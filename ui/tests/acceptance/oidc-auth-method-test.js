@@ -107,7 +107,7 @@ module('Acceptance | oidc auth method', function (hooks) {
 
     setTimeout(() => {
       window.postMessage(buildMessage().data, window.origin);
-    }, 50);
+    }, 500);
 
     await click('[data-test-auth-submit]');
     await waitUntil(() => find('[data-test-user-menu-trigger]'));

@@ -1,0 +1,227 @@
+[vault] $ vault server -dev -dev-ha -dev-transactional -dev-root-token-id=root -dev-listen-address=127.0.0.1:9200
+[vault] $ ember exam
+[vault] 
+[vault] WARNING: storage configured to use "inmem_transactional_ha" which is not
+[vault] supported for Vault Enterprise, must be "raft" or "consul"
+[vault] 
+[vault] ==> Vault server configuration:
+[vault] 
+[vault] Administrative Namespace: 
+[vault]              Api Address: http://127.0.0.1:9200
+[vault]                      Cgo: disabled
+[vault]          Cluster Address: https://127.0.0.1:9201
+[vault]    Environment Variables: BERRY_BIN_FOLDER, COLORFGBG, COLORTERM, COMMAND_MODE, GOPATH, HOME, HOMEBREW_CELLAR, HOMEBREW_PREFIX, HOMEBREW_REPOSITORY, INFOPATH, INIT_CWD, ITERM_PROFILE, ITERM_SESSION_ID, LANG, LC_TERMINAL, LC_TERMINAL_VERSION, LESS, LOGNAME, LSCOLORS, LS_COLORS, NVM_BIN, NVM_CD_FLAGS, NVM_DIR, NVM_INC, PAGER, PATH, PROJECT_CWD, PWD, SHELL, SHLVL, SSH_AUTH_SOCK, TERM, TERMINFO_DIRS, TERM_FEATURES, TERM_PROGRAM, TERM_PROGRAM_VERSION, TERM_SESSION_ID, TMPDIR, USER, VAULT_ADDR, VAULT_LICENSE_PATH, XPC_FLAGS, XPC_SERVICE_NAME, ZSH, _, __CFBundleIdentifier, __CF_USER_TEXT_ENCODING, npm_config_user_agent, npm_execpath, npm_lifecycle_event, npm_node_execpath, npm_package_json, npm_package_name, npm_package_version
+[vault]               Go Version: go1.24.2
+[vault]               Listener 1: tcp (addr: "127.0.0.1:9200", cluster address: "127.0.0.1:9201", disable_request_limiter: "false", max_request_duration: "1m30s", max_request_size: "33554432", tls: "disabled")
+[vault]                Log Level: 
+[vault]                    Mlock: supported: false, enabled: false
+[vault]            Recovery Mode: false
+[vault]                  Storage: inmem_transactional_ha (HA available)
+[vault]                  Version: Vault v1.20.0-beta1+ent, built 2025-04-30T11:27:24Z
+[vault]              Version Sha: 1e77e3f475e5d4cd3260effd2a63abee8e358722
+[vault] 
+[vault] ==> Vault server started! Log data will stream in below:
+[vault] 
+[vault] 2025-04-30T13:15:38.571-0600 [INFO]  proxy environment: http_proxy="" https_proxy="" no_proxy=""
+[vault] 2025-04-30T13:15:38.574-0600 [INFO]  incrementing seal generation: generation=1
+[vault] 2025-04-30T13:15:38.574-0600 [WARN]  no `api_addr` value specified in config or in VAULT_API_ADDR; falling back to detection if possible, but this value should be manually set
+[vault] 2025-04-30T13:15:38.581-0600 [INFO]  core: using autoloaded license: license="{\"license_id\":\"23248d28-17a3-17b0-d8df-f9aae9f958da\",\"customer_id\":\"56c5765b-9f9a-e3a0-232f-105a3627bb6d\",\"installation_id\":\"*\",\"issue_time\":\"2025-02-25T17:11:41.588177404Z\",\"start_time\":\"2025-02-25T00:00:00Z\",\"expiration_time\":\"2029-01-27T00:00:00Z\",\"termination_time\":\"2029-01-27T00:00:00Z\",\"flags\":{\"modules\":[\"multi-dc-scale\",\"governance-policy\",\"advanced-data-protection\"]},\"features\":[\"HSM\",\"Performance Replication\",\"DR Replication\",\"MFA\",\"Sentinel\",\"Seal Wrapping\",\"Control Groups\",\"Performance Standby\",\"Namespaces\",\"KMIP\",\"Entropy Augmentation\",\"Transform Secrets Engine\",\"Lease Count Quotas\",\"Key Management Secrets Engine\",\"Automated Snapshots\",\"Secrets Sync\"],\"performance_standby_count\":9999}"
+[vault] 2025-04-30T13:15:38.583-0600 [WARN]  replication.wal.aop: write controller disabled
+[vault] 2025-04-30T13:15:38.601-0600 [INFO]  core: Initializing version history cache for core
+[vault] 2025-04-30T13:15:38.601-0600 [INFO]  core: marking cluster as a production cluster based off HCL configuration
+[vault] 2025-04-30T13:15:38.601-0600 [INFO]  events: Starting event system
+[vault] 2025-04-30T13:15:38.604-0600 [INFO]  core: security barrier not initialized
+[vault] 2025-04-30T13:15:38.609-0600 [INFO]  core: security barrier initialized: stored=1 shares=1 threshold=1
+[vault] 2025-04-30T13:15:38.619-0600 [INFO]  core: post-unseal setup starting
+[vault] 2025-04-30T13:15:38.619-0600 [INFO]  replication.wal: no log directories found: root=wal/logs/
+[vault] 2025-04-30T13:15:38.621-0600 [INFO]  replication.index.perf: no index pages found
+[vault] 2025-04-30T13:15:38.621-0600 [INFO]  replication.index.perf: no checkpoint found
+[vault] 2025-04-30T13:15:38.621-0600 [INFO]  replication.index: no previous commit, forcing re-index: path-type=1
+[vault] 2025-04-30T13:15:38.621-0600 [INFO]  replication.index.local: no index pages found
+[vault] 2025-04-30T13:15:38.621-0600 [INFO]  replication.index.local: no checkpoint found
+[vault] 2025-04-30T13:15:38.621-0600 [INFO]  replication.index: no previous commit, forcing re-index: path-type=2
+[vault] 2025-04-30T13:15:38.622-0600 [INFO]  licensing: stored license removal was successful
+[vault] 2025-04-30T13:15:38.625-0600 [INFO]  core: loaded wrapping token key
+[vault] 2025-04-30T13:15:38.625-0600 [INFO]  core: successfully setup plugin runtime catalog
+[vault] 2025-04-30T13:15:38.625-0600 [INFO]  core: successfully setup plugin catalog: plugin-directory=""
+[vault] 2025-04-30T13:15:38.625-0600 [INFO]  core: no mounts; adding default mount table
+[vault] 2025-04-30T13:15:38.628-0600 [INFO]  core: successfully mounted: type=cubbyhole version="v1.20.0+builtin.vault" path=cubbyhole/ namespace="ID: root. Path: "
+[vault] 2025-04-30T13:15:38.632-0600 [INFO]  core: successfully mounted: type=system version="v1.20.0+builtin.vault" path=sys/ namespace="ID: root. Path: "
+[vault] 2025-04-30T13:15:38.634-0600 [INFO]  core: successfully mounted: type=identity version="v1.20.0+builtin.vault" path=identity/ namespace="ID: root. Path: "
+[vault] 2025-04-30T13:15:38.636-0600 [INFO]  core: successfully mounted: type=token version="v1.20.0+builtin.vault" path=token/ namespace="ID: root. Path: "
+[vault] 2025-04-30T13:15:38.637-0600 [INFO]  rollback: Starting the rollback manager with 256 workers
+[vault] 2025-04-30T13:15:38.638-0600 [INFO]  rollback: starting rollback manager
+[vault] 2025-04-30T13:15:38.639-0600 [INFO]  core: restoring leases
+[vault] 2025-04-30T13:15:38.640-0600 [INFO]  rotation-job-manager: starting rotation manager
+[vault] 2025-04-30T13:15:38.641-0600 [INFO]  identity: entities restored
+[vault] 2025-04-30T13:15:38.641-0600 [INFO]  identity: groups restored
+[vault] 2025-04-30T13:15:38.641-0600 [INFO]  system.mfa: configurations restored
+[vault] 2025-04-30T13:15:38.641-0600 [INFO]  expiration: lease restore complete
+[vault] 2025-04-30T13:15:38.642-0600 [INFO]  core: stopping replication
+[vault] 2025-04-30T13:15:38.642-0600 [INFO]  core: closed sync connection
+[vault] 2025-04-30T13:15:38.642-0600 [INFO]  core: replication stopped
+[vault] 2025-04-30T13:15:38.642-0600 [INFO]  core: setting up replication
+[vault] 2025-04-30T13:15:38.642-0600 [ERROR] core: a merkle tree reindex is required before replication can be started
+[vault] 2025-04-30T13:15:38.642-0600 [INFO]  core: running replication reindexing: diff=false force=false toggle replication=false no flush=false trees=2
+[vault] 2025-04-30T13:15:38.643-0600 [INFO]  replication.index.reindex: set starting WAL: value=14
+[vault] 2025-04-30T13:15:38.667-0600 [INFO]  replication.index.reindex: starting storage scan
+[vault] 2025-04-30T13:15:38.667-0600 [INFO]  replication.index.reindex: key scanning complete: num_keys=17
+[vault] 2025-04-30T13:15:38.667-0600 [INFO]  replication.index.reindex: performing first replay: lastWAL=16
+[vault] 2025-04-30T13:15:38.667-0600 [INFO]  replication.wal: prepared to replay logs: diff=2 commit_index=14 last_index=16
+[vault] 2025-04-30T13:15:38.667-0600 [INFO]  replication.index.reindex: locking tree
+[vault] 2025-04-30T13:15:38.667-0600 [INFO]  replication.index.reindex: locked tree
+[vault] 2025-04-30T13:15:38.667-0600 [INFO]  replication.index.reindex: performing second replay: lastWAL=16
+[vault] 2025-04-30T13:15:38.667-0600 [INFO]  replication.index.reindex: committing trees
+[vault] 2025-04-30T13:15:38.667-0600 [INFO]  replication.index.reindex: root hash mis-match
+[vault] 2025-04-30T13:15:38.667-0600 [INFO]  replication.index.reindex: reindexing subtree: tree=2
+[vault] 2025-04-30T13:15:38.667-0600 [INFO]  replication.index.local.reindex.subtree: locking subtree
+[vault] 2025-04-30T13:15:38.667-0600 [INFO]  replication.index.local.reindex.subtree: locked subtree
+[vault] 2025-04-30T13:15:38.692-0600 [INFO]  replication.index.reindex: done reindexing subtree: bad pages=0 tree=2
+[vault] 2025-04-30T13:15:38.692-0600 [INFO]  replication.index.reindex: reindexing subtree: tree=1
+[vault] 2025-04-30T13:15:38.692-0600 [INFO]  replication.index.perf.reindex.subtree: locking subtree
+[vault] 2025-04-30T13:15:38.692-0600 [INFO]  replication.index.perf.reindex.subtree: locked subtree
+[vault] 2025-04-30T13:15:38.692-0600 [INFO]  replication.index.perf.reindex.subtree: subtree root hash mis-match
+[vault] 2025-04-30T13:15:38.693-0600 [INFO]  replication.index.perf.reindex.subtree: reindexed subtree page, page diverged: page=15
+[vault] 2025-04-30T13:15:38.705-0600 [INFO]  replication.index.reindex: done reindexing subtree: bad pages=1 tree=1
+[vault] 2025-04-30T13:15:38.705-0600 [INFO]  replication.index.perf: flushing all currently dirty pages: until_wal=16
+[vault] 2025-04-30T13:15:38.707-0600 [INFO]  replication.index.reindex: deleting reindex WAL: tree=1
+[vault] 2025-04-30T13:15:38.707-0600 [INFO]  replication.index.reindex: deleting reindex WAL: tree=2
+[vault] 2025-04-30T13:15:38.707-0600 [INFO]  core: replication reindex complete: fixed_pages=1
+[vault] 2025-04-30T13:15:38.707-0600 [INFO]  core: replicated cluster information not found or disabled, not activating client
+[vault] 2025-04-30T13:15:38.707-0600 [INFO]  core: replication setup finished
+[vault] 2025-04-30T13:15:38.707-0600 [INFO]  core: Recorded vault version: vault version=1.20.0 upgrade time="2025-04-30 19:15:38.707946 +0000 UTC" build date=2025-04-30T11:27:24Z
+[vault] 2025-04-30T13:15:38.708-0600 [INFO]  activity: no clientIDs to load to memory: start_time="2025-02-01 00:00:00 +0000 UTC" end_time="2025-03-31 23:59:59 +0000 UTC"
+[vault] 2025-04-30T13:15:38.709-0600 [INFO]  core: post-unseal setup complete
+[vault] 2025-04-30T13:15:38.709-0600 [INFO]  core: root token generated
+[vault] 2025-04-30T13:15:38.709-0600 [INFO]  core: pre-seal teardown starting
+[vault] 2025-04-30T13:15:38.709-0600 [INFO]  core: stopping replication
+[vault] 2025-04-30T13:15:38.709-0600 [INFO]  core: closed sync connection
+[vault] 2025-04-30T13:15:38.709-0600 [INFO]  core: replication stopped
+[vault] 2025-04-30T13:15:38.709-0600 [INFO]  core: shutting down census manager
+[vault] 2025-04-30T13:15:38.710-0600 [INFO]  rollback: stopping rollback manager
+[vault] 2025-04-30T13:15:38.710-0600 [INFO]  core: pre-seal teardown complete
+[vault] 2025-04-30T13:15:38.710-0600 [INFO]  core.cluster-listener.tcp: starting listener: listener_address=127.0.0.1:9201
+2025-04-30T13:15:38.710-0600 [INFO]  core.cluster-listener: serving cluster requests: cluster_listen_address=127.0.0.1:9201
+[vault] 2025-04-30T13:15:38.710-0600 [INFO]  core: vault is unsealed
+[vault] 2025-04-30T13:15:38.710-0600 [INFO]  core: entering standby mode
+[vault] 2025-04-30T13:15:38.711-0600 [INFO]  core: performance standby: forwarding client is nil, waiting for new leader
+[vault] 2025-04-30T13:15:38.711-0600 [INFO]  core: acquired lock, enabling active operation
+[vault] 2025-04-30T13:15:38.719-0600 [INFO]  core: post-unseal setup starting
+[vault] 2025-04-30T13:15:38.719-0600 [INFO]  replication.wal: wal range recovered: first_wal=1 last_wal=24
+[vault] 2025-04-30T13:15:38.721-0600 [WARN]  replication.index.perf: unexpected number of index pages found: pages_restored=9 expect=256
+[vault] 2025-04-30T13:15:38.721-0600 [INFO]  replication.index.perf: no checkpoint found
+[vault] 2025-04-30T13:15:38.721-0600 [INFO]  replication.index: no previous commit, forcing re-index: path-type=1
+[vault] 2025-04-30T13:15:38.722-0600 [INFO]  replication.index.local: no index pages found
+[vault] 2025-04-30T13:15:38.722-0600 [INFO]  replication.index.local: no checkpoint found
+[vault] 2025-04-30T13:15:38.722-0600 [INFO]  replication.index: no previous commit, forcing re-index: path-type=2
+[vault] 2025-04-30T13:15:38.722-0600 [INFO]  replication.wal: prepared to replay logs: diff=24 commit_index=0 last_index=24
+[vault] 2025-04-30T13:15:38.722-0600 [INFO]  replication.wal: log replay complete: replayed=24 commit_index=0 last_index=24
+[vault] 2025-04-30T13:15:38.722-0600 [INFO]  licensing: stored license removal was successful
+[vault] 2025-04-30T13:15:38.722-0600 [INFO]  core: loaded wrapping token key
+[vault] 2025-04-30T13:15:38.722-0600 [INFO]  core: successfully setup plugin runtime catalog
+[vault] 2025-04-30T13:15:38.722-0600 [INFO]  core: successfully setup plugin catalog: plugin-directory=""
+[vault] 2025-04-30T13:15:38.723-0600 [INFO]  core: successfully mounted: type=system version="v1.20.0+builtin.vault" path=sys/ namespace="ID: root. Path: "
+[vault] 2025-04-30T13:15:38.723-0600 [INFO]  core: successfully mounted: type=identity version="v1.20.0+builtin.vault" path=identity/ namespace="ID: root. Path: "
+[vault] 2025-04-30T13:15:38.723-0600 [INFO]  core: successfully mounted: type=cubbyhole version="v1.20.0+builtin.vault" path=cubbyhole/ namespace="ID: root. Path: "
+[vault] 2025-04-30T13:15:38.724-0600 [INFO]  core: successfully mounted: type=token version="v1.20.0+builtin.vault" path=token/ namespace="ID: root. Path: "
+[vault] 2025-04-30T13:15:38.724-0600 [INFO]  rollback: Starting the rollback manager with 256 workers
+[vault] 2025-04-30T13:15:38.724-0600 [INFO]  rollback: starting rollback manager
+[vault] 2025-04-30T13:15:38.724-0600 [INFO]  core: restoring leases
+[vault] 2025-04-30T13:15:38.724-0600 [INFO]  rotation-job-manager: starting rotation manager
+[vault] 2025-04-30T13:15:38.724-0600 [INFO]  expiration: lease restore complete
+[vault] 2025-04-30T13:15:38.724-0600 [INFO]  identity: entities restored
+[vault] 2025-04-30T13:15:38.724-0600 [INFO]  identity: groups restored
+[vault] 2025-04-30T13:15:38.724-0600 [INFO]  system.mfa: configurations restored
+[vault] 2025-04-30T13:15:38.727-0600 [INFO]  core: stopping replication
+[vault] 2025-04-30T13:15:38.727-0600 [INFO]  core: closed sync connection
+[vault] 2025-04-30T13:15:38.727-0600 [INFO]  core: replication stopped
+[vault] 2025-04-30T13:15:38.727-0600 [INFO]  core: setting up replication
+[vault] 2025-04-30T13:15:38.727-0600 [ERROR] core: a merkle tree reindex is required before replication can be started
+[vault] 2025-04-30T13:15:38.727-0600 [INFO]  core: replication setup finished
+[vault] 2025-04-30T13:15:38.727-0600 [INFO]  core: reindex is running in background, replication will be started once reindex completes
+[vault] 2025-04-30T13:15:38.727-0600 [INFO]  core: running replication reindexing: diff=false force=false toggle replication=true no flush=false trees=2
+[vault] 2025-04-30T13:15:38.727-0600 [INFO]  activity: no clientIDs to load to memory: start_time="2025-02-01 00:00:00 +0000 UTC" end_time="2025-03-31 23:59:59 +0000 UTC"
+[vault] 2025-04-30T13:15:38.727-0600 [INFO]  core: post-unseal setup complete
+[vault] 2025-04-30T13:15:38.727-0600 [INFO]  core: performance standby: forwarding client is nil, waiting for new leader
+[vault] 2025-04-30T13:15:38.727-0600 [INFO]  replication.index.reindex: set starting WAL: value=25
+[vault] 2025-04-30T13:15:38.751-0600 [INFO]  replication.index.reindex: starting storage scan
+[vault] 2025-04-30T13:15:38.751-0600 [INFO]  replication.index.reindex: key scanning complete: num_keys=23
+[vault] 2025-04-30T13:15:38.751-0600 [INFO]  replication.index.reindex: performing first replay: lastWAL=25
+[vault] 2025-04-30T13:15:38.751-0600 [INFO]  replication.index.reindex: locking tree
+[vault] 2025-04-30T13:15:38.751-0600 [INFO]  replication.index.reindex: locked tree
+[vault] 2025-04-30T13:15:38.751-0600 [INFO]  replication.index.reindex: performing second replay: lastWAL=25
+[vault] 2025-04-30T13:15:38.751-0600 [INFO]  replication.index.reindex: committing trees
+[vault] 2025-04-30T13:15:38.751-0600 [INFO]  replication.index.reindex: root hash verified
+[vault] 2025-04-30T13:15:38.751-0600 [INFO]  replication.index.reindex: reindexing subtree: tree=1
+[vault] 2025-04-30T13:15:38.751-0600 [INFO]  replication.index.perf.reindex.subtree: locking subtree
+[vault] 2025-04-30T13:15:38.751-0600 [INFO]  replication.index.perf.reindex.subtree: locked subtree
+[vault] 2025-04-30T13:15:38.766-0600 [INFO]  replication.index.reindex: done reindexing subtree: bad pages=0 tree=1
+[vault] 2025-04-30T13:15:38.766-0600 [INFO]  replication.index.reindex: reindexing subtree: tree=2
+[vault] 2025-04-30T13:15:38.766-0600 [INFO]  replication.index.local.reindex.subtree: locking subtree
+[vault] 2025-04-30T13:15:38.766-0600 [INFO]  replication.index.local.reindex.subtree: locked subtree
+[vault] 2025-04-30T13:15:38.787-0600 [INFO]  replication.index.reindex: done reindexing subtree: bad pages=0 tree=2
+[vault] 2025-04-30T13:15:38.787-0600 [INFO]  replication.index.reindex: deleting reindex WAL: tree=1
+[vault] 2025-04-30T13:15:38.787-0600 [INFO]  replication.index.reindex: deleting reindex WAL: tree=2
+[vault] 2025-04-30T13:15:38.787-0600 [INFO]  core: replication index repaired, starting replication
+[vault] 2025-04-30T13:15:38.787-0600 [INFO]  core: stopping replication
+[vault] 2025-04-30T13:15:38.787-0600 [INFO]  core: closed sync connection
+[vault] 2025-04-30T13:15:38.787-0600 [INFO]  core: replication stopped
+[vault] 2025-04-30T13:15:38.787-0600 [INFO]  core: setting up replication
+[vault] 2025-04-30T13:15:38.787-0600 [INFO]  core: replicated cluster information not found or disabled, not activating client
+[vault] 2025-04-30T13:15:38.787-0600 [INFO]  core: replication setup finished
+[vault] 2025-04-30T13:15:38.787-0600 [INFO]  core: replication reindex complete: fixed_pages=0
+[vault] 2025-04-30T13:15:38.787-0600 [INFO]  replication.index: clean merkle tree started
+[vault] 2025-04-30T13:15:38.792-0600 [INFO]  replication.index: clean merkle tree complete: keys_cleaned=0
+[vault] 2025-04-30T13:15:39.715-0600 [INFO]  expiration: revoked lease: lease_id=auth/token/root/ha8003daceb070d2892b4c12058ae6d9eac76e3828e6e193c3ca6bdc1f9568a36
+[vault] 2025-04-30T13:15:39.719-0600 [INFO]  core: successful mount: namespace="" path=secret/ type=kv version="v0.21.0+builtin"
+[vault] WARNING! dev mode is enabled! In this mode, Vault runs entirely in-memory
+[vault] and starts unsealed with a single unseal key. The root token is already
+[vault] authenticated to the CLI, so you can immediately begin using Vault.
+[vault] 
+[vault] You may need to set the following environment variables:
+[vault] 
+[vault]     $ export VAULT_ADDR='http://127.0.0.1:9200'
+[vault] 
+[vault] The unseal key and root token are displayed below in case you want to
+[vault] seal/unseal the Vault or re-authenticate.
+[vault] 
+[vault] Unseal Key: 7xxlmxyp7m4sW0ecZtyoGNvvnR/qNmgiVdlJ/rwARGg=
+[vault] Root Token: root
+[vault] 
+[vault] Development mode should NOT be used in production installations!
+[vault] 
+[vault] VAULT SERVER READY
+[lint:js] yarn run lint:js:quiet exited with code 0
+[vault] Randomizing tests with seed: false
+[vault] - Building
+[vault] - Building
+[vault] Environment: test
+[vault] WARNING: ember-cli-typescript requires ember-cli-babel ^7.17.0, but you have version 8.2.0 installed; your TypeScript files may not be transpiled correctly.
+[vault] - Building
+[vault] WARNING: ember-cli-typescript requires ember-cli-babel ^7.17.0, but you have version 8.2.0 installed; your TypeScript files may not be transpiled correctly.
+[vault] - Building
+[vault] WARNING: ember-cli-typescript requires ember-cli-babel ^7.17.0, but you have version 8.2.0 installed; your TypeScript files may not be transpiled correctly.
+[vault] - Building
+[vault] WARNING: ember-cli-typescript requires ember-cli-babel ^7.17.0, but you have version 8.2.0 installed; your TypeScript files may not be transpiled correctly.
+[vault] - Building
+[vault] WARNING: ember-cli-typescript requires ember-cli-babel ^7.17.0, but you have version 8.2.0 installed; your TypeScript files may not be transpiled correctly.
+[vault] - Building
+[vault] WARNING: ember-cli-typescript requires ember-cli-babel ^7.17.0, but you have version 8.2.0 installed; your TypeScript files may not be transpiled correctly.
+[vault] - Building
+[vault] WARNING: ember-cli-typescript requires ember-cli-babel ^7.17.0, but you have version 8.2.0 installed; your TypeScript files may not be transpiled correctly.
+[vault] - Building
+[vault] WARNING: ember-cli-typescript requires ember-cli-babel ^7.17.0, but you have version 8.2.0 installed; your TypeScript files may not be transpiled correctly.
+[vault] - Building
+[vault] WARNING: ember-cli-typescript requires ember-cli-babel ^7.17.0, but you have version 8.2.0 installed; your TypeScript files may not be transpiled correctly.
+[vault] - Building
+[vault] WARNING: ember-cli-typescript requires ember-cli-babel ^7.17.0, but you have version 8.2.0 installed; your TypeScript files may not be transpiled correctly.
+[vault] - Building
+[vault] WARNING: ember-cli-typescript requires ember-cli-babel ^7.17.0, but you have version 8.2.0 installed; your TypeScript files may not be transpiled correctly.
+[vault] - Building
+[vault] WARNING: ember-cli-typescript requires ember-cli-babel ^7.17.0, but you have version 8.2.0 installed; your TypeScript files may not be transpiled correctly.
+[vault] - Building
+[vault] WARNING: ember-cli-typescript requires ember-cli-babel ^7.17.0, but you have version 8.2.0 installed; your TypeScript files may not be transpiled correctly.
+[vault] - Building
+[vault] WARNING: ember-cli-typescript requires ember-cli-babel ^7.17.0, but you have version 8.2.0 installed; your TypeScript files may not be transpiled correctly.
+[vault] - Building
+[vault] - building... 
