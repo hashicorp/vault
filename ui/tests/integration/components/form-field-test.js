@@ -358,6 +358,116 @@ module('Integration | Component | form field', function (hooks) {
   // Note: some tests may be duplicative of the generic tests above
   //
 
+  // ––––– editType === 'checkboxList' / possibleValues –––––
+
+  test('it renders: editType=checkboxList / possibleValues - as Hds::Form::Checkbox::Group', async function (assert) {
+    const possibleValues = ['foo', 'bar', 'baz'];
+    await setup.call(this, createAttr('foo', '-', { editType: 'checkboxList', possibleValues }));
+    assert
+      .dom('.field [class^="hds-form-group"] input[type="checkbox"].hds-form-checkbox')
+      .exists('renders as Hds::Form::Checkbox::Group');
+    assert
+      .dom('fieldset[data-test-input="foo"] input[type="checkbox"]')
+      .exists({ count: 3 }, 'renders a fieldset element with 3 checkbox elements');
+    assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
+    possibleValues.forEach((possibleValue, index) => {
+      assert
+        .dom(`fieldset[data-test-input="foo"] .hds-form-group__control-field:nth-of-type(${index + 1}) label`)
+        .hasAttribute('id', `label-${possibleValue}`, 'label has correct id')
+        .hasText(possibleValue, 'label has correct text');
+      assert
+        .dom(
+          `fieldset[data-test-input="foo"] .hds-form-group__control-field:nth-of-type(${
+            index + 1
+          }) input[type="checkbox"]`
+        )
+        .hasAttribute('id', possibleValue, 'input[type="checkbox"] has correct id');
+    });
+  });
+
+  test('it renders: editType=checkboxList / possibleValues - with no selected checkbox', async function (assert) {
+    const possibleValues = ['foo', 'bar', 'baz'];
+    await setup.call(this, createAttr('foo', '-', { editType: 'checkboxList', possibleValues }));
+    possibleValues.forEach(async (possibleValue, index) => {
+      const selector = `fieldset[data-test-input="foo"] .hds-form-group__control-field:nth-of-type(${
+        index + 1
+      }) input[type="checkbox"]`;
+      assert.dom(selector).isNotChecked(`input[type="checkbox"] "${possibleValue}" is not checked`);
+    });
+  });
+
+  test('it renders: editType=checkboxList / possibleValues - with selected value', async function (assert) {
+    await setup.call(
+      this,
+      createAttr('foo', '-', {
+        editType: 'checkboxList',
+        possibleValues: ['foo', 'bar', 'baz'],
+        defaultValue: ['baz'],
+      })
+    );
+    assert.dom('input[type="checkbox"][value="baz"]').isChecked('input[type="checkbox"] "baz" is checked');
+  });
+
+  test('it renders: editType=checkboxList / possibleValues - with passed label, subtext, helptext, doclink', async function (assert) {
+    await setup.call(
+      this,
+      createAttr('foo', '-', {
+        editType: 'checkboxList',
+        possibleValues: ['foo', 'bar', 'baz'],
+        label: 'Custom label',
+        subText: 'Some subtext',
+        helpText: 'Some helptext',
+        docLink: '/docs',
+      })
+    );
+    assert.strictEqual(
+      component.fields.objectAt(0).labelValue,
+      'Custom label',
+      'renders the custom label from options'
+    );
+    assert
+      .dom('[data-test-form-field-subtext]')
+      .exists('renders `subText` option as HelperText')
+      .hasText(
+        'Some subtext See our documentation for help.',
+        'renders the right subtext string from options'
+      );
+    assert
+      .dom('[data-test-form-field-subtext] a[data-test-form-field-doc-link]')
+      .exists('renders `docLink` option as as link inside the subtext');
+    assert
+      .dom('[data-test-form-field-help-text]')
+      .exists('renders `helptext` option as HelperText')
+      .hasText('Some helptext', 'renders the right help text string from options');
+  });
+
+  test('it renders: editType=checkboxList / possibleValues - with validation errors and warnings', async function (assert) {
+    this.setProperties({
+      attr: createAttr('foo', '-', { editType: 'checkboxList', possibleValues: ['foo', 'bar', 'baz'] }),
+      model: { foo: 'bar' },
+      modelValidations: {
+        foo: {
+          isValid: false,
+          errors: ['Error message #1', 'Error message #2'],
+          warnings: ['Warning message #1', 'Warning message #2'],
+        },
+      },
+      onChange: () => {},
+    });
+
+    await render(
+      hbs`<FormField @attr={{this.attr}} @model={{this.model}} @modelValidations={{this.modelValidations}} @onChange={{this.onChange}} />`
+    );
+    assert
+      .dom('[data-test-form-field-validation-error="foo"]')
+      .exists('Validation error renders')
+      .hasText('Error message #1 Error message #2', 'Validation errors are combined');
+    assert
+      .dom('[data-test-form-field-validation-warning="foo"]')
+      .exists('Validation warning renders')
+      .hasText('Warning message #1 Warning message #2', 'Validation warnings are combined');
+  });
+
   // ––––– editType === 'select' / possibleValues –––––
 
   test('it renders: editType=select / possibleValues - as Hds::Form::Select', async function (assert) {
@@ -378,7 +488,7 @@ module('Integration | Component | form field', function (hooks) {
     assert.ok(spy.calledWith('foo', 'bar'), 'onChange called with correct args');
   });
 
-  test('it renders: possibleValues / select - with no default', async function (assert) {
+  test('it renders: editType=select / possibleValues - with no default', async function (assert) {
     const [model, spy] = await setup.call(
       this,
       createAttr('foo', 'string', {
@@ -395,7 +505,7 @@ module('Integration | Component | form field', function (hooks) {
     assert.ok(spy.calledWith('foo', 'foo'), 'onChange called with correct args');
   });
 
-  test('it renders: possibleValues / select - with selected value', async function (assert) {
+  test('it renders: editType=select / possibleValues - with selected value', async function (assert) {
     const [model, spy] = await setup.call(
       this,
       createAttr('foo', 'string', {
@@ -412,7 +522,7 @@ module('Integration | Component | form field', function (hooks) {
     assert.ok(spy.calledWith('foo', 'foo'), 'onChange called with correct args');
   });
 
-  test('it renders: possibleValues / select - with passed label, subtext, helptext, doclink', async function (assert) {
+  test('it renders: editType=select / possibleValues - with passed label, subtext, helptext, doclink', async function (assert) {
     await setup.call(
       this,
       createAttr('foo', 'string', {
@@ -445,7 +555,7 @@ module('Integration | Component | form field', function (hooks) {
       .hasText('Some helptext', 'renders the right help text string from options');
   });
 
-  test('it renders: possibleValues / select - with validation errors and warnings', async function (assert) {
+  test('it renders: editType=select / possibleValues - with validation errors and warnings', async function (assert) {
     this.setProperties({
       attr: createAttr('foo', 'string', { editType: 'select', possibleValues: ['foo', 'bar', 'baz'] }),
       model: { foo: 'bar' },
