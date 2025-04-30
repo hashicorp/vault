@@ -15,13 +15,15 @@ import { action } from '@ember/object';
  *
  * @example
  * <Auth::Page
+ * @authMethodQueryParam={{this.authMethod}}
  * @cluster={{this.model}}
  * @namespaceQueryParam={{this.namespaceQueryParam}}
  * @oidcProviderQueryParam={{this.oidcProvider}}
  * @onAuthSuccess={{action "authSuccess"}}
  * @onNamespaceUpdate={{perform this.updateNamespace}}
 />
- *
+ * 
+ * @param {string} authMethodQueryParam - auth method type to login with, updated by selecting an auth method from the dropdown
  * @param {object} cluster - the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
  * @param {string} namespaceQueryParam - namespace to login with, updated by typing in to the namespace input
  * @param {string} oidcProviderQueryParam - oidc provider query param, set in url as "?o=someprovider"
