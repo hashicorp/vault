@@ -6,7 +6,6 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
-import apiErrorMessage from 'vault/utils/api-error-message';
 
 /**
  * @module Page::MessageDetails
@@ -37,8 +36,8 @@ export default class MessageDetails extends Component {
       this.customMessages.fetchMessages();
       this.flashMessages.success(`Successfully deleted ${message.title}.`);
     } catch (e) {
-      const errorMessage = await apiErrorMessage(e);
-      this.flashMessages.danger(errorMessage);
+      const { message } = await this.api.parseError(e);
+      this.flashMessages.danger(message);
     }
   }
 }

@@ -6,7 +6,6 @@
 import { service } from '@ember/service';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
-import apiErrorMessage from 'vault/utils/api-error-message';
 
 export default Component.extend({
   router: service(),
@@ -28,8 +27,8 @@ export default Component.extend({
       this.set('unwrapData', response.auth || response.data);
       this.controlGroup.deleteControlGroupToken(this.model.id);
     } catch (e) {
-      const error = yield apiErrorMessage(e);
-      this.error = `Token unwrap failed: ${error}`;
+      const { message } = yield this.api.parseError(e);
+      this.error = `Token unwrap failed: ${message}`;
     }
   }).drop(),
 
