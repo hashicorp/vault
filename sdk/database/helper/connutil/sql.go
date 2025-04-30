@@ -54,8 +54,8 @@ type SQLConnectionProducer struct {
 	MaxIdleConnections       int         `json:"max_idle_connections" mapstructure:"max_idle_connections" structs:"max_idle_connections"`
 	MaxConnectionLifetimeRaw interface{} `json:"max_connection_lifetime" mapstructure:"max_connection_lifetime" structs:"max_connection_lifetime"`
 	DisableEscaping          bool        `json:"disable_escaping" mapstructure:"disable_escaping" structs:"disable_escaping"`
+	SelfManaged              bool        `json:"self_managed" mapstructure:"self_managed" structs:"self_managed"`
 	usePrivateIP             bool
-	SelfManaged              bool `json:"self_managed" mapstructure:"self_managed" structs:"self_managed"`
 
 	// Username/Password is the default auth type when AuthType is not set
 	Username string `json:"username" mapstructure:"username" structs:"username"`
