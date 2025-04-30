@@ -164,7 +164,7 @@ const oidcLoginTests = (test) => {
     });
     await this.renderComponent();
     assert.dom(AUTH_FORM.login).hasText('Sign in with Auth0');
-    assert.dom(GENERAL.icon('auth0')).exists(0);
+    assert.dom(GENERAL.icon('auth0')).exists();
     parseURLStub.restore();
   });
 

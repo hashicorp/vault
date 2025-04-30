@@ -3,18 +3,15 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if this.pageError}}
+{{#if this.mfaErrors}}
   <Hds::ApplicationState class="has-top-margin-xxl" data-test-error as |A|>
     <A.Header @title="Authentication error" />
-    <A.Body @text={{this.pageError.message}} />
-    <A.Body @text="Error: {{this.pageError.error}}" />
+    <A.Body
+      @text="Multi-factor authentication is required, but failed. Go back and try again, or contact your administrator."
+    />
+    <A.Body @text="Error: {{this.mfaErrors}}" />
     <A.Footer as |F|>
-      <F.Button
-        @icon="arrow-left"
-        @color="tertiary"
-        @text="Go back"
-        {{on "click" (fn this.dismissError this.pageError.action)}}
-      />
+      <F.Button @icon="arrow-left" @color="tertiary" @text="Go back" {{on "click" this.goBack}} />
     </A.Footer>
   </Hds::ApplicationState>
 {{else}}
