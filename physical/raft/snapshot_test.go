@@ -986,11 +986,15 @@ func TestLoadReadOnlySnapshot(t *testing.T) {
 	_, _ = txn.Insert([]byte("/path/to/exclude/1"), []byte("value"))
 	_, _ = txn.Insert([]byte("/different/path/to/exclude"), []byte("value"))
 	pathsToExclude = txn.Commit()
+	toExclude := func(key string) bool {
+		_, ok := pathsToExclude.Get([]byte(key))
+		return ok
+	}
 
 	// Create an FSM to load the snapshot data into.
 	fsm, err := NewFSM(dir, "test-fsm", logger)
 
-	err = LoadReadOnlySnapshot(fsm, snapshotFile, pathsToExclude, logger)
+	err = LoadReadOnlySnapshot(fsm, snapshotFile, toExclude, logger)
 	require.NoError(t, err)
 	value, err := fsm.Get(context.Background(), "/path/to/exclude/1")
 	require.NoError(t, err)
