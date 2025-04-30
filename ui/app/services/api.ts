@@ -15,15 +15,16 @@ import {
   HTTPQuery,
   HTTPRequestInit,
   RequestOpts,
+  ResponseError,
 } from '@hashicorp/vault-client-typescript';
-import config from '../config/environment';
+import config from 'vault/config/environment';
 import { waitForPromise } from '@ember/test-waiters';
 
 import type AuthService from 'vault/services/auth';
 import type NamespaceService from 'vault/services/namespace';
 import type ControlGroupService from 'vault/services/control-group';
 import type FlashMessageService from 'vault/services/flash-messages';
-import type { ApiError, HeaderMap, XVaultHeaders } from 'vault/api';
+import type { HeaderMap, XVaultHeaders } from 'vault/api';
 
 export default class ApiService extends Service {
   @service('auth') declare readonly authService: AuthService;
@@ -103,27 +104,6 @@ export default class ApiService extends Service {
       this.controlGroup.deleteControlGroupToken(controlGroupToken.accessor);
     }
   };
-
-  formatErrorResponse = async (context: ResponseContext) => {
-    const response = context.response.clone();
-    const { headers, status, statusText } = response;
-
-    // backwards compatibility with Ember Data
-    if (status >= 400) {
-      const error: ApiError = (await response?.json()) || {};
-      error.httpStatus = response?.status;
-      error.path = context.url;
-      // typically the Vault API error response looks like { errors: ['some error message'] }
-      // but sometimes (eg RespondWithStatusCode) it's { data: { error: 'some error message' } }
-      if (error?.data?.error && !error.errors) {
-        // normalize the errors from RespondWithStatusCode
-        error.errors = [error.data.error];
-      }
-      return new Response(JSON.stringify(error), { headers, status, statusText });
-    }
-
-    return;
-  };
   // --- End Middleware ---
 
   configuration = new Configuration({
@@ -134,7 +114,6 @@ export default class ApiService extends Service {
       { pre: this.setHeaders },
       { post: this.showWarnings },
       { post: this.deleteControlGroupToken },
-      { post: this.formatErrorResponse },
     ],
     fetchApi: (...args: [Request]) => {
       return waitForPromise(window.fetch(...args));
@@ -171,5 +150,35 @@ export default class ApiService extends Service {
   addQueryParams(requestContext: { init: HTTPRequestInit; context: RequestOpts }, params: HTTPQuery = {}) {
     const { context } = requestContext;
     context.query = { ...context.query, ...params };
+  }
+
+  // accepts an error response and returns { status, message, response, path }
+  // message is built as error.errors joined with a comma, error.message or a fallback message
+  // path is the url of the request, minus the origin -> /v1/sys/wrapping/unwrap
+  async parseError(e: unknown, fallbackMessage = 'An error occurred, please try again') {
+    if (e instanceof ResponseError) {
+      const { status, url } = e.response;
+      const error = await e.response.json();
+      // typically the Vault API error response looks like { errors: ['some error message'] }
+      // but sometimes (eg RespondWithStatusCode) it's { data: { error: 'some error message' } }
+      const errors = error.data?.error && !error.errors ? [error.data.error] : error.errors;
+      const message = errors && typeof errors[0] === 'string' ? errors.join(', ') : error.message;
+
+      return {
+        message: message || fallbackMessage,
+        status,
+        path: url.replace(document.location.origin, ''),
+        response: error,
+      };
+    }
+
+    // log out generic error for ease of debugging in dev env
+    if (config.environment === 'development') {
+      console.log('API Error:', e); // eslint-disable-line no-console
+    }
+
+    return {
+      message: (e as Error)?.message || fallbackMessage,
+    };
   }
 }
