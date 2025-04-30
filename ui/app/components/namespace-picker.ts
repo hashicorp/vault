@@ -12,6 +12,7 @@ import type Router from 'vault/router';
 import type NamespaceService from 'vault/services/namespace';
 import type AuthService from 'vault/vault/services/auth';
 import type Store from '@ember-data/store';
+import errorMessage from 'vault/utils/error-message';
 
 interface NamespaceOption {
   id: string;
@@ -35,12 +36,13 @@ export default class NamespacePicker extends Component {
   @service declare router: Router;
   @service declare store: Store;
 
-  // Show/hide refresh & manage namespaces buttons
-  @tracked hasListPermissions = false;
-
+  // Load 200 namespaces in the namespace picker at a time
   @tracked batchSize = 200;
 
   @tracked allNamespaces: NamespaceOption[] = [];
+  @tracked canManageNamespaces = false; // Show/hide manage namespaces button
+  @tracked canRefreshNamespaces = false; // Show/hide refresh list button
+  @tracked errorLoadingNamespaces = '';
   @tracked hasNamespaces = false;
   @tracked searchInput = '';
   @tracked searchInputHelpText =
@@ -53,17 +55,14 @@ export default class NamespacePicker extends Component {
   }
 
   private matchesPath(option: NamespaceOption, currentPath: string): boolean {
-    // TODO: Revisit. A hardcoded check for "path" & "/path" seems hacky, but it fixes a breaking test:
-    //  "Acceptance | Enterprise | namespaces: it shows nested namespaces if you log in with a namespace starting with a /"
-    //  My assumption is that namespace shouldn't start with a "/", but is this a HVD thing? or is the test outdated?
-    return option?.path === currentPath || `/${option?.path}` === currentPath;
+    return option?.path === currentPath;
   }
 
   private getSelected(options: NamespaceOption[], currentPath: string): NamespaceOption | undefined {
     return options.find((option) => this.matchesPath(option, currentPath));
   }
 
-  private getOptions(namespace: any): NamespaceOption[] {
+  private getOptions(namespace: NamespaceService): NamespaceOption[] {
     /* Each namespace option has 3 properties: { id, path, and label }
      *   - id: node / namespace name (displayed when the namespace picker is closed)
      *   - path: full namespace path (used to navigate to the namespace)
@@ -131,22 +130,24 @@ export default class NamespacePicker extends Component {
     return this.hasSearchInput ? noMatchingNamespacesHelpText : noNamespacesMessage;
   }
 
+  get showNoNamespacesMessage(): boolean {
+    const hasError = this.errorLoadingNamespaces !== '';
+    return this.namespaceCount === 0 && !hasError;
+  }
+
   get visibleNamespaceOptions(): NamespaceOption[] {
     return this.namespaceOptions.slice(0, this.batchSize);
   }
 
   @action
   async fetchListCapability(): Promise<void> {
-    // TODO: Revist. This logic was carried over from previous component implementation.
-    //  When the user doesn't have this capability, shouldn't we just hide the "Manage" button,
-    //  instead of hiding both the "Manage" and "Refresh List" buttons?
     try {
-      await this.store.findRecord('capabilities', 'sys/namespaces/');
-      this.hasListPermissions = true;
-    } catch (e) {
-      // If error out on findRecord call it's because you don't have permissions
-      // and therefore don't have permission to manage namespaces
-      this.hasListPermissions = false;
+      const namespacePermission = await this.store.findRecord('capabilities', 'sys/namespaces/');
+      this.canRefreshNamespaces = namespacePermission.get('canList');
+      this.canManageNamespaces = true;
+    } catch (error) {
+      // If the findRecord call fails, the user lacks permissions to refresh or manage namespaces.
+      this.canRefreshNamespaces = this.canManageNamespaces = false;
     }
   }
 
@@ -158,9 +159,12 @@ export default class NamespacePicker extends Component {
 
   @action
   async loadOptions(): Promise<void> {
-    // TODO: namespace service's findNamespacesForUser will never throw an error.
-    // Check with design to determine if we should continue to ignore or handle an error situation here.
-    await this.namespace?.findNamespacesForUser?.perform();
+    try {
+      await this.namespace?.findNamespacesForUser?.perform();
+      this.errorLoadingNamespaces = '';
+    } catch (error) {
+      this.errorLoadingNamespaces = errorMessage(error);
+    }
 
     this.allNamespaces = this.getOptions(this.namespace);
     this.selected = this.getSelected(this.allNamespaces, this.namespace?.path) ?? null;
@@ -170,7 +174,8 @@ export default class NamespacePicker extends Component {
 
   @action
   loadMore(): void {
-    this.batchSize += 200; // Increase the batch size to load more items
+    // Increase the batch size to load more items
+    this.batchSize += 200;
   }
 
   @action
