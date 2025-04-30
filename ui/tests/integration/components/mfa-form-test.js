@@ -10,12 +10,15 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { _cancelTimers as cancelTimers, later } from '@ember/runloop';
 import { TOTP_VALIDATION_ERROR } from 'vault/components/mfa/mfa-form';
+import sinon from 'sinon';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | mfa-form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    this.onCancel = sinon.spy();
     this.clusterId = '123456';
     this.mfaAuthData = {
       backend: 'userpass',
@@ -43,7 +46,12 @@ module('Integration | Component | mfa-form', function (hooks) {
     }).mfa_requirement;
 
     await render(
-      hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onError={{fn (mut this.error)}} />`
+      hbs`<Mfa::MfaForm
+      @clusterId={{this.clusterId}}
+      @authData={{this.mfaAuthData}}
+      @onError={{fn (mut this.error)}}
+      @onCancel={{this.onCancel}}
+      />`
     );
     assert
       .dom('[data-test-mfa-description]')
@@ -58,7 +66,12 @@ module('Integration | Component | mfa-form', function (hooks) {
     }).mfa_requirement;
 
     await render(
-      hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onError={{fn (mut this.error)}} />`
+      hbs`<Mfa::MfaForm
+      @clusterId={{this.clusterId}}
+      @authData={{this.mfaAuthData}}
+      @onError={{fn (mut this.error)}}
+      @onCancel={{this.onCancel}}
+      />`
     );
     assert
       .dom('[data-test-mfa-description]')
@@ -73,7 +86,12 @@ module('Integration | Component | mfa-form', function (hooks) {
     }).mfa_requirement;
 
     await render(
-      hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onError={{fn (mut this.error)}} />`
+      hbs`<Mfa::MfaForm
+      @clusterId={{this.clusterId}}
+      @authData={{this.mfaAuthData}}
+      @onError={{fn (mut this.error)}}
+      @onCancel={{this.onCancel}}
+      />`
     );
     assert
       .dom('[data-test-mfa-description]')
@@ -84,7 +102,11 @@ module('Integration | Component | mfa-form', function (hooks) {
   });
 
   test('it should render a submit button', async function (assert) {
-    await render(hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} />`);
+    await render(hbs`<Mfa::MfaForm
+      @clusterId={{this.clusterId}}
+      @authData={{this.mfaAuthData}}
+      @onCancel={{this.onCancel}}
+      />`);
 
     assert.dom('[data-test-mfa-validate]').isNotDisabled('Button is not disabled by default');
   });
@@ -129,7 +151,12 @@ module('Integration | Component | mfa-form', function (hooks) {
       assert.strictEqual(resp, 'test response', 'Response is returned in onSuccess callback');
 
     await render(
-      hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onSuccess={{this.onSuccess}} />`
+      hbs`<Mfa::MfaForm
+      @clusterId={{this.clusterId}}
+      @authData={{this.mfaAuthData}}
+      @onSuccess={{this.onSuccess}}
+      @onCancel={{this.onCancel}}
+      />`
     );
     await fillIn('[data-test-mfa-select="0"] select', oktaConstraint.id);
     await fillIn('[data-test-mfa-passcode="1"]', 'test-code');
@@ -168,7 +195,12 @@ module('Integration | Component | mfa-form', function (hooks) {
       assert.strictEqual(resp, 'test response', 'Response is returned in onSuccess callback');
 
     await render(
-      hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} @onSuccess={{this.onSuccess}} />`
+      hbs`<Mfa::MfaForm
+      @clusterId={{this.clusterId}}
+      @authData={{this.mfaAuthData}}
+      @onSuccess={{this.onSuccess}}
+      @onCancel={{this.onCancel}}
+      />`
     );
 
     await fillIn('[data-test-mfa-passcode]', 'test-code');
@@ -190,7 +222,11 @@ module('Integration | Component | mfa-form', function (hooks) {
         },
       });
 
-      await render(hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} />`);
+      await render(hbs`<Mfa::MfaForm
+        @clusterId={{this.clusterId}}
+        @authData={{this.mfaAuthData}}
+        @onCancel={{this.onCancel}}
+        />`);
 
       await fillIn('[data-test-mfa-passcode]', 'foo');
       await click('[data-test-mfa-validate]');
@@ -214,7 +250,11 @@ module('Integration | Component | mfa-form', function (hooks) {
         };
       },
     });
-    await render(hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} />`);
+    await render(hbs`<Mfa::MfaForm
+      @clusterId={{this.clusterId}}
+      @authData={{this.mfaAuthData}}
+       @onCancel={{this.onCancel}}
+      />`);
 
     await fillIn('[data-test-mfa-passcode]', 'foo');
     await click('[data-test-mfa-validate]');
@@ -235,7 +275,11 @@ module('Integration | Component | mfa-form', function (hooks) {
         throw { errors: ['failed to validate'] };
       },
     });
-    await render(hbs`<Mfa::MfaForm @clusterId={{this.clusterId}} @authData={{this.mfaAuthData}} />`);
+    await render(hbs`<Mfa::MfaForm
+      @clusterId={{this.clusterId}}
+      @authData={{this.mfaAuthData}}
+      @onCancel={{this.onCancel}}
+      />`);
 
     await fillIn('[data-test-mfa-passcode]', 'test-code');
     later(() => cancelTimers(), 50);
@@ -245,5 +289,16 @@ module('Integration | Component | mfa-form', function (hooks) {
     assert
       .dom('[data-test-message-error]')
       .includesText(TOTP_VALIDATION_ERROR, 'Generic error message renders for passcode validation error');
+  });
+
+  test('it should call onCancel callback', async function (assert) {
+    await render(hbs`<Mfa::MfaForm
+      @clusterId={{this.clusterId}}
+      @authData={{this.mfaAuthData}}
+      @onCancel={{this.onCancel}}
+      />`);
+
+    await click(GENERAL.backButton);
+    assert.true(this.onCancel.calledOnce, 'it fires onCancel callback');
   });
 });
