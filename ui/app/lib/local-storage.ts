@@ -13,10 +13,12 @@ export default {
     } catch (e) {
       // modify the e object so we can customize the error message.
       // e.message is readOnly.
-      throw {
-        ...(e as Error),
-        errors: [`This is likely due to your browser's cookie settings.`],
-      };
+      Object.defineProperty(e, 'errors', {
+        value: [`This is likely due to your browser's cookie settings.`],
+        writable: false,
+      });
+
+      throw e;
     }
   },
 
