@@ -310,7 +310,8 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 		if err != nil {
 			return nil, fmt.Errorf("failed to open connection: %w", err)
 		}
-	} else if driverName == dbTypeSnowflake {
+	} else if driverName == dbTypeSnowflake && c.Password == "" {
+		// TODO: Remove the password check when Snowflake fully removes password auth.
 		var err error
 		c.db, err = openSnowflake(c.ConnectionURL, c.Username, c.PrivateKey)
 		if err != nil {
