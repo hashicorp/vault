@@ -172,4 +172,23 @@ export default class ApiService extends Service {
     const { context } = requestContext;
     context.query = { ...context.query, ...params };
   }
+
+  // accepts a list response as { keyInfo, keys } and returns a flat array of the keyInfo datum
+  // to preserve the keys (unique identifiers) the value will be set on the datum as id
+  keyInfoToArray(response: unknown = {}) {
+    const { keyInfo, keys } = response as { keyInfo?: Record<string, unknown>; keys?: string[] };
+    if (!keyInfo || !keys) {
+      return [];
+    }
+    return keys.reduce(
+      (arr, key) => {
+        const datum = keyInfo[key];
+        if (datum) {
+          arr.push({ id: key, ...datum });
+        }
+        return arr;
+      },
+      [] as Record<string, unknown>[]
+    );
+  }
 }

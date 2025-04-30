@@ -183,4 +183,20 @@ module('Unit | Service | api', function (hooks) {
       'All supported headers are set'
     );
   });
+
+  test('it should map list response to array', async function (assert) {
+    const response = {
+      keyInfo: {
+        key1: { title: 'Title 1' },
+        key2: { title: 'Title 2' },
+      },
+      keys: ['key1', 'key2'],
+    };
+    const expectedResponse = [
+      { id: 'key1', title: 'Title 1' },
+      { id: 'key2', title: 'Title 2' },
+    ];
+    const listData = this.apiService.keyInfoToArray(response);
+    assert.deepEqual(listData, expectedResponse, 'List response is mapped to array');
+  });
 });
