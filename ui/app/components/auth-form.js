@@ -13,7 +13,6 @@ import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/helpers/s
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { v4 as uuidv4 } from 'uuid';
-import apiErrorMessage from 'vault/utils/api-error-message';
 
 /**
  * @module AuthForm
@@ -190,8 +189,8 @@ export default Component.extend(DEFAULTS, {
         this.set('token', response.auth.clientToken);
         this.send('doSubmit');
       } catch (e) {
-        const error = yield apiErrorMessage(e);
-        this.set('error', `Token unwrap failed: ${error}`);
+        const { message } = yield this.api.parseError(e);
+        this.set('error', `Token unwrap failed: ${message}`);
       }
     })
   ),

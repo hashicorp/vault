@@ -81,7 +81,8 @@ async save() {
       this.router.transitionTo('another.route');
     }
   } catch(error) {
-    this.error = await apiErrorMessage(error);
+    const { message } = await this.api.parseError(error);
+    this.errorMessage = message;
   }
 }
 ```
