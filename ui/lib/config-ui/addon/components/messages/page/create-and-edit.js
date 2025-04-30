@@ -6,7 +6,6 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { task, timeout } from 'ember-concurrency';
-import apiErrorMessage from 'vault/utils/api-error-message';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import Ember from 'ember';
@@ -90,7 +89,8 @@ export default class MessagesList extends Component {
         this.router.transitionTo('vault.cluster.config-ui.messages.message.details', id);
       }
     } catch (error) {
-      this.errorBanner = yield apiErrorMessage(error);
+      const { message } = yield this.api.parseError(error);
+      this.errorBanner = message;
       this.invalidFormAlert = 'There was an error submitting this form.';
     }
   }

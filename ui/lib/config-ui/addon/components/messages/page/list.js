@@ -10,7 +10,6 @@ import { task, timeout } from 'ember-concurrency';
 import { dateFormat } from 'core/helpers/date-format';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import apiErrorMessage from 'vault/utils/api-error-message';
 import { isAfter } from 'date-fns';
 import timestamp from 'core/utils/timestamp';
 
@@ -102,8 +101,8 @@ export default class MessagesList extends Component {
       this.customMessages.fetchMessages();
       this.flashMessages.success(`Successfully deleted ${message.title}.`);
     } catch (e) {
-      const errorMessage = yield apiErrorMessage(e);
-      this.flashMessages.danger(errorMessage);
+      const { message } = yield this.api.parseError(e);
+      this.flashMessages.danger(message);
     } finally {
       this.messageToDelete = null;
     }
