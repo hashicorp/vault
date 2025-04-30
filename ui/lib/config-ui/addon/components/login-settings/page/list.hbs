@@ -17,13 +17,11 @@
 {{#each @loginRules as |rule|}}
   <LinkedBlock class="list-item-row linked-block-item is-no-underline">
     <div>
-      <div class="has-text-grey is-grid align-items-center linked-block-title">
-        <Hds::TooltipButton @text={{rule.name}} aria-label="Type of rule">
-          <Icon @name="user-check" class="has-text-grey-light" />
-        </Hds::TooltipButton>
-        <div data-test-rule-name={{rule.name}}>{{rule.name}}</div>
+      <div class="is-grid align-items-center linked-block-title">
+        <Hds::Icon @name="user-check" @size="24" />
+        <div class="has-text-weight-semibold has-left-margin-xs" data-test-rule-name={{rule.name}}>{{rule.name}}</div>
       </div>
-      <div data-test-rule-path={{rule.namespace}}>{{rule.namespace}}</div>
+      <div class="has-top-margin-m" data-test-rule-path={{rule.namespace}}>{{rule.namespace}}</div>
     </div>
     <div class="linked-block-popup-menu">
       <Hds::Dropdown @isInline={{true}} as |dd|>
@@ -36,9 +34,9 @@
           Read
         </dd.Interactive> 
         }}
-        {{#if (has-permission "something")}}
-          <dd.Interactive @color="critical" data-test-confirm-action-trigger>Delete</dd.Interactive>
-        {{/if}}
+        {{!-- {{#if (has-permission "status")}} --}}
+        <dd.Interactive @color="critical" data-test-confirm-action-trigger>Delete</dd.Interactive>
+        {{!-- {{/if}} --}}
       </Hds::Dropdown>
     </div>
   </LinkedBlock>
