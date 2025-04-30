@@ -13,69 +13,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/axiomhq/hyperloglog"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
 	"google.golang.org/protobuf/proto"
 )
 
-type HLLGetter func(ctx context.Context, startTime time.Time) (*hyperloglog.Sketch, error)
-
 // computeCurrentMonthForBillingPeriod computes the current month's data with respect
 // to a billing period.
-func (a *ActivityLog) computeCurrentMonthForBillingPeriod(ctx context.Context, byMonth map[int64]*processMonth, startTime time.Time, endTime time.Time) (*activity.MonthRecord, error) {
-	return a.computeCurrentMonthForBillingPeriodInternal(ctx, byMonth, a.CreateOrFetchHyperlogLog, startTime, endTime)
+func (a *ActivityLog) computeCurrentMonthForBillingPeriod(byMonth map[int64]*processMonth, startTime time.Time, endTime time.Time) (*activity.MonthRecord, error) {
+	return a.computeCurrentMonthForBillingPeriodInternal(byMonth, startTime, endTime)
 }
 
-// CreateOrFetchHyperlogLog creates a new hyperlogLog for each startTime (month) if it does not exist in storage.
-// hyperlogLog is used here to solve count-distinct problem i.e, to count the number of distinct clients
-// In activity log, hyperloglog is a sketch containing clientID's in a given month
-func (a *ActivityLog) CreateOrFetchHyperlogLog(ctx context.Context, startTime time.Time) (*hyperloglog.Sketch, error) {
-	monthlyHLLPath := fmt.Sprintf("%s%d", distinctClientsBasePath, startTime.Unix())
-	hll := hyperloglog.New()
-	data, err := a.view.Get(ctx, monthlyHLLPath)
-	if err != nil {
-		// If there is no hll, we should log the error, as having this fire multiple times
-		// is a sign that something is wrong with hll store/get. However, this is not a
-		// critical failure (in fact it is expected during the first month rotation after
-		// this code is deployed), so we will not throw an error.
-		a.logger.Warn("fetch of hyperloglog threw an error at path", monthlyHLLPath, "error", err)
-	}
-	if data == nil {
-		a.logger.Trace("creating hyperloglog ", "path", monthlyHLLPath)
-		err = a.StoreHyperlogLog(ctx, startTime, hll)
-		if err != nil {
-			return hll, fmt.Errorf("error storing hyperloglog at path %s: error %w", monthlyHLLPath, err)
-		}
-	} else {
-		err = hll.UnmarshalBinary(data.Value)
-		if err != nil {
-			return hll, fmt.Errorf("error unmarshaling hyperloglog at path %s: error %w", monthlyHLLPath, err)
-		}
-	}
-	return hll, nil
-}
-
-// StoreHyperlogLog stores the hyperloglog (a sketch containing client IDs) for startTime (month) in storage
-func (a *ActivityLog) StoreHyperlogLog(ctx context.Context, startTime time.Time, newHll *hyperloglog.Sketch) error {
-	monthlyHLLPath := fmt.Sprintf("%s%d", distinctClientsBasePath, startTime.Unix())
-	a.logger.Trace("storing hyperloglog ", "path", monthlyHLLPath)
-	marshalledHll, err := newHll.MarshalBinary()
-	if err != nil {
-		return err
-	}
-	err = a.view.Put(ctx, &logical.StorageEntry{
-		Key:   monthlyHLLPath,
-		Value: marshalledHll,
-	})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Context, byMonth map[int64]*processMonth, hllGetFunc HLLGetter, startTime time.Time, endTime time.Time) (*activity.MonthRecord, error) {
+func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(byMonth map[int64]*processMonth, startTime time.Time, endTime time.Time) (*activity.MonthRecord, error) {
 	if timeutil.IsCurrentMonth(startTime, a.clock.Now().UTC()) {
 		monthlyComputation := a.transformMonthBreakdowns(byMonth)
 		if len(monthlyComputation) > 1 {
@@ -85,39 +35,19 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 			return monthlyComputation[0], nil
 		}
 	}
-	// Fetch all hyperloglogs for months from startMonth to endMonth. If a month doesn't have an associated
-	// hll, warn and continue.
 
-	// hllMonthlyTimestamp is the start time of the month corresponding to which a hyperloglog of that month's
-	// client data is stored. The path at which the hyperloglog for a month is stored containes this timestamp.
-	hllMonthlyTimestamp := timeutil.StartOfMonth(startTime)
-	billingPeriodHLL := hyperloglog.New()
-	for hllMonthlyTimestamp.Before(timeutil.StartOfMonth(endTime)) {
-		monthSketch, err := hllGetFunc(ctx, hllMonthlyTimestamp)
-		// If there's an error with the hyperloglog fetch, we should still deduplicate on
-		// the hlls that we have so we will warn that we couldn't find a hll for the month
-		// and continue.
-		if err != nil {
-			a.logger.Warn("no hyperloglog associated with timestamp", "timestamp", hllMonthlyTimestamp)
-			hllMonthlyTimestamp = timeutil.StartOfNextMonth(hllMonthlyTimestamp)
-			continue
-		}
-		// Union the monthly hll into the billing period's hll
-		err = billingPeriodHLL.Merge(monthSketch)
-		if err != nil {
-			// In this case we can't afford to fail silently. Since this error indicates
-			// data corruption, we should not try to do any further deduplication
-			return nil, err
-		}
-		hllMonthlyTimestamp = timeutil.StartOfNextMonth(hllMonthlyTimestamp)
-	}
 	// There's at most one month of data here. We should validate this assumption explicitly
 	if len(byMonth) > 1 {
 		return nil, errors.New(fmt.Sprintf("multiple months of data found in partial month's client count breakdowns: %+v\n", byMonth))
 	}
+
+	// counts including new clients and old clients
 	totalCounts := &activity.CountsRecord{}
+	// new client counts
 	newCounts := &activity.CountsRecord{}
+	// namespaces of new clients
 	newNamespaces := make([]*activity.MonthlyNamespaceRecord, 0)
+	// namespaces including both namespaces with new and repeated clients
 	totalNamespaces := make([]*activity.MonthlyNamespaceRecord, 0)
 
 	monthRecord := &activity.MonthRecord{
@@ -133,19 +63,6 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 		return monthRecord, nil
 	}
 
-	// Create a copy of the previous month's HLL per client type
-	// We'll add all of the new clients seen this month to these typed HLLs
-	hllByType := make(map[string]*hyperloglog.Sketch, len(ActivityClientTypes))
-	for _, typ := range ActivityClientTypes {
-		hllByType[typ] = billingPeriodHLL.Clone()
-	}
-
-	// This is the estimated number of clients seen in the previous months
-	seenPreviousMonthsEstimate := billingPeriodHLL.Estimate()
-
-	runningMountEstimatesByType := make(map[string]uint64)
-	runningNSEstimatesByType := make(map[string]uint64)
-
 	// we've already checked that byMonth has length of 1, so this will get the
 	// value of the only entry in the map
 	var month *processMonth
@@ -157,31 +74,28 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 		return nil, errors.New("malformed current month used to calculate current month's activity")
 	}
 
-	namespaces := month.Namespaces.sort()
-	for _, n := range namespaces {
-		nsID := n.id
-		namespace := n.processByNamespace
+	// clients in current billing period until last month
+	currentBillingPeriodClients := a.GetClientIDsUsageInfo()
+	for nsID, namespace := range month.Namespaces {
 		namespaceActivity := &activity.MonthlyNamespaceRecord{NamespaceID: nsID, Counts: &activity.CountsRecord{}}
 		newNamespaceActivity := &activity.MonthlyNamespaceRecord{NamespaceID: nsID, Counts: &activity.CountsRecord{}}
 		mountsActivity := make([]*activity.MountRecord, 0)
 		newMountsActivity := make([]*activity.MountRecord, 0)
 
-		mounts := namespace.Mounts.sort()
-		for _, m := range mounts {
-			mountAccessor := m.accessor
-			mount := m.processMount
+		for mountAccessor, mount := range namespace.Mounts {
 			mountPath := a.mountAccessorToMountPath(mountAccessor)
 
 			mountCounts := &activity.CountsRecord{}
 			newMountCounts := &activity.CountsRecord{}
 
 			for _, typ := range ActivityClientTypes {
-				clients := mount.Counts.clientsByType(typ)
-				clientIDs := clients.sort()
-
-				// sort the client IDs before inserting
-				for _, clientID := range clientIDs {
-					hllByType[typ].Insert([]byte(clientID))
+				for clientID := range mount.Counts.clientsByType(typ) {
+					if _, ok := currentBillingPeriodClients[clientID]; !ok {
+						// new client
+						a.incrementCount(newCounts, 1, typ)
+						a.incrementCount(newMountCounts, 1, typ)
+						a.incrementCount(newNamespaceActivity.Counts, 1, typ)
+					}
 
 					// increment the per mount, per namespace, and total counts
 					// for each client
@@ -189,12 +103,6 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 					a.incrementCount(mountCounts, 1, typ)
 					a.incrementCount(namespaceActivity.Counts, 1, typ)
 				}
-
-				// get an estimated number of new clients on this mount and
-				// increment the new mount counts
-				mountEstimate := hllByType[typ].Estimate() - seenPreviousMonthsEstimate - runningMountEstimatesByType[typ]
-				runningMountEstimatesByType[typ] += mountEstimate
-				a.incrementCount(newMountCounts, int(mountEstimate), typ)
 			}
 
 			// if there are any new clients on this mount, add it to the
@@ -208,28 +116,12 @@ func (a *ActivityLog) computeCurrentMonthForBillingPeriodInternal(ctx context.Co
 		namespaceActivity.Mounts = mountsActivity
 		totalNamespaces = append(totalNamespaces, namespaceActivity)
 
-		for _, typ := range ActivityClientTypes {
-			// now that we've added all the clients from the namespace, get an
-			// estimated number of new clients on the namespace and increment
-			// the new namespace counts
-			nsEstimate := hllByType[typ].Estimate() - seenPreviousMonthsEstimate - runningNSEstimatesByType[typ]
-			runningNSEstimatesByType[typ] += nsEstimate
-			a.incrementCount(newNamespaceActivity.Counts, int(nsEstimate), typ)
-		}
-
 		// if there are any new clients on this namespace, add it to the
 		// list of new namespaces
 		if newNamespaceActivity.Counts.HasCounts() {
 			newNamespaceActivity.Mounts = newMountsActivity
 			newNamespaces = append(newNamespaces, newNamespaceActivity)
 		}
-	}
-
-	// get the overall estimated number of new clients and increment the
-	// total new counts
-	for _, typ := range ActivityClientTypes {
-		totalEstimate := int(hllByType[typ].Estimate() - seenPreviousMonthsEstimate)
-		a.incrementCount(newCounts, totalEstimate, typ)
 	}
 
 	monthRecord.Namespaces = totalNamespaces
@@ -559,19 +451,29 @@ func (a *ActivityLog) namespaceRecordToCountsResponse(record *activity.Namespace
 }
 
 func (a *ActivityLog) GetClientIDsUsageInfo() map[string]struct{} {
-	a.clientIDsUsageInfoLock.Lock()
-	defer a.clientIDsUsageInfoLock.Unlock()
-	return a.clientIDsUsageInfo
+	a.clientIDsUsage.clientIDsUsageInfoLock.Lock()
+	defer a.clientIDsUsage.clientIDsUsageInfoLock.Unlock()
+	return a.clientIDsUsage.clientIDsUsageInfo
 }
 
 func (a *ActivityLog) SetClientIDsUsageInfo(inMemClientIDsMap map[string]struct{}) {
-	a.clientIDsUsageInfoLock.Lock()
-	defer a.clientIDsUsageInfoLock.Unlock()
+	a.clientIDsUsage.clientIDsUsageInfoLock.Lock()
+	defer a.clientIDsUsage.clientIDsUsageInfoLock.Unlock()
 
-	a.clientIDsUsageInfo = inMemClientIDsMap
+	a.clientIDsUsage.clientIDsUsageInfo = inMemClientIDsMap
 }
 
 // GetclientIDsUsageInfoLoaded gets a.clientIDsUsageInfoLoaded for external tests
 func (a *ActivityLog) GetClientIDsUsageInfoLoaded() bool {
-	return a.clientIDsUsageInfoLoaded.Load()
+	return a.clientIDsUsage.clientIDsUsageInfoLoaded.Load()
+}
+
+// SetClientIDsUsageInfoLoaded sets a.clientIDsUsageInfoLoaded for external tests
+func (a *ActivityLog) SetClientIDsUsageInfoLoaded(loaded bool) {
+	a.clientIDsUsage.clientIDsUsageInfoLoaded.Store(loaded)
+}
+
+// SetupClientIDsUsageInfo calls core.setupClientIDsUsageInfo for external tests
+func (c *Core) SetupClientIDsUsageInfo(ctx context.Context) {
+	c.setupClientIDsUsageInfo(ctx)
 }

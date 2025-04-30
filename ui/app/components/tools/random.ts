@@ -7,7 +7,6 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import apiErrorMessage from 'vault/utils/api-error-message';
 
 import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
@@ -52,7 +51,8 @@ export default class ToolsRandom extends Component {
       this.randomBytes = randomBytes || '';
       this.flashMessages.success('Generated random bytes successfully.');
     } catch (error) {
-      this.errorMessage = await apiErrorMessage(error);
+      const { message } = await this.api.parseError(error);
+      this.errorMessage = message;
     }
   }
 }

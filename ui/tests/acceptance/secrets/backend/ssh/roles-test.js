@@ -17,7 +17,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import listPage from 'vault/tests/pages/secrets/backend/list';
 import editPage from 'vault/tests/pages/secrets/backend/ssh/edit-role';
@@ -35,7 +35,7 @@ module('Acceptance | ssh | roles', function (hooks) {
 
   hooks.beforeEach(function () {
     this.uid = uuidv4();
-    return authPage.login();
+    return login();
   });
 
   const PUB_KEY = `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCn9p5dHNr4aU4R2W7ln+efzO5N2Cdv/SXk6zbCcvhWcblWMjkXf802B0PbKvf6cJIzM/Xalb3qz1cK+UUjCSEAQWefk6YmfzbOikfc5EHaSKUqDdE+HlsGPvl42rjCr28qYfuYh031YfwEQGEAIEypo7OyAj+38NLbHAQxDxuaReee1YCOV5rqWGtEgl2VtP5kG+QEBza4ZfeglS85f/GGTvZC4Jq1GX+wgmFxIPnd6/mUXa4ecoR0QMfOAzzvPm4ajcNCQORfHLQKAcmiBYMiyQJoU+fYpi9CJGT1jWTmR99yBkrSg6yitI2qqXyrpwAbhNGrM0Fw0WpWxh66N9Xp meirish@Macintosh-3.local`;
@@ -120,7 +120,7 @@ module('Acceptance | ssh | roles', function (hooks) {
     await click(GENERAL.tab(sshPath));
     for (const role of ROLES) {
       // create a role
-      await click(SES.createSecret);
+      await click(SES.createSecretLink);
       assert.dom(SES.secretHeader).includesText('SSH Role', `${role.type}: renders the create page`);
 
       await fillIn(GENERAL.inputByAttr('name'), role.name);

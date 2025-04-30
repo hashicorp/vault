@@ -8,7 +8,6 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { stringify } from 'core/helpers/stringify';
-import apiErrorMessage from 'vault/utils/api-error-message';
 
 import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
@@ -83,11 +82,12 @@ export default class ToolsWrap extends Component {
     const wrap = this.wrapTTL || '';
 
     try {
-      const { wrap_info } = await this.api.sys.wrap(data, this.api.buildHeaders({ wrap }));
-      this.token = wrap_info?.token || '';
+      const { wrapInfo } = await this.api.sys.wrap(data, this.api.buildHeaders({ wrap }));
+      this.token = wrapInfo?.token || '';
       this.flashMessages.success('Wrap was successful.');
     } catch (error) {
-      this.errorMessage = await apiErrorMessage(error);
+      const { message } = await this.api.parseError(error);
+      this.errorMessage = message;
     }
   }
 }

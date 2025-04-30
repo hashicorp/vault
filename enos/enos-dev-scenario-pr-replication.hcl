@@ -39,7 +39,12 @@ scenario "dev_pr_replication" {
 
     exclude {
       artifact = ["deb"]
-      distro   = ["rhel"]
+      distro   = ["rhel", "amzn"]
+    }
+
+    exclude {
+      artifact = ["deb", "rpm"]
+      distro   = ["sles", "leap"]
     }
 
     exclude {

@@ -1,0 +1,42 @@
+---
+layout: docs
+page_title: Manage certificates
+description: >-
+  Integrate with certificate authorities to manage certificate life cycles and
+  authenticate clients.
+---
+
+# Manage certificates
+
+@include '/why-use-vault/manage-certificates-small.mdx'
+
+Generate dynamic X.509 certificates without the manual process of generating a
+private key and CSR, submitting to a CA, and waiting the signing process to
+complete. Built-in authentication and authorization mechanisms in Vault provide
+verification functionality and support unique, ephemeral certificate with short
+CRLs.
+
+<Tabs>
+<Tab heading="Guides" group="guides">
+
+- [PKI intermediate CA quickstart](/vault/docs/secrets/pki/quick-start-intermediate-ca)
+- [KMIP secrets engine overview](/vault/docs/secrets/kmip)
+- [PKI Certificate Management Protocol v2 (CMPv2)](/vault/docs/secrets/pki/cmpv2)
+- [Authenticate with TLS certificates](/vault/docs/auth/cert)
+- [Troubleshoot PKI secrets engine and ACME](/vault/docs/secrets/pki/troubleshooting-acme)
+
+</Tab>
+<Tab heading="Tutorials" group="tutorials">
+
+- [Manage certificates with ACME clients and the PKI secrets engine](/vault/tutorials/pki/pki-acme-caddy)
+- [Use PKI with external policy services](/vault/tutorials/pki/pki-cieps)
+- [PKI Unified CRL and OCSP with cross cluster revocation](/vault/tutorials/pki/pki-unified-crl-ocsp-cross-cluster)
+
+</Tab>
+<Tab heading="References" group="reference">
+
+- [PKI plugin API](/vault/api-docs/secret/pki)
+- [`vault pki` CLI commands](/vault/docs/commands/pki)
+
+</Tab>
+</Tabs>

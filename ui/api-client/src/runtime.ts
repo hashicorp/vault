@@ -399,17 +399,17 @@ export interface ApiResponse<T> {
 export interface VoidResponse {
   auth: unknown;
   data: unknown;
-  lease_duration: number;
-  lease_id: string;
-  mount_type: string;
+  leaseDuration: number;
+  leaseId: string;
+  mountType: string;
   renewable: boolean;
-  request_id: string;
+  requestId: string;
   warnings: Array<string> | null;
-  wrap_info: {
+  wrapInfo: {
     accessor: string;
-    creation_path: string;
-    creation_time: string;
-    wrapped_accessor: string;
+    creationPath: string;
+    creationTime: string;
+    wrappedAccessor: string;
     token: string;
     ttl: number;
   } | null;
@@ -419,19 +419,50 @@ export interface ResponseTransformer<T> {
     (json: any): T;
 }
 
+export function camelizeResponseKeys(json: any) {
+    const camelizeKeys = (json: any) => {
+      const notAnObject = (obj: unknown) => Object.prototype.toString.call(obj) !== '[object Object]';
+
+      if (notAnObject(json)) {
+        return json;
+      }
+      if (Array.isArray(json)) {
+        return json.map(camelizeKeys);
+      }
+      return Object.keys(json).reduce((convertedJson: Record<string, unknown>, key) => {
+        const value = json[key];
+        const convertedValue = notAnObject(value) ? value : camelizeKeys(value);
+        const convertedKey = key.split('_').reduce((str, segment, index) => {
+            const capitalized = index ? segment.charAt(0).toUpperCase() + segment.slice(1) : segment;
+            return str.concat(capitalized);
+        }, '');
+        convertedJson[convertedKey] = convertedValue;
+        return convertedJson;
+      }, {});
+    };
+
+    return camelizeKeys(json);
+}
+
 export class JSONApiResponse<T> {
     constructor(public raw: Response, private transformer: ResponseTransformer<T> = (jsonValue: any) => jsonValue) {}
 
     async value(): Promise<T> {
         const response = await this.raw.json();
-        return this.transformer(response.data);
+        const transformed = this.transformer(response.data);
+        return camelizeResponseKeys(transformed);
     }
 }
 
 export class VoidApiResponse {
     constructor(public raw: Response) {}
     async value(): Promise<VoidResponse> {
-        return await this.raw.json();
+        try {
+            const response = await this.raw.json();
+            return camelizeResponseKeys(response);
+        } catch (e) {
+            return undefined;
+        }
     }
 }
 

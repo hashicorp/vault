@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentURL, visit } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 
 const link = (label) => `[data-test-sidebar-nav-link="${label}"]`;
 const panel = (label) => `[data-test-sidebar-nav-panel="${label}"]`;
@@ -17,7 +17,7 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    return authPage.login();
+    return login();
   });
 
   // common links are tested in the sidebar-nav test and will not be covered here

@@ -3,6 +3,24 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 1.19.2
+### April 18, 2025
+
+**Enterprise LTS:** Vault Enterprise 1.19 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+CHANGES:
+
+* core: Bump Go version to 1.23.7
+* core: Bump Go version to 1.23.8
+* secrets/openldap: Update plugin to v0.15.4 [[GH-30279](https://github.com/hashicorp/vault/pull/30279)]
+
+BUG FIXES:
+
+* secrets/openldap: Prevent static role rotation on upgrade when `NextVaultRotation` is nil. Fixes an issue where static roles were unexpectedly rotated after upgrade due to a missing `NextVaultRotation` value. Now sets it to either `LastVaultRotation + RotationPeriod` or `now + RotationPeriod`. [[GH-30265](https://github.com/hashicorp/vault/pull/30265)]
+* secrets/pki (enterprise): Address a parsing bug that rejected CMPv2 requests containing a validity field.
+* secrets/pki: fix a bug where key_usage was ignored when generating root certificates, and signing certain intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/30034)]
+* secrets/transit: fix a panic when rotating on a managed key returns an error [[GH-30214](https://github.com/hashicorp/vault/pull/30214)]
+
 ## 1.19.1
 ### April 4, 2025
 
@@ -35,6 +53,7 @@ BUG FIXES:
 * aws/secrets: Prevent vault from rejecting secret role configurations where no regions or endpoints are set [[GH-29996](https://github.com/hashicorp/vault/pull/29996)]
 * core (enterprise): add nil check before attempting to use Rotation Manager operations.
 * core: Fix a bug that prevents certain loggers from writing to a log file. [[GH-29917](https://github.com/hashicorp/vault/pull/29917)]
+* core/raft: Fix decoding `auto_join` configurations that include escape characters. [[GH-29874](https://github.com/hashicorp/vault/pull/29874)]
 * identity: reintroduce RPC functionality for group creates, allowing performance standbys to handle external group changes during login and token renewal [[GH-30069](https://github.com/hashicorp/vault/pull/30069)]
 * plugins (enterprise): Fix plugin registration with artifact when a binary for the same plugin is already present in the plugin directory.
 * secrets/aws: fix a bug where environment and shared credential providers were overriding the WIF configuration [[GH-29982](https://github.com/hashicorp/vault/pull/29982)]
@@ -280,6 +299,21 @@ Unblocks customers that were stuck in a failing loop when attempting to rotate s
 * ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 * ui: No longer running decodeURIComponent on KVv2 list view allowing percent encoded data-octets in path name. [[GH-28698](https://github.com/hashicorp/vault/pull/28698)]
 * vault/diagnose: Fix time to expiration reporting within the TLS verification to not be a month off. [[GH-29128](https://github.com/hashicorp/vault/pull/29128)]
+
+## 1.18.8 Enterprise
+### April 18, 2025
+
+CHANGES:
+
+* core: Bump Go version to 1.23.7
+* core: Bump Go version to 1.23.8
+
+BUG FIXES:
+
+* secrets/openldap: Prevent static role rotation on upgrade when `NextVaultRotation` is nil. Fixes an issue where static roles were unexpectedly rotated after upgrade due to a missing `NextVaultRotation` value. Now sets it to either `LastVaultRotation + RotationPeriod` or `now + RotationPeriod`. [[GH-30265](https://github.com/hashicorp/vault/pull/30265)]
+* secrets/pki (enterprise): Address a parsing bug that rejected CMPv2 requests containing a validity field.
+* secrets/pki: fix a bug where key_usage was ignored when generating root certificates, and signing certain intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/30034)]
+* secrets/transit: fix a panic when rotating on a managed key returns an error [[GH-30214](https://github.com/hashicorp/vault/pull/30214)]
 
 ## 1.18.7 Enterprise
 ### April 4, 2025
@@ -699,6 +733,19 @@ use versioned plugins. [[GH-27881](https://github.com/hashicorp/vault/pull/27881
 * ui: fix namespace picker not working when in small screen where the sidebar is collapsed by default. [[GH-27728](https://github.com/hashicorp/vault/pull/27728)]
 * ui: fixes renew-self being called right after login for non-renewable tokens [[GH-28204](https://github.com/hashicorp/vault/pull/28204)]
 * ui: fixes toast (flash) alert message saying "created" when deleting a kv v2 secret [[GH-28093](https://github.com/hashicorp/vault/pull/28093)]
+
+## 1.17.15 Enterprise
+### April 18, 2025
+
+CHANGES:
+
+* core: Bump Go version to 1.23.7
+* core: Bump Go version to 1.23.8
+
+BUG FIXES:
+
+* secrets/openldap: Prevent static role rotation on upgrade when `NextVaultRotation` is nil. Fixes an issue where static roles were unexpectedly rotated after upgrade due to a missing `NextVaultRotation` value. Now sets it to either `LastVaultRotation + RotationPeriod` or `now + RotationPeriod`. [[GH-30265](https://github.com/hashicorp/vault/pull/30265)]
+* secrets/transit: fix a panic when rotating on a managed key returns an error [[GH-30214](https://github.com/hashicorp/vault/pull/30214)]
 
 ## 1.17.14 Enterprise
 ### April 04, 2025
@@ -1265,6 +1312,20 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 * ui: fix issue where a month without new clients breaks the client count dashboard [[GH-27352](https://github.com/hashicorp/vault/pull/27352)]
 * ui: fixed a bug where the replication pages did not update display when navigating between DR and performance [[GH-26325](https://github.com/hashicorp/vault/pull/26325)]
 * ui: fixes undefined start time in filename for downloaded client count attribution csv [[GH-26485](https://github.com/hashicorp/vault/pull/26485)]
+
+## 1.16.19 Enterprise
+### April 18, 2025
+**Enterprise LTS: ** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](Long-term support for Vault | Vault | HashiCorp Developer ) release.
+
+CHANGES:
+
+* core: Bump Go version to 1.23.7
+* core: Bump Go version to 1.23.8
+
+BUG FIXES:
+
+* secrets/openldap: Prevent static role rotation on upgrade when `NextVaultRotation` is nil. Fixes an issue where static roles were unexpectedly rotated after upgrade due to a missing `NextVaultRotation` value. Now sets it to either `LastVaultRotation + RotationPeriod` or `now + RotationPeriod`. [[GH-30265](https://github.com/hashicorp/vault/pull/30265)]
+* secrets/transit: fix a panic when rotating on a managed key returns an error [[GH-30214](https://github.com/hashicorp/vault/pull/30214)]
 
 ## 1.16.18 Enterprise
 ### April 4, 2025

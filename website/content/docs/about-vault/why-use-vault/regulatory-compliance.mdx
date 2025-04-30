@@ -1,0 +1,50 @@
+---
+layout: docs
+page_title: Support regulatory compliance
+description: >-
+  Configure Vault as part of an HSM solution, FIPS compliant architecture, or
+  PKCS11 authentication workflow.
+---
+
+# Support regulatory compliance
+
+@include '/why-use-vault/regulatory-compliance-small.mdx'
+
+Vault Enterprise supports HSM for devices with PKCS#11 version 2.20+ interfaces
+with integration libraries for Linux/amd64 platforms. Compliance support
+includes:
+
+- HSM-wrapped root keys
+- automatic unsealing with the HSM-wrapped root key
+- entropy augmentation from external cryptographic modules
+- FIPS 140-2 compliant cryptography built into the Vault binary
+- FIPS seal wrapping for critical Security parameters
+
+
+<Tabs>
+<Tab heading="Key concepts + Overviews" group="overviews">
+
+- [How HSM support changes Vault behavioral](/vault/docs/enterprise/hsm/behavior)
+- [HSM security details](/vault/docs/enterprise/hsm/security)
+- [FIPS compliance in Vault](/vault/docs/enterprise/fips)
+- [Built-in FIPS 140-2 support](/vault/docs/enterprise/fips/fips1402)
+
+</Tab>
+<Tab heading="Guides" group="guides">
+
+- [Configure auto-unseal and seal wrapping for HSM PKCS11](/vault/docs/configuration/seal/pkcs11)
+- [Seal wrap for FIPS compliance](/vault/docs/enterprise/fips/sealwrap)
+
+</Tab>
+<Tab heading="Tutorials" group="tutorials">
+
+- [Generate certificates with HSM or KMS managed keys](/vault/tutorials/pki/managed-key-pki)
+
+</Tab>
+<Tab heading="References" group="reference">
+
+- [Verified HSM partners](/vault/docs/partners/hsm)
+
+</Tab>
+</Tabs>
+

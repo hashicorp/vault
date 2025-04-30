@@ -16,6 +16,12 @@
  */
 export interface QueryTokenSelfCapabilitiesRequest {
     /**
+     * Namespace for which capabilities are being queried.
+     * @type {string}
+     * @memberof QueryTokenSelfCapabilitiesRequest
+     */
+    namespace?: string;
+    /**
      * Use 'paths' instead.
      * @type {Array<string>}
      * @memberof QueryTokenSelfCapabilitiesRequest

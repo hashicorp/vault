@@ -778,7 +778,7 @@ func (c *Core) HALock() sync.Locker {
 
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
-	EntCoreConfig
+	entCoreConfig
 
 	DevToken string
 
@@ -1361,8 +1361,11 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.events = events
 	c.events.Start()
 
-	c.clusterAddrBridge = conf.ClusterAddrBridge
+	// Create the snapshot manager if we're on enterprise and running raft
+	// storage backend.
+	c.createSnapshotManager()
 
+	c.clusterAddrBridge = conf.ClusterAddrBridge
 	return c, nil
 }
 

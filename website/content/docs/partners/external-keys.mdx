@@ -1,0 +1,93 @@
+---
+layout: docs
+page_title: External key partners
+description: >-
+  Reference list of verified HSM Vault integration partners
+---
+
+# Verified external key partners
+
+To support a variety of use cases, Vault verifies protocol implementation and
+integrations with partner products, appliances, and applications that support
+advanced data protection features.
+
+@include 'alerts/partner-program.mdx'
+
+## External key management (EKMS)
+
+Vault centrally manages and automates encryption keys across environments so
+customers can [manage external encryption keys](/vault/docs/secrets/key-management)
+used in third party services and products with the following plugins:
+
+Abbreviation | Full plugin name
+------------ | ----------------
+EKMMSSQL     | [Vault EKM provider for SQL server](/vault/docs/platform/mssql)
+KV           | [Key/Value secrets engine](/vault/docs/secrets/kv)
+KMSE         | [Key Management secrets engine](/vault/docs/secrets/key-management)
+KMIP         | [KMIP secrets engine](/vault/docs/secrets/kmip)
+PKCS#11      | [PKCS#11 provider](/vault/docs/enterprise/pkcs11-provider)
+Transit      | [Transit secrets engine](/vault/docs/secrets/transit)
+
+<Note title="Vault verified vs HCP Vault verified">
+
+  HCP Vault verified integrations work with the current version HCP Vault
+  Dedicated. Self-managed Vault instances must meet the required minimum version
+  for verification guarantees.
+
+</Note>
+
+## Verified integrations
+
+The table below indicates the plugin support for partner products, the
+verification status for HCP Vault Dedicated and the minimum Vault version
+required for verified behavior in self-managed Vault instances:
+
+| Partner           | Product                  | Vault plugin | Vault verified | HCP Vault verified
+| ----------------- | ------------------------ | ------------ | -------------- | ------------------
+| AWS               | AWS KMS                  | KMSE         | 1.8+           | Yes
+| Baffle            | Shield                   | KV           | 1.3+           | **No**
+| Bloombase         | StoreSafe                | KMIP         | 1.9+           | N/A
+| Cloudian          | HyperStore 7.5.1         | KMIP         | 1.12+          | N/A
+| Cockroach Labs    | Cockroach Cloud DB       | KMSE         | 1.10+          | N/A
+| Cockroach Labs    | Cockroach DB             | Transit      | 1.10+          | Yes
+| Cohesity          | Cohesity DataPlatform    | KMIP         | 1.13.2+        | N/A
+| Commvault Systems | CommVault                | KMIP         | 1.9+           | N/A
+| Cribl             | Cribl Stream             | KV           | 1.8+           | Yes
+| DataStax          | DataStax Enterprise      | KMIP         | 1.11+          | Yes
+| Dell              | PowerMax                 | KMIP         | 1.12.1+        | N/A
+| Dell              | PowerProtect DDOS 8.0.X  | KMIP         | 1.15.2+        | N/A 
+| EnterpriseDB      | Postgres Advanced Server | KMIP         | 1.12.6+        | N/A
+| Garantir          | GaraSign                 | Transit      | 1.5+           | Yes
+| Google            | Google KMS               | KMSE         | 1.9+           | N/A
+| HPE               | Exmeral Data Fabric      | KMIP         | 1.2+           | N/A
+| Intel             | Key Broker Service       | KMIP         | 1.11+          | N/A
+| JumpWire          | JumpWire                 | KV           | 1.12+          | Yes
+| Micro Focus       | Connected Mx             | Transit      | 1.7+           | **No**
+| Microsoft         | Azure Key Vault          | KMSE         | 1.6+           | N/A
+| Microsoft         | MSSSQL                   | EKMMSSQL     | 1.9+           | **No**
+| MinIO             | Key Encryption Service   | KV           | 1.11+          | **No**
+| MongoDB           | Atlas                    | KMSE         | 1.6+           | N/A
+| MongoDB           | MongoDB Enterprise       | KMIP         | 1.2+           | N/A
+| MongoDB           | Client Libraries         | KMIP         | 1.9+           | N/A
+| NetApp            | ONTAP                    | KMIP         | 1.2+           | N/A
+| NetApp            | StorageGrid              | KMIP         | 1.2+           | N/A
+| Nutanix           | AHV/AOS 6.5.1.6          | KMIP         | 1.12+          | N/A
+| Ondat             | Trousseau                | Transit      | 1.9+           | Yes
+| Oracle            | MySQL                    | KMIP         | 1.2+           | N/A
+| Oracle            | Oracle 19c               | PKCS#11      | 1.11+          | N/A
+| Percona           | Server 8.0               | KMIP         | 1.9+           | N/A
+| Percona           | XtraBackup 8.0           | KMIP         | 1.9+           | N/A
+| Rubrik            | CDM 9.1 (Edge)           | KMIP         | 1.16.2+        | N/A 
+| Scality           | Scality RING             | KMIP         | 1.12+          | N/A
+| Snowflake         | Snowflake                | KMSE         | 1.6+           | N/A
+| Veeam             | Karsten K10              | Transit      | 1.9+           | N/A
+| Veritas           | NetBackup                | KMIP         | 1.13.9+        | N/A
+| VMware            | vSphere 7.0, 8.0         | KMIP         | 1.2+           | N/A
+| VMware            | vSan 7.0, 8.0            | KMIP         | 1.2+           | N/A
+| Yugabyte          | Yugabyte Platform        | Transit      | 1.9+           | **No**
+<span style={{display:'block', textAlign:'right', fontSize:'12px'}}>
+  <em>
+    <b>Last Updated</b>:
+    August 25, 2023
+  </em>
+</span>

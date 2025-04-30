@@ -74,13 +74,18 @@ func entityTestonlyPaths(i *IdentityStore) []*framework.Path {
 					Type:        framework.TypeInt,
 					Description: "Number of entity aliases to create",
 				},
+				"local": {
+					Type:        framework.TypeBool,
+					Description: "Local alias toggle",
+				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
 					Callback:                  i.createDuplicateEntityAliases(),
 					ForwardPerformanceStandby: true,
-					// Writing global (non-local) state should be replicated.
-					ForwardPerformanceSecondary: true,
+					// Duplicate entity alias injector now forwards
+					// CreateEntity calls when flags.Local is true.
+					ForwardPerformanceSecondary: false,
 				},
 			},
 		},
@@ -291,7 +296,8 @@ type DuplicateGroupFlags struct {
 type DuplicateEntityAliasFlags struct {
 	CommonDuplicateFlags
 	CommonAliasFlags
-	Count int `json:"count"`
+	Count int  `json:"count"`
+	Local bool `json:"local"`
 }
 
 type DuplicateGroupAliasFlags struct {
@@ -353,6 +359,7 @@ func (i *IdentityStore) createDuplicateEntityAliases() framework.OperationFunc {
 				MountAccessor: data.Get("mount_accessor").(string),
 			},
 			Count: data.Get("count").(int),
+			Local: data.Get("local").(bool),
 		}
 
 		if flags.Count < 1 {
@@ -361,13 +368,14 @@ func (i *IdentityStore) createDuplicateEntityAliases() framework.OperationFunc {
 
 		ids, err := i.CreateDuplicateEntityAliasesInStorage(ctx, flags)
 		if err != nil {
-			i.logger.Error("error creating duplicate entities", "error", err)
-			return logical.ErrorResponse("error creating duplicate entities"), err
+			i.logger.Error("error creating duplicate entity aliases", "error", err)
+			return logical.ErrorResponse("error creating duplicate entity aliases"), err
 		}
 
 		return &logical.Response{
 			Data: map[string]interface{}{
 				"entity_ids": ids,
+				"local":      flags.Local,
 			},
 		}, nil
 	}
@@ -377,7 +385,7 @@ func (i *IdentityStore) createDuplicateLocalEntityAlias() framework.OperationFun
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 		metadata, ok := data.GetOk("metadata")
 		if !ok {
-			metadata = make(map[string]interface{})
+			metadata = make(map[string]string)
 		}
 
 		flags := DuplicateEntityAliasFlags{
@@ -532,28 +540,73 @@ func (i *IdentityStore) CreateDuplicateEntityAliasesInStorage(ctx context.Contex
 		e.NamespaceID = flags.NamespaceID
 		err = i.sanitizeEntity(ctx, e)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("error sanitizing entity: %w", err)
 		}
 		entityIDs = append(entityIDs, e.ID)
 
 		a := &identity.Alias{
 			ID:            aliasID,
+			NamespaceID:   flags.NamespaceID,
 			CanonicalID:   e.ID,
-			MountAccessor: flags.CommonAliasFlags.MountAccessor,
+			MountAccessor: flags.MountAccessor,
 			Name:          dupAliasName,
+			Local:         flags.Local,
 		}
-		e.UpsertAlias(a)
 
-		entity, err := ptypes.MarshalAny(e)
-		if err != nil {
-			return nil, err
+		persistEntity := func(ent *identity.Entity) error {
+			entity, err := ptypes.MarshalAny(ent)
+			if err != nil {
+				return fmt.Errorf("error marhsaling entity: %w", err)
+			}
+			item := &storagepacker.Item{
+				ID:      ent.ID,
+				Message: entity,
+			}
+			if err = i.entityPacker.PutItem(ctx, item); err != nil {
+				return err
+			}
+
+			return nil
 		}
-		item := &storagepacker.Item{
-			ID:      e.ID,
-			Message: entity,
-		}
-		if err = i.entityPacker.PutItem(ctx, item); err != nil {
-			return nil, err
+
+		if flags.Local {
+			// Check to see if the entity creation should be forwarded.
+			i.logger.Trace("forwarding entity creation for local alias cache")
+			e, err := i.entityCreator.CreateEntity(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			localAliases, err := i.parseLocalAliases(e.ID)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse local aliases from entity: %w", err)
+			}
+			if localAliases == nil {
+				localAliases = &identity.LocalAliases{}
+			}
+
+			// Don't check if this is a duplicate, since we're allowing the developer to
+			// create duplicates here.
+			localAliases.Aliases = append(localAliases.Aliases, a)
+
+			marshaledAliases, err := anypb.New(localAliases)
+			if err != nil {
+				return nil, fmt.Errorf("failed to marshal local aliases: %w", err)
+			}
+			item := &storagepacker.Item{
+				ID:      e.ID,
+				Message: marshaledAliases,
+			}
+			if err := i.localAliasPacker.PutItem(ctx, item); err != nil {
+				return nil, fmt.Errorf("failed to put item in local alias packer: %w", err)
+			}
+		} else {
+			e.UpsertAlias(a)
+			err := persistEntity(e)
+			if err != nil {
+				return nil, err
+			}
+
 		}
 	}
 
@@ -583,8 +636,9 @@ func (i *IdentityStore) CreateDuplicateLocalEntityAliasInStorage(ctx context.Con
 
 	a := &identity.Alias{
 		ID:            aliasID,
-		CanonicalID:   flags.CommonAliasFlags.CanonicalID,
-		MountAccessor: flags.CommonAliasFlags.MountAccessor,
+		NamespaceID:   flags.NamespaceID,
+		CanonicalID:   flags.CanonicalID,
+		MountAccessor: flags.MountAccessor,
 		Name:          flags.Name,
 		Local:         true,
 	}

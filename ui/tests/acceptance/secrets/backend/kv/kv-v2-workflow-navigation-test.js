@@ -17,7 +17,7 @@ import {
   waitUntil,
 } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import {
   createPolicyCmd,
   deleteEngineCmd,
@@ -35,6 +35,7 @@ import {
 } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { setupControlGroup, grantAccess } from 'vault/tests/helpers/control-groups';
 
 const secretPath = `my-#:$=?-secret`;
@@ -44,7 +45,7 @@ const secretPathUrlEncoded = `my-%23:$=%3F-secret`;
 const ALL_TABS = ['Overview', 'Secret', 'Metadata', 'Paths', 'Version History'];
 const navToBackend = async (backend) => {
   await visit(`/vault/secrets`);
-  return click(PAGE.backends.link(backend));
+  return click(SES.secretsBackendLink(backend));
 };
 const assertCorrectBreadcrumbs = (assert, expected) => {
   assert.dom(PAGE.breadcrumbs).hasText(expected.join(' '));
@@ -109,7 +110,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
     this.version = this.owner.lookup('service:version');
     this.emptyBackend = `kv-empty-${uid}`;
     this.backend = `kv-nav-${uid}`;
-    await authPage.login();
+    await login();
     await runCmd(mountEngineCmd('kv-v2', this.emptyBackend), false);
     await runCmd(mountEngineCmd('kv-v2', this.backend), false);
     await writeSecret(this.backend, 'app/nested/secret', 'foo', 'bar');
@@ -119,7 +120,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
   });
 
   hooks.afterEach(async function () {
-    await authPage.login();
+    await login();
     await runCmd(deleteEngineCmd(this.backend));
     await runCmd(deleteEngineCmd(this.emptyBackend));
     return;
@@ -241,7 +242,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       const token = await runCmd(
         tokenWithPolicyCmd('admin', personas.admin(this.backend) + personas.admin(this.emptyBackend))
       );
-      await authPage.login(token);
+      await login(token);
       clearRecords(this.store);
       return;
     });
@@ -598,7 +599,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         ),
         createTokenCmd(`data-reader-${this.backend}`),
       ]);
-      await authPage.login(token);
+      await login(token);
       clearRecords(this.store);
       return;
     });
@@ -791,7 +792,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         createTokenCmd(`data-reader-list-${this.backend}`),
       ]);
 
-      await authPage.login(token);
+      await login(token);
       clearRecords(this.store);
       return;
     });
@@ -984,7 +985,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         ),
         createTokenCmd(`metadata-maintainer-${this.backend}`),
       ]);
-      await authPage.login(token);
+      await login(token);
       clearRecords(this.store);
       return;
     });
@@ -1207,7 +1208,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         ),
         createTokenCmd(`secret-creator-${this.backend}`),
       ]);
-      await authPage.login(token);
+      await login(token);
       clearRecords(this.store);
       return;
     });
@@ -1443,7 +1444,7 @@ path "${this.backend}/subkeys/*" {
 `;
       const { userToken } = await setupControlGroup({ userPolicy, backend: this.backend });
       this.userToken = userToken;
-      await authPage.login(userToken);
+      await login(userToken);
       clearRecords(this.store);
       return;
     });
@@ -1651,12 +1652,12 @@ path "${this.backend}/subkeys/*" {
     test('can read custom_metadata from data endpoint (cg)', async function (assert) {
       assert.expect(3);
       // login is root user and make custom metadata since console can't be used to pass an object
-      await authPage.login();
+      await login();
       await visit(`/vault/secrets/${this.backend}/kv/${secretPathUrlEncoded}/metadata/edit`);
       await fillIn(FORM.keyInput(), 'special');
       await fillIn(FORM.valueInput(), 'secret');
       await click(FORM.saveBtn);
-      await authPage.login(this.userToken);
+      await login(this.userToken);
 
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/${secretPathUrlEncoded}`);
@@ -1694,7 +1695,7 @@ path "${this.backend}/subkeys/*" {
         ),
         createTokenCmd(`secret-patcher-${this.backend}`),
       ]);
-      await authPage.login(token);
+      await login(token);
       clearRecords(this.store);
       return;
     });

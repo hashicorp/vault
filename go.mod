@@ -10,7 +10,7 @@ module github.com/hashicorp/vault
 // semantic related to Go module handling), this comment should be updated to explain that.
 //
 // Whenever this value gets updated, sdk/go.mod should be updated to the same value.
-go 1.23.6
+go 1.24.0
 
 replace github.com/hashicorp/vault/api => ./api
 
@@ -51,7 +51,6 @@ require (
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/aws/aws-sdk-go v1.55.6
 	github.com/aws/aws-sdk-go-v2/config v1.27.11
-	github.com/axiomhq/hyperloglog v0.0.0-20220105174342-98591331716a
 	github.com/cenkalti/backoff/v3 v3.2.2
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
 	github.com/cockroachdb/cockroach-go/v2 v2.3.8
@@ -140,7 +139,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-azure v0.20.3
 	github.com/hashicorp/vault-plugin-auth-cf v0.20.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.20.2
-	github.com/hashicorp/vault-plugin-auth-jwt v0.23.0
+	github.com/hashicorp/vault-plugin-auth-jwt v0.23.2
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.14.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.21.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.18.0
@@ -159,7 +158,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.10.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.21.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.14.0
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.15.2
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.15.4
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.11.0
 	github.com/hashicorp/vault-testing-stepwise v0.3.2
 	github.com/hashicorp/vault/api v1.16.0
@@ -218,14 +217,14 @@ require (
 	go.opentelemetry.io/otel/trace v1.35.0
 	go.uber.org/atomic v1.11.0
 	go.uber.org/goleak v1.3.0
-	golang.org/x/crypto v0.36.0
+	golang.org/x/crypto v0.37.0
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
-	golang.org/x/net v0.38.0
-	golang.org/x/oauth2 v0.28.0
-	golang.org/x/sync v0.12.0
-	golang.org/x/sys v0.31.0
-	golang.org/x/term v0.30.0
-	golang.org/x/text v0.23.0
+	golang.org/x/net v0.39.0
+	golang.org/x/oauth2 v0.29.0
+	golang.org/x/sync v0.13.0
+	golang.org/x/sys v0.32.0
+	golang.org/x/term v0.31.0
+	golang.org/x/text v0.24.0
 	golang.org/x/tools v0.29.0
 	google.golang.org/api v0.221.0
 	google.golang.org/grpc v1.70.0
@@ -364,7 +363,6 @@ require (
 	github.com/danieljoos/wincred v1.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/denverdino/aliyungo v0.0.0-20190125010748-a747050bb1ba // indirect
-	github.com/dgryski/go-metro v0.0.0-20180109044635-280f6062b5bc // indirect
 	github.com/digitalocean/godo v1.7.5 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect

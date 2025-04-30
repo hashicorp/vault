@@ -12,16 +12,16 @@ import { create } from 'ember-cli-page-object';
 
 import databaseHandlers from 'vault/mirage/handlers/database';
 import { setupApplicationTest } from 'vault/tests/helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import flashMessage from 'vault/tests/pages/components/flash-message';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 const flash = create(flashMessage);
 
 const PAGE = {
   // GENERIC
   emptyStateTitle: '[data-test-empty-state-title]',
-  emptyStateAction: '[data-test-secret-create="connections"]',
   infoRow: '[data-test-component="info-table-row"]',
   infoRowLabel: (label) => `[data-test-row-label="${label}"]`,
   infoRowValue: (label) => `[data-test-row-value="${label}"]`,
@@ -31,7 +31,7 @@ const PAGE = {
   confirmRotate: '[data-test-enable-rotate-connection]',
   skipRotate: '[data-test-enable-connection]',
   // ROLES
-  addRole: '[data-test-secret-create]',
+  addRole: '[data-test-add-role]',
   roleSettingsSection: '[data-test-role-settings-section]',
   statementsSection: '[data-test-statements-section]',
   editRole: '[data-test-edit-link]',
@@ -64,12 +64,12 @@ module('Acceptance | database workflow', function (hooks) {
     databaseHandlers(this.server);
     this.backend = `db-workflow-${uuidv4()}`;
     this.store = this.owner.lookup('service:store');
-    await authPage.login();
+    await login();
     await runCmd(mountEngineCmd('database', this.backend), false);
   });
 
   hooks.afterEach(async function () {
-    await authPage.login();
+    await login();
     return runCmd(deleteEngineCmd(this.backend));
   });
 
@@ -99,7 +99,7 @@ module('Acceptance | database workflow', function (hooks) {
       });
       await visit(`/vault/secrets/${this.backend}/overview`);
       assert.dom(PAGE.emptyStateTitle).hasText('Connect a database', 'empty state title is correct');
-      await click(PAGE.emptyStateAction);
+      await click(SES.createSecretLink);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/create?itemType=connection`,
@@ -136,7 +136,7 @@ module('Acceptance | database workflow', function (hooks) {
       });
       await visit(`/vault/secrets/${this.backend}/overview`);
       assert.dom(PAGE.emptyStateTitle).hasText('Connect a database', 'empty state title is correct');
-      await click(PAGE.emptyStateAction);
+      await click(SES.createSecretLink);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/create?itemType=connection`,
@@ -174,7 +174,7 @@ module('Acceptance | database workflow', function (hooks) {
       });
       await visit(`/vault/secrets/${this.backend}/overview`);
       assert.dom(PAGE.emptyStateTitle).hasText('Connect a database', 'empty state title is correct');
-      await click(PAGE.emptyStateAction);
+      await click(SES.createSecretLink);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/create?itemType=connection`,
@@ -213,7 +213,7 @@ module('Acceptance | database workflow', function (hooks) {
     test('create connection with rotate failure', async function (assert) {
       await visit(`/vault/secrets/${this.backend}/overview`);
       assert.dom(PAGE.emptyStateTitle).hasText('Connect a database', 'empty state title is correct');
-      await click(PAGE.emptyStateAction);
+      await click(SES.createSecretLink);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/create?itemType=connection`,

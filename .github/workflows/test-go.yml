@@ -461,7 +461,7 @@ jobs:
         run: |
           tar -cvf '${{ steps.metadata.outputs.go-test-log-archive-name }}' -C "${{ steps.metadata.outputs.go-test-log-dir }}" .
       - name: Upload test logs archives
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ${{ steps.metadata.outputs.go-test-log-archive-name }}
           path: ${{ steps.metadata.outputs.go-test-log-archive-name }}
@@ -469,7 +469,7 @@ jobs:
         if: success() || failure()
       - name: Upload test results
         if: success() || failure()
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ${{ steps.metadata.outputs.go-test-results-upload-key }}
           path: |
@@ -509,7 +509,7 @@ jobs:
         if: |
           (success() || failure()) &&
           steps.data-race-check.outputs.data-race-result == 'failure'
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ${{ steps.metadata.outputs.data-race-log-upload-key }}
           path: ${{ steps.metadata.outputs.go-test-dir }}/${{ steps.metadata.outputs.data-race-log-file }}
@@ -582,7 +582,7 @@ jobs:
           '${{ steps.metadata.outputs.gotestsum-timing-events }}' \
           >> '${{ steps.metadata.outputs.failure-summary-file-name }}'
       - name: Upload failure summary
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: success() || failure()
         with:
           name: ${{ steps.metadata.outputs.failure-summary-file-name }}
@@ -600,7 +600,7 @@ jobs:
       data-race-output: ${{ steps.status.outputs.data-race-output }}
       data-race-result: ${{ steps.status.outputs.data-race-result }}
     steps:
-      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+      - uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
         with:
           pattern: ${{ needs.test-go.outputs.data-race-log-download-pattern }}
           path: data-race-logs
@@ -649,7 +649,7 @@ jobs:
           restore-keys: |
             ${{ inputs.test-timing-cache-key }}-
       - if: ${{ ! cancelled() && needs.test-go.result == 'success' && inputs.test-timing-cache-enabled }}
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
         with:
           path: ${{ needs.test-matrix.outputs.go-test-dir }}
           pattern: ${{ needs.test-go.outputs.go-test-results-download-pattern }}
