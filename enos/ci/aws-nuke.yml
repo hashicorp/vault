@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: BUSL-1.1
 
 regions:
+  - us-east-1
   - global
 
 blocklist:
