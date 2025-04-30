@@ -96,6 +96,7 @@ func handleSysHealthHead(core *vault.Core, w http.ResponseWriter, r *http.Reques
 	if body != nil {
 		w.Header().Set("Content-Type", "application/json")
 	}
+	defer logical.IncrementResponseStatusCodeMetric(code)
 	w.WriteHeader(code)
 }
 
