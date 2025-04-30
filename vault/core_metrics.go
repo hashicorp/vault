@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/hashicorp/secrets-store-syncer/stores"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pluginconsts"
@@ -24,6 +23,10 @@ import (
 
 const (
 	KVv2MetadataPath = "metadata"
+	AwsSm            = "aws-sm"
+	AzureKv          = "azure-kv"
+	GcpSm            = "gcp-sm"
+	Vault            = "vault"
 )
 
 func (c *Core) metricsLoop(stopCh chan struct{}) {
@@ -541,13 +544,13 @@ func (c *Core) collectOperatorImportMetrics(ctx context.Context, m *kvMount, res
 		if val, found := customMetadata["operation"]; found && val == "import" {
 			results.NumSecrets++
 			switch customMetadata["import-source"] {
-			case string(stores.AwsSm):
+			case string(AwsSm):
 				results.NumSecretsWithSourceAWS++
-			case string(stores.GcpSm):
+			case string(GcpSm):
 				results.NumSecretsWithSourceGCP++
-			case string(stores.Vault):
+			case string(Vault):
 				results.NumSecretsWithSourceVault++
-			case string(stores.AzureKv):
+			case string(AzureKv):
 				results.NumSecretsWithSourceAzure++
 			default:
 				c.logger.Warn("unknown import-source in KVv2 secret", "path", fullPath, "import-source", customMetadata["import-source"])
