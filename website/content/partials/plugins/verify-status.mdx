@@ -1,0 +1,115 @@
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+Use the appropriate list command (`vault secrets list` or `vault auth list`)
+to verify the version and mounted path for the registered plugin:
+
+```shell-session
+$ vault <secrets | auth> list
+```
+
+For example, to verify the `mykv` plugin:
+
+<CodeBlockConfig hideClipboard="true" highlight="6">
+
+```shell-session
+$ vault secrets list
+
+Path            Type            Accessor                 Description
+----            ----            --------                 -----------
+cubbyhole/      ns_cubbyhole    ns_cubbyhole_dd6729a7    per-token private secret storage
+custom/mykv/    mykv            mykv_7121a3d5            n/a
+identity/       ns_identity     ns_identity_f000c24d     identity store
+private/        kv              kv_4a4118d8              n/a
+shared/         kv              kv_60208c6d              n/a
+sys/            ns_system       ns_system_b9a3364f       system endpoints used for control, policy and debugging
+```
+
+</CodeBlockConfig>
+
+The `list` subcommand does not support filtering for specific fields in the
+output, to confirm the version or running version, use the `-detailed` flag,
+filter for the relevant plugin, and print the desired status column by index:
+
+Index  | Detail column
+:----: | -------------
+0      | Path
+1      | Plugin
+2      | Accessor
+3      | Default TTL
+4      | Max TTL
+5      | Force No Cache
+6      | Replication
+7      | Seal Wrap
+8      | External Entropy Access
+9      | Options
+10     | Description
+11     | UUID
+12     | Version
+13     | Running Version
+14     | Running SHA256
+15     | Deprecation Status
+
+For example, to print the running version for `mykv`:
+
+```shell-session
+$ row=($(vault secrets list -detailed | grep mykv)) ; \
+  echo "${row[0]}: ${row[1]} (${row[13]})"
+
+custom/mykv/: mykv (v1.0.1)
+```
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+Use the appropriate list endpoint
+([ListSecretsEngines](/vault/api-docs/system/mounts#enable-secrets-engine) or
+[ListAuthMethods](/vault/api-docs/system/auth#enable-auth-method))
+to verify the mounted path for the registered plugin:
+
+```shell-session
+$ curl -s                                          \
+  --request GET                                    \
+  --header "X-Vault-Token: ${VAULT_TOKEN}"         \
+  --header "X-Vault-Namespace: ${VAULT_NAMESPACE}" \
+  ${VAULT_ADDR}/v1/sys/<mounts | auth> | jq '.data."<mount_path>"'
+```
+
+For example, to verify the `mykv` secrets plugin on the path `/custom/kv`:
+
+<CodeBlockConfig hideClipboard="true">
+
+```shell-session
+$ curl -s                                          \
+  --request GET                                    \
+  --header "X-Vault-Token: ${VAULT_TOKEN}"         \
+  --header "X-Vault-Namespace: ${VAULT_NAMESPACE}" \
+  ${VAULT_ADDR}/v1/sys/mounts | jq '.data."custom/mykv/"'
+
+{
+  "accessor": "mykv_7121a3d5",
+  "config": {
+    "default_lease_ttl": 0,
+    "force_no_cache": false,
+    "max_lease_ttl": 0
+  },
+  "description": "",
+  "external_entropy_access": false,
+  "local": false,
+  "options": {},
+  "plugin_version": "v1.0.1",
+  "running_plugin_version": "v1.0.1",
+  "running_sha256": "4b7c6993b7147d84d958f30438f9d0c34f34aa400300693b193e62774e4338d7",
+  "seal_wrap": false,
+  "type": "mykv",
+  "uuid": "61c79aea-5b39-1cbb-b470-96edd9f6bfeb"
+}
+```
+
+</CodeBlockConfig>
+
+</Tab>
+
+</Tabs>
