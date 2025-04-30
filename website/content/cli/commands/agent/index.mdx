@@ -1,0 +1,101 @@
+---
+layout: docs
+page_title: "agent - Vault CLI"
+description: >-
+  Use vault agent to start an instance of Vault Agent.
+---
+
+# `vault agent`
+
+Start an instance of Vault Agent.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault agent -config <config_file>
+
+$ vault agent [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`vault agent` start an instance of Vault Agent, which automatically
+authenticates and fetches secrets for client applications.
+
+<Tip title="Related API endpoints">
+
+  **None**
+
+</Tip>
+
+## Command arguments
+
+None.
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/agent/flags/config.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/agent/flags/exit-after-auth.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/shared/flags/log-file.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/shared/flags/log-format.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/shared/flags/log-level.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/shared/flags/log-rotate-bytes.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/shared/flags/log-rotate-duration.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/shared/flags/log-rotate-max-files.mdx'
+
+## Standard flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags-but-format.mdx'
+
+## Examples
+
+Start Vault Agent with a single configuration file:
+
+```shell-session
+$ vault agent -config=/etc/vault/agent/config.hcl
+```
+
+Start Vault Agent with a two discrete configuration files:
+
+```shell-session
+$ vault agent                                   \
+    -config=/etc/vault/agent/base-config.hcl    \
+    -config=/etc/vault/agent/auto-auth-config.hcl
+```
+
+Start Vault Agent with a set of configuration files under the `` directory:
+
+```shell-session
+$ vault agent -config=/etc/vault/agent/config-files/
+```

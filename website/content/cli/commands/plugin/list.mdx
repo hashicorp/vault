@@ -1,0 +1,61 @@
+---
+layout: docs
+page_title: plugin list - Command
+description: The "plugin list" command lists all available plugins in the plugin catalog.
+---
+
+# plugin list
+
+The `plugin list` command lists all available plugins in the plugin catalog.
+It can be used alone or with a type such as "auth", "database", or "secret".
+
+## Deprecation status column
+
+As of 1.12, all builtin plugins will have an associated Deprecation
+Status. This status will be reflected in the `Deprecation Status` column, seen
+below. All non-builtin plugins will show a `Deprecation Status` of "n/a".
+
+## Examples
+
+List all available plugins in the catalog.
+
+```shell-session
+$ vault plugin list
+Name                                 Type        Version
+----                                 ----        -------
+alicloud                             auth        v0.13.0+builtin
+# ...
+
+$ vault plugin list database
+Name                                 Version
+----                                 -------
+cassandra-database-plugin            v1.13.0+builtin.vault
+# ...
+```
+
+List detailed plugin information:
+
+```shell-session
+$ vault plugin list -detailed
+Name        Type    Version                  Container    Deprecation Status
+----        ----    -------                  ---------    ------------------
+alicloud    auth    v0.12.0+builtin          false        supported
+app-id      auth    v1.12.0+builtin.vault    false        pending removal
+# ...
+```
+
+## Usage
+
+The following flags are available in addition to the [standard set of
+flags](/vault/docs/commands) included on all commands.
+
+### Output options
+
+- `-format` `(string: "table")` - Print the output in the given format. Valid
+  formats are "table", "json", or "yaml". This can also be specified via the
+  `VAULT_FORMAT` environment variable.
+
+### Command options
+
+- `-detailed` `(bool: false)` - Print detailed information such as version and
+deprecation status about each plugin.

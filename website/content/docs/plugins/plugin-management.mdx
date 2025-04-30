@@ -1,105 +1,13 @@
 ---
 layout: docs
-page_title: Plugin management
+page_title: Plugin runtime settings
 description: >-
-   Learn how to manage external plugins that are implemented using Vault's plugin system.
+   Learn about the available runtime settings for external plugins mounted in
+   Vault.
 ---
 
 
-# Plugin management
-
-External plugins are the components in Vault that can be implemented separately
-from Vault's built-in plugins. These plugins can be either authentication or
-secrets engines.
-
-The [`api_addr`][api_addr] must be set in order for the plugin process to
-establish communication with the Vault server during mount time. If the storage
-backend has HA enabled and supports automatic host address detection (e.g.
-Consul), Vault will automatically attempt to determine the `api_addr` as well.
-
-Detailed information regarding the plugin system can be found in the
-[internals documentation](/vault/docs/plugins).
-
-## Registering external plugins
-
-Before an external plugin can be mounted, it needs to be
-[registered](/vault/docs/plugins/plugin-architecture#plugin-registration) in the
-plugin catalog to ensure the plugin invoked by Vault is authentic and maintains
-integrity:
-
-### Community plugins
-
-```shell-session
-$ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
-    secret \                  # type
-    passthrough-plugin
-
-Success! Registered plugin: passthrough-plugin
-```
-
-### Enterprise plugins
-
-@include 'alerts/enterprise-and-hcp.mdx'
-
-#### Compatible Vault Enterprise versions
-- 1.16.16+
-- 1.17.12+
-- 1.18.5+
-- 1.19.0+
-
-Before registering an enterprise plugin, ensure that the plugin artifact
-compatible with the system that runs Vault Enterprise is downloaded from
-[HashiCorp releases page](https://releases.hashicorp.com/) and placed
-in the plugin directory.
-
-~> Note: Enterprise plugins artifacts should not be unzipped or modified
-in any way. Vault Enterprise will verify the plugin's integrity
-and compatibility and unzip during the registration process.
-
-```shell-session
-$ vault plugin register 
-    -version=<version of the plugin> # version must match the plugin version on the releases page
-    secret \                         # type
-    vault-plugin-secrets-keymgmt     # name must match the plugin name on the releases page
-
-Success! Registered plugin: vault-plugin-secrets-keymgmt
-```
-
-See [plugin register](/vault/docs/commands/plugin/register) for more details on 
-how to register Enterprise plugins.
-
-## Enabling/Disabling external plugins
-
-After the plugin is registered, it can be mounted by specifying the registered
-plugin name:
-
-```shell-session
-$ vault secrets enable -path=my-secrets passthrough-plugin
-Success! Enabled the passthrough-plugin secrets engine at: my-secrets/
-```
-
-Listing secrets engines will display secrets engines that are mounted as
-plugins:
-
-```shell-session
-$ vault secrets list
-Path         Type       Accessor            Plugin              Default TTL  Max TTL  Force No Cache  Replication Behavior  Description
-my-secrets/  plugin     plugin_deb84140     passthrough-plugin  system       system   false           replicated
-```
-
-Disabling an external plugins is identical to disabling a built-in plugin:
-
-```shell-session
-$ vault secrets disable my-secrets
-```
-
-## Upgrading plugins
-
-Upgrade instructions can be found in the [Upgrading Plugins - Guides][upgrading_plugins]
-page.
-
-[api_addr]: /vault/docs/configuration#api_addr
-[upgrading_plugins]: /vault/docs/upgrading/plugins
+# Plugin runtime settings
 
 ## Plugin environment variables
 
@@ -137,6 +45,7 @@ an external version of it in order to use this workflow. Check the
 prebuilt plugin binaries.
 
 #### Community plugins
+
 ```shell-session
 $ vault plugin register -sha256=<SHA256 Hex value of the plugin binary> \
     -env HTTP_PROXY=eu.example.com \
@@ -175,4 +84,29 @@ Success! Enabled the jwt-us auth method at: auth/jwt-us/
 
 $ vault secrets enable vault-plugin-secrets-keymgmt
 Success! Enabled the vault-plugin-secrets-keymgmt secrets engine at: vault-plugin-secrets-keymgmt/
+```
+
+## Troubleshooting
+
+### Unrecognized remote plugin message
+
+If the following error is encountered when enabling a plugin secret engine or
+auth method:
+
+<CodeBlockConfig hideClipboard>
+
+```sh
+Unrecognized remote plugin message:
+
+This usually means that the plugin is either invalid or simply
+needs to be recompiled to support the latest protocol.
+```
+
+</CodeBlockConfig>
+
+Verify whether the Vault process has `mlock` enabled, and if so, run the
+following command against the plugin binary:
+
+```shell-session
+$ sudo setcap cap_ipc_lock=+ep <plugin-binary>
 ```

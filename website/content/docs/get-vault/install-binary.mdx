@@ -1,0 +1,340 @@
+---
+layout: docs
+page_title: Manual install
+description: >-
+  Manually install a Vault binary.
+---
+
+# Manually install a Vault binary
+
+Install Vault using a compiled binary.
+
+## Before you start
+
+- **You must have a valid Vault binary**. You can
+  [download and unzip a precompiled binary](/vault/install) or
+  [build a local instance of Vault from source code](/vault/docs/install/build-from-code).
+
+## Step 1: Configure the environment
+
+<Tabs>
+
+<Tab heading="Linux shell" group="nix">
+
+1. Set the `VAULT_DATA` environment variable to your preferred Vault data
+  directory. For example, `/opt/vault/data`:
+
+   ```shell-session
+   export VAULT_DATA=/opt/vault/data
+   ```
+
+1. Set the `VAULT_CONFIG` environment variable  to your preferred Vault
+   configuration directory. For example, `/etc/vault.d`:
+
+   ```shell-session
+   export VAULT_CONFIG=/etc/vault.d
+   ```
+
+1. Move the Vault binary to `/usr/bin`:
+
+  ```shell-session
+  $ sudo mv PATH/TO/VAULT/BINARY /usr/bin/
+  ```
+
+1. Ensure the Vault binary can use `mlock()` to run as a non-root user:
+
+   ```shell-session
+   $ sudo setcap cap_ipc_lock=+ep $(readlink -f $(which vault))
+   ```
+
+  See the support article
+  [Vault and mlock()](https://support.hashicorp.com/hc/en-us/articles/115012787688-Vault-and-mlock)
+  for more information.
+
+1. Create your Vault data directory:
+
+  ```shell-session
+   $ sudo mkdir -p ${VAULT_DATA}
+  ```
+
+1. Create your Vault configuration directory:
+
+   ```shell-session
+   $ sudo mkdir -p ${VAULT_CONFIG}
+   ```
+
+<Highlight title="Best practice">
+  We recommend storing Vault data and Vault logs on different volumes than the
+  operating system.
+</Highlight>
+
+</Tab>
+
+<Tab heading="Powershell" group="ps">
+
+1. Run Powershell as Administrator.
+
+1. Set a `VAULT_HOME` environment variable to your preferred Vault home
+   directory. For example, `c:\Program Files\Vault`:
+
+   ```powershell
+   $env:VAULT_HOME = "${env:ProgramFiles}\Vault"
+   ```
+
+1. Create the Vault home directory:
+
+  ```powershell
+  New-Item -ItemType Directory -Path "${env:VAULT_HOME}"
+  ```
+
+1. Create the Vault data directory. For example, `c:\Program Files\Vault\Data`:
+
+  ```powershell
+  New-Item -ItemType Directory -Path "${env:VAULT_HOME}/Data"
+  ```
+   
+1. Create the Vault configuration directory. For example,
+   `c:\Program Files\Vault\Config`:
+  
+  ```powershell
+  New-Item -ItemType Directory -Path "${env:VAULT_HOME}/Config"
+  ```
+
+1. Create the Vault logs directory. For example, `c:\Program Files\Vault\Logs`:
+
+  ```powershell
+  New-Item -ItemType Directory -Path "${env:VAULT_HOME}/Logs"
+  ```
+
+1. Move the Vault binary to your Vault directory:
+
+  ```powershell
+  Move-Item                      `
+    -Path <PATH/TO/VAULT/BINARY> `
+    -Destination ${env:VAULT_HOME}\vault.exe
+  ```
+
+1. Add the Vault home directory to the system `Path` variable.
+
+  [![System PATH editor in Windows OS GUI](/img/install/windows-system-path.png)](/img/install/windows-system-path.png)
+
+</Tab>
+
+</Tabs>
+
+
+## Step 2: Configure user permissions
+
+<Tabs>
+
+<Tab heading="Linux shell" group="nix">
+
+1. Create a system user called `vault` to run Vault when your Vault data
+   directory as `home` and `nologin` as the shell:
+
+   ```shell-session
+   $ sudo useradd --system --home ${VAULT_DATA} --shell /sbin/nologin vault
+   ```
+
+1. Change directory ownership of your data directory to the `vault` user:
+
+      ```shell-session
+      $ sudo chown vault:vault ${VAULT_DATA}
+      ```
+
+1. Grant the `vault` user full permission on the data directory, search
+   permission for the group, and deny access to others:
+
+      ```shell-session
+      $ sudo chmod -R 750 ${VAULT_DATA}
+      ```
+
+</Tab>
+
+<Tab heading="Powershell" group="ps">
+
+1. Create an access rule to grant the `Local System` user access to the Vault
+   directory and related files:
+
+  ```powershell
+  $SystemAccessRule = 
+    New-Object System.Security.AccessControl.FileSystemAccessRule(
+      "SYSTEM",
+      "FullControl",
+      "ContainerInherit,Objectinherit",
+      "none",
+      "Allow"
+    )
+  ```
+
+1. Create an access rule to grant yourself access to the Vault directory and
+   related files so you can test your Vault installation:
+
+  ```powershell
+  $myUsername = Get-CimInstance -Class Win32_Computersystem |    `
+                Select-Object UserName | foreach {$_.UserName} ; `
+  $AdminAccessRule =
+    New-Object System.Security.AccessControl.FileSystemAccessRule(
+      "$myUsername",
+      "FullControl",
+      "ContainerInherit,Objectinherit",
+      "none",
+      "Allow"
+    )
+  ```
+
+  <Highlight title="Create additional access rules for human users if needed">
+
+    If you expect other accounts to start and run the Vault server, you must
+    create and apply access rules for those users as well. While users can run
+    the Vault CLI without explicit access, if they try to start the Vault
+    server, the process will fail with a permission denied error.
+
+  </Highlight>
+
+1. Update permissions on the `env:VAULT_HOME` directory:
+
+  ```powershell
+  $ACLObject = Get-ACL ${env:VAULT_HOME} ;       `
+  $ACLObject.AddAccessRule($AdminAccessRule) ;   `
+  $ACLObject.AddAccessRule($SystemAccessRule) ;  `
+  Set-Acl ${env:VAULT_HOME} $ACLObject
+  ```
+
+</Tab>
+
+</Tabs>
+
+## Step 3: Create a basic configuration file
+
+Create a basic Vault configuration file for testing and development.
+
+<Warning title="Always enable TLS for production">
+
+  The sample configuration below disables TLS for simplicity and is not
+  appropriate for production use. Refer to the
+  [configuration documentation](/vault/docs/configuration) for a full list of
+  supported parameters.
+
+</Warning>
+
+<Tabs>
+
+<Tab heading="Linux shell" group="nix">
+
+1. Create a file called `vault.hcl` under your configuration directory:
+  ```shell-session
+   $ sudo tee ${VAULT_CONFIG}/vault.hcl <<EOF
+   ui            = true
+   cluster_addr  = "http://127.0.0.1:8201"
+   api_addr      = "https://127.0.0.1:8200"
+   disable_mlock = true
+
+   storage "raft" {
+     path    = "${VAULT_DATA}"
+     node_id = "127.0.0.1"
+   }
+
+   listener "tcp" {
+     address       = "0.0.0.0:8200"
+     cluster_address = "0.0.0.0:8201"
+     tls_disable = 1
+   }
+   EOF
+  ```
+
+1. Change ownership and permissions on the Vault configuration file.
+
+   ```shell-session
+   $ sudo chown vault:vault "${VAULT_CONFIG}/vault.hcl" && \
+     sudo chmod 640 "${VAULT_CONFIG}/vault.hcl"
+   ```
+
+</Tab>
+
+<Tab heading="Powershell" group="ps">
+
+Create a file called `vault.hcl` under your configuration directory:
+
+```powershell
+@"
+ui            = true
+cluster_addr  = "http://127.0.0.1:8201"
+api_addr      = "https://127.0.0.1:8200"
+disable_mlock = true
+
+storage "raft" {
+  path    = "$(${env:VAULT_HOME}.Replace('\','\\'))\\Data"
+  node_id = "127.0.0.1"
+}
+
+listener "tcp" {
+  address       = "0.0.0.0:8200"
+  cluster_address = "0.0.0.0:8201"
+  tls_disable = 1
+}
+"@ | Out-File -FilePath ${env:VAULT_HOME}/Config/vault.hcl -Encoding ascii
+```
+
+<Note title="The double backslashes (\\) are not an error">
+
+  You **must** escape the Windows path character in your Vault configuration
+  file or the Vault server will fail with an error claiming the file contains
+  invalid characters.
+  
+</Note>
+
+</Tab>
+
+</Tabs>
+
+## Step 4: Verify your installation
+
+To confirm your Vault installation, use the help option with the Vault CLI to
+confirm the CLI is accessible and bring up the server in development mode to
+confirm you can run the binary.
+
+<Tabs>
+
+<Tab heading="Linux shell" group="nix">
+
+1. Bring up the help menu in the Vault CLI:
+  ```shell-session
+  $ vault -h
+  ```
+
+1. Use the Vault CLI to bring up a Vault server in development mode:
+  ```shell-session
+  $ vault server -dev -config ${VAULT_CONFIG}/vault.hcl
+  ```
+
+</Tab>
+
+<Tab heading="Powershell" group="ps">
+
+1. Start a new Powershell session without Administrator permission.
+
+1. Bring up the help menu in the Vault CLI:
+  ```powershell
+  vault -h
+  ```
+
+1. Use the Vault CLI to bring up a Vault server in development mode:
+  ```powershell
+  vault server -dev -config ${env:VAULT_HOME}\Config\vault.hcl
+  ```
+
+</Tab>
+
+</Tabs>
+
+
+## Related tutorials
+
+The following tutorials provide additional guidance for installing Vault and
+production cluster deployment:
+
+- [Get started: Install Vault](/vault/tutorials/getting-started/getting-started-install)
+- [Day One Preparation](/vault/tutorials/day-one-raft)
+- [Recommended Patterns](/vault/tutorials/recommended-patterns)
+- [Start the server in dev mode](/vault/tutorials/getting-started/getting-started-dev-server)
