@@ -1,0 +1,92 @@
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+Use the appropriate enable command (`vault secrets enable` or `vault auth enable`)
+and the registered name to mount the external plugin:
+
+```shell-session
+$ vault <secrets | auth> enable \
+  -path <mount_path>            \
+  <plugin_name>
+```
+
+For example, to enable the `mykv` plugin on the path `/custom/kv`:
+
+<CodeBlockConfig hideClipboard="true">
+
+```shell-session
+$ vault secrets enable \
+  -path custom/kv      \
+  mykv
+
+Success! Enabled the mykv secrets engine at: custom/kv/
+```
+
+</CodeBlockConfig>
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+1. Save the type and any relevant configuration details to a JSON file:
+
+    ```shell-session
+    $ cat <<-EOF > data.json
+    {
+      "type": "<registered_plugin_name>",
+      "config": {
+        "plugin_version": "<semantic_version>"
+      }
+    }
+    EOF
+    ```
+
+    For example, to create a data file for the `mykv` plugin:
+
+    <CodeBlockConfig hideClipboard="true">
+
+    ```shell-session
+    $ cat <<-EOF > data.json
+    {
+      "type": "mykv",
+      "config": {
+        "plugin_version": "v1.0.0"
+      }
+    }
+    EOF
+    ```
+    </CodeBlockConfig>
+
+1. Use the appropriate enable endpoint (
+   [EnableSecretsEngine](/vault/api-docs/system/mounts#enable-secrets-engine) or
+   [EnableAuthMethod](/vault/api-docs/system/auth#enable-auth-method))
+   and the registered plugin name to mount the external plugin:
+
+    ```shell-session
+    $ curl                                             \
+      --request POST                                   \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"         \
+      --header "X-Vault-Namespace: ${VAULT_NAMESPACE}" \
+      --data @data                                     \
+      ${VAULT_ADDR}/v1/sys/<mounts | auth>/<mount_path>
+    ```
+
+    For example, to enable the `mykv` secrets plugin on the path `/custom/kv`:
+
+    <CodeBlockConfig hideClipboard="true">
+
+    ```shell-session
+    $ curl                                              \
+      --request POST                                    \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"          \
+      --header "X-Vault-Namespace: ${VAULT_NAMESPACE}"  \
+      --data @data                                      \
+      ${VAULT_ADDR}/v1/sys/mounts/custom/kv
+    ```
+
+    </CodeBlockConfig>
+
+</Tab>
+
+</Tabs>
