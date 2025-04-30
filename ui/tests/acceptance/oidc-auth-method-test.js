@@ -108,7 +108,7 @@ module('Acceptance | oidc auth method', function (hooks) {
 
     setTimeout(() => {
       window.postMessage(buildMessage().data, window.origin);
-    }, DELAY_IN_MS);
+    }, 500);
 
     await click(AUTH_FORM.login);
     assert
