@@ -48,6 +48,7 @@ const API_PATHS = {
   },
   settings: {
     customMessages: 'sys/config/ui/custom-messages',
+    customLogin: 'sys/config/ui/login',
   },
   sync: {
     destinations: 'sys/sync/destinations',

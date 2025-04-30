@@ -26,7 +26,7 @@
     <div class="linked-block-popup-menu">
       <Hds::Dropdown @isInline={{true}} as |dd|>
         <dd.ToggleIcon @icon="more-horizontal" @hasChevron={{false}} @text="login rules menu" data-test-popup-menu-trigger />
-        <dd.Interactive data-test-view-rule-trigger>
+        <dd.Interactive @route="login-settings.rule" @model={{rule.name}} data-test-view-rule-trigger>
           View
         </dd.Interactive>
         {{!  TODO: uncomment once read comp is setup
@@ -34,7 +34,7 @@
           Read
         </dd.Interactive> 
         }}
-        {{!-- {{#if (has-permission "status")}} --}}
+        {{!-- {{#if (has-permission "delete")}} --}}
         <dd.Interactive @color="critical" data-test-confirm-action-trigger>Delete</dd.Interactive>
         {{!-- {{/if}} --}}
       </Hds::Dropdown>
