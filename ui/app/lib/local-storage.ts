@@ -3,8 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import type { ApiError } from 'vault/api';
-
 export default {
   isLocalStorageSupported() {
     try {
@@ -13,11 +11,12 @@ export default {
       window.localStorage.removeItem(key);
       return true;
     } catch (e) {
-      const error = e as ApiError;
       // modify the e object so we can customize the error message.
       // e.message is readOnly.
-      error.errors = [`This is likely due to your browser's cookie settings.`];
-      throw e;
+      throw {
+        ...(e as Error),
+        errors: [`This is likely due to your browser's cookie settings.`],
+      };
     }
   },
 
