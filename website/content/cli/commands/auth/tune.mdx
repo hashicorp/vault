@@ -1,0 +1,189 @@
+---
+layout: docs
+page_title: auth tune - Command
+description: |-
+  The "auth tune" command tunes the configuration options for the auth method at
+  the given PATH.
+---
+
+# auth tune
+
+The `auth tune` command tunes the configuration options for the auth method at
+the given PATH. 
+
+<Note>
+
+The argument corresponds to the **path** where the auth method is
+enabled, not the auth **type**.
+
+</Note>
+
+## Examples
+
+Before tuning the auth method configuration, view the current configuration of the
+auth method enabled at `github/`.
+
+```shell-session
+$ vault read sys/auth/github/tune
+Key                  Value
+---                  -----
+default_lease_ttl    768h
+description          n/a
+force_no_cache       false
+max_lease_ttl        768h
+token_type           default-service
+```
+
+The default lease for the auth method enabled at `github/` is currently set to
+768 hours. Tune this value to 72 hours.
+
+```shell-session
+$ vault auth tune -default-lease-ttl=72h github/
+Success! Tuned the auth method at: github/
+```
+
+Verify the updated configuration.
+
+<CodeBlockConfig highlight="1,4">
+
+```shell-session
+$ vault read sys/auth/github/tune
+Key                  Value
+---                  -----
+default_lease_ttl    72h
+description          n/a
+force_no_cache       false
+max_lease_ttl        768h
+token_type           default-service
+```
+
+</CodeBlockConfig>
+
+To restore back to the system default, you can use `-1`. 
+
+```shell-session
+$ vault auth tune -default-lease-ttl=-1 github/
+Success! Tuned the auth method at: github/
+```
+
+Verify the updated configuration.
+
+<CodeBlockConfig highlight="1,4">
+
+```shell-session
+$ vault read sys/auth/github/tune
+Key                  Value
+---                  -----
+default_lease_ttl    768h
+description          n/a
+force_no_cache       false
+max_lease_ttl        768h
+token_type           default-service
+```
+
+</CodeBlockConfig>
+
+You can specify multiple audit non-hmac request keys.
+
+```shell-session
+$ vault auth tune -audit-non-hmac-request-keys=value1 -audit-non-hmac-request-keys=value2 github/
+Success! Tuned the auth method at: github/
+```
+
+### Enable user lockout
+
+User lockout feature is only supported for
+[userpass](/vault/docs/auth/userpass), [ldap](/vault/docs/auth/ldap), and
+[approle](/vault/docs/auth/approle) auth methods.
+
+Tune the `userpass/` auth method to lock out the user after 10 failed login
+attempts within 10 minutes.
+
+```shell-session
+$ vault auth tune -user-lockout-threshold=10  -user-lockout-duration=10m userpass/
+Success! Tuned the auth method at: userpass/
+```
+
+View the current configuration of the auth method enabled at `userpass/`.
+
+<CodeBlockConfig highlight="1,11-13">
+
+```shell-session
+$ vault read sys/auth/userpass/tune
+
+Key                  Value
+---                  -----
+default_lease_ttl    768h
+description          n/a
+force_no_cache       false
+max_lease_ttl        768h
+token_type           default-service
+user_lockout_counter_reset_duration    0s
+user_lockout_disable                   false
+user_lockout_duration                  10m
+user_lockout_threshold                 10
+```
+
+</CodeBlockConfig>
+
+
+## Usage
+
+The following flags are available in addition to the [standard set of
+flags](/vault/docs/commands) included on all commands.
+
+- `-allowed-response-headers` `(string: "")` - response header values that the auth
+  method will be allowed to set.
+
+- `-audit-non-hmac-request-keys` `(string: "")` - Key that will not be HMAC'd
+  by audit devices in the request data object. Note that multiple keys may be
+  specified by providing this option multiple times, each time with 1 key.
+
+- `-audit-non-hmac-response-keys` `(string: "")` - Key that will not be HMAC'd
+  by audit devices in the response data object. Note that multiple keys may be
+  specified by providing this option multiple times, each time with 1 key.
+
+- `-default-lease-ttl` `(duration: "")` - The default lease TTL for this auth
+  method. If unspecified, this defaults to the Vault server's globally
+  configured default lease TTL, or a previously configured value for the auth
+  method.
+
+- `-description` `(string: "")` - Specifies the description of the auth method.
+  This overrides the current stored value, if any.
+
+- `-listing-visibility` `(string: "")` - The flag to toggle whether to show the
+  mount in the UI-specific listing endpoint. Valid values are `"unauth"` or `"hidden"`.
+  Passing empty string leaves the current setting unchanged.
+
+- `-max-lease-ttl` `(duration: "")` - The maximum lease TTL for this auth
+  method. If unspecified, this defaults to the Vault server's globally
+  configured [maximum lease TTL](/vault/docs/configuration#max_lease_ttl), or a
+  previously configured value for the auth method. This value is allowed to
+  override the server's global max TTL; it can be longer or shorter.
+
+- `-passthrough-request-headers` `(string: "")` - request header values that will
+  be sent to the auth method. Note that multiple keys may be
+  specified by providing this option multiple times, each time with 1 key.
+
+- `-token-type` `(string: "")` - Specifies the type of tokens that should be
+  returned by the auth method.
+
+- `-trim-request-trailing-slashes` `(bool: false)` - If true, requests to
+  this mount with trailing slashes will have those slashes trimmed. 
+  Necessary for some standards based APIs handled by Vault.
+
+- `-plugin-version` `(string: "")` - Configures the semantic version of the plugin
+  to use. The new version will not start running until the mount is
+  [reloaded](/vault/docs/commands/plugin/reload).
+
+- `-user-lockout-threshold` `(string: "")` - Specifies the number of failed login attempts 
+  after which the user is locked out. User lockout feature was added in Vault 1.13. 
+
+- `-user-lockout-duration` `(duration: "")` - Specifies the duration for which a user will be locked out.
+  User lockout feature was added in Vault 1.13.
+
+- `-user-lockout-counter-reset-duration` `(duration: "")` - Specifies the duration after which the lockout 
+  counter is reset with no failed login attempts. User lockout feature was added in Vault 1.13.
+
+- `-user-lockout-disable` `(bool: false)` - Disables the user lockout feature if set to true. User lockout feature was added in Vault 1.13.
+

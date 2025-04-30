@@ -1,0 +1,54 @@
+---
+layout: docs
+page_title: kv rollback - Command
+description: |-
+  The "kv rollback" command restores a given previous version to the current
+  version at the given path.
+---
+
+# kv rollback
+
+~> **NOTE:** This is a [KV version 2](/vault/docs/secrets/kv/kv-v2) secrets
+engine command, and not available for Version 1.
+
+The `kv rollback` command restores a given previous version to the current
+version at the given path. The value is written as a new version; for instance,
+if the current version is 5 and the rollback version is 2, the data from version
+2 will become version 6. This command makes it easy to restore unintentionally
+overwritten data.
+
+## Examples
+
+Restores the version 2 of the data at key "creds":
+
+```shell-session
+$ vault kv rollback -mount=secret -version=2 creds
+Key              Value
+---              -----
+created_time     2019-06-06T17:07:19.299831Z
+deletion_time    n/a
+destroyed        false
+version          6
+```
+
+## Usage
+
+There are no flags beyond the [standard set of flags](/vault/docs/commands)
+included on all commands.
+
+### Output options
+
+- `-format` `(string: "table")` - Print the output in the given format. Valid
+  formats are "table", "json", or "yaml". This can also be specified via the
+  `VAULT_FORMAT` environment variable.
+
+### Command options
+
+- `-mount` `(string: "")` - Specifies the path where the KV backend is mounted. 
+  If specified, the next argument will be interpreted as the secret path. If 
+  this flag is not specified, the next argument will be interpreted as the 
+  combined mount path and secret path, with /data/ automatically inserted for 
+  KV v2 secrets.
+
+- `-version` `(int: 0)` - Specifies the version number that should be made
+  current again.
