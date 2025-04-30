@@ -1,0 +1,48 @@
+---
+layout: docs
+page_title: auth move - Command
+description: |-
+  The "auth move" command moves an existing auth method to a new path. All
+  tokens from the old auth method are revoked, but all configurations
+  associated with the engine are preserved.
+---
+
+# auth move
+
+The `auth move` command moves an existing auth method to a new path. Any
+leases from the old auth method are revoked, but all configuration associated
+with the engine is preserved. The command can be issued for a move within or across
+namespaces, using namespace prefixes in the arguments.
+
+The command will trigger a remount operation and uses the returned migration ID to poll the 
+status of the operation until a terminal state of `success` or `failure` is reached.
+
+**Moving an existing auth method will revoke any leases from the old
+method.**
+
+## Examples
+
+Move the existing auth method at ns1/approle/ to ns2/new-approle/:
+
+```shell-session
+$ vault auth move ns1/auth/approle/ ns2/auth/new-approle/
+```
+
+Move the existing auth method `auth/userpass` to the `education/certification/approle` namespace.
+
+```shell-session
+$ vault auth move auth/userpass education/certification/auth/userpass
+```
+
+## Usage
+
+There are no flags beyond the [standard set of flags](/vault/docs/commands)
+included on all commands.
+
+## Post-move considerations
+
+Each namespace has its own policies, auth methods, secrets engines, tokens,
+identity entities and groups. You must consider the following after moving a mount across namespaces:
+
+- Necessary policies exist in the target namespace
+- Entities and groups might need updates after an auth method move

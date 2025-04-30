@@ -61,37 +61,44 @@ module.exports = [
     permanent: true,
   },
   {
-    source: '/vault/docs/:version(v1\.(?:4|5|6|7|8|9|10|11|12|13)\.x)/agent-and-proxy/agent',
+    source:
+      '/vault/docs/:version(v1.(?:4|5|6|7|8|9|10|11|12|13).x)/agent-and-proxy/agent',
     destination: '/vault/docs/:version/agent/',
     permanent: true,
   },
   {
-    source: '/vault/docs/:version(v1\.(?:4|5|6|7|8|9|10|11|12|13)\.x)/agent-and-proxy/agent/template',
+    source:
+      '/vault/docs/:version(v1.(?:4|5|6|7|8|9|10|11|12|13).x)/agent-and-proxy/agent/template',
     destination: '/vault/docs/:version/agent/template',
     permanent: true,
   },
   {
-    source: '/vault/docs/:version(v1\.(?:4|5|6|7|8|9|10|11|12|13)\.x)/agent-and-proxy/agent/caching',
+    source:
+      '/vault/docs/:version(v1.(?:4|5|6|7|8|9|10|11|12|13).x)/agent-and-proxy/agent/caching',
     destination: '/vault/docs/:version/agent/caching',
     permanent: true,
   },
   {
-    source: '/vault/docs/:version(v1\.(?:4|5|6|7|8|9|10|11|12|13)\.x)/agent-and-proxy/autoauth/:slug*',
+    source:
+      '/vault/docs/:version(v1.(?:4|5|6|7|8|9|10|11|12|13).x)/agent-and-proxy/autoauth/:slug*',
     destination: '/vault/docs/:version/agent/autoauth/:slug',
     permanent: true,
   },
   {
-    source: '/vault/docs/:version(v1\.(?:8|9|10|11|12|13)\.x)/agent-and-proxy/agent/caching/:slug*',
+    source:
+      '/vault/docs/:version(v1.(?:8|9|10|11|12|13).x)/agent-and-proxy/agent/caching/:slug*',
     destination: '/vault/docs/:version/agent/caching/:slug',
     permanent: true,
   },
   {
-    source: '/vault/docs/:version(v1\.(?:7|8|9|10|11|12|13)\.x)/agent-and-proxy/agent/winsvc',
+    source:
+      '/vault/docs/:version(v1.(?:7|8|9|10|11|12|13).x)/agent-and-proxy/agent/winsvc',
     destination: '/vault/docs/:version/agent/winsvc',
     permanent: true,
   },
   {
-    source: '/vault/docs/:version(v1\.(?:8|9)\.x)/agent-and-proxy/agent/generate-config',
+    source:
+      '/vault/docs/:version(v1.(?:8|9).x)/agent-and-proxy/agent/generate-config',
     destination: '/vault/docs/:version/agent/template-config',
     permanent: true,
   },
@@ -141,7 +148,8 @@ module.exports = [
     permanent: true,
   },
   {
-    source: '/vault/docs/:version(v1\.(?:8|9)\.x)/agent-and-proxy/agent/generate-config',
+    source:
+      '/vault/docs/:version(v1.(?:8|9).x)/agent-and-proxy/agent/generate-config',
     destination: '/vault/docs/:version/agent/template-config',
     permanent: true,
   },
@@ -181,7 +189,8 @@ module.exports = [
     permanent: true,
   },
   {
-    source: '/vault/docs/upgrading/upgrade-to-:version(1\.(?:12|13|14|15|16|17|18)\.x)',
+    source:
+      '/vault/docs/upgrading/upgrade-to-:version(1.(?:12|13|14|15|16|17|18).x)',
     destination: '/vault/docs/v:version/upgrading/upgrade-to-:version',
     permanent: true,
   },
@@ -191,12 +200,14 @@ module.exports = [
     permanent: true,
   },
   {
-    source: '/vault/docs/v:version(1\.(?:4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19)\.x)/updates/important-changes',
+    source:
+      '/vault/docs/v:version(1.(?:4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19).x)/updates/important-changes',
     destination: '/vault/docs/v:version/upgrading/upgrade-to-:version',
     permanent: true,
   },
   {
-    source: '/vault/docs/v:version(1\.(?:4|5|6|7|8|9|10|11|12|13|14|15|17|18)).x/updates/release-notes',
+    source:
+      '/vault/docs/v:version(1.(?:4|5|6|7|8|9|10|11|12|13|14|15|17|18)).x/updates/release-notes',
     destination: '/vault/docs/v:version.x/release-notes/:version.0',
     permanent: true,
   },
@@ -206,7 +217,8 @@ module.exports = [
     permanent: true,
   },
   {
-    source: '/vault/docs/release-notes/:version(1\.(?:4|5|6|7|8|9|10|11|12|13|14|15|17|18)).0',
+    source:
+      '/vault/docs/release-notes/:version(1.(?:4|5|6|7|8|9|10|11|12|13|14|15|17|18)).0',
     destination: '/vault/docs/v:version.x/release-notes/:version.0',
     permanent: true,
   },
@@ -231,7 +243,8 @@ module.exports = [
     permanent: true,
   },
   {
-    source: '/vault/docs/v:version(1\.(?:4|5|6|7|8|9|10|11|12|13|14|15|16|17|18)\.x)/partners',
+    source:
+      '/vault/docs/v:version(1.(?:4|5|6|7|8|9|10|11|12|13|14|15|16|17|18).x)/partners',
     destination: '/vault/docs/:version/interoperability-matrix',
     permanent: true,
   },
@@ -309,5 +322,5 @@ module.exports = [
     source: '/vault/docs/enterprise/license/faq',
     destination: '/vault/docs/license',
     permanent: true,
-  }
+  },
 ]
