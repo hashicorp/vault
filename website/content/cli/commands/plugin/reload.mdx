@@ -1,0 +1,72 @@
+---
+layout: docs
+page_title: plugin reload - Command
+description: |-
+  The "plugin reload" command reloads mounted plugins.
+---
+
+# plugin reload
+
+The `plugin reload` command is used to reload mounted plugin backends. Either
+the plugin name (`plugin`) or the desired plugin backend mounts (`mounts`)
+must be provided, but not both. In the case that the plugin name is provided,
+all mounted paths that use that plugin backend will be reloaded.
+
+If run with a Vault namespace other than the root namespace, only plugins
+running in the same namespace will be reloaded.
+
+## Examples
+
+Reload a plugin by type and name:
+
+```shell-session
+$ vault plugin reload -type=auth -plugin my-custom-plugin
+Success! Reloaded plugin: my-custom-plugin
+```
+
+Reload an auth plugin by mount:
+
+```shell-session
+$ vault plugin reload \
+  -mounts auth/my-custom-plugin-1 \
+  -mounts auth/my-custom-plugin-2
+Success! Reloaded mounts: [auth/my-custom-plugin-1/ auth/my-custom-plugin-2/]
+```
+
+Reload a secrets plugin by mount:
+
+```shell-session
+$ vault plugin reload \
+  -mounts my-custom-plugin-1 \
+  -mounts my-custom-plugin-2
+Success! Reloaded mounts: [my-custom-plugin-1/ my-custom-plugin-2/]
+```
+
+Reload a secrets plugin named "my-custom-plugin" across all nodes and replicated clusters:
+
+```shell-session
+$ vault plugin reload \
+  -type=secret \
+  -plugin=my-custom-plugin \
+  -scope=global
+```
+
+## Usage
+
+The following flags are available in addition to the [standard set of
+flags](/vault/docs/commands) included on all commands.
+
+### Command options
+
+- `-plugin` `(string: "")` - The name of the plugin to reload, as registered in
+  the plugin catalog.
+
+- `-type` `(string: "")` - The type of plugin to reload, one of auth, secret, or
+  database. Mutually exclusive with `-mounts`. If not provided, all plugins
+  with a matching name will be reloaded.
+
+- `-mounts` `(array: [])` - Array or comma-separated string mount paths of the
+  plugin backends to reload.
+
+- `-scope` `(string: "")` - The scope of the reload. For local reloads, omit this flag.
+  For reloads that span multiple Vault clusters, use `global`.

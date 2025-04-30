@@ -1,0 +1,50 @@
+---
+layout: docs
+page_title: token capabilities - Command
+description: |-
+  The "token capabilities" command fetches the capabilities of a token for a
+  given path.
+---
+
+# token capabilities
+
+The `token capabilities` command fetches the capabilities of a token for a given
+path.
+
+If you pass a token value as an argument, this command uses the
+`/sys/capabilities` endpoint and permission. In the absence of an explicit token
+value, this command uses the `/sys/capabilities-self` endpoint and permission
+with the locally authenticated token.
+
+## Examples
+
+List capabilities for the local token on the `secret/foo` path:
+
+```shell-session
+$ vault token capabilities secret/foo
+read
+```
+
+The output shows the local token has read permission on the `secret/foo` path.
+
+List capabilities for a token (`hvs.CAESI...WtiSW5mWUY`) on the `cubbyhole/foo`
+path:
+
+```shell-session
+$ vault token capabilities hvs.CAESI...WtiSW5mWUY database/creds/readonly
+deny
+```
+
+The output shows the token (`hvs.CAESI...WtiSW5mWUY`) has no permission to
+operate on the `cubbyhole/foo` path.
+
+## Usage
+
+The following flags are available in addition to the [standard set of
+flags](/vault/docs/commands) included on all commands.
+
+### Output options
+
+- `-format` `(string: "table")` - Print the output in the given format. Valid
+  formats are "table", "json", or "yaml". This can also be specified via the
+  `VAULT_FORMAT` environment variable.

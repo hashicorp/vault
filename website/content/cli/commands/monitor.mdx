@@ -1,0 +1,78 @@
+---
+layout: docs
+page_title: 'monitor - Vault CLI'
+description: >-
+  Use vault monitor to stream server logs to stdout in real time.
+---
+
+# `monitor`
+
+Stream Vault server logs in real-time to `stdout`.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault monitor [flags]
+
+$ vault monitor [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`vault monitor` streams Vault server logs to `stdout` in real time based on the
+address stored in `VAULT_ADDR` or passed through `-address`. Use the
+`-log-level` flag to override the default log level set for the Vault server.
+
+<Tip title="Related API endpoints">
+
+MonitorLogs - [`GET: /sys/monitor`](/vault/api-docs/system/monitor)
+
+</Tip>
+
+
+### Limitations and warnings
+
+- `vault monitor` runs indefinitely and only exits if an unexpected error occurs.
+
+- `vault monitor` may drop log lines if Vault is emitting log messages faster
+  than the receiver can process the input.
+
+
+
+## Command arguments
+
+None.
+
+## Command options
+
+None.
+
+## Command flags
+
+<br />
+
+@include 'cli/shared/flags/log-level.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/shared/flags/log-format.mdx'
+
+
+
+
+## Standard flags
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
+
+
+
+
+## Examples
+
+Stream server logs at the `debug` log level:
+
+```shell-session
+$ vault monitor -log-level=debug
+```

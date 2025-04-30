@@ -1,0 +1,65 @@
+---
+layout: docs
+page_title: operator rotate - Command
+description: |-
+  The "operator rotate" rotates the underlying encryption key which is used to
+  secure data written to the storage backend. This installs a new key in the key
+  ring. This new key is used to encrypt new data, while older keys in the ring
+  are used to decrypt older data.
+---
+
+# operator rotate
+
+The `operator rotate` command rotates the underlying encryption key, which
+secures data written to storage. This installs a new key in the key ring. 
+This new key encrypts new data, while older keys in the ring decrypt
+older data.
+
+This is an online operation and does not cause downtime. This command runs
+per-cluster (not per-server), since Vault servers in HA mode share the same
+storage.
+
+As of **Vault 1.7**, Vault will automatically rotate the encryption key before
+reaching 2<sup>32</sup> encryption operations, in adherence with NIST SP800-32D
+guidelines.
+
+## Examples
+
+Rotate Vault's encryption key:
+
+```shell-session
+$ vault operator rotate
+Key Term        3
+Install Time    01 May 17 10:30 UTC
+```
+
+View the current automatic rotation policy:
+
+```shell-session
+$ vault read sys/rotate/config
+```
+
+Configure a time interval for automatic key rotation:
+
+```shell-session
+$ vault write sys/rotate/config interval=2160h
+Success! Data written to: sys/rotate/config
+```
+
+Configure the maximum number of encryption operations per key:
+
+```shell-session
+$ vault write sys/rotate/config max_operations=123456789
+Success! Data written to: sys/rotate/config
+```
+
+## Usage
+
+The following flags are available in addition to the [standard set of
+flags](/vault/docs/commands) included on all commands.
+
+### Output options
+
+- `-format` `(string: "table")` - Print the output in the given format. Valid
+  formats are "table", "json", or "yaml". This can also be specified via the
+  `VAULT_FORMAT` environment variable.

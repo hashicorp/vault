@@ -1,0 +1,73 @@
+---
+layout: docs
+page_title: plugin info - Command
+description: The "plugin info" command displays information about a plugin in the catalog.
+---
+
+# plugin info
+
+The `plugin info` displays information about a plugin in the catalog.
+The plugin's type of "auth", "database", or "secret" must be included.
+
+## deprecation_status field
+
+As of 1.12, all builtin plugins will have an associated Deprecation
+Status. This status will be reflected in the `deprecation_status` key/value
+pair, seen below.
+
+## Examples
+
+Display information about a plugin
+
+```shell-session
+$ vault plugin info -version=v1.0.0 auth my-custom-plugin
+
+Key                   Value
+---                   -----
+args                  []
+builtin               false
+command               my-custom-plugin
+deprecation_status    n/a
+name                  my-custom-plugin
+oci_image             n/a
+runtime               n/a
+sha256                04ce575260fa3a2cfc477d13ac327108c50838a03917ec4d6df38ecdc64452d1
+version               v1.0.0
+```
+
+```shell-session
+$ vault plugin info database postgresql-database-plugin
+Key                   Value
+---                   -----
+args                  []
+builtin               true
+command               n/a
+deprecation_status    supported
+name                  postgresql-database-plugin
+oci_image             n/a
+runtime               n/a
+sha256                n/a
+version               n/a
+```
+
+## Usage
+
+The following flags are available in addition to the [standard set of
+flags](/vault/docs/commands) included on all commands.
+
+### Output options
+
+- `-field` `(string: "")` - Print only the field with the given name. Specifying
+  this option will take precedence over other formatting directives. The result
+  will not have a trailing newline making it ideal for piping to other
+  processes.
+
+- `-format` `(string: "table")` - Print the output in the given format. Valid
+  formats are "table", "json", or "yaml". This can also be specified via the
+  `VAULT_FORMAT` environment variable.
+
+### Command options
+
+- `-plugin-version` `(string: "")` - Semantic version of the plugin to read from
+  the catalog. If unspecified, refers to the unversioned plugin registered with
+  the same name and type, or the built-in plugin, in that order of precedence.
