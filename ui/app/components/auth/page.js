@@ -7,6 +7,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import { task } from 'ember-concurrency';
 
 /**
  * @module AuthPage
@@ -15,7 +16,6 @@ import { action } from '@ember/object';
  *
  * @example
  * <Auth::Page
- * @authMethodQueryParam={{this.authMethod}}
  * @cluster={{this.model}}
  * @namespaceQueryParam={{this.namespaceQueryParam}}
  * @oidcProviderQueryParam={{this.oidcProvider}}
@@ -24,7 +24,6 @@ import { action } from '@ember/object';
  * @wrappedToken={{this.wrappedToken}}
 />
  *
- * @param {string} authMethodQueryParam - auth method type to login with, updated by selecting an auth method from the dropdown
  * @param {object} cluster - the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
  * @param {string} namespaceQueryParam - namespace to login with, updated by typing in to the namespace input
  * @param {string} oidcProviderQueryParam - oidc provider query param, set in url as "?o=someprovider"
@@ -34,10 +33,23 @@ import { action } from '@ember/object';
  * */
 
 export default class AuthPage extends Component {
+  @service api;
+  @service auth;
   @service flags;
 
-  @tracked mfaErrors;
+  @tracked preselectedAuthType;
+
+  // application state error handling
+  @tracked mfaErrors = '';
   @tracked mfaAuthData;
+  @tracked tokenUnwrapError = '';
+
+  constructor() {
+    super(...arguments);
+    if (this.args.wrappedToken) {
+      this.unwrapToken.perform();
+    }
+  }
 
   get namespaceInput() {
     const namespaceQP = this.args.namespaceQueryParam;
@@ -52,6 +64,45 @@ export default class AuthPage extends Component {
     }
     return namespaceQP;
   }
+
+  get pageError() {
+    if (this.mfaErrors) {
+      return {
+        message:
+          'Multi-factor authentication is required, but failed. Go back and try again, or contact your administrator.',
+        error: this.mfaErrors,
+        action: 'retryMfa',
+      };
+    }
+    if (this.tokenUnwrapError) {
+      return {
+        message: 'Token unwrap failed',
+        error: this.tokenUnwrapError,
+        action: 'retryTokenUnwrap',
+      };
+    }
+    return null;
+  }
+
+  unwrapToken = task(async () => {
+    try {
+      const response = await this.api.sys.unwrap(
+        {},
+        this.api.buildHeaders({ token: this.args.wrappedToken })
+      );
+      const authResponse = await this.auth.authenticate({
+        clusterId: this.args.cluster.id,
+        backend: 'token',
+        data: { token: response.auth.clientToken },
+        selectedAuth: 'token',
+      });
+
+      this.onAuthResponse(authResponse);
+    } catch (e) {
+      const { message } = await this.api.parseError(e);
+      this.tokenUnwrapError = message;
+    }
+  });
 
   @action
   handleNamespaceUpdate(event) {
@@ -78,14 +129,26 @@ export default class AuthPage extends Component {
   }
 
   @action
+  onCancelMfa() {
+    // before resetting mfaAuthData, preserve auth type
+    this.preselectedAuthType = this.mfaAuthData.backend;
+    this.mfaAuthData = null;
+  }
+
+  @action
   onMfaSuccess(authResponse) {
     // calls authSuccess in auth.js controller
     this.args.onAuthSuccess(authResponse);
   }
 
   @action
-  onMfaErrorDismiss() {
-    this.mfaAuthData = null;
-    this.mfaErrors = null;
+  dismissError(action) {
+    if (action === 'retryTokenUnwrap') {
+      this.tokenUnwrapError = '';
+    }
+    if (action === 'retryMfa') {
+      this.mfaAuthData = null; // resets auth form
+      this.mfaErrors = '';
+    }
   }
 }

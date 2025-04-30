@@ -98,7 +98,8 @@ export default class MfaForm extends Component {
       } else if (this.singlePasscode) {
         this.error = TOTP_VALIDATION_ERROR;
       } else {
-        this.args.onError(this.auth.handleError(error));
+        const errorMessage = this.auth.handleError(error).join('. ');
+        this.args.onError(errorMessage);
       }
     }
   }

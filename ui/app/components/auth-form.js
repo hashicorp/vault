@@ -21,7 +21,6 @@ import { v4 as uuidv4 } from 'uuid';
  * @example
  * <AuthForm @cluster={{model}} @namespace="admin" @selectedAuth="token" @authIsRunning={{this.authenticate.isRunning}}  @performAuth={{this.performAuth}} />
  *
- * @param {string} wrappedToken - Token that can be used to login if added directly to the URL via the "wrapped_token" query param
  * @param {object} cluster - The cluster model which contains information such as cluster id, name and boolean for if the cluster is in standby
  * @param {string} namespace- The currently active namespace.
  * @param {string} selectedAuth - The auth method that is currently selected in the dropdown.
@@ -52,7 +51,6 @@ export default Component.extend(DEFAULTS, {
   methods: null,
   cluster: null,
   namespace: null,
-  wrappedToken: null,
   // internal
   oldNamespace: null,
 
@@ -62,26 +60,14 @@ export default Component.extend(DEFAULTS, {
 
   didReceiveAttrs() {
     this._super(...arguments);
-    const {
-      wrappedToken: token,
-      oldWrappedToken: oldToken,
-      oldNamespace: oldNS,
-      namespace: ns,
-      selectedAuth: newMethod,
-      oldSelectedAuth: oldMethod,
-    } = this;
+    const { oldNamespace: oldNS, namespace: ns, selectedAuth: newMethod, oldSelectedAuth: oldMethod } = this;
     next(() => {
-      if (!token && (oldNS === null || oldNS !== ns)) {
+      if (oldNS === null || oldNS !== ns) {
         this.fetchMethods.perform();
       }
       // don't set any variables if the component is being torn down
       if (this.isDestroyed || this.isDestroying) return;
       this.set('oldNamespace', ns);
-      // we only want to trigger this once
-      if (token && !oldToken) {
-        this.unwrapToken.perform(token);
-        this.set('oldWrappedToken', token);
-      }
       if (oldMethod && oldMethod !== newMethod) {
         this.resetDefaults();
       }
@@ -100,11 +86,7 @@ export default Component.extend(DEFAULTS, {
     next(() => {
       const firstMethod = this.firstMethod();
       // set `with` to the first method
-      if (
-        !this.wrappedToken &&
-        ((this.fetchMethods.isIdle && firstMethod && !this.selectedAuth) ||
-          (this.selectedAuth && !this.selectedAuthBackend))
-      ) {
+      if (this.fetchMethods.isIdle && firstMethod && !this.selectedAuth) {
         this.set('selectedAuth', firstMethod);
       }
     });
@@ -122,9 +104,9 @@ export default Component.extend(DEFAULTS, {
   },
 
   getAuthBackend(type) {
-    const { wrappedToken, methods, selectedAuth, selectedAuthIsPath: keyIsPath } = this;
+    const { methods, selectedAuth, selectedAuthIsPath: keyIsPath } = this;
     const selected = type || selectedAuth;
-    if (!methods && !wrappedToken) {
+    if (!methods) {
       return {};
     }
     // if type is provided we can ignore path since we are attempting to lookup a specific backend by type
@@ -135,16 +117,9 @@ export default Component.extend(DEFAULTS, {
   },
 
   selectedAuthIsPath: match('selectedAuth', /\/$/),
-  selectedAuthBackend: computed(
-    'wrappedToken',
-    'methods',
-    'methods.[]',
-    'selectedAuth',
-    'selectedAuthIsPath',
-    function () {
-      return this.getAuthBackend();
-    }
-  ),
+  selectedAuthBackend: computed('methods', 'methods.[]', 'selectedAuth', 'selectedAuthIsPath', function () {
+    return this.getAuthBackend();
+  }),
 
   providerName: computed('selectedAuthBackend.type', function () {
     if (!this.selectedAuthBackend) {
@@ -180,21 +155,6 @@ export default Component.extend(DEFAULTS, {
     return shownMethods.length ? shownMethods : this.authMethods;
   }),
 
-  unwrapToken: task(
-    waitFor(function* (token) {
-      // will be using the Token Auth Method, so set it here
-      this.set('selectedAuth', 'token');
-      try {
-        const response = yield this.api.sys.unwrap({}, this.api.buildHeaders({ token }));
-        this.set('token', response.auth.clientToken);
-        this.send('doSubmit');
-      } catch (e) {
-        const { message } = yield this.api.parseError(e);
-        this.set('error', `Token unwrap failed: ${message}`);
-      }
-    })
-  ),
-
   fetchMethods: task(
     waitFor(function* () {
       const store = this.store;
@@ -225,7 +185,7 @@ export default Component.extend(DEFAULTS, {
     })
   ),
 
-  showLoading: or('isLoading', 'authIsRunning', 'fetchMethods.isRunning', 'unwrapToken.isRunning'),
+  showLoading: or('isLoading', 'authIsRunning', 'fetchMethods.isRunning'),
 
   actions: {
     doSubmit(passedData, event, token) {
