@@ -6,9 +6,11 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn, findAll, waitFor, click, find } from '@ember/test-helpers';
+import sinon from 'sinon';
 import hbs from 'htmlbars-inline-precompile';
 import Service from '@ember/service';
 import { NAMESPACE_PICKER_SELECTORS } from 'vault/tests/helpers/namespace-picker';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
 class AuthService extends Service {
   authData = { userRootNamespace: '' };
@@ -35,8 +37,23 @@ class StoreService extends Service {
   }
 }
 
+function getMockCapabilitiesModel(canList) {
+  // Mock for the Capabilities model
+  return {
+    path: 'sys/namespaces/',
+    capabilities: canList ? ['list'] : [],
+    get(property) {
+      if (property === 'canList') {
+        return this.capabilities.includes('list');
+      }
+      return undefined;
+    },
+  };
+}
+
 module('Integration | Component | namespace-picker', function (hooks) {
   setupRenderingTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.owner.register('service:auth', AuthService);
@@ -46,7 +63,6 @@ module('Integration | Component | namespace-picker', function (hooks) {
 
   test('it focuses the search input field when the component is loaded', async function (assert) {
     await render(hbs`<NamespacePicker />`);
-
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify that the search input field is focused
@@ -60,7 +76,6 @@ module('Integration | Component | namespace-picker', function (hooks) {
 
   test('it filters namespace options based on search input', async function (assert) {
     await render(hbs`<NamespacePicker/>`);
-
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify all namespaces are displayed initially
@@ -93,12 +108,66 @@ module('Integration | Component | namespace-picker', function (hooks) {
     );
   });
 
-  test('it updates the namespace list after clicking "Refresh list"', async function (assert) {
-    // Mock `hasListPermissions`
-    this.owner.lookup('service:namespace').set('hasListPermissions', true);
+  test('it shows both action buttons when canList is true', async function (assert) {
+    const storeStub = this.owner.lookup('service:store');
+    sinon.stub(storeStub, 'findRecord').callsFake((modelType, id) => {
+      if (modelType === 'capabilities' && id === 'sys/namespaces/') {
+        return Promise.resolve(getMockCapabilitiesModel(true));
+      }
+      return Promise.reject();
+    });
 
     await render(hbs`<NamespacePicker />`);
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
+    // Verify that the "Refresh List" button is visible
+    assert.dom(NAMESPACE_PICKER_SELECTORS.refreshList).exists('Refresh List button is visible');
+    assert.dom(NAMESPACE_PICKER_SELECTORS.manageButton).exists('Manage button is visible');
+  });
+
+  test('it hides the refresh button when canList is false', async function (assert) {
+    const storeStub = this.owner.lookup('service:store');
+    sinon.stub(storeStub, 'findRecord').callsFake((modelType, id) => {
+      if (modelType === 'capabilities' && id === 'sys/namespaces/') {
+        return Promise.resolve(getMockCapabilitiesModel(false));
+      }
+      return Promise.reject();
+    });
+
+    await render(hbs`<NamespacePicker />`);
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+
+    // Verify that the buttons are hidden
+    assert.dom(NAMESPACE_PICKER_SELECTORS.refreshList).doesNotExist('Refresh List button is hidden');
+    assert.dom(NAMESPACE_PICKER_SELECTORS.manageButton).exists('Manage button is hidden');
+  });
+
+  test('it hides both action buttons when the capabilities store throws an error', async function (assert) {
+    const storeStub = this.owner.lookup('service:store');
+    sinon.stub(storeStub, 'findRecord').callsFake(() => {
+      return Promise.reject();
+    });
+
+    await render(hbs`<NamespacePicker />`);
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+
+    // Verify that the buttons are hidden
+    assert.dom(NAMESPACE_PICKER_SELECTORS.refreshList).doesNotExist('Refresh List button is hidden');
+    assert.dom(NAMESPACE_PICKER_SELECTORS.manageButton).doesNotExist('Manage button is hidden');
+  });
+
+  test('it updates the namespace list after clicking "Refresh list"', async function (assert) {
+    this.owner.lookup('service:namespace').set('hasListPermissions', true);
+
+    const storeStub = this.owner.lookup('service:store');
+    sinon.stub(storeStub, 'findRecord').callsFake((modelType, id) => {
+      if (modelType === 'capabilities' && id === 'sys/namespaces/') {
+        return Promise.resolve(getMockCapabilitiesModel(true)); // Return the mock model
+      }
+      return Promise.reject();
+    });
+
+    await render(hbs`<NamespacePicker />`);
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Dynamically modify the `findNamespacesForUser.perform` method for this test
@@ -135,23 +204,5 @@ module('Integration | Component | namespace-picker', function (hooks) {
     assert
       .dom(NAMESPACE_PICKER_SELECTORS.link('new-namespace'))
       .exists('The new namespace "new-namespace" is displayed after refreshing');
-  });
-
-  test('it displays the "Manage" button when the user has permissions', async function (assert) {
-    // Mock `hasListPermissions` to be true
-    this.owner.lookup('service:namespace').set('hasListPermissions', true);
-
-    await render(hbs`<NamespacePicker />`);
-
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
-
-    // Find the "Manage" button
-    const manageButton = findAll('a').find((el) => {
-      const spans = el.querySelectorAll('span');
-      return spans[1]?.textContent.trim() === 'Manage';
-    });
-
-    // Verify the "Manage" button is rendered
-    assert.ok(manageButton, 'The "Manage" button is displayed');
   });
 });
