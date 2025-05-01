@@ -10,7 +10,6 @@ import sinon from 'sinon';
 import hbs from 'htmlbars-inline-precompile';
 import Service from '@ember/service';
 import { NAMESPACE_PICKER_SELECTORS } from 'vault/tests/helpers/namespace-picker';
-import { setupMirage } from 'ember-cli-mirage/test-support';
 
 class AuthService extends Service {
   authData = { userRootNamespace: '' };
@@ -53,7 +52,6 @@ function getMockCapabilitiesModel(canList) {
 
 module('Integration | Component | namespace-picker', function (hooks) {
   setupRenderingTest(hooks);
-  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.owner.register('service:auth', AuthService);
