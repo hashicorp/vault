@@ -48,11 +48,11 @@ async function createNamespaces(namespaces) {
 }
 
 async function deleteNamespaces(namespaces) {
-  for (const ns of namespaces) {
-    // Reset to the root namespace
-    const url = '/vault/dashboard';
-    await visit(url);
+  // Reset to the root namespace
+  const url = '/vault/dashboard';
+  await visit(url);
 
+  for (const ns of namespaces) {
     // Note: delete the parent namespace to delete all child namespaces
     const part = ns.split('/')[0];
     await runCmd(deleteNS(part), false);
@@ -92,6 +92,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await createNamespaces(namespaces);
 
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
 
     assert.dom(NAMESPACE_PICKER_SELECTORS.searchInput).exists('The namespace search field exists');
 
@@ -122,6 +123,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await createNamespaces(namespaces);
 
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
 
     // Verify all namespaces are displayed initially
     assert.dom(NAMESPACE_PICKER_SELECTORS.link()).exists('Namespace link(s) exist');
@@ -207,6 +209,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await createNamespaces(namespaces);
 
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
 
     // Verify the "Manage" button is rendered and has the correct URL
     assert
@@ -244,6 +247,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await createNamespaces(namespaces);
 
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
 
     // Login with a namespace prefixed with /
     await loginNs('/beep/boop');
