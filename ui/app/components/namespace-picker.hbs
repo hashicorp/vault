@@ -32,19 +32,19 @@
 
       <D.Header>
         {{#if this.hasSearchInput}}
-          <div>
+          <div class="sub-text has-padding-8">
             {{this.searchInputHelpText}}
           </div>
         {{/if}}
 
-        <div class="has-padding-8">
+        <div class="is-size-8 has-text-black has-text-weight-semibold has-padding-8">
           {{this.namespaceLabel}}
           <Hds::BadgeCount @text={{or this.namespaceCount 0}} />
         </div>
       </D.Header>
 
       {{#if this.showNoNamespacesMessage}}
-        <D.Generic>
+        <D.Generic class="is-help">
           {{this.noNamespacesMessage}}
         </D.Generic>
       {{/if}}
