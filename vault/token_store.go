@@ -1066,7 +1066,7 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 			return fmt.Errorf("failed to parse inline policy for token entry: %v", err)
 		}
 		if duplicate {
-			ts.logger.Warn("HCL inline policy contains duplicate attributes, which will be forbidden in a future version", "namespace", tokenNS.Path)
+			ts.logger.Warn("HCL inline policy contains duplicate attributes, which will no longer be supported in a future version", "namespace", tokenNS.Path)
 		}
 	}
 

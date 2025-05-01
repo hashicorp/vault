@@ -95,7 +95,7 @@ func (c *PolicyFmtCommand) Run(args []string) int {
 
 	// Actually parse the policy. We always use the root namespace here because
 	// we don't want to modify the results.
-	// TODO: warning on duplicate attributes
+	// TODO (HCL_DUP_KEYS_DEPRECATION): Revert back to ParseACLPolicy once the deprecation is done
 	_, duplicate, err := vault.ParseACLPolicyCheckDuplicates(namespace.RootNamespace, string(b))
 	if err != nil {
 		c.UI.Error(err.Error())

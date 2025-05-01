@@ -330,7 +330,7 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 			return nil, nil, nil, nil, ErrInternalError
 		}
 		if duplicate {
-			c.logger.Warn("HCL inline policy contains duplicate attributes, which will be forbidden in a future version", "namespace", tokenNS.Path)
+			c.logger.Warn("HCL inline policy contains duplicate attributes, which will no longer be supported in a future version", "namespace", tokenNS.Path)
 		}
 		policies = append(policies, inlinePolicy)
 	}

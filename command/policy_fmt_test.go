@@ -118,6 +118,7 @@ path "secret" {
 	}
 }
 
+// TestPolicyFmtCommandNoTabs asserts the CLI help has no tab characters.
 func TestPolicyFmtCommandNoTabs(t *testing.T) {
 	t.Parallel()
 

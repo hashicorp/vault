@@ -616,7 +616,8 @@ func TestLoginMFATwoPhaseNonInteractiveMethodName(t *testing.T) {
 	validateFunc(methodName)
 }
 
-// TestLoginPrintsWarningOnDuplicateHclKeys ensures that a warning is printed when
+// TestLoginPrintsWarningOnDuplicateHclKeys ensures that a warning is printed when the token helper file contains
+// duplicate keys.
 func TestLoginPrintsWarningOnDuplicateHclKeys(t *testing.T) {
 	f, err := os.CreateTemp(t.TempDir(), ".vault")
 	f.WriteString(`

@@ -2703,7 +2703,7 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 		t.Fatalf("bad: %#v", resp)
 	}
 	// TODO (HCL_DUP_KEYS_DEPRECATION): remove this expectation once deprecation is done
-	require.NotContains(t, resp.Warnings, "policy contains duplicate attributes, which will be forbidden in a future version")
+	require.NotContains(t, resp.Warnings, "policy contains duplicate attributes, which will no longer be supported in a future version")
 
 	// validate the response structure for policy named Update
 	schema.ValidateResponse(
@@ -2810,6 +2810,8 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 	}
 }
 
+// TestSystemBackend_writeHCLDuplicateAttributes checks that trying to create a policy with duplicate HCL attributes
+// results in a warning being returned by the API
 func TestSystemBackend_writeHCLDuplicateAttributes(t *testing.T) {
 	b := testSystemBackend(t)
 
@@ -2825,7 +2827,7 @@ func TestSystemBackend_writeHCLDuplicateAttributes(t *testing.T) {
 	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
 		t.Fatalf("bad: %#v", resp)
 	}
-	require.Contains(t, resp.Warnings, "policy contains duplicate attributes, which will be forbidden in a future version")
+	require.Contains(t, resp.Warnings, "policy contains duplicate attributes, which will no longer be supported in a future version")
 }
 
 func TestSystemBackend_enableAudit(t *testing.T) {

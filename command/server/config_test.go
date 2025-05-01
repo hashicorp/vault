@@ -95,6 +95,7 @@ func TestUnknownFieldValidationListenerAndStorage(t *testing.T) {
 	testUnknownFieldValidationStorageAndListener(t)
 }
 
+// TestDuplicateKeyValidationHcl checks that the server command displays a warning when the HCL config file contains duplicate keys.
 func TestDuplicateKeyValidationHcl(t *testing.T) {
 	testDuplicateKeyValidationHcl(t)
 }

@@ -91,7 +91,7 @@ func (e extendedSystemViewImpl) SudoPrivilege(ctx context.Context, path string, 
 			return false
 		}
 		if duplicate {
-			e.core.logger.Warn("HCL inline policy contains duplicate attributes, which will be forbidden in a future version", "namespace", tokenNS.Path)
+			e.core.logger.Warn("HCL inline policy contains duplicate attributes, which will no longer be supported in a future version", "namespace", tokenNS.Path)
 		}
 		policies = append(policies, inlinePolicy)
 	}

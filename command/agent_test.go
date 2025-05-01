@@ -3114,6 +3114,7 @@ func TestAgent_Config_ReloadTls(t *testing.T) {
 	}
 }
 
+// TestAgent_Config_HclDuplicateKey checks that a log warning is printed when the agent config has duplicate attributes
 func TestAgent_Config_HclDuplicateKey(t *testing.T) {
 	configFile := populateTempFile(t, "agent-config.hcl", `
 log_level = "trace"

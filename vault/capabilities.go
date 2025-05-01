@@ -78,7 +78,7 @@ func (c *Core) CapabilitiesAndSubscribeEventTypes(ctx context.Context, token, pa
 			return nil, nil, err
 		}
 		if duplicate {
-			c.logger.Warn("HCL inline policy contains duplicate attributes", "namespace", tokenNS.Path)
+			c.logger.Warn("HCL inline policy contains duplicate attributes, which will no longer be supported in a future version", "namespace", tokenNS.Path)
 		}
 		policies = append(policies, inlinePolicy)
 		policyCount++

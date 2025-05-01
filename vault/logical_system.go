@@ -3682,8 +3682,8 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 
 		if duplicate {
 			// TODO (HCL_DUP_KEYS_DEPRECATION): remove log and API Warning once the deprecation is done
-			b.logger.Warn("newly created HCL policy contains duplicate attributes, which will be forbidden in a future version", "policy", policy.Name, "namespace", ns.Path)
-			resp.AddWarning("policy contains duplicate attributes, which will be forbidden in a future version")
+			b.logger.Warn("newly created HCL policy contains duplicate attributes, which will no longer be supported in a future version", "policy", policy.Name, "namespace", ns.Path)
+			resp.AddWarning("policy contains duplicate attributes, which will no longer be supported in a future version")
 		}
 		return resp, nil
 	}
