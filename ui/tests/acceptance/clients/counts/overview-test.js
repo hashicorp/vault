@@ -63,11 +63,14 @@ module('Acceptance | clients | overview', function (hooks) {
     assert.dom(CHARTS.xAxisLabel).exists({ count: 7 }, 'chart months matches query');
   });
 
-  // TODO revisit once CE changes are finalized
-  test.skip('it should update charts when querying date ranges', async function (assert) {
+  test('it should update charts when querying date ranges', async function (assert) {
     // query for single, historical month with no new counts (July 2023)
+    const service = this.owner.lookup('service:version');
+    service.type = 'community';
+
     const licenseStartMonth = format(LICENSE_START, 'yyyy-MM');
     const upgradeMonth = format(UPGRADE_DATE, 'yyyy-MM');
+    const now = format(STATIC_NOW, 'yyyy-MM');
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), licenseStartMonth);
     await fillIn(CLIENT_COUNT.dateRange.editDate('end'), licenseStartMonth);
@@ -83,22 +86,14 @@ module('Acceptance | clients | overview', function (hooks) {
     assert.dom(CHARTS.container('namespace')).exists('namespace attribution chart shows');
     assert.dom(CHARTS.container('mount')).exists('mount attribution chart shows');
 
-    // reset to billing period
-    await click(CLIENT_COUNT.dateRange.edit);
-    await click(CLIENT_COUNT.dateRange.reset);
-    await click(GENERAL.saveButton);
-
     // change to start on month/year of upgrade to 1.10
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), upgradeMonth);
+    await fillIn(CLIENT_COUNT.dateRange.editDate('end'), now);
     await click(GENERAL.saveButton);
-
     assert
       .dom(CLIENT_COUNT.dateRange.dateDisplay('start'))
       .hasText('September 2023', 'billing start month is correctly parsed from license');
-    assert
-      .dom(CLIENT_COUNT.dateRange.dateDisplay('end'))
-      .hasText('January 2024', 'billing start month is correctly parsed from license');
     assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
     assert
       .dom(CHARTS.container('Vault client counts'))
@@ -147,16 +142,10 @@ module('Acceptance | clients | overview', function (hooks) {
       .dom(xAxisLabels[xAxisLabels.length - 1])
       .hasText('12/23', 'x-axis labels end with queried end month');
 
-    // reset to billing period
-    await click(CLIENT_COUNT.dateRange.edit);
-    await click(CLIENT_COUNT.dateRange.reset);
-    await click(GENERAL.saveButton);
-
     // query month older than count start date
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2020-07');
     await click(GENERAL.saveButton);
-
     assert
       .dom(CLIENT_COUNT.counts.startDiscrepancy)
       .hasTextContaining(
