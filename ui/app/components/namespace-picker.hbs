@@ -31,7 +31,7 @@
       </D.Header>
 
       <D.Header>
-        {{#if this.hasSearchInput}}
+        {{#if (and this.hasSearchInput (not this.showNoNamespacesMessage))}}
           <div class="sub-text has-padding-8">
             {{this.searchInputHelpText}}
           </div>
@@ -44,7 +44,7 @@
       </D.Header>
 
       {{#if this.showNoNamespacesMessage}}
-        <D.Generic class="is-help">
+        <D.Generic class="sub-text">
           {{this.noNamespacesMessage}}
         </D.Generic>
       {{/if}}
