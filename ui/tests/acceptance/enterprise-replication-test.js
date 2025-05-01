@@ -89,7 +89,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await fillIn('[data-test-replication-secondary-id]', secondaryName);
 
     await click('#deny');
-    await clickTrigger('#paths');
+    await clickTrigger();
     await searchSelect.options.objectAt(0).click();
     const mountPath = find('[data-test-selected-option="0"]').innerText?.trim();
     await click('[data-test-secondary-add]');
