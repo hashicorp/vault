@@ -15,7 +15,7 @@
 <Toolbar />
 
 {{#each @loginRules as |rule|}}
-  <LinkedBlock class="list-item-row linked-block-item is-no-underline">
+  <div class="list-item-row linked-block-item is-no-underline">
     <div>
       <div class="is-grid align-items-center linked-block-title">
         <Hds::Icon @name="user-check" @size="24" />
@@ -34,5 +34,5 @@
         {{/if}}
       </Hds::Dropdown>
     </div>
-  </LinkedBlock>
+  </div>
 {{/each}}
