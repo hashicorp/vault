@@ -73,7 +73,7 @@ export default class AuthLoginFormComponent extends Component {
       if (data?.mfa_requirement) {
         const parsedMfaAuthResponse = this.auth._parseMfaResponse(data.mfa_requirement);
         // calls onAuthResponse in parent auth/page.js component
-        this.args.onSuccess(parsedMfaAuthResponse, backendType, data);
+        this.args.onSuccess(parsedMfaAuthResponse, { selectedAuth: backendType });
         // return here because mfa-form.js will finish login/authentication flow after mfa validation
         return;
       }
@@ -86,7 +86,7 @@ export default class AuthLoginFormComponent extends Component {
       });
 
       // calls onAuthResponse in auth/page.js
-      this.args.onSuccess(authResponse, backendType, data);
+      this.args.onSuccess(authResponse, { selectedAuth: backendType });
     } catch (e) {
       if (!this.auth.mfaError) {
         this.authError = `Authentication failed: ${this.auth.handleError(e)}`;
