@@ -24,8 +24,8 @@ export default class AuthRoute extends ClusterRouteBase {
     });
   }
 
-  async model(params, transition) {
-    const wrapped_token = transition?.to?.queryParams?.wrapped_token;
+  async model(params) {
+    const wrapped_token = params?.wrapped_token;
     if (wrapped_token) {
       const clusterModel = this.modelFor('vault.cluster');
       await this.unwrapToken(wrapped_token, clusterModel.id);
