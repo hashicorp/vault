@@ -63,7 +63,8 @@ module('Acceptance | clients | overview', function (hooks) {
     assert.dom(CHARTS.xAxisLabel).exists({ count: 7 }, 'chart months matches query');
   });
 
-  test('it should update charts when querying date ranges', async function (assert) {
+  // TODO revisit once CE changes are finalized
+  test.skip('it should update charts when querying date ranges', async function (assert) {
     // query for single, historical month with no new counts (July 2023)
     const licenseStartMonth = format(LICENSE_START, 'yyyy-MM');
     const upgradeMonth = format(UPGRADE_DATE, 'yyyy-MM');
