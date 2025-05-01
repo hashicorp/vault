@@ -5,4 +5,8 @@
 
 import Route from '@ember/routing/route';
 
-export default class LoginSettingsRuleDetailsRoute extends Route {}
+export default class LoginSettingsRuleDetailsRoute extends Route {
+  async model() {
+    return { rule: {} };
+  }
+}
