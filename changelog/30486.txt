@@ -1,0 +1,3 @@
+```release-note:bug
+Correct broken link from [AWS Static Roles](https://developer.hashicorp.com/vault/docs/secrets/aws#static-roles) documentation to [API documentation for same](https://developer.hashicorp.com/vault/api-docs/secret/aws#create-update-static-role)
+```
