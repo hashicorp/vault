@@ -82,7 +82,7 @@ export default class ClientsPageHeaderComponent extends Component {
   }
 
   get formattedCsvFileName() {
-    const endRange = this.formattedEndDate ? `-${this.formattedEndDate}` : '';
+    const endRange = this.showEndDate ? `-${this.formattedEndDate}` : '';
     const csvDateRange = this.formattedStartDate ? `_${this.formattedStartDate + endRange}` : '';
     const ns = this.namespaceFilter ? `_${this.namespaceFilter}` : '';
     return `clients_export${ns}${csvDateRange}`;
