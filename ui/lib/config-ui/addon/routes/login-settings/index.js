@@ -19,11 +19,11 @@ export default class LoginSettingsRoute extends Route {
     });
 
     // this makes sense with data structure atm, but to be revisited
-    const ruleList = [];
+    const loginRules = [];
     data.keys.forEach((rule) => {
-      ruleList.push({ name: rule, namespace: data.key_info[rule].namespace });
+      loginRules.push({ name: rule, namespace: data.key_info[rule].namespace });
     });
 
-    return { loginRules: ruleList };
+    return { loginRules };
   }
 }
