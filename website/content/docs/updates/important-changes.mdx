@@ -154,6 +154,7 @@ the external group associated with the client entity changes.
 ### Recommendation
 
 Direct all logins and token renewals to the active/primary node.
+Or upgrade to Vault 1.19.3+
 
 
 ## Strict validation for Azure auth login requests ((#strict-azure))
@@ -187,30 +188,22 @@ roles behave as expected.
 
 ### Recommendation
 
-If you rely on LDAP static roles, upgrade to Vault 1.19.2+, 1.18.8+, 1.17.15+,
-or 1.16.19+.
+If you rely on LDAP static roles, upgrade to Vault 1.19.3+, 1.18.9+, 1.17.16+,
+or 1.16.20+.
 
 
 ## Static DB role rotations on upgrade ((#db-static-role-rotations))
 
-| Change       | Affected version  | Affected deployments
-| ------------ | ----------------- | --------------------
-| Known issue  | 1.14.x or earlier | any
+| Change       | Affected version                                                        | Affected deployments
+| ------------ | ----------------------------------------------------------------------- | --------------------
+| Known issue  | 1.19.0 - 1.19.2, 1.18.5 - 1.18.8, 1.17.12 - 1.17.15, 1.16.16 - 1.16.19  | any
 
-When upgrading from Vault version 1.14.x or earlier, Vault automatically rotates
-existing static roles tied to database credentials once when upgrading to an
-affected version. After the one-time rotation, the static roles behave as
-expected.
+Any database static role that was created prior to Vault 1.15.0 will be affected upon upgrading to the affected Vault versions.
+Vault will automatically rotate static database credentials once, for all roles created prior to 1.15.0, when upgrading to affected versions.
+After the one-time rotation, the static roles behave as expected.
 
 ### Recommendation
-
-If you rely on database static roles, avoid directly upgrading to the following
-Vault versions:
-
-- 1.19.0 - 1.19.2
-- 1.18.5 - 1.18.8
-- 1.17.12 - 1.17.15
-- 1.16.16 - 1.16.19
+Upgrade to 1.19.3+, 1.18.9+, 1.17.16, 1.16.20+
 
 
 ## Vault log file missing subsystem logs ((#missing-logs))
@@ -225,7 +218,7 @@ expected in standard error and standard output.
 
 ### Recommendation
 
-Upgrade to one of the following Vault versions: 1.16.1+, 1.17.14+, 1.18.7+,
+Upgrade to one of the following Vault versions: 1.16.18+, 1.17.14+, 1.18.7+,
 1.19.1+
 
 
