@@ -49,7 +49,7 @@ require (
 	github.com/armon/go-metrics v0.4.1
 	github.com/armon/go-radix v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
-	github.com/aws/aws-sdk-go v1.55.6
+	github.com/aws/aws-sdk-go v1.55.7
 	github.com/aws/aws-sdk-go-v2/config v1.27.11
 	github.com/cenkalti/backoff/v3 v3.2.2
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
@@ -147,7 +147,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.17.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.14.0
 	github.com/hashicorp/vault-plugin-database-redis v0.5.0
-	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.6.0
+	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.6.1-0.20250501003829-6f9495c4ae57
 	github.com/hashicorp/vault-plugin-database-snowflake v0.13.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.20.1
@@ -417,7 +417,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/hashicorp/cronexpr v1.1.2 // indirect
-	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
+	github.com/hashicorp/go-immutable-radix v1.3.1
 	github.com/hashicorp/go-msgpack/v2 v2.1.2 // indirect
 	github.com/hashicorp/go-secure-stdlib/fileutil v0.1.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.4.1 // indirect
