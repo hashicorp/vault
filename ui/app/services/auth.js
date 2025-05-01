@@ -284,7 +284,9 @@ export default Service.extend({
       backend = this.backendFromTokenName(tokenName);
     } else {
       options = firstArg;
-      backend = options.selectedAuth || options.backend;
+      // backend is old news since it's confusing whether it refers to the auth mount path or auth type,
+      // new auth flow explicitly defines "selectedAuth" and "path"
+      backend = options?.backend || options.selectedAuth;
     }
 
     const currentBackend = {
