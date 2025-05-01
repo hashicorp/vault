@@ -19,17 +19,17 @@
     <div>
       <div class="is-grid align-items-center linked-block-title">
         <Hds::Icon @name="user-check" @size="24" />
-        <div class="has-text-weight-semibold has-left-margin-xs" data-test-rule-name={{rule.name}}>{{rule.name}}</div>
+        <div class="has-text-weight-semibold has-left-margin-xs" data-test-rule-name={{rule.id}}>{{rule.id}}</div>
       </div>
       <div class="has-top-margin-m" data-test-rule-path={{rule.namespace}}>{{rule.namespace}}</div>
     </div>
     <div class="linked-block-popup-menu">
       <Hds::Dropdown @isInline={{true}} as |dd|>
         <dd.ToggleIcon @icon="more-horizontal" @hasChevron={{false}} @text="login rules menu" data-test-popup-menu-trigger />
-        <dd.Interactive @route="login-settings.rule" @model={{rule.name}} data-test-view-rule-trigger>
+        <dd.Interactive @route="login-settings.rule" @model={{rule.id}} data-test-view-rule-trigger>
           View
         </dd.Interactive>
-        {{#if (has-capability @capabilities "delete" id=rule.name)}}
+        {{#if (has-capability this.capabilities "delete" id=rule.id)}}
           <dd.Interactive @color="critical" data-test-confirm-action-trigger>Delete</dd.Interactive>
         {{/if}}
       </Hds::Dropdown>

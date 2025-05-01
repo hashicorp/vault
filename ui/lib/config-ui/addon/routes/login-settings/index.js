@@ -18,11 +18,7 @@ export default class LoginSettingsRoute extends Route {
       data: { list: true },
     });
 
-    // this makes sense with data structure atm, but to be revisited
-    const loginRules = [];
-    data.keys.forEach((rule) => {
-      loginRules.push({ name: rule, namespace: data.key_info[rule].namespace });
-    });
+    const loginRules = this.api.keyInfoToArray({ keyInfo: data.key_info, keys: data.keys });
 
     return { loginRules };
   }
