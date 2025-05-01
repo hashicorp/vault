@@ -9,12 +9,21 @@ import { service } from '@ember/service';
 export default class LoginSettingsRoute extends Route {
   @service api;
   @service capabilities;
+  @service store;
 
   async model() {
-    // const adapter = this.store.adapterFor('application');
+    const adapter = this.store.adapterFor('application');
 
-    // const obj = await adapter.ajax('/v1/sys/config/ui/login/default-auth', 'GET', { data: { list: true } });
+    const { data } = await adapter.ajax('/v1/sys/config/ui/login/default-auth', 'GET', {
+      data: { list: true },
+    });
 
-    return { loginRules: [{ name: 'Root level auth', namespace: 'root/' }] };
+    // this makes sense with data structure atm, but to be revisited
+    const ruleList = [];
+    data.keys.forEach((rule) => {
+      ruleList.push({ name: rule, namespace: data.key_info[rule].namespace });
+    });
+
+    return { loginRules: ruleList };
   }
 }
