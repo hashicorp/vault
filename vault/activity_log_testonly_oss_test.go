@@ -120,7 +120,7 @@ func TestGetStartEndTime_EndTimeAdjustedToPastMonth(t *testing.T) {
 				},
 			}
 
-			start, end, warnings, err := getStartEndTime(d, billingStartTime)
+			start, end, warnings, err := getStartEndTime(d, time.Now(), billingStartTime)
 
 			if tc.expectErr {
 				require.Error(t, err)
