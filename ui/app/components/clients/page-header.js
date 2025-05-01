@@ -35,6 +35,7 @@ export default class ClientsPageHeaderComponent extends Component {
 
   @tracked canDownload = false;
   @tracked showExportModal = false;
+  @tracked showEditModal = false;
   @tracked exportFormat = 'csv';
   @tracked downloadError = '';
 
@@ -120,13 +121,20 @@ export default class ClientsPageHeaderComponent extends Component {
     }
   });
 
-  @action setExportFormat(evt) {
+  @action
+  setExportFormat(evt) {
     const { value } = evt.target;
     this.exportFormat = value;
   }
 
-  @action resetModal() {
+  @action
+  resetModal() {
     this.showExportModal = false;
     this.downloadError = '';
+  }
+
+  @action
+  onCloseEditModal() {
+    this.showEditModal = false;
   }
 }

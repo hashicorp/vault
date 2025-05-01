@@ -20,6 +20,8 @@ interface OnChangeParams {
 }
 interface Args {
   onChange: (callback: OnChangeParams) => void;
+  onCloseEditModal: () => void;
+  showEditModal: boolean;
   startTime: string;
   endTime: string;
   billingStartTime: string;
@@ -34,6 +36,8 @@ interface Args {
  * <Clients::DateRange @startTime="2018-01-01T14:15:30Z" @endTime="2019-01-31T14:15:30Z" @onChange={{this.handleDateChange}} />
  *
  * @param {function} onChange - callback when a new range is saved.
+ * @param {function} onCloseEditModal - func to tell parent header when modal has closed
+ * @param {boolean} showEditModal - boolean for when parent header triggers the modal open
  * @param {string} [startTime] - ISO string timestamp of the current start date
  * @param {string} [endTime] - ISO string timestamp of the current end date
  * @param {int} [retentionMonths=48] - number of months for historical billing
@@ -47,7 +51,12 @@ export default class ClientsDateRangeComponent extends Component<Args> {
   @tracked startDate = ''; // format yyyy-MM
   @tracked endDate = ''; // format yyyy-MM
   @tracked selectedStart = this.args.billingStartTime;
-  currentMonth = format(timestamp.now(), 'yyyy-MM');
+
+  currentMonth = timestamp.now();
+  previousMonth = format(
+    new Date(this.currentMonth.getFullYear(), this.currentMonth.getMonth() - 1, 1),
+    'yyyy-MM'
+  );
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
@@ -109,6 +118,7 @@ export default class ClientsDateRangeComponent extends Component<Args> {
     // since the component never gets torn down, we have to manually re-set this on close
     this.setTrackedFromArgs();
     this.showEditModal = false;
+    this.args.onCloseEditModal();
   }
 
   @action resetDates() {

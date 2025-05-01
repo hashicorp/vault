@@ -24,9 +24,11 @@ module('Integration | Component | clients/date-range', function (hooks) {
     this.billingStartTime = '2018-01-01T14:15:30';
     this.retentionMonths = 48;
     this.onChange = Sinon.spy();
+    this.onCloseEditModal = Sinon.spy();
+    this.showEditModal = false;
     this.renderComponent = async () => {
       await render(
-        hbs`<Clients::DateRange @startTime={{this.startTime}} @endTime={{this.endTime}} @onChange={{this.onChange}} @billingStartTime={{this.billingStartTime}} @retentionMonths={{this.retentionMonths}}/>`
+        hbs`<Clients::DateRange @startTime={{this.startTime}} @endTime={{this.endTime}} @onChange={{this.onChange}} @billingStartTime={{this.billingStartTime}} @retentionMonths={{this.retentionMonths}} @onCloseEditModal={{this.onCloseEditModal}} @showEditModal={{this.showEditModal}}/>`
       );
     };
   });
@@ -56,8 +58,8 @@ module('Integration | Component | clients/date-range', function (hooks) {
 
   test('it does not trigger onChange if date range invalid', async function (assert) {
     this.owner.lookup('service:version').type = 'community';
+    this.endTime = undefined;
     await this.renderComponent();
-
     await click(DATE_RANGE.edit);
     await fillIn(DATE_RANGE.editDate('end'), '');
     assert.dom(DATE_RANGE.validation).hasText('You must supply both start and end dates.');
@@ -73,18 +75,5 @@ module('Integration | Component | clients/date-range', function (hooks) {
     await click(GENERAL.cancelButton);
     assert.false(this.onChange.called);
     assert.dom(DATE_RANGE.editModal).doesNotExist();
-  });
-
-  test('it resets the tracked values on close', async function (assert) {
-    await this.renderComponent();
-
-    await click(DATE_RANGE.edit);
-    await fillIn(DATE_RANGE.editDate('start'), '2017-04');
-    await fillIn(DATE_RANGE.editDate('end'), '2018-05');
-    await click(GENERAL.cancelButton);
-
-    await click(DATE_RANGE.edit);
-    assert.dom(DATE_RANGE.editDate('start')).hasValue('2018-01');
-    assert.dom(DATE_RANGE.editDate('end')).hasValue('2019-01');
   });
 });

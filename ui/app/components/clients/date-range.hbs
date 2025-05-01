@@ -5,11 +5,11 @@
 
 <div ...attributes>
   <div class="is-flex-column align-items-end">
-    <Hds::Text::Display @tag="p" @size="100" class="has-bottom-margin-xs">
-      Change billing period
-    </Hds::Text::Display>
-    <div class="is-flex">
+    <div class="is-flex-column align-items-end">
       {{#if this.version.isEnterprise}}
+        <Hds::Text::Display @tag="p" @size="100" class="has-bottom-margin-xs">
+          Change billing period
+        </Hds::Text::Display>
         <Hds::Dropdown class="has-left-margin-xs" @matchToggleWidth={{true}} as |D|>
           <D.ToggleButton @text="Billing start date" @color="secondary" data-test-date-range-edit />
           <D.Description @text="Current period" />
@@ -35,19 +35,21 @@
           {{/if}}
         </Hds::Dropdown>
       {{else}}
-        <Hds::Button
-          class="has-left-margin-xs"
-          @text="Set date range"
-          @icon="edit"
-          {{on "click" (fn (mut this.showEditModal) true)}}
-          data-test-date-range-edit
-        />
+        {{#unless (and this.startDate this.endDate)}}
+          <Hds::Button
+            class="has-left-margin-xs"
+            @text="Set date range"
+            @icon="edit"
+            {{on "click" (fn (mut this.showEditModal) true)}}
+            data-test-date-range-edit
+          />
+        {{/unless}}
       {{/if}}
     </div>
 
   </div>
 
-  {{#if this.showEditModal}}
+  {{#if (or this.showEditModal @showEditModal)}}
     <Hds::Modal data-test-date-range-edit-modal @onClose={{this.onClose}} as |M|>
       <M.Header>
         Edit date range
@@ -61,7 +63,7 @@
             <Hds::Form::TextInput::Field
               @type="month"
               @value={{this.startDate}}
-              max={{this.currentMonth}}
+              max={{this.previousMonth}}
               id="start-month"
               name="start"
               {{on "change" this.updateDate}}
@@ -75,7 +77,7 @@
             <Hds::Form::TextInput::Field
               @type="month"
               @value={{this.endDate}}
-              max={{this.currentMonth}}
+              max={{this.previousMonth}}
               id="end-month"
               name="end"
               {{on "change" this.updateDate}}
