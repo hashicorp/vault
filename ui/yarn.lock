@@ -155,7 +155,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/helper-create-class-features-plugin@npm:^7.18.6, @babel/helper-create-class-features-plugin@npm:^7.21.0, @babel/helper-create-class-features-plugin@npm:^7.25.9, @babel/helper-create-class-features-plugin@npm:^7.27.1, @babel/helper-create-class-features-plugin@npm:^7.5.5":
+"@babel/helper-create-class-features-plugin@npm:^7.18.6, @babel/helper-create-class-features-plugin@npm:^7.21.0, @babel/helper-create-class-features-plugin@npm:^7.25.9, @babel/helper-create-class-features-plugin@npm:^7.27.1":
   version: 7.27.1
   resolution: "@babel/helper-create-class-features-plugin@npm:7.27.1"
   dependencies:
@@ -397,7 +397,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/plugin-proposal-class-properties@npm:^7.1.0, @babel/plugin-proposal-class-properties@npm:^7.16.5, @babel/plugin-proposal-class-properties@npm:^7.16.7, @babel/plugin-proposal-class-properties@npm:~7.18.6":
+"@babel/plugin-proposal-class-properties@npm:^7.16.5, @babel/plugin-proposal-class-properties@npm:^7.16.7, @babel/plugin-proposal-class-properties@npm:~7.18.6":
   version: 7.18.6
   resolution: "@babel/plugin-proposal-class-properties@npm:7.18.6"
   dependencies:
@@ -551,7 +551,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/plugin-syntax-typescript@npm:^7.2.0, @babel/plugin-syntax-typescript@npm:^7.27.1":
+"@babel/plugin-syntax-typescript@npm:^7.27.1":
   version: 7.27.1
   resolution: "@babel/plugin-syntax-typescript@npm:7.27.1"
   dependencies:
@@ -1141,31 +1141,6 @@ __metadata:
   peerDependencies:
     "@babel/core": ^7.0.0-0
   checksum: 0037db32fedaacf42b5b3df774263bb7176d455859f77322f57135f7e50e457e5c95151280fc83bb9942fc1839e785489b098d73c9539d0f3c7dc9d42b3a8e86
-  languageName: node
-  linkType: hard
-
-"@babel/plugin-transform-typescript@npm:~7.4.0":
-  version: 7.4.5
-  resolution: "@babel/plugin-transform-typescript@npm:7.4.5"
-  dependencies:
-    "@babel/helper-plugin-utils": ^7.0.0
-    "@babel/plugin-syntax-typescript": ^7.2.0
-  peerDependencies:
-    "@babel/core": ^7.0.0-0
-  checksum: 2c3aadfba8db8726a1e0c5341578e65ab8a2d46c79844509ccc74bff1c8eaa4943e94f458e4f006a7d21a2ea93025ae3629bdeb9858c7b53967b9f7aee154543
-  languageName: node
-  linkType: hard
-
-"@babel/plugin-transform-typescript@npm:~7.5.0":
-  version: 7.5.5
-  resolution: "@babel/plugin-transform-typescript@npm:7.5.5"
-  dependencies:
-    "@babel/helper-create-class-features-plugin": ^7.5.5
-    "@babel/helper-plugin-utils": ^7.0.0
-    "@babel/plugin-syntax-typescript": ^7.2.0
-  peerDependencies:
-    "@babel/core": ^7.0.0-0
-  checksum: a7a60f461e41db07dd04728c18b1ee9d5ba889f3666f8e209437b4007c2c02fe556ea03c70550077206ca3ac3f70f8da76d0f6a62eed1a9466249a5a1a316a81
   languageName: node
   linkType: hard
 
@@ -4510,7 +4485,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ansi-to-html@npm:^0.6.15, ansi-to-html@npm:^0.6.6":
+"ansi-to-html@npm:^0.6.15":
   version: 0.6.15
   resolution: "ansi-to-html@npm:0.6.15"
   dependencies:
@@ -7876,9 +7851,9 @@ __metadata:
   linkType: hard
 
 "electron-to-chromium@npm:^1.5.73":
-  version: 1.5.145
-  resolution: "electron-to-chromium@npm:1.5.145"
-  checksum: 0cc2412ca234ce61fc4a9a8b290a1236508b81a7214aee970a0204da0779a369c8e4584b4186fc32facb7f5ddb9b9c09712d098a7a5f285456043926ce30f521
+  version: 1.5.146
+  resolution: "electron-to-chromium@npm:1.5.146"
+  checksum: da19fac08d5eef5258881fa486aa0116be1ba7be046e97c5ae8c12e7f8423e62b97632256e7910a56fa2c132a9d16ba4b50184ccbc193317da516bfb13fff3d3
   languageName: node
   linkType: hard
 
@@ -8038,7 +8013,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-cli-babel-plugin-helpers@npm:^1.0.0, ember-cli-babel-plugin-helpers@npm:^1.1.1":
+"ember-cli-babel-plugin-helpers@npm:^1.1.1":
   version: 1.1.1
   resolution: "ember-cli-babel-plugin-helpers@npm:1.1.1"
   checksum: 3dc684317dbc4728d41a61de13d2fb1de5227105c1ba9194005647d2724b469d43aba3b1fa73622f2b5cd04c8283a15568b3a0044ec7a5036c17f336ac098ff5
@@ -8428,64 +8403,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-cli-typescript@npm:3.0.0":
-  version: 3.0.0
-  resolution: "ember-cli-typescript@npm:3.0.0"
-  dependencies:
-    "@babel/plugin-transform-typescript": ~7.5.0
-    ansi-to-html: ^0.6.6
-    debug: ^4.0.0
-    ember-cli-babel-plugin-helpers: ^1.0.0
-    execa: ^2.0.0
-    fs-extra: ^8.0.0
-    resolve: ^1.5.0
-    rsvp: ^4.8.1
-    semver: ^6.0.0
-    stagehand: ^1.0.0
-    walk-sync: ^2.0.0
-  checksum: 4ef2732a0743113aa0167365afb972239e51ca227ca0858b1e240f8e449a34c02462973e1669eb7cd1982b0c1db225f1537f1d41360dc3945b6c2b54e566f96a
-  languageName: node
-  linkType: hard
-
-"ember-cli-typescript@npm:^2.0.2":
-  version: 2.0.2
-  resolution: "ember-cli-typescript@npm:2.0.2"
-  dependencies:
-    "@babel/plugin-proposal-class-properties": ^7.1.0
-    "@babel/plugin-transform-typescript": ~7.4.0
-    ansi-to-html: ^0.6.6
-    debug: ^4.0.0
-    ember-cli-babel-plugin-helpers: ^1.0.0
-    execa: ^1.0.0
-    fs-extra: ^7.0.0
-    resolve: ^1.5.0
-    rsvp: ^4.8.1
-    semver: ^6.0.0
-    stagehand: ^1.0.0
-    walk-sync: ^1.0.0
-  checksum: a1eecb5733df78de96eee3d75f1d0425c8e2638fddcdfb4b2fa46b70131df78216fc341419ccdcf4c32ca480c2bc3d91c0390b81b5ad738a409335ae5ff7f993
-  languageName: node
-  linkType: hard
-
-"ember-cli-typescript@npm:^4.1.0, ember-cli-typescript@npm:^4.2.1":
-  version: 4.2.1
-  resolution: "ember-cli-typescript@npm:4.2.1"
-  dependencies:
-    ansi-to-html: ^0.6.15
-    broccoli-stew: ^3.0.0
-    debug: ^4.0.0
-    execa: ^4.0.0
-    fs-extra: ^9.0.1
-    resolve: ^1.5.0
-    rsvp: ^4.8.1
-    semver: ^7.3.2
-    stagehand: ^1.0.0
-    walk-sync: ^2.2.0
-  checksum: bd31698536c0df7fc03b47aa1c7d3f9c6f7e34fae1500c88bdbbc4c0b98b2a7e69230dd71a01d7cd7f563484cf895333f559af68f91527d95e198924e3cb2c24
-  languageName: node
-  linkType: hard
-
-"ember-cli-typescript@npm:^5.0.0":
+"ember-cli-typescript@npm:5.3.0":
   version: 5.3.0
   resolution: "ember-cli-typescript@npm:5.3.0"
   dependencies:
@@ -10104,23 +10022,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"execa@npm:^2.0.0":
-  version: 2.1.0
-  resolution: "execa@npm:2.1.0"
-  dependencies:
-    cross-spawn: ^7.0.0
-    get-stream: ^5.0.0
-    is-stream: ^2.0.0
-    merge-stream: ^2.0.0
-    npm-run-path: ^3.0.0
-    onetime: ^5.1.0
-    p-finally: ^2.0.0
-    signal-exit: ^3.0.2
-    strip-final-newline: ^2.0.0
-  checksum: 93af9b816a555d0944e0876f4ccd97e0f4593d2049e713518fd5458a7699836449c516c6bb7e6357e11431ec40cce3150625b86d1b1254180faaa0d744265eca
-  languageName: node
-  linkType: hard
-
 "execa@npm:^4.0.0, execa@npm:^4.1.0":
   version: 4.1.0
   resolution: "execa@npm:4.1.0"
@@ -10880,7 +10781,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fs-extra@npm:^8.0.0, fs-extra@npm:^8.0.1, fs-extra@npm:^8.1.0":
+"fs-extra@npm:^8.0.1, fs-extra@npm:^8.1.0":
   version: 8.1.0
   resolution: "fs-extra@npm:8.1.0"
   dependencies:
@@ -14715,15 +14616,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"npm-run-path@npm:^3.0.0":
-  version: 3.1.0
-  resolution: "npm-run-path@npm:3.1.0"
-  dependencies:
-    path-key: ^3.0.0
-  checksum: 141e0b8f0e3b137347a2896572c9a84701754dda0670d3ceb8c56a87702ee03c26227e4517ab93f2904acfc836547315e740b8289bb24ca0cd8ba2b198043b0f
-  languageName: node
-  linkType: hard
-
 "npm-run-path@npm:^4.0.0, npm-run-path@npm:^4.0.1":
   version: 4.0.1
   resolution: "npm-run-path@npm:4.0.1"
@@ -15011,13 +14903,6 @@ __metadata:
   version: 1.0.0
   resolution: "p-finally@npm:1.0.0"
   checksum: 93a654c53dc805dd5b5891bab16eb0ea46db8f66c4bfd99336ae929323b1af2b70a8b0654f8f1eae924b2b73d037031366d645f1fd18b3d30cbd15950cc4b1d4
-  languageName: node
-  linkType: hard
-
-"p-finally@npm:^2.0.0":
-  version: 2.0.1
-  resolution: "p-finally@npm:2.0.1"
-  checksum: 6306a2851c3b28f8b603624f395ae84dce76970498fed8aa6aae2d930595053746edf1e4ee0c4b78a97410d84aa4504d63179f5310d555511ecd226f53ed1e8e
   languageName: node
   linkType: hard
 
@@ -19233,7 +19118,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"walk-sync@npm:^2.0.0, walk-sync@npm:^2.0.2, walk-sync@npm:^2.2.0, walk-sync@npm:~2.2.0":
+"walk-sync@npm:^2.0.2, walk-sync@npm:^2.2.0, walk-sync@npm:~2.2.0":
   version: 2.2.0
   resolution: "walk-sync@npm:2.2.0"
   dependencies:
