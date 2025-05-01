@@ -4,18 +4,16 @@
 }}
 
 {{#if this.mfaErrors}}
-  <div class="has-top-margin-xxl" data-test-mfa-error>
-    <EmptyState
-      @title="Unauthorized"
-      @message="Multi-factor authentication is required, but failed. Go back and try again, or contact your administrator."
-      @icon="alert-circle"
-      @bottomBorder={{true}}
-      @subTitle={{join ". " this.mfaErrors}}
-      class="is-shadowless"
-    >
-      <Hds::Button @text="Go back" @icon="chevron-left" @color="tertiary" {{on "click" this.onMfaErrorDismiss}} />
-    </EmptyState>
-  </div>
+  <Hds::ApplicationState class="has-top-margin-xxl" data-test-error as |A|>
+    <A.Header @title="Authentication error" />
+    <A.Body
+      @text="Multi-factor authentication is required, but failed. Go back and try again, or contact your administrator."
+    />
+    <A.Body @text="Error: {{this.mfaErrors}}" />
+    <A.Footer as |F|>
+      <F.Button @icon="arrow-left" @color="tertiary" @text="Go back" {{on "click" this.onMfaErrorDismiss}} />
+    </A.Footer>
+  </Hds::ApplicationState>
 {{else}}
   <SplashPage>
     <:header>
@@ -29,21 +27,9 @@
             <Icon @name="vault" @size="24" @stretched={{true}} />
           </div>
         </div>
-        <div class="is-flex-row">
-          {{#if this.mfaAuthData}}
-            <Hds::Button
-              @text="Back to login"
-              @icon="arrow-left"
-              @isIconOnly={{true}}
-              @color="tertiary"
-              {{on "click" (fn (mut this.mfaAuthData) null)}}
-              data-test-back-button
-            />
-          {{/if}}
-          <h1 class="title is-3">
-            {{if this.mfaAuthData "Authenticate" "Sign in to Vault"}}
-          </h1>
-        </div>
+        <h1 class="title is-3">
+          Sign in to Vault
+        </h1>
       {{/if}}
     </:header>
 
@@ -91,11 +77,11 @@
           @clusterId={{@cluster.id}}
           @authData={{this.mfaAuthData}}
           @onSuccess={{this.onMfaSuccess}}
+          @onCancel={{this.onCancelMfa}}
           @onError={{fn (mut this.mfaErrors)}}
         />
       {{else}}
         <Auth::LoginForm
-          @wrappedToken={{@wrappedToken}}
           @cluster={{@cluster}}
           @namespace={{@namespaceQueryParam}}
           @selectedAuth={{@authMethodQueryParam}}

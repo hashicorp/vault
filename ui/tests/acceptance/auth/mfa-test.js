@@ -49,7 +49,7 @@ for (const method of AUTH_METHOD_MAP) {
       assert.expect(3 + loginKeys.length);
 
       // Fill in login form
-      await fillIn(AUTH_FORM.method, authType);
+      await fillIn(GENERAL.selectByAttr('auth-method'), authType);
       await fillInLoginFields(options.loginData);
 
       if (options?.hasPopupWindow) {
@@ -64,7 +64,7 @@ for (const method of AUTH_METHOD_MAP) {
       assert
         .dom(MFA_SELECTORS.mfaForm)
         .hasText(
-          'Multi-factor authentication is enabled for your account. Enter your authentication code to log in. TOTP passcode Verify'
+          'Back Multi-factor authentication is enabled for your account. Enter your authentication code to log in. TOTP passcode Verify'
         );
       await click(GENERAL.backButton);
       assert.dom(AUTH_FORM.form).exists('clicking back returns to auth form');
@@ -81,7 +81,7 @@ for (const method of AUTH_METHOD_MAP) {
       assert.expect(3 + loginKeys.length);
 
       // Fill in login form
-      await fillIn(AUTH_FORM.method, authType);
+      await fillIn(GENERAL.selectByAttr('auth-method'), authType);
       // Toggle more options to input a custom mount path
       await fillInLoginFields({ ...options.loginData, path: this.mountPath }, { toggleOptions: true });
 
@@ -97,7 +97,7 @@ for (const method of AUTH_METHOD_MAP) {
       assert
         .dom(MFA_SELECTORS.mfaForm)
         .hasText(
-          'Multi-factor authentication is enabled for your account. Enter your authentication code to log in. TOTP passcode Verify'
+          'Back Multi-factor authentication is enabled for your account. Enter your authentication code to log in. TOTP passcode Verify'
         );
       await click(GENERAL.backButton);
       assert.dom(AUTH_FORM.form).exists('clicking back returns to auth form');
@@ -120,7 +120,7 @@ for (const method of AUTH_METHOD_MAP) {
       });
 
       // Fill in login form
-      await fillIn(AUTH_FORM.method, authType);
+      await fillIn(GENERAL.selectByAttr('auth-method'), authType);
       await fillInLoginFields(options.loginData);
 
       if (options?.hasPopupWindow) {
@@ -150,7 +150,7 @@ for (const method of AUTH_METHOD_MAP) {
       });
 
       // Fill in login form
-      await fillIn(AUTH_FORM.method, authType);
+      await fillIn(GENERAL.selectByAttr('auth-method'), authType);
       // Toggle more options to input a custom mount path
       await fillInLoginFields({ ...options.loginData, path: this.mountPath }, { toggleOptions: true });
 

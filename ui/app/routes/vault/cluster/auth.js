@@ -7,27 +7,35 @@ import { service } from '@ember/service';
 import ClusterRouteBase from './cluster-route-base';
 import config from 'vault/config/environment';
 
-export default ClusterRouteBase.extend({
-  queryParams: {
-    authMethod: {
-      replace: true,
-    },
-  },
-  flashMessages: service(),
-  version: service(),
+export default class AuthRoute extends ClusterRouteBase {
+  queryParams = {
+    wrapped_token: { refreshModel: true },
+    authMethod: { replace: true },
+  };
+
+  @service api;
+  @service auth;
+  @service flashMessages;
+  @service version;
+
   beforeModel() {
-    return this._super().then(() => {
+    return super.beforeModel().then(() => {
       return this.version.fetchFeatures();
     });
-  },
-  model() {
-    return this._super(...arguments);
-  },
+  }
+
+  async model(params) {
+    const wrapped_token = params?.wrapped_token;
+    if (wrapped_token) {
+      const clusterModel = this.modelFor('vault.cluster');
+      await this.unwrapToken(wrapped_token, clusterModel.id);
+    }
+    return super.model(...arguments);
+  }
 
   resetController(controller) {
-    controller.set('wrappedToken', '');
     controller.set('authMethod', 'token');
-  },
+  }
 
   afterModel() {
     if (config.welcomeMessage) {
@@ -36,5 +44,23 @@ export default ClusterRouteBase.extend({
         priority: 300,
       });
     }
-  },
-});
+  }
+
+  async unwrapToken(token, clusterId) {
+    const authController = this.controllerFor('vault.cluster.auth');
+    try {
+      const { auth } = await this.api.sys.unwrap({}, this.api.buildHeaders({ token }));
+      const authResponse = await this.auth.authenticate({
+        clusterId,
+        backend: 'token',
+        data: { token: auth.clientToken },
+        selectedAuth: 'token',
+      });
+      // handles transition
+      return authController.send('authSuccess', authResponse);
+    } catch (e) {
+      const { message } = await this.api.parseError(e);
+      authController.unwrapTokenError = message;
+    }
+  }
+}

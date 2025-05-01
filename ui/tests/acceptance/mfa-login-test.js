@@ -178,19 +178,15 @@ module('Acceptance | mfa-login', function (hooks) {
 
   test('it should render unauthorized message for push failure', async function (assert) {
     await login('mfa-j');
-    await waitFor('[data-test-empty-state-title]');
-    assert.dom('[data-test-auth-form]').doesNotExist('Auth form hidden when mfa fails');
-    assert.dom('[data-test-empty-state-title]').hasText('Unauthorized', 'Error title renders');
+    await waitFor('[data-test-error]');
+    assert.dom('[data-test-mfa-form]').doesNotExist('MFA form does not render');
+    assert.dom('[data-test-auth-form]').doesNotExist('Auth form does not render');
     assert
-      .dom(GENERAL.emptyStateSubtitle)
-      .hasText('PingId MFA validation failed', 'Error message from server renders');
-    assert
-      .dom('[data-test-empty-state-message]')
+      .dom('[data-test-error]')
       .hasText(
-        'Multi-factor authentication is required, but failed. Go back and try again, or contact your administrator.',
-        'Error description renders'
+        'Authentication error Multi-factor authentication is required, but failed. Go back and try again, or contact your administrator. Error: PingId MFA validation failed Go back'
       );
-    await click('[data-test-mfa-error] button');
+    await click('[data-test-error] button');
     assert.dom('[data-test-auth-form]').exists('Auth form renders after mfa error dismissal');
   });
 });

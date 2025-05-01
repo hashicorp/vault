@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { _cancelTimers as cancelTimers, later } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, fillIn, render, settled } from '@ember/test-helpers';
@@ -135,44 +134,6 @@ module('Integration | Component | auth | login-form', function (hooks) {
     );
     assert.strictEqual(backendType, 'token', `it calls onSuccess with backend type: ${backendType}`);
     assert.propEqual(data, { token: 'mytoken' }, `it calls onSuccess with data: ${JSON.stringify(data)}`);
-  });
-
-  test('it makes a request to unwrap if passed a wrappedToken and logs in', async function (assert) {
-    assert.expect(3);
-    const authenticateStub = sinon.stub(this.auth, 'authenticate');
-    this.wrappedToken = '54321';
-
-    this.server.post('/sys/wrapping/unwrap', (_, req) => {
-      assert.strictEqual(req.url, '/v1/sys/wrapping/unwrap', 'makes call to unwrap the token');
-      assert.strictEqual(
-        req.requestHeaders['x-vault-token'],
-        this.wrappedToken,
-        'uses passed wrapped token for the unwrap'
-      );
-      return {
-        auth: {
-          client_token: '12345',
-        },
-      };
-    });
-
-    await this.renderComponent();
-
-    later(() => cancelTimers(), 50);
-    await settled();
-    const [actual] = authenticateStub.lastCall.args;
-    assert.propEqual(
-      actual,
-      {
-        backend: 'token',
-        clusterId: '1',
-        data: {
-          token: '12345',
-        },
-        selectedAuth: 'token',
-      },
-      `it calls auth service authenticate method with correct args: ${JSON.stringify(actual)} `
-    );
   });
 
   test('it should set nonce value as uuid for okta method type', async function (assert) {

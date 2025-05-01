@@ -20,11 +20,11 @@ export default Controller.extend({
   customMessages: service(),
   queryParams: [{ authMethod: 'with', oidcProvider: 'o' }],
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
-  wrappedToken: alias('vaultController.wrappedToken'),
   redirectTo: alias('vaultController.redirectTo'),
   hvdManagedNamespaceRoot: alias('flagsService.hvdManagedNamespaceRoot'),
   authMethod: '',
   oidcProvider: '',
+  unwrapTokenError: '',
 
   fullNamespaceFromInput(value) {
     const strippedNs = sanitizePath(value);
@@ -44,6 +44,7 @@ export default Controller.extend({
   }).restartable(),
 
   actions: {
+    // TODO move to auth service?
     authSuccess({ isRoot, namespace }) {
       let transition;
       this.version.fetchVersion();
@@ -67,6 +68,12 @@ export default Controller.extend({
           );
         }
       });
+    },
+    backToLogin() {
+      // reset error
+      this.set('unwrapTokenError', '');
+      // reset query params and go back to auth route
+      this.router.replaceWith('vault.cluster.auth', { queryParams: { wrapped_token: null } });
     },
   },
 });

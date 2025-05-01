@@ -3,10 +3,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, fillIn, render, settled } from '@ember/test-helpers';
+import { click, fillIn, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -132,23 +131,6 @@ module('Integration | Component | auth form', function (hooks) {
     await this.renderComponent();
 
     assert.dom(AUTH_FORM.tabs()).doesNotExist();
-  });
-
-  test('it shows an error if unwrap errors', async function (assert) {
-    assert.expect(1);
-    this.wrappedToken = '54321';
-    this.server.post('/sys/wrapping/unwrap', () => {
-      return new Response(
-        400,
-        { 'Content-Type': 'application/json' },
-        { errors: ['There was an error unwrapping!'] }
-      );
-    });
-
-    await this.renderComponent();
-    later(() => cancelTimers(), 50);
-    await settled();
-    assert.dom(GENERAL.messageError).hasText('Error Token unwrap failed: There was an error unwrapping!');
   });
 
   test('it should retain oidc role when mount path is changed', async function (assert) {
