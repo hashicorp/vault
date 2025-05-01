@@ -1,0 +1,3 @@
+```release-note:bug
+plugins: Plugin reloading will now reload all (non-erroring) plugins, even if some fail to Initialize
+```
