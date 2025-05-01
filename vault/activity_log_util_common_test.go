@@ -39,8 +39,7 @@ func equalActivityMonthRecords(t *testing.T, expected, got *activity.MonthRecord
 	require.Equal(t, expected, got)
 }
 
-// Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal creates 3 months
-// of hyperloglogs and fills them with overlapping clients. The test calls
+// Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal test calls
 // computeCurrentMonthForBillingPeriodInternal with the current month map having
 // some overlap with the previous months. The test then verifies that the
 // results have the correct number of entity, non-entity, and secret sync

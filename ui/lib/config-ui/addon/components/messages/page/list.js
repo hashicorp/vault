@@ -10,7 +10,8 @@ import { task, timeout } from 'ember-concurrency';
 import { dateFormat } from 'core/helpers/date-format';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import errorMessage from 'vault/utils/error-message';
+import { isAfter } from 'date-fns';
+import timestamp from 'core/utils/timestamp';
 
 /**
  * @module Page::MessagesList
@@ -28,9 +29,14 @@ export default class MessagesList extends Component {
   @service namespace;
   @service pagination;
   @service('app-router') router;
+  @service api;
 
   @tracked showMaxMessageModal = false;
   @tracked messageToDelete = null;
+
+  isStartTimeAfterToday = (message) => {
+    return isAfter(message.startTime, timestamp.now());
+  };
 
   get formattedMessages() {
     return this.args.messages.map((message) => {
@@ -47,7 +53,7 @@ export default class MessagesList extends Component {
         }
         badgeColor = 'success';
       } else {
-        if (message.isStartTimeAfterToday) {
+        if (this.isStartTimeAfterToday(message)) {
           badgeDisplayText = `Scheduled: ${dateFormat([message.startTime, 'MMM d, yyyy hh:mm aaa'], {
             withTimeZone: true,
           })}`;
@@ -90,13 +96,12 @@ export default class MessagesList extends Component {
   @task
   *deleteMessage(message) {
     try {
-      yield message.destroyRecord(message.id);
-      this.pagination.clearDataset('config-ui/message');
+      yield this.api.sys.uiConfigDeleteCustomMessage(message.id);
       this.router.transitionTo('vault.cluster.config-ui.messages');
-      this.customMessages.fetchMessages(this.namespace.path);
+      this.customMessages.fetchMessages();
       this.flashMessages.success(`Successfully deleted ${message.title}.`);
     } catch (e) {
-      const message = errorMessage(e);
+      const { message } = yield this.api.parseError(e);
       this.flashMessages.danger(message);
     } finally {
       this.messageToDelete = null;

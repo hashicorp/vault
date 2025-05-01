@@ -9,7 +9,6 @@ import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import { restartableTask, task, timeout, waitForEvent } from 'ember-concurrency';
 import { action } from '@ember/object';
-import { sanitizePath } from 'core/utils/sanitize-path';
 import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
 
@@ -61,7 +60,7 @@ export default class AuthFormOidcJwt extends AuthBase {
   ];
 
   // set by form inputs
-  _formData: FormData | null = null;
+  _formData: FormData = new FormData();
 
   // set during auth prep and login workflow
   @tracked fetchedRole: RoleJwtModel | null = null;
@@ -102,9 +101,7 @@ export default class AuthFormOidcJwt extends AuthBase {
     // it will cancel and restart from the beginning.
     if (wait) await timeout(wait);
 
-    const namespace = this._formData?.get('namespace') || '';
-    const path = sanitizePath(this._formData?.get('path')) || this.args.authType;
-    const role = this._formData?.get('role') || '';
+    const { namespace = '', path = '', role = '' } = this.parseFormData(this._formData);
     const id = JSON.stringify([path, role]);
 
     // reset state
@@ -140,6 +137,7 @@ export default class AuthFormOidcJwt extends AuthBase {
 
   async continueLogin(data: JwtLoginData | OidcLoginData) {
     try {
+      // TODO backend should probably be path, but holding off refactor since api service may remove need all together
       // OIDC callback returns a token so authenticate with that
       const backend = this.isOIDC && 'token' in data ? 'token' : this.args.authType;
 
@@ -149,8 +147,9 @@ export default class AuthFormOidcJwt extends AuthBase {
         data,
         selectedAuth: this.args.authType,
       });
+
       // responsible for redirect after auth data is persisted
-      this.handleAuthResponse(authResponse);
+      this.handleAuthResponse(authResponse, this.args.authType);
     } catch (error) {
       this.onError(error as Error);
     }

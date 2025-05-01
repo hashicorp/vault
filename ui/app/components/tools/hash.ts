@@ -7,7 +7,6 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
-import apiErrorMessage from 'vault/utils/api-error-message';
 
 import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
@@ -60,7 +59,8 @@ export default class ToolsHash extends Component {
       this.sum = sum || '';
       this.flashMessages.success('Hash was successful.');
     } catch (error) {
-      this.errorMessage = await apiErrorMessage(error);
+      const { message } = await this.api.parseError(error);
+      this.errorMessage = message;
     }
   }
 }

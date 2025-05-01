@@ -85,10 +85,14 @@ module('Integration | Component | auth | form template', function (hooks) {
   });
 
   test('it displays errors', async function (assert) {
+    const authenticateStub = sinon.stub(this.owner.lookup('service:auth'), 'authenticate');
+    authenticateStub.throws('permission denied');
     await this.renderComponent();
     await click(AUTH_FORM.login);
-    // this error message text is because the auth service is not stubbed in this test
-    assert.dom(GENERAL.messageError).hasText('Error Authentication failed: permission denied');
+    assert
+      .dom(GENERAL.messageError)
+      .hasText('Error Authentication failed: permission denied: Sinon-provided permission denied');
+    authenticateStub.restore();
   });
 
   module('listing visibility', function (hooks) {

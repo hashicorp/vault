@@ -39,7 +39,7 @@ export default Controller.extend({
     yield timeout(500);
     const ns = this.fullNamespaceFromInput(value);
     this.namespaceService.setNamespace(ns, true);
-    this.customMessages.fetchMessages(ns);
+    this.customMessages.fetchMessages();
     this.set('namespaceQueryParam', ns);
   }).restartable(),
 
@@ -57,7 +57,7 @@ export default Controller.extend({
       }
       transition.followRedirects().then(() => {
         if (this.version.isEnterprise) {
-          this.customMessages.fetchMessages(namespace);
+          this.customMessages.fetchMessages();
         }
 
         if (isRoot) {
