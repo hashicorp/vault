@@ -7,6 +7,7 @@
 // add properties as needed
 
 import Service from '@ember/service';
+import type { MfaRequirementApiResponse, ParsedMfaRequirement } from 'vault/auth/mfa';
 
 export interface AuthData {
   userRootNamespace: string;
@@ -15,8 +16,7 @@ export interface AuthData {
   renewable: boolean;
   entity_id: string;
   displayName?: string;
-  mfa_requirement: object;
-  client_token: string;
+  mfa_requirement?: MfaRequirementApiResponse;
 }
 
 export default class AuthService extends Service {
@@ -40,4 +40,5 @@ export default class AuthService extends Service {
       data?: Record<string, unknown>;
     }
   ) => Promise<any>;
+  _parseMfaResponse(mfaResponse: MfaRequirementApiResponse): ParsedMfaRequirement;
 }

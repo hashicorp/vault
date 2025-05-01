@@ -16,8 +16,7 @@ import type ClusterModel from 'vault/models/cluster';
 import type FlagsService from 'vault/services/flags';
 import type VersionService from 'vault/services/version';
 import type { HTMLElementEvent } from 'vault/forms';
-import type { LoginFields } from 'vault/vault/auth';
-import type { MfaRequirement } from 'vault/vault/services/auth';
+import type { MfaRequirementApiResponse, ParsedMfaRequirement } from 'vault/vault/auth/mfa';
 
 /**
  * @module Auth::Base
@@ -40,6 +39,11 @@ interface AuthResponse {
   token: string; // the name of the token in local storage, not the actual token
   isRoot: boolean;
 }
+
+export type LoginFields = Partial<Record<(typeof POSSIBLE_FIELDS)[number], string | undefined>> & {
+  path?: string | undefined;
+  namespace?: string | undefined;
+};
 
 export default class AuthBase extends Component<Args> {
   @service declare readonly auth: AuthService;
@@ -74,7 +78,7 @@ export default class AuthBase extends Component<Args> {
 
   // Standard methods get mfa_requirements from the authenticate method in the auth service
   // methodData is necessary if there's an MfaRequirement because persisting auth data happens after that
-  handleAuthResponse(authResponse: AuthResponse | MfaRequirement, path?: string) {
+  handleAuthResponse(authResponse: AuthResponse | ParsedMfaRequirement, path?: string) {
     const methodData: { selectedAuth: string; path?: string } = { selectedAuth: this.args.authType, path };
     // calls onAuthResponse in parent auth/page.js component
     this.args.onSuccess(authResponse, methodData);
@@ -82,7 +86,7 @@ export default class AuthBase extends Component<Args> {
 
   // SSO methods with a different token exchange workflow skip the auth service authenticate method
   // and need mfa handle separately
-  handleMfa(mfaRequirement: MfaRequirement, path: string) {
+  handleMfa(mfaRequirement: MfaRequirementApiResponse, path: string) {
     const parsedMfaAuthResponse = this.auth._parseMfaResponse(mfaRequirement);
     this.handleAuthResponse(parsedMfaAuthResponse, path);
   }
