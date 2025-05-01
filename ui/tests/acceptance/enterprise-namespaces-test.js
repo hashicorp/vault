@@ -9,20 +9,56 @@ import {
   visit,
   fillIn,
   currentURL,
-  waitFor,
   findAll,
   triggerKeyEvent,
   find,
 } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { runCmd, createNS } from 'vault/tests/helpers/commands';
+import { runCmd, createNS, deleteNS } from 'vault/tests/helpers/commands';
 import { login, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from '../helpers/general-selectors';
 import { NAMESPACE_PICKER_SELECTORS } from '../helpers/namespace-picker';
 
 import sinon from 'sinon';
+
+async function createNamespaces(namespaces) {
+  for (const ns of namespaces) {
+    // Note: iterate through the namespace parts to create the full namespace path
+    const parts = ns.split('/');
+    let currentPath = '';
+
+    for (const part of parts) {
+      // Visit the parent namespace
+      const url = `/vault/dashboard${currentPath && `?namespace=${currentPath.replaceAll('/', '%2F')}`}`;
+      await visit(url);
+
+      currentPath = currentPath ? `${currentPath}/${part}` : part;
+
+      // Create the current namespace
+      await runCmd(createNS(part), false);
+      await settled();
+    }
+
+    // Reset to the root namespace
+    const url = '/vault/dashboard';
+    await visit(url);
+  }
+}
+
+async function deleteNamespaces(namespaces) {
+  // Reset to the root namespace
+  const url = '/vault/dashboard';
+  await visit(url);
+
+  for (const ns of namespaces) {
+    // Note: delete the parent namespace to delete all child namespaces
+    const part = ns.split('/')[0];
+    await runCmd(deleteNS(part), false);
+    await settled();
+  }
+}
 
 module('Acceptance | Enterprise | namespaces', function (hooks) {
   setupApplicationTest(hooks);
@@ -51,10 +87,18 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
   });
 
   test('it navigates to the matching namespace when Enter is pressed', async function (assert) {
+    // Test Setup
+    const namespaces = ['beep/boop'];
+    await createNamespaces(namespaces);
+
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
+
+    assert.dom(NAMESPACE_PICKER_SELECTORS.searchInput).exists('The namespace search field exists');
 
     // Simulate typing into the search input
     await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, 'beep/boop');
+
     assert
       .dom(NAMESPACE_PICKER_SELECTORS.searchInput)
       .hasValue('beep/boop', 'The search input field has the correct value');
@@ -68,10 +112,18 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       '/vault/dashboard?namespace=beep%2Fboop',
       'Navigates to the correct namespace when Enter is pressed'
     );
+
+    // Test Cleanup
+    await deleteNamespaces(namespaces);
   });
 
   test('it filters namespaces based on search input', async function (assert) {
+    // Test Setup
+    const namespaces = ['beep/boop/bop'];
+    await createNamespaces(namespaces);
+
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
 
     // Verify all namespaces are displayed initially
     assert.dom(NAMESPACE_PICKER_SELECTORS.link()).exists('Namespace link(s) exist');
@@ -111,9 +163,16 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       allNamespaces.length,
       'All namespaces are displayed after clearing search input'
     );
+
+    // Test Cleanup
+    await deleteNamespaces(namespaces);
   });
 
   test('it updates the namespace list after clicking "Refresh list"', async function (assert) {
+    // Test Setup
+    const namespaces = ['beep'];
+    await createNamespaces(namespaces);
+
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify that the namespace list was fetched on load
@@ -139,18 +198,34 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       2,
       'The network call to the specific endpoint was made twice (once on load, once on refresh)'
     );
+
+    // Test Cleanup
+    await deleteNamespaces(namespaces);
   });
 
   test('it displays the "Manage" button with the correct URL', async function (assert) {
+    // Test Setup
+    const namespaces = ['beep'];
+    await createNamespaces(namespaces);
+
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
 
     // Verify the "Manage" button is rendered and has the correct URL
     assert
       .dom('[href="/ui/vault/access/namespaces"]')
       .exists('The "Manage" button is displayed with the correct URL');
+
+    // Test Cleanup
+    await deleteNamespaces(namespaces);
   });
 
+  // This test originated from this PR: https://github.com/hashicorp/vault/pull/7186
   test('it clears namespaces when you log out', async function (assert) {
+    // Test Setup
+    const namespaces = ['foo'];
+    await createNamespaces(namespaces);
+
     const ns = 'foo';
     await runCmd(createNS(ns), false);
     const token = await runCmd(`write -field=client_token auth/token/create policies=default`);
@@ -160,47 +235,31 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     assert
       .dom(`${NAMESPACE_PICKER_SELECTORS.link()} svg${GENERAL.icon('check')}`)
       .exists('The root namespace is selected');
+
+    // Test Cleanup
+    await deleteNamespaces(namespaces);
   });
 
-  // TODO: revisit test name/description, is this still relevant? A '/' prefix is stripped from namespace on login form
-  test('it shows nested namespaces if you log in with a namespace starting with a /', async function (assert) {
-    assert.expect(6);
+  // This test originated from this PR: https://github.com/hashicorp/vault/pull/7186
+  test('it displays namespaces whether you log in with a namespace prefixed with / or not', async function (assert) {
+    // Test Setup
+    const namespaces = ['beep/boop/bop'];
+    await createNamespaces(namespaces);
 
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
 
-    const nses = ['beep', 'boop', 'bop'];
-    for (const [i, ns] of nses.entries()) {
-      await runCmd(createNS(ns), false);
-      await settled();
-
-      // the namespace path will include all of the namespaces up to this point
-      const targetNamespace = nses.slice(0, i + 1).join('/');
-      const url = `/vault/secrets?namespace=${targetNamespace}`;
-
-      // this is usually triggered when creating a ns in the form -- trigger a reload of the namespaces manually
-      await click(NAMESPACE_PICKER_SELECTORS.toggle);
-
-      // refresh the list of namespaces
-      await waitFor(NAMESPACE_PICKER_SELECTORS.refreshList);
-      await click(NAMESPACE_PICKER_SELECTORS.refreshList);
-
-      // check that the full namespace path, like "beep/boop", shows in the toggle display
-      await waitFor(NAMESPACE_PICKER_SELECTORS.link(targetNamespace));
-
-      assert
-        .dom(NAMESPACE_PICKER_SELECTORS.link(targetNamespace))
-        .hasText(targetNamespace, `shows the namespace ${targetNamespace} in the toggle component`);
-
-      // because quint does not like page reloads, visiting url directly instead of clicking on namespace in toggle
-      await visit(url);
-    }
-
+    // Login with a namespace prefixed with /
     await loginNs('/beep/boop');
     await settled();
 
+    assert
+      .dom(NAMESPACE_PICKER_SELECTORS.toggle)
+      .hasText('boop', `shows the namespace 'boop' in the toggle component`);
+
     // Open the namespace picker & wait for it to render
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
-    await waitFor(`svg${GENERAL.icon('check')}`);
+    assert.dom(`svg${GENERAL.icon('check')}`).exists('The check icon is rendered');
 
     // Find the selected element with the check icon & ensure it exists
     const checkIcon = find(`${NAMESPACE_PICKER_SELECTORS.link()} ${GENERAL.icon('check')}`);
@@ -216,6 +275,9 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       'beep/boop',
       'The current namespace does not begin or end with /'
     );
+
+    // Test Cleanup
+    await deleteNamespaces(namespaces);
   });
 
   test('it shows the regular namespace toolbar when not managed', async function (assert) {

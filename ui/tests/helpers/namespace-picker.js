@@ -8,4 +8,5 @@ export const NAMESPACE_PICKER_SELECTORS = {
   refreshList: '[data-test-refresh-namespaces]',
   toggle: '[data-test-namespace-toggle]',
   searchInput: 'input[type="search"]',
+  manageButton: '[data-test-manage-namespaces]',
 };
