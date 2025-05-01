@@ -15,9 +15,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/cli@npm:~7.27.0":
-  version: 7.27.1
-  resolution: "@babel/cli@npm:7.27.1"
+"@babel/cli@npm:~7.26.4":
+  version: 7.26.4
+  resolution: "@babel/cli@npm:7.26.4"
   dependencies:
     "@jridgewell/trace-mapping": ^0.3.25
     "@nicolo-ribaudo/chokidar-2": 2.1.8-no-fsevents.3
@@ -38,7 +38,7 @@ __metadata:
   bin:
     babel: ./bin/babel.js
     babel-external-helpers: ./bin/babel-external-helpers.js
-  checksum: 219b8c46bd4b88f1e929e27d0e6e374872c706615da3e4665779291527fff4af28902c4568d6513116396b3ef965ac4a120d646b4b04c6987c6ddc6b763fef83
+  checksum: 759814fcb262545f787fad33456ffaef0cf282c6bc6a6fa610acf0f04457c300c0c880737e396e4c0303a9082cc9102123f8018111de5f60474365e32bf70300
   languageName: node
   linkType: hard
 
@@ -60,7 +60,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/core@npm:^7.0.0, @babel/core@npm:^7.12.0, @babel/core@npm:^7.13.10, @babel/core@npm:^7.16.10, @babel/core@npm:^7.16.7, @babel/core@npm:^7.22.20, @babel/core@npm:^7.23.6, @babel/core@npm:^7.24.0, @babel/core@npm:^7.26.0, @babel/core@npm:^7.3.4":
+"@babel/core@npm:^7.0.0, @babel/core@npm:^7.12.0, @babel/core@npm:^7.13.10, @babel/core@npm:^7.16.10, @babel/core@npm:^7.16.7, @babel/core@npm:^7.22.20, @babel/core@npm:^7.23.6, @babel/core@npm:^7.26.0, @babel/core@npm:^7.3.4":
   version: 7.27.1
   resolution: "@babel/core@npm:7.27.1"
   dependencies:
@@ -106,9 +106,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/eslint-parser@npm:~7.27.0":
-  version: 7.27.1
-  resolution: "@babel/eslint-parser@npm:7.27.1"
+"@babel/eslint-parser@npm:~7.26.8":
+  version: 7.26.10
+  resolution: "@babel/eslint-parser@npm:7.26.10"
   dependencies:
     "@nicolo-ribaudo/eslint-scope-5-internals": 5.1.1-v1
     eslint-visitor-keys: ^2.1.0
@@ -116,7 +116,7 @@ __metadata:
   peerDependencies:
     "@babel/core": ^7.11.0
     eslint: ^7.5.0 || ^8.0.0 || ^9.0.0
-  checksum: 0e8aa37fe03e5e5f2db35e1e628c02012a9ea9aa14429495eacdb0418e8ebeaf7b6308f9f8931ee3fe64a61fd6ac7637c8ffcc2c0d85eee246b6115198418bc2
+  checksum: 979f0e86d3bcb596f0ffd159265a32adfb09a7b6765cd66588130fd8db58ebdcbfb2ecf3456bfc081ace4500d36f16a8b497aaaf4830bc3c10b99856c7ea3ce5
   languageName: node
   linkType: hard
 
@@ -518,7 +518,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/plugin-syntax-jsx@npm:^7.27.1":
+"@babel/plugin-syntax-jsx@npm:^7.25.9":
   version: 7.27.1
   resolution: "@babel/plugin-syntax-jsx@npm:7.27.1"
   dependencies:
@@ -622,7 +622,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/plugin-transform-block-scoping@npm:^7.25.9, @babel/plugin-transform-block-scoping@npm:^7.27.1, @babel/plugin-transform-block-scoping@npm:~7.27.0":
+"@babel/plugin-transform-block-scoping@npm:^7.25.9, @babel/plugin-transform-block-scoping@npm:^7.27.1":
   version: 7.27.1
   resolution: "@babel/plugin-transform-block-scoping@npm:7.27.1"
   dependencies:
@@ -630,6 +630,17 @@ __metadata:
   peerDependencies:
     "@babel/core": ^7.0.0-0
   checksum: 490773ee111fd298d74bd0ba454c941ae23a39db5cd08bf4258997f44f7584399fc4214a7c3816ee70f0273c263fe2ea4e11bb07939e57845702ba05258a9cb0
+  languageName: node
+  linkType: hard
+
+"@babel/plugin-transform-block-scoping@npm:~7.25.9":
+  version: 7.25.9
+  resolution: "@babel/plugin-transform-block-scoping@npm:7.25.9"
+  dependencies:
+    "@babel/helper-plugin-utils": ^7.25.9
+  peerDependencies:
+    "@babel/core": ^7.0.0-0
+  checksum: e869500cfb1995e06e64c9608543b56468639809febfcdd6fcf683bc0bf1be2431cacf2981a168a1a14f4766393e37bc9f7c96d25bc5b5f39a64a8a8ad0bf8e0
   languageName: node
   linkType: hard
 
@@ -845,7 +856,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/plugin-transform-modules-commonjs@npm:^7.26.3, @babel/plugin-transform-modules-commonjs@npm:^7.27.1":
+"@babel/plugin-transform-modules-commonjs@npm:^7.25.9, @babel/plugin-transform-modules-commonjs@npm:^7.26.3, @babel/plugin-transform-modules-commonjs@npm:^7.27.1":
   version: 7.27.1
   resolution: "@babel/plugin-transform-modules-commonjs@npm:7.27.1"
   dependencies:
@@ -1129,7 +1140,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/plugin-transform-typescript@npm:^7.13.0, @babel/plugin-transform-typescript@npm:^7.16.8, @babel/plugin-transform-typescript@npm:^7.20.13, @babel/plugin-transform-typescript@npm:^7.27.1":
+"@babel/plugin-transform-typescript@npm:^7.13.0, @babel/plugin-transform-typescript@npm:^7.16.8, @babel/plugin-transform-typescript@npm:^7.20.13, @babel/plugin-transform-typescript@npm:^7.25.9":
   version: 7.27.1
   resolution: "@babel/plugin-transform-typescript@npm:7.27.1"
   dependencies:
@@ -1372,18 +1383,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/preset-typescript@npm:~7.27.0":
-  version: 7.27.1
-  resolution: "@babel/preset-typescript@npm:7.27.1"
+"@babel/preset-typescript@npm:~7.26.0":
+  version: 7.26.0
+  resolution: "@babel/preset-typescript@npm:7.26.0"
   dependencies:
-    "@babel/helper-plugin-utils": ^7.27.1
-    "@babel/helper-validator-option": ^7.27.1
-    "@babel/plugin-syntax-jsx": ^7.27.1
-    "@babel/plugin-transform-modules-commonjs": ^7.27.1
-    "@babel/plugin-transform-typescript": ^7.27.1
+    "@babel/helper-plugin-utils": ^7.25.9
+    "@babel/helper-validator-option": ^7.25.9
+    "@babel/plugin-syntax-jsx": ^7.25.9
+    "@babel/plugin-transform-modules-commonjs": ^7.25.9
+    "@babel/plugin-transform-typescript": ^7.25.9
   peerDependencies:
     "@babel/core": ^7.0.0-0
-  checksum: 38020f1b23e88ec4fbffd5737da455d8939244bddfb48a2516aef93fb5947bd9163fb807ce6eff3e43fa5ffe9113aa131305fef0fb5053998410bbfcfe6ce0ec
+  checksum: 6d8641fa6efd0e10eec5e8f92cd164b916a06d57131cfa5216c281404289c87d2b4995140a1c1d9c3bad171ff6ef2226be5f0585e09577ffff349706e991ec71
   languageName: node
   linkType: hard
 
@@ -2071,15 +2082,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@embroider/macros@npm:1.15.0":
-  version: 1.15.0
-  resolution: "@embroider/macros@npm:1.15.0"
+"@embroider/macros@npm:1.16.1":
+  version: 1.16.1
+  resolution: "@embroider/macros@npm:1.16.1"
   dependencies:
-    "@babel/core": ^7.24.0
-    "@embroider/shared-internals": 2.5.2
+    "@embroider/shared-internals": 2.6.0
     assert-never: ^1.2.1
     babel-import-util: ^2.0.0
-    ember-cli-babel: ^8.2.0
+    ember-cli-babel: ^7.26.6
     find-up: ^5.0.0
     lodash: ^4.17.21
     resolve: ^1.20.0
@@ -2089,13 +2099,13 @@ __metadata:
   peerDependenciesMeta:
     "@glint/template":
       optional: true
-  checksum: ac78c4e0d8a553a6d45476acf9248b6ccfb6499e0eb1ddc7e953e1e52cc7a491ce72d4a28defcbe29aff69ed4c32fac5a7311445400836f6427281ef378f1f83
+  checksum: fa58155db2306d30dfe809b2c4c1d74341fb478063671cea911016ce2b2737f3f9e19bef8e9874e0020fd03b7777ebe8635bfa2fae3431c6fe96dff65f7ca73c
   languageName: node
   linkType: hard
 
-"@embroider/shared-internals@npm:2.5.2":
-  version: 2.5.2
-  resolution: "@embroider/shared-internals@npm:2.5.2"
+"@embroider/shared-internals@npm:2.6.0":
+  version: 2.6.0
+  resolution: "@embroider/shared-internals@npm:2.6.0"
   dependencies:
     babel-import-util: ^2.0.0
     debug: ^4.3.2
@@ -2103,10 +2113,11 @@ __metadata:
     fs-extra: ^9.1.0
     js-string-escape: ^1.0.1
     lodash: ^4.17.21
+    minimatch: ^3.0.4
     resolve-package-path: ^4.0.1
     semver: ^7.3.5
     typescript-memoize: ^1.0.1
-  checksum: ffa48bc708498f57482d7c1ebca44fccf46543d705a2dab698581ef5dee5f0981a9a67d7df3164940f8de1b7412f20cfd4d6204b13c2945f461660089908fe53
+  checksum: f268764bd9cb031ab078af677865e8ce08cc2159bb8bce22125b452279a05c054061a3513616231612ce73fcf92c0737d2c9f517b169d5208bf9e36c89e3ccdd
   languageName: node
   linkType: hard
 
@@ -6592,7 +6603,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"codemirror@npm:~5.65.19":
+"codemirror@npm:~5.65.18":
   version: 5.65.19
   resolution: "codemirror@npm:5.65.19"
   checksum: 3422332a62d301224e7061edded5fc7596e2a97cdb8186f725d479481bbc43bbe1e61150955579432455b3fd653822c39ec8d4e090c62fc5d36c753f6308374f
@@ -7745,7 +7756,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dompurify@npm:~3.2.5":
+"dompurify@npm:~3.2.4":
   version: 3.2.5
   resolution: "dompurify@npm:3.2.5"
   dependencies:
@@ -7867,7 +7878,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-a11y-testing@npm:~7.1.2":
+"ember-a11y-testing@npm:~7.1.0":
   version: 7.1.2
   resolution: "ember-a11y-testing@npm:7.1.2"
   dependencies:
@@ -8020,7 +8031,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-cli-babel@npm:^7.1.2, ember-cli-babel@npm:^7.10.0, ember-cli-babel@npm:^7.13.0, ember-cli-babel@npm:^7.18.0, ember-cli-babel@npm:^7.22.1, ember-cli-babel@npm:^7.23.0, ember-cli-babel@npm:^7.26.11, ember-cli-babel@npm:^7.26.3, ember-cli-babel@npm:^7.26.4, ember-cli-babel@npm:^7.26.5, ember-cli-babel@npm:^7.26.6, ember-cli-babel@npm:^7.5.0, ember-cli-babel@npm:^7.7.3":
+"ember-cli-babel@npm:^7.1.2, ember-cli-babel@npm:^7.10.0, ember-cli-babel@npm:^7.13.0, ember-cli-babel@npm:^7.18.0, ember-cli-babel@npm:^7.22.1, ember-cli-babel@npm:^7.23.0, ember-cli-babel@npm:^7.26.11, ember-cli-babel@npm:^7.26.3, ember-cli-babel@npm:^7.26.4, ember-cli-babel@npm:^7.26.5, ember-cli-babel@npm:^7.26.6, ember-cli-babel@npm:^7.5.0, ember-cli-babel@npm:^7.7.3, ember-cli-babel@npm:~7.26.11":
   version: 7.26.11
   resolution: "ember-cli-babel@npm:7.26.11"
   dependencies:
@@ -8058,7 +8069,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-cli-babel@npm:^8.0.0, ember-cli-babel@npm:^8.2.0, ember-cli-babel@npm:~8.2.0":
+"ember-cli-babel@npm:^8.0.0, ember-cli-babel@npm:^8.2.0":
   version: 8.2.0
   resolution: "ember-cli-babel@npm:8.2.0"
   dependencies:
@@ -8237,7 +8248,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-cli-mirage@npm:~3.0.3":
+"ember-cli-mirage@npm:~3.0.4":
   version: 3.0.4
   resolution: "ember-cli-mirage@npm:3.0.4"
   dependencies:
@@ -8602,7 +8613,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-data@npm:~5.3.13":
+"ember-data@npm:~5.3.11":
   version: 5.3.13
   resolution: "ember-data@npm:5.3.13"
   dependencies:
@@ -18451,7 +18462,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:~5.8.3":
+"typescript@npm:~5.8.2":
   version: 5.8.3
   resolution: "typescript@npm:5.8.3"
   bin:
@@ -18471,7 +18482,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@~5.8.3#~builtin<compat/typescript>":
+"typescript@patch:typescript@~5.8.2#~builtin<compat/typescript>":
   version: 5.8.3
   resolution: "typescript@patch:typescript@npm%3A5.8.3#~builtin<compat/typescript>::version=5.8.3&hash=85af82"
   bin:
@@ -18893,15 +18904,15 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "vault@workspace:."
   dependencies:
-    "@babel/cli": ~7.27.0
+    "@babel/cli": ~7.26.4
     "@babel/core": ~7.26.10
-    "@babel/eslint-parser": ~7.27.0
+    "@babel/eslint-parser": ~7.26.8
     "@babel/plugin-proposal-class-properties": ~7.18.6
     "@babel/plugin-proposal-decorators": ~7.25.9
     "@babel/plugin-proposal-object-rest-spread": ~7.20.7
-    "@babel/plugin-transform-block-scoping": ~7.27.0
+    "@babel/plugin-transform-block-scoping": ~7.25.9
     "@babel/preset-env": ~7.26.9
-    "@babel/preset-typescript": ~7.27.0
+    "@babel/preset-typescript": ~7.26.0
     "@docfy/ember": ~0.8.5
     "@ember/legacy-built-in-components": ~0.4.2
     "@ember/optional-features": ~2.2.0
@@ -18927,7 +18938,7 @@ __metadata:
     base64-js: ~1.5.1
     broccoli-asset-rev: ~3.0.0
     broccoli-sri-hash: "meirish/broccoli-sri-hash#rooturl"
-    codemirror: ~5.65.19
+    codemirror: ~5.65.18
     columnify: ~1.6.0
     concurrently: ~8.2.2
     d3-array: ~3.2.4
@@ -18940,12 +18951,12 @@ __metadata:
     date-fns-tz: ~1.3.8
     deepmerge: ~4.3.1
     doctoc: ~2.2.1
-    dompurify: ~3.2.5
-    ember-a11y-testing: ~7.1.2
+    dompurify: ~3.2.4
+    ember-a11y-testing: ~7.1.0
     ember-auto-import: 2.10.0
     ember-basic-dropdown: ~8.6.0
     ember-cli: ~5.8.0
-    ember-cli-babel: ~8.2.0
+    ember-cli-babel: ~7.26.11
     ember-cli-clean-css: ~3.0.0
     ember-cli-content-security-policy: 2.0.3
     ember-cli-dependency-checker: ~3.3.3
@@ -18953,7 +18964,7 @@ __metadata:
     ember-cli-flash: 4.0.0
     ember-cli-htmlbars: ~6.3.0
     ember-cli-inject-live-reload: ~2.1.0
-    ember-cli-mirage: ~3.0.3
+    ember-cli-mirage: ~3.0.4
     ember-cli-page-object: ~2.3.1
     ember-cli-sass: 11.0.1
     ember-cli-sri: "meirish/ember-cli-sri#rooturl"
@@ -18961,7 +18972,7 @@ __metadata:
     ember-cli-terser: ~4.0.2
     ember-composable-helpers: 5.0.0
     ember-concurrency: ~4.0.3
-    ember-data: ~5.3.13
+    ember-data: ~5.3.11
     ember-engines: 0.8.23
     ember-exam: ~9.1.0
     ember-inflector: 4.0.2
@@ -19020,7 +19031,7 @@ __metadata:
     swagger-ui-dist: ~5.21.0
     text-encoder-lite: 2.0.0
     tracked-built-ins: ~3.4.0
-    typescript: ~5.8.3
+    typescript: ~5.8.2
     uuid: 9.0.1
     walk-sync: ~2.2.0
     webpack: 5.94.0
