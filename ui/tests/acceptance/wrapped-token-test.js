@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { currentURL, visit, currentRouteName, click } from '@ember/test-helpers';
+import { currentURL, visit, currentRouteName, click, waitFor } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { login, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { runCmd } from 'vault/tests/helpers/commands';
@@ -63,6 +63,7 @@ module(`Acceptance | wrapped_token query param functionality`, function (hooks) 
       );
     assert.dom(AUTH_FORM.form).doesNotExist();
     await click(`${GENERAL.pageError.error} button`);
+    waitFor(AUTH_FORM.form);
     assert.strictEqual(
       currentURL(),
       '/vault/auth?with=token',
