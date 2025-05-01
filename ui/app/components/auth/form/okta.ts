@@ -45,7 +45,7 @@ export default class AuthFormOkta extends AuthBase {
           selectedAuth: this.args.authType,
         });
 
-        this.handleAuthResponse(authResponse, this.args.authType);
+        this.handleAuthResponse(authResponse);
       } catch (error) {
         // if a user fails the okta verify challenge, the POST login request fails (made by this.auth.authenticate above)
         // bubble those up for consistency instead of managing error state in this component

@@ -29,7 +29,6 @@ import type { HTMLElementEvent } from 'vault/forms';
  * dynamically renders the corresponding form.
  *
  *
- * @param {string} wrappedToken - Query param value of a wrapped token that can be used to login when added directly to the URL via the "wrapped_token" query param
  * @param {object} cluster - The route model which is the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
  * @param {function} handleNamespaceUpdate - callback task that passes user input to the controller and updates the namespace query param in the url
  * @param {string} namespace - namespace query param from the url
@@ -41,6 +40,7 @@ interface Args {
   wrappedToken: string;
   cluster: ClusterModel;
   handleNamespaceUpdate: CallableFunction;
+  preselectedAuthType: string;
   namespace: string;
   onSuccess: CallableFunction;
 }
@@ -67,7 +67,7 @@ export default class AuthFormTemplate extends Component<Args> {
   @tracked showOtherMethods = false;
 
   // auth login variables
-  @tracked selectedAuthMethod = 'token';
+  @tracked selectedAuthMethod = '';
   @tracked errorMessage = '';
 
   displayName = (type: string) => {
@@ -77,6 +77,7 @@ export default class AuthFormTemplate extends Component<Args> {
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
+    this.selectedAuthMethod = this.args.preselectedAuthType || 'token';
     this.fetchMounts.perform();
   }
 
@@ -131,7 +132,8 @@ export default class AuthFormTemplate extends Component<Args> {
   handleAuthSelect(element: string, event: HTMLElementEvent<HTMLInputElement> | null, idx: number) {
     if (element === 'tab') {
       this.setAuthTypeFromTab(idx);
-    } else if (event?.target?.value) {
+    }
+    if (element === 'dropdown' && event?.target.value) {
       this.selectedAuthMethod = event.target.value;
     }
   }
@@ -142,10 +144,10 @@ export default class AuthFormTemplate extends Component<Args> {
 
     if (this.renderTabs) {
       // reset selected auth method to first tab
-      this.handleAuthSelect('tab', null, 0);
+      this.setAuthTypeFromTab(0);
     } else {
       // all methods render, reset dropdown
-      this.selectedAuthMethod = 'token';
+      this.selectedAuthMethod = this.args.preselectedAuthType || 'token';
     }
   }
 
@@ -199,10 +201,14 @@ export default class AuthFormTemplate extends Component<Args> {
             return obj;
           }, {});
 
-          // set tracked selected auth type to first tab
-          this.setAuthTypeFromTab(0);
-          // hide other methods to prioritize tabs (visible mounts)
-          this.showOtherMethods = false;
+          // SET FORM STATE
+          if (!this.args.preselectedAuthType) {
+            // set selectedAuthMethod auth type to first tab if nothing has been preselected
+            this.setAuthTypeFromTab(0);
+          }
+          // selectedTabIndex returns -1 if selectedAuthMethod is not a tab (i.e. preselected method exists)
+          // so display the dropdown of other methods (and not tabs)
+          this.showOtherMethods = this.selectedTabIndex < 0 ? true : false;
         }
       } catch (e) {
         // if for some reason there's an error fetching mounts, swallow and just show standard form

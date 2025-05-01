@@ -58,7 +58,7 @@ export default class AuthPage extends Component {
   }
 
   @action
-  onAuthResponse(authResponse, backend, data) {
+  onAuthResponse(authResponse, { selectedAuth, path }) {
     const { mfa_requirement } = authResponse;
     /*
     Checking for an mfa_requirement happens in two places.
@@ -69,7 +69,7 @@ export default class AuthPage extends Component {
     */
     if (mfa_requirement) {
       // if an mfa requirement exists further action is required
-      this.mfaAuthData = { mfa_requirement, backend, data };
+      this.mfaAuthData = { mfa_requirement, selectedAuth, path };
     } else {
       // calls authSuccess in auth.js controller
       this.args.onAuthSuccess(authResponse);
@@ -79,7 +79,7 @@ export default class AuthPage extends Component {
   @action
   onCancelMfa() {
     // before resetting mfaAuthData, preserve auth type
-    this.preselectedAuthType = this.mfaAuthData.backend;
+    this.preselectedAuthType = this.mfaAuthData.selectedAuth;
     this.mfaAuthData = null;
   }
 
