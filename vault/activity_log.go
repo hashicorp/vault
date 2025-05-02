@@ -1717,7 +1717,7 @@ func (a *ActivityLog) HandleEndOfMonth(ctx context.Context, currentTime time.Tim
 	// if new billing cycle is detected, reset clientIDs in memory
 	a.handleClientIDsInMemoryEndOfMonth(ctx, currentTime)
 
-	// Work on cleaning up ephemeral clients in background
+	// clean up cleints from the clientIDs in memory if they are ephemeral
 	a.cleanupEphemeralClients()
 
 	return nil
