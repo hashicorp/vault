@@ -31,12 +31,22 @@ import { action } from '@ember/object';
  * @param {function} onNamespaceUpdate - callback task that passes user input to the controller to update the login namespace in the url query params
  * */
 
+export const CSP_ERROR =
+  "This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.";
+
 export default class AuthPage extends Component {
+  @service('csp-event') csp;
   @service flags;
 
   @tracked mfaAuthData;
   @tracked mfaErrors = '';
   @tracked preselectedAuthType;
+
+  get cspError() {
+    const isStandby = this.args.cluster.standby;
+    const hasConnectionViolations = this.csp.connectionViolations.length;
+    return isStandby && hasConnectionViolations ? CSP_ERROR : '';
+  }
 
   get namespaceInput() {
     const namespaceQP = this.args.namespaceQueryParam;
