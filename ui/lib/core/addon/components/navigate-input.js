@@ -224,7 +224,7 @@ export default class NavigateInput extends Component {
   }
   @action
   handleKeyPress(event) {
-    if (event.key === 'Tab') {
+    if (event.key === keys.TAB) {
       this.onTab(event);
     }
   }
