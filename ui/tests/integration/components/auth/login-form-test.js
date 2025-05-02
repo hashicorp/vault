@@ -112,7 +112,7 @@ module('Integration | Component | auth | login-form', function (hooks) {
   });
 
   test('it calls onSuccess with expected args', async function (assert) {
-    assert.expect(3);
+    assert.expect(2);
     this.server.get(`auth/token/lookup-self`, () => {
       return {
         data: {
@@ -124,7 +124,7 @@ module('Integration | Component | auth | login-form', function (hooks) {
     await this.renderComponent();
     await fillIn(GENERAL.inputByAttr('token'), 'mytoken');
     await click(AUTH_FORM.login);
-    const [authResponse, backendType, data] = this.onSuccess.lastCall.args;
+    const [authResponse, data] = this.onSuccess.lastCall.args;
     const expected = { isRoot: false, namespace: '', token: 'vault-token☃1' };
 
     assert.propEqual(
@@ -132,8 +132,11 @@ module('Integration | Component | auth | login-form', function (hooks) {
       expected,
       `it calls onSuccess with response: ${JSON.stringify(authResponse)} `
     );
-    assert.strictEqual(backendType, 'token', `it calls onSuccess with backend type: ${backendType}`);
-    assert.propEqual(data, { token: 'mytoken' }, `it calls onSuccess with data: ${JSON.stringify(data)}`);
+    assert.propEqual(
+      data,
+      { selectedAuth: 'token' },
+      `it calls onSuccess with backend type: ${JSON.stringify(data)}}`
+    );
   });
 
   test('it should set nonce value as uuid for okta method type', async function (assert) {
