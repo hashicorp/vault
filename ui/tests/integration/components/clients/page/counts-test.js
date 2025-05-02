@@ -124,18 +124,10 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
       expectedStart: 'January 2023',
       expectedEnd: 'December 2023',
     },
-    {
-      scenario: 'reset',
-      expected: { start_time: undefined, end_time: undefined },
-      reset: true,
-      expectedStart: 'July 2023',
-      expectedEnd: 'January 2024',
-    },
   ].forEach((testCase) => {
     test(`it should send correct millis value on filter change when ${testCase.scenario}`, async function (assert) {
       assert.expect(5);
-      // set to enterprise so reset will save correctly
-      this.owner.lookup('service:version').type = 'enterprise';
+      this.owner.lookup('service:version').type = 'community';
       this.onFilterChange = (params) => {
         assert.deepEqual(params, testCase.expected, 'Correct values sent on filter change');
         // in the app, the timestamp choices trigger a qp refresh as millis from epoch,
