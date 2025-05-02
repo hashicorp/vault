@@ -987,7 +987,7 @@ func TestLoadReadOnlySnapshot(t *testing.T) {
 	_, _ = txn.Insert([]byte("/different/path/to/exclude"), []byte("value"))
 	pathsToExclude = txn.Commit()
 	toExclude := func(key string) bool {
-		_, ok := pathsToExclude.Get([]byte(key))
+		_, _, ok := pathsToExclude.Root().LongestPrefix([]byte(key))
 		return ok
 	}
 
