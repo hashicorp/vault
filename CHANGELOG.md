@@ -8,6 +8,10 @@
 
 **Enterprise LTS:** Vault Enterprise 1.19 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
 
+SECURITY:
+
+* core: vault may expose sensitive information in error logs when processing malformed data with the kv v2 plugin[[GH-30388](https://github.com/hashicorp/vault/pull/30388), [HCSEC-2025-09](https://discuss.hashicorp.com/t/hcsec-2025-09-vault-may-expose-sensitive-information-in-error-logs-when-processing-malformed-data-with-the-kv-v2-plugin/74717)]
+
 CHANGES:
 
 * auth/jwt: Update plugin to v0.23.2 [[GH-30434](https://github.com/hashicorp/vault/pull/30434)]
@@ -320,6 +324,10 @@ Unblocks customers that were stuck in a failing loop when attempting to rotate s
 
 ## 1.18.9 Enterprise
 ### April 30, 2025
+
+SECURITY:
+
+* core: vault may expose sensitive information in error logs when processing malformed data with the kv v2 plugin[[GH-30388](https://github.com/hashicorp/vault/pull/30388), [HCSEC-2025-09](https://discuss.hashicorp.com/t/hcsec-2025-09-vault-may-expose-sensitive-information-in-error-logs-when-processing-malformed-data-with-the-kv-v2-plugin/74717)]
 
 BUG FIXES:
 
@@ -763,6 +771,10 @@ use versioned plugins. [[GH-27881](https://github.com/hashicorp/vault/pull/27881
 
 ## 1.17.16 Enterprise
 ### April 30, 2025
+
+SECURITY:
+
+* core: vault may expose sensitive information in error logs when processing malformed data with the kv v2 plugin[[GH-30388](https://github.com/hashicorp/vault/pull/30388), [HCSEC-2025-09](https://discuss.hashicorp.com/t/hcsec-2025-09-vault-may-expose-sensitive-information-in-error-logs-when-processing-malformed-data-with-the-kv-v2-plugin/74717)]
 
 BUG FIXES:
 
@@ -1353,6 +1365,10 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 ### April 30, 2025
 
 **Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+SECURITY:
+
+* core: vault may expose sensitive information in error logs when processing malformed data with the kv v2 plugin[[GH-30388](https://github.com/hashicorp/vault/pull/30388), [HCSEC-2025-09](https://discuss.hashicorp.com/t/hcsec-2025-09-vault-may-expose-sensitive-information-in-error-logs-when-processing-malformed-data-with-the-kv-v2-plugin/74717)]
 
 BUG FIXES:
 
