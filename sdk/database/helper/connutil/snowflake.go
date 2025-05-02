@@ -15,6 +15,8 @@ import (
 	"github.com/snowflakedb/gosnowflake"
 )
 
+var ErrInvalidSnowflakeURL = fmt.Errorf("invalid connection URL format, expect <account_name>.snowflakecomputing.com/<db_name>")
+
 // Open the DB connection to Snowflake or return an error.
 func openSnowflake(connectionURL, username, providedPrivateKey string) (*sql.DB, error) {
 	// Parse thee connection_url for required fields. Should be of
@@ -41,16 +43,18 @@ func openSnowflake(connectionURL, username, providedPrivateKey string) (*sql.DB,
 	return sql.OpenDB(connector), nil
 }
 
-// Parse thee connection_url for required fields.
+// Parse the connection_url for required fields.
 func parseSnowflakeFieldsFromURL(connectionURL string) (string, string, error) {
-	nameDelim := strings.Index(connectionURL, ".snowflakecomputing")
-	domainDelim := strings.Index(connectionURL, ".com/")
-	if nameDelim == -1 || domainDelim == -1 {
-		return "", "", fmt.Errorf("invalid connection URL, missing snowflakecomputing.com")
+	pieces := strings.Split(connectionURL, ".")
+	if len(pieces) != 3 || pieces[0] == "" || pieces[1] != "snowflakecomputing" {
+		return "", "", ErrInvalidSnowflakeURL
 	}
 
-	accountName := connectionURL[:nameDelim]
-	dbName := connectionURL[domainDelim:]
+	accountName := pieces[0]
+	dbName, dbNameFound := strings.CutPrefix(pieces[2], "com/")
+	if !dbNameFound || dbName == "" {
+		return "", "", ErrInvalidSnowflakeURL
+	}
 
 	return accountName, dbName, nil
 }
@@ -72,7 +76,7 @@ func getPrivateKey(providedPrivateKey string) (*rsa.PrivateKey, error) {
 	}
 
 	if block == nil || block.Type != "PRIVATE KEY" {
-		return nil, fmt.Errorf("failed to decode the the private key value")
+		return nil, fmt.Errorf("failed to decode the private key value")
 	}
 
 	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
