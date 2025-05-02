@@ -2,4 +2,26 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 }}
+
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      {{@rule.data.name}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<nav class="tabs" aria-label="navigation for rule details">
+  <ul>
+    <li>
+      <LinkTo @route="login-settings.rule.details" @model={{@rule.data.name}} data-test-rule-tab>
+        Details
+      </LinkTo>
+    </li>
+  </ul>
+</nav>
+
 <Toolbar />
+{{#each-in @rule.data as |key value|}}
+  <InfoTableRow @alwaysRender={{true}} @defaultShown={{true}} @label={{capitalize key}} @value={{stringify value}} />
+{{/each-in}}
