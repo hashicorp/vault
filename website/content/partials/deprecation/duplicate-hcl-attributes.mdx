@@ -6,9 +6,11 @@
 
 The usage of duplicate attributes in HCL configuration files and policy definitions is deprecated.
 
-Look for "policy contains duplicate attributes" warnings in the server logs to identify if you are affected, once
-support for duplicate attributes ends any attempts to interact with such policies will result fail, like creating a
-token referencing it or even using a token that references it.
+To find affected policies, look for "policy contains duplicate attributes"
+warnings in the server logs. Once we remove support for duplicate attributes,
+you cannot interact with affected policies. For example, Vault will return an
+error if you try to create a token referencing an affected policy or use an
+existing token that references the policy.
 
 Configuration files provided to any Vault CLI commands are also subject to this deprecation and will warn about the
 usage of duplicate attributes.
