@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import keys from 'core/utils/keys';
 import { parse } from 'shell-quote';
 import argTokenizer from './arg-tokenizer';
 
@@ -219,7 +220,7 @@ export function shiftCommandIndex(key: string, history: CommandLog[], index: num
     return [];
   }
 
-  if (key === 'ArrowUp') {
+  if (key === keys.UP) {
     index -= 1;
     if (index < 0) {
       index = commandHistoryLength - 1;

@@ -9,6 +9,7 @@ import { action } from '@ember/object';
 import { getOwner } from '@ember/owner';
 import errorMessage from 'vault/utils/error-message';
 import { tracked } from '@glimmer/tracking';
+import keys from 'core/utils/keys';
 
 /**
  * @module Roles
@@ -43,8 +44,7 @@ export default class RolesPageComponent extends Component {
 
   @action
   handleKeyDown(event) {
-    // 'Esc' is included here because some older browsers use 'Esc' instead
-    const isEscKeyPressed = event.key === 'Escape' || event.key === 'Esc';
+    const isEscKeyPressed = keys.ESC.includes(event.key);
     if (isEscKeyPressed) {
       // On escape, transition to roles index route.
       this.navigate();

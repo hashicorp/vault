@@ -6,6 +6,7 @@
 import { text, triggerable, clickable, collection, fillable, value, isPresent } from 'ember-cli-page-object';
 import { getter } from 'ember-cli-page-object/macros';
 import { settled } from '@ember/test-helpers';
+import keys from 'core/utils/keys';
 
 export default {
   toggle: clickable('[data-test-console-toggle]'),
@@ -44,13 +45,13 @@ export default {
     return this.logJSONItems.objectAt(count - 1).text;
   }),
   up: triggerable('keyup', '[data-test-component="console/command-input"] input', {
-    eventProperties: { key: 'ArrowUp' },
+    eventProperties: { key: keys.UP },
   }),
   down: triggerable('keyup', '[data-test-component="console/command-input"] input', {
-    eventProperties: { key: 'ArrowDown' },
+    eventProperties: { key: keys.DOWN },
   }),
   enter: triggerable('keyup', '[data-test-component="console/command-input"] input', {
-    eventProperties: { key: 'Enter' },
+    eventProperties: { key: keys.ENTER },
   }),
   hasInput: isPresent('[data-test-component="console/command-input"] input'),
   runCommands: async function (commands, shouldToggle = true) {

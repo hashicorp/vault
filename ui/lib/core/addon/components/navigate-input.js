@@ -12,6 +12,7 @@ import Component from '@glimmer/component';
 
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
+import keys from 'core/utils/keys';
 
 /**
  * @module NavigateInput
@@ -230,11 +231,10 @@ export default class NavigateInput extends Component {
   @action
   handleKeyUp(event) {
     const val = event.target.value;
-    if (event.key === 'Enter') {
+    if (event.key === keys.ENTER) {
       this.onEnter(val);
     }
-    // 'Esc' is included here because some older browsers use 'Esc' instead
-    if (event.key === 'Escape' || event.key === 'Esc') {
+    if (keys.ESC.includes(event.key)) {
       this.onEscape(val);
     }
   }
