@@ -225,7 +225,7 @@ export function shiftCommandIndex(key: string, history: CommandLog[], index: num
     if (index < 0) {
       index = commandHistoryLength - 1;
     }
-  } else if (key === 'ArrowDown') {
+  } else {
     index += 1;
     if (index === commandHistoryLength) {
       newInputValue = '';
