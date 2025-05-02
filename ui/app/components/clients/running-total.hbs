@@ -36,20 +36,15 @@
     </:stats>
 
     <:chart>
-      <Clients::Charts::VerticalBarGrouped
-        @data={{this.runningTotalData}}
-        @legend={{this.chartLegend}}
-        @upgradeData={{@upgradeData}}
-        @chartHeight="250"
+      {{! todo does switching to basic from group have any implications for loss of upgrade data }}
+      <Clients::Charts::VerticalBarBasic
         @chartTitle="Vault client counts"
+        @data={{this.runningTotalData}}
+        @dataKey="new_clients"
+        @chartHeight={{200}}
       />
     </:chart>
 
-    <:legend>
-      {{#each this.chartLegend as |l|}}
-        <span class="legend-colors dot-{{l.key}}"></span><span class="legend-label">{{capitalize l.label}}</span>
-      {{/each}}
-    </:legend>
   </Clients::ChartContainer>
 {{else}}
   {{#let (get @byMonthActivityData "0") as |singleMonthData|}}
