@@ -3640,22 +3640,19 @@ func (c *csvEncoder) Encode(record *ActivityLogExportRecord) error {
 	return c.Writer.Write(row)
 }
 
+// cleanupEphemeralClients removes ephemeral clients whose associated entities no longer exist
 func (a *ActivityLog) cleanupEphemeralClients() error {
-	// get all the clients from the in-memory map
 	clientsIDsInMemory := a.GetClientIDsUsageInfo()
-	// define a map for ephemeral clients to delete
 	ephemeralClients := make([]string, 0, len(clientsIDsInMemory))
 
 	// loop through the clients and check if they are ephemeral
 	for clientId := range clientsIDsInMemory {
-		// check if the entity still exists
 		entity, err := a.core.identityStore.MemDBEntityByID(clientId, false)
 		if err != nil {
 			a.logger.Warn("could not lookup entity during ephemeral cleanup", "client_id", clientId, "error", err)
 			continue
 		}
 		if entity == nil {
-			// the entity does not exist anymore, so we can remove the associated client from the map
 			ephemeralClients = append(ephemeralClients, clientId)
 		}
 	}
@@ -3664,7 +3661,7 @@ func (a *ActivityLog) cleanupEphemeralClients() error {
 	for _, clientId := range ephemeralClients {
 		delete(clientsIDsInMemory, clientId)
 	}
-
 	a.SetClientIDsUsageInfo(clientsIDsInMemory)
+
 	return nil
 }
