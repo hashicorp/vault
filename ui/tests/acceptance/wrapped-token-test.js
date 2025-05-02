@@ -64,12 +64,10 @@ module(`Acceptance | wrapped_token query param functionality`, function (hooks) 
     assert.dom(AUTH_FORM.form).doesNotExist();
     await click(`${GENERAL.pageError.error} button`);
     waitFor(AUTH_FORM.form);
-    assert.strictEqual(
-      currentURL(),
-      '/vault/auth?with=token',
-      'it goes back to login route and clears wrapped_token param'
-    );
-    assert.dom(AUTH_FORM.form).exists();
+    const url = currentURL();
+    assert.false(url.includes('wrapped_token='), `url does not include wrapped_token param: ${url}`);
+    assert.strictEqual(currentRouteName(), 'vault.cluster.auth', 'it navigates back to auth route');
+    assert.dom(AUTH_FORM.form).exists('it navigates back to login form');
   });
 
   test('it makes request to authentication service with expected args', async function (assert) {

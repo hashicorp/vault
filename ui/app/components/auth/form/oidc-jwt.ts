@@ -37,7 +37,6 @@ interface JwtLoginData {
 
 interface OidcLoginData {
   token: string;
-  mfa_requirement?: object;
 }
 
 const ERROR_WINDOW_CLOSED =
@@ -149,7 +148,7 @@ export default class AuthFormOidcJwt extends AuthBase {
       });
 
       // responsible for redirect after auth data is persisted
-      this.handleAuthResponse(authResponse, this.args.authType);
+      this.handleAuthResponse(authResponse);
     } catch (error) {
       this.onError(error as Error);
     }
@@ -238,8 +237,15 @@ export default class AuthFormOidcJwt extends AuthBase {
     }
 
     const { client_token, mfa_requirement } = resp.auth;
-    const oidcExchangeData = { token: client_token, mfa_requirement };
-    await this.continueLogin(oidcExchangeData);
+    if (mfa_requirement) {
+      return this.handleMfa(mfa_requirement, path);
+    } else if (client_token) {
+      return this.continueLogin({ token: client_token });
+    } else {
+      // If there's a problem with the OIDC exchange the auth workflow should fail earlier.
+      // Including this catch just in case, though it's unlikely this will be hit.
+      this.handleOIDCError('Missing token. Please try again.');
+    }
   });
 
   // MANAGE POPUPS
@@ -274,6 +280,7 @@ export default class AuthFormOidcJwt extends AuthBase {
 
   handleOIDCError(err: string) {
     this.prepareForOIDC.cancelAll();
+    this.exchangeOIDC.cancelAll();
     this.onError(err);
   }
 }
