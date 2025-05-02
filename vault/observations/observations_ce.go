@@ -28,7 +28,7 @@ func (observations *pluginObservationSystem) RecordObservationFromPlugin(_ conte
 	return nil
 }
 
-func (observations *ObservationSystem) RecordObservationToLedger(_ context.Context, _ string, _ map[string]interface{}) error {
+func (observations *ObservationSystem) RecordObservationToLedger(_ context.Context, _ string, _ *namespace.Namespace, _ map[string]interface{}) error {
 	return nil
 }
 
