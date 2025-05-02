@@ -21,11 +21,16 @@ import { task } from 'ember-concurrency';
  * ```js
  * <Clients::PageHeader @startTimestamp="2022-06-01T23:00:11.050Z" @endTimestamp="2022-12-01T23:00:11.050Z" @namespace="foo" @upgradesDuringActivity={{array (hash version="1.10.1" previousVersion="1.9.1" timestampInstalled= "2021-11-18T10:23:16Z") }} />
  * ```
+ * @param {string} [billingStartTime] -
+ * @param {string} [activityTimestamp] -
  * @param {string} [startTimestamp] - ISO timestamp of start time, to be passed to export request
  * @param {string} [endTimestamp] - ISO timestamp of end time, to be passed to export request
+ * @param {number} [retentionMonths] -
  * @param {string} [namespace] - namespace filter. Will be appended to the current namespace in the export request.
  * @param {string} [upgradesDuringActivity] - array of objects containing version history upgrade data
  * @param {boolean} [noData = false] - when true, export button will hide regardless of capabilities
+ * @param {function} [onChange] -
+ *
  */
 export default class ClientsPageHeaderComponent extends Component {
   @service download;

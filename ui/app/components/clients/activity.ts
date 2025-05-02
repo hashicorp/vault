@@ -92,10 +92,30 @@ export default class ClientsActivityComponent extends Component<Args> {
     const { namespace, activity, mountPath } = this.args;
     // only do this if we have a mountPath filter.
     // namespace is filtered on API layer
+    // TODO adjust this to only return new client total
     if (activity?.byNamespace && namespace && mountPath) {
       return filteredTotalForMount(activity.byNamespace, namespace, mountPath);
     }
-    return activity?.total;
+
+    const newClientTotal: TotalClients = activity.byMonth.reduce(
+      (acc, curr) => {
+        acc.acme_clients += curr.new_clients.acme_clients || 0;
+        acc.clients += curr.new_clients.clients || 0;
+        acc.entity_clients += curr.new_clients.entity_clients || 0;
+        acc.non_entity_clients += curr.new_clients.non_entity_clients || 0;
+        acc.secret_syncs += curr.new_clients.secret_syncs || 0;
+        return acc;
+      },
+      {
+        acme_clients: 0,
+        clients: 0,
+        entity_clients: 0,
+        non_entity_clients: 0,
+        secret_syncs: 0,
+      }
+    );
+
+    return newClientTotal;
   }
 
   get upgradesDuringActivity() {
