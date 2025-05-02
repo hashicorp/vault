@@ -4,7 +4,6 @@
  */
 
 import Component from '@ember/component';
-import keys from 'core/utils/key-codes';
 
 export default Component.extend({
   onExecuteCommand() {},
@@ -16,15 +15,14 @@ export default Component.extend({
 
   actions: {
     handleKeyUp(event) {
-      const keyCode = event.keyCode;
       const val = event.target.value;
-      switch (keyCode) {
-        case keys.ENTER:
+      switch (event.key) {
+        case 'Enter':
           this.onExecuteCommand(val);
           break;
-        case keys.UP:
-        case keys.DOWN:
-          this.onShiftCommand(keyCode);
+        case 'ArrowUp':
+        case 'ArrowDown':
+          this.onShiftCommand(event.key);
           break;
         default:
           this.onValueUpdate(val);

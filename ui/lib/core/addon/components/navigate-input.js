@@ -12,7 +12,6 @@ import Component from '@glimmer/component';
 
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
-import keys from 'core/utils/key-codes';
 
 /**
  * @module NavigateInput
@@ -224,18 +223,18 @@ export default class NavigateInput extends Component {
   }
   @action
   handleKeyPress(event) {
-    if (event.keyCode === keys.TAB) {
+    if (event.key === 'Tab') {
       this.onTab(event);
     }
   }
   @action
   handleKeyUp(event) {
-    const keyCode = event.keyCode;
     const val = event.target.value;
-    if (keyCode === keys.ENTER) {
+    if (event.key === 'Enter') {
       this.onEnter(val);
     }
-    if (keyCode === keys.ESC) {
+    // 'Esc' is included here because some older browsers use 'Esc' instead
+    if (event.key === 'Escape' || event.key === 'Esc') {
       this.onEscape(val);
     }
   }

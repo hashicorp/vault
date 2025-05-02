@@ -10,7 +10,6 @@ import { task, waitForEvent } from 'ember-concurrency';
 import Component from '@ember/component';
 import { set } from '@ember/object';
 import FocusOnInsertMixin from 'vault/mixins/focus-on-insert';
-import keys from 'core/utils/key-codes';
 
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
@@ -49,7 +48,9 @@ export default Component.extend(FocusOnInsertMixin, {
   },
 
   onEscape(e) {
-    if (e.keyCode !== keys.ESC || this.mode !== 'show') {
+    // 'Esc' is included here because some older browsers use 'Esc' instead
+    const isEscKeyPressed = e.key === 'Escape' || e.key === 'Esc';
+    if (isEscKeyPressed || this.mode !== 'show') {
       return;
     }
     this.transitionToRoute(LIST_ROOT_ROUTE);

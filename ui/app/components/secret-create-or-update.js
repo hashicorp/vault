@@ -29,7 +29,6 @@
 import Component from '@glimmer/component';
 import ControlGroupError from 'vault/lib/control-group-error';
 import Ember from 'ember';
-import keys from 'core/utils/key-codes';
 import { action, set } from '@ember/object';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
@@ -89,7 +88,9 @@ export default class SecretCreateOrUpdate extends Component {
     this.validationErrorCount = values.filter(Boolean).length;
   }
   onEscape(e) {
-    if (e.keyCode !== keys.ESC || this.args.mode !== 'show') {
+    // 'Esc' is included here because some older browsers use 'Esc' instead
+    const isEscKeyPressed = e.key === 'Escape' || e.key === 'Esc';
+    if (isEscKeyPressed || this.args.mode !== 'show') {
       return;
     }
     const parentKey = this.args.model.parentKey;

@@ -3,7 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import keys from 'core/utils/key-codes';
 import { parse } from 'shell-quote';
 import argTokenizer from './arg-tokenizer';
 
@@ -212,7 +211,7 @@ interface CommandLog {
   type: string;
   content?: string;
 }
-export function shiftCommandIndex(keyCode: number, history: CommandLog[], index: number) {
+export function shiftCommandIndex(key: string, history: CommandLog[], index: number) {
   let newInputValue;
   const commandHistoryLength = history.length;
 
@@ -220,12 +219,12 @@ export function shiftCommandIndex(keyCode: number, history: CommandLog[], index:
     return [];
   }
 
-  if (keyCode === keys.UP) {
+  if (key === 'ArrowUp') {
     index -= 1;
     if (index < 0) {
       index = commandHistoryLength - 1;
     }
-  } else {
+  } else if (key === 'ArrowDown') {
     index += 1;
     if (index === commandHistoryLength) {
       newInputValue = '';
