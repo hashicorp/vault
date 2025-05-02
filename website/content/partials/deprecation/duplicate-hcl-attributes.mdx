@@ -12,5 +12,6 @@ you cannot interact with affected policies. For example, Vault will return an
 error if you try to create a token referencing an affected policy or use an
 existing token that references the policy.
 
-Configuration files provided to any Vault CLI commands are also subject to this deprecation and will warn about the
-usage of duplicate attributes.
+The Vault CLI now checks provided configuration files to determine if the file
+is subject to the duplicate parameter deprecation and returns a warning about
+the issue.
