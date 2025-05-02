@@ -51,6 +51,8 @@ export default class ClientsDateRangeComponent extends Component<Args> {
   @tracked startDate = ''; // format yyyy-MM
   @tracked endDate = ''; // format yyyy-MM
   @tracked selectedStart = this.args.billingStartTime;
+  @tracked modalStart = ''; // format yyyy-MM
+  @tracked modalEnd = ''; // format yyyy-MM
 
   currentMonth = timestamp.now();
   previousMonth = format(
@@ -105,10 +107,10 @@ export default class ClientsDateRangeComponent extends Component<Args> {
       // this means we want to reset, which is fine for ent only
       return null;
     }
-    if (!this.startDate || !this.endDate) {
+    if (!this.modalStart || !this.modalEnd) {
       return 'You must supply both start and end dates.';
     }
-    if (this.startDate > this.endDate) {
+    if (this.modalStart > this.modalEnd) {
       return 'Start date must be before end date.';
     }
     return null;
@@ -129,9 +131,9 @@ export default class ClientsDateRangeComponent extends Component<Args> {
   @action updateDate(evt: HTMLElementEvent<HTMLInputElement>) {
     const { name, value } = evt.target;
     if (name === 'end') {
-      this.endDate = value;
+      this.modalEnd = value;
     } else {
-      this.startDate = value;
+      this.modalStart = value;
     }
   }
 
@@ -142,17 +144,17 @@ export default class ClientsDateRangeComponent extends Component<Args> {
       start_time: undefined,
       end_time: undefined,
     };
-    if (this.startDate) {
-      const [year, month] = this.startDate.split('-');
-      if (year && month) {
-        params.start_time = formatDateObject({ monthIdx: parseInt(month) - 1, year: parseInt(year) }, false);
-      }
+    this.startDate = this.modalStart;
+    this.endDate = this.modalEnd;
+
+    let year, month;
+    [year, month] = this.startDate.split('-');
+    if (year && month) {
+      params.start_time = formatDateObject({ monthIdx: parseInt(month) - 1, year: parseInt(year) }, false);
     }
-    if (this.endDate) {
-      const [year, month] = this.endDate.split('-');
-      if (year && month) {
-        params.end_time = formatDateObject({ monthIdx: parseInt(month) - 1, year: parseInt(year) }, true);
-      }
+    [year, month] = this.endDate.split('-');
+    if (year && month) {
+      params.end_time = formatDateObject({ monthIdx: parseInt(month) - 1, year: parseInt(year) }, true);
     }
 
     this.args.onChange(params);

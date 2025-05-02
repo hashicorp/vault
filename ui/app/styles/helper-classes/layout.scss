@@ -43,6 +43,10 @@
   position: relative;
 }
 
+.is-absolute {
+  position: absolute;
+}
+
 .top-xxs {
   top: size_variables.$spacing-4;
 }

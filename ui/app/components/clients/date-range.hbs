@@ -3,49 +3,47 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<div ...attributes>
+<div ...attributes class={{if (and this.version.isCommunity this.startDate this.endDate) "is-absolute"}}>
   <div class="is-flex-column align-items-end">
-    <div class="is-flex-column align-items-end">
-      {{#if this.version.isEnterprise}}
-        <Hds::Text::Display @tag="p" @size="100" class="has-bottom-margin-xs">
-          Change billing period
-        </Hds::Text::Display>
-        <Hds::Dropdown class="has-left-margin-xs" @matchToggleWidth={{true}} as |D|>
-          <D.ToggleButton @text="Billing start date" @color="secondary" data-test-date-range-edit />
-          <D.Description @text="Current period" />
-          <D.Checkmark
-            {{on "click" (fn this.updateEnterpriseDateRange @billingStartTime)}}
-            @selected={{eq this.selectedStart (this.formattedDate @billingStartTime)}}
-            data-test-date-range-billing-start="0"
-          >
-            {{this.formattedDate @billingStartTime}}
-          </D.Checkmark>
-          {{#if this.historicalBillingPeriods.length}}
-            <D.Separator />
-            <D.Description @text="Historical periods" />
-            {{#each this.historicalBillingPeriods as |period idx|}}
-              <D.Checkmark
-                {{on "click" (fn this.updateEnterpriseDateRange period)}}
-                data-test-date-range-billing-start={{add idx 1}}
-                @selected={{eq this.selectedStart (this.formattedDate period)}}
-              >
-                {{this.formattedDate period}}
-              </D.Checkmark>
-            {{/each}}
-          {{/if}}
-        </Hds::Dropdown>
-      {{else}}
-        {{#unless (and this.startDate this.endDate)}}
-          <Hds::Button
-            class="has-left-margin-xs"
-            @text="Set date range"
-            @icon="edit"
-            {{on "click" (fn (mut this.showEditModal) true)}}
-            data-test-date-range-edit
-          />
-        {{/unless}}
-      {{/if}}
-    </div>
+    {{#if this.version.isEnterprise}}
+      <Hds::Text::Display @tag="p" @size="100" class="has-bottom-margin-xs">
+        Change billing period
+      </Hds::Text::Display>
+      <Hds::Dropdown class="has-left-margin-xs" @matchToggleWidth={{true}} as |D|>
+        <D.ToggleButton @text="Billing start date" @color="secondary" data-test-date-range-edit />
+        <D.Description @text="Current period" />
+        <D.Checkmark
+          {{on "click" (fn this.updateEnterpriseDateRange @billingStartTime)}}
+          @selected={{eq this.selectedStart (this.formattedDate @billingStartTime)}}
+          data-test-date-range-billing-start="0"
+        >
+          {{this.formattedDate @billingStartTime}}
+        </D.Checkmark>
+        {{#if this.historicalBillingPeriods.length}}
+          <D.Separator />
+          <D.Description @text="Historical periods" />
+          {{#each this.historicalBillingPeriods as |period idx|}}
+            <D.Checkmark
+              {{on "click" (fn this.updateEnterpriseDateRange period)}}
+              data-test-date-range-billing-start={{add idx 1}}
+              @selected={{eq this.selectedStart (this.formattedDate period)}}
+            >
+              {{this.formattedDate period}}
+            </D.Checkmark>
+          {{/each}}
+        {{/if}}
+      </Hds::Dropdown>
+    {{else}}
+      {{#unless (and this.startDate this.endDate)}}
+        <Hds::Button
+          class="has-left-margin-xs"
+          @text="Set date range"
+          @icon="edit"
+          {{on "click" (fn (mut this.showEditModal) true)}}
+          data-test-date-range-edit
+        />
+      {{/unless}}
+    {{/if}}
 
   </div>
 
@@ -62,7 +60,7 @@
           <div>
             <Hds::Form::TextInput::Field
               @type="month"
-              @value={{this.startDate}}
+              @value={{this.modalStart}}
               max={{this.previousMonth}}
               id="start-month"
               name="start"
@@ -76,7 +74,7 @@
           <div>
             <Hds::Form::TextInput::Field
               @type="month"
-              @value={{this.endDate}}
+              @value={{this.modalEnd}}
               max={{this.previousMonth}}
               id="end-month"
               name="end"
