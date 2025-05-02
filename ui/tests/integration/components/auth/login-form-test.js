@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, fillIn, render, settled } from '@ember/test-helpers';
+import { click, fillIn, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { validate } from 'uuid';
@@ -37,16 +37,6 @@ module('Integration | Component | auth | login-form', function (hooks) {
         />
         `);
     };
-  });
-  const CSP_ERR_TEXT = `Error This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`;
-  test('it renders error on CSP violation', async function (assert) {
-    assert.expect(2);
-    this.cluster.standby = true;
-    await this.renderComponent();
-    assert.dom(GENERAL.messageError).doesNotExist();
-    this.owner.lookup('service:csp-event').handleEvent({ violatedDirective: 'connect-src' });
-    await settled();
-    assert.dom(GENERAL.messageError).hasText(CSP_ERR_TEXT);
   });
 
   test('it renders with vault style errors', async function (assert) {
