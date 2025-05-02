@@ -41,7 +41,7 @@ interface Args {
   cluster: ClusterModel;
   handleNamespaceUpdate: CallableFunction;
   preselectedAuthType: string;
-  namespace: string;
+  namespaceQueryParam: string;
   onSuccess: CallableFunction;
 }
 
@@ -97,7 +97,7 @@ export default class AuthFormTemplate extends Component<Args> {
   }
 
   get namespaceInput() {
-    const namespaceQueryParam = this.args.namespace;
+    const namespaceQueryParam = this.args.namespaceQueryParam;
     if (this.flags.hvdManagedNamespaceRoot) {
       // When managed, the user isn't allowed to edit the prefix `admin/`
       // so prefill just the relative path in the namespace input
