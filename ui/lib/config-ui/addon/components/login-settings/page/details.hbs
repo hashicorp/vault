@@ -14,7 +14,7 @@
 <nav class="tabs" aria-label="navigation for rule details">
   <ul>
     <li>
-      <LinkTo @route="login-settings.rule.details" @model={{@rule.data.name}} data-test-rule-tab>
+      <LinkTo @route="login-settings.rule.details" @model={{@rule.data}} data-test-rule-tab>
         Details
       </LinkTo>
     </li>
@@ -23,5 +23,24 @@
 
 <Toolbar />
 {{#each-in @rule.data as |key value|}}
-  <InfoTableRow @alwaysRender={{true}} @defaultShown={{true}} @label={{capitalize key}} @value={{stringify value}} />
+  {{#if (eq key "default_auth_type")}}
+    <InfoTableRow
+      @alwaysRender={{true}}
+      @defaultShown={{true}}
+      @label={{capitalize "default method"}}
+      @value={{stringify value}}
+    />
+  {{else if (eq key "backup_auth_types")}}
+    <InfoTableRow @alwaysRender={{true}} @defaultShown={{true}} @label={{capitalize "backup methods"}} @value={{value}} />
+    {{! we're displaying 'inheritance' on UI, is that the flipped value of disable_inheritance? assuming so for now }}
+  {{else if (eq key "disable_inheritance")}}
+    <InfoTableRow
+      @alwaysRender={{true}}
+      @defaultShown={{true}}
+      @label={{capitalize "inheritance"}}
+      @value={{stringify (not value)}}
+    />
+  {{else}}
+    <InfoTableRow @alwaysRender={{true}} @defaultShown={{true}} @label={{capitalize key}} @value={{stringify value}} />
+  {{/if}}
 {{/each-in}}
