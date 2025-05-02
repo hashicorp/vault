@@ -3,6 +3,12 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
+{{#if this.cspError}}
+  <Hds::Alert @type="page" @color="critical" data-test-page-error as |A|>
+    <A.Description>{{this.cspError}}</A.Description>
+  </Hds::Alert>
+{{/if}}
+
 {{#if this.mfaErrors}}
   <Hds::ApplicationState class="has-top-margin-xxl" data-test-error as |A|>
     <A.Header @title="Authentication error" />

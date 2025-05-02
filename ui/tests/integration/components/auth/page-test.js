@@ -5,13 +5,14 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, fillIn, render } from '@ember/test-helpers';
+import { click, fillIn, render, waitFor } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { fillInLoginFields } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { CSP_ERROR } from 'vault/components/auth/page';
 
 module('Integration | Component | auth | page', function (hooks) {
   setupRenderingTest(hooks);
@@ -40,6 +41,16 @@ module('Integration | Component | auth | page', function (hooks) {
     // in the real world more info is returned by auth requests
     // only including pertinent data for testing
     this.authRequest = (url) => this.server.post(url, () => ({ auth: { policies: ['default'] } }));
+  });
+
+  test('it renders error on CSP violation', async function (assert) {
+    assert.expect(2);
+    this.cluster.standby = true;
+    await this.renderComponent();
+    assert.dom(GENERAL.pageError.error).doesNotExist();
+    this.owner.lookup('service:csp-event').handleEvent({ violatedDirective: 'connect-src' });
+    await waitFor(GENERAL.pageError.error);
+    assert.dom(GENERAL.pageError.error).hasText(CSP_ERROR);
   });
 
   test('it renders splash logo when oidc provider query param is present', async function (assert) {
@@ -112,6 +123,7 @@ module('Integration | Component | auth | page', function (hooks) {
 
       await this.renderComponent();
       await fillIn(AUTH_FORM.method, authType);
+      // await fillIn(AUTH_FORM.selectMethod, authType);
       await fillInLoginFields(loginData);
       await click(AUTH_FORM.login);
       const [actual] = this.onAuthSuccess.lastCall.args;
@@ -134,6 +146,7 @@ module('Integration | Component | auth | page', function (hooks) {
 
       await this.renderComponent();
       await fillIn(AUTH_FORM.method, authType);
+      // await fillIn(AUTH_FORM.selectMethod, authType);
       // toggle mount path input to specify custom path
       await fillInLoginFields(loginDataWithPath, { toggleOptions: true });
       await click(AUTH_FORM.login);
@@ -157,6 +170,7 @@ module('Integration | Component | auth | page', function (hooks) {
 
     await this.renderComponent();
     await fillIn(AUTH_FORM.method, 'token');
+    // await fillIn(AUTH_FORM.selectMethod, 'token');
     await fillInLoginFields({ token: 'mysupersecuretoken' });
     await click(AUTH_FORM.login);
     const [actual] = this.onAuthSuccess.lastCall.args;

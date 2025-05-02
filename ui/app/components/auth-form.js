@@ -42,7 +42,6 @@ export default Component.extend(DEFAULTS, {
   auth: service(),
   flashMessages: service(),
   store: service(),
-  csp: service('csp-event'),
   version: service(),
   api: service(),
 
@@ -129,13 +128,6 @@ export default Component.extend(DEFAULTS, {
     type = type.toLowerCase();
     const templateName = dasherize(type);
     return templateName;
-  }),
-
-  cspError: computed('csp.connectionViolations.length', function () {
-    if (this.csp.connectionViolations.length) {
-      return `This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.`;
-    }
-    return '';
   }),
 
   allSupportedMethods: computed('methodsToShow', 'hasMethodsWithPath', 'authMethods', function () {
