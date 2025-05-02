@@ -22,11 +22,15 @@ import (
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/sdk/helper/clientcountutil"
+	"github.com/hashicorp/vault/sdk/helper/clientcountutil/generation"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault/activity"
 	"github.com/mitchellh/mapstructure"
@@ -5079,5 +5083,125 @@ func TestActivityLog_partialMonthClientCountUsingWriteExport(t *testing.T) {
 				require.Equal(t, expectedCurrentMonthClients[i].ClientType, results[i].ClientType)
 			}
 		})
+	}
+}
+
+func TestActivityLog_CleanupEphemeralClients(t *testing.T) {
+	// Normalize to start of month to prevent end of month weirdness
+	now := time.Now().UTC()
+	startOfCurrMonth := timeutil.StartOfMonth(now)
+
+	// Fake a billing start date of 4 months ago
+	billingStart := startOfCurrMonth.AddDate(0, -4, 0)
+	storage := &logical.InmemStorage{}
+
+	config := &CoreConfig{
+		entCoreConfig: entCoreConfig{
+			BillingStart:                     billingStart,
+			AutomatedLicenseReportingEnabled: true,
+			CensusManagerAgentWriteInterval:  time.Second,
+		},
+		ActivityLogConfig: ActivityLogCoreConfig{
+			ForceEnable:   true,
+			DisableTimers: true,
+		},
+		CredentialBackends: map[string]logical.Factory{
+			"userpass": userpass.Factory,
+		},
+		Physical: storage.Underlying(),
+	}
+
+	core, _, token := TestCoreUnsealedWithConfig(t, config)
+	a := core.activityLog
+	a.SetEnable(true)
+
+	// create 100 entities and save the entities ids in a map
+	createdEntityIds := make(map[string]struct{})
+	for len(createdEntityIds) < 100 {
+		entityReq := logical.TestRequest(t, logical.CreateOperation, "identity/entity")
+		entityReq.ClientToken = token
+		entityResp, err := core.HandleRequest(namespace.RootContext(context.Background()), entityReq)
+		require.NoError(t, err)
+		entityID := entityResp.Data["id"].(string)
+		createdEntityIds[entityID] = struct{}{}
+	}
+
+	a.clientIDsUsage.clientIDsUsageInfoLoaded.Store(false)
+
+	// generate clients for the entities
+	activity := clientcountutil.NewActivityLogData(nil).
+		NewPreviousMonthData(1)
+
+	for entityID := range createdEntityIds {
+		activity.NewClientSeen(
+			clientcountutil.WithClientType("entity"),
+			clientcountutil.WithClientID(entityID),
+		)
+	}
+	activityJson, err := activity.ToJSON(generation.WriteOptions_WRITE_ENTITIES)
+	require.NoError(t, err)
+
+	activityReq := logical.TestRequest(t, logical.UpdateOperation, "sys/internal/counters/activity/write")
+	activityReq.Data["input"] = string(activityJson)
+	activityReq.ClientToken = token
+	_, err = core.HandleRequest(namespace.RootContext(context.Background()), activityReq)
+	require.NoError(t, err)
+
+	core.setupClientIDsUsageInfo(context.Background())
+
+	// wait for setup to finish before testing
+	verifyClientSetupCompleteUponUnseal := func() {
+		corehelpers.RetryUntil(t, 60*time.Second, func() error {
+			if !a.GetClientIDsUsageInfoLoaded() {
+				return fmt.Errorf("did not load all clientIDs to memory")
+			}
+			return nil
+		})
+	}
+	verifyClientSetupCompleteUponUnseal()
+
+	// verify that there are 100 clients created
+	require.Len(t, a.GetClientIDsUsageInfo(), 100)
+
+	// now let's simulate the deletion of 27 entities
+	deletedEntities := make(map[string]struct{})
+	for entityId := range createdEntityIds {
+		path := fmt.Sprintf("identity/entity/id/%s", entityId)
+		entityDelReq := logical.TestRequest(t, logical.DeleteOperation, path)
+		entityDelReq.ClientToken = token
+		_, err := core.HandleRequest(namespace.RootContext(context.Background()), entityDelReq)
+		require.NoError(t, err)
+
+		deletedEntities[entityId] = struct{}{}
+		if len(deletedEntities) == 27 {
+			break
+		}
+	}
+
+	// verify that entities are deleted by listing them
+	listReq := logical.TestRequest(t, logical.ListOperation, "identity/entity/id")
+	listReq.ClientToken = token
+	listResp, err := core.HandleRequest(namespace.RootContext(context.Background()), listReq)
+	require.NoError(t, err)
+	entities := listResp.Data["keys"].([]string)
+	require.Len(t, entities, 73)
+
+	// trigger handling of end of month
+	err = a.HandleEndOfMonth(context.Background(), billingStart)
+	require.NoError(t, err)
+
+	newClients := a.GetClientIDsUsageInfo()
+	require.Len(t, newClients, 73)
+	// ensure all the clients belonging to deleted entities are deleted
+	for deletedEntity := range deletedEntities {
+		if _, ok := newClients[deletedEntity]; ok {
+			t.Fatalf("found deleted entity in the in-memory map; cleanup failed")
+		}
+	}
+	// ensure all clients belonging to existing entities still exist
+	for _, entity := range entities {
+		if _, ok := newClients[entity]; !ok {
+			t.Fatalf("client belonging to existing entity is deleted from the in-memory map; cleanup failed")
+		}
 	}
 }
