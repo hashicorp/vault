@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"os/exec"
 	"strings"
 	sync "sync/atomic"
 	"time"
@@ -236,6 +237,17 @@ func (ts *Server) Run(ctx context.Context, incoming chan string, templates []*ct
 				// This template hasn't been rendered
 				if event.LastWouldRender.IsZero() {
 					doneRendering = false
+				}
+			}
+
+			if doneRendering && len(ts.config.AgentConfig.TemplatesDoneCommand) > 0 {
+				// Run a command if defined
+				ts.logger.Debug("template server: all templates rendered, running a command", "command", ts.config.AgentConfig.TemplatesDoneCommand)
+				err := exec.Command(
+					ts.config.AgentConfig.TemplatesDoneCommand[0],
+					ts.config.AgentConfig.TemplatesDoneCommand[1:]...).Run()
+				if err != nil {
+					ts.logger.Error("template server: error running command", "error", err, "command", ts.config.AgentConfig.TemplatesDoneCommand)
 				}
 			}
 
