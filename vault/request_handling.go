@@ -1532,11 +1532,11 @@ func (c *Core) handleLoginRequest(ctx context.Context, req *logical.Request) (re
 
 	// if user lockout feature is not disabled, check if the user is locked
 	if !isUserLockoutDisabled {
-		isloginUserLocked, err := c.isUserLocked(ctx, entry, req)
+		isLoginUserLocked, err := c.isUserLocked(ctx, entry, req)
 		if err != nil {
 			return nil, nil, err
 		}
-		if isloginUserLocked {
+		if isLoginUserLocked {
 			c.logger.Error("login attempts exceeded, user is locked out", "request_path", req.Path)
 			return nil, nil, logical.ErrPermissionDenied
 		}
@@ -2542,6 +2542,9 @@ func (c *Core) LocalUpdateUserFailedLoginInfo(ctx context.Context, userKey Faile
 				return err
 			}
 
+			// Start lockout logger
+			// We run this as locked false since we already hold the userFailedLoginInfoLock here
+			c.startLockoutLogger(false)
 		}
 
 	default:
