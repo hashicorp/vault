@@ -17,6 +17,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/physical/postgresql/iam"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	_ "github.com/jackc/pgx/v4/stdlib"
@@ -130,10 +131,20 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 	}
 
 	// Create PostgreSQL handle for the database.
-	db, err := sql.Open("pgx", connURL)
+	// db, err := sql.Open("pgx", connURL)
+	config := iam.DBConfig{
+		URL:           connURL,
+		UseAWSIAMAuth: true,
+		AWSDBRegion:   "us-east-1",
+		Logger:        logger,
+	}
+
+	db, err := iam.DBHandler(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to postgres: %w", err)
 	}
+
+	logger.Info("connected to postgres", "url", connURL)
 	db.SetMaxOpenConns(maxParInt)
 
 	if maxIdleConnsIsSet {
