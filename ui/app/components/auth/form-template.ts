@@ -7,8 +7,6 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { restartableTask, timeout } from 'ember-concurrency';
-import { waitFor } from '@ember/test-waiters';
 import { ALL_LOGIN_METHODS, supportedTypes } from 'vault/utils/supported-login-methods';
 import { getRelativePath } from 'core/utils/sanitize-path';
 
@@ -31,21 +29,30 @@ import type { HTMLElementEvent } from 'vault/forms';
  *
  * @param {object} cluster - The route model which is the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
  * @param {function} handleNamespaceUpdate - callback task that passes user input to the controller and updates the namespace query param in the url
- * @param {string} namespace - namespace query param from the url
+ * @param {string} namespaceQueryParam - namespace query param from the url
  * @param {function} onSuccess - callback after the initial authentication request, if an mfa_requirement exists the parent renders the mfa form otherwise it fires the authSuccess action in the auth controller and handles transitioning to the app
+ * @param {string} preselectedAuthType - auth type to preselect to in login form, set from either local storage (last method used to log in) or on canceled mfa validation
+ * @param {object} visibleAuthMounts - mount data from auth mounts tuned with listing_visibility="unauth"
  *
  * */
 
 interface Args {
-  wrappedToken: string;
   cluster: ClusterModel;
   handleNamespaceUpdate: CallableFunction;
-  preselectedAuthType: string;
   namespaceQueryParam: string;
   onSuccess: CallableFunction;
+  preselectedAuthType: string; // set by local storage or canceled MFA validation
+  visibleAuthMounts: VisibleAuthMounts;
 }
 
-interface AuthTabs {
+interface VisibleAuthMounts {
+  [key: string]: {
+    description: string;
+    type: string;
+  };
+}
+
+interface AuthTabData {
   // key is the auth method type
   [key: string]: MountData[];
 }
@@ -63,7 +70,6 @@ export default class AuthFormTemplate extends Component<Args> {
   @service declare readonly version: VersionService;
 
   // form display logic
-  @tracked authTabs: AuthTabs | null = null;
   @tracked showOtherMethods = false;
 
   // auth login variables
@@ -77,8 +83,46 @@ export default class AuthFormTemplate extends Component<Args> {
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
-    this.selectedAuthMethod = this.args.preselectedAuthType || 'token';
-    this.fetchMounts.perform();
+    // ensures args have settled before setting form state
+    setTimeout(() => this.initializeState(), 0);
+  }
+
+  initializeState() {
+    // SET AUTH TYPE
+    if (!this.args.preselectedAuthType) {
+      // if nothing has been preselected, select first tab or set to 'token'
+      const authType = this.authTabData ? (this.authTabTypes[0] as string) : 'token';
+      this.setAuthType(authType);
+    } else {
+      // there is a preselected type, set is as the selectedAuthType
+      this.setAuthType(this.args.preselectedAuthType);
+    }
+
+    // INITIALLY RENDER TABS OR DROPDOWN
+    // selectedAuthMethod is a tab, render tabs
+    // otherwise render dropdown (i.e. showOtherMethods = false)
+    if (this.authTabData) {
+      this.showOtherMethods = this.authTabTypes.includes(this.selectedAuthMethod) ? false : true;
+    } else {
+      this.showOtherMethods = false;
+    }
+  }
+
+  get authTabTypes() {
+    return this.authTabData ? Object.keys(this.authTabData) : [];
+  }
+
+  get authTabData() {
+    if (this.args.visibleAuthMounts) {
+      const authMounts = this.args.visibleAuthMounts;
+      return Object.entries(authMounts).reduce((obj, [path, mountData]) => {
+        const { type } = mountData;
+        obj[type] ??= []; // if an array doesn't already exist for that type, create it
+        obj[type].push({ path, ...mountData });
+        return obj;
+      }, {} as AuthTabData);
+    }
+    return null;
   }
 
   get availableMethodTypes() {
@@ -110,32 +154,20 @@ export default class AuthFormTemplate extends Component<Args> {
   get renderTabs() {
     // renders tabs if listing visibility is set (auth tabs exist)
     // and user has NOT clicked "Sign in with other"
-    if (this.authTabs && !this.showOtherMethods) {
+    if (this.authTabData && !this.showOtherMethods) {
       return true;
     }
     return false;
   }
 
-  get selectedTabIndex() {
-    if (this.authTabs) {
-      return Object.keys(this.authTabs).indexOf(this.selectedAuthMethod);
-    }
-    return 0;
-  }
-
-  setAuthTypeFromTab(idx: number) {
-    const authTypes = this.authTabs ? Object.keys(this.authTabs) : [];
-    this.selectedAuthMethod = authTypes[idx] || '';
+  @action
+  setAuthType(authType: string) {
+    this.selectedAuthMethod = authType;
   }
 
   @action
-  handleAuthSelect(element: string, event: HTMLElementEvent<HTMLInputElement> | null, idx: number) {
-    if (element === 'tab') {
-      this.setAuthTypeFromTab(idx);
-    }
-    if (element === 'dropdown' && event?.target.value) {
-      this.selectedAuthMethod = event.target.value;
-    }
+  setTypeFromDropdown(event: HTMLElementEvent<HTMLInputElement>) {
+    this.selectedAuthMethod = event.target.value;
   }
 
   @action
@@ -143,8 +175,8 @@ export default class AuthFormTemplate extends Component<Args> {
     this.showOtherMethods = !this.showOtherMethods;
 
     if (this.renderTabs) {
-      // reset selected auth method to first tab
-      this.setAuthTypeFromTab(0);
+      const firstTab = this.authTabTypes[0] as string;
+      this.setAuthType(firstTab);
     } else {
       // all methods render, reset dropdown
       this.selectedAuthMethod = this.args.preselectedAuthType || 'token';
@@ -157,63 +189,7 @@ export default class AuthFormTemplate extends Component<Args> {
   }
 
   @action
-  handleNamespaceUpdate(event: HTMLElementEvent<HTMLInputElement>) {
-    // update query param
+  async handleNamespaceUpdate(event: HTMLElementEvent<HTMLInputElement>) {
     this.args.handleNamespaceUpdate(event.target.value);
-    // reset tabs
-    this.authTabs = null;
-    // fetch mounts for that namespace
-    this.fetchMounts.perform(500);
   }
-
-  fetchMounts = restartableTask(
-    waitFor(async (wait = 0) => {
-      // task is `restartable` so if the user starts typing again,
-      // it will cancel and restart from the beginning.
-      if (wait) await timeout(wait);
-
-      try {
-        // clear ember data store before re-requesting.. :(
-        this.store.unloadAll('auth-method');
-
-        // unauthMounts are tuned with listing_visibility="unauth"
-        const unauthMounts = await this.store.findAll('auth-method', {
-          adapterOptions: {
-            unauthenticated: true,
-          },
-        });
-
-        if (unauthMounts.length !== 0) {
-          this.authTabs = unauthMounts.reduce((obj: AuthTabs, m) => {
-            // serialize the ember data model into a regular ol' object
-            const mountData = m.serialize();
-            const methodType = mountData.type;
-            if (!Object.keys(obj).includes(methodType)) {
-              // create a new empty array for that type
-              obj[methodType] = [];
-            }
-
-            if (Array.isArray(obj[methodType])) {
-              // push mount data into corresponding type's array
-              obj[methodType].push(mountData);
-            }
-
-            return obj;
-          }, {});
-
-          // SET FORM STATE
-          if (!this.args.preselectedAuthType) {
-            // set selectedAuthMethod auth type to first tab if nothing has been preselected
-            this.setAuthTypeFromTab(0);
-          }
-          // selectedTabIndex returns -1 if selectedAuthMethod is not a tab (i.e. preselected method exists)
-          // so display the dropdown of other methods (and not tabs)
-          this.showOtherMethods = this.selectedTabIndex < 0 ? true : false;
-        }
-      } catch (e) {
-        // if for some reason there's an error fetching mounts, swallow and just show standard form
-        this.authTabs = null;
-      }
-    })
-  );
 }

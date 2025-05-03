@@ -9,8 +9,8 @@ import config from 'vault/config/environment';
 
 export default class AuthRoute extends ClusterRouteBase {
   queryParams = {
-    wrapped_token: { refreshModel: true },
     authMethod: { replace: true },
+    wrapped_token: { refreshModel: true },
   };
 
   @service api;
@@ -25,12 +25,21 @@ export default class AuthRoute extends ClusterRouteBase {
   }
 
   async model(params) {
+    const clusterModel = this.modelFor('vault.cluster');
     const wrapped_token = params?.wrapped_token;
     if (wrapped_token) {
-      const clusterModel = this.modelFor('vault.cluster');
       await this.unwrapToken(wrapped_token, clusterModel.id);
     }
-    return super.model(...arguments);
+
+    const visibleAuthMounts = await this.fetchMounts();
+
+    return {
+      clusterModel: clusterModel,
+      visibleAuthMounts,
+      // set in the route because this updates when namespace changes
+      storedLoginData: this.auth.getAuthType(),
+      namespaceInput: this.namespaceInput,
+    };
   }
 
   resetController(controller) {
@@ -46,6 +55,7 @@ export default class AuthRoute extends ClusterRouteBase {
     }
   }
 
+  // authenticates the user if the wrapped_token query param exists
   async unwrapToken(token, clusterId) {
     const authController = this.controllerFor('vault.cluster.auth');
     try {
@@ -61,6 +71,18 @@ export default class AuthRoute extends ClusterRouteBase {
     } catch (e) {
       const { message } = await this.api.parseError(e);
       authController.unwrapTokenError = message;
+    }
+  }
+
+  async fetchMounts() {
+    try {
+      const resp = await this.api.sys.internalUiListEnabledVisibleMounts(
+        this.api.buildHeaders({ token: '' })
+      );
+      return resp.auth;
+    } catch {
+      // swallow the error if there's an error fetching mount data (i.e. invalid namespace)
+      return null;
     }
   }
 }

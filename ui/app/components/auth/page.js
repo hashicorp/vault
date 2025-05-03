@@ -40,7 +40,7 @@ export default class AuthPage extends Component {
 
   @tracked mfaAuthData;
   @tracked mfaErrors = '';
-  @tracked preselectedAuthType;
+  @tracked canceledMfaAuth = '';
 
   get cspError() {
     const isStandby = this.args.cluster.standby;
@@ -48,23 +48,9 @@ export default class AuthPage extends Component {
     return isStandby && hasConnectionViolations ? CSP_ERROR : '';
   }
 
-  get namespaceInput() {
-    const namespaceQP = this.args.namespaceQueryParam;
-    if (this.flags.hvdManagedNamespaceRoot) {
-      // When managed, the user isn't allowed to edit the prefix `admin/` for their nested namespace
-      const split = namespaceQP.split('/');
-      if (split.length > 1) {
-        split.shift();
-        return `/${split.join('/')}`;
-      }
-      return '';
-    }
-    return namespaceQP;
-  }
-
-  @action
-  handleNamespaceUpdate(event) {
-    this.args.onNamespaceUpdate(event.target.value);
+  get preselectedAuthType() {
+    // for now storedLoginData is just the selectedAuth, plan is to also include namespace
+    return this.canceledMfaAuth || this.args.storedLoginData;
   }
 
   @action
@@ -89,7 +75,7 @@ export default class AuthPage extends Component {
   @action
   onCancelMfa() {
     // before resetting mfaAuthData, preserve auth type
-    this.preselectedAuthType = this.mfaAuthData.selectedAuth;
+    this.canceledMfaAuth = this.mfaAuthData.selectedAuth;
     this.mfaAuthData = null;
   }
 

@@ -11,10 +11,9 @@
       @cluster={{@cluster}}
       @onError={{this.handleError}}
       @onSuccess={{@onSuccess}}
-      @wrappedToken={{@wrappedToken}}
     >
       <:namespace>
-        {{#if this.version.isEnterprise}}
+        {{#if (has-feature "Namespaces")}}
           <Auth::NamespaceInput
             @disabled={{@oidcProviderQueryParam}}
             @hvdManagedNamespace={{this.flags.hvdManagedNamespaceRoot}}
@@ -41,16 +40,16 @@
         <div class="has-bottom-margin-m">
           {{#if this.renderTabs}}
             <Auth::Tabs
-              @authTabs={{this.authTabs}}
+              @authTabData={{this.authTabData}}
+              @authTabTypes={{this.authTabTypes}}
               @displayNameHelper={{this.displayName}}
-              @onTabClick={{fn this.handleAuthSelect "tab"}}
+              @handleTabClick={{this.setAuthType}}
               @selectedAuthMethod={{this.selectedAuthMethod}}
-              @selectedTabIndex={{this.selectedTabIndex}}
             />
           {{else}}
             <Hds::Form::Select::Field
               name="selectedAuthMethod"
-              {{on "input" (fn this.handleAuthSelect "dropdown")}}
+              {{on "input" this.setTypeFromDropdown}}
               data-test-select="auth type"
               as |F|
             >

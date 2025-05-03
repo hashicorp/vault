@@ -3,8 +3,8 @@
   SPDX-License-Identifier: BUSL-1.1
 ~}}
 
-<Hds::Tabs @onClickTab={{@onTabClick}} @selectedTabIndex={{@selectedTabIndex}} as |T|>
-  {{#each-in @authTabs as |methodType mounts|}}
+<Hds::Tabs @onClickTab={{this.onClickTab}} @selectedTabIndex={{this.selectedTabIndex}} as |T|>
+  {{#each-in @authTabData as |methodType mounts|}}
     <T.Tab data-test-auth-method={{methodType}}>{{@displayNameHelper methodType}}</T.Tab>
     <T.Panel>
       <div class="has-top-padding-m">

@@ -17,7 +17,6 @@ import {
   BASE_LOGIN_METHODS,
   ENTERPRISE_LOGIN_METHODS,
 } from 'vault/utils/supported-login-methods';
-import { Response } from 'miragejs';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
 
@@ -28,21 +27,22 @@ module('Integration | Component | auth | form template', function (hooks) {
   hooks.beforeEach(function () {
     this.version = this.owner.lookup('service:version');
     this.cluster = { id: '1' };
-    this.wrappedToken = '';
     this.namespaceQueryParam = '';
     this.oidcProviderQueryParam = '';
     this.onAuthResponse = sinon.spy();
     this.onNamespaceChange = sinon.spy();
+    this.visibleMounts = null;
 
     this.renderComponent = () => {
       return render(hbs`
          <Auth::FormTemplate
-          @wrappedToken={{this.wrappedToken}}
-          @oidcProviderQueryParam={{this.oidcProviderQueryParam}}
-          @cluster={{this.cluster}}
+          @cluster={{@cluster}}
           @handleNamespaceUpdate={{this.onNamespaceChange}}
-          @namespace={{this.namespaceQueryParam}}
+          @namespaceQueryParam={{this.namespaceQueryParam}}
+          @oidcProviderQueryParam={{this.oidcProviderQueryParam}}
           @onSuccess={{this.onAuthResponse}}
+          @preselectedAuthType={{this.preselectedAuthType}}
+          @visibleAuthMounts={{this.visibleMounts}}
         />`);
     };
   });
@@ -59,31 +59,6 @@ module('Integration | Component | auth | form template', function (hooks) {
     assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('"Sign in with other methods" does not render ');
   });
 
-  test('it calls sys/internal/ui/mounts on initial render', async function (assert) {
-    assert.expect(2);
-    this.server.get('/sys/internal/ui/mounts', (_, req) => {
-      assert.true(true, 'request is made to /sys/internal/ui/mounts');
-      assert.strictEqual(
-        req.requestHeaders['X-Vault-Namespace'],
-        undefined,
-        'it does not pass a namespace header'
-      );
-      return {};
-    });
-
-    await this.renderComponent();
-  });
-
-  test('it fails gracefully if sys/internal/ui/mounts request errors', async function (assert) {
-    assert.expect(2);
-    this.server.get('/sys/internal/ui/mounts', () => {
-      assert.true(true, 'request is made to /sys/internal/ui/mounts');
-      return new Response(500, {}, { errors: ['something wrong with urls'] });
-    });
-    await this.renderComponent();
-    assert.dom(GENERAL.selectByAttr('auth type')).exists();
-  });
-
   test('it displays errors', async function (assert) {
     const authenticateStub = sinon.stub(this.owner.lookup('service:auth'), 'authenticate');
     authenticateStub.throws('permission denied');
@@ -97,34 +72,28 @@ module('Integration | Component | auth | form template', function (hooks) {
 
   module('listing visibility', function (hooks) {
     hooks.beforeEach(function () {
-      this.server.get('/sys/internal/ui/mounts', () => {
-        return {
-          data: {
-            auth: {
-              'userpass/': {
-                description: '',
-                options: {},
-                type: 'userpass',
-              },
-              'userpass2/': {
-                description: '',
-                options: {},
-                type: 'userpass',
-              },
-              'my-oidc/': {
-                description: '',
-                options: {},
-                type: 'oidc',
-              },
-              'token/': {
-                description: 'token based credentials',
-                options: null,
-                type: 'token',
-              },
-            },
-          },
-        };
-      });
+      this.visibleMounts = {
+        'userpass/': {
+          description: '',
+          options: {},
+          type: 'userpass',
+        },
+        'userpass2/': {
+          description: '',
+          options: {},
+          type: 'userpass',
+        },
+        'my-oidc/': {
+          description: '',
+          options: {},
+          type: 'oidc',
+        },
+        'token/': {
+          description: 'token based credentials',
+          options: null,
+          type: 'token',
+        },
+      };
     });
 
     test('it renders mounts configured with listing_visibility="unuath"', async function (assert) {
@@ -133,6 +102,7 @@ module('Integration | Component | auth | form template', function (hooks) {
         { type: 'oidc', display: 'OIDC' },
         { type: 'token', display: 'Token' },
       ];
+
       await this.renderComponent();
       assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
       // there are 4 mount paths returned in the stubbed sys/internal/ui/mounts response above,
@@ -267,6 +237,12 @@ module('Integration | Component | auth | form template', function (hooks) {
       this.version.type = 'enterprise';
       this.version.features = ['Namespaces'];
       this.namespaceQueryParam = '';
+    });
+
+    test('it does not render the namespace input if version does not include feature', async function (assert) {
+      this.version.features = [];
+      await this.renderComponent();
+      assert.dom(GENERAL.inputByAttr('namespace')).doesNotExist();
     });
 
     // in th ent module to test ALL supported login methods
