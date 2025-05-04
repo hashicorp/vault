@@ -32,13 +32,11 @@ export default class AuthRoute extends ClusterRouteBase {
     }
 
     const visibleAuthMounts = await this.fetchMounts();
-    const authTabData = this.formatTabs(visibleAuthMounts);
     return {
-      authTabData,
       clusterModel: clusterModel,
-      hasVisibleAuthMounts: !!visibleAuthMounts,
       namespaceInput: this.namespaceInput,
       storedLoginData: this.auth.getAuthType(),
+      visibleAuthMounts,
     };
   }
 
@@ -84,18 +82,5 @@ export default class AuthRoute extends ClusterRouteBase {
       // swallow the error if there's an error fetching mount data (i.e. invalid namespace)
       return null;
     }
-  }
-
-  formatTabs(visibleAuthMounts) {
-    if (visibleAuthMounts) {
-      const authMounts = visibleAuthMounts;
-      return Object.entries(authMounts).reduce((obj, [path, mountData]) => {
-        const { type } = mountData;
-        obj[type] ??= []; // if an array doesn't already exist for that type, create it
-        obj[type].push({ path, ...mountData });
-        return obj;
-      }, {});
-    }
-    return null;
   }
 }

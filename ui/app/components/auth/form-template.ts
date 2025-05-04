@@ -14,8 +14,8 @@ import type FlagsService from 'vault/services/flags';
 import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
 import type ClusterModel from 'vault/models/cluster';
-import type { HTMLElementEvent } from 'vault/forms';
 import type { AuthTabData } from 'vault/vault/auth/form';
+import type { HTMLElementEvent } from 'vault/forms';
 
 /**
  * @module Auth::FormTemplate
@@ -55,7 +55,6 @@ export default class AuthFormTemplate extends Component<Args> {
 
   // form display logic
   @tracked showOtherMethods = false;
-  @tracked authTabData: AuthTabData | null = null;
 
   // auth login variables
   @tracked selectedAuthMethod = '';

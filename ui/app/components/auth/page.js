@@ -29,6 +29,7 @@ import { action } from '@ember/object';
  * @param {string} oidcProviderQueryParam - oidc provider query param, set in url as "?o=someprovider"
  * @param {function} onAuthSuccess - callback task in controller that receives the auth response (after MFA, if enabled) when login is successful
  * @param {function} onNamespaceUpdate - callback task that passes user input to the controller to update the login namespace in the url query params
+ * @param {object} visibleAuthMounts - keys are auth methods to render as tabs, values is an array of mount data for mounts with listing_visibility="unauth"
  * */
 
 export const CSP_ERROR =
@@ -46,6 +47,20 @@ export default class AuthPage extends Component {
     const isStandby = this.args.cluster.standby;
     const hasConnectionViolations = this.csp.connectionViolations.length;
     return isStandby && hasConnectionViolations ? CSP_ERROR : '';
+  }
+
+  get authTabData() {
+    const visibleAuthMounts = this.args.visibleAuthMounts;
+    if (visibleAuthMounts) {
+      const authMounts = visibleAuthMounts;
+      return Object.entries(authMounts).reduce((obj, [path, mountData]) => {
+        const { type } = mountData;
+        obj[type] ??= []; // if an array doesn't already exist for that type, create it
+        obj[type].push({ path, ...mountData });
+        return obj;
+      }, {});
+    }
+    return null;
   }
 
   get preselectedAuthType() {
