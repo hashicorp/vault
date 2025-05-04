@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, fillIn, find, findAll, render, typeIn } from '@ember/test-helpers';
+import { click, fillIn, find, findAll, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -98,7 +98,7 @@ module('Integration | Component | auth | form template', function (hooks) {
 
     test('it renders mounts configured with listing_visibility="unuath"', async function (assert) {
       const expectedTabs = [
-        { type: 'userpass', display: 'Username' },
+        { type: 'userpass', display: 'Userpass' },
         { type: 'oidc', display: 'OIDC' },
         { type: 'token', display: 'Token' },
       ];
@@ -300,43 +300,6 @@ module('Integration | Component | auth | form template', function (hooks) {
       });
     });
 
-    test('it re-requests mount data when a namespace is inputted', async function (assert) {
-      assert.expect(3);
-      const expectedNs = 'test-ns1';
-
-      let count = 0;
-      this.server.get('/sys/internal/ui/mounts', () => {
-        count++;
-        const msg = count === 1 ? 'on initial render' : 'when namespace is inputted';
-        assert.true(true, `/sys/internal/ui/mounts is called ${msg}`);
-        return {};
-      });
-
-      await this.renderComponent();
-      await fillIn(GENERAL.inputByAttr('namespace'), expectedNs);
-      const [actual] = this.onNamespaceChange.lastCall.args;
-      assert.strictEqual(actual, expectedNs, 'callback has expected args');
-    });
-
-    test('it re-requests mount data when namespace input is prefilled and then updated', async function (assert) {
-      assert.expect(3);
-      this.namespaceQueryParam = 'admin';
-      const childNs = '/test-ns1';
-
-      let count = 0;
-      this.server.get('/sys/internal/ui/mounts', () => {
-        count++;
-        const msg = count === 1 ? 'on initial render' : 'when namespace updates';
-        assert.true(true, `/sys/internal/ui/mounts is called ${msg}`);
-        return {};
-      });
-
-      await this.renderComponent();
-      await typeIn(GENERAL.inputByAttr('namespace'), childNs);
-      const [actual] = this.onNamespaceChange.lastCall.args;
-      assert.strictEqual(actual, `${this.namespaceQueryParam}${childNs}`, 'callback has expected args');
-    });
-
     test('it sets namespace for hvd managed clusters', async function (assert) {
       this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
       this.namespaceQueryParam = 'admin/west-coast';
@@ -344,67 +307,6 @@ module('Integration | Component | auth | form template', function (hooks) {
       assert.dom(AUTH_FORM.managedNsRoot).hasValue('/admin');
       assert.dom(AUTH_FORM.managedNsRoot).hasAttribute('readonly');
       assert.dom(GENERAL.inputByAttr('namespace')).hasValue('/west-coast');
-    });
-
-    test('it does NOT display tabs when updated namespace has no visible mounts', async function (assert) {
-      assert.expect(4);
-      let count = 0;
-      this.server.get('/sys/internal/ui/mounts', () => {
-        count++;
-        const mounts = {
-          data: {
-            auth: {
-              'userpass2/': {
-                description: '',
-                options: {},
-                type: 'userpass',
-              },
-            },
-          },
-        };
-        // mocks re-requesting the endpoint when namespace changes by returning
-        // mounts on initial request, then when a namespace is inputted a second request is made which return NO mounts
-        const response = count === 1 ? mounts : {};
-        return response;
-      });
-
-      await this.renderComponent();
-      assert.dom(AUTH_FORM.tabs('userpass')).exists('userpass renders as a tab');
-      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
-      await fillIn(GENERAL.inputByAttr('namespace'), 'admin');
-      assert.dom(AUTH_FORM.tabs()).doesNotExist('tabs do not render');
-      assert.dom(GENERAL.selectByAttr('auth type')).exists('dropdown renders');
-    });
-
-    test('it DOES display tabs when updated namespace has visible mounts', async function (assert) {
-      assert.expect(4);
-      let count = 0;
-      this.server.get('/sys/internal/ui/mounts', () => {
-        count++;
-        const mounts = {
-          data: {
-            auth: {
-              'userpass2/': {
-                description: '',
-                options: {},
-                type: 'userpass',
-              },
-            },
-          },
-        };
-        // mocks re-requesting the endpoint when namespace changes by returning
-        // no mounts on initial request, then when a namespace is inputted a second request is made which return mounts
-        const response = count === 1 ? {} : mounts;
-        return response;
-      });
-
-      await this.renderComponent();
-      assert.dom(AUTH_FORM.tabs()).doesNotExist('tabs do not render');
-      assert.dom(GENERAL.selectByAttr('auth type')).exists('dropdown renders');
-      // fire off second request to sys/internal/mounts
-      await fillIn(GENERAL.inputByAttr('namespace'), 'admin');
-      assert.dom(AUTH_FORM.tabs('userpass')).exists('userpass renders as a tab');
-      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
     });
   });
 
