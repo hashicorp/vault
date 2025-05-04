@@ -15,7 +15,7 @@ import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
 import type ClusterModel from 'vault/models/cluster';
 import type { HTMLElementEvent } from 'vault/forms';
-import type { AuthTabData, VisibleAuthMounts } from 'vault/vault/auth/form';
+import type { AuthTabData } from 'vault/vault/auth/form';
 
 /**
  * @module Auth::FormTemplate
@@ -28,22 +28,24 @@ import type { AuthTabData, VisibleAuthMounts } from 'vault/vault/auth/form';
  * dynamically renders the corresponding form.
  *
  *
+ * @param {object} authTabData - auth methods to render as tabs, contains mount data for any mounts with listing_visibility="unauth"
  * @param {object} cluster - The route model which is the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
  * @param {function} handleNamespaceUpdate - callback task that passes user input to the controller and updates the namespace query param in the url
+ * @param {boolean} hasVisibleAuthMounts - whether or not any mounts have been tuned with listing_visibility="unauth"
  * @param {string} namespaceQueryParam - namespace query param from the url
  * @param {function} onSuccess - callback after the initial authentication request, if an mfa_requirement exists the parent renders the mfa form otherwise it fires the authSuccess action in the auth controller and handles transitioning to the app
  * @param {string} preselectedAuthType - auth type to preselect to in login form, set from either local storage (last method used to log in) or on canceled mfa validation
- * @param {object} visibleAuthMounts - mount data from auth mounts tuned with listing_visibility="unauth"
  *
  * */
 
 interface Args {
+  authTabData: AuthTabData;
   cluster: ClusterModel;
   handleNamespaceUpdate: CallableFunction;
+  hasVisibleAuthMounts: boolean;
   namespaceQueryParam: string;
   onSuccess: CallableFunction;
   preselectedAuthType: string; // set by local storage or canceled MFA validation
-  visibleAuthMounts: VisibleAuthMounts;
 }
 
 export default class AuthFormTemplate extends Component<Args> {
@@ -71,13 +73,10 @@ export default class AuthFormTemplate extends Component<Args> {
   }
 
   initializeState() {
-    // FORMAT MOUNT DATA
-    this.authTabData = this._formatTabs();
-
     // SET AUTH TYPE
     if (!this.args.preselectedAuthType) {
       // if nothing has been preselected, select first tab or set to 'token'
-      const authType = this.authTabData ? (this.authTabTypes[0] as string) : 'token';
+      const authType = this.args.hasVisibleAuthMounts ? (this.authTabTypes[0] as string) : 'token';
       this.setAuthType(authType);
     } else {
       // there is a preselected type, set is as the selectedAuthType
@@ -85,9 +84,8 @@ export default class AuthFormTemplate extends Component<Args> {
     }
 
     // INITIALLY RENDER TABS OR DROPDOWN
-    // selectedAuthMethod is a tab, render tabs
-    // otherwise render dropdown (i.e. showOtherMethods = false)
-    if (this.authTabData) {
+    // render tabs if selectedAuthMethod is one, otherwise render dropdown (i.e. showOtherMethods = false)
+    if (this.args.hasVisibleAuthMounts) {
       this.showOtherMethods = this.authTabTypes.includes(this.selectedAuthMethod) ? false : true;
     } else {
       this.showOtherMethods = false;
@@ -95,7 +93,8 @@ export default class AuthFormTemplate extends Component<Args> {
   }
 
   get authTabTypes() {
-    return this.authTabData ? Object.keys(this.authTabData) : [];
+    const visibleMounts = this.args.authTabData;
+    return visibleMounts ? Object.keys(visibleMounts) : [];
   }
 
   get availableMethodTypes() {
@@ -125,9 +124,8 @@ export default class AuthFormTemplate extends Component<Args> {
   }
 
   get renderTabs() {
-    // renders tabs if listing visibility is set (auth tabs exist)
-    // and user has NOT clicked "Sign in with other"
-    if (this.authTabData && !this.showOtherMethods) {
+    // renders tabs if listing visibility is set and user has NOT clicked "Sign in with other"
+    if (this.args.hasVisibleAuthMounts && !this.showOtherMethods) {
       return true;
     }
     return false;
@@ -164,18 +162,5 @@ export default class AuthFormTemplate extends Component<Args> {
   @action
   handleNamespaceUpdate(event: HTMLElementEvent<HTMLInputElement>) {
     this.args.handleNamespaceUpdate(event.target.value);
-  }
-
-  _formatTabs() {
-    if (this.args.visibleAuthMounts) {
-      const authMounts = this.args.visibleAuthMounts;
-      return Object.entries(authMounts).reduce((obj, [path, mountData]) => {
-        const { type } = mountData;
-        obj[type] ??= []; // if an array doesn't already exist for that type, create it
-        obj[type].push({ path, ...mountData });
-        return obj;
-      }, {} as AuthTabData);
-    }
-    return null;
   }
 }

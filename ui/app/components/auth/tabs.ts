@@ -9,10 +9,10 @@ import { action } from '@ember/object';
 import type { AuthTabData } from 'vault/vault/auth/form';
 
 interface Args {
-  selectedAuthMethod: string;
   authTabData: AuthTabData;
   authTabTypes: string[];
   handleTabClick: CallableFunction;
+  selectedAuthMethod: string;
 }
 
 export default class AuthTabs extends Component<Args> {

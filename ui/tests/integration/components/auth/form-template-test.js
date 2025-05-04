@@ -31,7 +31,9 @@ module('Integration | Component | auth | form template', function (hooks) {
     this.oidcProviderQueryParam = '';
     this.onAuthResponse = sinon.spy();
     this.onNamespaceChange = sinon.spy();
-    this.visibleMounts = null;
+    this.preselectedAuthType = '';
+    this.hasVisibleAuthMounts = false;
+    this.authTabData = null;
 
     this.renderComponent = () => {
       return render(hbs`
@@ -42,7 +44,8 @@ module('Integration | Component | auth | form template', function (hooks) {
           @oidcProviderQueryParam={{this.oidcProviderQueryParam}}
           @onSuccess={{this.onAuthResponse}}
           @preselectedAuthType={{this.preselectedAuthType}}
-          @visibleAuthMounts={{this.visibleMounts}}
+          @hasVisibleAuthMounts={{this.hasVisibleAuthMounts}}
+          @authTabData={{this.authTabData}}
         />`);
     };
   });
@@ -80,27 +83,38 @@ module('Integration | Component | auth | form template', function (hooks) {
 
   module('listing visibility', function (hooks) {
     hooks.beforeEach(function () {
-      this.visibleMounts = {
-        'userpass/': {
-          description: '',
-          options: {},
-          type: 'userpass',
-        },
-        'userpass2/': {
-          description: '',
-          options: {},
-          type: 'userpass',
-        },
-        'my-oidc/': {
-          description: '',
-          options: {},
-          type: 'oidc',
-        },
-        'token/': {
-          description: 'token based credentials',
-          options: null,
-          type: 'token',
-        },
+      this.hasVisibleAuthMounts = true;
+      this.authTabData = {
+        userpass: [
+          {
+            path: 'userpass/',
+            description: '',
+            options: {},
+            type: 'userpass',
+          },
+          {
+            path: 'userpass2/',
+            description: '',
+            options: {},
+            type: 'userpass',
+          },
+        ],
+        oidc: [
+          {
+            path: 'my-oidc/',
+            description: '',
+            options: {},
+            type: 'oidc',
+          },
+        ],
+        token: [
+          {
+            path: 'token/',
+            description: 'token based credentials',
+            options: null,
+            type: 'token',
+          },
+        ],
       };
     });
 
