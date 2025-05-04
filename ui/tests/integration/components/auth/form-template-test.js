@@ -36,7 +36,7 @@ module('Integration | Component | auth | form template', function (hooks) {
     this.renderComponent = () => {
       return render(hbs`
          <Auth::FormTemplate
-          @cluster={{@cluster}}
+          @cluster={{this.cluster}}
           @handleNamespaceUpdate={{this.onNamespaceChange}}
           @namespaceQueryParam={{this.namespaceQueryParam}}
           @oidcProviderQueryParam={{this.oidcProviderQueryParam}}
