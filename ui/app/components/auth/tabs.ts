@@ -33,7 +33,7 @@ export default class AuthTabs extends Component<Args> {
   }
 
   @action
-  onClickTab(idx: number) {
+  onClickTab(_event: Event, idx: number) {
     this.args.handleTabClick(this.args.authTabTypes[idx]);
   }
 }
