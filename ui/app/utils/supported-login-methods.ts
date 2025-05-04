@@ -17,7 +17,7 @@ export const BASE_LOGIN_METHODS = [
   },
   {
     type: 'userpass',
-    displayName: 'Username',
+    displayName: 'Userpass',
   },
   {
     type: 'ldap',
