@@ -72,7 +72,7 @@ export default class AuthFormTemplate extends Component<Args> {
 
   initializeState() {
     // FORMAT MOUNT DATA
-    this.authTabData = this.formatTabs();
+    this.authTabData = this._formatTabs();
 
     // SET AUTH TYPE
     if (!this.args.preselectedAuthType) {
@@ -96,19 +96,6 @@ export default class AuthFormTemplate extends Component<Args> {
 
   get authTabTypes() {
     return this.authTabData ? Object.keys(this.authTabData) : [];
-  }
-
-  formatTabs() {
-    if (this.args.visibleAuthMounts) {
-      const authMounts = this.args.visibleAuthMounts;
-      return Object.entries(authMounts).reduce((obj, [path, mountData]) => {
-        const { type } = mountData;
-        obj[type] ??= []; // if an array doesn't already exist for that type, create it
-        obj[type].push({ path, ...mountData });
-        return obj;
-      }, {} as AuthTabData);
-    }
-    return null;
   }
 
   get availableMethodTypes() {
@@ -175,7 +162,20 @@ export default class AuthFormTemplate extends Component<Args> {
   }
 
   @action
-  async handleNamespaceUpdate(event: HTMLElementEvent<HTMLInputElement>) {
+  handleNamespaceUpdate(event: HTMLElementEvent<HTMLInputElement>) {
     this.args.handleNamespaceUpdate(event.target.value);
+  }
+
+  _formatTabs() {
+    if (this.args.visibleAuthMounts) {
+      const authMounts = this.args.visibleAuthMounts;
+      return Object.entries(authMounts).reduce((obj, [path, mountData]) => {
+        const { type } = mountData;
+        obj[type] ??= []; // if an array doesn't already exist for that type, create it
+        obj[type].push({ path, ...mountData });
+        return obj;
+      }, {} as AuthTabData);
+    }
+    return null;
   }
 }
