@@ -6,23 +6,13 @@
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
 
+import type { AuthTabData } from 'vault/vault/auth/form';
+
 interface Args {
   selectedAuthMethod: string;
   authTabData: AuthTabData;
   authTabTypes: string[];
   handleTabClick: CallableFunction;
-}
-
-interface AuthTabData {
-  // key is the auth method type
-  [key: string]: MountData[];
-}
-
-interface MountData {
-  path: string;
-  type: string;
-  description?: string;
-  config?: object | null;
 }
 
 export default class AuthTabs extends Component<Args> {

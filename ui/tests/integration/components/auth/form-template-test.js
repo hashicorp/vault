@@ -121,8 +121,8 @@ module('Integration | Component | auth | form template', function (hooks) {
         assert.dom(AUTH_FORM.tabs(m.type)).hasText(m.display, `${m.type} renders expected display name`);
       });
       assert
-        .dom(AUTH_FORM.tabBtn('Userpass'))
-        .hasAttribute('aria-selected', 'true', 'it selects the first tab by default');
+        .dom(AUTH_FORM.tabBtn('userpass'))
+        .hasAttribute('aria-selected', 'true', 'it selects the first type by default');
     });
 
     test('it selects each auth tab and renders form for that type', async function (assert) {

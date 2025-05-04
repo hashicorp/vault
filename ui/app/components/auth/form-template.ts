@@ -1,8 +1,3 @@
-/**
- * Copyright (c) HashiCorp, Inc.
- * SPDX-License-Identifier: BUSL-1.1
- */
-
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
@@ -15,6 +10,7 @@ import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
 import type ClusterModel from 'vault/models/cluster';
 import type { HTMLElementEvent } from 'vault/forms';
+import type { AuthTabData, VisibleAuthMounts } from 'vault/vault/auth/form';
 
 /**
  * @module Auth::FormTemplate
@@ -45,25 +41,6 @@ interface Args {
   visibleAuthMounts: VisibleAuthMounts;
 }
 
-interface VisibleAuthMounts {
-  [key: string]: {
-    description: string;
-    type: string;
-  };
-}
-
-interface AuthTabData {
-  // key is the auth method type
-  [key: string]: MountData[];
-}
-
-interface MountData {
-  path: string;
-  type: string;
-  description?: string;
-  config?: object | null;
-}
-
 export default class AuthFormTemplate extends Component<Args> {
   @service declare readonly flags: FlagsService;
   @service declare readonly store: Store;
@@ -71,6 +48,7 @@ export default class AuthFormTemplate extends Component<Args> {
 
   // form display logic
   @tracked showOtherMethods = false;
+  @tracked authTabData: AuthTabData | null = null;
 
   // auth login variables
   @tracked selectedAuthMethod = '';
@@ -88,6 +66,9 @@ export default class AuthFormTemplate extends Component<Args> {
   }
 
   initializeState() {
+    // FORMAT MOUNT DATA
+    this.authTabData = this.formatTabs();
+
     // SET AUTH TYPE
     if (!this.args.preselectedAuthType) {
       // if nothing has been preselected, select first tab or set to 'token'
@@ -112,7 +93,7 @@ export default class AuthFormTemplate extends Component<Args> {
     return this.authTabData ? Object.keys(this.authTabData) : [];
   }
 
-  get authTabData() {
+  formatTabs() {
     if (this.args.visibleAuthMounts) {
       const authMounts = this.args.visibleAuthMounts;
       return Object.entries(authMounts).reduce((obj, [path, mountData]) => {
