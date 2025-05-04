@@ -53,10 +53,18 @@ module('Integration | Component | auth | form template', function (hooks) {
     assert.dom(GENERAL.selectByAttr('auth type')).hasValue('token');
   });
 
+  test('it selects @preselectedAuthType by default', async function (assert) {
+    this.preselectedAuthType = 'ldap';
+    await this.renderComponent();
+    assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap');
+    assert.dom(GENERAL.inputByAttr('username')).exists();
+    assert.dom(GENERAL.inputByAttr('password')).exists();
+  });
+
   test('it does not show toggle buttons when listing visibility is not set', async function (assert) {
     await this.renderComponent();
     assert.dom(GENERAL.backButton).doesNotExist('"Back" button does not render');
-    assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('"Sign in with other methods" does not render ');
+    assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('"Sign in with other methods" does not render');
   });
 
   test('it displays errors', async function (assert) {
@@ -112,6 +120,9 @@ module('Integration | Component | auth | form template', function (hooks) {
         assert.dom(AUTH_FORM.tabs(m.type)).exists(`${m.type} renders as a tab`);
         assert.dom(AUTH_FORM.tabs(m.type)).hasText(m.display, `${m.type} renders expected display name`);
       });
+      assert
+        .dom(AUTH_FORM.tabBtn('Userpass'))
+        .hasAttribute('aria-selected', 'true', 'it selects the first tab by default');
     });
 
     test('it selects each auth tab and renders form for that type', async function (assert) {
@@ -174,7 +185,7 @@ module('Integration | Component | auth | form template', function (hooks) {
       await click(AUTH_FORM.otherMethodsBtn);
       assert
         .dom(AUTH_FORM.otherMethodsBtn)
-        .doesNotExist('"Sign in with other methods" does not render after it is clicked');
+        .doesNotExist('"Sign in with other methods" does not renderafter it is clicked');
       assert
         .dom(GENERAL.selectByAttr('auth type'))
         .exists('clicking "Sign in with other methods" renders dropdown instead of tabs');
@@ -201,6 +212,24 @@ module('Integration | Component | auth | form template', function (hooks) {
       assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
       assert.dom(AUTH_FORM.tabBtn('oidc')).hasAttribute('aria-selected', 'false');
       assert.dom(AUTH_FORM.tabBtn('token')).hasAttribute('aria-selected', 'false');
+    });
+
+    test('it preselects tab if @preselectedAuthType is a tab', async function (assert) {
+      this.preselectedAuthType = 'oidc';
+      await this.renderComponent();
+      assert.dom(AUTH_FORM.authForm('oidc')).exists('oidc tab is selected');
+      assert.dom(AUTH_FORM.tabBtn('oidc')).hasAttribute('aria-selected', 'true');
+    });
+
+    test('if @preselectedAuthType is NOT a tab, dropdown renders with type selected instead of tabs', async function (assert) {
+      this.preselectedAuthType = 'ldap';
+      await this.renderComponent();
+      assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap');
+      assert.dom(GENERAL.inputByAttr('username')).exists();
+      assert.dom(GENERAL.inputByAttr('password')).exists();
+
+      assert.dom(GENERAL.backButton).exists('"Back" button renders');
+      assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('"Sign in with other methods" does not render');
     });
   });
 
