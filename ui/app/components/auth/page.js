@@ -53,6 +53,27 @@ export default class AuthPage extends Component {
     return this.canceledMfaAuth || this.args.storedLoginData;
   }
 
+  // TODO delete when Auth::FormTemplate is implemented
+  get namespaceInput() {
+    const namespaceQP = this.args.namespaceQueryParam;
+    if (this.flags.hvdManagedNamespaceRoot) {
+      // When managed, the user isn't allowed to edit the prefix `admin/` for their nested namespace
+      const split = namespaceQP.split('/');
+      if (split.length > 1) {
+        split.shift();
+        return `/${split.join('/')}`;
+      }
+      return '';
+    }
+    return namespaceQP;
+  }
+
+  // TODO delete when Auth::FormTemplate is implemented
+  @action
+  handleNamespaceUpdate(event) {
+    this.args.onNamespaceUpdate(event.target.value);
+  }
+
   @action
   onAuthResponse(authResponse, { selectedAuth, path }) {
     const { mfa_requirement } = authResponse;
