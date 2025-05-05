@@ -99,11 +99,11 @@ func TestMerge(t *testing.T) {
 			"combined listeners",
 			&SharedConfig{
 				Listeners: []*Listener{
-					&Listener{
+					{
 						Type:    TCP,
 						Address: "127.0.0.1",
 					},
-					&Listener{
+					{
 						Type:    Unix,
 						Address: "mnt/listener",
 					},
@@ -111,11 +111,11 @@ func TestMerge(t *testing.T) {
 			},
 			&SharedConfig{
 				Listeners: []*Listener{
-					&Listener{
+					{
 						Type:    TCP,
 						Address: "127.0.0.3",
 					},
-					&Listener{
+					{
 						Type:    Unix,
 						Address: "mnt/listener2",
 					},
@@ -123,19 +123,19 @@ func TestMerge(t *testing.T) {
 			},
 			&SharedConfig{
 				Listeners: []*Listener{
-					&Listener{
+					{
 						Type:    TCP,
 						Address: "127.0.0.1",
 					},
-					&Listener{
+					{
 						Type:    Unix,
 						Address: "mnt/listener",
 					},
-					&Listener{
+					{
 						Type:    TCP,
 						Address: "127.0.0.3",
 					},
-					&Listener{
+					{
 						Type:    Unix,
 						Address: "mnt/listener2",
 					},
@@ -146,24 +146,24 @@ func TestMerge(t *testing.T) {
 			"combined user lockouts",
 			&SharedConfig{
 				UserLockouts: []*UserLockout{
-					&UserLockout{
+					{
 						Type: "lockout1",
 					},
 				},
 			},
 			&SharedConfig{
 				UserLockouts: []*UserLockout{
-					&UserLockout{
+					{
 						Type: "lockout2",
 					},
 				},
 			},
 			&SharedConfig{
 				UserLockouts: []*UserLockout{
-					&UserLockout{
+					{
 						Type: "lockout1",
 					},
-					&UserLockout{
+					{
 						Type: "lockout2",
 					},
 				},
@@ -300,5 +300,4 @@ func TestMerge(t *testing.T) {
 			require.True(t, reflect.DeepEqual(tc.expect, tc.c1.Merge(tc.c2)))
 		})
 	}
-
 }
