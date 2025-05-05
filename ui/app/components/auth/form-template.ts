@@ -34,7 +34,7 @@ import type { HTMLElementEvent } from 'vault/forms';
  * @param {boolean} hasVisibleAuthMounts - whether or not any mounts have been tuned with listing_visibility="unauth"
  * @param {string} namespaceQueryParam - namespace query param from the url
  * @param {function} onSuccess - callback after the initial authentication request, if an mfa_requirement exists the parent renders the mfa form otherwise it fires the authSuccess action in the auth controller and handles transitioning to the app
- * @param {string} preselectedAuthType - auth type to preselect to in login form, set from either local storage (last method used to log in) or on canceled mfa validation
+ * @param {string} presetAuthType - auth type to preselect to in login form, set from either local storage (last method used to log in) or on canceled mfa validation
  *
  * */
 
@@ -45,7 +45,7 @@ interface Args {
   hasVisibleAuthMounts: boolean;
   namespaceQueryParam: string;
   onSuccess: CallableFunction;
-  preselectedAuthType: string; // set by local storage or canceled MFA validation
+  presetAuthType: string; // set by local storage or canceled MFA validation
 }
 
 export default class AuthFormTemplate extends Component<Args> {
@@ -73,13 +73,13 @@ export default class AuthFormTemplate extends Component<Args> {
 
   initializeState() {
     // SET AUTH TYPE
-    if (!this.args.preselectedAuthType) {
+    if (!this.args.presetAuthType) {
       // if nothing has been preselected, select first tab or set to 'token'
       const authType = this.args.hasVisibleAuthMounts ? (this.authTabTypes[0] as string) : 'token';
       this.setAuthType(authType);
     } else {
       // there is a preselected type, set is as the selectedAuthType
-      this.setAuthType(this.args.preselectedAuthType);
+      this.setAuthType(this.args.presetAuthType);
     }
 
     // INITIALLY RENDER TABS OR DROPDOWN
@@ -149,7 +149,7 @@ export default class AuthFormTemplate extends Component<Args> {
       this.setAuthType(firstTab);
     } else {
       // all methods render, reset dropdown
-      this.selectedAuthMethod = this.args.preselectedAuthType || 'token';
+      this.selectedAuthMethod = this.args.presetAuthType || 'token';
     }
   }
 

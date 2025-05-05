@@ -31,7 +31,7 @@ module('Integration | Component | auth | form template', function (hooks) {
     this.oidcProviderQueryParam = '';
     this.onAuthResponse = sinon.spy();
     this.onNamespaceChange = sinon.spy();
-    this.preselectedAuthType = '';
+    this.presetAuthType = '';
     this.hasVisibleAuthMounts = false;
     this.authTabData = null;
 
@@ -43,7 +43,7 @@ module('Integration | Component | auth | form template', function (hooks) {
           @namespaceQueryParam={{this.namespaceQueryParam}}
           @oidcProviderQueryParam={{this.oidcProviderQueryParam}}
           @onSuccess={{this.onAuthResponse}}
-          @preselectedAuthType={{this.preselectedAuthType}}
+          @presetAuthType={{this.presetAuthType}}
           @hasVisibleAuthMounts={{this.hasVisibleAuthMounts}}
           @authTabData={{this.authTabData}}
         />`);
@@ -56,8 +56,8 @@ module('Integration | Component | auth | form template', function (hooks) {
     assert.dom(GENERAL.selectByAttr('auth type')).hasValue('token');
   });
 
-  test('it selects @preselectedAuthType by default', async function (assert) {
-    this.preselectedAuthType = 'ldap';
+  test('it selects @presetAuthType by default', async function (assert) {
+    this.presetAuthType = 'ldap';
     await this.renderComponent();
     assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap');
     assert.dom(GENERAL.inputByAttr('username')).exists();
@@ -228,15 +228,15 @@ module('Integration | Component | auth | form template', function (hooks) {
       assert.dom(AUTH_FORM.tabBtn('token')).hasAttribute('aria-selected', 'false');
     });
 
-    test('it preselects tab if @preselectedAuthType is a tab', async function (assert) {
-      this.preselectedAuthType = 'oidc';
+    test('it preselects tab if @presetAuthType is a tab', async function (assert) {
+      this.presetAuthType = 'oidc';
       await this.renderComponent();
       assert.dom(AUTH_FORM.authForm('oidc')).exists('oidc tab is selected');
       assert.dom(AUTH_FORM.tabBtn('oidc')).hasAttribute('aria-selected', 'true');
     });
 
-    test('if @preselectedAuthType is NOT a tab, dropdown renders with type selected instead of tabs', async function (assert) {
-      this.preselectedAuthType = 'ldap';
+    test('if @presetAuthType is NOT a tab, dropdown renders with type selected instead of tabs', async function (assert) {
+      this.presetAuthType = 'ldap';
       await this.renderComponent();
       assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap');
       assert.dom(GENERAL.inputByAttr('username')).exists();

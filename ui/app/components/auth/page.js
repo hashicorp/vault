@@ -63,7 +63,7 @@ export default class AuthPage extends Component {
     return null;
   }
 
-  get preselectedAuthType() {
+  get presetAuthType() {
     // for now storedLoginData is just the selectedAuth, plan is to also include namespace
     return this.canceledMfaAuth || this.args.storedLoginData;
   }
