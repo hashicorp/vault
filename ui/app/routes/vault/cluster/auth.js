@@ -27,8 +27,8 @@ export default class AuthRoute extends ClusterRouteBase {
   async model(params) {
     const clusterModel = this.modelFor('vault.cluster');
     const wrapped_token = params?.wrapped_token;
-    // logs user in directly via URL query param
     if (wrapped_token) {
+      // log user in directly (i.e. no form interaction) via URL query param
       const authResponse = await this.unwrapToken(wrapped_token, clusterModel.id);
       return { clusterModel, unwrapResponse: authResponse };
     }
@@ -47,6 +47,7 @@ export default class AuthRoute extends ClusterRouteBase {
 
   afterModel(model) {
     if (model?.unwrapResponse) {
+      // handles the transition
       return this.controllerFor('vault.cluster.auth').send('authSuccess', model.unwrapResponse);
     }
     if (config.welcomeMessage) {
