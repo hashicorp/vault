@@ -38,7 +38,6 @@ export const CSP_ERROR =
 export default class AuthPage extends Component {
   @service auth;
   @service('csp-event') csp;
-  @service flags;
 
   @tracked canceledMfaAuth = '';
   @tracked mfaAuthData;

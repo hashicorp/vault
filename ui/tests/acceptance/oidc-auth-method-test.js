@@ -13,7 +13,7 @@ import { Response } from 'miragejs';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { ERROR_MISSING_PARAMS, ERROR_WINDOW_CLOSED } from 'vault/components/auth-jwt';
+import { ERROR_MISSING_PARAMS, ERROR_WINDOW_CLOSED } from 'vault/components/auth/form/oidc-jwt';
 
 const DELAY_IN_MS = 50;
 
@@ -108,11 +108,10 @@ module('Acceptance | oidc auth method', function (hooks) {
     }, 500);
 
     await click(AUTH_FORM.login);
-    // await this.pauseTest();
     await waitFor('[data-test-dashboard-card-header="Vault version"]');
-    // assert
-    //   .dom('[data-test-dashboard-card-header="Vault version"]')
-    //   .exists('Render the dashboard landing page.');
+    assert
+      .dom('[data-test-dashboard-card-header="Vault version"]')
+      .exists('Render the dashboard landing page.');
 
     await logout();
     assert.dom(AUTH_FORM.selectMethod).hasValue('oidc', 'Previous auth method selected on logout');
