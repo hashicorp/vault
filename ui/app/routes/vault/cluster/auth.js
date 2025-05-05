@@ -27,13 +27,15 @@ export default class AuthRoute extends ClusterRouteBase {
   async model(params) {
     const clusterModel = this.modelFor('vault.cluster');
     const wrapped_token = params?.wrapped_token;
+    // logs user in directly via URL query param
     if (wrapped_token) {
-      await this.unwrapToken(wrapped_token, clusterModel.id);
+      const authResponse = await this.unwrapToken(wrapped_token, clusterModel.id);
+      return { clusterModel, unwrapResponse: authResponse };
     }
 
     const visibleAuthMounts = await this.fetchMounts();
     return {
-      clusterModel: clusterModel,
+      clusterModel,
       namespaceInput: this.namespaceInput,
       storedLoginData: this.auth.getAuthType(),
       visibleAuthMounts,
@@ -44,7 +46,10 @@ export default class AuthRoute extends ClusterRouteBase {
     controller.set('authMethod', 'token');
   }
 
-  afterModel() {
+  afterModel(model) {
+    if (model?.unwrapResponse) {
+      return this.controllerFor('vault.cluster.auth').send('authSuccess', model.unwrapResponse);
+    }
     if (config.welcomeMessage) {
       this.flashMessages.info(config.welcomeMessage, {
         sticky: true,
@@ -55,20 +60,17 @@ export default class AuthRoute extends ClusterRouteBase {
 
   // authenticates the user if the wrapped_token query param exists
   async unwrapToken(token, clusterId) {
-    const authController = this.controllerFor('vault.cluster.auth');
     try {
       const { auth } = await this.api.sys.unwrap({}, this.api.buildHeaders({ token }));
-      const authResponse = await this.auth.authenticate({
+      return await this.auth.authenticate({
         clusterId,
         backend: 'token',
         data: { token: auth.clientToken },
         selectedAuth: 'token',
       });
-      // handles transition
-      return authController.send('authSuccess', authResponse);
     } catch (e) {
       const { message } = await this.api.parseError(e);
-      authController.unwrapTokenError = message;
+      this.controllerFor('vault.cluster.auth').unwrapTokenError = message;
     }
   }
 
