@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Hds::Card::Container @level="high" @hasBorder={{true}} class="has-padding-l" data-test-mfa-form>
+<Hds::Card::Container @level="high" @hasBorder={{true}} class="has-padding-l overflow-auto" data-test-mfa-form>
   <Hds::Button @text="Back" @icon="arrow-left" @color="tertiary" {{on "click" @onCancel}} data-test-back-button />
   <p data-test-mfa-description class="has-top-margin-m">
     {{this.description}}

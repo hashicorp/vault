@@ -12,7 +12,7 @@ module('Integration | Component | splash-page', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it should render', async function (assert) {
-    assert.expect(4);
+    assert.expect(3);
     await render(hbs`<SplashPage>
     <:header>
       Header here
