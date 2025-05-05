@@ -8,6 +8,10 @@
 
 **Enterprise LTS:** Vault Enterprise 1.19 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
 
+SECURITY:
+
+* core: vault may expose sensitive information in error logs when processing malformed data with the kv v2 plugin[[GH-30388](https://github.com/hashicorp/vault/pull/30388), [HCSEC-2025-09](https://discuss.hashicorp.com/t/hcsec-2025-09-vault-may-expose-sensitive-information-in-error-logs-when-processing-malformed-data-with-the-kv-v2-plugin/74717)]
+
 CHANGES:
 
 * auth/jwt: Update plugin to v0.23.2 [[GH-30434](https://github.com/hashicorp/vault/pull/30434)]
@@ -44,10 +48,13 @@ BUG FIXES:
 
 **Enterprise LTS:** Vault Enterprise 1.19 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
 
+SECURITY:
+
+* auth/azure: Update plugin to v0.20.2. Login requires `resource_group_name`, `vm_name`, and `vmss_name` to match token claims [[HCSEC-2025-07](https://discuss.hashicorp.com/t/hcsec-2025-07-vault-s-azure-authentication-method-bound-location-restriction-could-be-bypassed-on-login/74716) [GH-30052](https://github.com/hashicorp/vault/pull/30052)].
+
 CHANGES:
 
 * UI: remove outdated and unneeded js string extensions [[GH-29834](https://github.com/hashicorp/vault/pull/29834)]
-* auth/azure: Update plugin to v0.20.2. Login requires `resource_group_name`, `vm_name`, and `vmss_name` to match token claims [[GH-30052](https://github.com/hashicorp/vault/pull/30052)]
 * auth/azure: Update plugin to v0.20.3 [[GH-30082](https://github.com/hashicorp/vault/pull/30082)]
 * auth/gcp: Update plugin to v0.20.2 [[GH-30081](https://github.com/hashicorp/vault/pull/30081)]
 * core: Verify that the client IP address extracted from an X-Forwarded-For header is a valid IPv4 or IPv6 address [[GH-29774](https://github.com/hashicorp/vault/pull/29774)]
@@ -321,6 +328,10 @@ Unblocks customers that were stuck in a failing loop when attempting to rotate s
 ## 1.18.9 Enterprise
 ### April 30, 2025
 
+SECURITY:
+
+* core: vault may expose sensitive information in error logs when processing malformed data with the kv v2 plugin[[GH-30388](https://github.com/hashicorp/vault/pull/30388), [HCSEC-2025-09](https://discuss.hashicorp.com/t/hcsec-2025-09-vault-may-expose-sensitive-information-in-error-logs-when-processing-malformed-data-with-the-kv-v2-plugin/74717)]
+
 BUG FIXES:
 
 * core (enterprise): fix issue with errors being swallowed on failed HSM logins.
@@ -345,9 +356,12 @@ BUG FIXES:
 ## 1.18.7 Enterprise
 ### April 4, 2025
 
+SECURITY:
+
+* auth/azure: Update plugin to v0.19.3. Login requires `resource_group_name`, `vm_name`, and `vmss_name` to match token claims [[HCSEC-2025-07](https://discuss.hashicorp.com/t/hcsec-2025-07-vault-s-azure-authentication-method-bound-location-restriction-could-be-bypassed-on-login/74716)].
+
 CHANGES:
 
-* auth/azure: Update plugin to v0.19.3. Login requires `resource_group_name`, `vm_name`, and `vmss_name` to match token claims.
 * core: Verify that the client IP address extracted from an X-Forwarded-For header is a valid IPv4 or IPv6 address [[GH-29774](https://github.com/hashicorp/vault/pull/29774)]
 
 IMPROVEMENTS:
@@ -764,6 +778,10 @@ use versioned plugins. [[GH-27881](https://github.com/hashicorp/vault/pull/27881
 ## 1.17.16 Enterprise
 ### April 30, 2025
 
+SECURITY:
+
+* core: vault may expose sensitive information in error logs when processing malformed data with the kv v2 plugin[[GH-30388](https://github.com/hashicorp/vault/pull/30388), [HCSEC-2025-09](https://discuss.hashicorp.com/t/hcsec-2025-09-vault-may-expose-sensitive-information-in-error-logs-when-processing-malformed-data-with-the-kv-v2-plugin/74717)]
+
 BUG FIXES:
 
 * core (enterprise): fix issue with errors being swallowed on failed HSM logins.
@@ -786,9 +804,12 @@ BUG FIXES:
 ## 1.17.14 Enterprise
 ### April 04, 2025
 
+SECURITY:
+
+* auth/azure: Update plugin to v0.18.2. Login requires `resource_group_name`, `vm_name`, and `vmss_name` to match token claims [[HCSEC-2025-07](https://discuss.hashicorp.com/t/hcsec-2025-07-vault-s-azure-authentication-method-bound-location-restriction-could-be-bypassed-on-login/74716)].
+
 CHANGES:
 
-* auth/azure: Update plugin to v0.18.2. Login requires `resource_group_name`, `vm_name`, and `vmss_name` to match token claims.
 * core: Verify that the client IP address extracted from an X-Forwarded-For header is a valid IPv4 or IPv6 address [[GH-29774](https://github.com/hashicorp/vault/pull/29774)]
 
 IMPROVEMENTS:
@@ -1354,6 +1375,10 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 
 **Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
 
+SECURITY:
+
+* core: vault may expose sensitive information in error logs when processing malformed data with the kv v2 plugin[[GH-30388](https://github.com/hashicorp/vault/pull/30388), [HCSEC-2025-09](https://discuss.hashicorp.com/t/hcsec-2025-09-vault-may-expose-sensitive-information-in-error-logs-when-processing-malformed-data-with-the-kv-v2-plugin/74717)]
+
 BUG FIXES:
 
 * core (enterprise): fix issue with errors being swallowed on failed HSM logins.
@@ -1379,9 +1404,9 @@ BUG FIXES:
 
 **Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
 
-CHANGES:
+SECURITY:
 
-* auth/azure: Update plugin to v0.17.3. Login requires `resource_group_name`, `vm_name`, and `vmss_name` to match token claims.
+* auth/azure: Update plugin to v0.17.3. Login requires `resource_group_name`, `vm_name`, and `vmss_name` to match token claims [[HCSEC-2025-07](https://discuss.hashicorp.com/t/hcsec-2025-07-vault-s-azure-authentication-method-bound-location-restriction-could-be-bypassed-on-login/74716)].
 
 IMPROVEMENTS:
 
