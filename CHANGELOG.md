@@ -6,6 +6,10 @@
 ## 1.17.16 Enterprise
 ### April 30, 2025
 
+SECURITY:
+
+* core: vault may expose sensitive information in error logs when processing malformed data with the kv v2 plugin[[GH-30388](https://github.com/hashicorp/vault/pull/30388), [HCSEC-2025-09](https://discuss.hashicorp.com/t/hcsec-2025-09-vault-may-expose-sensitive-information-in-error-logs-when-processing-malformed-data-with-the-kv-v2-plugin/74717)]
+
 BUG FIXES:
 
 * core (enterprise): fix issue with errors being swallowed on failed HSM logins.
@@ -28,9 +32,12 @@ BUG FIXES:
 ## 1.17.14 Enterprise
 ### April 04, 2025
 
+SECURITY:
+
+* auth/azure: Update plugin to v0.18.2. Login requires `resource_group_name`, `vm_name`, and `vmss_name` to match token claims [[HCSEC-2025-07](https://discuss.hashicorp.com/t/hcsec-2025-07-vault-s-azure-authentication-method-bound-location-restriction-could-be-bypassed-on-login/74716)].
+
 CHANGES:
 
-* auth/azure: Update plugin to v0.18.2. Login requires `resource_group_name`, `vm_name`, and `vmss_name` to match token claims.
 * core: Verify that the client IP address extracted from an X-Forwarded-For header is a valid IPv4 or IPv6 address [[GH-29774](https://github.com/hashicorp/vault/pull/29774)]
 
 IMPROVEMENTS:
