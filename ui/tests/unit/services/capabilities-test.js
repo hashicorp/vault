@@ -6,6 +6,7 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import sinon from 'sinon';
 
 module('Unit | Service | capabilities', function (hooks) {
   setupTest(hooks);
@@ -163,6 +164,33 @@ module('Unit | Service | capabilities', function (hooks) {
       canUpdate: false,
     };
     assert.propEqual(actual, expected, 'returns capabilities for provided path');
+  });
+
+  test('pathFor: it should resolve the correct path to fetch capabilities', async function (assert) {
+    const syncActivate = this.capabilities.pathFor('syncActivate');
+    assert.strictEqual(
+      syncActivate,
+      'sys/activation-flags/secrets-sync/activate',
+      'pathFor returns expected path for syncActivate'
+    );
+
+    const syncDestination = this.capabilities.pathFor('syncDestination', { type: 'aws-sm', name: 'foo' });
+    assert.strictEqual(
+      syncDestination,
+      'sys/sync/destinations/aws-sm/foo',
+      'pathFor returns expected path for syncDestination'
+    );
+  });
+
+  test('for: it should fetch capabilities for single path using pathFor and fetchPathCapabilities methods', async function (assert) {
+    const pathForStub = sinon.spy(this.capabilities, 'pathFor');
+    const fetchPathCapabilitiesStub = sinon.stub(this.capabilities, 'fetchPathCapabilities').resolves();
+    await this.capabilities.for('customMessages', { id: 'foo' });
+    assert.true(pathForStub.calledWith('customMessages', { id: 'foo' }), 'pathFor called with expected args');
+    assert.true(
+      fetchPathCapabilitiesStub.calledWith('sys/config/ui/custom-messages/foo'),
+      'fetchPathCapabilities called with expected args'
+    );
   });
 
   module('specific methods', function () {
