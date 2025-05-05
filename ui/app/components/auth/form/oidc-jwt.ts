@@ -89,8 +89,10 @@ export default class AuthFormOidcJwt extends AuthBase {
     const { name, value } = event.target;
     this._formData?.set(name, value);
 
-    // only fetch role if the following inputs have changed
-    if (['path', 'role', 'namespace'].includes(name)) {
+    // re-fetch role if the following inputs have changed.
+    // namespace is not included because the route model refreshes
+    // when it changes and new component instantiates.
+    if (['path', 'role'].includes(name)) {
       this.fetchRole.perform(500);
     }
   }
