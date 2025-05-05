@@ -67,9 +67,10 @@ func Backend() *backend {
 				"special",
 			},
 		},
-		Secrets:     []*framework.Secret{},
-		Invalidate:  b.invalidate,
-		BackendType: logical.TypeLogical,
+		Secrets:          []*framework.Secret{},
+		Invalidate:       b.invalidate,
+		BackendType:      logical.TypeLogical,
+		RotateCredential: b.rotateRootCredential,
 	}
 	b.internal = MockPluginDefaultInternalValue
 	b.RunningVersion = "v0.0.0+mock"
@@ -127,4 +128,10 @@ func expectInternalValue(t *testing.T, client *api.Client, mountPath, expected s
 	if resp.Data["value"].(string) != expected {
 		t.Fatalf("expected %q but got %q", expected, resp.Data["value"].(string))
 	}
+}
+
+func (b *backend) rotateRootCredential(ctx context.Context, req *logical.Request) error {
+	b.Logger().Debug("mock rotateRootCredential")
+	b.internal = "rotated"
+	return nil
 }
