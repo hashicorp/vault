@@ -2958,6 +2958,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		DisableSSCTokens:               config.DisableSSCTokens,
 		Experiments:                    config.Experiments,
 		AdministrativeNamespacePath:    config.AdministrativeNamespacePath,
+		ObservationSystemLedgerPath:    config.ObservationSystemLedgerPath,
 	}
 
 	if c.flagDev {
