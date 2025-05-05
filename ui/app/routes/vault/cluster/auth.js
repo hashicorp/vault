@@ -37,7 +37,6 @@ export default class AuthRoute extends ClusterRouteBase {
     const visibleAuthMounts = await this.fetchMounts();
     return {
       clusterModel,
-      storedLoginData: this.auth.getAuthType(),
       visibleAuthMounts,
     };
   }

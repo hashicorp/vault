@@ -36,6 +36,7 @@ export const CSP_ERROR =
   "This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.";
 
 export default class AuthPage extends Component {
+  @service auth;
   @service('csp-event') csp;
   @service flags;
 
@@ -64,8 +65,8 @@ export default class AuthPage extends Component {
   }
 
   get presetAuthType() {
-    // for now storedLoginData is just the selectedAuth, plan is to also include namespace
-    return this.canceledMfaAuth || this.args.storedLoginData;
+    // getAuthType returns the last used auth method from local storage
+    return this.canceledMfaAuth || this.auth.getAuthType();
   }
 
   @action

@@ -89,7 +89,7 @@ module('Acceptance | auth login form', function (hooks) {
         },
       };
     });
-
+    await logout(); // clear local storage
     await visit('/vault/auth');
     await waitFor(AUTH_FORM.tabs());
     assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
