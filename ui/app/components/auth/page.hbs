@@ -39,6 +39,7 @@
       {{/if}}
     </:header>
 
+    {{!-- 
     <:subHeader>
       {{#if (has-feature "Namespaces")}}
         {{#unless this.mfaAuthData}}
@@ -75,7 +76,7 @@
           </Toolbar>
         {{/unless}}
       {{/if}}
-    </:subHeader>
+    </:subHeader> --}}
 
     <:content>
       {{#if this.mfaAuthData}}
@@ -87,11 +88,21 @@
           @onError={{fn (mut this.mfaErrors)}}
         />
       {{else}}
-        <Auth::LoginForm
+        {{!-- <Auth::LoginForm
           @cluster={{@cluster}}
           @namespace={{@namespaceQueryParam}}
           @selectedAuth={{@authMethodQueryParam}}
           @onSuccess={{this.onAuthResponse}}
+        /> --}}
+        <Auth::FormTemplate
+          @authTabData={{this.authTabData}}
+          @cluster={{@cluster}}
+          @handleNamespaceUpdate={{@onNamespaceUpdate}}
+          @hasVisibleAuthMounts={{if @visibleAuthMounts true false}}
+          @namespaceQueryParam={{@namespaceQueryParam}}
+          @oidcProviderQueryParam={{@oidcProviderQueryParam}}
+          @onSuccess={{this.onAuthResponse}}
+          @presetAuthType={{this.presetAuthType}}
         />
       {{/if}}
     </:content>
