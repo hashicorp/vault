@@ -86,10 +86,10 @@ module('Integration | Component | json-editor', function (hooks) {
       @theme={{this.hashi-read-only-theme}}
       @readOnly={{true}}
     />`);
-    // computed style differs between browsers so we only check for the color.
-    // soon this component will be replaced with a hds and this test can be removed.
-    // Chrome: rgb(247, 248, 250) none repeat scroll 0% 0% / auto padding-box border-box
-    // Firefox: rgb(247, 248, 250);
+    // computed style differs between browsers so we only check for the color
+    // TODO: this component will be replaced with a hds codeEditor and this test can be removed
+    // getComputedStyle for Chrome: rgb(247, 248, 250) none repeat scroll 0% 0% / auto padding-box border-box
+    // getComputedStyle for Firefox: rgb(247, 248, 250);
     assert.dom('.cm-s-hashi-read-only').hasStyle({
       backgroundColor: 'rgb(247, 248, 250)',
     });
