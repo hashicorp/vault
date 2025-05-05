@@ -7,23 +7,25 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 
 export default class LoginSettingsRuleDetailsRoute extends Route {
-  @service api;
   @service store;
 
   async model() {
-    const { name } = this.paramsFor('login-settings.rule');
+    try {
+      const { name } = this.paramsFor('login-settings.rule');
+      if (!name) return null;
 
-    const adapter = this.store.adapterFor('application');
+      const adapter = this.store.adapterFor('application');
+      const rule = await adapter.ajax(`/v1/sys/config/ui/login/default-auth/${encodeURI(name)}`, 'GET');
 
-    const rule = await adapter.ajax(`/v1/sys/config/ui/login/default-auth/${encodeURI(name)}`, 'GET');
-
-    return { rule };
+      return { rule: rule.data };
+    } catch (e) {
+      return null;
+    }
   }
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    const { rule } = resolvedModel;
 
-    controller.breadcrumbs = [{ label: 'UI login rules', route: 'login-settings' }, { label: rule.name }];
+    controller.breadcrumbs = [{ label: 'UI login rules', route: 'login-settings' }, { label: '' }];
   }
 }

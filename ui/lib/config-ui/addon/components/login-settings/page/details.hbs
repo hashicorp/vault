@@ -4,13 +4,12 @@
 }}
 
 <PageHeader as |p|>
-
   <p.top>
     <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3">
-      {{@rule.data.name}}
+      {{@rule.name}}
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -18,7 +17,7 @@
 <nav class="tabs" aria-label="navigation for rule details">
   <ul>
     <li>
-      <LinkTo @route="login-settings.rule.details" @model={{@rule.data}} data-test-rule-tab>
+      <LinkTo @route="login-settings.rule.details" @model={{@rule}} data-test-rule-tab>
         Details
       </LinkTo>
     </li>
@@ -26,19 +25,14 @@
 </nav>
 
 <Toolbar />
-{{#each-in @rule.data as |key value|}}
+{{#each-in @rule as |key value|}}
   {{#if (eq key "default_auth_type")}}
-    <InfoTableRow @alwaysRender={{true}} @label={{capitalize "default method"}} @value={{value}} />
+    <InfoTableRow @alwaysRender={{true}} @label="Default method" @value={{value}} />
   {{else if (eq key "backup_auth_types")}}
-    <InfoTableRow @alwaysRender={{true}} @label={{capitalize "backup methods"}} @value={{value}} />
+    <InfoTableRow @alwaysRender={{true}} @label="Backup methods" @value={{value}} />
     {{! we're displaying 'inheritance' on UI, is that the flipped value of disable_inheritance? assuming so for now }}
   {{else if (eq key "disable_inheritance")}}
-    <InfoTableRow
-      @alwaysRender={{true}}
-      @defaultShown={{true}}
-      @label={{capitalize "inheritance"}}
-      @value={{stringify (not value)}}
-    />
+    <InfoTableRow @alwaysRender={{true}} @defaultShown={{true}} @label="Inheritance" @value={{stringify (not value)}} />
   {{else}}
     <InfoTableRow @alwaysRender={{true}} @label={{capitalize key}} @value={{value}} />
   {{/if}}
