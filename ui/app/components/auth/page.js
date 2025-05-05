@@ -36,18 +36,12 @@ export const CSP_ERROR =
   "This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.";
 
 export default class AuthPage extends Component {
+  @service auth;
   @service('csp-event') csp;
-  @service flags;
 
+  @tracked canceledMfaAuth = '';
   @tracked mfaAuthData;
   @tracked mfaErrors = '';
-  @tracked canceledMfaAuth = '';
-
-  get cspError() {
-    const isStandby = this.args.cluster.standby;
-    const hasConnectionViolations = this.csp.connectionViolations.length;
-    return isStandby && hasConnectionViolations ? CSP_ERROR : '';
-  }
 
   get authTabData() {
     const visibleAuthMounts = this.args.visibleAuthMounts;
@@ -63,30 +57,15 @@ export default class AuthPage extends Component {
     return null;
   }
 
+  get cspError() {
+    const isStandby = this.args.cluster.standby;
+    const hasConnectionViolations = this.csp.connectionViolations.length;
+    return isStandby && hasConnectionViolations ? CSP_ERROR : '';
+  }
+
   get presetAuthType() {
-    // for now storedLoginData is just the selectedAuth, plan is to also include namespace
-    return this.canceledMfaAuth || this.args.storedLoginData;
-  }
-
-  // TODO delete when Auth::FormTemplate is implemented
-  get namespaceInput() {
-    const namespaceQP = this.args.namespaceQueryParam;
-    if (this.flags.hvdManagedNamespaceRoot) {
-      // When managed, the user isn't allowed to edit the prefix `admin/` for their nested namespace
-      const split = namespaceQP.split('/');
-      if (split.length > 1) {
-        split.shift();
-        return `/${split.join('/')}`;
-      }
-      return '';
-    }
-    return namespaceQP;
-  }
-
-  // TODO delete when Auth::FormTemplate is implemented
-  @action
-  handleNamespaceUpdate(event) {
-    this.args.onNamespaceUpdate(event.target.value);
+    // getAuthType returns the last used auth method from local storage
+    return this.canceledMfaAuth || this.auth.getAuthType();
   }
 
   @action

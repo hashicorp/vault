@@ -23,6 +23,7 @@ module('Integration | Component | auth | page', function (hooks) {
     this.cluster = { id: '1' };
     this.onAuthSuccess = sinon.spy();
     this.onNamespaceUpdate = sinon.spy();
+    this.visibleAuthMounts = false;
 
     this.renderComponent = () => {
       return render(hbs`
@@ -33,7 +34,7 @@ module('Integration | Component | auth | page', function (hooks) {
           @oidcProviderQueryParam={{this.providerQp}}
           @onAuthSuccess={{this.onAuthSuccess}}
           @onNamespaceUpdate={{this.onNamespaceUpdate}}
-          @wrappedToken={{this.wrappedToken}}
+          @visibleAuthMounts={{this.visibleAuthMounts}}
         />
         `);
     };
@@ -94,6 +95,49 @@ module('Integration | Component | auth | page', function (hooks) {
     assert.strictEqual(actual, 'mynamespace', `onNamespaceUpdate called with: ${actual}`);
   });
 
+  test('it formats tab data if visible auth mounts exist', async function (assert) {
+    this.visibleAuthMounts = {
+      'userpass/': {
+        description: '',
+        options: {},
+        type: 'userpass',
+      },
+      'userpass2/': {
+        description: '',
+        options: {},
+        type: 'userpass',
+      },
+      'my-oidc/': {
+        description: '',
+        options: {},
+        type: 'oidc',
+      },
+      'token/': {
+        description: 'token based credentials',
+        options: null,
+        type: 'token',
+      },
+    };
+    await this.renderComponent();
+    const expectedTabs = [
+      { type: 'userpass', display: 'Userpass' },
+      { type: 'oidc', display: 'OIDC' },
+      { type: 'token', display: 'Token' },
+    ];
+
+    assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
+    // there are 4 mount paths returned in the stubbed sys/internal/ui/mounts response above,
+    // but two are of the same type so only expect 3 tabs
+    assert.dom(AUTH_FORM.tabs()).exists({ count: 3 }, 'it groups mount paths by type and renders 3 tabs');
+    expectedTabs.forEach((m) => {
+      assert.dom(AUTH_FORM.tabs(m.type)).exists(`${m.type} renders as a tab`);
+      assert.dom(AUTH_FORM.tabs(m.type)).hasText(m.display, `${m.type} renders expected display name`);
+    });
+    assert
+      .dom(AUTH_FORM.tabBtn('userpass'))
+      .hasAttribute('aria-selected', 'true', 'it selects the first type by default');
+  });
+
   const REQUEST_DATA = {
     username: {
       loginData: { username: 'matilda', password: 'password' },
@@ -122,7 +166,7 @@ module('Integration | Component | auth | page', function (hooks) {
       this.authRequest(requestUrl);
 
       await this.renderComponent();
-      await fillIn(AUTH_FORM.method, authType);
+      await fillIn(AUTH_FORM.selectMethod, authType);
       // await fillIn(AUTH_FORM.selectMethod, authType);
       await fillInLoginFields(loginData);
       await click(AUTH_FORM.login);
@@ -145,7 +189,7 @@ module('Integration | Component | auth | page', function (hooks) {
       this.authRequest(requestUrl);
 
       await this.renderComponent();
-      await fillIn(AUTH_FORM.method, authType);
+      await fillIn(AUTH_FORM.selectMethod, authType);
       // await fillIn(AUTH_FORM.selectMethod, authType);
       // toggle mount path input to specify custom path
       await fillInLoginFields(loginDataWithPath, { toggleOptions: true });
@@ -169,7 +213,7 @@ module('Integration | Component | auth | page', function (hooks) {
     });
 
     await this.renderComponent();
-    await fillIn(AUTH_FORM.method, 'token');
+    await fillIn(AUTH_FORM.selectMethod, 'token');
     // await fillIn(AUTH_FORM.selectMethod, 'token');
     await fillInLoginFields({ token: 'mysupersecuretoken' });
     await click(AUTH_FORM.login);

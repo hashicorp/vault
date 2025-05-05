@@ -9,6 +9,7 @@ import { click, currentRouteName, fillIn, visit, waitUntil, find, waitFor } from
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import mfaLoginHandler, { validationHandler } from '../../mirage/handlers/mfa-login';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
 module('Acceptance | mfa-login', function (hooks) {
   setupApplicationTest(hooks);
@@ -30,8 +31,8 @@ module('Acceptance | mfa-login', function (hooks) {
   });
 
   const login = async (user) => {
-    await visit('/vault/auth?with=token');
-    await fillIn('[data-test-select="auth-method"]', 'userpass');
+    await visit('/vault/auth');
+    await fillIn(AUTH_FORM.selectMethod, 'userpass');
     await fillIn(GENERAL.inputByAttr('username'), user);
     await fillIn(GENERAL.inputByAttr('password'), 'test');
     await click('[data-test-auth-submit]');

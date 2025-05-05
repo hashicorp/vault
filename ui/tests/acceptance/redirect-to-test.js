@@ -64,7 +64,7 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
       currentURL().includes(`redirect_to=${encodeURIComponent(url)}`),
       `encodes url for the query param in ${currentURL()}`
     );
-    await fillIn(AUTH_FORM.method, 'token');
+    await fillIn(AUTH_FORM.selectMethod, 'token');
     // the login method on this page does another visit call that we don't want here
     await fillIn(GENERAL.inputByAttr('token'), 'root');
     await click(AUTH_FORM.login);
@@ -84,7 +84,7 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
       currentURL().includes(`?redirect_to=${encodeURIComponent(url)}`),
       'encodes url for the query param'
     );
-    await fillIn(AUTH_FORM.method, 'token');
+    await fillIn(AUTH_FORM.selectMethod, 'token');
     await fillIn(GENERAL.inputByAttr('token'), 'root');
     await click(AUTH_FORM.login);
     assert.strictEqual(currentURL(), url, 'navigates to the redirect_to with the query param after auth');

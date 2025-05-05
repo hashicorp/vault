@@ -10,7 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import { windowStub } from 'vault/tests/helpers/oidc-window-stub';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
 module('Acceptance | enterprise saml auth method', function (hooks) {
   setupApplicationTest(hooks);
@@ -44,8 +44,8 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
       req.passthrough();
     });
     // select from dropdown or click auth path tab
-    await waitUntil(() => find('[data-test-select="auth-method"]'));
-    await fillIn('[data-test-select="auth-method"]', 'saml');
+    await waitUntil(() => find(AUTH_FORM.selectMethod));
+    await fillIn(AUTH_FORM.selectMethod, 'saml');
     await click('[data-test-auth-submit]');
   });
 
@@ -85,87 +85,67 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
     });
 
     // click auth path tab
-    await waitUntil(() => find('[data-test-auth-method="test-path"]'));
-    await click('[data-test-auth-method="test-path"]');
-    await click('[data-test-auth-submit]');
+    await waitUntil(() => find(AUTH_FORM.tabBtn('saml')));
+    await click(AUTH_FORM.login);
   });
 
-  test('it should render API errors from both endpoints', async function (assert) {
-    assert.expect(3);
-
-    this.server.put('/auth/saml/sso_service_url', (schema, { requestBody }) => {
-      const { role } = JSON.parse(requestBody);
-      if (!role) {
-        return new Response(
-          400,
-          { 'Content-Type': 'application/json' },
-          JSON.stringify({ errors: ["missing required 'role' parameter"] })
-        );
-      }
-      return {
-        data: {
-          sso_service_url: 'http://sso-url.hashicorp.com/service',
-          token_poll_id: '1234',
-        },
-      };
-    });
-    this.server.put('/auth/saml/token', (schema, { requestHeaders }) => {
-      if (requestHeaders['X-Vault-Namespace']) {
-        return new Response(
-          400,
-          { 'Content-Type': 'application/json' },
-          JSON.stringify({ errors: ['something went wrong'] })
-        );
-      }
-      return {
-        auth: { client_token: 'root' },
-      };
-    });
-    this.server.get('/auth/token/lookup-self', (schema, req) => {
-      assert.ok(true, 'request made to auth/token/lookup-self after saml callback');
-      req.passthrough();
+  test('it should render API errors from sso_service_url', async function (assert) {
+    assert.expect(1);
+    this.server.put('/auth/saml/sso_service_url', () => {
+      return new Response(
+        400,
+        { 'Content-Type': 'application/json' },
+        JSON.stringify({ errors: ["missing required 'role' parameter"] })
+      );
     });
 
     // select saml auth type
-    await waitUntil(() => find('[data-test-select="auth-method"]'));
-    await fillIn('[data-test-select="auth-method"]', 'saml');
-    await fillIn(GENERAL.inputByAttr('namespace'), 'some-ns');
+    await waitUntil(() => find(AUTH_FORM.selectMethod));
+    await fillIn(AUTH_FORM.selectMethod, 'saml');
     await click('[data-test-auth-submit]');
     assert
       .dom('[data-test-message-error-description]')
-      .hasText("missing required 'role' parameter", 'shows API error from role fetch');
+      .hasText("Authentication failed: missing required 'role' parameter", 'shows API error from role fetch');
+  });
 
-    await fillIn(GENERAL.inputByAttr('role'), 'my-role');
+  test('it should render API errors from saml token login url', async function (assert) {
+    assert.expect(1);
+    this.server.put('/auth/saml/token', () => {
+      return new Response(
+        400,
+        { 'Content-Type': 'application/json' },
+        JSON.stringify({ errors: ['something went wrong'] })
+      );
+    });
+
+    // select saml auth type
+    await waitUntil(() => find(AUTH_FORM.selectMethod));
+    await fillIn(AUTH_FORM.selectMethod, 'saml');
     await click('[data-test-auth-submit]');
     assert
       .dom('[data-test-message-error-description]')
-      .hasText('something went wrong', 'shows API error from login attempt');
-
-    await fillIn(GENERAL.inputByAttr('namespace'), '');
-    await click('[data-test-auth-submit]');
+      .hasText('Authentication failed: something went wrong', 'shows API error from login attempt');
   });
 
   test('it should populate saml auth method on logout', async function (assert) {
     await visit('/vault/logout');
     // select from dropdown
-    await waitUntil(() => find('[data-test-select="auth-method"]'));
-    await fillIn('[data-test-select="auth-method"]', 'saml');
+    await waitUntil(() => find(AUTH_FORM.selectMethod));
+    await fillIn(AUTH_FORM.selectMethod, 'saml');
     await click('[data-test-auth-submit]');
     await waitUntil(() => find('[data-test-user-menu-trigger]'));
     await click('[data-test-user-menu-trigger]');
     await click('#logout');
-    assert
-      .dom('[data-test-select="auth-method"]')
-      .hasValue('saml', 'Previous auth method selected on logout');
+    assert.dom(AUTH_FORM.selectMethod).hasValue('saml', 'Previous auth method selected on logout');
   });
 
   test('it prompts mfa if configured', async function (assert) {
     assert.expect(1);
     this.server.put('/auth/saml/token', () => setupTotpMfaResponse('saml'));
 
-    await waitUntil(() => find('[data-test-select="auth-method"]'));
-    await fillIn('[data-test-select="auth-method"]', 'saml');
-    await click('[data-test-auth-submit]');
+    await waitUntil(() => find(AUTH_FORM.selectMethod));
+    await fillIn(AUTH_FORM.selectMethod, 'saml');
+    await click(AUTH_FORM.login);
     await waitUntil(() => find('[data-test-mfa-form]'));
     assert.dom('[data-test-mfa-form]').exists('it renders TOTP MFA form');
   });

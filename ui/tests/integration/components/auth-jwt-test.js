@@ -10,7 +10,7 @@ import { click, fillIn, render, settled, waitUntil } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { resolve } from 'rsvp';
-import { ERROR_JWT_LOGIN } from 'vault/components/auth-jwt';
+import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
 import { callbackData } from 'vault/tests/helpers/oidc-window-stub';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { overrideResponse } from 'vault/tests/helpers/stubs';

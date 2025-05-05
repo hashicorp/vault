@@ -156,10 +156,10 @@ module('Acceptance | oidc provider', function (hooks) {
         'Has updated text for client authorization flow'
       );
 
-    await fillIn(GENERAL.selectByAttr('auth-method'), 'userpass');
+    await fillIn(AUTH_FORM.selectMethod, 'userpass');
     await fillIn(GENERAL.inputByAttr('username'), OIDC_USER);
     await fillIn(GENERAL.inputByAttr('password'), USER_PASSWORD);
-    await click(AUTH_FORM.moreOptions);
+    await click(AUTH_FORM.advancedSettings);
     await fillIn(GENERAL.inputByAttr('path'), authMethodPath);
     await click(AUTH_FORM.login);
     assert.strictEqual(currentURL(), url, 'URL is as expected after login');
@@ -188,7 +188,9 @@ module('Acceptance | oidc provider', function (hooks) {
       'Url params no longer include prompt=login after redirect'
     );
 
-    await fillIn(GENERAL.selectByAttr('auth-method'), authMethodPath);
+    await fillIn(AUTH_FORM.selectMethod, 'userpass');
+    await click(AUTH_FORM.advancedSettings);
+    await fillIn(GENERAL.inputByAttr('path'), authMethodPath);
     await fillIn(GENERAL.inputByAttr('username'), OIDC_USER);
     await fillIn(GENERAL.inputByAttr('password'), USER_PASSWORD);
     await click(AUTH_FORM.login);
@@ -203,7 +205,9 @@ module('Acceptance | oidc provider', function (hooks) {
     const { providerName, callback, clientId, authMethodPath } = this.oidcSetupInformation;
     const url = getAuthzUrl(providerName, callback, clientId, { prompt: 'consent' });
     await visit('/vault/logout');
-    await fillIn(GENERAL.selectByAttr('auth-method'), authMethodPath);
+    await fillIn(AUTH_FORM.selectMethod, 'userpass');
+    await click(AUTH_FORM.advancedSettings);
+    await fillIn(GENERAL.inputByAttr('path'), authMethodPath);
     await fillIn(GENERAL.inputByAttr('username'), OIDC_USER);
     await fillIn(GENERAL.inputByAttr('password'), USER_PASSWORD);
     await click(AUTH_FORM.login);
