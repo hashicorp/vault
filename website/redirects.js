@@ -281,6 +281,31 @@ module.exports = [
     permanent: true,
   },
   {
+    source: '/vault/docs/enterprise/license',
+    destination: '/vault/docs/license',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/enterprise/license/autoloading',
+    destination: '/vault/docs/license/autoloading',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/enterprise/license/utilization-reporting',
+    destination: '/vault/docs/license/utilization/auto-reporting',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/enterprise/license/manual-reporting',
+    destination: '/vault/docs/license/utilization/manual-reporting',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/enterprise/license/product-usage-reporting',
+    destination: '/vault/docs/license/product-usage-reporting',
+    permanent: true,
+  },
+  {
     source: '/vault/docs/enterprise/license/faq',
     destination: '/vault/docs/license',
     permanent: true,
