@@ -16,7 +16,6 @@
     <Clients::ChartContainer
       @title={{this.title}}
       @description={{this.description}}
-      @timestamp={{@activity.responseTimestamp}}
       @hasChartData={{true}}
       class="no-legend"
     >
@@ -45,7 +44,6 @@
       <Clients::ChartContainer
         @title="Monthly new"
         @description="Secrets sync clients which interacted with Vault for the first time each month. Each bar represents the total new sync clients for that month."
-        @timestamp={{@activity.responseTimestamp}}
         @hasChartData={{true}}
         class="no-legend"
       >

@@ -4,12 +4,7 @@
 }}
 
 {{#if (gt @byMonthActivityData.length 1)}}
-  <Clients::ChartContainer
-    @title="Vault client counts"
-    @description={{this.chartContainerText}}
-    @timestamp={{@responseTimestamp}}
-    @hasChartData={{true}}
-  >
+  <Clients::ChartContainer @title="Vault client counts" @description={{this.chartContainerText}} @hasChartData={{true}}>
     <:subTitle>
       <StatText
         @label="Running new client total"

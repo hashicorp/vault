@@ -39,7 +39,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
     const mockNow = this.timestampStub();
     this.mockNow = mockNow;
     this.startTimestamp = formatRFC3339(subMonths(mockNow, 6));
-    this.timestamp = formatRFC3339(mockNow);
     this.selectedNamespace = null;
     this.namespaceAttribution = SERIALIZED_ACTIVITY_RESPONSE.by_namespace;
     this.authMountAttribution = SERIALIZED_ACTIVITY_RESPONSE.by_namespace.find(
@@ -63,7 +62,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
       <Clients::Attribution
         @noun={{this.noun}}
         @attribution={{this.namespaceAttribution}}
-        @responseTimestamp={{this.timestamp}}
         />
     `);
     assert.dom(CLIENTS_ATTRIBUTION.timestamp).includesText('Updated Apr 3');
@@ -110,7 +108,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
     await render(hbs`
       <Clients::Attribution
         @attribution={{this.namespaceAttribution}}
-        @responseTimestamp={{this.timestamp}}
         />
     `);
 
@@ -147,7 +144,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
     await render(hbs`
       <Clients::Attribution
         @attribution={{this.namespaceAttribution}}
-        @responseTimestamp={{this.timestamp}}
         @isSecretsSyncActivated={{true}}
         />
     `);
@@ -160,7 +156,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
     await render(hbs`
       <Clients::Attribution
         @attribution={{this.namespaceAttribution}}
-        @responseTimestamp={{this.timestamp}}
         />
     `);
 

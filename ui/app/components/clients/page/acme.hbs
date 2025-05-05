@@ -15,13 +15,7 @@
     class="is-shadowless"
   />
 {{else if this.isDateRange}}
-  <Clients::ChartContainer
-    @title={{this.title}}
-    @description={{this.description}}
-    @timestamp={{@activity.responseTimestamp}}
-    @hasChartData={{true}}
-    class="no-legend"
-  >
+  <Clients::ChartContainer @title={{this.title}} @description={{this.description}} @hasChartData={{true}} class="no-legend">
     <:subTitle>
       <StatText
         @label="Total ACME clients"
@@ -47,7 +41,6 @@
     <Clients::ChartContainer
       @title="Monthly new"
       @description="ACME clients which interacted with Vault for the first time each month. Each bar represents the total new ACME clients for that month."
-      @timestamp={{@activity.responseTimestamp}}
       @hasChartData={{true}}
       class="no-legend"
     >

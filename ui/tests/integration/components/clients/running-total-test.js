@@ -50,7 +50,6 @@ module('Integration | Component | clients/running-total', function (hooks) {
         @byMonthActivityData={{this.byMonthActivity}}
         @runningTotals={{this.totalUsageCounts}}
         @upgradeData={{this.upgradesDuringActivity}}
-        @responseTimestamp={{this.timestamp}}
         @isHistoricalMonth={{this.isHistoricalMonth}}
       />
     `);

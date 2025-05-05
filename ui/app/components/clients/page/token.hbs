@@ -7,7 +7,6 @@
   <Clients::ChartContainer
     @title="Entity/Non-entity clients usage"
     @description="This data can be used to understand how many entity and non-entity clients are using Vault each month for this date range. Each client is counted once per month."
-    @timestamp={{@activity.responseTimestamp}}
     @legend={{this.legend}}
     @hasChartData={{true}}
   >
@@ -34,7 +33,6 @@
   <Clients::ChartContainer
     @title="Monthly new"
     @description="Entity or non-entity clients which interacted with Vault for the first time during this date range. Each bar represents the total new clients for that month."
-    @timestamp={{@activity.responseTimestamp}}
     @legend={{this.legend}}
     @hasChartData={{this.hasNewClients}}
     class={{unless this.hasNewClients "no-legend"}}

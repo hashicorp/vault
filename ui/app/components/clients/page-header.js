@@ -30,7 +30,6 @@ import { task } from 'ember-concurrency';
  * @param {string} [upgradesDuringActivity] - array of objects containing version history upgrade data
  * @param {boolean} [noData = false] - when true, export button will hide regardless of capabilities
  * @param {function} [onChange] - callback when a new date range is saved, to be passed to date picker
- *
  */
 export default class ClientsPageHeaderComponent extends Component {
   @service download;
