@@ -116,3 +116,7 @@ export const tokenWithPolicyCmd = function (name, policy) {
 export function createNS(namespace) {
   return `write sys/namespaces/${namespace} -f`;
 }
+
+export function deleteNS(namespace) {
+  return `delete sys/namespaces/${namespace} -f`;
+}

@@ -88,6 +88,7 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, ns *namespace.Namespace
 		return reloaded, fmt.Errorf("unsupported plugin type %q", pluginType.String())
 	}
 
+	var errors error
 	if secrets || database {
 		c.mountsLock.RLock()
 		defer c.mountsLock.RUnlock()
@@ -100,11 +101,14 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, ns *namespace.Namespace
 
 			if secrets && (entry.Type == pluginName || (entry.Type == "plugin" && entry.Config.PluginName == pluginName)) {
 				err := c.reloadBackendCommon(ctx, entry, false)
+
+				// either append the error to the error list or increment the successfully reloaded count
 				if err != nil {
-					return reloaded, err
+					errors = multierror.Append(errors, fmt.Errorf("cannot reload plugin on %q: %w", entry.Path, err))
+				} else {
+					c.logger.Info("successfully reloaded plugin", "plugin", pluginName, "namespace", entry.Namespace(), "path", entry.Path, "version", entry.RunningVersion)
+					reloaded++
 				}
-				reloaded++
-				c.logger.Info("successfully reloaded plugin", "plugin", pluginName, "namespace", entry.Namespace(), "path", entry.Path, "version", entry.RunningVersion)
 			} else if database && entry.Type == "database" {
 				// The combined database plugin is itself a secrets engine, but
 				// knowledge of whether a database plugin is in use within a particular
@@ -117,16 +121,15 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, ns *namespace.Namespace
 				}
 				resp, err := c.router.Route(reqCtx, req)
 				if err != nil {
-					return reloaded, err
-				}
-				if resp == nil {
-					return reloaded, fmt.Errorf("failed to reload %q database plugin(s) mounted under %s", pluginName, entry.Path)
-				}
-				if resp.IsError() {
-					return reloaded, fmt.Errorf("failed to reload %q database plugin(s) mounted under %s: %s", pluginName, entry.Path, resp.Error())
-				}
-
-				if count, ok := resp.Data["count"].(int); ok && count > 0 {
+					// return reloaded, err
+					errors = multierror.Append(errors, err)
+				} else if resp == nil {
+					errors = multierror.Append(errors, fmt.Errorf("failed to reload %q database plugin(s) mounted under %s", pluginName, entry.Path))
+					// return reloaded, fmt.Errorf("failed to reload %q database plugin(s) mounted under %s", pluginName, entry.Path)
+				} else if resp.IsError() {
+					errors = multierror.Append(errors, fmt.Errorf("failed to reload %q database plugin(s) mounted under %s: %s", pluginName, entry.Path, resp.Error()))
+					// return reloaded, fmt.Errorf("failed to reload %q database plugin(s) mounted under %s: %s", pluginName, entry.Path, resp.Error())
+				} else if count, ok := resp.Data["count"].(int); ok && count > 0 {
 					c.logger.Info("successfully reloaded database plugin(s)", "plugin", pluginName, "namespace", entry.Namespace(), "path", entry.Path, "connections", resp.Data["connections"])
 					reloaded += count
 				}
@@ -146,16 +149,20 @@ func (c *Core) reloadMatchingPlugin(ctx context.Context, ns *namespace.Namespace
 
 			if entry.Type == pluginName || (entry.Type == "plugin" && entry.Config.PluginName == pluginName) {
 				err := c.reloadBackendCommon(ctx, entry, true)
+				// either append the error to the error list or increment the successfully reloaded count
 				if err != nil {
-					return reloaded, err
+					errors = multierror.Append(errors, fmt.Errorf("cannot reload plugin on %q: %w", entry.Path, err))
+					// return reloaded, err
+				} else {
+					c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path, "version", entry.RunningVersion)
+					reloaded++
 				}
-				reloaded++
-				c.logger.Info("successfully reloaded plugin", "plugin", entry.Accessor, "path", entry.Path, "version", entry.RunningVersion)
+
 			}
 		}
 	}
 
-	return reloaded, nil
+	return reloaded, errors
 }
 
 // reloadBackendCommon is a generic method to reload a backend provided a

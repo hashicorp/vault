@@ -83,7 +83,7 @@ export default Model.extend({
   disable_escaping: attr('boolean', {
     defaultValue: false,
     subText: 'Turns off the escaping of special characters inside of the username and password fields.',
-    docLink: 'https://developer.hashicorp.com/vault/docs/secrets/databases#disable-character-escaping',
+    docLink: '/vault/docs/secrets/databases#disable-character-escaping',
   }),
 
   // optional
@@ -149,12 +149,11 @@ export default Model.extend({
           'When set to "scram-sha-256", passwords will be hashed by Vault and stored as-is by PostgreSQL. Using "scram-sha-256" requires a minimum version of PostgreSQL 10.',
       },
     ],
-    docLink:
-      'https://developer.hashicorp.com/vault/api-docs/secret/databases/postgresql#password_authentication',
+    docLink: '/vault/api-docs/secret/databases/postgresql#password_authentication',
   }),
   auth_type: attr('string', {
     subText: 'If set to "gcp_iam", will enable IAM authentication to a Google CloudSQL instance.',
-    docLink: 'https://developer.hashicorp.com/vault/api-docs/secret/databases/postgresql#auth_type',
+    docLink: '/vault/api-docs/secret/databases/postgresql#auth_type',
   }),
   service_account_json: attr('string', {
     label: 'Service account JSON',
