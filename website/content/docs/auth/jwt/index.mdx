@@ -214,7 +214,7 @@ backend instance per method at different paths.
 After verifying the JWT signatures, Vault checks the corresponding `aud` claim.
 
 If the JWT in the authentication request contains an `aud` claim, the
-associated `bound_audiences` for the role must match at least one of the `aud`
+associated `bound_audiences` for the role must **exactly** match at least one of the `aud`
 claims declared for the JWT.
 
 ### Via the CLI
@@ -324,7 +324,7 @@ In some cases there are dedicated parameters, for example `bound_subject`,
 that must match the provided `sub` claim. For roles of type "jwt":
 
 1. the `bound_audiences` parameter is required when an `aud` claim is set.
-1. the `bound_audiences` parameter must match at least one of provided `aud` claims.
+1. the `bound_audiences` parameter must **exactly** match at least one of provided `aud` claims.
 
 You can also configure roles to check an arbitrary set of claims and required
 values with the `bound_claims` map. For example, assume `bound_claims` is set to:
