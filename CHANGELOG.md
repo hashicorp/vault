@@ -8,6 +8,10 @@
 
 **Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
 
+SECURITY:
+
+* core: vault may expose sensitive information in error logs when processing malformed data with the kv v2 plugin[[GH-30388](https://github.com/hashicorp/vault/pull/30388), [HCSEC-2025-09](https://discuss.hashicorp.com/t/hcsec-2025-09-vault-may-expose-sensitive-information-in-error-logs-when-processing-malformed-data-with-the-kv-v2-plugin/74717)]
+
 BUG FIXES:
 
 * core (enterprise): fix issue with errors being swallowed on failed HSM logins.
@@ -33,9 +37,9 @@ BUG FIXES:
 
 **Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
 
-CHANGES:
+SECURITY:
 
-* auth/azure: Update plugin to v0.17.3. Login requires `resource_group_name`, `vm_name`, and `vmss_name` to match token claims.
+* auth/azure: Update plugin to v0.17.3. Login requires `resource_group_name`, `vm_name`, and `vmss_name` to match token claims [[HCSEC-2025-07](https://discuss.hashicorp.com/t/hcsec-2025-07-vault-s-azure-authentication-method-bound-location-restriction-could-be-bypassed-on-login/74716)].
 
 IMPROVEMENTS:
 
