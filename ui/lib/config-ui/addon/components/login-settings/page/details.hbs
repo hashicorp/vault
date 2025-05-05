@@ -28,12 +28,7 @@
 <Toolbar />
 {{#each-in @rule.data as |key value|}}
   {{#if (eq key "default_auth_type")}}
-    <InfoTableRow
-      @alwaysRender={{true}}
-      @defaultShown={{true}}
-      @label={{capitalize "default method"}}
-      @value={{stringify value}}
-    />
+    <InfoTableRow @alwaysRender={{true}} @defaultShown={{true}} @label={{capitalize "default method"}} @value={{value}} />
   {{else if (eq key "backup_auth_types")}}
     <InfoTableRow @alwaysRender={{true}} @defaultShown={{true}} @label={{capitalize "backup methods"}} @value={{value}} />
     {{! we're displaying 'inheritance' on UI, is that the flipped value of disable_inheritance? assuming so for now }}
@@ -45,6 +40,6 @@
       @value={{stringify (not value)}}
     />
   {{else}}
-    <InfoTableRow @alwaysRender={{true}} @defaultShown={{true}} @label={{capitalize key}} @value={{stringify value}} />
+    <InfoTableRow @alwaysRender={{true}} @defaultShown={{true}} @label={{capitalize key}} @value={{value}} />
   {{/if}}
 {{/each-in}}
