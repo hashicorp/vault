@@ -65,10 +65,9 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     // This test is the opposite of the test in managed-namespace-test
     await logout();
     assert.strictEqual(currentURL(), '/vault/auth?with=token', 'Does not redirect');
-    assert.dom('[data-test-namespace-toolbar]').exists('Normal namespace toolbar exists');
     assert.dom(AUTH_FORM.managedNsRoot).doesNotExist('Managed namespace indicator does not exist');
-    assert.dom('input#namespace').hasAttribute('placeholder', '/ (Root)');
-    await fillIn('input#namespace', '/foo/bar ');
+    assert.dom('input[name="namespace"]').hasAttribute('placeholder', '/ (root)');
+    await fillIn('input[name="namespace"]', '/foo/bar ');
     const encodedNamespace = encodeURIComponent('foo/bar');
     assert.strictEqual(
       currentURL(),
