@@ -17,7 +17,12 @@ export default class LoginSettingsRuleDetailsRoute extends Route {
       const adapter = this.store.adapterFor('application');
       const rule = await adapter.ajax(`/v1/sys/config/ui/login/default-auth/${encodeURI(name)}`, 'GET');
 
-      return { rule: rule.data };
+      return {
+        rule: {
+          ...rule.data,
+          login_link: `${window.origin}/ui/vault/auth?with=${rule.data.default_auth_type}`,
+        },
+      };
     } catch (e) {
       return null;
     }

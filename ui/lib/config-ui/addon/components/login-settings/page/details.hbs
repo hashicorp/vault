@@ -30,7 +30,8 @@
     <InfoTableRow @alwaysRender={{true}} @label="Default method" @value={{value}} />
   {{else if (eq key "backup_auth_types")}}
     <InfoTableRow @alwaysRender={{true}} @label="Backup methods" @value={{value}} />
-    {{! we're displaying 'inheritance' on UI, is that the flipped value of disable_inheritance? assuming so for now }}
+  {{else if (eq key "login_link")}}
+    <InfoTableRow @alwaysRender={{true}} @label="UI login link" @value={{value}} />
   {{else if (eq key "disable_inheritance")}}
     <InfoTableRow @alwaysRender={{true}} @defaultShown={{true}} @label="Inheritance" @value={{stringify (not value)}} />
   {{else}}
