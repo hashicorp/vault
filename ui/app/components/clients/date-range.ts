@@ -68,10 +68,12 @@ export default class ClientsDateRangeComponent extends Component<Args> {
   setTrackedFromArgs() {
     if (this.args.startTime) {
       this.startDate = parseAPITimestamp(this.args.startTime, 'yyyy-MM') as string;
+      this.modalStart = this.startDate;
       this.selectedStart = this.formattedDate(this.args.startTime) as string;
     }
     if (this.args.endTime) {
       this.endDate = parseAPITimestamp(this.args.endTime, 'yyyy-MM') as string;
+      this.modalEnd = this.endDate;
     }
   }
 
