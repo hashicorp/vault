@@ -33,6 +33,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/observations"
 	"github.com/hashicorp/vault/vault/quotas"
 	uberAtomic "go.uber.org/atomic"
 )
@@ -948,6 +949,16 @@ func (m *ExpirationManager) lazyRevokeInternal(ctx context.Context, leaseID stri
 	}
 	m.updatePending(le)
 
+	err = m.core.observations.RecordObservationToLedger(ctx, observations.ObservationTypeLeaseLazyRevoke, le.namespace, map[string]interface{}{
+		"lease_id":    leaseID,
+		"path":        le.Path,
+		"issue_time":  le.IssueTime,
+		"expire_time": le.ExpireTime,
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -1068,6 +1079,20 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 		m.irrevocableLeaseCount--
 	}
 	m.pendingLock.Unlock()
+
+	if !skipToken {
+		err = m.core.observations.RecordObservationToLedger(ctx, observations.ObservationTypeLeaseRevocation, le.namespace, map[string]interface{}{
+			"lease_id":    leaseID,
+			"path":        le.Path,
+			"issue_time":  le.IssueTime,
+			"expire_time": le.ExpireTime,
+		})
+		if err != nil {
+			if !force {
+				return err
+			}
+		}
+	}
 
 	if m.logger.IsInfo() && !skipToken && m.logLeaseExpirations {
 		m.logger.Info("revoked lease", "lease_id", leaseID)
@@ -1318,6 +1343,16 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 		return nil, err
 	}
 
+	err = m.core.observations.RecordObservationToLedger(ctx, observations.ObservationTypeLeaseRenewNonAuth, le.namespace, map[string]interface{}{
+		"lease_id":    leaseID,
+		"path":        le.Path,
+		"issue_time":  le.IssueTime,
+		"expire_time": le.ExpireTime,
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	// Update the expiration time
 	m.updatePending(le)
 
@@ -1437,7 +1472,18 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 	if err := m.persistEntry(ctx, le); err != nil {
 		return nil, err
 	}
+
 	m.updatePending(le)
+
+	err = m.core.observations.RecordObservationToLedger(ctx, observations.ObservationTypeLeaseRenewAuth, le.namespace, map[string]interface{}{
+		"lease_id":    leaseID,
+		"path":        le.Path,
+		"issue_time":  le.IssueTime,
+		"expire_time": le.ExpireTime,
+	})
+	if err != nil {
+		return nil, err
+	}
 
 	retResp.Auth = resp.Auth
 	return retResp, nil
@@ -1560,6 +1606,16 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 		return "", err
 	}
 
+	err = m.core.observations.RecordObservationToLedger(ctx, observations.ObservationTypeLeaseCreationNonAuth, le.namespace, map[string]interface{}{
+		"lease_id":    leaseID,
+		"path":        te.Path,
+		"issue_time":  le.IssueTime,
+		"expire_time": le.ExpireTime,
+	})
+	if err != nil {
+		return "", err
+	}
+
 	if indexToken != "" {
 		if err := m.createIndexByToken(ctx, le, indexToken); err != nil {
 			return "", err
@@ -1629,13 +1685,14 @@ func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenE
 	}
 
 	// Create a lease entry
+	issueTime := time.Now()
 	le := leaseEntry{
 		LeaseID:     leaseID,
 		ClientToken: auth.ClientToken,
 		Auth:        auth,
 		Path:        te.Path,
 		LoginRole:   loginRole,
-		IssueTime:   time.Now(),
+		IssueTime:   issueTime,
 		ExpireTime:  authExpirationTime,
 		namespace:   tokenNS,
 		Version:     1,
@@ -1647,6 +1704,16 @@ func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenE
 
 	// Encode the entry
 	if err := m.persistEntry(ctx, &le); err != nil {
+		return err
+	}
+
+	err = m.core.observations.RecordObservationToLedger(ctx, observations.ObservationTypeLeaseCreationAuth, tokenNS, map[string]interface{}{
+		"lease_id":    leaseID,
+		"path":        te.Path,
+		"issue_time":  issueTime,
+		"expire_time": authExpirationTime,
+	})
+	if err != nil {
 		return err
 	}
 
@@ -2314,6 +2381,16 @@ func (m *ExpirationManager) CreateOrFetchRevocationLeaseByToken(ctx context.Cont
 		// Encode the entry
 		if err := m.persistEntry(ctx, le); err != nil {
 			m.deleteLockForLease(leaseID)
+			return "", err
+		}
+
+		err = m.core.observations.RecordObservationToLedger(ctx, observations.ObservationTypeLeaseCreationAuth, tokenNS, map[string]interface{}{
+			"lease_id":    leaseID,
+			"path":        te.Path,
+			"issue_time":  le.IssueTime,
+			"expire_time": le.ExpireTime,
+		})
+		if err != nil {
 			return "", err
 		}
 	}
