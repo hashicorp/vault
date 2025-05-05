@@ -39,45 +39,6 @@
       {{/if}}
     </:header>
 
-    {{!-- 
-    <:subHeader>
-      {{#if (has-feature "Namespaces")}}
-        {{#unless this.mfaAuthData}}
-          <Toolbar class="toolbar-namespace-picker">
-            <div class="field is-horizontal" data-test-namespace-toolbar>
-              <div class="field-label is-normal">
-                <label class="is-label" for="namespace">Namespace</label>
-              </div>
-              {{#if this.flags.hvdManagedNamespaceRoot}}
-                <div class="field-label">
-                  <span class="has-text-grey" data-test-managed-namespace-root>/{{this.flags.hvdManagedNamespaceRoot}}</span>
-                </div>
-              {{/if}}
-              <div class="field-body">
-                <div class="field">
-                  <div class="control">
-                    <input
-                      data-test-input="namespace"
-                      value={{this.namespaceInput}}
-                      placeholder={{if this.flags.hvdManagedNamespaceRoot "/ (Default)" "/ (Root)"}}
-                      {{on "input" this.handleNamespaceUpdate}}
-                      autocomplete="off"
-                      spellcheck="false"
-                      name="namespace"
-                      id="namespace"
-                      class="input"
-                      type="text"
-                      disabled={{@oidcProviderQueryParam}}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Toolbar>
-        {{/unless}}
-      {{/if}}
-    </:subHeader> --}}
-
     <:content>
       {{#if this.mfaAuthData}}
         <Mfa::MfaForm
@@ -88,12 +49,6 @@
           @onError={{fn (mut this.mfaErrors)}}
         />
       {{else}}
-        {{!-- <Auth::LoginForm
-          @cluster={{@cluster}}
-          @namespace={{@namespaceQueryParam}}
-          @selectedAuth={{@authMethodQueryParam}}
-          @onSuccess={{this.onAuthResponse}}
-        /> --}}
         <Auth::FormTemplate
           @authTabData={{this.authTabData}}
           @cluster={{@cluster}}

@@ -17,9 +17,6 @@ module('Integration | Component | splash-page', function (hooks) {
     <:header>
       Header here
     </:header>
-    <:subHeader>
-      sub header
-    </:subHeader>
     <:content>
       content
     </:content>
@@ -30,7 +27,6 @@ module('Integration | Component | splash-page', function (hooks) {
     </SplashPage>
       `);
     assert.dom('[data-test-splash-page-header]').includesText('Header here', 'Header renders');
-    assert.dom('[data-test-splash-page-sub-header]').includesText('sub header', 'SubHeader renders');
     assert.dom('[data-test-splash-page-content]').includesText('content', 'Content renders');
     assert.dom('[data-test-footer]').includesText('footer', 'Footer renders');
   });
