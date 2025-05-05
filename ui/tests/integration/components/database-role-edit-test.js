@@ -53,7 +53,7 @@ module('Integration | Component | database-role-edit', function (hooks) {
     this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['create']));
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelEmpty}} @mode="create"/>`);
-    await click('[data-test-secret-save]');
+    await click(GENERAL.saveButton);
 
     assert.dom('[data-test-inline-error-message]').exists('Inline form errors exist');
   });
@@ -75,7 +75,7 @@ module('Integration | Component | database-role-edit', function (hooks) {
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="edit"/>`);
     await fillIn('[data-test-ttl-value="Rotation period"]', '20');
-    await click('[data-test-secret-save]');
+    await click(GENERAL.saveButton);
   });
 
   test('enterprise: it should successfully create user that does not rotate immediately', async function (assert) {
@@ -101,7 +101,7 @@ module('Integration | Component | database-role-edit', function (hooks) {
     await click(GENERAL.toggleInput('toggle-skip_import_rotation'));
     await fillIn(GENERAL.inputByAttr('password'), 'testPassword'); // fill in password field
 
-    await click('[data-test-secret-save]');
+    await click(GENERAL.saveButton);
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="show"/>`);
     assert.dom(GENERAL.infoRowValue('Rotate immediately')).containsText('No');
@@ -130,7 +130,7 @@ module('Integration | Component | database-role-edit', function (hooks) {
     this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['create']));
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="create"/>`);
-    await click('[data-test-secret-save]');
+    await click(GENERAL.saveButton);
 
     assert.dom('[data-test-issuer-warning]').exists(); // check if warning modal shows after clicking save
     await click('[data-test-issuer-save]'); // click continue button on modal

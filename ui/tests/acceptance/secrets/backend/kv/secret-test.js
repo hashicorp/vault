@@ -8,7 +8,6 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
-import editPage from 'vault/tests/pages/secrets/backend/kv/edit-secret';
 import showPage from 'vault/tests/pages/secrets/backend/kv/show';
 import listPage from 'vault/tests/pages/secrets/backend/list';
 
@@ -341,7 +340,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await fillIn(SS.secretPath('create'), secretPath);
       await click(GENERAL.toggleInput('json'));
       codemirror().setValue(content);
-      await editPage.save();
+      await click(GENERAL.saveButton);
 
       assert.strictEqual(
         currentRouteName(),

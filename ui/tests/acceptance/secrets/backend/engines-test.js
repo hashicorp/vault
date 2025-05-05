@@ -20,11 +20,11 @@ module('Acceptance | secret-engine list view', function (hooks) {
 
   const createSecret = async (path, key, value, enginePath) => {
     await click(SES.createSecretLink);
-    await fillIn('[data-test-secret-path]', path);
+    await fillIn(SES.secretPath('create'), path);
 
-    await fillIn('[data-test-secret-key]', key);
+    await fillIn(SES.secretKey('create'), key);
     await fillIn(GENERAL.inputByAttr(key), value);
-    await click('[data-test-secret-save]');
+    await click(GENERAL.saveButton);
     await click(SES.crumb(enginePath));
   };
 
@@ -49,6 +49,8 @@ module('Acceptance | secret-engine list view', function (hooks) {
       'redirects to the backends page'
     );
     assert.dom(SES.secretsBackendLink(enginePath)).doesNotExist('does not show the disabled engine');
+    // remove the filter as it may cause issues in the next tests
+    await click(GENERAL.searchSelect.removeSelected);
   });
 
   test('it adds disabled css styling to unsupported secret engines', async function (assert) {
