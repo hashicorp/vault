@@ -57,6 +57,10 @@
   overflow: hidden;
 }
 
+.is-overflow-y-auto {
+  overflow-y: auto;
+}
+
 // width and height
 .is-fullwidth {
   width: 100%;
@@ -92,6 +96,10 @@
 
 .is-calc-large-height {
   height: calc(size_variables.$desktop * 0.66);
+}
+
+.is-max-drawer-height {
+  max-height: size_variables.$drawer-height;
 }
 
 // float
