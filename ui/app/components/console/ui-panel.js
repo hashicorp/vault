@@ -146,8 +146,8 @@ export default Component.extend({
     }
   }),
 
-  shiftCommandIndex(keyCode) {
-    this.console.shiftCommandIndex(keyCode, (val) => {
+  shiftCommandIndex(key) {
+    this.console.shiftCommandIndex(key, (val) => {
       this.set('inputValue', val);
     });
   },
