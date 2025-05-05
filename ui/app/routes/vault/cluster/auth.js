@@ -6,6 +6,7 @@
 import { service } from '@ember/service';
 import ClusterRouteBase from './cluster-route-base';
 import config from 'vault/config/environment';
+import { isEmptyValue } from 'core/helpers/is-empty-value';
 
 export default class AuthRoute extends ClusterRouteBase {
   queryParams = {
@@ -79,7 +80,7 @@ export default class AuthRoute extends ClusterRouteBase {
       const resp = await this.api.sys.internalUiListEnabledVisibleMounts(
         this.api.buildHeaders({ token: '' })
       );
-      return resp.auth;
+      return isEmptyValue(resp.auth) ? null : resp.auth;
     } catch {
       // swallow the error if there's an error fetching mount data (i.e. invalid namespace)
       return null;
