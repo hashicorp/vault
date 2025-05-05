@@ -28,6 +28,12 @@ export interface EntityAliasesCreateDuplicatesRequest {
      */
     differentCase?: boolean;
     /**
+     * Local alias toggle
+     * @type {boolean}
+     * @memberof EntityAliasesCreateDuplicatesRequest
+     */
+    local?: boolean;
+    /**
      * Metadata
      * @type {object}
      * @memberof EntityAliasesCreateDuplicatesRequest
