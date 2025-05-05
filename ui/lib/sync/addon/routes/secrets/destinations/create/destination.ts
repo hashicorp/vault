@@ -8,10 +8,10 @@ import { service } from '@ember/service';
 import { findDestination } from 'core/helpers/sync-destinations';
 
 import type Store from '@ember-data/store';
-import type { SyncDestinationType } from 'vault/vault/helpers/sync-destinations';
+import type { DestinationType } from 'vault/sync';
 
 interface Params {
-  type?: SyncDestinationType;
+  type?: DestinationType;
 }
 
 export default class SyncSecretsDestinationsCreateDestinationRoute extends Route {

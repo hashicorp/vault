@@ -123,7 +123,7 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
   });
 
   test('it should render destination list items', async function (assert) {
-    assert.expect(6);
+    assert.expect(5);
 
     this.server.delete('/sys/sync/destinations/aws-sm/destination-aws', () => {
       assert.ok('Request made to delete destination');
@@ -147,11 +147,6 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
       this.transitionStub.lastCall.args,
       ['vault.cluster.sync.secrets.overview'],
       'Transition is triggered on delete success'
-    );
-    assert.propEqual(
-      this.clearDatasetStub.lastCall.args,
-      ['sync/destination'],
-      'Store dataset is cleared on delete success'
     );
   });
 });
