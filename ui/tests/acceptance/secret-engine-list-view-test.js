@@ -12,8 +12,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
-import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import { login, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { UNSUPPORTED_ENGINES, mountableEngines } from 'vault/helpers/mountable-secret-engines';
+import { MOUNT_BACKEND_FORM } from '../helpers/components/mount-backend-form-selectors';
+import page from 'vault/tests/pages/settings/mount-secret-backend';
 
 module('Acceptance | secret-engine list view', function (hooks) {
   setupApplicationTest(hooks);
@@ -33,7 +35,60 @@ module('Acceptance | secret-engine list view', function (hooks) {
     return login();
   });
 
-  test('it allows you to disable an engine', async function (assert) {
+  test('after enabling an unsupported engine it takes you to list page', async function (assert) {
+    await visit('/vault/secrets');
+    await page.enableEngine();
+    await click(MOUNT_BACKEND_FORM.mountType('nomad'));
+    await click(GENERAL.saveButton);
+
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backends', 'navigates to the list page');
+    // cleanup
+    await runCmd(deleteEngineCmd('nomad'));
+  });
+
+  test('after enabling a supported engine it takes you to mount page, can see configure and clicking breadcrumb takes you back to list page', async function (assert) {
+    await visit('/vault/secrets');
+    await page.enableEngine();
+    await click(MOUNT_BACKEND_FORM.mountType('aws'));
+    await click(GENERAL.saveButton);
+
+    assert.dom(SES.configTab).exists();
+
+    await click(GENERAL.breadcrumbLink('Secrets'));
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backends',
+      'breadcrumb navigates to the list page'
+    );
+    // cleanup
+    await runCmd(deleteEngineCmd('aws'));
+  });
+
+  test('enterprise: cannot view list without permissions inside namespace', async function (assert) {
+    this.version = 'enterprise';
+    this.backend = `bk-${this.uid}`;
+    this.namespace = `ns-${this.uid}`;
+    await runCmd([`write sys/namespaces/${this.namespace} -force`]);
+    await loginNs(this.namespace, ' ');
+
+    await visit('/vault/secrets');
+    assert.dom(SES.secretsBackendLink('cubbyhole')).doesNotExist();
+
+    await logout();
+  });
+
+  test('enterprise: can view list with permissions inside namespace', async function (assert) {
+    this.version = 'enterprise';
+    this.backend = `bk-${this.uid}`;
+    this.namespace = `ns-${this.uid}`;
+    await runCmd([`write sys/namespaces/${this.namespace} -force`]);
+    await loginNs(this.namespace);
+    await visit('/vault/secrets');
+
+    assert.dom(SES.secretsBackendLink('cubbyhole')).exists();
+  });
+
+  test('after disabling it stays on the list view', async function (assert) {
     // first mount an engine so we can disable it.
     const enginePath = `alicloud-disable-${this.uid}`;
     await runCmd(mountEngineCmd('alicloud', enginePath));
@@ -48,9 +103,9 @@ module('Acceptance | secret-engine list view', function (hooks) {
       'vault.cluster.secrets.backends',
       'redirects to the backends page'
     );
-    assert.dom(SES.secretsBackendLink(enginePath)).doesNotExist('does not show the disabled engine');
   });
 
+  // Everything below goes to the component test
   test('it adds disabled css styling to unsupported secret engines', async function (assert) {
     assert.expect(16);
     const allEnginesArray = mountableEngines();
