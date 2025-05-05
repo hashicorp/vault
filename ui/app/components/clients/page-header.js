@@ -10,7 +10,7 @@ import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { sanitizePath } from 'core/utils/sanitize-path';
-import { format, isSameMonth } from 'date-fns';
+import { isSameMonth } from 'date-fns';
 import { task } from 'ember-concurrency';
 
 /**
@@ -31,6 +31,7 @@ export default class ClientsPageHeaderComponent extends Component {
   @service download;
   @service namespace;
   @service store;
+  @service version;
 
   @tracked canDownload = false;
   @tracked showExportModal = false;
@@ -68,15 +69,20 @@ export default class ClientsPageHeaderComponent extends Component {
   }
 
   get formattedEndDate() {
-    if (!this.args.startTimestamp && !this.args.endTimestamp) return null;
+    if (!this.args.endTimestamp) return null;
+    return parseAPITimestamp(this.args.endTimestamp, 'MMMM yyyy');
+  }
+
+  get showEndDate() {
     // displays on CSV export modal, no need to display duplicate months and years
+    if (!this.args.endTimestamp) return false;
     const startDateObject = parseAPITimestamp(this.args.startTimestamp);
     const endDateObject = parseAPITimestamp(this.args.endTimestamp);
-    return isSameMonth(startDateObject, endDateObject) ? null : format(endDateObject, 'MMMM yyyy');
+    return !isSameMonth(startDateObject, endDateObject);
   }
 
   get formattedCsvFileName() {
-    const endRange = this.formattedEndDate ? `-${this.formattedEndDate}` : '';
+    const endRange = this.showEndDate ? `-${this.formattedEndDate}` : '';
     const csvDateRange = this.formattedStartDate ? `_${this.formattedStartDate + endRange}` : '';
     const ns = this.namespaceFilter ? `_${this.namespaceFilter}` : '';
     return `clients_export${ns}${csvDateRange}`;
