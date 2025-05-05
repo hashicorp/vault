@@ -7,7 +7,7 @@ description: >-
   Kubernetes.
 ---
 
-# Run Vault on OpenShift
+# Run Vault on Openshift
 
 @include 'helm/version.mdx'
 
@@ -24,7 +24,7 @@ Vault and **Vault Agent Injector** on OpenShift.
 
 ## Requirements
 
-The following are required to install Vault and Vault Agent Injector
+The following the versions required to install Vault and Vault Agent Injector
 on OpenShift:
 
 - Cluster Admin privileges to bind the `auth-delegator` role to Vault's service account
@@ -87,8 +87,7 @@ Or install a specific version of the chart.
 @include 'helm/install.mdx'
 
 The `helm install` command accepts parameters to override default configuration
-values inline or defined in a file. For all OpenShift deployments, `global.openshift`
-should be set to `true`.
+values inline or defined in a file. For all OpenShift deployments, set the `global.openshift` to `true`.
 
 Override the `server.dev.enabled` configuration value:
 
@@ -144,7 +143,7 @@ $ helm install vault hashicorp/vault \
   --set='server.ha.raft.enabled=true'
 ```
 
-Next, initialize and unseal `vault-0` pod:
+Initialize and unseal `vault-0` pod:
 
 ```shell-session
 $ oc exec -ti vault-0 -- vault operator init
@@ -163,7 +162,7 @@ $ oc exec -ti vault-2 -- vault operator raft join http://vault-0.vault-internal:
 $ oc exec -ti vault-2 -- vault operator unseal
 ```
 
-To verify if the Raft cluster has successfully been initialized, run the following.
+To verify if the Raft cluster has initialized, run the following.
 
 First, login using the `root` token on the `vault-0` pod:
 
@@ -187,7 +186,7 @@ Vault with integrated storage (Raft) is now ready to use!
 
 #### External mode
 
-The Helm chart may be run in external mode. This installs no Vault server and
+Running the Helm chart in external mode installs no Vault server and
 relies on a network addressable Vault server to exist.
 
 Install the latest Vault Helm chart in external mode.
