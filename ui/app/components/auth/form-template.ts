@@ -65,32 +65,6 @@ export default class AuthFormTemplate extends Component<Args> {
     return displayName || type;
   };
 
-  constructor(owner: unknown, args: Args) {
-    super(owner, args);
-    // ensures args have settled before setting form state
-    setTimeout(() => this.initializeState(), 0);
-  }
-
-  initializeState() {
-    // SET AUTH TYPE
-    if (!this.args.presetAuthType) {
-      // if nothing has been preselected, select first tab or set to 'token'
-      const authType = this.args.hasVisibleAuthMounts ? (this.authTabTypes[0] as string) : 'token';
-      this.setAuthType(authType);
-    } else {
-      // there is a preselected type, set is as the selectedAuthType
-      this.setAuthType(this.args.presetAuthType);
-    }
-
-    // INITIALLY RENDER TABS OR DROPDOWN
-    // render tabs if selectedAuthMethod is one, otherwise render dropdown (i.e. showOtherMethods = false)
-    if (this.args.hasVisibleAuthMounts) {
-      this.showOtherMethods = this.authTabTypes.includes(this.selectedAuthMethod) ? false : true;
-    } else {
-      this.showOtherMethods = false;
-    }
-  }
-
   get authTabTypes() {
     const visibleMounts = this.args.authTabData;
     return visibleMounts ? Object.keys(visibleMounts) : [];
@@ -128,6 +102,27 @@ export default class AuthFormTemplate extends Component<Args> {
       return true;
     }
     return false;
+  }
+
+  @action
+  initializeState() {
+    // SET AUTH TYPE
+    if (!this.args.presetAuthType) {
+      // if nothing has been preselected, select first tab or set to 'token'
+      const authType = this.args.hasVisibleAuthMounts ? (this.authTabTypes[0] as string) : 'token';
+      this.setAuthType(authType);
+    } else {
+      // there is a preselected type, set is as the selectedAuthType
+      this.setAuthType(this.args.presetAuthType);
+    }
+
+    // INITIALLY RENDER TABS OR DROPDOWN
+    // render tabs if selectedAuthMethod is one, otherwise render dropdown (i.e. showOtherMethods = false)
+    if (this.args.hasVisibleAuthMounts) {
+      this.showOtherMethods = this.authTabTypes.includes(this.selectedAuthMethod) ? false : true;
+    } else {
+      this.showOtherMethods = false;
+    }
   }
 
   @action
