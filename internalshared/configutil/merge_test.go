@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestMerge tests SharedConfig#Merge
 func TestMerge(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -212,6 +213,12 @@ func TestMerge(t *testing.T) {
 			&SharedConfig{
 				Telemetry: &Telemetry{},
 			},
+		},
+		{
+			"HCPLinkConf overwrite",
+			&SharedConfig{},
+			&SharedConfig{},
+			&SharedConfig{},
 		},
 		{
 			"log fields overwrite",
