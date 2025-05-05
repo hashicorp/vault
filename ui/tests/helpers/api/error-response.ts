@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { ResponseError } from '@hashicorp/vault-client-typescript';
 
 export const getErrorResponse = <T>(error?: T, status?: number) => {
