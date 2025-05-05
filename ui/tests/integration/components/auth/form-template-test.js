@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, fillIn, find, findAll, render, typeIn } from '@ember/test-helpers';
+import { click, fillIn, find, findAll, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -17,7 +17,6 @@ import {
   BASE_LOGIN_METHODS,
   ENTERPRISE_LOGIN_METHODS,
 } from 'vault/utils/supported-login-methods';
-import { Response } from 'miragejs';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
 
@@ -28,21 +27,25 @@ module('Integration | Component | auth | form template', function (hooks) {
   hooks.beforeEach(function () {
     this.version = this.owner.lookup('service:version');
     this.cluster = { id: '1' };
-    this.wrappedToken = '';
     this.namespaceQueryParam = '';
     this.oidcProviderQueryParam = '';
     this.onAuthResponse = sinon.spy();
     this.onNamespaceChange = sinon.spy();
+    this.presetAuthType = '';
+    this.hasVisibleAuthMounts = false;
+    this.authTabData = null;
 
     this.renderComponent = () => {
       return render(hbs`
          <Auth::FormTemplate
-          @wrappedToken={{this.wrappedToken}}
-          @oidcProviderQueryParam={{this.oidcProviderQueryParam}}
           @cluster={{this.cluster}}
           @handleNamespaceUpdate={{this.onNamespaceChange}}
-          @namespace={{this.namespaceQueryParam}}
+          @namespaceQueryParam={{this.namespaceQueryParam}}
+          @oidcProviderQueryParam={{this.oidcProviderQueryParam}}
           @onSuccess={{this.onAuthResponse}}
+          @presetAuthType={{this.presetAuthType}}
+          @hasVisibleAuthMounts={{this.hasVisibleAuthMounts}}
+          @authTabData={{this.authTabData}}
         />`);
     };
   });
@@ -53,35 +56,18 @@ module('Integration | Component | auth | form template', function (hooks) {
     assert.dom(GENERAL.selectByAttr('auth type')).hasValue('token');
   });
 
+  test('it selects @presetAuthType by default', async function (assert) {
+    this.presetAuthType = 'ldap';
+    await this.renderComponent();
+    assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap');
+    assert.dom(GENERAL.inputByAttr('username')).exists();
+    assert.dom(GENERAL.inputByAttr('password')).exists();
+  });
+
   test('it does not show toggle buttons when listing visibility is not set', async function (assert) {
     await this.renderComponent();
     assert.dom(GENERAL.backButton).doesNotExist('"Back" button does not render');
-    assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('"Sign in with other methods" does not render ');
-  });
-
-  test('it calls sys/internal/ui/mounts on initial render', async function (assert) {
-    assert.expect(2);
-    this.server.get('/sys/internal/ui/mounts', (_, req) => {
-      assert.true(true, 'request is made to /sys/internal/ui/mounts');
-      assert.strictEqual(
-        req.requestHeaders['X-Vault-Namespace'],
-        undefined,
-        'it does not pass a namespace header'
-      );
-      return {};
-    });
-
-    await this.renderComponent();
-  });
-
-  test('it fails gracefully if sys/internal/ui/mounts request errors', async function (assert) {
-    assert.expect(2);
-    this.server.get('/sys/internal/ui/mounts', () => {
-      assert.true(true, 'request is made to /sys/internal/ui/mounts');
-      return new Response(500, {}, { errors: ['something wrong with urls'] });
-    });
-    await this.renderComponent();
-    assert.dom(GENERAL.selectByAttr('auth type')).exists();
+    assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('"Sign in with other methods" does not render');
   });
 
   test('it displays errors', async function (assert) {
@@ -97,42 +83,48 @@ module('Integration | Component | auth | form template', function (hooks) {
 
   module('listing visibility', function (hooks) {
     hooks.beforeEach(function () {
-      this.server.get('/sys/internal/ui/mounts', () => {
-        return {
-          data: {
-            auth: {
-              'userpass/': {
-                description: '',
-                options: {},
-                type: 'userpass',
-              },
-              'userpass2/': {
-                description: '',
-                options: {},
-                type: 'userpass',
-              },
-              'my-oidc/': {
-                description: '',
-                options: {},
-                type: 'oidc',
-              },
-              'token/': {
-                description: 'token based credentials',
-                options: null,
-                type: 'token',
-              },
-            },
+      this.hasVisibleAuthMounts = true;
+      this.authTabData = {
+        userpass: [
+          {
+            path: 'userpass/',
+            description: '',
+            options: {},
+            type: 'userpass',
           },
-        };
-      });
+          {
+            path: 'userpass2/',
+            description: '',
+            options: {},
+            type: 'userpass',
+          },
+        ],
+        oidc: [
+          {
+            path: 'my-oidc/',
+            description: '',
+            options: {},
+            type: 'oidc',
+          },
+        ],
+        token: [
+          {
+            path: 'token/',
+            description: 'token based credentials',
+            options: null,
+            type: 'token',
+          },
+        ],
+      };
     });
 
     test('it renders mounts configured with listing_visibility="unuath"', async function (assert) {
       const expectedTabs = [
-        { type: 'userpass', display: 'Username' },
+        { type: 'userpass', display: 'Userpass' },
         { type: 'oidc', display: 'OIDC' },
         { type: 'token', display: 'Token' },
       ];
+
       await this.renderComponent();
       assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
       // there are 4 mount paths returned in the stubbed sys/internal/ui/mounts response above,
@@ -142,6 +134,9 @@ module('Integration | Component | auth | form template', function (hooks) {
         assert.dom(AUTH_FORM.tabs(m.type)).exists(`${m.type} renders as a tab`);
         assert.dom(AUTH_FORM.tabs(m.type)).hasText(m.display, `${m.type} renders expected display name`);
       });
+      assert
+        .dom(AUTH_FORM.tabBtn('userpass'))
+        .hasAttribute('aria-selected', 'true', 'it selects the first type by default');
     });
 
     test('it selects each auth tab and renders form for that type', async function (assert) {
@@ -204,7 +199,7 @@ module('Integration | Component | auth | form template', function (hooks) {
       await click(AUTH_FORM.otherMethodsBtn);
       assert
         .dom(AUTH_FORM.otherMethodsBtn)
-        .doesNotExist('"Sign in with other methods" does not render after it is clicked');
+        .doesNotExist('"Sign in with other methods" does not renderafter it is clicked');
       assert
         .dom(GENERAL.selectByAttr('auth type'))
         .exists('clicking "Sign in with other methods" renders dropdown instead of tabs');
@@ -231,6 +226,24 @@ module('Integration | Component | auth | form template', function (hooks) {
       assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
       assert.dom(AUTH_FORM.tabBtn('oidc')).hasAttribute('aria-selected', 'false');
       assert.dom(AUTH_FORM.tabBtn('token')).hasAttribute('aria-selected', 'false');
+    });
+
+    test('it preselects tab if @presetAuthType is a tab', async function (assert) {
+      this.presetAuthType = 'oidc';
+      await this.renderComponent();
+      assert.dom(AUTH_FORM.authForm('oidc')).exists('oidc tab is selected');
+      assert.dom(AUTH_FORM.tabBtn('oidc')).hasAttribute('aria-selected', 'true');
+    });
+
+    test('if @presetAuthType is NOT a tab, dropdown renders with type selected instead of tabs', async function (assert) {
+      this.presetAuthType = 'ldap';
+      await this.renderComponent();
+      assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap');
+      assert.dom(GENERAL.inputByAttr('username')).exists();
+      assert.dom(GENERAL.inputByAttr('password')).exists();
+
+      assert.dom(GENERAL.backButton).exists('"Back" button renders');
+      assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('"Sign in with other methods" does not render');
     });
   });
 
@@ -267,6 +280,12 @@ module('Integration | Component | auth | form template', function (hooks) {
       this.version.type = 'enterprise';
       this.version.features = ['Namespaces'];
       this.namespaceQueryParam = '';
+    });
+
+    test('it does not render the namespace input if version does not include feature', async function (assert) {
+      this.version.features = [];
+      await this.renderComponent();
+      assert.dom(GENERAL.inputByAttr('namespace')).doesNotExist();
     });
 
     // in th ent module to test ALL supported login methods
@@ -324,43 +343,6 @@ module('Integration | Component | auth | form template', function (hooks) {
       });
     });
 
-    test('it re-requests mount data when a namespace is inputted', async function (assert) {
-      assert.expect(3);
-      const expectedNs = 'test-ns1';
-
-      let count = 0;
-      this.server.get('/sys/internal/ui/mounts', () => {
-        count++;
-        const msg = count === 1 ? 'on initial render' : 'when namespace is inputted';
-        assert.true(true, `/sys/internal/ui/mounts is called ${msg}`);
-        return {};
-      });
-
-      await this.renderComponent();
-      await fillIn(GENERAL.inputByAttr('namespace'), expectedNs);
-      const [actual] = this.onNamespaceChange.lastCall.args;
-      assert.strictEqual(actual, expectedNs, 'callback has expected args');
-    });
-
-    test('it re-requests mount data when namespace input is prefilled and then updated', async function (assert) {
-      assert.expect(3);
-      this.namespaceQueryParam = 'admin';
-      const childNs = '/test-ns1';
-
-      let count = 0;
-      this.server.get('/sys/internal/ui/mounts', () => {
-        count++;
-        const msg = count === 1 ? 'on initial render' : 'when namespace updates';
-        assert.true(true, `/sys/internal/ui/mounts is called ${msg}`);
-        return {};
-      });
-
-      await this.renderComponent();
-      await typeIn(GENERAL.inputByAttr('namespace'), childNs);
-      const [actual] = this.onNamespaceChange.lastCall.args;
-      assert.strictEqual(actual, `${this.namespaceQueryParam}${childNs}`, 'callback has expected args');
-    });
-
     test('it sets namespace for hvd managed clusters', async function (assert) {
       this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
       this.namespaceQueryParam = 'admin/west-coast';
@@ -368,67 +350,6 @@ module('Integration | Component | auth | form template', function (hooks) {
       assert.dom(AUTH_FORM.managedNsRoot).hasValue('/admin');
       assert.dom(AUTH_FORM.managedNsRoot).hasAttribute('readonly');
       assert.dom(GENERAL.inputByAttr('namespace')).hasValue('/west-coast');
-    });
-
-    test('it does NOT display tabs when updated namespace has no visible mounts', async function (assert) {
-      assert.expect(4);
-      let count = 0;
-      this.server.get('/sys/internal/ui/mounts', () => {
-        count++;
-        const mounts = {
-          data: {
-            auth: {
-              'userpass2/': {
-                description: '',
-                options: {},
-                type: 'userpass',
-              },
-            },
-          },
-        };
-        // mocks re-requesting the endpoint when namespace changes by returning
-        // mounts on initial request, then when a namespace is inputted a second request is made which return NO mounts
-        const response = count === 1 ? mounts : {};
-        return response;
-      });
-
-      await this.renderComponent();
-      assert.dom(AUTH_FORM.tabs('userpass')).exists('userpass renders as a tab');
-      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
-      await fillIn(GENERAL.inputByAttr('namespace'), 'admin');
-      assert.dom(AUTH_FORM.tabs()).doesNotExist('tabs do not render');
-      assert.dom(GENERAL.selectByAttr('auth type')).exists('dropdown renders');
-    });
-
-    test('it DOES display tabs when updated namespace has visible mounts', async function (assert) {
-      assert.expect(4);
-      let count = 0;
-      this.server.get('/sys/internal/ui/mounts', () => {
-        count++;
-        const mounts = {
-          data: {
-            auth: {
-              'userpass2/': {
-                description: '',
-                options: {},
-                type: 'userpass',
-              },
-            },
-          },
-        };
-        // mocks re-requesting the endpoint when namespace changes by returning
-        // no mounts on initial request, then when a namespace is inputted a second request is made which return mounts
-        const response = count === 1 ? {} : mounts;
-        return response;
-      });
-
-      await this.renderComponent();
-      assert.dom(AUTH_FORM.tabs()).doesNotExist('tabs do not render');
-      assert.dom(GENERAL.selectByAttr('auth type')).exists('dropdown renders');
-      // fire off second request to sys/internal/mounts
-      await fillIn(GENERAL.inputByAttr('namespace'), 'admin');
-      assert.dom(AUTH_FORM.tabs('userpass')).exists('userpass renders as a tab');
-      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
     });
   });
 

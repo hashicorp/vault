@@ -29,6 +29,7 @@ import { action } from '@ember/object';
  * @param {string} oidcProviderQueryParam - oidc provider query param, set in url as "?o=someprovider"
  * @param {function} onAuthSuccess - callback task in controller that receives the auth response (after MFA, if enabled) when login is successful
  * @param {function} onNamespaceUpdate - callback task that passes user input to the controller to update the login namespace in the url query params
+ * @param {object} visibleAuthMounts - keys are auth methods to render as tabs, values is an array of mount data for mounts with listing_visibility="unauth"
  * */
 
 export const CSP_ERROR =
@@ -40,7 +41,7 @@ export default class AuthPage extends Component {
 
   @tracked mfaAuthData;
   @tracked mfaErrors = '';
-  @tracked preselectedAuthType;
+  @tracked canceledMfaAuth = '';
 
   get cspError() {
     const isStandby = this.args.cluster.standby;
@@ -48,6 +49,26 @@ export default class AuthPage extends Component {
     return isStandby && hasConnectionViolations ? CSP_ERROR : '';
   }
 
+  get authTabData() {
+    const visibleAuthMounts = this.args.visibleAuthMounts;
+    if (visibleAuthMounts) {
+      const authMounts = visibleAuthMounts;
+      return Object.entries(authMounts).reduce((obj, [path, mountData]) => {
+        const { type } = mountData;
+        obj[type] ??= []; // if an array doesn't already exist for that type, create it
+        obj[type].push({ path, ...mountData });
+        return obj;
+      }, {});
+    }
+    return null;
+  }
+
+  get presetAuthType() {
+    // for now storedLoginData is just the selectedAuth, plan is to also include namespace
+    return this.canceledMfaAuth || this.args.storedLoginData;
+  }
+
+  // TODO delete when Auth::FormTemplate is implemented
   get namespaceInput() {
     const namespaceQP = this.args.namespaceQueryParam;
     if (this.flags.hvdManagedNamespaceRoot) {
@@ -62,6 +83,7 @@ export default class AuthPage extends Component {
     return namespaceQP;
   }
 
+  // TODO delete when Auth::FormTemplate is implemented
   @action
   handleNamespaceUpdate(event) {
     this.args.onNamespaceUpdate(event.target.value);
@@ -89,7 +111,7 @@ export default class AuthPage extends Component {
   @action
   onCancelMfa() {
     // before resetting mfaAuthData, preserve auth type
-    this.preselectedAuthType = this.mfaAuthData.selectedAuth;
+    this.canceledMfaAuth = this.mfaAuthData.selectedAuth;
     this.mfaAuthData = null;
   }
 

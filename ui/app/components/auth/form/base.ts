@@ -15,7 +15,9 @@ import type AuthService from 'vault/vault/services/auth';
 import type ClusterModel from 'vault/models/cluster';
 import type FlagsService from 'vault/services/flags';
 import type VersionService from 'vault/services/version';
+import type { AuthResponse } from 'vault/vault/services/auth';
 import type { HTMLElementEvent } from 'vault/forms';
+import type { LoginFields } from 'vault/vault/auth/form';
 import type { MfaRequirementApiResponse, ParsedMfaRequirement } from 'vault/vault/auth/mfa';
 
 /**
@@ -33,17 +35,6 @@ interface Args {
   onError: CallableFunction;
   onSuccess: CallableFunction;
 }
-
-interface AuthResponse {
-  namespace: string;
-  token: string; // the name of the token in local storage, not the actual token
-  isRoot: boolean;
-}
-
-export type LoginFields = Partial<Record<(typeof POSSIBLE_FIELDS)[number], string | undefined>> & {
-  path?: string | undefined;
-  namespace?: string | undefined;
-};
 
 export default class AuthBase extends Component<Args> {
   @service declare readonly auth: AuthService;
