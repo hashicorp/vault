@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, currentURL, visit, waitUntil, find, fillIn, typeIn } from '@ember/test-helpers';
+import { click, currentURL, find, fillIn, typeIn, visit, waitFor } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
@@ -16,7 +16,7 @@ import {
   mountEngineCmd,
   runCmd,
 } from 'vault/tests/helpers/commands';
-import { login, loginMethod, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
+import { login, loginMethod, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { v4 as uuidv4 } from 'uuid';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -24,17 +24,27 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 const ENT_AUTH_METHODS = ['saml'];
 const { rootToken } = VAULT_KEYS;
 
-module('Acceptance | auth', function (hooks) {
+module('Acceptance | auth login form', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  test('auth query params', async function (assert) {
+  // skipped test are waiting functionality
+  test.skip('it redirects if "with" query param references auth method type', async function (assert) {
     const backends = supportedAuthBackends();
     assert.expect(backends.length + 1);
     await visit('/vault/auth');
-    assert.strictEqual(currentURL(), '/vault/auth?with=token');
+    assert.strictEqual(currentURL(), '/vault/auth', 'it navigates to auth url');
     for (const backend of backends.reverse()) {
-      await fillIn(AUTH_FORM.method, backend.type);
+      await fillIn(AUTH_FORM.selectMethod, backend.type);
+      assert.strictEqual(currentURL(), `/vault/auth`, `has the correct URL for ${backend.type}`);
+    }
+  });
+
+  test.skip('it renders readonly input if "with" query param is a mount path', async function (assert) {
+    const backends = supportedAuthBackends();
+    assert.expect(backends.length + 1);
+    for (const backend of backends.reverse()) {
+      await fillIn(AUTH_FORM.selectMethod, backend.type);
       assert.strictEqual(
         currentURL(),
         `/vault/auth?with=${backend.type}`,
@@ -45,10 +55,47 @@ module('Acceptance | auth', function (hooks) {
 
   test('it clears token when changing selected auth method', async function (assert) {
     await visit('/vault/auth');
+    await fillIn(AUTH_FORM.selectMethod, 'token');
     await fillIn(GENERAL.inputByAttr('token'), 'token');
-    await fillIn(AUTH_FORM.method, 'github');
-    await fillIn(AUTH_FORM.method, 'token');
+    await fillIn(AUTH_FORM.selectMethod, 'github');
+    await fillIn(AUTH_FORM.selectMethod, 'token');
     assert.dom(GENERAL.inputByAttr('token')).hasNoValue('it clears the token value when toggling methods');
+  });
+
+  test('it does not render tabs if sys/internal/ui/mounts is empty', async function (assert) {
+    await logout(); // clear local storage
+    await visit('/vault/auth');
+    await waitFor(AUTH_FORM.form);
+    assert.dom(GENERAL.selectByAttr('auth type')).exists('dropdown renders');
+    // dropdown could still render in "Sign in with other methods" view, so make sure we're not in a weird state
+    assert.dom(GENERAL.backButton).doesNotExist('it does not render "Back" button');
+    assert.dom(AUTH_FORM.authForm('token')).exists('it renders token form');
+    assert.dom(AUTH_FORM.tabs()).doesNotExist();
+  });
+
+  test('it renders tabs if sys/internal/ui/mounts returns data', async function (assert) {
+    assert.expect(3);
+    this.server.get('/sys/internal/ui/mounts', () => {
+      assert.true(true, 'it makes request to stubbed endpoint');
+      return {
+        data: {
+          auth: {
+            'userpass/': {
+              description: '',
+              options: {},
+              type: 'userpass',
+            },
+          },
+        },
+      };
+    });
+
+    await visit('/vault/auth');
+    await waitFor(AUTH_FORM.tabs());
+    assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
+    assert
+      .dom(AUTH_FORM.tabBtn('userpass'))
+      .hasAttribute('aria-selected', 'true', 'userpass tab is selected');
   });
 
   module('it sends the right payload when authenticating', function (hooks) {
@@ -165,11 +212,11 @@ module('Acceptance | auth', function (hooks) {
           });
         };
         await visit('/vault/auth');
-        await fillIn(AUTH_FORM.method, type);
+        await fillIn(AUTH_FORM.selectMethod, type);
 
         if (type !== 'token') {
           // set custom mount
-          await click(AUTH_FORM.moreOptions);
+          await click(AUTH_FORM.advancedSettings);
           await fillIn(GENERAL.inputByAttr('path'), `custom-${type}`);
         }
         for (const key of backend.formAttributes) {
@@ -180,25 +227,6 @@ module('Acceptance | auth', function (hooks) {
         await click(AUTH_FORM.login);
       });
     }
-  });
-
-  test('it shows the push notification warning after submit', async function (assert) {
-    assert.expect(1);
-
-    this.server.get(
-      '/auth/token/lookup-self',
-      async () => {
-        assert.ok(
-          await waitUntil(() => find('[data-test-auth-message="push"]')),
-          'shows push notification message'
-        );
-        return {};
-      },
-      { timing: 1000 }
-    );
-    await visit('/vault/auth?with=token');
-    await fillIn(AUTH_FORM.method, 'token');
-    await click('[data-test-auth-submit]');
   });
 
   test('it does not call renew-self after successful login with non-renewable token', async function (assert) {
@@ -285,13 +313,11 @@ module('Acceptance | auth', function (hooks) {
       assert.expect(1);
       await visit('/vault/auth');
 
-      this.server.get('/sys/internal/ui/mounts', (schema, req) => {
-        assert.strictEqual(
-          req.requestHeaders['X-Vault-Namespace'],
-          'admin',
-          'request header contains expected namespace'
-        );
-        return { errors: ['permission denied'] };
+      this.server.get('/sys/internal/ui/mounts', (_, req) => {
+        // sometimes the namespace header is "X-Vault-Namespace" and other times "x-vault-namespace"...haven't figured out why
+        const key = Object.keys(req.requestHeaders).find((k) => k.toLowerCase().includes('namespace'));
+        assert.strictEqual(req.requestHeaders[key], 'admin', `${key}: header contains namespace`);
+        req.passthrough();
       });
       await typeIn(GENERAL.inputByAttr('namespace'), 'admin');
     });

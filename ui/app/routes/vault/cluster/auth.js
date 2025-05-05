@@ -80,6 +80,7 @@ export default class AuthRoute extends ClusterRouteBase {
       const resp = await this.api.sys.internalUiListEnabledVisibleMounts(
         this.api.buildHeaders({ token: '' })
       );
+      // return a falsy value if the object is empty
       return isEmptyValue(resp.auth) ? null : resp.auth;
     } catch {
       // swallow the error if there's an error fetching mount data (i.e. invalid namespace)
