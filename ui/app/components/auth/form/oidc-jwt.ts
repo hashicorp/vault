@@ -29,7 +29,7 @@ import type { HTMLElementEvent } from 'vault/forms';
  */
 
 interface JwtLoginData {
-  namespace: string;
+  namespace?: string;
   path?: string;
   role?: string;
   jwt?: string;
@@ -91,7 +91,7 @@ export default class AuthFormOidcJwt extends AuthBase {
 
     // re-fetch role if the following inputs have changed.
     // namespace is not included because the route model refreshes
-    // when it changes and new component instantiates.
+    // when it changes and a new component instantiates.
     if (['path', 'role'].includes(name)) {
       this.fetchRole.perform(500);
     }
