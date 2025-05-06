@@ -359,10 +359,12 @@ module('Integration | Component | auth | form template', function (hooks) {
   module('oidc-jwt', function (hooks) {
     hooks.beforeEach(async function () {
       this.store = this.owner.lookup('service:store');
-      this.routerStub = sinon.stub(this.owner.lookup('service:router'), 'urlFor').returns('123-example.com');
+      this.routerStub = (path) =>
+        sinon.stub(this.owner.lookup('service:router'), 'urlFor').returns(`/auth/${path}/oidc/callback`);
     });
 
     test('it re-requests the auth_url when authType changes', async function (assert) {
+      this.routerStub('oidc');
       assert.expect(2); // auth_url should be hit twice, one for each type selection
       let expectedType = 'oidc';
       this.server.post(`/auth/:path/oidc/auth_url`, (_, req) => {
@@ -385,6 +387,7 @@ module('Integration | Component | auth | form template', function (hooks) {
     // these tests assert that CONFIG changes from OIDC -> JWT render correctly and vice versa
     // so the order the requests are hit is what matters.
     test('"OIDC" to "JWT" configuration: it updates the form when the auth_url response changes', async function (assert) {
+      this.routerStub('oidc');
       this.server.post(`/auth/oidc/oidc/auth_url`, () => ({ data: { auth_url: '123-example.com' } })); // this return means mount is configured as oidc
       this.server.post(`/auth/jwt/oidc/auth_url`, () => overrideResponse(400, { errors: [ERROR_JWT_LOGIN] })); // this return means the mount is configured as jwt
       await this.renderComponent();
@@ -398,6 +401,7 @@ module('Integration | Component | auth | form template', function (hooks) {
     });
 
     test('"JWT" to "OIDC" configuration: it updates the form when the auth_url response changes', async function (assert) {
+      this.routerStub('oidc');
       this.server.post(`/auth/jwt/oidc/auth_url`, () => overrideResponse(400, { errors: [ERROR_JWT_LOGIN] })); // this return means the mount is configured as jwt
       this.server.post(`/auth/oidc/oidc/auth_url`, () => ({ data: { auth_url: '123-example.com' } })); // this return means mount is configured as oidc
       await this.renderComponent();
@@ -409,6 +413,38 @@ module('Integration | Component | auth | form template', function (hooks) {
       // then select mount configured for OIDC
       await fillIn(GENERAL.selectByAttr('auth type'), 'oidc');
       assert.dom(GENERAL.inputByAttr('jwt')).doesNotExist();
+    });
+
+    test('it should retain role input value when mount path changes', async function (assert) {
+      assert.expect(2);
+      this.routerStub('foo-oidc');
+      const auth_url = 'http://dev-foo-bar.com';
+      this.server.post('/auth/:path/oidc/auth_url', (_, req) => {
+        const { role, redirect_uri } = JSON.parse(req.requestBody);
+        const goodRequest =
+          req.params.path === 'foo-oidc' &&
+          role === 'foo' &&
+          redirect_uri.includes('/auth/foo-oidc/oidc/callback');
+        if (goodRequest) {
+          return { data: { auth_url } };
+        } else {
+          return overrideResponse(400, { errors: [ERROR_JWT_LOGIN] });
+        }
+      });
+
+      window.open = (url) => {
+        assert.strictEqual(url, auth_url, 'auth_url is returned when required params are passed');
+      };
+
+      await this.renderComponent();
+
+      await fillIn(GENERAL.selectByAttr('auth type'), 'oidc');
+      await fillIn(GENERAL.inputByAttr('role'), 'foo');
+      await click(AUTH_FORM.advancedSettings);
+      await fillIn(GENERAL.inputByAttr('role'), 'foo');
+      await fillIn(GENERAL.inputByAttr('path'), 'foo-oidc');
+      assert.dom(GENERAL.inputByAttr('role')).hasValue('foo', 'role is retained when mount path is changed');
+      await click(AUTH_FORM.login);
     });
   });
 });
