@@ -21,4 +21,6 @@ import { service } from '@ember/service';
 
 export default class LoginSettingsRuleDetails extends Component {
   @service capabilities;
+
+  onDelete() {}
 }

@@ -24,7 +24,19 @@
   </ul>
 </nav>
 
-<Toolbar />
+<Toolbar>
+  <ToolbarActions>
+    {{#if (has-capability this.capabilities "delete" id=@rule.name)}}
+      <Hds::Button
+        @text="Delete Rule"
+        @color="secondary"
+        class="toolbar-button"
+        {{on "click" this.onDelete}}
+        data-test-rule-delete
+      />
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
 {{#each-in @rule as |key value|}}
   {{#if (eq key "default_auth_type")}}
     <InfoTableRow @alwaysRender={{true}} @label="Default method" @value={{value}} />

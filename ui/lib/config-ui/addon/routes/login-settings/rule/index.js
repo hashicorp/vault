@@ -6,7 +6,7 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 
-export default class LoginSettingsRuleRoute extends Route {
+export default class LoginSettingsRuleIndexRoute extends Route {
   @service('app-router') router;
 
   redirect() {
