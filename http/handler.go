@@ -1017,6 +1017,8 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(statusCode)
 	w.Write(retBytes)
+
+	logical.IncrementResponseStatusCodeMetric(statusCode)
 }
 
 // request is a helper to perform a request and properly exit in the
@@ -1185,6 +1187,8 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	// the request method should be preserved.
 	w.Header().Set("Location", finalURL.String())
 	w.WriteHeader(307)
+
+	logical.IncrementResponseStatusCodeMetric(307)
 }
 
 // getTokenFromReq parse headers of the incoming request to extract token if
@@ -1386,8 +1390,10 @@ func respondOk(w http.ResponseWriter, body interface{}) {
 
 	if body == nil {
 		w.WriteHeader(http.StatusNoContent)
+		defer logical.IncrementResponseStatusCodeMetric(http.StatusNoContent)
 	} else {
 		w.WriteHeader(http.StatusOK)
+		defer logical.IncrementResponseStatusCodeMetric(http.StatusOK)
 		enc := json.NewEncoder(w)
 		enc.Encode(body)
 	}
@@ -1410,6 +1416,8 @@ func oidcPermissionDenied(path string, err error) bool {
 func respondOIDCPermissionDenied(w http.ResponseWriter) {
 	errorCode := "invalid_token"
 	errorDescription := logical.ErrPermissionDenied.Error()
+
+	defer logical.IncrementResponseStatusCodeMetric(http.StatusUnauthorized)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("WWW-Authenticate", fmt.Sprintf("Bearer error=%q,error_description=%q",

@@ -27,6 +27,8 @@ export function SystemListSyncAssociationsResponseFromJSONTyped(json, ignoreDisc
     return {
         'keyInfo': json['key_info'] == null ? undefined : json['key_info'],
         'keys': json['keys'] == null ? undefined : json['keys'],
+        'totalAssociations': json['total_associations'] == null ? undefined : json['total_associations'],
+        'totalSecrets': json['total_secrets'] == null ? undefined : json['total_secrets'],
     };
 }
 export function SystemListSyncAssociationsResponseToJSON(json) {
@@ -39,5 +41,7 @@ export function SystemListSyncAssociationsResponseToJSONTyped(value, ignoreDiscr
     return {
         'key_info': value['keyInfo'],
         'keys': value['keys'],
+        'total_associations': value['totalAssociations'],
+        'total_secrets': value['totalSecrets'],
     };
 }
