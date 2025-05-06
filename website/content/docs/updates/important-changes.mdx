@@ -18,14 +18,14 @@ valid_change_types: >-
 Always review important or breaking changes and remediation recommendations
 before upgrading Vault.
 
-## Breaking configuration change
+## Breaking configuration change for disable_mlock ((#disable_mlock-config))
 
 | Change       | Affected version | Affected deployments
 | ------------ | ---------------- | --------------------
-| New behavior | 1.20.0           | Vault instances using integrated storage
+| Breaking     | 1.20.0           | Vault instances using integrated storage
 
 In Vault 1.20.0 `disable_mlock` is a required configuration setting for
-clusters using integrated storage. This means that if you are not explicitly
+clusters using *integrated storage*. This means that if you are not explicitly
 setting a value for `disable_mlock`, the following changes must be made prior
 to upgrading.
 
