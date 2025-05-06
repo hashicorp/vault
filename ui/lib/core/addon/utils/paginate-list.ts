@@ -32,9 +32,9 @@ export type PaginatedMetadata = {
 
 export function paginate<T>(data: T[], options: PaginateOptions = {}) {
   const { page = 1, pageSize = DEFAULT_PAGE_SIZE, filter, filterKey } = options;
-  let filteredData = [...data];
 
   if (Array.isArray(data)) {
+    let filteredData = [...data];
     // filter data before paginating if filter is provided
     if (filter) {
       filteredData = data.filter((item) => {
@@ -63,7 +63,9 @@ export function paginate<T>(data: T[], options: PaginateOptions = {}) {
       },
       writable: false,
     });
+
+    return filteredData as T[] & PaginatedMetadata;
   }
 
-  return filteredData as T[] & PaginatedMetadata;
+  return data;
 }
