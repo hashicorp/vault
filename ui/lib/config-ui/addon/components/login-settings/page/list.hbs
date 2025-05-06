@@ -30,9 +30,22 @@
           View
         </dd.Interactive>
         {{#if (has-capability this.capabilities "delete" id=rule.id)}}
-          <dd.Interactive @color="critical" data-test-confirm-action-trigger>Delete</dd.Interactive>
+          <dd.Interactive
+            @color="critical"
+            data-test-confirm-action-trigger
+            {{on "click" (fn (mut this.ruleToDelete) rule)}}
+          >Delete</dd.Interactive>
         {{/if}}
       </Hds::Dropdown>
     </div>
   </div>
 {{/each}}
+
+{{#if this.ruleToDelete}}
+  <ConfirmModal
+    @color="critical"
+    @onClose={{fn (mut this.ruleToDelete) null}}
+    @confirmMessage="This will permanently delete this rule."
+    @onConfirm={{this.onDelete}}
+  />
+{{/if}}

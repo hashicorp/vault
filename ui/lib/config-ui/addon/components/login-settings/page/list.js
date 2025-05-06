@@ -4,7 +4,10 @@
  */
 
 import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
+import { action } from '@ember/object';
+import errorMessage from 'vault/utils/error-message';
 
 /**
  * @module Page::LoginSettingsList
@@ -18,4 +21,24 @@ import { service } from '@ember/service';
 
 export default class LoginSettingsList extends Component {
   @service capabilities;
+  @service('app-router') router;
+  @service store;
+  @service('flash-messages') flashMessages;
+
+  @tracked ruleToDelete = null; // set to the rule intended to delete
+
+  @action
+  async onDelete() {
+    try {
+      const adapter = this.store.adapterFor('application');
+
+      await adapter.ajax(`/v1/sys/config/ui/login/default-auth/${encodeURI(this.ruleToDelete.id)}`, 'DELETE');
+      this.flashMessages.success(`Successfully deleted rule ${this.ruleToDelete.id}`);
+
+      this.router.transitionTo('vault.cluster.config-ui.login-settings');
+    } catch (error) {
+      const message = errorMessage(error, 'Error deleting rule. Please try again.');
+      this.flashMessages.danger(message);
+    }
+  }
 }

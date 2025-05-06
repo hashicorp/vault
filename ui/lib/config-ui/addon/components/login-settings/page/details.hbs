@@ -31,7 +31,7 @@
         @text="Delete Rule"
         @color="secondary"
         class="toolbar-button"
-        {{on "click" this.onDelete}}
+        {{on "click" (fn (mut this.showConfirmModal) true)}}
         data-test-rule-delete
       />
     {{/if}}
@@ -42,10 +42,18 @@
     <InfoTableRow @alwaysRender={{true}} @label="Default method" @value={{value}} />
   {{else if (eq key "backup_auth_types")}}
     <InfoTableRow @alwaysRender={{true}} @label="Backup methods" @value={{value}} />
-    {{! we're displaying 'inheritance' on UI, is that the flipped value of disable_inheritance? assuming so for now }}
   {{else if (eq key "disable_inheritance")}}
     <InfoTableRow @alwaysRender={{true}} @defaultShown={{true}} @label="Inheritance" @value={{stringify (not value)}} />
   {{else}}
     <InfoTableRow @alwaysRender={{true}} @label={{capitalize key}} @value={{value}} />
   {{/if}}
 {{/each-in}}
+
+{{#if this.showConfirmModal}}
+  <ConfirmModal
+    @color="critical"
+    @onClose={{fn (mut this.showConfirmModal) false}}
+    @confirmMessage="This will permanently delete this rule."
+    @onConfirm={{this.onDelete}}
+  />
+{{/if}}
