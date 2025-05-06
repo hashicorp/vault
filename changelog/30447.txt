@@ -1,0 +1,3 @@
+```release-note:improvement
+core/quotas: Add new fields to the rate limit quota API to support different grouping modes on enterprise version.
+```
