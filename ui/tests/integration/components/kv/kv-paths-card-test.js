@@ -9,7 +9,6 @@ import { setupEngine } from 'ember-engines/test-support';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 /* eslint-disable no-useless-escape */
 
 module('Integration | Component | kv-v2 | KvPathsCard', function (hooks) {
@@ -42,7 +41,7 @@ module('Integration | Component | kv-v2 | KvPathsCard', function (hooks) {
 
     assert.dom('[data-test-component="info-table-row"] .helper-text').doesNotExist('subtext does not render');
 
-    assert.dom(GENERAL.infoRowLabelDiv).hasClass('is-one-quarter');
+    assert.dom('[data-test-component="info-table-row"] div').hasClass('is-one-quarter');
     assert.dom(PAGE.paths.codeSnippet('cli')).doesNotExist();
     assert.dom(PAGE.paths.codeSnippet('api')).doesNotExist();
 
@@ -60,7 +59,7 @@ module('Integration | Component | kv-v2 | KvPathsCard', function (hooks) {
     await this.renderComponent();
 
     assert.dom('[data-test-component="info-table-row"] .helper-text').exists('subtext renders');
-    assert.dom(GENERAL.infoRowLabelDiv).hasClass('is-one-third');
+    assert.dom('[data-test-component="info-table-row"] div').hasClass('is-one-third');
     assert.dom(PAGE.infoRowValue('API path for metadata')).exists();
     assert.dom(PAGE.paths.codeSnippet('cli')).exists();
     assert.dom(PAGE.paths.codeSnippet('api')).exists();

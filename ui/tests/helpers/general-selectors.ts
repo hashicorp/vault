@@ -51,10 +51,8 @@ export const GENERAL = {
     input: (attr: string) => `[data-test-ttl-value="${attr}"]`,
   },
   // Info Table Row
-  infoRowLabelDiv: '[data-test-row-label-div]',
   infoRowLabel: (label: string) => `[data-test-row-label="${label}"]`,
   infoRowValue: (label: string) => `[data-test-row-value="${label}"]`,
-  infoRowValueDefault: (label: string) => `[data-test-row-value-default="${label}"]`,
   // Validation
   validation: (attr: string) => `[data-test-field-validation=${attr}]`,
   validationWarning: (attr: string) => `[data-test-validation-warning=${attr}]`,

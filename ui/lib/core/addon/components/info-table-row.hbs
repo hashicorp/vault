@@ -62,7 +62,7 @@
         {{! @alwaysRender (this.isVisible) is still true }}
       {{else if this.valueIsEmpty}}
         {{#if @defaultShown}}
-          <span data-test-row-value-default={{@label}}>{{@defaultShown}}</span>
+          <span data-test-row-value={{@label}}>{{@defaultShown}}</span>
         {{else}}
           <Icon @name="minus" />
         {{/if}}

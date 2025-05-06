@@ -65,7 +65,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       />`);
 
     assert
-      .dom(GENERAL.infoRowLabelDiv)
+      .dom(GENERAL.infoRowValue(this.label))
       .doesNotExist('does not render if no value and alwaysRender is false (even if default exists)');
   });
 
@@ -154,9 +154,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
     assert.dom('div.column.is-flex-center .hds-icon').exists('Renders a dash (-) for undefined value');
 
     this.set('default', DEFAULT);
-    assert
-      .dom(GENERAL.infoRowValueDefault(this.label))
-      .hasText(DEFAULT, 'Renders default text if value is empty');
+    assert.dom(GENERAL.infoRowValue(this.label)).hasText(DEFAULT, 'Renders default text if value is empty');
 
     this.set('value', '');
     this.set('label', '');
