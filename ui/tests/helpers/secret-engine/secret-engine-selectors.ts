@@ -16,6 +16,8 @@ export const SECRET_ENGINE_SELECTORS = {
   },
   generateLink: '[data-test-backend-credentials]',
   secretHeader: '[data-test-secret-header]',
+  secretsBackendLink: (path: string) =>
+    path ? `[data-test-secrets-backend-link="${path}"]` : '[data-test-secrets-backend-link]',
   secretLink: (name: string) => (name ? `[data-test-secret-link="${name}"]` : '[data-test-secret-link]'),
   secretLinkMenu: (name: string) => `[data-test-secret-link="${name}"] [data-test-popup-menu-trigger]`,
   secretLinkMenuDelete: (name: string) =>

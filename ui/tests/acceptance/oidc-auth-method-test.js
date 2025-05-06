@@ -13,7 +13,7 @@ import sinon from 'sinon';
 import { Response } from 'miragejs';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
 
-const DELAY_IN_MS = 50;
+const DELAY_IN_MS = 500;
 
 module('Acceptance | oidc auth method', function (hooks) {
   setupApplicationTest(hooks);

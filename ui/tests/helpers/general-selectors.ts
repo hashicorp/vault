@@ -34,6 +34,7 @@ export const GENERAL = {
   emptyStateMessage: '[data-test-empty-state-message]',
   emptyStateActions: '[data-test-empty-state-actions]',
   menuTrigger: '[data-test-popup-menu-trigger]',
+  menuItem: (name: string) => `[data-test-popup-menu="${name}"]`,
   listItem: '[data-test-list-item-link]',
   // FORMS
   checkboxByAttr: (attr: string) => `[data-test-checkbox="${attr}"]`,
