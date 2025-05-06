@@ -544,6 +544,7 @@ func TestQuotas_RateLimitQuota(t *testing.T) {
 	}
 }
 
+// TestQuotas_RateLimitQuota_GroupByConfig tests the validations imposed on the group_by and secondary_rate fields
 func TestQuotas_RateLimitQuota_GroupByConfig(t *testing.T) {
 	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
 	opts.NoDefaultQuotas = true

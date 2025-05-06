@@ -70,12 +70,19 @@ func (q Type) String() string {
 	return "unknown"
 }
 
+// GroupBy identifies the attribute by which a rate limit quota rule will group the requests
 type GroupBy string
 
 const (
-	GroupByIp             = "ip"
-	GroupByNone           = "none"
-	GroupByEntityThenIp   = "entity_then_ip"
+	// GroupByIp groups requests to which the RLQ applies by the client IP address
+	GroupByIp = "ip"
+	// GroupByNone groups all requests to which the RLQ applies together (i.e. collective rate limit)
+	GroupByNone = "none"
+	// GroupByEntityThenIp groups requests to which the RLQ applies by entity Id if available, otherwise
+	// by the client IP address (e.g. login or root token requests)
+	GroupByEntityThenIp = "entity_then_ip"
+	// GroupByEntityThenNone groups requests to which the RLQ applies by entity Id if available, and all
+	// entity-less requests together (e.g. login or root token requests)
 	GroupByEntityThenNone = "entity_then_none"
 )
 
