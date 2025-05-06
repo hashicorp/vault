@@ -5,7 +5,8 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render, findAll, clickTrigger } from '@ember/test-helpers';
+import { render, findAll } from '@ember/test-helpers';
+import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { fillIn } from '@ember/test-helpers';
 import { selectChoose } from 'ember-power-select/test-support';
