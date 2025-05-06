@@ -18907,6 +18907,7 @@ __metadata:
     flat: ^6.0.1
     handlebars: 4.7.7
     highlight.js: ^10.4.1
+    js-yaml: ^4.1.0
     jsdoc-babel: ^0.5.0
     jsdoc-to-markdown: ^8.0.1
     jsondiffpatch: ^0.4.1

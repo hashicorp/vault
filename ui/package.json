@@ -143,6 +143,7 @@
     "eslint-plugin-qunit": "^8.0.1",
     "filesize": "^4.2.1",
     "flat": "^6.0.1",
+    "js-yaml": "^4.1.0",
     "jsdoc-babel": "^0.5.0",
     "jsdoc-to-markdown": "^8.0.1",
     "jsondiffpatch": "^0.4.1",

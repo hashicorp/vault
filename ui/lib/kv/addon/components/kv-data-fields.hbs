@@ -45,6 +45,21 @@
       }}
     />
   {{/if}}
+{{ else if @showYaml}}
+  {{#if (eq @type "details")}}
+    <Hds::CodeBlock
+      data-test-code-block="secret-data"
+      @value={{this.stringifiedSecretDataYaml}}
+      @language="yaml"
+      @hasCopyButton={{true}}
+      @maxHeight="300px"
+      as |CB|
+    >
+      <CB.Title @tag="h3">
+        Version data
+      </CB.Title>
+    </Hds::CodeBlock>
+  {{/if}}
 {{else if (eq @type "details")}}
   {{#each-in @secret.secretData as |key value|}}
     <InfoTableRow @label={{key}} @value={{value}} @alwaysRender={{true}}>

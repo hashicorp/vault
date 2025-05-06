@@ -3,16 +3,17 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Component from '@glimmer/component';
 import { action } from '@ember/object';
+import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { stringify } from 'core/helpers/stringify';
-
+import { yamlify } from 'core/helpers/yamlify';
 /**
  * @module KvDataFields is used for rendering the fields associated with kv secret data, it hides/shows a json editor and renders validation errors for the json editor
  *
  * <KvDataFields
  *  @showJson={{true}}
+ *  @showYaml={{false}}
  *  @secret={{@secret}}
  *  @type="edit"
  *  @modelValidations={{this.modelValidations}}
@@ -21,6 +22,7 @@ import { stringify } from 'core/helpers/stringify';
  *
  * @param {model} secret - Ember data model: 'kv/data', the new record saved by the form
  * @param {boolean} showJson - boolean passed from parent to hide/show json editor
+ * @param {boolean} showYaml - boolean passed from parent to hide/show YAML editor
  * @param {object} [modelValidations] - object of errors.  If attr.name is in object and has error message display in AlertInline.
  * @param {callback} [pathValidations] - callback function fired for the path input on key up
  * @param {boolean} [type=null] - can be edit, create, or details. Used to change text for some form labels
@@ -39,6 +41,10 @@ export default class KvDataFields extends Component {
 
   get stringifiedSecretData() {
     return this.args.secret?.secretData ? stringify([this.args.secret.secretData], {}) : this.startingValue;
+  }
+
+  get stringifiedSecretDataYaml() {
+    return this.args.secret?.secretData ? yamlify(this.args.secret.secretData) : this.startingValue;
   }
 
   get viewportMargin() {

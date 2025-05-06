@@ -3,15 +3,15 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import { tracked } from '@glimmer/tracking';
 import { next } from '@ember/runloop';
 import { service } from '@ember/service';
-import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import { isDeleted } from 'kv/utils/kv-deleted';
+import Component from '@glimmer/component';
+import { tracked } from '@glimmer/tracking';
 import { isAdvancedSecret } from 'core/utils/advanced-secret';
+import { task } from 'ember-concurrency';
+import { isDeleted } from 'kv/utils/kv-deleted';
 
 /**
  * @module KvSecretDetails renders the key/value data of a KV secret.
@@ -45,6 +45,7 @@ export default class KvSecretDetails extends Component {
   @service store;
 
   @tracked showJsonView = false;
+  @tracked showYamlView = false;
   @tracked wrappedData = null;
   @tracked syncStatus = null; // array of association sync status info by destination
 
@@ -55,6 +56,22 @@ export default class KvSecretDetails extends Component {
     if (isAdvancedSecret(this.originalSecret)) {
       // Default to JSON view if advanced
       this.showJsonView = true;
+    }
+  }
+
+  @action
+  setJsonView(checked) {
+    this.showJsonView = checked;
+    if (this.showJsonView) {
+      this.showYamlView = false;
+    }
+  }
+
+  @action
+  setYamlView(checked) {
+    this.showYamlView = checked;
+    if (this.showYamlView) {
+      this.showJsonView = false;
     }
   }
 
@@ -145,7 +162,7 @@ export default class KvSecretDetails extends Component {
   }
 
   get hideHeaders() {
-    return this.showJsonView || this.emptyState;
+    return this.showJsonView || this.showYamlView || this.emptyState;
   }
 
   get versionState() {
