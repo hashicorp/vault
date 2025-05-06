@@ -428,11 +428,12 @@ module('Acceptance | pki workflow', function (hooks) {
         `/vault/secrets/${this.mountPath}/pki/issuers/my-issuer/details`
       );
       assert.dom(GENERAL.title).hasText('View Issuer Certificate');
+
       ['Certificate', 'CA Chain', 'Common name', 'Issuer name', 'Issuer ID', 'Default key ID'].forEach(
         (label) => {
           assert
             .dom(`${PKI_ISSUER_DETAILS.defaultGroup} ${GENERAL.infoRowValue(label)}`)
-            .exists({ count: 1 }, `${label} value rendered`);
+            .exists(`${label} value rendered`);
         }
       );
       assert

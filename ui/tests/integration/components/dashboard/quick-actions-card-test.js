@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render, findAll, click } from '@ember/test-helpers';
+import { render, findAll, clickTrigger } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { fillIn } from '@ember/test-helpers';
 import { selectChoose } from 'ember-power-select/test-support';
@@ -134,7 +134,7 @@ module('Integration | Component | dashboard/quick-actions-card', function (hooks
   });
   test('it should show correct actions for kv', async function (assert) {
     await this.renderComponent();
-    await click('[data-test-component="search-select"]#secrets-engines-select .ember-basic-dropdown-trigger');
+    await clickTrigger('#type-to-select-a-mount');
     assert.strictEqual(
       findAll('li.ember-power-select-option').length,
       5,

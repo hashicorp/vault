@@ -320,7 +320,8 @@ module('Acceptance | database workflow', function (hooks) {
       assert
         .dom(`${GENERAL.infoRowValue('Username')} [data-test-masked-input]`)
         .hasText('***********', 'Username is masked');
-      await click(`${GENERAL.infoRowValue('Username')} [data-test-masked-input]`);
+
+      await click(`${GENERAL.infoRowValue('Username')} ${GENERAL.testButton('toggle-masked')}`);
       assert
         .dom(`${GENERAL.infoRowValue('Username')} [data-test-masked-input]`)
         .hasText('generated-username', 'Username is generated');
@@ -328,7 +329,8 @@ module('Acceptance | database workflow', function (hooks) {
       assert
         .dom(`${GENERAL.infoRowValue('Password')} [data-test-masked-input]`)
         .hasText('***********', 'Password is masked');
-      await click(`${GENERAL.infoRowValue('Password')} [data-test-masked-input]`);
+
+      await click(`${GENERAL.infoRowValue('Password')} ${GENERAL.testButton('toggle-masked')}`);
       assert
         .dom(`${GENERAL.infoRowValue('Password')} [data-test-masked-input]`)
         .hasText('generated-password', 'Password is generated');
