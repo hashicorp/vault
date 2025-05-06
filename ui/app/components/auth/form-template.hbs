@@ -40,13 +40,25 @@
         <:authSelectOptions>
           <div class="has-bottom-margin-m">
             {{#if this.renderTabs}}
-              <Auth::Tabs
-                @authTabData={{@authTabData}}
-                @authTabTypes={{this.authTabTypes}}
-                @displayNameHelper={{this.displayName}}
-                @handleTabClick={{this.setAuthType}}
-                @selectedAuthMethod={{this.selectedAuthMethod}}
-              />
+              {{#if @withDirectLink}}
+                {{! user has navigated with URL containing the with= query param, which replaces the "Tab" view }}
+                {{#let @withDirectLink as |mount|}}
+                  <Auth::SingleMount
+                    @description={{mount.description}}
+                    @path={{mount.path}}
+                    @renderInput={{not-eq @selectedAuthMethod "token"}}
+                    @type={{this.displayName mount.type}}
+                  />
+                {{/let}}
+              {{else}}
+                <Auth::Tabs
+                  @authTabData={{@authTabData}}
+                  @authTabTypes={{this.authTabTypes}}
+                  @displayNameHelper={{this.displayName}}
+                  @handleTabClick={{this.setAuthType}}
+                  @selectedAuthMethod={{this.selectedAuthMethod}}
+                />
+              {{/if}}
             {{else}}
               <Hds::Form::Select::Field
                 name="selectedAuthMethod"
