@@ -273,6 +273,8 @@ auto_auth {
     }
 	sink "file" {
 		config = {
+			# TODO (HCL_DUP_KEYS_DEPRECATION): remove duplicate attribute below
+			path = ""
 			path = "%s"
 		}
 	}
@@ -305,7 +307,7 @@ auto_auth {
 	os.Unsetenv(api.EnvVaultAddress)
 
 	// Start proxy
-	_, cmd := testProxyCommand(t, proxyLogger)
+	ui, cmd := testProxyCommand(t, proxyLogger)
 	cmd.startedCh = make(chan struct{})
 
 	wg := &sync.WaitGroup{}
@@ -320,6 +322,11 @@ auto_auth {
 	case <-time.After(5 * time.Second):
 		t.Fatalf("timeout")
 	}
+
+	// TODO (HCL_DUP_KEYS_DEPRECATION): Eventually remove this check together with the duplicate attribute in this
+	// test's configuration, create separate test ensuring such a config is not valid
+	require.Contains(t, ui.ErrorWriter.String(),
+		"WARNING: Duplicate keys found")
 
 	// Validate that the auto-auth token has been correctly attained
 	// and works for LookupSelf

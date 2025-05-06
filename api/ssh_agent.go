@@ -150,7 +150,9 @@ func LoadSSHHelperConfig(path string) (*SSHHelperConfig, error) {
 // ParseSSHHelperConfig parses the given contents as a string for the SSHHelper
 // configuration.
 func ParseSSHHelperConfig(contents string) (*SSHHelperConfig, error) {
-	root, err := hcl.Parse(string(contents))
+	// TODO (HCL_DUP_KEYS_DEPRECATION): replace with simple call to hcl.Parse once deprecation of duplicate attributes
+	// is over, for now just ignore duplicates
+	root, _, err := parseAndCheckForDuplicateHclAttributes(contents)
 	if err != nil {
 		return nil, errwrap.Wrapf("error parsing config: {{err}}", err)
 	}

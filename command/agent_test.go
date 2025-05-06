@@ -346,6 +346,8 @@ listener "tcp" {
     tls_disable = true
     require_request_header = true
 	disable_request_limiter = true
+	# TODO (HCL_DUP_KEYS_DEPRECATION): remove duplicate attribute below
+	disable_request_limiter = true
 }
 `
 	listenAddr1 := generateListenerAddress(t)
@@ -396,6 +398,11 @@ listener "tcp" {
 	//----------------------------------------------------
 	// Perform the tests
 	//----------------------------------------------------
+
+	// TODO (HCL_DUP_KEYS_DEPRECATION): Eventually remove this check together with the duplicate attribute in this
+	// test's configuration, create separate test ensuring such a config is not valid
+	require.Contains(t, ui.ErrorWriter.String(),
+		"WARNING: Duplicate keys found")
 
 	// Test against a listener configuration that omits
 	// 'require_request_header', with the header missing from the request.
@@ -3105,6 +3112,19 @@ func TestAgent_Config_ReloadTls(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("got a non-zero exit status: %d, stdout/stderr: %s", code, output)
 	}
+}
+
+// TestAgent_Config_HclDuplicateKey checks that a log warning is printed when the agent config has duplicate attributes
+func TestAgent_Config_HclDuplicateKey(t *testing.T) {
+	configFile := populateTempFile(t, "agent-config.hcl", `
+log_level = "trace"
+log_level = "debug"
+`)
+	_, duplicate, err := agentConfig.LoadConfigFileCheckDuplicates(configFile.Name())
+	// TODO (HCL_DUP_KEYS_DEPRECATION): expect error on duplicates once deprecation is done
+	require.NoError(t, err)
+	require.True(t, duplicate)
+	// require.Contains(t, err.Error(), "Each argument can only be defined once")
 }
 
 // TestAgent_NonTLSListener_SIGHUP tests giving a SIGHUP signal to a listener

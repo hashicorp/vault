@@ -4,6 +4,7 @@
 package command
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/hcl/hcl/printer"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/vault"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/posener/complete"
@@ -93,17 +95,34 @@ func (c *PolicyFmtCommand) Run(args []string) int {
 
 	// Actually parse the policy. We always use the root namespace here because
 	// we don't want to modify the results.
-	if _, err := vault.ParseACLPolicy(namespace.RootNamespace, string(b)); err != nil {
+	// TODO (HCL_DUP_KEYS_DEPRECATION): Revert back to ParseACLPolicy once the deprecation is done
+	_, duplicate, err := vault.ParseACLPolicyCheckDuplicates(namespace.RootNamespace, string(b))
+	if err != nil {
 		c.UI.Error(err.Error())
 		return 1
 	}
+	if duplicate {
+		c.UI.Warn("WARNING: Duplicate keys found in the provided policy, duplicate keys in HCL files are deprecated and will be forbidden in a future release.")
+	}
 
-	// Generate final contents
-	result, err := printer.Format(b)
+	// TODO (HCL_DUP_KEYS_DEPRECATION): Restore commented code and remove section below once deprecation is done
+	//result, err := printer.Format(b)
+	//if err != nil {
+	//	c.UI.Error(fmt.Sprintf("Error printing result: %s", err))
+	//	return 1
+	//}
+	ast, _, err := random.ParseAndCheckForDuplicateHclAttributes(string(b))
 	if err != nil {
+		c.UI.Error(err.Error())
+		return 1
+	}
+	var buf bytes.Buffer
+	if err := printer.DefaultConfig.Fprint(&buf, ast); err != nil {
 		c.UI.Error(fmt.Sprintf("Error printing result: %s", err))
 		return 1
 	}
+	buf.WriteString("\n")
+	result := buf.Bytes()
 
 	// Write them back out
 	if err := ioutil.WriteFile(path, result, 0o644); err != nil {

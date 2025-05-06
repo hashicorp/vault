@@ -29,6 +29,8 @@ func (p *Predict) Client() *api.Client {
 			client, _ := api.NewClient(nil)
 
 			if client.Token() == "" {
+				// ignore duplicate keys in HCL files on autocompletion as printing a warning here would be too annoying
+				// TODO (HCL_DUP_KEYS_DEPRECATION): remove the comment above
 				helper, err := cliconfig.DefaultTokenHelper()
 				if err != nil {
 					return
