@@ -277,4 +277,18 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
       .dom(GENERAL.emptyStateTitle)
       .hasText('No data received from July 2023 to January 2024', 'Empty state renders');
   });
+
+  test('it resets the tracked values on close', async function (assert) {
+    await this.renderComponent();
+    const DATE_RANGE = CLIENT_COUNT.dateRange;
+
+    await click(DATE_RANGE.edit);
+    await fillIn(DATE_RANGE.editDate('start'), '2017-04');
+    await fillIn(DATE_RANGE.editDate('end'), '2018-05');
+    await click(GENERAL.cancelButton);
+
+    await click(DATE_RANGE.edit);
+    assert.dom(DATE_RANGE.editDate('start')).hasValue('2023-07');
+    assert.dom(DATE_RANGE.editDate('end')).hasValue('2024-01');
+  });
 });

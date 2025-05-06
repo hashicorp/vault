@@ -297,19 +297,5 @@ module('Integration | Component | clients/page-header', function (hooks) {
       const [filename] = this.downloadStub.lastCall.args;
       assert.strictEqual(filename, 'clients_export_foo');
     });
-
-    test('it resets the tracked values on close', async function (assert) {
-      await this.renderComponent();
-      const DATE_RANGE = CLIENT_COUNT.dateRange;
-
-      await click(DATE_RANGE.edit);
-      await fillIn(DATE_RANGE.editDate('start'), '2017-04');
-      await fillIn(DATE_RANGE.editDate('end'), '2018-05');
-      await click(GENERAL.cancelButton);
-
-      await click(DATE_RANGE.edit);
-      assert.dom(DATE_RANGE.editDate('start')).hasValue('2022-06');
-      assert.dom(DATE_RANGE.editDate('end')).hasValue('2022-12');
-    });
   });
 });
