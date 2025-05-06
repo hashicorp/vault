@@ -21,10 +21,9 @@ import errorMessage from 'vault/utils/error-message';
 
 export default class LoginSettingsList extends Component {
   @service capabilities;
+  @service flashMessages;
   @service('app-router') router;
   @service store;
-  @service('flash-messages') flashMessages;
-
   @tracked ruleToDelete = null; // set to the rule intended to delete
 
   @action

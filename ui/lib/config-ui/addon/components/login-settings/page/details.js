@@ -24,9 +24,9 @@ import errorMessage from 'vault/utils/error-message';
 
 export default class LoginSettingsRuleDetails extends Component {
   @service capabilities;
+  @service flashMessages;
   @service('app-router') router;
   @service store;
-  @service('flash-messages') flashMessages;
 
   @tracked showConfirmModal = false;
 

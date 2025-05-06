@@ -2,52 +2,60 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 }}
+{{#if @rule}}
+  <PageHeader as |p|>
+    <p.top>
+      <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+    </p.top>
+    <p.levelLeft>
+      <h1 class="title is-3">
+        {{@rule.name}}
+      </h1>
+    </p.levelLeft>
+  </PageHeader>
 
-<PageHeader as |p|>
-  <p.top>
-    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
-  </p.top>
-  <p.levelLeft>
-    <h1 class="title is-3">
-      {{@rule.name}}
-    </h1>
-  </p.levelLeft>
-</PageHeader>
+  <nav class="tabs" aria-label="navigation for rule details">
+    <ul>
+      <li>
+        <LinkTo @route="login-settings.rule.details" @model={{@rule}} data-test-rule-tab>
+          Details
+        </LinkTo>
+      </li>
+    </ul>
+  </nav>
 
-<nav class="tabs" aria-label="navigation for rule details">
-  <ul>
-    <li>
-      <LinkTo @route="login-settings.rule.details" @model={{@rule}} data-test-rule-tab>
-        Details
-      </LinkTo>
-    </li>
-  </ul>
-</nav>
-
-<Toolbar>
-  <ToolbarActions>
-    {{#if (has-capability this.capabilities "delete" id=@rule.name)}}
-      <Hds::Button
-        @text="Delete Rule"
-        @color="secondary"
-        class="toolbar-button"
-        {{on "click" (fn (mut this.showConfirmModal) true)}}
-        data-test-rule-delete
-      />
+  <Toolbar>
+    <ToolbarActions>
+      {{#if (has-capability this.capabilities "delete" id=@rule.name)}}
+        <Hds::Button
+          @text="Delete Rule"
+          @color="secondary"
+          class="toolbar-button"
+          {{on "click" (fn (mut this.showConfirmModal) true)}}
+          data-test-rule-delete
+        />
+      {{/if}}
+    </ToolbarActions>
+  </Toolbar>
+  {{#each-in @rule as |key value|}}
+    {{#if (eq key "default_auth_type")}}
+      <InfoTableRow @alwaysRender={{true}} @label="Default method" @value={{value}} />
+    {{else if (eq key "backup_auth_types")}}
+      <InfoTableRow @alwaysRender={{true}} @label="Backup methods" @value={{value}} />
+    {{else if (eq key "disable_inheritance")}}
+      <InfoTableRow @alwaysRender={{true}} @defaultShown={{true}} @label="Inheritance" @value={{stringify (not value)}} />
+    {{else}}
+      <InfoTableRow @alwaysRender={{true}} @label={{capitalize key}} @value={{value}} />
     {{/if}}
-  </ToolbarActions>
-</Toolbar>
-{{#each-in @rule as |key value|}}
-  {{#if (eq key "default_auth_type")}}
-    <InfoTableRow @alwaysRender={{true}} @label="Default method" @value={{value}} />
-  {{else if (eq key "backup_auth_types")}}
-    <InfoTableRow @alwaysRender={{true}} @label="Backup methods" @value={{value}} />
-  {{else if (eq key "disable_inheritance")}}
-    <InfoTableRow @alwaysRender={{true}} @defaultShown={{true}} @label="Inheritance" @value={{stringify (not value)}} />
+  {{/each-in}}
+
+{{else}}
+  {{#if @error}}
+    <Page::Error @error={{@error}} />
   {{else}}
-    <InfoTableRow @alwaysRender={{true}} @label={{capitalize key}} @value={{value}} />
+    <EmptyState @title="No rule found" @message="The rule you are looking for does not exist." data-test-empty-state />
   {{/if}}
-{{/each-in}}
+{{/if}}
 
 {{#if this.showConfirmModal}}
   <ConfirmModal
