@@ -4,6 +4,7 @@
  */
 
 import Service from '@ember/service';
+import { TaskGenerator, Task } from 'ember-concurrency';
 
 interface PathsResponse {
   [key: string]: {
@@ -11,6 +12,7 @@ interface PathsResponse {
   };
 }
 export default class NamespaceService extends Service {
+  accessibleNamespaces: string[];
   userRootNamespace: string;
   inRootNamespace: boolean;
   inHvdAdminNamespace: boolean;
@@ -18,6 +20,6 @@ export default class NamespaceService extends Service {
   relativeNamespace: string;
   path: string;
   setNamespace: () => void;
-  findNamespacesForUser: () => void;
+  findNamespacesForUser: Task<TaskGenerator<[string]>, []>;
   reset: () => void;
 }

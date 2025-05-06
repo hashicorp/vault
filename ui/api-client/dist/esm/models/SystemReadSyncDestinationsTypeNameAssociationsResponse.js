@@ -26,8 +26,8 @@ export function SystemReadSyncDestinationsTypeNameAssociationsResponseFromJSONTy
     }
     return {
         'associatedSecrets': json['associated_secrets'] == null ? undefined : json['associated_secrets'],
-        'name': json['name'] == null ? undefined : json['name'],
-        'type': json['type'] == null ? undefined : json['type'],
+        'storeName': json['store_name'] == null ? undefined : json['store_name'],
+        'storeType': json['store_type'] == null ? undefined : json['store_type'],
     };
 }
 export function SystemReadSyncDestinationsTypeNameAssociationsResponseToJSON(json) {
@@ -39,7 +39,7 @@ export function SystemReadSyncDestinationsTypeNameAssociationsResponseToJSONType
     }
     return {
         'associated_secrets': value['associatedSecrets'],
-        'name': value['name'],
-        'type': value['type'],
+        'store_name': value['storeName'],
+        'store_type': value['storeType'],
     };
 }
