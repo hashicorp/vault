@@ -56,6 +56,7 @@ func Backend() *backend {
 			errorPaths(&b),
 			kvPaths(&b),
 			[]*framework.Path{
+				pathConfig(&b),
 				pathInternal(&b),
 				pathSpecial(&b),
 				pathRaw(&b),
