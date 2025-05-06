@@ -23,8 +23,7 @@ module('Unit | Helpers | has-capability', function (hooks) {
       },
     };
     this.hasCapability = (types = [], namedArgs) => {
-      const helperFn = this.helper.compute([capabilities, ...types], namedArgs || this.namedArgs);
-      return helperFn();
+      return this.helper.compute([capabilities, ...types], namedArgs || this.namedArgs);
     };
   });
 

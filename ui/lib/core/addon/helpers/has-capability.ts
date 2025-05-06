@@ -27,44 +27,42 @@ export default class HasCapabilityHelper extends Helper {
     [capabilitiesMap, ...types]: [CapabilitiesMap, ...CapabilityTypes[]],
     { pathKey, params, all = false }: { pathKey: keyof typeof PATH_MAP; params?: T; all?: boolean }
   ) {
-    return () => {
-      // since the default is to return true we need to validate the inputs here more thoroughly
-      // this is to help devs from thinking that the checks are working properly when the capability lookup is actually failing
-      if (!capabilitiesMap) {
-        throw new Error('Capabilities map is required as the first positional arg');
-      }
-      if (!types || !types.length) {
-        throw new Error('Capability types are required as positional args');
-      }
-      const acceptedTypes = ['read', 'update', 'delete', 'list', 'create', 'patch', 'sudo'];
-      const invalidTypes = types.filter((type) => !acceptedTypes.includes(type));
-      if (invalidTypes.length) {
-        throw new Error(
-          `Invalid capability types: ${invalidTypes.join(', ')}. Accepted types are: ${acceptedTypes.join(
-            ', '
-          )}.`
-        );
-      }
-      if (!pathKey) {
-        throw new Error('pathKey is a required named arg for path lookup in capabilities map');
-      }
+    // since the default is to return true we need to validate the inputs here more thoroughly
+    // this is to help devs from thinking that the checks are working properly when the capability lookup is actually failing
+    if (!capabilitiesMap) {
+      throw new Error('Capabilities map is required as the first positional arg');
+    }
+    if (!types || !types.length) {
+      throw new Error('Capability types are required as positional args');
+    }
+    const acceptedTypes = ['read', 'update', 'delete', 'list', 'create', 'patch', 'sudo'];
+    const invalidTypes = types.filter((type) => !acceptedTypes.includes(type));
+    if (invalidTypes.length) {
+      throw new Error(
+        `Invalid capability types: ${invalidTypes.join(', ')}. Accepted types are: ${acceptedTypes.join(
+          ', '
+        )}.`
+      );
+    }
+    if (!pathKey) {
+      throw new Error('pathKey is a required named arg for path lookup in capabilities map');
+    }
 
-      const path = this.capabilities.pathFor(pathKey, params);
-      if (path) {
-        const capabilities = capabilitiesMap[path];
+    const path = this.capabilities.pathFor(pathKey, params);
+    if (path) {
+      const capabilities = capabilitiesMap[path];
 
-        if (capabilities) {
-          const method = all ? 'every' : 'some';
+      if (capabilities) {
+        const method = all ? 'every' : 'some';
 
-          return types[method]((type) => {
-            const key = `can${capitalize(type)}` as keyof Capabilities;
-            // default to true if type provided is not valid - edit rather than update for example
-            return !(key in capabilities) ? true : capabilities[key];
-          });
-        }
+        return types[method]((type) => {
+          const key = `can${capitalize(type)}` as keyof Capabilities;
+          // default to true if type provided is not valid - edit rather than update for example
+          return !(key in capabilities) ? true : capabilities[key];
+        });
       }
-      // similar to the Capabilities service, default to allow and the API will deny if needed
-      return true;
-    };
+    }
+    // similar to the Capabilities service, default to allow and the API will deny if needed
+    return true;
   }
 }
