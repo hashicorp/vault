@@ -26,7 +26,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/natefinch/atomic v1.0.1
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/net v0.37.0
+	golang.org/x/net v0.38.0
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1
 )
 
