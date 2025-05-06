@@ -18,6 +18,53 @@ valid_change_types: >-
 Always review important or breaking changes and remediation recommendations
 before upgrading Vault.
 
+## Breaking configuration change
+
+| Change       | Affected version | Affected deployments
+| ------------ | ---------------- | --------------------
+| New behavior | 1.20.0           | Vault instances using integrated storage
+
+In Vault 1.20.0 `disable_mlock` is a required configuration setting for
+clusters using integrated storage. This means that if you are not explicitly
+setting a value for `disable_mlock`, the following changes must be made prior
+to upgrading.
+
+* Clusters missing this config value will fail to start after the upgrade to 1.20.0 *
+
+Before upgrading to Vault 1.20.0, administrators must explicitly add a value for
+`disable_mlock` to the outermost level of the server configuration. See docs.
+This must be done for all server nodes. Prior to Vault 1.20, the default setting
+for `disable_mlock` was false. Therefore if you do not currently have a value
+set for `disable_mlock`, you are using the default setting. If you wish to
+maintain this behavior, you will need to explicitly set
+`disable_mlock = false` prior to upgrade.
+
+For clusters that already set a value for `disable_mlock` no change is required.
+
+### Additional Considerations:
+
+#### Autopilot
+New 1.20.0 nodes are added to the cluster until there is a quorum of upgraded
+nodes. Each of these new nodes will need to have a value for`disable_mlock`
+set.
+
+#### Rolling Upgrades
+Standby nodes are stopped and upgraded one at a time. These node configurations
+will need to be updated before restarting the vault process on the node.
+
+#### dev mode
+If no config is provided, dev mode will start as usual. If a config is provided
+it must have a value for `disable_mlock`
+
+### Cluster types affected
+
+| Cluster Type               | `disable_mlock` required | Note
+|----------------------------|--------------------------|-----
+| Primary                    | Yes                      | value depends on cluster specifics. [See docs]()https://developer.hashicorp.com/vault/docs/configuration#disable_mlock
+| Performance Secondary      | Yes                      | value depends on cluster specifics. [See docs]()https://developer.hashicorp.com/vault/docs/configuration#disable_mlock
+| DR Secondary               | Yes                      | value depends on cluster specifics. [See docs]()https://developer.hashicorp.com/vault/docs/configuration#disable_mlock
+
+
 ## Transit support for Ed25519ph and Ed25519ctx signatures ((#ed25519))
 
 | Change       | Affected version | Affected deployments
