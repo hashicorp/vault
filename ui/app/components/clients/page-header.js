@@ -35,7 +35,6 @@ export default class ClientsPageHeaderComponent extends Component {
 
   @tracked canDownload = false;
   @tracked showExportModal = false;
-  @tracked showEditModal = false;
   @tracked exportFormat = 'csv';
   @tracked downloadError = '';
 
@@ -131,10 +130,5 @@ export default class ClientsPageHeaderComponent extends Component {
   resetModal() {
     this.showExportModal = false;
     this.downloadError = '';
-  }
-
-  @action
-  onCloseEditModal() {
-    this.showEditModal = false;
   }
 }

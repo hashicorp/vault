@@ -6,6 +6,7 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
+import { tracked } from '@glimmer/tracking';
 import { isSameMonth, isAfter } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { filteredTotalForMount, filterVersionHistory, TotalClients } from 'core/utils/client-count-utils';
@@ -38,8 +39,14 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   @service declare readonly namespace: NamespaceService;
   @service declare readonly store: Store;
 
+  @tracked showEditModal = false;
+
   get formattedStartDate() {
     return this.args.startTimestamp ? parseAPITimestamp(this.args.startTimestamp, 'MMMM yyyy') : null;
+  }
+
+  get formattedEndDate() {
+    return this.args.endTimestamp ? parseAPITimestamp(this.args.endTimestamp, 'MMMM yyyy') : null;
   }
 
   get formattedBillingStartDate() {
@@ -200,12 +207,18 @@ export default class ClientsCountsPageComponent extends Component<Args> {
     this.args.onFilterChange(params);
   }
 
-  @action resetFilters() {
+  @action
+  resetFilters() {
     this.args.onFilterChange({
       start_time: undefined,
       end_time: undefined,
       ns: undefined,
       mountPath: undefined,
     });
+  }
+
+  @action
+  onCloseEditModal() {
+    this.showEditModal = false;
   }
 }

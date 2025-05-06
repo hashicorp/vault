@@ -7,30 +7,21 @@
   <PH.Title>
     Client Usage
   </PH.Title>
-  {{#if (and this.formattedStartDate this.formattedEndDate)}}
+  {{#if (and this.version.isEnterprise this.formattedStartDate this.formattedEndDate)}}
     <PH.Description class="has-text-weight-semibold flex">
       <p>
         For billing period:
         <span data-test-date-range="start">{{this.formattedStartDate}}</span>
         -
         <span data-test-date-range="end">{{this.formattedEndDate}}</span>
-        {{#unless this.version.isEnterprise}}
-          <Hds::Button
-            class="has-left-margin-xs"
-            @size="small"
-            @text="Edit"
-            @isInline="true"
-            @color="tertiary"
-            @icon="edit"
-            @iconPosition="trailing"
-            data-test-date-range-edit
-            {{on "click" (fn (mut this.showEditModal) true)}}
-          />
-        {{/unless}}
       </p>
-
     </PH.Description>
   {{/if}}
+  <PH.Description>
+    This is the dashboard for your overall client count usages. Documentation is available
+    <Hds::Link::Inline @href={{doc-link "/vault/docs/concepts/client-count"}}> here</Hds::Link::Inline>.
+  </PH.Description>
+
   <PH.Actions class="align-items-end align-self-end">
     {{#if this.showExportButton}}
       <Hds::Button
@@ -48,10 +39,11 @@
       @billingStartTime={{@billingStartTime}}
       @retentionMonths={{@retentionMonths}}
       @onChange={{@onChange}}
-      @showEditModal={{this.showEditModal}}
-      @onCloseEditModal={{this.onCloseEditModal}}
+      @showEditModal={{@showEditModal}}
+      @onCloseEditModal={{@onCloseEditModal}}
     />
   </PH.Actions>
+
 </Hds::PageHeader>
 
 {{#if this.showExportModal}}
