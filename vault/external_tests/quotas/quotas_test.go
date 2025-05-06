@@ -583,6 +583,16 @@ func TestQuotas_RateLimitQuota_GroupByConfig(t *testing.T) {
 				"secondary_rate": json.Number("0"),
 			},
 		},
+		"explicit_group_by_ip_allowed_in_ce": {
+			reqData: map[string]interface{}{
+				"rate":     100,
+				"group_by": "ip",
+			},
+			expectedReadContains: map[string]interface{}{
+				"group_by":       "ip",
+				"secondary_rate": json.Number("0"),
+			},
+		},
 		"invalid_group_by": {
 			reqData: map[string]interface{}{
 				"rate":     100,
@@ -706,7 +716,6 @@ func TestQuotas_RateLimitQuota_GroupByConfig(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, resp)
 				require.NotEmpty(t, resp.Data)
-				t.Logf("%+v", resp.Data)
 				for k, v := range tc.expectedReadContains {
 					require.Contains(t, resp.Data, k)
 					require.Equal(t, v, resp.Data[k])

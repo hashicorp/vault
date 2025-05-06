@@ -166,9 +166,9 @@ from any further requests until after the 'block_interval' has elapsed.`,
 					Description: `Attribute by which to group requests by. Valid group_by modes are: 1) "ip" that groups
 requests by their source IP address (group_by defaults to ip if unset); 2) "none" that groups all requests that match
 the rate limit quota rule together; 3) "entity_then_ip" that groups requests by their entity ID for authenticated
-requests that carry one, or by their IP for unauthenticated or otherwise entity-less requests; and 4) "entity_then_none"
-which also groups requests by their entity ID when available, but the rest is all grouped together (i.e. unauthenticated
-or otherwise entity-less).`,
+requests that carry one, or by their IP for unauthenticated requests (or requests whose authentication is not connected
+to an entity); and 4) "entity_then_none" which also groups requests by their entity ID when available, but the rest is
+all grouped together (i.e. unauthenticated or with authentication not connected to an entity).`,
 					Default: "ip",
 				},
 				"secondary_rate": {
@@ -378,8 +378,10 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 			// before the group_by field was added
 			groupBy = quotas.GroupByIp
 		case quotas.GroupByIp:
-		// valid group_by
+			// valid group_by mode for both ent and CE
 		case quotas.GroupByNone, quotas.GroupByEntityThenIp, quotas.GroupByEntityThenNone:
+			// other group_by modes are only available in Enterprise. Use simple const on API to simplify things, but
+			// keep the evaluation properly contained in ent-only files
 			if !constants.IsEnterprise {
 				return logical.ErrorResponse("grouping mode %q is only available in Vault Enterprise", groupBy), nil
 			}
