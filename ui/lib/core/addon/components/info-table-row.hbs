@@ -8,7 +8,6 @@
     {{! label section of the row }}
     <div
       class="column {{or @labelWidth 'is-one-quarter'}} {{if this.hasLabelOverflow 'label-overflow'}}"
-      data-test-row-label-div
       {{did-insert this.calculateLabelOverflow}}
     >
       {{#if @label}}
