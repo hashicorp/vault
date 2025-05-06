@@ -35,8 +35,9 @@ const (
 )
 
 const (
-	dbTypePostgres   = "pgx"
-	cloudSQLPostgres = "cloudsql-postgres"
+	dbTypePostgres         = "pgx"
+	dbTypeCloudSQLPostgres = "cloudsql-postgres"
+	dbTypeSnowflake        = "snowflake"
 
 	// controls the size of the static account cache
 	// as part of the self-managed workflow
@@ -54,8 +55,8 @@ type SQLConnectionProducer struct {
 	MaxIdleConnections       int         `json:"max_idle_connections" mapstructure:"max_idle_connections" structs:"max_idle_connections"`
 	MaxConnectionLifetimeRaw interface{} `json:"max_connection_lifetime" mapstructure:"max_connection_lifetime" structs:"max_connection_lifetime"`
 	DisableEscaping          bool        `json:"disable_escaping" mapstructure:"disable_escaping" structs:"disable_escaping"`
-	usePrivateIP             bool        `json:"use_private_ip" mapstructure:"use_private_ip" structs:"use_private_ip"`
 	SelfManaged              bool        `json:"self_managed" mapstructure:"self_managed" structs:"self_managed"`
+	usePrivateIP             bool
 
 	// Username/Password is the default auth type when AuthType is not set
 	Username string `json:"username" mapstructure:"username" structs:"username"`
@@ -65,6 +66,9 @@ type SQLConnectionProducer struct {
 	AuthType           string `json:"auth_type" mapstructure:"auth_type" structs:"auth_type"`
 	ServiceAccountJSON string `json:"service_account_json" mapstructure:"service_account_json" structs:"service_account_json"`
 	TLSConfig          *tls.Config
+
+	// PrivateKey is a path to the private key file
+	PrivateKey string `json:"private_key" mapstructure:"private_key" structs:"private_key"`
 
 	// cloudDriverName is globally unique, but only needs to be retained for the lifetime
 	// of driver registration, not across plugin restarts.
@@ -317,6 +321,13 @@ func (c *SQLConnectionProducer) Connection(ctx context.Context) (interface{}, er
 		var err error
 		// TODO: remove this deprecated function call in a future SDK version
 		c.db, err = openPostgres(driverName, conn)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open connection: %w", err)
+		}
+	} else if driverName == dbTypeSnowflake && c.Password == "" {
+		// TODO: Remove the password check when Snowflake fully removes password auth.
+		var err error
+		c.db, err = openSnowflake(c.ConnectionURL, c.Username, c.PrivateKey)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open connection: %w", err)
 		}

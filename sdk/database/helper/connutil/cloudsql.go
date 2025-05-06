@@ -15,7 +15,7 @@ func (c *SQLConnectionProducer) getCloudSQLDriverType() (string, error) {
 	// using switch case for future extensibility
 	switch c.Type {
 	case dbTypePostgres:
-		driverType = cloudSQLPostgres
+		driverType = dbTypeCloudSQLPostgres
 	default:
 		return "", fmt.Errorf("unsupported DB type for cloud IAM: %s", c.Type)
 	}
@@ -36,7 +36,7 @@ func (c *SQLConnectionProducer) registerDrivers(driverName string, credentials s
 
 	// using switch case for future extensibility
 	switch typ {
-	case cloudSQLPostgres:
+	case dbTypeCloudSQLPostgres:
 		return pgxv4.RegisterDriver(driverName, opts...)
 	}
 
