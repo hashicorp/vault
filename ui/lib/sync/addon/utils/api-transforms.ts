@@ -15,7 +15,7 @@ export const listDestinationsTransform = (
 ) => {
   const { keyInfo } = response;
   const destinations: ListDestination[] = [];
-  // loop through each destination type (keys in key_info)
+  // Build full destination objects from keyInfo
   for (const key in keyInfo) {
     // iterate through each type's destination names
     const names = (keyInfo as Record<string, string[]>)[key];

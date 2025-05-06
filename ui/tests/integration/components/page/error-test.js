@@ -63,7 +63,7 @@ module('Integration | Component | page/error', function (hooks) {
     await render(hbs`<Page::Error @error={{this.error}} />`);
 
     assert
-      .dom('[data-test-page-error-title]')
+      .dom(GENERAL.pageError.errorTitle("404"))
       .hasText('404 Not Found', 'Error title renders based on status');
     assert
       .dom('[data-test-page-error-subtitle]')
@@ -77,8 +77,8 @@ module('Integration | Component | page/error', function (hooks) {
 
     await render(hbs`<Page::Error @error={{this.error}} />`);
 
-    assert.dom('[data-test-page-error-title]').hasText('Error', 'Error title renders');
-    assert.dom('[data-test-page-error-message]').hasText(error.message, 'Error message renders');
-    assert.dom('[data-test-page-error-details]').hasText(error.errors[0], 'Error details render');
+    assert.dom(GENERAL.pageError.errorTitle("400")).hasText('Error', 'Error title renders');
+    assert.dom(GENERAL.pageError.errorMessage).hasText(error.message, 'Error message renders');
+    assert.dom(GENERAL.pageError.errorDetails).hasText(error.errors[0], 'Error details render');
   });
 });
