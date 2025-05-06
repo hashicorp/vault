@@ -86,8 +86,12 @@ module('Integration | Component | json-editor', function (hooks) {
       @theme={{this.hashi-read-only-theme}}
       @readOnly={{true}}
     />`);
+    // computed style differs between browsers so we only check for the color
+    // TODO: this component will be replaced with a hds codeEditor and this test can be removed
+    // getComputedStyle for Chrome: rgb(247, 248, 250) none repeat scroll 0% 0% / auto padding-box border-box
+    // getComputedStyle for Firefox: rgb(247, 248, 250);
     assert.dom('.cm-s-hashi-read-only').hasStyle({
-      background: 'rgb(247, 248, 250) none repeat scroll 0% 0% / auto padding-box border-box',
+      backgroundColor: 'rgb(247, 248, 250)',
     });
     assert.dom('.CodeMirror-linenumber').doesNotExist('on readOnly does not show line numbers');
   });

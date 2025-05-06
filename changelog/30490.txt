@@ -1,0 +1,3 @@
+```release-note:feature
+**Vault Namespace Picker**: Updating the Vault Namespace Picker to enable search functionality, allow direct navigation to nested namespaces and improve accessibility.
+```

@@ -102,9 +102,41 @@ The remaining steps are all run on the database server.
 
 1. Download and run the latest Vault EKM provider installer from
   [releases.hashicorp.com](https://releases.hashicorp.com/vault-mssql-ekm-provider/)
-1. Enter your Vault server's address when prompted and complete the installer
-1. If you need to configure non-default namespace or mount paths for your AppRole and
-   Transit engines, see [configuration](/vault/docs/platform/mssql/configuration).
+1. Run the installer to create an initial configuration. If your server URL is
+   too long for the input field, you can set it manually in the next step.
+1. If you need to configure non-default namespaces or mount paths or your server
+   URL exceeds the character limit in the installer, set the relevant
+   [EKM configuration parameters](/vault/docs/platform/mssql/configuration)
+   manually in your configuration file:
+
+    <Tabs>
+    <Tab heading="Self-managed Vault">
+
+    ```hcl
+    {
+      "namespace": "<custom_namespace>",
+      "appRoleMountPath": "<custom_approle_path>",
+      "transitMountPath": "<custom_approle_path>",
+      "enableTrace": "true",
+      "vaultApiBaseUrl": "<server_url>"
+    }
+    ```
+
+    </Tab>
+    <Tab heading="HCP Vault Dedicated">
+
+    ```hcl
+    {
+      "namespace": "admin/<custom_namespace>",
+      "appRoleMountPath": "<custom_approle_path>",
+      "transitMountPath": "<custom_approle_path>",
+      "enableTrace": "true",
+      "vaultApiBaseUrl": "<server_url>"
+    }
+    ```
+
+    </Tab>
+    </Tabs>
 
 ### Configure the EKM provider using SQL
 

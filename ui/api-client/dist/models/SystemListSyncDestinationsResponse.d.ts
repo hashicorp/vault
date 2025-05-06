@@ -23,10 +23,16 @@ export interface SystemListSyncDestinationsResponse {
     keyInfo?: object;
     /**
      * List of destination types with at least one destination.
-     * @type {Array<object>}
+     * @type {Array<string>}
      * @memberof SystemListSyncDestinationsResponse
      */
-    keys?: Array<object>;
+    keys?: Array<string>;
+    /**
+     * Total number of destinations across all types.
+     * @type {number}
+     * @memberof SystemListSyncDestinationsResponse
+     */
+    totalDestinations?: number;
 }
 /**
  * Check if a given object implements the SystemListSyncDestinationsResponse interface.

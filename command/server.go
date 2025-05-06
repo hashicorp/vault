@@ -1149,7 +1149,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// ensure that the DisableMlock key is explicitly set if using integrated storage
-	if config.Storage != nil && config.Storage.Type == storageTypeRaft && !isMlockSet() {
+	if !c.flagDev && config.Storage != nil && config.Storage.Type == storageTypeRaft && !isMlockSet() {
 
 		c.UI.Error(wrapAtLength(
 			"ERROR: disable_mlock must be configured 'true' or 'false': Mlock " +
@@ -2951,6 +2951,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		DisableSSCTokens:               config.DisableSSCTokens,
 		Experiments:                    config.Experiments,
 		AdministrativeNamespacePath:    config.AdministrativeNamespacePath,
+		ObservationSystemLedgerPath:    config.ObservationSystemLedgerPath,
 	}
 
 	if c.flagDev {

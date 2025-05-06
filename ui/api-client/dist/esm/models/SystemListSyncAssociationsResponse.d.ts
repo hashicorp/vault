@@ -23,10 +23,22 @@ export interface SystemListSyncAssociationsResponse {
     keyInfo?: object;
     /**
      * List of mounts with at least one association.
-     * @type {Array<object>}
+     * @type {Array<string>}
      * @memberof SystemListSyncAssociationsResponse
      */
-    keys?: Array<object>;
+    keys?: Array<string>;
+    /**
+     * Total number of associations across all destinations.
+     * @type {number}
+     * @memberof SystemListSyncAssociationsResponse
+     */
+    totalAssociations?: number;
+    /**
+     * Total number of synced secrets across all destinations.
+     * @type {number}
+     * @memberof SystemListSyncAssociationsResponse
+     */
+    totalSecrets?: number;
 }
 /**
  * Check if a given object implements the SystemListSyncAssociationsResponse interface.

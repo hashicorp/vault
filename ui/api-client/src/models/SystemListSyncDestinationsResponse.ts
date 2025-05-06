@@ -27,10 +27,16 @@ export interface SystemListSyncDestinationsResponse {
     keyInfo?: object;
     /**
      * List of destination types with at least one destination.
-     * @type {Array<object>}
+     * @type {Array<string>}
      * @memberof SystemListSyncDestinationsResponse
      */
-    keys?: Array<object>;
+    keys?: Array<string>;
+    /**
+     * Total number of destinations across all types.
+     * @type {number}
+     * @memberof SystemListSyncDestinationsResponse
+     */
+    totalDestinations?: number;
 }
 
 /**
@@ -52,6 +58,7 @@ export function SystemListSyncDestinationsResponseFromJSONTyped(json: any, ignor
         
         'keyInfo': json['key_info'] == null ? undefined : json['key_info'],
         'keys': json['keys'] == null ? undefined : json['keys'],
+        'totalDestinations': json['total_destinations'] == null ? undefined : json['total_destinations'],
     };
 }
 
@@ -68,6 +75,7 @@ export function SystemListSyncDestinationsResponseToJSONTyped(value?: SystemList
         
         'key_info': value['keyInfo'],
         'keys': value['keys'],
+        'total_destinations': value['totalDestinations'],
     };
 }
 

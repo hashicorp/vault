@@ -15,7 +15,7 @@ import { AUTH_METHOD_MAP, fillInLoginFields } from 'vault/tests/helpers/auth/aut
 import { callbackData, windowStub } from 'vault/tests/helpers/oidc-window-stub';
 
 const ENT_ONLY = ['saml'];
-const DELAY_IN_MS = 50;
+const DELAY_IN_MS = 500;
 
 for (const method of AUTH_METHOD_MAP) {
   const { authType, options } = method;
