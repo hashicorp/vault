@@ -15,7 +15,7 @@ import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { ERROR_MISSING_PARAMS, ERROR_WINDOW_CLOSED } from 'vault/components/auth-jwt';
 
-const DELAY_IN_MS = 50;
+const DELAY_IN_MS = 500;
 
 module('Acceptance | oidc auth method', function (hooks) {
   setupApplicationTest(hooks);
