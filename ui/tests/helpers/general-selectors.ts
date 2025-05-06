@@ -55,9 +55,6 @@ export const GENERAL = {
   infoRowLabel: (label: string) => `[data-test-row-label="${label}"]`,
   infoRowValue: (label: string) => `[data-test-row-value="${label}"]`,
   infoRowValueDefault: (label: string) => `[data-test-row-value-default="${label}"]`,
-  // Info Table Item Array
-  infoItemArrayDiv: (label: string) => `[data-test-item-array-div="${label}"]`,
-  infoItemArrayCode: (label: string) => `[data-test-item-array-code="${label}"]`,
   // Validation
   validation: (attr: string) => `[data-test-field-validation=${attr}]`,
   validationWarning: (attr: string) => `[data-test-validation-warning=${attr}]`,
