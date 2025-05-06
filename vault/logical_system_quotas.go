@@ -6,12 +6,12 @@ package vault
 import (
 	"context"
 	"errors"
-	"github.com/hashicorp/vault/helper/constants"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -229,6 +229,14 @@ requests that contain an entity ID are subject to the "rate" field instead. Defa
 								},
 								"inheritable": {
 									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"group_by": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"secondary_rate": {
+									Type:     framework.TypeFloat,
 									Required: true,
 								},
 							},
