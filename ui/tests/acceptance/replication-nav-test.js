@@ -16,8 +16,8 @@ const SELECTORS = {
   navPerformance: '[data-test-sidebar-nav-link="Performance"]',
   navDR: '[data-test-sidebar-nav-link="Disaster Recovery"]',
   title: '[data-test-replication-title]',
-  primaryCluster: GENERAL.infoRowValue('primary_cluster_addr'),
-  replicationSet: '[data-test-row-value="Replication set"]',
+  primaryCluster: `${GENERAL.infoRowValue('primary_cluster_addr')}`,
+  replicationSet: `${GENERAL.infoRowValue('Replication set')}`,
   knownSecondariesTitle: '.known-secondaries-card h3',
 };
 module('Acceptance | Enterprise | replication navigation', function (hooks) {

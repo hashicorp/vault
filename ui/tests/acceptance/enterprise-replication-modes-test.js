@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { module, test, skip } from 'qunit';
+import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, currentURL, settled, visit, waitFor } from '@ember/test-helpers';
@@ -57,8 +57,7 @@ module('Acceptance | Enterprise | replication modes', function (hooks) {
     assert.dom(s.navLink('Disaster Recovery')).doesNotExist('hides dr link');
   });
 
-  // FLAKY and causes the browser to crash. Need to investigate
-  skip('replication page when disabled', async function (assert) {
+  test('replication page when disabled', async function (assert) {
     await this.setupMocks(STATUS_DISABLED_RESPONSE);
     await visit('/vault/replication');
 
