@@ -5,6 +5,7 @@
 
 import { click, fillIn, find, findAll, currentRouteName, visit, currentURL } from '@ember/test-helpers';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
+import { selectChoose } from 'ember-power-select/test-support';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -38,15 +39,17 @@ module('Acceptance | secret-engine list view', function (hooks) {
     const enginePath = `alicloud-disable-${this.uid}`;
     await runCmd(mountEngineCmd('alicloud', enginePath));
     await visit('/vault/secrets');
-    assert.dom(SES.secretsBackendLink(enginePath)).exists();
-    const row = SES.secretsBackendLink(enginePath);
-    await click(`${row} ${GENERAL.menuTrigger}`);
-    await click(`${row} ${GENERAL.confirmTrigger}`);
+    // to reduce flakiness, searching by engine name first in case there are pagination issues
+    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), enginePath);
+    assert.dom(SES.secretsBackendLink(enginePath)).exists('the alicloud engine is mounted');
+
+    await click(GENERAL.menuTrigger);
+    await click(GENERAL.menuItem('disable-engine'));
     await click(GENERAL.confirmButton);
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backends',
-      'redirects to the backends page'
+      'redirects to the backends list page'
     );
     assert.dom(SES.secretsBackendLink(enginePath)).doesNotExist('does not show the disabled engine');
   });
