@@ -16,7 +16,7 @@ Vault and **Vault Agent Injector** on OpenShift.
 
 <Warning title="Recommended setup method">
 
-   The recommended method to access Vault securely on OpenShift is through the [Vault Secrets Operator](/vault/docs/deploy/kubernetes/vso/). Through the Vault Secrets Operator, developers access secrets as native Kubernetes secrets, while Vault still manages the secrets. The Vault Secrets Operator is now [certified on Red Hat OpenShift](https://www.redhat.com/en/blog/vault-secrets-operator-now-certified-on-red-hat-openshift) and is available in the [Red Hat Ecosystem catalog](https://catalog.redhat.com/software/containers/hashicorp/vault-secrets-operator-bundle/64ddcd189d40d16b88133fd8).
+   The recommended method to access Vault securely on OpenShift is through the [Vault Secrets Operator](/vault/docs/deploy/kubernetes/vso/). Through the Vault Secrets Operator, developers access secrets as native Kubernetes secrets, while Vault still manages the secrets. The Vault Secrets Operator is now [certified on Red Hat OpenShift](https://www.redhat.com/en/blog/vault-secrets-operator-now-certified-on-red-hat-openshift) and is available in the embedded operator hub.
 
    See the [Run the Vault Secrets Operator on OpenShift documentation](/vault/docs/deploy/kubernetes/vso/openshift) for more information on how to install and configure the Vault Secrets Operator on OpenShift.
 
@@ -93,8 +93,7 @@ Override the `server.dev.enabled` configuration value:
 
 ```shell-session
 $ helm install vault hashicorp/vault \
-    --set "global.openshift=true" \
-    --set "server.dev.enabled=true"
+    --set "global.openshift=true" 
 ```
 
 Override all the configuration found in a file:
