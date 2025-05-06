@@ -630,8 +630,9 @@ func TestActivityLog_CountersAPI_NoErrorOnLoadingClientIDsToMemoryFlag_CE(t *tes
 
 	// verify query response response
 	endPastMonth := timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now))
-	startTwoMonthsAgo := timeutil.StartOfMonth(timeutil.MonthsPreviousTo(2, now))
-	require.Equal(t, resp.Data["start_time"], startTwoMonthsAgo.UTC().Format(time.RFC3339))
+
+	// start time will be default time for time.Time{} as no start time is specified in input params
+	require.Equal(t, resp.Data["start_time"], time.Time{}.UTC().Format(time.RFC3339))
 	require.Equal(t, resp.Data["end_time"], endPastMonth.UTC().Format(time.RFC3339))
 
 	byNamespace := getNamespaceData(t, resp)
