@@ -5,6 +5,7 @@
 
 import { click, fillIn, find, findAll, currentRouteName, visit, currentURL } from '@ember/test-helpers';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
+import { selectChoose } from 'ember-power-select/test-support';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -14,7 +15,7 @@ import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/com
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { UNSUPPORTED_ENGINES, mountableEngines } from 'vault/helpers/mountable-secret-engines';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
-import { SECRET_ENGINE_SELECTORS } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 const SELECTORS = {
   backendLink: (path) =>
@@ -25,13 +26,13 @@ module('Acceptance | secret-engine list view', function (hooks) {
   setupApplicationTest(hooks);
 
   const createSecret = async (path, key, value, enginePath) => {
-    await click(SECRET_ENGINE_SELECTORS.createSecret);
+    await click(SES.createSecret);
     await fillIn('[data-test-secret-path]', path);
 
     await fillIn('[data-test-secret-key]', key);
     await fillIn(GENERAL.inputByAttr(key), value);
     await click('[data-test-secret-save]');
-    await click(SECRET_ENGINE_SELECTORS.crumb(enginePath));
+    await click(SES.crumb(enginePath));
   };
 
   hooks.beforeEach(function () {
@@ -44,15 +45,17 @@ module('Acceptance | secret-engine list view', function (hooks) {
     const enginePath = `alicloud-disable-${this.uid}`;
     await runCmd(mountEngineCmd('alicloud', enginePath));
     await visit('/vault/secrets');
-    assert.dom(SELECTORS.backendLink(enginePath)).exists();
-    const row = SELECTORS.backendLink(enginePath);
-    await click(`${row} ${GENERAL.menuTrigger}`);
-    await click(`${row} ${GENERAL.confirmTrigger}`);
+    // to reduce flakiness, searching by engine name first in case there are pagination issues
+    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), enginePath);
+    assert.dom(SES.secretsBackendLink(enginePath)).exists('the alicloud engine is mounted');
+
+    await click(GENERAL.menuTrigger);
+    await click(GENERAL.menuItem('disable-engine'));
     await click(GENERAL.confirmButton);
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backends',
-      'redirects to the backends page'
+      'redirects to the backends list page'
     );
     assert.dom(SELECTORS.backendLink(enginePath)).doesNotExist('does not show the disabled engine');
   });
@@ -140,7 +143,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
       `/vault/secrets/${enginePath1}/list?page=2`,
       'After clicking next page in navigates to the second page.'
     );
-    await click(SECRET_ENGINE_SELECTORS.secretLink(secretPath));
+    await click(SES.secretLink(secretPath));
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${enginePath1}/show/${secretPath}`,
@@ -167,7 +170,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     }
 
     // navigate and check that the children list view is shown from nested secrets
-    await click(SECRET_ENGINE_SELECTORS.secretLink(`${parentPath}/`));
+    await click(SES.secretLink(`${parentPath}/`));
 
     assert.strictEqual(
       currentURL(),

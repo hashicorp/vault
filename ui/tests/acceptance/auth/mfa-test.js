@@ -16,6 +16,7 @@ import { callbackData, WindowStub } from 'vault/tests/helpers/oidc-window-stub';
 import sinon from 'sinon';
 
 const ENT_ONLY = ['saml'];
+const DELAY_IN_MS = 500;
 
 // See AUTH_METHOD_TEST_CASES for how request data maps to method types
 // authRequest is the request made on submit and what returns mfa_validation requirements (if any)
@@ -105,7 +106,7 @@ for (const method of AUTH_METHOD_TEST_CASES) {
         setTimeout(() => {
           // set path which is used to set :mount param in the callback url => /auth/:mount/oidc/callback
           window.postMessage(callbackData({ path: this.mountPath }), window.origin);
-        }, 50);
+        }, DELAY_IN_MS);
       }
 
       await click(AUTH_FORM.login);
@@ -141,7 +142,7 @@ for (const method of AUTH_METHOD_TEST_CASES) {
         setTimeout(() => {
           // set path which is used to set :mount param in the callback url => /auth/:mount/oidc/callback
           window.postMessage(callbackData({ path: this.mountPath }), window.origin);
-        }, 50);
+        }, DELAY_IN_MS);
       }
 
       await click(AUTH_FORM.login);
@@ -179,7 +180,7 @@ for (const method of AUTH_METHOD_TEST_CASES) {
         setTimeout(() => {
           // set path which is used to set :mount param in the callback url => /auth/:mount/oidc/callback
           window.postMessage(callbackData({ path: this.mountPath }), window.origin);
-        }, 50);
+        }, DELAY_IN_MS);
       }
 
       await click(AUTH_FORM.login);
@@ -213,7 +214,7 @@ for (const method of AUTH_METHOD_TEST_CASES) {
         setTimeout(() => {
           // set path which is used to set :mount param in the callback url => /auth/:mount/oidc/callback
           window.postMessage(callbackData({ path: this.mountPath }), window.origin);
-        }, 50);
+        }, DELAY_IN_MS);
       }
 
       await click(AUTH_FORM.login);
