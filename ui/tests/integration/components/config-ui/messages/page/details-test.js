@@ -10,6 +10,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { dateFormat } from 'core/helpers/date-format';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const allFields = [
   { label: 'Active', key: 'active' },
@@ -62,26 +63,23 @@ module('Integration | Component | messages/page/details', function (hooks) {
       .exists({ count: allFields.length }, 'Correct number of filtered fields render');
 
     allFields.forEach((field) => {
-      assert
-        .dom(`[data-test-row-label="${field.label}"]`)
-        .hasText(field.label, `${field.label} label renders`);
+      assert.dom(GENERAL.infoRowLabel(field.label)).hasText(field.label, `${field.label} label renders`);
       if (field.key === 'startTime' || field.key === 'endTime') {
         const formattedDate = dateFormat([this.message[field.key], 'MMM d, yyyy hh:mm aaa'], {
           withTimeZone: true,
         });
         assert
-          .dom(`[data-test-row-value="${field.label}"]`)
+          .dom(GENERAL.infoRowValue(field.label))
           .hasText(formattedDate || 'Never', `${field.label} value renders`);
       } else if (field.key === 'authenticated' || field.key === 'active') {
         assert
-          .dom(`[data-test-value-div="${field.label}"]`)
+          .dom(GENERAL.infoRowValue(field.label))
           .hasText(this.message[field.key] ? 'Yes' : 'No', `${field.label} value renders`);
       } else if (field.key === 'link') {
-        assert.dom('[data-test-value-div="Link"]').exists();
-        assert.dom('[data-test-value-div="Link"] [data-test-link="message link"]').hasText('here');
+        assert.dom(GENERAL.infoRowValue('Link')).hasText('here');
       } else {
         assert
-          .dom(`[data-test-row-value="${field.label}"]`)
+          .dom(GENERAL.infoRowValue(field.label))
           .hasText(this.message[field.key], `${field.label} value renders`);
       }
     });

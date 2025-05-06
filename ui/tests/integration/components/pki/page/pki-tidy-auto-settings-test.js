@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | page/pki-tidy-auto-settings', function (hooks) {
   setupRenderingTest(hooks);
@@ -50,26 +51,26 @@ module('Integration | Component | page/pki-tidy-auto-settings', function (hooks)
       .dom('[data-test-pki-edit-tidy-auto-link]')
       .hasText('Edit auto-tidy', 'toolbar edit link has correct text');
 
-    assert.dom('[data-test-row="enabled"] [data-test-label-div]').hasText('Automatic tidy enabled');
-    assert.dom('[data-test-value-div="Automatic tidy enabled"]').hasText('No');
-    assert.dom('[data-test-value-div="Interval duration"]').hasText('2 days');
+    assert.dom('[data-test-row="enabled"] [data-test-row-label]').hasText('Automatic tidy enabled');
+    assert.dom(GENERAL.infoRowValue('Automatic tidy enabled')).hasText('No');
+    assert.dom(GENERAL.infoRowValue('Interval duration')).hasText('2 days');
     // Universal operations
     assert.dom('[data-test-group-title="Universal operations"]').hasText('Universal operations');
     assert
-      .dom('[data-test-value-div="Tidy the certificate store"]')
+      .dom(GENERAL.infoRowValue('Tidy the certificate store'))
       .exists('Renders universal field when value exists');
-    assert.dom('[data-test-value-div="Tidy the certificate store"]').hasText('No');
+    assert.dom(GENERAL.infoRowValue('Tidy the certificate store')).hasText('No');
     assert
-      .dom('[data-test-value-div="Tidy revoked certificates"]')
+      .dom(GENERAL.infoRowValue('Tidy revoked certificates'))
       .doesNotExist('Does not render universal field when value null');
     // Issuer operations
     assert.dom('[data-test-group-title="Issuer operations"]').hasText('Issuer operations');
     assert
-      .dom('[data-test-value-div="Tidy expired issuers"]')
+      .dom(GENERAL.infoRowValue('Tidy expired issuers'))
       .exists('Renders issuer op field when value exists');
-    assert.dom('[data-test-value-div="Tidy expired issuers"]').hasText('Yes');
+    assert.dom(GENERAL.infoRowValue('Tidy expired issuers')).hasText('Yes');
     assert
-      .dom('[data-test-value-div="Tidy legacy CA bundle"]')
+      .dom(GENERAL.infoRowValue('Tidy legacy CA bundle'))
       .doesNotExist('Does not render issuer op field when value null');
   });
 });

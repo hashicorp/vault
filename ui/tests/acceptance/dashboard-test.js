@@ -17,6 +17,7 @@ import {
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { selectChoose } from 'ember-power-select/test-support';
+import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import clientsHandlers from 'vault/mirage/handlers/clients';
@@ -381,7 +382,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await runCmd([`write sys/mounts/kv1 type=kv`]);
       await settled();
       await visit('/vault/dashboard');
-      await click('[data-test-component="search-select"] .ember-basic-dropdown-trigger');
+      await clickTrigger('#type-to-select-a-mount');
       assert
         .dom('.ember-power-select-option')
         .doesNotHaveTextContaining('kv1', 'dropdown does not show kv1 mount');

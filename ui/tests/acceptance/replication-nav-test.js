@@ -9,13 +9,14 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import replicationHandlers from 'vault/mirage/handlers/replication';
 import { click } from '@ember/test-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECTORS = {
   navReplication: '[data-test-sidebar-nav-link="Replication"]',
   navPerformance: '[data-test-sidebar-nav-link="Performance"]',
   navDR: '[data-test-sidebar-nav-link="Disaster Recovery"]',
   title: '[data-test-replication-title]',
-  primaryCluster: '[data-test-value-div="primary_cluster_addr"]',
+  primaryCluster: GENERAL.infoRowValue('primary_cluster_addr'),
   replicationSet: '[data-test-row-value="Replication set"]',
   knownSecondariesTitle: '.known-secondaries-card h3',
 };

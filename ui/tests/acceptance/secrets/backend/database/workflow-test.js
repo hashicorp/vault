@@ -24,9 +24,6 @@ const PAGE = {
   // GENERIC
   emptyStateTitle: '[data-test-empty-state-title]',
   infoRow: '[data-test-component="info-table-row"]',
-  infoRowLabel: (label) => `[data-test-row-label="${label}"]`,
-  infoRowValue: (label) => `[data-test-row-value="${label}"]`,
-  infoRowValueDiv: (label) => `[data-test-value-div="${label}"]`,
   // CONNECTIONS
   rotateModal: '[data-test-db-connection-modal-title]',
   confirmRotate: '[data-test-enable-rotate-connection]',
@@ -119,12 +116,8 @@ module('Acceptance | database workflow', function (hooks) {
       );
       assert.dom(PAGE.infoRow).exists({ count: this.expectedRows.length }, 'correct number of rows');
       this.expectedRows.forEach(({ label, value }) => {
-        const valueSelector =
-          label === 'Rotate static roles immediately'
-            ? PAGE.infoRowValueDiv(label)
-            : PAGE.infoRowValue(label);
-        assert.dom(PAGE.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
-        assert.dom(valueSelector).hasText(value, `Value for ${label} is correct`);
+        assert.dom(GENERAL.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
+        assert.dom(GENERAL.infoRowValue(label)).hasText(value, `Value for ${label} is correct`);
       });
     });
     test('create without rotate', async function (assert) {
@@ -156,12 +149,8 @@ module('Acceptance | database workflow', function (hooks) {
       );
       assert.dom(PAGE.infoRow).exists({ count: this.expectedRows.length }, 'correct number of rows');
       this.expectedRows.forEach(({ label, value }) => {
-        const valueSelector =
-          label === 'Rotate static roles immediately'
-            ? PAGE.infoRowValueDiv(label)
-            : PAGE.infoRowValue(label);
-        assert.dom(PAGE.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
-        assert.dom(valueSelector).hasText(value, `Value for ${label} is correct`);
+        assert.dom(GENERAL.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
+        assert.dom(GENERAL.infoRowValue(label)).hasText(value, `Value for ${label} is correct`);
       });
     });
     test('create failure', async function (assert) {
@@ -200,12 +189,8 @@ module('Acceptance | database workflow', function (hooks) {
       );
       assert.dom(PAGE.infoRow).exists({ count: this.expectedRows.length }, 'correct number of rows');
       this.expectedRows.forEach(({ label, value }) => {
-        const valueSelector =
-          label === 'Rotate static roles immediately'
-            ? PAGE.infoRowValueDiv(label)
-            : PAGE.infoRowValue(label);
-        assert.dom(PAGE.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
-        assert.dom(valueSelector).hasText(value, `Value for ${label} is correct`);
+        assert.dom(GENERAL.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
+        assert.dom(GENERAL.infoRowValue(label)).hasText(value, `Value for ${label} is correct`);
       });
     });
 
@@ -297,10 +282,8 @@ module('Acceptance | database workflow', function (hooks) {
         },
         { label: 'Revocation statements', value: 'Default' },
       ].forEach(({ label, value }) => {
-        const valueSelector =
-          label === 'Creation statements' ? PAGE.infoRowValueDiv(label) : PAGE.infoRowValue(label);
-        assert.dom(PAGE.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
-        assert.dom(valueSelector).hasText(value, `Value for ${label} is correct`);
+        assert.dom(GENERAL.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
+        assert.dom(GENERAL.infoRowValue(label)).hasText(value, `Value for ${label} is correct`);
       });
       // EDIT
       await click(PAGE.editRole);
@@ -321,7 +304,7 @@ module('Acceptance | database workflow', function (hooks) {
         'Takes you to details page for role after save'
       );
       assert
-        .dom(PAGE.infoRowValue('Generated credentials’s Time-to-Live (TTL)'))
+        .dom(GENERAL.infoRowValue('Generated credentials’s Time-to-Live (TTL)'))
         .hasText('2 hours', 'Shows updated TTL');
 
       // CREDENTIALS
@@ -335,23 +318,25 @@ module('Acceptance | database workflow', function (hooks) {
         .dom('[data-test-credentials-warning]')
         .exists('shows warning about credentials only being available once');
       assert
-        .dom(`[data-test-value-div="Username"] [data-test-masked-input]`)
+        .dom(`${GENERAL.infoRowValue('Username')} [data-test-masked-input]`)
         .hasText('***********', 'Username is masked');
-      await click(`[data-test-value-div="Username"] [data-test-button="toggle-masked"]`);
+      await click(`${GENERAL.infoRowValue('Username')} [data-test-masked-input]`);
       assert
-        .dom(`[data-test-value-div="Username"] [data-test-masked-input]`)
+        .dom(`${GENERAL.infoRowValue('Username')} [data-test-masked-input]`)
         .hasText('generated-username', 'Username is generated');
 
       assert
-        .dom(`[data-test-value-div="Password"] [data-test-masked-input]`)
+        .dom(`${GENERAL.infoRowValue('Password')} [data-test-masked-input]`)
         .hasText('***********', 'Password is masked');
-      await click(`[data-test-value-div="Password"] [data-test-button="toggle-masked"]`);
+      await click(`${GENERAL.infoRowValue('Password')} [data-test-masked-input]`);
       assert
-        .dom(`[data-test-value-div="Password"] [data-test-masked-input]`)
+        .dom(`${GENERAL.infoRowValue('Password')} [data-test-masked-input]`)
         .hasText('generated-password', 'Password is generated');
-      assert.dom(PAGE.infoRowValue('Lease Duration')).hasText('3600', 'shows lease duration from response');
       assert
-        .dom(PAGE.infoRowValue('Lease ID'))
+        .dom(GENERAL.infoRowValue('Lease Duration'))
+        .hasText('3600', 'shows lease duration from response');
+      assert
+        .dom(GENERAL.infoRowValue('Lease ID'))
         .hasText(`database/creds/${roleName}/abcd`, 'shows lease ID from response');
     });
   });

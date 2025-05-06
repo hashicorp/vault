@@ -21,7 +21,7 @@ const SELECTORS = {
   versionsTab: '[data-test-transit-link="versions"]',
   actionsTab: '[data-test-transit-key-actions-link]',
   card: (action) => `[data-test-transit-card="${action}"]`,
-  infoRow: (label) => `[data-test-value-div="${label}"]`,
+  infoRow: (label) => `[data-test-row-value="${label}"]`, // TODO replace with GENERAL.infoRowValue
   form: (item) => `[data-test-transit-key="${item}"]`,
   versionRow: (version) => `[data-test-transit-version="${version}"]`,
   rotate: {

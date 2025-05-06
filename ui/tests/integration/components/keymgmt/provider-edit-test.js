@@ -10,6 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, settled, fillIn } from '@ember/test-helpers';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const ts = 'data-test-kms-provider';
 const root = {
@@ -150,7 +151,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
       />`);
 
     assert
-      .dom('[data-test-value-div="Keys"]')
+      .dom(GENERAL.infoRowValue('Keys'))
       .hasText('None', 'None is displayed when no keys exist for provider');
 
     await click(`[${ts}-delete]`);

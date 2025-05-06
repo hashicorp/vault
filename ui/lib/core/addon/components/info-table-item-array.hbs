@@ -6,7 +6,7 @@
 {{! the class linked-block-item is needed for the read-more component }}
 <div data-test-info-table-item-array {{did-insert this.fetchOptions}} class="linked-block-item">
   {{#if @isLink}}
-    <div data-test-row-value={{@label}}>
+    <div data-test-item-array-div={{@label}}>
       {{#if this.fetchComplete}}
         <ReadMore>
           {{#each this.displayArrayTruncated as |item|}}
@@ -72,7 +72,7 @@
       {{/if}}
     </div>
   {{else}}
-    <code class="is-word-break has-text-black" data-test-row-value={{@label}}>
+    <code class="is-word-break has-text-black" data-test-item-array-code={{@label}}>
       {{if
         (gte @displayArray.length 10)
         (concat @displayArray ", and " (dec 5 @displayArray.length) " more.")
