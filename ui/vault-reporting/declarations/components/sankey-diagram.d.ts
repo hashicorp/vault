@@ -1,7 +1,3 @@
-/**
- * Copyright (c) HashiCorp, Inc.
- */
-
 import Component from '@glimmer/component';
 interface SankeyDiagramArgs {
     data: {
