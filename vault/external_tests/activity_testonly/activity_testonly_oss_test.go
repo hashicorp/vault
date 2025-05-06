@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/helper/timeutil"
 	vaulthttp "github.com/hashicorp/vault/http"
@@ -579,4 +580,72 @@ func TestHandleQuery_MultipleMounts(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestActivityLog_CountersAPI_NoErrorOnLoadingClientIDsToMemoryFlag_CE verifies that default counters api is not blocked by clientIDsUsageInfoLoaded flag as it always remains false on CE
+func TestActivityLog_CountersAPI_NoErrorOnLoadingClientIDsToMemoryFlag_CE(t *testing.T) {
+	t.Parallel()
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+	core := cluster.Cores[0]
+	_, err := client.Logical().Write("sys/internal/counters/config", map[string]interface{}{
+		"enabled": "enable",
+	})
+	require.NoError(t, err)
+	a := core.GetActivityLog()
+	a.SetEnable(true)
+	now := time.Now().UTC()
+
+	// wait for clientIDs to be loaded into memory
+	verifyClientsLoadedInMemory := func() {
+		corehelpers.RetryUntil(t, 60*time.Second, func() error {
+			if a.GetClientIDsUsageInfoLoaded() {
+				return fmt.Errorf("loaded clientIDs to memory")
+			}
+			return nil
+		})
+	}
+	verifyClientsLoadedInMemory()
+
+	// add some data to previous months
+	_, err = clientcountutil.NewActivityLogData(client).
+		NewPreviousMonthData(2).
+		NewClientSeen(clientcountutil.WithClientMount("sys")).
+		NewClientSeen(clientcountutil.WithClientMount("secret")).
+		NewClientSeen(clientcountutil.WithClientMount("cubbyhole")).
+		NewClientSeen(clientcountutil.WithClientMount("identity")).
+		NewPreviousMonthData(1).
+		NewClientSeen(clientcountutil.WithClientMount("cubbyhole")).
+		NewClientSeen(clientcountutil.WithClientMount("sys")).
+		Write(context.Background(), generation.WriteOptions_WRITE_PRECOMPUTED_QUERIES, generation.WriteOptions_WRITE_ENTITIES)
+	require.NoError(t, err)
+
+	// clientIDs in memory should be 0 as they are not updated in CE
+	require.Len(t, a.GetClientIDsUsageInfo(), 0)
+
+	// default counters api query
+	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{})
+	require.NoError(t, err)
+
+	// verify query response response
+	endPastMonth := timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now))
+
+	// start time will be default time for time.Time{} as no start time is specified in input params
+	require.Equal(t, resp.Data["start_time"], time.Time{}.UTC().Format(time.RFC3339))
+	require.Equal(t, resp.Data["end_time"], endPastMonth.UTC().Format(time.RFC3339))
+
+	byNamespace := getNamespaceData(t, resp)
+	require.Len(t, byNamespace, 1)
+	require.Len(t, byNamespace[0].Mounts, 4)
+	mountSet := make(map[string]int, 4)
+	for _, mount := range byNamespace[0].Mounts {
+		mountSet[mount.MountPath] = mount.Counts.Clients
+	}
+	require.Equal(t, map[string]int{
+		"identity/":  1,
+		"sys/":       2,
+		"cubbyhole/": 2,
+		"secret/":    1,
+	}, mountSet)
 }

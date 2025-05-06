@@ -15,7 +15,9 @@ import (
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -31,6 +33,9 @@ const (
 
 	// WarningEndTimeAsCurrentMonthOrFutureIgnored is a warning string that is used to indicate the provided end time has been adjusted to the previous month if it was provided to be within the current month or in future date
 	WarningEndTimeAsCurrentMonthOrFutureIgnored = "end_time parameter can only be used to specify a date until the end of previous month. The value provided for this parameter was in the current month or in the future date and was therefore ignored. The response includes data until the end of the previous month."
+
+	// ErrWaitingForClientIDsToLoadToMemory is an error string that is used to indicate that the clientIDs are currently being loaded to memory which is needed to compute the actual values for new clients in the current month.
+	ErrWaitingForClientIDsToLoadToMemory = "We are gathering the most up-to-date client usage information. Please try again later."
 )
 
 type StartEndTimesWarnings struct {
@@ -326,7 +331,8 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 
 	var err error
 	var timeWarnings StartEndTimesWarnings
-	startTime, endTime, timeWarnings, err := getStartEndTime(d, b.Core.BillingStart())
+	now := time.Now()
+	startTime, endTime, timeWarnings, err := getStartEndTime(d, now, b.Core.BillingStart())
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -334,6 +340,12 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 	var limitNamespaces int
 	if limitNamespacesRaw, ok := d.GetOk("limit_namespaces"); ok {
 		limitNamespaces = limitNamespacesRaw.(int)
+	}
+
+	// if end time is in the current month and the clientIDs are still being loaded to memory, return an error
+	// this will not block on CE as endtime cannot be in the current month
+	if !a.GetClientIDsUsageInfoLoaded() && timeutil.EndOfMonth(endTime).Equal(timeutil.EndOfMonth(now.UTC())) {
+		return nil, errutil.InternalError{Err: ErrWaitingForClientIDsToLoadToMemory}
 	}
 
 	results, err := a.handleQuery(ctx, startTime, endTime, limitNamespaces)
