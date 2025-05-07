@@ -1,4 +1,3 @@
-.gitignore
 .npmignore
 README.md
 package.json
@@ -133,6 +132,7 @@ src/models/GenerateRandomWithSourceAndBytesRequest.ts
 src/models/GenerateRandomWithSourceAndBytesResponse.ts
 src/models/GenerateRandomWithSourceRequest.ts
 src/models/GenerateRandomWithSourceResponse.ts
+src/models/GenerateUtilizationReportResponse.ts
 src/models/GithubConfigureRequest.ts
 src/models/GithubLoginRequest.ts
 src/models/GithubWriteTeamMappingRequest.ts
@@ -745,7 +745,7 @@ src/models/TransitSignWithAlgorithmRequest.ts
 src/models/TransitTrimKeyRequest.ts
 src/models/TransitVerifyRequest.ts
 src/models/TransitVerifyWithAlgorithmRequest.ts
-src/models/UiConfigDeleteCustomMessageResponse.ts
+src/models/UiConfigListCustomMessagesResponse.ts
 src/models/UiConfigReadCustomMessageResponse.ts
 src/models/UiConfigUpdateCustomMessageRequest.ts
 src/models/UiConfigUpdateCustomMessageResponse.ts

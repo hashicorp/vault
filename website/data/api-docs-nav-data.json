@@ -571,6 +571,10 @@
         "path": "system/user-lockout"
       },
       {
+        "title": "<code>/sys/utilization-report</code>",
+        "path": "system/utilization-report"
+      },
+      {
         "title": "<code>/sys/loggers</code>",
         "path": "system/loggers"
       },

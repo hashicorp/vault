@@ -17,7 +17,7 @@ import {
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { selectChoose } from 'ember-power-select/test-support';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import clientsHandlers from 'vault/mirage/handlers/clients';
 import { formatNumber } from 'core/helpers/format-number';
@@ -74,13 +74,13 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
   test('navigate to dashboard on login', async function (assert) {
     assert.expect(1);
-    await authPage.login();
+    await login();
     assert.strictEqual(currentURL(), '/vault/dashboard');
   });
 
   test('display the version number for the title', async function (assert) {
     assert.expect(1);
-    await authPage.login();
+    await login();
     await visit('/vault/dashboard');
     const version = this.owner.lookup('service:version');
     // Since we're using mirage, version is mocked static value
@@ -93,7 +93,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
   module('secrets engines card', function (hooks) {
     hooks.beforeEach(async function () {
-      await authPage.login();
+      await login();
     });
 
     test('shows a secrets engine card', async function (assert) {
@@ -218,7 +218,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
     test('hides the configuration details card on a non-root namespace enterprise version', async function (assert) {
       assert.expect(3);
-      await authPage.login();
+      await login();
       await visit('/vault/dashboard');
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'vault is enterprise');
@@ -230,7 +230,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
     test('shows the configuration details card', async function (assert) {
       assert.expect(8);
-      await authPage.login();
+      await login();
       await visit('/vault/dashboard');
       assert.dom(DASHBOARD.cardHeader('configuration')).hasText('Configuration details');
       assert
@@ -250,7 +250,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       this.data.listeners[0].config.tls_cert_file = './cert.pem';
       this.data.listeners[0].config.tls_key_file = './key.pem';
 
-      await authPage.login();
+      await login();
       await visit('/vault/dashboard');
       assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('tls')).hasText('Enabled');
     });
@@ -260,7 +260,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       delete this.data.listeners[0].config.tls_disable;
       this.data.listeners[0].config.tls_cert_file = './cert.pem';
       this.data.listeners[0].config.tls_key_file = './key.pem';
-      await authPage.login();
+      await login();
       await visit('/vault/dashboard');
       assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('tls')).hasText('Enabled');
     });
@@ -268,7 +268,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     test('it should show tls as disabled if there is no tls information in the config', async function (assert) {
       assert.expect(1);
       this.data.listeners = [];
-      await authPage.login();
+      await login();
       await visit('/vault/dashboard');
       assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('tls')).hasText('Disabled');
     });
@@ -276,7 +276,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
   module('quick actions card', function (hooks) {
     hooks.beforeEach(async function () {
-      await authPage.login();
+      await login();
     });
 
     test('shows the default state of the quick actions card', async function (assert) {
@@ -394,7 +394,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       clientsHandlers(this.server);
       this.store = this.owner.lookup('service:store');
 
-      await authPage.login();
+      await login();
     });
 
     test('shows the client count card for enterprise', async function (assert) {
@@ -421,7 +421,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
   module('replication card enterprise', function (hooks) {
     hooks.beforeEach(async function () {
-      await authPage.login();
+      await login();
       await settled();
       await disableReplication('dr');
       await settled();

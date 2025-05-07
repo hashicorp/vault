@@ -17,7 +17,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { runCmd } from 'vault/tests/helpers/commands';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -27,7 +27,7 @@ const SELECT = {
   filterBar: '[data-test-component="navigate-input"]',
   delete: '[data-test-confirm-action-trigger]',
   confirmDelete: '[data-test-confirm-button]',
-  createLink: '[data-test-policy-create-link]',
+  createPolicy: '[data-test-policy-create-link]',
   nameInput: '[data-test-policy-input="name"]',
   save: '[data-test-policy-save]',
   createError: '[data-test-message-error]',
@@ -40,7 +40,7 @@ module('Acceptance | policies/acl', function (hooks) {
 
   hooks.beforeEach(function () {
     this.uid = uuidv4();
-    return authPage.login();
+    return login();
   });
 
   test('it lists default and root acls', async function (assert) {
@@ -85,7 +85,7 @@ module('Acceptance | policies/acl', function (hooks) {
 
     await visit('/vault/policies/acl');
     // new policy creation
-    await click(SELECT.createLink);
+    await click(SELECT.createPolicy);
 
     await fillIn(SELECT.nameInput, policyName);
     codemirror().setValue(policyString);
@@ -105,7 +105,7 @@ module('Acceptance | policies/acl', function (hooks) {
 
     await visit('/vault/policies/acl');
     // new policy creation
-    await click(SELECT.createLink);
+    await click(SELECT.createPolicy);
 
     await fillIn(SELECT.nameInput, policyName);
     await click(SELECT.save);

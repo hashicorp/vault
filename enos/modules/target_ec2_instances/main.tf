@@ -200,6 +200,11 @@ resource "aws_instance" "targets" {
     encrypted = true
   }
 
+  metadata_options {
+    http_tokens   = "required"
+    http_endpoint = "enabled"
+  }
+
   tags = merge(
     var.common_tags,
     {

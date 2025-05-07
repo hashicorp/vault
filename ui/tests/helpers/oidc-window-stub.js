@@ -2,37 +2,31 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
+import sinon from 'sinon';
 
-import EmberObject, { computed } from '@ember/object';
-import Evented from '@ember/object/evented';
+// suggestions for a custom popup
+// passing { close: true } automatically closes popups opened from window.open()
+// passing { closed: true } sets value on popup window
+export const windowStub = ({ stub, popup } = {}) => {
+  // if already stubbed, don't re-stub
+  const openStub = stub ? stub : sinon.stub(window, 'open');
 
-export const fakeWindow = EmberObject.extend(Evented, {
-  init() {
-    this._super(...arguments);
-    this.on('close', () => {
-      this.set('closed', true);
-    });
-  },
-  screen: computed(function () {
-    return {
-      height: 600,
-      width: 500,
-    };
-  }),
-  origin: 'https://my-vault.com',
-  closed: false,
-  open() {},
-  close() {},
-});
+  const defaultPopup = { close: () => true };
+  openStub.returns(popup || defaultPopup);
+  return openStub;
+};
 
 export const buildMessage = (opts) => ({
   isTrusted: true,
   origin: 'https://my-vault.com',
-  data: {
-    source: 'oidc-callback',
-    path: 'foo',
-    state: 'state',
-    code: 'code',
-  },
+  data: callbackData(),
   ...opts,
+});
+
+export const callbackData = (data = {}) => ({
+  source: 'oidc-callback',
+  path: 'foo',
+  state: 'state',
+  code: 'code',
+  ...data,
 });

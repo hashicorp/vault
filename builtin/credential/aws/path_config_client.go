@@ -107,6 +107,8 @@ func (b *backend) pathConfigClient() *framework.Path {
 					OperationVerb:   "configure",
 					OperationSuffix: "client",
 				},
+				ForwardPerformanceSecondary: true,
+				ForwardPerformanceStandby:   true,
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigClientCreateUpdate,
@@ -114,6 +116,8 @@ func (b *backend) pathConfigClient() *framework.Path {
 					OperationVerb:   "configure",
 					OperationSuffix: "client",
 				},
+				ForwardPerformanceSecondary: true,
+				ForwardPerformanceStandby:   true,
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathConfigClientDelete,

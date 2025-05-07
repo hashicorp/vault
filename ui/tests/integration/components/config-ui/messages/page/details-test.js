@@ -29,7 +29,6 @@ module('Integration | Component | messages/page/details', function (hooks) {
 
   hooks.beforeEach(function () {
     this.context = { owner: this.engine };
-    this.store = this.owner.lookup('service:store');
 
     this.server.post('/sys/capabilities-self', () => ({
       data: {
@@ -37,8 +36,7 @@ module('Integration | Component | messages/page/details', function (hooks) {
       },
     }));
 
-    this.store.pushPayload('config-ui/message', {
-      modelName: 'config-ui/message',
+    this.message = {
       id: '01234567-89ab-cdef-0123-456789abcdef',
       active: true,
       type: 'banner',
@@ -46,19 +44,18 @@ module('Integration | Component | messages/page/details', function (hooks) {
       title: 'Message title 1',
       message: 'Some long long long message',
       link: { here: 'www.example.com' },
-      start_time: '2021-08-01T00:00:00Z',
-      end_time: '',
-      canDeleteCustomMessages: true,
+      startTime: new Date('2021-08-01T00:00:00Z'),
+      endTime: undefined,
       canEditCustomMessages: true,
-    });
+    };
+    this.capabilities = { canDelete: true, canUpdate: true };
   });
 
   test('it should show the message details', async function (assert) {
-    this.message = await this.store.peekRecord('config-ui/message', '01234567-89ab-cdef-0123-456789abcdef');
-
-    await render(hbs`<Messages::Page::Details @message={{this.message}} />`, {
-      owner: this.engine,
-    });
+    await render(
+      hbs`<Messages::Page::Details @message={{this.message}} @capabilities={{this.capabilities}} />`,
+      this.context
+    );
     assert.dom('[data-test-page-title]').hasText('Message title 1');
     assert
       .dom('[data-test-component="info-table-row"]')
@@ -88,5 +85,8 @@ module('Integration | Component | messages/page/details', function (hooks) {
           .hasText(this.message[field.key], `${field.label} value renders`);
       }
     });
+
+    assert.dom('[data-test-confirm-action="Delete message"]').exists();
+    assert.dom('[data-test-link="edit"]').exists();
   });
 });

@@ -3,20 +3,18 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { resolve } from 'rsvp';
-import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, fillIn, find, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECTORS = {
   jsonViewer: '[data-test-json-viewer]',
   navigate: '[data-test-navigate-button]',
   navMessage: '[data-test-navigate-message]',
-  tokenInput: '[data-test-token-input]',
   unwrap: '[data-test-unwrap-button]',
   unwrapForm: '[data-test-unwrap-form]',
 };
@@ -25,7 +23,6 @@ module('Integration | Component | control group success', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
     this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
     this.controlGroup = this.owner.lookup('service:control-group');
     this.markTokenForUnwrapStub = sinon.stub(this.controlGroup, 'markTokenForUnwrap');
@@ -70,26 +67,20 @@ module('Integration | Component | control group success', function (hooks) {
     assert.expect(2);
     await render(hbs`<ControlGroupSuccess @model={{this.model}} />`);
     assert.dom(SELECTORS.unwrapForm).exists();
-    assert.dom(SELECTORS.tokenInput).hasValue('');
+    assert.dom(GENERAL.inputByAttr('token')).hasValue('');
   });
 
   test('it unwraps data on submit', async function (assert) {
     assert.expect(2);
-    const storeService = Service.extend({
-      adapterFor() {
-        return {
-          toolAction() {
-            return resolve({ data: { foo: 'bar' } });
-          },
-        };
-      },
-    });
-    this.owner.unregister('service:store');
-    this.owner.register('service:store', storeService);
+
+    sinon.stub(this.owner.lookup('service:api').sys, 'unwrap').resolves({ data: { foo: 'bar' } });
+
     await render(hbs`<ControlGroupSuccess @model={{this.model}} />`);
-    assert.dom(SELECTORS.tokenInput).hasValue('');
-    await fillIn(SELECTORS.tokenInput, 'token');
+    assert.dom(GENERAL.inputByAttr('token')).hasValue('');
+
+    await fillIn(GENERAL.inputByAttr('token'), 'token');
     await click(SELECTORS.unwrap);
+
     const actual = find(SELECTORS.jsonViewer).innerText;
     const expected = JSON.stringify({ foo: 'bar' }, null, 2);
     assert.strictEqual(actual, expected, `it renders unwrapped data: ${actual}`);

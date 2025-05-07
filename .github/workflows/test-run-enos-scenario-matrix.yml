@@ -202,6 +202,7 @@ jobs:
             echo "ENOS_VAR_vault_radar_license_path=./support/vault-radar.hclic"
             echo "ENOS_VAR_vault_revision=${{ inputs.vault-revision }}"
             echo "ENOS_VAR_vault_upgrade_initial_version=${{ matrix.attributes.upgrade_initial_version }}"
+            echo "ENOS_VAR_verify_aws_secrets_engine=false"
             echo "ENOS_VAR_verify_log_secrets=true"
           } | tee -a "$GITHUB_ENV"
       - uses: hashicorp/setup-terraform@v3
@@ -235,7 +236,7 @@ jobs:
           du -h "./enos/support/private_key.pem"
           echo "debug_data_artifact_name=enos-debug-data_$(echo "${{ matrix.scenario }}" | sed -e 's/ /_/g' | sed -e 's/:/=/g')" >> "$GITHUB_OUTPUT"
       - if: contains(inputs.sample-name, 'build')
-        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
         with:
           name: ${{ inputs.build-artifact-name }}
           path: ./enos/support/downloads
@@ -260,7 +261,7 @@ jobs:
         run: enos scenario launch --timeout 45m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
       - name: Upload Debug Data
         if: failure()
-        uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           # The name of the artifact is the same as the matrix scenario name with the spaces replaced with underscores and colons replaced by equals.
           name: ${{ steps.prepare_scenario.outputs.debug_data_artifact_name }}

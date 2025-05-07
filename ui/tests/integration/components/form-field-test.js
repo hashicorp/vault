@@ -231,6 +231,26 @@ module('Integration | Component | form field', function (hooks) {
     assert.strictEqual(model.get('foo'), selectedValue);
     assert.ok(spy.calledWith('foo', selectedValue), 'onChange called with correct args');
   });
+  test('it renders: radio buttons false value and id', async function (assert) {
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('foo', null, {
+        editType: 'radio',
+        possibleValues: [
+          { label: 'True option', value: true, id: 'true-option' },
+          { label: 'False option', value: false, id: 'false-option' },
+        ],
+      })
+    );
+
+    assert.dom('[data-test-radio-label="True option"]').hasTextContaining('True option');
+    assert.dom('[data-test-radio-label="False option"]').hasTextContaining('False option');
+    assert.dom('[data-test-radio="true-option"]').hasAttribute('id', 'true-option');
+    assert.dom('[data-test-radio="false-option"]').hasAttribute('id', 'false-option');
+    await component.selectRadioInput('false-option');
+    assert.false(model.get('foo'));
+    assert.ok(spy.calledWith('foo', false), 'onChange called with correct args');
+  });
   test('it renders: datetimelocal', async function (assert) {
     const [model] = await setup.call(
       this,

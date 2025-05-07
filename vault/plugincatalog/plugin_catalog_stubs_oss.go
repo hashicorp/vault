@@ -52,6 +52,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 		Env:      plugin.Env,
 		Sha256:   plugin.Sha256,
 		Builtin:  false,
+		Tmpdir:   c.tmpdir,
 	}
 	if entryTmp.OCIImage != "" && entryTmp.Runtime != "" {
 		var err error
@@ -112,6 +113,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 		Env:      plugin.Env,
 		Sha256:   plugin.Sha256,
 		Builtin:  false,
+		Tmpdir:   c.tmpdir,
 	}
 
 	buf, err := json.Marshal(entry)

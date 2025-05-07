@@ -1,0 +1,3 @@
+```release-note:improvement
+core/metrics: added a new telemetry metric, `vault.core.response_status_code`, with two labels, `code`, and `type`, detailing the status codes of all responses to requests that Vault handles.
+```

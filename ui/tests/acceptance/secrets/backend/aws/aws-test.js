@@ -11,7 +11,7 @@ import { spy } from 'sinon';
 
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
@@ -66,7 +66,7 @@ module('Acceptance | aws secret backend', function (hooks) {
     this.flashDangerSpy = spy(flash, 'danger');
 
     this.uid = uuidv4();
-    return authPage.login();
+    return login();
   });
 
   test('it creates role and deletes role', async function (assert) {
@@ -79,7 +79,7 @@ module('Acceptance | aws secret backend', function (hooks) {
       'After enabling aws secrets engine it navigates to roles list'
     );
 
-    await click(SES.createSecret);
+    await click(SES.createSecretLink);
     assert.dom(SES.secretHeader).hasText('Create an AWS Role', 'It renders the create role page');
 
     await fillIn(GENERAL.inputByAttr('name'), roleName);

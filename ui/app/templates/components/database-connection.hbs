@@ -68,7 +68,7 @@
             @backend={{@model.backend}}
             @type="add"
             @queryParams={{hash initialKey=@model.name itemType="role"}}
-            data-test-secret-create={{true}}
+            data-test-add-role
           >
             Add role
           </ToolbarSecretLink>
@@ -347,6 +347,13 @@
           @isLink={{true}}
           @queryParam="role"
           @type={{attr.type}}
+        />
+      {{else if (eq attr.name "skip_static_role_rotation_import")}}
+        <InfoTableRow
+          @alwaysRender={{not (is-empty-value (get @model attr.name) hasDefault=defaultDisplay)}}
+          @defaultShown={{defaultDisplay}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{not (get @model attr.name)}}
         />
       {{else}}
         <InfoTableRow

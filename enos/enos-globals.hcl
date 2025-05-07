@@ -30,7 +30,7 @@ globals {
     }
     rhel = {
       "8.10" = ["nc"]
-      "9.4"  = ["nc"]
+      "9.5"  = ["nc"]
     }
     sles = {
       // When installing Vault RPM packages on a SLES AMI, the openssl package provided
@@ -156,6 +156,7 @@ globals {
     bundle  = "/opt/vault/bin"
     package = "/usr/bin"
   }
-  vault_license_path = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
-  vault_tag_key      = "vault-cluster"
+  vault_license_path  = abspath(var.vault_license_path != null ? var.vault_license_path : joinpath(path.root, "./support/vault.hclic"))
+  vault_tag_key       = "vault-cluster"
+  vault_disable_mlock = false
 }

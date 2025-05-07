@@ -36,7 +36,12 @@ scenario "dev_single_cluster" {
 
     exclude {
       artifact = ["deb"]
-      distro   = ["rhel"]
+      distro   = ["rhel", "amzn"]
+    }
+
+    exclude {
+      artifact = ["deb", "rpm"]
+      distro   = ["sles", "leap"]
     }
 
     exclude {
@@ -143,6 +148,7 @@ scenario "dev_single_cluster" {
       artifactory_username = local.use_artifactory ? var.artifactory_username : null
       artifactory_token    = local.use_artifactory ? var.artifactory_token : null
       distro               = matrix.distro
+      distro_version       = global.distro_version[matrix.distro]
     }
   }
 

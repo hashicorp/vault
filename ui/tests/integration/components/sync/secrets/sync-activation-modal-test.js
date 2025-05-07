@@ -24,12 +24,11 @@ module('Integration | Component | Secrets::SyncActivationModal', function (hooks
     this.onClose = sinon.stub();
     this.onError = sinon.stub();
     this.onConfirm = sinon.stub();
-    this.isHvdManaged = false;
 
     this.renderComponent = async () => {
       await render(
         hbs`
-      <Secrets::SyncActivationModal @onClose={{this.onClose}} @onError={{this.onError}} @onConfirm={{this.onConfirm}} @isHvdManaged={{this.isHvdManaged}}/>
+      <Secrets::SyncActivationModal @onClose={{this.onClose}} @onError={{this.onError}} @onConfirm={{this.onConfirm}}/>
     `,
         { owner: this.engine }
       );
@@ -88,7 +87,8 @@ module('Integration | Component | Secrets::SyncActivationModal', function (hooks
       });
 
       test('HVD clusters: it calls the activate endpoint with correct namespace', async function (assert) {
-        this.isHvdManaged = true;
+        this.flags = this.owner.lookup('service:flags');
+        this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
         assert.expect(1);
 
         this.server.post('/sys/activation-flags/secrets-sync/activate', (_, req) => {

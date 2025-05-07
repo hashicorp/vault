@@ -10,21 +10,22 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import errorMessage from 'vault/utils/error-message';
 
+import type FlagsService from 'vault/services/flags';
 import type FlashMessageService from 'vault/services/flash-messages';
-import type Store from '@ember-data/store';
 import type RouterService from '@ember/routing/router-service';
+import type Store from '@ember-data/store';
 
 interface Args {
   onClose: () => void;
   onError: (errorMessage: string) => void;
   onConfirm: () => void;
-  isHvdManaged: boolean;
 }
 
 export default class SyncActivationModal extends Component<Args> {
+  @service declare readonly flags: FlagsService;
   @service declare readonly flashMessages: FlashMessageService;
-  @service declare readonly store: Store;
   @service('app-router') declare readonly router: RouterService;
+  @service declare readonly store: Store;
 
   @tracked hasConfirmedDocs = false;
 
@@ -34,9 +35,10 @@ export default class SyncActivationModal extends Component<Args> {
     // clear any previous errors in the parent component
     this.args.onConfirm();
 
-    // must return null instead of root for non managed cluster.
-    // child namespaces are not sent.
-    const namespace = this.args.isHvdManaged ? 'admin' : null;
+    // sync activation is managed by the root/administrative namespace so child namespaces are not sent.
+    // for non-managed clusters the root namespace path is technically an empty string so we pass null
+    // otherwise we pass 'admin' if HVD managed.
+    const namespace = this.flags.hvdManagedNamespaceRoot;
 
     try {
       yield this.store

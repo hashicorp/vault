@@ -34,6 +34,7 @@ export const GENERAL = {
   emptyStateMessage: '[data-test-empty-state-message]',
   emptyStateActions: '[data-test-empty-state-actions]',
   menuTrigger: '[data-test-popup-menu-trigger]',
+  menuItem: (name: string) => `[data-test-popup-menu="${name}"]`,
   listItem: '[data-test-list-item-link]',
   // FORMS
   checkboxByAttr: (attr: string) => `[data-test-checkbox="${attr}"]`,
@@ -59,6 +60,7 @@ export const GENERAL = {
   pageError: {
     error: '[data-test-page-error]',
     errorTitle: (httpStatus: number) => `[data-test-page-error-title="${httpStatus}"]`,
+    errorSubtitle: '[data-test-page-error-subtitle]',
     errorMessage: '[data-test-page-error-message]',
     errorDetails: '[data-test-page-error-details]',
   },
