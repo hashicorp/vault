@@ -67,7 +67,7 @@ require (
 	github.com/go-errors/errors v1.5.1
 	github.com/go-git/go-git/v5 v5.14.0
 	github.com/go-jose/go-jose/v3 v3.0.4
-	github.com/go-ldap/ldap/v3 v3.4.10
+	github.com/go-ldap/ldap/v3 v3.4.11
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/go-test/deep v1.1.1
 	github.com/go-zookeeper/zk v1.0.3
@@ -111,7 +111,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.2
 	github.com/hashicorp/go-secure-stdlib/mlock v0.1.3
 	github.com/hashicorp/go-secure-stdlib/nonceutil v0.1.0
-	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.9
+	github.com/hashicorp/go-secure-stdlib/parseutil v0.2.0
 	github.com/hashicorp/go-secure-stdlib/password v0.1.1
 	github.com/hashicorp/go-secure-stdlib/permitpool v1.0.0
 	github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1
@@ -158,7 +158,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.10.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.21.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.14.0
-	github.com/hashicorp/vault-plugin-secrets-openldap v0.15.4
+	github.com/hashicorp/vault-plugin-secrets-openldap v0.15.2-0.20250501000303-7c767f07f4bb
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.11.0
 	github.com/hashicorp/vault-testing-stepwise v0.3.2
 	github.com/hashicorp/vault/api v1.16.0
@@ -189,7 +189,7 @@ require (
 	github.com/okta/okta-sdk-golang/v5 v5.0.2
 	github.com/oracle/oci-go-sdk v24.3.0+incompatible
 	github.com/ory/dockertest v3.3.5+incompatible
-	github.com/ory/dockertest/v3 v3.11.1-0.20250102095203-4b59dd3f56ac
+	github.com/ory/dockertest/v3 v3.12.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pires/go-proxyproto v0.8.0
 	github.com/pkg/errors v0.9.1
@@ -346,7 +346,7 @@ require (
 	github.com/cloudflare/circl v1.6.0 // indirect
 	github.com/cloudfoundry-community/go-cfclient v0.0.0-20220930021109-9c4e6c59ccf1 // indirect
 	github.com/cncf/xds/go v0.0.0-20240905190251-b4127c9b8d78 // indirect
-	github.com/containerd/continuity v0.4.3 // indirect
+	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/coreos/etcd v3.3.27+incompatible // indirect
 	github.com/coreos/go-oidc/v3 v3.11.0 // indirect
@@ -377,7 +377,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.7 // indirect
 	github.com/gammazero/deque v0.2.1 // indirect
-	github.com/go-asn1-ber/asn1-ber v1.5.7 // indirect
+	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.6.2 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.5 // indirect
@@ -417,7 +417,7 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/hashicorp/cronexpr v1.1.2 // indirect
-	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
+	github.com/hashicorp/go-immutable-radix v1.3.1
 	github.com/hashicorp/go-msgpack/v2 v2.1.2 // indirect
 	github.com/hashicorp/go-secure-stdlib/fileutil v0.1.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.4.1 // indirect
