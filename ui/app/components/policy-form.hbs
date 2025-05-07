@@ -34,7 +34,7 @@
               @size="small"
               @color="tertiary"
               {{on "click" (fn (mut this.showTemplateModal))}}
-              data-test-policy-example-button
+              data-test-button="generate-example-policy"
             />
           </ToolbarFilters>
         {{/if}}
@@ -100,14 +100,14 @@
         @icon={{if this.save.isRunning "loading"}}
         type="submit"
         disabled={{this.save.isRunning}}
-        data-test-policy-save
+        data-test-save
       />
       <Hds::Button
         @text="Cancel"
         @color="secondary"
         disabled={{this.save.isRunning}}
         {{on "click" this.cancel}}
-        data-test-policy-cancel
+        data-test-cancel
       />
     </Hds::ButtonSet>
   </div>

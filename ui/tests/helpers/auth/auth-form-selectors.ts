@@ -18,5 +18,4 @@ export const AUTH_FORM = {
   logo: '[data-test-auth-logo]',
   helpText: '[data-test-auth-helptext]',
   authForm: (type: string) => `[data-test-auth-form="${type}"]`,
-  otherMethodsBtn: '[data-test-other-methods-button]',
 };

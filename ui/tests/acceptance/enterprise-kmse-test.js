@@ -13,6 +13,7 @@ import { allEngines } from 'vault/helpers/mountable-secret-engines';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { runCmd } from '../helpers/commands';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | Enterprise | keymgmt', function (hooks) {
   setupApplicationTest(hooks);
@@ -63,7 +64,7 @@ module('Acceptance | Enterprise | keymgmt', function (hooks) {
     await fillIn('[data-test-protection="hsm"]', 'hsm');
 
     this.server.get(`/${path}/kms/test-keyvault/key`, () => ({ data: { keys: ['test-key'] } }));
-    await click('[data-test-secret-save]');
+    await click(GENERAL.saveButton);
     await click('[data-test-kms-provider-tab="keys"] a');
     assert.dom('[data-test-secret-link="test-key"]').exists('Key is listed under keys tab of provider');
   });

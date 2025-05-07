@@ -12,6 +12,7 @@ import hbs from 'htmlbars-inline-precompile';
 import { Response } from 'miragejs';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kubernetes | Page::Configure', function (hooks) {
   setupRenderingTest(hooks);
@@ -68,13 +69,13 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
       );
     assert.dom('[data-test-config] button').hasText('Get config values', 'Get config button renders');
     assert
-      .dom('[data-test-config-save]')
+      .dom(GENERAL.saveButton)
       .isDisabled('Save button is disabled when config values have not been inferred');
     assert.dom('[data-test-config-cancel]').hasText('Back', 'Back button renders');
 
     await click('[data-test-radio-card="manual"]');
     assert.dom('[data-test-field]').exists({ count: 3 }, 'Form fields render');
-    assert.dom('[data-test-config-save]').isNotDisabled('Save button is enabled');
+    assert.dom(GENERAL.saveButton).isNotDisabled('Save button is enabled');
     assert.dom('[data-test-config-cancel]').hasText('Back', 'Back button renders');
   });
 
@@ -101,7 +102,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     const error =
       'Vault could not infer a configuration from your environment variables. Check your configuration file to edit or delete them, or configure manually.';
     assert.dom('[data-test-config] span').hasText(error, 'Error text is displayed');
-    assert.dom('[data-test-config-save]').isDisabled('Save button is disabled in error state');
+    assert.dom(GENERAL.saveButton).isDisabled('Save button is disabled in error state');
 
     status = 204;
     await click('[data-test-radio-card="manual"]');
@@ -113,7 +114,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     assert
       .dom('[data-test-config] span')
       .hasText('Configuration values were inferred successfully.', 'Success text is displayed');
-    assert.dom('[data-test-config-save]').isNotDisabled('Save button is enabled in success state');
+    assert.dom(GENERAL.saveButton).isNotDisabled('Save button is enabled in success state');
   });
 
   test('it should create new manual config', async function (assert) {
@@ -135,7 +136,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     await fillIn('[data-test-input="kubernetesHost"]', this.existingConfig.kubernetes_host);
     await fillIn('[data-test-input="serviceAccountJwt"]', this.existingConfig.service_account_jwt);
     await fillIn('[data-test-input="kubernetesCaCert"]', this.existingConfig.kubernetes_ca_cert);
-    await click('[data-test-config-save]');
+    await click(GENERAL.saveButton);
     assert.ok(
       stub.calledWith('vault.cluster.secrets.backend.kubernetes.configuration'),
       'Transitions to configuration route on save success'
@@ -211,7 +212,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     `,
       { owner: this.engine }
     );
-    await click('[data-test-config-save]');
+    await click(GENERAL.saveButton);
     assert
       .dom('[data-test-edit-config-body]')
       .hasText(
@@ -227,7 +228,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     });
 
     await click('[data-test-radio-card="manual"]');
-    await click('[data-test-config-save]');
+    await click(GENERAL.saveButton);
 
     assert
       .dom('[data-test-field-validation="kubernetesHost"] [data-test-inline-error-message]')
@@ -252,7 +253,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     });
 
     await click('[data-test-config] button');
-    await click('[data-test-config-save]');
+    await click(GENERAL.saveButton);
 
     assert.ok(
       stub.calledWith('vault.cluster.secrets.backend.kubernetes.configuration'),
@@ -281,6 +282,6 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
 
     await click('[data-test-radio-card="local"]');
     await click('[data-test-config] button');
-    await click('[data-test-config-save]');
+    await click(GENERAL.saveButton);
   });
 });

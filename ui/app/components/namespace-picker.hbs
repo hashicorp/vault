@@ -71,6 +71,7 @@
             @text="Refresh list"
             @isFullWidth={{(not this.canManageNamespaces)}}
             {{on "click" this.refreshList}}
+            {{! TODO Shannon can you update per new pattern. I think all your namespace specific selectors can be removed/replaced. }}
             data-test-refresh-namespaces
           />
         {{/if}}

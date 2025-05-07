@@ -13,5 +13,4 @@ export default create({
   editLink: clickable('[data-test-edit-link]'),
   name: fillable('[data-test-input="name"]'),
   alphabet: fillable('[data-test-input="alphabet"'),
-  submit: clickable('[data-test-alphabet-transform-create]'),
 });

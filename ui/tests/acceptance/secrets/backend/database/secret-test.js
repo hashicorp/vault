@@ -331,7 +331,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
         testCase.name,
         'Database connection is pre-selected on the form'
       );
-      await click('[data-test-database-role-cancel]');
+      await click(GENERAL.cancelButton);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/list?tab=role`,
@@ -549,7 +549,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert.dom('.overview-card h2').hasText('1', 'Lists the correct number of connections');
     // confirm get credentials card is an option to select. Regression bug.
     await typeIn(GENERAL.inputSearch('search-input-role'), 'blah');
-    assert.dom('[data-test-get-credentials]').isEnabled();
+    assert.dom(GENERAL.saveButton).isEnabled();
     // [BANDAID] navigate away to fix test failing on capabilities-self check before teardown
     await visit('/vault/secrets');
   });

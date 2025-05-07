@@ -23,6 +23,7 @@ import { create } from 'ember-cli-page-object';
 import flashMessage from 'vault/tests/pages/components/flash-message';
 import ss from 'vault/tests/pages/components/search-select';
 import { disableReplication } from 'vault/tests/helpers/replication';
+import { GENERAL } from '../helpers/general-selectors';
 const searchSelect = create(ss);
 const flash = create(flashMessage);
 
@@ -113,11 +114,8 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     // delete config by choosing "no filter" in the edit screen
     await click('[data-test-replication-link="edit-mount-config"]');
-
     await click('#no-filtering');
-
-    await click('[data-test-config-save]');
-    await settled(); // eslint-disable-line
+    await click(GENERAL.saveButton);
 
     assert.strictEqual(
       flash.latestMessage,

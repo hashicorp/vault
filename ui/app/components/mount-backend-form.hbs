@@ -59,12 +59,12 @@
             @text={{if (eq @mountType "secret") "Enable engine" "Enable method"}}
             @icon={{if this.mountBackend.isRunning "loading"}}
             type="submit"
-            data-test-save
             disabled={{this.mountBackend.isRunning}}
+            data-test-save
           />
         </div>
         <div class="control">
-          <Hds::Button @text="Back" @color="secondary" data-test-back-button {{on "click" (fn this.setMountType "")}} />
+          <Hds::Button @text="Back" @color="secondary" {{on "click" (fn this.setMountType "")}} data-test-back-button />
         </div>
         {{#if this.invalidFormAlert}}
           <div class="control">

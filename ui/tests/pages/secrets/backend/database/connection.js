@@ -5,6 +5,7 @@
 
 import { create, clickable, fillable, visitable, selectable } from 'ember-cli-page-object';
 import ListView from 'vault/tests/pages/components/list-view';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 export default create({
   ...ListView,
@@ -18,7 +19,7 @@ export default create({
   url: fillable('[data-test-input="url"]'),
   username: fillable('[data-test-input="username"]'),
   password: fillable('[data-test-input="password"]'),
-  save: clickable('[data-test-secret-save]'),
+  save: clickable(GENERAL.saveButton),
   addRole: clickable('[data-test-add-role]'), // only from connection show
   enable: clickable('[data-test-enable-connection]'),
   edit: clickable('[data-test-edit-link]'),
