@@ -4,6 +4,7 @@
 |-------------|--------|----------------------------------------------|
 | counter     | number | Number of responses issued by the local node |
 
-The metric includes two labels, `code`, which is the exact status code of the response,
-and `type`, which is the series of the status code. For example, code might be `429`, and
-`type` might be `4xx`.
+Response code metrics include the following labels:
+
+- `code` - exact HTTP status code of the response, for example, `429`.
+- `type` - HTTP response class of the response status, for example `4xx`.
