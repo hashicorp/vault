@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
+	uicustommessages "github.com/hashicorp/vault/vault/ui_custom_messages"
 )
 
 func (c *Core) metricsLoop(stopCh chan struct{}) {
@@ -489,6 +490,101 @@ func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
 			}
 		}
 	}
+}
+
+// GetLocalAndReplicatedSecretMounts returns the number of replicated and local secret mounts
+// across all namespaces, but excludes the default mounts that are pre mounted onto
+// each cluster
+func (c *Core) GetLocalAndReplicatedSecretMounts() (int, int) {
+	replicated := 0
+	local := 0
+	c.mountsLock.RLock()
+	defer c.mountsLock.RUnlock()
+	for _, mount := range c.mounts.Entries {
+		if mount.Local {
+			switch mount.Type {
+			// These types are mounted onto namespaces/root by default and cannot be modified
+			case mountTypeCubbyhole, mountTypeNSCubbyhole:
+			default:
+				local += 1
+
+			}
+		} else {
+			switch mount.Type {
+			// These types are mounted onto namespaces/root by default and cannot be modified
+			case mountTypeIdentity, mountTypeCubbyhole, mountTypeSystem, mountTypeNSIdentity, mountTypeNSSystem, mountTypeNSCubbyhole:
+			default:
+				replicated += 1
+			}
+		}
+	}
+	return replicated, local
+}
+
+// GetLocalAndReplicatedAuthMounts returns the number of replicated and local auth mounts
+// across all namespaces, but excludes the default mounts that are pre mounted onto
+// each cluster
+func (c *Core) GetLocalAndReplicatedAuthMounts() (int, int) {
+	replicated := 0
+	local := 0
+	c.authLock.RLock()
+	defer c.authLock.RUnlock()
+	for _, mount := range c.auth.Entries {
+		if mount.Local {
+			local += 1
+		} else {
+			switch mount.Type {
+			// Token type is mounted onto all namespaces by default and cannot be enabled, disabled, or remounted
+			case mountTypeToken, mountTypeNSToken:
+			default:
+				replicated += 1
+
+			}
+		}
+	}
+	return replicated, local
+}
+
+// GetAuthenticatedCustomBanners returns the number of authenticated custom
+// banners across all namespaces in Vault
+func (c *Core) GetAuthenticatedCustomBanners() int {
+	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+	allNamespaces := c.collectNamespaces()
+	numAuthCustomBanners := 0
+	filter := uicustommessages.FindFilter{
+		IncludeAncestors: false,
+	}
+	filter.Active(true)
+	filter.Authenticated(true)
+	for _, ns := range allNamespaces {
+		messages, err := c.customMessageManager.FindMessages(namespace.ContextWithNamespace(ctx, ns), filter)
+		if err != nil {
+			c.logger.Error("could not find authenticated custom messages for namespace", "namespace", ns.ID, "error", err)
+		}
+		numAuthCustomBanners += len(messages)
+	}
+	return numAuthCustomBanners
+}
+
+// GetUnauthenticatedCustomBanners returns the number of unauthenticated custom
+// banners across all namespaces in Vault
+func (c *Core) GetUnauthenticatedCustomBanners() int {
+	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+	allNamespaces := c.collectNamespaces()
+	numUnauthCustomBanners := 0
+	filter := uicustommessages.FindFilter{
+		IncludeAncestors: false,
+	}
+	filter.Active(true)
+	filter.Authenticated(false)
+	for _, ns := range allNamespaces {
+		messages, err := c.customMessageManager.FindMessages(namespace.ContextWithNamespace(ctx, ns), filter)
+		if err != nil {
+			c.logger.Error("could not find unauthenticated custom messages for namespace", "namespace", ns.ID, "error", err)
+		}
+		numUnauthCustomBanners += len(messages)
+	}
+	return numUnauthCustomBanners
 }
 
 // GetTotalPkiRoles returns the total roles across all PKI mounts in Vault
