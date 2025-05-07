@@ -131,7 +131,7 @@
     "ember-template-lint-plugin-prettier": "~5.0.0",
     "ember-test-selectors": "6.0.0",
     "ember-tether": "3.0.0",
-    "ember-truth-helpers": "3.0.0",
+    "ember-truth-helpers": "4.0.3",
     "escape-string-regexp": "~2.0.0",
     "eslint": "~8.57.1",
     "eslint-config-prettier": "~9.1.0",
