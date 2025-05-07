@@ -55,7 +55,7 @@ export default class AuthFormTemplate extends Component<Args> {
   @service declare readonly store: Store;
   @service declare readonly version: VersionService;
 
-  // form display logic
+  // true → "Back" button renders, false → "Sign in with other methods→" renders if customizations exist
   @tracked showOtherMethods = false;
 
   // auth login variables
@@ -99,14 +99,12 @@ export default class AuthFormTemplate extends Component<Args> {
   }
 
   // The "standard" selection is a dropdown listing all auth methods.
-  // This getter determines whether to render an alternative view (e.g. tabs or a single mount).
+  // This getter determines whether to render an alternative view (e.g., tabs or a preferred mount).
+  // If `true`, the "Sign in with other methods →" link is shown.
   get showCustomAuthOptions() {
-    // show if some sort of customization exists and user has NOT clicked "Sign in with other methods"
     const hasLoginCustomization = this.args?.directLinkData?.hasMountData || this.args.hasVisibleAuthMounts;
-    if (hasLoginCustomization && !this.showOtherMethods) {
-      return true;
-    }
-    return false;
+    // Show if customization exists and the user has NOT clicked "Sign in with other methods →"
+    return hasLoginCustomization && !this.showOtherMethods;
   }
 
   @action
