@@ -24,8 +24,7 @@ Vault and **Vault Agent Injector** on OpenShift.
 
 ## Requirements
 
-The following the versions required to install Vault and Vault Agent Injector
-on OpenShift:
+To install Vault and Vault Agent Injector on OpenShift you need the following:
 
 - Cluster Admin privileges to bind the `auth-delegator` role to Vault's service account
 - Helm v3.6+
@@ -93,7 +92,7 @@ Override the `server.dev.enabled` configuration value:
 
 ```shell-session
 $ helm install vault hashicorp/vault \
-    --set "global.openshift=true" 
+    --set "global.openshift=true"
 ```
 
 Override all the configuration found in a file:
