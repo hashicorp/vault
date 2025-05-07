@@ -15,7 +15,7 @@
     "docfy-md": "node scripts/docfy-md.js",
     "lint:css": "stylelint \"**/*.css\"",
     "lint:css:fix": "yarn lint:css --fix",
-    "lint:fix": "concurrently -c f\"auto\" -n lint: \"yarn:lint:*:fix\"",
+    "lint:fix": "concurrently -c \"auto\" -n lint: \"yarn:lint:*:fix\"",
     "lint:hbs": "ember-template-lint '**/*.hbs'",
     "lint:hbs:quiet": "ember-template-lint '**/*.hbs' --quiet",
     "lint:hbs:fix": "ember-template-lint . --fix",
