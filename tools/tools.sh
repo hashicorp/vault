@@ -44,7 +44,7 @@ install_external() {
     github.com/favadi/protoc-go-inject-tag@v1.4.0
     github.com/golangci/misspell/cmd/misspell@v0.6.0
     github.com/golangci/revgrep/cmd/revgrep@v0.8.0
-    github.com/loggerhead/enumer@v0.0.0-20240225233120-0aebd7ae8325
+    github.com/stevendpclark/enumer@v0.0.0-20250122154818-a42b666c3cd3
     github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8
     golang.org/x/tools/cmd/goimports@v0.30.0
     google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.5

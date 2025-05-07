@@ -3107,6 +3107,10 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 					Type:        framework.TypeCommaStringSlice,
 					Description: "Paths on which capabilities are being queried.",
 				},
+				"namespace": {
+					Type:        framework.TypeString,
+					Description: "Namespace for which capabilities are being queried.",
+				},
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{

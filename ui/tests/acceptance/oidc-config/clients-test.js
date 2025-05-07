@@ -8,7 +8,7 @@ import { visit, click, fillIn, findAll, currentRouteName, currentURL } from '@em
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { create } from 'ember-cli-page-object';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { selectChoose } from 'ember-power-select/test-support';
@@ -38,7 +38,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
   hooks.beforeEach(function () {
     oidcConfigHandlers(this.server);
     this.store = this.owner.lookup('service:store');
-    return authPage.login();
+    return login();
   });
 
   module('keys', function () {

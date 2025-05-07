@@ -288,6 +288,8 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 					OperationVerb:   "configure",
 					OperationSuffix: "connection",
 				},
+				ForwardPerformanceSecondary: true,
+				ForwardPerformanceStandby:   true,
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.connectionWriteHandler(),
@@ -295,6 +297,8 @@ func pathConfigurePluginConnection(b *databaseBackend) *framework.Path {
 					OperationVerb:   "configure",
 					OperationSuffix: "connection",
 				},
+				ForwardPerformanceSecondary: true,
+				ForwardPerformanceStandby:   true,
 			},
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.connectionReadHandler(),
@@ -642,6 +646,15 @@ func (b *databaseBackend) connectionWriteHandler() framework.OperationFunc {
 		if dbw.isV4() && config.PasswordPolicy != "" {
 			resp.AddWarning(fmt.Sprintf("%s does not support password policies - upgrade to the latest version of "+
 				"Vault (or the sdk if using a custom plugin) to gain password policy support", config.PluginName))
+		}
+
+		// We can ignore the error at this point since we're simply adding a warning.
+		dbType, _ := dbw.Type()
+		if dbType == "snowflake" && config.ConnectionDetails["password"] != nil {
+			resp.AddWarning(`[DEPRECATED] Single-factor password authentication is deprecated in Snowflake and will
+be removed by November 2025. Key pair authentication will be required after this date. Please
+see the Vault documentation for details on the removal of this feature. More information is
+available at https://www.snowflake.com/en/blog/blocking-single-factor-password-authentification`)
 		}
 
 		b.dbEvent(ctx, "config-write", req.Path, name, true)

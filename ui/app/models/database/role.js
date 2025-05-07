@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 import Model, { attr } from '@ember-data/model';
+import { service } from '@ember/service';
 import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { getRoleFields } from 'vault/utils/model-helpers/database-helpers';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
@@ -24,9 +25,14 @@ const validations = {
 };
 @withModelValidations(validations)
 export default class RoleModel extends Model {
+  @service version;
+
   idPrefix = 'role/';
+
   @attr('string', { readOnly: true }) backend;
+
   @attr('string', { label: 'Role name' }) name;
+
   @attr('array', {
     label: 'Connection name',
     editType: 'searchSelect',
@@ -37,12 +43,14 @@ export default class RoleModel extends Model {
     subText: 'The database connection for which credentials will be generated.',
   })
   database;
+
   @attr('string', {
     label: 'Type of role',
     noDefault: true,
     possibleValues: ['static', 'dynamic'],
   })
   type;
+
   @attr({
     editType: 'ttl',
     defaultValue: '1h',
@@ -51,6 +59,7 @@ export default class RoleModel extends Model {
     defaultShown: 'Engine default',
   })
   default_ttl;
+
   @attr({
     editType: 'ttl',
     defaultValue: '24h',
@@ -59,7 +68,9 @@ export default class RoleModel extends Model {
     defaultShown: 'Engine default',
   })
   max_ttl;
+
   @attr('string', { subText: 'The database username that this Vault role corresponds to.' }) username;
+
   @attr({
     editType: 'ttl',
     defaultValue: '24h',
@@ -68,38 +79,36 @@ export default class RoleModel extends Model {
     helperTextEnabled: 'Vault will rotate password after.',
   })
   rotation_period;
-  @attr({
-    label: 'Skip initial rotation',
-    editType: 'toggleButton',
-    defaultValue: false, // this defaultValue will be set in database-role-setting-form.js based on parent database value
-    helperTextDisabled: 'Vault will rotate password for this static role on creation.',
-    helperTextEnabled: "Vault will not rotate this role's password on creation.",
-  })
-  skip_import_rotation;
+
   @attr('array', {
     editType: 'stringArray',
   })
   creation_statements;
+
   @attr('array', {
     editType: 'stringArray',
     defaultShown: 'Default',
   })
   revocation_statements;
+
   @attr('array', {
     editType: 'stringArray',
     defaultShown: 'Default',
   })
   rotation_statements;
+
   @attr('array', {
     editType: 'stringArray',
     defaultShown: 'Default',
   })
   rollback_statements;
+
   @attr('array', {
     editType: 'stringArray',
     defaultShown: 'Default',
   })
   renew_statements;
+
   @attr('string', {
     editType: 'json',
     allowReset: true,
@@ -107,6 +116,7 @@ export default class RoleModel extends Model {
     defaultShown: 'Default',
   })
   creation_statement;
+
   @attr('string', {
     editType: 'json',
     allowReset: true,
@@ -114,6 +124,25 @@ export default class RoleModel extends Model {
     defaultShown: 'Default',
   })
   revocation_statement;
+
+  @attr('string', { readOnly: true }) last_vault_rotation;
+
+  // ENTERPRISE ONLY
+  @attr({
+    label: 'Rotate immediately',
+    editType: 'toggleButton',
+    helperTextEnabled: 'Vault will rotate the password for this static role on creation.',
+    helperTextDisabled: "Vault will not rotate this role's password on creation.",
+    isOppositeValue: true,
+  })
+  skip_import_rotation;
+
+  @attr('string', {
+    sensitive: true,
+    subText: 'The database password that this Vault role corresponds to.',
+  })
+  password;
+
   /* FIELD ATTRIBUTES */
   get fieldAttrs() {
     // Main fields on edit/create form
@@ -131,10 +160,11 @@ export default class RoleModel extends Model {
   }
   get roleSettingAttrs() {
     // logic for which get displayed is on DatabaseRoleSettingForm
-    const allRoleSettingFields = [
+    let allRoleSettingFields = [
       'default_ttl',
       'max_ttl',
       'username',
+      'password',
       'rotation_period',
       'skip_import_rotation',
       'creation_statements',
@@ -145,6 +175,14 @@ export default class RoleModel extends Model {
       'rollback_statements',
       'renew_statements',
     ];
+
+    // remove enterprise-only attrs if on community
+    if (!this.version.isEnterprise) {
+      allRoleSettingFields = allRoleSettingFields.filter(
+        (role) => !['skip_import_rotation', 'password'].includes(role)
+      );
+    }
+
     return expandAttributeMeta(this, allRoleSettingFields);
   }
   /* CAPABILITIES */

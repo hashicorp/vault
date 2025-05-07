@@ -10,6 +10,8 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import sinon from 'sinon';
 import { Response } from 'miragejs';
 import { ERROR_JWT_LOGIN } from 'vault/components/auth-jwt';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
 module('Acceptance | jwt auth method', function (hooks) {
   setupApplicationTest(hooks);
@@ -38,15 +40,15 @@ module('Acceptance | jwt auth method', function (hooks) {
       const { jwt, role } = JSON.parse(req.requestBody);
       assert.ok(true, 'request made to auth/jwt/login after submit');
       assert.strictEqual(jwt, 'my-test-jwt-token', 'JWT token is sent in body');
-      assert.strictEqual(role, undefined, 'role is not sent in body when not filled in');
+      assert.strictEqual(role, null, 'role is not sent in body when not filled in');
       req.passthrough();
     });
     await visit('/vault/auth');
     await fillIn('[data-test-select="auth-method"]', 'jwt');
-    assert.dom('[data-test-role]').exists({ count: 1 }, 'Role input exists');
-    assert.dom('[data-test-jwt]').exists({ count: 1 }, 'JWT input exists');
-    await fillIn('[data-test-jwt]', 'my-test-jwt-token');
-    await click('[data-test-auth-submit]');
+    assert.dom(GENERAL.inputByAttr('role')).exists({ count: 1 }, 'Role input exists');
+    assert.dom(GENERAL.inputByAttr('jwt')).exists({ count: 1 }, 'JWT input exists');
+    await fillIn(GENERAL.inputByAttr('jwt'), 'my-test-jwt-token');
+    await click(AUTH_FORM.login);
     assert.dom('[data-test-message-error]').exists('Failed login');
   });
 
@@ -61,12 +63,12 @@ module('Acceptance | jwt auth method', function (hooks) {
     });
     await visit('/vault/auth');
     await fillIn('[data-test-select="auth-method"]', 'jwt');
-    assert.dom('[data-test-role]').exists({ count: 1 }, 'Role input exists');
-    assert.dom('[data-test-jwt]').exists({ count: 1 }, 'JWT input exists');
-    await fillIn('[data-test-role]', 'some-role');
-    await fillIn('[data-test-jwt]', 'my-test-jwt-token');
-    assert.dom('[data-test-jwt]').exists({ count: 1 }, 'JWT input exists');
-    await click('[data-test-auth-submit]');
+    assert.dom(GENERAL.inputByAttr('role')).exists({ count: 1 }, 'Role input exists');
+    assert.dom(GENERAL.inputByAttr('jwt')).exists({ count: 1 }, 'JWT input exists');
+    await fillIn(GENERAL.inputByAttr('role'), 'some-role');
+    await fillIn(GENERAL.inputByAttr('jwt'), 'my-test-jwt-token');
+    assert.dom(GENERAL.inputByAttr('jwt')).exists({ count: 1 }, 'JWT input exists');
+    await click(AUTH_FORM.login);
     assert.dom('[data-test-message-error]').exists('Failed login');
   });
 
@@ -88,11 +90,11 @@ module('Acceptance | jwt auth method', function (hooks) {
     });
     await visit('/vault/auth');
     await click('[data-test-auth-method-link="jwt"]');
-    assert.dom('[data-test-role]').exists({ count: 1 }, 'Role input exists');
-    assert.dom('[data-test-jwt]').exists({ count: 1 }, 'JWT input exists');
-    await fillIn('[data-test-role]', 'some-role');
-    await fillIn('[data-test-jwt]', 'my-test-jwt-token');
-    await click('[data-test-auth-submit]');
+    assert.dom(GENERAL.inputByAttr('role')).exists({ count: 1 }, 'Role input exists');
+    assert.dom(GENERAL.inputByAttr('jwt')).exists({ count: 1 }, 'JWT input exists');
+    await fillIn(GENERAL.inputByAttr('role'), 'some-role');
+    await fillIn(GENERAL.inputByAttr('jwt'), 'my-test-jwt-token');
+    await click(AUTH_FORM.login);
     assert.dom('[data-test-message-error]').exists('Failed login');
   });
 });

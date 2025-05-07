@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentURL } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import modifyPassthroughResponse from 'vault/mirage/helpers/modify-passthrough-response';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 
@@ -30,7 +30,7 @@ module('Acceptance | sidebar navigation', function (hooks) {
         'nested-interactive': { enabled: false },
       },
     });
-    return authPage.login();
+    return login();
   });
 
   test('it should navigate back to the dashboard when logo is clicked', async function (assert) {

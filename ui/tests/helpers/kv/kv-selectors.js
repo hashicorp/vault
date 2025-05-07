@@ -27,9 +27,6 @@ export const PAGE = {
   toolbarAction: 'nav.toolbar-actions .toolbar-link, nav.toolbar-actions .toolbar-button',
   secretRow: '[data-test-component="info-table-row"]', // replace with infoRow
   // specific page selectors
-  backends: {
-    link: (backend) => `[data-test-secrets-backend-link="${backend}"]`,
-  },
   metadata: {
     requestData: '[data-test-request-data]',
     editBtn: '[data-test-edit-metadata]',

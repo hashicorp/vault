@@ -9,7 +9,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import clientsHandler, { STATIC_NOW } from 'vault/mirage/handlers/clients';
 import sinon from 'sinon';
 import { visit, click, currentURL, fillIn } from '@ember/test-helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 import timestamp from 'core/utils/timestamp';
@@ -23,7 +23,7 @@ module('Acceptance | clients | counts', function (hooks) {
     sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
     clientsHandler(this.server);
     this.store = this.owner.lookup('service:store');
-    return authPage.login();
+    return login();
   });
 
   test('it should prompt user to query start time for community version', async function (assert) {
@@ -44,6 +44,7 @@ module('Acceptance | clients | counts', function (hooks) {
   });
 
   test('it should persist filter query params between child routes', async function (assert) {
+    this.owner.lookup('service:version').type = 'community';
     await visit('/vault/clients/counts/overview');
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2023-03');

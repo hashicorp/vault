@@ -1,0 +1,3 @@
+```release-note:improvement
+ui/database: Adding warning modal pop up when creating a static role that will be rotated immediately
+```

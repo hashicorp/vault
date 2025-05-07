@@ -11,6 +11,8 @@ description: |
   to maintain compatibility in both execution contexts.
 
 inputs:
+  github-token:
+    description: An elevated Github token to use for searching labels
   vault-version:
     description: |
       The version of vault from hashicorp/action-set-product-version. If set we'll utilize this
@@ -97,7 +99,7 @@ runs:
       name: workflow-metadata
       shell: bash
       env:
-        GH_TOKEN: ${{ github.token }}
+        GH_TOKEN: ${{ inputs.github-token || github.token }}
       run: |
         if [ '${{ github.event_name }}' = 'pull_request' ]; then
           is_draft='${{ github.event.pull_request.draft }}'

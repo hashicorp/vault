@@ -10,7 +10,6 @@ export default create({
   ...ListView,
   visit: visitable('/vault/secrets/:backend/list?tab=templates'),
   visitCreate: visitable('/vault/secrets/:backend/create?itemType=template'),
-  createLink: clickable('[data-test-secret-create]'),
   editLink: clickable('[data-test-edit-link]'),
   deleteLink: clickable('[data-test-transformation-template-delete]'),
   name: fillable('[data-test-input="name"]'),

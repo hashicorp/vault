@@ -5,7 +5,8 @@
 
 import { helper as buildHelper } from '@ember/component/helper';
 
-import type { SyncDestination, SyncDestinationType } from 'vault/vault/helpers/sync-destinations';
+import type { DestinationType } from 'vault/sync';
+import type { SyncDestination } from 'vault/helpers/sync-destinations';
 
 /* 
 This helper is referenced in the base sync destination model and elsewhere to set attributes that rely on type
@@ -69,11 +70,11 @@ export function syncDestinations(): Array<SyncDestination> {
   return [...SYNC_DESTINATIONS];
 }
 
-export function destinationTypes(): Array<SyncDestinationType> {
+export function destinationTypes(): Array<DestinationType> {
   return SYNC_DESTINATIONS.map((d) => d.type);
 }
 
-export function findDestination(type: SyncDestinationType | undefined): SyncDestination | undefined {
+export function findDestination(type: DestinationType | undefined): SyncDestination | undefined {
   return SYNC_DESTINATIONS.find((d) => d.type === type);
 }
 

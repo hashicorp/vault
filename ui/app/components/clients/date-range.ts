@@ -22,6 +22,8 @@ interface Args {
   onChange: (callback: OnChangeParams) => void;
   startTime: string;
   endTime: string;
+  billingStartTime: string;
+  retentionMonths: number;
 }
 /**
  * @module ClientsDateRange
@@ -34,6 +36,8 @@ interface Args {
  * @param {function} onChange - callback when a new range is saved.
  * @param {string} [startTime] - ISO string timestamp of the current start date
  * @param {string} [endTime] - ISO string timestamp of the current end date
+ * @param {int} [retentionMonths=48] - number of months for historical billing
+ * @param {string} [billingStartTime] - ISO string timestamp of billing start date
  */
 
 export default class ClientsDateRangeComponent extends Component<Args> {
@@ -42,6 +46,7 @@ export default class ClientsDateRangeComponent extends Component<Args> {
   @tracked showEditModal = false;
   @tracked startDate = ''; // format yyyy-MM
   @tracked endDate = ''; // format yyyy-MM
+  @tracked selectedStart = this.args.billingStartTime;
   currentMonth = format(timestamp.now(), 'yyyy-MM');
 
   constructor(owner: unknown, args: Args) {
@@ -52,6 +57,7 @@ export default class ClientsDateRangeComponent extends Component<Args> {
   setTrackedFromArgs() {
     if (this.args.startTime) {
       this.startDate = parseAPITimestamp(this.args.startTime, 'yyyy-MM') as string;
+      this.selectedStart = this.formattedDate(this.args.startTime) as string;
     }
     if (this.args.endTime) {
       this.endDate = parseAPITimestamp(this.args.endTime, 'yyyy-MM') as string;
@@ -61,6 +67,25 @@ export default class ClientsDateRangeComponent extends Component<Args> {
   formattedDate = (isoTimestamp: string) => {
     return parseAPITimestamp(isoTimestamp, 'MMMM yyyy');
   };
+
+  get historicalBillingPeriods() {
+    // we want whole billing periods
+    const count = Math.floor(this.args.retentionMonths / 12);
+    const periods: string[] = [];
+
+    for (let i = 1; i <= count; i++) {
+      const startDate = new Date(this.args.billingStartTime);
+      const utcMonth = startDate.getUTCMonth();
+      const utcYear = startDate.getUTCFullYear() - i;
+
+      startDate.setUTCFullYear(utcYear);
+      startDate.setUTCMonth(utcMonth);
+
+      periods.push(startDate.toISOString());
+    }
+
+    return periods;
+  }
 
   get useDefaultDates() {
     return !this.startDate && !this.endDate;
@@ -100,6 +125,7 @@ export default class ClientsDateRangeComponent extends Component<Args> {
     }
   }
 
+  // used for CE date picker
   @action handleSave() {
     if (this.validationError) return;
     const params: OnChangeParams = {
@@ -121,5 +147,22 @@ export default class ClientsDateRangeComponent extends Component<Args> {
 
     this.args.onChange(params);
     this.onClose();
+  }
+
+  @action
+  updateEnterpriseDateRange(start: string) {
+    const params: OnChangeParams = {
+      start_time: undefined,
+      end_time: undefined,
+    };
+
+    const [year, month] = start.split('-');
+    if (year && month) {
+      // pass true for isEnd even for start because we want to go off last day of month here, otherwise we risk
+      // setting it to a start_time that is for the previous billing period
+      params.start_time = formatDateObject({ monthIdx: parseInt(month) - 1, year: parseInt(year) }, true);
+    }
+
+    this.args.onChange(params);
   }
 }
