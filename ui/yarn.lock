@@ -101,7 +101,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@babel/core@npm:^7.25.2":
+"@babel/core@npm:^7.23.2, @babel/core@npm:^7.25.2":
   version: 7.27.1
   resolution: "@babel/core@npm:7.27.1"
   dependencies:
@@ -2073,7 +2073,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ember/string@npm:^3.0.0, @ember/string@npm:^3.1.1":
+"@ember/string@npm:^3.1.1":
   version: 3.1.1
   resolution: "@ember/string@npm:3.1.1"
   dependencies:
@@ -5965,7 +5965,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"broccoli-plugin@npm:^4.0.0, broccoli-plugin@npm:^4.0.2, broccoli-plugin@npm:^4.0.3, broccoli-plugin@npm:^4.0.5, broccoli-plugin@npm:^4.0.7":
+"broccoli-plugin@npm:^4.0.0, broccoli-plugin@npm:^4.0.2, broccoli-plugin@npm:^4.0.3, broccoli-plugin@npm:^4.0.7":
   version: 4.0.7
   resolution: "broccoli-plugin@npm:4.0.7"
   dependencies:
@@ -8187,15 +8187,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-cli-deprecation-workflow@npm:~2.2.0":
-  version: 2.2.0
-  resolution: "ember-cli-deprecation-workflow@npm:2.2.0"
+"ember-cli-deprecation-workflow@npm:~3.3.0":
+  version: 3.3.0
+  resolution: "ember-cli-deprecation-workflow@npm:3.3.0"
   dependencies:
-    "@ember/string": ^3.0.0
-    broccoli-funnel: ^3.0.3
-    broccoli-merge-trees: ^4.2.0
-    broccoli-plugin: ^4.0.5
-  checksum: be6459f5ceeb4515116fc73cc1f530e3e18ec5a941c8435285672ca0f74b76ef2868a1e6ce946701e0fc4db520c4cd1e87d3bbd1087ecaf9f3df1dd7fc77ddd3
+    "@babel/core": ^7.23.2
+    ember-cli-babel: ^8.2.0
+  peerDependencies:
+    ember-source: ">= 4.0.0"
+  checksum: 0b17c1f3ee60edafcdef101a27afe966a5037ca77bcbd081702c4e350bfa282ae2bdebe6c671d9119938a13e4582a94c69dd4cafcbfbdc87b3c815e7639db45d
   languageName: node
   linkType: hard
 
@@ -18800,7 +18800,7 @@ __metadata:
     ember-cli-clean-css: ~3.0.0
     ember-cli-content-security-policy: 2.0.3
     ember-cli-dependency-checker: ~3.3.3
-    ember-cli-deprecation-workflow: ~2.2.0
+    ember-cli-deprecation-workflow: ~3.3.0
     ember-cli-flash: 4.0.0
     ember-cli-htmlbars: ~6.3.0
     ember-cli-inject-live-reload: ~2.1.0
