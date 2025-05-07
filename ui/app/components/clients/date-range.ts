@@ -152,7 +152,7 @@ export default class ClientsDateRangeComponent extends Component<Args> {
     let year, month;
     [year, month] = this.startDate.split('-');
     if (year && month) {
-      params.start_time = formatDateObject({ monthIdx: parseInt(month) - 1, year: parseInt(year) }, false);
+      params.start_time = formatDateObject({ monthIdx: parseInt(month, 10) - 1, year: parseInt(year, 10) }, false);
     }
     [year, month] = this.endDate.split('-');
     if (year && month) {
