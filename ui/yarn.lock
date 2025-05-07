@@ -2089,26 +2089,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ember/test-helpers@npm:~3.3.1":
-  version: 3.3.1
-  resolution: "@ember/test-helpers@npm:3.3.1"
+"@ember/test-helpers@npm:~5.2.1":
+  version: 5.2.1
+  resolution: "@ember/test-helpers@npm:5.2.1"
   dependencies:
-    "@ember/test-waiters": ^3.0.2
-    "@embroider/macros": ^1.10.0
+    "@ember/test-waiters": ^3.1.0 || ^4.0.0
+    "@embroider/addon-shim": ^1.8.7
+    "@embroider/macros": ^1.16.5
     "@simple-dom/interface": ^1.4.0
-    broccoli-debug: ^0.6.5
-    broccoli-funnel: ^3.0.8
+    decorator-transforms: ^2.0.0
     dom-element-descriptors: ^0.5.0
-    ember-auto-import: ^2.6.0
-    ember-cli-babel: ^8.2.0
-    ember-cli-htmlbars: ^6.2.0
   peerDependencies:
-    ember-source: ^4.0.0 || ^5.0.0
-  checksum: fcb6594814944e1d871f74f5ff4f610484cc9276274383cf9e437bc81c43d1ee3afccf674ae905b0ed71b4d208cde8413e6093f62dac0015956dcc410c0ff26e
+    ember-source: ">= 4.0.0"
+  checksum: 882548f2de9dd9ccae1ea29afda4ae6fffed0c0857ec88e0dff09b8883a0e1e953fbb05a09490a310a6b172937eb7ab277e81f3471cf4be2097da188e7b999d0
   languageName: node
   linkType: hard
 
-"@ember/test-waiters@npm:^2.4.3 || ^3.0.0 || ^4.0.0, @ember/test-waiters@npm:~4.1.0":
+"@ember/test-waiters@npm:^2.4.3 || ^3.0.0 || ^4.0.0, @ember/test-waiters@npm:^3.1.0 || ^4.0.0, @ember/test-waiters@npm:~4.1.0":
   version: 4.1.0
   resolution: "@ember/test-waiters@npm:4.1.0"
   dependencies:
@@ -2118,7 +2115,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ember/test-waiters@npm:^3.0.2, @ember/test-waiters@npm:^3.1.0":
+"@ember/test-waiters@npm:^3.1.0":
   version: 3.1.0
   resolution: "@ember/test-waiters@npm:3.1.0"
   dependencies:
@@ -7993,7 +7990,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-auto-import@npm:2.10.0, ember-auto-import@npm:^2.2.4, ember-auto-import@npm:^2.4.1, ember-auto-import@npm:^2.6.0, ember-auto-import@npm:^2.6.3, ember-auto-import@npm:^2.7.0":
+"ember-auto-import@npm:2.10.0, ember-auto-import@npm:^2.2.4, ember-auto-import@npm:^2.4.1, ember-auto-import@npm:^2.6.3, ember-auto-import@npm:^2.7.0":
   version: 2.10.0
   resolution: "ember-auto-import@npm:2.10.0"
   dependencies:
@@ -18783,7 +18780,7 @@ __metadata:
     "@ember/optional-features": ~2.2.0
     "@ember/render-modifiers": ~3.0.0
     "@ember/string": ~4.0.1
-    "@ember/test-helpers": ~3.3.1
+    "@ember/test-helpers": ~5.2.1
     "@ember/test-waiters": ~4.1.0
     "@glimmer/component": ~1.1.2
     "@glimmer/tracking": ~1.1.2
