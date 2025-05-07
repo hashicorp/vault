@@ -24,7 +24,9 @@ module('Integration | Component | clients/date-range', function (hooks) {
     this.billingStartTime = '2018-01-01T14:15:30';
     this.retentionMonths = 48;
     this.onChange = Sinon.spy();
-    this.setEditModalVisible = Sinon.spy();
+    this.setEditModalVisible = Sinon.stub().callsFake((visible) => {
+      this.set('showEditModal', visible);
+    });
     this.showEditModal = false;
     this.renderComponent = async () => {
       await render(
