@@ -61,12 +61,9 @@ export default class AuthRoute extends ClusterRouteBase {
       return this.controllerFor('vault.cluster.auth').send('authSuccess', model.unwrapResponse);
     }
     const invalidQueryPram = !model.directLinkData;
-    const referencesType = !model.directLinkData?.hasMountData;
-    if (invalidQueryPram || referencesType) {
-      // redirect user and clear out the query param if it's invalid or just references type
-      this.router.replaceWith(this.routeName, {
-        queryParams: { authMount: null },
-      });
+    if (invalidQueryPram) {
+      // redirect user and clear out the query param if it's invalid
+      this.router.replaceWith(this.routeName, { queryParams: { authMount: null } });
     }
   }
 
