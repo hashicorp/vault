@@ -10,6 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECTORS = {
   label: '[data-test-text-file-label]',
@@ -97,9 +98,7 @@ module('Integration | Component | text-file', function (hooks) {
     await render(hbs`<TextFile @onChange={{this.onChange}} />`);
 
     await triggerEvent(SELECTORS.fileUpload, 'change', { files: [this.file] });
-    assert
-      .dom('[data-test-form-field-validation-error="text-file"]')
-      .hasText('There was a problem uploading. Please try again.');
+    assert.dom(GENERAL.inlineAlert).hasText('There was a problem uploading. Please try again.');
     assert.propEqual(
       this.onChange.lastCall.args[0],
       {

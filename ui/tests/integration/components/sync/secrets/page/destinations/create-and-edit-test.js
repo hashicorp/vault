@@ -224,7 +224,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     await this.renderFormComponent();
     await typeIn(PAGE.inputByAttr('teamId'), 'id');
     assert
-      .dom(PAGE.validationWarning('teamId'))
+      .dom(PAGE.validationWarningByAttr('teamId'))
       .doesNotExist('does not render warning validation for new vercel-project destination');
 
     // existing model
@@ -240,7 +240,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     await PAGE.form.fillInByAttr('teamId', '');
     await typeIn(PAGE.inputByAttr('teamId'), 'edit');
     assert
-      .dom(PAGE.validationWarning('teamId'))
+      .dom(PAGE.validationWarningByAttr('teamId'))
       .hasText(
         'Team ID should only be updated if the project was transferred to another account.',
         'it renders validation warning'
@@ -338,7 +338,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
         // only asserts validations for presence, refactor if validations change
         for (const attr in validationAssertions) {
           const { message } = validationAssertions[attr].find((v) => v.type === 'presence');
-          assert.dom(PAGE.validation(attr)).hasText(message, `renders validation: ${message}`);
+          assert.dom(PAGE.validationErrorByAttr(attr)).hasText(message, `renders validation: ${message}`);
         }
       });
     });
