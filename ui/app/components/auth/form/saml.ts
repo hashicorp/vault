@@ -96,9 +96,6 @@ export default class AuthFormSaml extends AuthBase {
     this.watchPopup.perform(samlWindow);
     this.watchCurrent.perform(samlWindow);
 
-    // TODO CMB - when wiring up components check if this is still necessary
-    // pass namespace from state back to AuthForm
-    // this.args.onNamespace(namespace);
     let resp;
     try {
       resp = await this.pollForToken(samlWindow, { path });

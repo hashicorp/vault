@@ -137,7 +137,7 @@ export default class AuthFormOidcJwt extends AuthBase {
 
   async continueLogin(data: JwtLoginData | OidcLoginData) {
     try {
-      // TODO backend should probably be path, but holding off refactor since api service may remove need all together
+      // TODO CMB backend should probably be path, but holding off refactor since api service may remove need all together
       // OIDC callback returns a token so authenticate with that
       const backend = this.isOIDC && 'token' in data ? 'token' : this.args.authType;
 
@@ -220,10 +220,6 @@ export default class AuthFormOidcJwt extends AuthBase {
     if (!path || !state || !code) {
       return this.cancelLogin(oidcWindow, ERROR_MISSING_PARAMS);
     }
-
-    // TODO CMB - when wiring up components check if this is still necessary
-    // pass namespace from state back to AuthForm
-    // this.args.onNamespace(namespace);
 
     let resp;
     // do the OIDC exchange, set the token and continue login flow

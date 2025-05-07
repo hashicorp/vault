@@ -45,7 +45,7 @@ export default Controller.extend({
   }).restartable(),
 
   actions: {
-    // TODO move to auth service?
+    // TODO CMB move to auth service?
     authSuccess({ isRoot, namespace }) {
       let transition;
       this.version.fetchVersion();

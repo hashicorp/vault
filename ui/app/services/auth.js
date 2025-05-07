@@ -261,7 +261,7 @@ export default Service.extend({
     return userRootNamespace;
   },
 
-  // TODO changes below are stopgaps until this method is un-abstracted
+  // TODO CMB changes below are stopgaps until this method is un-abstracted
   // end goal is for each auth method's component to handle setting relevant parameters.
   // this method should just accept an arg of data to persist from the response as well as:
   // 1. generate token name and set token data
