@@ -101,12 +101,9 @@ export default class AuthFormTemplate extends Component<Args> {
   // The "standard" selection is a dropdown listing all auth methods.
   // This getter determines whether to render an alternative view (e.g. tabs or a single mount).
   get showCustomAuthOptions() {
-    const hasMountData = this.args?.directLinkData?.hasMountData;
-    if (hasMountData && !this.showOtherMethods) {
-      return true;
-    }
-    // renders tabs if listing visibility is set and user has NOT clicked "Sign in with other"
-    if (this.args.hasVisibleAuthMounts && !this.showOtherMethods) {
+    // show if some sort of customization exists and user has NOT clicked "Sign in with other methods"
+    const hasLoginCustomization = this.args?.directLinkData?.hasMountData || this.args.hasVisibleAuthMounts;
+    if (hasLoginCustomization && !this.showOtherMethods) {
       return true;
     }
     return false;
