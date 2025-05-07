@@ -14,7 +14,7 @@ import type FlagsService from 'vault/services/flags';
 import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
 import type ClusterModel from 'vault/models/cluster';
-import type { AuthTabData } from 'vault/vault/auth/form';
+import type { AuthTabData, AuthTabMountData } from 'vault/vault/auth/form';
 import type { HTMLElementEvent } from 'vault/forms';
 
 /**
@@ -34,7 +34,8 @@ import type { HTMLElementEvent } from 'vault/forms';
  * @param {boolean} hasVisibleAuthMounts - whether or not any mounts have been tuned with listing_visibility="unauth"
  * @param {string} namespaceQueryParam - namespace query param from the url
  * @param {function} onSuccess - callback after the initial authentication request, if an mfa_requirement exists the parent renders the mfa form otherwise it fires the authSuccess action in the auth controller and handles transitioning to the app
- * @param {string} presetAuthType - auth type to preselect to in login form, set from either local storage (last method used to log in) or on canceled mfa validation
+ * @param {string} presetAuthType - auth type to preselect in the login form, set from either canceled mfa validation, "with" query param or local storage (last method used to log in)
+ * @param {object} directLinkData - mount data built from the "with" query param. If param is a mount path and maps to a visible mount, the login form defaults to this mount. Otherwise the form preselects the passed auth type.
  *
  * */
 
@@ -45,7 +46,8 @@ interface Args {
   hasVisibleAuthMounts: boolean;
   namespaceQueryParam: string;
   onSuccess: CallableFunction;
-  presetAuthType: string; // set by local storage or canceled MFA validation
+  presetAuthType: string; // set by canceled MFA validation, method type mapped to "with" query param or local storage
+  directLinkData: (AuthTabMountData & { hasMountData: boolean }) | null;
 }
 
 export default class AuthFormTemplate extends Component<Args> {
@@ -96,7 +98,13 @@ export default class AuthFormTemplate extends Component<Args> {
     return namespaceQueryParam;
   }
 
-  get renderTabs() {
+  // The "standard" selection is a dropdown listing all auth methods.
+  // This getter determines whether to render an alternative view (e.g. tabs or a single mount).
+  get showCustomAuthOptions() {
+    const hasMountData = this.args?.directLinkData?.hasMountData;
+    if (hasMountData && !this.showOtherMethods) {
+      return true;
+    }
     // renders tabs if listing visibility is set and user has NOT clicked "Sign in with other"
     if (this.args.hasVisibleAuthMounts && !this.showOtherMethods) {
       return true;
@@ -116,9 +124,9 @@ export default class AuthFormTemplate extends Component<Args> {
       this.setAuthType(this.args.presetAuthType);
     }
 
-    // INITIALLY RENDER TABS OR DROPDOWN
-    // render tabs if selectedAuthMethod is one, otherwise render dropdown (i.e. showOtherMethods = false)
+    // DETERMINES INITIAL RENDER: custom selection (direct link or tabs) vs dropdown
     if (this.args.hasVisibleAuthMounts) {
+      // render tabs if selectedAuthMethod is one, otherwise render dropdown (i.e. showOtherMethods = false)
       this.showOtherMethods = this.authTabTypes.includes(this.selectedAuthMethod) ? false : true;
     } else {
       this.showOtherMethods = false;
@@ -139,7 +147,7 @@ export default class AuthFormTemplate extends Component<Args> {
   toggleView() {
     this.showOtherMethods = !this.showOtherMethods;
 
-    if (this.renderTabs) {
+    if (this.showCustomAuthOptions) {
       const firstTab = this.authTabTypes[0] as string;
       this.setAuthType(firstTab);
     } else {

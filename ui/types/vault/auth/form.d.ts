@@ -8,7 +8,7 @@ export interface AuthTabData {
   [key: string]: AuthTabMountData[];
 }
 
-interface AuthTabMountData {
+export interface AuthTabMountData {
   path: string;
   type: string;
   description?: string;

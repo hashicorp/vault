@@ -10,7 +10,7 @@
   <Hds::Text::Body @tag="p" @color="faint">{{@description}} data-test-description</Hds::Text::Body>
 {{/if}}
 {{! the token auth method does't support custom paths so no need to render an input }}
-{{#if @renderInput}}
+{{#if @shouldRenderPath}}
   {{! path is hidden so it is submitted with FormData but does not clutter the login form }}
   <input type="hidden" id="path" name="path" value={{@path}} data-test-input="path" />
 {{/if}}

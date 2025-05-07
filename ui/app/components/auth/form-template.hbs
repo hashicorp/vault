@@ -36,17 +36,18 @@
           {{/if}}
         </:back>
 
-        {{! TABS OR DROPDOWN }}
+        {{! DIRECT LINK, TABS OR DROPDOWN }}
         <:authSelectOptions>
           <div class="has-bottom-margin-m">
-            {{#if this.renderTabs}}
-              {{#if @withDirectLink}}
-                {{! user has navigated with URL containing the with= query param, which replaces the "Tab" view }}
-                {{#let @withDirectLink as |mount|}}
+            {{#if this.showCustomAuthOptions}}
+              {{! URL contains "with" query param and it references a visible mount }}
+              {{! treat it as a "preferred" mount and hide all other tabs }}
+              {{#if @directLinkData.hasMountData}}
+                {{#let @directLinkData as |mount|}}
                   <Auth::SingleMount
                     @description={{mount.description}}
                     @path={{mount.path}}
-                    @renderInput={{not-eq @selectedAuthMethod "token"}}
+                    @shouldRenderPath={{not-eq @selectedAuthMethod "token"}}
                     @type={{this.displayName mount.type}}
                   />
                 {{/let}}
@@ -60,6 +61,7 @@
                 />
               {{/if}}
             {{else}}
+              {{! fallback view is the dropdown with all auth methods }}
               <Hds::Form::Select::Field
                 name="selectedAuthMethod"
                 {{on "input" this.setTypeFromDropdown}}
@@ -87,7 +89,7 @@
 
         <:advancedSettings>
           {{! tabs render their own mount path inputs and token does not support custom paths }}
-          {{#if (and (not this.renderTabs) (not-eq this.selectedAuthMethod "token"))}}
+          {{#if (and (not this.showCustomAuthOptions) (not-eq this.selectedAuthMethod "token"))}}
             <Hds::Reveal @text="Advanced settings" data-test-auth-form-options-toggle class="is-fullwidth">
               <Hds::Form::TextInput::Field name="path" data-test-input="path" as |F|>
                 <F.Label class="has-top-margin-m">Mount path</F.Label>
@@ -102,7 +104,7 @@
         </:advancedSettings>
 
         <:footer>
-          {{#if this.renderTabs}}
+          {{#if this.showCustomAuthOptions}}
             <Hds::Button
               {{on "click" this.toggleView}}
               @color="tertiary"

@@ -27,7 +27,7 @@
               <Auth::SingleMount
                 @description={{mount.description}}
                 @path={{mount.path}}
-                @renderInput={{not-eq @selectedAuthMethod "token"}}
+                @shouldRenderPath={{not-eq @selectedAuthMethod "token"}}
               />
             {{/let}}
           {{/if}}
