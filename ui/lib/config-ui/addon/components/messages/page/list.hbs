@@ -115,7 +115,7 @@
                 {{#if (has-capability @capabilities "update" pathKey="customMessages" params=message)}}
                   <dd.Interactive @route="messages.message.edit" @model={{message.id}}>Edit</dd.Interactive>
                 {{/if}}
-                {{#if (has-capability @capabilities "delete" id=message.id)}}
+                {{#if (has-capability @capabilities "delete" pathKey="customMessages" params=message)}}
                   <dd.Interactive
                     @color="critical"
                     {{on "click" (fn (mut this.messageToDelete) message)}}
