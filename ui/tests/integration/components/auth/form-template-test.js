@@ -26,26 +26,28 @@ module('Integration | Component | auth | form template', function (hooks) {
 
   hooks.beforeEach(function () {
     this.version = this.owner.lookup('service:version');
+    this.authTabData = null;
     this.cluster = { id: '1' };
+    this.directLinkData = null;
+    this.handleNamespaceUpdate = sinon.spy();
+    this.hasVisibleAuthMounts = false;
     this.namespaceQueryParam = '';
     this.oidcProviderQueryParam = '';
-    this.onAuthResponse = sinon.spy();
-    this.onNamespaceChange = sinon.spy();
+    this.onSuccess = sinon.spy();
     this.presetAuthType = '';
-    this.hasVisibleAuthMounts = false;
-    this.authTabData = null;
 
     this.renderComponent = () => {
       return render(hbs`
          <Auth::FormTemplate
+          @authTabData={{this.authTabData}}
           @cluster={{this.cluster}}
-          @handleNamespaceUpdate={{this.onNamespaceChange}}
+          @directLinkData={{this.directLinkData}}
+          @handleNamespaceUpdate={{this.handleNamespaceUpdate}}
+          @hasVisibleAuthMounts={{this.hasVisibleAuthMounts}}
           @namespaceQueryParam={{this.namespaceQueryParam}}
           @oidcProviderQueryParam={{this.oidcProviderQueryParam}}
-          @onSuccess={{this.onAuthResponse}}
+          @onSuccess={{this.onSuccess}}
           @presetAuthType={{this.presetAuthType}}
-          @hasVisibleAuthMounts={{this.hasVisibleAuthMounts}}
-          @authTabData={{this.authTabData}}
         />`);
     };
   });
@@ -62,6 +64,19 @@ module('Integration | Component | auth | form template', function (hooks) {
     assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap');
     assert.dom(GENERAL.inputByAttr('username')).exists();
     assert.dom(GENERAL.inputByAttr('password')).exists();
+  });
+
+  test('it selects type in the dropdown if @directLinkData data just contains type', async function (assert) {
+    this.directLinkData = { type: 'oidc', hasMountData: false };
+    // set by parent (auth/page.js) component so stubbing here
+    this.presetAuthType = this.directLinkData.type;
+    await this.renderComponent();
+    assert.dom(GENERAL.selectByAttr('auth type')).hasValue('oidc');
+    assert.dom(GENERAL.inputByAttr('role')).exists();
+    await click(AUTH_FORM.advancedSettings);
+    assert.dom(GENERAL.inputByAttr('path')).exists();
+    assert.dom(GENERAL.backButton).doesNotExist();
+    assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('"Sign in with other methods" does not render');
   });
 
   test('it does not show toggle buttons when listing visibility is not set', async function (assert) {
@@ -185,10 +200,10 @@ module('Integration | Component | auth | form template', function (hooks) {
       });
     });
 
-    test('it renders a readonly input if only one mount path is returned', async function (assert) {
+    test('it renders hidden input if only one mount path is returned', async function (assert) {
       await this.renderComponent();
       await click(AUTH_FORM.tabBtn('oidc'));
-      assert.dom(GENERAL.inputByAttr('path')).hasAttribute('readonly');
+      assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
       assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
     });
 
@@ -231,7 +246,7 @@ module('Integration | Component | auth | form template', function (hooks) {
     test('it preselects tab if @presetAuthType is a tab', async function (assert) {
       this.presetAuthType = 'oidc';
       await this.renderComponent();
-      assert.dom(AUTH_FORM.authForm('oidc')).exists('oidc tab is selected');
+      assert.dom(AUTH_FORM.authForm('oidc')).exists('oidc form renders');
       assert.dom(AUTH_FORM.tabBtn('oidc')).hasAttribute('aria-selected', 'true');
     });
 
@@ -243,6 +258,45 @@ module('Integration | Component | auth | form template', function (hooks) {
       assert.dom(GENERAL.inputByAttr('password')).exists();
 
       assert.dom(GENERAL.backButton).exists('"Back" button renders');
+      assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('"Sign in with other methods" does not render');
+    });
+
+    // if mount data exists, the mount has listing_visibility="unauth"
+    test('it renders single mount view instead of tabs if @directLinkData data exists and includes mount data', async function (assert) {
+      this.directLinkData = { path: 'my-oidc/', type: 'oidc', hasMountData: true };
+      // set by parent (auth/page.js) component
+      this.presetAuthType = this.directLinkData.type;
+      await this.renderComponent();
+      assert.dom(AUTH_FORM.preferredMethod('OIDC')).hasText('OIDC', 'it renders mount type');
+      assert.dom(GENERAL.inputByAttr('role')).exists();
+      assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
+      assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
+      assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders');
+
+      assert.dom(AUTH_FORM.tabBtn('oidc')).doesNotExist('tab does not render');
+      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist();
+      assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
+      assert.dom(GENERAL.backButton).doesNotExist();
+    });
+
+    test('it does not render tabs if @directLinkData data exists and just includes type', async function (assert) {
+      // set a type that is NOT in a visible mount because mount data exists otherwise
+      this.directLinkData = { type: 'ldap', hasMountData: false };
+      this.presetAuthType = this.directLinkData.type;
+      await this.renderComponent();
+
+      assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap', 'dropdown has type selected');
+      assert.dom(AUTH_FORM.authForm('ldap')).exists();
+      assert.dom(GENERAL.inputByAttr('username')).exists();
+      assert.dom(GENERAL.inputByAttr('password')).exists();
+      await click(AUTH_FORM.advancedSettings);
+      assert.dom(GENERAL.inputByAttr('path')).exists();
+
+      assert.dom(AUTH_FORM.preferredMethod('LDAP')).doesNotExist('single mount view does not render');
+      assert.dom(AUTH_FORM.tabBtn('ldap')).doesNotExist('tab does not render');
+      assert
+        .dom(GENERAL.backButton)
+        .exists('back button renders because listing_visibility="unauth" for other mounts');
       assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('"Sign in with other methods" does not render');
     });
   });

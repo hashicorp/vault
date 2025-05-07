@@ -10,7 +10,7 @@ import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
-import { fillInLoginFields } from 'vault/tests/helpers/auth/auth-helpers';
+import { fillInLoginFields, VISIBLE_MOUNTS } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CSP_ERROR } from 'vault/components/auth/page';
 
@@ -24,12 +24,13 @@ module('Integration | Component | auth | page', function (hooks) {
     this.onAuthSuccess = sinon.spy();
     this.onNamespaceUpdate = sinon.spy();
     this.visibleAuthMounts = false;
+    this.directLinkData = null;
 
     this.renderComponent = () => {
       return render(hbs`
         <Auth::Page
-          @authMethodQueryParam={{this.authQp}}
           @cluster={{this.cluster}}
+          @directLinkData={{this.directLinkData}}
           @namespaceQueryParam={{this.nsQp}}
           @oidcProviderQueryParam={{this.providerQp}}
           @onAuthSuccess={{this.onAuthSuccess}}
@@ -95,47 +96,64 @@ module('Integration | Component | auth | page', function (hooks) {
     assert.strictEqual(actual, 'mynamespace', `onNamespaceUpdate called with: ${actual}`);
   });
 
-  test('it formats tab data if visible auth mounts exist', async function (assert) {
-    this.visibleAuthMounts = {
-      'userpass/': {
-        description: '',
-        options: {},
-        type: 'userpass',
-      },
-      'userpass2/': {
-        description: '',
-        options: {},
-        type: 'userpass',
-      },
-      'my-oidc/': {
-        description: '',
-        options: {},
-        type: 'oidc',
-      },
-      'token/': {
-        description: 'token based credentials',
-        options: null,
-        type: 'token',
-      },
-    };
-    await this.renderComponent();
-    const expectedTabs = [
-      { type: 'userpass', display: 'Userpass' },
-      { type: 'oidc', display: 'OIDC' },
-      { type: 'token', display: 'Token' },
-    ];
-
-    assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
-    // there are 4 mount paths returned in the stubbed sys/internal/ui/mounts response above,
-    // but two are of the same type so only expect 3 tabs
-    assert.dom(AUTH_FORM.tabs()).exists({ count: 3 }, 'it groups mount paths by type and renders 3 tabs');
-    expectedTabs.forEach((m) => {
-      assert.dom(AUTH_FORM.tabs(m.type)).exists(`${m.type} renders as a tab`);
-      assert.dom(AUTH_FORM.tabs(m.type)).hasText(m.display, `${m.type} renders expected display name`);
+  module('listing visibility', function (hooks) {
+    hooks.beforeEach(function () {
+      this.visibleAuthMounts = VISIBLE_MOUNTS;
     });
-    assert
-      .dom(AUTH_FORM.tabBtn('userpass'))
-      .hasAttribute('aria-selected', 'true', 'it selects the first type by default');
+
+    test('it formats tab data if visible auth mounts exist', async function (assert) {
+      await this.renderComponent();
+      const expectedTabs = [
+        { type: 'userpass', display: 'Userpass' },
+        { type: 'oidc', display: 'OIDC' },
+        { type: 'token', display: 'Token' },
+      ];
+
+      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
+      // there are 4 mount paths returned in visibleAuthMounts above,
+      // but two are of the same type so only expect 3 tabs
+      assert.dom(AUTH_FORM.tabs()).exists({ count: 3 }, 'it groups mount paths by type and renders 3 tabs');
+      expectedTabs.forEach((m) => {
+        assert.dom(AUTH_FORM.tabs(m.type)).exists(`${m.type} renders as a tab`);
+        assert.dom(AUTH_FORM.tabs(m.type)).hasText(m.display, `${m.type} renders expected display name`);
+      });
+      assert
+        .dom(AUTH_FORM.tabBtn('userpass'))
+        .hasAttribute('aria-selected', 'true', 'it selects the first type by default');
+    });
+
+    test('it selects type in the dropdown if @directLinkData references NON visible type', async function (assert) {
+      this.directLinkData = { type: 'ldap', hasMountData: false };
+      await this.renderComponent();
+      assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap', 'dropdown has type selected');
+      assert.dom(AUTH_FORM.authForm('ldap')).exists();
+      assert.dom(GENERAL.inputByAttr('username')).exists();
+      assert.dom(GENERAL.inputByAttr('password')).exists();
+      await click(AUTH_FORM.advancedSettings);
+      assert.dom(GENERAL.inputByAttr('path')).exists();
+
+      assert.dom(AUTH_FORM.preferredMethod('LDAP')).doesNotExist('single mount view does not render');
+      assert.dom(AUTH_FORM.tabBtn('ldap')).doesNotExist('tab does not render');
+      assert
+        .dom(GENERAL.backButton)
+        .exists('back button renders because listing_visibility="unauth" for other mounts');
+      assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('"Sign in with other methods" does not render');
+    });
+
+    test('it renders single mount view instead of tabs if @directLinkData data references a visible type', async function (assert) {
+      this.directLinkData = { path: 'my-oidc/', type: 'oidc', hasMountData: true };
+      await this.renderComponent();
+      assert.dom(AUTH_FORM.preferredMethod('OIDC')).hasText('OIDC', 'it renders mount type');
+      assert.dom(GENERAL.inputByAttr('role')).exists();
+      assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
+      assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
+      assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders');
+
+      assert.dom(AUTH_FORM.tabBtn('oidc')).doesNotExist('tab does not render');
+      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist();
+      assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
+      assert.dom(GENERAL.backButton).doesNotExist();
+    });
   });
 
   const REQUEST_DATA = {

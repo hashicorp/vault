@@ -127,3 +127,26 @@ export const AUTH_METHOD_MAP = [
   // ENTERPRISE ONLY
   { authType: 'saml', options: LOGIN_DATA.saml },
 ];
+
+export const VISIBLE_MOUNTS = {
+  'userpass/': {
+    description: '',
+    options: {},
+    type: 'userpass',
+  },
+  'userpass2/': {
+    description: '',
+    options: {},
+    type: 'userpass',
+  },
+  'my-oidc/': {
+    description: '',
+    options: {},
+    type: 'oidc',
+  },
+  'token/': {
+    description: 'token based credentials',
+    options: null,
+    type: 'token',
+  },
+};

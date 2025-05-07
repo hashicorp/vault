@@ -7,10 +7,12 @@ import { service } from '@ember/service';
 import ClusterRouteBase from './cluster-route-base';
 import config from 'vault/config/environment';
 import { isEmptyValue } from 'core/helpers/is-empty-value';
+import { supportedTypes } from 'vault/utils/supported-login-methods';
+import { sanitizePath } from 'core/utils/sanitize-path';
 
 export default class AuthRoute extends ClusterRouteBase {
   queryParams = {
-    authMethod: { replace: true },
+    authMount: { replace: true, refreshModel: true },
     wrapped_token: { refreshModel: true },
   };
 
@@ -35,26 +37,33 @@ export default class AuthRoute extends ClusterRouteBase {
     }
 
     const visibleAuthMounts = await this.fetchMounts();
+    const authMount = params?.authMount;
+
     return {
       clusterModel,
       visibleAuthMounts,
+      directLinkData: authMount ? this.getMountOrTypeData(authMount, visibleAuthMounts) : null,
     };
   }
 
-  resetController(controller) {
-    controller.set('authMethod', 'token');
-  }
-
-  afterModel(model) {
-    if (model?.unwrapResponse) {
-      // handles the transition
-      return this.controllerFor('vault.cluster.auth').send('authSuccess', model.unwrapResponse);
-    }
+  afterModel() {
     if (config.welcomeMessage) {
       this.flashMessages.info(config.welcomeMessage, {
         sticky: true,
         priority: 300,
       });
+    }
+  }
+
+  redirect(model) {
+    if (model?.unwrapResponse) {
+      // handles the transition
+      return this.controllerFor('vault.cluster.auth').send('authSuccess', model.unwrapResponse);
+    }
+    const invalidQueryPram = !model.directLinkData;
+    if (invalidQueryPram) {
+      // redirect user and clear out the query param if it's invalid
+      this.router.replaceWith(this.routeName, { queryParams: { authMount: null } });
     }
   }
 
@@ -85,5 +94,25 @@ export default class AuthRoute extends ClusterRouteBase {
       // swallow the error if there's an error fetching mount data (i.e. invalid namespace)
       return null;
     }
+  }
+
+  /*
+    In older versions of Vault, the "with" query param could refer to either the auth mount path or the type
+    (which may be the same, since the default mount path *is* the type). 
+    For backward compatibility, we handle both scenarios.
+    → If `authMount` matches a visible auth mount, return its mount data (which includes the type).
+    → If it matches a supported auth type instead, return just the type to preselect it in the dropdown.
+  */
+  getMountOrTypeData(authMount, visibleAuthMounts) {
+    if (visibleAuthMounts?.[authMount]) {
+      return { path: authMount, ...visibleAuthMounts[authMount], hasMountData: true };
+    }
+    const types = supportedTypes(this.version.isEnterprise);
+    if (types.includes(sanitizePath(authMount))) {
+      return { type: authMount, hasMountData: false };
+    }
+    // `type` is necessary because it determines which login fields to render.
+    // If we can't safely glean it from the query param, ignore it and return null
+    return null;
   }
 }

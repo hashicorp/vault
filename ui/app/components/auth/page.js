@@ -10,20 +10,21 @@ import { action } from '@ember/object';
 
 /**
  * @module AuthPage
- * The Auth::Page is the route template for the login splash view. It renders the Auth::LoginForm or MFA component if an 
- * mfa validation is returned from the auth request. It also handles display logic if there is an oidc provider query param.
+ * The Auth::Page is the route template for the login splash view. It renders the Auth::FormTemplate or MFA component if an
+ * mfa validation is returned from the auth request. It also formats mount data to manage what tabs are rendered in Auth::FormTemplate.
  *
  * @example
  * <Auth::Page
- * @authMethodQueryParam={{this.authMethod}}
- * @cluster={{this.model}}
- * @namespaceQueryParam={{this.namespaceQueryParam}}
- * @oidcProviderQueryParam={{this.oidcProvider}}
- * @onAuthSuccess={{action "authSuccess"}}
- * @onNamespaceUpdate={{perform this.updateNamespace}}
-/>
- * 
- * @param {string} authMethodQueryParam - auth method type to login with, updated by selecting an auth method from the dropdown
+ *  @cluster={{this.model.clusterModel}}
+ *  @namespaceQueryParam={{this.namespaceQueryParam}}
+ *  @oidcProviderQueryParam={{this.oidcProvider}}
+ *  @onAuthSuccess={{action "authSuccess"}}
+ *  @onNamespaceUpdate={{perform this.updateNamespace}}
+ *  @visibleAuthMounts={{this.model.visibleAuthMounts}}
+ *  @directLinkData={{this.model.directLinkData}}
+ * />
+ *
+ * @param {string} directLinkData - type or mount data gleaned from query param
  * @param {object} cluster - the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
  * @param {string} namespaceQueryParam - namespace to login with, updated by typing in to the namespace input
  * @param {string} oidcProviderQueryParam - oidc provider query param, set in url as "?o=someprovider"
@@ -64,8 +65,10 @@ export default class AuthPage extends Component {
   }
 
   get presetAuthType() {
-    // getAuthType returns the last used auth method from local storage
-    return this.canceledMfaAuth || this.auth.getAuthType();
+    // first canceledMfaAuth because that's from a user canceling mfa validation.
+    // then directLinkData url contains "with" query param specifying a mount path.
+    // fallback to getAuthType which is the last used auth method from local storage.
+    return this.canceledMfaAuth || this.args.directLinkData?.type || this.auth.getAuthType();
   }
 
   @action

@@ -14,8 +14,8 @@
   </Hds::ApplicationState>
 {{else}}
   <Auth::Page
-    @authMethodQueryParam={{this.authMethod}}
     @cluster={{this.model.clusterModel}}
+    @directLinkData={{this.model.directLinkData}}
     @namespaceQueryParam={{this.namespaceQueryParam}}
     @oidcProviderQueryParam={{this.oidcProvider}}
     @onAuthSuccess={{action "authSuccess"}}
