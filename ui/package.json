@@ -114,7 +114,7 @@
     "ember-engines": "0.8.23",
     "ember-exam": "~9.1.0",
     "ember-inflector": "5.0.2",
-    "ember-load-initializers": "~2.1.2",
+    "ember-load-initializers": "~3.0.1",
     "ember-modal-dialog": "~4.1.5",
     "ember-modifier": "~4.2.0",
     "ember-page-title": "~8.2.4",

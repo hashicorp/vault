@@ -8073,7 +8073,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-cli-babel@npm:^7.1.2, ember-cli-babel@npm:^7.10.0, ember-cli-babel@npm:^7.13.0, ember-cli-babel@npm:^7.18.0, ember-cli-babel@npm:^7.22.1, ember-cli-babel@npm:^7.23.0, ember-cli-babel@npm:^7.26.11, ember-cli-babel@npm:^7.26.3, ember-cli-babel@npm:^7.26.4, ember-cli-babel@npm:^7.26.6, ember-cli-babel@npm:^7.5.0, ember-cli-babel@npm:^7.7.3":
+"ember-cli-babel@npm:^7.1.2, ember-cli-babel@npm:^7.10.0, ember-cli-babel@npm:^7.18.0, ember-cli-babel@npm:^7.22.1, ember-cli-babel@npm:^7.23.0, ember-cli-babel@npm:^7.26.11, ember-cli-babel@npm:^7.26.3, ember-cli-babel@npm:^7.26.4, ember-cli-babel@npm:^7.26.6, ember-cli-babel@npm:^7.5.0, ember-cli-babel@npm:^7.7.3":
   version: 7.26.11
   resolution: "ember-cli-babel@npm:7.26.11"
   dependencies:
@@ -8824,13 +8824,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-load-initializers@npm:~2.1.2":
-  version: 2.1.2
-  resolution: "ember-load-initializers@npm:2.1.2"
-  dependencies:
-    ember-cli-babel: ^7.13.0
-    ember-cli-typescript: ^2.0.2
-  checksum: 104b38cb4b755894b65d39ab94f316bdb1b571884b8e52118ced0bfeb06de8e3e7685dcc4579fd8dae57fc6c62e2e50df042e782e960565e05a4cf4eaf6db337
+"ember-load-initializers@npm:~3.0.1":
+  version: 3.0.1
+  resolution: "ember-load-initializers@npm:3.0.1"
+  peerDependencies:
+    ember-source: ">= 5"
+  checksum: 67d66085792585cd3674602c92a07a21033a15d0af33423dd94f5c9468824d4bf77860aed986f87e14250e0102e80277e3413d288ff7788cba4f93761588b79d
   languageName: node
   linkType: hard
 
@@ -18807,7 +18806,7 @@ __metadata:
     ember-engines: 0.8.23
     ember-exam: ~9.1.0
     ember-inflector: 5.0.2
-    ember-load-initializers: ~2.1.2
+    ember-load-initializers: ~3.0.1
     ember-modal-dialog: ~4.1.5
     ember-modifier: ~4.2.0
     ember-page-title: ~8.2.4
