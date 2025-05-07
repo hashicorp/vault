@@ -32,7 +32,7 @@ export default class LoginSettingsList extends Component {
       const adapter = this.store.adapterFor('application');
 
       await adapter.ajax(`/v1/sys/config/ui/login/default-auth/${encodeURI(this.ruleToDelete.id)}`, 'DELETE');
-      this.flashMessages.success(`Successfully deleted rule ${this.ruleToDelete.id}`);
+      this.flashMessages.success(`Successfully deleted rule ${this.ruleToDelete.id}.`);
 
       this.router.transitionTo('vault.cluster.config-ui.login-settings');
     } catch (error) {

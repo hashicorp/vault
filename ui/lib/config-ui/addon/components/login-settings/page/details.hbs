@@ -17,7 +17,7 @@
   <nav class="tabs" aria-label="navigation for rule details">
     <ul>
       <li>
-        <LinkTo @route="login-settings.rule.details" @model={{@rule}} data-test-rule-tab>
+        <LinkTo @route="login-settings.rule.details" @model={{@rule}} data-test-tab="rule">
           Details
         </LinkTo>
       </li>
@@ -43,18 +43,19 @@
     {{else if (eq key "backup_auth_types")}}
       <InfoTableRow @alwaysRender={{true}} @label="Backup methods" @value={{value}} />
     {{else if (eq key "disable_inheritance")}}
-      <InfoTableRow @alwaysRender={{true}} @defaultShown={{true}} @label="Inheritance" @value={{stringify (not value)}} />
+      <InfoTableRow @alwaysRender={{true}} @label="Inheritance" @value={{stringify (not value)}} />
     {{else}}
       <InfoTableRow @alwaysRender={{true}} @label={{capitalize key}} @value={{value}} />
     {{/if}}
   {{/each-in}}
 
 {{else}}
-  {{#if @error}}
-    <Page::Error @error={{@error}} />
-  {{else}}
-    <EmptyState @title="No rule found" @message="The rule you are looking for does not exist." data-test-empty-state />
-  {{/if}}
+  <EmptyState
+    data-test-empty-state="rule-details"
+    @title="No rule found"
+    @message="The rule you are looking for does not exist."
+  />
+
 {{/if}}
 
 {{#if this.showConfirmModal}}

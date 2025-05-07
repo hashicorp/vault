@@ -26,13 +26,13 @@
     <div class="linked-block-popup-menu">
       <Hds::Dropdown @isInline={{true}} as |dd|>
         <dd.ToggleIcon @icon="more-horizontal" @hasChevron={{false}} @text="login rules menu" data-test-popup-menu-trigger />
-        <dd.Interactive @route="login-settings.rule.details" @model={{rule.id}} data-test-view-rule-trigger>
+        <dd.Interactive @route="login-settings.rule.details" @model={{rule.id}} data-test-popup-menu="view-rule">
           View
         </dd.Interactive>
         {{#if (has-capability this.capabilities "delete" id=rule.id)}}
           <dd.Interactive
             @color="critical"
-            data-test-confirm-action-trigger
+            data-test-popup-menu="delete-rule"
             {{on "click" (fn (mut this.ruleToDelete) rule)}}
           >Delete</dd.Interactive>
         {{/if}}

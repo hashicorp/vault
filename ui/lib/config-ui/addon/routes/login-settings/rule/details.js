@@ -18,16 +18,12 @@ export default class LoginSettingsRuleDetailsRoute extends Route {
   }
 
   async model() {
-    try {
-      const { name } = this.paramsFor('login-settings.rule');
+    const { name } = this.paramsFor('login-settings.rule');
 
-      const adapter = this.store.adapterFor('application');
-      const rule = await adapter.ajax(`/v1/sys/config/ui/login/default-auth/${encodeURI(name)}`, 'GET');
+    const adapter = this.store.adapterFor('application');
+    const rule = await adapter.ajax(`/v1/sys/config/ui/login/default-auth/${encodeURI(name)}`, 'GET');
 
-      return { rule: rule.data };
-    } catch (error) {
-      return { rule: {}, error };
-    }
+    return { rule: rule.data };
   }
 
   setupController(controller, resolvedModel) {
