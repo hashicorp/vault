@@ -75,7 +75,10 @@ Fail if the requested TTL increment cannot be fully fulfilled:
 $ vault token renew -increment=30m hvs.CAESIJk8P_ieg6Oyf9c92rl0S5j1mdMh7docAoHVS2q7UQ8bGh4KHGh2cy5uQ3dNQUhvbnFhTWl5cVJpMGxpVDhMZWU --fail-if-not-fulfilled || vault login
 ```
 
-**Note:** You can renew a token using either the token itself or its accessor. The token_accessor provides a way to perform certain operations (like renewal) without requiring the actual sensitive token value. This is useful for managing tokens without needing to handle the secret token itself.
+You can renew tokens using the token itself or the associated accessor.
+The `token_accessor` parameter lets you perform limited operations (like
+renewal) without requiring sensitive data so you can manage  tokens
+without handling the secret token itself.
 
 ## Usage
 
