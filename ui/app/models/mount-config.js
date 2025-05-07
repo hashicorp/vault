@@ -33,9 +33,11 @@ export default class MountConfigModel extends Model {
   auditNonHmacResponseKeys;
 
   @attr('mountVisibility', {
-    editType: 'boolean',
-    label: 'List method when unauthenticated',
-    defaultValue: false,
+    label: 'Use as preferred UI login method',
+    editType: 'toggleButton',
+    helperTextEnabled: 'Shown as the default login method on the unauthenticated UI login endpoint.',
+    helperTextDisabled:
+      'Turn on the toggle to use this auth mount as the preferred login method during UI login.',
   })
   listingVisibility;
 
