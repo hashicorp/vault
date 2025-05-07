@@ -46,11 +46,7 @@ export default class AuthRoute extends ClusterRouteBase {
     };
   }
 
-  afterModel(model) {
-    if (model?.unwrapResponse) {
-      // handles the transition
-      return this.controllerFor('vault.cluster.auth').send('authSuccess', model.unwrapResponse);
-    }
+  afterModel() {
     if (config.welcomeMessage) {
       this.flashMessages.info(config.welcomeMessage, {
         sticky: true,
@@ -60,6 +56,10 @@ export default class AuthRoute extends ClusterRouteBase {
   }
 
   redirect(model) {
+    if (model?.unwrapResponse) {
+      // handles the transition
+      return this.controllerFor('vault.cluster.auth').send('authSuccess', model.unwrapResponse);
+    }
     const invalidQueryPram = !model.directLinkData;
     const referencesType = !model.directLinkData?.hasMountData;
     if (invalidQueryPram || referencesType) {
