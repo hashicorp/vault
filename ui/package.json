@@ -80,7 +80,7 @@
     "broccoli-sri-hash": "meirish/broccoli-sri-hash#rooturl",
     "codemirror": "~5.65.19",
     "columnify": "~1.6.0",
-    "concurrently": "~8.2.2",
+    "concurrently": "~9.1.2",
     "d3-array": "~3.2.4",
     "d3-axis": "~3.0.0",
     "d3-format": "~3.1.0",
