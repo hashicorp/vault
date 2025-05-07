@@ -30,10 +30,10 @@ export default class HasCapabilityHelper extends Helper {
     // since the default is to return true we need to validate the inputs here more thoroughly
     // this is to help devs from thinking that the checks are working properly when the capability lookup is actually failing
     if (!capabilitiesMap) {
-      throw new Error('Capabilities map is required as the first positional arg');
+      throw new Error('First positional argument must be the capabilities map.');
     }
     if (!types || !types.length) {
-      throw new Error('Capability types are required as positional args');
+      throw new Error('At least one capability type is required as a positional argument.');
     }
     const acceptedTypes = ['read', 'update', 'delete', 'list', 'create', 'patch', 'sudo'];
     const invalidTypes = types.filter((type) => !acceptedTypes.includes(type));
@@ -49,19 +49,17 @@ export default class HasCapabilityHelper extends Helper {
     }
 
     const path = this.capabilities.pathFor(pathKey, params);
-    if (path) {
-      const capabilities = capabilitiesMap[path];
+    const capabilities = capabilitiesMap[path];
 
-      if (capabilities) {
-        const method = all ? 'every' : 'some';
+    if (capabilities) {
+      const method = all ? 'every' : 'some';
 
-        return types[method]((type) => {
-          const key = `can${capitalize(type)}` as keyof Capabilities;
-          // default to true if type provided is not valid - edit rather than update for example
-          return !(key in capabilities) ? true : capabilities[key];
-        });
-      }
+      return types[method]((type) => {
+        const key = `can${capitalize(type)}` as keyof Capabilities;
+        return capabilities[key];
+      });
     }
+
     // similar to the Capabilities service, default to allow and the API will deny if needed
     return true;
   }

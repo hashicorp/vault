@@ -8,6 +8,10 @@ import { findDestination } from 'core/helpers/sync-destinations';
 import type { DestinationType, ListDestination } from 'vault/sync';
 import type { SystemListSyncDestinationsResponse } from '@hashicorp/vault-client-typescript';
 
+// transforms the systemListSyncDestinations response to a flat array
+// destination name and type are the only properties returned from the request
+// to satisfy the list views, combine this data with static properties icon and typeDisplayName
+// the flat array is then filtered by name and type if filter values are provided
 export const listDestinationsTransform = (
   response: SystemListSyncDestinationsResponse,
   nameFilter?: string,
@@ -15,13 +19,14 @@ export const listDestinationsTransform = (
 ) => {
   const { keyInfo } = response;
   const destinations: ListDestination[] = [];
-  // Build full destination objects from keyInfo
+  // build ListDestination objects from keyInfo
   for (const key in keyInfo) {
     // iterate through each type's destination names
     const names = (keyInfo as Record<string, string[]>)[key];
+    // remove trailing slash from key
+    const type = key.replace(/\/$/, '') as DestinationType;
+
     names?.forEach((name: string) => {
-      // remove trailing slash from key
-      const type = key.replace(/\/$/, '') as DestinationType;
       const id = `${type}/${name}`;
       const { icon, name: typeDisplayName } = findDestination(type) || {};
       // create object with destination's id and attributes
