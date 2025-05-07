@@ -9,7 +9,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { spy } from 'sinon';
 
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { runCmd } from 'vault/tests/helpers/commands';
@@ -38,7 +38,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
     this.uid = uuidv4();
     this.type = 'gcp';
     this.path = `GCP-${this.uid}`;
-    return authPage.login();
+    return login();
   });
 
   test('it should prompt configuration after mounting the GCP engine', async function (assert) {

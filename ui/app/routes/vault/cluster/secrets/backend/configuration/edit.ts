@@ -30,17 +30,13 @@ export default class SecretsBackendConfigurationEdit extends Route {
   @service declare readonly store: Store;
   @service declare readonly version: VersionService;
 
-  standardizedModelName(type: string, modelName: string) {
-    // to determine if there is an additional config model, we check if the modelName is the same as the second element in the array.
-    const path =
-      MOUNT_CONFIG_MODEL_NAMES[type] && MOUNT_CONFIG_MODEL_NAMES[type].length > 1
-        ? MOUNT_CONFIG_MODEL_NAMES[type][1]
-        : null;
-    if (modelName === path) {
-      return 'additional-config-model';
-    } else {
-      return 'mount-config-model';
-    }
+  standardizedModelName(type: string, modelName: string): string {
+    const modelNames = MOUNT_CONFIG_MODEL_NAMES[type];
+    // We check the second item in the modelNames array (if it exists)
+    // to determine if there's an additional config model for the given type.
+    const additionalModel = modelNames?.[1] ?? null;
+
+    return modelName === additionalModel ? 'additional-config-model' : 'mount-config-model';
   }
 
   async model() {
@@ -77,7 +73,8 @@ export default class SecretsBackendConfigurationEdit extends Route {
         } else {
           model[standardizedKey] = configModel;
         }
-      } catch (e: AdapterError) {
+      } catch (error) {
+        const e = error as AdapterError;
         // For most models if the adapter returns a 404, we want to create a new record.
         // The ssh secret engine however returns a 400 if the CA is not configured.
         // For ssh's 400 error, we want to create the CA config model.

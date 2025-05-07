@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentRouteName, currentURL, fillIn, visit } from '@ember/test-helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import mfaConfigHandler from 'vault/mirage/handlers/mfa-config';
 import { Response } from 'miragejs';
@@ -25,7 +25,7 @@ module('Acceptance | mfa-method', function (hooks) {
         methods = [...methods, ...this.server.db[`mfa${type}Methods`].where({})];
         return methods;
       }, []);
-    return authPage.login();
+    return login();
   });
 
   test('it should display landing page when no methods exist', async function (assert) {
@@ -66,7 +66,7 @@ module('Acceptance | mfa-method', function (hooks) {
     assert
       .dom(`[data-test-mfa-method-list-item="${model.id}"]`)
       .includesText(
-        `${model.name} ${model.id} Namespace: ${model.namespace_id}`,
+        `${model.name} ${model.id} Namespace: ${model.namespace_path}`,
         'Copy renders for list item'
       );
 
@@ -85,6 +85,17 @@ module('Acceptance | mfa-method', function (hooks) {
       'vault.cluster.access.mfa.methods.method.edit',
       'Edit more menu action transitions to method edit route'
     );
+  });
+
+  test('it should not display for the root namespace', async function (assert) {
+    await visit('/vault/access/mfa');
+    const methods = this.getMethods();
+    const duoModel = this.store.peekRecord('mfa-method', methods[1].id);
+    assert.strictEqual(duoModel.namespace_path, '', 'Namespace path is unset');
+    assert
+      .dom(`[data-test-mfa-method-list-item="${duoModel.id}"]`)
+      .includesText(`${duoModel.name} ${duoModel.id}`, 'Copy renders for list item without namespace path')
+      .doesNotContainText('Namespace:', 'Does not include the namespace label');
   });
 
   test('it should display method details', async function (assert) {

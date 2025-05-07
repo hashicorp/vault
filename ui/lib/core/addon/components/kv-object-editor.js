@@ -15,7 +15,7 @@ import {
   isNonString,
   NON_STRING_WARNING,
   WHITESPACE_WARNING,
-} from 'vault/utils/model-helpers/validators';
+} from 'vault/utils/forms/validators';
 
 /**
  * @module KvObjectEditor

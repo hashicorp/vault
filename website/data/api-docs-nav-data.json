@@ -18,10 +18,6 @@
         "path": "secret"
       },
       {
-        "title": "Active Directory",
-        "path": "secret/ad"
-      },
-      {
         "title": "AliCloud",
         "path": "secret/alicloud"
       },
@@ -573,6 +569,10 @@
       {
         "title": "<code>/sys/locked-users</code>",
         "path": "system/user-lockout"
+      },
+      {
+        "title": "<code>/sys/utilization-report</code>",
+        "path": "system/utilization-report"
       },
       {
         "title": "<code>/sys/loggers</code>",

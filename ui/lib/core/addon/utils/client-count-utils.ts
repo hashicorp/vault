@@ -239,9 +239,7 @@ export const sortMonthsByTimestamp = (monthsArray: ActivityMonthBlock[]) => {
 function monthIsEmpty(month: ActivityMonthBlock): month is ActivityMonthEmpty {
   return !month || month?.counts === null;
 }
-function monthWithoutNewCounts(month: ActivityMonthBlock): month is ActivityMonthNoNewClients {
-  return month?.counts !== null && month?.new_clients?.counts === null;
-}
+
 function monthWithAllCounts(month: ActivityMonthBlock): month is ActivityMonthStandard {
   return month?.counts !== null && month?.new_clients?.counts !== null;
 }

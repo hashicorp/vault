@@ -12,16 +12,16 @@ import { create } from 'ember-cli-page-object';
 
 import databaseHandlers from 'vault/mirage/handlers/database';
 import { setupApplicationTest } from 'vault/tests/helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import flashMessage from 'vault/tests/pages/components/flash-message';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 const flash = create(flashMessage);
 
 const PAGE = {
   // GENERIC
   emptyStateTitle: '[data-test-empty-state-title]',
-  emptyStateAction: '[data-test-secret-create="connections"]',
   infoRow: '[data-test-component="info-table-row"]',
   infoRowLabel: (label) => `[data-test-row-label="${label}"]`,
   infoRowValue: (label) => `[data-test-row-value="${label}"]`,
@@ -31,7 +31,7 @@ const PAGE = {
   confirmRotate: '[data-test-enable-rotate-connection]',
   skipRotate: '[data-test-enable-connection]',
   // ROLES
-  addRole: '[data-test-secret-create]',
+  addRole: '[data-test-add-role]',
   roleSettingsSection: '[data-test-role-settings-section]',
   statementsSection: '[data-test-statements-section]',
   editRole: '[data-test-edit-link]',
@@ -64,12 +64,12 @@ module('Acceptance | database workflow', function (hooks) {
     databaseHandlers(this.server);
     this.backend = `db-workflow-${uuidv4()}`;
     this.store = this.owner.lookup('service:store');
-    await authPage.login();
+    await login();
     await runCmd(mountEngineCmd('database', this.backend), false);
   });
 
   hooks.afterEach(async function () {
-    await authPage.login();
+    await login();
     return runCmd(deleteEngineCmd(this.backend));
   });
 
@@ -88,17 +88,18 @@ module('Acceptance | database workflow', function (hooks) {
           label: 'Root rotation statements',
           value: `Default`,
         },
+        { label: 'Rotate static roles immediately', value: 'Yes' },
       ];
     });
     test('create with rotate', async function (assert) {
-      assert.expect(24);
+      assert.expect(26);
       this.server.post('/:backend/rotate-root/:name', () => {
         assert.ok(true, 'rotate root called');
         new Response(204);
       });
       await visit(`/vault/secrets/${this.backend}/overview`);
       assert.dom(PAGE.emptyStateTitle).hasText('Connect a database', 'empty state title is correct');
-      await click(PAGE.emptyStateAction);
+      await click(SES.createSecretLink);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/create?itemType=connection`,
@@ -119,19 +120,23 @@ module('Acceptance | database workflow', function (hooks) {
       );
       assert.dom(PAGE.infoRow).exists({ count: this.expectedRows.length }, 'correct number of rows');
       this.expectedRows.forEach(({ label, value }) => {
+        const valueSelector =
+          label === 'Rotate static roles immediately'
+            ? PAGE.infoRowValueDiv(label)
+            : PAGE.infoRowValue(label);
         assert.dom(PAGE.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
-        assert.dom(PAGE.infoRowValue(label)).hasText(value, `Value for ${label} is correct`);
+        assert.dom(valueSelector).hasText(value, `Value for ${label} is correct`);
       });
     });
     test('create without rotate', async function (assert) {
-      assert.expect(23);
+      assert.expect(25);
       this.server.post('/:backend/rotate-root/:name', () => {
         assert.notOk(true, 'rotate root called when it should not have been');
         new Response(204);
       });
       await visit(`/vault/secrets/${this.backend}/overview`);
       assert.dom(PAGE.emptyStateTitle).hasText('Connect a database', 'empty state title is correct');
-      await click(PAGE.emptyStateAction);
+      await click(SES.createSecretLink);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/create?itemType=connection`,
@@ -152,12 +157,16 @@ module('Acceptance | database workflow', function (hooks) {
       );
       assert.dom(PAGE.infoRow).exists({ count: this.expectedRows.length }, 'correct number of rows');
       this.expectedRows.forEach(({ label, value }) => {
+        const valueSelector =
+          label === 'Rotate static roles immediately'
+            ? PAGE.infoRowValueDiv(label)
+            : PAGE.infoRowValue(label);
         assert.dom(PAGE.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
-        assert.dom(PAGE.infoRowValue(label)).hasText(value, `Value for ${label} is correct`);
+        assert.dom(valueSelector).hasText(value, `Value for ${label} is correct`);
       });
     });
     test('create failure', async function (assert) {
-      assert.expect(25);
+      assert.expect(27);
       this.server.post('/:backend/rotate-root/:name', (schema, req) => {
         const okay = req.params.name !== 'bad-connection';
         assert.ok(okay, 'rotate root called but not for bad-connection');
@@ -165,7 +174,7 @@ module('Acceptance | database workflow', function (hooks) {
       });
       await visit(`/vault/secrets/${this.backend}/overview`);
       assert.dom(PAGE.emptyStateTitle).hasText('Connect a database', 'empty state title is correct');
-      await click(PAGE.emptyStateAction);
+      await click(SES.createSecretLink);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/create?itemType=connection`,
@@ -192,15 +201,19 @@ module('Acceptance | database workflow', function (hooks) {
       );
       assert.dom(PAGE.infoRow).exists({ count: this.expectedRows.length }, 'correct number of rows');
       this.expectedRows.forEach(({ label, value }) => {
+        const valueSelector =
+          label === 'Rotate static roles immediately'
+            ? PAGE.infoRowValueDiv(label)
+            : PAGE.infoRowValue(label);
         assert.dom(PAGE.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
-        assert.dom(PAGE.infoRowValue(label)).hasText(value, `Value for ${label} is correct`);
+        assert.dom(valueSelector).hasText(value, `Value for ${label} is correct`);
       });
     });
 
     test('create connection with rotate failure', async function (assert) {
       await visit(`/vault/secrets/${this.backend}/overview`);
       assert.dom(PAGE.emptyStateTitle).hasText('Connect a database', 'empty state title is correct');
-      await click(PAGE.emptyStateAction);
+      await click(SES.createSecretLink);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/create?itemType=connection`,
@@ -225,7 +238,7 @@ module('Acceptance | database workflow', function (hooks) {
       );
     });
   });
-  module('roles', function (hooks) {
+  module('dynamic roles', function (hooks) {
     hooks.beforeEach(async function () {
       this.connection = `connect-${this.backend}`;
       await visit(`/vault/secrets/${this.backend}/create`);
@@ -341,6 +354,61 @@ module('Acceptance | database workflow', function (hooks) {
       assert
         .dom(PAGE.infoRowValue('Lease ID'))
         .hasText(`database/creds/${roleName}/abcd`, 'shows lease ID from response');
+    });
+  });
+
+  module('static roles', function (hooks) {
+    hooks.beforeEach(async function () {
+      this.setup = async ({ toggleRotateOff = false }) => {
+        this.connection = `connect-${this.backend}`;
+        await visit(`/vault/secrets/${this.backend}/create`);
+        await fillOutConnection(this.connection);
+        if (toggleRotateOff) {
+          await click('[data-test-toggle-input="toggle-skip_static_role_rotation_import"]');
+        }
+        await click(FORM.saveBtn);
+        await visit(`/vault/secrets/${this.backend}/show/${this.connection}`);
+      };
+    });
+
+    test('set parent db to rotate static roles immediately, verify static role reflects that default', async function (assert) {
+      await this.setup({ toggleRotateOff: false });
+
+      const roleName = 'static-role';
+      await click(PAGE.addRole);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.backend}/create?initialKey=${this.connection}&itemType=role`,
+        'Takes you to create role page'
+      );
+
+      await fillIn(FORM.inputByAttr('name'), roleName);
+
+      await fillIn(FORM.inputByAttr('type'), 'static');
+
+      assert
+        .dom('[data-test-toggle-subtext]')
+        .containsText(`Vault will rotate the password for this static role on creation.`);
+    });
+
+    test('set parent db to not rotate static roles immediately, verify static role reflects that default', async function (assert) {
+      await this.setup({ toggleRotateOff: true });
+
+      const roleName = 'static-role';
+      await click(PAGE.addRole);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.backend}/create?initialKey=${this.connection}&itemType=role`,
+        'Takes you to create role page'
+      );
+
+      await fillIn(FORM.inputByAttr('name'), roleName);
+
+      await fillIn(FORM.inputByAttr('type'), 'static');
+
+      assert
+        .dom('[data-test-toggle-subtext]')
+        .containsText(`Vault will not rotate this role's password on creation.`);
     });
   });
 });

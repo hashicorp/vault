@@ -1,3 +1,6 @@
+@use '../utils/color_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -16,12 +19,12 @@
   fill: var(--token-color-palette-blue-300);
 }
 .lineal-axis {
-  color: $ui-gray-500;
+  color: color_variables.$ui-gray-500;
   text {
     font-size: 0.75rem;
   }
   line {
-    color: $ui-gray-300;
+    color: color_variables.$ui-gray-300;
   }
 }
 .lineal-tooltip-position {
@@ -34,7 +37,7 @@
   transform: translate(calc(1px * var(--x, 0)), calc(-1px * var(--y, 0)));
   transform-origin: bottom left;
   z-index: 100;
-  margin-bottom: $spacing-8;
+  margin-bottom: size_variables.$spacing-8;
 }
 
 // @colorScale arg for Lineal::VBars is "blue-bar", indices are added by lineal

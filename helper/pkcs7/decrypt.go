@@ -52,15 +52,40 @@ func (p7 *PKCS7) DecryptUsingPSK(key []byte) ([]byte, error) {
 	return data.EncryptedContentInfo.decrypt(key)
 }
 
+func (p7 *PKCS7) GetEncryptionAlgo() (int, error) {
+	data, ok := p7.raw.(envelopedData)
+	if !ok {
+		return -1, ErrNotEncryptedContent
+	}
+
+	alg := data.EncryptedContentInfo.ContentEncryptionAlgorithm.Algorithm
+	return encryptedAlgoOidToConstant(alg)
+}
+
+// convert the Encrypted Algorithm OID to our internal constants for Encryption Algorithms
+func encryptedAlgoOidToConstant(alg asn1.ObjectIdentifier) (int, error) {
+	switch {
+	case alg.Equal(OIDEncryptionAlgorithmDESCBC):
+		return EncryptionAlgorithmDESCBC, nil
+	case alg.Equal(OIDEncryptionAlgorithmDESEDE3CBC):
+		return EncryptionAlgorithmDESEDE3CBC, nil
+	case alg.Equal(OIDEncryptionAlgorithmAES128CBC):
+		return EncryptionAlgorithmAES128CBC, nil
+	case alg.Equal(OIDEncryptionAlgorithmAES256CBC):
+		return EncryptionAlgorithmAES256CBC, nil
+	case alg.Equal(OIDEncryptionAlgorithmAES128GCM):
+		return EncryptionAlgorithmAES128GCM, nil
+	case alg.Equal(OIDEncryptionAlgorithmAES256GCM):
+		return EncryptionAlgorithmAES256GCM, nil
+	default:
+		return -1, ErrUnsupportedAlgorithm
+	}
+}
+
 func (eci encryptedContentInfo) decrypt(key []byte) ([]byte, error) {
 	alg := eci.ContentEncryptionAlgorithm.Algorithm
-	if !alg.Equal(OIDEncryptionAlgorithmDESCBC) &&
-		!alg.Equal(OIDEncryptionAlgorithmDESEDE3CBC) &&
-		!alg.Equal(OIDEncryptionAlgorithmAES256CBC) &&
-		!alg.Equal(OIDEncryptionAlgorithmAES128CBC) &&
-		!alg.Equal(OIDEncryptionAlgorithmAES128GCM) &&
-		!alg.Equal(OIDEncryptionAlgorithmAES256GCM) {
-		return nil, ErrUnsupportedAlgorithm
+	if _, err := encryptedAlgoOidToConstant(alg); err != nil {
+		return nil, err
 	}
 
 	// EncryptedContent can either be constructed of multple OCTET STRINGs

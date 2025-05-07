@@ -65,7 +65,7 @@ export default class VerticalBarStacked extends Component<Args> {
   }
 
   label(legendKey: string) {
-    return this.args.chartLegend.find((l: Legend) => l.key === legendKey).label;
+    return this.args.chartLegend.find((l: Legend) => l.key === legendKey)?.label;
   }
 
   get chartData() {
@@ -136,7 +136,7 @@ export default class VerticalBarStacked extends Component<Args> {
 
   tooltipY = (original: number) => (!original ? '0' : `${original}`);
 
-  formatTicksX = (timestamp: string): string => parseAPITimestamp(timestamp, 'M/yy');
+  formatTicksX = (timestamp: string): string => parseAPITimestamp(timestamp, 'M/yy') as string;
 
   formatTicksY = (num: number): string => numericalAxisLabel(num) || num.toString();
 }

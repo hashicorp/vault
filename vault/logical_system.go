@@ -546,6 +546,10 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		}
 	}
 
+	if resp := validateSha256IsEmptyForEntPluginVersion(pluginVersion, sha256); resp.IsError() {
+		return resp, nil
+	}
+
 	command := d.Get("command").(string)
 	ociImage := d.Get("oci_image").(string)
 	if command == "" && ociImage == "" {
@@ -4478,6 +4482,7 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 		return nil, fmt.Errorf("error trying to start a monitor that's already been started")
 	}
 
+	defer logical.IncrementResponseStatusCodeMetric(http.StatusOK)
 	w.WriteHeader(http.StatusOK)
 
 	// 0 byte write is needed before the Flush call so that if we are using
@@ -6488,7 +6493,7 @@ This path responds to the following HTTP methods.
 	},
 
 	"alias_identifier": {
-		`It is the name of the alias (user). For example, if the alias belongs to userpass backend, 
+		`It is the name of the alias (user). For example, if the alias belongs to userpass backend,
 	   the name should be a valid username within userpass auth method. If the alias belongs
 	    to an approle auth method, the name should be a valid RoleID`,
 		"",

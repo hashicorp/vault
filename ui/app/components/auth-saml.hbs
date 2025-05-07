@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 {{#if this.canLoginSaml}}
   <form id="auth-form" {{on "submit" (fn this.startSAMLAuth @onSubmit (hash role=@roleName))}}>
@@ -18,7 +18,7 @@
           id="role"
           class="input"
           type="text"
-          data-test-role
+          data-test-input="role"
         />
       </div>
       <AlertInline
@@ -33,7 +33,7 @@
     <Hds::Button
       @text="Sign in with SAML provider"
       @icon={{if @disabled "loading"}}
-      data-test-auth-submit={{true}}
+      data-test-auth-submit
       type="submit"
       disabled={{@disabled}}
       id="auth-submit"

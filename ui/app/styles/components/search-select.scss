@@ -1,3 +1,8 @@
+@use '../utils/box-shadow_variables';
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -15,7 +20,7 @@
 
 .ember-power-select-trigger {
   border: 0;
-  border-radius: $radius;
+  border-radius: size_variables.$radius;
   padding-right: 0;
 
   &--active {
@@ -43,13 +48,13 @@
   z-index: -1;
 
   &::after {
-    background: $white;
-    bottom: $spacing-4;
+    background: color_variables.$white;
+    bottom: size_variables.$spacing-4;
     content: '';
-    left: $spacing-4 + $spacing-24;
+    left: size_variables.$spacing-4 + size_variables.$spacing-24;
     position: absolute;
-    right: $spacing-4;
-    top: $spacing-4;
+    right: size_variables.$spacing-4;
+    top: size_variables.$spacing-4;
     z-index: -1;
   }
 }
@@ -57,16 +62,16 @@
 .ember-power-select-search-input {
   background: transparent;
   border: 0;
-  padding: $spacing-4 $spacing-12;
-  padding-left: $spacing-4 + $spacing-24;
+  padding: size_variables.$spacing-4 size_variables.$spacing-12;
+  padding-left: size_variables.$spacing-4 + size_variables.$spacing-24;
 }
 
 div > .ember-power-select-options {
-  background: $white;
-  border: $base-border;
-  box-shadow: $box-shadow-middle;
-  margin: -4px $spacing-8 0;
-  padding: $spacing-4 0;
+  background: color_variables.$white;
+  border: box-shadow_variables.$base-border;
+  box-shadow: box-shadow_variables.$box-shadow-middle;
+  margin: -4px size_variables.$spacing-8 0;
+  padding: size_variables.$spacing-4 0;
 
   .ember-power-select-option,
   .ember-power-select-option[aria-current='true'] {
@@ -76,20 +81,20 @@ div > .ember-power-select-options {
   }
 
   .ember-power-select-option[aria-current='true'] {
-    background-color: $ui-gray-050;
-    color: $ui-gray-900;
+    background-color: color_variables.$ui-gray-050;
+    color: color_variables.$ui-gray-900;
   }
 
   .ember-power-select-option--no-matches-message {
-    color: $grey;
-    font-size: $size-8;
-    font-weight: $font-weight-semibold;
+    color: color_variables.$grey;
+    font-size: size_variables.$size-8;
+    font-weight: font_variables.$font-weight-semibold;
     text-transform: uppercase;
 
     &:hover,
     &:focus {
       background: transparent;
-      color: $grey;
+      color: color_variables.$grey;
     }
   }
 }
@@ -97,28 +102,28 @@ div > .ember-power-select-options {
 .search-select-list-item {
   align-items: center;
   display: flex;
-  padding: $spacing-4;
+  padding: size_variables.$spacing-4;
   justify-content: space-between;
-  border-bottom: $light-border;
+  border-bottom: box-shadow_variables.$light-border;
 
   .list-item-text {
     max-width: 200px;
   }
 
   .control .button {
-    color: $grey-light;
+    color: color_variables.$grey-light;
     min-width: auto;
 
     &:hover,
     &:focus {
-      color: $blue;
+      color: color_variables.$blue;
     }
   }
 }
 
 .search-select-list-key {
   color: var(--token-color-foreground-faint);
-  font-size: $size-8;
+  font-size: size_variables.$size-8;
 }
 
 .ember-power-select-dropdown.ember-basic-dropdown-content {

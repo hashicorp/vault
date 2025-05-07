@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-discover"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
@@ -107,6 +108,8 @@ type Config struct {
 	LogRequestsLevelRaw interface{} `hcl:"log_requests_level"`
 
 	DetectDeadlocks string `hcl:"detect_deadlocks"`
+
+	ObservationSystemLedgerPath string `hcl:"observation_system_ledger_path"`
 
 	ImpreciseLeaseRoleTracking bool `hcl:"imprecise_lease_role_tracking"`
 
@@ -412,6 +415,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.DetectDeadlocks = c.DetectDeadlocks
 	if c2.DetectDeadlocks != "" {
 		result.DetectDeadlocks = c2.DetectDeadlocks
+	}
+
+	result.ObservationSystemLedgerPath = c.ObservationSystemLedgerPath
+	if c2.ObservationSystemLedgerPath != "" {
+		result.ObservationSystemLedgerPath = c2.ObservationSystemLedgerPath
 	}
 
 	result.ImpreciseLeaseRoleTracking = c.ImpreciseLeaseRoleTracking
@@ -993,11 +1001,11 @@ func ParseStorage(result *Config, list *ast.ObjectList, name string) error {
 
 	// Override with top-level values if they are set
 	if result.APIAddr != "" {
-		redirectAddr = result.APIAddr
+		redirectAddr = configutil.NormalizeAddr(result.APIAddr)
 	}
 
 	if result.ClusterAddr != "" {
-		clusterAddr = result.ClusterAddr
+		clusterAddr = configutil.NormalizeAddr(result.ClusterAddr)
 	}
 
 	if result.DisableClusteringRaw != nil {
@@ -1101,20 +1109,17 @@ func normalizeRaftRetryJoin(val any) ([]byte, error) {
 		for k, v := range stanza {
 			switch k {
 			case "auto_join":
-				pairs := strings.Split(v.(string), " ")
-				for i, pair := range pairs {
-					pairParts := strings.Split(pair, "=")
-					if len(pairParts) != 2 {
-						return nil, fmt.Errorf("malformed auto_join pair %s, expected key=value", pair)
-					}
+				cfg, err := discover.Parse(v.(string))
+				if err != nil {
+					return nil, err
+				}
+				for k, v := range cfg {
 					// These are auto_join keys that are valid for the provider in go-discover
-					if slices.Contains([]string{"domain", "auth_url", "url", "host"}, pairParts[0]) {
-						pairParts[1] = configutil.NormalizeAddr(pairParts[1])
-						pair = strings.Join(pairParts, "=")
-						pairs[i] = pair
+					if slices.Contains([]string{"domain", "auth_url", "url", "host"}, k) {
+						cfg[k] = configutil.NormalizeAddr(v)
 					}
 				}
-				normalizedStanza[k] = strings.Join(pairs, " ")
+				normalizedStanza[k] = cfg.String()
 			case "leader_api_addr":
 				normalizedStanza[k] = configutil.NormalizeAddr(v.(string))
 			default:
@@ -1205,11 +1210,11 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 
 	// Override with top-level values if they are set
 	if result.APIAddr != "" {
-		redirectAddr = result.APIAddr
+		redirectAddr = configutil.NormalizeAddr(result.APIAddr)
 	}
 
 	if result.ClusterAddr != "" {
-		clusterAddr = result.ClusterAddr
+		clusterAddr = configutil.NormalizeAddr(result.ClusterAddr)
 	}
 
 	if result.DisableClusteringRaw != nil {
@@ -1314,6 +1319,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"experiments":        c.Experiments,
 
 		"detect_deadlocks": c.DetectDeadlocks,
+
+		"observation_system_ledger_path": c.ObservationSystemLedgerPath,
 
 		"imprecise_lease_role_tracking": c.ImpreciseLeaseRoleTracking,
 

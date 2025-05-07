@@ -110,6 +110,7 @@ type IdentityStore struct {
 	namespacer    Namespacer
 	metrics       metricsutil.Metrics
 	totpPersister TOTPPersister
+	groupUpdater  GroupUpdater
 	tokenStorer   TokenStorer
 	entityCreator EntityCreator
 	mountLister   MountLister
@@ -123,7 +124,11 @@ type IdentityStore struct {
 
 	// renameDuplicates holds the Core reference to feature activation flags, so
 	// we can set and query enablement of the deduplication feature.
-	renameDuplicates activationflags.ActivationManager
+	renameDuplicates       activationflags.ActivationManager
+	activationErrorHandler Sealer
+
+	// activateDeduplicationDone is a channel used for synchronization in testing
+	activateDeduplicationDone chan struct{}
 }
 
 type groupDiff struct {
@@ -156,6 +161,12 @@ type TOTPPersister interface {
 
 var _ TOTPPersister = &Core{}
 
+type GroupUpdater interface {
+	SendGroupUpdate(ctx context.Context, group *identity.Group) error
+}
+
+var _ GroupUpdater = &Core{}
+
 type TokenStorer interface {
 	LookupToken(context.Context, string) (*logical.TokenEntry, error)
 	CreateToken(context.Context, *logical.TokenEntry) error
@@ -175,3 +186,9 @@ type MountLister interface {
 }
 
 var _ MountLister = &Core{}
+
+type Sealer interface {
+	Shutdown() error
+}
+
+var _ Sealer = &Core{}

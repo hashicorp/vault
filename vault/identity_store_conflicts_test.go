@@ -65,7 +65,7 @@ func TestDuplicateReportingErrorResolver(t *testing.T) {
 	}
 
 	expectReport := `
-DUPLICATES DETECTED, see following logs for details and refer to https://developer.hashicorp.com/vault/docs/upgrading/identity-deduplication for resolution.:
+DUPLICATES DETECTED, see following logs for details and refer to https://developer.hashicorp.com/vault/docs/upgrading/deduplication for resolution.:
 1 different-case local entity alias duplicates found (potential security risk):
 local entity-alias "DIFFERENT-CASE-ALIAS-1" with mount accessor "local-mount" duplicates 1 others: id="00000000-0000-0000-0000-000000000009" canonical_id="11111111-0000-0000-0000-000000000009" force_deduplication="would merge others into this entity"
 local entity-alias "different-CASE-ALIAS-1" with mount accessor "local-mount" duplicates 1 others: id="00000000-0000-0000-0000-000000000010" canonical_id="11111111-0000-0000-0000-000000000010" force_deduplication="would merge into entity 11111111-0000-0000-0000-000000000009"
@@ -99,7 +99,7 @@ group "DIFFERENT-CASE-DUPE-1" with namespace ID "root" duplicates 1 others: id="
 group "exact-dupe-1" with namespace ID "root" duplicates 1 others: id="00000000-0000-0000-0000-000000000004" force_deduplication="would not rename"
 group "exact-dupe-1" with namespace ID "root" duplicates 1 others: id="00000000-0000-0000-0000-000000000005" force_deduplication="would rename to exact-dupe-1-00000000-0000-0000-0000-000000000005"
 end of group duplicates:
-end of identity duplicate report, refer to https://developer.hashicorp.com/vault/docs/upgrading/identity-deduplication for resolution.:
+end of identity duplicate report, refer to https://developer.hashicorp.com/vault/docs/upgrading/deduplication for resolution.:
 `
 
 	// Create a new errorResolver

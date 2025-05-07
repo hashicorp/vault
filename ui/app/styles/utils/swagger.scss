@@ -8,4 +8,9 @@
 /* align list items with container */
 .swagger-ember .swagger-ui .wrapper {
   padding: 0;
+
+  .opblock-summary-path-description-wrapper {
+    width: min-content;
+    flex-grow: 1;
+  }
 }

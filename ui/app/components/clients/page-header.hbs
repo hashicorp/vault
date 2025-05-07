@@ -1,18 +1,26 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <Hds::PageHeader class="has-top-padding-l has-bottom-padding-m" as |PH|>
-  <PH.Title>Vault Usage Metrics</PH.Title>
-  <PH.Description>
-    This dashboard surfaces Vault client usage over time.
-    <Hds::Link::Inline @href={{doc-link "/vault/docs/concepts/client-count"}}>Documentation is available here</Hds::Link::Inline>.
-    Date queries are sent in UTC.
-  </PH.Description>
-  <PH.Actions>
+  <PH.Title>
+    Client Usage
+  </PH.Title>
+  {{#if (and this.formattedStartDate this.formattedEndDate)}}
+    <PH.Description class="has-text-weight-semibold">
+      <p>
+        For billing period:
+        <span data-test-date-range="start">{{this.formattedStartDate}}</span>
+        -
+        <span data-test-date-range="end">{{this.formattedEndDate}}</span>
+      </p>
+    </PH.Description>
+  {{/if}}
+  <PH.Actions class="align-items-end">
     {{#if this.showExportButton}}
       <Hds::Button
+        class="has-font-weight-normal"
         data-test-export-button
         @text="Export activity data"
         @color="secondary"
@@ -20,6 +28,13 @@
         {{on "click" (fn (mut this.showExportModal) true)}}
       />
     {{/if}}
+    <Clients::DateRange
+      @startTime={{@startTimestamp}}
+      @endTime={{@endTimestamp}}
+      @billingStartTime={{@billingStartTime}}
+      @retentionMonths={{@retentionMonths}}
+      @onChange={{@onChange}}
+    />
   </PH.Actions>
 </Hds::PageHeader>
 
@@ -45,8 +60,11 @@
         <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if this.formattedEndDate " RANGE"}}</p>
         <p class="has-bottom-margin-s" data-test-export-date-range>
           {{this.formattedStartDate}}
-          {{if this.formattedEndDate "-"}}
-          {{this.formattedEndDate}}</p>
+          {{#if this.showEndDate}}
+            {{"-"}}
+            {{this.formattedEndDate}}
+          {{/if}}
+        </p>
 
         <Hds::Form::Select::Field
           class="has-bottom-margin-s"

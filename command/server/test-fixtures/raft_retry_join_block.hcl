@@ -26,6 +26,9 @@ storage "raft" {
   retry_join {
     "auto_join" = "provider=vsphere category_name=consul-role tag_name=consul-server host=https://[2001:db8:0:0:0:0:2:1] user=foo password=bar insecure_ssl=false"
   }
+  retry_join {
+    "auto_join" = "provider=k8s namespace=vault label_selector=\"app.kubernetes.io/name=vault, component=server\""
+  }
 }
 
 listener "tcp" {

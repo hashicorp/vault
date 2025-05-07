@@ -1,3 +1,5 @@
+@use '../utils/color_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -14,7 +16,7 @@
 input.has-error,
 input.has-error:focus,
 input.has-error:hover {
-  border-color: $red-dark;
+  border-color: color_variables.$red-dark;
 }
 
 .ttl-value-error {

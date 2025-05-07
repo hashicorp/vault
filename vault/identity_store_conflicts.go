@@ -28,6 +28,7 @@ type ConflictResolver interface {
 	ResolveEntities(ctx context.Context, existing, duplicate *identity.Entity) (bool, error)
 	ResolveGroups(ctx context.Context, existing, duplicate *identity.Group) (bool, error)
 	ResolveAliases(ctx context.Context, parent *identity.Entity, existing, duplicate *identity.Alias) (bool, error)
+	Reload(ctx context.Context)
 }
 
 // errorResolver is a ConflictResolver that logs a warning message when a
@@ -91,6 +92,10 @@ func (r *errorResolver) ResolveAliases(ctx context.Context, parent *identity.Ent
 	return false, errDuplicateIdentityName
 }
 
+// Reload is a no-op for the errorResolver implementation.
+func (r *errorResolver) Reload(ctx context.Context) {
+}
+
 // duplicateReportingErrorResolver collects duplicate information and optionally
 // logs a report on all the duplicates. We don't embed an errorResolver here
 // because we _don't_ want it's side effect of warning on just some duplicates
@@ -103,7 +108,7 @@ type duplicateReportingErrorResolver struct {
 	// when in case-sensitive mode.
 	//
 	// Since this is only ever called from `load*` methods on IdentityStore during
-	// an unseal we can assume that it's all from a single goroutine and does'nt
+	// an unseal we can assume that it's all from a single goroutine and doesn't
 	// need locking.
 	seenEntities     map[string][]*identity.Entity
 	seenGroups       map[string][]*identity.Group
@@ -142,6 +147,10 @@ func (r *duplicateReportingErrorResolver) ResolveAliases(ctx context.Context, pa
 		r.seenAliases[aliasKey] = append(r.seenAliases[aliasKey], duplicate)
 	}
 	return false, errDuplicateIdentityName
+}
+
+func (r *duplicateReportingErrorResolver) Reload(ctx context.Context) {
+	r.seenEntities = make(map[string][]*identity.Entity)
 }
 
 type identityDuplicateReportEntry struct {
@@ -316,8 +325,7 @@ type Warner interface {
 	Warn(msg string, args ...interface{})
 }
 
-// TODO set this correctly.
-const identityDuplicateReportUrl = "https://developer.hashicorp.com/vault/docs/upgrading/identity-deduplication"
+const identityDuplicateReportUrl = "https://developer.hashicorp.com/vault/docs/upgrading/deduplication"
 
 func (r *duplicateReportingErrorResolver) LogReport(log Warner) {
 	report := r.Report()
@@ -429,4 +437,8 @@ func (r *renameResolver) ResolveGroups(ctx context.Context, existing, duplicate 
 // ResolveAliases is a no-op for the renameResolver implementation.
 func (r *renameResolver) ResolveAliases(ctx context.Context, parent *identity.Entity, existing, duplicate *identity.Alias) (bool, error) {
 	return false, nil
+}
+
+// Reload is a no-op for the renameResolver implementation.
+func (r *renameResolver) Reload(ctx context.Context) {
 }

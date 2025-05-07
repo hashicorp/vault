@@ -9,7 +9,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { spy } from 'sinon';
 
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { runCmd } from 'vault/tests/helpers/commands';
@@ -37,7 +37,7 @@ module('Acceptance | aws | configuration', function (hooks) {
     this.flashDangerSpy = spy(flash, 'danger');
     this.version = this.owner.lookup('service:version');
     this.uid = uuidv4();
-    return authPage.login();
+    return login();
   });
 
   module('Enterprise', function (hooks) {
@@ -171,7 +171,8 @@ module('Acceptance | aws | configuration', function (hooks) {
       await runCmd(`delete sys/mounts/${path}`);
     });
 
-    test('it should not show identityTokenTtl or maxRetries if they have not been set', async function (assert) {
+    test('it should show identityTokenTtl or maxRetries even if they have not been set', async function (assert) {
+      // documenting the intention that we show fields that have not been set but are returned by the api due to defaults
       const path = `aws-${this.uid}`;
       await enablePage.enable('aws', path);
 
@@ -185,11 +186,12 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(GENERAL.toggleGroup('Root config options'));
       await fillIn(GENERAL.inputByAttr('region'), 'eu-central-1');
       await click(GENERAL.saveButton);
-      // the Serializer removes these two from the payload if the API returns their default value.
       assert
         .dom(GENERAL.infoRowValue('Identity token TTL'))
-        .doesNotExist('Identity token TTL does not show.');
-      assert.dom(GENERAL.infoRowValue('Max retries')).doesNotExist('Max retries does not show.');
+        .hasText('0', 'Identity token TTL shows default.');
+      assert
+        .dom(GENERAL.infoRowValue('Max retries'))
+        .hasText('-1', 'Max retries shows -1 indicating the default will be used.');
       // cleanup
       await runCmd(`delete sys/mounts/${path}`);
     });

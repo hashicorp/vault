@@ -48,6 +48,10 @@ module "create_vpc" {
   common_tags = var.tags
 }
 
+module "choose_follower_host" {
+  source = "./modules/choose_follower_host"
+}
+
 module "ec2_info" {
   source = "./modules/ec2_info"
 }
@@ -90,6 +94,11 @@ module "read_license" {
 
 module "replication_data" {
   source = "./modules/replication_data"
+}
+
+module "restart_vault" {
+  source            = "./modules/restart_vault"
+  vault_install_dir = var.vault_install_dir
 }
 
 module "seal_awskms" {
@@ -221,6 +230,11 @@ module "vault_failover_update_dr_primary" {
   vault_install_dir = var.vault_install_dir
 }
 
+module "vault_raft_remove_node_and_verify" {
+  source            = "./modules/vault_raft_remove_node_and_verify"
+  vault_install_dir = var.vault_install_dir
+}
+
 module "vault_raft_remove_peer" {
   source            = "./modules/vault_raft_remove_peer"
   vault_install_dir = var.vault_install_dir
@@ -281,16 +295,30 @@ module "vault_verify_dr_replication" {
   vault_install_dir = var.vault_install_dir
 }
 
+module "vault_verify_removed_node" {
+  source = "./modules/vault_verify_removed_node"
+
+  vault_install_dir = var.vault_install_dir
+}
+
+module "vault_verify_removed_node_shim" {
+  source            = "./modules/vault_verify_removed_node_shim"
+  vault_install_dir = var.vault_install_dir
+}
+
+
 module "vault_verify_secrets_engines_create" {
   source = "./modules/verify_secrets_engines/modules/create"
 
-  vault_install_dir = var.vault_install_dir
+  create_aws_secrets_engine = var.verify_aws_secrets_engine
+  vault_install_dir         = var.vault_install_dir
 }
 
 module "vault_verify_secrets_engines_read" {
   source = "./modules/verify_secrets_engines/modules/read"
 
-  vault_install_dir = var.vault_install_dir
+  verify_aws_secrets_engine = var.verify_aws_secrets_engine
+  vault_install_dir         = var.vault_install_dir
 }
 
 module "vault_verify_default_lcq" {

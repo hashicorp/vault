@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <form
   {{on "submit" (fn @doSubmit (hash ciphertext=@ciphertext padding_scheme=@padding_scheme context=@context nonce=@nonce))}}

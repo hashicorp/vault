@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 <div class="auth-form" data-test-auth-form>
   {{#if this.hasMethodsWithPath}}
     <nav class="tabs is-marginless">
@@ -65,15 +65,11 @@
     {{#if (or (eq this.selectedAuthBackend.type "jwt") (eq this.selectedAuthBackend.type "oidc"))}}
       <AuthJwt
         @onError={{action "handleError"}}
-        @onLoading={{action (mut this.isLoading)}}
         @namespace={{this.namespace}}
         @onNamespace={{action (mut this.namespace)}}
         @onSubmit={{action "doSubmit"}}
-        @onRoleName={{action (mut this.roleName)}}
-        @roleName={{this.roleName}}
         @selectedAuthType={{this.selectedAuthBackend.type}}
         @selectedAuthPath={{or this.customPath this.selectedAuthBackend.id}}
-        @disabled={{or this.authIsRunning this.isLoading}}
       >
         <AuthFormOptions
           @customPath={{this.customPath}}
@@ -112,7 +108,7 @@
                 name="token"
                 id="token"
                 class="input"
-                data-test-token={{true}}
+                data-test-input="token"
                 autocomplete="off"
                 spellcheck="false"
               />
@@ -129,7 +125,7 @@
                 class="input"
                 autocomplete="off"
                 spellcheck="false"
-                data-test-token={{true}}
+                data-test-input="token"
                 id="token"
               />
             </div>
@@ -145,7 +141,7 @@
                 class="input"
                 autocomplete="off"
                 spellcheck="false"
-                data-test-username
+                data-test-input="username"
               />
             </div>
           </div>
@@ -160,7 +156,7 @@
                 class="input"
                 autocomplete="off"
                 spellcheck="false"
-                data-test-password
+                data-test-input="password"
               />
             </div>
           </div>

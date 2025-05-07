@@ -64,7 +64,7 @@ module('Integration | Component | tools/lookup', function (hooks) {
     await waitUntil(() => find(GENERAL.infoRowValue('Creation path')));
     assert.true(flashSuccessSpy.calledWith('Lookup was successful.'), 'it renders success flash');
     assert.dom(GENERAL.infoRowValue('Creation path')).hasText(data.creation_path);
-    assert.dom(GENERAL.infoRowValue('Creation time')).hasText(data.creation_time);
+    assert.dom(GENERAL.infoRowValue('Creation time')).hasText(now.toString());
     assert.dom(GENERAL.infoRowValue('Creation TTL')).hasText(`${data.creation_ttl}`);
     assert.dom(GENERAL.infoRowValue('Expiration date')).hasTextContaining(`${getYear(now) + 1}`);
     assert.dom(GENERAL.infoRowValue('Expires in')).hasText('about 1 year');

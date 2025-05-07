@@ -891,6 +891,7 @@ scenario "seal_ha" {
     depends_on = [
       step.wait_for_seal_rewrap,
       step.verify_secrets_engines_read,
+      step.verify_log_secrets,
     ]
 
     providers = {
@@ -1131,6 +1132,7 @@ scenario "seal_ha" {
 
   output "secrets_engines_state" {
     description = "The state of configured secrets engines"
+    sensitive   = true
     value       = step.verify_secrets_engines_create.state
   }
 

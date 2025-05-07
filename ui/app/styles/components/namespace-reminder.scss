@@ -1,18 +1,22 @@
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 .namespace-reminder {
-  color: $grey;
-  margin: 0 0 $spacing-14 0;
+  color: color_variables.$grey;
+  margin: 0 0 size_variables.$spacing-14 0;
 }
 
 .console-reminder p.namespace-reminder {
-  color: $grey;
-  font-family: $family-monospace;
-  font-size: $size-8;
-  margin: $spacing-4 0 0;
+  color: color_variables.$grey;
+  font-family: font_variables.$family-monospace;
+  font-size: size_variables.$size-8;
+  margin: size_variables.$spacing-4 0 0;
   opacity: 0.7;
   position: absolute;
 }

@@ -81,6 +81,8 @@ func pathConfigRoot(b *backend) *framework.Path {
 			},
 		},
 
+		ExistenceCheck: b.pathConfigRootExistenceCheck,
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathConfigRootRead,
@@ -94,6 +96,17 @@ func pathConfigRoot(b *backend) *framework.Path {
 					OperationVerb:   "configure",
 					OperationSuffix: "root-iam-credentials",
 				},
+				ForwardPerformanceSecondary: true,
+				ForwardPerformanceStandby:   true,
+			},
+			logical.CreateOperation: &framework.PathOperation{
+				Callback: b.pathConfigRootWrite,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "root-iam-credentials",
+				},
+				ForwardPerformanceSecondary: true,
+				ForwardPerformanceStandby:   true,
 			},
 		},
 
@@ -104,6 +117,16 @@ func pathConfigRoot(b *backend) *framework.Path {
 	automatedrotationutil.AddAutomatedRotationFields(p.Fields)
 
 	return p
+}
+
+// Establishes dichotomy of request operation between CreateOperation and UpdateOperation.
+// Returning 'true' forces an UpdateOperation, CreateOperation otherwise.
+func (b *backend) pathConfigRootExistenceCheck(ctx context.Context, req *logical.Request, data *framework.FieldData) (bool, error) {
+	entry, err := getConfigFromStorage(ctx, req)
+	if err != nil {
+		return false, err
+	}
+	return entry != nil, nil
 }
 
 func (b *backend) pathConfigRootRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
@@ -283,11 +306,10 @@ func (b *backend) pathConfigRootWrite(ctx context.Context, req *logical.Request,
 
 	// Save the config
 	if err := putConfigToStorage(ctx, req, rc); err != nil {
-		b.Logger().Error("write to storage failed but the rotation manager still succeeded.",
-			"operation", performedRotationManagerOpern, "mount", req.MountPoint, "path", req.Path)
-
 		wrappedError := err
 		if performedRotationManagerOpern != "" {
+			b.Logger().Error("write to storage failed but the rotation manager still succeeded.",
+				"operation", performedRotationManagerOpern, "mount", req.MountPoint, "path", req.Path)
 			wrappedError = fmt.Errorf("write to storage failed but the rotation manager still succeeded; "+
 				"operation=%s, mount=%s, path=%s, storageError=%s", performedRotationManagerOpern, req.MountPoint, req.Path, err)
 		}

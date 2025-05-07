@@ -390,6 +390,7 @@ func TestPredict_Plugins(t *testing.T) {
 				"redis-elasticache-database-plugin",
 				"redshift-database-plugin",
 				"saml",
+				"scep",
 				"snowflake-database-plugin",
 				"ssh",
 				"terraform",
@@ -439,6 +440,14 @@ func TestPredict_Plugins(t *testing.T) {
 				if !strutil.StrListContains(act, "saml") {
 					for i, v := range tc.exp {
 						if v == "saml" {
+							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
+							break
+						}
+					}
+				}
+				if !strutil.StrListContains(act, "scep") {
+					for i, v := range tc.exp {
+						if v == "scep" {
 							tc.exp = append(tc.exp[:i], tc.exp[i+1:]...)
 							break
 						}

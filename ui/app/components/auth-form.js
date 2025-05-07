@@ -45,6 +45,7 @@ export default Component.extend(DEFAULTS, {
   store: service(),
   csp: service('csp-event'),
   version: service(),
+  api: service(),
 
   // set by query params, passed from parent Auth::Page component
   selectedAuth: null,
@@ -183,13 +184,13 @@ export default Component.extend(DEFAULTS, {
     waitFor(function* (token) {
       // will be using the Token Auth Method, so set it here
       this.set('selectedAuth', 'token');
-      const adapter = this.store.adapterFor('tools');
       try {
-        const response = yield adapter.toolAction('unwrap', null, { clientToken: token });
-        this.set('token', response.auth.client_token);
+        const response = yield this.api.sys.unwrap({}, this.api.buildHeaders({ token }));
+        this.set('token', response.auth.clientToken);
         this.send('doSubmit');
       } catch (e) {
-        this.set('error', `Token unwrap failed: ${e.errors[0]}`);
+        const { message } = yield this.api.parseError(e);
+        this.set('error', `Token unwrap failed: ${message}`);
       }
     })
   ),

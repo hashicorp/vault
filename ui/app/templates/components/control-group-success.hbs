@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 {{#if (and this.controlGroupResponse.token this.controlGroupResponse.uiParams.url)}}
   <div class="control-group-success" data-test-navigate-message>
@@ -59,7 +59,7 @@
         </label>
         <div class="control">
           <Input
-            data-test-token-input
+            data-test-input="token"
             class="input"
             autocomplete="off"
             spellcheck="false"

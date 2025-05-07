@@ -8,8 +8,6 @@ description: The aws auth method allows automated authentication of AWS entities
 
 @include 'x509-sha1-deprecation.mdx'
 
-@include 'aws-sha1-deprecation.mdx'
-
 The `aws` auth method provides an automated mechanism to retrieve a Vault token
 for IAM principals and AWS EC2 instances. Unlike most Vault auth methods, this
 method does not require manual first-deploying, or provisioning
@@ -350,6 +348,49 @@ are needed.
   with static credentials, and wish to rotate these credentials with the
   [Rotate Root Credentials](/vault/api-docs/auth/aws#rotate-root-credentials)
   API call.
+
+### Schedule-based root credential rotation
+
+@include 'alerts/enterprise-only.mdx'
+
+Use the [`rotation_schedule`](/vault/api-docs/auth/aws#rotation_schedule) field
+to configure schedule-based, automatic credential rotation for root credentials in
+the AWS auth engine. For example, the following command set the rotation to
+occur every Saturday at midnight (00:00):
+
+```shell-session
+$ vault write auth/aws/config/client \
+  ...
+  rotation_schedule="0 * * * SAT"
+  ...
+```
+
+Scheduled root credential rotation can also set a
+[rotation_window](/vault/api-docs/auth/aws#rotation_window) during which the
+scheduled rotation is allowed to occur. Vault will stop trying to rotate the
+credential once the window expires. For example, the following command tells
+Vault to rotate the credential on Saturday at midnight, but only within the span
+of an hour. If Vault cannot rotate the credential by 1:00, due to a failure
+or otherwise, Vault will stop trying to rotate the credential until the next
+scheduled rotation.
+
+```shell-session
+$ vault write auth/aws/config/client \
+  ...
+  rotation_window="1h" \
+  rotation_schedule="0 * * * SAT"
+  ...
+```
+
+You can temporarily disable root rotation by setting
+[`disable_automated_rotation`](/vault/api-docs/auth/aws#disable_automated_rotation)
+to `true`. Setting the `disable_automated_rotation` field prevent any rotation
+of the root credential until the field is reset to `false`. If you use
+`rotation_period`, setting `disable_automated_rotation` also resets the credential
+TTL.
+
+For more details on rotating root credentials in the AWS Auth engine, refer to the
+[Rotate Root credentials](/vault/api-docs/auth/aws#rotate-root-credentials) API docs.
 
 ## Plugin Workload Identity Federation (WIF)
 
@@ -706,6 +747,14 @@ then set the signature on the login endpoint:
 $ vault write auth/aws/login role=dev-role \
   pkcs7=$SIGNATURE
 ```
+
+<Note>
+
+Vault does not support X.509 certificates with SHA-1 signatures. If you use AWS
+[`/rsa2048` signature endpoint](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/verify-rsa2048.html)
+credentials, you must use the `pkcs7` login flow.
+
+</Note>
 
 For the iam auth method, generating the signed request is a non-standard
 operation. The Vault cli supports generating this for you:

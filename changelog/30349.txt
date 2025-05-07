@@ -1,0 +1,4 @@
+
+```release-note:improvement
+ui (enterprise): Replace date selector in client count usage page with fixed start and end dates that align with billing periods in order to return more relevant client counting data. 
+```

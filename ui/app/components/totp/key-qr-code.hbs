@@ -1,0 +1,32 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+  <MessageError @model={{@model}} />
+  {{#unless @model.isError}}
+    <Hds::Alert @type="inline" @color="warning" class="has-top-bottom-margin" data-test-warning as |A|>
+      <A.Title>Warning</A.Title>
+      <A.Description>
+        You will not be able to access this information later, so please copy the information below.
+      </A.Description>
+    </Hds::Alert>
+  {{/unless}}
+  {{#each @model.generatedAttrs as |attr|}}
+    <InfoTableRow
+      @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+      @value={{get @model attr.name}}
+    />
+  {{/each}}
+  <div class="list-item-row">
+    <div class="center-display">
+      <QrCode @text={{@model.url}} @colorLight="#F7F7F7" @width={{200}} @height={{200}} @correctLevel="L" data-test-qrcode />
+    </div>
+  </div>
+</div>
+<div class="field is-grouped box is-fullwidth is-bottomless">
+  <div class="control">
+    <Hds::Button @text="Continue" @color="secondary" {{on "click" @onReset}} data-test-back-button />
+  </div>
+</div>

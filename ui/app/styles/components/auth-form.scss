@@ -1,3 +1,7 @@
+@use '../utils/size_variables';
+@use '../core/box.scss';
+@use '../helper-classes/general.scss';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -25,14 +29,14 @@
 }
 
 .toolbar-namespace-picker {
-  padding: 0 $spacing-12;
+  padding: 0 size_variables.$spacing-12;
 
   .field {
     width: 100%;
   }
 
   .field-label {
-    margin-right: $spacing-12;
+    margin-right: size_variables.$spacing-12;
     align-self: center;
   }
 

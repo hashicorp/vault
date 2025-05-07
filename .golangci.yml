@@ -1,0 +1,20 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: MPL-2.0
+linters-settings:
+  depguard:
+    rules:
+      main:
+        list-mode: lax
+        files:
+          - "./sdk/**"
+        allow:
+          - "github.com/hashicorp/go-metrics/compat"
+        deny:
+          - pkg: "github.com/hashicorp/go-metrics"
+            desc: not allowed, use github.com/hashicorp/go-metrics/compat instead
+          - pkg: "github.com/armon/go-metrics"
+            desc: not allowed, use github.com/hashicorp/go-metrics/compat instead
+
+linters:
+  enable:
+    - depguard

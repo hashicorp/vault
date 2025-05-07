@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
 )
@@ -17,11 +18,11 @@ var schemaMap = map[string]*framework.FieldSchema{
 		Description: "CRON-style string that will define the schedule on which rotations should occur. Mutually exclusive with rotation_period",
 	},
 	"rotation_window": {
-		Type:        framework.TypeInt,
+		Type:        framework.TypeDurationSecond,
 		Description: "Specifies the amount of time in which the rotation is allowed to occur starting from a given rotation_schedule",
 	},
 	"rotation_period": {
-		Type:        framework.TypeInt,
+		Type:        framework.TypeDurationSecond,
 		Description: "TTL for automatic credential rotation of the given username. Mutually exclusive with rotation_schedule",
 	},
 	"disable_automated_rotation": {
@@ -35,6 +36,7 @@ func TestParseAutomatedRotationFields(t *testing.T) {
 		name           string
 		data           *framework.FieldData
 		expectedParams *AutomatedRotationParams
+		initialParams  *AutomatedRotationParams
 		expectedError  string
 	}{
 		{
@@ -48,7 +50,7 @@ func TestParseAutomatedRotationFields(t *testing.T) {
 			},
 			expectedParams: &AutomatedRotationParams{
 				RotationSchedule:         "*/15 * * * *",
-				RotationWindow:           60,
+				RotationWindow:           60 * time.Second,
 				RotationPeriod:           0,
 				DisableAutomatedRotation: false,
 			},
@@ -96,11 +98,118 @@ func TestParseAutomatedRotationFields(t *testing.T) {
 			},
 			expectedError: "cannot use rotation_window without rotation_schedule",
 		},
+		{
+			name: "rotation-period-duration-seconds",
+			data: &framework.FieldData{
+				Raw: map[string]interface{}{
+					"rotation_period": "2m",
+				},
+				Schema: schemaMap,
+			},
+			expectedParams: &AutomatedRotationParams{
+				RotationSchedule:         "",
+				RotationWindow:           0,
+				RotationPeriod:           120 * time.Second,
+				DisableAutomatedRotation: false,
+			},
+		},
+		{
+			name: "rotation-window-duration-seconds",
+			data: &framework.FieldData{
+				Raw: map[string]interface{}{
+					"rotation_window":   "12h",
+					"rotation_schedule": "* */2 * * *",
+				},
+				Schema: schemaMap,
+			},
+			expectedParams: &AutomatedRotationParams{
+				RotationSchedule:         "* */2 * * *",
+				RotationWindow:           12 * time.Hour,
+				RotationPeriod:           0,
+				DisableAutomatedRotation: false,
+			},
+		},
+		{
+			name: "period-and-window-ok",
+			data: &framework.FieldData{
+				Raw: map[string]interface{}{
+					"rotation_window": 0,
+					"rotation_period": 10,
+				},
+				Schema: schemaMap,
+			},
+			expectedParams: &AutomatedRotationParams{
+				RotationSchedule:         "",
+				RotationWindow:           0,
+				RotationPeriod:           10 * time.Second,
+				DisableAutomatedRotation: false,
+			},
+		},
+		{
+			name: "period-and-window-ok-strings",
+			data: &framework.FieldData{
+				Raw: map[string]interface{}{
+					"rotation_schedule": "* */2 * * *",
+					"rotation_window":   "5h",
+					"rotation_period":   "",
+				},
+				Schema: schemaMap,
+			},
+			expectedParams: &AutomatedRotationParams{
+				RotationSchedule:         "* */2 * * *",
+				RotationWindow:           5 * time.Hour,
+				RotationPeriod:           0,
+				DisableAutomatedRotation: false,
+			},
+		},
+		{
+			name: "period-and-schedule-ok",
+			data: &framework.FieldData{
+				Raw: map[string]interface{}{
+					"rotation_schedule": "",
+					"rotation_window":   "",
+					"rotation_period":   "2m",
+				},
+				Schema: schemaMap,
+			},
+			expectedParams: &AutomatedRotationParams{
+				RotationSchedule:         "",
+				RotationWindow:           0,
+				RotationPeriod:           2 * time.Minute,
+				DisableAutomatedRotation: false,
+			},
+		},
+		{
+			name: "zero-out-schedule-and-window-set-period",
+			data: &framework.FieldData{
+				Raw: map[string]interface{}{
+					"rotation_schedule": "",
+					"rotation_window":   "",
+					"rotation_period":   "2m",
+				},
+				Schema: schemaMap,
+			},
+			expectedParams: &AutomatedRotationParams{
+				RotationSchedule:         "",
+				RotationWindow:           0,
+				RotationPeriod:           2 * time.Minute,
+				DisableAutomatedRotation: false,
+			},
+			initialParams: &AutomatedRotationParams{
+				RotationSchedule:         "*/1 * * * *",
+				RotationWindow:           30 * time.Second,
+				RotationPeriod:           0,
+				DisableAutomatedRotation: false,
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			p := &AutomatedRotationParams{}
+			if tt.initialParams != nil {
+				p = tt.initialParams
+			}
 			err := p.ParseAutomatedRotationFields(tt.data)
 			if err != nil {
 				if tt.expectedError == "" {
@@ -128,8 +237,8 @@ func TestPopulateAutomatedRotationData(t *testing.T) {
 			name: "basic",
 			expected: map[string]interface{}{
 				"rotation_schedule":          "*/15 * * * *",
-				"rotation_window":            60,
-				"rotation_period":            0,
+				"rotation_window":            time.Duration(60).Seconds(),
+				"rotation_period":            time.Duration(0).Seconds(),
 				"disable_automated_rotation": false,
 			},
 			inputParams: &AutomatedRotationParams{

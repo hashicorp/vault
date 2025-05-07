@@ -10,7 +10,7 @@ import clientsHandler, { STATIC_NOW, LICENSE_START, UPGRADE_DATE } from 'vault/m
 import syncHandler from 'vault/mirage/handlers/sync';
 import sinon from 'sinon';
 import { visit, click, findAll, fillIn, currentURL } from '@ember/test-helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CHARTS, CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 import { formatNumber } from 'core/helpers/format-number';
@@ -36,7 +36,7 @@ module('Acceptance | clients | overview', function (hooks) {
       };
     });
     this.store = this.owner.lookup('service:store');
-    await authPage.login();
+    await login();
     return visit('/vault/clients/counts/overview');
   });
 
@@ -63,7 +63,8 @@ module('Acceptance | clients | overview', function (hooks) {
     assert.dom(CHARTS.xAxisLabel).exists({ count: 7 }, 'chart months matches query');
   });
 
-  test('it should update charts when querying date ranges', async function (assert) {
+  // TODO revisit once CE changes are finalized
+  test.skip('it should update charts when querying date ranges', async function (assert) {
     // query for single, historical month with no new counts (July 2023)
     const licenseStartMonth = format(LICENSE_START, 'yyyy-MM');
     const upgradeMonth = format(UPGRADE_DATE, 'yyyy-MM');
@@ -261,7 +262,7 @@ module('Acceptance | clients | overview', function (hooks) {
   `
       )
     );
-    await authPage.login(userToken);
+    await login(userToken);
     await visit('/vault/clients/counts/overview');
     assert.dom(CLIENT_COUNT.exportButton).doesNotExist();
 
@@ -281,7 +282,7 @@ module('Acceptance | clients | overview | sync in license, activated', function 
 
     syncHandler(this.server);
 
-    await authPage.login();
+    await login();
     return visit('/vault/clients/counts/overview');
   });
 
@@ -312,7 +313,7 @@ module('Acceptance | clients | overview | sync in license, not activated', funct
   hooks.beforeEach(async function () {
     this.server.get('/sys/license/features', () => ({ features: ['Secrets Sync'] }));
 
-    await authPage.login();
+    await login();
     return visit('/vault/clients/counts/overview');
   });
 
@@ -336,7 +337,7 @@ module('Acceptance | clients | overview | sync not in license', function (hooks)
     // mocks endpoint for no additional license modules
     this.server.get('/sys/license/features', () => ({ features: [] }));
 
-    await authPage.login();
+    await login();
     return visit('/vault/clients/counts/overview');
   });
 
@@ -359,7 +360,7 @@ module('Acceptance | clients | overview | HVD', function (hooks) {
     syncHandler(this.server);
     this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
 
-    await authPage.login();
+    await login();
     return visit('/vault/clients/counts/overview');
   });
 

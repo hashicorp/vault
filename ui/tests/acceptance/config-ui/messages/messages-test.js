@@ -7,8 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, visit, fillIn, currentRouteName, currentURL } from '@ember/test-helpers';
-import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { format, addDays, startOfDay } from 'date-fns';
 import { datetimeLocalStringFormat } from 'core/utils/date-formatters';
 import { CUSTOM_MESSAGES } from 'vault/tests/helpers/config-ui/message-selectors';
@@ -28,11 +27,11 @@ module('Acceptance | Community | config-ui/messages', function (hooks) {
   hooks.beforeEach(async function () {
     const version = this.owner.lookup('service:version');
     version.type = 'community';
-    await authPage.login();
+    await login();
   });
 
   hooks.afterEach(async function () {
-    await logout.visit();
+    await visit('/vault/logout');
   });
 
   test('it should hide the sidebar settings section on community', async function (assert) {
@@ -87,11 +86,11 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
       await click(CUSTOM_MESSAGES.confirmActionButton('Delete message'));
       await click(GENERAL.confirmButton);
     };
-    await authPage.login();
+    await login();
   });
 
   hooks.afterEach(async function () {
-    await logout.visit();
+    await visit('/vault/logout');
   });
   test('it should show an empty state when no messages are created', async function (assert) {
     assert.expect(4);

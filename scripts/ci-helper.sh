@@ -2,7 +2,6 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-
 # The ci-helper is used to determine build metadata, build Vault binaries,
 # package those binaries into artifacts, and execute tests with those artifacts.
 
@@ -92,7 +91,14 @@ function build() {
   : "${GO_TAGS:=""}"
   : "${REMOVE_SYMBOLS:=""}"
 
-  (unset GOOS; unset GOARCH; go generate ./...)
+  # Generate code but make sure we don't slurp in cross compilation env vars
+  (
+    unset GOOS
+    unset GOARCH
+    unset CC
+    unset CC_FOR_TARGET
+    go generate ./...
+  )
 
   # Build our ldflags
   msg="--> Building Vault revision $revision, built $build_date..."
@@ -155,7 +161,7 @@ function prepare_ce_legal() {
 # Package version converts a vault version string into a compatible representation for system
 # packages.
 function version_package() {
-  awk '{ gsub("-","~",$1); print $1 }' <<< "$VAULT_VERSION"
+  awk '{ gsub("-","~",$1); print $1 }' <<<"$VAULT_VERSION"
 }
 
 # Run the CI Helper
@@ -163,35 +169,35 @@ function main() {
   case $1 in
   artifact-basename)
     artifact_basename
-  ;;
+    ;;
   build)
     build
-  ;;
+    ;;
   build-ui)
     build_ui
-  ;;
+    ;;
   bundle)
     bundle
-  ;;
+    ;;
   date)
     build_date
-  ;;
+    ;;
   prepare-ent-legal)
     prepare_ent_legal
-  ;;
+    ;;
   prepare-ce-legal)
     prepare_ce_legal
-  ;;
+    ;;
   revision)
     build_revision
-  ;;
+    ;;
   version-package)
     version_package
-  ;;
+    ;;
   *)
     echo "unknown sub-command" >&2
     exit 1
-  ;;
+    ;;
   esac
 }
 

@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 {{#unless this.selectedAuthIsPath}}
   <div class="box has-slim-padding is-shadowless">
@@ -19,7 +19,7 @@
             class="input"
             value={{@customPath}}
             oninput={{action @onPathChange value="target.value"}}
-            data-test-auth-form-mount-path
+            data-test-input="path"
           />
         </div>
         <AlertInline

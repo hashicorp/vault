@@ -1,3 +1,6 @@
+@use '../utils/color_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -7,7 +10,9 @@
 
 // box-shadow helpers
 .has-only-top-shadow {
-  box-shadow: 0 -1px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light;
+  box-shadow:
+    0 -1px 0 -1px color_variables.$grey-light,
+    0 -2px 0 -1px color_variables.$grey-light;
 }
 
 .is-shadowless {
@@ -15,17 +20,19 @@
 }
 
 .is-sideless {
-  box-shadow: 0 2px 0 -1px $grey-light, 0 -2px 0 -1px $grey-light;
+  box-shadow:
+    0 2px 0 -1px color_variables.$grey-light,
+    0 -2px 0 -1px color_variables.$grey-light;
 }
 
 // this helper needs to go after is-sideless as they are often used together and is-bottomless needs to override is-sideless (no this is not ideal).
 .is-bottomless {
-  box-shadow: 0 -1px 0 0 $grey-light;
+  box-shadow: 0 -1px 0 0 color_variables.$grey-light;
 }
 
 // border helpers
 .has-default-border {
-  border: 1px solid $grey !important;
+  border: 1px solid color_variables.$grey !important;
 }
 
 .is-borderless {
@@ -47,7 +54,7 @@
 
 // other
 .has-background-transition {
-  transition: background-color ease-out $speed;
+  transition: background-color ease-out size_variables.$speed;
 }
 
 .has-current-color-fill {
@@ -59,14 +66,14 @@
 
 // large grouped css blocks
 .is-hint {
-  color: $grey;
-  font-size: $size-8;
-  padding: $spacing-12 0;
+  color: color_variables.$grey;
+  font-size: size_variables.$size-8;
+  padding: size_variables.$spacing-12 0;
 }
 
 .is-optional {
-  color: $grey;
-  font-size: $size-8;
+  color: color_variables.$grey;
+  font-size: size_variables.$size-8;
   text-transform: lowercase;
 }
 
@@ -119,7 +126,7 @@
 
 // border-radius
 .border-radius-4 {
-  border-radius: $radius-large;
+  border-radius: size_variables.$radius-large;
 }
 
 // border-spacing

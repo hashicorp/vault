@@ -107,6 +107,8 @@ func (b *backend) pathConfigClient() *framework.Path {
 					OperationVerb:   "configure",
 					OperationSuffix: "client",
 				},
+				ForwardPerformanceSecondary: true,
+				ForwardPerformanceStandby:   true,
 			},
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathConfigClientCreateUpdate,
@@ -114,6 +116,8 @@ func (b *backend) pathConfigClient() *framework.Path {
 					OperationVerb:   "configure",
 					OperationSuffix: "client",
 				},
+				ForwardPerformanceSecondary: true,
+				ForwardPerformanceStandby:   true,
 			},
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathConfigClientDelete,
@@ -435,11 +439,10 @@ func (b *backend) pathConfigClientCreateUpdate(ctx context.Context, req *logical
 
 	if changedCreds || changedOtherConfig || req.Operation == logical.CreateOperation {
 		if err := req.Storage.Put(ctx, entry); err != nil {
-			b.Logger().Error("write to storage failed but the rotation manager still succeeded.",
-				"operation", performedRotationManagerOpern, "mount", req.MountPoint, "path", req.Path)
-
 			wrappedError := err
 			if performedRotationManagerOpern != "" {
+				b.Logger().Error("write to storage failed but the rotation manager still succeeded.",
+					"operation", performedRotationManagerOpern, "mount", req.MountPoint, "path", req.Path)
 				wrappedError = fmt.Errorf("write to storage failed but the rotation manager still succeeded; "+
 					"operation=%s, mount=%s, path=%s, storageError=%s", performedRotationManagerOpern, req.MountPoint, req.Path, err)
 			}

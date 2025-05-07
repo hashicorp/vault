@@ -278,11 +278,12 @@ func (c *ServerCommand) Flags() *FlagSets {
 	})
 
 	f.StringVar(&StringVar{
-		Name:    "dev-listen-address",
-		Target:  &c.flagDevListenAddr,
-		Default: "127.0.0.1:8200",
-		EnvVar:  "VAULT_DEV_LISTEN_ADDRESS",
-		Usage:   "Address to bind to in \"dev\" mode.",
+		Name:        "dev-listen-address",
+		Target:      &c.flagDevListenAddr,
+		Default:     "127.0.0.1:8200",
+		EnvVar:      "VAULT_DEV_LISTEN_ADDRESS",
+		Usage:       "Address to bind to in \"dev\" mode.",
+		Normalizers: []func(string) string{configutil.NormalizeAddr},
 	})
 	f.BoolVar(&BoolVar{
 		Name:    "dev-no-store-token",
@@ -419,9 +420,7 @@ func (c *ServerCommand) AutocompleteFlags() complete.Flags {
 }
 
 func (c *ServerCommand) flushLog() {
-	c.logger.(hclog.OutputResettable).ResetOutputWithFlush(&hclog.LoggerOptions{
-		Output: c.logWriter,
-	}, c.logGate)
+	c.logGate.Flush()
 }
 
 func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError, error) {
@@ -447,7 +446,6 @@ func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError,
 		c.UI.Warn("WARNING: Entropy Augmentation is not supported in FIPS 140-2 Inside mode; disabling from server configuration!\n")
 		config.Entropy = nil
 	}
-
 	entCheckRequestLimiter(c, config)
 
 	return config, configErrors, nil
@@ -798,7 +796,7 @@ func (c *ServerCommand) setupStorage(config *server.Config) (physical.Backend, e
 		}
 	case storageTypeRaft:
 		if envCA := os.Getenv("VAULT_CLUSTER_ADDR"); envCA != "" {
-			config.ClusterAddr = envCA
+			config.ClusterAddr = configutil.NormalizeAddr(envCA)
 		}
 		if len(config.ClusterAddr) == 0 {
 			return nil, errors.New("Cluster address must be set when using raft storage")
@@ -1133,13 +1131,38 @@ func (c *ServerCommand) Run(args []string) int {
 
 	logProxyEnvironmentVariables(c.logger)
 
-	if envMlock := os.Getenv("VAULT_DISABLE_MLOCK"); envMlock != "" {
+	envMlock := os.Getenv("VAULT_DISABLE_MLOCK")
+	if envMlock != "" {
 		var err error
 		config.DisableMlock, err = strconv.ParseBool(envMlock)
 		if err != nil {
 			c.UI.Output("Error parsing the environment variable VAULT_DISABLE_MLOCK")
 			return 1
 		}
+	}
+
+	isMlockSet := func() bool {
+		// DisableMlock key has been found and thus explicitly set
+		return strutil.StrListContainsCaseInsensitive(config.SharedConfig.FoundKeys, "DisableMlock") ||
+			// envvar set
+			envMlock != ""
+	}
+
+	// ensure that the DisableMlock key is explicitly set if using integrated storage
+	if !c.flagDev && config.Storage != nil && config.Storage.Type == storageTypeRaft && !isMlockSet() {
+
+		c.UI.Error(wrapAtLength(
+			"ERROR: disable_mlock must be configured 'true' or 'false': Mlock " +
+				"prevents memory from being swapped to disk for security reasons, " +
+				"but can cause Vault on Integrated Storage to run out of memory " +
+				"if the machine was not provisioned with enough RAM. Disabling " +
+				"mlock can prevent this issue, but can result in the reveal of " +
+				"plaintext secrets when memory is swapped to disk, so it is only " +
+				"recommended on systems with encrypted swap or where swap is disabled." +
+				"Prior to Vault 1.20, disable_mlock defaulted to 'false' when the" +
+				"value was not set explicitly.",
+		))
+		return 1
 	}
 
 	if envLicensePath := os.Getenv(EnvVaultLicensePath); envLicensePath != "" {
@@ -1693,7 +1716,7 @@ func (c *ServerCommand) Run(args []string) int {
 				sr.NotifyConfigurationReload(srConfig)
 			}
 
-			if err := core.ReloadCensusManager(false); err != nil {
+			if err := core.ReloadCensusManager(ctx, false); err != nil {
 				c.UI.Error(err.Error())
 			}
 
@@ -2928,6 +2951,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		DisableSSCTokens:               config.DisableSSCTokens,
 		Experiments:                    config.Experiments,
 		AdministrativeNamespacePath:    config.AdministrativeNamespacePath,
+		ObservationSystemLedgerPath:    config.ObservationSystemLedgerPath,
 	}
 
 	if c.flagDev {

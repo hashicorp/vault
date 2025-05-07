@@ -9,7 +9,8 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
-import authPage from 'vault/tests/pages/auth';
+import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { settled, click, visit, currentURL, fillIn, currentRouteName } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -22,7 +23,8 @@ module('Acceptance | sync | destination (singular)', function (hooks) {
   hooks.beforeEach(async function () {
     syncScenario(this.server);
     syncHandlers(this.server);
-    return authPage.login();
+    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
+    return login();
   });
 
   test('it should transition to overview route via breadcrumb', async function (assert) {
@@ -113,8 +115,8 @@ module('Acceptance | sync | destination (singular)', function (hooks) {
     );
 
     await click(ts.breadcrumbLink('Destinations'));
-    await click(ts.menuTrigger);
-    await click(ts.destinations.list.menu.edit);
+    await click(GENERAL.menuTrigger);
+    await click(GENERAL.menuItem('edit'));
     assert.strictEqual(
       currentRouteName(),
       route,
@@ -122,8 +124,8 @@ module('Acceptance | sync | destination (singular)', function (hooks) {
     );
 
     await click(ts.breadcrumbLink('Destinations'));
-    await click(ts.menuTrigger);
-    await click(ts.destinations.list.menu.details);
+    await click(GENERAL.menuTrigger);
+    await click(GENERAL.menuItem('details'));
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.sync.secrets.destinations.destination.details',

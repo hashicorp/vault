@@ -13,6 +13,16 @@ import (
 
 //go:generate go run github.com/hashicorp/vault/tools/stubmaker
 
+// entIdentityStoreDeterminismSupportsSecondary is a hack to drop duplicate
+// tests in CE where the secondary param will only cause the no-op methods below
+// to run which is functionally the same. It would be cleaner to define
+// different tests in CE and ENT but it's a table test with customer test-only
+// struct types which makes it a massive pain to have ent-ce specific code
+// interact with the test arguments.
+func entIdentityStoreDeterminismSupportsSecondary() bool {
+	return false
+}
+
 func entIdentityStoreDeterminismSecondaryTestSetup(t *testing.T, ctx context.Context, c *Core, me, localme *MountEntry, seed *rand.Rand) {
 	// no op
 }

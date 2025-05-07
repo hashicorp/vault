@@ -1,0 +1,23 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#each @loginFields as |field|}}
+  {{#let field.name field.label field.helperText as |name label helperText|}}
+    <Hds::Form::TextInput::Field
+      {{! For security, we do not support autocomplete at this time }}
+      autocomplete="off"
+      @type={{this.setInputType name}}
+      name={{name}}
+      class="has-bottom-margin-m"
+      data-test-input={{name}}
+      as |F|
+    >
+      <F.Label>{{or label (capitalize name)}}</F.Label>
+      {{#if helperText}}
+        <F.HelperText>{{helperText}}</F.HelperText>
+      {{/if}}
+    </Hds::Form::TextInput::Field>
+  {{/let}}
+{{/each}}

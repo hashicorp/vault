@@ -65,11 +65,9 @@ flags](/vault/docs/commands) included on all commands.
 ### Command options
 
 - `-start-time` `(date)` - Start month of the report to generate. May be given as YYYY-MM-DD, YYYY-MM-DD,
-  a full RFC3339 timestamp, or a Unix epoch timestamp. Defaults to the configurable `default_report_months`
-  prior to `end-time`.
+  a full RFC3339 timestamp, or a Unix epoch timestamp. Defaults to the billing start date. The [billing start date](/vault/docs/concepts/billing-start-date) automatically rolls over to the latest billing year at the end of the last cycle.
 
-- `-end-time` `(date: previous month)` - End month of the report to generate. Defaults to the end of the
-  previous calendar month.
+- `-end-time` `(date: previous month)` - End month of the report to generate. Defaults to the end of the current month.
 
 The output shows the exact time range being reported, which may not match the input parameters if a full
 month is not available, or if the available reports are a subset of the months requested.
