@@ -8437,15 +8437,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-cli-test-loader@npm:^3.1.0":
-  version: 3.1.0
-  resolution: "ember-cli-test-loader@npm:3.1.0"
-  dependencies:
-    ember-cli-babel: ^7.23.0
-  checksum: f9831c6e39970dc31de596e8d46a08c30b02fa06c88f0437899bc9617e883e6ced80d1700a84e5cae065c94174f9fa6a3459c5906824e353d17da9edb1fb643f
-  languageName: node
-  linkType: hard
-
 "ember-cli-typescript-blueprint-polyfill@npm:^0.1.0":
   version: 0.1.0
   resolution: "ember-cli-typescript-blueprint-polyfill@npm:0.1.0"
@@ -8953,19 +8944,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-qunit@npm:~8.1.1":
-  version: 8.1.1
-  resolution: "ember-qunit@npm:8.1.1"
+"ember-qunit@npm:~9.0.2":
+  version: 9.0.2
+  resolution: "ember-qunit@npm:9.0.2"
   dependencies:
-    "@embroider/addon-shim": ^1.8.6
-    "@embroider/macros": ^1.13.1
-    ember-cli-test-loader: ^3.1.0
+    "@embroider/addon-shim": ^1.9.0
+    "@embroider/macros": ^1.16.12
     qunit-theme-ember: ^1.0.0
   peerDependencies:
     "@ember/test-helpers": ">=3.0.3"
     ember-source: ">=4.0.0"
     qunit: ^2.13.0
-  checksum: 9cacb25e1d26d04b469b2d5eddacb2970ecd038e74c517f0a0d02f6b6b4f386624eb3a44b27c414ac62107866ebae7bcd549de53e7b0bc91148fe80cf3bc2aa2
+  checksum: 89488f97f3cc8727c1341ce7249a7426c8cf7afd7494c55e6387a2e3949ddecb1dce7f46750f1eb6b04011f7e55a914c0bff3c3a7668dbfe3b06785c08958396
   languageName: node
   linkType: hard
 
@@ -18821,7 +18811,7 @@ __metadata:
     ember-page-title: ~8.2.4
     ember-power-select: ~8.7.0
     ember-qrcode-shim: ~0.4.0
-    ember-qunit: ~8.1.1
+    ember-qunit: ~9.0.2
     ember-resolver: ~11.0.1
     ember-responsive: 5.0.0
     ember-service-worker: "meirish/ember-service-worker#configurable-scope"

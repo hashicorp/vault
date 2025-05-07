@@ -9,6 +9,8 @@ import * as QUnit from 'qunit';
 import { setApplication } from '@ember/test-helpers';
 import { setup } from 'qunit-dom';
 import start from 'ember-exam/test-support/start';
+import { loadTests } from 'ember-qunit/test-loader';
+import { setupEmberOnerrorValidation } from 'ember-qunit';
 import './helpers/flash-message';
 import preloadAssets from 'ember-asset-loader/test-support/preload-assets';
 import { setupGlobalA11yHooks, setRunOptions } from 'ember-a11y-testing/test-support';
@@ -28,6 +30,8 @@ preloadAssets(manifest).then(() => {
     },
   });
   setupSinon();
+  loadTests();
+  setupEmberOnerrorValidation();
   start({
     setupTestIsolationValidation: true,
   });
