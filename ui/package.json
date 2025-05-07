@@ -73,7 +73,7 @@
     "@typescript-eslint/eslint-plugin": "~5.62.0",
     "@typescript-eslint/parser": "~5.62.0",
     "asn1js": "~3.0.6",
-    "autosize": "~4.0.4",
+    "autosize": "~6.0.1",
     "babel-plugin-inline-json-import": "~0.3.2",
     "base64-js": "~1.5.1",
     "broccoli-asset-rev": "~3.0.0",
