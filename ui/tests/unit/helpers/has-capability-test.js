@@ -33,7 +33,7 @@ module('Unit | Helpers | has-capability', function (hooks) {
     } catch (error) {
       assert.strictEqual(
         error.message,
-        'Capabilities map is required as the first positional arg',
+        'First positional argument must be the capabilities map.',
         'throws error when capabilities map is not provided'
       );
     }
@@ -45,7 +45,7 @@ module('Unit | Helpers | has-capability', function (hooks) {
     } catch (error) {
       assert.strictEqual(
         error.message,
-        'Capability types are required as positional args',
+        'At least one capability type is required as a positional argument.',
         'throws error when types are not provided'
       );
     }
