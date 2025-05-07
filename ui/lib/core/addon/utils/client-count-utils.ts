@@ -80,15 +80,38 @@ export const filterVersionHistory = (
 export const filteredTotalForMount = (
   byNamespace: ByNamespaceClients[],
   nsPath: string,
-  mountPath: string
+  mountPath: string,
+  byMonth: ByMonthClients[]
 ): TotalClients => {
-  if (!nsPath || !mountPath || isEmpty(byNamespace)) return emptyCounts();
-  return (
-    byNamespace
-      .find((namespace) => sanitizePath(namespace.label) === sanitizePath(nsPath))
-      ?.mounts.find((mount: MountClients) => sanitizePath(mount.label) === sanitizePath(mountPath)) ||
-    emptyCounts()
+  if (!nsPath || !mountPath || isEmpty(byNamespace) || isEmpty(byMonth)) return emptyCounts();
+
+  const newClientTotals = byMonth?.reduce(
+    (acc, month) => {
+      month.new_clients.namespaces
+        .filter((ns) => sanitizePath(ns.label) === sanitizePath(nsPath))
+        .forEach((ns) => {
+          ns.mounts
+            .filter((mount) => sanitizePath(mount.label) === sanitizePath(mountPath))
+            .forEach((mount) => {
+              acc.acme_clients += mount.acme_clients;
+              acc.clients += mount.clients;
+              acc.entity_clients += mount.entity_clients;
+              acc.non_entity_clients += mount.non_entity_clients;
+              acc.secret_syncs += mount.secret_syncs;
+            });
+        });
+      return acc;
+    },
+    {
+      acme_clients: 0,
+      clients: 0,
+      entity_clients: 0,
+      non_entity_clients: 0,
+      secret_syncs: 0,
+    }
   );
+
+  return newClientTotals;
 };
 
 // This method is used to filter byMonth data and return data for only

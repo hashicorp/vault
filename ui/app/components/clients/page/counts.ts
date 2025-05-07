@@ -124,12 +124,13 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   }
 
   // duplicate of the method found in the activity component, so that we render the child only when there is activity to view
+  // don't need to actually do total new clients calculation, just whether data is present
   get totalUsageCounts(): TotalClients {
     const { namespace, mountPath, activity } = this.args;
     if (mountPath) {
       // only do this if we have a mountPath filter.
       // namespace is filtered on API layer
-      return filteredTotalForMount(activity.byNamespace, namespace, mountPath);
+      return filteredTotalForMount(activity.byNamespace, namespace, mountPath, activity.byMonth);
     }
     return activity?.total;
   }
