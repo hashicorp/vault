@@ -8073,7 +8073,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-cli-babel@npm:^7.1.2, ember-cli-babel@npm:^7.10.0, ember-cli-babel@npm:^7.13.0, ember-cli-babel@npm:^7.18.0, ember-cli-babel@npm:^7.22.1, ember-cli-babel@npm:^7.23.0, ember-cli-babel@npm:^7.26.11, ember-cli-babel@npm:^7.26.3, ember-cli-babel@npm:^7.26.4, ember-cli-babel@npm:^7.26.5, ember-cli-babel@npm:^7.26.6, ember-cli-babel@npm:^7.5.0, ember-cli-babel@npm:^7.7.3":
+"ember-cli-babel@npm:^7.1.2, ember-cli-babel@npm:^7.10.0, ember-cli-babel@npm:^7.13.0, ember-cli-babel@npm:^7.18.0, ember-cli-babel@npm:^7.22.1, ember-cli-babel@npm:^7.23.0, ember-cli-babel@npm:^7.26.11, ember-cli-babel@npm:^7.26.3, ember-cli-babel@npm:^7.26.4, ember-cli-babel@npm:^7.26.6, ember-cli-babel@npm:^7.5.0, ember-cli-babel@npm:^7.7.3":
   version: 7.26.11
   resolution: "ember-cli-babel@npm:7.26.11"
   dependencies:
@@ -8290,7 +8290,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-cli-mirage@npm:~3.0.3":
+"ember-cli-mirage@npm:~3.0.4":
   version: 3.0.4
   resolution: "ember-cli-mirage@npm:3.0.4"
   dependencies:
@@ -8800,16 +8800,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-inflector@npm:4.0.2":
-  version: 4.0.2
-  resolution: "ember-inflector@npm:4.0.2"
-  dependencies:
-    ember-cli-babel: ^7.26.5
-  checksum: 0433146a7a093cf0f5e1454f3820c773d5f4ee7ca069df0eddc712f39d45a52bb699f8e44cd163815fb0c5abe75480b8511a947647b0f3cb38768147f457adae
-  languageName: node
-  linkType: hard
-
-"ember-inflector@npm:^2.0.0 || ^3.0.0 || ^4.0.2 || ^5.0.0":
+"ember-inflector@npm:5.0.2, ember-inflector@npm:^2.0.0 || ^3.0.0 || ^4.0.2 || ^5.0.0":
   version: 5.0.2
   resolution: "ember-inflector@npm:5.0.2"
   dependencies:
@@ -18804,7 +18795,7 @@ __metadata:
     ember-cli-flash: 4.0.0
     ember-cli-htmlbars: ~6.3.0
     ember-cli-inject-live-reload: ~2.1.0
-    ember-cli-mirage: ~3.0.3
+    ember-cli-mirage: ~3.0.4
     ember-cli-page-object: ~2.3.1
     ember-cli-sass: 11.0.1
     ember-cli-sri: "meirish/ember-cli-sri#rooturl"
@@ -18815,7 +18806,7 @@ __metadata:
     ember-data: ~5.3.13
     ember-engines: 0.8.23
     ember-exam: ~9.1.0
-    ember-inflector: 4.0.2
+    ember-inflector: 5.0.2
     ember-load-initializers: ~2.1.2
     ember-modal-dialog: ~4.1.5
     ember-modifier: ~4.2.0
