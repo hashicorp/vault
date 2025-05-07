@@ -156,7 +156,7 @@ export default class ClientsDateRangeComponent extends Component<Args> {
     }
     [year, month] = this.endDate.split('-');
     if (year && month) {
-      params.end_time = formatDateObject({ monthIdx: parseInt(month) - 1, year: parseInt(year) }, true);
+      params.end_time = formatDateObject({ monthIdx: parseInt(month, 10) - 1, year: parseInt(year, 10) }, true);
     }
 
     this.args.onChange(params);
