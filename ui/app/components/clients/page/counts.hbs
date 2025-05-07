@@ -16,7 +16,7 @@
     @setEditModalVisible={{this.setEditModalVisible}}
   />
 </div>
-{{#if (and this.version.isCommunity this.formattedStartDate this.formattedEndDate)}}
+{{#if this.showCommunity}}
   <div class="has-top-padding-m">
     <Hds::Text::Display @tag="h3">Client counting period</Hds::Text::Display>
     <Hds::Text::Body @tag="p" class="has-text-grey">Specify a date range to view within that timeframe. Click 'Edit' to

@@ -2,8 +2,7 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 }}
-
-<div ...attributes class={{if (and this.version.isCommunity this.startDate this.endDate) "is-absolute"}}>
+<div ...attributes>
   <div class="is-flex-column align-items-end">
     {{#if this.version.isEnterprise}}
       <Hds::Text::Display @tag="p" @size="100" class="has-bottom-margin-xs">

@@ -7,7 +7,7 @@
   <PH.Title>
     Client Usage
   </PH.Title>
-  {{#if (and this.version.isEnterprise this.formattedStartDate this.formattedEndDate)}}
+  {{#if this.version.isEnterprise}}
     <PH.Description class="has-text-weight-semibold flex">
       <p>
         For billing period:
@@ -18,8 +18,9 @@
     </PH.Description>
   {{/if}}
   <PH.Description>
-    This is the dashboard for your overall client count usages. Documentation is available
-    <Hds::Link::Inline @href={{doc-link "/vault/docs/concepts/client-count"}}> here</Hds::Link::Inline>.
+    This is the dashboard for your overall client count usages. Review Vault's
+    <Hds::Link::Inline @href={{doc-link "/vault/docs/concepts/client-count"}}>client counting documentation
+    </Hds::Link::Inline>for more information.
   </PH.Description>
 
   <PH.Actions class="align-items-end align-self-end">
@@ -41,6 +42,7 @@
       @onChange={{@onChange}}
       @showEditModal={{@showEditModal}}
       @setEditModalVisible={{@setEditModalVisible}}
+      class={{if (and this.version.isCommunity this.startDate this.endDate) "position-absolute"}}
     />
   </PH.Actions>
 

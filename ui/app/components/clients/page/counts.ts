@@ -189,6 +189,10 @@ export default class ClientsCountsPageComponent extends Component<Args> {
     return this.args.activity?.total?.secret_syncs > 0;
   }
 
+  get showCommunity(): boolean {
+    return this.version.isCommunity && !!this.formattedStartDate && !!this.formattedEndDate;
+  }
+
   @action
   onDateChange(params: { start_time: number | undefined; end_time: number | undefined }) {
     this.args.onFilterChange(params);
