@@ -530,7 +530,7 @@ CHECK:
 			// Check if parameter has been explicitly denied
 			if valueSlice, ok := permissions.DeniedParameters[strings.ToLower(parameter)]; ok {
 				// If the value exists in denied values slice, deny
-				if valueInParameterList(value, valueSlice) {
+				if valueInDeniedParameterList(value, valueSlice) {
 					return
 				}
 			}
@@ -556,9 +556,9 @@ CHECK:
 				return
 			}
 
-			// If the value doesn't exists in the allowed values slice,
+			// If the value doesn't exist in the allowed values slice,
 			// deny
-			if ok && !valueInParameterList(value, valueSlice) {
+			if ok && !valueInAllowedParameterList(value, valueSlice) {
 				return
 			}
 		}
@@ -764,16 +764,73 @@ func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.To
 	return ret
 }
 
-func valueInParameterList(v interface{}, list []interface{}) bool {
+func valueInAllowedParameterList(v interface{}, list []interface{}) bool {
 	// Empty list is equivalent to the item always existing in the list
 	if len(list) == 0 {
 		return true
 	}
 
-	return valueInSlice(v, list)
+	// If v is a slice, check if all the values in the slice are in the list
+	switch vals := v.(type) {
+	case []interface{}:
+		for _, val := range vals {
+			if !valueInParameterList(val, list) {
+				return false
+			}
+		}
+	case []string:
+		for _, val := range vals {
+			if !valueInParameterList(val, list) {
+				return false
+			}
+		}
+	case []int:
+		for _, val := range vals {
+			if !valueInParameterList(val, list) {
+				return false
+			}
+		}
+	default:
+		return valueInParameterList(v, list)
+	}
+
+	return true
 }
 
-func valueInSlice(v interface{}, list []interface{}) bool {
+func valueInDeniedParameterList(v interface{}, list []interface{}) bool {
+	// Empty list is equivalent to the item always existing in the list
+	if len(list) == 0 {
+		return true
+	}
+
+	// If v is a slice, check if any of the values in the slice are in the list
+	switch vals := v.(type) {
+	case []interface{}:
+		for _, val := range vals {
+			if valueInParameterList(val, list) {
+				return true
+			}
+		}
+	case []string:
+		for _, val := range vals {
+			if valueInParameterList(val, list) {
+				return true
+			}
+		}
+	case []int:
+		for _, val := range vals {
+			if valueInParameterList(val, list) {
+				return true
+			}
+		}
+	default:
+		return valueInParameterList(v, list)
+	}
+
+	return false
+}
+
+func valueInParameterList(v interface{}, list []interface{}) bool {
 	for _, el := range list {
 		if el == nil || v == nil {
 			// It doesn't seem possible to set up a nil entry in the list, but it is possible

@@ -560,62 +560,71 @@ func testACLValuePermissions(t *testing.T, ns *namespace.Namespace) {
 	}
 	type tcase struct {
 		path       string
-		parameters []string
-		values     []interface{}
+		parameters map[string]interface{}
 		allowed    bool
 	}
 
 	tcases := []tcase{
-		{"dev/ops", []string{"allow"}, []interface{}{"good"}, true},
-		{"dev/ops", []string{"allow"}, []interface{}{"bad"}, false},
-		{"foo/bar", []string{"deny"}, []interface{}{"bad"}, false},
-		{"foo/bar", []string{"deny"}, []interface{}{"bad glob"}, false},
-		{"foo/bar", []string{"deny"}, []interface{}{"good"}, true},
-		{"foo/bar", []string{"allow"}, []interface{}{"good"}, true},
-		{"foo/bar", []string{"deny"}, []interface{}{nil}, true},
-		{"foo/bar", []string{"allow"}, []interface{}{nil}, true},
-		{"foo/baz", []string{"aLLow"}, []interface{}{"good"}, true},
-		{"foo/baz", []string{"deny"}, []interface{}{"bad"}, false},
-		{"foo/baz", []string{"deny"}, []interface{}{"good"}, false},
-		{"foo/baz", []string{"allow", "deny"}, []interface{}{"good", "bad"}, false},
-		{"foo/baz", []string{"deny", "allow"}, []interface{}{"good", "bad"}, false},
-		{"foo/baz", []string{"deNy", "allow"}, []interface{}{"bad", "good"}, false},
-		{"foo/baz", []string{"aLLow"}, []interface{}{"bad"}, false},
-		{"foo/baz", []string{"Neither"}, []interface{}{"bad"}, false},
-		{"foo/baz", []string{"allow"}, []interface{}{nil}, false},
-		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"good"}, true},
-		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"good1"}, true},
-		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"good2"}, true},
-		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"glob good2"}, false},
-		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"glob good3"}, true},
-		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"bad"}, false},
-		{"fizz/buzz", []string{"allow_multi"}, []interface{}{"bad"}, false},
-		{"fizz/buzz", []string{"allow_multi", "allow"}, []interface{}{"good1", "good"}, true},
-		{"fizz/buzz", []string{"deny_multi"}, []interface{}{"bad2"}, false},
-		{"fizz/buzz", []string{"deny_multi", "allow_multi"}, []interface{}{"good", "good2"}, false},
-		//	{"test/types", []string{"array"}, []interface{}{[1]string{"good"}}, true},
-		{"test/types", []string{"map"}, []interface{}{map[string]interface{}{"good": "one"}}, true},
-		{"test/types", []string{"map"}, []interface{}{map[string]interface{}{"bad": "one"}}, false},
-		{"test/types", []string{"int"}, []interface{}{1}, true},
-		{"test/types", []string{"int"}, []interface{}{3}, false},
-		{"test/types", []string{"bool"}, []interface{}{false}, true},
-		{"test/types", []string{"bool"}, []interface{}{true}, false},
-		{"test/star", []string{"anything"}, []interface{}{true}, true},
-		{"test/star", []string{"foo"}, []interface{}{true}, true},
-		{"test/star", []string{"bar"}, []interface{}{false}, true},
-		{"test/star", []string{"bar"}, []interface{}{true}, false},
+		{"dev/ops", map[string]interface{}{"allow": "good"}, true},
+		{"dev/ops", map[string]interface{}{"allow": "bad"}, false},
+		{"foo/bar", map[string]interface{}{"deny": "bad"}, false},
+		{"foo/bar", map[string]interface{}{"deny": "bad glob"}, false},
+		{"foo/bar", map[string]interface{}{"deny": "good"}, true},
+		{"foo/bar", map[string]interface{}{"allow": "good"}, true},
+		{"foo/bar", map[string]interface{}{"deny": nil}, true},
+		{"foo/bar", map[string]interface{}{"allow": nil}, true},
+		{"foo/baz", map[string]interface{}{"aLLow": "good"}, true},
+		{"foo/baz", map[string]interface{}{"deny": "bad"}, false},
+		{"foo/baz", map[string]interface{}{"deny": "good"}, false},
+		{"foo/baz", map[string]interface{}{"allow": "good", "deny": "bad"}, false},
+		{"foo/baz", map[string]interface{}{"deny": "good", "allow": "bad"}, false},
+		{"foo/baz", map[string]interface{}{"deNy": "bad", "allow": "good"}, false},
+		{"foo/baz", map[string]interface{}{"aLLow": "bad"}, false},
+		{"foo/baz", map[string]interface{}{"Neither": "bad"}, false},
+		{"foo/baz", map[string]interface{}{"allow": nil}, false},
+		{"fizz/buzz", map[string]interface{}{"allow_multi": "good"}, true},
+		{"fizz/buzz", map[string]interface{}{"allow_multi": "good1"}, true},
+		{"fizz/buzz", map[string]interface{}{"allow_multi": "good2"}, true},
+		{"fizz/buzz", map[string]interface{}{"allow_multi": "glob good2"}, false},
+		{"fizz/buzz", map[string]interface{}{"allow_multi": "glob good3"}, true},
+		{"fizz/buzz", map[string]interface{}{"allow_multi": "bad"}, false},
+		{"fizz/buzz", map[string]interface{}{"allow_multi": "bad"}, false},
+		{"fizz/buzz", map[string]interface{}{"allow_multi": "good1", "allow": "good"}, true},
+		{"fizz/buzz", map[string]interface{}{"deny_multi": "bad2"}, false},
+		{"fizz/buzz", map[string]interface{}{"deny_multi": "good", "allow_multi": "good2"}, false},
+		{"test/types", map[string]interface{}{"map": map[string]interface{}{"good": "one"}}, true},
+		{"test/types", map[string]interface{}{"map": map[string]interface{}{"bad": "one"}}, false},
+		{"test/types", map[string]interface{}{"int": 1}, true},
+		{"test/types", map[string]interface{}{"int": 3}, false},
+		{"test/types", map[string]interface{}{"bool": false}, true},
+		{"test/types", map[string]interface{}{"bool": true}, false},
+		{"test/star", map[string]interface{}{"anything": true}, true},
+		{"test/star", map[string]interface{}{"foo": true}, true},
+		{"test/star", map[string]interface{}{"bar": false}, true},
+		{"test/star", map[string]interface{}{"bar": true}, false},
+		{"test/slice/allow", map[string]interface{}{"allowStr": []string{"good"}}, true},
+		{"test/slice/allow", map[string]interface{}{"allowStr": []string{"good1", "good2 glob"}}, true},
+		{"test/slice/allow", map[string]interface{}{"allowStr": []string{"good1", "bad"}}, false},
+		{"test/slice/allow", map[string]interface{}{"allowInt": []int{1, 2}}, true},
+		{"test/slice/allow", map[string]interface{}{"allowInt": []int{3, 4}}, false},
+		{"test/slice/allow", map[string]interface{}{"allowIface": []interface{}{"good", 1}}, true},
+		{"test/slice/allow", map[string]interface{}{"allowIface": []interface{}{"good", "bad", 1}}, false},
+		{"test/slice/deny", map[string]interface{}{"denyStr": []string{"bad"}}, false},
+		{"test/slice/deny", map[string]interface{}{"denyStr": []string{"good1", "bad2 glob"}}, false},
+		{"test/slice/deny", map[string]interface{}{"denyStr": []string{"good1", "good2"}}, true},
+		{"test/slice/deny", map[string]interface{}{"denyInt": []int{1, 2, 3}}, false},
+		{"test/slice/deny", map[string]interface{}{"denyInt": []int{4, 5}}, true},
+		{"test/slice/deny", map[string]interface{}{"denyIface": []interface{}{"bad", 1}}, false},
+		{"test/slice/deny", map[string]interface{}{"denyIface": []interface{}{"good", "good1", 5}}, true},
 	}
 
 	for _, tc := range tcases {
 		request := &logical.Request{
 			Path: tc.path,
-			Data: make(map[string]interface{}),
+			Data: tc.parameters,
 		}
 		ctx := namespace.ContextWithNamespace(context.Background(), ns)
 
-		for i, parameter := range tc.parameters {
-			request.Data[parameter] = tc.values[i]
-		}
 		for _, op := range toperations {
 			request.Operation = op
 			authResults := acl.AllowOperation(ctx, request, false)
@@ -1329,6 +1338,22 @@ path "test/star" {
 		"bar" = [false]
 	}
 	denied_parameters = {
+	}
+}
+path "test/slice/allow" {
+	policy = "write"
+	allowed_parameters = {
+		"allowStr" = ["good", "good1", "good2*"]
+		"allowInt" = [1, 2, 3]
+		"allowIface" = ["good", 1, 2]
+	}
+}
+path "test/slice/deny" {
+	policy = "write"
+	denied_parameters = {
+		"denyStr" = ["bad", "bad1", "bad2*"]
+		"denyInt" = [1, 2, 3]
+		"denyIface" = ["bad", 1, 2]
 	}
 }
 `
