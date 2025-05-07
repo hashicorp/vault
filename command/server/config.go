@@ -109,6 +109,8 @@ type Config struct {
 
 	DetectDeadlocks string `hcl:"detect_deadlocks"`
 
+	ObservationSystemLedgerPath string `hcl:"observation_system_ledger_path"`
+
 	ImpreciseLeaseRoleTracking bool `hcl:"imprecise_lease_role_tracking"`
 
 	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
@@ -413,6 +415,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.DetectDeadlocks = c.DetectDeadlocks
 	if c2.DetectDeadlocks != "" {
 		result.DetectDeadlocks = c2.DetectDeadlocks
+	}
+
+	result.ObservationSystemLedgerPath = c.ObservationSystemLedgerPath
+	if c2.ObservationSystemLedgerPath != "" {
+		result.ObservationSystemLedgerPath = c2.ObservationSystemLedgerPath
 	}
 
 	result.ImpreciseLeaseRoleTracking = c.ImpreciseLeaseRoleTracking
@@ -1312,6 +1319,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"experiments":        c.Experiments,
 
 		"detect_deadlocks": c.DetectDeadlocks,
+
+		"observation_system_ledger_path": c.ObservationSystemLedgerPath,
 
 		"imprecise_lease_role_tracking": c.ImpreciseLeaseRoleTracking,
 

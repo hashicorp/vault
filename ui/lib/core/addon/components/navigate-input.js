@@ -12,7 +12,7 @@ import Component from '@glimmer/component';
 
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
-import keys from 'core/utils/key-codes';
+import keys from 'core/utils/keys';
 
 /**
  * @module NavigateInput
@@ -224,18 +224,17 @@ export default class NavigateInput extends Component {
   }
   @action
   handleKeyPress(event) {
-    if (event.keyCode === keys.TAB) {
+    if (event.key === keys.TAB) {
       this.onTab(event);
     }
   }
   @action
   handleKeyUp(event) {
-    const keyCode = event.keyCode;
     const val = event.target.value;
-    if (keyCode === keys.ENTER) {
+    if (event.key === keys.ENTER) {
       this.onEnter(val);
     }
-    if (keyCode === keys.ESC) {
+    if (keys.ESC.includes(event.key)) {
       this.onEscape(val);
     }
   }
