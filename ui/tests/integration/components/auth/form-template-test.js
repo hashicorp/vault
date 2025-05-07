@@ -267,7 +267,7 @@ module('Integration | Component | auth | form template', function (hooks) {
       // set by parent (auth/page.js) component
       this.presetAuthType = this.directLinkData.type;
       await this.renderComponent();
-      assert.dom(`p${AUTH_FORM.method('OIDC')}`).hasText('OIDC', 'it renders mount type');
+      assert.dom(AUTH_FORM.preferredMethod('OIDC')).hasText('OIDC', 'it renders mount type');
       assert.dom(GENERAL.inputByAttr('role')).exists();
       assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
       assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
@@ -292,7 +292,7 @@ module('Integration | Component | auth | form template', function (hooks) {
       await click(AUTH_FORM.advancedSettings);
       assert.dom(GENERAL.inputByAttr('path')).exists();
 
-      assert.dom(`p${AUTH_FORM.method('LDAP')}`).doesNotExist('single mount view does not render');
+      assert.dom(AUTH_FORM.preferredMethod('LDAP')).doesNotExist('single mount view does not render');
       assert.dom(AUTH_FORM.tabBtn('ldap')).doesNotExist('tab does not render');
       assert
         .dom(GENERAL.backButton)
