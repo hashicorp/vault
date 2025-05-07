@@ -1717,7 +1717,7 @@ func (a *ActivityLog) HandleEndOfMonth(ctx context.Context, currentTime time.Tim
 	// if new billing cycle is detected, reset clientIDs in memory
 	a.handleClientIDsInMemoryEndOfMonth(ctx, currentTime)
 
-	// clean up cleints from the clientIDs in memory if they are ephemeral
+	// clean up clients from clientIDsUsageInfo map if they are ephemeral
 	a.cleanupEphemeralClients()
 
 	return nil
@@ -3643,7 +3643,6 @@ func (c *csvEncoder) Encode(record *ActivityLogExportRecord) error {
 // cleanupEphemeralClients removes ephemeral clients whose associated entities no longer exist
 func (a *ActivityLog) cleanupEphemeralClients() error {
 	clientsIDsInMemory := a.GetClientIDsUsageInfo()
-	ephemeralClients := make([]string, 0, len(clientsIDsInMemory))
 
 	// loop through the clients and check if they are ephemeral
 	for clientId := range clientsIDsInMemory {
@@ -3653,14 +3652,11 @@ func (a *ActivityLog) cleanupEphemeralClients() error {
 			continue
 		}
 		if entity == nil {
-			ephemeralClients = append(ephemeralClients, clientId)
+			delete(clientsIDsInMemory, clientId)
 		}
 	}
 
 	// now update the in-memory map
-	for _, clientId := range ephemeralClients {
-		delete(clientsIDsInMemory, clientId)
-	}
 	a.SetClientIDsUsageInfo(clientsIDsInMemory)
 
 	return nil
