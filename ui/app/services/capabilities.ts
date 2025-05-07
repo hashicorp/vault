@@ -15,17 +15,13 @@ export default class CapabilitiesService extends Service {
   @service declare readonly api: ApiService;
   @service declare readonly namespace: NamespaceService;
 
-// Add API paths to the PATH_MAP constant using a friendly key, e.g., 'syncDestinations'.
-// Each path should include placeholders for dynamic values, like:
-// apiPath`sys/sync/destinations/${'type'}/${'name'}`
-// To retrieve a path, use the key (ex: `syncDestinations`) and provide an object whose keys match
-// the dynamic segment names ('type', 'name', etc.).
-// The values from the object will be inserted into the placeholders,
-// and the fully-resolved path string will be returned.```
-  // PATH_MAP uses the apiPath tagged template literal to build the path with dynamic segments
-  // for example apiPath`sys/sync/destinations/${'type'}/${'name'}`,
-  // pass a key for lookup in PATH_MAP and an object whose keys match the dynamic segments in apiPath
-  // the values will be populated in the string and the resulting path will be returned
+  /*
+  Add API paths to the PATH_MAP constant using a friendly key, e.g. 'syncDestinations'.
+  Use the apiPath tagged template literal to build the path with dynamic segments
+  Each path should include placeholders for dynamic values -> apiPath`sys/sync/destinations/${'type'}/${'name'}`
+  Provide the key and an object whose keys match the dynamic segment names
+  The values from the object will be inserted into the placeholders and the fully-resolved path string will be returned.
+  */
   pathFor<T>(key: keyof typeof PATH_MAP, params?: T) {
     const path = PATH_MAP[key];
     if (!path) {
