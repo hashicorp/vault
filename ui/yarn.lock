@@ -2073,12 +2073,19 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ember/string@npm:^3.0.0, @ember/string@npm:^3.1.1, @ember/string@npm:~3.1.1":
+"@ember/string@npm:^3.0.0, @ember/string@npm:^3.1.1":
   version: 3.1.1
   resolution: "@ember/string@npm:3.1.1"
   dependencies:
     ember-cli-babel: ^7.26.6
   checksum: a2496735cb8cfc2d9484f7756fbb3e528db0a9bdf3acc8e86cc56491302777d806d1039186bf6c045aa3e40e464fd8d1cdac89fe97da274f3200844a7d3162c9
+  languageName: node
+  linkType: hard
+
+"@ember/string@npm:~4.0.1":
+  version: 4.0.1
+  resolution: "@ember/string@npm:4.0.1"
+  checksum: 3a5288847073929f08bdcc1fc71e266c19890463ff604c2f8b78ec58baee1856f6fd3347a8bb4b894a822b7fdb8fb7dae45241d83396bb9ae69f2ca8e8f2bd1e
   languageName: node
   linkType: hard
 
@@ -18775,7 +18782,7 @@ __metadata:
     "@ember/legacy-built-in-components": ~0.4.2
     "@ember/optional-features": ~2.2.0
     "@ember/render-modifiers": ~3.0.0
-    "@ember/string": ~3.1.1
+    "@ember/string": ~4.0.1
     "@ember/test-helpers": ~3.3.1
     "@ember/test-waiters": ~4.1.0
     "@glimmer/component": ~1.1.2

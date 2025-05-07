@@ -56,7 +56,7 @@
     "@ember/legacy-built-in-components": "~0.4.2",
     "@ember/optional-features": "~2.2.0",
     "@ember/render-modifiers": "~3.0.0",
-    "@ember/string": "~3.1.1",
+    "@ember/string": "~4.0.1",
     "@ember/test-helpers": "~3.3.1",
     "@ember/test-waiters": "~4.1.0",
     "@glimmer/component": "~1.1.2",
