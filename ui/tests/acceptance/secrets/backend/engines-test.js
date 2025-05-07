@@ -25,7 +25,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
 
     await fillIn('[data-test-secret-key]', key);
     await fillIn(GENERAL.inputByAttr(key), value);
-    await click('[data-test-secret-save]');
+    await click(GENERAL.saveButton);
     await click(SES.crumb(enginePath));
   };
 

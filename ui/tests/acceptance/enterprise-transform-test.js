@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { currentURL, click, settled, currentRouteName, visit } from '@ember/test-helpers';
+import { currentURL, click, settled, currentRouteName, visit, fillIn } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { selectChoose } from 'ember-power-select/test-support';
 import { typeInSearch, clickTrigger } from 'ember-power-select/test-support/helpers';
@@ -14,13 +14,13 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import transformationsPage from 'vault/tests/pages/secrets/backend/transform/transformations';
 import rolesPage from 'vault/tests/pages/secrets/backend/transform/roles';
-import templatesPage from 'vault/tests/pages/secrets/backend/transform/templates';
 import alphabetsPage from 'vault/tests/pages/secrets/backend/transform/alphabets';
 import searchSelect from 'vault/tests/pages/components/search-select';
 import { runCmd } from '../helpers/commands';
 import { allEngines } from 'vault/helpers/mountable-secret-engines';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { v4 as uuidv4 } from 'uuid';
+import { GENERAL } from 'vault/tests/pages/components/general';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 const searchSelectComponent = create(searchSelect);
@@ -263,22 +263,20 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
       `/vault/secrets/${backend}/create?itemType=template`,
       'redirects to create template page'
     );
-    await templatesPage.name(templateName);
-    await templatesPage.pattern(`(\\d{4})`);
+    await fillIn(GENERAL.inputByAttr('name'), templateName);
+    await fillIn(GENERAL.inputByAttr('pattern', `(\\d{4})`));
     await clickTrigger('#alphabet');
     await settled();
     assert.ok(searchSelectComponent.options.length > 0, 'lists built-in alphabets');
     await selectChoose('#alphabet', '.ember-power-select-option', 0);
     assert.dom('#alphabet .ember-power-select-trigger').doesNotExist('Alphabet input no longer searchable');
-    await templatesPage.submit();
-    await settled();
+    await click(GENERAL.saveButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/show/template/${templateName}`,
       'redirects to show template page after submit'
     );
-    await templatesPage.editLink();
-    await settled();
+    await click('[data-test-edit-link]');
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/edit/template/${templateName}`,
@@ -308,8 +306,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     );
     await alphabetsPage.name(alphabetName);
     await alphabetsPage.alphabet('aeiou');
-    await alphabetsPage.submit();
-    await settled();
+    await click(GENERAL.save);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/show/alphabet/${alphabetName}`,

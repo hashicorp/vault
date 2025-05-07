@@ -11,6 +11,7 @@ import kubernetesHandlers from 'vault/mirage/handlers/kubernetes';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { visit, click, currentRouteName } from '@ember/test-helpers';
 import { Response } from 'miragejs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | kubernetes | configuration', function (hooks) {
   setupApplicationTest(hooks);
@@ -39,7 +40,7 @@ module('Acceptance | kubernetes | configuration', function (hooks) {
     assert.expect(1);
     await this.visitConfiguration();
     await click('[data-test-toolbar-config-action]');
-    await click('[data-test-config-save]');
+    await click(GENERAL.saveButton);
     await click('[data-test-config-confirm]');
     this.validateRoute(assert, 'configuration', 'Transitions to Configuration route on click');
   });

@@ -12,6 +12,7 @@ import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { duration } from 'core/helpers/format-duration';
 import { ldapRoleID } from 'vault/adapters/ldap/role';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | ldap | Page::Role::Details', function (hooks) {
   setupRenderingTest(hooks);
@@ -64,7 +65,7 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
     await this.renderComponent('static');
 
     assert.dom('[data-test-delete]').hasText('Delete role', 'Delete action renders');
-    assert.dom('[data-test-get-credentials]').hasText('Get credentials', 'Get credentials action renders');
+    assert.dom(GENERAL.saveButton).hasText('Get credentials', 'Get credentials action renders');
     assert.dom('[data-test-rotate-credentials]').exists('Rotate credentials action renders for static role');
     assert.dom('[data-test-edit]').hasText('Edit role', 'Edit action renders');
 

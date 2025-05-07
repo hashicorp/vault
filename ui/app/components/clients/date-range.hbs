@@ -11,7 +11,7 @@
     <div class="is-flex">
       {{#if this.version.isEnterprise}}
         <Hds::Dropdown class="has-left-margin-xs" @matchToggleWidth={{true}} as |D|>
-          <D.ToggleButton @text="Billing start date" @color="secondary" data-test-date-range-edit />
+          <D.ToggleButton @text="Billing start date" @color="secondary" data-test-button="date-range-edit" />
           <D.Description @text="Current period" />
           <D.Checkmark
             {{on "click" (fn this.updateEnterpriseDateRange @billingStartTime)}}
@@ -40,7 +40,7 @@
           @text="Set date range"
           @icon="edit"
           {{on "click" (fn (mut this.showEditModal) true)}}
-          data-test-date-range-edit
+          data-test-button="date-range-edit"
         />
       {{/if}}
     </div>
