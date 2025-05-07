@@ -296,7 +296,7 @@ module('Integration | Component | auth | form template', function (hooks) {
       assert.dom(AUTH_FORM.tabBtn('ldap')).doesNotExist('tab does not render');
       assert
         .dom(GENERAL.backButton)
-        .exists('back button renders because listing visibility="unauth" for other mounts');
+        .exists('back button renders because listing_visibility="unauth" for other mounts');
       assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('"Sign in with other methods" does not render');
     });
   });

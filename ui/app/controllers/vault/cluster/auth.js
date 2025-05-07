@@ -18,11 +18,11 @@ export default Controller.extend({
   auth: service(),
   router: service(),
   customMessages: service(),
-  queryParams: [{ authMethod: 'with', oidcProvider: 'o' }],
+  queryParams: [{ authMount: 'with', oidcProvider: 'o' }],
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
   redirectTo: alias('vaultController.redirectTo'),
   hvdManagedNamespaceRoot: alias('flagsService.hvdManagedNamespaceRoot'),
-  authMethod: '',
+
   oidcProvider: '',
   unwrapTokenError: '',
 
