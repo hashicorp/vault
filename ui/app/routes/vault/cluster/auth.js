@@ -12,7 +12,7 @@ import { sanitizePath } from 'core/utils/sanitize-path';
 
 export default class AuthRoute extends ClusterRouteBase {
   queryParams = {
-    authMount: { replace: true },
+    authMount: { replace: true, refreshModel: true },
     wrapped_token: { refreshModel: true },
   };
 
