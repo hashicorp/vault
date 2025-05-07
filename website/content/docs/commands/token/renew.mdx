@@ -43,7 +43,8 @@ token_renewable    true
 token_policies     [default]
 ```
 
-Alternatively, renew a token using its accessor value (this is useful when you don't have the actual token):
+Alternatively, renew a token using its accessor value. Renewing with the
+ accessor vault is is useful when you do not have the actual token:
 
 ```shell-session
 $ vault token renew -accessor ntL634hzE0CtQnyCIqkxSa82
