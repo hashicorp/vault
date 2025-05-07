@@ -8970,17 +8970,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-resolver@npm:~11.0.1":
-  version: 11.0.1
-  resolution: "ember-resolver@npm:11.0.1"
+"ember-resolver@npm:~13.1.0":
+  version: 13.1.0
+  resolution: "ember-resolver@npm:13.1.0"
   dependencies:
     ember-cli-babel: ^7.26.11
   peerDependencies:
-    ember-source: ^4.8.3 || >= 5.0.0
+    ember-source: ^4.12.0 || >= 5.0.0
   peerDependenciesMeta:
     ember-source:
       optional: true
-  checksum: 8658f346cf0759f719a023c857ff71fde148ee8d4a15df6208f66274ca1215a7e5727a204b2d5023638cf818f6d49ee1c1cc8ab7d07173fe5587a91fa028c742
+  checksum: 050e0b7911924c76572cbd8e27ab2f6459de37b8bce86b1498547b330bf30bcdaed8d2575e32da4900e09f4fe4f5cc556dc23d49e7cbddac0455b6763dd3d3ee
   languageName: node
   linkType: hard
 
@@ -18812,7 +18812,7 @@ __metadata:
     ember-power-select: ~8.7.0
     ember-qrcode-shim: ~0.4.0
     ember-qunit: ~9.0.2
-    ember-resolver: ~11.0.1
+    ember-resolver: ~13.1.0
     ember-responsive: 5.0.0
     ember-service-worker: "meirish/ember-service-worker#configurable-scope"
     ember-sinon-qunit: ~7.5.0

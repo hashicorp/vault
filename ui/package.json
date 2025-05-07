@@ -121,7 +121,7 @@
     "ember-power-select": "~8.7.0",
     "ember-qrcode-shim": "~0.4.0",
     "ember-qunit": "~9.0.2",
-    "ember-resolver": "~11.0.1",
+    "ember-resolver": "~13.1.0",
     "ember-responsive": "5.0.0",
     "ember-service-worker": "meirish/ember-service-worker#configurable-scope",
     "ember-sinon-qunit": "~7.5.0",
