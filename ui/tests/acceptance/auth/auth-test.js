@@ -59,7 +59,7 @@ module('Acceptance | auth login form', function (hooks) {
     // dropdown could still render in "Sign in with other methods" view, so make sure we're not in a weird state
     assert.dom(GENERAL.backButton).doesNotExist('it does not render "Back" button');
     assert.dom(AUTH_FORM.authForm('token')).exists('it renders token form');
-    assert.dom(AUTH_FORM.tabs()).doesNotExist();
+    assert.dom(AUTH_FORM.tabs).doesNotExist();
   });
 
   module('listing visibility', function (hooks) {
@@ -78,14 +78,14 @@ module('Acceptance | auth login form', function (hooks) {
         { type: 'token', display: 'Token' },
       ];
       await visit('/vault/auth');
-      await waitFor(AUTH_FORM.tabs());
+      await waitFor(AUTH_FORM.tabs);
       assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
       // there are 4 mount paths returned in the stubbed sys/internal/ui/mounts response above,
       // but two are of the same type so only expect 3 tabs
-      assert.dom(AUTH_FORM.tabs()).exists({ count: 3 }, 'it groups mount paths by type and renders 3 tabs');
+      assert.dom(AUTH_FORM.tabs).exists({ count: 3 }, 'it groups mount paths by type and renders 3 tabs');
       expectedTabs.forEach((m) => {
-        assert.dom(AUTH_FORM.tabs(m.type)).exists(`${m.type} renders as a tab`);
-        assert.dom(AUTH_FORM.tabs(m.type)).hasText(m.display, `${m.type} renders expected display name`);
+        assert.dom(AUTH_FORM.tabBtn(m.type)).exists(`${m.type} renders as a tab`);
+        assert.dom(AUTH_FORM.tabBtn(m.type)).hasText(m.display, `${m.type} renders expected display name`);
       });
       assert
         .dom(AUTH_FORM.tabBtn('userpass'))

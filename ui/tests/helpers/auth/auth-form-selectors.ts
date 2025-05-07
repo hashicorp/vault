@@ -7,10 +7,9 @@ export const AUTH_FORM = {
   selectMethod: '[data-test-select="auth type"]',
   form: '[data-test-auth-form]',
   login: '[data-test-auth-submit]',
-  // TODO RENAME
-  tabs: (method: string) => (method ? `[data-test-auth-method="${method}"]` : '[data-test-auth-method]'),
-  preferredMethod: (method: string) => `p[data-test-auth-method="${method}"]`,
-  tabBtn: (method: string) => `[data-test-auth-method="${method}"] button`,
+  preferredMethod: (displayName: string) => `p[data-test-auth-method="${displayName}"]`, // display name => i.e "OIDC" not "oidc"
+  tabs: '[data-test-auth-tab]',
+  tabBtn: (method: string) => `[data-test-auth-tab="${method}"] button`, // method is all lowercased
   description: '[data-test-description]',
   // old form toggle, will eventually be deleted
   moreOptions: '[data-test-auth-form-options-toggle]',

@@ -112,10 +112,10 @@ module('Integration | Component | auth | page', function (hooks) {
       assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
       // there are 4 mount paths returned in visibleAuthMounts above,
       // but two are of the same type so only expect 3 tabs
-      assert.dom(AUTH_FORM.tabs()).exists({ count: 3 }, 'it groups mount paths by type and renders 3 tabs');
+      assert.dom(AUTH_FORM.tabs).exists({ count: 3 }, 'it groups mount paths by type and renders 3 tabs');
       expectedTabs.forEach((m) => {
-        assert.dom(AUTH_FORM.tabs(m.type)).exists(`${m.type} renders as a tab`);
-        assert.dom(AUTH_FORM.tabs(m.type)).hasText(m.display, `${m.type} renders expected display name`);
+        assert.dom(AUTH_FORM.tabBtn(m.type)).exists(`${m.type} renders as a tab`);
+        assert.dom(AUTH_FORM.tabBtn(m.type)).hasText(m.display, `${m.type} renders expected display name`);
       });
       assert
         .dom(AUTH_FORM.tabBtn('userpass'))
