@@ -24,11 +24,11 @@ module('Integration | Component | clients/date-range', function (hooks) {
     this.billingStartTime = '2018-01-01T14:15:30';
     this.retentionMonths = 48;
     this.onChange = Sinon.spy();
-    this.onCloseEditModal = Sinon.spy();
+    this.setEditModalVisible = Sinon.spy();
     this.showEditModal = false;
     this.renderComponent = async () => {
       await render(
-        hbs`<Clients::DateRange @startTime={{this.startTime}} @endTime={{this.endTime}} @onChange={{this.onChange}} @billingStartTime={{this.billingStartTime}} @retentionMonths={{this.retentionMonths}} @onCloseEditModal={{this.onCloseEditModal}} @showEditModal={{this.showEditModal}}/>`
+        hbs`<Clients::DateRange @startTime={{this.startTime}} @endTime={{this.endTime}} @onChange={{this.onChange}} @billingStartTime={{this.billingStartTime}} @retentionMonths={{this.retentionMonths}} @setEditModalVisible={{this.setEditModalVisible}} @showEditModal={{this.showEditModal}}/>`
       );
     };
   });

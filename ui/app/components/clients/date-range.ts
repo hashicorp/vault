@@ -20,7 +20,7 @@ interface OnChangeParams {
 }
 interface Args {
   onChange: (callback: OnChangeParams) => void;
-  onCloseEditModal: () => void;
+  setEditModalVisible: (visible: boolean) => void;
   showEditModal: boolean;
   startTime: string;
   endTime: string;
@@ -36,7 +36,7 @@ interface Args {
  * <Clients::DateRange @startTime="2018-01-01T14:15:30Z" @endTime="2019-01-31T14:15:30Z" @onChange={{this.handleDateChange}} />
  *
  * @param {function} onChange - callback when a new range is saved.
- * @param {function} onCloseEditModal - func to tell parent header when modal has closed
+ * @param {function} setEditModalVisible - callback to tell parent header when modal is opened/closed
  * @param {boolean} showEditModal - boolean for when parent header triggers the modal open
  * @param {string} [startTime] - ISO string timestamp of the current start date
  * @param {string} [endTime] - ISO string timestamp of the current end date
@@ -47,7 +47,6 @@ interface Args {
 export default class ClientsDateRangeComponent extends Component<Args> {
   @service declare readonly version: VersionService;
 
-  @tracked showEditModal = false;
   @tracked startDate = ''; // format yyyy-MM
   @tracked endDate = ''; // format yyyy-MM
   @tracked selectedStart = this.args.billingStartTime;
@@ -121,8 +120,7 @@ export default class ClientsDateRangeComponent extends Component<Args> {
   @action onClose() {
     // since the component never gets torn down, we have to manually re-set this on close
     this.setTrackedFromArgs();
-    this.showEditModal = false;
-    this.args.onCloseEditModal();
+    this.args.setEditModalVisible(false);
   }
 
   @action resetDates() {
@@ -152,11 +150,17 @@ export default class ClientsDateRangeComponent extends Component<Args> {
     let year, month;
     [year, month] = this.startDate.split('-');
     if (year && month) {
-      params.start_time = formatDateObject({ monthIdx: parseInt(month, 10) - 1, year: parseInt(year, 10) }, false);
+      params.start_time = formatDateObject(
+        { monthIdx: parseInt(month, 10) - 1, year: parseInt(year, 10) },
+        false
+      );
     }
     [year, month] = this.endDate.split('-');
     if (year && month) {
-      params.end_time = formatDateObject({ monthIdx: parseInt(month, 10) - 1, year: parseInt(year, 10) }, true);
+      params.end_time = formatDateObject(
+        { monthIdx: parseInt(month, 10) - 1, year: parseInt(year, 10) },
+        true
+      );
     }
 
     this.args.onChange(params);

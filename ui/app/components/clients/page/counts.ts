@@ -218,7 +218,7 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   }
 
   @action
-  onCloseEditModal() {
-    this.showEditModal = false;
+  setEditModalVisible(visible: boolean) {
+    this.showEditModal = visible;
   }
 }

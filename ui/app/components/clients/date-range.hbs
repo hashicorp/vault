@@ -39,7 +39,7 @@
           class="has-left-margin-xs"
           @text="Set date range"
           @icon="edit"
-          {{on "click" (fn (mut this.showEditModal) true)}}
+          {{on "click" (fn @setEditModalVisible true)}}
           data-test-date-range-edit
         />
       {{/unless}}
@@ -47,7 +47,7 @@
 
   </div>
 
-  {{#if (or this.showEditModal @showEditModal)}}
+  {{#if @showEditModal}}
     <Hds::Modal data-test-date-range-edit-modal @onClose={{this.onClose}} as |M|>
       <M.Header>
         Edit date range

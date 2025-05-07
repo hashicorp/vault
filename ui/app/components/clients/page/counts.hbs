@@ -13,7 +13,7 @@
     @noData={{not @activity.total.clients}}
     @onChange={{this.onDateChange}}
     @showEditModal={{this.showEditModal}}
-    @onCloseEditModal={{this.onCloseEditModal}}
+    @setEditModalVisible={{this.setEditModalVisible}}
   />
 </div>
 {{#if (and this.version.isCommunity this.formattedStartDate this.formattedEndDate)}}
