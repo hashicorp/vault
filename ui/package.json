@@ -72,7 +72,7 @@
     "@types/shell-quote": "~1.7.5",
     "@typescript-eslint/eslint-plugin": "~5.62.0",
     "@typescript-eslint/parser": "~5.62.0",
-    "asn1js": "~2.4.0",
+    "asn1js": "~3.0.6",
     "autosize": "~4.0.4",
     "babel-plugin-inline-json-import": "~0.3.2",
     "base64-js": "~1.5.1",
