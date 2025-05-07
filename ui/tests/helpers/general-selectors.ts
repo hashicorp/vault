@@ -38,8 +38,10 @@ export const GENERAL = {
   listItem: '[data-test-list-item-link]',
   // FORMS
   checkboxByAttr: (attr: string) => `[data-test-checkbox="${attr}"]`,
+  docLinkByAttr: (attr: string) => `[data-test-doc-link="${attr}"]`,
   enableField: (attr: string) => `[data-test-enable-field="${attr}"] button`,
   fieldByAttr: (attr: string) => `[data-test-field="${attr}"]`,
+  helpTextByAttr: (attr: string) => `[data-test-help-text="${attr}"]`,
   inputByAttr: (attr: string) => `[data-test-input="${attr}"]`,
   selectByAttr: (attr: string) => `[data-test-select="${attr}"]`,
   textToggle: '[data-test-text-toggle]',
@@ -54,8 +56,8 @@ export const GENERAL = {
   infoRowLabel: (label: string) => `[data-test-row-label="${label}"]`,
   infoRowValue: (label: string) => `[data-test-row-value="${label}"]`,
   // Validation
-  validation: (attr: string) => `[data-test-form-field-validation-error=${attr}]`,
-  validationWarning: (attr: string) => `[data-test-form-field-validation-warning=${attr}]`,
+  validationErrorByAttr: (attr: string) => `[data-test-validation-error=${attr}]`,
+  validationWarningByAttr: (attr: string) => `[data-test-validation-warning=${attr}]`,
   messageError: '[data-test-message-error]',
   notFound: '[data-test-not-found]',
   pageError: {

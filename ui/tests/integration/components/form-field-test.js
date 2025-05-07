@@ -13,6 +13,8 @@ import sinon from 'sinon';
 import formFields from '../../pages/components/form-field';
 import { format, startOfDay } from 'date-fns';
 
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+
 const component = create(formFields);
 
 module('Integration | Component | form field', function (hooks) {
@@ -303,7 +305,7 @@ module('Integration | Component | form field', function (hooks) {
     );
     await component.tooltipTrigger();
     assert.ok(component.hasTooltip, 'renders the tooltip component');
-    assert.dom('[data-test-input="foo"]').hasAttribute('placeholder', 'example::value');
+    assert.dom(GENERAL.inputByAttr('foo')).hasAttribute('placeholder', 'example::value');
   });
 
   test('it should not expand and toggle ttl when default 0s value is present', async function (assert) {
@@ -349,7 +351,7 @@ module('Integration | Component | form field', function (hooks) {
     await render(
       hbs`<FormField @attr={{this.attr}} @model={{this.model}} @modelValidations={{this.validations}} @onChange={{this.onChange}} />`
     );
-    assert.dom('[data-test-form-field-validation-warning]').exists('Validation warning renders');
+    assert.dom(GENERAL.validationWarningByAttr('path')).exists('Validation warning renders');
   });
 
   // ---------------
@@ -367,17 +369,21 @@ module('Integration | Component | form field', function (hooks) {
       .dom('.field [class^="hds-form-group"] input[type="checkbox"].hds-form-checkbox')
       .exists('renders as Hds::Form::Checkbox::Group');
     assert
-      .dom('fieldset[data-test-input="foo"] input[type="checkbox"]')
+      .dom(`fieldset${GENERAL.inputByAttr('foo')} input[type="checkbox"]`)
       .exists({ count: 3 }, 'renders a fieldset element with 3 checkbox elements');
     assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
     possibleValues.forEach((possibleValue, index) => {
       assert
-        .dom(`fieldset[data-test-input="foo"] .hds-form-group__control-field:nth-of-type(${index + 1}) label`)
+        .dom(
+          `fieldset${GENERAL.inputByAttr('foo')} .hds-form-group__control-field:nth-of-type(${
+            index + 1
+          }) label`
+        )
         .hasAttribute('id', `label-${possibleValue}`, 'label has correct id')
         .hasText(possibleValue, 'label has correct text');
       assert
         .dom(
-          `fieldset[data-test-input="foo"] .hds-form-group__control-field:nth-of-type(${
+          `fieldset${GENERAL.inputByAttr('foo')} .hds-form-group__control-field:nth-of-type(${
             index + 1
           }) input[type="checkbox"]`
         )
@@ -389,7 +395,7 @@ module('Integration | Component | form field', function (hooks) {
     const possibleValues = ['foo', 'bar', 'baz'];
     await setup.call(this, createAttr('foo', '-', { editType: 'checkboxList', possibleValues }));
     possibleValues.forEach(async (possibleValue, index) => {
-      const selector = `fieldset[data-test-input="foo"] .hds-form-group__control-field:nth-of-type(${
+      const selector = `fieldset${GENERAL.inputByAttr('foo')} .hds-form-group__control-field:nth-of-type(${
         index + 1
       }) input[type="checkbox"]`;
       assert.dom(selector).isNotChecked(`input[type="checkbox"] "${possibleValue}" is not checked`);
@@ -426,17 +432,17 @@ module('Integration | Component | form field', function (hooks) {
       'renders the custom label from options'
     );
     assert
-      .dom('[data-test-form-field-subtext]')
+      .dom(GENERAL.helpTextByAttr('Some subtext'))
       .exists('renders `subText` option as HelperText')
       .hasText(
         'Some subtext See our documentation for help.',
         'renders the right subtext string from options'
       );
     assert
-      .dom('[data-test-form-field-subtext] a[data-test-form-field-doc-link]')
+      .dom(`${GENERAL.helpTextByAttr('Some subtext')} ${GENERAL.docLinkByAttr('/docs')}`)
       .exists('renders `docLink` option as as link inside the subtext');
     assert
-      .dom('[data-test-form-field-help-text]')
+      .dom(GENERAL.helpTextByAttr('Some helptext'))
       .exists('renders `helptext` option as HelperText')
       .hasText('Some helptext', 'renders the right help text string from options');
   });
@@ -459,11 +465,11 @@ module('Integration | Component | form field', function (hooks) {
       hbs`<FormField @attr={{this.attr}} @model={{this.model}} @modelValidations={{this.modelValidations}} @onChange={{this.onChange}} />`
     );
     assert
-      .dom('[data-test-form-field-validation-error="foo"]')
+      .dom(GENERAL.validationErrorByAttr('foo'))
       .exists('Validation error renders')
       .hasText('Error message #1 Error message #2', 'Validation errors are combined');
     assert
-      .dom('[data-test-form-field-validation-warning="foo"]')
+      .dom(GENERAL.validationWarningByAttr('foo'))
       .exists('Validation warning renders')
       .hasText('Warning message #1 Warning message #2', 'Validation warnings are combined');
   });
@@ -479,7 +485,7 @@ module('Integration | Component | form field', function (hooks) {
     assert
       .dom('.field [class^="hds-form-field"] select.hds-form-select')
       .exists('renders as Hds::Form::Select');
-    assert.dom('select[data-test-input="foo"]').exists('renders a select element');
+    assert.dom(`select${GENERAL.inputByAttr('foo')}`).exists('renders a select element');
     assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
     assert.dom('[data-test-input]').hasValue('foo', 'has first option value');
     await fillIn('[data-test-input]', 'bar');
@@ -540,17 +546,17 @@ module('Integration | Component | form field', function (hooks) {
       'renders the custom label from options'
     );
     assert
-      .dom('[data-test-form-field-subtext]')
+      .dom(GENERAL.helpTextByAttr('Some subtext'))
       .exists('renders `subText` option as HelperText')
       .hasText(
         'Some subtext See our documentation for help.',
         'renders the right subtext string from options'
       );
     assert
-      .dom('[data-test-form-field-subtext] a[data-test-form-field-doc-link]')
+      .dom(`${GENERAL.helpTextByAttr('Some subtext')} ${GENERAL.docLinkByAttr('/docs')}`)
       .exists('renders `docLink` option as as link inside the subtext');
     assert
-      .dom('[data-test-form-field-help-text]')
+      .dom(GENERAL.helpTextByAttr('Some helptext'))
       .exists('renders `helptext` option as HelperText')
       .hasText('Some helptext', 'renders the right help text string from options');
   });
@@ -573,11 +579,11 @@ module('Integration | Component | form field', function (hooks) {
       hbs`<FormField @attr={{this.attr}} @model={{this.model}} @modelValidations={{this.modelValidations}} @onChange={{this.onChange}} />`
     );
     assert
-      .dom('[data-test-form-field-validation-error="foo"]')
+      .dom(GENERAL.validationErrorByAttr('foo'))
       .exists('Validation error renders')
       .hasText('Error message #1 Error message #2', 'Validation errors are combined');
     assert
-      .dom('[data-test-form-field-validation-warning="foo"]')
+      .dom(GENERAL.validationWarningByAttr('foo'))
       .exists('Validation warning renders')
       .hasText('Warning message #1 Warning message #2', 'Validation warnings are combined');
   });
@@ -592,7 +598,9 @@ module('Integration | Component | form field', function (hooks) {
     assert
       .dom('.field [class^="hds-form-field"] input.hds-form-text-input')
       .exists('renders as Hds::Form::TextInput');
-    assert.dom('input[data-test-input="foo"][type="password"]').exists('renders input with type=password');
+    assert
+      .dom(`input${GENERAL.inputByAttr('foo')}[type="password"]`)
+      .exists('renders input with type=password');
     assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
     assert.strictEqual(component.fields.objectAt(0).inputValue, 'default', 'renders default value');
     await fillIn('[data-test-input]', 'bar');
@@ -608,7 +616,9 @@ module('Integration | Component | form field', function (hooks) {
     assert
       .dom('.field [class^="hds-form-field"] input.hds-form-text-input')
       .exists('renders as Hds::Form::TextInput');
-    assert.dom('input[data-test-input="foo"][type="password"]').exists('renders input with type=password');
+    assert
+      .dom(`input${GENERAL.inputByAttr('foo')}[type="password"]`)
+      .exists('renders input with type=password');
     assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
     assert.strictEqual(component.fields.objectAt(0).inputValue, '123', 'renders default value');
     await fillIn('[data-test-input]', 987);
@@ -634,20 +644,20 @@ module('Integration | Component | form field', function (hooks) {
       'renders the custom label from options'
     );
     assert
-      .dom('[data-test-input="foo"]')
+      .dom(GENERAL.inputByAttr('foo'))
       .hasAttribute('placeholder', 'Custom placeholder', 'renders the placeholder from options');
     assert
-      .dom('[data-test-form-field-subtext]')
+      .dom(GENERAL.helpTextByAttr('Some subtext'))
       .exists('renders `subText` option as HelperText')
       .hasText(
         'Some subtext See our documentation for help.',
         'renders the right subtext string from options'
       );
     assert
-      .dom('[data-test-form-field-subtext] a[data-test-form-field-doc-link]')
+      .dom(`${GENERAL.helpTextByAttr('Some subtext')} ${GENERAL.docLinkByAttr('/docs')}`)
       .exists('renders `docLink` option as as link inside the subtext');
     assert
-      .dom('[data-test-form-field-help-text]')
+      .dom(GENERAL.helpTextByAttr('Some helptext'))
       .exists('renders `helptext` option as HelperText')
       .hasText('Some helptext', 'renders the right help text string from options');
   });
@@ -670,11 +680,11 @@ module('Integration | Component | form field', function (hooks) {
       hbs`<FormField @attr={{this.attr}} @model={{this.model}} @modelValidations={{this.modelValidations}} @onChange={{this.onChange}} />`
     );
     assert
-      .dom('[data-test-form-field-validation-error="foo"]')
+      .dom(GENERAL.validationErrorByAttr('foo'))
       .exists('Validation error renders')
       .hasText('Error message #1 Error message #2', 'Validation errors are combined');
     assert
-      .dom('[data-test-form-field-validation-warning="foo"]')
+      .dom(GENERAL.validationWarningByAttr('foo'))
       .exists('Validation warning renders')
       .hasText('Warning message #1 Warning message #2', 'Validation warnings are combined');
   });
