@@ -59,6 +59,17 @@ export default class AuthRoute extends ClusterRouteBase {
     }
   }
 
+  redirect(model) {
+    const invalidQueryPram = !model.directLinkData;
+    const referencesType = !model.directLinkData?.hasMountData;
+    if (invalidQueryPram || referencesType) {
+      // redirect user and clear out the query param if it's invalid or just references type
+      this.router.replaceWith(this.routeName, {
+        queryParams: { authMount: null },
+      });
+    }
+  }
+
   // authenticates the user if the wrapped_token query param exists
   async unwrapToken(token, clusterId) {
     try {

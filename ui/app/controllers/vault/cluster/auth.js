@@ -23,6 +23,7 @@ export default Controller.extend({
   redirectTo: alias('vaultController.redirectTo'),
   hvdManagedNamespaceRoot: alias('flagsService.hvdManagedNamespaceRoot'),
 
+  authMount: '',
   oidcProvider: '',
   unwrapTokenError: '',
 
