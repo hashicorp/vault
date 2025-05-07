@@ -88,7 +88,7 @@
         </:error>
 
         <:advancedSettings>
-          {{! tabs render their own mount path inputs and token does not support custom paths }}
+          {{! custom auth options render their own mount path inputs and token does not support custom paths }}
           {{#if (and (not this.showCustomAuthOptions) (not-eq this.selectedAuthMethod "token"))}}
             <Hds::Reveal @text="Advanced settings" data-test-auth-form-options-toggle class="is-fullwidth">
               <Hds::Form::TextInput::Field name="path" data-test-input="path" as |F|>
