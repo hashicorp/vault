@@ -5,6 +5,7 @@
 
 import Service, { service } from '@ember/service';
 import { sanitizePath, sanitizeStart } from 'core/utils/sanitize-path';
+import { PATH_MAP, SUDO_PATHS, SUDO_PATH_PREFIXES } from 'vault/utils/constants/capabilities';
 
 import type ApiService from 'vault/services/api';
 import type NamespaceService from 'vault/services/namespace';
@@ -14,14 +15,20 @@ export default class CapabilitiesService extends Service {
   @service declare readonly api: ApiService;
   @service declare readonly namespace: NamespaceService;
 
-  SUDO_PATHS = [
-    'sys/seal',
-    'sys/replication/performance/primary/secondary-token',
-    'sys/replication/dr/primary/secondary-token',
-    'sys/replication/reindex',
-    'sys/leases/lookup/',
-  ];
-  SUDO_PATH_PREFIXES = ['sys/leases/revoke-prefix', 'sys/leases/revoke-force'];
+  /*
+  Add API paths to the PATH_MAP constant using a friendly key, e.g. 'syncDestinations'.
+  Use the apiPath tagged template literal to build the path with dynamic segments
+  Each path should include placeholders for dynamic values -> apiPath`sys/sync/destinations/${'type'}/${'name'}`
+  Provide the key and an object whose keys match the dynamic segment names
+  The values from the object will be inserted into the placeholders and the fully-resolved path string will be returned.
+  */
+  pathFor<T>(key: keyof typeof PATH_MAP, params?: T) {
+    const path = PATH_MAP[key];
+    if (!path) {
+      throw new Error(`Path not found for key: ${key}`);
+    }
+    return path(params || {});
+  }
 
   /*
   Users don't always have access to the capabilities-self endpoint in the current namespace.
@@ -38,7 +45,6 @@ export default class CapabilitiesService extends Service {
 
   // map capabilities to friendly names like canRead, canUpdate, etc.
   mapCapabilities(paths: string[], capabilitiesData: CapabilitiesData) {
-    const { SUDO_PATHS, SUDO_PATH_PREFIXES } = this;
     // request may not return capabilities for all provided paths
     // loop provided paths and map capabilities, defaulting to true for missing paths
     return paths.reduce((mappedCapabilities: CapabilitiesMap, path) => {
@@ -106,12 +112,19 @@ export default class CapabilitiesService extends Service {
     }
   }
 
+  // convenience method for fetching capabilities for a singular path without needing to use pathFor
+  // ex: capabilities.for('syncDestinations', { type: 'github', name: 'org-sync' });
+  async for<T>(key: keyof typeof PATH_MAP, params?: T) {
+    const path = this.pathFor(key, params);
+    return this.fetchPathCapabilities(path);
+  }
+
   /*
   this method returns all of the capabilities for a singular path 
   */
   async fetchPathCapabilities(path: string) {
     const capabilities = await this.fetch([path]);
-    return capabilities[path];
+    return capabilities[path] as Capabilities;
   }
 
   /* 
