@@ -1103,6 +1103,14 @@ func (b *AESGCMBarrier) decrypt(path string, gcm cipher.AEAD, cipher []byte) ([]
 
 // Encrypt is used to encrypt in-memory for the BarrierEncryptor interface
 func (b *AESGCMBarrier) Encrypt(ctx context.Context, key string, plaintext []byte) ([]byte, error) {
+	return b.doEncrypt(ctx, key, plaintext, true)
+}
+
+func (b *AESGCMBarrier) EncryptUntracked(ctx context.Context, key string, plaintext []byte) ([]byte, error) {
+	return b.doEncrypt(ctx, key, plaintext, false)
+}
+
+func (b *AESGCMBarrier) doEncrypt(ctx context.Context, key string, plaintext []byte, tracked bool) ([]byte, error) {
 	b.l.RLock()
 	if b.sealed {
 		b.l.RUnlock()
@@ -1116,7 +1124,11 @@ func (b *AESGCMBarrier) Encrypt(ctx context.Context, key string, plaintext []byt
 		return nil, err
 	}
 
-	ciphertext, err := b.encryptTracked(key, term, primary, plaintext)
+	encrypt := b.encrypt
+	if tracked {
+		encrypt = b.encryptTracked
+	}
+	ciphertext, err := encrypt(key, term, primary, plaintext)
 	if err != nil {
 		return nil, err
 	}
@@ -1300,20 +1312,4 @@ func (b *AESGCMBarrier) encryptions() int64 {
 		}
 	}
 	return 0
-}
-
-// WithUnderlying returns a new barrier with the same underlying settings as
-// this one, but wrapping the given backend
-func (b *AESGCMBarrier) WithUnderlying(be physical.Backend) (logical.Storage, error) {
-	barrier, err := NewAESGCMBarrier(be, b.DetectDeadlocks())
-	if err != nil {
-		return nil, err
-	}
-	barrier.sealed = b.sealed
-	barrier.keyring = b.keyring
-	barrier.bestEffortKeyringTimeout = b.bestEffortKeyringTimeout
-	barrier.initialized = b.initialized
-	barrier.currentAESGCMVersionByte = b.currentAESGCMVersionByte
-
-	return barrier, nil
 }
