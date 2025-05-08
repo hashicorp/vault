@@ -178,7 +178,7 @@ module('Integration | Component | auth-config-form options', function (hooks) {
       .dom(GENERAL.inputByAttr('config.tokenType'))
       .doesNotExist('does not render tokenType for token auth method');
 
-    await click(GENERAL.inputByAttr('config.listingVisibility'));
+    await click(GENERAL.toggleInput('toggle-config.listingVisibility'));
     await click(GENERAL.ttl.toggle('Default Lease TTL'));
     await fillIn(GENERAL.ttl.input('Default Lease TTL'), '30');
 
