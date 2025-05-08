@@ -70,7 +70,7 @@ module('Acceptance | clients | overview', function (hooks) {
 
     const licenseStartMonth = format(LICENSE_START, 'yyyy-MM');
     const upgradeMonth = format(UPGRADE_DATE, 'yyyy-MM');
-    const now = format(STATIC_NOW, 'yyyy-MM');
+    const endMonth = format(STATIC_NOW, 'yyyy-MM');
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), licenseStartMonth);
     await fillIn(CLIENT_COUNT.dateRange.editDate('end'), licenseStartMonth);
@@ -89,7 +89,7 @@ module('Acceptance | clients | overview', function (hooks) {
     // change to start on month/year of upgrade to 1.10
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), upgradeMonth);
-    await fillIn(CLIENT_COUNT.dateRange.editDate('end'), now);
+    await fillIn(CLIENT_COUNT.dateRange.editDate('end'), endMonth);
     await click(GENERAL.saveButton);
     assert
       .dom(CLIENT_COUNT.dateRange.dateDisplay('start'))
