@@ -60,6 +60,7 @@ export const GENERAL = {
   pageError: {
     error: '[data-test-page-error]',
     errorTitle: (httpStatus: number) => `[data-test-page-error-title="${httpStatus}"]`,
+    errorSubtitle: '[data-test-page-error-subtitle]',
     errorMessage: '[data-test-page-error-message]',
     errorDetails: '[data-test-page-error-details]',
   },

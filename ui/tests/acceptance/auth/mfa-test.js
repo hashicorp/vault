@@ -49,7 +49,7 @@ for (const method of AUTH_METHOD_MAP) {
       assert.expect(3 + loginKeys.length);
 
       // Fill in login form
-      await fillIn(AUTH_FORM.method, authType);
+      await fillIn(AUTH_FORM.selectMethod, authType);
       await fillInLoginFields(options.loginData);
 
       if (options?.hasPopupWindow) {
@@ -64,11 +64,11 @@ for (const method of AUTH_METHOD_MAP) {
       assert
         .dom(MFA_SELECTORS.mfaForm)
         .hasText(
-          'Multi-factor authentication is enabled for your account. Enter your authentication code to log in. TOTP passcode Verify'
+          'Back Multi-factor authentication is enabled for your account. Enter your authentication code to log in. TOTP passcode Verify'
         );
       await click(GENERAL.backButton);
       assert.dom(AUTH_FORM.form).exists('clicking back returns to auth form');
-      assert.dom(GENERAL.selectByAttr('auth-method')).hasValue(authType, 'preserves method type on back');
+      assert.dom(AUTH_FORM.selectMethod).hasValue(authType, 'preserves method type on back');
       for (const field of loginKeys) {
         assert.dom(GENERAL.inputByAttr(field)).hasValue('', `${field} input clears on back`);
       }
@@ -81,7 +81,7 @@ for (const method of AUTH_METHOD_MAP) {
       assert.expect(3 + loginKeys.length);
 
       // Fill in login form
-      await fillIn(AUTH_FORM.method, authType);
+      await fillIn(AUTH_FORM.selectMethod, authType);
       // Toggle more options to input a custom mount path
       await fillInLoginFields({ ...options.loginData, path: this.mountPath }, { toggleOptions: true });
 
@@ -97,11 +97,11 @@ for (const method of AUTH_METHOD_MAP) {
       assert
         .dom(MFA_SELECTORS.mfaForm)
         .hasText(
-          'Multi-factor authentication is enabled for your account. Enter your authentication code to log in. TOTP passcode Verify'
+          'Back Multi-factor authentication is enabled for your account. Enter your authentication code to log in. TOTP passcode Verify'
         );
       await click(GENERAL.backButton);
       assert.dom(AUTH_FORM.form).exists('clicking back returns to auth form');
-      assert.dom(GENERAL.selectByAttr('auth-method')).hasValue(authType, 'preserves method type on back');
+      assert.dom(AUTH_FORM.selectMethod).hasValue(authType, 'preserves method type on back');
       for (const field of loginKeys) {
         assert.dom(GENERAL.inputByAttr(field)).hasValue('', `${field} input clears on back`);
       }
@@ -120,7 +120,7 @@ for (const method of AUTH_METHOD_MAP) {
       });
 
       // Fill in login form
-      await fillIn(AUTH_FORM.method, authType);
+      await fillIn(AUTH_FORM.selectMethod, authType);
       await fillInLoginFields(options.loginData);
 
       if (options?.hasPopupWindow) {
@@ -150,7 +150,7 @@ for (const method of AUTH_METHOD_MAP) {
       });
 
       // Fill in login form
-      await fillIn(AUTH_FORM.method, authType);
+      await fillIn(AUTH_FORM.selectMethod, authType);
       // Toggle more options to input a custom mount path
       await fillInLoginFields({ ...options.loginData, path: this.mountPath }, { toggleOptions: true });
 

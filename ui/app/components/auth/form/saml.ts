@@ -21,11 +21,6 @@ import type Store from '@ember-data/store';
  * see Auth::Base
  */
 
-interface SamlLoginData {
-  token: string;
-  mfa_requirement: object | null;
-}
-
 const ERROR_WINDOW_CLOSED =
   'The provider window was closed before authentication was complete. Your web browser may have blocked or closed a pop-up window. Please check your settings and click "Sign in" to try again.';
 const ERROR_TIMEOUT = 'The authentication request has timed out. Please click "Sign in" to try again.';
@@ -101,21 +96,32 @@ export default class AuthFormSaml extends AuthBase {
     this.watchPopup.perform(samlWindow);
     this.watchCurrent.perform(samlWindow);
 
-    // TODO CMB - when wiring up components check if this is still necessary
-    // pass namespace from state back to AuthForm
-    // this.args.onNamespace(namespace);
+    let resp;
     try {
-      const authData = await this.pollForToken(samlWindow, { path });
-      // We've obtained the Vault token for the authentication flow now log in or pass MFA data
-
-      if (authData?.client_token) {
-        const samlExchangeData = { token: authData.client_token, mfa_requirement: authData?.mfa_requirement };
-        await this.continueLogin(samlExchangeData);
-        this.closeWindow(samlWindow);
-      }
+      resp = await this.pollForToken(samlWindow, { path });
+      this.closeWindow(samlWindow);
     } catch (error) {
       this.cancelLogin(samlWindow, errorMessage(error));
+      return;
     }
+
+    // We've got a response from the polling request
+    // pass MFA data or use the Vault token (client_token) to continue the auth
+    const mfa_requirement = resp?.mfa_requirement;
+    const client_token = resp?.client_token;
+    if (mfa_requirement) {
+      this.handleMfa(mfa_requirement, path);
+      return;
+    }
+    if (client_token) {
+      this.continueLogin({ token: client_token });
+      return;
+    }
+
+    // If there's a problem with the SAML exchange the auth workflow should fail earlier.
+    // Including this catch just in case, though it's unlikely this will be hit.
+    this.handleSAMLError('Missing token. Please try again.');
+    return;
   });
 
   async pollForToken(samlWindow: Window, { path = '' }) {
@@ -153,7 +159,7 @@ export default class AuthFormSaml extends AuthBase {
     return;
   }
 
-  async continueLogin(data: SamlLoginData) {
+  async continueLogin(data: { token: string }) {
     try {
       const authResponse = await this.auth.authenticate({
         clusterId: this.args.cluster.id,
@@ -163,7 +169,7 @@ export default class AuthFormSaml extends AuthBase {
       });
 
       // responsible for redirect after auth data is persisted
-      this.handleAuthResponse(authResponse, this.args.authType);
+      this.handleAuthResponse(authResponse);
     } catch (e) {
       const error = e as AdapterError;
       this.onError(errorMessage(error));
