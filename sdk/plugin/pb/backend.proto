@@ -68,6 +68,11 @@ message Paths {
   //
   // See note in /sdk/logical/logical.go.
   repeated string limited = 7;
+ 
+  // AllowSnapshotRead paths are allowed to be read from a loaded snapshot
+  // 
+  // See note in /sdk/logical/logical.go
+  repeated string allow_snapshot_read = 8;
 }
 
 message Request {
@@ -156,6 +161,8 @@ message Request {
   // inspect the connection information and potentially use it for
   // authentication/protection.
   Connection connection = 20;
+
+  string requires_snapshot_id = 21;
 }
 
 message Auth {
