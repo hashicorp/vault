@@ -12,10 +12,9 @@
       {{#if (not (includes attr.name @model.userLockoutConfig.modelAttrs))}}
         <FormField data-test-field @attr={{attr}} @model={{@model}} />
         {{#if (eq attr.name "config.listingVisibility")}}
-          <div class="has-top-margin-negative-s has-bottom-margin-l has-text-info">
-            <span class="has-text-grey">UI login link:</span>
-            {{this.getLoginLink}}
-            <Hds::Copy::Button @isIconOnly={{true}} @text="Copy your login link" @textToCopy={{this.getLoginLink}} />
+          <div class="has-top-margin-negative-s has-bottom-margin-l is-flex-center">
+            <Hds::Text::Body @tag="p" @color="faint">UI login link:</Hds::Text::Body>
+            <Hds::Copy::Snippet @textToCopy={{this.getLoginLink}} />
           </div>
         {{/if}}
       {{/if}}
