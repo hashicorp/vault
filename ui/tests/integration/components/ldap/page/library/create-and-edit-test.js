@@ -10,6 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | ldap | Page::Library::CreateAndEdit', function (hooks) {
   setupRenderingTest(hooks);
@@ -87,10 +88,10 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
     await click('[data-test-save]');
 
     assert
-      .dom('[data-test-field-validation="name"]')
+      .dom(GENERAL.validationErrorByAttr('name'))
       .hasText('Library name is required.', 'Name validation error renders');
     assert
-      .dom('[data-test-field-validation="service_account_names"]')
+      .dom(GENERAL.validationErrorByAttr('service_account_names'))
       .hasText('At least one service account is required.', 'Service account name validation error renders');
     assert
       .dom('[data-test-invalid-form-message]')

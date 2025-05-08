@@ -10,6 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | pki-generate-csr', function (hooks) {
   setupRenderingTest(hooks);
@@ -91,7 +92,7 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
     await click('[data-test-save]');
 
     assert
-      .dom('[data-test-field-validation="type"]')
+      .dom(GENERAL.validationErrorByAttr('type'))
       .hasText('Type is required.', 'Type validation error renders');
     assert
       .dom('[data-test-field="commonName"] [data-test-inline-alert]')
