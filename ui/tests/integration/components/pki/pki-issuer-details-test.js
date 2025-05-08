@@ -9,6 +9,7 @@ import { render, settled } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { PKI_ISSUER_DETAILS } from 'vault/tests/helpers/pki/pki-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | page/pki-issuer-details', function (hooks) {
   setupRenderingTest(hooks);
@@ -89,25 +90,23 @@ module('Integration | Component | page/pki-issuer-details', function (hooks) {
 
     // Default group details:
     assert.dom(PKI_ISSUER_DETAILS.defaultGroup).exists('Default group of details exists');
-    assert.dom(PKI_ISSUER_DETAILS.valueByName('Certificate')).exists('Certificate detail exists');
+    assert.dom(GENERAL.infoRowValue('Certificate')).exists('Certificate detail exists');
     assert.dom(PKI_ISSUER_DETAILS.copyButtonByName('Certificate')).exists('Certificate is copyable');
-    assert.dom(PKI_ISSUER_DETAILS.valueByName('CA Chain')).exists('CA Chain detail exists');
+    assert.dom(GENERAL.infoRowValue('CA Chain')).exists('CA Chain detail exists');
     assert.dom(PKI_ISSUER_DETAILS.copyButtonByName('CA Chain')).exists('CA Chain is copyable');
-    assert.dom(PKI_ISSUER_DETAILS.valueByName('Common name')).exists('Common name detail exists');
-    assert.dom(PKI_ISSUER_DETAILS.valueByName('Issuer name')).exists('Issuer name detail exists');
-    assert.dom(PKI_ISSUER_DETAILS.valueByName('Issuer ID')).exists('Issuer ID detail exists');
+    assert.dom(GENERAL.infoRowValue('Common name')).exists('Common name detail exists');
+    assert.dom(GENERAL.infoRowValue('Issuer name')).exists('Issuer name detail exists');
+    assert.dom(GENERAL.infoRowValue('Issuer ID')).exists('Issuer ID detail exists');
     assert.dom(PKI_ISSUER_DETAILS.copyButtonByName('Issuer ID')).exists('Issuer ID is copyable');
-    assert.dom(PKI_ISSUER_DETAILS.valueByName('Default key ID')).exists('Default key ID detail exists');
+    assert.dom(GENERAL.infoRowValue('Default key ID')).exists('Default key ID detail exists');
 
     // Issuer URLs group details:
     assert.dom(PKI_ISSUER_DETAILS.urlsGroup).exists('Issuer URLs group of details exists');
+    assert.dom(GENERAL.infoRowValue('Issuing certificates')).exists('Issuing certificates detail exists');
     assert
-      .dom(PKI_ISSUER_DETAILS.valueByName('Issuing certificates'))
-      .exists('Issuing certificates detail exists');
-    assert
-      .dom(PKI_ISSUER_DETAILS.valueByName('CRL distribution points'))
+      .dom(GENERAL.infoRowValue('CRL distribution points'))
       .exists('CRL distribution points detail exists');
-    assert.dom(PKI_ISSUER_DETAILS.valueByName('OCSP servers')).exists('OCSP servers detail exists');
+    assert.dom(GENERAL.infoRowValue('OCSP servers')).exists('OCSP servers detail exists');
   });
 
   test('it renders parsing error banner if issuer certificate contains unsupported OIDs', async function (assert) {

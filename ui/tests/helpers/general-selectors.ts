@@ -40,8 +40,6 @@ export const GENERAL = {
   checkboxByAttr: (attr: string) => `[data-test-checkbox="${attr}"]`,
   enableField: (attr: string) => `[data-test-enable-field="${attr}"] button`,
   fieldByAttr: (attr: string) => `[data-test-field="${attr}"]`,
-  infoRowLabel: (label: string) => `[data-test-row-label="${label}"]`,
-  infoRowValue: (label: string) => `[data-test-value-div="${label}"]`,
   inputByAttr: (attr: string) => `[data-test-input="${attr}"]`,
   selectByAttr: (attr: string) => `[data-test-select="${attr}"]`,
   textToggle: '[data-test-text-toggle]',
@@ -52,7 +50,10 @@ export const GENERAL = {
     toggle: (attr: string) => `[data-test-toggle-label="${attr}"]`,
     input: (attr: string) => `[data-test-ttl-value="${attr}"]`,
   },
-
+  // Info Table Row
+  infoRowLabel: (label: string) => `[data-test-row-label="${label}"]`,
+  infoRowValue: (label: string) => `[data-test-row-value="${label}"]`,
+  // Validation
   validation: (attr: string) => `[data-test-field-validation=${attr}]`,
   validationWarning: (attr: string) => `[data-test-validation-warning=${attr}]`,
   messageError: '[data-test-message-error]',
@@ -95,11 +96,14 @@ export const GENERAL = {
     input: '[data-test-kv-suggestion-input]',
     select: '[data-test-kv-suggestion-select]',
   },
+  // Links and buttons
   navLink: (label: string) => `[data-test-sidebar-nav-link="${label}"]`,
+  backButton: '[data-test-back-button]',
   cancelButton: '[data-test-cancel]',
   saveButton: '[data-test-save]',
-  backButton: '[data-test-back-button]',
+  testButton: (label: string) => `[data-test-button="${label}"]`,
   codeBlock: (label: string) => `[data-test-code-block="${label}"]`,
+  // TODO replace data-test-component="value" as a higher level selector
   codemirror: `[data-test-component="code-mirror-modifier"]`,
   codemirrorTextarea: `[data-test-component="code-mirror-modifier"] textarea`,
 };
