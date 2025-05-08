@@ -53,10 +53,14 @@ func (b *barrierEncryptorStorage) List(ctx context.Context, prefix string) ([]st
 	return b.underlying.List(ctx, prefix)
 }
 
+// ignore-nil-nil-function-check
 func (b *barrierEncryptorStorage) Get(ctx context.Context, key string) (*logical.StorageEntry, error) {
 	entry, err := b.underlying.Get(ctx, key)
 	if err != nil {
 		return nil, err
+	}
+	if entry == nil {
+		return nil, nil
 	}
 	decrypted, err := b.barrier.Decrypt(ctx, entry.Key, entry.Value)
 	if err != nil {
