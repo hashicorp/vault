@@ -1,0 +1,4 @@
+```release-note:bug
+core/acl: Policies with `allowed_parameters` and `denied_parameters` are now evaluated correctly against
+request parameters with lists of values.
+```
