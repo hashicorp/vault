@@ -66,13 +66,13 @@ class SSUViewDashboard extends Component {
     const kvv1Formatted = Intl.NumberFormat().format(kvv1Secrets);
     const kvv2Formatted = Intl.NumberFormat().format(kvv2Secrets);
     if (kvv1Secrets && kvv2Secrets) {
-      return `Combined count of ${kvv1Formatted} KV v1 secrets and ${kvv2Formatted} KV v2 secrets`;
+      return `Combined count of ${kvv1Formatted} KV version 1 secrets and ${kvv2Formatted} KV version 2 secrets.`;
     }
     if (kvv1Secrets) {
-      return `Total number of ${kvv1Formatted} KV v1 secrets`;
+      return `Total number of ${kvv1Formatted} KV version 1 secrets.`;
     }
     if (kvv2Secrets) {
-      return `Total number of ${kvv2Formatted} KV v2 secrets`;
+      return `Total number of ${kvv2Formatted} KV version 2 secrets.`;
     }
     return '';
   }
@@ -83,7 +83,7 @@ class SSUViewDashboard extends Component {
     } = this.data ?? {};
     return [{
       title: 'Child namespaces',
-      tooltipMessage: `Total number of direct child namespaces under the ${this.namespace}/ namespace`,
+      tooltipMessage: 'Total number of namespaces for this cluster.',
       data: this.data?.namespaces ?? 0,
       link: 'access/namespaces'
     }, {
@@ -94,14 +94,14 @@ class SSUViewDashboard extends Component {
       emptyLink: 'secrets'
     }, {
       title: 'Secrets sync',
-      tooltipMessage: 'Total number of destinations (e.g. third-party integrations) synced with secrets from this namespace',
+      tooltipMessage: 'Total number of destinations (e.g. third-party integrations) synced with secrets from this namespace.',
       data: this.data?.secretSync?.totalDestinations ?? 0,
       link: 'sync/secrets/overview',
       emptyText: 'Not activated',
       suffix: 'destinations'
     }, {
       title: 'PKI roles',
-      tooltipMessage: 'Total number of PKI roles configured',
+      tooltipMessage: 'Total number of PKI roles configured.',
       data: this.data?.pki?.totalRoles ?? 0,
       emptyText: 'No roles created'
     }];
