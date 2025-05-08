@@ -12,13 +12,10 @@
       {{#if (not (includes attr.name @model.userLockoutConfig.modelAttrs))}}
         <FormField data-test-field @attr={{attr}} @model={{@model}} />
         {{#if (eq attr.name "config.listingVisibility")}}
-          <div class="has-top-margin-negative-s has-bottom-margin-l">
+          <div class="has-top-margin-negative-s has-bottom-margin-l has-text-info">
             <span class="has-text-grey">UI login link:</span>
-            <Hds::Link::Inline
-              @icon="clipboard-copy"
-              @iconPosition="trailing"
-              @href="https://vault.com/ui/vault/auth?with=username"
-            >https://vault.com/ui/vault/auth?with=username</Hds::Link::Inline>
+            {{this.getLoginLink}}
+            <Hds::Copy::Button @isIconOnly={{true}} @text="Copy your login link" @textToCopy={{this.getLoginLink}} />
           </div>
         {{/if}}
       {{/if}}
