@@ -20,6 +20,7 @@ import { login, loginMethod, loginNs, logout, VISIBLE_MOUNTS } from 'vault/tests
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { v4 as uuidv4 } from 'uuid';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import sinon from 'sinon';
 
 const ENT_AUTH_METHODS = ['saml'];
 const { rootToken } = VAULT_KEYS;
@@ -40,6 +41,14 @@ module('Acceptance | auth login form', function (hooks) {
   test('it redirects if "with" query param is not a supported auth method', async function (assert) {
     await visit('/vault/auth?with=fake');
     assert.strictEqual(currentURL(), '/vault/auth', 'invalid query param is cleared');
+  });
+
+  test('it does not refire route model if query param does not exist', async function (assert) {
+    const route = this.owner.lookup('route:vault/cluster/auth');
+    const modelSpy = sinon.spy(route, 'model');
+    await visit('/vault/auth');
+    assert.strictEqual(modelSpy.callCount, 1, 'model hook is only called once');
+    modelSpy.restore();
   });
 
   test('it clears token when changing selected auth method', async function (assert) {
