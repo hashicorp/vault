@@ -66,7 +66,7 @@ module('Integration | Component | auth-config-form options', function (hooks) {
 
       assert.dom('[data-test-user-lockout-section]').hasText('User lockout configuration');
 
-      await click(GENERAL.inputByAttr('config.listingVisibility'));
+      await click(GENERAL.toggleInput('toggle-config.listingVisibility'));
       await fillIn(GENERAL.inputByAttr('config.tokenType'), 'default-batch');
 
       await click(GENERAL.ttl.toggle('Default Lease TTL'));
@@ -124,7 +124,7 @@ module('Integration | Component | auth-config-form options', function (hooks) {
         .dom('[data-test-user-lockout-section]')
         .doesNotExist(`${type} method does not render user lockout section`);
 
-      await click(GENERAL.inputByAttr('config.listingVisibility'));
+      await click(GENERAL.toggleInput('toggle-config.listingVisibility'));
       await fillIn(GENERAL.inputByAttr('config.tokenType'), 'default-batch');
 
       await click(GENERAL.ttl.toggle('Default Lease TTL'));
