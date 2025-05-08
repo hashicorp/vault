@@ -1,0 +1,3 @@
+```release-note:deprecation
+api: Removed the `/sys/internal/counters/tokens` endpoint. This internal API was deprecated and is no longer available.
+```
