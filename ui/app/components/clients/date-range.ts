@@ -114,6 +114,8 @@ export default class ClientsDateRangeComponent extends Component<Args> {
     if (this.modalStart > this.modalEnd) {
       return 'Start date must be before end date.';
     }
+    if (this.modalStart > this.previousMonth || this.modalEnd > this.previousMonth)
+      return 'You cannot select the current month or beyond.';
     return null;
   }
 

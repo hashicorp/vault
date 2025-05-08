@@ -9,6 +9,7 @@ import { click, fillIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import Sinon from 'sinon';
 import timestamp from 'core/utils/timestamp';
+import { format } from 'date-fns';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 
@@ -77,5 +78,28 @@ module('Integration | Component | clients/date-range', function (hooks) {
     await click(GENERAL.cancelButton);
     assert.false(this.onChange.called);
     assert.dom(DATE_RANGE.editModal).doesNotExist();
+  });
+
+  test('it does not allow the current month to be selected as a start date or as an end date', async function (assert) {
+    this.owner.lookup('service:version').type = 'community';
+    this.endTime = undefined;
+    const currentMonth = format(timestamp.now(), 'yyyy-MM');
+
+    await this.renderComponent();
+    await click(DATE_RANGE.edit);
+    await fillIn(DATE_RANGE.editDate('start'), currentMonth);
+    await fillIn(DATE_RANGE.editDate('end'), currentMonth);
+
+    assert.dom(DATE_RANGE.validation).hasText('You cannot select the current month or beyond.');
+    await click(GENERAL.saveButton);
+    assert.false(this.onChange.called);
+
+    //  This tests validation when the end date is the current month and start is valid.
+    //  If start is current month and end is a valid prior selection, it will run into the validation error of start being after end date
+    //  which is covered by prior tests.
+    await fillIn(DATE_RANGE.editDate('start'), '2018-01');
+    await fillIn(DATE_RANGE.editDate('end'), currentMonth);
+    await click(GENERAL.saveButton);
+    assert.false(this.onChange.called);
   });
 });
