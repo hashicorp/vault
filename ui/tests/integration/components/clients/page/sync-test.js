@@ -15,7 +15,6 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT, CHARTS } from 'vault/tests/helpers/clients/client-count-selectors';
 import { formatNumber } from 'core/helpers/format-number';
 import { calculateAverage } from 'vault/utils/chart-helpers';
-import { dateFormat } from 'core/helpers/date-format';
 import { assertBarChart } from 'vault/tests/helpers/clients/client-count-helpers';
 
 const START_TIME = getUnixTime(LICENSE_START);
@@ -73,8 +72,18 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
 
     test('it should render with full month activity data', async function (assert) {
       const monthCount = this.activity.byMonth.length;
-      assert.expect(7 + monthCount * 2);
-      const expectedTotal = formatNumber([this.activity.total.secret_syncs]);
+      assert.expect(6 + monthCount * 2);
+      //TODO pull this out into calculate total util
+      const expectedTotal = formatNumber([
+        this.activity.byMonth.reduce((acc, month) => {
+          month.new_clients.namespaces.forEach((ns) => {
+            ns.mounts.forEach((mount) => {
+              acc += mount.secret_syncs;
+            });
+          });
+          return acc;
+        }, 0),
+      ]);
       const expectedNewAvg = formatNumber([
         calculateAverage(
           this.activity.byMonth.map((m) => m?.new_clients),
@@ -91,11 +100,6 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
         );
       assert.dom(statText('Average new sync clients per month')).hasTextContaining(`${expectedNewAvg}`);
 
-      const formattedTimestamp = dateFormat([this.activity.responseTimestamp, 'MMM d yyyy, h:mm:ss aaa'], {
-        withTimeZone: true,
-      });
-      assert.dom(CHARTS.timestamp).hasText(`Updated ${formattedTimestamp}`, 'renders response timestamp');
-
       assertBarChart(assert, 'Secrets sync usage', this.activity.byMonth);
       assertBarChart(assert, 'Monthly new', this.activity.byMonth);
     });
@@ -103,7 +107,16 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     test('it should render stats without chart for a single month', async function (assert) {
       const activityQuery = { start_time: { timestamp: END_TIME }, end_time: { timestamp: END_TIME } };
       this.activity = await this.store.queryRecord('clients/activity', activityQuery);
-      const expectedTotal = formatNumber([this.activity.total.secret_syncs]);
+      const expectedTotal = formatNumber([
+        this.activity.byMonth.reduce((acc, month) => {
+          month.new_clients.namespaces.forEach((ns) => {
+            ns.mounts.forEach((mount) => {
+              acc += mount.secret_syncs;
+            });
+          });
+          return acc;
+        }, 0),
+      ]);
       await this.renderComponent();
 
       assert.dom(CHARTS.chart('Secrets sync usage')).doesNotExist('total usage chart does not render');

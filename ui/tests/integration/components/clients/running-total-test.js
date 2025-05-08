@@ -69,7 +69,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     assert.dom(CHARTS.chart('Vault client counts')).exists('bar chart renders');
 
     const expectedValues = {
-      'Running client total': formatNumber([this.totalUsageCounts.clients]),
+      'Running new client total': formatNumber([this.totalUsageCounts.clients]),
       Entity: formatNumber([this.totalUsageCounts.entity_clients]),
       'Non-entity': formatNumber([this.totalUsageCounts.non_entity_clients]),
       ACME: formatNumber([this.totalUsageCounts.acme_clients]),
@@ -84,7 +84,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
         );
     }
 
-    // assert grouped bar chart is correct
+    // assert bar chart is correct
     findAll(CHARTS.xAxisLabel).forEach((e, i) => {
       assert
         .dom(e)
@@ -95,7 +95,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     });
     assert
       .dom(CHARTS.verticalBar)
-      .exists({ count: this.byMonthActivity.length * 2 }, 'renders correct number of bars ');
+      .exists({ count: this.byMonthActivity.length }, 'renders correct number of bars ');
   });
 
   test('it renders with no new monthly data', async function (assert) {

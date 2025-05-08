@@ -53,7 +53,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
 
     assert.dom(GENERAL.emptyStateTitle).hasText('No data found');
     assert.dom(CLIENTS_ATTRIBUTION.title).hasText('Namespace attribution', 'uses default noun');
-    assert.dom(CLIENTS_ATTRIBUTION.timestamp).hasNoText();
   });
 
   test('it updates language based on noun', async function (assert) {
@@ -64,7 +63,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
         @attribution={{this.namespaceAttribution}}
         />
     `);
-    assert.dom(CLIENTS_ATTRIBUTION.timestamp).includesText('Updated Apr 3');
 
     // when noun is blank, uses default
     assert.dom(CLIENTS_ATTRIBUTION.title).hasText('Namespace attribution');

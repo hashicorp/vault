@@ -44,9 +44,31 @@ module('Acceptance | clients | counts | acme', function (hooks) {
     this.mountPath = 'pki-engine-0';
 
     this.expectedValues = {
-      nsTotals: activity.byNamespace
-        .find((ns) => ns.label === this.nsPath)
-        .mounts.find((mount) => mount.label === this.mountPath),
+      nsTotals: activity.byMonth.reduce(
+        (acc, month) => {
+          month.new_clients.namespaces
+            .filter((ns) => ns.label === this.nsPath)
+            .forEach((ns) => {
+              ns.mounts
+                .filter((mount) => mount.label === this.mountPath)
+                .forEach((mount) => {
+                  acc.acme_clients += mount.acme_clients;
+                  acc.clients += mount.clients;
+                  acc.entity_clients += mount.entity_clients;
+                  acc.non_entity_clients += mount.non_entity_clients;
+                  acc.secret_syncs += mount.secret_syncs;
+                });
+            });
+          return acc;
+        },
+        {
+          acme_clients: 0,
+          clients: 0,
+          entity_clients: 0,
+          non_entity_clients: 0,
+          secret_syncs: 0,
+        }
+      ),
       nsMonthlyUsage: filterByMonthDataForMount(activity.byMonth, this.nsPath, this.mountPath),
     };
 
@@ -81,11 +103,12 @@ module('Acceptance | clients | counts | acme', function (hooks) {
       `/vault/clients/counts/acme?mountPath=pki-engine-0&ns=${this.nsPath}`,
       'namespace filter updates URL query param'
     );
+
     assert
       .dom(CLIENT_COUNT.statText('Total ACME clients'))
       .hasTextContaining(
         `${formatNumber([nsTotals.acme_clients])}`,
-        'renders total acme clients for namespace'
+        'renders total new acme clients for namespace'
       );
 
     // TODO: update this

@@ -172,11 +172,84 @@ module('Acceptance | clients | overview', function (hooks) {
     assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
 
     const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
+    // todo update this to only return new clients from byMonth?
     const orderedNs = response.byNamespace.sort((a, b) => b.clients - a.clients);
     const topNamespace = orderedNs[0];
     // the namespace dropdown excludes the current namespace, so use second-largest if that's the case
     const filterNamespace = topNamespace.label === 'root' ? orderedNs[1] : topNamespace;
     const topMount = filterNamespace?.mounts.sort((a, b) => b.clients - a.clients)[0];
+
+    // TODO this was a rough pass at getting this working, but should definitely improve this before merge
+    const responseNewClient = response.byMonth.reduce(
+      (acc, month) => {
+        month.new_clients.namespaces
+          // .filter((ns) => ns.label === filterNamespace.label)
+          .forEach((ns) => {
+            acc.acme_clients += ns.acme_clients;
+            acc.clients += ns.clients;
+            acc.entity_clients += ns.entity_clients;
+            acc.non_entity_clients += ns.non_entity_clients;
+            acc.secret_syncs += ns.secret_syncs;
+          });
+
+        return acc;
+      },
+      {
+        acme_clients: 0,
+        clients: 0,
+        entity_clients: 0,
+        non_entity_clients: 0,
+        secret_syncs: 0,
+      }
+    );
+    const filterNamespaceNewClients = response.byMonth.reduce(
+      (acc, month) => {
+        month.new_clients.namespaces
+          .filter((ns) => ns.label === filterNamespace.label)
+          .forEach((ns) => {
+            acc.acme_clients += ns.acme_clients;
+            acc.clients += ns.clients;
+            acc.entity_clients += ns.entity_clients;
+            acc.non_entity_clients += ns.non_entity_clients;
+            acc.secret_syncs += ns.secret_syncs;
+          });
+
+        return acc;
+      },
+      {
+        acme_clients: 0,
+        clients: 0,
+        entity_clients: 0,
+        non_entity_clients: 0,
+        secret_syncs: 0,
+      }
+    );
+
+    const topMountNewClients = response.byMonth.reduce(
+      (acc, month) => {
+        month.new_clients.namespaces
+          .filter((ns) => ns.label === filterNamespace.label)
+          .forEach((ns) => {
+            ns.mounts
+              .filter((mount) => mount.label === topMount.label)
+              .forEach((mount) => {
+                acc.acme_clients += mount.acme_clients;
+                acc.clients += mount.clients;
+                acc.entity_clients += mount.entity_clients;
+                acc.non_entity_clients += mount.non_entity_clients;
+                acc.secret_syncs += mount.secret_syncs;
+              });
+          });
+        return acc;
+      },
+      {
+        acme_clients: 0,
+        clients: 0,
+        entity_clients: 0,
+        non_entity_clients: 0,
+        secret_syncs: 0,
+      }
+    );
 
     assert
       .dom(`${CLIENT_COUNT.attributionBlock('namespace')} [data-test-top-attribution]`)
@@ -185,7 +258,6 @@ module('Acceptance | clients | overview', function (hooks) {
     assert
       .dom(`${CLIENT_COUNT.attributionBlock('namespace')} [data-test-attribution-clients] p`)
       .includesText(`${formatNumber([topNamespace.clients])}`, 'top attribution clients accurate');
-
     // Filter by top namespace
     await selectChoose(CLIENT_COUNT.nsFilter, filterNamespace.label);
     assert.dom(CLIENT_COUNT.selectedNs).hasText(filterNamespace.label, 'selects top namespace');
@@ -196,12 +268,15 @@ module('Acceptance | clients | overview', function (hooks) {
       .dom(`${CLIENT_COUNT.attributionBlock('mount')} [data-test-attribution-clients] p`)
       .includesText(`${formatNumber([topMount.clients])}`, 'top attribution clients accurate');
 
+    // There is a different in expected stats currently as the vertical bar chart will show new clients only while the
+    // attribution charts will reflect total clients
     let expectedStats = {
-      Entity: formatNumber([filterNamespace.entity_clients]),
-      'Non-entity': formatNumber([filterNamespace.non_entity_clients]),
-      ACME: formatNumber([filterNamespace.acme_clients]),
-      'Secret sync': formatNumber([filterNamespace.secret_syncs]),
+      Entity: formatNumber([filterNamespaceNewClients.entity_clients]),
+      'Non-entity': formatNumber([filterNamespaceNewClients.non_entity_clients]),
+      ACME: formatNumber([filterNamespaceNewClients.acme_clients]),
+      'Secret sync': formatNumber([filterNamespaceNewClients.secret_syncs]),
     };
+
     for (const label in expectedStats) {
       assert
         .dom(CLIENT_COUNT.statTextValue(label))
@@ -213,12 +288,15 @@ module('Acceptance | clients | overview', function (hooks) {
     assert.dom(CLIENT_COUNT.selectedAuthMount).hasText(topMount.label, 'selects top mount');
     assert.dom(CLIENT_COUNT.attributionBlock()).doesNotExist('Does not show attribution block');
 
+    // There is a different in expected stats currently as the vertical bar chart will show new clients only while the
+    // attribution charts will reflect total clients
     expectedStats = {
-      Entity: formatNumber([topMount.entity_clients]),
-      'Non-entity': formatNumber([topMount.non_entity_clients]),
-      ACME: formatNumber([topMount.acme_clients]),
-      'Secret sync': formatNumber([topMount.secret_syncs]),
+      Entity: formatNumber([topMountNewClients.entity_clients]),
+      'Non-entity': formatNumber([topMountNewClients.non_entity_clients]),
+      ACME: formatNumber([topMountNewClients.acme_clients]),
+      'Secret sync': formatNumber([topMountNewClients.secret_syncs]),
     };
+
     for (const label in expectedStats) {
       assert
         .dom(CLIENT_COUNT.statTextValue(label))
@@ -237,11 +315,12 @@ module('Acceptance | clients | overview', function (hooks) {
       );
 
     expectedStats = {
-      Entity: formatNumber([response.total.entity_clients]),
-      'Non-entity': formatNumber([response.total.non_entity_clients]),
-      ACME: formatNumber([response.total.acme_clients]),
-      'Secret sync': formatNumber([response.total.secret_syncs]),
+      Entity: formatNumber([responseNewClient.entity_clients]),
+      'Non-entity': formatNumber([responseNewClient.non_entity_clients]),
+      ACME: formatNumber([responseNewClient.acme_clients]),
+      'Secret sync': formatNumber([responseNewClient.secret_syncs]),
     };
+
     for (const label in expectedStats) {
       assert
         .dom(CLIENT_COUNT.statTextValue(label))
