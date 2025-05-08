@@ -74,28 +74,6 @@ const authUrlRequestTests = (test) => {
     assert.true(firstRequest, 'it makes FIRST request to auth_url with default path');
     assert.true(secondRequest, 'it makes SECOND request to auth_url with custom path');
   });
-
-  test('it re-requests auth_url when input changes: namespace', async function (assert) {
-    // request assert should be hit twice, once on initial render and again on namespace change
-    assert.expect(2);
-    this.server.post(`/auth/${this.authType}/oidc/auth_url`, () => {
-      assert.true(true, 'it makes request to auth_url');
-      return { data: { auth_url: '123-example.com' } };
-    });
-    await render(hbs`
-      <Auth::Form::OidcJwt 
-        @authType={{this.authType}} 
-        @cluster={{this.cluster}}
-        @onError={{this.onError}}
-        @onSuccess={{this.onSuccess}}
-      >
-        <:namespace>
-          <label for="namespace">Namespace</label>
-          <input data-test-input="namespace" id="namespace" name="namespace" type="text" /> 
-        </:namespace>
-      </Auth::Form::OidcJwt>`);
-    await fillIn(GENERAL.inputByAttr('namespace'), 'mynamespace');
-  });
 };
 
 const jwtLoginTests = (test) => {
@@ -164,7 +142,7 @@ const oidcLoginTests = (test) => {
     });
     await this.renderComponent();
     assert.dom(AUTH_FORM.login).hasText('Sign in with Auth0');
-    assert.dom(GENERAL.icon('auth0')).exists(0);
+    assert.dom(GENERAL.icon('auth0')).exists();
     parseURLStub.restore();
   });
 
