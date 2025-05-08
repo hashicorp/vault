@@ -66,7 +66,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     await this.renderComponent();
 
     assert.dom(CLIENT_COUNT.dateRange.dateDisplay('start')).hasText('July 2023', 'Start month renders');
-    assert.dom(CLIENT_COUNT.dateRange.dateDisplay('end')).hasText('January 2024', 'End month renders');
+    assert.dom(CLIENT_COUNT.dateRange.dateDisplay('end')).hasText('December 2023', 'End month renders');
   });
 
   test('it should render no data empty state', async function (assert) {
@@ -76,7 +76,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
     assert
       .dom(GENERAL.emptyStateTitle)
-      .hasText('No data received from July 2023 to January 2024', 'No data empty state renders');
+      .hasText('No data received from July 2023 to December 2023', 'No data empty state renders');
   });
 
   test('it should render activity error', async function (assert) {
@@ -278,7 +278,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
     assert
       .dom(GENERAL.emptyStateTitle)
-      .hasText('No data received from July 2023 to January 2024', 'Empty state renders');
+      .hasText('No data received from July 2023 to December 2023', 'Empty state renders');
   });
 
   test('it resets the tracked values on close', async function (assert) {
@@ -292,6 +292,6 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
     await click(DATE_RANGE.edit);
     assert.dom(DATE_RANGE.editDate('start')).hasValue('2023-07');
-    assert.dom(DATE_RANGE.editDate('end')).hasValue('2024-01');
+    assert.dom(DATE_RANGE.editDate('end')).hasValue('2023-12');
   });
 });

@@ -27,8 +27,6 @@ module('Integration | Component | clients/page-header', function (hooks) {
     this.selectedNamespace = undefined;
     this.upgradesDuringActivity = [];
     this.noData = undefined;
-    this.showEditModal = undefined;
-    this.setEditModalVisible = Sinon.spy();
     this.server.post('/sys/capabilities-self', () =>
       capabilitiesStub('sys/internal/counters/activity/export', ['sudo'])
     );
@@ -41,8 +39,6 @@ module('Integration | Component | clients/page-header', function (hooks) {
           @namespace={{this.selectedNamespace}}
           @upgradesDuringActivity={{this.upgradesDuringActivity}}
           @noData={{this.noData}}
-          @showEditModal={{this.showEditModal}}
-          @setEditModalVisible={{this.setEditModalVisible}}
         />`);
     };
   });

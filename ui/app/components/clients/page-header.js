@@ -29,8 +29,6 @@ import { task } from 'ember-concurrency';
  * @param {string} [upgradesDuringActivity] - array of objects containing version history upgrade data
  * @param {boolean} [noData = false] - when true, export button will hide regardless of capabilities
  * @param {function} onChange - callback when a new range is saved, to be passed to datepicker
- * @param {boolean} [showEditModal = false] - boolean for whether edit modal is open/closed, passed on to datepicker
- * @param {function} setEditModalVisible - callback to tell parent header when modal is opened/closed, passed on to datepicker
  */
 export default class ClientsPageHeaderComponent extends Component {
   @service download;
@@ -39,6 +37,7 @@ export default class ClientsPageHeaderComponent extends Component {
   @service version;
 
   @tracked canDownload = false;
+  @tracked showEditModal = false;
   @tracked showExportModal = false;
   @tracked exportFormat = 'csv';
   @tracked downloadError = '';
@@ -99,6 +98,10 @@ export default class ClientsPageHeaderComponent extends Component {
     return namespace ? sanitizePath(`${currentNs}/${namespace}`) : sanitizePath(currentNs);
   }
 
+  get showCommunity() {
+    return this.version.isCommunity && !!this.formattedStartDate && !!this.formattedEndDate;
+  }
+
   async getExportData() {
     const adapter = this.store.adapterFor('clients/activity');
     const { startTimestamp, endTimestamp } = this.args;
@@ -135,5 +138,10 @@ export default class ClientsPageHeaderComponent extends Component {
   resetModal() {
     this.showExportModal = false;
     this.downloadError = '';
+  }
+
+  @action
+  setEditModalVisible(visible) {
+    this.showEditModal = visible;
   }
 }

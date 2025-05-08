@@ -12,32 +12,8 @@
     @upgradesDuringActivity={{this.upgradesDuringActivity}}
     @noData={{not @activity.total.clients}}
     @onChange={{this.onDateChange}}
-    @showEditModal={{this.showEditModal}}
-    @setEditModalVisible={{this.setEditModalVisible}}
   />
 </div>
-{{#if this.showCommunity}}
-  <div class="has-top-padding-m">
-    <Hds::Text::Display @tag="h3">Client counting period</Hds::Text::Display>
-    <Hds::Text::Body @tag="p" class="has-text-grey">Specify a date range to view within that timeframe. Click 'Edit' to
-      choose a different date range.</Hds::Text::Body>
-    <Hds::Text::Body @tag="p">
-      <span data-test-date-range="start">{{this.formattedStartDate}}</span>
-      -
-      <span data-test-date-range="end">{{this.formattedEndDate}}</span>
-      <Hds::Button
-        @size="small"
-        @text="Edit"
-        @isInline="true"
-        @color="tertiary"
-        @icon="edit"
-        @iconPosition="trailing"
-        data-test-date-range-edit
-        {{on "click" (fn (mut this.showEditModal) true)}}
-      />
-    </Hds::Text::Body>
-  </div>
-{{/if}}
 
 <div class="box is-sideless is-fullwidth is-marginless is-bottomless is-shadowless">
 

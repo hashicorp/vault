@@ -6,7 +6,6 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
-import { tracked } from '@glimmer/tracking';
 import { isSameMonth, isAfter } from 'date-fns';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import { filteredTotalForMount, filterVersionHistory, TotalClients } from 'core/utils/client-count-utils';
@@ -38,8 +37,6 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   @service declare readonly version: VersionService;
   @service declare readonly namespace: NamespaceService;
   @service declare readonly store: Store;
-
-  @tracked showEditModal = false;
 
   get formattedStartDate() {
     return this.args.startTimestamp ? parseAPITimestamp(this.args.startTimestamp, 'MMMM yyyy') : null;
@@ -189,10 +186,6 @@ export default class ClientsCountsPageComponent extends Component<Args> {
     return this.args.activity?.total?.secret_syncs > 0;
   }
 
-  get showCommunity(): boolean {
-    return this.version.isCommunity && !!this.formattedStartDate && !!this.formattedEndDate;
-  }
-
   @action
   onDateChange(params: { start_time: number | undefined; end_time: number | undefined }) {
     this.args.onFilterChange(params);
@@ -219,10 +212,5 @@ export default class ClientsCountsPageComponent extends Component<Args> {
       ns: undefined,
       mountPath: undefined,
     });
-  }
-
-  @action
-  setEditModalVisible(visible: boolean) {
-    this.showEditModal = visible;
   }
 }
