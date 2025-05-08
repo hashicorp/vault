@@ -64,7 +64,7 @@ scenario "upgrade" {
     // versions after our initial publication of these editions for arm64.
     exclude {
       arch    = ["arm64"]
-      edition = ["ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+      edition = ["ent.fips1403", "ent.hsm", "ent.hsm.fips1403"]
     }
 
     // PKCS#11 can only be used with hsm editions
