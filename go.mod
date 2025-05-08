@@ -111,7 +111,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.2
 	github.com/hashicorp/go-secure-stdlib/mlock v0.1.3
 	github.com/hashicorp/go-secure-stdlib/nonceutil v0.1.0
-	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.9
+	github.com/hashicorp/go-secure-stdlib/parseutil v0.2.0
 	github.com/hashicorp/go-secure-stdlib/password v0.1.1
 	github.com/hashicorp/go-secure-stdlib/permitpool v1.0.0
 	github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1
@@ -137,7 +137,7 @@ require (
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.20.0
 	github.com/hashicorp/vault-plugin-auth-azure v0.20.4
-	github.com/hashicorp/vault-plugin-auth-cf v0.20.0
+	github.com/hashicorp/vault-plugin-auth-cf v0.20.1-0.20250508165307-b24a85d38261
 	github.com/hashicorp/vault-plugin-auth-gcp v0.20.2
 	github.com/hashicorp/vault-plugin-auth-jwt v0.23.2
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.14.0
