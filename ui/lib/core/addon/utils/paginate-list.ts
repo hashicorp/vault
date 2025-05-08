@@ -7,12 +7,22 @@ import config from 'vault/config/environment';
 
 const { DEFAULT_PAGE_SIZE } = config.APP;
 
-type PaginatedData = string | Record<string, string>[];
 type PaginateOptions = {
   page?: number;
   pageSize?: number;
   filter?: string;
   filterKey?: string;
+};
+export type PaginatedMetadata = {
+  meta: {
+    currentPage: number;
+    lastPage: number;
+    nextPage: number;
+    prevPage: number;
+    total: number;
+    filteredTotal: number;
+    pageSize: number;
+  };
 };
 
 /**
@@ -20,15 +30,15 @@ type PaginateOptions = {
  * If filter is provided, it will filter the data prior to paginating
  */
 
-export const paginate = (data: PaginatedData, options: PaginateOptions = {}) => {
+export function paginate<T>(data: T[], options: PaginateOptions = {}) {
   const { page = 1, pageSize = DEFAULT_PAGE_SIZE, filter, filterKey } = options;
-  let filteredData = data;
 
   if (Array.isArray(data)) {
+    let filteredData = [...data];
     // filter data before paginating if filter is provided
     if (filter) {
       filteredData = data.filter((item) => {
-        const filterValue = filterKey ? item[filterKey] : item;
+        const filterValue = filterKey ? (item as Record<string, unknown>)[filterKey] : item;
         if (typeof filterValue === 'string') {
           return filterValue.toLowerCase().includes(filter.toLowerCase());
         }
@@ -51,8 +61,11 @@ export const paginate = (data: PaginatedData, options: PaginateOptions = {}) => 
         filteredTotal: filteredData.length,
         pageSize,
       },
+      writable: false,
     });
+
+    return filteredData as T[] & PaginatedMetadata;
   }
 
-  return filteredData;
-};
+  return data;
+}

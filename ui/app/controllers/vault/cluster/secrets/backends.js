@@ -7,7 +7,6 @@ import Controller from '@ember/controller';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { dropTask } from 'ember-concurrency';
 
 export default class VaultClusterSecretsBackendController extends Controller {
   @service flashMessages;
@@ -73,11 +72,11 @@ export default class VaultClusterSecretsBackendController extends Controller {
     this.selectedEngineName = name;
   }
 
-  @dropTask
-  *disableEngine(engine) {
+  @action
+  async disableEngine(engine) {
     const { engineType, path } = engine;
     try {
-      yield engine.destroyRecord();
+      await engine.destroyRecord();
       this.flashMessages.success(`The ${engineType} Secrets Engine at ${path} has been disabled.`);
     } catch (err) {
       this.flashMessages.danger(
