@@ -6,7 +6,12 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import clientsHandler, { STATIC_NOW, LICENSE_START, UPGRADE_DATE } from 'vault/mirage/handlers/clients';
+import clientsHandler, {
+  STATIC_NOW,
+  LICENSE_START,
+  UPGRADE_DATE,
+  STATIC_PREVIOUS_MONTH,
+} from 'vault/mirage/handlers/clients';
 import syncHandler from 'vault/mirage/handlers/sync';
 import sinon from 'sinon';
 import { visit, click, findAll, fillIn, currentURL } from '@ember/test-helpers';
@@ -70,7 +75,7 @@ module('Acceptance | clients | overview', function (hooks) {
 
     const licenseStartMonth = format(LICENSE_START, 'yyyy-MM');
     const upgradeMonth = format(UPGRADE_DATE, 'yyyy-MM');
-    const endMonth = format(STATIC_NOW, 'yyyy-MM');
+    const endMonth = format(STATIC_PREVIOUS_MONTH, 'yyyy-MM');
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), licenseStartMonth);
     await fillIn(CLIENT_COUNT.dateRange.editDate('end'), licenseStartMonth);
@@ -101,7 +106,7 @@ module('Acceptance | clients | overview', function (hooks) {
     assert
       .dom(`${CHARTS.container('Vault client counts')} ${CHARTS.xAxisLabel}`)
       .hasText('9/23', 'x-axis labels start with queried start month (upgrade date)');
-    assert.dom(CHARTS.xAxisLabel).exists({ count: 5 }, 'chart months matches query');
+    assert.dom(CHARTS.xAxisLabel).exists({ count: 4 }, 'chart months matches query');
 
     // query for single, historical month (upgrade month)
     await click(CLIENT_COUNT.dateRange.edit);

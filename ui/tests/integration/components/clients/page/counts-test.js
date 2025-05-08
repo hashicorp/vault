@@ -8,7 +8,11 @@ import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, findAll, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
+import clientsHandler, {
+  LICENSE_START,
+  STATIC_NOW,
+  STATIC_PREVIOUS_MONTH,
+} from 'vault/mirage/handlers/clients';
 import { fromUnixTime, getUnixTime } from 'date-fns';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
@@ -18,9 +22,9 @@ import sinon from 'sinon';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 const START_TIME = getUnixTime(LICENSE_START);
-const END_TIME = getUnixTime(STATIC_NOW);
+const END_TIME = getUnixTime(STATIC_PREVIOUS_MONTH);
 const START_ISO = LICENSE_START.toISOString();
-const END_ISO = STATIC_NOW.toISOString();
+const END_ISO = STATIC_PREVIOUS_MONTH.toISOString();
 
 module('Integration | Component | clients | Page::Counts', function (hooks) {
   setupRenderingTest(hooks);
@@ -100,14 +104,13 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
   // license start is July 2, 2024 on date change it recalculates start to beginning of the month
   const july23start = getUnixTime(new Date('2023-07-01T00:00:00Z'));
   const dec23end = getUnixTime(new Date('2023-12-31T00:00:00Z'));
-  const jan24end = getUnixTime(new Date('2024-01-31T00:00:00Z'));
   [
     {
       scenario: 'changing start only',
-      expected: { start_time: jan23start, end_time: jan24end },
+      expected: { start_time: jan23start, end_time: dec23end },
       editStart: '2023-01',
       expectedStart: 'January 2023',
-      expectedEnd: 'January 2024',
+      expectedEnd: 'December 2023',
     },
     {
       scenario: 'changing end only',
@@ -142,9 +145,9 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
       await this.renderComponent();
       await click(CLIENT_COUNT.dateRange.edit);
 
-      // page starts with default billing dates, which are july 23 - jan 24
+      // page starts with default billing dates, which are july 23 - dec 23
       assert.dom(CLIENT_COUNT.dateRange.editDate('start')).hasValue('2023-07');
-      assert.dom(CLIENT_COUNT.dateRange.editDate('end')).hasValue('2024-01');
+      assert.dom(CLIENT_COUNT.dateRange.editDate('end')).hasValue('2023-12');
 
       if (testCase.editStart) {
         await fillIn(CLIENT_COUNT.dateRange.editDate('start'), testCase.editStart);

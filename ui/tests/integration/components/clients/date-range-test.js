@@ -48,11 +48,11 @@ module('Integration | Component | clients/date-range', function (hooks) {
     assert.dom(DATE_RANGE.editModal).exists();
     assert.dom(DATE_RANGE.editDate('start')).hasValue('');
     await fillIn(DATE_RANGE.editDate('start'), '2018-01');
-    await fillIn(DATE_RANGE.editDate('end'), '2019-01');
+    await fillIn(DATE_RANGE.editDate('end'), '2018-03');
     await click(GENERAL.saveButton);
     assert.deepEqual(this.onChange.args[0], [
       {
-        end_time: 1548892800,
+        end_time: 1522454400,
         start_time: 1514764800,
       },
     ]);
