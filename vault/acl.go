@@ -770,30 +770,18 @@ func valueInAllowedParameterList(v interface{}, list []interface{}) bool {
 		return true
 	}
 
-	// If v is a slice, check if all the values in the slice are in the list
-	switch vals := v.(type) {
-	case []interface{}:
-		for _, val := range vals {
-			if !valueInParameterList(val, list) {
+	val := reflect.ValueOf(v)
+	if val.Kind() == reflect.Slice {
+		// If v is a slice, check if all the values in the slice are in the list
+		for i := 0; i < val.Len(); i++ {
+			if !valueInParameterList(val.Index(i).Interface(), list) {
 				return false
 			}
 		}
-	case []string:
-		for _, val := range vals {
-			if !valueInParameterList(val, list) {
-				return false
-			}
-		}
-	case []int:
-		for _, val := range vals {
-			if !valueInParameterList(val, list) {
-				return false
-			}
-		}
-	default:
+	} else {
+		// If v is not a slice, check if the value is in the list
 		return valueInParameterList(v, list)
 	}
-
 	return true
 }
 
@@ -803,30 +791,18 @@ func valueInDeniedParameterList(v interface{}, list []interface{}) bool {
 		return true
 	}
 
-	// If v is a slice, check if any of the values in the slice are in the list
-	switch vals := v.(type) {
-	case []interface{}:
-		for _, val := range vals {
-			if valueInParameterList(val, list) {
+	val := reflect.ValueOf(v)
+	if val.Kind() == reflect.Slice {
+		// If v is a slice, check if any of the values in the slice are in the list
+		for i := 0; i < val.Len(); i++ {
+			if valueInParameterList(val.Index(i).Interface(), list) {
 				return true
 			}
 		}
-	case []string:
-		for _, val := range vals {
-			if valueInParameterList(val, list) {
-				return true
-			}
-		}
-	case []int:
-		for _, val := range vals {
-			if valueInParameterList(val, list) {
-				return true
-			}
-		}
-	default:
+	} else {
+		// If v is not a slice, check if the value is in the list
 		return valueInParameterList(v, list)
 	}
-
 	return false
 }
 
