@@ -128,33 +128,32 @@ The token making the call, not the token associated with the accessor, must
 have appropriate permissions for these functions.
 
 Token accessors enable many useful workflows. As an example, a
-service that creates tokens on behalf of another service (such as the
-[Nomad](https://www.nomadproject.io/) scheduler) can store the accessor
-correlated with a particular job ID. When the job is complete, the accessor can
-be used to instantly revoke the token given to the job and all of its leased
+service that creates tokens on behalf of another service, such as the
+[Nomad](https://www.nomadproject.io/) scheduler. can store the accessor
+correlated with a particular job ID. When the job is complete, you can use the accessor
+to instantly revoke the job's token and all of its leased
 credentials, limiting the chance that a bad actor will discover and use them.
 
-Audit devices can optionally be set to not obfuscate token accessors in audit
-logs. This provides a way to quickly revoke tokens in case of an emergency.
-However, it also means that the audit logs can be used to perform a larger-scale
+You can optionally set audit devices to not obfuscate token accessors in audit
+logs, providing a way for you to quickly revoke tokens in case of an emergency.
+However, it also means that a bad actor could use the audit logs to perform a larger-scale
 denial of service attack.
 
-Finally, the only way to "list tokens" is via the `auth/token/accessors`
-command, which actually gives a list of token accessors. While this is still a
-dangerous endpoint (since listing all of the accessors means that they can then
-be used to revoke all tokens), it also provides a way to audit and revoke the
+Finally, the only way to list tokens is using the `auth/token/accessors`
+command, which gives a list of token accessors. You should use this endpoint with caution since listing all of the accessors means that someone could use them
+to revoke all tokens. However, it also provides a way to audit and revoke the
 currently-active set of tokens.
 
 ## Token Time-To-Live, periodic tokens, and explicit max TTLs
 
 Every non-root token has a time-to-live (TTL) associated with it, which is a
 current period of validity since either the token's creation time or last
-renewal time, whichever is more recent. (Root tokens may have a TTL associated,
-but the TTL may also be 0, indicating a token that never expires). After the
-current TTL is up, the token will no longer function -- it, and its associated
-leases, are revoked.
+renewal time, whichever is more recent. Root tokens may have an associated TTL,
+but the TTL may also be 0, indicating a token that never expires. After the
+current TTL is up, the token no longer functions. Vault revokes it and any associated
+leases.
 
-If the token is renewable, Vault can be asked to extend the token validity
+If the token is renewable, you can extend the token validity
 period using `vault token renew` or the appropriate renewal endpoint. At this
 time, various factors come into play. What happens depends upon whether the
 token is a periodic token (available for creation by `root`/`sudo` users, token
@@ -164,12 +163,12 @@ attached, or neither.
 ### The general case
 
 In the general case, where there is neither a period nor explicit maximum TTL
-value set on the token, the token's lifetime since it was created will be
-compared to the maximum TTL. This maximum TTL value is dynamically generated
-and can change from renewal to renewal, so the value cannot be displayed when a
-token's information is looked up. It is based on a combination of factors:
+value set on the token, Vault compares the token's lifetime since it was created
+to the maximum TTL. Vault generates the maximum TTL value dynamically
+and it can change from renewal to renewal. So you cannot view the value when you
+look up a token's information. The value is based on a combination of factors:
 
-1. The system max TTL, which is 32 days but can be changed in Vault's
+1. The system max TTL, which is 32 days by default, but you can change it in Vault's
    configuration file.
 1. The max TTL set on a mount using [mount
    tuning](/vault/api-docs/system/mounts). This value
