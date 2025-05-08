@@ -4,7 +4,8 @@
 }}
 
 <Messages::Page::List
-  @messages={{this.model.messages}}
-  @authenticated={{this.authenticated}}
-  @params={{this.model.params}}
+  @capabilities={{@model.capabilities}}
+  @messages={{@model.messages}}
+  @authenticated={{@authenticated}}
+  @params={{@model.params}}
 />
