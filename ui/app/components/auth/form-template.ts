@@ -10,6 +10,7 @@ import { action } from '@ember/object';
 import { ALL_LOGIN_METHODS, supportedTypes } from 'vault/utils/supported-login-methods';
 import { getRelativePath } from 'core/utils/sanitize-path';
 
+import type AuthService from 'vault/vault/services/auth';
 import type FlagsService from 'vault/services/flags';
 import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
@@ -51,6 +52,7 @@ interface Args {
 }
 
 export default class AuthFormTemplate extends Component<Args> {
+  @service declare readonly auth: AuthService;
   @service declare readonly flags: FlagsService;
   @service declare readonly store: Store;
   @service declare readonly version: VersionService;
@@ -110,13 +112,16 @@ export default class AuthFormTemplate extends Component<Args> {
   @action
   initializeState() {
     // SET AUTH TYPE
-    if (!this.args.presetAuthType) {
+    // first presetAuthType because that's from a user canceling mfa validation.
+    // then directLinkData because url specifies a mount path.
+    // fallback to getAuthType which is the last used auth method from local storage.
+    const presetType = this.args.presetAuthType || this.args.directLinkData?.type || this.auth.getAuthType();
+    if (presetType) {
+      this.setAuthType(presetType);
+    } else {
       // if nothing has been preselected, select first tab or set to 'token'
       const authType = this.args.hasVisibleAuthMounts ? (this.authTabTypes[0] as string) : 'token';
       this.setAuthType(authType);
-    } else {
-      // there is a preselected type, set is as the selectedAuthType
-      this.setAuthType(this.args.presetAuthType);
     }
 
     // DETERMINES INITIAL RENDER: custom selection (direct link or tabs) vs dropdown
