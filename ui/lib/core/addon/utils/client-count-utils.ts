@@ -78,12 +78,11 @@ export const filterVersionHistory = (
 // This method is used to return totals relevant only to the specified
 // mount path within the specified namespace.
 export const filteredTotalForMount = (
-  byNamespace: ByNamespaceClients[],
   nsPath: string,
   mountPath: string,
   byMonth: ByMonthClients[]
 ): TotalClients => {
-  if (!nsPath || !mountPath || isEmpty(byNamespace) || isEmpty(byMonth)) return emptyCounts();
+  if (!nsPath || !mountPath || isEmpty(byMonth)) return emptyCounts();
 
   const newClientTotals = byMonth?.reduce(
     (acc, month) => {

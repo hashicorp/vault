@@ -486,6 +486,7 @@ module('Integration | Util | client count utils', function (hooks) {
   module('filteredTotalForMount', function (hooks) {
     hooks.beforeEach(function () {
       this.byNamespace = SERIALIZED_ACTIVITY_RESPONSE.by_namespace;
+      this.byMonth = SERIALIZED_ACTIVITY_RESPONSE.by_month;
     });
 
     const emptyCounts = {
@@ -524,11 +525,10 @@ module('Integration | Util | client count utils', function (hooks) {
         ns: 'ns1/',
         mount: 'auth/authid/0/',
         expected: {
-          label: 'auth/authid/0',
           acme_clients: 0,
-          clients: 8394,
-          entity_clients: 4256,
-          non_entity_clients: 4138,
+          clients: 96,
+          entity_clients: 34,
+          non_entity_clients: 62,
           secret_syncs: 0,
         },
       },
@@ -538,17 +538,16 @@ module('Integration | Util | client count utils', function (hooks) {
         ns: 'root',
         mount: 'kvv2-engine-0',
         expected: {
-          label: 'kvv2-engine-0',
           acme_clients: 0,
-          clients: 4290,
+          clients: 125,
           entity_clients: 0,
           non_entity_clients: 0,
-          secret_syncs: 4290,
+          secret_syncs: 125,
         },
       },
     ].forEach((testCase) => {
       test(`it returns correct values when ${testCase.when}`, async function (assert) {
-        const actual = filteredTotalForMount(this.byNamespace, testCase.ns, testCase.mount);
+        const actual = filteredTotalForMount(testCase.ns, testCase.mount, this.byMonth);
         assert.deepEqual(actual, testCase.expected);
       });
     });

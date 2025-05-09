@@ -130,7 +130,7 @@ export default class ClientsCountsPageComponent extends Component<Args> {
     if (mountPath) {
       // only do this if we have a mountPath filter.
       // namespace is filtered on API layer
-      return filteredTotalForMount(activity.byNamespace, namespace, mountPath, activity.byMonth);
+      return filteredTotalForMount(namespace, mountPath, activity.byMonth);
     }
     return activity?.total;
   }
