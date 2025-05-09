@@ -44,7 +44,14 @@
       (hash editType="boolean" variants=(array "base" "with label" "with helpText + subText + docLink" "checked" "disabled"))
       (hash
         editType="checkboxList"
-        variants=(array "base" "with label" "with helpText + subText + docLink" "with validation errors")
+        variants=(array
+          "base"
+          "with label"
+          "with helpText + subText + docLink"
+          "with validation errors"
+          "with validation warnings"
+          "with validation errors and warnings"
+        )
       )
       (hash
         editType="dateTimeLocal"
@@ -112,7 +119,15 @@
       (hash
         editType="radio"
         variants=(array
-          "base" "with label" "with helpText + subText + docLink" "with item subText" "with item helpText" "disabled"
+          "base"
+          "with label"
+          "with helpText + subText + docLink"
+          "with item subText"
+          "with item helpText"
+          "disabled"
+          "with validation errors"
+          "with validation warnings"
+          "with validation errors and warnings"
         )
       )
       (hash editType="regex" variants=(array "base" "with label" "with helpText + subText + docLink" "with value"))

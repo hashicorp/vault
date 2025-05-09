@@ -117,10 +117,27 @@ export default class ShowcaseController extends Controller {
   dynamicFormFieldModelValidations(editType, variant) {
     const modelValidations = {};
     if (editType === 'checkboxList') {
-      if (variant === 'with validation errors') {
+      if (variant === 'with validation errors and warnings') {
         modelValidations.checkboxList = {
           isValid: false,
           errors: ['This is the validation error message #1', 'This is the validation error message #2'],
+          warnings: [
+            'This is the validation warning message #1',
+            'This is the validation warning message #2',
+          ],
+        };
+      } else if (variant === 'with validation errors') {
+        modelValidations.checkboxList = {
+          isValid: false,
+          errors: ['This is the validation error message #1', 'This is the validation error message #2'],
+        };
+      } else if (variant === 'with validation warnings') {
+        modelValidations.checkboxList = {
+          isValid: true,
+          warnings: [
+            'This is the validation warning message #1',
+            'This is the validation warning message #2',
+          ],
         };
       }
     } else if (editType === 'dateTimeLocal') {
@@ -143,6 +160,30 @@ export default class ShowcaseController extends Controller {
         modelValidations.kv = {
           isValid: false,
           errors: ['This is the validation error message #1', 'This is the validation error message #2'],
+        };
+      }
+    } else if (editType === 'radio') {
+      if (variant === 'with validation errors and warnings') {
+        modelValidations.radio = {
+          isValid: false,
+          errors: ['This is the validation error message #1', 'This is the validation error message #2'],
+          warnings: [
+            'This is the validation warning message #1',
+            'This is the validation warning message #2',
+          ],
+        };
+      } else if (variant === 'with validation errors') {
+        modelValidations.radio = {
+          isValid: false,
+          errors: ['This is the validation error message #1', 'This is the validation error message #2'],
+        };
+      } else if (variant === 'with validation warnings') {
+        modelValidations.radio = {
+          isValid: true,
+          warnings: [
+            'This is the validation warning message #1',
+            'This is the validation warning message #2',
+          ],
         };
       }
     } else if (editType === 'stringArray') {
