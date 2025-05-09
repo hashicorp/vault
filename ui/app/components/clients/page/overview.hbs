@@ -14,7 +14,7 @@
   @mountPath={{@mountPath}}
 />
 
-{{#if this.hasAttributionData}}
+{{!-- {{#if this.hasAttributionData}}
   <Clients::Attribution
     @noun="namespace"
     @attribution={{@activity.byNamespace}}
@@ -29,4 +29,54 @@
       @isSecretsSyncActivated={{this.flags.secretsSyncIsActivated}}
     />
   {{/if}}
+{{/if}} --}}
+
+<Hds::Form::Select::Base
+  class="has-bottom-margin-m"
+  aria-label="Month"
+  name="month"
+  {{on "input" this.selectMonth}}
+  @width="200px"
+  as |S|
+>
+  <S.Options>
+    <option value="">Select month</option>
+    {{#each this.months as |m|}}
+      <option value={{m.value}}>{{m.display}}</option>
+    {{/each}}
+  </S.Options>
+</Hds::Form::Select::Base>
+
+{{#if this.tableData}}
+  <Hds::Table
+    @model={{this.tableData}}
+    @columns={{array
+      (hash key="namespace" label="Namespace" isSortable=true)
+      (hash key="label" label="Mount path" isSortable=true)
+      (hash key="mount_type" label="Mount type" isSortable=true)
+      (hash key="clients" label="Counts" isSortable=true)
+    }}
+    @sortBy="clients"
+    @sortOrder="desc"
+  >
+    <:body as |B|>
+      <B.Tr>
+        <B.Td>{{B.data.namespace}}</B.Td>
+        <B.Td>{{B.data.label}}</B.Td>
+        {{#if (eq B.data.mount_type "deleted mount")}}
+          <B.Td><Hds::Badge @text="Disabled" @type="outlined" /></B.Td>
+        {{else}}
+          <B.Td>{{B.data.mount_type}}</B.Td>
+        {{/if}}
+        <B.Td>{{B.data.clients}}</B.Td>
+      </B.Tr>
+    </:body>
+  </Hds::Table>
+{{else}}
+  <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-l">
+    <Hds::ApplicationState as |A|>
+      <A.Header @title="Select a month to view client attribution" />
+      <A.Body @text="View the namespace mount breakdown of clients by selecting a month." />
+    </Hds::ApplicationState>
+  </Hds::Card::Container>
 {{/if}}
