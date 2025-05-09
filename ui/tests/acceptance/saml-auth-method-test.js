@@ -11,16 +11,17 @@ import { Response } from 'miragejs';
 import { windowStub } from 'vault/tests/helpers/oidc-window-stub';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
+import { logout } from 'vault/tests/helpers/auth/auth-helpers';
 
 module('Acceptance | enterprise saml auth method', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     this.openStub = windowStub();
     this.server.put('/auth/saml/sso_service_url', () => ({
       data: {
-        sso_service_url: 'http://sso-url.hashicorp.com/service',
+        sso_service_url: 'test/fake/sso/route', // we aren't actually opening a popup so use a fake url
         token_poll_id: '1234',
       },
     }));
@@ -28,8 +29,7 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
       auth: { client_token: 'root' },
     }));
     // ensure clean state
-    localStorage.removeItem('selectedAuth');
-    visit('/vault/logout');
+    await logout(); // clears local storage
   });
 
   hooks.afterEach(function () {
@@ -51,7 +51,6 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
 
   test('it should login with saml from listed auth mount tab', async function (assert) {
     assert.expect(4);
-
     this.server.get('/sys/internal/ui/mounts', () => ({
       data: {
         auth: {
@@ -63,7 +62,7 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
       assert.ok(true, 'role request made to correct non-standard mount path');
       return {
         data: {
-          sso_service_url: 'http://sso-url.hashicorp.com/service',
+          sso_service_url: 'test/fake/sso/route',
           token_poll_id: '1234',
         },
       };
@@ -84,6 +83,7 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
       req.passthrough();
     });
 
+    await logout(); // clear local storage and refresh route so sys/internal/ui/mounts is reliably called
     // click auth path tab
     await waitUntil(() => find(AUTH_FORM.tabBtn('saml')));
     await click(AUTH_FORM.login);
