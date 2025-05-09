@@ -1,0 +1,11 @@
+<Note title="Important change to supported versions">
+
+   Behavior change related to `new_clients` counts returned for the current month from GET `sys/internal/counters/activity` endpoint:
+
+   - Prior to Vault versions 1.20 and 1.20+ent, `new_clients` counts returned for the current month will be an estimate.
+
+   - As of Vault 1.20+ent and later, actual values are returned for `new_clients` counts for the current month and they are no longer an estimate.
+
+   - As of Vault 1.20 and later, the response excludes the current month and any future dates.
+
+</Note>

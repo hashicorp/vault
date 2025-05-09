@@ -16,6 +16,8 @@ provided in the Vault UI and API.
 | 1.13    | UI        | Combined current month and previous history into one dashboard
 | 1.16    | All       | Added synced secrets as a new category in client counting
 | 1.17    | All       | Separated PKI ACME certificates as their own category in client counting
+| 1.20    | All       | Get client count endpoint response excludes the current month and any future date
+| 1.20+ent    | All       | Actual values are returned for `new_clients` counts for the current month and they are no longer an estimate
 
 The latest GA version of the Vault binary always contains the most updated
 version of the client count computation logic.
@@ -77,5 +79,9 @@ usage metrics UI correctly reflects all clients for the current billing period.
 
     Each unique combination of authN mount, namespace, and alias, will be counted
     as a distinct client.
+  </Tab>
+
+  <Tab heading="Upgrading from Vault 1.19+ent">
+    Actual values are returned for <b>new_clients</b> counts for the current month and they are no longer an estimate.
   </Tab>
 </Tabs>
