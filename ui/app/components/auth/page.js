@@ -37,7 +37,6 @@ export const CSP_ERROR =
   "This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.";
 
 export default class AuthPage extends Component {
-  @service auth;
   @service('csp-event') csp;
 
   @tracked canceledMfaAuth = '';
@@ -62,13 +61,6 @@ export default class AuthPage extends Component {
     const isStandby = this.args.cluster.standby;
     const hasConnectionViolations = this.csp.connectionViolations.length;
     return isStandby && hasConnectionViolations ? CSP_ERROR : '';
-  }
-
-  get presetAuthType() {
-    // first canceledMfaAuth because that's from a user canceling mfa validation.
-    // then directLinkData url contains "with" query param specifying a mount path.
-    // fallback to getAuthType which is the last used auth method from local storage.
-    return this.canceledMfaAuth || this.args.directLinkData?.type || this.auth.getAuthType();
   }
 
   @action
