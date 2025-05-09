@@ -80,7 +80,7 @@
       </Toolbar>
     {{/if}}
 
-    {{! TODO SLW check what expected behavior is for when to show all 0s vs no data }}
+    {{! TODO SLW check what the expected behavior is for when to show all 0s vs no data received}}
     {{#if this.totalUsageCounts}}
       {{#if this.upgradeExplanations}}
         <Hds::Alert data-test-clients-upgrade-warning @type="inline" @color="warning" class="has-bottom-margin-m" as |A|>
@@ -122,13 +122,12 @@
 
       {{! CLIENT COUNT PAGE COMPONENTS RENDER HERE }}
       {{yield}}
-
-    {{else if (and this.version.isCommunity (not @startTimestamp))}}
-      {{! Empty state for community without start query param }}
-      {{! TODO SLW should this be updates as we need both start and end dates present }}
+    {{else if (and this.version.isCommunity (or (not @startTimestamp) (not @endTimestamp)))}}
+      {{! Empty state for community without start or end query param }}
+      {{! TODO SLW check this copy with design considering user cannot select current month }}
       <EmptyState
-        @title="No start date found"
-        @message="In order to get the most from this data, please enter a start month above. Vault will calculate new clients starting from that month."
+        @title="Input the start and end dates to view client attribution by path."
+        @message="Only historical data may be queried. No data will return if the end date falls within the current month."
       />
     {{else}}
       <EmptyState
