@@ -69,6 +69,7 @@ module('Integration | Component | clients | Clients::Page::Token', function (hoo
 
   test('it should render monthly total chart', async function (assert) {
     const count = this.activity.byMonth.length;
+    // TODO SLW this should be new clients only
     const { entity_clients, non_entity_clients } = this.activity.total;
     assert.expect(count + 7);
 

@@ -14,6 +14,7 @@ import {
   filterByMonthDataForMount,
   filteredTotalForMount,
   filterVersionHistory,
+  newClientTotal,
 } from 'core/utils/client-count-utils';
 import { service } from '@ember/service';
 import { sanitizePath } from 'core/utils/sanitize-path';
@@ -96,25 +97,7 @@ export default class ClientsActivityComponent extends Component<Args> {
       return filteredTotalForMount(namespace, mountPath, activity.byMonth);
     }
 
-    const newClientTotals: TotalClients = activity?.byMonth.reduce(
-      (acc, curr) => {
-        acc.acme_clients += curr.new_clients.acme_clients || 0;
-        acc.clients += curr.new_clients.clients || 0;
-        acc.entity_clients += curr.new_clients.entity_clients || 0;
-        acc.non_entity_clients += curr.new_clients.non_entity_clients || 0;
-        acc.secret_syncs += curr.new_clients.secret_syncs || 0;
-        return acc;
-      },
-      {
-        acme_clients: 0,
-        clients: 0,
-        entity_clients: 0,
-        non_entity_clients: 0,
-        secret_syncs: 0,
-      }
-    );
-
-    return newClientTotals;
+    return newClientTotal(activity?.byMonth);
   }
 
   get upgradesDuringActivity() {

@@ -23,6 +23,7 @@ import timestamp from 'core/utils/timestamp';
 import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { selectChoose } from 'ember-power-select/test-support';
 import { format } from 'date-fns';
+import { newClientTotal } from 'core/utils/client-count-utils';
 
 module('Acceptance | clients | overview', function (hooks) {
   setupApplicationTest(hooks);
@@ -87,6 +88,7 @@ module('Acceptance | clients | overview', function (hooks) {
     assert
       .dom(CHARTS.container('Vault client counts'))
       .doesNotExist('running total month over month charts do not show');
+    // TODO SLW failing, why does it not show when there are no new clients?
     assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
     assert.dom(CHARTS.container('namespace')).exists('namespace attribution chart shows');
     assert.dom(CHARTS.container('mount')).exists('mount attribution chart shows');
@@ -166,36 +168,15 @@ module('Acceptance | clients | overview', function (hooks) {
     assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
 
     const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
-    // todo update this to only return new clients from byMonth?
     const orderedNs = response.byNamespace.sort((a, b) => b.clients - a.clients);
     const topNamespace = orderedNs[0];
     // the namespace dropdown excludes the current namespace, so use second-largest if that's the case
     const filterNamespace = topNamespace.label === 'root' ? orderedNs[1] : topNamespace;
     const topMount = filterNamespace?.mounts.sort((a, b) => b.clients - a.clients)[0];
 
-    // TODO this was a rough pass at getting this working, but should definitely improve this before merge
-    const responseNewClient = response.byMonth.reduce(
-      (acc, month) => {
-        month.new_clients.namespaces
-          // .filter((ns) => ns.label === filterNamespace.label)
-          .forEach((ns) => {
-            acc.acme_clients += ns.acme_clients;
-            acc.clients += ns.clients;
-            acc.entity_clients += ns.entity_clients;
-            acc.non_entity_clients += ns.non_entity_clients;
-            acc.secret_syncs += ns.secret_syncs;
-          });
-
-        return acc;
-      },
-      {
-        acme_clients: 0,
-        clients: 0,
-        entity_clients: 0,
-        non_entity_clients: 0,
-        secret_syncs: 0,
-      }
-    );
+    const responseNewClient = newClientTotal(response.byMonth);
+    // TODO SLW what about this interim where only namespace, but no mount?
+    // elsewhere it flows in already with activity filtered by namespace
     const filterNamespaceNewClients = response.byMonth.reduce(
       (acc, month) => {
         month.new_clients.namespaces
@@ -219,32 +200,7 @@ module('Acceptance | clients | overview', function (hooks) {
       }
     );
 
-    const topMountNewClients = response.byMonth.reduce(
-      (acc, month) => {
-        month.new_clients.namespaces
-          .filter((ns) => ns.label === filterNamespace.label)
-          .forEach((ns) => {
-            ns.mounts
-              .filter((mount) => mount.label === topMount.label)
-              .forEach((mount) => {
-                acc.acme_clients += mount.acme_clients;
-                acc.clients += mount.clients;
-                acc.entity_clients += mount.entity_clients;
-                acc.non_entity_clients += mount.non_entity_clients;
-                acc.secret_syncs += mount.secret_syncs;
-              });
-          });
-        return acc;
-      },
-      {
-        acme_clients: 0,
-        clients: 0,
-        entity_clients: 0,
-        non_entity_clients: 0,
-        secret_syncs: 0,
-      }
-    );
-
+    const topMountNewClients = newClientTotal(response.byMonth, filterNamespace.label, topMount.label);
     assert
       .dom(`${CLIENT_COUNT.attributionBlock('namespace')} [data-test-top-attribution]`)
       .includesText(`Top namespace ${topNamespace.label}`);

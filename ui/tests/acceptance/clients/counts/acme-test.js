@@ -17,7 +17,7 @@ import { ACTIVITY_RESPONSE_STUB, assertBarChart } from 'vault/tests/helpers/clie
 import { formatNumber } from 'core/helpers/format-number';
 import { filterActivityResponse, LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { selectChoose } from 'ember-power-select/test-support';
-import { filterByMonthDataForMount } from 'core/utils/client-count-utils';
+import { filterByMonthDataForMount, newClientTotal } from 'core/utils/client-count-utils';
 
 const { searchSelect } = GENERAL;
 
@@ -44,31 +44,7 @@ module('Acceptance | clients | counts | acme', function (hooks) {
     this.mountPath = 'pki-engine-0';
 
     this.expectedValues = {
-      nsTotals: activity.byMonth.reduce(
-        (acc, month) => {
-          month.new_clients.namespaces
-            .filter((ns) => ns.label === this.nsPath)
-            .forEach((ns) => {
-              ns.mounts
-                .filter((mount) => mount.label === this.mountPath)
-                .forEach((mount) => {
-                  acc.acme_clients += mount.acme_clients;
-                  acc.clients += mount.clients;
-                  acc.entity_clients += mount.entity_clients;
-                  acc.non_entity_clients += mount.non_entity_clients;
-                  acc.secret_syncs += mount.secret_syncs;
-                });
-            });
-          return acc;
-        },
-        {
-          acme_clients: 0,
-          clients: 0,
-          entity_clients: 0,
-          non_entity_clients: 0,
-          secret_syncs: 0,
-        }
-      ),
+      nsTotals: newClientTotal(activity.byMonth, this.nsPath, this.mountPath),
       nsMonthlyUsage: filterByMonthDataForMount(activity.byMonth, this.nsPath, this.mountPath),
     };
 

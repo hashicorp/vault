@@ -16,6 +16,7 @@ import { CLIENT_COUNT, CHARTS } from 'vault/tests/helpers/clients/client-count-s
 import { formatNumber } from 'core/helpers/format-number';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 import { assertBarChart } from 'vault/tests/helpers/clients/client-count-helpers';
+import { newClientTotal } from 'core/utils/client-count-utils';
 
 const START_TIME = getUnixTime(LICENSE_START);
 const END_TIME = getUnixTime(STATIC_NOW);
@@ -60,16 +61,7 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
     const monthCount = this.activity.byMonth.length;
     assert.expect(6 + monthCount * 2);
 
-    const expectedTotal = formatNumber([
-      this.activity.byMonth.reduce((acc, month) => {
-        month.new_clients.namespaces.forEach((ns) => {
-          ns.mounts.forEach((mount) => {
-            acc += mount.acme_clients;
-          });
-        });
-        return acc;
-      }, 0),
-    ]);
+    const expectedTotal = formatNumber([newClientTotal(this.activity.byMonth).acme_clients]);
 
     const expectedNewAvg = formatNumber([
       calculateAverage(
@@ -94,16 +86,9 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
     assert.expect(4);
     const activityQuery = { start_time: { timestamp: END_TIME }, end_time: { timestamp: END_TIME } };
     this.activity = await this.store.queryRecord('clients/activity', activityQuery);
-    const expectedTotal = formatNumber([
-      this.activity.byMonth.reduce((acc, month) => {
-        month.new_clients.namespaces.forEach((ns) => {
-          ns.mounts.forEach((mount) => {
-            acc += mount.acme_clients;
-          });
-        });
-        return acc;
-      }, 0),
-    ]);
+
+    const expectedTotal = formatNumber([newClientTotal(this.activity.byMonth).acme_clients]);
+
     await this.renderComponent();
 
     assert.dom(CHARTS.chart('ACME usage')).doesNotExist('total usage chart does not render');

@@ -84,33 +84,44 @@ export const filteredTotalForMount = (
 ): TotalClients => {
   if (!nsPath || !mountPath || isEmpty(byMonth)) return emptyCounts();
 
-  const newClientTotals = byMonth?.reduce(
-    (acc, month) => {
-      month.new_clients.namespaces
-        .filter((ns) => sanitizePath(ns.label) === sanitizePath(nsPath))
-        .forEach((ns) => {
-          ns.mounts
-            .filter((mount) => sanitizePath(mount.label) === sanitizePath(mountPath))
-            .forEach((mount) => {
-              acc.acme_clients += mount.acme_clients;
-              acc.clients += mount.clients;
-              acc.entity_clients += mount.entity_clients;
-              acc.non_entity_clients += mount.non_entity_clients;
-              acc.secret_syncs += mount.secret_syncs;
-            });
-        });
-      return acc;
-    },
-    {
-      acme_clients: 0,
-      clients: 0,
-      entity_clients: 0,
-      non_entity_clients: 0,
-      secret_syncs: 0,
-    }
-  );
+  return newClientTotal(byMonth, nsPath, mountPath);
+};
 
-  return newClientTotals;
+export const newClientTotal = (
+  byMonth: ByMonthClients[],
+  nsPath?: string,
+  mountPath?: string
+): TotalClients => {
+  if (isEmpty(byMonth)) return emptyCounts();
+
+  if (!nsPath || !mountPath) {
+    const total = byMonth.reduce((acc, curr) => {
+      for (const key of CLIENT_TYPES) {
+        acc[key] += curr.new_clients[key] || 0;
+      }
+      return acc;
+    }, emptyCounts());
+
+    return total;
+  }
+
+  const filteredTotals = byMonth?.reduce((acc, month) => {
+    month.new_clients.namespaces
+      .filter((ns) => sanitizePath(ns.label) === sanitizePath(nsPath))
+      .forEach((ns) => {
+        ns.mounts
+          .filter((mount) => sanitizePath(mount.label) === sanitizePath(mountPath))
+          .forEach((mount) => {
+            for (const key of CLIENT_TYPES) {
+              acc[key] += mount[key] || 0;
+            }
+            return acc;
+          });
+      });
+    return acc;
+  }, emptyCounts());
+
+  return filteredTotals;
 };
 
 // This method is used to filter byMonth data and return data for only
