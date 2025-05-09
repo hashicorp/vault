@@ -3,20 +3,20 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<div class="top-padding-4 has-bottom-padding-4 has-side-padding-8" ...attributes>
+<div class="has-side-padding-4" ...attributes>
   <Hds::Dropdown @enableCollisionDetection={{true}} as |D|>
 
     <D.ToggleButton @icon="org" @text={{or this.selected.id "-"}} @isFullWidth={{true}} data-test-namespace-toggle />
 
     {{#if this.errorLoadingNamespaces}}
 
-      <D.Header>
+      <D.Header class="is-paddingless">
         <MessageError @errorMessage={{this.errorLoadingNamespaces}} />
       </D.Header>
 
     {{else}}
 
-      <D.Header @hasDivider={{true}}>
+      <D.Header class="is-paddingless" @hasDivider={{true}}>
         <div class="has-padding-8">
           <Hds::Form::TextInput::Field
             @value={{this.searchInput}}
@@ -30,21 +30,21 @@
         </div>
       </D.Header>
 
-      <D.Header>
+      <D.Header class="is-paddingless">
         {{#if (and this.hasSearchInput (not this.showNoNamespacesMessage))}}
-          <div class="sub-text has-padding-8">
+          <div class="sub-text is-marginless has-top-padding-xs has-left-padding-16">
             {{this.searchInputHelpText}}
           </div>
         {{/if}}
 
-        <div class="is-size-8 has-text-black has-text-weight-semibold has-padding-8">
+        <div class="is-size-8 has-text-black has-text-weight-semibold has-left-padding-16 top-padding-10">
           {{this.namespaceLabel}}
           <Hds::BadgeCount @text={{or this.namespaceCount 0}} />
         </div>
       </D.Header>
 
       {{#if this.showNoNamespacesMessage}}
-        <D.Generic class="sub-text">
+        <D.Generic class="sub-text is-marginless">
           {{this.noNamespacesMessage}}
         </D.Generic>
       {{/if}}
