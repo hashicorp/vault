@@ -8,7 +8,6 @@ import { service } from '@ember/service';
 
 export default class LoginSettingsRoute extends Route {
   @service api;
-  @service capabilities;
   @service store;
 
   async model() {
