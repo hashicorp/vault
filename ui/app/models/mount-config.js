@@ -35,9 +35,10 @@ export default class MountConfigModel extends Model {
   @attr('mountVisibility', {
     label: 'Use as preferred UI login method',
     editType: 'toggleButton',
-    helperTextEnabled: 'Shown as the default login method on the unauthenticated UI login endpoint.',
+    helperTextEnabled:
+      'This mount will be included in the unauthenticated UI login endpoint and display as a preferred login method.',
     helperTextDisabled:
-      'Turn on the toggle to use this auth mount as the preferred login method during UI login.',
+      'Turn on the toggle to use this auth mount as a preferred login method during UI login.',
     defaultValue: false,
   })
   listingVisibility;
