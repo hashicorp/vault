@@ -1475,8 +1475,8 @@ github.com/hashicorp/go-secure-stdlib/mlock v0.1.3 h1:kH3Rhiht36xhAfhuHyWJDgdXXE
 github.com/hashicorp/go-secure-stdlib/mlock v0.1.3/go.mod h1:ov1Q0oEDjC3+A4BwsG2YdKltrmEw8sf9Pau4V9JQ4Vo=
 github.com/hashicorp/go-secure-stdlib/nonceutil v0.1.0 h1:iJG9Q3iUme12yH+wzBMGYrw/Am4CfX3sDcA8m5OGfhQ=
 github.com/hashicorp/go-secure-stdlib/nonceutil v0.1.0/go.mod h1:s28ohJ0kU6tersf0it/WsBCyZSdziPlP+G1FRA3ar28=
-github.com/hashicorp/go-secure-stdlib/parseutil v0.1.9 h1:FW0YttEnUNDJ2WL9XcrrfteS1xW8u+sh4ggM8pN5isQ=
-github.com/hashicorp/go-secure-stdlib/parseutil v0.1.9/go.mod h1:Ll013mhdmsVDuoIXVfBtvgGJsXDYkTw1kooNcoCXuE0=
+github.com/hashicorp/go-secure-stdlib/parseutil v0.2.0 h1:U+kC2dOhMFQctRfhK0gRctKAPTloZdMU5ZJxaesJ/VM=
+github.com/hashicorp/go-secure-stdlib/parseutil v0.2.0/go.mod h1:Ll013mhdmsVDuoIXVfBtvgGJsXDYkTw1kooNcoCXuE0=
 github.com/hashicorp/go-secure-stdlib/password v0.1.1 h1:6JzmBqXprakgFEHwBgdchsjaA9x3GyjdI568bXKxa60=
 github.com/hashicorp/go-secure-stdlib/password v0.1.1/go.mod h1:9hH302QllNwu1o2TGYtSk8I8kTAN0ca1EHpwhm5Mmzo=
 github.com/hashicorp/go-secure-stdlib/permitpool v1.0.0 h1:U6y5MXGiDVOOtkWJ6o/tu1TxABnI0yKTQWJr7z6BpNk=
@@ -1559,8 +1559,8 @@ github.com/hashicorp/vault-plugin-auth-alicloud v0.20.0 h1:yw96/zWrNPFTH8yTqTvVt
 github.com/hashicorp/vault-plugin-auth-alicloud v0.20.0/go.mod h1:aAE14G1n1/Qw5/Vj+P0eaEuo8m6op2/3RhR4gN3q5AI=
 github.com/hashicorp/vault-plugin-auth-azure v0.20.4 h1:Y10r6GMnnwuWVTbIi5BWuRN9k4YyXLFQNskruhGn0/0=
 github.com/hashicorp/vault-plugin-auth-azure v0.20.4/go.mod h1:xJ9/bjEfllNnlZtjUX1fltRxZz08h5HnWpftwmwcu+c=
-github.com/hashicorp/vault-plugin-auth-cf v0.20.0 h1:KOdNy0uSffjw0sOU9zg9JgdCkuRPcqOjOIxyV2NZLjg=
-github.com/hashicorp/vault-plugin-auth-cf v0.20.0/go.mod h1:SO35/C2iS12kIqIoux4AB2QSQ2IO+hbZ4/UQrQDyawo=
+github.com/hashicorp/vault-plugin-auth-cf v0.20.1-0.20250508165307-b24a85d38261 h1:pHvJy10kIMC9uE1Gqhy/oIlBuh2raLPSyI129uGRYlE=
+github.com/hashicorp/vault-plugin-auth-cf v0.20.1-0.20250508165307-b24a85d38261/go.mod h1:SI0tPENDM4KHHbvtxNaCWbudAcrDbPFeI5cbmGobj74=
 github.com/hashicorp/vault-plugin-auth-gcp v0.20.2 h1:M1gWdAo/WTu9PR8j8kfnDwDEqlgJKUDgEla/aB5IaZk=
 github.com/hashicorp/vault-plugin-auth-gcp v0.20.2/go.mod h1:FEXGIQPbjjc3Dzf3FEwRzj4qK7YfzwELd6ZHHsFXXM4=
 github.com/hashicorp/vault-plugin-auth-jwt v0.23.2 h1:5QDHC0u5HsqjE2YJPVUQJIede9UTbPTfV8PPuEY4K7o=
