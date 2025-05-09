@@ -38,6 +38,7 @@ export default class ClientsPageHeaderComponent extends Component {
   @service version;
 
   @tracked canDownload = false;
+  @tracked showEditModal = false;
   @tracked showExportModal = false;
   @tracked exportFormat = 'csv';
   @tracked downloadError = '';
@@ -98,6 +99,10 @@ export default class ClientsPageHeaderComponent extends Component {
     return namespace ? sanitizePath(`${currentNs}/${namespace}`) : sanitizePath(currentNs);
   }
 
+  get showCommunity() {
+    return this.version.isCommunity && !!this.formattedStartDate && !!this.formattedEndDate;
+  }
+
   async getExportData() {
     const adapter = this.store.adapterFor('clients/activity');
     const { startTimestamp, endTimestamp } = this.args;
@@ -124,13 +129,20 @@ export default class ClientsPageHeaderComponent extends Component {
     }
   });
 
-  @action setExportFormat(evt) {
+  @action
+  setExportFormat(evt) {
     const { value } = evt.target;
     this.exportFormat = value;
   }
 
-  @action resetModal() {
+  @action
+  resetModal() {
     this.showExportModal = false;
     this.downloadError = '';
+  }
+
+  @action
+  setEditModalVisible(visible) {
+    this.showEditModal = visible;
   }
 }

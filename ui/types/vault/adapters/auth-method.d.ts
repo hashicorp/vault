@@ -5,21 +5,9 @@
 
 import Store from '@ember-data/store';
 import { AdapterRegistry } from 'ember-data/adapter';
-import type { AuthData } from 'vault/services/auth';
+import { OidcApiResponse, SamlApiResponse } from 'vault/auth/methods';
 
 export default interface AuthMethodAdapter extends AdapterRegistry {
-  exchangeOIDC: (
-    path: string,
-    state: string,
-    code: string
-  ) => Promise<{
-    auth: AuthData;
-  }>;
-  pollSAMLToken: (
-    path: string,
-    tokenPollID: string,
-    clientVerifier: string
-  ) => Promise<{
-    auth: AuthData;
-  }>;
+  exchangeOIDC: (path: string, state: string, code: string) => Promise<OidcApiResponse>;
+  pollSAMLToken: (path: string, tokenPollID: string, clientVerifier: string) => Promise<SamlApiResponse>;
 }

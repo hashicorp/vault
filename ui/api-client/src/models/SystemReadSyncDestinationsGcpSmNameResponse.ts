@@ -32,6 +32,24 @@ export interface SystemReadSyncDestinationsGcpSmNameResponse {
      */
     name?: string;
     /**
+     * List of key value pairs of Vault configuration options.
+     * @type {object}
+     * @memberof SystemReadSyncDestinationsGcpSmNameResponse
+     */
+    options?: object;
+    /**
+     * Error message if the purge job failed.
+     * @type {string}
+     * @memberof SystemReadSyncDestinationsGcpSmNameResponse
+     */
+    purgeError?: string;
+    /**
+     * Timestamp of when a purge job was initiated when deleting a destination.
+     * @type {Date}
+     * @memberof SystemReadSyncDestinationsGcpSmNameResponse
+     */
+    purgeInitiatedAt?: Date;
+    /**
      * Type of this secrets store.
      * @type {string}
      * @memberof SystemReadSyncDestinationsGcpSmNameResponse
@@ -58,6 +76,9 @@ export function SystemReadSyncDestinationsGcpSmNameResponseFromJSONTyped(json: a
         
         'connectionDetails': json['connection_details'] == null ? undefined : json['connection_details'],
         'name': json['name'] == null ? undefined : json['name'],
+        'options': json['options'] == null ? undefined : json['options'],
+        'purgeError': json['purge_error'] == null ? undefined : json['purge_error'],
+        'purgeInitiatedAt': json['purge_initiated_at'] == null ? undefined : (new Date(json['purge_initiated_at'])),
         'type': json['type'] == null ? undefined : json['type'],
     };
 }
@@ -75,6 +96,9 @@ export function SystemReadSyncDestinationsGcpSmNameResponseToJSONTyped(value?: S
         
         'connection_details': value['connectionDetails'],
         'name': value['name'],
+        'options': value['options'],
+        'purge_error': value['purgeError'],
+        'purge_initiated_at': value['purgeInitiatedAt'] == null ? undefined : ((value['purgeInitiatedAt']).toISOString()),
         'type': value['type'],
     };
 }

@@ -7,7 +7,7 @@ import Ember from 'ember';
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
-import keys from 'core/utils/key-codes';
+import keys from 'core/utils/keys';
 import { keyIsFolder, parentKeyForKey, keyWithoutParentKey } from 'core/utils/key-utils';
 import { tracked } from '@glimmer/tracking';
 import { task, timeout } from 'ember-concurrency';
@@ -55,7 +55,8 @@ export default class KvListFilterComponent extends Component {
 
   @action
   handleKeyDown(event) {
-    if (event.keyCode === keys.ESC) {
+    const isEscKeyPressed = keys.ESC.includes(event.key);
+    if (isEscKeyPressed) {
       // On escape, transition to the nearest parentDirectory.
       // If no parentDirectory, then to the list route.
       const input = event.target.value;

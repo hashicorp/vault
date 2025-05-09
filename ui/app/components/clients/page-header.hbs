@@ -7,14 +7,15 @@
   <PH.Title>
     Client Usage
   </PH.Title>
+
   {{#if @activityTimestamp}}
     <PH.Subtitle>
       Last Updated:
       {{date-format @activityTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
     </PH.Subtitle>
   {{/if}}
-  {{#if (and this.formattedStartDate this.formattedEndDate)}}
-    <PH.Description class="has-text-weight-semibold">
+  {{#if this.version.isEnterprise}}
+    <PH.Description class="has-text-weight-semibold flex">
       <p>
         For billing period:
         <span data-test-date-range="start">{{this.formattedStartDate}}</span>
@@ -23,7 +24,36 @@
       </p>
     </PH.Description>
   {{/if}}
-  <PH.Actions class="align-items-end">
+  <PH.Description>
+    This is the dashboard for your overall client count usages. Review Vault's
+    <Hds::Link::Inline @href={{doc-link "/vault/docs/concepts/client-count"}}>client counting documentation
+    </Hds::Link::Inline>for more information.
+
+    {{#if this.showCommunity}}
+      <div class="has-top-padding-m">
+        <Hds::Text::Display @tag="h3">Client counting period</Hds::Text::Display>
+        <Hds::Text::Body @tag="p" class="has-text-grey">Specify a date range to view within that timeframe. Click 'Edit' to
+          choose a different date range.</Hds::Text::Body>
+        <Hds::Text::Body @tag="p">
+          <span data-test-date-range="start">{{this.formattedStartDate}}</span>
+          -
+          <span data-test-date-range="end">{{this.formattedEndDate}}</span>
+          <Hds::Button
+            @size="small"
+            @text="Edit"
+            @isInline="true"
+            @color="tertiary"
+            @icon="edit"
+            @iconPosition="trailing"
+            data-test-date-range-edit
+            {{on "click" (fn (mut this.showEditModal) true)}}
+          />
+        </Hds::Text::Body>
+      </div>
+    {{/if}}
+  </PH.Description>
+
+  <PH.Actions class="align-items-end align-self-end">
     {{#if this.showExportButton}}
       <Hds::Button
         class="has-font-weight-normal"
@@ -40,8 +70,12 @@
       @billingStartTime={{@billingStartTime}}
       @retentionMonths={{@retentionMonths}}
       @onChange={{@onChange}}
+      @showEditModal={{this.showEditModal}}
+      @setEditModalVisible={{this.setEditModalVisible}}
+      class={{if (and this.version.isCommunity this.startDate this.endDate) "position-absolute"}}
     />
   </PH.Actions>
+
 </Hds::PageHeader>
 
 {{#if this.showExportModal}}
