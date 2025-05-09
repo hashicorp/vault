@@ -4866,7 +4866,8 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 			perms.CapabilitiesBitmap&SudoCapabilityInt > 0,
 			perms.CapabilitiesBitmap&UpdateCapabilityInt > 0,
 			perms.CapabilitiesBitmap&PatchCapabilityInt > 0,
-			perms.CapabilitiesBitmap&SubscribeCapabilityInt > 0:
+			perms.CapabilitiesBitmap&SubscribeCapabilityInt > 0,
+			perms.CapabilitiesBitmap&RecoverCapabilityInt > 0:
 
 			aclCapabilitiesGiven = true
 
@@ -5284,6 +5285,9 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 		}
 		if perms.CapabilitiesBitmap&SubscribeCapabilityInt > 0 {
 			capabilities = append(capabilities, SubscribeCapability)
+		}
+		if perms.CapabilitiesBitmap&RecoverCapabilityInt > 0 {
+			capabilities = append(capabilities, RecoverCapability)
 		}
 
 		// If "deny" is explicitly set or if the path has no capabilities at all,

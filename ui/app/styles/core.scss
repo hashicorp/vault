@@ -52,7 +52,6 @@
 @use 'helper-classes/typography';
 
 // Component specific styling
-@use 'components/auth-form';
 @use 'components/autocomplete-input';
 @use 'components/b64-toggle';
 @use 'components/box-label';
@@ -75,9 +74,7 @@
 @use 'components/linked-block';
 @use 'components/list-item-row';
 @use 'components/loader';
-@use 'components/login-form';
 @use 'components/masked-input';
-@use 'components/namespace-picker';
 @use 'components/namespace-reminder';
 @use 'components/navigate-input';
 @use 'components/overview-card';

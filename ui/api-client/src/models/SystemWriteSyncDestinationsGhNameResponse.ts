@@ -32,6 +32,24 @@ export interface SystemWriteSyncDestinationsGhNameResponse {
      */
     name?: string;
     /**
+     * List of key value pairs of Vault configuration options.
+     * @type {object}
+     * @memberof SystemWriteSyncDestinationsGhNameResponse
+     */
+    options?: object;
+    /**
+     * Error message if the purge job failed.
+     * @type {string}
+     * @memberof SystemWriteSyncDestinationsGhNameResponse
+     */
+    purgeError?: string;
+    /**
+     * Timestamp of when a purge job was initiated when deleting a destination.
+     * @type {Date}
+     * @memberof SystemWriteSyncDestinationsGhNameResponse
+     */
+    purgeInitiatedAt?: Date;
+    /**
      * Type of this secrets store.
      * @type {string}
      * @memberof SystemWriteSyncDestinationsGhNameResponse
@@ -58,6 +76,9 @@ export function SystemWriteSyncDestinationsGhNameResponseFromJSONTyped(json: any
         
         'connectionDetails': json['connection_details'] == null ? undefined : json['connection_details'],
         'name': json['name'] == null ? undefined : json['name'],
+        'options': json['options'] == null ? undefined : json['options'],
+        'purgeError': json['purge_error'] == null ? undefined : json['purge_error'],
+        'purgeInitiatedAt': json['purge_initiated_at'] == null ? undefined : (new Date(json['purge_initiated_at'])),
         'type': json['type'] == null ? undefined : json['type'],
     };
 }
@@ -75,6 +96,9 @@ export function SystemWriteSyncDestinationsGhNameResponseToJSONTyped(value?: Sys
         
         'connection_details': value['connectionDetails'],
         'name': value['name'],
+        'options': value['options'],
+        'purge_error': value['purgeError'],
+        'purge_initiated_at': value['purgeInitiatedAt'] == null ? undefined : ((value['purgeInitiatedAt']).toISOString()),
         'type': value['type'],
     };
 }

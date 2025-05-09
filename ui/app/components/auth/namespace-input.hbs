@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <div class="background-neutral-50 has-padding-l">
   {{#if @hvdManagedNamespace}}
@@ -20,8 +20,8 @@
           />
           <SG.TextInput
             {{on "input" @updateNamespace}}
-            @value={{@namespace}}
-            autocomplete="namespace"
+            @value={{@namespaceValue}}
+            autocomplete="off"
             disabled={{@disabled}}
             name="namespace"
             placeholder="/ (default)"
@@ -33,8 +33,8 @@
   {{else}}
     <Hds::Form::TextInput::Field
       {{on "input" @updateNamespace}}
-      @value={{@namespace}}
-      autocomplete="namespace"
+      @value={{@namespaceValue}}
+      autocomplete="off"
       disabled={{@disabled}}
       name="namespace"
       placeholder="/ (root)"

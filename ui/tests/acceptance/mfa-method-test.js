@@ -145,7 +145,7 @@ module('Acceptance | mfa-method', function (hooks) {
             'Organization name': 'org_name',
           }[label] || underscore(label);
         const value = typeof model[key] === 'boolean' ? (model[key] ? 'Yes' : 'No') : model[key].toString();
-        assert.dom(`[data-test-value-div="${label}"]`).hasText(value, `${label} value renders`);
+        assert.dom(GENERAL.infoRowValue(label)).hasText(value, `${label} value renders`);
       });
       await click('.hds-breadcrumb a');
     }

@@ -26,13 +26,13 @@ export interface SystemReadSyncDestinationsTypeNameAssociationsResponse {
      * @type {string}
      * @memberof SystemReadSyncDestinationsTypeNameAssociationsResponse
      */
-    name?: string;
+    storeName?: string;
     /**
      * Type of this secrets store.
      * @type {string}
      * @memberof SystemReadSyncDestinationsTypeNameAssociationsResponse
      */
-    type?: string;
+    storeType?: string;
 }
 /**
  * Check if a given object implements the SystemReadSyncDestinationsTypeNameAssociationsResponse interface.
