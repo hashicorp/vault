@@ -333,6 +333,9 @@ func (a *ACL) CapabilitiesAndSubscribeEventTypes(ctx context.Context, path strin
 	if capabilities&SubscribeCapabilityInt > 0 {
 		pathCapabilities = append(pathCapabilities, SubscribeCapability)
 	}
+	if capabilities&RecoverCapabilityInt > 0 {
+		pathCapabilities = append(pathCapabilities, RecoverCapability)
+	}
 
 	// If "deny" is explicitly set or if the path has no capabilities at all,
 	// set the path capabilities to "deny"
@@ -467,6 +470,9 @@ CHECK:
 	case logical.PatchOperation:
 		operationAllowed = capabilities&PatchCapabilityInt > 0
 		grantingPolicies = permissions.GrantingPoliciesMap[PatchCapabilityInt]
+	case logical.RecoverOperation:
+		operationAllowed = capabilities&RecoverCapabilityInt > 0
+		grantingPolicies = permissions.GrantingPoliciesMap[RecoverCapabilityInt]
 
 	// These three re-use UpdateCapabilityInt since that's the most appropriate
 	// capability/operation mapping
@@ -504,7 +510,7 @@ CHECK:
 
 	// Only check parameter permissions for operations that can modify
 	// parameters.
-	if op == logical.ReadOperation || op == logical.UpdateOperation || op == logical.CreateOperation || op == logical.PatchOperation {
+	if op == logical.ReadOperation || op == logical.UpdateOperation || op == logical.CreateOperation || op == logical.PatchOperation || op == logical.RecoverOperation {
 		for _, parameter := range permissions.RequiredParameters {
 			if _, ok := req.Data[strings.ToLower(parameter)]; !ok {
 				return

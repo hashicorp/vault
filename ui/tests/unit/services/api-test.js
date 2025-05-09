@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import sinon from 'sinon';
 import config from 'vault/config/environment';
-import { ResponseError } from '@hashicorp/vault-client-typescript';
+import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 
 module('Unit | Service | api', function (hooks) {
   setupTest(hooks);
@@ -186,26 +186,14 @@ module('Unit | Service | api', function (hooks) {
     assert.deepEqual(listData, expectedResponse, 'List response is mapped to array');
   });
 
-  module('Error parsing', function (hooks) {
-    hooks.beforeEach(function () {
-      this.response = {
-        errors: ['first error', 'second error'],
-        message: 'there were some errors',
-      };
-      this.getErrorResponse = () =>
-        new ResponseError({
-          status: 404,
-          url: `${document.location.origin}/v1/test/error/parsing`,
-          json: () => Promise.resolve(this.response),
-        });
-    });
-
+  module('Error parsing', function () {
     test('it should correctly parse message from error', async function (assert) {
-      let e = await this.apiService.parseError(this.getErrorResponse());
+      let e = await this.apiService.parseError(getErrorResponse());
       assert.strictEqual(e.message, 'first error, second error', 'Builds message from errors');
 
-      this.response.errors = [];
-      e = await this.apiService.parseError(this.getErrorResponse());
+      e = await this.apiService.parseError(
+        getErrorResponse({ errors: [], message: 'there were some errors' })
+      );
       assert.strictEqual(e.message, 'there were some errors', 'Returns message when errors are empty');
 
       const error = new Error('some js type error');
@@ -221,18 +209,22 @@ module('Unit | Service | api', function (hooks) {
     });
 
     test('it should return status', async function (assert) {
-      const { status } = await this.apiService.parseError(this.getErrorResponse());
+      const { status } = await this.apiService.parseError(getErrorResponse());
       assert.strictEqual(status, 404, 'Returns the status code from the response');
     });
 
     test('it should return path', async function (assert) {
-      const { path } = await this.apiService.parseError(this.getErrorResponse());
+      const { path } = await this.apiService.parseError(getErrorResponse());
       assert.strictEqual(path, '/v1/test/error/parsing', 'Returns the path from the request url');
     });
 
     test('it should return error response', async function (assert) {
-      const { response } = await this.apiService.parseError(this.getErrorResponse());
-      assert.deepEqual(response, this.response, 'Returns the original error response');
+      const error = {
+        errors: ['something bad happened', 'something else bad too'],
+        message: 'all bad things occurred',
+      };
+      const { response } = await this.apiService.parseError(getErrorResponse(error));
+      assert.deepEqual(response, error, 'Returns the original error response');
     });
 
     test('it should log out error in development environment', async function (assert) {

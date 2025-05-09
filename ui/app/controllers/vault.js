@@ -6,12 +6,6 @@
 import Controller from '@ember/controller';
 
 export default class VaultController extends Controller {
-  queryParams = [
-    {
-      wrappedToken: 'wrapped_token',
-      redirectTo: 'redirect_to',
-    },
-  ];
-  wrappedToken = '';
+  queryParams = [{ redirectTo: 'redirect_to' }];
   redirectTo = '';
 }

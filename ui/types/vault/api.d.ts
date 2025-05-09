@@ -13,8 +13,8 @@ export interface WrapInfo {
 }
 
 export interface ApiResponse {
-  auth: unknown;
-  data: unknown;
+  data: Record<string, unknown> | null;
+  auth: Record<string, unknown> | null;
   lease_duration: number;
   lease_id: string;
   mount_type: string;

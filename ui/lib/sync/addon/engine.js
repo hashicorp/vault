@@ -14,7 +14,16 @@ export default class SyncEngine extends Engine {
   modulePrefix = modulePrefix;
   Resolver = Resolver;
   dependencies = {
-    services: ['flash-messages', 'flags', 'app-router', 'store', 'pagination', 'version'],
+    services: [
+      'flash-messages',
+      'flags',
+      'app-router',
+      'store',
+      'api',
+      'capabilities',
+      'pagination',
+      'version',
+    ],
     externalRoutes: ['kvSecretOverview', 'clientCountOverview'],
   };
 }

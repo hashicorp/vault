@@ -28,6 +28,24 @@ export interface SystemReadSyncDestinationsInMemNameResponse {
      */
     name?: string;
     /**
+     * List of key value pairs of Vault configuration options.
+     * @type {object}
+     * @memberof SystemReadSyncDestinationsInMemNameResponse
+     */
+    options?: object;
+    /**
+     * Error message if the purge job failed.
+     * @type {string}
+     * @memberof SystemReadSyncDestinationsInMemNameResponse
+     */
+    purgeError?: string;
+    /**
+     * Timestamp of when a purge job was initiated when deleting a destination.
+     * @type {Date}
+     * @memberof SystemReadSyncDestinationsInMemNameResponse
+     */
+    purgeInitiatedAt?: Date;
+    /**
      * Type of this secrets store.
      * @type {string}
      * @memberof SystemReadSyncDestinationsInMemNameResponse

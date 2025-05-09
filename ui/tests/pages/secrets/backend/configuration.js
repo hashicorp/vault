@@ -4,9 +4,10 @@
  */
 
 import { create, visitable, text } from 'ember-cli-page-object';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 export default create({
   visit: visitable('/vault/secrets/:backend/configuration'),
-  defaultTTL: text('[data-test-value-div="Default Lease TTL"]'),
-  maxTTL: text('[data-test-value-div="Max Lease TTL"]'),
+  defaultTTL: text(GENERAL.infoRowValue('Default Lease TTL')),
+  maxTTL: text(GENERAL.infoRowValue('Max Lease TTL')),
 });

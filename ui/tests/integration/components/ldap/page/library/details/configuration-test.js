@@ -10,6 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { duration } from 'core/helpers/format-duration';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | ldap | Page::Library::Details::Configuration', function (hooks) {
   setupRenderingTest(hooks);
@@ -46,8 +47,8 @@ module('Integration | Component | ldap | Page::Library::Details::Configuration',
       const value = label.includes('TTL') ? duration([this.model[key]]) : this.model[key];
       const method = key === 'disable_check_in_enforcement' ? 'includesText' : 'hasText';
 
-      assert.dom(`[data-test-row-label="${label}"]`).hasText(label, `${label} info row label renders`);
-      assert.dom(`[data-test-value-div="${label}"]`)[method](value, `${label} info row label renders`);
+      assert.dom(GENERAL.infoRowLabel(label)).hasText(label, `${label} info row label renders`);
+      assert.dom(GENERAL.infoRowValue(label))[method](value, `${label} info row value renders`);
     });
 
     assert

@@ -138,7 +138,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       'redirects to configuration page after saving config'
     );
     assert.notOk(scopesPage.isEmpty, 'configuration page no longer renders empty state');
-    assert.dom('[data-test-value-div="Listen addrs"]').hasText(addr, 'renders the correct listen address');
+    assert.dom(GENERAL.infoRowValue('Listen addrs')).hasText(addr, 'renders the correct listen address');
   });
 
   test('it can revoke from the credentials show page', async function (assert) {

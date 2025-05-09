@@ -91,6 +91,7 @@ func TestTranslation_Request(t *testing.T) {
 					PeerCertificates:  certs,
 				},
 			},
+			RequiresSnapshotID: "abcd",
 		},
 		{
 			ID:                 "ID",
@@ -170,6 +171,7 @@ func TestTranslation_Request(t *testing.T) {
 			EntityID:                 "tester",
 			PolicyOverride:           true,
 			Unauthenticated:          true,
+			RequiresSnapshotID:       "abcd",
 		},
 	}
 

@@ -28,6 +28,24 @@ export interface SystemWriteSyncDestinationsGhNameResponse {
      */
     name?: string;
     /**
+     * List of key value pairs of Vault configuration options.
+     * @type {object}
+     * @memberof SystemWriteSyncDestinationsGhNameResponse
+     */
+    options?: object;
+    /**
+     * Error message if the purge job failed.
+     * @type {string}
+     * @memberof SystemWriteSyncDestinationsGhNameResponse
+     */
+    purgeError?: string;
+    /**
+     * Timestamp of when a purge job was initiated when deleting a destination.
+     * @type {Date}
+     * @memberof SystemWriteSyncDestinationsGhNameResponse
+     */
+    purgeInitiatedAt?: Date;
+    /**
      * Type of this secrets store.
      * @type {string}
      * @memberof SystemWriteSyncDestinationsGhNameResponse

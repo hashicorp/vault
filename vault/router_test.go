@@ -13,6 +13,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRouter_Mount(t *testing.T) {
@@ -681,5 +682,86 @@ func TestWellKnownRedirectMatching(t *testing.T) {
 
 	if found := apiRedir.DeregisterSource("my-mount", "bar/baz"); !found {
 		t.Fail()
+	}
+}
+
+// TestRouter_AllowSnapshotReadPaths mounts a backend with a set of paths that
+// are allowed to be read from a snapshot. The test verifies that paths that
+// match the allowed paths return true, while paths that do not match return
+// false from the router.
+func TestRouter_AllowSnapshotReadPaths(t *testing.T) {
+	r := NewRouter()
+	_, barrier, _ := mockBarrier(t)
+	view := NewBarrierView(barrier, "logical/")
+
+	meUUID, err := uuid.GenerateUUID()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := namespace.RootContext(context.Background())
+	n := &NoopBackend{
+		AllowSnapshotRead: []string{
+			"config/root",
+			"roles/+",
+			"roles/+/status",
+			"static-creds/+",
+			"static-creds/+/sub",
+		},
+		BackendType: logical.TypeCredential,
+	}
+	err = r.Mount(n, "foo/", &MountEntry{UUID: meUUID, Accessor: "fooaccessor", NamespaceID: namespace.RootNamespaceID, namespace: namespace.RootNamespace}, view)
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	testCases := []struct {
+		queryPath string
+		expect    bool
+	}{
+		{
+			queryPath: "config",
+			expect:    false,
+		},
+		{
+			queryPath: "config/root",
+			expect:    true,
+		},
+		{
+			queryPath: "config/root/key",
+			expect:    false,
+		},
+		{
+			queryPath: "roles/name",
+			expect:    true,
+		},
+		{
+			queryPath: "roles/name/status",
+			expect:    true,
+		},
+		{
+			queryPath: "roles/name/status/sub",
+			expect:    false,
+		},
+		{
+			queryPath: "static-creds/name",
+			expect:    true,
+		},
+		{
+			queryPath: "static-creds/name/sub",
+			expect:    true,
+		},
+		{
+			queryPath: "static-creds/name/more/sub",
+			expect:    false,
+		},
+		{
+			queryPath: "creds/name",
+			expect:    false,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(strings.ReplaceAll(tc.queryPath, "/", "_"), func(t *testing.T) {
+			require.Equal(t, tc.expect, r.AllowSnapshotReadPath(ctx, "foo/"+tc.queryPath))
+		})
 	}
 }

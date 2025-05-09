@@ -19,16 +19,17 @@ type RouterTestHandlerFunc func(context.Context, *logical.Request) (*logical.Res
 type NoopBackend struct {
 	sync.Mutex
 
-	Root            []string
-	Login           []string
-	Paths           []string
-	Requests        []*logical.Request
-	Response        *logical.Response
-	RequestHandler  RouterTestHandlerFunc
-	Invalidations   []string
-	DefaultLeaseTTL time.Duration
-	MaxLeaseTTL     time.Duration
-	BackendType     logical.BackendType
+	Root              []string
+	Login             []string
+	Paths             []string
+	AllowSnapshotRead []string
+	Requests          []*logical.Request
+	Response          *logical.Response
+	RequestHandler    RouterTestHandlerFunc
+	Invalidations     []string
+	DefaultLeaseTTL   time.Duration
+	MaxLeaseTTL       time.Duration
+	BackendType       logical.BackendType
 
 	RollbackErrs bool
 }
@@ -79,8 +80,9 @@ func (n *NoopBackend) HandleExistenceCheck(ctx context.Context, req *logical.Req
 
 func (n *NoopBackend) SpecialPaths() *logical.Paths {
 	return &logical.Paths{
-		Root:            n.Root,
-		Unauthenticated: n.Login,
+		Root:              n.Root,
+		Unauthenticated:   n.Login,
+		AllowSnapshotRead: n.AllowSnapshotRead,
 	}
 }
 

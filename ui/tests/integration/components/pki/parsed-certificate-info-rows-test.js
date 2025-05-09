@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | parsed-certificate-info-rows', function (hooks) {
   setupRenderingTest(hooks);
@@ -37,10 +38,10 @@ module('Integration | Component | parsed-certificate-info-rows', function (hooks
     });
     assert.dom('[data-test-component="info-table-row"]').exists({ count: 2 }, 'renders 2 rows');
 
-    assert.dom('[data-test-value-div="Common name"]').doesNotExist('common name is never rendered');
+    assert.dom(GENERAL.infoRowValue('Common name')).doesNotExist('common name is never rendered');
     assert.dom('[data-test-row-value="Subject Alternative Names (SANs)"]').hasText('something,here');
-    assert.dom('[data-test-value-div="Use PSS"]').hasText('No', 'Booleans are rendered');
-    assert.dom('[data-test-value-div="ttl"]').doesNotExist('ttl is not rendered because value undefined');
+    assert.dom(GENERAL.infoRowValue('Use PSS')).hasText('No', 'Booleans are rendered');
+    assert.dom(GENERAL.infoRowValue('ttl')).doesNotExist('ttl is not rendered because value undefined');
     assert
       .dom('[data-test-parsing-error-alert-banner]')
       .doesNotExist('does not render parsing error info banner');

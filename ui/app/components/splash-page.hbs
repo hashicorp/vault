@@ -9,12 +9,9 @@
       <div class="splash-page-header" data-test-splash-page-header>
         {{yield to="header"}}
       </div>
-      <div class="splash-page-sub-header" data-test-splash-page-sub-header>
-        {{yield to="subHeader"}}
-      </div>
-      <div class="login-form box is-paddingless is-relative" data-test-splash-page-content>
+      <Hds::Card::Container @level="high" @hasBorder={{true}} class="overflow-auto" data-test-splash-page-content>
         {{yield to="content"}}
-      </div>
+      </Hds::Card::Container>
       {{yield to="footer"}}
     </div>
   </div>

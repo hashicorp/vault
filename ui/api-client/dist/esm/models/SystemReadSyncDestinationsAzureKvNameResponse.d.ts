@@ -28,6 +28,24 @@ export interface SystemReadSyncDestinationsAzureKvNameResponse {
      */
     name?: string;
     /**
+     * List of key value pairs of Vault configuration options.
+     * @type {object}
+     * @memberof SystemReadSyncDestinationsAzureKvNameResponse
+     */
+    options?: object;
+    /**
+     * Error message if the purge job failed.
+     * @type {string}
+     * @memberof SystemReadSyncDestinationsAzureKvNameResponse
+     */
+    purgeError?: string;
+    /**
+     * Timestamp of when a purge job was initiated when deleting a destination.
+     * @type {Date}
+     * @memberof SystemReadSyncDestinationsAzureKvNameResponse
+     */
+    purgeInitiatedAt?: Date;
+    /**
      * Type of this secrets store.
      * @type {string}
      * @memberof SystemReadSyncDestinationsAzureKvNameResponse

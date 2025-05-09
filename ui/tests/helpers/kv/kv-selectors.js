@@ -12,8 +12,8 @@ export const PAGE = {
   breadcrumbCurrentAtIdx: (idx) =>
     `[data-test-breadcrumbs] li:nth-child(${idx + 1}) .hds-breadcrumb__current`,
   infoRow: '[data-test-component="info-table-row"]',
-  infoRowValue: (label) => `[data-test-value-div="${label}"]`,
-  infoRowToggleMasked: (label) => `[data-test-value-div="${label}"] [data-test-button="toggle-masked"]`,
+  infoRowValue: (label) => `[data-test-row-value="${label}"]`, // TODO replace with GENERAL.infoRowValue
+  infoRowToggleMasked: (label) => `[data-test-row-value="${label}"] [data-test-button="toggle-masked"]`,
   secretTab: (tab) => (tab ? `[data-test-secrets-tab="${tab}"]` : '[data-test-secrets-tab]'),
   emptyStateTitle: '[data-test-empty-state-title]',
   emptyStateMessage: '[data-test-empty-state-message]',

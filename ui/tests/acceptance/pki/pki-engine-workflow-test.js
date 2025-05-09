@@ -395,7 +395,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await click(GENERAL.secretTab('Issuers'));
       await click(GENERAL.menuTrigger);
       await click(PKI_ISSUER_LIST.issuerPopupDetails);
-      const issuerId = find(PKI_ISSUER_DETAILS.valueByName('Issuer ID')).innerText;
+      const issuerId = find(GENERAL.infoRowValue('Issuer ID')).innerText;
       const pki_issuer_denied_policy = `
       path "${this.mountPath}/*" {
         capabilities = ["create", "read", "update", "delete", "list"]
@@ -428,11 +428,12 @@ module('Acceptance | pki workflow', function (hooks) {
         `/vault/secrets/${this.mountPath}/pki/issuers/my-issuer/details`
       );
       assert.dom(GENERAL.title).hasText('View Issuer Certificate');
+
       ['Certificate', 'CA Chain', 'Common name', 'Issuer name', 'Issuer ID', 'Default key ID'].forEach(
         (label) => {
           assert
-            .dom(`${PKI_ISSUER_DETAILS.defaultGroup} ${PKI_ISSUER_DETAILS.valueByName(label)}`)
-            .exists({ count: 1 }, `${label} value rendered`);
+            .dom(`${PKI_ISSUER_DETAILS.defaultGroup} ${GENERAL.infoRowValue(label)}`)
+            .exists(`${label} value rendered`);
         }
       );
       assert
@@ -448,7 +449,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await click(GENERAL.menuTrigger);
       await click(PKI_ISSUER_LIST.issuerPopupDetails);
 
-      const issuerId = find(PKI_ISSUER_DETAILS.valueByName('Issuer ID')).innerText;
+      const issuerId = find(GENERAL.infoRowValue('Issuer ID')).innerText;
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.mountPath}/pki/issuers/${issuerId}/details`,
@@ -542,7 +543,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await click(PKI_CONFIG_EDIT.saveButton);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/configuration`);
       assert
-        .dom('[data-test-value-div="CRL building"]')
+        .dom(GENERAL.infoRowValue('CRL building'))
         .hasText('Disabled', 'Successfully saves config with partial permission');
     });
   });

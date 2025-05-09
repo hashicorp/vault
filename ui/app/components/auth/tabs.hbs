@@ -3,9 +3,9 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Hds::Tabs @onClickTab={{@onTabClick}} @selectedTabIndex={{@selectedTabIndex}} as |T|>
-  {{#each-in @authTabs as |methodType mounts|}}
-    <T.Tab data-test-auth-method={{methodType}}>{{@displayNameHelper methodType}}</T.Tab>
+<Hds::Tabs @onClickTab={{this.onClickTab}} @selectedTabIndex={{this.selectedTabIndex}} as |T|>
+  {{#each-in @authTabData as |methodType mounts|}}
+    <T.Tab data-test-auth-tab={{methodType}}>{{@displayNameHelper methodType}}</T.Tab>
     <T.Panel>
       <div class="has-top-padding-m">
         {{! Elements "behind" tabs always render on the DOM and are just superficially hidden/shown. 
@@ -24,18 +24,11 @@
             </Hds::Form::Select::Field>
           {{else}}
             {{#let (get mounts "0") as |mount|}}
-              {{#if (and (eq @selectedAuthMethod "token") mount.description)}}
-                {{! the token auth method does't support a custom path }}
-                <Hds::Text::Body @tag="p" @color="faint">{{mount.description}} data-test-description</Hds::Text::Body>
-              {{else}}
-                {{! if it's the only available mount path render a readonly input }}
-                <Hds::Form::TextInput::Field readonly name="path" @value={{mount.path}} data-test-input="path" as |F|>
-                  <F.Label>Mount path</F.Label>
-                  {{#if mount.description}}
-                    <F.HelperText data-test-description>{{mount.description}}</F.HelperText>
-                  {{/if}}
-                </Hds::Form::TextInput::Field>
-              {{/if}}
+              <Auth::SingleMount
+                @description={{mount.description}}
+                @path={{mount.path}}
+                @shouldRenderPath={{not-eq @selectedAuthMethod "token"}}
+              />
             {{/let}}
           {{/if}}
         {{/if}}

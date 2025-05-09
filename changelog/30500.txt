@@ -1,0 +1,12 @@
+```release-note:improvement
+ui: Improve accessibility of login form to meet a11y standards
+```
+```release-note:improvement
+ui: Hide "Other" tab when mounts are configured with `listing_visibility="unauth"`; all methods can be accessed via the "Sign in with other methods" link
+```
+```release-note:change
+ui: `/vault/auth?with=` query parameter now exclusively refers to the auth mount path and renders a simplified form
+```
+```release-note:change
+ui: Selecting a different method in the login form no longer updates the `/vault/auth?with=` query parameter
+```

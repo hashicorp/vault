@@ -132,6 +132,8 @@ func (b *backendGRPCPluginClient) SpecialPaths() *logical.Paths {
 		LocalStorage:          reply.Paths.LocalStorage,
 		SealWrapStorage:       reply.Paths.SealWrapStorage,
 		WriteForwardedStorage: reply.Paths.WriteForwardedStorage,
+		Limited:               reply.Paths.Limited,
+		AllowSnapshotRead:     reply.Paths.AllowSnapshotRead,
 	}
 }
 

@@ -8,26 +8,25 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/owner';
-import errorMessage from 'vault/utils/error-message';
 
-import SyncDestinationModel from 'vault/vault/models/sync/destination';
-import type SyncAssociationModel from 'vault/vault/models/sync/association';
 import type RouterService from '@ember/routing/router-service';
-import type PaginationService from 'vault/services/pagination';
+import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
-import type { EngineOwner } from 'vault/vault/app-types';
+import type { EngineOwner, CapabilitiesMap } from 'vault/app-types';
+import type { Destination, AssociatedSecret } from 'vault/sync';
 
 interface Args {
-  destination: SyncDestinationModel;
-  associations: Array<SyncAssociationModel>;
+  destination: Destination;
+  associations: AssociatedSecret[];
+  capabilities: CapabilitiesMap;
 }
 
 export default class SyncSecretsDestinationsPageComponent extends Component<Args> {
   @service('app-router') declare readonly router: RouterService;
-  @service declare readonly pagination: PaginationService;
+  @service declare readonly api: ApiService;
   @service declare readonly flashMessages: FlashMessageService;
 
-  @tracked secretToUnsync: SyncAssociationModel | null = null;
+  @tracked secretToUnsync: AssociatedSecret | null = null;
 
   get mountPoint(): string {
     const owner = getOwner(this) as EngineOwner;
@@ -41,7 +40,6 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   @action
   refreshRoute() {
     // refresh route to update displayed secrets
-    this.pagination.clearDataset('sync/association');
     this.router.transitionTo(
       'vault.cluster.sync.secrets.destinations.destination.secrets',
       this.args.destination.type,
@@ -50,13 +48,22 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   }
 
   @action
-  async update(association: SyncAssociationModel, operation: string) {
+  async update(association: AssociatedSecret, operation: string) {
     try {
-      await association.save({ adapterOptions: { action: operation } });
+      const { name, type } = this.args.destination;
+      const { mount, secretName } = association;
+      const body = { mount, secretName };
+
+      if (operation === 'set') {
+        await this.api.sys.systemWriteSyncDestinationsTypeNameAssociationsSet(name, type, body);
+      } else {
+        await this.api.sys.systemWriteSyncDestinationsTypeNameAssociationsRemove(name, type, body);
+      }
       const action: string = operation === 'set' ? 'Sync' : 'Unsync';
       this.flashMessages.success(`${action} operation initiated.`);
     } catch (error) {
-      this.flashMessages.danger(`Sync operation error: \n ${errorMessage(error)}`);
+      const { message } = await this.api.parseError(error);
+      this.flashMessages.danger(`Sync operation error: \n ${message}`);
     } finally {
       this.secretToUnsync = null;
       this.refreshRoute();

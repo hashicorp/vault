@@ -134,12 +134,30 @@ export default function (server) {
 
   const destinationResponse = (record) => {
     delete record.id;
-    const { name, type, ...connection_details } = record;
+
+    const {
+      name,
+      type,
+      granularity,
+      secret_name_template,
+      custom_tags,
+      purge_initiated_at,
+      purge_error,
+      ...connection_details
+    } = record;
+
     return {
       data: {
-        connection_details,
         name,
         type,
+        connection_details,
+        options: {
+          granularity_level: granularity,
+          secret_name_template,
+          custom_tags,
+        },
+        purge_initiated_at,
+        purge_error,
       },
     };
   };

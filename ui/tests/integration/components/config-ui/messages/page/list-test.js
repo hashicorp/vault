@@ -10,7 +10,6 @@ import { setupEngine } from 'ember-engines/test-support';
 import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { CUSTOM_MESSAGES } from 'vault/tests/helpers/config-ui/message-selectors';
-import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { addDays, startOfDay } from 'date-fns';
 import timestamp from 'core/utils/timestamp';
 
@@ -31,8 +30,6 @@ module('Integration | Component | messages/page/list', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
-
     this.messages = [
       {
         id: '0',
@@ -67,15 +64,28 @@ module('Integration | Component | messages/page/list', function (hooks) {
       },
     ];
     Object.defineProperty(this.messages, 'meta', META);
+
+    this.renderComponent = () => {
+      const capabilitiesService = this.owner.lookup('service:capabilities');
+      this.capabilities = this.messages.reduce((obj, { id }) => {
+        const path = capabilitiesService.pathFor('customMessages', { id });
+        obj[path] = { canUpdate: true, canDelete: true };
+        return obj;
+      }, {});
+
+      return render(
+        hbs`<Messages::Page::List @messages={{this.messages}} @capabilities={{this.capabilities}} />`,
+        {
+          owner: this.engine,
+        }
+      );
+    };
   });
 
   test('it should show the messages empty state', async function (assert) {
     this.messages = [];
 
-    await render(hbs`<Messages::Page::List @messages={{this.messages}} />`, {
-      owner: this.engine,
-    });
-
+    await this.renderComponent();
     assert.dom('[data-test-empty-state-title]').hasText('No messages yet');
     assert
       .dom('[data-test-empty-state-message]')
@@ -85,9 +95,7 @@ module('Integration | Component | messages/page/list', function (hooks) {
   });
 
   test('it should show the list of custom messages', async function (assert) {
-    await render(hbs`<Messages::Page::List @messages={{this.messages}} />`, {
-      owner: this.engine,
-    });
+    await this.renderComponent();
     assert.dom('[data-test-icon="message-circle"]').exists();
     for (const message of this.messages) {
       assert.dom(CUSTOM_MESSAGES.listItem('Message title 1')).exists();
@@ -111,9 +119,7 @@ module('Integration | Component | messages/page/list', function (hooks) {
     this.messages.meta.total = this.messages.length;
     this.messages.meta.pageSize = 100;
 
-    await render(hbs`<Messages::Page::List @messages={{this.messages}} />`, {
-      owner: this.engine,
-    });
+    await this.renderComponent();
     await click(CUSTOM_MESSAGES.button('create message'));
     assert
       .dom(CUSTOM_MESSAGES.modalTitle('maximum-message-modal'))
@@ -129,9 +135,7 @@ module('Integration | Component | messages/page/list', function (hooks) {
   test('it should show the correct badge colors based on badge status', async function (assert) {
     this.messages[2].startTime = addDays(startOfDay(timestamp.now()), 1);
 
-    await render(hbs`<Messages::Page::List @messages={{this.messages}} />`, {
-      owner: this.engine,
-    });
+    await this.renderComponent();
     assert.dom(CUSTOM_MESSAGES.badge('0')).hasClass('hds-badge--color-success');
     assert.dom(CUSTOM_MESSAGES.badge('1')).hasClass('hds-badge--color-neutral');
     assert.dom(CUSTOM_MESSAGES.badge('2')).hasClass('hds-badge--color-highlight');

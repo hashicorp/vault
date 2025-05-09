@@ -15,8 +15,10 @@ import type AuthService from 'vault/vault/services/auth';
 import type ClusterModel from 'vault/models/cluster';
 import type FlagsService from 'vault/services/flags';
 import type VersionService from 'vault/services/version';
-import type { AuthData } from 'vault/vault/services/auth';
+import type { AuthResponse } from 'vault/vault/services/auth';
 import type { HTMLElementEvent } from 'vault/forms';
+import type { LoginFields } from 'vault/vault/auth/form';
+import type { MfaRequirementApiResponse, ParsedMfaRequirement } from 'vault/vault/auth/mfa';
 
 /**
  * @module Auth::Base
@@ -57,16 +59,27 @@ export default class AuthBase extends Component<Args> {
           selectedAuth: this.args.authType,
         });
 
-        this.handleAuthResponse(authResponse, this.args.authType, formData);
+        const path = formData?.path;
+        this.handleAuthResponse(authResponse, path);
       } catch (error) {
         this.onError(error as Error);
       }
     })
   );
 
-  handleAuthResponse(authResponse: AuthData, authType: string, formData?: object) {
+  // Standard methods get mfa_requirements from the authenticate method in the auth service
+  // methodData is necessary if there's an MfaRequirement because persisting auth data happens after that
+  handleAuthResponse(authResponse: AuthResponse | ParsedMfaRequirement, path?: string) {
+    const methodData: { selectedAuth: string; path?: string } = { selectedAuth: this.args.authType, path };
     // calls onAuthResponse in parent auth/page.js component
-    this.args.onSuccess(authResponse, authType, formData);
+    this.args.onSuccess(authResponse, methodData);
+  }
+
+  // SSO methods with a different token exchange workflow skip the auth service authenticate method
+  // and need mfa handle separately
+  handleMfa(mfaRequirement: MfaRequirementApiResponse, path: string) {
+    const parsedMfaAuthResponse = this.auth._parseMfaResponse(mfaRequirement);
+    this.handleAuthResponse(parsedMfaAuthResponse, path);
   }
 
   onError(error: Error | string) {
@@ -77,13 +90,13 @@ export default class AuthBase extends Component<Args> {
   }
 
   parseFormData(formData: FormData) {
-    const data: Record<string, FormDataEntryValue | null> = {};
+    const data: LoginFields = {};
 
     // iterate over method specific fields
     for (const field of POSSIBLE_FIELDS) {
       const value = formData.get(field);
       if (value) {
-        data[field] = value;
+        data[field] = typeof value === 'string' ? value : undefined;
       }
     }
 

@@ -11,6 +11,5 @@ export default create({
   path: fillable('[data-test-secret-path="true"]'),
   secretKey: fillable('[data-test-secret-key]'),
   secretValue: fillable('[data-test-secret-value] textarea'),
-  save: clickable('[data-test-secret-save]'),
   toggleJSON: clickable('[data-test-toggle-input="json"]'),
 });

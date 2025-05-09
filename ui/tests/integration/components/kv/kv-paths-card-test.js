@@ -40,8 +40,8 @@ module('Integration | Component | kv-v2 | KvPathsCard', function (hooks) {
     await this.renderComponent();
 
     assert.dom('[data-test-component="info-table-row"] .helper-text').doesNotExist('subtext does not render');
-    assert.dom('[data-test-label-div]').hasClass('is-one-quarter');
-    assert.dom(PAGE.infoRowValue('API path for metadata')).doesNotExist();
+
+    assert.dom('[data-test-component="info-table-row"] div').hasClass('is-one-quarter');
     assert.dom(PAGE.paths.codeSnippet('cli')).doesNotExist();
     assert.dom(PAGE.paths.codeSnippet('api')).doesNotExist();
 
@@ -59,7 +59,7 @@ module('Integration | Component | kv-v2 | KvPathsCard', function (hooks) {
     await this.renderComponent();
 
     assert.dom('[data-test-component="info-table-row"] .helper-text').exists('subtext renders');
-    assert.dom('[data-test-label-div]').hasClass('is-one-third');
+    assert.dom('[data-test-component="info-table-row"] div').hasClass('is-one-third');
     assert.dom(PAGE.infoRowValue('API path for metadata')).exists();
     assert.dom(PAGE.paths.codeSnippet('cli')).exists();
     assert.dom(PAGE.paths.codeSnippet('api')).exists();

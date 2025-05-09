@@ -7,10 +7,9 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { setupModels } from 'vault/tests/helpers/sync/setup-models';
+import { setupDataStubs } from 'vault/tests/helpers/sync/setup-hooks';
 import hbs from 'htmlbars-inline-precompile';
-import { click, fillIn, render, settled } from '@ember/test-helpers';
-import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { click, fillIn, render } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import sinon from 'sinon';
 
@@ -18,62 +17,65 @@ module('Integration | Component | sync | Secrets::DestinationHeader', function (
   setupRenderingTest(hooks);
   setupEngine(hooks, 'sync');
   setupMirage(hooks);
-  setupModels(hooks);
+  setupDataStubs(hooks);
 
   hooks.beforeEach(async function () {
-    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
+    this.refreshList = sinon.stub();
 
-    await render(hbs`<Secrets::DestinationHeader @destination={{this.destination}} />`, {
-      owner: this.engine,
-    });
+    this.renderComponent = () =>
+      render(
+        hbs`<Secrets::DestinationHeader @destination={{this.destination}} @capabilities={{this.capabilities}} @refreshList={{this.refreshList}} />`,
+        {
+          owner: this.engine,
+        }
+      );
   });
 
   test('it should render SyncHeader component', async function (assert) {
-    assert.dom(PAGE.title).includesText('us-west-1', 'SyncHeader component renders');
+    await this.renderComponent();
+    assert.dom(PAGE.title).includesText('destination-aws', 'SyncHeader component renders');
   });
 
   test('it should render tabs', async function (assert) {
+    await this.renderComponent();
     assert.dom(PAGE.tab('Secrets')).hasText('Secrets', 'Secrets tab renders');
     assert.dom(PAGE.tab('Details')).hasText('Details', 'Details tab renders');
   });
 
   test('it should render toolbar', async function (assert) {
+    await this.renderComponent();
     ['Delete destination', 'Sync secrets', 'Edit destination'].forEach((btn) => {
       assert.dom(PAGE.toolbar(btn)).hasText(btn, `${btn} toolbar action renders`);
     });
   });
 
   test('it should delete destination', async function (assert) {
-    assert.expect(3);
+    assert.expect(2);
 
     const transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
-    const clearDatasetStub = sinon.stub(this.owner.lookup('service:pagination'), 'clearDataset');
 
-    this.server.delete('/sys/sync/destinations/aws-sm/us-west-1', () => {
+    this.server.delete('/sys/sync/destinations/aws-sm/destination-aws', () => {
       assert.ok(true, 'Request made to delete destination');
       return {};
     });
 
+    await this.renderComponent();
     await click(PAGE.toolbar('Delete destination'));
     await fillIn(PAGE.confirmModalInput, 'DELETE');
     await click(PAGE.confirmButton);
 
-    assert.propEqual(
-      transitionStub.lastCall.args,
-      ['vault.cluster.sync.secrets.overview'],
+    assert.true(
+      transitionStub.calledWith('vault.cluster.sync.secrets.overview'),
       'Transition is triggered on delete success'
-    );
-    assert.propEqual(
-      clearDatasetStub.lastCall.args,
-      ['sync/destination'],
-      'Store dataset is cleared on delete success'
     );
   });
 
   test('it should render delete progress banner and hide actions', async function (assert) {
     assert.expect(5);
-    this.destination.set('purgeInitiatedAt', '2024-01-09T16:54:28.463879');
-    await settled();
+
+    this.destination.purgeInitiatedAt = '2024-01-09T16:54:28.463879';
+
+    await this.renderComponent();
     assert
       .dom(PAGE.destinations.deleteBanner)
       .hasText(
@@ -89,9 +91,11 @@ module('Integration | Component | sync | Secrets::DestinationHeader', function (
 
   test('it should render delete error banner', async function (assert) {
     assert.expect(2);
-    this.destination.set('purgeInitiatedAt', '2024-01-09T16:54:28.463879');
-    this.destination.set('purgeError', 'oh no! a problem occurred!');
-    await settled();
+
+    this.destination.purgeInitiatedAt = '2024-01-09T16:54:28.463879';
+    this.destination.purgeError = 'oh no! a problem occurred!';
+
+    await this.renderComponent();
     assert
       .dom(PAGE.destinations.deleteBanner)
       .hasText(
@@ -106,15 +110,8 @@ module('Integration | Component | sync | Secrets::DestinationHeader', function (
   test('it should render refresh list button', async function (assert) {
     assert.expect(1);
 
-    this.refreshList = () => assert.ok(true, 'Refresh list callback fires');
-
-    await render(
-      hbs`<Secrets::DestinationHeader @destination={{this.destination}} @refreshList={{this.refreshList}} />`,
-      {
-        owner: this.engine,
-      }
-    );
-
+    await this.renderComponent();
     await click(PAGE.associations.list.refresh);
+    assert.true(this.refreshList.calledOnce, 'Refresh list action is triggered');
   });
 });
