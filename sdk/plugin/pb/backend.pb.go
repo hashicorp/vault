@@ -367,8 +367,10 @@ type Request struct {
 	// Connection will be non-nil only for credential providers to
 	// inspect the connection information and potentially use it for
 	// authentication/protection.
-	Connection         *Connection `protobuf:"bytes,20,opt,name=connection,proto3" json:"connection,omitempty"`
-	RequiresSnapshotID string      `protobuf:"bytes,21,opt,name=requires_snapshot_id,json=requiresSnapshotId,proto3" json:"requires_snapshot_id,omitempty"`
+	Connection *Connection `protobuf:"bytes,20,opt,name=connection,proto3" json:"connection,omitempty"`
+	// RequiresSnapshotID will be present when the request is a list, read, or
+	// recover from snapshot operation
+	RequiresSnapshotID string `protobuf:"bytes,21,opt,name=requires_snapshot_id,json=requiresSnapshotId,proto3" json:"requires_snapshot_id,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
