@@ -8,13 +8,13 @@ import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncHandler from 'vault/mirage/handlers/sync';
-import { setupModels } from 'vault/tests/helpers/sync/setup-models';
+import { setupDataStubs } from 'vault/tests/helpers/sync/setup-hooks';
 import hbs from 'htmlbars-inline-precompile';
 import { click, render } from '@ember/test-helpers';
 import sinon from 'sinon';
+import { Response } from 'miragejs';
 
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
-import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 module(
   'Integration | Component | sync | Secrets::Page::Destinations::Destination::Secrets',
@@ -22,16 +22,16 @@ module(
     setupRenderingTest(hooks);
     setupEngine(hooks, 'sync');
     setupMirage(hooks);
-    setupModels(hooks);
+    setupDataStubs(hooks);
 
     hooks.beforeEach(async function () {
       syncHandler(this.server);
-      this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
       sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
 
       await render(
         hbs`
         <Secrets::Page::Destinations::Destination::Secrets
+          @capabilities={{this.capabilities}}
           @destination={{this.destination}}
           @associations={{this.associations}}
         />
@@ -41,7 +41,7 @@ module(
     });
 
     test('it should render DestinationHeader component', async function (assert) {
-      assert.dom(PAGE.title).includesText('us-west-1', 'DestinationHeader component renders');
+      assert.dom(PAGE.title).includesText('destination-aws', 'DestinationHeader component renders');
     });
 
     test('it should render empty list state', async function (assert) {
@@ -68,11 +68,14 @@ module(
     test('it should render list item menu actions', async function (assert) {
       assert.expect(5);
 
-      this.server.post('/sys/sync/destinations/aws-sm/us-west-1/associations/:action', (schema, req) => {
-        const { action } = req.params;
-        const operation = { set: 'sync', remove: 'unsync' }[action] || null;
-        assert.ok(operation, `Request made to ${operation} secret`);
-      });
+      this.server.post(
+        '/sys/sync/destinations/aws-sm/destination-aws/associations/:action',
+        (schema, req) => {
+          const { action } = req.params;
+          const operation = { set: 'sync', remove: 'unsync' }[action] || null;
+          assert.ok(operation, `Request made to ${operation} secret`);
+        }
+      );
 
       await click(PAGE.menuTrigger);
 

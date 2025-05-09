@@ -263,6 +263,10 @@ type Request struct {
 
 	// RequestLimiterDisabled tells whether the request context has Request Limiter applied.
 	RequestLimiterDisabled bool `json:"request_limiter_disabled,omitempty"`
+
+	// RequiresSnapshotID holds a loaded snapshot ID that the request will use,
+	// for either a read, list, or recover operation
+	RequiresSnapshotID string `json:"snapshot_id,omitempty"`
 }
 
 // Clone returns a deep copy (almost) of the request.
@@ -400,6 +404,13 @@ func (r *Request) SetTokenEntry(te *TokenEntry) {
 	r.tokenEntry = te
 }
 
+// IsSnapshotReadOrList checks whether the request reads or lists from a
+// snapshot. When this method returns true, handling the request should not
+// modify any internal caches or state
+func (r *Request) IsSnapshotReadOrList() bool {
+	return (r.Operation == ReadOperation || r.Operation == ListOperation) && r.RequiresSnapshotID != ""
+}
+
 // RenewRequest creates the structure of the renew request.
 func RenewRequest(path string, secret *Secret, data map[string]interface{}) *Request {
 	return &Request{
@@ -455,6 +466,7 @@ const (
 	AliasLookaheadOperation           = "alias-lookahead"
 	ResolveRoleOperation              = "resolve-role"
 	HeaderOperation                   = "header"
+	RecoverOperation                  = "recover"
 
 	// The operations below are called globally, the path is less relevant.
 	RevokeOperation   Operation = "revoke"
@@ -610,4 +622,25 @@ func CtxRedactionSettingsValue(ctx context.Context) (redactVersion, redactAddres
 // the ctxKeyRedactionSettings key.
 func CreateContextRedactionSettings(parent context.Context, redactVersion, redactAddresses, redactClusterName bool) context.Context {
 	return context.WithValue(parent, ctxKeyRedactionSettings{}, []bool{redactVersion, redactAddresses, redactClusterName})
+}
+
+type ctxKeySnapshotID struct{}
+
+func (c ctxKeySnapshotID) String() string {
+	return "snapshot-id"
+}
+
+// CreateContextWithSnapshotID creates a new context indicating that any storage
+// operations should be done using the given snapshot ID. If the value is empty,
+// it means that the request should use the normal storage.
+func CreateContextWithSnapshotID(parent context.Context, value string) context.Context {
+	return context.WithValue(parent, ctxKeySnapshotID{}, value)
+}
+
+// ContextSnapshotIDValue retrieves the snapshot ID value stored in the context.
+// This value can be empty, indicating that the request should use the normal
+// storage.
+func ContextSnapshotIDValue(ctx context.Context) (value string, ok bool) {
+	value, ok = ctx.Value(ctxKeySnapshotID{}).(string)
+	return
 }

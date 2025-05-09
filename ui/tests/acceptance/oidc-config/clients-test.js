@@ -24,6 +24,7 @@ import {
   ASSIGNMENT_DATA_RESPONSE,
 } from 'vault/tests/helpers/oidc-config';
 import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const searchSelect = create(ss);
 const flashMessage = create(fm);
@@ -220,12 +221,12 @@ module('Acceptance | oidc-config clients', function (hooks) {
       );
 
       // assert default values in details view are correct
-      assert.dom('[data-test-value-div="Algorithm"]').hasText('RS256', 'defaults to RS526 algorithm');
+      assert.dom(GENERAL.infoRowValue('Algorithm')).hasText('RS256', 'defaults to RS526 algorithm');
       assert
-        .dom('[data-test-value-div="Rotation period"]')
+        .dom(GENERAL.infoRowValue('Rotation period'))
         .hasText('1 day', 'when toggled off rotation period defaults to 1 day');
       assert
-        .dom('[data-test-value-div="Verification TTL"]')
+        .dom(GENERAL.infoRowValue('Verification TTL'))
         .hasText('1 day', 'when toggled off verification ttl defaults to 1 day');
 
       // rotate key
@@ -398,22 +399,22 @@ module('Acceptance | oidc-config clients', function (hooks) {
         'navigates to client details view after save'
       );
       // assert default values in details view are correct
-      assert.dom('[data-test-value-div="Assignment"]').hasText('allow_all', 'client allows all assignments');
-      assert.dom('[data-test-value-div="Type"]').hasText('confidential', 'type defaults to confidential');
+      assert.dom(GENERAL.infoRowValue('Assignment')).hasText('allow_all', 'client allows all assignments');
+      assert.dom(GENERAL.infoRowValue('Type')).hasText('confidential', 'type defaults to confidential');
       assert
-        .dom('[data-test-value-div="Key"] a')
+        .dom(`${GENERAL.infoRowValue('Key')} a`)
         .hasText('default', 'client uses default key and renders a link');
       assert
-        .dom('[data-test-value-div="Client ID"] [data-test-copy-button]')
+        .dom(`${GENERAL.infoRowValue('Client ID')} [data-test-copy-button]`)
         .exists('client ID exists and has copy button');
       assert
-        .dom('[data-test-value-div="Client Secret"] [data-test-copy-button]')
+        .dom(`${GENERAL.infoRowValue('Client Secret')} [data-test-copy-button]`)
         .exists('client secret exists and has copy button');
       assert
-        .dom('[data-test-value-div="ID Token TTL"]')
+        .dom(GENERAL.infoRowValue('ID Token TTL'))
         .hasText('1 day', 'ID token ttl toggled off sets default of 24h');
       assert
-        .dom('[data-test-value-div="Access Token TTL"]')
+        .dom(GENERAL.infoRowValue('Access Token TTL'))
         .hasText('1 day', 'access token ttl toggled off sets default of 24h');
 
       // edit client
@@ -452,9 +453,9 @@ module('Acceptance | oidc-config clients', function (hooks) {
         'vault.cluster.access.oidc.clients.client.details',
         'navigates back to details on update'
       );
-      assert.dom('[data-test-value-div="Redirect URI"]').hasText('some-url.com', 'shows updated attribute');
+      assert.dom(GENERAL.infoRowValue('Redirect URI')).hasText('some-url.com', 'shows updated attribute');
       assert
-        .dom('[data-test-value-div="Assignment"]')
+        .dom(GENERAL.infoRowValue('Assignment'))
         .hasText('assignment-inline', 'updated to limited assignment');
 
       // edit back to allow_all
@@ -463,7 +464,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       await click('[data-test-oidc-radio="allow-all"]');
       await click(SELECTORS.clientSaveButton);
       assert
-        .dom('[data-test-value-div="Assignment"]')
+        .dom(GENERAL.infoRowValue('Assignment'))
         .hasText('allow_all', 'client updated to allow all assignments');
 
       // create another client
@@ -534,8 +535,8 @@ module('Acceptance | oidc-config clients', function (hooks) {
       );
 
       // assert default values in assignment details view are correct
-      assert.dom('[data-test-value-div="Name"]').hasText('test-assignment');
-      assert.dom('[data-test-value-div="Entities"]').hasText('test-entity', 'shows the entity name.');
+      assert.dom(GENERAL.infoRowValue('Name')).hasText('test-assignment');
+      assert.dom(GENERAL.infoRowValue('Entities')).hasText('test-entity', 'shows the entity name.');
 
       // edit assignment
       await click(SELECTORS.assignmentEditButton);
@@ -555,10 +556,8 @@ module('Acceptance | oidc-config clients', function (hooks) {
         'renders success flash upon updating the assignment'
       );
 
-      assert
-        .dom('[data-test-value-div="Entities"]')
-        .hasText('test-entity', 'it still shows the entity name.');
-      assert.dom('[data-test-value-div="Groups"]').hasText('test-group', 'shows updated group name id.');
+      assert.dom(GENERAL.infoRowValue('Entities')).hasText('test-entity', 'it still shows the entity name.');
+      assert.dom(GENERAL.infoRowValue('Groups')).hasText('test-group', 'shows updated group name id.');
 
       // delete the assignment
       await click(SELECTORS.assignmentDeleteButton);

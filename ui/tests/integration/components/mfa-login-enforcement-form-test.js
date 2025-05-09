@@ -9,6 +9,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | mfa-login-enforcement-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -170,10 +171,10 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
       .dom('.search-select-list-item small')
       .hasText('123456', 'MFA method id renders in selected option');
     assert
-      .dom('[data-test-row-label="Authentication mount"]')
+      .dom(GENERAL.infoRowLabel('Authentication mount'))
       .hasText('Authentication mount', 'Selected target type renders');
     assert
-      .dom('[data-test-value-div="Authentication mount"]')
+      .dom(GENERAL.infoRowValue('Authentication mount'))
       .hasText('auth_userpass_1234', 'Selected target value renders');
 
     await click('[data-test-mlef-remove-target]');
@@ -237,10 +238,10 @@ module('Integration | Component | mfa-login-enforcement-form', function (hooks) 
     for (const [index, target] of targets.entries()) {
       // target populated from model
       assert
-        .dom(`[data-test-row-label="${target.label}"]`)
+        .dom(GENERAL.infoRowLabel(target.label))
         .hasText(target.label, `${target.label} target populated with correct type label`);
       assert
-        .dom(`[data-test-value-div="${target.label}"]`)
+        .dom(GENERAL.infoRowValue(target.label))
         .hasText(target.value, `${target.label} target populated with correct value`);
       // remove target
       await click(`[data-test-mlef-remove-target="${target.label}"]`);
