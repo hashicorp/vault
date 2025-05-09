@@ -218,8 +218,9 @@ module('Acceptance | clients | overview', function (hooks) {
       .dom(`${CLIENT_COUNT.attributionBlock('mount')} [data-test-attribution-clients] p`)
       .includesText(`${formatNumber([topMount.clients])}`, 'top attribution clients accurate');
 
-    // There is a different in expected stats currently as the vertical bar chart will show new clients only while the
+    // There is a difference in expected stats currently as the vertical bar chart will show new clients only while the
     // attribution charts will reflect total clients
+    // TODO SLW check that this is still as expected
     let expectedStats = {
       Entity: formatNumber([filterNamespaceNewClients.entity_clients]),
       'Non-entity': formatNumber([filterNamespaceNewClients.non_entity_clients]),

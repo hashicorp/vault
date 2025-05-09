@@ -14,7 +14,7 @@ export default class ClientsOverviewPageComponent extends ActivityComponent {
   get hasAttributionData() {
     // we hide attribution data when mountPath filter present
     // or if there's no data
-    // TODO SLW
+    // TODO SLW check this behavior
     if (this.args.mountPath || !this.totalUsageCounts.clients) return false;
     return true;
   }

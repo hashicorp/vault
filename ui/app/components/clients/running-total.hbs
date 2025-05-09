@@ -12,6 +12,7 @@
         @value={{@runningTotals.clients}}
         @size="l"
         {{! @tooltipText="This number is the total for the queried date range. The chart displays a monthly breakdown of total new clients per month." }}
+        {{! TODO SLW check whether exclusion of tooltip in design was intentional }}
       />
     </:subTitle>
 
@@ -31,7 +32,7 @@
     </:stats>
 
     <:chart>
-      {{! todo does switching to basic from group have any implications for loss of upgrade data }}
+      {{! todo SLW does switching to basic from group have any implications for loss of upgrade data }}
       <Clients::Charts::VerticalBarBasic
         @chartTitle="Vault client counts"
         @data={{this.runningTotalData}}

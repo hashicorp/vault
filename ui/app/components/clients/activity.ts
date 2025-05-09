@@ -94,7 +94,7 @@ export default class ClientsActivityComponent extends Component<Args> {
     // only do this if we have a mountPath filter.
     // namespace is filtered on API layer
     if (activity?.byNamespace && namespace && mountPath) {
-      return filteredTotalForMount(namespace, mountPath, activity.byMonth);
+      return filteredTotalForMount(activity.byMonth, namespace, mountPath);
     }
 
     return newClientTotal(activity?.byMonth);

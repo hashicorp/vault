@@ -79,7 +79,6 @@ module('Acceptance | clients | counts | acme', function (hooks) {
       `/vault/clients/counts/acme?mountPath=pki-engine-0&ns=${this.nsPath}`,
       'namespace filter updates URL query param'
     );
-
     assert
       .dom(CLIENT_COUNT.statText('Total ACME clients'))
       .hasTextContaining(

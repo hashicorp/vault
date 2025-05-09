@@ -25,7 +25,7 @@ import { task } from 'ember-concurrency';
  * @param {string} [activityTimestamp] -  ISO timestamp created in serializer to timestamp the response to be displayed in page header
  * @param {string} [startTimestamp] - ISO timestamp of start time, to be passed to export request
  * @param {string} [endTimestamp] - ISO timestamp of end time, to be passed to export request
- * @param {number} [retentionMonths] - number of months for historical billing, to be passed to date picker
+ * @param {number} [retentionMonths = 48] - number of months for historical billing, to be passed to date picker
  * @param {string} [namespace] - namespace filter. Will be appended to the current namespace in the export request.
  * @param {string} [upgradesDuringActivity] - array of objects containing version history upgrade data
  * @param {boolean} [noData = false] - when true, export button will hide regardless of capabilities
