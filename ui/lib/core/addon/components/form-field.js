@@ -195,6 +195,22 @@ export default class FormFieldComponent extends Component {
     this.setAndBroadcast(valueToSet);
   }
   @action
+  setAndBroadcastChecklist(event) {
+    let updatedValue = this.args.model[this.valuePath];
+    if (event.target.checked) {
+      updatedValue = addToArray(updatedValue, event.target.value);
+    } else {
+      updatedValue = removeFromArray(updatedValue, event.target.value);
+    }
+    this.setAndBroadcast(updatedValue);
+  }
+  @action
+  setAndBroadcastRadio(item) {
+    // we want to read the original value instead of `event.target.value` so we have `false` (boolean) and not `"false"` (string)
+    const valueToSet = this.radioValue(item);
+    this.setAndBroadcast(valueToSet);
+  }
+  @action
   setAndBroadcastTtl(value) {
     const alwaysSendValue = this.valuePath === 'expiry' || this.valuePath === 'safetyBuffer';
     const attrOptions = this.args.attr.options || {};
@@ -242,16 +258,5 @@ export default class FormFieldComponent extends Component {
   onChangeWithEvent(event) {
     const prop = event.target.type === 'checkbox' ? 'checked' : 'value';
     this.setAndBroadcast(event.target[prop]);
-  }
-
-  @action
-  handleChecklist(event) {
-    let updatedValue = this.args.model[this.valuePath];
-    if (event.target.checked) {
-      updatedValue = addToArray(updatedValue, event.target.value);
-    } else {
-      updatedValue = removeFromArray(updatedValue, event.target.value);
-    }
-    this.setAndBroadcast(updatedValue);
   }
 }
