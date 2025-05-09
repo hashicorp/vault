@@ -95,12 +95,7 @@ export default class FormFieldComponent extends Component {
 
     // here we replicate the logic in the template, to make sure we don't change the order in which the "ifs" are evaluated
     if (options?.possibleValues?.length > 0) {
-      // we still have to migrate the `radio` use case
-      if (options?.editType === 'radio') {
-        return false;
-      } else {
-        return true;
-      }
+      return true;
     } else {
       if (type === 'number' || type === 'string') {
         if (options?.editType === 'password') {
@@ -116,8 +111,13 @@ export default class FormFieldComponent extends Component {
   }
 
   get hasRadioSubText() {
-    // for 'radio' editType, check to see if every of the possibleValues has a subText and label
+    // for 'radio' editType, check to see if any of the possibleValues has a subText
     return this.args?.attr?.options?.possibleValues?.any((v) => v.subText);
+  }
+
+  get hasRadioHelpText() {
+    // for 'radio' editType, check to see if any of the possibleValues has a helpText
+    return this.args?.attr?.options?.possibleValues?.any((v) => v.helpText);
   }
 
   get hideLabel() {
