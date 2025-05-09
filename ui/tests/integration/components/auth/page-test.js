@@ -99,6 +99,7 @@ module('Integration | Component | auth | page', function (hooks) {
   module('listing visibility', function (hooks) {
     hooks.beforeEach(function () {
       this.visibleAuthMounts = VISIBLE_MOUNTS;
+      window.localStorage.clear();
     });
 
     test('it formats tab data if visible auth mounts exist', async function (assert) {
