@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -160,6 +161,22 @@ The 'rate' must be positive.`,
 					Description: `If set, when a client reaches a rate limit threshold, the client will be prohibited
 from any further requests until after the 'block_interval' has elapsed.`,
 				},
+				"group_by": {
+					Type: framework.TypeString,
+					Description: `Attribute by which to group requests by. Valid group_by modes are: 1) "ip" that groups
+requests by their source IP address (group_by defaults to ip if unset); 2) "none" that groups all requests that match
+the rate limit quota rule together; 3) "entity_then_ip" that groups requests by their entity ID for authenticated
+requests that carry one, or by their IP for unauthenticated requests (or requests whose authentication is not connected
+to an entity); and 4) "entity_then_none" which also groups requests by their entity ID when available, but the rest is
+all grouped together (i.e. unauthenticated or with authentication not connected to an entity).`,
+					Default: "ip",
+				},
+				"secondary_rate": {
+					Type: framework.TypeFloat,
+					Description: `Only available when using the "entity_then_ip" or "entity_then_none" group_by modes.
+This is the rate limit applied to the requests that fall under the "ip" or "none" groupings, while the authenticated
+requests that contain an entity ID are subject to the "rate" field instead. Defaults to the same value as "rate".`,
+				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
@@ -212,6 +229,14 @@ from any further requests until after the 'block_interval' has elapsed.`,
 								},
 								"inheritable": {
 									Type:     framework.TypeBool,
+									Required: true,
+								},
+								"group_by": {
+									Type:     framework.TypeString,
+									Required: true,
+								},
+								"secondary_rate": {
+									Type:     framework.TypeFloat,
 									Required: true,
 								},
 							},
@@ -345,9 +370,40 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 		name := d.Get("name").(string)
 
 		qType := quotas.TypeRateLimit.String()
+
+		groupBy := d.Get("group_by").(string)
+		switch groupBy {
+		case "":
+			// in order to preserve backwards compatibility we default to the IP grouping, which was the behavior
+			// before the group_by field was added
+			groupBy = quotas.GroupByIp
+		case quotas.GroupByIp:
+			// valid group_by mode for both ent and CE
+		case quotas.GroupByNone, quotas.GroupByEntityThenIp, quotas.GroupByEntityThenNone:
+			// other group_by modes are only available in Enterprise. Use simple const on API to simplify things, but
+			// keep the evaluation properly contained in ent-only files
+			if !constants.IsEnterprise {
+				return logical.ErrorResponse("grouping mode %q is only available in Vault Enterprise", groupBy), nil
+			}
+		default:
+			return logical.ErrorResponse("invalid grouping mode %q", groupBy), nil
+		}
+
 		rate := d.Get("rate").(float64)
 		if rate <= 0 {
 			return logical.ErrorResponse("'rate' is invalid"), nil
+		}
+
+		secondaryRate := d.Get("secondary_rate").(float64)
+		if groupBy == quotas.GroupByEntityThenIp || groupBy == quotas.GroupByEntityThenNone {
+			if secondaryRate < 0 {
+				return logical.ErrorResponse("secondary rate must be greater than or equal to 0"), nil
+			}
+			if secondaryRate == 0 {
+				secondaryRate = rate
+			}
+		} else if secondaryRate != 0 {
+			return logical.ErrorResponse("secondary rate is only valid when using entity-based grouping"), nil
 		}
 
 		interval := time.Second * time.Duration(d.Get("interval").(int))
@@ -461,16 +517,18 @@ func (b *SystemBackend) handleRateLimitQuotasUpdate() framework.OperationFunc {
 
 		switch {
 		case quota == nil:
-			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, pathSuffix, role, inheritable, interval, blockInterval, rate)
+			quota = quotas.NewRateLimitQuota(name, ns.Path, mountPath, pathSuffix, role, quotas.GroupBy(groupBy), inheritable, interval, blockInterval, rate, secondaryRate)
 		default:
 			// Re-inserting the already indexed object in memdb might cause problems.
 			// So, clone the object. See https://github.com/hashicorp/go-memdb/issues/76.
 			clonedQuota := quota.Clone()
 			rlq := clonedQuota.(*quotas.RateLimitQuota)
+			rlq.GroupBy = quotas.GroupBy(groupBy)
 			rlq.NamespacePath = ns.Path
 			rlq.MountPath = mountPath
 			rlq.PathSuffix = pathSuffix
 			rlq.Rate = rate
+			rlq.SecondaryRate = secondaryRate
 			rlq.Inheritable = inheritable
 			rlq.Interval = interval
 			rlq.BlockInterval = blockInterval
@@ -507,9 +565,11 @@ func (b *SystemBackend) handleRateLimitQuotasRead() framework.OperationFunc {
 		data := map[string]interface{}{
 			"type":           qType,
 			"name":           rlq.Name,
+			"group_by":       rlq.GroupBy,
 			"path":           nsPath + rlq.MountPath + rlq.PathSuffix,
 			"role":           rlq.Role,
 			"rate":           rlq.Rate,
+			"secondary_rate": rlq.SecondaryRate,
 			"inheritable":    rlq.Inheritable,
 			"interval":       int(rlq.Interval.Seconds()),
 			"block_interval": int(rlq.BlockInterval.Seconds()),
@@ -558,8 +618,8 @@ var quotasHelp = map[string][2]string{
 mount.`,
 		`A rate limit quota will enforce API rate limiting in a specified interval. A
 rate limit quota can be created at the root level or defined on a namespace or
-mount by specifying a 'path'. The rate limiter is applied to each unique client
-IP address.`,
+mount by specifying a 'path'. The rate limiter is applied to each unique group of
+requests, as defined by the configured grouping method (client IP, entity ID, etc.).`,
 	},
 	"rate-limit-list": {
 		"Lists the names of all the rate limit quotas.",

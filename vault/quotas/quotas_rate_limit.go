@@ -50,6 +50,9 @@ type RateLimitQuota struct {
 	// Name of the quota rule
 	Name string `json:"name"`
 
+	// GroupBy is the grouping mode for the rate limit quota, defaulting to IP grouping if unset.
+	GroupBy GroupBy `json:"group_by"`
+
 	// NamespacePath is the path of the namespace to which this quota is
 	// applicable.
 	NamespacePath string `json:"namespace_path"`
@@ -69,6 +72,10 @@ type RateLimitQuota struct {
 
 	// Rate defines the number of requests allowed per Interval.
 	Rate float64 `json:"rate"`
+
+	// SecondaryRate is only available when GroupBy is set to GroupByEntityThenIp or GroupByEntityThenNone, defining the
+	// number of requests allowed per Interval for the secondary groups.
+	SecondaryRate float64 `json:"secondary_rate"`
 
 	// Interval defines the duration to which rate limiting is applied.
 	Interval time.Duration `json:"interval"`
@@ -98,7 +105,7 @@ func (q *RateLimitQuota) GetNamespacePath() string {
 // provided, which will default to 1s when initialized. An optional block
 // duration may be provided, where if set, when a client reaches the rate limit,
 // subsequent requests will fail until the block duration has passed.
-func NewRateLimitQuota(name, nsPath, mountPath, pathSuffix, role string, inheritable bool, interval, block time.Duration, rate float64) *RateLimitQuota {
+func NewRateLimitQuota(name, nsPath, mountPath, pathSuffix, role string, groupBy GroupBy, inheritable bool, interval, block time.Duration, rate, secondaryRate float64) *RateLimitQuota {
 	id, err := uuid.GenerateUUID()
 	if err != nil {
 		// Fall back to generating with a hash of the name, later in initialize
@@ -108,12 +115,14 @@ func NewRateLimitQuota(name, nsPath, mountPath, pathSuffix, role string, inherit
 		Name:          name,
 		ID:            id,
 		Type:          TypeRateLimit,
+		GroupBy:       groupBy,
 		NamespacePath: nsPath,
 		MountPath:     mountPath,
 		Role:          role,
 		PathSuffix:    pathSuffix,
 		Inheritable:   inheritable,
 		Rate:          rate,
+		SecondaryRate: secondaryRate,
 		Interval:      interval,
 		BlockInterval: block,
 		purgeInterval: DefaultRateLimitPurgeInterval,

@@ -31,7 +31,7 @@ func TestNewRateLimitQuota(t *testing.T) {
 		rlq       *RateLimitQuota
 		expectErr bool
 	}{
-		{"valid rate", NewRateLimitQuota("test-rate-limiter", "qa", "/foo/bar", "", "", false, time.Second, 0, 16.7), false},
+		{"valid rate", NewRateLimitQuota("test-rate-limiter", "qa", "/foo/bar", "", "", GroupByIp, false, time.Second, 0, 16.7, 0), false},
 	}
 
 	for _, tc := range testCases {
@@ -48,7 +48,7 @@ func TestNewRateLimitQuota(t *testing.T) {
 }
 
 func TestRateLimitQuota_Close(t *testing.T) {
-	rlq := NewRateLimitQuota("test-rate-limiter", "qa", "/foo/bar", "", "", false, time.Second, time.Minute, 16.7)
+	rlq := NewRateLimitQuota("test-rate-limiter", "qa", "/foo/bar", "", "", GroupByIp, false, time.Second, 0, 16.7, 0)
 	require.NoError(t, rlq.initialize(logging.NewVaultLogger(log.Trace), metricsutil.BlackholeSink()))
 	require.NoError(t, rlq.close(context.Background()))
 
@@ -225,7 +225,7 @@ func TestRateLimitQuota_Update(t *testing.T) {
 	view := &logical.InmemStorage{}
 	require.NoError(t, qm.Setup(context.Background(), view, nil))
 
-	quota := NewRateLimitQuota("quota1", "", "", "", "", false, time.Second, 0, 10)
+	quota := NewRateLimitQuota("quota1", "", "", "", "", GroupByIp, false, time.Second, 0, 10, 0)
 	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, true))
 	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, true))
 
