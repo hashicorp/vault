@@ -35,7 +35,7 @@ import type { HTMLElementEvent } from 'vault/forms';
  * @param {boolean} hasVisibleAuthMounts - whether or not any mounts have been tuned with listing_visibility="unauth"
  * @param {string} namespaceQueryParam - namespace query param from the url
  * @param {function} onSuccess - callback after the initial authentication request, if an mfa_requirement exists the parent renders the mfa form otherwise it fires the authSuccess action in the auth controller and handles transitioning to the app
- * @param {string} presetAuthType - auth type to preselect in the login form, set from either canceled mfa validation, "with" query param or local storage (last method used to log in)
+ * @param {string} canceledMfaAuth - saved auth type from a cancelled mfa verification
  * @param {object} directLinkData - mount data built from the "with" query param. If param is a mount path and maps to a visible mount, the login form defaults to this mount. Otherwise the form preselects the passed auth type.
  *
  * */
@@ -47,7 +47,7 @@ interface Args {
   hasVisibleAuthMounts: boolean;
   namespaceQueryParam: string;
   onSuccess: CallableFunction;
-  presetAuthType: string; // set by canceled MFA validation, method type mapped to "with" query param or local storage
+  canceledMfaAuth: string;
   directLinkData: (AuthTabMountData & { hasMountData: boolean }) | null;
 }
 
@@ -100,6 +100,13 @@ export default class AuthFormTemplate extends Component<Args> {
     return namespaceQueryParam;
   }
 
+  get preselectedType() {
+    // Prioritize canceledMfaAuth since it's triggered by user interaction.
+    // Next, check type from directLinkData as it's specified by the URL.
+    // Finally, fall back to the most recently used auth method in localStorage.
+    return this.args.canceledMfaAuth || this.args.directLinkData?.type || this.auth.getAuthType();
+  }
+
   // The "standard" selection is a dropdown listing all auth methods.
   // This getter determines whether to render an alternative view (e.g., tabs or a preferred mount).
   // If `true`, the "Sign in with other methods →" link is shown.
@@ -112,12 +119,8 @@ export default class AuthFormTemplate extends Component<Args> {
   @action
   initializeState() {
     // SET AUTH TYPE
-    // first presetAuthType because that's from a user canceling mfa validation.
-    // then directLinkData because url specifies a mount path.
-    // fallback to getAuthType which is the last used auth method from local storage.
-    const presetType = this.args.presetAuthType || this.args.directLinkData?.type || this.auth.getAuthType();
-    if (presetType) {
-      this.setAuthType(presetType);
+    if (this.preselectedType) {
+      this.setAuthType(this.preselectedType);
     } else {
       // if nothing has been preselected, select first tab or set to 'token'
       const authType = this.args.hasVisibleAuthMounts ? (this.authTabTypes[0] as string) : 'token';
@@ -152,7 +155,7 @@ export default class AuthFormTemplate extends Component<Args> {
       this.setAuthType(firstTab);
     } else {
       // all methods render, reset dropdown
-      this.selectedAuthMethod = this.args.presetAuthType || 'token';
+      this.selectedAuthMethod = this.preselectedType || 'token';
     }
   }
 
