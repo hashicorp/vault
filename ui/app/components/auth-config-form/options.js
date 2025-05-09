@@ -10,7 +10,6 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { tracked } from '@glimmer/tracking';
 import errorMessage from 'vault/utils/error-message';
-import { encodePath } from 'vault/utils/path-encoding-helpers';
 
 /**
  * @module AuthConfigForm/Options
@@ -68,6 +67,6 @@ export default class AuthConfigOptions extends AuthConfigComponent {
   }
 
   get getLoginLink() {
-    return `${window.origin}/ui/vault/auth?with=${encodePath(this.args.model.path)}`;
+    return `${window.origin}/ui/vault/auth?with=${encodeURIComponent(this.args.model.path)}`;
   }
 }
