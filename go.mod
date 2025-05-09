@@ -111,7 +111,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/kv-builder v0.1.2
 	github.com/hashicorp/go-secure-stdlib/mlock v0.1.3
 	github.com/hashicorp/go-secure-stdlib/nonceutil v0.1.0
-	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.9
+	github.com/hashicorp/go-secure-stdlib/parseutil v0.2.0
 	github.com/hashicorp/go-secure-stdlib/password v0.1.1
 	github.com/hashicorp/go-secure-stdlib/permitpool v1.0.0
 	github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1
@@ -156,7 +156,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.21.3
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.20.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.10.0
-	github.com/hashicorp/vault-plugin-secrets-kv v0.21.0
+	github.com/hashicorp/vault-plugin-secrets-kv v0.21.1-0.20250501001443-f3536e6a52a7
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.14.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.15.4
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.11.0
@@ -228,7 +228,7 @@ require (
 	golang.org/x/tools v0.29.0
 	google.golang.org/api v0.221.0
 	google.golang.org/grpc v1.70.0
-	google.golang.org/protobuf v1.36.5
+	google.golang.org/protobuf v1.36.6
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	k8s.io/apimachinery v0.32.1
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
