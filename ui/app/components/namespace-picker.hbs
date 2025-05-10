@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<div class="has-side-padding-4" ...attributes>
+<div class="namespace-picker has-side-padding-4" ...attributes>
   <Hds::Dropdown @enableCollisionDetection={{true}} as |D|>
 
     <D.ToggleButton @icon="org" @text={{or this.selected.id "-"}} @isFullWidth={{true}} data-test-namespace-toggle />
