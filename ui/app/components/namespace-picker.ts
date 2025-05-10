@@ -140,6 +140,22 @@ export default class NamespacePicker extends Component {
   }
 
   @action
+  adjustElementWidth(element: HTMLElement): void {
+    const namespaceLinks = document.querySelectorAll('[data-test-namespace-link]');
+
+    let maxWidth = 240; // Default minimum width
+    namespaceLinks.forEach((checkmark: Element) => {
+      const width = (checkmark as HTMLElement).offsetWidth;
+      if (width > maxWidth) {
+        maxWidth = width;
+      }
+    });
+
+    // Set the width of the target element
+    element.style.width = `${maxWidth}px`;
+  }
+
+  @action
   async fetchListCapability(): Promise<void> {
     try {
       const namespacePermission = await this.store.findRecord('capabilities', 'sys/namespaces/');
