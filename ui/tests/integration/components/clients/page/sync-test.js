@@ -16,7 +16,6 @@ import { CLIENT_COUNT, CHARTS } from 'vault/tests/helpers/clients/client-count-s
 import { formatNumber } from 'core/helpers/format-number';
 import { calculateAverage } from 'vault/utils/chart-helpers';
 import { assertBarChart } from 'vault/tests/helpers/clients/client-count-helpers';
-import { newClientTotal } from 'core/utils/client-count-utils';
 
 const START_TIME = getUnixTime(LICENSE_START);
 const END_TIME = getUnixTime(STATIC_NOW);
@@ -74,7 +73,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     test('it should render with full month activity data', async function (assert) {
       const monthCount = this.activity.byMonth.length;
       assert.expect(6 + monthCount * 2);
-      const expectedTotal = formatNumber([newClientTotal(this.activity.byMonth).secret_syncs]);
+      const expectedTotal = formatNumber([this.activity.newClientTotal.secret_syncs]);
       const expectedNewAvg = formatNumber([
         calculateAverage(
           this.activity.byMonth.map((m) => m?.new_clients),
@@ -98,7 +97,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     test('it should render stats without chart for a single month', async function (assert) {
       const activityQuery = { start_time: { timestamp: END_TIME }, end_time: { timestamp: END_TIME } };
       this.activity = await this.store.queryRecord('clients/activity', activityQuery);
-      const expectedTotal = formatNumber([newClientTotal(this.activity.byMonth).secret_syncs]);
+      const expectedTotal = formatNumber([this.activity.newClientTotal.secret_syncs]);
 
       await this.renderComponent();
 

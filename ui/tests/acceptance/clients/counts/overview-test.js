@@ -171,7 +171,7 @@ module('Acceptance | clients | overview', function (hooks) {
     assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
 
     const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
-    const responseNewClients = newClientTotal(response.byMonth);
+    const responseNewClients = response.newClientTotal;
 
     const orderedNs = response.byNamespace.sort((a, b) => b.clients - a.clients);
     const topNamespace = orderedNs[0];
