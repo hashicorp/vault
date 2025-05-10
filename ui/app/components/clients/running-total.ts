@@ -34,9 +34,6 @@ export default class RunningTotal extends Component<Args> {
   }
 
   get chartLegend() {
-    return [
-      { key: 'clients', label: 'total clients' },
-      { key: 'new_clients', label: 'new clients' },
-    ];
+    return [{ key: 'new_clients', label: 'new clients' }];
   }
 }

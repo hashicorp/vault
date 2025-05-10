@@ -8,6 +8,7 @@ export default class Activity extends Model {
   @attr('array') byMonth;
   @attr('array') byNamespace;
   @attr('object') total;
+  @attr('object') newClientTotal;
   @attr('string') startTime;
   @attr('string') endTime;
   @attr('string') responseTimestamp;

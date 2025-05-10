@@ -68,7 +68,7 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   // passed into page-header for the export modal alert
   get upgradesDuringActivity() {
     const { versionHistory, activity } = this.args;
-    return filterVersionHistory(versionHistory, activity.startTime, activity.endTime);
+    return filterVersionHistory(versionHistory, activity?.startTime, activity?.endTime);
   }
 
   get upgradeExplanations() {
@@ -128,13 +128,16 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   }
 
   // duplicate of the method found in the activity component, so that we render the child only when there is activity to view
-  get totalUsageCounts(): TotalClients {
+  // don't need to actually do total new clients calculation, just whether data is present
+  get totalUsageCounts(): TotalClients | undefined {
     const { namespace, mountPath, activity } = this.args;
     if (mountPath) {
       // only do this if we have a mountPath filter.
       // namespace is filtered on API layer
-      return filteredTotalForMount(activity.byNamespace, namespace, mountPath);
+      return filteredTotalForMount(activity.byMonth, namespace, mountPath);
     }
+    // TODO SLW should this still check whether there are new clients vs old clients
+    // or as long as there is any data, want to show?
     return activity?.total;
   }
 

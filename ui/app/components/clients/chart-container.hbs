@@ -48,11 +48,4 @@
       {{yield to="emptyState"}}
     </div>
   {{/if}}
-
-  {{#if @timestamp}}
-    <div class="timestamp" data-test-chart-container-timestamp>
-      Updated
-      {{date-format @timestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
-    </div>
-  {{/if}}
 </div>

@@ -15,7 +15,6 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT, CHARTS } from 'vault/tests/helpers/clients/client-count-selectors';
 import { formatNumber } from 'core/helpers/format-number';
 import { calculateAverage } from 'vault/utils/chart-helpers';
-import { dateFormat } from 'core/helpers/date-format';
 import { assertBarChart } from 'vault/tests/helpers/clients/client-count-helpers';
 
 const START_TIME = getUnixTime(LICENSE_START);
@@ -59,8 +58,10 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
 
   test('it should render with full month activity data charts', async function (assert) {
     const monthCount = this.activity.byMonth.length;
-    assert.expect(7 + monthCount * 2);
-    const expectedTotal = formatNumber([this.activity.total.acme_clients]);
+    assert.expect(6 + monthCount * 2);
+
+    const expectedTotal = formatNumber([this.activity.newClientTotal.acme_clients]);
+
     const expectedNewAvg = formatNumber([
       calculateAverage(
         this.activity.byMonth.map((m) => m?.new_clients),
@@ -76,11 +77,6 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
       );
     assert.dom(statText('Average new ACME clients per month')).hasTextContaining(`${expectedNewAvg}`);
 
-    const formattedTimestamp = dateFormat([this.activity.responseTimestamp, 'MMM d yyyy, h:mm:ss aaa'], {
-      withTimeZone: true,
-    });
-    assert.dom(CHARTS.timestamp).hasText(`Updated ${formattedTimestamp}`, 'renders response timestamp');
-
     assertBarChart(assert, 'ACME usage', this.activity.byMonth);
     assertBarChart(assert, 'Monthly new', this.activity.byMonth);
   });
@@ -89,7 +85,9 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
     assert.expect(4);
     const activityQuery = { start_time: { timestamp: END_TIME }, end_time: { timestamp: END_TIME } };
     this.activity = await this.store.queryRecord('clients/activity', activityQuery);
-    const expectedTotal = formatNumber([this.activity.total.acme_clients]);
+
+    const expectedTotal = formatNumber([this.activity.newClientTotal.acme_clients]);
+
     await this.renderComponent();
 
     assert.dom(CHARTS.chart('ACME usage')).doesNotExist('total usage chart does not render');

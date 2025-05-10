@@ -17,7 +17,7 @@ import { ACTIVITY_RESPONSE_STUB, assertBarChart } from 'vault/tests/helpers/clie
 import { formatNumber } from 'core/helpers/format-number';
 import { filterActivityResponse, LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { selectChoose } from 'ember-power-select/test-support';
-import { filterByMonthDataForMount } from 'core/utils/client-count-utils';
+import { filterByMonthDataForMount, newClientTotal } from 'core/utils/client-count-utils';
 
 const { searchSelect } = GENERAL;
 
@@ -44,9 +44,7 @@ module('Acceptance | clients | counts | acme', function (hooks) {
     this.mountPath = 'pki-engine-0';
 
     this.expectedValues = {
-      nsTotals: activity.byNamespace
-        .find((ns) => ns.label === this.nsPath)
-        .mounts.find((mount) => mount.label === this.mountPath),
+      nsTotals: newClientTotal(activity.byMonth, this.nsPath, this.mountPath),
       nsMonthlyUsage: filterByMonthDataForMount(activity.byMonth, this.nsPath, this.mountPath),
     };
 
@@ -85,7 +83,7 @@ module('Acceptance | clients | counts | acme', function (hooks) {
       .dom(CLIENT_COUNT.statText('Total ACME clients'))
       .hasTextContaining(
         `${formatNumber([nsTotals.acme_clients])}`,
-        'renders total acme clients for namespace'
+        'renders total new acme clients for namespace'
       );
 
     // TODO: update this
