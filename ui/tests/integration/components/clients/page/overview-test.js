@@ -49,7 +49,6 @@ module('Integration | Component | clients/page/overview', function (hooks) {
     this.namespace = '';
     this.versionHistory = '';
 
-    // TODO SLW check why this is now necessary
     // Fails on #ember-testing-container
     setRunOptions({
       rules: {

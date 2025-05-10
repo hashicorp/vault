@@ -171,15 +171,14 @@ module('Acceptance | clients | overview', function (hooks) {
     assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
 
     const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
+    const responseNewClients = newClientTotal(response.byMonth);
+
     const orderedNs = response.byNamespace.sort((a, b) => b.clients - a.clients);
     const topNamespace = orderedNs[0];
     // the namespace dropdown excludes the current namespace, so use second-largest if that's the case
     const filterNamespace = topNamespace.label === 'root' ? orderedNs[1] : topNamespace;
-    const topMount = filterNamespace?.mounts.sort((a, b) => b.clients - a.clients)[0];
 
-    const responseNewClient = newClientTotal(response.byMonth);
-    // TODO SLW what about this interim where only namespace, but no mount?
-    // elsewhere it flows in already with activity filtered by namespace
+    // TODO SLW namespace is typically filtered on the api level, which isn't reflected here by response
     const filterNamespaceNewClients = response.byMonth.reduce(
       (acc, month) => {
         month.new_clients.namespaces
@@ -203,7 +202,9 @@ module('Acceptance | clients | overview', function (hooks) {
       }
     );
 
+    const topMount = filterNamespace?.mounts.sort((a, b) => b.clients - a.clients)[0];
     const topMountNewClients = newClientTotal(response.byMonth, filterNamespace.label, topMount.label);
+
     assert
       .dom(`${CLIENT_COUNT.attributionBlock('namespace')} [data-test-top-attribution]`)
       .includesText(`Top namespace ${topNamespace.label}`);
@@ -222,9 +223,6 @@ module('Acceptance | clients | overview', function (hooks) {
       .dom(`${CLIENT_COUNT.attributionBlock('mount')} [data-test-attribution-clients] p`)
       .includesText(`${formatNumber([topMount.clients])}`, 'top attribution clients accurate');
 
-    // There is a difference in expected stats currently as the vertical bar chart will show new clients only while the
-    // attribution charts will reflect total clients
-    // TODO SLW check that this is still as expected
     let expectedStats = {
       Entity: formatNumber([filterNamespaceNewClients.entity_clients]),
       'Non-entity': formatNumber([filterNamespaceNewClients.non_entity_clients]),
@@ -243,8 +241,6 @@ module('Acceptance | clients | overview', function (hooks) {
     assert.dom(CLIENT_COUNT.selectedAuthMount).hasText(topMount.label, 'selects top mount');
     assert.dom(CLIENT_COUNT.attributionBlock()).doesNotExist('Does not show attribution block');
 
-    // There is a different in expected stats currently as the vertical bar chart will show new clients only while the
-    // attribution charts will reflect total clients
     expectedStats = {
       Entity: formatNumber([topMountNewClients.entity_clients]),
       'Non-entity': formatNumber([topMountNewClients.non_entity_clients]),
@@ -270,10 +266,10 @@ module('Acceptance | clients | overview', function (hooks) {
       );
 
     expectedStats = {
-      Entity: formatNumber([responseNewClient.entity_clients]),
-      'Non-entity': formatNumber([responseNewClient.non_entity_clients]),
-      ACME: formatNumber([responseNewClient.acme_clients]),
-      'Secret sync': formatNumber([responseNewClient.secret_syncs]),
+      Entity: formatNumber([responseNewClients.entity_clients]),
+      'Non-entity': formatNumber([responseNewClients.non_entity_clients]),
+      ACME: formatNumber([responseNewClients.acme_clients]),
+      'Secret sync': formatNumber([responseNewClients.secret_syncs]),
     };
 
     for (const label in expectedStats) {

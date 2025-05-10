@@ -93,7 +93,7 @@ export default class ClientsActivityComponent extends Component<Args> {
     const { namespace, activity, mountPath } = this.args;
     // only do this if we have a mountPath filter.
     // namespace is filtered on API layer
-    if (activity?.byNamespace && namespace && mountPath) {
+    if (activity?.byMonth && namespace && mountPath) {
       return filteredTotalForMount(activity.byMonth, namespace, mountPath);
     }
 

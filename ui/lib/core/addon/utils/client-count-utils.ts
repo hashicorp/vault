@@ -43,7 +43,6 @@ export const filterVersionHistory = (
   start: string,
   end: string
 ) => {
-  // TODO SLW this should not return anything in CE when either start or end are missing, check ENT behavior
   if (versionHistory && start && end) {
     const upgrades = versionHistory.reduce((array: ClientsVersionHistoryModel[], upgradeData) => {
       const isRelevantHistory = (v: string) => {
