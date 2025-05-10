@@ -32,7 +32,7 @@
     </:stats>
 
     <:chart>
-      {{! todo SLW does switching to basic from group have any implications for loss of upgrade data }}
+      {{! TODO SLW switching to basic from group loses the upgrade data info on the tooltip, confirm whether this is acceptable and revert if not }}
       <Clients::Charts::VerticalBarBasic
         @chartTitle="Vault client counts"
         @data={{this.runningTotalData}}

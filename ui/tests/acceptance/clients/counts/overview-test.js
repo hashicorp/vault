@@ -88,10 +88,13 @@ module('Acceptance | clients | overview', function (hooks) {
     assert
       .dom(CHARTS.container('Vault client counts'))
       .doesNotExist('running total month over month charts do not show');
-    // TODO SLW failing, why does it not show when there are no new clients?
-    assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
-    assert.dom(CHARTS.container('namespace')).exists('namespace attribution chart shows');
-    assert.dom(CHARTS.container('mount')).exists('mount attribution chart shows');
+    assert.dom(CLIENT_COUNT.attributionBlock()).doesNotExist();
+    assert
+      .dom(CHARTS.container('namespace'))
+      .doesNotExist('namespace attribution chart does not show when no data');
+    assert
+      .dom(CHARTS.container('mount'))
+      .doesNotExist('mount attribution chart shows does not show when no data');
 
     // change to start on month/year of upgrade to 1.10
     await click(CLIENT_COUNT.dateRange.edit);
@@ -208,6 +211,7 @@ module('Acceptance | clients | overview', function (hooks) {
     assert
       .dom(`${CLIENT_COUNT.attributionBlock('namespace')} [data-test-attribution-clients] p`)
       .includesText(`${formatNumber([topNamespace.clients])}`, 'top attribution clients accurate');
+
     // Filter by top namespace
     await selectChoose(CLIENT_COUNT.nsFilter, filterNamespace.label);
     assert.dom(CLIENT_COUNT.selectedNs).hasText(filterNamespace.label, 'selects top namespace');

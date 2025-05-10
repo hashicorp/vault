@@ -547,7 +547,7 @@ module('Integration | Util | client count utils', function (hooks) {
       },
     ].forEach((testCase) => {
       test(`it returns correct values when ${testCase.when}`, async function (assert) {
-        const actual = filteredTotalForMount(testCase.ns, testCase.mount, this.byMonth);
+        const actual = filteredTotalForMount(this.byMonth, testCase.ns, testCase.mount);
         assert.deepEqual(actual, testCase.expected);
       });
     });
