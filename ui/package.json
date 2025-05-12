@@ -165,7 +165,7 @@
     "text-encoder-lite": "2.0.0",
     "tracked-built-ins": "~3.4.0",
     "typescript": "~5.8.3",
-    "webpack": "5.99.0"
+    "webpack": "5.94.0"
   },
   "resolutions": {
     "ansi-html": "0.0.8",
