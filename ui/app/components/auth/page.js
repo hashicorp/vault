@@ -30,21 +30,20 @@ import { action } from '@ember/object';
  * @param {string} oidcProviderQueryParam - oidc provider query param, set in url as "?o=someprovider"
  * @param {function} onAuthSuccess - callback task in controller that receives the auth response (after MFA, if enabled) when login is successful
  * @param {function} onNamespaceUpdate - callback task that passes user input to the controller to update the login namespace in the url query params
- * @param {object} visibleAuthMounts - keys are auth methods to render as tabs, values is an array of mount data for mounts with listing_visibility="unauth"
+ * @param {object} visibleAuthMounts - mount paths with listing_visibility="unauth", keys are the mount path and value is it's mount data such as "type" or "description," if it exists
  * */
 
 export const CSP_ERROR =
   "This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.";
 
 export default class AuthPage extends Component {
-  @service auth;
   @service('csp-event') csp;
 
   @tracked canceledMfaAuth = '';
   @tracked mfaAuthData;
   @tracked mfaErrors = '';
 
-  get authTabData() {
+  get visibleMountsByType() {
     const visibleAuthMounts = this.args.visibleAuthMounts;
     if (visibleAuthMounts) {
       const authMounts = visibleAuthMounts;
@@ -62,13 +61,6 @@ export default class AuthPage extends Component {
     const isStandby = this.args.cluster.standby;
     const hasConnectionViolations = this.csp.connectionViolations.length;
     return isStandby && hasConnectionViolations ? CSP_ERROR : '';
-  }
-
-  get presetAuthType() {
-    // first canceledMfaAuth because that's from a user canceling mfa validation.
-    // then directLinkData url contains "with" query param specifying a mount path.
-    // fallback to getAuthType which is the last used auth method from local storage.
-    return this.canceledMfaAuth || this.args.directLinkData?.type || this.auth.getAuthType();
   }
 
   @action

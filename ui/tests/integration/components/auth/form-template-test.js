@@ -25,29 +25,28 @@ module('Integration | Component | auth | form template', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    window.localStorage.clear();
     this.version = this.owner.lookup('service:version');
-    this.authTabData = null;
+    this.visibleMountsByType = null;
     this.cluster = { id: '1' };
     this.directLinkData = null;
     this.handleNamespaceUpdate = sinon.spy();
-    this.hasVisibleAuthMounts = false;
     this.namespaceQueryParam = '';
     this.oidcProviderQueryParam = '';
     this.onSuccess = sinon.spy();
-    this.presetAuthType = '';
+    this.canceledMfaAuth = '';
 
     this.renderComponent = () => {
       return render(hbs`
          <Auth::FormTemplate
-          @authTabData={{this.authTabData}}
+          @visibleMountsByType={{this.visibleMountsByType}}
           @cluster={{this.cluster}}
           @directLinkData={{this.directLinkData}}
           @handleNamespaceUpdate={{this.handleNamespaceUpdate}}
-          @hasVisibleAuthMounts={{this.hasVisibleAuthMounts}}
           @namespaceQueryParam={{this.namespaceQueryParam}}
           @oidcProviderQueryParam={{this.oidcProviderQueryParam}}
           @onSuccess={{this.onSuccess}}
-          @presetAuthType={{this.presetAuthType}}
+          @canceledMfaAuth={{this.canceledMfaAuth}}
         />`);
     };
   });
@@ -58,8 +57,8 @@ module('Integration | Component | auth | form template', function (hooks) {
     assert.dom(GENERAL.selectByAttr('auth type')).hasValue('token');
   });
 
-  test('it selects @presetAuthType by default', async function (assert) {
-    this.presetAuthType = 'ldap';
+  test('it selects @canceledMfaAuth by default', async function (assert) {
+    this.canceledMfaAuth = 'ldap';
     await this.renderComponent();
     assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap');
     assert.dom(GENERAL.inputByAttr('username')).exists();
@@ -67,9 +66,7 @@ module('Integration | Component | auth | form template', function (hooks) {
   });
 
   test('it selects type in the dropdown if @directLinkData data just contains type', async function (assert) {
-    this.directLinkData = { type: 'oidc', hasMountData: false };
-    // set by parent (auth/page.js) component so stubbing here
-    this.presetAuthType = this.directLinkData.type;
+    this.directLinkData = { type: 'oidc', isVisibleMount: false };
     await this.renderComponent();
     assert.dom(GENERAL.selectByAttr('auth type')).hasValue('oidc');
     assert.dom(GENERAL.inputByAttr('role')).exists();
@@ -98,8 +95,7 @@ module('Integration | Component | auth | form template', function (hooks) {
 
   module('listing visibility', function (hooks) {
     hooks.beforeEach(function () {
-      this.hasVisibleAuthMounts = true;
-      this.authTabData = {
+      this.visibleMountsByType = {
         userpass: [
           {
             path: 'userpass/',
@@ -187,7 +183,7 @@ module('Integration | Component | auth | form template', function (hooks) {
     test('it renders the mount description', async function (assert) {
       await this.renderComponent();
       await click(AUTH_FORM.tabBtn('token'));
-      assert.dom('section p').hasText('token based credentials data-test-description');
+      assert.dom('section p').hasText('token based credentials');
     });
 
     test('it renders a dropdown if multiple mount paths are returned', async function (assert) {
@@ -243,15 +239,15 @@ module('Integration | Component | auth | form template', function (hooks) {
       assert.dom(AUTH_FORM.tabBtn('token')).hasAttribute('aria-selected', 'false');
     });
 
-    test('it preselects tab if @presetAuthType is a tab', async function (assert) {
-      this.presetAuthType = 'oidc';
+    test('it preselects tab if @canceledMfaAuth is a tab', async function (assert) {
+      this.canceledMfaAuth = 'oidc';
       await this.renderComponent();
       assert.dom(AUTH_FORM.authForm('oidc')).exists('oidc form renders');
       assert.dom(AUTH_FORM.tabBtn('oidc')).hasAttribute('aria-selected', 'true');
     });
 
-    test('if @presetAuthType is NOT a tab, dropdown renders with type selected instead of tabs', async function (assert) {
-      this.presetAuthType = 'ldap';
+    test('if @canceledMfaAuth is NOT a tab, dropdown renders with type selected instead of tabs', async function (assert) {
+      this.canceledMfaAuth = 'ldap';
       await this.renderComponent();
       assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap');
       assert.dom(GENERAL.inputByAttr('username')).exists();
@@ -263,11 +259,9 @@ module('Integration | Component | auth | form template', function (hooks) {
 
     // if mount data exists, the mount has listing_visibility="unauth"
     test('it renders single mount view instead of tabs if @directLinkData data exists and includes mount data', async function (assert) {
-      this.directLinkData = { path: 'my-oidc/', type: 'oidc', hasMountData: true };
-      // set by parent (auth/page.js) component
-      this.presetAuthType = this.directLinkData.type;
+      this.directLinkData = { path: 'my-oidc/', type: 'oidc', isVisibleMount: true };
       await this.renderComponent();
-      assert.dom(AUTH_FORM.preferredMethod('OIDC')).hasText('OIDC', 'it renders mount type');
+      assert.dom(AUTH_FORM.preferredMethod('oidc')).hasText('OIDC', 'it renders mount type');
       assert.dom(GENERAL.inputByAttr('role')).exists();
       assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
       assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
@@ -281,8 +275,7 @@ module('Integration | Component | auth | form template', function (hooks) {
 
     test('it does not render tabs if @directLinkData data exists and just includes type', async function (assert) {
       // set a type that is NOT in a visible mount because mount data exists otherwise
-      this.directLinkData = { type: 'ldap', hasMountData: false };
-      this.presetAuthType = this.directLinkData.type;
+      this.directLinkData = { type: 'ldap', isVisibleMount: false };
       await this.renderComponent();
 
       assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap', 'dropdown has type selected');
@@ -292,7 +285,7 @@ module('Integration | Component | auth | form template', function (hooks) {
       await click(AUTH_FORM.advancedSettings);
       assert.dom(GENERAL.inputByAttr('path')).exists();
 
-      assert.dom(AUTH_FORM.preferredMethod('LDAP')).doesNotExist('single mount view does not render');
+      assert.dom(AUTH_FORM.preferredMethod('ldap')).doesNotExist('single mount view does not render');
       assert.dom(AUTH_FORM.tabBtn('ldap')).doesNotExist('tab does not render');
       assert
         .dom(GENERAL.backButton)
