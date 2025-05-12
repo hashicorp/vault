@@ -120,7 +120,7 @@
     "ember-page-title": "~8.2.4",
     "ember-power-select": "~8.7.0",
     "ember-qrcode-shim": "~0.4.0",
-    "ember-qunit": "~9.0.2",
+    "ember-qunit": "~8.1.1",
     "ember-resolver": "~13.1.0",
     "ember-responsive": "5.0.0",
     "ember-service-worker": "meirish/ember-service-worker#configurable-scope",
