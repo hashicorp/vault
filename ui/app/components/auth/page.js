@@ -24,8 +24,9 @@ import { action } from '@ember/object';
  *  @directLinkData={{this.model.directLinkData}}
  * />
  *
- * @param {string} directLinkData - type or mount data gleaned from query param
  * @param {object} cluster - the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
+ * @param {object} directLinkData - mount data built from the "with" query param. If param is a mount path and maps to a visible mount, the login form defaults to this mount. Otherwise the form preselects the passed auth type.
+ * @param {object} loginSettings - * enterprise only * login settings configured for the namespace
  * @param {string} namespaceQueryParam - namespace to login with, updated by typing in to the namespace input
  * @param {string} oidcProviderQueryParam - oidc provider query param, set in url as "?o=someprovider"
  * @param {function} onAuthSuccess - callback task in controller that receives the auth response (after MFA, if enabled) when login is successful
@@ -56,6 +57,25 @@ export default class AuthPage extends Component {
     }
     return null;
   }
+
+  // get loginCustomizations() {
+  //   const defaultType = this.args.loginSettings?.default_auth_type;
+  //   const backupTypes = this.args.loginSettings?.backup_auth_types;
+  //   const backupMethodsMounts = backupTypes?.reduce((obj, type) => {
+  //     const mountData = this.visibleMountsByType?.[type];
+  //     obj[type] = mountData || null;
+  //     return obj;
+  //   }, {});
+  //   if (defaultType || backupTypes) {
+  //     return {
+  //       defaultType,
+  //       defaultMethodMounts: this.visibleMountsByType?.[defaultType] || null,
+  //       backupTypes,
+  //       backupMethodsMounts: backupMethodsMounts,
+  //     };
+  //   }
+  //   return null;
+  // }
 
   get cspError() {
     const isStandby = this.args.cluster.standby;

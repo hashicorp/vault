@@ -19,6 +19,8 @@ export default class AuthRoute extends ClusterRouteBase {
   @service api;
   @service auth;
   @service flashMessages;
+  @service namespace;
+  @service store;
   @service version;
 
   beforeModel() {
@@ -36,6 +38,7 @@ export default class AuthRoute extends ClusterRouteBase {
       return { clusterModel, unwrapResponse: authResponse };
     }
 
+    const loginSettings = this.version.isEnterprise ? await this.fetchLoginSettings() : null;
     const visibleAuthMounts = await this.fetchMounts();
     const authMount = params?.authMount;
 
@@ -43,6 +46,7 @@ export default class AuthRoute extends ClusterRouteBase {
       clusterModel,
       visibleAuthMounts,
       directLinkData: authMount ? this.getMountOrTypeData(authMount, visibleAuthMounts) : null,
+      loginSettings,
     };
   }
 
@@ -93,6 +97,27 @@ export default class AuthRoute extends ClusterRouteBase {
       return isEmptyValue(resp.auth) ? null : resp.auth;
     } catch {
       // swallow the error if there's an error fetching mount data (i.e. invalid namespace)
+      return null;
+    }
+  }
+
+  async fetchLoginSettings() {
+    const adapter = this.store.adapterFor('application');
+    const ns = this.namespace.currentNamespace;
+    try {
+      const response = await adapter.ajax('/v1/sys/internal/ui/default-login-methods', 'GET', {
+        unauthenticated: true,
+        namespace: ns === 'root' ? '' : ns,
+      });
+      if (response?.data) {
+        const { default_auth_type, backup_auth_types } = response.data;
+        return {
+          defaultType: default_auth_type,
+          backupTypes: backup_auth_types,
+        };
+      }
+    } catch (e) {
+      // swallow if there's an error
       return null;
     }
   }

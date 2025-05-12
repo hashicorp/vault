@@ -47,6 +47,28 @@
                   @mounts={{array @directLinkData}}
                   @shouldRenderPath={{not-eq @selectedAuthMethod "token"}}
                 />
+              {{else if @loginSettings}}
+                {{#if @loginSettings.defaultType}}
+                  <Hds::Text::Body
+                    @tag="p"
+                    @weight="semibold"
+                    class="has-bottom-margin-m"
+                    data-test-auth-method={{@loginSettings.defaultType}}
+                  >
+                    {{auth-display-name @loginSettings.defaultType}}
+                  </Hds::Text::Body>
+                  {{#let (get @visibleMountsByType @loginSettings.defaultType) as |mounts|}}
+                    {{#if mounts.length}}
+                      <Auth::MountsDisplay @mounts={{mounts}} @shouldRenderPath={{not-eq @selectedAuthMethod "token"}} />
+                    {{/if}}
+                  {{/let}}
+                {{else}}
+                  <Auth::Tabs
+                    @authTabData={{this.backupMethodTabs}}
+                    @handleTabClick={{this.setAuthType}}
+                    @selectedAuthMethod={{this.selectedAuthMethod}}
+                  />
+                {{/if}}
               {{else}}
                 <Auth::Tabs
                   @authTabData={{@visibleMountsByType}}
@@ -55,22 +77,30 @@
                 />
               {{/if}}
             {{else}}
-              {{! fallback view is the dropdown with all auth methods }}
-              <Hds::Form::Select::Field
-                name="selectedAuthMethod"
-                {{on "input" this.setTypeFromDropdown}}
-                data-test-select="auth type"
-                as |F|
-              >
-                <F.Label class="has-top-margin-m">Auth method</F.Label>
-                <F.Options>
-                  {{#each this.availableMethodTypes as |type|}}
-                    <option selected={{eq this.selectedAuthMethod type}} value={{type}}>
-                      {{auth-display-name type}}
-                    </option>
-                  {{/each}}
-                </F.Options>
-              </Hds::Form::Select::Field>
+              {{#if @loginSettings.backupTypes}}
+                <Auth::Tabs
+                  @authTabData={{this.backupMethodTabs}}
+                  @handleTabClick={{this.setAuthType}}
+                  @selectedAuthMethod={{this.selectedAuthMethod}}
+                />
+              {{else}}
+                {{! fallback view is the dropdown with all auth methods }}
+                <Hds::Form::Select::Field
+                  name="selectedAuthMethod"
+                  {{on "input" this.setTypeFromDropdown}}
+                  data-test-select="auth type"
+                  as |F|
+                >
+                  <F.Label class="has-top-margin-m">Auth method</F.Label>
+                  <F.Options>
+                    {{#each this.availableMethodTypes as |type|}}
+                      <option selected={{eq this.selectedAuthMethod type}} value={{type}}>
+                        {{auth-display-name type}}
+                      </option>
+                    {{/each}}
+                  </F.Options>
+                </Hds::Form::Select::Field>
+              {{/if}}
             {{/if}}
           </div>
         </:authSelectOptions>
@@ -82,8 +112,7 @@
         </:error>
 
         <:advancedSettings>
-          {{! custom auth options render their own mount path inputs and token does not support custom paths }}
-          {{#if (and (not this.showCustomAuthOptions) (not-eq this.selectedAuthMethod "token"))}}
+          {{#if this.showAdvancedSettings}}
             <Hds::Reveal @text="Advanced settings" data-test-auth-form-options-toggle class="is-fullwidth">
               <Hds::Form::TextInput::Field name="path" data-test-input="path" as |F|>
                 <F.Label class="has-top-margin-m">Mount path</F.Label>
@@ -98,7 +127,7 @@
         </:advancedSettings>
 
         <:footer>
-          {{#if this.showCustomAuthOptions}}
+          {{#if (and this.showCustomAuthOptions this.canToggleViews)}}
             <Hds::Button
               {{on "click" this.toggleView}}
               @color="tertiary"
