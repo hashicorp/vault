@@ -141,9 +141,11 @@ export default class NamespacePicker extends Component {
 
   @action
   adjustElementWidth(element: HTMLElement): void {
-    const namespaceLinks = document.querySelectorAll('[data-test-namespace-link]');
+    // Hide the element so that it doesn't affect the layout
+    element.style.display = 'none';
 
     let maxWidth = 240; // Default minimum width
+    const namespaceLinks = document.querySelectorAll('[data-test-namespace-link]');
     namespaceLinks.forEach((checkmark: Element) => {
       const width = (checkmark as HTMLElement).offsetWidth;
       if (width > maxWidth) {
@@ -153,6 +155,9 @@ export default class NamespacePicker extends Component {
 
     // Set the width of the target element
     element.style.width = `${maxWidth}px`;
+
+    // Show the element once the width is set
+    element.style.display = '';
   }
 
   @action
