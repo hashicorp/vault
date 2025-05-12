@@ -1,0 +1,92 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<div class="top-padding-4 has-bottom-padding-4 has-side-padding-8" ...attributes>
+  <Hds::Dropdown @enableCollisionDetection={{true}} as |D|>
+
+    <D.ToggleButton @icon="org" @text={{or this.selected.id "-"}} @isFullWidth={{true}} data-test-namespace-toggle />
+
+    {{#if this.errorLoadingNamespaces}}
+
+      <D.Header>
+        <MessageError @errorMessage={{this.errorLoadingNamespaces}} />
+      </D.Header>
+
+    {{else}}
+
+      <D.Header @hasDivider={{true}}>
+        <div class="has-padding-8">
+          <Hds::Form::TextInput::Field
+            @value={{this.searchInput}}
+            @type="search"
+            aria-label="Search namespaces"
+            placeholder="Search"
+            {{on "keydown" this.onKeyDown}}
+            {{on "input" this.onSearchInput}}
+            {{did-insert this.focusSearchInput}}
+          />
+        </div>
+      </D.Header>
+
+      <D.Header>
+        {{#if (and this.hasSearchInput (not this.showNoNamespacesMessage))}}
+          <div class="sub-text has-padding-8">
+            {{this.searchInputHelpText}}
+          </div>
+        {{/if}}
+
+        <div class="is-size-8 has-text-black has-text-weight-semibold has-padding-8">
+          {{this.namespaceLabel}}
+          <Hds::BadgeCount @text={{or this.namespaceCount 0}} />
+        </div>
+      </D.Header>
+
+      {{#if this.showNoNamespacesMessage}}
+        <D.Generic class="sub-text">
+          {{this.noNamespacesMessage}}
+        </D.Generic>
+      {{/if}}
+
+      <div class="is-overflow-y-auto is-max-drawer-height" {{did-insert this.setupScrollListener}}>
+        {{#each this.visibleNamespaceOptions as |option|}}
+          <D.Checkmark
+            @selected={{eq option.id this.selected.id}}
+            {{on "click" (fn this.onChange option)}}
+            data-test-namespace-link={{option.path}}
+          >
+            {{option.label}}
+          </D.Checkmark>
+        {{/each}}
+      </div>
+
+    {{/if}}
+
+    <D.Footer @hasDivider={{true}} class="is-flex-center">
+      <Hds::ButtonSet class="is-fullwidth">
+        {{#if this.canRefreshNamespaces}}
+          <Hds::Button
+            @color="secondary"
+            @text="Refresh list"
+            @isFullWidth={{(not this.canManageNamespaces)}}
+            {{on "click" this.refreshList}}
+            data-test-refresh-namespaces
+          />
+        {{/if}}
+        {{#if this.canManageNamespaces}}
+          <Hds::Button
+            @color="secondary"
+            @text="Manage"
+            @isFullWidth={{(not this.canRefreshNamespaces)}}
+            @icon="settings"
+            @route="vault.cluster.access.namespaces"
+            data-test-manage-namespaces
+          />
+        {{/if}}
+      </Hds::ButtonSet>
+
+    </D.Footer>
+
+  </Hds::Dropdown>
+</div>
