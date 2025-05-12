@@ -1460,11 +1460,12 @@ func trimPath(ns *namespace.Namespace, path string) string {
 // requiresSnapshot checks if the request requires a loaded snapshot, by
 // checking for the existence of a snapshot query parameter
 func requiresSnapshot(r *http.Request) bool {
-	switch r.Method {
-	case http.MethodGet, http.MethodPut, http.MethodPost, "LIST":
-	default:
-		return false
-	}
 	query := r.URL.Query()
-	return query.Has(VaultSnapshotReadParam) || query.Has(VaultSnapshotRecoverParam)
+	switch r.Method {
+	case http.MethodGet, "LIST":
+		return query.Has(VaultSnapshotReadParam)
+	case http.MethodPut, http.MethodPost:
+		return query.Has(VaultSnapshotRecoverParam)
+	}
+	return false
 }

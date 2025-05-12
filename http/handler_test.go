@@ -996,9 +996,15 @@ func Test_requiresSnapshot(t *testing.T) {
 			expected:    false,
 		},
 		{
-			name:        "put with snapshot",
+			name:        "put with read snapshot",
 			method:      http.MethodPut,
 			queryParams: map[string][]string{VaultSnapshotReadParam: {"param"}},
+			expected:    false,
+		},
+		{
+			name:        "put with recover snapshot",
+			method:      http.MethodPut,
+			queryParams: map[string][]string{VaultSnapshotRecoverParam: {"param"}},
 			expected:    true,
 		},
 		{
