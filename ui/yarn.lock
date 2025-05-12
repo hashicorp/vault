@@ -18536,7 +18536,6 @@ __metadata:
     tracked-built-ins: ~3.4.0
     typescript: ~5.8.3
     uuid: 9.0.1
-    walk-sync: ~2.2.0
     webpack: 5.94.0
   languageName: unknown
   linkType: soft
@@ -18632,7 +18631,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"walk-sync@npm:^2.0.2, walk-sync@npm:^2.2.0, walk-sync@npm:~2.2.0":
+"walk-sync@npm:^2.0.2, walk-sync@npm:^2.2.0":
   version: 2.2.0
   resolution: "walk-sync@npm:2.2.0"
   dependencies:
