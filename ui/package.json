@@ -165,7 +165,7 @@
     "text-encoder-lite": "2.0.0",
     "tracked-built-ins": "~3.4.0",
     "typescript": "~5.8.3",
-    "webpack": "5.94.0"
+    "webpack": "5.99.0"
   },
   "resolutions": {
     "ansi-html": "0.0.8",
@@ -221,7 +221,7 @@
     "@hashicorp/vault-client-typescript": "portal:./api-client",
     "@hashicorp/vault-reporting": "portal:./vault-reporting",
     "ember-auto-import": "2.10.0",
-    "handlebars": "4.7.7",
+    "handlebars": "4.7.8",
     "highlight.js": "10.7.3",
     "node-notifier": "8.0.2",
     "uuid": "9.0.1"
