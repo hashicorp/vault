@@ -50,7 +50,7 @@
         />
       {{else}}
         <Auth::FormTemplate
-          @authTabData={{this.authTabData}}
+          @visibleMountsByType={{this.visibleMountsByType}}
           @cluster={{@cluster}}
           @handleNamespaceUpdate={{@onNamespaceUpdate}}
           @hasVisibleAuthMounts={{if @visibleAuthMounts true false}}

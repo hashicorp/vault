@@ -43,7 +43,7 @@ export default class AuthPage extends Component {
   @tracked mfaAuthData;
   @tracked mfaErrors = '';
 
-  get authTabData() {
+  get visibleMountsByType() {
     const visibleAuthMounts = this.args.visibleAuthMounts;
     if (visibleAuthMounts) {
       const authMounts = visibleAuthMounts;

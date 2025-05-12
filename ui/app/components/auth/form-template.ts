@@ -15,7 +15,7 @@ import type FlagsService from 'vault/services/flags';
 import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
 import type ClusterModel from 'vault/models/cluster';
-import type { AuthTabData, AuthTabMountData } from 'vault/vault/auth/form';
+import type { UnauthMountsByType, AuthTabMountData } from 'vault/vault/auth/form';
 import type { HTMLElementEvent } from 'vault/forms';
 
 /**
@@ -29,26 +29,26 @@ import type { HTMLElementEvent } from 'vault/forms';
  * dynamically renders the corresponding form.
  *
  *
- * @param {object} authTabData - auth methods to render as tabs, contains mount data for any mounts with listing_visibility="unauth"
+ * @param {string} canceledMfaAuth - saved auth type from a cancelled mfa verification
  * @param {object} cluster - The route model which is the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
+ * @param {object} directLinkData - mount data built from the "with" query param. If param is a mount path and maps to a visible mount, the login form defaults to this mount. Otherwise the form preselects the passed auth type.
  * @param {function} handleNamespaceUpdate - callback task that passes user input to the controller and updates the namespace query param in the url
  * @param {boolean} hasVisibleAuthMounts - whether or not any mounts have been tuned with listing_visibility="unauth"
  * @param {string} namespaceQueryParam - namespace query param from the url
  * @param {function} onSuccess - callback after the initial authentication request, if an mfa_requirement exists the parent renders the mfa form otherwise it fires the authSuccess action in the auth controller and handles transitioning to the app
- * @param {string} canceledMfaAuth - saved auth type from a cancelled mfa verification
- * @param {object} directLinkData - mount data built from the "with" query param. If param is a mount path and maps to a visible mount, the login form defaults to this mount. Otherwise the form preselects the passed auth type.
+ * @param {object} visibleMountsByType - auth methods to render as tabs, contains mount data for any mounts with listing_visibility="unauth"
  *
  * */
 
 interface Args {
-  authTabData: AuthTabData;
+  canceledMfaAuth: string;
   cluster: ClusterModel;
+  directLinkData: (AuthTabMountData & { hasMountData: boolean }) | null;
   handleNamespaceUpdate: CallableFunction;
   hasVisibleAuthMounts: boolean;
   namespaceQueryParam: string;
   onSuccess: CallableFunction;
-  canceledMfaAuth: string;
-  directLinkData: (AuthTabMountData & { hasMountData: boolean }) | null;
+  visibleMountsByType: UnauthMountsByType;
 }
 
 export default class AuthFormTemplate extends Component<Args> {
@@ -65,7 +65,7 @@ export default class AuthFormTemplate extends Component<Args> {
   @tracked errorMessage = '';
 
   get authTabTypes() {
-    const visibleMounts = this.args.authTabData;
+    const visibleMounts = this.args.visibleMountsByType;
     return visibleMounts ? Object.keys(visibleMounts) : [];
   }
 

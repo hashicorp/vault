@@ -26,7 +26,7 @@ module('Integration | Component | auth | form template', function (hooks) {
 
   hooks.beforeEach(function () {
     this.version = this.owner.lookup('service:version');
-    this.authTabData = null;
+    this.visibleMountsByType = null;
     this.cluster = { id: '1' };
     this.directLinkData = null;
     this.handleNamespaceUpdate = sinon.spy();
@@ -39,7 +39,7 @@ module('Integration | Component | auth | form template', function (hooks) {
     this.renderComponent = () => {
       return render(hbs`
          <Auth::FormTemplate
-          @authTabData={{this.authTabData}}
+          @visibleMountsByType={{this.visibleMountsByType}}
           @cluster={{this.cluster}}
           @directLinkData={{this.directLinkData}}
           @handleNamespaceUpdate={{this.handleNamespaceUpdate}}
@@ -97,7 +97,7 @@ module('Integration | Component | auth | form template', function (hooks) {
   module('listing visibility', function (hooks) {
     hooks.beforeEach(function () {
       this.hasVisibleAuthMounts = true;
-      this.authTabData = {
+      this.visibleMountsByType = {
         userpass: [
           {
             path: 'userpass/',

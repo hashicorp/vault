@@ -53,8 +53,7 @@
                 {{/let}}
               {{else}}
                 <Auth::Tabs
-                  @authTabData={{@authTabData}}
-                  @authTabTypes={{this.authTabTypes}}
+                  @authTabData={{@visibleMountsByType}}
                   @handleTabClick={{this.setAuthType}}
                   @selectedAuthMethod={{this.selectedAuthMethod}}
                 />
