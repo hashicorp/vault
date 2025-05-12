@@ -7,7 +7,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { ALL_LOGIN_METHODS, supportedTypes } from 'vault/utils/supported-login-methods';
+import { supportedTypes } from 'vault/utils/supported-login-methods';
 import { getRelativePath } from 'core/utils/sanitize-path';
 
 import type AuthService from 'vault/vault/services/auth';
@@ -63,11 +63,6 @@ export default class AuthFormTemplate extends Component<Args> {
   // auth login variables
   @tracked selectedAuthMethod = '';
   @tracked errorMessage = '';
-
-  displayName = (type: string) => {
-    const displayName = ALL_LOGIN_METHODS?.find((t) => t.type === type)?.displayName;
-    return displayName || type;
-  };
 
   get authTabTypes() {
     const visibleMounts = this.args.authTabData;

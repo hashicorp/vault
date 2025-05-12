@@ -48,14 +48,13 @@
                     @description={{mount.description}}
                     @path={{mount.path}}
                     @shouldRenderPath={{not-eq @selectedAuthMethod "token"}}
-                    @type={{this.displayName mount.type}}
+                    @type={{mount.type}}
                   />
                 {{/let}}
               {{else}}
                 <Auth::Tabs
                   @authTabData={{@authTabData}}
                   @authTabTypes={{this.authTabTypes}}
-                  @displayNameHelper={{this.displayName}}
                   @handleTabClick={{this.setAuthType}}
                   @selectedAuthMethod={{this.selectedAuthMethod}}
                 />
@@ -72,7 +71,7 @@
                 <F.Options>
                   {{#each this.availableMethodTypes as |type|}}
                     <option selected={{eq this.selectedAuthMethod type}} value={{type}}>
-                      {{this.displayName type}}
+                      {{auth-display-name type}}
                     </option>
                   {{/each}}
                 </F.Options>
