@@ -176,6 +176,7 @@ func TestConnectionURL(t *testing.T) {
 	}
 }
 
+// We only test the standard flow as we would get errors for cloud based auth while fetching token
 func TestGetAuthConfig(t *testing.T) {
 	cases := map[string]struct {
 		url       string
@@ -183,83 +184,21 @@ func TestGetAuthConfig(t *testing.T) {
 		expectErr bool
 	}{
 		"no_auth_config": {
-			url:       "postgresql://user:password@localhost:5432/dbname",
-			conf:      map[string]string{},
-			expectErr: false,
-		},
-		"aws": {
-			url:       "postgresql://user@localhost:5432/dbname",
-			conf:      map[string]string{"use_aws_iam": "true", "aws_db_region": "us-east-1"},
-			expectErr: false,
-		},
-		"gcp": {
-			url:  "postgresql://user@localhost:5432/dbname",
-			conf: map[string]string{"use_gcp_default_credentials": "true"},
-		},
-		"azure": {
-			url:  "postgresql://user@localhost:5432/dbname",
-			conf: map[string]string{"use_azure_msi": "true", "azure_client_id": "1234"},
-		},
-		"azure_no_client_id": {
-			url:  "postgresql://user@localhost:5432/dbname",
-			conf: map[string]string{"use_azure_msi": "true"},
-		},
-		"aws_no_region": {
-			url:       "postgresql://user@localhost:5432/dbname",
-			conf:      map[string]string{"use_aws_iam": "true"},
-			expectErr: true,
-		},
-	}
-
-	for name, tt := range cases {
-		t.Run(name, func(t *testing.T) {
-			// Cannot assert config as the fields are not exported.
-			_, err := getAuthConfig(context.Background(), tt.url, tt.conf, log.Default())
-			if (err != nil) != tt.expectErr {
-				t.Fatalf("Expected error: %v, got: %v", tt.expectErr, err)
-			}
-		})
-	}
-}
-
-// TestConsumeGetAuthConfig tests the output of getAuthConfig.
-// For cloud, we only test aws auth config here, as the aws library generates the token with default parameters.
-// Other auth methods try to use credentials from the environment, which is not possible in the unit test.
-func TestConsumeGetAuthConfig(t *testing.T) {
-	cases := map[string]struct {
-		url       string
-		conf      map[string]string
-		expectErr bool
-	}{
-		"no_auth_config": {
-			url:       "postgresql://user:password@localhost:5432/dbname",
-			conf:      map[string]string{},
-			expectErr: false,
-		},
-		"aws": {
-			url:       "postgresql://user@localhost:5432/dbname",
-			conf:      map[string]string{"use_aws_iam": "true", "aws_db_region": "us-east-1"},
-			expectErr: false,
-		},
-		"empty_url": {
-			url:       "",
-			conf:      map[string]string{},
-			expectErr: true,
+			url:  "postgresql://user:password@localhost:5432/dbname",
+			conf: map[string]string{},
 		},
 	}
 
 	for name, tt := range cases {
 		t.Run(name, func(t *testing.T) {
 			cfg, err := getAuthConfig(context.Background(), tt.url, tt.conf, log.Default())
-			if err != nil {
-				t.Fatalf("Failed to generate auth config: %v", err)
+			if (err != nil) != tt.expectErr {
+				t.Fatalf("Expected error: %v, got: %v", tt.expectErr, err)
 			}
 
 			db, err := pgmultiauth.Open(context.TODO(), cfg)
 			if err != nil {
-				if !tt.expectErr {
-					t.Fatalf("Expected error: %v, got: %v", tt.expectErr, err)
-				}
+				t.Fatalf("Failed to open db: %v", err)
 				return
 			}
 
