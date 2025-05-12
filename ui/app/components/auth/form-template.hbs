@@ -48,35 +48,83 @@
                     @description={{mount.description}}
                     @path={{mount.path}}
                     @shouldRenderPath={{not-eq @selectedAuthMethod "token"}}
-                    @type={{this.displayName mount.type}}
+                    @type={{mount.type}}
                   />
                 {{/let}}
+              {{else if @loginSettings}}
+                {{#if @loginSettings.defaultType}}
+                  <Hds::Text::Body
+                    @tag="p"
+                    @weight="semibold"
+                    class="has-bottom-margin-m"
+                    data-test-auth-method={{@loginSettings.defaultType}}
+                  >
+                    {{auth-display-name @loginSettings.defaultType}}
+                  </Hds::Text::Body>
+
+                  {{#let (get @visibleMountsByType @loginSettings.defaultType) as |mounts|}}
+                    {{#if mounts.length}}
+                      {{! render dropdown or single mount view for default }}
+                      {{#if (gt mounts.length 1)}}
+                        {{! render dropdown of mount paths }}
+                        <Hds::Form::Select::Field name="path" data-test-select="path" as |F|>
+                          <F.Label>Mount path</F.Label>
+                          <F.Options>
+                            {{#each mounts as |mount|}}
+                              <option value={{mount.path}}>{{mount.path}}</option>
+                            {{/each}}
+                          </F.Options>
+                        </Hds::Form::Select::Field>
+                      {{else}}
+                        {{#let (get mounts "0") as |mount|}}
+                          <Auth::SingleMount
+                            @description={{mount.description}}
+                            @path={{mount.path}}
+                            @shouldRenderPath={{not-eq @selectedAuthMethod "token"}}
+                          />
+                        {{/let}}
+                      {{/if}}
+                    {{/if}}
+                  {{/let}}
+                {{else}}
+                  <Auth::Tabs
+                    @authTabData={{this.backupMethodTabs}}
+                    @handleTabClick={{this.setAuthType}}
+                    @selectedAuthMethod={{this.selectedAuthMethod}}
+                  />
+                {{/if}}
               {{else}}
                 <Auth::Tabs
-                  @authTabData={{@authTabData}}
-                  @authTabTypes={{this.authTabTypes}}
-                  @displayNameHelper={{this.displayName}}
+                  @authTabData={{@visibleMountsByType}}
                   @handleTabClick={{this.setAuthType}}
                   @selectedAuthMethod={{this.selectedAuthMethod}}
                 />
               {{/if}}
             {{else}}
-              {{! fallback view is the dropdown with all auth methods }}
-              <Hds::Form::Select::Field
-                name="selectedAuthMethod"
-                {{on "input" this.setTypeFromDropdown}}
-                data-test-select="auth type"
-                as |F|
-              >
-                <F.Label class="has-top-margin-m">Auth method</F.Label>
-                <F.Options>
-                  {{#each this.availableMethodTypes as |type|}}
-                    <option selected={{eq this.selectedAuthMethod type}} value={{type}}>
-                      {{this.displayName type}}
-                    </option>
-                  {{/each}}
-                </F.Options>
-              </Hds::Form::Select::Field>
+              {{#if @loginSettings.backupTypes}}
+                <Auth::Tabs
+                  @authTabData={{this.backupMethodTabs}}
+                  @handleTabClick={{this.setAuthType}}
+                  @selectedAuthMethod={{this.selectedAuthMethod}}
+                />
+              {{else}}
+                {{! fallback view is the dropdown with all auth methods }}
+                <Hds::Form::Select::Field
+                  name="selectedAuthMethod"
+                  {{on "input" this.setTypeFromDropdown}}
+                  data-test-select="auth type"
+                  as |F|
+                >
+                  <F.Label class="has-top-margin-m">Auth method</F.Label>
+                  <F.Options>
+                    {{#each this.availableMethodTypes as |type|}}
+                      <option selected={{eq this.selectedAuthMethod type}} value={{type}}>
+                        {{this.displayName type}}
+                      </option>
+                    {{/each}}
+                  </F.Options>
+                </Hds::Form::Select::Field>
+              {{/if}}
             {{/if}}
           </div>
         </:authSelectOptions>
@@ -88,8 +136,7 @@
         </:error>
 
         <:advancedSettings>
-          {{! custom auth options render their own mount path inputs and token does not support custom paths }}
-          {{#if (and (not this.showCustomAuthOptions) (not-eq this.selectedAuthMethod "token"))}}
+          {{#if this.showAdvancedSettings}}
             <Hds::Reveal @text="Advanced settings" data-test-auth-form-options-toggle class="is-fullwidth">
               <Hds::Form::TextInput::Field name="path" data-test-input="path" as |F|>
                 <F.Label class="has-top-margin-m">Mount path</F.Label>
@@ -104,7 +151,7 @@
         </:advancedSettings>
 
         <:footer>
-          {{#if this.showCustomAuthOptions}}
+          {{#if (and this.showCustomAuthOptions this.canToggleViews)}}
             <Hds::Button
               {{on "click" this.toggleView}}
               @color="tertiary"

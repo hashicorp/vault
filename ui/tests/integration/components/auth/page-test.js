@@ -144,7 +144,7 @@ module('Integration | Component | auth | page', function (hooks) {
     test('it renders single mount view instead of tabs if @directLinkData data references a visible type', async function (assert) {
       this.directLinkData = { path: 'my-oidc/', type: 'oidc', hasMountData: true };
       await this.renderComponent();
-      assert.dom(AUTH_FORM.preferredMethod('OIDC')).hasText('OIDC', 'it renders mount type');
+      assert.dom(AUTH_FORM.preferredMethod('oidc')).hasText('OIDC', 'it renders mount type');
       assert.dom(GENERAL.inputByAttr('role')).exists();
       assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
       assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');

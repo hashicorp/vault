@@ -103,8 +103,8 @@ module('Acceptance | auth login form', function (hooks) {
 
     test('it renders preferred mount view if "with" query param is a mount path with listing_visibility="unauth"', async function (assert) {
       await visit('/vault/auth?with=my-oidc%2F');
-      await waitFor(AUTH_FORM.preferredMethod('OIDC'));
-      assert.dom(AUTH_FORM.preferredMethod('OIDC')).hasText('OIDC', 'it renders mount type');
+      await waitFor(AUTH_FORM.preferredMethod('oidc'));
+      assert.dom(AUTH_FORM.preferredMethod('oidc')).hasText('OIDC', 'it renders mount type');
       assert.dom(GENERAL.inputByAttr('role')).exists();
       assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
       assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
@@ -122,7 +122,7 @@ module('Acceptance | auth login form', function (hooks) {
       assert
         .dom(AUTH_FORM.tabBtn('oidc'))
         .hasAttribute('aria-selected', 'true', 'it selects tab matching query param');
-      assert.dom(AUTH_FORM.preferredMethod('OIDC')).doesNotExist('it does not render single mount view');
+      assert.dom(AUTH_FORM.preferredMethod('oidc')).doesNotExist('it does not render single mount view');
       assert.dom(GENERAL.backButton).doesNotExist();
     });
 

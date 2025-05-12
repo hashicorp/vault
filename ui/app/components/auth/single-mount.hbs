@@ -4,7 +4,7 @@
 }}
 
 {{#if @type}}
-  <Hds::Text::Body @tag="p" @weight="semibold" data-test-auth-method={{@type}}>{{@type}}</Hds::Text::Body>
+  <Hds::Text::Body @tag="p" @weight="semibold" data-test-auth-method={{@type}}>{{auth-display-name @type}}</Hds::Text::Body>
 {{/if}}
 {{#if @description}}
   <Hds::Text::Body @tag="p" @color="faint">{{@description}} data-test-description</Hds::Text::Body>

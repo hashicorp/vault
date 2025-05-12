@@ -5,7 +5,7 @@
 
 export interface AuthTabData {
   // key is the auth method type
-  [key: string]: AuthTabMountData[];
+  [key: string]: AuthTabMountData[] | null;
 }
 
 export interface AuthTabMountData {
