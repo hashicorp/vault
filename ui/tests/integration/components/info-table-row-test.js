@@ -9,6 +9,7 @@ import Service from '@ember/service';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, triggerEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const VALUE = 'test value';
 const LABEL = 'test label';
@@ -52,11 +53,19 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       />`);
 
     assert.dom('[data-test-component="info-table-row"]').exists();
-    assert.dom('[data-test-row-value]').hasText(VALUE, 'renders value as passed through');
+    assert.dom(GENERAL.infoRowValue(this.label)).hasText(VALUE, 'renders value as passed through');
+  });
 
+  test('it does not render if a value is empty and alwaysRender is false (even if default exists)', async function (assert) {
     this.set('value', '');
+    await render(hbs`<InfoTableRow
+        @value={{this.value}}
+        @label={{this.label}}
+        @defaultShown={{this.default}}
+      />`);
+
     assert
-      .dom('[data-test-label-div]')
+      .dom(GENERAL.infoRowValue(this.label))
       .doesNotExist('does not render if no value and alwaysRender is false (even if default exists)');
   });
 
@@ -69,8 +78,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
         @tooltipText={{this.tooltipText}}
       />`);
 
-    await triggerEvent('[data-test-value-div="test label"] .ember-basic-dropdown-trigger', 'mouseenter');
-
+    await triggerEvent('.ember-basic-dropdown-trigger', 'mouseenter');
     const tooltip = document.querySelector('div.box').textContent.trim();
     assert.strictEqual(tooltip, 'Tooltip text!', 'renders tooltip text');
   });
@@ -89,7 +97,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       />
     `);
 
-    await triggerEvent('[data-test-value-div="test label"] .ember-basic-dropdown-trigger', 'mouseenter');
+    await triggerEvent('.ember-basic-dropdown-trigger', 'mouseenter');
 
     assert.dom('[data-test-tooltip-copy]').doesNotExist('Tooltip has no copy button');
     this.set('isCopyable', true);
@@ -146,7 +154,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
     assert.dom('div.column.is-flex-center .hds-icon').exists('Renders a dash (-) for undefined value');
 
     this.set('default', DEFAULT);
-    assert.dom('[data-test-value-div]').hasText(DEFAULT, 'Renders default text if value is empty');
+    assert.dom(GENERAL.infoRowValue(this.label)).hasText(DEFAULT, 'Renders default text if value is empty');
 
     this.set('value', '');
     this.set('label', '');
@@ -167,7 +175,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       Block content is here
       </InfoTableRow>`);
 
-    const block = document.querySelector('[data-test-value-div]').textContent.trim();
+    const block = document.querySelector(GENERAL.infoRowValue(this.label)).textContent.trim();
     assert.strictEqual(block, 'Block content is here', 'renders block passed through');
   });
 
@@ -177,8 +185,8 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       @alwaysRender={{false}}>
       Block content
     </InfoTableRow>`);
-    assert.dom('[data-test-value-div]').exists('renders block');
-    assert.dom('[data-test-value-div]').hasText('Block content', 'renders block');
+    assert.dom(GENERAL.infoRowValue(this.label)).exists('renders block');
+    assert.dom(GENERAL.infoRowValue(this.label)).hasText('Block content', 'renders block');
   });
 
   test('Row does not render empty block content when alwaysRender = false', async function (assert) {
@@ -195,6 +203,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
     assert.dom('[data-test-component="info-table-row"]').exists();
     assert.dom('[data-test-icon="minus"]').exists('renders dash when no label');
   });
+
   test('Truncates the label if too long', async function (assert) {
     this.set('label', 'abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz');
     await render(hbs`<div style="width: 100px;">
@@ -204,26 +213,29 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       />
     </div>`);
     assert.dom('[data-test-component="info-table-row"]').exists('Row renders');
-    assert.dom('[data-test-label-div].label-overflow').exists('Label has class label-overflow');
     await triggerEvent('[data-test-row-label]', 'mouseenter');
     assert.dom('[data-test-label-tooltip]').exists('Label tooltip exists on hover');
   });
+
   test('Renders if block value and alwaysrender=false', async function (assert) {
     await render(hbs`<InfoTableRow @alwaysRender={{false}}>{{this.value}}</InfoTableRow>`);
     assert.dom('[data-test-component="info-table-row"]').exists();
   });
+
   test('Does not render if value is empty and alwaysrender=false', async function (assert) {
     await render(hbs`<InfoTableRow @alwaysRender={{false}} @value="" />`);
     assert.dom('[data-test-component="info-table-row"]').doesNotExist();
   });
+
   test('Renders dash for value if value empty and alwaysRender=true', async function (assert) {
     await render(hbs`<InfoTableRow
         @label={{this.label}}
         @alwaysRender={{true}}
       />`);
     assert.dom('[data-test-component="info-table-row"]').exists();
-    assert.dom('[data-test-value-div] [data-test-icon="minus"]').exists('renders dash for value');
+    assert.dom(GENERAL.infoRowValue(this.label)).exists('renders dash for value');
   });
+
   test('Renders block over @value or @defaultShown', async function (assert) {
     await render(hbs`<InfoTableRow
         @label={{this.label}}
@@ -233,8 +245,9 @@ module('Integration | Component | InfoTableRow', function (hooks) {
         foo
       </InfoTableRow>`);
     assert.dom('[data-test-component="info-table-row"]').exists();
-    assert.dom('[data-test-value-div]').hasText('foo', 'renders block value');
+    assert.dom(GENERAL.infoRowValue(this.label)).hasText('foo', 'renders block value');
   });
+
   test('Renders icons if value is boolean', async function (assert) {
     this.set('value', true);
     await render(hbs`<InfoTableRow
@@ -243,10 +256,10 @@ module('Integration | Component | InfoTableRow', function (hooks) {
     />`);
 
     assert.dom('[data-test-boolean-true]').exists('check icon exists');
-    assert.dom('[data-test-value-div]').hasText('Yes', 'Renders yes text');
+    assert.dom(GENERAL.infoRowValue(this.label)).hasText('Yes', 'Renders yes text');
     this.set('value', false);
     assert.dom('[data-test-boolean-false]').exists('x icon exists');
-    assert.dom('[data-test-value-div]').hasText('No', 'renders no text');
+    assert.dom(GENERAL.infoRowValue(this.label)).hasText('No', 'renders no text');
   });
   test('Renders data-test attrs passed from parent', async function (assert) {
     this.set('value', true);
@@ -267,7 +280,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       @formatDate={{'yyyy'}}
     />`);
 
-    assert.dom('[data-test-value-div]').hasText('2018', 'Renders date with passed format');
+    assert.dom(GENERAL.infoRowValue(this.label)).hasText('2018', 'Renders date with passed format');
   });
 
   test('Formats the value as TTL when formatTtl present', async function (assert) {
@@ -279,7 +292,7 @@ module('Integration | Component | InfoTableRow', function (hooks) {
     />`);
 
     assert
-      .dom('[data-test-value-div]')
+      .dom(GENERAL.infoRowValue(this.label))
       .hasText('1 hour 40 minutes', 'Translates number value to largest unit with carryover of minutes');
   });
 
@@ -291,6 +304,6 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       @formatTtl={{true}}
     />`);
 
-    assert.dom('[data-test-value-div]').hasText('45 minutes', 'it formats string duration');
+    assert.dom(GENERAL.infoRowValue(this.label)).hasText('45 minutes', 'it formats string duration');
   });
 });

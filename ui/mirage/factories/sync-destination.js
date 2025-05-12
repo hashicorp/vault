@@ -5,6 +5,15 @@
 
 import { Factory, trait } from 'miragejs';
 
+const options = {
+  granularity: 'secret-path', // default varies per destination, but setting all as secret-path so edit test loop updates each to 'secret-key'
+  secret_name_template: 'vault/{{ .MountAccessor }}/{{ .SecretPath }}',
+};
+const optionsWithTags = {
+  ...options,
+  custom_tags: { foo: 'bar' },
+};
+
 export default Factory.extend({
   ['aws-sm']: trait({
     type: 'aws-sm',
@@ -16,35 +25,28 @@ export default Factory.extend({
     role_arn: 'test-role',
     external_id: 'id12345',
     // options
-    granularity: 'secret-path', // default varies per destination, but setting all as secret-path so edit test loop updates each to 'secret-key'
-    secret_name_template: 'vault-{{ .MountAccessor }}-{{ .SecretPath }}',
-    custom_tags: { foo: 'bar' },
+    ...optionsWithTags,
   }),
   ['azure-kv']: trait({
     type: 'azure-kv',
     name: 'destination-azure',
     // connection_details
     key_vault_uri: 'https://keyvault-1234abcd.vault.azure.net',
-    subscription_id: 'subscription-id',
     tenant_id: 'tenant-id',
     client_id: 'azure-client-id',
     client_secret: '*****',
     cloud: 'Azure Public Cloud',
     // options
-    granularity: 'secret-path',
-    secret_name_template: 'vault-{{ .MountAccessor }}-{{ .SecretPath }}',
-    custom_tags: { foo: 'bar' },
+    ...optionsWithTags,
   }),
   ['gcp-sm']: trait({
     type: 'gcp-sm',
     name: 'destination-gcp',
-    project_id: 'id12345',
     // connection_details
     credentials: '*****',
+    project_id: 'id12345',
     // options
-    granularity: 'secret-path',
-    secret_name_template: 'vault-{{ .MountAccessor }}-{{ .SecretPath }}',
-    custom_tags: { foo: 'bar' },
+    ...optionsWithTags,
   }),
   gh: trait({
     type: 'gh',
@@ -54,8 +56,7 @@ export default Factory.extend({
     repository_owner: 'my-organization-or-username',
     repository_name: 'my-repository',
     // options
-    granularity: 'secret-path',
-    secret_name_template: 'vault-{{ .MountAccessor }}-{{ .SecretPath }}',
+    ...options,
   }),
   ['vercel-project']: trait({
     type: 'vercel-project',
@@ -66,7 +67,6 @@ export default Factory.extend({
     team_id: 'team_12345',
     deployment_environments: ['development', 'preview'], // 'production' is also an option, but left out for testing to assert form changes value
     // options
-    granularity: 'secret-path',
-    secret_name_template: 'vault-{{ .MountAccessor }}-{{ .SecretPath }}',
+    ...options,
   }),
 });
