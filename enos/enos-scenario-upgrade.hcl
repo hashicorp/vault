@@ -322,7 +322,7 @@ scenario "upgrade" {
       packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       release = {
         edition = strcontains(matrix.edition, "fips1403") ? (
-          semverconstraint(var.vault_upgrade_initial_version, ">=1.19.4-0 || >=1.18.10-0,<1.19.0-0 || >=1.17.17-0,<1.18.0-0 || >=1.16.21-0,<1.17.0-0")
+          semverconstraint(var.vault_upgrade_initial_version, "<1.19.4-0,>=1.19.0-0 || <1.18.10-0,>=1.18.0-0 || <1.17.17-0,>=1.17.0-0 || <1.16.21-0")
           ? replace(matrix.edition, "fips1403", "fips1402")
           : matrix.edition
         ) : matrix.edition
