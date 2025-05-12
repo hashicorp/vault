@@ -183,7 +183,7 @@ module('Integration | Component | auth | form template', function (hooks) {
     test('it renders the mount description', async function (assert) {
       await this.renderComponent();
       await click(AUTH_FORM.tabBtn('token'));
-      assert.dom('section p').hasText('token based credentials data-test-description');
+      assert.dom('section p').hasText('token based credentials');
     });
 
     test('it renders a dropdown if multiple mount paths are returned', async function (assert) {

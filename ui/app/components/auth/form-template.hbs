@@ -43,14 +43,10 @@
               {{! URL contains "with" query param and it references a visible mount }}
               {{! treat it as a "preferred" mount and hide all other tabs }}
               {{#if @directLinkData.hasMountData}}
-                {{#let @directLinkData as |mount|}}
-                  <Auth::SingleMount
-                    @description={{mount.description}}
-                    @path={{mount.path}}
-                    @shouldRenderPath={{not-eq @selectedAuthMethod "token"}}
-                    @type={{mount.type}}
-                  />
-                {{/let}}
+                <Auth::MountsDisplay
+                  @mounts={{array @directLinkData}}
+                  @shouldRenderPath={{not-eq @selectedAuthMethod "token"}}
+                />
               {{else}}
                 <Auth::Tabs
                   @authTabData={{@visibleMountsByType}}
