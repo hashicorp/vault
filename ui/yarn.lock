@@ -14395,13 +14395,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"normalize.css@npm:4.1.1":
-  version: 4.1.1
-  resolution: "normalize.css@npm:4.1.1"
-  checksum: 48500b12c63141286b637a0ed771d23e95872469eb9726171aea4fa90c9e9fe97870ee52c81dc42ef391733423bf0887dc0fdadae0e5f6020b6eb04e60ffcd68
-  languageName: node
-  linkType: hard
-
 "npm-package-arg@npm:^10.1.0":
   version: 10.1.0
   resolution: "npm-package-arg@npm:10.1.0"
@@ -18707,7 +18700,6 @@ __metadata:
     loader.js: ~4.7.0
     miragejs: ~0.1.48
     node-notifier: 8.0.2
-    normalize.css: 4.1.1
     pkijs: ~2.4.0
     prettier: 3.0.3
     prettier-eslint-cli: ~7.1.0

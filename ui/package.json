@@ -149,7 +149,6 @@
     "lint-staged": "~16.0.0",
     "loader.js": "~4.7.0",
     "miragejs": "~0.1.48",
-    "normalize.css": "4.1.1",
     "pkijs": "~2.4.0",
     "prettier": "3.0.3",
     "prettier-eslint-cli": "~7.1.0",
