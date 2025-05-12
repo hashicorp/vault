@@ -1,0 +1,3 @@
+```release-note:change
+Update vault-plugin-auth-cf to v0.20.1
+```
