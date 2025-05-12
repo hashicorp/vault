@@ -43,7 +43,7 @@ import type { HTMLElementEvent } from 'vault/forms';
 interface Args {
   canceledMfaAuth: string;
   cluster: ClusterModel;
-  directLinkData: (AuthTabMountData & { hasMountData: boolean }) | null;
+  directLinkData: (AuthTabMountData & { isVisibleMount: boolean }) | null;
   handleNamespaceUpdate: CallableFunction;
   namespaceQueryParam: string;
   oidcProviderQueryParam: string;
@@ -106,7 +106,7 @@ export default class AuthFormTemplate extends Component<Args> {
   // This getter determines whether to render an alternative view (e.g., tabs or a preferred mount).
   // If `true`, the "Sign in with other methods →" link is shown.
   get showCustomAuthOptions() {
-    const hasLoginCustomization = this.args?.directLinkData?.hasMountData || this.args.visibleMountsByType;
+    const hasLoginCustomization = this.args?.directLinkData?.isVisibleMount || this.args.visibleMountsByType;
     // Show if customization exists and the user has NOT clicked "Sign in with other methods →"
     return hasLoginCustomization && !this.showOtherMethods;
   }
