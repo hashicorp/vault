@@ -1072,6 +1072,10 @@
                 "path": "internals/telemetry/metrics/storage"
               },
               {
+                "title": "Activity metrics",
+                "path": "internals/telemetry/metrics/activity"
+              },
+              {
                 "title": "Full metrics list",
                 "path": "internals/telemetry/metrics/all"
               }
