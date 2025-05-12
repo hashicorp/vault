@@ -1055,6 +1055,8 @@ func TestLogical_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T) {
 	}
 }
 
+// TestLogical_SnapshotParams checks that a request is converted into a logical
+// request correctly when it contains snapshot query parameters
 func TestLogical_SnapshotParams(t *testing.T) {
 	core, _, rootToken := vault.TestCoreUnsealed(t)
 	testCases := []struct {
