@@ -5,7 +5,6 @@
 
 import { computed } from '@ember/object';
 import Mixin from '@ember/object/mixin';
-import escapeStringRegexp from 'escape-string-regexp';
 import commonPrefix from 'core/utils/common-prefix';
 
 export default Mixin.create({
@@ -26,9 +25,17 @@ export default Mixin.create({
     return !!(content.length && content.find((c) => c.id === filter));
   }),
 
+  _escapeRegExp(string) {
+    // replaces the old use of: import escapeStringRegexp from 'escape-string-regexp';
+    // uses String.prototype.replace()
+    // The \\$& in the replace method ensures that each special character is preceded by a backslash
+    if (typeof string !== 'string') return '';
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  },
+
   firstPartialMatch: computed('filter', 'model', 'model.[]', 'filterMatchesKey', function () {
     const { filter, filterMatchesKey, model: content } = this;
-    const re = new RegExp('^' + escapeStringRegexp(filter));
+    const re = new RegExp('^' + this._escapeRegExp(filter));
     const matchSet = content.filter((key) => re.test(key.id));
     const match = matchSet[0];
 

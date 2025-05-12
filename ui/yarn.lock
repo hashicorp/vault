@@ -9488,7 +9488,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"escape-string-regexp@npm:^2.0.0, escape-string-regexp@npm:~2.0.0":
+"escape-string-regexp@npm:^2.0.0":
   version: 2.0.0
   resolution: "escape-string-regexp@npm:2.0.0"
   checksum: 9f8a2d5743677c16e85c810e3024d54f0c8dea6424fad3c79ef6666e81dd0846f7437f5e729dfcdac8981bc9e5294c39b4580814d114076b8d36318f46ae4395
@@ -18688,7 +18688,6 @@ __metadata:
     ember-test-selectors: 7.1.0
     ember-tether: 3.0.0
     ember-truth-helpers: 3.0.0
-    escape-string-regexp: ~2.0.0
     eslint: ~8.57.1
     eslint-config-prettier: ~9.1.0
     eslint-plugin-compat: ~4.2.0
