@@ -7,9 +7,9 @@ import { module, test } from 'qunit';
 import { create } from 'ember-cli-page-object';
 import { v4 as uuidv4 } from 'uuid';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, fillIn, waitFor } from '@ember/test-helpers';
-import authPage from 'vault/tests/pages/auth';
-import enablePage from 'vault/tests/pages/settings/auth/enable';
+import { click, fillIn, visit, waitFor } from '@ember/test-helpers';
+import { login, loginMethod } from 'vault/tests/helpers/auth/auth-helpers';
+import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
@@ -19,7 +19,8 @@ const PASSWORD = 'mypassword';
 const POLICY_NAME = 'identity_policy';
 
 const writePolicy = async function (path) {
-  await enablePage.enable('userpass', path);
+  await visit('/vault/settings/auth/enable');
+  await mountBackend('userpass', path);
   const identityPolicy = `path "identity/*" {
     capabilities = ["create", "read", "update", "delete", "list"]
   }`;
@@ -46,10 +47,12 @@ module('Acceptance | mfa-setup', function (hooks) {
 
   hooks.beforeEach(async function () {
     const path = `userpass-${uuidv4()}`;
-    await authPage.login();
+    await login();
     await setupUser(path);
-    await authPage.logout();
-    await authPage.loginUsername(USER, PASSWORD, path);
+    await loginMethod(
+      { username: USER, password: PASSWORD, path },
+      { authType: 'userpass', toggleOptions: true }
+    );
     await click('[data-test-user-menu-trigger]');
     await click('[data-test-user-menu-item="mfa"]');
   });

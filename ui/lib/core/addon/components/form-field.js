@@ -12,6 +12,7 @@ import { dasherize } from 'vault/helpers/dasherize';
 import { assert } from '@ember/debug';
 import { addToArray } from 'vault/helpers/add-to-array';
 import { removeFromArray } from 'vault/helpers/remove-from-array';
+import { isEmpty } from '@ember/utils';
 
 /**
  * @module FormField
@@ -67,6 +68,8 @@ export default class FormFieldComponent extends Component {
   ];
   @tracked showToggleTextInput = false;
   @tracked toggleInputEnabled = false;
+
+  radioValue = (item) => (isEmpty(item.value) ? item : item.value);
 
   constructor() {
     super(...arguments);

@@ -7,7 +7,6 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import apiErrorMessage from 'vault/utils/api-error-message';
 import { addSeconds } from 'date-fns';
 
 import type ApiService from 'vault/services/api';
@@ -56,8 +55,9 @@ export default class ToolsLookup extends Component {
       const data = await this.api.sys.readWrappingProperties(payload);
       this.lookupData = data;
       this.flashMessages.success('Lookup was successful.');
-    } catch (error) {
-      this.errorMessage = await apiErrorMessage(error);
+    } catch (e) {
+      const { message } = await this.api.parseError(e);
+      this.errorMessage = message;
     }
   }
 }

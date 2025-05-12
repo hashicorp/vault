@@ -258,6 +258,145 @@ information will be returned for all months in the queried period, except for th
 current month. The last element in the `months` response stanza will signify the current month. Furthermore, the
 `new_clients` counts returned for the current month will be an estimate.
 
+### Behavior Differences between Vault Enterprise and Vault Community ((#count-difference))
+
+The `start_time` and `end_time` request parameters behave differently between
+Vault Enterprise and Vault Community edition.
+
+In Vault Enterprise edition, the time parameters must align with the entire default
+billing period of 12 months. In Vault Community edition, the Get Client Count endpoint  
+supports flexible historical time ranges, but excludes the current month and any
+future dates. 
+
+
+<Tabs>
+
+<Tab heading="Vault Enterprise">
+
+In Vault Enterprise, the Get Client Count endpoint adjusts `start_time` and
+`end_time` to align with the start and end of the corresponding billing period.
+
+- The endpoint only returns data for an entire billing period.
+- By default, the endpoint returns activity data from the start of the current 
+  billing period up to the time you call the endpoint.
+- If you provide a start time outside the current billing period, Vault
+  aligns the query to the full default billing period associated with the
+  provided start time.
+- If you provide an end time, but no start time, Vault aligns the query to the
+  full default billing period associated with the provided end time.
+- If you provide start and end times from different billing periods:
+   - Vault adjusts `start_time` to the start of the associated billing period.
+   - Vault adjusts `end_time` to the end of the billing period associated with `start_time`.
+   - The endpoint returns the associated counts and the following warning:
+
+   ```json
+   {
+      "warning": "start_time and end_time parameters can only be used to specify the beginning or end of the same billing period. The values provided for these parameters are not supported and are ignored. Showing the data for the entire billing period corresponding to start_time. If start_time is not provided, the billing period is determined based on the end_time."
+   }
+   ```
+
+For example, assume the start of the billing period is January 1, 2023 and
+current date is December 31, 2025 and you make the following API call:
+
+```shell-session
+$ curl \
+   --header "X-Vault-Token: ..." \
+   --request GET \
+   http://127.0.0.1:8200/v1/sys/internal/counters/activity?end_time=2023-12-31T00%3A00%3A00Z&start_time=2023-03-01T00%3A00%3A00Z
+```
+
+If `start_time` or `end_time` falls within the billing period or overlaps multiple billing periods, Vault returns the following::
+
+<CodeBlockConfig hideClipboard>
+
+```json
+{
+   "request_id":"26be5ab9-dcac-9237-ec12-269a8ca647d5",
+   "lease_id":"",
+   "renewable":false,
+   "lease_duration":0,
+   "data":{
+      "start_time":"2023-01-01T00:00:00Z",
+      "end_time":"2023-12-31T23:59:59Z",
+      "total":{
+         "entity_clients":20,
+         "non_entity_clients":20,
+         "secret_syncs":5,
+         "acme_clients":3,
+         "clients":48
+      }
+   },
+   "wrap_info":null,
+   "warnings":"start_time and end_time parameters can only be used to specify the beginning or end of the same billing period. The values provided for these parameters are not supported and are ignored. Showing the data for the entire billing period corresponding to start_time. If start_time is not provided, the billing period is determined based on the end_time.",
+   "auth":null
+}
+```
+
+</CodeBlockConfig>
+
+</Tab>
+
+<Tab heading="Vault Community">
+
+In Vault Community edition, the Get Client Count endpoint supports arbitrary
+historical time ranges. The default range for Get Client Count is the start of
+the current cycle through the end of the previous month.
+
+When `end_time` falls in the current month or a future month, Vault adjusts the query
+end time to the last day of the previous month and includes the following
+warning along with the associated counts:
+
+      ```json
+      {
+         "warning": "end_time parameter can only be used to specify a date until the end of previous month. The value provided for this parameter was in the current month or in the future date and was therefore ignored. The response includes data until the end of the previous month."
+      }
+      ```
+
+For example, assume the current date is September 25, 2025  and you call the
+Get Client Count endpoint with `end_time` set to `2025-10-01`:
+
+```shell-session
+$ curl \
+   --header "X-Vault-Token: ..." \
+   --request GET \
+   http://127.0.0.1:8200/v1/sys/internal/counters/activity?end_time=2025-10-01T00%3A00%3A00Z&start_time=2025-01-01T00%3A00%3A00Z
+```
+
+Vault adjusts `end_time` to the last day in the previous month (August 31, 2025) and returns the following:
+
+<CodeBlockConfig hideClipboard>
+
+   ```json
+{
+   "request_id":"26be5ab9-dcac-9237-ec12-269a8ca647d5",
+   "lease_id":"",
+   "renewable":false,
+   "lease_duration":0,
+   "data":{
+      "start_time":"2025-01-01T00:00:00Z",
+      "end_time":"2025-08-31T23:59:59Z",
+      "total":{
+         "entity_clients":20,
+         "non_entity_clients":20,
+         "secret_syncs":5,
+         "acme_clients":3,
+         "clients":48
+      }
+   },
+   "wrap_info":null,
+   "warnings":"end_time parameter can only be used to specify a date until the end of previous month. The value provided for this parameter was in the current month or in the future date and was therefore ignored. The response includes data until the end of the previous month.",
+   "auth":null
+}
+```
+
+</CodeBlockConfig>
+
+</Tab>
+
+</Tabs>
+
+### Sample response
+
 The following is an example of the `months` breakdown with just the current month information.
 
 @include 'auto-roll-billing-start-example.mdx'

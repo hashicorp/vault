@@ -17,7 +17,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import listPage from 'vault/tests/pages/secrets/backend/list';
 import editPage from 'vault/tests/pages/secrets/backend/ssh/edit-role';
@@ -35,7 +35,7 @@ module('Acceptance | ssh | roles', function (hooks) {
 
   hooks.beforeEach(function () {
     this.uid = uuidv4();
-    return authPage.login();
+    return login();
   });
 
   const PUB_KEY = `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCn9p5dHNr4aU4R2W7ln+efzO5N2Cdv/SXk6zbCcvhWcblWMjkXf802B0PbKvf6cJIzM/Xalb3qz1cK+UUjCSEAQWefk6YmfzbOikfc5EHaSKUqDdE+HlsGPvl42rjCr28qYfuYh031YfwEQGEAIEypo7OyAj+38NLbHAQxDxuaReee1YCOV5rqWGtEgl2VtP5kG+QEBza4ZfeglS85f/GGTvZC4Jq1GX+wgmFxIPnd6/mUXa4ecoR0QMfOAzzvPm4ajcNCQORfHLQKAcmiBYMiyQJoU+fYpi9CJGT1jWTmR99yBkrSg6yitI2qqXyrpwAbhNGrM0Fw0WpWxh66N9Xp meirish@Macintosh-3.local`;
@@ -72,12 +72,10 @@ module('Acceptance | ssh | roles', function (hooks) {
           `/vault/secrets/${sshPath}/sign/${this.name}`,
           'ca sign url is correct'
         );
-        assert.dom('[data-test-row-label="Signed key"]').exists({ count: 1 }, 'renders the signed key');
-        assert
-          .dom('[data-test-row-value="Signed key"]')
-          .exists({ count: 1 }, "renders the signed key's value");
-        assert.dom('[data-test-row-label="Serial number"]').exists({ count: 1 }, 'renders the serial');
-        assert.dom('[data-test-row-value="Serial number"]').exists({ count: 1 }, 'renders the serial value');
+        assert.dom(GENERAL.infoRowLabel('Signed key')).exists({ count: 1 }, 'renders the signed key');
+        assert.dom(GENERAL.infoRowValue('Signed key')).exists("renders the signed key's value");
+        assert.dom(GENERAL.infoRowLabel('Serial number')).exists({ count: 1 }, 'renders the serial');
+        assert.dom(GENERAL.infoRowValue('Serial number')).exists('renders the serial value');
       },
     },
     {
@@ -102,7 +100,7 @@ module('Acceptance | ssh | roles', function (hooks) {
         assert.dom(GENERAL.infoRowLabel('Key')).exists({ count: 1 }, 'renders the key');
         assert.dom('[data-test-masked-input]').exists({ count: 1 }, 'renders mask for key value');
         assert.dom(GENERAL.infoRowLabel('Port')).exists({ count: 1 }, 'renders the port');
-        assert.dom('[data-test-row-value="Port"]').exists({ count: 1 }, "renders the port's value");
+        assert.dom(GENERAL.infoRowValue('Port')).exists("renders the port's value");
       },
     },
   ];
@@ -120,7 +118,7 @@ module('Acceptance | ssh | roles', function (hooks) {
     await click(GENERAL.tab(sshPath));
     for (const role of ROLES) {
       // create a role
-      await click(SES.createSecret);
+      await click(SES.createSecretLink);
       assert.dom(SES.secretHeader).includesText('SSH Role', `${role.type}: renders the create page`);
 
       await fillIn(GENERAL.inputByAttr('name'), role.name);

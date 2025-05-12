@@ -43,6 +43,7 @@ import type {
   GenerateRandomWithSourceAndBytesResponse,
   GenerateRandomWithSourceRequest,
   GenerateRandomWithSourceResponse,
+  GenerateUtilizationReportResponse,
   HaStatusResponse,
   InitializeRequest,
   InternalClientActivityConfigureRequest,
@@ -231,7 +232,7 @@ import type {
   SystemWriteSyncGithubAppsNameResponse,
   SystemWriteUtilizationRequest,
   SystemWriteUtilizationResponse,
-  UiConfigDeleteCustomMessageResponse,
+  UiConfigListCustomMessagesResponse,
   UiConfigReadCustomMessageResponse,
   UiConfigUpdateCustomMessageRequest,
   UiConfigUpdateCustomMessageResponse,
@@ -303,6 +304,8 @@ import {
     GenerateRandomWithSourceRequestToJSON,
     GenerateRandomWithSourceResponseFromJSON,
     GenerateRandomWithSourceResponseToJSON,
+    GenerateUtilizationReportResponseFromJSON,
+    GenerateUtilizationReportResponseToJSON,
     HaStatusResponseFromJSON,
     HaStatusResponseToJSON,
     InitializeRequestFromJSON,
@@ -679,8 +682,8 @@ import {
     SystemWriteUtilizationRequestToJSON,
     SystemWriteUtilizationResponseFromJSON,
     SystemWriteUtilizationResponseToJSON,
-    UiConfigDeleteCustomMessageResponseFromJSON,
-    UiConfigDeleteCustomMessageResponseToJSON,
+    UiConfigListCustomMessagesResponseFromJSON,
+    UiConfigListCustomMessagesResponseToJSON,
     UiConfigReadCustomMessageResponseFromJSON,
     UiConfigReadCustomMessageResponseToJSON,
     UiConfigUpdateCustomMessageRequestFromJSON,
@@ -1684,6 +1687,9 @@ export interface SystemApiUiConfigDeleteCustomMessageRequest {
 
 export interface SystemApiUiConfigListCustomMessagesRequest {
     list: UiConfigListCustomMessagesListEnum;
+    active?: boolean;
+    authenticated?: boolean;
+    type?: string;
 }
 
 export interface SystemApiUiConfigReadCustomMessageRequest {
@@ -2872,6 +2878,30 @@ export class SystemApi extends runtime.BaseAPI {
      */
     async generateRandomWithSourceAndBytes(source: string, urlbytes: string, generateRandomWithSourceAndBytesRequest: GenerateRandomWithSourceAndBytesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GenerateRandomWithSourceAndBytesResponse> {
         const response = await this.generateRandomWithSourceAndBytesRaw({ source: source, urlbytes: urlbytes, generateRandomWithSourceAndBytesRequest: generateRandomWithSourceAndBytesRequest }, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     */
+    async generateUtilizationReportRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GenerateUtilizationReportResponse>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/sys/utilization-report`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => GenerateUtilizationReportResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async generateUtilizationReport(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GenerateUtilizationReportResponse> {
+        const response = await this.generateUtilizationReportRaw(initOverrides);
         return await response.value();
     }
 
@@ -9933,30 +9963,6 @@ export class SystemApi extends runtime.BaseAPI {
     }
 
     /**
-     */
-    async systemReadUtilizationReportRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>> {
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        const response = await this.request({
-            path: `/sys/utilization-report`,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.VoidApiResponse(response);
-    }
-
-    /**
-     */
-    async systemReadUtilizationReport(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse> {
-        const response = await this.systemReadUtilizationReportRaw(initOverrides);
-        return await response.value();
-    }
-
-    /**
      * Configure control group global settings.
      */
     async systemWriteConfigControlGroupRaw(requestParameters: SystemApiSystemWriteConfigControlGroupOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>> {
@@ -12505,7 +12511,7 @@ export class SystemApi extends runtime.BaseAPI {
     /**
      * Delete custom message
      */
-    async uiConfigDeleteCustomMessageRaw(requestParameters: SystemApiUiConfigDeleteCustomMessageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UiConfigDeleteCustomMessageResponse>> {
+    async uiConfigDeleteCustomMessageRaw(requestParameters: SystemApiUiConfigDeleteCustomMessageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -12524,13 +12530,13 @@ export class SystemApi extends runtime.BaseAPI {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => UiConfigDeleteCustomMessageResponseFromJSON(jsonValue));
+        return new runtime.VoidApiResponse(response);
     }
 
     /**
      * Delete custom message
      */
-    async uiConfigDeleteCustomMessage(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UiConfigDeleteCustomMessageResponse> {
+    async uiConfigDeleteCustomMessage(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse> {
         const response = await this.uiConfigDeleteCustomMessageRaw({ id: id }, initOverrides);
         return await response.value();
     }
@@ -12538,7 +12544,7 @@ export class SystemApi extends runtime.BaseAPI {
     /**
      * Lists custom messages
      */
-    async uiConfigListCustomMessagesRaw(requestParameters: SystemApiUiConfigListCustomMessagesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>> {
+    async uiConfigListCustomMessagesRaw(requestParameters: SystemApiUiConfigListCustomMessagesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UiConfigListCustomMessagesResponse>> {
         if (requestParameters['list'] == null) {
             throw new runtime.RequiredError(
                 'list',
@@ -12548,8 +12554,20 @@ export class SystemApi extends runtime.BaseAPI {
 
         const queryParameters: any = {};
 
+        if (requestParameters['active'] != null) {
+            queryParameters['active'] = requestParameters['active'];
+        }
+
+        if (requestParameters['authenticated'] != null) {
+            queryParameters['authenticated'] = requestParameters['authenticated'];
+        }
+
         if (requestParameters['list'] != null) {
             queryParameters['list'] = requestParameters['list'];
+        }
+
+        if (requestParameters['type'] != null) {
+            queryParameters['type'] = requestParameters['type'];
         }
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -12561,14 +12579,14 @@ export class SystemApi extends runtime.BaseAPI {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.VoidApiResponse(response);
+        return new runtime.JSONApiResponse(response, (jsonValue) => UiConfigListCustomMessagesResponseFromJSON(jsonValue));
     }
 
     /**
      * Lists custom messages
      */
-    async uiConfigListCustomMessages(list: UiConfigListCustomMessagesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse> {
-        const response = await this.uiConfigListCustomMessagesRaw({ list: list }, initOverrides);
+    async uiConfigListCustomMessages(list: UiConfigListCustomMessagesListEnum, active?: boolean, authenticated?: boolean, type?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UiConfigListCustomMessagesResponse> {
+        const response = await this.uiConfigListCustomMessagesRaw({ list: list, active: active, authenticated: authenticated, type: type }, initOverrides);
         return await response.value();
     }
 

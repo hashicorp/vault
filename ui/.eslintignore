@@ -4,6 +4,7 @@
 # compiled output
 /dist/
 /tmp/
+/vault-reporting/
 
 # dependencies
 /bower_components/

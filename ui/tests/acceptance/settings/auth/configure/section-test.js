@@ -14,7 +14,7 @@ import enablePage from 'vault/tests/pages/settings/auth/enable';
 import page from 'vault/tests/pages/settings/auth/configure/section';
 import indexPage from 'vault/tests/pages/settings/auth/configure/index';
 import consolePanel from 'vault/tests/pages/components/console/ui-panel';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 
 const cli = create(consolePanel);
 
@@ -24,7 +24,7 @@ module('Acceptance | settings/auth/configure/section', function (hooks) {
 
   hooks.beforeEach(function () {
     this.uid = uuidv4();
-    return authPage.login();
+    return login();
   });
 
   test('it can save options', async function (assert) {

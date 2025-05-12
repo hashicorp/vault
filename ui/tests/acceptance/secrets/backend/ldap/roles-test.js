@@ -9,7 +9,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { v4 as uuidv4 } from 'uuid';
 import ldapMirageScenario from 'vault/mirage/scenarios/ldap';
 import ldapHandlers from 'vault/mirage/handlers/ldap';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { click, fillIn, waitFor } from '@ember/test-helpers';
 import { assertURL, isURL, visitURL } from 'vault/tests/helpers/ldap/ldap-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -24,7 +24,7 @@ module('Acceptance | ldap | roles', function (hooks) {
     ldapHandlers(this.server);
     ldapMirageScenario(this.server);
     this.backend = `ldap-test-${uuidv4()}`;
-    await authPage.login();
+    await login();
     // mount & configure
     await runCmd([
       mountEngineCmd('ldap', this.backend),

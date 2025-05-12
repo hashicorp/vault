@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/license"
@@ -247,13 +248,18 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		}
 	}
 
+	// We need to check SQLConnectionProducer fields separately since they are not top-level Path fields.
+	var sqlFields map[string]any
+	if req.MountType == "database" && strings.HasPrefix(req.Path, "config") {
+		sqlFields = connutil.SQLConnectionProducerFieldNames()
+	}
 	// Build up the data for the route, with the URL taking priority
 	// for the fields over the PUT data.
 	raw := make(map[string]interface{}, len(path.Fields))
 	var ignored []string
 	for k, v := range req.Data {
 		raw[k] = v
-		if !path.TakesArbitraryInput && path.Fields[k] == nil {
+		if !path.TakesArbitraryInput && path.Fields[k] == nil && sqlFields[k] == nil {
 			ignored = append(ignored, k)
 		}
 	}

@@ -7,7 +7,6 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import apiErrorMessage from 'vault/utils/api-error-message';
 
 import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
@@ -42,11 +41,12 @@ export default class ToolsRewrap extends Component {
     const data = { token: this.originalToken.trim() };
 
     try {
-      const { wrap_info } = await this.api.sys.rewrap(data);
-      this.rewrappedToken = wrap_info?.token || '';
+      const { wrapInfo } = await this.api.sys.rewrap(data);
+      this.rewrappedToken = wrapInfo?.token || '';
       this.flashMessages.success('Rewrap was successful.');
     } catch (error) {
-      this.errorMessage = await apiErrorMessage(error);
+      const { message } = await this.api.parseError(error);
+      this.errorMessage = message;
     }
   }
 }

@@ -8,10 +8,11 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { click, visit, fillIn, currentURL, currentRouteName } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 import { syncDestinations } from 'vault/helpers/sync-destinations';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SYNC_DESTINATIONS = syncDestinations();
 
@@ -25,7 +26,7 @@ module('Acceptance | sync | destinations (plural)', function (hooks) {
     this.version.features = ['Secrets Sync'];
     syncScenario(this.server);
     syncHandlers(this.server);
-    return authPage.login();
+    return login();
   });
 
   test('it should create new destination', async function (assert) {
@@ -98,12 +99,12 @@ module('Acceptance | sync | destinations (plural)', function (hooks) {
   test('it should transition to correct routes when performing actions', async function (assert) {
     const routeName = (route) => `vault.cluster.sync.secrets.destinations.destination.${route}`;
     await visit('vault/sync/secrets/destinations');
-    await click(ts.menuTrigger);
-    await click(ts.destinations.list.menu.details);
+    await click(GENERAL.menuTrigger);
+    await click(GENERAL.menuItem('details'));
     assert.strictEqual(currentRouteName(), routeName('details'), 'Navigates to details route');
     await click(ts.breadcrumbLink('Destinations'));
-    await click(ts.menuTrigger);
-    await click(ts.destinations.list.menu.edit);
+    await click(GENERAL.menuTrigger);
+    await click(GENERAL.menuItem('edit'));
     assert.strictEqual(currentRouteName(), routeName('edit'), 'Navigates to edit route');
   });
 });

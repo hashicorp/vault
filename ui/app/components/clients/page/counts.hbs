@@ -2,22 +2,20 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 }}
-
-<Clients::PageHeader
-  @startTimestamp={{@startTimestamp}}
-  @endTimestamp={{@endTimestamp}}
-  @namespace={{@namespace}}
-  @upgradesDuringActivity={{this.upgradesDuringActivity}}
-  @noData={{not @activity.total.clients}}
-/>
+<div class="has-border-bottom-light">
+  <Clients::PageHeader
+    @billingStartTime={{this.formattedBillingStartDate}}
+    @retentionMonths={{@config.retentionMonths}}
+    @startTimestamp={{@startTimestamp}}
+    @endTimestamp={{@endTimestamp}}
+    @namespace={{@namespace}}
+    @upgradesDuringActivity={{this.upgradesDuringActivity}}
+    @noData={{not @activity.total.clients}}
+    @onChange={{this.onDateChange}}
+  />
+</div>
 
 <div class="box is-sideless is-fullwidth is-marginless is-bottomless is-shadowless">
-  <Clients::DateRange
-    @startTime={{@startTimestamp}}
-    @endTime={{@endTimestamp}}
-    @onChange={{this.onDateChange}}
-    class="has-bottom-margin-l"
-  />
 
   {{#if (eq @activity.id "no-data")}}
     <Clients::NoData @config={{@config}} @dateRangeMessage={{this.dateRangeMessage}} />

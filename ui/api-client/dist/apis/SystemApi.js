@@ -991,6 +991,29 @@ class SystemApi extends runtime.BaseAPI {
         });
     }
     /**
+     */
+    generateUtilizationReportRaw(initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const queryParameters = {};
+            const headerParameters = {};
+            const response = yield this.request({
+                path: `/sys/utilization-report`,
+                method: 'GET',
+                headers: headerParameters,
+                query: queryParameters,
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => (0, index_1.GenerateUtilizationReportResponseFromJSON)(jsonValue));
+        });
+    }
+    /**
+     */
+    generateUtilizationReport(initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.generateUtilizationReportRaw(initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
      * Check the HA status of a Vault cluster
      */
     haStatusRaw(initOverrides) {
@@ -7041,29 +7064,6 @@ class SystemApi extends runtime.BaseAPI {
         });
     }
     /**
-     */
-    systemReadUtilizationReportRaw(initOverrides) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const queryParameters = {};
-            const headerParameters = {};
-            const response = yield this.request({
-                path: `/sys/utilization-report`,
-                method: 'GET',
-                headers: headerParameters,
-                query: queryParameters,
-            }, initOverrides);
-            return new runtime.VoidApiResponse(response);
-        });
-    }
-    /**
-     */
-    systemReadUtilizationReport(initOverrides) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const response = yield this.systemReadUtilizationReportRaw(initOverrides);
-            return yield response.value();
-        });
-    }
-    /**
      * Configure control group global settings.
      */
     systemWriteConfigControlGroupRaw(requestParameters, initOverrides) {
@@ -9153,7 +9153,7 @@ class SystemApi extends runtime.BaseAPI {
                 headers: headerParameters,
                 query: queryParameters,
             }, initOverrides);
-            return new runtime.JSONApiResponse(response, (jsonValue) => (0, index_1.UiConfigDeleteCustomMessageResponseFromJSON)(jsonValue));
+            return new runtime.VoidApiResponse(response);
         });
     }
     /**
@@ -9174,8 +9174,17 @@ class SystemApi extends runtime.BaseAPI {
                 throw new runtime.RequiredError('list', 'Required parameter "list" was null or undefined when calling uiConfigListCustomMessages().');
             }
             const queryParameters = {};
+            if (requestParameters['active'] != null) {
+                queryParameters['active'] = requestParameters['active'];
+            }
+            if (requestParameters['authenticated'] != null) {
+                queryParameters['authenticated'] = requestParameters['authenticated'];
+            }
             if (requestParameters['list'] != null) {
                 queryParameters['list'] = requestParameters['list'];
+            }
+            if (requestParameters['type'] != null) {
+                queryParameters['type'] = requestParameters['type'];
             }
             const headerParameters = {};
             const response = yield this.request({
@@ -9184,15 +9193,15 @@ class SystemApi extends runtime.BaseAPI {
                 headers: headerParameters,
                 query: queryParameters,
             }, initOverrides);
-            return new runtime.VoidApiResponse(response);
+            return new runtime.JSONApiResponse(response, (jsonValue) => (0, index_1.UiConfigListCustomMessagesResponseFromJSON)(jsonValue));
         });
     }
     /**
      * Lists custom messages
      */
-    uiConfigListCustomMessages(list, initOverrides) {
+    uiConfigListCustomMessages(list, active, authenticated, type, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            const response = yield this.uiConfigListCustomMessagesRaw({ list: list }, initOverrides);
+            const response = yield this.uiConfigListCustomMessagesRaw({ list: list, active: active, authenticated: authenticated, type: type }, initOverrides);
             return yield response.value();
         });
     }

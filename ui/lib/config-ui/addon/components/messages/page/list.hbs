@@ -104,7 +104,7 @@
         </div>
         <div class="level-right is-flex is-paddingless is-marginless">
           <div class="level-item">
-            {{#if (or message.canEditCustomMessages message.canDeleteCustomMessages)}}
+            {{#if (has-capability @capabilities "update" "delete" pathKey="customMessages" params=message)}}
               <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
                 <dd.ToggleIcon
                   @icon="more-horizontal"
@@ -112,10 +112,10 @@
                   @hasChevron={{false}}
                   data-test-popup-menu-trigger
                 />
-                {{#if message.canEditCustomMessages}}
+                {{#if (has-capability @capabilities "update" pathKey="customMessages" params=message)}}
                   <dd.Interactive @route="messages.message.edit" @model={{message.id}}>Edit</dd.Interactive>
                 {{/if}}
-                {{#if message.canDeleteCustomMessages}}
+                {{#if (has-capability @capabilities "delete" pathKey="customMessages" params=message)}}
                   <dd.Interactive
                     @color="critical"
                     {{on "click" (fn (mut this.messageToDelete) message)}}

@@ -12,8 +12,8 @@ export const PAGE = {
   breadcrumbCurrentAtIdx: (idx) =>
     `[data-test-breadcrumbs] li:nth-child(${idx + 1}) .hds-breadcrumb__current`,
   infoRow: '[data-test-component="info-table-row"]',
-  infoRowValue: (label) => `[data-test-value-div="${label}"]`,
-  infoRowToggleMasked: (label) => `[data-test-value-div="${label}"] [data-test-button="toggle-masked"]`,
+  infoRowValue: (label) => `[data-test-row-value="${label}"]`, // TODO replace with GENERAL.infoRowValue
+  infoRowToggleMasked: (label) => `[data-test-row-value="${label}"] [data-test-button="toggle-masked"]`,
   secretTab: (tab) => (tab ? `[data-test-secrets-tab="${tab}"]` : '[data-test-secrets-tab]'),
   emptyStateTitle: '[data-test-empty-state-title]',
   emptyStateMessage: '[data-test-empty-state-message]',
@@ -27,9 +27,6 @@ export const PAGE = {
   toolbarAction: 'nav.toolbar-actions .toolbar-link, nav.toolbar-actions .toolbar-button',
   secretRow: '[data-test-component="info-table-row"]', // replace with infoRow
   // specific page selectors
-  backends: {
-    link: (backend) => `[data-test-secrets-backend-link="${backend}"]`,
-  },
   metadata: {
     requestData: '[data-test-request-data]',
     editBtn: '[data-test-edit-metadata]',

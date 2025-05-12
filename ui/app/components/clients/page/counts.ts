@@ -42,6 +42,14 @@ export default class ClientsCountsPageComponent extends Component<Args> {
     return this.args.startTimestamp ? parseAPITimestamp(this.args.startTimestamp, 'MMMM yyyy') : null;
   }
 
+  get formattedEndDate() {
+    return this.args.endTimestamp ? parseAPITimestamp(this.args.endTimestamp, 'MMMM yyyy') : null;
+  }
+
+  get formattedBillingStartDate() {
+    return this.args.config.billingStartTimestamp.toISOString();
+  }
+
   // returns text for empty state message if noActivityData
   get dateRangeMessage() {
     if (this.args.startTimestamp && this.args.endTimestamp) {
@@ -196,7 +204,8 @@ export default class ClientsCountsPageComponent extends Component<Args> {
     this.args.onFilterChange(params);
   }
 
-  @action resetFilters() {
+  @action
+  resetFilters() {
     this.args.onFilterChange({
       start_time: undefined,
       end_time: undefined,

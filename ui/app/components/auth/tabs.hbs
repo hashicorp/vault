@@ -1,0 +1,38 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Hds::Tabs @onClickTab={{this.onClickTab}} @selectedTabIndex={{this.selectedTabIndex}} as |T|>
+  {{#each-in @authTabData as |methodType mounts|}}
+    <T.Tab data-test-auth-tab={{methodType}}>{{@displayNameHelper methodType}}</T.Tab>
+    <T.Panel>
+      <div class="has-top-padding-m">
+        {{! Elements "behind" tabs always render on the DOM and are just superficially hidden/shown. 
+	        However, for accessibility, we only want to render form inputs relevant to the selected method. 
+	        By wrapping the elements in this conditional, it only renders them when the tab is selected. }}
+        {{#if (eq @selectedAuthMethod methodType)}}
+          {{#if (gt mounts.length 1)}}
+            {{! render dropdown of mount paths }}
+            <Hds::Form::Select::Field name="path" data-test-select="path" as |F|>
+              <F.Label>Mount path</F.Label>
+              <F.Options>
+                {{#each mounts as |mount|}}
+                  <option value={{mount.path}}>{{mount.path}}</option>
+                {{/each}}
+              </F.Options>
+            </Hds::Form::Select::Field>
+          {{else}}
+            {{#let (get mounts "0") as |mount|}}
+              <Auth::SingleMount
+                @description={{mount.description}}
+                @path={{mount.path}}
+                @shouldRenderPath={{not-eq @selectedAuthMethod "token"}}
+              />
+            {{/let}}
+          {{/if}}
+        {{/if}}
+      </div>
+    </T.Panel>
+  {{/each-in}}
+</Hds::Tabs>

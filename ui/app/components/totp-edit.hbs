@@ -1,0 +1,43 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<PageHeader as |p|>
+  <p.top>
+    <KeyValueHeader
+      @baseKey={{@model}}
+      @path="vault.cluster.secrets.backend.list"
+      @mode={{@mode}}
+      @root={{@root}}
+      @showCurrent={{true}}
+    />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3" data-test-secret-header>
+      {{#if (eq @mode "create")}}
+        Create a TOTP key
+      {{else}}
+        TOTP key
+        <code>{{@model.id}}</code>
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+{{#if (eq @mode "show")}}
+  <Totp::KeyDetails @model={{@model}} @onDelete={{this.deleteKey}} />
+{{else if (eq @mode "create")}}
+  {{#if this.hasGenerated}}
+    <Totp::KeyQrCode @model={{@model}} @onReset={{this.reset}} />
+  {{else}}
+    <Totp::KeyCreate
+      @onSubmit={{this.createKey}}
+      @model={{@model}}
+      @defaultKeyFormFields={{this.defaultKeyFormFields}}
+      @groups={{this.groups}}
+      @modelValidations={{this.modelValidations}}
+      @invalidFormAlert={{this.invalidFormAlert}}
+    />
+  {{/if}}
+{{/if}}

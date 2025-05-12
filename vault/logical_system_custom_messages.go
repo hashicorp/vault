@@ -19,6 +19,49 @@ import (
 // uiCustomMessagePaths returns a slice of *framework.Path elements that are
 // added to the receiver SystemBackend.
 func (b *SystemBackend) uiCustomMessagePaths() []*framework.Path {
+	responseFieldSchema := map[string]*framework.FieldSchema{
+		"id": {
+			Type:     framework.TypeString,
+			Required: true,
+		},
+		"title": {
+			Type:     framework.TypeString,
+			Required: true,
+		},
+		"authenticated": {
+			Type:     framework.TypeBool,
+			Required: true,
+		},
+		"type": {
+			Type:     framework.TypeBool,
+			Required: true,
+		},
+		"message": {
+			Type:     framework.TypeString,
+			Required: true,
+		},
+		"link": {
+			Type:     framework.TypeMap,
+			Required: false,
+		},
+		"start_time": {
+			Type:     framework.TypeTime,
+			Required: true,
+		},
+		"end_time": {
+			Type:     framework.TypeTime,
+			Required: true,
+		},
+		"active": {
+			Type:     framework.TypeBool,
+			Required: true,
+		},
+		"options": {
+			Type:     framework.TypeMap,
+			Required: false,
+		},
+	}
+
 	return []*framework.Path{
 		{
 			Pattern: "config/ui/custom-messages/$",
@@ -32,14 +75,17 @@ func (b *SystemBackend) uiCustomMessagePaths() []*framework.Path {
 				"authenticated": {
 					Type:     framework.TypeBool,
 					Required: false,
+					Query:    true,
 				},
 				"active": {
 					Type:     framework.TypeBool,
 					Required: false,
+					Query:    true,
 				},
 				"type": {
 					Type:     framework.TypeString,
 					Required: false,
+					Query:    true,
 				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -49,6 +95,16 @@ func (b *SystemBackend) uiCustomMessagePaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
+							Fields: map[string]*framework.FieldSchema{
+								"keys": {
+									Type:     framework.TypeStringSlice,
+									Required: true,
+								},
+								"key_info": {
+									Type:     framework.TypeMap,
+									Required: true,
+								},
+							},
 						}},
 					},
 				},
@@ -167,12 +223,7 @@ func (b *SystemBackend) uiCustomMessagePaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"id": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-							},
+							Fields:      responseFieldSchema,
 						}},
 					},
 
@@ -187,12 +238,6 @@ func (b *SystemBackend) uiCustomMessagePaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusNoContent: {{
 							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"id": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-							},
 						}},
 					},
 
@@ -207,44 +252,7 @@ func (b *SystemBackend) uiCustomMessagePaths() []*framework.Path {
 					Responses: map[int][]framework.Response{
 						http.StatusOK: {{
 							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"id": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"title": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"authenticated": {
-									Type:     framework.TypeBool,
-									Required: true,
-								},
-								"type": {
-									Type:     framework.TypeBool,
-									Required: true,
-								},
-								"message": {
-									Type:     framework.TypeString,
-									Required: true,
-								},
-								"link": {
-									Type:     framework.TypeMap,
-									Required: false,
-								},
-								"start_time": {
-									Type:     framework.TypeTime,
-									Required: true,
-								},
-								"end_time": {
-									Type:     framework.TypeTime,
-									Required: true,
-								},
-								"options": {
-									Type:     framework.TypeMap,
-									Required: false,
-								},
-							},
+							Fields:      responseFieldSchema,
 						}},
 					},
 

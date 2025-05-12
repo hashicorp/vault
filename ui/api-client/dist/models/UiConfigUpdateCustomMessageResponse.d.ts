@@ -20,6 +20,12 @@ export interface UiConfigUpdateCustomMessageResponse {
      * @type {boolean}
      * @memberof UiConfigUpdateCustomMessageResponse
      */
+    active?: boolean;
+    /**
+     *
+     * @type {boolean}
+     * @memberof UiConfigUpdateCustomMessageResponse
+     */
     authenticated?: boolean;
     /**
      *

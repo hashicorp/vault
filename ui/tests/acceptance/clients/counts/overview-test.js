@@ -6,11 +6,16 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import clientsHandler, { STATIC_NOW, LICENSE_START, UPGRADE_DATE } from 'vault/mirage/handlers/clients';
+import clientsHandler, {
+  STATIC_NOW,
+  LICENSE_START,
+  UPGRADE_DATE,
+  STATIC_PREVIOUS_MONTH,
+} from 'vault/mirage/handlers/clients';
 import syncHandler from 'vault/mirage/handlers/sync';
 import sinon from 'sinon';
 import { visit, click, findAll, fillIn, currentURL } from '@ember/test-helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CHARTS, CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 import { formatNumber } from 'core/helpers/format-number';
@@ -36,7 +41,7 @@ module('Acceptance | clients | overview', function (hooks) {
       };
     });
     this.store = this.owner.lookup('service:store');
-    await authPage.login();
+    await login();
     return visit('/vault/clients/counts/overview');
   });
 
@@ -65,8 +70,12 @@ module('Acceptance | clients | overview', function (hooks) {
 
   test('it should update charts when querying date ranges', async function (assert) {
     // query for single, historical month with no new counts (July 2023)
+    const service = this.owner.lookup('service:version');
+    service.type = 'community';
+
     const licenseStartMonth = format(LICENSE_START, 'yyyy-MM');
     const upgradeMonth = format(UPGRADE_DATE, 'yyyy-MM');
+    const endMonth = format(STATIC_PREVIOUS_MONTH, 'yyyy-MM');
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), licenseStartMonth);
     await fillIn(CLIENT_COUNT.dateRange.editDate('end'), licenseStartMonth);
@@ -82,22 +91,14 @@ module('Acceptance | clients | overview', function (hooks) {
     assert.dom(CHARTS.container('namespace')).exists('namespace attribution chart shows');
     assert.dom(CHARTS.container('mount')).exists('mount attribution chart shows');
 
-    // reset to billing period
-    await click(CLIENT_COUNT.dateRange.edit);
-    await click(CLIENT_COUNT.dateRange.reset);
-    await click(GENERAL.saveButton);
-
     // change to start on month/year of upgrade to 1.10
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), upgradeMonth);
+    await fillIn(CLIENT_COUNT.dateRange.editDate('end'), endMonth);
     await click(GENERAL.saveButton);
-
     assert
       .dom(CLIENT_COUNT.dateRange.dateDisplay('start'))
       .hasText('September 2023', 'billing start month is correctly parsed from license');
-    assert
-      .dom(CLIENT_COUNT.dateRange.dateDisplay('end'))
-      .hasText('January 2024', 'billing start month is correctly parsed from license');
     assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
     assert
       .dom(CHARTS.container('Vault client counts'))
@@ -105,7 +106,7 @@ module('Acceptance | clients | overview', function (hooks) {
     assert
       .dom(`${CHARTS.container('Vault client counts')} ${CHARTS.xAxisLabel}`)
       .hasText('9/23', 'x-axis labels start with queried start month (upgrade date)');
-    assert.dom(CHARTS.xAxisLabel).exists({ count: 5 }, 'chart months matches query');
+    assert.dom(CHARTS.xAxisLabel).exists({ count: 4 }, 'chart months matches query');
 
     // query for single, historical month (upgrade month)
     await click(CLIENT_COUNT.dateRange.edit);
@@ -146,16 +147,10 @@ module('Acceptance | clients | overview', function (hooks) {
       .dom(xAxisLabels[xAxisLabels.length - 1])
       .hasText('12/23', 'x-axis labels end with queried end month');
 
-    // reset to billing period
-    await click(CLIENT_COUNT.dateRange.edit);
-    await click(CLIENT_COUNT.dateRange.reset);
-    await click(GENERAL.saveButton);
-
     // query month older than count start date
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2020-07');
     await click(GENERAL.saveButton);
-
     assert
       .dom(CLIENT_COUNT.counts.startDiscrepancy)
       .hasTextContaining(
@@ -261,7 +256,7 @@ module('Acceptance | clients | overview', function (hooks) {
   `
       )
     );
-    await authPage.login(userToken);
+    await login(userToken);
     await visit('/vault/clients/counts/overview');
     assert.dom(CLIENT_COUNT.exportButton).doesNotExist();
 
@@ -281,7 +276,7 @@ module('Acceptance | clients | overview | sync in license, activated', function 
 
     syncHandler(this.server);
 
-    await authPage.login();
+    await login();
     return visit('/vault/clients/counts/overview');
   });
 
@@ -312,7 +307,7 @@ module('Acceptance | clients | overview | sync in license, not activated', funct
   hooks.beforeEach(async function () {
     this.server.get('/sys/license/features', () => ({ features: ['Secrets Sync'] }));
 
-    await authPage.login();
+    await login();
     return visit('/vault/clients/counts/overview');
   });
 
@@ -336,7 +331,7 @@ module('Acceptance | clients | overview | sync not in license', function (hooks)
     // mocks endpoint for no additional license modules
     this.server.get('/sys/license/features', () => ({ features: [] }));
 
-    await authPage.login();
+    await login();
     return visit('/vault/clients/counts/overview');
   });
 
@@ -359,7 +354,7 @@ module('Acceptance | clients | overview | HVD', function (hooks) {
     syncHandler(this.server);
     this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
 
-    await authPage.login();
+    await login();
     return visit('/vault/clients/counts/overview');
   });
 
