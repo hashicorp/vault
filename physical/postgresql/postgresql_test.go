@@ -176,7 +176,7 @@ func TestConnectionURL(t *testing.T) {
 	}
 }
 
-// We only test the standard flow as we would get errors for cloud based auth while fetching token
+// TestGetAuthConfig - We only test the standard flow as we would get errors for cloud based auth while fetching token
 func TestGetAuthConfig(t *testing.T) {
 	cases := map[string]struct {
 		url       string
