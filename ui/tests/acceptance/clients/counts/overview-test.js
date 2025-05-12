@@ -178,7 +178,7 @@ module('Acceptance | clients | overview', function (hooks) {
     // the namespace dropdown excludes the current namespace, so use second-largest if that's the case
     const filterNamespace = topNamespace.label === 'root' ? orderedNs[1] : topNamespace;
 
-    // TODO SLW namespace is typically filtered on the api level, which isn't reflected here by response
+    // The namespace is typically filtered on the api level, which isn't reflected here by response
     const filterNamespaceNewClients = response.byMonth.reduce(
       (acc, month) => {
         month.new_clients.namespaces
