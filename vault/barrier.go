@@ -192,7 +192,6 @@ type BarrierStorage interface {
 type BarrierEncryptor interface {
 	Encrypt(ctx context.Context, key string, plaintext []byte) ([]byte, error)
 	Decrypt(ctx context.Context, key string, ciphertext []byte) ([]byte, error)
-	EncryptUntracked(ctx context.Context, key string, plaintext []byte) ([]byte, error)
 }
 
 // KeyInfo is used to convey information about the encryption key

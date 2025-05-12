@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -31,30 +32,29 @@ func (b *BarrierEncryptorAccess) Decrypt(ctx context.Context, key string, cipher
 	return b.barrierEncryptor.Decrypt(ctx, key, ciphertext)
 }
 
-func (b *BarrierEncryptorAccess) EncryptUntracked(ctx context.Context, key string, plaintext []byte) ([]byte, error) {
-	return b.barrierEncryptor.EncryptUntracked(ctx, key, plaintext)
-}
-
-func NewBarrierEncryptorStorage(
+// NewBarrierDecryptingStorage returns a view of storage that will decrypt the
+// storage values for Get operations. The returned storage is read-only, and
+// will error on attempts to Put or Delete.
+func NewBarrierDecryptingStorage(
 	barrier BarrierEncryptor, underlying physical.Backend,
 ) logical.Storage {
-	return &barrierEncryptorStorage{
+	return &barrierDecryptingStorage{
 		barrier:    barrier,
 		underlying: underlying,
 	}
 }
 
-type barrierEncryptorStorage struct {
+type barrierDecryptingStorage struct {
 	barrier    BarrierEncryptor
 	underlying physical.Backend
 }
 
-func (b *barrierEncryptorStorage) List(ctx context.Context, prefix string) ([]string, error) {
+func (b *barrierDecryptingStorage) List(ctx context.Context, prefix string) ([]string, error) {
 	return b.underlying.List(ctx, prefix)
 }
 
 // ignore-nil-nil-function-check
-func (b *barrierEncryptorStorage) Get(ctx context.Context, key string) (*logical.StorageEntry, error) {
+func (b *barrierDecryptingStorage) Get(ctx context.Context, key string) (*logical.StorageEntry, error) {
 	entry, err := b.underlying.Get(ctx, key)
 	if err != nil {
 		return nil, err
@@ -73,21 +73,14 @@ func (b *barrierEncryptorStorage) Get(ctx context.Context, key string) (*logical
 	}, nil
 }
 
-func (b *barrierEncryptorStorage) Put(ctx context.Context, entry *logical.StorageEntry) error {
-	encrypted, err := b.barrier.EncryptUntracked(ctx, entry.Key, entry.Value)
-	if err != nil {
-		return err
-	}
-	pe := &physical.Entry{
-		Key:      entry.Key,
-		Value:    encrypted,
-		SealWrap: entry.SealWrap,
-	}
-	return b.underlying.Put(ctx, pe)
+var errReadOnly = errors.New("read-only storage")
+
+func (b *barrierDecryptingStorage) Put(ctx context.Context, entry *logical.StorageEntry) error {
+	return errReadOnly
 }
 
-func (b *barrierEncryptorStorage) Delete(ctx context.Context, key string) error {
-	return b.underlying.Delete(ctx, key)
+func (b *barrierDecryptingStorage) Delete(ctx context.Context, key string) error {
+	return errReadOnly
 }
 
-var _ logical.Storage = (*barrierEncryptorStorage)(nil)
+var _ logical.Storage = (*barrierDecryptingStorage)(nil)

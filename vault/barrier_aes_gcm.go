@@ -1103,14 +1103,6 @@ func (b *AESGCMBarrier) decrypt(path string, gcm cipher.AEAD, cipher []byte) ([]
 
 // Encrypt is used to encrypt in-memory for the BarrierEncryptor interface
 func (b *AESGCMBarrier) Encrypt(ctx context.Context, key string, plaintext []byte) ([]byte, error) {
-	return b.doEncrypt(ctx, key, plaintext, true)
-}
-
-func (b *AESGCMBarrier) EncryptUntracked(ctx context.Context, key string, plaintext []byte) ([]byte, error) {
-	return b.doEncrypt(ctx, key, plaintext, false)
-}
-
-func (b *AESGCMBarrier) doEncrypt(ctx context.Context, key string, plaintext []byte, tracked bool) ([]byte, error) {
 	b.l.RLock()
 	if b.sealed {
 		b.l.RUnlock()
@@ -1124,11 +1116,7 @@ func (b *AESGCMBarrier) doEncrypt(ctx context.Context, key string, plaintext []b
 		return nil, err
 	}
 
-	encrypt := b.encrypt
-	if tracked {
-		encrypt = b.encryptTracked
-	}
-	ciphertext, err := encrypt(key, term, primary, plaintext)
+	ciphertext, err := b.encryptTracked(key, term, primary, plaintext)
 	if err != nil {
 		return nil, err
 	}
