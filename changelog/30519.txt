@@ -1,4 +1,0 @@
-```release-note:improvement
-ui: Updates our JWT documentation to clearly specify that the bound audience must exactly match
-the bound claim stored in Vault for successful authentication when using the JWT login method.
-```
