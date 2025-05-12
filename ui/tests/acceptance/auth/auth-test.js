@@ -20,6 +20,7 @@ import { login, loginMethod, loginNs, logout, VISIBLE_MOUNTS } from 'vault/tests
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { v4 as uuidv4 } from 'uuid';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import sinon from 'sinon';
 
 const ENT_AUTH_METHODS = ['saml'];
 const { rootToken } = VAULT_KEYS;
@@ -40,6 +41,14 @@ module('Acceptance | auth login form', function (hooks) {
   test('it redirects if "with" query param is not a supported auth method', async function (assert) {
     await visit('/vault/auth?with=fake');
     assert.strictEqual(currentURL(), '/vault/auth', 'invalid query param is cleared');
+  });
+
+  test('it does not refire route model if query param does not exist', async function (assert) {
+    const route = this.owner.lookup('route:vault/cluster/auth');
+    const modelSpy = sinon.spy(route, 'model');
+    await visit('/vault/auth');
+    assert.strictEqual(modelSpy.callCount, 1, 'model hook is only called once');
+    modelSpy.restore();
   });
 
   test('it clears token when changing selected auth method', async function (assert) {
@@ -94,8 +103,8 @@ module('Acceptance | auth login form', function (hooks) {
 
     test('it renders preferred mount view if "with" query param is a mount path with listing_visibility="unauth"', async function (assert) {
       await visit('/vault/auth?with=my-oidc%2F');
-      await waitFor(AUTH_FORM.preferredMethod('OIDC'));
-      assert.dom(AUTH_FORM.preferredMethod('OIDC')).hasText('OIDC', 'it renders mount type');
+      await waitFor(AUTH_FORM.preferredMethod('oidc'));
+      assert.dom(AUTH_FORM.preferredMethod('oidc')).hasText('OIDC', 'it renders mount type');
       assert.dom(GENERAL.inputByAttr('role')).exists();
       assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
       assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
@@ -113,7 +122,7 @@ module('Acceptance | auth login form', function (hooks) {
       assert
         .dom(AUTH_FORM.tabBtn('oidc'))
         .hasAttribute('aria-selected', 'true', 'it selects tab matching query param');
-      assert.dom(AUTH_FORM.preferredMethod('OIDC')).doesNotExist('it does not render single mount view');
+      assert.dom(AUTH_FORM.preferredMethod('oidc')).doesNotExist('it does not render single mount view');
       assert.dom(GENERAL.backButton).doesNotExist();
     });
 

@@ -1054,3 +1054,89 @@ func TestLogical_AuditEnabled_ShouldLogPluginMetadata_Secret(t *testing.T) {
 		}
 	}
 }
+
+// TestLogical_SnapshotParams checks that a request is converted into a logical
+// request correctly when it contains snapshot query parameters
+func TestLogical_SnapshotParams(t *testing.T) {
+	core, _, rootToken := vault.TestCoreUnsealed(t)
+	testCases := []struct {
+		name                   string
+		method                 string
+		url                    string
+		body                   []byte
+		wantData               map[string]interface{}
+		wantOperation          logical.Operation
+		wantRequiresSnapshotID string
+	}{
+		{
+			name:                   "normal get",
+			method:                 http.MethodGet,
+			url:                    "https://example.com",
+			body:                   nil,
+			wantOperation:          logical.ReadOperation,
+			wantRequiresSnapshotID: "",
+		},
+		{
+			name:                   "normal list",
+			method:                 http.MethodGet,
+			url:                    "https://example.com?list=true",
+			body:                   nil,
+			wantOperation:          logical.ListOperation,
+			wantRequiresSnapshotID: "",
+		},
+		{
+			name:                   "snapshot list",
+			method:                 http.MethodGet,
+			url:                    "https://example.com?list=true&read_snapshot_id=1234",
+			body:                   nil,
+			wantData:               nil,
+			wantOperation:          logical.ListOperation,
+			wantRequiresSnapshotID: "1234",
+		},
+		{
+			name:                   "snapshot read",
+			method:                 http.MethodGet,
+			url:                    "https://example.com?read_snapshot_id=1234",
+			body:                   nil,
+			wantData:               nil,
+			wantOperation:          logical.ReadOperation,
+			wantRequiresSnapshotID: "1234",
+		},
+		{
+			name:   "normal update",
+			method: http.MethodPost,
+			url:    "https://example.com",
+			body:   []byte(`{"foo":"bar"}`),
+			wantData: map[string]interface{}{
+				"foo": "bar",
+			},
+			wantOperation: logical.UpdateOperation,
+		},
+		{
+			name:   "snapshot update",
+			method: http.MethodPost,
+			url:    "https://example.com?recover_snapshot_id=1234",
+			body:   []byte(`{"other_data":"abcd"}`),
+			wantData: map[string]interface{}{
+				"other_data": "abcd",
+			},
+			wantOperation:          logical.RecoverOperation,
+			wantRequiresSnapshotID: "1234",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req, _ := http.NewRequest(tc.method, tc.url, bytes.NewReader(tc.body))
+			req = req.WithContext(namespace.RootContext(nil))
+			req.Header.Add(consts.AuthHeaderName, rootToken)
+
+			lreq, _, status, err := buildLogicalRequest(core, nil, req, "")
+			require.NoError(t, err)
+			require.Equal(t, 0, status)
+			require.Equal(t, tc.wantOperation, lreq.Operation)
+			require.Equal(t, tc.wantData, lreq.Data)
+			require.Equal(t, tc.wantRequiresSnapshotID, lreq.RequiresSnapshotID)
+		})
+	}
+}

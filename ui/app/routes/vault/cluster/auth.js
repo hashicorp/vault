@@ -55,13 +55,14 @@ export default class AuthRoute extends ClusterRouteBase {
     }
   }
 
-  redirect(model) {
+  redirect(model, transition) {
     if (model?.unwrapResponse) {
       // handles the transition
       return this.controllerFor('vault.cluster.auth').send('authSuccess', model.unwrapResponse);
     }
-    const invalidQueryPram = !model.directLinkData;
-    if (invalidQueryPram) {
+    const hasQueryParam = transition.to?.queryParams?.with;
+    const isInvalid = !model.directLinkData;
+    if (hasQueryParam && isInvalid) {
       // redirect user and clear out the query param if it's invalid
       this.router.replaceWith(this.routeName, { queryParams: { authMount: null } });
     }
@@ -105,11 +106,11 @@ export default class AuthRoute extends ClusterRouteBase {
   */
   getMountOrTypeData(authMount, visibleAuthMounts) {
     if (visibleAuthMounts?.[authMount]) {
-      return { path: authMount, ...visibleAuthMounts[authMount], hasMountData: true };
+      return { path: authMount, ...visibleAuthMounts[authMount], isVisibleMount: true };
     }
     const types = supportedTypes(this.version.isEnterprise);
     if (types.includes(sanitizePath(authMount))) {
-      return { type: authMount, hasMountData: false };
+      return { type: authMount, isVisibleMount: false };
     }
     // `type` is necessary because it determines which login fields to render.
     // If we can't safely glean it from the query param, ignore it and return null

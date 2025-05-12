@@ -4482,7 +4482,6 @@ func (b *SystemBackend) handleMonitor(ctx context.Context, req *logical.Request,
 		return nil, fmt.Errorf("error trying to start a monitor that's already been started")
 	}
 
-	defer logical.IncrementResponseStatusCodeMetric(http.StatusOK)
 	w.WriteHeader(http.StatusOK)
 
 	// 0 byte write is needed before the Flush call so that if we are using
@@ -4867,7 +4866,8 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 			perms.CapabilitiesBitmap&SudoCapabilityInt > 0,
 			perms.CapabilitiesBitmap&UpdateCapabilityInt > 0,
 			perms.CapabilitiesBitmap&PatchCapabilityInt > 0,
-			perms.CapabilitiesBitmap&SubscribeCapabilityInt > 0:
+			perms.CapabilitiesBitmap&SubscribeCapabilityInt > 0,
+			perms.CapabilitiesBitmap&RecoverCapabilityInt > 0:
 
 			aclCapabilitiesGiven = true
 
@@ -5270,6 +5270,9 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 		}
 		if perms.CapabilitiesBitmap&SubscribeCapabilityInt > 0 {
 			capabilities = append(capabilities, SubscribeCapability)
+		}
+		if perms.CapabilitiesBitmap&RecoverCapabilityInt > 0 {
+			capabilities = append(capabilities, RecoverCapability)
 		}
 
 		// If "deny" is explicitly set or if the path has no capabilities at all,
