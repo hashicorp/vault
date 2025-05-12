@@ -22,6 +22,7 @@
     "ember-power-select": "*",
     "ember-router-helpers": "*",
     "ember-truth-helpers": "*",
+    "escape-string-regexp": "*",
     "@hashicorp/flight-icons": "*",
     "@hashicorp/design-system-components": "*",
     "codemirror": "*",
