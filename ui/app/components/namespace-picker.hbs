@@ -71,16 +71,18 @@
             @text="Refresh list"
             @isFullWidth={{(not this.canManageNamespaces)}}
             @icon="reload"
+            @size="small"
             {{on "click" this.refreshList}}
             data-test-refresh-namespaces
           />
         {{/if}}
         {{#if this.canManageNamespaces}}
           <Hds::Button
-            @color="secondary"
+            @color="tertiary"
             @text="Manage"
             @isFullWidth={{(not this.canRefreshNamespaces)}}
             @icon="settings"
+            @size="small"
             @route="vault.cluster.access.namespaces"
             data-test-manage-namespaces
           />

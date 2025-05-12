@@ -7,6 +7,10 @@
 @use '../helper-classes/flexbox-and-grid';
 
 .namespace-picker {
+  .hds-dropdown__content {
+    min-width: 239px;
+  }
+
   .hds-dropdown-toggle-button__text {
     @extend .truncate-second-line, .is-word-break;
     white-space: normal;
