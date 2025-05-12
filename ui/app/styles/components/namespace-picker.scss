@@ -13,7 +13,7 @@
   }
 
   .hds-button-set {
-    @extend .flex.space-between;
+    @extend .is-flex-between;
 
     .hds-button {
       @extend .is-flex-grow-1;
