@@ -16,7 +16,6 @@ import { formatNumber } from 'core/helpers/format-number';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CHARTS, CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 import { assertBarChart } from 'vault/tests/helpers/clients/client-count-helpers';
-import { newClientTotal } from 'core/utils/client-count-utils';
 
 const START_TIME = getUnixTime(LICENSE_START);
 const END_TIME = getUnixTime(STATIC_NOW);
@@ -69,7 +68,7 @@ module('Integration | Component | clients | Clients::Page::Token', function (hoo
 
   test('it should render monthly total chart', async function (assert) {
     const count = this.activity.byMonth.length;
-    const { entity_clients, non_entity_clients } = newClientTotal.newClientTotal;
+    const { entity_clients, non_entity_clients } = this.activity.newClientTotal;
     assert.expect(count + 6);
 
     const expectedTotal = formatNumber([entity_clients + non_entity_clients]);
@@ -137,7 +136,7 @@ module('Integration | Component | clients | Clients::Page::Token', function (hoo
     this.activity.endTime = this.activity.startTime;
 
     const checkUsage = () => {
-      const { entity_clients, non_entity_clients } = newClientTotal.newClientTotal;
+      const { entity_clients, non_entity_clients } = this.activity.newClientTotal;
       assert
         .dom(CLIENT_COUNT.statTextValue('Total clients'))
         .hasText(formatNumber([entity_clients + non_entity_clients]), 'Total clients value renders');

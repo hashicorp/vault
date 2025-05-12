@@ -167,7 +167,7 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
         },
       },
     ];
-    this.activity.total = counts;
+    this.activity.newClientTotal = counts;
 
     await this.renderComponent();
 

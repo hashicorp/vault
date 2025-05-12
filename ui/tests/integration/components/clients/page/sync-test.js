@@ -142,7 +142,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
       assert.dom(GENERAL.emptyStateMessage).hasText('There is no sync data available for this month.');
     });
 
-    test('it should render an empty total usage chart  if secrets sync is activated but monthly syncs are null or 0', async function (assert) {
+    test('it should render an empty total usage chart if secrets sync is activated but monthly syncs are null or 0', async function (assert) {
       // manually stub because mirage isn't setup to handle mixed data yet
       const counts = {
         clients: 10,
@@ -170,7 +170,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
           },
         },
       ];
-      this.activity.total = counts;
+      this.activity.newClientTotal = counts;
 
       assert.expect(6);
       await this.renderComponent();

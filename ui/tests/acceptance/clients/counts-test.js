@@ -30,11 +30,13 @@ module('Acceptance | clients | counts', function (hooks) {
     assert.expect(2);
     this.owner.lookup('service:version').type = 'community';
     await visit('/vault/clients/counts/overview');
-    assert.dom(GENERAL.emptyStateTitle).hasText('No start date found');
+    assert
+      .dom(GENERAL.emptyStateTitle)
+      .hasText('Input the start and end dates to view client attribution by path.');
     assert
       .dom(GENERAL.emptyStateMessage)
       .hasText(
-        'In order to get the most from this data, please enter a start month above. Vault will calculate new clients starting from that month.'
+        'Only historical data may be queried. No data will return if the end date falls within the current month.'
       );
   });
 
