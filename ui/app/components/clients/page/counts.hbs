@@ -80,7 +80,6 @@
       </Toolbar>
     {{/if}}
 
-    {{! TODO SLW check what the expected behavior is for when to show all 0s vs no data received}}
     {{#if this.totalUsageCounts}}
       {{#if this.upgradeExplanations}}
         <Hds::Alert data-test-clients-upgrade-warning @type="inline" @color="warning" class="has-bottom-margin-m" as |A|>
@@ -134,7 +133,7 @@
         @title="No data received {{if this.dateRangeMessage this.dateRangeMessage}}"
         @message={{if
           this.version.isCommunity
-          "Select a start date above to query client count data."
+          "Select a start and end date above to query client count data."
           "Update the filter values or click the button to reset them."
         }}
       >

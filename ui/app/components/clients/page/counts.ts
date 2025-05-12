@@ -128,7 +128,6 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   }
 
   // duplicate of the method found in the activity component, so that we render the child only when there is activity to view
-  // don't need to actually do total new clients calculation, just whether data is present
   get totalUsageCounts(): TotalClients | undefined {
     const { namespace, mountPath, activity } = this.args;
     if (mountPath) {
@@ -136,9 +135,7 @@ export default class ClientsCountsPageComponent extends Component<Args> {
       // namespace is filtered on API layer
       return filteredTotalForMount(activity.byMonth, namespace, mountPath);
     }
-    // TODO SLW should this still check whether there are new clients vs old clients
-    // or as long as there is any data, want to show?
-    return activity?.total;
+    return activity?.newClientTotal;
   }
 
   // namespace list for the search-select filter
