@@ -106,11 +106,11 @@ export default class AuthRoute extends ClusterRouteBase {
   */
   getMountOrTypeData(authMount, visibleAuthMounts) {
     if (visibleAuthMounts?.[authMount]) {
-      return { path: authMount, ...visibleAuthMounts[authMount], hasMountData: true };
+      return { path: authMount, ...visibleAuthMounts[authMount], isVisibleMount: true };
     }
     const types = supportedTypes(this.version.isEnterprise);
     if (types.includes(sanitizePath(authMount))) {
-      return { type: authMount, hasMountData: false };
+      return { type: authMount, isVisibleMount: false };
     }
     // `type` is necessary because it determines which login fields to render.
     // If we can't safely glean it from the query param, ignore it and return null
