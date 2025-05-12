@@ -7604,7 +7604,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dom-element-descriptors@npm:^0.5.0":
+"dom-element-descriptors@npm:^0.5.0, dom-element-descriptors@npm:^0.5.1":
   version: 0.5.1
   resolution: "dom-element-descriptors@npm:0.5.1"
   checksum: 19449c67de81ceffca094b9034f8876b6a17bb4d1149febb373dfd71457115e21317bbe23e2693d8f912632fa989a4cf8fcf8ac77594751bc179b35f45ef916e
@@ -15478,15 +15478,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"qunit-dom@npm:~2.0.0":
-  version: 2.0.0
-  resolution: "qunit-dom@npm:2.0.0"
+"qunit-dom@npm:~3.4.0":
+  version: 3.4.0
+  resolution: "qunit-dom@npm:3.4.0"
   dependencies:
-    broccoli-funnel: ^3.0.3
-    broccoli-merge-trees: ^4.2.0
-    ember-cli-babel: ^7.23.0
-    ember-cli-version-checker: ^5.1.1
-  checksum: f9f06ad19adaaa4f8f107f28fd3feacd65b26d4de647d08b11a844b750ebbed2adbeabab52edc9d8cda2b0b7a0e08812425a5d4698b34f1b2a9af7b6f53b8413
+    dom-element-descriptors: ^0.5.1
+  checksum: e657b085c493a25afea84a6ce4762a41249140b11e37b94faf3e728cdc5b95ebaa77b33aebeac3cd320f22b488c6eed78e657060c271fe6cb5a63e226fa92d87
   languageName: node
   linkType: hard
 
@@ -18705,7 +18702,7 @@ __metadata:
     prettier-eslint-cli: ~7.1.0
     pvutils: ~1.1.3
     qunit: ~2.24.1
-    qunit-dom: ~2.0.0
+    qunit-dom: ~3.4.0
     sass: ~1.86.3
     shell-quote: ~1.8.2
     sinon: ~17.0.1

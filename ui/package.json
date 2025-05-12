@@ -154,7 +154,7 @@
     "prettier-eslint-cli": "~7.1.0",
     "pvutils": "~1.1.3",
     "qunit": "~2.24.1",
-    "qunit-dom": "~2.0.0",
+    "qunit-dom": "~3.4.0",
     "sass": "~1.86.3",
     "shell-quote": "~1.8.2",
     "sinon": "~17.0.1",
