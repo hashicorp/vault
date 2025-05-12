@@ -30,7 +30,7 @@ import { action } from '@ember/object';
  * @param {string} oidcProviderQueryParam - oidc provider query param, set in url as "?o=someprovider"
  * @param {function} onAuthSuccess - callback task in controller that receives the auth response (after MFA, if enabled) when login is successful
  * @param {function} onNamespaceUpdate - callback task that passes user input to the controller to update the login namespace in the url query params
- * @param {object} visibleAuthMounts - keys are auth methods to render as tabs, values is an array of mount data for mounts with listing_visibility="unauth"
+ * @param {object} visibleAuthMounts - mount paths with listing_visibility="unauth", keys are the mount path and value is it's mount data such as "type" or "description," if it exists
  * */
 
 export const CSP_ERROR =

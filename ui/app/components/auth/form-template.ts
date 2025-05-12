@@ -33,8 +33,8 @@ import type { HTMLElementEvent } from 'vault/forms';
  * @param {object} cluster - The route model which is the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
  * @param {object} directLinkData - mount data built from the "with" query param. If param is a mount path and maps to a visible mount, the login form defaults to this mount. Otherwise the form preselects the passed auth type.
  * @param {function} handleNamespaceUpdate - callback task that passes user input to the controller and updates the namespace query param in the url
- * @param {boolean} hasVisibleAuthMounts - whether or not any mounts have been tuned with listing_visibility="unauth"
  * @param {string} namespaceQueryParam - namespace query param from the url
+ * @param {string} oidcProviderQueryParam - oidc provider query param, set in url as "?o=someprovider". if present, disables the namespace input
  * @param {function} onSuccess - callback after the initial authentication request, if an mfa_requirement exists the parent renders the mfa form otherwise it fires the authSuccess action in the auth controller and handles transitioning to the app
  * @param {object} visibleMountsByType - auth methods to render as tabs, contains mount data for any mounts with listing_visibility="unauth"
  *
@@ -45,8 +45,8 @@ interface Args {
   cluster: ClusterModel;
   directLinkData: (AuthTabMountData & { hasMountData: boolean }) | null;
   handleNamespaceUpdate: CallableFunction;
-  hasVisibleAuthMounts: boolean;
   namespaceQueryParam: string;
+  oidcProviderQueryParam: string;
   onSuccess: CallableFunction;
   visibleMountsByType: UnauthMountsByType;
 }
@@ -106,7 +106,7 @@ export default class AuthFormTemplate extends Component<Args> {
   // This getter determines whether to render an alternative view (e.g., tabs or a preferred mount).
   // If `true`, the "Sign in with other methods →" link is shown.
   get showCustomAuthOptions() {
-    const hasLoginCustomization = this.args?.directLinkData?.hasMountData || this.args.hasVisibleAuthMounts;
+    const hasLoginCustomization = this.args?.directLinkData?.hasMountData || this.args.visibleMountsByType;
     // Show if customization exists and the user has NOT clicked "Sign in with other methods →"
     return hasLoginCustomization && !this.showOtherMethods;
   }
@@ -118,12 +118,12 @@ export default class AuthFormTemplate extends Component<Args> {
       this.setAuthType(this.preselectedType);
     } else {
       // if nothing has been preselected, select first tab or set to 'token'
-      const authType = this.args.hasVisibleAuthMounts ? (this.authTabTypes[0] as string) : 'token';
+      const authType = this.args.visibleMountsByType ? (this.authTabTypes[0] as string) : 'token';
       this.setAuthType(authType);
     }
 
     // DETERMINES INITIAL RENDER: custom selection (direct link or tabs) vs dropdown
-    if (this.args.hasVisibleAuthMounts) {
+    if (this.args.visibleMountsByType) {
       // render tabs if selectedAuthMethod is one, otherwise render dropdown (i.e. showOtherMethods = false)
       this.showOtherMethods = this.authTabTypes.includes(this.selectedAuthMethod) ? false : true;
     } else {

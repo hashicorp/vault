@@ -25,12 +25,12 @@ module('Integration | Component | auth | form template', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    window.localStorage.clear();
     this.version = this.owner.lookup('service:version');
     this.visibleMountsByType = null;
     this.cluster = { id: '1' };
     this.directLinkData = null;
     this.handleNamespaceUpdate = sinon.spy();
-    this.hasVisibleAuthMounts = false;
     this.namespaceQueryParam = '';
     this.oidcProviderQueryParam = '';
     this.onSuccess = sinon.spy();
@@ -43,7 +43,6 @@ module('Integration | Component | auth | form template', function (hooks) {
           @cluster={{this.cluster}}
           @directLinkData={{this.directLinkData}}
           @handleNamespaceUpdate={{this.handleNamespaceUpdate}}
-          @hasVisibleAuthMounts={{this.hasVisibleAuthMounts}}
           @namespaceQueryParam={{this.namespaceQueryParam}}
           @oidcProviderQueryParam={{this.oidcProviderQueryParam}}
           @onSuccess={{this.onSuccess}}
@@ -96,7 +95,6 @@ module('Integration | Component | auth | form template', function (hooks) {
 
   module('listing visibility', function (hooks) {
     hooks.beforeEach(function () {
-      this.hasVisibleAuthMounts = true;
       this.visibleMountsByType = {
         userpass: [
           {
