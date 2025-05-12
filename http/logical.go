@@ -202,13 +202,38 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 		return nil, nil, http.StatusInternalServerError, fmt.Errorf("failed to generate identifier for the request: %w", err)
 	}
 
+	var requiredSnapshotID string
+
+	// check for a read, list, or recover from snapshot request
+	switch op {
+	case logical.ReadOperation, logical.ListOperation:
+		snapshotID, ok := data[VaultSnapshotReadParam]
+		if ok && snapshotID != "" {
+			requiredSnapshotID = snapshotID.(string)
+			delete(data, VaultSnapshotReadParam)
+			if len(data) == 0 {
+				data = nil
+			}
+		}
+	case logical.UpdateOperation:
+		queryVals := r.URL.Query()
+		if queryVals.Has(VaultSnapshotRecoverParam) {
+			snapshotID := queryVals.Get(VaultSnapshotRecoverParam)
+			if snapshotID != "" {
+				requiredSnapshotID = snapshotID
+				op = logical.RecoverOperation
+			}
+		}
+	}
+
 	req := &logical.Request{
-		ID:         requestId,
-		Operation:  op,
-		Path:       path,
-		Data:       data,
-		Connection: getConnection(r),
-		Headers:    r.Header,
+		ID:                 requestId,
+		Operation:          op,
+		Path:               path,
+		Data:               data,
+		Connection:         getConnection(r),
+		Headers:            r.Header,
+		RequiresSnapshotID: requiredSnapshotID,
 	}
 
 	if ra != nil && ra.IsLimitedPath(r.Context(), path) {
