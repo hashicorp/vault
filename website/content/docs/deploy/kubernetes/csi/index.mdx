@@ -40,7 +40,11 @@ The following features are supported by the Vault CSI Provider:
 
 <Note>
 
-  Installation via Helm runs the Vault CSI provider alongside [Vault Agent](/vault/docs/deploy/kubernetes/csi) within the same pod. If the Vault Agent container is to stop or restart, the leases managed by Vault Agent will eventually be revoked since the token used to create the leases cannot be renewed..
+  Installing with Helm runs the Vault CSI provider alongside
+  [Vault Agent](/vault/docs/deploy/kubernetes/csi) within the same pod. Vault
+  Agent cannot renew tokens created before a restart. As a result, if the Vault
+  Agent container stops or restarts, when a preexisting token expires, Vault
+  Agent revokes the associated lease.
 
 </Note>
 
