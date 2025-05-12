@@ -26,28 +26,30 @@ module('Integration | Component | auth | form template', function (hooks) {
 
   hooks.beforeEach(function () {
     this.version = this.owner.lookup('service:version');
-    this.authTabData = null;
+    this.visibleMountsByType = null;
+    this.canceledMfaAuth = '';
     this.cluster = { id: '1' };
     this.directLinkData = null;
     this.handleNamespaceUpdate = sinon.spy();
     this.hasVisibleAuthMounts = false;
+    this.loginSettings = null;
     this.namespaceQueryParam = '';
     this.oidcProviderQueryParam = '';
     this.onSuccess = sinon.spy();
-    this.canceledMfaAuth = '';
 
     this.renderComponent = () => {
       return render(hbs`
          <Auth::FormTemplate
-          @authTabData={{this.authTabData}}
+          @visibleMountsByType={{this.visibleMountsByType}}
+          @canceledMfaAuth={{this.canceledMfaAuth}}
           @cluster={{this.cluster}}
           @directLinkData={{this.directLinkData}}
           @handleNamespaceUpdate={{this.handleNamespaceUpdate}}
           @hasVisibleAuthMounts={{this.hasVisibleAuthMounts}}
+          @loginSettings={{this.loginSettings}}
           @namespaceQueryParam={{this.namespaceQueryParam}}
           @oidcProviderQueryParam={{this.oidcProviderQueryParam}}
           @onSuccess={{this.onSuccess}}
-          @canceledMfaAuth={{this.canceledMfaAuth}}
         />`);
     };
   });
@@ -97,7 +99,7 @@ module('Integration | Component | auth | form template', function (hooks) {
   module('listing visibility', function (hooks) {
     hooks.beforeEach(function () {
       this.hasVisibleAuthMounts = true;
-      this.authTabData = {
+      this.visibleMountsByType = {
         userpass: [
           {
             path: 'userpass/',
@@ -263,7 +265,7 @@ module('Integration | Component | auth | form template', function (hooks) {
     test('it renders single mount view instead of tabs if @directLinkData data exists and includes mount data', async function (assert) {
       this.directLinkData = { path: 'my-oidc/', type: 'oidc', hasMountData: true };
       await this.renderComponent();
-      assert.dom(AUTH_FORM.preferredMethod('OIDC')).hasText('OIDC', 'it renders mount type');
+      assert.dom(AUTH_FORM.preferredMethod('oidc')).hasText('OIDC', 'it renders mount type');
       assert.dom(GENERAL.inputByAttr('role')).exists();
       assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
       assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
@@ -399,6 +401,238 @@ module('Integration | Component | auth | form template', function (hooks) {
       assert.dom(AUTH_FORM.managedNsRoot).hasValue('/admin');
       assert.dom(AUTH_FORM.managedNsRoot).hasAttribute('readonly');
       assert.dom(GENERAL.inputByAttr('namespace')).hasValue('/west-coast');
+    });
+  });
+
+  // Login settings are an enterprise only feature but the component is version agnostic
+  // because fetching login customizations happens on enterprise only in the route.
+  /* 
+  TEST CASES 
+  All need to be tested with and without visible mounts (i.e. tuned with listing_visibility="unauth")
+  1. default type set, backup types set 
+  2. default type set, no backup types
+  3. no default type, backup types set 
+   */
+  module('ent login settings', function (hooks) {
+    hooks.beforeEach(function () {
+      this.loginSettings = {
+        defaultType: 'oidc',
+        backupTypes: ['userpass', 'ldap'],
+      };
+    });
+
+    test('default and backups are set: it initially renders default type and toggles to view backup methods', async function (assert) {
+      await this.renderComponent();
+      assert.dom(AUTH_FORM.preferredMethod('oidc')).hasText('OIDC', 'it renders default method');
+      assert.dom(AUTH_FORM.authForm('oidc')).exists();
+      await click(AUTH_FORM.advancedSettings);
+      assert.dom(GENERAL.inputByAttr('path')).exists('it renders custom path input for oidc');
+      assert.dom(GENERAL.backButton).doesNotExist();
+      await click(AUTH_FORM.otherMethodsBtn);
+      assert.dom(GENERAL.backButton).exists();
+      assert.dom(AUTH_FORM.tabs).exists({ count: 2 }, 'it renders 2 backup type tabs');
+      assert
+        .dom(AUTH_FORM.tabBtn('userpass'))
+        .hasAttribute('aria-selected', 'true', 'it selects the first backup type');
+      await click(AUTH_FORM.advancedSettings);
+      assert.dom(GENERAL.inputByAttr('path')).exists('it renders custom path input for userpass');
+      await click(AUTH_FORM.tabBtn('ldap'));
+      assert.dom(AUTH_FORM.tabBtn('ldap')).exists('aria-selected', 'true');
+      await click(AUTH_FORM.advancedSettings);
+      assert.dom(GENERAL.inputByAttr('path')).exists('it renders custom path input for ldap');
+    });
+
+    test('only default is set: it renders default type without backup methods', async function (assert) {
+      this.loginSettings.backupTypes = [];
+      await this.renderComponent();
+      assert.dom(AUTH_FORM.preferredMethod('oidc')).hasText('OIDC', 'it renders default method');
+      assert.dom(GENERAL.backButton).doesNotExist();
+      assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist();
+    });
+
+    test('only backups are set: it initially renders backup types if no default exists', async function (assert) {
+      this.loginSettings.defaultType = '';
+      await this.renderComponent();
+      assert.dom(AUTH_FORM.preferredMethod('oidc')).doesNotExist();
+      assert.dom(AUTH_FORM.tabs).exists({ count: 2 }, 'it renders 2 backup type tabs');
+      assert
+        .dom(AUTH_FORM.tabBtn('userpass'))
+        .hasAttribute('aria-selected', 'true', 'it selects the first backup type');
+      await click(AUTH_FORM.advancedSettings);
+      assert.dom(GENERAL.inputByAttr('path')).exists('custom path input exists');
+      assert.dom(GENERAL.backButton).doesNotExist();
+      assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist();
+    });
+
+    module('all methods have visible mounts', function (hooks) {
+      hooks.beforeEach(function () {
+        this.loginSettings = {
+          defaultType: 'oidc',
+          backupTypes: ['userpass', 'ldap'],
+        };
+        this.hasVisibleAuthMounts = true;
+        this.visibleMountsByType = {
+          userpass: [
+            {
+              path: 'userpass/',
+              description: '',
+              options: {},
+              type: 'userpass',
+            },
+            {
+              path: 'userpass2/',
+              description: '',
+              options: {},
+              type: 'userpass',
+            },
+          ],
+          oidc: [
+            {
+              path: 'my-oidc/',
+              description: '',
+              options: {},
+              type: 'oidc',
+            },
+          ],
+          ldap: [
+            {
+              path: 'ldap/',
+              description: '',
+              options: null,
+              type: 'ldap',
+            },
+          ],
+        };
+      });
+
+      test('default and backups are set: it hides advanced settings for both views', async function (assert) {
+        await this.renderComponent();
+        assert.dom(AUTH_FORM.preferredMethod('oidc')).hasText('OIDC', 'it renders default method');
+        assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
+        assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
+        assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
+        await click(AUTH_FORM.otherMethodsBtn);
+        assert.dom(AUTH_FORM.tabs).exists({ count: 2 }, 'it renders 2 backup type tabs');
+        assert
+          .dom(AUTH_FORM.tabBtn('userpass'))
+          .exists('aria-selected', 'true', 'it selects the first backup type');
+        assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
+      });
+
+      test('only default is set: it hides advanced settings and renders hidden input', async function (assert) {
+        this.loginSettings.backupTypes = [];
+        await this.renderComponent();
+        assert.dom(AUTH_FORM.preferredMethod('oidc')).hasText('OIDC', 'it renders default method');
+        assert.dom(AUTH_FORM.authForm('oidc')).exists();
+        assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
+        assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
+        assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
+        assert.dom(GENERAL.backButton).doesNotExist();
+        assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist();
+      });
+
+      test('only backups are set: it hides advanced settings and renders hidden input', async function (assert) {
+        this.loginSettings.defaultType = '';
+        await this.renderComponent();
+        assert.dom(AUTH_FORM.preferredMethod('oidc')).doesNotExist();
+        assert.dom(AUTH_FORM.tabs).exists({ count: 2 }, 'it renders 2 backup type tabs');
+        assert
+          .dom(AUTH_FORM.tabBtn('userpass'))
+          .hasAttribute('aria-selected', 'true', 'it selects the first backup type');
+        assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
+        assert.dom(GENERAL.backButton).doesNotExist();
+        assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist();
+      });
+    });
+
+    module('only some methods have visible mounts', function (hooks) {
+      hooks.beforeEach(function () {
+        this.loginSettings = {
+          defaultType: 'oidc',
+          backupTypes: ['userpass', 'ldap'],
+        };
+        this.hasVisibleAuthMounts = true;
+        this.mountData = {
+          userpass: [
+            {
+              path: 'userpass/',
+              description: '',
+              options: {},
+              type: 'userpass',
+            },
+            {
+              path: 'userpass2/',
+              description: '',
+              options: {},
+              type: 'userpass',
+            },
+          ],
+          oidc: [
+            {
+              path: 'my-oidc/',
+              description: '',
+              options: {},
+              type: 'oidc',
+            },
+          ],
+          ldap: [
+            {
+              path: 'ldap/',
+              description: '',
+              options: null,
+              type: 'ldap',
+            },
+          ],
+        };
+      });
+
+      test('only default has visible mounts: it hides advanced settings for default but it renders for backups', async function (assert) {
+        this.visibleMountsByType = { oidc: this.mountData.oidc };
+        await this.renderComponent();
+        assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
+        assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
+        assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
+        await click(AUTH_FORM.otherMethodsBtn);
+        assert.dom(AUTH_FORM.tabBtn('userpass')).exists('aria-selected', 'true');
+        assert.dom(AUTH_FORM.advancedSettings).exists();
+        await click(AUTH_FORM.tabBtn('ldap'));
+        assert.dom(AUTH_FORM.advancedSettings).exists();
+      });
+
+      test('only default and one backup method have visible mounts: it only renders advanced settings for method without mounts', async function (assert) {
+        this.visibleMountsByType = { oidc: this.mountData.oidc, userpass: this.mountData.userpass };
+        await this.renderComponent();
+        assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
+        await click(AUTH_FORM.otherMethodsBtn);
+        assert.dom(AUTH_FORM.tabBtn('userpass')).exists('aria-selected', 'true');
+        assert.dom(GENERAL.selectByAttr('path')).exists();
+        assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
+        await click(AUTH_FORM.tabBtn('ldap'));
+        assert.dom(AUTH_FORM.advancedSettings).exists();
+      });
+
+      test('only one backup method has visible mounts: it hides advanced settings for only method with mounts', async function (assert) {
+        this.visibleMountsByType = { ldap: this.mountData.ldap };
+        await this.renderComponent();
+        assert.dom(AUTH_FORM.advancedSettings).exists();
+        await click(AUTH_FORM.otherMethodsBtn);
+        assert.dom(AUTH_FORM.tabBtn('userpass')).exists('aria-selected', 'true');
+        assert.dom(AUTH_FORM.advancedSettings).exists();
+        await click(AUTH_FORM.tabBtn('ldap'));
+        assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
+        assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
+      });
+
+      test('only backup methods are set (no default): it hides advanced settings for only method with mounts', async function (assert) {
+        this.loginSettings.defaultType = '';
+        this.visibleMountsByType = { ldap: this.mountData.ldap };
+        await this.renderComponent();
+        assert.dom(AUTH_FORM.tabBtn('userpass')).exists('aria-selected', 'true');
+        assert.dom(AUTH_FORM.advancedSettings).exists();
+        await click(AUTH_FORM.tabBtn('ldap'));
+        assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
+        assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
+      });
     });
   });
 
