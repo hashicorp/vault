@@ -10185,17 +10185,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"filesize@npm:^10.0.8":
+"filesize@npm:^10.0.8, filesize@npm:~10.1.6":
   version: 10.1.6
   resolution: "filesize@npm:10.1.6"
   checksum: a797a9d41c8f27a9ae334d23f99fc5d903eac5d03c82190dc163901205435b56626fe1260c779ba3e87a2a34d426f19ff264c3f7d956e00f2d3ac69760b52e33
-  languageName: node
-  linkType: hard
-
-"filesize@npm:~4.2.1":
-  version: 4.2.1
-  resolution: "filesize@npm:4.2.1"
-  checksum: 3179f5852519cfe140bdd1e35852d552654e1e232f45b76d5a0df7cefa810b66b4808650cd1705ab00821c5709520bf01fbf7bf74872bd2652a420bfdcbb1a82
   languageName: node
   linkType: hard
 
@@ -10457,15 +10450,6 @@ __metadata:
     keyv: ^4.5.3
     rimraf: ^3.0.2
   checksum: e7e0f59801e288b54bee5cb9681e9ee21ee28ef309f886b312c9d08415b79fc0f24ac842f84356ce80f47d6a53de62197ce0e6e148dc42d5db005992e2a756ec
-  languageName: node
-  linkType: hard
-
-"flat@npm:~6.0.1":
-  version: 6.0.1
-  resolution: "flat@npm:6.0.1"
-  bin:
-    flat: cli.js
-  checksum: c7a5f2e7e3ba0bec28b9c3aca27e68ff74df446df15cdb77ddef9e3d4fd0e9321ca52e49ca8b861c46157215006666b0dad25457f231083fc7bd2f7fcb67d7eb
   languageName: node
   linkType: hard
 
@@ -18695,8 +18679,7 @@ __metadata:
     eslint-plugin-n: ~16.6.2
     eslint-plugin-prettier: ~5.2.6
     eslint-plugin-qunit: ~8.1.2
-    filesize: ~4.2.1
-    flat: ~6.0.1
+    filesize: ~10.1.6
     handlebars: 4.7.7
     highlight.js: 10.7.3
     jsdoc-babel: ~0.5.0
