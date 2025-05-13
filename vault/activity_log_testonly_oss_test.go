@@ -137,7 +137,7 @@ func TestGetStartEndTime_EndTimeAdjustedToPastMonth(t *testing.T) {
 	}
 }
 
-// TestActivityLog_setupClientIDsUsageInfo_CE verifies that upon startup, the client IDs are not loaded in CE
+// TestActivityLog_GetBillingPeriodActivityTelemetryMetric_CE verifies that vault.client.billing_period.activity is not emitted in ce
 func TestActivityLog_GetBillingPeriodActivityTelemetryMetric_CE(t *testing.T) {
 	inMemSink := metrics.NewInmemSink(1*time.Second, 10000*time.Hour)
 	sink := metricsutil.NewClusterMetricSink("test", inMemSink)
@@ -176,6 +176,8 @@ func TestActivityLog_GetBillingPeriodActivityTelemetryMetric_CE(t *testing.T) {
 	if len(intervals) > 1 {
 		t.Skip("Detected interval crossing.")
 	}
+
+	// vault.client.billing_period.activity should not be present in ce
 	fullMetricName := fmt.Sprintf("client.billing_period.activity;cluster=%s", testClusterName)
 	_, ok := intervals[0].Gauges[fullMetricName]
 	require.False(t, ok)
