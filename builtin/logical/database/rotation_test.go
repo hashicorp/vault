@@ -1673,6 +1673,10 @@ func TestStaticRoleNextVaultRotationOnRestart(t *testing.T) {
 	require.Equal(t, newPriority, firstPriority)                               // confirm that priority has not changed
 }
 
+// TestRotationSchedulePriorityAfterRestart checks that the priority of a
+// static role with rotation schedule does not change after a restart
+// This addresses VAULT-35616, where role schedules were incorrectly shifting
+// from the local timezone to UTC after reloading from storage.
 func TestRotationSchedulePriorityAfterRestart(t *testing.T) {
 	ctx := context.Background()
 	b, storage, mockDB := getBackend(t)
