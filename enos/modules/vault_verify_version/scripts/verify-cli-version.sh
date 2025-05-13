@@ -32,8 +32,8 @@ case "$edition" in
   *ce) ;;
   *ent) ;;
   *ent.hsm) version_expected="$version_expected (cgo)" ;;
-  *ent.fips1402) version_expected="$version_expected (cgo)" ;;
-  *ent.hsm.fips1402) version_expected="$version_expected (cgo)" ;;
+  *ent.fips1403) version_expected="$version_expected (cgo)" ;;
+  *ent.hsm.fips1403) version_expected="$version_expected (cgo)" ;;
   *) fail "Unknown Vault edition: ($edition)" ;;
 esac
 
