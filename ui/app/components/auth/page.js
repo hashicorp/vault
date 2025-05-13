@@ -58,25 +58,6 @@ export default class AuthPage extends Component {
     return null;
   }
 
-  // get loginCustomizations() {
-  //   const defaultType = this.args.loginSettings?.default_auth_type;
-  //   const backupTypes = this.args.loginSettings?.backup_auth_types;
-  //   const backupMethodsMounts = backupTypes?.reduce((obj, type) => {
-  //     const mountData = this.visibleMountsByType?.[type];
-  //     obj[type] = mountData || null;
-  //     return obj;
-  //   }, {});
-  //   if (defaultType || backupTypes) {
-  //     return {
-  //       defaultType,
-  //       defaultMethodMounts: this.visibleMountsByType?.[defaultType] || null,
-  //       backupTypes,
-  //       backupMethodsMounts: backupMethodsMounts,
-  //     };
-  //   }
-  //   return null;
-  // }
-
   get cspError() {
     const isStandby = this.args.cluster.standby;
     const hasConnectionViolations = this.csp.connectionViolations.length;
