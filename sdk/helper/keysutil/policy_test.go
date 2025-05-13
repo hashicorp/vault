@@ -16,6 +16,7 @@ import (
 	"fmt"
 	mathrand "math/rand"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -991,11 +992,6 @@ func Test_RSA_PSS(t *testing.T) {
 		t.Log(tabs[3], "Make an automatic signature")
 		sig, err := p.Sign(0, nil, input, hashType, sigAlgorithm, marshalingType)
 		if err != nil {
-			// A bit of a hack but FIPS go does not support some hash types
-			if isUnsupportedGoHashType(hashType, err) {
-				t.Skip(tabs[4], "skipping test as FIPS Go does not support hash type")
-				return
-			}
 			t.Fatal(tabs[4], "❌ Failed to automatically sign:", err)
 		}
 
@@ -1192,15 +1188,20 @@ func Test_RSA_PKCS1Signing(t *testing.T) {
 			input = hash.Sum(nil)
 		}
 
+		// Skip over SHA3 hash tests when running with boringcrypto as it still doesn't support it or hasn't been
+		// validated yet. Wasn't available in FIPS-140-2, but should be in FIPS-140-3 eventually?
+		if strings.Contains(runtime.Version(), "X:boringcrypto") {
+			switch hashType {
+			case HashTypeSHA3224, HashTypeSHA3256, HashTypeSHA3384, HashTypeSHA3512:
+				t.Skip(tabs[4], "boringcrypto does not support SHA3")
+				return
+			}
+		}
+
 		// 1. Make a signature with the given key size and hash algorithm.
 		t.Log(tabs[3], "Make an automatic signature")
 		sig, err := p.Sign(0, nil, input, hashType, sigAlgorithm, marshalingType)
 		if err != nil {
-			// A bit of a hack but FIPS go does not support some hash types
-			if isUnsupportedGoHashType(hashType, err) {
-				t.Skip(tabs[4], "skipping test as FIPS Go does not support hash type")
-				return
-			}
 			t.Fatal(tabs[4], "❌ Failed to automatically sign:", err)
 		}
 
@@ -1245,16 +1246,4 @@ func Test_RSA_PKCS1Signing(t *testing.T) {
 			}
 		}
 	}
-}
-
-// Normal Go builds support all the hash functions for RSA_PSS signatures but the
-// FIPS Go build does not support at this time the SHA3 hashes as FIPS 140_2 does
-// not accept them.
-func isUnsupportedGoHashType(hashType HashType, err error) bool {
-	switch hashType {
-	case HashTypeSHA3224, HashTypeSHA3256, HashTypeSHA3384, HashTypeSHA3512:
-		return strings.Contains(err.Error(), "unsupported hash function")
-	}
-
-	return false
 }
