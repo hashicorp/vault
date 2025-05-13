@@ -66,7 +66,7 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
     assert.dom('[data-test-ttl-value="Max lease TTL"]').hasAnyValue('Max lease ttl renders');
     const checkInValue = this.libraryData.disable_check_in_enforcement ? 'Disabled' : 'Enabled';
     assert
-      .dom(`[data-test-input="disable_check_in_enforcement"] input#${checkInValue}`)
+      .dom(`[data-test-input-group="disable_check_in_enforcement"] input#${checkInValue}`)
       .isChecked('Correct radio is checked for check-in enforcement');
   });
 
@@ -121,7 +121,7 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
     await click('[data-test-string-list-button="add"]');
     await fillIn('[data-test-string-list-input="1"]', 'bar@baz.com');
     await click('[data-test-string-list-button="add"]');
-    await click('[data-test-input="disable_check_in_enforcement"] input#Disabled');
+    await click('[data-test-input-group="disable_check_in_enforcement"] input#Disabled');
     await click('[data-test-save]');
 
     assert.ok(
@@ -149,7 +149,7 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
     await this.renderComponent();
 
     await click('[data-test-string-list-row="0"] [data-test-string-list-button="delete"]');
-    await click('[data-test-input="disable_check_in_enforcement"] input#Disabled');
+    await click('[data-test-input-group="disable_check_in_enforcement"] input#Disabled');
     await click('[data-test-save]');
 
     assert.ok(
