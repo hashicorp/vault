@@ -283,70 +283,88 @@ func (c *Core) emitMetricsActiveNode(stopCh chan struct{}) {
 	// because there's more than one TokenManager created during startup,
 	// but we only want one set of gauges.
 	metricsInit := []struct {
-		MetricName    []string
-		MetadataLabel []metrics.Label
-		CollectorFunc metricsutil.GaugeCollector
-		DisableEnvVar string
+		MetricName       []string
+		MetadataLabel    []metrics.Label
+		CollectorFunc    metricsutil.GaugeCollector
+		DisableEnvVar    string
+		IsEnterpriseOnly bool
 	}{
 		{
 			[]string{"token", "count"},
 			[]metrics.Label{{"gauge", "token_by_namespace"}},
 			c.tokenGaugeCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"token", "count", "by_policy"},
 			[]metrics.Label{{"gauge", "token_by_policy"}},
 			c.tokenGaugePolicyCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"expire", "leases", "by_expiration"},
 			[]metrics.Label{{"gauge", "leases_by_expiration"}},
 			c.leaseExpiryGaugeCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"token", "count", "by_auth"},
 			[]metrics.Label{{"gauge", "token_by_auth"}},
 			c.tokenGaugeMethodCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"token", "count", "by_ttl"},
 			[]metrics.Label{{"gauge", "token_by_ttl"}},
 			c.tokenGaugeTtlCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"secret", "kv", "count"},
 			[]metrics.Label{{"gauge", "kv_secrets_by_mountpoint"}},
 			c.kvSecretGaugeCollector,
 			"VAULT_DISABLE_KV_GAUGE",
+			false,
 		},
 		{
 			[]string{"identity", "entity", "count"},
 			[]metrics.Label{{"gauge", "identity_by_namespace"}},
 			c.entityGaugeCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"identity", "entity", "alias", "count"},
 			[]metrics.Label{{"gauge", "identity_by_mountpoint"}},
 			c.entityGaugeCollectorByMount,
 			"",
+			false,
 		},
 		{
 			[]string{"identity", "entity", "active", "partial_month"},
 			[]metrics.Label{{"gauge", "identity_active_month"}},
 			c.activeEntityGaugeCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"policy", "configured", "count"},
 			[]metrics.Label{{"gauge", "number_policies_by_type"}},
 			c.configuredPoliciesGaugeCollector,
 			"",
+			false,
+		},
+		{
+			[]string{"client", "billing_period", "activity"},
+			[]metrics.Label{{"gauge", "clients_current_billing_period"}},
+			c.clientsGaugeCollectorCurrentBillingPeriod,
+			"",
+			true,
 		},
 	}
 
@@ -362,6 +380,11 @@ func (c *Core) emitMetricsActiveNode(stopCh chan struct{}) {
 						"metric", init.MetricName)
 					continue
 				}
+			}
+
+			// Billing start date is always 0 on CE
+			if init.IsEnterpriseOnly && c.BillingStart().IsZero() {
+				continue
 			}
 
 			proc, err := c.MetricSink().NewGaugeCollectionProcess(
@@ -975,4 +998,41 @@ func (c *Core) configuredPoliciesGaugeCollector(ctx context.Context) ([]metricsu
 	}
 
 	return values, nil
+}
+
+// clientsGaugeCollectorCurrentBillingPeriod returns the total number of clients used in the current billing period
+func (c *Core) clientsGaugeCollectorCurrentBillingPeriod(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	c.stateLock.RLock()
+	a := c.activityLog
+	cm := c.censusManager
+	c.stateLock.RUnlock()
+	if a == nil {
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+	if cm == nil || cm.agent == nil {
+		return []metricsutil.GaugeLabelValues{}, nil
+	}
+
+	// Get a consistent view of "now" for this report
+	now := a.clock.Now().UTC()
+
+	cm.l.Lock()
+	// autoRoll billing start date if needed as it gets updated via census only every hour
+	billingStart := cm.autoRollBillingStartDate(now)
+	cm.l.Unlock()
+
+	ctx = namespace.RootContext(ctx)
+
+	// Get total entity clients and non entity clients count seen for this billing period as of now
+	estimateCounts, err := a.getDeduplicatedClientCounts(ctx, billingStart.UTC(), now)
+	if err != nil {
+		return []metricsutil.GaugeLabelValues{}, err
+	}
+
+	return []metricsutil.GaugeLabelValues{
+		{
+			Labels: []metricsutil.Label{},
+			Value:  float32(estimateCounts.Clients),
+		},
+	}, nil
 }

@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/framework"
@@ -133,4 +135,48 @@ func TestGetStartEndTime_EndTimeAdjustedToPastMonth(t *testing.T) {
 			require.Equal(t, tc.expectWarning, warnings.EndTimeAdjustedToPastMonth)
 		})
 	}
+}
+
+// TestActivityLog_setupClientIDsUsageInfo_CE verifies that upon startup, the client IDs are not loaded in CE
+func TestActivityLog_GetBillingPeriodActivityTelemetryMetric_CE(t *testing.T) {
+	inMemSink := metrics.NewInmemSink(1*time.Second, 10000*time.Hour)
+	sink := metricsutil.NewClusterMetricSink("test", inMemSink)
+	testClusterName := "test-cluster"
+	config := &CoreConfig{
+		MetricSink: sink,
+		ActivityLogConfig: ActivityLogCoreConfig{
+			ForceEnable:   true,
+			DisableTimers: true,
+		},
+	}
+	core, _, _ := TestCoreUnsealedWithConfig(t, config)
+	a := core.activityLog
+	a.SetEnable(true)
+
+	core.setupClientIDsUsageInfo(context.Background())
+
+	// wait for clientIDs to be loaded into memory
+	verifyClientsLoadedInMemory := func() {
+		corehelpers.RetryUntil(t, 60*time.Second, func() error {
+			if a.GetClientIDsUsageInfoLoaded() {
+				return fmt.Errorf("loaded clientIDs to memory")
+			}
+			return nil
+		})
+	}
+	verifyClientsLoadedInMemory()
+
+	require.Len(t, a.GetClientIDsUsageInfo(), 0)
+
+	// verify telemetry metric value client.billing_period.activity
+	intervals := inMemSink.Data()
+
+	// Test crossed an interval boundary, don't try to deal with it.
+	// If we start close to the end of an interval, metrics will be split across two buckets
+	if len(intervals) > 1 {
+		t.Skip("Detected interval crossing.")
+	}
+	fullMetricName := fmt.Sprintf("client.billing_period.activity;cluster=%s", testClusterName)
+	_, ok := intervals[0].Gauges[fullMetricName]
+	require.False(t, ok)
 }
