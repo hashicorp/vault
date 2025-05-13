@@ -11,7 +11,7 @@
     {{! •••••••••••••••••••••••••••••••••••••••••••••••••••••••• }}
     {{#if @attr.options.possibleValues}}
       {{#if (eq @attr.options.editType "checkboxList")}}
-        <Hds::Form::Checkbox::Group @name={{@attr.name}} data-test-input={{@attr.name}} as |G|>
+        <Hds::Form::Checkbox::Group @name={{@attr.name}} data-test-input-group={{@attr.name}} as |G|>
           {{#if this.labelString}}
             <G.Legend data-test-form-field-label>{{this.labelString}}</G.Legend>
           {{/if}}
@@ -29,13 +29,14 @@
           {{/if}}
           {{#each @attr.options.possibleValues as |option|}}
             <G.CheckboxField
-              checked={{includes option (get @model this.valuePath)}}
-              @value={{option}}
               @id={{option}}
-              {{on "change" this.handleChecklist}}
+              @value={{option}}
+              checked={{includes option (get @model this.valuePath)}}
+              {{on "change" this.setAndBroadcastChecklist}}
+              data-test-checkbox={{option}}
               as |F|
             >
-              <F.Label>{{option}}</F.Label>
+              <F.Label data-test-input-group-item-label={{option}}>{{option}}</F.Label>
             </G.CheckboxField>
           {{/each}}
           {{#if this.validationError}}
@@ -46,9 +47,9 @@
         <Hds::Form::Select::Field
           name={{@attr.name}}
           @id={{@attr.name}}
+          @isInvalid={{this.validationError}}
           {{on "change" this.onChangeWithEvent}}
           data-test-input={{@attr.name}}
-          @isInvalid={{this.validationError}}
           as |F|
         >
           {{#if this.labelString}}
@@ -88,10 +89,10 @@
         {{#if (eq @attr.options.editType "password")}}
           <Hds::Form::TextInput::Field
             @type="password"
+            name={{@attr.name}}
             {{! TODO: about this visibility toggle, see: https://hashicorp.atlassian.net/browse/VAULT-34870 }}
             @hasVisibilityToggle={{false}}
             @value={{get @model this.valuePath}}
-            name={{@attr.name}}
             @isInvalid={{this.validationError}}
             {{! Prevents browsers from auto-filling }}
             placeholder={{@attr.options.placeholder}}
