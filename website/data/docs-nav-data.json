@@ -1072,6 +1072,10 @@
                 "path": "internals/telemetry/metrics/storage"
               },
               {
+                "title": "Activity metrics",
+                "path": "internals/telemetry/metrics/activity"
+              },
+              {
                 "title": "Full metrics list",
                 "path": "internals/telemetry/metrics/all"
               }
@@ -2809,8 +2813,8 @@
             "path": "enterprise/fips"
           },
           {
-            "title": "Built-in FIPS 140-2 support",
-            "path": "enterprise/fips/fips1402"
+            "title": "Built-in FIPS 140-3 support",
+            "path": "enterprise/fips/fips1403"
           },
           {
             "title": "Seal wrap for FIPS compliance",

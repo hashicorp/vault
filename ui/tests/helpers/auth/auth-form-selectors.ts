@@ -4,11 +4,12 @@
  */
 
 export const AUTH_FORM = {
-  method: '[data-test-select=auth-method]',
+  selectMethod: '[data-test-select="auth type"]',
   form: '[data-test-auth-form]',
   login: '[data-test-auth-submit]',
-  tabs: (method: string) => (method ? `[data-test-auth-method="${method}"]` : '[data-test-auth-method]'),
-  tabBtn: (method: string) => `[data-test-auth-method="${method}"] button`,
+  preferredMethod: (method: string) => `p[data-test-auth-method="${method}"]`,
+  tabs: '[data-test-auth-tab]',
+  tabBtn: (method: string) => `[data-test-auth-tab="${method}"] button`, // method is all lowercased
   description: '[data-test-description]',
   // old form toggle, will eventually be deleted
   moreOptions: '[data-test-auth-form-options-toggle]',
