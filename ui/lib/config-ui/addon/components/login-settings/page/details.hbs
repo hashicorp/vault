@@ -26,7 +26,7 @@
 
   <Toolbar>
     <ToolbarActions>
-      {{#if (has-capability this.capabilities "delete" id=@rule.name)}}
+      {{#if (has-capability this.capabilities "delete" pathKey="customLogin" params=@rule)}}
         <Hds::Button
           @text="Delete Rule"
           @color="secondary"
