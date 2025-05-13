@@ -1673,6 +1673,35 @@ func TestStaticRoleNextVaultRotationOnRestart(t *testing.T) {
 	require.Equal(t, newPriority, firstPriority)                               // confirm that priority has not changed
 }
 
+func TestRotationSchedulePriorityAfterRestart(t *testing.T) {
+	ctx := context.Background()
+	b, storage, mockDB := getBackend(t)
+
+	// Replace test scheduler with default scheduler
+	scheduler := &schedule.DefaultSchedule{}
+	b.schedule = scheduler
+	defer b.Cleanup(ctx)
+	configureDBMount(t, storage)
+
+	roleName := "hashicorp"
+	data := map[string]interface{}{
+		"username":          "hashicorp",
+		"db_name":           "mockv5",
+		"rotation_schedule": "*/30 * * * SAT",
+	}
+
+	createRoleWithData(t, b, storage, mockDB, roleName, data)
+	item, err := b.credRotationQueue.Pop()
+	require.NoError(t, err)
+	firstPriority := item.Priority
+
+	// Repopulate queue to simulate restart
+	b.populateQueue(ctx, storage)
+	item, err = b.credRotationQueue.Pop()
+	newPriority := item.Priority
+	require.Equal(t, newPriority, firstPriority) // confirm that priority has not changed
+}
+
 func generateWALFromFailedRotation(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string) {
 	t.Helper()
 	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
