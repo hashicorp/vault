@@ -205,17 +205,25 @@ module('Integration | Component | auth | form template', function (hooks) {
       assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
     });
 
-    test('it clicks "Sign in with other methods"', async function (assert) {
+    test('it clicks "Sign in with other methods" and renders standard form', async function (assert) {
       await this.renderComponent();
       assert.dom(AUTH_FORM.tabs).exists({ count: 3 }, 'tabs render by default');
       assert.dom(GENERAL.backButton).doesNotExist();
       await click(AUTH_FORM.otherMethodsBtn);
-      assert
-        .dom(AUTH_FORM.otherMethodsBtn)
-        .doesNotExist('"Sign in with other methods" does not renderafter it is clicked');
+      assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('button disappears after it is clicked');
       assert
         .dom(GENERAL.selectByAttr('auth type'))
-        .exists('clicking "Sign in with other methods" renders dropdown instead of tabs');
+        .hasValue('token', 'dropdown renders and resets to select "Token"');
+      await fillIn(GENERAL.selectByAttr('auth type'), 'userpass');
+      assert.dom(AUTH_FORM.advancedSettings).exists('toggle renders even though userpass has visible mounts');
+      await click(AUTH_FORM.advancedSettings);
+      assert.dom(GENERAL.inputByAttr('path')).exists({ count: 1 });
+      assert.dom(GENERAL.inputByAttr('path')).hasValue('', 'it renders empty custom path input');
+      await fillIn(GENERAL.selectByAttr('auth type'), 'oidc');
+      assert.dom(AUTH_FORM.advancedSettings).exists('toggle renders even though oidc has a visible mount');
+      await click(AUTH_FORM.advancedSettings);
+      assert.dom(GENERAL.inputByAttr('path')).exists({ count: 1 });
+      assert.dom(GENERAL.inputByAttr('path')).hasValue('', 'it renders empty custom path input');
       await click(GENERAL.backButton);
       assert.dom(GENERAL.backButton).doesNotExist('"Back" button does not render after it is clicked');
       assert.dom(AUTH_FORM.tabs).exists({ count: 3 }, 'clicking "Back" renders tabs again');

@@ -59,7 +59,11 @@
                   </Hds::Text::Body>
                   {{#let (get @visibleMountsByType @loginSettings.defaultType) as |mounts|}}
                     {{#if mounts.length}}
-                      <Auth::MountsDisplay @mounts={{mounts}} @shouldRenderPath={{not-eq @selectedAuthMethod "token"}} />
+                      <Auth::MountsDisplay
+                        @hideType={{true}}
+                        @mounts={{mounts}}
+                        @shouldRenderPath={{not-eq @selectedAuthMethod "token"}}
+                      />
                     {{/if}}
                   {{/let}}
                 {{else}}

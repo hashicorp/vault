@@ -20,14 +20,44 @@ import type { HTMLElementEvent } from 'vault/forms';
 
 /**
  * @module Auth::FormTemplate
- * This component is responsible for managing the layout and display logic for the auth form. When initialized it fetches
- * the unauthenticated sys/internal/ui/mounts endpoint to check the listing_visibility configuration of available mounts.
- * If mounts have been configured as listing_visibility="unauth" then tabs render for the corresponding method types,
- * otherwise all auth methods display in a dropdown list. The endpoint is re-requested anytime the namespace input is updated.
+ * This component manages the layout and display logic of the login form. When auth type changes the component dynamically renders the corresponding form.
+ * The route fetches the unauthenticated sys/internal/ui/mounts endpoint to check if any mounts have `listing_visibility="unauth"`.
+ * The endpoint is re-requested anytime the namespace input updates.
  *
- * When auth type changes (by selecting a new one from the dropdown or select a tab), the form component updates and
- * dynamically renders the corresponding form.
+ * 🔧 CONFIGURATION OPTIONS:
+ * Outlined below are the different configuration options, in some scenarios there are two views to toggle between:
+ * - The initial view (shown by default)
+ * - The alternate methods view (displayed when the user clicks "Sign in with other methods →")
  *
+ * 📋 Standard dropdown view (no form configurations):
+ *   ▸ Dropdown lists ALL auth methods supported by the UI
+ *   ▸ Alternate view: None
+ *
+ * 🗂️ Unauth mount tabs:
+ *   ▸ Auth mounts (not methods) with `listing_visibility="unauth"` are grouped by type and render as tabs.
+ *   ▸ Alternate view: Dropdown with all methods
+ *
+ * 🔗 Direct link (auth URL contains the `?with=` query param):
+ *   ▸ If param references a visible mount, the corresponding method type renders and the mount path is assumed for login
+ *      ↳ Alternate view: Dropdown with all methods
+ *   ▸ Param references a type (backward compatibility)
+ *      ↳ Type is selected in either dropdown or as tab, depending on listing visibility configs
+ *
+ * 🏢 *Enterprise-only* Login customizations:
+ *   ▸ A namespace can have a default auth method and/or preferred (backup) methods set. Preferred methods display as tabs.
+ *    ✎ Default + preferred is set
+ *        ↳ Default method displays by default
+ *        ↳ Alternate view: Preferred methods as tabs
+ *    ✎ Only default OR only preferred methods selected
+ *        ↳ Alternate view: None
+ *   ▸ The "path" input depends on the number of visible mounts for a method:
+ *    🚫 No visible mounts
+ *        ↳ The UI assumes the default path (which is the auth method type)
+ *        ↳ "Advanced settings" toggle reveals an input for an optional custom path
+ *    1️⃣ One visible mount
+ *        ↳ Path renders in a hidden input and it is assumed for login
+ *    🔀 Multiple visible mounts
+ *        ↳ Dropdown lists with all paths.
  *
  * @param {string} canceledMfaAuth - saved auth type from a cancelled mfa verification
  * @param {object} cluster - The route model which is the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
@@ -59,17 +89,11 @@ export default class AuthFormTemplate extends Component<Args> {
   @service declare readonly store: Store;
   @service declare readonly version: VersionService;
 
-  // true → "Back" button renders, false → "Sign in with other methods→" renders if customizations exist
+  // true → "Back" button renders, false → "Sign in with other methods→" (only if an alternate view exists)
   @tracked showOtherMethods = false;
 
-  // auth login variables
-  @tracked selectedAuthMethod = '';
+  @tracked selectedAuthMethod = ''; // determines which form renders
   @tracked errorMessage = '';
-
-  get authTabTypes() {
-    const visibleMounts = this.args.visibleMountsByType;
-    return visibleMounts ? Object.keys(visibleMounts) : [];
-  }
 
   get availableMethodTypes() {
     return supportedTypes(this.version.isEnterprise);
@@ -98,26 +122,25 @@ export default class AuthFormTemplate extends Component<Args> {
   }
 
   get preselectedType() {
-    // Prioritize canceledMfaAuth since it's triggered by user interaction.
-    // Next, check type from directLinkData as it's specified by the URL.
-    // Next, if there is a default method set we want to prioritize that.
-    // Finally, fall back to the most recently used auth method in localStorage.
     return (
+      // Prioritize canceledMfaAuth since it's triggered by user interaction.
       this.args.canceledMfaAuth ||
+      // Next, check type from directLinkData as it's specified by the URL.
       this.args.directLinkData?.type ||
+      // Then, if there is a default method set we want to prioritize that.
       this.args.loginSettings?.defaultType ||
+      // Finally, fall back to the most recently used auth method in localStorage.
       this.auth.getAuthType()
     );
   }
 
-  // The "standard" selection is a dropdown listing all auth methods.
-  // This getter determines whether to render an alternative view (e.g., tabs or a preferred mount).
-  // If `true`, the "Sign in with other methods →" link is shown.
+  // The "standard" login view is a dropdown listing all auth methods.
+  // This getter determines if an alternate configuration exists and whether it should render.
   get showCustomAuthOptions() {
-    const hasLoginCustomization =
+    const hasNonStandardConfiguration =
       this.args?.directLinkData?.isVisibleMount || this.args.loginSettings || this.args.visibleMountsByType;
-    // Show if customization exists and the user has NOT clicked "Sign in with other methods →"
-    return hasLoginCustomization && !this.showOtherMethods;
+    // Show if a configuration exists and the user has NOT clicked "Sign in with other methods →"
+    return hasNonStandardConfiguration && !this.showOtherMethods;
   }
 
   get canToggleViews() {
@@ -135,8 +158,13 @@ export default class AuthFormTemplate extends Component<Args> {
     // token does not support custom paths
     if (this.selectedAuthMethod === 'token') return false;
 
-    const isVisibleMount = !!this.args.visibleMountsByType?.[this.selectedAuthMethod];
-    return !isVisibleMount;
+    const { loginSettings, directLinkData, visibleMountsByType } = this.args;
+    // for the most part, if a method has a visible mount the UI should assume to use that path
+    const isVisibleMount = !!visibleMountsByType?.[this.selectedAuthMethod];
+    // but if ONLY listing visibility is configured and the user has toggled to view the "other" methods, the UI allows inputting a custom path
+    const hasToggledFromVisibleMountTabs =
+      !loginSettings && !directLinkData && visibleMountsByType && this.showOtherMethods;
+    return !isVisibleMount || hasToggledFromVisibleMountTabs;
   }
 
   get backupMethodTabs() {
