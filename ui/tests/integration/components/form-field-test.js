@@ -6,12 +6,14 @@
 import EmberObject from '@ember/object';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn } from '@ember/test-helpers';
+import { render, click, fillIn, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { create } from 'ember-cli-page-object';
 import sinon from 'sinon';
 import formFields from '../../pages/components/form-field';
 import { format, startOfDay } from 'date-fns';
+
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const component = create(formFields);
 
@@ -45,6 +47,10 @@ module('Integration | Component | form field', function (hooks) {
     assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
     assert.notOk(component.hasInput, 'renders only the label');
   });
+
+  // ------------------
+  // LEGACY FORM FIELDS
+  // ------------------
 
   test('it renders: string', async function (assert) {
     const [model, spy] = await setup.call(this, createAttr('foo', 'string', { defaultValue: 'default' }));
@@ -285,6 +291,8 @@ module('Integration | Component | form field', function (hooks) {
     assert.ok(spy.calledWith('password', 'secret'), 'onChange called with correct args');
   });
 
+  // --- common elements (legacy) ---
+
   test('it uses a passed label', async function (assert) {
     await setup.call(this, createAttr('foo', 'string', { label: 'Not Foo' }));
     assert.strictEqual(component.fields.objectAt(0).labelValue, 'Not Foo', 'renders the label from options');
@@ -297,7 +305,7 @@ module('Integration | Component | form field', function (hooks) {
     );
     await component.tooltipTrigger();
     assert.ok(component.hasTooltip, 'renders the tooltip component');
-    assert.dom('[data-test-input="foo"]').hasAttribute('placeholder', 'example::value');
+    assert.dom(GENERAL.inputByAttr('foo')).hasAttribute('placeholder', 'example::value');
   });
 
   test('it should not expand and toggle ttl when default 0s value is present', async function (assert) {
@@ -343,6 +351,337 @@ module('Integration | Component | form field', function (hooks) {
     await render(
       hbs`<FormField @attr={{this.attr}} @model={{this.model}} @modelValidations={{this.validations}} @onChange={{this.onChange}} />`
     );
-    assert.dom('[data-test-validation-warning]').exists('Validation warning renders');
+    assert.dom(GENERAL.validationWarningByAttr('path')).exists('Validation warning renders');
+  });
+
+  // ---------------
+  // HDS FORM FIELDS
+  // ---------------
+  // Note: some tests may be duplicative of the generic tests above
+  //
+
+  // ––––– editType === 'checkboxList' / possibleValues –––––
+
+  test('it renders: editType=checkboxList / possibleValues - as Hds::Form::Checkbox::Group', async function (assert) {
+    const possibleValues = ['foo', 'bar', 'baz'];
+    await setup.call(this, createAttr('myfield', '-', { editType: 'checkboxList', possibleValues }));
+    const labels = findAll(`${GENERAL.inputGroupByAttr('myfield')} label`);
+    const inputs = findAll(`${GENERAL.inputGroupByAttr('myfield')} input[type="checkbox"]`);
+    assert
+      .dom('.field [class^="hds-form-group"] input[type="checkbox"].hds-form-checkbox')
+      .exists('renders as Hds::Form::Checkbox::Group');
+    assert.strictEqual(inputs.length, 3, 'renders a fieldset element with 3 checkbox elements');
+    assert.dom(GENERAL.fieldLabel()).hasText('Myfield', 'renders the input group label');
+    possibleValues.forEach((possibleValue, index) => {
+      assert
+        .dom(labels[index])
+        .hasAttribute('id', `label-${possibleValue}`, 'label has correct id')
+        .hasText(possibleValue, 'label has correct text');
+      assert
+        .dom(inputs[index])
+        .hasAttribute('id', possibleValue, 'input[type="checkbox"] has correct id')
+        .hasAttribute(
+          'data-test-checkbox',
+          possibleValue,
+          'input[type="checkbox"] has correct `data-test-checkbox` attribute'
+        );
+    });
+  });
+
+  test('it renders: editType=checkboxList / possibleValues - with no selected checkbox', async function (assert) {
+    const possibleValues = ['foo', 'bar', 'baz'];
+    await setup.call(this, createAttr('myfield', '-', { editType: 'checkboxList', possibleValues }));
+    possibleValues.forEach((possibleValue) => {
+      assert
+        .dom(GENERAL.checkboxByAttr(possibleValue))
+        .isNotChecked(`input[type="checkbox"] "${possibleValue}" is not checked`);
+    });
+  });
+
+  test('it renders: editType=checkboxList / possibleValues - with selected value and changes it', async function (assert) {
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('myfield', '-', {
+        editType: 'checkboxList',
+        possibleValues: ['foo', 'bar', 'baz'],
+        defaultValue: ['baz'],
+      })
+    );
+    assert.dom(GENERAL.checkboxByAttr('baz')).isChecked('input[type="checkbox"] "baz" is checked');
+    // select the remaining items (they're appended to the model)
+    await click(GENERAL.checkboxByAttr('foo'));
+    await click(GENERAL.checkboxByAttr('bar'));
+    // notice: we can't use `strictEqual` here because they're different objects
+    assert.deepEqual(model.get('myfield'), ['baz', 'foo', 'bar']);
+    assert.ok(spy.calledWith('myfield', ['baz', 'foo', 'bar']), 'onChange called with correct args');
+  });
+
+  test('it renders: editType=checkboxList / possibleValues - with passed label, subtext, helptext, doclink', async function (assert) {
+    await setup.call(
+      this,
+      createAttr('myfield', '-', {
+        editType: 'checkboxList',
+        possibleValues: ['foo', 'bar', 'baz'],
+        label: 'Custom label',
+        subText: 'Some subtext',
+        helpText: 'Some helptext',
+        docLink: '/docs',
+      })
+    );
+    assert.dom(GENERAL.fieldLabel()).hasText('Custom label', 'renders the custom label from options');
+    assert
+      .dom(GENERAL.helpTextByAttr('Some subtext'))
+      .exists('renders `subText` option as HelperText')
+      .hasText(
+        'Some subtext See our documentation for help.',
+        'renders the right subtext string from options'
+      );
+    assert
+      .dom(`${GENERAL.helpTextByAttr('Some subtext')} ${GENERAL.docLinkByAttr('/docs')}`)
+      .exists('renders `docLink` option as as link inside the subtext');
+    assert
+      .dom(GENERAL.helpTextByAttr('Some helptext'))
+      .exists('renders `helptext` option as HelperText')
+      .hasText('Some helptext', 'renders the right help text string from options');
+  });
+
+  test('it renders: editType=checkboxList / possibleValues - with validation errors and warnings', async function (assert) {
+    this.setProperties({
+      attr: createAttr('myfield', '-', { editType: 'checkboxList', possibleValues: ['foo', 'bar', 'baz'] }),
+      model: { myfield: 'bar' },
+      modelValidations: {
+        myfield: {
+          isValid: false,
+          errors: ['Error message #1', 'Error message #2'],
+          warnings: ['Warning message #1', 'Warning message #2'],
+        },
+      },
+      onChange: () => {},
+    });
+
+    await render(
+      hbs`<FormField @attr={{this.attr}} @model={{this.model}} @modelValidations={{this.modelValidations}} @onChange={{this.onChange}} />`
+    );
+    assert
+      .dom(GENERAL.validationErrorByAttr('myfield'))
+      .exists('Validation error renders')
+      .hasText('Error message #1 Error message #2', 'Validation errors are combined');
+    assert
+      .dom(GENERAL.validationWarningByAttr('myfield'))
+      .exists('Validation warning renders')
+      .hasText('Warning message #1 Warning message #2', 'Validation warnings are combined');
+  });
+
+  // ––––– editType === 'select' / possibleValues –––––
+
+  test('it renders: editType=select / possibleValues - as Hds::Form::Select', async function (assert) {
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('myfield', 'string', { editType: 'select', possibleValues: ['foo', 'bar', 'baz'] })
+    );
+    assert
+      .dom('.field [class^="hds-form-field"] select.hds-form-select')
+      .exists('renders as Hds::Form::Select');
+    assert
+      .dom('select')
+      .hasAttribute('data-test-input', 'myfield', 'select has correct `data-test-input` attribute');
+    assert.dom(GENERAL.fieldLabel()).hasText('Myfield', 'renders the select label');
+    assert.dom(GENERAL.inputByAttr('myfield')).hasValue('foo', 'has first option value');
+    await fillIn(GENERAL.inputByAttr('myfield'), 'bar');
+    assert.dom(GENERAL.inputByAttr('myfield')).hasValue('bar', 'has selected option value');
+    assert.strictEqual(model.get('myfield'), 'bar');
+    assert.ok(spy.calledWith('myfield', 'bar'), 'onChange called with correct args');
+  });
+
+  test('it renders: editType=select / possibleValues - with no default', async function (assert) {
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('myfield', 'string', {
+        editType: 'select',
+        possibleValues: ['foo', 'bar', 'baz'],
+        noDefault: true,
+      })
+    );
+
+    assert.dom(GENERAL.inputByAttr('myfield')).hasValue('', 'has no initial value');
+    await fillIn(GENERAL.inputByAttr('myfield'), 'foo');
+    assert.dom(GENERAL.inputByAttr('myfield')).hasValue('foo', 'has selected option value');
+    assert.strictEqual(model.get('myfield'), 'foo');
+    assert.ok(spy.calledWith('myfield', 'foo'), 'onChange called with correct args');
+  });
+
+  test('it renders: editType=select / possibleValues - with selected value', async function (assert) {
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('myfield', 'string', {
+        editType: 'select',
+        possibleValues: ['foo', 'bar', 'baz'],
+        defaultValue: 'baz',
+      })
+    );
+
+    assert.dom(GENERAL.inputByAttr('myfield')).hasValue('baz', 'has initial value selected');
+    await fillIn(GENERAL.inputByAttr('myfield'), 'foo');
+    assert.dom(GENERAL.inputByAttr('myfield')).hasValue('foo', 'has selected option value');
+    assert.strictEqual(model.get('myfield'), 'foo');
+    assert.ok(spy.calledWith('myfield', 'foo'), 'onChange called with correct args');
+  });
+
+  test('it renders: editType=select / possibleValues - with passed label, subtext, helptext, doclink', async function (assert) {
+    await setup.call(
+      this,
+      createAttr('myfield', 'string', {
+        editType: 'select',
+        possibleValues: ['foo', 'bar', 'baz'],
+        label: 'Custom label',
+        subText: 'Some subtext',
+        helpText: 'Some helptext',
+        docLink: '/docs',
+      })
+    );
+    assert.dom(GENERAL.fieldLabel()).hasText('Custom label', 'renders the custom label from options');
+    assert
+      .dom(GENERAL.helpTextByAttr('Some subtext'))
+      .exists('renders `subText` option as HelperText')
+      .hasText(
+        'Some subtext See our documentation for help.',
+        'renders the right subtext string from options'
+      );
+    assert
+      .dom(`${GENERAL.helpTextByAttr('Some subtext')} ${GENERAL.docLinkByAttr('/docs')}`)
+      .exists('renders `docLink` option as as link inside the subtext');
+    assert
+      .dom(GENERAL.helpTextByAttr('Some helptext'))
+      .exists('renders `helptext` option as HelperText')
+      .hasText('Some helptext', 'renders the right help text string from options');
+  });
+
+  test('it renders: editType=select / possibleValues - with validation errors and warnings', async function (assert) {
+    this.setProperties({
+      attr: createAttr('myfield', 'string', { editType: 'select', possibleValues: ['foo', 'bar', 'baz'] }),
+      model: { myfield: 'bar' },
+      modelValidations: {
+        myfield: {
+          isValid: false,
+          errors: ['Error message #1', 'Error message #2'],
+          warnings: ['Warning message #1', 'Warning message #2'],
+        },
+      },
+      onChange: () => {},
+    });
+
+    await render(
+      hbs`<FormField @attr={{this.attr}} @model={{this.model}} @modelValidations={{this.modelValidations}} @onChange={{this.onChange}} />`
+    );
+    assert
+      .dom(GENERAL.validationErrorByAttr('myfield'))
+      .exists('Validation error renders')
+      .hasText('Error message #1 Error message #2', 'Validation errors are combined');
+    assert
+      .dom(GENERAL.validationWarningByAttr('myfield'))
+      .exists('Validation warning renders')
+      .hasText('Warning message #1 Warning message #2', 'Validation warnings are combined');
+  });
+
+  // ––––– editType === 'password' –––––
+
+  test('it renders: editType=password / type=string - as Hds::Form::TextInput [@type=password]', async function (assert) {
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('myfield', 'string', { editType: 'password', defaultValue: 'default' })
+    );
+    assert
+      .dom('.field [class^="hds-form-field"] input.hds-form-text-input')
+      .exists('renders as Hds::Form::TextInput');
+    assert
+      .dom(`input[type="password"]`)
+      .exists('renders input with type=password')
+      .hasAttribute(
+        'data-test-input',
+        'myfield',
+        'input[type="password"] has correct `data-test-input` attribute'
+      );
+    assert.dom(GENERAL.fieldLabel()).hasText('Myfield', 'renders the input label');
+    assert.dom(GENERAL.inputByAttr('myfield')).hasValue('default', 'renders default value');
+    await fillIn(GENERAL.inputByAttr('myfield'), 'bar');
+    assert.strictEqual(model.get('myfield'), 'bar');
+    assert.ok(spy.calledWith('myfield', 'bar'), 'onChange called with correct args');
+  });
+
+  test('it renders: editType=password / type=number - as Hds::Form::TextInput [@type=password]', async function (assert) {
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('myfield', 'number', { editType: 'password', defaultValue: 123 })
+    );
+    assert
+      .dom('.field [class^="hds-form-field"] input.hds-form-text-input')
+      .exists('renders as Hds::Form::TextInput');
+    assert
+      .dom(`input${GENERAL.inputByAttr('myfield')}[type="password"]`)
+      .exists('renders input with type=password');
+    assert.dom(GENERAL.fieldLabel()).hasText('Myfield', 'renders the input label');
+    assert.dom(GENERAL.inputByAttr('myfield')).hasValue('123', 'renders default value');
+    await fillIn(GENERAL.inputByAttr('myfield'), 987);
+    assert.strictEqual(model.get('myfield'), '987');
+    assert.ok(spy.calledWith('myfield', '987'), 'onChange called with correct args');
+  });
+
+  test('it renders: editType=password / type=string - with passed label, placeholder, subtext, helptext, doclink', async function (assert) {
+    await setup.call(
+      this,
+      createAttr('myfield', 'string', {
+        editType: 'password',
+        placeholder: 'Custom placeholder',
+        label: 'Custom label',
+        subText: 'Some subtext',
+        helpText: 'Some helptext',
+        docLink: '/docs',
+      })
+    );
+    assert.dom(GENERAL.fieldLabel()).hasText('Custom label', 'renders the custom label from options');
+    assert
+      .dom(GENERAL.inputByAttr('myfield'))
+      .hasAttribute('placeholder', 'Custom placeholder', 'renders the placeholder from options');
+    assert
+      .dom(GENERAL.helpTextByAttr('Some subtext'))
+      .exists('renders `subText` option as HelperText')
+      .hasText(
+        'Some subtext See our documentation for help.',
+        'renders the right subtext string from options'
+      );
+    assert
+      .dom(`${GENERAL.helpTextByAttr('Some subtext')} ${GENERAL.docLinkByAttr('/docs')}`)
+      .exists('renders `docLink` option as as link inside the subtext');
+    assert
+      .dom(GENERAL.helpTextByAttr('Some helptext'))
+      .exists('renders `helptext` option as HelperText')
+      .hasText('Some helptext', 'renders the right help text string from options');
+  });
+
+  test('it renders: editType=password / type=string - with validation errors and warnings', async function (assert) {
+    this.setProperties({
+      attr: createAttr('myfield', 'string', { editType: 'password' }),
+      model: { myfield: 'bar' },
+      modelValidations: {
+        myfield: {
+          isValid: false,
+          errors: ['Error message #1', 'Error message #2'],
+          warnings: ['Warning message #1', 'Warning message #2'],
+        },
+      },
+      onChange: () => {},
+    });
+
+    await render(
+      hbs`<FormField @attr={{this.attr}} @model={{this.model}} @modelValidations={{this.modelValidations}} @onChange={{this.onChange}} />`
+    );
+    assert
+      .dom(GENERAL.validationErrorByAttr('myfield'))
+      .exists('Validation error renders')
+      .hasText('Error message #1 Error message #2', 'Validation errors are combined');
+    assert
+      .dom(GENERAL.validationWarningByAttr('myfield'))
+      .exists('Validation warning renders')
+      .hasText('Warning message #1 Warning message #2', 'Validation warnings are combined');
   });
 });
