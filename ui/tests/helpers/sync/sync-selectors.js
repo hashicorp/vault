@@ -100,9 +100,9 @@ export const PAGE = {
           await fillIn('[data-test-kv-key="0"]', 'foo');
           return fillIn('[data-test-kv-value="0"]', value);
         case 'deploymentEnvironments':
-          await click('[data-test-input="deploymentEnvironments"] input#development');
-          await click('[data-test-input="deploymentEnvironments"] input#preview');
-          return await click('[data-test-input="deploymentEnvironments"] input#production');
+          await click('[data-test-input-group="deploymentEnvironments"] input#development');
+          await click('[data-test-input-group="deploymentEnvironments"] input#preview');
+          return await click('[data-test-input-group="deploymentEnvironments"] input#production');
         default:
           return fillIn(`[data-test-input="${attr}"]`, value);
       }

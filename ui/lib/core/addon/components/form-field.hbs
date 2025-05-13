@@ -11,57 +11,58 @@
     {{! •••••••••••••••••••••••••••••••••••••••••••••••••••••••• }}
     {{#if @attr.options.possibleValues}}
       {{#if (eq @attr.options.editType "checkboxList")}}
-        <Hds::Form::Checkbox::Group @name={{@attr.name}} data-test-input={{@attr.name}} as |G|>
+        <Hds::Form::Checkbox::Group @name={{@attr.name}} data-test-input-group={{@attr.name}} as |G|>
           {{#if this.labelString}}
             <G.Legend data-test-form-field-label>{{this.labelString}}</G.Legend>
           {{/if}}
           {{#if this.helpTextString}}
-            <G.HelperText data-test-help-text>{{this.helpTextString}}</G.HelperText>
+            <G.HelperText data-test-help-text={{@attr.options.helpText}}>{{this.helpTextString}}</G.HelperText>
           {{/if}}
           {{#if @attr.options.subText}}
-            <G.HelperText data-test-label-subtext>
+            <G.HelperText data-test-help-text={{@attr.options.subText}}>
               {{@attr.options.subText}}
               {{#if @attr.options.docLink}}
-                <DocLink @path={{@attr.options.docLink}}>See our documentation</DocLink>
+                <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>See our documentation</DocLink>
                 for help.
               {{/if}}
             </G.HelperText>
           {{/if}}
           {{#each @attr.options.possibleValues as |option|}}
             <G.CheckboxField
-              checked={{includes option (get @model this.valuePath)}}
-              @value={{option}}
               @id={{option}}
-              {{on "change" this.handleChecklist}}
+              @value={{option}}
+              checked={{includes option (get @model this.valuePath)}}
+              {{on "change" this.setAndBroadcastChecklist}}
+              data-test-checkbox={{option}}
               as |F|
             >
-              <F.Label>{{option}}</F.Label>
+              <F.Label data-test-input-group-item-label={{option}}>{{option}}</F.Label>
             </G.CheckboxField>
           {{/each}}
           {{#if this.validationError}}
-            <G.Error data-test-field-validation={{this.valuePath}}>{{this.validationError}}</G.Error>
+            <G.Error data-test-validation-error={{this.valuePath}}>{{this.validationError}}</G.Error>
           {{/if}}
         </Hds::Form::Checkbox::Group>
       {{else}}
         <Hds::Form::Select::Field
           name={{@attr.name}}
           @id={{@attr.name}}
+          @isInvalid={{this.validationError}}
           {{on "change" this.onChangeWithEvent}}
           data-test-input={{@attr.name}}
-          @isInvalid={{this.validationError}}
           as |F|
         >
           {{#if this.labelString}}
             <F.Label data-test-form-field-label>{{this.labelString}}</F.Label>
           {{/if}}
           {{#if this.helpTextString}}
-            <F.HelperText data-test-help-text>{{this.helpTextString}}</F.HelperText>
+            <F.HelperText data-test-help-text={{@attr.options.helpText}}>{{this.helpTextString}}</F.HelperText>
           {{/if}}
           {{#if @attr.options.subText}}
-            <F.HelperText data-test-label-subtext>
+            <F.HelperText data-test-help-text={{@attr.options.subText}}>
               {{@attr.options.subText}}
               {{#if @attr.options.docLink}}
-                <DocLink @path={{@attr.options.docLink}}>See our documentation</DocLink>
+                <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>See our documentation</DocLink>
                 for help.
               {{/if}}
             </F.HelperText>
@@ -79,7 +80,7 @@
             {{/each}}
           </F.Options>
           {{#if this.validationError}}
-            <F.Error data-test-field-validation={{this.valuePath}}>{{this.validationError}}</F.Error>
+            <F.Error data-test-validation-error={{this.valuePath}}>{{this.validationError}}</F.Error>
           {{/if}}
         </Hds::Form::Select::Field>
       {{/if}}
@@ -88,12 +89,13 @@
         {{#if (eq @attr.options.editType "password")}}
           <Hds::Form::TextInput::Field
             @type="password"
+            name={{@attr.name}}
             {{! TODO: about this visibility toggle, see: https://hashicorp.atlassian.net/browse/VAULT-34870 }}
             @hasVisibilityToggle={{false}}
             @value={{get @model this.valuePath}}
-            name={{@attr.name}}
             @isInvalid={{this.validationError}}
             {{! Prevents browsers from auto-filling }}
+            placeholder={{@attr.options.placeholder}}
             autocomplete="new-password"
             spellcheck="false"
             {{on "input" this.onChangeWithEvent}}
@@ -105,20 +107,21 @@
                 <F.Label data-test-form-field-label>{{this.labelString}}</F.Label>
               {{/if}}
               {{#if this.helpTextString}}
-                <F.HelperText data-test-help-text>{{this.helpTextString}}</F.HelperText>
+                <F.HelperText data-test-help-text={{@attr.options.helpText}}>{{this.helpTextString}}</F.HelperText>
               {{/if}}
               {{#if @attr.options.subText}}
-                <F.HelperText data-test-label-subtext>
+                <F.HelperText data-test-help-text={{@attr.options.subText}}>
                   {{@attr.options.subText}}
                   {{#if @attr.options.docLink}}
-                    <DocLink @path={{@attr.options.docLink}}>See our documentation</DocLink>
+                    <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>See our
+                      documentation</DocLink>
                     for help.
                   {{/if}}
                 </F.HelperText>
               {{/if}}
             {{/unless}}
             {{#if this.validationError}}
-              <F.Error data-test-field-validation={{this.valuePath}}>{{this.validationError}}</F.Error>
+              <F.Error data-test-validation-error={{this.valuePath}}>{{this.validationError}}</F.Error>
             {{/if}}
           </Hds::Form::TextInput::Field>
         {{/if}}
@@ -310,7 +313,7 @@
             <span>
               {{@attr.options.subText}}
               {{#if @attr.options.docLink}}
-                <DocLink @path={{@attr.options.docLink}}>
+                <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>
                   See our documentation
                 </DocLink>
                 for help.
@@ -320,7 +323,7 @@
             <span>
               {{or @attr.options.defaultSubText "Vault will use the engine default."}}
               {{#if @attr.options.docLink}}
-                <DocLink @path={{@attr.options.docLink}}>
+                <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>
                   See our documentation
                 </DocLink>
                 for help.
@@ -404,7 +407,7 @@
             <p class="sub-text">
               {{@attr.options.subText}}
               {{#if @attr.options.docLink}}
-                <DocLink @path={{@attr.options.docLink}}>
+                <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>
                   See our documentation
                 </DocLink>
                 for help.
@@ -451,7 +454,7 @@
           <p class="sub-text">
             {{@attr.options.subText}}
             {{#if @attr.options.docLink}}
-              <DocLink @path={{@attr.options.docLink}}>
+              <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>
                 Learn more here.
               </DocLink>
             {{/if}}
@@ -474,7 +477,7 @@
         @type="danger"
         @message={{this.validationError}}
         @paddingTop={{not-eq @attr.options.editType "ttl"}}
-        data-test-field-validation={{this.valuePath}}
+        data-test-validation-error={{this.valuePath}}
         class={{if (eq @attr.options.editType "stringArray") "has-top-margin-negative-xxl"}}
       />
     {{/if}}
