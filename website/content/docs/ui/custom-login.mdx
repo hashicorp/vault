@@ -11,15 +11,7 @@ description: >-
 @include 'alerts/enterprise-only.mdx'
 
 Use custom login options to set preferred authentication method for Vault GUI
-users. You can customize your login flow with a default authentication method,
-preferred authentication methods, or both.
-
-Configuration           | Result
------------------------ | ------
-Default only            | Clients must use the configured authentication method during login
-Preferred only          | Clients must choose among the configured authentication methods during login
-Default and preferred   | Clients see the default method first but can choose any of the configured authentication methods
-
+users.
 
 ## Before you start 
 
@@ -43,6 +35,15 @@ methods:
 - [Token](/vault/docs/auth/token)
 - [Username and password](/vault/docs/auth/userpass)
 
+You can customize your login flow with a default authentication method,
+preferred authentication methods, or both.
+
+Configuration           | Result
+----------------------- | ------
+Default only            | Clients must use the configured authentication method during login
+Preferred only          | Clients must choose among the configured authentication methods during login
+Default and preferred   | Clients see the default method first but can choose any of the configured authentication methods
+
 
 ## Step 2: Make the authentication method visible to the GUI
 
@@ -60,7 +61,6 @@ Vault GUI.
 ### Option 1: Configure a new plugin
 
 <Tabs>
-
 <Tab heading="CLI" group="cli">
 
 1. Use `vault auth enable` to establish a new instance of the authentication
@@ -103,10 +103,9 @@ Vault GUI.
     ```
 
 </Tab>
-
 <Tab heading="GUI" group="gui">
 
-@include 'gui-instructions/enable-auth-plugin.mdx'
+@include 'gui-instructions/enable-authn-plugin.mdx'
 
 - Select the desired plugin.
 
@@ -118,7 +117,6 @@ Vault GUI.
 - Click **Enable method**.
 
 </Tab>
-
 <Tab heading="API" group="api">
 
 1. Create a JSON file with the configuration information for your authentication
@@ -168,11 +166,11 @@ $ curl                                               \
 `/sys/auth/{plugin_mount_path}` does not return data on success.
 
 </Tab>
-
 </Tabs>
 
 ### Option 2: Update an existing plugin
 
+<Tabs>
 <Tab heading="CLI" group="cli">
 
 Use `vault auth tune` to update the `-listing-visibility` flag to `unauth`:
@@ -202,10 +200,9 @@ Success! Tuned the auth method at: gui/userpass/
 </CodeBlockConfig>
 
 </Tab>
-
 <Tab heading="GUI" group="gui">
 
-@include 'gui-instructions/update-auth-plugin.mdx'
+@include 'gui-instructions/update-authn-plugin.mdx'
 
 - Click **Configure >**.
 - Check the box next to **List method when unauthenticated**.
@@ -214,11 +211,18 @@ Success! Tuned the auth method at: gui/userpass/
 - Click **Update options**.
 
 </Tab>
-
 <Tab heading="API" group="api">
 
 1. Create a JSON file with the updated configuration information for your
    authentication plugin and set the `listing_visibility` parameter to `unauth`.
+   For example:
+
+    ```json
+    {
+      "description": "Default GUI auth method",
+      "listing_visibility": "unauth"
+    }
+    ```
 
 1. Make a `POST` call to
    [`/sys/auth/{plugin_mount_path}/tune`](/vault/api-docs/system/auth#tune-auth-method)
@@ -232,43 +236,29 @@ Success! Tuned the auth method at: gui/userpass/
       ${VAULT_ADDR}/v1/sys/auth/<plugin_mount_path>/tune
     ```
 
+    For example:
 
-For example:
+    <CodeBlockConfig hideClipboard="true">
 
-<CodeBlockConfig hideClipboard="true">
+    ```shell-session
+    $ curl                                               \
+        --request POST                                   \
+        --header "X-Vault-Token: ${VAULT_TOKEN}"         \
+        --header "X-Vault-Namespace: ${VAULT_NAMESPACE}" \
+        --data @data.json                         \
+        ${VAULT_ADDR}/v1/sys/auth/gui/userpass/tune | jq
+    ```
 
-```json
-{
-  "description": "Default GUI auth method",
-  "listing_visibility": "unauth"
-}
-```
+    </CodeBlockConfig>
 
-</CodeBlockConfig>
-
-<CodeBlockConfig hideClipboard="true">
-
-```shell-session
-$ curl                                               \
-    --request POST                                   \
-    --header "X-Vault-Token: ${VAULT_TOKEN}"         \
-    --header "X-Vault-Namespace: ${VAULT_NAMESPACE}" \
-    --data @data.json                         \
-    ${VAULT_ADDR}/v1/sys/auth/gui/userpass/tune | jq
-```
-
-</CodeBlockConfig>
-
-`/sys/auth/{plugin_mount_path}/tune` does not return data on success.
+    `/sys/auth/{plugin_mount_path}/tune` does not return data on success.
 
 </Tab>
-
 </Tabs>
 
 ## Step 3: Set your default and preferred authentication methods
 
 <Tabs>
-
 <Tab heading="CLI" group="cli">
 
 1. Use `vault write` with the
@@ -300,7 +290,7 @@ $ curl                                               \
     </CodeBlockConfig>
 
 1. Use `vault read` with the
-   [`sys/config/ui/login/default-auth`](/vault/api-docs/system/config-ui-login-default-auth)
+   [`sys/config/ui/login/default-auth/{rule_name}`](/vault/api-docs/system/config-ui-login-default-auth)
    endpoint and the new rule name to verify the login configuration. For example:
 
     ```shell-session
@@ -310,20 +300,36 @@ $ curl                                               \
     ```
 
 </Tab>
-
 <Tab heading="GUI" group="gui">
 
 TBD
 
 </Tab>
-
 <Tab heading="API" group="api">
 
 1. Create a JSON file with a new custom login configuration rule that sets your
-   default and/or preferred GUI authentication methods.
+   default and/or preferred GUI authentication methods:
+   
+    ```json
+    {
+      "namespace": "<namespace_where_the_rule_applies>",
+      "default_auth_type": "<auth_plugin_mount_path>",
+      "preferred_auth_types": [
+        <list_of_auth_plugin_mount_paths>
+      ]
+    }
+    ```
+    
+    For example, to customize the login options for the `dev` namespace and set
+    the authentication method mounted at `gui/userpass` as the default
+    authentication method with `gui/ldap` and `gui/token` as additional,
+    preferred options:
+
+    EXAMPLE TEMPORARILY REMOVED BECAUSE OF BUILD ERROR
+
 
 1. Make a `POST` call to
-   [`/sys/auth/{plugin_mount_path}/tune`](/vault/api-docs/system/auth#tune-auth-method)
+   [`sys/config/ui/login/default-auth/{rule_name}`](/vault/api-docs/system/config-ui-login-default-auth)
    with the JSON data:
     ```shell-session
     $ curl                                             \
@@ -331,45 +337,28 @@ TBD
       --header "X-Vault-Token: ${VAULT_TOKEN}"         \
       --header "X-Vault-Namespace: ${VAULT_NAMESPACE}" \
       --data @data.json                                \
-      ${VAULT_ADDR}/v1/sys/auth/<plugin_mount_path>/tune
+      ${VAULT_ADDR}/v1/sys/config/ui/login/default-auth/<unique_rule_name>
     ```
 
+    For example, to create a new login rule called "dev-gui-login":
 
-For example:
+    <CodeBlockConfig hideClipboard="true">
 
-<CodeBlockConfig hideClipboard="true">
+    ```shell-session
+    $ curl                                             \
+      --request POST                                   \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"         \
+      --header "X-Vault-Namespace: ${VAULT_NAMESPACE}" \
+      --data @data.json                                \
+      ${VAULT_ADDR}/v1/sys/config/ui/login/default-auth/dev-gui-login
+    ```
 
-```json
-{
-  "description": "Default GUI auth method",
-  "listing_visibility": "unauth"
-}
-```
+    </CodeBlockConfig>
 
-</CodeBlockConfig>
-
-<CodeBlockConfig hideClipboard="true">
-
-```shell-session
-$ curl                                               \
-    --request POST                                   \
-    --header "X-Vault-Token: ${VAULT_TOKEN}"         \
-    --header "X-Vault-Namespace: ${VAULT_NAMESPACE}" \
-    --data @data.json                         \
-    ${VAULT_ADDR}/v1/sys/auth/gui/userpass/tune | jq
-```
-
-</CodeBlockConfig>
-
-`/sys/auth/{plugin_mount_path}/tune` does not return data on success.
+`/sys/config/ui/login/default-auth/{rule_name}` does not return data on success.
 
 </Tab>
-
 </Tabs>
-
-## Step 4: Set your preferred authentication methods ((#step4))
-
-
 
 
 # Next steps

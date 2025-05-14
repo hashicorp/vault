@@ -9,6 +9,8 @@ description: >-
 
 @include 'x509-sha1-deprecation.mdx'
 
+@include 'tips/custom-authn.mdx'
+
 ~> **Note**: Starting in Vault 1.17, if the JWT in the authentication request
 contains an `aud` claim, the associated `bound_audiences` for the "jwt" role
 must match at least one of the `aud` claims declared for the JWT. For
