@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/quotas"
 )
 
 //go:generate go run github.com/hashicorp/vault/tools/stubmaker

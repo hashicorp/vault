@@ -7,6 +7,10 @@ package quotas
 
 import "context"
 
+type entRateLimitRequest struct {
+	FetchEntityId func() (string, error)
+}
+
 type entRateLimitQuota struct {
 }
 
