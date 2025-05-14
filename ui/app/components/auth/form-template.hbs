@@ -38,21 +38,20 @@
 
         <:authSelectOptions>
           <div class="has-bottom-margin-m">
-            {{#if (eq this.currentAuthViewMode "directLink")}}
+            {{#if (eq this.currentFormView this.view.DIRECT_LINK)}}
               {{! URL contains a "with" query param that references a mount with listing_visibility="unauth" }}
-              {{! Treat it as a "preferred" mount and hide all other tabs }}
+              {{! Treat it as a "preferred" mount and "other" view renders dropdown with all methods }}
               <Auth::MountsDisplay
                 @mounts={{array @directLinkData}}
                 @shouldRenderPath={{not-eq this.selectedAuthMethod "token"}}
               />
-            {{else if (eq this.currentAuthViewMode "loginSettingsDefault")}}
+            {{else if (eq this.currentFormView this.view.LOGIN_SETTINGS_DEFAULT)}}
               <Hds::Text::Body
                 @tag="p"
                 @weight="semibold"
                 class="has-bottom-margin-m"
                 data-test-auth-method={{this.selectedAuthMethod}}
               >
-                {{!-- {{auth-display-name @loginSettings.defaultType}} --}}
                 {{auth-display-name this.selectedAuthMethod}}
               </Hds::Text::Body>
               {{#let (get @visibleMountsByType this.selectedAuthMethod) as |mounts|}}
@@ -64,13 +63,13 @@
                   />
                 {{/if}}
               {{/let}}
-            {{else if (eq this.currentAuthViewMode "loginSettingsTabs")}}
+            {{else if (eq this.currentFormView this.view.LOGIN_SETTINGS_TABS)}}
               <Auth::Tabs
                 @authTabData={{this.backupMethodTabs}}
                 @handleTabClick={{this.setAuthType}}
                 @selectedAuthMethod={{this.selectedAuthMethod}}
               />
-            {{else if (eq this.currentAuthViewMode "tabs")}}
+            {{else if (eq this.currentFormView this.view.TABS)}}
               <Auth::Tabs
                 @authTabData={{@visibleMountsByType}}
                 @handleTabClick={{this.setAuthType}}

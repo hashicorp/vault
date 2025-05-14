@@ -83,7 +83,17 @@ interface Args {
   visibleMountsByType: UnauthMountsByType;
 }
 
+enum FormView {
+  DIRECT_LINK = 'directLink',
+  DROPDOWN = 'dropdown',
+  LOGIN_SETTINGS_DEFAULT = 'loginSettingsDefault',
+  LOGIN_SETTINGS_TABS = 'loginSettingsTabs',
+  TABS = 'tabs',
+}
+
 export default class AuthFormTemplate extends Component<Args> {
+  view = FormView;
+
   @service declare readonly auth: AuthService;
   @service declare readonly flags: FlagsService;
   @service declare readonly store: Store;
@@ -126,7 +136,7 @@ export default class AuthFormTemplate extends Component<Args> {
     return visibleMountsByType && !this.showOtherMethods;
   }
 
-  get currentAuthViewMode() {
+  get currentFormView() {
     const { directLinkData, loginSettings, visibleMountsByType } = this.args;
 
     const hasBackupMethods = !!loginSettings?.backupTypes?.length;
@@ -136,17 +146,17 @@ export default class AuthFormTemplate extends Component<Args> {
 
     // Rendering alternate view
     if (this.showOtherMethods) {
-      if (!directLinkData && hasBackupMethods) return 'loginSettingsTabs';
-      return 'dropdown';
+      if (!directLinkData && hasBackupMethods) return this.view.LOGIN_SETTINGS_TABS;
+      return this.view.DROPDOWN;
     }
 
     // Rendering default view
-    if (isDirectLink) return 'directLink';
+    if (isDirectLink) return this.view.DIRECT_LINK;
     // Login settings only render without a direct link
-    if (!directLinkData && hasDefaultType) return 'loginSettingsDefault';
-    if (!directLinkData && hasBackupMethods) return 'loginSettingsTabs';
-    if (hasVisibleMounts) return 'tabs';
-    return 'dropdown';
+    if (!directLinkData && hasDefaultType) return this.view.LOGIN_SETTINGS_DEFAULT;
+    if (!directLinkData && hasBackupMethods) return this.view.LOGIN_SETTINGS_TABS;
+    if (hasVisibleMounts) return this.view.TABS;
+    return this.view.DROPDOWN;
   }
 
   get formComponent() {
@@ -179,11 +189,11 @@ export default class AuthFormTemplate extends Component<Args> {
     // Token does not support custom paths
     if (this.selectedAuthMethod === 'token') return true;
 
-    switch (this.currentAuthViewMode) {
-      case 'dropdown':
+    switch (this.currentFormView) {
+      case this.view.DROPDOWN:
         // Always show for dropdown mode
         return false;
-      case 'directLink':
+      case this.view.DIRECT_LINK:
         // For direct links, always show advanced settings when rendering the "other" view.
         // Otherwise hide/show depending on mount visibility
         return !this.showOtherMethods || this.selectedAuthHasMounts;
