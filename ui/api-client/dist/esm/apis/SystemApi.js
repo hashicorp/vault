@@ -21,7 +21,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import * as runtime from '../runtime';
-import { AuditingCalculateHashRequestToJSON, AuditingCalculateHashResponseFromJSON, AuditingEnableDeviceRequestToJSON, AuditingEnableRequestHeaderRequestToJSON, AuditingListRequestHeadersResponseFromJSON, AuthEnableMethodRequestToJSON, AuthReadConfigurationResponseFromJSON, AuthReadTuningInformationResponseFromJSON, AuthTuneConfigurationParametersRequestToJSON, CollectHostInformationResponseFromJSON, CorsConfigureRequestToJSON, CorsReadConfigurationResponseFromJSON, CreateCustomMessageRequestToJSON, DecodeTokenRequestToJSON, EncryptionKeyConfigureRotationRequestToJSON, EncryptionKeyReadRotationConfigurationResponseFromJSON, GenerateHashRequestToJSON, GenerateHashResponseFromJSON, GenerateHashWithAlgorithmRequestToJSON, GenerateHashWithAlgorithmResponseFromJSON, GenerateRandomRequestToJSON, GenerateRandomResponseFromJSON, GenerateRandomWithBytesRequestToJSON, GenerateRandomWithBytesResponseFromJSON, GenerateRandomWithSourceAndBytesRequestToJSON, GenerateRandomWithSourceAndBytesResponseFromJSON, GenerateRandomWithSourceRequestToJSON, GenerateRandomWithSourceResponseFromJSON, GenerateUtilizationReportResponseFromJSON, HaStatusResponseFromJSON, InitializeRequestToJSON, InternalClientActivityConfigureRequestToJSON, InternalCountEntitiesResponseFromJSON, InternalCountTokensResponseFromJSON, InternalGenerateOpenApiDocumentWithParametersRequestToJSON, InternalUiListEnabledFeatureFlagsResponseFromJSON, InternalUiListEnabledVisibleMountsResponseFromJSON, InternalUiListNamespacesResponseFromJSON, InternalUiReadAuthenticatedActiveCustomMessagesResponseFromJSON, InternalUiReadMountInformationResponseFromJSON, InternalUiReadResultantAclResponseFromJSON, InternalUiReadUnauthenticatedActiveCustomMessagesResponseFromJSON, LeaderStatusResponseFromJSON, LeasesCountResponseFromJSON, LeasesListResponseFromJSON, LeasesLookUpResponseFromJSON, LeasesReadLeaseRequestToJSON, LeasesReadLeaseResponseFromJSON, LeasesRenewLease2RequestToJSON, LeasesRenewLeaseRequestToJSON, LeasesRenewLeaseWithId2RequestToJSON, LeasesRenewLeaseWithIdRequestToJSON, LeasesRevokeLease2RequestToJSON, LeasesRevokeLeaseRequestToJSON, LeasesRevokeLeaseWithId2RequestToJSON, LeasesRevokeLeaseWithIdRequestToJSON, LeasesRevokeLeaseWithPrefix2RequestToJSON, LeasesRevokeLeaseWithPrefixRequestToJSON, LoggersUpdateVerbosityLevelForRequestToJSON, LoggersUpdateVerbosityLevelRequestToJSON, MfaValidateRequestToJSON, MountsEnableSecretsEngineRequestToJSON, MountsReadConfigurationResponseFromJSON, MountsReadTuningInformationResponseFromJSON, MountsTuneConfigurationParametersRequestToJSON, PluginsCatalogListPluginsResponseFromJSON, PluginsCatalogListPluginsWithTypeResponseFromJSON, PluginsCatalogPinsCreatePinnedVersionRequestToJSON, PluginsCatalogPinsListPinnedVersionsResponseFromJSON, PluginsCatalogPinsReadPinnedVersionResponseFromJSON, PluginsCatalogReadPluginConfigurationResponseFromJSON, PluginsCatalogReadPluginConfigurationWithTypeResponseFromJSON, PluginsCatalogRegisterPluginRequestToJSON, PluginsCatalogRegisterPluginWithTypeRequestToJSON, PluginsReloadBackendsRequestToJSON, PluginsReloadBackendsResponseFromJSON, PluginsRuntimesCatalogListPluginsRuntimesResponseFromJSON, PluginsRuntimesCatalogReadPluginRuntimeConfigurationResponseFromJSON, PluginsRuntimesCatalogRegisterPluginRuntimeRequestToJSON, PoliciesGeneratePasswordFromPasswordPolicyResponseFromJSON, PoliciesListAclPolicies2ResponseFromJSON, PoliciesListAclPolicies3ResponseFromJSON, PoliciesListAclPoliciesResponseFromJSON, PoliciesReadAclPolicy2ResponseFromJSON, PoliciesReadAclPolicyResponseFromJSON, PoliciesReadPasswordPolicyResponseFromJSON, PoliciesWriteAclPolicy2RequestToJSON, PoliciesWriteAclPolicyRequestToJSON, PoliciesWritePasswordPolicyRequestToJSON, QueryTokenAccessorCapabilitiesRequestToJSON, QueryTokenCapabilitiesRequestToJSON, QueryTokenSelfCapabilitiesRequestToJSON, RateLimitQuotasConfigureRequestToJSON, RateLimitQuotasReadConfigurationResponseFromJSON, RateLimitQuotasReadResponseFromJSON, RateLimitQuotasWriteRequestToJSON, RawReadResponseFromJSON, RawWriteRequestToJSON, ReadWrappingProperties2ResponseFromJSON, ReadWrappingPropertiesRequestToJSON, ReadWrappingPropertiesResponseFromJSON, RekeyAttemptInitializeRequestToJSON, RekeyAttemptInitializeResponseFromJSON, RekeyAttemptReadProgressResponseFromJSON, RekeyAttemptUpdateRequestToJSON, RekeyAttemptUpdateResponseFromJSON, RekeyReadBackupKeyResponseFromJSON, RekeyReadBackupRecoveryKeyResponseFromJSON, RekeyVerificationCancelResponseFromJSON, RekeyVerificationReadProgressResponseFromJSON, RekeyVerificationUpdateRequestToJSON, RekeyVerificationUpdateResponseFromJSON, ReloadPluginsRequestToJSON, ReloadPluginsResponseFromJSON, RemountRequestToJSON, RemountResponseFromJSON, RemountStatusResponseFromJSON, RewrapRequestToJSON, RootTokenGenerationInitialize2RequestToJSON, RootTokenGenerationInitialize2ResponseFromJSON, RootTokenGenerationInitializeRequestToJSON, RootTokenGenerationInitializeResponseFromJSON, RootTokenGenerationReadProgress2ResponseFromJSON, RootTokenGenerationReadProgressResponseFromJSON, RootTokenGenerationUpdateRequestToJSON, RootTokenGenerationUpdateResponseFromJSON, SealStatusResponseFromJSON, StandardListResponseFromJSON, SubscriptionsCreateResponseFromJSON, SubscriptionsListEventsSubscriptionsResponseFromJSON, SubscriptionsReadEventsSubscriptionsResponseFromJSON, SubscriptionsWriteEventsSubscriptionsRequestToJSON, SubscriptionsWriteEventsSubscriptionsResponseFromJSON, SystemDeleteSyncConfigResponseFromJSON, SystemDeleteSyncGithubAppsNameResponseFromJSON, SystemListSyncAssociationsResponseFromJSON, SystemListSyncDestinationsResponseFromJSON, SystemListSyncDestinationsTypeResponseFromJSON, SystemListSyncGithubAppsResponseFromJSON, SystemReadConfigGroupPolicyApplicationResponseFromJSON, SystemReadSyncAssociationsDestinationsResponseFromJSON, SystemReadSyncAssociationsMountSecretNameResponseFromJSON, SystemReadSyncConfigResponseFromJSON, SystemReadSyncDestinationsAwsSmNameResponseFromJSON, SystemReadSyncDestinationsAzureKvNameResponseFromJSON, SystemReadSyncDestinationsGcpSmNameResponseFromJSON, SystemReadSyncDestinationsGhNameResponseFromJSON, SystemReadSyncDestinationsInMemNameResponseFromJSON, SystemReadSyncDestinationsTypeNameAssociationsResponseFromJSON, SystemReadSyncDestinationsVercelProjectNameResponseFromJSON, SystemReadSyncGithubAppsNameResponseFromJSON, SystemWriteConfigControlGroupRequestToJSON, SystemWriteConfigGroupPolicyApplicationRequestToJSON, SystemWriteControlGroupAuthorizeRequestToJSON, SystemWriteControlGroupRequestRequestToJSON, SystemWriteInternalCountersActivityWriteRequestToJSON, SystemWriteManagedKeysTypeNameRequestToJSON, SystemWriteManagedKeysTypeNameTestSignRequestToJSON, SystemWriteMfaMethodDuoNameRequestToJSON, SystemWriteMfaMethodOktaNameRequestToJSON, SystemWriteMfaMethodPingidNameRequestToJSON, SystemWriteMfaMethodTotpNameAdminDestroyRequestToJSON, SystemWriteMfaMethodTotpNameAdminGenerateRequestToJSON, SystemWriteMfaMethodTotpNameRequestToJSON, SystemWriteNamespacesApiLockUnlockPathRequestToJSON, SystemWriteNamespacesApiLockUnlockRequestToJSON, SystemWriteNamespacesPathRequestToJSON, SystemWritePoliciesEgpNameRequestToJSON, SystemWritePoliciesRgpNameRequestToJSON, SystemWriteQuotasLeaseCountNameRequestToJSON, SystemWriteReplicationDrPrimaryEnableRequestToJSON, SystemWriteReplicationDrPrimaryRevokeSecondaryRequestToJSON, SystemWriteReplicationDrPrimarySecondaryTokenRequestToJSON, SystemWriteReplicationDrSecondaryDisableRequestToJSON, SystemWriteReplicationDrSecondaryEnableRequestToJSON, SystemWriteReplicationDrSecondaryMerkleCheckRequestToJSON, SystemWriteReplicationDrSecondaryOperationTokenDeleteRequestToJSON, SystemWriteReplicationDrSecondaryPromoteRequestToJSON, SystemWriteReplicationDrSecondaryRecoverRequestToJSON, SystemWriteReplicationDrSecondaryReindexRequestToJSON, SystemWriteReplicationDrSecondaryUpdatePrimaryRequestToJSON, SystemWriteReplicationForceCorruptionRequestToJSON, SystemWriteReplicationPerformancePrimaryEnableRequestToJSON, SystemWriteReplicationPerformancePrimaryPathsFilterIdRequestToJSON, SystemWriteReplicationPerformancePrimaryRevokeSecondaryRequestToJSON, SystemWriteReplicationPerformancePrimarySecondaryTokenRequestToJSON, SystemWriteReplicationPerformanceSecondaryEnableRequestToJSON, SystemWriteReplicationPerformanceSecondaryPromoteRequestToJSON, SystemWriteReplicationPerformanceSecondaryUpdatePrimaryRequestToJSON, SystemWriteReplicationPrimaryEnableRequestToJSON, SystemWriteReplicationPrimaryRevokeSecondaryRequestToJSON, SystemWriteReplicationPrimarySecondaryTokenRequestToJSON, SystemWriteReplicationReindexRequestToJSON, SystemWriteReplicationSecondaryEnableRequestToJSON, SystemWriteReplicationSecondaryPromoteRequestToJSON, SystemWriteReplicationSecondaryUpdatePrimaryRequestToJSON, SystemWriteStorageRaftSnapshotAutoConfigNameRequestToJSON, SystemWriteSyncDestinationsAwsSmNameRequestToJSON, SystemWriteSyncDestinationsAwsSmNameResponseFromJSON, SystemWriteSyncDestinationsAzureKvNameRequestToJSON, SystemWriteSyncDestinationsAzureKvNameResponseFromJSON, SystemWriteSyncDestinationsGcpSmNameRequestToJSON, SystemWriteSyncDestinationsGcpSmNameResponseFromJSON, SystemWriteSyncDestinationsGhNameRequestToJSON, SystemWriteSyncDestinationsGhNameResponseFromJSON, SystemWriteSyncDestinationsInMemNameRequestToJSON, SystemWriteSyncDestinationsInMemNameResponseFromJSON, SystemWriteSyncDestinationsTypeNameAssociationsRemoveRequestToJSON, SystemWriteSyncDestinationsTypeNameAssociationsRemoveResponseFromJSON, SystemWriteSyncDestinationsTypeNameAssociationsSetRequestToJSON, SystemWriteSyncDestinationsTypeNameAssociationsSetResponseFromJSON, SystemWriteSyncDestinationsVercelProjectNameRequestToJSON, SystemWriteSyncDestinationsVercelProjectNameResponseFromJSON, SystemWriteSyncGithubAppsNameRequestToJSON, SystemWriteSyncGithubAppsNameResponseFromJSON, SystemWriteUtilizationRequestToJSON, SystemWriteUtilizationResponseFromJSON, UiConfigListCustomMessagesResponseFromJSON, UiConfigReadCustomMessageResponseFromJSON, UiConfigUpdateCustomMessageRequestToJSON, UiConfigUpdateCustomMessageResponseFromJSON, UiHeadersConfigureRequestToJSON, UiHeadersListResponseFromJSON, UiHeadersReadConfigurationResponseFromJSON, UnsealRequestToJSON, UnsealResponseFromJSON, UnwrapRequestToJSON, VersionHistoryResponseFromJSON, WellKnownListLabels2ResponseFromJSON, WellKnownListLabelsResponseFromJSON, WellKnownReadLabelResponseFromJSON, } from '../models/index';
+import { ActivationFlagsActivateRequestToJSON, AuditingCalculateHashRequestToJSON, AuditingCalculateHashResponseFromJSON, AuditingEnableDeviceRequestToJSON, AuditingEnableRequestHeaderRequestToJSON, AuditingListRequestHeadersResponseFromJSON, AuthEnableMethodRequestToJSON, AuthReadConfigurationResponseFromJSON, AuthReadTuningInformationResponseFromJSON, AuthTuneConfigurationParametersRequestToJSON, CollectHostInformationResponseFromJSON, CorsConfigureRequestToJSON, CorsReadConfigurationResponseFromJSON, CreateCustomMessageRequestToJSON, DecodeTokenRequestToJSON, EncryptionKeyConfigureRotationRequestToJSON, EncryptionKeyReadRotationConfigurationResponseFromJSON, GenerateHashRequestToJSON, GenerateHashResponseFromJSON, GenerateHashWithAlgorithmRequestToJSON, GenerateHashWithAlgorithmResponseFromJSON, GenerateRandomRequestToJSON, GenerateRandomResponseFromJSON, GenerateRandomWithBytesRequestToJSON, GenerateRandomWithBytesResponseFromJSON, GenerateRandomWithSourceAndBytesRequestToJSON, GenerateRandomWithSourceAndBytesResponseFromJSON, GenerateRandomWithSourceRequestToJSON, GenerateRandomWithSourceResponseFromJSON, GenerateUtilizationReportResponseFromJSON, HaStatusResponseFromJSON, InitializeRequestToJSON, InternalClientActivityConfigureRequestToJSON, InternalCountEntitiesResponseFromJSON, InternalCountTokensResponseFromJSON, InternalGenerateOpenApiDocumentWithParametersRequestToJSON, InternalUiListEnabledFeatureFlagsResponseFromJSON, InternalUiListEnabledVisibleMountsResponseFromJSON, InternalUiListNamespacesResponseFromJSON, InternalUiReadAuthenticatedActiveCustomMessagesResponseFromJSON, InternalUiReadMountInformationResponseFromJSON, InternalUiReadResultantAclResponseFromJSON, InternalUiReadUnauthenticatedActiveCustomMessagesResponseFromJSON, LeaderStatusResponseFromJSON, LeasesCountResponseFromJSON, LeasesListResponseFromJSON, LeasesLookUpResponseFromJSON, LeasesReadLeaseRequestToJSON, LeasesReadLeaseResponseFromJSON, LeasesRenewLease2RequestToJSON, LeasesRenewLeaseRequestToJSON, LeasesRenewLeaseWithId2RequestToJSON, LeasesRenewLeaseWithIdRequestToJSON, LeasesRevokeLease2RequestToJSON, LeasesRevokeLeaseRequestToJSON, LeasesRevokeLeaseWithId2RequestToJSON, LeasesRevokeLeaseWithIdRequestToJSON, LeasesRevokeLeaseWithPrefix2RequestToJSON, LeasesRevokeLeaseWithPrefixRequestToJSON, LoggersUpdateVerbosityLevelForRequestToJSON, LoggersUpdateVerbosityLevelRequestToJSON, MfaValidateRequestToJSON, MountsEnableSecretsEngineRequestToJSON, MountsReadConfigurationResponseFromJSON, MountsReadTuningInformationResponseFromJSON, MountsTuneConfigurationParametersRequestToJSON, PluginsCatalogListPluginsResponseFromJSON, PluginsCatalogListPluginsWithTypeResponseFromJSON, PluginsCatalogPinsCreatePinnedVersionRequestToJSON, PluginsCatalogPinsListPinnedVersionsResponseFromJSON, PluginsCatalogPinsReadPinnedVersionResponseFromJSON, PluginsCatalogReadPluginConfigurationResponseFromJSON, PluginsCatalogReadPluginConfigurationWithTypeResponseFromJSON, PluginsCatalogRegisterPluginRequestToJSON, PluginsCatalogRegisterPluginWithTypeRequestToJSON, PluginsReloadBackendsRequestToJSON, PluginsReloadBackendsResponseFromJSON, PluginsRuntimesCatalogListPluginsRuntimesResponseFromJSON, PluginsRuntimesCatalogReadPluginRuntimeConfigurationResponseFromJSON, PluginsRuntimesCatalogRegisterPluginRuntimeRequestToJSON, PoliciesGeneratePasswordFromPasswordPolicyResponseFromJSON, PoliciesListAclPolicies2ResponseFromJSON, PoliciesListAclPolicies3ResponseFromJSON, PoliciesListAclPoliciesResponseFromJSON, PoliciesReadAclPolicy2ResponseFromJSON, PoliciesReadAclPolicyResponseFromJSON, PoliciesReadPasswordPolicyResponseFromJSON, PoliciesWriteAclPolicy2RequestToJSON, PoliciesWriteAclPolicyRequestToJSON, PoliciesWritePasswordPolicyRequestToJSON, QueryTokenAccessorCapabilitiesRequestToJSON, QueryTokenCapabilitiesRequestToJSON, QueryTokenSelfCapabilitiesRequestToJSON, RateLimitQuotasConfigureRequestToJSON, RateLimitQuotasReadConfigurationResponseFromJSON, RateLimitQuotasReadResponseFromJSON, RateLimitQuotasWriteRequestToJSON, RawReadResponseFromJSON, RawWriteRequestToJSON, ReadWrappingProperties2ResponseFromJSON, ReadWrappingPropertiesRequestToJSON, ReadWrappingPropertiesResponseFromJSON, RekeyAttemptInitializeRequestToJSON, RekeyAttemptInitializeResponseFromJSON, RekeyAttemptReadProgressResponseFromJSON, RekeyAttemptUpdateRequestToJSON, RekeyAttemptUpdateResponseFromJSON, RekeyReadBackupKeyResponseFromJSON, RekeyReadBackupRecoveryKeyResponseFromJSON, RekeyVerificationCancelResponseFromJSON, RekeyVerificationReadProgressResponseFromJSON, RekeyVerificationUpdateRequestToJSON, RekeyVerificationUpdateResponseFromJSON, ReloadPluginsRequestToJSON, ReloadPluginsResponseFromJSON, RemountRequestToJSON, RemountResponseFromJSON, RemountStatusResponseFromJSON, RewrapRequestToJSON, RootTokenGenerationInitialize2RequestToJSON, RootTokenGenerationInitialize2ResponseFromJSON, RootTokenGenerationInitializeRequestToJSON, RootTokenGenerationInitializeResponseFromJSON, RootTokenGenerationReadProgress2ResponseFromJSON, RootTokenGenerationReadProgressResponseFromJSON, RootTokenGenerationUpdateRequestToJSON, RootTokenGenerationUpdateResponseFromJSON, SealStatusResponseFromJSON, StandardListResponseFromJSON, SubscriptionsCreateResponseFromJSON, SubscriptionsListEventsSubscriptionsResponseFromJSON, SubscriptionsReadEventsSubscriptionsResponseFromJSON, SubscriptionsWriteEventsSubscriptionsRequestToJSON, SubscriptionsWriteEventsSubscriptionsResponseFromJSON, SystemDeleteSyncConfigResponseFromJSON, SystemDeleteSyncGithubAppsNameResponseFromJSON, SystemListSyncAssociationsResponseFromJSON, SystemListSyncDestinationsResponseFromJSON, SystemListSyncDestinationsTypeResponseFromJSON, SystemListSyncGithubAppsResponseFromJSON, SystemPatchNamespacesPathRequestToJSON, SystemPatchSyncConfigRequestToJSON, SystemPatchSyncConfigResponseFromJSON, SystemPatchSyncDestinationsAwsSmNameRequestToJSON, SystemPatchSyncDestinationsAwsSmNameResponseFromJSON, SystemPatchSyncDestinationsAzureKvNameRequestToJSON, SystemPatchSyncDestinationsAzureKvNameResponseFromJSON, SystemPatchSyncDestinationsGcpSmNameRequestToJSON, SystemPatchSyncDestinationsGcpSmNameResponseFromJSON, SystemPatchSyncDestinationsGhNameRequestToJSON, SystemPatchSyncDestinationsGhNameResponseFromJSON, SystemPatchSyncDestinationsInMemNameRequestToJSON, SystemPatchSyncDestinationsInMemNameResponseFromJSON, SystemPatchSyncDestinationsVercelProjectNameRequestToJSON, SystemPatchSyncDestinationsVercelProjectNameResponseFromJSON, SystemReadConfigGroupPolicyApplicationResponseFromJSON, SystemReadSyncAssociationsDestinationsResponseFromJSON, SystemReadSyncAssociationsMountSecretNameResponseFromJSON, SystemReadSyncConfigResponseFromJSON, SystemReadSyncDestinationsAwsSmNameResponseFromJSON, SystemReadSyncDestinationsAzureKvNameResponseFromJSON, SystemReadSyncDestinationsGcpSmNameResponseFromJSON, SystemReadSyncDestinationsGhNameResponseFromJSON, SystemReadSyncDestinationsInMemNameResponseFromJSON, SystemReadSyncDestinationsTypeNameAssociationsResponseFromJSON, SystemReadSyncDestinationsVercelProjectNameResponseFromJSON, SystemReadSyncGithubAppsNameResponseFromJSON, SystemWriteConfigControlGroupRequestToJSON, SystemWriteConfigGroupPolicyApplicationRequestToJSON, SystemWriteControlGroupAuthorizeRequestToJSON, SystemWriteControlGroupRequestRequestToJSON, SystemWriteInternalCountersActivityWriteRequestToJSON, SystemWriteManagedKeysTypeNameRequestToJSON, SystemWriteManagedKeysTypeNameTestSignRequestToJSON, SystemWriteMfaMethodDuoNameRequestToJSON, SystemWriteMfaMethodOktaNameRequestToJSON, SystemWriteMfaMethodPingidNameRequestToJSON, SystemWriteMfaMethodTotpNameAdminDestroyRequestToJSON, SystemWriteMfaMethodTotpNameAdminGenerateRequestToJSON, SystemWriteMfaMethodTotpNameRequestToJSON, SystemWriteNamespacesApiLockUnlockPathRequestToJSON, SystemWriteNamespacesApiLockUnlockRequestToJSON, SystemWriteNamespacesPathRequestToJSON, SystemWritePoliciesEgpNameRequestToJSON, SystemWritePoliciesRgpNameRequestToJSON, SystemWriteQuotasLeaseCountNameRequestToJSON, SystemWriteReplicationDrPrimaryEnableRequestToJSON, SystemWriteReplicationDrPrimaryRevokeSecondaryRequestToJSON, SystemWriteReplicationDrPrimarySecondaryTokenRequestToJSON, SystemWriteReplicationDrSecondaryDisableRequestToJSON, SystemWriteReplicationDrSecondaryEnableRequestToJSON, SystemWriteReplicationDrSecondaryMerkleCheckRequestToJSON, SystemWriteReplicationDrSecondaryOperationTokenDeleteRequestToJSON, SystemWriteReplicationDrSecondaryPromoteRequestToJSON, SystemWriteReplicationDrSecondaryRecoverRequestToJSON, SystemWriteReplicationDrSecondaryReindexRequestToJSON, SystemWriteReplicationDrSecondaryUpdatePrimaryRequestToJSON, SystemWriteReplicationForceCorruptionRequestToJSON, SystemWriteReplicationPerformancePrimaryEnableRequestToJSON, SystemWriteReplicationPerformancePrimaryPathsFilterIdRequestToJSON, SystemWriteReplicationPerformancePrimaryRevokeSecondaryRequestToJSON, SystemWriteReplicationPerformancePrimarySecondaryTokenRequestToJSON, SystemWriteReplicationPerformanceSecondaryEnableRequestToJSON, SystemWriteReplicationPerformanceSecondaryPromoteRequestToJSON, SystemWriteReplicationPerformanceSecondaryUpdatePrimaryRequestToJSON, SystemWriteReplicationPrimaryEnableRequestToJSON, SystemWriteReplicationPrimaryRevokeSecondaryRequestToJSON, SystemWriteReplicationPrimarySecondaryTokenRequestToJSON, SystemWriteReplicationReindexRequestToJSON, SystemWriteReplicationSecondaryEnableRequestToJSON, SystemWriteReplicationSecondaryPromoteRequestToJSON, SystemWriteReplicationSecondaryUpdatePrimaryRequestToJSON, SystemWriteStorageRaftSnapshotAutoConfigNameRequestToJSON, SystemWriteSyncDestinationsAwsSmNameRequestToJSON, SystemWriteSyncDestinationsAwsSmNameResponseFromJSON, SystemWriteSyncDestinationsAzureKvNameRequestToJSON, SystemWriteSyncDestinationsAzureKvNameResponseFromJSON, SystemWriteSyncDestinationsGcpSmNameRequestToJSON, SystemWriteSyncDestinationsGcpSmNameResponseFromJSON, SystemWriteSyncDestinationsGhNameRequestToJSON, SystemWriteSyncDestinationsGhNameResponseFromJSON, SystemWriteSyncDestinationsInMemNameRequestToJSON, SystemWriteSyncDestinationsInMemNameResponseFromJSON, SystemWriteSyncDestinationsTypeNameAssociationsRemoveRequestToJSON, SystemWriteSyncDestinationsTypeNameAssociationsRemoveResponseFromJSON, SystemWriteSyncDestinationsTypeNameAssociationsSetRequestToJSON, SystemWriteSyncDestinationsTypeNameAssociationsSetResponseFromJSON, SystemWriteSyncDestinationsVercelProjectNameRequestToJSON, SystemWriteSyncDestinationsVercelProjectNameResponseFromJSON, SystemWriteSyncGithubAppsNameRequestToJSON, SystemWriteSyncGithubAppsNameResponseFromJSON, SystemWriteUtilizationRequestToJSON, SystemWriteUtilizationResponseFromJSON, UiConfigListCustomMessagesResponseFromJSON, UiConfigReadCustomMessageResponseFromJSON, UiConfigUpdateCustomMessageRequestToJSON, UiConfigUpdateCustomMessageResponseFromJSON, UiHeadersConfigureRequestToJSON, UiHeadersListResponseFromJSON, UiHeadersReadConfigurationResponseFromJSON, UnsealRequestToJSON, UnsealResponseFromJSON, UnwrapRequestToJSON, VersionHistoryResponseFromJSON, WellKnownListLabels2ResponseFromJSON, WellKnownListLabelsResponseFromJSON, WellKnownReadLabelResponseFromJSON, } from '../models/index';
 /**
  *
  */
@@ -79,15 +79,20 @@ export class SystemApi extends runtime.BaseAPI {
     /**
      * Activate a flagged feature.
      */
-    activationFlagsActivate_2Raw(initOverrides) {
+    activationFlagsActivate_2Raw(requestParameters, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['activationFlagsActivateRequest'] == null) {
+                throw new runtime.RequiredError('activationFlagsActivateRequest', 'Required parameter "activationFlagsActivateRequest" was null or undefined when calling activationFlagsActivate_2().');
+            }
             const queryParameters = {};
             const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
                 path: `/sys/activation-flags/secrets-sync/activate`,
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
+                body: ActivationFlagsActivateRequestToJSON(requestParameters['activationFlagsActivateRequest']),
             }, initOverrides);
             return new runtime.VoidApiResponse(response);
         });
@@ -95,9 +100,9 @@ export class SystemApi extends runtime.BaseAPI {
     /**
      * Activate a flagged feature.
      */
-    activationFlagsActivate_2(initOverrides) {
+    activationFlagsActivate_2(activationFlagsActivateRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            const response = yield this.activationFlagsActivate_2Raw(initOverrides);
+            const response = yield this.activationFlagsActivate_2Raw({ activationFlagsActivateRequest: activationFlagsActivateRequest }, initOverrides);
             return yield response.value();
         });
     }
@@ -6139,6 +6144,251 @@ export class SystemApi extends runtime.BaseAPI {
     systemListSyncGithubApps(list, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
             const response = yield this.systemListSyncGithubAppsRaw({ list: list }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    systemPatchNamespacesPathRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['path'] == null) {
+                throw new runtime.RequiredError('path', 'Required parameter "path" was null or undefined when calling systemPatchNamespacesPath().');
+            }
+            if (requestParameters['systemPatchNamespacesPathRequest'] == null) {
+                throw new runtime.RequiredError('systemPatchNamespacesPathRequest', 'Required parameter "systemPatchNamespacesPathRequest" was null or undefined when calling systemPatchNamespacesPath().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/sys/namespaces/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: SystemPatchNamespacesPathRequestToJSON(requestParameters['systemPatchNamespacesPathRequest']),
+            }, initOverrides);
+            return new runtime.VoidApiResponse(response);
+        });
+    }
+    /**
+     */
+    systemPatchNamespacesPath(path, systemPatchNamespacesPathRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.systemPatchNamespacesPathRaw({ path: path, systemPatchNamespacesPathRequest: systemPatchNamespacesPathRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    systemPatchSyncConfigRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['systemPatchSyncConfigRequest'] == null) {
+                throw new runtime.RequiredError('systemPatchSyncConfigRequest', 'Required parameter "systemPatchSyncConfigRequest" was null or undefined when calling systemPatchSyncConfig().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/sys/sync/config`,
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: SystemPatchSyncConfigRequestToJSON(requestParameters['systemPatchSyncConfigRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => SystemPatchSyncConfigResponseFromJSON(jsonValue));
+        });
+    }
+    /**
+     */
+    systemPatchSyncConfig(systemPatchSyncConfigRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.systemPatchSyncConfigRaw({ systemPatchSyncConfigRequest: systemPatchSyncConfigRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsAwsSmNameRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['name'] == null) {
+                throw new runtime.RequiredError('name', 'Required parameter "name" was null or undefined when calling systemPatchSyncDestinationsAwsSmName().');
+            }
+            if (requestParameters['systemPatchSyncDestinationsAwsSmNameRequest'] == null) {
+                throw new runtime.RequiredError('systemPatchSyncDestinationsAwsSmNameRequest', 'Required parameter "systemPatchSyncDestinationsAwsSmNameRequest" was null or undefined when calling systemPatchSyncDestinationsAwsSmName().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/sys/sync/destinations/aws-sm/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: SystemPatchSyncDestinationsAwsSmNameRequestToJSON(requestParameters['systemPatchSyncDestinationsAwsSmNameRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => SystemPatchSyncDestinationsAwsSmNameResponseFromJSON(jsonValue));
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsAwsSmName(name, systemPatchSyncDestinationsAwsSmNameRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.systemPatchSyncDestinationsAwsSmNameRaw({ name: name, systemPatchSyncDestinationsAwsSmNameRequest: systemPatchSyncDestinationsAwsSmNameRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsAzureKvNameRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['name'] == null) {
+                throw new runtime.RequiredError('name', 'Required parameter "name" was null or undefined when calling systemPatchSyncDestinationsAzureKvName().');
+            }
+            if (requestParameters['systemPatchSyncDestinationsAzureKvNameRequest'] == null) {
+                throw new runtime.RequiredError('systemPatchSyncDestinationsAzureKvNameRequest', 'Required parameter "systemPatchSyncDestinationsAzureKvNameRequest" was null or undefined when calling systemPatchSyncDestinationsAzureKvName().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/sys/sync/destinations/azure-kv/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: SystemPatchSyncDestinationsAzureKvNameRequestToJSON(requestParameters['systemPatchSyncDestinationsAzureKvNameRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => SystemPatchSyncDestinationsAzureKvNameResponseFromJSON(jsonValue));
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsAzureKvName(name, systemPatchSyncDestinationsAzureKvNameRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.systemPatchSyncDestinationsAzureKvNameRaw({ name: name, systemPatchSyncDestinationsAzureKvNameRequest: systemPatchSyncDestinationsAzureKvNameRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsGcpSmNameRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['name'] == null) {
+                throw new runtime.RequiredError('name', 'Required parameter "name" was null or undefined when calling systemPatchSyncDestinationsGcpSmName().');
+            }
+            if (requestParameters['systemPatchSyncDestinationsGcpSmNameRequest'] == null) {
+                throw new runtime.RequiredError('systemPatchSyncDestinationsGcpSmNameRequest', 'Required parameter "systemPatchSyncDestinationsGcpSmNameRequest" was null or undefined when calling systemPatchSyncDestinationsGcpSmName().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/sys/sync/destinations/gcp-sm/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: SystemPatchSyncDestinationsGcpSmNameRequestToJSON(requestParameters['systemPatchSyncDestinationsGcpSmNameRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => SystemPatchSyncDestinationsGcpSmNameResponseFromJSON(jsonValue));
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsGcpSmName(name, systemPatchSyncDestinationsGcpSmNameRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.systemPatchSyncDestinationsGcpSmNameRaw({ name: name, systemPatchSyncDestinationsGcpSmNameRequest: systemPatchSyncDestinationsGcpSmNameRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsGhNameRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['name'] == null) {
+                throw new runtime.RequiredError('name', 'Required parameter "name" was null or undefined when calling systemPatchSyncDestinationsGhName().');
+            }
+            if (requestParameters['systemPatchSyncDestinationsGhNameRequest'] == null) {
+                throw new runtime.RequiredError('systemPatchSyncDestinationsGhNameRequest', 'Required parameter "systemPatchSyncDestinationsGhNameRequest" was null or undefined when calling systemPatchSyncDestinationsGhName().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/sys/sync/destinations/gh/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: SystemPatchSyncDestinationsGhNameRequestToJSON(requestParameters['systemPatchSyncDestinationsGhNameRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => SystemPatchSyncDestinationsGhNameResponseFromJSON(jsonValue));
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsGhName(name, systemPatchSyncDestinationsGhNameRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.systemPatchSyncDestinationsGhNameRaw({ name: name, systemPatchSyncDestinationsGhNameRequest: systemPatchSyncDestinationsGhNameRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsInMemNameRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['name'] == null) {
+                throw new runtime.RequiredError('name', 'Required parameter "name" was null or undefined when calling systemPatchSyncDestinationsInMemName().');
+            }
+            if (requestParameters['systemPatchSyncDestinationsInMemNameRequest'] == null) {
+                throw new runtime.RequiredError('systemPatchSyncDestinationsInMemNameRequest', 'Required parameter "systemPatchSyncDestinationsInMemNameRequest" was null or undefined when calling systemPatchSyncDestinationsInMemName().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/sys/sync/destinations/in-mem/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: SystemPatchSyncDestinationsInMemNameRequestToJSON(requestParameters['systemPatchSyncDestinationsInMemNameRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => SystemPatchSyncDestinationsInMemNameResponseFromJSON(jsonValue));
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsInMemName(name, systemPatchSyncDestinationsInMemNameRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.systemPatchSyncDestinationsInMemNameRaw({ name: name, systemPatchSyncDestinationsInMemNameRequest: systemPatchSyncDestinationsInMemNameRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsVercelProjectNameRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['name'] == null) {
+                throw new runtime.RequiredError('name', 'Required parameter "name" was null or undefined when calling systemPatchSyncDestinationsVercelProjectName().');
+            }
+            if (requestParameters['systemPatchSyncDestinationsVercelProjectNameRequest'] == null) {
+                throw new runtime.RequiredError('systemPatchSyncDestinationsVercelProjectNameRequest', 'Required parameter "systemPatchSyncDestinationsVercelProjectNameRequest" was null or undefined when calling systemPatchSyncDestinationsVercelProjectName().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/sys/sync/destinations/vercel-project/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: SystemPatchSyncDestinationsVercelProjectNameRequestToJSON(requestParameters['systemPatchSyncDestinationsVercelProjectNameRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => SystemPatchSyncDestinationsVercelProjectNameResponseFromJSON(jsonValue));
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsVercelProjectName(name, systemPatchSyncDestinationsVercelProjectNameRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.systemPatchSyncDestinationsVercelProjectNameRaw({ name: name, systemPatchSyncDestinationsVercelProjectNameRequest: systemPatchSyncDestinationsVercelProjectNameRequest }, initOverrides);
             return yield response.value();
         });
     }

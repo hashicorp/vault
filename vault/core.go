@@ -2631,6 +2631,9 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 		func(ctx context.Context) error {
 			return c.setupHeaderHMACKey(ctx, false)
 		},
+		func(ctx context.Context) error {
+			return c.EntSetupUIDefaultAuth(ctx)
+		},
 	}
 
 	// If this server is not part of a Disaster Recovery secondary cluster,
@@ -2673,6 +2676,10 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 			return nil
 		})
 		setupFunctions = append(setupFunctions, c.loadLoginMFAConfigs)
+
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			return c.EntSetupUIDefaultAuth(ctx)
+		})
 	}
 
 	return setupFunctions
