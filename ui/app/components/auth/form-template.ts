@@ -121,30 +121,27 @@ export default class AuthFormTemplate extends Component<Args> {
     return namespaceQueryParam;
   }
 
-  // The "standard" login view is a dropdown listing all auth methods.
-  // This getter determines if an alternate login configuration exists.
-  get hasCustomConfiguration() {
+  get authViewMode() {
     const { directLinkData, loginSettings, visibleMountsByType } = this.args;
-    // // if direct link exists without visible mount data, it just references a type
-    // // ignore all other customizations because a direct URL takes priority
-    if (directLinkData && !directLinkData?.isVisibleMount && !visibleMountsByType) {
-      return false;
+
+    const hasBackupMethods = !!loginSettings?.backupTypes?.length;
+    const hasDefaultType = !!loginSettings?.defaultType;
+    const hasVisibleMounts = !!visibleMountsByType;
+    const isDirectLink = !!directLinkData?.isVisibleMount;
+
+    // Rendering alternate view
+    if (this.showOtherMethods) {
+      if (!directLinkData && hasBackupMethods) return 'backupTabs';
+      return 'dropdown';
     }
 
-    return directLinkData?.isVisibleMount || loginSettings || visibleMountsByType;
-  }
-
-  get formView() {
-    const { directLinkData, loginSettings } = this.args;
-    const directLinkIsSelected = this.selectedAuthMethod === directLinkData?.type;
-    if (directLinkData?.isVisibleMount && directLinkIsSelected) {
-      return 'directLinkMount';
-    } else if (loginSettings?.defaultType === this.selectedAuthMethod) {
-      return 'preferredType';
-    } else {
-      // visible mount tabs display as fallback
-      return '';
-    }
+    // Rendering default view
+    if (isDirectLink) return 'directLink';
+    // Login settings only render without a direct link
+    if (!directLinkData && hasDefaultType) return 'loginSettingsDefault';
+    if (!directLinkData && hasBackupMethods) return 'tabs';
+    if (hasVisibleMounts) return 'tabs';
+    return 'dropdown';
   }
 
   get canToggleViews() {
@@ -156,12 +153,12 @@ export default class AuthFormTemplate extends Component<Args> {
     // token does not support custom paths
     if (this.selectedAuthMethod === 'token') return false;
 
-    const { directLinkData, loginSettings, visibleMountsByType } = this.args;
-    // in most cases, if a method has a visible mount the UI should assume to use that path and hide "Advanced settings"
-    const hasMounts = !!visibleMountsByType?.[this.selectedAuthMethod];
+    const { directLinkData, loginSettings } = this.args;
+    // in most cases, if the selected method has visible mount(s) the UI should prefer those and hide "Advanced settings"
+    const hasMounts = !!this.selectedAuthHasMounts;
+
     // showOtherMethods is the fallback view in most cases, so we always want to show the advanced settings toggle.
     // UNLESS viewing backup methods then just rely on mount status
-
     if (directLinkData) {
       // always show advanced settings if showOtherMethods is true, otherwise hide/show depending on mount visibility
       return this.showOtherMethods ? true : !hasMounts;
@@ -176,6 +173,7 @@ export default class AuthFormTemplate extends Component<Args> {
 
     const tabs: UnauthMountsByType = {};
     for (const type of loginSettings.backupTypes) {
+      // adds visible mounts for each type, if they exist
       tabs[type] = visibleMountsByType?.[type] || null;
     }
     return tabs;
@@ -183,6 +181,10 @@ export default class AuthFormTemplate extends Component<Args> {
 
   get visibleMountTypes() {
     return Object.keys(this.args.visibleMountsByType || {});
+  }
+
+  get selectedAuthHasMounts() {
+    return this.visibleMountTypes.includes(this.selectedAuthMethod);
   }
 
   @action
@@ -253,9 +255,7 @@ export default class AuthFormTemplate extends Component<Args> {
     const { loginSettings, directLinkData } = this.args;
 
     if (directLinkData && !directLinkData?.isVisibleMount) {
-      return this.args.visibleMountsByType
-        ? !this.visibleMountTypes.includes(this.selectedAuthMethod)
-        : false;
+      return this.args.visibleMountsByType ? !this.selectedAuthHasMounts : false;
     }
 
     if (loginSettings) {
@@ -263,7 +263,7 @@ export default class AuthFormTemplate extends Component<Args> {
     }
     if (this.args.visibleMountsByType) {
       // if selectedAuthMethod is a tab (visible mount), then showOtherMethods should be "false"
-      return !this.visibleMountTypes.includes(this.selectedAuthMethod);
+      return !this.selectedAuthHasMounts;
     }
     return false;
   }

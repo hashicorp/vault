@@ -742,18 +742,18 @@ module('Integration | Component | auth | form template', function (hooks) {
             .exists('it renders dropdown after clicking "Sign in with other"');
         };
 
-        test('default and backups are set: it renders @directLinkData view', async function (assert) {
+        test('default and backups are set: it renders single mount view for @directLinkData', async function (assert) {
           await this.renderComponent();
           await testHelper(assert);
         });
 
-        test('only default is set: it renders @directLinkData view', async function (assert) {
+        test('only default is set: it renders single mount view for @directLinkData', async function (assert) {
           this.loginSettings.backupTypes = [];
           await this.renderComponent();
           await testHelper(assert);
         });
 
-        test('only backups are set: it renders @directLinkData view', async function (assert) {
+        test('only backups are set: it renders single mount view for @directLinkData', async function (assert) {
           this.loginSettings.defaultType = '';
           await this.renderComponent();
           await testHelper(assert);
