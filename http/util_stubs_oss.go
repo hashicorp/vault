@@ -24,3 +24,5 @@ func entAdditionalRoutes(mux *http.ServeMux, core *vault.Core) {}
 
 func entAdjustResponse(core *vault.Core, w http.ResponseWriter, req *logical.Request) {
 }
+
+func entRlqRequestFields(core *vault.Core, r *http.Request, quotaReq *quotas.Request) {}
