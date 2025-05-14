@@ -208,32 +208,30 @@ export default class AuthFormTemplate extends Component<Args> {
   @action
   toggleView() {
     this.showOtherMethods = !this.showOtherMethods;
-    const { loginSettings } = this.args;
 
-    if (this.showOtherMethods) {
-      // User has clicked "Sign in with other methods →"
-      const firstBackup = loginSettings?.backupTypes?.[0] as string;
-      const presetType = this.auth.getAuthType() || 'token';
-      this.setAuthType(firstBackup || presetType);
-    } else {
-      // Initial view of login form
-      const type = this.determineAuthType();
-      this.setAuthType(type);
-    }
+    const type = this.determineAuthType(this.showOtherMethods);
+    this.setAuthType(type);
   }
 
   @action
   initializeState() {
-    // SET AUTH TYPE
+    // First, set auth type
     const type = this.determineAuthType();
     this.setAuthType(type);
 
-    // DETERMINES INITIAL RENDER (if alternate view exists)
+    // Depending on which method is selected, determine which view renders
+    // (if alternate views exist)
     this.showOtherMethods = this.determineShowOtherMethods();
   }
 
-  private determineAuthType(): string {
+  private determineAuthType(showOtherMethods = false): string {
     const { canceledMfaAuth, directLinkData, loginSettings } = this.args;
+
+    if (showOtherMethods) {
+      // If "other methods" view is shown, prioritize backup types
+      return loginSettings?.backupTypes?.[0] || this.auth.getAuthType() || 'token';
+    }
+
     return (
       // Prioritize canceledMfaAuth since it's triggered by user interaction.
       canceledMfaAuth ||
