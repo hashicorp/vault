@@ -456,7 +456,7 @@ module('Integration | Component | auth | form template', function (hooks) {
         .hasAttribute('aria-selected', 'true', 'it selects the first backup type');
       await this.assertPathInput(assert);
       await click(AUTH_FORM.tabBtn('ldap'));
-      assert.dom(AUTH_FORM.tabBtn('ldap')).exists('aria-selected', 'true', 'it selects ldap tab');
+      assert.dom(AUTH_FORM.tabBtn('ldap')).hasAttribute('aria-selected', 'true', 'it selects ldap tab');
       await this.assertPathInput(assert);
     });
 
@@ -468,7 +468,7 @@ module('Integration | Component | auth | form template', function (hooks) {
       assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist();
     });
 
-    test('only backups are set: it initially renders backup types if no default exists', async function (assert) {
+    test('only backups are set: it initially renders backup types if no default is set', async function (assert) {
       this.loginSettings.defaultType = '';
       await this.renderComponent();
       assert.dom(AUTH_FORM.preferredMethod('oidc')).doesNotExist();
@@ -487,7 +487,6 @@ module('Integration | Component | auth | form template', function (hooks) {
           defaultType: 'oidc',
           backupTypes: ['userpass', 'ldap'],
         };
-        this.hasVisibleAuthMounts = true;
         this.visibleMountsByType = {
           userpass: [
             {
@@ -530,7 +529,7 @@ module('Integration | Component | auth | form template', function (hooks) {
         assert.dom(AUTH_FORM.tabs).exists({ count: 2 }, 'it renders 2 backup type tabs');
         assert
           .dom(AUTH_FORM.tabBtn('userpass'))
-          .exists('aria-selected', 'true', 'it selects the first backup type');
+          .hasAttribute('aria-selected', 'true', 'it selects the first backup type');
         assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
         assert.dom(GENERAL.inputByAttr('path')).doesNotExist();
         assert.dom(GENERAL.selectByAttr('path')).exists(); // dropdown renders because userpass has 2 mount paths
@@ -607,7 +606,7 @@ module('Integration | Component | auth | form template', function (hooks) {
         await this.renderComponent();
         this.assertPathInput(assert, { isHidden: true, value: 'my-oidc/' });
         await click(AUTH_FORM.otherMethodsBtn);
-        assert.dom(AUTH_FORM.tabBtn('userpass')).exists('aria-selected', 'true');
+        assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
         await this.assertPathInput(assert);
         await click(AUTH_FORM.tabBtn('ldap'));
         await this.assertPathInput(assert);
@@ -618,7 +617,7 @@ module('Integration | Component | auth | form template', function (hooks) {
         await this.renderComponent();
         assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
         await click(AUTH_FORM.otherMethodsBtn);
-        assert.dom(AUTH_FORM.tabBtn('userpass')).exists('aria-selected', 'true');
+        assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
         assert.dom(GENERAL.selectByAttr('path')).exists();
         assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
         await click(AUTH_FORM.tabBtn('ldap'));
@@ -630,7 +629,7 @@ module('Integration | Component | auth | form template', function (hooks) {
         await this.renderComponent();
         assert.dom(AUTH_FORM.advancedSettings).exists();
         await click(AUTH_FORM.otherMethodsBtn);
-        assert.dom(AUTH_FORM.tabBtn('userpass')).exists('aria-selected', 'true');
+        assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
         assert.dom(AUTH_FORM.advancedSettings).exists();
         await click(AUTH_FORM.tabBtn('ldap'));
         this.assertPathInput(assert, { isHidden: true, value: 'ldap/' });
@@ -640,10 +639,160 @@ module('Integration | Component | auth | form template', function (hooks) {
         this.loginSettings.defaultType = '';
         this.visibleMountsByType = { ldap: this.mountData.ldap };
         await this.renderComponent();
-        assert.dom(AUTH_FORM.tabBtn('userpass')).exists('aria-selected', 'true');
+        assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
         assert.dom(AUTH_FORM.advancedSettings).exists();
         await click(AUTH_FORM.tabBtn('ldap'));
         this.assertPathInput(assert, { isHidden: true, value: 'ldap/' });
+      });
+    });
+
+    module('@directLinkData overrides login settings', function (hooks) {
+      hooks.beforeEach(function () {
+        this.mountData = {
+          userpass: [
+            {
+              path: 'userpass/',
+              description: '',
+              options: {},
+              type: 'userpass',
+            },
+            {
+              path: 'userpass2/',
+              description: '',
+              options: {},
+              type: 'userpass',
+            },
+          ],
+          oidc: [
+            {
+              path: 'my-oidc/',
+              description: '',
+              options: {},
+              type: 'oidc',
+            },
+          ],
+          ldap: [
+            {
+              path: 'ldap/',
+              description: '',
+              options: null,
+              type: 'ldap',
+            },
+          ],
+        };
+      });
+
+      module('when there are no visible mounts at all', function (hooks) {
+        hooks.beforeEach(function () {
+          this.visibleMountsByType = null;
+          this.directLinkData = { type: 'okta', isVisibleMount: false };
+        });
+
+        const testHelper = (assert) => {
+          assert.dom(AUTH_FORM.selectMethod).hasValue('okta');
+          assert.dom(AUTH_FORM.authForm('okta')).exists();
+          assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist();
+          assert.dom(GENERAL.backButton).doesNotExist();
+        };
+
+        test('default and backups are set: it renders standard view and selects @directLinkData type from dropdown', async function (assert) {
+          await this.renderComponent();
+          testHelper(assert);
+        });
+
+        test('only default is set: it renders standard view and selects @directLinkData type from dropdown', async function (assert) {
+          this.loginSettings.backupTypes = [];
+          await this.renderComponent();
+          testHelper(assert);
+        });
+
+        test('only backups are set: it renders standard view and selects @directLinkData type from dropdown', async function (assert) {
+          this.loginSettings.defaultType = '';
+          await this.renderComponent();
+          testHelper(assert);
+        });
+      });
+
+      module('when param refers to a visible mount and other visible mounts exist', function (hooks) {
+        hooks.beforeEach(function () {
+          this.visibleMountsByType = {
+            ...this.mountData,
+            okta: [
+              {
+                path: 'my-okta/',
+                description: '',
+                options: null,
+                type: 'okta',
+              },
+            ],
+          };
+          this.directLinkData = { path: 'my-okta/', type: 'okta', isVisibleMount: true };
+        });
+
+        const testHelper = async (assert) => {
+          assert.dom(AUTH_FORM.preferredMethod('okta')).hasText('Okta');
+          assert.dom(AUTH_FORM.authForm('okta'));
+          assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
+          assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
+          assert.dom(GENERAL.inputByAttr('path')).hasValue('my-okta/');
+          assert.dom(GENERAL.inputByAttr('path')).exists({ count: 1 });
+          await click(AUTH_FORM.otherMethodsBtn);
+          assert
+            .dom(GENERAL.selectByAttr('auth type'))
+            .exists('it renders dropdown after clicking "Sign in with other"');
+        };
+
+        test('default and backups are set: it renders @directLinkData view', async function (assert) {
+          await this.renderComponent();
+          await testHelper(assert);
+        });
+
+        test('only default is set: it renders @directLinkData view', async function (assert) {
+          this.loginSettings.backupTypes = [];
+          await this.renderComponent();
+          await testHelper(assert);
+        });
+
+        test('only backups are set: it renders @directLinkData view', async function (assert) {
+          this.loginSettings.defaultType = '';
+          await this.renderComponent();
+          await testHelper(assert);
+        });
+      });
+
+      // directLinkData for a non-visible mount usually means it's referencing a type, not a mount path
+      module('when param refers to a NON-visible mount but other visible mounts exist', function (hooks) {
+        hooks.beforeEach(function () {
+          this.directLinkData = { type: 'okta', isVisibleMount: false };
+          this.visibleMountsByType = this.mountData;
+        });
+
+        const testHelper = async (assert) => {
+          assert.dom(GENERAL.backButton).exists('back button renders because other methods have tabs');
+          assert.dom(AUTH_FORM.selectMethod).hasValue('okta');
+          assert.dom(AUTH_FORM.authForm('okta')).exists();
+          assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist();
+          await click(GENERAL.backButton);
+          assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
+          assert.dom(AUTH_FORM.tabBtn('ldap')).exists();
+        };
+
+        test('default and backups are set: it selects @directLinkData type from dropdown and toggles to tab view', async function (assert) {
+          await this.renderComponent();
+          await testHelper(assert);
+        });
+
+        test('only default is set: it selects @directLinkData type from dropdown and toggles to tab view', async function (assert) {
+          this.loginSettings.backupTypes = [];
+          await this.renderComponent();
+          await testHelper(assert);
+        });
+
+        test('only backups are set: it selects @directLinkData type from dropdown and toggles to tab view', async function (assert) {
+          this.loginSettings.defaultType = '';
+          await this.renderComponent();
+          await testHelper(assert);
+        });
       });
     });
   });

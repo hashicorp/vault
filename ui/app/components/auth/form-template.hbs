@@ -36,66 +36,61 @@
           {{/if}}
         </:back>
 
-        {{! DIRECT LINK, TABS OR DROPDOWN }}
         <:authSelectOptions>
           <div class="has-bottom-margin-m">
-            {{#if this.showCustomAuthOptions}}
-              {{#if @directLinkData.isVisibleMount}}
+            {{! If any sort of login configuration exists, it renders here }}
+            {{#if (and this.hasCustomConfiguration (not this.showOtherMethods))}}
+              {{#if (eq this.formView "directLinkMount")}}
                 {{! URL contains a "with" query param that references a mount with listing_visibility="unauth" }}
                 {{! Treat it as a "preferred" mount and hide all other tabs }}
                 <Auth::MountsDisplay
                   @mounts={{array @directLinkData}}
-                  @shouldRenderPath={{not-eq @selectedAuthMethod "token"}}
+                  @shouldRenderPath={{not-eq this.selectedAuthMethod "token"}}
                 />
-              {{else if @loginSettings}}
-                {{#if @loginSettings.defaultType}}
-                  <Hds::Text::Body
-                    @tag="p"
-                    @weight="semibold"
-                    class="has-bottom-margin-m"
-                    data-test-auth-method={{@loginSettings.defaultType}}
-                  >
-                    {{auth-display-name @loginSettings.defaultType}}
-                  </Hds::Text::Body>
-                  {{#let (get @visibleMountsByType @loginSettings.defaultType) as |mounts|}}
-                    {{#if mounts.length}}
-                      <Auth::MountsDisplay
-                        @hideType={{true}}
-                        @mounts={{mounts}}
-                        @shouldRenderPath={{not-eq @selectedAuthMethod "token"}}
-                      />
-                    {{/if}}
-                  {{/let}}
-                {{else}}
-                  <Auth::Tabs
-                    @authTabData={{this.backupMethodTabs}}
-                    @handleTabClick={{this.setAuthType}}
-                    @selectedAuthMethod={{this.selectedAuthMethod}}
-                  />
-                {{/if}}
+              {{else if (eq this.formView "preferredType")}}
+                <Hds::Text::Body
+                  @tag="p"
+                  @weight="semibold"
+                  class="has-bottom-margin-m"
+                  data-test-auth-method={{this.selectedAuthMethod}}
+                >
+                  {{!-- {{auth-display-name @loginSettings.defaultType}} --}}
+                  {{auth-display-name this.selectedAuthMethod}}
+                </Hds::Text::Body>
+                {{#let (get @visibleMountsByType this.selectedAuthMethod) as |mounts|}}
+                  {{#if mounts.length}}
+                    <Auth::MountsDisplay
+                      @hideType={{true}}
+                      @mounts={{mounts}}
+                      @shouldRenderPath={{not-eq this.selectedAuthMethod "token"}}
+                    />
+                  {{/if}}
+                {{/let}}
               {{else}}
+                {{! Tabs are either preferred methods from login settings or visible mounts }}
                 <Auth::Tabs
-                  @authTabData={{@visibleMountsByType}}
+                  @authTabData={{or this.backupMethodTabs @visibleMountsByType}}
                   @handleTabClick={{this.setAuthType}}
                   @selectedAuthMethod={{this.selectedAuthMethod}}
                 />
               {{/if}}
             {{else}}
-              {{#if @loginSettings.backupTypes}}
+              {{! showOtherMethods is true }}
+              {{#if (and this.backupMethodTabs (not @directLinkData))}}
                 <Auth::Tabs
                   @authTabData={{this.backupMethodTabs}}
                   @handleTabClick={{this.setAuthType}}
                   @selectedAuthMethod={{this.selectedAuthMethod}}
                 />
               {{else}}
-                {{! fallback view is the dropdown with all auth methods }}
+                {{! "Standard" view is dropdown with all auth methods }}
                 <Hds::Form::Select::Field
                   name="selectedAuthMethod"
                   {{on "input" this.setTypeFromDropdown}}
                   data-test-select="auth type"
                   as |F|
                 >
-                  <F.Label class="has-top-margin-m">Auth method</F.Label>
+                  <F.Label class="has-top-margin-m">Method</F.Label>
                   <F.Options>
                     {{#each this.availableMethodTypes as |type|}}
                       <option selected={{eq this.selectedAuthMethod type}} value={{type}}>
@@ -131,7 +126,7 @@
         </:advancedSettings>
 
         <:footer>
-          {{#if (and this.showCustomAuthOptions this.canToggleViews)}}
+          {{#if this.canToggleViews}}
             <Hds::Button
               {{on "click" this.toggleView}}
               @color="tertiary"
