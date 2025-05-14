@@ -67,6 +67,9 @@ export const GENERAL = {
   },
   inlineError: '[data-test-inline-error-message]',
   kvObjectEditor: {
+    key: (idx = 0) => `[data-test-kv-key="${idx}"]`,
+    value: (idx = 0) => `[data-test-kv-value="${idx}"]`,
+    addRow: '[data-test-kv-add-row]',
     deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
   },
   searchSelect: {
