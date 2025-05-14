@@ -95,7 +95,8 @@ func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logica
 		return nil, err
 	}
 
-	reply, err := b.client.HandleRequest(ctx, &pb.HandleRequestArgs{
+	reqCtx := logicalCtxToPBMetadataCtx(ctx)
+	reply, err := b.client.HandleRequest(reqCtx, &pb.HandleRequestArgs{
 		Request: protoReq,
 	}, largeMsgGRPCCallOpts...)
 	if err != nil {
