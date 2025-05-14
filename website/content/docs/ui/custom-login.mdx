@@ -1,0 +1,377 @@
+---
+layout: docs
+page_title: Manage custom login options
+description: >-
+  Use custom login flows to control how clients can authenticate to Vault
+  through the GUI.
+---
+
+# Manage custom login options for the Vault GUI
+
+@include 'alerts/enterprise-only.mdx'
+
+Use custom login options to set preferred authentication method for Vault GUI
+users. You can customize your login flow with a default authentication method,
+preferred authentication methods, or both.
+
+Configuration           | Result
+----------------------- | ------
+Default only            | Clients must use the configured authentication method during login
+Preferred only          | Clients must choose among the configured authentication methods during login
+Default and preferred   | Clients see the default method first but can choose any of the configured authentication methods
+
+
+## Before you start 
+
+- **You must have Vault Enterprise 1.20.0 or higher installed.**
+- **You must have the appropriate permissions**:
+  - You must have `update` permission for the `sys/config/ui/login/default-auth` endpoint.
+  - You must have `read` permission for the `sys/internal/ui/default-login-methods` endpoint.
+
+## Step 1: Select your authentication method
+
+Vault Enterprise supports customization for the following authentication
+methods:
+
+- [GitHub](/vault/docs/auth/github)
+- [JWT](/vault/docs/auth/jwt)
+- [LDAP](/vault/docs/auth/ldap)
+- [OIDC](/vault/docs/auth/jwt/oidc-providers)
+- [Okta](/vault/docs/auth/okta)
+- [RADIUS](/vault/docs/auth/radius)
+- [SAML](/vault/docs/auth/saml)
+- [Token](/vault/docs/auth/token)
+- [Username and password](/vault/docs/auth/userpass)
+
+
+## Step 2: Make the authentication method visible to the GUI
+
+Set the listing visibility of your authentication plugin to `unauth` so Vault
+knows to make it available in the GUI login flow.
+
+<Tip title="Make use of metadata">
+
+Set the [mount description field](/vault/api-docs/system/auth#description) to
+make it obvious that the mount is a default or preferred login method for the
+Vault GUI.
+
+</Tip>
+
+### Option 1: Configure a new plugin
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+1. Use `vault auth enable` to establish a new instance of the authentication
+   plugin and set the `-listing-visibility` flag to `unauth`:
+    
+    ```shell-session
+    $ vault auth enable              \
+      -path <mount_path>             \
+      -namespace <plugin_namespace>  \
+      -description <visibility_note> \
+      -listing-visibility "unauth"   \
+      <authentication_method>
+    ```
+    
+    For example:
+    
+    <CodeBlockConfig hideClipboard="true">
+    
+    ```shell-session
+    $ vault auth enable                      \
+      -path gui/ldap                         \
+      -namespace admin                       \
+      -description "Default GUI auth method" \
+      -listing-visibility "unauth"           \
+      ldap
+    
+    Success! Enabled userpass auth method at: gui/userpass/
+    ```
+
+    </CodeBlockConfig>
+
+1. Use `vault auth list` to verify the plugin configuration. For example:
+
+    ```shell-session
+    $ vault auth list
+    
+    Path             Type        Accessor                  Description                Version
+    ----             ----        --------                  -----------                -------
+    gui/userpass/    userpass    auth_userpass_b6284852    Default GUI auth method    n/a
+    ```
+
+</Tab>
+
+<Tab heading="GUI" group="gui">
+
+@include 'gui-instructions/enable-auth-plugin.mdx'
+
+- Select the desired plugin.
+
+- Enter a unique path for the plugin.
+- Check the box next to **List method when unauthenticated**.
+- In **Description**, note that the method is a default or preferred
+  authentication method for the GUI.
+- Provide any other relevant configuration information for the plugin.
+- Click **Enable method**.
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+1. Create a JSON file with the configuration information for your authentication
+   plugin. Use the `config` field to set the `listing_visibility` parameter to
+   `unauth`.
+
+1. Make a `POST` call to
+   [`/sys/auth/{plugin_mount_path}`](/vault/api-docs/system/auth#enable-auth-method)
+   with the JSON data:
+    ```shell-session
+    $ curl                                             \
+      --request POST                                   \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"         \
+      --header "X-Vault-Namespace: ${VAULT_NAMESPACE}" \
+      --data @data.json                                \
+      ${VAULT_ADDR}/v1/sys/auth/<plugin_mount_path>
+    ```
+
+For example:
+
+<CodeBlockConfig hideClipboard="true">
+
+```json
+{
+  "description": "Default GUI auth method",
+  "config": {
+    "listing_visibility": "unauth"
+  }
+}
+```
+
+</CodeBlockConfig>
+
+<CodeBlockConfig hideClipboard="true">
+
+```shell-session
+$ curl                                               \
+    --request POST                                   \
+    --header "X-Vault-Token: ${VAULT_TOKEN}"         \
+    --header "X-Vault-Namespace: ${VAULT_NAMESPACE}" \
+    --data @data.json                         \
+    ${VAULT_ADDR}/v1/sys/auth/gui/userpass | jq
+```
+
+</CodeBlockConfig>
+
+`/sys/auth/{plugin_mount_path}` does not return data on success.
+
+</Tab>
+
+</Tabs>
+
+### Option 2: Update an existing plugin
+
+<Tab heading="CLI" group="cli">
+
+Use `vault auth tune` to update the `-listing-visibility` flag to `unauth`:
+    
+```shell-session
+$ vault auth tune              \
+  -namespace <plugin_namespace>  \
+  -description <visibility_note> \
+  -listing-visibility "unauth"   \
+  <mount_path>
+```
+    
+For example:
+    
+<CodeBlockConfig hideClipboard="true">
+
+```shell-session
+$ vault auth tune                        \
+  -namespace admin                       \
+  -description "Default GUI auth method" \
+  -listing-visibility "unauth"           \
+  gui/userpass
+
+Success! Tuned the auth method at: gui/userpass/
+```
+
+</CodeBlockConfig>
+
+</Tab>
+
+<Tab heading="GUI" group="gui">
+
+@include 'gui-instructions/update-auth-plugin.mdx'
+
+- Click **Configure >**.
+- Check the box next to **List method when unauthenticated**.
+- Update **Description** to note the method as a default or preferred
+  authentication method for the GUI.
+- Click **Update options**.
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+1. Create a JSON file with the updated configuration information for your
+   authentication plugin and set the `listing_visibility` parameter to `unauth`.
+
+1. Make a `POST` call to
+   [`/sys/auth/{plugin_mount_path}/tune`](/vault/api-docs/system/auth#tune-auth-method)
+   with the JSON data:
+    ```shell-session
+    $ curl                                             \
+      --request POST                                   \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"         \
+      --header "X-Vault-Namespace: ${VAULT_NAMESPACE}" \
+      --data @data.json                                \
+      ${VAULT_ADDR}/v1/sys/auth/<plugin_mount_path>/tune
+    ```
+
+
+For example:
+
+<CodeBlockConfig hideClipboard="true">
+
+```json
+{
+  "description": "Default GUI auth method",
+  "listing_visibility": "unauth"
+}
+```
+
+</CodeBlockConfig>
+
+<CodeBlockConfig hideClipboard="true">
+
+```shell-session
+$ curl                                               \
+    --request POST                                   \
+    --header "X-Vault-Token: ${VAULT_TOKEN}"         \
+    --header "X-Vault-Namespace: ${VAULT_NAMESPACE}" \
+    --data @data.json                         \
+    ${VAULT_ADDR}/v1/sys/auth/gui/userpass/tune | jq
+```
+
+</CodeBlockConfig>
+
+`/sys/auth/{plugin_mount_path}/tune` does not return data on success.
+
+</Tab>
+
+</Tabs>
+
+## Step 3: Set your default and preferred authentication methods
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+1. Use `vault write` with the
+   [`sys/config/ui/login/default-auth`](/vault/api-docs/system/config-ui-login-default-auth)
+   endpoint to set the default and/or preferred GUI authentication method.
+
+    ```shell-session
+    $ vault write sys/config/ui/login/default-auth    \
+      name="<unique_rule_name>"                       \
+      namespace="<namespace_where_the_rule_applies>"  \
+      default_auth_type="<auth_plugin_mount_path>"    \
+      preferred_auth_types=[<list_of_auth_plugin_mount_paths>]
+    ```
+
+    For example, to customize the login options for the `dev` namespace and set the
+    authentication method mounted at `gui/userpass` as the default authentication
+    method with `gui/ldap` and `gui/token` as additional, preferred options:
+
+    <CodeBlockConfig hideClipboard="true">
+
+    ```shell-session
+    $ vault write sys/config/ui/login/default-auth  \
+      name="dev-gui-login"                          \
+      namespace="dev"                               \
+      default_auth_type="gui/userpass"              \
+      preferred_auth_types=["gui/ldap", "gui/token"]
+    ```
+
+    </CodeBlockConfig>
+
+1. Use `vault read` with the
+   [`sys/config/ui/login/default-auth`](/vault/api-docs/system/config-ui-login-default-auth)
+   endpoint and the new rule name to verify the login configuration. For example:
+
+    ```shell-session
+    $ vault read sys/config/ui/login/default-auth/dev-gui-login
+
+    TBD
+    ```
+
+</Tab>
+
+<Tab heading="GUI" group="gui">
+
+TBD
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+1. Create a JSON file with a new custom login configuration rule that sets your
+   default and/or preferred GUI authentication methods.
+
+1. Make a `POST` call to
+   [`/sys/auth/{plugin_mount_path}/tune`](/vault/api-docs/system/auth#tune-auth-method)
+   with the JSON data:
+    ```shell-session
+    $ curl                                             \
+      --request POST                                   \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"         \
+      --header "X-Vault-Namespace: ${VAULT_NAMESPACE}" \
+      --data @data.json                                \
+      ${VAULT_ADDR}/v1/sys/auth/<plugin_mount_path>/tune
+    ```
+
+
+For example:
+
+<CodeBlockConfig hideClipboard="true">
+
+```json
+{
+  "description": "Default GUI auth method",
+  "listing_visibility": "unauth"
+}
+```
+
+</CodeBlockConfig>
+
+<CodeBlockConfig hideClipboard="true">
+
+```shell-session
+$ curl                                               \
+    --request POST                                   \
+    --header "X-Vault-Token: ${VAULT_TOKEN}"         \
+    --header "X-Vault-Namespace: ${VAULT_NAMESPACE}" \
+    --data @data.json                         \
+    ${VAULT_ADDR}/v1/sys/auth/gui/userpass/tune | jq
+```
+
+</CodeBlockConfig>
+
+`/sys/auth/{plugin_mount_path}/tune` does not return data on success.
+
+</Tab>
+
+</Tabs>
+
+## Step 4: Set your preferred authentication methods ((#step4))
+
+
+
+
+# Next steps
+
+TBD
