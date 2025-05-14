@@ -21,43 +21,42 @@ import type { HTMLElementEvent } from 'vault/forms';
 /**
  * @module Auth::FormTemplate
  * This component manages the layout and display logic of the login form. When auth type changes the component dynamically renders the corresponding form.
- * The route fetches the unauthenticated sys/internal/ui/mounts endpoint to check if any mounts have `listing_visibility="unauth"`.
- * The endpoint is re-requested anytime the namespace input updates.
+ * The route fetches the unauthenticated sys/internal/ui/mounts endpoint to check for visible mounts and re-requests it when the namespace input updates.
  *
- * 🔧 CONFIGURATION OPTIONS:
- * Outlined below are the different configuration options, in some scenarios there are two views to toggle between:
- * - The initial view (shown by default)
- * - The alternate methods view (displayed when the user clicks "Sign in with other methods →")
+ * 🔧 CONFIGURATION OVERVIEW:
+ * Each view mode (see `FormView` enum below) has specific layout configurations. In some scenarios, the component supports toggling between a default view and an alternate view.
  *
- * 📋 Standard dropdown view (no form configurations):
- *   ▸ Dropdown lists ALL auth methods supported by the UI
- *   ▸ Alternate view: None
+ * 📋 [DROPDOWN] (default view)
+ *   ▸ All supported auth methods show in a dropdown.
+ *   ▸ No alternate view.
  *
- * 🗂️ Unauth mount tabs:
- *   ▸ Auth mounts (not methods) with `listing_visibility="unauth"` are grouped by type and render as tabs.
- *   ▸ Alternate view: Dropdown with all methods
+ * 🗂️ [TABS] (unauth mount tabs)
+ *   ▸ Groups visible mounts (`listing_visibility="unauth"`) by type and displays as tabs.
+ *   ▸ Alternate view: full dropdown of all methods.
  *
- * 🔗 Direct link (auth URL contains the `?with=` query param):
- *   ▸ If param references a visible mount, the corresponding method type renders and the mount path is assumed for login
- *      ↳ Alternate view: Dropdown with all methods
- *   ▸ Param references a type (backward compatibility)
- *      ↳ Type is selected in either dropdown or as tab, depending on listing visibility configs
+ * 🔗 [DIRECT_LINK] (via `?with=` query param)
+ *   ▸ If the param references a visible mount, that method renders by default and the mount path is assumed.
+ *     ↳ Alternate view: full dropdown.
+ *   ▸ If the param references a method type (legacy behavior), the method is preselected in the dropdown or its tab is selected.
+ *     ↳ Alternate view: if other methods have visible mounts, the form can toggle between tabs and dropdown. The initial view depends on whether the chosen type is a tab.
  *
- * 🏢 *Enterprise-only* Login customizations:
- *   ▸ A namespace can have a default auth method and/or preferred (backup) methods set. Preferred methods display as tabs.
- *    ✎ Default + preferred is set
- *        ↳ Default method displays by default
- *        ↳ Alternate view: Preferred methods as tabs
- *    ✎ Only default OR only preferred methods selected
- *        ↳ Alternate view: None
- *   ▸ The "path" input depends on the number of visible mounts for a method:
- *    🚫 No visible mounts
- *        ↳ The UI assumes the default path (which is the auth method type)
- *        ↳ "Advanced settings" toggle reveals an input for an optional custom path
- *    1️⃣ One visible mount
- *        ↳ Path renders in a hidden input and it is assumed for login
- *    🔀 Multiple visible mounts
- *        ↳ Dropdown lists with all paths.
+ * 🏢 *Enterprise-only login customizations*
+ *   ▸ A namespace can define a default method [LOGIN_SETTINGS_DEFAULT] and/or preferred methods (i.e. "backups") [LOGIN_SETTINGS_TABS].
+ *     ✎ Both set:
+ *       ▸ Default method shown initially.
+ *       ▸ Alternate view: preferred methods in tab layout.
+ *     ✎ Only one set:
+ *       ▸ No alternate view.
+ *
+ * 🔁 Advanced settings toggle reveals the custom path input:
+ *   🚫 No visible mounts:
+ *     ▸ UI defaults to method type as path.
+ *     ▸ "Advanced settings" shows a path input.
+ *   1️⃣ One visible mount:
+ *     ▸ Path is assumed and hidden.
+ *   🔀 Multiple visible mounts:
+ *     ▸ Path dropdown is shown.
+ *
  *
  * @param {string} canceledMfaAuth - saved auth type from a cancelled mfa verification
  * @param {object} cluster - The route model which is the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
