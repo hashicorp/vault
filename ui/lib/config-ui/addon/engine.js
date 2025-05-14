@@ -23,7 +23,6 @@ export default class ConfigUiEngine extends Engine {
       'namespace',
       'app-router',
       'version',
-      'store',
       'custom-messages',
       'api',
       'capabilities',
