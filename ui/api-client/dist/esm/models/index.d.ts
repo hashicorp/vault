@@ -1,3 +1,4 @@
+export * from './ActivationFlagsActivateRequest';
 export * from './AliCloudConfigureRequest';
 export * from './AliCloudLoginRequest';
 export * from './AliCloudWriteAuthRoleRequest';

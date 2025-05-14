@@ -7,6 +7,7 @@ src/apis/SecretsApi.ts
 src/apis/SystemApi.ts
 src/apis/index.ts
 src/index.ts
+src/models/ActivationFlagsActivateRequest.ts
 src/models/AliCloudConfigureRequest.ts
 src/models/AliCloudLoginRequest.ts
 src/models/AliCloudWriteAuthRoleRequest.ts
