@@ -116,7 +116,7 @@ module('Integration | Component | totp/key-form', function (hooks) {
     assert.dom('[data-test-secret-header]').hasText('Create a TOTP key', 'Form title renders');
 
     // switch to non-generated form fields
-    await click('[data-test-radio="Other service"]');
+    await click(GENERAL.radioByAttr('Other service'));
 
     // check validation errors
     await click(GENERAL.saveButton);
@@ -156,7 +156,7 @@ module('Integration | Component | totp/key-form', function (hooks) {
     assert.dom(SELECTORS.toggleGroup('Provider Options')).exists('Generated exclusive group is shown');
 
     // switch to non-generated form fields
-    await click('[data-test-radio="Other service"]');
+    await click(GENERAL.radioByAttr('Other service'));
 
     // check non generated groups
     assert.dom(SELECTORS.toggleGroup('TOTP Code Options')).exists('Common group is shown');

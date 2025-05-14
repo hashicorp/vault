@@ -28,7 +28,6 @@ export default {
   hasMaskedInput: isPresent('[data-test-masked-input]'),
   hasTooltip: isPresent('[data-test-component=info-tooltip]'),
   tooltipTrigger: focusable('[data-test-tool-tip-trigger]'),
-  hasRadio: isPresent('[data-test-radio-input]'),
   radioButtons: collection('input[type=radio]', {
     select: clickable(),
     id: attribute('id'),

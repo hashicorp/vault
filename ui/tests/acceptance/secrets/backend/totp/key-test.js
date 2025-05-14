@@ -27,7 +27,7 @@ module('Acceptance | totp key backend', function (hooks) {
   };
 
   const createNonVaultKey = async (keyName, issuer, accountName, url, key) => {
-    await click('[data-test-radio="Other service"]');
+    await click(GENERAL.radioByAttr('Other service'));
     await fillIn(GENERAL.inputByAttr('name'), keyName);
     await fillIn(GENERAL.inputByAttr('issuer'), issuer);
     await fillIn(GENERAL.inputByAttr('accountName'), accountName);
