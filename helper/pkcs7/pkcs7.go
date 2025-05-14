@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 )
 
 // PKCS7 Represents a PKCS7 structure
@@ -63,6 +64,7 @@ var (
 
 	// Signature Algorithms
 	OIDEncryptionAlgorithmRSA       = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 1}
+	OIDEncryptionAlgorithmRSAOAEP   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 7}
 	OIDEncryptionAlgorithmRSASHA1   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 5}
 	OIDEncryptionAlgorithmRSASHA256 = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 11}
 	OIDEncryptionAlgorithmRSASHA384 = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 12}
@@ -214,7 +216,18 @@ func (raw rawCertificates) Parse() ([]*x509.Certificate, error) {
 		return nil, err
 	}
 
-	return x509.ParseCertificates(val.Bytes)
+	stdlibCerts, err := x509.ParseCertificates(val.Bytes)
+	if err == nil {
+		// If the parsing was successful, return the stdlib certs and don't worry about
+		// our workarounds
+		return stdlibCerts, nil
+	}
+
+	if !strings.Contains(err.Error(), "authority key identifier incorrectly marked critical") {
+		return nil, err
+	}
+
+	return CustomParseX509Certificates(val.Bytes)
 }
 
 func isCertMatchForIssuerAndSerial(cert *x509.Certificate, ias issuerAndSerial) bool {
