@@ -39,14 +39,14 @@
         <:authSelectOptions>
           <div class="has-bottom-margin-m">
             {{! If any sort of login configuration exists, it renders here }}
-            {{#if (eq this.authViewMode "directLink")}}
+            {{#if (eq this.currentAuthViewMode "directLink")}}
               {{! URL contains a "with" query param that references a mount with listing_visibility="unauth" }}
               {{! Treat it as a "preferred" mount and hide all other tabs }}
               <Auth::MountsDisplay
                 @mounts={{array @directLinkData}}
                 @shouldRenderPath={{not-eq this.selectedAuthMethod "token"}}
               />
-            {{else if (eq this.authViewMode "loginSettingsDefault")}}
+            {{else if (eq this.currentAuthViewMode "loginSettingsDefault")}}
               <Hds::Text::Body
                 @tag="p"
                 @weight="semibold"
@@ -65,14 +65,14 @@
                   />
                 {{/if}}
               {{/let}}
-            {{else if (eq this.authViewMode "tabs")}}
+            {{else if (eq this.currentAuthViewMode "tabs")}}
               {{! Tabs are either preferred methods from login settings or visible mounts }}
               <Auth::Tabs
                 @authTabData={{or this.backupMethodTabs @visibleMountsByType}}
                 @handleTabClick={{this.setAuthType}}
                 @selectedAuthMethod={{this.selectedAuthMethod}}
               />
-            {{else if (eq this.authViewMode "backupTabs")}}
+            {{else if (eq this.currentAuthViewMode "backupTabs")}}
               <Auth::Tabs
                 @authTabData={{this.backupMethodTabs}}
                 @handleTabClick={{this.setAuthType}}
@@ -107,7 +107,7 @@
 
         <:advancedSettings>
           {{#if this.showAdvancedSettings}}
-            <Hds::Reveal @text="Advanced settings" data-test-auth-form-options-toggle class="is-fullwidth">
+            <Hds::Reveal @text="Advanced settings" data-test-advanced-settings class="is-fullwidth">
               <Hds::Form::TextInput::Field name="path" data-test-input="path" as |F|>
                 <F.Label class="has-top-margin-m">Mount path</F.Label>
                 <F.HelperText>

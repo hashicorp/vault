@@ -11,10 +11,7 @@ export const AUTH_FORM = {
   tabs: '[data-test-auth-tab]',
   tabBtn: (method: string) => `[data-test-auth-tab="${method}"] button`, // method is all lowercased
   description: '[data-test-description]',
-  // old form toggle, will eventually be deleted
-  moreOptions: '[data-test-auth-form-options-toggle]',
-  // new toggle, hds component is a button
-  advancedSettings: '[data-test-auth-form-options-toggle] button',
+  advancedSettings: '[data-test-advanced-settings] button',
   managedNsRoot: '[data-test-managed-namespace-root]',
   logo: '[data-test-auth-logo]',
   helpText: '[data-test-auth-helptext]',

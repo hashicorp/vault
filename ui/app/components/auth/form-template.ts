@@ -121,7 +121,7 @@ export default class AuthFormTemplate extends Component<Args> {
     return namespaceQueryParam;
   }
 
-  get authViewMode() {
+  get currentAuthViewMode() {
     const { directLinkData, loginSettings, visibleMountsByType } = this.args;
 
     const hasBackupMethods = !!loginSettings?.backupTypes?.length;
@@ -145,7 +145,17 @@ export default class AuthFormTemplate extends Component<Args> {
   }
 
   get canToggleViews() {
-    return this.hasAlternateView() && !this.showOtherMethods;
+    const { directLinkData, loginSettings, visibleMountsByType } = this.args;
+
+    if (directLinkData) {
+      return this.canToggleWithDirectLink() && !this.showOtherMethods;
+    }
+
+    if (loginSettings) {
+      return this.canToggleWithLoginSettings() && !this.showOtherMethods;
+    }
+
+    return visibleMountsByType && !this.showOtherMethods;
   }
 
   // Reveals custom path input
@@ -188,13 +198,14 @@ export default class AuthFormTemplate extends Component<Args> {
   }
 
   @action
-  handleError(message: string) {
-    this.errorMessage = message;
-  }
+  initializeState() {
+    // First, set auth type
+    const type = this.determineAuthType();
+    this.setAuthType(type);
 
-  @action
-  handleNamespaceUpdate(event: HTMLElementEvent<HTMLInputElement>) {
-    this.args.handleNamespaceUpdate(event.target.value);
+    // Depending on which method is selected, determine which view renders
+    // (if alternate views exist)
+    this.showOtherMethods = this.determineShowOtherMethods();
   }
 
   @action
@@ -216,14 +227,13 @@ export default class AuthFormTemplate extends Component<Args> {
   }
 
   @action
-  initializeState() {
-    // First, set auth type
-    const type = this.determineAuthType();
-    this.setAuthType(type);
+  handleError(message: string) {
+    this.errorMessage = message;
+  }
 
-    // Depending on which method is selected, determine which view renders
-    // (if alternate views exist)
-    this.showOtherMethods = this.determineShowOtherMethods();
+  @action
+  handleNamespaceUpdate(event: HTMLElementEvent<HTMLInputElement>) {
+    this.args.handleNamespaceUpdate(event.target.value);
   }
 
   private determineAuthType(showOtherMethods = false): string {
@@ -268,20 +278,22 @@ export default class AuthFormTemplate extends Component<Args> {
     return false;
   }
 
-  private hasAlternateView(): boolean {
-    const { directLinkData, loginSettings, visibleMountsByType } = this.args;
+  private canToggleWithDirectLink(): boolean {
+    const { directLinkData, visibleMountsByType } = this.args;
+    const isVisible = directLinkData?.isVisibleMount;
 
-    if (directLinkData && directLinkData?.isVisibleMount) return true;
-    if (directLinkData && !directLinkData?.isVisibleMount && !visibleMountsByType) return false;
+    if (isVisible) return true;
+    if (!isVisible && !visibleMountsByType) return false;
 
-    if (loginSettings) {
-      const hasDefault = !!loginSettings?.defaultType;
-      const hasBackups = !!loginSettings?.backupTypes.length;
-      // if login settings exist *both* a default and backups must be set to toggle views
-      return hasBackups && hasDefault;
-    }
-
-    if (visibleMountsByType) return true;
     return false;
+  }
+
+  private canToggleWithLoginSettings(): boolean {
+    const { loginSettings } = this.args;
+
+    const hasDefault = !!loginSettings?.defaultType;
+    const hasBackups = !!loginSettings?.backupTypes.length;
+    // if login settings exist *both* a default and backups must be set to toggle views
+    return hasBackups && hasDefault;
   }
 }
