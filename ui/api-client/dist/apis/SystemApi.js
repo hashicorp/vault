@@ -82,15 +82,20 @@ class SystemApi extends runtime.BaseAPI {
     /**
      * Activate a flagged feature.
      */
-    activationFlagsActivate_2Raw(initOverrides) {
+    activationFlagsActivate_2Raw(requestParameters, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['activationFlagsActivateRequest'] == null) {
+                throw new runtime.RequiredError('activationFlagsActivateRequest', 'Required parameter "activationFlagsActivateRequest" was null or undefined when calling activationFlagsActivate_2().');
+            }
             const queryParameters = {};
             const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
                 path: `/sys/activation-flags/secrets-sync/activate`,
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
+                body: (0, index_1.ActivationFlagsActivateRequestToJSON)(requestParameters['activationFlagsActivateRequest']),
             }, initOverrides);
             return new runtime.VoidApiResponse(response);
         });
@@ -98,9 +103,9 @@ class SystemApi extends runtime.BaseAPI {
     /**
      * Activate a flagged feature.
      */
-    activationFlagsActivate_2(initOverrides) {
+    activationFlagsActivate_2(activationFlagsActivateRequest, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            const response = yield this.activationFlagsActivate_2Raw(initOverrides);
+            const response = yield this.activationFlagsActivate_2Raw({ activationFlagsActivateRequest: activationFlagsActivateRequest }, initOverrides);
             return yield response.value();
         });
     }
@@ -6142,6 +6147,251 @@ class SystemApi extends runtime.BaseAPI {
     systemListSyncGithubApps(list, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
             const response = yield this.systemListSyncGithubAppsRaw({ list: list }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    systemPatchNamespacesPathRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['path'] == null) {
+                throw new runtime.RequiredError('path', 'Required parameter "path" was null or undefined when calling systemPatchNamespacesPath().');
+            }
+            if (requestParameters['systemPatchNamespacesPathRequest'] == null) {
+                throw new runtime.RequiredError('systemPatchNamespacesPathRequest', 'Required parameter "systemPatchNamespacesPathRequest" was null or undefined when calling systemPatchNamespacesPath().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/sys/namespaces/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: (0, index_1.SystemPatchNamespacesPathRequestToJSON)(requestParameters['systemPatchNamespacesPathRequest']),
+            }, initOverrides);
+            return new runtime.VoidApiResponse(response);
+        });
+    }
+    /**
+     */
+    systemPatchNamespacesPath(path, systemPatchNamespacesPathRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.systemPatchNamespacesPathRaw({ path: path, systemPatchNamespacesPathRequest: systemPatchNamespacesPathRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    systemPatchSyncConfigRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['systemPatchSyncConfigRequest'] == null) {
+                throw new runtime.RequiredError('systemPatchSyncConfigRequest', 'Required parameter "systemPatchSyncConfigRequest" was null or undefined when calling systemPatchSyncConfig().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/sys/sync/config`,
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: (0, index_1.SystemPatchSyncConfigRequestToJSON)(requestParameters['systemPatchSyncConfigRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => (0, index_1.SystemPatchSyncConfigResponseFromJSON)(jsonValue));
+        });
+    }
+    /**
+     */
+    systemPatchSyncConfig(systemPatchSyncConfigRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.systemPatchSyncConfigRaw({ systemPatchSyncConfigRequest: systemPatchSyncConfigRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsAwsSmNameRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['name'] == null) {
+                throw new runtime.RequiredError('name', 'Required parameter "name" was null or undefined when calling systemPatchSyncDestinationsAwsSmName().');
+            }
+            if (requestParameters['systemPatchSyncDestinationsAwsSmNameRequest'] == null) {
+                throw new runtime.RequiredError('systemPatchSyncDestinationsAwsSmNameRequest', 'Required parameter "systemPatchSyncDestinationsAwsSmNameRequest" was null or undefined when calling systemPatchSyncDestinationsAwsSmName().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/sys/sync/destinations/aws-sm/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: (0, index_1.SystemPatchSyncDestinationsAwsSmNameRequestToJSON)(requestParameters['systemPatchSyncDestinationsAwsSmNameRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => (0, index_1.SystemPatchSyncDestinationsAwsSmNameResponseFromJSON)(jsonValue));
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsAwsSmName(name, systemPatchSyncDestinationsAwsSmNameRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.systemPatchSyncDestinationsAwsSmNameRaw({ name: name, systemPatchSyncDestinationsAwsSmNameRequest: systemPatchSyncDestinationsAwsSmNameRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsAzureKvNameRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['name'] == null) {
+                throw new runtime.RequiredError('name', 'Required parameter "name" was null or undefined when calling systemPatchSyncDestinationsAzureKvName().');
+            }
+            if (requestParameters['systemPatchSyncDestinationsAzureKvNameRequest'] == null) {
+                throw new runtime.RequiredError('systemPatchSyncDestinationsAzureKvNameRequest', 'Required parameter "systemPatchSyncDestinationsAzureKvNameRequest" was null or undefined when calling systemPatchSyncDestinationsAzureKvName().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/sys/sync/destinations/azure-kv/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: (0, index_1.SystemPatchSyncDestinationsAzureKvNameRequestToJSON)(requestParameters['systemPatchSyncDestinationsAzureKvNameRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => (0, index_1.SystemPatchSyncDestinationsAzureKvNameResponseFromJSON)(jsonValue));
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsAzureKvName(name, systemPatchSyncDestinationsAzureKvNameRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.systemPatchSyncDestinationsAzureKvNameRaw({ name: name, systemPatchSyncDestinationsAzureKvNameRequest: systemPatchSyncDestinationsAzureKvNameRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsGcpSmNameRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['name'] == null) {
+                throw new runtime.RequiredError('name', 'Required parameter "name" was null or undefined when calling systemPatchSyncDestinationsGcpSmName().');
+            }
+            if (requestParameters['systemPatchSyncDestinationsGcpSmNameRequest'] == null) {
+                throw new runtime.RequiredError('systemPatchSyncDestinationsGcpSmNameRequest', 'Required parameter "systemPatchSyncDestinationsGcpSmNameRequest" was null or undefined when calling systemPatchSyncDestinationsGcpSmName().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/sys/sync/destinations/gcp-sm/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: (0, index_1.SystemPatchSyncDestinationsGcpSmNameRequestToJSON)(requestParameters['systemPatchSyncDestinationsGcpSmNameRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => (0, index_1.SystemPatchSyncDestinationsGcpSmNameResponseFromJSON)(jsonValue));
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsGcpSmName(name, systemPatchSyncDestinationsGcpSmNameRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.systemPatchSyncDestinationsGcpSmNameRaw({ name: name, systemPatchSyncDestinationsGcpSmNameRequest: systemPatchSyncDestinationsGcpSmNameRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsGhNameRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['name'] == null) {
+                throw new runtime.RequiredError('name', 'Required parameter "name" was null or undefined when calling systemPatchSyncDestinationsGhName().');
+            }
+            if (requestParameters['systemPatchSyncDestinationsGhNameRequest'] == null) {
+                throw new runtime.RequiredError('systemPatchSyncDestinationsGhNameRequest', 'Required parameter "systemPatchSyncDestinationsGhNameRequest" was null or undefined when calling systemPatchSyncDestinationsGhName().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/sys/sync/destinations/gh/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: (0, index_1.SystemPatchSyncDestinationsGhNameRequestToJSON)(requestParameters['systemPatchSyncDestinationsGhNameRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => (0, index_1.SystemPatchSyncDestinationsGhNameResponseFromJSON)(jsonValue));
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsGhName(name, systemPatchSyncDestinationsGhNameRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.systemPatchSyncDestinationsGhNameRaw({ name: name, systemPatchSyncDestinationsGhNameRequest: systemPatchSyncDestinationsGhNameRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsInMemNameRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['name'] == null) {
+                throw new runtime.RequiredError('name', 'Required parameter "name" was null or undefined when calling systemPatchSyncDestinationsInMemName().');
+            }
+            if (requestParameters['systemPatchSyncDestinationsInMemNameRequest'] == null) {
+                throw new runtime.RequiredError('systemPatchSyncDestinationsInMemNameRequest', 'Required parameter "systemPatchSyncDestinationsInMemNameRequest" was null or undefined when calling systemPatchSyncDestinationsInMemName().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/sys/sync/destinations/in-mem/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: (0, index_1.SystemPatchSyncDestinationsInMemNameRequestToJSON)(requestParameters['systemPatchSyncDestinationsInMemNameRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => (0, index_1.SystemPatchSyncDestinationsInMemNameResponseFromJSON)(jsonValue));
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsInMemName(name, systemPatchSyncDestinationsInMemNameRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.systemPatchSyncDestinationsInMemNameRaw({ name: name, systemPatchSyncDestinationsInMemNameRequest: systemPatchSyncDestinationsInMemNameRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsVercelProjectNameRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['name'] == null) {
+                throw new runtime.RequiredError('name', 'Required parameter "name" was null or undefined when calling systemPatchSyncDestinationsVercelProjectName().');
+            }
+            if (requestParameters['systemPatchSyncDestinationsVercelProjectNameRequest'] == null) {
+                throw new runtime.RequiredError('systemPatchSyncDestinationsVercelProjectNameRequest', 'Required parameter "systemPatchSyncDestinationsVercelProjectNameRequest" was null or undefined when calling systemPatchSyncDestinationsVercelProjectName().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/sys/sync/destinations/vercel-project/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: (0, index_1.SystemPatchSyncDestinationsVercelProjectNameRequestToJSON)(requestParameters['systemPatchSyncDestinationsVercelProjectNameRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => (0, index_1.SystemPatchSyncDestinationsVercelProjectNameResponseFromJSON)(jsonValue));
+        });
+    }
+    /**
+     */
+    systemPatchSyncDestinationsVercelProjectName(name, systemPatchSyncDestinationsVercelProjectNameRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.systemPatchSyncDestinationsVercelProjectNameRaw({ name: name, systemPatchSyncDestinationsVercelProjectNameRequest: systemPatchSyncDestinationsVercelProjectNameRequest }, initOverrides);
             return yield response.value();
         });
     }
