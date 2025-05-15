@@ -35,9 +35,7 @@ module('Acceptance | clients | counts', function (hooks) {
       .hasText('Input the start and end dates to view client attribution by path.');
     assert
       .dom(GENERAL.emptyStateMessage)
-      .hasText(
-        'Only historical data may be queried. No data will return if the end date falls within the current month.'
-      );
+      .hasText('Only historical data may be queried. No data is available for the current month.');
   });
 
   test('it should redirect to counts overview route for transitions to parent', async function (assert) {

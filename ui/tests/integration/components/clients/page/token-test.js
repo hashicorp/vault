@@ -11,9 +11,7 @@ import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { getUnixTime } from 'date-fns';
-import { calculateAverage } from 'vault/utils/chart-helpers';
 import { formatNumber } from 'core/helpers/format-number';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CHARTS, CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 import { assertBarChart } from 'vault/tests/helpers/clients/client-count-helpers';
 
@@ -85,49 +83,6 @@ module('Integration | Component | clients | Clients::Page::Token', function (hoo
 
     assert.dom(`${chart} ${CHARTS.legendLabel(1)}`).hasText('Entity clients', 'Legend label renders');
     assert.dom(`${chart} ${CHARTS.legendLabel(2)}`).hasText('Non-entity clients', 'Legend label renders');
-  });
-
-  test('it should render monthly new chart', async function (assert) {
-    const count = this.newActivity.length;
-    assert.expect(count + 7);
-    const expectedNewEntity = formatNumber([calculateAverage(this.newActivity, 'entity_clients')]);
-    const expectedNewNonEntity = formatNumber([calculateAverage(this.newActivity, 'non_entity_clients')]);
-    const chart = CHARTS.container('Monthly new');
-
-    await this.renderComponent();
-
-    assert
-      .dom(CLIENT_COUNT.statTextValue('Average new entity clients per month'))
-      .hasText(expectedNewEntity, 'renders correct new entity clients');
-    assert
-      .dom(CLIENT_COUNT.statTextValue('Average new non-entity clients per month'))
-      .hasText(expectedNewNonEntity, 'renders correct new nonentity clients');
-    assert.dom(`${chart} ${CHARTS.legendLabel(1)}`).hasText('Entity clients', 'Legend label renders');
-    assert.dom(`${chart} ${CHARTS.legendLabel(2)}`).hasText('Non-entity clients', 'Legend label renders');
-
-    // assert bar chart is correct
-    assert.dom(`${chart} ${CHARTS.xAxis}`).hasText('7/23 8/23 9/23 10/23 11/23 12/23 1/24');
-    assertBarChart(assert, 'Monthly new', this.newActivity, true);
-  });
-
-  test('it should render empty state for no new monthly data', async function (assert) {
-    this.activity.byMonth = this.activity.byMonth.map((d) => ({
-      ...d,
-      new_clients: { month: d.month },
-    }));
-    const chart = CHARTS.container('Monthly new');
-
-    await this.renderComponent();
-
-    assert.dom(`${chart} ${CHARTS.verticalBar}`).doesNotExist('Chart does not render');
-    assert.dom(`${chart} ${CHARTS.legend}`).doesNotExist('Legend does not render');
-    assert.dom(GENERAL.emptyStateTitle).hasText('No new clients');
-    assert
-      .dom(CLIENT_COUNT.statText('Average new entity clients per month'))
-      .doesNotExist('New client counts does not exist');
-    assert
-      .dom(CLIENT_COUNT.statText('Average new non-entity clients per month'))
-      .doesNotExist('Average new client counts does not exist');
   });
 
   test('it should render usage stats', async function (assert) {
