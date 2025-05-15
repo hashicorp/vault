@@ -99,7 +99,7 @@ func TestSnapshotStorageRouter(t *testing.T) {
 	ctx := context.Background()
 	snapshotCtx := CreateContextWithSnapshotID(ctx, "snapshot_id")
 
-	// test get on with and without snapshot ID
+	// test get with and without snapshot ID
 	value, err := router.Get(ctx, "key")
 	require.NoError(t, err)
 	require.Equal(t, []byte("foo"), value.Value)
