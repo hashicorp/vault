@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pluginconsts"
@@ -998,6 +1000,66 @@ func (c *Core) configuredPoliciesGaugeCollector(ctx context.Context) ([]metricsu
 	}
 
 	return values, nil
+}
+
+type auditCounts struct {
+	file       int
+	socketUdp  int
+	socketTcp  int
+	socketUnix int
+	syslog     int
+}
+
+func (c *Core) GetAuditDeviceCountByType() auditCounts {
+	var auditCounts auditCounts
+
+	c.auditLock.RLock()
+	defer c.auditLock.RUnlock()
+
+	for _, entree := range c.audit.Entries {
+		switch entree.Type {
+		case audit.TypeFile:
+			auditCounts.file++
+		case audit.TypeSocket:
+			if entree.Options != nil {
+				switch strings.ToLower(entree.Options["socket_type"]) {
+				case "udp":
+					auditCounts.socketUdp++
+				case "tcp":
+					auditCounts.socketTcp++
+				case "unix":
+					auditCounts.socketUnix++
+				}
+			}
+		case audit.TypeSyslog:
+			auditCounts.syslog++
+		}
+	}
+
+	return auditCounts
+}
+
+func (c *Core) GetAuditExclusionStanzaCount() int {
+	exclusionsCount := 0
+
+	c.auditLock.RLock()
+	defer c.auditLock.RUnlock()
+
+	for _, entree := range c.audit.Entries {
+		excludeRaw, ok := entree.Options["exclude"]
+		if !ok || excludeRaw == "" {
+			continue
+		}
+
+		var exclusionObjects []map[string]interface{}
+		if err := json.Unmarshal([]byte(excludeRaw), &exclusionObjects); err != nil {
+			c.logger.Error("failed to parse audit exclusion config for device", "path", entree.Path, "error", err)
+		}
+
+		exclusionsCount += len(exclusionObjects)
+	}
+
+	return exclusionsCount
 }
 
 func (c *Core) GetPolicyMetrics(ctx context.Context) map[PolicyType]int {
