@@ -141,7 +141,8 @@ func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.Ha
 
 	logicalReq.Storage = newGRPCStorageClient(brokeredClient)
 
-	resp, respErr := backend.HandleRequest(ctx, logicalReq)
+	reqCtx := pbMetadataCtxToLogicalCtx(ctx)
+	resp, respErr := backend.HandleRequest(reqCtx, logicalReq)
 
 	pbResp, err := pb.LogicalResponseToProtoResponse(resp)
 	if err != nil {
@@ -197,6 +198,7 @@ func (b *backendGRPCPluginServer) SpecialPaths(ctx context.Context, args *pb.Emp
 			WriteForwardedStorage: paths.WriteForwardedStorage,
 			Binary:                paths.Binary,
 			Limited:               paths.Limited,
+			AllowSnapshotRead:     paths.AllowSnapshotRead,
 		},
 	}, nil
 }
