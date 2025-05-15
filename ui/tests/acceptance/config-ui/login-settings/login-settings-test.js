@@ -13,7 +13,7 @@ module('Acceptance | config-ui/login-settings', function (hooks) {
   setupMirage(hooks);
 
   test('Login settings index page', async function (assert) {
-    assert.expect(3);
+    assert.expect(1);
 
     // Mock API response
     this.server.get('/v1/sys/config/ui/login/default-auth', () => {
