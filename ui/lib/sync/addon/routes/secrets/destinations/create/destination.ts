@@ -4,11 +4,9 @@
  */
 
 import Route from '@ember/routing/route';
-import { service } from '@ember/service';
 import { findDestination } from 'core/helpers/sync-destinations';
 import formResolver from 'vault/forms/sync/resolver';
 
-import type Store from '@ember-data/store';
 import type { DestinationType } from 'vault/sync';
 
 type Params = {
@@ -16,8 +14,6 @@ type Params = {
 };
 
 export default class SyncSecretsDestinationsCreateDestinationRoute extends Route {
-  @service declare readonly store: Store;
-
   model(params: Params) {
     const { type } = params;
     const { defaultValues } = findDestination(type);

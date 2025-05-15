@@ -82,20 +82,15 @@ class SystemApi extends runtime.BaseAPI {
     /**
      * Activate a flagged feature.
      */
-    activationFlagsActivate_2Raw(requestParameters, initOverrides) {
+    activationFlagsActivate_2Raw(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (requestParameters['activationFlagsActivateRequest'] == null) {
-                throw new runtime.RequiredError('activationFlagsActivateRequest', 'Required parameter "activationFlagsActivateRequest" was null or undefined when calling activationFlagsActivate_2().');
-            }
             const queryParameters = {};
             const headerParameters = {};
-            headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
                 path: `/sys/activation-flags/secrets-sync/activate`,
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
-                body: (0, index_1.ActivationFlagsActivateRequestToJSON)(requestParameters['activationFlagsActivateRequest']),
             }, initOverrides);
             return new runtime.VoidApiResponse(response);
         });
@@ -103,9 +98,9 @@ class SystemApi extends runtime.BaseAPI {
     /**
      * Activate a flagged feature.
      */
-    activationFlagsActivate_2(activationFlagsActivateRequest, initOverrides) {
+    activationFlagsActivate_2(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            const response = yield this.activationFlagsActivate_2Raw({ activationFlagsActivateRequest: activationFlagsActivateRequest }, initOverrides);
+            const response = yield this.activationFlagsActivate_2Raw(initOverrides);
             return yield response.value();
         });
     }
