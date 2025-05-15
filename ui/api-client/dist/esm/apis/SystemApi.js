@@ -21,7 +21,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import * as runtime from '../runtime';
-import { AuditingCalculateHashRequestToJSON, AuditingCalculateHashResponseFromJSON, AuditingEnableDeviceRequestToJSON, AuditingEnableRequestHeaderRequestToJSON, AuditingListRequestHeadersResponseFromJSON, AuthEnableMethodRequestToJSON, AuthReadConfigurationResponseFromJSON, AuthReadTuningInformationResponseFromJSON, AuthTuneConfigurationParametersRequestToJSON, CollectHostInformationResponseFromJSON, CorsConfigureRequestToJSON, CorsReadConfigurationResponseFromJSON, CreateCustomMessageRequestToJSON, DecodeTokenRequestToJSON, EncryptionKeyConfigureRotationRequestToJSON, EncryptionKeyReadRotationConfigurationResponseFromJSON, GenerateHashRequestToJSON, GenerateHashResponseFromJSON, GenerateHashWithAlgorithmRequestToJSON, GenerateHashWithAlgorithmResponseFromJSON, GenerateRandomRequestToJSON, GenerateRandomResponseFromJSON, GenerateRandomWithBytesRequestToJSON, GenerateRandomWithBytesResponseFromJSON, GenerateRandomWithSourceAndBytesRequestToJSON, GenerateRandomWithSourceAndBytesResponseFromJSON, GenerateRandomWithSourceRequestToJSON, GenerateRandomWithSourceResponseFromJSON, GenerateUtilizationReportResponseFromJSON, HaStatusResponseFromJSON, InitializeRequestToJSON, InternalClientActivityConfigureRequestToJSON, InternalCountEntitiesResponseFromJSON, InternalCountTokensResponseFromJSON, InternalGenerateOpenApiDocumentWithParametersRequestToJSON, InternalUiListEnabledFeatureFlagsResponseFromJSON, InternalUiListEnabledVisibleMountsResponseFromJSON, InternalUiListNamespacesResponseFromJSON, InternalUiReadAuthenticatedActiveCustomMessagesResponseFromJSON, InternalUiReadMountInformationResponseFromJSON, InternalUiReadResultantAclResponseFromJSON, InternalUiReadUnauthenticatedActiveCustomMessagesResponseFromJSON, LeaderStatusResponseFromJSON, LeasesCountResponseFromJSON, LeasesListResponseFromJSON, LeasesLookUpResponseFromJSON, LeasesReadLeaseRequestToJSON, LeasesReadLeaseResponseFromJSON, LeasesRenewLease2RequestToJSON, LeasesRenewLeaseRequestToJSON, LeasesRenewLeaseWithId2RequestToJSON, LeasesRenewLeaseWithIdRequestToJSON, LeasesRevokeLease2RequestToJSON, LeasesRevokeLeaseRequestToJSON, LeasesRevokeLeaseWithId2RequestToJSON, LeasesRevokeLeaseWithIdRequestToJSON, LeasesRevokeLeaseWithPrefix2RequestToJSON, LeasesRevokeLeaseWithPrefixRequestToJSON, LoggersUpdateVerbosityLevelForRequestToJSON, LoggersUpdateVerbosityLevelRequestToJSON, MfaValidateRequestToJSON, MountsEnableSecretsEngineRequestToJSON, MountsReadConfigurationResponseFromJSON, MountsReadTuningInformationResponseFromJSON, MountsTuneConfigurationParametersRequestToJSON, PluginsCatalogListPluginsResponseFromJSON, PluginsCatalogListPluginsWithTypeResponseFromJSON, PluginsCatalogPinsCreatePinnedVersionRequestToJSON, PluginsCatalogPinsListPinnedVersionsResponseFromJSON, PluginsCatalogPinsReadPinnedVersionResponseFromJSON, PluginsCatalogReadPluginConfigurationResponseFromJSON, PluginsCatalogReadPluginConfigurationWithTypeResponseFromJSON, PluginsCatalogRegisterPluginRequestToJSON, PluginsCatalogRegisterPluginWithTypeRequestToJSON, PluginsReloadBackendsRequestToJSON, PluginsReloadBackendsResponseFromJSON, PluginsRuntimesCatalogListPluginsRuntimesResponseFromJSON, PluginsRuntimesCatalogReadPluginRuntimeConfigurationResponseFromJSON, PluginsRuntimesCatalogRegisterPluginRuntimeRequestToJSON, PoliciesGeneratePasswordFromPasswordPolicyResponseFromJSON, PoliciesListAclPolicies2ResponseFromJSON, PoliciesListAclPolicies3ResponseFromJSON, PoliciesListAclPoliciesResponseFromJSON, PoliciesReadAclPolicy2ResponseFromJSON, PoliciesReadAclPolicyResponseFromJSON, PoliciesReadPasswordPolicyResponseFromJSON, PoliciesWriteAclPolicy2RequestToJSON, PoliciesWriteAclPolicyRequestToJSON, PoliciesWritePasswordPolicyRequestToJSON, QueryTokenAccessorCapabilitiesRequestToJSON, QueryTokenCapabilitiesRequestToJSON, QueryTokenSelfCapabilitiesRequestToJSON, RateLimitQuotasConfigureRequestToJSON, RateLimitQuotasReadConfigurationResponseFromJSON, RateLimitQuotasReadResponseFromJSON, RateLimitQuotasWriteRequestToJSON, RawReadResponseFromJSON, RawWriteRequestToJSON, ReadWrappingProperties2ResponseFromJSON, ReadWrappingPropertiesRequestToJSON, ReadWrappingPropertiesResponseFromJSON, RekeyAttemptInitializeRequestToJSON, RekeyAttemptInitializeResponseFromJSON, RekeyAttemptReadProgressResponseFromJSON, RekeyAttemptUpdateRequestToJSON, RekeyAttemptUpdateResponseFromJSON, RekeyReadBackupKeyResponseFromJSON, RekeyReadBackupRecoveryKeyResponseFromJSON, RekeyVerificationCancelResponseFromJSON, RekeyVerificationReadProgressResponseFromJSON, RekeyVerificationUpdateRequestToJSON, RekeyVerificationUpdateResponseFromJSON, ReloadPluginsRequestToJSON, ReloadPluginsResponseFromJSON, RemountRequestToJSON, RemountResponseFromJSON, RemountStatusResponseFromJSON, RewrapRequestToJSON, RootTokenGenerationInitialize2RequestToJSON, RootTokenGenerationInitialize2ResponseFromJSON, RootTokenGenerationInitializeRequestToJSON, RootTokenGenerationInitializeResponseFromJSON, RootTokenGenerationReadProgress2ResponseFromJSON, RootTokenGenerationReadProgressResponseFromJSON, RootTokenGenerationUpdateRequestToJSON, RootTokenGenerationUpdateResponseFromJSON, SealStatusResponseFromJSON, StandardListResponseFromJSON, SubscriptionsCreateResponseFromJSON, SubscriptionsListEventsSubscriptionsResponseFromJSON, SubscriptionsReadEventsSubscriptionsResponseFromJSON, SubscriptionsWriteEventsSubscriptionsRequestToJSON, SubscriptionsWriteEventsSubscriptionsResponseFromJSON, SystemDeleteSyncConfigResponseFromJSON, SystemDeleteSyncGithubAppsNameResponseFromJSON, SystemListSyncAssociationsResponseFromJSON, SystemListSyncDestinationsResponseFromJSON, SystemListSyncDestinationsTypeResponseFromJSON, SystemListSyncGithubAppsResponseFromJSON, SystemPatchNamespacesPathRequestToJSON, SystemPatchSyncConfigRequestToJSON, SystemPatchSyncConfigResponseFromJSON, SystemPatchSyncDestinationsAwsSmNameRequestToJSON, SystemPatchSyncDestinationsAwsSmNameResponseFromJSON, SystemPatchSyncDestinationsAzureKvNameRequestToJSON, SystemPatchSyncDestinationsAzureKvNameResponseFromJSON, SystemPatchSyncDestinationsGcpSmNameRequestToJSON, SystemPatchSyncDestinationsGcpSmNameResponseFromJSON, SystemPatchSyncDestinationsGhNameRequestToJSON, SystemPatchSyncDestinationsGhNameResponseFromJSON, SystemPatchSyncDestinationsInMemNameRequestToJSON, SystemPatchSyncDestinationsInMemNameResponseFromJSON, SystemPatchSyncDestinationsVercelProjectNameRequestToJSON, SystemPatchSyncDestinationsVercelProjectNameResponseFromJSON, SystemReadConfigGroupPolicyApplicationResponseFromJSON, SystemReadSyncAssociationsDestinationsResponseFromJSON, SystemReadSyncAssociationsMountSecretNameResponseFromJSON, SystemReadSyncConfigResponseFromJSON, SystemReadSyncDestinationsAwsSmNameResponseFromJSON, SystemReadSyncDestinationsAzureKvNameResponseFromJSON, SystemReadSyncDestinationsGcpSmNameResponseFromJSON, SystemReadSyncDestinationsGhNameResponseFromJSON, SystemReadSyncDestinationsInMemNameResponseFromJSON, SystemReadSyncDestinationsTypeNameAssociationsResponseFromJSON, SystemReadSyncDestinationsVercelProjectNameResponseFromJSON, SystemReadSyncGithubAppsNameResponseFromJSON, SystemWriteConfigControlGroupRequestToJSON, SystemWriteConfigGroupPolicyApplicationRequestToJSON, SystemWriteControlGroupAuthorizeRequestToJSON, SystemWriteControlGroupRequestRequestToJSON, SystemWriteInternalCountersActivityWriteRequestToJSON, SystemWriteManagedKeysTypeNameRequestToJSON, SystemWriteManagedKeysTypeNameTestSignRequestToJSON, SystemWriteMfaMethodDuoNameRequestToJSON, SystemWriteMfaMethodOktaNameRequestToJSON, SystemWriteMfaMethodPingidNameRequestToJSON, SystemWriteMfaMethodTotpNameAdminDestroyRequestToJSON, SystemWriteMfaMethodTotpNameAdminGenerateRequestToJSON, SystemWriteMfaMethodTotpNameRequestToJSON, SystemWriteNamespacesApiLockUnlockPathRequestToJSON, SystemWriteNamespacesApiLockUnlockRequestToJSON, SystemWriteNamespacesPathRequestToJSON, SystemWritePoliciesEgpNameRequestToJSON, SystemWritePoliciesRgpNameRequestToJSON, SystemWriteQuotasLeaseCountNameRequestToJSON, SystemWriteReplicationDrPrimaryEnableRequestToJSON, SystemWriteReplicationDrPrimaryRevokeSecondaryRequestToJSON, SystemWriteReplicationDrPrimarySecondaryTokenRequestToJSON, SystemWriteReplicationDrSecondaryDisableRequestToJSON, SystemWriteReplicationDrSecondaryEnableRequestToJSON, SystemWriteReplicationDrSecondaryMerkleCheckRequestToJSON, SystemWriteReplicationDrSecondaryOperationTokenDeleteRequestToJSON, SystemWriteReplicationDrSecondaryPromoteRequestToJSON, SystemWriteReplicationDrSecondaryRecoverRequestToJSON, SystemWriteReplicationDrSecondaryReindexRequestToJSON, SystemWriteReplicationDrSecondaryUpdatePrimaryRequestToJSON, SystemWriteReplicationForceCorruptionRequestToJSON, SystemWriteReplicationPerformancePrimaryEnableRequestToJSON, SystemWriteReplicationPerformancePrimaryPathsFilterIdRequestToJSON, SystemWriteReplicationPerformancePrimaryRevokeSecondaryRequestToJSON, SystemWriteReplicationPerformancePrimarySecondaryTokenRequestToJSON, SystemWriteReplicationPerformanceSecondaryEnableRequestToJSON, SystemWriteReplicationPerformanceSecondaryPromoteRequestToJSON, SystemWriteReplicationPerformanceSecondaryUpdatePrimaryRequestToJSON, SystemWriteReplicationPrimaryEnableRequestToJSON, SystemWriteReplicationPrimaryRevokeSecondaryRequestToJSON, SystemWriteReplicationPrimarySecondaryTokenRequestToJSON, SystemWriteReplicationReindexRequestToJSON, SystemWriteReplicationSecondaryEnableRequestToJSON, SystemWriteReplicationSecondaryPromoteRequestToJSON, SystemWriteReplicationSecondaryUpdatePrimaryRequestToJSON, SystemWriteStorageRaftSnapshotAutoConfigNameRequestToJSON, SystemWriteSyncDestinationsAwsSmNameRequestToJSON, SystemWriteSyncDestinationsAwsSmNameResponseFromJSON, SystemWriteSyncDestinationsAzureKvNameRequestToJSON, SystemWriteSyncDestinationsAzureKvNameResponseFromJSON, SystemWriteSyncDestinationsGcpSmNameRequestToJSON, SystemWriteSyncDestinationsGcpSmNameResponseFromJSON, SystemWriteSyncDestinationsGhNameRequestToJSON, SystemWriteSyncDestinationsGhNameResponseFromJSON, SystemWriteSyncDestinationsInMemNameRequestToJSON, SystemWriteSyncDestinationsInMemNameResponseFromJSON, SystemWriteSyncDestinationsTypeNameAssociationsRemoveRequestToJSON, SystemWriteSyncDestinationsTypeNameAssociationsRemoveResponseFromJSON, SystemWriteSyncDestinationsTypeNameAssociationsSetRequestToJSON, SystemWriteSyncDestinationsTypeNameAssociationsSetResponseFromJSON, SystemWriteSyncDestinationsVercelProjectNameRequestToJSON, SystemWriteSyncDestinationsVercelProjectNameResponseFromJSON, SystemWriteSyncGithubAppsNameRequestToJSON, SystemWriteSyncGithubAppsNameResponseFromJSON, SystemWriteUtilizationRequestToJSON, SystemWriteUtilizationResponseFromJSON, UiConfigListCustomMessagesResponseFromJSON, UiConfigReadCustomMessageResponseFromJSON, UiConfigUpdateCustomMessageRequestToJSON, UiConfigUpdateCustomMessageResponseFromJSON, UiHeadersConfigureRequestToJSON, UiHeadersListResponseFromJSON, UiHeadersReadConfigurationResponseFromJSON, UnsealRequestToJSON, UnsealResponseFromJSON, UnwrapRequestToJSON, VersionHistoryResponseFromJSON, WellKnownListLabels2ResponseFromJSON, WellKnownListLabelsResponseFromJSON, WellKnownReadLabelResponseFromJSON, } from '../models/index';
+import { AuditingCalculateHashRequestToJSON, AuditingCalculateHashResponseFromJSON, AuditingEnableDeviceRequestToJSON, AuditingEnableRequestHeaderRequestToJSON, AuditingListRequestHeadersResponseFromJSON, AuthEnableMethodRequestToJSON, AuthReadConfigurationResponseFromJSON, AuthReadTuningInformationResponseFromJSON, AuthTuneConfigurationParametersRequestToJSON, CollectHostInformationResponseFromJSON, CorsConfigureRequestToJSON, CorsReadConfigurationResponseFromJSON, CreateCustomMessageRequestToJSON, DecodeTokenRequestToJSON, EncryptionKeyConfigureRotationRequestToJSON, EncryptionKeyReadRotationConfigurationResponseFromJSON, GenerateHashRequestToJSON, GenerateHashResponseFromJSON, GenerateHashWithAlgorithmRequestToJSON, GenerateHashWithAlgorithmResponseFromJSON, GenerateRandomRequestToJSON, GenerateRandomResponseFromJSON, GenerateRandomWithBytesRequestToJSON, GenerateRandomWithBytesResponseFromJSON, GenerateRandomWithSourceAndBytesRequestToJSON, GenerateRandomWithSourceAndBytesResponseFromJSON, GenerateRandomWithSourceRequestToJSON, GenerateRandomWithSourceResponseFromJSON, GenerateUtilizationReportResponseFromJSON, HaStatusResponseFromJSON, InitializeRequestToJSON, InternalClientActivityConfigureRequestToJSON, InternalCountEntitiesResponseFromJSON, InternalGenerateOpenApiDocumentWithParametersRequestToJSON, InternalUiListEnabledFeatureFlagsResponseFromJSON, InternalUiListEnabledVisibleMountsResponseFromJSON, InternalUiListNamespacesResponseFromJSON, InternalUiReadAuthenticatedActiveCustomMessagesResponseFromJSON, InternalUiReadMountInformationResponseFromJSON, InternalUiReadResultantAclResponseFromJSON, InternalUiReadUnauthenticatedActiveCustomMessagesResponseFromJSON, LeaderStatusResponseFromJSON, LeasesCountResponseFromJSON, LeasesListResponseFromJSON, LeasesLookUpResponseFromJSON, LeasesReadLeaseRequestToJSON, LeasesReadLeaseResponseFromJSON, LeasesRenewLease2RequestToJSON, LeasesRenewLeaseRequestToJSON, LeasesRenewLeaseWithId2RequestToJSON, LeasesRenewLeaseWithIdRequestToJSON, LeasesRevokeLease2RequestToJSON, LeasesRevokeLeaseRequestToJSON, LeasesRevokeLeaseWithId2RequestToJSON, LeasesRevokeLeaseWithIdRequestToJSON, LeasesRevokeLeaseWithPrefix2RequestToJSON, LeasesRevokeLeaseWithPrefixRequestToJSON, LoggersUpdateVerbosityLevelForRequestToJSON, LoggersUpdateVerbosityLevelRequestToJSON, MfaValidateRequestToJSON, MountsEnableSecretsEngineRequestToJSON, MountsReadConfigurationResponseFromJSON, MountsReadTuningInformationResponseFromJSON, MountsTuneConfigurationParametersRequestToJSON, PluginsCatalogListPluginsResponseFromJSON, PluginsCatalogListPluginsWithTypeResponseFromJSON, PluginsCatalogPinsCreatePinnedVersionRequestToJSON, PluginsCatalogPinsListPinnedVersionsResponseFromJSON, PluginsCatalogPinsReadPinnedVersionResponseFromJSON, PluginsCatalogReadPluginConfigurationResponseFromJSON, PluginsCatalogReadPluginConfigurationWithTypeResponseFromJSON, PluginsCatalogRegisterPluginRequestToJSON, PluginsCatalogRegisterPluginWithTypeRequestToJSON, PluginsReloadBackendsRequestToJSON, PluginsReloadBackendsResponseFromJSON, PluginsRuntimesCatalogListPluginsRuntimesResponseFromJSON, PluginsRuntimesCatalogReadPluginRuntimeConfigurationResponseFromJSON, PluginsRuntimesCatalogRegisterPluginRuntimeRequestToJSON, PoliciesGeneratePasswordFromPasswordPolicyResponseFromJSON, PoliciesListAclPolicies2ResponseFromJSON, PoliciesListAclPolicies3ResponseFromJSON, PoliciesListAclPoliciesResponseFromJSON, PoliciesReadAclPolicy2ResponseFromJSON, PoliciesReadAclPolicyResponseFromJSON, PoliciesReadPasswordPolicyResponseFromJSON, PoliciesWriteAclPolicy2RequestToJSON, PoliciesWriteAclPolicyRequestToJSON, PoliciesWritePasswordPolicyRequestToJSON, QueryTokenAccessorCapabilitiesRequestToJSON, QueryTokenCapabilitiesRequestToJSON, QueryTokenSelfCapabilitiesRequestToJSON, RateLimitQuotasConfigureRequestToJSON, RateLimitQuotasReadConfigurationResponseFromJSON, RateLimitQuotasReadResponseFromJSON, RateLimitQuotasWriteRequestToJSON, RawReadResponseFromJSON, RawWriteRequestToJSON, ReadWrappingProperties2ResponseFromJSON, ReadWrappingPropertiesRequestToJSON, ReadWrappingPropertiesResponseFromJSON, RekeyAttemptInitializeRequestToJSON, RekeyAttemptInitializeResponseFromJSON, RekeyAttemptReadProgressResponseFromJSON, RekeyAttemptUpdateRequestToJSON, RekeyAttemptUpdateResponseFromJSON, RekeyReadBackupKeyResponseFromJSON, RekeyReadBackupRecoveryKeyResponseFromJSON, RekeyVerificationCancelResponseFromJSON, RekeyVerificationReadProgressResponseFromJSON, RekeyVerificationUpdateRequestToJSON, RekeyVerificationUpdateResponseFromJSON, ReloadPluginsRequestToJSON, ReloadPluginsResponseFromJSON, RemountRequestToJSON, RemountResponseFromJSON, RemountStatusResponseFromJSON, RewrapRequestToJSON, RootTokenGenerationInitialize2RequestToJSON, RootTokenGenerationInitialize2ResponseFromJSON, RootTokenGenerationInitializeRequestToJSON, RootTokenGenerationInitializeResponseFromJSON, RootTokenGenerationReadProgress2ResponseFromJSON, RootTokenGenerationReadProgressResponseFromJSON, RootTokenGenerationUpdateRequestToJSON, RootTokenGenerationUpdateResponseFromJSON, SealStatusResponseFromJSON, StandardListResponseFromJSON, SubscriptionsCreateResponseFromJSON, SubscriptionsListEventsSubscriptionsResponseFromJSON, SubscriptionsReadEventsSubscriptionsResponseFromJSON, SubscriptionsWriteEventsSubscriptionsRequestToJSON, SubscriptionsWriteEventsSubscriptionsResponseFromJSON, SystemDeleteSyncConfigResponseFromJSON, SystemDeleteSyncGithubAppsNameResponseFromJSON, SystemListSyncAssociationsResponseFromJSON, SystemListSyncDestinationsResponseFromJSON, SystemListSyncDestinationsTypeResponseFromJSON, SystemListSyncGithubAppsResponseFromJSON, SystemPatchNamespacesPathRequestToJSON, SystemPatchSyncConfigRequestToJSON, SystemPatchSyncConfigResponseFromJSON, SystemPatchSyncDestinationsAwsSmNameRequestToJSON, SystemPatchSyncDestinationsAwsSmNameResponseFromJSON, SystemPatchSyncDestinationsAzureKvNameRequestToJSON, SystemPatchSyncDestinationsAzureKvNameResponseFromJSON, SystemPatchSyncDestinationsGcpSmNameRequestToJSON, SystemPatchSyncDestinationsGcpSmNameResponseFromJSON, SystemPatchSyncDestinationsGhNameRequestToJSON, SystemPatchSyncDestinationsGhNameResponseFromJSON, SystemPatchSyncDestinationsInMemNameRequestToJSON, SystemPatchSyncDestinationsInMemNameResponseFromJSON, SystemPatchSyncDestinationsVercelProjectNameRequestToJSON, SystemPatchSyncDestinationsVercelProjectNameResponseFromJSON, SystemReadConfigGroupPolicyApplicationResponseFromJSON, SystemReadSyncAssociationsDestinationsResponseFromJSON, SystemReadSyncAssociationsMountSecretNameResponseFromJSON, SystemReadSyncConfigResponseFromJSON, SystemReadSyncDestinationsAwsSmNameResponseFromJSON, SystemReadSyncDestinationsAzureKvNameResponseFromJSON, SystemReadSyncDestinationsGcpSmNameResponseFromJSON, SystemReadSyncDestinationsGhNameResponseFromJSON, SystemReadSyncDestinationsInMemNameResponseFromJSON, SystemReadSyncDestinationsTypeNameAssociationsResponseFromJSON, SystemReadSyncDestinationsVercelProjectNameResponseFromJSON, SystemReadSyncGithubAppsNameResponseFromJSON, SystemWriteConfigControlGroupRequestToJSON, SystemWriteConfigGroupPolicyApplicationRequestToJSON, SystemWriteControlGroupAuthorizeRequestToJSON, SystemWriteControlGroupRequestRequestToJSON, SystemWriteInternalCountersActivityWriteRequestToJSON, SystemWriteManagedKeysTypeNameRequestToJSON, SystemWriteManagedKeysTypeNameTestSignRequestToJSON, SystemWriteMfaMethodDuoNameRequestToJSON, SystemWriteMfaMethodOktaNameRequestToJSON, SystemWriteMfaMethodPingidNameRequestToJSON, SystemWriteMfaMethodTotpNameAdminDestroyRequestToJSON, SystemWriteMfaMethodTotpNameAdminGenerateRequestToJSON, SystemWriteMfaMethodTotpNameRequestToJSON, SystemWriteNamespacesApiLockUnlockPathRequestToJSON, SystemWriteNamespacesApiLockUnlockRequestToJSON, SystemWriteNamespacesPathRequestToJSON, SystemWritePoliciesEgpNameRequestToJSON, SystemWritePoliciesRgpNameRequestToJSON, SystemWriteQuotasLeaseCountNameRequestToJSON, SystemWriteReplicationDrPrimaryEnableRequestToJSON, SystemWriteReplicationDrPrimaryRevokeSecondaryRequestToJSON, SystemWriteReplicationDrPrimarySecondaryTokenRequestToJSON, SystemWriteReplicationDrSecondaryDisableRequestToJSON, SystemWriteReplicationDrSecondaryEnableRequestToJSON, SystemWriteReplicationDrSecondaryMerkleCheckRequestToJSON, SystemWriteReplicationDrSecondaryOperationTokenDeleteRequestToJSON, SystemWriteReplicationDrSecondaryPromoteRequestToJSON, SystemWriteReplicationDrSecondaryRecoverRequestToJSON, SystemWriteReplicationDrSecondaryReindexRequestToJSON, SystemWriteReplicationDrSecondaryUpdatePrimaryRequestToJSON, SystemWriteReplicationForceCorruptionRequestToJSON, SystemWriteReplicationPerformancePrimaryEnableRequestToJSON, SystemWriteReplicationPerformancePrimaryPathsFilterIdRequestToJSON, SystemWriteReplicationPerformancePrimaryRevokeSecondaryRequestToJSON, SystemWriteReplicationPerformancePrimarySecondaryTokenRequestToJSON, SystemWriteReplicationPerformanceSecondaryEnableRequestToJSON, SystemWriteReplicationPerformanceSecondaryPromoteRequestToJSON, SystemWriteReplicationPerformanceSecondaryUpdatePrimaryRequestToJSON, SystemWriteReplicationPrimaryEnableRequestToJSON, SystemWriteReplicationPrimaryRevokeSecondaryRequestToJSON, SystemWriteReplicationPrimarySecondaryTokenRequestToJSON, SystemWriteReplicationReindexRequestToJSON, SystemWriteReplicationSecondaryEnableRequestToJSON, SystemWriteReplicationSecondaryPromoteRequestToJSON, SystemWriteReplicationSecondaryUpdatePrimaryRequestToJSON, SystemWriteStorageRaftSnapshotAutoConfigNameRequestToJSON, SystemWriteSyncDestinationsAwsSmNameRequestToJSON, SystemWriteSyncDestinationsAwsSmNameResponseFromJSON, SystemWriteSyncDestinationsAzureKvNameRequestToJSON, SystemWriteSyncDestinationsAzureKvNameResponseFromJSON, SystemWriteSyncDestinationsGcpSmNameRequestToJSON, SystemWriteSyncDestinationsGcpSmNameResponseFromJSON, SystemWriteSyncDestinationsGhNameRequestToJSON, SystemWriteSyncDestinationsGhNameResponseFromJSON, SystemWriteSyncDestinationsInMemNameRequestToJSON, SystemWriteSyncDestinationsInMemNameResponseFromJSON, SystemWriteSyncDestinationsTypeNameAssociationsRemoveRequestToJSON, SystemWriteSyncDestinationsTypeNameAssociationsRemoveResponseFromJSON, SystemWriteSyncDestinationsTypeNameAssociationsSetRequestToJSON, SystemWriteSyncDestinationsTypeNameAssociationsSetResponseFromJSON, SystemWriteSyncDestinationsVercelProjectNameRequestToJSON, SystemWriteSyncDestinationsVercelProjectNameResponseFromJSON, SystemWriteSyncGithubAppsNameRequestToJSON, SystemWriteSyncGithubAppsNameResponseFromJSON, SystemWriteUtilizationRequestToJSON, SystemWriteUtilizationResponseFromJSON, UiConfigListCustomMessagesResponseFromJSON, UiConfigReadCustomMessageResponseFromJSON, UiConfigUpdateCustomMessageRequestToJSON, UiConfigUpdateCustomMessageResponseFromJSON, UiHeadersConfigureRequestToJSON, UiHeadersListResponseFromJSON, UiHeadersReadConfigurationResponseFromJSON, UiLoginDefaultAuthConfigureRequestToJSON, UiLoginDefaultAuthListResponseFromJSON, UnsealRequestToJSON, UnsealResponseFromJSON, UnwrapRequestToJSON, VersionHistoryResponseFromJSON, WellKnownListLabels2ResponseFromJSON, WellKnownListLabelsResponseFromJSON, WellKnownReadLabelResponseFromJSON, } from '../models/index';
 /**
  *
  */
@@ -1246,31 +1246,6 @@ export class SystemApi extends runtime.BaseAPI {
     internalCountRequests(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
             const response = yield this.internalCountRequestsRaw(initOverrides);
-            return yield response.value();
-        });
-    }
-    /**
-     * Backwards compatibility is not guaranteed for this API
-     */
-    internalCountTokensRaw(initOverrides) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const queryParameters = {};
-            const headerParameters = {};
-            const response = yield this.request({
-                path: `/sys/internal/counters/tokens`,
-                method: 'GET',
-                headers: headerParameters,
-                query: queryParameters,
-            }, initOverrides);
-            return new runtime.JSONApiResponse(response, (jsonValue) => InternalCountTokensResponseFromJSON(jsonValue));
-        });
-    }
-    /**
-     * Backwards compatibility is not guaranteed for this API
-     */
-    internalCountTokens(initOverrides) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const response = yield this.internalCountTokensRaw(initOverrides);
             return yield response.value();
         });
     }
@@ -9629,6 +9604,126 @@ export class SystemApi extends runtime.BaseAPI {
         });
     }
     /**
+     * Configure Default Auth method for UI Login.
+     */
+    uiLoginDefaultAuthConfigureRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['name'] == null) {
+                throw new runtime.RequiredError('name', 'Required parameter "name" was null or undefined when calling uiLoginDefaultAuthConfigure().');
+            }
+            if (requestParameters['uiLoginDefaultAuthConfigureRequest'] == null) {
+                throw new runtime.RequiredError('uiLoginDefaultAuthConfigureRequest', 'Required parameter "uiLoginDefaultAuthConfigureRequest" was null or undefined when calling uiLoginDefaultAuthConfigure().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/sys/config/ui/login/default-auth/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+                method: 'POST',
+                headers: headerParameters,
+                query: queryParameters,
+                body: UiLoginDefaultAuthConfigureRequestToJSON(requestParameters['uiLoginDefaultAuthConfigureRequest']),
+            }, initOverrides);
+            return new runtime.VoidApiResponse(response);
+        });
+    }
+    /**
+     * Configure Default Auth method for UI Login.
+     */
+    uiLoginDefaultAuthConfigure(name, uiLoginDefaultAuthConfigureRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.uiLoginDefaultAuthConfigureRaw({ name: name, uiLoginDefaultAuthConfigureRequest: uiLoginDefaultAuthConfigureRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     * Remove Default Auth config for UI Login.
+     */
+    uiLoginDefaultAuthDeleteConfigurationRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['name'] == null) {
+                throw new runtime.RequiredError('name', 'Required parameter "name" was null or undefined when calling uiLoginDefaultAuthDeleteConfiguration().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            const response = yield this.request({
+                path: `/sys/config/ui/login/default-auth/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+                method: 'DELETE',
+                headers: headerParameters,
+                query: queryParameters,
+            }, initOverrides);
+            return new runtime.VoidApiResponse(response);
+        });
+    }
+    /**
+     * Remove Default Auth config for UI Login.
+     */
+    uiLoginDefaultAuthDeleteConfiguration(name, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.uiLoginDefaultAuthDeleteConfigurationRaw({ name: name }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     * Return a list of configured default auth methods for the UI.
+     */
+    uiLoginDefaultAuthListRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['list'] == null) {
+                throw new runtime.RequiredError('list', 'Required parameter "list" was null or undefined when calling uiLoginDefaultAuthList().');
+            }
+            const queryParameters = {};
+            if (requestParameters['list'] != null) {
+                queryParameters['list'] = requestParameters['list'];
+            }
+            const headerParameters = {};
+            const response = yield this.request({
+                path: `/sys/config/ui/login/default-auth/`,
+                method: 'GET',
+                headers: headerParameters,
+                query: queryParameters,
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => UiLoginDefaultAuthListResponseFromJSON(jsonValue));
+        });
+    }
+    /**
+     * Return a list of configured default auth methods for the UI.
+     */
+    uiLoginDefaultAuthList(list, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.uiLoginDefaultAuthListRaw({ list: list }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     * Return the given Default Auth configuration
+     */
+    uiLoginDefaultAuthReadConfigurationRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['name'] == null) {
+                throw new runtime.RequiredError('name', 'Required parameter "name" was null or undefined when calling uiLoginDefaultAuthReadConfiguration().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            const response = yield this.request({
+                path: `/sys/config/ui/login/default-auth/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+                method: 'GET',
+                headers: headerParameters,
+                query: queryParameters,
+            }, initOverrides);
+            return new runtime.VoidApiResponse(response);
+        });
+    }
+    /**
+     * Return the given Default Auth configuration
+     */
+    uiLoginDefaultAuthReadConfiguration(name, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.uiLoginDefaultAuthReadConfigurationRaw({ name: name }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
      * Unseal the Vault.
      */
     unsealRaw(requestParameters, initOverrides) {
@@ -10002,6 +10097,14 @@ export var UiHeadersListListEnum;
 (function (UiHeadersListListEnum) {
     UiHeadersListListEnum["TRUE"] = "true";
 })(UiHeadersListListEnum || (UiHeadersListListEnum = {}));
+/**
+  * @export
+  * @enum {string}
+  */
+export var UiLoginDefaultAuthListListEnum;
+(function (UiLoginDefaultAuthListListEnum) {
+    UiLoginDefaultAuthListListEnum["TRUE"] = "true";
+})(UiLoginDefaultAuthListListEnum || (UiLoginDefaultAuthListListEnum = {}));
 /**
   * @export
   * @enum {string}
