@@ -322,7 +322,7 @@ module('Acceptance | auth login form', function (hooks) {
 
       // login as user just to get token (this is the only way to generate a token in the UI right now..)
       await loginMethod(inputValues, { authType: 'userpass', toggleOptions: true });
-      await click('[data-test-user-menu-trigger=""]');
+      await click(GENERAL.testButton('user-menu-trigger'));
       const token = find('[data-test-copy-button]').getAttribute('data-test-copy-button');
 
       // login with token to reproduce bug
@@ -332,7 +332,7 @@ module('Acceptance | auth login form', function (hooks) {
         .dom('[data-test-overview-card="Roles"]')
         .hasText('Roles Create new', 'database overview renders');
       // renew token
-      await click('[data-test-user-menu-trigger=""]');
+      await click(GENERAL.testButton('user-menu-trigger'));
       await click('[data-test-user-menu-item="renew token"]');
       // navigate out and back to overview tab to re-request capabilities
       await click(GENERAL.secretTab('Roles'));

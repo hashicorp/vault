@@ -117,6 +117,7 @@ export const GENERAL = {
   cancelButton: '[data-test-cancel]',
   saveButton: '[data-test-save]',
   testButton: (label: string) => `[data-test-button="${label}"]`,
+  // Code blocks
   codeBlock: (label: string) => `[data-test-code-block="${label}"]`,
   // TODO replace data-test-component="value" as a higher level selector
   codemirror: `[data-test-component="code-mirror-modifier"]`,
