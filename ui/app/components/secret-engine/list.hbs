@@ -86,14 +86,18 @@
           @hasChevron={{false}}
           data-test-popup-menu-trigger
         />
-        <dd.Interactive @route={{backend.backendConfigurationLink}} @model={{backend.id}} data-test-engine-config>
+        <dd.Interactive
+          @route={{backend.backendConfigurationLink}}
+          @model={{backend.id}}
+          data-test-popup-menu="view-configuration"
+        >
           View configuration
         </dd.Interactive>
         {{#if (not-eq backend.type "cubbyhole")}}
           <dd.Interactive
             @color="critical"
             {{on "click" (fn (mut this.engineToDisable) backend)}}
-            data-test-confirm-action-trigger
+            data-test-popup-menu="disable-engine"
           >Disable</dd.Interactive>
         {{/if}}
       </Hds::Dropdown>

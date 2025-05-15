@@ -23,11 +23,10 @@ module('Acceptance | secret-engine list view', function (hooks) {
 
   const createSecret = async (path, key, value, enginePath) => {
     await click(SES.createSecretLink);
-    await fillIn('[data-test-secret-path]', path);
-
-    await fillIn('[data-test-secret-key]', key);
+    await fillIn(SES.secretPath('create'), path);
+    await fillIn(SES.secretKey('create'), key);
     await fillIn(GENERAL.inputByAttr(key), value);
-    await click('[data-test-secret-save]');
+    await click(GENERAL.saveButton);
     await click(SES.crumb(enginePath));
   };
 
