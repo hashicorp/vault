@@ -90,7 +90,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
 
       const associationCount = Object.entries(secrets).length;
       return {
-        icon: findDestination(type)?.icon,
+        icon: findDestination(type).icon,
         name: storeName,
         type,
         associationCount,
