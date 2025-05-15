@@ -32,6 +32,12 @@ export interface EntityAliasesCreateDuplicatesRequest {
      */
     differentCase?: boolean;
     /**
+     * Local alias toggle
+     * @type {boolean}
+     * @memberof EntityAliasesCreateDuplicatesRequest
+     */
+    local?: boolean;
+    /**
      * Metadata
      * @type {object}
      * @memberof EntityAliasesCreateDuplicatesRequest
@@ -76,6 +82,7 @@ export function EntityAliasesCreateDuplicatesRequestFromJSONTyped(json: any, ign
         
         'count': json['count'] == null ? undefined : json['count'],
         'differentCase': json['different_case'] == null ? undefined : json['different_case'],
+        'local': json['local'] == null ? undefined : json['local'],
         'metadata': json['metadata'] == null ? undefined : json['metadata'],
         'mountAccessor': json['mount_accessor'] == null ? undefined : json['mount_accessor'],
         'name': json['name'] == null ? undefined : json['name'],
@@ -96,6 +103,7 @@ export function EntityAliasesCreateDuplicatesRequestToJSONTyped(value?: EntityAl
         
         'count': value['count'],
         'different_case': value['differentCase'],
+        'local': value['local'],
         'metadata': value['metadata'],
         'mount_accessor': value['mountAccessor'],
         'name': value['name'],

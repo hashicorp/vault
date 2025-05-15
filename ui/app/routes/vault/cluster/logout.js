@@ -25,7 +25,6 @@ export default Route.extend(ModelBoundaryRoute, {
   }),
 
   beforeModel({ to: { queryParams } }) {
-    const authType = this.auth.getAuthType();
     const ns = this.namespaceService.path;
     this.auth.deleteCurrentToken();
     this.controlGroup.deleteTokens();
@@ -40,7 +39,6 @@ export default Route.extend(ModelBoundaryRoute, {
       this.customMessages.clearCustomMessages();
     }
 
-    queryParams.with = authType;
     if (ns) {
       queryParams.namespace = ns;
     }

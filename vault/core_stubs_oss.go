@@ -114,3 +114,5 @@ func (c *Core) ReloadReplicationCanaryWriteInterval() {}
 func (c *Core) GetReplicationLagMillisIgnoreErrs() int64 { return 0 }
 
 func (c *Core) ReloadOverloadController() {}
+
+func (c *Core) EntSetupUIDefaultAuth(ctx context.Context) error { return nil }

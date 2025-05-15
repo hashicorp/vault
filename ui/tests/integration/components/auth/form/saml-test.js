@@ -227,7 +227,6 @@ module('Integration | Component | auth | form | saml', function (hooks) {
     assert.propEqual(
       actual.data,
       {
-        mfa_requirement: undefined,
         token: 'my_token',
       },
       'auth service "authenticate" method is called token callback data'
@@ -245,9 +244,10 @@ module('Integration | Component | auth | form | saml', function (hooks) {
 
     await this.renderComponent();
     await click(AUTH_FORM.login);
-    const [actualResponse, type] = this.onSuccess.lastCall.args;
+    const [actualResponse, methodData] = this.onSuccess.lastCall.args;
     assert.propEqual(actualResponse, expectedResponse, 'onSuccess is called with auth response');
-    assert.strictEqual(type, 'saml', 'onSuccess is called with auth type');
+    assert.strictEqual(methodData.path, undefined, 'onSuccess is called without path value');
+    assert.strictEqual(methodData.selectedAuth, 'saml', 'onSuccess is called with selected auth type');
   });
 
   test('it calls onError if auth service authentication fails', async function (assert) {

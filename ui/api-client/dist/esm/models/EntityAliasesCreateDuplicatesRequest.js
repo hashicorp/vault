@@ -27,6 +27,7 @@ export function EntityAliasesCreateDuplicatesRequestFromJSONTyped(json, ignoreDi
     return {
         'count': json['count'] == null ? undefined : json['count'],
         'differentCase': json['different_case'] == null ? undefined : json['different_case'],
+        'local': json['local'] == null ? undefined : json['local'],
         'metadata': json['metadata'] == null ? undefined : json['metadata'],
         'mountAccessor': json['mount_accessor'] == null ? undefined : json['mount_accessor'],
         'name': json['name'] == null ? undefined : json['name'],
@@ -43,6 +44,7 @@ export function EntityAliasesCreateDuplicatesRequestToJSONTyped(value, ignoreDis
     return {
         'count': value['count'],
         'different_case': value['differentCase'],
+        'local': value['local'],
         'metadata': value['metadata'],
         'mount_accessor': value['mountAccessor'],
         'name': value['name'],
