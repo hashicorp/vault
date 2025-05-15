@@ -3,8 +3,8 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 {{#if this.flags.secretsSyncIsActivated}}
-  {{#if (not this.byMonthActivityData)}}
-    {{! byMonthActivityData is an empty array if there is no monthly data (monthly breakdown was added in 1.11)
+  {{#if (not this.byMonthNewClients)}}
+    {{! byMonthNewClients is an empty array if there is no monthly data (monthly breakdown was added in 1.11)
     this means the user has queried dates before sync clients existed. we render an empty state instead of
     "0 sync clients" (which is what the activity response returns) to be more explicit }}
     <EmptyState
@@ -32,7 +32,7 @@
       <:chart>
         <Clients::Charts::VerticalBarBasic
           @chartTitle={{this.title}}
-          @data={{this.byMonthActivityData}}
+          @data={{this.byMonthNewClients}}
           @dataKey="secret_syncs"
           @chartHeight={{200}}
         />

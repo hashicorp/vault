@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if (gt @byMonthActivityData.length 1)}}
+{{#if (gt @byMonthNewClients.length 1)}}
   <Clients::ChartContainer @title="Vault client counts" @description={{this.chartContainerText}} @hasChartData={{true}}>
     <:subTitle>
       <StatText
@@ -47,30 +47,13 @@
 
   </Clients::ChartContainer>
 {{else}}
-  {{#let (get @byMonthActivityData "0") as |singleMonthData|}}
-    {{#if (and @isHistoricalMonth singleMonthData.new_clients.clients)}}
+  {{#let (get @byMonthNewClients "0") as |singleMonthData|}}
+    {{#if (and @isHistoricalMonth singleMonthData.clients)}}
       <Clients::UsageStats @title="Vault client counts" @description={{this.chartContainerText}}>
         <div class="column" data-test-new>
           <StatText
             @label="New clients"
             @subText="This is the number of clients which were created in Vault for the first time in the selected month."
-            @value={{singleMonthData.new_clients.clients}}
-            @size="l"
-            class="has-bottom-margin-l"
-          />
-          <div class="flex row-wrap gap-36">
-            <StatText @label="Entity" @value={{singleMonthData.new_clients.entity_clients}} @size="m" />
-            <StatText @label="Non-entity" @value={{singleMonthData.new_clients.non_entity_clients}} @size="m" />
-            <StatText @label="ACME" @value={{singleMonthData.new_clients.acme_clients}} @size="m" />
-            {{#if @isSecretsSyncActivated}}
-              <StatText @label="Secret sync" @value={{singleMonthData.new_clients.secret_syncs}} @size="m" />
-            {{/if}}
-          </div>
-        </div>
-        <div class="column" data-test-total>
-          <StatText
-            @label="Total monthly clients"
-            @subText="This is the number of total clients which used Vault for the given month, both new and previous."
             @value={{singleMonthData.clients}}
             @size="l"
             class="has-bottom-margin-l"
@@ -80,7 +63,7 @@
             <StatText @label="Non-entity" @value={{singleMonthData.non_entity_clients}} @size="m" />
             <StatText @label="ACME" @value={{singleMonthData.acme_clients}} @size="m" />
             {{#if @isSecretsSyncActivated}}
-              <StatText @label="Secret sync" @value={{singleMonthData.secret_syncs}} @size="m" class="column-start-4" />
+              <StatText @label="Secret sync" @value={{singleMonthData.secret_syncs}} @size="m" />
             {{/if}}
           </div>
         </div>
