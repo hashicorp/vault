@@ -11,7 +11,7 @@ module('Unit | Service | custom-login', function (hooks) {
 
   test('it exists', function (assert) {
     const service = this.owner.lookup('service:custom-login');
-    assert.ok(service);
+    assert.notOk(service);
   });
 
   // Fetch list of rules unauth
