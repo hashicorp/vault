@@ -37,7 +37,7 @@ module('Integration | Component | totp/key-form', function (hooks) {
         issuer: 'test-issuer',
         key_size: 20,
         period: 30,
-        qr_size: 0,
+        qr_size: 200,
         skew: 1,
       };
 
