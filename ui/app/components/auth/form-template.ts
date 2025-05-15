@@ -124,15 +124,20 @@ export default class AuthFormTemplate extends Component<Args> {
   get canToggleViews() {
     const { directLinkData, loginSettings, visibleMountsByType } = this.args;
 
-    if (directLinkData) {
-      return this.canToggleWithDirectLink() && !this.showOtherMethods;
-    }
+    if (this.showOtherMethods) return false;
 
-    if (loginSettings) {
-      return this.canToggleWithLoginSettings() && !this.showOtherMethods;
-    }
+    if (!this.showOtherMethods) {
+      if (directLinkData) {
+        return this.canToggleWithDirectLink();
+      }
 
-    return visibleMountsByType && !this.showOtherMethods;
+      if (loginSettings) {
+        return this.canToggleWithLoginSettings();
+      }
+
+      return visibleMountsByType;
+    }
+    return true;
   }
 
   get currentFormView() {
@@ -231,7 +236,14 @@ export default class AuthFormTemplate extends Component<Args> {
   toggleView() {
     this.showOtherMethods = !this.showOtherMethods;
 
-    const type = this.determineAuthType();
+    let type = '';
+    if (this.currentFormView === this.view.TABS) {
+      type = this.visibleMountTypes[0] as string;
+    } else if (this.currentFormView === this.view.LOGIN_SETTINGS_TABS) {
+      type = this.args.loginSettings.backupTypes?.[0] as string;
+    } else {
+      type = this.determineAuthType();
+    }
     this.setAuthType(type);
   }
 
@@ -292,7 +304,7 @@ export default class AuthFormTemplate extends Component<Args> {
     const isVisible = directLinkData?.isVisibleMount;
 
     if (isVisible) return true;
-    if (!isVisible && !visibleMountsByType) return false;
+    if (visibleMountsByType) return true;
 
     return false;
   }
