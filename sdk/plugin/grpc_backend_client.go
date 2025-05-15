@@ -239,6 +239,10 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 		impl: config.EventsSender,
 	}
 
+	observations := &GRPCObservationsServer{
+		impl: config.ObservationRecorder,
+	}
+
 	// Register the server in this closure.
 	serverFunc := func(opts []grpc.ServerOption) *grpc.Server {
 		opts = append(opts, grpc.MaxRecvMsgSize(math.MaxInt32))
@@ -248,6 +252,7 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 		registerSystemViewServer(s, sysViewImpl, config)
 		pb.RegisterStorageServer(s, storage)
 		pb.RegisterEventsServer(s, events)
+		pb.RegisterObservationsServer(s, observations)
 		b.server.Store(s)
 		close(b.cleanupCh)
 		return s
