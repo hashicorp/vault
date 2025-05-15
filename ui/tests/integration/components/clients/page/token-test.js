@@ -68,7 +68,7 @@ module('Integration | Component | clients | Clients::Page::Token', function (hoo
 
   test('it should render monthly total chart', async function (assert) {
     const count = this.activity.byMonth.length;
-    const { entity_clients, non_entity_clients } = this.activity.newClientTotal;
+    const { entity_clients, non_entity_clients } = this.activity.total;
     assert.expect(count + 6);
 
     const expectedTotal = formatNumber([entity_clients + non_entity_clients]);
@@ -136,7 +136,7 @@ module('Integration | Component | clients | Clients::Page::Token', function (hoo
     this.activity.endTime = this.activity.startTime;
 
     const checkUsage = () => {
-      const { entity_clients, non_entity_clients } = this.activity.newClientTotal;
+      const { entity_clients, non_entity_clients } = this.activity.total;
       assert
         .dom(CLIENT_COUNT.statTextValue('Total clients'))
         .hasText(formatNumber([entity_clients + non_entity_clients]), 'Total clients value renders');

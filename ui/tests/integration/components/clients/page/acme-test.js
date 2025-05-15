@@ -60,7 +60,7 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
     const monthCount = this.activity.byMonth.length;
     assert.expect(6 + monthCount * 2);
 
-    const expectedTotal = formatNumber([this.activity.newClientTotal.acme_clients]);
+    const expectedTotal = formatNumber([this.activity.total.acme_clients]);
 
     const expectedNewAvg = formatNumber([
       calculateAverage(
@@ -86,7 +86,7 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
     const activityQuery = { start_time: { timestamp: END_TIME }, end_time: { timestamp: END_TIME } };
     this.activity = await this.store.queryRecord('clients/activity', activityQuery);
 
-    const expectedTotal = formatNumber([this.activity.newClientTotal.acme_clients]);
+    const expectedTotal = formatNumber([this.activity.total.acme_clients]);
 
     await this.renderComponent();
 
@@ -167,7 +167,7 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
         },
       },
     ];
-    this.activity.newClientTotal = counts;
+    this.activity.total = counts;
 
     await this.renderComponent();
 

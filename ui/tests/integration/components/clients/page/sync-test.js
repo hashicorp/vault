@@ -73,7 +73,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     test('it should render with full month activity data', async function (assert) {
       const monthCount = this.activity.byMonth.length;
       assert.expect(6 + monthCount * 2);
-      const expectedTotal = formatNumber([this.activity.newClientTotal.secret_syncs]);
+      const expectedTotal = formatNumber([this.activity.total.secret_syncs]);
       const expectedNewAvg = formatNumber([
         calculateAverage(
           this.activity.byMonth.map((m) => m?.new_clients),
@@ -97,7 +97,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
     test('it should render stats without chart for a single month', async function (assert) {
       const activityQuery = { start_time: { timestamp: END_TIME }, end_time: { timestamp: END_TIME } };
       this.activity = await this.store.queryRecord('clients/activity', activityQuery);
-      const expectedTotal = formatNumber([this.activity.newClientTotal.secret_syncs]);
+      const expectedTotal = formatNumber([this.activity.total.secret_syncs]);
 
       await this.renderComponent();
 
@@ -170,7 +170,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
           },
         },
       ];
-      this.activity.newClientTotal = counts;
+      this.activity.total = counts;
 
       assert.expect(6);
       await this.renderComponent();

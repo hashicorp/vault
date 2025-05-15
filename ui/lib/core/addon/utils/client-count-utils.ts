@@ -78,50 +78,17 @@ export const filterVersionHistory = (
 // This method is used to return totals relevant only to the specified
 // mount path within the specified namespace.
 export const filteredTotalForMount = (
-  byMonth: ByMonthClients[],
+  byNamespace: ByNamespaceClients[],
   nsPath: string,
   mountPath: string
 ): TotalClients => {
-  if (!nsPath || !mountPath || isEmpty(byMonth)) return emptyCounts();
-
-  return newClientTotal(byMonth, nsPath, mountPath);
-};
-
-export const newClientTotal = (
-  byMonth: ByMonthClients[],
-  nsPath?: string,
-  mountPath?: string
-): TotalClients => {
-  if (isEmpty(byMonth)) return emptyCounts();
-
-  if (!nsPath || !mountPath) {
-    const total = byMonth.reduce((acc, curr) => {
-      for (const key of CLIENT_TYPES) {
-        acc[key] += curr.new_clients[key] || 0;
-      }
-      return acc;
-    }, emptyCounts());
-
-    return total;
-  }
-
-  const filteredTotals = byMonth?.reduce((acc, month) => {
-    month.new_clients.namespaces
-      .filter((ns) => sanitizePath(ns.label) === sanitizePath(nsPath))
-      .forEach((ns) => {
-        ns.mounts
-          .filter((mount) => sanitizePath(mount.label) === sanitizePath(mountPath))
-          .forEach((mount) => {
-            for (const key of CLIENT_TYPES) {
-              acc[key] += mount[key] || 0;
-            }
-            return acc;
-          });
-      });
-    return acc;
-  }, emptyCounts());
-
-  return filteredTotals;
+  if (!nsPath || !mountPath || isEmpty(byNamespace)) return emptyCounts();
+  return (
+    byNamespace
+      .find((namespace) => sanitizePath(namespace.label) === sanitizePath(nsPath))
+      ?.mounts.find((mount: MountClients) => sanitizePath(mount.label) === sanitizePath(mountPath)) ||
+    emptyCounts()
+  );
 };
 
 // This method is used to filter byMonth data and return data for only

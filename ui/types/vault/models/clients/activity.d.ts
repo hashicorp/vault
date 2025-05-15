@@ -11,7 +11,6 @@ export default interface ClientsActivityModel extends Model {
   byMonth: ByMonthClients[];
   byNamespace: ByNamespaceClients[];
   total: TotalClients;
-  newClientTotal: TotalClients;
   startTime: string;
   endTime: string;
   responseTimestamp: string;

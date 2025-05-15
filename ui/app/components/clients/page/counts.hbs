@@ -123,7 +123,6 @@
       {{yield}}
     {{else if (and this.version.isCommunity (or (not @startTimestamp) (not @endTimestamp)))}}
       {{! Empty state for community without start or end query param }}
-      {{! TODO SLW check this copy with design considering user cannot select current month }}
       <EmptyState
         @title="Input the start and end dates to view client attribution by path."
         @message="Only historical data may be queried. No data will return if the end date falls within the current month."
