@@ -38,11 +38,11 @@
     </ToolbarActions>
   </Toolbar>
   {{#each-in @rule as |key value|}}
-    {{#if (eq key "default_auth_type")}}
+    {{#if (eq key "defaultAuthType")}}
       <InfoTableRow @alwaysRender={{true}} @label="Default method" @value={{value}} />
-    {{else if (eq key "backup_auth_types")}}
+    {{else if (eq key "backupAuthTypes")}}
       <InfoTableRow @alwaysRender={{true}} @label="Backup methods" @value={{value}} />
-    {{else if (eq key "disable_inheritance")}}
+    {{else if (eq key "disableInheritance")}}
       <InfoTableRow @alwaysRender={{true}} @label="Inheritance" @value={{stringify (not value)}} />
     {{else}}
       <InfoTableRow @alwaysRender={{true}} @label={{capitalize key}} @value={{value}} />
