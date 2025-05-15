@@ -271,8 +271,6 @@ func (b *databaseBackend) pathStaticCredsRead() framework.OperationFunc {
 				respData["rotation_window"] = role.StaticAccount.RotationWindow.Seconds()
 			}
 
-			// The schedule is in UTC, but we want to convert it to the local time
-			role.StaticAccount.Schedule.Location = time.Local
 			respData["ttl"] = role.StaticAccount.CredentialTTL().Seconds()
 		}
 
