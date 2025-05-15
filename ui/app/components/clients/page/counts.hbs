@@ -125,7 +125,7 @@
       {{! Empty state for community without start or end query param }}
       <EmptyState
         @title="Input the start and end dates to view client attribution by path."
-        @message="Only historical data may be queried. No data will return if the end date falls within the current month."
+        @message="Only historical data may be queried. No data is available for the current month."
       />
     {{else}}
       <EmptyState
