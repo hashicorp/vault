@@ -23,7 +23,6 @@ export default class ActivitySerializer extends ApplicationSerializer {
       by_month: formatByMonths(payload.data.months),
       total: destructureClientCounts(payload.data.total),
     };
-
     delete payload.data.by_namespace;
     delete payload.data.months;
     delete payload.data.total;

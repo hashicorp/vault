@@ -166,12 +166,10 @@ module('Acceptance | clients | overview', function (hooks) {
     assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
 
     const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
-
     const orderedNs = response.byNamespace.sort((a, b) => b.clients - a.clients);
     const topNamespace = orderedNs[0];
     // the namespace dropdown excludes the current namespace, so use second-largest if that's the case
     const filterNamespace = topNamespace.label === 'root' ? orderedNs[1] : topNamespace;
-
     const topMount = filterNamespace?.mounts.sort((a, b) => b.clients - a.clients)[0];
 
     assert
@@ -198,7 +196,6 @@ module('Acceptance | clients | overview', function (hooks) {
       ACME: formatNumber([filterNamespace.acme_clients]),
       'Secret sync': formatNumber([filterNamespace.secret_syncs]),
     };
-
     for (const label in expectedStats) {
       assert
         .dom(CLIENT_COUNT.statTextValue(label))
@@ -216,7 +213,6 @@ module('Acceptance | clients | overview', function (hooks) {
       ACME: formatNumber([topMount.acme_clients]),
       'Secret sync': formatNumber([topMount.secret_syncs]),
     };
-
     for (const label in expectedStats) {
       assert
         .dom(CLIENT_COUNT.statTextValue(label))
@@ -240,7 +236,6 @@ module('Acceptance | clients | overview', function (hooks) {
       ACME: formatNumber([response.total.acme_clients]),
       'Secret sync': formatNumber([response.total.secret_syncs]),
     };
-
     for (const label in expectedStats) {
       assert
         .dom(CLIENT_COUNT.statTextValue(label))
