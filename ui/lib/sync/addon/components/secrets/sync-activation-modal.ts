@@ -35,12 +35,10 @@ export default class SyncActivationModal extends Component<Args> {
     this.args.onConfirm();
 
     // sync activation is managed by the root/administrative namespace so child namespaces are not sent.
-    // for non-managed clusters the root namespace path is technically an empty string so we pass null
-    // otherwise we pass 'admin' if HVD managed.
-    const namespace = this.flags.hvdManagedNamespaceRoot || undefined;
-    const headers = namespace ? this.api.buildHeaders({ namespace }) : undefined;
+    // for non-managed clusters the root namespace path is technically an empty string, otherwise we pass 'admin' if HVD managed.
+    const namespace = this.flags.hvdManagedNamespaceRoot || '';
     try {
-      yield this.api.sys.activationFlagsActivate_2(headers);
+      yield this.api.sys.activationFlagsActivate_2(this.api.buildHeaders({ namespace }));
       // must refresh and not transition because transition does not refresh the model from within a namespace
       yield this.router.refresh('vault.cluster');
     } catch (error) {
