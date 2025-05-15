@@ -999,3 +999,33 @@ func (c *Core) configuredPoliciesGaugeCollector(ctx context.Context) ([]metricsu
 
 	return values, nil
 }
+
+func (c *Core) GetPolicyMetrics(ctx context.Context) map[PolicyType]int {
+	policyStore := c.policyStore
+
+	if policyStore == nil {
+		c.logger.Error("could not find policy store")
+		return map[PolicyType]int{}
+	}
+
+	ctx = namespace.RootContext(ctx)
+	namespaces := c.collectNamespaces()
+
+	policyTypes := []PolicyType{
+		PolicyTypeACL,
+		PolicyTypeRGP,
+		PolicyTypeEGP,
+	}
+
+	ret := make(map[PolicyType]int)
+	for _, pt := range policyTypes {
+		policies, err := policyStore.policiesByNamespaces(ctx, pt, namespaces)
+		if err != nil {
+			c.logger.Error("could not retrieve policies for namespaces", "policy_type", pt.String(), "error", err)
+			return map[PolicyType]int{}
+		}
+
+		ret[pt] = len(policies)
+	}
+	return ret
+}
