@@ -5,6 +5,7 @@
 
 import { click, fillIn, find, findAll, currentRouteName, visit, currentURL } from '@ember/test-helpers';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
+import { selectChoose } from 'ember-power-select/test-support';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
