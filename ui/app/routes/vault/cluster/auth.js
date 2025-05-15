@@ -130,12 +130,16 @@ export default class AuthRoute extends ClusterRouteBase {
     → If it matches a supported auth type instead, return just the type to preselect it in the dropdown.
   */
   getMountOrTypeData(authMount, visibleAuthMounts) {
-    if (visibleAuthMounts?.[authMount]) {
-      return { path: authMount, ...visibleAuthMounts[authMount], isVisibleMount: true };
+    const sanitizedParam = sanitizePath(authMount); // strip leading/trailing slashes
+    // mount paths in visibleAuthMounts always end in a slash, so format for consistency
+    const formattedPath = `${sanitizedParam}/`;
+    if (visibleAuthMounts?.[formattedPath]) {
+      return { path: formattedPath, ...visibleAuthMounts[formattedPath], isVisibleMount: true };
     }
+
     const types = supportedTypes(this.version.isEnterprise);
-    if (types.includes(sanitizePath(authMount))) {
-      return { type: authMount, isVisibleMount: false };
+    if (types.includes(sanitizedParam)) {
+      return { type: sanitizedParam, isVisibleMount: false };
     }
     // `type` is necessary because it determines which login fields to render.
     // If we can't safely glean it from the query param, ignore it and return null
