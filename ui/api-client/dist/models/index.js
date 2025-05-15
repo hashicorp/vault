@@ -16,7 +16,6 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 /* tslint:disable */
 /* eslint-disable */
-__exportStar(require("./ActivationFlagsActivateRequest"), exports);
 __exportStar(require("./AliCloudConfigureRequest"), exports);
 __exportStar(require("./AliCloudLoginRequest"), exports);
 __exportStar(require("./AliCloudWriteAuthRoleRequest"), exports);

@@ -15,7 +15,6 @@
 
 import * as runtime from '../runtime';
 import type {
-  ActivationFlagsActivateRequest,
   AuditingCalculateHashRequest,
   AuditingCalculateHashResponse,
   AuditingEnableDeviceRequest,
@@ -264,8 +263,6 @@ import type {
   WellKnownReadLabelResponse,
 } from '../models/index';
 import {
-    ActivationFlagsActivateRequestFromJSON,
-    ActivationFlagsActivateRequestToJSON,
     AuditingCalculateHashRequestFromJSON,
     AuditingCalculateHashRequestToJSON,
     AuditingCalculateHashResponseFromJSON,
@@ -759,10 +756,6 @@ import {
     WellKnownReadLabelResponseFromJSON,
     WellKnownReadLabelResponseToJSON,
 } from '../models/index';
-
-export interface SystemApiActivationFlagsActivate1Request {
-    activationFlagsActivateRequest: ActivationFlagsActivateRequest;
-}
 
 export interface SystemApiAuditingCalculateHashOperationRequest {
     path: string;
@@ -1893,26 +1886,16 @@ export class SystemApi extends runtime.BaseAPI {
     /**
      * Activate a flagged feature.
      */
-    async activationFlagsActivate_2Raw(requestParameters: SystemApiActivationFlagsActivate1Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>> {
-        if (requestParameters['activationFlagsActivateRequest'] == null) {
-            throw new runtime.RequiredError(
-                'activationFlagsActivateRequest',
-                'Required parameter "activationFlagsActivateRequest" was null or undefined when calling activationFlagsActivate_2().'
-            );
-        }
-
+    async activationFlagsActivate_2Raw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
-
-        headerParameters['Content-Type'] = 'application/json';
 
         const response = await this.request({
             path: `/sys/activation-flags/secrets-sync/activate`,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: ActivationFlagsActivateRequestToJSON(requestParameters['activationFlagsActivateRequest']),
         }, initOverrides);
 
         return new runtime.VoidApiResponse(response);
@@ -1921,8 +1904,8 @@ export class SystemApi extends runtime.BaseAPI {
     /**
      * Activate a flagged feature.
      */
-    async activationFlagsActivate_2(activationFlagsActivateRequest: ActivationFlagsActivateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse> {
-        const response = await this.activationFlagsActivate_2Raw({ activationFlagsActivateRequest: activationFlagsActivateRequest }, initOverrides);
+    async activationFlagsActivate_2(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse> {
+        const response = await this.activationFlagsActivate_2Raw(initOverrides);
         return await response.value();
     }
 
