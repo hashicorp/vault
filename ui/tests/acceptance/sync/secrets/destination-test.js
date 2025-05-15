@@ -14,6 +14,7 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { settled, click, visit, currentURL, fillIn, currentRouteName } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import sinon from 'sinon';
 
 // sync is an enterprise feature but since mirage is used the enterprise label has been intentionally omitted from the module name
 module('Acceptance | sync | destination (singular)', function (hooks) {
@@ -63,40 +64,36 @@ module('Acceptance | sync | destination (singular)', function (hooks) {
     assert.strictEqual(currentURL(), '/vault/sync/secrets/overview', 'navigates back to overview on delete');
   });
 
-  test('it should not save placeholder values for credentials and only save when there are changes', async function (assert) {
+  test('it should not save placeholder values for credentials', async function (assert) {
     assert.expect(2);
 
-    const handler = this.server.patch(
-      '/sys/sync/destinations/vercel-project/destination-vercel',
-      (schema, req) => {
-        assert.deepEqual(
-          JSON.parse(req.requestBody),
-          { access_token: 'foobar' },
-          'Updated access token sent in patch request'
-        );
-        const { deployment_environments, project_id, team_id, name, type, secret_name_template } =
-          this.server.create('sync-destination', 'vercel-project');
-        return {
-          data: {
-            connection_details: { access_token: '*****', deployment_environments, project_id, team_id },
-            name,
-            options: { custom_tags: {}, secret_name_template },
-            type,
-          },
-        };
-      }
-    );
+    const apiService = this.owner.lookup('service:api');
+    const apiStub = sinon.stub(apiService.sys, 'systemPatchSyncDestinationsVercelProjectName');
+    const { deployment_environments, project_id, team_id, name, type, secret_name_template } =
+      this.server.create('sync-destination', 'vercel-project');
+    const response = {
+      data: {
+        connection_details: { access_token: '*****', deployment_environments, project_id, team_id },
+        name,
+        options: { custom_tags: {}, secret_name_template },
+        type,
+      },
+    };
+    apiStub.resolves(response);
 
     await visit('vault/sync/secrets/destinations/vercel-project/destination-vercel/edit');
+    await fillIn(GENERAL.inputByAttr('teamId'), 'team-id');
+    await click(ts.saveButton);
+    assert.false('accessToken' in apiStub.lastCall.args[1], 'access_token not sent in request');
+
+    await click(ts.toolbar('Edit destination'));
     await click(ts.enableField('accessToken'));
     await fillIn(GENERAL.inputByAttr('accessToken'), 'foobar');
     await click(ts.saveButton);
-    await click(ts.toolbar('Edit destination'));
-    await click(ts.saveButton);
     assert.strictEqual(
-      handler.numberOfCalls,
-      1,
-      'Model is not dirty after server returns masked value for credentials and save request is not made when there are no changes'
+      apiStub.lastCall.args[1].accessToken,
+      'foobar',
+      'Updated access token sent in patch request'
     );
   });
 
