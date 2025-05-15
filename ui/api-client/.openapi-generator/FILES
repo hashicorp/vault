@@ -169,7 +169,6 @@ src/models/HaStatusResponse.ts
 src/models/InitializeRequest.ts
 src/models/InternalClientActivityConfigureRequest.ts
 src/models/InternalCountEntitiesResponse.ts
-src/models/InternalCountTokensResponse.ts
 src/models/InternalGenerateOpenApiDocumentWithParametersRequest.ts
 src/models/InternalUiListEnabledFeatureFlagsResponse.ts
 src/models/InternalUiListEnabledVisibleMountsResponse.ts
@@ -764,6 +763,8 @@ src/models/UiConfigUpdateCustomMessageResponse.ts
 src/models/UiHeadersConfigureRequest.ts
 src/models/UiHeadersListResponse.ts
 src/models/UiHeadersReadConfigurationResponse.ts
+src/models/UiLoginDefaultAuthConfigureRequest.ts
+src/models/UiLoginDefaultAuthListResponse.ts
 src/models/UnsealRequest.ts
 src/models/UnsealResponse.ts
 src/models/UnwrapRequest.ts
