@@ -35,38 +35,6 @@
       />
     </:chart>
   </Clients::ChartContainer>
-
-  {{#if this.totalUsageCounts.acme_clients}}
-    {{! no need to render two empty charts! hide this one if there are no acme clients }}
-    <Clients::ChartContainer
-      @title="Monthly new"
-      @description="ACME clients which interacted with Vault for the first time each month. Each bar represents the total new ACME clients for that month."
-      @hasChartData={{true}}
-      class="no-legend"
-    >
-      <:stats>
-        {{#let (this.average this.byMonthNewClients "acme_clients") as |avg|}}
-          {{#if avg}}
-            <StatText
-              @label="Average new ACME clients per month"
-              @value={{avg}}
-              @size="m"
-              class="chart-subTitle has-top-padding-l"
-            />
-          {{/if}}
-        {{/let}}
-      </:stats>
-
-      <:chart>
-        <Clients::Charts::VerticalBarBasic
-          @chartTitle="Monthly new"
-          @data={{this.byMonthNewClients}}
-          @dataKey="acme_clients"
-          @chartHeight={{200}}
-        />
-      </:chart>
-    </Clients::ChartContainer>
-  {{/if}}
 {{else}}
   <Clients::UsageStats @title={{this.title}} @description={{this.description}}>
     <StatText @label="Total ACME clients" @value={{this.totalUsageCounts.acme_clients}} @size="l" class="column" />

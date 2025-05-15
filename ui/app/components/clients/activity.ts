@@ -95,7 +95,6 @@ export default class ClientsActivityComponent extends Component<Args> {
     if (activity?.byNamespace && namespace && mountPath) {
       return filteredTotalForMount(activity.byNamespace, namespace, mountPath);
     }
-
     return activity?.total;
   }
 

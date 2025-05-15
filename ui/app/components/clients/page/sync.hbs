@@ -38,38 +38,6 @@
         />
       </:chart>
     </Clients::ChartContainer>
-
-    {{! no need to render two empty charts! hide this one if there is no sync data }}
-    {{#if this.totalUsageCounts.secret_syncs}}
-      <Clients::ChartContainer
-        @title="Monthly new"
-        @description="Secrets sync clients which interacted with Vault for the first time each month. Each bar represents the total new sync clients for that month."
-        @hasChartData={{true}}
-        class="no-legend"
-      >
-        <:stats>
-          {{#let (this.average this.byMonthNewClients "secret_syncs") as |avg|}}
-            {{#if avg}}
-              <StatText
-                @label="Average new sync clients per month"
-                @value={{avg}}
-                @size="m"
-                class="chart-subTitle has-top-padding-l"
-              />
-            {{/if}}
-          {{/let}}
-        </:stats>
-
-        <:chart>
-          <Clients::Charts::VerticalBarBasic
-            @chartTitle="Monthly new"
-            @data={{this.byMonthNewClients}}
-            @dataKey="secret_syncs"
-            @chartHeight={{200}}
-          />
-        </:chart>
-      </Clients::ChartContainer>
-    {{/if}}
   {{else}}
     <Clients::UsageStats @title={{this.title}} @description={{this.description}}>
       <StatText @label="Total sync clients" @value={{this.totalUsageCounts.secret_syncs}} @size="l" class="column" />
