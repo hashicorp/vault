@@ -41,8 +41,17 @@ class ClusterReplication extends Component {
     };
     return colorMap[state] || colorMap['disabled'];
   };
+  get linkUrl() {
+    const {
+      isVaultDedicated = false
+    } = this.args;
+    if (isVaultDedicated) {
+      return;
+    }
+    return 'replication';
+  }
   static {
-    setComponentTemplate(precompileTemplate("\n    <HdsCardContainer data-test-cluster-replication @hasBorder={{true}} class=\"ssu-cluster-replication\" ...attributes>\n      <TitleRow @title=\"Cluster replication\" @description={{this.description}} @linkUrl=\"replication\" />\n\n      <HdsTextBody @size=\"300\" data-test-cluster-replication-dr-row>\n        Disaster Recovery\n        <HdsBadge class=\"ssu-cluster-replication__list-row__badge\" data-test-cluster-replication-dr-badge @icon={{this.getIcon @disasterRecoveryState}} @text={{this.getState @disasterRecoveryState}} @color={{this.getColor @disasterRecoveryState}} @type=\"outlined\" @size=\"small\" />\n      </HdsTextBody>\n\n      <HdsTextBody @size=\"300\" data-test-cluster-replication-perf-row>\n        Performance\n        <HdsBadge class=\"ssu-cluster-replication__list-row__badge\" data-test-cluster-replication-perf-badge @icon={{this.getIcon @performanceState}} @text={{this.getState @performanceState}} @color={{this.getColor @performanceState}} @type=\"outlined\" @size=\"small\" />\n      </HdsTextBody>\n\n    </HdsCardContainer>\n  ", {
+    setComponentTemplate(precompileTemplate("\n    <HdsCardContainer data-test-cluster-replication @hasBorder={{true}} class=\"ssu-cluster-replication\" ...attributes>\n      <TitleRow @title=\"Cluster replication\" @description={{this.description}} @linkUrl={{this.linkUrl}} />\n\n      <HdsTextBody @size=\"300\" data-test-cluster-replication-dr-row>\n        Disaster Recovery\n        <HdsBadge class=\"ssu-cluster-replication__list-row__badge\" data-test-cluster-replication-dr-badge @icon={{this.getIcon @disasterRecoveryState}} @text={{this.getState @disasterRecoveryState}} @color={{this.getColor @disasterRecoveryState}} @type=\"outlined\" @size=\"small\" />\n      </HdsTextBody>\n\n      <HdsTextBody @size=\"300\" data-test-cluster-replication-perf-row>\n        Performance\n        <HdsBadge class=\"ssu-cluster-replication__list-row__badge\" data-test-cluster-replication-perf-badge @icon={{this.getIcon @performanceState}} @text={{this.getState @performanceState}} @color={{this.getColor @performanceState}} @type=\"outlined\" @size=\"small\" />\n      </HdsTextBody>\n\n    </HdsCardContainer>\n  ", {
       strictMode: true,
       scope: () => ({
         HdsCardContainer,
