@@ -10,7 +10,7 @@
  * Do not edit the class manually.
  */
 import * as runtime from '../runtime';
-import type { AuditingCalculateHashRequest, AuditingCalculateHashResponse, AuditingEnableDeviceRequest, AuditingEnableRequestHeaderRequest, AuditingListRequestHeadersResponse, AuthEnableMethodRequest, AuthReadConfigurationResponse, AuthReadTuningInformationResponse, AuthTuneConfigurationParametersRequest, CollectHostInformationResponse, CorsConfigureRequest, CorsReadConfigurationResponse, CreateCustomMessageRequest, DecodeTokenRequest, EncryptionKeyConfigureRotationRequest, EncryptionKeyReadRotationConfigurationResponse, GenerateHashRequest, GenerateHashResponse, GenerateHashWithAlgorithmRequest, GenerateHashWithAlgorithmResponse, GenerateRandomRequest, GenerateRandomResponse, GenerateRandomWithBytesRequest, GenerateRandomWithBytesResponse, GenerateRandomWithSourceAndBytesRequest, GenerateRandomWithSourceAndBytesResponse, GenerateRandomWithSourceRequest, GenerateRandomWithSourceResponse, GenerateUtilizationReportResponse, HaStatusResponse, InitializeRequest, InternalClientActivityConfigureRequest, InternalCountEntitiesResponse, InternalCountTokensResponse, InternalGenerateOpenApiDocumentWithParametersRequest, InternalUiListEnabledFeatureFlagsResponse, InternalUiListEnabledVisibleMountsResponse, InternalUiListNamespacesResponse, InternalUiReadAuthenticatedActiveCustomMessagesResponse, InternalUiReadMountInformationResponse, InternalUiReadResultantAclResponse, InternalUiReadUnauthenticatedActiveCustomMessagesResponse, LeaderStatusResponse, LeasesCountResponse, LeasesListResponse, LeasesLookUpResponse, LeasesReadLeaseRequest, LeasesReadLeaseResponse, LeasesRenewLease2Request, LeasesRenewLeaseRequest, LeasesRenewLeaseWithId2Request, LeasesRenewLeaseWithIdRequest, LeasesRevokeLease2Request, LeasesRevokeLeaseRequest, LeasesRevokeLeaseWithId2Request, LeasesRevokeLeaseWithIdRequest, LeasesRevokeLeaseWithPrefix2Request, LeasesRevokeLeaseWithPrefixRequest, LoggersUpdateVerbosityLevelForRequest, LoggersUpdateVerbosityLevelRequest, MfaValidateRequest, MountsEnableSecretsEngineRequest, MountsReadConfigurationResponse, MountsReadTuningInformationResponse, MountsTuneConfigurationParametersRequest, PluginsCatalogListPluginsResponse, PluginsCatalogListPluginsWithTypeResponse, PluginsCatalogPinsCreatePinnedVersionRequest, PluginsCatalogPinsListPinnedVersionsResponse, PluginsCatalogPinsReadPinnedVersionResponse, PluginsCatalogReadPluginConfigurationResponse, PluginsCatalogReadPluginConfigurationWithTypeResponse, PluginsCatalogRegisterPluginRequest, PluginsCatalogRegisterPluginWithTypeRequest, PluginsReloadBackendsRequest, PluginsReloadBackendsResponse, PluginsRuntimesCatalogListPluginsRuntimesResponse, PluginsRuntimesCatalogReadPluginRuntimeConfigurationResponse, PluginsRuntimesCatalogRegisterPluginRuntimeRequest, PoliciesGeneratePasswordFromPasswordPolicyResponse, PoliciesListAclPolicies2Response, PoliciesListAclPolicies3Response, PoliciesListAclPoliciesResponse, PoliciesReadAclPolicy2Response, PoliciesReadAclPolicyResponse, PoliciesReadPasswordPolicyResponse, PoliciesWriteAclPolicy2Request, PoliciesWriteAclPolicyRequest, PoliciesWritePasswordPolicyRequest, QueryTokenAccessorCapabilitiesRequest, QueryTokenCapabilitiesRequest, QueryTokenSelfCapabilitiesRequest, RateLimitQuotasConfigureRequest, RateLimitQuotasReadConfigurationResponse, RateLimitQuotasReadResponse, RateLimitQuotasWriteRequest, RawReadResponse, RawWriteRequest, ReadWrappingProperties2Response, ReadWrappingPropertiesRequest, ReadWrappingPropertiesResponse, RekeyAttemptInitializeRequest, RekeyAttemptInitializeResponse, RekeyAttemptReadProgressResponse, RekeyAttemptUpdateRequest, RekeyAttemptUpdateResponse, RekeyReadBackupKeyResponse, RekeyReadBackupRecoveryKeyResponse, RekeyVerificationCancelResponse, RekeyVerificationReadProgressResponse, RekeyVerificationUpdateRequest, RekeyVerificationUpdateResponse, ReloadPluginsRequest, ReloadPluginsResponse, RemountRequest, RemountResponse, RemountStatusResponse, RewrapRequest, RootTokenGenerationInitialize2Request, RootTokenGenerationInitialize2Response, RootTokenGenerationInitializeRequest, RootTokenGenerationInitializeResponse, RootTokenGenerationReadProgress2Response, RootTokenGenerationReadProgressResponse, RootTokenGenerationUpdateRequest, RootTokenGenerationUpdateResponse, SealStatusResponse, StandardListResponse, SubscriptionsCreateResponse, SubscriptionsListEventsSubscriptionsResponse, SubscriptionsReadEventsSubscriptionsResponse, SubscriptionsWriteEventsSubscriptionsRequest, SubscriptionsWriteEventsSubscriptionsResponse, SystemDeleteSyncConfigResponse, SystemDeleteSyncGithubAppsNameResponse, SystemListSyncAssociationsResponse, SystemListSyncDestinationsResponse, SystemListSyncDestinationsTypeResponse, SystemListSyncGithubAppsResponse, SystemReadConfigGroupPolicyApplicationResponse, SystemReadSyncAssociationsDestinationsResponse, SystemReadSyncAssociationsMountSecretNameResponse, SystemReadSyncConfigResponse, SystemReadSyncDestinationsAwsSmNameResponse, SystemReadSyncDestinationsAzureKvNameResponse, SystemReadSyncDestinationsGcpSmNameResponse, SystemReadSyncDestinationsGhNameResponse, SystemReadSyncDestinationsInMemNameResponse, SystemReadSyncDestinationsTypeNameAssociationsResponse, SystemReadSyncDestinationsVercelProjectNameResponse, SystemReadSyncGithubAppsNameResponse, SystemWriteConfigControlGroupRequest, SystemWriteConfigGroupPolicyApplicationRequest, SystemWriteControlGroupAuthorizeRequest, SystemWriteControlGroupRequestRequest, SystemWriteInternalCountersActivityWriteRequest, SystemWriteManagedKeysTypeNameRequest, SystemWriteManagedKeysTypeNameTestSignRequest, SystemWriteMfaMethodDuoNameRequest, SystemWriteMfaMethodOktaNameRequest, SystemWriteMfaMethodPingidNameRequest, SystemWriteMfaMethodTotpNameAdminDestroyRequest, SystemWriteMfaMethodTotpNameAdminGenerateRequest, SystemWriteMfaMethodTotpNameRequest, SystemWriteNamespacesApiLockUnlockPathRequest, SystemWriteNamespacesApiLockUnlockRequest, SystemWriteNamespacesPathRequest, SystemWritePoliciesEgpNameRequest, SystemWritePoliciesRgpNameRequest, SystemWriteQuotasLeaseCountNameRequest, SystemWriteReplicationDrPrimaryEnableRequest, SystemWriteReplicationDrPrimaryRevokeSecondaryRequest, SystemWriteReplicationDrPrimarySecondaryTokenRequest, SystemWriteReplicationDrSecondaryDisableRequest, SystemWriteReplicationDrSecondaryEnableRequest, SystemWriteReplicationDrSecondaryMerkleCheckRequest, SystemWriteReplicationDrSecondaryOperationTokenDeleteRequest, SystemWriteReplicationDrSecondaryPromoteRequest, SystemWriteReplicationDrSecondaryRecoverRequest, SystemWriteReplicationDrSecondaryReindexRequest, SystemWriteReplicationDrSecondaryUpdatePrimaryRequest, SystemWriteReplicationForceCorruptionRequest, SystemWriteReplicationPerformancePrimaryEnableRequest, SystemWriteReplicationPerformancePrimaryPathsFilterIdRequest, SystemWriteReplicationPerformancePrimaryRevokeSecondaryRequest, SystemWriteReplicationPerformancePrimarySecondaryTokenRequest, SystemWriteReplicationPerformanceSecondaryEnableRequest, SystemWriteReplicationPerformanceSecondaryPromoteRequest, SystemWriteReplicationPerformanceSecondaryUpdatePrimaryRequest, SystemWriteReplicationPrimaryEnableRequest, SystemWriteReplicationPrimaryRevokeSecondaryRequest, SystemWriteReplicationPrimarySecondaryTokenRequest, SystemWriteReplicationReindexRequest, SystemWriteReplicationSecondaryEnableRequest, SystemWriteReplicationSecondaryPromoteRequest, SystemWriteReplicationSecondaryUpdatePrimaryRequest, SystemWriteStorageRaftSnapshotAutoConfigNameRequest, SystemWriteSyncDestinationsAwsSmNameRequest, SystemWriteSyncDestinationsAwsSmNameResponse, SystemWriteSyncDestinationsAzureKvNameRequest, SystemWriteSyncDestinationsAzureKvNameResponse, SystemWriteSyncDestinationsGcpSmNameRequest, SystemWriteSyncDestinationsGcpSmNameResponse, SystemWriteSyncDestinationsGhNameRequest, SystemWriteSyncDestinationsGhNameResponse, SystemWriteSyncDestinationsInMemNameRequest, SystemWriteSyncDestinationsInMemNameResponse, SystemWriteSyncDestinationsTypeNameAssociationsRemoveRequest, SystemWriteSyncDestinationsTypeNameAssociationsRemoveResponse, SystemWriteSyncDestinationsTypeNameAssociationsSetRequest, SystemWriteSyncDestinationsTypeNameAssociationsSetResponse, SystemWriteSyncDestinationsVercelProjectNameRequest, SystemWriteSyncDestinationsVercelProjectNameResponse, SystemWriteSyncGithubAppsNameRequest, SystemWriteSyncGithubAppsNameResponse, SystemWriteUtilizationRequest, SystemWriteUtilizationResponse, UiConfigListCustomMessagesResponse, UiConfigReadCustomMessageResponse, UiConfigUpdateCustomMessageRequest, UiConfigUpdateCustomMessageResponse, UiHeadersConfigureRequest, UiHeadersListResponse, UiHeadersReadConfigurationResponse, UnsealRequest, UnsealResponse, UnwrapRequest, VersionHistoryResponse, WellKnownListLabels2Response, WellKnownListLabelsResponse, WellKnownReadLabelResponse } from '../models/index';
+import type { AuditingCalculateHashRequest, AuditingCalculateHashResponse, AuditingEnableDeviceRequest, AuditingEnableRequestHeaderRequest, AuditingListRequestHeadersResponse, AuthEnableMethodRequest, AuthReadConfigurationResponse, AuthReadTuningInformationResponse, AuthTuneConfigurationParametersRequest, CollectHostInformationResponse, CorsConfigureRequest, CorsReadConfigurationResponse, CreateCustomMessageRequest, DecodeTokenRequest, EncryptionKeyConfigureRotationRequest, EncryptionKeyReadRotationConfigurationResponse, GenerateHashRequest, GenerateHashResponse, GenerateHashWithAlgorithmRequest, GenerateHashWithAlgorithmResponse, GenerateRandomRequest, GenerateRandomResponse, GenerateRandomWithBytesRequest, GenerateRandomWithBytesResponse, GenerateRandomWithSourceAndBytesRequest, GenerateRandomWithSourceAndBytesResponse, GenerateRandomWithSourceRequest, GenerateRandomWithSourceResponse, GenerateUtilizationReportResponse, HaStatusResponse, InitializeRequest, InternalClientActivityConfigureRequest, InternalCountEntitiesResponse, InternalGenerateOpenApiDocumentWithParametersRequest, InternalUiListEnabledFeatureFlagsResponse, InternalUiListEnabledVisibleMountsResponse, InternalUiListNamespacesResponse, InternalUiReadAuthenticatedActiveCustomMessagesResponse, InternalUiReadMountInformationResponse, InternalUiReadResultantAclResponse, InternalUiReadUnauthenticatedActiveCustomMessagesResponse, LeaderStatusResponse, LeasesCountResponse, LeasesListResponse, LeasesLookUpResponse, LeasesReadLeaseRequest, LeasesReadLeaseResponse, LeasesRenewLease2Request, LeasesRenewLeaseRequest, LeasesRenewLeaseWithId2Request, LeasesRenewLeaseWithIdRequest, LeasesRevokeLease2Request, LeasesRevokeLeaseRequest, LeasesRevokeLeaseWithId2Request, LeasesRevokeLeaseWithIdRequest, LeasesRevokeLeaseWithPrefix2Request, LeasesRevokeLeaseWithPrefixRequest, LoggersUpdateVerbosityLevelForRequest, LoggersUpdateVerbosityLevelRequest, MfaValidateRequest, MountsEnableSecretsEngineRequest, MountsReadConfigurationResponse, MountsReadTuningInformationResponse, MountsTuneConfigurationParametersRequest, PluginsCatalogListPluginsResponse, PluginsCatalogListPluginsWithTypeResponse, PluginsCatalogPinsCreatePinnedVersionRequest, PluginsCatalogPinsListPinnedVersionsResponse, PluginsCatalogPinsReadPinnedVersionResponse, PluginsCatalogReadPluginConfigurationResponse, PluginsCatalogReadPluginConfigurationWithTypeResponse, PluginsCatalogRegisterPluginRequest, PluginsCatalogRegisterPluginWithTypeRequest, PluginsReloadBackendsRequest, PluginsReloadBackendsResponse, PluginsRuntimesCatalogListPluginsRuntimesResponse, PluginsRuntimesCatalogReadPluginRuntimeConfigurationResponse, PluginsRuntimesCatalogRegisterPluginRuntimeRequest, PoliciesGeneratePasswordFromPasswordPolicyResponse, PoliciesListAclPolicies2Response, PoliciesListAclPolicies3Response, PoliciesListAclPoliciesResponse, PoliciesReadAclPolicy2Response, PoliciesReadAclPolicyResponse, PoliciesReadPasswordPolicyResponse, PoliciesWriteAclPolicy2Request, PoliciesWriteAclPolicyRequest, PoliciesWritePasswordPolicyRequest, QueryTokenAccessorCapabilitiesRequest, QueryTokenCapabilitiesRequest, QueryTokenSelfCapabilitiesRequest, RateLimitQuotasConfigureRequest, RateLimitQuotasReadConfigurationResponse, RateLimitQuotasReadResponse, RateLimitQuotasWriteRequest, RawReadResponse, RawWriteRequest, ReadWrappingProperties2Response, ReadWrappingPropertiesRequest, ReadWrappingPropertiesResponse, RekeyAttemptInitializeRequest, RekeyAttemptInitializeResponse, RekeyAttemptReadProgressResponse, RekeyAttemptUpdateRequest, RekeyAttemptUpdateResponse, RekeyReadBackupKeyResponse, RekeyReadBackupRecoveryKeyResponse, RekeyVerificationCancelResponse, RekeyVerificationReadProgressResponse, RekeyVerificationUpdateRequest, RekeyVerificationUpdateResponse, ReloadPluginsRequest, ReloadPluginsResponse, RemountRequest, RemountResponse, RemountStatusResponse, RewrapRequest, RootTokenGenerationInitialize2Request, RootTokenGenerationInitialize2Response, RootTokenGenerationInitializeRequest, RootTokenGenerationInitializeResponse, RootTokenGenerationReadProgress2Response, RootTokenGenerationReadProgressResponse, RootTokenGenerationUpdateRequest, RootTokenGenerationUpdateResponse, SealStatusResponse, StandardListResponse, SubscriptionsCreateResponse, SubscriptionsListEventsSubscriptionsResponse, SubscriptionsReadEventsSubscriptionsResponse, SubscriptionsWriteEventsSubscriptionsRequest, SubscriptionsWriteEventsSubscriptionsResponse, SystemDeleteSyncConfigResponse, SystemDeleteSyncGithubAppsNameResponse, SystemListSyncAssociationsResponse, SystemListSyncDestinationsResponse, SystemListSyncDestinationsTypeResponse, SystemListSyncGithubAppsResponse, SystemPatchNamespacesPathRequest, SystemPatchSyncConfigRequest, SystemPatchSyncConfigResponse, SystemPatchSyncDestinationsAwsSmNameRequest, SystemPatchSyncDestinationsAwsSmNameResponse, SystemPatchSyncDestinationsAzureKvNameRequest, SystemPatchSyncDestinationsAzureKvNameResponse, SystemPatchSyncDestinationsGcpSmNameRequest, SystemPatchSyncDestinationsGcpSmNameResponse, SystemPatchSyncDestinationsGhNameRequest, SystemPatchSyncDestinationsGhNameResponse, SystemPatchSyncDestinationsInMemNameRequest, SystemPatchSyncDestinationsInMemNameResponse, SystemPatchSyncDestinationsVercelProjectNameRequest, SystemPatchSyncDestinationsVercelProjectNameResponse, SystemReadConfigGroupPolicyApplicationResponse, SystemReadSyncAssociationsDestinationsResponse, SystemReadSyncAssociationsMountSecretNameResponse, SystemReadSyncConfigResponse, SystemReadSyncDestinationsAwsSmNameResponse, SystemReadSyncDestinationsAzureKvNameResponse, SystemReadSyncDestinationsGcpSmNameResponse, SystemReadSyncDestinationsGhNameResponse, SystemReadSyncDestinationsInMemNameResponse, SystemReadSyncDestinationsTypeNameAssociationsResponse, SystemReadSyncDestinationsVercelProjectNameResponse, SystemReadSyncGithubAppsNameResponse, SystemWriteConfigControlGroupRequest, SystemWriteConfigGroupPolicyApplicationRequest, SystemWriteControlGroupAuthorizeRequest, SystemWriteControlGroupRequestRequest, SystemWriteInternalCountersActivityWriteRequest, SystemWriteManagedKeysTypeNameRequest, SystemWriteManagedKeysTypeNameTestSignRequest, SystemWriteMfaMethodDuoNameRequest, SystemWriteMfaMethodOktaNameRequest, SystemWriteMfaMethodPingidNameRequest, SystemWriteMfaMethodTotpNameAdminDestroyRequest, SystemWriteMfaMethodTotpNameAdminGenerateRequest, SystemWriteMfaMethodTotpNameRequest, SystemWriteNamespacesApiLockUnlockPathRequest, SystemWriteNamespacesApiLockUnlockRequest, SystemWriteNamespacesPathRequest, SystemWritePoliciesEgpNameRequest, SystemWritePoliciesRgpNameRequest, SystemWriteQuotasLeaseCountNameRequest, SystemWriteReplicationDrPrimaryEnableRequest, SystemWriteReplicationDrPrimaryRevokeSecondaryRequest, SystemWriteReplicationDrPrimarySecondaryTokenRequest, SystemWriteReplicationDrSecondaryDisableRequest, SystemWriteReplicationDrSecondaryEnableRequest, SystemWriteReplicationDrSecondaryMerkleCheckRequest, SystemWriteReplicationDrSecondaryOperationTokenDeleteRequest, SystemWriteReplicationDrSecondaryPromoteRequest, SystemWriteReplicationDrSecondaryRecoverRequest, SystemWriteReplicationDrSecondaryReindexRequest, SystemWriteReplicationDrSecondaryUpdatePrimaryRequest, SystemWriteReplicationForceCorruptionRequest, SystemWriteReplicationPerformancePrimaryEnableRequest, SystemWriteReplicationPerformancePrimaryPathsFilterIdRequest, SystemWriteReplicationPerformancePrimaryRevokeSecondaryRequest, SystemWriteReplicationPerformancePrimarySecondaryTokenRequest, SystemWriteReplicationPerformanceSecondaryEnableRequest, SystemWriteReplicationPerformanceSecondaryPromoteRequest, SystemWriteReplicationPerformanceSecondaryUpdatePrimaryRequest, SystemWriteReplicationPrimaryEnableRequest, SystemWriteReplicationPrimaryRevokeSecondaryRequest, SystemWriteReplicationPrimarySecondaryTokenRequest, SystemWriteReplicationReindexRequest, SystemWriteReplicationSecondaryEnableRequest, SystemWriteReplicationSecondaryPromoteRequest, SystemWriteReplicationSecondaryUpdatePrimaryRequest, SystemWriteStorageRaftSnapshotAutoConfigNameRequest, SystemWriteSyncDestinationsAwsSmNameRequest, SystemWriteSyncDestinationsAwsSmNameResponse, SystemWriteSyncDestinationsAzureKvNameRequest, SystemWriteSyncDestinationsAzureKvNameResponse, SystemWriteSyncDestinationsGcpSmNameRequest, SystemWriteSyncDestinationsGcpSmNameResponse, SystemWriteSyncDestinationsGhNameRequest, SystemWriteSyncDestinationsGhNameResponse, SystemWriteSyncDestinationsInMemNameRequest, SystemWriteSyncDestinationsInMemNameResponse, SystemWriteSyncDestinationsTypeNameAssociationsRemoveRequest, SystemWriteSyncDestinationsTypeNameAssociationsRemoveResponse, SystemWriteSyncDestinationsTypeNameAssociationsSetRequest, SystemWriteSyncDestinationsTypeNameAssociationsSetResponse, SystemWriteSyncDestinationsVercelProjectNameRequest, SystemWriteSyncDestinationsVercelProjectNameResponse, SystemWriteSyncGithubAppsNameRequest, SystemWriteSyncGithubAppsNameResponse, SystemWriteUtilizationRequest, SystemWriteUtilizationResponse, UiConfigListCustomMessagesResponse, UiConfigReadCustomMessageResponse, UiConfigUpdateCustomMessageRequest, UiConfigUpdateCustomMessageResponse, UiHeadersConfigureRequest, UiHeadersListResponse, UiHeadersReadConfigurationResponse, UiLoginDefaultAuthConfigureRequest, UiLoginDefaultAuthListResponse, UnsealRequest, UnsealResponse, UnwrapRequest, VersionHistoryResponse, WellKnownListLabels2Response, WellKnownListLabelsResponse, WellKnownReadLabelResponse } from '../models/index';
 export interface SystemApiAuditingCalculateHashOperationRequest {
     path: string;
     auditingCalculateHashRequest: AuditingCalculateHashRequest;
@@ -481,6 +481,37 @@ export interface SystemApiSystemListSyncDestinationsTypeRequest {
 export interface SystemApiSystemListSyncGithubAppsRequest {
     list: SystemListSyncGithubAppsListEnum;
 }
+export interface SystemApiSystemPatchNamespacesPathOperationRequest {
+    path: string;
+    systemPatchNamespacesPathRequest: SystemPatchNamespacesPathRequest;
+}
+export interface SystemApiSystemPatchSyncConfigOperationRequest {
+    systemPatchSyncConfigRequest: SystemPatchSyncConfigRequest;
+}
+export interface SystemApiSystemPatchSyncDestinationsAwsSmNameOperationRequest {
+    name: string;
+    systemPatchSyncDestinationsAwsSmNameRequest: SystemPatchSyncDestinationsAwsSmNameRequest;
+}
+export interface SystemApiSystemPatchSyncDestinationsAzureKvNameOperationRequest {
+    name: string;
+    systemPatchSyncDestinationsAzureKvNameRequest: SystemPatchSyncDestinationsAzureKvNameRequest;
+}
+export interface SystemApiSystemPatchSyncDestinationsGcpSmNameOperationRequest {
+    name: string;
+    systemPatchSyncDestinationsGcpSmNameRequest: SystemPatchSyncDestinationsGcpSmNameRequest;
+}
+export interface SystemApiSystemPatchSyncDestinationsGhNameOperationRequest {
+    name: string;
+    systemPatchSyncDestinationsGhNameRequest: SystemPatchSyncDestinationsGhNameRequest;
+}
+export interface SystemApiSystemPatchSyncDestinationsInMemNameOperationRequest {
+    name: string;
+    systemPatchSyncDestinationsInMemNameRequest: SystemPatchSyncDestinationsInMemNameRequest;
+}
+export interface SystemApiSystemPatchSyncDestinationsVercelProjectNameOperationRequest {
+    name: string;
+    systemPatchSyncDestinationsVercelProjectNameRequest: SystemPatchSyncDestinationsVercelProjectNameRequest;
+}
 export interface SystemApiSystemReadManagedKeysTypeNameRequest {
     name: string;
     type: string;
@@ -786,6 +817,19 @@ export interface SystemApiUiHeadersListRequest {
 }
 export interface SystemApiUiHeadersReadConfigurationRequest {
     header: string;
+}
+export interface SystemApiUiLoginDefaultAuthConfigureOperationRequest {
+    name: string;
+    uiLoginDefaultAuthConfigureRequest: UiLoginDefaultAuthConfigureRequest;
+}
+export interface SystemApiUiLoginDefaultAuthDeleteConfigurationRequest {
+    name: string;
+}
+export interface SystemApiUiLoginDefaultAuthListRequest {
+    list: UiLoginDefaultAuthListListEnum;
+}
+export interface SystemApiUiLoginDefaultAuthReadConfigurationRequest {
+    name: string;
 }
 export interface SystemApiUnsealOperationRequest {
     unsealRequest: UnsealRequest;
@@ -1153,14 +1197,6 @@ export declare class SystemApi extends runtime.BaseAPI {
      * @deprecated
      */
     internalCountRequests(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
-    /**
-     * Backwards compatibility is not guaranteed for this API
-     */
-    internalCountTokensRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<InternalCountTokensResponse>>;
-    /**
-     * Backwards compatibility is not guaranteed for this API
-     */
-    internalCountTokens(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<InternalCountTokensResponse>;
     /**
      */
     internalGenerateOpenApiDocumentRaw(requestParameters: SystemApiInternalGenerateOpenApiDocumentRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
@@ -2484,6 +2520,54 @@ export declare class SystemApi extends runtime.BaseAPI {
      */
     systemListSyncGithubApps(list: SystemListSyncGithubAppsListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SystemListSyncGithubAppsResponse>;
     /**
+     */
+    systemPatchNamespacesPathRaw(requestParameters: SystemApiSystemPatchNamespacesPathOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     */
+    systemPatchNamespacesPath(path: string, systemPatchNamespacesPathRequest: SystemPatchNamespacesPathRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
+    /**
+     */
+    systemPatchSyncConfigRaw(requestParameters: SystemApiSystemPatchSyncConfigOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SystemPatchSyncConfigResponse>>;
+    /**
+     */
+    systemPatchSyncConfig(systemPatchSyncConfigRequest: SystemPatchSyncConfigRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SystemPatchSyncConfigResponse>;
+    /**
+     */
+    systemPatchSyncDestinationsAwsSmNameRaw(requestParameters: SystemApiSystemPatchSyncDestinationsAwsSmNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SystemPatchSyncDestinationsAwsSmNameResponse>>;
+    /**
+     */
+    systemPatchSyncDestinationsAwsSmName(name: string, systemPatchSyncDestinationsAwsSmNameRequest: SystemPatchSyncDestinationsAwsSmNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SystemPatchSyncDestinationsAwsSmNameResponse>;
+    /**
+     */
+    systemPatchSyncDestinationsAzureKvNameRaw(requestParameters: SystemApiSystemPatchSyncDestinationsAzureKvNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SystemPatchSyncDestinationsAzureKvNameResponse>>;
+    /**
+     */
+    systemPatchSyncDestinationsAzureKvName(name: string, systemPatchSyncDestinationsAzureKvNameRequest: SystemPatchSyncDestinationsAzureKvNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SystemPatchSyncDestinationsAzureKvNameResponse>;
+    /**
+     */
+    systemPatchSyncDestinationsGcpSmNameRaw(requestParameters: SystemApiSystemPatchSyncDestinationsGcpSmNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SystemPatchSyncDestinationsGcpSmNameResponse>>;
+    /**
+     */
+    systemPatchSyncDestinationsGcpSmName(name: string, systemPatchSyncDestinationsGcpSmNameRequest: SystemPatchSyncDestinationsGcpSmNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SystemPatchSyncDestinationsGcpSmNameResponse>;
+    /**
+     */
+    systemPatchSyncDestinationsGhNameRaw(requestParameters: SystemApiSystemPatchSyncDestinationsGhNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SystemPatchSyncDestinationsGhNameResponse>>;
+    /**
+     */
+    systemPatchSyncDestinationsGhName(name: string, systemPatchSyncDestinationsGhNameRequest: SystemPatchSyncDestinationsGhNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SystemPatchSyncDestinationsGhNameResponse>;
+    /**
+     */
+    systemPatchSyncDestinationsInMemNameRaw(requestParameters: SystemApiSystemPatchSyncDestinationsInMemNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SystemPatchSyncDestinationsInMemNameResponse>>;
+    /**
+     */
+    systemPatchSyncDestinationsInMemName(name: string, systemPatchSyncDestinationsInMemNameRequest: SystemPatchSyncDestinationsInMemNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SystemPatchSyncDestinationsInMemNameResponse>;
+    /**
+     */
+    systemPatchSyncDestinationsVercelProjectNameRaw(requestParameters: SystemApiSystemPatchSyncDestinationsVercelProjectNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SystemPatchSyncDestinationsVercelProjectNameResponse>>;
+    /**
+     */
+    systemPatchSyncDestinationsVercelProjectName(name: string, systemPatchSyncDestinationsVercelProjectNameRequest: SystemPatchSyncDestinationsVercelProjectNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SystemPatchSyncDestinationsVercelProjectNameResponse>;
+    /**
      * Configure control group global settings.
      */
     systemReadConfigControlGroupRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
@@ -3270,6 +3354,38 @@ export declare class SystemApi extends runtime.BaseAPI {
      */
     uiHeadersReadConfiguration(header: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UiHeadersReadConfigurationResponse>;
     /**
+     * Configure Default Auth method for UI Login.
+     */
+    uiLoginDefaultAuthConfigureRaw(requestParameters: SystemApiUiLoginDefaultAuthConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Configure Default Auth method for UI Login.
+     */
+    uiLoginDefaultAuthConfigure(name: string, uiLoginDefaultAuthConfigureRequest: UiLoginDefaultAuthConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
+    /**
+     * Remove Default Auth config for UI Login.
+     */
+    uiLoginDefaultAuthDeleteConfigurationRaw(requestParameters: SystemApiUiLoginDefaultAuthDeleteConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Remove Default Auth config for UI Login.
+     */
+    uiLoginDefaultAuthDeleteConfiguration(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
+    /**
+     * Return a list of configured default auth methods for the UI.
+     */
+    uiLoginDefaultAuthListRaw(requestParameters: SystemApiUiLoginDefaultAuthListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UiLoginDefaultAuthListResponse>>;
+    /**
+     * Return a list of configured default auth methods for the UI.
+     */
+    uiLoginDefaultAuthList(list: UiLoginDefaultAuthListListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UiLoginDefaultAuthListResponse>;
+    /**
+     * Return the given Default Auth configuration
+     */
+    uiLoginDefaultAuthReadConfigurationRaw(requestParameters: SystemApiUiLoginDefaultAuthReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>>;
+    /**
+     * Return the given Default Auth configuration
+     */
+    uiLoginDefaultAuthReadConfiguration(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse>;
+    /**
      * Unseal the Vault.
      */
     unsealRaw(requestParameters: SystemApiUnsealOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UnsealResponse>>;
@@ -3472,6 +3588,13 @@ export declare enum UiConfigListCustomMessagesListEnum {
   * @enum {string}
   */
 export declare enum UiHeadersListListEnum {
+    TRUE = "true"
+}
+/**
+  * @export
+  * @enum {string}
+  */
+export declare enum UiLoginDefaultAuthListListEnum {
     TRUE = "true"
 }
 /**

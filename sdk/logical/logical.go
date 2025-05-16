@@ -111,6 +111,10 @@ type BackendConfig struct {
 
 	// EventsSender provides a mechanism to interact with Vault events.
 	EventsSender EventSender
+
+	// ObservationsRecorder provides a mechanism to interact with the
+	// Vault Observation System.
+	ObservationRecorder ObservationRecorder
 }
 
 // Factory is the factory function to create a logical backend.
