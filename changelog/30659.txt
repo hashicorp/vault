@@ -1,0 +1,4 @@
+```release-note:feature
+**Development Cluster Configuration** (enterprise): Added `development_cluster` as a field to Vault's utilization reports.
+The field is configurable via HCL and indicates whether the cluster is being used in a development environment, defaults to false if not set.
+```
