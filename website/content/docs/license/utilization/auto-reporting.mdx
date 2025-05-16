@@ -194,7 +194,7 @@ isn’t trying to send reports.
 If your configuration file and environment variable differ, the environment
 variable setting will take precedence.
 
-## Development Cluster Setting
+## Development Cluster Configuration
 
 As of 1.20.0, clusters now report the `development_cluster` metadata field, which
 indicates whether the cluster is used for development (non-production) purposes. By default, the field is set to `false`,
@@ -211,7 +211,7 @@ reporting {
 
 #### Replication Considerations
 
-The `development_cluster` setting cannot differ across replicated clusters.
+The `development_cluster` configuration cannot differ across replicated clusters.
 In [performance replication](/vault/docs/enterprise/replication#performance-replication), secondary clusters inherit the
 `development_cluster` value from the primary cluster, regardless of their own HCL configuration. If the secondary cluster
 is promoted to a primary, it will begin to report its own `development_cluster` value determined by its HCL configuration.
