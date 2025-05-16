@@ -9,6 +9,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/asn1"
 	"errors"
 	"fmt"
@@ -33,13 +34,68 @@ func (p7 *PKCS7) Decrypt(cert *x509.Certificate, pkey crypto.PrivateKey) ([]byte
 	switch pkey := pkey.(type) {
 	case *rsa.PrivateKey:
 		var contentKey []byte
-		contentKey, err := rsa.DecryptPKCS1v15(rand.Reader, pkey, recipient.EncryptedKey)
-		if err != nil {
-			return nil, err
+		switch {
+		case recipient.KeyEncryptionAlgorithm.Algorithm.Equal(OIDEncryptionAlgorithmRSAOAEP):
+			oaepHash, err := parseRSAOaepParam(recipient.KeyEncryptionAlgorithm.Parameters)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse RSA OAEP parameter: %w", err)
+			}
+			contentKey, err = rsa.DecryptOAEP(oaepHash.New(), rand.Reader, pkey, recipient.EncryptedKey, []byte{})
+			if err != nil {
+				return nil, fmt.Errorf("failed OAEP decryption of content key: %w", err)
+			}
+		default:
+			var err error
+			contentKey, err = rsa.DecryptPKCS1v15(rand.Reader, pkey, recipient.EncryptedKey)
+			if err != nil {
+				return nil, fmt.Errorf("failed PKCS1v15 decryption of content key: %w", err)
+			}
 		}
 		return data.EncryptedContentInfo.decrypt(contentKey)
 	}
 	return nil, ErrUnsupportedAlgorithm
+}
+
+// parseRSAOaepParam parses the RSA-OAEP parameters as defined in RFC 3447,
+// at the moment we don't support the PSourceAlgorithm (label attribute)
+func parseRSAOaepParam(parameters asn1.RawValue) (crypto.Hash, error) {
+	if len(parameters.Bytes) == 0 {
+		// Based on RFC 3447 Section A.2.1, if the parameter is absent, we assume SHA-1.
+		return crypto.SHA1, nil
+	}
+
+	type rsaOAEPParams struct {
+		HashAlgorithm    pkix.AlgorithmIdentifier `asn1:"tag:0,optional,explicit"`
+		MaskGenAlgorithm pkix.AlgorithmIdentifier `asn1:"tag:1,optional,explicit"`
+		PSourceAlgorithm pkix.AlgorithmIdentifier `asn1:"tag:2,optional,explicit"`
+	}
+
+	var params rsaOAEPParams
+	_, err := asn1.Unmarshal(parameters.FullBytes, &params)
+	if err != nil {
+		return 0, errors.New("failed to parse RSA-OAEP parameters")
+	}
+
+	// Parse the hash algorithm
+	hashOID := params.HashAlgorithm.Algorithm
+	var hash crypto.Hash
+	switch {
+	case hashOID == nil:
+		// If the hash algorithm is not specified, we assume SHA-1.
+		hash = crypto.SHA1
+	case hashOID.Equal(OIDDigestAlgorithmSHA1):
+		hash = crypto.SHA1
+	case hashOID.Equal(OIDDigestAlgorithmSHA256):
+		hash = crypto.SHA256
+	case hashOID.Equal(OIDDigestAlgorithmSHA384):
+		hash = crypto.SHA384
+	case hashOID.Equal(OIDDigestAlgorithmSHA512):
+		hash = crypto.SHA512
+	default:
+		return 0, fmt.Errorf("unsupported hash algorithm in RSA-OAEP parameters: %s", hashOID)
+	}
+
+	return hash, nil
 }
 
 // DecryptUsingPSK decrypts encrypted data using caller provided

@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"math/rand"
 	"net/url"
 	"os"
@@ -2335,4 +2336,11 @@ func (b *RaftBackend) ReloadConfig(config raft.ReloadableConfig) error {
 		}
 	}
 	return nil
+}
+
+// GetStorageConfig returns a map with the raft configuration from the storage stanza in the config file.
+func (b *RaftBackend) GetStorageConfig() map[string]string {
+	storageConfig := make(map[string]string)
+	maps.Copy(storageConfig, b.conf)
+	return storageConfig
 }
