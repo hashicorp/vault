@@ -15,13 +15,13 @@ import keys from 'core/utils/keys';
  * vault.cluster.access.namespaces.index route.
  */
 export default class ManageNamespacesController extends Controller {
+  queryParams = ['pageFilter', 'page'];
+
   @service namespace;
   @service router;
 
   @tracked query;
-  @tracked pageFilter;
-
-  queryParams = ['pageFilter', 'page'];
+  @tracked pageFilter = '';
 
   constructor() {
     super(...arguments);
