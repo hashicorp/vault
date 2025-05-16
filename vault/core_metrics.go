@@ -283,70 +283,88 @@ func (c *Core) emitMetricsActiveNode(stopCh chan struct{}) {
 	// because there's more than one TokenManager created during startup,
 	// but we only want one set of gauges.
 	metricsInit := []struct {
-		MetricName    []string
-		MetadataLabel []metrics.Label
-		CollectorFunc metricsutil.GaugeCollector
-		DisableEnvVar string
+		MetricName       []string
+		MetadataLabel    []metrics.Label
+		CollectorFunc    metricsutil.GaugeCollector
+		DisableEnvVar    string
+		IsEnterpriseOnly bool
 	}{
 		{
 			[]string{"token", "count"},
 			[]metrics.Label{{"gauge", "token_by_namespace"}},
 			c.tokenGaugeCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"token", "count", "by_policy"},
 			[]metrics.Label{{"gauge", "token_by_policy"}},
 			c.tokenGaugePolicyCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"expire", "leases", "by_expiration"},
 			[]metrics.Label{{"gauge", "leases_by_expiration"}},
 			c.leaseExpiryGaugeCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"token", "count", "by_auth"},
 			[]metrics.Label{{"gauge", "token_by_auth"}},
 			c.tokenGaugeMethodCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"token", "count", "by_ttl"},
 			[]metrics.Label{{"gauge", "token_by_ttl"}},
 			c.tokenGaugeTtlCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"secret", "kv", "count"},
 			[]metrics.Label{{"gauge", "kv_secrets_by_mountpoint"}},
 			c.kvSecretGaugeCollector,
 			"VAULT_DISABLE_KV_GAUGE",
+			false,
 		},
 		{
 			[]string{"identity", "entity", "count"},
 			[]metrics.Label{{"gauge", "identity_by_namespace"}},
 			c.entityGaugeCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"identity", "entity", "alias", "count"},
 			[]metrics.Label{{"gauge", "identity_by_mountpoint"}},
 			c.entityGaugeCollectorByMount,
 			"",
+			false,
 		},
 		{
 			[]string{"identity", "entity", "active", "partial_month"},
 			[]metrics.Label{{"gauge", "identity_active_month"}},
 			c.activeEntityGaugeCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"policy", "configured", "count"},
 			[]metrics.Label{{"gauge", "number_policies_by_type"}},
 			c.configuredPoliciesGaugeCollector,
 			"",
+			false,
+		},
+		{
+			[]string{"client", "billing_period", "activity"},
+			[]metrics.Label{{"gauge", "clients_current_billing_period"}},
+			c.clientsGaugeCollectorCurrentBillingPeriod,
+			"",
+			true,
 		},
 	}
 
@@ -362,6 +380,11 @@ func (c *Core) emitMetricsActiveNode(stopCh chan struct{}) {
 						"metric", init.MetricName)
 					continue
 				}
+			}
+
+			// Billing start date is always 0 on CE
+			if init.IsEnterpriseOnly && c.BillingStart().IsZero() {
+				continue
 			}
 
 			proc, err := c.MetricSink().NewGaugeCollectionProcess(
@@ -975,4 +998,34 @@ func (c *Core) configuredPoliciesGaugeCollector(ctx context.Context) ([]metricsu
 	}
 
 	return values, nil
+}
+
+func (c *Core) GetPolicyMetrics(ctx context.Context) map[PolicyType]int {
+	policyStore := c.policyStore
+
+	if policyStore == nil {
+		c.logger.Error("could not find policy store")
+		return map[PolicyType]int{}
+	}
+
+	ctx = namespace.RootContext(ctx)
+	namespaces := c.collectNamespaces()
+
+	policyTypes := []PolicyType{
+		PolicyTypeACL,
+		PolicyTypeRGP,
+		PolicyTypeEGP,
+	}
+
+	ret := make(map[PolicyType]int)
+	for _, pt := range policyTypes {
+		policies, err := policyStore.policiesByNamespaces(ctx, pt, namespaces)
+		if err != nil {
+			c.logger.Error("could not retrieve policies for namespaces", "policy_type", pt.String(), "error", err)
+			return map[PolicyType]int{}
+		}
+
+		ret[pt] = len(policies)
+	}
+	return ret
 }

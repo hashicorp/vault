@@ -122,7 +122,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       'Kubernetes role name cleared when switching from expanded to full'
     );
 
-    await click('[data-test-input="kubernetesRoleType"] input');
+    await click('[data-test-input-group="kubernetesRoleType"] input');
     await click('[data-test-toggle-input="show-nameTemplate"]');
     await fillIn('[data-test-input="nameTemplate"]', 'bar');
     await fillIn('[data-test-select-template]', '6');
