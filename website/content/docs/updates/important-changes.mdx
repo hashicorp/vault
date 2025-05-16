@@ -63,7 +63,7 @@ flag.
 ### Recommendation
 
 Vault 1.19.0 also includes improved reporting in server logs to help diagnose
-whether you have duplicate identities in your Vault instance. 
+whether you have duplicate identities in your Vault instance.
 
 After upgrading, review your server logs for identity duplicate reporting.
 
@@ -82,7 +82,7 @@ resolves safely.
 Security improvements to
 [`hashicorp/cap/ldap`](https://github.com/hashicorp/cap/tree/main/ldap) ensure
 that user DN searches with `upndomain` configured return an error if the search
-returns more than one result. 
+returns more than one result.
 
 ### Recommendation
 
@@ -149,7 +149,7 @@ sensitivity on entered credentials.
 
 Performance standby nodes cannot persist updated group membership to storage.
 As a result, standby nodes return a `500` error during login or token renewal if
-the external group associated with the client entity changes. 
+the external group associated with the client entity changes.
 
 ### Recommendation
 
@@ -259,15 +259,45 @@ $ vault write gcp/config/root rotation_period="<old_period>"
 
 ## Azure Auth fails to authenticate Uniform VMSS instances ((#azure-vmss))
 
-| Change       | Affected version                     | Affected deployments
-| ------------ | ------------------------------------ | --------------------
-| Bug          | 1.16.18+, 1.17.14+, 1.18.7+, 1.19.1+ | any
+| Change       | Affected version                                               | Affected deployments
+| ------------ | -------------------------------------------------------------- | --------------------
+| Bug          | 1.16.18-1.16.20, 1.17.14-1.17.16, 1.18.7-1.18.9, 1.19.1-1.19.3 | any
 
 A previous update to validate JWT claims against the provided VM, VMSS, and
 resource group names without accounting for the uniform VMSS format introduced a
 regression that causes Azure authentication from a uniform VMSS instance with a
 user assigned managed identity on the VMSS to incorrectly return an error.
 
-### Recommendation 
+### Recommendation
 
-Avoid upgrading until we fix the issue.
+Upgrade to one of the following Vault versions: 1.16.21+, 1.17.17+, 1.18.10+,
+1.19.4+
+
+
+## External Vault Enterprise plugins can't run on a standby node when it becomes active ((#external-enterprise-plugins))
+
+| Change       | Affected version                                               | Affected deployments
+| ------------ | -------------------------------------------------------------- | --------------------
+| Bug          | 1.16.17-1.16.20, 1.17.13-1.17.16, 1.18.6-1.18.9, 1.19.0-1.19.3 | any
+
+External Enterprise plugins can't run on a standby node when it becomes active
+because standby nodes don't extract the artifact when the plugin
+is registered.
+
+### Recommendation
+
+As a workaround, add the plugin `.zip` artifact on every node and register the plugin on the
+active node. Then, extract the contents of the zip file on the follower nodes
+similar to the following folder structure for
+`vault-plugin-secrets-keymgmt_0.16.0+ent_darwin_arm64.zip`.
+
+```
+<plugin-directory>/vault-plugin-secrets-keymgmt_0.16.0+ent_darwin_arm64
+├── metadata.json
+├── metadata.json.sig
+└── vault-plugin-secrets-keymgmt
+```
+
+Alternatively, upgrade to one of the following Vault versions: 1.16.21+, 1.17.17+,
+1.18.10+, 1.19.4+. See [Register external plugins](/vault/docs/plugins/register)
+for more details.
