@@ -8,7 +8,7 @@
     {{#let (component this.formComponent) as |AuthFormComponent|}}
       {{! renders Auth::Form::Base or Auth::Form::<Type>}}
       <AuthFormComponent
-        @authType={{this.selectedAuthMethod}}
+        @authType={{this.selectedAuth}}
         @cluster={{@cluster}}
         @onError={{this.handleError}}
         @onSuccess={{@onSuccess}}
@@ -25,7 +25,7 @@
         </:namespace>
 
         <:back>
-          {{#if this.showOtherMethods}}
+          {{#if this.showAlternateLoginView}}
             <Hds::Button
               @text="Back"
               {{on "click" this.toggleView}}
@@ -43,23 +43,23 @@
               {{! Treat it as a "preferred" mount and "other" view renders dropdown with all methods }}
               <Auth::MountsDisplay
                 @mounts={{array @directLinkData}}
-                @shouldRenderPath={{not-eq this.selectedAuthMethod "token"}}
+                @shouldRenderPath={{not-eq this.selectedAuth "token"}}
               />
             {{else if (eq this.currentFormView this.view.LOGIN_SETTINGS_DEFAULT)}}
               <Hds::Text::Body
                 @tag="p"
                 @weight="semibold"
                 class="has-bottom-margin-m"
-                data-test-auth-method={{this.selectedAuthMethod}}
+                data-test-auth-method={{this.selectedAuth}}
               >
-                {{auth-display-name this.selectedAuthMethod}}
+                {{auth-display-name this.selectedAuth}}
               </Hds::Text::Body>
-              {{#let (get @visibleMountsByType this.selectedAuthMethod) as |mounts|}}
+              {{#let (get @visibleMountsByType this.selectedAuth) as |mounts|}}
                 {{#if mounts.length}}
                   <Auth::MountsDisplay
                     @hideType={{true}}
                     @mounts={{mounts}}
-                    @shouldRenderPath={{not-eq this.selectedAuthMethod "token"}}
+                    @shouldRenderPath={{not-eq this.selectedAuth "token"}}
                   />
                 {{/if}}
               {{/let}}
@@ -67,26 +67,26 @@
               <Auth::Tabs
                 @authTabData={{this.backupMethodTabs}}
                 @handleTabClick={{this.setAuthType}}
-                @selectedAuthMethod={{this.selectedAuthMethod}}
+                @selectedAuthMethod={{this.selectedAuth}}
               />
             {{else if (eq this.currentFormView this.view.TABS)}}
               <Auth::Tabs
                 @authTabData={{@visibleMountsByType}}
                 @handleTabClick={{this.setAuthType}}
-                @selectedAuthMethod={{this.selectedAuthMethod}}
+                @selectedAuthMethod={{this.selectedAuth}}
               />
             {{else}}
               {{! Fallback is dropdown with all auth methods }}
               <Hds::Form::Select::Field
-                name="selectedAuthMethod"
+                name="selectedAuth"
                 {{on "input" this.setTypeFromDropdown}}
                 data-test-select="auth type"
                 as |F|
               >
                 <F.Label class="has-top-margin-m">Method</F.Label>
                 <F.Options>
-                  {{#each this.availableMethodTypes as |type|}}
-                    <option selected={{eq this.selectedAuthMethod type}} value={{type}}>
+                  {{#each this.supportedAuthTypes as |type|}}
+                    <option selected={{eq this.selectedAuth type}} value={{type}}>
                       {{auth-display-name type}}
                     </option>
                   {{/each}}
@@ -110,7 +110,7 @@
                 <F.HelperText>
                   If this authentication method was mounted using a non-default path, input it below. Otherwise Vault will
                   assume the default path
-                  <Hds::Text::Code class="code-in-text">{{this.selectedAuthMethod}}</Hds::Text::Code>
+                  <Hds::Text::Code class="code-in-text">{{this.selectedAuth}}</Hds::Text::Code>
                   .</F.HelperText>
               </Hds::Form::TextInput::Field>
             </Hds::Reveal>
@@ -118,7 +118,7 @@
         </:advancedSettings>
 
         <:footer>
-          {{#if this.canToggleViews}}
+          {{#if (and (not this.showAlternateLoginView) this.alternateView)}}
             <Hds::Button
               {{on "click" this.toggleView}}
               @color="tertiary"
