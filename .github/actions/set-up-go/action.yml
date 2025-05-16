@@ -82,7 +82,7 @@ runs:
         # keeps cache upload time, download time, and storage size to a minimum.
         path: ${{ steps.metadata.outputs.cache-path }}
         key: ${{ steps.metadata.outputs.cache-key }}
-    - if: steps.cache-modules.outputs.cache-hit != 'true' && inputs.no-save != 'false'
+    - if: steps.cache-modules.outputs.cache-hit != 'true' && inputs.no-save != 'true'
       name: Download go modules
       shell: bash
       env:
