@@ -18,7 +18,7 @@ var listReleaseVersionsReq = &releases.ListVersionsReq{
 
 func newReleasesVersionsBetweenCmd() *cobra.Command {
 	versions := &cobra.Command{
-		Use:   "list-versions",
+		Use:   "versions",
 		Short: "Create a list of Vault versions between a lower and upper bound",
 		Long:  "Create a list of Vault versions between a lower and upper bound",
 		RunE:  runListVersionsReq,

@@ -53,12 +53,12 @@ func newGithubListRunCmd() *cobra.Command {
 func runListGithubWorkflowsCmd(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
-	res, err := listGithubWorkflowRuns.Run(context.TODO(), githubCmdState.Client)
+	res, err := listGithubWorkflowRuns.Run(context.TODO(), githubCmdState.Github)
 	if err != nil {
 		return fmt.Errorf("listing github workflow failures: %w", err)
 	}
 
-	switch githubCmdFlags.Format {
+	switch rootCfg.format {
 	case "json":
 		b, err := json.Marshal(res)
 		if err != nil {

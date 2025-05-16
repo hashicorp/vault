@@ -20,14 +20,21 @@ runs:
       id: dyn-cfg-metadata
       shell: bash
       run: |
-        # We're using a weekly cache key here so that we only regenerate the configuration on a
-        # weekly basis. If/when Github decides to purge our tiny config file cache we'll also
+        # Since the dynamic config is created by a specific version of the
+        # pipeline tool, we always need to factor it into our cache key.
+        # If the pipeline changes we always want to make sure we are using
+        # dynamic config from the latest version.
+        #
+        # We use a weekly date in the cache key so that we regenerate the
+        # configuration on at least a weekly basis
+        #
+        # If/when Github decides to purge our tiny config file cache we'll also
         # recreate it as necessary.
         #
         # Uses GITHUB_ENV instead of GITHUB_OUTPUT because composite actions are broken,
         # see: https://github.com/actions/cache/issues/803#issuecomment-1793565071
         {
-          echo "DYNAMIC_CONFIG_KEY=${{ inputs.vault-version }}-$(date +%Y-%m-%U)"
+          echo "DYNAMIC_CONFIG_KEY=${{ inputs.vault-version }}-$(date +%Y-%m-%U)-$(git ls-tree HEAD tools/pipeline --object-only --abbrev=8)"
           echo "DYNAMIC_CONFIG_PATH=enos/enos-dynamic-config.hcl"
         } | tee -a "$GITHUB_ENV"
     - name: Try to restore dynamic config from cache
@@ -49,4 +56,4 @@ runs:
       shell: bash
       run: |
         # Make sure that any branch specific dynamic config has been generated
-        pipeline generate enos-dynamic-config -d ./enos -f enos-dynamic-config.hcl -v ${{ inputs.vault-version }} -e ${{ inputs.vault-edition }} -n 3 --log debug
+        pipeline generate enos-dynamic-config -d ./enos --file enos-dynamic-config.hcl -v ${{ inputs.vault-version }} -e ${{ inputs.vault-edition }} -n 3 --log debug

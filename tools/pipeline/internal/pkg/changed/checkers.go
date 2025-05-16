@@ -194,6 +194,7 @@ func FileGroupCheckerEnterprise(ctx context.Context, file *File) FileGroups {
 		".yaml",
 		".yml":
 		switch {
+		case strings.Contains(name, "-ce"): // Skip workflows that might have ce and ent in the name
 		case
 			strings.Contains(name, "-ent"),
 			strings.Contains(name, "_ent"),

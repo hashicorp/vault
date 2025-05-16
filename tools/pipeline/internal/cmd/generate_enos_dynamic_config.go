@@ -34,7 +34,7 @@ sample attribute variables on per-branch basis.`,
 	genCfg.PersistentFlags().StringVarP(&genEnosDynamicConfigReq.EnosDir, "dir", "d", ".", "The enos directory to create the configuration in")
 	genCfg.PersistentFlags().UintVarP(&genEnosDynamicConfigReq.NMinus, "nminus", "n", 3, "Instead of setting a dedicated lower bound, calculate N-X from the upper")
 	genCfg.PersistentFlags().StringSliceVarP(&genEnosDynamicConfigReq.Skip, "skip", "s", skipVersionsDefault, "Skip these versions. Can be provided none-to-many times")
-	genCfg.PersistentFlags().StringVarP(&genEnosDynamicConfigReq.FileName, "file", "f", "enos-dynamic-config.hcl", "The name of the file to write the configuration into")
+	genCfg.PersistentFlags().StringVar(&genEnosDynamicConfigReq.FileName, "file", "enos-dynamic-config.hcl", "The name of the file to write the configuration into")
 
 	err := genCfg.MarkPersistentFlagRequired("edition")
 	if err != nil {

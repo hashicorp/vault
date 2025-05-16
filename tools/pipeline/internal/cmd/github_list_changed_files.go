@@ -34,12 +34,12 @@ func newGithubListChangedFilesCmd() *cobra.Command {
 func runListGithubChangedFilesCmd(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
-	res, err := listGithubChangedFiles.Run(context.TODO(), githubCmdState.Client)
+	res, err := listGithubChangedFiles.Run(context.TODO(), githubCmdState.Github)
 	if err != nil {
 		return fmt.Errorf("listing github workflow failures: %w", err)
 	}
 
-	switch githubCmdFlags.Format {
+	switch rootCfg.format {
 	case "json":
 		b, err := res.ToJSON()
 		if err != nil {
