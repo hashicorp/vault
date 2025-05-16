@@ -1,0 +1,3 @@
+```release-note:feature
+**Login form customization** (enterprise): Adds support to choose a default or preferred auth method for the web UI login form and remove unused auth types.
+```
