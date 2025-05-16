@@ -18,7 +18,8 @@ export default create({
   url: fillable('[data-test-input="url"]'),
   username: fillable('[data-test-input="username"]'),
   password: fillable('[data-test-input="password"]'),
-  addRole: clickable('[data-test-add-role]'), // only from connection show
+  save: clickable('[data-test-secret-save]'),
+  addRole: clickable('[data-test-add-role]'),
   enable: clickable('[data-test-enable-connection]'),
   edit: clickable('[data-test-edit-link]'),
   delete: clickable('[data-test-database-connection-delete]'),
