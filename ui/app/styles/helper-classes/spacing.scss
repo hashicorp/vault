@@ -23,6 +23,11 @@
   padding: size_variables.$spacing-36;
 }
 
+.side-padding-4 {
+  padding-left: size_variables.$spacing-4;
+  padding-right: size_variables.$spacing-4;
+}
+
 .has-side-padding-8 {
   padding-left: size_variables.$spacing-8;
   padding-right: size_variables.$spacing-8;
@@ -73,6 +78,10 @@
   padding-top: size_variables.$spacing-4;
 }
 
+.top-padding-10 {
+  padding-top: size_variables.$spacing-10;
+}
+
 .has-bottom-padding-4 {
   padding-bottom: size_variables.$spacing-4;
 }
@@ -97,8 +106,16 @@
   padding-left: size_variables.$spacing-12;
 }
 
+.left-padding-16 {
+  padding-left: size_variables.$spacing-16;
+}
+
 .has-left-padding-l {
   padding-left: size_variables.$spacing-24;
+}
+
+.right-padding-4 {
+  padding-right: size_variables.$spacing-4;
 }
 
 .has-top-padding-xxl {

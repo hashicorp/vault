@@ -27,6 +27,7 @@ HOW TO ADD NEW TYPES:
 */
 export const LICENSE_START = new Date('2023-07-02T00:00:00Z');
 export const STATIC_NOW = new Date('2024-01-25T23:59:59Z');
+export const STATIC_PREVIOUS_MONTH = new Date('2023-12-25T23:59:59Z');
 const COUNTS_START = subMonths(STATIC_NOW, 12); // user started Vault cluster on 2023-01-25
 // upgrade happened 2 month after license start
 export const UPGRADE_DATE = addMonths(LICENSE_START, 2); // monthly attribution added

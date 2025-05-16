@@ -20,30 +20,33 @@ export declare enum REPLICATION_ENABLED_STATE {
 }
 export declare const REPLICATION_DISABLED_STATE = "disabled";
 export interface UsageDashboardData {
-    auth_methods: Record<string, number>;
-    kvv1_secrets: number;
-    kvv2_secrets: number;
-    lease_count_quotas: {
-        global_lease_count_quota: {
+    authMethods: Record<string, number>;
+    leasesByAuthMethod: Record<string, number>;
+    kvv1Secrets: number;
+    kvv2Secrets: number;
+    leaseCountQuotas: {
+        globalLeaseCountQuota: {
             capacity: number;
             count: number;
             name: string;
         };
-        total_lease_count_quotas: number;
+        totalLeaseCountQuotas: number;
     };
     namespaces: number;
-    secrets_sync: number;
+    secretSync: {
+        totalDestinations: number;
+    };
     pki: {
-        total_issuers: number;
-        total_roles: number;
+        totalIssuers: number;
+        totalRoles: number;
     };
-    replication_status: {
-        dr_primary: boolean;
-        dr_state: REPLICATION_ENABLED_STATE | typeof REPLICATION_DISABLED_STATE;
-        pr_primary: boolean;
-        pr_state: REPLICATION_ENABLED_STATE | typeof REPLICATION_DISABLED_STATE;
+    replicationStatus: {
+        drPrimary: boolean;
+        drState: REPLICATION_ENABLED_STATE | typeof REPLICATION_DISABLED_STATE;
+        prPrimary: boolean;
+        prState: REPLICATION_ENABLED_STATE | typeof REPLICATION_DISABLED_STATE;
     };
-    secret_engines: Record<string, number>;
+    secretEngines: Record<string, number>;
 }
 export type getUsageDataFunction = () => Promise<UsageDashboardData>;
 export {};

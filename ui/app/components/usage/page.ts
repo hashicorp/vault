@@ -5,8 +5,6 @@
 
 import Component from '@ember/component';
 import { service } from '@ember/service';
-import { allEngines } from 'vault/helpers/mountable-secret-engines';
-import { allMethods } from 'vault/helpers/mountable-auth-methods';
 
 import type FlagsService from 'vault/services/flags';
 import type ApiService from 'vault/services/api';
@@ -31,23 +29,47 @@ export default class UsagePage extends Component {
   @service declare readonly flags: FlagsService;
 
   handleFetchUsageData: getUsageDataFunction = async () => {
-    //TODO: Update client with typed response after the API is updated https://hashicorp.atlassian.net/browse/VAULT-35108
+    /**
+     * We get a partially typed response from the API client, but only 1 level deep.
+     * Casting the nested types here and falling back to defaults in the mappings.
+     * We should get typescript errors if top level interfaces in the API client or
+     * the vault-reporting addon change.
+     */
     const response = await this.api.sys.generateUtilizationReport();
-    const data = response as UsageDashboardData;
-    // Replace engine names with display names if available
-    allEngines().forEach((engine) => {
-      if (engine.type in data.secret_engines) {
-        data.secret_engines[engine.displayName] = data.secret_engines[engine.type] || 0;
-        delete data.secret_engines[engine.type];
-      }
-    });
-    // Replace auth method names with display names if available
-    allMethods().forEach((method) => {
-      if (method.type in data.auth_methods) {
-        data.auth_methods[method.displayName] = data.auth_methods[method.type] || 0;
-        delete data.auth_methods[method.type];
-      }
-    });
+    const leaseCountQuotas = response.leaseCountQuotas as UsageDashboardData['leaseCountQuotas'];
+    const replicationStatus = response.replicationStatus as UsageDashboardData['replicationStatus'];
+    const pki = response.pki as UsageDashboardData['pki'];
+    const secretSync = response.secretSync as UsageDashboardData['secretSync'];
+
+    const data: UsageDashboardData = {
+      authMethods: (response.authMethods as Record<string, number>) || {},
+      secretEngines: (response.secretEngines as Record<string, number>) || {},
+      leasesByAuthMethod: (response.leasesByAuthMethod as Record<string, number>) || {},
+      leaseCountQuotas: {
+        globalLeaseCountQuota: {
+          capacity: leaseCountQuotas?.globalLeaseCountQuota?.capacity || 0,
+          count: leaseCountQuotas?.globalLeaseCountQuota?.count || 0,
+          name: leaseCountQuotas?.globalLeaseCountQuota?.name || '',
+        },
+        totalLeaseCountQuotas: leaseCountQuotas?.totalLeaseCountQuotas || 0,
+      },
+      replicationStatus: {
+        drState: replicationStatus?.drState || 'disabled',
+        prState: replicationStatus?.prState || 'disabled',
+        drPrimary: replicationStatus?.drPrimary ?? false,
+        prPrimary: replicationStatus?.prPrimary ?? false,
+      },
+      kvv1Secrets: response.kvv1Secrets || 0,
+      kvv2Secrets: response.kvv2Secrets || 0,
+      namespaces: response.namespaces || 0,
+      pki: {
+        totalIssuers: pki?.totalIssuers || 0,
+        totalRoles: pki?.totalRoles || 0,
+      },
+      secretSync: {
+        totalDestinations: secretSync?.totalDestinations || 0,
+      },
+    };
     return data as UsageDashboardData;
   };
 }

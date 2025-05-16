@@ -180,10 +180,20 @@ type FSM struct {
 
 	localID         string
 	desiredSuffrage string
+	// metricSuffix should contain a dash, since it will be appended directly to the end of the key string.
+	metricSuffix string
+}
+
+func NewReadOnlyFSM(path string, localID string, logger log.Logger) (*FSM, error) {
+	return newFSM(path, localID, logger, "-readonly")
 }
 
 // NewFSM constructs a FSM using the given directory
 func NewFSM(path string, localID string, logger log.Logger) (*FSM, error) {
+	return newFSM(path, localID, logger, "")
+}
+
+func newFSM(path string, localID string, logger log.Logger, metricSuffix string) (*FSM, error) {
 	// Initialize the latest term, index, and config values
 	latestTerm := new(uint64)
 	latestIndex := new(uint64)
@@ -204,6 +214,7 @@ func NewFSM(path string, localID string, logger log.Logger) (*FSM, error) {
 		// setup if this is already part of a cluster with a desired suffrage.
 		desiredSuffrage: "voter",
 		localID:         localID,
+		metricSuffix:    metricSuffix,
 	}
 
 	f.chunker = &logVerificationChunkingShim{
@@ -559,8 +570,8 @@ func (f *FSM) DeletePrefix(ctx context.Context, prefix string) error {
 // Get retrieves the value at the given path from the bolt file.
 func (f *FSM) Get(ctx context.Context, path string) (*physical.Entry, error) {
 	// TODO: Remove this outdated metric name in an older release
-	defer metrics.MeasureSince([]string{"raft", "get"}, time.Now())
-	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "get"}, time.Now())
+	defer metrics.MeasureSince([]string{"raft", fmt.Sprintf("get%s", f.metricSuffix)}, time.Now())
+	defer metrics.MeasureSince([]string{"raft_storage", "fsm", fmt.Sprintf("get%s", f.metricSuffix)}, time.Now())
 
 	f.l.RLock()
 	defer f.l.RUnlock()
@@ -607,8 +618,8 @@ func (f *FSM) Put(ctx context.Context, entry *physical.Entry) error {
 // List retrieves the set of keys with the given prefix from the bolt file.
 func (f *FSM) List(ctx context.Context, prefix string) ([]string, error) {
 	// TODO: Remove this outdated metric name in a future release
-	defer metrics.MeasureSince([]string{"raft", "list"}, time.Now())
-	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "list"}, time.Now())
+	defer metrics.MeasureSince([]string{"raft", fmt.Sprintf("list%s", f.metricSuffix)}, time.Now())
+	defer metrics.MeasureSince([]string{"raft_storage", "fsm", fmt.Sprintf("list%s", f.metricSuffix)}, time.Now())
 
 	f.l.RLock()
 	defer f.l.RUnlock()

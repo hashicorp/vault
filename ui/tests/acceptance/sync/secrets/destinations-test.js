@@ -78,7 +78,7 @@ module('Acceptance | sync | destinations (plural)', function (hooks) {
       // check default values
       const attr = 'granularity';
       assert
-        .dom(`${ts.inputByAttr(attr)} input#${defaultValues[attr]}`)
+        .dom(`${ts.inputGroupByAttr(attr)} input#${defaultValues[attr]}`)
         .isChecked(`${defaultValues[attr]} is checked`);
     });
   }

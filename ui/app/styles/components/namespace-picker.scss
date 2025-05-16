@@ -1,0 +1,26 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+@use '../helper-classes/general';
+@use '../helper-classes/flexbox-and-grid';
+
+.namespace-picker {
+  .hds-dropdown__content {
+    min-width: 239px;
+  }
+
+  .hds-dropdown-toggle-button__text {
+    @extend .truncate-second-line, .is-word-break;
+    white-space: normal;
+  }
+
+  .hds-button-set {
+    @extend .is-flex-between;
+
+    .hds-button {
+      @extend .is-flex-grow-1;
+    }
+  }
+}

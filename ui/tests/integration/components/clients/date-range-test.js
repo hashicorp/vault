@@ -9,6 +9,7 @@ import { click, fillIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import Sinon from 'sinon';
 import timestamp from 'core/utils/timestamp';
+import { format } from 'date-fns';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 
@@ -24,9 +25,13 @@ module('Integration | Component | clients/date-range', function (hooks) {
     this.billingStartTime = '2018-01-01T14:15:30';
     this.retentionMonths = 48;
     this.onChange = Sinon.spy();
+    this.setEditModalVisible = Sinon.stub().callsFake((visible) => {
+      this.set('showEditModal', visible);
+    });
+    this.showEditModal = false;
     this.renderComponent = async () => {
       await render(
-        hbs`<Clients::DateRange @startTime={{this.startTime}} @endTime={{this.endTime}} @onChange={{this.onChange}} @billingStartTime={{this.billingStartTime}} @retentionMonths={{this.retentionMonths}}/>`
+        hbs`<Clients::DateRange @startTime={{this.startTime}} @endTime={{this.endTime}} @onChange={{this.onChange}} @billingStartTime={{this.billingStartTime}} @retentionMonths={{this.retentionMonths}} @setEditModalVisible={{this.setEditModalVisible}} @showEditModal={{this.showEditModal}}/>`
       );
     };
   });
@@ -43,11 +48,11 @@ module('Integration | Component | clients/date-range', function (hooks) {
     assert.dom(DATE_RANGE.editModal).exists();
     assert.dom(DATE_RANGE.editDate('start')).hasValue('');
     await fillIn(DATE_RANGE.editDate('start'), '2018-01');
-    await fillIn(DATE_RANGE.editDate('end'), '2019-01');
+    await fillIn(DATE_RANGE.editDate('end'), '2018-03');
     await click(GENERAL.saveButton);
     assert.deepEqual(this.onChange.args[0], [
       {
-        end_time: 1548892800,
+        end_time: 1522454400,
         start_time: 1514764800,
       },
     ]);
@@ -56,8 +61,8 @@ module('Integration | Component | clients/date-range', function (hooks) {
 
   test('it does not trigger onChange if date range invalid', async function (assert) {
     this.owner.lookup('service:version').type = 'community';
+    this.endTime = undefined;
     await this.renderComponent();
-
     await click(DATE_RANGE.edit);
     await fillIn(DATE_RANGE.editDate('end'), '');
     assert.dom(DATE_RANGE.validation).hasText('You must supply both start and end dates.');
@@ -75,16 +80,26 @@ module('Integration | Component | clients/date-range', function (hooks) {
     assert.dom(DATE_RANGE.editModal).doesNotExist();
   });
 
-  test('it resets the tracked values on close', async function (assert) {
+  test('it does not allow the current month to be selected as a start date or as an end date', async function (assert) {
+    this.owner.lookup('service:version').type = 'community';
+    this.endTime = undefined;
+    const currentMonth = format(timestamp.now(), 'yyyy-MM');
+
     await this.renderComponent();
-
     await click(DATE_RANGE.edit);
-    await fillIn(DATE_RANGE.editDate('start'), '2017-04');
-    await fillIn(DATE_RANGE.editDate('end'), '2018-05');
-    await click(GENERAL.cancelButton);
+    await fillIn(DATE_RANGE.editDate('start'), currentMonth);
+    await fillIn(DATE_RANGE.editDate('end'), currentMonth);
 
-    await click(DATE_RANGE.edit);
-    assert.dom(DATE_RANGE.editDate('start')).hasValue('2018-01');
-    assert.dom(DATE_RANGE.editDate('end')).hasValue('2019-01');
+    assert.dom(DATE_RANGE.validation).hasText('You cannot select the current month or beyond.');
+    await click(GENERAL.saveButton);
+    assert.false(this.onChange.called);
+
+    //  This tests validation when the end date is the current month and start is valid.
+    //  If start is current month and end is a valid prior selection, it will run into the validation error of start being after end date
+    //  which is covered by prior tests.
+    await fillIn(DATE_RANGE.editDate('start'), '2018-01');
+    await fillIn(DATE_RANGE.editDate('end'), currentMonth);
+    await click(GENERAL.saveButton);
+    assert.false(this.onChange.called);
   });
 });

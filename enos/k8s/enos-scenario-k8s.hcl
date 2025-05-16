@@ -11,7 +11,7 @@ scenario "k8s" {
   EOF
 
   matrix {
-    edition = ["ce", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+    edition = ["ce", "ent", "ent.fips1403", "ent.hsm", "ent.hsm.fips1403"]
     repo    = ["docker", "ecr", "quay"]
   }
 
@@ -68,7 +68,7 @@ scenario "k8s" {
           tag  = local.tag_version_ubi
         }
       },
-      "ent.fips1402" = {
+      "ent.fips1403" = {
         docker = {
           // https://hub.docker.com/r/hashicorp/vault-enterprise-fips
           repo = "hashicorp/vault-enterprise-fips"
@@ -102,7 +102,7 @@ scenario "k8s" {
           tag  = local.tag_version_ubi
         }
       },
-      "ent.hsm.fips1402" = {
+      "ent.hsm.fips1403" = {
         docker = {
           // https://hub.docker.com/r/hashicorp/vault-enterprise
           repo = "hashicorp/vault-enterprise"

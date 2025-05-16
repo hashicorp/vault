@@ -17,6 +17,7 @@ import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { Response } from 'miragejs';
 import { dateFormat } from 'core/helpers/date-format';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { listDestinationsTransform } from 'sync/utils/api-transforms';
 
 const { title, tab, overviewCard, cta, overview, pagination, emptyStateTitle, emptyStateMessage } = PAGE;
 
@@ -29,13 +30,14 @@ module('Integration | Component | sync | Page::Overview', function (hooks) {
     // allow capabilities as root by default to allow users to POST to the secrets-sync/activate endpoint
     this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
     this.version = this.owner.lookup('service:version');
-    this.store = this.owner.lookup('service:store');
+    this.api = this.owner.lookup('service:api');
     this.flags = this.owner.lookup('service:flags');
 
     syncScenario(this.server);
     syncHandlers(this.server);
 
-    this.destinations = await this.store.query('sync/destination', {});
+    const destinations = await this.api.sys.systemListSyncDestinations(true);
+    this.destinations = listDestinationsTransform(destinations);
 
     this.setup = ({
       canActivate = false,

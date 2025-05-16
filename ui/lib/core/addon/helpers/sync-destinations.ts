@@ -9,7 +9,7 @@ import type { DestinationType } from 'vault/sync';
 import type { SyncDestination } from 'vault/helpers/sync-destinations';
 
 /* 
-This helper is referenced in the base sync destination model and elsewhere to set attributes that rely on type
+This helper is used to lookup static display properties for sync destinations
 maskedParams: attributes for sensitive data, the API returns these values as '*****'
 */
 
@@ -20,6 +20,7 @@ const SYNC_DESTINATIONS: Array<SyncDestination> = [
     icon: 'aws-color',
     category: 'cloud',
     maskedParams: ['accessKeyId', 'secretAccessKey'],
+    readonlyParams: ['name', 'region'],
     defaultValues: {
       granularity: 'secret-path',
     },
@@ -30,6 +31,7 @@ const SYNC_DESTINATIONS: Array<SyncDestination> = [
     icon: 'azure-color',
     category: 'cloud',
     maskedParams: ['clientSecret'],
+    readonlyParams: ['name', 'keyVaultUri', 'tenantId', 'cloud'],
     defaultValues: {
       granularity: 'secret-path',
     },
@@ -40,6 +42,7 @@ const SYNC_DESTINATIONS: Array<SyncDestination> = [
     icon: 'gcp-color',
     category: 'cloud',
     maskedParams: ['credentials'],
+    readonlyParams: ['name'],
     defaultValues: {
       granularity: 'secret-path',
     },
@@ -50,6 +53,7 @@ const SYNC_DESTINATIONS: Array<SyncDestination> = [
     icon: 'github-color',
     category: 'dev-tools',
     maskedParams: ['accessToken'],
+    readonlyParams: ['name', 'repositoryOwner', 'repositoryName'],
     defaultValues: {
       granularity: 'secret-key',
     },
@@ -60,8 +64,10 @@ const SYNC_DESTINATIONS: Array<SyncDestination> = [
     icon: 'vercel-color',
     category: 'dev-tools',
     maskedParams: ['accessToken'],
+    readonlyParams: ['name', 'projectId'],
     defaultValues: {
       granularity: 'secret-key',
+      deploymentEnvironments: [],
     },
   },
 ];
@@ -74,8 +80,12 @@ export function destinationTypes(): Array<DestinationType> {
   return SYNC_DESTINATIONS.map((d) => d.type);
 }
 
-export function findDestination(type: DestinationType | undefined): SyncDestination | undefined {
-  return SYNC_DESTINATIONS.find((d) => d.type === type);
+export function findDestination(type: DestinationType) {
+  const destination = SYNC_DESTINATIONS.find((d) => d.type === type);
+  if (!destination) {
+    throw new Error(`Destination not found for type: ${type}`);
+  }
+  return destination;
 }
 
 export default buildHelper(syncDestinations);

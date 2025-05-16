@@ -28,7 +28,7 @@ export const listDestinationsTransform = (
 
     names?.forEach((name: string) => {
       const id = `${type}/${name}`;
-      const { icon, name: typeDisplayName } = findDestination(type) || {};
+      const { icon, name: typeDisplayName } = findDestination(type);
       // create object with destination's id and attributes
       destinations.push({ id, name, type, icon, typeDisplayName });
     });

@@ -29,3 +29,5 @@ func (c *Core) ReloadCensusManager(ctx context.Context, licenseChange bool) erro
 func (c *Core) parseCensusManagerConfig(conf *CoreConfig) (CensusManagerConfig, error) {
 	return CensusManagerConfig{}, nil
 }
+func (c *Core) DevelopmentCluster() bool                      { return false }
+func (c *Core) SetDevelopmentCluster(developmentCluster bool) {}

@@ -12,6 +12,7 @@ import { login, loginMethod } from 'vault/tests/helpers/auth/auth-helpers';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const consoleComponent = create(consoleClass);
 const USER = 'end-user';
@@ -53,7 +54,7 @@ module('Acceptance | mfa-setup', function (hooks) {
       { username: USER, password: PASSWORD, path },
       { authType: 'userpass', toggleOptions: true }
     );
-    await click('[data-test-user-menu-trigger]');
+    await click(GENERAL.testButton('user-menu-trigger'));
     await click('[data-test-user-menu-item="mfa"]');
   });
 

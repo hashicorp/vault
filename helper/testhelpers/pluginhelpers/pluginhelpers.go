@@ -76,10 +76,6 @@ func CompilePlugin(t testing.TB, typ consts.PluginType, pluginVersion string, pl
 	var pluginBytes []byte
 
 	dir := ""
-	pluginRootDir := "builtin"
-	if typ == consts.PluginTypeDatabase {
-		pluginRootDir = "plugins"
-	}
 	for {
 		// So that we can assign to dir without overshadowing the other
 		// err variables.
@@ -89,7 +85,7 @@ func CompilePlugin(t testing.TB, typ consts.PluginType, pluginVersion string, pl
 			t.Fatal(getWdErr)
 		}
 		// detect if we are in a subdirectory or the root directory and compensate
-		if _, err := os.Stat(pluginRootDir); os.IsNotExist(err) {
+		if _, err := os.Stat(pluginMain); os.IsNotExist(err) {
 			err := os.Chdir("..")
 			if err != nil {
 				t.Fatal(err)

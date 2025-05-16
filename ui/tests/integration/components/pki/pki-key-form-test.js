@@ -46,10 +46,10 @@ module('Integration | Component | pki key form', function (hooks) {
 
     await click(GENERAL.saveButton);
     assert
-      .dom(GENERAL.validation('type'))
+      .dom(GENERAL.validationErrorByAttr('type'))
       .hasTextContaining('Type is required.', 'renders presence validation for type of key');
     assert
-      .dom(GENERAL.validation('keyType'))
+      .dom(GENERAL.validationErrorByAttr('keyType'))
       .hasTextContaining('Please select a key type.', 'renders selection prompt for key type');
     assert
       .dom(PKI_KEY_FORM.validationError)

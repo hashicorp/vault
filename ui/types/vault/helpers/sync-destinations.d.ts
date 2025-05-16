@@ -11,5 +11,6 @@ export interface SyncDestination {
   icon: 'aws-color' | 'azure-color' | 'gcp-color' | 'github-color' | 'vercel-color';
   category: 'cloud' | 'dev-tools';
   maskedParams: Array<string>;
+  readonlyParams: Array<string>;
   defaultValues: object;
 }

@@ -62,7 +62,7 @@ export default class DestinationDetailsPage extends Component<Args> {
   };
 
   isMasked = (field: string) => {
-    const { maskedParams = [] } = findDestination(this.args.destination.type) || {};
+    const { maskedParams = [] } = findDestination(this.args.destination.type);
     return maskedParams.includes(this.fieldName(field));
   };
 

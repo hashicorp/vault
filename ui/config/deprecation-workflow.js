@@ -7,9 +7,5 @@
 self.deprecationWorkflow = self.deprecationWorkflow || {};
 self.deprecationWorkflow.config = {
   throwOnUnhandled: false,
-};
-
-self.deprecationWorkflow.config = {
-  // current output from deprecationWorkflow.flushDeprecations();
   workflow: [],
 };

@@ -63,10 +63,10 @@ scenario "autopilot" {
     // versions after our initial publication of these editions for arm64.
     exclude {
       arch    = ["arm64"]
-      edition = ["ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+      edition = ["ent.fips1403", "ent.hsm", "ent.hsm.fips1403"]
     }
 
-    // PKCS#11 can only be used on ent.hsm and ent.hsm.fips1402.
+    // PKCS#11 can only be used on ent.hsm and ent.hsm.fips1403.
     exclude {
       seal    = ["pkcs11"]
       edition = [for e in matrix.edition : e if !strcontains(e, "hsm")]
@@ -267,7 +267,11 @@ scenario "autopilot" {
       license              = matrix.edition != "ce" ? step.read_license.license : null
       packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       release = {
-        edition = matrix.edition
+        edition = strcontains(matrix.edition, "fips1403") ? (
+          semverconstraint(var.vault_upgrade_initial_version, "<1.19.4-0,>=1.19.0-0 || <1.18.10-0,>=1.18.0-0 || <1.17.17-0,>=1.17.0-0 || <1.16.21-0")
+          ? replace(matrix.edition, "fips1403", "fips1402")
+          : matrix.edition
+        ) : matrix.edition
         version = var.vault_upgrade_initial_version
       }
       seal_attributes = step.create_seal_key.attributes

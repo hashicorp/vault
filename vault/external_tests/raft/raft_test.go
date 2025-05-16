@@ -1577,3 +1577,37 @@ func TestRaftCluster_Removed_ReAdd(t *testing.T) {
 	_, err = follower.Client.Sys().RaftJoin(joinReq)
 	require.Error(t, err)
 }
+
+// TestCore_RaftDataDirPath verifies that the RaftDataDirPath method returns a
+// data path when the storage backend is raft, and no data path when the storage
+// is not raft
+func TestCore_RaftDataDirPath(t *testing.T) {
+	t.Parallel()
+	t.Run("raft", func(t *testing.T) {
+		t.Parallel()
+		cluster, _ := raftCluster(t, nil)
+		defer cluster.Cleanup()
+		path, ok := cluster.Cores[0].RaftDataDirPath()
+		require.True(t, ok)
+		require.NotEmpty(t, path)
+	})
+	t.Run("inmem", func(t *testing.T) {
+		t.Parallel()
+		core, _, _ := vault.TestCoreUnsealed(t)
+		defer core.Shutdown()
+		path, ok := core.RaftDataDirPath()
+		require.False(t, ok)
+		require.Empty(t, path)
+	})
+	t.Run("raft ha", func(t *testing.T) {
+		t.Parallel()
+		var conf vault.CoreConfig
+		opts := vault.TestClusterOptions{HandlerFunc: vaulthttp.Handler}
+		teststorage.RaftHASetup(&conf, &opts, teststorage.MakeFileBackend)
+		cluster := vault.NewTestCluster(t, &conf, &opts)
+		defer cluster.Cleanup()
+		path, ok := cluster.Cores[0].RaftDataDirPath()
+		require.False(t, ok)
+		require.Empty(t, path)
+	})
+}

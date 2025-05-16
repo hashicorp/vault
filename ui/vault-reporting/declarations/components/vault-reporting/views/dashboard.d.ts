@@ -14,6 +14,7 @@ interface CounterBlock {
     suffix?: string;
     link?: string;
     emptyText?: string;
+    emptyLink?: string;
 }
 export interface SSUViewDashboardSignature {
     Args: {
@@ -31,7 +32,7 @@ export default class SSUViewDashboard extends Component<SSUViewDashboardSignatur
     error?: unknown;
     constructor(owner: unknown, args: SSUViewDashboardSignature['Args']);
     fetchAllData: () => void;
-    getBarChartData: (map: Record<string, number>) => SimpleDatum[];
+    getBarChartData: (map: Record<string, number>, exclude?: string[]) => SimpleDatum[];
     get isVaultDedicated(): boolean;
     get kvSecretsTooltipMessage(): string;
     get counters(): CounterBlock[];

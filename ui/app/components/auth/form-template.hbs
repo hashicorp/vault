@@ -40,22 +40,16 @@
         <:authSelectOptions>
           <div class="has-bottom-margin-m">
             {{#if this.showCustomAuthOptions}}
-              {{! URL contains "with" query param and it references a visible mount }}
-              {{! treat it as a "preferred" mount and hide all other tabs }}
-              {{#if @directLinkData.hasMountData}}
-                {{#let @directLinkData as |mount|}}
-                  <Auth::SingleMount
-                    @description={{mount.description}}
-                    @path={{mount.path}}
-                    @shouldRenderPath={{not-eq @selectedAuthMethod "token"}}
-                    @type={{this.displayName mount.type}}
-                  />
-                {{/let}}
+              {{#if @directLinkData.isVisibleMount}}
+                {{! URL contains a "with" query param that references a mount with listing_visibility="unauth" }}
+                {{! Treat it as a "preferred" mount and hide all other tabs }}
+                <Auth::MountsDisplay
+                  @mounts={{array @directLinkData}}
+                  @shouldRenderPath={{not-eq @selectedAuthMethod "token"}}
+                />
               {{else}}
                 <Auth::Tabs
-                  @authTabData={{@authTabData}}
-                  @authTabTypes={{this.authTabTypes}}
-                  @displayNameHelper={{this.displayName}}
+                  @authTabData={{@visibleMountsByType}}
                   @handleTabClick={{this.setAuthType}}
                   @selectedAuthMethod={{this.selectedAuthMethod}}
                 />
@@ -72,7 +66,7 @@
                 <F.Options>
                   {{#each this.availableMethodTypes as |type|}}
                     <option selected={{eq this.selectedAuthMethod type}} value={{type}}>
-                      {{this.displayName type}}
+                      {{auth-display-name type}}
                     </option>
                   {{/each}}
                 </F.Options>

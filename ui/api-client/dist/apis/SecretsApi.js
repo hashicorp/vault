@@ -4370,6 +4370,74 @@ class SecretsApi extends runtime.BaseAPI {
     }
     /**
      */
+    kvV2PatchRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['path'] == null) {
+                throw new runtime.RequiredError('path', 'Required parameter "path" was null or undefined when calling kvV2Patch().');
+            }
+            if (requestParameters['kvV2MountPath'] == null) {
+                throw new runtime.RequiredError('kvV2MountPath', 'Required parameter "kvV2MountPath" was null or undefined when calling kvV2Patch().');
+            }
+            if (requestParameters['kvV2PatchRequest'] == null) {
+                throw new runtime.RequiredError('kvV2PatchRequest', 'Required parameter "kvV2PatchRequest" was null or undefined when calling kvV2Patch().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/{kv_v2_mount_path}/data/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))).replace(`{${"kv_v2_mount_path"}}`, encodeURIComponent(String(requestParameters['kvV2MountPath']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: (0, index_1.KvV2PatchRequestToJSON)(requestParameters['kvV2PatchRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => (0, index_1.KvV2PatchResponseFromJSON)(jsonValue));
+        });
+    }
+    /**
+     */
+    kvV2Patch(path, kvV2MountPath, kvV2PatchRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.kvV2PatchRaw({ path: path, kvV2MountPath: kvV2MountPath, kvV2PatchRequest: kvV2PatchRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    kvV2PatchMetadataPathRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['path'] == null) {
+                throw new runtime.RequiredError('path', 'Required parameter "path" was null or undefined when calling kvV2PatchMetadataPath().');
+            }
+            if (requestParameters['kvV2MountPath'] == null) {
+                throw new runtime.RequiredError('kvV2MountPath', 'Required parameter "kvV2MountPath" was null or undefined when calling kvV2PatchMetadataPath().');
+            }
+            if (requestParameters['kvV2PatchMetadataPathRequest'] == null) {
+                throw new runtime.RequiredError('kvV2PatchMetadataPathRequest', 'Required parameter "kvV2PatchMetadataPathRequest" was null or undefined when calling kvV2PatchMetadataPath().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/{kv_v2_mount_path}/metadata/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))).replace(`{${"kv_v2_mount_path"}}`, encodeURIComponent(String(requestParameters['kvV2MountPath']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: (0, index_1.KvV2PatchMetadataPathRequestToJSON)(requestParameters['kvV2PatchMetadataPathRequest']),
+            }, initOverrides);
+            return new runtime.VoidApiResponse(response);
+        });
+    }
+    /**
+     */
+    kvV2PatchMetadataPath(path, kvV2MountPath, kvV2PatchMetadataPathRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.kvV2PatchMetadataPathRaw({ path: path, kvV2MountPath: kvV2MountPath, kvV2PatchMetadataPathRequest: kvV2PatchMetadataPathRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
     kvV2ReadRaw(requestParameters, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
             if (requestParameters['path'] == null) {
@@ -8184,6 +8252,74 @@ class SecretsApi extends runtime.BaseAPI {
     pkiListUnifiedRevokedCerts(pkiMountPath, list, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
             const response = yield this.pkiListUnifiedRevokedCertsRaw({ pkiMountPath: pkiMountPath, list: list }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    pkiPatchIssuerRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['issuerRef'] == null) {
+                throw new runtime.RequiredError('issuerRef', 'Required parameter "issuerRef" was null or undefined when calling pkiPatchIssuer().');
+            }
+            if (requestParameters['pkiMountPath'] == null) {
+                throw new runtime.RequiredError('pkiMountPath', 'Required parameter "pkiMountPath" was null or undefined when calling pkiPatchIssuer().');
+            }
+            if (requestParameters['pkiPatchIssuerRequest'] == null) {
+                throw new runtime.RequiredError('pkiPatchIssuerRequest', 'Required parameter "pkiPatchIssuerRequest" was null or undefined when calling pkiPatchIssuer().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/{pki_mount_path}/issuer/{issuer_ref}`.replace(`{${"issuer_ref"}}`, encodeURIComponent(String(requestParameters['issuerRef']))).replace(`{${"pki_mount_path"}}`, encodeURIComponent(String(requestParameters['pkiMountPath']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: (0, index_1.PkiPatchIssuerRequestToJSON)(requestParameters['pkiPatchIssuerRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => (0, index_1.PkiPatchIssuerResponseFromJSON)(jsonValue));
+        });
+    }
+    /**
+     */
+    pkiPatchIssuer(issuerRef, pkiMountPath, pkiPatchIssuerRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.pkiPatchIssuerRaw({ issuerRef: issuerRef, pkiMountPath: pkiMountPath, pkiPatchIssuerRequest: pkiPatchIssuerRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    pkiPatchRoleRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['name'] == null) {
+                throw new runtime.RequiredError('name', 'Required parameter "name" was null or undefined when calling pkiPatchRole().');
+            }
+            if (requestParameters['pkiMountPath'] == null) {
+                throw new runtime.RequiredError('pkiMountPath', 'Required parameter "pkiMountPath" was null or undefined when calling pkiPatchRole().');
+            }
+            if (requestParameters['pkiPatchRoleRequest'] == null) {
+                throw new runtime.RequiredError('pkiPatchRoleRequest', 'Required parameter "pkiPatchRoleRequest" was null or undefined when calling pkiPatchRole().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/{pki_mount_path}/roles/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"pki_mount_path"}}`, encodeURIComponent(String(requestParameters['pkiMountPath']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: (0, index_1.PkiPatchRoleRequestToJSON)(requestParameters['pkiPatchRoleRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => (0, index_1.PkiPatchRoleResponseFromJSON)(jsonValue));
+        });
+    }
+    /**
+     */
+    pkiPatchRole(name, pkiMountPath, pkiPatchRoleRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.pkiPatchRoleRaw({ name: name, pkiMountPath: pkiMountPath, pkiPatchRoleRequest: pkiPatchRoleRequest }, initOverrides);
             return yield response.value();
         });
     }

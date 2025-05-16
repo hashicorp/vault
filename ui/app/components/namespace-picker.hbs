@@ -3,7 +3,7 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<div class="top-padding-4 has-bottom-padding-4 has-side-padding-8" ...attributes>
+<div class="namespace-picker side-padding-4" ...attributes>
   <Hds::Dropdown @enableCollisionDetection={{true}} as |D|>
 
     <D.ToggleButton @icon="org" @text={{or this.selected.id "-"}} @isFullWidth={{true}} data-test-namespace-toggle />
@@ -16,7 +16,7 @@
 
     {{else}}
 
-      <D.Header @hasDivider={{true}}>
+      <D.Header class="is-paddingless" @hasDivider={{true}}>
         <div class="has-padding-8">
           <Hds::Form::TextInput::Field
             @value={{this.searchInput}}
@@ -30,21 +30,21 @@
         </div>
       </D.Header>
 
-      <D.Header>
+      <D.Header class="is-paddingless">
         {{#if (and this.hasSearchInput (not this.showNoNamespacesMessage))}}
-          <div class="sub-text has-padding-8">
+          <div class="sub-text is-marginless has-top-padding-xs left-padding-16" {{did-insert this.adjustElementWidth}}>
             {{this.searchInputHelpText}}
           </div>
         {{/if}}
 
-        <div class="is-size-8 has-text-black has-text-weight-semibold has-padding-8">
+        <div class="is-size-8 has-text-black has-text-weight-semibold left-padding-16 top-padding-10">
           {{this.namespaceLabel}}
           <Hds::BadgeCount @text={{or this.namespaceCount 0}} />
         </div>
       </D.Header>
 
       {{#if this.showNoNamespacesMessage}}
-        <D.Generic class="sub-text">
+        <D.Generic class="sub-text is-marginless" {{did-insert this.adjustElementWidth}}>
           {{this.noNamespacesMessage}}
         </D.Generic>
       {{/if}}
@@ -56,7 +56,7 @@
             {{on "click" (fn this.onChange option)}}
             data-test-namespace-link={{option.path}}
           >
-            {{option.label}}
+            <span class="is-fullwidth is-word-break right-padding-4">{{option.label}}</span>
           </D.Checkmark>
         {{/each}}
       </div>
@@ -70,16 +70,19 @@
             @color="secondary"
             @text="Refresh list"
             @isFullWidth={{(not this.canManageNamespaces)}}
+            @icon="reload"
+            @size="small"
             {{on "click" this.refreshList}}
             data-test-refresh-namespaces
           />
         {{/if}}
         {{#if this.canManageNamespaces}}
           <Hds::Button
-            @color="secondary"
+            @color="tertiary"
             @text="Manage"
             @isFullWidth={{(not this.canRefreshNamespaces)}}
             @icon="settings"
+            @size="small"
             @route="vault.cluster.access.namespaces"
             data-test-manage-namespaces
           />

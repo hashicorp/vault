@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export interface AuthTabData {
+export interface UnauthMountsByType {
   // key is the auth method type
   [key: string]: AuthTabMountData[];
 }

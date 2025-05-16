@@ -5,6 +5,7 @@
 import Component from '@glimmer/component';
 import { HdsLinkStandalone } from '@hashicorp/design-system-components/components';
 import './title-row.scss';
+import type { SafeString } from '@ember/template';
 /**
  * TitleRow Component
  *
@@ -16,7 +17,7 @@ export interface TitleRowSignature {
         /** The main title text to display */
         title: string;
         /** Optional description text to display beneath the title */
-        description?: string;
+        description?: string | SafeString;
         /** Custom text for the link (defaults to "View all") */
         linkText?: string;
         /** Icon to display with the link (defaults to "arrow-right") */

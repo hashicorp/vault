@@ -3664,14 +3664,14 @@ func TestBuildUnsealSetupFunctionSlice(t *testing.T) {
 			core: &Core{
 				replicationState: uint32Ptr(uint32(0)),
 			},
-			expectedLength: 26,
+			expectedLength: 28,
 		},
 		{
 			name: "dr secondary core",
 			core: &Core{
 				replicationState: uint32Ptr(uint32(consts.ReplicationDRSecondary)),
 			},
-			expectedLength: 14,
+			expectedLength: 15,
 		},
 	} {
 		funcs := buildUnsealSetupFunctionSlice(testcase.core, true)

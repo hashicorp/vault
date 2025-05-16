@@ -137,7 +137,7 @@ export default class TotpKeyModel extends Model {
 
   @attr('number', {
     label: 'QR size',
-    defaultValue: 0,
+    defaultValue: 200,
   })
   qrSize;
 

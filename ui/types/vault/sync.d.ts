@@ -3,6 +3,12 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import type AwsSmForm from 'vault/forms/sync/aws-sm';
+import type AzureKvForm from 'vault/forms/sync/azure-kv';
+import type GcpSmForm from 'vault/forms/sync/gcp-sm';
+import type GhForm from 'vault/forms/sync/gh';
+import type VercelProjectForm from 'vault/forms/sync/vercel-project';
+
 export type ListDestination = {
   id: string;
   name: string;
@@ -92,7 +98,10 @@ export type DestinationConnectionDetails = {
 };
 
 export type DestinationOptions = {
-  granularity: string;
+  granularity?: string; // expected as granularity in request
+  granularityLevel?: string; // returned as granularityLevel from response
   secretNameTemplate: string;
-  customTags?: string;
+  customTags?: Record<string, string>;
 };
+
+export type DestinationForm = AwsSmForm | AzureKvForm | GcpSmForm | GhForm | VercelProjectForm;

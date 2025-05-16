@@ -18,7 +18,10 @@ import type { DestinationType } from 'vault/sync';
 
 type TypeKey = 'AwsSm' | 'AzureKv' | 'GcpSm' | 'Gh' | 'VercelProject';
 
-export default function apiMethodResolver(action: 'read' | 'write' | 'delete', type: DestinationType) {
+export default function apiMethodResolver(
+  action: 'read' | 'write' | 'delete' | 'patch',
+  type: DestinationType
+) {
   const method = `system${capitalize(action)}SyncDestinations${classify(type)}Name`;
   return method as `system${Capitalize<typeof action>}SyncDestinations${TypeKey}Name`;
 }

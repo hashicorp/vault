@@ -23,6 +23,12 @@ export interface RateLimitQuotasReadResponse {
     blockInterval?: number;
     /**
      *
+     * @type {string}
+     * @memberof RateLimitQuotasReadResponse
+     */
+    groupBy?: string;
+    /**
+     *
      * @type {boolean}
      * @memberof RateLimitQuotasReadResponse
      */
@@ -57,6 +63,12 @@ export interface RateLimitQuotasReadResponse {
      * @memberof RateLimitQuotasReadResponse
      */
     role?: string;
+    /**
+     *
+     * @type {number}
+     * @memberof RateLimitQuotasReadResponse
+     */
+    secondaryRate?: number;
     /**
      *
      * @type {string}

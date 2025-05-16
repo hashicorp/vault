@@ -11,16 +11,22 @@ import { Response } from 'miragejs';
 import { windowStub } from 'vault/tests/helpers/oidc-window-stub';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
+import { MFA_SELECTORS } from 'vault/tests/helpers/mfa/mfa-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+
+import { logout } from 'vault/tests/helpers/auth/auth-helpers';
+
+const DELAY_IN_MS = 500;
 
 module('Acceptance | enterprise saml auth method', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(function () {
+  hooks.beforeEach(async function () {
     this.openStub = windowStub();
     this.server.put('/auth/saml/sso_service_url', () => ({
       data: {
-        sso_service_url: 'http://sso-url.hashicorp.com/service',
+        sso_service_url: 'test/fake/sso/route', // we aren't actually opening a popup so use a fake url
         token_poll_id: '1234',
       },
     }));
@@ -28,8 +34,7 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
       auth: { client_token: 'root' },
     }));
     // ensure clean state
-    localStorage.removeItem('selectedAuth');
-    visit('/vault/logout');
+    await logout(); // clears local storage
   });
 
   hooks.afterEach(function () {
@@ -40,18 +45,17 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
     assert.expect(1);
 
     this.server.get('/auth/token/lookup-self', (schema, req) => {
-      assert.ok(true, 'request made to auth/token/lookup-self after saml callback');
+      assert.true(true, 'request made to auth/token/lookup-self after saml callback');
       req.passthrough();
     });
     // select from dropdown or click auth path tab
-    await waitUntil(() => find(AUTH_FORM.selectMethod));
+    await waitUntil(() => find(AUTH_FORM.selectMethod), { timeout: DELAY_IN_MS });
     await fillIn(AUTH_FORM.selectMethod, 'saml');
-    await click('[data-test-auth-submit]');
+    await click(AUTH_FORM.login);
   });
 
   test('it should login with saml from listed auth mount tab', async function (assert) {
     assert.expect(4);
-
     this.server.get('/sys/internal/ui/mounts', () => ({
       data: {
         auth: {
@@ -63,7 +67,7 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
       assert.ok(true, 'role request made to correct non-standard mount path');
       return {
         data: {
-          sso_service_url: 'http://sso-url.hashicorp.com/service',
+          sso_service_url: 'test/fake/sso/route',
           token_poll_id: '1234',
         },
       };
@@ -84,8 +88,9 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
       req.passthrough();
     });
 
+    await logout(); // clear local storage and refresh route so sys/internal/ui/mounts is reliably called
     // click auth path tab
-    await waitUntil(() => find(AUTH_FORM.tabBtn('saml')));
+    await waitUntil(() => find(AUTH_FORM.tabBtn('saml')), { timeout: DELAY_IN_MS });
     await click(AUTH_FORM.login);
   });
 
@@ -100,9 +105,9 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
     });
 
     // select saml auth type
-    await waitUntil(() => find(AUTH_FORM.selectMethod));
+    await waitUntil(() => find(AUTH_FORM.selectMethod), { timeout: DELAY_IN_MS });
     await fillIn(AUTH_FORM.selectMethod, 'saml');
-    await click('[data-test-auth-submit]');
+    await click(AUTH_FORM.login);
     assert
       .dom('[data-test-message-error-description]')
       .hasText("Authentication failed: missing required 'role' parameter", 'shows API error from role fetch');
@@ -119,9 +124,9 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
     });
 
     // select saml auth type
-    await waitUntil(() => find(AUTH_FORM.selectMethod));
+    await waitUntil(() => find(AUTH_FORM.selectMethod), { timeout: DELAY_IN_MS });
     await fillIn(AUTH_FORM.selectMethod, 'saml');
-    await click('[data-test-auth-submit]');
+    await click(AUTH_FORM.login);
     assert
       .dom('[data-test-message-error-description]')
       .hasText('Authentication failed: something went wrong', 'shows API error from login attempt');
@@ -130,11 +135,11 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
   test('it should populate saml auth method on logout', async function (assert) {
     await visit('/vault/logout');
     // select from dropdown
-    await waitUntil(() => find(AUTH_FORM.selectMethod));
+    await waitUntil(() => find(AUTH_FORM.selectMethod), { timeout: DELAY_IN_MS });
     await fillIn(AUTH_FORM.selectMethod, 'saml');
-    await click('[data-test-auth-submit]');
-    await waitUntil(() => find('[data-test-user-menu-trigger]'));
-    await click('[data-test-user-menu-trigger]');
+    await click(AUTH_FORM.login);
+    await waitUntil(() => find(GENERAL.testButton('user-menu-trigger')), { timeout: DELAY_IN_MS });
+    await click(GENERAL.testButton('user-menu-trigger'));
     await click('#logout');
     assert.dom(AUTH_FORM.selectMethod).hasValue('saml', 'Previous auth method selected on logout');
   });
@@ -143,10 +148,10 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
     assert.expect(1);
     this.server.put('/auth/saml/token', () => setupTotpMfaResponse('saml'));
 
-    await waitUntil(() => find(AUTH_FORM.selectMethod));
+    await waitUntil(() => find(AUTH_FORM.selectMethod), { timeout: DELAY_IN_MS });
     await fillIn(AUTH_FORM.selectMethod, 'saml');
     await click(AUTH_FORM.login);
-    await waitUntil(() => find('[data-test-mfa-form]'));
-    assert.dom('[data-test-mfa-form]').exists('it renders TOTP MFA form');
+    await waitUntil(() => find(MFA_SELECTORS.mfaForm), { timeout: DELAY_IN_MS });
+    assert.dom(MFA_SELECTORS.mfaForm).exists('it renders TOTP MFA form');
   });
 });

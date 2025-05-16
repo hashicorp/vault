@@ -64,7 +64,7 @@ scenario "upgrade" {
     // versions after our initial publication of these editions for arm64.
     exclude {
       arch    = ["arm64"]
-      edition = ["ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+      edition = ["ent.fips1403", "ent.hsm", "ent.hsm.fips1403"]
     }
 
     // PKCS#11 can only be used with hsm editions
@@ -321,7 +321,11 @@ scenario "upgrade" {
       manage_service       = true # always handle systemd for released bundles
       packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       release = {
-        edition = matrix.edition
+        edition = strcontains(matrix.edition, "fips1403") ? (
+          semverconstraint(var.vault_upgrade_initial_version, "<1.19.4-0,>=1.19.0-0 || <1.18.10-0,>=1.18.0-0 || <1.17.17-0,>=1.17.0-0 || <1.16.21-0")
+          ? replace(matrix.edition, "fips1403", "fips1402")
+          : matrix.edition
+        ) : matrix.edition
         version = var.vault_upgrade_initial_version
       }
       seal_attributes = step.create_seal_key.attributes

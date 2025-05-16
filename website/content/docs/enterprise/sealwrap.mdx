@@ -3,7 +3,7 @@ layout: docs
 page_title: Wrap seals with encryption
 description: >-
   Wrap sealed data with an extra layer of encryption to honor increased
-  compliance and regulatory requirements including FIPS 140-2.
+  compliance and regulatory requirements including FIPS 140-2/3.
 ---
 
 # Wrap seals with encryption
@@ -13,7 +13,7 @@ description: >-
 Vault Enterprise features a mechanism to wrap values with an extra layer of
 encryption for supported [seals](/vault/docs/configuration/seal). This adds an
 extra layer of protection and is useful in some compliance and regulatory
-environments, including FIPS 140-2 environments.
+environments, including FIPS 140-2/3 environments.
 
 To use this feature, you must have an active or trial license for Vault
 Enterprise Plus (HSMs). To start a trial, contact [HashiCorp
@@ -23,10 +23,10 @@ sales](mailto:sales@hashicorp.com).
 
 Your Vault deployments can gain the following benefits by enabling seal wrapping:
 
-- Conformance with FIPS 140-2 directives on Key Storage and Key Transport as [certified by Leidos](/vault/docs/enterprise/sealwrap#fips-140-2-compliance)
+- Conformance with FIPS 140-2/3 directives on Key Storage and Key Transport as [certified by Leidos](/vault/docs/enterprise/sealwrap#fips-140-2-compliance)
 - Supports FIPS level of security equal to HSM
   - For example, if you use Level 3 hardware encryption on an HSM, Vault will be
-    using FIPS 140-2 Level 3 cryptography
+    using FIPS 140-3 Level 3 cryptography
 - Enables Vault deployments in high security [GRC](https://en.wikipedia.org/wiki/Governance,_risk_management,_and_compliance)
   environments (e.g. PCI-DSS, HIPAA) where FIPS guidelines important for external audits
 - Pathway to use Vault for managing Department of Defense (DOD) or North

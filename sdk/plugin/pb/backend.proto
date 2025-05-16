@@ -4,6 +4,7 @@
 syntax = "proto3";
 package pb;
 
+import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 import "sdk/logical/event.proto";
 import "sdk/logical/identity.proto";
@@ -753,4 +754,13 @@ message SendEventRequest {
 
 service Events {
   rpc SendEvent(SendEventRequest) returns (Empty);
+}
+
+message RecordObservationRequest {
+  string observation_type = 1;
+  google.protobuf.Struct data = 2;
+}
+
+service Observations {
+  rpc RecordObservation(RecordObservationRequest) returns (Empty);
 }

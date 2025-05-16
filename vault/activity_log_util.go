@@ -9,6 +9,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/framework"
 )
@@ -42,4 +43,9 @@ func getStartEndTime(d *framework.FieldData, now time.Time, billingStartTime tim
 	}
 
 	return startTime, endTime, warnings, nil
+}
+
+// clientsGaugeCollectorCurrentBillingPeriod is no-op on CE
+func (c *Core) clientsGaugeCollectorCurrentBillingPeriod(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	return []metricsutil.GaugeLabelValues{}, nil
 }

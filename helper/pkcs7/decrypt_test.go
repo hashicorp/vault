@@ -2,7 +2,13 @@ package pkcs7
 
 import (
 	"bytes"
+	"crypto"
+	"crypto/x509/pkix"
+	"encoding/asn1"
+	"encoding/base64"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestDecrypt(t *testing.T) {
@@ -59,3 +65,48 @@ o5FC5Jg2FUfFzZSDmyZ6IONUsdF/i78KDV5nRv1R+hI6/oRlWNCtTNBv/lvBBd6b
 dseUE9QoaQZsn5lpILEvmQJAZ0B+Or1rAYjnbjnUhdVZoy9kC4Zov+4UH3N/BtSy
 KJRWUR0wTWfZBPZ5hAYZjTBEAFULaYCXlQKsODSp0M1aQA==
 -----END PRIVATE KEY-----`
+
+// TestRsaOAEPKeyIdentifier validates that we can parse the RSA-OAEP algo
+// identifier's parameters correctly. See RFC 3447 for the definition
+func TestRsaOAEPKeyIdentifier(t *testing.T) {
+	t.Parallel()
+
+	t.Run("no params", func(t *testing.T) {
+		hash, err := parseRSAOaepParam(asn1.NullRawValue)
+		require.NoError(t, err)
+		require.Equal(t, hash, crypto.SHA1)
+	})
+
+	t.Run("only pSource parameter set", func(t *testing.T) {
+		// This is the base64 encoded key identifier that only has pSource parameter set.
+		// Example pulled from https://github.com/pnwamk/mbedtls/blob/rsaes-oaep/example_tpm_cert.der linked
+		// from https://github.com/Mbed-TLS/mbedtls/issues/1015
+		base64KeyId := "MCIGCSqGSIb3DQEBBzAVohMwEQYJKoZIhvcNAQEJBARUQ1BB"
+		rawKeyId, err := base64.StdEncoding.DecodeString(base64KeyId)
+		require.NoError(t, err)
+
+		var keyId pkix.AlgorithmIdentifier
+		_, err = asn1.Unmarshal(rawKeyId, &keyId)
+		require.NoError(t, err)
+
+		hash, err := parseRSAOaepParam(keyId.Parameters)
+		require.NoError(t, err)
+		require.Equal(t, hash, crypto.SHA1)
+	})
+
+	t.Run("full parameters", func(t *testing.T) {
+		// This is the base64 encoded key identifier that has all parameters set, example pulled from
+		// https://stackoverflow.com/questions/22194359/rsaes-oaep-certificate-public-key-0-bits
+		base64KeyId := "MFIGCSqGSIb3DQEBBzBFoA8wDQYJYIZIAWUDBAIBBQChHDAaBgkqhkiG9w0BAQgwDQYJYIZIAWUDBAIBBQCiFDASBgkqhkiG9w0BAQkEBVRDUEEA"
+		rawKeyId, err := base64.StdEncoding.DecodeString(base64KeyId)
+		require.NoError(t, err)
+
+		var keyId pkix.AlgorithmIdentifier
+		_, err = asn1.Unmarshal(rawKeyId, &keyId)
+		require.NoError(t, err)
+
+		hash, err := parseRSAOaepParam(keyId.Parameters)
+		require.NoError(t, err)
+		require.Equal(t, hash, crypto.SHA256)
+	})
+}

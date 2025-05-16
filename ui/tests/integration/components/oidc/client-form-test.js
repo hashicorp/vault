@@ -153,9 +153,11 @@ module('Integration | Component | oidc/client-form', function (hooks) {
     assert.dom('[data-test-input="name"]').hasValue('test-app', 'Name input is populated with model value');
     assert.dom('[data-test-input="key"]').isDisabled('Signing key input is disabled');
     assert.dom('[data-test-input="key"]').hasValue('default', 'Key input populated with default');
-    assert.dom('[data-test-input="clientType"] input').isDisabled('client type input is disabled on edit');
     assert
-      .dom('[data-test-input="clientType"] input#confidential')
+      .dom('[data-test-input-group="clientType"] input')
+      .isDisabled('client type input is disabled on edit');
+    assert
+      .dom('[data-test-input-group="clientType"] input#confidential')
       .isChecked('Correct radio button is selected');
     assert.dom('[data-test-oidc-radio="allow-all"] input').isChecked('Allow all radio button is selected');
     await click(SELECTORS.clientSaveButton);

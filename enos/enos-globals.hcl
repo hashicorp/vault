@@ -11,9 +11,9 @@ globals {
   build_tags = {
     "ce"               = ["ui"]
     "ent"              = ["ui", "enterprise", "ent"]
-    "ent.fips1402"     = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.fips1402"]
+    "ent.fips1403"     = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_3", "ent.fips1403"]
     "ent.hsm"          = ["ui", "enterprise", "cgo", "hsm", "venthsm"]
-    "ent.hsm.fips1402" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.hsm.fips1402"]
+    "ent.hsm.fips1403" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_3", "ent.hsm.fips1403"]
   }
   config_modes    = ["env", "file"]
   consul_editions = ["ce", "ent"]
@@ -51,7 +51,7 @@ globals {
     sles   = var.distro_version_sles
     ubuntu = var.distro_version_ubuntu
   }
-  editions            = ["ce", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+  editions            = ["ce", "ent", "ent.fips1403", "ent.hsm", "ent.hsm.fips1403"]
   enterprise_editions = [for e in global.editions : e if e != "ce"]
   ip_versions         = ["4", "6"]
   package_manager = {
