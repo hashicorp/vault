@@ -180,6 +180,7 @@ type FSM struct {
 
 	localID         string
 	desiredSuffrage string
+	// metricSuffix should contain a dash, since it will be appended directly to the end of the key string.
 	metricSuffix    string
 }
 
