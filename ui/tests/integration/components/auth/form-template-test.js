@@ -461,7 +461,7 @@ module('Integration | Component | auth | form template', function (hooks) {
     });
 
     test('(default only): it renders default type without backup methods', async function (assert) {
-      this.loginSettings.backupTypes = [];
+      this.loginSettings.backupTypes = null;
       await this.renderComponent();
       assert.dom(AUTH_FORM.preferredMethod('oidc')).hasText('OIDC', 'it renders default method');
       assert.dom(GENERAL.backButton).doesNotExist();
@@ -538,7 +538,7 @@ module('Integration | Component | auth | form template', function (hooks) {
       });
 
       test('(default only): it hides advanced settings and renders hidden input', async function (assert) {
-        this.loginSettings.backupTypes = [];
+        this.loginSettings.backupTypes = null;
         await this.renderComponent();
         assert.dom(AUTH_FORM.preferredMethod('oidc')).hasText('OIDC', 'it renders default method');
         assert.dom(AUTH_FORM.authForm('oidc')).exists();
@@ -601,7 +601,7 @@ module('Integration | Component | auth | form template', function (hooks) {
         };
       });
 
-      test('only default has visible mounts: it hides advanced settings for default but it renders for backups', async function (assert) {
+      test('(default+backups): it hides advanced settings for default with visible mount but it renders for backups', async function (assert) {
         this.visibleMountsByType = { oidc: this.mountData.oidc };
         await this.renderComponent();
         this.assertPathInput(assert, { isHidden: true, value: 'my-oidc/' });
@@ -612,7 +612,8 @@ module('Integration | Component | auth | form template', function (hooks) {
         await this.assertPathInput(assert);
       });
 
-      test('only default and one backup method have visible mounts: it only renders advanced settings for method without mounts', async function (assert) {
+      test('(default+backups): it only renders advanced settings for method without mounts', async function (assert) {
+        // default and only one backup method have visible mounts
         this.visibleMountsByType = { oidc: this.mountData.oidc, userpass: this.mountData.userpass };
         await this.renderComponent();
         assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
@@ -624,9 +625,10 @@ module('Integration | Component | auth | form template', function (hooks) {
         assert.dom(AUTH_FORM.advancedSettings).exists();
       });
 
-      test('only one backup method has visible mounts: it hides advanced settings for only method with mounts', async function (assert) {
+      test('(default+backups): it hides advanced settings for single backup method with mounts', async function (assert) {
         this.visibleMountsByType = { ldap: this.mountData.ldap };
         await this.renderComponent();
+        assert.dom(AUTH_FORM.authForm('oidc')).exists();
         assert.dom(AUTH_FORM.advancedSettings).exists();
         await click(AUTH_FORM.otherMethodsBtn);
         assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
@@ -635,7 +637,7 @@ module('Integration | Component | auth | form template', function (hooks) {
         this.assertPathInput(assert, { isHidden: true, value: 'ldap/' });
       });
 
-      test('only backup methods are set (no default): it hides advanced settings for only method with mounts', async function (assert) {
+      test('(backups only): it hides advanced settings for single method with mounts', async function (assert) {
         this.loginSettings.defaultType = '';
         this.visibleMountsByType = { ldap: this.mountData.ldap };
         await this.renderComponent();
@@ -701,7 +703,7 @@ module('Integration | Component | auth | form template', function (hooks) {
         });
 
         test('(default only): it renders standard view and selects @directLinkData type from dropdown', async function (assert) {
-          this.loginSettings.backupTypes = [];
+          this.loginSettings.backupTypes = null;
           await this.renderComponent();
           testHelper(assert);
         });
@@ -748,7 +750,7 @@ module('Integration | Component | auth | form template', function (hooks) {
         });
 
         test('(default only): it renders single mount view for @directLinkData', async function (assert) {
-          this.loginSettings.backupTypes = [];
+          this.loginSettings.backupTypes = null;
           await this.renderComponent();
           await testHelper(assert);
         });
@@ -784,7 +786,7 @@ module('Integration | Component | auth | form template', function (hooks) {
         });
 
         test('(default only): it selects @directLinkData type from dropdown and toggles to tab view', async function (assert) {
-          this.loginSettings.backupTypes = [];
+          this.loginSettings.backupTypes = null;
           await this.renderComponent();
           await testHelper(assert);
         });
@@ -819,7 +821,7 @@ module('Integration | Component | auth | form template', function (hooks) {
         });
 
         test('(default only): it selects @directLinkData type tab and toggles to dropdown view', async function (assert) {
-          this.loginSettings.backupTypes = [];
+          this.loginSettings.backupTypes = null;
           await this.renderComponent();
           await testHelper(assert);
         });

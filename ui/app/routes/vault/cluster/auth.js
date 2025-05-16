@@ -113,7 +113,7 @@ export default class AuthRoute extends ClusterRouteBase {
         const { default_auth_type, backup_auth_types } = response.data;
         return {
           defaultType: default_auth_type,
-          backupTypes: backup_auth_types,
+          backupTypes: backup_auth_types, // the API returns null (not an empty array) when none are set
         };
       }
     } catch (e) {
