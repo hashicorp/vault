@@ -1148,7 +1148,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// ensure that the DisableMlock key is explicitly set if using integrated storage
-	if !c.flagDev && config.Storage != nil && config.Storage.Type == storageTypeRaft && !isMlockSet() {
+	if !c.flagDev && mlock.Supported() && config.Storage != nil && config.Storage.Type == storageTypeRaft && !isMlockSet() {
 
 		c.UI.Error(wrapAtLength(
 			"ERROR: disable_mlock must be configured 'true' or 'false': Mlock " +
@@ -1186,7 +1186,7 @@ func (c *ServerCommand) Run(args []string) int {
 		}
 	}
 
-	// If mlockall(2) isn't supported, show a warning. We disable this in dev
+	// If mlockall(2) !isn't supported, show a warning. We disable this in dev
 	// because it is quite scary to see when first using Vault. We also disable
 	// this if the user has explicitly disabled mlock in configuration.
 	if !c.flagDev && !config.DisableMlock && !mlock.Supported() {
