@@ -24,10 +24,6 @@ import (
 
 const (
 	KVv2MetadataPath = "metadata"
-	AwsSm            = "aws-sm"
-	AzureKv          = "azure-kv"
-	GcpSm            = "gcp-sm"
-	Vault            = "vault"
 )
 
 func (c *Core) metricsLoop(stopCh chan struct{}) {
@@ -421,14 +417,6 @@ type kvMount struct {
 	NumSecrets int
 }
 
-type OperatorImportKVV2Metric struct {
-	NumSecrets                int
-	NumSecretsWithSourceGCP   int
-	NumSecretsWithSourceAWS   int
-	NumSecretsWithSourceAzure int
-	NumSecretsWithSourceVault int
-}
-
 func (c *Core) findKvMounts() []*kvMount {
 	mounts := make([]*kvMount, 0)
 
@@ -537,71 +525,6 @@ func (c *Core) walkKvSecrets(
 		}
 	}
 	return nil
-}
-
-func (c *Core) collectOperatorImportMetrics(ctx context.Context, m *kvMount, results *OperatorImportKVV2Metric) {
-	startDirs := []string{m.Namespace.Path + m.MountPoint + KVv2MetadataPath + "/"}
-
-	err := c.walkKvSecrets(ctx, startDirs, m, func(ctx context.Context, fullPath string) error {
-		res, err := c.router.Route(ctx, &logical.Request{
-			Operation: logical.ReadOperation,
-			Path:      fullPath,
-		})
-		if err != nil {
-			c.kvCollectionErrorCount()
-			c.logger.Error("failed to get metadata for KVv2 secret", "path", fullPath, "error", err)
-			return err
-		}
-
-		metadata := res.Data
-		customMetadataRaw, ok := metadata["custom_metadata"]
-		if !ok {
-			return nil
-		}
-
-		customMetadata, ok := customMetadataRaw.(map[string]string)
-		if !ok {
-			c.logger.Error("custom_metadata not a map[string]string in KV v2 secret", "path", fullPath)
-			return nil
-		}
-
-		if val, found := customMetadata["operation"]; found && val == "import" {
-			results.NumSecrets++
-			switch customMetadata["import-source"] {
-			case string(AwsSm):
-				results.NumSecretsWithSourceAWS++
-			case string(GcpSm):
-				results.NumSecretsWithSourceGCP++
-			case string(Vault):
-				results.NumSecretsWithSourceVault++
-			case string(AzureKv):
-				results.NumSecretsWithSourceAzure++
-			default:
-				c.logger.Warn("unknown import-source in KVv2 secret", "path", fullPath, "import-source", customMetadata["import-source"])
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		c.logger.Error("failed to collect operator import metrics", "mount_point", m.MountPoint, "error", err)
-	}
-}
-
-func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
-	var startDirs []string
-	if m.Version == "1" {
-		startDirs = []string{m.Namespace.Path + m.MountPoint}
-	} else {
-		startDirs = []string{m.Namespace.Path + m.MountPoint + KVv2MetadataPath + "/"}
-	}
-
-	err := c.walkKvSecrets(ctx, startDirs, m, func(ctx context.Context, fullPath string) error {
-		m.NumSecrets++
-		return nil
-	})
-	if err != nil {
-		c.logger.Error("failed to walk KV mount", "mount_point", m.MountPoint, "error", err)
-	}
 }
 
 // GetLocalAndReplicatedSecretMounts returns the number of replicated and local secret mounts
@@ -835,39 +758,6 @@ func (c *Core) GetSecretEngineUsageMetrics() map[string]int {
 	return mounts
 }
 
-// GetKVV2OperatorImportMetrics returns a map of operator import metrics.
-func (c *Core) GetKVV2OperatorImportMetrics(ctx context.Context) (*OperatorImportKVV2Metric, error) {
-	mounts := c.findKvMounts()
-
-	var kvv2Mounts []*kvMount
-	for _, mount := range mounts {
-		if mount.Version == "2" {
-			kvv2Mounts = append(kvv2Mounts, mount)
-		}
-	}
-
-	results := &OperatorImportKVV2Metric{
-		NumSecrets:                0,
-		NumSecretsWithSourceGCP:   0,
-		NumSecretsWithSourceAWS:   0,
-		NumSecretsWithSourceAzure: 0,
-		NumSecretsWithSourceVault: 0,
-	}
-
-	for _, m := range kvv2Mounts {
-		select {
-		case <-ctx.Done():
-			return nil, fmt.Errorf("context expired")
-		default:
-			break
-		}
-
-		c.collectOperatorImportMetrics(ctx, m, results)
-	}
-
-	return results, nil
-}
-
 // Get returns a map of auth mount types to the number of those mounts that exist.
 func (c *Core) GetAuthMethodUsageMetrics() map[string]int {
 	mounts := make(map[string]int)
@@ -957,6 +847,31 @@ func (c *Core) GetKvUsageMetrics(ctx context.Context, kvVersion string) (map[str
 	}
 
 	return results, nil
+}
+
+func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
+	var startDirs []string
+	if m.Version == "1" {
+		startDirs = []string{m.Namespace.Path + m.MountPoint}
+	} else {
+		startDirs = []string{m.Namespace.Path + m.MountPoint + KVv2MetadataPath + "/"}
+	}
+
+	err := c.walkKvSecrets(ctx, startDirs, m, func(ctx context.Context, fullPath string) error {
+		m.NumSecrets++
+		return nil
+	})
+	if err != nil {
+		// ErrUnsupportedPath probably means that the mount is not there anymore,
+		// don't log those cases.
+		if !strings.Contains(err.Error(), logical.ErrUnsupportedPath.Error()) &&
+			// ErrSetupReadOnly means the mount's currently being set up.
+			// Nothing is wrong and there's no cause for alarm, just that we can't get data from it
+			// yet. We also shouldn't log these cases
+			!strings.Contains(err.Error(), logical.ErrSetupReadOnly.Error()) {
+			c.logger.Error("failed to walk KV mount", "mount_point", m.MountPoint, "error", err)
+		}
+	}
 }
 
 func (c *Core) kvSecretGaugeCollector(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
@@ -1120,4 +1035,34 @@ func (c *Core) configuredPoliciesGaugeCollector(ctx context.Context) ([]metricsu
 	}
 
 	return values, nil
+}
+
+func (c *Core) GetPolicyMetrics(ctx context.Context) map[PolicyType]int {
+	policyStore := c.policyStore
+
+	if policyStore == nil {
+		c.logger.Error("could not find policy store")
+		return map[PolicyType]int{}
+	}
+
+	ctx = namespace.RootContext(ctx)
+	namespaces := c.collectNamespaces()
+
+	policyTypes := []PolicyType{
+		PolicyTypeACL,
+		PolicyTypeRGP,
+		PolicyTypeEGP,
+	}
+
+	ret := make(map[PolicyType]int)
+	for _, pt := range policyTypes {
+		policies, err := policyStore.policiesByNamespaces(ctx, pt, namespaces)
+		if err != nil {
+			c.logger.Error("could not retrieve policies for namespaces", "policy_type", pt.String(), "error", err)
+			return map[PolicyType]int{}
+		}
+
+		ret[pt] = len(policies)
+	}
+	return ret
 }
