@@ -74,9 +74,21 @@ module('Acceptance | config-ui/login-settings', function (hooks) {
     assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted rule ns1.');
   });
 
-  test('fetched individual rule renders', async function (assert) {
+  test('navigate to rule details page and renders rule data', async function (assert) {
     // visit individual rule page
-    await visit('vault/config-ui/login-settings/ns1');
+    await visit('vault/config-ui/login-settings/');
+
+    await click(GENERAL.menuTrigger);
+    await click(GENERAL.menuItem('view-rule'));
+
+    // verify that user is redirected to the rule details page
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.config-ui.login-settings.rule.details',
+      'goes to rule details page'
+    );
+
+    // verify fetched rule data is rendered
     assert.dom('.info-table-row').exists({ count: 5 });
   });
 
