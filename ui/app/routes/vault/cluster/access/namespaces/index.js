@@ -5,47 +5,56 @@
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import UnloadModel from 'vault/mixins/unload-model-route';
+import { action } from '@ember/object';
+import { hash } from 'rsvp';
 
-export default Route.extend(UnloadModel, {
-  pagination: service(),
-  store: service(),
+export default class NamespaceListRoute extends Route {
+  @service pagination;
+  @service store;
+  @service version;
 
-  queryParams: {
+  queryParams = {
+    pageFilter: {
+      refreshModel: true,
+    },
     page: {
       refreshModel: true,
     },
-  },
-
-  version: service(),
+  };
 
   beforeModel() {
     this.store.unloadAll('namespace');
     return this.version.fetchFeatures().then(() => {
-      return this._super(...arguments);
+      return super.beforeModel(...arguments);
     });
-  },
+  }
+
+  async fetchNamespaces(params) {
+    return await this.pagination
+      .lazyPaginatedQuery('namespace', {
+        responsePath: 'data.keys',
+        page: Number(params?.page) || 1,
+        pageFilter: params?.pageFilter,
+      })
+      .catch((err) => {
+        if (err.httpStatus === 403) {
+          return 403;
+        }
+        if (err.httpStatus === 404) {
+          return [];
+        } else {
+          throw err;
+        }
+      });
+  }
 
   model(params) {
-    if (this.version.hasNamespaces) {
-      return this.pagination
-        .lazyPaginatedQuery('namespace', {
-          responsePath: 'data.keys',
-          page: Number(params?.page) || 1,
-        })
-        .then((model) => {
-          return model;
-        })
-        .catch((err) => {
-          if (err.httpStatus === 404) {
-            return [];
-          } else {
-            throw err;
-          }
-        });
-    }
-    return null;
-  },
+    const { pageFilter } = params;
+    return hash({
+      namespaces: this.fetchNamespaces(params),
+      pageFilter,
+    });
+  }
 
   setupController(controller, model) {
     const has404 = this.has404;
@@ -59,29 +68,31 @@ export default Route.extend(UnloadModel, {
         page: Number(model?.meta?.currentPage) || 1,
       });
     }
-  },
+  }
 
-  actions: {
-    error(error, transition) {
-      /* eslint-disable-next-line ember/no-controller-access-in-routes */
-      const hasModel = this.controllerFor(this.routeName).hasModel;
-      if (hasModel && error.httpStatus === 404) {
-        this.set('has404', true);
-        transition.abort();
-      } else {
-        return true;
-      }
-    },
-    willTransition(transition) {
-      window.scrollTo(0, 0);
-      if (!transition || transition.targetName !== this.routeName) {
-        this.pagination.clearDataset();
-      }
+  @action
+  error(error, transition) {
+    /* eslint-disable-next-line ember/no-controller-access-in-routes */
+    const hasModel = this.controllerFor(this.routeName).hasModel;
+    if (hasModel && error.httpStatus === 404) {
+      this.has404 = true;
+      transition.abort();
+    } else {
       return true;
-    },
-    reload() {
+    }
+  }
+
+  @action
+  willTransition(transition) {
+    window.scrollTo(0, 0);
+    if (!transition || transition.targetName !== this.routeName) {
       this.pagination.clearDataset();
-      this.refresh();
-    },
-  },
-});
+    }
+    return true;
+  }
+
+  reload() {
+    this.pagination.clearDataset();
+    this.refresh();
+  }
+}
