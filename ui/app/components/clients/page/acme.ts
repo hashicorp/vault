@@ -8,8 +8,6 @@ import ActivityComponent from '../activity';
 export default class ClientsAcmePageComponent extends ActivityComponent {
   title = 'ACME usage';
   get description() {
-    return `This data can be used to understand how many ACME clients have been used for the queried ${
-      this.isDateRange ? 'date range' : 'month'
-    }. Each ACME request is counted as one client.`;
+    return 'ACME clients which interacted with Vault for the first time each month. Each bar represents the total new ACME clients for that month.';
   }
 }

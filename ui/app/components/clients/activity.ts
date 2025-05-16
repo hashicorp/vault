@@ -57,18 +57,15 @@ export default class ClientsActivityComponent extends Component<Args> {
     return sanitizePath(namespace || currentNs || 'root');
   }
 
-  get byMonthActivityData() {
+  get byMonthNewClients() {
     const { activity, mountPath } = this.args;
     const nsPath = this.namespacePathForFilter;
-    if (mountPath) {
-      // only do client-side filtering if we have a mountPath filter set
-      return filterByMonthDataForMount(activity.byMonth, nsPath, mountPath);
-    }
-    return activity.byMonth;
-  }
 
-  get byMonthNewClients() {
-    return this.byMonthActivityData ? this.byMonthActivityData?.map((m) => m?.new_clients) : [];
+    const data = mountPath
+      ? filterByMonthDataForMount(activity.byMonth, nsPath, mountPath)
+      : activity.byMonth;
+
+    return data ? data?.map((m) => m?.new_clients) : [];
   }
 
   get isCurrentMonth() {

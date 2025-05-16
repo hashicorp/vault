@@ -47,7 +47,7 @@ type ChartDatum = DatumBase & {
  * @example
  * <Clients::Charts::VerticalBarStacked
  * @chartTitle="Total monthly usage"
- * @data={{this.byMonthActivityData}}
+ * @data={{this.byMonthNewClients}}
  * @chartLegend={{this.legend}}
  * @chartHeight={{250}}
  * />

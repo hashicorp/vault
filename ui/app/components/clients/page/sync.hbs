@@ -3,8 +3,8 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 {{#if this.flags.secretsSyncIsActivated}}
-  {{#if (not this.byMonthActivityData)}}
-    {{! byMonthActivityData is an empty array if there is no monthly data (monthly breakdown was added in 1.11)
+  {{#if (not this.byMonthNewClients)}}
+    {{! byMonthNewClients is an empty array if there is no monthly data (monthly breakdown was added in 1.11)
     this means the user has queried dates before sync clients existed. we render an empty state instead of
     "0 sync clients" (which is what the activity response returns) to be more explicit }}
     <EmptyState
@@ -16,7 +16,6 @@
     <Clients::ChartContainer
       @title={{this.title}}
       @description={{this.description}}
-      @timestamp={{@activity.responseTimestamp}}
       @hasChartData={{true}}
       class="no-legend"
     >
@@ -33,45 +32,12 @@
       <:chart>
         <Clients::Charts::VerticalBarBasic
           @chartTitle={{this.title}}
-          @data={{this.byMonthActivityData}}
+          @data={{this.byMonthNewClients}}
           @dataKey="secret_syncs"
           @chartHeight={{200}}
         />
       </:chart>
     </Clients::ChartContainer>
-
-    {{! no need to render two empty charts! hide this one if there is no sync data }}
-    {{#if this.totalUsageCounts.secret_syncs}}
-      <Clients::ChartContainer
-        @title="Monthly new"
-        @description="Secrets sync clients which interacted with Vault for the first time each month. Each bar represents the total new sync clients for that month."
-        @timestamp={{@activity.responseTimestamp}}
-        @hasChartData={{true}}
-        class="no-legend"
-      >
-        <:stats>
-          {{#let (this.average this.byMonthNewClients "secret_syncs") as |avg|}}
-            {{#if avg}}
-              <StatText
-                @label="Average new sync clients per month"
-                @value={{avg}}
-                @size="m"
-                class="chart-subTitle has-top-padding-l"
-              />
-            {{/if}}
-          {{/let}}
-        </:stats>
-
-        <:chart>
-          <Clients::Charts::VerticalBarBasic
-            @chartTitle="Monthly new"
-            @data={{this.byMonthNewClients}}
-            @dataKey="secret_syncs"
-            @chartHeight={{200}}
-          />
-        </:chart>
-      </Clients::ChartContainer>
-    {{/if}}
   {{else}}
     <Clients::UsageStats @title={{this.title}} @description={{this.description}}>
       <StatText @label="Total sync clients" @value={{this.totalUsageCounts.secret_syncs}} @size="l" class="column" />

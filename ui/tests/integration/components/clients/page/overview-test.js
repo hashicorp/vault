@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { ACTIVITY_RESPONSE_STUB } from 'vault/tests/helpers/clients/client-count-helpers';
 import { filterActivityResponse } from 'vault/mirage/handlers/clients';
 import { CHARTS, CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
@@ -47,6 +48,13 @@ module('Integration | Component | clients/page/overview', function (hooks) {
     this.mountPath = '';
     this.namespace = '';
     this.versionHistory = '';
+
+    // Fails on #ember-testing-container
+    setRunOptions({
+      rules: {
+        'scrollable-region-focusable': { enabled: false },
+      },
+    });
   });
 
   test('it hides attribution data when mount filter applied', async function (assert) {

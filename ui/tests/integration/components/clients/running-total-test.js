@@ -34,6 +34,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     const activity = await store.queryRecord('clients/activity', activityQuery);
     this.byMonthActivity = activity.byMonth;
     this.newActivity = this.byMonthActivity.map((d) => d.new_clients);
+
     this.totalUsageCounts = activity.total;
     this.set('timestamp', formatRFC3339(timestamp.now()));
     this.set('chartLegend', [
@@ -47,10 +48,9 @@ module('Integration | Component | clients/running-total', function (hooks) {
       await render(hbs`
       <Clients::RunningTotal
         @isSecretsSyncActivated={{this.isSecretsSyncActivated}}
-        @byMonthActivityData={{this.byMonthActivity}}
+        @byMonthNewClients={{this.byMonthActivity}}
         @runningTotals={{this.totalUsageCounts}}
         @upgradeData={{this.upgradesDuringActivity}}
-        @responseTimestamp={{this.timestamp}}
         @isHistoricalMonth={{this.isHistoricalMonth}}
       />
     `);
@@ -70,7 +70,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     assert.dom(CHARTS.chart('Vault client counts')).exists('bar chart renders');
 
     const expectedValues = {
-      'Running client total': formatNumber([this.totalUsageCounts.clients]),
+      'Running new client total': formatNumber([this.totalUsageCounts.clients]),
       Entity: formatNumber([this.totalUsageCounts.entity_clients]),
       'Non-entity': formatNumber([this.totalUsageCounts.non_entity_clients]),
       ACME: formatNumber([this.totalUsageCounts.acme_clients]),
@@ -85,7 +85,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
         );
     }
 
-    // assert grouped bar chart is correct
+    // assert bar chart is correct
     findAll(CHARTS.xAxisLabel).forEach((e, i) => {
       assert
         .dom(e)
@@ -96,7 +96,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     });
     assert
       .dom(CHARTS.verticalBar)
-      .exists({ count: this.byMonthActivity.length * 2 }, 'renders correct number of bars ');
+      .exists({ count: this.byMonthActivity.length }, 'renders correct number of bars ');
   });
 
   test('it renders with no new monthly data', async function (assert) {
@@ -127,30 +127,11 @@ module('Integration | Component | clients/running-total', function (hooks) {
   });
 
   test('it renders with single historical month data', async function (assert) {
-    const singleMonth = this.byMonthActivity[this.byMonthActivity.length - 1];
     const singleMonthNew = this.newActivity[this.newActivity.length - 1];
-    this.byMonthActivity = [singleMonth];
+    this.byMonthActivity = [singleMonthNew];
     this.isHistoricalMonth = true;
-
     await this.renderComponent();
-
-    let expectedStats = {
-      'Total monthly clients': formatNumber([singleMonth.clients]),
-      Entity: formatNumber([singleMonth.entity_clients]),
-      'Non-entity': formatNumber([singleMonth.non_entity_clients]),
-      ACME: formatNumber([singleMonth.acme_clients]),
-      'Secret sync': formatNumber([singleMonth.secret_syncs]),
-    };
-    for (const label in expectedStats) {
-      assert
-        .dom(`[data-test-total] ${CLIENT_COUNT.statTextValue(label)}`)
-        .hasText(
-          `${expectedStats[label]}`,
-          `stat label: ${label} renders single month total: ${expectedStats[label]}`
-        );
-    }
-
-    expectedStats = {
+    const expectedStats = {
       'New clients': formatNumber([singleMonthNew.clients]),
       Entity: formatNumber([singleMonthNew.entity_clients]),
       'Non-entity': formatNumber([singleMonthNew.non_entity_clients]),
@@ -166,7 +147,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
         );
     }
     assert.dom(CHARTS.chart('Vault client counts')).doesNotExist('bar chart does not render');
-    assert.dom(CLIENT_COUNT.statTextValue()).exists({ count: 10 }, 'renders 10 stat text containers');
+    assert.dom(CLIENT_COUNT.statTextValue()).exists({ count: 5 }, 'renders 5 stat text containers');
   });
 
   test('it hides secret sync totals when feature is not activated', async function (assert) {

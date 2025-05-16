@@ -20,7 +20,7 @@
 .single-chart-grid {
   display: grid;
   grid-template-columns: 1fr 0.3fr 3.7fr;
-  grid-template-rows: 0.5fr 1fr 1fr 1fr 0.25fr;
+  grid-template-rows: 0.5fr 1fr 1fr 0.5fr 0.25fr;
   width: 100%;
   &.no-legend {
     grid-template-rows: 0.5fr 1fr 1fr 0.25fr;
@@ -138,14 +138,6 @@
   grid-column-start: 1;
   grid-column-end: 3;
   grid-row-start: 4;
-}
-
-.timestamp {
-  grid-column: 1 / span 2;
-  grid-row-start: -1;
-  color: color_variables.$ui-gray-500;
-  font-size: size_variables.$size-9;
-  align-self: end;
 }
 
 .legend {

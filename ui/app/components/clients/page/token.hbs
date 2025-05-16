@@ -3,11 +3,10 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if (and this.byMonthActivityData this.isDateRange)}}
+{{#if (and this.byMonthNewClients this.isDateRange)}}
   <Clients::ChartContainer
     @title="Entity/Non-entity clients usage"
-    @description="This data can be used to understand how many entity and non-entity clients are using Vault each month for this date range. Each client is counted once per month."
-    @timestamp={{@activity.responseTimestamp}}
+    @description="Entity or non-entity clients which interacted with Vault for the first time during this date range. Each bar represents the total new clients for that month."
     @legend={{this.legend}}
     @hasChartData={{true}}
   >
@@ -24,58 +23,11 @@
     <:chart>
       <Clients::Charts::VerticalBarStacked
         @chartTitle="Entity/Non-entity clients usage"
-        @data={{this.byMonthActivityData}}
-        @chartLegend={{this.legend}}
-        @chartHeight={{250}}
-      />
-    </:chart>
-  </Clients::ChartContainer>
-
-  <Clients::ChartContainer
-    @title="Monthly new"
-    @description="Entity or non-entity clients which interacted with Vault for the first time during this date range. Each bar represents the total new clients for that month."
-    @timestamp={{@activity.responseTimestamp}}
-    @legend={{this.legend}}
-    @hasChartData={{this.hasNewClients}}
-    class={{unless this.hasNewClients "no-legend"}}
-  >
-    <:stats>
-      <StatText
-        @label="Average new entity clients per month"
-        @value={{this.average this.byMonthNewClients "entity_clients"}}
-        @size="m"
-        class="chart-subTitle has-top-padding-l"
-      />
-
-      <StatText
-        @label="Average new non-entity clients per month"
-        @value={{this.average this.byMonthNewClients "non_entity_clients"}}
-        @size="m"
-        class="data-details-top has-top-padding-l"
-      />
-    </:stats>
-
-    <:chart>
-      <Clients::Charts::VerticalBarStacked
-        @chartTitle="Monthly new"
         @data={{this.byMonthNewClients}}
         @chartLegend={{this.legend}}
         @chartHeight={{250}}
       />
     </:chart>
-
-    <:emptyState>
-      <EmptyState
-        @title="No new clients"
-        @subTitle="There is no new client data available for this {{if
-          this.countsController.mountPath
-          'auth method'
-          'namespace'
-        }} in this date range."
-        @bottomBorder={{true}}
-        class="is-shadowless"
-      />
-    </:emptyState>
   </Clients::ChartContainer>
 {{else}}
   {{! Renders when viewing a single month or activity log data that predates the monthly breakdown added in 1.11 }}

@@ -16,7 +16,7 @@
   }
 }
 .lineal-chart-bar {
-  fill: var(--token-color-palette-blue-300);
+  fill: var(--token-color-palette-blue-500);
 }
 .lineal-axis {
   color: color_variables.$ui-gray-500;
@@ -56,6 +56,6 @@
   fill: var(--token-color-palette-blue-200);
 }
 .custom-bar-new_clients {
-  color: var(--token-color-palette-blue-100);
-  fill: var(--token-color-palette-blue-100);
+  fill: var(--token-color-palette-blue-500);
+  color: var(--token-color-palette-blue-500);
 }

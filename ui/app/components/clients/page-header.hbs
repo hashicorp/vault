@@ -7,6 +7,13 @@
   <PH.Title>
     Client Usage
   </PH.Title>
+
+  {{#if @activityTimestamp}}
+    <PH.Subtitle>
+      Last Updated:
+      {{date-format @activityTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
+    </PH.Subtitle>
+  {{/if}}
   {{#if this.version.isEnterprise}}
     <PH.Description class="has-text-weight-semibold flex">
       <p>

@@ -66,8 +66,7 @@ module('Acceptance | clients | counts | acme', function (hooks) {
 
   test('it filters by mount data and renders charts', async function (assert) {
     const { nsTotals, nsMonthlyUsage } = this.expectedValues;
-    const nsMonthlyNew = nsMonthlyUsage.map((m) => m?.new_clients);
-    assert.expect(7 + nsMonthlyUsage.length + nsMonthlyNew.length);
+    assert.expect(4 + nsMonthlyUsage.length);
 
     await visit('/vault/clients/counts/acme');
     await selectChoose(CLIENT_COUNT.nsFilter, this.nsPath);
@@ -75,7 +74,6 @@ module('Acceptance | clients | counts | acme', function (hooks) {
 
     // each chart assertion count is data array length + 2
     assertBarChart(assert, 'ACME usage', nsMonthlyUsage);
-    assertBarChart(assert, 'Monthly new', nsMonthlyNew);
     assert.strictEqual(
       currentURL(),
       `/vault/clients/counts/acme?mountPath=pki-engine-0&ns=${this.nsPath}`,
@@ -85,13 +83,8 @@ module('Acceptance | clients | counts | acme', function (hooks) {
       .dom(CLIENT_COUNT.statText('Total ACME clients'))
       .hasTextContaining(
         `${formatNumber([nsTotals.acme_clients])}`,
-        'renders total acme clients for namespace'
+        'renders total new acme clients for namespace'
       );
-
-    // TODO: update this
-    assert
-      .dom(CLIENT_COUNT.statText('Average new ACME clients per month'))
-      .hasTextContaining(`13`, 'renders average acme clients for namespace');
   });
 
   /**
