@@ -4,9 +4,8 @@
  */
 
 import Component from '@glimmer/component';
-import type { TotalClients } from 'core/utils/client-count-utils';
-import ClientsVersionHistoryModel from 'vault/vault/models/clients/version-history';
-import { ByMonthNewClients } from '../../../lib/core/addon/utils/client-count-utils';
+import type { ByMonthNewClients, TotalClients } from 'core/utils/client-count-utils';
+import type ClientsVersionHistoryModel from 'vault/vault/models/clients/version-history';
 
 interface Args {
   isSecretsSyncActivated: boolean;
