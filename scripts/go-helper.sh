@@ -11,7 +11,7 @@ check_fmt() {
   declare -a malformed_imports=()
   declare -a malformed_formatting=()
   local failed=0
-  IFS=" " read -r -a files <<<"$(tr '\n' ' ' <<<"$@")"
+  IFS=" " read -r -a files <<< "$(tr '\n' ' ' <<< "$@")"
   if [ -n "${files+set}" ] && [[ "${files[0]}" != "" ]]; then
     echo "--> Checking changed files..."
     for file in "${files[@]}"; do
@@ -20,7 +20,7 @@ check_fmt() {
         continue
       fi
 
-      if echo "$file" | grep -v pb.go | grep -v vendor >/dev/null; then
+      if echo "$file" | grep -v pb.go | grep -v vendor > /dev/null; then
         local output
         if ! output=$(gosimports -d "$file") || [ "$output" != "" ]; then
           echo "----> ${file} ✖ (gosimports)"
@@ -42,8 +42,8 @@ check_fmt() {
     done
   else
     echo "--> Checking all files..."
-    IFS=" " read -r -a malformed_imports <<<"$(find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gosimports -l | tr '\n' ' ')"
-    IFS=" " read -r -a malformed_formatting <<<"$(find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -l)"
+    IFS=" " read -r -a malformed_imports <<< "$(find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gosimports -l | tr '\n' ' ')"
+    IFS=" " read -r -a malformed_formatting <<< "$(find . -name '*.go' | grep -v pb.go | grep -v vendor | xargs gofumpt -l)"
   fi
 
   if [ "${#malformed_imports[@]}" -ne 0 ] && [ -n "${malformed_imports[0]}" ]; then
@@ -84,8 +84,8 @@ check_version() {
   else
     GO_VERSION=$($GO_CMD version | grep -o 'go[0-9]\+\.[0-9]\+\(\.[0-9]\+\)\?' | tr -d 'go')
 
-    IFS="." read -r -a GO_VERSION_ARR <<<"$GO_VERSION"
-    IFS="." read -r -a GO_VERSION_REQ <<<"$GO_VERSION_MIN"
+    IFS="." read -r -a GO_VERSION_ARR <<< "$GO_VERSION"
+    IFS="." read -r -a GO_VERSION_REQ <<< "$GO_VERSION_MIN"
 
     if [[ ${GO_VERSION_ARR[0]} -lt ${GO_VERSION_REQ[0]} ||
       (${GO_VERSION_ARR[0]} -eq ${GO_VERSION_REQ[0]} &&
@@ -104,9 +104,10 @@ check_version() {
 mod_download() {
   while IFS= read -r -d '' mod; do
     echo "==> Downloading Go modules for $mod to $(go env GOMODCACHE)..."
-    pushd "$(dirname "$mod")" >/dev/null || (echo "failed to push into module dir" && exit 1)
+    pushd "$(dirname "$mod")" > /dev/null || (echo "failed to push into module dir" && exit 1)
     GOOS=linux GOARCH=amd64 GOPRIVATE=github.com/hashicorp go mod download -x
-    popd >/dev/null || (echo "failed to pop out of module dir" && exit 1)
+    GOOS=linux GOARCH=amd64 GOPRIVATE=github.com/hashicorp go list ./...
+    popd > /dev/null || (echo "failed to pop out of module dir" && exit 1)
   done < <(find . -type f -name go.mod -not -path "./tools/pipeline/*" -print0)
 }
 
@@ -114,30 +115,30 @@ mod_download() {
 mod_tidy() {
   while IFS= read -r -d '' mod; do
     echo "==> Tidying $mod..."
-    pushd "$(dirname "$mod")" >/dev/null || (echo "failed to push into module dir" && exit 1)
+    pushd "$(dirname "$mod")" > /dev/null || (echo "failed to push into module dir" && exit 1)
     GOOS=linux GOARCH=amd64 GOPRIVATE=github.com/hashicorp go mod tidy
-    popd >/dev/null || (echo "failed to pop out of module dir" && exit 1)
+    popd > /dev/null || (echo "failed to pop out of module dir" && exit 1)
   done < <(find . -type f -name go.mod -print0)
 }
 
 main() {
   case $1 in
-  mod-download)
-    mod_download
-    ;;
-  mod-tidy)
-    mod_tidy
-    ;;
-  check-fmt)
-    check_fmt "${@:2}"
-    ;;
-  check-version)
-    check_version "$2"
-    ;;
-  *)
-    echo "unknown sub-command" >&2
-    exit 1
-    ;;
+    mod-download)
+      mod_download
+      ;;
+    mod-tidy)
+      mod_tidy
+      ;;
+    check-fmt)
+      check_fmt "${@:2}"
+      ;;
+    check-version)
+      check_version "$2"
+      ;;
+    *)
+      echo "unknown sub-command" >&2
+      exit 1
+      ;;
   esac
 }
 
