@@ -113,15 +113,15 @@ module('Acceptance | auth login form', function (hooks) {
 
     test('it renders preferred mount view if "with" query param is a mount path with listing_visibility="unauth"', async function (assert) {
       await visit('/vault/auth?with=my-oidc%2F');
-      await waitFor(AUTH_FORM.preferredMethod('oidc'));
-      assert.dom(AUTH_FORM.preferredMethod('oidc')).hasText('OIDC', 'it renders mount type');
+      await waitFor(AUTH_FORM.tabBtn('oidc'));
+      assert.dom(AUTH_FORM.authForm('oidc')).exists();
+      assert.dom(AUTH_FORM.tabBtn('oidc')).exists();
       assert.dom(GENERAL.inputByAttr('role')).exists();
       assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
       assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
       assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders');
 
-      assert.dom(AUTH_FORM.tabBtn('oidc')).doesNotExist('tab does not render');
-      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist();
+      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
       assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
       assert.dom(GENERAL.backButton).doesNotExist();
     });
@@ -132,7 +132,9 @@ module('Acceptance | auth login form', function (hooks) {
       assert
         .dom(AUTH_FORM.tabBtn('oidc'))
         .hasAttribute('aria-selected', 'true', 'it selects tab matching query param');
-      assert.dom(AUTH_FORM.preferredMethod('oidc')).doesNotExist('it does not render single mount view');
+      assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
+      assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
+      assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders');
       assert.dom(GENERAL.backButton).doesNotExist();
     });
 
