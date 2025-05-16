@@ -159,7 +159,7 @@ the operations allowed on plugin data.
 
    ```shell-session
    $ vault policy write kv-access-policy - << EOF
-   path "shared/data/kv/creds/*" {
+   path "shared/data/kv/creds" {
       capabilities = ["read", "create", "update", "delete"]
    }
    EOF
@@ -187,7 +187,7 @@ the operations allowed on plugin data.
 1. Try retrieving the secrets stored on the `kv/creds` path:
 
    ```shell-session
-   $ vault kv get kv/creds
+   $ vault kv get -mount=shared kv/creds
    ```
 
    The command retrieves the secrets stored on the `kv/creds` path.
@@ -195,7 +195,7 @@ the operations allowed on plugin data.
 1. Try retrieving the secrets stored on the `kv/api-keys` path:
 
    ```shell-session
-   $ vault kv get kv/api-keys
+   $ vault kv get -mount=shared kv/api-keys
    ```
 
    The second command fails because the policy for `opsuser` does
