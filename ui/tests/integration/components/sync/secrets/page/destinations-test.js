@@ -101,7 +101,7 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
 
   test('it should render empty state when there are no filtered results', async function (assert) {
     this.destinations = [];
-    this.typeFilter = 'foo';
+    this.typeFilter = 'aws-sm';
     this.nameFilter = 'bar';
 
     await this.renderComponent();
@@ -109,14 +109,17 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
     assert
       .dom(emptyStateTitle)
       .hasText(
-        'There are no foo destinations matching "bar".',
+        'There are no AWS Secrets Manager destinations matching "bar".',
         'Renders correct empty state when both type and name filters are defined'
       );
 
     this.set('nameFilter', undefined);
     assert
       .dom(emptyStateTitle)
-      .hasText('There are no foo destinations.', 'Renders correct empty state when type filter is defined');
+      .hasText(
+        'There are no AWS Secrets Manager destinations.',
+        'Renders correct empty state when type filter is defined'
+      );
 
     this.setProperties({
       typeFilter: undefined,

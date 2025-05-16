@@ -25,6 +25,7 @@ export function JwtLoginRequestFromJSONTyped(json, ignoreDiscriminator) {
         return json;
     }
     return {
+        'distributedClaimAccessToken': json['distributed_claim_access_token'] == null ? undefined : json['distributed_claim_access_token'],
         'jwt': json['jwt'] == null ? undefined : json['jwt'],
         'role': json['role'] == null ? undefined : json['role'],
     };
@@ -37,6 +38,7 @@ export function JwtLoginRequestToJSONTyped(value, ignoreDiscriminator = false) {
         return value;
     }
     return {
+        'distributed_claim_access_token': value['distributedClaimAccessToken'],
         'jwt': value['jwt'],
         'role': value['role'],
     };

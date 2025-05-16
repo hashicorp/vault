@@ -9,6 +9,7 @@ import { setupApplicationTest } from 'vault/tests/helpers';
 import { login, loginMethod } from 'vault/tests/helpers/auth/auth-helpers';
 import { createPolicyCmd, deleteAuthCmd, mountAuthCmd, runCmd } from '../helpers/commands';
 import { v4 as uuidv4 } from 'uuid';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SUCCESS_MESSAGE = 'Successfully reset password';
 
@@ -34,7 +35,7 @@ module('Acceptance | reset password', function (hooks) {
     await login();
     await settled();
 
-    await click('[data-test-user-menu-trigger]');
+    await click(GENERAL.testButton('user-menu-trigger'));
     assert.dom('[data-test-user-menu-item="reset-password"]').doesNotExist();
   });
 
@@ -51,7 +52,7 @@ module('Acceptance | reset password', function (hooks) {
       { authType: 'userpass', toggleOptions: true }
     );
 
-    await click('[data-test-user-menu-trigger]');
+    await click(GENERAL.testButton('user-menu-trigger'));
     await click('[data-test-user-menu-item="reset-password"]');
 
     assert.strictEqual(currentURL(), '/vault/access/reset-password', 'links to password reset');
