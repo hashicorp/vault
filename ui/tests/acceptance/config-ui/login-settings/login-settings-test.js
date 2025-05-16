@@ -6,37 +6,93 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { visit, currentURL } from '@ember/test-helpers';
+import { click, visit, currentRouteName } from '@ember/test-helpers';
+import syncScenario from 'vault/mirage/scenarios/sync';
+import syncHandlers from 'vault/mirage/handlers/sync';
+import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import sinon from 'sinon';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | config-ui/login-settings', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  test('Login settings index page', async function (assert) {
-    assert.expect(1);
-
-    // Mock API response
-    this.server.get('/v1/sys/config/ui/login/default-auth', () => {
-      return {
-        data: {
-          key_info: 'key_info',
-          keys: ['key1', 'key2'],
+  hooks.beforeEach(function () {
+    syncScenario(this.server);
+    syncHandlers(this.server);
+    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
+    const listPayload = {
+      keys: ['ns1', 'ns2'],
+      keyInfo: {
+        ns1: {
+          DisableInheritance: true,
+          Name: 'ns1',
+          Namespace: 'root',
         },
-      };
-    });
+        ns2: {
+          DisableInheritance: true,
+          Name: 'ns2',
+          Namespace: 'root',
+        },
+      },
+    };
 
-    // Visit the login settings index page
-    await visit('/login-settings');
+    const rulePayload = {
+      data: {
+        backup_auth_types: ['okta', 'userpass'],
+        default_auth_type: 'ldap',
+        disable_inheritance: true,
+        namespace: 'root/',
+      },
+    };
 
-    // Check if the page is rendered correctly
-    assert.strictEqual(currentURL(), '/login-settings', 'Navigated to login settings index page');
+    const api = this.owner.lookup('service:api');
+    this.ruleListStub = sinon.stub(api.sys, 'uiLoginDefaultAuthList').resolves(listPayload);
+    this.singleRuleStub = sinon.stub(api.sys, 'uiLoginDefaultAuthReadConfiguration').resolves(rulePayload);
+
+    return login();
   });
 
-  // keep a render test
+  test('fetched login rule list renders', async function (assert) {
+    // Visit the login settings list index page
+    await visit('vault/config-ui/login-settings');
 
-  // fetched login rules list should display on index page
+    // verify fetched rules are rendered in list
+    assert.dom('.linked-block-item').exists({ count: 2 });
+  });
 
-  // clicking a rule should navigate to the details page (verify route & render)
+  test('delete rule from list view', async function (assert) {
+    // Visit the login settings list index page
+    await visit('vault/config-ui/login-settings');
 
-  // from login list index page, clicking delete should have a popup modal, should be removed from list on confirm
+    await click(GENERAL.menuTrigger);
+    await click(GENERAL.menuItem('delete-rule'));
+    await click(GENERAL.confirmButton);
+
+    // verify success message from deletion
+    assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted rule ns1.');
+  });
+
+  test('fetched individual rule renders', async function (assert) {
+    // visit individual rule page
+    await visit('vault/config-ui/login-settings/ns1');
+    assert.dom('.info-table-row').exists({ count: 5 });
+  });
+
+  test('delete rule from rule details page', async function (assert) {
+    // visit individual rule page
+    await visit('vault/config-ui/login-settings/ns1');
+
+    // click delete button & confirm from modal
+    await click('[data-test-rule-delete]');
+    await click(GENERAL.confirmButton);
+
+    // verify that user is redirected to the list page after deletion
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.config-ui.login-settings.index',
+      'goes to login rule list page'
+    );
+  });
 });
