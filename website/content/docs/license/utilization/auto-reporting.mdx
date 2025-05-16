@@ -198,7 +198,7 @@ variable setting will take precedence.
 
 As of 1.20.0, clusters now report the `development_cluster` metadata field, which
 indicates whether the cluster is used for development (non-production) purposes. By default, the field is set to `false`,
-indicating the cluster is running in a production environment. Setting the value is done via HCL configuration by adding
+indicating the cluster is running in a production environment. Changing the value is done via HCL configuration by adding
 the `development_cluster` field to the `license` parameter within the `reporting` stanza.
 
 ```hcl
