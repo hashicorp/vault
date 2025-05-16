@@ -3,6 +3,34 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 1.19.4
+### May 16, 2025
+
+**Enterprise LTS:** Vault Enterprise 1.19 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+CHANGES:
+
+* Update vault-plugin-auth-cf to v0.20.1 [[GH-30586](https://github.com/hashicorp/vault/pull/30586)]
+* auth/azure: Update plugin to v0.20.4 [[GH-30543](https://github.com/hashicorp/vault/pull/30543)]
+* core: Bump Go version to 1.24.3.
+
+IMPROVEMENTS:
+
+* Namespaces (enterprise): allow a root token to relock a namespace
+* core (enterprise): Updated code and documentation to support FIPS 140-3 compliant algorithms.
+* core (enterprise): update to FIPS 140-3 cryptographic module in the FIPS builds.
+* core: Updated code and documentation to support FIPS 140-3 compliant algorithms. [[GH-30576](https://github.com/hashicorp/vault/pull/30576)]
+* core: support for X25519MLKEM768 (post quantum key agreement) in the Go TLS stack. [[GH-30603](https://github.com/hashicorp/vault/pull/30603)]
+* ui: Replaces all instances of the deprecated event.keyCode with event.key [[GH-30493](https://github.com/hashicorp/vault/pull/30493)]
+
+BUG FIXES:
+
+* core (enterprise): fix a bug where plugin automated root rotations would stop after seal/unseal operations
+* plugins (enterprise): Fix an issue where Enterprise plugins can't run on a standby node
+when it becomes active because standby nodes don't extract the artifact when the plugin
+is registered. Remove extracting from Vault and require the operator to place
+the extracted artifact in the plugin directory before registration.
+
 ## 1.19.3
 ### April 30, 2025
 
