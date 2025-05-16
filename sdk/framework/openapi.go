@@ -116,6 +116,7 @@ type OASPathItem struct {
 
 	Get    *OASOperation `json:"get,omitempty"`
 	Post   *OASOperation `json:"post,omitempty"`
+	Patch  *OASOperation `json:"patch,omitempty"`
 	Delete *OASOperation `json:"delete,omitempty"`
 }
 
@@ -354,9 +355,11 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 			op.OperationID = operationID
 
 			switch opType {
-			// For the operation types which map to POST/PUT methods, and so allow for request body parameters,
+			// For the operation types which map to POST/PUT/PATCH methods, and so allow for request body parameters,
 			// prepare the request body definition
 			case logical.CreateOperation:
+				fallthrough
+			case logical.PatchOperation:
 				fallthrough
 			case logical.UpdateOperation:
 				s := &OASSchema{
@@ -377,7 +380,7 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 
 				// Contrary to what one might guess, fields marked with "Query: true" are only query fields when the
 				// request method is one which does not allow for a request body - they are still body fields when
-				// dealing with a POST/PUT request.
+				// dealing with a POST/PUT/PATCH request.
 				for name, field := range queryFields {
 					addFieldToOASSchema(s, name, field)
 				}
@@ -571,6 +574,8 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 				pi.Delete = op
 			case logical.ListOperation:
 				listOperation = op
+			case logical.PatchOperation:
+				pi.Patch = op
 			}
 		}
 
@@ -579,13 +584,14 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 		// the two following blocks of code (non-list, and list) write an OpenAPI path to the output document, then the
 		// first one will definitely not have a trailing slash.
 		originalPathHasTrailingSlash := strings.HasSuffix(path, "/")
-		if originalPathHasTrailingSlash && (pi.Get != nil || pi.Post != nil || pi.Delete != nil) {
+		if originalPathHasTrailingSlash && (pi.Get != nil || pi.Post != nil || pi.Delete != nil || pi.Patch != nil) {
 			backend.Logger().Warn(
 				"OpenAPI spec generation: discarding impossible-to-invoke non-list operations from path with "+
 					"required trailing slash; this is a bug in the backend code", "path", path)
 			pi.Get = nil
 			pi.Post = nil
 			pi.Delete = nil
+			pi.Patch = nil
 		}
 
 		// Write the regular, non-list, OpenAPI path to the OpenAPI document, UNLESS we generated a ListOperation, and
@@ -597,7 +603,7 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 		// to provide documentation to a human that an endpoint exists, even if it has no invokable OpenAPI operations.
 		// Examples of this include kv-v2's ".*" endpoint (regex cannot be translated to OpenAPI parameters), and the
 		// auth/oci/login endpoint (implements ResolveRoleOperation only, only callable from inside Vault).
-		if listOperation == nil || pi.Get != nil || pi.Post != nil || pi.Delete != nil {
+		if listOperation == nil || pi.Get != nil || pi.Post != nil || pi.Delete != nil || pi.Patch != nil {
 			openAPIPath := "/" + path
 			if doc.Paths[openAPIPath] != nil {
 				backend.Logger().Warn(
@@ -1222,7 +1228,7 @@ func (d *OASDocument) CreateOperationIDs(context string) {
 
 	for _, path := range paths {
 		pi := d.Paths[path]
-		for _, method := range []string{"get", "post", "delete"} {
+		for _, method := range []string{"get", "post", "delete", "patch"} {
 			var oasOperation *OASOperation
 			switch method {
 			case "get":
@@ -1231,6 +1237,8 @@ func (d *OASDocument) CreateOperationIDs(context string) {
 				oasOperation = pi.Post
 			case "delete":
 				oasOperation = pi.Delete
+			case "patch":
+				oasOperation = pi.Patch
 			}
 
 			if oasOperation == nil {
