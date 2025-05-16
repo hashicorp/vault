@@ -17,7 +17,6 @@ CHANGES:
 IMPROVEMENTS:
 
 * Namespaces (enterprise): allow a root token to relock a namespace
-* core (enterprise): Updated code and documentation to support FIPS 140-3 compliant algorithms.
 * core (enterprise): update to FIPS 140-3 cryptographic module in the FIPS builds.
 * core: Updated code and documentation to support FIPS 140-3 compliant algorithms. [[GH-30576](https://github.com/hashicorp/vault/pull/30576)]
 * core: support for X25519MLKEM768 (post quantum key agreement) in the Go TLS stack. [[GH-30603](https://github.com/hashicorp/vault/pull/30603)]
