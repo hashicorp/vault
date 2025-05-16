@@ -8,7 +8,7 @@ import { service } from '@ember/service';
 
 export default class LoginSettingsRuleDetailsRoute extends Route {
   @service('app-router') router;
-  @service store;
+  @service api;
 
   beforeModel() {
     const { name } = this.paramsFor('login-settings.rule');
@@ -20,10 +20,9 @@ export default class LoginSettingsRuleDetailsRoute extends Route {
   async model() {
     const { name } = this.paramsFor('login-settings.rule');
 
-    const adapter = this.store.adapterFor('application');
-    const rule = await adapter.ajax(`/v1/sys/config/ui/login/default-auth/${encodeURI(name)}`, 'GET');
+    const rule = await this.api.sys.uiLoginDefaultAuthReadConfiguration(name);
 
-    return { rule: rule.data };
+    return { rule: { name, ...rule.data } };
   }
 
   setupController(controller, resolvedModel) {

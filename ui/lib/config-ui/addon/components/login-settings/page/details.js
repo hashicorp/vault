@@ -26,7 +26,7 @@ export default class LoginSettingsRuleDetails extends Component {
   @service capabilities;
   @service flashMessages;
   @service('app-router') router;
-  @service store;
+  @service api;
 
   @tracked showConfirmModal = false;
 
@@ -35,9 +35,8 @@ export default class LoginSettingsRuleDetails extends Component {
     const { rule } = this.args;
 
     try {
-      const adapter = this.store.adapterFor('application');
+      await this.api.sys.uiLoginDefaultAuthDeleteConfiguration(rule.name);
 
-      await adapter.ajax(`/v1/sys/config/ui/login/default-auth/${encodeURI(rule.name)}`, 'DELETE');
       this.flashMessages.success(`Successfully deleted rule ${rule.name}.`);
 
       this.router.transitionTo('vault.cluster.config-ui.login-settings.index');

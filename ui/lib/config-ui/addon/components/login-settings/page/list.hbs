@@ -20,9 +20,9 @@
       <div>
         <div class="is-grid align-items-center linked-block-title">
           <Hds::Icon @name="user-check" @size="24" />
-          <div class="has-text-weight-semibold has-left-margin-xs" data-test-rule-name={{rule.id}}>{{rule.id}}</div>
+          <div class="has-text-weight-semibold has-left-margin-xs" data-test-rule-name={{rule.Name}}>{{rule.Name}}</div>
         </div>
-        <div class="has-top-margin-m" data-test-rule-path={{rule.namespace}}>{{rule.namespace}}</div>
+        <div class="has-top-margin-m" data-test-rule-path={{rule.Namespace}}>{{rule.Namespace}}</div>
       </div>
       <div class="linked-block-popup-menu">
         <Hds::Dropdown @isInline={{true}} as |dd|>
@@ -32,7 +32,7 @@
             @text="login rules menu"
             data-test-popup-menu-trigger
           />
-          <dd.Interactive @route="login-settings.rule.details" @model={{rule.id}} data-test-popup-menu="view-rule">
+          <dd.Interactive @route="login-settings.rule.details" @model={{rule.Name}} data-test-popup-menu="view-rule">
             View
           </dd.Interactive>
           {{#if (has-capability this.capabilities "delete" pathKey="customLogin" params=rule)}}
