@@ -602,6 +602,11 @@ quality "vault_secrets_kv_write" {
   description = "Vault kv secrets engine data is writable"
 }
 
+
+quality "vault_secret_engine_config_update" {
+  description = "The Vault secrets engine config is updated"
+}
+
 quality "vault_service_restart" {
   description = "Vault restarts with existing configuration"
 }
