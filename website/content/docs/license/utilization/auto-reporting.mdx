@@ -194,6 +194,46 @@ isn’t trying to send reports.
 If your configuration file and environment variable differ, the environment
 variable setting will take precedence.
 
+## Development Cluster Setting
+
+As of 1.20.0, clusters now report the `development_cluster` metadata field, which
+indicates whether the cluster is used for development (non-production) purposes. By default, the field is set to `false`,
+indicating the cluster is running in a production environment. Setting the value is done via HCL configuration by adding
+the `development_cluster` field to the `license` parameter within the `reporting` stanza.
+
+```hcl
+reporting {
+  license {
+    development_cluster = true
+  }
+}
+```
+
+#### Replication Considerations
+
+The `development_cluster` setting cannot differ across replicated clusters.
+In [performance replication](/vault/docs/enterprise/replication#performance-replication), secondary clusters inherit the
+`development_cluster` value from the primary cluster, regardless of their own HCL configuration. If the secondary cluster
+is promoted to a primary, it will begin to report its own `development_cluster` value determined by its HCL configuration.
+The reverse is also true, if the primary cluster is demoted to a secondary, it will report the `development_cluster`
+value of its new primary.
+
+[Disaster recovery](/vault/docs/enterprise/replication#disaster-recovery-dr-replication) secondaries do not send reports.
+However, if promoted to primary during failover, they will report their own `development_cluster` value based on their HCL configuration.
+
+<Warning>
+
+All clusters in a replication group must have the same `development_cluster` setting in their HCL configuration.
+In the event of a promotion or failover, the new primary cluster's HCL configuration will determine the value reported
+by all clusters in the replication group. Inconsistent configurations between clusters can lead to changes to the
+reported `development_cluster` value when the primary cluster changes.
+
+Within each cluster, each node must have the same `development_cluster` setting in its configuration to be consistent.
+In the event of leadership change, nodes will use its server configuration to determine the value to report.
+Inconsistent configuration between nodes will change the `development_cluster` setting reported upon active unseal.
+
+</Warning>
+
 ## Example payloads
 
 HashiCorp collects the following utilization data as JSON payloads:
@@ -240,6 +280,7 @@ HashiCorp collects the following utilization data as JSON payloads:
 
    - `cluster_id` - The cluster UUID as shown by `vault status` on the reporting
      cluster
+   - `development_cluster` - Whether the cluster is operating as a development (non-production) cluster.
 
 <CodeBlockConfig hideClipboard>
 
@@ -287,7 +328,8 @@ HashiCorp collects the following utilization data as JSON payloads:
   "metadata": {
     "vault": {
       "billing_start": "2023-03-01T00:00:00Z",
-      "cluster_id": "a8d95acc-ec0a-6087-d7f6-4f054ab2e7fd"
+      "cluster_id": "a8d95acc-ec0a-6087-d7f6-4f054ab2e7fd",
+      "development_cluster": "false",
     }
   }
 }
