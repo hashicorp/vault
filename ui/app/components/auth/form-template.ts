@@ -91,8 +91,6 @@ enum FormView {
 }
 
 export default class AuthFormTemplate extends Component<Args> {
-  view = FormView;
-
   @service declare readonly auth: AuthService;
   @service declare readonly flags: FlagsService;
   @service declare readonly store: Store;
@@ -104,6 +102,7 @@ export default class AuthFormTemplate extends Component<Args> {
   @tracked selectedAuth = ''; // determines which form renders
   @tracked errorMessage = '';
 
+  alternateView: string | null;
   backupMethodTabs: UnauthMountsByType | null;
   namespaceInput = '';
   supportedAuthTypes: string[];
@@ -111,41 +110,45 @@ export default class AuthFormTemplate extends Component<Args> {
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
+    this.alternateView = this.setAlternateView();
     this.backupMethodTabs = this.setBackupTabs();
     this.namespaceInput = this.setNamespaceInput();
     this.supportedAuthTypes = supportedTypes(this.version.isEnterprise);
     this.visibleMountTypes = this.setVisibleMountTypes();
   }
 
-  get alternateView() {
-    const { directLinkData, loginSettings } = this.args;
+  get tabData() {
+    const { directLinkData } = this.args;
+    const defaultMounts = this.hasVisibleMounts() ? this.args.visibleMountsByType[this.selectedAuth] : [];
 
-    // Direct links override login settings so check first
-    if (directLinkData) {
-      return this.hasVisibleMounts() ? this.view.DROPDOWN : null;
+    switch (this.currentFormView) {
+      case FormView.DIRECT_LINK:
+        // URL contains a "with" query param that references a mount with listing_visibility="unauth"
+        // Treat it as a "preferred" mount and hide all other tabs
+        return { [directLinkData!.type]: [directLinkData!] };
+      case FormView.LOGIN_SETTINGS_DEFAULT:
+        return { [this.selectedAuth]: defaultMounts };
+      case FormView.LOGIN_SETTINGS_TABS:
+        return this.backupMethodTabs;
+      case FormView.TABS:
+        return this.args.visibleMountsByType;
+      default:
+        // if none of the above, then the dropdown is rendering
+        return null;
     }
-
-    if (loginSettings) {
-      const hasBackups = !!loginSettings?.backupTypes;
-      const hasDefault = !!loginSettings?.defaultType;
-      // Both default and backups must be set for an alternate view to exist
-      return hasBackups && hasDefault ? this.view.LOGIN_SETTINGS_TABS : null;
-    }
-
-    return this.hasVisibleMounts() ? this.view.DROPDOWN : null;
   }
 
-  get currentFormView() {
-    if (this.showAlternateLoginView && this.alternateView) return this.alternateView;
+  get currentFormView(): FormView {
+    if (this.showAlternateLoginView && this.alternateView) return this.alternateView as FormView;
 
-    if (this.isDirectLink()) return this.view.DIRECT_LINK;
+    if (this.isDirectLink()) return FormView.DIRECT_LINK;
 
     // Direct link overrides login settings so these checks come after
-    if (this.hasLoginSettingsDefault()) return this.view.LOGIN_SETTINGS_DEFAULT;
-    if (this.hasLoginSettingsTabs()) return this.view.LOGIN_SETTINGS_TABS;
-    if (this.hasVisibleMounts()) return this.view.TABS;
+    if (this.hasLoginSettingsDefault()) return FormView.LOGIN_SETTINGS_DEFAULT;
+    if (this.hasLoginSettingsTabs()) return FormView.LOGIN_SETTINGS_TABS;
+    if (this.hasVisibleMounts()) return FormView.TABS;
 
-    return this.view.DROPDOWN;
+    return FormView.DROPDOWN;
   }
 
   get firstTab() {
@@ -170,10 +173,10 @@ export default class AuthFormTemplate extends Component<Args> {
     if (this.selectedAuth === 'token') return true;
 
     switch (this.currentFormView) {
-      case this.view.DROPDOWN:
+      case FormView.DROPDOWN:
         // Always show for dropdown mode
         return false;
-      case this.view.DIRECT_LINK:
+      case FormView.DIRECT_LINK:
         // For direct links, always show advanced settings when rendering the "other" view.
         // Otherwise hide/show depending on mount visibility
         return !this.showAlternateLoginView || this.selectedAuthHasMounts;
@@ -219,7 +222,8 @@ export default class AuthFormTemplate extends Component<Args> {
   toggleView() {
     this.showAlternateLoginView = !this.showAlternateLoginView;
 
-    const isRenderingTabs = [this.view.TABS, this.view.LOGIN_SETTINGS_TABS].includes(this.currentFormView);
+    const isRenderingTabs = [(FormView.TABS, FormView.LOGIN_SETTINGS_TABS)].includes(this.currentFormView);
+
     const type = isRenderingTabs ? this.firstTab : this.determineAuthType();
     this.setAuthType(type);
   }
@@ -281,6 +285,24 @@ export default class AuthFormTemplate extends Component<Args> {
   }
 
   // Setup helpers called in constructor
+  private setAlternateView() {
+    const { directLinkData, loginSettings } = this.args;
+
+    // Direct links override login settings so check first
+    if (directLinkData) {
+      return this.hasVisibleMounts() ? FormView.DROPDOWN : null;
+    }
+
+    if (loginSettings) {
+      const hasBackups = !!loginSettings?.backupTypes;
+      const hasDefault = !!loginSettings?.defaultType;
+      // Both default and backups must be set for an alternate view to exist
+      return hasBackups && hasDefault ? FormView.LOGIN_SETTINGS_TABS : null;
+    }
+
+    return this.hasVisibleMounts() ? FormView.DROPDOWN : null;
+  }
+
   private setBackupTabs() {
     const { loginSettings, visibleMountsByType } = this.args;
 

@@ -38,40 +38,9 @@
 
         <:authSelectOptions>
           <div class="has-bottom-margin-m">
-            {{#if (eq this.currentFormView this.view.DIRECT_LINK)}}
-              {{! URL contains a "with" query param that references a mount with listing_visibility="unauth" }}
-              {{! Treat it as a "preferred" mount and "other" view renders dropdown with all methods }}
-              <Auth::MountsDisplay
-                @mounts={{array @directLinkData}}
-                @shouldRenderPath={{not-eq this.selectedAuth "token"}}
-              />
-            {{else if (eq this.currentFormView this.view.LOGIN_SETTINGS_DEFAULT)}}
-              <Hds::Text::Body
-                @tag="p"
-                @weight="semibold"
-                class="has-bottom-margin-m"
-                data-test-auth-method={{this.selectedAuth}}
-              >
-                {{auth-display-name this.selectedAuth}}
-              </Hds::Text::Body>
-              {{#let (get @visibleMountsByType this.selectedAuth) as |mounts|}}
-                {{#if mounts.length}}
-                  <Auth::MountsDisplay
-                    @hideType={{true}}
-                    @mounts={{mounts}}
-                    @shouldRenderPath={{not-eq this.selectedAuth "token"}}
-                  />
-                {{/if}}
-              {{/let}}
-            {{else if (eq this.currentFormView this.view.LOGIN_SETTINGS_TABS)}}
+            {{#if this.tabData}}
               <Auth::Tabs
-                @authTabData={{this.backupMethodTabs}}
-                @handleTabClick={{this.setAuthType}}
-                @selectedAuthMethod={{this.selectedAuth}}
-              />
-            {{else if (eq this.currentFormView this.view.TABS)}}
-              <Auth::Tabs
-                @authTabData={{@visibleMountsByType}}
+                @authTabData={{this.tabData}}
                 @handleTabClick={{this.setAuthType}}
                 @selectedAuthMethod={{this.selectedAuth}}
               />

@@ -185,7 +185,7 @@ module('Integration | Component | auth | form template', function (hooks) {
     test('it renders the mount description', async function (assert) {
       await this.renderComponent();
       await click(AUTH_FORM.tabBtn('token'));
-      assert.dom('section p').hasText('token based credentials');
+      assert.dom(AUTH_FORM.description).hasText('token based credentials');
     });
 
     test('it renders a dropdown if multiple mount paths are returned', async function (assert) {
@@ -271,14 +271,15 @@ module('Integration | Component | auth | form template', function (hooks) {
     test('it renders single mount view instead of tabs if @directLinkData data exists and includes mount data', async function (assert) {
       this.directLinkData = { path: 'my-oidc/', type: 'oidc', isVisibleMount: true };
       await this.renderComponent();
-      assert.dom(AUTH_FORM.preferredMethod('oidc')).hasText('OIDC', 'it renders mount type');
+      assert.dom(AUTH_FORM.authForm('oidc')).exists;
+      assert.dom(AUTH_FORM.tabBtn('oidc')).hasText('OIDC', 'it renders auth type tab');
+      assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
       assert.dom(GENERAL.inputByAttr('role')).exists();
       assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
       assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
       assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders');
 
-      assert.dom(AUTH_FORM.tabBtn('oidc')).doesNotExist('tab does not render');
-      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist();
+      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
       assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
       assert.dom(GENERAL.backButton).doesNotExist();
     });
@@ -294,8 +295,6 @@ module('Integration | Component | auth | form template', function (hooks) {
       assert.dom(GENERAL.inputByAttr('password')).exists();
       await click(AUTH_FORM.advancedSettings);
       assert.dom(GENERAL.inputByAttr('path')).exists();
-
-      assert.dom(AUTH_FORM.preferredMethod('ldap')).doesNotExist('single mount view does not render');
       assert.dom(AUTH_FORM.tabBtn('ldap')).doesNotExist('tab does not render');
       assert
         .dom(GENERAL.backButton)
@@ -444,7 +443,8 @@ module('Integration | Component | auth | form template', function (hooks) {
 
     test('(default+backups): it initially renders default type and toggles to view backup methods', async function (assert) {
       await this.renderComponent();
-      assert.dom(AUTH_FORM.preferredMethod('oidc')).hasText('OIDC', 'it renders default method');
+      assert.dom(AUTH_FORM.tabBtn('oidc')).hasText('OIDC', 'it renders default method');
+      assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
       assert.dom(AUTH_FORM.authForm('oidc')).exists();
       assert.dom(GENERAL.backButton).doesNotExist();
       await this.assertPathInput(assert);
@@ -463,7 +463,8 @@ module('Integration | Component | auth | form template', function (hooks) {
     test('(default only): it renders default type without backup methods', async function (assert) {
       this.loginSettings.backupTypes = null;
       await this.renderComponent();
-      assert.dom(AUTH_FORM.preferredMethod('oidc')).hasText('OIDC', 'it renders default method');
+      assert.dom(AUTH_FORM.tabBtn('oidc')).hasText('OIDC', 'it renders default method');
+      assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
       assert.dom(GENERAL.backButton).doesNotExist();
       assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist();
     });
@@ -471,7 +472,7 @@ module('Integration | Component | auth | form template', function (hooks) {
     test('(backups only): it initially renders backup types if no default is set', async function (assert) {
       this.loginSettings.defaultType = '';
       await this.renderComponent();
-      assert.dom(AUTH_FORM.preferredMethod('oidc')).doesNotExist();
+      assert.dom(AUTH_FORM.tabBtn('oidc')).doesNotExist();
       assert.dom(AUTH_FORM.tabs).exists({ count: 2 }, 'it renders 2 backup type tabs');
       assert
         .dom(AUTH_FORM.tabBtn('userpass'))
@@ -523,7 +524,8 @@ module('Integration | Component | auth | form template', function (hooks) {
 
       test('(default+backups): it hides advanced settings for both views', async function (assert) {
         await this.renderComponent();
-        assert.dom(AUTH_FORM.preferredMethod('oidc')).hasText('OIDC', 'it renders default method');
+        assert.dom(AUTH_FORM.tabBtn('oidc')).hasText('OIDC', 'it renders default method');
+        assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
         this.assertPathInput(assert, { isHidden: true, value: 'my-oidc/' });
         await click(AUTH_FORM.otherMethodsBtn);
         assert.dom(AUTH_FORM.tabs).exists({ count: 2 }, 'it renders 2 backup type tabs');
@@ -540,7 +542,8 @@ module('Integration | Component | auth | form template', function (hooks) {
       test('(default only): it hides advanced settings and renders hidden input', async function (assert) {
         this.loginSettings.backupTypes = null;
         await this.renderComponent();
-        assert.dom(AUTH_FORM.preferredMethod('oidc')).hasText('OIDC', 'it renders default method');
+        assert.dom(AUTH_FORM.tabBtn('oidc')).hasText('OIDC', 'it renders default method');
+        assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
         assert.dom(AUTH_FORM.authForm('oidc')).exists();
         this.assertPathInput(assert, { isHidden: true, value: 'my-oidc/' });
         assert.dom(GENERAL.backButton).doesNotExist();
@@ -550,7 +553,6 @@ module('Integration | Component | auth | form template', function (hooks) {
       test('(backups only): it hides advanced settings and renders hidden input', async function (assert) {
         this.loginSettings.defaultType = '';
         await this.renderComponent();
-        assert.dom(AUTH_FORM.preferredMethod('oidc')).doesNotExist();
         assert.dom(AUTH_FORM.tabs).exists({ count: 2 }, 'it renders 2 backup type tabs');
         assert
           .dom(AUTH_FORM.tabBtn('userpass'))
@@ -732,7 +734,8 @@ module('Integration | Component | auth | form template', function (hooks) {
         });
 
         const testHelper = async (assert) => {
-          assert.dom(AUTH_FORM.preferredMethod('okta')).hasText('Okta');
+          assert.dom(AUTH_FORM.tabBtn('okta')).hasText('Okta', 'it renders preferred method');
+          assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
           assert.dom(AUTH_FORM.authForm('okta'));
           assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
           assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
