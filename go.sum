@@ -666,6 +666,8 @@ github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.2.0/go.mod h1:5kakwfW5CjC9KK+Q4wjXAg+ShuIm2mBMua0ZFj2C8PE=
 github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.0.0 h1:u/LLAOFgsMv7HmNL4Qufg58y+qElGOt5qv0z1mURkRY=
 github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.0.0/go.mod h1:2e8rMJtl2+2j+HXbTBwnyGpm5Nou7KhvSfxOq8JpTag=
+github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.3.2 h1:YUUxeiOWgdAQE3pXt2H7QXzZs0q8UBjgRbl56qo8GYM=
+github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.3.2/go.mod h1:dmXQgZuiSubAecswZE+Sm8jkvEa7kQgTPVRvwL/nd0E=
 github.com/Azure/azure-storage-blob-go v0.15.0 h1:rXtgp8tN1p29GvpGgfJetavIG0V7OgcSXPpwp3tx6qk=
 github.com/Azure/azure-storage-blob-go v0.15.0/go.mod h1:vbjsVbX0dlxnRc4FFMPsS9BsJWPcne7GB7onqlPvz58=
 github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c h1:udKWzYgxTojEKWjV8V+WSxDXJ4NFATAsZjh8iIbsQIg=
@@ -1561,6 +1563,8 @@ github.com/hashicorp/raft-boltdb/v2 v2.3.0 h1:fPpQR1iGEVYjZ2OELvUHX600VAK5qmdnDE
 github.com/hashicorp/raft-boltdb/v2 v2.3.0/go.mod h1:YHukhB04ChJsLHLJEUD6vjFyLX2L3dsX3wPBZcX4tmc=
 github.com/hashicorp/raft-snapshot v1.0.4 h1:EuDuayAJPdiDmVk1ygTDnG2zDzrs0/6/yBuma1IYSow=
 github.com/hashicorp/raft-snapshot v1.0.4/go.mod h1:5sL9eUn72lH5DzsFIJ9jaysITbHksSSszImWSOTC8Ic=
+github.com/hashicorp/raft-snapshotagent v0.2.0 h1:pvcf3u5wxuVJu+rY64RlKzSJKvg7tK19BdC7aFTDINo=
+github.com/hashicorp/raft-snapshotagent v0.2.0/go.mod h1:ksndTRSGcyQWrptIPdQCYuem03x4rJ1Xy0bSR+ik8Qc=
 github.com/hashicorp/raft-wal v0.4.0 h1:oHCQLPa3gBTrfuBVHaDg2b/TVXpU0RIyeH/mU9ovk3Y=
 github.com/hashicorp/raft-wal v0.4.0/go.mod h1:A6vP5o8hGOs1LHfC1Okh9xPwWDcmb6Vvuz/QyqUXlOE=
 github.com/hashicorp/serf v0.10.1 h1:Z1H2J60yRKvfDYAOZLd2MU0ND4AH/WDz7xYHDWQsIPY=
