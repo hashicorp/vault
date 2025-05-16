@@ -27,33 +27,27 @@ export default class GenerateCredentialsTotp extends Component {
   get remainingTime() {
     const { totpCodePeriod } = this.args;
 
-    if (!totpCodePeriod) {
-      return 0; // TODO improve this
-    }
-
     return totpCodePeriod - this.elapsedTime;
   }
 
   @task({ restartable: true })
   *startTimer() {
     const { backendPath, keyName, totpCodePeriod } = this.args;
-    if (totpCodePeriod) {
-      this.generateTotpCode(backendPath, keyName);
-      while (this.elapsedTime <= totpCodePeriod) {
-        yield timeout(1000);
-        this.elapsedTime += 1;
-      }
+    this.generateTotpCode(backendPath, keyName);
+    while (this.elapsedTime <= totpCodePeriod) {
+      yield timeout(1000);
+      this.elapsedTime += 1;
+    }
 
-      if (this.elapsedTime > totpCodePeriod) {
-        this.elapsedTime = 0;
-        this.generateTotpCode(backendPath, keyName);
-        this.startTimer.perform();
-      }
+    if (this.elapsedTime > totpCodePeriod) {
+      this.elapsedTime = 0;
+      this.generateTotpCode(backendPath, keyName);
+      this.startTimer.perform();
     }
   }
 
   async generateTotpCode(backend, keyName) {
-    // TODO improvement: refreshing does not currently result in a new code
+    // refreshing will generate a new code if the period has expired.
     try {
       const totpCode = await this.store.adapterFor('totp-key').generateCode(backend, keyName);
       this.totpCode = totpCode.code;
