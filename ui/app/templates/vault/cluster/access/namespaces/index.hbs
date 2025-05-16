@@ -13,6 +13,15 @@
   </PageHeader>
 
   <Toolbar>
+    <ToolbarFilters>
+      <FilterInputExplicit
+        @query={{this.query}}
+        @placeholder="Search"
+        @handleSearch={{this.handleSearch}}
+        @handleInput={{this.handleInput}}
+        @handleKeyDown={{this.handleKeyDown}}
+      />
+    </ToolbarFilters>
     <ToolbarActions>
       <ToolbarLink @route="vault.cluster.access.namespaces.create" @type="add">
         Create namespace
@@ -20,16 +29,14 @@
     </ToolbarActions>
   </Toolbar>
 
-  <ListView @items={{this.model}} @itemNoun="namespace" @paginationRouteName="vault.cluster.access.namespaces" as |list|>
-    {{#if list.empty}}
-      <list.empty>
-        <Hds::Link::Standalone
-          @icon="learn-link"
-          @text="Secure multi-tenancy with namespaces tutorial"
-          @href={{doc-link "/vault/tutorials/enterprise/namespaces"}}
-        />
-      </list.empty>
-    {{else}}
+  <ListView
+    @items={{this.model.namespaces}}
+    @itemNoun="namespace"
+    @paginationRouteName="vault.cluster.access.namespaces"
+    as |list|
+  >
+    {{#if this.model.namespaces.length}}
+
       <ListItem as |Item|>
         <Item.content>
           {{list.item.id}}
@@ -68,6 +75,14 @@
           {{/if}}
         </Item.menu>
       </ListItem>
+    {{else}}
+      <list.empty>
+        <Hds::Link::Standalone
+          @icon="learn-link"
+          @text="Secure multi-tenancy with namespaces tutorial"
+          @href={{doc-link "/vault/tutorials/enterprise/namespaces"}}
+        />
+      </list.empty>
     {{/if}}
   </ListView>
 {{else}}
