@@ -8,6 +8,11 @@ import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
+import type { AuthResponse, AuthResponseWithMfa } from 'vault/vault/services/auth';
+import type { UnauthMountsByType, UnauthMountsResponse } from 'vault/vault/auth/form';
+import type ClusterModel from 'vault/models/cluster';
+import type CspEventService from 'vault/services/csp-event';
+
 /**
  * @module AuthPage
  * The Auth::Page is the route template for the login splash view. It renders the Auth::FormTemplate or MFA component if an
@@ -37,11 +42,23 @@ import { action } from '@ember/object';
 export const CSP_ERROR =
   "This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.";
 
-export default class AuthPage extends Component {
-  @service('csp-event') csp;
+interface Args {
+  visibleAuthMounts: UnauthMountsResponse;
+  cluster: ClusterModel;
+  onAuthSuccess: CallableFunction;
+}
+
+interface MfaAuthData {
+  mfa_requirement: object;
+  selectedAuth: string;
+  path: string;
+}
+
+export default class AuthPage extends Component<Args> {
+  @service('csp-event') declare readonly csp: CspEventService;
 
   @tracked canceledMfaAuth = '';
-  @tracked mfaAuthData;
+  @tracked mfaAuthData: MfaAuthData | null = null;
   @tracked mfaErrors = '';
 
   get visibleMountsByType() {
@@ -53,7 +70,7 @@ export default class AuthPage extends Component {
         obj[type] ??= []; // if an array doesn't already exist for that type, create it
         obj[type].push({ path, ...mountData });
         return obj;
-      }, {});
+      }, {} as UnauthMountsByType);
     }
     return null;
   }
@@ -65,8 +82,8 @@ export default class AuthPage extends Component {
   }
 
   @action
-  onAuthResponse(authResponse, { selectedAuth, path }) {
-    const { mfa_requirement } = authResponse;
+  onAuthResponse(authResponse: AuthResponse | AuthResponseWithMfa, { selectedAuth = '', path = '' }) {
+    const mfa_requirement = 'mfa_requirement' in authResponse ? authResponse.mfa_requirement : undefined;
     /*
     Checking for an mfa_requirement happens in two places.
     If doSubmit in <AuthForm> is called directly (by the <form> component) mfa is just handled here.
@@ -86,12 +103,12 @@ export default class AuthPage extends Component {
   @action
   onCancelMfa() {
     // before resetting mfaAuthData, preserve auth type
-    this.canceledMfaAuth = this.mfaAuthData.selectedAuth;
+    this.canceledMfaAuth = this.mfaAuthData?.selectedAuth ?? '';
     this.mfaAuthData = null;
   }
 
   @action
-  onMfaSuccess(authResponse) {
+  onMfaSuccess(authResponse: AuthResponse) {
     // calls authSuccess in auth.js controller
     this.args.onAuthSuccess(authResponse);
   }
