@@ -37,6 +37,7 @@ func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, config plug
 		// order to enable multiplexing on multiplexed plugins
 		c.client = proto.NewDatabaseClient(pluginClient.Conn())
 		c.versionClient = logical.NewPluginVersionClient(pluginClient.Conn())
+		c.tier = config.Tier
 
 		db = c
 	default:
