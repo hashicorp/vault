@@ -38,6 +38,16 @@ module('Acceptance | auth login form', function (hooks) {
     }
   });
 
+  test('it selects auth method if "with" query param ends in an unencoded a slash', async function (assert) {
+    await visit('/vault/auth?with=userpass/');
+    assert.dom(AUTH_FORM.selectMethod).hasValue('userpass');
+  });
+
+  test('it selects auth method if "with" query param ends in an encoded slash', async function (assert) {
+    await visit('/vault/auth?with=userpass%2F');
+    assert.dom(AUTH_FORM.selectMethod).hasValue('userpass');
+  });
+
   test('it redirects if "with" query param is not a supported auth method', async function (assert) {
     await visit('/vault/auth?with=fake');
     assert.strictEqual(currentURL(), '/vault/auth', 'invalid query param is cleared');
@@ -103,21 +113,33 @@ module('Acceptance | auth login form', function (hooks) {
 
     test('it renders preferred mount view if "with" query param is a mount path with listing_visibility="unauth"', async function (assert) {
       await visit('/vault/auth?with=my-oidc%2F');
-      await waitFor(AUTH_FORM.preferredMethod('oidc'));
-      assert.dom(AUTH_FORM.preferredMethod('oidc')).hasText('OIDC', 'it renders mount type');
+      await waitFor(AUTH_FORM.tabBtn('oidc'));
+      assert.dom(AUTH_FORM.authForm('oidc')).exists();
+      assert.dom(AUTH_FORM.tabBtn('oidc')).exists();
       assert.dom(GENERAL.inputByAttr('role')).exists();
       assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
       assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
       assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders');
 
-      assert.dom(AUTH_FORM.tabBtn('oidc')).doesNotExist('tab does not render');
-      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist();
+      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
       assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
       assert.dom(GENERAL.backButton).doesNotExist();
     });
 
     test('it selects tab if "with" query param matches a tab type', async function (assert) {
       await visit('/vault/auth?with=oidc');
+      await waitFor(AUTH_FORM.tabBtn('oidc'));
+      assert
+        .dom(AUTH_FORM.tabBtn('oidc'))
+        .hasAttribute('aria-selected', 'true', 'it selects tab matching query param');
+      assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
+      assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
+      assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders');
+      assert.dom(GENERAL.backButton).doesNotExist();
+    });
+
+    test('it selects tab if "with" query param ends in a slash and matches a tab', async function (assert) {
+      await visit('/vault/auth?with=oidc/');
       await waitFor(AUTH_FORM.tabBtn('oidc'));
       assert
         .dom(AUTH_FORM.tabBtn('oidc'))
@@ -355,9 +377,7 @@ module('Acceptance | auth login form', function (hooks) {
       await visit('/vault/auth');
 
       this.server.get('/sys/internal/ui/mounts', (_, req) => {
-        // sometimes the namespace header is "X-Vault-Namespace" and other times "x-vault-namespace"...haven't figured out why
-        const key = Object.keys(req.requestHeaders).find((k) => k.toLowerCase().includes('namespace'));
-        assert.strictEqual(req.requestHeaders[key], 'admin', `${key}: header contains namespace`);
+        assert.strictEqual(req.requestHeaders['x-vault-namespace'], 'admin', 'header contains namespace');
         req.passthrough();
       });
       await typeIn(GENERAL.inputByAttr('namespace'), 'admin');

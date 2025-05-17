@@ -13,6 +13,7 @@ const DOMAIN_STRINGS = {
   'ping.com': 'Ping',
   'okta.com': 'Okta',
   'auth0.com': 'Auth0',
+  'login.microsoftonline.com': 'Azure',
 };
 
 const PROVIDER_WITH_LOGO = {
@@ -21,6 +22,7 @@ const PROVIDER_WITH_LOGO = {
   Google: 'google',
   Okta: 'okta',
   Auth0: 'auth0',
+  Azure: 'azure',
 };
 
 export { DOMAIN_STRINGS, PROVIDER_WITH_LOGO };
