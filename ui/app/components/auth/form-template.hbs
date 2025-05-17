@@ -40,20 +40,11 @@
         <:authSelectOptions>
           <div class="has-bottom-margin-m">
             {{#if this.showCustomAuthOptions}}
-              {{#if @directLinkData.isVisibleMount}}
-                {{! URL contains a "with" query param that references a mount with listing_visibility="unauth" }}
-                {{! Treat it as a "preferred" mount and hide all other tabs }}
-                <Auth::MountsDisplay
-                  @mounts={{array @directLinkData}}
-                  @shouldRenderPath={{not-eq @selectedAuthMethod "token"}}
-                />
-              {{else}}
-                <Auth::Tabs
-                  @authTabData={{@visibleMountsByType}}
-                  @handleTabClick={{this.setAuthType}}
-                  @selectedAuthMethod={{this.selectedAuthMethod}}
-                />
-              {{/if}}
+              <Auth::Tabs
+                @authTabData={{this.tabData}}
+                @handleTabClick={{this.setAuthType}}
+                @selectedAuthMethod={{this.selectedAuthMethod}}
+              />
             {{else}}
               {{! fallback view is the dropdown with all auth methods }}
               <Hds::Form::Select::Field

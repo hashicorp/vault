@@ -183,7 +183,7 @@ module('Integration | Component | auth | form template', function (hooks) {
     test('it renders the mount description', async function (assert) {
       await this.renderComponent();
       await click(AUTH_FORM.tabBtn('token'));
-      assert.dom('section p').hasText('token based credentials');
+      assert.dom(AUTH_FORM.description).hasText('token based credentials');
     });
 
     test('it renders a dropdown if multiple mount paths are returned', async function (assert) {
@@ -261,14 +261,15 @@ module('Integration | Component | auth | form template', function (hooks) {
     test('it renders single mount view instead of tabs if @directLinkData data exists and includes mount data', async function (assert) {
       this.directLinkData = { path: 'my-oidc/', type: 'oidc', isVisibleMount: true };
       await this.renderComponent();
-      assert.dom(AUTH_FORM.preferredMethod('oidc')).hasText('OIDC', 'it renders mount type');
+      assert.dom(AUTH_FORM.authForm('oidc')).exists;
+      assert.dom(AUTH_FORM.tabBtn('oidc')).hasText('OIDC', 'it renders auth type tab');
+      assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
       assert.dom(GENERAL.inputByAttr('role')).exists();
       assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
       assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
       assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders');
 
-      assert.dom(AUTH_FORM.tabBtn('oidc')).doesNotExist('tab does not render');
-      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist();
+      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
       assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
       assert.dom(GENERAL.backButton).doesNotExist();
     });
@@ -284,8 +285,6 @@ module('Integration | Component | auth | form template', function (hooks) {
       assert.dom(GENERAL.inputByAttr('password')).exists();
       await click(AUTH_FORM.advancedSettings);
       assert.dom(GENERAL.inputByAttr('path')).exists();
-
-      assert.dom(AUTH_FORM.preferredMethod('ldap')).doesNotExist('single mount view does not render');
       assert.dom(AUTH_FORM.tabBtn('ldap')).doesNotExist('tab does not render');
       assert
         .dom(GENERAL.backButton)
