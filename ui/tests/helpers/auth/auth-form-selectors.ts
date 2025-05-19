@@ -7,7 +7,6 @@ export const AUTH_FORM = {
   selectMethod: '[data-test-select="auth type"]',
   form: '[data-test-auth-form]',
   login: '[data-test-auth-submit]',
-  preferredMethod: (method: string) => `p[data-test-auth-method="${method}"]`,
   tabs: '[data-test-auth-tab]',
   tabBtn: (method: string) => `[data-test-auth-tab="${method}"] button`, // method is all lowercased
   description: '[data-test-description]',
