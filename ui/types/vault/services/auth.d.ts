@@ -16,13 +16,15 @@ export interface AuthData {
   renewable: boolean;
   entity_id: string;
   displayName?: string;
-  mfa_requirement?: MfaRequirementApiResponse;
 }
 
 export interface AuthResponse {
   namespace: string;
   token: string; // the name of the token in local storage, not the actual token
   isRoot: boolean;
+}
+export interface AuthResponseWithMfa {
+  mfa_requirement: MfaRequirementApiResponse;
 }
 
 export default class AuthService extends Service {
