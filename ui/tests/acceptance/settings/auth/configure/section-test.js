@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { create } from 'ember-cli-page-object';
-import { fillIn, settled } from '@ember/test-helpers';
+import { fillIn, settled, findAll } from '@ember/test-helpers';
 import { v4 as uuidv4 } from 'uuid';
 
 import enablePage from 'vault/tests/pages/settings/auth/enable';
@@ -45,11 +45,11 @@ module('Acceptance | settings/auth/configure/section', function (hooks) {
     const section = 'options';
     await enablePage.enable(type, path);
     await page.visit({ path, section });
-    await fillIn('[data-test-input="description"]', 'This is Approle!');
+    await fillIn(GENERAL.inputByAttr('description'), 'This is Approle!');
     assert
-      .dom('[data-test-input="config.tokenType"]')
+      .dom(GENERAL.inputByAttr('config.tokenType'))
       .hasValue('default-service', 'as default the token type selected is default-service.');
-    await fillIn('[data-test-input="config.tokenType"]', 'batch');
+    await fillIn(GENERAL.inputByAttr('config.tokenType'), 'batch');
     await page.save();
     assert.strictEqual(
       page.flash.latestMessage,
