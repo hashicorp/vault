@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
@@ -27,14 +28,14 @@ const (
 	// WarningCurrentBillingPeriodDeprecated is a warning string that is used to indicate that the current_billing_period field, as the default start time will automatically be the billing period start date
 	WarningCurrentBillingPeriodDeprecated = "current_billing_period is deprecated; unless otherwise specified, all requests will default to the current billing period"
 
-	// WarningCurrentMonthIsAnEstimate is a warning string that is used to let the customer know that for this query, the current month's data is estimated.
-	WarningCurrentMonthIsAnEstimate = "Since this usage period includes both the current month and at least one historical month, counts returned in this usage period are an estimate. Client counts for this period will no longer be estimated at the start of the next month."
-
 	// WarningProvidedStartAndEndTimesIgnored is a warning string that is used to indicate that the provided start and end times by the user have been aligned to a billing period's start and end times
 	WarningProvidedStartAndEndTimesIgnored = "start_time and end_time parameters can only be used to specify the beginning or end of the same billing period. The values provided for these parameters are not supported and are ignored. Showing the data for the entire billing period corresponding to start_time. If start_time is not provided, the billing period is determined based on the end_time."
 
 	// WarningEndTimeAsCurrentMonthOrFutureIgnored is a warning string that is used to indicate the provided end time has been adjusted to the previous month if it was provided to be within the current month or in future date
 	WarningEndTimeAsCurrentMonthOrFutureIgnored = "end_time parameter can only be used to specify a date until the end of previous month. The value provided for this parameter was in the current month or in the future date and was therefore ignored. The response includes data until the end of the previous month."
+
+	// ErrWaitingForClientIDsToLoadToMemory is an error string that is used to indicate that the clientIDs are currently being loaded to memory which is needed to compute the actual values for new clients in the current month.
+	ErrWaitingForClientIDsToLoadToMemory = "We are gathering the most up-to-date client usage information. Please try again later."
 )
 
 type StartEndTimesWarnings struct {
@@ -239,34 +240,6 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 	return paths
 }
 
-// queryContainsEstimates calculates if the query for client counts will contain estimates.
-// A query between months N-2 and N-1 would not be an estimate, as with a query for month N.
-// But a query between N-2 and N or N-1 and N would be an estimate.
-func queryContainsEstimates(startTime time.Time, endTime time.Time) bool {
-	startTime = timeutil.EndOfMonth(startTime)
-	endTime = timeutil.EndOfMonth(endTime)
-
-	if startTime == endTime {
-		// If we're only estimating the current month, then we have no estimation
-		return false
-	}
-
-	if timeutil.IsCurrentMonth(endTime, time.Now().UTC()) {
-		// Our query includes the current month and previous months, so we have estimation
-		return true
-	}
-
-	// If the endTime is in the future, the behaviour is equivalent to when endTime is set to the current month
-	// (it includes the current month and previous months, so we have estimation)
-	endOfCurrentMonth := timeutil.EndOfMonth(time.Now().UTC())
-	if endTime.After(endOfCurrentMonth) {
-		return true
-	}
-
-	// Our query doesn't include the current month
-	return false
-}
-
 func parseStartEndTimes(d *framework.FieldData, billingStartTime time.Time) (time.Time, time.Time, error) {
 	startTime := d.Get("start_time").(time.Time)
 	endTime := d.Get("end_time").(time.Time)
@@ -358,7 +331,8 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 
 	var err error
 	var timeWarnings StartEndTimesWarnings
-	startTime, endTime, timeWarnings, err := getStartEndTime(d, b.Core.BillingStart())
+	now := time.Now()
+	startTime, endTime, timeWarnings, err := getStartEndTime(d, now, b.Core.BillingStart())
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -366,6 +340,12 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 	var limitNamespaces int
 	if limitNamespacesRaw, ok := d.GetOk("limit_namespaces"); ok {
 		limitNamespaces = limitNamespacesRaw.(int)
+	}
+
+	// if end time is in the current month and the clientIDs are still being loaded to memory, return an error
+	// this will not block on CE as endtime cannot be in the current month
+	if !a.GetClientIDsUsageInfoLoaded() && timeutil.EndOfMonth(endTime).Equal(timeutil.EndOfMonth(now.UTC())) {
+		return nil, errutil.InternalError{Err: ErrWaitingForClientIDsToLoadToMemory}
 	}
 
 	results, err := a.handleQuery(ctx, startTime, endTime, limitNamespaces)
@@ -379,9 +359,6 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 		return resp204, err
 	}
 
-	if queryContainsEstimates(startTime, endTime) {
-		warnings = append(warnings, WarningCurrentMonthIsAnEstimate)
-	}
 	if timeWarnings.EndTimeAdjustedToPastMonth {
 		warnings = append(warnings, WarningEndTimeAsCurrentMonthOrFutureIgnored)
 	}

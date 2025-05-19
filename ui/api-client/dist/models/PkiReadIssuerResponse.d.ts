@@ -34,6 +34,12 @@ export interface PkiReadIssuerResponse {
      */
     crlDistributionPoints?: Array<string>;
     /**
+     * Delta CRL Distribution Points
+     * @type {Array<string>}
+     * @memberof PkiReadIssuerResponse
+     */
+    deltaCrlDistributionPoints?: Array<string>;
+    /**
      * Whether critical extension checks should be performed when issuing certificates. (Enterprise only)
      * @type {boolean}
      * @memberof PkiReadIssuerResponse

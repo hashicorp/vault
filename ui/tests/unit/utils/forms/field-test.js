@@ -26,6 +26,6 @@ module('Unit | Utility | forms | field', function (hooks) {
   test('it should default field value', async function (assert) {
     this.options.fieldValue = undefined;
     const field = new FormField('test', 'string', this.options);
-    assert.strictEqual(field.options.fieldValue, 'data.test', 'Default field value is set correctly');
+    assert.strictEqual(field.options.fieldValue, 'test', 'Default field value is set correctly');
   });
 });

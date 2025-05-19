@@ -97,6 +97,35 @@ export type WithFormFieldsAndValidationsModel = WithFormFieldsModel & {
   validate(): ModelValidations;
 };
 
+// capabilities
+export interface Capabilities {
+  canCreate: boolean;
+  canDelete: boolean;
+  canList: boolean;
+  canPatch: boolean;
+  canRead: boolean;
+  canSudo: boolean;
+  canUpdate: boolean;
+}
+
+export interface CapabilitiesMap {
+  [key: string]: Capabilities;
+}
+
+export type CapabilityTypes =
+  | 'root'
+  | 'sudo'
+  | 'deny'
+  | 'create'
+  | 'read'
+  | 'update'
+  | 'delete'
+  | 'list'
+  | 'patch';
+export interface CapabilitiesData {
+  [key: string]: CapabilityTypes[];
+}
+
 export interface Breadcrumb {
   label: string;
   route?: string;

@@ -8,8 +8,6 @@ description: The aws auth method allows automated authentication of AWS entities
 
 @include 'x509-sha1-deprecation.mdx'
 
-@include 'aws-sha1-deprecation.mdx'
-
 The `aws` auth method provides an automated mechanism to retrieve a Vault token
 for IAM principals and AWS EC2 instances. Unlike most Vault auth methods, this
 method does not require manual first-deploying, or provisioning
@@ -749,6 +747,14 @@ then set the signature on the login endpoint:
 $ vault write auth/aws/login role=dev-role \
   pkcs7=$SIGNATURE
 ```
+
+<Note>
+
+Vault does not support X.509 certificates with SHA-1 signatures. If you use AWS
+[`/rsa2048` signature endpoint](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/verify-rsa2048.html)
+credentials, you must use the `pkcs7` login flow.
+
+</Note>
 
 For the iam auth method, generating the signed request is a non-standard
 operation. The Vault cli supports generating this for you:

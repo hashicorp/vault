@@ -57,7 +57,7 @@ scenario "smoke" {
       artifact_type   = ["package"]
     }
 
-    // PKCS#11 can only be used on ent.hsm and ent.hsm.fips1402.
+    // PKCS#11 can only be used on ent.hsm and ent.hsm.fips1403.
     exclude {
       seal    = ["pkcs11"]
       edition = [for e in matrix.edition : e if !strcontains(e, "hsm")]
@@ -737,6 +737,7 @@ scenario "smoke" {
 
   output "secrets_engines_state" {
     description = "The state of configured secrets engines"
+    sensitive   = true
     value       = step.verify_secrets_engines_create.state
   }
 

@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/license"
@@ -116,11 +117,12 @@ type Backend struct {
 	// communicate with a plugin to activate a feature.
 	ActivationFunc func(context.Context, *logical.Request) error
 
-	logger  log.Logger
-	system  logical.SystemView
-	events  logical.EventSender
-	once    sync.Once
-	pathsRe []*regexp.Regexp
+	logger       log.Logger
+	system       logical.SystemView
+	events       logical.EventSender
+	observations logical.ObservationRecorder
+	once         sync.Once
+	pathsRe      []*regexp.Regexp
 }
 
 // periodicFunc is the callback called when the RollbackManager's timer ticks.
@@ -153,6 +155,10 @@ type PatchPreprocessorFunc func(map[string]interface{}) (map[string]interface{},
 // ErrNoEvents is returned when attempting to send an event, but when the event
 // sender was not passed in during `backend.Setup()`.
 var ErrNoEvents = errors.New("no event sender configured")
+
+// ErrNoObservations is returned when attempting to record an observation, but when
+// the observation system was not passed in during `backend.Setup()`.
+var ErrNoObservations = errors.New("no observation system configured")
 
 // Initialize is the logical.Backend implementation.
 func (b *Backend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
@@ -247,13 +253,18 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		}
 	}
 
+	// We need to check SQLConnectionProducer fields separately since they are not top-level Path fields.
+	var sqlFields map[string]any
+	if req.MountType == "database" && strings.HasPrefix(req.Path, "config") {
+		sqlFields = connutil.SQLConnectionProducerFieldNames()
+	}
 	// Build up the data for the route, with the URL taking priority
 	// for the fields over the PUT data.
 	raw := make(map[string]interface{}, len(path.Fields))
 	var ignored []string
 	for k, v := range req.Data {
 		raw[k] = v
-		if !path.TakesArbitraryInput && path.Fields[k] == nil {
+		if !path.TakesArbitraryInput && path.Fields[k] == nil && sqlFields[k] == nil {
 			ignored = append(ignored, k)
 		}
 	}
@@ -427,6 +438,7 @@ func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) erro
 	b.logger = config.Logger
 	b.system = config.System
 	b.events = config.EventsSender
+	b.observations = config.ObservationRecorder
 	return nil
 }
 
@@ -763,6 +775,15 @@ func (b *Backend) SendEvent(ctx context.Context, eventType logical.EventType, ev
 		return ErrNoEvents
 	}
 	return b.events.SendEvent(ctx, eventType, event)
+}
+
+// RecordObservation is used to record observations through the plugin's observation system.
+// It returns ErrNoObservations if the observation system has not been configured or enabled.
+func (b *Backend) RecordObservation(ctx context.Context, observationType string, data map[string]interface{}) error {
+	if b.observations == nil {
+		return ErrNoObservations
+	}
+	return b.observations.RecordObservationFromPlugin(ctx, observationType, data)
 }
 
 // FieldSchema is a basic schema to describe the format of a path field.

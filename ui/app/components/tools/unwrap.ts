@@ -7,7 +7,6 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import apiErrorMessage from 'vault/utils/api-error-message';
 
 import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
@@ -47,14 +46,15 @@ export default class ToolsUnwrap extends Component {
       const resp = await this.api.sys.unwrap(data);
       this.unwrapData = (resp && resp.data) || resp.auth;
       this.unwrapDetails = {
-        'Request ID': resp.request_id,
-        'Lease ID': resp.lease_id || 'None',
+        'Request ID': resp.requestId,
+        'Lease ID': resp.leaseId || 'None',
         Renewable: resp.renewable,
-        'Lease Duration': resp.lease_duration || 'None',
+        'Lease Duration': resp.leaseDuration || 'None',
       };
       this.flashMessages.success('Unwrap was successful.');
     } catch (error) {
-      this.errorMessage = await apiErrorMessage(error);
+      const { message } = await this.api.parseError(error);
+      this.errorMessage = message;
     }
   }
 }

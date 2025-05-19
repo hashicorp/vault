@@ -17,10 +17,64 @@
 export interface UiConfigReadCustomMessageResponse {
     /**
      *
+     * @type {boolean}
+     * @memberof UiConfigReadCustomMessageResponse
+     */
+    active?: boolean;
+    /**
+     *
+     * @type {boolean}
+     * @memberof UiConfigReadCustomMessageResponse
+     */
+    authenticated?: boolean;
+    /**
+     *
+     * @type {Date}
+     * @memberof UiConfigReadCustomMessageResponse
+     */
+    endTime?: Date;
+    /**
+     *
      * @type {string}
      * @memberof UiConfigReadCustomMessageResponse
      */
     id?: string;
+    /**
+     *
+     * @type {object}
+     * @memberof UiConfigReadCustomMessageResponse
+     */
+    link?: object;
+    /**
+     *
+     * @type {string}
+     * @memberof UiConfigReadCustomMessageResponse
+     */
+    message?: string;
+    /**
+     *
+     * @type {object}
+     * @memberof UiConfigReadCustomMessageResponse
+     */
+    options?: object;
+    /**
+     *
+     * @type {Date}
+     * @memberof UiConfigReadCustomMessageResponse
+     */
+    startTime?: Date;
+    /**
+     *
+     * @type {string}
+     * @memberof UiConfigReadCustomMessageResponse
+     */
+    title?: string;
+    /**
+     *
+     * @type {boolean}
+     * @memberof UiConfigReadCustomMessageResponse
+     */
+    type?: boolean;
 }
 /**
  * Check if a given object implements the UiConfigReadCustomMessageResponse interface.

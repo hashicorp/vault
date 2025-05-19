@@ -11,7 +11,6 @@ import hbs from 'htmlbars-inline-precompile';
 import { setupEngine } from 'ember-engines/test-support';
 import Service from '@ember/service';
 import sinon from 'sinon';
-import { Promise } from 'rsvp';
 import { create } from 'ember-cli-page-object';
 import ss from 'vault/tests/pages/components/search-select';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
@@ -41,7 +40,7 @@ module('Integration | Component | path filter config list', function (hooks) {
 
   hooks.beforeEach(function () {
     this.context = { owner: this.engine }; // this.engine set by setupEngine
-    const ajaxStub = sinon.stub().usingPromise(Promise);
+    const ajaxStub = sinon.stub();
     ajaxStub.withArgs('/v1/sys/internal/ui/mounts', 'GET').resolves(MOUNTS_RESPONSE);
     ajaxStub
       .withArgs('/v1/sys/internal/ui/mounts', 'GET', { namespace: 'ns1' })

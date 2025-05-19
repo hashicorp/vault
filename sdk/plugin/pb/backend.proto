@@ -4,6 +4,7 @@
 syntax = "proto3";
 package pb;
 
+import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 import "sdk/logical/event.proto";
 import "sdk/logical/identity.proto";
@@ -68,6 +69,11 @@ message Paths {
   //
   // See note in /sdk/logical/logical.go.
   repeated string limited = 7;
+
+  // AllowSnapshotRead paths are allowed to be read from a loaded snapshot
+  //
+  // See note in /sdk/logical/logical.go
+  repeated string allow_snapshot_read = 8;
 }
 
 message Request {
@@ -156,6 +162,10 @@ message Request {
   // inspect the connection information and potentially use it for
   // authentication/protection.
   Connection connection = 20;
+
+  // RequiresSnapshotID will be present when the request is a list, read, or
+  // recover from snapshot operation
+  string requires_snapshot_id = 21;
 }
 
 message Auth {
@@ -744,4 +754,13 @@ message SendEventRequest {
 
 service Events {
   rpc SendEvent(SendEventRequest) returns (Empty);
+}
+
+message RecordObservationRequest {
+  string observation_type = 1;
+  google.protobuf.Struct data = 2;
+}
+
+service Observations {
+  rpc RecordObservation(RecordObservationRequest) returns (Empty);
 }

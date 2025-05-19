@@ -18,13 +18,14 @@ export default Controller.extend({
   auth: service(),
   router: service(),
   customMessages: service(),
-  queryParams: [{ authMethod: 'with', oidcProvider: 'o' }],
+  queryParams: [{ authMount: 'with', oidcProvider: 'o' }],
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
-  wrappedToken: alias('vaultController.wrappedToken'),
   redirectTo: alias('vaultController.redirectTo'),
   hvdManagedNamespaceRoot: alias('flagsService.hvdManagedNamespaceRoot'),
-  authMethod: '',
+
+  authMount: '',
   oidcProvider: '',
+  unwrapTokenError: '',
 
   fullNamespaceFromInput(value) {
     const strippedNs = sanitizePath(value);
@@ -39,11 +40,12 @@ export default Controller.extend({
     yield timeout(500);
     const ns = this.fullNamespaceFromInput(value);
     this.namespaceService.setNamespace(ns, true);
-    this.customMessages.fetchMessages(ns);
+    this.customMessages.fetchMessages();
     this.set('namespaceQueryParam', ns);
   }).restartable(),
 
   actions: {
+    // TODO CMB move to auth service?
     authSuccess({ isRoot, namespace }) {
       let transition;
       this.version.fetchVersion();
@@ -57,7 +59,7 @@ export default Controller.extend({
       }
       transition.followRedirects().then(() => {
         if (this.version.isEnterprise) {
-          this.customMessages.fetchMessages(namespace);
+          this.customMessages.fetchMessages();
         }
 
         if (isRoot) {
@@ -67,6 +69,12 @@ export default Controller.extend({
           );
         }
       });
+    },
+    backToLogin() {
+      // reset error
+      this.set('unwrapTokenError', '');
+      // reset query params and go back to auth route
+      this.router.replaceWith('vault.cluster.auth', { queryParams: { wrapped_token: null } });
     },
   },
 });

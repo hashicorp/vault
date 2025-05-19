@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
+	uicustommessages "github.com/hashicorp/vault/vault/ui_custom_messages"
 )
 
 func (c *Core) metricsLoop(stopCh chan struct{}) {
@@ -282,70 +283,88 @@ func (c *Core) emitMetricsActiveNode(stopCh chan struct{}) {
 	// because there's more than one TokenManager created during startup,
 	// but we only want one set of gauges.
 	metricsInit := []struct {
-		MetricName    []string
-		MetadataLabel []metrics.Label
-		CollectorFunc metricsutil.GaugeCollector
-		DisableEnvVar string
+		MetricName       []string
+		MetadataLabel    []metrics.Label
+		CollectorFunc    metricsutil.GaugeCollector
+		DisableEnvVar    string
+		IsEnterpriseOnly bool
 	}{
 		{
 			[]string{"token", "count"},
 			[]metrics.Label{{"gauge", "token_by_namespace"}},
 			c.tokenGaugeCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"token", "count", "by_policy"},
 			[]metrics.Label{{"gauge", "token_by_policy"}},
 			c.tokenGaugePolicyCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"expire", "leases", "by_expiration"},
 			[]metrics.Label{{"gauge", "leases_by_expiration"}},
 			c.leaseExpiryGaugeCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"token", "count", "by_auth"},
 			[]metrics.Label{{"gauge", "token_by_auth"}},
 			c.tokenGaugeMethodCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"token", "count", "by_ttl"},
 			[]metrics.Label{{"gauge", "token_by_ttl"}},
 			c.tokenGaugeTtlCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"secret", "kv", "count"},
 			[]metrics.Label{{"gauge", "kv_secrets_by_mountpoint"}},
 			c.kvSecretGaugeCollector,
 			"VAULT_DISABLE_KV_GAUGE",
+			false,
 		},
 		{
 			[]string{"identity", "entity", "count"},
 			[]metrics.Label{{"gauge", "identity_by_namespace"}},
 			c.entityGaugeCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"identity", "entity", "alias", "count"},
 			[]metrics.Label{{"gauge", "identity_by_mountpoint"}},
 			c.entityGaugeCollectorByMount,
 			"",
+			false,
 		},
 		{
 			[]string{"identity", "entity", "active", "partial_month"},
 			[]metrics.Label{{"gauge", "identity_active_month"}},
 			c.activeEntityGaugeCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"policy", "configured", "count"},
 			[]metrics.Label{{"gauge", "number_policies_by_type"}},
 			c.configuredPoliciesGaugeCollector,
 			"",
+			false,
+		},
+		{
+			[]string{"client", "billing_period", "activity"},
+			[]metrics.Label{{"gauge", "clients_current_billing_period"}},
+			c.clientsGaugeCollectorCurrentBillingPeriod,
+			"",
+			true,
 		},
 	}
 
@@ -361,6 +380,11 @@ func (c *Core) emitMetricsActiveNode(stopCh chan struct{}) {
 						"metric", init.MetricName)
 					continue
 				}
+			}
+
+			// Billing start date is always 0 on CE
+			if init.IsEnterpriseOnly && c.BillingStart().IsZero() {
+				continue
 			}
 
 			proc, err := c.MetricSink().NewGaugeCollectionProcess(
@@ -489,6 +513,101 @@ func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
 			}
 		}
 	}
+}
+
+// GetLocalAndReplicatedSecretMounts returns the number of replicated and local secret mounts
+// across all namespaces, but excludes the default mounts that are pre mounted onto
+// each cluster
+func (c *Core) GetLocalAndReplicatedSecretMounts() (int, int) {
+	replicated := 0
+	local := 0
+	c.mountsLock.RLock()
+	defer c.mountsLock.RUnlock()
+	for _, mount := range c.mounts.Entries {
+		if mount.Local {
+			switch mount.Type {
+			// These types are mounted onto namespaces/root by default and cannot be modified
+			case mountTypeCubbyhole, mountTypeNSCubbyhole:
+			default:
+				local += 1
+
+			}
+		} else {
+			switch mount.Type {
+			// These types are mounted onto namespaces/root by default and cannot be modified
+			case mountTypeIdentity, mountTypeCubbyhole, mountTypeSystem, mountTypeNSIdentity, mountTypeNSSystem, mountTypeNSCubbyhole:
+			default:
+				replicated += 1
+			}
+		}
+	}
+	return replicated, local
+}
+
+// GetLocalAndReplicatedAuthMounts returns the number of replicated and local auth mounts
+// across all namespaces, but excludes the default mounts that are pre mounted onto
+// each cluster
+func (c *Core) GetLocalAndReplicatedAuthMounts() (int, int) {
+	replicated := 0
+	local := 0
+	c.authLock.RLock()
+	defer c.authLock.RUnlock()
+	for _, mount := range c.auth.Entries {
+		if mount.Local {
+			local += 1
+		} else {
+			switch mount.Type {
+			// Token type is mounted onto all namespaces by default and cannot be enabled, disabled, or remounted
+			case mountTypeToken, mountTypeNSToken:
+			default:
+				replicated += 1
+
+			}
+		}
+	}
+	return replicated, local
+}
+
+// GetAuthenticatedCustomBanners returns the number of authenticated custom
+// banners across all namespaces in Vault
+func (c *Core) GetAuthenticatedCustomBanners() int {
+	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+	allNamespaces := c.collectNamespaces()
+	numAuthCustomBanners := 0
+	filter := uicustommessages.FindFilter{
+		IncludeAncestors: false,
+	}
+	filter.Active(true)
+	filter.Authenticated(true)
+	for _, ns := range allNamespaces {
+		messages, err := c.customMessageManager.FindMessages(namespace.ContextWithNamespace(ctx, ns), filter)
+		if err != nil {
+			c.logger.Error("could not find authenticated custom messages for namespace", "namespace", ns.ID, "error", err)
+		}
+		numAuthCustomBanners += len(messages)
+	}
+	return numAuthCustomBanners
+}
+
+// GetUnauthenticatedCustomBanners returns the number of unauthenticated custom
+// banners across all namespaces in Vault
+func (c *Core) GetUnauthenticatedCustomBanners() int {
+	ctx := namespace.ContextWithNamespace(context.Background(), namespace.RootNamespace)
+	allNamespaces := c.collectNamespaces()
+	numUnauthCustomBanners := 0
+	filter := uicustommessages.FindFilter{
+		IncludeAncestors: false,
+	}
+	filter.Active(true)
+	filter.Authenticated(false)
+	for _, ns := range allNamespaces {
+		messages, err := c.customMessageManager.FindMessages(namespace.ContextWithNamespace(ctx, ns), filter)
+		if err != nil {
+			c.logger.Error("could not find unauthenticated custom messages for namespace", "namespace", ns.ID, "error", err)
+		}
+		numUnauthCustomBanners += len(messages)
+	}
+	return numUnauthCustomBanners
 }
 
 // GetTotalPkiRoles returns the total roles across all PKI mounts in Vault
@@ -879,4 +998,34 @@ func (c *Core) configuredPoliciesGaugeCollector(ctx context.Context) ([]metricsu
 	}
 
 	return values, nil
+}
+
+func (c *Core) GetPolicyMetrics(ctx context.Context) map[PolicyType]int {
+	policyStore := c.policyStore
+
+	if policyStore == nil {
+		c.logger.Error("could not find policy store")
+		return map[PolicyType]int{}
+	}
+
+	ctx = namespace.RootContext(ctx)
+	namespaces := c.collectNamespaces()
+
+	policyTypes := []PolicyType{
+		PolicyTypeACL,
+		PolicyTypeRGP,
+		PolicyTypeEGP,
+	}
+
+	ret := make(map[PolicyType]int)
+	for _, pt := range policyTypes {
+		policies, err := policyStore.policiesByNamespaces(ctx, pt, namespaces)
+		if err != nil {
+			c.logger.Error("could not retrieve policies for namespaces", "policy_type", pt.String(), "error", err)
+			return map[PolicyType]int{}
+		}
+
+		ret[pt] = len(policies)
+	}
+	return ret
 }

@@ -14,6 +14,10 @@ export interface FieldOptions {
   isSingleRow?: boolean;
   keyPlaceholder?: string;
   valuePlaceholder?: string;
+  editDisabled?: boolean;
+  sensitive?: boolean;
+  noCopy?: boolean;
+  docLink?: string;
 }
 
 export default class FormField {
@@ -26,7 +30,7 @@ export default class FormField {
     this.type = type;
     this.options = {
       ...options,
-      fieldValue: options.fieldValue || `data.${key}`,
+      fieldValue: options.fieldValue || key,
     };
   }
 }

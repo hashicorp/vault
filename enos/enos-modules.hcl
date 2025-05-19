@@ -296,7 +296,7 @@ module "vault_verify_dr_replication" {
 }
 
 module "vault_verify_removed_node" {
-  source = "./modules/vault_verify_raft_removed"
+  source = "./modules/vault_verify_removed_node"
 
   vault_install_dir = var.vault_install_dir
 }
@@ -310,13 +310,15 @@ module "vault_verify_removed_node_shim" {
 module "vault_verify_secrets_engines_create" {
   source = "./modules/verify_secrets_engines/modules/create"
 
-  vault_install_dir = var.vault_install_dir
+  create_aws_secrets_engine = var.verify_aws_secrets_engine
+  vault_install_dir         = var.vault_install_dir
 }
 
 module "vault_verify_secrets_engines_read" {
   source = "./modules/verify_secrets_engines/modules/read"
 
-  vault_install_dir = var.vault_install_dir
+  verify_aws_secrets_engine = var.verify_aws_secrets_engine
+  vault_install_dir         = var.vault_install_dir
 }
 
 module "vault_verify_default_lcq" {

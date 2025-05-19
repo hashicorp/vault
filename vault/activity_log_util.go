@@ -9,6 +9,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/sdk/framework"
 )
@@ -28,7 +29,7 @@ func (a *ActivityLog) handleClientIDsInMemoryEndOfMonth(ctx context.Context, cur
 
 // getStartEndTime parses input for start and end times
 // If the end time is after the end of last month, it is adjusted to the last month
-func getStartEndTime(d *framework.FieldData, billingStartTime time.Time) (time.Time, time.Time, StartEndTimesWarnings, error) {
+func getStartEndTime(d *framework.FieldData, now time.Time, billingStartTime time.Time) (time.Time, time.Time, StartEndTimesWarnings, error) {
 	warnings := StartEndTimesWarnings{}
 	startTime, endTime, err := parseStartEndTimes(d, billingStartTime)
 	if err != nil {
@@ -36,11 +37,15 @@ func getStartEndTime(d *framework.FieldData, billingStartTime time.Time) (time.T
 	}
 	// ensure end time is adjusted to the past month if it falls within the current month
 	// or is in a future month
-	now := time.Now().UTC()
-	if !endTime.Before(timeutil.StartOfMonth(now)) {
-		endTime = timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, timeutil.StartOfMonth(now)))
+	if !endTime.Before(timeutil.StartOfMonth(now.UTC())) {
+		endTime = timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, timeutil.StartOfMonth(now.UTC())))
 		warnings.EndTimeAdjustedToPastMonth = true
 	}
 
 	return startTime, endTime, warnings, nil
+}
+
+// clientsGaugeCollectorCurrentBillingPeriod is no-op on CE
+func (c *Core) clientsGaugeCollectorCurrentBillingPeriod(ctx context.Context) ([]metricsutil.GaugeLabelValues, error) {
+	return []metricsutil.GaugeLabelValues{}, nil
 }

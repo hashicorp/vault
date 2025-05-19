@@ -77,10 +77,9 @@ jobs:
     # If you'd like to run the autopilot tests for a specific git checkout or set of source versions,
     # you can manually trigger the workflow, see the .github/workflows/run-apupgrade-tests-ent.yml file in the ENT repo.
     if: |
-      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'autopilot') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'autopilot') &&
       needs.setup.outputs.is-enterprise == 'true' &&
-      ((github.event_name == 'pull_request' && github.base_ref == 'main') ||
-      (github.event_name == 'push' && github.ref == 'refs/heads/main'))
+      (github.base_ref == 'main' || github.ref == 'refs/heads/main')
     needs: setup
     permissions:
       id-token: write
@@ -142,6 +141,7 @@ jobs:
     # Run Go tests if the vault app changed
     if: |
       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain') ||
       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline')
     name: Run Go tests
     needs: setup
@@ -162,7 +162,9 @@ jobs:
 
   test-go-testonly:
     # Run Go tests tagged with "testonly" if the vault app changed
-    if: contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app')
+    if: |
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain')
     name: Run Go tests tagged with testonly
     needs: setup
     uses: ./.github/workflows/test-go.yml
@@ -181,7 +183,12 @@ jobs:
   test-go-race:
     # Run Go test with the data race detector enabled if the vault app changed and we're out of
     # drafts mode.
-    if: contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') && needs.setup.outputs.is-draft == 'false'
+    if: |
+      needs.setup.outputs.is-draft == 'false' &&
+        (
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain')
+        )
     name: Run Go tests with data race detection
     needs: setup
     uses: ./.github/workflows/test-go.yml
@@ -208,7 +215,9 @@ jobs:
     if: |
       contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') &&
       needs.setup.outputs.is-enterprise == 'true' &&
-      (needs.setup.outputs.workflow-trigger == 'push' || contains(needs.setup.outputs.labels, 'fips'))
+        (
+          needs.setup.outputs.workflow-trigger == 'push' || contains(needs.setup.outputs.labels, 'fips')
+        )
     needs: setup
     uses: ./.github/workflows/test-go.yml
     with:
@@ -219,7 +228,7 @@ jobs:
         }
       name: fips
       go-arch: amd64
-      go-tags: '${{ needs.setup.outputs.go-tags }},deadlock,cgo,fips,fips_140_2'
+      go-tags: '${{ needs.setup.outputs.go-tags }},deadlock,cgo,fips,fips_140_3'
       runs-on: ${{ needs.setup.outputs.compute-test-go }}
       runs-on-small: ${{ needs.setup.outputs.compute-small }}
       test-timing-cache-key: go-test-timing-fips

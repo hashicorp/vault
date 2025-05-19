@@ -34,6 +34,12 @@ export interface PkiRevokeIssuerResponse {
      */
     crlDistributionPoints?: Array<string>;
     /**
+     * Delta CRL Distribution Points
+     * @type {Array<string>}
+     * @memberof PkiRevokeIssuerResponse
+     */
+    deltaCrlDistributionPoints?: Array<string>;
+    /**
      * Whether critical extension checks should be performed when issuing certificates. (Enterprise only)
      * @type {boolean}
      * @memberof PkiRevokeIssuerResponse
