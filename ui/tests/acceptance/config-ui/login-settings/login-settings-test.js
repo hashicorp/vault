@@ -68,6 +68,8 @@ module('Acceptance | config-ui/login-settings', function (hooks) {
 
     await click(GENERAL.menuTrigger);
     await click(GENERAL.menuItem('delete-rule'));
+
+    assert.dom(GENERAL.confirmationModal).exists();
     await click(GENERAL.confirmButton);
 
     // verify success message from deletion
@@ -89,7 +91,10 @@ module('Acceptance | config-ui/login-settings', function (hooks) {
     );
 
     // verify fetched rule data is rendered
-    assert.dom('.info-table-row').exists({ count: 5 });
+    assert.dom(GENERAL.infoRowLabel('Name')).exists();
+    assert.dom(GENERAL.infoRowValue('Name')).hasText('ns1');
+    assert.dom(GENERAL.infoRowLabel('Namespace')).exists();
+    assert.dom(GENERAL.infoRowValue('Namespace')).hasText('root/');
   });
 
   test('delete rule from rule details page', async function (assert) {
@@ -98,13 +103,16 @@ module('Acceptance | config-ui/login-settings', function (hooks) {
 
     // click delete button & confirm from modal
     await click('[data-test-rule-delete]');
+
+    assert.dom(GENERAL.confirmationModal).exists();
+
     await click(GENERAL.confirmButton);
 
     // verify that user is redirected to the list page after deletion
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.config-ui.login-settings.index',
-      'goes to login rule list page'
+      'goes back to login rule list page'
     );
   });
 });
