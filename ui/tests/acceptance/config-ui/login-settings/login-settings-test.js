@@ -50,6 +50,7 @@ module('Acceptance | config-ui/login-settings', function (hooks) {
     const api = this.owner.lookup('service:api');
     this.ruleListStub = sinon.stub(api.sys, 'uiLoginDefaultAuthList').resolves(listPayload);
     this.singleRuleStub = sinon.stub(api.sys, 'uiLoginDefaultAuthReadConfiguration').resolves(rulePayload);
+    this.deleteStub = sinon.stub(api.sys, 'uiLoginDefaultAuthDeleteConfiguration').resolves({});
 
     return login();
   });
