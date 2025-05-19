@@ -78,7 +78,6 @@ module('Integration | Component | secret-engine/list', function (hooks) {
       .hasClass('linked-block', `linked-block class is added to supported aws engines.`);
   });
 
-  //
   test('it filters by name and engine type', async function (assert) {
     await render(hbs`<SecretEngine::List @secretEngineModels={{this.secretEngineModels}} />`);
     // filter by type

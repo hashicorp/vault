@@ -105,8 +105,6 @@ module('Acceptance | secret-engine list view', function (hooks) {
     );
   });
 
-  // Everything below goes to the component test
-
   test('it allows navigation to a non-nested secret with pagination', async function (assert) {
     assert.expect(2);
 
