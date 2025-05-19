@@ -144,9 +144,9 @@ export const VISIBLE_MOUNTS = {
     options: {},
     type: 'oidc',
   },
-  'token/': {
-    description: 'token based credentials',
+  'ldap/': {
+    description: '',
     options: null,
-    type: 'token',
+    type: 'ldap',
   },
 };
