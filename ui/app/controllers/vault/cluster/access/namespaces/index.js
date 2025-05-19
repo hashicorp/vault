@@ -13,6 +13,9 @@ import keys from 'core/utils/keys';
  * @module ManageNamespaces
  * ManageNamespacesController is the controller for the
  * vault.cluster.access.namespaces.index route.
+ *
+ * @param {string} pageFilter - value of queryParam
+ * @param {string} page - value of queryParam
  */
 export default class ManageNamespacesController extends Controller {
   queryParams = ['pageFilter', 'page'];
@@ -20,6 +23,9 @@ export default class ManageNamespacesController extends Controller {
   @service namespace;
   @service router;
 
+  // The `query` property is used to track the filter
+  // input value seperately from updating the `pageFilter`
+  // browser query param to prevent unnecessary re-renders.
   @tracked query;
   @tracked pageFilter = '';
 
