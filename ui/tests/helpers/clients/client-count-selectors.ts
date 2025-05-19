@@ -13,6 +13,7 @@ export const CLIENT_COUNT = {
     startDiscrepancy: '[data-test-counts-start-discrepancy]',
   },
   dateRange: {
+    dropdownOption: (idx = 0) => `[data-test-date-range-billing-start="${idx}"]`,
     dateDisplay: (name: string) => (name ? `[data-test-date-range="${name}"]` : '[data-test-date-range]'),
     edit: '[data-test-date-range-edit]',
     editModal: '[data-test-date-range-edit-modal]',

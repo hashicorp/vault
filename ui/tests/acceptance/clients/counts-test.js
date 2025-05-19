@@ -30,12 +30,12 @@ module('Acceptance | clients | counts', function (hooks) {
     assert.expect(2);
     this.owner.lookup('service:version').type = 'community';
     await visit('/vault/clients/counts/overview');
-    assert.dom(GENERAL.emptyStateTitle).hasText('No start date found');
+    assert
+      .dom(GENERAL.emptyStateTitle)
+      .hasText('Input the start and end dates to view client attribution by path.');
     assert
       .dom(GENERAL.emptyStateMessage)
-      .hasText(
-        'In order to get the most from this data, please enter a start month above. Vault will calculate new clients starting from that month.'
-      );
+      .hasText('Only historical data may be queried. No data is available for the current month.');
   });
 
   test('it should redirect to counts overview route for transitions to parent', async function (assert) {
@@ -44,6 +44,7 @@ module('Acceptance | clients | counts', function (hooks) {
   });
 
   test('it should persist filter query params between child routes', async function (assert) {
+    this.owner.lookup('service:version').type = 'community';
     await visit('/vault/clients/counts/overview');
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2023-03');

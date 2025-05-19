@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix broken link to Hashicorp Vault developer site in the Web REPL help.
+```

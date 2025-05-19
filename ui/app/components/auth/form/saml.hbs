@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <form {{on "submit" this.onSubmit}} data-test-auth-form={{@authType}}>
 
@@ -19,10 +19,10 @@
       {{yield to="advancedSettings"}}
 
       <Hds::Button
-        @icon={{if this.tasksAreRunning "loading" this.icon}}
+        @icon={{if this.tasksAreRunning "loading"}}
         @isFullWidth={{true}}
         @text="Sign in with SAML provider"
-        class="has-top-margin-m has-bottom-margin-m"
+        class="has-top-margin-xl has-bottom-margin-xl"
         type="submit"
         data-test-auth-submit
       />

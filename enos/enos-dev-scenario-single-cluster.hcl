@@ -21,11 +21,11 @@ scenario "dev_single_cluster" {
     artifact = ["local", "deb", "rpm", "zip"]
     backend  = ["consul", "raft"]
     distro   = ["amzn", "leap", "rhel", "sles", "ubuntu"]
-    edition  = ["ce", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+    edition  = ["ce", "ent", "ent.fips1403", "ent.hsm", "ent.hsm.fips1403"]
     seal     = ["awskms", "pkcs11", "shamir"]
 
     exclude {
-      edition = ["ent.hsm", "ent.fips1402", "ent.hsm.fips1402"]
+      edition = ["ent.hsm", "ent.fips1403", "ent.hsm.fips1403"]
       arch    = ["arm64"]
     }
 
@@ -46,7 +46,7 @@ scenario "dev_single_cluster" {
 
     exclude {
       seal    = ["pkcs11"]
-      edition = ["ce", "ent", "ent.fips1402"]
+      edition = ["ce", "ent", "ent.fips1403"]
     }
   }
 

@@ -254,9 +254,10 @@ in the queried period. The `end_time` is the end of the final month of the queri
 period.
 
 - If the `end_date` supplied to the API is the current month, exact activity
-information will be returned for all months in the queried period, except for the
-current month. The last element in the `months` response stanza will signify the current month. Furthermore, the
-`new_clients` counts returned for the current month will be an estimate.
+information will be returned for all months in the queried period. The last element 
+in the `months` response stanza will signify the current month.
+
+@include 'counters-api-new-clients-behavior-change.mdx'
 
 ### Behavior Differences between Vault Enterprise and Vault Community ((#count-difference))
 
@@ -488,7 +489,7 @@ The following is an example of the `months` breakdown with just the current mont
 Refer to the [client count](/vault/docs/concepts/client-count) concepts page for
 more information on how clients map to these client IDs and how they are
 counted, or for more information about how the new clients for the current month
-are estimated in a billing period.
+are calculated.
 
 The response will include all child namespaces of the namespace in which the
 request was made. If some namespace has subsequently been deleted, its path will
@@ -518,6 +519,15 @@ is unknown.
   response with the current billing period information without having to
   explicitly provide a start and end time. This parameter is deprecated, as this option is now the default, so no parameter is needed to specify.
 
+@include 'counters-api-new-clients-behavior-change.mdx'
+
+<Note>
+  <EnterpriseAlert product="vault" inline />
+
+- @include 'counters-api-wait-warning.mdx'
+- @include 'counters-api-custom-contract-note.mdx'
+
+</Note>
 
 ### Sample request
 
@@ -1047,9 +1057,11 @@ this request was made.
 
 <Note>
 
-The client count may be inaccurate in the moments following a Vault
-reboot, or leadership change. The estimate will stabilize when background
+- For Vault versions prior to 1.20 and 1.20+ent, the client count may be inaccurate in the moments following a Vault
+reboot, or leadership change. The count will stabilize when background
 loading of client data has completed.
+
+- @include 'counters-api-wait-warning.mdx'
 
 </Note>
 
