@@ -16,6 +16,8 @@ import indexPage from 'vault/tests/pages/settings/auth/configure/index';
 import consolePanel from 'vault/tests/pages/components/console/ui-panel';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+
 const cli = create(consolePanel);
 
 module('Acceptance | settings/auth/configure/section', function (hooks) {
@@ -66,7 +68,8 @@ module('Acceptance | settings/auth/configure/section', function (hooks) {
       await indexPage.visit({ path });
       // aws has 4 tabs, the others will have 'Configuration' and 'Method Options' tabs
       const numTabs = type === 'aws' ? 4 : 2;
-      assert.strictEqual(page.tabs.length, numTabs, 'shows correct number of tabs');
+      const tabs = findAll(GENERAL.linkTo('auth-tab'));
+      assert.strictEqual(tabs.length, numTabs, 'shows correct number of tabs');
     });
   }
 });
