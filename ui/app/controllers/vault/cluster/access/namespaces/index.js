@@ -14,13 +14,16 @@ import keys from 'core/utils/keys';
  * ManageNamespacesController is the controller for the
  * vault.cluster.access.namespaces.index route.
  *
+ * @param {object} namespaces - list of namespaces
  * @param {string} pageFilter - value of queryParam
  * @param {string} page - value of queryParam
  */
 export default class ManageNamespacesController extends Controller {
   queryParams = ['pageFilter', 'page'];
 
-  @service namespace;
+  // Use namespaceService alias to avoid collision with namespaces
+  // input parameter from the route.
+  @service('namespace') namespaceService;
   @service router;
 
   // The `query` property is used to track the filter
@@ -32,14 +35,6 @@ export default class ManageNamespacesController extends Controller {
   constructor() {
     super(...arguments);
     this.query = this.pageFilter;
-  }
-
-  get accessibleNamespaces() {
-    return this.namespace.accessibleNamespaces;
-  }
-
-  get currentNamespace() {
-    return this.namespace.path;
   }
 
   navigate(pageFilter) {
@@ -71,7 +66,7 @@ export default class ManageNamespacesController extends Controller {
   @action
   refreshNamespaceList() {
     // fetch new namespaces for the namespace picker
-    this.namespace.findNamespacesForUser.perform();
+    this.namespaceService.findNamespacesForUser.perform();
     this.send('reload');
   }
 }

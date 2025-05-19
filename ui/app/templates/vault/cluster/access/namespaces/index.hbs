@@ -44,11 +44,14 @@
         <Item.menu>
           <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
             <dd.ToggleIcon @icon="more-horizontal" @text="More options" @hasChevron={{false}} data-test-popup-menu-trigger />
-            {{#let (concat this.currentNamespace (if this.currentNamespace "/") list.item.id) as |targetNamespace|}}
-              {{#if (includes targetNamespace this.accessibleNamespaces)}}
+            {{#let
+              (concat this.namespaceService.path (if this.namespaceService.path "/") list.item.id)
+              as |targetNamespace|
+            }}
+              {{#if (includes targetNamespace this.namespaceService.accessibleNamespaces)}}
                 <dd.Generic>
                   <NamespaceLink @targetNamespace={{targetNamespace}} @unparsed={{true}} @class="ns-dropdown-item">
-                    Switch to Namespace
+                    Switch to namespace
                   </NamespaceLink>
                 </dd.Generic>
               {{/if}}
