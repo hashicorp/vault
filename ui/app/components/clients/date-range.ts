@@ -7,17 +7,13 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { formatDateObject } from 'core/utils/client-count-utils';
+import { formatDateObject, OnChangeParams } from 'core/utils/client-count-utils';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import timestamp from 'core/utils/timestamp';
 import { format } from 'date-fns';
 import type VersionService from 'vault/services/version';
 import type { HTMLElementEvent } from 'forms';
 
-interface OnChangeParams {
-  start_time: number | undefined;
-  end_time: number | undefined;
-}
 interface Args {
   onChange: (callback: OnChangeParams) => void;
   setEditModalVisible: (visible: boolean) => void;
@@ -168,7 +164,9 @@ export default class ClientsDateRangeComponent extends Component<Args> {
     const params: OnChangeParams = {
       start_time: undefined,
       end_time: undefined,
+      month: undefined,
     };
+    // TODO SLW resetting the month should be handled by the controller instead
 
     const [year, month] = start.split('-');
     if (year && month) {

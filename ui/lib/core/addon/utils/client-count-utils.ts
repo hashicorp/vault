@@ -205,7 +205,11 @@ export const formatByNamespace = (namespaceArray: NamespaceObject[] | null): ByN
     // transform to an empty array for type consistency
     let mounts: MountClients[] | [] = [];
     if (Array.isArray(ns.mounts)) {
-      mounts = ns.mounts.map((m) => ({ label: m.mount_path, ...destructureClientCounts(m.counts) }));
+      mounts = ns.mounts.map((m) => ({
+        label: m.mount_path,
+        mount_type: m.mount_type || '',
+        ...destructureClientCounts(m.counts),
+      }));
     }
     return {
       label,
@@ -281,6 +285,7 @@ export interface ByNamespaceClients extends TotalClients {
 
 export interface MountClients extends TotalClients {
   label: string;
+  mount_type: string;
 }
 
 export interface ByMonthClients extends TotalClients {
@@ -328,7 +333,7 @@ export interface NamespaceObject {
   namespace_id: string;
   namespace_path: string;
   counts: Counts;
-  mounts: { mount_path: string; counts: Counts }[];
+  mounts: { mount_path: string; counts: Counts; mount_type: string }[];
 }
 
 type ActivityMonthStandard = {
@@ -364,4 +369,10 @@ export interface Counts {
   entity_clients: number;
   non_entity_clients: number;
   secret_syncs: number;
+}
+
+export interface OnChangeParams {
+  start_time?: number | undefined;
+  end_time?: number | undefined;
+  month?: string | undefined;
 }
