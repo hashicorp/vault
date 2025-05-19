@@ -12,11 +12,29 @@
 	        However, for accessibility, we only want to render form inputs relevant to the selected method. 
 	        By wrapping the elements in this conditional, it only renders them when the tab is selected. }}
         {{#if (eq @selectedAuthMethod methodType)}}
-          <Auth::MountsDisplay
-            @mounts={{mounts}}
-            @shouldRenderPath={{not-eq @selectedAuthMethod "token"}}
-            @hideType={{true}}
-          />
+          {{#if (gt mounts.length 1)}}
+            {{! DROPDOWN for mount paths }}
+            <Hds::Form::Select::Field name="path" data-test-select="path" as |F|>
+              <F.Label>Mount path</F.Label>
+              <F.Options>
+                {{#each mounts as |mount|}}
+                  <option value={{mount.path}}>{{mount.path}}</option>
+                {{/each}}
+              </F.Options>
+            </Hds::Form::Select::Field>
+          {{else}}
+            {{! SINGLE mount path }}
+            {{#let (get mounts "0") as |mount|}}
+              {{#if mount.description}}
+                <Hds::Text::Body @tag="p" @color="faint" data-test-description>{{mount.description}}</Hds::Text::Body>
+              {{/if}}
+              {{! the token auth method does't support custom paths so no need to render an input }}
+              {{#if (not-eq @selectedAuthMethod "token")}}
+                {{! path is hidden so it is submitted with FormData but does not clutter the login form }}
+                <input type="hidden" id="path" name="path" value={{mount.path}} data-test-input="path" />
+              {{/if}}
+            {{/let}}
+          {{/if}}
         {{/if}}
       </div>
     </T.Panel>
