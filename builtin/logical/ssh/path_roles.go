@@ -372,9 +372,10 @@ func pathRoles(b *backend) *framework.Path {
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathRoleRead,
-			logical.UpdateOperation: b.pathRoleWrite,
-			logical.DeleteOperation: b.pathRoleDelete,
+			logical.ReadOperation:    b.pathRoleRead,
+			logical.UpdateOperation:  b.pathRoleWrite,
+			logical.DeleteOperation:  b.pathRoleDelete,
+			logical.RecoverOperation: b.pathRoleWrite,
 		},
 
 		HelpSynopsis:    pathRoleHelpSyn,
@@ -534,7 +535,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser, signer string, data *f
 	return role, nil
 }
 
-func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*sshRole, error) {
+func (b *backend) getRole(ctx context.Context, s logical.Storage, n string, disallowUpgrades bool) (*sshRole, error) {
 	entry, err := s.Get(ctx, "roles/"+n)
 	if err != nil {
 		return nil, err
@@ -548,15 +549,19 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string) (*ss
 		return nil, err
 	}
 
-	if err := b.checkUpgrade(ctx, s, n, &result); err != nil {
+	if err := b.checkUpgrade(ctx, s, n, &result, disallowUpgrades); err != nil {
 		return nil, err
 	}
 
 	return &result, nil
 }
 
-func (b *backend) checkUpgrade(ctx context.Context, s logical.Storage, n string, result *sshRole) error {
+func (b *backend) checkUpgrade(ctx context.Context, s logical.Storage, n string, result *sshRole, disallowUpgrades bool) error {
 	modified := false
+
+	if disallowUpgrades {
+		return nil
+	}
 
 	// NOTE: When introducing a new migration, increment roleEntryVersion and
 	// check if the version is less than the version this change was introduced
@@ -717,7 +722,7 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *fra
 
 	keyInfo := map[string]interface{}{}
 	for _, entry := range entries {
-		role, err := b.getRole(ctx, req.Storage, entry)
+		role, err := b.getRole(ctx, req.Storage, entry, req.IsSnapshotReadOrList())
 		if err != nil {
 			// On error, log warning and continue
 			if b.Logger().IsWarn() {
@@ -752,7 +757,7 @@ func (b *backend) pathRoleList(ctx context.Context, req *logical.Request, d *fra
 }
 
 func (b *backend) pathRoleRead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	role, err := b.getRole(ctx, req.Storage, d.Get("role").(string))
+	role, err := b.getRole(ctx, req.Storage, d.Get("role").(string), req.IsSnapshotReadOrList())
 	if err != nil {
 		return nil, err
 	}

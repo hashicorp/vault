@@ -92,7 +92,7 @@ func (b *backend) pathConfigZeroAddressWrite(ctx context.Context, req *logical.R
 
 	// Check if the roles listed actually exist in the backend
 	for _, item := range roles {
-		role, err := b.getRole(ctx, req.Storage, item)
+		role, err := b.getRole(ctx, req.Storage, item, false)
 		if err != nil {
 			return nil, err
 		}

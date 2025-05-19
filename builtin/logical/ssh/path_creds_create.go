@@ -65,7 +65,7 @@ func (b *backend) pathCredsCreateWrite(ctx context.Context, req *logical.Request
 		return logical.ErrorResponse("Missing ip"), nil
 	}
 
-	role, err := b.getRole(ctx, req.Storage, roleName)
+	role, err := b.getRole(ctx, req.Storage, roleName, false)
 	if err != nil {
 		return nil, fmt.Errorf("error retrieving role: %w", err)
 	}
