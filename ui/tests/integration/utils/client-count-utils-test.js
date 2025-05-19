@@ -486,6 +486,7 @@ module('Integration | Util | client count utils', function (hooks) {
   module('filteredTotalForMount', function (hooks) {
     hooks.beforeEach(function () {
       this.byNamespace = SERIALIZED_ACTIVITY_RESPONSE.by_namespace;
+      this.byMonth = SERIALIZED_ACTIVITY_RESPONSE.by_month;
     });
 
     const emptyCounts = {
