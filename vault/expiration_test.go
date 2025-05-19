@@ -28,6 +28,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
+	"github.com/stretchr/testify/require"
 )
 
 var testImagePull sync.Once
@@ -3505,5 +3506,64 @@ func TestExpiration_listIrrevocableLeases_includeAll(t *testing.T) {
 	numLeases := numLeasesRaw.(int)
 	if numLeases != expectedNumLeases {
 		t.Errorf("bad lease count. expected %d, got %d", expectedNumLeases, numLeases)
+	}
+}
+
+func TestExpiration_Irrevocable_Lease_Removal(t *testing.T) {
+	//if !constants.IsEnterprise {
+	//	t.Skip("test can only run on enterprise due to irrevocable lease removal is an enterprise feature")
+	//}
+
+	lenSyncMap := func(m *sync.Map) int {
+		var i int
+		m.Range(func(k, v interface{}) bool {
+			i++
+			return true
+		})
+		return i
+	}
+
+	leasesEntries := []leaseEntry{
+		{LeaseID: "l1", ExpireTime: time.Now().AddDate(0, -1, 0)},
+		{LeaseID: "l2", ExpireTime: time.Now().AddDate(0, -1, 0)},
+		{LeaseID: "l3", ExpireTime: time.Now().AddDate(0, 0, -10)},
+		{LeaseID: "l4", ExpireTime: time.Now().AddDate(0, 0, -10)},
+		{LeaseID: "l5", ExpireTime: time.Now().AddDate(0, 0, -10)},
+	}
+
+	testCases := map[string]struct {
+		irrevocable                 []leaseEntry
+		removeIrrevocableLeaseAfter time.Duration
+		finalExpectedIrrevocable    int
+	}{
+		"remove leasesEntries older than 15 days": {
+			irrevocable:                 leasesEntries,
+			removeIrrevocableLeaseAfter: time.Hour * 24 * 15,
+			finalExpectedIrrevocable:    3,
+		},
+		"no leasesEntries removed if removeIrrevocableLeaseAfter is less than minimum ": {
+			irrevocable:                 leasesEntries,
+			removeIrrevocableLeaseAfter: time.Hour,
+			finalExpectedIrrevocable:    5,
+		},
+		"All leasesEntries removed": {
+			irrevocable:                 leasesEntries,
+			removeIrrevocableLeaseAfter: time.Hour * 24 * 7,
+			finalExpectedIrrevocable:    0,
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			exp := mockExpiration(t)
+
+			for _, irr := range tc.irrevocable {
+				exp.irrevocable.Store(irr.LeaseID, &irr)
+			}
+
+			require.Equal(t, len(tc.irrevocable), lenSyncMap(&exp.irrevocable))
+			exp.attemptIrrevocableLeasesRevoke(tc.removeIrrevocableLeaseAfter)
+			require.Equal(t, tc.finalExpectedIrrevocable, lenSyncMap(&exp.irrevocable))
+		})
 	}
 }

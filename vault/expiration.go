@@ -85,6 +85,8 @@ const (
 	MaxIrrevocableLeasesToReturn = 10000
 
 	MaxIrrevocableLeasesWarning = "Command halted because many irrevocable leases were found. To emit the entire list, re-run the command with force set true."
+
+	removeIrrevocableLeaseAfterMinimum = time.Hour * 24 * 2
 )
 
 type pendingInfo struct {
@@ -427,7 +429,7 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 			case <-quit:
 				return
 			case <-t.C:
-				c.expiration.attemptIrrevocableLeasesRevoke()
+				c.expiration.attemptIrrevocableLeasesRevoke(c.removeIrrevocableLeaseAfter)
 				t.Reset(24 * time.Hour)
 			}
 		}
@@ -963,12 +965,33 @@ func (m *ExpirationManager) lazyRevokeInternal(ctx context.Context, leaseID stri
 }
 
 // should be run on a schedule. something like once a day, maybe once a week
-func (m *ExpirationManager) attemptIrrevocableLeasesRevoke() {
+func (m *ExpirationManager) attemptIrrevocableLeasesRevoke(removeIrrevocableLeaseAfter time.Duration) {
+	// determine if irrevocable leases should be evaluated for removal after revocation attempt
+	var removeIrrevocableLeases bool
+	if removeIrrevocableLeaseAfter != 0 {
+		if removeIrrevocableLeaseAfter < removeIrrevocableLeaseAfterMinimum {
+			m.logger.Debug(fmt.Sprintf("irrevocable leases will not be removed; remove_irrevocable_lease_after: %s is less than minimum duration: %s",
+				removeIrrevocableLeaseAfter.String(), removeIrrevocableLeaseAfterMinimum.String()))
+		} else {
+			removeIrrevocableLeases = true
+		}
+	}
+
 	m.irrevocable.Range(func(k, v interface{}) bool {
 		leaseID := k.(string)
 		le := v.(*leaseEntry)
 
-		if le.ExpireTime.Add(time.Hour).Before(time.Now()) {
+		expiryBuffer := le.ExpireTime.Add(time.Hour)
+
+		// remove irrevocable leases after configured duration
+		if expiryBuffer.Before(time.Now()) {
+			if removeIrrevocableLeases && expiryBuffer.Add(removeIrrevocableLeaseAfter).Before(time.Now()) {
+				defer func() {
+					m.irrevocable.Delete(k)
+					m.logger.Debug("deleted irrevocable lease", "lease_id", leaseID, "lease_expire_time", le.ExpireTime)
+				}()
+			}
+
 			// if we get an error (or no namespace) note it, but continue attempting
 			// to revoke other leases
 			leaseNS, err := m.getNamespaceFromLeaseID(m.core.activeContext, leaseID)
