@@ -47,7 +47,7 @@ module('Integration | Component | secret-engine/list', function (hooks) {
   test('it allows you to disable an engine', async function (assert) {
     const enginePath = 'kv2-test';
     this.server.delete(`sys/mounts/${enginePath}`, () => {
-      assert.ok(true, 'Destroy record is called and deletes the engine');
+      assert.true(true, 'Destroy record is called and deletes the engine');
       return overrideResponse(204);
     });
     await render(hbs`<SecretEngine::List @secretEngineModels={{this.secretEngineModels}} />`);
@@ -99,7 +99,7 @@ module('Integration | Component | secret-engine/list', function (hooks) {
     // clear filter by engine name
     await click(`#filter-by-engine-name ${GENERAL.searchSelect.removeSelected}`);
     const rowsAgain = document.querySelectorAll(SES.secretsBackendLink());
-    assert.ok(rowsAgain.length > 1, 'filter has been removed');
+    assert.true(rowsAgain.length > 1, 'filter has been removed');
   });
 
   test('it applies overflow styling', async function (assert) {
