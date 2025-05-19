@@ -24,19 +24,16 @@ variable "common_tags" {
   default     = { "Project" : "vault-ci" }
 }
 
-variable "ports_ingress" {
-  description = "Ports mappings to allow for ingress"
-  type = list(object({
-    description = string
-    port        = number
-    protocol    = string
-  }))
-}
-
 variable "disable_selinux" {
   description = "Optionally disable SELinux for certain distros/versions"
   type        = bool
   default     = true
+}
+
+variable "ebs_optimized" {
+  description = "Apply EBS optimization and high throughput disks to maximize IO performance"
+  type        = bool
+  default     = false
 }
 
 variable "instance_count" {
@@ -55,6 +52,24 @@ variable "instance_types" {
     amd64 = "t3a.medium"
     arm64 = "t4g.medium"
   }
+}
+
+variable "metrics_security_group_ids" {
+  type = object({
+    grafana    = string
+    prometheus = string
+  })
+  description = "Security group IDs to attach to the target instances"
+  default     = null
+}
+
+variable "ports_ingress" {
+  description = "Ports mappings to allow for ingress"
+  type = list(object({
+    description = string
+    port        = number
+    protocol    = string
+  }))
 }
 
 variable "project_name" {

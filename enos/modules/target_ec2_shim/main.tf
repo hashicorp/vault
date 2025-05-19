@@ -30,6 +30,7 @@ variable "seal_key_names" { default = null }
 variable "ssh_allow_ips" { default = null }
 variable "ssh_keypair" { default = null }
 variable "vpc_id" { default = null }
+variable "metrics_security_group_ids" { default = null }
 
 resource "random_string" "cluster_name" {
   length  = 8
@@ -50,3 +51,5 @@ output "hosts" {
     ipv6       = "null-ipv6-${idx}"
   } }
 }
+
+output "security_group_id" { value = null }

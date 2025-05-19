@@ -100,8 +100,13 @@ locals {
     "arm64"  = var.instance_types["arm64"]
     "x86_64" = var.instance_types["amd64"]
   }
-  instances   = toset([for idx in range(var.instance_count) : tostring(idx)])
-  name_prefix = "${var.project_name}-${local.cluster_name}-${random_string.unique_id.result}"
+  instances        = toset([for idx in range(var.instance_count) : tostring(idx)])
+  name_prefix      = "${var.project_name}-${local.cluster_name}-${random_string.unique_id.result}"
+  root_volume_type = var.ebs_optimized ? "io2" : null
+  root_volume_size = var.ebs_optimized ? 24 : null
+  ebs_optimized    = var.ebs_optimized ? true : null
+  // the ratio between iops and volume size can't be greater than 1000:1, which is why this is calculated like it is
+  iops = var.ebs_optimized ? local.root_volume_size * 1000 : null
 }
 
 resource "random_string" "cluster_name" {
@@ -194,10 +199,17 @@ resource "aws_instance" "targets" {
   instance_type                        = local.instance_type
   key_name                             = var.ssh_keypair
   subnet_id                            = data.aws_subnets.vpc.ids[tonumber(each.key) % length(data.aws_subnets.vpc.ids)]
-  vpc_security_group_ids               = [aws_security_group.target.id]
+  vpc_security_group_ids = compact([
+    aws_security_group.target.id,
+    try(var.metrics_security_group_ids["prometheus"], null)
+  ])
+  ebs_optimized = local.ebs_optimized
 
   root_block_device {
-    encrypted = true
+    encrypted   = true
+    volume_type = local.root_volume_type
+    volume_size = local.root_volume_size
+    iops        = local.iops
   }
 
   metadata_options {

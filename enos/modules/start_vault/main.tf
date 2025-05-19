@@ -132,6 +132,13 @@ locals {
       auto_join_scheme : "http",
     },
   }
+  global_telemetry = var.enable_telemetry ? {
+    prometheus_retention_time = "24h"
+    disable_hostname          = true
+  } : null
+  listener_telemetry = var.enable_telemetry ? {
+    unauthenticated_metrics_access = true
+  } : null
 }
 
 # You might be wondering why our start_vault module, which supports shamir, awskms, and pkcs11 seal
@@ -201,6 +208,7 @@ resource "enos_vault_start" "leader" {
         address     = local.listener_address
         tls_disable = "true"
       }
+      telemetry = local.listener_telemetry
     }
     log_level = var.log_level
     storage = {
@@ -208,8 +216,9 @@ resource "enos_vault_start" "leader" {
       attributes = local.storage_attributes[each.key]
       retry_join = try(local.storage_retry_join[var.storage_backend], null)
     }
-    seals = local.seals
-    ui    = true
+    seals     = local.seals
+    ui        = true
+    telemetry = local.global_telemetry
   }
   license        = var.license
   manage_service = var.manage_service
@@ -245,6 +254,7 @@ resource "enos_vault_start" "followers" {
         address     = local.listener_address
         tls_disable = "true"
       }
+      telemetry = local.listener_telemetry
     }
     log_level = var.log_level
     storage = {
@@ -252,8 +262,9 @@ resource "enos_vault_start" "followers" {
       attributes = { for key, value in local.storage_attributes[each.key] : key => value }
       retry_join = try(local.storage_retry_join[var.storage_backend], null)
     }
-    seals = local.seals
-    ui    = true
+    seals     = local.seals
+    ui        = true
+    telemetry = local.global_telemetry
   }
   license        = var.license
   manage_service = var.manage_service
