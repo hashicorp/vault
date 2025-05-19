@@ -119,23 +119,12 @@ export default class AuthFormTemplate extends Component<Args> {
 
   get tabData() {
     const { directLinkData } = this.args;
-    const defaultMounts = this.hasVisibleMounts() ? this.args.visibleMountsByType[this.selectedAuth] : [];
-
-    switch (this.currentFormView) {
-      case FormView.DIRECT_LINK:
-        // URL contains a "with" query param that references a mount with listing_visibility="unauth"
-        // Treat it as a "preferred" mount and hide all other tabs
-        return { [directLinkData!.type]: [directLinkData!] };
-      case FormView.LOGIN_SETTINGS_DEFAULT:
-        return { [this.selectedAuth]: defaultMounts };
-      case FormView.LOGIN_SETTINGS_TABS:
-        return this.backupMethodTabs;
-      case FormView.TABS:
-        return this.args.visibleMountsByType;
-      default:
-        // if none of the above, then the dropdown is rendering
-        return null;
+    // URL contains a "with" query param that references a mount with listing_visibility="unauth"
+    // Treat it as a "preferred" mount and hide all other tabs
+    if (directLinkData?.isVisibleMount && directLinkData?.type) {
+      return { [directLinkData.type]: [this.args.directLinkData] };
     }
+    return this.args.visibleMountsByType;
   }
 
   get currentFormView(): FormView {

@@ -11,6 +11,10 @@ export interface UnauthMountsResponse {
   // key is the mount path
   [key: string]: { type: string; description?: string; config?: object | null };
 }
+export interface UnauthMountsResponse {
+  // key is the mount path
+  [key: string]: { type: string; description?: string; config?: object | null };
+}
 
 export interface AuthTabMountData {
   path: string;
