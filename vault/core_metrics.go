@@ -1016,13 +1016,13 @@ func (c *Core) GetAuditDeviceCountByType() auditCounts {
 	c.auditLock.RLock()
 	defer c.auditLock.RUnlock()
 
-	for _, entree := range c.audit.Entries {
-		switch entree.Type {
+	for _, entry := range c.audit.Entries {
+		switch entry.Type {
 		case audit.TypeFile:
 			auditCounts.file++
 		case audit.TypeSocket:
-			if entree.Options != nil {
-				switch strings.ToLower(entree.Options["socket_type"]) {
+			if entry.Options != nil {
+				switch strings.ToLower(entry.Options["socket_type"]) {
 				case "udp":
 					auditCounts.socketUdp++
 				case "tcp":
@@ -1045,15 +1045,15 @@ func (c *Core) GetAuditExclusionStanzaCount() int {
 	c.auditLock.RLock()
 	defer c.auditLock.RUnlock()
 
-	for _, entree := range c.audit.Entries {
-		excludeRaw, ok := entree.Options["exclude"]
+	for _, entry := range c.audit.Entries {
+		excludeRaw, ok := entry.Options["exclude"]
 		if !ok || excludeRaw == "" {
 			continue
 		}
 
 		var exclusionObjects []map[string]interface{}
 		if err := json.Unmarshal([]byte(excludeRaw), &exclusionObjects); err != nil {
-			c.logger.Error("failed to parse audit exclusion config for device", "path", entree.Path, "error", err)
+			c.logger.Error("failed to parse audit exclusion config for device", "path", entry.Path, "error", err)
 		}
 
 		exclusionsCount += len(exclusionObjects)
