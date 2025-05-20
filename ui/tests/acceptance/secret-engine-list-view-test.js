@@ -3,8 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, find, findAll, currentRouteName, visit, currentURL } from '@ember/test-helpers';
-import { clickTrigger } from 'ember-power-select/test-support/helpers';
+import { click, fillIn, currentRouteName, visit, currentURL } from '@ember/test-helpers';
 import { selectChoose } from 'ember-power-select/test-support';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -13,8 +12,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
-import { login } from 'vault/tests/helpers/auth/auth-helpers';
-import { UNSUPPORTED_ENGINES, mountableEngines } from 'vault/helpers/mountable-secret-engines';
+import { login, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
+import { MOUNT_BACKEND_FORM } from '../helpers/components/mount-backend-form-selectors';
+import page from 'vault/tests/pages/settings/mount-secret-backend';
 
 module('Acceptance | secret-engine list view', function (hooks) {
   setupApplicationTest(hooks);
@@ -22,7 +22,6 @@ module('Acceptance | secret-engine list view', function (hooks) {
   const createSecret = async (path, key, value, enginePath) => {
     await click(SES.createSecretLink);
     await fillIn(SES.secretPath('create'), path);
-
     await fillIn(SES.secretKey('create'), key);
     await fillIn(GENERAL.inputByAttr(key), value);
     await click(GENERAL.saveButton);
@@ -34,7 +33,60 @@ module('Acceptance | secret-engine list view', function (hooks) {
     return login();
   });
 
-  test('it allows you to disable an engine', async function (assert) {
+  test('after enabling an unsupported engine it takes you to list page', async function (assert) {
+    await visit('/vault/secrets');
+    await page.enableEngine();
+    await click(MOUNT_BACKEND_FORM.mountType('nomad'));
+    await click(GENERAL.saveButton);
+
+    assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backends', 'navigates to the list page');
+    // cleanup
+    await runCmd(deleteEngineCmd('nomad'));
+  });
+
+  test('after enabling a supported engine it takes you to mount page, can see configure and clicking breadcrumb takes you back to list page', async function (assert) {
+    await visit('/vault/secrets');
+    await page.enableEngine();
+    await click(MOUNT_BACKEND_FORM.mountType('aws'));
+    await click(GENERAL.saveButton);
+
+    assert.dom(SES.configTab).exists();
+
+    await click(GENERAL.breadcrumbLink('Secrets'));
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backends',
+      'breadcrumb navigates to the list page'
+    );
+    // cleanup
+    await runCmd(deleteEngineCmd('aws'));
+  });
+
+  test('enterprise: cannot view list without permissions inside namespace', async function (assert) {
+    this.version = 'enterprise';
+    this.backend = `bk-${this.uid}`;
+    this.namespace = `ns-${this.uid}`;
+    await runCmd([`write sys/namespaces/${this.namespace} -force`]);
+    await loginNs(this.namespace, ' ');
+
+    await visit('/vault/secrets');
+    assert.dom(SES.secretsBackendLink('cubbyhole')).doesNotExist();
+
+    await logout();
+  });
+
+  test('enterprise: can view list with permissions inside namespace', async function (assert) {
+    this.version = 'enterprise';
+    this.backend = `bk-${this.uid}`;
+    this.namespace = `ns-${this.uid}`;
+    await runCmd([`write sys/namespaces/${this.namespace} -force`]);
+    await loginNs(this.namespace);
+    await visit('/vault/secrets');
+
+    assert.dom(SES.secretsBackendLink('cubbyhole')).exists();
+  });
+
+  test('after disabling it stays on the list view', async function (assert) {
     // first mount an engine so we can disable it.
     const enginePath = `alicloud-disable-${this.uid}`;
     await runCmd(mountEngineCmd('alicloud', enginePath));
@@ -51,74 +103,6 @@ module('Acceptance | secret-engine list view', function (hooks) {
       'vault.cluster.secrets.backends',
       'redirects to the backends list page'
     );
-    assert.dom(SES.secretsBackendLink(enginePath)).doesNotExist('does not show the disabled engine');
-    // remove the filter as it may cause issues in the next tests
-    await click(GENERAL.searchSelect.removeSelected);
-  });
-
-  test('it adds disabled css styling to unsupported secret engines', async function (assert) {
-    assert.expect(16);
-    const allEnginesArray = mountableEngines();
-    for (const engineObject of allEnginesArray) {
-      const engine = engineObject.type;
-      const enginePath = `${engine}-${this.uid}`;
-      await runCmd(mountEngineCmd(engine, enginePath));
-      await visit('/vault/cluster/dashboard');
-      await visit('/vault/secrets');
-      if (UNSUPPORTED_ENGINES.includes(engine)) {
-        assert
-          .dom(SES.secretsBackendLink(enginePath))
-          .doesNotHaveClass(
-            'linked-block',
-            `the linked-block class is not added to the unsupported ${engine}, which effectively disables it.`
-          );
-      } else {
-        assert
-          .dom(SES.secretsBackendLink(enginePath))
-          .hasClass('linked-block', `linked-block class is added to supported ${engine} engines.`);
-      }
-      // cleanup
-      await runCmd(deleteEngineCmd(enginePath));
-    }
-  });
-
-  test('it filters by name and engine type', async function (assert) {
-    const enginePath1 = `aws-1-${this.uid}`;
-    const enginePath2 = `aws-2-${this.uid}`;
-
-    await await runCmd(mountEngineCmd('aws', enginePath1));
-    await await runCmd(mountEngineCmd('aws', enginePath2));
-    await visit('/vault/secrets');
-    // filter by type
-    await clickTrigger('#filter-by-engine-type');
-    await click(GENERAL.searchSelect.option());
-
-    const rows = findAll(SES.secretsBackendLink());
-    const rowsAws = Array.from(rows).filter((row) => row.innerText.includes('aws'));
-
-    assert.strictEqual(rows.length, rowsAws.length, 'all rows returned are aws');
-    // filter by name
-    await clickTrigger('#filter-by-engine-name');
-    const firstItemToSelect = find(GENERAL.searchSelect.option()).innerText;
-    await click(GENERAL.searchSelect.option());
-    const singleRow = document.querySelectorAll(SES.secretsBackendLink());
-    assert.strictEqual(singleRow.length, 1, 'returns only one row');
-    assert.dom(singleRow[0]).includesText(firstItemToSelect, 'shows the filtered by name engine');
-    // clear filter by engine name
-    await click(`#filter-by-engine-name ${GENERAL.searchSelect.removeSelected}`);
-    const rowsAgain = document.querySelectorAll(SES.secretsBackendLink());
-    assert.ok(rowsAgain.length > 1, 'filter has been removed');
-
-    // cleanup
-    await runCmd(deleteEngineCmd(enginePath1));
-    await runCmd(deleteEngineCmd(enginePath2));
-  });
-
-  test('it applies overflow styling', async function (assert) {
-    await visit('/vault/secrets');
-    // not using the secret-engine-selector "secretPath" because I want to return the first node of a querySelectorAll
-    const firstSecretEngine = document.querySelectorAll('[data-test-secret-path]')[0];
-    assert.dom(firstSecretEngine).hasClass('overflow-wrap', 'secret engine name has overflow class ');
   });
 
   test('it allows navigation to a non-nested secret with pagination', async function (assert) {

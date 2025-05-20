@@ -4,14 +4,12 @@
 package postgresql
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"testing"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-pgmultiauth"
 	"github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -172,37 +170,6 @@ func TestConnectionURL(t *testing.T) {
 			if got != tt.want {
 				t.Errorf("connectionURL(%s): want %q, got %q", tt.input, tt.want, got)
 			}
-		})
-	}
-}
-
-// TestGetAuthConfig - We only test the standard flow as we would get errors for cloud based auth while fetching token
-func TestGetAuthConfig(t *testing.T) {
-	cases := map[string]struct {
-		url       string
-		conf      map[string]string
-		expectErr bool
-	}{
-		"no_auth_config": {
-			url:  "postgresql://user:password@localhost:5432/dbname",
-			conf: map[string]string{},
-		},
-	}
-
-	for name, tt := range cases {
-		t.Run(name, func(t *testing.T) {
-			cfg, err := getAuthConfig(context.Background(), tt.url, tt.conf, log.Default())
-			if (err != nil) != tt.expectErr {
-				t.Fatalf("Expected error: %v, got: %v", tt.expectErr, err)
-			}
-
-			db, err := pgmultiauth.Open(context.TODO(), cfg)
-			if err != nil {
-				t.Fatalf("Failed to open db: %v", err)
-				return
-			}
-
-			defer db.Close()
 		})
 	}
 }

@@ -208,6 +208,9 @@ All of these metrics are numerical, and contain no sensitive values or additiona
 HashiCorp collects the following product usage metadata as part of the `metadata` part of the
 [JSON payload that it collects for licence utilization](/vault/docs/enterprise/license/utilization-reporting#example-payloads):
 
-| Metadata Name        | Description                                                          |
-|----------------------|----------------------------------------------------------------------|
-| `replication_status` | Replication status of this cluster, e.g. `perf-disabled,dr-disabled` |
+| Metadata Name         | Description                                                                 |
+|-----------------------|-----------------------------------------------------------------------------|
+| `replication_status`  | Replication status of this cluster, e.g. `perf-disabled,dr-disabled`        |
+| `storage_type`        | Storage backend type, e.g. `raft` or `consul`                               |
+| `operating_system`    | Operating system this cluster is running on.                                |
+| `development_cluster` | Whether the cluster is operating as a development (non-production) cluster. |

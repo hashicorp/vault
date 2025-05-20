@@ -5428,7 +5428,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 				// Add tags to all of the operations if necessary
 				if tag != "" {
-					for _, op := range []*framework.OASOperation{obj.Get, obj.Post, obj.Delete} {
+					for _, op := range []*framework.OASOperation{obj.Get, obj.Post, obj.Patch, obj.Delete} {
 						// TODO: a special override for identity is used used here because the backend
 						// is currently categorized as "secret", which will likely change. Also of interest
 						// is removing all tag handling here and providing the mount information to OpenAPI.

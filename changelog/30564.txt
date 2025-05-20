@@ -1,3 +1,0 @@
-```release-note:improvement
-physical/postgres:: Adds support to authenticate with the PostgreSQL Backend server with cloud based identities(AWS IAM, Azure MSI and GCP IAM)
-```
