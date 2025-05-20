@@ -883,10 +883,11 @@ func testConfig_Sanitized(t *testing.T) {
 			"add_lease_metrics_namespace_labels":     false,
 			"add_mount_point_rollback_metrics":       false,
 		},
-		"administrative_namespace_path": "admin/",
-		"imprecise_lease_role_tracking": false,
-		"enable_post_unseal_trace":      true,
-		"post_unseal_trace_directory":   "/tmp",
+		"administrative_namespace_path":  "admin/",
+		"imprecise_lease_role_tracking":  false,
+		"enable_post_unseal_trace":       true,
+		"post_unseal_trace_directory":    "/tmp",
+		"remove_irrevocable_lease_after": (30 * 24 * time.Hour) / time.Second,
 	}
 
 	addExpectedEntSanitizedConfig(expected, []string{"http"})
