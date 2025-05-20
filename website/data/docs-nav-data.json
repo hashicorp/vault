@@ -969,7 +969,7 @@
       },
       {
         "title": "Full changelog",
-        "path": "updates/changelog"
+        "href": "https://raw.githubusercontent.com/hashicorp/vault/refs/heads/main/CHANGELOG.md"
       }
     ]
   },
