@@ -36,6 +36,7 @@ export default class NamespaceListRoute extends Route {
         page: Number(params?.page) || 1,
         pageFilter: params?.pageFilter,
       })
+      .then((model) => model)
       .catch((err) => {
         if (err.httpStatus === 404) {
           return [];
