@@ -125,7 +125,7 @@ func (r *ListChangedFilesReq) getCommitFiles(ctx context.Context, client *gh.Cli
 	}
 }
 
-// getCommitFiles attempts to locate the workflow associated with our workflow name.
+// getPullFiles attempts to locate the workflow associated with our workflow name.
 func (r *ListChangedFilesReq) getPullFiles(ctx context.Context, client *gh.Client) (changed.Files, error) {
 	opts := &gh.ListOptions{PerPage: PerPageMax}
 	files := changed.Files{}
