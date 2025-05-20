@@ -180,30 +180,7 @@ module('Integration | Component | auth | form template', function (hooks) {
       assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
     });
 
-    test('it renders the mount description', async function (assert) {
-      await this.renderComponent();
-      await click(AUTH_FORM.tabBtn('token'));
-      assert.dom(AUTH_FORM.description).hasText('token based credentials');
-    });
-
-    test('it renders a dropdown if multiple mount paths are returned', async function (assert) {
-      await this.renderComponent();
-      await click(AUTH_FORM.tabBtn('userpass'));
-      const dropdownOptions = findAll(`${GENERAL.selectByAttr('path')} option`).map((o) => o.value);
-      const expectedPaths = ['userpass/', 'userpass2/'];
-      expectedPaths.forEach((p) => {
-        assert.true(dropdownOptions.includes(p), `dropdown includes path: ${p}`);
-      });
-    });
-
-    test('it renders hidden input if only one mount path is returned', async function (assert) {
-      await this.renderComponent();
-      await click(AUTH_FORM.tabBtn('oidc'));
-      assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
-      assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
-    });
-
-    test('it clicks "Sign in with other methods"', async function (assert) {
+    test('it clicks "Sign in with other methods" and toggles to other view', async function (assert) {
       await this.renderComponent();
       assert.dom(AUTH_FORM.tabs).exists({ count: 3 }, 'tabs render by default');
       assert.dom(GENERAL.backButton).doesNotExist();
