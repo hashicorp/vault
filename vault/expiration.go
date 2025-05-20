@@ -24,7 +24,6 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/base62"
-	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/fairshare"
 	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -969,15 +968,7 @@ func (m *ExpirationManager) lazyRevokeInternal(ctx context.Context, leaseID stri
 // should be run on a schedule. something like once a day, maybe once a week
 func (m *ExpirationManager) attemptIrrevocableLeasesRevoke(removeIrrevocableLeaseAfter time.Duration) {
 	// determine if irrevocable leases should be evaluated for removal after revocation attempt
-	var removeIrrevocableLeases bool
-	if removeIrrevocableLeaseAfter != 0 {
-		if removeIrrevocableLeaseAfter < removeIrrevocableLeaseAfterMinimum {
-			m.logger.Debug(fmt.Sprintf("irrevocable leases will not be removed; remove_irrevocable_lease_after: %s is less than minimum duration: %s",
-				removeIrrevocableLeaseAfter.String(), removeIrrevocableLeaseAfterMinimum.String()))
-		} else {
-			removeIrrevocableLeases = true
-		}
-	}
+	removeIrrevocableLeases := m.removeIrrevocableLeasesEnabled(removeIrrevocableLeaseAfter)
 
 	m.irrevocable.Range(func(k, v interface{}) bool {
 		leaseID := k.(string)
@@ -1003,15 +994,8 @@ func (m *ExpirationManager) attemptIrrevocableLeasesRevoke(removeIrrevocableLeas
 			ctxWithNSAndTimeout, _ := context.WithTimeout(ctxWithNS, time.Minute)
 
 			// attempt to remove irrevocable lease if feature enabled
-			if constants.IsEnterprise && removeIrrevocableLeases && expiryBuffer.Add(removeIrrevocableLeaseAfter).Before(time.Now()) {
-				defer func() {
-					err := m.deleteLeaseCommon(ctxWithNSAndTimeout, le)
-					if err != nil {
-						m.logger.Debug("failed to delete irrevocable lease", "lease_id", leaseID, "err", err)
-					} else {
-						m.logger.Debug("deleted irrevocable lease", "lease_id", leaseID, "lease_expire_time", le.ExpireTime)
-					}
-				}()
+			if removeIrrevocableLeases && expiryBuffer.Add(removeIrrevocableLeaseAfter).Before(time.Now()) {
+				defer m.deleteIrrevocableLease(ctxWithNSAndTimeout, le)
 			}
 
 			if err := m.revokeCommon(ctxWithNSAndTimeout, leaseID, false, false); err != nil {
