@@ -720,7 +720,7 @@ path "bar/baz" {
 	capabilities = ["read", "update"]
 }
 path "bar/baz" {
-	capabilities = ["delete"]
+	capabilities = ["delete", "recover"]
 }
 `
 
@@ -828,7 +828,7 @@ func TestSystemBackend_PathCapabilities(t *testing.T) {
 		expected1 := []string{"create", "sudo", "update"}
 		expected2 := expected1
 		expected3 := []string{"update"}
-		expected4 := []string{"delete", "read", "update"}
+		expected4 := []string{"delete", "read", "recover", "update"}
 
 		if !reflect.DeepEqual(resp.Data[path1], expected1) ||
 			!reflect.DeepEqual(resp.Data[path2], expected2) ||

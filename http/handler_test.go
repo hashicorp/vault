@@ -972,3 +972,58 @@ func TestHandler_MaxRequestSize_Memory(t *testing.T) {
 	runtime.ReadMemStats(&end)
 	require.Less(t, end.TotalAlloc-start.TotalAlloc, uint64(1024*1024))
 }
+
+// Test_requiresSnapshot verifies that a request is marked as requiring a
+// snapshot when it's a read, list, or create/update and has a snapshot query
+// parameter
+func Test_requiresSnapshot(t *testing.T) {
+	testCases := []struct {
+		name        string
+		method      string
+		queryParams map[string][]string
+		expected    bool
+	}{
+		{
+			name:        "get no snapshot",
+			method:      http.MethodGet,
+			queryParams: map[string][]string{"other": {"param"}},
+			expected:    false,
+		},
+		{
+			name:        "options with snapshot",
+			method:      http.MethodOptions,
+			queryParams: map[string][]string{VaultSnapshotRecoverParam: {"param"}},
+			expected:    false,
+		},
+		{
+			name:        "put with read snapshot",
+			method:      http.MethodPut,
+			queryParams: map[string][]string{VaultSnapshotReadParam: {"param"}},
+			expected:    false,
+		},
+		{
+			name:        "put with recover snapshot",
+			method:      http.MethodPut,
+			queryParams: map[string][]string{VaultSnapshotRecoverParam: {"param"}},
+			expected:    true,
+		},
+		{
+			name:        "list with snapshot",
+			method:      "LIST",
+			queryParams: map[string][]string{VaultSnapshotReadParam: {"param"}},
+			expected:    true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := &http.Request{
+				Method: tc.method,
+				URL: &url.URL{
+					RawQuery: url.Values(tc.queryParams).Encode(),
+				},
+			}
+			require.Equal(t, tc.expected, requiresSnapshot(req))
+		})
+	}
+}

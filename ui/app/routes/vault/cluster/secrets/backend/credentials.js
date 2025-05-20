@@ -90,7 +90,7 @@ export default Route.extend({
     } else if (backendType === 'aws') {
       awsRole = await this.getAwsRole(backendPath, role);
     } else if (backendType === 'totp') {
-      totpCodePeriod = (await this.getTotpKey(backendPath, role))?.period;
+      totpCodePeriod = (await this.getTotpKey(backendPath, role))?.period ?? 30;
       backRoute = this.backRoute;
       return { ...backendData, keyName: role, totpCodePeriod, backRoute };
     }

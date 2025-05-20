@@ -111,6 +111,10 @@ type BackendConfig struct {
 
 	// EventsSender provides a mechanism to interact with Vault events.
 	EventsSender EventSender
+
+	// ObservationsRecorder provides a mechanism to interact with the
+	// Vault Observation System.
+	ObservationRecorder ObservationRecorder
 }
 
 // Factory is the factory function to create a logical backend.
@@ -174,6 +178,14 @@ type Paths struct {
 	//
 	// For more details, consult limits/registry.go.
 	Limited []string
+
+	// AllowSnapshotRead paths are API paths that are allowed to be read from
+	// a loaded snapshot. These can't be regular expressions, it is either an
+	// exact match, a prefix match and/or a wildcard match.
+	// For prefix match, append '*' as a suffix.
+	// For a wildcard match, use '+' in the segment to match any identifier
+	// (e.g. 'foo/+/bar'). Note that '+' can't be adjacent to a non-slash.
+	AllowSnapshotRead []string
 }
 
 type Auditor interface {

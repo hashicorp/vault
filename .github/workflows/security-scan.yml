@@ -36,7 +36,7 @@ jobs:
       with:
         python-version: 3.x
 
-    - name: Clone Security Scanner repo
+    - name: Set up Security Scanner
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       with:
         repository: hashicorp/security-scanner
@@ -44,50 +44,24 @@ jobs:
         path: security-scanner
         ref: main
 
-    - name: Install dependencies
+    - name: Install Security Scanner Semgrep Plugin Dependency
       shell: bash
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        mkdir "$HOME/.bin"
-        cd "$GITHUB_WORKSPACE/security-scanner/pkg/sdk/examples/scan-plugin-semgrep"
-        go build -o scan-plugin-semgrep .
-        mv scan-plugin-semgrep "$HOME/.bin"
-
-        cd "$GITHUB_WORKSPACE/security-scanner/pkg/sdk/examples/scan-plugin-codeql"
-        go build -o scan-plugin-codeql .
-        mv scan-plugin-codeql "$HOME/.bin"
-
-        # Semgrep
         python3 -m pip install semgrep==1.45.0
-
-        # CodeQL
-        LATEST=$(gh release list --repo https://github.com/github/codeql-action | cut -f 3 | grep codeql-bundle- | sort --version-sort | tail -n1)
-        gh release download --repo https://github.com/github/codeql-action --pattern codeql-bundle-linux64.tar.gz "$LATEST"
-        tar xf codeql-bundle-linux64.tar.gz -C "$HOME/.bin"
-
-        # Add to PATH
-        echo "$HOME/.bin" >> "$GITHUB_PATH"
-        echo "$HOME/.bin/codeql" >> "$GITHUB_PATH"
 
     - name: Scan
       id: scan
       uses: ./security-scanner
-      # env:
-        # Note: this _should_ work, but causes some issues with Semgrep.
-        # Instead, rely on filtering in the SARIF Output step.
-        #SEMGREP_BASELINE_REF: ${{ github.base_ref }}
       with:
         repository: "$PWD"
-        cache-build: true
-        cache-go-modules: false
+        plugins: "codeql semgrep"
 
-    - name: SARIF Output
+    - name: Read SARIF
       shell: bash
       run: |
-        cat results.sarif
+        cat ${{ steps.scan.outputs.sarif-file-path }}
 
-    - name: Upload SARIF file
+    - name: Upload SARIF 
       uses: github/codeql-action/upload-sarif@3096afedf9873361b2b2f65e1445b13272c83eb8  # TSCCR: could not find entry for github/codeql-action/upload-sarif
       with:
-        sarif_file: results.sarif
+        sarif_file: ${{ steps.scan.outputs.sarif-file-path }}

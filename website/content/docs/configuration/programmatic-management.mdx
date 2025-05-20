@@ -210,7 +210,6 @@ To manage your Vault policies in Terraform:
 1. Use `terraform validate` to confirm the new configuration is valid:
   ```shell-session
   $ terraform validate
-
   
   Success! The configuration is valid.
   ```
@@ -219,8 +218,7 @@ To manage your Vault policies in Terraform:
 
 Use the `terraform import` command to import the preexisting root-level resources.
 
-For example, import the `admin` namespace, `default` policy, and `transit`
-plugin from the previous steps:
+For example, continue from the previous steps, and import the `admin` namespace:
 
 ```shell-session
 $ terraform import vault_namespace.admin_ns admin
@@ -236,6 +234,8 @@ The resources that were imported are shown above. These resources are now in
 your Terraform state and will henceforth be managed by Terraform.
 ```
 
+Import the `default` policy:
+
 ```shell-session
 $ terraform import vault_policy.default_policy default
 
@@ -249,6 +249,8 @@ Import successful!
 The resources that were imported are shown above. These resources are now in
 your Terraform state and will henceforth be managed by Terraform.
 ```
+
+Import the `transit` plugin:
 
 ```shell-session
 $ terraform import vault_mount.transit_plugin transit
@@ -456,6 +458,8 @@ For example, to import the `admin_keys` secret engine from the `admin` namespace
   dev_keys/     kv              kv_b3d2dd6f              n/a
   ``` 
 
-## Next steps
+<Tip title="Additional guide">
 
-1. Review the [best practices for programmatic Vault management](/vault/docs/configuration/programmatic-best-practices).
+Review the [best practices for programmatic Vault management](/vault/docs/configuration/programmatic-best-practices) for additional guidance.
+
+</Tip>

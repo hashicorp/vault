@@ -10,6 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | pki-generate-csr', function (hooks) {
   setupRenderingTest(hooks);
@@ -91,7 +92,7 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
     await click('[data-test-save]');
 
     assert
-      .dom('[data-test-field-validation="type"]')
+      .dom(GENERAL.validationErrorByAttr('type'))
       .hasText('Type is required.', 'Type validation error renders');
     assert
       .dom('[data-test-field="commonName"] [data-test-inline-alert]')
@@ -121,16 +122,16 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
       );
 
     assert
-      .dom('[data-test-value-div="CSR"] [data-test-certificate-card] button')
+      .dom(`${GENERAL.infoRowValue('CSR')} [data-test-certificate-card] button`)
       .hasAttribute('data-test-copy-button', this.model.csr, 'it renders copyable csr');
     assert
-      .dom('[data-test-value-div="Key ID"] button')
+      .dom(`${GENERAL.infoRowValue('Key ID')} button`)
       .hasAttribute('data-test-copy-button', this.model.keyId, 'it renders copyable key_id');
     assert
-      .dom('[data-test-value-div="Private key"] [data-test-certificate-card] button')
+      .dom(`${GENERAL.infoRowValue('Private key')} [data-test-certificate-card] button`)
       .hasAttribute('data-test-copy-button', this.model.privateKey, 'it renders copyable private_key');
     assert
-      .dom('[data-test-value-div="Private key type"]')
+      .dom(GENERAL.infoRowValue('Private key type'))
       .hasText(this.model.privateKeyType, 'renders private_key_type');
     await click('[data-test-done]');
   });
@@ -152,14 +153,14 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
         'renders Next steps alert banner'
       );
     assert
-      .dom('[data-test-value-div="CSR"] [data-test-certificate-card] button')
+      .dom(`${GENERAL.infoRowValue('CSR')} [data-test-certificate-card] button`)
       .hasAttribute('data-test-copy-button', this.model.csr, 'it renders copyable csr');
     assert
-      .dom('[data-test-value-div="Key ID"] button')
+      .dom(`${GENERAL.infoRowValue('Key ID')} button`)
       .hasAttribute('data-test-copy-button', this.model.keyId, 'it renders copyable key_id');
-    assert.dom('[data-test-value-div="Private key"]').hasText('internal', 'does not render private key');
+    assert.dom(GENERAL.infoRowValue('Private key')).hasText('internal', 'does not render private key');
     assert
-      .dom('[data-test-value-div="Private key type"]')
+      .dom(GENERAL.infoRowValue('Private key type'))
       .hasText('internal', 'does not render private key type');
   });
 });
