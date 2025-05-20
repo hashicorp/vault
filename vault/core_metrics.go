@@ -1029,3 +1029,23 @@ func (c *Core) GetPolicyMetrics(ctx context.Context) map[PolicyType]int {
 	}
 	return ret
 }
+
+func (c *Core) GetAutopilotUpgradeEnabled() float64 {
+	raftBackend := c.getRaftBackend()
+	if raftBackend == nil {
+		c.logger.Warn("raft storage is not in use")
+		return 0.0
+	}
+
+	config := raftBackend.AutopilotConfig()
+	if config == nil {
+		c.logger.Error("failed to get autopilot config")
+		return 0.0
+	}
+
+	// if false, autopilot upgrade is enabled
+	if !config.DisableUpgradeMigration {
+		return 1
+	}
+	return 0.0
+}
