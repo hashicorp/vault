@@ -37,7 +37,7 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     const store = this.owner.lookup('service:store');
     // Default page size is 15
     assert.strictEqual(store.peekAll('namespace').length, 15, 'Store has 15 namespaces records');
-    assert.dom('.list-item-row').exists({ count: 15 });
+    assert.dom('.list-item-row').exists({ count: 15 }, 'Should display 15 namespaces');
     assert.dom('.hds-pagination').exists();
   });
 
@@ -95,7 +95,7 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     await visit('/vault/access/namespaces');
     assert.dom(GENERAL.menuTrigger).exists();
     await click(GENERAL.menuTrigger);
-    assert.dom('.hds-dropdown-list-item').exists({ count: 2 });
+    assert.dom('.hds-dropdown-list-item').exists({ count: 2 }, 'Should display 2 options in the menu.');
 
     // Verify that the user can switch to the namespace
     const switchNamespaceButton = '.hds-dropdown-list-item:nth-of-type(1)';
@@ -126,7 +126,7 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     await click(GENERAL.menuTrigger);
 
     // Verify that only the delete option is available for the unaccessible namespace
-    assert.dom('.hds-dropdown-list-item').exists({ count: 1 });
+    assert.dom('.hds-dropdown-list-item').exists({ count: 1 }, 'Should display 1 option in the menu.');
 
     // Verify that the user can delete the namespace
     const deleteNamespaceButton = '.hds-dropdown-list-item:nth-of-type(1)';

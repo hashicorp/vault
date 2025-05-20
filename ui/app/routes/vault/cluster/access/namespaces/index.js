@@ -91,6 +91,7 @@ export default class NamespaceListRoute extends Route {
     return true;
   }
 
+  @action
   reload() {
     this.pagination.clearDataset();
     this.refresh();

@@ -25,6 +25,7 @@ export default class ManageNamespacesController extends Controller {
   // input parameter from the route.
   @service('namespace') namespaceService;
   @service router;
+  @service flashMessages;
 
   // The `query` property is used to track the filter
   // input value seperately from updating the `pageFilter`
@@ -64,9 +65,29 @@ export default class ManageNamespacesController extends Controller {
   }
 
   @action
-  refreshNamespaceList() {
-    // fetch new namespaces for the namespace picker
-    this.namespaceService.findNamespacesForUser.perform();
-    this.send('reload');
+  async deleteNamespace(nsToDelete) {
+    try {
+      // Attempt to destroy the record
+      await nsToDelete.destroyRecord();
+
+      // Log success and optionally update the UI
+      this.flashMessages.success(`Successfully deleted namespace: ${nsToDelete.id}`);
+
+      // Call the refresh method to update the list
+      this.refreshNamespaceList();
+    } catch (error) {
+      this.flashMessages.danger(`There was an error deleting this namespace: ${error.message}`);
+    }
+  }
+
+  // Refresh the namespace list
+  async refreshNamespaceList() {
+    try {
+      // Await the async operation to complete
+      await this.namespaceService.findNamespacesForUser.perform();
+      this.send('reload'); // Trigger the reload only after the task completes
+    } catch (error) {
+      this.flashMessages.danger('There was an error refreshing the namespace list.');
+    }
   }
 }

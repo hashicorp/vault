@@ -62,16 +62,7 @@
             <ConfirmModal
               @color="critical"
               @onClose={{fn (mut this.nsToDelete) null}}
-              @onConfirm={{action
-                (perform
-                  Item.callMethod
-                  "destroyRecord"
-                  this.nsToDelete
-                  (concat "Successfully deleted namespace: " this.nsToDelete.id)
-                  "There was an error deleting this namespace: "
-                  (action "refreshNamespaceList")
-                )
-              }}
+              @onConfirm={{fn this.deleteNamespace list.item}}
               @confirmTitle="Delete this namespace?"
               @confirmMessage="Any engines or mounts in this namespace will also be removed."
             />
