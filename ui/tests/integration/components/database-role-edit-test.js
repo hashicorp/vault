@@ -142,12 +142,12 @@ module('Integration | Component | database-role-edit', function (hooks) {
   test('it should show Get credentials button when a user has the correct policy', async function (assert) {
     this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['read']));
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="show"/>`);
-    assert.dom('[data-test-database-role-creds="static"]').exists('Get credentials button exists');
+    assert.dom(GENERAL.buttonByAttr('static')).exists('Get credentials button exists');
   });
 
   test('it should show Generate credentials button when a user has the correct policy', async function (assert) {
     this.server.post('/sys/capabilities-self', capabilitiesStub('database/creds/my-role', ['read']));
     await render(hbs`<DatabaseRoleEdit @model={{this.modelDynamic}} @mode="show"/>`);
-    assert.dom('[data-test-database-role-creds="dynamic"]').exists('Generate credentials button exists');
+    assert.dom(GENERAL.buttonByAttr('dynamic')).exists('Generate credentials button exists');
   });
 });

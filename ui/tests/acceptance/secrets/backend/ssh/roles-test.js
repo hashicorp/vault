@@ -112,7 +112,7 @@ module('Acceptance | ssh | roles', function (hooks) {
     await click(SES.configTab);
     await click(SES.configure);
     // default has generate CA checked so we just submit the form
-    await click(SES.ssh.save);
+    await click(GENERAL.saveButton);
     // There is a delay in the backend for the public key to be generated, wait for it to complete by checking that the public key is displayed
     await waitFor(GENERAL.infoRowLabel('Public key'));
     await click(GENERAL.tab(sshPath));

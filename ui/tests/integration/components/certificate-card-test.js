@@ -8,12 +8,13 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECTORS = {
   label: '[data-test-certificate-label]',
   value: '[data-test-certificate-value]',
   icon: '[data-test-certificate-icon]',
-  copyButton: '[data-test-copy-button]',
+  copyButton: GENERAL.copyButton,
   copyIcon: '[data-test-icon="clipboard-copy"]',
 };
 const { rootPem, rootDer } = CERTIFICATES;

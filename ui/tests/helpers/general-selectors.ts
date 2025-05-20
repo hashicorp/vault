@@ -25,7 +25,10 @@ export const GENERAL = {
   backButton: '[data-test-back-button]',
   cancelButton: '[data-test-cancel]',
   confirmButton: '[data-test-confirm-button]',
-  saveButton: '[data-test-save]', // there should only be one save button per view (e.g. one per form) so this does not need to be dynamic
+  copyButton: '[data-test-copy-button]',
+  // there should only be one save button per view (e.g. one per form) so this does not need to be dynamic
+  // this button should be used for any kind of "submit" on a form or "save" action.
+  saveButton: '[data-test-save]',
   confirmTrigger: '[data-test-confirm-action-trigger]',
   buttonByAttr: (label: string) => `[data-test-button="${label}"]`,
 

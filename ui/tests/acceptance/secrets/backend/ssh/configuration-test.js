@@ -62,7 +62,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
       'transitions to the configuration page'
     );
     // default has generate CA checked so we just submit the form
-    await click(SES.ssh.save);
+    await click(GENERAL.saveButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${sshPath}/configuration`,
@@ -104,7 +104,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await click(SES.configure);
     assert.dom(GENERAL.inputByAttr('generateSigningKey')).isChecked('generate_signing_key defaults to true');
     await click(GENERAL.inputByAttr('generateSigningKey'));
-    await click(SES.ssh.save);
+    await click(GENERAL.saveButton);
     assert
       .dom(GENERAL.inlineError)
       .hasText('Provide a Public and Private key or set "Generate Signing Key" to true.');

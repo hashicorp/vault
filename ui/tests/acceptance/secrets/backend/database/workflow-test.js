@@ -33,7 +33,6 @@ const PAGE = {
   roleSettingsSection: '[data-test-role-settings-section]',
   statementsSection: '[data-test-statements-section]',
   editRole: '[data-test-edit-link]',
-  generateCredentials: (type = 'dynamic') => `[data-test-database-role-creds="${type}"]`,
 };
 
 const FORM = {
@@ -308,7 +307,7 @@ module('Acceptance | database workflow', function (hooks) {
         .hasText('2 hours', 'Shows updated TTL');
 
       // CREDENTIALS
-      await click(PAGE.generateCredentials());
+      await click(GENERAL.buttonByAttr('dynamic'));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/credentials/${roleName}?roleType=dynamic`,

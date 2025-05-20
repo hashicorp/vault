@@ -39,7 +39,7 @@ const writeUserWithPolicy = async function (path) {
 const setupUser = async function (path) {
   await writePolicy(path);
   await writeUserWithPolicy(path);
-  await click('[data-test-save-config="true"]');
+  await click(GENERAL.saveButton);
 };
 
 module('Acceptance | mfa-setup', function (hooks) {

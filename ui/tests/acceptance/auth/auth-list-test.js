@@ -163,7 +163,7 @@ module('Acceptance | auth backend list', function (hooks) {
       // go directly to token configure route
       await visit('/vault/settings/auth/configure/token/options');
       await fillIn(GENERAL.inputByAttr('description'), 'My custom description');
-      await click('[data-test-save-config="true"]');
+      await click(GENERAL.saveButton);
       assert.strictEqual(currentURL(), '/vault/access', 'successfully saves and navigates away');
       await click(AUTH_FORM.linkedBlockAuth('token'));
       assert

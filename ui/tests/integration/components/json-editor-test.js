@@ -12,6 +12,7 @@ import jsonEditor from '../../pages/components/json-editor';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { createLongJson } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const component = create(jsonEditor);
 
@@ -54,7 +55,7 @@ module('Integration | Component | json-editor', function (hooks) {
 
     assert.strictEqual(component.title, 'Test title', 'renders the provided title');
     assert.true(component.hasToolbar, 'renders the toolbar');
-    assert.true(component.hasCopyButton, 'renders the copy button');
+    assert.true(GENERAL.copyButton, 'renders the copy button');
     assert.true(component.hasJSONEditor, 'renders the code mirror modifier');
     assert.ok(component.canEdit, 'json editor can be edited');
   });

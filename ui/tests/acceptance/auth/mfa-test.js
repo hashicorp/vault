@@ -60,7 +60,7 @@ for (const method of AUTH_METHOD_MAP) {
         }, DELAY_IN_MS);
       }
 
-      await click(AUTH_FORM.login);
+      await click(GENERAL.saveButton);
       assert
         .dom(MFA_SELECTORS.mfaForm)
         .hasText(
@@ -93,7 +93,7 @@ for (const method of AUTH_METHOD_MAP) {
         }, DELAY_IN_MS);
       }
 
-      await click(AUTH_FORM.login);
+      await click(GENERAL.saveButton);
       assert
         .dom(MFA_SELECTORS.mfaForm)
         .hasText(
@@ -131,7 +131,7 @@ for (const method of AUTH_METHOD_MAP) {
         }, DELAY_IN_MS);
       }
 
-      await click(AUTH_FORM.login);
+      await click(GENERAL.saveButton);
       await fillIn(MFA_SELECTORS.passcode(0), expectedOtp);
       await click(MFA_SELECTORS.validate);
     });
@@ -162,7 +162,7 @@ for (const method of AUTH_METHOD_MAP) {
         }, DELAY_IN_MS);
       }
 
-      await click(AUTH_FORM.login);
+      await click(GENERAL.saveButton);
       await fillIn(MFA_SELECTORS.passcode(0), expectedOtp);
       await click(MFA_SELECTORS.validate);
     });

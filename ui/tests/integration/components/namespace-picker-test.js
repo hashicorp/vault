@@ -10,6 +10,7 @@ import sinon from 'sinon';
 import hbs from 'htmlbars-inline-precompile';
 import Service from '@ember/service';
 import { NAMESPACE_PICKER_SELECTORS } from 'vault/tests/helpers/namespace-picker';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 class AuthService extends Service {
   authData = { userRootNamespace: '' };
@@ -119,8 +120,8 @@ module('Integration | Component | namespace-picker', function (hooks) {
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify that the "Refresh List" button is visible
-    assert.dom(NAMESPACE_PICKER_SELECTORS.refreshList).exists('Refresh List button is visible');
-    assert.dom(NAMESPACE_PICKER_SELECTORS.manageButton).exists('Manage button is visible');
+    assert.dom(GENERAL.buttonByAttr('refresh-list')).exists('Refresh List button is visible');
+    assert.dom(GENERAL.buttonByAttr('manage-namespaces')).exists('Manage button is visible');
   });
 
   test('it hides the refresh button when canList is false', async function (assert) {
@@ -136,8 +137,8 @@ module('Integration | Component | namespace-picker', function (hooks) {
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify that the buttons are hidden
-    assert.dom(NAMESPACE_PICKER_SELECTORS.refreshList).doesNotExist('Refresh List button is hidden');
-    assert.dom(NAMESPACE_PICKER_SELECTORS.manageButton).exists('Manage button is hidden');
+    assert.dom(GENERAL.buttonByAttr('refresh-list')).doesNotExist('Refresh List button is hidden');
+    assert.dom(GENERAL.buttonByAttr('manage-namespaces')).exists('Manage button is hidden');
   });
 
   test('it hides both action buttons when the capabilities store throws an error', async function (assert) {
@@ -150,8 +151,8 @@ module('Integration | Component | namespace-picker', function (hooks) {
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify that the buttons are hidden
-    assert.dom(NAMESPACE_PICKER_SELECTORS.refreshList).doesNotExist('Refresh List button is hidden');
-    assert.dom(NAMESPACE_PICKER_SELECTORS.manageButton).doesNotExist('Manage button is hidden');
+    assert.dom(GENERAL.buttonByAttr('refresh-list')).doesNotExist('Refresh List button is hidden');
+    assert.dom(GENERAL.buttonByAttr('manage-namespaces')).doesNotExist('Manage button is hidden');
   });
 
   test('it updates the namespace list after clicking "Refresh list"', async function (assert) {
@@ -189,7 +190,7 @@ module('Integration | Component | namespace-picker', function (hooks) {
     );
 
     // Click the "Refresh list" button
-    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
+    await click(GENERAL.buttonByAttr('refresh-list'));
 
     // Verify the new namespace is displayed
     assert.strictEqual(

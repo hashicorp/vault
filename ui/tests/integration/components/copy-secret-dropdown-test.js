@@ -7,10 +7,11 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECTORS = {
   dropdown: '[data-test-copy-menu-trigger]',
-  copyButton: '[data-test-copy-button]',
+  copyButton: GENERAL.copyButton,
   clipboard: 'data-test-copy-button',
   wrapButton: '[data-test-wrap-button]',
   masked: '[data-test-masked-input]',

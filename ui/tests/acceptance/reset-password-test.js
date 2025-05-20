@@ -65,7 +65,7 @@ module('Acceptance | reset password', function (hooks) {
 
     assert.dom('[data-test-title]').hasText('Reset password', 'page title');
     await fillIn('[data-test-input="reset-password"]', 'newpassword');
-    await click('[data-test-reset-password-save]');
+    await click(GENERAL.saveButton);
     await waitFor('[data-test-flash-message]');
     assert.dom('[data-test-flash-message]').hasText(`Success ${SUCCESS_MESSAGE}`);
     assert.dom('[data-test-input="reset-password"]').hasValue('', 'Resets input after save');

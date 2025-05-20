@@ -67,7 +67,7 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
     await fillIn(AUTH_FORM.selectMethod, 'token');
     // the login method on this page does another visit call that we don't want here
     await fillIn(GENERAL.inputByAttr('token'), 'root');
-    await click(AUTH_FORM.login);
+    await click(GENERAL.saveButton);
     assert.strictEqual(currentURL(), url, 'navigates to the redirect_to url after auth');
   });
 
@@ -86,7 +86,7 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
     );
     await fillIn(AUTH_FORM.selectMethod, 'token');
     await fillIn(GENERAL.inputByAttr('token'), 'root');
-    await click(AUTH_FORM.login);
+    await click(GENERAL.saveButton);
     assert.strictEqual(currentURL(), url, 'navigates to the redirect_to with the query param after auth');
   });
 

@@ -136,7 +136,9 @@ module('Integration | Component | auth | page', function (hooks) {
       assert
         .dom(GENERAL.backButton)
         .exists('back button renders because listing_visibility="unauth" for other mounts');
-      assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('"Sign in with other methods" does not render');
+      assert
+        .dom(GENERAL.buttonByAttr('other-methods'))
+        .doesNotExist('"Sign in with other methods" does not render');
     });
 
     test('it renders single mount view instead of tabs if @directLinkData data references a visible type', async function (assert) {
@@ -146,7 +148,7 @@ module('Integration | Component | auth | page', function (hooks) {
       assert.dom(GENERAL.inputByAttr('role')).exists();
       assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
       assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
-      assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders');
+      assert.dom(GENERAL.buttonByAttr('other-methods')).exists('"Sign in with other methods" renders');
       assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist();
       assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
       assert.dom(GENERAL.backButton).doesNotExist();
@@ -184,7 +186,7 @@ module('Integration | Component | auth | page', function (hooks) {
       await fillIn(AUTH_FORM.selectMethod, authType);
       // await fillIn(AUTH_FORM.selectMethod, authType);
       await fillInLoginFields(loginData);
-      await click(AUTH_FORM.login);
+      await click(GENERAL.saveButton);
       const [actual] = this.onAuthSuccess.lastCall.args;
       const expected = {
         namespace: '',
@@ -208,7 +210,7 @@ module('Integration | Component | auth | page', function (hooks) {
       // await fillIn(AUTH_FORM.selectMethod, authType);
       // toggle mount path input to specify custom path
       await fillInLoginFields(loginDataWithPath, { toggleOptions: true });
-      await click(AUTH_FORM.login);
+      await click(GENERAL.saveButton);
 
       const [actual] = this.onAuthSuccess.lastCall.args;
       const expected = {
@@ -231,7 +233,7 @@ module('Integration | Component | auth | page', function (hooks) {
     await fillIn(AUTH_FORM.selectMethod, 'token');
     // await fillIn(AUTH_FORM.selectMethod, 'token');
     await fillInLoginFields({ token: 'mysupersecuretoken' });
-    await click(AUTH_FORM.login);
+    await click(GENERAL.saveButton);
     const [actual] = this.onAuthSuccess.lastCall.args;
     const expected = {
       namespace: '',

@@ -48,7 +48,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
   />
     `);
 
-    await click(SES.ssh.cancel);
+    await click(GENERAL.cancelButton);
 
     assert.true(
       this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', 'ssh-test'),
@@ -64,7 +64,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
   />
     `);
     await fillIn(GENERAL.inputByAttr('publicKey'), 'hello');
-    await click(SES.ssh.save);
+    await click(GENERAL.saveButton);
     assert
       .dom(GENERAL.inlineError)
       .hasText(
@@ -73,7 +73,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
       );
 
     await click(GENERAL.inputByAttr('generateSigningKey'));
-    await click(SES.ssh.save);
+    await click(GENERAL.saveButton);
     assert
       .dom(GENERAL.inlineError)
       .hasText(
@@ -99,7 +99,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
   />
     `);
 
-    await click(SES.ssh.save);
+    await click(GENERAL.saveButton);
     assert.dom(SES.ssh.editConfigSection).exists('renders the edit configuration section of the form');
   });
 

@@ -92,7 +92,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await createNamespaces(namespaces);
 
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
-    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
+    await click(GENERAL.buttonByAttr('refresh-list'));
 
     assert.dom(NAMESPACE_PICKER_SELECTORS.searchInput).exists('The namespace search field exists');
 
@@ -123,7 +123,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await createNamespaces(namespaces);
 
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
-    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
+    await click(GENERAL.buttonByAttr('refresh-list'));
 
     // Verify all namespaces are displayed initially
     assert.dom(NAMESPACE_PICKER_SELECTORS.link()).exists('Namespace link(s) exist');
@@ -186,8 +186,8 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     );
 
     // Refresh the list of namespaces
-    assert.dom(NAMESPACE_PICKER_SELECTORS.refreshList).exists('Refresh list button exists');
-    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
+    assert.dom(GENERAL.buttonByAttr('refresh-list')).exists('Refresh list button exists');
+    await click(GENERAL.buttonByAttr('refresh-list'));
 
     // Verify that the namespace list was fetched on refresh
     listNamespaceRequests = fetchSpy
@@ -209,7 +209,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await createNamespaces(namespaces);
 
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
-    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
+    await click(GENERAL.buttonByAttr('refresh-list'));
 
     // Verify the "Manage" button is rendered and has the correct URL
     assert
@@ -247,7 +247,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await createNamespaces(namespaces);
 
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
-    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
+    await click(GENERAL.buttonByAttr('refresh-list'));
 
     // Login with a namespace prefixed with /
     await loginNs('/beep/boop');
