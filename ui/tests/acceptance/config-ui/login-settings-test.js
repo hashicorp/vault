@@ -17,14 +17,23 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
 
   hooks.beforeEach(async function () {
     await login();
+
+    // create login rules
+    await runCmd([
+      'write sys/config/ui/login/default-auth/testRule backup_auth_types=[] default_auth_type=okta disable_inheritance=false namespace=ns1',
+      'write sys/config/ui/login/default-auth/testRule2 backup_auth_types=[] default_auth_type=ldap disable_inheritance=true namespace=ns2',
+    ]);
+  });
+
+  hooks.afterEach(async function () {
+    // cleanup login rules
+    await runCmd([
+      'delete sys/config/ui/login/default-auth/testRule',
+      'delete sys/config/ui/login/default-auth/testRule2',
+    ]);
   });
 
   test('fetched login rule list renders', async function (assert) {
-    await runCmd([
-      'write sys/config/ui/login/default-auth/testRule backup_auth_types=[] default_auth_type=okta disable_inheritance=false namespace=ns1',
-      'write sys/config/ui/login/default-auth/testRule2 backup_auth_types=[] default_auth_type=ldap disable_inheritance=false namespace=ns2',
-    ]);
-
     // Visit the login settings list index page
     await visit('vault/config-ui/login-settings');
 
@@ -62,8 +71,8 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
 
     // verify fetched rule data is rendered
     assert.dom(GENERAL.infoRowLabel('Name')).exists();
-    assert.dom(GENERAL.infoRowValue('Name')).hasText('testRule2');
+    assert.dom(GENERAL.infoRowValue('Name')).hasText('testRule');
     assert.dom(GENERAL.infoRowLabel('Namespace')).exists();
-    assert.dom(GENERAL.infoRowValue('Namespace')).hasText('ns2/');
+    assert.dom(GENERAL.infoRowValue('Namespace')).hasText('ns1/');
   });
 });
