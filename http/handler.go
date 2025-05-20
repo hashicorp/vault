@@ -132,6 +132,7 @@ func init() {
 		"sys/storage/raft/snapshot",
 		"sys/storage/raft/snapshot-force",
 		"!sys/storage/raft/snapshot-auto/config",
+		"sys/storage/raft/snapshot-load",
 	})
 	websocketPaths.AddPaths(websocketRawPaths)
 }

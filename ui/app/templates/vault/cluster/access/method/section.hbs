@@ -18,7 +18,7 @@
 </PageHeader>
 
 {{#if (not (includes this.model.type (supported-managed-auth-backends)))}}
-  <div class="has-text-grey has-top-bottom-margin" data-test-doc-link>
+  <div class="has-text-grey has-top-bottom-margin" data-test-doc-link={{this.model.id}}>
     The Vault UI only supports configuration for this authentication method. For management, the
     <DocLink @path="/vault/api-docs">API or CLI</DocLink>
     should be used.

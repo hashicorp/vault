@@ -294,4 +294,39 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       'correctly sanitizes namespace'
     );
   });
+
+  test('it should allow the user to delete a namespace', async function (assert) {
+    // Test Setup
+    const namespaces = ['test-delete-me'];
+    await createNamespaces(namespaces);
+
+    await visit('/vault/access/namespaces');
+
+    const searchInput = GENERAL.filterInputExplicit;
+    const searchButton = GENERAL.filterInputExplicitSearch;
+
+    await fillIn(searchInput, 'test-delete-me');
+    await click(searchButton);
+
+    assert.dom(GENERAL.menuTrigger).exists();
+    await click(GENERAL.menuTrigger);
+
+    // Verify that the user can delete the namespace
+    const deleteNamespaceButton = '.hds-dropdown-list-item:nth-of-type(1)';
+    assert.dom(deleteNamespaceButton).hasText('Delete', 'Allow users to delete the namespace');
+    await click(`${deleteNamespaceButton} button`);
+
+    assert.dom(GENERAL.confirmButton).hasText('Confirm', 'Allow users to delete the namespace');
+    await click(GENERAL.confirmButton);
+
+    assert.strictEqual(
+      currentURL(),
+      '/vault/access/namespaces?page=1&pageFilter=test-delete-me',
+      'Should remain on the manage namespaces page after deletion'
+    );
+
+    assert
+      .dom('.list-item-row')
+      .exists({ count: 0 }, 'Namespace should be deleted and not displayed in the list');
+  });
 });

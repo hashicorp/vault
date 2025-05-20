@@ -73,6 +73,29 @@
             "description": "OK"
           }
         }
+      },
+      "patch": {
+        "summary": "Patch Summary",
+        "description": "Patch Description",
+        "operationId": "kv-patch-foo-id",
+        "tags": [
+          "secrets"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KvPatchFooIdRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
       }
     },
     "/foo/{id}/": {
@@ -139,6 +162,60 @@
   "components": {
     "schemas": {
       "KvWriteFooIdRequest": {
+        "type": "object",
+        "properties": {
+          "age": {
+            "type": "integer",
+            "description": "the age",
+            "enum": [
+              1,
+              2,
+              3
+            ],
+            "x-vault-displayAttrs": {
+              "name": "Age",
+              "value": 7,
+              "sensitive": true,
+              "group": "Some Group"
+            }
+          },
+          "flavors": {
+            "type": "array",
+            "description": "the flavors",
+            "items": {
+              "type": "string"
+            }
+          },
+          "format": {
+            "type": "string",
+            "description": "a query param"
+          },
+          "maximum": {
+            "type": "integer",
+            "description": "a maximum value",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string",
+            "description": "the name",
+            "pattern": "\\w([\\w-.]*\\w)?",
+            "default": "Larry"
+          },
+          "x-abc-token": {
+            "type": "string",
+            "description": "a header value",
+            "enum": [
+              "a",
+              "b",
+              "c"
+            ]
+          }
+        },
+        "required": [
+          "age"
+        ]
+      },
+      "KvPatchFooIdRequest": {
         "type": "object",
         "properties": {
           "age": {

@@ -111,7 +111,10 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 		contentType := r.Header.Get("Content-Type")
 
 		if (ra != nil && ra.IsBinaryPath(r.Context(), path)) ||
-			path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" {
+			path == "sys/storage/raft/snapshot" ||
+			path == "sys/storage/raft/snapshot-force" ||
+			path == "sys/storage/raft/snapshot-load" {
+
 			passHTTPReq = true
 			origBody = r.Body
 		} else {

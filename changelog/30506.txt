@@ -1,0 +1,3 @@
+```release-note:change
+ui: Client counting "running total" charts now reflect new clients only
+```
