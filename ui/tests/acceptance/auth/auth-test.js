@@ -35,6 +35,17 @@ module('Acceptance | auth login form', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
+  test('it does not request login settings for community versions', async function (assert) {
+    assert.expect(1); // should only be one assertion because the stubbed mirage request should NOT be hit
+    this.owner.lookup('service:version').type = 'community';
+    this.server.get('/sys/internal/ui/default-login-methods', () => {
+      // cannot throw error here because request errors are swallowed
+      assert.false(true, 'request made for login settings and it should not have been');
+    });
+    await visit('/vault/auth');
+    assert.strictEqual(currentURL(), '/vault/auth');
+  });
+
   test('it selects auth method if "with" query param is a supported auth method', async function (assert) {
     const backends = supportedAuthBackends();
     assert.expect(backends.length);
