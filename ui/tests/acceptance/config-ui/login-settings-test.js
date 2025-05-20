@@ -16,15 +16,13 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    const version = this.owner.lookup('service:version');
-    version.type = 'enterprise';
     await login();
   });
 
   test('fetched login rule list renders', async function (assert) {
     await runCmd([
-      'write sys/config/ui/login/default-auth/testRule backupAuthTypes=[] defaultAuthType=okta disableInheritance=false namespace=ns1',
-      'write sys/config/ui/login/default-auth/testRule2 backupAuthTypes=[] defaultAuthType=ldap disableInheritance=false namespace=ns2',
+      'write sys/config/ui/login/default-auth/testRule backup_auth_types=[] default_auth_type=okta disable_inheritance=false namespace=ns1',
+      'write sys/config/ui/login/default-auth/testRule2 backup_auth_types=[] default_auth_type=ldap disable_inheritance=false namespace=ns2',
     ]);
 
     // Visit the login settings list index page
