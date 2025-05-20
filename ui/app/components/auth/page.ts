@@ -10,6 +10,7 @@ import { action } from '@ember/object';
 
 import type { AuthResponse, AuthResponseWithMfa } from 'vault/vault/services/auth';
 import type { UnauthMountsByType, UnauthMountsResponse } from 'vault/vault/auth/form';
+import type AuthService from 'vault/vault/services/auth';
 import type ClusterModel from 'vault/models/cluster';
 import type CspEventService from 'vault/services/csp-event';
 
@@ -96,6 +97,7 @@ enum FormView {
 }
 
 export default class AuthPage extends Component<Args> {
+  @service declare readonly auth: AuthService;
   @service('csp-event') declare readonly csp: CspEventService;
 
   @tracked canceledMfaAuth = '';
@@ -106,6 +108,17 @@ export default class AuthPage extends Component<Args> {
     const isStandby = this.args.cluster.standby;
     const hasConnectionViolations = this.csp.connectionViolations.length;
     return isStandby && hasConnectionViolations ? CSP_ERROR : '';
+  }
+
+  get initialAuthType(): string {
+    // First, prioritize canceledMfaAuth since it's set by user interaction.
+    // Next, "type" from direct link since the URL query param overrides any login settings.
+    // Then, first tab which is either the first backup method or visible mount tab.
+    // Finally, fallback to the most recently used auth method in localStorage.
+    // Token is the default otherwise.
+    const directLinkType = this.args.directLinkData?.type;
+    const firstTab = Object.keys(this.formStates?.defaultView?.tabData || {})[0];
+    return this.canceledMfaAuth || directLinkType || firstTab || this.auth.getAuthType() || 'token';
   }
 
   get formStates() {
@@ -123,12 +136,8 @@ export default class AuthPage extends Component<Args> {
       return this.visibleMountViews;
     }
 
-    // If none of the above, the UI renders the standard dropdown
-    return null;
-  }
-
-  get preselectedType() {
-    return this.canceledMfaAuth || this.args.directLinkData?.type || '';
+    // If none of the above, the UI renders the standard dropdown with no alternate views
+    return this.standardDropdownView;
   }
 
   get visibleMountsByType() {
@@ -149,7 +158,14 @@ export default class AuthPage extends Component<Args> {
     return Object.keys(this.visibleMountsByType || {});
   }
 
-  // Form State Getters
+  // FORM STATE GETTERS
+  get standardDropdownView() {
+    return {
+      defaultView: this.constructViews(FormView.DROPDOWN, null),
+      alternateView: null,
+    };
+  }
+
   get directLinkViews() {
     const { directLinkData } = this.args;
 
@@ -164,8 +180,8 @@ export default class AuthPage extends Component<Args> {
     }
 
     // Otherwise, directLinkData just has a "type" key.
-    // Render either the dropdown or visibleMountViews, with that type preselected
-    return this.visibleMountsByType ? this.visibleMountViews : this.constructViews(FormView.DROPDOWN, null);
+    // Render either visibleMountViews or dropdown with that type preselected
+    return this.visibleMountsByType ? this.visibleMountViews : this.standardDropdownView;
   }
 
   get loginSettingsViews() {
@@ -195,6 +211,22 @@ export default class AuthPage extends Component<Args> {
     const defaultView = this.constructViews(FormView.TABS, this.visibleMountsByType);
     const alternateView = this.constructViews(FormView.DROPDOWN, null);
     return { defaultView, alternateView };
+  }
+
+  @action
+  initialFormState() {
+    const { defaultView, alternateView } = this.formStates;
+    const hasTab = (tabData: object) => Object.keys(tabData).includes(this.initialAuthType);
+    const authIsNotDefaultTab = !hasTab(defaultView?.tabData || {});
+    const hasAlternateView = !!alternateView;
+    const authIsAlternateTab = hasTab(alternateView?.tabData || {});
+
+    // In rare cases, pre-toggle the form to the fallback dropdown if the selected method is not in the alternate view.
+    // This could happen if tabs render for visible mounts and the "with" query param references a type that isn't a tab.
+    // Or auth type is preset from canceled MFA or local storage and is not in the default view.
+    const showAlternate = (authIsNotDefaultTab && hasAlternateView) || authIsAlternateTab;
+
+    return { initialAuthType: this.initialAuthType, showAlternate };
   }
 
   @action

@@ -3,103 +3,101 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<div {{did-insert this.initializeState}}>
-  {{#if this.formComponent}}
-    {{#let (component this.formComponent) as |AuthFormComponent|}}
-      {{! renders Auth::Form::Base or Auth::Form::<Type>}}
-      <AuthFormComponent
-        @authType={{this.selectedAuth}}
-        @cluster={{@cluster}}
-        @onError={{this.handleError}}
-        @onSuccess={{@onSuccess}}
-      >
-        <:namespace>
-          {{#if (has-feature "Namespaces")}}
-            <Auth::NamespaceInput
-              @disabled={{@oidcProviderQueryParam}}
-              @hvdManagedNamespace={{this.flags.hvdManagedNamespaceRoot}}
-              @namespaceValue={{this.namespaceInput}}
-              @updateNamespace={{this.handleNamespaceUpdate}}
+{{#if this.formComponent}}
+  {{#let (component this.formComponent) as |AuthFormComponent|}}
+    {{! renders Auth::Form::Base or Auth::Form::<Type>}}
+    <AuthFormComponent
+      @authType={{this.selectedAuth}}
+      @cluster={{@cluster}}
+      @onError={{this.handleError}}
+      @onSuccess={{@onSuccess}}
+    >
+      <:namespace>
+        {{#if (has-feature "Namespaces")}}
+          <Auth::NamespaceInput
+            @disabled={{@oidcProviderQueryParam}}
+            @hvdManagedNamespace={{this.flags.hvdManagedNamespaceRoot}}
+            @namespaceValue={{this.namespaceInput}}
+            @updateNamespace={{this.handleNamespaceUpdate}}
+          />
+        {{/if}}
+      </:namespace>
+
+      <:back>
+        {{#if this.showAlternateLoginView}}
+          <Hds::Button
+            @text="Back"
+            {{on "click" this.toggleView}}
+            @color="tertiary"
+            @icon="arrow-left"
+            data-test-back-button
+          />
+        {{/if}}
+      </:back>
+
+      <:authSelectOptions>
+        <div class="has-bottom-margin-m">
+          {{#if this.tabData}}
+            <Auth::Tabs
+              @authTabData={{this.tabData}}
+              @handleTabClick={{this.setAuthType}}
+              @selectedAuthMethod={{this.selectedAuth}}
             />
+          {{else}}
+            {{! Fallback is dropdown with all auth methods }}
+            <Hds::Form::Select::Field
+              name="selectedAuth"
+              {{on "input" this.setTypeFromDropdown}}
+              data-test-select="auth type"
+              as |F|
+            >
+              <F.Label class="has-top-margin-m">Method</F.Label>
+              <F.Options>
+                {{#each this.supportedAuthTypes as |type|}}
+                  <option selected={{eq this.selectedAuth type}} value={{type}}>
+                    {{auth-display-name type}}
+                  </option>
+                {{/each}}
+              </F.Options>
+            </Hds::Form::Select::Field>
           {{/if}}
-        </:namespace>
+        </div>
+      </:authSelectOptions>
 
-        <:back>
-          {{#if this.showAlternateLoginView}}
-            <Hds::Button
-              @text="Back"
-              {{on "click" this.toggleView}}
-              @color="tertiary"
-              @icon="arrow-left"
-              data-test-back-button
-            />
-          {{/if}}
-        </:back>
+      <:error>
+        {{#if this.errorMessage}}
+          <MessageError @errorMessage={{this.errorMessage}} />
+        {{/if}}
+      </:error>
 
-        <:authSelectOptions>
-          <div class="has-bottom-margin-m">
-            {{#if this.tabData}}
-              <Auth::Tabs
-                @authTabData={{this.tabData}}
-                @handleTabClick={{this.setAuthType}}
-                @selectedAuthMethod={{this.selectedAuth}}
-              />
-            {{else}}
-              {{! Fallback is dropdown with all auth methods }}
-              <Hds::Form::Select::Field
-                name="selectedAuth"
-                {{on "input" this.setTypeFromDropdown}}
-                data-test-select="auth type"
-                as |F|
-              >
-                <F.Label class="has-top-margin-m">Method</F.Label>
-                <F.Options>
-                  {{#each this.supportedAuthTypes as |type|}}
-                    <option selected={{eq this.selectedAuth type}} value={{type}}>
-                      {{auth-display-name type}}
-                    </option>
-                  {{/each}}
-                </F.Options>
-              </Hds::Form::Select::Field>
-            {{/if}}
-          </div>
-        </:authSelectOptions>
+      <:advancedSettings>
+        {{#unless this.hideAdvancedSettings}}
+          <Hds::Reveal @text="Advanced settings" data-test-advanced-settings class="is-fullwidth">
+            <Hds::Form::TextInput::Field name="path" data-test-input="path" as |F|>
+              <F.Label class="has-top-margin-m">Mount path</F.Label>
+              <F.HelperText>
+                If this authentication method was mounted using a non-default path, input it below. Otherwise Vault will
+                assume the default path
+                <Hds::Text::Code class="code-in-text">{{this.selectedAuth}}</Hds::Text::Code>
+                .</F.HelperText>
+            </Hds::Form::TextInput::Field>
+          </Hds::Reveal>
+        {{/unless}}
+      </:advancedSettings>
 
-        <:error>
-          {{#if this.errorMessage}}
-            <MessageError @errorMessage={{this.errorMessage}} />
-          {{/if}}
-        </:error>
-
-        <:advancedSettings>
-          {{#unless this.hideAdvancedSettings}}
-            <Hds::Reveal @text="Advanced settings" data-test-advanced-settings class="is-fullwidth">
-              <Hds::Form::TextInput::Field name="path" data-test-input="path" as |F|>
-                <F.Label class="has-top-margin-m">Mount path</F.Label>
-                <F.HelperText>
-                  If this authentication method was mounted using a non-default path, input it below. Otherwise Vault will
-                  assume the default path
-                  <Hds::Text::Code class="code-in-text">{{this.selectedAuth}}</Hds::Text::Code>
-                  .</F.HelperText>
-              </Hds::Form::TextInput::Field>
-            </Hds::Reveal>
-          {{/unless}}
-        </:advancedSettings>
-
-        <:footer>
-          {{#if (and @alternateView (not this.showAlternateLoginView))}}
-            <Hds::Button
-              {{on "click" this.toggleView}}
-              @color="tertiary"
-              @icon="arrow-right"
-              @iconPosition="trailing"
-              @isInline={{true}}
-              @text="Sign in with other methods"
-              data-test-other-methods-button
-            />
-          {{/if}}
-        </:footer>
-      </AuthFormComponent>
-    {{/let}}
-  {{/if}}
-</div>
+      <:footer>
+        {{#if (and @alternateView (not this.showAlternateLoginView))}}
+          <Hds::Button
+            {{on "click" this.toggleView}}
+            @color="tertiary"
+            @icon="arrow-right"
+            @iconPosition="trailing"
+            @isInline={{true}}
+            @text="Sign in with other methods"
+            data-test-other-methods-button
+          />
+        {{/if}}
+      </:footer>
+    </AuthFormComponent>
+  {{/let}}
+{{/if}}

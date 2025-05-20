@@ -41,6 +41,7 @@ interface Args {
   namespaceQueryParam: string;
   oidcProviderQueryParam: string;
   onSuccess: CallableFunction;
+  initialFormState: () => { initialAuthType: string; showAlternate: boolean };
   preselectedType: string;
   visibleMountTypes: string[];
 }
@@ -55,10 +56,9 @@ export default class AuthFormTemplate extends Component<Args> {
   @service declare readonly flags: FlagsService;
   @service declare readonly version: VersionService;
 
-  // true → "Back" button renders, false → "Sign in with other methods→" (only if an alternate view exists)
-  @tracked showAlternateLoginView = false;
-
   @tracked selectedAuth = ''; // determines which form renders
+  // true → "Back" button renders, false → "Sign in with other methods→" renders (if an alternate view exists)
+  @tracked showAlternateLoginView = false;
   @tracked errorMessage = '';
 
   supportedAuthTypes: string[];
@@ -66,6 +66,9 @@ export default class AuthFormTemplate extends Component<Args> {
   constructor(owner: unknown, args: Args) {
     super(owner, args);
     this.supportedAuthTypes = supportedTypes(this.version.isEnterprise);
+    const { initialAuthType, showAlternate } = this.args.initialFormState();
+    this.showAlternateLoginView = showAlternate;
+    this.selectedAuth = initialAuthType;
   }
 
   get firstAuthTab() {
@@ -109,21 +112,6 @@ export default class AuthFormTemplate extends Component<Args> {
   get tabData() {
     if (this.showAlternateLoginView) return this.args?.alternateView?.tabData;
     return this.args?.defaultView?.tabData;
-  }
-
-  @action
-  initializeState() {
-    // First, set auth type
-    const type = this.determineAuthType();
-    this.setAuthType(type);
-
-    // In rare cases, pre-toggle the form to the fallback dropdown if the selected method is not in the default view.
-    // This could happen if tabs render for visible mounts and the "with" query param references a type that isn't a tab.
-    // Or auth type is preset from canceled MFA or local storage and is not in the default view.
-    const isInitialTab = Object.keys(this.args.defaultView?.tabData || {}).includes(this.selectedAuth);
-    const isAlternateTab = Object.keys(this.args.alternateView?.tabData || {}).includes(this.selectedAuth);
-
-    this.showAlternateLoginView = (!isInitialTab && !!this.args.alternateView) || isAlternateTab;
   }
 
   @action
