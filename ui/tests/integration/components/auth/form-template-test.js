@@ -85,45 +85,44 @@ module('Integration | Component | auth | form template', function (hooks) {
 
   module('listing visibility', function (hooks) {
     hooks.beforeEach(function () {
-      this.visibleMountTypes = ['userpass', 'oidc', 'token'];
-      this.initialFormState = { initialAuthType: 'userpass', showAlternate: false };
-      this.initialFormState;
-      this.defaultView = {
-        view: 'tabs',
-        tabData: {
-          userpass: [
-            {
-              path: 'userpass/',
-              description: '',
-              options: {},
-              type: 'userpass',
-            },
-            {
-              path: 'userpass2/',
-              description: '',
-              options: {},
-              type: 'userpass',
-            },
-          ],
-          oidc: [
-            {
-              path: 'my-oidc/',
-              description: '',
-              options: {},
-              type: 'oidc',
-            },
-          ],
-          token: [
-            {
-              path: 'token/',
-              description: 'token based credentials',
-              options: null,
-              type: 'token',
-            },
-          ],
-        },
+      const defaultTabs = {
+        userpass: [
+          {
+            path: 'userpass/',
+            description: '',
+            options: {},
+            type: 'userpass',
+          },
+          {
+            path: 'userpass2/',
+            description: '',
+            options: {},
+            type: 'userpass',
+          },
+        ],
+        oidc: [
+          {
+            path: 'my-oidc/',
+            description: '',
+            options: {},
+            type: 'oidc',
+          },
+        ],
+        token: [
+          {
+            path: 'token/',
+            description: 'token based credentials',
+            options: null,
+            type: 'token',
+          },
+        ],
       };
-      this.alternateView = { view: 'dropdown', tabData: null };
+      // all computed by the parent, in this case the initial tabs are the same as visible mount types
+      // but that isn't always the case
+      this.visibleMountTypes = Object.keys(defaultTabs);
+      this.defaultView = { type: 'tabs', tabData: defaultTabs };
+      this.alternateView = { type: 'dropdown', tabData: null };
+      this.initialFormState = { initialAuthType: 'userpass', showAlternate: false };
     });
 
     test('it selects each auth tab and renders form for that type', async function (assert) {

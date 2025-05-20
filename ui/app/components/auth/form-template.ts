@@ -10,7 +10,6 @@ import { action } from '@ember/object';
 import { supportedTypes } from 'vault/utils/supported-login-methods';
 import { getRelativePath } from 'core/utils/sanitize-path';
 
-import type AuthService from 'vault/vault/services/auth';
 import type FlagsService from 'vault/services/flags';
 import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
@@ -59,7 +58,6 @@ interface FormState {
 }
 
 export default class AuthFormTemplate extends Component<Args> {
-  @service declare readonly auth: AuthService; // TODO delete
   @service declare readonly flags: FlagsService;
   @service declare readonly store: Store;
   @service declare readonly version: VersionService;

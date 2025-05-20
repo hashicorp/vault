@@ -16,13 +16,49 @@ import type CspEventService from 'vault/services/csp-event';
 
 /**
  * @module AuthPage
- * The Auth::Page is the route template for the login splash view. It renders the Auth::FormTemplate or MFA component if an
- * mfa validation is returned from the auth request. It also formats mount data to manage what tabs are rendered in Auth::FormTemplate.
+ * Auth::Page renders the Auth::FormTemplate or MFA component if an mfa validation is returned from the auth request.
+ * It receives configuration settings from the route's model hook and determines the possible form states passed to Auth::FormTemplate.
+ * The model hook refreshes when the namespace input updates and re-requests `sys/internal/ui/mounts` and the login settings endpoint (enterprise only).
+ *
+ * 🔧 CONFIGURATION OVERVIEW:
+ * Each view mode (see `FormView` enum below) has specific layout configurations. In some scenarios, the component supports toggling between a default view and an alternate view.
+ *
+ * 📋 [DROPDOWN] (default view)
+ *   ▸ All supported auth methods show in a dropdown.
+ *   ▸ No alternate view.
+ *
+ * 🗂️ [TABS] (visible (unauth) mount tabs)
+ *   ▸ Groups visible mounts (`listing_visibility="unauth"`) by type and displays as tabs.
+ *   ▸ Alternate view: full dropdown of all methods.
+ *
+ * 🔗 [DIRECT_LINK] (via `?with=` query param)
+ *   ▸ If the param references a visible mount, that method renders by default and the mount path is assumed.
+ *     ↳ Alternate view: full dropdown.
+ *   ▸ If the param references a method type (legacy behavior), the method is preselected in the dropdown or its tab is selected.
+ *     ↳ Alternate view: if other methods have visible mounts, the form can toggle between tabs and dropdown. The initial view depends on whether the chosen type is a tab.
+ *
+ * 🏢 *Enterprise-only login settings*
+ *   ▸ A namespace can define a default method and/or preferred methods (i.e. "backups") and enable child namespaces to inherit these preferences.
+ *     ✎ Both set:
+ *       ▸ Default method shown initially.
+ *       ▸ Alternate view: preferred methods in tab layout.
+ *     ✎ Only one set:
+ *       ▸ No alternate view.
+ *
+ * 🔁 Advanced settings toggle reveals the custom path input:
+ *   🚫 No visible mounts:
+ *     ▸ UI defaults to method type as path.
+ *     ▸ "Advanced settings" shows a path input.
+ *   1️⃣ One visible mount:
+ *     ▸ Path is assumed and hidden.
+ *   🔀 Multiple visible mounts:
+ *     ▸ Path dropdown is shown.
  *
  * @example
  * <Auth::Page
  *  @cluster={{this.model.clusterModel}}
  *  @directLinkData={{this.model.directLinkData}}
+ *  @loginSettings={{this.model.loginSettings}}
  *  @namespaceQueryParam={{this.namespaceQueryParam}}
  *  @oidcProviderQueryParam={{this.oidcProvider}}
  *  @onAuthSuccess={{action "authSuccess"}}
@@ -32,7 +68,7 @@ import type CspEventService from 'vault/services/csp-event';
  *
  * @param {object} cluster - the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
  * @param {object} directLinkData - mount data built from the "with" query param. If param is a mount path and maps to a visible mount, the login form defaults to this mount. Otherwise the form preselects the passed auth type.
- * @param {object} loginSettings - * enterprise only * login settings configured for the namespace
+ * @param {object} loginSettings - * enterprise only * login settings configured for the namespace. If set, specifies a default auth method type and/or backup method types
  * @param {string} namespaceQueryParam - namespace to login with, updated by typing in to the namespace input
  * @param {string} oidcProviderQueryParam - oidc provider query param, set in url as "?o=someprovider"
  * @param {function} onAuthSuccess - callback task in controller that receives the auth response (after MFA, if enabled) when login is successful
@@ -46,6 +82,7 @@ export const CSP_ERROR =
 interface Args {
   cluster: ClusterModel;
   directLinkData: { type: string; path?: string } | null; // if "path" key is present then mount data is visible
+  loginSettings: { defaultType: string; backupTypes: string[] | null }; // enterprise only
   onAuthSuccess: CallableFunction;
   visibleAuthMounts: UnauthMountsResponse;
 }
@@ -95,15 +132,15 @@ export default class AuthPage extends Component<Args> {
 
   // FORM STATE GETTERS
   get formViews() {
-    const { directLinkData } = this.args;
+    const { directLinkData, loginSettings } = this.args;
 
     if (directLinkData) {
       return this.directLinkViews;
     }
 
-    // if (loginSettings) {
-    //   return this.loginSettingsViews;
-    // }
+    if (loginSettings) {
+      return this.loginSettingsViews;
+    }
 
     if (this.visibleMountsByType) {
       return this.visibleMountViews;
@@ -147,6 +184,29 @@ export default class AuthPage extends Component<Args> {
       defaultView: this.constructViews(FormView.DROPDOWN, null),
       alternateView: null,
     };
+  }
+
+  get loginSettingsViews() {
+    const { loginSettings } = this.args;
+    const defaultType = loginSettings?.defaultType;
+    const backupTypes = loginSettings?.backupTypes;
+
+    // If a default is not set, render backup methods as the initial view
+    const preferredTypes = defaultType ? [defaultType] : backupTypes;
+    let defaultView;
+    if (preferredTypes) {
+      const tabData = this.filterVisibleMountsByType(preferredTypes);
+      defaultView = this.constructViews(FormView.TABS, tabData);
+    }
+
+    // Both default and backups must be set for an alternate view to exist
+    let alternateView = null;
+    if (defaultType && backupTypes) {
+      const tabData = this.filterVisibleMountsByType(backupTypes);
+      alternateView = this.constructViews(FormView.TABS, tabData);
+    }
+
+    return { defaultView, alternateView };
   }
 
   get visibleMountViews() {
