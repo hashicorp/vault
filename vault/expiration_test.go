@@ -20,6 +20,7 @@ import (
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/fairshare"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -3510,9 +3511,9 @@ func TestExpiration_listIrrevocableLeases_includeAll(t *testing.T) {
 }
 
 func TestExpiration_Irrevocable_Lease_Removal(t *testing.T) {
-	//if !constants.IsEnterprise {
-	//	t.Skip("test can only run on enterprise due to irrevocable lease removal is an enterprise feature")
-	//}
+	if !constants.IsEnterprise {
+		t.Skip("test can only run on enterprise due to irrevocable lease removal is an enterprise feature")
+	}
 
 	lenSyncMap := func(m *sync.Map) int {
 		var i int

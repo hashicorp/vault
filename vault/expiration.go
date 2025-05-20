@@ -24,6 +24,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/base62"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/helper/fairshare"
 	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
@@ -86,6 +87,7 @@ const (
 
 	MaxIrrevocableLeasesWarning = "Command halted because many irrevocable leases were found. To emit the entire list, re-run the command with force set true."
 
+	// removeIrrevocableLeaseAfterMinimum is the minimum amount of a time after a lease's expire time that it can stay irrevocable. 2 Days
 	removeIrrevocableLeaseAfterMinimum = time.Hour * 24 * 2
 )
 
@@ -985,13 +987,6 @@ func (m *ExpirationManager) attemptIrrevocableLeasesRevoke(removeIrrevocableLeas
 
 		// remove irrevocable leases after configured duration
 		if expiryBuffer.Before(time.Now()) {
-			if removeIrrevocableLeases && expiryBuffer.Add(removeIrrevocableLeaseAfter).Before(time.Now()) {
-				defer func() {
-					m.irrevocable.Delete(k)
-					m.logger.Debug("deleted irrevocable lease", "lease_id", leaseID, "lease_expire_time", le.ExpireTime)
-				}()
-			}
-
 			// if we get an error (or no namespace) note it, but continue attempting
 			// to revoke other leases
 			leaseNS, err := m.getNamespaceFromLeaseID(m.core.activeContext, leaseID)
@@ -1006,6 +1001,19 @@ func (m *ExpirationManager) attemptIrrevocableLeasesRevoke(removeIrrevocableLeas
 
 			ctxWithNS := namespace.ContextWithNamespace(m.core.activeContext, leaseNS)
 			ctxWithNSAndTimeout, _ := context.WithTimeout(ctxWithNS, time.Minute)
+
+			// attempt to remove irrevocable lease if feature enabled
+			if constants.IsEnterprise && removeIrrevocableLeases && expiryBuffer.Add(removeIrrevocableLeaseAfter).Before(time.Now()) {
+				defer func() {
+					err := m.deleteLeaseCommon(ctxWithNSAndTimeout, le)
+					if err != nil {
+						m.logger.Debug("failed to delete irrevocable lease", "lease_id", leaseID, "err", err)
+					} else {
+						m.logger.Debug("deleted irrevocable lease", "lease_id", leaseID, "lease_expire_time", le.ExpireTime)
+					}
+				}()
+			}
+
 			if err := m.revokeCommon(ctxWithNSAndTimeout, leaseID, false, false); err != nil {
 				// on failure, force some delay to mitigate resource spike while
 				// this is running. if revocations succeed, we are okay with
@@ -1057,13 +1065,46 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 		}
 	}
 
+	err = m.deleteLeaseCommon(ctx, le)
+	if err != nil {
+		return err
+	}
+
+	if !skipToken {
+		err = m.core.observations.RecordObservationToLedger(ctx, observations.ObservationTypeLeaseRevocation, le.namespace, map[string]interface{}{
+			"lease_id":    leaseID,
+			"path":        le.Path,
+			"issue_time":  le.IssueTime,
+			"expire_time": le.ExpireTime,
+		})
+		if err != nil {
+			if !force {
+				return err
+			}
+		}
+	}
+
+	if m.logger.IsInfo() && !skipToken && m.logLeaseExpirations {
+		m.logger.Info("revoked lease", "lease_id", leaseID)
+	}
+	if m.logger.IsWarn() && !skipToken && le.isIncorrectlyNonExpiring() {
+		var accessor string
+		if le.Auth != nil {
+			accessor = le.Auth.Accessor
+		}
+		m.logger.Warn("finished revoking incorrectly non-expiring lease", "leaseID", le.LeaseID, "accessor", accessor)
+	}
+	return nil
+}
+
+func (m *ExpirationManager) deleteLeaseCommon(ctx context.Context, le *leaseEntry) error {
 	// Delete the entry
 	if err := m.deleteEntry(ctx, le); err != nil {
 		return err
 	}
 
 	// Lease has been removed, also remove the in-memory lock.
-	m.deleteLockForLease(leaseID)
+	m.deleteLockForLease(le.LeaseID)
 
 	// Delete the secondary index, but only if it's a leased secret (not auth)
 	if le.Secret != nil {
@@ -1094,39 +1135,14 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 
 	// Clear the expiration handler
 	m.pendingLock.Lock()
-	m.removeFromPending(ctx, leaseID, true)
-	m.nonexpiring.Delete(leaseID)
+	m.removeFromPending(ctx, le.LeaseID, true)
+	m.nonexpiring.Delete(le.LeaseID)
 
 	if _, ok := m.irrevocable.Load(le.LeaseID); ok {
-		m.irrevocable.Delete(leaseID)
+		m.irrevocable.Delete(le.LeaseID)
 		m.irrevocableLeaseCount--
 	}
 	m.pendingLock.Unlock()
-
-	if !skipToken {
-		err = m.core.observations.RecordObservationToLedger(ctx, observations.ObservationTypeLeaseRevocation, le.namespace, map[string]interface{}{
-			"lease_id":    leaseID,
-			"path":        le.Path,
-			"issue_time":  le.IssueTime,
-			"expire_time": le.ExpireTime,
-		})
-		if err != nil {
-			if !force {
-				return err
-			}
-		}
-	}
-
-	if m.logger.IsInfo() && !skipToken && m.logLeaseExpirations {
-		m.logger.Info("revoked lease", "lease_id", leaseID)
-	}
-	if m.logger.IsWarn() && !skipToken && le.isIncorrectlyNonExpiring() {
-		var accessor string
-		if le.Auth != nil {
-			accessor = le.Auth.Accessor
-		}
-		m.logger.Warn("finished revoking incorrectly non-expiring lease", "leaseID", le.LeaseID, "accessor", accessor)
-	}
 	return nil
 }
 
