@@ -535,6 +535,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser, signer string, data *f
 	return role, nil
 }
 
+// ignore-nil-nil-function-check
 func (b *backend) getRole(ctx context.Context, s logical.Storage, n string, skipStorageWrite bool) (*sshRole, error) {
 	entry, err := s.Get(ctx, "roles/"+n)
 	if err != nil {
