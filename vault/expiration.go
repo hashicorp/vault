@@ -85,9 +85,6 @@ const (
 	MaxIrrevocableLeasesToReturn = 10000
 
 	MaxIrrevocableLeasesWarning = "Command halted because many irrevocable leases were found. To emit the entire list, re-run the command with force set true."
-
-	// removeIrrevocableLeaseAfterMinimum is the minimum amount of a time after a lease's expire time that it can stay irrevocable. 2 Days
-	removeIrrevocableLeaseAfterMinimum = time.Hour * 24 * 2
 )
 
 type pendingInfo struct {
