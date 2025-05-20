@@ -371,7 +371,7 @@ func (rlq *RateLimitQuota) allow(ctx context.Context, req *Request) (Response, e
 	if !resp.Allowed && rlq.purgeBlocked {
 		blockedAt := time.Now()
 		retryAfter = strconv.Itoa(int(time.Until(blockedAt.Add(rlq.BlockInterval)).Seconds()))
-		rlq.blockedClients.Store(req.ClientAddress, blockedAt)
+		rlq.blockedClients.Store(key, blockedAt)
 	}
 
 	return resp, nil
