@@ -1,5 +1,5 @@
 ```release-note:feature
-ui: **Custom login settings** - Adding new components to be able to view and delete custom login rules
+**Custom login settings**: Adding new components to be able to view and delete custom login rules
 ```
 
 ```release-note:change
