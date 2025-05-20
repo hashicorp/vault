@@ -10,7 +10,7 @@ import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
-import { fillInLoginFields, VISIBLE_MOUNTS } from 'vault/tests/helpers/auth/auth-helpers';
+import { fillInLoginFields, SYS_INTERNAL_UI_MOUNTS } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CSP_ERROR } from 'vault/components/auth/page';
 
@@ -98,16 +98,16 @@ module('Integration | Component | auth | page', function (hooks) {
 
   module('listing visibility', function (hooks) {
     hooks.beforeEach(function () {
-      this.visibleAuthMounts = VISIBLE_MOUNTS;
+      this.visibleAuthMounts = SYS_INTERNAL_UI_MOUNTS;
       window.localStorage.clear();
     });
 
-    test('it formats tab data if visible auth mounts exist', async function (assert) {
+    test('it formats and renders tabs if visible auth mounts exist', async function (assert) {
       await this.renderComponent();
       const expectedTabs = [
         { type: 'userpass', display: 'Userpass' },
         { type: 'oidc', display: 'OIDC' },
-        { type: 'token', display: 'Token' },
+        { type: 'ldap', display: 'LDAP' },
       ];
 
       assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
@@ -123,16 +123,58 @@ module('Integration | Component | auth | page', function (hooks) {
         .hasAttribute('aria-selected', 'true', 'it selects the first type by default');
     });
 
-    test('it selects type in the dropdown if @directLinkData references NON visible type', async function (assert) {
-      this.directLinkData = { type: 'ldap' };
+    test('it renders dropdown as alternate view', async function (assert) {
       await this.renderComponent();
-      assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap', 'dropdown has type selected');
-      assert.dom(AUTH_FORM.authForm('ldap')).exists();
+      assert.dom(AUTH_FORM.tabs).exists({ count: 3 }, 'tabs render by default');
+      assert.dom(GENERAL.backButton).doesNotExist();
+      await click(AUTH_FORM.otherMethodsBtn);
+      assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('button disappears after it is clicked');
+      assert
+        .dom(GENERAL.selectByAttr('auth type'))
+        .hasValue('token', 'dropdown renders and resets to select "Token"');
+      await fillIn(GENERAL.selectByAttr('auth type'), 'userpass');
+      assert.dom(AUTH_FORM.advancedSettings).exists('toggle renders even though userpass has visible mounts');
+      await click(AUTH_FORM.advancedSettings);
+      assert.dom(GENERAL.inputByAttr('path')).exists({ count: 1 });
+      assert.dom(GENERAL.inputByAttr('path')).hasValue('', 'it renders empty custom path input');
+      await fillIn(GENERAL.selectByAttr('auth type'), 'oidc');
+      assert.dom(AUTH_FORM.advancedSettings).exists('toggle renders even though oidc has a visible mount');
+      await click(AUTH_FORM.advancedSettings);
+      assert.dom(GENERAL.inputByAttr('path')).exists({ count: 1 });
+      assert.dom(GENERAL.inputByAttr('path')).hasValue('', 'it renders empty custom path input');
+      await click(GENERAL.backButton);
+      assert.dom(GENERAL.backButton).doesNotExist('"Back" button does not render after it is clicked');
+      assert.dom(AUTH_FORM.tabs).exists({ count: 3 }, 'clicking "Back" renders tabs again');
+      assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders again');
+    });
+
+    // TESTS FOR @directLinkData
+    test('it renders single mount view instead of tabs if @directLinkData is for a method with mount data', async function (assert) {
+      this.directLinkData = { path: 'my-oidc/', type: 'oidc' };
+      await this.renderComponent();
+      assert.dom(AUTH_FORM.authForm('oidc')).exists;
+      assert.dom(AUTH_FORM.tabBtn('oidc')).hasText('OIDC', 'it renders auth type tab');
+      assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
+      assert.dom(GENERAL.inputByAttr('role')).exists();
+      assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
+      assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
+      assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders');
+
+      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
+      assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
+      assert.dom(GENERAL.backButton).doesNotExist();
+    });
+
+    test('it selects type in the dropdown if @directLinkData references NON visible type', async function (assert) {
+      this.directLinkData = { type: 'okta' };
+      await this.renderComponent();
+      assert.dom(GENERAL.selectByAttr('auth type')).hasValue('okta', 'dropdown has type selected');
+      assert.dom(AUTH_FORM.authForm('okta')).exists();
       assert.dom(GENERAL.inputByAttr('username')).exists();
       assert.dom(GENERAL.inputByAttr('password')).exists();
       await click(AUTH_FORM.advancedSettings);
       assert.dom(GENERAL.inputByAttr('path')).exists();
-      assert.dom(AUTH_FORM.tabBtn('ldap')).doesNotExist('tab does not render');
+      assert.dom(AUTH_FORM.tabBtn('okta')).doesNotExist('tab does not render');
       assert
         .dom(GENERAL.backButton)
         .exists('back button renders because listing_visibility="unauth" for other mounts');

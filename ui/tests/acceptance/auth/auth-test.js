@@ -16,7 +16,13 @@ import {
   mountEngineCmd,
   runCmd,
 } from 'vault/tests/helpers/commands';
-import { login, loginMethod, loginNs, logout, VISIBLE_MOUNTS } from 'vault/tests/helpers/auth/auth-helpers';
+import {
+  login,
+  loginMethod,
+  loginNs,
+  logout,
+  SYS_INTERNAL_UI_MOUNTS,
+} from 'vault/tests/helpers/auth/auth-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { v4 as uuidv4 } from 'uuid';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -74,7 +80,7 @@ module('Acceptance | auth login form', function (hooks) {
   module('listing visibility', function (hooks) {
     hooks.beforeEach(async function () {
       this.server.get('/sys/internal/ui/mounts', () => {
-        return { data: { auth: VISIBLE_MOUNTS } };
+        return { data: { auth: SYS_INTERNAL_UI_MOUNTS } };
       });
       await logout(); // clear local storage
     });
