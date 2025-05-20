@@ -6,7 +6,7 @@
 {{#if (has-feature "Namespaces")}}
   <PageHeader as |p|>
     <p.top>
-      <Hds::Breadcrumb>
+      <Hds::Breadcrumb data-test-breadcrumbs>
         <Hds::Breadcrumb::Item @text="Namespaces" @current={{true}} />
       </Hds::Breadcrumb>
     </p.top>
@@ -36,8 +36,9 @@
         @iconPosition="trailing"
         @text="Refresh list"
         {{on "click" this.refreshNamespaceList}}
+        data-test-button="refresh-namespace-list"
       />
-      <ToolbarLink @route="vault.cluster.access.namespaces.create" @type="add">
+      <ToolbarLink @route="vault.cluster.access.namespaces.create" @type="add" data-test-link-to="create-namespace">
         Create namespace
       </ToolbarLink>
     </ToolbarActions>
