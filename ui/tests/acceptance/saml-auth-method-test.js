@@ -138,8 +138,8 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
     await waitUntil(() => find(AUTH_FORM.selectMethod), { timeout: DELAY_IN_MS });
     await fillIn(AUTH_FORM.selectMethod, 'saml');
     await click(AUTH_FORM.login);
-    await waitUntil(() => find(GENERAL.testButton('user-menu-trigger')), { timeout: DELAY_IN_MS });
-    await click(GENERAL.testButton('user-menu-trigger'));
+    await waitUntil(() => find(GENERAL.buttonByAttr('user-menu-trigger')), { timeout: DELAY_IN_MS });
+    await click(GENERAL.buttonByAttr('user-menu-trigger'));
     await click('#logout');
     assert.dom(AUTH_FORM.selectMethod).hasValue('saml', 'Previous auth method selected on logout');
   });

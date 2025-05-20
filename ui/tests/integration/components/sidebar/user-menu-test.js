@@ -30,9 +30,9 @@ module('Integration | Component | sidebar-user-menu', function (hooks) {
     await render(hbs`<Sidebar::UserMenu />`);
 
     assert
-      .dom(`${GENERAL.testButton('user-menu-trigger')} [data-test-icon="user"]`)
+      .dom(`${GENERAL.buttonByAttr('user-menu-trigger')} [data-test-icon="user"]`)
       .exists('Correct icon renders for menu trigger');
-    await click(GENERAL.testButton('user-menu-trigger'));
+    await click(GENERAL.buttonByAttr('user-menu-trigger'));
     assert.dom('[data-test-user-menu-content]').exists('User menu content renders');
   });
 
@@ -41,7 +41,7 @@ module('Integration | Component | sidebar-user-menu', function (hooks) {
     sinon.stub(this.auth, 'authData').value({ displayName: 'token' });
 
     await render(hbs`<Sidebar::UserMenu />`);
-    await click(GENERAL.testButton('user-menu-trigger'));
+    await click(GENERAL.buttonByAttr('user-menu-trigger'));
 
     assert.dom('.menu-label').hasText('Token', 'Auth data display name renders');
     assert.dom('li').exists({ count: 2 }, 'Correct number of menu items render');
@@ -60,7 +60,7 @@ module('Integration | Component | sidebar-user-menu', function (hooks) {
     this.auth.set('allowExpiration', true);
 
     await render(hbs`<Sidebar::UserMenu />`);
-    await click(GENERAL.testButton('user-menu-trigger'));
+    await click(GENERAL.buttonByAttr('user-menu-trigger'));
 
     assert.dom('[data-test-user-menu-item="token alert"]').exists('Token expiration alert renders');
     assert.dom('[data-test-user-menu-item="mfa"]').hasText('Multi-factor authentication', 'MFA link renders');

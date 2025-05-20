@@ -81,7 +81,7 @@ module('Integration | Component | ldap | Page::Role::Credentials', function (hoo
       assert.dom(GENERAL.infoRowLabel(field.label)).hasText(field.label, `${field.label} label renders`);
 
       if (field.isMasked) {
-        await click(`${GENERAL.infoRowValue(field.label)} ${GENERAL.testButton('toggle-masked')}`);
+        await click(`${GENERAL.infoRowValue(field.label)} ${GENERAL.buttonByAttr('toggle-masked')}`);
       }
 
       const value = field.value ? field.value() : this.creds[field.key];
@@ -122,7 +122,7 @@ module('Integration | Component | ldap | Page::Role::Credentials', function (hoo
       assert.dom(GENERAL.infoRowLabel(field.label)).hasText(field.label, `${field.label} label renders`);
 
       if (field.isMasked) {
-        await click(`${GENERAL.infoRowValue(field.label)} ${GENERAL.testButton('toggle-masked')}`);
+        await click(`${GENERAL.infoRowValue(field.label)} ${GENERAL.buttonByAttr('toggle-masked')}`);
       }
 
       const value = field.value ? field.value() : this.creds[field.key];

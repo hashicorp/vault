@@ -52,12 +52,12 @@ module('Acceptance | cluster', function (hooks) {
 
     await loginMethod({ username, password, path }, { authType: 'userpass', toggleOptions: true });
 
-    await click(GENERAL.testButton('user-menu-trigger'));
+    await click(GENERAL.buttonByAttr('user-menu-trigger'));
     assert.dom('[data-test-user-menu-item="mfa"]').exists();
 
     await login();
     await settled();
-    await click(GENERAL.testButton('user-menu-trigger'));
+    await click(GENERAL.buttonByAttr('user-menu-trigger'));
     assert.dom('[data-test-user-menu-item="mfa"]').doesNotExist();
   });
 
