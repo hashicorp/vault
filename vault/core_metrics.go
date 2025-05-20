@@ -1002,6 +1002,56 @@ func (c *Core) configuredPoliciesGaugeCollector(ctx context.Context) ([]metricsu
 	return values, nil
 }
 
+func (c *Core) GetPolicyMetrics(ctx context.Context) map[PolicyType]int {
+	policyStore := c.policyStore
+
+	if policyStore == nil {
+		c.logger.Error("could not find policy store")
+		return map[PolicyType]int{}
+	}
+
+	ctx = namespace.RootContext(ctx)
+	namespaces := c.collectNamespaces()
+
+	policyTypes := []PolicyType{
+		PolicyTypeACL,
+		PolicyTypeRGP,
+		PolicyTypeEGP,
+	}
+
+	ret := make(map[PolicyType]int)
+	for _, pt := range policyTypes {
+		policies, err := policyStore.policiesByNamespaces(ctx, pt, namespaces)
+		if err != nil {
+			c.logger.Error("could not retrieve policies for namespaces", "policy_type", pt.String(), "error", err)
+			return map[PolicyType]int{}
+		}
+
+		ret[pt] = len(policies)
+	}
+	return ret
+}
+
+func (c *Core) GetAutopilotUpgradeEnabled() float64 {
+	raftBackend := c.getRaftBackend()
+	if raftBackend == nil {
+		c.logger.Warn("raft storage is not in use")
+		return 0.0
+	}
+
+	config := raftBackend.AutopilotConfig()
+	if config == nil {
+		c.logger.Error("failed to get autopilot config")
+		return 0.0
+	}
+
+	// if false, autopilot upgrade is enabled
+	if !config.DisableUpgradeMigration {
+		return 1
+	}
+	return 0.0
+}
+
 func (c *Core) GetAuditDeviceCountByType() map[string]int {
 	auditCounts := make(map[string]int)
 	auditCounts["file"] = 0
@@ -1055,7 +1105,6 @@ func (c *Core) GetAuditExclusionStanzaCount() int {
 	for _, entry := range c.audit.Entries {
 		excludeRaw, ok := entry.Options["exclude"]
 		if !ok || excludeRaw == "" {
-			c.logger.Debug("no 'exclude' field found in audit entry, skipping", "path", entry.Path)
 			continue
 		}
 
@@ -1068,54 +1117,4 @@ func (c *Core) GetAuditExclusionStanzaCount() int {
 	}
 
 	return exclusionsCount
-}
-
-func (c *Core) GetPolicyMetrics(ctx context.Context) map[PolicyType]int {
-	policyStore := c.policyStore
-
-	if policyStore == nil {
-		c.logger.Error("could not find policy store")
-		return map[PolicyType]int{}
-	}
-
-	ctx = namespace.RootContext(ctx)
-	namespaces := c.collectNamespaces()
-
-	policyTypes := []PolicyType{
-		PolicyTypeACL,
-		PolicyTypeRGP,
-		PolicyTypeEGP,
-	}
-
-	ret := make(map[PolicyType]int)
-	for _, pt := range policyTypes {
-		policies, err := policyStore.policiesByNamespaces(ctx, pt, namespaces)
-		if err != nil {
-			c.logger.Error("could not retrieve policies for namespaces", "policy_type", pt.String(), "error", err)
-			return map[PolicyType]int{}
-		}
-
-		ret[pt] = len(policies)
-	}
-	return ret
-}
-
-func (c *Core) GetAutopilotUpgradeEnabled() float64 {
-	raftBackend := c.getRaftBackend()
-	if raftBackend == nil {
-		c.logger.Warn("raft storage is not in use")
-		return 0.0
-	}
-
-	config := raftBackend.AutopilotConfig()
-	if config == nil {
-		c.logger.Error("failed to get autopilot config")
-		return 0.0
-	}
-
-	// if false, autopilot upgrade is enabled
-	if !config.DisableUpgradeMigration {
-		return 1
-	}
-	return 0.0
 }
