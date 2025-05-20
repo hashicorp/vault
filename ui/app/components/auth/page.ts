@@ -25,7 +25,7 @@ import type CspEventService from 'vault/services/csp-event';
  *   ▸ All supported auth methods show in a dropdown.
  *   ▸ No alternate view.
  *
- * 🗂️ [TABS] (unauth mount tabs)
+ * 🗂️ [TABS] (visible (unauth) mount tabs)
  *   ▸ Groups visible mounts (`listing_visibility="unauth"`) by type and displays as tabs.
  *   ▸ Alternate view: full dropdown of all methods.
  *
@@ -35,8 +35,8 @@ import type CspEventService from 'vault/services/csp-event';
  *   ▸ If the param references a method type (legacy behavior), the method is preselected in the dropdown or its tab is selected.
  *     ↳ Alternate view: if other methods have visible mounts, the form can toggle between tabs and dropdown. The initial view depends on whether the chosen type is a tab.
  *
- * 🏢 *Enterprise-only login customizations*
- *   ▸ A namespace can define a default method [LOGIN_SETTINGS_DEFAULT] and/or preferred methods (i.e. "backups") [LOGIN_SETTINGS_TABS].
+ * 🏢 *Enterprise-only login settings*
+ *   ▸ A namespace can define a default method and/or preferred methods (i.e. "backups") and enable child namespaces to inherit these preferences.
  *     ✎ Both set:
  *       ▸ Default method shown initially.
  *       ▸ Alternate view: preferred methods in tab layout.
@@ -111,8 +111,6 @@ export default class AuthPage extends Component<Args> {
   get formStates() {
     const { directLinkData, loginSettings } = this.args;
 
-    // If "path" key is present, "with" query param references a mount with listing_visibility="unauth."
-    // Treat it as a "preferred" mount and hide all other tabs
     if (directLinkData) {
       return this.directLinkViews;
     }
@@ -122,8 +120,9 @@ export default class AuthPage extends Component<Args> {
     }
 
     if (this.visibleMountsByType) {
-      return this.visibleMountsViews;
+      return this.visibleMountViews;
     }
+
     // If none of the above, the UI renders the standard dropdown
     return null;
   }
@@ -148,6 +147,54 @@ export default class AuthPage extends Component<Args> {
 
   get visibleMountTypes(): string[] {
     return Object.keys(this.visibleMountsByType || {});
+  }
+
+  // Form State Getters
+  get directLinkViews() {
+    const { directLinkData } = this.args;
+
+    // If "path" key exists we know the "with" query param references a mount with listing_visibility="unauth"
+    // Treat it as a preferred method and hide all other tabs.
+    if (directLinkData?.path) {
+      const tabData = this.filterVisibleMountsByType([directLinkData.type]);
+      const defaultView = this.constructViews(FormView.TABS, tabData);
+      const alternateView = this.constructViews(FormView.DROPDOWN, null);
+
+      return { defaultView, alternateView };
+    }
+
+    // Otherwise, directLinkData just has a "type" key.
+    // Render either the dropdown or visibleMountViews, with that type preselected
+    return this.visibleMountsByType ? this.visibleMountViews : this.constructViews(FormView.DROPDOWN, null);
+  }
+
+  get loginSettingsViews() {
+    const { loginSettings } = this.args;
+    const defaultType = loginSettings?.defaultType;
+    const backupTypes = loginSettings?.backupTypes;
+
+    // If a default is not set, render backup methods as the initial view
+    const preferredTypes = defaultType ? [defaultType] : backupTypes;
+    let defaultView;
+    if (preferredTypes) {
+      const tabData = this.filterVisibleMountsByType(preferredTypes);
+      defaultView = this.constructViews(FormView.TABS, tabData);
+    }
+
+    // Both default and backups must be set for an alternate view to exist
+    let alternateView = null;
+    if (defaultType && backupTypes) {
+      const tabData = this.filterVisibleMountsByType(backupTypes);
+      alternateView = this.constructViews(FormView.TABS, tabData);
+    }
+
+    return { defaultView, alternateView };
+  }
+
+  get visibleMountViews() {
+    const defaultView = this.constructViews(FormView.TABS, this.visibleMountsByType);
+    const alternateView = this.constructViews(FormView.DROPDOWN, null);
+    return { defaultView, alternateView };
   }
 
   @action
@@ -188,6 +235,7 @@ export default class AuthPage extends Component<Args> {
     this.mfaErrors = '';
   }
 
+  // Helpers
   private filterVisibleMountsByType(authTypes: string[]) {
     const tabs: UnauthMountsByType = {};
     for (const type of authTypes) {
@@ -197,50 +245,7 @@ export default class AuthPage extends Component<Args> {
     return tabs;
   }
 
-  get directLinkViews() {
-    const { directLinkData } = this.args;
-
-    let defaultTabData;
-    if (directLinkData?.path) {
-      defaultTabData = this.filterVisibleMountsByType([directLinkData.type]);
-    } else {
-      defaultTabData = this.visibleMountsByType || null;
-    }
-
-    const defaultView = { view: FormView.TABS, tabData: defaultTabData };
-    const alternateView = this.visibleMountsByType ? { view: FormView.DROPDOWN, tabData: null } : null;
-
-    return { defaultView, alternateView };
-  }
-
-  get loginSettingsViews() {
-    const { loginSettings } = this.args;
-    const defaultType = loginSettings?.defaultType;
-    const backupTypes = loginSettings?.backupTypes;
-
-    let defaultTabData;
-    if (defaultType) {
-      defaultTabData = this.filterVisibleMountsByType([defaultType]);
-    }
-
-    if (backupTypes && !defaultType) {
-      defaultTabData = this.filterVisibleMountsByType(backupTypes);
-    }
-
-    const defaultView = { view: FormView.TABS, tabData: defaultTabData };
-
-    // Both default and backups must be set for an alternate view to exist
-    const alternateView =
-      defaultType && backupTypes
-        ? { view: FormView.TABS, tabData: this.filterVisibleMountsByType(backupTypes) }
-        : null;
-
-    return { defaultView, alternateView };
-  }
-
-  get visibleMountsViews() {
-    const defaultView = { view: FormView.TABS, tabData: this.visibleMountsByType };
-    const alternateView = { view: FormView.DROPDOWN, tabData: null };
-    return { defaultView, alternateView };
+  private constructViews(view: FormView, tabData: UnauthMountsByType | null) {
+    return { view, tabData };
   }
 }

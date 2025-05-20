@@ -68,17 +68,6 @@ export default class AuthFormTemplate extends Component<Args> {
     this.supportedAuthTypes = supportedTypes(this.version.isEnterprise);
   }
 
-  get namespaceInput() {
-    const namespaceQueryParam = this.args.namespaceQueryParam;
-    if (this.flags.hvdManagedNamespaceRoot) {
-      // When managed, the user isn't allowed to edit the prefix `admin/`
-      // so prefill just the relative path in the namespace input
-      const path = getRelativePath(namespaceQueryParam, this.flags.hvdManagedNamespaceRoot);
-      return path ? `/${path}` : '';
-    }
-    return namespaceQueryParam;
-  }
-
   get firstAuthTab() {
     const tabs = Object.keys(this.tabData || {});
     return tabs?.[0] ?? '';
@@ -104,6 +93,17 @@ export default class AuthFormTemplate extends Component<Args> {
 
     // For remaining scenarios, hide "Advanced settings" if the selected method has visible mount(s)
     return this.args.visibleMountTypes?.includes(this.selectedAuth);
+  }
+
+  get namespaceInput() {
+    const namespaceQueryParam = this.args.namespaceQueryParam;
+    if (this.flags.hvdManagedNamespaceRoot) {
+      // When managed, the user isn't allowed to edit the prefix `admin/`
+      // so prefill just the relative path in the namespace input
+      const path = getRelativePath(namespaceQueryParam, this.flags.hvdManagedNamespaceRoot);
+      return path ? `/${path}` : '';
+    }
+    return namespaceQueryParam;
   }
 
   get tabData() {
