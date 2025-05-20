@@ -2272,11 +2272,6 @@
             "path": "secrets/transit/key-wrapping-guide"
           }
         ]
-      },
-      {
-        "title": "Venafi (Certificates)",
-        "path": "secrets/venafi",
-        "hidden": true
       }
     ]
   },
