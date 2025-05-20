@@ -5,6 +5,7 @@
 
 import ActivityComponent, { Args } from '../activity';
 import { service } from '@ember/service';
+import type FlagsService from 'vault/services/flags';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { HTMLElementEvent } from 'vault/forms';
@@ -21,6 +22,7 @@ type TableColumn = 'namespace' | 'label' | 'mount_type' | 'clients';
 type SortDirection = 'asc' | 'desc';
 
 export default class ClientsOverviewPageComponent extends ActivityComponent {
+  @service declare readonly flags: FlagsService;
   @service('app-router') declare readonly router: RouterService;
 
   @tracked selectedMonth = '';
