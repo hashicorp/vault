@@ -1002,37 +1002,39 @@ func (c *Core) configuredPoliciesGaugeCollector(ctx context.Context) ([]metricsu
 	return values, nil
 }
 
-type auditCounts struct {
-	file       int
-	socketUdp  int
-	socketTcp  int
-	socketUnix int
-	syslog     int
-}
-
-func (c *Core) GetAuditDeviceCountByType() auditCounts {
-	var auditCounts auditCounts
+func (c *Core) GetAuditDeviceCountByType() map[string]int {
+	auditCounts := make(map[string]int)
+	auditCounts["file"] = 0
+	auditCounts["socketUdp"] = 0
+	auditCounts["socketTcp"] = 0
+	auditCounts["socketUnix"] = 0
+	auditCounts["syslog"] = 0
 
 	c.auditLock.RLock()
 	defer c.auditLock.RUnlock()
 
+	// return if audit is not set up
+	if c.audit == nil {
+		return auditCounts
+	}
+
 	for _, entry := range c.audit.Entries {
 		switch entry.Type {
 		case audit.TypeFile:
-			auditCounts.file++
+			auditCounts["file"]++
 		case audit.TypeSocket:
 			if entry.Options != nil {
 				switch strings.ToLower(entry.Options["socket_type"]) {
 				case "udp":
-					auditCounts.socketUdp++
+					auditCounts["socketUdp"]++
 				case "tcp":
-					auditCounts.socketTcp++
+					auditCounts["socketTcp"]++
 				case "unix":
-					auditCounts.socketUnix++
+					auditCounts["socketUnix"]++
 				}
 			}
 		case audit.TypeSyslog:
-			auditCounts.syslog++
+			auditCounts["syslog"]++
 		}
 	}
 
@@ -1045,9 +1047,15 @@ func (c *Core) GetAuditExclusionStanzaCount() int {
 	c.auditLock.RLock()
 	defer c.auditLock.RUnlock()
 
+	// return if audit is not set up
+	if c.audit == nil {
+		return exclusionsCount
+	}
+
 	for _, entry := range c.audit.Entries {
 		excludeRaw, ok := entry.Options["exclude"]
 		if !ok || excludeRaw == "" {
+			c.logger.Debug("no 'exclude' field found in audit entry, skipping", "path", entry.Path)
 			continue
 		}
 
