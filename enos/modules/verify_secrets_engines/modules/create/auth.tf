@@ -165,7 +165,8 @@ resource "enos_remote_exec" "auth_enable_ldap" {
   }
 }
 
-# Write the ldap config
+# Write the initial ldap config
+# This is a one time write to the leader node.
 resource "enos_remote_exec" "auth_write_ldap_config" {
   depends_on = [
     enos_remote_exec.auth_enable_ldap
@@ -195,7 +196,8 @@ resource "enos_remote_exec" "auth_write_ldap_config" {
   }
 }
 
-# Update the ldap config
+# Update the ldap config on all nodes
+# This ensures that a write to the non-leader nodes will not panic.
 resource "enos_remote_exec" "auth_update_ldap_config" {
   depends_on = [
     enos_remote_exec.auth_enable_ldap

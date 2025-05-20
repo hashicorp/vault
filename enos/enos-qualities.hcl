@@ -603,8 +603,8 @@ quality "vault_secrets_kv_write" {
 }
 
 
-quality "vault_secret_engine_config_update" {
-  description = "The Vault secrets engine config is updated"
+quality "vault_secrets_ldap_write_config" {
+  description = "The Vault LDAP secrets engine is configured with the correct settings"
 }
 
 quality "vault_service_restart" {

@@ -502,7 +502,7 @@ scenario "agent" {
       quality.vault_mount_auth,
       quality.vault_mount_kv,
       quality.vault_secrets_kv_write,
-      quality.vault_secret_engine_config_update,
+      quality.vault_secrets_ldap_write_config,
     ]
 
     variables {
