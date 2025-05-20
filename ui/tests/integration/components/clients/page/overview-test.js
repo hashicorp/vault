@@ -5,13 +5,16 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render } from '@ember/test-helpers';
+import { click, fillIn, findAll, render, triggerEvent } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { ACTIVITY_RESPONSE_STUB } from 'vault/tests/helpers/clients/client-count-helpers';
 import { filterActivityResponse } from 'vault/mirage/handlers/clients';
-import { CHARTS, CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
+import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+
+import sinon from 'sinon';
 
 module('Integration | Component | clients/page/overview', function (hooks) {
   setupRenderingTest(hooks);
@@ -47,72 +50,148 @@ module('Integration | Component | clients/page/overview', function (hooks) {
     this.store = this.owner.lookup('service:store');
     this.mountPath = '';
     this.namespace = '';
+    this.month = '';
     this.versionHistory = '';
+    this.onChange = sinon.spy();
+    this.activity = await this.store.queryRecord('clients/activity', {});
 
     // Fails on #ember-testing-container
     setRunOptions({
       rules: {
-        'scrollable-region-focusable': { enabled: false },
+        'aria-prohibited-attr': { enabled: false },
       },
     });
   });
 
-  test('it hides attribution data when mount filter applied', async function (assert) {
-    this.mountPath = '';
-    this.activity = await this.store.queryRecord('clients/activity', {
-      namespace: 'ns1',
-    });
+  test('it shows empty state message upon initial load', async function (assert) {
     await render(
-      hbs`<Clients::Page::Overview @activity={{this.activity}} @namespace="ns1" @mountPath={{this.mountPath}} />`
+      hbs`<Clients::Page::Overview @activity={{this.activity}} @updateQueryParams={{this.onChange}}/>`
     );
 
-    assert.dom(CHARTS.container('Vault client counts')).exists('shows running totals');
-    assert.dom(CLIENT_COUNT.attributionBlock('namespace')).exists();
-    assert.dom(CLIENT_COUNT.attributionBlock('mount')).exists();
+    assert.dom(GENERAL.selectByAttr('attribution-month')).exists('shows month selection dropdown');
 
-    this.set('mountPath', 'auth/authid/0');
-    assert.dom(CHARTS.container('Vault client counts')).exists('shows running totals');
-    assert.dom(CLIENT_COUNT.attributionBlock('namespace')).doesNotExist();
-    assert.dom(CLIENT_COUNT.attributionBlock('mount')).doesNotExist();
+    // assert card state
+    assert.dom(CLIENT_COUNT.attribution.card).exists('shows card for table state');
+    assert
+      .dom(CLIENT_COUNT.attribution.card)
+      .hasText(
+        'Select a month to view client attribution View the namespace mount breakdown of clients by selecting a month. Client count documentation',
+        'Show initial table state message'
+      );
   });
 
-  test('it hides attribution data when no data returned', async function (assert) {
-    this.mountPath = '';
-    this.activity = await this.store.queryRecord('clients/activity', {
-      namespace: 'no-data',
-    });
-    await render(hbs`<Clients::Page::Overview @activity={{this.activity}} />`);
-    assert.dom(CLIENT_COUNT.usageStats('Total usage')).exists();
-    assert.dom(CHARTS.container('Vault client counts')).doesNotExist('usage stats instead of running totals');
-    assert.dom(CLIENT_COUNT.attributionBlock('namespace')).doesNotExist();
-    assert.dom(CLIENT_COUNT.attributionBlock('mount')).doesNotExist();
+  test('it shows correct state message when month selection has no data', async function (assert) {
+    await render(
+      hbs`<Clients::Page::Overview @activity={{this.activity}} @updateQueryParams={{this.onChange}}/>`
+    );
+
+    // assert month selector present
+    assert.dom(GENERAL.selectByAttr('attribution-month')).exists('shows month selection dropdown');
+
+    await fillIn(GENERAL.selectByAttr('attribution-month'), '6/23');
+
+    assert
+      .dom(CLIENT_COUNT.attribution.card)
+      .hasText(
+        'No data is available for the selected month View the namespace mount breakdown of clients by selecting another month. Client count documentation',
+        'Shows correct message for a month selection with no data'
+      );
   });
 
-  test('it shows the correct mount attributions', async function (assert) {
-    this.nsService = this.owner.lookup('service:namespace');
-    const rootActivity = await this.store.queryRecord('clients/activity', {});
-    this.activity = rootActivity;
-    await render(hbs`<Clients::Page::Overview @activity={{this.activity}} />`);
-    // start at "root" namespace
-    let expectedMounts = rootActivity.byNamespace.find((ns) => ns.label === 'root').mounts;
-    assert
-      .dom(`${CLIENT_COUNT.attributionBlock('mount')} [data-test-group="y-labels"] text`)
-      .exists({ count: expectedMounts.length });
-    assert
-      .dom(`${CLIENT_COUNT.attributionBlock('mount')} [data-test-group="y-labels"]`)
-      .includesText(expectedMounts[0].label);
+  test('it shows table when month selection has data', async function (assert) {
+    await render(
+      hbs`<Clients::Page::Overview @activity={{this.activity}} @updateQueryParams={{this.onChange}}/>`
+    );
 
-    // now pretend we're querying within a child namespace
-    this.nsService.path = 'ns1';
+    // assert month selector present
+    assert.dom(GENERAL.selectByAttr('attribution-month')).exists('shows month selection dropdown');
+
+    await fillIn(GENERAL.selectByAttr('attribution-month'), '9/23');
+
+    assert.dom(CLIENT_COUNT.attribution.card).doesNotExist('does not show card when table has data');
+  });
+
+  test('it filters the table when a namespace filter is applied', async function (assert) {
+    this.namespace = 'ns1';
+    this.month = '9/23';
     this.activity = await this.store.queryRecord('clients/activity', {
-      namespace: 'ns1',
+      namespace: this.namespace,
     });
-    expectedMounts = rootActivity.byNamespace.find((ns) => ns.label === 'ns1').mounts;
+    await render(
+      hbs`<Clients::Page::Overview @activity={{this.activity}} @namespace={{this.namespace}} @updateQueryParams={{this.onChange}} @month={{this.month}}/>`
+    );
+
+    assert.dom(CLIENT_COUNT.attribution.card).doesNotExist('does not show card when table has data');
+    assert.dom(CLIENT_COUNT.attribution.table).exists();
+    assert.dom(CLIENT_COUNT.attribution.paginationInfo).hasText('1–3 of 3', 'shows correct pagination info');
+  });
+
+  test('it hides the table when a mount filter is applied', async function (assert) {
+    this.namespace = 'ns1';
+    this.mountPath = 'auth/authid/0';
+    this.activity = await this.store.queryRecord('clients/activity', {
+      namespace: this.namespace,
+      mountPath: this.mountPath,
+    });
+    await render(
+      hbs`<Clients::Page::Overview @activity={{this.activity}} @namespace={{this.namespace}} @mountPath={{this.mountPath}} @updateQueryParams={{this.onChange}} @month={{this.month}}/>`
+    );
+    assert.dom(CLIENT_COUNT.attribution.card).doesNotExist('does not show card when table has data');
     assert
-      .dom(`${CLIENT_COUNT.attributionBlock('mount')} [data-test-group="y-labels"] text`)
-      .exists({ count: expectedMounts.length });
+      .dom(CLIENT_COUNT.attribution.table)
+      .doesNotExist('does not show table when a mount filter is applied');
+  });
+
+  test('it show table when month selection is present in URL', async function (assert) {
+    this.month = '9/23';
+
+    await render(
+      hbs`<Clients::Page::Overview @activity={{this.activity}} @updateQueryParams={{this.onChange}} @month={{this.month}}/>`
+    );
+
+    assert.dom(CLIENT_COUNT.attribution.card).doesNotExist('does not show card when table has data');
+    assert.dom(CLIENT_COUNT.attribution.table).exists('loads the table');
+  });
+
+  test('it paginates table data', async function (assert) {
+    this.month = '9/23';
+
+    await render(
+      hbs`<Clients::Page::Overview @activity={{this.activity}} @updateQueryParams={{this.onChange}} @month={{this.month}}/>`
+    );
+
     assert
-      .dom(`${CLIENT_COUNT.attributionBlock('mount')} [data-test-group="y-labels"]`)
-      .includesText(expectedMounts[0].label);
+      .dom(CLIENT_COUNT.attribution.row)
+      .exists({ count: 3 }, 'Correct number of table rows render based on page size');
+    assert.dom(CLIENT_COUNT.attribution.counts(0)).hasText('96', 'First page shows data');
+    assert.dom(CLIENT_COUNT.attribution.pagination).exists('shows pagination');
+    assert.dom(CLIENT_COUNT.attribution.paginationInfo).hasText('1–3 of 6', 'shows correct pagination info');
+
+    await click(GENERAL.pagination.next);
+
+    assert.dom(CLIENT_COUNT.attribution.counts(0)).hasText('53', 'Second page shows new data');
+    assert.dom(CLIENT_COUNT.attribution.paginationInfo).hasText('4–6 of 6', 'shows correct pagination info');
+  });
+
+  test('it shows correct month options for billing period', async function (assert) {
+    await render(
+      hbs`<Clients::Page::Overview @activity={{this.activity}} @updateQueryParams={{this.onChange}}/>`
+    );
+
+    // assert month selector present
+    assert.dom(GENERAL.selectByAttr('attribution-month')).exists('shows month selection dropdown');
+
+    await fillIn(GENERAL.selectByAttr('attribution-month'), '');
+    await triggerEvent(GENERAL.selectByAttr('attribution-month'), 'change');
+
+    // assert that months options in select are those of selected billing period
+    const expectedMonths = this.activity.byMonth.map((m) => m.month);
+
+    // '' represents default state of 'Select month'
+    const expectedOptions = ['', ...expectedMonths];
+    const actualOptions = findAll(`${GENERAL.selectByAttr('attribution-month')} option`).map(
+      (option) => option.value
+    );
+    assert.deepEqual(actualOptions, expectedOptions, 'All <option> values match expected list');
   });
 });

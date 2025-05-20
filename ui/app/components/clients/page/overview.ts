@@ -4,6 +4,7 @@
  */
 
 import ActivityComponent, { Args } from '../activity';
+import Ember from 'ember';
 import { service } from '@ember/service';
 import type FlagsService from 'vault/services/flags';
 import { tracked } from '@glimmer/tracking';
@@ -30,7 +31,7 @@ export default class ClientsOverviewPageComponent extends ActivityComponent {
   @tracked sortColumn: TableColumn = 'clients';
   @tracked sortDirection: SortDirection = 'desc';
 
-  pageSize = 10;
+  pageSize = Ember.testing ? 3 : 10; // lower in tests to test pagination without seeding more data
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
@@ -41,6 +42,11 @@ export default class ClientsOverviewPageComponent extends ActivityComponent {
     if (this.args.month) {
       this.selectedMonth = this.args.month;
     }
+  }
+
+  get hasAttributionData() {
+    // we hide attribution table when mountPath filter present
+    return !this.args.mountPath;
   }
 
   get months() {
