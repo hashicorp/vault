@@ -39,7 +39,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
     const mockNow = this.timestampStub();
     this.mockNow = mockNow;
     this.startTimestamp = formatRFC3339(subMonths(mockNow, 6));
-    this.timestamp = formatRFC3339(mockNow);
     this.selectedNamespace = null;
     this.namespaceAttribution = SERIALIZED_ACTIVITY_RESPONSE.by_namespace;
     this.authMountAttribution = SERIALIZED_ACTIVITY_RESPONSE.by_namespace.find(
@@ -54,7 +53,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
 
     assert.dom(GENERAL.emptyStateTitle).hasText('No data found');
     assert.dom(CLIENTS_ATTRIBUTION.title).hasText('Namespace attribution', 'uses default noun');
-    assert.dom(CLIENTS_ATTRIBUTION.timestamp).hasNoText();
   });
 
   test('it updates language based on noun', async function (assert) {
@@ -63,10 +61,8 @@ module('Integration | Component | clients/attribution', function (hooks) {
       <Clients::Attribution
         @noun={{this.noun}}
         @attribution={{this.namespaceAttribution}}
-        @responseTimestamp={{this.timestamp}}
         />
     `);
-    assert.dom(CLIENTS_ATTRIBUTION.timestamp).includesText('Updated Apr 3');
 
     // when noun is blank, uses default
     assert.dom(CLIENTS_ATTRIBUTION.title).hasText('Namespace attribution');
@@ -110,7 +106,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
     await render(hbs`
       <Clients::Attribution
         @attribution={{this.namespaceAttribution}}
-        @responseTimestamp={{this.timestamp}}
         />
     `);
 
@@ -147,7 +142,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
     await render(hbs`
       <Clients::Attribution
         @attribution={{this.namespaceAttribution}}
-        @responseTimestamp={{this.timestamp}}
         @isSecretsSyncActivated={{true}}
         />
     `);
@@ -160,7 +154,6 @@ module('Integration | Component | clients/attribution', function (hooks) {
     await render(hbs`
       <Clients::Attribution
         @attribution={{this.namespaceAttribution}}
-        @responseTimestamp={{this.timestamp}}
         />
     `);
 
