@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import sinon from 'sinon';
 
 const SELECTORS = {
   dropdown: '[data-test-copy-menu-trigger]',
@@ -25,7 +26,6 @@ module('Integration | Component | copy-secret-dropdown', function (hooks) {
   });
 
   test('it renders and fires callback functions', async function (assert) {
-    assert.expect(5);
     this.data = `{ foo: 'bar' }`;
     this.onWrap = () => assert.ok(true, 'onWrap callback fires Wrap secret is clicked');
     this.onClose = () => assert.ok(true, 'onClose callback fires when dropdown closes');
@@ -43,12 +43,35 @@ module('Integration | Component | copy-secret-dropdown', function (hooks) {
     await click(SELECTORS.dropdown);
     assert.dom(SELECTORS.copyButton).hasText('Copy JSON');
     assert.dom(SELECTORS.wrapButton).hasText('Wrap secret');
-    assert
-      .dom(SELECTORS.copyButton)
-      .hasAttribute('data-test-copy-button', `${this.data}`, 'it renders copyable data');
 
     await click(SELECTORS.wrapButton);
     await click(SELECTORS.dropdown);
+  });
+
+  test('it copies JSON', async function (assert) {
+    // Sinon spy for clipboard
+    const clipboardSpy = sinon.stub(navigator.clipboard, 'writeText').resolves();
+
+    this.data = `{ foo: 'bar' }`;
+    this.onWrap = () => assert.ok(true, 'onWrap callback fires Wrap secret is clicked');
+    this.onClose = () => assert.ok(true, 'onClose callback fires when dropdown closes');
+
+    await render(
+      hbs`<ToolbarActions>
+  <CopySecretDropdown
+    @clipboardText={{this.data}}
+    @onWrap={{this.onWrap}}
+    @onClose={{this.onClose}}
+  />
+</ToolbarActions>`
+    );
+
+    await click(SELECTORS.dropdown);
+    await click(GENERAL.copyButton);
+    assert.true(clipboardSpy.calledOnce, 'Clipboard was called once');
+    assert.strictEqual(clipboardSpy.firstCall.args[0], this.data, 'copy value is the json secret data');
+    // Restore original clipboard
+    clipboardSpy.restore(); // cleanup
   });
 
   test('it renders loading wrap button', async function (assert) {
@@ -70,8 +93,9 @@ module('Integration | Component | copy-secret-dropdown', function (hooks) {
     assert.dom(SELECTORS.wrapButton).isDisabled();
   });
 
-  test('it wrapped data', async function (assert) {
-    assert.expect(1);
+  test('it wraps data', async function (assert) {
+    // Sinon spy for clipboard
+    const clipboardSpy = sinon.stub(navigator.clipboard, 'writeText').resolves();
     this.wrappedData = 'my-token';
 
     await render(
@@ -87,8 +111,10 @@ module('Integration | Component | copy-secret-dropdown', function (hooks) {
     );
 
     await click(SELECTORS.dropdown);
-    assert
-      .dom(`${SELECTORS.masked} ${SELECTORS.copyButton}`)
-      .hasAttribute('data-test-copy-button', this.wrappedData, 'it renders wrapped data');
+    await click(SELECTORS.wrapButton);
+    assert.true(clipboardSpy.calledOnce, 'Clipboard was called once');
+    assert.strictEqual(clipboardSpy.firstCall.args[0], this.wrappedData, 'copy value is wrapped secret data');
+    // Restore original clipboard
+    clipboardSpy.restore(); // cleanup
   });
 });

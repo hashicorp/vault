@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { create } from 'ember-cli-page-object';
-import { fillIn, settled, findAll } from '@ember/test-helpers';
+import { fillIn, settled, findAll, click } from '@ember/test-helpers';
 import { v4 as uuidv4 } from 'uuid';
 
 import enablePage from 'vault/tests/pages/settings/auth/enable';
@@ -50,7 +50,7 @@ module('Acceptance | settings/auth/configure/section', function (hooks) {
       .dom(GENERAL.inputByAttr('config.tokenType'))
       .hasValue('default-service', 'as default the token type selected is default-service.');
     await fillIn(GENERAL.inputByAttr('config.tokenType'), 'batch');
-    await page.save();
+    await click(GENERAL.saveButton);
     assert.strictEqual(
       page.flash.latestMessage,
       `The configuration was saved successfully.`,

@@ -18,7 +18,6 @@ import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend
 
 const SELECTORS = {
   createUser: '[data-test-entity-create-link="user"]',
-  saveBtn: '[data-test-save-config]',
   methods: '[data-test-access-methods] a',
   listItem: '[data-test-list-item-content]',
 };
@@ -50,7 +49,7 @@ module('Acceptance | auth backend list', function (hooks) {
       await click(SELECTORS.createUser);
       await fillIn(GENERAL.inputByAttr('username'), username);
       await fillIn(GENERAL.inputByAttr('password'), username);
-      await click(SELECTORS.saveBtn);
+      await click(GENERAL.saveButton);
       assert.strictEqual(currentURL(), `/vault/access/${backendPath}/item/user`);
     }
     // visit access page and enable the first user in the first userpass backend

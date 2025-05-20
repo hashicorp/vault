@@ -74,7 +74,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     fetchSpy.restore();
   });
 
-  test('it focuses the search input field when the component is loaded', async function (assert) {
+  test('it focuses the search input field when user toggles namespace picker', async function (assert) {
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify that the search input field is focused

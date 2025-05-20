@@ -86,7 +86,6 @@ export const PAGE = {
     metadataSection: '[data-test-metadata-section]',
   },
   paths: {
-    copyButton: (label) => `${PAGE.infoRowValue(label)} button`,
     codeSnippet: (section) => `[data-test-code-block="${section}"] code`,
     snippetCopy: (section) => `[data-test-code-block="${section}"] button`,
   },
