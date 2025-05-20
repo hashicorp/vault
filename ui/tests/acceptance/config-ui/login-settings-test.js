@@ -1,0 +1,71 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { module, test } from 'qunit';
+import { setupApplicationTest } from 'ember-qunit';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { click, visit, currentRouteName } from '@ember/test-helpers';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { runCmd } from 'vault/tests/helpers/commands';
+
+module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
+  setupApplicationTest(hooks);
+  setupMirage(hooks);
+
+  hooks.beforeEach(async function () {
+    const version = this.owner.lookup('service:version');
+    version.type = 'enterprise';
+    await login();
+  });
+
+  test('fetched login rule list renders', async function (assert) {
+    await runCmd([
+      'write sys/config/ui/login/default-auth/testRule backupAuthTypes=[] defaultAuthType=okta disableInheritance=false namespace=ns1',
+      'write sys/config/ui/login/default-auth/testRule2 backupAuthTypes=[] defaultAuthType=ldap disableInheritance=false namespace=ns2',
+    ]);
+
+    // Visit the login settings list index page
+    await visit('vault/config-ui/login-settings');
+
+    // verify fetched rules are rendered in list
+    assert.dom('.linked-block-item').exists({ count: 2 });
+  });
+
+  test('delete rule from list view', async function (assert) {
+    // Visit the login settings list index page
+    await visit('vault/config-ui/login-settings');
+
+    await click(GENERAL.menuTrigger);
+    await click(GENERAL.menuItem('delete-rule'));
+
+    assert.dom(GENERAL.confirmationModal).exists();
+    await click(GENERAL.confirmButton);
+
+    // verify success message from deletion
+    assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted rule testRule.');
+  });
+
+  test('navigate to rule details page and renders rule data', async function (assert) {
+    // visit individual rule page
+    await visit('vault/config-ui/login-settings');
+
+    await click(GENERAL.menuTrigger);
+    await click(GENERAL.menuItem('view-rule'));
+
+    // verify that user is redirected to the rule details page
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.config-ui.login-settings.rule.details',
+      'goes to rule details page'
+    );
+
+    // verify fetched rule data is rendered
+    assert.dom(GENERAL.infoRowLabel('Name')).exists();
+    assert.dom(GENERAL.infoRowValue('Name')).hasText('testRule2');
+    assert.dom(GENERAL.infoRowLabel('Namespace')).exists();
+    assert.dom(GENERAL.infoRowValue('Namespace')).hasText('ns2/');
+  });
+});
