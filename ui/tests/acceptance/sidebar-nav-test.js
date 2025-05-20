@@ -10,6 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import modifyPassthroughResponse from 'vault/mirage/helpers/modify-passthrough-response';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
 const link = (label) => `[data-test-sidebar-nav-link="${label}"]`;
 const panel = (label) => `[data-test-sidebar-nav-panel="${label}"]`;
@@ -141,7 +142,7 @@ module('Acceptance | sidebar navigation', function (hooks) {
     await click('[data-test-auth-enable]');
     assert.dom('[data-test-sidebar-nav-panel="Access"]').exists('Access nav panel renders');
     await click(link('Authentication Methods'));
-    await click('[data-test-auth-backend-link="token"]');
+    await click(AUTH_FORM.linkedBlockAuth('token'));
     await click('[data-test-configure-link]');
     assert.dom('[data-test-sidebar-nav-panel="Access"]').exists('Access nav panel renders');
   });
