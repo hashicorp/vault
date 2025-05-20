@@ -85,6 +85,9 @@ const (
 	MaxIrrevocableLeasesToReturn = 10000
 
 	MaxIrrevocableLeasesWarning = "Command halted because many irrevocable leases were found. To emit the entire list, re-run the command with force set true."
+
+	// removeIrrevocableLeaseAfterMinimum is the minimum amount of a time after a lease's expire time that it can stay irrevocable. 2 Days
+	removeIrrevocableLeaseAfterMinimum = time.Hour * 24 * 2
 )
 
 type pendingInfo struct {
@@ -971,10 +974,8 @@ func (m *ExpirationManager) attemptIrrevocableLeasesRevoke(removeIrrevocableLeas
 		leaseID := k.(string)
 		le := v.(*leaseEntry)
 
-		expiryBuffer := le.ExpireTime.Add(time.Hour)
-
 		// remove irrevocable leases after configured duration
-		if expiryBuffer.Before(time.Now()) {
+		if le.ExpireTime.Add(time.Hour).Before(time.Now()) {
 			// if we get an error (or no namespace) note it, but continue attempting
 			// to revoke other leases
 			leaseNS, err := m.getNamespaceFromLeaseID(m.core.activeContext, leaseID)
@@ -991,7 +992,7 @@ func (m *ExpirationManager) attemptIrrevocableLeasesRevoke(removeIrrevocableLeas
 			ctxWithNSAndTimeout, _ := context.WithTimeout(ctxWithNS, time.Minute)
 
 			// attempt to remove irrevocable lease if feature enabled
-			if removeIrrevocableLeases && expiryBuffer.Add(removeIrrevocableLeaseAfter).Before(time.Now()) {
+			if removeIrrevocableLeases && le.ExpireTime.Add(removeIrrevocableLeaseAfter).Before(time.Now()) {
 				defer m.deleteIrrevocableLease(ctxWithNSAndTimeout, le)
 			}
 
