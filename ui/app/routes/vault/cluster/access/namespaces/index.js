@@ -37,9 +37,6 @@ export default class NamespaceListRoute extends Route {
         pageFilter: params?.pageFilter,
       })
       .catch((err) => {
-        if (err.httpStatus === 403) {
-          return 403;
-        }
         if (err.httpStatus === 404) {
           return [];
         } else {
