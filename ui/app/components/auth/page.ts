@@ -10,6 +10,7 @@ import { action } from '@ember/object';
 
 import type { AuthResponse, AuthResponseWithMfa } from 'vault/vault/services/auth';
 import type { UnauthMountsByType, UnauthMountsResponse } from 'vault/vault/auth/form';
+import type AuthService from 'vault/vault/services/auth';
 import type ClusterModel from 'vault/models/cluster';
 import type CspEventService from 'vault/services/csp-event';
 
@@ -21,12 +22,12 @@ import type CspEventService from 'vault/services/csp-event';
  * @example
  * <Auth::Page
  *  @cluster={{this.model.clusterModel}}
+ *  @directLinkData={{this.model.directLinkData}}
  *  @namespaceQueryParam={{this.namespaceQueryParam}}
  *  @oidcProviderQueryParam={{this.oidcProvider}}
  *  @onAuthSuccess={{action "authSuccess"}}
  *  @onNamespaceUpdate={{perform this.updateNamespace}}
  *  @visibleAuthMounts={{this.model.visibleAuthMounts}}
- *  @directLinkData={{this.model.directLinkData}}
  * />
  *
  * @param {object} cluster - the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
@@ -43,18 +44,25 @@ export const CSP_ERROR =
   "This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.";
 
 interface Args {
-  visibleAuthMounts: UnauthMountsResponse;
   cluster: ClusterModel;
+  directLinkData: { type: string; path?: string } | null; // if "path" key is present then mount data is visible
   onAuthSuccess: CallableFunction;
+  visibleAuthMounts: UnauthMountsResponse;
 }
 
 interface MfaAuthData {
   mfa_requirement: object;
-  selectedAuth: string;
   path: string;
+  selectedAuth: string;
+}
+
+enum FormView {
+  DROPDOWN = 'dropdown',
+  TABS = 'tabs',
 }
 
 export default class AuthPage extends Component<Args> {
+  @service declare readonly auth: AuthService;
   @service('csp-event') declare readonly csp: CspEventService;
 
   @tracked canceledMfaAuth = '';
@@ -75,12 +83,94 @@ export default class AuthPage extends Component<Args> {
     return null;
   }
 
+  get visibleMountTypes(): string[] {
+    return Object.keys(this.visibleMountsByType || {});
+  }
+
   get cspError() {
     const isStandby = this.args.cluster.standby;
     const hasConnectionViolations = this.csp.connectionViolations.length;
     return isStandby && hasConnectionViolations ? CSP_ERROR : '';
   }
 
+  // FORM STATE GETTERS
+  get formViews() {
+    const { directLinkData } = this.args;
+
+    if (directLinkData) {
+      return this.directLinkViews;
+    }
+
+    // if (loginSettings) {
+    //   return this.loginSettingsViews;
+    // }
+
+    if (this.visibleMountsByType) {
+      return this.visibleMountViews;
+    }
+
+    // If none of the above, the UI renders the standard dropdown with no alternate views
+    return this.standardDropdownView;
+  }
+
+  get initialAuthType(): string {
+    // First, prioritize canceledMfaAuth since it's set by user interaction.
+    // Next, "type" from direct link since the URL query param overrides any login settings.
+    // Then, first tab which is either the first backup method or visible mount tab.
+    // Finally, fallback to the most recently used auth method in localStorage.
+    // Token is the default otherwise.
+    const directLinkType = this.args.directLinkData?.type;
+    const firstTab = Object.keys(this.formViews?.defaultView?.tabData || {})[0];
+    return this.canceledMfaAuth || directLinkType || firstTab || this.auth.getAuthType() || 'token';
+  }
+
+  get directLinkViews() {
+    const { directLinkData } = this.args;
+
+    // If "path" key exists we know the "with" query param references a mount with listing_visibility="unauth"
+    // Treat it as a preferred method and hide all other tabs.
+    if (directLinkData?.path) {
+      const tabData = this.filterVisibleMountsByType([directLinkData.type]);
+      const defaultView = this.constructViews(FormView.TABS, tabData);
+      const alternateView = this.constructViews(FormView.DROPDOWN, null);
+
+      return { defaultView, alternateView };
+    }
+
+    // Otherwise, directLinkData just has a "type" key.
+    // Render either visibleMountViews or dropdown with that type preselected
+    return this.visibleMountsByType ? this.visibleMountViews : this.standardDropdownView;
+  }
+
+  get standardDropdownView() {
+    return {
+      defaultView: this.constructViews(FormView.DROPDOWN, null),
+      alternateView: null,
+    };
+  }
+
+  get visibleMountViews() {
+    const defaultView = this.constructViews(FormView.TABS, this.visibleMountsByType);
+    const alternateView = this.constructViews(FormView.DROPDOWN, null);
+    return { defaultView, alternateView };
+  }
+
+  get initialFormState() {
+    const { defaultView, alternateView } = this.formViews;
+    const hasTab = (tabData: object) => Object.keys(tabData).includes(this.initialAuthType);
+    const authIsNotDefaultTab = !hasTab(defaultView?.tabData || {});
+    const hasAlternateView = !!alternateView;
+    const authIsAlternateTab = hasTab(alternateView?.tabData || {});
+
+    // In rare cases, pre-toggle the form to the fallback dropdown if the selected method is not in the alternate view.
+    // This could happen if tabs render for visible mounts and the "with" query param references a type that isn't a tab.
+    // Or auth type is preset from canceled MFA or local storage and is not in the default view.
+    const showAlternate = (authIsNotDefaultTab && hasAlternateView) || authIsAlternateTab;
+
+    return { initialAuthType: this.initialAuthType, showAlternate };
+  }
+
+  // ACTIONS
   @action
   onAuthResponse(authResponse: AuthResponse | AuthResponseWithMfa, { selectedAuth = '', path = '' }) {
     const mfa_requirement = 'mfa_requirement' in authResponse ? authResponse.mfa_requirement : undefined;
@@ -117,5 +207,19 @@ export default class AuthPage extends Component<Args> {
   onMfaErrorDismiss() {
     this.mfaAuthData = null;
     this.mfaErrors = '';
+  }
+
+  // HELPERS
+  private filterVisibleMountsByType(authTypes: string[]) {
+    const tabs: UnauthMountsByType = {};
+    for (const type of authTypes) {
+      // adds visible mounts for each type, if they exist
+      tabs[type] = this.visibleMountsByType?.[type] || null;
+    }
+    return tabs;
+  }
+
+  private constructViews(view: FormView, tabData: UnauthMountsByType | null) {
+    return { view, tabData };
   }
 }

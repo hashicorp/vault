@@ -13,6 +13,7 @@ import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { fillInLoginFields, SYS_INTERNAL_UI_MOUNTS } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CSP_ERROR } from 'vault/components/auth/page';
+import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
 
 module('Integration | Component | auth | page', function (hooks) {
   setupRenderingTest(hooks);
@@ -96,6 +97,20 @@ module('Integration | Component | auth | page', function (hooks) {
     assert.strictEqual(actual, 'mynamespace', `onNamespaceUpdate called with: ${actual}`);
   });
 
+  // DIRECT LINK tests (without any listing visibility)
+  test('it selects type in the dropdown if direct link is just type', async function (assert) {
+    this.directLinkData = { type: 'oidc' };
+    await this.renderComponent();
+    assert.dom(AUTH_FORM.tabBtn('oidc')).doesNotExist('tab does not render');
+    assert.dom(GENERAL.selectByAttr('auth type')).hasValue('oidc', 'dropdown has type selected');
+    assert.dom(AUTH_FORM.authForm('oidc')).exists();
+    assert.dom(GENERAL.inputByAttr('role')).exists();
+    await click(AUTH_FORM.advancedSettings);
+    assert.dom(GENERAL.inputByAttr('path')).exists({ count: 1 });
+    assert.dom(GENERAL.backButton).doesNotExist();
+    assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('"Sign in with other methods" does not render');
+  });
+
   module('listing visibility', function (hooks) {
     hooks.beforeEach(function () {
       this.visibleAuthMounts = SYS_INTERNAL_UI_MOUNTS;
@@ -129,14 +144,12 @@ module('Integration | Component | auth | page', function (hooks) {
       assert.dom(GENERAL.backButton).doesNotExist();
       await click(AUTH_FORM.otherMethodsBtn);
       assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('button disappears after it is clicked');
-      assert
-        .dom(GENERAL.selectByAttr('auth type'))
-        .hasValue('token', 'dropdown renders and resets to select "Token"');
-      await fillIn(GENERAL.selectByAttr('auth type'), 'userpass');
+      assert.dom(GENERAL.selectByAttr('auth type')).hasValue('userpass', 'dropdown has userpass selected');
       assert.dom(AUTH_FORM.advancedSettings).exists('toggle renders even though userpass has visible mounts');
       await click(AUTH_FORM.advancedSettings);
       assert.dom(GENERAL.inputByAttr('path')).exists({ count: 1 });
       assert.dom(GENERAL.inputByAttr('path')).hasValue('', 'it renders empty custom path input');
+
       await fillIn(GENERAL.selectByAttr('auth type'), 'oidc');
       assert.dom(AUTH_FORM.advancedSettings).exists('toggle renders even though oidc has a visible mount');
       await click(AUTH_FORM.advancedSettings);
@@ -148,50 +161,78 @@ module('Integration | Component | auth | page', function (hooks) {
       assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders again');
     });
 
-    // TESTS FOR @directLinkData
-    test('it renders single mount view instead of tabs if @directLinkData is for a method with mount data', async function (assert) {
-      this.directLinkData = { path: 'my-oidc/', type: 'oidc' };
-      await this.renderComponent();
-      assert.dom(AUTH_FORM.authForm('oidc')).exists;
-      assert.dom(AUTH_FORM.tabBtn('oidc')).hasText('OIDC', 'it renders auth type tab');
-      assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
-      assert.dom(GENERAL.inputByAttr('role')).exists();
-      assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
-      assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
-      assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders');
+    module('with a direct link', function (hooks) {
+      hooks.beforeEach(function () {
+        // if path exists, the mount has listing_visibility="unauth"
+        this.directLinkIsVisibleMount = { path: 'my-oidc/', type: 'oidc' };
+        this.directLinkIsJustType = { type: 'okta' };
+      });
 
-      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
-      assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
-      assert.dom(GENERAL.backButton).doesNotExist();
-    });
+      test('it selects type in the dropdown if direct link is just type', async function (assert) {
+        this.directLinkData = this.directLinkIsJustType;
+        await this.renderComponent();
+        assert.dom(AUTH_FORM.tabBtn('okta')).doesNotExist('tab does not render');
+        assert.dom(GENERAL.selectByAttr('auth type')).hasValue('okta', 'dropdown has type selected');
+        assert.dom(AUTH_FORM.authForm('okta')).exists();
+        assert.dom(GENERAL.inputByAttr('username')).exists();
+        assert.dom(GENERAL.inputByAttr('password')).exists();
+        await click(AUTH_FORM.advancedSettings);
+        assert.dom(GENERAL.inputByAttr('path')).exists({ count: 1 });
+        assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('"Sign in with other methods" does not render');
+        assert.dom(GENERAL.backButton).exists('back button renders because tabs exist for other methods');
+        await click(GENERAL.backButton);
+        assert
+          .dom(AUTH_FORM.tabBtn('userpass'))
+          .hasAttribute('aria-selected', 'true', 'first tab is selected on back');
+      });
 
-    test('it selects type in the dropdown if @directLinkData references NON visible type', async function (assert) {
-      this.directLinkData = { type: 'okta' };
-      await this.renderComponent();
-      assert.dom(GENERAL.selectByAttr('auth type')).hasValue('okta', 'dropdown has type selected');
-      assert.dom(AUTH_FORM.authForm('okta')).exists();
-      assert.dom(GENERAL.inputByAttr('username')).exists();
-      assert.dom(GENERAL.inputByAttr('password')).exists();
-      await click(AUTH_FORM.advancedSettings);
-      assert.dom(GENERAL.inputByAttr('path')).exists();
-      assert.dom(AUTH_FORM.tabBtn('okta')).doesNotExist('tab does not render');
-      assert
-        .dom(GENERAL.backButton)
-        .exists('back button renders because listing_visibility="unauth" for other mounts');
-      assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('"Sign in with other methods" does not render');
-    });
+      test('it renders single method view instead of tabs if direct link includes path', async function (assert) {
+        this.directLinkData = this.directLinkIsVisibleMount;
+        await this.renderComponent();
+        assert.dom(AUTH_FORM.authForm('oidc')).exists;
+        assert.dom(AUTH_FORM.tabBtn('oidc')).hasText('OIDC', 'it renders tab for type');
+        assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
+        assert.dom(GENERAL.inputByAttr('role')).exists();
+        assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
+        assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
+        assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders');
+        assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist();
+        assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
+        assert.dom(GENERAL.backButton).doesNotExist();
+      });
 
-    test('it renders single mount view instead of tabs if @directLinkData data references a visible type', async function (assert) {
-      this.directLinkData = { path: 'my-oidc/', type: 'oidc' };
-      await this.renderComponent();
-      assert.dom(AUTH_FORM.tabBtn('oidc')).hasText('OIDC', 'it renders tab for type');
-      assert.dom(GENERAL.inputByAttr('role')).exists();
-      assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
-      assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
-      assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders');
-      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist();
-      assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
-      assert.dom(GENERAL.backButton).doesNotExist();
+      test('it prioritizes auth type from canceled mfa instead of direct link for path', async function (assert) {
+        assert.expect(1);
+        this.directLinkData = this.directLinkIsVisibleMount;
+        const authType = 'okta';
+        const { loginData, url } = REQUEST_DATA.username;
+        const requestUrl = url({ path: authType, username: loginData?.username });
+        this.server.post(requestUrl, () => setupTotpMfaResponse(authType));
+
+        await this.renderComponent();
+        await click(AUTH_FORM.otherMethodsBtn);
+        await fillIn(AUTH_FORM.selectMethod, authType);
+        await fillInLoginFields(loginData);
+        await click(AUTH_FORM.login);
+        await waitFor('[data-test-mfa-description]'); // wait until MFA validation renders
+        await click(GENERAL.backButton);
+        assert.dom(AUTH_FORM.selectMethod).hasValue(authType, 'Okta is selected in dropdown');
+      });
+
+      test('it prioritizes auth type from canceled mfa instead of direct link with type', async function (assert) {
+        assert.expect(1);
+        this.directLinkData = this.directLinkIsJustType;
+        const authType = 'userpass';
+        const { loginData, url } = REQUEST_DATA.username;
+        const requestUrl = url({ path: authType, username: loginData?.username });
+        this.server.post(requestUrl, () => setupTotpMfaResponse(authType));
+        await this.renderComponent();
+        await fillIn(AUTH_FORM.selectMethod, authType);
+        await fillInLoginFields(loginData);
+        await click(AUTH_FORM.login);
+        await click(GENERAL.backButton);
+        assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
+      });
     });
   });
 
@@ -224,7 +265,6 @@ module('Integration | Component | auth | page', function (hooks) {
 
       await this.renderComponent();
       await fillIn(AUTH_FORM.selectMethod, authType);
-      // await fillIn(AUTH_FORM.selectMethod, authType);
       await fillInLoginFields(loginData);
       await click(AUTH_FORM.login);
       const [actual] = this.onAuthSuccess.lastCall.args;
@@ -259,6 +299,20 @@ module('Integration | Component | auth | page', function (hooks) {
         isRoot: false,
       };
       assert.propEqual(actual, expected, `onAuthSuccess called with: ${JSON.stringify(actual)}`);
+    });
+
+    test('it preselects auth type from canceled mfa', async function (assert) {
+      assert.expect(1);
+      const { loginData, url } = options;
+      const requestUrl = url({ path: authType, username: loginData?.username });
+      this.server.post(requestUrl, () => setupTotpMfaResponse(authType));
+
+      await this.renderComponent();
+      await fillIn(AUTH_FORM.selectMethod, authType);
+      await fillInLoginFields(loginData);
+      await click(AUTH_FORM.login);
+      await click(GENERAL.backButton);
+      assert.dom(AUTH_FORM.selectMethod).hasValue(authType, `${authType} is selected in dropdown`);
     });
   }
 

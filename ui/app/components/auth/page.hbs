@@ -50,14 +50,15 @@
         />
       {{else}}
         <Auth::FormTemplate
-          @canceledMfaAuth={{this.canceledMfaAuth}}
+          @alternateView={{this.formViews.alternateView}}
           @cluster={{@cluster}}
-          @directLinkData={{@directLinkData}}
+          @defaultView={{this.formViews.defaultView}}
           @handleNamespaceUpdate={{@onNamespaceUpdate}}
+          @initialFormState={{this.initialFormState}}
           @namespaceQueryParam={{@namespaceQueryParam}}
           @oidcProviderQueryParam={{@oidcProviderQueryParam}}
           @onSuccess={{this.onAuthResponse}}
-          @visibleMountsByType={{this.visibleMountsByType}}
+          @visibleMountTypes={{this.visibleMountTypes}}
         />
       {{/if}}
     </:content>

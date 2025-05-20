@@ -5,7 +5,8 @@
 
 export interface UnauthMountsByType {
   // key is the auth method type
-  [key: string]: AuthTabMountData[];
+  // if the value is "null" there is no mount data for that type
+  [key: string]: AuthTabMountData[] | null;
 }
 export interface UnauthMountsResponse {
   // key is the mount path

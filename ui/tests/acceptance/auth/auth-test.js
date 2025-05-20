@@ -90,7 +90,7 @@ module('Acceptance | auth login form', function (hooks) {
       const expectedTabs = [
         { type: 'userpass', display: 'Userpass' },
         { type: 'oidc', display: 'OIDC' },
-        { type: 'token', display: 'Token' },
+        { type: 'ldap', display: 'LDAP' },
       ];
       await visit('/vault/auth');
       await waitFor(AUTH_FORM.tabs);
@@ -135,9 +135,9 @@ module('Acceptance | auth login form', function (hooks) {
     });
 
     test('it selects type from dropdown if query param is NOT a visible mount, but is a supported method', async function (assert) {
-      await visit('/vault/auth?with=ldap');
+      await visit('/vault/auth?with=token');
       await waitFor(GENERAL.selectByAttr('auth type'));
-      assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap');
+      assert.dom(GENERAL.selectByAttr('auth type')).hasValue('token');
       assert.dom(GENERAL.backButton).exists('it renders "Back" button because tabs do exist');
       assert
         .dom(AUTH_FORM.otherMethodsBtn)

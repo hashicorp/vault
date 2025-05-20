@@ -29,69 +29,81 @@ import type { HTMLElementEvent } from 'vault/forms';
  * dynamically renders the corresponding form.
  *
  *
+ * @param {object | null} alternateView - if an alternate view is supported, form view ("tabs" or "dropdown") and tab data for that view
  * @param {string} canceledMfaAuth - saved auth type from a cancelled mfa verification
  * @param {object} cluster - The route model which is the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
- * @param {object} directLinkData - mount data built from the "with" query param. If param is a mount path and maps to a visible mount, the login form defaults to this mount. Otherwise the form preselects the passed auth type.
+ * @param {object} defaultView - form view (default is "dropdown") and tab data if view is not the standard dropdown
  * @param {function} handleNamespaceUpdate - callback task that passes user input to the controller and updates the namespace query param in the url
+ * @param {object} initialFormState - sets selectedAuthMethod and showOtherMethods based on the login form configuration computed in parent component
  * @param {string} namespaceQueryParam - namespace query param from the url
  * @param {string} oidcProviderQueryParam - oidc provider query param, set in url as "?o=someprovider". if present, disables the namespace input
  * @param {function} onSuccess - callback after the initial authentication request, if an mfa_requirement exists the parent renders the mfa form otherwise it fires the authSuccess action in the auth controller and handles transitioning to the app
- * @param {object} visibleMountsByType - auth methods to render as tabs, contains mount data for any mounts with listing_visibility="unauth"
+ * @param {array} visibleMountTypes - array of auth method types that have mounts with listing_visibility="unauth"
  *
  * */
 
 interface Args {
-  canceledMfaAuth: string;
+  alternateView: FormState | null;
   cluster: ClusterModel;
-  directLinkData: { path?: string; type: string } | null;
+  defaultView: FormState;
   handleNamespaceUpdate: CallableFunction;
+  initialFormState: { initialAuthType: string; showAlternate: boolean };
   namespaceQueryParam: string;
   oidcProviderQueryParam: string;
   onSuccess: CallableFunction;
-  visibleMountsByType: UnauthMountsByType;
+  visibleMountTypes: string[];
+}
+interface FormState {
+  view: string;
+  tabData: UnauthMountsByType | null;
 }
 
 export default class AuthFormTemplate extends Component<Args> {
-  @service declare readonly auth: AuthService;
+  @service declare readonly auth: AuthService; // TODO delete
   @service declare readonly flags: FlagsService;
   @service declare readonly store: Store;
   @service declare readonly version: VersionService;
 
-  // true → "Back" button renders, false → "Sign in with other methods→" renders if customizations exist
-  @tracked showOtherMethods = false;
+  supportedAuthTypes: string[];
 
-  // auth login variables
   @tracked selectedAuthMethod = '';
+  // true → "Back" button renders, false → "Sign in with other methods→" renders if an alternate view exists
+  @tracked showOtherMethods = false;
   @tracked errorMessage = '';
 
+  constructor(owner: unknown, args: Args) {
+    super(owner, args);
+    const { initialAuthType, showAlternate } = this.args.initialFormState;
+    this.selectedAuthMethod = initialAuthType;
+    this.showOtherMethods = showAlternate;
+    this.supportedAuthTypes = supportedTypes(this.version.isEnterprise);
+  }
+
   get tabData() {
-    const { directLinkData } = this.args;
-    // URL contains a "with" query param that references a mount with listing_visibility="unauth"
-    // Treat it as a "preferred" mount and hide all other tabs
-    if (directLinkData?.path && directLinkData?.type) {
-      return { [directLinkData.type]: [this.args.directLinkData] };
-    }
-    return this.args.visibleMountsByType;
-  }
-
-  get authTabTypes() {
-    const visibleMounts = this.args.visibleMountsByType;
-    return visibleMounts ? Object.keys(visibleMounts) : [];
-  }
-
-  get availableMethodTypes() {
-    return supportedTypes(this.version.isEnterprise);
+    if (this.showOtherMethods) return this.args?.alternateView?.tabData;
+    return this.args?.defaultView?.tabData;
   }
 
   get formComponent() {
     const { selectedAuthMethod } = this;
     // isSupported means there is a component file defined for that auth type
-    const isSupported = this.availableMethodTypes.includes(selectedAuthMethod);
+    const isSupported = this.supportedAuthTypes.includes(selectedAuthMethod);
     const formFile = () => (['oidc', 'jwt'].includes(selectedAuthMethod) ? 'oidc-jwt' : selectedAuthMethod);
     const component = isSupported ? formFile() : 'base';
 
     // an Auth::Form::<Type> component exists for each method in supported-login-methods
     return `auth/form/${component}`;
+  }
+
+  get hideAdvancedSettings() {
+    // Token does not support custom paths
+    if (this.selectedAuthMethod === 'token') return true;
+
+    // Always show for dropdown mode
+    if (!this.tabData) return false;
+
+    // For remaining scenarios, hide "Advanced settings" if the selected method has visible mount(s)
+    return this.args.visibleMountTypes?.includes(this.selectedAuthMethod);
   }
 
   get namespaceInput() {
@@ -103,42 +115,6 @@ export default class AuthFormTemplate extends Component<Args> {
       return path ? `/${path}` : '';
     }
     return namespaceQueryParam;
-  }
-
-  get preselectedType() {
-    // Prioritize canceledMfaAuth since it's triggered by user interaction.
-    // Next, check type from directLinkData as it's specified by the URL.
-    // Finally, fall back to the most recently used auth method in localStorage.
-    return this.args.canceledMfaAuth || this.args.directLinkData?.type || this.auth.getAuthType();
-  }
-
-  // The "standard" selection is a dropdown listing all auth methods.
-  // This getter determines whether to render an alternative view (e.g., tabs or a preferred mount).
-  // If `true`, the "Sign in with other methods →" link is shown.
-  get showCustomAuthOptions() {
-    const hasLoginCustomization = this.args?.directLinkData?.path || this.args.visibleMountsByType;
-    // Show if customization exists and the user has NOT clicked "Sign in with other methods →"
-    return hasLoginCustomization && !this.showOtherMethods;
-  }
-
-  @action
-  initializeState() {
-    // SET AUTH TYPE
-    if (this.preselectedType) {
-      this.setAuthType(this.preselectedType);
-    } else {
-      // if nothing has been preselected, select first tab or set to 'token'
-      const authType = this.args.visibleMountsByType ? (this.authTabTypes[0] as string) : 'token';
-      this.setAuthType(authType);
-    }
-
-    // DETERMINES INITIAL RENDER: custom selection (direct link or tabs) vs dropdown
-    if (this.args.visibleMountsByType) {
-      // render tabs if selectedAuthMethod is one, otherwise render dropdown (i.e. showOtherMethods = false)
-      this.showOtherMethods = this.authTabTypes.includes(this.selectedAuthMethod) ? false : true;
-    } else {
-      this.showOtherMethods = false;
-    }
   }
 
   @action
@@ -154,14 +130,9 @@ export default class AuthFormTemplate extends Component<Args> {
   @action
   toggleView() {
     this.showOtherMethods = !this.showOtherMethods;
-
-    if (this.showCustomAuthOptions) {
-      const firstTab = this.authTabTypes[0] as string;
-      this.setAuthType(firstTab);
-    } else {
-      // all methods render, reset dropdown
-      this.selectedAuthMethod = this.preselectedType || 'token';
-    }
+    const firstAuthTab = Object.keys(this.tabData || {})[0];
+    const type = firstAuthTab || this.args.initialFormState.initialAuthType;
+    this.setAuthType(type);
   }
 
   @action
