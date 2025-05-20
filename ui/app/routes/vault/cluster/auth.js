@@ -19,6 +19,8 @@ export default class AuthRoute extends ClusterRouteBase {
   @service api;
   @service auth;
   @service flashMessages;
+  @service namespace;
+  @service store;
   @service version;
 
   beforeModel() {
@@ -36,6 +38,7 @@ export default class AuthRoute extends ClusterRouteBase {
       return { clusterModel, unwrapResponse: authResponse };
     }
 
+    const loginSettings = this.version.isEnterprise ? await this.fetchLoginSettings() : null;
     const visibleAuthMounts = await this.fetchMounts();
     const authMount = params?.authMount;
 
@@ -43,6 +46,7 @@ export default class AuthRoute extends ClusterRouteBase {
       clusterModel,
       visibleAuthMounts,
       directLinkData: authMount ? this.getMountOrTypeData(authMount, visibleAuthMounts) : null,
+      loginSettings,
     };
   }
 
@@ -84,6 +88,27 @@ export default class AuthRoute extends ClusterRouteBase {
     }
   }
 
+  async fetchLoginSettings() {
+    const adapter = this.store.adapterFor('application');
+    const ns = this.namespace.currentNamespace;
+    try {
+      const response = await adapter.ajax('/v1/sys/internal/ui/default-login-methods', 'GET', {
+        unauthenticated: true,
+        namespace: ns === 'root' ? '' : ns,
+      });
+      if (response?.data) {
+        const { default_auth_type, backup_auth_types } = response.data;
+        return {
+          defaultType: default_auth_type,
+          backupTypes: backup_auth_types, // the API returns null if none are set
+        };
+      }
+    } catch {
+      // swallow if there's an error and fallback to default login form configuration
+      return null;
+    }
+  }
+
   async fetchMounts() {
     try {
       const resp = await this.api.sys.internalUiListEnabledVisibleMounts(
@@ -101,19 +126,24 @@ export default class AuthRoute extends ClusterRouteBase {
     In older versions of Vault, the "with" query param could refer to either the auth mount path or the type
     (which may be the same, since the default mount path *is* the type). 
     For backward compatibility, we handle both scenarios.
-    → If `authMount` matches a visible auth mount, return its mount data (which includes the type).
-    → If it matches a supported auth type instead, return just the type to preselect it in the dropdown.
+    → If `authMount` matches a visible auth mount the method will assume that mount path to login and render as the default in the login form.
+    → If `authMount` matches a supported auth type (and the mount does not have `listing_visibility="unauth"`), that is preselected in the login form.
   */
   getMountOrTypeData(authMount, visibleAuthMounts) {
-    if (visibleAuthMounts?.[authMount]) {
-      return { path: authMount, ...visibleAuthMounts[authMount], isVisibleMount: true };
+    const sanitizedParam = sanitizePath(authMount); // strip leading/trailing slashes
+    // mount paths in visibleAuthMounts always end in a slash, so format for consistency
+    const formattedPath = `${sanitizedParam}/`;
+    const mountData = visibleAuthMounts?.[formattedPath];
+    if (mountData) {
+      return { path: formattedPath, type: mountData.type };
     }
+
     const types = supportedTypes(this.version.isEnterprise);
-    if (types.includes(sanitizePath(authMount))) {
-      return { type: authMount, isVisibleMount: false };
+    if (types.includes(sanitizedParam)) {
+      return { type: sanitizedParam };
     }
     // `type` is necessary because it determines which login fields to render.
-    // If we can't safely glean it from the query param, ignore it and return null
+    // If we can't safely glean it from the query param, ignore it and return null.
     return null;
   }
 }

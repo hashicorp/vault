@@ -12,7 +12,7 @@ export interface UnauthMountsResponse {
   [key: string]: { type: string; description?: string; config?: object | null };
 }
 
-export interface AuthTabMountData {
+interface AuthTabMountData {
   path: string;
   type: string;
   description?: string;

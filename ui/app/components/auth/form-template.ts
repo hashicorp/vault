@@ -15,7 +15,7 @@ import type FlagsService from 'vault/services/flags';
 import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
 import type ClusterModel from 'vault/models/cluster';
-import type { UnauthMountsByType, AuthTabMountData } from 'vault/vault/auth/form';
+import type { UnauthMountsByType } from 'vault/vault/auth/form';
 import type { HTMLElementEvent } from 'vault/forms';
 
 /**
@@ -43,7 +43,7 @@ import type { HTMLElementEvent } from 'vault/forms';
 interface Args {
   canceledMfaAuth: string;
   cluster: ClusterModel;
-  directLinkData: (AuthTabMountData & { isVisibleMount: boolean }) | null;
+  directLinkData: { path?: string; type: string } | null;
   handleNamespaceUpdate: CallableFunction;
   namespaceQueryParam: string;
   oidcProviderQueryParam: string;
@@ -68,7 +68,7 @@ export default class AuthFormTemplate extends Component<Args> {
     const { directLinkData } = this.args;
     // URL contains a "with" query param that references a mount with listing_visibility="unauth"
     // Treat it as a "preferred" mount and hide all other tabs
-    if (directLinkData?.isVisibleMount && directLinkData?.type) {
+    if (directLinkData?.path && directLinkData?.type) {
       return { [directLinkData.type]: [this.args.directLinkData] };
     }
     return this.args.visibleMountsByType;
@@ -116,7 +116,7 @@ export default class AuthFormTemplate extends Component<Args> {
   // This getter determines whether to render an alternative view (e.g., tabs or a preferred mount).
   // If `true`, the "Sign in with other methods →" link is shown.
   get showCustomAuthOptions() {
-    const hasLoginCustomization = this.args?.directLinkData?.isVisibleMount || this.args.visibleMountsByType;
+    const hasLoginCustomization = this.args?.directLinkData?.path || this.args.visibleMountsByType;
     // Show if customization exists and the user has NOT clicked "Sign in with other methods →"
     return hasLoginCustomization && !this.showOtherMethods;
   }

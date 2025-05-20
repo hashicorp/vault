@@ -66,7 +66,7 @@ module('Integration | Component | auth | form template', function (hooks) {
   });
 
   test('it selects type in the dropdown if @directLinkData data just contains type', async function (assert) {
-    this.directLinkData = { type: 'oidc', isVisibleMount: false };
+    this.directLinkData = { type: 'oidc' };
     await this.renderComponent();
     assert.dom(GENERAL.selectByAttr('auth type')).hasValue('oidc');
     assert.dom(GENERAL.inputByAttr('role')).exists();
@@ -259,7 +259,7 @@ module('Integration | Component | auth | form template', function (hooks) {
 
     // if mount data exists, the mount has listing_visibility="unauth"
     test('it renders single mount view instead of tabs if @directLinkData data exists and includes mount data', async function (assert) {
-      this.directLinkData = { path: 'my-oidc/', type: 'oidc', isVisibleMount: true };
+      this.directLinkData = { path: 'my-oidc/', type: 'oidc' };
       await this.renderComponent();
       assert.dom(AUTH_FORM.authForm('oidc')).exists;
       assert.dom(AUTH_FORM.tabBtn('oidc')).hasText('OIDC', 'it renders auth type tab');
@@ -276,7 +276,7 @@ module('Integration | Component | auth | form template', function (hooks) {
 
     test('it does not render tabs if @directLinkData data exists and just includes type', async function (assert) {
       // set a type that is NOT in a visible mount because mount data exists otherwise
-      this.directLinkData = { type: 'ldap', isVisibleMount: false };
+      this.directLinkData = { type: 'ldap' };
       await this.renderComponent();
 
       assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap', 'dropdown has type selected');
