@@ -53,12 +53,14 @@ type RaftClusterOpts struct {
 	RedundancyZoneMap              map[int]string
 	EffectiveSDKVersionMap         map[int]string
 	PerNodePhysicalFactoryConfig   map[int]map[string]interface{}
+	DisableMlock                   bool
 }
 
 func raftClusterBuilder(t testing.TB, ropts *RaftClusterOpts) (*vault.CoreConfig, vault.TestClusterOptions) {
 	if ropts == nil {
 		ropts = &RaftClusterOpts{
 			InmemCluster: true,
+			DisableMlock: true,
 		}
 	}
 
@@ -70,6 +72,7 @@ func raftClusterBuilder(t testing.TB, ropts *RaftClusterOpts) (*vault.CoreConfig
 		EnableResponseHeaderRaftNodeID: ropts.EnableResponseHeaderRaftNodeID,
 		Seal:                           ropts.Seal,
 		EnableRaw:                      true,
+		DisableMlock:                   ropts.DisableMlock,
 	}
 
 	opts := vault.TestClusterOptions{

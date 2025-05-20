@@ -10,9 +10,8 @@ import (
 
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/quotas"
 )
-
-//go:generate go run github.com/hashicorp/vault/tools/stubmaker
 
 func entWrapGenericHandler(core *vault.Core, in http.Handler, props *vault.HandlerProperties) http.Handler {
 	// Wrap the help wrapped handler with another layer with a generic
@@ -24,3 +23,5 @@ func entAdditionalRoutes(mux *http.ServeMux, core *vault.Core) {}
 
 func entAdjustResponse(core *vault.Core, w http.ResponseWriter, req *logical.Request) {
 }
+
+func entRlqRequestFields(core *vault.Core, r *http.Request, quotaReq *quotas.Request) {}
