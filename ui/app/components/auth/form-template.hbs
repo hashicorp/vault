@@ -87,7 +87,7 @@
         </:advancedSettings>
 
         <:footer>
-          {{#if (and (not this.showAlternateLoginView) this.alternateView)}}
+          {{#if (and @alternateView (not this.showAlternateLoginView))}}
             <Hds::Button
               {{on "click" this.toggleView}}
               @color="tertiary"

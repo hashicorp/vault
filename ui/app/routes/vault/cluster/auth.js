@@ -133,13 +133,14 @@ export default class AuthRoute extends ClusterRouteBase {
     const sanitizedParam = sanitizePath(authMount); // strip leading/trailing slashes
     // mount paths in visibleAuthMounts always end in a slash, so format for consistency
     const formattedPath = `${sanitizedParam}/`;
-    if (visibleAuthMounts?.[formattedPath]) {
-      return { path: formattedPath, ...visibleAuthMounts[formattedPath], isVisibleMount: true };
+    const mountData = visibleAuthMounts?.[formattedPath];
+    if (mountData) {
+      return { path: formattedPath, type: mountData.type };
     }
 
     const types = supportedTypes(this.version.isEnterprise);
     if (types.includes(sanitizedParam)) {
-      return { type: sanitizedParam, isVisibleMount: false };
+      return { type: sanitizedParam };
     }
     // `type` is necessary because it determines which login fields to render.
     // If we can't safely glean it from the query param, ignore it and return null

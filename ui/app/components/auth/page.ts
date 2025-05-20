@@ -15,8 +15,42 @@ import type CspEventService from 'vault/services/csp-event';
 
 /**
  * @module AuthPage
- * The Auth::Page is the route template for the login splash view. It renders the Auth::FormTemplate or MFA component if an
- * mfa validation is returned from the auth request. It also formats mount data to manage what tabs are rendered in Auth::FormTemplate.
+ * The Auth::Page receives configuration settings from the route's model hook and determines the possible form states. It also renders the Auth::FormTemplate or MFA component if an
+ * mfa validation is returned from the auth request. The model hook refreshes when the namespace input updates.
+ *
+ * 🔧 CONFIGURATION OVERVIEW:
+ * Each view mode (see `FormView` enum below) has specific layout configurations. In some scenarios, the component supports toggling between a default view and an alternate view.
+ *
+ * 📋 [DROPDOWN] (default view)
+ *   ▸ All supported auth methods show in a dropdown.
+ *   ▸ No alternate view.
+ *
+ * 🗂️ [TABS] (unauth mount tabs)
+ *   ▸ Groups visible mounts (`listing_visibility="unauth"`) by type and displays as tabs.
+ *   ▸ Alternate view: full dropdown of all methods.
+ *
+ * 🔗 [DIRECT_LINK] (via `?with=` query param)
+ *   ▸ If the param references a visible mount, that method renders by default and the mount path is assumed.
+ *     ↳ Alternate view: full dropdown.
+ *   ▸ If the param references a method type (legacy behavior), the method is preselected in the dropdown or its tab is selected.
+ *     ↳ Alternate view: if other methods have visible mounts, the form can toggle between tabs and dropdown. The initial view depends on whether the chosen type is a tab.
+ *
+ * 🏢 *Enterprise-only login customizations*
+ *   ▸ A namespace can define a default method [LOGIN_SETTINGS_DEFAULT] and/or preferred methods (i.e. "backups") [LOGIN_SETTINGS_TABS].
+ *     ✎ Both set:
+ *       ▸ Default method shown initially.
+ *       ▸ Alternate view: preferred methods in tab layout.
+ *     ✎ Only one set:
+ *       ▸ No alternate view.
+ *
+ * 🔁 Advanced settings toggle reveals the custom path input:
+ *   🚫 No visible mounts:
+ *     ▸ UI defaults to method type as path.
+ *     ▸ "Advanced settings" shows a path input.
+ *   1️⃣ One visible mount:
+ *     ▸ Path is assumed and hidden.
+ *   🔀 Multiple visible mounts:
+ *     ▸ Path dropdown is shown.
  *
  * @example
  * <Auth::Page
@@ -43,15 +77,22 @@ export const CSP_ERROR =
   "This is a standby Vault node but can't communicate with the active node via request forwarding. Sign in at the active node to use the Vault UI.";
 
 interface Args {
-  visibleAuthMounts: UnauthMountsResponse;
   cluster: ClusterModel;
+  directLinkData: { type: string; path?: string } | null; // if "path" key is present then mount data is visible
+  loginSettings: { defaultType: string; backupTypes: string[] | null }; // enterprise only
   onAuthSuccess: CallableFunction;
+  visibleAuthMounts: UnauthMountsResponse;
 }
 
 interface MfaAuthData {
   mfa_requirement: object;
-  selectedAuth: string;
   path: string;
+  selectedAuth: string;
+}
+
+enum FormView {
+  DROPDOWN = 'dropdown',
+  TABS = 'tabs',
 }
 
 export default class AuthPage extends Component<Args> {
@@ -60,6 +101,36 @@ export default class AuthPage extends Component<Args> {
   @tracked canceledMfaAuth = '';
   @tracked mfaAuthData: MfaAuthData | null = null;
   @tracked mfaErrors = '';
+
+  get cspError() {
+    const isStandby = this.args.cluster.standby;
+    const hasConnectionViolations = this.csp.connectionViolations.length;
+    return isStandby && hasConnectionViolations ? CSP_ERROR : '';
+  }
+
+  get formStates() {
+    const { directLinkData, loginSettings } = this.args;
+
+    // If "path" key is present, "with" query param references a mount with listing_visibility="unauth."
+    // Treat it as a "preferred" mount and hide all other tabs
+    if (directLinkData) {
+      return this.directLinkViews;
+    }
+
+    if (loginSettings) {
+      return this.loginSettingsViews;
+    }
+
+    if (this.visibleMountsByType) {
+      return this.visibleMountsViews;
+    }
+    // If none of the above, the UI renders the standard dropdown
+    return null;
+  }
+
+  get preselectedType() {
+    return this.canceledMfaAuth || this.args.directLinkData?.type || '';
+  }
 
   get visibleMountsByType() {
     const visibleAuthMounts = this.args.visibleAuthMounts;
@@ -75,10 +146,8 @@ export default class AuthPage extends Component<Args> {
     return null;
   }
 
-  get cspError() {
-    const isStandby = this.args.cluster.standby;
-    const hasConnectionViolations = this.csp.connectionViolations.length;
-    return isStandby && hasConnectionViolations ? CSP_ERROR : '';
+  get visibleMountTypes(): string[] {
+    return Object.keys(this.visibleMountsByType || {});
   }
 
   @action
@@ -117,5 +186,61 @@ export default class AuthPage extends Component<Args> {
   onMfaErrorDismiss() {
     this.mfaAuthData = null;
     this.mfaErrors = '';
+  }
+
+  private filterVisibleMountsByType(authTypes: string[]) {
+    const tabs: UnauthMountsByType = {};
+    for (const type of authTypes) {
+      // adds visible mounts for each type, if they exist
+      tabs[type] = this.visibleMountsByType?.[type] || null;
+    }
+    return tabs;
+  }
+
+  get directLinkViews() {
+    const { directLinkData } = this.args;
+
+    let defaultTabData;
+    if (directLinkData?.path) {
+      defaultTabData = this.filterVisibleMountsByType([directLinkData.type]);
+    } else {
+      defaultTabData = this.visibleMountsByType || null;
+    }
+
+    const defaultView = { view: FormView.TABS, tabData: defaultTabData };
+    const alternateView = this.visibleMountsByType ? { view: FormView.DROPDOWN, tabData: null } : null;
+
+    return { defaultView, alternateView };
+  }
+
+  get loginSettingsViews() {
+    const { loginSettings } = this.args;
+    const defaultType = loginSettings?.defaultType;
+    const backupTypes = loginSettings?.backupTypes;
+
+    let defaultTabData;
+    if (defaultType) {
+      defaultTabData = this.filterVisibleMountsByType([defaultType]);
+    }
+
+    if (backupTypes && !defaultType) {
+      defaultTabData = this.filterVisibleMountsByType(backupTypes);
+    }
+
+    const defaultView = { view: FormView.TABS, tabData: defaultTabData };
+
+    // Both default and backups must be set for an alternate view to exist
+    const alternateView =
+      defaultType && backupTypes
+        ? { view: FormView.TABS, tabData: this.filterVisibleMountsByType(backupTypes) }
+        : null;
+
+    return { defaultView, alternateView };
+  }
+
+  get visibleMountsViews() {
+    const defaultView = { view: FormView.TABS, tabData: this.visibleMountsByType };
+    const alternateView = { view: FormView.DROPDOWN, tabData: null };
+    return { defaultView, alternateView };
   }
 }
