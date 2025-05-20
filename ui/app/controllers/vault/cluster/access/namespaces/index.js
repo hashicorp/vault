@@ -80,7 +80,7 @@ export default class ManageNamespacesController extends Controller {
     }
   }
 
-  // Refresh the namespace list
+  @action
   async refreshNamespaceList() {
     try {
       // Await the async operation to complete

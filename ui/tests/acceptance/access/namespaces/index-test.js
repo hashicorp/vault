@@ -31,6 +31,12 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     );
   });
 
+  test('it displays the breadcrumb trail', async function (assert) {
+    await visit('/vault/access/namespaces');
+    assert.dom('.hds-breadcrumb__text').exists({ count: 1 }, 'Only one breadcrumb is displayed');
+    assert.dom('.hds-breadcrumb__text').hasText('Namespaces', 'Breadcrumb trail is displayed correctly');
+  });
+
   test('it should render correct number of namespaces', async function (assert) {
     assert.expect(3);
     await visit('/vault/access/namespaces');
@@ -39,6 +45,26 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     assert.strictEqual(store.peekAll('namespace').length, 15, 'Store has 15 namespaces records');
     assert.dom('.list-item-row').exists({ count: 15 }, 'Should display 15 namespaces');
     assert.dom('.hds-pagination').exists();
+  });
+
+  test('it should show button to refresh namespace list', async function (assert) {
+    let refreshNetworkRequestTriggered;
+
+    this.server.get('/sys/internal/ui/namespaces', () => {
+      refreshNetworkRequestTriggered = true;
+      return;
+    });
+
+    await visit('/vault/access/namespaces');
+    const refreshListButton = 'nav.toolbar-actions .hds-button';
+    assert.dom(refreshListButton).hasText('Refresh list', 'Refresh button is rendered correctly');
+
+    refreshNetworkRequestTriggered = false;
+    await click(refreshListButton);
+    assert.true(
+      refreshNetworkRequestTriggered,
+      'Get namespaces network request was made when refresh button was clicked'
+    );
   });
 
   test('it should show button to create new namespace', async function (assert) {
