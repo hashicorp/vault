@@ -535,7 +535,7 @@ func (b *backend) createCARole(allowedUsers, defaultUser, signer string, data *f
 	return role, nil
 }
 
-func (b *backend) getRole(ctx context.Context, s logical.Storage, n string, disallowUpgrades bool) (*sshRole, error) {
+func (b *backend) getRole(ctx context.Context, s logical.Storage, n string, skipStorageWrite bool) (*sshRole, error) {
 	entry, err := s.Get(ctx, "roles/"+n)
 	if err != nil {
 		return nil, err
@@ -549,19 +549,15 @@ func (b *backend) getRole(ctx context.Context, s logical.Storage, n string, disa
 		return nil, err
 	}
 
-	if err := b.checkUpgrade(ctx, s, n, &result, disallowUpgrades); err != nil {
+	if err := b.checkUpgrade(ctx, s, n, &result, skipStorageWrite); err != nil {
 		return nil, err
 	}
 
 	return &result, nil
 }
 
-func (b *backend) checkUpgrade(ctx context.Context, s logical.Storage, n string, result *sshRole, disallowUpgrades bool) error {
+func (b *backend) checkUpgrade(ctx context.Context, s logical.Storage, n string, result *sshRole, skipStorageWrite bool) error {
 	modified := false
-
-	if disallowUpgrades {
-		return nil
-	}
 
 	// NOTE: When introducing a new migration, increment roleEntryVersion and
 	// check if the version is less than the version this change was introduced
@@ -637,7 +633,7 @@ func (b *backend) checkUpgrade(ctx context.Context, s logical.Storage, n string,
 	// Add new migrations just before here.
 	//
 	// Condition copied from PKI builtin.
-	if modified && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) {
+	if modified && (b.System().LocalMount() || !b.System().ReplicationState().HasState(consts.ReplicationPerformanceSecondary)) && !skipStorageWrite {
 		jsonEntry, err := logical.StorageEntryJSON("roles/"+n, &result)
 		if err != nil {
 			return err
