@@ -1,3 +1,0 @@
-```release-note:improvement
-add remove_irrevocable_lease_after configuration field
-```
