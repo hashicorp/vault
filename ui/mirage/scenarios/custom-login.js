@@ -12,7 +12,7 @@ export default function (server) {
     disable_inheritance: true,
   });
   server.create('login-rule', {
-    namespace: 'admin/',
+    namespace: 'admin',
     default_auth_type: 'oidc',
     backup_auth_types: ['token'],
   });

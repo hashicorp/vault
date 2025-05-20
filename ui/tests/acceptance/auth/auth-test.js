@@ -44,6 +44,16 @@ module('Acceptance | auth login form', function (hooks) {
     }
   });
 
+  test('it selects auth method if "with" query param ends in an unencoded a slash', async function (assert) {
+    await visit('/vault/auth?with=userpass/');
+    assert.dom(AUTH_FORM.selectMethod).hasValue('userpass');
+  });
+
+  test('it selects auth method if "with" query param ends in an encoded slash and matches an auth type', async function (assert) {
+    await visit('/vault/auth?with=userpass%2F');
+    assert.dom(AUTH_FORM.selectMethod).hasValue('userpass');
+  });
+
   test('it redirects if "with" query param is not a supported auth method', async function (assert) {
     await visit('/vault/auth?with=fake');
     assert.strictEqual(currentURL(), '/vault/auth', 'invalid query param is cleared');
@@ -363,9 +373,7 @@ module('Acceptance | auth login form', function (hooks) {
       await visit('/vault/auth');
 
       this.server.get('/sys/internal/ui/mounts', (_, req) => {
-        // sometimes the namespace header is "X-Vault-Namespace" and other times "x-vault-namespace"...haven't figured out why
-        const key = Object.keys(req.requestHeaders).find((k) => k.toLowerCase().includes('namespace'));
-        assert.strictEqual(req.requestHeaders[key], 'admin', `${key}: header contains namespace`);
+        assert.strictEqual(req.requestHeaders['x-vault-namespace'], 'admin', 'header contains namespace');
         req.passthrough();
       });
       await typeIn(GENERAL.inputByAttr('namespace'), 'admin');
