@@ -72,7 +72,6 @@ export default class ClientsOverviewPageComponent extends ActivityComponent {
       data = [...data, ...mounts];
     });
 
-    // TODO SLW should we put a hard cap still?
     const sorted = this.sortTableData(data);
     return sorted;
   }
@@ -107,7 +106,6 @@ export default class ClientsOverviewPageComponent extends ActivityComponent {
   }
 
   get tableBodyMessage(): string {
-    // TODO SLW confirm copy
     return this.selectedMonth
       ? 'View the namespace mount breakdown of clients by selecting another month.'
       : 'View the namespace mount breakdown of clients by selecting a month.';

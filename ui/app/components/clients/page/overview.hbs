@@ -48,7 +48,6 @@
         <B.Tr data-test-attribution-table-row>
           <B.Td>{{B.data.namespace}}</B.Td>
           <B.Td>{{B.data.label}}</B.Td>
-          {{! TODO SLW mount_type defaults to '' which will appear blank, what to show? }}
           {{#if (eq B.data.mount_type "deleted mount")}}
             <B.Td><Hds::Badge @text="Disabled" @type="outlined" /></B.Td>
           {{else}}
