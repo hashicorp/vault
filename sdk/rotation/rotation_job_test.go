@@ -19,7 +19,6 @@ func TestConfigureRotationJob(t *testing.T) {
 		{
 			name: "no rotation params",
 			req: &RotationJobConfigureRequest{
-				MountPoint:       "aws",
 				ReqPath:          "config/root",
 				RotationSchedule: "",
 				RotationWindow:   60,
@@ -28,20 +27,8 @@ func TestConfigureRotationJob(t *testing.T) {
 			expectedError: "RotationSchedule or RotationPeriod is required to set up rotation job",
 		},
 		{
-			name: "no mount point",
-			req: &RotationJobConfigureRequest{
-				MountPoint:       "",
-				ReqPath:          "config/root",
-				RotationSchedule: "",
-				RotationWindow:   60,
-				RotationPeriod:   5,
-			},
-			expectedError: "MountPoint is required",
-		},
-		{
 			name: "no req path",
 			req: &RotationJobConfigureRequest{
-				MountPoint:       "aws",
 				ReqPath:          "",
 				RotationSchedule: "",
 				RotationWindow:   60,
