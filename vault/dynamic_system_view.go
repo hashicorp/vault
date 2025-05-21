@@ -363,9 +363,7 @@ func (d dynamicSystemView) RegisterRotationJob(ctx context.Context, req *rotatio
 	nsCtx := namespace.ContextWithNamespace(ctx, mountEntry.Namespace())
 
 	// set mount point
-	if req.MountPoint == "" {
-		req.MountPoint = mountEntry.Path
-	}
+	req.MountPoint = mountEntry.Path
 
 	job, err := rotation.ConfigureRotationJob(req)
 	if err != nil {
@@ -388,9 +386,7 @@ func (d dynamicSystemView) DeregisterRotationJob(ctx context.Context, req *rotat
 	}
 	nsCtx := namespace.ContextWithNamespace(ctx, mountEntry.Namespace())
 
-	if req.MountPoint == "" {
-		req.MountPoint = mountEntry.Path
-	}
+	req.MountPoint = mountEntry.Path
 
 	return d.core.DeregisterRotationJob(nsCtx, req)
 }
