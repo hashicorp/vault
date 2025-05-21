@@ -1,0 +1,3 @@
+```release-note:change
+ui: (Client Counts) The mount attribution and namespace attribution charts have been replaced in the overview tab with a table that breaks down client attribution according to month selection.
+```

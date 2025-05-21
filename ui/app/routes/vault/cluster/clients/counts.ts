@@ -39,7 +39,6 @@ export default class ClientsCountsRoute extends Route {
   @service declare readonly store: Store;
   @service declare readonly version: VersionService;
 
-  // TODO SLW
   queryParams = {
     start_time: { refreshModel: true, replace: true },
     end_time: { refreshModel: true, replace: true },

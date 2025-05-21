@@ -77,7 +77,6 @@ export default class ClientsOverviewPageComponent extends ActivityComponent {
     return sorted;
   }
 
-  // TODO SLW should these be separate or combine with a variable set for total items?
   get paginatedTableData(): TableData[] {
     const paginated = paginate(this.tableData, {
       page: this.currentPage,
@@ -89,7 +88,6 @@ export default class ClientsOverviewPageComponent extends ActivityComponent {
 
   sortTableData(data: TableData[]): TableData[] {
     if (this.sortColumn) {
-      // TODO SLW review sorting logic and see if it works for each column
       data = [...data].sort((a, b) => {
         const valA = a[this.sortColumn];
         const valB = b[this.sortColumn];
@@ -132,5 +130,3 @@ export default class ClientsOverviewPageComponent extends ActivityComponent {
     this.currentPage = page;
   }
 }
-
-// TODO SLW are all mounts disabled in mock data? double check
