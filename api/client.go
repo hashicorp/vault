@@ -8,15 +8,18 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -26,7 +29,6 @@ import (
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/go-retryablehttp"
-	"github.com/hashicorp/go-rootcerts"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"golang.org/x/net/http2"
@@ -291,6 +293,56 @@ func DefaultConfig() *Config {
 	return config
 }
 
+func appendCerts(certPool *x509.CertPool, path string) error {
+	pem, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	if !certPool.AppendCertsFromPEM(pem) {
+		return errors.New("could not parse PEM")
+	}
+	return nil
+}
+
+func loadCACerts(CACertFile string, CACertBytes []byte, CAPath string) (*x509.CertPool, error) {
+	var certPool *x509.CertPool
+
+	switch true {
+	case CACertFile != "":
+		certPool = x509.NewCertPool()
+		if err := appendCerts(certPool, CACertFile); err != nil {
+			return nil, fmt.Errorf("error loading CA file %s: %w", CACertFile, err)
+		}
+	case len(CACertBytes) > 0:
+		certPool = x509.NewCertPool()
+		if !certPool.AppendCertsFromPEM(CACertBytes) {
+			return nil, errors.New("could not parse PEM")
+		}
+	case CAPath != "":
+		certPool = x509.NewCertPool()
+		err := filepath.Walk(CAPath, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+
+			if info.IsDir() {
+				return nil
+			}
+
+			if err = appendCerts(certPool, path); err != nil {
+				err = fmt.Errorf("%s: %w", path, err)
+			}
+			return err
+		})
+		if err != nil {
+			return nil, fmt.Errorf("error loading file from CAPath: %w", err)
+		}
+	}
+
+	return certPool, nil
+}
+
 // configureTLS is a lock free version of ConfigureTLS that can be used in
 // ReadEnvironment where the lock is already hold
 func (c *Config) configureTLS(t *TLSConfig) error {
@@ -326,14 +378,11 @@ func (c *Config) configureTLS(t *TLSConfig) error {
 	if t.CACert != "" || len(t.CACertBytes) != 0 || t.CAPath != "" {
 		c.curlCACert = t.CACert
 		c.curlCAPath = t.CAPath
-		rootConfig := &rootcerts.Config{
-			CAFile:        t.CACert,
-			CACertificate: t.CACertBytes,
-			CAPath:        t.CAPath,
-		}
-		if err := rootcerts.ConfigureTLS(clientTLSConfig, rootConfig); err != nil {
+		certPool, err := loadCACerts(t.CACert, t.CACertBytes, t.CAPath)
+		if err != nil {
 			return err
 		}
+		clientTLSConfig.RootCAs = certPool
 	}
 
 	if t.Insecure {
