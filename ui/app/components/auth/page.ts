@@ -20,24 +20,25 @@ import type CspEventService from 'vault/services/csp-event';
  * It receives configuration settings from the route's model hook and determines the possible form states passed to Auth::FormTemplate.
  * The model hook refreshes when the namespace input updates and re-requests `sys/internal/ui/mounts` and the login settings endpoint (enterprise only).
  *
- * 🔧 CONFIGURATION OVERVIEW:
- * Each view mode (see `FormView` enum below) has specific layout configurations. In some scenarios, the component supports toggling between a default view and an alternate view.
+ * ⚙️ CONFIGURATION OVERVIEW:
+ * The login form either renders a `dropdown` or `tabs` depending on specific configuration combinations.
+ * In some scenarios, the component supports toggling between a default view and an alternate view.
  *
- * 📋 [DROPDOWN] (default view)
+ * 📋 Dropdown (default view)
  *   ▸ All supported auth methods show in a dropdown.
  *   ▸ No alternate view.
  *
- * 🗂️ [TABS] (visible (unauth) mount tabs)
+ * 🗂️ Visible mount tabs
  *   ▸ Groups visible mounts (`listing_visibility="unauth"`) by type and displays as tabs.
  *   ▸ Alternate view: full dropdown of all methods.
  *
- * 🔗 [DIRECT_LINK] (via `?with=` query param)
+ * 🔗 Direct link (via `?with=` query param)
  *   ▸ If the param references a visible mount, that method renders by default and the mount path is assumed.
  *     ↳ Alternate view: full dropdown.
  *   ▸ If the param references a method type (legacy behavior), the method is preselected in the dropdown or its tab is selected.
  *     ↳ Alternate view: if other methods have visible mounts, the form can toggle between tabs and dropdown. The initial view depends on whether the chosen type is a tab.
  *
- * 🏢 *Enterprise-only login settings*
+ * 🏢 Login settings * enterprise only *
  *   ▸ A namespace can define a default method and/or preferred methods (i.e. "backups") and enable child namespaces to inherit these preferences.
  *     ✎ Both set:
  *       ▸ Default method shown initially.
@@ -45,7 +46,7 @@ import type CspEventService from 'vault/services/csp-event';
  *     ✎ Only one set:
  *       ▸ No alternate view.
  *
- * 🔁 Advanced settings toggle reveals the custom path input:
+ * 🛠️ Advanced settings toggle reveals the custom path input:
  *   🚫 No visible mounts:
  *     ▸ UI defaults to method type as path.
  *     ▸ "Advanced settings" shows a path input.

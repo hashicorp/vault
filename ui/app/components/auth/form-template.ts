@@ -33,7 +33,7 @@ import type { HTMLElementEvent } from 'vault/forms';
  * @param {object} cluster - The route model which is the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
  * @param {object} defaultView - form view (default is "dropdown") and tab data if view is not the standard dropdown
  * @param {function} handleNamespaceUpdate - callback task that passes user input to the controller and updates the namespace query param in the url
- * @param {object} initialFormState - sets selectedAuthMethod and showOtherMethods based on the login form configuration computed in parent component
+ * @param {object} initialFormState - sets selectedAuthMethod and showAlternateView based on the login form configuration computed in parent component
  * @param {string} namespaceQueryParam - namespace query param from the url
  * @param {string} oidcProviderQueryParam - oidc provider query param, set in url as "?o=someprovider". if present, disables the namespace input
  * @param {function} onSuccess - callback after the initial authentication request, if an mfa_requirement exists the parent renders the mfa form otherwise it fires the authSuccess action in the auth controller and handles transitioning to the app
@@ -66,19 +66,19 @@ export default class AuthFormTemplate extends Component<Args> {
 
   @tracked selectedAuthMethod = '';
   // true → "Back" button renders, false → "Sign in with other methods→" renders if an alternate view exists
-  @tracked showOtherMethods = false;
+  @tracked showAlternateView = false;
   @tracked errorMessage = '';
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
     const { initialAuthType, showAlternate } = this.args.initialFormState;
     this.selectedAuthMethod = initialAuthType;
-    this.showOtherMethods = showAlternate;
+    this.showAlternateView = showAlternate;
     this.supportedAuthTypes = supportedTypes(this.version.isEnterprise);
   }
 
   get tabData() {
-    if (this.showOtherMethods) return this.args?.alternateView?.tabData;
+    if (this.showAlternateView) return this.args?.alternateView?.tabData;
     return this.args?.defaultView?.tabData;
   }
 
@@ -127,7 +127,7 @@ export default class AuthFormTemplate extends Component<Args> {
 
   @action
   toggleView() {
-    this.showOtherMethods = !this.showOtherMethods;
+    this.showAlternateView = !this.showAlternateView;
     const firstAuthTab = Object.keys(this.tabData || {})[0];
     const type = firstAuthTab || this.args.initialFormState.initialAuthType;
     this.setAuthType(type);

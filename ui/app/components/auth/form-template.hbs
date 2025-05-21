@@ -24,7 +24,7 @@
       </:namespace>
 
       <:back>
-        {{#if this.showOtherMethods}}
+        {{#if this.showAlternateView}}
           <Hds::Button
             @text="Back"
             {{on "click" this.toggleView}}
@@ -88,7 +88,7 @@
       </:advancedSettings>
 
       <:footer>
-        {{#if (and @alternateView (not this.showOtherMethods))}}
+        {{#if (and @alternateView (not this.showAlternateView))}}
           <Hds::Button
             {{on "click" this.toggleView}}
             @color="tertiary"
