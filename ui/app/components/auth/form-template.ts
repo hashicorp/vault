@@ -51,6 +51,7 @@ interface Args {
   onSuccess: CallableFunction;
   visibleMountTypes: string[];
 }
+
 interface FormView {
   view: string; // "dropdown" or "tabs"
   tabData: UnauthMountsByType | null; // tabs to render if view = "tabs"
@@ -62,10 +63,10 @@ export default class AuthFormTemplate extends Component<Args> {
 
   supportedAuthTypes: string[];
 
+  @tracked errorMessage = '';
   @tracked selectedAuthMethod = '';
   // true → "Back" button renders, false → "Sign in with other methods→" renders if an alternate view exists
   @tracked showAlternateView = false;
-  @tracked errorMessage = '';
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
