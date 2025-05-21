@@ -20,8 +20,8 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
 
     // create login rules
     await runCmd([
-      'write sys/config/ui/login/default-auth/testRule backup_auth_types=[] default_auth_type=okta disable_inheritance=false namespace=ns1',
-      'write sys/config/ui/login/default-auth/testRule2 backup_auth_types=[] default_auth_type=ldap disable_inheritance=true namespace=ns2',
+      `write sys/config/ui/login/default-auth/testRule backup_auth_types=userpass default_auth_type=okta disable_inheritance=false namespace=ns1`,
+      'write sys/config/ui/login/default-auth/testRule2 backup_auth_types=oidc default_auth_type=ldap disable_inheritance=true namespace=ns2',
     ]);
   });
 
@@ -39,6 +39,9 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
 
     // verify fetched rules are rendered in list
     assert.dom('.linked-block-item').exists({ count: 2 });
+    // verify rule data namespaces render
+    assert.dom('[data-test-rule-path="ns1/"]').exists();
+    assert.dom('[data-test-rule-path="ns2/"]').exists();
   });
 
   test('delete rule from list view', async function (assert) {
@@ -53,6 +56,7 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
 
     // verify success message from deletion
     assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted rule testRule.');
+    assert.dom('[data-test-rule-name="testRule"]').doesNotExist();
   });
 
   test('navigate to rule details page and renders rule data', async function (assert) {
@@ -70,9 +74,9 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
     );
 
     // verify fetched rule data is rendered
-    assert.dom(GENERAL.infoRowLabel('Name')).exists();
     assert.dom(GENERAL.infoRowValue('Name')).hasText('testRule');
-    assert.dom(GENERAL.infoRowLabel('Namespace')).exists();
     assert.dom(GENERAL.infoRowValue('Namespace')).hasText('ns1/');
+    assert.dom(GENERAL.infoRowValue('Backup methods')).hasText('userpass');
+    assert.dom(GENERAL.infoRowValue('Inheritance')).hasText('true');
   });
 });

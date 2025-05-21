@@ -1,7 +1,7 @@
 ```release-note:feature
-**Custom login settings**: Adding new components to be able to view and delete custom login rules
+**Custom login settings**: Adding view to list and delete custom login rules
 ```
 
 ```release-note:change
-ui/navbar: 'Custom messages' renamed to 'System Messages'
+ui: 'Custom messages' renamed to 'System Messages'
 ```

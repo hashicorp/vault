@@ -28,6 +28,9 @@ export default class LoginSettingsRuleDetailsRoute extends Route {
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
 
-    controller.breadcrumbs = [{ label: 'UI login rules', route: 'login-settings' }, { label: '' }];
+    controller.breadcrumbs = [
+      { label: 'UI login rules', route: 'login-settings' },
+      { label: resolvedModel.rule.name },
+    ];
   }
 }
