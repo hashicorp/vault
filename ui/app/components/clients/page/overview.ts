@@ -53,8 +53,6 @@ export default class ClientsOverviewPageComponent extends ActivityComponent {
     });
 
     return data;
-    // const sorted = this.sortTableData(data);
-    // return sorted;
   }
 
   @action
