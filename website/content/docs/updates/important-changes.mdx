@@ -29,32 +29,36 @@ clusters using *integrated storage*. This means that if you are not explicitly
 setting a value for `disable_mlock`, the following changes must be made prior
 to upgrading.
 
-* Clusters missing this config value will fail to start after the upgrade to 1.20.0 *
+<Warning>
+
+Clusters missing this config value will fail to start after the upgrade to 1.20.0.
+
+</Warning>
 
 Before upgrading to Vault 1.20.0, administrators must explicitly add a value for
-`disable_mlock` to the outermost level of the server configuration. See docs.
+`disable_mlock` to the outermost level of the server configuration. Refer to the [documentation](/vault/docs/configuration#parameters).
 This must be done for all server nodes. Prior to Vault 1.20, the default setting
-for `disable_mlock` was false. Therefore if you do not currently have a value
+for `disable_mlock` was false. Therefore, if you do not currently have a value
 set for `disable_mlock`, you are using the default setting. If you wish to
 maintain this behavior, you will need to explicitly set
 `disable_mlock = false` prior to upgrade.
 
-For clusters that already set a value for `disable_mlock` no change is required.
+For clusters that already set a value for `disable_mlock`, no change is required.
 
 ### Additional Considerations:
 
 #### Autopilot
 New 1.20.0 nodes are added to the cluster until there is a quorum of upgraded
-nodes. Each of these new nodes will need to have a value for`disable_mlock`
+nodes. Each of these new nodes will need to have a value for `disable_mlock`
 set.
 
-#### Rolling Upgrades
+#### Rolling upgrades
 Standby nodes are stopped and upgraded one at a time. These node configurations
 will need to be updated before restarting the vault process on the node.
 
 #### dev mode
-If no config is provided, dev mode will start as usual. If a config is provided
-it must have a value for `disable_mlock`
+If no config is provided, dev mode will start as usual. If a config is provided,
+it must have a value for `disable_mlock`.
 
 ### Cluster types affected
 
