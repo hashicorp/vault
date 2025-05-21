@@ -99,6 +99,8 @@ export default class SecretEngineModel extends Model {
   })
   deleteVersionAfter;
 
+  @attr('string') runningPluginVersion;
+
   /* GETTERS */
   get isV2KV() {
     return this.version === 2 && (this.engineType === 'kv' || this.engineType === 'generic');
@@ -160,7 +162,7 @@ export default class SecretEngineModel extends Model {
 
   get formFields() {
     const type = this.engineType;
-    const fields = ['type', 'path', 'description', 'accessor', 'local', 'sealWrap'];
+    const fields = ['type', 'path', 'description', 'accessor', 'runningPluginVersion', 'local', 'sealWrap'];
     // no ttl options for keymgmt
     if (type !== 'keymgmt') {
       fields.push('config.defaultLeaseTtl', 'config.maxLeaseTtl');
