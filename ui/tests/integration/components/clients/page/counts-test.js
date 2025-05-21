@@ -107,21 +107,21 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
   [
     {
       scenario: 'changing start only',
-      expected: { start_time: jan23start, end_time: dec23end, month: undefined },
+      expected: { start_time: jan23start, end_time: dec23end },
       editStart: '2023-01',
       expectedStart: 'January 2023',
       expectedEnd: 'December 2023',
     },
     {
       scenario: 'changing end only',
-      expected: { start_time: july23start, end_time: dec23end, month: undefined },
+      expected: { start_time: july23start, end_time: dec23end },
       editEnd: '2023-12',
       expectedStart: 'July 2023',
       expectedEnd: 'December 2023',
     },
     {
       scenario: 'changing both',
-      expected: { start_time: jan23start, end_time: dec23end, month: undefined },
+      expected: { start_time: jan23start, end_time: dec23end },
       editStart: '2023-01',
       editEnd: '2023-12',
       expectedStart: 'January 2023',

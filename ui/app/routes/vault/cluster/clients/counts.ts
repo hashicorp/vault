@@ -22,7 +22,6 @@ export interface ClientsCountsRouteParams {
   end_time?: string | number | undefined;
   ns?: string | undefined;
   mountPath?: string | undefined;
-  month?: string | undefined;
 }
 
 interface ActivityAdapterQuery {
@@ -123,7 +122,6 @@ export default class ClientsCountsRoute extends Route {
         activity?.byMonth[0]?.timestamp || activity?.startTime
       ),
       endTimestamp: this.paramOrResponseTimestamp(params?.end_time, activity?.endTime),
-      month: params?.month,
       versionHistory,
     };
   }

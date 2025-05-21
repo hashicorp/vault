@@ -54,7 +54,6 @@ module('Integration | Component | clients/date-range', function (hooks) {
       {
         end_time: 1522454400,
         start_time: 1514764800,
-        month: undefined,
       },
     ]);
     assert.dom(DATE_RANGE.editModal).doesNotExist('closes modal');

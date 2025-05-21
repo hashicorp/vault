@@ -138,11 +138,9 @@ export default class ClientsDateRangeComponent extends Component<Args> {
   // used for CE date picker
   @action handleSave() {
     if (this.validationError) return;
-    // including the month param here as undefined allows the table month selection to reset when a new billing period is chosen
     const params: OnChangeParams = {
       start_time: undefined,
       end_time: undefined,
-      month: undefined,
     };
     this.startDate = this.modalStart;
     this.endDate = this.modalEnd;
@@ -163,11 +161,9 @@ export default class ClientsDateRangeComponent extends Component<Args> {
 
   @action
   updateEnterpriseDateRange(start: string) {
-    // including the month param here as undefined allows the table month selection to reset when a new billing period is chosen
     const params: OnChangeParams = {
       start_time: undefined,
       end_time: undefined,
-      month: undefined,
     };
 
     const [year, month] = start.split('-');

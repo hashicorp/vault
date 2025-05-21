@@ -50,7 +50,6 @@ module('Integration | Component | clients/page/overview', function (hooks) {
     this.store = this.owner.lookup('service:store');
     this.mountPath = '';
     this.namespace = '';
-    this.month = '';
     this.versionHistory = '';
     this.onChange = sinon.spy();
     this.activity = await this.store.queryRecord('clients/activity', {});
@@ -110,13 +109,14 @@ module('Integration | Component | clients/page/overview', function (hooks) {
 
   test('it filters the table when a namespace filter is applied', async function (assert) {
     this.namespace = 'ns1';
-    this.month = '9/23';
     this.activity = await this.store.queryRecord('clients/activity', {
       namespace: this.namespace,
     });
     await render(
-      hbs`<Clients::Page::Overview @activity={{this.activity}} @namespace={{this.namespace}} @updateQueryParams={{this.onChange}} @month={{this.month}}/>`
+      hbs`<Clients::Page::Overview @activity={{this.activity}} @namespace={{this.namespace}} @updateQueryParams={{this.onChange}}/>`
     );
+
+    await fillIn(GENERAL.selectByAttr('attribution-month'), '9/23');
 
     assert.dom(CLIENT_COUNT.attribution.card).doesNotExist('does not show card when table has data');
     assert.dom(CLIENT_COUNT.attribution.table).exists();
@@ -131,7 +131,7 @@ module('Integration | Component | clients/page/overview', function (hooks) {
       mountPath: this.mountPath,
     });
     await render(
-      hbs`<Clients::Page::Overview @activity={{this.activity}} @namespace={{this.namespace}} @mountPath={{this.mountPath}} @updateQueryParams={{this.onChange}} @month={{this.month}}/>`
+      hbs`<Clients::Page::Overview @activity={{this.activity}} @namespace={{this.namespace}} @mountPath={{this.mountPath}} @updateQueryParams={{this.onChange}}/>`
     );
     assert.dom(CLIENT_COUNT.attribution.card).doesNotExist('does not show card when table has data');
     assert
@@ -139,23 +139,12 @@ module('Integration | Component | clients/page/overview', function (hooks) {
       .doesNotExist('does not show table when a mount filter is applied');
   });
 
-  test('it shows table when month selection is present in URL', async function (assert) {
-    this.month = '9/23';
-
-    await render(
-      hbs`<Clients::Page::Overview @activity={{this.activity}} @updateQueryParams={{this.onChange}} @month={{this.month}}/>`
-    );
-
-    assert.dom(CLIENT_COUNT.attribution.card).doesNotExist('does not show card when table has data');
-    assert.dom(CLIENT_COUNT.attribution.table).exists('loads the table');
-  });
-
   test('it paginates table data', async function (assert) {
-    this.month = '9/23';
-
     await render(
-      hbs`<Clients::Page::Overview @activity={{this.activity}} @updateQueryParams={{this.onChange}} @month={{this.month}}/>`
+      hbs`<Clients::Page::Overview @activity={{this.activity}} @updateQueryParams={{this.onChange}} />`
     );
+
+    await fillIn(GENERAL.selectByAttr('attribution-month'), '9/23');
 
     assert
       .dom(CLIENT_COUNT.attribution.row)

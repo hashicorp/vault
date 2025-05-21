@@ -30,14 +30,13 @@ import type {
 } from 'core/utils/client-count-utils';
 import type NamespaceService from 'vault/services/namespace';
 
-export interface Args {
+interface Args {
   activity: ClientsActivityModel;
   versionHistory: ClientsVersionHistoryModel[];
   startTimestamp: string;
   endTimestamp: string;
   namespace: string;
   mountPath: string;
-  month: string;
   updateQueryParams: (callback: OnChangeParams) => void;
 }
 
