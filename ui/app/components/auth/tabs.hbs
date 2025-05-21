@@ -26,7 +26,12 @@
             {{! SINGLE mount path }}
             {{#let (get mounts "0") as |mount|}}
               {{#if mount.description}}
-                <Hds::Text::Body @tag="p" @color="faint" data-test-description>{{mount.description}}</Hds::Text::Body>
+                <Hds::Text::Body
+                  @tag="p"
+                  @color="faint"
+                  class="white-space-pre-line"
+                  data-test-description
+                >{{mount.description}}</Hds::Text::Body>
               {{/if}}
               {{! the token auth method does't support custom paths so no need to render an input }}
               {{#if (not-eq @selectedAuthMethod "token")}}
