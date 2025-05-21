@@ -999,6 +999,14 @@ func (m *ExpirationManager) attemptIrrevocableLeasesRevoke(removeIrrevocableLeas
 
 			err = m.revokeCommon(ctxWithNSAndTimeout, leaseID, forceRevoke, false)
 
+			if forceRevoke {
+				if err != nil {
+					m.logger.Debug("failed to delete irrevocable lease", "lease_id", le.LeaseID, "err", err)
+				} else {
+					m.logger.Debug("deleted irrevocable lease", "lease_id", le.LeaseID, "lease_expire_time", le.ExpireTime)
+				}
+			}
+
 			if err != nil || forceRevoke {
 				// on failure or force revocation, force some delay to mitigate resource spike while
 				// this is running. if revocations succeed, we are okay with
@@ -1013,9 +1021,8 @@ func (m *ExpirationManager) attemptIrrevocableLeasesRevoke(removeIrrevocableLeas
 
 // revokeCommon does the heavy lifting. If force is true, we ignore a problem
 // during revocation and still remove entries/index/lease timers
-func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, force, skipToken bool) error {
+func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, force, skipToken bool) (err error) {
 	defer metrics.MeasureSince([]string{"expire", "revoke-common"}, time.Now())
-
 	if !skipToken {
 		// Acquire lock for this lease
 		// If skipToken is true, then we're either being (1) called via RevokeByToken, so
@@ -1045,7 +1052,7 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 			}
 
 			if m.logger.IsWarn() {
-				m.logger.Warn("revocation from the backend failed, but in force mode so ignoring", "error", err)
+				m.logger.Warn("revocation from the backend failed, but in force mode so ignoring. external resources may be orphaned.", "lease_id", leaseID, "error", err)
 			}
 		}
 	}
@@ -1093,6 +1100,10 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 	if _, ok := m.irrevocable.Load(le.LeaseID); ok {
 		m.irrevocable.Delete(leaseID)
 		m.irrevocableLeaseCount--
+
+		if force {
+			m.logger.Debug("force deleted irrevocable lease", "lease_id", leaseID, "lease_expire_time", le.ExpireTime)
+		}
 	}
 	m.pendingLock.Unlock()
 
