@@ -1,13 +1,45 @@
 ---
 layout: docs
-page_title: hcp disconnect - Command
+page_title: hcp disconnect - Vault CLI
 description: |-
-  Use "hcp disconnect" command invalidates live sessions to a HCP Vault Dedicated cluster.
+  Invalidate live sessions to a HCP Vault Dedicated cluster.
 ---
 
-# hcp disconnect
+# `hcp disconnect`
 
-The `hcp disconnect` command invalidates live sessions to a HCP Vault Dedicated cluster.
+`hcp disconnect` invalidates live sessions to a HCP Vault Dedicated cluster.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault hcp disconnect [options]
+$ vault hcp disconnect [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`hcp disconnect` invalidates live sessions to a HCP Vault Dedicated cluster.
+
+
+## Command arguments
+
+None.
+
+## Command options
+
+None.
+
+## Command flags
+
+None.
+
+## Standard flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags-but-format.mdx'
 
 ## Examples
 
@@ -16,8 +48,3 @@ Disconnect from HCP:
 ```shell-session
 $ vault hcp disconnect
 ```
-
-## Usage
-
-All [standard set of
-flags](/vault/docs/commands) are included.
