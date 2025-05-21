@@ -77,6 +77,8 @@ type BaseCommand struct {
 	tokenHelper    tokenhelper.TokenHelper
 	hcpTokenHelper hcpvlib.HCPTokenHelper
 
+	flagSnapshotID string
+
 	client *api.Client
 }
 
@@ -371,6 +373,7 @@ const (
 	FlagSetOutputField
 	FlagSetOutputFormat
 	FlagSetOutputDetailed
+	FlagSetSnapshot
 )
 
 // flagSet creates the flags for this command. The result is cached on the
@@ -612,6 +615,16 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 					Default: false,
 					EnvVar:  EnvVaultDetailed,
 					Usage:   "Enables additional metadata during some operations",
+				})
+			}
+
+			if bit&FlagSetSnapshot != 0 {
+				outputSet.StringVar(&StringVar{
+					Name:       "snapshot-id",
+					Target:     &c.flagSnapshotID,
+					Default:    "",
+					Completion: complete.PredictAnything,
+					Usage:      "ID of the loaded snapshot that this command will use",
 				})
 			}
 		}
