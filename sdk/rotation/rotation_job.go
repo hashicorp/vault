@@ -50,10 +50,6 @@ type RotationJobDeregisterRequest struct {
 }
 
 func (s *RotationJob) Validate() error {
-	if s.MountPoint == "" {
-		return fmt.Errorf("MountPoint is required")
-	}
-
 	if s.Path == "" {
 		return fmt.Errorf("ReqPath is required")
 	}
