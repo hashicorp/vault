@@ -16,7 +16,7 @@ export default function (server) {
     default_auth_type: 'oidc',
     backup_auth_types: ['token'],
   });
-  server.create('login-rule', { default_auth_type: 'jwt', backup_auth_types: null }); // namespace-2
+  server.create('login-rule', { default_auth_type: 'jwt', backup_auth_types: [] }); // namespace-2
   server.create('login-rule', { default_auth_type: '', backup_auth_types: ['oidc', 'jwt'] }); // namespace-3
   server.create('login-rule', { default_auth_type: '', backup_auth_types: ['token'] }); // namespace-4
 }

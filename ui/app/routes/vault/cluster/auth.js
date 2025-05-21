@@ -45,7 +45,7 @@ export default class AuthRoute extends ClusterRouteBase {
     return {
       clusterModel,
       visibleAuthMounts,
-      directLinkData: authMount ? this.getMountOrTypeData(authMount, visibleAuthMounts) : null,
+      directLinkData: this.getDirectLinkData(authMount, visibleAuthMounts),
       loginSettings,
     };
   }
@@ -90,17 +90,18 @@ export default class AuthRoute extends ClusterRouteBase {
 
   async fetchLoginSettings() {
     const adapter = this.store.adapterFor('application');
-    const ns = this.namespace.currentNamespace;
     try {
-      const response = await adapter.ajax('/v1/sys/internal/ui/default-login-methods', 'GET', {
-        unauthenticated: true,
-        namespace: ns === 'root' ? '' : ns,
-      });
+      // TODO update with api service when api-client is updated
+      const response = await adapter.ajax(
+        '/v1/sys/internal/ui/default-auth-methods',
+        'GET',
+        this.api.buildHeaders({ token: '' })
+      );
       if (response?.data) {
         const { default_auth_type, backup_auth_types } = response.data;
         return {
           defaultType: default_auth_type,
-          backupTypes: backup_auth_types, // the API returns null if none are set
+          backupTypes: backup_auth_types.length ? backup_auth_types : null,
         };
       }
     } catch {
@@ -129,7 +130,9 @@ export default class AuthRoute extends ClusterRouteBase {
     → If `authMount` matches a visible auth mount the method will assume that mount path to login and render as the default in the login form.
     → If `authMount` matches a supported auth type (and the mount does not have `listing_visibility="unauth"`), that type is preselected in the login form.
   */
-  getMountOrTypeData(authMount, visibleAuthMounts) {
+  getDirectLinkData(authMount, visibleAuthMounts) {
+    if (!authMount) return null;
+
     const sanitizedParam = sanitizePath(authMount); // strip leading/trailing slashes
     // mount paths in visibleAuthMounts always end in a slash, so format for consistency
     const formattedPath = `${sanitizedParam}/`;
