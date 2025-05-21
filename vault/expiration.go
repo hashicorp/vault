@@ -999,6 +999,7 @@ func (m *ExpirationManager) attemptIrrevocableLeasesRevoke(removeIrrevocableLeas
 
 			err = m.revokeCommon(ctxWithNSAndTimeout, leaseID, forceRevoke, false)
 
+			// Log the appropriate message on errors or force revocation
 			if forceRevoke {
 				if err != nil {
 					m.logger.Debug("failed to delete irrevocable lease", "lease_id", le.LeaseID, "err", err)
@@ -1007,12 +1008,9 @@ func (m *ExpirationManager) attemptIrrevocableLeasesRevoke(removeIrrevocableLeas
 				}
 			}
 
-			if err != nil || forceRevoke {
-				// on failure or force revocation, force some delay to mitigate resource spike while
-				// this is running. if revocations succeed, we are okay with
-				// the higher resource consumption.
-				time.Sleep(10 * time.Millisecond)
-			}
+			// Force some delay to mitigate resource spike while
+			// this is running.
+			time.Sleep(10 * time.Millisecond)
 		}
 
 		return true
