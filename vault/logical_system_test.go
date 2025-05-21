@@ -720,7 +720,7 @@ path "bar/baz" {
 	capabilities = ["read", "update"]
 }
 path "bar/baz" {
-	capabilities = ["delete"]
+	capabilities = ["delete", "recover"]
 }
 `
 
@@ -828,7 +828,7 @@ func TestSystemBackend_PathCapabilities(t *testing.T) {
 		expected1 := []string{"create", "sudo", "update"}
 		expected2 := expected1
 		expected3 := []string{"update"}
-		expected4 := []string{"delete", "read", "update"}
+		expected4 := []string{"delete", "read", "recover", "update"}
 
 		if !reflect.DeepEqual(resp.Data[path1], expected1) ||
 			!reflect.DeepEqual(resp.Data[path2], expected2) ||
@@ -2488,7 +2488,7 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 			Command: "foo",
 			Args:    []string{},
 			Env:     []string{},
-			Sha256:  []byte{},
+			Sha256:  []byte("sha256"),
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -2625,7 +2625,7 @@ func TestSystemBackend_tune_updatePreV1MountEntryType(t *testing.T) {
 				Command: tc.pluginName,
 				Args:    []string{},
 				Env:     []string{},
-				Sha256:  []byte{},
+				Sha256:  []byte("sha256"),
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -6451,7 +6451,7 @@ func TestValidateVersion_HelpfulErrorWhenBuiltinOverridden(t *testing.T) {
 		Command: command,
 		Args:    nil,
 		Env:     nil,
-		Sha256:  nil,
+		Sha256:  []byte("sha256"),
 	})
 	if err != nil {
 		t.Fatal(err)

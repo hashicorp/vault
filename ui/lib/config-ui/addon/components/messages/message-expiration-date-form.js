@@ -15,7 +15,7 @@ import { datetimeLocalStringFormat } from 'core/utils/date-formatters';
  * ```js
  * <Messages::MessageExpirationDateForm @message={{this.message}} @attr={{attr}} />
  * ```
- * @param {array} messages - array message objects
+ * @param {array} message - message form data
  */
 
 export default class MessageExpirationDateForm extends Component {

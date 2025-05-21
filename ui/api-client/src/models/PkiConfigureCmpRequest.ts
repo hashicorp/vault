@@ -38,6 +38,12 @@ export interface PkiConfigureCmpRequest {
      */
     defaultPathPolicy?: string;
     /**
+     * A comma-separated list of validations not to perform on CMPv2 messages. Possible entries are DisableCertTimeValidation and DisableMatchingKeyIdValidation.
+     * @type {Array<string>}
+     * @memberof PkiConfigureCmpRequest
+     */
+    disabledValidations?: Array<string>;
+    /**
      * Parse CSR to that its fields can be used by sentinel policies.
      * @type {boolean}
      * @memberof PkiConfigureCmpRequest
@@ -71,6 +77,7 @@ export function PkiConfigureCmpRequestFromJSONTyped(json: any, ignoreDiscriminat
         'auditFields': json['audit_fields'] == null ? undefined : json['audit_fields'],
         'authenticators': json['authenticators'] == null ? undefined : json['authenticators'],
         'defaultPathPolicy': json['default_path_policy'] == null ? undefined : json['default_path_policy'],
+        'disabledValidations': json['disabled_validations'] == null ? undefined : json['disabled_validations'],
         'enableSentinelParsing': json['enable_sentinel_parsing'] == null ? undefined : json['enable_sentinel_parsing'],
         'enabled': json['enabled'] == null ? undefined : json['enabled'],
     };
@@ -90,6 +97,7 @@ export function PkiConfigureCmpRequestToJSONTyped(value?: PkiConfigureCmpRequest
         'audit_fields': value['auditFields'],
         'authenticators': value['authenticators'],
         'default_path_policy': value['defaultPathPolicy'],
+        'disabled_validations': value['disabledValidations'],
         'enable_sentinel_parsing': value['enableSentinelParsing'],
         'enabled': value['enabled'],
     };

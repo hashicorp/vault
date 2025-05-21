@@ -17,6 +17,9 @@ import (
 	"math"
 	"math/big"
 	http2 "net/http"
+	"os"
+	"os/exec"
+	"path"
 	"strings"
 	"testing"
 	"time"
@@ -472,4 +475,33 @@ func requireSerialInStorage(t *testing.T, client *api.Client, serial string) {
 	require.NotNilf(t, resp, "reading certificate returned a nil response for serial: %s", serial)
 	require.NotNilf(t, resp.Data, "reading certificate returned a nil data response for serial: %s", serial)
 	require.NotEmpty(t, resp.Data["certificate"], "certificate field was empty for serial: %s", serial)
+}
+
+func writeToTmpDir(t *testing.T, tmpDir string, filename string, contents string) string {
+	filePath := path.Join(tmpDir, filename)
+	out, err := os.Create(filePath)
+	require.NoError(t, err, "failed creating file %s", filePath)
+	_, err = out.WriteString(contents)
+	require.NoError(t, err, "failed writing to file %s", filePath)
+	err = out.Close()
+	require.NoError(t, err, "failed closing file %s", filePath)
+	return filePath
+}
+
+// Openssl is a good reference implementation for x509 and CMPv2
+func findOpenSSL() (string, string, bool) {
+	paths := os.Getenv("PATH")
+	for _, pathFolder := range strings.Split(paths, ":") {
+		cmd := path.Join(pathFolder, "openssl")
+		out, err := exec.Command(cmd, "version").CombinedOutput()
+		if err != nil {
+			continue
+		}
+		// We need a v3 version of OpenSSL to properly support the CMP command we run
+		if strings.Contains(string(out), "OpenSSL 3.") {
+			return cmd, string(out), true
+		}
+	}
+
+	return "", "", false
 }

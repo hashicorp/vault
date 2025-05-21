@@ -6,7 +6,6 @@
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 
-import type flagsService from 'vault/services/flags';
 import NamespaceService from 'vault/services/namespace';
 
 export type Args = {
@@ -18,7 +17,6 @@ export type Args = {
 };
 
 export default class OverviewComponent extends Component<Args> {
-  @service declare readonly flags: flagsService;
   @service declare readonly namespace: NamespaceService;
 
   /**
@@ -30,13 +28,13 @@ export default class OverviewComponent extends Component<Args> {
   // for HVD clusters, this is the `admin` namespace
   get shouldShowClientCount() {
     const { version, isRootNamespace } = this.args;
-    const { flags, namespace } = this;
+    const { namespace } = this;
 
     // don't show client count if this isn't an enterprise cluster
     if (!version.isEnterprise) return false;
 
     // HVD clusters
-    if (flags.isHvdManaged && namespace.currentNamespace === 'admin') return true;
+    if (namespace.inHvdAdminNamespace) return true;
 
     // SM clusters
     if (isRootNamespace) return true;

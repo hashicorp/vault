@@ -3,17 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-export interface ApiError {
-  httpStatus: number;
-  path: string;
-  message: string;
-  errors: Array<string | { [key: string]: unknown; title?: string; message?: string }>;
-  data?: {
-    [key: string]: unknown;
-    error?: string;
-  };
-}
-
 export interface WrapInfo {
   accessor: string;
   creation_path: string;
@@ -24,8 +13,8 @@ export interface WrapInfo {
 }
 
 export interface ApiResponse {
-  auth: unknown;
-  data: unknown;
+  data: Record<string, unknown> | null;
+  auth: Record<string, unknown> | null;
   lease_duration: number;
   lease_id: string;
   mount_type: string;

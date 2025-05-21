@@ -64,6 +64,7 @@ import (
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/eventbus"
+	"github.com/hashicorp/vault/vault/observations"
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
@@ -464,6 +465,8 @@ type Core struct {
 	defaultLeaseTTL time.Duration
 	maxLeaseTTL     time.Duration
 
+	removeIrrevocableLeaseAfter time.Duration
+
 	// baseLogger is used to avoid ResetNamed as it strips useful prefixes in
 	// e.g. testing
 	baseLogger log.Logger
@@ -716,6 +719,8 @@ type Core struct {
 
 	events *eventbus.EventBus
 
+	observations *observations.ObservationSystem
+
 	// writeForwardedPaths are a set of storage paths which are GRPC forwarded
 	// to the active node of the primary cluster, when present. This PathManager
 	// contains absolute paths that we intend to forward (and template) when
@@ -778,7 +783,7 @@ func (c *Core) HALock() sync.Locker {
 
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
-	EntCoreConfig
+	entCoreConfig
 
 	DevToken string
 
@@ -840,6 +845,8 @@ type CoreConfig struct {
 	DefaultLeaseTTL time.Duration
 
 	MaxLeaseTTL time.Duration
+
+	RemoveIrrevocableLeaseAfter time.Duration
 
 	ClusterName string
 
@@ -917,6 +924,9 @@ type CoreConfig struct {
 	// AdministrativeNamespacePath is used to configure the administrative namespace, which has access to some sys endpoints that are
 	// only accessible in the root namespace, currently sys/audit-hash and sys/monitor.
 	AdministrativeNamespacePath string
+
+	// ObservationSystemLedgerPath is the path that the Observation System's ledger will be recorded at.
+	ObservationSystemLedgerPath string
 
 	NumRollbackWorkers int
 
@@ -1049,6 +1059,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 		defaultLeaseTTL:                conf.DefaultLeaseTTL,
 		maxLeaseTTL:                    conf.MaxLeaseTTL,
+		removeIrrevocableLeaseAfter:    conf.RemoveIrrevocableLeaseAfter,
 		sentinelTraceDisabled:          conf.DisableSentinelTrace,
 		cachingDisabled:                conf.DisableCache,
 		clusterName:                    conf.ClusterName,
@@ -1361,8 +1372,22 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.events = events
 	c.events.Start()
 
-	c.clusterAddrBridge = conf.ClusterAddrBridge
+	// Create the snapshot manager if we're on enterprise and running raft
+	// storage backend.
+	c.createSnapshotManager()
 
+	observationsLogger := conf.Logger.Named("observations")
+	observationSystemLedgerPath := conf.ObservationSystemLedgerPath
+	if observationSystemLedgerPath != "" {
+		observations, err := observations.NewObservationSystem(nodeID, observationSystemLedgerPath, observationsLogger)
+		if err != nil {
+			return nil, err
+		}
+		c.observations = observations
+		c.observations.Start()
+	}
+
+	c.clusterAddrBridge = conf.ClusterAddrBridge
 	return c, nil
 }
 
@@ -2486,6 +2511,28 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		return err
 	}
 
+	if c.isPrimary() {
+		// Reload the development cluster setting from config in case the cluster is newly promoted and the setting
+		// in Census Manager is a holdover from the old primary.
+		if err := c.reloadDevelopmentClusterSetting(); err != nil {
+			return err
+		}
+		// Store the primary's development cluster setting to propagate it to any secondaries
+		if err := c.persistDevelopmentClusterSetting(ctx); err != nil {
+			return err
+		}
+	} else {
+		// If we can find a stored development cluster setting, and it is different from what was set in our config,
+		// then we need to log an error warning that the value is changing and update the census manager with the new setting.
+		developmentCluster, err := c.getDevelopmentClusterSetting(ctx)
+		if err == nil && developmentCluster != c.DevelopmentCluster() {
+			c.logger.Error("development cluster setting in config does not match that of the primary, updating to follow the primary config setting")
+			c.SetDevelopmentCluster(developmentCluster)
+		} else if err != nil {
+			return err
+		}
+	}
+
 	if !c.IsDRSecondary() {
 		// not waiting on wg to avoid changing existing behavior
 		var wg sync.WaitGroup
@@ -2611,6 +2658,9 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 		func(ctx context.Context) error {
 			return c.setupHeaderHMACKey(ctx, false)
 		},
+		func(ctx context.Context) error {
+			return c.EntSetupUIDefaultAuth(ctx)
+		},
 	}
 
 	// If this server is not part of a Disaster Recovery secondary cluster,
@@ -2653,6 +2703,10 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 			return nil
 		})
 		setupFunctions = append(setupFunctions, c.loadLoginMFAConfigs)
+
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			return c.EntSetupUIDefaultAuth(ctx)
+		})
 	}
 
 	return setupFunctions
@@ -4559,6 +4613,11 @@ func (c *Core) GetRaftAutopilotState(ctx context.Context) (*raft.AutopilotState,
 // Events returns a reference to the common event bus for sending and subscribing to events.
 func (c *Core) Events() *eventbus.EventBus {
 	return c.events
+}
+
+// Observations returns a reference to the observations system for recording observations.
+func (c *Core) Observations() *observations.ObservationSystem {
+	return c.observations
 }
 
 func (c *Core) SetSeals(ctx context.Context, grabLock bool, barrierSeal Seal, secureRandomReader io.Reader, shouldRewrap bool) error {

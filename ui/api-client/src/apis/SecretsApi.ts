@@ -55,6 +55,9 @@ import type {
   KvV2ConfigureRequest,
   KvV2DeleteVersionsRequest,
   KvV2DestroyVersionsRequest,
+  KvV2PatchMetadataPathRequest,
+  KvV2PatchRequest,
+  KvV2PatchResponse,
   KvV2ReadConfigurationResponse,
   KvV2ReadMetadataResponse,
   KvV2ReadResponse,
@@ -156,6 +159,10 @@ import type {
   PkiListIssuersResponse,
   PkiListKeysResponse,
   PkiListUnifiedRevokedCertsResponse,
+  PkiPatchIssuerRequest,
+  PkiPatchIssuerResponse,
+  PkiPatchRoleRequest,
+  PkiPatchRoleResponse,
   PkiReadAutoTidyConfigurationResponse,
   PkiReadCaChainPemResponse,
   PkiReadCaDerResponse,
@@ -449,6 +456,12 @@ import {
     KvV2DeleteVersionsRequestToJSON,
     KvV2DestroyVersionsRequestFromJSON,
     KvV2DestroyVersionsRequestToJSON,
+    KvV2PatchMetadataPathRequestFromJSON,
+    KvV2PatchMetadataPathRequestToJSON,
+    KvV2PatchRequestFromJSON,
+    KvV2PatchRequestToJSON,
+    KvV2PatchResponseFromJSON,
+    KvV2PatchResponseToJSON,
     KvV2ReadConfigurationResponseFromJSON,
     KvV2ReadConfigurationResponseToJSON,
     KvV2ReadMetadataResponseFromJSON,
@@ -651,6 +664,14 @@ import {
     PkiListKeysResponseToJSON,
     PkiListUnifiedRevokedCertsResponseFromJSON,
     PkiListUnifiedRevokedCertsResponseToJSON,
+    PkiPatchIssuerRequestFromJSON,
+    PkiPatchIssuerRequestToJSON,
+    PkiPatchIssuerResponseFromJSON,
+    PkiPatchIssuerResponseToJSON,
+    PkiPatchRoleRequestFromJSON,
+    PkiPatchRoleRequestToJSON,
+    PkiPatchRoleResponseFromJSON,
+    PkiPatchRoleResponseToJSON,
     PkiReadAutoTidyConfigurationResponseFromJSON,
     PkiReadAutoTidyConfigurationResponseToJSON,
     PkiReadCaChainPemResponseFromJSON,
@@ -1165,6 +1186,11 @@ export interface SecretsApiAwsGenerateStsCredentialsWithParametersOperationReque
 export interface SecretsApiAwsListRolesRequest {
     awsMountPath: string;
     list: AwsListRolesListEnum;
+}
+
+export interface SecretsApiAwsListStaticRolesRequest {
+    awsMountPath: string;
+    list: AwsListStaticRolesListEnum;
 }
 
 export interface SecretsApiAwsReadLeaseConfigurationRequest {
@@ -1791,6 +1817,18 @@ export interface SecretsApiKvV2ListRequest {
     path: string;
     kvV2MountPath: string;
     list: KvV2ListListEnum;
+}
+
+export interface SecretsApiKvV2PatchOperationRequest {
+    path: string;
+    kvV2MountPath: string;
+    kvV2PatchRequest: KvV2PatchRequest;
+}
+
+export interface SecretsApiKvV2PatchMetadataPathOperationRequest {
+    path: string;
+    kvV2MountPath: string;
+    kvV2PatchMetadataPathRequest: KvV2PatchMetadataPathRequest;
 }
 
 export interface SecretsApiKvV2ReadRequest {
@@ -2429,6 +2467,18 @@ export interface SecretsApiPkiListRolesRequest {
 export interface SecretsApiPkiListUnifiedRevokedCertsRequest {
     pkiMountPath: string;
     list: PkiListUnifiedRevokedCertsListEnum;
+}
+
+export interface SecretsApiPkiPatchIssuerOperationRequest {
+    issuerRef: string;
+    pkiMountPath: string;
+    pkiPatchIssuerRequest: PkiPatchIssuerRequest;
+}
+
+export interface SecretsApiPkiPatchRoleOperationRequest {
+    name: string;
+    pkiMountPath: string;
+    pkiPatchRoleRequest: PkiPatchRoleRequest;
 }
 
 export interface SecretsApiPkiQueryOcspRequest {
@@ -4615,6 +4665,48 @@ export class SecretsApi extends runtime.BaseAPI {
      */
     async awsListRoles(awsMountPath: string, list: AwsListRolesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse> {
         const response = await this.awsListRolesRaw({ awsMountPath: awsMountPath, list: list }, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     */
+    async awsListStaticRolesRaw(requestParameters: SecretsApiAwsListStaticRolesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<StandardListResponse>> {
+        if (requestParameters['awsMountPath'] == null) {
+            throw new runtime.RequiredError(
+                'awsMountPath',
+                'Required parameter "awsMountPath" was null or undefined when calling awsListStaticRoles().'
+            );
+        }
+
+        if (requestParameters['list'] == null) {
+            throw new runtime.RequiredError(
+                'list',
+                'Required parameter "list" was null or undefined when calling awsListStaticRoles().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['list'] != null) {
+            queryParameters['list'] = requestParameters['list'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/{aws_mount_path}/static-roles/`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => StandardListResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async awsListStaticRoles(awsMountPath: string, list: AwsListStaticRolesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse> {
+        const response = await this.awsListStaticRolesRaw({ awsMountPath: awsMountPath, list: list }, initOverrides);
         return await response.value();
     }
 
@@ -9570,6 +9662,102 @@ export class SecretsApi extends runtime.BaseAPI {
      */
     async kvV2List(path: string, kvV2MountPath: string, list: KvV2ListListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<StandardListResponse> {
         const response = await this.kvV2ListRaw({ path: path, kvV2MountPath: kvV2MountPath, list: list }, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     */
+    async kvV2PatchRaw(requestParameters: SecretsApiKvV2PatchOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<KvV2PatchResponse>> {
+        if (requestParameters['path'] == null) {
+            throw new runtime.RequiredError(
+                'path',
+                'Required parameter "path" was null or undefined when calling kvV2Patch().'
+            );
+        }
+
+        if (requestParameters['kvV2MountPath'] == null) {
+            throw new runtime.RequiredError(
+                'kvV2MountPath',
+                'Required parameter "kvV2MountPath" was null or undefined when calling kvV2Patch().'
+            );
+        }
+
+        if (requestParameters['kvV2PatchRequest'] == null) {
+            throw new runtime.RequiredError(
+                'kvV2PatchRequest',
+                'Required parameter "kvV2PatchRequest" was null or undefined when calling kvV2Patch().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/{kv_v2_mount_path}/data/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))).replace(`{${"kv_v2_mount_path"}}`, encodeURIComponent(String(requestParameters['kvV2MountPath']))),
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: KvV2PatchRequestToJSON(requestParameters['kvV2PatchRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => KvV2PatchResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async kvV2Patch(path: string, kvV2MountPath: string, kvV2PatchRequest: KvV2PatchRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<KvV2PatchResponse> {
+        const response = await this.kvV2PatchRaw({ path: path, kvV2MountPath: kvV2MountPath, kvV2PatchRequest: kvV2PatchRequest }, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     */
+    async kvV2PatchMetadataPathRaw(requestParameters: SecretsApiKvV2PatchMetadataPathOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>> {
+        if (requestParameters['path'] == null) {
+            throw new runtime.RequiredError(
+                'path',
+                'Required parameter "path" was null or undefined when calling kvV2PatchMetadataPath().'
+            );
+        }
+
+        if (requestParameters['kvV2MountPath'] == null) {
+            throw new runtime.RequiredError(
+                'kvV2MountPath',
+                'Required parameter "kvV2MountPath" was null or undefined when calling kvV2PatchMetadataPath().'
+            );
+        }
+
+        if (requestParameters['kvV2PatchMetadataPathRequest'] == null) {
+            throw new runtime.RequiredError(
+                'kvV2PatchMetadataPathRequest',
+                'Required parameter "kvV2PatchMetadataPathRequest" was null or undefined when calling kvV2PatchMetadataPath().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/{kv_v2_mount_path}/metadata/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))).replace(`{${"kv_v2_mount_path"}}`, encodeURIComponent(String(requestParameters['kvV2MountPath']))),
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: KvV2PatchMetadataPathRequestToJSON(requestParameters['kvV2PatchMetadataPathRequest']),
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async kvV2PatchMetadataPath(path: string, kvV2MountPath: string, kvV2PatchMetadataPathRequest: KvV2PatchMetadataPathRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse> {
+        const response = await this.kvV2PatchMetadataPathRaw({ path: path, kvV2MountPath: kvV2MountPath, kvV2PatchMetadataPathRequest: kvV2PatchMetadataPathRequest }, initOverrides);
         return await response.value();
     }
 
@@ -14657,6 +14845,102 @@ export class SecretsApi extends runtime.BaseAPI {
      */
     async pkiListUnifiedRevokedCerts(pkiMountPath: string, list: PkiListUnifiedRevokedCertsListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PkiListUnifiedRevokedCertsResponse> {
         const response = await this.pkiListUnifiedRevokedCertsRaw({ pkiMountPath: pkiMountPath, list: list }, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     */
+    async pkiPatchIssuerRaw(requestParameters: SecretsApiPkiPatchIssuerOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PkiPatchIssuerResponse>> {
+        if (requestParameters['issuerRef'] == null) {
+            throw new runtime.RequiredError(
+                'issuerRef',
+                'Required parameter "issuerRef" was null or undefined when calling pkiPatchIssuer().'
+            );
+        }
+
+        if (requestParameters['pkiMountPath'] == null) {
+            throw new runtime.RequiredError(
+                'pkiMountPath',
+                'Required parameter "pkiMountPath" was null or undefined when calling pkiPatchIssuer().'
+            );
+        }
+
+        if (requestParameters['pkiPatchIssuerRequest'] == null) {
+            throw new runtime.RequiredError(
+                'pkiPatchIssuerRequest',
+                'Required parameter "pkiPatchIssuerRequest" was null or undefined when calling pkiPatchIssuer().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/{pki_mount_path}/issuer/{issuer_ref}`.replace(`{${"issuer_ref"}}`, encodeURIComponent(String(requestParameters['issuerRef']))).replace(`{${"pki_mount_path"}}`, encodeURIComponent(String(requestParameters['pkiMountPath']))),
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: PkiPatchIssuerRequestToJSON(requestParameters['pkiPatchIssuerRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PkiPatchIssuerResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async pkiPatchIssuer(issuerRef: string, pkiMountPath: string, pkiPatchIssuerRequest: PkiPatchIssuerRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PkiPatchIssuerResponse> {
+        const response = await this.pkiPatchIssuerRaw({ issuerRef: issuerRef, pkiMountPath: pkiMountPath, pkiPatchIssuerRequest: pkiPatchIssuerRequest }, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     */
+    async pkiPatchRoleRaw(requestParameters: SecretsApiPkiPatchRoleOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<PkiPatchRoleResponse>> {
+        if (requestParameters['name'] == null) {
+            throw new runtime.RequiredError(
+                'name',
+                'Required parameter "name" was null or undefined when calling pkiPatchRole().'
+            );
+        }
+
+        if (requestParameters['pkiMountPath'] == null) {
+            throw new runtime.RequiredError(
+                'pkiMountPath',
+                'Required parameter "pkiMountPath" was null or undefined when calling pkiPatchRole().'
+            );
+        }
+
+        if (requestParameters['pkiPatchRoleRequest'] == null) {
+            throw new runtime.RequiredError(
+                'pkiPatchRoleRequest',
+                'Required parameter "pkiPatchRoleRequest" was null or undefined when calling pkiPatchRole().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/{pki_mount_path}/roles/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"pki_mount_path"}}`, encodeURIComponent(String(requestParameters['pkiMountPath']))),
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: PkiPatchRoleRequestToJSON(requestParameters['pkiPatchRoleRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => PkiPatchRoleResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async pkiPatchRole(name: string, pkiMountPath: string, pkiPatchRoleRequest: PkiPatchRoleRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<PkiPatchRoleResponse> {
+        const response = await this.pkiPatchRoleRaw({ name: name, pkiMountPath: pkiMountPath, pkiPatchRoleRequest: pkiPatchRoleRequest }, initOverrides);
         return await response.value();
     }
 
@@ -26292,6 +26576,13 @@ export enum AliCloudListRolesListEnum {
   * @enum {string}
   */
 export enum AwsListRolesListEnum {
+    TRUE = 'true'
+}
+/**
+  * @export
+  * @enum {string}
+  */
+export enum AwsListStaticRolesListEnum {
     TRUE = 'true'
 }
 /**

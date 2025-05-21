@@ -52,7 +52,6 @@
 @use 'helper-classes/typography';
 
 // Component specific styling
-@use 'components/auth-form';
 @use 'components/autocomplete-input';
 @use 'components/b64-toggle';
 @use 'components/box-label';
@@ -69,14 +68,12 @@
 @use 'components/form-section';
 @use 'components/global-flash';
 @use 'components/icon';
-@use 'components/init-illustration';
 @use 'components/info-table-row';
 @use 'components/kmip-role-edit';
 @use 'components/known-secondaries-card.scss';
 @use 'components/linked-block';
 @use 'components/list-item-row';
 @use 'components/loader';
-@use 'components/login-form';
 @use 'components/masked-input';
 @use 'components/namespace-picker';
 @use 'components/namespace-reminder';
@@ -110,4 +107,5 @@
 @use 'components/transit-card';
 @use 'components/ttl-picker';
 @use 'components/unseal-warning';
+@use 'components/usage-page';
 @use 'components/vault-loading';

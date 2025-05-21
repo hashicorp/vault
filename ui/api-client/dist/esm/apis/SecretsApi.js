@@ -21,7 +21,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import * as runtime from '../runtime';
-import { AliCloudConfigureRequestToJSON, AliCloudWriteRoleRequestToJSON, AwsConfigureLeaseRequestToJSON, AwsConfigureRootIamCredentialsRequestToJSON, AwsGenerateCredentialsWithParametersRequestToJSON, AwsGenerateStsCredentialsWithParametersRequestToJSON, AwsReadStaticCredsNameResponseFromJSON, AwsReadStaticRolesNameResponseFromJSON, AwsWriteRoleRequestToJSON, AwsWriteStaticRolesNameRequestToJSON, AwsWriteStaticRolesNameResponseFromJSON, AzureConfigureRequestToJSON, AzureWriteRoleRequestToJSON, ConsulConfigureAccessRequestToJSON, ConsulWriteRoleRequestToJSON, DatabaseConfigureConnectionRequestToJSON, DatabaseWriteRoleRequestToJSON, DatabaseWriteStaticRoleRequestToJSON, GoogleCloudConfigureRequestToJSON, GoogleCloudGenerateRolesetKey3RequestToJSON, GoogleCloudGenerateRolesetKeyRequestToJSON, GoogleCloudGenerateStaticAccountKeyRequestToJSON, GoogleCloudKmsConfigureKeyRequestToJSON, GoogleCloudKmsConfigureRequestToJSON, GoogleCloudKmsDecryptRequestToJSON, GoogleCloudKmsEncryptRequestToJSON, GoogleCloudKmsReencryptRequestToJSON, GoogleCloudKmsRegisterKeyRequestToJSON, GoogleCloudKmsSignRequestToJSON, GoogleCloudKmsVerifyRequestToJSON, GoogleCloudKmsWriteKeyRequestToJSON, GoogleCloudWriteImpersonatedAccountRequestToJSON, GoogleCloudWriteRolesetRequestToJSON, GoogleCloudWriteStaticAccountRequestToJSON, KubernetesConfigureRequestToJSON, KubernetesGenerateCredentialsRequestToJSON, KubernetesWriteRoleRequestToJSON, KvV2ConfigureRequestToJSON, KvV2DeleteVersionsRequestToJSON, KvV2DestroyVersionsRequestToJSON, KvV2ReadConfigurationResponseFromJSON, KvV2ReadMetadataResponseFromJSON, KvV2ReadResponseFromJSON, KvV2ReadSubkeysResponseFromJSON, KvV2UndeleteVersionsRequestToJSON, KvV2WriteMetadataRequestToJSON, KvV2WriteRequestToJSON, KvV2WriteResponseFromJSON, LdapConfigureRequestToJSON, LdapLibraryCheckInRequestToJSON, LdapLibraryCheckOutRequestToJSON, LdapLibraryConfigureRequestToJSON, LdapLibraryForceCheckInRequestToJSON, LdapRotateStaticRoleRequestToJSON, LdapWriteDynamicRoleRequestToJSON, LdapWriteStaticRoleRequestToJSON, MongoDbAtlasConfigureRequestToJSON, MongoDbAtlasWriteRoleRequestToJSON, NomadConfigureAccessRequestToJSON, NomadConfigureLeaseRequestToJSON, NomadWriteRoleRequestToJSON, PkiConfigureAcmeRequestToJSON, PkiConfigureAutoTidyRequestToJSON, PkiConfigureAutoTidyResponseFromJSON, PkiConfigureCaRequestToJSON, PkiConfigureCaResponseFromJSON, PkiConfigureClusterRequestToJSON, PkiConfigureClusterResponseFromJSON, PkiConfigureCmpRequestToJSON, PkiConfigureCrlRequestToJSON, PkiConfigureCrlResponseFromJSON, PkiConfigureEstRequestToJSON, PkiConfigureExternalPolicyRequestToJSON, PkiConfigureExternalPolicyResponseFromJSON, PkiConfigureIssuersRequestToJSON, PkiConfigureIssuersResponseFromJSON, PkiConfigureKeysRequestToJSON, PkiConfigureKeysResponseFromJSON, PkiConfigureScepRequestToJSON, PkiConfigureUrlsRequestToJSON, PkiConfigureUrlsResponseFromJSON, PkiCrossSignIntermediateRequestToJSON, PkiCrossSignIntermediateResponseFromJSON, PkiGenerateEabKeyForIssuerAndRoleResponseFromJSON, PkiGenerateEabKeyForIssuerResponseFromJSON, PkiGenerateEabKeyForRoleResponseFromJSON, PkiGenerateEabKeyResponseFromJSON, PkiGenerateExportedKeyRequestToJSON, PkiGenerateExportedKeyResponseFromJSON, PkiGenerateIntermediateRequestToJSON, PkiGenerateIntermediateResponseFromJSON, PkiGenerateInternalKeyRequestToJSON, PkiGenerateInternalKeyResponseFromJSON, PkiGenerateKmsKeyRequestToJSON, PkiGenerateKmsKeyResponseFromJSON, PkiGenerateRootRequestToJSON, PkiGenerateRootResponseFromJSON, PkiImportKeyRequestToJSON, PkiImportKeyResponseFromJSON, PkiIssueWithRoleRequestToJSON, PkiIssueWithRoleResponseFromJSON, PkiIssuerIssueWithRoleRequestToJSON, PkiIssuerIssueWithRoleResponseFromJSON, PkiIssuerReadCrlDeltaDerResponseFromJSON, PkiIssuerReadCrlDeltaPemResponseFromJSON, PkiIssuerReadCrlDeltaResponseFromJSON, PkiIssuerReadCrlDerResponseFromJSON, PkiIssuerReadCrlPemResponseFromJSON, PkiIssuerReadCrlResponseFromJSON, PkiIssuerReadUnifiedCrlDeltaDerResponseFromJSON, PkiIssuerReadUnifiedCrlDeltaPemResponseFromJSON, PkiIssuerReadUnifiedCrlDeltaResponseFromJSON, PkiIssuerReadUnifiedCrlDerResponseFromJSON, PkiIssuerReadUnifiedCrlPemResponseFromJSON, PkiIssuerReadUnifiedCrlResponseFromJSON, PkiIssuerResignCrlsRequestToJSON, PkiIssuerResignCrlsResponseFromJSON, PkiIssuerSignIntermediateRequestToJSON, PkiIssuerSignIntermediateResponseFromJSON, PkiIssuerSignRevocationListRequestToJSON, PkiIssuerSignRevocationListResponseFromJSON, PkiIssuerSignSelfIssuedRequestToJSON, PkiIssuerSignSelfIssuedResponseFromJSON, PkiIssuerSignVerbatimRequestToJSON, PkiIssuerSignVerbatimResponseFromJSON, PkiIssuerSignVerbatimWithRoleRequestToJSON, PkiIssuerSignVerbatimWithRoleResponseFromJSON, PkiIssuerSignWithRoleRequestToJSON, PkiIssuerSignWithRoleResponseFromJSON, PkiIssuersGenerateIntermediateRequestToJSON, PkiIssuersGenerateIntermediateResponseFromJSON, PkiIssuersGenerateRootRequestToJSON, PkiIssuersGenerateRootResponseFromJSON, PkiIssuersImportBundleRequestToJSON, PkiIssuersImportBundleResponseFromJSON, PkiIssuersImportCertRequestToJSON, PkiIssuersImportCertResponseFromJSON, PkiListEabKeysResponseFromJSON, PkiListIssuersResponseFromJSON, PkiListKeysResponseFromJSON, PkiListUnifiedRevokedCertsResponseFromJSON, PkiReadAutoTidyConfigurationResponseFromJSON, PkiReadCaChainPemResponseFromJSON, PkiReadCaDerResponseFromJSON, PkiReadCaPemResponseFromJSON, PkiReadCertCaChainResponseFromJSON, PkiReadCertCrlResponseFromJSON, PkiReadCertDeltaCrlResponseFromJSON, PkiReadCertMetadataResponseFromJSON, PkiReadCertRawDerResponseFromJSON, PkiReadCertRawPemResponseFromJSON, PkiReadCertResponseFromJSON, PkiReadCertUnifiedCrlResponseFromJSON, PkiReadCertUnifiedDeltaCrlResponseFromJSON, PkiReadClusterConfigurationResponseFromJSON, PkiReadCrlConfigurationResponseFromJSON, PkiReadCrlDeltaPemResponseFromJSON, PkiReadCrlDeltaResponseFromJSON, PkiReadCrlDerResponseFromJSON, PkiReadCrlPemResponseFromJSON, PkiReadIssuerDerResponseFromJSON, PkiReadIssuerJsonResponseFromJSON, PkiReadIssuerPemResponseFromJSON, PkiReadIssuerResponseFromJSON, PkiReadIssuersConfigurationResponseFromJSON, PkiReadKeyResponseFromJSON, PkiReadKeysConfigurationResponseFromJSON, PkiReadRoleResponseFromJSON, PkiReadUrlsConfigurationResponseFromJSON, PkiReplaceRootRequestToJSON, PkiReplaceRootResponseFromJSON, PkiRevokeIssuerResponseFromJSON, PkiRevokeRequestToJSON, PkiRevokeResponseFromJSON, PkiRevokeWithKeyRequestToJSON, PkiRevokeWithKeyResponseFromJSON, PkiRootSignIntermediateRequestToJSON, PkiRootSignIntermediateResponseFromJSON, PkiRootSignSelfIssuedRequestToJSON, PkiRootSignSelfIssuedResponseFromJSON, PkiRotateCrlResponseFromJSON, PkiRotateDeltaCrlResponseFromJSON, PkiRotateRootRequestToJSON, PkiRotateRootResponseFromJSON, PkiSetSignedIntermediateRequestToJSON, PkiSetSignedIntermediateResponseFromJSON, PkiSignVerbatimRequestToJSON, PkiSignVerbatimResponseFromJSON, PkiSignVerbatimWithRoleRequestToJSON, PkiSignVerbatimWithRoleResponseFromJSON, PkiSignWithRoleRequestToJSON, PkiSignWithRoleResponseFromJSON, PkiTidyCancelResponseFromJSON, PkiTidyRequestToJSON, PkiTidyStatusResponseFromJSON, PkiWriteAcmeAccountKidRequestToJSON, PkiWriteAcmeAuthorizationAuthIdRequestToJSON, PkiWriteAcmeChallengeAuthIdChallengeTypeRequestToJSON, PkiWriteAcmeKeyIdRequestToJSON, PkiWriteAcmeNewAccountRequestToJSON, PkiWriteAcmeNewOrderRequestToJSON, PkiWriteAcmeOrderOrderIdCertRequestToJSON, PkiWriteAcmeOrderOrderIdFinalizeRequestToJSON, PkiWriteAcmeOrderOrderIdRequestToJSON, PkiWriteAcmeOrdersRequestToJSON, PkiWriteAcmeRevokeCertRequestToJSON, PkiWriteExternalPolicyAcmeAccountKidRequestToJSON, PkiWriteExternalPolicyAcmeAuthorizationAuthIdRequestToJSON, PkiWriteExternalPolicyAcmeChallengeAuthIdChallengeTypeRequestToJSON, PkiWriteExternalPolicyAcmeNewAccountRequestToJSON, PkiWriteExternalPolicyAcmeNewOrderRequestToJSON, PkiWriteExternalPolicyAcmeOrderOrderIdCertRequestToJSON, PkiWriteExternalPolicyAcmeOrderOrderIdFinalizeRequestToJSON, PkiWriteExternalPolicyAcmeOrderOrderIdRequestToJSON, PkiWriteExternalPolicyAcmeOrdersRequestToJSON, PkiWriteExternalPolicyAcmeRevokeCertRequestToJSON, PkiWriteExternalPolicyIssuePolicyRequestToJSON, PkiWriteExternalPolicyIssuePolicyResponseFromJSON, PkiWriteExternalPolicyIssueRequestToJSON, PkiWriteExternalPolicyIssueResponseFromJSON, PkiWriteExternalPolicyPolicyAcmeAccountKidRequestToJSON, PkiWriteExternalPolicyPolicyAcmeAuthorizationAuthIdRequestToJSON, PkiWriteExternalPolicyPolicyAcmeChallengeAuthIdChallengeTypeRequestToJSON, PkiWriteExternalPolicyPolicyAcmeNewAccountRequestToJSON, PkiWriteExternalPolicyPolicyAcmeNewOrderRequestToJSON, PkiWriteExternalPolicyPolicyAcmeOrderOrderIdCertRequestToJSON, PkiWriteExternalPolicyPolicyAcmeOrderOrderIdFinalizeRequestToJSON, PkiWriteExternalPolicyPolicyAcmeOrderOrderIdRequestToJSON, PkiWriteExternalPolicyPolicyAcmeOrdersRequestToJSON, PkiWriteExternalPolicyPolicyAcmeRevokeCertRequestToJSON, PkiWriteExternalPolicySignIntermediatePolicyRequestToJSON, PkiWriteExternalPolicySignIntermediatePolicyResponseFromJSON, PkiWriteExternalPolicySignIntermediateRequestToJSON, PkiWriteExternalPolicySignIntermediateResponseFromJSON, PkiWriteExternalPolicySignPolicyRequestToJSON, PkiWriteExternalPolicySignPolicyResponseFromJSON, PkiWriteExternalPolicySignRequestToJSON, PkiWriteExternalPolicySignResponseFromJSON, PkiWriteIssuerIssuerRefAcmeAccountKidRequestToJSON, PkiWriteIssuerIssuerRefAcmeAuthorizationAuthIdRequestToJSON, PkiWriteIssuerIssuerRefAcmeChallengeAuthIdChallengeTypeRequestToJSON, PkiWriteIssuerIssuerRefAcmeNewAccountRequestToJSON, PkiWriteIssuerIssuerRefAcmeNewOrderRequestToJSON, PkiWriteIssuerIssuerRefAcmeOrderOrderIdCertRequestToJSON, PkiWriteIssuerIssuerRefAcmeOrderOrderIdFinalizeRequestToJSON, PkiWriteIssuerIssuerRefAcmeOrderOrderIdRequestToJSON, PkiWriteIssuerIssuerRefAcmeOrdersRequestToJSON, PkiWriteIssuerIssuerRefAcmeRevokeCertRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyAcmeAccountKidRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyAcmeAuthorizationAuthIdRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyAcmeChallengeAuthIdChallengeTypeRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyAcmeNewAccountRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyAcmeNewOrderRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdCertRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdFinalizeRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyAcmeOrdersRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyAcmeRevokeCertRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyIssuePolicyRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyIssuePolicyResponseFromJSON, PkiWriteIssuerIssuerRefExternalPolicyIssueRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyIssueResponseFromJSON, PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAccountKidRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAuthorizationAuthIdRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeChallengeAuthIdChallengeTypeRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewAccountRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewOrderRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdCertRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdFinalizeRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrdersRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeRevokeCertRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicySignIntermediatePolicyRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicySignIntermediatePolicyResponseFromJSON, PkiWriteIssuerIssuerRefExternalPolicySignIntermediateRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicySignIntermediateResponseFromJSON, PkiWriteIssuerIssuerRefExternalPolicySignPolicyRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicySignPolicyResponseFromJSON, PkiWriteIssuerIssuerRefExternalPolicySignRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicySignResponseFromJSON, PkiWriteIssuerIssuerRefRolesRoleAcmeAccountKidRequestToJSON, PkiWriteIssuerIssuerRefRolesRoleAcmeAuthorizationAuthIdRequestToJSON, PkiWriteIssuerIssuerRefRolesRoleAcmeChallengeAuthIdChallengeTypeRequestToJSON, PkiWriteIssuerIssuerRefRolesRoleAcmeNewAccountRequestToJSON, PkiWriteIssuerIssuerRefRolesRoleAcmeNewOrderRequestToJSON, PkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdCertRequestToJSON, PkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdFinalizeRequestToJSON, PkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdRequestToJSON, PkiWriteIssuerIssuerRefRolesRoleAcmeOrdersRequestToJSON, PkiWriteIssuerIssuerRefRolesRoleAcmeRevokeCertRequestToJSON, PkiWriteIssuerRequestToJSON, PkiWriteIssuerResponseFromJSON, PkiWriteKeyRequestToJSON, PkiWriteKeyResponseFromJSON, PkiWriteRoleRequestToJSON, PkiWriteRoleResponseFromJSON, PkiWriteRolesRoleAcmeAccountKidRequestToJSON, PkiWriteRolesRoleAcmeAuthorizationAuthIdRequestToJSON, PkiWriteRolesRoleAcmeChallengeAuthIdChallengeTypeRequestToJSON, PkiWriteRolesRoleAcmeNewAccountRequestToJSON, PkiWriteRolesRoleAcmeNewOrderRequestToJSON, PkiWriteRolesRoleAcmeOrderOrderIdCertRequestToJSON, PkiWriteRolesRoleAcmeOrderOrderIdFinalizeRequestToJSON, PkiWriteRolesRoleAcmeOrderOrderIdRequestToJSON, PkiWriteRolesRoleAcmeOrdersRequestToJSON, PkiWriteRolesRoleAcmeRevokeCertRequestToJSON, RabbitMqConfigureConnectionRequestToJSON, RabbitMqConfigureLeaseRequestToJSON, RabbitMqWriteRoleRequestToJSON, SshConfigureCaRequestToJSON, SshConfigureZeroAddressRequestToJSON, SshGenerateCredentialsRequestToJSON, SshIssueCertificateRequestToJSON, SshListRolesByIpRequestToJSON, SshSignCertificateRequestToJSON, SshVerifyOtpRequestToJSON, SshWriteRoleRequestToJSON, StandardListResponseFromJSON, TerraformCloudConfigureRequestToJSON, TerraformCloudWriteRoleRequestToJSON, TotpCreateKeyRequestToJSON, TotpValidateCodeRequestToJSON, TransitConfigureCacheRequestToJSON, TransitConfigureKeyRequestToJSON, TransitConfigureKeysRequestToJSON, TransitCreateKeyRequestToJSON, TransitDecryptRequestToJSON, TransitEncryptRequestToJSON, TransitGenerateCmacRequestToJSON, TransitGenerateCmacWithMacLengthRequestToJSON, TransitGenerateCsrForKeyRequestToJSON, TransitGenerateDataKeyRequestToJSON, TransitGenerateHmacRequestToJSON, TransitGenerateHmacWithAlgorithmRequestToJSON, TransitGenerateRandomRequestToJSON, TransitGenerateRandomWithBytesRequestToJSON, TransitGenerateRandomWithSourceAndBytesRequestToJSON, TransitGenerateRandomWithSourceRequestToJSON, TransitHashRequestToJSON, TransitHashWithAlgorithmRequestToJSON, TransitImportKeyRequestToJSON, TransitImportKeyVersionRequestToJSON, TransitRestoreAndRenameKeyRequestToJSON, TransitRestoreKeyRequestToJSON, TransitRewrapRequestToJSON, TransitRotateKeyRequestToJSON, TransitSetCertificateForKeyRequestToJSON, TransitSignRequestToJSON, TransitSignWithAlgorithmRequestToJSON, TransitTrimKeyRequestToJSON, TransitVerifyRequestToJSON, TransitVerifyWithAlgorithmRequestToJSON, } from '../models/index';
+import { AliCloudConfigureRequestToJSON, AliCloudWriteRoleRequestToJSON, AwsConfigureLeaseRequestToJSON, AwsConfigureRootIamCredentialsRequestToJSON, AwsGenerateCredentialsWithParametersRequestToJSON, AwsGenerateStsCredentialsWithParametersRequestToJSON, AwsReadStaticCredsNameResponseFromJSON, AwsReadStaticRolesNameResponseFromJSON, AwsWriteRoleRequestToJSON, AwsWriteStaticRolesNameRequestToJSON, AwsWriteStaticRolesNameResponseFromJSON, AzureConfigureRequestToJSON, AzureWriteRoleRequestToJSON, ConsulConfigureAccessRequestToJSON, ConsulWriteRoleRequestToJSON, DatabaseConfigureConnectionRequestToJSON, DatabaseWriteRoleRequestToJSON, DatabaseWriteStaticRoleRequestToJSON, GoogleCloudConfigureRequestToJSON, GoogleCloudGenerateRolesetKey3RequestToJSON, GoogleCloudGenerateRolesetKeyRequestToJSON, GoogleCloudGenerateStaticAccountKeyRequestToJSON, GoogleCloudKmsConfigureKeyRequestToJSON, GoogleCloudKmsConfigureRequestToJSON, GoogleCloudKmsDecryptRequestToJSON, GoogleCloudKmsEncryptRequestToJSON, GoogleCloudKmsReencryptRequestToJSON, GoogleCloudKmsRegisterKeyRequestToJSON, GoogleCloudKmsSignRequestToJSON, GoogleCloudKmsVerifyRequestToJSON, GoogleCloudKmsWriteKeyRequestToJSON, GoogleCloudWriteImpersonatedAccountRequestToJSON, GoogleCloudWriteRolesetRequestToJSON, GoogleCloudWriteStaticAccountRequestToJSON, KubernetesConfigureRequestToJSON, KubernetesGenerateCredentialsRequestToJSON, KubernetesWriteRoleRequestToJSON, KvV2ConfigureRequestToJSON, KvV2DeleteVersionsRequestToJSON, KvV2DestroyVersionsRequestToJSON, KvV2PatchMetadataPathRequestToJSON, KvV2PatchRequestToJSON, KvV2PatchResponseFromJSON, KvV2ReadConfigurationResponseFromJSON, KvV2ReadMetadataResponseFromJSON, KvV2ReadResponseFromJSON, KvV2ReadSubkeysResponseFromJSON, KvV2UndeleteVersionsRequestToJSON, KvV2WriteMetadataRequestToJSON, KvV2WriteRequestToJSON, KvV2WriteResponseFromJSON, LdapConfigureRequestToJSON, LdapLibraryCheckInRequestToJSON, LdapLibraryCheckOutRequestToJSON, LdapLibraryConfigureRequestToJSON, LdapLibraryForceCheckInRequestToJSON, LdapRotateStaticRoleRequestToJSON, LdapWriteDynamicRoleRequestToJSON, LdapWriteStaticRoleRequestToJSON, MongoDbAtlasConfigureRequestToJSON, MongoDbAtlasWriteRoleRequestToJSON, NomadConfigureAccessRequestToJSON, NomadConfigureLeaseRequestToJSON, NomadWriteRoleRequestToJSON, PkiConfigureAcmeRequestToJSON, PkiConfigureAutoTidyRequestToJSON, PkiConfigureAutoTidyResponseFromJSON, PkiConfigureCaRequestToJSON, PkiConfigureCaResponseFromJSON, PkiConfigureClusterRequestToJSON, PkiConfigureClusterResponseFromJSON, PkiConfigureCmpRequestToJSON, PkiConfigureCrlRequestToJSON, PkiConfigureCrlResponseFromJSON, PkiConfigureEstRequestToJSON, PkiConfigureExternalPolicyRequestToJSON, PkiConfigureExternalPolicyResponseFromJSON, PkiConfigureIssuersRequestToJSON, PkiConfigureIssuersResponseFromJSON, PkiConfigureKeysRequestToJSON, PkiConfigureKeysResponseFromJSON, PkiConfigureScepRequestToJSON, PkiConfigureUrlsRequestToJSON, PkiConfigureUrlsResponseFromJSON, PkiCrossSignIntermediateRequestToJSON, PkiCrossSignIntermediateResponseFromJSON, PkiGenerateEabKeyForIssuerAndRoleResponseFromJSON, PkiGenerateEabKeyForIssuerResponseFromJSON, PkiGenerateEabKeyForRoleResponseFromJSON, PkiGenerateEabKeyResponseFromJSON, PkiGenerateExportedKeyRequestToJSON, PkiGenerateExportedKeyResponseFromJSON, PkiGenerateIntermediateRequestToJSON, PkiGenerateIntermediateResponseFromJSON, PkiGenerateInternalKeyRequestToJSON, PkiGenerateInternalKeyResponseFromJSON, PkiGenerateKmsKeyRequestToJSON, PkiGenerateKmsKeyResponseFromJSON, PkiGenerateRootRequestToJSON, PkiGenerateRootResponseFromJSON, PkiImportKeyRequestToJSON, PkiImportKeyResponseFromJSON, PkiIssueWithRoleRequestToJSON, PkiIssueWithRoleResponseFromJSON, PkiIssuerIssueWithRoleRequestToJSON, PkiIssuerIssueWithRoleResponseFromJSON, PkiIssuerReadCrlDeltaDerResponseFromJSON, PkiIssuerReadCrlDeltaPemResponseFromJSON, PkiIssuerReadCrlDeltaResponseFromJSON, PkiIssuerReadCrlDerResponseFromJSON, PkiIssuerReadCrlPemResponseFromJSON, PkiIssuerReadCrlResponseFromJSON, PkiIssuerReadUnifiedCrlDeltaDerResponseFromJSON, PkiIssuerReadUnifiedCrlDeltaPemResponseFromJSON, PkiIssuerReadUnifiedCrlDeltaResponseFromJSON, PkiIssuerReadUnifiedCrlDerResponseFromJSON, PkiIssuerReadUnifiedCrlPemResponseFromJSON, PkiIssuerReadUnifiedCrlResponseFromJSON, PkiIssuerResignCrlsRequestToJSON, PkiIssuerResignCrlsResponseFromJSON, PkiIssuerSignIntermediateRequestToJSON, PkiIssuerSignIntermediateResponseFromJSON, PkiIssuerSignRevocationListRequestToJSON, PkiIssuerSignRevocationListResponseFromJSON, PkiIssuerSignSelfIssuedRequestToJSON, PkiIssuerSignSelfIssuedResponseFromJSON, PkiIssuerSignVerbatimRequestToJSON, PkiIssuerSignVerbatimResponseFromJSON, PkiIssuerSignVerbatimWithRoleRequestToJSON, PkiIssuerSignVerbatimWithRoleResponseFromJSON, PkiIssuerSignWithRoleRequestToJSON, PkiIssuerSignWithRoleResponseFromJSON, PkiIssuersGenerateIntermediateRequestToJSON, PkiIssuersGenerateIntermediateResponseFromJSON, PkiIssuersGenerateRootRequestToJSON, PkiIssuersGenerateRootResponseFromJSON, PkiIssuersImportBundleRequestToJSON, PkiIssuersImportBundleResponseFromJSON, PkiIssuersImportCertRequestToJSON, PkiIssuersImportCertResponseFromJSON, PkiListEabKeysResponseFromJSON, PkiListIssuersResponseFromJSON, PkiListKeysResponseFromJSON, PkiListUnifiedRevokedCertsResponseFromJSON, PkiPatchIssuerRequestToJSON, PkiPatchIssuerResponseFromJSON, PkiPatchRoleRequestToJSON, PkiPatchRoleResponseFromJSON, PkiReadAutoTidyConfigurationResponseFromJSON, PkiReadCaChainPemResponseFromJSON, PkiReadCaDerResponseFromJSON, PkiReadCaPemResponseFromJSON, PkiReadCertCaChainResponseFromJSON, PkiReadCertCrlResponseFromJSON, PkiReadCertDeltaCrlResponseFromJSON, PkiReadCertMetadataResponseFromJSON, PkiReadCertRawDerResponseFromJSON, PkiReadCertRawPemResponseFromJSON, PkiReadCertResponseFromJSON, PkiReadCertUnifiedCrlResponseFromJSON, PkiReadCertUnifiedDeltaCrlResponseFromJSON, PkiReadClusterConfigurationResponseFromJSON, PkiReadCrlConfigurationResponseFromJSON, PkiReadCrlDeltaPemResponseFromJSON, PkiReadCrlDeltaResponseFromJSON, PkiReadCrlDerResponseFromJSON, PkiReadCrlPemResponseFromJSON, PkiReadIssuerDerResponseFromJSON, PkiReadIssuerJsonResponseFromJSON, PkiReadIssuerPemResponseFromJSON, PkiReadIssuerResponseFromJSON, PkiReadIssuersConfigurationResponseFromJSON, PkiReadKeyResponseFromJSON, PkiReadKeysConfigurationResponseFromJSON, PkiReadRoleResponseFromJSON, PkiReadUrlsConfigurationResponseFromJSON, PkiReplaceRootRequestToJSON, PkiReplaceRootResponseFromJSON, PkiRevokeIssuerResponseFromJSON, PkiRevokeRequestToJSON, PkiRevokeResponseFromJSON, PkiRevokeWithKeyRequestToJSON, PkiRevokeWithKeyResponseFromJSON, PkiRootSignIntermediateRequestToJSON, PkiRootSignIntermediateResponseFromJSON, PkiRootSignSelfIssuedRequestToJSON, PkiRootSignSelfIssuedResponseFromJSON, PkiRotateCrlResponseFromJSON, PkiRotateDeltaCrlResponseFromJSON, PkiRotateRootRequestToJSON, PkiRotateRootResponseFromJSON, PkiSetSignedIntermediateRequestToJSON, PkiSetSignedIntermediateResponseFromJSON, PkiSignVerbatimRequestToJSON, PkiSignVerbatimResponseFromJSON, PkiSignVerbatimWithRoleRequestToJSON, PkiSignVerbatimWithRoleResponseFromJSON, PkiSignWithRoleRequestToJSON, PkiSignWithRoleResponseFromJSON, PkiTidyCancelResponseFromJSON, PkiTidyRequestToJSON, PkiTidyStatusResponseFromJSON, PkiWriteAcmeAccountKidRequestToJSON, PkiWriteAcmeAuthorizationAuthIdRequestToJSON, PkiWriteAcmeChallengeAuthIdChallengeTypeRequestToJSON, PkiWriteAcmeKeyIdRequestToJSON, PkiWriteAcmeNewAccountRequestToJSON, PkiWriteAcmeNewOrderRequestToJSON, PkiWriteAcmeOrderOrderIdCertRequestToJSON, PkiWriteAcmeOrderOrderIdFinalizeRequestToJSON, PkiWriteAcmeOrderOrderIdRequestToJSON, PkiWriteAcmeOrdersRequestToJSON, PkiWriteAcmeRevokeCertRequestToJSON, PkiWriteExternalPolicyAcmeAccountKidRequestToJSON, PkiWriteExternalPolicyAcmeAuthorizationAuthIdRequestToJSON, PkiWriteExternalPolicyAcmeChallengeAuthIdChallengeTypeRequestToJSON, PkiWriteExternalPolicyAcmeNewAccountRequestToJSON, PkiWriteExternalPolicyAcmeNewOrderRequestToJSON, PkiWriteExternalPolicyAcmeOrderOrderIdCertRequestToJSON, PkiWriteExternalPolicyAcmeOrderOrderIdFinalizeRequestToJSON, PkiWriteExternalPolicyAcmeOrderOrderIdRequestToJSON, PkiWriteExternalPolicyAcmeOrdersRequestToJSON, PkiWriteExternalPolicyAcmeRevokeCertRequestToJSON, PkiWriteExternalPolicyIssuePolicyRequestToJSON, PkiWriteExternalPolicyIssuePolicyResponseFromJSON, PkiWriteExternalPolicyIssueRequestToJSON, PkiWriteExternalPolicyIssueResponseFromJSON, PkiWriteExternalPolicyPolicyAcmeAccountKidRequestToJSON, PkiWriteExternalPolicyPolicyAcmeAuthorizationAuthIdRequestToJSON, PkiWriteExternalPolicyPolicyAcmeChallengeAuthIdChallengeTypeRequestToJSON, PkiWriteExternalPolicyPolicyAcmeNewAccountRequestToJSON, PkiWriteExternalPolicyPolicyAcmeNewOrderRequestToJSON, PkiWriteExternalPolicyPolicyAcmeOrderOrderIdCertRequestToJSON, PkiWriteExternalPolicyPolicyAcmeOrderOrderIdFinalizeRequestToJSON, PkiWriteExternalPolicyPolicyAcmeOrderOrderIdRequestToJSON, PkiWriteExternalPolicyPolicyAcmeOrdersRequestToJSON, PkiWriteExternalPolicyPolicyAcmeRevokeCertRequestToJSON, PkiWriteExternalPolicySignIntermediatePolicyRequestToJSON, PkiWriteExternalPolicySignIntermediatePolicyResponseFromJSON, PkiWriteExternalPolicySignIntermediateRequestToJSON, PkiWriteExternalPolicySignIntermediateResponseFromJSON, PkiWriteExternalPolicySignPolicyRequestToJSON, PkiWriteExternalPolicySignPolicyResponseFromJSON, PkiWriteExternalPolicySignRequestToJSON, PkiWriteExternalPolicySignResponseFromJSON, PkiWriteIssuerIssuerRefAcmeAccountKidRequestToJSON, PkiWriteIssuerIssuerRefAcmeAuthorizationAuthIdRequestToJSON, PkiWriteIssuerIssuerRefAcmeChallengeAuthIdChallengeTypeRequestToJSON, PkiWriteIssuerIssuerRefAcmeNewAccountRequestToJSON, PkiWriteIssuerIssuerRefAcmeNewOrderRequestToJSON, PkiWriteIssuerIssuerRefAcmeOrderOrderIdCertRequestToJSON, PkiWriteIssuerIssuerRefAcmeOrderOrderIdFinalizeRequestToJSON, PkiWriteIssuerIssuerRefAcmeOrderOrderIdRequestToJSON, PkiWriteIssuerIssuerRefAcmeOrdersRequestToJSON, PkiWriteIssuerIssuerRefAcmeRevokeCertRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyAcmeAccountKidRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyAcmeAuthorizationAuthIdRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyAcmeChallengeAuthIdChallengeTypeRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyAcmeNewAccountRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyAcmeNewOrderRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdCertRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdFinalizeRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyAcmeOrderOrderIdRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyAcmeOrdersRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyAcmeRevokeCertRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyIssuePolicyRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyIssuePolicyResponseFromJSON, PkiWriteIssuerIssuerRefExternalPolicyIssueRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyIssueResponseFromJSON, PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAccountKidRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeAuthorizationAuthIdRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeChallengeAuthIdChallengeTypeRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewAccountRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeNewOrderRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdCertRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdFinalizeRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrderOrderIdRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeOrdersRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicyPolicyAcmeRevokeCertRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicySignIntermediatePolicyRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicySignIntermediatePolicyResponseFromJSON, PkiWriteIssuerIssuerRefExternalPolicySignIntermediateRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicySignIntermediateResponseFromJSON, PkiWriteIssuerIssuerRefExternalPolicySignPolicyRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicySignPolicyResponseFromJSON, PkiWriteIssuerIssuerRefExternalPolicySignRequestToJSON, PkiWriteIssuerIssuerRefExternalPolicySignResponseFromJSON, PkiWriteIssuerIssuerRefRolesRoleAcmeAccountKidRequestToJSON, PkiWriteIssuerIssuerRefRolesRoleAcmeAuthorizationAuthIdRequestToJSON, PkiWriteIssuerIssuerRefRolesRoleAcmeChallengeAuthIdChallengeTypeRequestToJSON, PkiWriteIssuerIssuerRefRolesRoleAcmeNewAccountRequestToJSON, PkiWriteIssuerIssuerRefRolesRoleAcmeNewOrderRequestToJSON, PkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdCertRequestToJSON, PkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdFinalizeRequestToJSON, PkiWriteIssuerIssuerRefRolesRoleAcmeOrderOrderIdRequestToJSON, PkiWriteIssuerIssuerRefRolesRoleAcmeOrdersRequestToJSON, PkiWriteIssuerIssuerRefRolesRoleAcmeRevokeCertRequestToJSON, PkiWriteIssuerRequestToJSON, PkiWriteIssuerResponseFromJSON, PkiWriteKeyRequestToJSON, PkiWriteKeyResponseFromJSON, PkiWriteRoleRequestToJSON, PkiWriteRoleResponseFromJSON, PkiWriteRolesRoleAcmeAccountKidRequestToJSON, PkiWriteRolesRoleAcmeAuthorizationAuthIdRequestToJSON, PkiWriteRolesRoleAcmeChallengeAuthIdChallengeTypeRequestToJSON, PkiWriteRolesRoleAcmeNewAccountRequestToJSON, PkiWriteRolesRoleAcmeNewOrderRequestToJSON, PkiWriteRolesRoleAcmeOrderOrderIdCertRequestToJSON, PkiWriteRolesRoleAcmeOrderOrderIdFinalizeRequestToJSON, PkiWriteRolesRoleAcmeOrderOrderIdRequestToJSON, PkiWriteRolesRoleAcmeOrdersRequestToJSON, PkiWriteRolesRoleAcmeRevokeCertRequestToJSON, RabbitMqConfigureConnectionRequestToJSON, RabbitMqConfigureLeaseRequestToJSON, RabbitMqWriteRoleRequestToJSON, SshConfigureCaRequestToJSON, SshConfigureZeroAddressRequestToJSON, SshGenerateCredentialsRequestToJSON, SshIssueCertificateRequestToJSON, SshListRolesByIpRequestToJSON, SshSignCertificateRequestToJSON, SshVerifyOtpRequestToJSON, SshWriteRoleRequestToJSON, StandardListResponseFromJSON, TerraformCloudConfigureRequestToJSON, TerraformCloudWriteRoleRequestToJSON, TotpCreateKeyRequestToJSON, TotpValidateCodeRequestToJSON, TransitConfigureCacheRequestToJSON, TransitConfigureKeyRequestToJSON, TransitConfigureKeysRequestToJSON, TransitCreateKeyRequestToJSON, TransitDecryptRequestToJSON, TransitEncryptRequestToJSON, TransitGenerateCmacRequestToJSON, TransitGenerateCmacWithMacLengthRequestToJSON, TransitGenerateCsrForKeyRequestToJSON, TransitGenerateDataKeyRequestToJSON, TransitGenerateHmacRequestToJSON, TransitGenerateHmacWithAlgorithmRequestToJSON, TransitGenerateRandomRequestToJSON, TransitGenerateRandomWithBytesRequestToJSON, TransitGenerateRandomWithSourceAndBytesRequestToJSON, TransitGenerateRandomWithSourceRequestToJSON, TransitHashRequestToJSON, TransitHashWithAlgorithmRequestToJSON, TransitImportKeyRequestToJSON, TransitImportKeyVersionRequestToJSON, TransitRestoreAndRenameKeyRequestToJSON, TransitRestoreKeyRequestToJSON, TransitRewrapRequestToJSON, TransitRotateKeyRequestToJSON, TransitSetCertificateForKeyRequestToJSON, TransitSignRequestToJSON, TransitSignWithAlgorithmRequestToJSON, TransitTrimKeyRequestToJSON, TransitVerifyRequestToJSON, TransitVerifyWithAlgorithmRequestToJSON, } from '../models/index';
 /**
  *
  */
@@ -569,6 +569,38 @@ export class SecretsApi extends runtime.BaseAPI {
     awsListRoles(awsMountPath, list, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
             const response = yield this.awsListRolesRaw({ awsMountPath: awsMountPath, list: list }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    awsListStaticRolesRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['awsMountPath'] == null) {
+                throw new runtime.RequiredError('awsMountPath', 'Required parameter "awsMountPath" was null or undefined when calling awsListStaticRoles().');
+            }
+            if (requestParameters['list'] == null) {
+                throw new runtime.RequiredError('list', 'Required parameter "list" was null or undefined when calling awsListStaticRoles().');
+            }
+            const queryParameters = {};
+            if (requestParameters['list'] != null) {
+                queryParameters['list'] = requestParameters['list'];
+            }
+            const headerParameters = {};
+            const response = yield this.request({
+                path: `/{aws_mount_path}/static-roles/`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                method: 'GET',
+                headers: headerParameters,
+                query: queryParameters,
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => StandardListResponseFromJSON(jsonValue));
+        });
+    }
+    /**
+     */
+    awsListStaticRoles(awsMountPath, list, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.awsListStaticRolesRaw({ awsMountPath: awsMountPath, list: list }, initOverrides);
             return yield response.value();
         });
     }
@@ -4329,6 +4361,74 @@ export class SecretsApi extends runtime.BaseAPI {
     kvV2List(path, kvV2MountPath, list, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
             const response = yield this.kvV2ListRaw({ path: path, kvV2MountPath: kvV2MountPath, list: list }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    kvV2PatchRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['path'] == null) {
+                throw new runtime.RequiredError('path', 'Required parameter "path" was null or undefined when calling kvV2Patch().');
+            }
+            if (requestParameters['kvV2MountPath'] == null) {
+                throw new runtime.RequiredError('kvV2MountPath', 'Required parameter "kvV2MountPath" was null or undefined when calling kvV2Patch().');
+            }
+            if (requestParameters['kvV2PatchRequest'] == null) {
+                throw new runtime.RequiredError('kvV2PatchRequest', 'Required parameter "kvV2PatchRequest" was null or undefined when calling kvV2Patch().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/{kv_v2_mount_path}/data/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))).replace(`{${"kv_v2_mount_path"}}`, encodeURIComponent(String(requestParameters['kvV2MountPath']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: KvV2PatchRequestToJSON(requestParameters['kvV2PatchRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => KvV2PatchResponseFromJSON(jsonValue));
+        });
+    }
+    /**
+     */
+    kvV2Patch(path, kvV2MountPath, kvV2PatchRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.kvV2PatchRaw({ path: path, kvV2MountPath: kvV2MountPath, kvV2PatchRequest: kvV2PatchRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    kvV2PatchMetadataPathRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['path'] == null) {
+                throw new runtime.RequiredError('path', 'Required parameter "path" was null or undefined when calling kvV2PatchMetadataPath().');
+            }
+            if (requestParameters['kvV2MountPath'] == null) {
+                throw new runtime.RequiredError('kvV2MountPath', 'Required parameter "kvV2MountPath" was null or undefined when calling kvV2PatchMetadataPath().');
+            }
+            if (requestParameters['kvV2PatchMetadataPathRequest'] == null) {
+                throw new runtime.RequiredError('kvV2PatchMetadataPathRequest', 'Required parameter "kvV2PatchMetadataPathRequest" was null or undefined when calling kvV2PatchMetadataPath().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/{kv_v2_mount_path}/metadata/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))).replace(`{${"kv_v2_mount_path"}}`, encodeURIComponent(String(requestParameters['kvV2MountPath']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: KvV2PatchMetadataPathRequestToJSON(requestParameters['kvV2PatchMetadataPathRequest']),
+            }, initOverrides);
+            return new runtime.VoidApiResponse(response);
+        });
+    }
+    /**
+     */
+    kvV2PatchMetadataPath(path, kvV2MountPath, kvV2PatchMetadataPathRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.kvV2PatchMetadataPathRaw({ path: path, kvV2MountPath: kvV2MountPath, kvV2PatchMetadataPathRequest: kvV2PatchMetadataPathRequest }, initOverrides);
             return yield response.value();
         });
     }
@@ -8148,6 +8248,74 @@ export class SecretsApi extends runtime.BaseAPI {
     pkiListUnifiedRevokedCerts(pkiMountPath, list, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
             const response = yield this.pkiListUnifiedRevokedCertsRaw({ pkiMountPath: pkiMountPath, list: list }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    pkiPatchIssuerRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['issuerRef'] == null) {
+                throw new runtime.RequiredError('issuerRef', 'Required parameter "issuerRef" was null or undefined when calling pkiPatchIssuer().');
+            }
+            if (requestParameters['pkiMountPath'] == null) {
+                throw new runtime.RequiredError('pkiMountPath', 'Required parameter "pkiMountPath" was null or undefined when calling pkiPatchIssuer().');
+            }
+            if (requestParameters['pkiPatchIssuerRequest'] == null) {
+                throw new runtime.RequiredError('pkiPatchIssuerRequest', 'Required parameter "pkiPatchIssuerRequest" was null or undefined when calling pkiPatchIssuer().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/{pki_mount_path}/issuer/{issuer_ref}`.replace(`{${"issuer_ref"}}`, encodeURIComponent(String(requestParameters['issuerRef']))).replace(`{${"pki_mount_path"}}`, encodeURIComponent(String(requestParameters['pkiMountPath']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: PkiPatchIssuerRequestToJSON(requestParameters['pkiPatchIssuerRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => PkiPatchIssuerResponseFromJSON(jsonValue));
+        });
+    }
+    /**
+     */
+    pkiPatchIssuer(issuerRef, pkiMountPath, pkiPatchIssuerRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.pkiPatchIssuerRaw({ issuerRef: issuerRef, pkiMountPath: pkiMountPath, pkiPatchIssuerRequest: pkiPatchIssuerRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    pkiPatchRoleRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['name'] == null) {
+                throw new runtime.RequiredError('name', 'Required parameter "name" was null or undefined when calling pkiPatchRole().');
+            }
+            if (requestParameters['pkiMountPath'] == null) {
+                throw new runtime.RequiredError('pkiMountPath', 'Required parameter "pkiMountPath" was null or undefined when calling pkiPatchRole().');
+            }
+            if (requestParameters['pkiPatchRoleRequest'] == null) {
+                throw new runtime.RequiredError('pkiPatchRoleRequest', 'Required parameter "pkiPatchRoleRequest" was null or undefined when calling pkiPatchRole().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/{pki_mount_path}/roles/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"pki_mount_path"}}`, encodeURIComponent(String(requestParameters['pkiMountPath']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: PkiPatchRoleRequestToJSON(requestParameters['pkiPatchRoleRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => PkiPatchRoleResponseFromJSON(jsonValue));
+        });
+    }
+    /**
+     */
+    pkiPatchRole(name, pkiMountPath, pkiPatchRoleRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.pkiPatchRoleRaw({ name: name, pkiMountPath: pkiMountPath, pkiPatchRoleRequest: pkiPatchRoleRequest }, initOverrides);
             return yield response.value();
         });
     }
@@ -16662,6 +16830,14 @@ export var AwsListRolesListEnum;
 (function (AwsListRolesListEnum) {
     AwsListRolesListEnum["TRUE"] = "true";
 })(AwsListRolesListEnum || (AwsListRolesListEnum = {}));
+/**
+  * @export
+  * @enum {string}
+  */
+export var AwsListStaticRolesListEnum;
+(function (AwsListStaticRolesListEnum) {
+    AwsListStaticRolesListEnum["TRUE"] = "true";
+})(AwsListStaticRolesListEnum || (AwsListStaticRolesListEnum = {}));
 /**
   * @export
   * @enum {string}

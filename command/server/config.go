@@ -68,6 +68,9 @@ type Config struct {
 	DefaultLeaseTTL    time.Duration `hcl:"-"`
 	DefaultLeaseTTLRaw interface{}   `hcl:"default_lease_ttl,alias:DefaultLeaseTTL"`
 
+	RemoveIrrevocableLeaseAfter    time.Duration `hcl:"-"`
+	RemoveIrrevocableLeaseAfterRaw interface{}   `hcl:"remove_irrevocable_lease_after,alias:RemoveIrrevocableLeaseAfter"`
+
 	ClusterCipherSuites string `hcl:"cluster_cipher_suites"`
 
 	PluginDirectory string `hcl:"plugin_directory"`
@@ -108,6 +111,8 @@ type Config struct {
 	LogRequestsLevelRaw interface{} `hcl:"log_requests_level"`
 
 	DetectDeadlocks string `hcl:"detect_deadlocks"`
+
+	ObservationSystemLedgerPath string `hcl:"observation_system_ledger_path"`
 
 	ImpreciseLeaseRoleTracking bool `hcl:"imprecise_lease_role_tracking"`
 
@@ -326,6 +331,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DefaultLeaseTTL = c2.DefaultLeaseTTL
 	}
 
+	result.RemoveIrrevocableLeaseAfter = c.RemoveIrrevocableLeaseAfter
+	if c2.RemoveIrrevocableLeaseAfter > result.RemoveIrrevocableLeaseAfter {
+		result.RemoveIrrevocableLeaseAfter = c2.RemoveIrrevocableLeaseAfter
+	}
+
 	result.ClusterCipherSuites = c.ClusterCipherSuites
 	if c2.ClusterCipherSuites != "" {
 		result.ClusterCipherSuites = c2.ClusterCipherSuites
@@ -413,6 +423,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.DetectDeadlocks = c.DetectDeadlocks
 	if c2.DetectDeadlocks != "" {
 		result.DetectDeadlocks = c2.DetectDeadlocks
+	}
+
+	result.ObservationSystemLedgerPath = c.ObservationSystemLedgerPath
+	if c2.ObservationSystemLedgerPath != "" {
+		result.ObservationSystemLedgerPath = c2.ObservationSystemLedgerPath
 	}
 
 	result.ImpreciseLeaseRoleTracking = c.ImpreciseLeaseRoleTracking
@@ -620,6 +635,12 @@ func ParseConfig(d, source string) (*Config, error) {
 	}
 	if result.DefaultLeaseTTLRaw != nil {
 		if result.DefaultLeaseTTL, err = parseutil.ParseDurationSecond(result.DefaultLeaseTTLRaw); err != nil {
+			return nil, err
+		}
+	}
+
+	if result.RemoveIrrevocableLeaseAfterRaw != nil {
+		if result.RemoveIrrevocableLeaseAfter, err = parseutil.ParseDurationSecond(result.RemoveIrrevocableLeaseAfterRaw); err != nil {
 			return nil, err
 		}
 	}
@@ -1281,6 +1302,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"max_lease_ttl":     c.MaxLeaseTTL / time.Second,
 		"default_lease_ttl": c.DefaultLeaseTTL / time.Second,
 
+		"remove_irrevocable_lease_after": c.RemoveIrrevocableLeaseAfter / time.Second,
+
 		"cluster_cipher_suites": c.ClusterCipherSuites,
 
 		"plugin_directory": c.PluginDirectory,
@@ -1312,6 +1335,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"experiments":        c.Experiments,
 
 		"detect_deadlocks": c.DetectDeadlocks,
+
+		"observation_system_ledger_path": c.ObservationSystemLedgerPath,
 
 		"imprecise_lease_role_tracking": c.ImpreciseLeaseRoleTracking,
 

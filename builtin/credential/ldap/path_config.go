@@ -44,6 +44,8 @@ func pathConfig(b *backend) *framework.Path {
 				DisplayAttrs: &framework.DisplayAttributes{
 					OperationVerb: "configure-auth",
 				},
+				ForwardPerformanceSecondary: true,
+				ForwardPerformanceStandby:   true,
 			},
 		},
 

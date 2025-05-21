@@ -22,7 +22,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TransitListKeysListEnum = exports.TotpListKeysListEnum = exports.TerraformCloudListRolesListEnum = exports.SshListRolesListEnum = exports.RabbitMqListRolesListEnum = exports.PkiRotateRootExportedEnum = exports.PkiListUnifiedRevokedCertsListEnum = exports.PkiListRolesListEnum = exports.PkiListRevokedCertsListEnum = exports.PkiListKeysListEnum = exports.PkiListIssuersListEnum = exports.PkiListEabKeysListEnum = exports.PkiListCertsRevocationQueueListEnum = exports.PkiListCertsListEnum = exports.PkiListCertMetadataListEnum = exports.PkiListAcmeAccountKeysListEnum = exports.PkiIssuersGenerateRootExportedEnum = exports.PkiIssuersGenerateIntermediateExportedEnum = exports.PkiGenerateRootExportedEnum = exports.PkiGenerateIntermediateExportedEnum = exports.NomadListRolesListEnum = exports.MongoDbAtlasListRolesListEnum = exports.LdapListStaticRolesListEnum = exports.LdapListStaticRolePath0ListEnum = exports.LdapListStaticRolePathListEnum = exports.LdapListRolePath0ListEnum = exports.LdapListRolePathListEnum = exports.LdapListDynamicRolesListEnum = exports.LdapLibraryListLibraryPath0ListEnum = exports.LdapLibraryListLibraryPathListEnum = exports.LdapLibraryListListEnum = exports.KvV2ListListEnum = exports.KvV1ListListEnum = exports.KubernetesListRolesListEnum = exports.GoogleCloudListStaticAccounts2ListEnum = exports.GoogleCloudListStaticAccountsListEnum = exports.GoogleCloudListRolesets2ListEnum = exports.GoogleCloudListRolesetsListEnum = exports.GoogleCloudListImpersonatedAccounts2ListEnum = exports.GoogleCloudListImpersonatedAccountsListEnum = exports.GoogleCloudKmsListKeysListEnum = exports.DatabaseListStaticRolesListEnum = exports.DatabaseListRolesListEnum = exports.DatabaseListConnectionsListEnum = exports.CubbyholeListListEnum = exports.ConsulListRolesListEnum = exports.AzureListRolesListEnum = exports.AwsListRolesListEnum = exports.AliCloudListRolesListEnum = exports.SecretsApi = void 0;
+exports.TotpListKeysListEnum = exports.TerraformCloudListRolesListEnum = exports.SshListRolesListEnum = exports.RabbitMqListRolesListEnum = exports.PkiRotateRootExportedEnum = exports.PkiListUnifiedRevokedCertsListEnum = exports.PkiListRolesListEnum = exports.PkiListRevokedCertsListEnum = exports.PkiListKeysListEnum = exports.PkiListIssuersListEnum = exports.PkiListEabKeysListEnum = exports.PkiListCertsRevocationQueueListEnum = exports.PkiListCertsListEnum = exports.PkiListCertMetadataListEnum = exports.PkiListAcmeAccountKeysListEnum = exports.PkiIssuersGenerateRootExportedEnum = exports.PkiIssuersGenerateIntermediateExportedEnum = exports.PkiGenerateRootExportedEnum = exports.PkiGenerateIntermediateExportedEnum = exports.NomadListRolesListEnum = exports.MongoDbAtlasListRolesListEnum = exports.LdapListStaticRolesListEnum = exports.LdapListStaticRolePath0ListEnum = exports.LdapListStaticRolePathListEnum = exports.LdapListRolePath0ListEnum = exports.LdapListRolePathListEnum = exports.LdapListDynamicRolesListEnum = exports.LdapLibraryListLibraryPath0ListEnum = exports.LdapLibraryListLibraryPathListEnum = exports.LdapLibraryListListEnum = exports.KvV2ListListEnum = exports.KvV1ListListEnum = exports.KubernetesListRolesListEnum = exports.GoogleCloudListStaticAccounts2ListEnum = exports.GoogleCloudListStaticAccountsListEnum = exports.GoogleCloudListRolesets2ListEnum = exports.GoogleCloudListRolesetsListEnum = exports.GoogleCloudListImpersonatedAccounts2ListEnum = exports.GoogleCloudListImpersonatedAccountsListEnum = exports.GoogleCloudKmsListKeysListEnum = exports.DatabaseListStaticRolesListEnum = exports.DatabaseListRolesListEnum = exports.DatabaseListConnectionsListEnum = exports.CubbyholeListListEnum = exports.ConsulListRolesListEnum = exports.AzureListRolesListEnum = exports.AwsListStaticRolesListEnum = exports.AwsListRolesListEnum = exports.AliCloudListRolesListEnum = exports.SecretsApi = void 0;
+exports.TransitListKeysListEnum = void 0;
 const runtime = require("../runtime");
 const index_1 = require("../models/index");
 /**
@@ -572,6 +573,38 @@ class SecretsApi extends runtime.BaseAPI {
     awsListRoles(awsMountPath, list, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
             const response = yield this.awsListRolesRaw({ awsMountPath: awsMountPath, list: list }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    awsListStaticRolesRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['awsMountPath'] == null) {
+                throw new runtime.RequiredError('awsMountPath', 'Required parameter "awsMountPath" was null or undefined when calling awsListStaticRoles().');
+            }
+            if (requestParameters['list'] == null) {
+                throw new runtime.RequiredError('list', 'Required parameter "list" was null or undefined when calling awsListStaticRoles().');
+            }
+            const queryParameters = {};
+            if (requestParameters['list'] != null) {
+                queryParameters['list'] = requestParameters['list'];
+            }
+            const headerParameters = {};
+            const response = yield this.request({
+                path: `/{aws_mount_path}/static-roles/`.replace(`{${"aws_mount_path"}}`, encodeURIComponent(String(requestParameters['awsMountPath']))),
+                method: 'GET',
+                headers: headerParameters,
+                query: queryParameters,
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => (0, index_1.StandardListResponseFromJSON)(jsonValue));
+        });
+    }
+    /**
+     */
+    awsListStaticRoles(awsMountPath, list, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.awsListStaticRolesRaw({ awsMountPath: awsMountPath, list: list }, initOverrides);
             return yield response.value();
         });
     }
@@ -4332,6 +4365,74 @@ class SecretsApi extends runtime.BaseAPI {
     kvV2List(path, kvV2MountPath, list, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
             const response = yield this.kvV2ListRaw({ path: path, kvV2MountPath: kvV2MountPath, list: list }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    kvV2PatchRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['path'] == null) {
+                throw new runtime.RequiredError('path', 'Required parameter "path" was null or undefined when calling kvV2Patch().');
+            }
+            if (requestParameters['kvV2MountPath'] == null) {
+                throw new runtime.RequiredError('kvV2MountPath', 'Required parameter "kvV2MountPath" was null or undefined when calling kvV2Patch().');
+            }
+            if (requestParameters['kvV2PatchRequest'] == null) {
+                throw new runtime.RequiredError('kvV2PatchRequest', 'Required parameter "kvV2PatchRequest" was null or undefined when calling kvV2Patch().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/{kv_v2_mount_path}/data/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))).replace(`{${"kv_v2_mount_path"}}`, encodeURIComponent(String(requestParameters['kvV2MountPath']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: (0, index_1.KvV2PatchRequestToJSON)(requestParameters['kvV2PatchRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => (0, index_1.KvV2PatchResponseFromJSON)(jsonValue));
+        });
+    }
+    /**
+     */
+    kvV2Patch(path, kvV2MountPath, kvV2PatchRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.kvV2PatchRaw({ path: path, kvV2MountPath: kvV2MountPath, kvV2PatchRequest: kvV2PatchRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    kvV2PatchMetadataPathRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['path'] == null) {
+                throw new runtime.RequiredError('path', 'Required parameter "path" was null or undefined when calling kvV2PatchMetadataPath().');
+            }
+            if (requestParameters['kvV2MountPath'] == null) {
+                throw new runtime.RequiredError('kvV2MountPath', 'Required parameter "kvV2MountPath" was null or undefined when calling kvV2PatchMetadataPath().');
+            }
+            if (requestParameters['kvV2PatchMetadataPathRequest'] == null) {
+                throw new runtime.RequiredError('kvV2PatchMetadataPathRequest', 'Required parameter "kvV2PatchMetadataPathRequest" was null or undefined when calling kvV2PatchMetadataPath().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/{kv_v2_mount_path}/metadata/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))).replace(`{${"kv_v2_mount_path"}}`, encodeURIComponent(String(requestParameters['kvV2MountPath']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: (0, index_1.KvV2PatchMetadataPathRequestToJSON)(requestParameters['kvV2PatchMetadataPathRequest']),
+            }, initOverrides);
+            return new runtime.VoidApiResponse(response);
+        });
+    }
+    /**
+     */
+    kvV2PatchMetadataPath(path, kvV2MountPath, kvV2PatchMetadataPathRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.kvV2PatchMetadataPathRaw({ path: path, kvV2MountPath: kvV2MountPath, kvV2PatchMetadataPathRequest: kvV2PatchMetadataPathRequest }, initOverrides);
             return yield response.value();
         });
     }
@@ -8151,6 +8252,74 @@ class SecretsApi extends runtime.BaseAPI {
     pkiListUnifiedRevokedCerts(pkiMountPath, list, initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
             const response = yield this.pkiListUnifiedRevokedCertsRaw({ pkiMountPath: pkiMountPath, list: list }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    pkiPatchIssuerRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['issuerRef'] == null) {
+                throw new runtime.RequiredError('issuerRef', 'Required parameter "issuerRef" was null or undefined when calling pkiPatchIssuer().');
+            }
+            if (requestParameters['pkiMountPath'] == null) {
+                throw new runtime.RequiredError('pkiMountPath', 'Required parameter "pkiMountPath" was null or undefined when calling pkiPatchIssuer().');
+            }
+            if (requestParameters['pkiPatchIssuerRequest'] == null) {
+                throw new runtime.RequiredError('pkiPatchIssuerRequest', 'Required parameter "pkiPatchIssuerRequest" was null or undefined when calling pkiPatchIssuer().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/{pki_mount_path}/issuer/{issuer_ref}`.replace(`{${"issuer_ref"}}`, encodeURIComponent(String(requestParameters['issuerRef']))).replace(`{${"pki_mount_path"}}`, encodeURIComponent(String(requestParameters['pkiMountPath']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: (0, index_1.PkiPatchIssuerRequestToJSON)(requestParameters['pkiPatchIssuerRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => (0, index_1.PkiPatchIssuerResponseFromJSON)(jsonValue));
+        });
+    }
+    /**
+     */
+    pkiPatchIssuer(issuerRef, pkiMountPath, pkiPatchIssuerRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.pkiPatchIssuerRaw({ issuerRef: issuerRef, pkiMountPath: pkiMountPath, pkiPatchIssuerRequest: pkiPatchIssuerRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     */
+    pkiPatchRoleRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['name'] == null) {
+                throw new runtime.RequiredError('name', 'Required parameter "name" was null or undefined when calling pkiPatchRole().');
+            }
+            if (requestParameters['pkiMountPath'] == null) {
+                throw new runtime.RequiredError('pkiMountPath', 'Required parameter "pkiMountPath" was null or undefined when calling pkiPatchRole().');
+            }
+            if (requestParameters['pkiPatchRoleRequest'] == null) {
+                throw new runtime.RequiredError('pkiPatchRoleRequest', 'Required parameter "pkiPatchRoleRequest" was null or undefined when calling pkiPatchRole().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/{pki_mount_path}/roles/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))).replace(`{${"pki_mount_path"}}`, encodeURIComponent(String(requestParameters['pkiMountPath']))),
+                method: 'PATCH',
+                headers: headerParameters,
+                query: queryParameters,
+                body: (0, index_1.PkiPatchRoleRequestToJSON)(requestParameters['pkiPatchRoleRequest']),
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => (0, index_1.PkiPatchRoleResponseFromJSON)(jsonValue));
+        });
+    }
+    /**
+     */
+    pkiPatchRole(name, pkiMountPath, pkiPatchRoleRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.pkiPatchRoleRaw({ name: name, pkiMountPath: pkiMountPath, pkiPatchRoleRequest: pkiPatchRoleRequest }, initOverrides);
             return yield response.value();
         });
     }
@@ -16666,6 +16835,14 @@ var AwsListRolesListEnum;
 (function (AwsListRolesListEnum) {
     AwsListRolesListEnum["TRUE"] = "true";
 })(AwsListRolesListEnum || (exports.AwsListRolesListEnum = AwsListRolesListEnum = {}));
+/**
+  * @export
+  * @enum {string}
+  */
+var AwsListStaticRolesListEnum;
+(function (AwsListStaticRolesListEnum) {
+    AwsListStaticRolesListEnum["TRUE"] = "true";
+})(AwsListStaticRolesListEnum || (exports.AwsListStaticRolesListEnum = AwsListStaticRolesListEnum = {}));
 /**
   * @export
   * @enum {string}

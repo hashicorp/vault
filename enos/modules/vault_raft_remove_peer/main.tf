@@ -53,6 +53,12 @@ variable "vault_root_token" {
   description = "The vault root token"
 }
 
+variable "is_voter" {
+  type        = bool
+  default     = false
+  description = "Whether the nodes that are going to be removed are voters"
+}
+
 resource "enos_remote_exec" "vault_raft_remove_peer" {
   for_each = var.hosts
 
@@ -61,6 +67,7 @@ resource "enos_remote_exec" "vault_raft_remove_peer" {
     VAULT_TOKEN               = var.vault_root_token
     VAULT_ADDR                = var.vault_addr
     VAULT_INSTALL_DIR         = var.vault_install_dir
+    REMOVE_NODE_IS_VOTER      = var.is_voter
   }
 
   scripts = [abspath("${path.module}/scripts/raft-remove-peer.sh")]

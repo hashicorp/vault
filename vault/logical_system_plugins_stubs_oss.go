@@ -15,3 +15,7 @@ func validateSHA256(sha256 string) *logical.Response {
 	}
 	return nil
 }
+
+func validateSha256IsEmptyForEntPluginVersion(pluginVersion string, sha256 string) *logical.Response {
+	return nil
+}

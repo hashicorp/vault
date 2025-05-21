@@ -11,6 +11,7 @@ import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { deleteAuthCmd, runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
 module('Acceptance | settings/auth/enable', function (hooks) {
   setupApplicationTest(hooks);
@@ -37,7 +38,7 @@ module('Acceptance | settings/auth/enable', function (hooks) {
     );
 
     await visit('/vault/access/');
-    assert.dom(`[data-test-auth-backend-link=${path}]`).exists('mount is present in the list');
+    assert.dom(AUTH_FORM.linkedBlockAuth(path)).exists('mount is present in the list');
 
     // cleanup
     await runCmd(deleteAuthCmd(path));

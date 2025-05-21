@@ -4,15 +4,59 @@
 }}
 
 <Hds::PageHeader class="has-top-padding-l has-bottom-padding-m" as |PH|>
-  <PH.Title>Vault Usage Metrics</PH.Title>
+  <PH.Title>
+    Client Usage
+  </PH.Title>
+
+  {{#if @activityTimestamp}}
+    <PH.Subtitle>
+      Last Updated:
+      {{date-format @activityTimestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
+    </PH.Subtitle>
+  {{/if}}
+  {{#if this.version.isEnterprise}}
+    <PH.Description class="has-text-weight-semibold flex">
+      <p>
+        For billing period:
+        <span data-test-date-range="start">{{this.formattedStartDate}}</span>
+        -
+        <span data-test-date-range="end">{{this.formattedEndDate}}</span>
+      </p>
+    </PH.Description>
+  {{/if}}
   <PH.Description>
-    This dashboard surfaces Vault client usage over time.
-    <Hds::Link::Inline @href={{doc-link "/vault/docs/concepts/client-count"}}>Documentation is available here</Hds::Link::Inline>.
-    Date queries are sent in UTC.
+    This is the dashboard for your overall client count usages. Review Vault's
+    <Hds::Link::Inline @href={{doc-link "/vault/docs/concepts/client-count"}}>client counting documentation
+    </Hds::Link::Inline>for more information.
+
+    {{#if this.showCommunity}}
+      <div class="has-top-padding-m">
+        <Hds::Text::Display @tag="h3">Client counting period</Hds::Text::Display>
+        <Hds::Text::Body @tag="p" class="has-text-grey">Specify a date range to view within that timeframe. Click 'Edit' to
+          choose a different date range.</Hds::Text::Body>
+        <Hds::Text::Body @tag="p">
+          <span data-test-date-range="start">{{this.formattedStartDate}}</span>
+          -
+          <span data-test-date-range="end">{{this.formattedEndDate}}</span>
+          <Hds::Button
+            @size="small"
+            @text="Edit"
+            @isInline="true"
+            @color="tertiary"
+            @icon="edit"
+            @iconPosition="trailing"
+            data-test-date-range-edit
+            {{on "click" (fn (mut this.showEditModal) true)}}
+          />
+        </Hds::Text::Body>
+      </div>
+    {{/if}}
   </PH.Description>
-  <PH.Actions>
+
+  <PH.Actions class="align-items-end align-self-end">
     {{#if this.showExportButton}}
       <Hds::Button
+        class="has-font-weight-normal"
         data-test-export-button
         @text="Export activity data"
         @color="secondary"
@@ -20,7 +64,18 @@
         {{on "click" (fn (mut this.showExportModal) true)}}
       />
     {{/if}}
+    <Clients::DateRange
+      @startTime={{@startTimestamp}}
+      @endTime={{@endTimestamp}}
+      @billingStartTime={{@billingStartTime}}
+      @retentionMonths={{@retentionMonths}}
+      @onChange={{@onChange}}
+      @showEditModal={{this.showEditModal}}
+      @setEditModalVisible={{this.setEditModalVisible}}
+      class={{if (and this.version.isCommunity this.startDate this.endDate) "position-absolute"}}
+    />
   </PH.Actions>
+
 </Hds::PageHeader>
 
 {{#if this.showExportModal}}
@@ -45,8 +100,11 @@
         <p class="has-bottom-margin-s is-subtitle-gray">SELECTED DATE {{if this.formattedEndDate " RANGE"}}</p>
         <p class="has-bottom-margin-s" data-test-export-date-range>
           {{this.formattedStartDate}}
-          {{if this.formattedEndDate "-"}}
-          {{this.formattedEndDate}}</p>
+          {{#if this.showEndDate}}
+            {{"-"}}
+            {{this.formattedEndDate}}
+          {{/if}}
+        </p>
 
         <Hds::Form::Select::Field
           class="has-bottom-margin-s"

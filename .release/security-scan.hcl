@@ -1,27 +1,27 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-container {
-	dependencies = true
-	alpine_secdb = true
-	secrets      = true
+binary {
+  secrets    = false
+  go_modules = false
+  osv        = true
+  oss_index  = true
+  nvd        = false
 }
 
-binary {
-	secrets      = false
-	go_modules   = true
-	go_stdlib    = true
-	osv          = true
-	oss_index    = true
-	nvd          = false
+container {
+  dependencies    = true
+  alpine_security = true
+  secrets         = true
 
-	# Triage items that are _safe_ to ignore here. Note that this list should be
-	# periodically cleaned up to remove items that are no longer found by the scanner.
-	triage {
-		suppress {
-			vulnerabilities = [
-				"GO-2022-0635", // github.com/aws/aws-sdk-go@v1.55.5
-			]
-		}
-	}
+  triage {
+    suppress {
+      vulnerabilities = [
+        // We can't do anything about these two CVE's until a new Alpine container with busybox 1.38 is available.
+        "CVE-2025-46394",
+        "CVE-2024-58251",
+        "GO-2022-0635", // github.com/aws/aws-sdk-go@v1.x
+      ]
+    }
+  }
 }

@@ -16,7 +16,7 @@ import {
   triggerKeyEvent,
 } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import {
   createPolicyCmd,
   deleteEngineCmd,
@@ -34,6 +34,7 @@ import {
 import { clearRecords, writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { personas } from 'vault/tests/helpers/kv/policy-generator';
 
@@ -48,7 +49,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     this.backend = `kv-edge-${uid}`;
     this.rootSecret = 'root-directory';
     this.fullSecretPath = `${this.rootSecret}/nested/child-secret`;
-    await authPage.login();
+    await login();
     await runCmd(mountEngineCmd('kv-v2', this.backend), false);
     await writeSecret(this.backend, this.fullSecretPath, 'foo', 'bar');
     await writeSecret(this.backend, 'edge/one', 'foo', 'bar');
@@ -57,7 +58,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   });
 
   hooks.afterEach(async function () {
-    await authPage.login();
+    await login();
     await runCmd(deleteEngineCmd(this.backend));
     return;
   });
@@ -76,7 +77,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
         ),
         createTokenCmd(`nested-secret-list-reader-${this.backend}`),
       ]);
-      await authPage.login(token);
+      await login(token);
     });
 
     test('it can navigate to secrets within a secret directory', async function (assert) {
@@ -221,7 +222,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       for (const secret of testSecrets) {
         await writeVersionedSecret(backend, secret, 'foo', 'bar', 2);
       }
-      await authPage.login(token);
+      await login(token);
     });
 
     test('it renders the delete action and disables delete this version option', async function (assert) {
@@ -410,7 +411,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
         ),
         createTokenCmd(`secret-patcher-${this.backend}`),
       ]);
-      await authPage.login(token);
+      await login(token);
       clearRecords(this.store);
       return;
     });
@@ -494,7 +495,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
 
   const navToEngine = async (backend) => {
     await click('[data-test-sidebar-nav-link="Secrets Engines"]');
-    return await click(PAGE.backends.link(backend));
+    return await click(SES.secretsBackendLink(backend));
   };
 
   const assertDeleteActions = (assert, expected = ['delete', 'destroy']) => {
@@ -525,13 +526,13 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
     this.store = this.owner.lookup('service:store');
     this.backend = `kv-enterprise-edge-${uid}`;
     this.namespace = `ns-${uid}`;
-    await authPage.login();
+    await login();
     await runCmd([`write sys/namespaces/${this.namespace} -force`]);
     return;
   });
 
   hooks.afterEach(async function () {
-    await authPage.login();
+    await login();
     await runCmd([`delete /sys/auth/${this.namespace}`]);
     await runCmd(deleteEngineCmd(this.backend));
     return;
@@ -539,7 +540,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
 
   module('admin persona', function (hooks) {
     hooks.beforeEach(async function () {
-      await authPage.loginNs(this.namespace);
+      await loginNs(this.namespace);
       // mount engine within namespace
       await runCmd(mountEngineCmd('kv-v2', this.backend), false);
       clearRecords(this.store);
@@ -549,7 +550,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
       // visit logout with namespace query param because we're transitioning from within an engine
       // and navigating directly to /vault/auth caused test context routing problems :(
       await visit(`/vault/logout?namespace=${this.namespace}`);
-      await authPage.namespaceInput(''); // clear login form namespace input
+      await fillIn(GENERAL.inputByAttr('namespace'), ''); // clear login form namespace input
     });
 
     test('namespace: it can create a secret and new secret version', async function (assert) {

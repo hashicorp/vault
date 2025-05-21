@@ -43,11 +43,11 @@ import type {
   GenerateRandomWithSourceAndBytesResponse,
   GenerateRandomWithSourceRequest,
   GenerateRandomWithSourceResponse,
+  GenerateUtilizationReportResponse,
   HaStatusResponse,
   InitializeRequest,
   InternalClientActivityConfigureRequest,
   InternalCountEntitiesResponse,
-  InternalCountTokensResponse,
   InternalGenerateOpenApiDocumentWithParametersRequest,
   InternalUiListEnabledFeatureFlagsResponse,
   InternalUiListEnabledVisibleMountsResponse,
@@ -153,6 +153,21 @@ import type {
   SystemListSyncDestinationsResponse,
   SystemListSyncDestinationsTypeResponse,
   SystemListSyncGithubAppsResponse,
+  SystemPatchNamespacesPathRequest,
+  SystemPatchSyncConfigRequest,
+  SystemPatchSyncConfigResponse,
+  SystemPatchSyncDestinationsAwsSmNameRequest,
+  SystemPatchSyncDestinationsAwsSmNameResponse,
+  SystemPatchSyncDestinationsAzureKvNameRequest,
+  SystemPatchSyncDestinationsAzureKvNameResponse,
+  SystemPatchSyncDestinationsGcpSmNameRequest,
+  SystemPatchSyncDestinationsGcpSmNameResponse,
+  SystemPatchSyncDestinationsGhNameRequest,
+  SystemPatchSyncDestinationsGhNameResponse,
+  SystemPatchSyncDestinationsInMemNameRequest,
+  SystemPatchSyncDestinationsInMemNameResponse,
+  SystemPatchSyncDestinationsVercelProjectNameRequest,
+  SystemPatchSyncDestinationsVercelProjectNameResponse,
   SystemReadConfigGroupPolicyApplicationResponse,
   SystemReadSyncAssociationsDestinationsResponse,
   SystemReadSyncAssociationsMountSecretNameResponse,
@@ -231,13 +246,15 @@ import type {
   SystemWriteSyncGithubAppsNameResponse,
   SystemWriteUtilizationRequest,
   SystemWriteUtilizationResponse,
-  UiConfigDeleteCustomMessageResponse,
+  UiConfigListCustomMessagesResponse,
   UiConfigReadCustomMessageResponse,
   UiConfigUpdateCustomMessageRequest,
   UiConfigUpdateCustomMessageResponse,
   UiHeadersConfigureRequest,
   UiHeadersListResponse,
   UiHeadersReadConfigurationResponse,
+  UiLoginDefaultAuthConfigureRequest,
+  UiLoginDefaultAuthListResponse,
   UnsealRequest,
   UnsealResponse,
   UnwrapRequest,
@@ -303,6 +320,8 @@ import {
     GenerateRandomWithSourceRequestToJSON,
     GenerateRandomWithSourceResponseFromJSON,
     GenerateRandomWithSourceResponseToJSON,
+    GenerateUtilizationReportResponseFromJSON,
+    GenerateUtilizationReportResponseToJSON,
     HaStatusResponseFromJSON,
     HaStatusResponseToJSON,
     InitializeRequestFromJSON,
@@ -311,8 +330,6 @@ import {
     InternalClientActivityConfigureRequestToJSON,
     InternalCountEntitiesResponseFromJSON,
     InternalCountEntitiesResponseToJSON,
-    InternalCountTokensResponseFromJSON,
-    InternalCountTokensResponseToJSON,
     InternalGenerateOpenApiDocumentWithParametersRequestFromJSON,
     InternalGenerateOpenApiDocumentWithParametersRequestToJSON,
     InternalUiListEnabledFeatureFlagsResponseFromJSON,
@@ -523,6 +540,36 @@ import {
     SystemListSyncDestinationsTypeResponseToJSON,
     SystemListSyncGithubAppsResponseFromJSON,
     SystemListSyncGithubAppsResponseToJSON,
+    SystemPatchNamespacesPathRequestFromJSON,
+    SystemPatchNamespacesPathRequestToJSON,
+    SystemPatchSyncConfigRequestFromJSON,
+    SystemPatchSyncConfigRequestToJSON,
+    SystemPatchSyncConfigResponseFromJSON,
+    SystemPatchSyncConfigResponseToJSON,
+    SystemPatchSyncDestinationsAwsSmNameRequestFromJSON,
+    SystemPatchSyncDestinationsAwsSmNameRequestToJSON,
+    SystemPatchSyncDestinationsAwsSmNameResponseFromJSON,
+    SystemPatchSyncDestinationsAwsSmNameResponseToJSON,
+    SystemPatchSyncDestinationsAzureKvNameRequestFromJSON,
+    SystemPatchSyncDestinationsAzureKvNameRequestToJSON,
+    SystemPatchSyncDestinationsAzureKvNameResponseFromJSON,
+    SystemPatchSyncDestinationsAzureKvNameResponseToJSON,
+    SystemPatchSyncDestinationsGcpSmNameRequestFromJSON,
+    SystemPatchSyncDestinationsGcpSmNameRequestToJSON,
+    SystemPatchSyncDestinationsGcpSmNameResponseFromJSON,
+    SystemPatchSyncDestinationsGcpSmNameResponseToJSON,
+    SystemPatchSyncDestinationsGhNameRequestFromJSON,
+    SystemPatchSyncDestinationsGhNameRequestToJSON,
+    SystemPatchSyncDestinationsGhNameResponseFromJSON,
+    SystemPatchSyncDestinationsGhNameResponseToJSON,
+    SystemPatchSyncDestinationsInMemNameRequestFromJSON,
+    SystemPatchSyncDestinationsInMemNameRequestToJSON,
+    SystemPatchSyncDestinationsInMemNameResponseFromJSON,
+    SystemPatchSyncDestinationsInMemNameResponseToJSON,
+    SystemPatchSyncDestinationsVercelProjectNameRequestFromJSON,
+    SystemPatchSyncDestinationsVercelProjectNameRequestToJSON,
+    SystemPatchSyncDestinationsVercelProjectNameResponseFromJSON,
+    SystemPatchSyncDestinationsVercelProjectNameResponseToJSON,
     SystemReadConfigGroupPolicyApplicationResponseFromJSON,
     SystemReadConfigGroupPolicyApplicationResponseToJSON,
     SystemReadSyncAssociationsDestinationsResponseFromJSON,
@@ -679,8 +726,8 @@ import {
     SystemWriteUtilizationRequestToJSON,
     SystemWriteUtilizationResponseFromJSON,
     SystemWriteUtilizationResponseToJSON,
-    UiConfigDeleteCustomMessageResponseFromJSON,
-    UiConfigDeleteCustomMessageResponseToJSON,
+    UiConfigListCustomMessagesResponseFromJSON,
+    UiConfigListCustomMessagesResponseToJSON,
     UiConfigReadCustomMessageResponseFromJSON,
     UiConfigReadCustomMessageResponseToJSON,
     UiConfigUpdateCustomMessageRequestFromJSON,
@@ -693,6 +740,10 @@ import {
     UiHeadersListResponseToJSON,
     UiHeadersReadConfigurationResponseFromJSON,
     UiHeadersReadConfigurationResponseToJSON,
+    UiLoginDefaultAuthConfigureRequestFromJSON,
+    UiLoginDefaultAuthConfigureRequestToJSON,
+    UiLoginDefaultAuthListResponseFromJSON,
+    UiLoginDefaultAuthListResponseToJSON,
     UnsealRequestFromJSON,
     UnsealRequestToJSON,
     UnsealResponseFromJSON,
@@ -1319,6 +1370,45 @@ export interface SystemApiSystemListSyncGithubAppsRequest {
     list: SystemListSyncGithubAppsListEnum;
 }
 
+export interface SystemApiSystemPatchNamespacesPathOperationRequest {
+    path: string;
+    systemPatchNamespacesPathRequest: SystemPatchNamespacesPathRequest;
+}
+
+export interface SystemApiSystemPatchSyncConfigOperationRequest {
+    systemPatchSyncConfigRequest: SystemPatchSyncConfigRequest;
+}
+
+export interface SystemApiSystemPatchSyncDestinationsAwsSmNameOperationRequest {
+    name: string;
+    systemPatchSyncDestinationsAwsSmNameRequest: SystemPatchSyncDestinationsAwsSmNameRequest;
+}
+
+export interface SystemApiSystemPatchSyncDestinationsAzureKvNameOperationRequest {
+    name: string;
+    systemPatchSyncDestinationsAzureKvNameRequest: SystemPatchSyncDestinationsAzureKvNameRequest;
+}
+
+export interface SystemApiSystemPatchSyncDestinationsGcpSmNameOperationRequest {
+    name: string;
+    systemPatchSyncDestinationsGcpSmNameRequest: SystemPatchSyncDestinationsGcpSmNameRequest;
+}
+
+export interface SystemApiSystemPatchSyncDestinationsGhNameOperationRequest {
+    name: string;
+    systemPatchSyncDestinationsGhNameRequest: SystemPatchSyncDestinationsGhNameRequest;
+}
+
+export interface SystemApiSystemPatchSyncDestinationsInMemNameOperationRequest {
+    name: string;
+    systemPatchSyncDestinationsInMemNameRequest: SystemPatchSyncDestinationsInMemNameRequest;
+}
+
+export interface SystemApiSystemPatchSyncDestinationsVercelProjectNameOperationRequest {
+    name: string;
+    systemPatchSyncDestinationsVercelProjectNameRequest: SystemPatchSyncDestinationsVercelProjectNameRequest;
+}
+
 export interface SystemApiSystemReadManagedKeysTypeNameRequest {
     name: string;
     type: string;
@@ -1684,6 +1774,9 @@ export interface SystemApiUiConfigDeleteCustomMessageRequest {
 
 export interface SystemApiUiConfigListCustomMessagesRequest {
     list: UiConfigListCustomMessagesListEnum;
+    active?: boolean;
+    authenticated?: boolean;
+    type?: string;
 }
 
 export interface SystemApiUiConfigReadCustomMessageRequest {
@@ -1710,6 +1803,23 @@ export interface SystemApiUiHeadersListRequest {
 
 export interface SystemApiUiHeadersReadConfigurationRequest {
     header: string;
+}
+
+export interface SystemApiUiLoginDefaultAuthConfigureOperationRequest {
+    name: string;
+    uiLoginDefaultAuthConfigureRequest: UiLoginDefaultAuthConfigureRequest;
+}
+
+export interface SystemApiUiLoginDefaultAuthDeleteConfigurationRequest {
+    name: string;
+}
+
+export interface SystemApiUiLoginDefaultAuthListRequest {
+    list: UiLoginDefaultAuthListListEnum;
+}
+
+export interface SystemApiUiLoginDefaultAuthReadConfigurationRequest {
+    name: string;
 }
 
 export interface SystemApiUnsealOperationRequest {
@@ -2876,6 +2986,30 @@ export class SystemApi extends runtime.BaseAPI {
     }
 
     /**
+     */
+    async generateUtilizationReportRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<GenerateUtilizationReportResponse>> {
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/sys/utilization-report`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => GenerateUtilizationReportResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async generateUtilizationReport(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<GenerateUtilizationReportResponse> {
+        const response = await this.generateUtilizationReportRaw(initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Check the HA status of a Vault cluster
      */
     async haStatusRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<HaStatusResponse>> {
@@ -3130,32 +3264,6 @@ export class SystemApi extends runtime.BaseAPI {
      */
     async internalCountRequests(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse> {
         const response = await this.internalCountRequestsRaw(initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Backwards compatibility is not guaranteed for this API
-     */
-    async internalCountTokensRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<InternalCountTokensResponse>> {
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        const response = await this.request({
-            path: `/sys/internal/counters/tokens`,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => InternalCountTokensResponseFromJSON(jsonValue));
-    }
-
-    /**
-     * Backwards compatibility is not guaranteed for this API
-     */
-    async internalCountTokens(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<InternalCountTokensResponse> {
-        const response = await this.internalCountTokensRaw(initOverrides);
         return await response.value();
     }
 
@@ -8872,6 +8980,327 @@ export class SystemApi extends runtime.BaseAPI {
     }
 
     /**
+     */
+    async systemPatchNamespacesPathRaw(requestParameters: SystemApiSystemPatchNamespacesPathOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>> {
+        if (requestParameters['path'] == null) {
+            throw new runtime.RequiredError(
+                'path',
+                'Required parameter "path" was null or undefined when calling systemPatchNamespacesPath().'
+            );
+        }
+
+        if (requestParameters['systemPatchNamespacesPathRequest'] == null) {
+            throw new runtime.RequiredError(
+                'systemPatchNamespacesPathRequest',
+                'Required parameter "systemPatchNamespacesPathRequest" was null or undefined when calling systemPatchNamespacesPath().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/sys/namespaces/{path}`.replace(`{${"path"}}`, encodeURIComponent(String(requestParameters['path']))),
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SystemPatchNamespacesPathRequestToJSON(requestParameters['systemPatchNamespacesPathRequest']),
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async systemPatchNamespacesPath(path: string, systemPatchNamespacesPathRequest: SystemPatchNamespacesPathRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse> {
+        const response = await this.systemPatchNamespacesPathRaw({ path: path, systemPatchNamespacesPathRequest: systemPatchNamespacesPathRequest }, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     */
+    async systemPatchSyncConfigRaw(requestParameters: SystemApiSystemPatchSyncConfigOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SystemPatchSyncConfigResponse>> {
+        if (requestParameters['systemPatchSyncConfigRequest'] == null) {
+            throw new runtime.RequiredError(
+                'systemPatchSyncConfigRequest',
+                'Required parameter "systemPatchSyncConfigRequest" was null or undefined when calling systemPatchSyncConfig().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/sys/sync/config`,
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SystemPatchSyncConfigRequestToJSON(requestParameters['systemPatchSyncConfigRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => SystemPatchSyncConfigResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async systemPatchSyncConfig(systemPatchSyncConfigRequest: SystemPatchSyncConfigRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SystemPatchSyncConfigResponse> {
+        const response = await this.systemPatchSyncConfigRaw({ systemPatchSyncConfigRequest: systemPatchSyncConfigRequest }, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     */
+    async systemPatchSyncDestinationsAwsSmNameRaw(requestParameters: SystemApiSystemPatchSyncDestinationsAwsSmNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SystemPatchSyncDestinationsAwsSmNameResponse>> {
+        if (requestParameters['name'] == null) {
+            throw new runtime.RequiredError(
+                'name',
+                'Required parameter "name" was null or undefined when calling systemPatchSyncDestinationsAwsSmName().'
+            );
+        }
+
+        if (requestParameters['systemPatchSyncDestinationsAwsSmNameRequest'] == null) {
+            throw new runtime.RequiredError(
+                'systemPatchSyncDestinationsAwsSmNameRequest',
+                'Required parameter "systemPatchSyncDestinationsAwsSmNameRequest" was null or undefined when calling systemPatchSyncDestinationsAwsSmName().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/sys/sync/destinations/aws-sm/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SystemPatchSyncDestinationsAwsSmNameRequestToJSON(requestParameters['systemPatchSyncDestinationsAwsSmNameRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => SystemPatchSyncDestinationsAwsSmNameResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async systemPatchSyncDestinationsAwsSmName(name: string, systemPatchSyncDestinationsAwsSmNameRequest: SystemPatchSyncDestinationsAwsSmNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SystemPatchSyncDestinationsAwsSmNameResponse> {
+        const response = await this.systemPatchSyncDestinationsAwsSmNameRaw({ name: name, systemPatchSyncDestinationsAwsSmNameRequest: systemPatchSyncDestinationsAwsSmNameRequest }, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     */
+    async systemPatchSyncDestinationsAzureKvNameRaw(requestParameters: SystemApiSystemPatchSyncDestinationsAzureKvNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SystemPatchSyncDestinationsAzureKvNameResponse>> {
+        if (requestParameters['name'] == null) {
+            throw new runtime.RequiredError(
+                'name',
+                'Required parameter "name" was null or undefined when calling systemPatchSyncDestinationsAzureKvName().'
+            );
+        }
+
+        if (requestParameters['systemPatchSyncDestinationsAzureKvNameRequest'] == null) {
+            throw new runtime.RequiredError(
+                'systemPatchSyncDestinationsAzureKvNameRequest',
+                'Required parameter "systemPatchSyncDestinationsAzureKvNameRequest" was null or undefined when calling systemPatchSyncDestinationsAzureKvName().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/sys/sync/destinations/azure-kv/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SystemPatchSyncDestinationsAzureKvNameRequestToJSON(requestParameters['systemPatchSyncDestinationsAzureKvNameRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => SystemPatchSyncDestinationsAzureKvNameResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async systemPatchSyncDestinationsAzureKvName(name: string, systemPatchSyncDestinationsAzureKvNameRequest: SystemPatchSyncDestinationsAzureKvNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SystemPatchSyncDestinationsAzureKvNameResponse> {
+        const response = await this.systemPatchSyncDestinationsAzureKvNameRaw({ name: name, systemPatchSyncDestinationsAzureKvNameRequest: systemPatchSyncDestinationsAzureKvNameRequest }, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     */
+    async systemPatchSyncDestinationsGcpSmNameRaw(requestParameters: SystemApiSystemPatchSyncDestinationsGcpSmNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SystemPatchSyncDestinationsGcpSmNameResponse>> {
+        if (requestParameters['name'] == null) {
+            throw new runtime.RequiredError(
+                'name',
+                'Required parameter "name" was null or undefined when calling systemPatchSyncDestinationsGcpSmName().'
+            );
+        }
+
+        if (requestParameters['systemPatchSyncDestinationsGcpSmNameRequest'] == null) {
+            throw new runtime.RequiredError(
+                'systemPatchSyncDestinationsGcpSmNameRequest',
+                'Required parameter "systemPatchSyncDestinationsGcpSmNameRequest" was null or undefined when calling systemPatchSyncDestinationsGcpSmName().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/sys/sync/destinations/gcp-sm/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SystemPatchSyncDestinationsGcpSmNameRequestToJSON(requestParameters['systemPatchSyncDestinationsGcpSmNameRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => SystemPatchSyncDestinationsGcpSmNameResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async systemPatchSyncDestinationsGcpSmName(name: string, systemPatchSyncDestinationsGcpSmNameRequest: SystemPatchSyncDestinationsGcpSmNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SystemPatchSyncDestinationsGcpSmNameResponse> {
+        const response = await this.systemPatchSyncDestinationsGcpSmNameRaw({ name: name, systemPatchSyncDestinationsGcpSmNameRequest: systemPatchSyncDestinationsGcpSmNameRequest }, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     */
+    async systemPatchSyncDestinationsGhNameRaw(requestParameters: SystemApiSystemPatchSyncDestinationsGhNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SystemPatchSyncDestinationsGhNameResponse>> {
+        if (requestParameters['name'] == null) {
+            throw new runtime.RequiredError(
+                'name',
+                'Required parameter "name" was null or undefined when calling systemPatchSyncDestinationsGhName().'
+            );
+        }
+
+        if (requestParameters['systemPatchSyncDestinationsGhNameRequest'] == null) {
+            throw new runtime.RequiredError(
+                'systemPatchSyncDestinationsGhNameRequest',
+                'Required parameter "systemPatchSyncDestinationsGhNameRequest" was null or undefined when calling systemPatchSyncDestinationsGhName().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/sys/sync/destinations/gh/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SystemPatchSyncDestinationsGhNameRequestToJSON(requestParameters['systemPatchSyncDestinationsGhNameRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => SystemPatchSyncDestinationsGhNameResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async systemPatchSyncDestinationsGhName(name: string, systemPatchSyncDestinationsGhNameRequest: SystemPatchSyncDestinationsGhNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SystemPatchSyncDestinationsGhNameResponse> {
+        const response = await this.systemPatchSyncDestinationsGhNameRaw({ name: name, systemPatchSyncDestinationsGhNameRequest: systemPatchSyncDestinationsGhNameRequest }, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     */
+    async systemPatchSyncDestinationsInMemNameRaw(requestParameters: SystemApiSystemPatchSyncDestinationsInMemNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SystemPatchSyncDestinationsInMemNameResponse>> {
+        if (requestParameters['name'] == null) {
+            throw new runtime.RequiredError(
+                'name',
+                'Required parameter "name" was null or undefined when calling systemPatchSyncDestinationsInMemName().'
+            );
+        }
+
+        if (requestParameters['systemPatchSyncDestinationsInMemNameRequest'] == null) {
+            throw new runtime.RequiredError(
+                'systemPatchSyncDestinationsInMemNameRequest',
+                'Required parameter "systemPatchSyncDestinationsInMemNameRequest" was null or undefined when calling systemPatchSyncDestinationsInMemName().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/sys/sync/destinations/in-mem/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SystemPatchSyncDestinationsInMemNameRequestToJSON(requestParameters['systemPatchSyncDestinationsInMemNameRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => SystemPatchSyncDestinationsInMemNameResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async systemPatchSyncDestinationsInMemName(name: string, systemPatchSyncDestinationsInMemNameRequest: SystemPatchSyncDestinationsInMemNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SystemPatchSyncDestinationsInMemNameResponse> {
+        const response = await this.systemPatchSyncDestinationsInMemNameRaw({ name: name, systemPatchSyncDestinationsInMemNameRequest: systemPatchSyncDestinationsInMemNameRequest }, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     */
+    async systemPatchSyncDestinationsVercelProjectNameRaw(requestParameters: SystemApiSystemPatchSyncDestinationsVercelProjectNameOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SystemPatchSyncDestinationsVercelProjectNameResponse>> {
+        if (requestParameters['name'] == null) {
+            throw new runtime.RequiredError(
+                'name',
+                'Required parameter "name" was null or undefined when calling systemPatchSyncDestinationsVercelProjectName().'
+            );
+        }
+
+        if (requestParameters['systemPatchSyncDestinationsVercelProjectNameRequest'] == null) {
+            throw new runtime.RequiredError(
+                'systemPatchSyncDestinationsVercelProjectNameRequest',
+                'Required parameter "systemPatchSyncDestinationsVercelProjectNameRequest" was null or undefined when calling systemPatchSyncDestinationsVercelProjectName().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/sys/sync/destinations/vercel-project/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: SystemPatchSyncDestinationsVercelProjectNameRequestToJSON(requestParameters['systemPatchSyncDestinationsVercelProjectNameRequest']),
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => SystemPatchSyncDestinationsVercelProjectNameResponseFromJSON(jsonValue));
+    }
+
+    /**
+     */
+    async systemPatchSyncDestinationsVercelProjectName(name: string, systemPatchSyncDestinationsVercelProjectNameRequest: SystemPatchSyncDestinationsVercelProjectNameRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SystemPatchSyncDestinationsVercelProjectNameResponse> {
+        const response = await this.systemPatchSyncDestinationsVercelProjectNameRaw({ name: name, systemPatchSyncDestinationsVercelProjectNameRequest: systemPatchSyncDestinationsVercelProjectNameRequest }, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Configure control group global settings.
      */
     async systemReadConfigControlGroupRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>> {
@@ -12481,7 +12910,7 @@ export class SystemApi extends runtime.BaseAPI {
     /**
      * Delete custom message
      */
-    async uiConfigDeleteCustomMessageRaw(requestParameters: SystemApiUiConfigDeleteCustomMessageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UiConfigDeleteCustomMessageResponse>> {
+    async uiConfigDeleteCustomMessageRaw(requestParameters: SystemApiUiConfigDeleteCustomMessageRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -12500,13 +12929,13 @@ export class SystemApi extends runtime.BaseAPI {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.JSONApiResponse(response, (jsonValue) => UiConfigDeleteCustomMessageResponseFromJSON(jsonValue));
+        return new runtime.VoidApiResponse(response);
     }
 
     /**
      * Delete custom message
      */
-    async uiConfigDeleteCustomMessage(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UiConfigDeleteCustomMessageResponse> {
+    async uiConfigDeleteCustomMessage(id: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse> {
         const response = await this.uiConfigDeleteCustomMessageRaw({ id: id }, initOverrides);
         return await response.value();
     }
@@ -12514,7 +12943,7 @@ export class SystemApi extends runtime.BaseAPI {
     /**
      * Lists custom messages
      */
-    async uiConfigListCustomMessagesRaw(requestParameters: SystemApiUiConfigListCustomMessagesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>> {
+    async uiConfigListCustomMessagesRaw(requestParameters: SystemApiUiConfigListCustomMessagesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UiConfigListCustomMessagesResponse>> {
         if (requestParameters['list'] == null) {
             throw new runtime.RequiredError(
                 'list',
@@ -12524,8 +12953,20 @@ export class SystemApi extends runtime.BaseAPI {
 
         const queryParameters: any = {};
 
+        if (requestParameters['active'] != null) {
+            queryParameters['active'] = requestParameters['active'];
+        }
+
+        if (requestParameters['authenticated'] != null) {
+            queryParameters['authenticated'] = requestParameters['authenticated'];
+        }
+
         if (requestParameters['list'] != null) {
             queryParameters['list'] = requestParameters['list'];
+        }
+
+        if (requestParameters['type'] != null) {
+            queryParameters['type'] = requestParameters['type'];
         }
 
         const headerParameters: runtime.HTTPHeaders = {};
@@ -12537,14 +12978,14 @@ export class SystemApi extends runtime.BaseAPI {
             query: queryParameters,
         }, initOverrides);
 
-        return new runtime.VoidApiResponse(response);
+        return new runtime.JSONApiResponse(response, (jsonValue) => UiConfigListCustomMessagesResponseFromJSON(jsonValue));
     }
 
     /**
      * Lists custom messages
      */
-    async uiConfigListCustomMessages(list: UiConfigListCustomMessagesListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse> {
-        const response = await this.uiConfigListCustomMessagesRaw({ list: list }, initOverrides);
+    async uiConfigListCustomMessages(list: UiConfigListCustomMessagesListEnum, active?: boolean, authenticated?: boolean, type?: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UiConfigListCustomMessagesResponse> {
+        const response = await this.uiConfigListCustomMessagesRaw({ list: list, active: active, authenticated: authenticated, type: type }, initOverrides);
         return await response.value();
     }
 
@@ -12767,6 +13208,152 @@ export class SystemApi extends runtime.BaseAPI {
      */
     async uiHeadersReadConfiguration(header: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UiHeadersReadConfigurationResponse> {
         const response = await this.uiHeadersReadConfigurationRaw({ header: header }, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Configure Default Auth method for UI Login.
+     */
+    async uiLoginDefaultAuthConfigureRaw(requestParameters: SystemApiUiLoginDefaultAuthConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>> {
+        if (requestParameters['name'] == null) {
+            throw new runtime.RequiredError(
+                'name',
+                'Required parameter "name" was null or undefined when calling uiLoginDefaultAuthConfigure().'
+            );
+        }
+
+        if (requestParameters['uiLoginDefaultAuthConfigureRequest'] == null) {
+            throw new runtime.RequiredError(
+                'uiLoginDefaultAuthConfigureRequest',
+                'Required parameter "uiLoginDefaultAuthConfigureRequest" was null or undefined when calling uiLoginDefaultAuthConfigure().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/sys/config/ui/login/default-auth/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: UiLoginDefaultAuthConfigureRequestToJSON(requestParameters['uiLoginDefaultAuthConfigureRequest']),
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Configure Default Auth method for UI Login.
+     */
+    async uiLoginDefaultAuthConfigure(name: string, uiLoginDefaultAuthConfigureRequest: UiLoginDefaultAuthConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse> {
+        const response = await this.uiLoginDefaultAuthConfigureRaw({ name: name, uiLoginDefaultAuthConfigureRequest: uiLoginDefaultAuthConfigureRequest }, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Remove Default Auth config for UI Login.
+     */
+    async uiLoginDefaultAuthDeleteConfigurationRaw(requestParameters: SystemApiUiLoginDefaultAuthDeleteConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>> {
+        if (requestParameters['name'] == null) {
+            throw new runtime.RequiredError(
+                'name',
+                'Required parameter "name" was null or undefined when calling uiLoginDefaultAuthDeleteConfiguration().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/sys/config/ui/login/default-auth/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Remove Default Auth config for UI Login.
+     */
+    async uiLoginDefaultAuthDeleteConfiguration(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse> {
+        const response = await this.uiLoginDefaultAuthDeleteConfigurationRaw({ name: name }, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Return a list of configured default auth methods for the UI.
+     */
+    async uiLoginDefaultAuthListRaw(requestParameters: SystemApiUiLoginDefaultAuthListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UiLoginDefaultAuthListResponse>> {
+        if (requestParameters['list'] == null) {
+            throw new runtime.RequiredError(
+                'list',
+                'Required parameter "list" was null or undefined when calling uiLoginDefaultAuthList().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['list'] != null) {
+            queryParameters['list'] = requestParameters['list'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/sys/config/ui/login/default-auth/`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => UiLoginDefaultAuthListResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Return a list of configured default auth methods for the UI.
+     */
+    async uiLoginDefaultAuthList(list: UiLoginDefaultAuthListListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UiLoginDefaultAuthListResponse> {
+        const response = await this.uiLoginDefaultAuthListRaw({ list: list }, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Return the given Default Auth configuration
+     */
+    async uiLoginDefaultAuthReadConfigurationRaw(requestParameters: SystemApiUiLoginDefaultAuthReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>> {
+        if (requestParameters['name'] == null) {
+            throw new runtime.RequiredError(
+                'name',
+                'Required parameter "name" was null or undefined when calling uiLoginDefaultAuthReadConfiguration().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/sys/config/ui/login/default-auth/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Return the given Default Auth configuration
+     */
+    async uiLoginDefaultAuthReadConfiguration(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse> {
+        const response = await this.uiLoginDefaultAuthReadConfigurationRaw({ name: name }, initOverrides);
         return await response.value();
     }
 
@@ -13157,6 +13744,13 @@ export enum UiConfigListCustomMessagesListEnum {
   * @enum {string}
   */
 export enum UiHeadersListListEnum {
+    TRUE = 'true'
+}
+/**
+  * @export
+  * @enum {string}
+  */
+export enum UiLoginDefaultAuthListListEnum {
     TRUE = 'true'
 }
 /**

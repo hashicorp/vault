@@ -107,30 +107,31 @@ synchronize_repos() {
 wait_for_cloud_init() {
   if output=$(sudo cloud-init status --wait); then
     return 0
+  else
+    res=$?
+    case $res in
+      2)
+        {
+          echo "WARNING: cloud-init did not complete successfully but recovered."
+          echo "Exit code: $res"
+          echo "Output: $output"
+          echo "Here are the logs for the failure:"
+          cat /var/log/cloud-init-*
+        } 1>&2
+        return 0
+        ;;
+      *)
+        {
+          echo "cloud-init did not complete successfully."
+          echo "Exit code: $res"
+          echo "Output: $output"
+          echo "Here are the logs for the failure:"
+          cat /var/log/cloud-init-*
+        } 1>&2
+        return 1
+        ;;
+    esac
   fi
-  res=$?
-  case $res in
-    2)
-      {
-        echo "WARNING: cloud-init did not complete successfully but recovered."
-        echo "Exit code: $res"
-        echo "Output: $output"
-        echo "Here are the logs for the failure:"
-        cat /var/log/cloud-init-*
-      } 1>&2
-      return 0
-      ;;
-    *)
-      {
-        echo "cloud-init did not complete successfully."
-        echo "Exit code: $res"
-        echo "Output: $output"
-        echo "Here are the logs for the failure:"
-        cat /var/log/cloud-init-*
-      } 1>&2
-      return 1
-      ;;
-  esac
 }
 
 # Wait for cloud-init if it exists

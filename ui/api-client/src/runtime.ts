@@ -143,12 +143,6 @@ export class BaseAPI {
 
     private async createFetchParams(context: RequestOpts, initOverrides?: RequestInit | InitOverrideFunction) {
         let url = this.configuration.basePath + context.path;
-        if (context.query !== undefined && Object.keys(context.query).length !== 0) {
-            // only add the querystring to the URL if there are query parameters.
-            // this is done to avoid urls ending with a "?" character which buggy webservers
-            // do not handle correctly sometimes.
-            url += '?' + this.configuration.queryParamsStringify(context.query);
-        }
 
         const headers = Object.assign({}, this.configuration.headers, context.headers);
         Object.keys(headers).forEach(key => headers[key] === undefined ? delete headers[key] : {});
@@ -172,6 +166,13 @@ export class BaseAPI {
                 context,
             }))
         };
+
+        if (context.query !== undefined && Object.keys(context.query).length !== 0) {
+            // only add the querystring to the URL if there are query parameters.
+            // this is done to avoid urls ending with a "?" character which buggy webservers
+            // do not handle correctly sometimes.
+            url += '?' + this.configuration.queryParamsStringify(context.query);
+        }
 
         let body: any;
         if (isFormData(overriddenInit.body)
@@ -396,19 +397,19 @@ export interface ApiResponse<T> {
 }
 
 export interface VoidResponse {
-  auth: null;
-  data: null;
-  lease_duration: number;
-  lease_id: string;
-  mount_type: string;
+  auth: unknown;
+  data: unknown;
+  leaseDuration: number;
+  leaseId: string;
+  mountType: string;
   renewable: boolean;
-  request_id: string;
+  requestId: string;
   warnings: Array<string> | null;
-  wrap_info: {
+  wrapInfo: {
     accessor: string;
-    creation_path: string;
-    creation_time: string;
-    wrapped_accessor: string;
+    creationPath: string;
+    creationTime: string;
+    wrappedAccessor: string;
     token: string;
     ttl: number;
   } | null;
@@ -418,18 +419,50 @@ export interface ResponseTransformer<T> {
     (json: any): T;
 }
 
+export function camelizeResponseKeys(json: any) {
+    const camelizeKeys = (json: any) => {
+      const notAnObject = (obj: unknown) => Object.prototype.toString.call(obj) !== '[object Object]';
+
+      if (notAnObject(json)) {
+        return json;
+      }
+      if (Array.isArray(json)) {
+        return json.map(camelizeKeys);
+      }
+      return Object.keys(json).reduce((convertedJson: Record<string, unknown>, key) => {
+        const value = json[key];
+        const convertedValue = notAnObject(value) ? value : camelizeKeys(value);
+        const convertedKey = key.split('_').reduce((str, segment, index) => {
+            const capitalized = index ? segment.charAt(0).toUpperCase() + segment.slice(1) : segment;
+            return str.concat(capitalized);
+        }, '');
+        convertedJson[convertedKey] = convertedValue;
+        return convertedJson;
+      }, {});
+    };
+
+    return camelizeKeys(json);
+}
+
 export class JSONApiResponse<T> {
     constructor(public raw: Response, private transformer: ResponseTransformer<T> = (jsonValue: any) => jsonValue) {}
 
     async value(): Promise<T> {
-        return this.transformer(await this.raw.json());
+        const response = await this.raw.json();
+        const transformed = this.transformer(response.data);
+        return camelizeResponseKeys(transformed);
     }
 }
 
 export class VoidApiResponse {
     constructor(public raw: Response) {}
     async value(): Promise<VoidResponse> {
-        return await this.raw.json();
+        try {
+            const response = await this.raw.json();
+            return camelizeResponseKeys(response);
+        } catch (e) {
+            return undefined;
+        }
     }
 }
 

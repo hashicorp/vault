@@ -21,11 +21,11 @@ scenario "dev_single_cluster" {
     artifact = ["local", "deb", "rpm", "zip"]
     backend  = ["consul", "raft"]
     distro   = ["amzn", "leap", "rhel", "sles", "ubuntu"]
-    edition  = ["ce", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+    edition  = ["ce", "ent", "ent.fips1403", "ent.hsm", "ent.hsm.fips1403"]
     seal     = ["awskms", "pkcs11", "shamir"]
 
     exclude {
-      edition = ["ent.hsm", "ent.fips1402", "ent.hsm.fips1402"]
+      edition = ["ent.hsm", "ent.fips1403", "ent.hsm.fips1403"]
       arch    = ["arm64"]
     }
 
@@ -36,12 +36,17 @@ scenario "dev_single_cluster" {
 
     exclude {
       artifact = ["deb"]
-      distro   = ["rhel"]
+      distro   = ["rhel", "amzn"]
+    }
+
+    exclude {
+      artifact = ["deb", "rpm"]
+      distro   = ["sles", "leap"]
     }
 
     exclude {
       seal    = ["pkcs11"]
-      edition = ["ce", "ent", "ent.fips1402"]
+      edition = ["ce", "ent", "ent.fips1403"]
     }
   }
 
@@ -143,6 +148,7 @@ scenario "dev_single_cluster" {
       artifactory_username = local.use_artifactory ? var.artifactory_username : null
       artifactory_token    = local.use_artifactory ? var.artifactory_token : null
       distro               = matrix.distro
+      distro_version       = global.distro_version[matrix.distro]
     }
   }
 

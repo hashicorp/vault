@@ -157,19 +157,19 @@ export interface ApiResponse<T> {
     value(): Promise<T>;
 }
 export interface VoidResponse {
-    auth: null;
-    data: null;
-    lease_duration: number;
-    lease_id: string;
-    mount_type: string;
+    auth: unknown;
+    data: unknown;
+    leaseDuration: number;
+    leaseId: string;
+    mountType: string;
     renewable: boolean;
-    request_id: string;
+    requestId: string;
     warnings: Array<string> | null;
-    wrap_info: {
+    wrapInfo: {
         accessor: string;
-        creation_path: string;
-        creation_time: string;
-        wrapped_accessor: string;
+        creationPath: string;
+        creationTime: string;
+        wrappedAccessor: string;
         token: string;
         ttl: number;
     } | null;
@@ -177,6 +177,7 @@ export interface VoidResponse {
 export interface ResponseTransformer<T> {
     (json: any): T;
 }
+export declare function camelizeResponseKeys(json: any): any;
 export declare class JSONApiResponse<T> {
     raw: Response;
     private transformer;

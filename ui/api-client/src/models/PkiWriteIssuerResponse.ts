@@ -38,6 +38,12 @@ export interface PkiWriteIssuerResponse {
      */
     crlDistributionPoints?: Array<string>;
     /**
+     * Delta CRL Distribution Points
+     * @type {Array<string>}
+     * @memberof PkiWriteIssuerResponse
+     */
+    deltaCrlDistributionPoints?: Array<string>;
+    /**
      * Whether critical extension checks should be performed when issuing certificates. (Enterprise only)
      * @type {boolean}
      * @memberof PkiWriteIssuerResponse
@@ -161,6 +167,7 @@ export function PkiWriteIssuerResponseFromJSONTyped(json: any, ignoreDiscriminat
         'caChain': json['ca_chain'] == null ? undefined : json['ca_chain'],
         'certificate': json['certificate'] == null ? undefined : json['certificate'],
         'crlDistributionPoints': json['crl_distribution_points'] == null ? undefined : json['crl_distribution_points'],
+        'deltaCrlDistributionPoints': json['delta_crl_distribution_points'] == null ? undefined : json['delta_crl_distribution_points'],
         'disableCriticalExtensionChecks': json['disable_critical_extension_checks'] == null ? undefined : json['disable_critical_extension_checks'],
         'disableNameChecks': json['disable_name_checks'] == null ? undefined : json['disable_name_checks'],
         'disableNameConstraintChecks': json['disable_name_constraint_checks'] == null ? undefined : json['disable_name_constraint_checks'],
@@ -195,6 +202,7 @@ export function PkiWriteIssuerResponseToJSONTyped(value?: PkiWriteIssuerResponse
         'ca_chain': value['caChain'],
         'certificate': value['certificate'],
         'crl_distribution_points': value['crlDistributionPoints'],
+        'delta_crl_distribution_points': value['deltaCrlDistributionPoints'],
         'disable_critical_extension_checks': value['disableCriticalExtensionChecks'],
         'disable_name_checks': value['disableNameChecks'],
         'disable_name_constraint_checks': value['disableNameConstraintChecks'],

@@ -173,6 +173,26 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       assert.dom(DASHBOARD.cardName('client-count')).exists();
     });
 
+    test('it should show not show client count on enterprise in child namespaces called "admin" when running a managed mode', async function (assert) {
+      this.permissions.exactPaths = {
+        'admin/sys/internal/counters/activity': {
+          capabilities: ['read'],
+        },
+        'admin/sys/replication/status': {
+          capabilities: ['read'],
+        },
+      };
+
+      this.version.type = 'enterprise';
+      this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+      this.namespace.path = 'ns1/admin';
+      this.isRootNamespace = false;
+
+      await this.renderComponent();
+
+      assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
+    });
+
     test('it should hide client count on enterprise in any other namespace when running a managed mode', async function (assert) {
       this.permissions.exactPaths = {
         'sys/internal/counters/activity': {
