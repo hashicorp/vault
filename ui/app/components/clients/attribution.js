@@ -14,13 +14,11 @@ import Component from '@glimmer/component';
  *  <Clients::Attribution
  *    @noun="mount"
  *    @attribution={{array (hash label="my-kv" clients=100)}}
- *    @responseTimestamp="2018-04-03T14:15:30"
  *    @isSecretsSyncActivated={{true}}
  *  />
  *
  * @param {string} noun - noun which reflects the type of data and used in title. Should be "namespace" (default) or "mount"
  * @param {array} attribution - array of objects containing a label and breakdown of client counts for total clients
- * @param {string} responseTimestamp -  ISO timestamp created in serializer to timestamp the response, renders in bottom left corner below attribution chart
  * @param {boolean} isSecretsSyncActivated - boolean reflecting if secrets sync is activated. Determines the labels and data shown
  */
 

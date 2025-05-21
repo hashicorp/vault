@@ -20,4 +20,5 @@ export const PATH_MAP = {
   syncActivate: apiPath`sys/activation-flags/secrets-sync/activate`,
   syncDestination: apiPath`sys/sync/destinations/${'type'}/${'name'}`,
   syncSetAssociation: apiPath`sys/sync/destinations/${'type'}/${'name'}/associations/set`,
+  syncRemoveAssociation: apiPath`sys/sync/destinations/${'type'}/${'name'}/associations/remove`,
 };

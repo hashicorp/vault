@@ -283,16 +283,50 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
   test('it shows the regular namespace toolbar when not managed', async function (assert) {
     // This test is the opposite of the test in managed-namespace-test
     await logout();
-    assert.strictEqual(currentURL(), '/vault/auth?with=token', 'Does not redirect');
-    assert.dom('[data-test-namespace-toolbar]').exists('Normal namespace toolbar exists');
+    assert.strictEqual(currentURL(), '/vault/auth', 'Does not redirect');
     assert.dom(AUTH_FORM.managedNsRoot).doesNotExist('Managed namespace indicator does not exist');
-    assert.dom('input#namespace').hasAttribute('placeholder', '/ (Root)');
-    await fillIn('input#namespace', '/foo/bar ');
+    assert.dom('input[name="namespace"]').hasAttribute('placeholder', '/ (root)');
+    await fillIn('input[name="namespace"]', '/foo/bar ');
     const encodedNamespace = encodeURIComponent('foo/bar');
     assert.strictEqual(
       currentURL(),
-      `/vault/auth?namespace=${encodedNamespace}&with=token`,
+      `/vault/auth?namespace=${encodedNamespace}`,
       'correctly sanitizes namespace'
     );
+  });
+
+  test('it should allow the user to delete a namespace', async function (assert) {
+    // Test Setup
+    const namespaces = ['test-delete-me'];
+    await createNamespaces(namespaces);
+
+    await visit('/vault/access/namespaces');
+
+    const searchInput = GENERAL.filterInputExplicit;
+    const searchButton = GENERAL.filterInputExplicitSearch;
+
+    await fillIn(searchInput, 'test-delete-me');
+    await click(searchButton);
+
+    assert.dom(GENERAL.menuTrigger).exists();
+    await click(GENERAL.menuTrigger);
+
+    // Verify that the user can delete the namespace
+    const deleteNamespaceButton = '.hds-dropdown-list-item:nth-of-type(1)';
+    assert.dom(deleteNamespaceButton).hasText('Delete', 'Allow users to delete the namespace');
+    await click(`${deleteNamespaceButton} button`);
+
+    assert.dom(GENERAL.confirmButton).hasText('Confirm', 'Allow users to delete the namespace');
+    await click(GENERAL.confirmButton);
+
+    assert.strictEqual(
+      currentURL(),
+      '/vault/access/namespaces?page=1&pageFilter=test-delete-me',
+      'Should remain on the manage namespaces page after deletion'
+    );
+
+    assert
+      .dom('.list-item-row')
+      .exists({ count: 0 }, 'Namespace should be deleted and not displayed in the list');
   });
 });

@@ -16,6 +16,12 @@
  */
 export interface JwtLoginRequest {
     /**
+     * An optional token used to fetch group memberships specified by the distributed claim source in the jwt. This is supported only on Azure/Entra ID
+     * @type {string}
+     * @memberof JwtLoginRequest
+     */
+    distributedClaimAccessToken?: string;
+    /**
      * The signed JWT to validate.
      * @type {string}
      * @memberof JwtLoginRequest

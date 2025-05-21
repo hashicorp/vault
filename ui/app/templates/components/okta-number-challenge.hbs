@@ -2,9 +2,9 @@
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
 }}
-{{! todo move to auth/ folder? }}
-<div class="auth-form" data-test-okta-number-challenge>
-  <div class="box is-marginless is-shadowless">
+
+<Hds::Card::Container @level="high" @hasBorder={{true}} class="overflow-auto" data-test-okta-number-challenge>
+  <div class="has-padding-l">
     <p data-test-okta-number-challenge-description>
       To finish signing in, you will need to complete an additional MFA step.
     </p>
@@ -33,4 +33,4 @@
     {{on "click" @onReturnToLogin}}
     data-test-back-button
   />
-</div>
+</Hds::Card::Container>

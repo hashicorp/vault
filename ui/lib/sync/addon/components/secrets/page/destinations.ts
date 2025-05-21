@@ -57,7 +57,8 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
 
   // typeFilter arg comes in as destination type but we need to pass the destination display name into the SearchSelect
   get typeFilterName() {
-    return findDestination(this.args.typeFilter)?.name;
+    const { typeFilter } = this.args;
+    return typeFilter ? findDestination(typeFilter).name : undefined;
   }
 
   get destinationTypes() {

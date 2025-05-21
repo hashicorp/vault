@@ -28,7 +28,7 @@ module('Unit | Model | role-jwt', function (hooks) {
   });
 
   test('it provides a providerName for listed known providers', function (assert) {
-    assert.expect(12);
+    assert.expect(14);
     Object.keys(DOMAIN_STRINGS).forEach((domain) => {
       const model = this.owner.lookup('service:store').createRecord('role-jwt', {
         authUrl: `http://provider-${domain}`,
