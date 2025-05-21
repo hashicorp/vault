@@ -127,7 +127,7 @@ export default class AuthRoute extends ClusterRouteBase {
     (which may be the same, since the default mount path *is* the type). 
     For backward compatibility, we handle both scenarios.
     → If `authMount` matches a visible auth mount the method will assume that mount path to login and render as the default in the login form.
-    → If `authMount` matches a supported auth type (and the mount does not have `listing_visibility="unauth"`), that is preselected in the login form.
+    → If `authMount` matches a supported auth type (and the mount does not have `listing_visibility="unauth"`), that type is preselected in the login form.
   */
   getMountOrTypeData(authMount, visibleAuthMounts) {
     const sanitizedParam = sanitizePath(authMount); // strip leading/trailing slashes

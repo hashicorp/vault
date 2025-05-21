@@ -27,10 +27,10 @@ import type { HTMLElementEvent } from 'vault/forms';
  * dynamically renders the corresponding form.
  *
  *
- * @param {object | null} alternateView - if an alternate view is supported, form view ("tabs" or "dropdown") and tab data for that view
+ * @param {object | null} alternateView - if an alternate view exists, this is the `FormView` (see interface below) data to render that view.
  * @param {string} canceledMfaAuth - saved auth type from a cancelled mfa verification
  * @param {object} cluster - The route model which is the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
- * @param {object} defaultView - form view (default is "dropdown") and tab data if view is not the standard dropdown
+ * @param {object} defaultView - The `FormView` (see the interface below) data to render the initial view.
  * @param {function} handleNamespaceUpdate - callback task that passes user input to the controller and updates the namespace query param in the url
  * @param {object} initialFormState - sets selectedAuthMethod and showAlternateView based on the login form configuration computed in parent component
  * @param {string} namespaceQueryParam - namespace query param from the url
@@ -41,9 +41,9 @@ import type { HTMLElementEvent } from 'vault/forms';
  * */
 
 interface Args {
-  alternateView: FormState | null;
+  alternateView: FormView | null;
   cluster: ClusterModel;
-  defaultView: FormState;
+  defaultView: FormView;
   handleNamespaceUpdate: CallableFunction;
   initialFormState: { initialAuthType: string; showAlternate: boolean };
   namespaceQueryParam: string;
@@ -51,9 +51,9 @@ interface Args {
   onSuccess: CallableFunction;
   visibleMountTypes: string[];
 }
-interface FormState {
-  view: string;
-  tabData: UnauthMountsByType | null;
+interface FormView {
+  view: string; // "dropdown" or "tabs"
+  tabData: UnauthMountsByType | null; // tabs to render if view = "tabs"
 }
 
 export default class AuthFormTemplate extends Component<Args> {
