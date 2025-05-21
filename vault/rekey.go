@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/go-uuid"
@@ -910,7 +911,7 @@ func (c *Core) RekeyVerify(ctx context.Context, key []byte, nonce string, recove
 }
 
 // RekeyCancel is used to cancel an in-progress rekey
-func (c *Core) RekeyCancel(recovery bool) logical.HTTPCodedError {
+func (c *Core) RekeyCancel(recovery bool, nonce string) logical.HTTPCodedError {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.Sealed() {
@@ -925,8 +926,14 @@ func (c *Core) RekeyCancel(recovery bool) logical.HTTPCodedError {
 
 	// Clear any progress or config
 	if recovery {
+		if c.recoveryRekeyConfig.Nonce != nonce && rekeyCancelDeadlineisMet(c.recoveryRekeyConfig.Created) {
+			return logical.CodedError(http.StatusBadRequest, "invalid request")
+		}
 		c.recoveryRekeyConfig = nil
 	} else {
+		if c.barrierRekeyConfig.Nonce != nonce && rekeyCancelDeadlineisMet() {
+			return logical.CodedError(http.StatusBadRequest, "invalid request")
+		}
 		c.barrierRekeyConfig = nil
 	}
 	return nil
@@ -1030,4 +1037,8 @@ func (c *Core) RekeyDeleteBackup(ctx context.Context, recovery bool) logical.HTT
 		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("error deleting backup keys: %w", err).Error())
 	}
 	return nil
+}
+
+func rekeyCancelDeadlineisMet(created time.Time) bool {
+	return time.Now().UTC().Sub(created) >= time.Duration(10)*time.Minute
 }
