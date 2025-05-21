@@ -7,23 +7,49 @@ scenario "benchmark" {
     A three node Vault cluster is created, along with two additional nodes: one to run prometheus and grafana,
     and one to run k6, the load generation tool.
 
+    If you've never used Enos before, it's worth noting that the matrix parameters act as filters. You can view a full
+    list of all possible values in enos-globals.hcl. If a matrix parameter listed below is not specified when you run
+    the Enos scenario, then all possible parameters are used. For example, if you don't specify `backend` then this
+    scenario will run for both raft and consul, because those are the two possible values listed for `backends`.
+    Specifying backend:raft will only run the scenario for raft. Specifying backend:consul will create a three node
+    Consul cluster and connect it to Vault.
+
+    If you want to run your benchmarks against a released version of Vault, you can download the Vault release tarball
+    from releases.hashicorp.com, place it inside the 'support' subdirectory (sometimes you have to create this, as
+    it's git-ignored), and specify artifact_source:crt. If you wish to run your benchmarks against your local Vault
+    branch, specify artifact_source:local.
+
+    Often times, when running benchmarks, you're wanting to run one very specific scenario, instead of running
+    many possible scenarios at once. One example of this from the CLI would be:
+
+    enos scenario launch benchmark config_mode:file artifact_source:crt artifact_type:bundle seal:awskms ip_version:4 consul_version:1.20.6 edition:ent consul_edition:ent backend:consul
+
+    This would run exactly 1 scenario, since I've specified every possible matrix parameter. This is what I used when
+    running Consul/IS benchmarks.
+
+    Also note that as of this writing, this scenario does not do automatic benchmarking, results gathering, etc. It's
+    manual. That means this scenario is (as of right now) meant to be run as `enos scenario launch` (plus the scenario
+    name and matrix parameters, as outlined above) _not_ `enos scenario run`. This also means that when you're done
+    running your benchmarks, you need to manually destroy the infrastructure with `enos scenario destroy`.
+
     The benchmark module that implements much of the actual benchmark logic has subdirectories for grafana dashboards
     that will get automatically uploaded and installed, as well as k6 templates for different benchmarking scenarios.
 
-    The way this is currently used is to launch the scenario, via `enos launch`, specifying whatever matrix parameters
-    are important to you. Once everything has finished, grab the public IP of the metrics node and open it in a browser
-    on port 3000. Log into grafana with admin/admin and choose whatever dashboard you wish to see. All of the ones in
-    the grafana-dashboards subdirectory will be available. Then SSH into the public IP of the k6 node and run scenarios
-    via the k6-run.sh shell script, e.g. `./k6-run.sh kvv2`. The argument you pass it should match the basename, minus
-    the k6- of the corresponding file in the k6-templates directory, e.g. for the above it would match k6-kvv2-js.tpl.
+    Once the scenario has been launched, and everything has finished, grab the public IP of the metrics node and open
+    it in a browser on port 3000. Log into grafana with admin/admin and choose whatever dashboard you wish to see.
+    All of the ones in the grafana-dashboards subdirectory will be available. Then SSH into the public IP of the k6
+    node and run scenarios via the k6-run.sh shell script, e.g. `./k6-run.sh kvv2`. The argument you pass it should
+    match the basename, minus the k6- of the corresponding file in the k6-templates directory, e.g. for the above it
+    would match k6-kvv2-js.tpl.
 
     When you're done getting the results from your grafana dashboard, destroy the infrastructure with `enos destroy`.
   EOF
 
-  // The arch and distro is hardcoded here for expediency. We need to install prometheus, grafana, and k6
-  // and doing that for 1 arch and 1 distro was sufficient for our needs and a lot easier than doing it
-  // for all possible combinations. If you need additional arch/distro combinations, feel free to check
-  // out the installation shell scripts in the benchmark module and update them as necessary.
+  // The arch and distro is hardcoded here for expediency. We need to install prometheus, grafana, k6, and
+  // the prometheus node exporter. Some of those packages were not available via normal package managers and
+  // had to be installed from source. Doing that for 1 arch and 1 distro was sufficient for our needs and a
+  // lot easier than doing it for all possible combinations. If you need additional arch/distro combinations,
+  // feel free to check out the installation shell scripts in the benchmark module and update them as necessary.
   matrix {
     arch            = ["amd64"]
     artifact_source = global.artifact_sources
