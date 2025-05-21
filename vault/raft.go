@@ -1529,16 +1529,13 @@ func (c *Core) isRaftUnseal() bool {
 // RaftDataDirPath returns the string path to the raft data directory and true,
 // or an empty string and false if it fails to find it or if the value is an empty string.
 func (c *Core) RaftDataDirPath() (string, bool) {
-	config := c.GetCoreConfigInternal()
-	if config == nil || config.Storage == nil || config.Storage.Config == nil {
+	raftStorage, ok := c.underlyingPhysical.(*raft.RaftBackend)
+	if !ok {
 		return "", false
 	}
+	config := raftStorage.GetStorageConfig()
 
-	if config.Storage.Type != "raft" {
-		return "", false
-	}
-
-	path, ok := config.Storage.Config["path"]
+	path, ok := config["path"]
 	if !ok || path == "" {
 		return "", false
 	}

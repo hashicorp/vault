@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pluginconsts"
@@ -283,70 +285,88 @@ func (c *Core) emitMetricsActiveNode(stopCh chan struct{}) {
 	// because there's more than one TokenManager created during startup,
 	// but we only want one set of gauges.
 	metricsInit := []struct {
-		MetricName    []string
-		MetadataLabel []metrics.Label
-		CollectorFunc metricsutil.GaugeCollector
-		DisableEnvVar string
+		MetricName       []string
+		MetadataLabel    []metrics.Label
+		CollectorFunc    metricsutil.GaugeCollector
+		DisableEnvVar    string
+		IsEnterpriseOnly bool
 	}{
 		{
 			[]string{"token", "count"},
 			[]metrics.Label{{"gauge", "token_by_namespace"}},
 			c.tokenGaugeCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"token", "count", "by_policy"},
 			[]metrics.Label{{"gauge", "token_by_policy"}},
 			c.tokenGaugePolicyCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"expire", "leases", "by_expiration"},
 			[]metrics.Label{{"gauge", "leases_by_expiration"}},
 			c.leaseExpiryGaugeCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"token", "count", "by_auth"},
 			[]metrics.Label{{"gauge", "token_by_auth"}},
 			c.tokenGaugeMethodCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"token", "count", "by_ttl"},
 			[]metrics.Label{{"gauge", "token_by_ttl"}},
 			c.tokenGaugeTtlCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"secret", "kv", "count"},
 			[]metrics.Label{{"gauge", "kv_secrets_by_mountpoint"}},
 			c.kvSecretGaugeCollector,
 			"VAULT_DISABLE_KV_GAUGE",
+			false,
 		},
 		{
 			[]string{"identity", "entity", "count"},
 			[]metrics.Label{{"gauge", "identity_by_namespace"}},
 			c.entityGaugeCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"identity", "entity", "alias", "count"},
 			[]metrics.Label{{"gauge", "identity_by_mountpoint"}},
 			c.entityGaugeCollectorByMount,
 			"",
+			false,
 		},
 		{
 			[]string{"identity", "entity", "active", "partial_month"},
 			[]metrics.Label{{"gauge", "identity_active_month"}},
 			c.activeEntityGaugeCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"policy", "configured", "count"},
 			[]metrics.Label{{"gauge", "number_policies_by_type"}},
 			c.configuredPoliciesGaugeCollector,
 			"",
+			false,
+		},
+		{
+			[]string{"client", "billing_period", "activity"},
+			[]metrics.Label{{"gauge", "clients_current_billing_period"}},
+			c.clientsGaugeCollectorCurrentBillingPeriod,
+			"",
+			true,
 		},
 	}
 
@@ -362,6 +382,11 @@ func (c *Core) emitMetricsActiveNode(stopCh chan struct{}) {
 						"metric", init.MetricName)
 					continue
 				}
+			}
+
+			// Billing start date is always 0 on CE
+			if init.IsEnterpriseOnly && c.BillingStart().IsZero() {
+				continue
 			}
 
 			proc, err := c.MetricSink().NewGaugeCollectionProcess(
@@ -975,4 +1000,121 @@ func (c *Core) configuredPoliciesGaugeCollector(ctx context.Context) ([]metricsu
 	}
 
 	return values, nil
+}
+
+func (c *Core) GetPolicyMetrics(ctx context.Context) map[PolicyType]int {
+	policyStore := c.policyStore
+
+	if policyStore == nil {
+		c.logger.Error("could not find policy store")
+		return map[PolicyType]int{}
+	}
+
+	ctx = namespace.RootContext(ctx)
+	namespaces := c.collectNamespaces()
+
+	policyTypes := []PolicyType{
+		PolicyTypeACL,
+		PolicyTypeRGP,
+		PolicyTypeEGP,
+	}
+
+	ret := make(map[PolicyType]int)
+	for _, pt := range policyTypes {
+		policies, err := policyStore.policiesByNamespaces(ctx, pt, namespaces)
+		if err != nil {
+			c.logger.Error("could not retrieve policies for namespaces", "policy_type", pt.String(), "error", err)
+			return map[PolicyType]int{}
+		}
+
+		ret[pt] = len(policies)
+	}
+	return ret
+}
+
+func (c *Core) GetAutopilotUpgradeEnabled() float64 {
+	raftBackend := c.getRaftBackend()
+	if raftBackend == nil {
+		c.logger.Warn("raft storage is not in use")
+		return 0.0
+	}
+
+	config := raftBackend.AutopilotConfig()
+	if config == nil {
+		c.logger.Error("failed to get autopilot config")
+		return 0.0
+	}
+
+	// if false, autopilot upgrade is enabled
+	if !config.DisableUpgradeMigration {
+		return 1
+	}
+	return 0.0
+}
+
+func (c *Core) GetAuditDeviceCountByType() map[string]int {
+	auditCounts := make(map[string]int)
+	auditCounts["file"] = 0
+	auditCounts["socketUdp"] = 0
+	auditCounts["socketTcp"] = 0
+	auditCounts["socketUnix"] = 0
+	auditCounts["syslog"] = 0
+
+	c.auditLock.RLock()
+	defer c.auditLock.RUnlock()
+
+	// return if audit is not set up
+	if c.audit == nil {
+		return auditCounts
+	}
+
+	for _, entry := range c.audit.Entries {
+		switch entry.Type {
+		case audit.TypeFile:
+			auditCounts["file"]++
+		case audit.TypeSocket:
+			if entry.Options != nil {
+				switch strings.ToLower(entry.Options["socket_type"]) {
+				case "udp":
+					auditCounts["socketUdp"]++
+				case "tcp":
+					auditCounts["socketTcp"]++
+				case "unix":
+					auditCounts["socketUnix"]++
+				}
+			}
+		case audit.TypeSyslog:
+			auditCounts["syslog"]++
+		}
+	}
+
+	return auditCounts
+}
+
+func (c *Core) GetAuditExclusionStanzaCount() int {
+	exclusionsCount := 0
+
+	c.auditLock.RLock()
+	defer c.auditLock.RUnlock()
+
+	// return if audit is not set up
+	if c.audit == nil {
+		return exclusionsCount
+	}
+
+	for _, entry := range c.audit.Entries {
+		excludeRaw, ok := entry.Options["exclude"]
+		if !ok || excludeRaw == "" {
+			continue
+		}
+
+		var exclusionObjects []map[string]interface{}
+		if err := json.Unmarshal([]byte(excludeRaw), &exclusionObjects); err != nil {
+			c.logger.Error("failed to parse audit exclusion config for device", "path", entry.Path, "error", err)
+		}
+
+		exclusionsCount += len(exclusionObjects)
+	}
+
+	return exclusionsCount
 }

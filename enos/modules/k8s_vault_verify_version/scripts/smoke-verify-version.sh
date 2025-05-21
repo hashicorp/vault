@@ -27,8 +27,8 @@ case "${VAULT_EDITION}" in
   ce) version_expected="${vault_expected_version}${expected_build_date}" ;;
   ent) version_expected="${vault_expected_version}${expected_build_date}" ;;
   ent.hsm) version_expected="${vault_expected_version}${expected_build_date} (cgo)" ;;
-  ent.fips1402) version_expected="${vault_expected_version}${expected_build_date} (cgo)" ;;
-  ent.hsm.fips1402) version_expected="${vault_expected_version}${expected_build_date} (cgo)" ;;
+  ent.fips1403) version_expected="${vault_expected_version}${expected_build_date} (cgo)" ;;
+  ent.hsm.fips1403) version_expected="${vault_expected_version}${expected_build_date} (cgo)" ;;
   *) fail "(${VAULT_EDITION}) does not match any known Vault editions" ;;
 esac
 

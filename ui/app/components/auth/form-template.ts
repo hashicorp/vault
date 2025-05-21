@@ -7,7 +7,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { ALL_LOGIN_METHODS, supportedTypes } from 'vault/utils/supported-login-methods';
+import { supportedTypes } from 'vault/utils/supported-login-methods';
 import { getRelativePath } from 'core/utils/sanitize-path';
 
 import type AuthService from 'vault/vault/services/auth';
@@ -15,7 +15,7 @@ import type FlagsService from 'vault/services/flags';
 import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
 import type ClusterModel from 'vault/models/cluster';
-import type { AuthTabData, AuthTabMountData } from 'vault/vault/auth/form';
+import type { UnauthMountsByType, AuthTabMountData } from 'vault/vault/auth/form';
 import type { HTMLElementEvent } from 'vault/forms';
 
 /**
@@ -29,26 +29,26 @@ import type { HTMLElementEvent } from 'vault/forms';
  * dynamically renders the corresponding form.
  *
  *
- * @param {object} authTabData - auth methods to render as tabs, contains mount data for any mounts with listing_visibility="unauth"
- * @param {object} cluster - The route model which is the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
- * @param {function} handleNamespaceUpdate - callback task that passes user input to the controller and updates the namespace query param in the url
- * @param {boolean} hasVisibleAuthMounts - whether or not any mounts have been tuned with listing_visibility="unauth"
- * @param {string} namespaceQueryParam - namespace query param from the url
- * @param {function} onSuccess - callback after the initial authentication request, if an mfa_requirement exists the parent renders the mfa form otherwise it fires the authSuccess action in the auth controller and handles transitioning to the app
  * @param {string} canceledMfaAuth - saved auth type from a cancelled mfa verification
+ * @param {object} cluster - The route model which is the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
  * @param {object} directLinkData - mount data built from the "with" query param. If param is a mount path and maps to a visible mount, the login form defaults to this mount. Otherwise the form preselects the passed auth type.
+ * @param {function} handleNamespaceUpdate - callback task that passes user input to the controller and updates the namespace query param in the url
+ * @param {string} namespaceQueryParam - namespace query param from the url
+ * @param {string} oidcProviderQueryParam - oidc provider query param, set in url as "?o=someprovider". if present, disables the namespace input
+ * @param {function} onSuccess - callback after the initial authentication request, if an mfa_requirement exists the parent renders the mfa form otherwise it fires the authSuccess action in the auth controller and handles transitioning to the app
+ * @param {object} visibleMountsByType - auth methods to render as tabs, contains mount data for any mounts with listing_visibility="unauth"
  *
  * */
 
 interface Args {
-  authTabData: AuthTabData;
-  cluster: ClusterModel;
-  handleNamespaceUpdate: CallableFunction;
-  hasVisibleAuthMounts: boolean;
-  namespaceQueryParam: string;
-  onSuccess: CallableFunction;
   canceledMfaAuth: string;
-  directLinkData: (AuthTabMountData & { hasMountData: boolean }) | null;
+  cluster: ClusterModel;
+  directLinkData: (AuthTabMountData & { isVisibleMount: boolean }) | null;
+  handleNamespaceUpdate: CallableFunction;
+  namespaceQueryParam: string;
+  oidcProviderQueryParam: string;
+  onSuccess: CallableFunction;
+  visibleMountsByType: UnauthMountsByType;
 }
 
 export default class AuthFormTemplate extends Component<Args> {
@@ -64,13 +64,18 @@ export default class AuthFormTemplate extends Component<Args> {
   @tracked selectedAuthMethod = '';
   @tracked errorMessage = '';
 
-  displayName = (type: string) => {
-    const displayName = ALL_LOGIN_METHODS?.find((t) => t.type === type)?.displayName;
-    return displayName || type;
-  };
+  get tabData() {
+    const { directLinkData } = this.args;
+    // URL contains a "with" query param that references a mount with listing_visibility="unauth"
+    // Treat it as a "preferred" mount and hide all other tabs
+    if (directLinkData?.isVisibleMount && directLinkData?.type) {
+      return { [directLinkData.type]: [this.args.directLinkData] };
+    }
+    return this.args.visibleMountsByType;
+  }
 
   get authTabTypes() {
-    const visibleMounts = this.args.authTabData;
+    const visibleMounts = this.args.visibleMountsByType;
     return visibleMounts ? Object.keys(visibleMounts) : [];
   }
 
@@ -111,7 +116,7 @@ export default class AuthFormTemplate extends Component<Args> {
   // This getter determines whether to render an alternative view (e.g., tabs or a preferred mount).
   // If `true`, the "Sign in with other methods →" link is shown.
   get showCustomAuthOptions() {
-    const hasLoginCustomization = this.args?.directLinkData?.hasMountData || this.args.hasVisibleAuthMounts;
+    const hasLoginCustomization = this.args?.directLinkData?.isVisibleMount || this.args.visibleMountsByType;
     // Show if customization exists and the user has NOT clicked "Sign in with other methods →"
     return hasLoginCustomization && !this.showOtherMethods;
   }
@@ -123,12 +128,12 @@ export default class AuthFormTemplate extends Component<Args> {
       this.setAuthType(this.preselectedType);
     } else {
       // if nothing has been preselected, select first tab or set to 'token'
-      const authType = this.args.hasVisibleAuthMounts ? (this.authTabTypes[0] as string) : 'token';
+      const authType = this.args.visibleMountsByType ? (this.authTabTypes[0] as string) : 'token';
       this.setAuthType(authType);
     }
 
     // DETERMINES INITIAL RENDER: custom selection (direct link or tabs) vs dropdown
-    if (this.args.hasVisibleAuthMounts) {
+    if (this.args.visibleMountsByType) {
       // render tabs if selectedAuthMethod is one, otherwise render dropdown (i.e. showOtherMethods = false)
       this.showOtherMethods = this.authTabTypes.includes(this.selectedAuthMethod) ? false : true;
     } else {

@@ -1,0 +1,7 @@
+```release-note:improvement
+ui: Enable search for a namespace on the namespace list page.
+```
+
+```release-note:bug
+ui: Fix refresh namespace list after deleting a namespace.
+```

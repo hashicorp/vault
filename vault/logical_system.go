@@ -5169,21 +5169,6 @@ func (b *SystemBackend) pathInternalCountersRequests(ctx context.Context, req *l
 	return resp, logical.ErrPathFunctionalityRemoved
 }
 
-func (b *SystemBackend) pathInternalCountersTokens(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	activeTokens, err := b.Core.countActiveTokens(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"counters": activeTokens,
-		},
-	}
-
-	return resp, nil
-}
-
 func (b *SystemBackend) pathInternalCountersEntities(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	activeEntities, err := b.Core.countActiveEntities(ctx)
 	if err != nil {
@@ -5443,7 +5428,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 				// Add tags to all of the operations if necessary
 				if tag != "" {
-					for _, op := range []*framework.OASOperation{obj.Get, obj.Post, obj.Delete} {
+					for _, op := range []*framework.OASOperation{obj.Get, obj.Post, obj.Patch, obj.Delete} {
 						// TODO: a special override for identity is used used here because the backend
 						// is currently categorized as "secret", which will likely change. Also of interest
 						// is removing all tag handling here and providing the mount information to OpenAPI.
@@ -7116,10 +7101,6 @@ This path responds to the following HTTP methods.
 	"internal-counters-requests": {
 		"Currently unsupported. Previously, count of requests seen by this Vault cluster over time.",
 		"Currently unsupported. Previously, count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
-	},
-	"internal-counters-tokens": {
-		"Count of active tokens in this Vault cluster.",
-		"Count of active tokens in this Vault cluster.",
 	},
 	"internal-counters-entities": {
 		"Count of active entities in this Vault cluster.",

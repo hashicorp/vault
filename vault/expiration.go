@@ -427,7 +427,7 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 			case <-quit:
 				return
 			case <-t.C:
-				c.expiration.attemptIrrevocableLeasesRevoke()
+				c.expiration.attemptIrrevocableLeasesRevoke(c.removeIrrevocableLeaseAfter)
 				t.Reset(24 * time.Hour)
 			}
 		}
@@ -963,11 +963,15 @@ func (m *ExpirationManager) lazyRevokeInternal(ctx context.Context, leaseID stri
 }
 
 // should be run on a schedule. something like once a day, maybe once a week
-func (m *ExpirationManager) attemptIrrevocableLeasesRevoke() {
+func (m *ExpirationManager) attemptIrrevocableLeasesRevoke(removeIrrevocableLeaseAfter time.Duration) {
+	// determine if irrevocable leases should be evaluated for removal after revocation attempt
+	removeIrrevocableLeases := m.removeIrrevocableLeasesEnabled(removeIrrevocableLeaseAfter)
+
 	m.irrevocable.Range(func(k, v interface{}) bool {
 		leaseID := k.(string)
 		le := v.(*leaseEntry)
 
+		// remove irrevocable leases after configured duration
 		if le.ExpireTime.Add(time.Hour).Before(time.Now()) {
 			// if we get an error (or no namespace) note it, but continue attempting
 			// to revoke other leases
@@ -983,6 +987,12 @@ func (m *ExpirationManager) attemptIrrevocableLeasesRevoke() {
 
 			ctxWithNS := namespace.ContextWithNamespace(m.core.activeContext, leaseNS)
 			ctxWithNSAndTimeout, _ := context.WithTimeout(ctxWithNS, time.Minute)
+
+			// attempt to remove irrevocable lease if feature enabled
+			if removeIrrevocableLeases && le.ExpireTime.Add(removeIrrevocableLeaseAfter).Before(time.Now()) {
+				defer m.deleteIrrevocableLease(ctxWithNSAndTimeout, le)
+			}
+
 			if err := m.revokeCommon(ctxWithNSAndTimeout, leaseID, false, false); err != nil {
 				// on failure, force some delay to mitigate resource spike while
 				// this is running. if revocations succeed, we are okay with
@@ -1034,13 +1044,46 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 		}
 	}
 
+	err = m.deleteLeaseCommon(ctx, le)
+	if err != nil {
+		return err
+	}
+
+	if !skipToken {
+		err = m.core.observations.RecordObservationToLedger(ctx, observations.ObservationTypeLeaseRevocation, le.namespace, map[string]interface{}{
+			"lease_id":    leaseID,
+			"path":        le.Path,
+			"issue_time":  le.IssueTime,
+			"expire_time": le.ExpireTime,
+		})
+		if err != nil {
+			if !force {
+				return err
+			}
+		}
+	}
+
+	if m.logger.IsInfo() && !skipToken && m.logLeaseExpirations {
+		m.logger.Info("revoked lease", "lease_id", leaseID)
+	}
+	if m.logger.IsWarn() && !skipToken && le.isIncorrectlyNonExpiring() {
+		var accessor string
+		if le.Auth != nil {
+			accessor = le.Auth.Accessor
+		}
+		m.logger.Warn("finished revoking incorrectly non-expiring lease", "leaseID", le.LeaseID, "accessor", accessor)
+	}
+	return nil
+}
+
+func (m *ExpirationManager) deleteLeaseCommon(ctx context.Context, le *leaseEntry) error {
 	// Delete the entry
 	if err := m.deleteEntry(ctx, le); err != nil {
 		return err
 	}
 
 	// Lease has been removed, also remove the in-memory lock.
-	m.deleteLockForLease(leaseID)
+	m.deleteLockForLease(le.LeaseID)
 
 	// Delete the secondary index, but only if it's a leased secret (not auth)
 	if le.Secret != nil {
@@ -1071,39 +1114,14 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 
 	// Clear the expiration handler
 	m.pendingLock.Lock()
-	m.removeFromPending(ctx, leaseID, true)
-	m.nonexpiring.Delete(leaseID)
+	m.removeFromPending(ctx, le.LeaseID, true)
+	m.nonexpiring.Delete(le.LeaseID)
 
 	if _, ok := m.irrevocable.Load(le.LeaseID); ok {
-		m.irrevocable.Delete(leaseID)
+		m.irrevocable.Delete(le.LeaseID)
 		m.irrevocableLeaseCount--
 	}
 	m.pendingLock.Unlock()
-
-	if !skipToken {
-		err = m.core.observations.RecordObservationToLedger(ctx, observations.ObservationTypeLeaseRevocation, le.namespace, map[string]interface{}{
-			"lease_id":    leaseID,
-			"path":        le.Path,
-			"issue_time":  le.IssueTime,
-			"expire_time": le.ExpireTime,
-		})
-		if err != nil {
-			if !force {
-				return err
-			}
-		}
-	}
-
-	if m.logger.IsInfo() && !skipToken && m.logLeaseExpirations {
-		m.logger.Info("revoked lease", "lease_id", leaseID)
-	}
-	if m.logger.IsWarn() && !skipToken && le.isIncorrectlyNonExpiring() {
-		var accessor string
-		if le.Auth != nil {
-			accessor = le.Auth.Accessor
-		}
-		m.logger.Warn("finished revoking incorrectly non-expiring lease", "leaseID", le.LeaseID, "accessor", accessor)
-	}
 	return nil
 }
 

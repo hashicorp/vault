@@ -19,7 +19,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
-	iradix "github.com/hashicorp/go-immutable-radix"
 	"github.com/hashicorp/raft"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
 	"github.com/rboyer/safeio"
@@ -504,8 +503,8 @@ func snapshotName(term, index uint64) string {
 // FSM. The caller is responsible for closing the reader.
 // If pathsToFilter is not nil, the function will filter out any keys that are
 // found in the pathsToFilter tree.
-func LoadReadOnlySnapshot(fsm *FSM, snapshotFile io.ReadCloser, pathsToFilter *iradix.Tree, logger log.Logger) error {
-	return loadSnapshot(fsm.db, logger, snapshotFile, pathsToFilter, true)
+func LoadReadOnlySnapshot(fsm *FSM, snapshotFile io.ReadCloser, filterKey func(key string) bool, logger log.Logger) error {
+	return loadSnapshot(fsm.db, logger, snapshotFile, filterKey, true)
 }
 
 // loadSnapshot loads a snapshot from a file into the supplied boltDB database.
@@ -515,7 +514,7 @@ func LoadReadOnlySnapshot(fsm *FSM, snapshotFile io.ReadCloser, pathsToFilter *i
 // to 1.0.
 // If pathsToFilter is not nil, the function will filter out any keys that are
 // found in the pathsToFilter tree.
-func loadSnapshot(db *bolt.DB, logger log.Logger, snapshotFile io.ReadCloser, pathsToFilter *iradix.Tree, readOnly bool) error {
+func loadSnapshot(db *bolt.DB, logger log.Logger, snapshotFile io.ReadCloser, filterKey func(key string) bool, readOnly bool) error {
 	// The delimited reader will parse full proto messages from the snapshot data.
 	protoReader := NewDelimitedReader(snapshotFile, math.MaxInt32)
 	defer protoReader.Close()
@@ -545,12 +544,8 @@ func loadSnapshot(db *bolt.DB, logger log.Logger, snapshotFile io.ReadCloser, pa
 					return err
 				}
 
-				if pathsToFilter != nil {
-					keyToLookUp := []byte(entry.Key)
-					_, _, ok := pathsToFilter.Root().LongestPrefix(keyToLookUp)
-					if ok {
-						continue
-					}
+				if filterKey != nil && filterKey(entry.Key) {
+					continue
 				}
 
 				err = b.Put([]byte(entry.Key), entry.Value)

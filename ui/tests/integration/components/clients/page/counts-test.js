@@ -260,14 +260,16 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
       );
   });
 
-  test('it should render empty state for no start when CE', async function (assert) {
+  test('it should render empty state for no start or no end when CE', async function (assert) {
     this.owner.lookup('service:version').type = 'community';
     this.startTimestamp = null;
     this.activity = {};
 
     await this.renderComponent();
 
-    assert.dom(GENERAL.emptyStateTitle).hasText('No start date found', 'Empty state renders');
+    assert
+      .dom(GENERAL.emptyStateTitle)
+      .hasText('Input the start and end dates to view client attribution by path.', 'Empty state renders');
     assert.dom(CLIENT_COUNT.dateRange.edit).hasText('Set date range');
   });
 

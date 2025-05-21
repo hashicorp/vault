@@ -5,7 +5,7 @@
 
 <Hds::Tabs @onClickTab={{this.onClickTab}} @selectedTabIndex={{this.selectedTabIndex}} as |T|>
   {{#each-in @authTabData as |methodType mounts|}}
-    <T.Tab data-test-auth-tab={{methodType}}>{{@displayNameHelper methodType}}</T.Tab>
+    <T.Tab data-test-auth-tab={{methodType}}>{{auth-display-name methodType}}</T.Tab>
     <T.Panel>
       <div class="has-top-padding-m">
         {{! Elements "behind" tabs always render on the DOM and are just superficially hidden/shown. 
@@ -13,7 +13,7 @@
 	        By wrapping the elements in this conditional, it only renders them when the tab is selected. }}
         {{#if (eq @selectedAuthMethod methodType)}}
           {{#if (gt mounts.length 1)}}
-            {{! render dropdown of mount paths }}
+            {{! DROPDOWN for mount paths }}
             <Hds::Form::Select::Field name="path" data-test-select="path" as |F|>
               <F.Label>Mount path</F.Label>
               <F.Options>
@@ -23,12 +23,16 @@
               </F.Options>
             </Hds::Form::Select::Field>
           {{else}}
+            {{! SINGLE mount path }}
             {{#let (get mounts "0") as |mount|}}
-              <Auth::SingleMount
-                @description={{mount.description}}
-                @path={{mount.path}}
-                @shouldRenderPath={{not-eq @selectedAuthMethod "token"}}
-              />
+              {{#if mount.description}}
+                <Hds::Text::Body @tag="p" @color="faint" data-test-description>{{mount.description}}</Hds::Text::Body>
+              {{/if}}
+              {{! the token auth method does't support custom paths so no need to render an input }}
+              {{#if (not-eq @selectedAuthMethod "token")}}
+                {{! path is hidden so it is submitted with FormData but does not clutter the login form }}
+                <input type="hidden" id="path" name="path" value={{mount.path}} data-test-input="path" />
+              {{/if}}
             {{/let}}
           {{/if}}
         {{/if}}
