@@ -40,7 +40,7 @@ module('Acceptance | Community | config-ui/messages', function (hooks) {
   });
 });
 
-module('Acceptance | Enterprise | config-ui/message', function (hooks) {
+module('Acceptance | Enterprise | config-ui/message?', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
