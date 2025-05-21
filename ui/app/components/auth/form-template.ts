@@ -11,7 +11,6 @@ import { supportedTypes } from 'vault/utils/supported-login-methods';
 import { getRelativePath } from 'core/utils/sanitize-path';
 
 import type FlagsService from 'vault/services/flags';
-import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
 import type ClusterModel from 'vault/models/cluster';
 import type { UnauthMountsByType } from 'vault/vault/auth/form';
@@ -59,7 +58,6 @@ interface FormState {
 
 export default class AuthFormTemplate extends Component<Args> {
   @service declare readonly flags: FlagsService;
-  @service declare readonly store: Store;
   @service declare readonly version: VersionService;
 
   supportedAuthTypes: string[];
