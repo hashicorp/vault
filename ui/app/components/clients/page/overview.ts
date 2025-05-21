@@ -46,7 +46,8 @@ export default class ClientsOverviewPageComponent extends ActivityComponent {
 
   get hasAttributionData() {
     // we hide attribution table when mountPath filter present
-    return !this.args.mountPath;
+    // or if there's no data
+    return !this.args.mountPath && this.totalUsageCounts.clients;
   }
 
   get months() {

@@ -26,7 +26,7 @@
     <S.Options>
       <option value="">Select month</option>
       {{#each this.months as |m|}}
-        <option value={{m.value}} selected={{if (eq m.value this.selectedMonth) true false}}>{{m.display}}</option>
+        <option value={{m.value}} selected={{eq m.value this.selectedMonth}}>{{m.display}}</option>
       {{/each}}
     </S.Options>
   </Hds::Form::Select::Base>
@@ -64,7 +64,6 @@
       @currentPage={{this.currentPage}}
       @pageSize={{this.pageSize}}
       @currentPageSize={{this.pageSize}}
-      {{!-- @route={{"vault.cluster.clients.counts.overview"}} --}}
       @onPageChange={{this.onPageChange}}
       data-test-pagination
     />

@@ -70,7 +70,6 @@ module('Integration | Component | clients/page/overview', function (hooks) {
 
     assert.dom(GENERAL.selectByAttr('attribution-month')).exists('shows month selection dropdown');
 
-    // assert card state
     assert.dom(CLIENT_COUNT.attribution.card).exists('shows card for table state');
     assert
       .dom(CLIENT_COUNT.attribution.card)
@@ -85,9 +84,7 @@ module('Integration | Component | clients/page/overview', function (hooks) {
       hbs`<Clients::Page::Overview @activity={{this.activity}} @updateQueryParams={{this.onChange}}/>`
     );
 
-    // assert month selector present
     assert.dom(GENERAL.selectByAttr('attribution-month')).exists('shows month selection dropdown');
-
     await fillIn(GENERAL.selectByAttr('attribution-month'), '6/23');
 
     assert
@@ -103,12 +100,12 @@ module('Integration | Component | clients/page/overview', function (hooks) {
       hbs`<Clients::Page::Overview @activity={{this.activity}} @updateQueryParams={{this.onChange}}/>`
     );
 
-    // assert month selector present
     assert.dom(GENERAL.selectByAttr('attribution-month')).exists('shows month selection dropdown');
-
     await fillIn(GENERAL.selectByAttr('attribution-month'), '9/23');
 
     assert.dom(CLIENT_COUNT.attribution.card).doesNotExist('does not show card when table has data');
+    assert.dom(CLIENT_COUNT.attribution.table).exists('shows table');
+    assert.dom(CLIENT_COUNT.attribution.paginationInfo).hasText('1–3 of 6', 'shows correct pagination info');
   });
 
   test('it filters the table when a namespace filter is applied', async function (assert) {
@@ -142,7 +139,7 @@ module('Integration | Component | clients/page/overview', function (hooks) {
       .doesNotExist('does not show table when a mount filter is applied');
   });
 
-  test('it show table when month selection is present in URL', async function (assert) {
+  test('it shows table when month selection is present in URL', async function (assert) {
     this.month = '9/23';
 
     await render(
@@ -178,9 +175,7 @@ module('Integration | Component | clients/page/overview', function (hooks) {
       hbs`<Clients::Page::Overview @activity={{this.activity}} @updateQueryParams={{this.onChange}}/>`
     );
 
-    // assert month selector present
     assert.dom(GENERAL.selectByAttr('attribution-month')).exists('shows month selection dropdown');
-
     await fillIn(GENERAL.selectByAttr('attribution-month'), '');
     await triggerEvent(GENERAL.selectByAttr('attribution-month'), 'change');
 
