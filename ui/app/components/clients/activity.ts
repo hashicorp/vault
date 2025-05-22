@@ -25,7 +25,6 @@ import type {
   MountNewClients,
   NamespaceByKey,
   NamespaceNewClients,
-  OnChangeParams,
   TotalClients,
 } from 'core/utils/client-count-utils';
 import type NamespaceService from 'vault/services/namespace';
@@ -37,7 +36,6 @@ interface Args {
   endTimestamp: string;
   namespace: string;
   mountPath: string;
-  updateQueryParams: (callback: OnChangeParams) => void;
 }
 
 export default class ClientsActivityComponent extends Component<Args> {

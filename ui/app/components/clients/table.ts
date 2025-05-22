@@ -5,7 +5,6 @@
 
 import Component from '@glimmer/component';
 import Ember from 'ember';
-
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { paginate } from 'core/utils/paginate-list';
@@ -17,7 +16,6 @@ interface TableData extends MountClients {
 
 interface Args {
   data: TableData[];
-  filteredMonth?: string;
 }
 
 type TableColumn = 'namespace' | 'label' | 'mount_type' | 'clients';
@@ -41,13 +39,13 @@ export default class Table extends Component<Args> {
   }
 
   get tableHeaderMessage(): string {
-    return this.args.filteredMonth
+    return this.args.data
       ? 'No data is available for the selected month'
       : 'Select a month to view client attribution';
   }
 
   get tableBodyMessage(): string {
-    return this.args.filteredMonth
+    return this.args.data
       ? 'View the namespace mount breakdown of clients by selecting another month.'
       : 'View the namespace mount breakdown of clients by selecting a month.';
   }

@@ -7,12 +7,17 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
-import { formatDateObject, OnChangeParams } from 'core/utils/client-count-utils';
+import { formatDateObject } from 'core/utils/client-count-utils';
 import { parseAPITimestamp } from 'core/utils/date-formatters';
 import timestamp from 'core/utils/timestamp';
 import { format } from 'date-fns';
 import type VersionService from 'vault/services/version';
 import type { HTMLElementEvent } from 'forms';
+
+interface OnChangeParams {
+  start_time: number | undefined;
+  end_time: number | undefined;
+}
 
 interface Args {
   onChange: (callback: OnChangeParams) => void;

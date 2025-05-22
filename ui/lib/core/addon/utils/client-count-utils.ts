@@ -219,6 +219,23 @@ export const formatByNamespace = (namespaceArray: NamespaceObject[] | null): ByN
   });
 };
 
+export const formatTableData = (byMonthNewClients: ByMonthNewClients[], month: string): TableData[] => {
+  const monthData = byMonthNewClients.find((m) => m.month === month);
+  const namespaces = monthData?.namespaces;
+
+  let data: TableData[] = [];
+  // iterate over namespaces to add "namespace" to each mount object
+  namespaces?.forEach((n) => {
+    const mounts: TableData[] = n.mounts.map((m) => {
+      // add namespace to mount block
+      return { ...m, namespace: n.label };
+    });
+    data = [...data, ...mounts];
+  });
+
+  return data;
+};
+
 // This method returns only client types from the passed object, excluding other keys such as "label".
 // when querying historical data the response will always contain the latest client type keys because the activity log is
 // constructed based on the version of Vault the user is on (key values will be 0)
@@ -327,6 +344,10 @@ export interface MountNewClients extends TotalClientsSometimes {
   label: string;
 }
 
+export interface TableData extends MountClients {
+  namespace: string;
+}
+
 // API RESPONSE SHAPE (prior to serialization)
 
 export interface NamespaceObject {
@@ -369,9 +390,4 @@ export interface Counts {
   entity_clients: number;
   non_entity_clients: number;
   secret_syncs: number;
-}
-
-export interface OnChangeParams {
-  start_time?: number | undefined;
-  end_time?: number | undefined;
 }

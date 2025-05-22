@@ -14,8 +14,6 @@ import { filterActivityResponse } from 'vault/mirage/handlers/clients';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-import sinon from 'sinon';
-
 module('Integration | Component | clients/page/overview', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
@@ -51,7 +49,6 @@ module('Integration | Component | clients/page/overview', function (hooks) {
     this.mountPath = '';
     this.namespace = '';
     this.versionHistory = '';
-    this.onChange = sinon.spy();
     this.activity = await this.store.queryRecord('clients/activity', {});
 
     // Fails on #ember-testing-container
@@ -63,9 +60,7 @@ module('Integration | Component | clients/page/overview', function (hooks) {
   });
 
   test('it shows empty state message upon initial load', async function (assert) {
-    await render(
-      hbs`<Clients::Page::Overview @activity={{this.activity}} @updateQueryParams={{this.onChange}}/>`
-    );
+    await render(hbs`<Clients::Page::Overview @activity={{this.activity}}/>`);
 
     assert.dom(GENERAL.selectByAttr('attribution-month')).exists('shows month selection dropdown');
 
@@ -79,9 +74,7 @@ module('Integration | Component | clients/page/overview', function (hooks) {
   });
 
   test('it shows correct state message when month selection has no data', async function (assert) {
-    await render(
-      hbs`<Clients::Page::Overview @activity={{this.activity}} @updateQueryParams={{this.onChange}}/>`
-    );
+    await render(hbs`<Clients::Page::Overview @activity={{this.activity}} />`);
 
     assert.dom(GENERAL.selectByAttr('attribution-month')).exists('shows month selection dropdown');
     await fillIn(GENERAL.selectByAttr('attribution-month'), '6/23');
@@ -95,9 +88,7 @@ module('Integration | Component | clients/page/overview', function (hooks) {
   });
 
   test('it shows table when month selection has data', async function (assert) {
-    await render(
-      hbs`<Clients::Page::Overview @activity={{this.activity}} @updateQueryParams={{this.onChange}}/>`
-    );
+    await render(hbs`<Clients::Page::Overview @activity={{this.activity}} />`);
 
     assert.dom(GENERAL.selectByAttr('attribution-month')).exists('shows month selection dropdown');
     await fillIn(GENERAL.selectByAttr('attribution-month'), '9/23');
@@ -112,9 +103,7 @@ module('Integration | Component | clients/page/overview', function (hooks) {
     this.activity = await this.store.queryRecord('clients/activity', {
       namespace: this.namespace,
     });
-    await render(
-      hbs`<Clients::Page::Overview @activity={{this.activity}} @namespace={{this.namespace}} @updateQueryParams={{this.onChange}}/>`
-    );
+    await render(hbs`<Clients::Page::Overview @activity={{this.activity}} @namespace={{this.namespace}} />`);
 
     await fillIn(GENERAL.selectByAttr('attribution-month'), '9/23');
 
@@ -131,7 +120,7 @@ module('Integration | Component | clients/page/overview', function (hooks) {
       mountPath: this.mountPath,
     });
     await render(
-      hbs`<Clients::Page::Overview @activity={{this.activity}} @namespace={{this.namespace}} @mountPath={{this.mountPath}} @updateQueryParams={{this.onChange}}/>`
+      hbs`<Clients::Page::Overview @activity={{this.activity}} @namespace={{this.namespace}} @mountPath={{this.mountPath}}/>`
     );
     assert.dom(CLIENT_COUNT.attribution.card).doesNotExist('does not show card when table has data');
     assert
@@ -140,9 +129,7 @@ module('Integration | Component | clients/page/overview', function (hooks) {
   });
 
   test('it paginates table data', async function (assert) {
-    await render(
-      hbs`<Clients::Page::Overview @activity={{this.activity}} @updateQueryParams={{this.onChange}} />`
-    );
+    await render(hbs`<Clients::Page::Overview @activity={{this.activity}}  />`);
 
     await fillIn(GENERAL.selectByAttr('attribution-month'), '9/23');
 
@@ -160,9 +147,7 @@ module('Integration | Component | clients/page/overview', function (hooks) {
   });
 
   test('it shows correct month options for billing period', async function (assert) {
-    await render(
-      hbs`<Clients::Page::Overview @activity={{this.activity}} @updateQueryParams={{this.onChange}}/>`
-    );
+    await render(hbs`<Clients::Page::Overview @activity={{this.activity}} />`);
 
     assert.dom(GENERAL.selectByAttr('attribution-month')).exists('shows month selection dropdown');
     await fillIn(GENERAL.selectByAttr('attribution-month'), '');
