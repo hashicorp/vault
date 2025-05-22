@@ -38,7 +38,7 @@ module('Acceptance | auth login form', function (hooks) {
   test('it does not request login settings for community versions', async function (assert) {
     assert.expect(1); // should only be one assertion because the stubbed mirage request should NOT be hit
     this.owner.lookup('service:version').type = 'community';
-    this.server.get('/sys/internal/ui/default-login-methods', () => {
+    this.server.get('/sys/internal/ui/default-auth-methods', () => {
       // cannot throw error here because request errors are swallowed
       assert.false(true, 'request made for login settings and it should not have been');
     });

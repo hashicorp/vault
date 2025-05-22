@@ -158,7 +158,7 @@ export default class AuthPage extends Component<Args> {
     // Finally, fallback to the most recently used auth method in localStorage.
     // Token is the default otherwise.
     const directLinkType = this.args.directLinkData?.type;
-    const firstTab = Object.keys(this.formViews?.defaultView?.tabData || {})[0];
+    const firstTab = Object.keys(this.formViews.defaultView?.tabData || {})[0];
     return this.canceledMfaAuth || directLinkType || firstTab || this.auth.getAuthType() || 'token';
   }
 
