@@ -1077,6 +1077,8 @@ func (f *fakeWALGetter) GetCurrentWALHeader() string {
 
 var _ StorageWALGetter = (*fakeWALGetter)(nil)
 
+// Test_getIndexForEvent tests the retrieval of the Vault storage index for an
+// event based on its metadata.
 func Test_getIndexForEvent(t *testing.T) {
 	tests := map[string]struct {
 		event       *logical.EventReceived
