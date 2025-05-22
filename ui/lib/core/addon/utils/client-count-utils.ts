@@ -43,7 +43,7 @@ export const filterVersionHistory = (
   start: string,
   end: string
 ) => {
-  if (versionHistory) {
+  if (versionHistory && start && end) {
     const upgrades = versionHistory.reduce((array: ClientsVersionHistoryModel[], upgradeData) => {
       const isRelevantHistory = (v: string) => {
         return (

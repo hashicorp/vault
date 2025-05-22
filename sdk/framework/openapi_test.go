@@ -459,6 +459,10 @@ func TestOpenAPI_Paths(t *testing.T) {
 					Summary:     "Update Summary",
 					Description: "Update Description",
 				},
+				logical.PatchOperation: &PathOperation{
+					Summary:     "Patch Summary",
+					Description: "Patch Description",
+				},
 				logical.CreateOperation: &PathOperation{
 					Summary:     "Create Summary",
 					Description: "Create Description",
@@ -711,6 +715,15 @@ func TestOpenAPI_constructOperationID(t *testing.T) {
 			operationAttributes: nil,
 			defaultPrefix:       "test",
 			expected:            "test-write-path-to-thing",
+		},
+		"simple-patch": {
+			path:                "path/to/thing",
+			pathIndex:           0,
+			pathAttributes:      nil,
+			operation:           logical.PatchOperation,
+			operationAttributes: nil,
+			defaultPrefix:       "test",
+			expected:            "test-patch-path-to-thing",
 		},
 		"operation-verb": {
 			path:                "path/to/thing",

@@ -1717,7 +1717,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 			factory = wrapFactoryCheckPerms(c, factory)
 		}
 
-		entSetExternalPluginConfig(plug, conf)
+		setExternalPluginConfig(plug, conf)
 	}
 
 	// Set up conf to pass in plugin_name
@@ -1748,13 +1748,27 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	if err != nil {
 		return nil, err
 	}
+
+	pluginObservationRecorder, err := c.observations.WithPlugin(entry.namespace, &logical.EventPluginInfo{
+		MountClass:    consts.PluginTypeCredential.String(),
+		MountAccessor: entry.Accessor,
+		MountPath:     entry.Path,
+		Plugin:        entry.Type,
+		PluginVersion: pluginVersion,
+		Version:       entry.Options["version"],
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	config := &logical.BackendConfig{
-		StorageView:  view,
-		Logger:       backendLogger,
-		Config:       conf,
-		System:       sysView,
-		BackendUUID:  entry.BackendAwareUUID,
-		EventsSender: pluginEventSender,
+		StorageView:         view,
+		Logger:              backendLogger,
+		Config:              conf,
+		System:              sysView,
+		BackendUUID:         entry.BackendAwareUUID,
+		EventsSender:        pluginEventSender,
+		ObservationRecorder: pluginObservationRecorder,
 	}
 
 	ctx = namespace.ContextWithNamespace(ctx, entry.namespace)

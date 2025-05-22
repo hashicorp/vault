@@ -78,6 +78,13 @@ const (
 	// provided and the server is fed ever more data until it exhausts memory.
 	// Can be overridden per listener.
 	DefaultMaxRequestSize = 32 * 1024 * 1024
+
+	// VaultSnapshotReadParam is the query parameter sent when Vault should read
+	// the data from a loaded snapshot
+	VaultSnapshotReadParam = "read_snapshot_id"
+	// VaultSnapshotRecoverParam is the query parameter sent when Vault should
+	// recover the data from a loaded snapshot
+	VaultSnapshotRecoverParam = "recover_snapshot_id"
 )
 
 var (
@@ -125,6 +132,7 @@ func init() {
 		"sys/storage/raft/snapshot",
 		"sys/storage/raft/snapshot-force",
 		"!sys/storage/raft/snapshot-auto/config",
+		"sys/storage/raft/snapshot-load",
 	})
 	websocketPaths.AddPaths(websocketRawPaths)
 }
@@ -906,6 +914,10 @@ func handleRequestForwarding(core *vault.Core, handler http.Handler) http.Handle
 			return
 		}
 
+		// Check if the request requires a snapshot, which is only on the active
+		// node
+		shouldForward = shouldForward || requiresSnapshot(r)
+
 		// If we are a performance standby we can maybe handle the request.
 		if core.PerfStandby() && !shouldForward {
 			ns, err := namespace.FromContext(r.Context())
@@ -1017,6 +1029,8 @@ func forwardRequest(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(statusCode)
 	w.Write(retBytes)
+
+	logical.IncrementResponseStatusCodeMetric(statusCode)
 }
 
 // request is a helper to perform a request and properly exit in the
@@ -1185,6 +1199,8 @@ func respondStandby(core *vault.Core, w http.ResponseWriter, r *http.Request) {
 	// the request method should be preserved.
 	w.Header().Set("Location", finalURL.String())
 	w.WriteHeader(307)
+
+	logical.IncrementResponseStatusCodeMetric(307)
 }
 
 // getTokenFromReq parse headers of the incoming request to extract token if
@@ -1386,8 +1402,10 @@ func respondOk(w http.ResponseWriter, body interface{}) {
 
 	if body == nil {
 		w.WriteHeader(http.StatusNoContent)
+		defer logical.IncrementResponseStatusCodeMetric(http.StatusNoContent)
 	} else {
 		w.WriteHeader(http.StatusOK)
+		defer logical.IncrementResponseStatusCodeMetric(http.StatusOK)
 		enc := json.NewEncoder(w)
 		enc.Encode(body)
 	}
@@ -1410,6 +1428,8 @@ func oidcPermissionDenied(path string, err error) bool {
 func respondOIDCPermissionDenied(w http.ResponseWriter) {
 	errorCode := "invalid_token"
 	errorDescription := logical.ErrPermissionDenied.Error()
+
+	defer logical.IncrementResponseStatusCodeMetric(http.StatusUnauthorized)
 
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("WWW-Authenticate", fmt.Sprintf("Bearer error=%q,error_description=%q",
@@ -1436,4 +1456,17 @@ func trimPath(ns *namespace.Namespace, path string) string {
 	}
 
 	return ns.TrimmedPath(path)
+}
+
+// requiresSnapshot checks if the request requires a loaded snapshot, by
+// checking for the existence of a snapshot query parameter
+func requiresSnapshot(r *http.Request) bool {
+	query := r.URL.Query()
+	switch r.Method {
+	case http.MethodGet, "LIST":
+		return query.Has(VaultSnapshotReadParam)
+	case http.MethodPut, http.MethodPost:
+		return query.Has(VaultSnapshotRecoverParam)
+	}
+	return false
 }

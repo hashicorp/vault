@@ -185,6 +185,9 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 		DefaultLeaseTTL:    10 * time.Hour,
 		DefaultLeaseTTLRaw: "10h",
 
+		RemoveIrrevocableLeaseAfter:    10 * 24 * time.Hour,
+		RemoveIrrevocableLeaseAfterRaw: "10d",
+
 		APIAddr:     "top_level_api_addr",
 		ClusterAddr: "top_level_cluster_addr",
 	}
@@ -491,6 +494,9 @@ func testLoadConfigFile(t *testing.T) {
 		DefaultLeaseTTL:    10 * time.Hour,
 		DefaultLeaseTTLRaw: "10h",
 
+		RemoveIrrevocableLeaseAfter:    10 * 24 * time.Hour,
+		RemoveIrrevocableLeaseAfterRaw: "10d",
+
 		EnableResponseHeaderHostname:      true,
 		EnableResponseHeaderHostnameRaw:   true,
 		EnableResponseHeaderRaftNodeID:    true,
@@ -692,17 +698,19 @@ func testLoadConfigFile_json(t *testing.T) {
 
 		ClusterCipherSuites: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
 
-		MaxLeaseTTL:          10 * time.Hour,
-		MaxLeaseTTLRaw:       "10h",
-		DefaultLeaseTTL:      10 * time.Hour,
-		DefaultLeaseTTLRaw:   "10h",
-		DisableCacheRaw:      interface{}(nil),
-		EnableUI:             true,
-		EnableUIRaw:          true,
-		EnableRawEndpoint:    true,
-		EnableRawEndpointRaw: true,
-		DisableSealWrap:      true,
-		DisableSealWrapRaw:   true,
+		MaxLeaseTTL:                    10 * time.Hour,
+		MaxLeaseTTLRaw:                 "10h",
+		DefaultLeaseTTL:                10 * time.Hour,
+		DefaultLeaseTTLRaw:             "10h",
+		RemoveIrrevocableLeaseAfter:    10 * 24 * time.Hour,
+		RemoveIrrevocableLeaseAfterRaw: "10d",
+		DisableCacheRaw:                interface{}(nil),
+		EnableUI:                       true,
+		EnableUIRaw:                    true,
+		EnableRawEndpoint:              true,
+		EnableRawEndpointRaw:           true,
+		DisableSealWrap:                true,
+		DisableSealWrapRaw:             true,
 	}
 
 	addExpectedEntConfig(expected, []string{})
@@ -882,10 +890,11 @@ func testConfig_Sanitized(t *testing.T) {
 			"add_lease_metrics_namespace_labels":     false,
 			"add_mount_point_rollback_metrics":       false,
 		},
-		"administrative_namespace_path": "admin/",
-		"imprecise_lease_role_tracking": false,
-		"enable_post_unseal_trace":      true,
-		"post_unseal_trace_directory":   "/tmp",
+		"administrative_namespace_path":  "admin/",
+		"imprecise_lease_role_tracking":  false,
+		"enable_post_unseal_trace":       true,
+		"post_unseal_trace_directory":    "/tmp",
+		"remove_irrevocable_lease_after": (30 * 24 * time.Hour) / time.Second,
 	}
 
 	addExpectedEntSanitizedConfig(expected, []string{"http"})
@@ -1605,6 +1614,9 @@ func testLoadConfigFileLeaseMetrics(t *testing.T) {
 		MaxLeaseTTLRaw:     "10h",
 		DefaultLeaseTTL:    10 * time.Hour,
 		DefaultLeaseTTLRaw: "10h",
+
+		RemoveIrrevocableLeaseAfter:    10 * 24 * time.Hour,
+		RemoveIrrevocableLeaseAfterRaw: "10d",
 	}
 
 	addExpectedEntConfig(expected, []string{})

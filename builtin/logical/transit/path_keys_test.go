@@ -238,6 +238,10 @@ func TestTransit_CreateKey(t *testing.T) {
 			creationParams: map[string]interface{}{"type": "aes128-cmac"},
 			entOnly:        true,
 		},
+		"AES-192 CMAC": {
+			creationParams: map[string]interface{}{"type": "aes192-cmac"},
+			entOnly:        true,
+		},
 		"AES-256 CMAC": {
 			creationParams: map[string]interface{}{"type": "aes256-cmac"},
 			entOnly:        true,

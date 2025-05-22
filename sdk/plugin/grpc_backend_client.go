@@ -95,7 +95,8 @@ func (b *backendGRPCPluginClient) HandleRequest(ctx context.Context, req *logica
 		return nil, err
 	}
 
-	reply, err := b.client.HandleRequest(ctx, &pb.HandleRequestArgs{
+	reqCtx := logicalCtxToPBMetadataCtx(ctx)
+	reply, err := b.client.HandleRequest(reqCtx, &pb.HandleRequestArgs{
 		Request: protoReq,
 	}, largeMsgGRPCCallOpts...)
 	if err != nil {
@@ -132,6 +133,8 @@ func (b *backendGRPCPluginClient) SpecialPaths() *logical.Paths {
 		LocalStorage:          reply.Paths.LocalStorage,
 		SealWrapStorage:       reply.Paths.SealWrapStorage,
 		WriteForwardedStorage: reply.Paths.WriteForwardedStorage,
+		Limited:               reply.Paths.Limited,
+		AllowSnapshotRead:     reply.Paths.AllowSnapshotRead,
 	}
 }
 
@@ -236,6 +239,10 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 		impl: config.EventsSender,
 	}
 
+	observations := &GRPCObservationsServer{
+		impl: config.ObservationRecorder,
+	}
+
 	// Register the server in this closure.
 	serverFunc := func(opts []grpc.ServerOption) *grpc.Server {
 		opts = append(opts, grpc.MaxRecvMsgSize(math.MaxInt32))
@@ -245,6 +252,7 @@ func (b *backendGRPCPluginClient) Setup(ctx context.Context, config *logical.Bac
 		registerSystemViewServer(s, sysViewImpl, config)
 		pb.RegisterStorageServer(s, storage)
 		pb.RegisterEventsServer(s, events)
+		pb.RegisterObservationsServer(s, observations)
 		b.server.Store(s)
 		close(b.cleanupCh)
 		return s

@@ -6,7 +6,6 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { paginate } from 'core/utils/paginate-list';
-import { PATH_MAP } from 'core/utils/capabilities';
 
 export default class MessagesRoute extends Route {
   @service api;
@@ -63,7 +62,7 @@ export default class MessagesRoute extends Route {
         filterKey: 'title',
       });
       // fetch capabilities for each message path
-      const paths = messages.map((message) => `${PATH_MAP.customMessages}/${message.id}`);
+      const paths = messages.map((message) => this.capabilities.pathFor('customMessages', message));
       const capabilities = await this.capabilities.fetch(paths);
 
       return { params, messages, capabilities };

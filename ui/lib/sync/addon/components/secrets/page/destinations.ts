@@ -8,30 +8,33 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { getOwner } from '@ember/owner';
-import errorMessage from 'vault/utils/error-message';
 import { findDestination, syncDestinations } from 'core/helpers/sync-destinations';
 import { next } from '@ember/runloop';
+import apiMethodResolver from 'sync/utils/api-method-resolver';
 
-import type SyncDestinationModel from 'vault/vault/models/sync/destination';
 import type RouterService from '@ember/routing/router-service';
 import type PaginationService from 'vault/services/pagination';
 import type FlashMessageService from 'vault/services/flash-messages';
-import type { EngineOwner } from 'vault/vault/app-types';
-import type { SyncDestinationName, SyncDestinationType } from 'vault/vault/helpers/sync-destinations';
+import type { CapabilitiesMap, EngineOwner } from 'vault/app-types';
+import type { DestinationName, DestinationType, ListDestination } from 'vault/sync';
 import type Transition from '@ember/routing/transition';
+import type { PaginatedMetadata } from 'core/utils/paginate-list';
+import type ApiService from 'vault/services/api';
 
 interface Args {
-  destinations: Array<SyncDestinationModel>;
-  nameFilter: SyncDestinationName;
-  typeFilter: SyncDestinationType;
+  capabilities: CapabilitiesMap;
+  destinations: ListDestination & PaginatedMetadata[];
+  nameFilter: DestinationName;
+  typeFilter: DestinationType;
 }
 
 export default class SyncSecretsDestinationsPageComponent extends Component<Args> {
   @service('app-router') declare readonly router: RouterService;
   @service declare readonly pagination: PaginationService;
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly api: ApiService;
 
-  @tracked destinationToDelete: SyncDestinationModel | null = null;
+  @tracked destinationToDelete: ListDestination | null = null;
   // for some reason there isn't a full page refresh happening when transitioning on filter change
   // when the transition happens it causes the FilterInput component to lose focus since it can only focus on didInsert
   // to work around this, verify that a transition from this route was completed and then focus the input
@@ -54,7 +57,8 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
 
   // typeFilter arg comes in as destination type but we need to pass the destination display name into the SearchSelect
   get typeFilterName() {
-    return findDestination(this.args.typeFilter)?.name;
+    const { typeFilter } = this.args;
+    return typeFilter ? findDestination(typeFilter).name : undefined;
   }
 
   get destinationTypes() {
@@ -93,16 +97,17 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   }
 
   @action
-  async onDelete(destination: SyncDestinationModel) {
+  async onDelete(destination: ListDestination) {
     try {
       const { name } = destination;
       const message = `Destination ${name} has been queued for deletion.`;
-      await destination.destroyRecord();
-      this.pagination.clearDataset('sync/destination');
+      const method = apiMethodResolver('delete', destination.type);
+      await this.api.sys[method](destination.name, {});
       this.router.transitionTo('vault.cluster.sync.secrets.overview');
       this.flashMessages.success(message);
     } catch (error) {
-      this.flashMessages.danger(`Error deleting destination \n ${errorMessage(error)}`);
+      const { message } = await this.api.parseError(error);
+      this.flashMessages.danger(`Error deleting destination \n ${message}`);
     } finally {
       this.destinationToDelete = null;
     }

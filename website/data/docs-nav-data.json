@@ -969,7 +969,7 @@
       },
       {
         "title": "Full changelog",
-        "path": "updates/changelog"
+        "href": "https://raw.githubusercontent.com/hashicorp/vault/refs/heads/main/CHANGELOG.md"
       }
     ]
   },
@@ -1028,8 +1028,8 @@
                 "path": "internals/telemetry/metrics"
               },
               {
-                "title": "Core system metrics",
-                "path": "internals/telemetry/metrics/core-system"
+                "title": "Activity metrics",
+                "path": "internals/telemetry/metrics/activity"
               },
               {
                 "title": "Audit log metrics",
@@ -1046,6 +1046,10 @@
               {
                 "title": "Availability metrics",
                 "path": "internals/telemetry/metrics/availability"
+              },
+              {
+                "title": "Core system metrics",
+                "path": "internals/telemetry/metrics/core-system"
               },
               {
                 "title": "Database metrics",
@@ -2272,11 +2276,6 @@
             "path": "secrets/transit/key-wrapping-guide"
           }
         ]
-      },
-      {
-        "title": "Venafi (Certificates)",
-        "path": "secrets/venafi",
-        "hidden": true
       }
     ]
   },
@@ -2809,8 +2808,8 @@
             "path": "enterprise/fips"
           },
           {
-            "title": "Built-in FIPS 140-2 support",
-            "path": "enterprise/fips/fips1402"
+            "title": "Built-in FIPS 140-3 support",
+            "path": "enterprise/fips/fips1403"
           },
           {
             "title": "Seal wrap for FIPS compliance",

@@ -69,6 +69,9 @@ type Config struct {
 	DefaultLeaseTTL    time.Duration `hcl:"-"`
 	DefaultLeaseTTLRaw interface{}   `hcl:"default_lease_ttl,alias:DefaultLeaseTTL"`
 
+	RemoveIrrevocableLeaseAfter    time.Duration `hcl:"-"`
+	RemoveIrrevocableLeaseAfterRaw interface{}   `hcl:"remove_irrevocable_lease_after,alias:RemoveIrrevocableLeaseAfter"`
+
 	ClusterCipherSuites string `hcl:"cluster_cipher_suites"`
 
 	PluginDirectory string `hcl:"plugin_directory"`
@@ -327,6 +330,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.DefaultLeaseTTL = c.DefaultLeaseTTL
 	if c2.DefaultLeaseTTL > result.DefaultLeaseTTL {
 		result.DefaultLeaseTTL = c2.DefaultLeaseTTL
+	}
+
+	result.RemoveIrrevocableLeaseAfter = c.RemoveIrrevocableLeaseAfter
+	if c2.RemoveIrrevocableLeaseAfter > result.RemoveIrrevocableLeaseAfter {
+		result.RemoveIrrevocableLeaseAfter = c2.RemoveIrrevocableLeaseAfter
 	}
 
 	result.ClusterCipherSuites = c.ClusterCipherSuites
@@ -657,6 +665,12 @@ func ParseConfigCheckDuplicate(d, source string) (cfg *Config, duplicate bool, e
 	if result.DefaultLeaseTTLRaw != nil {
 		if result.DefaultLeaseTTL, err = parseutil.ParseDurationSecond(result.DefaultLeaseTTLRaw); err != nil {
 			return nil, duplicate, err
+		}
+	}
+
+	if result.RemoveIrrevocableLeaseAfterRaw != nil {
+		if result.RemoveIrrevocableLeaseAfter, err = parseutil.ParseDurationSecond(result.RemoveIrrevocableLeaseAfterRaw); err != nil {
+			return nil, err
 		}
 	}
 
@@ -1324,6 +1338,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 		"max_lease_ttl":     c.MaxLeaseTTL / time.Second,
 		"default_lease_ttl": c.DefaultLeaseTTL / time.Second,
+
+		"remove_irrevocable_lease_after": c.RemoveIrrevocableLeaseAfter / time.Second,
 
 		"cluster_cipher_suites": c.ClusterCipherSuites,
 

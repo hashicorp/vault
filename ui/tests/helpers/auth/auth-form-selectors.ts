@@ -4,19 +4,20 @@
  */
 
 export const AUTH_FORM = {
-  method: '[data-test-select=auth-method]',
-  form: '[data-test-auth-form]',
-  login: '[data-test-auth-submit]',
-  tabs: (method: string) => (method ? `[data-test-auth-method="${method}"]` : '[data-test-auth-method]'),
-  tabBtn: (method: string) => `[data-test-auth-method="${method}"] button`,
   description: '[data-test-description]',
+  form: '[data-test-auth-form]',
+  linkedBlockAuth: (type: string) => `[data-test-auth-backend-link="${type}"]`,
+  login: '[data-test-auth-submit]',
+  selectMethod: '[data-test-select="auth type"]',
+  tabBtn: (method: string) => `[data-test-auth-tab="${method}"] button`, // method is all lowercased
+  tabs: '[data-test-auth-tab]',
   // old form toggle, will eventually be deleted
   moreOptions: '[data-test-auth-form-options-toggle]',
   // new toggle, hds component is a button
   advancedSettings: '[data-test-auth-form-options-toggle] button',
-  managedNsRoot: '[data-test-managed-namespace-root]',
-  logo: '[data-test-auth-logo]',
-  helpText: '[data-test-auth-helptext]',
   authForm: (type: string) => `[data-test-auth-form="${type}"]`,
+  helpText: '[data-test-auth-helptext]',
+  logo: '[data-test-auth-logo]',
+  managedNsRoot: '[data-test-managed-namespace-root]',
   otherMethodsBtn: '[data-test-other-methods-button]',
 };

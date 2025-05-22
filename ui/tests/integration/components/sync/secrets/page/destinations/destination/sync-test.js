@@ -7,13 +7,11 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { setupModels } from 'vault/tests/helpers/sync/setup-models';
+import { setupDataStubs } from 'vault/tests/helpers/sync/setup-hooks';
 import hbs from 'htmlbars-inline-precompile';
-import { render, click, fillIn, settled } from '@ember/test-helpers';
+import { render, click, fillIn } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
-import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { selectChoose } from 'ember-power-select/test-support';
-import sinon from 'sinon';
 import { Response } from 'miragejs';
 
 const { destinations, searchSelect, messageError, kvSuggestion } = PAGE;
@@ -23,11 +21,9 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
   setupRenderingTest(hooks);
   setupEngine(hooks, 'sync');
   setupMirage(hooks);
-  setupModels(hooks);
+  setupDataStubs(hooks);
 
   hooks.beforeEach(async function () {
-    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
-
     this.server.get('/sys/internal/ui/mounts', () => ({
       data: { secret: { 'my-kv/': { type: 'kv', options: { version: '2' } } } },
     }));
@@ -38,9 +34,12 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
       data: { keys: ['nested-secret'] },
     }));
 
-    await render(hbs`<Secrets::Page::Destinations::Destination::Sync @destination={{this.destination}} />`, {
-      owner: this.engine,
-    });
+    await render(
+      hbs`<Secrets::Page::Destinations::Destination::Sync @destination={{this.destination}} @capabilities={{this.capabilities}} />`,
+      {
+        owner: this.engine,
+      }
+    );
   });
 
   test('it should fetch and render kv mounts', async function (assert) {
@@ -137,26 +136,5 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
     await click(submit);
 
     assert.dom(messageError).hasTextContaining(error, 'Error renders in alert banner');
-  });
-
-  test('it should clear sync associations from store in willDestroy hook', async function (assert) {
-    const clearDatasetStub = sinon.stub(this.owner.lookup('service:pagination'), 'clearDataset');
-
-    this.renderComponent = true;
-    await render(
-      hbs`
-      {{#if this.renderComponent}}
-        <Secrets::Page::Destinations::Destination::Sync @destination={{this.destination}} />
-      {{/if}}
-    `,
-      { owner: this.engine }
-    );
-    this.set('renderComponent', false);
-    await settled();
-
-    assert.true(
-      clearDatasetStub.calledWith('sync/association'),
-      'Sync associations are cleared from store on component teardown'
-    );
   });
 });
