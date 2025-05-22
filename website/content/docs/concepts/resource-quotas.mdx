@@ -52,6 +52,42 @@ Vault also allows the inspection of the state of rate limiting in a Vault node
 through various [metrics](/vault/docs/internals/telemetry/metrics/core-system#quota-metrics) exposed
 and through enabling optional audit logging.
 
+| Feature                                                                  | Description                                                                                                      | Vault Community Edition | Vault Enterprise |
+| ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- | :---------------------: | :--------------: |
+| [Rate limit quotas](/vault/docs/configuration/create-rate-limit-quota)   | Limit maximum amount of requests per second (RPS) to a system or mount to protect network bandwidth              | &#9989;                 | &#9989;          |
+| [Lease count quotas](/vault/docs/configuration/create-lease-count-quota) | Cap number of leases generated in a system or mount to protect system stability and storage performance at scale | &#10060;                | &#9989;          |
+
+
+## Adaptive overload protection
+
+@include 'alerts/enterprise-only.mdx'
+
+Adaptive overload protection protects against Vault outages caused by
+write-intensive overloads which most likely to cause service degradation or
+outages. Upon detecting significant service degradation, adaptive overload
+protection throttles “write” requests, returning retryable error response codes
+to clients while continuing to serve “read” requests. Once the cluster’s
+performance returns to normal levels, “write” requests become automatically
+accepted once again.
+
+In effect, adaptive overload protection serves as a last layer of defense
+against a full Vault outage, preserving availability for read requests and some
+write requests. **Adaptive overload protection is enabled by default in Vault
+Enterprise 1.18 and later.**
+
+The best practice is to define quality-of-service (QoS) standards and enforce
+tenant fairness, ensuring that each tenant (namespace) has resource allocated
+appropriately to its usage. No one tenant should cause service degradation for
+other tenants. 
+
+Resource quotas work in tandem with adaptive overload protection to protect the
+Vault service from denial of service attacks and unfair resource allocation. 
+
+Refer to the [identity-based rate limit
+quotas](/vault/docs/configuration/identity-based-rate-limit) page to learn about
+defining more fine-grained control over how traffic enters their Vault. 
+
+
 ## Exempt routes
 
 By default, the following paths are exempt from rate limiting. However, Vault
@@ -84,11 +120,6 @@ set up a local mount on both clusters with the same path, a user that only has
 access to the performance secondary cluster can create/update a quota for this
 path that will apply to the performance primary cluster.
 
-## Tutorial
-
-Refer to [Protecting Vault with Resource
-Quotas](/vault/tutorials/operations/resource-quotas) for a
-step-by-step tutorial.
 
 ## API
 
