@@ -33,10 +33,11 @@ locals {
   }])
   // In order to get Terraform to plan we have to use collections with keys that are known at plan
   // time. Here we're creating locals that keep track of index values that point to our target hosts.
-  followers        = toset(slice(local.instances, 1, length(local.instances)))
-  instances        = [for idx in range(length(var.hosts)) : tostring(idx)]
-  leader           = toset(slice(local.instances, 0, 1))
-  listener_address = var.ip_version == 4 ? "0.0.0.0:${var.listener_port}" : "[::]:${var.listener_port}"
+  followers                 = toset(slice(local.instances, 1, length(local.instances)))
+  instances                 = [for idx in range(length(var.hosts)) : tostring(idx)]
+  leader                    = toset(slice(local.instances, 0, 1))
+  listener_address          = var.ip_version == 4 ? "0.0.0.0:${var.listener_port}" : "[::]:${var.listener_port}"
+  prometheus_retention_time = var.enable_telemetry ? "24h" : "0"
   // Handle cases where we might have to distribute HSM tokens for the pkcs11 seal before starting
   // vault.
   token_base64           = try(lookup(var.seal_attributes, "token_base64", ""), "")
@@ -132,17 +133,6 @@ locals {
       auto_join_scheme : "http",
     },
   }
-  global_telemetry = var.enable_telemetry ? {
-    prometheus_retention_time = "24h"
-    disable_hostname          = true
-  } : {
-    disable_hostname = true
-  }
-  listener_telemetry = var.enable_telemetry ? {
-    unauthenticated_metrics_access = true
-  } : {
-    unauthenticated_metrics_access = false
-  }
 }
 
 # You might be wondering why our start_vault module, which supports shamir, awskms, and pkcs11 seal
@@ -212,7 +202,9 @@ resource "enos_vault_start" "leader" {
         address     = local.listener_address
         tls_disable = "true"
       }
-      telemetry = local.listener_telemetry
+      telemetry = {
+        unauthenticated_metrics_access = var.enable_telemetry
+      }
     }
     log_level = var.log_level
     storage = {
@@ -220,9 +212,12 @@ resource "enos_vault_start" "leader" {
       attributes = local.storage_attributes[each.key]
       retry_join = try(local.storage_retry_join[var.storage_backend], null)
     }
-    seals     = local.seals
-    ui        = true
-    telemetry = local.global_telemetry
+    seals = local.seals
+    ui    = true
+    telemetry = {
+      prometheus_retention_time = local.prometheus_retention_time
+      disable_hostname          = true
+    }
   }
   license        = var.license
   manage_service = var.manage_service
@@ -258,7 +253,9 @@ resource "enos_vault_start" "followers" {
         address     = local.listener_address
         tls_disable = "true"
       }
-      telemetry = local.listener_telemetry
+      telemetry = {
+        unauthenticated_metrics_access = var.enable_telemetry
+      }
     }
     log_level = var.log_level
     storage = {
@@ -266,9 +263,12 @@ resource "enos_vault_start" "followers" {
       attributes = { for key, value in local.storage_attributes[each.key] : key => value }
       retry_join = try(local.storage_retry_join[var.storage_backend], null)
     }
-    seals     = local.seals
-    ui        = true
-    telemetry = local.global_telemetry
+    seals = local.seals
+    ui    = true
+    telemetry = {
+      prometheus_retention_time = local.prometheus_retention_time
+      disable_hostname          = true
+    }
   }
   license        = var.license
   manage_service = var.manage_service
