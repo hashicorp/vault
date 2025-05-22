@@ -120,7 +120,7 @@ module('Integration | Component | namespace-picker', function (hooks) {
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify that the "Refresh List" button is visible
-    assert.dom(GENERAL.buttonByAttr('refresh-list')).exists('Refresh List button is visible');
+    assert.dom(GENERAL.buttonByAttr('refresh-namespaces')).exists('Refresh List button is visible');
     assert.dom(GENERAL.buttonByAttr('manage-namespaces')).exists('Manage button is visible');
   });
 
@@ -137,7 +137,7 @@ module('Integration | Component | namespace-picker', function (hooks) {
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify that the buttons are hidden
-    assert.dom(GENERAL.buttonByAttr('refresh-list')).doesNotExist('Refresh List button is hidden');
+    assert.dom(GENERAL.buttonByAttr('refresh-namespaces')).doesNotExist('Refresh List button is hidden');
     assert.dom(GENERAL.buttonByAttr('manage-namespaces')).exists('Manage button is hidden');
   });
 
@@ -151,7 +151,7 @@ module('Integration | Component | namespace-picker', function (hooks) {
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify that the buttons are hidden
-    assert.dom(GENERAL.buttonByAttr('refresh-list')).doesNotExist('Refresh List button is hidden');
+    assert.dom(GENERAL.buttonByAttr('refresh-namespaces')).doesNotExist('Refresh List button is hidden');
     assert.dom(GENERAL.buttonByAttr('manage-namespaces')).doesNotExist('Manage button is hidden');
   });
 
@@ -190,7 +190,7 @@ module('Integration | Component | namespace-picker', function (hooks) {
     );
 
     // Click the "Refresh list" button
-    await click(GENERAL.buttonByAttr('refresh-list'));
+    await click(GENERAL.buttonByAttr('refresh-namespaces'));
 
     // Verify the new namespace is displayed
     assert.strictEqual(
