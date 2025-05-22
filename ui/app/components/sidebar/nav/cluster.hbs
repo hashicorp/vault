@@ -122,8 +122,16 @@
     <Nav.Title data-test-sidebar-nav-heading="Settings">Settings</Nav.Title>
     <Nav.Link
       @route="vault.cluster.config-ui.messages"
-      @text="Custom Messages"
-      data-test-sidebar-nav-link="Custom Messages"
+      {{! formerly called 'Custom Messages' }}
+      @text="System Messages"
+      data-test-sidebar-nav-link="System Messages"
     />
+    {{#if (or this.isRootNamespace this.namespace.isHvdAdminNamespace)}}
+      <Nav.Link
+        @route="vault.cluster.config-ui.login-settings"
+        @text="UI Login Rules"
+        data-test-sidebar-nav-link="UI Login Rules"
+      />
+    {{/if}}
   {{/if}}
 </Hds::SideNav::Portal>
