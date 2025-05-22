@@ -16,8 +16,12 @@ scenario "benchmark" {
 
     If you want to run your benchmarks against a released version of Vault, you can download the Vault release tarball
     from releases.hashicorp.com, place it inside the 'support' subdirectory (sometimes you have to create this, as
-    it's git-ignored), and specify artifact_source:crt. If you wish to run your benchmarks against your local Vault
-    branch, specify artifact_source:local.
+    it's git-ignored), and specify artifact_source:crt. You also need to add that path to enos-local.vars.hcl as:
+
+    vault_artifact_path = "./support/vault_1.20.0_linux_amd64.zip"
+
+    Substitute in your own actual file name. If you wish to run your benchmarks against your local Vault branch,
+    specify artifact_source:local.
 
     Often times, when running benchmarks, you're wanting to run one very specific scenario, instead of running
     many possible scenarios at once. One example of this from the CLI would be:
@@ -31,6 +35,9 @@ scenario "benchmark" {
     manual. That means this scenario is (as of right now) meant to be run as `enos scenario launch` (plus the scenario
     name and matrix parameters, as outlined above) _not_ `enos scenario run`. This also means that when you're done
     running your benchmarks, you need to manually destroy the infrastructure with `enos scenario destroy`.
+
+    If you're going to use an enterprise Consul backend, you'll need to specify the path to a Consul license file under
+    the `backend_license_path` variable in the enos-local.vars.hcl file.
 
     The benchmark module that implements much of the actual benchmark logic has subdirectories for grafana dashboards
     that will get automatically uploaded and installed, as well as k6 templates for different benchmarking scenarios.
@@ -204,13 +211,13 @@ scenario "benchmark" {
       ami_id          = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
       cluster_tag_key = global.vault_tag_key
       common_tags     = global.tags
+      ebs_optimized   = true
       instance_count  = 3
       instance_types = {
         amd64 = "i3.4xlarge"
         arm64 = "t4g.small"
       }
       metrics_security_group_ids = step.create_metrics_security_groups.ids
-      ebs_optimized              = true
       seal_key_names             = step.create_seal_key.resource_names
       vpc_id                     = step.create_vpc.id
     }
