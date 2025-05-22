@@ -15,7 +15,6 @@
 
 import * as runtime from '../runtime';
 import type {
-  ActivationFlagsActivateRequest,
   AuditingCalculateHashRequest,
   AuditingCalculateHashResponse,
   AuditingEnableDeviceRequest,
@@ -49,7 +48,6 @@ import type {
   InitializeRequest,
   InternalClientActivityConfigureRequest,
   InternalCountEntitiesResponse,
-  InternalCountTokensResponse,
   InternalGenerateOpenApiDocumentWithParametersRequest,
   InternalUiListEnabledFeatureFlagsResponse,
   InternalUiListEnabledVisibleMountsResponse,
@@ -255,6 +253,8 @@ import type {
   UiHeadersConfigureRequest,
   UiHeadersListResponse,
   UiHeadersReadConfigurationResponse,
+  UiLoginDefaultAuthConfigureRequest,
+  UiLoginDefaultAuthListResponse,
   UnsealRequest,
   UnsealResponse,
   UnwrapRequest,
@@ -264,8 +264,6 @@ import type {
   WellKnownReadLabelResponse,
 } from '../models/index';
 import {
-    ActivationFlagsActivateRequestFromJSON,
-    ActivationFlagsActivateRequestToJSON,
     AuditingCalculateHashRequestFromJSON,
     AuditingCalculateHashRequestToJSON,
     AuditingCalculateHashResponseFromJSON,
@@ -332,8 +330,6 @@ import {
     InternalClientActivityConfigureRequestToJSON,
     InternalCountEntitiesResponseFromJSON,
     InternalCountEntitiesResponseToJSON,
-    InternalCountTokensResponseFromJSON,
-    InternalCountTokensResponseToJSON,
     InternalGenerateOpenApiDocumentWithParametersRequestFromJSON,
     InternalGenerateOpenApiDocumentWithParametersRequestToJSON,
     InternalUiListEnabledFeatureFlagsResponseFromJSON,
@@ -744,6 +740,10 @@ import {
     UiHeadersListResponseToJSON,
     UiHeadersReadConfigurationResponseFromJSON,
     UiHeadersReadConfigurationResponseToJSON,
+    UiLoginDefaultAuthConfigureRequestFromJSON,
+    UiLoginDefaultAuthConfigureRequestToJSON,
+    UiLoginDefaultAuthListResponseFromJSON,
+    UiLoginDefaultAuthListResponseToJSON,
     UnsealRequestFromJSON,
     UnsealRequestToJSON,
     UnsealResponseFromJSON,
@@ -759,10 +759,6 @@ import {
     WellKnownReadLabelResponseFromJSON,
     WellKnownReadLabelResponseToJSON,
 } from '../models/index';
-
-export interface SystemApiActivationFlagsActivate1Request {
-    activationFlagsActivateRequest: ActivationFlagsActivateRequest;
-}
 
 export interface SystemApiAuditingCalculateHashOperationRequest {
     path: string;
@@ -1809,6 +1805,23 @@ export interface SystemApiUiHeadersReadConfigurationRequest {
     header: string;
 }
 
+export interface SystemApiUiLoginDefaultAuthConfigureOperationRequest {
+    name: string;
+    uiLoginDefaultAuthConfigureRequest: UiLoginDefaultAuthConfigureRequest;
+}
+
+export interface SystemApiUiLoginDefaultAuthDeleteConfigurationRequest {
+    name: string;
+}
+
+export interface SystemApiUiLoginDefaultAuthListRequest {
+    list: UiLoginDefaultAuthListListEnum;
+}
+
+export interface SystemApiUiLoginDefaultAuthReadConfigurationRequest {
+    name: string;
+}
+
 export interface SystemApiUnsealOperationRequest {
     unsealRequest: UnsealRequest;
 }
@@ -1893,26 +1906,16 @@ export class SystemApi extends runtime.BaseAPI {
     /**
      * Activate a flagged feature.
      */
-    async activationFlagsActivate_2Raw(requestParameters: SystemApiActivationFlagsActivate1Request, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>> {
-        if (requestParameters['activationFlagsActivateRequest'] == null) {
-            throw new runtime.RequiredError(
-                'activationFlagsActivateRequest',
-                'Required parameter "activationFlagsActivateRequest" was null or undefined when calling activationFlagsActivate_2().'
-            );
-        }
-
+    async activationFlagsActivate_2Raw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>> {
         const queryParameters: any = {};
 
         const headerParameters: runtime.HTTPHeaders = {};
-
-        headerParameters['Content-Type'] = 'application/json';
 
         const response = await this.request({
             path: `/sys/activation-flags/secrets-sync/activate`,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: ActivationFlagsActivateRequestToJSON(requestParameters['activationFlagsActivateRequest']),
         }, initOverrides);
 
         return new runtime.VoidApiResponse(response);
@@ -1921,8 +1924,8 @@ export class SystemApi extends runtime.BaseAPI {
     /**
      * Activate a flagged feature.
      */
-    async activationFlagsActivate_2(activationFlagsActivateRequest: ActivationFlagsActivateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse> {
-        const response = await this.activationFlagsActivate_2Raw({ activationFlagsActivateRequest: activationFlagsActivateRequest }, initOverrides);
+    async activationFlagsActivate_2(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse> {
+        const response = await this.activationFlagsActivate_2Raw(initOverrides);
         return await response.value();
     }
 
@@ -3261,32 +3264,6 @@ export class SystemApi extends runtime.BaseAPI {
      */
     async internalCountRequests(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse> {
         const response = await this.internalCountRequestsRaw(initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Backwards compatibility is not guaranteed for this API
-     */
-    async internalCountTokensRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<InternalCountTokensResponse>> {
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        const response = await this.request({
-            path: `/sys/internal/counters/tokens`,
-            method: 'GET',
-            headers: headerParameters,
-            query: queryParameters,
-        }, initOverrides);
-
-        return new runtime.JSONApiResponse(response, (jsonValue) => InternalCountTokensResponseFromJSON(jsonValue));
-    }
-
-    /**
-     * Backwards compatibility is not guaranteed for this API
-     */
-    async internalCountTokens(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<InternalCountTokensResponse> {
-        const response = await this.internalCountTokensRaw(initOverrides);
         return await response.value();
     }
 
@@ -13235,6 +13212,152 @@ export class SystemApi extends runtime.BaseAPI {
     }
 
     /**
+     * Configure Default Auth method for UI Login.
+     */
+    async uiLoginDefaultAuthConfigureRaw(requestParameters: SystemApiUiLoginDefaultAuthConfigureOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>> {
+        if (requestParameters['name'] == null) {
+            throw new runtime.RequiredError(
+                'name',
+                'Required parameter "name" was null or undefined when calling uiLoginDefaultAuthConfigure().'
+            );
+        }
+
+        if (requestParameters['uiLoginDefaultAuthConfigureRequest'] == null) {
+            throw new runtime.RequiredError(
+                'uiLoginDefaultAuthConfigureRequest',
+                'Required parameter "uiLoginDefaultAuthConfigureRequest" was null or undefined when calling uiLoginDefaultAuthConfigure().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        const response = await this.request({
+            path: `/sys/config/ui/login/default-auth/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: UiLoginDefaultAuthConfigureRequestToJSON(requestParameters['uiLoginDefaultAuthConfigureRequest']),
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Configure Default Auth method for UI Login.
+     */
+    async uiLoginDefaultAuthConfigure(name: string, uiLoginDefaultAuthConfigureRequest: UiLoginDefaultAuthConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse> {
+        const response = await this.uiLoginDefaultAuthConfigureRaw({ name: name, uiLoginDefaultAuthConfigureRequest: uiLoginDefaultAuthConfigureRequest }, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Remove Default Auth config for UI Login.
+     */
+    async uiLoginDefaultAuthDeleteConfigurationRaw(requestParameters: SystemApiUiLoginDefaultAuthDeleteConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>> {
+        if (requestParameters['name'] == null) {
+            throw new runtime.RequiredError(
+                'name',
+                'Required parameter "name" was null or undefined when calling uiLoginDefaultAuthDeleteConfiguration().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/sys/config/ui/login/default-auth/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+            method: 'DELETE',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Remove Default Auth config for UI Login.
+     */
+    async uiLoginDefaultAuthDeleteConfiguration(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse> {
+        const response = await this.uiLoginDefaultAuthDeleteConfigurationRaw({ name: name }, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Return a list of configured default auth methods for the UI.
+     */
+    async uiLoginDefaultAuthListRaw(requestParameters: SystemApiUiLoginDefaultAuthListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UiLoginDefaultAuthListResponse>> {
+        if (requestParameters['list'] == null) {
+            throw new runtime.RequiredError(
+                'list',
+                'Required parameter "list" was null or undefined when calling uiLoginDefaultAuthList().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['list'] != null) {
+            queryParameters['list'] = requestParameters['list'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/sys/config/ui/login/default-auth/`,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.JSONApiResponse(response, (jsonValue) => UiLoginDefaultAuthListResponseFromJSON(jsonValue));
+    }
+
+    /**
+     * Return a list of configured default auth methods for the UI.
+     */
+    async uiLoginDefaultAuthList(list: UiLoginDefaultAuthListListEnum, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<UiLoginDefaultAuthListResponse> {
+        const response = await this.uiLoginDefaultAuthListRaw({ list: list }, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Return the given Default Auth configuration
+     */
+    async uiLoginDefaultAuthReadConfigurationRaw(requestParameters: SystemApiUiLoginDefaultAuthReadConfigurationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.VoidResponse>> {
+        if (requestParameters['name'] == null) {
+            throw new runtime.RequiredError(
+                'name',
+                'Required parameter "name" was null or undefined when calling uiLoginDefaultAuthReadConfiguration().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        const response = await this.request({
+            path: `/sys/config/ui/login/default-auth/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        }, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     * Return the given Default Auth configuration
+     */
+    async uiLoginDefaultAuthReadConfiguration(name: string, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.VoidResponse> {
+        const response = await this.uiLoginDefaultAuthReadConfigurationRaw({ name: name }, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Unseal the Vault.
      */
     async unsealRaw(requestParameters: SystemApiUnsealOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<UnsealResponse>> {
@@ -13621,6 +13744,13 @@ export enum UiConfigListCustomMessagesListEnum {
   * @enum {string}
   */
 export enum UiHeadersListListEnum {
+    TRUE = 'true'
+}
+/**
+  * @export
+  * @enum {string}
+  */
+export enum UiLoginDefaultAuthListListEnum {
     TRUE = 'true'
 }
 /**

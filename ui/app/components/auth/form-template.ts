@@ -64,6 +64,16 @@ export default class AuthFormTemplate extends Component<Args> {
   @tracked selectedAuthMethod = '';
   @tracked errorMessage = '';
 
+  get tabData() {
+    const { directLinkData } = this.args;
+    // URL contains a "with" query param that references a mount with listing_visibility="unauth"
+    // Treat it as a "preferred" mount and hide all other tabs
+    if (directLinkData?.isVisibleMount && directLinkData?.type) {
+      return { [directLinkData.type]: [this.args.directLinkData] };
+    }
+    return this.args.visibleMountsByType;
+  }
+
   get authTabTypes() {
     const visibleMounts = this.args.visibleMountsByType;
     return visibleMounts ? Object.keys(visibleMounts) : [];

@@ -20,6 +20,12 @@ import { mapValues } from '../runtime';
  */
 export interface JwtLoginRequest {
     /**
+     * An optional token used to fetch group memberships specified by the distributed claim source in the jwt. This is supported only on Azure/Entra ID
+     * @type {string}
+     * @memberof JwtLoginRequest
+     */
+    distributedClaimAccessToken?: string;
+    /**
      * The signed JWT to validate.
      * @type {string}
      * @memberof JwtLoginRequest
@@ -50,6 +56,7 @@ export function JwtLoginRequestFromJSONTyped(json: any, ignoreDiscriminator: boo
     }
     return {
         
+        'distributedClaimAccessToken': json['distributed_claim_access_token'] == null ? undefined : json['distributed_claim_access_token'],
         'jwt': json['jwt'] == null ? undefined : json['jwt'],
         'role': json['role'] == null ? undefined : json['role'],
     };
@@ -66,6 +73,7 @@ export function JwtLoginRequestToJSONTyped(value?: JwtLoginRequest | null, ignor
 
     return {
         
+        'distributed_claim_access_token': value['distributedClaimAccessToken'],
         'jwt': value['jwt'],
         'role': value['role'],
     };

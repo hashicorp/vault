@@ -112,11 +112,13 @@ export const GENERAL = {
     select: '[data-test-kv-suggestion-select]',
   },
   // Links and buttons
-  navLink: (label: string) => `[data-test-sidebar-nav-link="${label}"]`,
   backButton: '[data-test-back-button]',
   cancelButton: '[data-test-cancel]',
+  linkTo: (label: string) => `[data-test-link-to="${label}"]`,
+  navLink: (label: string) => `[data-test-sidebar-nav-link="${label}"]`,
   saveButton: '[data-test-save]',
   testButton: (label: string) => `[data-test-button="${label}"]`,
+  // Code blocks
   codeBlock: (label: string) => `[data-test-code-block="${label}"]`,
   // TODO replace data-test-component="value" as a higher level selector
   codemirror: `[data-test-component="code-mirror-modifier"]`,

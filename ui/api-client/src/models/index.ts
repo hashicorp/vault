@@ -1,6 +1,5 @@
 /* tslint:disable */
 /* eslint-disable */
-export * from './ActivationFlagsActivateRequest';
 export * from './AliCloudConfigureRequest';
 export * from './AliCloudLoginRequest';
 export * from './AliCloudWriteAuthRoleRequest';
@@ -163,7 +162,6 @@ export * from './HaStatusResponse';
 export * from './InitializeRequest';
 export * from './InternalClientActivityConfigureRequest';
 export * from './InternalCountEntitiesResponse';
-export * from './InternalCountTokensResponse';
 export * from './InternalGenerateOpenApiDocumentWithParametersRequest';
 export * from './InternalUiListEnabledFeatureFlagsResponse';
 export * from './InternalUiListEnabledVisibleMountsResponse';
@@ -758,6 +756,8 @@ export * from './UiConfigUpdateCustomMessageResponse';
 export * from './UiHeadersConfigureRequest';
 export * from './UiHeadersListResponse';
 export * from './UiHeadersReadConfigurationResponse';
+export * from './UiLoginDefaultAuthConfigureRequest';
+export * from './UiLoginDefaultAuthListResponse';
 export * from './UnsealRequest';
 export * from './UnsealResponse';
 export * from './UnwrapRequest';

@@ -16,7 +16,6 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
 Object.defineProperty(exports, "__esModule", { value: true });
 /* tslint:disable */
 /* eslint-disable */
-__exportStar(require("./ActivationFlagsActivateRequest"), exports);
 __exportStar(require("./AliCloudConfigureRequest"), exports);
 __exportStar(require("./AliCloudLoginRequest"), exports);
 __exportStar(require("./AliCloudWriteAuthRoleRequest"), exports);
@@ -179,7 +178,6 @@ __exportStar(require("./HaStatusResponse"), exports);
 __exportStar(require("./InitializeRequest"), exports);
 __exportStar(require("./InternalClientActivityConfigureRequest"), exports);
 __exportStar(require("./InternalCountEntitiesResponse"), exports);
-__exportStar(require("./InternalCountTokensResponse"), exports);
 __exportStar(require("./InternalGenerateOpenApiDocumentWithParametersRequest"), exports);
 __exportStar(require("./InternalUiListEnabledFeatureFlagsResponse"), exports);
 __exportStar(require("./InternalUiListEnabledVisibleMountsResponse"), exports);
@@ -774,6 +772,8 @@ __exportStar(require("./UiConfigUpdateCustomMessageResponse"), exports);
 __exportStar(require("./UiHeadersConfigureRequest"), exports);
 __exportStar(require("./UiHeadersListResponse"), exports);
 __exportStar(require("./UiHeadersReadConfigurationResponse"), exports);
+__exportStar(require("./UiLoginDefaultAuthConfigureRequest"), exports);
+__exportStar(require("./UiLoginDefaultAuthListResponse"), exports);
 __exportStar(require("./UnsealRequest"), exports);
 __exportStar(require("./UnsealResponse"), exports);
 __exportStar(require("./UnwrapRequest"), exports);

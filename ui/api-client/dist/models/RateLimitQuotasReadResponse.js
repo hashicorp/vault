@@ -33,12 +33,14 @@ function RateLimitQuotasReadResponseFromJSONTyped(json, ignoreDiscriminator) {
     }
     return {
         'blockInterval': json['block_interval'] == null ? undefined : json['block_interval'],
+        'groupBy': json['group_by'] == null ? undefined : json['group_by'],
         'inheritable': json['inheritable'] == null ? undefined : json['inheritable'],
         'interval': json['interval'] == null ? undefined : json['interval'],
         'name': json['name'] == null ? undefined : json['name'],
         'path': json['path'] == null ? undefined : json['path'],
         'rate': json['rate'] == null ? undefined : json['rate'],
         'role': json['role'] == null ? undefined : json['role'],
+        'secondaryRate': json['secondary_rate'] == null ? undefined : json['secondary_rate'],
         'type': json['type'] == null ? undefined : json['type'],
     };
 }
@@ -51,12 +53,14 @@ function RateLimitQuotasReadResponseToJSONTyped(value, ignoreDiscriminator = fal
     }
     return {
         'block_interval': value['blockInterval'],
+        'group_by': value['groupBy'],
         'inheritable': value['inheritable'],
         'interval': value['interval'],
         'name': value['name'],
         'path': value['path'],
         'rate': value['rate'],
         'role': value['role'],
+        'secondary_rate': value['secondaryRate'],
         'type': value['type'],
     };
 }

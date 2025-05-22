@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/hashicorp/cli"
+	"github.com/hashicorp/vault/api"
 	"github.com/posener/complete"
 )
 
@@ -45,7 +46,7 @@ Usage: vault list [options] PATH
 }
 
 func (c *ListCommand) Flags() *FlagSets {
-	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat | FlagSetOutputDetailed)
+	set := c.flagSet(FlagSetHTTP | FlagSetOutputFormat | FlagSetOutputDetailed | FlagSetSnapshot)
 	return set
 }
 
@@ -82,7 +83,12 @@ func (c *ListCommand) Run(args []string) int {
 	}
 
 	path := sanitizePath(args[0])
-	secret, err := client.Logical().List(path)
+	var secret *api.Secret
+	if c.flagSnapshotID != "" {
+		secret, err = client.Logical().ListFromSnapshot(path, c.flagSnapshotID)
+	} else {
+		secret, err = client.Logical().List(path)
+	}
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error listing %s: %s", path, err))
 		return 2

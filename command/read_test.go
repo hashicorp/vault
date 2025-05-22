@@ -4,10 +4,14 @@
 package command
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/hashicorp/cli"
+	"github.com/hashicorp/vault/api"
+	"github.com/stretchr/testify/require"
 )
 
 func testReadCommand(tb testing.TB) (*cli.MockUi, *ReadCommand) {
@@ -164,4 +168,40 @@ func TestReadCommand_Run(t *testing.T) {
 		_, cmd := testReadCommand(t)
 		assertNoTabs(t, cmd)
 	})
+}
+
+// TestRead_Snapshot tests that the read_snapshot_id query parameter is added
+// to the request when the -snapshot-id flag is used.
+func TestRead_Snapshot(t *testing.T) {
+	t.Parallel()
+	mockVaultServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		snapID := r.URL.Query().Get("read_snapshot_id")
+		if snapID != "abcd" {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+		w.Write([]byte(`{"secret":{"data":{"foo":"bar"}}}`))
+	}))
+	defer mockVaultServer.Close()
+
+	cfg := api.DefaultConfig()
+	cfg.Address = mockVaultServer.URL
+	client, err := api.NewClient(cfg)
+	require.NoError(t, err)
+
+	ui, cmd := testReadCommand(t)
+	cmd.client = client
+
+	// a read command with a snapshot id shouldn't error
+	code := cmd.Run([]string{
+		"-snapshot-id", "abcd", "path/to/item",
+	})
+	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+	require.Equal(t, 0, code, combined)
+
+	// check that the raw flag also works with a snapshot id
+	code = cmd.Run([]string{
+		"-format", "raw", "-snapshot-id", "abcd", "path/to/item",
+	})
+	combined = ui.OutputWriter.String() + ui.ErrorWriter.String()
+	require.Equal(t, 0, code, combined)
 }

@@ -22,7 +22,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.WellKnownListLabelsListEnum = exports.VersionHistoryListEnum = exports.UiHeadersListListEnum = exports.UiConfigListCustomMessagesListEnum = exports.SystemListSyncGithubAppsListEnum = exports.SystemListSyncDestinationsTypeListEnum = exports.SystemListSyncDestinationsListEnum = exports.SystemListSyncAssociationsListEnum = exports.SystemListStorageRaftSnapshotAutoConfigListEnum = exports.SystemListQuotasLeaseCountListEnum = exports.SystemListPoliciesRgpListEnum = exports.SystemListPoliciesEgpListEnum = exports.SystemListNamespacesListEnum = exports.SystemListMfaMethodListEnum = exports.SystemListManagedKeysTypeListEnum = exports.SubscriptionsListEventsSubscriptionsListEnum = exports.RawListListEnum = exports.RateLimitQuotasListListEnum = exports.PoliciesListPasswordPoliciesListEnum = exports.PoliciesListAclPolicies3ListEnum = exports.PoliciesListAclPoliciesListEnum = exports.PluginsRuntimesCatalogListPluginsRuntimes0ListEnum = exports.PluginsCatalogListPluginsWithTypeListEnum = exports.LeasesLookUpListEnum = exports.SystemApi = void 0;
+exports.WellKnownListLabelsListEnum = exports.VersionHistoryListEnum = exports.UiLoginDefaultAuthListListEnum = exports.UiHeadersListListEnum = exports.UiConfigListCustomMessagesListEnum = exports.SystemListSyncGithubAppsListEnum = exports.SystemListSyncDestinationsTypeListEnum = exports.SystemListSyncDestinationsListEnum = exports.SystemListSyncAssociationsListEnum = exports.SystemListStorageRaftSnapshotAutoConfigListEnum = exports.SystemListQuotasLeaseCountListEnum = exports.SystemListPoliciesRgpListEnum = exports.SystemListPoliciesEgpListEnum = exports.SystemListNamespacesListEnum = exports.SystemListMfaMethodListEnum = exports.SystemListManagedKeysTypeListEnum = exports.SubscriptionsListEventsSubscriptionsListEnum = exports.RawListListEnum = exports.RateLimitQuotasListListEnum = exports.PoliciesListPasswordPoliciesListEnum = exports.PoliciesListAclPolicies3ListEnum = exports.PoliciesListAclPoliciesListEnum = exports.PluginsRuntimesCatalogListPluginsRuntimes0ListEnum = exports.PluginsCatalogListPluginsWithTypeListEnum = exports.LeasesLookUpListEnum = exports.SystemApi = void 0;
 const runtime = require("../runtime");
 const index_1 = require("../models/index");
 /**
@@ -82,20 +82,15 @@ class SystemApi extends runtime.BaseAPI {
     /**
      * Activate a flagged feature.
      */
-    activationFlagsActivate_2Raw(requestParameters, initOverrides) {
+    activationFlagsActivate_2Raw(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            if (requestParameters['activationFlagsActivateRequest'] == null) {
-                throw new runtime.RequiredError('activationFlagsActivateRequest', 'Required parameter "activationFlagsActivateRequest" was null or undefined when calling activationFlagsActivate_2().');
-            }
             const queryParameters = {};
             const headerParameters = {};
-            headerParameters['Content-Type'] = 'application/json';
             const response = yield this.request({
                 path: `/sys/activation-flags/secrets-sync/activate`,
                 method: 'POST',
                 headers: headerParameters,
                 query: queryParameters,
-                body: (0, index_1.ActivationFlagsActivateRequestToJSON)(requestParameters['activationFlagsActivateRequest']),
             }, initOverrides);
             return new runtime.VoidApiResponse(response);
         });
@@ -103,9 +98,9 @@ class SystemApi extends runtime.BaseAPI {
     /**
      * Activate a flagged feature.
      */
-    activationFlagsActivate_2(activationFlagsActivateRequest, initOverrides) {
+    activationFlagsActivate_2(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
-            const response = yield this.activationFlagsActivate_2Raw({ activationFlagsActivateRequest: activationFlagsActivateRequest }, initOverrides);
+            const response = yield this.activationFlagsActivate_2Raw(initOverrides);
             return yield response.value();
         });
     }
@@ -1254,31 +1249,6 @@ class SystemApi extends runtime.BaseAPI {
     internalCountRequests(initOverrides) {
         return __awaiter(this, void 0, void 0, function* () {
             const response = yield this.internalCountRequestsRaw(initOverrides);
-            return yield response.value();
-        });
-    }
-    /**
-     * Backwards compatibility is not guaranteed for this API
-     */
-    internalCountTokensRaw(initOverrides) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const queryParameters = {};
-            const headerParameters = {};
-            const response = yield this.request({
-                path: `/sys/internal/counters/tokens`,
-                method: 'GET',
-                headers: headerParameters,
-                query: queryParameters,
-            }, initOverrides);
-            return new runtime.JSONApiResponse(response, (jsonValue) => (0, index_1.InternalCountTokensResponseFromJSON)(jsonValue));
-        });
-    }
-    /**
-     * Backwards compatibility is not guaranteed for this API
-     */
-    internalCountTokens(initOverrides) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const response = yield this.internalCountTokensRaw(initOverrides);
             return yield response.value();
         });
     }
@@ -9637,6 +9607,126 @@ class SystemApi extends runtime.BaseAPI {
         });
     }
     /**
+     * Configure Default Auth method for UI Login.
+     */
+    uiLoginDefaultAuthConfigureRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['name'] == null) {
+                throw new runtime.RequiredError('name', 'Required parameter "name" was null or undefined when calling uiLoginDefaultAuthConfigure().');
+            }
+            if (requestParameters['uiLoginDefaultAuthConfigureRequest'] == null) {
+                throw new runtime.RequiredError('uiLoginDefaultAuthConfigureRequest', 'Required parameter "uiLoginDefaultAuthConfigureRequest" was null or undefined when calling uiLoginDefaultAuthConfigure().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            headerParameters['Content-Type'] = 'application/json';
+            const response = yield this.request({
+                path: `/sys/config/ui/login/default-auth/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+                method: 'POST',
+                headers: headerParameters,
+                query: queryParameters,
+                body: (0, index_1.UiLoginDefaultAuthConfigureRequestToJSON)(requestParameters['uiLoginDefaultAuthConfigureRequest']),
+            }, initOverrides);
+            return new runtime.VoidApiResponse(response);
+        });
+    }
+    /**
+     * Configure Default Auth method for UI Login.
+     */
+    uiLoginDefaultAuthConfigure(name, uiLoginDefaultAuthConfigureRequest, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.uiLoginDefaultAuthConfigureRaw({ name: name, uiLoginDefaultAuthConfigureRequest: uiLoginDefaultAuthConfigureRequest }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     * Remove Default Auth config for UI Login.
+     */
+    uiLoginDefaultAuthDeleteConfigurationRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['name'] == null) {
+                throw new runtime.RequiredError('name', 'Required parameter "name" was null or undefined when calling uiLoginDefaultAuthDeleteConfiguration().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            const response = yield this.request({
+                path: `/sys/config/ui/login/default-auth/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+                method: 'DELETE',
+                headers: headerParameters,
+                query: queryParameters,
+            }, initOverrides);
+            return new runtime.VoidApiResponse(response);
+        });
+    }
+    /**
+     * Remove Default Auth config for UI Login.
+     */
+    uiLoginDefaultAuthDeleteConfiguration(name, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.uiLoginDefaultAuthDeleteConfigurationRaw({ name: name }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     * Return a list of configured default auth methods for the UI.
+     */
+    uiLoginDefaultAuthListRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['list'] == null) {
+                throw new runtime.RequiredError('list', 'Required parameter "list" was null or undefined when calling uiLoginDefaultAuthList().');
+            }
+            const queryParameters = {};
+            if (requestParameters['list'] != null) {
+                queryParameters['list'] = requestParameters['list'];
+            }
+            const headerParameters = {};
+            const response = yield this.request({
+                path: `/sys/config/ui/login/default-auth/`,
+                method: 'GET',
+                headers: headerParameters,
+                query: queryParameters,
+            }, initOverrides);
+            return new runtime.JSONApiResponse(response, (jsonValue) => (0, index_1.UiLoginDefaultAuthListResponseFromJSON)(jsonValue));
+        });
+    }
+    /**
+     * Return a list of configured default auth methods for the UI.
+     */
+    uiLoginDefaultAuthList(list, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.uiLoginDefaultAuthListRaw({ list: list }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
+     * Return the given Default Auth configuration
+     */
+    uiLoginDefaultAuthReadConfigurationRaw(requestParameters, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            if (requestParameters['name'] == null) {
+                throw new runtime.RequiredError('name', 'Required parameter "name" was null or undefined when calling uiLoginDefaultAuthReadConfiguration().');
+            }
+            const queryParameters = {};
+            const headerParameters = {};
+            const response = yield this.request({
+                path: `/sys/config/ui/login/default-auth/{name}`.replace(`{${"name"}}`, encodeURIComponent(String(requestParameters['name']))),
+                method: 'GET',
+                headers: headerParameters,
+                query: queryParameters,
+            }, initOverrides);
+            return new runtime.VoidApiResponse(response);
+        });
+    }
+    /**
+     * Return the given Default Auth configuration
+     */
+    uiLoginDefaultAuthReadConfiguration(name, initOverrides) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const response = yield this.uiLoginDefaultAuthReadConfigurationRaw({ name: name }, initOverrides);
+            return yield response.value();
+        });
+    }
+    /**
      * Unseal the Vault.
      */
     unsealRaw(requestParameters, initOverrides) {
@@ -10011,6 +10101,14 @@ var UiHeadersListListEnum;
 (function (UiHeadersListListEnum) {
     UiHeadersListListEnum["TRUE"] = "true";
 })(UiHeadersListListEnum || (exports.UiHeadersListListEnum = UiHeadersListListEnum = {}));
+/**
+  * @export
+  * @enum {string}
+  */
+var UiLoginDefaultAuthListListEnum;
+(function (UiLoginDefaultAuthListListEnum) {
+    UiLoginDefaultAuthListListEnum["TRUE"] = "true";
+})(UiLoginDefaultAuthListListEnum || (exports.UiLoginDefaultAuthListListEnum = UiLoginDefaultAuthListListEnum = {}));
 /**
   * @export
   * @enum {string}

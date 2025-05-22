@@ -285,6 +285,8 @@ type Request struct {
 	// ClientAddress is client unique addressable string (e.g. IP address). It can
 	// be empty if the quota type does not need it.
 	ClientAddress string
+
+	entRateLimitRequest
 }
 
 // NewManager creates and initializes a new quota manager to hold all the quota
