@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 /*
   Normally, the default export of this file would _do something_. In our case, the mthods for the provider simply log the 
 */

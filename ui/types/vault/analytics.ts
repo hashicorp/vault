@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 export interface AnalyticsProvider {
   name: string;
   identify: (identifier: string, traits: Record<string, string>) => void;

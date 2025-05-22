@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import posthog from 'posthog-js/dist/module.no-external';
 
 import type { AnalyticsProvider } from 'vault/vault/analytics';
