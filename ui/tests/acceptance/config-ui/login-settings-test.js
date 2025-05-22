@@ -12,6 +12,10 @@ import { runCmd } from 'vault/tests/helpers/commands';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 
+const SELECTORS = {
+  rule: (name) => (name ? `[data-test-rule="${name}"]` : '[data-test-rule]'),
+  popupMenu: (name) => `[data-test-rule="${name}"] ${GENERAL.menuTrigger}`,
+};
 // read view for custom login settings
 module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
   setupApplicationTest(hooks);
@@ -38,7 +42,7 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
     assert.dom(GENERAL.pageError.error).hasText('Error permission denied');
   });
 
-  module.skip('list, read and delete', function (hooks) {
+  module('list, read and delete', function (hooks) {
     hooks.beforeEach(async function () {
       await login();
 
@@ -64,16 +68,17 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
       await visit('vault/config-ui/login-settings');
 
       // verify fetched rules are rendered in list
-      assert.dom('.linked-block-item').exists({ count: 2 });
-      assert.dom('[data-test-rule-path="ns1/"]').hasValue('ns1');
-      assert.dom('[data-test-rule-path="ns2/"]').hasValue('ns2');
+      assert.dom(SELECTORS.rule()).exists({ count: 2 });
+      assert.dom(SELECTORS.rule('testRule')).hasText('testRule ns1/ Inheritance enabled');
+      assert.dom(SELECTORS.rule('testRule2')).hasText('testRule2 ns2/ Inheritance disabled');
     });
 
     test('delete rule from list view', async function (assert) {
       // Visit the login settings list index page
       await visit('vault/config-ui/login-settings');
 
-      await click(GENERAL.menuTrigger);
+      assert.dom(SELECTORS.rule()).exists({ count: 2 });
+      await click(SELECTORS.popupMenu('testRule'));
       await click(GENERAL.menuItem('delete-rule'));
 
       assert.dom(GENERAL.confirmationModal).exists();
@@ -81,14 +86,15 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
 
       // verify success message from deletion
       assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted rule testRule.');
-      assert.dom('[data-test-rule-name="testRule"]').doesNotExist();
+      assert.dom(SELECTORS.rule('testRule')).doesNotExist();
+      assert.dom(SELECTORS.rule()).exists({ count: 1 });
     });
 
     test('navigate to rule details page and renders rule data', async function (assert) {
       // visit individual rule page
       await visit('vault/config-ui/login-settings');
 
-      await click(GENERAL.menuTrigger);
+      await click(SELECTORS.popupMenu('testRule'));
       await click(GENERAL.menuItem('view-rule'));
 
       // verify that user is redirected to the rule details page
@@ -99,10 +105,25 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
       );
 
       // verify fetched rule data is rendered
-      assert.dom(GENERAL.infoRowValue('Name')).hasText('testRule');
+      assert.dom(GENERAL.infoRowValue('Default method')).hasText('okta');
       assert.dom(GENERAL.infoRowValue('Namespace')).hasText('ns1/');
       assert.dom(GENERAL.infoRowValue('Backup methods')).hasText('userpass');
-      assert.dom(GENERAL.infoRowValue('Inheritance')).hasText('true');
+      assert.dom(GENERAL.infoRowValue('Inheritance enabled')).hasText('Yes');
+    });
+
+    test('it navigates to rule details from linked block', async function (assert) {
+      await visit('vault/config-ui/login-settings');
+      await click(SELECTORS.rule('testRule2'));
+      assert.strictEqual(
+        currentRouteName(),
+        'vault.cluster.config-ui.login-settings.rule.details',
+        'goes to rule details page'
+      );
+
+      assert.dom(GENERAL.infoRowValue('Default method')).hasText('ldap');
+      assert.dom(GENERAL.infoRowValue('Namespace')).hasText('ns2/');
+      assert.dom(GENERAL.infoRowValue('Backup methods')).hasText('oidc');
+      assert.dom(GENERAL.infoRowValue('Inheritance enabled')).hasText('No');
     });
   });
 });
