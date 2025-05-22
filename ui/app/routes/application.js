@@ -75,8 +75,15 @@ export default class ApplicationRoute extends Route {
   }
 
   afterModel() {
-    if (this.flagsService.isHvdManaged || config.environment === 'development') {
-      const { ANALYTICS_CONFIG } = config.APP;
+    const { environment, APP } = config;
+    const { ANALYTICS_CONFIG } = APP;
+
+    // if the app is built for dev  -> attempt to start the analytics service based on the config setting
+    // if the app is built for prod -> attempt to start the analytics service based on the config setting AND HVD ownership
+    // if the app is built for test -> don't start the analytics service
+    if (environment === 'development') {
+      this.analytics.start('posthog', ANALYTICS_CONFIG);
+    } else if (environment === 'production' && this.flagsService.isHvdManaged) {
       this.analytics.start('posthog', ANALYTICS_CONFIG);
     }
   }

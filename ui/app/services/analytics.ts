@@ -13,7 +13,6 @@ import {
 } from 'vault/utils/analytics-providers/posthog';
 
 import type { AnalyticsConfig, AnalyticsProvider } from 'vault/vault/analytics';
-import type Owner from '@ember/owner';
 import type RouterService from '@ember/routing/router-service';
 
 import config from 'vault/config/environment';
@@ -21,6 +20,7 @@ import config from 'vault/config/environment';
 export default class AnalyticsService extends Service {
   @service declare readonly router: RouterService;
 
+  @tracked activated = false;
   @tracked provider: AnalyticsProvider = new DummyProvider();
 
   debug = config.environment === 'development';
@@ -39,12 +39,6 @@ export default class AnalyticsService extends Service {
 
       this.trackPageView(currentRouteName || 'unknown-route');
     });
-  }
-
-  constructor(owner: Owner) {
-    super(owner);
-
-    this.setupRouteEventListener();
   }
 
   identifyUser = (identifer: string, traits: Record<string, string>) => {
@@ -70,7 +64,11 @@ export default class AnalyticsService extends Service {
           this.provider = new PostHogProvider();
       }
 
+      // only start things once we've confirmed we want to
       this.provider.start(config);
+      this.activated = true;
+      this.setupRouteEventListener();
+
       this.log('start');
     }
   };

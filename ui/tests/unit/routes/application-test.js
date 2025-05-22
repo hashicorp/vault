@@ -21,24 +21,26 @@ module('Unit | Route | application', function (hooks) {
     sinon.reset();
   });
 
-  test('it sets up the analytics service when a cluster is flagged as "HVD managed"', function (assert) {
-    this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
-    const route = this.owner.lookup('route:application');
+  module('Analytics', function () {
+    test('it sets up the analytics service when a cluster is flagged as "HVD managed"', function (assert) {
+      this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+      const route = this.owner.lookup('route:application');
 
-    route.afterModel();
+      route.afterModel();
 
-    assert.true(
-      this.analyticsStartStub.calledWith('posthog'),
-      'the start call was made with the correct provider'
-    );
-  });
+      assert.true(
+        this.analyticsStartStub.calledWith('posthog'),
+        'the start call was made with the correct provider'
+      );
+    });
 
-  test('it does not set up the analytics service when a cluster is not flagged as "HVD managed"', function (assert) {
-    this.flags.featureFlags = ['AARDVARKS_ACTIVATED'];
-    const route = this.owner.lookup('route:application');
+    test('it does not set up the analytics service when a cluster is not flagged as "HVD managed"', function (assert) {
+      this.flags.featureFlags = ['AARDVARKS_ACTIVATED'];
+      const route = this.owner.lookup('route:application');
 
-    route.afterModel();
+      route.afterModel();
 
-    assert.true(this.analyticsStartStub.notCalled, 'the start call was not made');
+      assert.true(this.analyticsStartStub.notCalled, 'the start call was not made');
+    });
   });
 });
