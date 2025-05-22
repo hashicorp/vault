@@ -421,7 +421,7 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 	}
 	go c.expiration.Restore(errorFunc)
 
-	if mgr.removeIrrevocableLeasesEnabled(c.removeIrrevocableLeaseAfter) {
+	if mgr.removeIrrevocableLeasesEnabled(c) {
 		mgr.irrevocableLeaseRemovalEnabled = true
 	}
 
