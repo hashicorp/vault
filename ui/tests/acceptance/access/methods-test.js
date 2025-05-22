@@ -45,9 +45,8 @@ module('Acceptance | auth-methods list view', function (hooks) {
     // filter by auth type
     await clickTrigger('#filter-by-auth-type');
     await click(searchSelect.option(searchSelect.optionIndex(type)));
-    let rows = findAll('.linked-block list-item row');
-    const rowsUserpass = findAll(AUTH_FORM.linkedBlockAuth(type));
-
+    let rows = findAll('.list-item-row');
+    const rowsUserpass = findAll(GENERAL.buttonByAttr('userpass'));
     assert.strictEqual(rows.length, rowsUserpass.length, 'all rows returned are userpass');
 
     // filter by name

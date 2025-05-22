@@ -24,7 +24,7 @@ export const GENERAL = {
   /* ────── Buttons ────── */
   backButton: '[data-test-back-button]',
   cancelButton: '[data-test-cancel]',
-  confirmButton: '[data-test-confirm-button]',
+  confirmButton: '[data-test-confirm-button]', // used most often on modal or confirm popups
   copyButton: '[data-test-copy-button]',
   // there should only be one save button per view (e.g. one per form) so this does not need to be dynamic
   // this button should be used for any kind of "submit" on a form or "save" action.
@@ -40,6 +40,7 @@ export const GENERAL = {
   /* ────── Inputs / Form Fields ────── */
   checkboxByAttr: (attr: string) => `[data-test-checkbox="${attr}"]`,
   confirmModalInput: '[data-test-confirmation-modal-input]',
+  confirmMessage: '[data-test-confirm-action-message]',
   docLinkByAttr: (attr: string) => `[data-test-doc-link="${attr}"]`,
   enableField: (attr: string) => `[data-test-enable-field="${attr}"] button`,
   fieldByAttr: (attr: string) => `[data-test-field="${attr}"]`,

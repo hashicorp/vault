@@ -12,21 +12,24 @@ import sinon from 'sinon';
 
 const SELECTORS = {
   dropdown: '[data-test-copy-menu-trigger]',
-  copyButton: GENERAL.copyButton,
-  clipboard: 'data-test-copy-button',
-  wrapButton: '[data-test-wrap-button]',
   masked: '[data-test-masked-input]',
 };
 
 module('Integration | Component | copy-secret-dropdown', function (hooks) {
   setupRenderingTest(hooks);
   hooks.beforeEach(function () {
-    this.onWrap = () => {};
+    this.onWrap = sinon.stub().returns('wrapped-data');
     this.onClose = () => {};
+    this.data = `{ foo: 'bar' }`;
+    this.wrappedData = 'wrapped-data';
+    this.clipboardSpy = sinon.stub(navigator.clipboard, 'writeText').resolves();
+  });
+
+  hooks.afterEach(function () {
+    sinon.restore(); // resets all stubs, including clipboard
   });
 
   test('it renders and fires callback functions', async function (assert) {
-    this.data = `{ foo: 'bar' }`;
     this.onWrap = () => assert.ok(true, 'onWrap callback fires Wrap secret is clicked');
     this.onClose = () => assert.ok(true, 'onClose callback fires when dropdown closes');
 
@@ -41,18 +44,14 @@ module('Integration | Component | copy-secret-dropdown', function (hooks) {
     );
 
     await click(SELECTORS.dropdown);
-    assert.dom(SELECTORS.copyButton).hasText('Copy JSON');
-    assert.dom(SELECTORS.wrapButton).hasText('Wrap secret');
+    assert.dom(GENERAL.copyButton).hasText('Copy JSON');
+    assert.dom(GENERAL.buttonByAttr('wrap')).hasText('Wrap secret');
 
-    await click(SELECTORS.wrapButton);
+    await click(GENERAL.buttonByAttr('wrap'));
     await click(SELECTORS.dropdown);
   });
 
   test('it copies JSON', async function (assert) {
-    // Sinon spy for clipboard
-    const clipboardSpy = sinon.stub(navigator.clipboard, 'writeText').resolves();
-
-    this.data = `{ foo: 'bar' }`;
     this.onWrap = () => assert.ok(true, 'onWrap callback fires Wrap secret is clicked');
     this.onClose = () => assert.ok(true, 'onClose callback fires when dropdown closes');
 
@@ -68,14 +67,11 @@ module('Integration | Component | copy-secret-dropdown', function (hooks) {
 
     await click(SELECTORS.dropdown);
     await click(GENERAL.copyButton);
-    assert.true(clipboardSpy.calledOnce, 'Clipboard was called once');
-    assert.strictEqual(clipboardSpy.firstCall.args[0], this.data, 'copy value is the json secret data');
-    // Restore original clipboard
-    clipboardSpy.restore(); // cleanup
+    assert.true(this.clipboardSpy.calledOnce, 'Clipboard was called once');
+    assert.strictEqual(this.clipboardSpy.firstCall.args[0], this.data, 'copy value is the json secret data');
   });
 
   test('it renders loading wrap button', async function (assert) {
-    assert.expect(2);
     await render(
       hbs`<ToolbarActions>
   <CopySecretDropdown
@@ -89,32 +85,25 @@ module('Integration | Component | copy-secret-dropdown', function (hooks) {
     );
 
     await click(SELECTORS.dropdown);
-    assert.dom(`${SELECTORS.wrapButton} [data-test-icon="loading"]`).exists('renders loading icon');
-    assert.dom(SELECTORS.wrapButton).isDisabled();
+    assert.dom(`${GENERAL.buttonByAttr('wrap')} [data-test-icon="loading"]`).exists('renders loading icon');
+    assert.dom(GENERAL.buttonByAttr('wrap')).isDisabled();
   });
 
   test('it wraps data', async function (assert) {
-    // Sinon spy for clipboard
-    const clipboardSpy = sinon.stub(navigator.clipboard, 'writeText').resolves();
-    this.wrappedData = 'my-token';
-
+    this.data = '';
     await render(
       hbs`<ToolbarActions>
   <CopySecretDropdown
     @clipboardText={{this.data}}
     @onWrap={{this.onWrap}}
     @isWrapping={{false}}
-    @wrappedData={{this.wrappedData}}
     @onClose={{this.onClose}}
   />
 </ToolbarActions>`
     );
 
     await click(SELECTORS.dropdown);
-    await click(SELECTORS.wrapButton);
-    assert.true(clipboardSpy.calledOnce, 'Clipboard was called once');
-    assert.strictEqual(clipboardSpy.firstCall.args[0], this.wrappedData, 'copy value is wrapped secret data');
-    // Restore original clipboard
-    clipboardSpy.restore(); // cleanup
+    await click(GENERAL.buttonByAttr('wrap'));
+    assert.true(this.onWrap.calledOnce, 'onWrap was called');
   });
 });

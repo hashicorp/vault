@@ -259,7 +259,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     await this.renderComponent();
 
     await click(PAGE.detail.copy);
-    await click(PAGE.detail.wrap);
+    await click(GENERAL.buttonByAttr('wrap'));
   });
 
   test('it renders sync status page alert for multiple destinations', async function (assert) {

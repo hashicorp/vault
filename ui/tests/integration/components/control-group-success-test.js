@@ -15,7 +15,6 @@ const SELECTORS = {
   jsonViewer: '[data-test-json-viewer]',
   navigate: '[data-test-navigate-button]',
   navMessage: '[data-test-navigate-message]',
-  unwrap: '[data-test-unwrap-button]',
   unwrapForm: '[data-test-unwrap-form]',
 };
 
@@ -79,7 +78,7 @@ module('Integration | Component | control group success', function (hooks) {
     assert.dom(GENERAL.inputByAttr('token')).hasValue('');
 
     await fillIn(GENERAL.inputByAttr('token'), 'token');
-    await click(SELECTORS.unwrap);
+    await click(GENERAL.buttonByAttr('unwrap'));
 
     const actual = find(SELECTORS.jsonViewer).innerText;
     const expected = JSON.stringify({ foo: 'bar' }, null, 2);

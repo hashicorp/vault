@@ -55,10 +55,14 @@
     <div class="level is-mobile">
       <div>
         <div class="is-grid align-items-center linked-block-title">
-          <Hds::TooltipButton @text={{method.methodType}} aria-label="Type of auth mount">
+          <Hds::TooltipButton
+            @text={{method.methodType}}
+            aria-label="Type of auth mount"
+            data-test-button={{method.methodType}}
+          >
             <Icon @name={{method.icon}} class="has-text-grey-light" />
           </Hds::TooltipButton>
-          <span data-test-path data-test-id={{method.id}} class="has-text-weight-semibold has-text-black overflow-wrap">
+          <span class="has-text-weight-semibold has-text-black overflow-wrap">
             {{method.path}}
           </span>
           <br />
