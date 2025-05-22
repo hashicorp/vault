@@ -16,7 +16,13 @@ import {
   mountEngineCmd,
   runCmd,
 } from 'vault/tests/helpers/commands';
-import { login, loginMethod, loginNs, logout, VISIBLE_MOUNTS } from 'vault/tests/helpers/auth/auth-helpers';
+import {
+  login,
+  loginMethod,
+  loginNs,
+  logout,
+  SYS_INTERNAL_UI_MOUNTS,
+} from 'vault/tests/helpers/auth/auth-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { v4 as uuidv4 } from 'uuid';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -29,6 +35,17 @@ module('Acceptance | auth login form', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
+  test('it does not request login settings for community versions', async function (assert) {
+    assert.expect(1); // should only be one assertion because the stubbed mirage request should NOT be hit
+    this.owner.lookup('service:version').type = 'community';
+    this.server.get('/sys/internal/ui/default-auth-methods', () => {
+      // cannot throw error here because request errors are swallowed
+      assert.false(true, 'request made for login settings and it should not have been');
+    });
+    await visit('/vault/auth');
+    assert.strictEqual(currentURL(), '/vault/auth');
+  });
+
   test('it selects auth method if "with" query param is a supported auth method', async function (assert) {
     const backends = supportedAuthBackends();
     assert.expect(backends.length);
@@ -36,6 +53,16 @@ module('Acceptance | auth login form', function (hooks) {
       await visit(`/vault/auth?with=${backend.type}`);
       assert.dom(AUTH_FORM.selectMethod).hasValue(backend.type);
     }
+  });
+
+  test('it selects auth method if "with" query param ends in an unencoded a slash', async function (assert) {
+    await visit('/vault/auth?with=userpass/');
+    assert.dom(AUTH_FORM.selectMethod).hasValue('userpass');
+  });
+
+  test('it selects auth method if "with" query param ends in an encoded slash and matches an auth type', async function (assert) {
+    await visit('/vault/auth?with=userpass%2F');
+    assert.dom(AUTH_FORM.selectMethod).hasValue('userpass');
   });
 
   test('it redirects if "with" query param is not a supported auth method', async function (assert) {
@@ -74,7 +101,7 @@ module('Acceptance | auth login form', function (hooks) {
   module('listing visibility', function (hooks) {
     hooks.beforeEach(async function () {
       this.server.get('/sys/internal/ui/mounts', () => {
-        return { data: { auth: VISIBLE_MOUNTS } };
+        return { data: { auth: SYS_INTERNAL_UI_MOUNTS } };
       });
       await logout(); // clear local storage
     });
@@ -84,7 +111,7 @@ module('Acceptance | auth login form', function (hooks) {
       const expectedTabs = [
         { type: 'userpass', display: 'Userpass' },
         { type: 'oidc', display: 'OIDC' },
-        { type: 'token', display: 'Token' },
+        { type: 'ldap', display: 'LDAP' },
       ];
       await visit('/vault/auth');
       await waitFor(AUTH_FORM.tabs);
@@ -129,9 +156,9 @@ module('Acceptance | auth login form', function (hooks) {
     });
 
     test('it selects type from dropdown if query param is NOT a visible mount, but is a supported method', async function (assert) {
-      await visit('/vault/auth?with=ldap');
+      await visit('/vault/auth?with=token');
       await waitFor(GENERAL.selectByAttr('auth type'));
-      assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap');
+      assert.dom(GENERAL.selectByAttr('auth type')).hasValue('token');
       assert.dom(GENERAL.backButton).exists('it renders "Back" button because tabs do exist');
       assert
         .dom(GENERAL.buttonByAttr('other-methods'))
@@ -361,9 +388,7 @@ module('Acceptance | auth login form', function (hooks) {
       await visit('/vault/auth');
 
       this.server.get('/sys/internal/ui/mounts', (_, req) => {
-        // sometimes the namespace header is "X-Vault-Namespace" and other times "x-vault-namespace"...haven't figured out why
-        const key = Object.keys(req.requestHeaders).find((k) => k.toLowerCase().includes('namespace'));
-        assert.strictEqual(req.requestHeaders[key], 'admin', `${key}: header contains namespace`);
+        assert.strictEqual(req.requestHeaders['x-vault-namespace'], 'admin', 'header contains namespace');
         req.passthrough();
       });
       await typeIn(GENERAL.inputByAttr('namespace'), 'admin');

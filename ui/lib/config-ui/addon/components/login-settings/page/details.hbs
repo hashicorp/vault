@@ -1,0 +1,52 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      {{@rule.name}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<nav class="tabs" aria-label="navigation for rule details">
+  <ul>
+    <li>
+      <LinkTo @route="login-settings.rule.details" @model={{@rule}} data-test-tab="rule">
+        Details
+      </LinkTo>
+    </li>
+  </ul>
+</nav>
+
+<Toolbar>
+  <ToolbarActions>
+    {{#if (has-capability this.capabilities "delete" pathKey="customLogin" params=@rule)}}
+      <Hds::Button
+        @text="Delete Rule"
+        @color="secondary"
+        class="toolbar-button"
+        {{on "click" (fn (mut this.showConfirmModal) true)}}
+        data-test-rule-delete
+      />
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
+
+{{#each-in this.displayFields as |key label|}}
+  <InfoTableRow @alwaysRender={{true}} @label={{label}} @value={{this.displayValue key}} />
+{{/each-in}}
+
+{{#if this.showConfirmModal}}
+  <ConfirmModal
+    @color="critical"
+    @onClose={{fn (mut this.showConfirmModal) false}}
+    @confirmMessage="This will permanently delete this rule."
+    @onConfirm={{this.onDelete}}
+  />
+{{/if}}

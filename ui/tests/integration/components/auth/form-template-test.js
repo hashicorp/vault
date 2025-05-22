@@ -27,26 +27,29 @@ module('Integration | Component | auth | form template', function (hooks) {
   hooks.beforeEach(function () {
     window.localStorage.clear();
     this.version = this.owner.lookup('service:version');
-    this.visibleMountsByType = null;
     this.cluster = { id: '1' };
-    this.directLinkData = null;
+
+    this.alternateView = null;
+    this.defaultView = { view: 'dropdown', tabData: null };
     this.handleNamespaceUpdate = sinon.spy();
+    this.initialFormState = { initialAuthType: 'token', showAlternate: false };
     this.namespaceQueryParam = '';
     this.oidcProviderQueryParam = '';
     this.onSuccess = sinon.spy();
-    this.canceledMfaAuth = '';
+    this.visibleMountTypes = null;
 
     this.renderComponent = () => {
       return render(hbs`
          <Auth::FormTemplate
-          @visibleMountsByType={{this.visibleMountsByType}}
+          @alternateView={{this.alternateView}}
           @cluster={{this.cluster}}
-          @directLinkData={{this.directLinkData}}
+          @defaultView={{this.defaultView}}
           @handleNamespaceUpdate={{this.handleNamespaceUpdate}}
+          @initialFormState={{this.initialFormState}}
           @namespaceQueryParam={{this.namespaceQueryParam}}
           @oidcProviderQueryParam={{this.oidcProviderQueryParam}}
           @onSuccess={{this.onSuccess}}
-          @canceledMfaAuth={{this.canceledMfaAuth}}
+          @visibleMountTypes={{this.visibleMountTypes}}
         />`);
     };
   });
@@ -57,8 +60,7 @@ module('Integration | Component | auth | form template', function (hooks) {
     assert.dom(GENERAL.selectByAttr('auth type')).hasValue('token');
   });
 
-  test('it selects @canceledMfaAuth by default', async function (assert) {
-    this.canceledMfaAuth = 'ldap';
+  test('it does not show toggle buttons if @alternateView does not exist', async function (assert) {
     await this.renderComponent();
     assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap');
     assert.dom(GENERAL.inputByAttr('username')).exists();
@@ -72,18 +74,14 @@ module('Integration | Component | auth | form template', function (hooks) {
     assert.dom(GENERAL.inputByAttr('role')).exists();
     await click(AUTH_FORM.advancedSettings);
     assert.dom(GENERAL.inputByAttr('path')).exists();
-    assert.dom(GENERAL.backButton).doesNotExist();
-    assert
-      .dom(GENERAL.buttonByAttr('other-methods'))
-      .doesNotExist('"Sign in with other methods" does not render');
+    assert.dom(GENERAL.backButton).doesNotExist('"Back" button does not render');
+    assert.dom(GENERAL.buttonByAttr('other-methods')).doesNotExist('"Sign in with other methods" does not render');
   });
 
-  test('it does not show toggle buttons when listing visibility is not set', async function (assert) {
+  test('it initializes with preset auth type', async function (assert) {
+    this.initialFormState = { initialAuthType: 'userpass' };
     await this.renderComponent();
-    assert.dom(GENERAL.backButton).doesNotExist('"Back" button does not render');
-    assert
-      .dom(GENERAL.buttonByAttr('other-methods'))
-      .doesNotExist('"Sign in with other methods" does not render');
+    assert.dom(GENERAL.selectByAttr('auth type')).hasValue('userpass');
   });
 
   test('it displays errors', async function (assert) {
@@ -99,7 +97,7 @@ module('Integration | Component | auth | form template', function (hooks) {
 
   module('listing visibility', function (hooks) {
     hooks.beforeEach(function () {
-      this.visibleMountsByType = {
+      const defaultTabs = {
         userpass: [
           {
             path: 'userpass/',
@@ -131,27 +129,12 @@ module('Integration | Component | auth | form template', function (hooks) {
           },
         ],
       };
-    });
-
-    test('it renders mounts configured with listing_visibility="unuath"', async function (assert) {
-      const expectedTabs = [
-        { type: 'userpass', display: 'Userpass' },
-        { type: 'oidc', display: 'OIDC' },
-        { type: 'token', display: 'Token' },
-      ];
-
-      await this.renderComponent();
-      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
-      // there are 4 mount paths returned in the stubbed sys/internal/ui/mounts response above,
-      // but two are of the same type so only expect 3 tabs
-      assert.dom(AUTH_FORM.tabs).exists({ count: 3 }, 'it groups mount paths by type and renders 3 tabs');
-      expectedTabs.forEach((m) => {
-        assert.dom(AUTH_FORM.tabBtn(m.type)).exists(`${m.type} renders as a tab`);
-        assert.dom(AUTH_FORM.tabBtn(m.type)).hasText(m.display, `${m.type} renders expected display name`);
-      });
-      assert
-        .dom(AUTH_FORM.tabBtn('userpass'))
-        .hasAttribute('aria-selected', 'true', 'it selects the first type by default');
+      // all computed by the parent, in this case the initial tabs are the same as visible mount types
+      // but that isn't always the case
+      this.visibleMountTypes = Object.keys(defaultTabs);
+      this.defaultView = { type: 'tabs', tabData: defaultTabs };
+      this.alternateView = { type: 'dropdown', tabData: null };
+      this.initialFormState = { initialAuthType: 'userpass', showAlternate: false };
     });
 
     test('it selects each auth tab and renders form for that type', async function (assert) {
@@ -184,37 +167,14 @@ module('Integration | Component | auth | form template', function (hooks) {
       assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
     });
 
-    test('it renders the mount description', async function (assert) {
-      await this.renderComponent();
-      await click(AUTH_FORM.tabBtn('token'));
-      assert.dom(AUTH_FORM.description).hasText('token based credentials');
-    });
-
-    test('it renders a dropdown if multiple mount paths are returned', async function (assert) {
-      await this.renderComponent();
-      await click(AUTH_FORM.tabBtn('userpass'));
-      const dropdownOptions = findAll(`${GENERAL.selectByAttr('path')} option`).map((o) => o.value);
-      const expectedPaths = ['userpass/', 'userpass2/'];
-      expectedPaths.forEach((p) => {
-        assert.true(dropdownOptions.includes(p), `dropdown includes path: ${p}`);
-      });
-    });
-
-    test('it renders hidden input if only one mount path is returned', async function (assert) {
-      await this.renderComponent();
-      await click(AUTH_FORM.tabBtn('oidc'));
-      assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
-      assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
-    });
-
-    test('it clicks "Sign in with other methods"', async function (assert) {
+    test('it clicks "Sign in with other methods" and toggles to other view', async function (assert) {
       await this.renderComponent();
       assert.dom(AUTH_FORM.tabs).exists({ count: 3 }, 'tabs render by default');
       assert.dom(GENERAL.backButton).doesNotExist();
       await click(GENERAL.buttonByAttr('other-methods'));
       assert
         .dom(GENERAL.buttonByAttr('other-methods'))
-        .doesNotExist('"Sign in with other methods" does not renderafter it is clicked');
+        .doesNotExist('"Sign in with other methods" does not render after it is clicked');
       assert
         .dom(GENERAL.selectByAttr('auth type'))
         .exists('clicking "Sign in with other methods" renders dropdown instead of tabs');
@@ -243,58 +203,21 @@ module('Integration | Component | auth | form template', function (hooks) {
       assert.dom(AUTH_FORM.tabBtn('token')).hasAttribute('aria-selected', 'false');
     });
 
-    test('it preselects tab if @canceledMfaAuth is a tab', async function (assert) {
-      this.canceledMfaAuth = 'oidc';
+    test('it preselects tab from initialFormState', async function (assert) {
+      this.initialFormState = { initialAuthType: 'oidc', showAlternate: false };
       await this.renderComponent();
       assert.dom(AUTH_FORM.authForm('oidc')).exists('oidc form renders');
       assert.dom(AUTH_FORM.tabBtn('oidc')).hasAttribute('aria-selected', 'true');
     });
 
-    test('if @canceledMfaAuth is NOT a tab, dropdown renders with type selected instead of tabs', async function (assert) {
-      this.canceledMfaAuth = 'ldap';
+    test('it renders dropdown and preselects type if initialFormState is not a tab', async function (assert) {
+      this.initialFormState = { initialAuthType: 'ldap', showAlternate: true };
       await this.renderComponent();
       assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap');
       assert.dom(GENERAL.inputByAttr('username')).exists();
       assert.dom(GENERAL.inputByAttr('password')).exists();
 
       assert.dom(GENERAL.backButton).exists('"Back" button renders');
-      assert
-        .dom(GENERAL.buttonByAttr('other-methods'))
-        .doesNotExist('"Sign in with other methods" does not render');
-    });
-
-    // if mount data exists, the mount has listing_visibility="unauth"
-    test('it renders single mount view instead of tabs if @directLinkData data exists and includes mount data', async function (assert) {
-      this.directLinkData = { path: 'my-oidc/', type: 'oidc', isVisibleMount: true };
-      await this.renderComponent();
-      assert.dom(AUTH_FORM.authForm('oidc')).exists;
-      assert.dom(AUTH_FORM.tabBtn('oidc')).hasText('OIDC', 'it renders auth type tab');
-      assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
-      assert.dom(GENERAL.inputByAttr('role')).exists();
-      assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
-      assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
-      assert.dom(GENERAL.buttonByAttr('other-methods')).exists('"Sign in with other methods" renders');
-
-      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
-      assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
-      assert.dom(GENERAL.backButton).doesNotExist();
-    });
-
-    test('it does not render tabs if @directLinkData data exists and just includes type', async function (assert) {
-      // set a type that is NOT in a visible mount because mount data exists otherwise
-      this.directLinkData = { type: 'ldap', isVisibleMount: false };
-      await this.renderComponent();
-
-      assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap', 'dropdown has type selected');
-      assert.dom(AUTH_FORM.authForm('ldap')).exists();
-      assert.dom(GENERAL.inputByAttr('username')).exists();
-      assert.dom(GENERAL.inputByAttr('password')).exists();
-      await click(AUTH_FORM.advancedSettings);
-      assert.dom(GENERAL.inputByAttr('path')).exists();
-      assert.dom(AUTH_FORM.tabBtn('ldap')).doesNotExist('tab does not render');
-      assert
-        .dom(GENERAL.backButton)
-        .exists('back button renders because listing_visibility="unauth" for other mounts');
       assert
         .dom(GENERAL.buttonByAttr('other-methods'))
         .doesNotExist('"Sign in with other methods" does not render');

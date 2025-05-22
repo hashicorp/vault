@@ -306,7 +306,6 @@ module "vault_verify_removed_node_shim" {
   vault_install_dir = var.vault_install_dir
 }
 
-
 module "vault_verify_secrets_engines_create" {
   source = "./modules/verify_secrets_engines/modules/create"
 

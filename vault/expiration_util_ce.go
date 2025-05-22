@@ -31,3 +31,7 @@ func (m *ExpirationManager) collectLeases() (map[*namespace.Namespace][]string, 
 	leaseCount += len(keys)
 	return existing, leaseCount, nil
 }
+
+func (m *ExpirationManager) removeIrrevocableLeasesEnabled(c *Core) bool {
+	return false
+}
