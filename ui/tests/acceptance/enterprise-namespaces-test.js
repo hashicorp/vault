@@ -92,8 +92,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await createNamespaces(namespaces);
 
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
-    await click(GENERAL.buttonByAttr('refresh-list'));
-
+    await click(GENERAL.buttonByAttr('refresh-namespaces'));
     assert.dom(NAMESPACE_PICKER_SELECTORS.searchInput).exists('The namespace search field exists');
 
     // Simulate typing into the search input
@@ -123,7 +122,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await createNamespaces(namespaces);
 
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
-    await click(GENERAL.buttonByAttr('refresh-list'));
+    await click(GENERAL.buttonByAttr('refresh-namespaces'));
 
     // Verify all namespaces are displayed initially
     assert.dom(NAMESPACE_PICKER_SELECTORS.link()).exists('Namespace link(s) exist');
@@ -186,8 +185,8 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     );
 
     // Refresh the list of namespaces
-    assert.dom(GENERAL.buttonByAttr('refresh-list')).exists('Refresh list button exists');
-    await click(GENERAL.buttonByAttr('refresh-list'));
+    assert.dom(GENERAL.buttonByAttr('refresh-namespaces')).exists('Refresh list button exists');
+    await click(GENERAL.buttonByAttr('refresh-namespaces'));
 
     // Verify that the namespace list was fetched on refresh
     listNamespaceRequests = fetchSpy
@@ -209,7 +208,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await createNamespaces(namespaces);
 
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
-    await click(GENERAL.buttonByAttr('refresh-list'));
+    await click(GENERAL.buttonByAttr('refresh-namespaces'));
 
     // Verify the "Manage" button is rendered and has the correct URL
     assert
@@ -247,7 +246,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await createNamespaces(namespaces);
 
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
-    await click(GENERAL.buttonByAttr('refresh-list'));
+    await click(GENERAL.buttonByAttr('refresh-namespaces'));
 
     // Login with a namespace prefixed with /
     await loginNs('/beep/boop');

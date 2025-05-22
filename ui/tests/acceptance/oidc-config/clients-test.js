@@ -405,10 +405,10 @@ module('Acceptance | oidc-config clients', function (hooks) {
         .dom(`${GENERAL.infoRowValue('Key')} a`)
         .hasText('default', 'client uses default key and renders a link');
       assert
-        .dom(`${GENERAL.infoRowValue('Client ID')} GENERAL.copyButton`)
+        .dom(`${GENERAL.infoRowValue('Client ID')} ${GENERAL.copyButton}`)
         .exists('client ID exists and has copy button');
       assert
-        .dom(`${GENERAL.infoRowValue('Client Secret')} GENERAL.copyButton`)
+        .dom(`${GENERAL.infoRowValue('Client Secret')} ${GENERAL.copyButton}`)
         .exists('client secret exists and has copy button');
       assert
         .dom(GENERAL.infoRowValue('ID Token TTL'))

@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, currentURL, find, fillIn, typeIn, visit, waitFor } from '@ember/test-helpers';
+import { click, currentURL, fillIn, typeIn, visit, waitFor } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
@@ -289,6 +289,8 @@ module('Acceptance | auth login form', function (hooks) {
     // subsequent capability checks fail because they would not be queried with the appropriate namespace header
     // if this test fails because a POST /v1/sys/capabilities-self returns a 403, then we have a problem!
     test('it sets namespace when renewing token', async function (assert) {
+      // Sinon spy for clipboard
+      const clipboardSpy = sinon.stub(navigator.clipboard, 'writeText').resolves();
       const uid = uuidv4();
       const ns = `admin-${uid}`;
       // log in to root to create namespace
@@ -325,9 +327,10 @@ module('Acceptance | auth login form', function (hooks) {
       // login as user just to get token (this is the only way to generate a token in the UI right now..)
       await loginMethod(inputValues, { authType: 'userpass', toggleOptions: true });
       await click(GENERAL.buttonByAttr('user-menu-trigger'));
-      // ARG TODO this is going to break
-      const token = find(GENERAL.copyButton).getAttribute('data-test-copy-button');
-
+      await click(GENERAL.copyButton);
+      assert.true(clipboardSpy.calledOnce, 'Clipboard was called once');
+      const token = clipboardSpy.firstCall.args[0];
+      clipboardSpy.restore(); // restore original clipboard
       // login with token to reproduce bug
       await loginNs(ns, token);
       await visit(`/vault/secrets/${db}/overview?namespace=${ns}`);

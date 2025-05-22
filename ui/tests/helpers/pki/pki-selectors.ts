@@ -76,12 +76,12 @@ export const PKI_CROSS_SIGN = {
   signedIssuerRow: (row = 0) => `[data-test-info-table-row="${row}"]`,
   signedIssuerCol: (attr: string) => `[data-test-info-table-column="${attr}"]`,
   rowValue: (attr: string) => `[data-test-row-value="${attr}"]`, // TODO replace with the GENERAL.infoRowValue
-  copyButton: (attr: string) => `[data-test-row-value="${attr}"] GENERAL.copyButton`,
+  copyButton: (attr: string) => `[data-test-row-value="${attr}"] ${GENERAL.copyButton}`,
 };
 
 export const PKI_ISSUER_DETAILS = {
   configure: '[data-test-pki-issuer-configure]',
-  copyButtonByName: (name: string) => `[data-test-row-value="${name}"] GENERAL.copyButton`,
+  copyButtonByName: (name: string) => `[data-test-row-value="${name}"] ${GENERAL.copyButton}`,
   crossSign: '[data-test-pki-issuer-cross-sign]',
   defaultGroup: '[data-test-details-group="default"]',
   download: '[data-test-issuer-download]',
