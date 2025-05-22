@@ -3,10 +3,8 @@
 
 binary {
   secrets    = false
-  go_modules = false
+  go_modules = true
   osv        = true
-  oss_index  = true
-  nvd        = false
 }
 
 container {
