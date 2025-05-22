@@ -26,7 +26,7 @@ export const logout = async () => {
 export const login = async (token = rootToken) => {
   // make sure we're always logged out and logged back in
   await logout();
-  await visit('/vault/auth?with=token');
+  await visit('/vault/auth');
 
   await fillIn(AUTH_FORM.selectMethod, 'token');
   await fillIn(GENERAL.inputByAttr('token'), token);

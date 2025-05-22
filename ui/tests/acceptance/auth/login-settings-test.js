@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, fillIn, typeIn, visit, waitFor } from '@ember/test-helpers';
 import { runCmd } from 'vault/tests/helpers/commands';
-import { login, logout } from 'vault/tests/helpers/auth/auth-helpers';
+import { login, logout, rootToken } from 'vault/tests/helpers/auth/auth-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
@@ -29,7 +29,9 @@ module('Acceptance | Enterprise | auth custom login settings', function (hooks) 
 
   hooks.afterEach(async function () {
     // cleanup login rules
-    await login();
+    await visit('/vault/auth?with=token');
+    await fillIn(GENERAL.inputByAttr('token'), rootToken);
+    await click(AUTH_FORM.login);
     await runCmd([
       'delete sys/config/ui/login/default-auth/root-rule',
       'delete sys/config/ui/login/default-auth/ns-rule',
