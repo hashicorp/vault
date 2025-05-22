@@ -3,10 +3,6 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-/* 
-  Event names shoud be
-
-*/
 export const PREFIX = 'vault_ui';
 
 /*
