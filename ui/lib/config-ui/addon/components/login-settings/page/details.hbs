@@ -3,61 +3,51 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#if @rule}}
-  <PageHeader as |p|>
-    <p.top>
-      <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
-    </p.top>
-    <p.levelLeft>
-      <h1 class="title is-3">
-        {{@rule.name}}
-      </h1>
-    </p.levelLeft>
-  </PageHeader>
+<PageHeader as |p|>
+  <p.top>
+    <Page::Breadcrumbs @breadcrumbs={{@breadcrumbs}} />
+  </p.top>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      {{@rule.name}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
 
-  <nav class="tabs" aria-label="navigation for rule details">
-    <ul>
-      <li>
-        <LinkTo @route="login-settings.rule.details" @model={{@rule}} data-test-tab="rule">
-          Details
-        </LinkTo>
-      </li>
-    </ul>
-  </nav>
+<nav class="tabs" aria-label="navigation for rule details">
+  <ul>
+    <li>
+      <LinkTo @route="login-settings.rule.details" @model={{@rule}} data-test-tab="rule">
+        Details
+      </LinkTo>
+    </li>
+  </ul>
+</nav>
 
-  <Toolbar>
-    <ToolbarActions>
-      {{#if (has-capability this.capabilities "delete" pathKey="customLogin" params=@rule)}}
-        <Hds::Button
-          @text="Delete Rule"
-          @color="secondary"
-          class="toolbar-button"
-          {{on "click" (fn (mut this.showConfirmModal) true)}}
-          data-test-rule-delete
-        />
-      {{/if}}
-    </ToolbarActions>
-  </Toolbar>
-  {{#each-in @rule as |key value|}}
-    {{#if (eq key "defaultAuthType")}}
-      <InfoTableRow @alwaysRender={{true}} @label="Default method" @value={{value}} />
-    {{else if (eq key "backupAuthTypes")}}
-      <InfoTableRow @alwaysRender={{true}} @label="Backup methods" @value={{value}} />
-    {{else if (eq key "disableInheritance")}}
-      <InfoTableRow @alwaysRender={{true}} @label="Inheritance" @value={{stringify (not value)}} />
-    {{else}}
-      <InfoTableRow @alwaysRender={{true}} @label={{capitalize key}} @value={{value}} />
+<Toolbar>
+  <ToolbarActions>
+    {{#if (has-capability this.capabilities "delete" pathKey="customLogin" params=@rule)}}
+      <Hds::Button
+        @text="Delete Rule"
+        @color="secondary"
+        class="toolbar-button"
+        {{on "click" (fn (mut this.showConfirmModal) true)}}
+        data-test-rule-delete
+      />
     {{/if}}
-  {{/each-in}}
-
-{{else}}
-  <EmptyState
-    data-test-empty-state="rule-details"
-    @title="No rule found"
-    @message="The rule you are looking for does not exist."
-  />
-
-{{/if}}
+  </ToolbarActions>
+</Toolbar>
+{{#each-in @rule as |key value|}}
+  {{#if (eq key "defaultAuthType")}}
+    <InfoTableRow @alwaysRender={{true}} @label="Default method" @value={{value}} />
+  {{else if (eq key "backupAuthTypes")}}
+    <InfoTableRow @alwaysRender={{true}} @label="Backup methods" @value={{value}} />
+  {{else if (eq key "disableInheritance")}}
+    <InfoTableRow @alwaysRender={{true}} @label="Inheritance" @value={{stringify (not value)}} />
+  {{else}}
+    <InfoTableRow @alwaysRender={{true}} @label={{capitalize key}} @value={{value}} />
+  {{/if}}
+{{/each-in}}
 
 {{#if this.showConfirmModal}}
   <ConfirmModal
