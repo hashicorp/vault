@@ -15,7 +15,6 @@ const SELECTORS = {
   label: '[data-test-certificate-label]',
   value: '[data-test-certificate-value]',
   icon: '[data-test-certificate-icon]',
-  copyButton: GENERAL.copyButton,
   copyIcon: '[data-test-icon="clipboard-copy"]',
 };
 const { rootPem, rootDer } = CERTIFICATES;
