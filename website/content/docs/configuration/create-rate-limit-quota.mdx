@@ -351,6 +351,69 @@ encryption requests using `orders` key to be 500 per second.
    </CodeBlockConfig>
 
 
+### Vault Enterprise namespaces
+
+For Vault Enterprise clusters, you can use the `inheritable` parameter to apply
+the resource quota set on a namespace to its subsequent child namespaces.
+
+Think of the following namespace hierarchy:
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+root
+   └── parent
+      └── child
+         └── grand-child
+```
+
+</CodeBlockConfig>
+
+Under the `root` namespace, you have a `parent` namespace, and then
+`parent/child` and `parent/child/grand-child` namespaces.
+
+You can set the resource quota on the `parent` namespace which gets applied to
+its child namespaces inheritably by setting the `inheritable` parameter to
+`true`. By default, it is set to `false`.
+
+1. Create a quota rule on the `us-west` namespace which its child namespaces
+   will inherit. The rate limit is 500 requests per minute.
+
+   ```shell-session
+   $ vault write sys/quotas/rate-limit/us-west \
+      path="us-west" \
+      rate=500 \
+      interval=1m \
+      inheritable=true
+   ```
+
+   **Output:**
+
+   <CodeBlockConfig hideClipboard>
+
+   ```plaintext
+   Success! Data written to: sys/quotas/rate-limit/us-west
+   ```
+
+   </CodeBlockConfig>
+
+1. Verify the quota rule.
+
+   ```shell-session
+   $ vault read sys/quotas/rate-limit/us-west
+
+   Key               Value
+   ---               -----
+   block_interval    0
+   inheritable       true
+   interval          60
+   name              us-west
+   path              us-west/
+   rate              500
+   role              n/a
+   type              rate-limit
+   ```
+
 </Tab>
 <Tab heading="API call using cURL" group="api">
 
@@ -517,6 +580,68 @@ encryption requests using `orders` key to be 500 per second.
    </CodeBlockConfig>
 
 
+### Vault Enterprise namespaces
+
+For Vault Enterprise clusters, you can use the `inheritable` parameter to apply
+the resource quota set on a namespace to its subsequent child namespaces.
+
+Think of the following namespace hierarchy:
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+root
+   └── parent
+      └── child
+         └── grand-child
+```
+
+</CodeBlockConfig>
+
+Under the `root` namespace, you have a `parent` namespace, and then
+`parent/child` and `parent/child/grand-child` namespaces.
+
+You can set the resource quota on the `parent` namespace which gets applied to
+its child namespaces inheritably by setting the `inheritable` parameter to
+`true`. By default, it is set to `false`.
+
+
+1. Create a quota rule on the `us-west` namespace which its child namespace
+   inherits. The rate limit is 500 requests per minute.
+
+   ```shell-session
+   $ curl --header "X-Vault-Token: $VAULT_TOKEN" \
+      --request POST \
+      --data '{"path": "us-west", "rate": 500, "interval": 60, "inheritable": true }' \
+      $VAULT_ADDR/v1/sys/quotas/rate-limit/us-west
+   ```
+
+1. Verify the quota rule.
+
+   ```shell-session
+   $ curl -s --header "X-Vault-Token: $VAULT_TOKEN" \
+      $VAULT_ADDR/v1/sys/quotas/rate-limit/us-west | jq -r ".data"
+   ```
+
+   **Output:**
+
+   <CodeBlockConfig hideClipboard>
+
+   ```json
+   {
+      "block_interval": 0,
+      "inheritable": true,
+      "interval": 60,
+      "name": "us-west",
+      "path": "us-west/",
+      "rate": 500,
+      "role": "",
+      "type": "rate-limit"
+   }
+   ```
+
+   </CodeBlockConfig>
+
 </Tab>
 <Tab heading="Terraform" group="terraform">
 
@@ -628,29 +753,7 @@ resources with `terraform plan`.
 
 To learn more about Terraform, visit the [Terraform tutorials site](/terraform/tutorials).
 
-</Tab>
-</Tabs>
-
-
-## Vault Enterprise
-
-For Vault Enterprise clusters, additional parameters are available on rate limit
-quotas are available.
-
-You can use Vault identities to group incoming requests using `group_by` paramter. 
-
-- **Group_by: IP** – same as the existing behavior and default behavior going forward
-- **Group_by: entity** – creates one bucket for each entity ID 
-   - **Group_by: entity_then_none** - groups requests on namespace, mount, or path by entity ID. For requests that have an entity ID, they are bucketed by entity ID and the rate applied to each bucket. Requests that have no associated entity ID are all handled by a collective secondary quota. 
-   - **Group_by: entity_then_ip** - groups requests on namespace, mount, or path by entity ID. For requests that have an entity ID, they are bucketed by entity ID and the rate applied to each bucket. Requests that have no associated entity ID are instead bucketed by IP and the rate applied to each bucket. 
-   Recommended if customers have reliably mappable IPs (specifically, customers with the three problems listed above will probably want to use entity_then_none instead) 
-   - **Secondary_rate** – a configuration that allows customers to set a separate rate for entity ID than for the _then_[blank] secondary options. For example, with rate R = 1000 requests per second group_by: entity_then_none and secondary_rate = 2000 requests per second, items with an entity ID would be bucketed per entity ID at 1000 requests per second and items without an entity ID would be collectively limited at 2000 requests per second 
-- **Group_by: none** – creates one bucket for the namespace, path, or mount and collectively limits all traffic to that target
-
-
-
-
-
+### Vault Enterprise namespaces
 
 For Vault Enterprise clusters, you can use the `inheritable` parameter to apply
 the resource quota set on a namespace to its subsequent child namespaces.
@@ -674,90 +777,6 @@ Under the `root` namespace, you have a `parent` namespace, and then
 You can set the resource quota on the `parent` namespace which gets applied to
 its child namespaces inheritably by setting the `inheritable` parameter to
 `true`. By default, it is set to `false`.
-
-
-<Tabs>
-<Tab heading="CLI command" group="cli">
-
-1. Create a quota rule on the `us-west` namespace which its child namespaces
-   will inherit. The rate limit is 500 requests per minute.
-
-   ```shell-session
-   $ vault write sys/quotas/rate-limit/us-west \
-      path="us-west" \
-      rate=500 \
-      interval=1m \
-      inheritable=true
-   ```
-
-   **Output:**
-
-   <CodeBlockConfig hideClipboard>
-
-   ```plaintext
-   Success! Data written to: sys/quotas/rate-limit/us-west
-   ```
-
-   </CodeBlockConfig>
-
-1. Verify the quota rule.
-
-   ```shell-session
-   $ vault read sys/quotas/rate-limit/us-west
-
-   Key               Value
-   ---               -----
-   block_interval    0
-   inheritable       true
-   interval          60
-   name              us-west
-   path              us-west/
-   rate              500
-   role              n/a
-   type              rate-limit
-   ```
-
-</Tab>
-<Tab heading="API call using cURL" group="api">
-
-1. Create a quota rule on the `us-west` namespace which its child namespace
-   inherits. The rate limit is 500 requests per minute.
-
-   ```shell-session
-   $ curl --header "X-Vault-Token: $VAULT_TOKEN" \
-      --request POST \
-      --data '{"path": "us-west", "rate": 500, "interval": 60, "inheritable": true }' \
-      $VAULT_ADDR/v1/sys/quotas/rate-limit/us-west
-   ```
-
-1. Verify the quota rule.
-
-   ```shell-session
-   $ curl -s --header "X-Vault-Token: $VAULT_TOKEN" \
-      $VAULT_ADDR/v1/sys/quotas/rate-limit/us-west | jq -r ".data"
-   ```
-
-   **Output:**
-
-   <CodeBlockConfig hideClipboard>
-
-   ```json
-   {
-      "block_interval": 0,
-      "inheritable": true,
-      "interval": 60,
-      "name": "us-west",
-      "path": "us-west/",
-      "rate": 500,
-      "role": "",
-      "type": "rate-limit"
-   }
-   ```
-
-   </CodeBlockConfig>
-
-</Tab>
-<Tab heading="Terraform" group="terraform">
 
 You can use Terraform to create a quota rule on the us-west namespace which its
 child namespaces will inherit. The following Terraform configuration sets the
@@ -784,6 +803,12 @@ resource "vault_quota_rate_limit" "us-west" {
 </Tab>
 </Tabs>
 
-The `us-west` namespace and its children are now restricted to 500 requests per
-minute instead of following the `global-quota` rule. 
 
+## Next steps 
+
+Proactive monitoring and periodic usage analysis can help you identify potential
+problems before they escalate.
+
+- Brush up on [general Vault resource quotas](/vault/docs/concepts/resource-quotas) in general.
+- Learn about [lease count quotas for Vault Enterprise](/vault/docs/enterprise/lease-count-quotas).
+- Review [identity-based rate limit quotas](/vault/docs/configuration/identity-based-rate-limit) if you are running Vault Enterprise clusters.
