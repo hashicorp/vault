@@ -143,18 +143,25 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
 
     // identify user for analytics service
     try {
+      let license;
       const token = await this.api.auth.tokenLookUpSelf();
       const entity = token.data.entity_id ? token.data.entity_id : `root_${crypto.randomUUID()}`;
 
+      if (model.license.state) {
+        license = await this.api.sys.systemReadLicenseStatus();
+      }
+
       this.analytics.identifyUser(entity, {
-        licenseState: model.license.state,
+        licenseId: license?.data?.autoloaded?.licenseId,
+        licenseState: model.license?.state || 'community',
         version: model.version.version,
         storageType: model.storageType,
         replicationMode: model.replicationMode,
+        isEnterprise: Boolean(model.license),
       });
     } catch (e) {
       // eslint-disable-next-line no-console
-      console.log('unable to identify user for analytics', e);
+      console.log('unable to start analytics', e);
     }
 
     return this.transitionToTargetRoute(transition);

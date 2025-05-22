@@ -25,6 +25,7 @@
               @text="Console toggle"
               data-test-console-toggle
               {{on "click" (fn (mut this.console.isOpen) (not this.console.isOpen))}}
+              {{on "click" this.trackReplToggle}}
             />
             <Sidebar::UserMenu />
           </:actions>

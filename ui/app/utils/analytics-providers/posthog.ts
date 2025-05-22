@@ -9,11 +9,22 @@ interface PostHogConfig {
   api_host: string;
 }
 
-export const PROVIDER_NAME = 'dummy';
+/*
+  formatEvent takes the default posthog capture event and trims it down to only the things we want to collect
+  PostHog collects a lot of stuff by default, this removes most of those in favor of generic information
+*/
+const formatEvent = (cr: CaptureResult | null) => {
+  if (cr === null) return cr;
+  return cr;
+};
+
+export const PROVIDER_NAME = 'posthog';
 
 export class PostHogProvider implements AnalyticsProvider {
   name = PROVIDER_NAME;
+
   client = posthog;
+  licenseId = '';
 
   get anonymousId() {
     return this.client.get_distinct_id();
@@ -31,21 +42,44 @@ export class PostHogProvider implements AnalyticsProvider {
         disable_session_recording: true,
         advanced_disable_decide: true,
         capture_pageview: false,
-        // replace with real redact operation
-        before_send: (cr: CaptureResult | null) => cr,
+        before_send: formatEvent,
       });
     }
   }
 
   identify(identifier: string, traits: Record<string, string>) {
+    this.licenseId = traits['licenseId'] || '';
+
     this.client.identify(identifier, {
       ...traits,
     });
   }
 
   trackPageView(routeName: string /* metadata: Record<string, string> */) {
-    this.client.capture('$pageview', {
-      routeName,
-    });
+    // use licenseId as a grouping for this cluster
+    if (this.licenseId) {
+      this.client.capture('$pageview', {
+        routeName,
+        $groups: {
+          licenseId: this.licenseId,
+        },
+      });
+    } else {
+      this.client.capture('$pageview', { routeName });
+    }
+  }
+
+  trackEvent(eventName: string, metadata: Record<string, string>) {
+    // use licenseId as a grouping for this cluster
+    if (this.licenseId) {
+      this.client.capture(eventName, {
+        ...metadata,
+        $groups: {
+          licenseId: this.licenseId,
+        },
+      });
+    } else {
+      this.client.capture(eventName, metadata);
+    }
   }
 }

@@ -77,6 +77,6 @@ export default class ApplicationRoute extends Route {
   afterModel() {
     const { ANALYTICS_CONFIG } = config.APP;
 
-    this.analytics.start(ANALYTICS_CONFIG.provider, ANALYTICS_CONFIG);
+    this.analytics.start('posthog', ANALYTICS_CONFIG);
   }
 }

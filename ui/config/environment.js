@@ -39,17 +39,14 @@ module.exports = function (environment) {
       // number of records to show on a single page by default - this is used by the client-side pagination
       DEFAULT_PAGE_SIZE: 100,
 
-      ANALYTICS_CONFIG: {
-        provider: 'dummy',
-        enabled: false,
-        project_id: '',
-      },
+      ANALYTICS_CONFIG: { enabled: false },
     },
     flashMessageDefaults: {
       timeout: 7000,
       sticky: false,
     },
   };
+
   if (environment === 'development') {
     // ENV.APP.LOG_RESOLVER = true;
     // ENV.APP.LOG_ACTIVE_GENERATION = true;
@@ -63,12 +60,14 @@ module.exports = function (environment) {
       };
     }
 
-    ENV.APP.ANALYTICS_CONFIG = {
-      provider: 'posthog',
-      enabled: true,
-      project_id: 'phc_zPQ9fPlFj4ZTYKJmThG1C8AE4J4RgPQx8dJJ7agg4SG',
-      api_host: 'https://eu.i.posthog.com',
-    };
+    if (process.env.ENABLE_POSTHOG) {
+      ENV.APP.ANALYTICS_CONFIG = {
+        provider: 'posthog',
+        enabled: true,
+        project_id: 'phc_zPQ9fPlFj4ZTYKJmThG1C8AE4J4RgPQx8dJJ7agg4SG',
+        api_host: 'https://eu.i.posthog.com',
+      };
+    }
   }
 
   if (environment === 'test') {
@@ -83,13 +82,19 @@ module.exports = function (environment) {
     ENV['ember-cli-mirage'] = {
       enabled: false,
     };
+    ENV.APP.ANALYTICS_CONFIG = { enabled: false };
   }
+
   if (environment !== 'production') {
     ENV.APP.DEFAULT_PAGE_SIZE = 15;
+  }
+
+  if (environment === 'production') {
     ENV.APP.ANALYTICS_CONFIG = {
-      provider: 'dummy',
-      enabled: false,
-      project_id: '',
+      provider: 'posthog',
+      enabled: true,
+      project_id: 'phc_pIw6t5numW5jDram4dnJjSnwDOorf9IGd1MmlFp0dHh',
+      api_host: 'https://eu.i.posthog.com',
     };
   }
 

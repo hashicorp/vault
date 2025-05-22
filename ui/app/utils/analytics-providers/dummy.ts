@@ -12,12 +12,15 @@ export class DummyProvider implements AnalyticsProvider {
     /* intentionally blank */
   }
 
-  // identifier: string, context: Record<string, string>
   identify() {
     /* intentionally blank */
   }
 
   trackPageView() {
+    /* intentionally blank */
+  }
+
+  trackEvent() {
     /* intentionally blank */
   }
 }
