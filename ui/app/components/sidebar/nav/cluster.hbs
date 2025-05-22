@@ -126,7 +126,7 @@
       @text="System Messages"
       data-test-sidebar-nav-link="System Messages"
     />
-    {{#if this.isRootNamespace}}
+    {{#if (or this.isRootNamespace this.namespace.isHvdAdminNamespace)}}
       <Nav.Link
         @route="vault.cluster.config-ui.login-settings"
         @text="UI Login Rules"

@@ -5,7 +5,6 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, visit, currentRouteName } from '@ember/test-helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -13,7 +12,6 @@ import { runCmd } from 'vault/tests/helpers/commands';
 
 module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
   setupApplicationTest(hooks);
-  setupMirage(hooks);
 
   hooks.beforeEach(async function () {
     await login();
@@ -26,6 +24,8 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
   });
 
   hooks.afterEach(async function () {
+    await login();
+
     // cleanup login rules
     await runCmd([
       'delete sys/config/ui/login/default-auth/testRule',
