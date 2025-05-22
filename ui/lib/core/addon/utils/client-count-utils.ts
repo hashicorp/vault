@@ -374,5 +374,4 @@ export interface Counts {
 export interface OnChangeParams {
   start_time?: number | undefined;
   end_time?: number | undefined;
-  month?: string | undefined;
 }

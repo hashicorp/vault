@@ -58,6 +58,5 @@ export default class ClientsOverviewPageComponent extends ActivityComponent {
   @action
   selectMonth(e: HTMLElementEvent<HTMLInputElement>) {
     this.selectedMonth = e.target.value;
-    this.args.updateQueryParams({ month: this.selectedMonth });
   }
 }

@@ -43,7 +43,6 @@ export default class ClientsCountsRoute extends Route {
     end_time: { refreshModel: true, replace: true },
     ns: { refreshModel: true, replace: true },
     mountPath: { refreshModel: false, replace: true },
-    month: { refreshModel: false, replace: true },
   };
 
   beforeModel() {
