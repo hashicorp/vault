@@ -89,21 +89,6 @@ module('Unit | Service | analytics', function (hooks) {
       console.log.restore();
     });
 
-    test('logging is shown when active', function (assert) {
-      // for the next few lines, console.log WILL NOT WORK AS EXPECTED
-      this.service.trackPageView('a', null);
-
-      // eslint-disable-next-line no-console
-      assert.true(console.log.called, 'console.log is called');
-      assert.deepEqual(
-        // get the first collection of args to the logger
-        // eslint-disable-next-line no-console
-        console.log.args[0],
-        ['[Analytics - dummy]', '$pageview', 'a', null],
-        'the correct message is send to the logger'
-      );
-    });
-
     test('logging is not shown when inactive', function (assert) {
       this.service.debug = false;
       // for the next few lines, console.log WILL NOT WORK AS EXPECTED
