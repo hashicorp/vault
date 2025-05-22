@@ -1118,3 +1118,43 @@ func (c *Core) GetAuditExclusionStanzaCount() int {
 
 	return exclusionsCount
 }
+
+func (c *Core) GetControlGroupCount() int {
+	controlGroupCount := 0
+	policyStore := c.policyStore
+
+	if policyStore == nil {
+		c.logger.Error("could not find a policy store")
+		return controlGroupCount
+	}
+
+	namespaces := c.collectNamespaces()
+
+	for _, ns := range namespaces {
+		nsCtx := namespace.ContextWithNamespace(context.Background(), ns)
+
+		// get the names of all the ACL policyNames from this namespace
+		policyNames, err := policyStore.ListPolicies(nsCtx, PolicyTypeACL)
+		if err != nil {
+			c.logger.Error("failed to list ACL policies", "error", err)
+			continue
+		}
+
+		for _, name := range policyNames {
+			policy, err := policyStore.GetPolicy(nsCtx, name, PolicyTypeACL)
+			if err != nil {
+				c.logger.Error("failed to load ACL policy", "error", err)
+				continue
+			}
+
+			// check for control groups inside the path rules of the policy
+			for _, pathPolicy := range policy.Paths {
+				if pathPolicy.ControlGroupHCL != nil {
+					controlGroupCount++
+				}
+			}
+		}
+	}
+
+	return controlGroupCount
+}
