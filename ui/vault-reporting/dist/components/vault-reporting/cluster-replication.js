@@ -18,7 +18,7 @@ class ClusterReplication extends Component {
   }
   get description() {
     if (this.isEmpty) {
-      return htmlSafe('Enable <a class="hds-link-inline--color-secondary" href="https://developer.hashicorp.com/vault/docs/internals/replication" target="_blank" data-test-cluster-replication-description-link>replication</a> to replicate data across clusters.');
+      return htmlSafe('Enable <a class="hds-link-inline--color-secondary" href="https://developer.hashicorp.com/vault/docs/internals/replication" target="_blank" data-test-vault-reporting-cluster-replication-description-link>replication</a> to replicate data across clusters.');
     } else {
       return 'Status of disaster recovery and performance replication.';
     }
@@ -51,7 +51,7 @@ class ClusterReplication extends Component {
     return 'replication';
   }
   static {
-    setComponentTemplate(precompileTemplate("\n    <HdsCardContainer data-test-cluster-replication @hasBorder={{true}} class=\"ssu-cluster-replication\" ...attributes>\n      <TitleRow @title=\"Cluster replication\" @description={{this.description}} @linkUrl={{this.linkUrl}} />\n\n      <HdsTextBody @size=\"300\" data-test-cluster-replication-dr-row>\n        Disaster Recovery\n        <HdsBadge class=\"ssu-cluster-replication__list-row__badge\" data-test-cluster-replication-dr-badge @icon={{this.getIcon @disasterRecoveryState}} @text={{this.getState @disasterRecoveryState}} @color={{this.getColor @disasterRecoveryState}} @type=\"outlined\" @size=\"small\" />\n      </HdsTextBody>\n\n      <HdsTextBody @size=\"300\" data-test-cluster-replication-perf-row>\n        Performance\n        <HdsBadge class=\"ssu-cluster-replication__list-row__badge\" data-test-cluster-replication-perf-badge @icon={{this.getIcon @performanceState}} @text={{this.getState @performanceState}} @color={{this.getColor @performanceState}} @type=\"outlined\" @size=\"small\" />\n      </HdsTextBody>\n\n    </HdsCardContainer>\n  ", {
+    setComponentTemplate(precompileTemplate("\n    <HdsCardContainer data-test-vault-reporting-cluster-replication @hasBorder={{true}} class=\"ssu-cluster-replication\" ...attributes>\n      <TitleRow @title=\"Cluster replication\" @description={{this.description}} @linkUrl={{this.linkUrl}} />\n\n      <HdsTextBody @size=\"300\" data-test-vault-reporting-cluster-replication-dr-row>\n        Disaster Recovery\n        <HdsBadge class=\"ssu-cluster-replication__list-row__badge\" data-test-vault-reporting-cluster-replication-dr-badge @icon={{this.getIcon @disasterRecoveryState}} @text={{this.getState @disasterRecoveryState}} @color={{this.getColor @disasterRecoveryState}} @type=\"outlined\" @size=\"small\" />\n      </HdsTextBody>\n\n      <HdsTextBody @size=\"300\" data-test-vault-reporting-cluster-replication-perf-row>\n        Performance\n        <HdsBadge class=\"ssu-cluster-replication__list-row__badge\" data-test-vault-reporting-cluster-replication-perf-badge @icon={{this.getIcon @performanceState}} @text={{this.getState @performanceState}} @color={{this.getColor @performanceState}} @type=\"outlined\" @size=\"small\" />\n      </HdsTextBody>\n\n    </HdsCardContainer>\n  ", {
       strictMode: true,
       scope: () => ({
         HdsCardContainer,
