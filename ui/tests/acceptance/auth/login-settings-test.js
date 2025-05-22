@@ -20,7 +20,7 @@ module('Acceptance | Enterprise | auth custom login settings', function (hooks) 
       `write sys/namespaces/test-ns -force`,
       `write test-ns/sys/namespaces/child -force`,
       `write sys/config/ui/login/default-auth/root-rule backup_auth_types=token default_auth_type=okta disable_inheritance=false namespace=""`,
-      `write sys/config/ui/login/default-auth/admin-rule backup_auth_types=oidc default_auth_type=ldap disable_inheritance=true namespace=test-ns`,
+      `write sys/config/ui/login/default-auth/ns-rule default_auth_type=ldap disable_inheritance=true namespace=test-ns`,
       `write sys/auth/my-oidc type=oidc`,
       `write sys/auth/my-oidc/tune listing_visibility="unauth"`,
     ]);
@@ -32,14 +32,14 @@ module('Acceptance | Enterprise | auth custom login settings', function (hooks) 
     await login();
     await runCmd([
       'delete sys/config/ui/login/default-auth/root-rule',
-      'delete sys/config/ui/login/default-auth/admin-rule',
+      'delete sys/config/ui/login/default-auth/ns-rule',
       'delete sys/auth/my-oidc',
       'delete test-ns/sys/namespaces/child',
       'delete sys/namespaces/test-ns',
     ]);
   });
 
-  test('it renders default method and backups for root namespace', async function (assert) {
+  test('it renders login settings for root namespace', async function (assert) {
     await visit('/vault/auth');
     await waitFor(AUTH_FORM.tabBtn('okta'));
     assert.dom(AUTH_FORM.tabBtn('okta')).hasAttribute('aria-selected', 'true');
@@ -50,21 +50,20 @@ module('Acceptance | Enterprise | auth custom login settings', function (hooks) 
     assert.dom(AUTH_FORM.authForm('token')).exists('it renders backup method');
   });
 
-  test('it renders default method and backups for namespaces', async function (assert) {
+  test('it renders login settings for namespaces', async function (assert) {
     await visit('/vault/auth');
     await fillIn(GENERAL.inputByAttr('namespace'), 'test-ns');
     await waitFor(AUTH_FORM.authForm('ldap'));
     assert.dom(AUTH_FORM.authForm('ldap')).exists('it renders default method');
     assert.dom(AUTH_FORM.advancedSettings).exists();
-    await click(AUTH_FORM.otherMethodsBtn);
-    assert.dom(AUTH_FORM.authForm('oidc')).exists('it renders backup method');
+    assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('it does not render alternate view');
 
     // type in so that the namespace is "test-ns/child"
     await typeIn(GENERAL.inputByAttr('namespace'), '/child');
     await waitFor(AUTH_FORM.authForm('okta'));
     assert
       .dom(AUTH_FORM.authForm('okta'))
-      .exists('it renders view from root namespace because "test-ns" settings are not inheritable');
+      .exists('it inherits view from root namespace because "test-ns" settings are not inheritable');
   });
 
   test('it ignores login settings if query param references a visible mount path', async function (assert) {

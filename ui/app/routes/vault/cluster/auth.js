@@ -97,11 +97,13 @@ export default class AuthRoute extends ClusterRouteBase {
         'GET',
         this.api.buildHeaders({ token: '' })
       );
+
       if (response?.data) {
         const { default_auth_type, backup_auth_types } = response.data;
         return {
           defaultType: default_auth_type,
-          backupTypes: backup_auth_types.length ? backup_auth_types : null,
+          // TODO WIP backend PR consistently return empty array when no backup_auth_types
+          backupTypes: backup_auth_types?.length ? backup_auth_types : null,
         };
       }
     } catch {
