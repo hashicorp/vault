@@ -7,7 +7,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { inject as controller } from '@ember/controller';
 
-import { OPEN_WEB_REPL } from 'vault/utils/analytic-events';
+import { TOGGLE_WEB_REPL } from 'vault/utils/analytic-events';
 
 export default class SidebarNavComponent extends Component {
   @service analytics;
@@ -16,6 +16,6 @@ export default class SidebarNavComponent extends Component {
   @controller('vault.cluster') clusterController;
 
   trackReplToggle = () => {
-    this.analytics.trackEvent(OPEN_WEB_REPL);
+    this.analytics.trackEvent(TOGGLE_WEB_REPL);
   };
 }

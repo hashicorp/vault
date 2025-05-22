@@ -75,7 +75,7 @@ export default class ApplicationRoute extends Route {
   }
 
   afterModel() {
-    if (this.flagsService.isHvdManaged) {
+    if (this.flagsService.isHvdManaged || config.environment === 'development') {
       const { ANALYTICS_CONFIG } = config.APP;
       this.analytics.start('posthog', ANALYTICS_CONFIG);
     }
