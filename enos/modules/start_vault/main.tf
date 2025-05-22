@@ -135,10 +135,10 @@ locals {
   global_telemetry = var.enable_telemetry ? {
     prometheus_retention_time = "24h"
     disable_hostname          = true
-  } : null
+  } : {}
   listener_telemetry = var.enable_telemetry ? {
     unauthenticated_metrics_access = true
-  } : null
+  } : {}
 }
 
 # You might be wondering why our start_vault module, which supports shamir, awskms, and pkcs11 seal
