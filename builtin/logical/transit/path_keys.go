@@ -180,9 +180,9 @@ func (b *backend) pathKeysList(ctx context.Context, req *logical.Request, d *fra
 		return nil, err
 	}
 
-	// filter out partial path of wrapping key
+	// filter out partial paths
 	entries = slices.DeleteFunc(entries, func(s string) bool {
-		if s == "import/" {
+		if strings.HasSuffix(s, "/") {
 			return true
 		}
 
