@@ -465,6 +465,8 @@ type Core struct {
 	defaultLeaseTTL time.Duration
 	maxLeaseTTL     time.Duration
 
+	removeIrrevocableLeaseAfter time.Duration
+
 	// baseLogger is used to avoid ResetNamed as it strips useful prefixes in
 	// e.g. testing
 	baseLogger log.Logger
@@ -844,6 +846,8 @@ type CoreConfig struct {
 
 	MaxLeaseTTL time.Duration
 
+	RemoveIrrevocableLeaseAfter time.Duration
+
 	ClusterName string
 
 	ClusterCipherSuites string
@@ -1055,6 +1059,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 		defaultLeaseTTL:                conf.DefaultLeaseTTL,
 		maxLeaseTTL:                    conf.MaxLeaseTTL,
+		removeIrrevocableLeaseAfter:    conf.RemoveIrrevocableLeaseAfter,
 		sentinelTraceDisabled:          conf.DisableSentinelTrace,
 		cachingDisabled:                conf.DisableCache,
 		clusterName:                    conf.ClusterName,
