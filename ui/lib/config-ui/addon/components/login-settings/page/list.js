@@ -12,10 +12,10 @@ import errorMessage from 'vault/utils/error-message';
 /**
  * @module Page::LoginSettingsList
  * Page::LoginSettingsList components are used to display list of rules.
+ *
  * @example
- * ```js
  * <Page::LoginSettingsList @loginRules={{this.rules}}  />
- * ```
+ *
  * @param {array} loginRules - array of rule objects
  */
 
