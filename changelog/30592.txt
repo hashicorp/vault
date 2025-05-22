@@ -1,0 +1,7 @@
+```release-note:feature
+**Custom login settings**: Adding view to list and delete custom login rules
+```
+
+```release-note:change
+ui: 'Custom messages' renamed to 'System Messages'
+```
