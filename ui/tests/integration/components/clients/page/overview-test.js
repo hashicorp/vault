@@ -114,7 +114,7 @@ module('Integration | Component | clients/page/overview', function (hooks) {
 
   test('it hides the table when a mount filter is applied', async function (assert) {
     this.namespace = 'ns1';
-    this.mountPath = 'auth/authid/0';
+    this.mountPath = 'auth/userpass-0';
     this.activity = await this.store.queryRecord('clients/activity', {
       namespace: this.namespace,
       mountPath: this.mountPath,

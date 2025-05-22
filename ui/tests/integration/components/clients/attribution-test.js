@@ -129,12 +129,12 @@ module('Integration | Component | clients/attribution', function (hooks) {
 
     assert.dom(GENERAL.emptyStateTitle).doesNotExist();
     assert.dom(CLIENTS_ATTRIBUTION.chart).exists();
-    assert.dom(CLIENTS_ATTRIBUTION.topItem).includesText('mount').includesText('auth/authid/0');
+    assert.dom(CLIENTS_ATTRIBUTION.topItem).includesText('mount').includesText('auth/userpass-0');
     assert.dom(CLIENTS_ATTRIBUTION.topItemCount).includesText('mount').includesText('8,394');
     assert
       .dom(CLIENTS_ATTRIBUTION.yLabels)
       .exists({ count: 3 }, 'bars reflect number of mounts in single month');
-    assert.dom(CLIENTS_ATTRIBUTION.yLabel).hasText('auth/authid/0pki-engine-0kvv2-engine-0');
+    assert.dom(CLIENTS_ATTRIBUTION.yLabel).hasText('auth/userpas...pki-engine-0kvv2-engine-0');
   });
 
   test('it shows secret syncs when flag is on', async function (assert) {
