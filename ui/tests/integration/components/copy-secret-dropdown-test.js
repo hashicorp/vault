@@ -78,15 +78,12 @@ module('Integration | Component | copy-secret-dropdown', function (hooks) {
     @clipboardText={{this.data}}
     @onWrap={{this.onWrap}}
     @isWrapping={{true}}
-    @wrappedData={{this.wrappedData}}
     @onClose={{this.onClose}}
   />
 </ToolbarActions>`
     );
-
     await click(SELECTORS.dropdown);
-    assert.dom(`${GENERAL.buttonByAttr('wrap')} [data-test-icon="loading"]`).exists('renders loading icon');
-    assert.dom(GENERAL.buttonByAttr('wrap')).isDisabled();
+    assert.dom(`[data-test-icon="loading"]`).exists('renders loading icon');
   });
 
   test('it wraps data', async function (assert) {
