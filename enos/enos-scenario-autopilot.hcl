@@ -24,10 +24,10 @@ scenario "autopilot" {
       - vault_build_date*
       - vault_product_version
       - vault_revision*
-    
+
     * If you don't already know what build date and revision you should be using, see
     https://eng-handbook.hashicorp.services/internal-tools/enos/troubleshooting/#execution-error-expected-vs-got-for-vault-versioneditionrevisionbuild-date.
-  
+
     Variables required for some scenario variants:
       - artifactory_username (if using `artifact_source:artifactory` in your filter)
       - artifactory_token (if using `artifact_source:artifactory` in your filter)
@@ -370,6 +370,7 @@ scenario "autopilot" {
       quality.vault_mount_auth,
       quality.vault_mount_kv,
       quality.vault_secrets_kv_write,
+      quality.vault_secrets_ldap_write_config,
     ]
 
     variables {
