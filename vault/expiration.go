@@ -1098,10 +1098,6 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 	if _, ok := m.irrevocable.Load(le.LeaseID); ok {
 		m.irrevocable.Delete(leaseID)
 		m.irrevocableLeaseCount--
-
-		if force {
-			m.logger.Debug("force deleted irrevocable lease", "lease_id", leaseID, "lease_expire_time", le.ExpireTime)
-		}
 	}
 	m.pendingLock.Unlock()
 
