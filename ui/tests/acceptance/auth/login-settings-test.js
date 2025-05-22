@@ -12,7 +12,7 @@ import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 // This feature has thorough integration test coverage so only testing a few scenarios and direct link functionality
-module('Acceptance | Enterprise | auth custom login settings', function (hooks) {
+module('Acceptance | Enterprise | auth form custom login settings', function (hooks) {
   setupApplicationTest(hooks);
   hooks.beforeEach(async function () {
     await login();
