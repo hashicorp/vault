@@ -243,6 +243,8 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		polReq.KeyType = keysutil.KeyType_MANAGED_KEY
 	case "aes128-cmac":
 		polReq.KeyType = keysutil.KeyType_AES128_CMAC
+	case "aes192-cmac":
+		polReq.KeyType = keysutil.KeyType_AES192_CMAC
 	case "aes256-cmac":
 		polReq.KeyType = keysutil.KeyType_AES256_CMAC
 	case "ml-dsa":
