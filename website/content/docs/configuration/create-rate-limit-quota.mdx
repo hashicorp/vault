@@ -149,23 +149,32 @@ performance if the volume of rejected requests is large.
 
 ## Step 3: Create a rate limit quota
 
-The table lists available parameters to create a rate limit quota.
+Create a rate limit quota using the following parameters:
 
-| Parameter        | Type    | Description                                                                                                                                              |
-| ---------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`           | string  | Name of the quota rule                                                                                                                                   |
-| `path`           | string  | Target path or namespace to apply the quota rule. It can end with `*` (e.g., `auth/token/create*`). A blank path configures a global rate limit quota    |
-| `rate`           | float   | Rate for the number of allowed _requests per second_ (RPS)                                                                                               |
-| `role`           | string  | Login role to apply this quota to. When you set this parameter, you must configure the path to a valid auth method with a concept of roles.              |
-| `interval`       | second  | The duration to enforce rate limiting for (default is 1 second)                                                                                          |
-| `block_interval` | string  | If set, when a client reaches a rate limit threshold, Vault prohibits the client from any further requests until after the `block_interval` has elapsed. |
-| `inheritable`    | boolean | **Vault Enterprise:** Determine whether to apply the quota rule to child namespaces.                                                                     |
+- `name` `(string: "")` - Name of the quota rule
+- `path` `(string: "")` - Target namespace, mount, or path to apply the quota
+  rule. It can end with `*` (e.g., `auth/token/create*`). A blank path
+  configures a global rate limit quota. 
+- `rate` `float` - Rate for the number of allowed _requests per second_ (RPS)  
+- `role` `(string: "")` - Login role to apply this quota to. When you set this
+  parameter, you must configure the path to a valid auth method with a concept
+  of roles.  
+- `interval` `(int: 0)` - The duration to enforce rate limiting for (default is
+  1 second)
+- `block_interval` `(string: "")` - If set, when a client reaches a rate limit
+  threshold, Vault prohibits the client from any further requests until after
+  the `block_interval` has elapsed. 
+- `inheritable` `(boolean: false)` - **Vault Enterprise:** Determine whether to
+  apply the quota rule to child namespaces.   
+- `group_by` `(string: "")` - **Vault Enterprise:** Define how to group incoming
+  requests. Refer to the [identity-based rate limit quotas](/vault/docs/configuration/identity-based-rate-limit) for more details.
 
 
 <Tabs>
 <Tab heading="CLI command" group="cli">
 
-Use `vault write` and the `sys/quotas/rate-limit/{quota-name}` path to create a new rate limit quota.
+Use `vault write` and the `sys/quotas/rate-limit/{quota-name}` path to create a
+new rate limit quota.
 
 <CodeBlockConfig hideClipboard>
 

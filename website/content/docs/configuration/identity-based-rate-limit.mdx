@@ -73,14 +73,38 @@ to how traffic enters their Vault cluster. Identity-based rate limit quotas use
     </td>
   </tr>
 
-
   </tbody>
 </table>
 
+The default behavior is to group requests by IP addresses. Group requests by
+ entity (`entity_than_none` or `entity_then_ip`) option creates buckets based on
+the attached entity. This helps when your organization have:
 
-**Example:** The command below creates a rate limit quota with rate of 1000
-requests per second with `group_by` is set to `entity_then_none`, and the
-secondary rate is 2000 requests per second.
+- many workloads using the same IP
+- single workloads using many IPs which may scale up or down
+- dynamic IPs that change frequently
+
+The group by `none` option creates one bucket for all requests at the designated
+level (namespace, mount, or path) for that rate limit. For example, if your
+organization provides Vault as a service to your customers, you segregate the
+customers each into their own namespace. The default behavior of any rate limit
+set for the namespace creates a bucket per IP. If the desired behavior is to set
+a collective rate limit for all entities and workloads coming into the
+namespace, the `none` option can achieve that.
+
+<Note title="Rate limit granularity">
+
+You can define quotas on namespaces, mounts, and paths. The most granular rate
+limit quota takes effect on the requests. 
+
+</Note>
+
+
+### Example
+
+The command below creates a rate limit quota with rate of 1000 requests per
+second with `group_by` is set to `entity_then_none`, and the secondary rate is
+2000 requests per second.
 
 ```shell-session
 $ vault write sys/quotas/rate-limit/my-rate \
@@ -89,10 +113,22 @@ $ vault write sys/quotas/rate-limit/my-rate \
     secondary_rate=2000     
 ```
 
+## Best practices
+
 The `group_by` option supplements the existing quota features.
 
 ![Diagram indicating possible user paths](/img/resource-quotas/resource-quotas-use-cases_light.png#light-theme-only)
 ![Diagram indicating possible user paths](/img/resource-quotas/resource-quotas-use-cases_dark.png#dark-theme-only)
 
+- Use [Terraform Vault
+  provider](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/resources/quota_rate_limit)
+  to configure and implement quotas instead of making API calls.
 
+- Define at least one lease count quota to protect your Vault cluster from
+  [lease explosions](/vault/docs/configuration/prevent-lease-explosions).
 
+- Configure low limits at the namespace level, and higher limits at the specific
+problematic path. The most granular rate limit quotas takes the effect. 
+
+  ![Diagram indicating possible user paths](/img/resource-quotas/quota-granularity_light.png#light-theme-only)
+  ![Diagram indicating possible user paths](/img/resource-quotas/quota-granularity_dark.png#dark-theme-only)
