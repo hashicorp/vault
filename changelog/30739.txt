@@ -1,5 +1,4 @@
 ```release-note:feature
-**Item Recovery from Snapshot**: Adds the ability to load an integrated storage 
-snapshot into Vault and read, list, and recover single items from the snapshot. 
-Note: Enterprise only.
+**Item Recovery from Snapshot (enterprise)**: Adds the ability to load an integrated storage 
+snapshot into Vault and read, list, and recover single items from the snapshot.
 ```
