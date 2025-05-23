@@ -163,6 +163,15 @@
           {
             "title": "Migrate Consul storage",
             "path": "concepts/integrated-storage/migrate-consul-storage"
+          },
+          {
+            "title": "Recover from a snapshot",
+            "path": "concepts/integrated-storage/snapshot-recover",
+            "badge": {
+              "text": "ENT",
+              "type": "filled",
+              "color": "neutral"
+            }
           }
         ]
       },
@@ -254,15 +263,6 @@
             "path": "concepts/adaptive-overload-protection/vault-server-temporarily-overloaded"
           }
         ]
-      },
-      {
-        "title": "Recover from a snapshot",
-        "path": "concepts/snapshot-recover",
-        "badge": {
-          "text": "ENT",
-          "type": "filled",
-          "color": "neutral"
-        }
       }
     ]
   },
