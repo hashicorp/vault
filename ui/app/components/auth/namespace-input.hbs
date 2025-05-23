@@ -20,6 +20,7 @@
           />
           <SG.TextInput
             {{on "input" this.handleInput}}
+            {{did-insert this.maybeRefocus}}
             @value={{this.namespaceInput}}
             autocomplete="off"
             disabled={{@disabled}}
@@ -33,6 +34,7 @@
   {{else}}
     <Hds::Form::TextInput::Field
       {{on "input" this.handleInput}}
+      {{did-insert this.maybeRefocus}}
       @value={{this.namespaceInput}}
       autocomplete="off"
       disabled={{@disabled}}

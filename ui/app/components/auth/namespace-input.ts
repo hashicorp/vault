@@ -57,4 +57,11 @@ export default class AuthNamespaceInput extends Component<Args> {
     await timeout(500);
     await this.args.handleNamespaceUpdate(namespace);
   });
+
+  @action
+  maybeRefocus(element: HTMLElement) {
+    if (this.args.shouldRefocusNamespaceInput) {
+      element.focus();
+    }
+  }
 }

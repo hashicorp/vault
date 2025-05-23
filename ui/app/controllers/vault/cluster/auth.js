@@ -26,6 +26,7 @@ export default Controller.extend({
   authMount: '',
   oidcProvider: '',
   unwrapTokenError: '',
+  shouldRefocusNamespaceInput: false,
 
   fullNamespaceFromInput(value) {
     const strippedNs = sanitizePath(value);
@@ -41,6 +42,7 @@ export default Controller.extend({
     yield this.customMessages.fetchMessages();
     this.set('namespaceQueryParam', ns);
     // if user is inputting a namespace, maintain input focus as the param updates
+    this.set('shouldRefocusNamespaceInput', true);
   }).restartable(),
 
   actions: {
