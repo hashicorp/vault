@@ -5,7 +5,7 @@
 import { service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import Controller, { inject as controller } from '@ember/controller';
-import { task, timeout } from 'ember-concurrency';
+import { task } from 'ember-concurrency';
 import { sanitizePath } from 'core/utils/sanitize-path';
 
 export default Controller.extend({
@@ -36,12 +36,11 @@ export default Controller.extend({
   },
 
   updateNamespace: task(function* (value) {
-    // debounce
-    yield timeout(500);
     const ns = this.fullNamespaceFromInput(value);
     this.namespaceService.setNamespace(ns, true);
-    this.customMessages.fetchMessages();
+    yield this.customMessages.fetchMessages();
     this.set('namespaceQueryParam', ns);
+    // if user is inputting a namespace, maintain input focus as the param updates
   }).restartable(),
 
   actions: {

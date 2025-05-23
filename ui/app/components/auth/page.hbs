@@ -53,13 +53,19 @@
           @alternateView={{this.formViews.alternateView}}
           @cluster={{@cluster}}
           @defaultView={{this.formViews.defaultView}}
-          @handleNamespaceUpdate={{@onNamespaceUpdate}}
           @initialFormState={{this.initialFormState}}
-          @namespaceQueryParam={{@namespaceQueryParam}}
-          @oidcProviderQueryParam={{@oidcProviderQueryParam}}
           @onSuccess={{this.onAuthResponse}}
           @visibleMountTypes={{this.visibleMountTypes}}
-        />
+        >
+          {{! yielded for accessibility so namespace submits as an input of the <form> element }}
+          {{#if (has-feature "Namespaces")}}
+            <Auth::NamespaceInput
+              @disabled={{if @oidcProviderQueryParam true false}}
+              @handleNamespaceUpdate={{@onNamespaceUpdate}}
+              @namespaceQueryParam={{@namespaceQueryParam}}
+            />
+          {{/if}}
+        </Auth::FormTemplate>
       {{/if}}
     </:content>
 
