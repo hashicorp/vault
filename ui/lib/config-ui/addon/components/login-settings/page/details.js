@@ -30,6 +30,19 @@ export default class LoginSettingsRuleDetails extends Component {
 
   @tracked showConfirmModal = false;
 
+  displayFields = {
+    defaultAuthType: 'Default method',
+    backupAuthTypes: 'Backup methods',
+    disableInheritance: 'Inheritance enabled',
+    namespace: 'Namespace',
+  };
+
+  displayValue = (key) => {
+    const value = this.args.rule[key];
+    // flip boolean for disable inheritance so template reads "Inheritance enabled: Yes/No"
+    return key === 'disableInheritance' ? !value : value;
+  };
+
   @action
   async onDelete() {
     const { rule } = this.args;
