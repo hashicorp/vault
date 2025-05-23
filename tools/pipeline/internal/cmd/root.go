@@ -64,6 +64,7 @@ func newRootCmd() *cobra.Command {
 
 // Execute executes the root pipeline command.
 func Execute() {
+	cobra.EnableTraverseRunHooks = true // Automatically chain run hooks
 	rootCmd := newRootCmd()
 	rootCmd.SilenceErrors = true // We handle this below
 

@@ -22,6 +22,77 @@ func TestOptsStringers(t *testing.T) {
 		opts     OptStringer
 		expected string
 	}{
+		"am": {
+			&AmOpts{
+				AllowEmpty:                true, // Only supported for --resolved
+				CommitterDateIsAuthorDate: true,
+				Empty:                     EmptyCommitKeep,
+				Keep:                      true,
+				KeepNonPatch:              true,
+				MessageID:                 true,
+				NoMessageID:               true,
+				NoReReReAutoupdate:        true,
+				NoVerify:                  true,
+				Quiet:                     true,
+				ReReReAutoupdate:          true,
+				Signoff:                   true,
+				ThreeWayMerge:             true,
+				Whitespace:                ApplyWhitespaceActionFix,
+				Mbox:                      []string{"/path/to/my.patch"},
+			},
+			"--committer-date-is-author-date --empty=keep --keep --keep-non-patch --message-id --no-message-id --no-rerere-autoupdate --no-verify --quiet --rerere-autoupdate --signoff --3way --whitespace=fix /path/to/my.patch",
+		},
+		"am --continue": {
+			&AmOpts{
+				// Unallowed options are ignored
+				Empty:      EmptyCommitKeep,
+				AllowEmpty: true,
+				// Sequence
+				Continue: true,
+			},
+			"--continue",
+		},
+		"am --abort": {
+			&AmOpts{
+				// Unallowed options are ignored
+				Empty:      EmptyCommitKeep,
+				AllowEmpty: true,
+				// Sequence
+				Abort: true,
+			},
+			"--abort",
+		},
+		"am --quit": {
+			&AmOpts{
+				// Unallowed options are ignored
+				Empty:      EmptyCommitKeep,
+				AllowEmpty: true,
+				// Sequence
+				Quit: true,
+			},
+			"--quit",
+		},
+		"am --allow-empty --resolved": {
+			&AmOpts{
+				// Unallowed options are ignored
+				Empty: EmptyCommitKeep,
+				// Allowed options are kept
+				AllowEmpty: true,
+				// Sequence
+				Resolved: true,
+			},
+			"--allow-empty --resolved",
+		},
+		"am --retry": {
+			&AmOpts{
+				// Unallowed options are ignored
+				Empty:      EmptyCommitKeep,
+				AllowEmpty: true,
+				// Sequence
+				Retry: true,
+			},
+			"--retry",
+		},
 		"apply": {
 			&ApplyOpts{
 				AllowEmpty:    true,
