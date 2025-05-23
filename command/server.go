@@ -38,7 +38,6 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
 	"github.com/hashicorp/vault/audit"
-	config2 "github.com/hashicorp/vault/command/config"
 	"github.com/hashicorp/vault/command/server"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/constants"
@@ -443,7 +442,7 @@ func (c *ServerCommand) parseConfig() (*server.Config, []configutil.ConfigError,
 	}
 
 	if config != nil && config.Entropy != nil && config.Entropy.Mode == configutil.EntropyAugmentation && constants.IsFIPS() {
-		c.UI.Warn("WARNING: Entropy Augmentation is not supported in FIPS 140-2 Inside mode; disabling from server configuration!\n")
+		c.UI.Warn("WARNING: Entropy Augmentation is not supported in FIPS 140-3 Inside mode; disabling from server configuration!\n")
 		config.Entropy = nil
 	}
 	entCheckRequestLimiter(c, config)
@@ -1149,7 +1148,7 @@ func (c *ServerCommand) Run(args []string) int {
 	}
 
 	// ensure that the DisableMlock key is explicitly set if using integrated storage
-	if config.Storage != nil && config.Storage.Type == storageTypeRaft && !isMlockSet() {
+	if !c.flagDev && mlock.Supported() && config.Storage != nil && config.Storage.Type == storageTypeRaft && !isMlockSet() {
 
 		c.UI.Error(wrapAtLength(
 			"ERROR: disable_mlock must be configured 'true' or 'false': Mlock " +
@@ -2926,6 +2925,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		DisableMlock:                   config.DisableMlock,
 		MaxLeaseTTL:                    config.MaxLeaseTTL,
 		DefaultLeaseTTL:                config.DefaultLeaseTTL,
+		RemoveIrrevocableLeaseAfter:    config.RemoveIrrevocableLeaseAfter,
 		ClusterName:                    config.ClusterName,
 		CacheSize:                      config.CacheSize,
 		PluginDirectory:                config.PluginDirectory,
@@ -2951,6 +2951,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		DisableSSCTokens:               config.DisableSSCTokens,
 		Experiments:                    config.Experiments,
 		AdministrativeNamespacePath:    config.AdministrativeNamespacePath,
+		ObservationSystemLedgerPath:    config.ObservationSystemLedgerPath,
 	}
 
 	if c.flagDev {
@@ -3125,10 +3126,6 @@ func startHttpServers(c *ServerCommand, core *vault.Core, config *server.Config,
 	for _, ln := range lns {
 		if ln.Config == nil {
 			return fmt.Errorf("found nil listener config after parsing")
-		}
-
-		if err := config2.IsValidListener(ln.Config); err != nil {
-			return err
 		}
 
 		handler := vaulthttp.Handler.Handler(&vault.HandlerProperties{

@@ -7,15 +7,13 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { restartableTask, timeout } from 'ember-concurrency';
-import { waitFor } from '@ember/test-waiters';
-import { ALL_LOGIN_METHODS, supportedTypes } from 'vault/utils/supported-login-methods';
+import { supportedTypes } from 'vault/utils/supported-login-methods';
 import { getRelativePath } from 'core/utils/sanitize-path';
 
 import type FlagsService from 'vault/services/flags';
-import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
 import type ClusterModel from 'vault/models/cluster';
+import type { UnauthMountsByType } from 'vault/vault/auth/form';
 import type { HTMLElementEvent } from 'vault/forms';
 
 /**
@@ -29,65 +27,64 @@ import type { HTMLElementEvent } from 'vault/forms';
  * dynamically renders the corresponding form.
  *
  *
- * @param {string} wrappedToken - Query param value of a wrapped token that can be used to login when added directly to the URL via the "wrapped_token" query param
+ * @param {object | null} alternateView - if an alternate view exists, this is the `FormView` (see interface below) data to render that view.
+ * @param {string} canceledMfaAuth - saved auth type from a cancelled mfa verification
  * @param {object} cluster - The route model which is the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
+ * @param {object} defaultView - The `FormView` (see the interface below) data to render the initial view.
  * @param {function} handleNamespaceUpdate - callback task that passes user input to the controller and updates the namespace query param in the url
- * @param {string} namespace - namespace query param from the url
+ * @param {object} initialFormState - sets selectedAuthMethod and showAlternateView based on the login form configuration computed in parent component
+ * @param {string} namespaceQueryParam - namespace query param from the url
+ * @param {string} oidcProviderQueryParam - oidc provider query param, set in url as "?o=someprovider". if present, disables the namespace input
  * @param {function} onSuccess - callback after the initial authentication request, if an mfa_requirement exists the parent renders the mfa form otherwise it fires the authSuccess action in the auth controller and handles transitioning to the app
+ * @param {array} visibleMountTypes - array of auth method types that have mounts with listing_visibility="unauth"
  *
  * */
 
 interface Args {
-  wrappedToken: string;
+  alternateView: FormView | null;
   cluster: ClusterModel;
+  defaultView: FormView;
   handleNamespaceUpdate: CallableFunction;
-  namespace: string;
+  initialFormState: { initialAuthType: string; showAlternate: boolean };
+  namespaceQueryParam: string;
+  oidcProviderQueryParam: string;
   onSuccess: CallableFunction;
+  visibleMountTypes: string[];
 }
 
-interface AuthTabs {
-  // key is the auth method type
-  [key: string]: MountData[];
-}
-
-interface MountData {
-  path: string;
-  type: string;
-  description?: string;
-  config?: object | null;
+interface FormView {
+  view: string; // "dropdown" or "tabs"
+  tabData: UnauthMountsByType | null; // tabs to render if view = "tabs"
 }
 
 export default class AuthFormTemplate extends Component<Args> {
   @service declare readonly flags: FlagsService;
-  @service declare readonly store: Store;
   @service declare readonly version: VersionService;
 
-  // form display logic
-  @tracked authTabs: AuthTabs | null = null;
-  @tracked showOtherMethods = false;
+  supportedAuthTypes: string[];
 
-  // auth login variables
-  @tracked selectedAuthMethod = 'token';
   @tracked errorMessage = '';
-
-  displayName = (type: string) => {
-    const displayName = ALL_LOGIN_METHODS?.find((t) => t.type === type)?.displayName;
-    return displayName || type;
-  };
+  @tracked selectedAuthMethod = '';
+  // true → "Back" button renders, false → "Sign in with other methods→" renders if an alternate view exists
+  @tracked showAlternateView = false;
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
-    this.fetchMounts.perform();
+    const { initialAuthType, showAlternate } = this.args.initialFormState;
+    this.selectedAuthMethod = initialAuthType;
+    this.showAlternateView = showAlternate;
+    this.supportedAuthTypes = supportedTypes(this.version.isEnterprise);
   }
 
-  get availableMethodTypes() {
-    return supportedTypes(this.version.isEnterprise);
+  get tabData() {
+    if (this.showAlternateView) return this.args?.alternateView?.tabData;
+    return this.args?.defaultView?.tabData;
   }
 
   get formComponent() {
     const { selectedAuthMethod } = this;
     // isSupported means there is a component file defined for that auth type
-    const isSupported = this.availableMethodTypes.includes(selectedAuthMethod);
+    const isSupported = this.supportedAuthTypes.includes(selectedAuthMethod);
     const formFile = () => (['oidc', 'jwt'].includes(selectedAuthMethod) ? 'oidc-jwt' : selectedAuthMethod);
     const component = isSupported ? formFile() : 'base';
 
@@ -95,8 +92,19 @@ export default class AuthFormTemplate extends Component<Args> {
     return `auth/form/${component}`;
   }
 
+  get hideAdvancedSettings() {
+    // Token does not support custom paths
+    if (this.selectedAuthMethod === 'token') return true;
+
+    // Always show for dropdown mode
+    if (!this.tabData) return false;
+
+    // For remaining scenarios, hide "Advanced settings" if the selected method has visible mount(s)
+    return this.args.visibleMountTypes?.includes(this.selectedAuthMethod);
+  }
+
   get namespaceInput() {
-    const namespaceQueryParam = this.args.namespace;
+    const namespaceQueryParam = this.args.namespaceQueryParam;
     if (this.flags.hvdManagedNamespaceRoot) {
       // When managed, the user isn't allowed to edit the prefix `admin/`
       // so prefill just the relative path in the namespace input
@@ -106,47 +114,22 @@ export default class AuthFormTemplate extends Component<Args> {
     return namespaceQueryParam;
   }
 
-  get renderTabs() {
-    // renders tabs if listing visibility is set (auth tabs exist)
-    // and user has NOT clicked "Sign in with other"
-    if (this.authTabs && !this.showOtherMethods) {
-      return true;
-    }
-    return false;
-  }
-
-  get selectedTabIndex() {
-    if (this.authTabs) {
-      return Object.keys(this.authTabs).indexOf(this.selectedAuthMethod);
-    }
-    return 0;
-  }
-
-  setAuthTypeFromTab(idx: number) {
-    const authTypes = this.authTabs ? Object.keys(this.authTabs) : [];
-    this.selectedAuthMethod = authTypes[idx] || '';
+  @action
+  setAuthType(authType: string) {
+    this.selectedAuthMethod = authType;
   }
 
   @action
-  handleAuthSelect(element: string, event: HTMLElementEvent<HTMLInputElement> | null, idx: number) {
-    if (element === 'tab') {
-      this.setAuthTypeFromTab(idx);
-    } else if (event?.target?.value) {
-      this.selectedAuthMethod = event.target.value;
-    }
+  setTypeFromDropdown(event: HTMLElementEvent<HTMLInputElement>) {
+    this.selectedAuthMethod = event.target.value;
   }
 
   @action
   toggleView() {
-    this.showOtherMethods = !this.showOtherMethods;
-
-    if (this.renderTabs) {
-      // reset selected auth method to first tab
-      this.handleAuthSelect('tab', null, 0);
-    } else {
-      // all methods render, reset dropdown
-      this.selectedAuthMethod = 'token';
-    }
+    this.showAlternateView = !this.showAlternateView;
+    const firstAuthTab = Object.keys(this.tabData || {})[0];
+    const type = firstAuthTab || this.args.initialFormState.initialAuthType;
+    this.setAuthType(type);
   }
 
   @action
@@ -156,58 +139,6 @@ export default class AuthFormTemplate extends Component<Args> {
 
   @action
   handleNamespaceUpdate(event: HTMLElementEvent<HTMLInputElement>) {
-    // update query param
     this.args.handleNamespaceUpdate(event.target.value);
-    // reset tabs
-    this.authTabs = null;
-    // fetch mounts for that namespace
-    this.fetchMounts.perform(500);
   }
-
-  fetchMounts = restartableTask(
-    waitFor(async (wait = 0) => {
-      // task is `restartable` so if the user starts typing again,
-      // it will cancel and restart from the beginning.
-      if (wait) await timeout(wait);
-
-      try {
-        // clear ember data store before re-requesting.. :(
-        this.store.unloadAll('auth-method');
-
-        // unauthMounts are tuned with listing_visibility="unauth"
-        const unauthMounts = await this.store.findAll('auth-method', {
-          adapterOptions: {
-            unauthenticated: true,
-          },
-        });
-
-        if (unauthMounts.length !== 0) {
-          this.authTabs = unauthMounts.reduce((obj: AuthTabs, m) => {
-            // serialize the ember data model into a regular ol' object
-            const mountData = m.serialize();
-            const methodType = mountData.type;
-            if (!Object.keys(obj).includes(methodType)) {
-              // create a new empty array for that type
-              obj[methodType] = [];
-            }
-
-            if (Array.isArray(obj[methodType])) {
-              // push mount data into corresponding type's array
-              obj[methodType].push(mountData);
-            }
-
-            return obj;
-          }, {});
-
-          // set tracked selected auth type to first tab
-          this.setAuthTypeFromTab(0);
-          // hide other methods to prioritize tabs (visible mounts)
-          this.showOtherMethods = false;
-        }
-      } catch (e) {
-        // if for some reason there's an error fetching mounts, swallow and just show standard form
-        this.authTabs = null;
-      }
-    })
-  );
 }

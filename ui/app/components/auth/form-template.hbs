@@ -11,21 +11,20 @@
       @cluster={{@cluster}}
       @onError={{this.handleError}}
       @onSuccess={{@onSuccess}}
-      @wrappedToken={{@wrappedToken}}
     >
       <:namespace>
-        {{#if this.version.isEnterprise}}
+        {{#if (has-feature "Namespaces")}}
           <Auth::NamespaceInput
             @disabled={{@oidcProviderQueryParam}}
             @hvdManagedNamespace={{this.flags.hvdManagedNamespaceRoot}}
-            @namespace={{this.namespaceInput}}
+            @namespaceValue={{this.namespaceInput}}
             @updateNamespace={{this.handleNamespaceUpdate}}
           />
         {{/if}}
       </:namespace>
 
       <:back>
-        {{#if this.showOtherMethods}}
+        {{#if this.showAlternateView}}
           <Hds::Button
             @text="Back"
             {{on "click" this.toggleView}}
@@ -36,29 +35,28 @@
         {{/if}}
       </:back>
 
-      {{! TABS OR DROPDOWN }}
+      {{! DIRECT LINK, TABS OR DROPDOWN }}
       <:authSelectOptions>
         <div class="has-bottom-margin-m">
-          {{#if this.renderTabs}}
+          {{#if this.tabData}}
             <Auth::Tabs
-              @authTabs={{this.authTabs}}
-              @displayNameHelper={{this.displayName}}
-              @onTabClick={{fn this.handleAuthSelect "tab"}}
+              @authTabData={{this.tabData}}
+              @handleTabClick={{this.setAuthType}}
               @selectedAuthMethod={{this.selectedAuthMethod}}
-              @selectedTabIndex={{this.selectedTabIndex}}
             />
           {{else}}
+            {{! Fallback is dropdown with all auth methods }}
             <Hds::Form::Select::Field
               name="selectedAuthMethod"
-              {{on "input" (fn this.handleAuthSelect "dropdown")}}
+              {{on "input" this.setTypeFromDropdown}}
               data-test-select="auth type"
               as |F|
             >
-              <F.Label class="has-top-margin-m">Auth method</F.Label>
+              <F.Label class="has-top-margin-m">Method</F.Label>
               <F.Options>
-                {{#each this.availableMethodTypes as |type|}}
+                {{#each this.supportedAuthTypes as |type|}}
                   <option selected={{eq this.selectedAuthMethod type}} value={{type}}>
-                    {{this.displayName type}}
+                    {{auth-display-name type}}
                   </option>
                 {{/each}}
               </F.Options>
@@ -74,8 +72,8 @@
       </:error>
 
       <:advancedSettings>
-        {{! tabs render their own mount path inputs and token does not support custom paths }}
-        {{#if (and (not this.renderTabs) (not-eq this.selectedAuthMethod "token"))}}
+        {{! custom auth options render their own mount path inputs and token does not support custom paths }}
+        {{#unless this.hideAdvancedSettings}}
           <Hds::Reveal @text="Advanced settings" data-test-auth-form-options-toggle class="is-fullwidth">
             <Hds::Form::TextInput::Field name="path" data-test-input="path" as |F|>
               <F.Label class="has-top-margin-m">Mount path</F.Label>
@@ -86,11 +84,11 @@
                 .</F.HelperText>
             </Hds::Form::TextInput::Field>
           </Hds::Reveal>
-        {{/if}}
+        {{/unless}}
       </:advancedSettings>
 
       <:footer>
-        {{#if this.renderTabs}}
+        {{#if (and @alternateView (not this.showAlternateView))}}
           <Hds::Button
             {{on "click" this.toggleView}}
             @color="tertiary"

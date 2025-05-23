@@ -21,11 +21,15 @@ import { task } from 'ember-concurrency';
  * ```js
  * <Clients::PageHeader @startTimestamp="2022-06-01T23:00:11.050Z" @endTimestamp="2022-12-01T23:00:11.050Z" @namespace="foo" @upgradesDuringActivity={{array (hash version="1.10.1" previousVersion="1.9.1" timestampInstalled= "2021-11-18T10:23:16Z") }} />
  * ```
+ * @param {string} [billingStartTime] - ISO timestamp of billing start date, to be passed to date picker
+ * @param {string} [activityTimestamp] -  ISO timestamp created in serializer to timestamp the response to be displayed in page header
  * @param {string} [startTimestamp] - ISO timestamp of start time, to be passed to export request
  * @param {string} [endTimestamp] - ISO timestamp of end time, to be passed to export request
+ * @param {number} [retentionMonths = 48] - number of months for historical billing, to be passed to date picker
  * @param {string} [namespace] - namespace filter. Will be appended to the current namespace in the export request.
  * @param {string} [upgradesDuringActivity] - array of objects containing version history upgrade data
  * @param {boolean} [noData = false] - when true, export button will hide regardless of capabilities
+ * @param {function} [onChange] - callback when a new date range is saved, to be passed to date picker
  */
 export default class ClientsPageHeaderComponent extends Component {
   @service download;
@@ -34,6 +38,7 @@ export default class ClientsPageHeaderComponent extends Component {
   @service version;
 
   @tracked canDownload = false;
+  @tracked showEditModal = false;
   @tracked showExportModal = false;
   @tracked exportFormat = 'csv';
   @tracked downloadError = '';
@@ -94,6 +99,10 @@ export default class ClientsPageHeaderComponent extends Component {
     return namespace ? sanitizePath(`${currentNs}/${namespace}`) : sanitizePath(currentNs);
   }
 
+  get showCommunity() {
+    return this.version.isCommunity && !!this.formattedStartDate && !!this.formattedEndDate;
+  }
+
   async getExportData() {
     const adapter = this.store.adapterFor('clients/activity');
     const { startTimestamp, endTimestamp } = this.args;
@@ -120,13 +129,20 @@ export default class ClientsPageHeaderComponent extends Component {
     }
   });
 
-  @action setExportFormat(evt) {
+  @action
+  setExportFormat(evt) {
     const { value } = evt.target;
     this.exportFormat = value;
   }
 
-  @action resetModal() {
+  @action
+  resetModal() {
     this.showExportModal = false;
     this.downloadError = '';
+  }
+
+  @action
+  setEditModalVisible(visible) {
+    this.showEditModal = visible;
   }
 }

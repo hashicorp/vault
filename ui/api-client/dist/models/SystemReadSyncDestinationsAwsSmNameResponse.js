@@ -34,6 +34,9 @@ function SystemReadSyncDestinationsAwsSmNameResponseFromJSONTyped(json, ignoreDi
     return {
         'connectionDetails': json['connection_details'] == null ? undefined : json['connection_details'],
         'name': json['name'] == null ? undefined : json['name'],
+        'options': json['options'] == null ? undefined : json['options'],
+        'purgeError': json['purge_error'] == null ? undefined : json['purge_error'],
+        'purgeInitiatedAt': json['purge_initiated_at'] == null ? undefined : (new Date(json['purge_initiated_at'])),
         'type': json['type'] == null ? undefined : json['type'],
     };
 }
@@ -47,6 +50,9 @@ function SystemReadSyncDestinationsAwsSmNameResponseToJSONTyped(value, ignoreDis
     return {
         'connection_details': value['connectionDetails'],
         'name': value['name'],
+        'options': value['options'],
+        'purge_error': value['purgeError'],
+        'purge_initiated_at': value['purgeInitiatedAt'] == null ? undefined : ((value['purgeInitiatedAt']).toISOString()),
         'type': value['type'],
     };
 }

@@ -7,39 +7,39 @@ description: >-
   Kubernetes.
 ---
 
-# Run Vault on OpenShift
+# Run Vault on Openshift
 
 @include 'helm/version.mdx'
 
 The following documentation describes installing, running, and using
 Vault and **Vault Agent Injector** on OpenShift.
 
-~> **Note:** We recommend using the Vault agent injector on Openshift
-instead of the Secrets Store CSI driver. OpenShift
-[does not recommend](https://docs.openshift.com/container-platform/4.9/storage/persistent_storage/persistent-storage-hostpath.html)
-using `hostPath` mounting in production or
-[certify Helm charts](https://github.com/redhat-certification/chart-verifier/blob/dbf89bff2d09142e4709d689a9f4037a739c2244/docs/helm-chart-checks.md#table-2-helm-chart-default-checks)
-using CSI objects because pods must run as privileged. If you would like to run the Secrets Store
-CSI driver on a development or testing cluster, refer to
-[installation instructions for the Vault CSI provider](/vault/docs/platform/k8s/csi/installation).
+<Warning title="Recommended setup method">
+
+   The recommended method to access Vault securely on OpenShift is through the [Vault Secrets Operator](/vault/docs/deploy/kubernetes/vso/). Through the Vault Secrets Operator, developers access secrets as native Kubernetes secrets, while Vault still manages the secrets. The Vault Secrets Operator is now [certified on Red Hat OpenShift](https://www.redhat.com/en/blog/vault-secrets-operator-now-certified-on-red-hat-openshift) and is available in the embedded operator hub.
+
+   See the [Run the Vault Secrets Operator on OpenShift documentation](/vault/docs/deploy/kubernetes/vso/openshift) for more information on how to install and configure the Vault Secrets Operator on OpenShift.
+
+</Warning>
 
 ## Requirements
 
-The following are required to install Vault and Vault Agent Injector
-on OpenShift:
+To install Vault and Vault Agent Injector on OpenShift you need the following:
 
 - Cluster Admin privileges to bind the `auth-delegator` role to Vault's service account
 - Helm v3.6+
 - OpenShift 4.3+
 - Vault Helm v0.6.0+
-- Vault K8s v0.4.0+
+- [Vault K8s](https://github.com/hashicorp/vault-k8s) v0.4.0+
 
-~> **Note:** Support for Consul on OpenShift is available since [Consul 1.9](https://www.hashicorp.com/blog/introducing-openshift-support-for-consul-on-kubernetes). However, for highly available
-deployments, Raft integrated storage is recommended.
+
+<Note>
+Support for Consul on OpenShift is available. However, for highly available deployments, HashiCorp recommends Raft integrated storage.
+</Note>
 
 ## Additional resources
 
-The documentation, configuration and examples for Vault Helm and Vault K8s Agent Injector
+The documentation, configuration, and examples for Vault Helm and Vault K8s Agent Injector
 are applicable to OpenShift installations. For more examples see the existing documentation:
 
 - [Vault Helm documentation](/vault/docs/platform/k8s/helm)
@@ -58,27 +58,22 @@ configuration to meet your requirements, it **does not automatically operate
 Vault.** You are still responsible for learning how to monitor, backup, upgrade,
 etc. the Vault cluster.
 
-~> **Security Warning:** By default, the chart runs in standalone mode. This
-mode uses a single Vault server with a file storage backend. This is a less
-secure and less resilient installation that is **NOT** appropriate for a
-production setup. It is highly recommended to use a [properly secured Kubernetes
-cluster](https://kubernetes.io/docs/tasks/administer-cluster/securing-a-cluster/),
-[learn the available configuration
-options](/vault/docs/platform/k8s/helm/configuration), and read the [production deployment
-checklist](/vault/docs/platform/k8s/helm/run#architecture).
+<Warning title="Security warning">
 
-## How-To
+   By default, the chart runs in standalone mode. Standalone mode uses a single Vault server with a file storage backend. This is a less secure and less resilient installation that is not appropriate for a production setup. 
+
+   See documentation for a [properly secured Kubernetes cluster](https://kubernetes.io/docs/tasks/administer-cluster/securing-a-cluster/), [learn the available configuration options](/vault/docs/platform/k8s/helm/configuration), and read the [production deployment checklist](/vault/docs/platform/k8s/helm/run#architecture).
+
+</Warning>
+
+## How-to
 
 ### Install Vault
 
-To use the Helm chart, add the Hashicorp helm repository and check that you have
+To use the Helm chart, add the HashiCorp Helm repository and check that you have
 access to the chart:
 
 @include 'helm/repo.mdx'
-
--> **Important:** The Helm chart is new and under significant development.
-Please always run Helm with `--dry-run` before any install or upgrade to verify
-changes.
 
 Use `helm install` to install the latest release of the Vault Helm chart.
 
@@ -91,15 +86,22 @@ Or install a specific version of the chart.
 @include 'helm/install.mdx'
 
 The `helm install` command accepts parameters to override default configuration
-values inline or defined in a file. For all OpenShift deployments, `global.openshift`
-should be set to `true`.
+values inline or defined in a file.
 
-Override the `server.dev.enabled` configuration value:
+<Tip>
+
+For all OpenShift deployments, set `global.openshift` to `true`, and deploy the
+chart in a namespace other than `default`.
+
+</Tip>
+
+Override the `global.openshift` configuration value:
 
 ```shell-session
 $ helm install vault hashicorp/vault \
-    --set "global.openshift=true" \
-    --set "server.dev.enabled=true"
+    --create-namespace \
+    --namespace vault \
+    --set "global.openshift=true"
 ```
 
 Override all the configuration found in a file:
@@ -115,6 +117,8 @@ server:
     replicas: 5
 ##
 $ helm install vault hashicorp/vault \
+    --create-namespace \
+    --namespace vault \
     --values override-values.yml
 ```
 
@@ -123,13 +127,16 @@ $ helm install vault hashicorp/vault \
 The Helm chart may run a Vault server in development. This installs a single
 Vault server with a memory storage backend.
 
--> **Dev mode:** This is ideal for learning and demonstration environments but
-NOT recommended for a production environment.
+<Tip>
+   Dev mode is ideal for learning and demonstration environments but NOT recommended for a production environment.
+</Tip> 
 
 Install the latest Vault Helm chart in development mode.
 
 ```shell-session
 $ helm install vault hashicorp/vault \
+    --create-namespace \
+    --namespace vault \
     --set "global.openshift=true" \
     --set "server.dev.enabled=true"
 ```
@@ -142,12 +149,14 @@ Install the latest Vault Helm chart in HA Raft mode:
 
 ```shell-session
 $ helm install vault hashicorp/vault \
+  --create-namespace \
+  --namespace vault \
   --set='global.openshift=true' \
   --set='server.ha.enabled=true' \
   --set='server.ha.raft.enabled=true'
 ```
 
-Next, initialize and unseal `vault-0` pod:
+Initialize and unseal `vault-0` pod:
 
 ```shell-session
 $ oc exec -ti vault-0 -- vault operator init
@@ -166,7 +175,7 @@ $ oc exec -ti vault-2 -- vault operator raft join http://vault-0.vault-internal:
 $ oc exec -ti vault-2 -- vault operator unseal
 ```
 
-To verify if the Raft cluster has successfully been initialized, run the following.
+To verify if the Raft cluster has initialized, run the following.
 
 First, login using the `root` token on the `vault-0` pod:
 
@@ -190,19 +199,21 @@ Vault with integrated storage (Raft) is now ready to use!
 
 #### External mode
 
-The Helm chart may be run in external mode. This installs no Vault server and
+Running the Helm chart in external mode installs no Vault server and
 relies on a network addressable Vault server to exist.
 
 Install the latest Vault Helm chart in external mode.
 
 ```shell-session
 $ helm install vault hashicorp/vault \
+    --create-namespace \
+    --namespace vault \
     --set "global.openshift=true" \
     --set "injector.externalVaultAddr=http://external-vault:8200"
 ```
 
-## Tutorial
+## Tutorials
 
-Refer to the [Integrate a Kubernetes Cluster with an
-External Vault](/vault/tutorials/kubernetes/kubernetes-external-vault)
-tutorial to learn how to use an external Vault within a Kubernetes cluster.
+Start with [Install Vault to Red Hat OpenShift](/vault/tutorials/kubernetes/kubernetes-openshift) to help you get started with Vault on OpenShift.
+
+Refer to the [Integrate a Kubernetes Cluster with an External Vault](/vault/tutorials/kubernetes/kubernetes-external-vault) tutorial to learn how to run Vault outside the Kubernetes cluster.

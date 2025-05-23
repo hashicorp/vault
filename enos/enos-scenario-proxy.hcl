@@ -22,7 +22,7 @@ scenario "proxy" {
     - vault_build_date*
     - vault_product_version
     - vault_revision*
-  
+
   * If you don't already know what build date and revision you should be using, see
   https://eng-handbook.hashicorp.services/internal-tools/enos/troubleshooting/#execution-error-expected-vs-got-for-vault-versioneditionrevisionbuild-date.
 
@@ -58,7 +58,7 @@ scenario "proxy" {
       artifact_type   = ["package"]
     }
 
-    // PKCS#11 can only be used on ent.hsm and ent.hsm.fips1402.
+    // PKCS#11 can only be used on ent.hsm and ent.hsm.fips1403.
     exclude {
       seal    = ["pkcs11"]
       edition = [for e in matrix.edition : e if !strcontains(e, "hsm")]
@@ -479,6 +479,7 @@ scenario "proxy" {
       quality.vault_mount_auth,
       quality.vault_mount_kv,
       quality.vault_secrets_kv_write,
+      quality.vault_secrets_ldap_write_config,
     ]
 
     variables {

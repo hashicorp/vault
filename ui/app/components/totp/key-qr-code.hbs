@@ -19,11 +19,21 @@
       @value={{get @model attr.name}}
     />
   {{/each}}
-  <div class="list-item-row">
-    <div class="center-display">
-      <QrCode @text={{@model.url}} @colorLight="#F7F7F7" @width={{200}} @height={{200}} @correctLevel="L" data-test-qrcode />
+  {{#if (gt @model.qrSize 0)}}
+    <div class="list-item-row">
+      <div class="center-display column">
+        <QrCode
+          @text={{@model.url}}
+          @colorLight="#F7F7F7"
+          @width={{@model.qrSize}}
+          @height={{@model.qrSize}}
+          @correctLevel="L"
+          data-test-qrcode
+        />
+      </div>
     </div>
-  </div>
+  {{/if}}
+
 </div>
 <div class="field is-grouped box is-fullwidth is-bottomless">
   <div class="control">

@@ -72,12 +72,10 @@ module('Acceptance | ssh | roles', function (hooks) {
           `/vault/secrets/${sshPath}/sign/${this.name}`,
           'ca sign url is correct'
         );
-        assert.dom('[data-test-row-label="Signed key"]').exists({ count: 1 }, 'renders the signed key');
-        assert
-          .dom('[data-test-row-value="Signed key"]')
-          .exists({ count: 1 }, "renders the signed key's value");
-        assert.dom('[data-test-row-label="Serial number"]').exists({ count: 1 }, 'renders the serial');
-        assert.dom('[data-test-row-value="Serial number"]').exists({ count: 1 }, 'renders the serial value');
+        assert.dom(GENERAL.infoRowLabel('Signed key')).exists({ count: 1 }, 'renders the signed key');
+        assert.dom(GENERAL.infoRowValue('Signed key')).exists("renders the signed key's value");
+        assert.dom(GENERAL.infoRowLabel('Serial number')).exists({ count: 1 }, 'renders the serial');
+        assert.dom(GENERAL.infoRowValue('Serial number')).exists('renders the serial value');
       },
     },
     {
@@ -102,7 +100,7 @@ module('Acceptance | ssh | roles', function (hooks) {
         assert.dom(GENERAL.infoRowLabel('Key')).exists({ count: 1 }, 'renders the key');
         assert.dom('[data-test-masked-input]').exists({ count: 1 }, 'renders mask for key value');
         assert.dom(GENERAL.infoRowLabel('Port')).exists({ count: 1 }, 'renders the port');
-        assert.dom('[data-test-row-value="Port"]').exists({ count: 1 }, "renders the port's value");
+        assert.dom(GENERAL.infoRowValue('Port')).exists("renders the port's value");
       },
     },
   ];
