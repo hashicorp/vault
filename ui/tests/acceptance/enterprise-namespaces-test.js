@@ -304,20 +304,32 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     const searchInput = GENERAL.filterInputExplicit;
     const searchButton = GENERAL.filterInputExplicitSearch;
 
+    // Verify that the namespace exists in the namespace picker
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, 'test-delete-me');
+    assert
+      .dom(NAMESPACE_PICKER_SELECTORS.link())
+      .exists({ count: 1 }, 'Namespace exists in the namespace picker');
+
+    // Close the namespace picker
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+
+    // Verify that the namespace exists in the manage namespaces page
     await fillIn(searchInput, 'test-delete-me');
     await click(searchButton);
 
     assert.dom(GENERAL.menuTrigger).exists();
     await click(GENERAL.menuTrigger);
 
-    // Verify that the user can delete the namespace
-    const deleteNamespaceButton = '.hds-dropdown-list-item:nth-of-type(1)';
-    assert.dom(deleteNamespaceButton).hasText('Delete', 'Allow users to delete the namespace');
+    // Delete the namespace
+    const deleteNamespaceButton = '.hds-dropdown-list-item:nth-of-type(2)';
+    assert.dom(deleteNamespaceButton).hasText('Delete', 'Delete namespace button exists');
     await click(`${deleteNamespaceButton} button`);
 
-    assert.dom(GENERAL.confirmButton).hasText('Confirm', 'Allow users to delete the namespace');
+    assert.dom(GENERAL.confirmButton).hasText('Confirm', 'Confirm namespace deletion button is shown');
     await click(GENERAL.confirmButton);
 
+    // Verify that the namespace does not exist in the nmanage namespace page
     assert.strictEqual(
       currentURL(),
       '/vault/access/namespaces?page=1&pageFilter=test-delete-me',
@@ -327,5 +339,12 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     assert
       .dom('.list-item-row')
       .exists({ count: 0 }, 'Namespace should be deleted and not displayed in the list');
+
+    // Verify that the namespace does not exist in the namespace picker
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, 'test-delete-me');
+    assert
+      .dom(NAMESPACE_PICKER_SELECTORS.link())
+      .exists({ count: 0 }, 'Deleted namespace does not exist in the namespace picker');
   });
 });
