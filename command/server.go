@@ -2925,6 +2925,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		DisableMlock:                   config.DisableMlock,
 		MaxLeaseTTL:                    config.MaxLeaseTTL,
 		DefaultLeaseTTL:                config.DefaultLeaseTTL,
+		RemoveIrrevocableLeaseAfter:    config.RemoveIrrevocableLeaseAfter,
 		ClusterName:                    config.ClusterName,
 		CacheSize:                      config.CacheSize,
 		PluginDirectory:                config.PluginDirectory,

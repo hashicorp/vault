@@ -541,9 +541,10 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 	sha256 := d.Get("sha256").(string)
 	if sha256 == "" {
 		sha256 = d.Get("sha_256").(string)
-		if resp := validateSHA256(sha256); resp.IsError() {
-			return resp, nil
-		}
+	}
+
+	if sha256 == "" && pluginVersion == "" {
+		return logical.ErrorResponse("must provide at least one of sha256 or version: use sha256 for binary registration (version optional) or version only for artifact registration"), nil
 	}
 
 	if resp := validateSha256IsEmptyForEntPluginVersion(pluginVersion, sha256); resp.IsError() {
@@ -5428,7 +5429,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 				// Add tags to all of the operations if necessary
 				if tag != "" {
-					for _, op := range []*framework.OASOperation{obj.Get, obj.Post, obj.Delete} {
+					for _, op := range []*framework.OASOperation{obj.Get, obj.Post, obj.Patch, obj.Delete} {
 						// TODO: a special override for identity is used used here because the backend
 						// is currently categorized as "secret", which will likely change. Also of interest
 						// is removing all tag handling here and providing the mount information to OpenAPI.

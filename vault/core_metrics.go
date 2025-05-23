@@ -5,6 +5,7 @@ package vault
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
+	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pluginconsts"
@@ -1028,4 +1030,91 @@ func (c *Core) GetPolicyMetrics(ctx context.Context) map[PolicyType]int {
 		ret[pt] = len(policies)
 	}
 	return ret
+}
+
+func (c *Core) GetAutopilotUpgradeEnabled() float64 {
+	raftBackend := c.getRaftBackend()
+	if raftBackend == nil {
+		c.logger.Warn("raft storage is not in use")
+		return 0.0
+	}
+
+	config := raftBackend.AutopilotConfig()
+	if config == nil {
+		c.logger.Error("failed to get autopilot config")
+		return 0.0
+	}
+
+	// if false, autopilot upgrade is enabled
+	if !config.DisableUpgradeMigration {
+		return 1
+	}
+	return 0.0
+}
+
+func (c *Core) GetAuditDeviceCountByType() map[string]int {
+	auditCounts := make(map[string]int)
+	auditCounts["file"] = 0
+	auditCounts["socketUdp"] = 0
+	auditCounts["socketTcp"] = 0
+	auditCounts["socketUnix"] = 0
+	auditCounts["syslog"] = 0
+
+	c.auditLock.RLock()
+	defer c.auditLock.RUnlock()
+
+	// return if audit is not set up
+	if c.audit == nil {
+		return auditCounts
+	}
+
+	for _, entry := range c.audit.Entries {
+		switch entry.Type {
+		case audit.TypeFile:
+			auditCounts["file"]++
+		case audit.TypeSocket:
+			if entry.Options != nil {
+				switch strings.ToLower(entry.Options["socket_type"]) {
+				case "udp":
+					auditCounts["socketUdp"]++
+				case "tcp":
+					auditCounts["socketTcp"]++
+				case "unix":
+					auditCounts["socketUnix"]++
+				}
+			}
+		case audit.TypeSyslog:
+			auditCounts["syslog"]++
+		}
+	}
+
+	return auditCounts
+}
+
+func (c *Core) GetAuditExclusionStanzaCount() int {
+	exclusionsCount := 0
+
+	c.auditLock.RLock()
+	defer c.auditLock.RUnlock()
+
+	// return if audit is not set up
+	if c.audit == nil {
+		return exclusionsCount
+	}
+
+	for _, entry := range c.audit.Entries {
+		excludeRaw, ok := entry.Options["exclude"]
+		if !ok || excludeRaw == "" {
+			continue
+		}
+
+		var exclusionObjects []map[string]interface{}
+		if err := json.Unmarshal([]byte(excludeRaw), &exclusionObjects); err != nil {
+			c.logger.Error("failed to parse audit exclusion config for device", "path", entry.Path, "error", err)
+		}
+
+		exclusionsCount += len(exclusionObjects)
+	}
+
+	return exclusionsCount
 }
