@@ -545,6 +545,7 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
             secret_syncs: 0,
           },
           mount_path: 'no mount accessor (pre-1.10 upgrade?)',
+          mount_type: 'no mount path (pre-1.10 upgrade?)',
         },
         {
           counts: {
@@ -554,7 +555,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
             non_entity_clients: 0,
             secret_syncs: 0,
           },
-          mount_path: 'auth/u/',
+          mount_path: 'auth/userpass-0',
+          mount_type: 'userpass',
         },
       ],
       namespace_id: 'root',
@@ -595,6 +597,7 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
                 secret_syncs: 0,
               },
               mount_path: 'no mount accessor (pre-1.10 upgrade?)',
+              mount_type: 'no mount path (pre-1.10 upgrade?)',
             },
             {
               counts: {
@@ -604,7 +607,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
                 non_entity_clients: 0,
                 secret_syncs: 0,
               },
-              mount_path: 'auth/u/',
+              mount_path: 'auth/userpass-0',
+              mount_type: 'userpass',
             },
           ],
           namespace_id: 'root',
@@ -638,6 +642,7 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
                   secret_syncs: 0,
                 },
                 mount_path: 'no mount accessor (pre-1.10 upgrade?)',
+                mount_type: 'no mount path (pre-1.10 upgrade?)',
               },
               {
                 counts: {
@@ -647,7 +652,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
                   non_entity_clients: 0,
                   secret_syncs: 0,
                 },
-                mount_path: 'auth/u/',
+                mount_path: 'auth/userpass-0',
+                mount_type: 'userpass',
               },
             ],
             namespace_id: 'root',
