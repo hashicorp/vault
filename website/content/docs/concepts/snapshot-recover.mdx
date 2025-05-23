@@ -1,0 +1,52 @@
+---
+layout: docs
+page_title: Recover an item from a snapshot
+description: >-
+Item recovery allows you to recover a specific item from a snapshot, rather than restoring the entire snapshot.
+---
+
+# Recover from a snapshot
+
+@include 'alerts/enterprise-only.mdx'
+
+## Overview
+
+
+## Supported Paths
+
+| Plugin    | Path              | Snapshot operations supported | Vault version |
+|-----------|-------------------|-------------------------------|---------------|
+| cubbyhole | `cubbyhole/:name` | `recover`, `read`, `list`     | 1.20.0        |
+| kv (v1)   | `secrets/:name`   | `recover`, `read`, `list`     | 1.20.0        |
+
+
+## Loading snapshots
+
+## Snapshot operations
+
+## Policies
+
+To subscribe to an event notification, you must have the following policy grants:
+
+1. `read` capability on `/v1/sys/events/subscribe/{eventType}`, where `{eventType}` is the event type that will be
+subscribed to. The path may contain wildcards.
+
+An example blanket policy is:
+```hcl
+path "sys/events/subscribe/*" {
+    capabilities = ["read"]
+}
+   ```
+
+2. `list` and `subscribe` capabilities on the *path of the secret* for events
+related to secrets. The policy must also provide a `subscribe_event_types`
+entry with the specific event notifications subscribers are allowed to use. For example,
+to receive event notifications related to the KV secrets engine path,
+`secret/my-data`, a valid policy would be:
+
+```hcl
+path "secret/my-data" {
+  capabilities = ["list", "subscribe"]
+  subscribe_event_types = ["*"]
+}
+   ```

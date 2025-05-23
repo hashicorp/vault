@@ -254,6 +254,15 @@
             "path": "concepts/adaptive-overload-protection/vault-server-temporarily-overloaded"
           }
         ]
+      },
+      {
+        "title": "Recover from a snapshot",
+        "path": "concepts/snapshot-recover",
+        "badge": {
+          "text": "ENT",
+          "type": "filled",
+          "color": "neutral"
+        }
       }
     ]
   },
@@ -279,7 +288,7 @@
     ]
   },
 
-  
+
   { "divider": true },
   { "heading": "OPERATIONS" },
 
@@ -358,7 +367,7 @@
       }
     ]
   },
-  
+
   {
     "title": "Configure Vault",
     "routes": [
@@ -398,10 +407,10 @@
           "color": "neutral"
         },
         "path": "configuration/entropy-augmentation"
-      },  
-      
+      },
+
       { "heading": "Configuration stanzas" },
-    
+
       {
         "title": "<code>adaptive_overload_protection</code>",
         "badge": {
@@ -1510,6 +1519,10 @@
       {
         "title": "<code>read</code>",
         "path": "commands/read"
+      },
+      {
+        "title": "<code>recover</code>",
+        "path": "commands/recover"
       },
       {
         "title": "<code>secrets</code>",

@@ -21,12 +21,11 @@ snapshots within the Vault cluster.
 | :----- | :--------------------------------------------- |
 | `POST` | `/sys/storage/raft/snapshot-load` |
 
-Load a new snapshot into the Vault cluster, without restoring the cluster to the
-snapshot's state. Recover, read, and list individual pieces of data from the
-loaded snapshot.
+Load a new snapshot into the Vault cluster without restoring the cluster to the
+snapshot's state. After you load a snapshot, you can recover, read, and list
+individual pieces of data from the loaded snapshot.
 
-A Vault cluster can only have 1 snapshot loaded at a time. A loaded snapshot will
-be automatically unloaded 72 hours after it is loaded.
+@include 'recover/loadedsnapshots.mdx'
 
 ### Sample request
 
@@ -36,4 +35,108 @@ $ curl \
     --request POST \
     --data-binary @raft.snap \
     http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-load
+```
+
+
+### Sample response
+
+```json
+{
+  "data": {
+    "cluster_id": "2ec84695-cfe5-44f3-b351-3f08a9ccc0c8",
+    "expires_at": "2025-05-25T15:07:58.187769+01:00",
+    "snapshot_id": "2403d301-94f2-46a1-a39d-02be83e2831a",
+    "status": "loading"
+  }
+}
+```
+
+## List loaded snapshots
+
+This endpoint lists snapshots loaded in the cluster.
+
+| Method | Path                                     |
+| :----- | :--------------------------------------- |
+| `LIST` | `/sys/storage/raft/snapshot-load` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request LIST \
+    http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-load
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "keys": ["2403d301-94f2-46a1-a39d-02be83e2831a"]
+  }
+}
+```
+
+## Read loaded snapshot
+
+This endpoint reads a loaded snapshot.
+
+| Method | Path                                           |
+| :----- | :--------------------------------------------- |
+| `GET`  | `/sys/storage/raft/snapshot-load/:snapshot_id` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-load/2403d301-94f2-46a1-a39d-02be83e2831a
+```
+
+### Sample responses
+
+For a snapshot loaded as a binary file:
+
+```json
+{
+  "data": {
+    "cluster_id": "2ec84695-cfe5-44f3-b351-3f08a9ccc0c8",
+    "expires_at": "2025-05-25T15:07:58.187769+01:00",
+    "snapshot_id": "2403d301-94f2-46a1-a39d-02be83e2831a",
+    "status": "ready"
+  }
+}
+```
+
+For a snapshot loaded from a an Automated Snapshot configuration:
+
+```json
+{
+  "data": {
+    "auto_config_name": "config1",
+    "cluster_id": "2ec84695-cfe5-44f3-b351-3f08a9ccc0c8",
+    "expires_at": "2025-05-25T15:07:58.187769+01:00",
+    "snapshot_id": "2403d301-94f2-46a1-a39d-02be83e2831a",
+    "url": "https://example.com/raft.snap",
+    "status": "ready"
+  }
+}
+```
+
+## Unload loaded snapshot
+
+This endpoint unloads the loaded snapshot.
+
+| Method   | Path                                           |
+| :------- | :--------------------------------------------- |
+| `DELETE` | `/sys/storage/raft/snapshot-load/:snapshot_id` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request DELETE \
+    http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-load/2403d301-94f2-46a1-a39d-02be83e2831a
 ```
