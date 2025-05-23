@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, typeIn } from '@ember/test-helpers';
+import { fillIn, find, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
@@ -18,6 +18,7 @@ module('Integration | Component | auth | namespace input', function (hooks) {
     this.disabled = false;
     this.oidcProviderQueryParam = '';
     this.handleNamespaceUpdate = sinon.spy();
+    this.shouldRefocusNamespaceInput = false;
 
     this.renderComponent = () => {
       return render(hbs`
@@ -25,14 +26,15 @@ module('Integration | Component | auth | namespace input', function (hooks) {
         @disabled={{this.disabled}}
         @handleNamespaceUpdate={{this.handleNamespaceUpdate}}
         @namespaceQueryParam={{this.namespaceQueryParam}}
+        @shouldRefocusNamespaceInput={{this.shouldRefocusNamespaceInput}}
       />`);
     };
   });
 
-  test('it calls handleNamespaceUpdate', async function (assert) {
+  test('it fires @handleNamespaceUpdate callback', async function (assert) {
     assert.expect(1);
     await this.renderComponent();
-    await typeIn(GENERAL.inputByAttr('namespace'), 'ns-1');
+    await fillIn(GENERAL.inputByAttr('namespace'), 'ns-1');
     const [actual] = this.handleNamespaceUpdate.lastCall.args;
     assert.strictEqual(actual, 'ns-1', `handleNamespaceUpdate called with: ${actual}`);
   });
@@ -41,6 +43,19 @@ module('Integration | Component | auth | namespace input', function (hooks) {
     this.disabled = true;
     await this.renderComponent();
     assert.dom(GENERAL.inputByAttr('namespace')).isDisabled();
+  });
+
+  test('it does not focus the input if @shouldRefocusNamespaceInput is false', async function (assert) {
+    await this.renderComponent();
+    const element = find(GENERAL.inputByAttr('namespace'));
+    assert.notStrictEqual(document.activeElement, element, 'the namespace input is NOT focused');
+  });
+
+  test('it focuses the input if @shouldRefocusNamespaceInput is true', async function (assert) {
+    this.shouldRefocusNamespaceInput = true;
+    await this.renderComponent();
+    const element = find(GENERAL.inputByAttr('namespace'));
+    assert.strictEqual(document.activeElement, element, 'the namespace input is focused');
   });
 
   module('HVD managed', function (hooks) {
@@ -62,7 +77,7 @@ module('Integration | Component | auth | namespace input', function (hooks) {
       await this.renderComponent();
 
       assert.dom(GENERAL.inputByAttr('namespace')).hasValue('');
-      await typeIn(GENERAL.inputByAttr('namespace'), 'ns-1');
+      await fillIn(GENERAL.inputByAttr('namespace'), 'ns-1');
       const [actual] = this.handleNamespaceUpdate.lastCall.args;
       assert.strictEqual(actual, 'ns-1', `handleNamespaceUpdate called with: ${actual}`);
     });

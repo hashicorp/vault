@@ -22,11 +22,12 @@ export default Controller.extend({
   namespaceQueryParam: alias('clusterController.namespaceQueryParam'),
   redirectTo: alias('vaultController.redirectTo'),
   hvdManagedNamespaceRoot: alias('flagsService.hvdManagedNamespaceRoot'),
+  shouldRefocusNamespaceInput: false,
 
+  // Query params
   authMount: '',
   oidcProvider: '',
   unwrapTokenError: '',
-  shouldRefocusNamespaceInput: false,
 
   fullNamespaceFromInput(value) {
     const strippedNs = sanitizePath(value);
