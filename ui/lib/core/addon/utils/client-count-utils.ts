@@ -207,7 +207,7 @@ export const formatByNamespace = (namespaceArray: NamespaceObject[] | null): ByN
     if (Array.isArray(ns.mounts)) {
       mounts = ns.mounts.map((m) => ({
         label: m.mount_path,
-        mount_type: m.mount_type || '',
+        mount_type: m.mount_type,
         ...destructureClientCounts(m.counts),
       }));
     }
