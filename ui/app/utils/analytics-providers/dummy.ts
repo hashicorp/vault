@@ -4,7 +4,9 @@
  */
 
 /*
-  Normally, the default export of this file would _do something_. In our case, the mthods for the provider simply log the 
+  Normally, the default export of this file would _do something_. 
+  In the dummy case, the methods for the provider are noops so we
+    have a safe fallback when analytics is disabled.
 */
 import type { AnalyticsProvider } from 'vault/vault/analytics';
 

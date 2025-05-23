@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { module, test, skip } from 'qunit';
+import { module, test } from 'qunit';
 
 import sinon from 'sinon';
 
@@ -28,27 +28,6 @@ module('Unit | Service | analytics', function (hooks) {
     sinon.reset();
   });
 
-  module('#start', function () {
-    skip('#start does nothing when no provider is given', function (assert) {
-      const providerStub = new ProviderStub();
-      this.service.provider = providerStub;
-
-      this.service.start();
-
-      assert.true(providerStub.start.notCalled, 'provider start is not called');
-    });
-
-    skip('#start initializes the provider with a config', function (assert) {
-      const providerStub = new ProviderStub();
-      this.service.provider = providerStub;
-
-      this.service.start('dummy', { key: 'yep' });
-
-      assert.true(providerStub.start.called, 'start is called on the provider');
-      assert.true(providerStub.start.calledWith({ key: 'yep' }), 'the config is passed to the provider');
-    });
-  });
-
   test('#identifyUser passes data to the provider', function (assert) {
     const providerStub = new ProviderStub();
     this.service.provider = providerStub;
@@ -58,7 +37,7 @@ module('Unit | Service | analytics', function (hooks) {
 
     this.service.identifyUser(identifier, traits);
 
-    assert.true(providerStub.identify.calledOnce, 'the service calls idenfiy on the provider');
+    assert.true(providerStub.identify.calledOnce, 'the service calls identify on the provider');
     assert.true(
       providerStub.identify.calledWith(identifier, traits),
       'the provider recieves the expected id and traits'

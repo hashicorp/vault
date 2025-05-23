@@ -15,6 +15,8 @@ import ClusterRoute from 'vault/mixins/cluster-route';
 import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
 import { assert } from '@ember/debug';
 
+import { v4 as uuidv4 } from 'uuid';
+
 const POLL_INTERVAL_MS = 10000;
 
 export const getManagedNamespace = (nsParam, root) => {
@@ -143,17 +145,22 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
 
     // identify user for analytics service
     if (this.analytics.activated) {
-      try {
-        let license;
-        const token = await this.api.auth.tokenLookUpSelf();
-        const entity = token.data.entity_id ? token.data.entity_id : `root_${crypto.randomUUID()}`;
+      let licenseId = '';
 
-        if (model.license?.state) {
-          license = await this.api.sys.systemReadLicenseStatus();
-        }
+      try {
+        const licenseStatus = await this.api.sys.systemReadLicenseStatus();
+        licenseId = licenseStatus?.data?.autoloaded?.licenseId;
+      } catch (e) {
+        // license is not retrievable
+        licenseId = '';
+      }
+
+      try {
+        const entity_id = this.auth.authData?.entity_id;
+        const entity = entity_id ? entity_id : `root_${uuidv4()}`;
 
         this.analytics.identifyUser(entity, {
-          licenseId: license?.data?.autoloaded?.licenseId,
+          licenseId: licenseId,
           licenseState: model.license?.state || 'community',
           version: model.version.version,
           storageType: model.storageType,
