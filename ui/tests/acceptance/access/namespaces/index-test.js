@@ -49,7 +49,7 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
 
   test('it should show button to refresh namespace list', async function (assert) {
     let refreshNetworkRequestTriggered;
-    const refreshNamespaceButton = GENERAL.testButton('refresh-namespace-list');
+    const refreshNamespaceButton = GENERAL.buttonByAttr('refresh-namespace-list');
 
     this.server.get('/sys/internal/ui/namespaces', () => {
       refreshNetworkRequestTriggered = true;

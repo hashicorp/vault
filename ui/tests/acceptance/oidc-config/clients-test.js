@@ -232,7 +232,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       // rotate key
       await click(SELECTORS.keyDetailsTab);
       await click(SELECTORS.keyRotateButton);
-      await click(SELECTORS.confirmActionButton);
+      await click(GENERAL.confirmButton);
       assert.strictEqual(
         flashMessage.latestMessage,
         'Success: test-key connection was rotated.',
@@ -240,7 +240,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       );
       // delete
       await click(SELECTORS.keyDeleteButton);
-      await click(SELECTORS.confirmActionButton);
+      await click(GENERAL.confirmButton);
       assert.strictEqual(
         flashMessage.latestMessage,
         'Key deleted successfully',
@@ -474,7 +474,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
 
       // immediately delete client, test transition
       await click(SELECTORS.clientDeleteButton);
-      await click(SELECTORS.confirmActionButton);
+      await click(GENERAL.confirmButton);
       assert.strictEqual(
         flashMessage.latestMessage,
         'Application deleted successfully',
@@ -489,7 +489,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       await click('[data-test-oidc-client-linked-block]');
       assert.strictEqual(currentRouteName(), 'vault.cluster.access.oidc.clients.client.details');
       await click(SELECTORS.clientDeleteButton);
-      await click(SELECTORS.confirmActionButton);
+      await click(GENERAL.confirmButton);
 
       //TODO this part of the test has a race condition
       //because other tests could have created clients - there is no guarantee that this will be the last
@@ -561,7 +561,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
 
       // delete the assignment
       await click(SELECTORS.assignmentDeleteButton);
-      await click(SELECTORS.confirmActionButton);
+      await click(GENERAL.confirmButton);
       assert.strictEqual(
         flashMessage.latestMessage,
         'Assignment deleted successfully',

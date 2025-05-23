@@ -75,7 +75,9 @@ module('Integration | Component | auth | form template', function (hooks) {
     await click(AUTH_FORM.advancedSettings);
     assert.dom(GENERAL.inputByAttr('path')).exists();
     assert.dom(GENERAL.backButton).doesNotExist('"Back" button does not render');
-    assert.dom(GENERAL.buttonByAttr('other-methods')).doesNotExist('"Sign in with other methods" does not render');
+    assert
+      .dom(GENERAL.buttonByAttr('other-methods'))
+      .doesNotExist('"Sign in with other methods" does not render');
   });
 
   test('it initializes with preset auth type', async function (assert) {

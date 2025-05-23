@@ -491,11 +491,11 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(CUSTOM_MESSAGES.modalTitle(modalId)).hasText('Modal title');
       assert.dom(CUSTOM_MESSAGES.modalBody(modalId)).exists();
       assert.dom(CUSTOM_MESSAGES.modalBody(modalId)).hasText('here is a cool message');
-      await click(CUSTOM_MESSAGES.modalButton(modalId));
       assert.dom(CUSTOM_MESSAGES.alertTitle(alertId)).hasText('Banner title');
       assert.dom(CUSTOM_MESSAGES.alertDescription(alertId)).hasText('hello world hello wolrd');
       assert.dom(CUSTOM_MESSAGES.alertAction('link')).hasText('some link title');
     });
+
     test('it shows the multiple modal messages', async function (assert) {
       const modalIdOne = 'some-awesome-id-2';
       const modalIdTwo = 'some-awesome-id-1';
@@ -512,13 +512,12 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(CUSTOM_MESSAGES.modalTitle(modalIdOne)).hasText('Modal title 1');
       assert.dom(CUSTOM_MESSAGES.modalBody(modalIdOne)).exists();
       assert.dom(CUSTOM_MESSAGES.modalBody(modalIdOne)).hasText('hello world hello wolrd some link title');
-      await click(CUSTOM_MESSAGES.modalButton(modalIdOne));
       assert.dom(CUSTOM_MESSAGES.modal(modalIdTwo)).exists();
       assert.dom(CUSTOM_MESSAGES.modalTitle(modalIdTwo)).hasText('Modal title 2');
       assert.dom(CUSTOM_MESSAGES.modalBody(modalIdTwo)).exists();
       assert.dom(CUSTOM_MESSAGES.modalBody(modalIdTwo)).hasText('here is a cool message');
-      await click(CUSTOM_MESSAGES.modalButton(modalIdTwo));
     });
+
     test('it shows the multiple banner messages', async function (assert) {
       const bannerIdOne = 'some-awesome-id-2';
       const bannerIdTwo = 'some-awesome-id-1';
