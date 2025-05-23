@@ -19,7 +19,7 @@
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
-  "id": 4,
+  "id": 3,
   "links": [],
   "panels": [
     {
@@ -4602,7 +4602,7 @@
             "uid": "default-prom"
           },
           "editorMode": "code",
-          "expr": "irate(node_disk_flush_requests_total{instance=~\"consul-.*\",device=\"nvme0n1\"}[5m])",
+          "expr": "irate(node_disk_flush_requests_total{instance=~\"consul-.*\",device=\"xvda\"}[5m])",
           "hide": false,
           "instant": false,
           "legendFormat": "{{instance}}",
@@ -4725,7 +4725,7 @@
             "uid": "default-prom"
           },
           "editorMode": "code",
-          "expr": "irate(node_disk_writes_completed_total{instance=~\"consul-.*\",device=\"nvme0n1\"}[5m])",
+          "expr": "irate(node_disk_writes_completed_total{instance=~\"consul-.*\",device=\"xvda\"}[5m])",
           "hide": false,
           "instant": false,
           "legendFormat": "{{instance}}",
@@ -4848,7 +4848,7 @@
             "uid": "default-prom"
           },
           "editorMode": "code",
-          "expr": "irate(node_disk_written_bytes_total{instance=~\"consul-.*\",device=\"nvme0n1\"}[5m])",
+          "expr": "irate(node_disk_written_bytes_total{instance=~\"consul-.*\",device=\"xvda\"}[5m])",
           "hide": false,
           "instant": false,
           "legendFormat": "{{instance}}",
@@ -4971,7 +4971,7 @@
             "uid": "default-prom"
           },
           "editorMode": "code",
-          "expr": "irate(node_disk_io_time_seconds_total{instance=~\"consul-.*\",device=\"nvme0n1\"}[5m])",
+          "expr": "irate(node_disk_io_time_seconds_total{instance=~\"consul-.*\",device=\"xvda\"}[5m])",
           "hide": false,
           "instant": false,
           "interval": "",

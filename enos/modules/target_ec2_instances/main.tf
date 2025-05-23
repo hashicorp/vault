@@ -102,11 +102,6 @@ locals {
   }
   instances        = toset([for idx in range(var.instance_count) : tostring(idx)])
   name_prefix      = "${var.project_name}-${local.cluster_name}-${random_string.unique_id.result}"
-  root_volume_type = var.ebs_optimized ? "io2" : null
-  root_volume_size = var.ebs_optimized ? 24 : null
-  ebs_optimized    = var.ebs_optimized ? true : null
-  // the ratio between iops and volume size can't be greater than 1000:1, which is why this is calculated like it is
-  iops = var.ebs_optimized ? local.root_volume_size * 1000 : null
 }
 
 resource "random_string" "cluster_name" {
@@ -203,13 +198,13 @@ resource "aws_instance" "targets" {
     aws_security_group.target.id,
     try(var.metrics_security_group_ids["prometheus"], null)
   ])
-  ebs_optimized = local.ebs_optimized
+  ebs_optimized = var.ebs_optimized
 
   root_block_device {
     encrypted   = true
-    volume_type = local.root_volume_type
-    volume_size = local.root_volume_size
-    iops        = local.iops
+    iops        = var.root_volume_iops
+    volume_size = var.root_volume_size
+    volume_type = var.root_volume_type
   }
 
   metadata_options {

@@ -217,6 +217,9 @@ scenario "benchmark" {
         amd64 = "i3.4xlarge"
         arm64 = "t4g.small"
       }
+      root_volume_type           = "io2"
+      root_volume_size           = 24
+      root_volume_iops            = 24000
       metrics_security_group_ids = step.create_metrics_security_groups.ids
       seal_key_names             = step.create_seal_key.resource_names
       vpc_id                     = step.create_vpc.id
@@ -236,12 +239,16 @@ scenario "benchmark" {
       ami_id          = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
       cluster_tag_key = global.backend_tag_key
       common_tags     = global.tags
+      ebs_optimized   = true
       instance_count  = 3
       instance_types = {
-        amd64 = "r5.2xlarge"
+        amd64 = "i3.4xlarge"
         arm64 = "t4g.small"
       }
       metrics_security_group_ids = step.create_metrics_security_groups.ids
+      root_volume_type           = "io1"
+      root_volume_size           = 50
+      root_volume_iops            = 2500
       seal_key_names             = step.create_seal_key.resource_names
       vpc_id                     = step.create_vpc.id
     }
