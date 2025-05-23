@@ -1365,7 +1365,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if err != nil {
 		return nil, err
 	}
-	events, err := eventbus.NewEventBus(nodeID, eventsLogger)
+	events, err := eventbus.NewEventBus(nodeID, eventsLogger, c)
 	if err != nil {
 		return nil, err
 	}

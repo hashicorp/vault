@@ -16,6 +16,7 @@
   <Auth::Page
     @cluster={{this.model.clusterModel}}
     @directLinkData={{this.model.directLinkData}}
+    @loginSettings={{this.model.loginSettings}}
     @namespaceQueryParam={{this.namespaceQueryParam}}
     @oidcProviderQueryParam={{this.oidcProvider}}
     @onAuthSuccess={{action "authSuccess"}}

@@ -324,9 +324,13 @@ func (c *Core) fetchACLTokenEntryAndEntity(ctx context.Context, req *logical.Req
 	// Add the inline policy if it's set
 	policies := make([]*Policy, 0)
 	if te.InlinePolicy != "" {
-		inlinePolicy, err := ParseACLPolicy(tokenNS, te.InlinePolicy)
+		// TODO (HCL_DUP_KEYS_DEPRECATION): return to ParseACLPolicy once the deprecation is done
+		inlinePolicy, duplicate, err := ParseACLPolicyCheckDuplicates(tokenNS, te.InlinePolicy)
 		if err != nil {
 			return nil, nil, nil, nil, ErrInternalError
+		}
+		if duplicate {
+			c.logger.Warn("HCL inline policy contains duplicate attributes, which will no longer be supported in a future version", "namespace", tokenNS.Path)
 		}
 		policies = append(policies, inlinePolicy)
 	}
@@ -633,6 +637,19 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 	var entry *MountEntry
 	req.MountPoint, entry = c.router.MatchingMountAndEntry(ctx, req.Path)
 
+	// If the request requires a snapshot ID, we need to perform checks to
+	// ensure the request is valid and lock the snapshot, so it doesn't get
+	// unloaded while the request is being processed.
+	if req.RequiresSnapshotID != "" {
+		if c.perfStandby {
+			return nil, logical.ErrPerfStandbyPleaseForward
+		}
+		unlockSnapshot, err := c.lockSnapshotForRequest(ctx, req, entry)
+		if err != nil {
+			return logical.ErrorResponse("unable to lock snapshot: " + err.Error()), err
+		}
+		defer unlockSnapshot()
+	}
 	// Allowing writing to a path ending in / makes it extremely difficult to
 	// understand user intent for the filesystem-like backends (kv,
 	// cubbyhole) -- did they want a key named foo/ or did they want to write
@@ -642,7 +659,8 @@ func (c *Core) handleCancelableRequest(ctx context.Context, req *logical.Request
 	if strings.HasSuffix(req.Path, "/") &&
 		(req.Operation == logical.UpdateOperation ||
 			req.Operation == logical.CreateOperation ||
-			req.Operation == logical.PatchOperation) {
+			req.Operation == logical.PatchOperation ||
+			req.Operation == logical.RecoverOperation) {
 		if entry == nil || !entry.Config.TrimRequestTrailingSlashes {
 			return logical.ErrorResponse("cannot write to a path ending in '/'"), nil
 		} else {
@@ -1186,6 +1204,34 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 		}
 	}()
 
+	// This context value will be empty if it's a request that doesn't require a
+	// snapshot. This is done on purpose and handled in the
+	// SnapshotStorageRouter
+	ctx = logical.CreateContextWithSnapshotID(ctx, req.RequiresSnapshotID)
+
+	// recover operations require 2 steps
+	if req.Operation == logical.RecoverOperation {
+		// first do a read operation
+		// this will use the snapshot's storage
+		req.Operation = logical.ReadOperation
+		resp, err := c.doRouting(ctx, req)
+		if err != nil {
+			return nil, auth, err
+		}
+		if resp == nil {
+			return logical.ErrorResponse("no data in the snapshot"), auth, err
+		}
+		if resp.IsError() {
+			return resp, auth, err
+		}
+		// use the response as the data in a recover operation
+		// set the snapshot ID context value to the empty string to ensure that
+		// the write goes to the real storage
+		req.Operation = logical.RecoverOperation
+		req.Data = resp.Data
+		ctx = logical.CreateContextWithSnapshotID(ctx, "")
+	}
+
 	// Route the request
 	resp, routeErr := c.doRouting(ctx, req)
 	if resp != nil {
@@ -1270,18 +1316,24 @@ func (c *Core) handleRequest(ctx context.Context, req *logical.Request) (retResp
 			} else if matchingMountEntry.Options == nil || matchingMountEntry.Options["leased_passthrough"] != "true" {
 				registerLease = false
 				resp.Secret.Renewable = false
+			} else if req.IsSnapshotReadOrList() {
+				registerLease = false
+				resp.Secret.Renewable = false
 			}
 
 		case "plugin":
 			// If we are a plugin type and the plugin name is "kv" check the
 			// mount entry options.
-			if matchingMountEntry.Config.PluginName == "kv" && (matchingMountEntry.Options == nil || matchingMountEntry.Options["leased_passthrough"] != "true") {
+			if matchingMountEntry.Config.PluginName == "kv" && (matchingMountEntry.Options == nil || matchingMountEntry.Options["leased_passthrough"] != "true" || req.IsSnapshotReadOrList()) {
 				registerLease = false
 				resp.Secret.Renewable = false
 			}
 		}
 
 		if registerLease {
+			if req.IsSnapshotReadOrList() {
+				return logical.ErrorResponse("cannot register lease for snapshot read or list"), nil, ErrInternalError
+			}
 			sysView := c.router.MatchingSystemView(ctx, req.Path)
 			if sysView == nil {
 				c.logger.Error("unable to look up sys view for login path", "request_path", req.Path)
