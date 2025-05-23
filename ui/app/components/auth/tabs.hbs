@@ -11,7 +11,7 @@
         {{! Elements "behind" tabs always render on the DOM and are just superficially hidden/shown. 
 	        However, for accessibility, we only want to render form inputs relevant to the selected method. 
 	        By wrapping the elements in this conditional, it only renders them when the tab is selected. }}
-        {{#if (eq @selectedAuthMethod methodType)}}
+        {{#if (and mounts (eq @selectedAuthMethod methodType))}}
           {{#if (gt mounts.length 1)}}
             {{! DROPDOWN for mount paths }}
             <Hds::Form::Select::Field name="path" data-test-select="path" as |F|>
@@ -26,7 +26,12 @@
             {{! SINGLE mount path }}
             {{#let (get mounts "0") as |mount|}}
               {{#if mount.description}}
-                <Hds::Text::Body @tag="p" @color="faint" data-test-description>{{mount.description}}</Hds::Text::Body>
+                <Hds::Text::Body
+                  @tag="p"
+                  @color="faint"
+                  class="white-space-pre-line"
+                  data-test-description
+                >{{mount.description}}</Hds::Text::Body>
               {{/if}}
               {{! the token auth method does't support custom paths so no need to render an input }}
               {{#if (not-eq @selectedAuthMethod "token")}}

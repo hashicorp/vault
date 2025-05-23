@@ -37,16 +37,9 @@
     {{/if}}
   </ToolbarActions>
 </Toolbar>
-{{#each-in @rule as |key value|}}
-  {{#if (eq key "defaultAuthType")}}
-    <InfoTableRow @alwaysRender={{true}} @label="Default method" @value={{value}} />
-  {{else if (eq key "backupAuthTypes")}}
-    <InfoTableRow @alwaysRender={{true}} @label="Backup methods" @value={{value}} />
-  {{else if (eq key "disableInheritance")}}
-    <InfoTableRow @alwaysRender={{true}} @label="Inheritance" @value={{stringify (not value)}} />
-  {{else}}
-    <InfoTableRow @alwaysRender={{true}} @label={{capitalize key}} @value={{value}} />
-  {{/if}}
+
+{{#each-in this.displayFields as |key label|}}
+  <InfoTableRow @alwaysRender={{true}} @label={{label}} @value={{this.displayValue key}} />
 {{/each-in}}
 
 {{#if this.showConfirmModal}}
