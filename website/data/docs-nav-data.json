@@ -157,21 +157,21 @@
             "path": "concepts/integrated-storage/autopilot"
           },
           {
-            "title": "Migration checklist",
-            "path": "concepts/integrated-storage/migration-checklist"
-          },
-          {
-            "title": "Migrate Consul storage",
-            "path": "concepts/integrated-storage/migrate-consul-storage"
-          },
-          {
-            "title": "Recover from a snapshot",
+            "title": "Item Recovery",
             "path": "concepts/integrated-storage/snapshot-recover",
             "badge": {
               "text": "ENT",
               "type": "filled",
               "color": "neutral"
             }
+          },
+          {
+            "title": "Migration checklist",
+            "path": "concepts/integrated-storage/migration-checklist"
+          },
+          {
+            "title": "Migrate Consul storage",
+            "path": "concepts/integrated-storage/migrate-consul-storage"
           }
         ]
       },

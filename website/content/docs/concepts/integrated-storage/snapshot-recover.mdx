@@ -1,11 +1,10 @@
 ---
 layout: docs
-page_title: Recover an item from a snapshot
-description: >-
-Item recovery allows you to recover a specific item from a snapshot, rather than restoring the entire snapshot.
+page_title: Item recovery from a snapshot
+description: Item recovery allows you to recover a specific item from a snapshot, rather than restoring the entire snapshot.
 ---
 
-# Recover from a snapshot
+# Item recovery from a snapshot
 
 @include 'alerts/enterprise-only.mdx'
 
@@ -32,23 +31,25 @@ Not all paths support snapshot operations. The following paths are currently sup
 
 ## Loading snapshots
 
-Load a snapshot using the [`vault operator raft snapshot load`](/vault/docs/commands/operator/raft.mdx#snapshot-load) command. There are two ways to call this command:
+Load a snapshot using the [`vault operator raft snapshot load`](/vault/docs/commands/operator/raft#snapshot-load) command. There are two ways to call this command:
 1. Using a snapshot file:
+
    ```shell
    $ vault operator raft snapshot load raft.snap
    ```
-2. If you are using Vault's [automated snapshot](/vault/docs/enterprise/automated-integrated-storage-snapshots.mdx) feature, you can load a snapshot
+2. If you are using Vault's [automated snapshot](/vault/docs/enterprise/automated-integrated-storage-snapshots) feature, you can load a snapshot
 that Vault has saved to a cloud storage backend without needing to download the
 snapshot to your local machine:
-    ```shell
-    $ vault operator raft snapshot load auto_config_name=my-config url="https://example.com/path/to/snapshot"
-    ```
-
+```shell
+    $ vault operator raft snapshot load \
+        auto_config_name=my-config \
+        url="https://example.com/path/to/snapshot"
+```
 Vault will return you information about the loaded snapshot, including a `snapshot_id`
-which you will reference to perform operations from the snapshot. The initial `status`
-of the loaded snapshot will be `loading`, which means that Vault is extracting the
-data within the snapshot and preparing it for use. Once the snapshot is fully loaded,
-the status will update to `ready`. You can query your loaded snapshot at the API
+which you will reference to perform operations from the snapshot. Vault sets the
+initial status of the loaded snapshot to `loading`, indicating that it is extracting
+the data within the snapshot and preparing it for use. Once Vault fully loads the
+snapshot, it updates the status to `ready`. You can query your loaded snapshot at the API
 endpoint [`sys/storage/raft/snapshot-load/:snapshot_id`](/vault/api-docs/system/storage/raftsnapshotload#read-loaded-snapshot).
 
 If something goes wrong during the loading process, Vault will set the status of
