@@ -15,35 +15,52 @@
 
 {{#if @loginRules}}
   {{#each @loginRules as |rule|}}
-    <div class="list-item-row linked-block-item is-no-underline">
-      <div>
-        <div class="is-grid align-items-center linked-block-title">
-          <Hds::Icon @name="user-check" @size="24" />
-          <div class="has-text-weight-semibold has-left-margin-xs" data-test-rule-name={{rule.Name}}>{{rule.Name}}</div>
+    <LinkedBlock
+      class="list-item-row"
+      @params={{array "login-settings.rule.details" rule.name}}
+      @linkPrefix="vault.cluster.config-ui"
+      data-test-rule={{rule.name}}
+    >
+      <div class="level is-mobile">
+        <div class="level-left">
+          <div>
+            <Hds::Text::Display @tag="h3">
+              <Hds::Icon @name="user-check" @size="24" @isInline={{true}} />
+              {{rule.name}}
+            </Hds::Text::Display>
+            <div class="has-top-margin-m">
+              {{rule.namespace}}
+              <Hds::Badge
+                @text="Inheritance {{if rule.disableInheritance 'disabled' 'enabled'}}"
+                class="has-left-margin-xxs"
+              />
+            </div>
+          </div>
         </div>
-        <div class="has-top-margin-m" data-test-rule-path={{rule.Namespace}}>{{rule.Namespace}}</div>
+        <div class="level-right is-flex is-paddingless is-marginless">
+          <div class="level-item">
+            <Hds::Dropdown @isInline={{true}} as |dd|>
+              <dd.ToggleIcon
+                @icon="more-horizontal"
+                @hasChevron={{false}}
+                @text="login rules menu"
+                data-test-popup-menu-trigger
+              />
+              <dd.Interactive @route="login-settings.rule.details" @model={{rule.name}} data-test-popup-menu="view-rule">
+                View
+              </dd.Interactive>
+              {{#if (has-capability this.capabilities "delete" pathKey="customLogin" params=rule)}}
+                <dd.Interactive
+                  @color="critical"
+                  data-test-popup-menu="delete-rule"
+                  {{on "click" (fn (mut this.ruleToDelete) rule)}}
+                >Delete</dd.Interactive>
+              {{/if}}
+            </Hds::Dropdown>
+          </div>
+        </div>
       </div>
-      <div class="linked-block-popup-menu">
-        <Hds::Dropdown @isInline={{true}} as |dd|>
-          <dd.ToggleIcon
-            @icon="more-horizontal"
-            @hasChevron={{false}}
-            @text="login rules menu"
-            data-test-popup-menu-trigger
-          />
-          <dd.Interactive @route="login-settings.rule.details" @model={{rule.Name}} data-test-popup-menu="view-rule">
-            View
-          </dd.Interactive>
-          {{#if (has-capability this.capabilities "delete" pathKey="customLogin" params=rule)}}
-            <dd.Interactive
-              @color="critical"
-              data-test-popup-menu="delete-rule"
-              {{on "click" (fn (mut this.ruleToDelete) rule)}}
-            >Delete</dd.Interactive>
-          {{/if}}
-        </Hds::Dropdown>
-      </div>
-    </div>
+    </LinkedBlock>
   {{/each}}
 {{else}}
   <EmptyState
