@@ -30,7 +30,7 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
     await fillIn(selectors.binddn, 'foo');
     await fillIn(selectors.bindpass, 'bar');
     await click(selectors.save);
-    await click(`[data-test-save-${rotate}-rotate]`);
+    await click(`[data-test-submit-${rotate}-rotate]`);
   };
 
   hooks.beforeEach(function () {

@@ -49,7 +49,7 @@ module('Acceptance | auth backend list', function (hooks) {
       await click(SELECTORS.createUser);
       await fillIn(GENERAL.inputByAttr('username'), username);
       await fillIn(GENERAL.inputByAttr('password'), username);
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert.strictEqual(currentURL(), `/vault/access/${backendPath}/item/user`);
     }
     // visit access page and enable the first user in the first userpass backend
@@ -92,7 +92,7 @@ module('Acceptance | auth backend list', function (hooks) {
             await visit('/vault/settings/auth/enable');
             await click(MOUNT_BACKEND_FORM.mountType(type));
             await fillIn(GENERAL.inputByAttr('path'), path);
-            await click(GENERAL.saveButton);
+            await click(GENERAL.submitButton);
           }
 
           await visit('/vault/access');
@@ -162,7 +162,7 @@ module('Acceptance | auth backend list', function (hooks) {
       // go directly to token configure route
       await visit('/vault/settings/auth/configure/token/options');
       await fillIn(GENERAL.inputByAttr('description'), 'My custom description');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert.strictEqual(currentURL(), '/vault/access', 'successfully saves and navigates away');
       await click(AUTH_FORM.linkedBlockAuth('token'));
       assert

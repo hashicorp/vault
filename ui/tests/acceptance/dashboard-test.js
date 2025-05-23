@@ -345,7 +345,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await connectionPage.name(name);
       await connectionPage.connectionUrl(`mongodb://127.0.0.1:4321/${name}`);
       await connectionPage.toggleVerify();
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       await connectionPage.enable();
       return name;
     };

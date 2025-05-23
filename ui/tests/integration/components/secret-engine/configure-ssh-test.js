@@ -64,7 +64,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
   />
     `);
     await fillIn(GENERAL.inputByAttr('publicKey'), 'hello');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.inlineError)
       .hasText(
@@ -73,7 +73,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
       );
 
     await click(GENERAL.inputByAttr('generateSigningKey'));
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.inlineError)
       .hasText(
@@ -99,7 +99,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
   />
     `);
 
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.dom(SES.ssh.editConfigSection).exists('renders the edit configuration section of the form');
   });
 

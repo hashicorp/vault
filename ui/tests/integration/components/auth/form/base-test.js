@@ -176,7 +176,7 @@ module('Integration | Component | auth | form | base', function (hooks) {
     test('it submits form data with defaults', async function (assert) {
       await this.renderComponent();
       await fillIn(GENERAL.inputByAttr('token'), 'mytoken');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       const [actual] = this.authenticateStub.lastCall.args;
       assert.propEqual(
         actual.data,
@@ -190,7 +190,7 @@ module('Integration | Component | auth | form | base', function (hooks) {
       await fillIn(GENERAL.inputByAttr('token'), 'mytoken');
       // token doesn't support custom paths, so testing path is not sent
       await fillIn(GENERAL.inputByAttr('path'), `path-${this.authType}`);
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       const [actual] = this.authenticateStub.lastCall.args;
       assert.propEqual(
         actual.data,

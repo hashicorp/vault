@@ -33,7 +33,7 @@ module('Acceptance | Enterprise | auth form custom login settings', function (ho
     // cleanup login rules
     await visit('/vault/auth?with=token');
     await fillIn(GENERAL.inputByAttr('token'), rootToken);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await runCmd([
       'delete sys/config/ui/login/default-auth/root-rule',
       'delete sys/config/ui/login/default-auth/ns-rule',

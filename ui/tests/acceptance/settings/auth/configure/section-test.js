@@ -50,7 +50,7 @@ module('Acceptance | settings/auth/configure/section', function (hooks) {
       .dom(GENERAL.inputByAttr('config.tokenType'))
       .hasValue('default-service', 'as default the token type selected is default-service.');
     await fillIn(GENERAL.inputByAttr('config.tokenType'), 'batch');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       page.flash.latestMessage,
       `The configuration was saved successfully.`,

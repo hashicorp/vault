@@ -49,7 +49,7 @@ module('Acceptance | jwt auth method', function (hooks) {
     assert.dom(GENERAL.inputByAttr('role')).exists({ count: 1 }, 'Role input exists');
     assert.dom(GENERAL.inputByAttr('jwt')).exists({ count: 1 }, 'JWT input exists');
     await fillIn(GENERAL.inputByAttr('jwt'), 'my-test-jwt-token');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await waitFor(GENERAL.messageError);
     assert.dom(GENERAL.messageError).hasText('Error Authentication failed: permission denied');
   });
@@ -70,7 +70,7 @@ module('Acceptance | jwt auth method', function (hooks) {
     await fillIn(GENERAL.inputByAttr('role'), 'some-role');
     await fillIn(GENERAL.inputByAttr('jwt'), 'my-test-jwt-token');
     assert.dom(GENERAL.inputByAttr('jwt')).exists({ count: 1 }, 'JWT input exists');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await waitFor(GENERAL.messageError);
     assert.dom(GENERAL.messageError).hasText('Error Authentication failed: permission denied');
   });
@@ -97,7 +97,7 @@ module('Acceptance | jwt auth method', function (hooks) {
     assert.dom(GENERAL.inputByAttr('jwt')).exists({ count: 1 }, 'JWT input exists');
     await fillIn(GENERAL.inputByAttr('role'), 'some-role');
     await fillIn(GENERAL.inputByAttr('jwt'), 'my-test-jwt-token');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await waitFor(GENERAL.messageError);
     assert.dom(GENERAL.messageError).hasText('Error Authentication failed: permission denied');
   });

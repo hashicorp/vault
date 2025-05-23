@@ -107,7 +107,7 @@ module('Integration | Component | auth | form | saml', function (hooks) {
     });
 
     await this.renderComponent();
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     const [sso_service_url, name, dimensions] = this.windowStub.lastCall.args;
     assert.strictEqual(
@@ -140,7 +140,7 @@ module('Integration | Component | auth | form | saml', function (hooks) {
 
     await this.renderComponent();
     await fillIn(GENERAL.inputByAttr('role'), 'some-dev');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     const [sso_service_url, name, dimensions] = this.windowStub.lastCall.args;
     assert.strictEqual(
@@ -179,7 +179,7 @@ module('Integration | Component | auth | form | saml', function (hooks) {
     await this.renderComponent({ yieldBlock: true });
     await fillIn(GENERAL.inputByAttr('role'), 'some-dev');
     await fillIn(GENERAL.inputByAttr('path'), path);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     const [sso_service_url, name, dimensions] = this.windowStub.lastCall.args;
     assert.strictEqual(
@@ -215,12 +215,12 @@ module('Integration | Component | auth | form | saml', function (hooks) {
       }
     });
     await this.renderComponent();
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
   });
 
   test('it calls auth service with token request callback data', async function (assert) {
     await this.renderComponent();
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     const [actual] = this.authenticateStub.lastCall.args;
     assert.propEqual(
@@ -242,7 +242,7 @@ module('Integration | Component | auth | form | saml', function (hooks) {
     this.authenticateStub.returns(expectedResponse);
 
     await this.renderComponent();
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     const [actualResponse, methodData] = this.onSuccess.lastCall.args;
     assert.propEqual(actualResponse, expectedResponse, 'onSuccess is called with auth response');
     assert.strictEqual(methodData.path, undefined, 'onSuccess is called without path value');
@@ -252,7 +252,7 @@ module('Integration | Component | auth | form | saml', function (hooks) {
   test('it calls onError if auth service authentication fails', async function (assert) {
     this.authenticateStub.throws('permission denied!!');
     await this.renderComponent();
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     const [actual] = this.onError.lastCall.args;
     assert.strictEqual(
       actual,
@@ -265,7 +265,7 @@ module('Integration | Component | auth | form | saml', function (hooks) {
     // role request
     this.server.put('/auth/saml/sso_service_url', () => overrideResponse(403));
     await this.renderComponent();
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     const [actual] = this.onError.lastCall.args;
     assert.strictEqual(
       actual,
@@ -277,7 +277,7 @@ module('Integration | Component | auth | form | saml', function (hooks) {
   test('it calls onError if polling token errors in status code that is NOT 401', async function (assert) {
     this.server.put('/auth/saml/token', () => overrideResponse(500));
     await this.renderComponent();
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     const [actual] = this.onError.lastCall.args;
     assert.strictEqual(
       actual,

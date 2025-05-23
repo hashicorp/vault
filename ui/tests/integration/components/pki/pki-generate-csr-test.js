@@ -77,7 +77,7 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
 
     await fillIn('[data-test-input="type"]', 'exported');
     await fillIn('[data-test-input="commonName"]', 'foo');
-    await click('[data-test-save]');
+    await click('[data-test-submit]');
 
     const savedRecord = this.store.peekAll('pki/action')[0];
     assert.false(savedRecord.isNew, 'record is saved');
@@ -95,7 +95,7 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
       }
     );
 
-    await click('[data-test-save]');
+    await click('[data-test-submit]');
 
     assert
       .dom(GENERAL.validationErrorByAttr('type'))

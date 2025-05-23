@@ -83,13 +83,13 @@ module('Acceptance | sync | destination (singular)', function (hooks) {
 
     await visit('vault/sync/secrets/destinations/vercel-project/destination-vercel/edit');
     await fillIn(GENERAL.inputByAttr('teamId'), 'team-id');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.false('accessToken' in apiStub.lastCall.args[1], 'access_token not sent in request');
 
     await click(ts.toolbar('Edit destination'));
     await click(ts.enableField('accessToken'));
     await fillIn(GENERAL.inputByAttr('accessToken'), 'foobar');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       apiStub.lastCall.args[1].accessToken,
       'foobar',

@@ -45,7 +45,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
       'json editor initializes with empty object that includes whitespace'
     );
     assert.dom(TTL.toggleByLabel('Wrap TTL')).isNotChecked('Wrap TTL defaults to unchecked');
-    assert.dom(GENERAL.saveButton).isEnabled();
+    assert.dom(GENERAL.submitButton).isEnabled();
     assert.dom(TS.toolsInput('wrapping-token')).doesNotExist();
     assert.dom(GENERAL.buttonByAttr('Back')).doesNotExist();
     assert.dom(GENERAL.buttonByAttr('Done')).doesNotExist();
@@ -58,7 +58,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
   test('it renders errors', async function (assert) {
     this.server.post('sys/wrapping/wrap', () => new Response(500, {}, { errors: ['Something is wrong'] }));
     await this.renderComponent();
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await waitUntil(() => find(GENERAL.messageError));
     assert.dom(GENERAL.messageError).hasText('Error Something is wrong', 'Error renders');
   });
@@ -84,7 +84,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
 
     await this.renderComponent();
     await codemirror().setValue(this.wrapData);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await waitUntil(() => find(TS.toolsInput('wrapping-token')));
     assert.true(flashSpy.calledWith('Wrap was successful.'), 'it renders success flash');
     assert.dom(TS.toolsInput('wrapping-token')).hasText(this.token);
@@ -106,7 +106,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await codemirror().setValue(this.wrapData);
     await click(TTL.toggleByLabel('Wrap TTL'));
     await fillIn(TTL.valueInputByLabel('Wrap TTL'), '20');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
   });
 
   test('it toggles between views and preserves input data', async function (assert) {
@@ -162,7 +162,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await click('[data-test-kv-add-row="0"]');
     await fillIn('[data-test-kv-key="1"]', 'foo2');
     await fillIn('[data-test-kv-value="1"]', multilineData);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await waitUntil(() => find(TS.toolsInput('wrapping-token')));
     assert.true(flashSpy.calledWith('Wrap was successful.'), 'it renders success flash');
     assert.dom(TS.toolsInput('wrapping-token')).hasText(this.token);
@@ -175,7 +175,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await codemirror().setValue(this.wrapData);
     await click(TTL.toggleByLabel('Wrap TTL'));
     await fillIn(TTL.valueInputByLabel('Wrap TTL'), '20');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     await waitUntil(() => find(GENERAL.buttonByAttr('Done')));
     await click(GENERAL.buttonByAttr('Done'));
@@ -192,7 +192,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
   test('it preserves input data on back', async function (assert) {
     await this.renderComponent();
     await codemirror().setValue(this.wrapData);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     await waitUntil(() => find(GENERAL.buttonByAttr('Back')));
     await click(GENERAL.buttonByAttr('Back'));
@@ -226,7 +226,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
         'JSON is unparsable. Fix linting errors to avoid data discrepancies.',
         'Linting error message is shown for json view'
       );
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await waitUntil(() => find(GENERAL.buttonByAttr('Done')));
     await click(GENERAL.buttonByAttr('Done'));
     assert.dom('[data-test-inline-alert]').doesNotExist();
@@ -238,7 +238,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
         'JSON is unparsable. Fix linting errors to avoid data discrepancies.',
         'Linting error message is shown for json view'
       );
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await waitUntil(() => find(GENERAL.buttonByAttr('Back')));
     await click(GENERAL.buttonByAttr('Back'));
     assert.dom('[data-test-inline-alert]').doesNotExist();

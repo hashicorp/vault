@@ -79,7 +79,7 @@ const authUrlRequestTests = (test) => {
 const jwtLoginTests = (test) => {
   test('it renders sign in button text', async function (assert) {
     await this.renderComponent();
-    assert.dom(GENERAL.saveButton).hasText('Sign in');
+    assert.dom(GENERAL.submitButton).hasText('Sign in');
   });
 
   test('it submits form data with defaults', async function (assert) {
@@ -88,7 +88,7 @@ const jwtLoginTests = (test) => {
     await fillIn(GENERAL.inputByAttr('role'), 'some-dev');
     await fillIn(GENERAL.inputByAttr('jwt'), 'some-jwt-token');
 
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     const [actual] = this.authenticateStub.lastCall.args;
     assert.propEqual(
       actual.data,
@@ -103,7 +103,7 @@ const jwtLoginTests = (test) => {
     await fillIn(GENERAL.inputByAttr('jwt'), 'some-jwt-token');
     await fillIn(GENERAL.inputByAttr('path'), `custom-${this.authType}`);
 
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     const [actual] = this.authenticateStub.lastCall.args;
     assert.propEqual(
       actual.data,
@@ -129,7 +129,7 @@ const oidcLoginTests = (test) => {
   test('it renders fields', async function (assert) {
     await this.renderComponent();
     assert.dom(AUTH_FORM.authForm(this.authType)).exists(`${this.authType}: it renders form component`);
-    assert.dom(GENERAL.saveButton).hasText('Sign in with OIDC Provider');
+    assert.dom(GENERAL.submitButton).hasText('Sign in with OIDC Provider');
     this.expectedFields.forEach((field) => {
       assert.dom(GENERAL.inputByAttr(field)).exists(`${this.authType}: it renders ${field}`);
     });
@@ -141,7 +141,7 @@ const oidcLoginTests = (test) => {
       return { data: { auth_url: '123.auth0.com' } };
     });
     await this.renderComponent();
-    assert.dom(GENERAL.saveButton).hasText('Sign in with Auth0');
+    assert.dom(GENERAL.submitButton).hasText('Sign in with Auth0');
     assert.dom(GENERAL.icon('auth0')).exists();
     parseURLStub.restore();
   });
@@ -154,7 +154,7 @@ const oidcLoginTests = (test) => {
     sinon.replaceGetter(window, 'screen', () => ({ height: 600, width: 500 }));
     await this.renderComponent();
     await fillIn(GENERAL.inputByAttr('role'), 'test');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await waitUntil(() => {
       return this.windowStub.calledOnce;
     });
@@ -175,7 +175,7 @@ const oidcLoginTests = (test) => {
   test('it fires onError callback on submit when auth_url request fails with 400', async function (assert) {
     this.server.post('/auth/:path/oidc/auth_url', () => overrideResponse(400));
     await this.renderComponent();
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     const [actual] = this.onError.lastCall.args;
     assert.strictEqual(actual, 'Authentication failed: Invalid role. Please try again.');
@@ -184,7 +184,7 @@ const oidcLoginTests = (test) => {
   test('it fires onError callback on submit when auth_url request fails with 403', async function (assert) {
     this.server.post('/auth/:path/oidc/auth_url', () => overrideResponse(403));
     await this.renderComponent();
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     const [actual] = this.onError.lastCall.args;
     assert.strictEqual(actual, 'Authentication failed: Error fetching role: permission denied');
@@ -193,7 +193,7 @@ const oidcLoginTests = (test) => {
   test('it fires onError callback on submit when auth_url request is successful but missing auth_url key', async function (assert) {
     this.server.post('/auth/:path/oidc/auth_url', () => ({ data: {} }));
     await this.renderComponent();
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     const [actual] = this.onError.lastCall.args;
     assert.strictEqual(
@@ -220,7 +220,7 @@ const oidcLoginTests = (test) => {
 
     await this.renderComponent();
     await fillIn(GENERAL.inputByAttr('role'), 'test');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await waitUntil(() => {
       return this.windowStub.calledOnce;
     });
@@ -254,7 +254,7 @@ const oidcLoginTests = (test) => {
 
     await this.renderComponent();
     await fillIn(GENERAL.inputByAttr('role'), 'test');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await waitUntil(() => {
       return this.windowStub.calledOnce;
     });

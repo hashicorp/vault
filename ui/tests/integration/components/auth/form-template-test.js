@@ -90,7 +90,7 @@ module('Integration | Component | auth | form template', function (hooks) {
     const authenticateStub = sinon.stub(this.owner.lookup('service:auth'), 'authenticate');
     authenticateStub.throws('permission denied');
     await this.renderComponent();
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.messageError)
       .hasText('Error Authentication failed: permission denied: Sinon-provided permission denied');
@@ -423,7 +423,7 @@ module('Integration | Component | auth | form template', function (hooks) {
       await fillIn(GENERAL.inputByAttr('role'), 'foo');
       await fillIn(GENERAL.inputByAttr('path'), 'foo-oidc');
       assert.dom(GENERAL.inputByAttr('role')).hasValue('foo', 'role is retained when mount path is changed');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
     });
   });
 });

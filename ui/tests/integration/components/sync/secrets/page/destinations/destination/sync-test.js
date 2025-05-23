@@ -79,16 +79,16 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
       assert.deepEqual(data, expected, 'Sync request made with mount and secret name');
       return { data: { associated_secrets: { 'my-kv_12345': data } } };
     });
-    assert.dom(GENERAL.saveButton).isDisabled('Submit button is disabled when mount is not selected');
+    assert.dom(GENERAL.submitButton).isDisabled('Submit button is disabled when mount is not selected');
     assert.dom(GENERAL.cancelButton).hasText('Back', 'back button renders');
     await selectChoose(mountSelect, '.ember-power-select-option', 1);
-    assert.dom(GENERAL.saveButton).isDisabled('Submit button is disabled when secret is not selected');
+    assert.dom(GENERAL.submitButton).isDisabled('Submit button is disabled when secret is not selected');
     await click(kvSuggestion.input);
     await click(searchSelect.option(1));
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.dom(GENERAL.cancelButton).hasText('View synced secrets', 'view secrets tertiary renders');
     assert.dom(kvSuggestion.input).hasNoValue('Secret path is unset after submit success');
-    assert.dom(GENERAL.saveButton).isDisabled('Submit button is disabled');
+    assert.dom(GENERAL.submitButton).isDisabled('Submit button is disabled');
     assert
       .dom(successMessage)
       .includesText('Sync operation successfully initiated for my-secret.', 'Success banner renders');
@@ -118,7 +118,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
     await fillIn(mountInput, 'my-kv');
     await click(kvSuggestion.input);
     await click(searchSelect.option(1));
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
   });
 
   test('it should render alert banner on sync error', async function (assert) {
@@ -133,7 +133,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
     await selectChoose(mountSelect, '.ember-power-select-option', 1);
     await click(kvSuggestion.input);
     await click(searchSelect.option(1));
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     assert.dom(messageError).hasTextContaining(error, 'Error renders in alert banner');
   });

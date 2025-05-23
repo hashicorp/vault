@@ -63,7 +63,6 @@ export const PAGE = {
     listMenuDelete: `[data-test-popup-metadata-delete]`,
     overviewCard: '[data-test-overview-card-container="View secret"]',
     overviewInput: '[data-test-view-secret] input',
-    overviewButton: '[data-test-submit-button]',
     pagination: '[data-test-pagination]',
     paginationInfo: '.hds-pagination-info',
     paginationNext: '.hds-pagination-nav__arrow--direction-next',

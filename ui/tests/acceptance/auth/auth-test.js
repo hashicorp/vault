@@ -294,7 +294,7 @@ module('Acceptance | auth login form', function (hooks) {
           if (key === 'jwt') return;
           await fillIn(GENERAL.inputByAttr(key), `some-${key}`);
         }
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
       });
     }
   });

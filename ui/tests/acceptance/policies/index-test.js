@@ -88,7 +88,7 @@ module('Acceptance | policies/acl', function (hooks) {
 
     await fillIn(SELECT.nameInput, policyName);
     codemirror().setValue(policyString);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
       `/vault/policy/acl/${policyName}`,
@@ -107,12 +107,12 @@ module('Acceptance | policies/acl', function (hooks) {
     await click(SELECT.createPolicy);
 
     await fillIn(SELECT.nameInput, policyName);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert
       .dom(SELECT.createError)
       .hasText(`Error 'policy' parameter not supplied or empty`, 'renders error message on save');
     codemirror().setValue(policyString);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     await waitUntil(() => currentURL() === `/vault/policy/acl/${encodeURIComponent(policyLower)}`);
     assert.strictEqual(

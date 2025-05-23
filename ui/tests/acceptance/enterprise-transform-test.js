@@ -309,7 +309,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     );
     await alphabetsPage.name(alphabetName);
     await alphabetsPage.alphabet('aeiou');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/show/alphabet/${alphabetName}`,

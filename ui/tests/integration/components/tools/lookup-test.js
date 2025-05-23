@@ -37,7 +37,7 @@ module('Integration | Component | tools/lookup', function (hooks) {
   test('it renders errors', async function (assert) {
     this.server.post('sys/wrapping/lookup', () => new Response(500, {}, { errors: ['Something is wrong'] }));
     await this.renderComponent();
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await waitUntil(() => find(GENERAL.messageError));
     assert.dom(GENERAL.messageError).hasText('Error Something is wrong', 'Error renders');
   });
@@ -59,7 +59,7 @@ module('Integration | Component | tools/lookup', function (hooks) {
     });
     await this.renderComponent();
     await fillIn(TS.toolsInput('wrapping-token'), `${token}   `);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     await waitUntil(() => find(GENERAL.infoRowValue('Creation path')));
     assert.true(flashSuccessSpy.calledWith('Lookup was successful.'), 'it renders success flash');

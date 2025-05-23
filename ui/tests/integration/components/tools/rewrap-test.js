@@ -36,7 +36,7 @@ module('Integration | Component | tools/rewrap', function (hooks) {
   test('it renders errors', async function (assert) {
     this.server.post('sys/wrapping/rewrap', () => new Response(500, {}, { errors: ['Something is wrong'] }));
     await this.renderComponent();
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await waitUntil(() => find(GENERAL.messageError));
     assert.dom(GENERAL.messageError).hasText('Error Something is wrong', 'Error renders');
   });
@@ -64,7 +64,7 @@ module('Integration | Component | tools/rewrap', function (hooks) {
 
     // test submit
     await fillIn(TS.toolsInput('original-token'), original_token);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     // test rewrapped token view
     await waitUntil(() => TS.toolsInput('rewrapped-token'));
@@ -90,6 +90,6 @@ module('Integration | Component | tools/rewrap', function (hooks) {
     await this.renderComponent();
 
     await fillIn(TS.toolsInput('original-token'), `${data.token}  `);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
   });
 });

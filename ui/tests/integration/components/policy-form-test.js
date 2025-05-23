@@ -68,8 +68,8 @@ module('Integration | Component | policy-form', function (hooks) {
     await fillIn(`${SELECTORS.policyEditor} textarea`, policy);
     assert.strictEqual(this.model.policy, policy, 'Policy editor sets policy on model');
     assert.ok(this.onSave.notCalled);
-    assert.dom(GENERAL.saveButton).hasText('Create policy');
-    await click(GENERAL.saveButton);
+    assert.dom(GENERAL.submitButton).hasText('Create policy');
+    await click(GENERAL.submitButton);
     assert.ok(this.onSave.calledOnceWith(this.model));
   });
 
@@ -96,8 +96,8 @@ module('Integration | Component | policy-form', function (hooks) {
     await fillIn(`${SELECTORS.policyEditor} textarea`, policy);
     assert.strictEqual(this.model.policy, policy, 'Policy editor sets policy on model');
     assert.ok(this.onSave.notCalled);
-    assert.dom(GENERAL.saveButton).hasText('Create policy');
-    await click(GENERAL.saveButton);
+    assert.dom(GENERAL.submitButton).hasText('Create policy');
+    await click(GENERAL.submitButton);
     assert.ok(this.onSave.calledOnceWith(this.model));
   });
 
@@ -127,8 +127,8 @@ module('Integration | Component | policy-form', function (hooks) {
     assert.dom(SELECTORS.pathsInput('0')).exists('0 field exists');
     await fillIn(SELECTORS.pathsInput('0'), 'my path');
     assert.ok(this.onSave.notCalled);
-    assert.dom(GENERAL.saveButton).hasText('Create policy');
-    await click(GENERAL.saveButton);
+    assert.dom(GENERAL.submitButton).hasText('Create policy');
+    await click(GENERAL.submitButton);
     assert.ok(this.onSave.calledOnceWith(this.model));
   });
 
@@ -153,7 +153,7 @@ module('Integration | Component | policy-form', function (hooks) {
     assert.dom(SELECTORS.policyEditor).doesNotExist('Policy editor is not shown');
     await triggerEvent(SELECTORS.policyUpload, 'change', { files: [this.file] });
     assert.dom(SELECTORS.nameInput).hasValue('test-policy', 'it fills in policy name');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.propEqual(this.onSave.lastCall.args[0].policy, policy, 'policy content saves in correct format');
   });
 
@@ -198,8 +198,8 @@ module('Integration | Component | policy-form', function (hooks) {
       'Policy editor updates policy value on model'
     );
     assert.ok(this.onSave.notCalled);
-    assert.dom(GENERAL.saveButton).hasText('Save', 'Save button text is correct');
-    await click(GENERAL.saveButton);
+    assert.dom(GENERAL.submitButton).hasText('Save', 'Save button text is correct');
+    await click(GENERAL.submitButton);
     assert.ok(this.onSave.calledOnceWith(this.model));
   });
 
@@ -228,8 +228,8 @@ module('Integration | Component | policy-form', function (hooks) {
       'Policy editor updates policy value on model'
     );
     assert.ok(this.onSave.notCalled);
-    assert.dom(GENERAL.saveButton).hasText('Save', 'Save button text is correct');
-    await click(GENERAL.saveButton);
+    assert.dom(GENERAL.submitButton).hasText('Save', 'Save button text is correct');
+    await click(GENERAL.submitButton);
     assert.ok(this.onSave.calledOnceWith(this.model));
   });
 
@@ -264,8 +264,8 @@ module('Integration | Component | policy-form', function (hooks) {
       'Second path field is updated on model'
     );
     assert.ok(this.onSave.notCalled);
-    assert.dom(GENERAL.saveButton).hasText('Save', 'Save button text is correct');
-    await click(GENERAL.saveButton);
+    assert.dom(GENERAL.submitButton).hasText('Save', 'Save button text is correct');
+    await click(GENERAL.submitButton);
     assert.ok(this.onSave.calledOnceWith(this.model));
   });
 
@@ -283,7 +283,7 @@ module('Integration | Component | policy-form', function (hooks) {
       @onSave={{this.onSave}}
     />
     `);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.ok(this.onSave.notCalled);
     assert.dom(SELECTORS.error).includesText('An error occurred');
   });

@@ -30,7 +30,7 @@ export const login = async (token = rootToken) => {
 
   await fillIn(AUTH_FORM.selectMethod, 'token');
   await fillIn(GENERAL.inputByAttr('token'), token);
-  return click(GENERAL.saveButton);
+  return click(GENERAL.submitButton);
 };
 
 export const loginNs = async (ns: string, token = rootToken) => {
@@ -42,7 +42,7 @@ export const loginNs = async (ns: string, token = rootToken) => {
 
   await fillIn(AUTH_FORM.selectMethod, 'token');
   await fillIn(GENERAL.inputByAttr('token'), token);
-  return click(GENERAL.saveButton);
+  return click(GENERAL.submitButton);
 };
 
 // LOGIN WITH NON-TOKEN METHODS
@@ -57,7 +57,7 @@ export const loginMethod = async (
   await fillIn(AUTH_FORM.selectMethod, type);
 
   await fillInLoginFields(loginFields, options);
-  return click(GENERAL.saveButton);
+  return click(GENERAL.submitButton);
 };
 
 export const fillInLoginFields = async (loginFields: LoginFields, { toggleOptions = false } = {}) => {

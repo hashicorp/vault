@@ -237,7 +237,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
 
     await rolesPage.roleName(role);
     await settled();
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/kmip/scopes/${scope}/roles`,
@@ -367,7 +367,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       await runCmd([`write ${this.backend}/scope/${this.scope} -force`]);
       await rolesPage.visit({ backend: this.backend, scope: this.scope });
       this.setModel = async () => {
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
         await visit(`/vault/secrets/${this.backend}/kmip/scopes/${this.scope}/roles/${this.name}`);
         this.model = this.store.peekRecord('kmip/role', this.name);
       };

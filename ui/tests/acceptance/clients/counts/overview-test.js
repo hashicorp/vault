@@ -80,7 +80,7 @@ module('Acceptance | clients | overview', function (hooks) {
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), licenseStartMonth);
     await fillIn(CLIENT_COUNT.dateRange.editDate('end'), licenseStartMonth);
 
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert
       .dom(CLIENT_COUNT.usageStats('Vault client counts'))
       .doesNotExist('running total single month stat boxes do not show');
@@ -95,7 +95,7 @@ module('Acceptance | clients | overview', function (hooks) {
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), upgradeMonth);
     await fillIn(CLIENT_COUNT.dateRange.editDate('end'), endMonth);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert
       .dom(CLIENT_COUNT.dateRange.dateDisplay('start'))
       .hasText('September 2023', 'billing start month is correctly parsed from license');
@@ -112,7 +112,7 @@ module('Acceptance | clients | overview', function (hooks) {
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), upgradeMonth);
     await fillIn(CLIENT_COUNT.dateRange.editDate('end'), upgradeMonth);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     assert
       .dom(CLIENT_COUNT.usageStats('Vault client counts'))
@@ -128,7 +128,7 @@ module('Acceptance | clients | overview', function (hooks) {
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2023-09');
     await fillIn(CLIENT_COUNT.dateRange.editDate('end'), '2023-12');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     assert
       .dom(CLIENT_COUNT.dateRange.dateDisplay('start'))
@@ -150,7 +150,7 @@ module('Acceptance | clients | overview', function (hooks) {
     // query month older than count start date
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2020-07');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert
       .dom(CLIENT_COUNT.counts.startDiscrepancy)
       .hasTextContaining(

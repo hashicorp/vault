@@ -45,7 +45,7 @@ module('Acceptance | sync | destinations (plural)', function (hooks) {
     await click(ts.cta.button);
     await click(ts.selectType('aws-sm'));
     await fillIn(ts.inputByAttr('name'), 'foo');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.dom(ts.infoRowValue('Name')).hasText('foo', 'Destination details render after create success');
 
     await click(ts.breadcrumbLink('Destinations'));

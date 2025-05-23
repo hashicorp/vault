@@ -43,7 +43,7 @@ module('Integration | Component | page/userpass-reset-password', function (hooks
       );
 
     await fillIn(S.input, 'new');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     // eslint-disable-next-line ember/no-settled-after-test-helper
     await settled();
 
@@ -60,11 +60,11 @@ module('Integration | Component | page/userpass-reset-password', function (hooks
       .dom(S.infoBanner)
       .hasText(`You are updating the password for ${this.username} on the ${this.backend} auth mount.`);
 
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.dom(S.error).hasText('Error Please provide a new password.');
 
     await fillIn(S.input, 'invalid-pw');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     // eslint-disable-next-line ember/no-settled-after-test-helper
     await settled();

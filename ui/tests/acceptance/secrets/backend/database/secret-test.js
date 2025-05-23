@@ -34,7 +34,7 @@ const newConnection = async (
   await connectionPage.name(name);
   await connectionPage.connectionUrl(connectionUrl);
   await connectionPage.toggleVerify();
-  await click(GENERAL.saveButton);
+  await click(GENERAL.submitButton);
   await connectionPage.enable();
   return name;
 };
@@ -295,7 +295,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       assert
         .dom('[data-test-database-oracle-alert]')
         .doesNotExist('does not show oracle alert for non-oracle plugins');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert
         .dom('[data-test-db-connection-modal-title]')
         .hasText('Rotate your root credentials?', 'Modal appears asking to rotate root credentials');
@@ -320,7 +320,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       assert.dom('[data-test-toggle-input="show-password"]').exists('Update password toggle exists');
 
       assert.dom(GENERAL.inputByAttr('verify_connection')).isNotChecked('verify is still unchecked');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/show/${testCase.name}`);
       // click "Add Role"
       await connectionPage.addRole();
@@ -464,7 +464,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     });
     // uncheck verify for the save step to work
     await connectionPage.toggleVerify();
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert
       .dom('[data-test-db-connection-modal-title]')
       .hasText('Rotate your root credentials?', 'Modal appears asking to ');

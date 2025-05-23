@@ -150,7 +150,7 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
 
     await fillIn(GENERAL.inputByAttr('username'), ADMIN_USER);
     await fillIn(GENERAL.inputByAttr('password'), ADMIN_PASSWORD);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await visit(`/vault/access/control-groups/${accessor}`);
 
     // putting here to help with flaky test

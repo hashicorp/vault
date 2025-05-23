@@ -76,7 +76,7 @@ module('Integration | Component | client count config', function (hooks) {
 
     await click('[data-test-input="enabled"]');
     await fillIn('[data-test-input="retentionMonths"]', 20);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert
       .dom('[data-test-inline-error-message]')
       .hasText(
@@ -84,7 +84,7 @@ module('Integration | Component | client count config', function (hooks) {
         'Validation error shows for min retention period'
       );
     await fillIn('[data-test-input="retentionMonths"]', 90);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert
       .dom('[data-test-inline-error-message]')
       .hasText(
@@ -93,7 +93,7 @@ module('Integration | Component | client count config', function (hooks) {
       );
 
     await fillIn('[data-test-input="retentionMonths"]', retentionMonths);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert
       .dom('[data-test-clients-config-modal="title"]')
       .hasText('Turn usage tracking on?', 'Correct modal title renders');
@@ -106,7 +106,7 @@ module('Integration | Component | client count config', function (hooks) {
     );
 
     await click('[data-test-input="enabled"]');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.dom('[data-test-clients-config-modal]').exists('Modal renders');
     assert
       .dom('[data-test-clients-config-modal="title"]')
@@ -137,7 +137,7 @@ module('Integration | Component | client count config', function (hooks) {
     assert.dom('[data-test-input="retentionMonths"]').hasValue('49', 'Retention months render');
 
     await fillIn('[data-test-input="retentionMonths"]', 5);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert
       .dom('[data-test-inline-error-message]')
       .hasText(
@@ -146,7 +146,7 @@ module('Integration | Component | client count config', function (hooks) {
       );
 
     await fillIn('[data-test-input="retentionMonths"]', 48);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
   });
 
   test('it should not show modal when data collection is not changed', async function (assert) {
@@ -165,6 +165,6 @@ module('Integration | Component | client count config', function (hooks) {
       <Clients::Config @model={{this.model}} @mode="edit" />
     `);
     await fillIn('[data-test-input="retentionMonths"]', 48);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
   });
 });

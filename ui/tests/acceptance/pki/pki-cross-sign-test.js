@@ -55,7 +55,7 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     await click(PKI_CONFIGURE_CREATE.optionByKey('generate-csr'));
     await fillIn(GENERAL.inputByAttr('type'), 'internal');
     await fillIn(GENERAL.inputByAttr('commonName'), 'Short-Lived Int R1');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await click(PKI_CROSS_SIGN.copyButton('CSR'));
     const csr = clipboardSpy.firstCall.args[0];
     await visit(`vault/secrets/${this.parentMountPath}/pki/issuers/${this.oldParentIssuerName}/sign`);
@@ -77,14 +77,14 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     const oldIntCert = clipboardSpy.thirdCall.args[0];
     await click(PKI_ISSUER_DETAILS.configure);
     await fillIn(GENERAL.inputByAttr('issuerName'), this.intIssuerName);
-    await click('[data-test-save]');
+    await click('[data-test-submit]');
 
     // perform cross-sign
     await visit(`vault/secrets/${this.parentMountPath}/pki/issuers/${this.parentIssuerName}/cross-sign`);
     await fillIn(PKI_CROSS_SIGN.objectListInput('intermediateMount'), this.intMountPath);
     await fillIn(PKI_CROSS_SIGN.objectListInput('intermediateIssuer'), this.intIssuerName);
     await fillIn(PKI_CROSS_SIGN.objectListInput('newCrossSignedIssuer'), this.newlySignedIssuer);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert
       .dom(`${PKI_CROSS_SIGN.signedIssuerCol('intermediateMount')} a`)
       .hasAttribute('href', `/ui/vault/secrets/${this.intMountPath}/pki/overview`);
@@ -108,7 +108,7 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     await visit(`vault/secrets/${this.intMountPath}/pki/roles/${myRole}/generate`);
     await fillIn(GENERAL.inputByAttr('commonName'), 'my-leaf');
     await fillIn('[data-test-ttl-value="TTL"]', '3600');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await click(PKI_CROSS_SIGN.copyButton('Certificate'));
     const myLeafCert = clipboardSpy.lastCall.args[0];
 

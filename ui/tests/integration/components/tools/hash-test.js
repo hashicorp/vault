@@ -37,7 +37,7 @@ module('Integration | Component | tools/hash', function (hooks) {
   test('it renders errors', async function (assert) {
     this.server.post('sys/tools/hash', () => new Response(500, {}, { errors: ['Something is wrong'] }));
     await this.renderComponent();
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await waitUntil(() => find(GENERAL.messageError));
     assert.dom(GENERAL.messageError).hasText('Error Something is wrong');
   });
@@ -60,7 +60,7 @@ module('Integration | Component | tools/hash', function (hooks) {
 
     // test submit
     await fillIn(TS.toolsInput('hash-input'), 'blah');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     // test sum view
     await waitUntil(() => TS.toolsInput('sum'));
@@ -96,6 +96,6 @@ module('Integration | Component | tools/hash', function (hooks) {
     await fillIn(TS.toolsInput('hash-input'), 'blah');
     await fillIn('#algorithm', 'sha2-224');
     await fillIn('#format', 'hex');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
   });
 });
