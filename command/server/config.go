@@ -670,7 +670,7 @@ func ParseConfigCheckDuplicate(d, source string) (cfg *Config, duplicate bool, e
 
 	if result.RemoveIrrevocableLeaseAfterRaw != nil {
 		if result.RemoveIrrevocableLeaseAfter, err = parseutil.ParseDurationSecond(result.RemoveIrrevocableLeaseAfterRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 
