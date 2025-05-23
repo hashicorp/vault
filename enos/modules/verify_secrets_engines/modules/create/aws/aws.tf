@@ -76,11 +76,16 @@ data "aws_caller_identity" "current" {}
 
 data "aws_region" "current" {}
 
-# Using Pre-made policy and role
+# The "DemoUser" policy is a predefined policy created by the security team.
+# This policy grants the necessary AWS permissions required for role generation via Vault.
+# Reference: https://github.com/hashicorp/honeybee-templates/blob/main/templates/iam_policy/DemoUser.yaml
 data "aws_iam_policy" "premade_demo_user_policy" {
   name = "DemoUser"
 }
 
+# This role was provisioned by the security team using the repository referenced below.
+# This role includes the necessary policies to enable AWS credential generation and rotation via Vault.
+# Reference: https://github.com/hashicorp/honeybee-templates/blob/main/templates/iam_role/vault-assumed-role-credentials-demo.yaml
 data "aws_iam_role" "premade_demo_assumed_role" {
   name = "vault-assumed-role-credentials-demo"
 }
