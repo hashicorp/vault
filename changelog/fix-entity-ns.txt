@@ -1,4 +1,0 @@
-
-```release-note:bug
-identity: Fix issue where entity merges use incorrect namespace in context.
-```
