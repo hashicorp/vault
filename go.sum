@@ -1518,8 +1518,8 @@ github.com/hashicorp/golang-lru v1.0.2/go.mod h1:iADmTwqILo4mZ8BN3D2Q6+9jd8WM5uG
 github.com/hashicorp/golang-lru/v2 v2.0.7 h1:a+bsQ5rvGLjzHuww6tVxozPZFVghXaHOwFs4luLUK2k=
 github.com/hashicorp/golang-lru/v2 v2.0.7/go.mod h1:QeFd9opnmA6QUJc5vARoKUSoFhyfM2/ZepoAG6RGpeM=
 github.com/hashicorp/hcl v1.0.0/go.mod h1:E5yfLk+7swimpb2L/Alb/PJmXilQ/rhwaUYs4T20WEQ=
-github.com/hashicorp/hcl v1.0.1-vault-5 h1:kI3hhbbyzr4dldA8UdTb7ZlVVlI2DACdCfz31RPDgJM=
-github.com/hashicorp/hcl v1.0.1-vault-5/go.mod h1:XYhtn6ijBSAj6n4YqAaf7RBPS4I06AItNorpy+MoQNM=
+github.com/hashicorp/hcl v1.0.1-vault-7 h1:ag5OxFVy3QYTFTJODRzTKVZ6xvdfLLCA1cy/Y6xGI0I=
+github.com/hashicorp/hcl v1.0.1-vault-7/go.mod h1:XYhtn6ijBSAj6n4YqAaf7RBPS4I06AItNorpy+MoQNM=
 github.com/hashicorp/hcl/v2 v2.16.2 h1:mpkHZh/Tv+xet3sy3F9Ld4FyI2tUpWe9x3XtPx9f1a0=
 github.com/hashicorp/hcl/v2 v2.16.2/go.mod h1:JRmR89jycNkrrqnMmvPDMd56n1rQJ2Q6KocSLCMCXng=
 github.com/hashicorp/hcp-link v0.2.1 h1:8w4YVJxRb2C7oXN+hCPSyDbBeo7RQsIYTR6nQXJt6f8=
@@ -1602,8 +1602,8 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms v0.20.0 h1:gFPxVPaFJjyPUF3GE7Lw
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.20.0/go.mod h1:SgKyMgD4+Jj4jDRgFOactHENY7Vov6Hi0UdYWVO9NGY=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.10.0 h1:Fw7s2f1WNW1GZgd3jb+7mkx6jPH528AFwWMHg9LarCQ=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.10.0/go.mod h1:MHNHjEfrXPzWB2J/xmgzojb76wsw0/oUd8z3QLDzzbM=
-github.com/hashicorp/vault-plugin-secrets-kv v0.22.1 h1:rrzE31n0FDaAgt8JPF+lmbUitTP4V3TRds/lUPgv1Qc=
-github.com/hashicorp/vault-plugin-secrets-kv v0.22.1/go.mod h1:CFEcTInqpC2sJWh148RT6VElTnFcJ65fOQuPzEOFvWE=
+github.com/hashicorp/vault-plugin-secrets-kv v0.23.0 h1:LpjG8L77PGqLsS5fYYEW6Lxvom8rusdT6AvGRI7gWj8=
+github.com/hashicorp/vault-plugin-secrets-kv v0.23.0/go.mod h1:U+aKQtbJH78mP/X6k/nxaPXIzdqLyNfo1LaP9570yAQ=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.14.0 h1:N7zUrgQqvDVUsOZW4x49Cbx6WcjEU5Qwe8hrr4lYvV8=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.14.0/go.mod h1:nRcr6W9rb3vDMLDGb/ZovsFhrEM8Q1WLNUKDGRaDplM=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.15.4 h1:hIzo90tKFGCF6smDwAnv0hdO41836JzSLX2dvAsK0mI=
