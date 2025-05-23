@@ -13,14 +13,17 @@ import { helper as buildHelper } from '@ember/component/helper';
 
 const ALL_ENGINES = [
   {
-    displayName: 'Cubbyhole',
-    type: 'cubbyhole',
-  },
-  {
     displayName: 'AliCloud',
     type: 'alicloud',
     glyph: 'alibaba-color',
     category: 'cloud',
+  },
+  {
+    displayName: 'AppRole',
+    value: 'approle',
+    type: 'approle',
+    category: 'generic',
+    glyph: 'cpu',
   },
   {
     displayName: 'AWS',
@@ -41,10 +44,21 @@ const ALL_ENGINES = [
     category: 'infra',
   },
   {
+    displayName: 'Cubbyhole',
+    type: 'cubbyhole',
+  },
+  {
     displayName: 'Databases',
     type: 'database',
     category: 'infra',
     glyph: 'database',
+  },
+  {
+    displayName: 'GitHub',
+    value: 'github',
+    type: 'github',
+    category: 'cloud',
+    glyph: 'github-color',
   },
   {
     displayName: 'Google Cloud',
@@ -59,20 +73,11 @@ const ALL_ENGINES = [
     glyph: 'gcp-color',
   },
   {
-    displayName: 'Key Management',
-    type: 'keymgmt',
-    glyph: 'key',
-    category: 'cloud',
-    requiredFeature: 'Key Management Secrets Engine',
-    routeQueryParams: { tab: 'provider' },
-  },
-  {
-    displayName: 'KMIP',
-    type: 'kmip',
-    glyph: 'lock',
-    engineRoute: 'kmip.scopes.index',
+    displayName: 'JWT',
+    value: 'jwt',
+    type: 'jwt',
+    glyph: 'jwt',
     category: 'generic',
-    requiredFeature: 'KMIP',
   },
   {
     displayName: 'KV',
@@ -82,10 +87,38 @@ const ALL_ENGINES = [
     category: 'generic',
   },
   {
+    displayName: 'Kubernetes',
+    type: 'kubernetes',
+    engineRoute: 'kubernetes.overview',
+    category: 'generic',
+    glyph: 'kubernetes-color',
+  },
+  {
+    displayName: 'LDAP',
+    type: 'ldap',
+    engineRoute: 'ldap.overview',
+    category: 'generic',
+    glyph: 'folder-users',
+  },
+  {
     displayName: 'Nomad',
     type: 'nomad',
     glyph: 'nomad-color',
     category: 'infra',
+  },
+  {
+    displayName: 'OIDC',
+    value: 'oidc',
+    type: 'oidc',
+    glyph: 'openid-color',
+    category: 'generic',
+  },
+  {
+    displayName: 'Okta',
+    value: 'okta',
+    type: 'okta',
+    category: 'infra',
+    glyph: 'okta-color',
   },
   {
     displayName: 'PKI Certificates',
@@ -93,6 +126,13 @@ const ALL_ENGINES = [
     glyph: 'certificate',
     engineRoute: 'pki.overview',
     category: 'generic',
+  },
+  {
+    displayName: 'RADIUS',
+    value: 'radius',
+    type: 'radius',
+    glyph: 'mainframe',
+    category: 'infra',
   },
   {
     displayName: 'RabbitMQ',
@@ -107,17 +147,11 @@ const ALL_ENGINES = [
     category: 'generic',
   },
   {
-    displayName: 'Transform',
-    type: 'transform',
+    displayName: 'TLS Certificates',
+    value: 'cert',
+    type: 'cert',
     category: 'generic',
-    requiredFeature: 'Transform Secrets Engine',
-    glyph: 'transform-data',
-  },
-  {
-    displayName: 'Transit',
-    type: 'transit',
-    glyph: 'swap-horizontal',
-    category: 'generic',
+    glyph: 'certificate',
   },
   {
     displayName: 'TOTP',
@@ -126,91 +160,10 @@ const ALL_ENGINES = [
     category: 'generic',
   },
   {
-    displayName: 'LDAP',
-    type: 'ldap',
-    engineRoute: 'ldap.overview',
+    displayName: 'Transit',
+    type: 'transit',
+    glyph: 'swap-horizontal',
     category: 'generic',
-    glyph: 'folder-users',
-  },
-  {
-    displayName: 'Kubernetes',
-    type: 'kubernetes',
-    engineRoute: 'kubernetes.overview',
-    category: 'generic',
-    glyph: 'kubernetes-color',
-  },
-  {
-    displayName: 'AliCloud',
-    type: 'alicloud',
-  },
-  {
-    displayName: 'AppRole',
-    type: 'approle',
-  },
-  {
-    displayName: 'AWS',
-    type: 'aws',
-  },
-  {
-    displayName: 'Azure',
-    type: 'azure',
-  },
-  {
-    displayName: 'Google Cloud',
-    type: 'gcp',
-  },
-  {
-    displayName: 'GitHub',
-    type: 'github',
-  },
-  {
-    displayName: 'JWT',
-    value: 'jwt',
-    type: 'jwt',
-    glyph: 'jwt',
-    category: 'generic',
-  },
-  {
-    displayName: 'OIDC',
-    value: 'oidc',
-    type: 'oidc',
-    glyph: 'openid-color',
-    category: 'generic',
-  },
-  {
-    displayName: 'Kubernetes',
-    value: 'kubernetes',
-    type: 'kubernetes',
-    category: 'infra',
-    glyph: 'kubernetes-color',
-  },
-  {
-    displayName: 'LDAP',
-    value: 'ldap',
-    type: 'ldap',
-    glyph: 'folder-users',
-    category: 'infra',
-  },
-  {
-    displayName: 'Okta',
-    value: 'okta',
-    type: 'okta',
-    category: 'infra',
-    glyph: 'okta-color',
-  },
-  {
-    displayName: 'RADIUS',
-    value: 'radius',
-    type: 'radius',
-    glyph: 'mainframe',
-    category: 'infra',
-  },
-  {
-    displayName: 'TLS Certificates',
-    value: 'cert',
-    type: 'cert',
-    category: 'generic',
-    glyph: 'certificate',
   },
   {
     displayName: 'Username & Password',

@@ -28,7 +28,7 @@ interface Args {
   secretEngineModels: Array<SecretEngineModel>;
 }
 
-export default class SecretListItem extends Component<Args> {
+export default class SecretEngineList extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
 
   @tracked secretEngineOptions: Array<string> | [] = [];
