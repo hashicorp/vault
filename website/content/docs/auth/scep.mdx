@@ -14,8 +14,8 @@ methods for clients using the SCEP protocol within given PKI mounts.
 This auth mount isn't to be used directly, but rather through
 [delegated authentication](/vault/api-docs/system/mounts#delegated_auth_accessors) from a PKI mount.
 
-Multiple PKI mounts can use the same SCEP auth mount, if the SCEP role name is not provided within the PKI mount's
-configuration, the first matching SCEP role will be based on matching criteria. If a PKI mount has configured an InTune
+Multiple PKI mounts can use the same SCEP auth mount. If the SCEP role name is not provided within the PKI mount's
+configuration, the first matching SCEP role will be based on matching criteria. If a PKI mount has configured an Intune
 integration, it will only match SCEP auth roles with `intune` set as the `auth_type`, otherwise it will attempt to match
 the SCEP auth roles with `static-challenge` set as the `auth_type`.
 
@@ -35,7 +35,7 @@ which might not have the correct policy attached to it.
 
 ### Intune authentication type
 
-If the SCEP role has a value of `intune` for the `auth_type`, the SCEP role will allow usage of InTune authentication
+If the SCEP role has a value of `intune` for the `auth_type`, the SCEP role will allow usage of Intune authentication
 if the PKI mount is requesting it.
 
 If multiple roles are configured with the `intune` authentication type, the PKI mount
