@@ -128,13 +128,13 @@ module('Acceptance | sidebar navigation', function (hooks) {
     await click(link('Client Count'));
     assert.dom(panel('Client Count')).exists('Client counts nav panel renders');
     assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'Top level nav link renders overview');
-    assert.dom(link('Vault Usage Metrics')).hasClass('active');
+    assert.dom(link('Client Usage')).hasClass('active');
     await click(link('Configuration'));
     assert.strictEqual(currentURL(), '/vault/clients/config', 'Clients configuration renders');
     assert.dom(link('Configuration')).hasClass('active');
-    await click(link('Vault Usage Metrics'));
+    await click(link('Client Usage'));
     assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'Sub nav link navigates to overview');
-    assert.dom(link('Vault Usage Metrics')).hasClass('active');
+    assert.dom(link('Client Usage')).hasClass('active');
   });
 
   test('it should display access nav when mounting and configuring auth methods', async function (assert) {
