@@ -226,8 +226,10 @@ func TestRateLimitQuota_Update(t *testing.T) {
 	require.NoError(t, qm.Setup(context.Background(), view, nil))
 
 	quota := NewRateLimitQuota("quota1", "", "", "", "", GroupByIp, false, time.Second, 0, 10, 0)
+	quotaUpdate := quota.Clone()
 	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, true))
-	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, true))
+	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quotaUpdate, true))
 
 	require.Nil(t, quota.close(context.Background()))
+	require.Nil(t, quotaUpdate.close(context.Background()))
 }
