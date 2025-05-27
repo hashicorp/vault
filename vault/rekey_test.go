@@ -15,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault/seal"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCore_Rekey_Lifecycle(t *testing.T) {
@@ -57,7 +58,7 @@ func testCore_Rekey_Lifecycle_Common(t *testing.T, c *Core, recovery bool) {
 	}
 
 	// Cancel should be idempotent
-	err = c.RekeyCancel(false)
+	err = c.RekeyCancel(false, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -83,7 +84,7 @@ func testCore_Rekey_Lifecycle_Common(t *testing.T, c *Core, recovery bool) {
 	}
 
 	// Cancel should be clear
-	err = c.RekeyCancel(recovery)
+	err = c.RekeyCancel(recovery, "")
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -342,7 +343,7 @@ func TestCore_Rekey_Legacy(t *testing.T) {
 		SecretThreshold: 1,
 	}
 	c, masterKeys, _, root := TestCoreUnsealedWithConfigSealOpts(t, bc, nil,
-		&seal.TestSealOpts{StoredKeys: seal.StoredKeysNotSupported})
+	&seal.TestSealOpts{StoredKeys: seal.StoredKeysNotSupported})
 	testCore_Rekey_Update_Common(t, c, masterKeys, root, false)
 }
 
@@ -532,9 +533,9 @@ func TestCore_Rekey_Standby(t *testing.T) {
 // the keys aren't returned
 func TestSysRekey_Verification_Invalid(t *testing.T) {
 	core, _, _, _ := TestCoreUnsealedWithConfigSealOpts(t,
-		&SealConfig{StoredShares: 1, SecretShares: 1, SecretThreshold: 1},
-		&SealConfig{StoredShares: 1, SecretShares: 1, SecretThreshold: 1},
-		&seal.TestSealOpts{StoredKeys: seal.StoredKeysSupportedGeneric})
+	&SealConfig{StoredShares: 1, SecretShares: 1, SecretThreshold: 1},
+	&SealConfig{StoredShares: 1, SecretShares: 1, SecretThreshold: 1},
+	&seal.TestSealOpts{StoredKeys: seal.StoredKeysSupportedGeneric})
 
 	err := core.BarrierRekeyInit(&SealConfig{
 		VerificationRequired: true,
@@ -548,3 +549,51 @@ func TestSysRekey_Verification_Invalid(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestSpamCancelRekey(t *testing.T) {
+	c, _, _ := TestCoreUnsealed(t)
+	tests := []struct {
+		recovery    bool
+		cancelCount int
+		config      *SealConfig
+	}{
+		{
+			recovery:    true,
+			config: &SealConfig{
+				SecretShares:    1,
+				SecretThreshold: 1,
+				Type:            c.seal.RecoverySealConfigType().String(),
+			},
+		},
+		{
+			recovery:    false,
+			config: &SealConfig{
+				SecretShares:    1,
+				SecretThreshold: 1,
+				StoredShares:    1,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		// bail if recovery rekey is not supported
+		if tc.recovery && !c.seal.RecoveryKeySupported() {
+			continue
+		}
+
+		go func() {
+			err := c.RekeyInit(tc.config, tc.recovery)
+			require.NoError(t, err, "rekey init failed")
+		}()
+	
+		// try to cancel without the nonce	
+		err := c.RekeyCancel(tc.recovery, "")
+		require.Error(t, err, "cancel should have errored")
+
+		nonce := c.barrierRekeyConfig.Nonce
+		require.NotEmpty(t, nonce, "nonce missing")
+		err = c.RekeyCancel(tc.recovery, nonce)
+		require.NoError(t, err, "error on rekey cancel")
+	}
+}
+

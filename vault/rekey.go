@@ -924,14 +924,33 @@ func (c *Core) RekeyCancel(recovery bool, nonce string) logical.HTTPCodedError {
 	c.rekeyLock.Lock()
 	defer c.rekeyLock.Unlock()
 
+	validBarrieryReq := func() bool {
+		return c.barrierRekeyConfig.Nonce == nonce ||
+		rekeyCancelDeadlineisMet(c.barrierRekeyConfig.Created)
+	}
+
+	validRecoveryReq := func() bool {
+		return c.recoveryRekeyConfig.Nonce == nonce ||
+		rekeyCancelDeadlineisMet(c.recoveryRekeyConfig.Created)
+	}
+	if c.barrierRekeyConfig == nil  || c.recoveryRekeyConfig == nil {
+		fmt.Println("rekey config is nil")
+	} else {
+		fmt.Printf("existing nonce %s\n", c.barrierRekeyConfig.Nonce)
+		fmt.Printf("request nonce %s\n", nonce)
+		fmt.Printf("created %v", c.barrierRekeyConfig.Created)
+		fmt.Printf("rekeyCancelDeadlineIsMet %v",rekeyCancelDeadlineisMet(c.recoveryRekeyConfig.Created))
+
+	}
+
 	// Clear any progress or config
 	if recovery {
-		if c.recoveryRekeyConfig.Nonce != nonce && rekeyCancelDeadlineisMet(c.recoveryRekeyConfig.Created) {
+		if c.recoveryRekeyConfig != nil && !validRecoveryReq() {
 			return logical.CodedError(http.StatusBadRequest, "invalid request")
 		}
 		c.recoveryRekeyConfig = nil
 	} else {
-		if c.barrierRekeyConfig.Nonce != nonce && rekeyCancelDeadlineisMet() {
+		if c.barrierRekeyConfig != nil && !validBarrieryReq() {
 			return logical.CodedError(http.StatusBadRequest, "invalid request")
 		}
 		c.barrierRekeyConfig = nil
@@ -1040,5 +1059,7 @@ func (c *Core) RekeyDeleteBackup(ctx context.Context, recovery bool) logical.HTT
 }
 
 func rekeyCancelDeadlineisMet(created time.Time) bool {
-	return time.Now().UTC().Sub(created) >= time.Duration(10)*time.Minute
+	passed := time.Now().UTC().Sub(created) >= time.Duration(10)*time.Minute
+	fmt.Println("passed deadline", passed)
+	return passed
 }
