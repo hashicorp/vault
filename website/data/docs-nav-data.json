@@ -396,7 +396,7 @@
         "path": "configuration/create-rate-limit-quota"
       },
       {
-        "title": "Identity-based rate limit quotas",
+        "title": "Identity-based and collective rate limits",
         "badge": {
           "text": "ENT",
           "type": "filled",
