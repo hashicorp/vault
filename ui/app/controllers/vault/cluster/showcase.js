@@ -116,7 +116,31 @@ export default class ShowcaseController extends Controller {
   @action
   dynamicFormFieldModelValidations(editType, variant) {
     const modelValidations = {};
-    if (editType === 'checkboxList') {
+    if (editType === 'boolean') {
+      if (variant === 'with validation errors and warnings') {
+        modelValidations.boolean = {
+          isValid: false,
+          errors: ['This is the validation error message #1', 'This is the validation error message #2'],
+          warnings: [
+            'This is the validation warning message #1',
+            'This is the validation warning message #2',
+          ],
+        };
+      } else if (variant === 'with validation errors') {
+        modelValidations.boolean = {
+          isValid: false,
+          errors: ['This is the validation error message #1', 'This is the validation error message #2'],
+        };
+      } else if (variant === 'with validation warnings') {
+        modelValidations.boolean = {
+          isValid: true,
+          warnings: [
+            'This is the validation warning message #1',
+            'This is the validation warning message #2',
+          ],
+        };
+      }
+    } else if (editType === 'checkboxList') {
       if (variant === 'with validation errors and warnings') {
         modelValidations.checkboxList = {
           isValid: false,
