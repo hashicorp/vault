@@ -17,6 +17,12 @@
           data-test-input-group={{@attr.name}}
           as |G|
         >
+          {{#if @attr.options.label}}
+            <G.Legend>{{@attr.options.label}}</G.Legend>
+          {{/if}}
+          {{#if @attr.options.subText}}
+            <G.HelperText data-test-help-text>{{@attr.options.subText}}</G.HelperText>
+          {{/if}}
           {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
             <G.RadioField
               @id={{or val.id (this.radioValue val)}}

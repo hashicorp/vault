@@ -383,6 +383,8 @@ module('Integration | Component | form field', function (hooks) {
     await setup.call(
       this,
       createAttr('myfield', '-', {
+        label: 'Radio group legend',
+        subText: 'Helpful legend subtext',
         editType: 'radio',
         possibleValues: [
           { value: 'foo', id: 'custom-id-1' },
@@ -392,6 +394,8 @@ module('Integration | Component | form field', function (hooks) {
         ],
       })
     );
+    assert.dom('legend').hasText('Radio group legend', 'it renders attribute label as legend');
+    assert.dom(GENERAL.helpText()).hasText('Helpful legend subtext');
     // first item should have custom ID, label `foo`, and no subText/helpText
     assert
       .dom(GENERAL.radioByAttr('custom-id-1'))
