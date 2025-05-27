@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { visit, currentURL, waitFor } from '@ember/test-helpers';
+import { visit, currentURL, waitFor, click } from '@ember/test-helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { mockedResponseWithData, mockedEmptyResponse } from 'vault/tests/helpers/vault-usage/mocks';
@@ -19,7 +19,8 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
   });
 
   test('it visits the usage reporting dashboard and renders the header', async function (assert) {
-    await visit('/vault/usage-reporting');
+    await visit('/vault/dashboard');
+    await click('[data-test-sidebar-nav-link="Vault Usage"]');
     assert.strictEqual(currentURL(), '/vault/usage-reporting', 'navigates to usage reporting dashboard');
     assert.dom('.hds-page-header').includesText('Vault Usage', 'renders the "Vault Usage" header');
   });
