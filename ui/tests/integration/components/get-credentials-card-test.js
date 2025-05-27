@@ -57,8 +57,8 @@ module('Integration | Component | get-credentials-card', function (hooks) {
   test('it shows a disabled button when no item is selected', async function (assert) {
     assert.expect(2);
     await render(hbs`<GetCredentialsCard @title={{this.title}} @searchLabel={{this.searchLabel}}/>`);
-    assert.dom(GENERAL.button('get-credentials')).isDisabled();
-    assert.dom(GENERAL.button('get-credentials')).hasText('Get credentials', 'Button has default text');
+    assert.dom(GENERAL.button('Get credentials')).isDisabled();
+    assert.dom(GENERAL.button('Get credentials')).hasText('Get credentials', 'Button has default text');
   });
 
   test('it shows button that can be clicked to credentials route when an item is selected', async function (assert) {
@@ -76,8 +76,8 @@ module('Integration | Component | get-credentials-card', function (hooks) {
       .hasText('Search for a role...', 'renders placeholder text passed to search select');
     await clickTrigger();
     await selectChoose('', 'my-role');
-    assert.dom(GENERAL.button('get-credentials')).isEnabled();
-    await click(GENERAL.button('get-credentials'));
+    assert.dom(GENERAL.button('Get credentials')).isEnabled();
+    await click(GENERAL.button('Get credentials'));
     assert.propEqual(
       this.router.transitionTo.lastCall.args,
       ['vault.cluster.secrets.backend.credentials', 'my-role'],

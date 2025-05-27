@@ -120,8 +120,8 @@ module('Integration | Component | namespace-picker', function (hooks) {
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify that the "Refresh List" button is visible
-    assert.dom(GENERAL.button('refresh-namespaces')).exists('Refresh List button is visible');
-    assert.dom(GENERAL.button('manage-namespaces')).exists('Manage button is visible');
+    assert.dom(GENERAL.button('Refresh list')).exists('Refresh List button is visible');
+    assert.dom(GENERAL.button('Manage')).exists('Manage button is visible');
   });
 
   test('it hides the refresh button when canList is false', async function (assert) {
@@ -137,8 +137,8 @@ module('Integration | Component | namespace-picker', function (hooks) {
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify that the buttons are hidden
-    assert.dom(GENERAL.button('refresh-namespaces')).doesNotExist('Refresh List button is hidden');
-    assert.dom(GENERAL.button('manage-namespaces')).exists('Manage button is hidden');
+    assert.dom(GENERAL.button('Refresh list')).doesNotExist('Refresh List button is hidden');
+    assert.dom(GENERAL.button('Manage')).exists('Manage button is hidden');
   });
 
   test('it hides both action buttons when the capabilities store throws an error', async function (assert) {
@@ -151,8 +151,8 @@ module('Integration | Component | namespace-picker', function (hooks) {
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify that the buttons are hidden
-    assert.dom(GENERAL.button('refresh-namespaces')).doesNotExist('Refresh List button is hidden');
-    assert.dom(GENERAL.button('manage-namespaces')).doesNotExist('Manage button is hidden');
+    assert.dom(GENERAL.button('Refresh list')).doesNotExist('Refresh List button is hidden');
+    assert.dom(GENERAL.button('Manage')).doesNotExist('Manage button is hidden');
   });
 
   test('it updates the namespace list after clicking "Refresh list"', async function (assert) {
@@ -190,7 +190,7 @@ module('Integration | Component | namespace-picker', function (hooks) {
     );
 
     // Click the "Refresh list" button
-    await click(GENERAL.button('refresh-namespaces'));
+    await click(GENERAL.button('Refresh list'));
 
     // Verify the new namespace is displayed
     assert.strictEqual(

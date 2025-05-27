@@ -143,7 +143,7 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
     );
     await fillIn('[data-test-kv-key="0"]', 'Learn more');
     await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
-    await click(GENERAL.button('create-message'));
+    await click(GENERAL.submitButton);
     assert.dom(GENERAL.title).hasText('active authenticated message title', 'title is correct');
     assert.dom('.hds-alert').exists('active custom message displays on authenticated.');
     //  confirm message shows within a namespace

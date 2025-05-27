@@ -63,7 +63,7 @@
           @text="Apply filters"
           @icon={{if this.handleSearch.isRunning "loading" "filter"}}
           type="submit"
-          data-test-button="filter-messages"
+          data-test-submit
         />
       </Hds::SegmentedGroup>
     </form>
@@ -75,8 +75,8 @@
       @color="secondary"
       class="toolbar-button"
       {{on "click" this.createMessage}}
-      data-test-button="create-message"
       aria-label="create message"
+      data-test-button="Create message"
     />
   </:toolbarActions>
 </Messages::TabPageHeader>

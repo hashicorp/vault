@@ -119,7 +119,7 @@ module('Integration | Component | messages/page/list', function (hooks) {
     this.messages.meta.pageSize = 100;
 
     await this.renderComponent();
-    await click(GENERAL.button('create-message'));
+    await click(GENERAL.submitButton);
     assert
       .dom(CUSTOM_MESSAGES.modalTitle('maximum-message-modal'))
       .hasText('Maximum number of messages reached');

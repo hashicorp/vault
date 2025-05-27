@@ -547,7 +547,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert.dom('.overview-card h2').hasText('1', 'Lists the correct number of connections');
     // confirm get credentials card is an option to select. Regression bug.
     await typeIn(GENERAL.inputSearch('search-input-role'), 'blah');
-    assert.dom(GENERAL.button('get-credentials')).isEnabled();
+    assert.dom(GENERAL.button('Get credentials')).isEnabled();
     // [BANDAID] navigate away to fix test failing on capabilities-self check before teardown
     await visit('/vault/secrets');
   });

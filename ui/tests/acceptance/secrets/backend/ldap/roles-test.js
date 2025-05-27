@@ -86,7 +86,7 @@ module('Acceptance | ldap | roles', function (hooks) {
 
   test('it should transition to routes from role details toolbar links', async function (assert) {
     await click(LDAP_SELECTORS.roleItem('dynamic', 'dynamic-role'));
-    await click(GENERAL.button('get-credentials'));
+    await click(GENERAL.button('Get credentials'));
     assert.true(
       isURL('roles/dynamic/dynamic-role/credentials', this.backend),
       'Transitions to credentials route from toolbar link'

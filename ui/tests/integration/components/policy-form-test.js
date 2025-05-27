@@ -360,7 +360,7 @@ module('Integration | Component | policy-form', function (hooks) {
     `);
     assert.dom(SELECTORS.exampleModal).doesNotExist('Modal for the policy example does not exist');
     assert
-      .dom(GENERAL.button('policy-example'))
+      .dom(GENERAL.button('How to write a policy'))
       .doesNotExist('Button for the policy example modal does not exist');
   });
 
@@ -373,9 +373,11 @@ module('Integration | Component | policy-form', function (hooks) {
       @renderPolicyExampleModal={{true}}
     />
         `);
-    assert.dom(GENERAL.button('policy-example')).exists({ count: 1 }, 'Modal for the policy example exists');
     assert
-      .dom(GENERAL.button('policy-example'))
+      .dom(GENERAL.button('How to write a policy'))
+      .exists({ count: 1 }, 'Modal for the policy example exists');
+    assert
+      .dom(GENERAL.button('How to write a policy'))
       .exists({ count: 1 }, 'Button for the policy example modal exists');
   });
 
@@ -388,7 +390,7 @@ module('Integration | Component | policy-form', function (hooks) {
       @renderPolicyExampleModal={{true}}
     />
         `);
-    await click(GENERAL.button('policy-example'));
+    await click(GENERAL.button('How to write a policy'));
     assert.dom(SELECTORS.exampleModalTitle).hasText('Example ACL Policy');
   });
 
@@ -403,7 +405,7 @@ module('Integration | Component | policy-form', function (hooks) {
       @renderPolicyExampleModal={{true}}
     />
         `);
-    await click(GENERAL.button('policy-example'));
+    await click(GENERAL.button('How to write a policy'));
     assert.dom(SELECTORS.exampleModalTitle).hasText('Example RGP Policy');
   });
 
@@ -418,7 +420,7 @@ module('Integration | Component | policy-form', function (hooks) {
       @renderPolicyExampleModal={{true}}
     />
         `);
-    await click(GENERAL.button('policy-example'));
+    await click(GENERAL.button('How to write a policy'));
     assert.dom(SELECTORS.exampleModalTitle).hasText('Example EGP Policy');
   });
 });

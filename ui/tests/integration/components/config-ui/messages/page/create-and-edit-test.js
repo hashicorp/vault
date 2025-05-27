@@ -75,7 +75,7 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
 
     await fillIn(CUSTOM_MESSAGES.input('startTime'), '2024-01-20T00:00');
     await fillIn(CUSTOM_MESSAGES.input('endTime'), '2024-01-01T00:00');
-    await click(GENERAL.button('create-message'));
+    await click(GENERAL.submitButton);
     assert.dom(CUSTOM_MESSAGES.input('title')).hasClass('has-error-border');
     assert
       .dom(`${CUSTOM_MESSAGES.fieldValidation('title')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
@@ -119,13 +119,13 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
     );
     await fillIn('[data-test-kv-key="0"]', 'Learn more');
     await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
-    await click(GENERAL.button('create-message'));
+    await click(GENERAL.submitButton);
   });
 
   test('it should have form vaildations', async function (assert) {
     await this.renderComponent();
 
-    await click(GENERAL.button('create-message'));
+    await click(GENERAL.submitButton);
     assert
       .dom(CUSTOM_MESSAGES.input('title'))
       .hasClass('has-error-border', 'show error border for title field');
@@ -195,7 +195,7 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
       .hasText('Lorem ipsum dolor sit amet, consectetur adipiscing elit.');
     assert.dom('img').hasAttribute('src', '/ui/images/custom-messages-dashboard.png');
 
-    await click(GENERAL.button('close-preview'));
+    await click(GENERAL.button('Close preview'));
     await click('#unauthenticated');
     await click(GENERAL.button('preview'));
     assert.dom('img').hasAttribute('src', '/ui/images/custom-messages-login.png');
@@ -250,7 +250,7 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
       'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'
     );
     await click(CUSTOM_MESSAGES.radio('modal'));
-    await click(GENERAL.button('create-message'));
+    await click(GENERAL.submitButton);
     assert.dom(CUSTOM_MESSAGES.modalTitle('Warning: more than one modal')).exists();
     assert
       .dom(CUSTOM_MESSAGES.modalBody('Warning: more than one modal'))

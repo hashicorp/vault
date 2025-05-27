@@ -73,7 +73,7 @@
             @icon="reload"
             @size="small"
             {{on "click" this.refreshList}}
-            data-test-button="refresh-namespaces"
+            data-test-button="Refresh list"
           />
         {{/if}}
         {{#if this.canManageNamespaces}}
@@ -84,7 +84,7 @@
             @icon="settings"
             @size="small"
             @route="vault.cluster.access.namespaces"
-            data-test-button="manage-namespaces"
+            data-test-button="Manage"
           />
         {{/if}}
       </Hds::ButtonSet>
