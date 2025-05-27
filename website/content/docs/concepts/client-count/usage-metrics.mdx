@@ -1,22 +1,22 @@
 ---
 layout: docs
-page_title: Vault usage metrics
+page_title: Vault client usage
 description: |-
   Learn how to discover the number of Vault clients for each namespace in Vault.
 ---
 
-# Vault usage metrics
+# Vault client usage
 
 Client calculation and sizing can be complex to compute when you have multiple
-namespaces and auth mounts. The **Vault Usage Metrics** dashboard on Vault UI
+namespaces and auth mounts. The **Vault Client Usage** dashboard on Vault UI
 provides the information where you can filter the data by namespace and/or auth
 mounts. You can also use Vault CLI or API to query the usage metrics.
 
-## Enable usage metrics
+## Enable client usage metrics
 
-Usage metrics are a feature that is enabled by default for Vault Enterprise and
+Client usage metrics are a feature that is enabled by default for Vault Enterprise and
 HCP Vault Dedicated. However, if you are running Vault Community Edition, you
-need to enable usage metrics since it is disabled by default.
+need to enable usage data collection since it is disabled by default.
 
 <Tabs>
 <Tab heading="Web UI" group="ui">
@@ -110,10 +110,10 @@ $ curl --header "X-Vault-Token: <TOKEN>" \
 1. Select **Details**.
    ![Vault UI default dashboard example](/img/ui-client-count.png)
 
-1. Examine the **Vault Usage Metrics** dashboard to learn your Vault usage.
-   ![Example Vault Usage Metrics dashboard view](/img/ui-usage-metrics-1.png)
+1. Examine the **Vault Client Usage** dashboard to learn your Vault usage.
+   ![Example Vault Client Usage dashboard view](/img/ui-usage-metrics-1.png)
 
-#### Usage metrics data categories
+#### Client usage data categories
 
 - **Running client total** are the primary metric on which pricing is based.
   It is the sum of entity clients (or distinct entities) and non-entity clients.
