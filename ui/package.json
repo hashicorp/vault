@@ -202,6 +202,7 @@
     "underscore": "1.13.7",
     "xmlhttprequest-ssl": "1.6.3",
     "@embroider/macros": "1.16.1",
+    "@babel/runtime": "7.27.0",
     "socket.io": "4.8.1",
     "json5": "1.0.2",
     "ember-cli-typescript": "5.3.0",
