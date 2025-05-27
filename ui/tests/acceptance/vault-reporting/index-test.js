@@ -25,7 +25,7 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
   });
 
   test('it renders the counters dashboard block with all expected counters', async function (assert) {
-    this.server.get('http://localhost:7357/v1/sys/utilization-report', () => mockedResponseWithData);
+    this.server.get('sys/utilization-report', () => mockedResponseWithData);
     await visit('/vault/usage-reporting');
     await waitFor('[data-test-vault-reporting-dashboard-counters]');
     assert
@@ -45,7 +45,7 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
   });
 
   test('dashboard card: Secret engines', async function (assert) {
-    this.server.get('http://localhost:7357/v1/sys/utilization-report', () => mockedResponseWithData);
+    this.server.get('sys/utilization-report', () => mockedResponseWithData);
     await visit('/vault/usage-reporting');
     await waitFor('[data-test-vault-reporting-dashboard-secret-engines]');
 
@@ -74,7 +74,7 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
   });
 
   test('dashboard card: Authentication methods', async function (assert) {
-    this.server.get('http://localhost:7357/v1/sys/utilization-report', () => mockedResponseWithData);
+    this.server.get('sys/utilization-report', () => mockedResponseWithData);
     await visit('/vault/usage-reporting');
     await waitFor('[data-test-vault-reporting-dashboard-auth-methods]');
 
@@ -105,7 +105,7 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
   });
 
   test('dashboard card: Global lease count quota', async function (assert) {
-    this.server.get('http://localhost:7357/v1/sys/utilization-report', () => mockedResponseWithData);
+    this.server.get('sys/utilization-report', () => mockedResponseWithData);
     await visit('/vault/usage-reporting');
     await waitFor('[data-test-vault-reporting-dashboard-lease-count]');
 
@@ -143,7 +143,7 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
   });
 
   test('dashboard card: Cluster replication status', async function (assert) {
-    this.server.get('http://localhost:7357/v1/sys/utilization-report', () => mockedResponseWithData);
+    this.server.get('sys/utilization-report', () => mockedResponseWithData);
     await visit('/vault/usage-reporting');
     await waitFor('[data-test-vault-reporting-dashboard-cluster-replication]');
 
@@ -171,7 +171,7 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
   });
 
   test('empty states display expected text', async function (assert) {
-    this.server.get('http://localhost:7357/v1/sys/utilization-report', () => mockedEmptyResponse);
+    this.server.get('sys/utilization-report', () => mockedEmptyResponse);
     await visit('/vault/usage-reporting');
 
     await waitFor('[data-test-vault-reporting-dashboard-secret-engines]');
