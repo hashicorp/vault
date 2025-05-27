@@ -123,6 +123,7 @@
                   <dd.Interactive
                     @color="critical"
                     {{on "click" (fn (mut this.messageToDelete) message)}}
+                    data-test-popup-menu="delete"
                   >Delete</dd.Interactive>
                 {{/if}}
               </Hds::Dropdown>
