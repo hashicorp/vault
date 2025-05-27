@@ -385,7 +385,9 @@ func (rlq *RateLimitQuota) close(ctx context.Context) error {
 	}
 
 	if rlq.store != nil {
-		return rlq.store.Close(ctx)
+		if err := rlq.store.Close(ctx); err != nil {
+			return err
+		}
 	}
 
 	return rlq.closeEnt(ctx)
