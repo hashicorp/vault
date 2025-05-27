@@ -16,6 +16,7 @@ const selectors = {
   form: '[data-test-sign-intermediate-form]',
   saveButton: '[data-test-pki-sign-intermediate-save]',
   cancelButton: '[data-test-pki-sign-intermediate-cancel]',
+  fieldError: '[data-test-validation-error="csr"]',
   formError: '[data-test-form-error]',
   resultsContainer: '[data-test-sign-intermediate-result]',
 };
@@ -77,8 +78,8 @@ module('Integration | Component | pki-sign-intermediate-form', function (hooks) 
     });
     await click(selectors.saveButton);
     assert.dom(selectors.formError).hasText('There is an error with this form.', 'Shows validation errors');
-    assert.dom(GENERAL.inputByAttr('csr')).hasClass('has-error-border');
-    assert.dom(GENERAL.inlineAlert).hasText('CSR is required.');
+    assert.dom(selectors.csrInput).hasClass('hds-form-textarea--is-invalid');
+    assert.dom(selectors.fieldError).hasText('CSR is required.');
 
     await fillIn(GENERAL.inputByAttr('csr'), 'example-data');
     await click(selectors.saveButton);
