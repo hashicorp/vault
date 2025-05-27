@@ -41,7 +41,19 @@
 
   {{#let
     (array
-      (hash editType="boolean" variants=(array "base" "with label" "with helpText + subText + docLink" "checked" "disabled"))
+      (hash
+        editType="boolean"
+        variants=(array
+          "base"
+          "with label"
+          "with helpText + subText + docLink"
+          "checked"
+          "disabled"
+          "with validation errors"
+          "with validation warnings"
+          "with validation errors and warnings"
+        )
+      )
       (hash
         isHds=true
         editType="checkboxList"
