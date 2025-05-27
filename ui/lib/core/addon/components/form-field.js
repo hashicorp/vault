@@ -56,7 +56,6 @@ import { get } from '@ember/object';
 export default class FormFieldComponent extends Component {
   emptyData = '{\n}';
   shouldHideLabel = [
-    'boolean',
     'file',
     'json',
     'kv',
@@ -107,6 +106,8 @@ export default class FormFieldComponent extends Component {
         } else {
           return false;
         }
+      } else if (type === 'boolean' || options?.editType === 'boolean') {
+        return true;
       } else {
         // we leave these fields as they are (for now)
         return false;
@@ -126,7 +127,7 @@ export default class FormFieldComponent extends Component {
 
   get hideLabel() {
     const { type, options } = this.args.attr;
-    if (type === 'boolean' || type === 'object' || options?.isSectionHeader) {
+    if (type === 'object' || options?.isSectionHeader) {
       return true;
     }
     // falsey values render a <FormFieldLabel>
