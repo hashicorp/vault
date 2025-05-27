@@ -22,7 +22,7 @@ import { allEngines } from 'vault/helpers/mountable-secret-engines';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { v4 as uuidv4 } from 'uuid';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
-import { GENERAL } from '../helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const searchSelectComponent = create(searchSelect);
 

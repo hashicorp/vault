@@ -9,7 +9,7 @@ import { click, currentRouteName, fillIn, visit, waitFor } from '@ember/test-hel
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import mfaConfigHandlers from 'vault/mirage/handlers/mfa-config';
-import { GENERAL } from '../helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | mfa-login-enforcement', function (hooks) {
   setupApplicationTest(hooks);

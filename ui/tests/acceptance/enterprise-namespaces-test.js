@@ -18,7 +18,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { runCmd, createNS, deleteNS } from 'vault/tests/helpers/commands';
 import { login, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
-import { GENERAL } from '../helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { NAMESPACE_PICKER_SELECTORS } from '../helpers/namespace-picker';
 
 import sinon from 'sinon';

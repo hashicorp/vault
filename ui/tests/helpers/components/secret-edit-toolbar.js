@@ -4,7 +4,7 @@
  */
 
 import { click } from '@ember/test-helpers';
-import { GENERAL } from '../general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 const SELECTORS = {
   dropdown: '[data-test-copy-menu-trigger]',
 };

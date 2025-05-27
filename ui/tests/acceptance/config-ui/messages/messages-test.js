@@ -10,7 +10,6 @@ import { click, visit, fillIn, currentRouteName, findAll } from '@ember/test-hel
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { format, addDays, startOfDay } from 'date-fns';
 import { datetimeLocalStringFormat } from 'core/utils/date-formatters';
-import { v4 as uuidv4 } from 'uuid';
 import { CUSTOM_MESSAGES } from 'vault/tests/helpers/config-ui/message-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
@@ -49,12 +48,8 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     version.type = 'enterprise';
     await login();
 
-    this.uid = uuidv4();
-    this.messageId = `Message-${this.uid}`;
-    this.messageId2 = `Message-2-${this.uid}`;
-
     this.createMessage = async (
-      messageId = this.messageId,
+      messageId,
       messageType = 'banner',
       endTime = '2023-12-12',
       authenticated = true
