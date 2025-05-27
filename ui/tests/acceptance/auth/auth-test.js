@@ -136,7 +136,9 @@ module('Acceptance | auth login form', function (hooks) {
       assert.dom(GENERAL.inputByAttr('role')).exists();
       assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
       assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
-      assert.dom(GENERAL.buttonByAttr('other-methods')).exists('"Sign in with other methods" renders');
+      assert
+        .dom(GENERAL.buttonByAttr('Sign in with other methods'))
+        .exists('"Sign in with other methods" renders');
 
       assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
       assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
@@ -151,7 +153,9 @@ module('Acceptance | auth login form', function (hooks) {
         .hasAttribute('aria-selected', 'true', 'it selects tab matching query param');
       assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
       assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
-      assert.dom(GENERAL.buttonByAttr('other-methods')).exists('"Sign in with other methods" renders');
+      assert
+        .dom(GENERAL.buttonByAttr('Sign in with other methods'))
+        .exists('"Sign in with other methods" renders');
       assert.dom(GENERAL.backButton).doesNotExist();
     });
 
@@ -161,7 +165,7 @@ module('Acceptance | auth login form', function (hooks) {
       assert.dom(GENERAL.selectByAttr('auth type')).hasValue('token');
       assert.dom(GENERAL.backButton).exists('it renders "Back" button because tabs do exist');
       assert
-        .dom(GENERAL.buttonByAttr('other-methods'))
+        .dom(GENERAL.buttonByAttr('Sign in with other methods'))
         .doesNotExist(
           'Tabs exist but query param does not match so login is showing "other" methods and this button should not render'
         );

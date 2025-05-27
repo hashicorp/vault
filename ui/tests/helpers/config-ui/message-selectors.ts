@@ -11,7 +11,6 @@ export const CUSTOM_MESSAGES = {
   radio: (radioName: string) => `[data-test-radio="${radioName}"]`,
   field: (fieldName: string) => `[data-test-field="${fieldName}"]`,
   input: (input: string) => `[data-test-input="${input}"]`,
-  button: (buttonName: string) => `[data-test-button="${buttonName}"]`,
   fieldValidation: (fieldName: string) => `[data-test-validation-error="${fieldName}"]`,
   modal: (name: string) => `[data-test-modal="${name}"]`,
   modalTitle: (title: string) => `[data-test-modal-title="${title}"]`,

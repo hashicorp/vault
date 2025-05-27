@@ -28,9 +28,9 @@ export const GENERAL = {
   copyButton: '[data-test-copy-button]',
   // there should only be one save button per view (e.g. one per form) so this does not need to be dynamic
   // this button should be used for any kind of "submit" on a form or "save" action.
-  submitButton: '[data-test-submit]', // ARG TODO make submit
+  submitButton: '[data-test-submit]',
   confirmTrigger: '[data-test-confirm-action-trigger]',
-  buttonByAttr: (label: string) => `[data-test-button="${label}"]`,
+  buttonByAttr: (label: string) => `[data-test-button="${label}"]`, // for buttons with @text, the label passed into this selector should match the @text exactly
 
   /* ────── Menus & Lists ────── */
   menuTrigger: '[data-test-popup-menu-trigger]',
