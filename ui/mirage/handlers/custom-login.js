@@ -45,7 +45,7 @@ export default function (server) {
   });
 
   // UNAUTHENTICATED READ ONLY for login form display logic
-  server.get('sys/internal/ui/default-login-methods', (schema, req) => {
+  server.get('sys/internal/ui/default-auth-methods', (schema, req) => {
     const nsHeader = req.requestHeaders['X-Vault-Namespace'];
     // if no namespace is passed, assume root
     const namespace = !nsHeader ? '' : nsHeader;

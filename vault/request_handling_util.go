@@ -7,6 +7,7 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -83,4 +84,8 @@ func possiblyForwardSaveCachedAuthResponse(ctx context.Context, c *Core, respAut
 
 func forwardCreateTokenRegisterAuth(ctx context.Context, c *Core, te *logical.TokenEntry, roleName string, renewable bool, periodToUse, explicitMaxTTLToUse time.Duration) (*logical.TokenEntry, error) {
 	return nil, nil
+}
+
+func (c *Core) lockSnapshotForRequest(ctx context.Context, req *logical.Request, entry *MountEntry) (func(), error) {
+	return nil, errors.New("loaded snapshots not supported")
 }
