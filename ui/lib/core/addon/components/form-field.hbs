@@ -162,8 +162,7 @@
               <F.Error data-test-validation-error={{this.valuePath}}>{{this.validationError}}</F.Error>
             {{/if}}
           </Hds::Form::TextInput::Field>
-        {{/if}}
-        {{#if (eq @attr.options.editType "textarea")}}
+        {{else if (eq @attr.options.editType "textarea")}}
           <Hds::Form::Textarea::Field
             name={{@attr.name}}
             id={{@attr.name}}
