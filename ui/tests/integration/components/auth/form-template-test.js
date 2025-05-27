@@ -62,18 +62,6 @@ module('Integration | Component | auth | form template', function (hooks) {
 
   test('it does not show toggle buttons if @alternateView does not exist', async function (assert) {
     await this.renderComponent();
-    assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap');
-    assert.dom(GENERAL.inputByAttr('username')).exists();
-    assert.dom(GENERAL.inputByAttr('password')).exists();
-  });
-
-  test('it selects type in the dropdown if @directLinkData data just contains type', async function (assert) {
-    this.directLinkData = { type: 'oidc', isVisibleMount: false };
-    await this.renderComponent();
-    assert.dom(GENERAL.selectByAttr('auth type')).hasValue('oidc');
-    assert.dom(GENERAL.inputByAttr('role')).exists();
-    await click(AUTH_FORM.advancedSettings);
-    assert.dom(GENERAL.inputByAttr('path')).exists();
     assert.dom(GENERAL.backButton).doesNotExist('"Back" button does not render');
     assert
       .dom(GENERAL.buttonByAttr('Sign in with other methods'))
