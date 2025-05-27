@@ -95,6 +95,16 @@ func TestUnknownFieldValidationListenerAndStorage(t *testing.T) {
 	testUnknownFieldValidationStorageAndListener(t)
 }
 
+// Test_ObservationSystemConfig makes sure that the observation system config
+// is properly loaded.
+func Test_ObservationSystemConfig(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/observations.hcl")
+	require.NoError(t, err)
+	require.NotNil(t, config)
+	require.NotNil(t, config.Observations)
+	require.Equal(t, "/var/ledger.log", config.Observations.LedgerPath)
+}
+
 // TestDuplicateKeyValidationHcl checks that the server command displays a warning when the HCL config file contains duplicate keys.
 func TestDuplicateKeyValidationHcl(t *testing.T) {
 	testDuplicateKeyValidationHcl(t)
