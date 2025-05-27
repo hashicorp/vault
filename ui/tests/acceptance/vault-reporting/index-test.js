@@ -10,7 +10,7 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { mockedResponseWithData, mockedEmptyResponse } from 'vault/tests/helpers/vault-usage/mocks';
 
-module('Acceptance | vault-reporting', function (hooks) {
+module('Acceptance | enterprise vault-reporting', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
