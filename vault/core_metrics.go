@@ -1035,7 +1035,6 @@ func (c *Core) GetPolicyMetrics(ctx context.Context) map[PolicyType]int {
 func (c *Core) GetAutopilotUpgradeEnabled() float64 {
 	raftBackend := c.getRaftBackend()
 	if raftBackend == nil {
-		c.logger.Warn("raft storage is not in use")
 		return 0.0
 	}
 

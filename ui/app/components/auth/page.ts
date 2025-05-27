@@ -107,6 +107,12 @@ export default class AuthPage extends Component<Args> {
   @tracked mfaAuthData: MfaAuthData | null = null;
   @tracked mfaErrors = '';
 
+  get cspError() {
+    const isStandby = this.args.cluster.standby;
+    const hasConnectionViolations = this.csp.connectionViolations.length;
+    return isStandby && hasConnectionViolations ? CSP_ERROR : '';
+  }
+
   get visibleMountsByType() {
     const visibleAuthMounts = this.args.visibleAuthMounts;
     if (visibleAuthMounts) {
@@ -125,13 +131,7 @@ export default class AuthPage extends Component<Args> {
     return Object.keys(this.visibleMountsByType || {});
   }
 
-  get cspError() {
-    const isStandby = this.args.cluster.standby;
-    const hasConnectionViolations = this.csp.connectionViolations.length;
-    return isStandby && hasConnectionViolations ? CSP_ERROR : '';
-  }
-
-  // FORM STATE GETTERS
+  // AUTH FORM STATE GETTERS
   get formViews() {
     const { directLinkData, loginSettings } = this.args;
 
