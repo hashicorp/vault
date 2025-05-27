@@ -120,7 +120,7 @@ export default class AuthRoute extends ClusterRouteBase {
       // return a falsy value if the object is empty
       return isEmptyValue(resp.auth) ? null : resp.auth;
     } catch {
-      // swallow the error if there's an error fetching mount data (i.e. invalid namespace)
+      // catch error if there's a problem fetching mount data (i.e. invalid namespace)
       return null;
     }
   }

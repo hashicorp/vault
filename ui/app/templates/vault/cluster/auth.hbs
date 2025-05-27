@@ -22,5 +22,6 @@
     @onAuthSuccess={{action "authSuccess"}}
     @onNamespaceUpdate={{perform this.updateNamespace}}
     @visibleAuthMounts={{this.model.visibleAuthMounts}}
+    @shouldRefocusNamespaceInput={{this.shouldRefocusNamespaceInput}}
   />
 {{/if}}
