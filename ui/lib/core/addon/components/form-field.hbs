@@ -191,6 +191,39 @@
             {{/if}}
           </Hds::Form::Textarea::Field>
         {{/if}}
+      {{else if (or (eq @attr.type "boolean") (eq @attr.options.editType "boolean"))}}
+        <Hds::Form::Checkbox::Field
+          name={{@attr.name}}
+          id={{@attr.name}}
+          checked={{get @model @attr.name}}
+          disabled={{this.disabled}}
+          @isInvalid={{this.validationError}}
+          {{on "change" this.onChangeWithEvent}}
+          data-test-input={{@attr.name}}
+          as |F|
+        >
+          {{#if this.labelString}}
+            <F.Label data-test-form-field-label>{{this.labelString}}</F.Label>
+          {{/if}}
+          {{#if (or this.helpTextString @attr.options.subText)}}
+            <F.HelperText>
+              {{#if this.helpTextString}}
+                <span data-test-help-text={{@attr.options.helpText}}>{{this.helpTextString}}</span>
+              {{/if}}
+              {{#if @attr.options.subText}}
+                <span data-test-help-text={{@attr.options.subText}}>
+                  {{@attr.options.subText}}
+                  {{#if @attr.options.docLink}}
+                    <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>Learn more here.</DocLink>
+                  {{/if}}
+                </span>
+              {{/if}}
+            </F.HelperText>
+          {{/if}}
+          {{#if this.validationError}}
+            <F.Error data-test-validation-error={{this.valuePath}}>{{this.validationError}}</F.Error>
+          {{/if}}
+        </Hds::Form::Checkbox::Field>
       {{/if}}
     {{/if}}
     {{! •••••••••••••••••••••••••••••••••••••••••••••••••••••••• }}
@@ -444,34 +477,6 @@
             class="input {{if this.validationError 'has-error-border'}}"
             maxLength={{@attr.options.characterLimit}}
           />
-        {{/if}}
-      </div>
-    {{else if (or (eq @attr.type "boolean") (eq @attr.options.editType "boolean"))}}
-      <div class="b-checkbox">
-        <input
-          disabled={{this.disabled}}
-          type="checkbox"
-          id={{@attr.name}}
-          class="styled"
-          checked={{get @model @attr.name}}
-          onchange={{this.onChangeWithEvent}}
-          data-test-input={{@attr.name}}
-        />
-        <label for={{@attr.name}} class="is-label" data-test-form-field-label>
-          {{this.labelString}}
-          {{#if this.helpTextString}}
-            <InfoTooltip>{{this.helpTextString}}</InfoTooltip>
-          {{/if}}
-        </label>
-        {{#if @attr.options.subText}}
-          <p class="sub-text">
-            {{@attr.options.subText}}
-            {{#if @attr.options.docLink}}
-              <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>
-                Learn more here.
-              </DocLink>
-            {{/if}}
-          </p>
         {{/if}}
       </div>
     {{else if (eq @attr.type "object")}}
