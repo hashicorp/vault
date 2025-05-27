@@ -119,7 +119,7 @@ module('Integration | Component | messages/page/list', function (hooks) {
     this.messages.meta.pageSize = 100;
 
     await this.renderComponent();
-    await click(GENERAL.buttonByAttr('create-message'));
+    await click(GENERAL.button('create-message'));
     assert
       .dom(CUSTOM_MESSAGES.modalTitle('maximum-message-modal'))
       .hasText('Maximum number of messages reached');
@@ -128,6 +128,6 @@ module('Integration | Component | messages/page/list', function (hooks) {
       .hasText(
         'Vault can only store up to 100 messages. To create a message, delete one of your messages to clear up space.'
       );
-    await click(GENERAL.buttonByAttr('close-maximum-message'));
+    await click(GENERAL.button('close-maximum-message'));
   });
 });

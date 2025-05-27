@@ -307,7 +307,7 @@ module('Acceptance | database workflow', function (hooks) {
         .hasText('2 hours', 'Shows updated TTL');
 
       // CREDENTIALS
-      await click(GENERAL.buttonByAttr('dynamic'));
+      await click(GENERAL.button('dynamic'));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/credentials/${roleName}?roleType=dynamic`,
@@ -320,7 +320,7 @@ module('Acceptance | database workflow', function (hooks) {
         .dom(`${GENERAL.infoRowValue('Username')} [data-test-masked-input]`)
         .hasText('***********', 'Username is masked');
 
-      await click(`${GENERAL.infoRowValue('Username')} ${GENERAL.buttonByAttr('toggle-masked')}`);
+      await click(`${GENERAL.infoRowValue('Username')} ${GENERAL.button('toggle-masked')}`);
       assert
         .dom(`${GENERAL.infoRowValue('Username')} [data-test-masked-input]`)
         .hasText('generated-username', 'Username is generated');
@@ -329,7 +329,7 @@ module('Acceptance | database workflow', function (hooks) {
         .dom(`${GENERAL.infoRowValue('Password')} [data-test-masked-input]`)
         .hasText('***********', 'Password is masked');
 
-      await click(`${GENERAL.infoRowValue('Password')} ${GENERAL.buttonByAttr('toggle-masked')}`);
+      await click(`${GENERAL.infoRowValue('Password')} ${GENERAL.button('toggle-masked')}`);
       assert
         .dom(`${GENERAL.infoRowValue('Password')} [data-test-masked-input]`)
         .hasText('generated-password', 'Password is generated');

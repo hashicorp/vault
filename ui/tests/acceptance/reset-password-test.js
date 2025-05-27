@@ -35,7 +35,7 @@ module('Acceptance | reset password', function (hooks) {
     await login();
     await settled();
 
-    await click(GENERAL.buttonByAttr('user-menu-trigger'));
+    await click(GENERAL.button('user-menu-trigger'));
     assert.dom('[data-test-user-menu-item="reset-password"]').doesNotExist();
   });
 
@@ -52,7 +52,7 @@ module('Acceptance | reset password', function (hooks) {
       { authType: 'userpass', toggleOptions: true }
     );
 
-    await click(GENERAL.buttonByAttr('user-menu-trigger'));
+    await click(GENERAL.button('user-menu-trigger'));
     await click('[data-test-user-menu-item="reset-password"]');
 
     assert.strictEqual(currentURL(), '/vault/access/reset-password', 'links to password reset');

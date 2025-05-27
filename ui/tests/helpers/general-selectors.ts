@@ -30,7 +30,7 @@ export const GENERAL = {
   // this button should be used for any kind of "submit" on a form or "save" action.
   submitButton: '[data-test-submit]',
   confirmTrigger: '[data-test-confirm-action-trigger]',
-  buttonByAttr: (label: string) => `[data-test-button="${label}"]`, // for buttons with @text, the label passed into this selector should match the @text exactly
+  button: (label: string) => `[data-test-button="${label}"]`, // for buttons with @text, the label passed into this selector should match the @text exactly
 
   /* ────── Menus & Lists ────── */
   menuTrigger: '[data-test-popup-menu-trigger]',

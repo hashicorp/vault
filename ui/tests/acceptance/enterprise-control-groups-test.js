@@ -184,7 +184,7 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
 
       await controlGroupSuccessComponent.token(controlGroupToken);
       await settled();
-      await click(GENERAL.buttonByAttr('unwrap'));
+      await click(GENERAL.button('unwrap'));
       assert.ok(controlGroupSuccessComponent.showsJsonViewer, 'shows the json viewer');
     }
   };

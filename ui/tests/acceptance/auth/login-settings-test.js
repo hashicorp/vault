@@ -50,7 +50,7 @@ module('Acceptance | Enterprise | auth form custom login settings', function (ho
     assert.dom(AUTH_FORM.authForm('okta')).exists('it renders default method');
     assert.dom(AUTH_FORM.advancedSettings).exists();
 
-    await click(GENERAL.buttonByAttr('Sign in with other methods'));
+    await click(GENERAL.button('Sign in with other methods'));
     assert.dom(AUTH_FORM.authForm('token')).exists('it renders backup method');
   });
 
@@ -61,7 +61,7 @@ module('Acceptance | Enterprise | auth form custom login settings', function (ho
     assert.dom(AUTH_FORM.authForm('ldap')).exists('it renders default method');
     assert.dom(AUTH_FORM.advancedSettings).exists();
     assert
-      .dom(GENERAL.buttonByAttr('Sign in with other methods'))
+      .dom(GENERAL.button('Sign in with other methods'))
       .doesNotExist('it does not render alternate view');
 
     // type in so that the namespace is "test-ns/child"
@@ -80,7 +80,7 @@ module('Acceptance | Enterprise | auth form custom login settings', function (ho
       .hasAttribute('aria-selected', 'true', 'it selects tab matching query param');
     assert.dom(AUTH_FORM.authForm('oidc')).exists();
     assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
-    await click(GENERAL.buttonByAttr('Sign in with other methods'));
+    await click(GENERAL.button('Sign in with other methods'));
     assert.dom(GENERAL.selectByAttr('auth type')).exists('dropdown renders as fallback view');
   });
 

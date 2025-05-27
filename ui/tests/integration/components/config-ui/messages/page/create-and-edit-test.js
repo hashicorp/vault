@@ -75,7 +75,7 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
 
     await fillIn(CUSTOM_MESSAGES.input('startTime'), '2024-01-20T00:00');
     await fillIn(CUSTOM_MESSAGES.input('endTime'), '2024-01-01T00:00');
-    await click(GENERAL.buttonByAttr('create-message'));
+    await click(GENERAL.button('create-message'));
     assert.dom(CUSTOM_MESSAGES.input('title')).hasClass('has-error-border');
     assert
       .dom(`${CUSTOM_MESSAGES.fieldValidation('title')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
@@ -119,13 +119,13 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
     );
     await fillIn('[data-test-kv-key="0"]', 'Learn more');
     await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
-    await click(GENERAL.buttonByAttr('create-message'));
+    await click(GENERAL.button('create-message'));
   });
 
   test('it should have form vaildations', async function (assert) {
     await this.renderComponent();
 
-    await click(GENERAL.buttonByAttr('create-message'));
+    await click(GENERAL.button('create-message'));
     assert
       .dom(CUSTOM_MESSAGES.input('title'))
       .hasClass('has-error-border', 'show error border for title field');
@@ -184,7 +184,7 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
       CUSTOM_MESSAGES.input('message'),
       'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'
     );
-    await click(GENERAL.buttonByAttr('preview'));
+    await click(GENERAL.button('preview'));
     assert.dom(CUSTOM_MESSAGES.modal('preview modal')).doesNotExist();
     assert.dom(CUSTOM_MESSAGES.modal('preview image')).exists();
     assert
@@ -195,9 +195,9 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
       .hasText('Lorem ipsum dolor sit amet, consectetur adipiscing elit.');
     assert.dom('img').hasAttribute('src', '/ui/images/custom-messages-dashboard.png');
 
-    await click(GENERAL.buttonByAttr('close-preview'));
+    await click(GENERAL.button('close-preview'));
     await click('#unauthenticated');
-    await click(GENERAL.buttonByAttr('preview'));
+    await click(GENERAL.button('preview'));
     assert.dom('img').hasAttribute('src', '/ui/images/custom-messages-login.png');
   });
 
@@ -207,7 +207,7 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
     await click(CUSTOM_MESSAGES.radio('modal'));
     await fillIn(CUSTOM_MESSAGES.input('title'), 'Preview modal title');
     await fillIn(CUSTOM_MESSAGES.input('message'), 'Some preview modal message thats super long.');
-    await click(GENERAL.buttonByAttr('preview'));
+    await click(GENERAL.button('preview'));
     assert.dom(CUSTOM_MESSAGES.modal('preview modal')).exists();
     assert.dom(CUSTOM_MESSAGES.modal('preview image')).doesNotExist();
     assert.dom(CUSTOM_MESSAGES.modalTitle('Preview modal title')).hasText('Preview modal title');
@@ -250,7 +250,7 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
       'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'
     );
     await click(CUSTOM_MESSAGES.radio('modal'));
-    await click(GENERAL.buttonByAttr('create-message'));
+    await click(GENERAL.button('create-message'));
     assert.dom(CUSTOM_MESSAGES.modalTitle('Warning: more than one modal')).exists();
     assert
       .dom(CUSTOM_MESSAGES.modalBody('Warning: more than one modal'))
@@ -258,6 +258,6 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
         'You have an active modal configured after the user logs in and are trying to create another one. It is recommended to avoid having more than one modal at once as it can be intrusive for users. Would you like to continue creating your message? Click “Confirm” to continue.'
       );
 
-    await click(GENERAL.buttonByAttr('confirm-multiple'));
+    await click(GENERAL.button('confirm-multiple'));
   });
 });

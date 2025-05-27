@@ -121,7 +121,7 @@ module('Acceptance | tools', function (hooks) {
       assert
         .dom(sumInput)
         .hasText('LCa0a2j/xo/5m0U8HTBBNBNCLXBkg7+g+YpeiGJm564=', 'hashes the data, encodes input');
-      await click(GENERAL.buttonByAttr('Done'));
+      await click(GENERAL.button('Done'));
 
       await waitUntil(() => find(TS.toolsInput('hash-input')));
       assert.dom(TS.toolsInput('hash-input')).hasText('', 'it clears input on done');
@@ -185,7 +185,7 @@ module('Acceptance | tools', function (hooks) {
       // initial wrap
       await click(GENERAL.submitButton);
       await waitUntil(() => find(TS.toolsInput('wrapping-token')));
-      await click(GENERAL.buttonByAttr('Back'));
+      await click(GENERAL.button('Back'));
 
       // wrap again without re-inputting data
       await click(GENERAL.submitButton);

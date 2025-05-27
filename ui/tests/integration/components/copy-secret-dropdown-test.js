@@ -45,9 +45,9 @@ module('Integration | Component | copy-secret-dropdown', function (hooks) {
 
     await click(SELECTORS.dropdown);
     assert.dom(GENERAL.copyButton).hasText('Copy JSON');
-    assert.dom(GENERAL.buttonByAttr('wrap')).hasText('Wrap secret');
+    assert.dom(GENERAL.button('wrap')).hasText('Wrap secret');
 
-    await click(GENERAL.buttonByAttr('wrap'));
+    await click(GENERAL.button('wrap'));
     await click(SELECTORS.dropdown);
   });
 
@@ -100,7 +100,7 @@ module('Integration | Component | copy-secret-dropdown', function (hooks) {
     );
 
     await click(SELECTORS.dropdown);
-    await click(GENERAL.buttonByAttr('wrap'));
+    await click(GENERAL.button('wrap'));
     assert.true(this.onWrap.calledOnce, 'onWrap was called');
   });
 });

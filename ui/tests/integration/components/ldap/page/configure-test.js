@@ -32,7 +32,7 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
     await fillIn(selectors.bindpass, 'bar');
     await click(selectors.save);
     const buttonLabel = rotate === 'without' ? 'Save without rotating' : 'Save and rotate';
-    await click(GENERAL.buttonByAttr(buttonLabel));
+    await click(GENERAL.button(buttonLabel));
   };
 
   hooks.beforeEach(function () {

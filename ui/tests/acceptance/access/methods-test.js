@@ -46,7 +46,7 @@ module('Acceptance | auth-methods list view', function (hooks) {
     await clickTrigger('#filter-by-auth-type');
     await click(searchSelect.option(searchSelect.optionIndex(type)));
     let rows = findAll('.list-item-row');
-    const rowsUserpass = findAll(GENERAL.buttonByAttr('userpass'));
+    const rowsUserpass = findAll(GENERAL.button('userpass'));
     assert.strictEqual(rows.length, rowsUserpass.length, 'all rows returned are userpass');
 
     // filter by name

@@ -34,7 +34,7 @@ module('Integration | Component | tools/random', function (hooks) {
     assert.dom('#format').hasValue('base64');
     assert.dom(GENERAL.submitButton).hasText('Generate');
     assert.dom(TS.toolsInput('random-bytes')).doesNotExist();
-    assert.dom(GENERAL.buttonByAttr('Done')).doesNotExist();
+    assert.dom(GENERAL.button('Done')).doesNotExist();
   });
 
   test('it renders errors', async function (assert) {
@@ -69,7 +69,7 @@ module('Integration | Component | tools/random', function (hooks) {
     assert.dom('#format').doesNotExist();
 
     // clicking 'Done' resets form
-    await click(GENERAL.buttonByAttr('Done'));
+    await click(GENERAL.button('Done'));
     assert.dom('#bytes').hasValue('32');
     assert.dom('#format').hasValue('base64');
   });

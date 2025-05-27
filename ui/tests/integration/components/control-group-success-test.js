@@ -78,7 +78,7 @@ module('Integration | Component | control group success', function (hooks) {
     assert.dom(GENERAL.inputByAttr('token')).hasValue('');
 
     await fillIn(GENERAL.inputByAttr('token'), 'token');
-    await click(GENERAL.buttonByAttr('unwrap'));
+    await click(GENERAL.button('unwrap'));
 
     const actual = find(SELECTORS.jsonViewer).innerText;
     const expected = JSON.stringify({ foo: 'bar' }, null, 2);

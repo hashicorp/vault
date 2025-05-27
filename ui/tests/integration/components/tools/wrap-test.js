@@ -47,8 +47,8 @@ module('Integration | Component | tools/wrap', function (hooks) {
     assert.dom(TTL.toggleByLabel('Wrap TTL')).isNotChecked('Wrap TTL defaults to unchecked');
     assert.dom(GENERAL.submitButton).isEnabled();
     assert.dom(TS.toolsInput('wrapping-token')).doesNotExist();
-    assert.dom(GENERAL.buttonByAttr('Back')).doesNotExist();
-    assert.dom(GENERAL.buttonByAttr('Done')).doesNotExist();
+    assert.dom(GENERAL.button('Back')).doesNotExist();
+    assert.dom(GENERAL.button('Done')).doesNotExist();
 
     await click(TTL.toggleByLabel('Wrap TTL'));
     assert.dom(TTL.valueInputByLabel('Wrap TTL')).hasValue('30', 'ttl defaults to 30 when toggled');
@@ -177,8 +177,8 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await fillIn(TTL.valueInputByLabel('Wrap TTL'), '20');
     await click(GENERAL.submitButton);
 
-    await waitUntil(() => find(GENERAL.buttonByAttr('Done')));
-    await click(GENERAL.buttonByAttr('Done'));
+    await waitUntil(() => find(GENERAL.button('Done')));
+    await click(GENERAL.button('Done'));
     assert.strictEqual(
       codemirror().getValue(' '),
       `{   \"\": \"\" }`, // eslint-disable-line no-useless-escape
@@ -194,8 +194,8 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await codemirror().setValue(this.wrapData);
     await click(GENERAL.submitButton);
 
-    await waitUntil(() => find(GENERAL.buttonByAttr('Back')));
-    await click(GENERAL.buttonByAttr('Back'));
+    await waitUntil(() => find(GENERAL.button('Back')));
+    await click(GENERAL.button('Back'));
     assert.strictEqual(
       codemirror().getValue(' '),
       `{   \"foo": \"bar" }`, // eslint-disable-line no-useless-escape
@@ -227,8 +227,8 @@ module('Integration | Component | tools/wrap', function (hooks) {
         'Linting error message is shown for json view'
       );
     await click(GENERAL.submitButton);
-    await waitUntil(() => find(GENERAL.buttonByAttr('Done')));
-    await click(GENERAL.buttonByAttr('Done'));
+    await waitUntil(() => find(GENERAL.button('Done')));
+    await click(GENERAL.button('Done'));
     assert.dom('[data-test-inline-alert]').doesNotExist();
 
     await codemirror().setValue(`{bad json}`);
@@ -239,8 +239,8 @@ module('Integration | Component | tools/wrap', function (hooks) {
         'Linting error message is shown for json view'
       );
     await click(GENERAL.submitButton);
-    await waitUntil(() => find(GENERAL.buttonByAttr('Back')));
-    await click(GENERAL.buttonByAttr('Back'));
+    await waitUntil(() => find(GENERAL.button('Back')));
+    await click(GENERAL.button('Back'));
     assert.dom('[data-test-inline-alert]').doesNotExist();
   });
 });

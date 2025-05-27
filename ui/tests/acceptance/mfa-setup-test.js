@@ -54,7 +54,7 @@ module('Acceptance | mfa-setup', function (hooks) {
       { username: USER, password: PASSWORD, path },
       { authType: 'userpass', toggleOptions: true }
     );
-    await click(GENERAL.buttonByAttr('user-menu-trigger'));
+    await click(GENERAL.button('user-menu-trigger'));
     await click('[data-test-user-menu-item="mfa"]');
   });
 

@@ -34,7 +34,7 @@ module('Integration | Component | tools/unwrap', function (hooks) {
     assert.dom(GENERAL.hdsTab('data')).doesNotExist();
     assert.dom(GENERAL.hdsTab('details')).doesNotExist();
     assert.dom('.CodeMirror').doesNotExist();
-    assert.dom(GENERAL.buttonByAttr('Done')).doesNotExist();
+    assert.dom(GENERAL.button('Done')).doesNotExist();
   });
 
   test('it renders errors', async function (assert) {
@@ -89,7 +89,7 @@ module('Integration | Component | tools/unwrap', function (hooks) {
     }
 
     // form resets clicking 'Done'
-    await click(GENERAL.buttonByAttr('Done'));
+    await click(GENERAL.button('Done'));
     assert.dom('label').hasText('Wrapped token');
     assert.dom(TS.toolsInput('unwrap-token')).hasValue('', 'token input resets');
   });

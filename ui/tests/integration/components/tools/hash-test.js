@@ -31,7 +31,7 @@ module('Integration | Component | tools/hash', function (hooks) {
     assert.dom('#algorithm').hasValue('sha2-256');
     assert.dom('#format').hasValue('base64');
     assert.dom(TS.toolsInput('sum')).doesNotExist();
-    assert.dom(GENERAL.buttonByAttr('Done')).doesNotExist();
+    assert.dom(GENERAL.button('Done')).doesNotExist();
   });
 
   test('it renders errors', async function (assert) {
@@ -71,7 +71,7 @@ module('Integration | Component | tools/hash', function (hooks) {
     assert.dom('#format').doesNotExist();
 
     // test form reset clicking 'Done'
-    await click(GENERAL.buttonByAttr('Done'));
+    await click(GENERAL.button('Done'));
     assert.dom('#algorithm').hasValue('sha2-256');
     assert.dom('#format').hasValue('base64');
     assert.dom(TS.toolsInput('hash-input')).hasValue('', 'inputs reset to default values');

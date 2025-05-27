@@ -61,7 +61,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     ) => {
       await click(CUSTOM_MESSAGES.navLink);
       await click(CUSTOM_MESSAGES.tab(authenticated ? 'After user logs in' : 'On login page'));
-      await click(GENERAL.buttonByAttr('create-message'));
+      await click(GENERAL.button('create-message'));
 
       await fillIn(CUSTOM_MESSAGES.input('title'), messageId);
       await click(CUSTOM_MESSAGES.radio(messageType));
@@ -83,7 +83,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
       await fillIn('[data-test-kv-key="0"]', 'Learn more');
       await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
 
-      await click(GENERAL.buttonByAttr('create-message'));
+      await click(GENERAL.button('create-message'));
     };
 
     // issues with deleting messages because of state issues on the list view
@@ -115,7 +115,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
       // edit message
       await click(GENERAL.linkTo('edit'));
       await fillIn(CUSTOM_MESSAGES.input('title'), `Edited new-message`);
-      await click(GENERAL.buttonByAttr('create-message'));
+      await click(GENERAL.button('create-message'));
       assert
         .dom(GENERAL.title)
         .hasText(`Edited new-message`, 'edited message title shows on the details screen');
@@ -135,7 +135,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
         .dom(CUSTOM_MESSAGES.modalTitle('Warning: more than one modal'))
         .hasText('Warning: more than one modal after the user logs in');
 
-      await click(GENERAL.buttonByAttr('cancel-multiple')); // cancel out of the modal
+      await click(GENERAL.button('cancel-multiple')); // cancel out of the modal
       await click(GENERAL.cancelButton); // cancel out of the create message form
     });
 
@@ -155,13 +155,13 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
 
       // check number of messages with status filters
       await fillIn(MESSAGES_LIST.filterBy('status'), 'active');
-      await click(GENERAL.buttonByAttr('filter-messages'));
+      await click(GENERAL.button('filter-messages'));
       assert.dom(MESSAGES_LIST.listItem).exists({ count: 2 }, 'list does not filter before clicking submit');
 
       // check number of messages with type filters
       await click(MESSAGES_LIST.filterReset);
       await fillIn(MESSAGES_LIST.filterBy('type'), 'modal');
-      await click(GENERAL.buttonByAttr('filter-messages'));
+      await click(GENERAL.button('filter-messages'));
       // because of test pollution, we cannot guarantee that the list will be empty
       // make sure only modal messages or no messages are shown
       const messages = findAll(MESSAGES_LIST.listItem);
@@ -178,14 +178,14 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
       // unsetting a filter will reset that item in the query
       await fillIn(MESSAGES_LIST.filterBy('type'), '');
       await fillIn(MESSAGES_LIST.filterBy('status'), 'inactive');
-      await click(GENERAL.buttonByAttr('filter-messages'));
+      await click(GENERAL.button('filter-messages'));
       assert.dom(MESSAGES_LIST.listItem).exists({ count: 2 });
     });
 
     test('it should display preview a message when all required fields are filled out', async function (assert) {
       await click(CUSTOM_MESSAGES.navLink);
       await click(CUSTOM_MESSAGES.tab('After user logs in'));
-      await click(GENERAL.buttonByAttr('create-message'));
+      await click(GENERAL.button('create-message'));
       await fillIn(CUSTOM_MESSAGES.input('title'), 'authenticated display preview');
       await click(CUSTOM_MESSAGES.radio('banner'));
       await fillIn(
@@ -194,19 +194,19 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
       );
       await fillIn('[data-test-kv-key="0"]', 'Learn more');
       await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
-      await click(GENERAL.buttonByAttr('preview'));
+      await click(GENERAL.button('preview'));
       assert.dom(CUSTOM_MESSAGES.modal('preview image')).exists('preview image of the message shows');
 
-      await click(GENERAL.buttonByAttr('close-preview'));
+      await click(GENERAL.button('close-preview'));
       await click(CUSTOM_MESSAGES.radio('modal'));
-      await click(GENERAL.buttonByAttr('preview'));
+      await click(GENERAL.button('preview'));
       assert.dom(CUSTOM_MESSAGES.modal('preview modal')).exists('preview modal of the message shows');
     });
 
     test('it should not display preview a message when all required fields are not filled out', async function (assert) {
       await click(CUSTOM_MESSAGES.navLink);
       await click(CUSTOM_MESSAGES.tab('After user logs in'));
-      await click(GENERAL.buttonByAttr('create-message'));
+      await click(GENERAL.button('create-message'));
       await click(CUSTOM_MESSAGES.radio('banner'));
       await fillIn(
         CUSTOM_MESSAGES.input('message'),
@@ -214,7 +214,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
       );
       await fillIn('[data-test-kv-key="0"]', 'Learn more');
       await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
-      await click(GENERAL.buttonByAttr('preview'));
+      await click(GENERAL.button('preview'));
       assert
         .dom(CUSTOM_MESSAGES.modal('preview image'))
         .doesNotExist('preview image does not show because you have a missing title');
@@ -231,7 +231,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
       // navigate to edit the title
       await click(GENERAL.linkTo('edit'));
       await fillIn(CUSTOM_MESSAGES.input('title'), `Edited ${'unathenticated create edit view delete'}`);
-      await click(GENERAL.buttonByAttr('create-message'));
+      await click(GENERAL.button('create-message'));
       assert
         .dom(GENERAL.title)
         .hasText(
@@ -257,14 +257,14 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
         .dom(CUSTOM_MESSAGES.modalTitle('Warning: more than one modal'))
         .hasText('Warning: more than one modal on the login page', 'the warning modal title shows');
 
-      await click(GENERAL.buttonByAttr('cancel-multiple')); // cancel out of the modal
+      await click(GENERAL.button('cancel-multiple')); // cancel out of the modal
       await click(GENERAL.cancelButton); // cancel out of the create message form
     });
 
     test('it should show info message about sensitive information on create and edit form', async function (assert) {
       await click(CUSTOM_MESSAGES.navLink);
       await click(CUSTOM_MESSAGES.tab('On login page'));
-      await click(GENERAL.buttonByAttr('create-message'));
+      await click(GENERAL.button('create-message'));
       assert
         .dom(CUSTOM_MESSAGES.unauthCreateFormInfo)
         .hasText(
@@ -275,7 +275,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     test('it should allow you to preview a message when all required fields are filled out', async function (assert) {
       await click(CUSTOM_MESSAGES.navLink);
       await click(CUSTOM_MESSAGES.tab('On login page'));
-      await click(GENERAL.buttonByAttr('create-message'));
+      await click(GENERAL.button('create-message'));
       await fillIn(CUSTOM_MESSAGES.input('title'), 'unauthenticated display preview');
       await click(CUSTOM_MESSAGES.radio('banner'));
       await fillIn(
@@ -284,19 +284,19 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
       );
       await fillIn('[data-test-kv-key="0"]', 'Learn more');
       await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
-      await click(GENERAL.buttonByAttr('preview'));
+      await click(GENERAL.button('preview'));
       assert.dom(CUSTOM_MESSAGES.modal('preview image')).exists('preview image of the message shows');
 
-      await click(GENERAL.buttonByAttr('close-preview'));
+      await click(GENERAL.button('close-preview'));
       await click(CUSTOM_MESSAGES.radio('modal'));
-      await click(GENERAL.buttonByAttr('preview'));
+      await click(GENERAL.button('preview'));
       assert.dom(CUSTOM_MESSAGES.modal('preview modal')).exists('preview modal of the message shows');
     });
 
     test('it should not display a preview of a message when all required fields are not filled out', async function (assert) {
       await click(CUSTOM_MESSAGES.navLink);
       await click(CUSTOM_MESSAGES.tab('On login page'));
-      await click(GENERAL.buttonByAttr('create-message'));
+      await click(GENERAL.button('create-message'));
       await click(CUSTOM_MESSAGES.radio('banner'));
       await fillIn(
         CUSTOM_MESSAGES.input('message'),
@@ -304,7 +304,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
       );
       await fillIn('[data-test-kv-key="0"]', 'Learn more');
       await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
-      await click(GENERAL.buttonByAttr('preview'));
+      await click(GENERAL.button('preview'));
       assert.dom(CUSTOM_MESSAGES.modal('preview image')).doesNotExist('preview image does not show');
       assert.dom(CUSTOM_MESSAGES.input('title')).hasClass('has-error-border', 'error around title shows');
     });

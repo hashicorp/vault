@@ -77,7 +77,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
       .dom(SES.ssh.editConfigSection)
       .exists('renders the edit configuration section of the form and not the create part');
     // delete Public key
-    await click(GENERAL.buttonByAttr('delete-public-key'));
+    await click(GENERAL.button('delete-public-key'));
     assert.dom(GENERAL.confirmMessage).hasText('Confirming will remove the CA certificate information.');
     await click(GENERAL.confirmButton);
     assert.strictEqual(

@@ -31,7 +31,7 @@ module('Integration | Component | tools/lookup', function (hooks) {
     assert.dom('h1').hasText('Lookup Token', 'Title renders');
     assert.dom('label').hasText('Wrapped token');
     assert.dom(TS.toolsInput('wrapping-token')).hasValue('');
-    assert.dom(GENERAL.buttonByAttr('Done')).doesNotExist();
+    assert.dom(GENERAL.button('Done')).doesNotExist();
   });
 
   test('it renders errors', async function (assert) {
@@ -70,9 +70,9 @@ module('Integration | Component | tools/lookup', function (hooks) {
     assert.dom(GENERAL.infoRowValue('Expires in')).hasText('about 1 year');
 
     // clicking done resets form
-    await click(GENERAL.buttonByAttr('Done'));
+    await click(GENERAL.button('Done'));
     assert.dom('label').hasText('Wrapped token');
     assert.dom(TS.toolsInput('wrapping-token')).hasValue('');
-    assert.dom(GENERAL.buttonByAttr('Done')).doesNotExist();
+    assert.dom(GENERAL.button('Done')).doesNotExist();
   });
 });

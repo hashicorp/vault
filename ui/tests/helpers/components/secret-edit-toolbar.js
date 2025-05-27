@@ -13,5 +13,5 @@ export async function assertSecretWrap(assert, server, path) {
     assert.ok(true, `request made to ${path} when wrapping secret`);
   });
   await click(SELECTORS.dropdown);
-  await click(GENERAL.buttonByAttr('wrap'));
+  await click(GENERAL.button('wrap'));
 }

@@ -66,7 +66,7 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
 
     assert.dom('[data-test-delete]').hasText('Delete role', 'Delete action renders');
     assert
-      .dom(GENERAL.buttonByAttr('get-credentials'))
+      .dom(GENERAL.button('get-credentials'))
       .hasText('Get credentials', 'Get credentials action renders');
     assert.dom('[data-test-rotate-credentials]').exists('Rotate credentials action renders for static role');
     assert.dom('[data-test-edit]').hasText('Edit role', 'Edit action renders');
