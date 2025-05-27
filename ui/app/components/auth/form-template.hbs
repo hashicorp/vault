@@ -13,14 +13,7 @@
       @onSuccess={{@onSuccess}}
     >
       <:namespace>
-        {{#if (has-feature "Namespaces")}}
-          <Auth::NamespaceInput
-            @disabled={{@oidcProviderQueryParam}}
-            @hvdManagedNamespace={{this.flags.hvdManagedNamespaceRoot}}
-            @namespaceValue={{this.namespaceInput}}
-            @updateNamespace={{this.handleNamespaceUpdate}}
-          />
-        {{/if}}
+        {{yield}}
       </:namespace>
 
       <:back>
