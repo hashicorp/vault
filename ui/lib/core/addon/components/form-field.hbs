@@ -163,6 +163,41 @@
             {{/if}}
           </Hds::Form::TextInput::Field>
         {{/if}}
+        {{#if (eq @attr.options.editType "textarea")}}
+          <Hds::Form::Textarea::Field
+            name={{@attr.name}}
+            id={{@attr.name}}
+            @hasVisibilityToggle={{false}}
+            @value={{or (get @model this.valuePath) @attr.options.defaultValue}}
+            @isInvalid={{this.validationError}}
+            placeholder={{@attr.options.placeholder}}
+            {{on "input" this.onChangeWithEvent}}
+            data-test-input={{@attr.name}}
+            as |F|
+          >
+            {{#unless this.hideLabel}}
+              {{#if this.labelString}}
+                <F.Label data-test-form-field-label>{{this.labelString}}</F.Label>
+              {{/if}}
+              {{#if this.helpTextString}}
+                <F.HelperText data-test-help-text={{@attr.options.helpText}}>{{this.helpTextString}}</F.HelperText>
+              {{/if}}
+              {{#if @attr.options.subText}}
+                <F.HelperText data-test-help-text={{@attr.options.subText}}>
+                  {{@attr.options.subText}}
+                  {{#if @attr.options.docLink}}
+                    <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>See our
+                      documentation</DocLink>
+                    for help.
+                  {{/if}}
+                </F.HelperText>
+              {{/if}}
+            {{/unless}}
+            {{#if this.validationError}}
+              <F.Error data-test-validation-error={{this.valuePath}}>{{this.validationError}}</F.Error>
+            {{/if}}
+          </Hds::Form::Textarea::Field>
+        {{/if}}
       {{/if}}
     {{/if}}
     {{! •••••••••••••••••••••••••••••••••••••••••••••••••••••••• }}
@@ -359,16 +394,7 @@
       />
     {{else if (or (eq @attr.type "number") (eq @attr.type "string"))}}
       <div class="control">
-        {{#if (eq @attr.options.editType "textarea")}}
-          {{! Text area }}
-          <textarea
-            data-test-input={{@attr.name}}
-            id={{@attr.name}}
-            value={{or (get @model this.valuePath) @attr.options.defaultValue}}
-            oninput={{this.onChangeWithEvent}}
-            class="textarea {{if this.validationError 'has-error-border'}}"
-          ></textarea>
-        {{else if (eq @attr.options.editType "json")}}
+        {{#if (eq @attr.options.editType "json")}}
           {{! JSON Editor }}
           {{#let (get @model this.valuePath) as |value|}}
             <JsonEditor
