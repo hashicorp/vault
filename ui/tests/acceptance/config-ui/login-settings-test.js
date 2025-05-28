@@ -28,7 +28,7 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
   test('it renders empty state if no login settings exist', async function (assert) {
     await visit('vault/config-ui/login-settings');
 
-    assert.dom(GENERAL.emptyStateTitle).hasText('No UI login rules yet');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No UI login settings yet');
     assert
       .dom(GENERAL.emptyStateMessage)
       .hasText(
