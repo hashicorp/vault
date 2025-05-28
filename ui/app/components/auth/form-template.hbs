@@ -56,7 +56,7 @@
               <F.Options>
                 {{#each this.supportedAuthTypes as |type|}}
                   <option selected={{eq this.selectedAuthMethod type}} value={{type}}>
-                    {{(get (find-by "type" type (engines-display-name)) "displayName")}}
+                    {{auth-display-name type}}
                   </option>
                 {{/each}}
               </F.Options>
