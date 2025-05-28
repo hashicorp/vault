@@ -130,6 +130,13 @@ DONELISTHANDLING:
 		}
 	}
 
+	// If the response is from a snapshot read or list, we need to make sure
+	// that hte wrapped value is written to real storage, not to the snapshot
+	// storage
+	if req.IsSnapshotReadOrList() {
+		ctx = logical.CreateContextWithSnapshotID(ctx, "")
+	}
+
 	// If we are wrapping, the first part (performed in this functions) happens
 	// before auditing so that resp.WrapInfo.Token can contain the HMAC'd
 	// wrapping token ID in the audit logs, so that it can be determined from

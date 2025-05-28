@@ -192,7 +192,7 @@ All of these metrics are numerical, and contain no sensitive values or additiona
 | `vault.pki.issuers.count`                                           | The total issuers from all PKI mounts across all namespaces.                                               |
 | `vault.identity.case_sensitive_mode`                                | Whether or not the cluster is using case-sensitive identity name matching caused by historical duplicates. |
 | `vault.identity.force_deduplication_activated`                      | Whether or not the cluster has had the force_identity_deduplication activation flag activated.             |
-| `vault.ui.enabled`                                                  | Whether the UI is enabled.                                                                                 |
+| `vault.ui.enabled`                                                  | Whether or not the UI is enabled for the cluster.                                                          |
 | `vault.ui.custom_banners.authenticated`                             | How many authenticated custom banners have been enabled across all namespaces.                             |
 | `vault.ui.custom_banners.unauthenticated`                           | How many unauthenticated custom banners have been enabled across all namespaces.                           |
 | `vault.storage.max_entry_size`                                      | The value of `max_entry_size` parameter for the storage stanza in the config.                              |
@@ -202,12 +202,18 @@ All of these metrics are numerical, and contain no sensitive values or additiona
 | `vault.replication.auth.local_mounts`                               | The number of local auth mounts on Enterprise clusters.                                                    |
 | `vault.replication.auth.non_local_mounts`                           | The number of replicated auth mounts on Enterprise clusters.                                               |
 | `vault.replication.num_nodes`                                       | The number of nodes in a HA cluster.                                                                       |
-| `vault.enterprise.aop_enabled`                                      | Whether Adaptive Overload Protection is enabled on Enterprise clusters.                                    |
-| `vault.policies.count.egp`                                          | The total number of Enterprise Governance Policies (EGP) across all namespaces in Vault.                   |
-| `vault.policies.count.rgp`                                          | The total number of Replication Governance Policies (RGP) across all namespaces in Vault.                  |
-| `vault.policies.count.acl`                                          | The total number of Access Control List (ACL) policies across all namespaces in Vault.                     |
-
-
+| `vault.adaptive_overload_protection_enabled`                        | Whether or not Adaptive Overload Protection is enabled for the cluster.                                    |
+| `vault.policies.egp.count`                                          | The total number of Enterprise Governance Policies (EGP) across all namespaces in Vault.                   |
+| `vault.policies.rgp.count`                                          | The total number of Replication Governance Policies (RGP) across all namespaces in Vault.                  |
+| `vault.policies.acl.count`                                          | The total number of Access Control List (ACL) policies across all namespaces in Vault.                     |
+| `vault.policies.acl.control_group.count`                            | The total number of control groups in this cluster.                                                        |
+| `vault.autopilot_upgrade_enabled`                                   | Whether or not Autopilot Upgrade is enabled for the cluster.                                               |
+| `vault.audit.device.file.count`                                     | The total number of audit devices of type file configured for this cluster.                                |
+| `vault.audit.device.syslog.count`                                   | The total total number of audit devices of type syslog configured for this cluster.                        |
+| `vault.audit.device.socket.udp.count`                               | The total total number of audit devices of type UDP socket configured for this cluster.                    |
+| `vault.audit.device.socket.tcp.count`                               | The total total number of audit devices of type TCP socket configured for this cluster.                    |
+| `vault.audit.device.socket.unix.count`                              | The total total number of audit devices of type UNIX socket configured for this cluster.                   |
+| `vault.audit.exclusion.stanza.count`                                | The total number of audit exclusion stanzas in the HCL configuration for this cluster.                     |
 
 ## Usage metadata list
 

@@ -131,7 +131,7 @@ module('Acceptance | clients | counts | acme', function (hooks) {
     assert.expect(3);
     await visit('/vault/clients/counts/acme');
     await selectChoose(CLIENT_COUNT.nsFilter, this.nsPath);
-    await selectChoose(CLIENT_COUNT.mountFilter, 'auth/authid/0');
+    await selectChoose(CLIENT_COUNT.mountFilter, 'auth/userpass-0');
     // no data because this is an auth mount (acme_clients come from pki mounts)
     assert.dom(CLIENT_COUNT.statText('Total ACME clients')).hasTextContaining('0');
     assert.dom(`${CHARTS.chart('ACME usage')} ${CHARTS.verticalBar}`).isNotVisible();

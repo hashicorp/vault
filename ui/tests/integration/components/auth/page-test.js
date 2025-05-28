@@ -24,6 +24,8 @@ module('Integration | Component | auth | page', function (hooks) {
     this.cluster = { id: '1' };
     this.directLinkData = null;
     this.loginSettings = null;
+    this.namespaceQueryParam = '';
+    this.oidcProviderQueryParam = '';
     this.onAuthSuccess = sinon.spy();
     this.onNamespaceUpdate = sinon.spy();
     this.visibleAuthMounts = false;
@@ -34,8 +36,8 @@ module('Integration | Component | auth | page', function (hooks) {
           @cluster={{this.cluster}}
           @directLinkData={{this.directLinkData}}
           @loginSettings={{this.loginSettings}}
-          @namespaceQueryParam={{this.nsQp}}
-          @oidcProviderQueryParam={{this.providerQp}}
+          @namespaceQueryParam={{this.namespaceQueryParam}}
+          @oidcProviderQueryParam={{this.oidcProviderQueryParam}}
           @onAuthSuccess={{this.onAuthSuccess}}
           @onNamespaceUpdate={{this.onNamespaceUpdate}}
           @visibleAuthMounts={{this.visibleAuthMounts}}
@@ -58,23 +60,17 @@ module('Integration | Component | auth | page', function (hooks) {
     assert.dom(GENERAL.pageError.error).hasText(CSP_ERROR);
   });
 
-  test('it renders splash logo when oidc provider query param is present', async function (assert) {
-    this.providerQp = 'myprovider';
+  test('it renders splash logo and disables namespace input when oidc provider query param is present', async function (assert) {
+    this.oidcProviderQueryParam = 'myprovider';
+    this.version.features = ['Namespaces'];
     await this.renderComponent();
     assert.dom(AUTH_FORM.logo).exists();
+    assert.dom(GENERAL.inputByAttr('namespace')).isDisabled();
     assert
       .dom(AUTH_FORM.helpText)
       .hasText(
         'Once you log in, you will be redirected back to your application. If you require login credentials, contact your administrator.'
       );
-  });
-
-  test('it disables namespace input when oidc provider query param is present', async function (assert) {
-    this.providerQp = 'myprovider';
-    this.version.features = ['Namespaces'];
-    await this.renderComponent();
-    assert.dom(AUTH_FORM.logo).exists();
-    assert.dom(GENERAL.inputByAttr('namespace')).isDisabled();
   });
 
   test('it calls onNamespaceUpdate', async function (assert) {
@@ -86,21 +82,28 @@ module('Integration | Component | auth | page', function (hooks) {
     assert.strictEqual(actual, 'mynamespace', `onNamespaceUpdate called with: ${actual}`);
   });
 
-  test('it calls onNamespaceUpdate for HVD managed clusters', async function (assert) {
-    assert.expect(2);
+  test('it passes query param to namespace input', async function (assert) {
     this.version.features = ['Namespaces'];
-    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
-    this.nsQp = 'admin';
+    this.namespaceQueryParam = 'ns-1';
     await this.renderComponent();
-
-    assert.dom(GENERAL.inputByAttr('namespace')).hasValue('');
-    await fillIn(GENERAL.inputByAttr('namespace'), 'mynamespace');
-    const [actual] = this.onNamespaceUpdate.lastCall.args;
-    assert.strictEqual(actual, 'mynamespace', `onNamespaceUpdate called with: ${actual}`);
+    assert.dom(GENERAL.inputByAttr('namespace')).hasValue(this.namespaceQueryParam);
   });
 
-  // DIRECT LINK tests (without any listing visibility)
-  test('it selects type in the dropdown if direct link is just type', async function (assert) {
+  test('it does not render the namespace input on community', async function (assert) {
+    this.version.type = 'community';
+    this.version.features = [];
+    await this.renderComponent();
+    assert.dom(GENERAL.inputByAttr('namespace')).doesNotExist();
+  });
+
+  test('it does not render the namespace input on enterprise without the "Namespaces" feature', async function (assert) {
+    this.version.type = 'enterprise';
+    this.version.features = [];
+    await this.renderComponent();
+    assert.dom(GENERAL.inputByAttr('namespace')).doesNotExist();
+  });
+
+  test('it selects type in the dropdown if direct link just has type', async function (assert) {
     this.directLinkData = { type: 'oidc' };
     await this.renderComponent();
     assert.dom(AUTH_FORM.tabBtn('oidc')).doesNotExist('tab does not render');
