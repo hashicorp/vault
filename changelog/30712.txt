@@ -1,0 +1,3 @@
+```release-note:improvement
+ui/secrets: Add running plugin version under enabled engine name, add engine version to tooltip
+```
