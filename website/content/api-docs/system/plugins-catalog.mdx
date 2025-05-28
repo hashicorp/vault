@@ -158,11 +158,12 @@ supplied name.
 - `version` `(string: "")` - Specifies the semantic version of the plugin. Used as the tag
   when specifying `oci_image`, but with any leading 'v' trimmed.
 
-- `sha256` `(string: <required>)` – The SHA256 sum of a Community plugin
-  binary or the OCI image. Before a plugin is run, its SHA will be checked against this value.
-  If the actual SHA of the plugin binary and the SHA provided in `sha256` do not match, Vault will not run the plugin. The `sha256` parameter is only required for Community plugins. Enterprise plugins do not require SHA confirmation.
+- `sha256` `(string: "")` – The SHA256 of the plugin binary or the OCI image provided.
+  This is required to register with the plugin binary but should not be specified when registering with an
+  extracted artifact directory. When used, before a plugin is run, its SHA will be checked against this value.
+  If the actual SHA of the plugin binary and the SHA provided in `sha256` do not match, Vault will not run the plugin.
 
-- `command` `(string: <required>)` - Specifies the command used to execute the
+- `command` `(string: "")` - Specifies the command used to execute the
   plugin. This is relative to the plugin directory. e.g. `"myplugin"`, or if `oci_image`
   is also specified, it is relative to the image's working directory.
   This defaults to the name of the plugin if both `oci_image` and `command` are unspecified.
