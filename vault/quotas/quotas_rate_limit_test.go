@@ -232,4 +232,7 @@ func TestRateLimitQuota_Update(t *testing.T) {
 
 	require.Nil(t, quota.close(context.Background()))
 	require.Nil(t, quotaUpdate.close(context.Background()))
+
+	// wait for go-limiter's purge loop to exit
+	time.Sleep(1 * time.Second)
 }
