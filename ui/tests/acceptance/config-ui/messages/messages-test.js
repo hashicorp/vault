@@ -56,7 +56,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     ) => {
       await click(CUSTOM_MESSAGES.navLink);
       await click(CUSTOM_MESSAGES.tab(authenticated ? 'After user logs in' : 'On login page'));
-      await click(GENERAL.submitButton);
+      await click(GENERAL.button('Create message'));
 
       await fillIn(CUSTOM_MESSAGES.input('title'), messageId);
       await click(CUSTOM_MESSAGES.radio(messageType));
@@ -77,7 +77,6 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
       }
       await fillIn('[data-test-kv-key="0"]', 'Learn more');
       await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
-
       await click(GENERAL.submitButton);
     };
   });
@@ -185,7 +184,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
   test('it should display preview a message when all required fields are filled out', async function (assert) {
     await click(CUSTOM_MESSAGES.navLink);
     await click(CUSTOM_MESSAGES.tab('After user logs in'));
-    await click(GENERAL.submitButton);
+    await click(GENERAL.button('Create message'));
     await fillIn(CUSTOM_MESSAGES.input('title'), 'authenticated display preview');
     await click(CUSTOM_MESSAGES.radio('banner'));
     await fillIn(
@@ -206,7 +205,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
   test('it should not display preview a message when all required fields are not filled out', async function (assert) {
     await click(CUSTOM_MESSAGES.navLink);
     await click(CUSTOM_MESSAGES.tab('After user logs in'));
-    await click(GENERAL.submitButton);
+    await click(GENERAL.button('Create message'));
     await click(CUSTOM_MESSAGES.radio('banner'));
     await fillIn(
       CUSTOM_MESSAGES.input('message'),
@@ -267,7 +266,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
   test('it should show info message about sensitive information on create and edit form', async function (assert) {
     await click(CUSTOM_MESSAGES.navLink);
     await click(CUSTOM_MESSAGES.tab('On login page'));
-    await click(GENERAL.submitButton);
+    await click(GENERAL.button('Create message'));
     assert
       .dom(CUSTOM_MESSAGES.unauthCreateFormInfo)
       .hasText(
@@ -278,7 +277,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
   test('it should allow you to preview a message when all required fields are filled out', async function (assert) {
     await click(CUSTOM_MESSAGES.navLink);
     await click(CUSTOM_MESSAGES.tab('On login page'));
-    await click(GENERAL.submitButton);
+    await click(GENERAL.button('Create message'));
     await fillIn(CUSTOM_MESSAGES.input('title'), 'unauthenticated display preview');
     await click(CUSTOM_MESSAGES.radio('banner'));
     await fillIn(
@@ -299,7 +298,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
   test('it should not display a preview of a message when all required fields are not filled out', async function (assert) {
     await click(CUSTOM_MESSAGES.navLink);
     await click(CUSTOM_MESSAGES.tab('On login page'));
-    await click(GENERAL.submitButton);
+    await click(GENERAL.button('Create message'));
     await click(CUSTOM_MESSAGES.radio('banner'));
     await fillIn(
       CUSTOM_MESSAGES.input('message'),
