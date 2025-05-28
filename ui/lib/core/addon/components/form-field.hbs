@@ -25,7 +25,11 @@
             <G.HelperText data-test-help-text={{@attr.options.subText}}>
               {{@attr.options.subText}}
               {{#if @attr.options.docLink}}
-                <Hds::Link::Inline data-test-doc-link={{@attr.options.docLink}} @href={{doc-link @attr.options.docLink}}>
+                <Hds::Link::Inline
+                  data-test-doc-link={{@attr.options.docLink}}
+                  @href={{doc-link @attr.options.docLink}}
+                  @isHrefExternal={{true}}
+                >
                   See our documentation
                 </Hds::Link::Inline>
                 for help.
