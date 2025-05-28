@@ -45,10 +45,14 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
     await this.renderComponent();
 
     assert.dom(GENERAL.title).hasText('Create message');
+    assert
+      .dom(`${GENERAL.inputGroupByAttr('authenticated')} legend`)
+      .hasText('Where should we display this message?');
     assert.dom(CUSTOM_MESSAGES.radio('authenticated')).exists();
     assert.dom(CUSTOM_MESSAGES.radio('unauthenticated')).exists();
     assert.dom(CUSTOM_MESSAGES.radio('authenticated')).isChecked();
     assert.dom(CUSTOM_MESSAGES.radio('unauthenticated')).isNotChecked();
+    assert.dom(`${GENERAL.inputGroupByAttr('type')} legend`).hasText('Type');
     assert.dom(CUSTOM_MESSAGES.radio('banner')).exists();
     assert.dom(CUSTOM_MESSAGES.radio('modal')).exists();
     assert.dom(CUSTOM_MESSAGES.radio('banner')).isChecked();
