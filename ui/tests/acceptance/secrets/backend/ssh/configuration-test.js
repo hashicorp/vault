@@ -106,7 +106,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await click(GENERAL.inputByAttr('generateSigningKey'));
     await click(SES.ssh.save);
     assert
-      .dom(GENERAL.inlineError)
+      .dom(GENERAL.validationErrorByAttr('generateSigningKey'))
       .hasText('Provide a Public and Private key or set "Generate Signing Key" to true.');
     // visit the details page and confirm the public key is not shown
     await visit(`/vault/secrets/${path}/configuration`);
