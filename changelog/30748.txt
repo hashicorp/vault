@@ -1,3 +1,0 @@
-```release-note:change
-database/snowflake: Update plugin to v0.14.0
-```
