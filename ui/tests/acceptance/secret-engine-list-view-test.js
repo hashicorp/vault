@@ -83,13 +83,10 @@ module('Acceptance | secret-engine list view', function (hooks) {
 
   test('hovering over the icon of a supported engine shows engine name and version (if applicable)', async function (assert) {
     await visit('/vault/secrets');
-
     await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-type'), 'kv');
 
     await triggerEvent('.hds-tooltip-button', 'mouseenter');
     assert.dom('.hds-tooltip-container').hasText('KV version 2', 'shows tooltip for kv version 2');
-    // cleanup
-    await runCmd(deleteEngineCmd('nomad'));
   });
 
   test('enterprise: cannot view list without permissions inside namespace', async function (assert) {
