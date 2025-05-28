@@ -19,11 +19,11 @@ export default class KmipPageCredentialsGenerate extends Component {
     const { scope, role } = this.args.credentials;
     try {
       await this.args.credentials.destroyRecord();
-      this.flashMessages.success('Successfully revoked credentials');
+      this.flashMessages.success('Successfully revoked credentials.');
       this.router.transitionTo('vault.cluster.secrets.backend.kmip.credentials.index', scope, role);
     } catch (e) {
       const message = errorMessage(e);
-      this.flashMessages.danger(`There was an error revoking credentials: ${message}`);
+      this.flashMessages.danger(`There was an error revoking credentials: ${message}.`);
       this.args.credentials.rollbackAttributes();
     }
   }
