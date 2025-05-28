@@ -165,7 +165,7 @@
         {{else if (eq @attr.options.editType "textarea")}}
           <Hds::Form::Textarea::Field
             name={{@attr.name}}
-            id={{@attr.name}}
+            @id={{@attr.name}}
             @hasVisibilityToggle={{false}}
             @value={{or (get @model this.valuePath) @attr.options.defaultValue}}
             @isInvalid={{this.validationError}}
