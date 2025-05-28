@@ -359,8 +359,8 @@ for more details.
 | ------ | ---------------- | --------------------
 | Bug    | 1.19.0-1.19.3    | any
 
-When configuring an sts endpoint in the AWS Secrets engine, when no sts_endpoint is set, the engine will return
-an error stating that the number of endpoints and regions do not match:
+When configuring an sts endpoint in the AWS Secrets engine, or when upgrading Vault with such an endpoint,
+if no sts_endpoint is set, the engine will return an error stating that the number of endpoints and regions do not match:
 
 ```
 {"errors":["number of regions does not match number of endpoints"]}
