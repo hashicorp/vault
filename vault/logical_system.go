@@ -554,7 +554,7 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 	command := d.Get("command").(string)
 	ociImage := d.Get("oci_image").(string)
 	if command == "" && ociImage == "" {
-		return logical.ErrorResponse("must provide at least one of command or oci_image"), nil
+		command = pluginName
 	}
 
 	if ociImage == "" {

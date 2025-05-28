@@ -47,15 +47,28 @@ func testCoreWithPlugins(t *testing.T, typ consts.PluginType, versions ...string
 func TestCore_EnableExternalPlugin(t *testing.T) {
 	for name, tc := range map[string]struct {
 		pluginType    consts.PluginType
+		useCommand    bool
 		routerPath    string
 		expectedMatch string
 	}{
-		"enable external credential plugin": {
+		"enable external credential plugin with command": {
+			pluginType:    consts.PluginTypeCredential,
+			routerPath:    "auth/foo/bar",
+			expectedMatch: "auth/foo/",
+			useCommand:    true,
+		},
+		"enable external credential plugin without command (default to plugin name)": {
 			pluginType:    consts.PluginTypeCredential,
 			routerPath:    "auth/foo/bar",
 			expectedMatch: "auth/foo/",
 		},
-		"enable external secrets plugin": {
+		"enable external secrets plugin with command": {
+			pluginType:    consts.PluginTypeSecrets,
+			routerPath:    "foo/bar",
+			expectedMatch: "foo/",
+			useCommand:    true,
+		},
+		"enable external secrets plugin without command (default to plugin name)": {
 			pluginType:    consts.PluginTypeSecrets,
 			routerPath:    "foo/bar",
 			expectedMatch: "foo/",
@@ -83,7 +96,12 @@ func TestCore_EnableExternalPlugin(t *testing.T) {
 
 			plugins := cluster.Plugins
 
-			registerPlugin(t, c.systemBackend, plugins[0].Name, tc.pluginType.String(), "1.0.0", plugins[0].Sha256, plugins[0].FileName)
+			command := ""
+			if tc.useCommand {
+				command = plugins[0].FileName
+			}
+
+			registerPlugin(t, c.systemBackend, plugins[0].Name, tc.pluginType.String(), "1.0.0", plugins[0].Sha256, command)
 
 			mountPlugin(t, c.systemBackend, plugins[0].Name, tc.pluginType, "v1.0.0", "")
 

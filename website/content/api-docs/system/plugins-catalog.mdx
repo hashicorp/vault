@@ -165,8 +165,7 @@ supplied name.
 - `command` `(string: <required>)` - Specifies the command used to execute the
   plugin. This is relative to the plugin directory. e.g. `"myplugin"`, or if `oci_image`
   is also specified, it is relative to the image's working directory.
-  The `command` parameter is only required for Community plugins as
-  the run command is known for Enterprise plugins.
+  This defaults to the name of the plugin if both `oci_image` and `command` are unspecified.
 
 - `args` `(array: [])` – Specifies the arguments used to execute the plugin. If
   the arguments are provided here, the `command` parameter should only contain
