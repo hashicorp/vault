@@ -65,4 +65,8 @@ export default class AuthConfigOptions extends AuthConfigComponent {
     this.router.transitionTo('vault.cluster.access.methods').followRedirects();
     this.flashMessages.success('The configuration was saved successfully.');
   }
+
+  get getLoginLink() {
+    return `${window.origin}/ui/vault/auth?with=${encodeURIComponent(this.args.model.path)}`;
+  }
 }

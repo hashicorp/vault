@@ -327,6 +327,12 @@ The following parameters are only used with Vault Enterprise
 - `administrative_namespace_path` `(string: "")` - Specifies the absolute path
   to the Vault namespace to be used as an [Administrative namespace](/vault/docs/enterprise/namespaces/create-admin-namespace).
 
+- `remove_irrevocable_lease_after` `(string: "")` - Enables the automatic deletion
+of irrevocable leases. When the configured duration exceeds the expiry time of an irrevocable lease,
+Vault deletes the lease. The minimum value for `remove_irrevocable_lease_after` is 2 days (`2d`).
+If you set the removal window to a value less than the minimum, Vault overwrites the value to `2d`.
+Deleting a lease may cause Vault to orphan external resources.
+
 [storage-backend]: /vault/docs/configuration/storage
 [listener]: /vault/docs/configuration/listener
 [reporting]: /vault/docs/configuration/reporting

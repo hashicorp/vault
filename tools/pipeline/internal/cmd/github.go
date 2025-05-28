@@ -10,23 +10,19 @@ import (
 	"path/filepath"
 
 	gh "github.com/google/go-github/v68/github"
+	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
 	"github.com/spf13/cobra"
 )
 
-type githubCommandFlags struct {
-	Format string `json:"format,omitempty"`
-}
-
 type githubCommandState struct {
-	Client *gh.Client
+	Github *gh.Client
+	Git    *git.Client
 }
 
-var (
-	githubCmdFlags = &githubCommandFlags{}
-	githubCmdState = &githubCommandState{
-		Client: gh.NewClient(nil),
-	}
-)
+var githubCmdState = &githubCommandState{
+	Github: gh.NewClient(nil),
+	Git:    git.NewClient(git.WithLoadTokenFromEnv()),
+}
 
 func newGithubCmd() *cobra.Command {
 	github := &cobra.Command{
@@ -34,15 +30,15 @@ func newGithubCmd() *cobra.Command {
 		Short: "Github commands",
 		Long:  "Github commands",
 	}
-	github.PersistentPreRunE = func(_cmd *cobra.Command, _args []string) error {
+	github.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		if token, set := os.LookupEnv("GITHUB_TOKEN"); set {
-			githubCmdState.Client = githubCmdState.Client.WithAuthToken(token)
+			githubCmdState.Github = githubCmdState.Github.WithAuthToken(token)
 		} else {
-			fmt.Println("\x1b[1;33;49mWARNING\x1b[0m: GITHUB_TOKEN has not been set. While not required for public repositories you're likely to get throttled without it")
+			fmt.Println("\x1b[1;33;49mWARNING\x1b[0m: GITHUB_TOKEN has not been set. While not always required for read actions on public repositories you're likely to get throttled without it")
 		}
 		return nil
 	}
-	github.PersistentFlags().StringVarP(&githubCmdFlags.Format, "format", "f", "table", "The output format. Can be 'json' or 'table'")
+	github.AddCommand(newGithubCreateCmd())
 	github.AddCommand(newGithubListCmd())
 
 	return github

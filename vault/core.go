@@ -465,6 +465,8 @@ type Core struct {
 	defaultLeaseTTL time.Duration
 	maxLeaseTTL     time.Duration
 
+	removeIrrevocableLeaseAfter time.Duration
+
 	// baseLogger is used to avoid ResetNamed as it strips useful prefixes in
 	// e.g. testing
 	baseLogger log.Logger
@@ -844,6 +846,8 @@ type CoreConfig struct {
 
 	MaxLeaseTTL time.Duration
 
+	RemoveIrrevocableLeaseAfter time.Duration
+
 	ClusterName string
 
 	ClusterCipherSuites string
@@ -921,8 +925,8 @@ type CoreConfig struct {
 	// only accessible in the root namespace, currently sys/audit-hash and sys/monitor.
 	AdministrativeNamespacePath string
 
-	// ObservationSystemLedgerPath is the path that the Observation System's ledger will be recorded at.
-	ObservationSystemLedgerPath string
+	// ObservationSystemConfig is the config for the Observation System
+	ObservationSystemConfig *observations.ObservationSystemConfig
 
 	NumRollbackWorkers int
 
@@ -1055,6 +1059,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 		defaultLeaseTTL:                conf.DefaultLeaseTTL,
 		maxLeaseTTL:                    conf.MaxLeaseTTL,
+		removeIrrevocableLeaseAfter:    conf.RemoveIrrevocableLeaseAfter,
 		sentinelTraceDisabled:          conf.DisableSentinelTrace,
 		cachingDisabled:                conf.DisableCache,
 		clusterName:                    conf.ClusterName,
@@ -1360,7 +1365,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if err != nil {
 		return nil, err
 	}
-	events, err := eventbus.NewEventBus(nodeID, eventsLogger)
+	events, err := eventbus.NewEventBus(nodeID, eventsLogger, c)
 	if err != nil {
 		return nil, err
 	}
@@ -1372,14 +1377,16 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.createSnapshotManager()
 
 	observationsLogger := conf.Logger.Named("observations")
-	observationSystemLedgerPath := conf.ObservationSystemLedgerPath
-	if observationSystemLedgerPath != "" {
-		observations, err := observations.NewObservationSystem(nodeID, observationSystemLedgerPath, observationsLogger)
-		if err != nil {
-			return nil, err
+	observationSystemConfig := conf.ObservationSystemConfig
+	if observationSystemConfig != nil {
+		if observationSystemConfig.LedgerPath != "" {
+			observations, err := observations.NewObservationSystem(nodeID, observationSystemConfig.LedgerPath, observationsLogger)
+			if err != nil {
+				return nil, err
+			}
+			c.observations = observations
+			c.observations.Start()
 		}
-		c.observations = observations
-		c.observations.Start()
 	}
 
 	c.clusterAddrBridge = conf.ClusterAddrBridge

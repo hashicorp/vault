@@ -14,6 +14,7 @@ import (
 
 type rootCmdCfg struct {
 	logLevel string
+	format   string
 }
 
 var rootCfg = &rootCmdCfg{}
@@ -26,6 +27,7 @@ func newRootCmd() *cobra.Command {
 	}
 
 	rootCmd.PersistentFlags().StringVar(&rootCfg.logLevel, "log", "warn", "Set the log level. One of 'debug', 'info', 'warn', 'error'")
+	rootCmd.PersistentFlags().StringVarP(&rootCfg.format, "format", "f", "table", "The output format. Can be 'json' or 'table'")
 
 	rootCmd.AddCommand(newGenerateCmd())
 	rootCmd.AddCommand(newGithubCmd())
@@ -45,8 +47,14 @@ func newRootCmd() *cobra.Command {
 		default:
 			return fmt.Errorf("unsupported log level: %s", rootCfg.logLevel)
 		}
-		h := slogctx.NewHandler(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: ll}), nil)
+		h := slogctx.NewHandler(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: ll}), nil)
 		slog.SetDefault(slog.New(h))
+
+		switch rootCfg.format {
+		case "json", "table":
+		default:
+			return fmt.Errorf("unsupported format: %s", rootCfg.format)
+		}
 
 		return nil
 	}
@@ -56,6 +64,7 @@ func newRootCmd() *cobra.Command {
 
 // Execute executes the root pipeline command.
 func Execute() {
+	cobra.EnableTraverseRunHooks = true // Automatically chain run hooks
 	rootCmd := newRootCmd()
 	rootCmd.SilenceErrors = true // We handle this below
 

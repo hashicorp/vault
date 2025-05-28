@@ -64,6 +64,12 @@ func (c *Logical) ReadWithData(path string, data map[string][]string) (*Secret, 
 	return c.ReadWithDataWithContext(context.Background(), path, data)
 }
 
+// ReadFromSnapshot reads the data at the given Vault path from a previously
+// loaded snapshot. The snapshotID parameter is the ID of the loaded snapshot
+func (c *Logical) ReadFromSnapshot(path string, snapshotID string) (*Secret, error) {
+	return c.ReadWithData(path, map[string][]string{"read_snapshot_id": {snapshotID}})
+}
+
 func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Secret, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
@@ -102,6 +108,10 @@ func (c *Logical) ReadRawWithContext(ctx context.Context, path string) (*Respons
 // context.WithTimeout or context.WithDeadline.
 func (c *Logical) ReadRawWithData(path string, data map[string][]string) (*Response, error) {
 	return c.ReadRawWithDataWithContext(context.Background(), path, data)
+}
+
+func (c *Logical) ReadRawFromSnapshot(path string, snapshotID string) (*Response, error) {
+	return c.ReadRawWithDataWithContext(context.Background(), path, map[string][]string{"read_snapshot_id": {snapshotID}})
 }
 
 // ReadRawWithDataWithContext attempts to read the value stored at the given
@@ -160,15 +170,26 @@ func (c *Logical) readRawWithDataWithContext(ctx context.Context, path string, d
 	return c.c.RawRequestWithContext(ctx, r)
 }
 
+// ListFromSnapshot lists from the Vault path using a previously loaded
+// snapshot. The snapshotID parameter is the ID of the loaded snapshot
+func (c *Logical) ListFromSnapshot(path string, snapshotID string) (*Secret, error) {
+	r := c.c.NewRequest("LIST", "/v1/"+path)
+	r.Params.Set("read_snapshot_id", snapshotID)
+	return c.list(context.Background(), r)
+}
+
 func (c *Logical) List(path string) (*Secret, error) {
 	return c.ListWithContext(context.Background(), path)
 }
 
 func (c *Logical) ListWithContext(ctx context.Context, path string) (*Secret, error) {
+	return c.list(ctx, c.c.NewRequest("LIST", "/v1/"+path))
+}
+
+func (c *Logical) list(ctx context.Context, r *Request) (*Secret, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("LIST", "/v1/"+path)
 	// Set this for broader compatibility, but we use LIST above to be able to
 	// handle the wrapping lookup function
 	r.Method = http.MethodGet
@@ -221,6 +242,14 @@ func (c *Logical) WriteRawWithContext(ctx context.Context, path string, data []b
 	r.BodyBytes = data
 
 	return c.writeRaw(ctx, r)
+}
+
+// Recover recovers the data at the given Vault path from a loaded snapshot.
+// The snapshotID parameter is the ID of the loaded snapshot
+func (c *Logical) Recover(ctx context.Context, path string, snapshotID string) (*Secret, error) {
+	r := c.c.NewRequest(http.MethodPut, "/v1/"+path)
+	r.Params.Set("recover_snapshot_id", snapshotID)
+	return c.write(ctx, path, r)
 }
 
 func (c *Logical) JSONMergePatch(ctx context.Context, path string, data map[string]interface{}) (*Secret, error) {

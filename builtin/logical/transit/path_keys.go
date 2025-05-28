@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -179,6 +180,15 @@ func (b *backend) pathKeysList(ctx context.Context, req *logical.Request, d *fra
 		return nil, err
 	}
 
+	// filter out partial paths
+	entries = slices.DeleteFunc(entries, func(s string) bool {
+		if strings.HasSuffix(s, "/") {
+			return true
+		}
+
+		return false
+	})
+
 	return logical.ListResponse(entries), nil
 }
 
@@ -243,6 +253,8 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		polReq.KeyType = keysutil.KeyType_MANAGED_KEY
 	case "aes128-cmac":
 		polReq.KeyType = keysutil.KeyType_AES128_CMAC
+	case "aes192-cmac":
+		polReq.KeyType = keysutil.KeyType_AES192_CMAC
 	case "aes256-cmac":
 		polReq.KeyType = keysutil.KeyType_AES256_CMAC
 	case "ml-dsa":
