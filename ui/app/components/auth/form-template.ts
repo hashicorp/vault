@@ -8,9 +8,7 @@ import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { supportedTypes } from 'vault/utils/supported-login-methods';
-import { getRelativePath } from 'core/utils/sanitize-path';
 
-import type FlagsService from 'vault/services/flags';
 import type VersionService from 'vault/services/version';
 import type ClusterModel from 'vault/models/cluster';
 import type { UnauthMountsByType } from 'vault/vault/auth/form';
@@ -31,23 +29,16 @@ import type { HTMLElementEvent } from 'vault/forms';
  * @param {string} canceledMfaAuth - saved auth type from a cancelled mfa verification
  * @param {object} cluster - The route model which is the ember data cluster model. contains information such as cluster id, name and boolean for if the cluster is in standby
  * @param {object} defaultView - The `FormView` (see the interface below) data to render the initial view.
- * @param {function} handleNamespaceUpdate - callback task that passes user input to the controller and updates the namespace query param in the url
  * @param {object} initialFormState - sets selectedAuthMethod and showAlternateView based on the login form configuration computed in parent component
- * @param {string} namespaceQueryParam - namespace query param from the url
- * @param {string} oidcProviderQueryParam - oidc provider query param, set in url as "?o=someprovider". if present, disables the namespace input
  * @param {function} onSuccess - callback after the initial authentication request, if an mfa_requirement exists the parent renders the mfa form otherwise it fires the authSuccess action in the auth controller and handles transitioning to the app
  * @param {array} visibleMountTypes - array of auth method types that have mounts with listing_visibility="unauth"
- *
  * */
 
 interface Args {
   alternateView: FormView | null;
   cluster: ClusterModel;
   defaultView: FormView;
-  handleNamespaceUpdate: CallableFunction;
   initialFormState: { initialAuthType: string; showAlternate: boolean };
-  namespaceQueryParam: string;
-  oidcProviderQueryParam: string;
   onSuccess: CallableFunction;
   visibleMountTypes: string[];
 }
@@ -58,7 +49,6 @@ interface FormView {
 }
 
 export default class AuthFormTemplate extends Component<Args> {
-  @service declare readonly flags: FlagsService;
   @service declare readonly version: VersionService;
 
   supportedAuthTypes: string[];
@@ -103,17 +93,6 @@ export default class AuthFormTemplate extends Component<Args> {
     return this.args.visibleMountTypes?.includes(this.selectedAuthMethod);
   }
 
-  get namespaceInput() {
-    const namespaceQueryParam = this.args.namespaceQueryParam;
-    if (this.flags.hvdManagedNamespaceRoot) {
-      // When managed, the user isn't allowed to edit the prefix `admin/`
-      // so prefill just the relative path in the namespace input
-      const path = getRelativePath(namespaceQueryParam, this.flags.hvdManagedNamespaceRoot);
-      return path ? `/${path}` : '';
-    }
-    return namespaceQueryParam;
-  }
-
   @action
   setAuthType(authType: string) {
     this.selectedAuthMethod = authType;
@@ -135,10 +114,5 @@ export default class AuthFormTemplate extends Component<Args> {
   @action
   handleError(message: string) {
     this.errorMessage = message;
-  }
-
-  @action
-  handleNamespaceUpdate(event: HTMLElementEvent<HTMLInputElement>) {
-    this.args.handleNamespaceUpdate(event.target.value);
   }
 }
