@@ -17,11 +17,20 @@
           data-test-input-group={{@attr.name}}
           as |G|
         >
-          {{#if @attr.options.label}}
-            <G.Legend>{{@attr.options.label}}</G.Legend>
+          <G.Legend>{{this.labelString}}</G.Legend>
+          {{#if this.helpTextString}}
+            <G.HelperText data-test-help-text={{@attr.options.helpText}}>{{this.helpTextString}}</G.HelperText>
           {{/if}}
           {{#if @attr.options.subText}}
-            <G.HelperText data-test-help-text>{{@attr.options.subText}}</G.HelperText>
+            <G.HelperText data-test-help-text={{@attr.options.subText}}>
+              {{@attr.options.subText}}
+              {{#if @attr.options.docLink}}
+                <Hds::Link::Inline data-test-doc-link={{@attr.options.docLink}} @href={{doc-link @attr.options.docLink}}>
+                  See our documentation
+                </Hds::Link::Inline>
+                for help.
+              {{/if}}
+            </G.HelperText>
           {{/if}}
           {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
             <G.RadioField
