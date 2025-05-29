@@ -89,7 +89,9 @@ func (c *PluginRegisterCommand) Flags() *FlagSets {
 		Name:       "sha256",
 		Target:     &c.flagSHA256,
 		Completion: complete.PredictAnything,
-		Usage:      "SHA256 of the plugin binary or the oci_image provided. This is required for all plugins.",
+		Usage: "SHA256 of the plugin binary or the OCI image provided. " +
+			"This is required to register with the plugin binary but should not be " +
+			"specified when registering with an extracted artifact directory.",
 	})
 
 	f.StringVar(&StringVar{
