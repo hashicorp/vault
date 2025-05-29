@@ -209,13 +209,39 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
 
   // This test originated from this PR: https://github.com/hashicorp/vault/pull/7186
   test('it clears namespaces when you log out', async function (assert) {
+    // Test Setup
+    const namespace = 'foo';
+    await createNSFromPaths([namespace]);
+
     const token = await runCmd(`write -field=client_token auth/token/create policies=default`);
     await login(token);
+    
+    // Open the namespace picker
     await click(GENERAL.toggleInput('namespace-id'));
+
+    // Verify that the root namespace is selected by default
     assert.dom(NAMESPACE_PICKER_SELECTORS.link()).hasText('root', 'root renders as current namespace');
     assert
       .dom(`${NAMESPACE_PICKER_SELECTORS.link()} svg${GENERAL.icon('check')}`)
       .exists('The root namespace is selected');
+
+    // Verify that the foo namespace does not exist in the namespace picker
+    assert
+      .dom(NAMESPACE_PICKER_SELECTORS.link(namespace))
+      .exists({ count: 0 }, 'foo should not exist in the namespace picker');
+
+    // Logout and log back into root
+    await logout();
+    await login();
+
+    // Open the namespace picker & verify that the foo namespace does exist
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    assert
+      .dom(NAMESPACE_PICKER_SELECTORS.link(namespace))
+      .exists({ count: 1 }, 'foo should exist in the namespace picker');
+
+    // Cleanup: Delete namespace(s) via the CLI
+    await deleteNSFromPaths([namespace]);
   });
 
   // This test originated from this PR: https://github.com/hashicorp/vault/pull/7186
