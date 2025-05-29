@@ -273,7 +273,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     );
   });
 
-  test('it should allow the user to delete a namespace meep', async function (assert) {
+  test('it should allow the user to delete a namespace', async function (assert) {
     // Setup: Create namespace(s) via the CLI
     const namespace = 'test-delete-me';
     await createNSFromPaths([namespace]);
