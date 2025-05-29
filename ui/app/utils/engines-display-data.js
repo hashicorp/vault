@@ -135,6 +135,10 @@ export const ALL_ENGINES = [
     category: 'infra',
   },
   {
+    type: 'saml',
+    displayName: 'SAML',
+  },
+  {
     displayName: 'SSH',
     type: 'ssh',
     glyph: 'terminal-screen',
@@ -158,6 +162,10 @@ export const ALL_ENGINES = [
     type: 'transit',
     glyph: 'swap-horizontal',
     category: 'generic',
+  },
+  {
+    type: 'token',
+    displayName: 'Token',
   },
   {
     displayName: 'Username & Password',
