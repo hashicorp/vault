@@ -650,6 +650,8 @@ module('Integration | Component | form field', function (hooks) {
       .exists('renders as Hds::Form::Select');
     assert
       .dom('select')
+      .hasAttribute('id', 'myfield', 'select has correct `id` attribute')
+      .hasAttribute('name', 'myfield', 'select has correct `name` attribute')
       .hasAttribute('data-test-input', 'myfield', 'select has correct `data-test-input` attribute');
     assert.dom(GENERAL.fieldLabel()).hasText('Myfield', 'renders the select label');
     assert.dom(GENERAL.inputByAttr('myfield')).hasValue('foo', 'has first option value');
