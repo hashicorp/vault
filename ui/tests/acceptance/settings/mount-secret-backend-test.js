@@ -375,7 +375,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       await visit(`/vault/secrets/${path}/configuration`);
       await click(SES.configurationToggle);
       assert
-        .dom(GENERAL.infoRowValue('Identity Token Key'))
+        .dom(GENERAL.infoRowValue('Identity token key'))
         .hasText(newKey, `shows identity token key on configuration page for engine: ${engine}`);
 
       // cleanup
@@ -411,7 +411,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
       await click(SES.configurationToggle);
       assert
-        .dom(GENERAL.infoRowValue('Identity Token Key'))
+        .dom(GENERAL.infoRowValue('Identity token key'))
         .hasText('general-key', `shows identity token key on configuration page for engine: ${engine}`);
 
       // cleanup
