@@ -56,7 +56,7 @@ module('Integration | Component | secrets-engine-mount-config', function (hooks)
     await click(selectors.toggle);
 
     assert
-      .dom(GENERAL.infoRowValue('Secret Engine Type'))
+      .dom(GENERAL.infoRowValue('Secret engine type'))
       .hasText(this.model.engineType, 'Secret engine type renders');
     assert.dom(GENERAL.infoRowValue('Path')).hasText(this.model.path, 'Path renders');
     assert.dom(GENERAL.infoRowValue('Accessor')).hasText(this.model.accessor, 'Accessor renders');
