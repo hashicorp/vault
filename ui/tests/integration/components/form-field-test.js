@@ -395,6 +395,23 @@ module('Integration | Component | form field', function (hooks) {
     assert.ok(spy.calledWith('myfield', 'foo'), 'onChange called with correct args');
   });
 
+  test('it renders: editType=radio / possibleValues - disabled inputs', async function (assert) {
+    const possibleValues = ['foo', 'bar', 'baz'];
+    await setup.call(
+      this,
+      createAttr('myfield', '-', {
+        editType: 'radio',
+        editDisabled: true,
+        possibleValues: ['foo', 'bar', 'baz'],
+        defaultValue: 'baz',
+      })
+    );
+    const inputs = findAll(`${GENERAL.inputGroupByAttr('myfield')} input[type="radio"]`);
+    possibleValues.forEach((possibleValue, index) => {
+      assert.dom(inputs[index]).hasAttribute('disabled', '', 'input[type="radio"] has `disabled` attribute');
+    });
+  });
+
   test('it renders: editType=radio / possibleValues - with `true/false` boolean values', async function (assert) {
     const [model, spy] = await setup.call(
       this,
