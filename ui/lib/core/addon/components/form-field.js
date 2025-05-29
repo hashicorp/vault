@@ -80,10 +80,7 @@ export default class FormFieldComponent extends Component {
       'Form is attempting to modify an ID. Ember-data does not allow this.',
       valuePath.toLowerCase() !== 'id'
     );
-    assert(
-      '@name and @model (resource being updated) are required',
-      presence(this.args.name) && presence(this.args.model)
-    );
+    assert('@name and @model (resource being updated) are required', presence(attr.name) && presence(model));
     const modelValue = model[valuePath];
     this.showToggleTextInput = !!modelValue;
     this.toggleInputEnabled = !!modelValue;
