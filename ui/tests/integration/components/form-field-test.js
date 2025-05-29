@@ -144,10 +144,10 @@ module('Integration | Component | form field', function (hooks) {
       );
     assert.dom('.hds-form-helper-text a').exists('renders doc link');
     await click('[data-test-text-toggle]');
-    // assert again after toggling because subtext is rendered differently for each input
+    // assert again after toggling because `subText` is rendered differently for each input
     assert
       .dom('.hds-form-helper-text')
-      .hasText(`Enter the value as text. ${subText} See our documentation for help.`, 'renders subtext');
+      .hasText(`Enter the value as text. ${subText} See our documentation for help.`, 'renders `subText`');
     assert.dom('.hds-form-helper-text a').exists('renders doc link');
     await fillIn('[data-test-text-file-textarea]', 'hello world');
   });
@@ -379,7 +379,7 @@ module('Integration | Component | form field', function (hooks) {
     assert.ok(spy.calledWith('myfield', false), 'onChange called with correct args');
   });
 
-  test('it renders: editType=radio / possibleValues - with passed custom id, label, subtext, help text for options and doc link, help text, subtext for field', async function (assert) {
+  test('it renders: editType=radio / possibleValues - with passed custom id, label, subText, helpText for options and docLink, helpText, subText for field', async function (assert) {
     await setup.call(
       this,
       createAttr('myfield', '-', {
@@ -408,37 +408,35 @@ module('Integration | Component | form field', function (hooks) {
       .exists('renders `docLink` option as as link inside the subtext');
     assert
       .dom(GENERAL.helpTextByAttr('Some help text'))
-      .hasText('Some help text', 'renders the right help text string from options');
+      .hasText('Some help text', 'renders the right `helpText` string from options');
 
-    // first item should have custom ID, label `foo`, and no subText/helpText
+    // first item should have custom ID, label `foo`, and no `subText/helpText`
     assert
       .dom(GENERAL.radioByAttr('custom-id-1'))
       .hasAttribute('id', 'custom-id-1', 'renders the radio input with a custom `id` attribute');
     assert.dom(GENERAL.labelByGroupControlIndex(1)).hasText('foo', 'renders default label from `foo` value');
     assert
       .dom(GENERAL.helpTextByGroupControlIndex(1))
-      .doesNotExist('does not render subtext/help text for `foo`');
-    // second item should have custom label and subText but no helpText
+      .doesNotExist('does not render `subText/helpText` for `foo`');
+    // second item should have custom label and subText but no `helpText`
     assert
       .dom(GENERAL.labelByGroupControlIndex(2))
       .hasText('Custom label 2', 'renders the custom label for `bar` from options');
     assert
       .dom(GENERAL.helpTextByGroupControlIndex(2))
-      .hasText('Some subtext 2', 'renders the right subtext string for `bar` from options');
-    // third item should have custom label and no subText/helpText (helpText is visible only if no subText is defined for any of the items)
+      .hasText('Some subtext 2', 'renders the right `subText` string for `bar` from options');
+    // third item should have custom label and no `subText/helpText` (`helpText` is visible only if no subText is defined for any of the items)
     assert
       .dom(GENERAL.labelByGroupControlIndex(3))
       .hasText('Custom label 3', 'renders the custom label for `baz` from options');
-    assert
-      .dom(GENERAL.helpTextByGroupControlIndex(3))
-      .doesNotExist('does not render the help text for `baz`');
-    // fourth item should have custom label and subText but no helpText (helpText is visible only if no subText is defined for any of the items)
+    assert.dom(GENERAL.helpTextByGroupControlIndex(3)).doesNotExist('does not render `helpText` for `baz`');
+    // fourth item should have custom label and subText but no `helpText` (`helpText` is visible only if no subText is defined for any of the items)
     assert
       .dom(GENERAL.labelByGroupControlIndex(4))
       .hasText('Custom label 4', 'renders the custom label for `qux` from options');
     assert
       .dom(GENERAL.helpTextByGroupControlIndex(4))
-      .exists({ count: 1 }, 'renders only the subtext for `qux` and not the help text')
+      .exists({ count: 1 }, 'renders only `subText` for `qux` and not `helpText`')
       .hasText('Some subtext 4', 'renders the right subtext string for `qux` from options');
   });
 
@@ -525,7 +523,7 @@ module('Integration | Component | form field', function (hooks) {
     assert.ok(spy.calledWith('myfield', ['baz', 'foo', 'bar']), 'onChange called with correct args');
   });
 
-  test('it renders: editType=checkboxList / possibleValues - with passed label, subtext, help text, doclink', async function (assert) {
+  test('it renders: editType=checkboxList / possibleValues - with passed label, subText, helpText, docLink', async function (assert) {
     await setup.call(
       this,
       createAttr('myfield', '-', {
@@ -550,8 +548,8 @@ module('Integration | Component | form field', function (hooks) {
       .exists('renders `docLink` option as as link inside the subtext');
     assert
       .dom(GENERAL.helpTextByAttr('Some help text'))
-      .exists('renders `help text` option as HelperText')
-      .hasText('Some help text', 'renders the right help text string from options');
+      .exists('renders `helpText` option as HelperText')
+      .hasText('Some help text', 'renders the right `helpText` string from options');
   });
 
   test('it renders: editType=checkboxList / possibleValues - with validation errors and warnings', async function (assert) {
@@ -636,7 +634,7 @@ module('Integration | Component | form field', function (hooks) {
     assert.ok(spy.calledWith('myfield', 'foo'), 'onChange called with correct args');
   });
 
-  test('it renders: editType=select / possibleValues - with passed label, subtext, help text, doclink', async function (assert) {
+  test('it renders: editType=select / possibleValues - with passed label, subText, helpText, docLink', async function (assert) {
     await setup.call(
       this,
       createAttr('myfield', 'string', {
@@ -661,8 +659,8 @@ module('Integration | Component | form field', function (hooks) {
       .exists('renders `docLink` option as as link inside the subtext');
     assert
       .dom(GENERAL.helpTextByAttr('Some help text'))
-      .exists('renders `help text` option as HelperText')
-      .hasText('Some help text', 'renders the right help text string from options');
+      .exists('renders `helpText` option as HelperText')
+      .hasText('Some help text', 'renders the right `helpText` string from options');
   });
 
   test('it renders: editType=select / possibleValues - with validation errors and warnings', async function (assert) {
@@ -735,7 +733,7 @@ module('Integration | Component | form field', function (hooks) {
     assert.ok(spy.calledWith('myfield', '987'), 'onChange called with correct args');
   });
 
-  test('it renders: editType=password / type=string - with passed label, placeholder, subtext, help text, doclink', async function (assert) {
+  test('it renders: editType=password / type=string - with passed label, placeholder, subText, helpText, docLink', async function (assert) {
     await setup.call(
       this,
       createAttr('myfield', 'string', {
@@ -763,8 +761,8 @@ module('Integration | Component | form field', function (hooks) {
       .exists('renders `docLink` option as as link inside the subtext');
     assert
       .dom(GENERAL.helpTextByAttr('Some help text'))
-      .exists('renders `help text` option as HelperText')
-      .hasText('Some help text', 'renders the right help text string from options');
+      .exists('renders `helpText` option as HelperText')
+      .hasText('Some help text', 'renders the right `helpText` string from options');
   });
 
   test('it renders: editType=password / type=string - with validation errors and warnings', async function (assert) {
