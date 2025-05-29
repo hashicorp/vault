@@ -147,13 +147,7 @@ export default class FormFieldComponent extends Component {
   // used in the label element next to the form element
   get labelString() {
     const label = this.args.attr.options?.label || '';
-    if (label) {
-      return label;
-    }
-    if (this.args.attr.name) {
-      return capitalize([humanize([dasherize([this.args.attr.name])])]);
-    }
-    return '';
+    return label ? label : capitalize([humanize([dasherize([this.args.attr.name])])]);
   }
 
   // both the path to mutate on the model, and the path to read the value from
