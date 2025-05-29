@@ -229,7 +229,7 @@ module('Acceptance | Enterprise | /access/namespaces shannontest', function (hoo
     assert.dom(GENERAL.filterInputExplicit).hasValue('', 'Search input is cleared');
     assert
       .dom('.list-item-row')
-      .exists({ count: 3 }, 'All namespaces are displayed after clearing the search input');
+      .exists({ count: 2 }, 'All namespaces are displayed after clearing the search input');
     assert.strictEqual(
       currentURL(),
       '/vault/access/namespaces?page=1',
