@@ -323,7 +323,8 @@ module('Integration | Component | form field', function (hooks) {
         .hasText(possibleValue, 'label has correct text');
       assert
         .dom(inputs[index])
-        .hasAttribute('id', possibleValue, 'input[type="radio"] has correct id')
+        .hasAttribute('id', possibleValue, 'input[type="radio"] has correct `id` attribute')
+        .hasAttribute('name', 'myfield', 'input[type="radio"] has correct `name` attribute')
         .hasAttribute(
           'data-test-radio',
           possibleValue,
