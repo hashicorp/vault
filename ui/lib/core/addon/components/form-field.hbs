@@ -194,10 +194,9 @@
       {{else if (or (eq @attr.type "boolean") (eq @attr.options.editType "boolean"))}}
         <Hds::Form::Checkbox::Field
           name={{@attr.name}}
-          id={{@attr.name}}
+          @id={{@attr.name}}
           checked={{get @model @attr.name}}
           disabled={{this.disabled}}
-          @isInvalid={{this.validationError}}
           {{on "change" this.onChangeWithEvent}}
           data-test-input={{@attr.name}}
           as |F|
