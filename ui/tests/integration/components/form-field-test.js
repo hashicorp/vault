@@ -543,7 +543,8 @@ module('Integration | Component | form field', function (hooks) {
         .hasText(possibleValue, 'label has correct text');
       assert
         .dom(inputs[index])
-        .hasAttribute('id', possibleValue, 'input[type="checkbox"] has correct id')
+        .hasAttribute('id', possibleValue, 'input[type="checkbox"] has correct `id` attribute')
+        .hasAttribute('name', 'myfield', 'input[type="checkbox"] has correct `name` attribute')
         .hasAttribute(
           'data-test-checkbox',
           possibleValue,
