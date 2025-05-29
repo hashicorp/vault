@@ -273,7 +273,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     );
   });
 
-  test('it should allow the user to delete a namespace', async function (assert) {
+  test('it should allow the user to delete a namespace meep', async function (assert) {
     // Setup: Create namespace(s) via the CLI
     const namespace = 'test-delete-me';
     await createNSFromPaths([namespace]);
@@ -282,6 +282,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
 
     // Verify that the namespace exists in the namespace picker
     await click(GENERAL.toggleInput('namespace-id'));
+    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
     await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, namespace);
 
     assert
@@ -319,6 +320,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
 
     // Verify that the namespace does not exist in the namespace picker
     await click(GENERAL.toggleInput('namespace-id'));
+    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
     await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, namespace);
     assert
       .dom(NAMESPACE_PICKER_SELECTORS.link())
