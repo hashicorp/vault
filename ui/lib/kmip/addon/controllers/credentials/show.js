@@ -15,10 +15,10 @@ export default class CredentialsShowController extends Controller {
   async revokeCredentials() {
     try {
       await this.model.destroyRecord();
-      this.flashMessages.success('Successfully revoked credentials');
+      this.flashMessages.success('Successfully revoked credentials.');
       this.router.transitionTo('vault.cluster.secrets.backend.kmip.credentials.index', this.scope, this.role);
     } catch (e) {
-      this.flashMessages.danger(`There was an error revoking credentials: ${e.errors.join(' ')}`);
+      this.flashMessages.danger(`There was an error revoking credentials: ${e.errors.join(' ')}.`);
       this.model.rollbackAttributes();
     }
   }
