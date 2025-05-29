@@ -3,15 +3,13 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { helper as buildHelper } from '@ember/component/helper';
-
 /**
  * These are all the secret and auth methods, including enterprise.
  * This is to be used for displaying the method name in the UI.
  * TODO: maybe add param on object that mentions secret or auth or enterprise
  */
 
-const ALL_ENGINES = [
+export const ALL_ENGINES = [
   {
     displayName: 'AliCloud',
     type: 'alicloud',
@@ -83,20 +81,17 @@ const ALL_ENGINES = [
     displayName: 'KV',
     type: 'kv',
     glyph: 'key-values',
-    engineRoute: 'kv.list',
     category: 'generic',
   },
   {
     displayName: 'Kubernetes',
     type: 'kubernetes',
-    engineRoute: 'kubernetes.overview',
     category: 'generic',
     glyph: 'kubernetes-color',
   },
   {
     displayName: 'LDAP',
     type: 'ldap',
-    engineRoute: 'ldap.overview',
     category: 'generic',
     glyph: 'folder-users',
   },
@@ -124,7 +119,6 @@ const ALL_ENGINES = [
     displayName: 'PKI Certificates',
     type: 'pki',
     glyph: 'certificate',
-    engineRoute: 'pki.overview',
     category: 'generic',
   },
   {
@@ -173,9 +167,3 @@ const ALL_ENGINES = [
     glyph: 'users',
   },
 ];
-
-export function methods() {
-  return ALL_ENGINES.slice();
-}
-
-export default buildHelper(methods);
