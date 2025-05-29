@@ -75,7 +75,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
       .dom('.hds-tooltip-container')
       .hasText(
         'This secret engine type is not currently supported by the UI.',
-        'shows tooltip for unsupported engine'
+        'shows tooltip text for unsupported engine'
       );
     // cleanup
     await runCmd(deleteEngineCmd('nomad'));
@@ -83,10 +83,21 @@ module('Acceptance | secret-engine list view', function (hooks) {
 
   test('hovering over the icon of a supported engine shows engine name and version (if applicable)', async function (assert) {
     await visit('/vault/secrets');
+    await page.enableEngine();
+    await click(MOUNT_BACKEND_FORM.mountType('ssh'));
+    await click(GENERAL.saveButton);
+    await click(GENERAL.breadcrumbLink('Secrets'));
+
     await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-type'), 'kv');
 
     await triggerEvent('.hds-tooltip-button', 'mouseenter');
     assert.dom('.hds-tooltip-container').hasText('KV version 2', 'shows tooltip for kv version 2');
+
+    await click('[data-test-selected-list-button="delete"]');
+
+    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-type'), 'ssh');
+    await triggerEvent('.hds-tooltip-button', 'mouseenter');
+    assert.dom('.hds-tooltip-container').hasText('SSH', 'shows tooltip for SSH without version');
   });
 
   test('enterprise: cannot view list without permissions inside namespace', async function (assert) {
