@@ -13,6 +13,7 @@ import { assert } from '@ember/debug';
 import { addToArray } from 'vault/helpers/add-to-array';
 import { removeFromArray } from 'vault/helpers/remove-from-array';
 import { isEmpty } from '@ember/utils';
+import { presence } from 'vault/utils/forms/validators';
 
 /**
  * @module FormField
@@ -78,6 +79,10 @@ export default class FormFieldComponent extends Component {
     assert(
       'Form is attempting to modify an ID. Ember-data does not allow this.',
       valuePath.toLowerCase() !== 'id'
+    );
+    assert(
+      '@name and @model (resource being updated) are required',
+      presence(this.args.name) && presence(this.args.model)
     );
     const modelValue = model[valuePath];
     this.showToggleTextInput = !!modelValue;
