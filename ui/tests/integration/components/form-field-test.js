@@ -325,6 +325,7 @@ module('Integration | Component | form field', function (hooks) {
         .dom(inputs[index])
         .hasAttribute('id', possibleValue, 'input[type="radio"] has correct `id` attribute')
         .hasAttribute('name', 'myfield', 'input[type="radio"] has correct `name` attribute')
+        .hasAttribute('value', possibleValue, 'input[type="radio"] has correct `value` attribute')
         .hasAttribute(
           'data-test-radio',
           possibleValue,
