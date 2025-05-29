@@ -209,10 +209,6 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
 
   // This test originated from this PR: https://github.com/hashicorp/vault/pull/7186
   test('it clears namespaces when you log out', async function (assert) {
-    // Setup: Create namespace(s) via the CLI
-    const namespaces = ['foo'];
-    await createNSFromPaths(namespaces);
-
     const token = await runCmd(`write -field=client_token auth/token/create policies=default`);
     await login(token);
     await click(GENERAL.toggleInput('namespace-id'));
@@ -220,9 +216,6 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     assert
       .dom(`${NAMESPACE_PICKER_SELECTORS.link()} svg${GENERAL.icon('check')}`)
       .exists('The root namespace is selected');
-
-    // Cleanup: Delete namespace(s) via the CLI
-    await deleteNSFromPaths(namespaces);
   });
 
   // This test originated from this PR: https://github.com/hashicorp/vault/pull/7186
@@ -316,7 +309,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     // Verify that the namespace does not exist in the nmanage namespace page
     assert.strictEqual(
       currentURL(),
-      '/vault/access/namespaces?page=1&pageFilter=test-delete-me',
+      `/vault/access/namespaces?page=1&pageFilter=${namespace}`,
       'Should remain on the manage namespaces page after deletion'
     );
 
