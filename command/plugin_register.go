@@ -183,18 +183,21 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 
 	command := c.flagCommand
 
-	if c.flagSHA256 == "" {
-		// TODO: Not really sure how to propagate up the warning from the API layer, so doing it here for now.
-		if command != "" {
-			c.UI.Warn(wrapAtLength("When -sha256 is not provided and registering a plugin artifact, the -command flag is not used and will be ignored."))
-		}
-	} else {
+	// TODO: Alternative to propagating the warning from the API layer
+	// because the "Endpoint replaced the value of these parameters with the values captured from the endpoint's path: [type]"
+	// warning comes with every CLI request.
+	// if c.flagSHA256 == "" {
+	// 	if command != "" {
+	// 		c.UI.Warn(wrapAtLength("When -sha256 is not provided and registering a plugin artifact, the -command flag is not used and will be ignored."))
+	// 	}
+	// } else {
+	if c.flagSHA256 != "" {
 		if command == "" && c.flagOCIImage == "" {
 			command = pluginName
 		}
 	}
 
-	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
+	resp, err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
 		Name:     pluginName,
 		Type:     pluginType,
 		Args:     c.flagArgs,
@@ -204,9 +207,18 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 		OCIImage: c.flagOCIImage,
 		Runtime:  c.flagRuntime,
 		Env:      c.flagEnv,
-	}); err != nil {
+	})
+	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error registering plugin %s: %s", pluginName, err))
 		return 2
+	}
+
+	if resp != nil && len(resp.Warnings) > 0 {
+		c.UI.Warn(wrapAtLength(fmt.Sprintf(
+			"Warnings while registering plugin %s: %s",
+			pluginName,
+			strings.Join(resp.Warnings, ", "),
+		)) + "\n")
 	}
 
 	c.UI.Output(fmt.Sprintf("Success! Registered plugin: %s", pluginName))

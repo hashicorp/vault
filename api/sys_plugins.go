@@ -217,13 +217,17 @@ type RegisterPluginInput struct {
 	Env []string `json:"env,omitempty"`
 }
 
+type RegisterPluginResponse struct {
+	Warnings []string `json:"warnings"`
+}
+
 // RegisterPlugin wraps RegisterPluginWithContext using context.Background.
-func (c *Sys) RegisterPlugin(i *RegisterPluginInput) error {
+func (c *Sys) RegisterPlugin(i *RegisterPluginInput) (*RegisterPluginResponse, error) {
 	return c.RegisterPluginWithContext(context.Background(), i)
 }
 
 // RegisterPluginWithContext registers the plugin with the given information.
-func (c *Sys) RegisterPluginWithContext(ctx context.Context, i *RegisterPluginInput) error {
+func (c *Sys) RegisterPluginWithContext(ctx context.Context, i *RegisterPluginInput) (*RegisterPluginResponse, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
@@ -231,14 +235,17 @@ func (c *Sys) RegisterPluginWithContext(ctx context.Context, i *RegisterPluginIn
 	req := c.c.NewRequest(http.MethodPut, path)
 
 	if err := req.SetJSONBody(i); err != nil {
-		return err
+		return nil, err
 	}
 
 	resp, err := c.c.rawRequestWithContext(ctx, req)
 	if err == nil {
 		defer resp.Body.Close()
 	}
-	return err
+
+	var result RegisterPluginResponse
+	err = resp.DecodeJSON(&result)
+	return &result, err
 }
 
 // DeregisterPluginInput is used as input to the DeregisterPlugin function.
