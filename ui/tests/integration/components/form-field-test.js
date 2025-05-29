@@ -545,6 +545,7 @@ module('Integration | Component | form field', function (hooks) {
         .dom(inputs[index])
         .hasAttribute('id', possibleValue, 'input[type="checkbox"] has correct `id` attribute')
         .hasAttribute('name', 'myfield', 'input[type="checkbox"] has correct `name` attribute')
+        .hasAttribute('value', possibleValue, 'input[type="checkbox"] has correct `value` attribute')
         .hasAttribute(
           'data-test-checkbox',
           possibleValue,
