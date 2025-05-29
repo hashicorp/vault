@@ -764,6 +764,17 @@ module('Integration | Component | form field', function (hooks) {
     assert
       .dom(`input[type="password"]`)
       .exists('renders input with type=password')
+      .hasAttribute('name', 'myfield', 'input[type="password"] has correct `id` attribute')
+      .doesNotHaveAttribute(
+        'placeholder',
+        'input[type="password"] does not have `placeholder` attribute by default'
+      )
+      .hasAttribute(
+        'autocomplete',
+        'new-password',
+        'input[type="password"] has correct `autocomplete` attribute'
+      )
+      .hasAttribute('spellcheck', 'false', 'input[type="password"] has correct `spellcheck` attribute')
       .hasAttribute(
         'data-test-input',
         'myfield',

@@ -141,8 +141,8 @@
             @hasVisibilityToggle={{false}}
             @value={{get @model this.valuePath}}
             @isInvalid={{this.validationError}}
-            {{! Prevents browsers from auto-filling }}
             placeholder={{@attr.options.placeholder}}
+            {{! Prevents browsers from auto-filling }}
             autocomplete="new-password"
             spellcheck="false"
             {{on "input" this.onChangeWithEvent}}
