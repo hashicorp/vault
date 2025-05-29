@@ -497,6 +497,25 @@ module('Integration | Component | form field', function (hooks) {
       .hasText('Some subtext 4', 'renders the right subtext string for `qux` from options');
   });
 
+  // note: this test is not a duplicate of the one above, but is meant to test the condition
+  // where there is a `helpText` provided for one of the controls, but no `subText` for any of them
+  // in which case the template logic for the `HelperText` block of the inputs hits the `else` block
+  test('it renders: editType=radio / possibleValues - with passed helptext and subtext not defined', async function (assert) {
+    await setup.call(
+      this,
+      createAttr('myfield', '-', {
+        editType: 'radio',
+        possibleValues: [{ value: 'foo' }, { value: 'bar', helpText: 'Some helptext 2' }],
+      })
+    );
+    // first item should not have helpText
+    assert.dom(GENERAL.helpTextByGroupControlIndex(1)).doesNotExist('does not render helptext for `foo`');
+    // second item should have helpText
+    assert
+      .dom(GENERAL.helpTextByGroupControlIndex(2))
+      .hasText('Some helptext 2', 'renders the right helptext string for `bar` from options');
+  });
+
   test('it renders: editType=radio / possibleValues - with validation errors and warnings', async function (assert) {
     this.setProperties({
       attr: createAttr('myfield', '-', { editType: 'radio', possibleValues: ['foo', 'bar', 'baz'] }),
