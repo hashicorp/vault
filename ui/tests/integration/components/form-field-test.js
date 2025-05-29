@@ -332,6 +332,42 @@ module('Integration | Component | form field', function (hooks) {
     });
   });
 
+  test('it renders: editType=radio / possibleValues - horizontal layout (no `subText/helpText`)', async function (assert) {
+    await setup.call(
+      this,
+      createAttr('myfield', '-', { editType: 'radio', possibleValues: ['foo', 'bar', 'baz'] })
+    );
+    assert
+      .dom('.field fieldset[class^="hds-form-group"].hds-form-group--layout-horizontal')
+      .exists('renders the Hds::Form::Radio::Group with an horizontal layout');
+  });
+
+  test('it renders: editType=radio / possibleValues - vertical layout (with `subText`)', async function (assert) {
+    await setup.call(
+      this,
+      createAttr('myfield', '-', {
+        editType: 'radio',
+        possibleValues: [{ value: 'foo', subText: 'Some subtext' }, { value: 'bar' }, { value: 'baz' }],
+      })
+    );
+    assert
+      .dom('.field fieldset[class^="hds-form-group"].hds-form-group--layout-vertical')
+      .exists('renders the Hds::Form::Radio::Group with a vertical layout');
+  });
+
+  test('it renders: editType=radio / possibleValues - vertical layout (with `helpText`)', async function (assert) {
+    await setup.call(
+      this,
+      createAttr('myfield', '-', {
+        editType: 'radio',
+        possibleValues: [{ value: 'foo', helpText: 'Some help text' }, { value: 'bar' }, { value: 'baz' }],
+      })
+    );
+    assert
+      .dom('.field fieldset[class^="hds-form-group"].hds-form-group--layout-vertical')
+      .exists('renders the Hds::Form::Radio::Group with a vertical layout');
+  });
+
   test('it renders: editType=radio / possibleValues - with no selected radio', async function (assert) {
     const possibleValues = ['foo', 'bar', 'baz'];
     await setup.call(this, createAttr('myfield', '-', { editType: 'radio', possibleValues }));
