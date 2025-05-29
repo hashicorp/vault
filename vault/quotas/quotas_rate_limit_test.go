@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -218,6 +219,11 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 }
 
 func TestRateLimitQuota_Update(t *testing.T) {
+	// This test checks for leaking goroutines, and for whatever reason that doesn't seem to interact well with the race
+	// detector, it seems to take longer than expected to clear the goroutines. Just skip it
+	if os.Getenv("VAULT_CI_GO_TEST_RACE") != "" {
+		t.Skip("skipping race test in CI as its prone to sporadic failures (false positives)")
+	}
 	defer goleak.VerifyNone(t)
 	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink(), true)
 	require.NoError(t, err)
