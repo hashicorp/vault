@@ -11,7 +11,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { createNSFromPaths, deleteNSFromPaths } from 'vault/tests/helpers/commands';
 import { NAMESPACE_PICKER_SELECTORS } from 'vault/tests/helpers/namespace-picker';
 
-module('Acceptance | Enterprise | /access/namespaces shannontest', function (hooks) {
+module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async () => {
@@ -242,11 +242,15 @@ module('Acceptance | Enterprise | /access/namespaces shannontest', function (hoo
 
   test('it should show options menu for each namespace', async function (assert) {
     // Setup: Create namespace(s) via the CLI
-    const namespace = 'meep';
+    const namespace = 'asdf';
     await createNSFromPaths([namespace]);
 
     // Go to the manage namespaces page
     await visit('/vault/access/namespaces');
+
+    // Hack: Trigger refresh internal namespaces endpoint
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
 
     // Enter search text
     await fillIn(GENERAL.filterInputExplicit, namespace);
