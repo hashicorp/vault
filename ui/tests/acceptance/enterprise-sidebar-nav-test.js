@@ -50,7 +50,7 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
 
     await click(link('Client Count'));
     assert.dom(panel('Client Count')).exists('Client Count nav panel renders');
-    assert.dom(link('Vault Usage Metrics')).hasClass('active', 'Vault Usage Metrics link is active');
+    assert.dom(link('Client Usage')).hasClass('active', 'Client Usage link is active');
     assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'Client counts route renders');
     await click(link('Back to main navigation'));
 

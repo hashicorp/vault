@@ -42,7 +42,7 @@ variable "verify_aws_engine_creds" {
   type = bool
 }
 
-# Verify PKI Certificate
+# Verify AWS Engine
 resource "enos_remote_exec" "aws_verify_new_creds" {
   for_each = var.hosts
 

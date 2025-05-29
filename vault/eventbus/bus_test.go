@@ -18,12 +18,13 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // TestBusBasics tests that basic event sending and subscribing function.
 func TestBusBasics(t *testing.T) {
-	bus, err := NewEventBus("", nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +79,7 @@ func TestBusBasics(t *testing.T) {
 // TestBusIgnoresSendContext tests that the context is ignored when sending to an event,
 // so that we do not give up too quickly.
 func TestBusIgnoresSendContext(t *testing.T) {
-	bus, err := NewEventBus("", nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,7 +120,7 @@ func TestBusIgnoresSendContext(t *testing.T) {
 // TestSubscribeNonRootNamespace verifies that events for non-root namespaces
 // aren't filtered out by the bus.
 func TestSubscribeNonRootNamespace(t *testing.T) {
-	bus, err := NewEventBus("", nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,7 +163,7 @@ func TestSubscribeNonRootNamespace(t *testing.T) {
 
 // TestNamespaceFiltering verifies that events for other namespaces are filtered out by the bus.
 func TestNamespaceFiltering(t *testing.T) {
-	bus, err := NewEventBus("", nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,7 +223,7 @@ func TestNamespaceFiltering(t *testing.T) {
 
 // TestBus2Subscriptions verifies that events of different types are successfully routed to the correct subscribers.
 func TestBus2Subscriptions(t *testing.T) {
-	bus, err := NewEventBus("", nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -293,7 +294,7 @@ func TestBusSubscriptionsCancel(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("cancel=%v", tc.cancel), func(t *testing.T) {
 			subscriptions.Store(0)
-			bus, err := NewEventBus("", nil)
+			bus, err := NewEventBus("", nil, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -396,7 +397,7 @@ func waitFor(t *testing.T, maxWait time.Duration, f func() bool) {
 // TestBusWildcardSubscriptions tests that a single subscription can receive
 // multiple event types using * for glob patterns.
 func TestBusWildcardSubscriptions(t *testing.T) {
-	bus, err := NewEventBus("", nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -471,7 +472,7 @@ func TestBusWildcardSubscriptions(t *testing.T) {
 // TestDataPathIsPrependedWithMount tests that "data_path", if present in the
 // metadata, is prepended with the plugin's mount.
 func TestDataPathIsPrependedWithMount(t *testing.T) {
-	bus, err := NewEventBus("", nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -625,7 +626,7 @@ func TestDataPathIsPrependedWithMount(t *testing.T) {
 
 // TestBexpr tests go-bexpr filters are evaluated on an event.
 func TestBexpr(t *testing.T) {
-	bus, err := NewEventBus("", nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -705,7 +706,7 @@ func TestBexpr(t *testing.T) {
 // TestPipelineCleanedUp ensures pipelines are properly cleaned up after
 // subscriptions are closed.
 func TestPipelineCleanedUp(t *testing.T) {
-	bus, err := NewEventBus("", nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -740,7 +741,7 @@ func TestPipelineCleanedUp(t *testing.T) {
 
 // TestSubscribeGlobal tests that the global filter subscription mechanism works.
 func TestSubscribeGlobal(t *testing.T) {
-	bus, err := NewEventBus("", nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -776,7 +777,7 @@ func TestSubscribeGlobal(t *testing.T) {
 
 // TestSubscribeGlobal_WithApply tests that the global filter subscription mechanism works when using ApplyGlobalFilterChanges.
 func TestSubscribeGlobal_WithApply(t *testing.T) {
-	bus, err := NewEventBus("", nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -821,7 +822,7 @@ func TestSubscribeGlobal_WithApply(t *testing.T) {
 // TestSubscribeClusterNode tests that the cluster node filter subscription
 // mechanism works.
 func TestSubscribeClusterNode(t *testing.T) {
-	bus, err := NewEventBus("", nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -858,7 +859,7 @@ func TestSubscribeClusterNode(t *testing.T) {
 // TestSubscribeClusterNode_WithApply tests that the cluster node filter
 // subscription mechanism works when using ApplyClusterNodeFilterChanges.
 func TestSubscribeClusterNode_WithApply(t *testing.T) {
-	bus, err := NewEventBus("", nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -900,7 +901,7 @@ func TestSubscribeClusterNode_WithApply(t *testing.T) {
 
 // TestClearGlobalFilter tests that clearing the global filter means no messages get through.
 func TestClearGlobalFilter(t *testing.T) {
-	bus, err := NewEventBus("", nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -942,7 +943,7 @@ func TestClearGlobalFilter(t *testing.T) {
 // TestClearClusterNodeFilter tests that clearing a cluster node filter means no
 // messages get through.
 func TestClearClusterNodeFilter(t *testing.T) {
-	bus, err := NewEventBus("", nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -983,7 +984,7 @@ func TestClearClusterNodeFilter(t *testing.T) {
 
 // TestNotifyOnGlobalFilterChanges tests that notifications on global filter changes are sent.
 func TestNotifyOnGlobalFilterChanges(t *testing.T) {
-	bus, err := NewEventBus("", nil)
+	bus, err := NewEventBus("", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1026,7 +1027,7 @@ func TestNotifyOnGlobalFilterChanges(t *testing.T) {
 // TestNotifyOnLocalFilterChanges tests that notifications on local cluster node
 // filter changes are sent.
 func TestNotifyOnLocalFilterChanges(t *testing.T) {
-	bus, err := NewEventBus("somecluster", nil)
+	bus, err := NewEventBus("somecluster", nil, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1063,5 +1064,123 @@ func TestNotifyOnLocalFilterChanges(t *testing.T) {
 		}
 	case <-time.After(100 * time.Millisecond):
 		t.Fatal("We expected to get a global filter notification")
+	}
+}
+
+type fakeWALGetter struct {
+	Header string
+}
+
+func (f *fakeWALGetter) GetCurrentWALHeader() string {
+	return f.Header
+}
+
+var _ StorageWALGetter = (*fakeWALGetter)(nil)
+
+// Test_getIndexForEvent tests the retrieval of the Vault storage index for an
+// event based on its metadata.
+func Test_getIndexForEvent(t *testing.T) {
+	tests := map[string]struct {
+		event       *logical.EventReceived
+		walGetter   StorageWALGetter
+		expectErr   string
+		expectIndex string
+	}{
+		"event with modified true": {
+			event: &logical.EventReceived{
+				Event: &logical.EventData{
+					Metadata: &structpb.Struct{
+						Fields: map[string]*structpb.Value{
+							"modified": {Kind: &structpb.Value_StringValue{StringValue: "true"}},
+						},
+					},
+				},
+			},
+			walGetter:   &fakeWALGetter{"test-wal"},
+			expectErr:   "",
+			expectIndex: "test-wal",
+		},
+		"event with modified false": {
+			event: &logical.EventReceived{
+				Event: &logical.EventData{
+					Metadata: &structpb.Struct{
+						Fields: map[string]*structpb.Value{
+							"modified": {Kind: &structpb.Value_StringValue{StringValue: "false"}},
+						},
+					},
+				},
+			},
+			walGetter:   &fakeWALGetter{"test-wal"},
+			expectErr:   "",
+			expectIndex: "",
+		},
+		"event with modified not set": {
+			event: &logical.EventReceived{
+				Event: &logical.EventData{
+					Metadata: &structpb.Struct{
+						Fields: map[string]*structpb.Value{
+							"path": {Kind: &structpb.Value_StringValue{StringValue: "abc/"}},
+						},
+					},
+				},
+			},
+			walGetter:   &fakeWALGetter{"test-wal"},
+			expectErr:   "",
+			expectIndex: "",
+		},
+		"event with modified invalid": {
+			event: &logical.EventReceived{
+				Event: &logical.EventData{
+					Metadata: &structpb.Struct{
+						Fields: map[string]*structpb.Value{
+							"modified": {Kind: &structpb.Value_StringValue{StringValue: "invalid"}},
+						},
+					},
+				},
+			},
+			walGetter:   &fakeWALGetter{"test-wal"},
+			expectErr:   "failed to parse event metadata modified",
+			expectIndex: "",
+		},
+		"event without metadata": {
+			event: &logical.EventReceived{
+				Event: &logical.EventData{
+					Metadata: nil,
+				},
+			},
+			expectErr:   "",
+			expectIndex: "",
+		},
+		"nil walGetter": {
+			event: &logical.EventReceived{
+				Event: &logical.EventData{
+					Metadata: &structpb.Struct{
+						Fields: map[string]*structpb.Value{
+							"modified": {Kind: &structpb.Value_StringValue{StringValue: "true"}},
+						},
+					},
+				},
+			},
+			walGetter:   nil,
+			expectErr:   "",
+			expectIndex: "",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			bus, err := NewEventBus("", nil, tc.walGetter)
+			require.NoError(t, err)
+			bus.Start()
+
+			index, err := bus.getIndexForEvent(tc.event)
+			if tc.expectErr != "" {
+				assert.ErrorContains(t, err, tc.expectErr)
+				assert.Equal(t, tc.expectIndex, index)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectIndex, index)
+			}
+		})
 	}
 }

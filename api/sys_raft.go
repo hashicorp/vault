@@ -13,6 +13,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -442,4 +443,76 @@ func (c *Sys) PutRaftAutopilotConfigurationWithContext(ctx context.Context, opts
 	defer resp.Body.Close()
 
 	return nil
+}
+
+// RaftLoadLocalSnapshot wraps RaftLoadLocalSnapshotWithContext using context.Background.
+func (c *Sys) RaftLoadLocalSnapshot(snapReader io.Reader) (*Secret, error) {
+	return c.RaftLoadLocalSnapshotWithContext(context.Background(), snapReader)
+}
+
+// RaftLoadLocalSnapshotWithContext loads a snapshot into the raft cluster.
+// It accepts a reader that reads the snapshot file data.
+func (c *Sys) RaftLoadLocalSnapshotWithContext(ctx context.Context, snapReader io.Reader) (*Secret, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	r := c.c.NewRequest(http.MethodPost, "/v1/sys/storage/raft/snapshot-load")
+	r.Body = snapReader
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ParseSecret(resp.Body)
+}
+
+// RaftLoadCloudSnapshot wraps RaftLoadCloudSnapshotWithContext using context.Background.
+func (c *Sys) RaftLoadCloudSnapshot(name string, url *url.URL) (*Secret, error) {
+	return c.RaftLoadCloudSnapshotWithContext(context.Background(), name, url)
+}
+
+// RaftLoadCloudSnapshotWithContext loads a snapshot from cloud storage into the raft cluster.
+// It accepts a name for the cloud auto snapshot configuration and a URL to the snapshot location in cloud storage.
+func (c *Sys) RaftLoadCloudSnapshotWithContext(ctx context.Context, name string, url *url.URL) (*Secret, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	r := c.c.NewRequest(http.MethodPost, "/v1/sys/storage/raft/snapshot-auto/snapshot-load/"+name)
+	if err := r.SetJSONBody(map[string]interface{}{
+		"url": url.String(),
+	}); err != nil {
+		return nil, err
+	}
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ParseSecret(resp.Body)
+}
+
+// RaftUnloadSnapshot wraps RaftUnloadSnapshotWithContext using context.Background.
+func (c *Sys) RaftUnloadSnapshot(snapID string) (*Secret, error) {
+	return c.RaftUnloadSnapshotWithContext(context.Background(), snapID)
+}
+
+// RaftUnloadSnapshotWithContext unloads a snapshot from the raft cluster.
+// It accepts a snapshot ID to identify the snapshot to be unloaded.
+func (c *Sys) RaftUnloadSnapshotWithContext(ctx context.Context, snapID string) (*Secret, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	r := c.c.NewRequest(http.MethodDelete, "/v1/sys/storage/raft/snapshot-load/"+snapID)
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ParseSecret(resp.Body)
 }

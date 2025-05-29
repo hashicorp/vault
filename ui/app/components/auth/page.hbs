@@ -50,15 +50,23 @@
         />
       {{else}}
         <Auth::FormTemplate
-          @canceledMfaAuth={{this.canceledMfaAuth}}
+          @alternateView={{this.formViews.alternateView}}
           @cluster={{@cluster}}
-          @directLinkData={{@directLinkData}}
-          @handleNamespaceUpdate={{@onNamespaceUpdate}}
-          @namespaceQueryParam={{@namespaceQueryParam}}
-          @oidcProviderQueryParam={{@oidcProviderQueryParam}}
+          @defaultView={{this.formViews.defaultView}}
+          @initialFormState={{this.initialFormState}}
           @onSuccess={{this.onAuthResponse}}
-          @visibleMountsByType={{this.visibleMountsByType}}
-        />
+          @visibleMountTypes={{this.visibleMountTypes}}
+        >
+          {{! yielded for accessibility so namespace submits as an input of the <form> element }}
+          {{#if (has-feature "Namespaces")}}
+            <Auth::NamespaceInput
+              @disabled={{if @oidcProviderQueryParam true false}}
+              @handleNamespaceUpdate={{@onNamespaceUpdate}}
+              @namespaceQueryParam={{@namespaceQueryParam}}
+              @shouldRefocusNamespaceInput={{@shouldRefocusNamespaceInput}}
+            />
+          {{/if}}
+        </Auth::FormTemplate>
       {{/if}}
     </:content>
 

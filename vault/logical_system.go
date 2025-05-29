@@ -541,9 +541,10 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 	sha256 := d.Get("sha256").(string)
 	if sha256 == "" {
 		sha256 = d.Get("sha_256").(string)
-		if resp := validateSHA256(sha256); resp.IsError() {
-			return resp, nil
-		}
+	}
+
+	if sha256 == "" && pluginVersion == "" {
+		return logical.ErrorResponse("must provide at least one of sha256 or version: use sha256 for binary registration (version optional) or version only for artifact registration"), nil
 	}
 
 	if resp := validateSha256IsEmptyForEntPluginVersion(pluginVersion, sha256); resp.IsError() {
@@ -3651,9 +3652,12 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 			policy.Raw = string(polBytes)
 		}
 
+		var duplicate bool
 		switch policyType {
 		case PolicyTypeACL:
-			p, err := ParseACLPolicy(ns, policy.Raw)
+			var p *Policy
+			// TODO (HCL_DUP_KEYS_DEPRECATION): go back to ParseACLPolicy once the deprecation is done
+			p, duplicate, err = ParseACLPolicyCheckDuplicates(ns, policy.Raw)
 			if err != nil {
 				return handleError(err)
 			}
@@ -3677,6 +3681,14 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 			return handleError(err)
 		}
 
+		if duplicate {
+			if resp == nil {
+				resp = &logical.Response{}
+			}
+			// TODO (HCL_DUP_KEYS_DEPRECATION): remove log and API Warning once the deprecation is done
+			b.logger.Warn("newly created HCL policy contains duplicate attributes, which will no longer be supported in a future version", "policy", policy.Name, "namespace", ns.Path)
+			resp.AddWarning("policy contains duplicate attributes, which will no longer be supported in a future version")
+		}
 		return resp, nil
 	}
 }
