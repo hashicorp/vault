@@ -370,6 +370,21 @@ Unblocks customers that were stuck in a failing loop when attempting to rotate s
 * ui: No longer running decodeURIComponent on KVv2 list view allowing percent encoded data-octets in path name. [[GH-28698](https://github.com/hashicorp/vault/pull/28698)]
 * vault/diagnose: Fix time to expiration reporting within the TLS verification to not be a month off. [[GH-29128](https://github.com/hashicorp/vault/pull/29128)]
 
+## 1.18.10
+### May 30, 2025
+
+CHANGES:
+
+* database/snowflake: Update plugin to v0.13.1 [[GH-30775](https://github.com/hashicorp/vault/pull/30775)]
+
+IMPROVEMENTS:
+
+* plugins: Support registration of CE plugins with extracted artifact directory. [[GH-30673](https://github.com/hashicorp/vault/pull/30673)]
+
+BUG FIXES:
+
+* ui: Fix broken link to Hashicorp Vault developer site in the Web REPL help. [[GH-30670](https://github.com/hashicorp/vault/pull/30670)]
+
 ## 1.18.9 Enterprise
 ### April 30, 2025
 
@@ -819,6 +834,21 @@ use versioned plugins. [[GH-27881](https://github.com/hashicorp/vault/pull/27881
 * ui: fix namespace picker not working when in small screen where the sidebar is collapsed by default. [[GH-27728](https://github.com/hashicorp/vault/pull/27728)]
 * ui: fixes renew-self being called right after login for non-renewable tokens [[GH-28204](https://github.com/hashicorp/vault/pull/28204)]
 * ui: fixes toast (flash) alert message saying "created" when deleting a kv v2 secret [[GH-28093](https://github.com/hashicorp/vault/pull/28093)]
+
+## 1.17.17
+### May 30, 2025
+
+CHANGES:
+
+* database/snowflake: Update plugin to v0.13.1 [[GH-30775](https://github.com/hashicorp/vault/pull/30775)]
+
+IMPROVEMENTS:
+
+* plugins: Support registration of CE plugins with extracted artifact directory. [[GH-30673](https://github.com/hashicorp/vault/pull/30673)]
+
+BUG FIXES:
+
+* ui: Fix broken link to Hashicorp Vault developer site in the Web REPL help. [[GH-30670](https://github.com/hashicorp/vault/pull/30670)]
 
 ## 1.17.16 Enterprise
 ### April 30, 2025
@@ -1414,6 +1444,23 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 * ui: fix issue where a month without new clients breaks the client count dashboard [[GH-27352](https://github.com/hashicorp/vault/pull/27352)]
 * ui: fixed a bug where the replication pages did not update display when navigating between DR and performance [[GH-26325](https://github.com/hashicorp/vault/pull/26325)]
 * ui: fixes undefined start time in filename for downloaded client count attribution csv [[GH-26485](https://github.com/hashicorp/vault/pull/26485)]
+
+## 1.16.21
+### May 30, 2025
+
+**Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+CHANGES:
+
+* database/snowflake: Update plugin to v0.13.1 [[GH-30775](https://github.com/hashicorp/vault/pull/30775)]
+
+IMPROVEMENTS:
+
+* plugins: Support registration of CE plugins with extracted artifact directory. [[GH-30673](https://github.com/hashicorp/vault/pull/30673)]
+
+BUG FIXES:
+
+* ui: Fix broken link to Hashicorp Vault developer site in the Web REPL help. [[GH-30670](https://github.com/hashicorp/vault/pull/30670)]
 
 ## 1.16.20 Enterprise
 ### April 30, 2025
