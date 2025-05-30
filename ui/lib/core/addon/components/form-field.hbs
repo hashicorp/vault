@@ -4,7 +4,7 @@
 }}
 
 {{! template-lint-configure simple-unless "warn" }}
-<div class="field" data-test-field={{or @attr.name true}}>
+<div class="field" data-test-field={{@attr.name}}>
   {{#if this.isHdsFormField}}
     {{! •••••••••••••••••••••••••••••••••••••••••••••••••••••••• }}
     {{!                  HDS COMPONENTS - START                  }}
