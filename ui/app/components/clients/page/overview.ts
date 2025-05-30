@@ -26,7 +26,7 @@ export default class ClientsOverviewPageComponent extends ActivityComponent {
   }
 
   get months() {
-    return this.byMonthNewClients.map((m) => ({
+    return this.byMonthNewClients.reverse().map((m) => ({
       display: parseAPITimestamp(m.timestamp, 'MMMM yyyy'),
       value: m.month,
     }));
