@@ -7,6 +7,7 @@
 ## 1.19.5
 ### May 30, 2025
 
+**Enterprise LTS:** Vault Enterprise 1.19 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
 
 CHANGES:
 
@@ -19,7 +20,6 @@ IMPROVEMENTS:
 BUG FIXES:
 
 * ui: Fix broken link to Hashicorp Vault developer site in the Web REPL help. [[GH-30670](https://github.com/hashicorp/vault/pull/30670)]
-
 
 ## 1.19.4
 ### May 16, 2025
