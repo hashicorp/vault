@@ -43,7 +43,7 @@ export const filterVersionHistory = (
   start: string,
   end: string
 ) => {
-  if (versionHistory) {
+  if (versionHistory && start && end) {
     const upgrades = versionHistory.reduce((array: ClientsVersionHistoryModel[], upgradeData) => {
       const isRelevantHistory = (v: string) => {
         return (
@@ -205,7 +205,11 @@ export const formatByNamespace = (namespaceArray: NamespaceObject[] | null): ByN
     // transform to an empty array for type consistency
     let mounts: MountClients[] | [] = [];
     if (Array.isArray(ns.mounts)) {
-      mounts = ns.mounts.map((m) => ({ label: m.mount_path, ...destructureClientCounts(m.counts) }));
+      mounts = ns.mounts.map((m) => ({
+        label: m.mount_path,
+        mount_type: m.mount_type,
+        ...destructureClientCounts(m.counts),
+      }));
     }
     return {
       label,
@@ -213,6 +217,23 @@ export const formatByNamespace = (namespaceArray: NamespaceObject[] | null): ByN
       mounts,
     };
   });
+};
+
+export const formatTableData = (byMonthNewClients: ByMonthNewClients[], month: string): TableData[] => {
+  const monthData = byMonthNewClients.find((m) => m.month === month);
+  const namespaces = monthData?.namespaces;
+
+  let data: TableData[] = [];
+  // iterate over namespaces to add "namespace" to each mount object
+  namespaces?.forEach((n) => {
+    const mounts: TableData[] = n.mounts.map((m) => {
+      // add namespace to mount block
+      return { ...m, namespace: n.label };
+    });
+    data = [...data, ...mounts];
+  });
+
+  return data;
 };
 
 // This method returns only client types from the passed object, excluding other keys such as "label".
@@ -281,6 +302,7 @@ export interface ByNamespaceClients extends TotalClients {
 
 export interface MountClients extends TotalClients {
   label: string;
+  mount_type: string;
 }
 
 export interface ByMonthClients extends TotalClients {
@@ -322,13 +344,17 @@ export interface MountNewClients extends TotalClientsSometimes {
   label: string;
 }
 
+export interface TableData extends MountClients {
+  namespace: string;
+}
+
 // API RESPONSE SHAPE (prior to serialization)
 
 export interface NamespaceObject {
   namespace_id: string;
   namespace_path: string;
   counts: Counts;
-  mounts: { mount_path: string; counts: Counts }[];
+  mounts: { mount_path: string; counts: Counts; mount_type: string }[];
 }
 
 type ActivityMonthStandard = {

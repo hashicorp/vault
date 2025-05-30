@@ -68,7 +68,7 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   // passed into page-header for the export modal alert
   get upgradesDuringActivity() {
     const { versionHistory, activity } = this.args;
-    return filterVersionHistory(versionHistory, activity.startTime, activity.endTime);
+    return filterVersionHistory(versionHistory, activity?.startTime, activity?.endTime);
   }
 
   get upgradeExplanations() {
@@ -128,7 +128,7 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   }
 
   // duplicate of the method found in the activity component, so that we render the child only when there is activity to view
-  get totalUsageCounts(): TotalClients {
+  get totalUsageCounts(): TotalClients | undefined {
     const { namespace, mountPath, activity } = this.args;
     if (mountPath) {
       // only do this if we have a mountPath filter.

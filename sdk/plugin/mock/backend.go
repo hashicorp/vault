@@ -67,6 +67,10 @@ func Backend() *backend {
 			Unauthenticated: []string{
 				"special",
 			},
+			AllowSnapshotRead: []string{
+				"kv/*",
+				"kv",
+			},
 		},
 		Secrets:          []*framework.Secret{},
 		Invalidate:       b.invalidate,

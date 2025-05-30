@@ -217,6 +217,7 @@ module('Integration | Util | client count utils', function (hooks) {
               clients: 30,
             },
             mount_path: 'no mount accessor (pre-1.10 upgrade?)',
+            mount_type: '',
           },
         ],
       },
@@ -233,6 +234,7 @@ module('Integration | Util | client count utils', function (hooks) {
             clients: 30,
             entity_clients: 10,
             label: 'no mount accessor (pre-1.10 upgrade?)',
+            mount_type: '',
             non_entity_clients: 20,
             secret_syncs: 0,
           },
@@ -264,6 +266,7 @@ module('Integration | Util | client count utils', function (hooks) {
               clients: 2,
               entity_clients: 2,
               label: 'no mount accessor (pre-1.10 upgrade?)',
+              mount_type: 'no mount path (pre-1.10 upgrade?)',
               non_entity_clients: 0,
               secret_syncs: 0,
             },
@@ -271,7 +274,8 @@ module('Integration | Util | client count utils', function (hooks) {
               acme_clients: 0,
               clients: 1,
               entity_clients: 1,
-              label: 'auth/u/',
+              label: 'auth/userpass-0',
+              mount_type: 'userpass',
               non_entity_clients: 0,
               secret_syncs: 0,
             },
@@ -301,6 +305,7 @@ module('Integration | Util | client count utils', function (hooks) {
                 clients: 2,
                 entity_clients: 2,
                 label: 'no mount accessor (pre-1.10 upgrade?)',
+                mount_type: 'no mount path (pre-1.10 upgrade?)',
                 non_entity_clients: 0,
                 secret_syncs: 0,
               },
@@ -308,7 +313,8 @@ module('Integration | Util | client count utils', function (hooks) {
                 acme_clients: 0,
                 clients: 1,
                 entity_clients: 1,
-                label: 'auth/u/',
+                label: 'auth/userpass-0',
+                mount_type: 'userpass',
                 non_entity_clients: 0,
                 secret_syncs: 0,
               },
@@ -486,6 +492,7 @@ module('Integration | Util | client count utils', function (hooks) {
   module('filteredTotalForMount', function (hooks) {
     hooks.beforeEach(function () {
       this.byNamespace = SERIALIZED_ACTIVITY_RESPONSE.by_namespace;
+      this.byMonth = SERIALIZED_ACTIVITY_RESPONSE.by_month;
     });
 
     const emptyCounts = {
@@ -501,7 +508,7 @@ module('Integration | Util | client count utils', function (hooks) {
         when: 'no namespace filter passed',
         result: 'it returns empty counts',
         ns: '',
-        mount: 'auth/authid/0',
+        mount: 'auth/userpass-0',
         expected: emptyCounts,
       },
       {
@@ -515,16 +522,17 @@ module('Integration | Util | client count utils', function (hooks) {
         when: 'no matching ns/mount exists',
         result: 'it returns empty counts',
         ns: 'ns1',
-        mount: 'auth/authid/1',
+        mount: 'auth/userpass-1',
         expected: emptyCounts,
       },
       {
         when: 'mount and label have extra slashes',
         result: 'it returns the data sanitized',
         ns: 'ns1/',
-        mount: 'auth/authid/0/',
+        mount: 'auth/userpass-0',
         expected: {
-          label: 'auth/authid/0',
+          label: 'auth/userpass-0',
+          mount_type: 'userpass',
           acme_clients: 0,
           clients: 8394,
           entity_clients: 4256,
@@ -539,6 +547,7 @@ module('Integration | Util | client count utils', function (hooks) {
         mount: 'kvv2-engine-0',
         expected: {
           label: 'kvv2-engine-0',
+          mount_type: 'kv',
           acme_clients: 0,
           clients: 4290,
           entity_clients: 0,

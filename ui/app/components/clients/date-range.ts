@@ -18,6 +18,7 @@ interface OnChangeParams {
   start_time: number | undefined;
   end_time: number | undefined;
 }
+
 interface Args {
   onChange: (callback: OnChangeParams) => void;
   setEditModalVisible: (visible: boolean) => void;

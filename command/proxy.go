@@ -1122,11 +1122,16 @@ func (c *ProxyCommand) loadConfig(paths []string) (*proxyConfig.Config, error) {
 	cfg := proxyConfig.NewConfig()
 
 	for _, configPath := range paths {
-		configFromPath, err := proxyConfig.LoadConfig(configPath)
+		// TODO (HCL_DUP_KEYS_DEPRECATION): go back to proxyConfig.LoadConfig and remove duplicate when deprecation is done
+		configFromPath, duplicate, err := proxyConfig.LoadConfigCheckDuplicate(configPath)
 		if err != nil {
 			errors = multierror.Append(errors, fmt.Errorf("error loading configuration from %s: %w", configPath, err))
 		} else {
 			cfg = cfg.Merge(configFromPath)
+		}
+		if duplicate {
+			c.UI.Warn(fmt.Sprintf(
+				"WARNING: Duplicate keys found in the Vault proxy configuration file %q, duplicate keys in HCL files are deprecated and will be forbidden in a future release.", configPath))
 		}
 	}
 

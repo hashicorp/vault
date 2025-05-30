@@ -10,58 +10,106 @@
     {{!                  HDS COMPONENTS - START                  }}
     {{! •••••••••••••••••••••••••••••••••••••••••••••••••••••••• }}
     {{#if @attr.options.possibleValues}}
-      {{#if (eq @attr.options.editType "checkboxList")}}
-        <Hds::Form::Checkbox::Group @name={{@attr.name}} data-test-input={{@attr.name}} as |G|>
+      {{#if (eq @attr.options.editType "radio")}}
+        <Hds::Form::Radio::Group
+          @name={{@attr.name}}
+          @layout={{if (or this.hasRadioSubText this.hasRadioHelpText) "vertical" "horizontal"}}
+          data-test-input-group={{@attr.name}}
+          as |G|
+        >
+          <G.Legend data-test-form-field-label={{@attr.name}}>{{this.labelString}}</G.Legend>
+          {{#if this.helpTextString}}
+            <G.HelperText data-test-help-text={{@attr.options.helpText}}>{{this.helpTextString}}</G.HelperText>
+          {{/if}}
+          {{#if @attr.options.subText}}
+            <G.HelperText data-test-help-text={{@attr.options.subText}}>
+              {{@attr.options.subText}}
+              {{#if @attr.options.docLink}}
+                <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>
+                  See our documentation
+                </DocLink>
+                for help.
+              {{/if}}
+            </G.HelperText>
+          {{/if}}
+          {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
+            <G.RadioField
+              @id={{or val.id (this.radioValue val)}}
+              @value={{this.radioValue val}}
+              checked={{if (eq (this.radioValue val) (get @model this.valuePath)) "checked"}}
+              disabled={{and @attr.options.editDisabled (not @model.isNew)}}
+              {{on "change" (fn this.setAndBroadcastRadio val)}}
+              data-test-radio={{or val.id (this.radioValue val)}}
+              as |F|
+            >
+              <F.Label data-test-input-group-item-label={{or val.label val.value val}}>
+                {{or val.label val.value val}}
+              </F.Label>
+              {{! Note: if we have both `subText` and `helpText`, we display only the `subText` because in these situations, the helpText is likely there to clarify or improve upon the OpenAPI-generated text }}
+              {{#if this.hasRadioSubText}}
+                <F.HelperText data-test-help-text={{val.subText}}>{{val.subText}}</F.HelperText>
+              {{else if this.hasRadioHelpText}}
+                <F.HelperText data-test-help-text={{val.helpText}}>{{val.helpText}}</F.HelperText>
+              {{/if}}
+            </G.RadioField>
+          {{/each}}
+          {{#if this.validationError}}
+            <G.Error data-test-validation-error={{this.valuePath}}>{{this.validationError}}</G.Error>
+          {{/if}}
+        </Hds::Form::Radio::Group>
+      {{else if (eq @attr.options.editType "checkboxList")}}
+        <Hds::Form::Checkbox::Group @name={{@attr.name}} data-test-input-group={{@attr.name}} as |G|>
           {{#if this.labelString}}
             <G.Legend data-test-form-field-label>{{this.labelString}}</G.Legend>
           {{/if}}
           {{#if this.helpTextString}}
-            <G.HelperText data-test-help-text>{{this.helpTextString}}</G.HelperText>
+            <G.HelperText data-test-help-text={{@attr.options.helpText}}>{{this.helpTextString}}</G.HelperText>
           {{/if}}
           {{#if @attr.options.subText}}
-            <G.HelperText data-test-label-subtext>
+            <G.HelperText data-test-help-text={{@attr.options.subText}}>
               {{@attr.options.subText}}
               {{#if @attr.options.docLink}}
-                <DocLink @path={{@attr.options.docLink}}>See our documentation</DocLink>
+                <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>See our documentation</DocLink>
                 for help.
               {{/if}}
             </G.HelperText>
           {{/if}}
           {{#each @attr.options.possibleValues as |option|}}
             <G.CheckboxField
-              checked={{includes option (get @model this.valuePath)}}
-              @value={{option}}
               @id={{option}}
-              {{on "change" this.handleChecklist}}
+              @value={{option}}
+              checked={{includes option (get @model this.valuePath)}}
+              {{on "change" this.setAndBroadcastChecklist}}
+              data-test-checkbox={{option}}
               as |F|
             >
-              <F.Label>{{option}}</F.Label>
+              <F.Label data-test-input-group-item-label={{option}}>{{option}}</F.Label>
             </G.CheckboxField>
           {{/each}}
           {{#if this.validationError}}
-            <G.Error data-test-field-validation={{this.valuePath}}>{{this.validationError}}</G.Error>
+            <G.Error data-test-validation-error={{this.valuePath}}>{{this.validationError}}</G.Error>
           {{/if}}
         </Hds::Form::Checkbox::Group>
       {{else}}
         <Hds::Form::Select::Field
           name={{@attr.name}}
           @id={{@attr.name}}
+          @isInvalid={{this.validationError}}
           {{on "change" this.onChangeWithEvent}}
           data-test-input={{@attr.name}}
-          @isInvalid={{this.validationError}}
           as |F|
         >
           {{#if this.labelString}}
             <F.Label data-test-form-field-label>{{this.labelString}}</F.Label>
           {{/if}}
           {{#if this.helpTextString}}
-            <F.HelperText data-test-help-text>{{this.helpTextString}}</F.HelperText>
+            <F.HelperText data-test-help-text={{@attr.options.helpText}}>{{this.helpTextString}}</F.HelperText>
           {{/if}}
           {{#if @attr.options.subText}}
-            <F.HelperText data-test-label-subtext>
+            <F.HelperText data-test-help-text={{@attr.options.subText}}>
               {{@attr.options.subText}}
               {{#if @attr.options.docLink}}
-                <DocLink @path={{@attr.options.docLink}}>See our documentation</DocLink>
+                <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>See our documentation</DocLink>
                 for help.
               {{/if}}
             </F.HelperText>
@@ -79,7 +127,7 @@
             {{/each}}
           </F.Options>
           {{#if this.validationError}}
-            <F.Error data-test-field-validation={{this.valuePath}}>{{this.validationError}}</F.Error>
+            <F.Error data-test-validation-error={{this.valuePath}}>{{this.validationError}}</F.Error>
           {{/if}}
         </Hds::Form::Select::Field>
       {{/if}}
@@ -88,11 +136,12 @@
         {{#if (eq @attr.options.editType "password")}}
           <Hds::Form::TextInput::Field
             @type="password"
+            name={{@attr.name}}
             {{! TODO: about this visibility toggle, see: https://hashicorp.atlassian.net/browse/VAULT-34870 }}
             @hasVisibilityToggle={{false}}
             @value={{get @model this.valuePath}}
-            name={{@attr.name}}
             @isInvalid={{this.validationError}}
+            placeholder={{@attr.options.placeholder}}
             {{! Prevents browsers from auto-filling }}
             autocomplete="new-password"
             spellcheck="false"
@@ -105,20 +154,21 @@
                 <F.Label data-test-form-field-label>{{this.labelString}}</F.Label>
               {{/if}}
               {{#if this.helpTextString}}
-                <F.HelperText data-test-help-text>{{this.helpTextString}}</F.HelperText>
+                <F.HelperText data-test-help-text={{@attr.options.helpText}}>{{this.helpTextString}}</F.HelperText>
               {{/if}}
               {{#if @attr.options.subText}}
-                <F.HelperText data-test-label-subtext>
+                <F.HelperText data-test-help-text={{@attr.options.subText}}>
                   {{@attr.options.subText}}
                   {{#if @attr.options.docLink}}
-                    <DocLink @path={{@attr.options.docLink}}>See our documentation</DocLink>
+                    <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>See our
+                      documentation</DocLink>
                     for help.
                   {{/if}}
                 </F.HelperText>
               {{/if}}
             {{/unless}}
             {{#if this.validationError}}
-              <F.Error data-test-field-validation={{this.valuePath}}>{{this.validationError}}</F.Error>
+              <F.Error data-test-validation-error={{this.valuePath}}>{{this.validationError}}</F.Error>
             {{/if}}
           </Hds::Form::TextInput::Field>
         {{/if}}
@@ -140,51 +190,7 @@
         @docLink={{@attr.options.docLink}}
       />
     {{/unless}}
-    {{#if @attr.options.possibleValues}}
-      {{#if (eq @attr.options.editType "radio")}}
-        <div class="control {{unless this.hasRadioSubText 'columns'}}" data-test-radio-input>
-          {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
-            <div
-              class="is-flex-center
-                {{if this.hasRadioSubText 'has-top-padding-xs has-bottom-padding-s' 'column is-narrow has-right-margin-s'}}"
-              data-test-input={{@attr.name}}
-            >
-              <RadioButton
-                class="radio"
-                name={{@attr.name}}
-                id={{or val.id (this.radioValue val)}}
-                value={{this.radioValue val}}
-                @value={{this.radioValue val}}
-                @onChange={{this.setAndBroadcast}}
-                @groupValue={{get @model this.valuePath}}
-                @disabled={{and @attr.options.editDisabled (not @model.isNew)}}
-                data-test-radio={{or val.id (this.radioValue val)}}
-              />
-              <div class="has-left-margin-xs">
-                <label
-                  for={{or val.id (this.radioValue val)}}
-                  value={{this.radioValue val}}
-                  class="has-left-margin-xs is-size-7"
-                  data-test-radio-label={{or val.label val.value val}}
-                >
-                  {{or val.label val.value val}}
-                  {{#if val.helpText}}
-                    <Hds::TooltipButton @text={{val.helpText}} aria-label="More information">
-                      <Hds::Icon @name="info" @isInline={{true}} />
-                    </Hds::TooltipButton>
-                  {{/if}}
-                  {{#if this.hasRadioSubText}}
-                    <p class="has-left-margin-xs has-text-grey is-size-8" data-test-radio-subText={{val.subText}}>
-                      {{val.subText}}
-                    </p>
-                  {{/if}}
-                </label>
-              </div>
-            </div>
-          {{/each}}
-        </div>
-      {{/if}}
-    {{else if (eq @attr.options.editType "dateTimeLocal")}}
+    {{#if (eq @attr.options.editType "dateTimeLocal")}}
       <Input
         @type="datetime-local"
         @value={{date-format (get @model this.valuePath) "yyyy-MM-dd'T'HH:mm"}}
@@ -310,7 +316,7 @@
             <span>
               {{@attr.options.subText}}
               {{#if @attr.options.docLink}}
-                <DocLink @path={{@attr.options.docLink}}>
+                <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>
                   See our documentation
                 </DocLink>
                 for help.
@@ -320,7 +326,7 @@
             <span>
               {{or @attr.options.defaultSubText "Vault will use the engine default."}}
               {{#if @attr.options.docLink}}
-                <DocLink @path={{@attr.options.docLink}}>
+                <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>
                   See our documentation
                 </DocLink>
                 for help.
@@ -404,7 +410,7 @@
             <p class="sub-text">
               {{@attr.options.subText}}
               {{#if @attr.options.docLink}}
-                <DocLink @path={{@attr.options.docLink}}>
+                <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>
                   See our documentation
                 </DocLink>
                 for help.
@@ -451,7 +457,7 @@
           <p class="sub-text">
             {{@attr.options.subText}}
             {{#if @attr.options.docLink}}
-              <DocLink @path={{@attr.options.docLink}}>
+              <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>
                 Learn more here.
               </DocLink>
             {{/if}}
@@ -474,7 +480,7 @@
         @type="danger"
         @message={{this.validationError}}
         @paddingTop={{not-eq @attr.options.editType "ttl"}}
-        data-test-field-validation={{this.valuePath}}
+        data-test-validation-error={{this.valuePath}}
         class={{if (eq @attr.options.editType "stringArray") "has-top-margin-negative-xxl"}}
       />
     {{/if}}
