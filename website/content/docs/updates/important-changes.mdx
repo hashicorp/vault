@@ -68,6 +68,20 @@ it must have a value for `disable_mlock`.
 | Performance Secondary      | Yes                      | value depends on cluster specifics. [See docs](/vault/docs/configuration#disable_mlock)
 | DR Secondary               | Yes                      | value depends on cluster specifics. [See docs](/vault/docs/configuration#disable_mlock)
 
+## Rekey cancellations use a nonce ((#rekey-cancel-nonce))
+| Change       | Affected version | Affected deployments
+| ------------ | ---------------- | --------------------
+| Breaking     | 1.20.0           | Any
+
+Vault 1.20.0 requires a nonce to cancel a [rekey](/vault/api-docs/system/rekey) or
+[rekey recovery key](/vault/api-docs/system/rekey-recovery-key) operation when
+the rekey was initialized within the last 10 minutes. If the rekey operation
+was initialized more than 10 minutes ago, the nonce is not required and the operation
+will be canceled.
+
+### Recommendation
+To cancel a rekey operation, provide the nonce value from the
+`/sys/rekey/init` response.
 
 ## Transit support for Ed25519ph and Ed25519ctx signatures ((#ed25519))
 
