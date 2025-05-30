@@ -6,7 +6,6 @@
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import { CONFIGURABLE_SECRET_ENGINES, allEngines } from 'vault/helpers/mountable-secret-engines';
-import { reject } from 'rsvp';
 
 /**
  * This route is responsible for fetching all configuration model(s).
@@ -15,51 +14,16 @@ import { reject } from 'rsvp';
  */
 
 export default class SecretsBackendConfigurationRoute extends Route {
-  @service store;
+  @service api;
   @service version;
 
   async model() {
-    const secretEngineModel = this.modelFor('vault.cluster.secrets.backend');
-    if (secretEngineModel.isV2KV) {
-      const canRead = await this.store
-        .findRecord('capabilities', `${secretEngineModel.id}/config`)
-        .then((response) => response.canRead);
-      // only set these config params if they can read the config endpoint.
-      if (canRead) {
-        // design wants specific default to show that can't be set in the model
-        secretEngineModel.casRequired = secretEngineModel.casRequired
-          ? secretEngineModel.casRequired
-          : 'False';
-        secretEngineModel.deleteVersionAfter = secretEngineModel.deleteVersionAfter
-          ? secretEngineModel.deleteVersionAfter
-          : 'Never delete';
-      } else {
-        // remove the default values from the model if they don't have read access otherwise it will display the defaults even if they've been set (because they error on returning config data)
-        secretEngineModel.set('casRequired', null);
-        secretEngineModel.set('deleteVersionAfter', null);
-        secretEngineModel.set('maxVersions', null);
-      }
-    }
-    // If the engine is configurable fetch the config model(s) for the engine and return it alongside the model
-    if (CONFIGURABLE_SECRET_ENGINES.includes(secretEngineModel.type)) {
-      let configModels = await this.fetchConfig(secretEngineModel.type, secretEngineModel.id);
-      configModels = this.standardizeConfigModels(configModels);
-
-      return {
-        secretEngineModel,
-        configModels,
-      };
-    }
-    return { secretEngineModel };
-  }
-
-  standardizeConfigModels(configModels) {
-    // standardize the configModels to an array so that the component can handle it correctly
-    Array.isArray(configModels) ? configModels : (configModels = [configModels]);
-    // make sure no items in the array are null or undefined
-    return configModels.filter((configModel) => {
-      return !!configModel;
-    });
+    const secretsEngine = this.modelFor('vault.cluster.secrets.backend');
+    const { type, id } = secretsEngine;
+    return {
+      secretsEngine,
+      config: await this.fetchConfig(type, id), // fetch config for configurable engines (aws, azure, gcp, ssh)
+    };
   }
 
   fetchConfig(type, id) {
@@ -73,31 +37,19 @@ export default class SecretsBackendConfigurationRoute extends Route {
         return this.fetchGcpConfig(id);
       case 'ssh':
         return this.fetchSshCaConfig(id);
-      default:
-        return reject({ httpStatus: 404, message: 'not found', path: id });
     }
   }
 
-  async fetchAwsConfigs(id) {
+  async fetchAwsConfigs(path) {
     // AWS has two configuration endpoints root and lease, as well as a separate endpoint for the issuer.
     // return an array of these responses.
-    const configArray = [];
-    const configRoot = await this.fetchAwsConfig(id, 'aws/root-config');
-    const configLease = await this.fetchAwsConfig(id, 'aws/lease-config');
-    let issuer = null;
-    if (this.version.isEnterprise && configRoot) {
-      // issuer is an enterprise only related feature
-      // issuer is also a global endpoint that doesn't mean anything in the AWS secret details context if WIF related fields on the rootConfig have not been set.
-      const WIF_FIELDS = ['roleArn', 'identityTokenAudience', 'identityTokenTtl'];
-      WIF_FIELDS.some((field) => configRoot[field]) ? (issuer = await this.fetchIssuer()) : null;
-    }
-    configArray.push(configRoot, configLease, issuer);
-    return configArray;
-  }
-
-  async fetchAwsConfig(id, modelPath) {
     try {
-      return await this.store.queryRecord(modelPath, { backend: id });
+      const { data: configRoot } = await this.api.secrets.awsReadRootIamCredentialsConfiguration(path);
+      const { data: configLease } = await this.api.secrets.awsReadLeaseConfiguration(path);
+      const WIF_FIELDS = ['roleArn', 'identityTokenAudience', 'identityTokenTtl'];
+      const issuer = await this.checkIssuer(configRoot, WIF_FIELDS);
+
+      return Object.assign({}, configRoot, configLease, issuer);
     } catch (e) {
       if (e.httpStatus === 404) {
         // a 404 error is thrown when the lease config hasn't been set yet.
@@ -107,20 +59,17 @@ export default class SecretsBackendConfigurationRoute extends Route {
     }
   }
 
-  async fetchAzureConfig(id) {
+  async fetchAzureConfig(path) {
     try {
-      const azureModel = await this.store.queryRecord('azure/config', { backend: id });
-      let issuer = null;
-      if (this.version.isEnterprise) {
-        // Issuer is an enterprise only related feature
-        // Issuer is also a global endpoint that doesn't mean anything in the Azure secret details context if WIF related fields on the azureConfig have not been set.
-        const WIF_FIELDS = ['identityTokenAudience', 'identityTokenTtl'];
-        WIF_FIELDS.some((field) => azureModel[field]) ? (issuer = await this.fetchIssuer()) : null;
+      const { data: azureConfig } = await this.api.secrets.azureReadConfiguration(path);
+      const WIF_FIELDS = ['identityTokenAudience', 'identityTokenTtl'];
+      const issuer = await this.checkIssuer(azureConfig, WIF_FIELDS);
+      // azure config endpoint returns 200 with default values if engine has not been configured yet
+      // all values happen to be falsy so we can just check if any are truthy
+      const isConfigured = Object.values(azureConfig).some((value) => value);
+      if (isConfigured) {
+        return Object.assign({}, azureConfig, issuer);
       }
-      const configArray = [];
-      if (azureModel.isConfigured) configArray.push(azureModel);
-      if (issuer) configArray.push(issuer);
-      return configArray;
     } catch (e) {
       if (e.httpStatus === 404) {
         // a 404 error is thrown when Azure's config hasn't been set yet.
@@ -130,18 +79,13 @@ export default class SecretsBackendConfigurationRoute extends Route {
     }
   }
 
-  async fetchGcpConfig(id) {
+  async fetchGcpConfig(path) {
     try {
-      const gcpModel = await this.store.queryRecord('gcp/config', { backend: id });
-      let issuer = null;
-      if (this.version.isEnterprise) {
-        const WIF_FIELDS = ['identityTokenAudience', 'identityTokenTtl', 'serviceAccountEmail'];
-        WIF_FIELDS.some((field) => gcpModel[field]) ? (issuer = await this.fetchIssuer()) : null;
-      }
-      const configArray = [];
-      if (gcpModel) configArray.push(gcpModel);
-      if (issuer) configArray.push(issuer);
-      return configArray;
+      const { data: gcpConfig } = await this.api.secrets.googleCloudReadConfiguration(path);
+      const WIF_FIELDS = ['identityTokenAudience', 'identityTokenTtl', 'serviceAccountEmail'];
+      const issuer = await this.checkIssuer(gcpConfig, WIF_FIELDS);
+
+      return Object.assign({}, gcpConfig, issuer);
     } catch (e) {
       if (e.httpStatus === 404) {
         // a 404 error is thrown when GCP's config hasn't been set yet.
@@ -151,18 +95,10 @@ export default class SecretsBackendConfigurationRoute extends Route {
     }
   }
 
-  async fetchIssuer() {
+  async fetchSshCaConfig(path) {
     try {
-      return await this.store.queryRecord('identity/oidc/config', {});
-    } catch (e) {
-      // silently fail if the endpoint is not available or the user doesn't have permission to access it.
-      return;
-    }
-  }
-
-  async fetchSshCaConfig(id) {
-    try {
-      return await this.store.queryRecord('ssh/ca-config', { backend: id });
+      const { data } = await this.api.secrets.sshReadCaConfiguration(path);
+      return data;
     } catch (e) {
       if (e.httpStatus === 400 && e.errors[0] === `keys haven't been configured yet`) {
         // When first mounting a SSH engine it throws a 400 error with this specific message.
@@ -173,12 +109,29 @@ export default class SecretsBackendConfigurationRoute extends Route {
     }
   }
 
+  async checkIssuer(config, fields) {
+    // issuer is an enterprise only related feature
+    // issuer is also a global endpoint that doesn't mean anything in the AWS secret details context if WIF related fields on the rootConfig have not been set.
+    if (this.version.isEnterprise) {
+      const shouldFetchIssuer = fields.some((field) => config[field]);
+
+      if (shouldFetchIssuer) {
+        try {
+          const { data } = this.api.identity.oidcReadConfiguration();
+          return data;
+        } catch (e) {
+          // silently fail if the endpoint is not available or the user doesn't have permission to access it.
+        }
+      }
+    }
+  }
+
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
     controller.typeDisplay = allEngines().find(
-      (engine) => engine.type === resolvedModel.secretEngineModel.type
+      (engine) => engine.type === resolvedModel.secretsEngine.type
     )?.displayName;
-    controller.isConfigurable = CONFIGURABLE_SECRET_ENGINES.includes(resolvedModel.secretEngineModel.type);
-    controller.modelId = resolvedModel.secretEngineModel.id;
+    controller.isConfigurable = CONFIGURABLE_SECRET_ENGINES.includes(resolvedModel.secretsEngine.type);
+    controller.modelId = resolvedModel.secretsEngine.id;
   }
 }
