@@ -79,7 +79,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
-	github.com/hashicorp/cap v0.8.0
+	github.com/hashicorp/cap v0.9.0
 	github.com/hashicorp/cap/ldap v0.0.0-20250106213447-9047b8b3240f
 	github.com/hashicorp/cli v1.1.7
 	github.com/hashicorp/consul-template v0.39.1
@@ -142,7 +142,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-gcp v0.20.2
 	github.com/hashicorp/vault-plugin-auth-jwt v0.23.2
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.14.0
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.21.0
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.22.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.18.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.13.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.17.0
@@ -231,7 +231,7 @@ require (
 	google.golang.org/grpc v1.72.1
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
-	k8s.io/apimachinery v0.32.1
+	k8s.io/apimachinery v0.33.1
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
 	layeh.com/radius v0.0.0-20231213012653-1006025d24f8
 )
@@ -270,6 +270,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.34.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
+	sigs.k8s.io/randfill v1.0.0 // indirect
 )
 
 require (
@@ -405,9 +406,8 @@ require (
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/flatbuffers v24.12.23+incompatible // indirect
-	github.com/google/gnostic-models v0.6.8 // indirect
+	github.com/google/gnostic-models v0.6.9 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
-	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/uuid v1.6.0
@@ -553,12 +553,12 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.32.1 // indirect
+	k8s.io/api v0.33.1 // indirect
 	k8s.io/client-go v0.32.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20241105132330-32ad38e42d3f // indirect
+	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
 	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.4.2 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.6.0 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
