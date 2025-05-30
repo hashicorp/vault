@@ -22,7 +22,7 @@ export default class SecretsEngineResource extends baseResourceFactory<SecretsEn
 
   get version() {
     const { version } = this.options || {};
-    return version ? Number(version) : undefined;
+    return version ? Number(version) : 1;
   }
 
   get engineType() {

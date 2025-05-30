@@ -61,7 +61,13 @@ export default class ConfigurationDetails extends Component<Args> {
   label = (field: string) => {
     const label = toLabel([field]);
     // convert words like id and ttl to uppercase
-    const formattedLabel = label.replace(/(id|ttl)/g, (match: string) => match.toUpperCase());
+    const formattedLabel = label
+      .split(' ')
+      .map((word: string) => {
+        const acronyms = ['id', 'ttl', 'arn', 'iam', 'sts'];
+        return acronyms.includes(word.toLowerCase()) ? word.toUpperCase() : word;
+      })
+      .join(' ');
     // map specific fields to custom labels
     return (
       {

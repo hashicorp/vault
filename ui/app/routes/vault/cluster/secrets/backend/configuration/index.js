@@ -42,20 +42,25 @@ export default class SecretsBackendConfigurationRoute extends Route {
 
   async fetchAwsConfigs(path) {
     // AWS has two configuration endpoints root and lease, as well as a separate endpoint for the issuer.
-    // return an array of these responses.
-    try {
-      const { data: configRoot } = await this.api.secrets.awsReadRootIamCredentialsConfiguration(path);
-      const { data: configLease } = await this.api.secrets.awsReadLeaseConfiguration(path);
-      const WIF_FIELDS = ['roleArn', 'identityTokenAudience', 'identityTokenTtl'];
-      const issuer = await this.checkIssuer(configRoot, WIF_FIELDS);
-
-      return Object.assign({}, configRoot, configLease, issuer);
-    } catch (e) {
-      if (e.httpStatus === 404) {
+    const handleError = async (e) => {
+      const error = await this.parseApiError(e);
+      if (error.httpStatus === 404) {
         // a 404 error is thrown when the lease config hasn't been set yet.
-        return;
+        return {};
       }
-      throw e;
+      throw error;
+    };
+
+    const { data: configRoot } = await this.api.secrets
+      .awsReadRootIamCredentialsConfiguration(path)
+      .catch(handleError);
+    const { data: configLease } = await this.api.secrets.awsReadLeaseConfiguration(path).catch(handleError);
+
+    const WIF_FIELDS = ['roleArn', 'identityTokenAudience', 'identityTokenTtl'];
+    const issuer = await this.checkIssuer(configRoot, WIF_FIELDS);
+
+    if (configRoot) {
+      return Object.assign(configRoot, configLease, issuer);
     }
   }
 
@@ -71,11 +76,12 @@ export default class SecretsBackendConfigurationRoute extends Route {
         return Object.assign({}, azureConfig, issuer);
       }
     } catch (e) {
-      if (e.httpStatus === 404) {
+      const error = await this.parseApiError(e);
+      if (error.httpStatus === 404) {
         // a 404 error is thrown when Azure's config hasn't been set yet.
         return;
       }
-      throw e;
+      throw error;
     }
   }
 
@@ -85,13 +91,16 @@ export default class SecretsBackendConfigurationRoute extends Route {
       const WIF_FIELDS = ['identityTokenAudience', 'identityTokenTtl', 'serviceAccountEmail'];
       const issuer = await this.checkIssuer(gcpConfig, WIF_FIELDS);
 
-      return Object.assign({}, gcpConfig, issuer);
+      if (gcpConfig) {
+        return Object.assign(gcpConfig, issuer);
+      }
     } catch (e) {
-      if (e.httpStatus === 404) {
+      const error = await this.parseApiError(e);
+      if (error.httpStatus === 404) {
         // a 404 error is thrown when GCP's config hasn't been set yet.
         return;
       }
-      throw e;
+      throw error;
     }
   }
 
@@ -100,30 +109,41 @@ export default class SecretsBackendConfigurationRoute extends Route {
       const { data } = await this.api.secrets.sshReadCaConfiguration(path);
       return data;
     } catch (e) {
-      if (e.httpStatus === 400 && e.errors[0] === `keys haven't been configured yet`) {
+      const error = await this.parseApiError(e);
+      if (error.httpStatus === 400 && error.errors[0] === `keys haven't been configured yet`) {
         // When first mounting a SSH engine it throws a 400 error with this specific message.
         // We want to catch this situation and return nothing so that the component can handle it correctly.
         return;
       }
-      throw e;
+      throw error;
     }
   }
 
   async checkIssuer(config, fields) {
     // issuer is an enterprise only related feature
     // issuer is also a global endpoint that doesn't mean anything in the AWS secret details context if WIF related fields on the rootConfig have not been set.
-    if (this.version.isEnterprise) {
+    if (this.version.isEnterprise && config) {
       const shouldFetchIssuer = fields.some((field) => config[field]);
 
       if (shouldFetchIssuer) {
         try {
-          const { data } = this.api.identity.oidcReadConfiguration();
+          const { data } = await this.api.identity.oidcReadConfiguration();
           return data;
         } catch (e) {
           // silently fail if the endpoint is not available or the user doesn't have permission to access it.
         }
       }
     }
+  }
+
+  async parseApiError(e) {
+    const { backend } = this.paramsFor('vault.cluster.secrets.backend');
+    const error = await this.api.parseError(e);
+    return {
+      backend,
+      httpStatus: error.status,
+      ...error,
+    };
   }
 
   setupController(controller, resolvedModel) {

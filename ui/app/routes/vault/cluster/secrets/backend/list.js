@@ -131,7 +131,7 @@ export default Route.extend({
     const secret = this.secretParam() || '';
     const backend = this.enginePathParam();
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
-    const modelType = this.getModelType(backend, params.tab);
+    const modelType = this.getModelType(backendModel.type, params.tab);
 
     return hash({
       secret,

@@ -37,6 +37,15 @@ module('Acceptance | aws | configuration', function (hooks) {
     this.flashDangerSpy = spy(flash, 'danger');
     this.version = this.owner.lookup('service:version');
     this.uid = uuidv4();
+    this.awsRootConfigResponse = {
+      data: {
+        region: 'us-west-2',
+        access_key: '123-key',
+        iam_endpoint: 'iam-endpoint',
+        sts_endpoint: 'sts-endpoint',
+        max_retries: 1,
+      },
+    };
     return login();
   });
 
@@ -129,16 +138,16 @@ module('Acceptance | aws | configuration', function (hooks) {
     test('it should not show issuer if no root WIF configuration data is returned', async function (assert) {
       const path = `aws-${this.uid}`;
       const type = 'aws';
-      this.server.get(`${path}/config/root`, (schema, req) => {
-        const payload = JSON.parse(req.requestBody);
+
+      this.server.get(`${path}/config/root`, () => {
         assert.true(true, 'request made to config/root when navigating to the configuration page.');
-        return { data: { id: path, type, attributes: payload } };
+        return this.awsRootConfigResponse;
       });
       this.server.get(`identity/oidc/config`, () => {
         throw new Error(`Request was made to return the issuer when it should not have been.`);
       });
+
       await enablePage.enable(type, path);
-      createConfig(this.store, path, type); // create the aws root config in the store
       await click(SES.configTab);
       assert.dom(GENERAL.infoRowLabel('Issuer')).doesNotExist(`Issuer does not exists on config details.`);
       assert.dom(GENERAL.infoRowLabel('Access key')).exists(`Access key does exists on config details.`);
@@ -199,11 +208,12 @@ module('Acceptance | aws | configuration', function (hooks) {
     test('it shows AWS mount configuration details', async function (assert) {
       const path = `aws-${this.uid}`;
       const type = 'aws';
-      this.server.get(`${path}/config/root`, (schema, req) => {
-        const payload = JSON.parse(req.requestBody);
+
+      this.server.get(`${path}/config/root`, () => {
         assert.true(true, 'request made to config/root when navigating to the configuration page.');
-        return { data: { id: path, type, attributes: payload } };
+        return this.awsRootConfigResponse;
       });
+
       await enablePage.enable(type, path);
       createConfig(this.store, path, type); // create the aws root config in the store
       await click(SES.configTab);

@@ -40,7 +40,7 @@ export default class VaultClusterDashboardRoute extends Route.extend(ClusterRout
           };
     const requests = [
       this.getVaultConfiguration(hasChroot),
-      this.api.sys.internalUiListEnabledVisibleMounts(),
+      this.api.sys.internalUiListEnabledVisibleMounts().catch(() => ({})),
     ];
     const [vaultConfiguration, { secret }] = await Promise.all(requests);
     const secretsEngines = this.api
