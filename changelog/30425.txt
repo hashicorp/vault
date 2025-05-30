@@ -1,0 +1,3 @@
+```release-note:feature
+**UI Telemetry**: add Posthog for UI telemetry tracking on HVD managed clusters
+```

@@ -677,8 +677,12 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 		return fmt.Errorf("error creating forwarded writer: %v", err)
 	}
 
+	// add the snapshot storage router, which will use the context to determine
+	// whether a read will be from a snapshot or from the normal barrier storage
+	router := newSnapshotStorageRouter(c, forwarded)
+
 	viewPath := entry.ViewPath()
-	view := NewBarrierView(forwarded, viewPath)
+	view := NewBarrierView(router, viewPath)
 
 	// Singleton mounts cannot be filtered manually on a per-secondary basis
 	// from replication.
@@ -1525,8 +1529,10 @@ func (c *Core) setupMounts(ctx context.Context) error {
 			return fmt.Errorf("error creating forwarded writer: %v", err)
 		}
 
+		storageRouter := newSnapshotStorageRouter(c, forwarded)
+
 		// Create a barrier storage view using the UUID
-		view := NewBarrierView(forwarded, barrierPath)
+		view := NewBarrierView(storageRouter, barrierPath)
 
 		// Singleton mounts cannot be filtered manually on a per-secondary basis
 		// from replication

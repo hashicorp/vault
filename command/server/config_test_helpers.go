@@ -606,6 +606,13 @@ func testUnknownFieldValidationHcl(t *testing.T) {
 	}
 }
 
+func testDuplicateKeyValidationHcl(t *testing.T) {
+	_, duplicate, err := LoadConfigFileCheckDuplicate("./test-fixtures/invalid_config_duplicate_key.hcl")
+	// TODO (HCL_DUP_KEYS_DEPRECATION): require error once deprecation is done
+	require.NoError(t, err)
+	require.True(t, duplicate)
+}
+
 // testConfigWithAdministrativeNamespaceJson tests that a config with a valid administrative namespace path is correctly validated and loaded.
 func testConfigWithAdministrativeNamespaceJson(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/config_with_valid_admin_ns.json")
@@ -807,7 +814,6 @@ func testConfig_Sanitized(t *testing.T) {
 		"raw_storage_endpoint":                true,
 		"introspection_endpoint":              false,
 		"disable_sentinel_trace":              true,
-		"observation_system_ledger_path":      "",
 		"detect_deadlocks":                    "",
 		"enable_ui":                           true,
 		"enable_response_header_hostname":     false,
