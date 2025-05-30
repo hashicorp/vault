@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/mitchellh/mapstructure"
@@ -243,9 +244,25 @@ func (c *Sys) RegisterPluginWithContext(ctx context.Context, i *RegisterPluginIn
 		defer resp.Body.Close()
 	}
 
-	var result RegisterPluginResponse
-	err = resp.DecodeJSON(&result)
-	return &result, err
+	var registerResp RegisterPluginResponse
+	err = resp.DecodeJSON(&registerResp)
+	if err != nil {
+		return nil, err
+	}
+
+	// Filter out the `Endpoint replaced the value of these parameters with the values captured from the endpoint's path: [type]`
+	// warning because it is expected behavior from this function, as we set the type parameter in both the path and request body,
+	// and the warning informs us the path parameter takes precedence. However, this warning is not relevant for an end user so we
+	// omit it before returning to any client.
+	filteredWarnings := make([]string, 0, len(registerResp.Warnings))
+	for _, warning := range registerResp.Warnings {
+		if !strings.Contains(warning, "Endpoint replaced the value of these parameters with the values captured from the endpoint's path") {
+			filteredWarnings = append(filteredWarnings, warning)
+		}
+	}
+	registerResp.Warnings = filteredWarnings
+
+	return &registerResp, err
 }
 
 // DeregisterPluginInput is used as input to the DeregisterPlugin function.

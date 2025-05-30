@@ -182,15 +182,6 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 	pluginName := strings.TrimSpace(pluginNameRaw)
 
 	command := c.flagCommand
-
-	// TODO: Alternative to propagating the warning from the API layer
-	// because the "Endpoint replaced the value of these parameters with the values captured from the endpoint's path: [type]"
-	// warning comes with every CLI request.
-	// if c.flagSHA256 == "" {
-	// 	if command != "" {
-	// 		c.UI.Warn(wrapAtLength("When -sha256 is not provided and registering a plugin artifact, the -command flag is not used and will be ignored."))
-	// 	}
-	// } else {
 	if c.flagSHA256 != "" {
 		if command == "" && c.flagOCIImage == "" {
 			command = pluginName
@@ -217,7 +208,7 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 		c.UI.Warn(wrapAtLength(fmt.Sprintf(
 			"Warnings while registering plugin %s: %s",
 			pluginName,
-			strings.Join(resp.Warnings, ", "),
+			strings.Join(resp.Warnings, "\n\n"),
 		)) + "\n")
 	}
 
