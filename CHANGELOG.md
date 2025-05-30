@@ -375,15 +375,20 @@ Unblocks customers that were stuck in a failing loop when attempting to rotate s
 
 CHANGES:
 
-* database/snowflake: Update plugin to v0.13.1 [[GH-30775](https://github.com/hashicorp/vault/pull/30775)]
+* Update vault-plugin-auth-cf to v0.19.2
+* auth/azure: Upgrade plugin to v0.19.4
+* database/snowflake: Update plugin to v0.12.1
 
 IMPROVEMENTS:
 
-* plugins: Support registration of CE plugins with extracted artifact directory. [[GH-30673](https://github.com/hashicorp/vault/pull/30673)]
+* ui: Replaces all instances of the deprecated event.keyCode with event.key [[GH-30493](https://github.com/hashicorp/vault/pull/30493)]
 
 BUG FIXES:
 
-* ui: Fix broken link to Hashicorp Vault developer site in the Web REPL help. [[GH-30670](https://github.com/hashicorp/vault/pull/30670)]
+* plugins (enterprise): Fix an issue where Enterprise plugins can't run on a standby node
+when it becomes active because standby nodes don't extract the artifact when the plugin
+is registered. Remove extracting from Vault and require the operator to place
+the extracted artifact in the plugin directory before registration.
 
 ## 1.18.9 Enterprise
 ### April 30, 2025
@@ -840,15 +845,20 @@ use versioned plugins. [[GH-27881](https://github.com/hashicorp/vault/pull/27881
 
 CHANGES:
 
-* database/snowflake: Update plugin to v0.13.1 [[GH-30775](https://github.com/hashicorp/vault/pull/30775)]
+* Update vault-plugin-auth-cf to v0.18.2
+* auth/azure: Upgrade plugin to v0.18.3
+* database/snowflake: Update plugin to v0.11.1
 
 IMPROVEMENTS:
 
-* plugins: Support registration of CE plugins with extracted artifact directory. [[GH-30673](https://github.com/hashicorp/vault/pull/30673)]
+* ui: Replaces all instances of the deprecated event.keyCode with event.key [[GH-30493](https://github.com/hashicorp/vault/pull/30493)]
 
 BUG FIXES:
 
-* ui: Fix broken link to Hashicorp Vault developer site in the Web REPL help. [[GH-30670](https://github.com/hashicorp/vault/pull/30670)]
+* plugins (enterprise): Fix an issue where Enterprise plugins can't run on a standby node
+when it becomes active because standby nodes don't extract the artifact when the plugin
+is registered. Remove extracting from Vault and require the operator to place
+the extracted artifact in the plugin directory before registration.
 
 ## 1.17.16 Enterprise
 ### April 30, 2025
@@ -1448,19 +1458,18 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 ## 1.16.21
 ### May 30, 2025
 
-**Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
-
 CHANGES:
 
-* database/snowflake: Update plugin to v0.13.1 [[GH-30775](https://github.com/hashicorp/vault/pull/30775)]
-
-IMPROVEMENTS:
-
-* plugins: Support registration of CE plugins with extracted artifact directory. [[GH-30673](https://github.com/hashicorp/vault/pull/30673)]
+* Update vault-plugin-auth-cf to v0.18.2
+* auth/azure: Upgrade plugin to v0.17.4
+* database/snowflake: Update plugin to v0.10.2
 
 BUG FIXES:
 
-* ui: Fix broken link to Hashicorp Vault developer site in the Web REPL help. [[GH-30670](https://github.com/hashicorp/vault/pull/30670)]
+* plugins (enterprise): Fix an issue where Enterprise plugins can't run on a standby node
+when it becomes active because standby nodes don't extract the artifact when the plugin
+is registered. Remove extracting from Vault and require the operator to place
+the extracted artifact in the plugin directory before registration.
 
 ## 1.16.20 Enterprise
 ### April 30, 2025
