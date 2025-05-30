@@ -100,8 +100,8 @@ locals {
     "arm64"  = var.instance_types["arm64"]
     "x86_64" = var.instance_types["amd64"]
   }
-  instances        = toset([for idx in range(var.instance_count) : tostring(idx)])
-  name_prefix      = "${var.project_name}-${local.cluster_name}-${random_string.unique_id.result}"
+  instances   = toset([for idx in range(var.instance_count) : tostring(idx)])
+  name_prefix = "${var.project_name}-${local.cluster_name}-${random_string.unique_id.result}"
 }
 
 resource "random_string" "cluster_name" {
