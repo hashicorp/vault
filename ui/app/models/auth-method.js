@@ -28,6 +28,7 @@ const validations = {
 
 @withModelValidations(validations)
 export default class AuthMethodModel extends Model {
+  @service namespace;
   @service store;
   @service version;
 
@@ -49,8 +50,12 @@ export default class AuthMethodModel extends Model {
   }
 
   get directLoginLink() {
+    const ns = this.namespace.path;
+    const nsQueryParam = ns ? `namespace=${encodeURIComponent(ns)}&` : '';
     const isSupported = supportedTypes(this.version.isEnterprise).includes(this.methodType);
-    return isSupported ? `${window.origin}/ui/vault/auth?with=${encodeURIComponent(this.path)}` : '';
+    return isSupported
+      ? `${window.origin}/ui/vault/auth?${nsQueryParam}with=${encodeURIComponent(this.path)}`
+      : '';
   }
 
   @attr('string', {
