@@ -3,6 +3,24 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+
+## 1.19.5
+### May 30, 2025
+
+
+CHANGES:
+
+* database/snowflake: Update plugin to v0.13.1 [[GH-30775](https://github.com/hashicorp/vault/pull/30775)]
+
+IMPROVEMENTS:
+
+* plugins: Support registration of CE plugins with extracted artifact directory. [[GH-30673](https://github.com/hashicorp/vault/pull/30673)]
+
+BUG FIXES:
+
+* ui: Fix broken link to Hashicorp Vault developer site in the Web REPL help. [[GH-30670](https://github.com/hashicorp/vault/pull/30670)]
+
+
 ## 1.19.4
 ### May 16, 2025
 
