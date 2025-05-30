@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -178,6 +179,15 @@ func (b *backend) pathKeysList(ctx context.Context, req *logical.Request, d *fra
 	if err != nil {
 		return nil, err
 	}
+
+	// filter out partial paths
+	entries = slices.DeleteFunc(entries, func(s string) bool {
+		if strings.HasSuffix(s, "/") {
+			return true
+		}
+
+		return false
+	})
 
 	return logical.ListResponse(entries), nil
 }

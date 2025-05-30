@@ -31,10 +31,7 @@ module('Integration | Component | auth | form template', function (hooks) {
 
     this.alternateView = null;
     this.defaultView = { view: 'dropdown', tabData: null };
-    this.handleNamespaceUpdate = sinon.spy();
     this.initialFormState = { initialAuthType: 'token', showAlternate: false };
-    this.namespaceQueryParam = '';
-    this.oidcProviderQueryParam = '';
     this.onSuccess = sinon.spy();
     this.visibleMountTypes = null;
 
@@ -44,10 +41,7 @@ module('Integration | Component | auth | form template', function (hooks) {
           @alternateView={{this.alternateView}}
           @cluster={{this.cluster}}
           @defaultView={{this.defaultView}}
-          @handleNamespaceUpdate={{this.handleNamespaceUpdate}}
           @initialFormState={{this.initialFormState}}
-          @namespaceQueryParam={{this.namespaceQueryParam}}
-          @oidcProviderQueryParam={{this.oidcProviderQueryParam}}
           @onSuccess={{this.onSuccess}}
           @visibleMountTypes={{this.visibleMountTypes}}
         />`);
@@ -81,6 +75,22 @@ module('Integration | Component | auth | form template', function (hooks) {
       .dom(GENERAL.messageError)
       .hasText('Error Authentication failed: permission denied: Sinon-provided permission denied');
     authenticateStub.restore();
+  });
+
+  test('dropdown does not include enterprise methods on community versions', async function (assert) {
+    this.version.type = 'community';
+    const supported = BASE_LOGIN_METHODS.map((m) => m.type);
+    const unsupported = ENTERPRISE_LOGIN_METHODS.map((m) => m.type);
+    assert.expect(supported.length + unsupported.length);
+    await this.renderComponent();
+    const dropdownOptions = findAll(`${GENERAL.selectByAttr('auth type')} option`).map((o) => o.value);
+
+    supported.forEach((m) => {
+      assert.true(dropdownOptions.includes(m), `dropdown includes supported method: ${m}`);
+    });
+    unsupported.forEach((m) => {
+      assert.false(dropdownOptions.includes(m), `dropdown does NOT include unsupported method: ${m}`);
+    });
   });
 
   module('listing visibility', function (hooks) {
@@ -210,45 +220,12 @@ module('Integration | Component | auth | form template', function (hooks) {
     });
   });
 
-  module('community', function (hooks) {
-    hooks.beforeEach(function () {
-      this.version.type = 'community';
-    });
-
-    test('it does not render the namespace input on community', async function (assert) {
-      await this.renderComponent();
-      assert.dom(GENERAL.inputByAttr('namespace')).doesNotExist();
-    });
-
-    test('dropdown does not include enterprise methods', async function (assert) {
-      const supported = BASE_LOGIN_METHODS.map((m) => m.type);
-      const unsupported = ENTERPRISE_LOGIN_METHODS.map((m) => m.type);
-      assert.expect(supported.length + unsupported.length);
-      await this.renderComponent();
-      const dropdownOptions = findAll(`${GENERAL.selectByAttr('auth type')} option`).map((o) => o.value);
-
-      supported.forEach((m) => {
-        assert.true(dropdownOptions.includes(m), `dropdown includes supported method: ${m}`);
-      });
-      unsupported.forEach((m) => {
-        assert.false(dropdownOptions.includes(m), `dropdown does NOT include unsupported method: ${m}`);
-      });
-    });
-  });
-
   // tests with "enterprise" in the title are filtered out from CE test runs
   // naming the module 'ent' so these tests still run on the CE repo
   module('ent', function (hooks) {
     hooks.beforeEach(function () {
       this.version.type = 'enterprise';
-      this.version.features = ['Namespaces'];
       this.namespaceQueryParam = '';
-    });
-
-    test('it does not render the namespace input if version does not include feature', async function (assert) {
-      this.version.features = [];
-      await this.renderComponent();
-      assert.dom(GENERAL.inputByAttr('namespace')).doesNotExist();
     });
 
     // in th ent module to test ALL supported login methods
@@ -289,12 +266,6 @@ module('Integration | Component | auth | form template', function (hooks) {
       }
     });
 
-    test('it disables namespace input when an oidc provider query param exists', async function (assert) {
-      this.oidcProviderQueryParam = 'myprovider';
-      await this.renderComponent();
-      assert.dom(GENERAL.inputByAttr('namespace')).isDisabled();
-    });
-
     test('dropdown includes enterprise methods', async function (assert) {
       const supported = ALL_LOGIN_METHODS.map((m) => m.type);
       assert.expect(supported.length);
@@ -304,15 +275,6 @@ module('Integration | Component | auth | form template', function (hooks) {
       supported.forEach((m) => {
         assert.true(dropdownOptions.includes(m), `dropdown includes supported method: ${m}`);
       });
-    });
-
-    test('it sets namespace for hvd managed clusters', async function (assert) {
-      this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
-      this.namespaceQueryParam = 'admin/west-coast';
-      await this.renderComponent();
-      assert.dom(AUTH_FORM.managedNsRoot).hasValue('/admin');
-      assert.dom(AUTH_FORM.managedNsRoot).hasAttribute('readonly');
-      assert.dom(GENERAL.inputByAttr('namespace')).hasValue('/west-coast');
     });
   });
 
