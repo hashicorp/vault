@@ -151,7 +151,7 @@
     type="submit"
     form="role"
     disabled={{or (not @model.generationPreference) this.save.isRunning}}
-    data-test-save
+    data-test-submit
   />
   <Hds::Button @text="Back" @color="secondary" class="has-left-margin-s" data-test-cancel {{on "click" this.cancel}} />
 </div>

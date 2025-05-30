@@ -9,6 +9,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kubernetes | Page::Configuration', function (hooks) {
   setupRenderingTest(hooks);
@@ -92,9 +93,7 @@ module('Integration | Component | kubernetes | Page::Configuration', function (h
     assert.dom('[data-test-row-label="Certificate"]').exists('Certificate label renders');
     assert.dom('[data-test-certificate-card]').exists('Certificate card component renders');
     assert.dom('[data-test-certificate-icon]').hasClass('hds-icon-certificate', 'Certificate icon renders');
-    assert
-      .dom('[data-test-certificate-card] [data-test-copy-button]')
-      .exists('Certificate copy button renders');
+    assert.dom(GENERAL.copyButton).exists('Certificate copy button renders');
     assert.dom('[data-test-certificate-label]').hasText('PEM Format', 'Certificate label renders');
     assert
       .dom('[data-test-certificate-value]')

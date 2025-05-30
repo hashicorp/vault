@@ -69,7 +69,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       .enableMaxTtl()
       .maxTTLUnit('h')
       .maxTTLVal(maxTTLHours);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await configPage.visit({ backend: path });
     assert.strictEqual(configPage.defaultTTL, `${this.calcDays(defaultTTLHours)}`, 'shows the proper TTL');
     assert.strictEqual(configPage.maxTTL, `${this.calcDays(maxTTLHours)}`, 'shows the proper max TTL');
@@ -91,7 +91,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await fillIn(GENERAL.inputByAttr('path'), path);
     await click(GENERAL.toggleGroup('Method Options'));
     await page.enableDefaultTtl().enableMaxTtl().maxTTLUnit('h').maxTTLVal(maxTTLHours);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await configPage.visit({ backend: path });
     assert.strictEqual(configPage.defaultTTL, '1 month 1 day', 'shows system default TTL');
     assert.strictEqual(configPage.maxTTL, `${this.calcDays(maxTTLHours)}`, 'shows the proper max TTL');
@@ -185,7 +185,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await click(MOUNT_BACKEND_FORM.mountType('kv'));
     await fillIn(GENERAL.inputByAttr('path'), enginePath);
     await mountSecrets.setMaxVersion(101);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     assert
       .dom('[data-test-flash-message]')
@@ -245,7 +245,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         await click(GENERAL.toggleGroup('Method Options'));
         await mountSecrets.version(1);
       }
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
 
       const route = CONFIGURATION_ONLY.includes(engine.type) ? 'configuration.index' : 'list-root';
       assert.strictEqual(
@@ -307,7 +307,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await fillIn(GENERAL.inputByAttr('path'), v1);
     await click(GENERAL.toggleGroup('Method Options'));
     await mountSecrets.version(1);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     assert.strictEqual(currentURL(), `/vault/secrets/${v1}/list`, `${v1} navigates to list url`);
     assert.strictEqual(
@@ -371,7 +371,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       assert.dom('#search-select-modal').doesNotExist(`modal disappears onSave for engine ${engine}`);
       assert.dom(GENERAL.searchSelect.selectedOption()).hasText(newKey, `${newKey} is now selected`);
 
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       await visit(`/vault/secrets/${path}/configuration`);
       await click(SES.configurationToggle);
       assert
@@ -402,7 +402,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       await click(GENERAL.toggleGroup('Method Options'));
       // type-in fallback component to create new key
       await typeIn(GENERAL.inputSearch('key'), 'general-key');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert
         .dom(GENERAL.latestFlashContent)
         .hasText(`Successfully mounted the ${engine} secrets engine at ${path}.`);

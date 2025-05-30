@@ -124,7 +124,7 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
     // validations
     await fillIn(GENERAL.inputByAttr('commonName'), '');
     await fillIn(GENERAL.inputByAttr('issuerName'), 'default');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.dom(SELECTORS.validationError).hasText('There are 2 errors with this form.');
     assert
       .dom(GENERAL.inputByAttr('commonName'))
@@ -151,7 +151,7 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
     `,
       { owner: this.engine }
     );
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
   });
 
   function testEndpoint(test, type) {
@@ -174,7 +174,7 @@ module('Integration | Component | page/pki-issuer-rotate-root', function (hooks)
       );
       await click(SELECTORS.customRadioSelect);
       await fillIn(GENERAL.inputByAttr('type'), type);
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
     });
   }
   testEndpoint(test, 'internal');

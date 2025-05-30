@@ -108,7 +108,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
         await click(SES.configTab);
         await click(SES.configure);
         await fillInGcpConfig();
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
         assert.true(
           this.flashSuccessSpy.calledWith(`Successfully saved ${this.path}'s configuration.`),
           'Success flash message is rendered showing the GCP model configuration was saved.'
@@ -162,7 +162,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
 
         await click(GENERAL.textToggle);
         await fillIn(GENERAL.textToggleTextarea, credentials);
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
         // cleanup
         await runCmd(`delete sys/mounts/${this.path}`);
       });
@@ -190,7 +190,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
         await click(GENERAL.toggleGroup('More options'));
         await click(GENERAL.ttl.toggle('Config TTL'));
         await fillIn(GENERAL.ttl.input('Config TTL'), '10800');
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
         // cleanup
         await runCmd(`delete sys/mounts/${this.path}`);
       });
@@ -207,7 +207,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
         await click(SES.configTab);
         await click(SES.configure);
         await fillInGcpConfig();
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
 
         assert
           .dom(GENERAL.messageError)
@@ -270,11 +270,11 @@ module('Acceptance | GCP | configuration', function (hooks) {
         await click(SES.configTab);
         await click(SES.configure);
         await fillInGcpConfig();
-        await click(GENERAL.saveButton); // save GCP credentials
+        await click(GENERAL.submitButton); // save GCP credentials
 
         await click(SES.configure); // navigate so you can edit that configuration
         await fillInGcpConfig(true);
-        await click(GENERAL.saveButton); // try and save wif fields
+        await click(GENERAL.submitButton); // try and save wif fields
         assert
           .dom(GENERAL.messageError)
           .hasText(

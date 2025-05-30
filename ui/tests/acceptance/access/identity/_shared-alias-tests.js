@@ -4,11 +4,11 @@
  */
 
 import { currentRouteName, find, settled, waitUntil } from '@ember/test-helpers';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import page from 'vault/tests/pages/access/identity/aliases/add';
 import aliasIndexPage from 'vault/tests/pages/access/identity/aliases/index';
 import aliasShowPage from 'vault/tests/pages/access/identity/aliases/show';
 import createItemPage from 'vault/tests/pages/access/identity/create';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 export const testAliasCRUD = async function (name, itemType, assert) {
   if (itemType === 'groups') {
@@ -21,7 +21,7 @@ export const testAliasCRUD = async function (name, itemType, assert) {
 
   const itemID = await waitUntil(
     function () {
-      return find('[data-test-row-value="ID"]').textContent.trim();
+      return find(GENERAL.infoRowValue('ID')).textContent.trim();
     },
     { timeout: 2000 }
   );
@@ -36,7 +36,7 @@ export const testAliasCRUD = async function (name, itemType, assert) {
 
   const aliasID = await waitUntil(
     function () {
-      return find('[data-test-row-value="ID"]').textContent.trim();
+      return find(GENERAL.infoRowValue('ID')).textContent.trim();
     },
     { timeout: 2000 }
   );
@@ -46,7 +46,6 @@ export const testAliasCRUD = async function (name, itemType, assert) {
     'navigates to the correct route'
   );
   assert.ok(aliasShowPage.nameContains(name), `${itemType}: renders the name on the show page`);
-
   await aliasIndexPage.visit({ item_type: itemType });
   await settled();
   assert.strictEqual(
@@ -82,7 +81,7 @@ export const testAliasDeleteFromForm = async function (name, itemType, assert) {
 
   const itemID = await waitUntil(
     function () {
-      return find('[data-test-row-value="ID"]').textContent.trim();
+      return find(GENERAL.infoRowValue('ID')).textContent.trim();
     },
     { timeout: 2000 }
   );
@@ -92,7 +91,7 @@ export const testAliasDeleteFromForm = async function (name, itemType, assert) {
   await settled();
   const aliasID = await waitUntil(
     function () {
-      return find('[data-test-row-value="ID"]').textContent.trim();
+      return find(GENERAL.infoRowValue('ID')).textContent.trim();
     },
     { timeout: 2000 }
   );

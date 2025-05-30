@@ -45,9 +45,8 @@ module('Acceptance | auth-methods list view', function (hooks) {
     // filter by auth type
     await clickTrigger('#filter-by-auth-type');
     await click(searchSelect.option(searchSelect.optionIndex(type)));
-    let rows = findAll('.linked-block list-item row');
-    const rowsUserpass = findAll(AUTH_FORM.linkedBlockAuth(type));
-
+    let rows = findAll('.list-item-row');
+    const rowsUserpass = findAll(GENERAL.button('userpass'));
     assert.strictEqual(rows.length, rowsUserpass.length, 'all rows returned are userpass');
 
     // filter by name
@@ -78,21 +77,17 @@ module('Acceptance | auth-methods list view', function (hooks) {
       },
     }));
     await visit('/vault/access/');
-    for (const [key, value] of Object.entries(authPayload)) {
+    for (const [key] of Object.entries(authPayload)) {
       assert
-        .dom(AUTH_FORM.linkedBlockAuth(value.type))
+        .dom(AUTH_FORM.linkedBlockAuth(key.replace(/\/$/, ''))) // remove the forward slash
         .exists({ count: 1 }, `auth method ${key} appears in list view`);
     }
-
-    // verify overflow style exists on auth method name
-    assert.dom('[data-test-path]').hasClass('overflow-wrap', 'auth method name has overflow class applied');
     await visit('/vault/settings/auth/enable');
     await click(GENERAL.navLink('OIDC Provider'));
     await visit('/vault/access/');
-
-    for (const [key, value] of Object.entries(authPayload)) {
+    for (const [key] of Object.entries(authPayload)) {
       assert
-        .dom(AUTH_FORM.linkedBlockAuth(value.type))
+        .dom(AUTH_FORM.linkedBlockAuth(key.replace(/\/$/, '')))
         .exists({ count: 1 }, `auth method ${key} appears in list view after navigating from OIDC Provider`);
     }
   });

@@ -56,7 +56,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       await fillIn(GENERAL.inputByAttr('type'), 'exported');
       await fillIn(GENERAL.inputByAttr('commonName'), 'issuer-common-0');
       await fillIn(GENERAL.inputByAttr('issuerName'), 'issuer-0');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       await click(PKI_CONFIGURE_CREATE.doneButton);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
       await settled();
@@ -89,7 +89,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       await fillIn(GENERAL.inputByAttr('type'), 'exported');
       await fillIn(GENERAL.inputByAttr('commonName'), 'issuer-common-0');
       await fillIn(GENERAL.inputByAttr('issuerName'), 'issuer-0');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       await click(PKI_CONFIGURE_CREATE.doneButton);
       assert.strictEqual(
         currentURL(),
@@ -165,7 +165,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       await fillIn(GENERAL.inputByAttr('type'), 'exported');
       await fillIn(GENERAL.inputByAttr('commonName'), 'issuer-common-0');
       await fillIn(GENERAL.inputByAttr('issuerName'), 'issuer-0');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       await click(PKI_CONFIGURE_CREATE.doneButton);
       // Create role and root CA"
       await runCmd([
@@ -239,7 +239,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       await fillIn(GENERAL.inputByAttr('commonName'), 'my-certificate');
       await click(PKI_GENERATE_ROOT.keyParamsGroupToggle);
       await fillIn(GENERAL.inputByAttr('keyType'), 'ed25519');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
 
       const issuerId = find(PKI_GENERATE_ROOT.saved.issuerLink).innerHTML;
       await visit(`/vault/secrets/${this.mountPath}/pki/issuers`);

@@ -6,11 +6,11 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, focus, triggerKeyEvent, typeIn, fillIn, click } from '@ember/test-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
 const SELECTORS = {
-  copyBtn: '[data-test-copy-button]',
   downloadBtn: '[data-test-download-button]',
   toggle: '[data-test-button="toggle-masked"]',
   downloadIcon: '[data-test-download-icon]',
@@ -31,7 +31,7 @@ module('Integration | Component | masked input', function (hooks) {
     assert.dom('[data-test-masked-input]').exists('shows masked input');
     assert.dom('textarea').exists();
     assert.dom('textarea').hasClass('masked-font', 'it renders an input with obscure font');
-    assert.dom(SELECTORS.copyBtn).doesNotExist('does not render copy button by default');
+    assert.dom(GENERAL.copyButton).doesNotExist('does not render copy button by default');
     assert.dom('[data-test-download-button]').doesNotExist('does not render download button by default');
 
     await click(SELECTORS.toggle);
@@ -51,7 +51,7 @@ module('Integration | Component | masked input', function (hooks) {
   test('it renders a copy button when allowCopy is true', async function (assert) {
     this.set('value', { some: 'object' });
     await render(hbs`<MaskedInput @allowCopy={{true}} @value={{this.value}} />`);
-    assert.dom(SELECTORS.copyBtn).exists();
+    assert.dom(GENERAL.copyButton).exists();
   });
 
   test('it renders a download button when allowDownload is true', async function (assert) {
@@ -122,7 +122,7 @@ module('Integration | Component | masked input', function (hooks) {
       />
     `);
     assert.dom('[data-test-masked-input]').exists('shows masked input');
-    assert.dom(SELECTORS.copyBtn).exists();
+    assert.dom(GENERAL.copyButton).exists();
     assert.dom(SELECTORS.downloadIcon).exists();
     assert.dom(SELECTORS.toggle).exists('shows toggle mask button');
 

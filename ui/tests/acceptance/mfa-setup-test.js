@@ -39,7 +39,7 @@ const writeUserWithPolicy = async function (path) {
 const setupUser = async function (path) {
   await writePolicy(path);
   await writeUserWithPolicy(path);
-  await click('[data-test-save-config="true"]');
+  await click(GENERAL.submitButton);
 };
 
 module('Acceptance | mfa-setup', function (hooks) {
@@ -54,7 +54,7 @@ module('Acceptance | mfa-setup', function (hooks) {
       { username: USER, password: PASSWORD, path },
       { authType: 'userpass', toggleOptions: true }
     );
-    await click(GENERAL.testButton('user-menu-trigger'));
+    await click(GENERAL.button('user-menu-trigger'));
     await click('[data-test-user-menu-item="mfa"]');
   });
 

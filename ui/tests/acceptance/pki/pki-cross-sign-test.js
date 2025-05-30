@@ -18,6 +18,7 @@ import {
   PKI_CROSS_SIGN,
   PKI_ISSUER_DETAILS,
 } from 'vault/tests/helpers/pki/pki-selectors';
+import sinon from 'sinon';
 
 module('Acceptance | pki/pki cross sign', function (hooks) {
   setupApplicationTest(hooks);
@@ -47,20 +48,22 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
   });
 
   test('it cross-signs an issuer', async function (assert) {
+    // Sinon spy for clipboard
+    const clipboardSpy = sinon.stub(navigator.clipboard, 'writeText').resolves();
     // configure parent and intermediate mounts to make them cross-signable
     await visit(`/vault/secrets/${this.intMountPath}/pki/configuration/create`);
     await click(PKI_CONFIGURE_CREATE.optionByKey('generate-csr'));
     await fillIn(GENERAL.inputByAttr('type'), 'internal');
     await fillIn(GENERAL.inputByAttr('commonName'), 'Short-Lived Int R1');
-    await click('[data-test-save]');
-    const csr = find(PKI_CROSS_SIGN.copyButton('CSR')).getAttribute('data-test-copy-button');
+    await click(GENERAL.submitButton);
+    await click(PKI_CROSS_SIGN.copyButton('CSR'));
+    const csr = clipboardSpy.firstCall.args[0];
     await visit(`vault/secrets/${this.parentMountPath}/pki/issuers/${this.oldParentIssuerName}/sign`);
     await fillIn(GENERAL.inputByAttr('csr'), csr);
     await fillIn(GENERAL.inputByAttr('format'), 'pem_bundle');
     await click('[data-test-pki-sign-intermediate-save]');
-    const pemBundle = find(PKI_CROSS_SIGN.copyButton('CA Chain'))
-      .getAttribute('data-test-copy-button')
-      .replace(/,/, '\n');
+    await click(PKI_CROSS_SIGN.copyButton('CA Chain'));
+    const pemBundle = clipboardSpy.secondCall.args[0].replace(/,/, '\n');
     await visit(`vault/secrets/${this.intMountPath}/pki/configuration/create`);
     await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
     await click('[data-test-text-toggle]');
@@ -70,17 +73,18 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     await click('[data-test-is-default]');
     // name default issuer of intermediate
     const oldIntIssuerId = find(PKI_CROSS_SIGN.rowValue('Issuer ID')).innerText;
-    const oldIntCert = find(PKI_CROSS_SIGN.copyButton('Certificate')).getAttribute('data-test-copy-button');
+    await click(PKI_CROSS_SIGN.copyButton('Certificate'));
+    const oldIntCert = clipboardSpy.thirdCall.args[0];
     await click(PKI_ISSUER_DETAILS.configure);
     await fillIn(GENERAL.inputByAttr('issuerName'), this.intIssuerName);
-    await click('[data-test-save]');
+    await click('[data-test-submit]');
 
     // perform cross-sign
     await visit(`vault/secrets/${this.parentMountPath}/pki/issuers/${this.parentIssuerName}/cross-sign`);
     await fillIn(PKI_CROSS_SIGN.objectListInput('intermediateMount'), this.intMountPath);
     await fillIn(PKI_CROSS_SIGN.objectListInput('intermediateIssuer'), this.intIssuerName);
     await fillIn(PKI_CROSS_SIGN.objectListInput('newCrossSignedIssuer'), this.newlySignedIssuer);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert
       .dom(`${PKI_CROSS_SIGN.signedIssuerCol('intermediateMount')} a`)
       .hasAttribute('href', `/ui/vault/secrets/${this.intMountPath}/pki/overview`);
@@ -90,7 +94,8 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
 
     // get certificate data of newly signed issuer
     await click(`${PKI_CROSS_SIGN.signedIssuerCol('newCrossSignedIssuer')} a`);
-    const newIntCert = find(PKI_CROSS_SIGN.copyButton('Certificate')).getAttribute('data-test-copy-button');
+    await click(PKI_CROSS_SIGN.copyButton('Certificate'));
+    const newIntCert = clipboardSpy.getCall(3).args[0];
 
     // verify cross-sign was accurate by creating a role to issue a leaf certificate
     const myRole = 'some-role';
@@ -103,13 +108,16 @@ module('Acceptance | pki/pki cross sign', function (hooks) {
     await visit(`vault/secrets/${this.intMountPath}/pki/roles/${myRole}/generate`);
     await fillIn(GENERAL.inputByAttr('commonName'), 'my-leaf');
     await fillIn('[data-test-ttl-value="TTL"]', '3600');
-    await click(GENERAL.saveButton);
-    const myLeafCert = find(PKI_CROSS_SIGN.copyButton('Certificate')).getAttribute('data-test-copy-button');
+    await click(GENERAL.submitButton);
+    await click(PKI_CROSS_SIGN.copyButton('Certificate'));
+    const myLeafCert = clipboardSpy.lastCall.args[0];
 
     // see comments in utils/parse-pki-cert.js for step-by-step explanation of of verifyCertificates method
     assert.true(
       await verifyCertificates(oldIntCert, newIntCert, myLeafCert),
       'the leaf certificate validates against both intermediate certificates'
     );
+    // Restore original clipboard
+    clipboardSpy.restore(); // cleanup
   });
 });

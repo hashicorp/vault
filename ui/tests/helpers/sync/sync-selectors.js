@@ -34,8 +34,6 @@ export const PAGE = {
     sync: {
       mountSelect: '[data-test-sync-mount-select]',
       mountInput: '[data-test-sync-mount-input]',
-      submit: '[data-test-sync-submit]',
-      cancel: '[data-test-sync-cancel]',
       successMessage: '[data-test-sync-success-message]',
     },
     list: {
@@ -82,7 +80,6 @@ export const PAGE = {
   },
   selectType: (type) => `[data-test-select-destination="${type}"]`,
   createCancel: '[data-test-destination-create-cancel]',
-  saveButton: '[data-test-save]',
   toolbar: (btnText) => `[data-test-toolbar="${btnText}"]`,
   form: {
     enableInput: (attr) => `[data-test-enable-field="${attr}"] [data-test-icon="edit"]`, // TODO duplicated in general-selectors as this component became more widely used

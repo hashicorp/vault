@@ -39,7 +39,7 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     await fillIn(GENERAL.inputByAttr('path'), path);
     await click(GENERAL.toggleGroup('Method Options'));
     await mountSecrets.enableDefaultTtl().defaultTTLUnit('s').defaultTTLVal(100);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     assert
       .dom(`${GENERAL.flashMessage}.is-success`)

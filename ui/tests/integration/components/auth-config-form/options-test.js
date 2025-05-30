@@ -85,7 +85,7 @@ module('Integration | Component | auth-config-form options', function (hooks) {
 
       await click(GENERAL.inputByAttr('config.lockoutDisable'));
 
-      await click('[data-test-save-config]');
+      await click(GENERAL.submitButton);
     });
   }
 
@@ -143,7 +143,7 @@ module('Integration | Component | auth-config-form options', function (hooks) {
         .dom(GENERAL.inputByAttr('config.lockoutDisable'))
         .doesNotExist(`${type} method does not render lockout disable`);
 
-      await click('[data-test-save-config]');
+      await click(GENERAL.submitButton);
     });
   }
 
@@ -196,6 +196,6 @@ module('Integration | Component | auth-config-form options', function (hooks) {
       .dom(GENERAL.inputByAttr('config.lockoutDisable'))
       .doesNotExist('token method does not render lockout disable');
 
-    await click('[data-test-save-config]');
+    await click(GENERAL.submitButton);
   });
 });
