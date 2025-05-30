@@ -65,8 +65,9 @@ export default class ApiService extends Service {
     const headers = new Headers(init.headers);
     // unauthenticated or clientToken requests should set the header in initOverrides
     // unauthenticated value should be empty string, not undefined or null
-    if (!headers.has('X-Vault-Token')) {
-      headers.set('X-Vault-Token', this.authService.currentToken);
+    const { currentToken } = this.authService;
+    if (!headers.has('X-Vault-Token') && currentToken) {
+      headers.set('X-Vault-Token', currentToken);
     }
     if (init.method === 'PATCH') {
       headers.set('Content-Type', 'application/merge-patch+json');
