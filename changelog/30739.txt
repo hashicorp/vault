@@ -1,0 +1,4 @@
+```release-note:feature
+**Secret Recovery from Snapshot (enterprise)**: Adds a framework to load an integrated storage 
+snapshot into Vault and read, list, and recover KV v1 and cubbyhole secrets from the snapshot.
+```

@@ -755,6 +755,10 @@
           {
             "title": "<code>/sys/storage/raft/snapshot-auto</code>",
             "path": "system/storage/raftautosnapshots"
+          },
+          {
+            "title": "<code>/sys/storage/raft/snapshot-load</code>",
+            "path": "system/storage/raftsnapshotload"
           }
         ]
       },
