@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/go-uuid"
@@ -236,6 +237,7 @@ func (c *Core) BarrierRekeyInit(config *SealConfig) logical.HTTPCodedError {
 		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("error generating nonce for procedure: %w", err).Error())
 	}
 	c.barrierRekeyConfig.Nonce = nonce
+	c.barrierRekeyConfig.Created = time.Now().UTC()
 
 	if c.logger.IsInfo() {
 		c.logger.Info("rekey initialized", "nonce", c.barrierRekeyConfig.Nonce, "shares", c.barrierRekeyConfig.SecretShares, "threshold", c.barrierRekeyConfig.SecretThreshold, "validation_required", c.barrierRekeyConfig.VerificationRequired)
@@ -286,6 +288,7 @@ func (c *Core) RecoveryRekeyInit(config *SealConfig) logical.HTTPCodedError {
 		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("error generating nonce for procedure: %w", err).Error())
 	}
 	c.recoveryRekeyConfig.Nonce = nonce
+	c.recoveryRekeyConfig.Created = time.Now().UTC()
 
 	if c.logger.IsInfo() {
 		c.logger.Info("rekey initialized", "nonce", c.recoveryRekeyConfig.Nonce, "shares", c.recoveryRekeyConfig.SecretShares, "threshold", c.recoveryRekeyConfig.SecretThreshold, "validation_required", c.recoveryRekeyConfig.VerificationRequired)
@@ -910,7 +913,7 @@ func (c *Core) RekeyVerify(ctx context.Context, key []byte, nonce string, recove
 }
 
 // RekeyCancel is used to cancel an in-progress rekey
-func (c *Core) RekeyCancel(recovery bool) logical.HTTPCodedError {
+func (c *Core) RekeyCancel(recovery bool, nonce string, requiresNonceDeadline time.Duration) logical.HTTPCodedError {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.Sealed() {
@@ -923,10 +926,26 @@ func (c *Core) RekeyCancel(recovery bool) logical.HTTPCodedError {
 	c.rekeyLock.Lock()
 	defer c.rekeyLock.Unlock()
 
+	validBarrierReq := func() bool {
+		return c.barrierRekeyConfig.Nonce == nonce ||
+			rekeyCancelDeadlineIsMet(c.barrierRekeyConfig.Created, requiresNonceDeadline)
+	}
+
+	validRecoveryReq := func() bool {
+		return c.recoveryRekeyConfig.Nonce == nonce ||
+			rekeyCancelDeadlineIsMet(c.recoveryRekeyConfig.Created, requiresNonceDeadline)
+	}
+
 	// Clear any progress or config
 	if recovery {
+		if c.recoveryRekeyConfig != nil && !validRecoveryReq() {
+			return logical.CodedError(http.StatusBadRequest, "invalid request")
+		}
 		c.recoveryRekeyConfig = nil
 	} else {
+		if c.barrierRekeyConfig != nil && !validBarrierReq() {
+			return logical.CodedError(http.StatusBadRequest, "invalid request")
+		}
 		c.barrierRekeyConfig = nil
 	}
 	return nil
@@ -1030,4 +1049,12 @@ func (c *Core) RekeyDeleteBackup(ctx context.Context, recovery bool) logical.HTT
 		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("error deleting backup keys: %w", err).Error())
 	}
 	return nil
+}
+
+func rekeyCancelDeadlineIsMet(created time.Time, deadline time.Duration) bool {
+	if created.IsZero() {
+		return false
+	}
+	passed := time.Now().UTC().Sub(created) >= deadline
+	return passed
 }

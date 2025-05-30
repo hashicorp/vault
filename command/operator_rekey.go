@@ -337,6 +337,15 @@ func (c *OperatorRekeyCommand) init(client *api.Client) int {
 
 // cancel is used to abort the rekey process.
 func (c *OperatorRekeyCommand) cancel(client *api.Client) int {
+	if c.flagNonce != "" && c.flagVerify {
+		c.UI.Error("The -nonce flag is not valid with the -verify flag")
+		return 1
+	}
+
+	if c.flagNonce != "" {
+		return c.cancelWithNonce(client)
+	}
+
 	// Handle the different API requests
 	var fn func() error
 	switch strings.ToLower(strings.TrimSpace(c.flagTarget)) {
@@ -358,6 +367,29 @@ func (c *OperatorRekeyCommand) cancel(client *api.Client) int {
 
 	// Make the request
 	if err := fn(); err != nil {
+		c.UI.Error(fmt.Sprintf("Error canceling rekey: %s", err))
+		return 2
+	}
+
+	c.UI.Output("Success! Canceled rekeying (if it was started)")
+	return 0
+}
+
+func (c *OperatorRekeyCommand) cancelWithNonce(client *api.Client) int {
+	var fn func(nonce string) error
+	switch strings.ToLower(strings.TrimSpace(c.flagTarget)) {
+	case "barrier":
+		fn = client.Sys().RekeyCancelWithNonce
+	case "recovery", "hsm":
+		fn = client.Sys().RekeyRecoveryKeyCancelWithNonce
+
+	default:
+		c.UI.Error(fmt.Sprintf("Unknown target: %s", c.flagTarget))
+		return 1
+	}
+
+	// Make the request
+	if err := fn(c.flagNonce); err != nil {
 		c.UI.Error(fmt.Sprintf("Error canceling rekey: %s", err))
 		return 2
 	}
