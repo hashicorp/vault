@@ -2817,8 +2817,8 @@ func TestSystemBackend_writeHCLDuplicateAttributes(t *testing.T) {
 
 	// policy with duplicate attribute
 	rules := `path "foo/" { policy = "read" policy = "read" }`
-	req := logical.TestRequest(t, logical.UpdateOperation, "policy/Foo")
-	req.Data["rules"] = rules
+	req := logical.TestRequest(t, logical.UpdateOperation, "policy/foo")
+	req.Data["policy"] = rules
 	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 	// TODO (HCL_DUP_KEYS_DEPRECATION): change this test to expect an error when creating a policy with duplicate attributes
 	if err != nil {

@@ -323,13 +323,51 @@ module('Integration | Component | form field', function (hooks) {
         .hasText(possibleValue, 'label has correct text');
       assert
         .dom(inputs[index])
-        .hasAttribute('id', possibleValue, 'input[type="radio"] has correct id')
+        .hasAttribute('id', possibleValue, 'input[type="radio"] has correct `id` attribute')
+        .hasAttribute('name', 'myfield', 'input[type="radio"] has correct `name` attribute')
+        .hasAttribute('value', possibleValue, 'input[type="radio"] has correct `value` attribute')
         .hasAttribute(
           'data-test-radio',
           possibleValue,
           'input[type="radio"] has correct `data-test-radio` attribute'
         );
     });
+  });
+
+  test('it renders: editType=radio / possibleValues - horizontal layout (no `subText/helpText`)', async function (assert) {
+    await setup.call(
+      this,
+      createAttr('myfield', '-', { editType: 'radio', possibleValues: ['foo', 'bar', 'baz'] })
+    );
+    assert
+      .dom('.field fieldset[class^="hds-form-group"].hds-form-group--layout-horizontal')
+      .exists('renders the Hds::Form::Radio::Group with an horizontal layout');
+  });
+
+  test('it renders: editType=radio / possibleValues - vertical layout (with `subText`)', async function (assert) {
+    await setup.call(
+      this,
+      createAttr('myfield', '-', {
+        editType: 'radio',
+        possibleValues: [{ value: 'foo', subText: 'Some subtext' }, { value: 'bar' }, { value: 'baz' }],
+      })
+    );
+    assert
+      .dom('.field fieldset[class^="hds-form-group"].hds-form-group--layout-vertical')
+      .exists('renders the Hds::Form::Radio::Group with a vertical layout');
+  });
+
+  test('it renders: editType=radio / possibleValues - vertical layout (with `helpText`)', async function (assert) {
+    await setup.call(
+      this,
+      createAttr('myfield', '-', {
+        editType: 'radio',
+        possibleValues: [{ value: 'foo', helpText: 'Some help text' }, { value: 'bar' }, { value: 'baz' }],
+      })
+    );
+    assert
+      .dom('.field fieldset[class^="hds-form-group"].hds-form-group--layout-vertical')
+      .exists('renders the Hds::Form::Radio::Group with a vertical layout');
   });
 
   test('it renders: editType=radio / possibleValues - with no selected radio', async function (assert) {
@@ -355,6 +393,23 @@ module('Integration | Component | form field', function (hooks) {
     await click(GENERAL.radioByAttr('foo'));
     assert.strictEqual(model.get('myfield'), 'foo');
     assert.ok(spy.calledWith('myfield', 'foo'), 'onChange called with correct args');
+  });
+
+  test('it renders: editType=radio / possibleValues - disabled inputs', async function (assert) {
+    const possibleValues = ['foo', 'bar', 'baz'];
+    await setup.call(
+      this,
+      createAttr('myfield', '-', {
+        editType: 'radio',
+        editDisabled: true,
+        possibleValues: ['foo', 'bar', 'baz'],
+        defaultValue: 'baz',
+      })
+    );
+    const inputs = findAll(`${GENERAL.inputGroupByAttr('myfield')} input[type="radio"]`);
+    possibleValues.forEach((possibleValue, index) => {
+      assert.dom(inputs[index]).hasAttribute('disabled', '', 'input[type="radio"] has `disabled` attribute');
+    });
   });
 
   test('it renders: editType=radio / possibleValues - with `true/false` boolean values', async function (assert) {
@@ -442,6 +497,25 @@ module('Integration | Component | form field', function (hooks) {
       .hasText('Some subtext 4', 'renders the right subtext string for `qux` from options');
   });
 
+  // note: this test is not a duplicate of the one above, but is meant to test the condition
+  // where there is a `helpText` provided for one of the controls, but no `subText` for any of them
+  // in which case the template logic for the `HelperText` block of the inputs hits the `else` block
+  test('it renders: editType=radio / possibleValues - with passed helptext and subtext not defined', async function (assert) {
+    await setup.call(
+      this,
+      createAttr('myfield', '-', {
+        editType: 'radio',
+        possibleValues: [{ value: 'foo' }, { value: 'bar', helpText: 'Some helptext 2' }],
+      })
+    );
+    // first item should not have helpText
+    assert.dom(GENERAL.helpTextByGroupControlIndex(1)).doesNotExist('does not render helptext for `foo`');
+    // second item should have helpText
+    assert
+      .dom(GENERAL.helpTextByGroupControlIndex(2))
+      .hasText('Some helptext 2', 'renders the right helptext string for `bar` from options');
+  });
+
   test('it renders: editType=radio / possibleValues - with validation errors and warnings', async function (assert) {
     this.setProperties({
       attr: createAttr('myfield', '-', { editType: 'radio', possibleValues: ['foo', 'bar', 'baz'] }),
@@ -488,7 +562,9 @@ module('Integration | Component | form field', function (hooks) {
         .hasText(possibleValue, 'label has correct text');
       assert
         .dom(inputs[index])
-        .hasAttribute('id', possibleValue, 'input[type="checkbox"] has correct id')
+        .hasAttribute('id', possibleValue, 'input[type="checkbox"] has correct `id` attribute')
+        .hasAttribute('name', 'myfield', 'input[type="checkbox"] has correct `name` attribute')
+        .hasAttribute('value', possibleValue, 'input[type="checkbox"] has correct `value` attribute')
         .hasAttribute(
           'data-test-checkbox',
           possibleValue,
@@ -593,6 +669,8 @@ module('Integration | Component | form field', function (hooks) {
       .exists('renders as Hds::Form::Select');
     assert
       .dom('select')
+      .hasAttribute('id', 'myfield', 'select has correct `id` attribute')
+      .hasAttribute('name', 'myfield', 'select has correct `name` attribute')
       .hasAttribute('data-test-input', 'myfield', 'select has correct `data-test-input` attribute');
     assert.dom(GENERAL.fieldLabel()).hasText('Myfield', 'renders the select label');
     assert.dom(GENERAL.inputByAttr('myfield')).hasValue('foo', 'has first option value');
@@ -705,6 +783,17 @@ module('Integration | Component | form field', function (hooks) {
     assert
       .dom(`input[type="password"]`)
       .exists('renders input with type=password')
+      .hasAttribute('name', 'myfield', 'input[type="password"] has correct `id` attribute')
+      .doesNotHaveAttribute(
+        'placeholder',
+        'input[type="password"] does not have `placeholder` attribute by default'
+      )
+      .hasAttribute(
+        'autocomplete',
+        'new-password',
+        'input[type="password"] has correct `autocomplete` attribute'
+      )
+      .hasAttribute('spellcheck', 'false', 'input[type="password"] has correct `spellcheck` attribute')
       .hasAttribute(
         'data-test-input',
         'myfield',
