@@ -124,6 +124,12 @@ variable "enable_audit_devices" {
   default     = true
 }
 
+variable "enable_telemetry" {
+  type        = bool
+  description = "Enable Vault telemetry"
+  default     = false
+}
+
 variable "external_storage_port" {
   type        = number
   description = "The port to connect to when using external storage"

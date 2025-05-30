@@ -13,3 +13,8 @@ output "hosts" {
     ipv6       = try(data.aws_instance.targets[idx].ipv6_addresses[0], null)
   } }
 }
+
+output "security_group_id" {
+  description = "The target security group ID"
+  value       = aws_security_group.target.id
+}

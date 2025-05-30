@@ -40,6 +40,12 @@ variable "disable_mlock" {
   default     = false
 }
 
+variable "enable_telemetry" {
+  type        = bool
+  description = "Enable Vault telemetry"
+  default     = false
+}
+
 variable "environment" {
   description = "Optional Vault configuration environment variables to set starting Vault"
   type        = map(string)
