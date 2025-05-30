@@ -214,6 +214,10 @@ All of these metrics are numerical, and contain no sensitive values or additiona
 | `vault.audit.device.socket.tcp.count`                               | The total total number of audit devices of type TCP socket configured for this cluster.                    |
 | `vault.audit.device.socket.unix.count`                              | The total total number of audit devices of type UNIX socket configured for this cluster.                   |
 | `vault.audit.exclusion.stanza.count`                                | The total number of audit exclusion stanzas in the HCL configuration for this cluster.                     |
+| `vault.loadedsnapshots.manual.count`                                | The total number of manual (local) snapshots loaded for recovery.                                          |
+| `vault.loadedsnapshots.cloud.google-gcs.count`                      | The total number of Google GCS snapshots loaded for recovery.                                              |
+| `vault.loadedsnapshots.cloud.aws-s3.count`                          | The total number of AWS S3 snapshots loaded for recovery.                                                  |
+| `vault.loadedsnapshots.cloud.azure-blob.count`                      | The total number of Azure Blob snapshots loaded for recovery.                                              |
 
 ## Usage metadata list
 
