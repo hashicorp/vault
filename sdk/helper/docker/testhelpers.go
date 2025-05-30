@@ -79,7 +79,7 @@ func NewServiceRunner(opts RunOptions) (*Runner, error) {
 		opts.NetworkName = os.Getenv("TEST_DOCKER_NETWORK_NAME")
 	}
 	if opts.NetworkName != "" {
-		nets, err := dapi.NetworkList(context.TODO(), types.NetworkListOptions{
+		nets, err := dapi.NetworkList(context.TODO(), network.ListOptions{
 			Filters: filters.NewArgs(filters.Arg("name", opts.NetworkName)),
 		})
 		if err != nil {
@@ -570,7 +570,7 @@ func copyToContainer(ctx context.Context, dapi *client.Client, containerID, from
 		return fmt.Errorf("error preparing copy from %q -> %q: %v", from, to, err)
 	}
 	defer content.Close()
-	err = dapi.CopyToContainer(ctx, containerID, dstDir, content, types.CopyToContainerOptions{})
+	err = dapi.CopyToContainer(ctx, containerID, dstDir, content, container.CopyToContainerOptions{})
 	if err != nil {
 		return fmt.Errorf("error copying from %q -> %q: %v", from, to, err)
 	}
@@ -579,14 +579,14 @@ func copyToContainer(ctx context.Context, dapi *client.Client, containerID, from
 }
 
 type RunCmdOpt interface {
-	Apply(cfg *types.ExecConfig) error
+	Apply(cfg *container.ExecOptions) error
 }
 
 type RunCmdUser string
 
 var _ RunCmdOpt = (*RunCmdUser)(nil)
 
-func (u RunCmdUser) Apply(cfg *types.ExecConfig) error {
+func (u RunCmdUser) Apply(cfg *container.ExecOptions) error {
 	cfg.User = string(u)
 	return nil
 }
@@ -595,8 +595,8 @@ func (d *Runner) RunCmdWithOutput(ctx context.Context, container string, cmd []s
 	return RunCmdWithOutput(d.DockerAPI, ctx, container, cmd, opts...)
 }
 
-func RunCmdWithOutput(api *client.Client, ctx context.Context, container string, cmd []string, opts ...RunCmdOpt) ([]byte, []byte, int, error) {
-	runCfg := types.ExecConfig{
+func RunCmdWithOutput(api *client.Client, ctx context.Context, containerID string, cmd []string, opts ...RunCmdOpt) ([]byte, []byte, int, error) {
+	runCfg := container.ExecOptions{
 		AttachStdout: true,
 		AttachStderr: true,
 		Cmd:          cmd,
@@ -608,12 +608,12 @@ func RunCmdWithOutput(api *client.Client, ctx context.Context, container string,
 		}
 	}
 
-	ret, err := api.ContainerExecCreate(ctx, container, runCfg)
+	ret, err := api.ContainerExecCreate(ctx, containerID, runCfg)
 	if err != nil {
 		return nil, nil, -1, fmt.Errorf("error creating execution environment: %v\ncfg: %v\n", err, runCfg)
 	}
 
-	resp, err := api.ContainerExecAttach(ctx, ret.ID, types.ExecStartCheck{})
+	resp, err := api.ContainerExecAttach(ctx, ret.ID, container.ExecAttachOptions{})
 	if err != nil {
 		return nil, nil, -1, fmt.Errorf("error attaching to command execution: %v\ncfg: %v\nret: %v\n", err, runCfg, ret)
 	}
@@ -641,8 +641,8 @@ func (d *Runner) RunCmdInBackground(ctx context.Context, container string, cmd [
 	return RunCmdInBackground(d.DockerAPI, ctx, container, cmd, opts...)
 }
 
-func RunCmdInBackground(api *client.Client, ctx context.Context, container string, cmd []string, opts ...RunCmdOpt) (string, error) {
-	runCfg := types.ExecConfig{
+func RunCmdInBackground(api *client.Client, ctx context.Context, containerID string, cmd []string, opts ...RunCmdOpt) (string, error) {
+	runCfg := container.ExecOptions{
 		AttachStdout: true,
 		AttachStderr: true,
 		Cmd:          cmd,
@@ -654,12 +654,12 @@ func RunCmdInBackground(api *client.Client, ctx context.Context, container strin
 		}
 	}
 
-	ret, err := api.ContainerExecCreate(ctx, container, runCfg)
+	ret, err := api.ContainerExecCreate(ctx, containerID, runCfg)
 	if err != nil {
 		return "", fmt.Errorf("error creating execution environment: %w\ncfg: %v\n", err, runCfg)
 	}
 
-	err = api.ContainerExecStart(ctx, ret.ID, types.ExecStartCheck{})
+	err = api.ContainerExecStart(ctx, ret.ID, container.ExecStartOptions{})
 	if err != nil {
 		return "", fmt.Errorf("error starting command execution: %w\ncfg: %v\nret: %v\n", err, runCfg, ret)
 	}
@@ -886,10 +886,10 @@ func BuildImage(ctx context.Context, api *client.Client, containerfile string, c
 	return output, nil
 }
 
-func (d *Runner) CopyTo(container string, destination string, contents BuildContext) error {
+func (d *Runner) CopyTo(containerID string, destination string, contents BuildContext) error {
 	// XXX: currently we use the default options but we might want to allow
 	// modifying cfg.CopyUIDGID in the future.
-	var cfg types.CopyToContainerOptions
+	var cfg container.CopyToContainerOptions
 
 	// Convert our provided contents to a tarball to ship up.
 	tar, err := contents.ToTarball()
@@ -897,10 +897,10 @@ func (d *Runner) CopyTo(container string, destination string, contents BuildCont
 		return fmt.Errorf("failed to build contents into tarball: %v", err)
 	}
 
-	return d.DockerAPI.CopyToContainer(context.Background(), container, destination, tar, cfg)
+	return d.DockerAPI.CopyToContainer(context.Background(), containerID, destination, tar, cfg)
 }
 
-func (d *Runner) CopyFrom(container string, source string) (BuildContext, *types.ContainerPathStat, error) {
+func (d *Runner) CopyFrom(container string, source string) (BuildContext, *container.PathStat, error) {
 	reader, stat, err := d.DockerAPI.CopyFromContainer(context.Background(), container, source)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to read %v from container: %v", source, err)
