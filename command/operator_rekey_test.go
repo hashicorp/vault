@@ -67,6 +67,16 @@ func TestOperatorRekeyCommand_Run(t *testing.T) {
 			"incorrect number",
 			2,
 		},
+		{
+			"cancel_verify_nonce",
+			[]string{
+				"-cancel",
+				"-verify",
+				"-nonce", "abcd",
+			},
+			"The -nonce flag is not valid with the -verify flag",
+			1,
+		},
 	}
 
 	t.Run("validations", func(t *testing.T) {
@@ -152,10 +162,11 @@ func TestOperatorRekeyCommand_Run(t *testing.T) {
 		defer closer()
 
 		// Initialize a rekey
-		if _, err := client.Sys().RekeyInit(&api.RekeyInitRequest{
+		init, err := client.Sys().RekeyInit(&api.RekeyInitRequest{
 			SecretShares:    1,
 			SecretThreshold: 1,
-		}); err != nil {
+		})
+		if err != nil {
 			t.Fatal(err)
 		}
 
@@ -163,7 +174,7 @@ func TestOperatorRekeyCommand_Run(t *testing.T) {
 		cmd.client = client
 
 		code := cmd.Run([]string{
-			"-cancel",
+			"-cancel", "-nonce", init.Nonce,
 		})
 		if exp := 0; code != exp {
 			t.Errorf("expected %d to be %d", code, exp)

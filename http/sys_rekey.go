@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/hashicorp/vault/helper/pgpkeys"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -134,6 +135,7 @@ func handleSysRekeyInitPut(ctx context.Context, core *vault.Core, recovery bool,
 		PGPKeys:              req.PGPKeys,
 		Backup:               req.Backup,
 		VerificationRequired: req.RequireVerification,
+		Created:              time.Now().UTC(),
 	}, recovery)
 	if err != nil {
 		respondError(w, err.Code(), err)
@@ -144,7 +146,13 @@ func handleSysRekeyInitPut(ctx context.Context, core *vault.Core, recovery bool,
 }
 
 func handleSysRekeyInitDelete(ctx context.Context, core *vault.Core, recovery bool, w http.ResponseWriter, r *http.Request) {
-	if err := core.RekeyCancel(recovery); err != nil {
+	var req RekeyDeleteRequest
+	if _, err := parseJSONRequest(core.PerfStandby(), r, w, &req); err != nil {
+		respondError(w, http.StatusBadRequest, err)
+		return
+	}
+
+	if err := core.RekeyCancel(recovery, req.Nonce, 10*time.Minute); err != nil {
 		respondError(w, err.Code(), err)
 		return
 	}
@@ -411,4 +419,9 @@ type RekeyVerificationStatusResponse struct {
 type RekeyVerificationUpdateResponse struct {
 	Nonce    string `json:"nonce"`
 	Complete bool   `json:"complete"`
+}
+
+type RekeyDeleteRequest struct {
+	Nonce string `json:"nonce"`
+	Key   string `json:"key"`
 }

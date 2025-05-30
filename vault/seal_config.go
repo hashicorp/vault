@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"time"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
@@ -65,6 +66,9 @@ type SealConfig struct {
 
 	// Name is the name provided in the seal configuration to identify the seal
 	Name string `json:"name" mapstructure:"name"`
+
+	// Created is the time of creation in UTC
+	Created time.Time `json:"-"`
 }
 
 // Validate is used to sanity check the seal configuration
