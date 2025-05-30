@@ -43,6 +43,7 @@ export default class AuthMethodModel extends Model {
   get methodType() {
     return this.type.replace(/^ns_/, '');
   }
+
   get icon() {
     const authMethods = allMethods().find((backend) => backend.type === this.methodType);
 
