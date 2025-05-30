@@ -68,7 +68,7 @@ require (
 	github.com/go-errors/errors v1.5.1
 	github.com/go-git/go-git/v5 v5.14.0
 	github.com/go-jose/go-jose/v3 v3.0.4
-	github.com/go-ldap/ldap/v3 v3.4.10
+	github.com/go-ldap/ldap/v3 v3.4.11
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/go-test/deep v1.1.1
 	github.com/go-zookeeper/zk v1.0.3
@@ -141,7 +141,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-cf v0.20.1
 	github.com/hashicorp/vault-plugin-auth-gcp v0.20.2
 	github.com/hashicorp/vault-plugin-auth-jwt v0.23.2
-	github.com/hashicorp/vault-plugin-auth-kerberos v0.14.0
+	github.com/hashicorp/vault-plugin-auth-kerberos v0.14.1-0.20250530214156-6e4d42c79afb
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.21.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.18.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.13.0
@@ -190,7 +190,7 @@ require (
 	github.com/okta/okta-sdk-golang/v5 v5.0.2
 	github.com/oracle/oci-go-sdk v24.3.0+incompatible
 	github.com/ory/dockertest v3.3.5+incompatible
-	github.com/ory/dockertest/v3 v3.11.1-0.20250102095203-4b59dd3f56ac
+	github.com/ory/dockertest/v3 v3.12.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pires/go-proxyproto v0.8.0
 	github.com/pkg/errors v0.9.1
@@ -348,7 +348,7 @@ require (
 	github.com/cloudflare/circl v1.6.0 // indirect
 	github.com/cloudfoundry-community/go-cfclient v0.0.0-20220930021109-9c4e6c59ccf1 // indirect
 	github.com/cncf/xds/go v0.0.0-20250121191232-2f005788dc42 // indirect
-	github.com/containerd/continuity v0.4.3 // indirect
+	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/coreos/etcd v3.3.27+incompatible // indirect
 	github.com/coreos/go-oidc/v3 v3.14.1 // indirect
@@ -378,7 +378,7 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.7 // indirect
 	github.com/gammazero/deque v0.2.1 // indirect
-	github.com/go-asn1-ber/asn1-ber v1.5.7 // indirect
+	github.com/go-asn1-ber/asn1-ber v1.5.8-0.20250403174932-29230038a667 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.6.2 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.0 // indirect
@@ -488,7 +488,7 @@ require (
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
-	github.com/opencontainers/runc v1.2.3 // indirect
+	github.com/opencontainers/runc v1.2.6 // indirect
 	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b // indirect
 	github.com/oracle/oci-go-sdk/v59 v59.0.0 // indirect
 	github.com/oracle/oci-go-sdk/v60 v60.0.0 // indirect
