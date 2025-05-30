@@ -8,8 +8,8 @@
   defining the schedule on which Vault should rotate the root token. Standard
   cron-style time format uses five fields to define the minute, hour, day of
   month, month, and day of week respectively. For example, `0 0 * * SAT` tells
-  Vault to rotate the root token every Saturday at 00:00. **You must set one of
-  `rotation_schedule` or `rotation_period`, but cannot set both**.
+  Vault to rotate the root token every Saturday at 00:00. Vault interprets the schedule in UTC.
+  **You must set one of `rotation_schedule` or `rotation_period`, but cannot set both**.
 - `rotation_window` `(string/integer: 0)` – <EnterpriseAlert product="vault" inline />
   The maximum amount of time, in seconds, allowed to complete
   a rotation when a scheduled token rotation occurs. If Vault cannot rotate the
