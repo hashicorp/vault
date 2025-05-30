@@ -17,6 +17,21 @@
           data-test-input-group={{@attr.name}}
           as |G|
         >
+          <G.Legend data-test-form-field-label={{@attr.name}}>{{this.labelString}}</G.Legend>
+          {{#if this.helpTextString}}
+            <G.HelperText data-test-help-text={{@attr.options.helpText}}>{{this.helpTextString}}</G.HelperText>
+          {{/if}}
+          {{#if @attr.options.subText}}
+            <G.HelperText data-test-help-text={{@attr.options.subText}}>
+              {{@attr.options.subText}}
+              {{#if @attr.options.docLink}}
+                <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>
+                  See our documentation
+                </DocLink>
+                for help.
+              {{/if}}
+            </G.HelperText>
+          {{/if}}
           {{#each (path-or-array @attr.options.possibleValues @model) as |val|}}
             <G.RadioField
               @id={{or val.id (this.radioValue val)}}
@@ -126,8 +141,8 @@
             @hasVisibilityToggle={{false}}
             @value={{get @model this.valuePath}}
             @isInvalid={{this.validationError}}
-            {{! Prevents browsers from auto-filling }}
             placeholder={{@attr.options.placeholder}}
+            {{! Prevents browsers from auto-filling }}
             autocomplete="new-password"
             spellcheck="false"
             {{on "input" this.onChangeWithEvent}}
