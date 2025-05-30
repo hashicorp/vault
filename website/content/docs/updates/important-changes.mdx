@@ -352,3 +352,29 @@ similar to the following folder structure for
 Alternatively, upgrade to one of the following Vault versions: 1.16.21+, 1.17.17+,
 1.18.10+, 1.19.4+. See [Register external plugins](/vault/docs/plugins/register)
 for more details.
+
+## AWS STS configuration can fail if STS endpoints are unspecified ((#aws-fallback-sts))
+
+| Change | Affected version | Affected deployments
+| ------ | ---------------- | --------------------
+| Bug    | 1.19.0-1.19.3    | any
+
+When configuring an sts endpoint in the AWS Secrets engine, or when upgrading Vault with such an endpoint,
+if no sts_endpoint is set, the engine will return an error stating that the number of endpoints and regions do not match:
+
+```
+{"errors":["number of regions does not match number of endpoints"]}
+```
+
+### Recommendation
+
+Explicitly set the default endpoint and region when configuring sts:
+
+```
+{
+...
+  sts_region = "us-east-1"
+  sts_endpoint = "https://sts.amazonaws.com"
+...
+}
+```
