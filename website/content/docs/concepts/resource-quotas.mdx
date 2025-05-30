@@ -58,36 +58,6 @@ and through enabling optional audit logging.
 | [Lease count quotas](/vault/docs/configuration/create-lease-count-quota) | Cap number of leases generated in a system or mount to protect system stability and storage performance at scale | &#10060;                | &#9989;          |
 
 
-## Adaptive overload protection
-
-@include 'alerts/enterprise-only.mdx'
-
-Adaptive overload protection protects against Vault outages caused by
-write-intensive overloads which most likely to cause service degradation or
-outages. Upon detecting significant service degradation, adaptive overload
-protection throttles “write” requests, returning retryable error response codes
-to clients while continuing to serve “read” requests. Once the cluster’s
-performance returns to normal levels, “write” requests become automatically
-accepted once again.
-
-In effect, adaptive overload protection serves as a last layer of defense
-against a full Vault outage, preserving availability for read requests and some
-write requests. **Adaptive overload protection is enabled by default in Vault
-Enterprise 1.18 and later.**
-
-The best practice is to define quality-of-service (QoS) standards and enforce
-tenant fairness, ensuring that each tenant (namespace) has resource allocated
-appropriately to its usage. No one tenant should cause service degradation for
-other tenants. 
-
-Resource quotas work in tandem with adaptive overload protection to protect the
-Vault service from denial of service attacks and unfair resource allocation. 
-
-Refer to the [identity-based rate limit
-quotas](/vault/docs/configuration/identity-based-rate-limit) page to learn about
-defining more fine-grained control over how traffic enters their Vault. 
-
-
 ## Exempt routes
 
 By default, the following paths are exempt from rate limiting. However, Vault
