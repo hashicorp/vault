@@ -147,7 +147,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-couchbase v0.13.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.17.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.14.0
-	github.com/hashicorp/vault-plugin-database-redis v0.5.0
+	github.com/hashicorp/vault-plugin-database-redis v0.6.0
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.7.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.14.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
@@ -190,7 +190,7 @@ require (
 	github.com/okta/okta-sdk-golang/v5 v5.0.2
 	github.com/oracle/oci-go-sdk v24.3.0+incompatible
 	github.com/ory/dockertest v3.3.5+incompatible
-	github.com/ory/dockertest/v3 v3.11.1-0.20250102095203-4b59dd3f56ac
+	github.com/ory/dockertest/v3 v3.12.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pires/go-proxyproto v0.8.0
 	github.com/pkg/errors v0.9.1
@@ -348,7 +348,7 @@ require (
 	github.com/cloudflare/circl v1.6.0 // indirect
 	github.com/cloudfoundry-community/go-cfclient v0.0.0-20220930021109-9c4e6c59ccf1 // indirect
 	github.com/cncf/xds/go v0.0.0-20250121191232-2f005788dc42 // indirect
-	github.com/containerd/continuity v0.4.3 // indirect
+	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/coreos/etcd v3.3.27+incompatible // indirect
 	github.com/coreos/go-oidc/v3 v3.14.1 // indirect
@@ -488,7 +488,7 @@ require (
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
-	github.com/opencontainers/runc v1.2.3 // indirect
+	github.com/opencontainers/runc v1.2.6 // indirect
 	github.com/opentracing/opentracing-go v1.2.1-0.20220228012449-10b1cf09e00b // indirect
 	github.com/oracle/oci-go-sdk/v59 v59.0.0 // indirect
 	github.com/oracle/oci-go-sdk/v60 v60.0.0 // indirect
