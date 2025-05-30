@@ -28,6 +28,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
+	"github.com/hashicorp/vault/vault/observations"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -113,7 +114,7 @@ type Config struct {
 
 	DetectDeadlocks string `hcl:"detect_deadlocks"`
 
-	ObservationSystemLedgerPath string `hcl:"observation_system_ledger_path"`
+	Observations *observations.ObservationSystemConfig `hcl:"observations"`
 
 	ImpreciseLeaseRoleTracking bool `hcl:"imprecise_lease_role_tracking"`
 
@@ -426,9 +427,18 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DetectDeadlocks = c2.DetectDeadlocks
 	}
 
-	result.ObservationSystemLedgerPath = c.ObservationSystemLedgerPath
-	if c2.ObservationSystemLedgerPath != "" {
-		result.ObservationSystemLedgerPath = c2.ObservationSystemLedgerPath
+	result.DisablePrintableCheck = c.DisablePrintableCheck
+	if c2.DisablePrintableCheckRaw != nil {
+		result.DisablePrintableCheck = c2.DisablePrintableCheck
+	}
+	result.Observations = c.Observations
+	if c2.Observations != nil {
+		if result.Observations == nil {
+			result.Observations = &observations.ObservationSystemConfig{}
+		}
+		if c2.Observations.LedgerPath != "" {
+			result.Observations.LedgerPath = c2.Observations.LedgerPath
+		}
 	}
 
 	result.ImpreciseLeaseRoleTracking = c.ImpreciseLeaseRoleTracking
@@ -1373,8 +1383,6 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 		"detect_deadlocks": c.DetectDeadlocks,
 
-		"observation_system_ledger_path": c.ObservationSystemLedgerPath,
-
 		"imprecise_lease_role_tracking": c.ImpreciseLeaseRoleTracking,
 
 		"enable_post_unseal_trace":    c.EnablePostUnsealTrace,
@@ -1404,6 +1412,14 @@ func (c *Config) Sanitized() map[string]interface{} {
 		}
 
 		result["storage"] = sanitizedStorage
+	}
+
+	// Sanitize observations stanza
+	if c.Observations != nil {
+		sanitizedObservations := map[string]interface{}{
+			"ledger_path": c.Observations.LedgerPath,
+		}
+		result["observations"] = sanitizedObservations
 	}
 
 	// Sanitize HA storage stanza
