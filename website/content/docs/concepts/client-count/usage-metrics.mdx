@@ -29,7 +29,7 @@ need to enable usage data collection since it is disabled by default.
 
 1. Select **Edit configuration**.
 
-   ![Edit configuration](/img/ui-usage-metrics-config.png)
+   ![Edit configuration](/img/ui-client-usage-config.png)
 
 1. Select the toggle for **Usage data collection** so that the text reads **Data
    collection  is on**.
@@ -102,7 +102,7 @@ $ curl --header "X-Vault-Token: <TOKEN>" \
 </Tab>
 </Tabs>
 
-## Usage metrics dashboard
+## Client usage dashboard
 
 1. Sign into Vault UI. The **Client count** section displays the total number of
    clients for the current billing period.
@@ -111,7 +111,7 @@ $ curl --header "X-Vault-Token: <TOKEN>" \
    ![Vault UI default dashboard example](/img/ui-client-count.png)
 
 1. Examine the **Vault Client Usage** dashboard to learn your Vault usage.
-   ![Example Vault Client Usage dashboard view](/img/ui-usage-metrics-1.png)
+   ![Example Vault Client Usage dashboard view](/img/ui-client-usage-1.png)
 
 #### Client usage data categories
 
@@ -147,7 +147,7 @@ $ curl --header "X-Vault-Token: <TOKEN>" \
   [documentation](/vault/docs/concepts/client-count#entity-assignment-with-acme)
   for more details.
 
-    ![ACME clients example](/img/ui-usage-metrics-acme.png)
+    ![ACME clients example](/img/ui-client-usage-acme.png)
 
 
 ## Select a data range
@@ -155,7 +155,7 @@ $ curl --header "X-Vault-Token: <TOKEN>" \
 Under the **Client counting period**, select **Edit** to query the data for
 a different billing period.
 
-![Query](/img/ui-usage-metrics-period.png)
+![Query](/img/ui-client-usage-period.png)
 
 Keep in mind that Vault begins collecting data when the feature is enabled. For
 example, if you enabled the usage metrics in March of 2023, you cannot query
@@ -168,11 +168,11 @@ Vault will return metrics from March of 2023 through most recent full month.
 If you have [namespaces](/vault/docs/enterprise/namespaces), the dashboard
 displays the top ten namespaces by total clients.
 
-![Namespace attribution example](/img/ui-usage-metrics-namespace.png)
+![Namespace attribution example](/img/ui-client-usage-namespace.png)
 
 Use the **Filters** to view the metrics data of a specific namespace.
 
-![Filter by namespace](/img/ui-usage-metrics-filter.png)
+![Filter by namespace](/img/ui-client-usage-filter.png)
 
 ## Mount attribution
 
@@ -184,7 +184,7 @@ can filter for auth mounts within a namespace, or view auth mounts across
 namespaces. The mount attribution is available even if you are not using
 namespaces. 
 
-![Usage metrics by mount attribution](/img/ui-usage-metrics-mounts.png)
+![Client usage by mount attribution](/img/ui-client-usage-mounts.png)
 
 
 ## Query usage metrics via CLI
@@ -289,7 +289,7 @@ Total                                                 90               92       
 You can export the metrics data by clicking on the **Export attribution data**
 button.
 
-![Metrics UI](/img/ui-usage-metrics-export.png)
+![Metrics UI](/img/ui-client-usage-export.png)
 
 This downloads the usage metrics data on your local drive in comma separated
 values format (`.csv`) or JSON.

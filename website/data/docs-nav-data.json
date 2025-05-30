@@ -194,7 +194,7 @@
             "path": "concepts/client-count/counting"
           },
           {
-            "title": "Usage metrics",
+            "title": "Client usage",
             "path": "concepts/client-count/usage-metrics"
           },
           {
@@ -279,10 +279,8 @@
     ]
   },
 
-  
   { "divider": true },
   { "heading": "OPERATIONS" },
-
 
   {
     "title": "Get Vault",
@@ -358,7 +356,7 @@
       }
     ]
   },
-  
+
   {
     "title": "Configure Vault",
     "routes": [
@@ -398,10 +396,10 @@
           "color": "neutral"
         },
         "path": "configuration/entropy-augmentation"
-      },  
-      
+      },
+
       { "heading": "Configuration stanzas" },
-    
+
       {
         "title": "<code>adaptive_overload_protection</code>",
         "badge": {
@@ -2585,7 +2583,7 @@
       },
       {
         "title": "Rollback upgrades",
-        "path" : "plugins/rollback"
+        "path": "plugins/rollback"
       },
       {
         "title": "Plugin development",
