@@ -5,25 +5,22 @@
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
+import SecretsEngineResource from 'vault/resources/secrets/engine';
+
 export default Route.extend({
   flashMessages: service(),
   router: service(),
   secretMountPath: service(),
-  store: service(),
+  api: service(),
+
   oldModel: null,
 
-  model(params) {
+  async model(params) {
     const { backend } = params;
     this.secretMountPath.update(backend);
-    return this.store
-      .query('secret-engine', {
-        path: backend,
-      })
-      .then((model) => {
-        if (model) {
-          return model[0];
-        }
-      });
+
+    const secretsEngine = await this.api.sys.mountsReadConfiguration(backend);
+    return new SecretsEngineResource({ ...secretsEngine, path: `${backend}/` });
   },
 
   afterModel(model, transition) {
