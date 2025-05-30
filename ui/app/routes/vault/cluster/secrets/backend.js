@@ -19,8 +19,18 @@ export default Route.extend({
     const { backend } = params;
     this.secretMountPath.update(backend);
 
-    const secretsEngine = await this.api.sys.mountsReadConfiguration(backend);
-    return new SecretsEngineResource({ ...secretsEngine, path: `${backend}/` });
+    try {
+      const secretsEngine = await this.api.sys.internalUiReadMountInformation(backend);
+      return new SecretsEngineResource({ ...secretsEngine, path: `${backend}/` });
+    } catch (e) {
+      // the backend.error template is expecting additional data so for now we will catch and rethrow
+      const error = await this.api.parseError(e);
+      throw {
+        backend,
+        httpStatus: error.status,
+        ...error,
+      };
+    }
   },
 
   afterModel(model, transition) {
