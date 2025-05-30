@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/database: Require rotation_schedule cron style strings to be defined in UTC.
+```
