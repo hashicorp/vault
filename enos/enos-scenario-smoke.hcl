@@ -317,6 +317,21 @@ scenario "smoke" {
     }
   }
 
+  step "create_test_servers" {
+    description = global.description.create_test_servers
+    module      = module.create_test_servers
+    depends_on  = [step.create_vpc]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      vpc_id                 = step.create_vpc.id
+      vpc_security_group_ids = [step.create_vpc.security_group_id]
+    }
+  }
+
   step "get_local_metadata" {
     description = global.description.get_local_metadata
     skip_step   = matrix.artifact_source != "local"

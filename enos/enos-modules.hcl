@@ -48,6 +48,12 @@ module "create_vpc" {
   common_tags = var.tags
 }
 
+module "create_test_servers" {
+  source = "./modules/create_test_servers"
+
+  ssh_keypair  = var.aws_ssh_keypair_name
+}
+
 module "choose_follower_host" {
   source = "./modules/choose_follower_host"
 }
