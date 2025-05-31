@@ -1,0 +1,82 @@
+---
+layout: docs
+page_title: Manage namespaces
+description: >-
+  Learn how to create, delete, and manage namespaces in the Vault UI.
+---
+
+# Manage namespaces in the Vault UI
+
+@include 'alerts/enterprise-only.mdx'
+
+Namespaces in Vault Enterprise allow you to create isolated environments within a single Vault cluster. Use namespaces to organize teams, projects, or environments, and delegate management to different administrators.
+
+<Tip title="Best practices for namespaces">
+
+1. **Plan your hierarchy**. Design your namespace structure to reflect your organization’s teams or projects.
+2. **Use nested namespaces**. Take advantage of nested namespaces to further segment access and resources.
+3. **Delegate management**. Assign namespace admins to manage their own resources and policies.
+4. **Clean up unused namespaces**. Regularly review and delete namespaces that are no longer needed.
+
+</Tip>
+
+## Before you start
+
+- **You must have Vault Enterprise ??? or higher installed.**
+- **You must have the appropriate permissions** to create, read, list, delete, or manage namespaces.
+
+## Create a namespace
+
+1. In the Vault UI sidebar, navigate to **Access** and select **Namespaces**.
+2. Click the **+ Create namespace** button.
+3. Enter a unique name for your new namespace.
+4. (Optional) Select a parent namespace to create a nested namespace.
+5. Click **Save** to save.
+
+![Create namespace](/img/create-namespace.png)
+
+![Save namespace](/img/save-namespace.png)
+
+## Delete a namespace
+
+<Warning title="Namespace deletion is permanent">
+  Deleting a namespace will remove all resources, secrets, and configuration within it and its child namespaces. This action cannot be undone.
+</Warning>
+
+1. In the **Namespaces** list, find the namespace you want to delete.
+2. Click the additional options button (three dots) next to the namespace.
+3. Select **Delete** from the dropdown menu.
+4. Confirm the deletion in the confirmation modal.
+
+![Delete namespace](/img/delete-namespace.png)
+![Delete namespace modal](/img/delete-namespace-modal.png)
+
+## Switch between namespaces using the Manage Namespace page
+
+1. Navigate to **Access Management** > **Namespaces**.
+2. Click on the namespace name in the list to view its details.
+3. Use the **Switch to namespace** button to enter that namespace context.
+
+![Switch to namespace](/img/switch-to-namespace.png)
+
+## Switch between namespaces using the namespace picker
+
+1. In the Vault UI header, locate the **Namespace picker** dropdown.
+2. Click the dropdown to view available namespaces.
+3. Select the namespace you want to switch to.
+
+![Namespace picker](/img/namespace-picker.png)
+
+## Nested namespaces
+
+Namespaces can be nested to create a hierarchy. For example:
+
+```plaintext
+─ root
+    ├── finance
+    └── engineering
+        ├── dev
+        └── prod
+```
+
+To create a nested namespace, switch to the parent namespace before creating a new namespace.
