@@ -164,10 +164,15 @@ Create a rate limit quota using the following parameters:
 - `block_interval` `(string: "")` - If set, when a client reaches a rate limit
   threshold, Vault prohibits the client from any further requests until after
   the `block_interval` has elapsed. 
-- `inheritable` `(boolean: false)` - **Vault Enterprise:** Determine whether to
+- `inheritable` `(boolean: false)` - <EnterpriseAlert product="vault" inline /> Determine whether to
   apply the quota rule to child namespaces.   
-- `group_by` `(string: "")` - **Vault Enterprise:** Define how to group incoming
+- `group_by` `(string: "")` - <EnterpriseAlert product="vault" inline /> Define how to group incoming
   requests. Refer to the [identity-based rate limit quotas](/vault/docs/configuration/identity-based-rate-limit) for more details.
+- `secondary_rate` `(float: 0.0)` – <EnterpriseAlert product="vault" inline /> Can only be set
+  for the `group_by` modes `entity_then_ip` or `entity_then_none`. This is the rate limit applied
+  to the requests that fall under the "ip" or "none" groupings, while the authenticated requests
+  that contain an entity ID are subject to the `rate` field instead. Defaults to the same value
+  as `rate`.
 
 
 <Tabs>

@@ -279,10 +279,8 @@
     ]
   },
 
-  
   { "divider": true },
   { "heading": "OPERATIONS" },
-
 
   {
     "title": "Get Vault",
@@ -358,7 +356,7 @@
       }
     ]
   },
-  
+
   {
     "title": "Configure Vault",
     "routes": [
@@ -396,7 +394,7 @@
         "path": "configuration/create-rate-limit-quota"
       },
       {
-        "title": "Identity-based and collective rate limits",
+        "title": "Rate limit quotas by IP or entity",
         "badge": {
           "text": "ENT",
           "type": "filled",
@@ -416,10 +414,10 @@
           "color": "neutral"
         },
         "path": "configuration/entropy-augmentation"
-      },  
-      
+      },
+
       { "heading": "Configuration stanzas" },
-    
+
       {
         "title": "<code>adaptive_overload_protection</code>",
         "badge": {
@@ -2603,7 +2601,7 @@
       },
       {
         "title": "Rollback upgrades",
-        "path" : "plugins/rollback"
+        "path": "plugins/rollback"
       },
       {
         "title": "Plugin development",

@@ -1,84 +1,53 @@
 ---
 layout: docs
-page_title: Identity-based and collective rate limits
+page_title: Rate limit quotas - collective, by IP, by entity
 description: >-
   Implement protections to prevent misbehaving applications and clients from impacting Vault performance.
 ---
 
-# Identity-based and collective rate limits
+# Rate limit quotas - collective, by IP, by entity
 
 As the number of Vault client applications increases, the incoming requests to
-Vault can degrade Vault's performance. The issue is often caused by
-applications that are:
+Vault can degrade Vault's performance. To protect your Vault environment's
+stability and network, as well as storage resource consumption from runaway
+application behavior and distributed denial of service (DDoS) attack, use [rate
+limit quotas](/vault/docs/configuration/create-lease-count-quota) and [lease
+count quotas](/vault/docs/configuration/create-rate-limit-quota).
 
-- Generating an unbounded number of leases and/or loading too much data into
-  Vault leading to exhausting storage backend's available memory
-- Consuming an erroneously large amount of bandwidth leading to internal
-  throttling of the Vault cluster as a whole
+For Vault Enterprise clusters, the rate limit quota supports **`group_by`**
+option to define more fine-grained rate limits to control how traffic enters
+their cluster.
 
-Use [rate limit quotas](/vault/docs/configuration/create-lease-count-quota) and
-[lease count quotas](/vault/docs/configuration/create-rate-limit-quota) to
-protect your Vault environment's stability and network, as well as storage
-resource consumption from runaway application behavior and distributed denial of
-service (DDoS) attack.
+The available `group_by` modes are:
 
+- `ip` - groups requests by their source IP address (`group_by` defaults to `ip`
+  if unset)
 
-Vault Enterprise permits organizations to define more fine-grained rate limits
-to how traffic enters their Vault cluster. Identity-based rate limit quotas use
-`group_by` options to create buckets for requests.
+  <Note title="Vault Community Edition">
 
-<table>
-  <thead>
-    <tr>
-      <th style={{verticalAlign: 'middle'}}>Group_by option</th>
-      <th style={{verticalAlign: 'middle'}}>Description</th>
-    </tr>
-  </thead>
+  The `ip` mode is the only supported mode in the community edition of Vault.
 
-  <tbody>
+  </Note>
 
-  <tr>
-    <td><code>ip</code></td>
-    <td>
-      Creates buckets based on the IP addresses. (Default)
-    </td>
-  </tr>
+- `none` - groups together all requests that match the rate limit quota rule
 
-  <tr>
-    <td><code>entity_then_none</code></td>
-    <td>
-     Groups requests on namespace, mount, or path by entity ID. The rate applies to the each bucket created. Requests
-     without associated entity ID are handled by a collective secondary quota.
-    </td>
-  </tr>
+- `entity_then_ip` - groups requests by their entity ID for authenticated
+  requests that carry one, or by their IP for unauthenticated requests (or
+  requests whose authentication is not connected to an entity)
 
-  <tr>
-    <td><code>entity_then_ip</code></td>
-    <td>
-      Groups requests on namespace, mount, or path by entity ID. The rate applies to the each bucket created. Requests without associated entity ID are bucketed by IP, and the rate applies to each bucket. This option is recommended if your organization has reliably mappable IPs.
-    </td>
-  </tr>
+- `entity_then_none` - groups requests by their entity ID when available, but
+  the rest is all grouped together (for example, unauthenticated requests, and
+  requests with authentication that is not connected to an entity)
 
-  <tr>
-    <td><code>secondary_rate</code></td>
-    <td>
-      Allows organizations to set a separate rate for entity ID.<br/><br/>
-    </td>
-  </tr>
+The `group_by` option with `entity_then_ip` or `entity_then_none` mode allows
+you to set a secondary rate limit (**`secondary_rate`**). This rate limit applies to
+the requests that fall under the `ip` or `none` groupings, while the
+authenticated requests that contain an entity ID are subject to the primary rate
+limit set by the `rate` parameter.
 
-  <tr>
-    <td><code>none</code></td>
-    <td>
-      Creates one bucket for the namespace, path, or mount and collectively limits all traffic to that target.
-    </td>
-  </tr>
-
-  </tbody>
-</table>
-
-The default behavior is to group requests by IP addresses. Group requests by
- entity (`entity_than_none` or `entity_then_ip`) option creates buckets based on
-the attached entity. This helps when your organization have:
+The default behavior is to group requests by their source IP addresses. The
+`entity_then_none` or `entity_then_ip` mode groups requests based on their
+attached entity. This helps when your organization have:
 
 - many workloads using the same IP
 - single workloads using many IPs which may scale up or down
@@ -107,9 +76,9 @@ limit quota takes effect on the requests.
 
 ### Example
 
-The command below creates a rate limit quota with rate of 1000 requests per
+The command below creates a rate limit quota with rate of 1,000 requests per
 second with `group_by` is set to `entity_then_none`, and the secondary rate is
-2000 requests per second.
+2,000 requests per second.
 
 ```shell-session
 $ vault write sys/quotas/rate-limit/my-rate \
