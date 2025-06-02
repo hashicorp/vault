@@ -218,15 +218,17 @@ export default class AuthPage extends Component<Args> {
 
   get initialFormState() {
     const { defaultView, alternateView } = this.formViews;
-    const hasTab = (tabData: object) => Object.keys(tabData).includes(this.initialAuthType);
+    // Helper to check if passed tabs include initialAuthType to render
+    const hasTab = (tabs: object) => Object.keys(tabs).includes(this.initialAuthType);
     const authIsNotDefaultTab = !hasTab(defaultView?.tabData || {});
     const hasAlternateView = !!alternateView;
     const authIsAlternateTab = hasTab(alternateView?.tabData || {});
 
-    // In rare cases, pre-toggle the form to the fallback dropdown if the selected method is not in the alternate view.
-    // This could happen if tabs render for visible mounts and the "with" query param references a type that isn't a tab.
-    // Or auth type is preset from canceled MFA or local storage and is not in the default view.
-    const showAlternate = (authIsNotDefaultTab && hasAlternateView) || authIsAlternateTab;
+    // In rare cases, pre-toggle the form to the fallback dropdown or backup tabs, if an alternate view exists.
+    // This is only possible in a couple scenarios:
+    // - The default view renders tabs for visible mounts and the "with" query param references a type that is not a tab.
+    // - Auth type is preset from canceled MFA verification or local storage and it is not in the default (initial) view
+    const showAlternate = authIsNotDefaultTab && (hasAlternateView || authIsAlternateTab);
 
     return { initialAuthType: this.initialAuthType, showAlternate };
   }
