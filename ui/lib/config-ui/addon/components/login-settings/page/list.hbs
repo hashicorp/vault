@@ -6,7 +6,7 @@
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
-      UI Login Rules
+      UI Login Settings
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -64,8 +64,7 @@
   {{/each}}
 {{else}}
   <EmptyState
-    data-test-empty-state="login-rules-list"
-    @title="No UI login rules yet"
+    @title="No UI login settings yet"
     @message="Login rules can be used to select default and back up login methods and customize which methods display in the web UI login form. Available to be created via the CLI or HTTP API."
   >
     {{! TODO: update href with tutorial link }}

@@ -17,7 +17,7 @@ import type FlagsService from 'vault/services/flags';
  * @module Auth::NamespaceInput
  * Renders the namespace input for the login form. As a user types, the updateNamespace callback fires in the controller to update the query param in the URL.
  * When a namespace is updated, the controller sets `shouldRefocusNamespaceInput = true` which refocuses the input after the route refreshes.
- * For HVD managed clusters the input prepends the administrative namespace: `admin/`. The input is disabled if the url has and OIDC query param: "?o=someprovider"
+ * For HVD managed clusters the input prepends the administrative namespace: `admin/`. The input is disabled if the url has an OIDC query param: "?o=someprovider"
  *
  * @param {boolean} disabled - determines whether or not the namespace input is disabled
  * @param {function} handleNamespaceUpdate - fires updateNamespace callback in controller
