@@ -10,7 +10,7 @@ description: >-
 
 @include 'alerts/enterprise-and-hcp.mdx'
 
-Use login customizations to preferred authentication methods and control which methods display in the Vault GUI login form.
+Use login customization to set preferred authentication methods and control which methods display in the Vault GUI login form.
 
 <Tip>
 
@@ -30,7 +30,7 @@ set: `disable_inheritance=true`.
 
 ## Step 1: Select your authentication method
 
-Only the following methods are supported by the GUI and can be set as a default or preferred backup method:
+Only the following methods are supported by the GUI and can be set as a default or backup method:
 
 @include 'ui/supported-login-methods.mdx'
 
@@ -40,8 +40,8 @@ preferred authentication methods, or both.
 Configuration           | Result
 ----------------------- | ------
 Default only            | Clients must use the selected authentication method during login
-Preferred only          | Clients must choose among the selected authentication methods during login
-Default and preferred   | Clients see the default method first but can toggle to view the preferred backup methods
+Preferred only          | Client must choose from the selected authentication methods during login
+Default and preferred   | Clients see the default method first but can access the preferred methods as backup methods
 
 
 ## Step 2: Make the authentication method visible to the GUI
@@ -271,6 +271,10 @@ Success! Tuned the auth method at: gui/ldap/
 ## Step 3: Set your default and preferred authentication methods
 
 @include 'alerts/restricted-admin.mdx'
+
+The following authentication types are supported:
+
+@include 'ui/supported-login-methods-api-docs.mdx'
 
 <Tabs>
 <Tab heading="CLI" group="cli">
@@ -509,20 +513,26 @@ $ curl                                               \
 </Tab>
 </Tabs>
 
-# Using a Direct Link
+## Using a Direct Link
 
 The `?with=` query parameter can be used at any point to override login customizations. For example,
 if a Vault GUI user is unable to authenticate with the default or backup method(s) they can bypass
-the login settings using a direct URL for their method of choice. 
+the login settings using a direct URL for their mount of choice. 
 
-#### URL for `root` namespace
-`${VAULT_ADDR}/ui/vault/auth?with=<method_type_or_mount_path>` 
+The query parameter value can specify either a method [type](/vault/api-docs/system/auth#type) 
+or [path](/vault/api-docs/system/auth#path).
 
-#### URL for a child namespace
-`${VAULT_ADDR}/ui/vault/auth?namespace=<child_namespace>&with=<method_type_or_mount_path>` 
+| Description              | Sample URL                                                       |
+| ------------------------ | ---------------------------------------------------------------- |
+| `root` namespace         | `${VAULT_ADDR}/ui/vault/auth?with=<value>`                       |
+| child namespace          | `${VAULT_ADDR}/ui/vault/auth?namespace=<namespace>&with=<value>` |
+| type: `token`            | `${VAULT_ADDR}/ui/vault/auth?with=token`                         |
+| mount path: `gui/ldap`\* | `${VAULT_ADDR}/ui/vault/auth?with=gui%2Fldap%2F`                 |
 
-The query parameter accepts either a method [type](/vault/api-docs/system/auth#type) or [path](/vault/api-docs/system/auth#path).
-If specifying a path, the mount must be tuned with `listing_visibility="unauth"`  
+_*When specifying a path, the mount must be tuned with `listing_visibility="unauth"`_ 
 
-URL specifying type: `${VAULT_ADDR}/ui/vault/auth?with=token` 
-URL specifying a custom mount path: `${VAULT_ADDR}/ui/vault/auth?with=gui%2Fldap%2F`
+### Navigate to copy a direct link in the Vault GUI
+The Vault GUI generates a login URL for each mount, which is available on the mount's configuration details page.
+
+@include 'gui-instructions/update-authn-plugin.mdx'
+* Click the clipboard to copy the "UI login link"
