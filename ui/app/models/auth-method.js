@@ -14,6 +14,7 @@ import { camelize } from '@ember/string';
 import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
 import { supportedTypes } from 'vault/utils/supported-login-methods';
 import engineDisplayData from 'vault/helpers/engines-display-data';
+import { supportedTypes } from 'vault/utils/supported-login-methods';
 
 const validations = {
   path: [
