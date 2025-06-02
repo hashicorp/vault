@@ -8,7 +8,6 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { dropTask } from 'ember-concurrency';
-import errorMessage from 'vault/utils/error-message';
 
 import type FlashMessageService from 'vault/services/flash-messages';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
@@ -101,14 +100,15 @@ export default class SecretListItem extends Component<Args> {
 
   @dropTask
   *disableEngine(engine: SecretsEngineResource) {
-    const { engineType, path } = engine;
+    const { engineType, id, path } = engine;
     try {
-      yield this.api.sys.mountsDisableSecretsEngine(path);
-      this.router.transitionTo('vault.cluster.secrets.backends');
+      yield this.api.sys.mountsDisableSecretsEngine(id);
       this.flashMessages.success(`The ${engineType} Secrets Engine at ${path} has been disabled.`);
+      this.router.transitionTo('vault.cluster.secrets.backends');
     } catch (err) {
+      const { message } = yield this.api.parseError(err);
       this.flashMessages.danger(
-        `There was an error disabling the ${engineType} Secrets Engines at ${path}: ${errorMessage(err)}.`
+        `There was an error disabling the ${engineType} Secrets Engines at ${path}: ${message}.`
       );
     } finally {
       this.engineToDisable = undefined;

@@ -73,6 +73,7 @@ export default class ConfigurationDetails extends Component<Args> {
       {
         lease: 'Default Lease TTL',
         leaseMax: 'Max Lease TTL',
+        ttl: 'Config TTL',
       }[field] || formattedLabel
     );
   };

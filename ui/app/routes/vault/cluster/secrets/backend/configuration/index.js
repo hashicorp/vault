@@ -142,7 +142,7 @@ export default class SecretsBackendConfigurationRoute extends Route {
     return {
       backend,
       httpStatus: error.status,
-      ...error,
+      ...error.response,
     };
   }
 

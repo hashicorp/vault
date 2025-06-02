@@ -8,6 +8,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { stringArrayToCamelCase } from 'vault/helpers/string-array-to-camel';
 import { v4 as uuidv4 } from 'uuid';
+import SecretsEngineResource from 'vault/resources/secrets/engine';
 
 /* Secret Create/Edit methods */
 // ARG TODO unsure if should be moved to another file
@@ -20,16 +21,23 @@ export async function createSecret(path, key, value) {
 }
 
 export const createSecretsEngine = (store, type, path) => {
-  store.pushPayload('secret-engine', {
-    modelName: 'secret-engine',
-    id: path,
-    path: `${path}/`,
-    type: type,
-    data: {
+  if (store) {
+    store.pushPayload('secret-engine', {
+      modelName: 'secret-engine',
+      id: path,
+      path: `${path}/`,
       type: type,
-    },
+      data: {
+        type: type,
+      },
+    });
+    return store.peekRecord('secret-engine', path);
+  }
+
+  return new SecretsEngineResource({
+    path: `${path}/`,
+    type,
   });
-  return store.peekRecord('secret-engine', path);
 };
 /* Create configurations methods
  * for each configuration we create the record and then push it to the store.

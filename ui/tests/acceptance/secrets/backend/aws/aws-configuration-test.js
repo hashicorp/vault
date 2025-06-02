@@ -18,7 +18,6 @@ import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import {
-  createConfig,
   expectedConfigKeys,
   expectedValueOfConfigKeys,
   configUrl,
@@ -31,7 +30,6 @@ module('Acceptance | aws | configuration', function (hooks) {
 
   hooks.beforeEach(function () {
     const flash = this.owner.lookup('service:flash-messages');
-    this.store = this.owner.lookup('service:store');
     this.flashSuccessSpy = spy(flash, 'success');
     this.flashInfoSpy = spy(flash, 'info');
     this.flashDangerSpy = spy(flash, 'danger');
@@ -215,8 +213,8 @@ module('Acceptance | aws | configuration', function (hooks) {
       });
 
       await enablePage.enable(type, path);
-      createConfig(this.store, path, type); // create the aws root config in the store
       await click(SES.configTab);
+
       for (const key of expectedConfigKeys(type)) {
         if (key === 'Secret key') continue; // secret-key is not returned by the API
         assert.dom(GENERAL.infoRowLabel(key)).exists(`${key} on the ${type} config details exists.`);
@@ -294,28 +292,6 @@ module('Acceptance | aws | configuration', function (hooks) {
         'navigates back to the configuration index view'
       );
       assert.dom(GENERAL.emptyStateTitle).hasText('AWS not configured');
-      // cleanup
-      await runCmd(`delete sys/mounts/${path}`);
-    });
-
-    test('it should reset models after saving', async function (assert) {
-      const path = `aws-${this.uid}`;
-      const type = 'aws';
-      await enablePage.enable(type, path);
-      await click(SES.configTab);
-      await click(SES.configure);
-      await fillInAwsConfig('withAccess');
-      //  the way to tell if a record has been unloaded is if the private key is not saved in the store (the API does not return it, but if the record was not unloaded it would have stayed.)
-      await click(GENERAL.saveButton); // save the configuration
-      await click(SES.configure);
-      const privateKeyExists = this.store.peekRecord('aws/root-config', path).privateKey ? true : false;
-      assert.false(
-        privateKeyExists,
-        'private key is not on the store record, meaning it was unloaded after save. This new record without the key comes from the API.'
-      );
-      assert
-        .dom(GENERAL.enableField('secretKey'))
-        .exists('secret key field is wrapped inside an enableInput component');
       // cleanup
       await runCmd(`delete sys/mounts/${path}`);
     });

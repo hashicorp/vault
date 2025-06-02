@@ -21,7 +21,6 @@ import {
   expectedConfigKeys,
   expectedValueOfConfigKeys,
   configUrl,
-  createConfig,
   fillInAzureConfig,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
@@ -31,7 +30,6 @@ module('Acceptance | Azure | configuration', function (hooks) {
 
   hooks.beforeEach(function () {
     const flash = this.owner.lookup('service:flash-messages');
-    this.store = this.owner.lookup('service:store');
     this.flashSuccessSpy = spy(flash, 'success');
     this.flashDangerSpy = spy(flash, 'danger');
     this.flashInfoSpy = spy(flash, 'info');
@@ -299,7 +297,6 @@ module('Acceptance | Azure | configuration', function (hooks) {
         this.server.get(`identity/oidc/config`, () => {
           throw new Error(`Request was made to return the issuer when it should not have been.`);
         });
-        await createConfig(this.store, path, this.type); // create the azure account config in the store
         await enablePage.enable(this.type, path);
         await click(SES.configTab);
 
@@ -385,7 +382,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
         const oldIssuer = 'http://old.issuer';
         await enablePage.enable(this.type, path);
         this.server.get('/identity/oidc/config', () => {
-          return { issuer: 'http://old.issuer' };
+          return { data: { issuer: 'http://old.issuer' } };
         });
         this.server.post('/identity/oidc/config', () => {
           return overrideResponse(400, { errors: ['bad request'] });
@@ -427,7 +424,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
         const oldIssuer = 'http://old.issuer';
         await enablePage.enable(this.type, path);
         this.server.get('/identity/oidc/config', () => {
-          return { issuer: oldIssuer };
+          return { data: { issuer: oldIssuer } };
         });
         this.server.post(configUrl(this.type, path), () => {
           return overrideResponse(400, { errors: ['bad request'] });
