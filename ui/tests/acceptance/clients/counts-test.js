@@ -130,7 +130,7 @@ module('Acceptance | clients | counts', function (hooks) {
                   counts: getCounts(),
                   mounts: [
                     {
-                      mount_path: 'auth/authid/0',
+                      mount_path: 'auth/userpass-0',
                       counts: getCounts(),
                     },
                   ],
@@ -145,7 +145,7 @@ module('Acceptance | clients | counts', function (hooks) {
                     counts: getCounts(),
                     mounts: [
                       {
-                        mount_path: 'auth/authid/0',
+                        mount_path: 'auth/userpass-0',
                         counts: getCounts(),
                       },
                     ],

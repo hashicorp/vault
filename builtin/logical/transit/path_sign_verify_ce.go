@@ -73,7 +73,7 @@ func _forbidEd25519EntBehavior(p *keysutil.Policy, apiArgs commonSignVerifyApiAr
 
 func _validateEntSpecificKeyType(p *keysutil.Policy) error {
 	switch p.Type {
-	case keysutil.KeyType_AES128_CMAC, keysutil.KeyType_AES256_CMAC, keysutil.KeyType_MANAGED_KEY:
+	case keysutil.KeyType_AES128_CMAC, keysutil.KeyType_AES256_CMAC, keysutil.KeyType_AES192_CMAC, keysutil.KeyType_MANAGED_KEY:
 		return fmt.Errorf("enterprise specific key type %q can not be used on CE", p.Type)
 	default:
 		return nil

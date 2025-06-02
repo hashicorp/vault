@@ -31,6 +31,12 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     );
   });
 
+  test('it displays the breadcrumb trail', async function (assert) {
+    await visit('/vault/access/namespaces');
+    assert.dom(GENERAL.breadcrumb).exists({ count: 1 }, 'Only one breadcrumb is displayed');
+    assert.dom(GENERAL.breadcrumb).hasText('Namespaces', 'Breadcrumb trail is displayed correctly');
+  });
+
   test('it should render correct number of namespaces', async function (assert) {
     assert.expect(3);
     await visit('/vault/access/namespaces');
@@ -41,14 +47,37 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     assert.dom('.hds-pagination').exists();
   });
 
-  test('it should show button to create new namespace', async function (assert) {
+  test('it should show button to refresh namespace list', async function (assert) {
+    let refreshNetworkRequestTriggered;
+    const refreshNamespaceButton = GENERAL.testButton('refresh-namespace-list');
+
+    this.server.get('/sys/internal/ui/namespaces', () => {
+      refreshNetworkRequestTriggered = true;
+      return;
+    });
+
     await visit('/vault/access/namespaces');
-    const createNamespaceButton = 'nav.toolbar-actions a.toolbar-link';
+
+    assert.dom(refreshNamespaceButton).hasText('Refresh list', 'Refresh button is rendered correctly');
+
+    refreshNetworkRequestTriggered = false;
+    await click(refreshNamespaceButton);
+    assert.true(
+      refreshNetworkRequestTriggered,
+      'Get namespaces network request was made when refresh button was clicked'
+    );
+  });
+
+  test('it should show button to create new namespace', async function (assert) {
+    const createNamespaceLink = GENERAL.linkTo('create-namespace');
+
+    await visit('/vault/access/namespaces');
+
     assert
-      .dom(createNamespaceButton)
+      .dom(createNamespaceLink)
       .hasText('Create namespace', 'Create namespace button is rendered correctly');
     assert
-      .dom(createNamespaceButton)
+      .dom(createNamespaceLink)
       .hasAttribute(
         'href',
         '/ui/vault/access/namespaces/create',

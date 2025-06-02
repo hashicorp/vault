@@ -5,23 +5,40 @@
 
 import ActivityComponent from '../activity';
 import { service } from '@ember/service';
-import { sanitizePath } from 'core/utils/sanitize-path';
+import { tracked } from '@glimmer/tracking';
+import { action } from '@ember/object';
+import { HTMLElementEvent } from 'vault/forms';
+import { parseAPITimestamp } from 'core/utils/date-formatters';
+import { formatTableData, TableData } from 'core/utils/client-count-utils';
 import type FlagsService from 'vault/services/flags';
+import type RouterService from '@ember/routing/router-service';
 
 export default class ClientsOverviewPageComponent extends ActivityComponent {
   @service declare readonly flags: FlagsService;
+  @service('app-router') declare readonly router: RouterService;
+
+  @tracked selectedMonth = '';
 
   get hasAttributionData() {
-    // we hide attribution data when mountPath filter present
+    // we hide attribution table when mountPath filter present
     // or if there's no data
-    if (this.args.mountPath || !this.totalUsageCounts.clients) return false;
-    return true;
+    return !this.args.mountPath && this.totalUsageCounts.clients;
   }
 
-  // mounts attribution
-  get namespaceMountAttribution() {
-    const { activity } = this.args;
-    const nsLabel = this.namespacePathForFilter;
-    return activity?.byNamespace?.find((ns) => sanitizePath(ns.label) === nsLabel)?.mounts || [];
+  get months() {
+    return this.byMonthNewClients.reverse().map((m) => ({
+      display: parseAPITimestamp(m.timestamp, 'MMMM yyyy'),
+      value: m.month,
+    }));
+  }
+
+  get tableData(): TableData[] | undefined {
+    if (!this.selectedMonth) return undefined;
+    return formatTableData(this.byMonthNewClients, this.selectedMonth);
+  }
+
+  @action
+  selectMonth(e: HTMLElementEvent<HTMLInputElement>) {
+    this.selectedMonth = e.target.value;
   }
 }
