@@ -45,28 +45,32 @@ maintain this behavior, you will need to explicitly set
 
 For clusters that already set a value for `disable_mlock`, no change is required.
 
-### Additional Considerations:
+Cluster types affected:
+
+| Cluster Type               | `disable_mlock` required | Note
+|----------------------------|--------------------------|-----
+| Primary                    | Yes                      | [Value depends on cluster specifics](/vault/docs/configuration#disable_mlock)
+| Performance Secondary      | Yes                      | [Value depends on cluster specifics](/vault/docs/configuration#disable_mlock)
+| DR Secondary               | Yes                      | [Value depends on cluster specifics](/vault/docs/configuration#disable_mlock)
+
+
+### Additional considerations
 
 #### Autopilot
+
 New 1.20.0 nodes are added to the cluster until there is a quorum of upgraded
 nodes. Each of these new nodes will need to have a value for `disable_mlock`
 set.
 
 #### Rolling upgrades
+
 Standby nodes are stopped and upgraded one at a time. These node configurations
 will need to be updated before restarting the vault process on the node.
 
-#### dev mode
+#### Working in development mode
+
 If no config is provided, dev mode will start as usual. If a config is provided,
 it must have a value for `disable_mlock`.
-
-### Cluster types affected
-
-| Cluster Type               | `disable_mlock` required | Note
-|----------------------------|--------------------------|-----
-| Primary                    | Yes                      | value depends on cluster specifics. [See docs](/vault/docs/configuration#disable_mlock)
-| Performance Secondary      | Yes                      | value depends on cluster specifics. [See docs](/vault/docs/configuration#disable_mlock)
-| DR Secondary               | Yes                      | value depends on cluster specifics. [See docs](/vault/docs/configuration#disable_mlock)
 
 
 ## Transit support for Ed25519ph and Ed25519ctx signatures ((#ed25519))
@@ -124,7 +128,7 @@ action, make the necessary updates, and ensure the forced deduplication process
 resolves safely.
 
 
-## LDAP user DN search with `upndomain` ((#ldap))
+## LDAP user DN search with upndomain ((#ldap))
 
 | Change   | Affected version | Affected deployments
 | -------- | ---------------- | --------------------

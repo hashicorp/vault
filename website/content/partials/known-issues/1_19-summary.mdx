@@ -1,7 +1,16 @@
-Identified  | Fixed    | Edition    | Issue
------------ |--------- | ---------- | -----
-1.19.0      | No       | All        | [Login/token renewal failures after group changes](/vault/docs/updates/important-changes#login-token-renewal-failures-after-group-changes)
-Preexisting | No       | All        | [Duplicate unseal/seal wrap HSM keys](/vault/docs/v1.16.x/upgrading/upgrade-to-1.16.x#seal-seal-wrapped-duplicate-hsm-keys)
-Preexisting | 1.19.3   | All        | [LDAP static role rotations on upgrade](/vault/docs/v1.16.x/upgrading/upgrade-to-1.16.x#ldap-static-role-rotations-on-upgrade)
-Preexisting | 1.19.3   | All        | [Database static role rotations on upgrade](/vault/docs/v1.16.x/upgrading/upgrade-to-1.16.x#database-static-role-rotations-on-upgrade)
-Preexisting | 1.19.1   | All        | [Vault log file missing subsystem logs](/vault/docs/v1.16.x/upgrading/upgrade-to-1.16.x#vault-log-file-missing-subsystem-logs)
+Change          | Identified  | Fixed  | Edition    | Issue
+--------------- | ----------- |------- | ---------- | -----
+Known issue     | 1.19.0      | No     | All        | [Login/token renewal failures after group changes](/vault/docs/updates/important-changes#login-token-renewal-failures-after-group-changes)
+Known issue     | Preexisting | No     | All        | [Duplicate unseal/seal wrap HSM keys](/vault/docs/v1.16.x/upgrading/upgrade-to-1.16.x#seal-seal-wrapped-duplicate-hsm-keys)
+Known issue     | Preexisting | 1.19.3 | All        | [Unexpected LDAP static role rotations on upgrade](/vault/docs/v1.19.x/updates/important-changes#ldap-static-role-rotations)
+Known issue     | Preexisting | 1.19.3 | All        | [Unexpected DB static role rotations on upgrade](/vault/docs/v1.19.x/updates/important-changes#db-static-role-rotations)
+Known issue     | Preexisting | 1.19.1 | All        | [Vault log file missing subsystem logs](/vault/docs/updates/v1.19.x/important-changes#missing-logs)
+Known issue     | Preexisting | 1.19.4 | All        | [Azure Auth fails to authenticate Uniform VMSS instances](/vault/docs/v1.16.x/upgrading/upgrade-to-1.16.x#azure-auth-fails-to-authenticate-uniform-vmss-instances)
+Bug             | 1.19.0      | 1.19.3 | All        | [Automated rotation stops after unseal](/vault/docs/updates/important-changes#automated-rotation-stops-after-unseal)
+Bug             | Preexisting | 1.19.4 | Enterprise | [External Enterprise plugins cannot run on a standby node when it becomes active](/vault/docs/updates/important-changes#external-vault-enterprise-plugins-can-t-run-on-a-standby-node-when-it-becomes-active)
+New behavior    | N/A         | N/A    | All        | [Transit support for Ed25519ph and Ed25519ctx signatures](/vault/docs/updates/important-changes#transit-support-for-ed25519ph-and-ed25519ctx-signatures)
+New behavior    | N/A         | N/A    | All        | [Identity system duplicate cleanup](/vault/docs/updates/important-changes#identity-system-duplicate-cleanup)
+New behavior    | N/A         | N/A    | Enterprise | [Anonymized cluster data returned with license utilization](/vault/docs/updates/important-changes#anonymized-cluster-data-returned-with-license-utilization)
+New behavior    | N/A         | N/A    | All        | [RADIUS authentication is no longer case sensitive](/vault/docs/updates/important-changes#radius-authentication-is-no-longer-case-sensitive)
+New behavior    | N/A         | N/A    | All        | [Strict validation for Azure auth login requests](/vault/docs/updates/important-changes#strict-validation-for-azure-auth-login-requests)
+Breaking change | N/A         | N/A    | All        | [LDAP user DN search with upndomain](/vault/docs/updates/important-changes#ldap)
