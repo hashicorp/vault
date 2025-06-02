@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { fillIn, render, typeIn } from '@ember/test-helpers';
+import { find, fillIn, render, typeIn, waitUntil } from '@ember/test-helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { hbs } from 'ember-cli-htmlbars';
@@ -18,6 +18,7 @@ const SELECTORS = {
   searchInput: 'input.operation-filter-input',
   apiPathBlock: '.opblock-post',
   operationId: '.opblock-summary-operation-id',
+  title: '.information-container .title',
 };
 
 module('Integration | Component | open-api-explorer | swagger-ui', function (hooks) {
@@ -73,6 +74,16 @@ module('Integration | Component | open-api-explorer | swagger-ui', function (hoo
     await this.renderComponent();
 
     assert.dom(SELECTORS.operationId).doesNotExist('operation ids are hidden in production environment');
+
+    envStub.restore();
+  });
+
+  test('it should replace the title h2 tag with an h1 tag for a11y', async function (assert) {
+    const envStub = sinon.stub(config, 'environment').value('production');
+
+    await this.renderComponent();
+
+    assert.ok(await waitUntil(() => find('h1.title')), 'The title element is an <h1>');
 
     envStub.restore();
   });
