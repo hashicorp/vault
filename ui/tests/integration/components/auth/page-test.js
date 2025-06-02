@@ -392,6 +392,26 @@ module('Integration | Component | auth | page', function (hooks) {
       await this.assertPathInput(assert);
     });
 
+    test('(default+backups): it initially renders default type if backup types include the default method', async function (assert) {
+      this.loginSettings = {
+        defaultType: 'userpass',
+        backupTypes: ['ldap', 'userpass', 'oidc'],
+      };
+      await this.renderComponent();
+      assert.dom(GENERAL.backButton).doesNotExist('it renders default view');
+      assert.dom(AUTH_FORM.tabBtn('userpass')).hasText('Userpass', 'it renders default method');
+      assert
+        .dom(AUTH_FORM.tabs)
+        .exists({ count: 1 }, 'it is rendering the default view because only one tab renders');
+
+      await click(AUTH_FORM.otherMethodsBtn);
+      assert.dom(GENERAL.backButton).exists('it toggles to backup method view');
+      assert.dom(AUTH_FORM.tabs).exists({ count: 3 }, 'it renders 3 backup type tabs');
+      assert
+        .dom(AUTH_FORM.tabBtn('ldap'))
+        .hasAttribute('aria-selected', 'true', 'it selects the first backup type');
+    });
+
     test('(default only): it renders default type without backup methods', async function (assert) {
       this.loginSettings.backupTypes = null;
       await this.renderComponent();
