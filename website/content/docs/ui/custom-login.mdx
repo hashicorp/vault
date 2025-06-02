@@ -18,7 +18,7 @@ Use login customization to set preferred authentication methods and control whic
 
 - **You must have Vault Enterprise 1.20.0 or higher installed.**
 - **You must have the appropriate permissions**:
-  - You must have `update` permission for the `sys/config/ui/login/default-auth` endpoint.
+  - You must have `update` permission for the [`sys/config/ui/login/default-auth`](/vault/api-docs/system/config-ui-login-default-auth) endpoint.
  
 ## Step 1: Select your authentication method
 
@@ -260,7 +260,7 @@ Success! Tuned the auth method at: gui/ldap/
 </Tab>
 </Tabs>
 
-## Step 3: Set your default and preferred authentication methods
+## Step 3: Set your default and backup authentication methods
 
 The following authentication method types are supported:
 
@@ -522,17 +522,16 @@ the login settings using a direct URL for their mount of choice.
 The query parameter value can specify either a method [type](/vault/api-docs/system/auth#type) 
 or [path](/vault/api-docs/system/auth#path).
 
-| Description              | Sample URL                                                       |
-| ------------------------ | ---------------------------------------------------------------- |
-| `root` namespace         | `${VAULT_ADDR}/ui/vault/auth?with=<value>`                       |
-| child namespace          | `${VAULT_ADDR}/ui/vault/auth?namespace=<namespace>&with=<value>` |
-| type: `token`            | `${VAULT_ADDR}/ui/vault/auth?with=token`                         |
-| path: `gui/ldap`\*       | `${VAULT_ADDR}/ui/vault/auth?with=gui%2Fldap%2F`                 |
-
+Description              | Sample URL                                                       
+------------------------ | ---------------------------------------------------------------- 
+`root` namespace         | `${VAULT_ADDR}/ui/vault/auth?with=<value>`                       
+child namespace          | `${VAULT_ADDR}/ui/vault/auth?namespace=<namespace>&with=<value>` 
+type: `token`            | `${VAULT_ADDR}/ui/vault/auth?with=token`                         
+path: `gui/ldap`\*       | `${VAULT_ADDR}/ui/vault/auth?with=gui%2Fldap%2F`                 
 _*When specifying a path, the mount must be tuned with `listing_visibility="unauth"`_ 
 
-### Navigate to copy a direct link in the Vault GUI
-The Vault GUI generates a login URL for each mount, which is available on the mount's configuration details page.
+### Copy a direct link in the Vault GUI
+The Vault GUI generates a login URL for each mount, which can be copied from the mount's configuration details page.
 
 @include 'gui-instructions/update-authn-plugin.mdx'
 * Click the clipboard to copy the "UI login link"
