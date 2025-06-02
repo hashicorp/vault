@@ -5,7 +5,7 @@
 
 <Hds::Tabs @onClickTab={{this.onClickTab}} @selectedTabIndex={{this.selectedTabIndex}} as |T|>
   {{#each-in @authTabData as |methodType mounts|}}
-    <T.Tab data-test-auth-tab={{methodType}}>{{engines-display-name methodType}}</T.Tab>
+    <T.Tab data-test-auth-tab={{methodType}}>{{get (engines-display-data methodType) "displayName"}}</T.Tab>
     <T.Panel>
       <div class="has-top-padding-m">
         {{! Elements "behind" tabs always render on the DOM and are just superficially hidden/shown. 

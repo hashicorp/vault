@@ -52,7 +52,7 @@
             @text={{if
               backend.isSupportedBackend
               (concat
-                (engines-display-name backend.type)
+                (get (engines-display-data backend.type) "displayName")
                 (if (eq backend.version 2) " version 2" (if (eq backend.version 1) " version 1" ""))
               )
               "This secret engine type is not currently supported by the UI."

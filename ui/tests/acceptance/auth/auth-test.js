@@ -109,7 +109,7 @@ module('Acceptance | auth login form', function (hooks) {
     test('it renders tabs if sys/internal/ui/mounts returns data', async function (assert) {
       assert.expect(9);
       const expectedTabs = [
-        { type: 'userpass', display: 'Username & Password' },
+        { type: 'userpass', display: 'Userpass' },
         { type: 'oidc', display: 'OIDC' },
         { type: 'ldap', display: 'LDAP' },
       ];
