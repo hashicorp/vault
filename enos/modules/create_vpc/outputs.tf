@@ -20,8 +20,3 @@ output "cluster_id" {
   description = "A unique string associated with the VPC"
   value       = random_string.cluster_id.result
 }
-
-output "security_group_id" {
-  description = "The VPC security group"
-  value       = aws_security_group.default.id
-}

@@ -49,9 +49,7 @@ module "create_vpc" {
 }
 
 module "create_test_servers" {
-  source = "./modules/create_test_servers"
-
-  ssh_keypair  = var.aws_ssh_keypair_name
+  source = "./modules/backend_test_servers"
 }
 
 module "choose_follower_host" {
