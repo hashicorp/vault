@@ -154,7 +154,7 @@ export default class AuthPage extends Component<Args> {
   get initialAuthType(): string {
     // First, prioritize canceledMfaAuth since it's set by user interaction.
     // Next, "type" from direct link since the URL query param overrides any login settings.
-    // Then, first tab which is either the first backup method or visible mount tab.
+    // Then, first tab which is either the default method, first backup method or first visible mount tab.
     // Finally, fallback to the most recently used auth method in localStorage.
     // Token is the default otherwise.
     const directLinkType = this.args.directLinkData?.type;
@@ -192,7 +192,7 @@ export default class AuthPage extends Component<Args> {
     const defaultType = loginSettings?.defaultType;
     const backupTypes = loginSettings?.backupTypes;
 
-    // If a default is not set, render backup methods as the initial view
+    // If a default type is not set, render backup methods as the initial view
     const preferredTypes = defaultType ? [defaultType] : backupTypes;
     let defaultView;
     if (preferredTypes) {
