@@ -168,6 +168,23 @@ scenario "smoke" {
     }
   }
 
+  step "create_test_servers_target" {
+    description = global.description.create_test_servers_target
+    module      = module.target_ec2_instances
+    depends_on  = [step.create_vpc]
+
+    providers = {
+      enos = provider.enos.ubuntu
+    }
+
+    variables {
+      ami_id          = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
+      cluster_tag_key = global.vault_tag_key
+      common_tags     = global.tags
+      vpc_id          = step.create_vpc.id
+    }
+  }
+
   step "create_vault_cluster_targets" {
     description = global.description.create_vault_cluster_targets
     module      = module.target_ec2_instances
@@ -320,15 +337,16 @@ scenario "smoke" {
   step "create_test_servers" {
     description = global.description.create_test_servers
     module      = module.create_test_servers
-    depends_on  = [step.create_vpc]
+    depends_on = [
+      step.create_test_servers_target
+    ]
 
     providers = {
-      enos = local.enos_provider[matrix.distro]
+      enos = provider.enos.ubuntu
     }
 
     variables {
-      vpc_id                 = step.create_vpc.id
-      vpc_security_group_ids = [step.create_vpc.security_group_id]
+      hosts = step.create_test_servers_target.hosts
     }
   }
 
