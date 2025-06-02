@@ -61,7 +61,7 @@ module('Integration | Component | auth | tabs', function (hooks) {
 
   test('it renders tabs', async function (assert) {
     const expectedTabs = [
-      { type: 'userpass', display: 'Username & Password' },
+      { type: 'userpass', display: 'Userpass' },
       { type: 'oidc', display: 'OIDC' },
       { type: 'token', display: 'Token' },
     ];

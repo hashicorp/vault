@@ -122,7 +122,7 @@ module('Integration | Component | auth | page', function (hooks) {
     test('it formats and renders tabs if visible auth mounts exist', async function (assert) {
       await this.renderComponent();
       const expectedTabs = [
-        { type: 'userpass', display: 'Username & Password' },
+        { type: 'userpass', display: 'Userpass' },
         { type: 'oidc', display: 'OIDC' },
         { type: 'ldap', display: 'LDAP' },
       ];
