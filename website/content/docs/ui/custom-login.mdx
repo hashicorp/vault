@@ -12,22 +12,14 @@ description: >-
 
 Use login customization to set preferred authentication methods and control which methods display in the Vault GUI login form.
 
-<Tip>
-
-- To apply a login customization to the `root` namespace, pass an empty string: `namespace=""`.
-
-- **Login settings are inheritable by default**. Namespaces inherit login settings from their parent 
-unless inheritance is explicitly disabled. To scope a login setting to a specific namespace, 
-set: `disable_inheritance=true`.
-
-</Tip>
-
 ## Before you start 
+
+@include 'alerts/restricted-admin.mdx'
 
 - **You must have Vault Enterprise 1.20.0 or higher installed.**
 - **You must have the appropriate permissions**:
   - You must have `update` permission for the `sys/config/ui/login/default-auth` endpoint.
-
+ 
 ## Step 1: Select your authentication method
 
 Only the following methods are supported by the GUI and can be set as a default or backup method:
@@ -39,9 +31,9 @@ preferred authentication methods, or both.
 
 Configuration           | Result
 ----------------------- | ------
-Default only            | Clients must use the selected authentication method during login
-Preferred only          | Client must choose from the selected authentication methods during login
-Default and preferred   | Clients see the default method first but can access the preferred methods as backup methods
+Default only            | Clients must use the selected authentication method during login.
+Preferred only          | Client must choose from the selected authentication methods during login.
+Default and preferred   | Clients see the default method first but can access the preferred methods as backup methods.
 
 
 ## Step 2: Make the authentication method visible to the GUI
@@ -270,11 +262,19 @@ Success! Tuned the auth method at: gui/ldap/
 
 ## Step 3: Set your default and preferred authentication methods
 
-@include 'alerts/restricted-admin.mdx'
-
-The following authentication types are supported:
+The following authentication method types are supported:
 
 @include 'ui/supported-login-methods-api-docs.mdx'
+
+<Tip>
+
+- To apply a login customization to the `root` namespace, pass an empty string: `namespace=""`.
+
+- **Login settings are inheritable by default**. Namespaces inherit login settings from their parent 
+unless inheritance is explicitly disabled. To scope a login setting to a specific namespace, 
+set: `disable_inheritance=true`.
+
+</Tip>
 
 <Tabs>
 <Tab heading="CLI" group="cli">
@@ -527,7 +527,7 @@ or [path](/vault/api-docs/system/auth#path).
 | `root` namespace         | `${VAULT_ADDR}/ui/vault/auth?with=<value>`                       |
 | child namespace          | `${VAULT_ADDR}/ui/vault/auth?namespace=<namespace>&with=<value>` |
 | type: `token`            | `${VAULT_ADDR}/ui/vault/auth?with=token`                         |
-| mount path: `gui/ldap`\* | `${VAULT_ADDR}/ui/vault/auth?with=gui%2Fldap%2F`                 |
+| path: `gui/ldap`\*       | `${VAULT_ADDR}/ui/vault/auth?with=gui%2Fldap%2F`                 |
 
 _*When specifying a path, the mount must be tuned with `listing_visibility="unauth"`_ 
 
