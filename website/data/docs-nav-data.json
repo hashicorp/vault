@@ -930,6 +930,10 @@
     "title": "Upgrade Vault",
     "routes": [
       {
+        "title": "Known issues",
+        "path": "upgrade/known-issues"
+      },
+      {
         "title": "Single-instance",
         "path": "upgrade"
       },
