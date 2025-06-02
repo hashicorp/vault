@@ -1060,8 +1060,13 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 
 	// Validate the inline policy if it's set
 	if entry.InlinePolicy != "" {
-		if _, err := ParseACLPolicy(tokenNS, entry.InlinePolicy); err != nil {
+		// TODO (HCL_DUP_KEYS_DEPRECATION): return to ParseACLPolicy once the deprecation is done
+		_, duplicate, err := ParseACLPolicyCheckDuplicates(tokenNS, entry.InlinePolicy)
+		if err != nil {
 			return fmt.Errorf("failed to parse inline policy for token entry: %v", err)
+		}
+		if duplicate {
+			ts.logger.Warn("HCL inline policy contains duplicate attributes, which will no longer be supported in a future version", "namespace", tokenNS.Path)
 		}
 	}
 

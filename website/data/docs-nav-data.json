@@ -969,7 +969,7 @@
       },
       {
         "title": "Full changelog",
-        "path": "updates/changelog"
+        "href": "https://raw.githubusercontent.com/hashicorp/vault/refs/heads/main/CHANGELOG.md"
       }
     ]
   },
@@ -1028,8 +1028,8 @@
                 "path": "internals/telemetry/metrics"
               },
               {
-                "title": "Core system metrics",
-                "path": "internals/telemetry/metrics/core-system"
+                "title": "Activity metrics",
+                "path": "internals/telemetry/metrics/activity"
               },
               {
                 "title": "Audit log metrics",
@@ -1046,6 +1046,10 @@
               {
                 "title": "Availability metrics",
                 "path": "internals/telemetry/metrics/availability"
+              },
+              {
+                "title": "Core system metrics",
+                "path": "internals/telemetry/metrics/core-system"
               },
               {
                 "title": "Database metrics",
@@ -1070,10 +1074,6 @@
               {
                 "title": "Storage plugin metrics",
                 "path": "internals/telemetry/metrics/storage"
-              },
-              {
-                "title": "Activity metrics",
-                "path": "internals/telemetry/metrics/activity"
               },
               {
                 "title": "Full metrics list",
@@ -2276,11 +2276,6 @@
             "path": "secrets/transit/key-wrapping-guide"
           }
         ]
-      },
-      {
-        "title": "Venafi (Certificates)",
-        "path": "secrets/venafi",
-        "hidden": true
       }
     ]
   },

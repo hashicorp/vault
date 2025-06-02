@@ -33,15 +33,15 @@
   "scripts": {
     "build": "rollup --config",
     "format": "prettier . --cache --write",
-    "lint": "concurrently \"npm:lint:*(!fix)\" --names \"lint:\" --prefixColors auto",
-    "lint:fix": "concurrently \"npm:lint:*:fix\" --names \"fix:\" --prefixColors auto &&  run format",
+    "lint": "concurrently \"pnpm:lint:*(!fix)\" --names \"lint:\" --prefixColors auto",
+    "lint:fix": "concurrently \"pnpm:lint:*:fix\" --names \"fix:\" --prefixColors auto &&  run format",
     "lint:format": "prettier . --cache --check",
     "lint:hbs": "ember-template-lint . --no-error-on-unmatched-pattern",
     "lint:hbs:fix": "ember-template-lint . --fix --no-error-on-unmatched-pattern",
     "lint:js": "eslint . --cache",
     "lint:js:fix": "eslint . --fix",
     "lint:types": "glint",
-    "prepack": "rollup --config",
+    "prepack": "pnpm build",
     "start": "rollup --config --watch",
     "test": "echo 'A v2 addon does not have tests, run tests in test-app'",
     "sync-to-vault": "node scripts/sync-to-vault.mjs"
@@ -59,10 +59,13 @@
     "@embroider/addon-dev": "^7.1.0",
     "@embroider/addon-shim": "^1.8.9",
     "@eslint/js": "^9.17.0",
+    "@glimmer/component": "^1.1.2",
+    "@glimmer/tracking": "^1.1.2",
     "@glint/core": "^1.4.0",
     "@glint/environment-ember-loose": "^1.4.0",
     "@glint/environment-ember-template-imports": "^1.4.0",
     "@glint/template": "^1.4.0",
+    "@hashicorp/flight-icons": "^3.10.0",
     "@rollup/plugin-babel": "^6.0.4",
     "@tsconfig/ember": "^3.0.8",
     "babel-plugin-ember-template-compilation": "^2.2.5",
@@ -106,7 +109,8 @@
       "./components/vault-reporting/horizontal-bar-chart.js": "./dist/_app_/components/vault-reporting/horizontal-bar-chart.js",
       "./components/vault-reporting/views/dashboard.js": "./dist/_app_/components/vault-reporting/views/dashboard.js",
       "./modifiers/axis-offset.js": "./dist/_app_/modifiers/axis-offset.js",
-      "./modifiers/css-custom-property.js": "./dist/_app_/modifiers/css-custom-property.js"
+      "./modifiers/css-custom-property.js": "./dist/_app_/modifiers/css-custom-property.js",
+      "./services/reporting-analytics.js": "./dist/_app_/services/reporting-analytics.js"
     }
   }
 }

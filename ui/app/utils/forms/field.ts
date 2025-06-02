@@ -14,6 +14,10 @@ export interface FieldOptions {
   isSingleRow?: boolean;
   keyPlaceholder?: string;
   valuePlaceholder?: string;
+  editDisabled?: boolean;
+  sensitive?: boolean;
+  noCopy?: boolean;
+  docLink?: string;
 }
 
 export default class FormField {

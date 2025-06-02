@@ -52,6 +52,7 @@ export const GENERAL = {
   inputGroupByAttr: (attr: string) => `[data-test-input-group="${attr}"]`,
   labelById: (id: string) => `label[id="${id}"]`,
   labelByGroupControlIndex: (index: number) => `.hds-form-group__control-field:nth-of-type(${index}) label`,
+  radioByAttr: (attr: string) => `[data-test-radio="${attr}"]`,
   selectByAttr: (attr: string) => `[data-test-select="${attr}"]`,
   textToggle: '[data-test-text-toggle]',
   textToggleTextarea: '[data-test-text-file-textarea]',
@@ -78,6 +79,9 @@ export const GENERAL = {
   },
   inlineError: '[data-test-inline-error-message]',
   kvObjectEditor: {
+    key: (idx = 0) => `[data-test-kv-key="${idx}"]`,
+    value: (idx = 0) => `[data-test-kv-value="${idx}"]`,
+    addRow: '[data-test-kv-add-row]',
     deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
   },
   searchSelect: {
@@ -108,11 +112,13 @@ export const GENERAL = {
     select: '[data-test-kv-suggestion-select]',
   },
   // Links and buttons
-  navLink: (label: string) => `[data-test-sidebar-nav-link="${label}"]`,
   backButton: '[data-test-back-button]',
   cancelButton: '[data-test-cancel]',
+  linkTo: (label: string) => `[data-test-link-to="${label}"]`,
+  navLink: (label: string) => `[data-test-sidebar-nav-link="${label}"]`,
   saveButton: '[data-test-save]',
   testButton: (label: string) => `[data-test-button="${label}"]`,
+  // Code blocks
   codeBlock: (label: string) => `[data-test-code-block="${label}"]`,
   // TODO replace data-test-component="value" as a higher level selector
   codemirror: `[data-test-component="code-mirror-modifier"]`,

@@ -1,0 +1,3 @@
+```release-note:improvement
+core: support for X25519MLKEM768 (post quantum key agreement) in the Go TLS stack.
+```

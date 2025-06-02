@@ -92,7 +92,7 @@ export const PAGE = {
       // for handling more complex form input elements by attr name
       switch (attr) {
         case 'granularity':
-          return await click(`[data-test-radio="secret-key"]`);
+          return await click(`${GENERAL.radioByAttr('secret-key')}`);
         case 'credentials':
           await click('[data-test-text-toggle]');
           return fillIn('[data-test-text-file-textarea]', value);
@@ -100,9 +100,9 @@ export const PAGE = {
           await fillIn('[data-test-kv-key="0"]', 'foo');
           return fillIn('[data-test-kv-value="0"]', value);
         case 'deploymentEnvironments':
-          await click('[data-test-input-group="deploymentEnvironments"] input#development');
-          await click('[data-test-input-group="deploymentEnvironments"] input#preview');
-          return await click('[data-test-input-group="deploymentEnvironments"] input#production');
+          await click(`${GENERAL.inputGroupByAttr('deploymentEnvironments')} input#development`);
+          await click(`${GENERAL.inputGroupByAttr('deploymentEnvironments')} input#preview`);
+          return await click(`${GENERAL.inputGroupByAttr('deploymentEnvironments')} input#production`);
         default:
           return fillIn(`[data-test-input="${attr}"]`, value);
       }

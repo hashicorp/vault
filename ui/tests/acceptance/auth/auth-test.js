@@ -16,7 +16,13 @@ import {
   mountEngineCmd,
   runCmd,
 } from 'vault/tests/helpers/commands';
-import { login, loginMethod, loginNs, logout, VISIBLE_MOUNTS } from 'vault/tests/helpers/auth/auth-helpers';
+import {
+  login,
+  loginMethod,
+  loginNs,
+  logout,
+  SYS_INTERNAL_UI_MOUNTS,
+} from 'vault/tests/helpers/auth/auth-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { v4 as uuidv4 } from 'uuid';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -29,6 +35,17 @@ module('Acceptance | auth login form', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
+  test('it does not request login settings for community versions', async function (assert) {
+    assert.expect(1); // should only be one assertion because the stubbed mirage request should NOT be hit
+    this.owner.lookup('service:version').type = 'community';
+    this.server.get('/sys/internal/ui/default-auth-methods', () => {
+      // cannot throw error here because request errors are swallowed
+      assert.false(true, 'request made for login settings and it should not have been');
+    });
+    await visit('/vault/auth');
+    assert.strictEqual(currentURL(), '/vault/auth');
+  });
+
   test('it selects auth method if "with" query param is a supported auth method', async function (assert) {
     const backends = supportedAuthBackends();
     assert.expect(backends.length);
@@ -36,6 +53,16 @@ module('Acceptance | auth login form', function (hooks) {
       await visit(`/vault/auth?with=${backend.type}`);
       assert.dom(AUTH_FORM.selectMethod).hasValue(backend.type);
     }
+  });
+
+  test('it selects auth method if "with" query param ends in an unencoded a slash', async function (assert) {
+    await visit('/vault/auth?with=userpass/');
+    assert.dom(AUTH_FORM.selectMethod).hasValue('userpass');
+  });
+
+  test('it selects auth method if "with" query param ends in an encoded slash and matches an auth type', async function (assert) {
+    await visit('/vault/auth?with=userpass%2F');
+    assert.dom(AUTH_FORM.selectMethod).hasValue('userpass');
   });
 
   test('it redirects if "with" query param is not a supported auth method', async function (assert) {
@@ -74,7 +101,7 @@ module('Acceptance | auth login form', function (hooks) {
   module('listing visibility', function (hooks) {
     hooks.beforeEach(async function () {
       this.server.get('/sys/internal/ui/mounts', () => {
-        return { data: { auth: VISIBLE_MOUNTS } };
+        return { data: { auth: SYS_INTERNAL_UI_MOUNTS } };
       });
       await logout(); // clear local storage
     });
@@ -84,7 +111,7 @@ module('Acceptance | auth login form', function (hooks) {
       const expectedTabs = [
         { type: 'userpass', display: 'Userpass' },
         { type: 'oidc', display: 'OIDC' },
-        { type: 'token', display: 'Token' },
+        { type: 'ldap', display: 'LDAP' },
       ];
       await visit('/vault/auth');
       await waitFor(AUTH_FORM.tabs);
@@ -103,15 +130,15 @@ module('Acceptance | auth login form', function (hooks) {
 
     test('it renders preferred mount view if "with" query param is a mount path with listing_visibility="unauth"', async function (assert) {
       await visit('/vault/auth?with=my-oidc%2F');
-      await waitFor(AUTH_FORM.preferredMethod('oidc'));
-      assert.dom(AUTH_FORM.preferredMethod('oidc')).hasText('OIDC', 'it renders mount type');
+      await waitFor(AUTH_FORM.tabBtn('oidc'));
+      assert.dom(AUTH_FORM.authForm('oidc')).exists();
+      assert.dom(AUTH_FORM.tabBtn('oidc')).exists();
       assert.dom(GENERAL.inputByAttr('role')).exists();
       assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
       assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
       assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders');
 
-      assert.dom(AUTH_FORM.tabBtn('oidc')).doesNotExist('tab does not render');
-      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist();
+      assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
       assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
       assert.dom(GENERAL.backButton).doesNotExist();
     });
@@ -122,14 +149,16 @@ module('Acceptance | auth login form', function (hooks) {
       assert
         .dom(AUTH_FORM.tabBtn('oidc'))
         .hasAttribute('aria-selected', 'true', 'it selects tab matching query param');
-      assert.dom(AUTH_FORM.preferredMethod('oidc')).doesNotExist('it does not render single mount view');
+      assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
+      assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
+      assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders');
       assert.dom(GENERAL.backButton).doesNotExist();
     });
 
     test('it selects type from dropdown if query param is NOT a visible mount, but is a supported method', async function (assert) {
-      await visit('/vault/auth?with=ldap');
+      await visit('/vault/auth?with=token');
       await waitFor(GENERAL.selectByAttr('auth type'));
-      assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap');
+      assert.dom(GENERAL.selectByAttr('auth type')).hasValue('token');
       assert.dom(GENERAL.backButton).exists('it renders "Back" button because tabs do exist');
       assert
         .dom(AUTH_FORM.otherMethodsBtn)
@@ -322,7 +351,7 @@ module('Acceptance | auth login form', function (hooks) {
 
       // login as user just to get token (this is the only way to generate a token in the UI right now..)
       await loginMethod(inputValues, { authType: 'userpass', toggleOptions: true });
-      await click('[data-test-user-menu-trigger=""]');
+      await click(GENERAL.testButton('user-menu-trigger'));
       const token = find('[data-test-copy-button]').getAttribute('data-test-copy-button');
 
       // login with token to reproduce bug
@@ -332,7 +361,7 @@ module('Acceptance | auth login form', function (hooks) {
         .dom('[data-test-overview-card="Roles"]')
         .hasText('Roles Create new', 'database overview renders');
       // renew token
-      await click('[data-test-user-menu-trigger=""]');
+      await click(GENERAL.testButton('user-menu-trigger'));
       await click('[data-test-user-menu-item="renew token"]');
       // navigate out and back to overview tab to re-request capabilities
       await click(GENERAL.secretTab('Roles'));
@@ -355,9 +384,7 @@ module('Acceptance | auth login form', function (hooks) {
       await visit('/vault/auth');
 
       this.server.get('/sys/internal/ui/mounts', (_, req) => {
-        // sometimes the namespace header is "X-Vault-Namespace" and other times "x-vault-namespace"...haven't figured out why
-        const key = Object.keys(req.requestHeaders).find((k) => k.toLowerCase().includes('namespace'));
-        assert.strictEqual(req.requestHeaders[key], 'admin', `${key}: header contains namespace`);
+        assert.strictEqual(req.requestHeaders['x-vault-namespace'], 'admin', 'header contains namespace');
         req.passthrough();
       });
       await typeIn(GENERAL.inputByAttr('namespace'), 'admin');

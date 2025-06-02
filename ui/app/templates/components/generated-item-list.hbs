@@ -23,7 +23,7 @@
         <ul>
           {{#each tabs as |tab|}}
             <li>
-              <LinkTo @route={{tab.route}} @models={{tab.routeParams}} data-test-auth-section-tab>
+              <LinkTo @route={{tab.route}} @models={{tab.routeParams}} data-test-link-to="generated-tab">
                 {{tab.label}}
               </LinkTo>
             </li>

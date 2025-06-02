@@ -93,7 +93,7 @@ module('Integration | Component | Secrets::SyncActivationModal', function (hooks
 
         this.server.post('/sys/activation-flags/secrets-sync/activate', (_, req) => {
           assert.strictEqual(
-            req.requestHeaders['X-Vault-Namespace'],
+            req.requestHeaders['x-vault-namespace'],
             'admin',
             'POST to secrets-sync/activate is called with admin namespace'
           );

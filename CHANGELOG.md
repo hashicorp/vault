@@ -3,6 +3,51 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+
+## 1.19.5
+### May 30, 2025
+
+**Enterprise LTS:** Vault Enterprise 1.19 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+CHANGES:
+
+* database/snowflake: Update plugin to v0.13.1 [[GH-30775](https://github.com/hashicorp/vault/pull/30775)]
+
+IMPROVEMENTS:
+
+* plugins: Support registration of CE plugins with extracted artifact directory. [[GH-30673](https://github.com/hashicorp/vault/pull/30673)]
+
+BUG FIXES:
+
+* ui: Fix broken link to Hashicorp Vault developer site in the Web REPL help. [[GH-30670](https://github.com/hashicorp/vault/pull/30670)]
+
+## 1.19.4
+### May 16, 2025
+
+**Enterprise LTS:** Vault Enterprise 1.19 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+CHANGES:
+
+* Update vault-plugin-auth-cf to v0.20.1 [[GH-30586](https://github.com/hashicorp/vault/pull/30586)]
+* auth/azure: Update plugin to v0.20.4 [[GH-30543](https://github.com/hashicorp/vault/pull/30543)]
+* core: Bump Go version to 1.24.3.
+
+IMPROVEMENTS:
+
+* Namespaces (enterprise): allow a root token to relock a namespace
+* core (enterprise): update to FIPS 140-3 cryptographic module in the FIPS builds.
+* core: Updated code and documentation to support FIPS 140-3 compliant algorithms. [[GH-30576](https://github.com/hashicorp/vault/pull/30576)]
+* core: support for X25519MLKEM768 (post quantum key agreement) in the Go TLS stack. [[GH-30603](https://github.com/hashicorp/vault/pull/30603)]
+* ui: Replaces all instances of the deprecated event.keyCode with event.key [[GH-30493](https://github.com/hashicorp/vault/pull/30493)]
+
+BUG FIXES:
+
+* core (enterprise): fix a bug where plugin automated root rotations would stop after seal/unseal operations
+* plugins (enterprise): Fix an issue where Enterprise plugins can't run on a standby node
+when it becomes active because standby nodes don't extract the artifact when the plugin
+is registered. Remove extracting from Vault and require the operator to place
+the extracted artifact in the plugin directory before registration.
+
 ## 1.19.3
 ### April 30, 2025
 
@@ -324,6 +369,26 @@ Unblocks customers that were stuck in a failing loop when attempting to rotate s
 * ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 * ui: No longer running decodeURIComponent on KVv2 list view allowing percent encoded data-octets in path name. [[GH-28698](https://github.com/hashicorp/vault/pull/28698)]
 * vault/diagnose: Fix time to expiration reporting within the TLS verification to not be a month off. [[GH-29128](https://github.com/hashicorp/vault/pull/29128)]
+
+## 1.18.10
+### May 30, 2025
+
+CHANGES:
+
+* Update vault-plugin-auth-cf to v0.19.2
+* auth/azure: Upgrade plugin to v0.19.4
+* database/snowflake: Update plugin to v0.12.1
+
+IMPROVEMENTS:
+
+* ui: Replaces all instances of the deprecated event.keyCode with event.key [[GH-30493](https://github.com/hashicorp/vault/pull/30493)]
+
+BUG FIXES:
+
+* plugins (enterprise): Fix an issue where Enterprise plugins can't run on a standby node
+when it becomes active because standby nodes don't extract the artifact when the plugin
+is registered. Remove extracting from Vault and require the operator to place
+the extracted artifact in the plugin directory before registration.
 
 ## 1.18.9 Enterprise
 ### April 30, 2025
@@ -774,6 +839,26 @@ use versioned plugins. [[GH-27881](https://github.com/hashicorp/vault/pull/27881
 * ui: fix namespace picker not working when in small screen where the sidebar is collapsed by default. [[GH-27728](https://github.com/hashicorp/vault/pull/27728)]
 * ui: fixes renew-self being called right after login for non-renewable tokens [[GH-28204](https://github.com/hashicorp/vault/pull/28204)]
 * ui: fixes toast (flash) alert message saying "created" when deleting a kv v2 secret [[GH-28093](https://github.com/hashicorp/vault/pull/28093)]
+
+## 1.17.17
+### May 30, 2025
+
+CHANGES:
+
+* Update vault-plugin-auth-cf to v0.18.2
+* auth/azure: Upgrade plugin to v0.18.3
+* database/snowflake: Update plugin to v0.11.1
+
+IMPROVEMENTS:
+
+* ui: Replaces all instances of the deprecated event.keyCode with event.key [[GH-30493](https://github.com/hashicorp/vault/pull/30493)]
+
+BUG FIXES:
+
+* plugins (enterprise): Fix an issue where Enterprise plugins can't run on a standby node
+when it becomes active because standby nodes don't extract the artifact when the plugin
+is registered. Remove extracting from Vault and require the operator to place
+the extracted artifact in the plugin directory before registration.
 
 ## 1.17.16 Enterprise
 ### April 30, 2025
@@ -1369,6 +1454,22 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 * ui: fix issue where a month without new clients breaks the client count dashboard [[GH-27352](https://github.com/hashicorp/vault/pull/27352)]
 * ui: fixed a bug where the replication pages did not update display when navigating between DR and performance [[GH-26325](https://github.com/hashicorp/vault/pull/26325)]
 * ui: fixes undefined start time in filename for downloaded client count attribution csv [[GH-26485](https://github.com/hashicorp/vault/pull/26485)]
+
+## 1.16.21
+### May 30, 2025
+
+CHANGES:
+
+* Update vault-plugin-auth-cf to v0.18.2
+* auth/azure: Upgrade plugin to v0.17.4
+* database/snowflake: Update plugin to v0.10.2
+
+BUG FIXES:
+
+* plugins (enterprise): Fix an issue where Enterprise plugins can't run on a standby node
+when it becomes active because standby nodes don't extract the artifact when the plugin
+is registered. Remove extracting from Vault and require the operator to place
+the extracted artifact in the plugin directory before registration.
 
 ## 1.16.20 Enterprise
 ### April 30, 2025
