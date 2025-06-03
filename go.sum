@@ -1608,8 +1608,8 @@ github.com/hashicorp/vault-plugin-secrets-kubernetes v0.10.0 h1:Fw7s2f1WNW1GZgd3
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.10.0/go.mod h1:MHNHjEfrXPzWB2J/xmgzojb76wsw0/oUd8z3QLDzzbM=
 github.com/hashicorp/vault-plugin-secrets-kv v0.23.0 h1:LpjG8L77PGqLsS5fYYEW6Lxvom8rusdT6AvGRI7gWj8=
 github.com/hashicorp/vault-plugin-secrets-kv v0.23.0/go.mod h1:U+aKQtbJH78mP/X6k/nxaPXIzdqLyNfo1LaP9570yAQ=
-github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.14.0 h1:N7zUrgQqvDVUsOZW4x49Cbx6WcjEU5Qwe8hrr4lYvV8=
-github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.14.0/go.mod h1:nRcr6W9rb3vDMLDGb/ZovsFhrEM8Q1WLNUKDGRaDplM=
+github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.14.1-0.20250601002745-ffd25052212c h1:6rcyx9pUFjQs9ci+fNydGenU/qcyuJggbY/t0Z2wNFc=
+github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.14.1-0.20250601002745-ffd25052212c/go.mod h1:dJcwyr8tHFJEET32dKEIgGp1PBp5EMDOI9n4HaEruy8=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.15.4 h1:hIzo90tKFGCF6smDwAnv0hdO41836JzSLX2dvAsK0mI=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.15.4/go.mod h1:pRXM0xkUe8B7Y8Seb7TQr9GuL70sovCB7gY5UbxXlsA=
 github.com/hashicorp/vault-plugin-secrets-terraform v0.11.0 h1:dIOJ7VKyYU8o9xH1DuD61Fsfl6uSPHy6OrYdEjp4Ku0=
@@ -2266,8 +2266,8 @@ go.etcd.io/etcd/client/v2 v2.305.17 h1:ajFukQfI//xY5VuSeuUw4TJ4WnNR2kAFfV/P0pDdP
 go.etcd.io/etcd/client/v2 v2.305.17/go.mod h1:EttKgEgvwikmXN+b7pkEWxDZr6sEaYsqCiS3k4fa/Vg=
 go.etcd.io/etcd/client/v3 v3.5.17 h1:o48sINNeWz5+pjy/Z0+HKpj/xSnBkuVhVvXkjEXbqZY=
 go.etcd.io/etcd/client/v3 v3.5.17/go.mod h1:j2d4eXTHWkT2ClBgnnEPm/Wuu7jsqku41v9DZ3OtjQo=
-go.mongodb.org/atlas v0.37.0 h1:zQnO1o5+bVP9IotpAYpres4UjMD2F4nwNEFTZhNL4ck=
-go.mongodb.org/atlas v0.37.0/go.mod h1:DJYtM+vsEpPEMSkQzJnFHrT0sP7ev6cseZc/GGjJYG8=
+go.mongodb.org/atlas v0.38.0 h1:zfwymq20GqivGwxPZfypfUDry+WwMGVui97z1d8V4bU=
+go.mongodb.org/atlas v0.38.0/go.mod h1:DJYtM+vsEpPEMSkQzJnFHrT0sP7ev6cseZc/GGjJYG8=
 go.mongodb.org/mongo-driver v1.17.3 h1:TQyXhnsWfWtgAhMtOgtYHMTkZIfBTpMTsMnd9ZBeHxQ=
 go.mongodb.org/mongo-driver v1.17.3/go.mod h1:Hy04i7O2kC4RS06ZrhPRqj/u4DTYkFDAAccj+rVKqgQ=
 go.opencensus.io v0.21.0/go.mod h1:mSImk1erAIZhrmZN+AvHh14ztQfjbGwt4TtuofqLduU=
