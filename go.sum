@@ -780,8 +780,8 @@ github.com/alecthomas/units v0.0.0-20190717042225-c3de453c63f4/go.mod h1:ybxpYRF
 github.com/alecthomas/units v0.0.0-20190924025748-f65c72e2690d/go.mod h1:rBZYJk541a8SKzHPHnH3zbiI+7dagKZ0cgpgrD7Fyho=
 github.com/alexbrainman/sspi v0.0.0-20231016080023-1a75b4708caa h1:LHTHcTQiSGT7VVbI0o4wBRNQIgn917usHWOd6VAffYI=
 github.com/alexbrainman/sspi v0.0.0-20231016080023-1a75b4708caa/go.mod h1:cEWa1LVoE5KvSD9ONXsZrj0z6KqySlCCNKHlLzbqAt4=
-github.com/aliyun/alibaba-cloud-sdk-go v1.63.84 h1:8IpC2i1mtsuUt13cbZtVCtQRSjzuMvLiDrbOJcaS+Z4=
-github.com/aliyun/alibaba-cloud-sdk-go v1.63.84/go.mod h1:SOSDHfe1kX91v3W5QiBsWSLqeLxImobbMX1mxrFHsVQ=
+github.com/aliyun/alibaba-cloud-sdk-go v1.63.107 h1:qagvUyrgOnBIlVRQWOyCZGVKUIYbMBdGdJ104vBpRFU=
+github.com/aliyun/alibaba-cloud-sdk-go v1.63.107/go.mod h1:SOSDHfe1kX91v3W5QiBsWSLqeLxImobbMX1mxrFHsVQ=
 github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5 h1:nWDRPCyCltiTsANwC/n3QZH7Vww33Npq9MKqlwRzI/c=
 github.com/aliyun/aliyun-oss-go-sdk v0.0.0-20190307165228-86c17b95fcd5/go.mod h1:T/Aws4fEfogEE9v+HPhhw+CntffsBHJ8nXQCwKr0/g8=
 github.com/andybalholm/brotli v1.0.4/go.mod h1:fO7iG3H7G2nSZ7m0zPUDn85XEX2GTukHGRSepvi9Eig=
@@ -1564,8 +1564,8 @@ github.com/hashicorp/serf v0.10.1 h1:Z1H2J60yRKvfDYAOZLd2MU0ND4AH/WDz7xYHDWQsIPY
 github.com/hashicorp/serf v0.10.1/go.mod h1:yL2t6BqATOLGc5HF7qbFkTfXoPIY0WZdWHfEvMqbG+4=
 github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16 h1:OYPMX3Td3XTL0Xk5N3Se1KLde630diD1X+v3wgJXDhQ=
 github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16/go.mod h1:v4RnW8isIioLAc11prbTczNCq9TiEWE5MwizMsgY5mE=
-github.com/hashicorp/vault-plugin-auth-alicloud v0.20.0 h1:yw96/zWrNPFTH8yTqTvVtraJ3EWk9vewvx1H7X6lekI=
-github.com/hashicorp/vault-plugin-auth-alicloud v0.20.0/go.mod h1:aAE14G1n1/Qw5/Vj+P0eaEuo8m6op2/3RhR4gN3q5AI=
+github.com/hashicorp/vault-plugin-auth-alicloud v0.21.0 h1:5nw3SbWPZNeOx/C7jPzKnfUMHzlGSnyUO+EuCimOWlM=
+github.com/hashicorp/vault-plugin-auth-alicloud v0.21.0/go.mod h1:b74ZlQ/vh4MNPIOJiUDlXtdhr2Qmby7FAUeO+5q+1M0=
 github.com/hashicorp/vault-plugin-auth-azure v0.20.4 h1:Y10r6GMnnwuWVTbIi5BWuRN9k4YyXLFQNskruhGn0/0=
 github.com/hashicorp/vault-plugin-auth-azure v0.20.4/go.mod h1:xJ9/bjEfllNnlZtjUX1fltRxZz08h5HnWpftwmwcu+c=
 github.com/hashicorp/vault-plugin-auth-cf v0.20.1 h1:PkXbAGHaGvZGWIE6v+Q2FGO/EoIEPCgaMYEW3NOuvP0=
@@ -1606,8 +1606,8 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms v0.20.0 h1:gFPxVPaFJjyPUF3GE7Lw
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.20.0/go.mod h1:SgKyMgD4+Jj4jDRgFOactHENY7Vov6Hi0UdYWVO9NGY=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.10.0 h1:Fw7s2f1WNW1GZgd3jb+7mkx6jPH528AFwWMHg9LarCQ=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.10.0/go.mod h1:MHNHjEfrXPzWB2J/xmgzojb76wsw0/oUd8z3QLDzzbM=
-github.com/hashicorp/vault-plugin-secrets-kv v0.23.0 h1:LpjG8L77PGqLsS5fYYEW6Lxvom8rusdT6AvGRI7gWj8=
-github.com/hashicorp/vault-plugin-secrets-kv v0.23.0/go.mod h1:U+aKQtbJH78mP/X6k/nxaPXIzdqLyNfo1LaP9570yAQ=
+github.com/hashicorp/vault-plugin-secrets-kv v0.24.0 h1:LRL9eeEgQxVzf05IEJWg6uApFZeDOCJEU9M0LbnVB1U=
+github.com/hashicorp/vault-plugin-secrets-kv v0.24.0/go.mod h1:U+aKQtbJH78mP/X6k/nxaPXIzdqLyNfo1LaP9570yAQ=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.14.0 h1:N7zUrgQqvDVUsOZW4x49Cbx6WcjEU5Qwe8hrr4lYvV8=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.14.0/go.mod h1:nRcr6W9rb3vDMLDGb/ZovsFhrEM8Q1WLNUKDGRaDplM=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.15.4 h1:hIzo90tKFGCF6smDwAnv0hdO41836JzSLX2dvAsK0mI=
