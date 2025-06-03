@@ -637,8 +637,8 @@ github.com/Azure/azure-sdk-for-go/sdk/azcore v0.19.0/go.mod h1:h6H6c8enJmmocHUbL
 github.com/Azure/azure-sdk-for-go/sdk/azcore v1.18.0 h1:Gt0j3wceWMwPmiazCa8MzMA0MfhmPIz0Qp0FJ6qcM0U=
 github.com/Azure/azure-sdk-for-go/sdk/azcore v1.18.0/go.mod h1:Ot/6aikWnKWi4l9QB7qVSwa8iMphQNqkWALMoNT3rzM=
 github.com/Azure/azure-sdk-for-go/sdk/azidentity v0.11.0/go.mod h1:HcM1YX14R7CJcghJGOYCgdezslRSVzqwLf/q+4Y2r/0=
-github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.9.0 h1:OVoM452qUFBrX+URdH3VpR299ma4kfom0yB0URYky9g=
-github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.9.0/go.mod h1:kUjrAo8bgEwLeZ/CmHqNl3Z/kPm7y6FKfxxK0izYUg4=
+github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.10.0 h1:j8BorDEigD8UFOSZQiSqAMOOleyQOOQPnUAwV+Ls1gA=
+github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.10.0/go.mod h1:JdM5psgjfBf5fo2uWOZhflPWyDBZ/O/CNAH9CtsuZE4=
 github.com/Azure/azure-sdk-for-go/sdk/azidentity/cache v0.3.2 h1:yz1bePFlP5Vws5+8ez6T3HWXPmwOK7Yvq8QxDBD3SKY=
 github.com/Azure/azure-sdk-for-go/sdk/azidentity/cache v0.3.2/go.mod h1:Pa9ZNPuoNu/GztvBSKk9J1cDJW6vk/n0zLtV4mgd8N8=
 github.com/Azure/azure-sdk-for-go/sdk/internal v0.7.0/go.mod h1:yqy467j36fJxcRV2TzfVZ1pCb5vxm4BtZPUdYWe/Xo8=
@@ -1566,8 +1566,8 @@ github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16 h1:OYPMX3T
 github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16/go.mod h1:v4RnW8isIioLAc11prbTczNCq9TiEWE5MwizMsgY5mE=
 github.com/hashicorp/vault-plugin-auth-alicloud v0.20.0 h1:yw96/zWrNPFTH8yTqTvVtraJ3EWk9vewvx1H7X6lekI=
 github.com/hashicorp/vault-plugin-auth-alicloud v0.20.0/go.mod h1:aAE14G1n1/Qw5/Vj+P0eaEuo8m6op2/3RhR4gN3q5AI=
-github.com/hashicorp/vault-plugin-auth-azure v0.20.4 h1:Y10r6GMnnwuWVTbIi5BWuRN9k4YyXLFQNskruhGn0/0=
-github.com/hashicorp/vault-plugin-auth-azure v0.20.4/go.mod h1:xJ9/bjEfllNnlZtjUX1fltRxZz08h5HnWpftwmwcu+c=
+github.com/hashicorp/vault-plugin-auth-azure v0.20.2-0.20250601002705-1806414e7a13 h1:eHnqXGoNraacUU9f1WpN7xKJ21BKAL1ri6hZ8Yk58QE=
+github.com/hashicorp/vault-plugin-auth-azure v0.20.2-0.20250601002705-1806414e7a13/go.mod h1:+tciM8gOWBdj0iAKi150sLZyhNfDxs0HYXEmqzXnhlU=
 github.com/hashicorp/vault-plugin-auth-cf v0.20.1 h1:PkXbAGHaGvZGWIE6v+Q2FGO/EoIEPCgaMYEW3NOuvP0=
 github.com/hashicorp/vault-plugin-auth-cf v0.20.1/go.mod h1:UmXfdMdh+uY/zaUE838g9cFbi7dkSSmKFycq/AG9mx8=
 github.com/hashicorp/vault-plugin-auth-gcp v0.20.2 h1:M1gWdAo/WTu9PR8j8kfnDwDEqlgJKUDgEla/aB5IaZk=
@@ -1859,8 +1859,8 @@ github.com/microsoft/kiota-serialization-multipart-go v1.1.2 h1:1pUyA1QgIeKslQwb
 github.com/microsoft/kiota-serialization-multipart-go v1.1.2/go.mod h1:j2K7ZyYErloDu7Kuuk993DsvfoP7LPWvAo7rfDpdPio=
 github.com/microsoft/kiota-serialization-text-go v1.1.2 h1:7OfKFlzdjpPygca/+OtqafkEqCWR7+94efUFGC28cLw=
 github.com/microsoft/kiota-serialization-text-go v1.1.2/go.mod h1:QNTcswkBPFY3QVBFmzfk00UMNViKQtV0AQKCrRw5ibM=
-github.com/microsoftgraph/msgraph-sdk-go v1.69.0 h1:DVh6hIwOXxdI4pFocKC8YetJOhQamDkJC5z6BjtivmE=
-github.com/microsoftgraph/msgraph-sdk-go v1.69.0/go.mod h1:5ncg4aauxM5XKHo/xvAq7Cjl6+Dqu6lOtoihSGKtDt4=
+github.com/microsoftgraph/msgraph-sdk-go v1.72.0 h1:yKYJ46dJgX6XdI79zI2kotiBPIYktMQs1ad2DVz81rk=
+github.com/microsoftgraph/msgraph-sdk-go v1.72.0/go.mod h1:5ncg4aauxM5XKHo/xvAq7Cjl6+Dqu6lOtoihSGKtDt4=
 github.com/microsoftgraph/msgraph-sdk-go-core v1.3.2 h1:5jCUSosTKaINzPPQXsz7wsHWwknyBmJSu8+ZWxx3kdQ=
 github.com/microsoftgraph/msgraph-sdk-go-core v1.3.2/go.mod h1:iD75MK3LX8EuwjDYCmh0hkojKXK6VKME33u4daCo3cE=
 github.com/miekg/dns v1.0.14/go.mod h1:W1PPwlIAgtquWBMBEV9nkV9Cazfe8ScdGz/Lj7v3Nrg=
@@ -2070,8 +2070,8 @@ github.com/prometheus/procfs v0.15.1/go.mod h1:fB45yRUv8NstnjriLhBQLuOUt+WW4BsoG
 github.com/prometheus/tsdb v0.7.1/go.mod h1:qhTCs0VvXwvX/y3TZrWD7rabWM+ijKTux40TwIPHuXU=
 github.com/rboyer/safeio v0.2.1 h1:05xhhdRNAdS3apYm7JRjOqngf4xruaW959jmRxGDuSU=
 github.com/rboyer/safeio v0.2.1/go.mod h1:Cq/cEPK+YXFn622lsQ0K4KsPZSPtaptHHEldsy7Fmig=
-github.com/redis/go-redis/v9 v9.7.3 h1:YpPyAayJV+XErNsatSElgRZZVCwXX9QzkKYNvO7x0wM=
-github.com/redis/go-redis/v9 v9.7.3/go.mod h1:bGUrSggJ9X9GUmZpZNEOQKaANxSGgOEBRltRTZHSvrA=
+github.com/redis/go-redis/v9 v9.8.0 h1:q3nRvjrlge/6UD7eTu/DSg2uYiU2mCL0G/uzBWqhicI=
+github.com/redis/go-redis/v9 v9.8.0/go.mod h1:huWgSWd8mW6+m0VPhJjSSQ+d6Nh1VICQ6Q5lHuCH/Iw=
 github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0/go.mod h1:qqbHyh8v60DhA7CoWK5oRCqLrMHRGoxYCSS9EjAz6Eo=
 github.com/renier/xmlrpc v0.0.0-20170708154548-ce4a1a486c03 h1:Wdi9nwnhFNAlseAOekn6B5G/+GMtks9UKbvRU/CMM/o=
 github.com/renier/xmlrpc v0.0.0-20170708154548-ce4a1a486c03/go.mod h1:gRAiPF5C5Nd0eyyRdqIu9qTiFSoZzpTq727b5B8fkkU=
