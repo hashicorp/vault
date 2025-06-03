@@ -7,7 +7,7 @@
   {{#each this.displayFields as |field|}}
     {{! public key while not sensitive when editing/creating, should be hidden by default on viewing }}
     {{#if (eq field "publicKey")}}
-      <InfoTableRow alwaysRender={{not (is-empty-value @config.publicKey)}} @label="Public key" @value={{@config.publicKey}}>
+      <InfoTableRow @label="Public key" @value={{@config.publicKey}}>
         <MaskedInput @value={{@config.publicKey}} @name={{field}} @displayOnly={{true}} @allowCopy={{true}} />
       </InfoTableRow>
     {{else}}
