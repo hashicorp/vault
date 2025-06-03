@@ -7,5 +7,5 @@ import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
 
 export default function engineDisplayData(methodType: string) {
   const engine = ALL_ENGINES?.find((t) => t.type === methodType);
-  return engine || methodType;
+  return engine;
 }
