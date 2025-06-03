@@ -930,8 +930,12 @@
     "title": "Upgrade Vault",
     "routes": [
       {
-        "title": "Single-instance",
+        "title": "Upgrade history",
         "path": "upgrade"
+      },
+      {
+        "title": "Single-instance",
+        "path": "upgrade/single-instance"
       },
       {
         "title": "Replicated deployments",
