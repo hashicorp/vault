@@ -229,6 +229,7 @@ func FileGroupCheckerPipeline(ctx context.Context, file *File) FileGroups {
 
 	switch {
 	case
+		hasBaseDir(name, ".build"),
 		hasBaseDir(name, ".github"),
 		hasBaseDir(name, "scripts"),
 		hasBaseDir(name, filepath.Join("tools", "pipeline")),
