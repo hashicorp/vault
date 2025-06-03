@@ -9,10 +9,10 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, fillIn, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { methods } from 'vault/helpers/mountable-auth-methods';
+import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
 
 const userLockoutSupported = ['approle', 'ldap', 'userpass'];
-const userLockoutUnsupported = methods()
+const userLockoutUnsupported = ALL_ENGINES.map((engine) => !engine.requiresEnterprise)
   .map((m) => m.type)
   .filter((m) => !userLockoutSupported.includes(m));
 
