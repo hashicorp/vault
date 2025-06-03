@@ -121,7 +121,7 @@ export default class SecretsBackendConfigurationRoute extends Route {
 
   async checkIssuer(config, fields) {
     // issuer is an enterprise only related feature
-    // issuer is also a global endpoint that doesn't mean anything in the AWS secret details context if WIF related fields on the rootConfig have not been set.
+    // issuer is also a global endpoint that doesn't mean anything in the secret details context if WIF related fields on the engine's config have not been set.
     if (this.version.isEnterprise && config) {
       const shouldFetchIssuer = fields.some((field) => config[field]);
 
