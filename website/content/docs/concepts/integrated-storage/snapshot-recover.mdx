@@ -10,13 +10,16 @@ description: Item recovery allows you to recover a specific item from a snapshot
 
 ## Overview
 
-Vault Enterprise provides the ability to recover individual items from an integrated
-storage snapshot. This allows you to restore a specific item without needing to
-restore your entire cluster to the state in the snapshot.
+With Vault Enterprise you can recover individual items from an integrated
+storage snapshot without needing to restore your entire cluster to the state in
+the snapshot.
 
-Item recovery is a two-step process: first, you load a snapshot into Vault and
-Vault returns you a snapshot ID. Then you can use that snapshot ID to read, list,
-and recover individual paths from the snapshot.
+Item recovery is a two-step process:
+
+1. Load a snapshot into Vault so Vault can access the data and assign a snapshot
+   ID.
+1. Use that snapshot ID to read, list, and recover individual paths from the
+   snapshot.
 
 ## Supported Paths
 
