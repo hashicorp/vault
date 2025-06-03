@@ -4,6 +4,11 @@
 }}
 
 <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
+  {{#if @model.directLoginLink}}
+    <InfoTableRow @alwaysRender={{true}} @label="UI login link">
+      <Hds::Copy::Snippet @textToCopy={{@model.directLoginLink}} />
+    </InfoTableRow>
+  {{/if}}
   {{#each @model.attrs as |attr|}}
     {{#if (eq attr.type "object")}}
       <InfoTableRow
