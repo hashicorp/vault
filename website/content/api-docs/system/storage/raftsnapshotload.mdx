@@ -21,7 +21,7 @@ Manage the state of loaded snapshots within the Vault cluster.
 | `POST` | `/sys/storage/raft/snapshot-load` |
 
 Load a new snapshot into the Vault cluster without overwriting the cluster with
-the recovery data. After loading a snapshot, you can recover, read, and list
+the snapshot's data. After loading a snapshot, you can recover, read, and list
 individual pieces of data from the loaded snapshot.
 
 @include 'recover/loadedsnapshots.mdx'
