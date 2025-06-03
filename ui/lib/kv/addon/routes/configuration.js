@@ -13,7 +13,7 @@ export default class KvConfigurationRoute extends Route {
   model() {
     const backend = this.modelFor('application');
     return hash({
-      mountConfig: this.store.findRecord('secret-engine', backend.id),
+      mountConfig: this.store.query('secret-engine', { path: backend.id }).then((models = []) => models[0]),
       engineConfig: this.store.findRecord('kv/config', backend.id).catch(() => {
         // return an empty record so we have access to model capabilities
         return this.store.createRecord('kv/config', { backend: backend.id });
