@@ -1,0 +1,179 @@
+---
+layout: api
+page_title: /sys/config/ui/login/default-auth - HTTP API
+description: The '/sys/config/ui/login/default-auth' endpoint configures default authentication types that will display on a UI page per namespace.
+---
+
+# `/sys/config/ui/login/default-auth`
+
+@include 'alerts/enterprise-only.mdx'
+@include 'alerts/restricted-admin.mdx'
+
+The `/sys/config/ui/login/default-auth` endpoint is used to list, create, read, update, or delete login customization configurations for the Vault GUI. These configurations determine which methods to display in the login form.
+
+## Create UI default login customization configuration
+
+This endpoint allows the creation of a new UI default login customization configuration. Only one UI default login configuration is
+allowed per namespace. Namespaces can inherit from their parent if the parent's configuration has `disable_inheritance`
+set to `false`. If no namespace is provided, the rule will be applied to the root namespace. One of `default_auth_type`,
+or `backup_auth_types` is required during creation.
+
+| Method | Path                              |
+| :----- | :-------------------------------- |
+| `POST` | `/sys/config/ui/login/default-auth/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` - The name of the configuration. Spaces are not supported. This parameter is specified as part of the URL.
+
+- `namespace` `(string: "")` - Namespace to apply this configuration to.
+
+- `default_auth_type` `(string: <required>)` - The type of auth method to be presented by default. Only UI supported auth types are allowed: `github`,`jwt`,`ldap`,`oidc`,`okta`,`radius`,`saml`,token`,and `userpass`
+
+- `backup_auth_types` `(array: [])` - Backup auth types to be presented in the `Sign in with other methods` tab. Only UI supported auth types are allowed: `github`,`jwt`,`ldap`,`oidc`,`okta`,`radius`,`saml`, `token`,and `userpass`
+
+- `disable_inheritance` `(bool: false)` - Defaults to `false` which means child namespaces inherit `default_auth_type` and `backup_auth_types from their parent. If set to `true`, the config will not be inherited.
+
+### Sample payload
+
+```json
+{
+  "namespace": "IT",
+  "default_auth_type": "okta",
+  "backup_auth_types": ["userpass", "token"],
+  "disable_inheritance": "true"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json
+    http://127.0.0.1:8200/v1/sys/config/ui/login/default-auth/it-rule
+```
+
+## List UI default login customization configurations
+
+This endpoint returns a list of all UI default login customization configurations that exist.
+
+| Method | Path                              |
+| :----- | :-------------------------------- |
+| `LIST` | `/sys/config/ui/login/default-auth` |
+
+### Sample request
+
+```shell-session
+$ curl --header "X-Vault-Token: ..." \
+    --request LIST \
+    http://127.0.0.1:8200/v1/sys/config/ui/login/default-auth
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "key_info": {
+      "default-ldap": {
+        "name":"default-ldap",
+        "namespace":"root",
+        "disable_inheritance":false
+      }
+    },
+    "keys":["default-ldap"]
+  }
+}
+```
+
+
+
+## Read UI default auth customization configuration
+
+This endpoint returns the properties of a specific UI default auth customization configuration.
+
+| Method |                                      |
+| :----- | :----------------------------------- |
+| `GET`  | `/sys/config/ui/login/default-auth/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` - The name of the configuration
+
+### Sample request
+
+```shell-session
+$ curl --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/config/ui/login/default-auth/IT
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "backup_auth_types":["token","userpass"],
+    "default_auth_type":"okta",
+    "disable_inheritance":false,
+    "namespace":"IT/"
+  }
+}
+```
+
+## Update UI default auth customization configuration
+
+This endpoint updates the properties of a specific UI default auth customization configuration.
+
+| Method |                                      |
+| :----- | :----------------------------------- |
+| `POST` | `/sys/config/ui/login/default-auth/:name` |
+
+### Parameters
+
+- `namespace` `(string: "")` - Namespace to apply this configuration to.
+
+- `default_auth_type` `(string: <required>)` - The type of auth method to be presented by default. Only UI supported auth types are allowed: `github`,`jwt`,`ldap`,`oidc`,`okta`,`radius`,`saml`,token`,and `userpass`
+
+- `backup_auth_types` `(array: [])` - Backup auth types to be presented in the `Sign in with other methods` tab. Only UI supported auth types are allowed: `github`,`jwt`,`ldap`,`oidc`,`okta`,`radius`,`saml`, `token`,and `userpass`
+
+- `disable_inheritance` `(bool: false)` - Disable child namespaces from inheriting `default_auth_type` and `backup_auth_types` from this configuration.
+
+### Sample payload
+
+```json
+{
+  "namespace": "IT",
+  "default_auth_type": "ldap",
+  "backup_auth_types": ["userpass", "github"],
+  "disable_inheritance": "true"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json
+    http://127.0.0.1:8200/v1/sys/config/ui/login/default-auth/it-rule
+```
+
+## Delete UI default auth customization configuration
+
+This endpoint deletes a specific UI default auth customization configuration.
+
+| Method   |                                      |
+| :------- | :----------------------------------- |
+| `DELETE` | `/sys/config/ui/login/default-auth/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` - The name of the configuration
+
+### Sample request
+
+```shell-session
+$ curl --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/config/ui/login/default-auth/IT
+```
