@@ -9,8 +9,7 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import { methods } from 'vault/helpers/mountable-auth-methods';
-import { isAddonEngine, allEngines } from 'vault/helpers/mountable-secret-engines';
+import { isAddonEngine } from 'vault/helpers/mountable-secret-engines';
 
 import type FlashMessageService from 'vault/services/flash-messages';
 import type Store from '@ember-data/store';
@@ -18,6 +17,7 @@ import type AdapterError from '@ember-data/adapter/error';
 
 import type { AuthEnableModel } from 'vault/routes/vault/cluster/settings/auth/enable';
 import type { MountSecretBackendModel } from 'vault/routes/vault/cluster/settings/mount-secret-backend';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 /**
  * @module MountBackendForm
@@ -58,18 +58,15 @@ export default class MountBackendForm extends Component<Args> {
     super.willDestroy();
   }
 
-  checkPathChange(type: string) {
-    if (!type) return;
+  checkPathChange(backendType: string) {
+    if (!backendType) return;
     const mount = this.args.mountModel;
     const currentPath = mount.path;
-    const mountTypes =
-      this.args.mountType === 'secret'
-        ? allEngines().map((engine) => engine.type)
-        : methods().map((auth) => auth.type);
+
     // if the current path has not been altered by user,
     // change it here to match the new type
-    if (!currentPath || mountTypes.includes(currentPath)) {
-      mount.path = type;
+    if (!currentPath || engineDisplayData(backendType)?.type === currentPath) {
+      mount.path = backendType;
     }
   }
 
