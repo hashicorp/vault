@@ -9,14 +9,14 @@ import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
 import { allEngines, mountableEngines } from 'vault/helpers/mountable-secret-engines';
-import { allMethods, methods } from 'vault/helpers/mountable-auth-methods';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
+import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
 
 const secretTypes = mountableEngines().map((engine) => engine.type);
 const allSecretTypes = allEngines().map((engine) => engine.type);
-const authTypes = methods().map((auth) => auth.type);
-const allAuthTypes = allMethods().map((auth) => auth.type);
+const authTypes = ALL_ENGINES.map((auth) => auth.type && !auth.requiresEnterprise);
+const allAuthTypes = ALL_ENGINES.map((auth) => auth.type);
 
 module('Integration | Component | mount-backend/type-form', function (hooks) {
   setupRenderingTest(hooks);

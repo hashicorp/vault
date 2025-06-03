@@ -8,11 +8,11 @@ import { service } from '@ember/service';
 import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import apiPath from 'vault/utils/api-path';
 import { withModelValidations } from 'vault/decorators/model-validations';
-import { allMethods } from 'vault/helpers/mountable-auth-methods';
 import lazyCapabilities from 'vault/macros/lazy-capabilities';
 import { action } from '@ember/object';
 import { camelize } from '@ember/string';
 import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
+import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
 
 const validations = {
   path: [
@@ -41,7 +41,7 @@ export default class AuthMethodModel extends Model {
     return this.type.replace(/^ns_/, '');
   }
   get icon() {
-    const authMethods = allMethods().find((backend) => backend.type === this.methodType);
+    const authMethods = ALL_ENGINES.find((backend) => backend.type === this.methodType);
 
     return authMethods?.glyph || 'users';
   }
