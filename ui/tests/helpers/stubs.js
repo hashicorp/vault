@@ -70,7 +70,7 @@ export function overrideResponse(httpStatus = 200, payload = {}) {
     return new Response(
       403,
       { 'Content-Type': 'application/json' },
-      JSON.stringify({ errors: ['"1 errors occurred:\n\t* permission denied"'] })
+      JSON.stringify({ errors: ['1 errors occurred:\n\t* permission denied'] })
     );
   }
   if (httpStatus === 404) {
