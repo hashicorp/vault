@@ -51,7 +51,7 @@ module('Integration | Component | mount backend form', function (hooks) {
         .dom(GENERAL.title)
         .hasText('Enable an Authentication Method', 'renders auth header in default state');
 
-      for (const method of ALL_ENGINES.map((engine) => !engine.requiresEnterprise)) {
+      for (const method of ALL_ENGINES.filter((engine) => !engine.requiresEnterprise)) {
         assert
           .dom(MOUNT_BACKEND_FORM.mountType(method.type))
           .hasText(method.displayName, `renders type:${method.displayName} picker`);

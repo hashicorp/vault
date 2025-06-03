@@ -12,7 +12,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
 
 const userLockoutSupported = ['approle', 'ldap', 'userpass'];
-const userLockoutUnsupported = ALL_ENGINES.map((engine) => !engine.requiresEnterprise)
+const userLockoutUnsupported = ALL_ENGINES.filter((engine) => !engine.requiresEnterprise)
   .map((m) => m.type)
   .filter((m) => !userLockoutSupported.includes(m));
 
