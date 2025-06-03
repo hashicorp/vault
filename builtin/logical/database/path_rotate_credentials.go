@@ -5,12 +5,17 @@ package database
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"fmt"
 	"time"
 
 	"github.com/hashicorp/vault/helper/versions"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
 )
@@ -106,8 +111,22 @@ func (b *databaseBackend) rotateRootCredentials(ctx context.Context, req *logica
 	}
 
 	rootPassword, ok := config.ConnectionDetails["password"].(string)
-	if !ok || rootPassword == "" {
-		return nil, fmt.Errorf("unable to rotate root credentials: no password in configuration")
+	if !ok {
+		return nil, fmt.Errorf("received unexpected type for field '%s', expected string", "password")
+	}
+
+	rootPrivateKey, ok := config.ConnectionDetails["private_key"].([]byte)
+	if !ok {
+		return nil, fmt.Errorf("received unexpected type for field '%s', expected string", "private_key")
+	}
+
+	isPasswordRotation := rootPassword != ""
+	isKeyPairRotation := rootPrivateKey != nil
+
+	// TODO see if there's a way to localize this to be Snowflake-only
+
+	if !isPasswordRotation && !isKeyPairRotation {
+		return nil, fmt.Errorf("unable to rotate root credentials: require either 'password' or 'private_key' to be set")
 	}
 
 	dbi, err := b.GetConnection(ctx, req.Storage, name)
@@ -130,65 +149,142 @@ func (b *databaseBackend) rotateRootCredentials(ctx context.Context, req *logica
 		}
 	}()
 
-	generator, err := newPasswordGenerator(nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to construct credential generator: %s", err)
-	}
-	generator.PasswordPolicy = config.PasswordPolicy
+	if isPasswordRotation {
+		// default legacy case
+		generator, err := newPasswordGenerator(nil)
+		if err != nil {
+			return nil, fmt.Errorf("failed to construct credential generator: %s", err)
+		}
+		generator.PasswordPolicy = config.PasswordPolicy
 
-	// Generate new credentials
-	oldPassword := config.ConnectionDetails["password"].(string)
-	newPassword, err := generator.generate(ctx, b, dbi.database)
-	if err != nil {
-		b.CloseIfShutdown(dbi, err)
-		return nil, fmt.Errorf("failed to generate password: %s", err)
-	}
-	config.ConnectionDetails["password"] = newPassword
+		// Generate new credentials
+		oldPassword := config.ConnectionDetails["password"].(string)
+		newPassword, err := generator.generate(ctx, b, dbi.database)
+		if err != nil {
+			b.CloseIfShutdown(dbi, err)
+			return nil, fmt.Errorf("failed to generate password: %s", err)
+		}
+		config.ConnectionDetails["password"] = newPassword
 
-	// Write a WAL entry
-	walID, err := framework.PutWAL(ctx, req.Storage, rotateRootWALKey, &rotateRootCredentialsWAL{
-		ConnectionName: name,
-		UserName:       rootUsername,
-		OldPassword:    oldPassword,
-		NewPassword:    newPassword,
-	})
-	if err != nil {
-		return nil, err
-	}
+		// Write a WAL entry
+		walID, err := framework.PutWAL(ctx, req.Storage, rotateRootWALKey, &rotateRootCredentialsWAL{
+			ConnectionName: name,
+			UserName:       rootUsername,
+			OldPassword:    oldPassword,
+			NewPassword:    newPassword,
+		})
+		if err != nil {
+			return nil, err
+		}
 
-	updateReq := v5.UpdateUserRequest{
-		Username:       rootUsername,
-		CredentialType: v5.CredentialTypePassword,
-		Password: &v5.ChangePassword{
-			NewPassword: newPassword,
-			Statements: v5.Statements{
-				Commands: config.RootCredentialsRotateStatements,
+		updateReq := v5.UpdateUserRequest{
+			Username:       rootUsername,
+			CredentialType: v5.CredentialTypePassword,
+			Password: &v5.ChangePassword{
+				NewPassword: newPassword,
+				Statements: v5.Statements{
+					Commands: config.RootCredentialsRotateStatements,
+				},
 			},
-		},
-	}
-	newConfigDetails, err := dbi.database.UpdateUser(ctx, updateReq, true)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update user: %w", err)
-	}
-	if newConfigDetails != nil {
-		config.ConnectionDetails = newConfigDetails
-	}
-	modified = true
+		}
+		newConfigDetails, err := dbi.database.UpdateUser(ctx, updateReq, true)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update user: %w", err)
+		}
+		if newConfigDetails != nil {
+			config.ConnectionDetails = newConfigDetails
+		}
+		modified = true
 
-	// 1.12.0 and 1.12.1 stored builtin plugins in storage, but 1.12.2 reverted
-	// that, so clean up any pre-existing stored builtin versions on write.
-	if versions.IsBuiltinVersion(config.PluginVersion) {
-		config.PluginVersion = ""
-	}
-	err = storeConfig(ctx, req.Storage, name, config)
-	if err != nil {
-		return nil, err
+		// 1.12.0 and 1.12.1 stored builtin plugins in storage, but 1.12.2 reverted
+		// that, so clean up any pre-existing stored builtin versions on write.
+		if versions.IsBuiltinVersion(config.PluginVersion) {
+			config.PluginVersion = ""
+		}
+		err = storeConfig(ctx, req.Storage, name, config)
+		if err != nil {
+			return nil, err
+		}
+
+		err = framework.DeleteWAL(ctx, req.Storage, walID)
+		if err != nil {
+			b.Logger().Warn("unable to delete WAL", "error", err, "WAL ID", walID)
+		}
+	} else if isKeyPairRotation {
+		// Generate new private key and public key
+		// ensure this is only done for snowflake,
+		// as we are only generating 2048 PKCS RSA keys
+		// specific to Snowflake
+		key, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate RSA key: %s", err)
+		}
+
+		public, err := x509.MarshalPKIXPublicKey(key.Public())
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal public key from private key: %s", err)
+		}
+
+		newPrivateKey, err := x509.MarshalPKCS8PrivateKey(key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal private key: %v", err)
+		}
+
+		// get old stored credentials
+		oldPrivateKey := config.ConnectionDetails["private_key"].([]byte)
+		oldPublicKey, err := getPublicKeyFromPrivateKeyBytes(oldPrivateKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get public key from old private key: %s", err)
+		}
+
+		config.ConnectionDetails["private_key"] = newPrivateKey
+
+		// Write a WAL entry
+		walID, err := framework.PutWAL(ctx, req.Storage, rotateRootWALKey, &rotateRootCredentialsWAL{
+			ConnectionName: name,
+			UserName:       rootUsername,
+			OldPublicKey:   oldPublicKey,
+			NewPrivateKey:  newPrivateKey,
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		updateReq := v5.UpdateUserRequest{
+			Username:       rootUsername,
+			CredentialType: v5.CredentialTypeRSAPrivateKey,
+			PublicKey: &v5.ChangePublicKey{
+				NewPublicKey: public,
+				Statements: v5.Statements{
+					Commands: config.RootCredentialsRotateStatements,
+				},
+			},
+		}
+		newConfigDetails, err := dbi.database.UpdateUser(ctx, updateReq, true)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update user: %w", err)
+		}
+		if newConfigDetails != nil {
+			config.ConnectionDetails = newConfigDetails
+		}
+		modified = true
+
+		// 1.12.0 and 1.12.1 stored builtin plugins in storage, but 1.12.2 reverted
+		// that, so clean up any pre-existing stored builtin versions on write.
+		if versions.IsBuiltinVersion(config.PluginVersion) {
+			config.PluginVersion = ""
+		}
+		err = storeConfig(ctx, req.Storage, name, config)
+		if err != nil {
+			return nil, err
+		}
+
+		err = framework.DeleteWAL(ctx, req.Storage, walID)
+		if err != nil {
+			b.Logger().Warn("unable to delete WAL", "error", err, "WAL ID", walID)
+		}
 	}
 
-	err = framework.DeleteWAL(ctx, req.Storage, walID)
-	if err != nil {
-		b.Logger().Warn("unable to delete WAL", "error", err, "WAL ID", walID)
-	}
 	return nil, nil
 }
 
@@ -264,6 +360,29 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 
 		return nil, nil
 	}
+}
+
+func getPublicKeyFromPrivateKeyBytes(oldPrivateKey []byte) ([]byte, error) {
+	block, _ := pem.Decode(oldPrivateKey)
+	if block == nil {
+		return nil, fmt.Errorf("unable to decode private key")
+	}
+
+	k, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse private key to PKCS8: %w", err)
+	}
+	privateKey, ok := k.(*rsa.PrivateKey)
+	if !ok {
+		return nil, fmt.Errorf("private key was parsed into an unexpected type")
+	}
+
+	public, err := x509.MarshalPKIXPublicKey(privateKey.Public())
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal public key from private key: %s", err)
+	}
+
+	return public, nil
 }
 
 const pathRotateCredentialsUpdateHelpSyn = `

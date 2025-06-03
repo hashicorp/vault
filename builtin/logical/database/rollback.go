@@ -4,6 +4,7 @@
 package database
 
 import (
+	"bytes"
 	"context"
 	"errors"
 
@@ -16,7 +17,11 @@ import (
 )
 
 // WAL storage key used for the rollback of root database credentials
-const rotateRootWALKey = "rotateRootWALKey"
+const (
+	rotateRootWALKey       = "rotateRootWALKey"
+	rollbackTypePassword   = "password"
+	rollbackTypePrivateKey = "private_key"
+)
 
 // WAL entry used for the rollback of root database credentials
 type rotateRootCredentialsWAL struct {
@@ -24,6 +29,11 @@ type rotateRootCredentialsWAL struct {
 	UserName       string
 	NewPassword    string
 	OldPassword    string
+
+	// NewPrivateKey is used to update the config value
+	NewPrivateKey []byte
+	// OldPublicKey is used in the UpdateUserRequest
+	OldPublicKey []byte
 }
 
 // walRollback handles WAL entries that result from partial failures
@@ -47,10 +57,14 @@ func (b *databaseBackend) walRollback(ctx context.Context, req *logical.Request,
 		return err
 	}
 
-	// The password in storage doesn't match the new password
+	// default rollback type
+	isPrivatekeyRollback := config.ConnectionDetails["private_key"] != nil && !bytes.Equal(config.ConnectionDetails["private_key"].([]byte), entry.NewPrivateKey)
+	isPasswordRollback := config.ConnectionDetails["password"] != "" && config.ConnectionDetails["password"] != entry.NewPassword
+
+	// The credential in storage doesn't match the new credential
 	// in the WAL entry. This means there was a partial failure
 	// to update either the database or storage.
-	if config.ConnectionDetails["password"] != entry.NewPassword {
+	if isPasswordRollback || isPrivatekeyRollback {
 		// Clear any cached connection to inform the rollback decision
 		err := b.ClearConnection(entry.ConnectionName)
 		if err != nil {
@@ -66,12 +80,18 @@ func (b *databaseBackend) walRollback(ctx context.Context, req *logical.Request,
 			return nil
 		}
 
-		return b.rollbackDatabaseCredentials(ctx, config, entry)
+		switch {
+		case isPrivatekeyRollback:
+			return b.rollbackDatabaseCredentials(ctx, config, entry, rollbackTypePrivateKey)
+		case isPasswordRollback:
+			return b.rollbackDatabaseCredentials(ctx, config, entry, rollbackTypePassword)
+		default:
+		}
 	}
 
-	// The password in storage matches the new password in
+	// The credential in storage matches the new password in
 	// the WAL entry, so there is nothing to roll back. This
-	// means the new password was successfully updated in the
+	// means the new credential was successfully updated in the
 	// database and storage, but the WAL wasn't deleted.
 	return nil
 }
@@ -80,30 +100,65 @@ func (b *databaseBackend) walRollback(ctx context.Context, req *logical.Request,
 // the connection associated with the passed WAL entry. It will create
 // a connection to the database using the WAL entry new password in
 // order to alter the password to be the WAL entry old password.
-func (b *databaseBackend) rollbackDatabaseCredentials(ctx context.Context, config *DatabaseConfig, entry rotateRootCredentialsWAL) error {
+func (b *databaseBackend) rollbackDatabaseCredentials(ctx context.Context, config *DatabaseConfig, entry rotateRootCredentialsWAL, rollbackType string) error {
 	// Attempt to get a connection with the WAL entry new password.
-	config.ConnectionDetails["password"] = entry.NewPassword
-	dbi, err := b.GetConnectionWithConfig(ctx, entry.ConnectionName, config)
-	if err != nil {
-		return err
-	}
 
-	// Ensure the connection used to roll back the database password is not cached
-	defer func() {
-		if err := b.ClearConnection(entry.ConnectionName); err != nil {
-			b.Logger().Error("error closing database plugin connection", "err", err)
+	var dbi *dbPluginInstance
+	var updateReq v5.UpdateUserRequest
+	var err error
+	switch rollbackType {
+	case rollbackTypePassword:
+		config.ConnectionDetails["password"] = entry.NewPassword
+		dbi, err = b.GetConnectionWithConfig(ctx, entry.ConnectionName, config)
+		if err != nil {
+			return err
 		}
-	}()
 
-	updateReq := v5.UpdateUserRequest{
-		Username:       entry.UserName,
-		CredentialType: v5.CredentialTypePassword,
-		Password: &v5.ChangePassword{
-			NewPassword: entry.OldPassword,
-			Statements: v5.Statements{
-				Commands: config.RootCredentialsRotateStatements,
+		// Ensure the connection used to roll back the database password is not cached
+		defer func() {
+			if err := b.ClearConnection(entry.ConnectionName); err != nil {
+				b.Logger().Error("error closing database plugin connection", "err", err)
+			}
+		}()
+
+		updateReq = v5.UpdateUserRequest{
+			Username:       entry.UserName,
+			CredentialType: v5.CredentialTypePassword,
+			Password: &v5.ChangePassword{
+				NewPassword: entry.OldPassword,
+				Statements: v5.Statements{
+					Commands: config.RootCredentialsRotateStatements,
+				},
 			},
-		},
+		}
+
+	case rollbackTypePrivateKey:
+		config.ConnectionDetails["private_key"] = entry.NewPrivateKey
+		dbi, err = b.GetConnectionWithConfig(ctx, entry.ConnectionName, config)
+		if err != nil {
+			return err
+		}
+
+		// Ensure the connection used to roll back the database password is not cached
+		defer func() {
+			if err := b.ClearConnection(entry.ConnectionName); err != nil {
+				b.Logger().Error("error closing database plugin connection", "err", err)
+			}
+		}()
+
+		updateReq = v5.UpdateUserRequest{
+			Username:       entry.UserName,
+			CredentialType: v5.CredentialTypeRSAPrivateKey,
+			PublicKey: &v5.ChangePublicKey{
+				NewPublicKey: entry.OldPublicKey,
+				Statements: v5.Statements{
+					Commands: config.RootCredentialsRotateStatements,
+				},
+			},
+		}
+	default:
+		return errors.New("unknown rollback type")
+
 	}
 
 	// It actually is the root user here, but we only want to use SetCredentials since
