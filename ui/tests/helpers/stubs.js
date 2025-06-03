@@ -66,10 +66,11 @@ export function allowAllCapabilitiesStub(capabilitiesList = ['root']) {
  */
 export function overrideResponse(httpStatus = 200, payload = {}) {
   if (httpStatus === 403) {
+    // https://pkg.go.dev/github.com/hashicorp/go-multierror
     return new Response(
       403,
       { 'Content-Type': 'application/json' },
-      JSON.stringify({ errors: ['permission denied'] })
+      JSON.stringify({ errors: ['"1 errors occurred:\n\t* permission denied"'] })
     );
   }
   if (httpStatus === 404) {
