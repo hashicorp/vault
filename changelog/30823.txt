@@ -1,0 +1,4 @@
+```release-note:feature
+**Snowflake DB Keypair authentication**: Added support to authenticate to Snowflake DBs using private keys.
+This allows users to switch to the keypair auth flow before the removal of password auth in November 2025.
+```
