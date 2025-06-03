@@ -80,7 +80,7 @@ module('Acceptance | auth backend list', function (hooks) {
     });
 
     // Test all auth methods, not just those you can log in with
-    ALL_ENGINES.filter((engine) => !engine.requiresEnterprise)
+    ALL_ENGINES.filter((engine) => engine.mountType !== 'secret' && !engine.requiresEnterprise)
       .map((backend) => backend.type)
       .forEach((type) => {
         test(`${type} auth method`, async function (assert) {
