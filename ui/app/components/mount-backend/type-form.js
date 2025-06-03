@@ -26,14 +26,14 @@ export default class MountBackendTypeForm extends Component {
 
   get secretEngines() {
     return this.version.isEnterprise
-      ? ALL_ENGINES.map((engine) => engine.mountType !== 'auth')
-      : ALL_ENGINES.map((engine) => engine.mountType !== 'auth' && !engine.requiresEnterprise);
+      ? ALL_ENGINES.filter((engine) => engine.mountType !== 'auth')
+      : ALL_ENGINES.filter((engine) => engine.mountType !== 'auth' && !engine.requiresEnterprise);
   }
 
   get authMethods() {
     return this.version.isEnterprise
-      ? ALL_ENGINES.map((engine) => engine.mountType !== 'secret')
-      : ALL_ENGINES.map((engine) => engine.mountType !== 'secret' && !engine.requiresEnterprise);
+      ? ALL_ENGINES.filter((engine) => engine.mountType !== 'secret')
+      : ALL_ENGINES.filter((engine) => engine.mountType !== 'secret' && !engine.requiresEnterprise);
   }
 
   get mountTypes() {
