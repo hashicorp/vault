@@ -117,22 +117,8 @@ export default class SwaggerUiComponent extends Component {
   };
 
   // using an action to bind the correct "this" context
-  @action async swaggerInit(element) {
+  @action async swaggerInit() {
     const configSettings = this.CONFIG(SwaggerUIBundle, this);
     SwaggerUIBundle(configSettings);
-
-    // Update the title to be an h1 tag to align with a11y standards
-    setTimeout(() => {
-      const oldTitle = element.querySelector('.swagger-ui .title');
-
-      if (oldTitle) {
-        const newTitle = document.createElement('h1');
-        newTitle.innerHTML = oldTitle.innerHTML;
-
-        // this will cause the same styling to be applied
-        newTitle.className = oldTitle.className;
-        oldTitle.parentNode.replaceChild(newTitle, oldTitle);
-      }
-    }, 500);
   }
 }
