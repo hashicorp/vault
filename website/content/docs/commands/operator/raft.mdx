@@ -191,7 +191,7 @@ Subcommands:
 
 ### snapshot inspect
 
-Inspects a snapshot file taken from a Vault Raft cluster and prints a table showing the number of keys and the amount of space used.
+Inspects a snapshot file taken from a Vault raft cluster and prints a table showing the number of keys and the amount of space used.
 
 ```text
 Usage: vault operator raft snapshot inspect <snapshot_file>
@@ -243,8 +243,10 @@ Usage: vault operator raft snapshot restore <snapshot_file>
 
 ### snapshot save
 
-Takes a snapshot of the Vault data. The snapshot can be used to restore Vault to
-the point in time when a snapshot was taken.
+Takes a snapshot of your Vault data. You can use the snapshot to restore Vault
+to the point in time when you took the snapshot if you use integrated storage.
+Vault does not support snapshots for deployments that only use raft for
+high-availability storage.
 
 ```text
 Usage: vault operator raft snapshot save <snapshot_file>
@@ -254,13 +256,12 @@ Usage: vault operator raft snapshot save <snapshot_file>
 	  $ vault operator raft snapshot save raft.snap
 ```
 
-~> **Note:** Snapshot is not supported when Raft is used only for `ha_storage`.
 
 ### snapshot unload
 
 @include 'alerts/enterprise-only.mdx'
 
-Unload a snapshot that was loaded with `vault operator raft snapshot load`.
+Unload a snapshot previously loaded with `vault operator raft snapshot load`.
 
 ```text
 Usage: vault operator raft snapshot unload <SNAPSHOT_ID>

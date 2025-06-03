@@ -3,16 +3,15 @@ layout: api
 page_title: /sys/storage/raft/snapshot-load - HTTP API
 description: |-
 
-  The `/sys/storage/raft/snapshot-load` endpoints are used to load a snapshot
-  into the Vault cluster to recover individual pieces of data from the snapshot.
+  Use the snapshot-load endpoints to load a snapshot into your Vault cluster
+  to recover individual pieces of data from the snapshot.
 ---
 
 # `/sys/storage/raft/snapshot-load`
 
 @include 'alerts/enterprise-only.mdx'
 
-The `/sys/storage/raft/snapshot-load` endpoints are used to manage loaded
-snapshots within the Vault cluster.
+Manage the state of loaded snapshots within the Vault cluster.
 
 ## Load a snapshot into Vault
 
@@ -21,8 +20,8 @@ snapshots within the Vault cluster.
 | :----- | :--------------------------------------------- |
 | `POST` | `/sys/storage/raft/snapshot-load` |
 
-Load a new snapshot into the Vault cluster without restoring the cluster to the
-snapshot's state. After you load a snapshot, you can recover, read, and list
+Load a new snapshot into the Vault cluster without overwriting the cluster with
+the recovery data. After loading a snapshot, you can recover, read, and list
 individual pieces of data from the loaded snapshot.
 
 @include 'recover/loadedsnapshots.mdx'
@@ -53,7 +52,7 @@ $ curl \
 
 ## List loaded snapshots
 
-This endpoint lists snapshots loaded in the cluster.
+List all snapshots currently loaded in the cluster.
 
 | Method | Path                                     |
 | :----- | :--------------------------------------- |
@@ -80,7 +79,7 @@ $ curl \
 
 ## Read loaded snapshot
 
-This endpoint reads a loaded snapshot.
+Read the status details of a given snapshot loaded in the cluster.
 
 | Method | Path                                           |
 | :----- | :--------------------------------------------- |
@@ -126,7 +125,7 @@ For a snapshot loaded from a an Automated Snapshot configuration:
 
 ## Unload loaded snapshot
 
-This endpoint unloads the loaded snapshot.
+Unloads a currently loaded snapshot from the cluster.
 
 | Method   | Path                                           |
 | :------- | :--------------------------------------------- |

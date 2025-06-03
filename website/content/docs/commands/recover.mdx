@@ -2,16 +2,16 @@
 layout: docs
 page_title: recover - Command
 description: |-
-  The "recover" command recovers data at the specified path from a loaded snapshot, essentially
-  restoring an older version of the data on that path.
+  Use the recover command to pull data from a loaded snapshot and restore it at
+  the specified path.
 ---
 
 # recover
 
 @include 'alerts/enterprise-only.mdx'
 
-The [`recover`](/vault/docs/concepts/integrated-storage/snapshot-recover) commandrecovers data at the specified path from a loaded snapshot, essentially
-restoring an older version of the data on that path.
+The `recover` command pulls data at the specified path from a loaded snapshot
+and restores it to the cluster, overwriting newer data on the same path.
 
 @include 'recover/deletedmounts.mdx'
 
