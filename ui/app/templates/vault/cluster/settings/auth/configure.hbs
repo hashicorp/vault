@@ -14,7 +14,7 @@
   <p.levelLeft>
     <h1 class="title is-3">
       Configure
-      {{get (find-by "type" this.model.type (engines-display-data)) "displayName"}}
+      {{get (engines-display-data this.model.type) "displayName"}}
     </h1>
   </p.levelLeft>
 </PageHeader>
