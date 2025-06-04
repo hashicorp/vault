@@ -122,7 +122,9 @@ well as any progress made. This must be called to change the parameters of the
 rekey. Note: verification is still a part of a rekey. If rekeying is canceled
 during the verification flow, the current unseal keys remain valid.
 
-This is an unauthenticated endpoint.
+<Note title="Unrestricted endpoint">
+  Clients can all the endpoint without authenticating to Vault.
+</Note>
 
 | Method   | Path                           |
 | :------- | :----------------------------- |
@@ -131,8 +133,8 @@ This is an unauthenticated endpoint.
 ### Parameters
 
 - `nonce` `(string: <optional>)` – Specifies the nonce of the rekey operation. If
-  the rekey was initialized within the last 10 minutes, the nonce is required to
-  cancel the operation.
+  the rekey was initialized within the last 10 minutes, you must provide the
+  nonce to cancel the operation.
 
 ### Sample payload
 
