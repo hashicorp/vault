@@ -147,7 +147,7 @@ module('Integration | Component | form field', function (hooks) {
   });
 
   test('it renders: string as json with clear button', async function (assert) {
-    await setup.call(this, createAttr('foo', 'string', { allowReset: true }, { editType: 'json' }));
+    await setup.call(this, createAttr('foo', 'string', { editType: 'json', allowReset: true }));
     assert.dom('[data-test-component="json-editor-title"]').hasText('Foo', 'renders a label');
     assert.ok(component.hasJSONEditor, 'renders the json editor');
     assert.ok(component.hasJSONClearButton, 'renders button that will clear the JSON value');
