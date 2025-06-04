@@ -136,11 +136,11 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		// to ensure the database credential does not expire before the lease
 		expiration = expiration.Add(5 * time.Second)
 
-		// Validate the `reason` string to ensure it contains only alphanumeric characters
+		// Validate the `reason` string to ensure it contains only alphanumeric characters or dashes
 		// and is no longer than 16 characters. This prevents injection or malformed input.
-		re := regexp.MustCompile(`^[a-zA-Z0-9]{0,16}$`)
+		re := regexp.MustCompile(`^[a-zA-Z0-9-]{0,16}$`)
 		if !re.MatchString(reason) {
-			return nil, fmt.Errorf("invalid reason %q: must be alphanumeric and at most 16 characters", reason)
+			return nil, fmt.Errorf("invalid reason %q: must be alphanumeric or dash and at most 16 characters", reason)
 		}
 
 		newUserReq := v5.NewUserRequest{
