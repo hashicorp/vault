@@ -17,7 +17,7 @@ import type AdapterError from '@ember-data/adapter/error';
 
 import type { AuthEnableModel } from 'vault/routes/vault/cluster/settings/auth/enable';
 import type { MountSecretBackendModel } from 'vault/routes/vault/cluster/settings/mount-secret-backend';
-import engineDisplayData from 'vault/helpers/engines-display-data';
+import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
 
 /**
  * @module MountBackendForm
@@ -62,10 +62,13 @@ export default class MountBackendForm extends Component<Args> {
     if (!backendType) return;
     const mount = this.args.mountModel;
     const currentPath = mount.path;
+    const mountTypes = ALL_ENGINES.filter(
+      (engine) => engine.mountType === this.args.mountType || engine.mountType === 'both'
+    ).map((engine) => engine.type);
 
     // if the current path has not been altered by user,
     // change it here to match the new type
-    if (!currentPath || engineDisplayData(backendType)?.type === currentPath) {
+    if (!currentPath || mountTypes.includes(currentPath)) {
       mount.path = backendType;
     }
   }
