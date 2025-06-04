@@ -27,31 +27,37 @@ Only the following methods are supported by the GUI and can be set as a default 
 @include 'ui/supported-login-methods.mdx'
 
 You can customize your login flow with a default authentication method,
-preferred authentication methods, or both.
+backup authentication methods, or both.
 
 Configuration           | Result
 ----------------------- | ------
-Default only            | Clients must use the selected authentication method during login.
-Preferred only          | Client must choose from the selected authentication methods during login.
-Default and preferred   | Clients see the default method first but can access the preferred methods as backup methods.
+Default only            | User only see the selected authentication method during login.
+Backup(s) only          | User only sees from the selected authentication method(s) during login.
+Default and backup(s)   | User see the default method first but can access the backup methods as alternate options.
 
 
-## Step 2: Make the authentication method visible to the GUI
+## Step 2: Make the authentication method visible to the GUI. (Optional, but recommended) 
 
-Set the listing visibility of your authentication plugin to `unauth` so Vault
-knows to make it available in the GUI login flow. 
+Set the [listing visibility](/vault/api-docs/system/auth#listing_visibility-1) of your authentication plugin to `unauth` 
+so the Vault GUI knows which login URL to authenticate against.
 
-<Note title="Listing visibility">
+<Warning title="Listing visibility and plugin mount paths">
 
-If [listing visibility](/vault/api-docs/system/auth#listing_visibility-1) is unset or set to `hidden`, 
-the Vault GUI assumes the default mount path for login, which matches the method type.
+Login customizations specify authentication **types**, not specific plugin paths.
+As a result, the Vault GUI assumes each login method is mounted at its default mount [path](/vault/api-docs/system/auth#path), 
+which corresponds to its auth type.
 
-</Note>
+If a login customization specifies a type for a plugin mounted at a **non-default** path, 
+that mount **must** be configured with `listing_visibility=unauth`.
+
+Otherwise, users will be unable to authenticate through the customized login view.
+
+</Warning>
 
 <Tip title="Make use of metadata">
 
 Set the [mount description field](/vault/api-docs/system/auth#description) to
-make it obvious that the mount is a default or preferred login method for the
+make it obvious that the mount is a default or backup login method(s) for the
 Vault GUI.
 
 </Tip>
@@ -114,8 +120,7 @@ Vault GUI.
 - Select the desired plugin.
 - Optional: Enter a unique path for the plugin. (The default path is the plugin type).
 - Enable **Use as preferred UI login method** toggle.
-- Optional: Update **Description** to note the method as a default or preferred
-  authentication method for the GUI.
+- Optional: Update **Description** to let teams know to use this method.
 - Provide any other relevant configuration information for the plugin.
 - Click **Enable method**.
 
@@ -208,8 +213,7 @@ Success! Tuned the auth method at: gui/ldap/
 
 - Click **Configure >**.
 - Enable **Use as preferred UI login method** toggle.
-- Optional: Update **Description** to note the method as a default or preferred
-  authentication method for the GUI.
+- Optional: Update **Description** to let teams know to use this method.
 - Click **Update options**.
 
 </Tab>
@@ -281,7 +285,7 @@ set: `disable_inheritance=true`.
 
 1. Use `vault write` with the
    [`sys/config/ui/login/default-auth`](/vault/api-docs/system/config-ui-login-default-auth)
-   endpoint to set the default and/or preferred GUI authentication method.
+   endpoint to set the default and/or backup GUI authentication method(s).
 
     ```shell-session
     $ vault write sys/config/ui/login/default-auth/<unique_rule_name> \
@@ -346,7 +350,7 @@ Creating login customizations is only available using the CLI or API to encourag
 <Tab heading="API" group="api">
 
 1. Create a JSON file with a new custom login configuration rule that sets your
-   default and/or preferred GUI authentication methods:
+   default and/or backup GUI authentication methods:
    
     ```json
     {
