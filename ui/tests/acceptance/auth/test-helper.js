@@ -12,6 +12,8 @@ const assertFields = (assert, fields, customSelectors = {}) => {
   fields.forEach((param) => {
     if (Object.keys(customSelectors).includes(param)) {
       assert.dom(customSelectors[param]).exists();
+    } else if (param === 'config.listingVisibility') {
+      assert.dom(GENERAL.toggleInput('toggle-config.listingVisibility')).exists();
     } else {
       assert.dom(GENERAL.inputByAttr(param)).exists();
     }

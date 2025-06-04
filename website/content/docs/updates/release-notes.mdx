@@ -40,12 +40,14 @@ description: >-
 | Known issue     | 1.19.x                         | [Automated rotation stops after unseal](/vault/docs/updates/important-changes#rotation-stops)
 | Known issue     | 1.19.x, 1.18.x, 1.17.x, 1.16.x | [Azure Auth fails to authenticate Uniform VMSS instances](/vault/docs/updates/important-changes#azure-vmss)
 | Known issue     | 1.19.x, 1.18.x, 1.17.x, 1.16.x | [External Vault Enterprise plugins can't run on a standby node when it becomes active](/vault/docs/updates/important-changes#external-enterprise-plugins)
+| Known issue     | 1.19.x                         | [AWS STS secrets can fail if STS endpoints are unspecified](/vault/docs/updates/important-changes#aws-fallback-sts)
+| Breaking        | 1.20.x                         | [`disable_mlock` required for integrated storage](/vault/docs/updates/important-changes#disable_mlock-config)
 
 ## Feature deprecations and EOL
 
-Deprecated in 1.19.x | Retired in 1.19.x
+Deprecated in 1.20.x | Retired in 1.20.x
 -------------------- | ---------------
-None                 | [Active Directory plugin](/vault/docs/deprecation#ad-secrets-engine)
+[Duplicate HCL attributes](/vault/docs/deprecations#duplicate-hcl-attributes) | None
 
 @include 'release-notes/deprecation-note.mdx'
 

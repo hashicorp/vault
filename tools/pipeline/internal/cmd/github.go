@@ -31,14 +31,6 @@ func newGithubCmd() *cobra.Command {
 		Long:  "Github commands",
 	}
 	github.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
-		if parent := cmd.Parent(); parent != nil {
-			if parent.PersistentPreRunE != nil {
-				err := parent.PersistentPreRunE(parent, args)
-				if err != nil {
-					return err
-				}
-			}
-		}
 		if token, set := os.LookupEnv("GITHUB_TOKEN"); set {
 			githubCmdState.Github = githubCmdState.Github.WithAuthToken(token)
 		} else {
@@ -46,6 +38,7 @@ func newGithubCmd() *cobra.Command {
 		}
 		return nil
 	}
+	github.AddCommand(newGithubCreateCmd())
 	github.AddCommand(newGithubListCmd())
 
 	return github

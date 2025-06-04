@@ -1,0 +1,59 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#if @data}}
+  <Hds::Table
+    @model={{this.paginatedTableData}}
+    @columns={{array
+      (hash key="namespace" label="Namespace" isSortable=true)
+      (hash key="label" label="Mount path" isSortable=true)
+      (hash key="mount_type" label="Mount type" isSortable=true)
+      (hash key="clients" label="Counts" isSortable=true)
+    }}
+    @sortBy="clients"
+    @sortOrder="desc"
+    @onSort={{this.updateSort}}
+    data-test-clients-attribution-table
+  >
+    <:body as |B|>
+      <B.Tr data-test-attribution-table-row>
+        <B.Td>{{B.data.namespace}}</B.Td>
+        <B.Td>{{B.data.label}}</B.Td>
+        {{#if (eq B.data.mount_type "deleted mount")}}
+          <B.Td><Hds::Badge @text="Deleted" @type="outlined" /></B.Td>
+        {{else}}
+          <B.Td>{{B.data.mount_type}}</B.Td>
+        {{/if}}
+        <B.Td data-test-attribution-table-counts={{B.rowIndex}}>{{B.data.clients}}</B.Td>
+      </B.Tr>
+    </:body>
+  </Hds::Table>
+
+  <Hds::Pagination::Numbered
+    @showSizeSelector={{false}}
+    @totalItems={{@data.length}}
+    @currentPage={{this.currentPage}}
+    @pageSize={{this.pageSize}}
+    @currentPageSize={{this.pageSize}}
+    @onPageChange={{this.onPageChange}}
+    data-test-pagination
+    class="has-top-margin-m"
+  />
+{{else}}
+  <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-l" data-test-card="attribution">
+    <Hds::ApplicationState as |A|>
+      <A.Header @title={{this.tableHeaderMessage}} />
+      <A.Body @text={{this.tableBodyMessage}} />
+      <A.Footer as |F|>
+        <F.LinkStandalone
+          @icon="file-text"
+          @text="Client count documentation"
+          @href="https://developer.hashicorp.com/vault/docs/concepts/client-count"
+          @iconPosition="trailing"
+        />
+      </A.Footer>
+    </Hds::ApplicationState>
+  </Hds::Card::Container>
+{{/if}}

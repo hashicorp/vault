@@ -128,7 +128,8 @@ export const AUTH_METHOD_MAP = [
   { authType: 'saml', options: LOGIN_DATA.saml },
 ];
 
-export const VISIBLE_MOUNTS = {
+// Mock response for `sys/internal/ui/mounts`
+export const SYS_INTERNAL_UI_MOUNTS = {
   'userpass/': {
     description: '',
     options: {},
@@ -144,9 +145,9 @@ export const VISIBLE_MOUNTS = {
     options: {},
     type: 'oidc',
   },
-  'token/': {
-    description: 'token based credentials',
+  'ldap/': {
+    description: '',
     options: null,
-    type: 'token',
+    type: 'ldap',
   },
 };
