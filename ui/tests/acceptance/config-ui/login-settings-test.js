@@ -32,7 +32,7 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
     assert
       .dom(GENERAL.emptyStateMessage)
       .hasText(
-        'Login rules can be used to select default and back up login methods and customize which methods display in the web UI login form. Available to be created via the CLI or HTTP API.'
+        'Login settings can be used to customize which methods display in the web UI login form by setting a default and back up login methods. Available to be created via the CLI or HTTP API.'
       );
   });
 
