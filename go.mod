@@ -10,7 +10,9 @@ module github.com/hashicorp/vault
 // semantic related to Go module handling), this comment should be updated to explain that.
 //
 // Whenever this value gets updated, sdk/go.mod should be updated to the same value.
-go 1.24.0
+go 1.24.2
+
+toolchain go1.24.3
 
 replace github.com/hashicorp/vault/api => ./api
 
@@ -79,7 +81,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
-	github.com/hashicorp/cap v0.8.0
+	github.com/hashicorp/cap v0.9.0
 	github.com/hashicorp/cap/ldap v0.0.0-20250106213447-9047b8b3240f
 	github.com/hashicorp/cli v1.1.7
 	github.com/hashicorp/consul-template v0.39.1
@@ -141,7 +143,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-azure v0.20.4
 	github.com/hashicorp/vault-plugin-auth-cf v0.20.1
 	github.com/hashicorp/vault-plugin-auth-gcp v0.20.2
-	github.com/hashicorp/vault-plugin-auth-jwt v0.23.2
+	github.com/hashicorp/vault-plugin-auth-jwt v0.24.0
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.14.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.21.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.18.0
