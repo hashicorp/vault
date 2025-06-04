@@ -184,10 +184,8 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 	pluginName := strings.TrimSpace(pluginNameRaw)
 
 	command := c.flagCommand
-	if c.flagSHA256 != "" {
-		if command == "" && c.flagOCIImage == "" {
-			command = pluginName
-		}
+	if c.flagSHA256 != "" && (command == "" && c.flagOCIImage == "") {
+		command = pluginName
 	}
 
 	resp, err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
