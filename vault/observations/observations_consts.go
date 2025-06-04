@@ -10,4 +10,5 @@ const (
 	ObservationTypeLeaseRenewNonAuth    = "lease/renew/non-auth"
 	ObservationTypeLeaseLazyRevoke      = "lease/lazy-revoke"
 	ObservationTypeLeaseRevocation      = "lease/revoke"
+	ObservationTypePolicyACLEvaluation  = "policy/acl/evaluation"
 )
