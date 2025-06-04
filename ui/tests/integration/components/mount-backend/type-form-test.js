@@ -16,7 +16,7 @@ import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
 const secretTypes = mountableEngines().map((engine) => engine.type);
 const allSecretTypes = allEngines().map((engine) => engine.type);
 const authTypes = ALL_ENGINES.filter(
-  (engine) => engine.mountType !== 'secret' && !engine.requiresEnterprise
+  (engine) => engine.mountType !== 'secret' && !engine.requiresEnterprise && engine.type !== 'token'
 ).map((auth) => auth.type);
 const allAuthTypes = ALL_ENGINES.filter((engine) => engine.mountType !== 'secret').map((auth) => auth.type);
 
