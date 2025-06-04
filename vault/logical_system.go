@@ -555,14 +555,10 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 	ociImage := d.Get("oci_image").(string)
 	var resp logical.Response
 
-	if sha256 == "" {
-		if command != "" {
-			resp.AddWarning(fmt.Sprintf("When sha256 is unspecified, a plugin artifact is expected for registration and the command parameter %q will be ignored.", command))
-		}
-	} else {
-		if command == "" && ociImage == "" {
-			return logical.ErrorResponse("must provide at least one of command or oci_image"), nil
-		}
+	if sha256 == "" && command != "" {
+		resp.AddWarning(fmt.Sprintf("When sha256 is unspecified, a plugin artifact is expected for registration and the command parameter %q will be ignored.", command))
+	} else if sha256 != "" && (command == "" && ociImage == "") {
+		return logical.ErrorResponse("must provide at least one of command or oci_image"), nil
 	}
 
 	if ociImage == "" {
