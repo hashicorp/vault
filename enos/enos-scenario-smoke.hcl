@@ -174,7 +174,7 @@ scenario "smoke" {
     depends_on  = [step.create_vpc]
 
     providers = {
-      enos = provider.enos.ubuntu
+      enos = local.enos_provider[matrix.distro]
     }
 
     variables {
@@ -342,7 +342,7 @@ scenario "smoke" {
     ]
 
     providers = {
-      enos = provider.enos.ubuntu
+      enos = local.enos_provider[matrix.distro]
     }
 
     variables {
@@ -727,6 +727,11 @@ scenario "smoke" {
   output "audit_device_file_path" {
     description = "The file path for the file audit device, if enabled"
     value       = step.create_vault_cluster.audit_device_file_path
+  }
+
+  output "backend_test_servers_ldap" {
+    description = "The LDAP test servers info"
+    value       = step.create_test_servers.state.ldap
   }
 
   output "cluster_name" {
