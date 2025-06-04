@@ -6,6 +6,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/strutil"
@@ -18,12 +19,12 @@ import (
 func pathCredsCreate(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern: "creds/" + framework.GenericNameRegex("name"),
+			Pattern: "creds/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("reason"),
 
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: operationPrefixDatabase,
 				OperationVerb:   "generate",
-				OperationSuffix: "credentials",
+				OperationSuffix: "credentials|credentials-with-reason",
 			},
 
 			Fields: map[string]*framework.FieldSchema{
@@ -31,10 +32,19 @@ func pathCredsCreate(b *databaseBackend) []*framework.Path {
 					Type:        framework.TypeString,
 					Description: "Name of the role.",
 				},
+
+				"reason": {
+					Type: framework.TypeString,
+					Description: `Reason used in template to generate
+						usernames. Can include ticket numbers or any other
+						task-related information that justifies the credential generation.`,
+				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation: b.pathCredsCreateRead(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathCredsCreateRead(),
+				},
 			},
 
 			HelpSynopsis:    pathCredsCreateReadHelpSyn,
@@ -56,8 +66,10 @@ func pathCredsCreate(b *databaseBackend) []*framework.Path {
 				},
 			},
 
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.ReadOperation: b.pathStaticCredsRead(),
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: b.pathCredsCreateRead(),
+				},
 			},
 
 			HelpSynopsis:    pathStaticCredsReadHelpSyn,
@@ -69,6 +81,8 @@ func pathCredsCreate(b *databaseBackend) []*framework.Path {
 func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (resp *logical.Response, err error) {
 		name := data.Get("name").(string)
+		reason := data.Get("reason").(string)
+
 		modified := false
 		defer func() {
 			if err == nil && (resp == nil || !resp.IsError()) {
@@ -122,10 +136,18 @@ func (b *databaseBackend) pathCredsCreateRead() framework.OperationFunc {
 		// to ensure the database credential does not expire before the lease
 		expiration = expiration.Add(5 * time.Second)
 
+		// Validate the `reason` string to ensure it contains only alphanumeric characters
+		// and is no longer than 16 characters. This prevents injection or malformed input.
+		re := regexp.MustCompile(`^[a-zA-Z0-9]{0,16}$`)
+		if !re.MatchString(reason) {
+			return nil, fmt.Errorf("invalid reason %q: must be alphanumeric and at most 16 characters", reason)
+		}
+
 		newUserReq := v5.NewUserRequest{
 			UsernameConfig: v5.UsernameMetadata{
 				DisplayName: req.DisplayName,
 				RoleName:    name,
+				Reason:      reason,
 			},
 			Statements: v5.Statements{
 				Commands: role.Statements.Creation,
