@@ -67,7 +67,7 @@ Vault GUI.
     ```shell-session
     $ vault auth enable              \
       -path <mount_path>             \
-      -namespace <plugin_namespace>  \
+      -namespace-path <plugin_namespace>  \
       -description <visibility_note> \
       -listing-visibility "unauth"   \
       <authentication_method>
@@ -80,7 +80,7 @@ Vault GUI.
     ```shell-session
     $ vault auth enable                      \
       -path gui/ldap                         \
-      -namespace admin                       \
+      -namespace-path admin                       \
       -description "Default GUI auth method" \
       -listing-visibility "unauth"           \
       ldap
@@ -97,7 +97,7 @@ Vault GUI.
   <CodeBlockConfig hideClipboard>
 
   ```shell-session
-  $ vault auth list -namespace=admin
+  $ vault auth list -namespace-path=admin
   
   Path         Type        Accessor                  Description                Version
   ----         ----        --------                  -----------                -------
@@ -145,7 +145,7 @@ Vault GUI.
     $ curl                                             \
       --request POST                                   \
       --header "X-Vault-Token: ${VAULT_TOKEN}"         \
-      --header "X-Vault-Namespace: ${VAULT_NAMESPACE}" \
+      --header "X-Vault-namespace-path: ${VAULT_NAMESPACE}" \
       --data @data.json                                \
       ${VAULT_ADDR}/v1/sys/auth/<plugin_mount_path>
     ```
@@ -158,7 +158,7 @@ Vault GUI.
   $ curl                                               \
       --request POST                                   \
       --header "X-Vault-Token: ${VAULT_TOKEN}"         \
-      --header "X-Vault-Namespace: ${VAULT_NAMESPACE}" \
+      --header "X-Vault-namespace-path: ${VAULT_NAMESPACE}" \
       --data @data.json                         \
       ${VAULT_ADDR}/v1/sys/auth/gui/ldap | jq
   ```
@@ -179,7 +179,7 @@ Use `vault auth tune` to update the `-listing-visibility` flag to `unauth`:
     
 ```shell-session
 $ vault auth tune              \
-  -namespace <plugin_namespace>  \
+  -namespace-path <plugin_namespace>  \
   -description <visibility_note> \
   -listing-visibility "unauth"   \
   <mount_path>
@@ -191,7 +191,7 @@ For example:
 
 ```shell-session
 $ vault auth tune                        \
-  -namespace admin                       \
+  -namespace-path admin                       \
   -description "Default GUI auth method" \
   -listing-visibility "unauth"           \
   gui/ldap
@@ -235,7 +235,7 @@ Success! Tuned the auth method at: gui/ldap/
     $ curl                                             \
       --request POST                                   \
       --header "X-Vault-Token: ${VAULT_TOKEN}"         \
-      --header "X-Vault-Namespace: ${VAULT_NAMESPACE}" \
+      --header "X-Vault-namespace-path: ${VAULT_NAMESPACE}" \
       --data @data.json                                \
       ${VAULT_ADDR}/v1/sys/auth/<plugin_mount_path>/tune
     ```
@@ -248,7 +248,7 @@ Success! Tuned the auth method at: gui/ldap/
     $ curl                                               \
         --request POST                                   \
         --header "X-Vault-Token: ${VAULT_TOKEN}"         \
-        --header "X-Vault-Namespace: ${VAULT_NAMESPACE}" \
+        --header "X-Vault-namespace-path: ${VAULT_NAMESPACE}" \
         --data @data.json                         \
         ${VAULT_ADDR}/v1/sys/auth/gui/userpass/tune | jq
     ```
@@ -268,7 +268,7 @@ The following authentication method types are supported:
 
 <Tip>
 
-- To apply a login customization to the `root` namespace, pass an empty string: `namespace=""`.
+- To apply a login customization to the `root` namespace, pass an empty string: `namespace_path=""`.
 
 - **Login settings are inheritable by default**. Namespaces inherit login settings from their parent 
 unless inheritance is explicitly disabled. To scope a login setting to a specific namespace, 
@@ -289,7 +289,7 @@ set: `disable_inheritance=true`.
       backup_auth_types=<backup_auth_type>                            \
       backup_auth_types=<backup_auth_type>                            \
       disable_inheritance=<true_or_false>                             \
-      namespace=<namespace_where_the_rule_applies>
+      namespace_path=<namespace_where_the_rule_applies>
     ```
 
     For example, to customize the login options for the `dev` namespace and set 
@@ -304,7 +304,7 @@ set: `disable_inheritance=true`.
       backup_auth_types=ldap                                      \
       backup_auth_types=token                                     \
       disable_inheritance=false                                   \
-      namespace=dev
+      namespace_path=dev
     ```
 
     </CodeBlockConfig>
@@ -325,7 +325,7 @@ set: `disable_inheritance=true`.
     backup_auth_types      [ldap token]
     default_auth_type      userpass
     disable_inheritance    false
-    namespace              dev/
+    namespace_path         dev/
     ```
 
     </CodeBlockConfig>
@@ -350,7 +350,7 @@ Creating login customizations is only available using the CLI or API to encourag
    
     ```json
     {
-      "namespace": "<namespace_where_the_rule_applies>",
+      "namespace_path": "<namespace_where_the_rule_applies>",
       "default_auth_type": "<default_auth_type>",
       "disable_inheritance": <true_or_false>,
       "backup_auth_types": [
@@ -367,7 +367,7 @@ Creating login customizations is only available using the CLI or API to encourag
 
     ```json
     {
-      "namespace": "dev",
+      "namespace_path": "dev",
       "default_auth_type": "userpass",
       "disable_inheritance": false,
       "backup_auth_types": ["ldap", "token"]
@@ -432,7 +432,7 @@ Creating login customizations is only available using the CLI or API to encourag
         ],
         "default_auth_type": "userpass",
         "disable_inheritance": false,
-        "namespace": "dev/"
+        "namespace_path": "dev/"
       },
     }
     ```
