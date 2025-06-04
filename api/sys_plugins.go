@@ -242,6 +242,8 @@ func (c *Sys) RegisterPluginWithContext(ctx context.Context, i *RegisterPluginIn
 	resp, err := c.c.rawRequestWithContext(ctx, req)
 	if err == nil {
 		defer resp.Body.Close()
+	} else {
+		return nil, err
 	}
 
 	var registerResp RegisterPluginResponse
