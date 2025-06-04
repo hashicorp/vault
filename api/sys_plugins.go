@@ -257,7 +257,11 @@ func (c *Sys) RegisterPluginWithContext(ctx context.Context, i *RegisterPluginIn
 	// and the warning informs us the path parameter takes precedence. However, this warning is not relevant for an end user so we
 	// omit it before returning to any client.
 	// TODO: This can likely be removed once https://hashicorp.atlassian.net/browse/VAULT-36722 is addressed.
-	filteredWarnings := make([]string, 0, len(registerResp.Warnings))
+	var filteredWarnings []string
+	if len(registerResp.Warnings) > 0 {
+		filteredWarnings = make([]string, 0, len(registerResp.Warnings))
+	}
+
 	for _, warning := range registerResp.Warnings {
 		if !strings.Contains(warning, "Endpoint replaced the value of these parameters with the values captured from the endpoint's path") {
 			filteredWarnings = append(filteredWarnings, warning)
