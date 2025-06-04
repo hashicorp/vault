@@ -22,8 +22,7 @@ put them in the same bucket.
 
 The available `group_by` modes are:
 
-- `ip` - groups requests by their source IP address (_Default_). The `ip` mode is
-  the only supported mode in the community edition of Vault
+- `ip` - groups requests by their source IP address (_Default_)
 
 - `none` - groups together all requests that match the rate limit quota rule
 
@@ -44,7 +43,7 @@ limit set by the `rate` parameter.
 **Example:**
 
 The command below creates a rate limit quota with rate of 1,000 requests per
-second with `group_by` is set to `entity_then_none`, and the secondary rate is
+second with `group_by` mode is `entity_then_none`, and the secondary rate is
 2,000 requests per second.
 
 ```shell-session
