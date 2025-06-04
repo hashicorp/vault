@@ -147,7 +147,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-oci v0.19.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.14.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.18.0
-	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.14.0
+	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.15.0
 	github.com/hashicorp/vault-plugin-database-redis v0.6.0
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.7.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.14.0
@@ -212,7 +212,7 @@ require (
 	go.etcd.io/etcd/client/pkg/v3 v3.5.17
 	go.etcd.io/etcd/client/v2 v2.305.17
 	go.etcd.io/etcd/client/v3 v3.5.17
-	go.mongodb.org/atlas v0.37.0
+	go.mongodb.org/atlas v0.38.0
 	go.mongodb.org/mongo-driver v1.17.3
 	go.opentelemetry.io/otel v1.35.0
 	go.opentelemetry.io/otel/sdk v1.35.0
