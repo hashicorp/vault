@@ -10,7 +10,7 @@ module github.com/hashicorp/vault
 // semantic related to Go module handling), this comment should be updated to explain that.
 //
 // Whenever this value gets updated, sdk/go.mod should be updated to the same value.
-go 1.24.0
+go 1.24.3
 
 replace github.com/hashicorp/vault/api => ./api
 
@@ -155,7 +155,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-ad v0.21.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.19.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.22.0
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.21.3
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.22.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.21.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.10.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.24.0
