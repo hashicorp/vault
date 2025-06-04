@@ -240,9 +240,10 @@ func (c *Sys) RegisterPluginWithContext(ctx context.Context, i *RegisterPluginIn
 	}
 
 	resp, err := c.c.rawRequestWithContext(ctx, req)
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
-	} else {
+	}
+	if err != nil {
 		return nil, err
 	}
 
