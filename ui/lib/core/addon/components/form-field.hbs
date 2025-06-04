@@ -59,9 +59,7 @@
         </Hds::Form::Radio::Group>
       {{else if (eq @attr.options.editType "checkboxList")}}
         <Hds::Form::Checkbox::Group @name={{@attr.name}} data-test-input-group={{@attr.name}} as |G|>
-          {{#if this.labelString}}
-            <G.Legend data-test-form-field-label>{{this.labelString}}</G.Legend>
-          {{/if}}
+          <G.Legend data-test-form-field-label>{{this.labelString}}</G.Legend>
           {{#if this.helpTextString}}
             <G.HelperText data-test-help-text={{@attr.options.helpText}}>{{this.helpTextString}}</G.HelperText>
           {{/if}}
@@ -99,9 +97,7 @@
           data-test-input={{@attr.name}}
           as |F|
         >
-          {{#if this.labelString}}
-            <F.Label data-test-form-field-label>{{this.labelString}}</F.Label>
-          {{/if}}
+          <F.Label data-test-form-field-label>{{this.labelString}}</F.Label>
           {{#if this.helpTextString}}
             <F.HelperText data-test-help-text={{@attr.options.helpText}}>{{this.helpTextString}}</F.HelperText>
           {{/if}}
@@ -149,24 +145,19 @@
             data-test-input={{@attr.name}}
             as |F|
           >
-            {{#unless this.hideLabel}}
-              {{#if this.labelString}}
-                <F.Label data-test-form-field-label>{{this.labelString}}</F.Label>
-              {{/if}}
-              {{#if this.helpTextString}}
-                <F.HelperText data-test-help-text={{@attr.options.helpText}}>{{this.helpTextString}}</F.HelperText>
-              {{/if}}
-              {{#if @attr.options.subText}}
-                <F.HelperText data-test-help-text={{@attr.options.subText}}>
-                  {{@attr.options.subText}}
-                  {{#if @attr.options.docLink}}
-                    <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>See our
-                      documentation</DocLink>
-                    for help.
-                  {{/if}}
-                </F.HelperText>
-              {{/if}}
-            {{/unless}}
+            <F.Label data-test-form-field-label>{{this.labelString}}</F.Label>
+            {{#if this.helpTextString}}
+              <F.HelperText data-test-help-text={{@attr.options.helpText}}>{{this.helpTextString}}</F.HelperText>
+            {{/if}}
+            {{#if @attr.options.subText}}
+              <F.HelperText data-test-help-text={{@attr.options.subText}}>
+                {{@attr.options.subText}}
+                {{#if @attr.options.docLink}}
+                  <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>See our documentation</DocLink>
+                  for help.
+                {{/if}}
+              </F.HelperText>
+            {{/if}}
             {{#if this.validationError}}
               <F.Error data-test-validation-error={{this.valuePath}}>{{this.validationError}}</F.Error>
             {{/if}}

@@ -50,7 +50,7 @@ require (
 	github.com/armon/go-metrics v0.4.1
 	github.com/armon/go-radix v1.0.0
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
-	github.com/aws/aws-sdk-go v1.55.6
+	github.com/aws/aws-sdk-go v1.55.7
 	github.com/aws/aws-sdk-go-v2/config v1.27.11
 	github.com/cenkalti/backoff/v3 v3.2.2
 	github.com/chrismalek/oktasdk-go v0.0.0-20181212195951-3430665dfaa0
@@ -145,10 +145,10 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.21.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.18.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.13.0
-	github.com/hashicorp/vault-plugin-database-elasticsearch v0.17.0
+	github.com/hashicorp/vault-plugin-database-elasticsearch v0.18.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.14.0
 	github.com/hashicorp/vault-plugin-database-redis v0.5.0
-	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.6.0
+	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.7.0
 	github.com/hashicorp/vault-plugin-database-snowflake v0.14.0
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.20.1

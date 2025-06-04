@@ -154,7 +154,7 @@ module('Integration | Component | clients/page/overview', function (hooks) {
     await triggerEvent(GENERAL.selectByAttr('attribution-month'), 'change');
 
     // assert that months options in select are those of selected billing period
-    const expectedMonths = this.activity.byMonth.map((m) => m.month);
+    const expectedMonths = this.activity.byMonth.reverse().map((m) => m.month);
 
     // '' represents default state of 'Select month'
     const expectedOptions = ['', ...expectedMonths];
