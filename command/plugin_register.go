@@ -81,9 +81,9 @@ func (c *PluginRegisterCommand) Flags() *FlagSets {
 		Name:       "command",
 		Target:     &c.flagCommand,
 		Completion: complete.PredictAnything,
-		Usage: "Command to spawn the plugin. If sha256 is provided to register with a plugin binary, " +
+		Usage: "Command to spawn the plugin. If -sha256 is provided to register with a plugin binary, " +
 			"this defaults to the name of the plugin if both oci_image and command are unspecified. " +
-			"Otherwise, if sha256 is not provided, a plugin artifact is expected for registration, and " +
+			"Otherwise, if -sha256 is not provided, a plugin artifact is expected for registration, and " +
 			"this will be ignored because the run command is known.",
 	})
 
