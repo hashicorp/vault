@@ -144,7 +144,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.14.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.21.0
 	github.com/hashicorp/vault-plugin-auth-oci v0.18.0
-	github.com/hashicorp/vault-plugin-database-couchbase v0.13.0
+	github.com/hashicorp/vault-plugin-database-couchbase v0.14.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.18.0
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.14.0
 	github.com/hashicorp/vault-plugin-database-redis v0.6.0
@@ -357,8 +357,8 @@ require (
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/coreos/pkg v0.0.0-20220810130054-c7d1c02cb6cf // indirect
-	github.com/couchbase/gocb/v2 v2.9.3 // indirect
-	github.com/couchbase/gocbcore/v10 v10.5.3 // indirect
+	github.com/couchbase/gocb/v2 v2.10.0 // indirect
+	github.com/couchbase/gocbcore/v10 v10.7.0 // indirect
 	github.com/couchbase/gocbcoreps v0.1.3 // indirect
 	github.com/couchbase/goprotostellar v1.0.2 // indirect
 	github.com/couchbaselabs/gocbconnstr/v2 v2.0.0-20240607131231-fb385523de28 // indirect
@@ -416,7 +416,7 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.2 // indirect
 	github.com/gophercloud/gophercloud v0.1.0 // indirect
-	github.com/gorilla/websocket v1.5.1 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 // indirect
 	github.com/hailocab/go-hostpool v0.0.0-20160125115350-e80d13ce29ed // indirect
 	github.com/hashicorp/cronexpr v1.1.2 // indirect
@@ -543,7 +543,7 @@ require (
 	go.opentelemetry.io/otel/metric v1.35.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
-	golang.org/x/mod v0.22.0 // indirect
+	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/time v0.11.0
 	google.golang.org/genproto v0.0.0-20250528174236-200df99c418a // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250519155744-55703ea1f237 // indirect
