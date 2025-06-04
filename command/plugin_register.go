@@ -156,7 +156,9 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1 or 2, got %d)", len(args)))
 		return 1
 	case c.flagSHA256 == "" && c.flagVersion == "":
-		c.UI.Error("One of -sha256 or -version is required. If registering with a binary, please provide at least -sha256 (-version optional). If registering with an artifact, please provide -version only.")
+		c.UI.Error("One of -sha256 or -version is required. " +
+			"If registering with a binary, please provide at least -sha256 (-version optional)." +
+			"If registering with an artifact, please provide -version only.")
 		return 1
 
 	// These cases should come after invalid cases have been checked
