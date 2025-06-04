@@ -247,14 +247,12 @@ module('Acceptance | oidc provider', function (hooks) {
 
     // visit the OIDC authorization url to trigger the stubbed (and rejected) auth service ajax request
     await visit(url);
-
     await waitFor('[data-test-auth-form]', { timeout: 5000 });
-    await fillIn(AUTH_FORM.selectMethod, 'userpass');
-    await fillIn(GENERAL.inputByAttr('username'), OIDC_USER);
-    await fillIn(GENERAL.inputByAttr('password'), USER_PASSWORD);
-    await click(AUTH_FORM.advancedSettings);
-    await fillIn(GENERAL.inputByAttr('path'), authMethodPath);
-    await click(AUTH_FORM.login);
+    await authFormComponent.selectMethod(authMethodPath);
+    await authFormComponent.username(OIDC_USER);
+    await authFormComponent.password(USER_PASSWORD);
+    await authFormComponent.login();
+    await settled();
 
     // permission denied error redirect user to log in
     // if the route remains "vault.cluster.oidc-provider" - it did not redirect
@@ -268,7 +266,7 @@ module('Acceptance | oidc provider', function (hooks) {
 
     //* clean up test state
     authStub.restore();
-    await login();
+    await authPage.login();
     await clearRecord(this.store, 'oidc/client', WEB_APP_NAME);
     await clearRecord(this.store, 'oidc/provider', PROVIDER_NAME);
   });
