@@ -9,3 +9,9 @@ variable "hosts" {
     public_ip  = string
   }))
 }
+
+variable "ldap_version" {
+  type        = string
+  description = "OpenLDAP Server Version to use"
+  default     = "1.5.0"
+}

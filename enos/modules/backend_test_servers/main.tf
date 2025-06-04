@@ -10,23 +10,38 @@ terraform {
 }
 
 locals {
-  // Variables
-  open_ldap_name = "openldap" # identity/group/name/kv_writers
+  ldap_server = {
+    domain     = "enos.com"
+    org        = "enos"
+    admin_pw   = "testing"
+    version    = var.ldap_version
+    port       = "389"
+    ip_address = var.hosts[0].public_ip
+  }
 }
 
-# Enable kv secrets engine
-resource "enos_remote_exec" "create_server_enviroment" {
-  for_each = var.hosts
+# Outputs
+output "state" {
+  value = {
+    ldap = local.ldap_server
+  }
+}
 
+# Creating OpenLDAP Server
+resource "enos_remote_exec" "create_openldap" {
   environment = {
-    HOST = "testing"
+    LDAP_DOMAIN   = local.ldap_server.domain
+    LDAP_ORG      = local.ldap_server.org
+    LDAP_ADMIN_PW = local.ldap_server.admin_pw
+    LDAP_VERSION  = local.ldap_server.version
+    LDAP_PORT     = local.ldap_server.port
   }
 
-  scripts = [abspath("${path.module}/scripts/test_server_setup.sh")]
+  scripts = [abspath("${path.module}/scripts/setup_openldap.sh")]
 
   transport = {
     ssh = {
-      host = each.value.public_ip
+      host = local.ldap_server.ip_address
     }
   }
 }
