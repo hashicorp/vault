@@ -5,17 +5,27 @@
 
 /**
  * These are all the secret and auth methods, including enterprise.
- * If filtering for enterprise-only engines or a specific category is required, that logic should be done within the consumer of this utility.
  */
 
 export interface EngineDisplayData {
   category?: string;
   displayName: string;
   glyph?: string;
-  mountType: 'secret' | 'auth' | 'both';
+  mountGroup: string[]; // ['auth'] | ['secret'] | ['auth', 'secret']; // - changed to string[] because of ts error with filterEnginesByMountType - couldn't check mount of type 'never'
   requiresEnterprise?: boolean;
   type: string;
   value?: string;
+}
+
+/**
+ * @param mountType - Given mount type to filter by, e.g., 'auth' or 'secret'.
+ * @param useEnterprise - Optional boolean to indicate if enterprise engines should be included in the results.
+ * @returns Filtered array of engines that match the given mount type
+ */
+export function filterEnginesByMountType(mountType: string, useEnterprise?: boolean) {
+  return useEnterprise
+    ? ALL_ENGINES.filter((engine) => engine.mountGroup.includes(mountType))
+    : ALL_ENGINES.filter((engine) => engine.mountGroup.includes(mountType) && !engine.requiresEnterprise);
 }
 
 export const ALL_ENGINES: EngineDisplayData[] = [
@@ -23,14 +33,14 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'cloud',
     displayName: 'AliCloud',
     glyph: 'alibaba-color',
-    mountType: 'both',
+    mountGroup: ['auth', 'secret'],
     type: 'alicloud',
   },
   {
     category: 'generic',
     displayName: 'AppRole',
     glyph: 'cpu',
-    mountType: 'auth',
+    mountGroup: ['auth'],
     type: 'approle',
     value: 'approle',
   },
@@ -38,40 +48,40 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'cloud',
     displayName: 'AWS',
     glyph: 'aws-color',
-    mountType: 'both',
+    mountGroup: ['auth', 'secret'],
     type: 'aws',
   },
   {
     category: 'cloud',
     displayName: 'Azure',
     glyph: 'azure-color',
-    mountType: 'both',
+    mountGroup: ['auth', 'secret'],
     type: 'azure',
   },
   {
     category: 'infra',
     displayName: 'Consul',
     glyph: 'consul-color',
-    mountType: 'secret',
+    mountGroup: ['secret'],
     type: 'consul',
   },
   {
     displayName: 'Cubbyhole',
     type: 'cubbyhole',
-    mountType: 'secret',
+    mountGroup: ['secret'],
   },
   {
     category: 'infra',
     displayName: 'Databases',
     glyph: 'database',
-    mountType: 'secret',
+    mountGroup: ['secret'],
     type: 'database',
   },
   {
     category: 'cloud',
     displayName: 'GitHub',
     glyph: 'github-color',
-    mountType: 'auth',
+    mountGroup: ['auth'],
     type: 'github',
     value: 'github',
   },
@@ -79,21 +89,21 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'cloud',
     displayName: 'Google Cloud',
     glyph: 'gcp-color',
-    mountType: 'both',
+    mountGroup: ['auth', 'secret'],
     type: 'gcp',
   },
   {
     category: 'cloud',
     displayName: 'Google Cloud KMS',
     glyph: 'gcp-color',
-    mountType: 'secret',
+    mountGroup: ['secret'],
     type: 'gcpkms',
   },
   {
     category: 'generic',
     displayName: 'JWT',
     glyph: 'jwt',
-    mountType: 'auth',
+    mountGroup: ['auth'],
     type: 'jwt',
     value: 'jwt',
   },
@@ -101,14 +111,14 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'generic',
     displayName: 'KV',
     glyph: 'key-values',
-    mountType: 'secret',
+    mountGroup: ['secret'],
     type: 'kv',
   },
   {
     category: 'generic',
     displayName: 'KMIP',
     glyph: 'lock',
-    mountType: 'secret',
+    mountGroup: ['secret'],
     requiresEnterprise: true,
     type: 'kmip',
   },
@@ -116,7 +126,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'generic',
     displayName: 'Transform',
     glyph: 'transform-data',
-    mountType: 'secret',
+    mountGroup: ['secret'],
     requiresEnterprise: true,
     type: 'transform',
   },
@@ -124,7 +134,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'cloud',
     displayName: 'Key Management',
     glyph: 'key',
-    mountType: 'secret',
+    mountGroup: ['secret'],
     requiresEnterprise: true,
     type: 'keymgmt',
   },
@@ -132,28 +142,28 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'generic',
     displayName: 'Kubernetes',
     glyph: 'kubernetes-color',
-    mountType: 'both',
+    mountGroup: ['auth', 'secret'],
     type: 'kubernetes',
   },
   {
     category: 'generic',
     displayName: 'LDAP',
     glyph: 'folder-users',
-    mountType: 'both',
+    mountGroup: ['auth', 'secret'],
     type: 'ldap',
   },
   {
     category: 'infra',
     displayName: 'Nomad',
     glyph: 'nomad-color',
-    mountType: 'secret',
+    mountGroup: ['secret'],
     type: 'nomad',
   },
   {
     category: 'generic',
     displayName: 'OIDC',
     glyph: 'openid-color',
-    mountType: 'auth',
+    mountGroup: ['auth'],
     type: 'oidc',
     value: 'oidc',
   },
@@ -161,7 +171,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'infra',
     displayName: 'Okta',
     glyph: 'okta-color',
-    mountType: 'auth',
+    mountGroup: ['auth'],
     type: 'okta',
     value: 'okta',
   },
@@ -169,14 +179,14 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'generic',
     displayName: 'PKI Certificates',
     glyph: 'certificate',
-    mountType: 'secret',
+    mountGroup: ['secret'],
     type: 'pki',
   },
   {
     category: 'infra',
     displayName: 'RADIUS',
     glyph: 'mainframe',
-    mountType: 'auth',
+    mountGroup: ['auth'],
     type: 'radius',
     value: 'radius',
   },
@@ -184,14 +194,14 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'infra',
     displayName: 'RabbitMQ',
     glyph: 'rabbitmq-color',
-    mountType: 'secret',
+    mountGroup: ['secret'],
     type: 'rabbitmq',
   },
   {
     category: 'generic',
     displayName: 'SAML',
     glyph: 'saml-color',
-    mountType: 'auth',
+    mountGroup: ['auth'],
     requiresEnterprise: true,
     type: 'saml',
     value: 'saml',
@@ -200,14 +210,14 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'generic',
     displayName: 'SSH',
     glyph: 'terminal-screen',
-    mountType: 'secret',
+    mountGroup: ['secret'],
     type: 'ssh',
   },
   {
     category: 'generic',
     displayName: 'TLS Certificates',
     glyph: 'certificate',
-    mountType: 'auth',
+    mountGroup: ['auth'],
     type: 'cert',
     value: 'cert',
   },
@@ -215,26 +225,26 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'generic',
     displayName: 'TOTP',
     glyph: 'history',
-    mountType: 'secret',
+    mountGroup: ['secret'],
     type: 'totp',
   },
   {
     category: 'generic',
     displayName: 'Transit',
     glyph: 'swap-horizontal',
-    mountType: 'secret',
+    mountGroup: ['secret'],
     type: 'transit',
   },
   {
     displayName: 'Token',
     type: 'token',
-    mountType: 'auth',
+    mountGroup: ['auth'],
   },
   {
     category: 'generic',
     displayName: 'Userpass',
     glyph: 'users',
-    mountType: 'auth',
+    mountGroup: ['auth'],
     type: 'userpass',
     value: 'userpass',
   },

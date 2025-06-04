@@ -11,14 +11,12 @@ import sinon from 'sinon';
 import { allEngines, mountableEngines } from 'vault/helpers/mountable-secret-engines';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
-import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
+import { filterEnginesByMountType } from 'vault/utils/all-engines-metadata';
 
 const secretTypes = mountableEngines().map((engine) => engine.type);
 const allSecretTypes = allEngines().map((engine) => engine.type);
-const authTypes = ALL_ENGINES.filter(
-  (engine) => engine.mountType !== 'secret' && !engine.requiresEnterprise && engine.type !== 'token'
-).map((auth) => auth.type);
-const allAuthTypes = ALL_ENGINES.filter((engine) => engine.mountType !== 'secret').map((auth) => auth.type);
+const authTypes = filterEnginesByMountType('auth').map((auth) => auth.type);
+const allAuthTypes = filterEnginesByMountType('auth', true).map((auth) => auth.type);
 
 module('Integration | Component | mount-backend/type-form', function (hooks) {
   setupRenderingTest(hooks);

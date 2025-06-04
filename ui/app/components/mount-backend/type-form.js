@@ -5,7 +5,7 @@
 
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
-import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
+import { filterEnginesByMountType } from 'vault/utils/all-engines-metadata';
 
 /**
  *
@@ -25,15 +25,15 @@ export default class MountBackendTypeForm extends Component {
   @service version;
 
   get secretEngines() {
-    return this.version.isEnterprise
-      ? ALL_ENGINES.filter((engine) => engine.mountType !== 'auth')
-      : ALL_ENGINES.filter((engine) => engine.mountType !== 'auth' && !engine.requiresEnterprise);
+    // If an enterprise license is present, return all secret engines;
+    // otherwise, return only the secret engines supported in OSS.
+    return filterEnginesByMountType('secret', this.version.isEnterprise);
   }
 
   get authMethods() {
-    return this.version.isEnterprise
-      ? ALL_ENGINES.filter((engine) => engine.mountType !== 'secret')
-      : ALL_ENGINES.filter((engine) => engine.mountType !== 'secret' && !engine.requiresEnterprise);
+    // If an enterprise license is present, return all auth methods;
+    // otherwise, return only the auth methods supported in OSS.
+    return filterEnginesByMountType('auth', this.version.isEnterprise);
   }
 
   get mountTypes() {

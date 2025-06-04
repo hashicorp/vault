@@ -15,7 +15,7 @@ import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-
 import { mountableEngines, WIF_ENGINES } from 'vault/helpers/mountable-secret-engines';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
-import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
+import { filterEnginesByMountType } from 'vault/utils/all-engines-metadata';
 
 module('Integration | Component | mount backend form', function (hooks) {
   setupRenderingTest(hooks);
@@ -51,9 +51,7 @@ module('Integration | Component | mount backend form', function (hooks) {
         .dom(GENERAL.title)
         .hasText('Enable an Authentication Method', 'renders auth header in default state');
 
-      for (const method of ALL_ENGINES.filter(
-        (engine) => engine.mountType !== 'secret' && !engine.requiresEnterprise && engine.type !== 'token'
-      )) {
+      for (const method of filterEnginesByMountType('auth').filter((engine) => engine.type !== 'token')) {
         assert
           .dom(MOUNT_BACKEND_FORM.mountType(method.type))
           .hasText(method.displayName, `renders type:${method.displayName} picker`);

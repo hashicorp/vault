@@ -12,7 +12,7 @@ import lazyCapabilities from 'vault/macros/lazy-capabilities';
 import { action } from '@ember/object';
 import { camelize } from '@ember/string';
 import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
-import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
+import { filterEnginesByMountType } from 'vault/utils/all-engines-metadata';
 
 const validations = {
   path: [
@@ -41,8 +41,10 @@ export default class AuthMethodModel extends Model {
     return this.type.replace(/^ns_/, '');
   }
   get icon() {
-    const authMethods = ALL_ENGINES.find((backend) => backend.type === this.methodType);
-
+    // methodType refers to the backend type (e.g., "aws", "azure") and is set on a getter.
+    const authMethods = filterEnginesByMountType('auth', true).find(
+      (backend) => backend.type === this.methodType
+    );
     return authMethods?.glyph || 'users';
   }
   @attr('string', {
