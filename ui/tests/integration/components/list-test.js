@@ -27,7 +27,6 @@ module('Integration | Component | secret-engine/list', function (hooks) {
         capabilities: ['root'],
       },
     }));
-    this.store = this.owner.lookup('service:store');
     this.version = this.owner.lookup('service:version');
     this.flashMessages = this.owner.lookup('service:flash-messages');
     this.flashMessages.registerTypes(['success', 'danger']);
@@ -36,21 +35,21 @@ module('Integration | Component | secret-engine/list', function (hooks) {
     this.uid = uuidv4();
     // generate a model of cubbyhole, kv2, and nomad
     this.secretEngineModels = [
-      createSecretsEngine(this.store, 'cubbyhole', 'cubbyhole-test'),
-      createSecretsEngine(this.store, 'kv', 'kv2-test'),
-      createSecretsEngine(this.store, 'aws', 'aws-1'),
-      createSecretsEngine(this.store, 'aws', 'aws-2'),
-      createSecretsEngine(this.store, 'nomad', 'nomad-test'),
+      createSecretsEngine(undefined, 'cubbyhole', 'cubbyhole-test'),
+      createSecretsEngine(undefined, 'kv', 'kv2-test'),
+      createSecretsEngine(undefined, 'aws', 'aws-1'),
+      createSecretsEngine(undefined, 'aws', 'aws-2'),
+      createSecretsEngine(undefined, 'nomad', 'nomad-test'),
     ];
   });
 
   test('it allows you to disable an engine', async function (assert) {
     const enginePath = 'kv2-test';
     this.server.delete(`sys/mounts/${enginePath}`, () => {
-      assert.true(true, 'Destroy record is called and deletes the engine');
+      assert.true(true, 'Request is made to delete engine');
       return overrideResponse(204);
     });
-    await render(hbs`<SecretEngine::List @secretEngineModels={{this.secretEngineModels}} />`);
+    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
 
     assert.dom(SES.secretsBackendLink(enginePath)).exists('shows the link for the kvv2 secrets engine');
     const row = SES.secretsBackendLink(enginePath);
@@ -65,7 +64,7 @@ module('Integration | Component | secret-engine/list', function (hooks) {
   });
 
   test('it adds disabled css styling to unsupported secret engines', async function (assert) {
-    await render(hbs`<SecretEngine::List @secretEngineModels={{this.secretEngineModels}} />`);
+    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
     assert
       .dom(SES.secretsBackendLink('nomad-test'))
       .doesNotHaveClass(
@@ -79,7 +78,7 @@ module('Integration | Component | secret-engine/list', function (hooks) {
   });
 
   test('it filters by name and engine type', async function (assert) {
-    await render(hbs`<SecretEngine::List @secretEngineModels={{this.secretEngineModels}} />`);
+    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
     // filter by type
     await clickTrigger('#filter-by-engine-type');
     await click(GENERAL.searchSelect.option());
@@ -103,7 +102,7 @@ module('Integration | Component | secret-engine/list', function (hooks) {
   });
 
   test('it applies overflow styling', async function (assert) {
-    await render(hbs`<SecretEngine::List @secretEngineModels={{this.secretEngineModels}} />`);
+    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
     // not using the secret-engine-selector "secretPath" because I want to return the first node of a querySelectorAll
     const firstSecretEngine = document.querySelectorAll('[data-test-secret-path]')[0];
     assert.dom(firstSecretEngine).hasClass('overflow-wrap', 'secret engine name has overflow class ');
