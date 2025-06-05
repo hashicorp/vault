@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Redirect users authenticating with Vault as an OIDC provider to log in again when token expires.
+```
