@@ -1,15 +1,50 @@
 ---
 layout: docs
-page_title: list - Command
+page_title: list - Vault CLI
 description: |-
-  The "list" command lists data from Vault at the given path. This can be used
+  List data from Vault at the given path. This can be used
   to list keys in a, given secrets engine.
 ---
 
 # list
 
-The `list` command lists data from Vault at the given path (wrapper command for
+List arbitrary data from Vault at the given path. For example, list the keys
+stored under a specific mount path for a secrets plugin.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault list [flags] <vault_path>
+$ vault list [-help | -h]
+```
+
+</CodeBlockConfig>
+
+## Description
+
+`list` lists data from Vault at the given path (wrapper command for
 HTTP LIST). This can be used to list keys in a given secrets engine.
+
+
+## Command arguments
+
+<br />
+
+@include 'cli/list/args/path.mdx'
+
+## Command options
+
+None.
+
+## Command flags
+
+None.
+
+## Standard flags
+
+<br />
+
+@include 'cli/standard-settings/all-standard-flags.mdx'
 
 ## Examples
 
@@ -18,8 +53,3 @@ List available entities by their identifiers:
 ```shell-session
 $ vault list identity/entity/id
 ```
-
-## Usage
-
-There are no flags beyond the [standard set of flags](/vault/docs/commands)
-included on all commands.
