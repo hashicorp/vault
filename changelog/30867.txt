@@ -1,0 +1,3 @@
+```release-note:change
+secrets/database: Update vault-plugin-database-snowflake to v0.13.2
+```
