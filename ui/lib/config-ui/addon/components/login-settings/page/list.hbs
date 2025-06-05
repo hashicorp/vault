@@ -6,7 +6,7 @@
 <PageHeader as |p|>
   <p.levelLeft>
     <h1 class="title is-3">
-      UI Login Rules
+      UI Login Settings
     </h1>
   </p.levelLeft>
 </PageHeader>
@@ -29,7 +29,7 @@
               {{rule.name}}
             </Hds::Text::Display>
             <div class="has-top-margin-m">
-              {{rule.namespace}}
+              {{rule.namespacePath}}
               <Hds::Badge
                 @text="Inheritance {{if rule.disableInheritance 'disabled' 'enabled'}}"
                 class="has-left-margin-xxs"
@@ -64,9 +64,8 @@
   {{/each}}
 {{else}}
   <EmptyState
-    data-test-empty-state="login-rules-list"
-    @title="No UI login rules yet"
-    @message="Login rules can be used to select default and back up login methods and customize which methods display in the web UI login form. Available to be created via the CLI or HTTP API."
+    @title="No UI login settings yet"
+    @message="Login settings can be used to customize which methods display in the web UI login form by setting a default and back up login methods. Available to be created via the CLI or HTTP API."
   >
     {{! TODO: update href with tutorial link }}
     {{! <Hds::Link::Standalone @icon="arrow-right" @iconPosition="trailing" @text="Learn more" @href="/" /> }}

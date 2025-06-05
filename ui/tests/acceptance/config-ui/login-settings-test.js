@@ -11,6 +11,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
+import { v4 as uuidv4 } from 'uuid';
 
 const SELECTORS = {
   rule: (name) => (name ? `[data-test-rule="${name}"]` : '[data-test-rule]'),
@@ -22,17 +23,24 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    // a login rule cannot be created for a namespace that already has a rule applied.
+    // rules are deleted in the afterEach hook, but when debugging tests locally they may
+    // re-run before cleanup happens.
+    // using a uuid ensures the runCmd that creates new rules is always successful
+    // by using a different namespace_path each run.
+    this.ns1 = `ns1-${uuidv4()}`;
+    this.ns2 = `ns2-${uuidv4()}`;
     return await login();
   });
 
   test('it renders empty state if no login settings exist', async function (assert) {
     await visit('vault/config-ui/login-settings');
 
-    assert.dom(GENERAL.emptyStateTitle).hasText('No UI login rules yet');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No UI login settings yet');
     assert
       .dom(GENERAL.emptyStateMessage)
       .hasText(
-        'Login rules can be used to select default and back up login methods and customize which methods display in the web UI login form. Available to be created via the CLI or HTTP API.'
+        'Login settings can be used to customize which methods display in the web UI login form by setting a default and back up login methods. Available to be created via the CLI or HTTP API.'
       );
   });
 
@@ -48,19 +56,24 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
 
       // create login rules
       await runCmd([
-        `write sys/config/ui/login/default-auth/testRule backup_auth_types=userpass default_auth_type=okta disable_inheritance=false namespace=ns1`,
-        'write sys/config/ui/login/default-auth/testRule2 backup_auth_types=oidc default_auth_type=ldap disable_inheritance=true namespace=ns2',
+        `write sys/config/ui/login/default-auth/testRule1 backup_auth_types=userpass default_auth_type=okta disable_inheritance=false namespace_path=${this.ns1}`,
+        `write sys/config/ui/login/default-auth/testRule2 backup_auth_types=oidc default_auth_type=ldap disable_inheritance=true namespace_path=${this.ns2}`,
       ]);
     });
 
     hooks.afterEach(async function () {
+      // since the test login rules are created for namespaces that do not exist
+      // they do not affect the login view for the "root" namespace
       await login();
 
       // cleanup login rules
-      await runCmd([
-        'delete sys/config/ui/login/default-auth/testRule',
-        'delete sys/config/ui/login/default-auth/testRule2',
-      ]);
+      await runCmd(
+        [
+          'delete sys/config/ui/login/default-auth/testRule1',
+          'delete sys/config/ui/login/default-auth/testRule2',
+        ],
+        true
+      );
     });
 
     test('fetched login rule list renders', async function (assert) {
@@ -69,8 +82,8 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
 
       // verify fetched rules are rendered in list
       assert.dom(SELECTORS.rule()).exists({ count: 2 });
-      assert.dom(SELECTORS.rule('testRule')).hasText('testRule ns1/ Inheritance enabled');
-      assert.dom(SELECTORS.rule('testRule2')).hasText('testRule2 ns2/ Inheritance disabled');
+      assert.dom(SELECTORS.rule('testRule1')).hasText(`testRule1 ${this.ns1}/ Inheritance enabled`);
+      assert.dom(SELECTORS.rule('testRule2')).hasText(`testRule2 ${this.ns2}/ Inheritance disabled`);
     });
 
     test('delete rule from list view', async function (assert) {
@@ -78,15 +91,15 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
       await visit('vault/config-ui/login-settings');
 
       assert.dom(SELECTORS.rule()).exists({ count: 2 });
-      await click(SELECTORS.popupMenu('testRule'));
+      await click(SELECTORS.popupMenu('testRule1'));
       await click(GENERAL.menuItem('delete-rule'));
 
       assert.dom(GENERAL.confirmationModal).exists();
       await click(GENERAL.confirmButton);
 
       // verify success message from deletion
-      assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted rule testRule.');
-      assert.dom(SELECTORS.rule('testRule')).doesNotExist();
+      assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted rule testRule1.');
+      assert.dom(SELECTORS.rule('testRule1')).doesNotExist();
       assert.dom(SELECTORS.rule()).exists({ count: 1 });
     });
 
@@ -94,7 +107,7 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
       // visit individual rule page
       await visit('vault/config-ui/login-settings');
 
-      await click(SELECTORS.popupMenu('testRule'));
+      await click(SELECTORS.popupMenu('testRule1'));
       await click(GENERAL.menuItem('view-rule'));
 
       // verify that user is redirected to the rule details page
@@ -106,7 +119,7 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
 
       // verify fetched rule data is rendered
       assert.dom(GENERAL.infoRowValue('Default method')).hasText('okta');
-      assert.dom(GENERAL.infoRowValue('Namespace')).hasText('ns1/');
+      assert.dom(GENERAL.infoRowValue('Namespace the rule applies to')).hasText(`${this.ns1}/`);
       assert.dom(GENERAL.infoRowValue('Backup methods')).hasText('userpass');
       assert.dom(GENERAL.infoRowValue('Inheritance enabled')).hasText('Yes');
     });
@@ -121,7 +134,7 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
       );
 
       assert.dom(GENERAL.infoRowValue('Default method')).hasText('ldap');
-      assert.dom(GENERAL.infoRowValue('Namespace')).hasText('ns2/');
+      assert.dom(GENERAL.infoRowValue('Namespace the rule applies to')).hasText(`${this.ns2}/`);
       assert.dom(GENERAL.infoRowValue('Backup methods')).hasText('oidc');
       assert.dom(GENERAL.infoRowValue('Inheritance enabled')).hasText('No');
     });

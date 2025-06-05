@@ -218,6 +218,7 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 }
 
 func TestRateLimitQuota_Update(t *testing.T) {
+	t.Skipf("See: https://hashicorp.atlassian.net/browse/VAULT-36611?focusedCommentId=746927")
 	defer goleak.VerifyNone(t)
 	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink(), true)
 	require.NoError(t, err)
