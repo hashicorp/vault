@@ -51,6 +51,20 @@ the mount to restrict more specific API paths.
   the same quota will be cumulatively applied to all child namespace. The `inheritable`
   parameter cannot be set to `true` if the `path` does not specify a namespace. Only quotas
   associated with the root namespace quotas are inheritable by default.
+- `group_by` `(string: "")` – <EnterpriseAlert product="vault" inline /> Attribute by which
+  to group requests by. Valid `group_by` modes are: 1) `ip` that groups requests by their source
+  IP address (`group_by` defaults to `ip` if unset, which is the only supported mode in community
+  edition); 2) `none` that groups together all requests that match the rate limit quota rule; 3)
+  `entity_then_ip` that groups requests by their entity ID for authenticated requests that carry
+  one, or by their IP for unauthenticated requests (or requests whose authentication is not
+  connected to an entity); and 4) `entity_then_none` which also groups requests by their entity
+  ID when available, but the rest is all grouped together (i.e. unauthenticated or with
+  authentication not connected to an entity).
+- `secondary_rate` `(float: 0.0)` – <EnterpriseAlert product="vault" inline /> Can only be set
+  for the `group_by` modes `entity_then_ip` or `entity_then_none`. This is the rate limit applied
+  to the requests that fall under the "ip" or "none" groupings, while the authenticated requests
+  that contain an entity ID are subject to the `rate` field instead. Defaults to the same value
+  as `rate`.
 
 ### Sample payload
 
@@ -121,11 +135,13 @@ $ curl \
   "renewable": false,
   "data": {
     "block_interval": 300,
+    "group_by": "ip",
     "interval": 2,
     "name": "global-rate-limiter",
     "path": "",
     "rate": 897.3,
     "role": "",
+    "secondary_rate": 0,
     "type": "rate-limit"
   },
   "warnings": null

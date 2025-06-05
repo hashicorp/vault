@@ -15,6 +15,7 @@ func TestFileGroupDefaultCheckers(t *testing.T) {
 	t.Parallel()
 
 	for filename, groups := range map[string]FileGroups{
+		".build/entrypoint.sh":                      {FileGroupPipeline},
 		".github/actions/changed-files/actions.yml": {FileGroupPipeline},
 		".github/workflows/build.yml":               {FileGroupPipeline},
 		".github/workflows/build-artifacts-ce.yml":  {FileGroupCommunity, FileGroupPipeline},
