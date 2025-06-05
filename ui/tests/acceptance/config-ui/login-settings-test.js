@@ -23,6 +23,11 @@ module('Acceptance | Enterprise | config-ui/login-settings', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
+    // a login rule cannot be created for a namespace that already has a rule applied.
+    // rules are deleted in the afterEach hook, but when debugging tests locally they may
+    // re-run before cleanup happens.
+    // using a uuid ensures the runCmd that creates new rules is always successful
+    // by using a different namespace_path each run.
     this.ns1 = `ns1-${uuidv4()}`;
     this.ns2 = `ns2-${uuidv4()}`;
     return await login();
