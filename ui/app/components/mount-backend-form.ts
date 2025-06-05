@@ -62,7 +62,10 @@ export default class MountBackendForm extends Component<Args> {
     if (!backendType) return;
     const mount = this.args.mountModel;
     const currentPath = mount.path;
-    const mountTypes = filterEnginesByMountType(this.args.mountType).map((engine) => engine.type);
+    const mountGroup = this.args.mountType ? this.args.mountType : 'auth';
+    const mountTypes = filterEnginesByMountType(mountGroup, mountGroup === 'secret' ? true : false).map(
+      (engine) => engine.type
+    );
 
     // if the current path has not been altered by user,
     // change it here to match the new type

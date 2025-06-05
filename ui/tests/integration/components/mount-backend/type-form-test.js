@@ -15,8 +15,12 @@ import { filterEnginesByMountType } from 'vault/utils/all-engines-metadata';
 
 const secretTypes = mountableEngines().map((engine) => engine.type);
 const allSecretTypes = allEngines().map((engine) => engine.type);
-const authTypes = filterEnginesByMountType('auth').map((auth) => auth.type);
-const allAuthTypes = filterEnginesByMountType('auth', true).map((auth) => auth.type);
+const authTypes = filterEnginesByMountType('auth')
+  .filter((engine) => engine.type !== 'token')
+  .map((auth) => auth.type);
+const allAuthTypes = filterEnginesByMountType('auth', true)
+  .filter((engine) => engine.type !== 'token')
+  .map((auth) => auth.type);
 
 module('Integration | Component | mount-backend/type-form', function (hooks) {
   setupRenderingTest(hooks);
