@@ -9,8 +9,8 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import { methods } from 'vault/helpers/mountable-auth-methods';
-import { isAddonEngine, allEngines } from 'vault/helpers/mountable-secret-engines';
+import { isAddonEngine } from 'vault/helpers/mountable-secret-engines';
+import { filterEnginesByMountType } from 'vault/utils/all-engines-metadata';
 
 import type FlashMessageService from 'vault/services/flash-messages';
 import type Store from '@ember-data/store';
@@ -58,18 +58,19 @@ export default class MountBackendForm extends Component<Args> {
     super.willDestroy();
   }
 
-  checkPathChange(type: string) {
-    if (!type) return;
+  checkPathChange(backendType: string) {
+    if (!backendType) return;
     const mount = this.args.mountModel;
     const currentPath = mount.path;
-    const mountTypes =
-      this.args.mountType === 'secret'
-        ? allEngines().map((engine) => engine.type)
-        : methods().map((auth) => auth.type);
+    const mountGroup = this.args.mountType ? this.args.mountType : 'auth';
+    const mountTypes = filterEnginesByMountType(mountGroup, mountGroup === 'secret' ? true : false).map(
+      (engine) => engine.type
+    );
+
     // if the current path has not been altered by user,
     // change it here to match the new type
     if (!currentPath || mountTypes.includes(currentPath)) {
-      mount.path = type;
+      mount.path = backendType;
     }
   }
 
