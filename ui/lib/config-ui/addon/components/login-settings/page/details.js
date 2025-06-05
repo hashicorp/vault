@@ -34,7 +34,7 @@ export default class LoginSettingsRuleDetails extends Component {
     defaultAuthType: 'Default method',
     backupAuthTypes: 'Backup methods',
     disableInheritance: 'Inheritance enabled',
-    namespace: 'Namespace the rule applies to',
+    namespacePath: 'Namespace the rule applies to',
   };
 
   displayValue = (key) => {
