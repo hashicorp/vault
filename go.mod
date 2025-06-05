@@ -138,7 +138,7 @@ require (
 	github.com/hashicorp/raft-wal v0.4.0
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.21.0
-	github.com/hashicorp/vault-plugin-auth-azure v0.20.4
+	github.com/hashicorp/vault-plugin-auth-azure v0.21.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.21.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.21.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.23.2
