@@ -92,7 +92,7 @@ export default class ManageNamespacesController extends Controller {
   }
 
   @action
-  transitionToRoute(targetNamespace) {
+  switchNamespace(targetNamespace) {
     this.router.transitionTo('vault.cluster.dashboard', {
       queryParams: { namespace: targetNamespace },
     });
