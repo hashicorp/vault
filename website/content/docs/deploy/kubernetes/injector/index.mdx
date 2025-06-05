@@ -13,6 +13,8 @@ containers that render Vault secrets to a shared memory volume using
 By rendering secrets to a shared volume, containers within the pod can consume
 Vault secrets without being Vault aware.
 
+The Vault Agent Injector is a fully supported component of HashiCorp Vault.
+
 The injector is a [Kubernetes Mutation Webhook Controller](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/).
 The controller intercepts pod events and applies mutations to the pod if annotations exist within
 the request. This functionality is provided by the [vault-k8s](https://github.com/hashicorp/vault-k8s)
@@ -193,7 +195,7 @@ An example of mounting a Vault Agent configmap [can be found here](/vault/docs/p
 
 <Tip>
 
-Set [`injector.metrics.enabled`](/vault/docs/platform/k8s/helm/configuration#metrics) 
+Set [`injector.metrics.enabled`](/vault/docs/platform/k8s/helm/configuration#metrics)
 to `true` in the Helm chart to start collecting injector metrics.
 
 </Tip>
