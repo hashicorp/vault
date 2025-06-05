@@ -65,9 +65,7 @@
             }}
               {{#if (includes targetNamespace this.namespaceService.accessibleNamespaces)}}
                 <dd.Generic>
-                  <NamespaceLink @targetNamespace={{targetNamespace}} @unparsed={{true}} @class="ns-dropdown-item">
-                    Switch to namespace
-                  </NamespaceLink>
+                  <NamespaceLink @targetNamespace={{targetNamespace}} @unparsed={{true}} @class="ns-dropdown-item" />
                 </dd.Generic>
               {{/if}}
             {{/let}}
