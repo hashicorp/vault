@@ -10,6 +10,7 @@ import { computed } from '@ember/object';
 
 export default Component.extend({
   namespaceService: service('namespace'),
+  router: service(),
   currentNamespace: alias('namespaceService.path'),
 
   tagName: '',
@@ -47,5 +48,13 @@ export default Component.extend({
     if (!this.normalizedNamespace) return `${origin}/ui/vault/dashboard`;
     // The full URL/origin is required so that the page is reloaded.
     return `${origin}/ui/vault/dashboard?namespace=${encodeURIComponent(this.normalizedNamespace)}`;
+  },
+
+  actions: {
+    transitionToRoute() {
+      this.router.transitionTo('vault.cluster.dashboard', {
+        queryParams: { namespace: this.targetNamespace },
+      });
+    },
   },
 });
