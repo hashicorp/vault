@@ -87,7 +87,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
 
   test('it should save a new pki role with various options selected', async function (assert) {
     // Key usage, Key params and Not valid after options are tested in their respective component tests
-    assert.expect(8);
+    assert.expect(7);
     this.server.post(`/${this.role.backend}/roles/test-role`, (schema, req) => {
       assert.ok(true, 'Request made to save role');
       const request = JSON.parse(req.requestBody);
@@ -124,10 +124,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
     await click(GENERAL.saveButton);
 
     assert
-      .dom(GENERAL.inputByAttr('name'))
-      .hasClass('has-error-border', 'shows border error on role name field when no role name is submitted');
-    assert
-      .dom('[data-test-inline-error-message]')
+      .dom(GENERAL.validationErrorByAttr('name'))
       .includesText('Name is required.', 'show correct error message');
 
     await fillIn(GENERAL.inputByAttr('name'), 'test-role');

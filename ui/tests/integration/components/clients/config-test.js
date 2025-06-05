@@ -9,6 +9,7 @@ import { render, find, click, fillIn } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | client count config', function (hooks) {
   setupRenderingTest(hooks);
@@ -77,7 +78,7 @@ module('Integration | Component | client count config', function (hooks) {
     await fillIn('[data-test-input="retentionMonths"]', 20);
     await click('[data-test-clients-config-save]');
     assert
-      .dom('[data-test-inline-error-message]')
+      .dom(GENERAL.validationErrorByAttr('retentionMonths'))
       .hasText(
         'Retention period must be greater than or equal to 48.',
         'Validation error shows for min retention period'
@@ -85,7 +86,7 @@ module('Integration | Component | client count config', function (hooks) {
     await fillIn('[data-test-input="retentionMonths"]', 90);
     await click('[data-test-clients-config-save]');
     assert
-      .dom('[data-test-inline-error-message]')
+      .dom(GENERAL.validationErrorByAttr('retentionMonths'))
       .hasText(
         'Retention period must be less than or equal to 60.',
         'Validation error shows for max retention period'
@@ -138,7 +139,7 @@ module('Integration | Component | client count config', function (hooks) {
     await fillIn('[data-test-input="retentionMonths"]', 5);
     await click('[data-test-clients-config-save]');
     assert
-      .dom('[data-test-inline-error-message]')
+      .dom(GENERAL.validationErrorByAttr('retentionMonths'))
       .hasText(
         'Retention period must be greater than or equal to 24.',
         'Validation error shows for incorrect retention period'

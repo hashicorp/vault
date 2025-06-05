@@ -69,17 +69,14 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
   });
 
   test('it should display validation errors for invalid form fields', async function (assert) {
-    assert.expect(8);
+    assert.expect(7);
 
     await this.renderComponent();
 
     await fillIn(CUSTOM_MESSAGES.input('startTime'), '2024-01-20T00:00');
     await fillIn(CUSTOM_MESSAGES.input('endTime'), '2024-01-01T00:00');
     await click(CUSTOM_MESSAGES.button('create-message'));
-    assert.dom(CUSTOM_MESSAGES.input('title')).hasClass('has-error-border');
-    assert
-      .dom(`${CUSTOM_MESSAGES.fieldValidation('title')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
-      .hasText('Title is required.');
+    assert.dom(`${GENERAL.validationErrorByAttr('title')}`).hasText('Title is required.');
     assert.dom(CUSTOM_MESSAGES.input('message')).hasClass('hds-form-textarea--is-invalid');
     assert.dom(`${CUSTOM_MESSAGES.fieldValidation('message')}`).hasText('Message is required.');
     assert.dom(CUSTOM_MESSAGES.input('startTime')).hasClass('has-error-border');
@@ -121,17 +118,12 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
   });
 
   test('it should have form vaildations', async function (assert) {
-    assert.expect(4);
+    assert.expect(3);
 
     await this.renderComponent();
 
     await click(CUSTOM_MESSAGES.button('create-message'));
-    assert
-      .dom(CUSTOM_MESSAGES.input('title'))
-      .hasClass('has-error-border', 'show error border for title field');
-    assert
-      .dom(`${CUSTOM_MESSAGES.fieldValidation('title')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
-      .hasText('Title is required.');
+    assert.dom(`${GENERAL.validationErrorByAttr('title')}`).hasText('Title is required.');
     assert
       .dom(CUSTOM_MESSAGES.input('message'))
       .hasClass('hds-form-textarea--is-invalid', 'show error border for message field');

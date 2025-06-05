@@ -96,8 +96,14 @@ export default class FormFieldComponent extends Component {
     if (options?.possibleValues?.length > 0) {
       return true;
     } else {
-      if (type === 'number' || type === 'string') {
-        if (options?.editType === 'password' || options?.editType === 'textarea') {
+      if (!options?.sensitive && (type === 'number' || type === 'string')) {
+        if (
+          options?.editType === undefined ||
+          options?.editType === 'password' ||
+          options?.editType === 'textarea' ||
+          options?.editType === 'string' ||
+          options?.editType === 'number'
+        ) {
           return true;
         } else {
           return false;
