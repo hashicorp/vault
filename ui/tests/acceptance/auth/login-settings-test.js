@@ -21,8 +21,8 @@ module('Acceptance | Enterprise | auth form custom login settings', function (ho
     await runCmd([
       `write sys/namespaces/test-ns -force`,
       `write test-ns/sys/namespaces/child -force`,
-      `write sys/config/ui/login/default-auth/root-rule backup_auth_types=token default_auth_type=okta disable_inheritance=false namespace=""`,
-      `write sys/config/ui/login/default-auth/ns-rule default_auth_type=ldap disable_inheritance=true namespace=test-ns`,
+      `write sys/config/ui/login/default-auth/root-rule backup_auth_types=token default_auth_type=okta disable_inheritance=false namespace_path=""`,
+      `write sys/config/ui/login/default-auth/ns-rule default_auth_type=ldap disable_inheritance=true namespace_path=test-ns`,
       `write sys/auth/my-oidc type=oidc`,
       `write sys/auth/my-oidc/tune listing_visibility="unauth"`,
     ]);
