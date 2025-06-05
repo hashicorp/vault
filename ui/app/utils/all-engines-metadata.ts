@@ -11,21 +11,21 @@ export interface EngineDisplayData {
   category?: string;
   displayName: string;
   glyph?: string;
-  mountGroup: string[]; // ['auth'] | ['secret'] | ['auth', 'secret']; // - changed to string[] because of ts error with filterEnginesByMountType - couldn't check mount of type 'never'
+  mountGroup: string[];
   requiresEnterprise?: boolean;
   type: string;
   value?: string;
 }
 
 /**
- * @param mountType - Given mount type to filter by, e.g., 'auth' or 'secret'.
- * @param useEnterprise - Optional boolean to indicate if enterprise engines should be included in the results.
+ * @param mountGroup - Given mount group to filter by, e.g., 'auth' or 'secret'.
+ * @param isEnterprise - Optional boolean to indicate if enterprise engines should be included in the results.
  * @returns Filtered array of engines that match the given mount type
  */
-export function filterEnginesByMountType(mountType: string, useEnterprise?: boolean) {
-  return useEnterprise
-    ? ALL_ENGINES.filter((engine) => engine.mountGroup.includes(mountType))
-    : ALL_ENGINES.filter((engine) => engine.mountGroup.includes(mountType) && !engine.requiresEnterprise);
+export function filterEnginesByMountType(mountGroup: 'auth' | 'secret', isEnterprise?: boolean) {
+  return isEnterprise
+    ? ALL_ENGINES.filter((engine) => engine.mountGroup.includes(mountGroup))
+    : ALL_ENGINES.filter((engine) => engine.mountGroup.includes(mountGroup) && !engine.requiresEnterprise);
 }
 
 export const ALL_ENGINES: EngineDisplayData[] = [
