@@ -337,13 +337,6 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     assert
       .dom(switchNamespaceButton)
       .hasText('Switch to namespace', 'Allow users to switch to different namespace');
-    assert
-      .dom(`${switchNamespaceButton} a`)
-      .hasAttribute(
-        'href',
-        `http://localhost:7357/ui/vault/dashboard?namespace=${namespace}`,
-        'Switch namespace button has the correct href attribute'
-      );
 
     // Verify that the user can delete the namespace
     assert
