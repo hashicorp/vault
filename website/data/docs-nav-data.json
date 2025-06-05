@@ -930,12 +930,8 @@
     "title": "Upgrade Vault",
     "routes": [
       {
-        "title": "Upgrade history",
-        "path": "upgrade"
-      },
-      {
         "title": "Single-instance",
-        "path": "upgrade/single-instance"
+        "path": "upgrade"
       },
       {
         "title": "Replicated deployments",
@@ -970,6 +966,10 @@
       {
         "title": "Deprecation notices",
         "path": "updates/deprecation"
+      },
+      {
+        "title": "Change tracker",
+        "path": "updates/change-tracker"
       },
       {
         "title": "Full changelog",
