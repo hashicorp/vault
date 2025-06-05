@@ -90,4 +90,11 @@ export default class ManageNamespacesController extends Controller {
       this.flashMessages.danger('There was an error refreshing the namespace list.');
     }
   }
+
+  @action
+  transitionToRoute(targetNamespace) {
+    this.router.transitionTo('vault.cluster.dashboard', {
+      queryParams: { namespace: targetNamespace },
+    });
+  }
 }
