@@ -7,6 +7,7 @@ import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
+import sinon from 'sinon';
 
 import authPage from 'vault/tests/pages/auth';
 import logout from 'vault/tests/pages/logout';
@@ -219,6 +220,53 @@ module('Acceptance | oidc provider', function (hooks) {
     assert.dom('[data-test-consent-form]').exists('Consent form exists');
 
     //* clean up test state
+    await clearRecord(this.store, 'oidc/client', WEB_APP_NAME);
+    await clearRecord(this.store, 'oidc/provider', PROVIDER_NAME);
+  });
+
+  // Error handling test coverage, see issue for more context https://github.com/hashicorp/vault/issues/27772
+  test('OIDC Provider redirects if authorization request throws a permission denied error', async function (assert) {
+    this.auth = this.owner.lookup('service:auth');
+    const { providerName, callback, clientId, authMethodPath } = this.oidcSetupInformation;
+    // oidc provider authorization url, see https://developer.hashicorp.com/vault/docs/concepts/oidc-provider#authorization-endpoint
+    const url = getAuthzUrl(providerName, callback, clientId);
+
+    // stub ajax request made by the model hook in routes/vault/cluster/oidc-provider.js
+    const authStub = sinon.stub(this.auth, 'ajax');
+    authStub.rejects({
+      json: () =>
+        Promise.resolve({
+          errors: ['2 errors occurred:\n\t* permission denied\n\t* invalid token\n\n'],
+        }),
+    });
+
+    await visit('/vault/logout');
+
+    // set spy here so they only spy on the relevant logic
+    const deleteTokenSpy = sinon.spy(this.auth, 'deleteToken');
+
+    // visit the OIDC authorization url to trigger the stubbed (and rejected) auth service ajax request
+    await visit(url);
+    await waitFor('[data-test-auth-form]', { timeout: 5000 });
+    await authFormComponent.selectMethod(authMethodPath);
+    await authFormComponent.username(OIDC_USER);
+    await authFormComponent.password(USER_PASSWORD);
+    await authFormComponent.login();
+    await settled();
+
+    // permission denied error redirect user to log in
+    // if the route remains "vault.cluster.oidc-provider" - it did not redirect
+    assert.strictEqual(currentRouteName(), 'vault.cluster.auth', 'it redirects to auth route');
+
+    // assert permission denied error deletes OIDC user's token
+    assert.true(
+      deleteTokenSpy.calledOnce,
+      'deleteToken is called because _redirectToAuth was called with logout:true'
+    );
+
+    //* clean up test state
+    authStub.restore();
+    await authPage.login();
     await clearRecord(this.store, 'oidc/client', WEB_APP_NAME);
     await clearRecord(this.store, 'oidc/provider', PROVIDER_NAME);
   });
