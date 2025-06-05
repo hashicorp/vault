@@ -208,7 +208,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
       await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
       await click(CUSTOM_MESSAGES.button('preview'));
       assert.dom(CUSTOM_MESSAGES.modal('preview image')).doesNotExist();
-      assert.dom(CUSTOM_MESSAGES.input('title')).hasClass('has-error-border');
+      assert.dom(GENERAL.validationErrorByAttr('title')).exists();
     });
   });
 
@@ -290,7 +290,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
       await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
       await click(CUSTOM_MESSAGES.button('preview'));
       assert.dom(CUSTOM_MESSAGES.modal('preview image')).doesNotExist();
-      assert.dom(CUSTOM_MESSAGES.input('title')).hasClass('has-error-border');
+      assert.dom(GENERAL.validationErrorByAttr('title')).exists();
     });
   });
 });
