@@ -17,9 +17,9 @@ Vault 1.17. **Please read carefully**.
 ### Rekey cancellations use a nonce ((#rekey-cancel-nonce))
 | Change       | Affected version | Affected deployments
 | ------------ | ---------------- | --------------------
-| Breaking     | 1.18.11 | Any
+| Breaking     | 1.18.11+ | Any
 
-Vault 1.18.11 requires a nonce to cancel
+Vault 1.18.11 and onwards requires a nonce to cancel
 [rekey](/vault/api-docs/system/rekey) and
 [rekey recovery key](/vault/api-docs/system/rekey-recovery-key) operations
 within 10 minutes of initializing a rekey request. Cancellation requests after
