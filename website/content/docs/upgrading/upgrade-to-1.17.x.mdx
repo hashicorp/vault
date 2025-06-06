@@ -14,6 +14,21 @@ Vault 1.16. **Please read carefully**.
 
 ## Important changes
 
+### Rekey cancellations use a nonce ((#rekey-cancel-nonce))
+| Change       | Affected version | Affected deployments
+| ------------ | ---------------- | --------------------
+| Breaking     | 1.17.18+ | Any
+
+Vault 1.17.18 and onwards require a nonce to cancel
+[rekey](/vault/api-docs/system/rekey) and
+[rekey recovery key](/vault/api-docs/system/rekey-recovery-key) operations
+within 10 minutes of initializing a rekey request. Cancellation requests after
+the 10 minute window do not require a nonce and succeed as expected.
+
+#### Recommendation
+To cancel a rekey operation, provide the nonce value from the
+`/sys/rekey/init` or `sys/rekey-recovery-key/init` response.
+
 ### Strict validation for Azure auth login requests ((#strict-azure))
 
 | Change       | Affected version
