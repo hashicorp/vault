@@ -172,7 +172,7 @@ module.exports = [
   },
   {
     source: '/vault/docs/upgrading/upgrade-to-1.19.x',
-    destination: '/vault/docs/updates/important-changes',
+    destination: '/vault/docs/v1.19.x/updates/important-changes',
     permanent: true,
   },
   {
@@ -191,7 +191,7 @@ module.exports = [
     permanent: true,
   },
   {
-    source: '/vault/docs/v:version(1\.(?:4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19)\.x)/updates/important-changes',
+    source: '/vault/docs/v:version(1\.(?:4|5|6|7|8|9|10|11|12|13|14|15|16|17|18)\.x)/updates/important-changes',
     destination: '/vault/docs/v:version/upgrading/upgrade-to-:version',
     permanent: true,
   },
