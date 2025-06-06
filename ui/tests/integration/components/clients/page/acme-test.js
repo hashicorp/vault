@@ -84,7 +84,7 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
     assert
       .dom(usageStats('ACME usage'))
       .hasText(
-        `ACME usage Usage metrics tutorial ACME clients which interacted with Vault for the first time each month. Each bar represents the total new ACME clients for that month. Total ACME clients ${expectedTotal}`,
+        `ACME usage Client usage tutorial ACME clients which interacted with Vault for the first time each month. Each bar represents the total new ACME clients for that month. Total ACME clients ${expectedTotal}`,
         'it renders usage stats with single month copy'
       );
   });

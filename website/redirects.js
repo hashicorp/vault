@@ -309,5 +309,10 @@ module.exports = [
     source: '/vault/docs/enterprise/license/faq',
     destination: '/vault/docs/license',
     permanent: true,
-  }
+  },
+  {
+    source: '/vault/docs/concepts/client-count/usage-metrics',
+    destination: '/vault/docs/concepts/client-count/client-usage',
+    permanent: true,
+  },
 ]
