@@ -8,13 +8,10 @@ description: |-
 
 # SCEP auth method (API)
 
-This is the API documentation for the Vault SCEP authentication
-method. For general information about the usage and operation of the
-SCEP method, please see the [Vault SCEP method documentation](/vault/docs/auth/scep).
+Use the SCEP authentication plugin API to interact with a mounted plugin
+instance. For general information about the usage and operation of the
+SCEP method, refer to the [Vault SCEP method documentation](/vault/docs/auth/scep).
 
-This documentation assumes the SCEP method is mounted at the
-`/auth/scep` path in Vault. Since it is possible to enable auth methods at any
-location, please update your API calls accordingly.
 
 ## Create SCEP role
 
@@ -22,19 +19,17 @@ Creates or updates a named SCEP role.
 
 | Method | Path                    |
 |:-------|:------------------------|
-| `POST` | `/auth/scep/role/:name` |
+| `POST` | `/auth/{mount_path}/role/:name` |
 
 ### Parameters
 
 - `name` `(string: <required>)` - The name of the SCEP role.
-- `display_name` `(string: "")` - The `display_name` to set on tokens issued
-  when authenticating against this role. If not set, defaults to the
-  name of the role.
-- `auth_type` `(string: <required>)` - The authentication type to use for this role.
-  Valid values are `static-challenge` and `intune`.
-- `challenge` `(string: "")` - The challenge to use for this role. This is only
-  used when `auth_type` is set to `static-challenge`. If not set, defaults to
-  the empty string.
+- `display_name` `(string: "<name>")` - The `display_name` value for tokens
+  issued when authenticating against the role. Defaults to `name`.
+- `auth_type` `(enum: <required>)` - Required authentication type for the SCEP
+  role. Must be one of: `static-challenge`, `intune`.
+- `challenge` `(string: "")` - The authentication challenge to use when
+  `auth_type` is `static-challenge`.
 
 @include 'tokenfields.mdx'
 
@@ -93,11 +88,11 @@ $ curl \
 
 ## Read SCEP role
 
-Gets information associated with the named role.
+Get information associated with the named role.
 
 | Method | Path                    |
 |:-------|:------------------------|
-| `GET`  | `/auth/scep/role/:name` |
+| `GET`  | `/auth/{mount_path}/role/:name` |
 
 ### Parameters
 
@@ -144,11 +139,11 @@ $ curl \
 
 ## List SCEP roles
 
-Lists configured SCEP role names.
+List all currently configured SCEP role names.
 
 | Method | Path               |
 | :----- | :----------------- |
-| `LIST` | `/auth/scep/role` |
+| `LIST` | `/auth/{mount_path}/role` |
 
 ### Sample request
 
@@ -177,11 +172,11 @@ $ curl \
 
 ## Delete SCEP role
 
-Deletes the named role.
+Delete the named role.
 
 | Method   | Path                    |
 |:---------|:------------------------|
-| `DELETE` | `/auth/scep/role/:name` |
+| `DELETE` | `/auth/{mount_path}/role/:name` |
 
 ### Parameters
 
@@ -203,9 +198,10 @@ rather through delegated authentication from a PKI mount.".
 
 | Method | Path               |
 |:-------|:-------------------|
-| `POST` | `/auth/scep/login` |
+| `POST` | `/auth/{mount_path}/login` |
 
 ### Parameters
 
-- `name` `(string: "")` - Authenticate against the named SCEP role.
-  If not set, defaults to trying all SCEP roles and returning any one that matches.
+- `name` `(string: "")` - The SCEP role associated with the PKI mount. Leaving
+  `name` unset tells Vault to try all SCEP roles and return the first one that
+  matches.
