@@ -31,12 +31,6 @@ and can be used without any prerequisite steps.
 External plugins are not shipped with Vault and require additional operator
 intervention to run.
 
-To run an external plugin, a binary or container image of the plugin is required. Plugin
-binaries can be obtained from [releases.hashicorp.com](https://releases.hashicorp.com/)
-or they can be [built from source](/vault/docs/plugins/plugin-development#building-a-plugin-from-source).
-Containerized plugins are not yet available from a registry and must currently
-be built.
-
 Vault's external plugins are completely separate, standalone applications that
 Vault executes and communicates with over RPC. Each time a Vault secret engine,
 auth method, or database plugin is mounted, a new process or container is spawned. However,
@@ -45,7 +39,24 @@ to improve performance. Plugin multiplexing allows plugin instances to be
 reused across all mounts of a given type.
 
 -> **NOTE:** See the [Vault Integrations](/vault/integrations) page to find a
-curated collection of official, partner, and community Vault plugins. 
+curated collection of official, partner, and community Vault plugins.
+
+### Community plugins
+
+To run an external Community plugin, a binary or container image of the plugin is required.
+Plugin binaries can be obtained from the [HashiCorp releases page](https://releases.hashicorp.com/)
+or they can be [built from source](/vault/docs/plugins/plugin-development#building-a-plugin-from-source).
+Some containerized plugins can be obtained from [HashiCorp Docker Registry](https://hub.docker.com/u/hashicorp)
+or [HashiCorp AWS Elastic Container Registry (ECR)](https://gallery.ecr.aws/hashicorp).
+Containerized plugins can also be built.
+
+### Enterprise plugins
+
+@include 'alerts/enterprise-and-hcp.mdx'
+
+To run an external Enterprise plugin, a `.zip` plugin artifact is required.
+Enterprise plugin artifacts can be obtained from the
+[HashiCorp releases page](https://releases.hashicorp.com/).
 
 ## Plugin versioning
 

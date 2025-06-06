@@ -92,9 +92,9 @@ install_internal() {
   )
 
   echo "==> Installing internal tools..."
-  pushd "$(repo_root)" &> /dev/null
+  pushd "$(repo_root)/tools" &> /dev/null
   for tool in "${tools[@]}"; do
-    go_install ./tools/"$tool"
+    go_install ./"$tool"
   done
   popd &> /dev/null
 }
@@ -112,6 +112,27 @@ check_internal() {
   for tool in "${tools[@]}"; do
     check_tool internal "$tool"
   done
+}
+
+# Install our pipeline tools. In some cases these may require access to internal repositories so
+# they are excluded from our baseline toolset.
+install_pipeline() {
+  echo "==> Installing pipeline tools..."
+  pushd "$(repo_root)/tools/pipeline" &> /dev/null
+  if env GOPRIVATE=github.com/hashicorp go install ./...; then
+    echo "--> pipeline ✔"
+  else
+    echo "--> pipeline ✖"
+    popd &> /dev/null
+    return 1
+  fi
+  popd &> /dev/null
+}
+
+# Check that all required pipeline tools are installed
+check_pipeline() {
+  echo "==> Checking for pipeline tools..."
+  check_tool pipeline pipeline
 }
 
 # Install tools.
@@ -134,11 +155,17 @@ main() {
   install-internal)
     install_internal
   ;;
+  install-pipeline)
+    install_pipeline
+  ;;
   check-external)
     check_external
   ;;
   check-internal)
     check_internal
+  ;;
+  check-pipeline)
+    check_pipeline
   ;;
   install)
     install

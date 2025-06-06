@@ -4,6 +4,7 @@ page_title: Vault Secrets Operator
 description: >-
   The Vault Secrets Operator allows Pods to consume Vault secrets natively from Kubernetes Secrets.
 ---
+@include 'vso/common-links.mdx'
 
 # Vault Secrets Operator
 
@@ -29,6 +30,8 @@ Vault Secrets Operator supports the following Vault features:
 during drift remediation.
 - Cross Vault namespace authentication for Vault Enterprise 1.13+.
 - [Encrypted Vault client cache storage](/vault/docs/platform/k8s/vso/sources/vault#vault-client-cache) for improved performance and security.
+- [Instant updates](/vault/docs/platform/k8s/vso/sources/vault#instant-updates)
+  for VaultStaticSecret's with Vault Enterprise 1.16.3+.
 
 ### Supported Vault authentication methods
 
@@ -111,6 +114,76 @@ spec:
   # HTTP headers to be included in all Vault authentication requests.
   # headers: []
 ```
+
+### VaultAuthGlobal custom resource
+
+<Tip title="Feature availability">
+
+VSO v0.8.0
+
+</Tip>
+
+Namespaced resource that provides shared Vault authentication configuration that can be inherited by multiple
+`VaultAuth` custom resources. It supports multiple authentication methods and allows you to define a default
+authentication method that can be overridden by individual VaultAuth custom resources. See `vaultAuthGlobalRef` in
+the [VaultAuth spec][va-spec] for more details. The `VaultAuthGlobal` custom resource is optional and can be used to
+simplify the configuration of multiple VaultAuth custom resources by reducing config duplication. Like other
+namespaced VSO custom resources, there can be many VaultAuthGlobal resources configured in a single Kubernetes cluster.
+
+For more details on how to integrate VaultAuthGlobals into your workflow, see the detailed [Authentication][auth]
+docs.
+
+<Tip>
+
+  The VaultAuthGlobal resources shares many of the same fields as the VaultAuth custom resource, but cannot be used
+  for authentication directly. It is only used to define shared Vault authentication configuration within a Kubernetes
+  cluster.
+
+</Tip>
+
+The example below demonstrates how to define a VaultAuthGlobal custom resource with a default authentication method of
+`kubernetes`, along with a VaultAuth custom resource that inherits its global configuration.
+
+```yaml
+---
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultAuthGlobal
+metadata:
+  namespace: vso-example
+  name: vault-auth-global
+spec:
+  defaultAuthMethod: kubernetes
+  kubernetes:
+    audiences:
+    - vault
+    mount: kubernetes
+    namespace: example-ns
+    role: auth-role
+    serviceAccount: default
+    tokenExpirationSeconds: 600
+---
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultAuth
+metadata:
+  namespace: vso-example
+  name: vault-auth
+spec:
+  vaultAuthGlobalRef:
+    name: vault-auth-global
+  kubernetes:
+    role: local-role
+```
+
+#### Explanation
+
+- The VaultAuthGlobal custom resource defines a default authentication method of kubernetes with the `defaultAuthMethod`
+  field.
+- The VaultAuth custom resource inherits the global configuration by referencing the VaultAuthGlobal custom
+  resource with the `vaultAuthGlobalRef` field.
+- The `kubernetes.role` field in the VaultAuth custom resource spec overrides the value of the corresponding field in
+  the VaultAuthGlobal custom resource. All other fields are inherited from the VaultAuthGlobal custom resource
+  `spec.kubernetes` field, e.g., `audiences`, `mount`, `serviceAccount`, `namespace`, etc.
+
 
 ## Vault secret custom resource definitions
 
@@ -304,6 +377,35 @@ spec:
 The Vault Secrets Operator can optionally cache Vault client information such as Vault tokens and leases in Kubernetes Secrets within its own namespace. The client cache enables seamless upgrades because Vault tokens and dynamic secret leases can continue to be tracked and renewed through leadership changes. Client cache persistence and encryption is not enabled by default because it requires extra configuration and Vault Server setup. VSO supports encrypting the client cache using Vault Server's [transit secrets engine](/vault/docs/secrets/transit).
 
 The [Encrypted client cache](/vault/docs/platform/k8s/vso/sources/vault/client-cache) guide will walk you through the steps to enable and configure client cache encryption.
+
+## Instant updates <EnterpriseAlert inline="true" />
+<Tip title="Feature availability">
+
+  VSO v0.8.0
+
+</Tip>
+
+The Vault Secrets Operator can instantly update Kubernetes Secrets when changes
+are made in Vault, by subscribing to [Vault Events][vault-events] for change
+notification. Setting a refresh interval (e.g. [refreshAfter][vss-spec]) is
+still recommended since event message delivery is not guaranteed.
+
+**Supported secret types:**
+- [VaultStaticSecret](#vaultstaticsecret-custom-resource) ([kv-v1](/vault/docs/secrets/kv/kv-v1),
+  [kv-v2](/vault/docs/secrets/kv/kv-v2))
+
+<Note title="Requires Vault Enterprise 1.16.3+">
+
+The instant updates option requires [Vault Enterprise](/vault/docs/enterprise)
+1.16.3+ due to the use of [Vault Event Notifications][vault-events].
+
+</Note>
+
+The [Instant updates](/vault/docs/platform/k8s/vso/sources/vault/instant-updates) guide
+will walk you through the steps to enable instant updates for a VaultStaticSecret.
+
+[vss-spec]: /vault/docs/platform/k8s/vso/api-reference#vaultstaticsecretspec
+[vault-events]: /vault/docs/concepts/events
 
 ## Tutorial
 

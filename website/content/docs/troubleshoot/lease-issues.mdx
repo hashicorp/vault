@@ -1,0 +1,122 @@
+---
+layout: docs
+page_title: Lease problems
+description: >-
+  Troubleshoot lease problems in Vault.
+---
+
+# Troubleshoot lease problems
+
+Explanations, workarounds, and solutions for common lease problems in Vault.
+
+## `429 - Too Many Requests`
+
+### Problem
+
+Vault returns a `429 - Too Many Requests` response when users try to
+authenticate. For example:
+
+<CodeBlockConfig hideClipboard>
+
+```text
+Error making API request.
+
+URL: PUT https://127.0.0.1:61555/v1/auth/userpass/login/foo
+Code: 429. Errors:
+
+* 1 error occurred:
+	* request path "auth/userpass/login/foo": lease count quota exceeded
+```
+
+</CodeBlockConfig>
+
+### Cause
+
+Vault returns a `429 - Too Many Requests` response if a new lease request
+violates the configured lease quota limit.
+
+To guard against [lease explosions](/vault/docs/troubleshoot/lease-explosions),
+Vault rejects authentication requests if completing the request would violate
+the configured lease quota limit.
+
+### Solution
+
+1. Correct any client-side errors that may cause excessive lease creation.
+1. Determine if your resource needs have changed and complete the
+   [Protecting Vault with Resource Quotas](/vault/tutorials/operations/resource-quotas)
+   tutorial to determine new, appropriate defaults.
+1. Use the [`vault lease`](/vault/docs/commands/lease) CLI command or
+   [lease count quota endpoint](/vault/api-docs/system/lease-count-quotas) to
+   tune your lease count quota.
+
+<Highlight title="Use proactive tuning to avoid errors">
+   Consider making short-term changes to your lease quotas when you expect a
+   significant increase in lease creation. For example, when you release a new
+   feature or complete a marketing push to increase your user base.
+</Highlight>
+
+
+## Lease explosion (degraded performance)
+
+### Problem
+
+Your Vault nodes are out of memory and unresponsive to new lease requests.
+
+### Cause
+
+Clients have caused a lease explosion with consistent, high-volume API requests.
+
+<Note title="Lease explosions can lead to DoS">
+
+   Unchecked lease explosions create cascading denial-of-service issues for the
+   active node that can result in denial-of-service issues for the entire
+   cluster.
+
+</Note>
+
+### Solution
+
+To resolve a lease explosion, you need to mitigate the problem to stabilize
+Vault and provide space for cluster recovery then clean up your Vault
+environment.
+
+1. Mitigate resource stress by adjusting TTL values for your Vault instance:
+
+   Config level         | Parameter              | Precedence
+   -------------------- | ---------------------- | -----------
+   Database plugin      | `ttl` or `default_ttl` | first
+   Database plugin      | `max_ttl`              | first
+   AuthN/secrets plugin | `ttl` or `default_ttl` | second
+   AuthN/secrets plugin | `max_ttl`              | second
+   Vault                | `default_lease_ttl`    | last
+   Vault                | `max_lease_ttl`        | last
+
+   **Granular TTLs on a role, group, or user level always override plugin and
+   system-wide TTL values**.
+
+1. Use firewalls or load balancers to limit API calls to Vault from aberrant
+   clients and reduce load on the struggling cluster .
+
+1. Once the cluster stabilizes, check the active node to determine if you can
+   wait for it to purge leases automatically or if you need to speed up the
+   process by manually revoking leases.
+
+1. If the cluster requires manual intervention, confirm you have a recent, valid
+   snapshots of the cluster.
+
+1. Once you confirm a valid snapshot of the cluster exists, use
+   [`vault lease revoke`](/vault/docs/commands/lease/revoke) to manually revoke
+   the offending leases.
+
+<Warning title="Potentially dangerous operation">
+
+   Revoking or forcefully revoking leases is potentially a dangerous operation.
+   Do not proceed without a valid snapshot. If you have a valid Vault
+   Enterprise license, consider contacting the
+   [HashiCorp Customer Support team](https://support.hashicorp.com/) for help.
+
+</Warning>
+
+### Related tutorials
+
+- [Troubleshoot irrevocable leases](/vault/tutorials/monitoring/troubleshoot-irrevocable-leases)

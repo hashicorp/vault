@@ -13,16 +13,29 @@ description: |-
 
 ## Important changes
 
-| Version         | Change                                                                                                                                                                                                                             |
-|-----------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 1.16.0+         | [Existing clusters do not show the current Vault version in UI by default](/vault/docs/upgrading/upgrade-to-1.16.x#default-policy-changes)                                                                                                                |
-| 1.16.0+         | [Default LCQ enabled when upgrading pre-1.9](/vault/docs/upgrading/upgrade-to-1.16.x#default-lcq-pre-1.9-upgrade) |
-| 1.16.0+         | [External plugin environment variables take precedence over server variables](/vault/docs/upgrading/upgrade-to-1.16.x#external-plugin-variables)
-| 1.16.0+         | [LDAP auth entity alias names no longer include upndomain](/vault/docs/upgrading/upgrade-to-1.16.x#ldap-auth-entity-alias-names-no-longer-include-upndomain)
-| 1.16.0+         | [Secrets Sync now requires a one-time flag to operate](/vault/docs/upgrading/upgrade-to-1.16.x#secrets-sync-now-requires-setting-a-one-time-flag-before-use)
-| 1.16.0+         | [Azure secrets engine role creation failing](/vault/docs/upgrading/upgrade-to-1.16.x#azure-secrets-engine-role-creation-failing)
-| 1.16.1 - 1.16.3 | [New nodes added by autopilot upgrades provisioned with the wrong version](/vault/docs/upgrading/upgrade-to-1.15.x#new-nodes-added-by-autopilot-upgrades-provisioned-with-the-wrong-version)
-| 1.15.8+         | [Autopilot upgrade for Vault Enterprise fails](/vault/docs/upgrading/upgrade-to-1.15.x#autopilot)
+| Version                     | Change                                                                                                                                                                                       |
+|-----------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1.16.0+                     | [Existing clusters do not show the current Vault version in UI by default](/vault/docs/upgrading/upgrade-to-1.16.x#default-policy-changes)                                                   |
+| 1.16.0+                     | [Default LCQ enabled when upgrading pre-1.9](/vault/docs/upgrading/upgrade-to-1.16.x#default-lcq-pre-1.9-upgrade)                                                                            |
+| 1.16.0+                     | [External plugin environment variables take precedence over server variables](/vault/docs/upgrading/upgrade-to-1.16.x#external-plugin-variables)                                             |
+| 1.16.0+                     | [LDAP auth entity alias names no longer include upndomain](/vault/docs/upgrading/upgrade-to-1.16.x#ldap-auth-entity-alias-names-no-longer-include-upndomain)                                 |
+| 1.16.0+                     | [Secrets Sync now requires a one-time flag to operate](/vault/docs/upgrading/upgrade-to-1.16.x#secrets-sync-now-requires-setting-a-one-time-flag-before-use)                                 |
+| 1.16.0+                     | [Azure secrets engine role creation failing](/vault/docs/upgrading/upgrade-to-1.16.x#azure-secrets-engine-role-creation-failing)                                                             |
+| 1.16.1 - 1.16.3             | [New nodes added by autopilot upgrades provisioned with the wrong version](/vault/docs/upgrading/upgrade-to-1.15.x#new-nodes-added-by-autopilot-upgrades-provisioned-with-the-wrong-version) |
+| 1.15.8+                     | [Autopilot upgrade for Vault Enterprise fails](/vault/docs/upgrading/upgrade-to-1.15.x#autopilot)                                                                                            |
+| 1.16.5                      | [Listener stops listening on untrusted upstream connection with particular config settings](/vault/docs/upgrading/upgrade-to-1.16.x#listener-proxy-protocol-config)                          |
+| 1.16.3 - 1.16.6             | [Vault standby nodes not deleting removed entity-aliases from in-memory database](/vault/docs/upgrading/upgrade-to-1.16.x#dangling-entity-alias-in-memory)                                   |
+| 0.7.0+                      | [Duplicate identity groups created](/vault/docs/upgrading/upgrade-to-1.16.x#duplicate-identity-groups-created-when-concurrent-requests-sent-to-the-primary-and-pr-secondary-cluster)         |                                                                                       |
+| Known Issue (0.7.0+)        | [Manual entity merges fail](/vault/docs/upgrading/upgrade-to-1.16.x#manual-entity-merges-sent-to-a-pr-secondary-cluster-are-not-persisted-to-storage)                                        |
+| Known Issue (1.16.7-1.16.8) | [Some values in the audit logs not hmac'd properly](/vault/docs/upgrading/upgrade-to-1.16.x#client-tokens-and-token-accessors-audited-in-plaintext)                                          |
+| New default (1.16.13)       | [Vault product usage metrics reporting](/vault/docs/upgrading/upgrade-to-1.6.x#product-usage-reporting)                                                                                      |
+| Deprecation (1.16.13)       | [`default_report_months` is deprecated for the `sys/internal/counters` API](/vault/docs/upgrading/upgrade-to-1.16.x#activity-log-changes)                                                    |
+| Known Issue (1.16.16)       | [Authorization failures using Azure federated identity credentials](/vault/docs/upgrading/upgrade-to-1.16.x#authorization-failures-using-azure-federated-identity-credentials) |
+| Known issue (1.16.16-1.16.18) | [Unexpected LDAP static role rotations on upgrade](/vault/docs/upgrading/upgrade-to-1.16.x#static-role-rotations) | 
+| Known issue (1.16.16-1.16.19) | [Unexpected Database static role rotations on upgrade](/vault/docs/upgrading/upgrade-to-1.16.x#db-static-role-rotations) | 
+| Known issue (1.16.0)        | [Vault log file missing subsystem logs](/vault/docs/upgrading/upgrade-to-1.16.x#log-files)
+| Known issue (1.16.18+)      | [Azure Auth fails to authenticate Uniform VMSS instances](/vault/docs/upgrading/upgrade-to-1.16.x#azure-auth-fails-uniform-vmss) |
+
 
 ## Vault companion updates
 
@@ -149,6 +162,7 @@ Follow the learn more links for more information, or browse the list of
     </td>
   </tr>
 
+
   <tr>
     <td style={{verticalAlign: 'middle'}}>
       Static secret caching
@@ -233,8 +247,7 @@ Follow the learn more links for more information, or browse the list of
     </td>
     <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
     <td style={{verticalAlign: 'middle'}}>
-      
-      Use automatic identity tokes for workload identity federation 
+      Use automatic identity tokes for workload identity federation
       authentication flows with the AWS secret engine without explicitly
       configuring sensitive security credentials.
       <br /><br />

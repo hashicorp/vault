@@ -1,0 +1,12 @@
+### Duplicate identity groups created when concurrent requests sent to the primary and PR secondary cluster
+
+#### Affected versions
+- All Enterprise versions from 0.7.0 up
+
+#### Issue
+Duplicate identity groups are groups that have the same name, and should not be possible in vault. However, there is a race condition
+in which duplicate groups are possible. If more than 1 create group request is sent at the same time to a Primary Cluster and 
+the PR secondary cluster, it can result in group duplicates.
+
+#### Workaround
+All create group requests should be sent to the primary cluster.

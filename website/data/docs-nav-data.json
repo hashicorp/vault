@@ -361,7 +361,7 @@
           },
           {
             "title": "TCP",
-            "routes": [  
+            "routes": [
               {
                 "title": "Overview",
                 "path": "configuration/listener/tcp"
@@ -386,6 +386,15 @@
           "color": "neutral"
         },
         "path": "configuration/replication"
+      },
+      {
+        "title": "<code>reporting</code>",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
+        "path": "configuration/reporting"
       },
       {
         "title": "<code>seal</code>",
@@ -440,6 +449,11 @@
       },
       {
         "title": "<code>sentinel</code>",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        },
         "path": "configuration/sentinel"
       },
       {
@@ -1097,7 +1111,7 @@
             "path": "commands/transform/import"
           }
         ]
-      },      
+      },
       {
         "title": "<code>unwrap</code>",
         "path": "commands/unwrap"
@@ -1976,8 +1990,25 @@
     "path": "interoperability-matrix"
   },
   {
-    "title": "Troubleshoot",
-    "href": "https://learn.hashicorp.com/tutorials/vault/troubleshooting-vault"
+    "title": "Troubleshoot Vault",
+    "routes": [
+      {
+        "title": "Generate a root token",
+        "path": "troubleshoot/generate-root-token"
+      },
+      {
+        "title": "Troubleshoot lease errors",
+        "path": "troubleshoot/lease-issues"
+      },
+      {
+        "title": "Tune the lease TTL",
+        "path": "troubleshoot/tune-lease-ttl"
+      },
+      {
+        "title": "Troubleshooting tutorials",
+        "href": "https://learn.hashicorp.com/tutorials/vault/troubleshooting-vault"
+      }
+    ]
   },
   {
     "divider": true
@@ -2189,8 +2220,12 @@
                         "path": "platform/k8s/vso/sources/vault"
                       },
                       {
-                        "title": "Auth Methods",
+                        "title": "Authentication",
                         "routes": [
+                          {
+                            "title": "Overview",
+                            "path": "platform/k8s/vso/sources/vault/auth"
+                          },
                           {
                             "title": "AWS",
                             "path": "platform/k8s/vso/sources/vault/auth/aws"
@@ -2204,6 +2239,10 @@
                       {
                         "title": "Encrypted client cache",
                         "path": "platform/k8s/vso/sources/vault/client-cache"
+                      },
+                      {
+                        "title": "Instant updates",
+                        "path": "platform/k8s/vso/sources/vault/instant-updates"
                       }
                     ]
                   },
@@ -2699,6 +2738,10 @@
           {
             "title": "Manual license utilization reporting",
             "path": "enterprise/license/manual-reporting"
+          },
+          {
+            "title": "Product usage reporting",
+            "path": "enterprise/license/product-usage-reporting"
           },
           {
             "title": "FAQ",
