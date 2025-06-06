@@ -16,6 +16,12 @@ module "backend_raft" {
   source = "./modules/backend_raft"
 }
 
+module "benchmark" {
+  source = "./modules/benchmark"
+
+  ssh_keypair = var.aws_ssh_keypair_name
+}
+
 // Find any artifact in Artifactory. Requires the version, revision, and edition.
 module "build_artifactory" {
   source = "./modules/build_artifactory_artifact"
@@ -46,6 +52,10 @@ module "create_vpc" {
 
   environment = "ci"
   common_tags = var.tags
+}
+
+module "create_metrics_security_groups" {
+  source = "./modules/create_metrics_security_groups"
 }
 
 module "choose_follower_host" {
