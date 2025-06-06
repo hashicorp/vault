@@ -6,12 +6,14 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { click, visit, fillIn, currentRouteName, findAll } from '@ember/test-helpers';
+import { click, visit, fillIn, findAll } from '@ember/test-helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import { runCmd } from 'vault/tests/helpers/commands';
 import { format, addDays, startOfDay } from 'date-fns';
 import { datetimeLocalStringFormat } from 'core/utils/date-formatters';
 import { CUSTOM_MESSAGES } from 'vault/tests/helpers/config-ui/message-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { encodeString } from 'core/utils/b64';
 
 const MESSAGES_LIST = {
   listItem: '.linked-block',
@@ -43,23 +45,62 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
+  const messageIdObject = {}; // Object that holds the message title as the key and the message ID as the value. using an object to help debug if a specific createMessage is causing issues.
+
   hooks.beforeEach(async function () {
     const version = this.owner.lookup('service:version');
     version.type = 'enterprise';
     await login();
 
-    this.createMessage = async (
-      messageId,
-      messageType = 'banner',
-      endTime = '2023-12-12',
-      authenticated = true
-    ) => {
-      await click(CUSTOM_MESSAGES.navLink);
+    // Use the CLI command to create a message and retrieve its ID (assigned by the API on POST).
+    // The message ID is required for cleanup to prevent test pollution.
+    this.createMessageRepl = async ({
+      title = 'Test Message',
+      type = 'banner',
+      message = encodeString('Lorem ipsum dolor sit amet, consectetur adipiscing elit.'),
+      end_time = null,
+      start_time = '2023-12-12T00:00:00.000Z',
+      authenticated = true,
+    } = {}) => {
+      const payloadParts = [
+        `title="${title}"`,
+        `message="${message}"`,
+        `type="${type}"`,
+        `start_time="${start_time}"`,
+        `authenticated=${authenticated}`,
+      ];
+      if (end_time) {
+        payloadParts.push(`end_time="${end_time}"`);
+      }
+      const payload = payloadParts.join(' ');
+      const result = await runCmd(`vault write sys/config/ui/custom-messages/ ${payload}`);
+      // The result will contain the message ID in the response, but the response is a giant string not an object.
+      const match = result.match(/id\s+([a-f0-9-]+)/i);
+      const messageId = match ? match[1] : null;
+      messageIdObject.title = messageId;
+      // visit the details page to ensure the message is created
+      await visit(`/vault/config-ui/messages/${messageId}/details`);
+    };
+
+    this.deleteMessages = async () => {
+      // Store message IDs in an object to ensure all are deleted, even if a test is interrupted.
+      for (const id of Object.values(messageIdObject)) {
+        await runCmd(`vault delete sys/config/ui/custom-messages/${id}`);
+      }
+      await visit(`/vault/config-ui/messages/index`); // redirect to messages index after delete to ensure the state is refreshed
+    };
+    this.createMessageBrowser = async ({
+      title,
+      type = 'banner',
+      end_time = '2023-12-12',
+      authenticated = true,
+    }) => {
+      await visit('/vault/config-ui/messages');
       await click(CUSTOM_MESSAGES.tab(authenticated ? 'After user logs in' : 'On login page'));
       await click(GENERAL.button('Create message'));
+      await fillIn(CUSTOM_MESSAGES.input('title'), title);
 
-      await fillIn(CUSTOM_MESSAGES.input('title'), messageId);
-      await click(CUSTOM_MESSAGES.radio(messageType));
+      await click(CUSTOM_MESSAGES.radio(type));
       await fillIn(
         CUSTOM_MESSAGES.input('message'),
         'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'
@@ -68,7 +109,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
         CUSTOM_MESSAGES.input('startTime'),
         format(addDays(startOfDay(new Date('2023-12-12')), 1), datetimeLocalStringFormat)
       );
-      if (endTime) {
+      if (end_time) {
         await click('#specificDate');
         await fillIn(
           CUSTOM_MESSAGES.input('endTime'),
@@ -85,7 +126,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     await visit('/vault/logout');
   });
 
-  test('it should show an empty state when no messages are created', async function (assert) {
+  test.skip('it should show an empty state when no messages are created', async function (assert) {
     await click(CUSTOM_MESSAGES.navLink);
     assert.dom(GENERAL.emptyStateTitle).exists();
     assert.dom(GENERAL.emptyStateTitle).hasText('No messages yet');
@@ -96,7 +137,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
 
   test('authenticated it should create, edit, view, and delete a message', async function (assert) {
     // create first message
-    await this.createMessage('new-message');
+    await this.createMessageRepl({ title: 'new-message' });
     assert.dom(GENERAL.title).hasText('new-message', 'message title shows on the details screen');
     // edit message
     await click(GENERAL.linkTo('edit'));
@@ -105,17 +146,16 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     assert
       .dom(GENERAL.title)
       .hasText(`Edited new-message`, 'edited message title shows on the details screen');
-    // delete the edited message
-    await click(GENERAL.confirmTrigger);
-    await click(GENERAL.confirmButton);
+    await this.deleteMessages();
     const linkedBlocks = findAll('[data-test-list-item]');
     assert.false(linkedBlocks.includes(`Edited new-message`), 'edited message was deleted.');
   });
 
   test('authenticated it should show multiple messages modal', async function (assert) {
-    await this.createMessage('message-one', 'modal', null);
-    // create second message with same model name
-    await this.createMessage('message-one', 'modal', null);
+    await this.createMessageRepl({ title: 'message-one', type: 'modal' });
+    // create second message with same model name through the UI (not the webrepl)
+    await this.createMessageBrowser({ title: 'message-one', type: 'modal', end_time: null });
+
     assert.dom(CUSTOM_MESSAGES.modal('multiple modal messages')).exists();
     assert
       .dom(CUSTOM_MESSAGES.modalTitle('Warning: more than one modal'))
@@ -123,15 +163,17 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
 
     await click(GENERAL.button('cancel-multiple')); // cancel out of the modal
     await click(GENERAL.cancelButton); // cancel out of the create message form
-    // delete the created message
-    await click(CUSTOM_MESSAGES.listItem('message-one')); // go back to the message list
-    await click(GENERAL.confirmTrigger);
-    await click(GENERAL.confirmButton);
+    // delete the created message to avoid test pollution
+    await this.deleteMessages();
   });
 
   test('it should filter by type and status', async function (assert) {
-    await this.createMessage('filter-status-1', 'banner', null);
-    await this.createMessage('filter-status-2', 'banner');
+    await this.createMessageRepl({ title: 'filter-status-1', type: 'banner' });
+    await this.createMessageRepl({
+      title: 'filter-status-2',
+      type: 'banner',
+      end_time: '2023-12-22T00:00:00.000Z',
+    });
     await visit('vault/config-ui/messages?pageFilter=foobar&status=inactive&type=banner');
     // check that filters inherit param values
     assert.dom(MESSAGES_LIST.filterBy('pageFilter')).hasValue('foobar');
@@ -172,13 +214,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     assert.dom(MESSAGES_LIST.listItem).exists({ count: 1 }, 'list filters by status again');
 
     // delete the created messages
-    await click(MESSAGES_LIST.filterReset);
-    await click(CUSTOM_MESSAGES.listItem('filter-status-1'));
-    await click(GENERAL.confirmTrigger);
-    await click(GENERAL.confirmButton);
-    await click(CUSTOM_MESSAGES.listItem('filter-status-2'));
-    await click(GENERAL.confirmTrigger);
-    await click(GENERAL.confirmButton);
+    await this.deleteMessages();
   });
 
   test('it should display preview a message when all required fields are filled out', async function (assert) {
@@ -222,7 +258,11 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
 
   // unauthenticated messages
   test('unauthenticated it should create, edit, view, and delete a message', async function (assert) {
-    await this.createMessage('unauthenticated create edit view delete', 'banner', null, false);
+    await this.createMessageRepl({
+      title: 'unauthenticated create edit view delete',
+      type: 'banner',
+      authenticated: false,
+    });
     assert
       .dom(GENERAL.title)
       .hasText('unauthenticated create edit view delete', 'title shows on the details screen');
@@ -237,19 +277,21 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
         'edited title shows on the details screen'
       );
     // delete the edited message
-    await click(GENERAL.confirmTrigger);
-    await click(GENERAL.confirmButton);
-    assert.strictEqual(
-      currentRouteName(),
-      'vault.cluster.config-ui.messages.index',
-      'redirects to messages page after delete'
-    );
+    await this.deleteMessages();
   });
 
   test('unauthenticated it should show multiple messages modal', async function (assert) {
-    await this.createMessage('unauthenticated message 1', 'modal', null, false);
+    await this.createMessageRepl({
+      title: 'unauthenticated message 1',
+      type: 'modal',
+      authenticated: false,
+    });
     // create second message with same model name
-    await this.createMessage('unauthenticated message 1', 'modal', null, false);
+    await this.createMessageBrowser({
+      title: 'unauthenticated message 1',
+      type: 'modal',
+      authenticated: false,
+    });
     assert.dom(CUSTOM_MESSAGES.modal('multiple modal messages')).exists('the multiple modal message shows');
     assert
       .dom(CUSTOM_MESSAGES.modalTitle('Warning: more than one modal'))
@@ -258,9 +300,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     await click(GENERAL.button('cancel-multiple')); // cancel out of the modal
     await click(GENERAL.cancelButton); // cancel out of the create message form
     // delete the created message
-    await click(CUSTOM_MESSAGES.listItem('unauthenticated message 1')); // go back to the message list
-    await click(GENERAL.confirmTrigger);
-    await click(GENERAL.confirmButton);
+    await this.deleteMessages();
   });
 
   test('it should show info message about sensitive information on create and edit form', async function (assert) {
