@@ -256,7 +256,7 @@ module('Acceptance | oidc provider', function (hooks) {
     await fillIn(GENERAL.inputByAttr('password'), USER_PASSWORD);
     await click(AUTH_FORM.advancedSettings);
     await fillIn(GENERAL.inputByAttr('path'), authMethodPath);
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
 
     // permission denied error redirect user to log in
     // if the route remains "vault.cluster.oidc-provider" - it did not redirect

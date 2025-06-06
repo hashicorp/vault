@@ -412,8 +412,7 @@ module('Integration | Component | auth | page', function (hooks) {
       assert
         .dom(AUTH_FORM.tabs)
         .exists({ count: 1 }, 'it is rendering the default view because only one tab renders');
-
-      await click(AUTH_FORM.otherMethodsBtn);
+      await click(GENERAL.button('Sign in with other methods'));
       assert.dom(GENERAL.backButton).exists('it toggles to backup method view');
       assert.dom(AUTH_FORM.tabs).exists({ count: 3 }, 'it renders 3 backup type tabs');
       assert
