@@ -1,6 +1,6 @@
 ---
 layout: docs
-page_title: Integrated Storage Autopilot
+page_title: Integrated Storage autopilot
 description: Learn about the autopilot subsystem of integrated raft storage in Vault.
 ---
 
@@ -45,10 +45,10 @@ Follower node health is determined by 2 factors.
 
 ### Default configuration
 
-By default, Autopilot will be enabled with clusters using Vault 1.7+,
+By default, autopilot will be enabled with clusters using Vault 1.7+,
 although dead server cleanup is not enabled by default. Upgrade of
 Raft clusters deployed with older versions of Vault will also transition to use
-Autopilot automatically.
+autopilot automatically.
 
 @include 'autopilot/config.mdx'
 
@@ -63,7 +63,7 @@ provide the autopilot functionality.
 
 [Automated Upgrades](/vault/docs/enterprise/automated-upgrades) lets you automatically upgrade a cluster of Vault nodes to a new version as
 updated server nodes join the cluster. Once the number of nodes on the new version is
-equal to or greater than the number of nodes on the old version, Autopilot will promote
+equal to or greater than the number of nodes on the old version, autopilot will promote
 the newer versioned nodes to voters, demote the older versioned nodes to non-voters,
 and initiate a leadership transfer from the older version leader to one of the newer
 versioned nodes. After the leadership transfer completes, the older versioned non-voting
@@ -81,7 +81,7 @@ increase read scalability.
 
 ## Replication
 
-DR secondary and Performance secondary clusters have their own Autopilot configurations, managed
+DR secondary and Performance secondary clusters have their own autopilot configurations, managed
 independently of their primary.
 
 The [Autopilot API](/vault/api-docs/system/storage/raftautopilot) uses DR operation tokens for

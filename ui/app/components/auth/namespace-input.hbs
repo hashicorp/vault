@@ -4,14 +4,14 @@
 }}
 
 <div class="background-neutral-50 has-padding-l">
-  {{#if @hvdManagedNamespace}}
+  {{#if this.flags.hvdManagedNamespaceRoot}}
     <Hds::Form::Field @layout="vertical" disabled={{@disabled}} as |F|>
       <F.Label>Namespace</F.Label>
       <F.Control>
         <Hds::SegmentedGroup class="is-fullwidth" as |SG|>
           <SG.TextInput
             @type="text"
-            @value="/{{@hvdManagedNamespace}}"
+            @value="/{{this.flags.hvdManagedNamespaceRoot}}"
             aria-label="Root namespace for H-C-P managed cluster"
             class="one-fourth-width"
             name="hvd-root-namespace"
@@ -19,8 +19,9 @@
             data-test-managed-namespace-root
           />
           <SG.TextInput
-            {{on "input" @updateNamespace}}
-            @value={{@namespaceValue}}
+            {{on "input" this.handleInput}}
+            {{did-insert this.maybeRefocus}}
+            @value={{this.namespaceInput}}
             autocomplete="off"
             disabled={{@disabled}}
             name="namespace"
@@ -32,8 +33,9 @@
     </Hds::Form::Field>
   {{else}}
     <Hds::Form::TextInput::Field
-      {{on "input" @updateNamespace}}
-      @value={{@namespaceValue}}
+      {{on "input" this.handleInput}}
+      {{did-insert this.maybeRefocus}}
+      @value={{this.namespaceInput}}
       autocomplete="off"
       disabled={{@disabled}}
       name="namespace"

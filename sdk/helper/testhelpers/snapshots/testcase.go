@@ -13,13 +13,13 @@ import (
 
 type SnapshotTestCase struct {
 	backend         logical.Backend
-	regularStorage  *logical.InmemStorage
-	snapshotStorage *logical.InmemStorage
+	regularStorage  logical.Storage
+	snapshotStorage logical.Storage
 	storageRouter   logical.Storage
 }
 
 type storageProvider struct {
-	storage *logical.InmemStorage
+	storage logical.Storage
 }
 
 func (s *storageProvider) SnapshotStorage(ctx context.Context, id string) (logical.Storage, error) {
@@ -43,11 +43,11 @@ func NewSnapshotTestCase(t testing.TB, backend logical.Backend) *SnapshotTestCas
 	return s
 }
 
-func (s *SnapshotTestCase) SnapshotStorage() *logical.InmemStorage {
+func (s *SnapshotTestCase) SnapshotStorage() logical.Storage {
 	return s.snapshotStorage
 }
 
-func (s *SnapshotTestCase) RegularStorage() *logical.InmemStorage {
+func (s *SnapshotTestCase) RegularStorage() logical.Storage {
 	return s.regularStorage
 }
 
@@ -74,7 +74,11 @@ func (s *SnapshotTestCase) runCase(t testing.TB, path string, op logical.Operati
 		Storage:   s.storageRouter,
 	})
 	require.NoError(t, err)
-	require.Equal(t, normalResp.Data, normalResp2.Data)
+	if normalResp == nil || normalResp2 == nil {
+		require.Equal(t, normalResp, normalResp2)
+	} else {
+		require.Equal(t, normalResp.Data, normalResp2.Data)
+	}
 }
 
 // RunList runs a list operation without a snapshot, a list operation from a
@@ -110,6 +114,7 @@ func (s *SnapshotTestCase) DoRecover(t testing.TB, path string) (*logical.Respon
 		Path:               path,
 		Operation:          logical.RecoverOperation,
 		Storage:            s.storageRouter,
+		Data:               readResp.Data,
 		RequiresSnapshotID: "snapshot_id",
 	})
 }

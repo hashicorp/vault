@@ -59,11 +59,28 @@ module('Acceptance | settings/auth/enable', function (hooks) {
       .dom(GENERAL.infoRowValue('Default Lease TTL'))
       .hasText('1 month 1 day', 'shows system default TTL');
     assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('1 month 1 day', 'shows the proper max TTL');
+    assert
+      .dom(GENERAL.infoRowValue('UI login link'))
+      .doesNotExist('Login link does not render for unsupported methods');
 
     // check edit form TTL values
     await click('[data-test-configure-link]');
     assert.dom(GENERAL.toggleInput('Default Lease TTL')).isNotChecked('default lease ttl is still unset');
     assert.dom(GENERAL.toggleInput('Max Lease TTL')).isNotChecked('max lease ttl is still unset');
+
+    // cleanup
+    await runCmd(deleteAuthCmd(path));
+  });
+
+  test('it renders direct login link for supported method', async function (assert) {
+    const path = `oidc-config-${this.uid}`;
+    const type = 'oidc';
+    await visit('/vault/settings/auth/enable');
+    await mountBackend(type, path);
+    await click(GENERAL.breadcrumbAtIdx(1));
+    assert
+      .dom(GENERAL.infoRowValue('UI login link'))
+      .hasText(`${window.origin}/ui/vault/auth?with=${path}%2F`);
 
     // cleanup
     await runCmd(deleteAuthCmd(path));
