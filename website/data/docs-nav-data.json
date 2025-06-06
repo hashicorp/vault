@@ -279,7 +279,7 @@
     ]
   },
 
-  
+
   { "divider": true },
   { "heading": "OPERATIONS" },
 
@@ -358,7 +358,7 @@
       }
     ]
   },
-  
+
   {
     "title": "Configure Vault",
     "routes": [
@@ -398,10 +398,10 @@
           "color": "neutral"
         },
         "path": "configuration/entropy-augmentation"
-      },  
-      
+      },
+
       { "heading": "Configuration stanzas" },
-    
+
       {
         "title": "<code>adaptive_overload_protection</code>",
         "badge": {
@@ -2207,6 +2207,15 @@
             "path": "secrets/pki/cmpv2"
           },
           {
+            "title": "Simple Certificate Enrollment Protocol (SCEP)",
+            "badge": {
+              "text": "ENT",
+              "type": "filled",
+              "color": "neutral"
+            },
+            "path": "secrets/pki/scep"
+          },
+          {
             "title": "Troubleshooting ACME",
             "path": "secrets/pki/troubleshooting-acme"
           }
@@ -2529,6 +2538,15 @@
             ]
           }
         ]
+      },
+      {
+        "title": "SCEP",
+        "path": "auth/scep",
+        "badge": {
+          "text": "ENT",
+          "type": "filled",
+          "color": "neutral"
+        }
       },
       {
         "title": "TLS Certificates",
