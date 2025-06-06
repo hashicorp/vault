@@ -257,7 +257,7 @@ func (bus *EventBus) SubscribeMultipleNamespaces(ctx context.Context, namespaceP
 }
 
 // subscribeInternal creates the pipeline and connects it to the event bus to receive events. If the
-// clusterNode is specified, then the namespacePathPatterns, pattern, and bexprFilter are ignored,
+// clusterNode is specified, then the namespacePathPatterns and pattern are ignored,
 // and instead this subscription will be tied to the given cluster node's filter.
 func (bus *EventBus) subscribeInternal(ctx context.Context, namespacePathPatterns []string, pattern string, bexprFilter string, clusterNode *string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
 	// subscriptions are still stored even if the bus has not been started
@@ -278,7 +278,7 @@ func (bus *EventBus) subscribeInternal(ctx context.Context, namespacePathPattern
 
 	var filterNode *eventlogger.Filter
 	if clusterNode != nil {
-		filterNode, err = newClusterNodeFilterNode(bus.filters, clusterNodeID(*clusterNode))
+		filterNode, err = newClusterNodeFilterNode(bus.filters, clusterNodeID(*clusterNode), bexprFilter)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -288,6 +288,7 @@ func (bus *EventBus) subscribeInternal(ctx context.Context, namespacePathPattern
 			return nil, nil, err
 		}
 		bus.filters.addPattern(bus.filters.self, namespacePathPatterns, pattern)
+		bus.filters.addGlobalPattern(namespacePathPatterns, pattern)
 	}
 	err = bus.broker.RegisterNode(eventlogger.NodeID(filterNodeID), filterNode)
 	if err != nil {
@@ -303,6 +304,7 @@ func (bus *EventBus) subscribeInternal(ctx context.Context, namespacePathPattern
 	asyncNode := newAsyncNode(ctx, bus.logger, bus.broker, func() {
 		if clusterNode == nil {
 			bus.filters.removePattern(bus.filters.self, namespacePathPatterns, pattern)
+			bus.filters.removeGlobalPattern(namespacePathPatterns, pattern)
 		}
 	})
 	err = bus.broker.RegisterNode(eventlogger.NodeID(sinkNodeID), asyncNode)
@@ -394,18 +396,37 @@ func (bus *EventBus) NewClusterNodeSubscription(ctx context.Context, clusterNode
 	return bus.subscribeInternal(ctx, nil, "", "", &clusterNode)
 }
 
+// NewClusterNodeSubscriptionNonLocal creates a new subscription to all events
+// that match the given cluster node's filter, excluding local mount events.
+func (bus *EventBus) NewClusterNodeSubscriptionNonLocal(ctx context.Context, clusterNode string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
+	return bus.subscribeInternal(ctx, nil, "", "source_plugin_is_local == false", &clusterNode)
+}
+
 // creates a new filter node that is tied to the filter for a given cluster node
-func newClusterNodeFilterNode(filters *Filters, c clusterNodeID) (*eventlogger.Filter, error) {
+func newClusterNodeFilterNode(filters *Filters, c clusterNodeID, bexprFilter string) (*eventlogger.Filter, error) {
+	var evaluator *bexpr.Evaluator
+	if bexprFilter != "" {
+		var err error
+		evaluator, err = bexpr.CreateEvaluator(bexprFilter)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return &eventlogger.Filter{
 		Predicate: func(e *eventlogger.Event) (bool, error) {
 			eventRecv := e.Payload.(*logical.EventReceived)
 			eventNs := strings.Trim(eventRecv.Namespace, "/")
-			if filters.clusterNodeMatch(c, &namespace.Namespace{
+			if !filters.clusterNodeMatch(c, &namespace.Namespace{
 				Path: eventNs,
 			}, logical.EventType(eventRecv.EventType)) {
-				return true, nil
+				return false, nil
 			}
-			return false, nil
+
+			// apply go-bexpr filter
+			if evaluator != nil {
+				return evaluator.Evaluate(eventRecv.BexprDatum())
+			}
+			return true, nil
 		},
 	}, nil
 }
