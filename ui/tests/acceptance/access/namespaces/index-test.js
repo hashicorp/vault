@@ -177,21 +177,91 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
   });
 
   test('it should show button to create new namespace', async function (assert) {
-    const createNamespaceLink = GENERAL.linkTo('create-namespace');
-
     // Go to the manage namespaces page
     await visit('/vault/access/namespaces');
 
     assert
-      .dom(createNamespaceLink)
+      .dom(GENERAL.linkTo('create-namespace'))
       .hasText('Create namespace', 'Create namespace button is rendered correctly');
     assert
-      .dom(createNamespaceLink)
+      .dom(GENERAL.linkTo('create-namespace'))
       .hasAttribute(
         'href',
         '/ui/vault/access/namespaces/create',
         'Create namespace button has the correct href attribute'
       );
+  });
+
+  test('it should update namespace list after create/delete without manual refresh', async function (assert) {
+    const testNS = 'test-create-ns';
+
+    // Go to the manage namespaces page
+    await visit('/vault/access/namespaces');
+
+    // Verify test-create-ns does not exist in the Manage Namespace page
+    await fillIn(GENERAL.filterInputExplicit, testNS);
+    await click(GENERAL.filterInputExplicitSearch);
+    assert.dom('.list-item-row').exists({ count: 0 }, `"${testNS}" namespace is not displayed on the page`);
+
+    // Verify test-create-ns does not exist in the Namespace Picker
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, testNS);
+    assert.strictEqual(
+      findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
+      0,
+      `"${testNS}" is not displayed in the namespace picker`
+    );
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+
+    // Create a new namespace
+    assert
+      .dom(GENERAL.linkTo('create-namespace'))
+      .hasText('Create namespace', 'Create namespace button is displayed');
+    await click(GENERAL.linkTo('create-namespace'));
+    assert.dom(GENERAL.inputByAttr('path')).exists('Create namespace input field is displayed');
+    await fillIn(GENERAL.inputByAttr('path'), testNS);
+    assert.dom('[data-test-edit-form-submit]').exists('Save button is displayed');
+    await click('[data-test-edit-form-submit]');
+
+    // Verify test-create-ns does not exist in the Manage Namespace page
+    await fillIn(GENERAL.filterInputExplicit, testNS);
+    await click(GENERAL.filterInputExplicitSearch);
+    assert.dom('.list-item-row').exists({ count: 1 }, `"${testNS}" namespace is displayed on the page`);
+
+    // Verify test-create-ns exists in the Namespace Picker without refresh
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, testNS);
+    assert.strictEqual(
+      findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
+      1,
+      `"${testNS}" is displayed in the namespace picker`
+    );
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+
+    // Delete the created namespace
+    assert.dom(GENERAL.menuTrigger).exists('Namespace options menu is displayed');
+    await click(GENERAL.menuTrigger);
+    assert
+      .dom('.hds-dropdown-list-item:nth-of-type(2)')
+      .hasText('Delete', 'Delete namespace option is displayed');
+    await click('.hds-dropdown-list-item:nth-of-type(2) button');
+    assert.dom(GENERAL.confirmButton).hasText('Confirm', 'Confirm namespace deletion button is shown');
+    await click(GENERAL.confirmButton);
+
+    // Verify test-create-ns does not exist in the Manage Namespace page
+    await fillIn(GENERAL.filterInputExplicit, testNS);
+    await click(GENERAL.filterInputExplicitSearch);
+    assert.dom('.list-item-row').exists({ count: 0 }, `"${testNS}" namespace is not displayed on the page`);
+
+    // Verify test-create-ns does not exist in the Namespace Picker
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, testNS);
+    assert.strictEqual(
+      findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
+      0,
+      `"${testNS}" is not displayed in the namespace picker`
+    );
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
   });
 
   test('it should filter namespaces based on search input', async function (assert) {
@@ -276,8 +346,9 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
       );
 
     // Verify that the user can delete the namespace
-    const deleteNamespaceButton = '.hds-dropdown-list-item:nth-of-type(2)';
-    assert.dom(deleteNamespaceButton).hasText('Delete', 'Allow users to delete the namespace');
+    assert
+      .dom('.hds-dropdown-list-item:nth-of-type(2)')
+      .hasText('Delete', 'Delete namespace option is displayed');
 
     // Cleanup: Delete namespace(s) via the CLI
     await deleteNSFromPaths([namespace]);
