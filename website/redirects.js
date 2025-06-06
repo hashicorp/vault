@@ -187,7 +187,7 @@ module.exports = [
   },
   {
     source: '/vault/docs/release-notes/1.19.0',
-    destination: '/vault/docs/updates/release-notes',
+    destination: '/vault/docs/v1.19.x/updates/release-notes',
     permanent: true,
   },
   {
