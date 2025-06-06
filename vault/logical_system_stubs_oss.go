@@ -31,3 +31,7 @@ func (s *SystemBackend) makeSnapshotSource(ctx context.Context, _ *framework.Fie
 	}
 	return snapshots.NewManualSnapshotSource(body), nil
 }
+
+func entWrappedPluginsCRUDPath(b *SystemBackend) []*framework.Path {
+	return []*framework.Path{b.pluginsCatalogCRUDPath()}
+}
