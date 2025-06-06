@@ -157,6 +157,10 @@
             "path": "concepts/integrated-storage/autopilot"
           },
           {
+            "title": "Manage snapshots",
+            "path": "concepts/integrated-storage/manage-snapshots"
+          },
+          {
             "title": "Migration checklist",
             "path": "concepts/integrated-storage/migration-checklist"
           },
