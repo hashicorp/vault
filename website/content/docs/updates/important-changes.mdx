@@ -25,13 +25,14 @@ before upgrading Vault.
 
 ### Transit support for Ed25519ph and Ed25519ctx signatures ((#ed25519))
 
-| Change       | Affected version | Affected deployments
+| Change       | Affected version | Fixed version
 | ------------ | ---------------- | --------------------
-| New behavior | 1.19.0           | Transit plugins using Ed25519 keys
+| New behavior | 1.19.0           | N/A
 
-Prior versions of sign and verify API endpoints backed by an Ed25519 key ignored
-`prehashed=true` or `hash_algorithm=sha2-512` parameters. As a result, the
-endpoint always returned or verified a Pure Ed25519 signature.
+In Vault deployments using Transit plugins with Ed25519 keys, prior versions of
+sign and verify API endpoints backed by an Ed25519 key ignored `prehashed=true`
+or `hash_algorithm=sha2-512` parameters. As a result, the endpoint always
+returned or verified a Pure Ed25519 signature.
 
 The Transit plugin now assumes input hashed using the SHA-512 algorithm and
 returns an Ed25519ph or Pure Ed25519 signature based on the configuration of
@@ -53,9 +54,9 @@ returns an Ed25519ph or Pure Ed25519 signature based on the configuration of
 
 ### Identity system duplicate cleanup ((#dedupe)) <EnterpriseAlert inline="true" />
 
-| Change       | Affected version | Affected deployments
+| Change       | Affected version | Fixed version
 | ------------ | ---------------- | --------------------
-| New behavior | 1.19.0           | any
+| New behavior | 1.19.0           | N/A
 
 Vault 1.19.0 includes a feature flag that, when enabled, forces deduplication of
 existing identities and forbids duplicate identities going forward. Once
@@ -80,9 +81,9 @@ resolves safely.
 
 ### Anonymized cluster data returned with license utilization ((#anon-data)) <EnterpriseAlert inline="true" />
 
-| Change       | Affected version | Affected deployments
+| Change       | Affected version | Fixed version
 | ------------ | ---------------- | --------------------
-| New behavior | 1.19.0           | any
+| New behavior | 1.19.0           | N/A
 
 As of version 1.19.0 Vault Enterprise collects
 [anonymous usage data](/vault/docs/enterprise/license/product-usage-reporting#anonymous-product-usage-reporting)
@@ -93,9 +94,9 @@ license reporting.
 
 ### RADIUS authentication is no longer case sensitive ((#case-sensitive))
 
-| Change       | Affected version | Affected deployments
+| Change       | Affected version | Fixed version
 | ------------ | ---------------- | --------------------
-| New behavior | 1.19.0           | any
+| New behavior | 1.19.0           | N/A
 
 As of Vault 1.19.0 the RADIUS authentication plugin does not enforce case
 sensitivity on entered credentials.
@@ -103,9 +104,9 @@ sensitivity on entered credentials.
 
 ### Strict validation for Azure auth login requests ((#strict-azure))
 
-| Change       | Affected version                 | Affected deployments
+| Change       | Affected version                 | Fixed version
 | ------------ | -------------------------------- | --------------------
-| New behavior | 1.19.1, 1.18.7, 1.17.14, 1.16.18 | any
+| New behavior | 1.16.18, 1.17.14, 1.18.7, 1.19.1 | N/A
 
 Azure auth plugin requires `resource_group_name`, `vm_name`, and `vmss_name` to match the JWT claims on login
 
@@ -126,9 +127,9 @@ requirements.
 
 ### LDAP user DN search with upndomain ((#ldap))
 
-| Change       | Affected version | Affected deployments
+| Change       | Affected version | Fixed version
 | ------------ | ---------------- | --------------------
-| Breaking     | 1.19.x           | any
+| Breaking     | 1.19.x           | N/A
 
 Security improvements to
 [`hashicorp/cap/ldap`](https://github.com/hashicorp/cap/tree/main/ldap) ensure
@@ -151,15 +152,15 @@ details.
 
 ### Vault log file missing subsystem logs ((#missing-logs))
 
-| Change       | Affected version                 | Affected deployments
+| Change       | Affected version                 | Fixed version
 | ------------ | -------------------------------- | --------------------
-| Bug          | 1.16.0, 1.17.13, 1.18.6, 1.19.0  | any
+| Bug          | 1.16.0, 1.17.13, 1.18.6, 1.19.0  | 1.16.18, 1.17.14, 1.18.7, 1.19.1
 
 Log entries, including plugin logs, for Vault deployments using `log_file` do
 not capture all relevant information even though the information appears as
 expected in standard error and standard output.
 
-#### Recommendation
+#### Workaround
 
 Upgrade to one of the following Vault versions: 1.16.18+, 1.17.14+, 1.18.7+,
 1.19.1+
@@ -167,15 +168,15 @@ Upgrade to one of the following Vault versions: 1.16.18+, 1.17.14+, 1.18.7+,
 
 ### Automated rotation stops after unseal ((#rotation-stops))
 
-| Change       | Affected version                 | Affected deployments
-| ------------ | -------------------------------- | --------------------
-| Bug          | 1.19.0 - 1.19.2  | any
+| Change       | Affected version | Fixed version
+| ------------ | ---------------- | --------------------
+| Bug          | 1.19.0 - 1.19.2  | 1.19.3
 
 After unsealing Vault, the rotation manager does not reinstate the rotation
 queue. The stopped queue then causes automated root credential rotations to
 stop.
 
-#### Recommendation
+#### Workaround
 
 Update the root configuration on affected backends to recreate the rotation
 schedule with the previous values.
@@ -202,16 +203,16 @@ $ vault write gcp/config/root rotation_period="<old_period>"
 
 ### Azure authentication fails to authenticate Uniform VMSS instances ((#azure-vmss))
 
-| Change       | Affected version                 | Affected deployments
-| ------------ | -------------------------------- | --------------------
-| Bug          | 1.16.18-1.16.20, 1.17.14-1.17.16, 1.18.7-1.18.9, 1.19.1-1.19.3 | any
+| Change       | Affected version                                               | Fixed version
+| ------------ | -------------------------------------------------------------- | --------------------
+| Bug          | 1.16.18-1.16.20, 1.17.14-1.17.16, 1.18.7-1.18.9, 1.19.1-1.19.3 | 1.16.21, 1.17.17, 1.18.10, 1.19.4
 
 A previous update to validate JWT claims against the provided VM, VMSS, and
 resource group names without accounting for the uniform VMSS format introduced a
 regression that causes Azure authentication from a uniform VMSS instance with a
 user assigned managed identity on the VMSS to incorrectly return an error.
 
-#### Recommendation
+#### Workaround
 
 Upgrade to one of the following Vault versions: 1.16.21+, 1.17.17+, 1.18.10+,
 1.19.4+
@@ -219,15 +220,15 @@ Upgrade to one of the following Vault versions: 1.16.21+, 1.17.17+, 1.18.10+,
 
 ### External Enterprise plugins cannot run on a standby node when it becomes active ((#external-ent-plugins))
 
-| Change       | Affected version                 | Affected deployments
-| ------------ | -------------------------------- | --------------------
-| Bug          | 1.16.17-1.16.20, 1.17.13-1.17.16, 1.18.6-1.18.9, 1.19.0-1.19.3 | any
+| Change       | Affected version                                               | Fixed version
+| ------------ | -------------------------------------------------------------- | --------------------
+| Bug          | 1.16.17-1.16.20, 1.17.13-1.17.16, 1.18.6-1.18.9, 1.19.0-1.19.3 | 1.16.17, 1.17.17, 1.18.10, 1.19.4
 
 External Enterprise plugins can't run on a standby node when it becomes active
 because standby nodes don't extract the artifact when the plugin
 is registered.
 
-#### Recommendation
+#### Workaround
 
 As a workaround, add the plugin `.zip` artifact on every node and register the plugin on the
 active node. Then, extract the contents of the zip file on the follower nodes
@@ -248,9 +249,9 @@ for more details.
 
 ### AWS STS configuration can fail with unspecified STS endpoints ((#aws-fallback-sts))
 
-| Change       | Affected version | Affected deployments
+| Change       | Affected version | Fixed version
 | ------------ | ---------------- | --------------------
-| Bug          | 1.19.0-1.19.3    | any
+| Bug          | 1.19.0-1.19.3    | 1.19.4
 
 If you leave `sts_endpoint` unset and configure an STS endpoint in the AWS
 secrets plugin **or** upgrade Vault with `sts_endpoint` unset on an existing
@@ -261,7 +262,7 @@ do not match:
 {"errors":["number of regions does not match number of endpoints"]}
 ```
 
-#### Recommendation
+#### Workaround
 
 Explicitly set the default endpoint and region when configuring sts:
 
@@ -279,10 +280,11 @@ Explicitly set the default endpoint and region when configuring sts:
 
 ### Duplicate unseal/seal wrap HSM keys ((#hsm-keys)) <EnterpriseAlert inline="true" />
 
-| Change      | Status | Affected version               | Affected deployments
+| Change      | Status | Affected version               | Fixed version
 | ----------- | ------ | ------------------------------ | --------------------
-| Known issue | Open   | 1.19.x, 1.18.x, 1.17.x, 1.16.x | HSM-HA configurations migrating from Shamir to HSM-backed unseal/seal wraps.
+| Known issue | Open   | 1.19.x, 1.18.x, 1.17.x, 1.16.x | None
 
+In HSM-HA configurations migrating from Shamir to HSM-backed unseal/seal wraps,
 Vault may create duplicate HSM keys when you migrate from Shamir to an
 HSM-backed unseal configuration for high availability (HA) HSM deployments. Key
 duplication can happen even after a seal migration to HSM that initially
@@ -294,7 +296,7 @@ Duplicate HSM keys can cause the following errors:
 [seal-wrapped values](/vault/docs/enterprise/sealwrap#wrapped-parameters).
 - nodes fail to unseal after a restart with errors such as `CKR_DATA_INVALID`.
 
-#### Recommendation
+#### Workaround
 
 Always run Vault with `generate_key = false` and manually create all required
 keys within the HSM during the setup process.
@@ -302,45 +304,45 @@ keys within the HSM during the setup process.
 
 ### Login/token renewal failures after group changes ((#group-writes))
 
-| Change      | Status | Affected version | Affected deployments
+| Change      | Status | Affected version | Fixed version
 | ----------- | ------ | ---------------- | --------------------
-| Known issue | Fixed  | 1.19.0           | any
+| Known issue | Fixed  | 1.19.0           | 1.19.3
 
 Performance standby nodes cannot persist updated group membership to storage.
 As a result, standby nodes return a `500` error during login or token renewal if
 the external group associated with the client entity changes.
 
-#### Recommendation
+#### Workaround
 
 Direct all logins and token renewals to the active/primary node.
 Or upgrade to Vault 1.19.3+
 
 ### Unexpected DB static role rotations on upgrade ((#db-static-role-rotations))
 
-| Change      | Status | Affected version                                                        | Affected deployments
+| Change      | Status | Affected version                                                        | Fixed version
 | ----------- | ------ | ----------------------------------------------------------------------- | --------------------
-| Known issue | Fixed  | 1.19.0 - 1.19.2, 1.18.5 - 1.18.8, 1.17.12 - 1.17.15, 1.16.16 - 1.16.19  | any
+| Known issue | Fixed  | 1.16.16 - 1.16.19, 1.17.12 - 1.17.15, 1.18.5 - 1.18.8, 1.19.0 - 1.19.2  | 1.16.20, 1.17.16, 1.18.9, 1.19.3
 
 Any database static role that was created prior to Vault 1.15.0 will be affected upon upgrading to the affected Vault versions.
 Vault will automatically rotate static database credentials once, for all roles created prior to 1.15.0, when upgrading to affected versions.
 After the one-time rotation, the static roles behave as expected.
 
-#### Recommendation
+#### Workaround
 
 Upgrade to 1.19.3+, 1.18.9+, 1.17.16, 1.16.20+
 
 
 ### Unexpected LDAP static role rotations on upgrade ((#ldap-static-role-rotations))
 
-| Change      | Status | Affected version                                                       | Affected deployments
+| Change      | Status | Affected version                                                       | Fixed version
 | ----------- | ------ | ---------------------------------------------------------------------- | --------------------
-| Known issue | Fixed  | 1.19.0 - 1.19.1, 1.18.5 - 1.18.7, 1.17.12 - 1.17.14, 1.16.16 - 1.16.18 | any
+| Known issue | Fixed  | 1.16.16 - 1.16.19, 1.17.12 - 1.17.15, 1.18.5 - 1.18.8, 1.19.0 - 1.19.2 | 1.16.20, 1.17.16, 1.18.9, 1.19.3
 
 Vault automatically rotates existing static roles tied to LDAP credentials once
 when upgrading to an affected version. After the one-time rotation, the static
 roles behave as expected.
 
-#### Recommendation
+#### Workaround
 
 If you rely on LDAP static roles, upgrade to Vault 1.19.3+, 1.18.9+, 1.17.16+,
 or 1.16.20+.
@@ -348,9 +350,9 @@ or 1.16.20+.
 
 ### Unwanted secret rotation for DB and LDAP roles on restart ((#secret-rotate-on-restart))
 
-| Change      | Status | Affected version                                 | Affected deployments
+| Change      | Status | Affected version                                 | Fixed version
 | ----------- | ------ | ------------------------------------------------ | --------------------
-| Known issue | Fixed  | 1.19.0 - 1.19.2, 1.18.0 - 1.18.8, 1.17.x, 1.16.x | any
+| Known issue | Fixed  | 1.16.x, 1.17.x, 1.18.0 - 1.18.8, 1.19.0 - 1.19.2 | 1.18.9, 1.19.3
 
 Database and LDAP secrets engines both support skipping automatic import
 rotation of static roles with the config-level field
@@ -361,7 +363,7 @@ When either field is `true`, Vault automatically rotates the configured static
 roles when Vault restarts. Vault skips password rotation if the password was
 already rotated before the restart.
 
-#### Recommendation
+#### Workaround
 
 Upgrade to 1.18.9+ or 1.19.3+. If you cannot upgrade, the only workaround is to
 avoid restarting the backend.
