@@ -26,11 +26,11 @@ None.
 
 ## Breaking changes 
 
-## Breaking configuration change for disable_mlock ((#disable_mlock-config))
+### Breaking configuration change for disable_mlock ((#disable_mlock-config))
 
-| Change       | Affected version | Affected deployments
+| Change       | Affected version | Fixed version
 | ------------ | ---------------- | --------------------
-| Breaking     | 1.20.0           | Vault instances using integrated storage
+| Breaking     | 1.20.0           | N/A
 
 In Vault 1.20.0 `disable_mlock` is a required configuration setting for
 clusters using *integrated storage*. This means that if you are not explicitly
@@ -53,33 +53,32 @@ maintain this behavior, you will need to explicitly set
 
 For clusters that already set a value for `disable_mlock`, no change is required.
 
-### Additional Considerations:
-
-#### Autopilot
-New 1.20.0 nodes are added to the cluster until there is a quorum of upgraded
-nodes. Each of these new nodes will need to have a value for `disable_mlock`
-set.
-
-#### Rolling upgrades
-Standby nodes are stopped and upgraded one at a time. These node configurations
-will need to be updated before restarting the vault process on the node.
-
-#### dev mode
-If no config is provided, dev mode will start as usual. If a config is provided,
-it must have a value for `disable_mlock`.
-
-### Cluster types affected
-
 | Cluster Type               | `disable_mlock` required | Note
 |----------------------------|--------------------------|-----
 | Primary                    | Yes                      | value depends on cluster specifics. [See docs](/vault/docs/configuration#disable_mlock)
 | Performance Secondary      | Yes                      | value depends on cluster specifics. [See docs](/vault/docs/configuration#disable_mlock)
 | DR Secondary               | Yes                      | value depends on cluster specifics. [See docs](/vault/docs/configuration#disable_mlock)
 
-## Rekey cancellations use a nonce ((#rekey-cancel-nonce))
-| Change       | Affected version | Affected deployments
-| ------------ | ---------------- | --------------------
-| Breaking     | 1.20.0, 1.19.6, 1.18.11, 1.17.18, 1.16.21 | Any
+
+#### Additional Considerations
+
+- **Autopilot** - New 1.20.0 nodes are added to the cluster until there is a
+  quorum of upgraded nodes. Each of these new nodes will need to have a value
+  for `disable_mlock` set.
+
+- **Rolling upgrades** - Standby nodes are stopped and upgraded one at a time.
+  These node configurations will need to be updated before restarting the vault
+  process on the node.
+
+- **`dev` mode** - If no config is provided, dev mode will start as usual. If a
+  config is provided, it must have a value for `disable_mlock`.
+
+
+### Rekey cancellations use a nonce ((#rekey-cancel-nonce))
+
+| Change       | Affected version                          | Fixed version
+| ------------ | ----------------------------------------- | --------------------
+| Breaking     | 1.20.0, 1.19.6, 1.18.11, 1.17.18, 1.16.21 | N/A
 
 Vault 1.20.0, 1.19.6, 1.18.11, 1.17.18, and 1.16.21 require a nonce to cancel
 [rekey](/vault/api-docs/system/rekey) and
@@ -87,22 +86,26 @@ Vault 1.20.0, 1.19.6, 1.18.11, 1.17.18, and 1.16.21 require a nonce to cancel
 within 10 minutes of initializing a rekey request. Cancellation requests after
 the 10 minute window do not require a nonce and succeed as expected.
 
-### Recommendation
+#### Recommendation
+
 To cancel a rekey operation, provide the nonce value from the
 `/sys/rekey/init` or `sys/rekey-recovery-key/init` response.
+
 
 ## Bugs
 
 None.
 
+
 ## Known issues
 
 ### Duplicate unseal/seal wrap HSM keys ((#hsm-keys)) <EnterpriseAlert inline="true" />
 
-| Change      | Status | Affected version                       | Affected deployments
+| Change      | Status | Affected version                       | Fixed version
 | ----------- | ------ | -------------------------------------- | --------------------
-| Known issue | Open   | 1.20.x, 1.19.x, 1.18.x, 1.17.x, 1.16.x | HSM-HA configurations migrating from Shamir to HSM-backed unseal/seal wraps.
+| Known issue | Open   | 1.20.x, 1.19.x, 1.18.x, 1.17.x, 1.16.x | None
 
+In HSM-HA configurations migrating from Shamir to HSM-backed unseal/seal wraps,
 Vault may create duplicate HSM keys when you migrate from Shamir to an
 HSM-backed unseal configuration for high availability (HA) HSM deployments. Key
 duplication can happen even after a seal migration to HSM that initially
