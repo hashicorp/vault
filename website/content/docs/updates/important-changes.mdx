@@ -20,7 +20,7 @@ valid_change_types: >-
 Always review important or breaking changes and remediation recommendations
 before upgrading Vault.
 
-## New behavior 
+## New behavior
 
 ### Transit support for Ed25519ph and Ed25519ctx signatures ((#ed25519))
 
@@ -121,7 +121,7 @@ requirements.
 
 
 
-## Breaking changes 
+## Breaking changes
 
 ### Rekey cancellations use a nonce ((#rekey-cancel-nonce))
 | Change       | Affected version | Affected deployments
@@ -134,7 +134,7 @@ Vault 1.20.0, 1.19.6, 1.18.11, 1.17.18, and 1.16.21 require a nonce to cancel
 within 10 minutes of initializing a rekey request. Cancellation requests after
 the 10 minute window do not require a nonce and succeed as expected.
 
-### Recommendation
+#### Recommendation
 To cancel a rekey operation, provide the nonce value from the
 `/sys/rekey/init` or `sys/rekey-recovery-key/init` response.
 
