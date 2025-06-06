@@ -1,0 +1,45 @@
+### General updates
+
+Change          | Found  | Fixed  | Recs    | Edition    | Issue
+--------------- | ------ |------- | ------- | ---------- | -----
+Support change  | 1.19.0 | N/A    | N/A     | All        | 1.16.x moves to [long term support](/vault/docs/enterprise/lts) and 1.19 becomes the current LTS version
+
+
+### Breaking changes
+
+Found  | Recommendations | Edition    | Issue
+------ | --------------- | ---------- | -----
+1.19.0 | **Yes**         | All        | [Security improvement for LDAP user DN search with upndomain](/vault/docs/v1.19.x/updates/important-changes#ldap)
+1.19.6 | **Yes**         | All        | [Rekey cancellations use a nonce](/vault/docs/v1.20.x/updates/important-changes#rekey-cancel-nonce)
+
+### New behavior
+
+Found  | Recommendations | Edition    | Issue
+------ | --------------- | ---------- | -----
+1.19.0 | No              | Enterprise | [Anonymized cluster data returned with license utilization](/vault/docs/v1.19.x/updates/important-changes#anon-data)
+1.19.0 | **Yes**         | All        | [Identity system duplicate cleanup](/vault/docs/v1.19.x/updates/important-changes#dedupe)
+1.19.0 | No              | All        | [RADIUS authentication is no longer case sensitive](/vault/docs/v1.19.x/updates/important-changes#case-sensitive)
+1.19.0 | No              | All        | [Transit support for Ed25519ph and Ed25519ctx signatures](/vault/docs/v1.19.x/updates/important-changes#ed25519)
+1.19.1 | **Yes**         | All        | [Strict validation for Azure auth login requests](/vault/docs/v1.19.x/updates/important-changes#strict-azure)
+
+
+### Bugs
+
+Found  | Fixed  | Workaround | Edition    | Issue
+------ |------- | ---------- | ---------- | -----
+1.19.0 | 1.19.3 | **Yes**    | All        | [Automated rotation stops after unseal](/vault/docs/v1.19.x/updates/important-changes#rotation-stops)
+1.19.0 | 1.19.4 | **Yes**    | All        | [AWS STS configuration can fail with unspecified STS endpoints](/vault/docs/v1.19.x/updates/important-changes#aws-fallback-sts)
+1.19.0 | 1.19.4 | **Yes**    | Enterprise | [External Enterprise plugins cannot run on a standby node when it becomes active](/vault/docs/v1.19.x/updates/important-changes#external-ent-plugins)
+1.19.0 | 1.19.1 | Upgrade    | All        | [Vault log file missing subsystem logs](/vault/docs/v1.19.x/updates/important-changes#missing-logs)
+1.19.1 | 1.19.4 | **Yes**    | All        | [Azure authN fails to authenticate Uniform VMSS instances](/vault/docs/v1.19.x/updates/important-changes#azure-vmss)
+
+
+### Known issues
+
+Found  | Fixed  | Workaround | Edition    | Issue
+------ |------- | ---------- | ---------- | -----
+1.19.0 | No     | **Yes**    | All        | [Duplicate unseal/seal wrap HSM keys](/vault/docs/v1.19.x/updates/important-changes#hsm-keys)
+1.19.0 | 1.19.3 | **Yes**    | All        | [Login/token renewal failures after group changes](/vault/docs/v1.19.x/updates/important-changes#group-writes)
+1.19.0 | 1.19.3 | Upgrade    | All        | [Unexpected DB static role rotations on upgrade](/vault/docs/v1.19.x/updates/important-changes#db-static-role-rotations)
+1.19.0 | 1.19.3 | Upgrade    | All        | [Unexpected LDAP static role rotations on upgrade](/vault/docs/v1.19.x/updates/important-changes#ldap-static-role-rotations)
+1.19.0 | 1.19.3 | **Yes**    | All        | [Unwanted secret rotation for DB and LDAP roles on restart](/vault/docs/v1.19.x/updates/important-changes#secret-rotate-on-restart)

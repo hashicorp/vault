@@ -279,9 +279,11 @@
     ]
   },
 
+
   { "divider": true },
   { "heading": "OPERATIONS" },
 
+  
   {
     "title": "Get Vault",
     "routes": [
@@ -982,6 +984,10 @@
       {
         "title": "Deprecation notices",
         "path": "updates/deprecation"
+      },
+      {
+        "title": "Change tracker",
+        "path": "updates/change-tracker"
       },
       {
         "title": "Full changelog",
@@ -2219,6 +2225,15 @@
             "path": "secrets/pki/cmpv2"
           },
           {
+            "title": "Simple Certificate Enrollment Protocol (SCEP)",
+            "badge": {
+              "text": "ENT",
+              "type": "filled",
+              "color": "neutral"
+            },
+            "path": "secrets/pki/scep"
+          },
+          {
             "title": "Troubleshooting ACME",
             "path": "secrets/pki/troubleshooting-acme"
           }
@@ -2541,6 +2556,15 @@
             ]
           }
         ]
+      },
+      {
+        "title": "SCEP",
+        "path": "auth/scep",
+        "badge": {
+          "text": "ENT",
+          "type": "filled",
+          "color": "neutral"
+        }
       },
       {
         "title": "TLS Certificates",
