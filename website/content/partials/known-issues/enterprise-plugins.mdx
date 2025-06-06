@@ -1,0 +1,27 @@
+### External Enterprise plugins cannot run on a standby node when it becomes active ((#external-ent-plugins))
+
+| Change       | Affected version                 | Affected deployments
+| ------------ | -------------------------------- | --------------------
+| Bug          | 1.16.17-1.16.20, 1.17.13-1.17.16, 1.18.6-1.18.9, 1.19.0-1.19.3 | any
+
+External Enterprise plugins can't run on a standby node when it becomes active
+because standby nodes don't extract the artifact when the plugin
+is registered.
+
+#### Recommendation
+
+As a workaround, add the plugin `.zip` artifact on every node and register the plugin on the
+active node. Then, extract the contents of the zip file on the follower nodes
+similar to the following folder structure for
+`vault-plugin-secrets-keymgmt_0.16.0+ent_darwin_arm64.zip`.
+
+```text
+<plugin-directory>/vault-plugin-secrets-keymgmt_0.16.0+ent_darwin_arm64
+├── metadata.json
+├── metadata.json.sig
+└── vault-plugin-secrets-keymgmt
+```
+
+Alternatively, upgrade to one of the following Vault versions: 1.16.21+, 1.17.17+,
+1.18.10+, 1.19.4+. See [Register external plugins](/vault/docs/plugins/register)
+for more details.

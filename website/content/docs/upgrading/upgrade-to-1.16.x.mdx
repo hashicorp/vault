@@ -14,6 +14,26 @@ Vault 1.15. **Please read carefully**.
 
 ## Important changes
 
+### Strict validation for Azure auth login requests ((#strict-azure))
+
+| Change       | Affected version
+| ------------ | ----------------
+| New behavior | 1.16.18+
+
+Azure auth plugin requires `resource_group_name`, `vm_name`, and `vmss_name` to
+match the JWT claims on login
+
+Vault versions before 11.16.18 did not strictly validate the
+`resource_group_name`, `vm_name`, and `vmss_name` parameters against their token
+claims for clients logging in with Azure authentication.
+
+#### Recommendation
+
+Review the [Token validation](/vault/docs/auth/azure#token-validation) section
+of the Azure authN plugin guide for more information on the new validation
+requirements.
+
+
 ### External plugin variables take precedence over system variables ((#external-plugin-variables))
 
 Vault gives precedence to plugin environment variables over system environment
@@ -96,6 +116,10 @@ decides to trigger the flag. More information can be found in the
 
 ### Activity Log Changes
 
+#### Disable client counting activity
+
+License utilization cannot be reported if client counting is disabled. As of Vault Enterprise 1.16.0 and later, client counting cannot be disabled using `/sys/internal/counters/config` endpoint as manual license utilization reporting is always enabled.
+
 #### Default Activity Log Querying Period
 
 As of 1.16.13 and later, the field `default_report_months` can no longer be configured or read. Any previously set values
@@ -140,7 +164,7 @@ Attempts to set `current_billing_period` will result in the following warning fr
 
 ### Auto-rolled billing start date
 
-As of 1.16.7 and later, the billing start date (license start date if not configured) automatically rolls over to the latest billing year at the end of the last cycle. 
+As of 1.16.7 and later, the billing start date (license start date if not configured) automatically rolls over to the latest billing year at the end of the last cycle.
 
 @include 'auto-roll-billing-start.mdx'
 
@@ -189,7 +213,7 @@ kubectl exec -ti <NAME> -- wget https://github.com/moparisthebest/static-curl/re
 ### Product usage reporting
 
 As of 1.16.13, Vault will collect anonymous product usage metrics for HashiCorp. This information will be collected
-alongside client activity data, and will be sent automatically if automated reporting is configured, or added to manual
+alongside activity information, and will be sent automatically if automated reporting is configured, or added to manual
 reports if manual reporting is preferred.
 
 See the main page for [Vault product usage metrics reporting](/vault/docs/enterprise/license/product-usage-reporting) for
@@ -219,9 +243,9 @@ more details, and information about opt-out.
 
 @include 'known-issues/1_13-reload-census-panic-standby.mdx'
 
-@include 'known-issues/1_16_secrets-sync-chroot-activation.mdx'
-
 @include 'known-issues/autopilot-upgrade-upgrade-version.mdx'
+
+@include 'known-issues/1_16_secrets-sync-chroot-activation.mdx'
 
 @include 'known-issues/config_listener_proxy_protocol_behavior_issue.mdx'
 
@@ -230,7 +254,6 @@ more details, and information about opt-out.
 @include 'known-issues/duplicate-identity-groups.mdx'
 
 @include 'known-issues/manual-entity-merge-does-not-persist.mdx'
-
 
 @include 'known-issues/database-skip-static-role-rotation.mdx'
 
@@ -243,3 +266,7 @@ more details, and information about opt-out.
 @include 'known-issues/log_file_flush_issue.mdx'
 
 @include 'known-issues/azure-auth-fails-uniform-vmss.mdx'
+
+@include 'known-issues/sync-activation-flags-cache-not-updated.mdx'
+
+@include 'known-issues/enterprise-plugins.mdx'
