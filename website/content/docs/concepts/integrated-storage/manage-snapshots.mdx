@@ -1,0 +1,648 @@
+---
+layout: docs
+page_title: Manage snapshots
+description: >-
+  Save and restore data from cluster snapshots.
+---
+
+# Manage snapshots
+
+All Vault editions support data backup and restoration through manual snapshots of the cluster state. Vault Enterprise and HCP Vault add support for automated snapshots
+
+Taking regular snapshots protects your Vault cluster against data corruption or sabotage of which Disaster Recovery Replication might be unable to protect against. Retaining cluster snapshots outside cluster storage or physical datacenters where the clusters operate supports data availability in the event of catastrophic failure.
+
+This guidance provides snapshot management details, and command examples for the Vault CLI and API. Refer to the [Resources](#resources) section of this document to learn more about the API endpoints and CLI commands shown in the examples.
+
+If you're saving a snapshot in preparation for Vault Enterprise upgrade, review the [Automate upgrades with Vault Enterprise](/vault/tutorials/raft/raft-upgrade-automation) guide to learn how Autopilot can automate your upgrades.
+
+## Prerequisites
+
+Ensure that you carry out or understand these items **before** you try to save or restore Vault snapshots.
+
+- **Working Vault knowledge:**
+   You need some working Vault knoweldge to follow the examples. You should be familiar with using Vault with the CLI, API, or UI.
+
+- **Valid Vault cluster configuration:**
+   Your Vault cluster must have valid cluster configuration as defined in the guidance in [Vault with integrated storage reference architecture](/vault/tutorials/day-one-raft/raft-reference-architecture).
+
+- **Vault ready for use:**
+   Your Vault cluster must be in an initialized state, with keyholders available
+   to enter the unseal or recovery keys. You must also have access to tokens with required capabilities to access encrypted data in the storage.
+
+## Manually save a cluster snapshot
+
+All Vault editions offer support for manually saving cluster snapshots with the CLI, API, or UI. These example steps show how to manually take a snapshot from a Vault cluster leader node.
+
+<Note> 
+
+The exact steps needed depends on your Vault architecture and storage type, and can differ from these examples.
+
+</Note>
+
+Choose a tab, and learn how to manually save a snapshot for a single cluster, a disaster recovery (DR) replication cluster, or a performance replication cluster.
+
+<Tabs>
+
+<Tab heading="Single cluster" group="single">
+
+### Save a single cluster snapshot
+
+These examples show how to take a snapshot of a single cluster with the Vault CLI or API.
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+Use the Vault CLI to take a snapshot from the cluster members with a command like this example.
+
+```shell-session
+$ vault operator raft snapshot save backup.snap
+```
+
+This command writes a snapshot to the local file `backup.snap`.
+
+Learn more in the [snapshot CLI documentation](/vault/docs/commands/operator/raft#snapshot).
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+Use cURL with the Vault API to take a snapshot from the cluster members with a command like this example.
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/storage/raft/snapshot > backup.snap
+```
+
+This command writes a snapshot to the local file `backup.snap`.
+
+Learn more in the [snapshot API documentation](/vault/api-docs/system/storage/raft#take-a-snapshot-of-the-raft-cluster).
+
+</Tab>
+
+</Tabs>
+
+</Tab>
+
+<Tab heading="DR replication cluster" group="dr">
+
+### Save a DR replication cluster snapshot
+
+These examples show how to take a snapshot of a cluster participating in DR replication with the Vault CLI or API.
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+Take snapshots from the cluster members on the DR Primary cluster using a command like this example.
+
+```shell-session
+$ vault operator raft snapshot save primary.snap
+```
+
+This command writes a snapshot to the local file `primary.snap`.
+
+Learn more in the [snapshot CLI documentation](/vault/docs/commands/operator/raft#snapshot).
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+Use cURL with the Vault API to take snapshots from the cluster members with a command like this example.
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/storage/raft/snapshot > primary.snap
+```
+
+This command writes a snapshot to the local file `primary.snap`.
+
+Learn more in the [snapshot API documentation](/vault/api-docs/system/storage/raft#take-a-snapshot-of-the-raft-cluster).
+
+</Tab>
+
+</Tabs>
+
+</Tab>
+
+<Tab heading="Performance replication cluster" group="perf">
+
+### Save a performance replication cluster snapshot
+
+These examples show how to take a snapshot of a cluster participating in performance replication with the Vault CLI or API.
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+Take separate snapshots from the Vault Integrated Storage (Raft) cluster members
+supporting both the Performance Primary cluster and Performance Secondary
+cluster using commands like these examples.
+
+First, take a snapshot on the primary cluster.
+
+```shell-session
+$ vault operator raft snapshot save primary.snap
+```
+
+This command writes a snapshot to the local file `primary.snap`.
+
+Next, take a snapshot on the secondary cluster.
+
+```shell-session
+$ vault operator raft snapshot save secondary.snap
+```
+
+This command writes a snapshot to the local file `secondary.snap`.
+
+Learn more in the [snapshot CLI documentation](/vault/docs/commands/operator/raft#snapshot).
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+Take separate snapshots from the Vault Integrated Storage (Raft) cluster members
+supporting both the Performance Primary cluster and Performance Secondary
+cluster using commands like these examples.
+
+First, take a snapshot on the primary cluster.
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/storage/raft/snapshot > primary.snap
+```
+
+This command writes a snapshot to the local file `primary.snap`.
+
+Next, take a snapshot on the secondary cluster.
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    http://127.0.0.1:8200/v1/sys/storage/raft/snapshot > secondary.snap
+```
+
+This command writes a snapshot to the local file `secondary.snap`.
+
+Learn more in the [snapshot API documentation](/vault/api-docs/system/storage/raft#take-a-snapshot-of-the-raft-cluster).
+
+</Tab>
+
+</Tabs>
+
+</Tab>
+
+</Tabs>
+
+<Tip>
+
+As a best practice, you should always store the snapshot files in a secure place away from the Vault clusters and their infrastructure.
+
+</Tip>
+
+## Enable automatic cluster snapshots
+
+@include 'alerts/enterprise-only.mdx'
+
+Vault Enterprise features configurable automatic snapshots on an interval, to local or cloud storage. Follow these steps to backup Vault using automated snapshots.
+
+<Tabs>
+
+<Tab heading="Single cluster" group="single">
+
+### Enable a single cluster automatic snapshot
+
+These examples show how to configure automatic snapshots for a single cluster with the Vault CLI or API.
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+Enable automated snapshots with the following example commands, based on the
+instructions in the [automatic snapshots with integrated storage documentation](/vault/docs/enterprise/automated-integrated-storage-snapshots)
+with options specified in the [API
+documentation](/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config).
+
+```shell-session
+$ vault write sys/storage/raft/snapshot-auto/config/[:name] [options]
+```
+
+**Example:**
+
+The following command creates a automatic snapshot configuration named,
+`testsnap` with a user defined location and interval. It retains up to 7
+snapshots before deleting earlier snapshots.
+
+```shell-session
+$ vault write sys/storage/raft/snapshot-auto/config/testsnap \
+     storage_type=local \
+     file_prefix=testsnappy \
+     interval=120m \
+     retain=7 \
+     local_max_space=1000000 \
+     path_prefix=/opt/vault/
+```
+
+Learn more in the [CLI documentation](/vault/docs/commands/write).
+
+<Tip title="Tutorial">
+
+Refer to the [configure Vault cluster with Integrated Storage](/vault/tutorials/raft/raft-storage#automated-snapshots) tutorial to learn more.
+
+</Tip>
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+Use cURL with the Vault API to...
+
+```shell-session
+$ 
+```
+
+Learn more in the [API documentation](/vault/api-docs/system/storage/raftautosnapshots).
+
+</Tab>
+
+</Tabs>
+
+</Tab>
+
+<Tab heading="DR replication cluster" group="dr">
+
+### Enable a DR replication cluster automatic snapshot
+
+These examples show how to configure automatic snapshots for a cluster participating in DR replication with the Vault CLI or API.
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+Enable automated snapshots with the following example commands, based on the
+instructions in the [automatic snapshots with integrated storage documentation](/vault/docs/enterprise/automated-integrated-storage-snapshots)
+with options specified in the [API
+documentation](/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config).
+
+```shell-session
+$ vault write sys/storage/raft/snapshot-auto/config/[:name] [options]
+```
+
+Learn more in the [CLI documentation](/vault/docs/commands/write).
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+Use cURL with the Vault API to...
+
+```shell-session
+$ 
+```
+
+Learn more in the [API documentation](/vault/api-docs/system/storage/raftautosnapshots).
+
+</Tab>
+
+</Tabs>
+
+</Tab>
+
+<Tab heading="Performance replication cluster" group="perf">
+
+### Enable a performance replication cluster automatic snapshot
+
+These examples show how to configure automatic snapshots for a cluster participating in performance replication with the Vault CLI or API.
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+Enable automated snapshots with the following example commands, based on the
+instructions in the [automatic snapshots with integrated storage documentation](/vault/docs/enterprise/automated-integrated-storage-snapshots)
+with options specified in the [API
+documentation](/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config).
+
+<Tip>
+
+You should configure each Vault cluster (forming the Primary and Secondary Vault Performance Replicas) to create separate automated snapshots.
+
+</Tip>
+
+```shell-session
+$ vault write sys/storage/raft/snapshot-auto/config/[:name] [options]
+```
+
+Learn more in the [CLI documentation](/vault/docs/commands/write).
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+Use cURL with the Vault API to...
+
+```shell-session
+$ 
+```
+
+Learn more in the [FIXME](/vault/api-docs/system/storage/raft#take-a-snapshot-of-the-raft-cluster) documentation.
+
+</Tab>
+
+</Tabs>
+
+</Tab>
+
+</Tabs>
+
+## Restore a cluster snapshot
+
+<Tabs>
+
+<Tab heading="Single cluster" group="single">
+
+### Restore a single cluster snapshot
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+1. Bring your Vault cluster back online following the circumstances that
+required you to restore from backup. You must reinitialise your Vault
+cluster with new storage, and authenticate with the new initial root token generated during this re-initialisation. Note that this situation is temporary- you still need the original cluster unseal keys to unseal Vault after restoring the snapshot.
+
+1. Copy your Vault snapshot file to a Vault cluster member and run the
+example command, replacing the example filename with that of your snapshot file. Note that you must use the `-force` flag in this command since the Auto-unseal or Shamir keys will not be consistent with the snapshot data as you are restoring a snapshot from a different cluster.
+
+   ```shell-session
+   $ vault operator raft snapshot restore -force backup.snap
+   ```
+
+   Learn more in the [CLI documentation](https://developer.hashicorp.com/vault/docs/commands/operator/raft#snapshot-restore).
+
+1. Once you have restored the snapshot, you need to unseal your Vault
+cluster again using a command like this example, run for each number of key shares required by the quroum defined in your original cluster configuration.
+
+   ```shell-session
+   $ vault operator unseal [unseal_key]
+   ```
+
+   Learn more in the [CLI documentation](/vault/docs/commands/operator/unseal).
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+Use cURL with the Vault API to...
+
+```shell-session
+$ 
+```
+
+Learn more in the [FIXME](/vault/api-docs/system/storage/raft#take-a-snapshot-of-the-raft-cluster) documentation.
+
+</Tab>
+
+</Tabs>
+
+</Tab>
+
+<Tab heading="DR replication cluster" group="dr">
+
+### Restore a disaster recovery replication cluster snapshot
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+1. Bring your Vault cluster back online following the circumstances that
+required you to restore from backup. You must reinitialise your Vault
+cluster with new storage, and authenticate with the new initial root token generated during this re-initialisation. Note that this situation is temporary- you still need the original cluster unseal keys to unseal Vault after restoring the snapshot.
+
+1. Copy your Vault snapshot files for the Primary and DR replica clusters onto restored members of the respective clusters and run the following example command, replacing the example filename with that of your snapshot file. Note that you must use the `-force` flag in this command since the Auto-unseal or Shamir keys will not be consistent with the snapshot data as you are restoring a snapshot from a different cluster.
+
+   ```shell-session
+   $ vault operator raft snapshot restore -force backup.snap
+   ```
+
+   Learn more in the [CLI documentation](/vault/docs/commands/operator/raft#snapshot-restore).
+
+1. Once you have restored the snapshot, you need to unseal your Vault
+cluster again using a command like this example, run for each number of key shares required by the quroum defined in your original cluster configuration.
+
+   ```shell-session
+   $ vault operator unseal [unseal_key]
+   ```
+
+   Learn more in the [CLI documentation](/vault/docs/commands/operator/unseal).
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+Use cURL with the Vault API to...
+
+```shell-session
+$ 
+```
+
+Learn more in the [FIXME](/vault/api-docs/system/storage/raft#take-a-snapshot-of-the-raft-cluster) documentation.
+
+</Tab>
+
+</Tabs>
+
+</Tab>
+
+<Tab heading="Performance replication cluster" group="perf">
+
+### Restore a performance replication cluster snapshot
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+1. Bring your Vault cluster back online following the circumstances that
+required you to restore from backup. You will need to reinitialise your Vault
+cluster and log in with the new root token that was generated during its
+reinitialisation. Note that these will be temporary- the original unseal keys
+will be needed following restore.
+
+1. Copy your Vault Raft Snapshots for the Primary and Secondary Performance
+Replica clusters onto restored members of the respective clusters and run the
+below following command, replacing the filename with that of your snapshot file.
+Note, the `-force` option is required here since the Auto-unseal or Shamir keys
+will not be consistent with the snapshot data as you will be restoring a
+snapshot from a different cluster.
+
+   ```shell-session
+   $ vault operator raft snapshot restore -force backup.snap
+   ```
+
+1. Once you have restored the Raft snapshot you will need to unseal your Vault
+cluster again using the following command
+
+   ```shell-session
+   $ vault operator unseal [unseal_key]
+   ```
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+Use cURL with the Vault API to...
+
+```shell-session
+$ 
+```
+
+Learn more in the [FIXME](/vault/api-docs/system/storage/raft#take-a-snapshot-of-the-raft-cluster) documentation.
+
+</Tab>
+
+</Tabs>
+
+</Tab>
+
+</Tabs>
+
+## Restore a secret from a snapshot
+
+@include 'alerts/enterprise-only.mdx'
+
+<Tabs>
+
+<Tab heading="Single cluster" group="single">
+
+### Restore a secret to a single cluster
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+Load the snapshot that holds the secret you need to restore.
+
+```shell-session
+$ ...
+```
+
+Restore the secret by specifying its path.
+
+```shell-session
+$ ...
+```
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+Load the snapshot that holds the secret you need to restore.
+
+```shell-session
+$ curl ...
+```
+
+Restore the secret by specifying its path.
+
+```shell-session
+$ curl ...
+```
+
+</Tab>
+
+</Tabs>
+
+</Tab>
+
+<Tab heading="DR replication cluster" group="dr">
+
+### Restore a secret to a DR replication cluster
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+Load the snapshot that holds the secret you need to restore.
+
+```shell-session
+$ ...
+```
+
+Restore the secret by specifying its path.
+
+```shell-session
+$ ...
+```
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+Load the snapshot that holds the secret you need to restore.
+
+```shell-session
+$ curl ...
+```
+
+Restore the secret by specifying its path.
+
+```shell-session
+$ curl ...
+```
+
+</Tab>
+
+</Tabs>
+
+</Tab>
+
+<Tab heading="Performance replication cluster" group="perf">
+
+### Restore a secret to a performanc replication cluster
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+Load the snapshot that holds the secret you need to restore.
+
+```shell-session
+$ ...
+```
+
+Restore the secret by specifying its path.
+
+```shell-session
+$ ...
+```
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+Load the snapshot that holds the secret you need to restore.
+
+```shell-session
+$ curl ...
+```
+
+Restore the secret by specifying its path.
+
+```shell-session
+$ curl ...
+```
+
+</Tab>
+
+</Tabs>
+
+</Tab>
+
+</Tabs>
