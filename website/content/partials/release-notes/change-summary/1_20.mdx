@@ -1,4 +1,12 @@
-Change          | Found  | Fixed  | Recs    | Edition    | Issue
---------------- | ------ |------- | ------- | ---------- | -----
-Breaking change | 1.20.0 | N/A    | **Yes** | All        | [`disable_mlock` required for integrated storage](/vault/docs/v1.20.x/updates/important-changes#disable_mlock-config)
-Known issue     | 1.20.0 | No     | **Yes** | All        | [Duplicate unseal/seal wrap HSM keys](/vault/docs/v1.20.x/updates/important-changes#hsm-keys)
+### Breaking changes
+
+Found  | Recommendations | Edition    | Issue
+------ | --------------- | ---------- | -----
+1.20.0 | **Yes**         | All        | [`disable_mlock` required for integrated storage](/vault/docs/v1.20.x/updates/important-changes#disable_mlock-config)
+1.20.0 | **Yes**         | All        | [Rekey cancellations use a nonce](/vault/docs/v1.20.x/updates/important-changes#rekey-cancel-nonce)
+
+### Known issues
+
+Found  | Fixed  | Workaround | Edition    | Issue
+------ |------- | ---------- | ---------- | -----
+1.20.0 | No     | **Yes**    | All        | [Duplicate unseal/seal wrap HSM keys](/vault/docs/v1.20.x/updates/important-changes#hsm-keys)
