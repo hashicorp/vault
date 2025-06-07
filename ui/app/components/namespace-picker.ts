@@ -47,7 +47,6 @@ export default class NamespacePicker extends Component {
   @tracked searchInput = '';
   @tracked searchInputHelpText =
     "Enter a full path in the search bar and hit the 'Enter' ↵ key to navigate faster.";
-  @tracked selected: NamespaceOption | null = null;
 
   constructor(owner: unknown, args: Record<string, never>) {
     super(owner, args);
@@ -130,6 +129,10 @@ export default class NamespacePicker extends Component {
     return this.hasSearchInput ? noMatchingNamespacesHelpText : noNamespacesMessage;
   }
 
+  get selected(): NamespaceOption | null {
+    return this.getSelected(this.allNamespaces, this.namespace?.path) ?? null;
+  }
+
   get showNoNamespacesMessage(): boolean {
     const hasError = this.errorLoadingNamespaces !== '';
     return this.namespaceCount === 0 && !hasError;
@@ -188,7 +191,6 @@ export default class NamespacePicker extends Component {
     }
 
     this.allNamespaces = this.getOptions(this.namespace);
-    this.selected = this.getSelected(this.allNamespaces, this.namespace?.path) ?? null;
 
     await this.fetchListCapability();
   }
@@ -216,7 +218,6 @@ export default class NamespacePicker extends Component {
 
   @action
   async onChange(selected: NamespaceOption): Promise<void> {
-    this.selected = selected;
     this.searchInput = '';
     this.router.transitionTo('vault.cluster.dashboard', { queryParams: { namespace: selected.path } });
   }
@@ -227,7 +228,6 @@ export default class NamespacePicker extends Component {
       const matchingNamespace = this.allNamespaces.find((ns) => ns.label === this.searchInput.trim());
 
       if (matchingNamespace) {
-        this.selected = matchingNamespace;
         this.searchInput = '';
         this.router.transitionTo('vault.cluster.dashboard', {
           queryParams: { namespace: matchingNamespace.path },

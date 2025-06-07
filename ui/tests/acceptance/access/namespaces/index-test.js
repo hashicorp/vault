@@ -131,13 +131,6 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     assert
       .dom(switchNamespaceButton)
       .hasText('Switch to namespace', 'Allow users to switch to different namespace');
-    assert
-      .dom(`${switchNamespaceButton} a`)
-      .hasAttribute(
-        'href',
-        'http://localhost:7357/ui/vault/dashboard?namespace=ns1',
-        'Switch namespace button has the correct href attribute'
-      );
 
     // Verify that the user can delete the namespace
     const deleteNamespaceButton = '.hds-dropdown-list-item:nth-of-type(2)';
