@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/mitchellh/mapstructure"
@@ -217,13 +218,17 @@ type RegisterPluginInput struct {
 	Env []string `json:"env,omitempty"`
 }
 
+type RegisterPluginResponse struct {
+	Warnings []string `json:"warnings"`
+}
+
 // RegisterPlugin wraps RegisterPluginWithContext using context.Background.
-func (c *Sys) RegisterPlugin(i *RegisterPluginInput) error {
+func (c *Sys) RegisterPlugin(i *RegisterPluginInput) (*RegisterPluginResponse, error) {
 	return c.RegisterPluginWithContext(context.Background(), i)
 }
 
 // RegisterPluginWithContext registers the plugin with the given information.
-func (c *Sys) RegisterPluginWithContext(ctx context.Context, i *RegisterPluginInput) error {
+func (c *Sys) RegisterPluginWithContext(ctx context.Context, i *RegisterPluginInput) (*RegisterPluginResponse, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
@@ -231,14 +236,41 @@ func (c *Sys) RegisterPluginWithContext(ctx context.Context, i *RegisterPluginIn
 	req := c.c.NewRequest(http.MethodPut, path)
 
 	if err := req.SetJSONBody(i); err != nil {
-		return err
+		return nil, err
 	}
 
 	resp, err := c.c.rawRequestWithContext(ctx, req)
-	if err == nil {
+	if resp != nil {
 		defer resp.Body.Close()
 	}
-	return err
+	if err != nil {
+		return nil, err
+	}
+
+	var registerResp RegisterPluginResponse
+	err = resp.DecodeJSON(&registerResp)
+	if err != nil {
+		return nil, err
+	}
+
+	// Filter out the `Endpoint replaced the value of these parameters with the values captured from the endpoint's path: [type]`
+	// warning because it is expected behavior from this function, as we set the type parameter in both the path and request body,
+	// and the warning informs us the path parameter takes precedence. However, this warning is not relevant for an end user so we
+	// omit it before returning to any client.
+	// TODO: This can likely be removed once https://hashicorp.atlassian.net/browse/VAULT-36722 is addressed.
+	var filteredWarnings []string
+	if len(registerResp.Warnings) > 0 {
+		filteredWarnings = make([]string, 0, len(registerResp.Warnings))
+	}
+
+	for _, warning := range registerResp.Warnings {
+		if !strings.Contains(warning, "Endpoint replaced the value of these parameters with the values captured from the endpoint's path") {
+			filteredWarnings = append(filteredWarnings, warning)
+		}
+	}
+	registerResp.Warnings = filteredWarnings
+
+	return &registerResp, err
 }
 
 // DeregisterPluginInput is used as input to the DeregisterPlugin function.
