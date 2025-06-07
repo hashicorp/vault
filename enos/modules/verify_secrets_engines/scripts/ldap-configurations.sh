@@ -48,11 +48,11 @@ test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 export VAULT_FORMAT=json
 
-# Verify ldap connection
-ldapsearch -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" -b "dc=${LDAP_USERNAME},dc=com" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w ${LDAP_ADMIN_PW}
-
 # Installing LDAP tools
 install_ldap_tools
+
+# Verify ldap connection
+ldapsearch -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" -b "dc=${LDAP_USERNAME},dc=com" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w ${LDAP_ADMIN_PW}
 
 # Creating Users Org Unit LDIF file and adding users organizational unit
 USER_OU_LDIF="users-ou.ldif"
