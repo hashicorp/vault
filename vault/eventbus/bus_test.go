@@ -659,6 +659,7 @@ func TestBexpr(t *testing.T) {
 			Plugin:        "kv",
 			PluginVersion: "v1.13.1+builtin",
 			Version:       "2",
+			IsLocal:       false,
 		}
 		return bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, logical.EventType(eventType), false, event)
 	}
@@ -672,6 +673,8 @@ func TestBexpr(t *testing.T) {
 		{"non-matching expression", "data_path == nothing", false},
 		{"matching expression", "data_path == secret/my/secret/path", true},
 		{"full matching expression", "data_path == secret/my/secret/path and operation != read and source_plugin_mount == secret/ and source_plugin_mount != somethingelse", true},
+		{"non-matching on local", "source_plugin_is_local == true", false},
+		{"matching on local", "source_plugin_is_local == false", true},
 	}
 
 	for _, testCase := range testCases {

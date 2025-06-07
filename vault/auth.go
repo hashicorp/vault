@@ -1014,6 +1014,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 		Plugin:        entry.Type,
 		PluginVersion: pluginVersion,
 		Version:       entry.Options["version"],
+		IsLocal:       entry.Local,
 	})
 	if err != nil {
 		return nil, err
@@ -1026,6 +1027,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 		Plugin:        entry.Type,
 		PluginVersion: pluginVersion,
 		Version:       entry.Options["version"],
+		IsLocal:       entry.Local,
 	})
 	if err != nil {
 		return nil, err
