@@ -347,6 +347,7 @@ scenario "smoke" {
 
     variables {
       hosts = step.create_test_servers_target.hosts
+      ldap_version = "1.5.0"
     }
   }
 
@@ -592,7 +593,10 @@ scenario "smoke" {
   step "verify_secrets_engines_create" {
     description = global.description.verify_secrets_engines_create
     module      = module.vault_verify_secrets_engines_create
-    depends_on  = [step.vault_remove_node_and_verify]
+    depends_on  = [
+      step.vault_remove_node_and_verify,
+      step.create_test_servers
+    ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -620,6 +624,7 @@ scenario "smoke" {
 
     variables {
       hosts             = step.create_vault_cluster_targets.hosts
+      ldap_host         = step.create_test_servers.state.ldap.ip_address
       leader_host       = step.get_vault_cluster_ips.leader_host
       vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]

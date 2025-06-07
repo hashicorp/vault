@@ -31,6 +31,23 @@ variable "hosts" {
   description = "The Vault cluster instances that were created"
 }
 
+variable "ldap_host" {
+  type        = string
+  description = "The LDAP Server host"
+}
+
+variable "ldap_port" {
+  type        = string
+  description = "The LDAP Server port"
+  default     = "389"
+}
+
+variable "ldap_pw" {
+  type        = string
+  description = "The LDAP Server admin password"
+  default     = "testing"
+}
+
 variable "leader_host" {
   type = object({
     ipv6       = string
