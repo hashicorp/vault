@@ -1,0 +1,543 @@
+---
+layout: docs
+page_title: Manage custom login options
+description: >-
+  Use custom login flows to control how clients can authenticate to Vault
+  through the GUI.
+---
+
+# Manage custom login options for the Vault GUI
+
+@include 'alerts/enterprise-and-hcp.mdx'
+
+Use login customization to set preferred authentication methods and control which methods display in the Vault GUI login form.
+
+## Before you start 
+
+@include 'alerts/restricted-admin.mdx'
+
+- **You must have Vault Enterprise 1.20.0 or higher installed.**
+- **You must have the appropriate permissions**:
+  - You must have `update` permission for the [`sys/config/ui/login/default-auth`](/vault/api-docs/system/config-ui-login-default-auth) endpoint.
+ 
+## Step 1: Select your authentication method
+
+Only the following methods are supported by the GUI and can be set as a default or backup method:
+
+@include 'ui/supported-login-methods.mdx'
+
+You can customize your login flow with a default authentication method,
+backup authentication methods, or both.
+
+Configuration           | Result
+----------------------- | ------
+Default only            | User only see the selected authentication method during login.
+Backup(s) only          | User only sees from the selected authentication method(s) during login.
+Default and backup(s)   | User see the default method first but can access the backup methods as alternate options.
+
+
+## Step 2: Make the authentication method visible to the GUI. (Optional, but recommended) 
+
+Set the [listing visibility](/vault/api-docs/system/auth#listing_visibility-1) of your authentication plugin to `unauth` 
+so the Vault GUI knows which login URL to authenticate against.
+
+<Warning title="Listing visibility and plugin mount paths">
+
+Login customizations specify authentication **types**, not specific plugin paths.
+As a result, the Vault GUI assumes each login method is mounted at its default mount [path](/vault/api-docs/system/auth#path), 
+which corresponds to its auth type.
+
+If a login customization specifies a type for a plugin mounted at a **non-default** path, 
+that mount **must** be configured with `listing_visibility=unauth`.
+
+Otherwise, users will be unable to authenticate through the customized login view.
+
+</Warning>
+
+<Tip title="Make use of metadata">
+
+Set the [mount description field](/vault/api-docs/system/auth#description) to
+make it obvious that the mount is a default or backup login method(s) for the
+Vault GUI.
+
+</Tip>
+
+### Option 1: Configure a new plugin
+
+<Tabs>
+<Tab heading="CLI" group="cli">
+
+1. Use `vault auth enable` to establish a new instance of the authentication
+   plugin and set the `-listing-visibility` flag to `unauth`:
+    
+    ```shell-session
+    $ vault auth enable              \
+      -path <mount_path>             \
+      -namespace-path <plugin_namespace>  \
+      -description <visibility_note> \
+      -listing-visibility "unauth"   \
+      <authentication_method>
+    ```
+    
+    For example:
+    
+    <CodeBlockConfig hideClipboard>
+
+    ```shell-session
+    $ vault auth enable                      \
+      -path gui/ldap                         \
+      -namespace-path admin                       \
+      -description "Default GUI auth method" \
+      -listing-visibility "unauth"           \
+      ldap
+    
+    Success! Enabled ldap auth method at: gui/ldap/
+    ```
+
+    </CodeBlockConfig>
+
+1. Use `vault auth list` to verify the plugin configuration. 
+
+  For example:
+    
+  <CodeBlockConfig hideClipboard>
+
+  ```shell-session
+  $ vault auth list -namespace-path=admin
+  
+  Path         Type        Accessor                  Description                Version
+  ----         ----        --------                  -----------                -------
+  gui/ldap/    ldap        auth_ldap_c84b8cd2        Default GUI auth method    n/a
+  ```
+
+  </CodeBlockConfig>
+
+</Tab>
+<Tab heading="GUI" group="gui">
+
+@include 'gui-instructions/enable-authn-plugin.mdx'
+
+- Select the desired plugin.
+- Optional: Enter a unique path for the plugin. (The default path is the plugin type).
+- Enable **Use as preferred UI login method** toggle.
+- Optional: Update **Description** to let teams know to use this method.
+- Provide any other relevant configuration information for the plugin.
+- Click **Enable method**.
+
+</Tab>
+<Tab heading="API" group="api">
+
+1. Create a JSON file with the configuration information for your authentication
+   plugin. Use the `config` field to set the `listing_visibility` parameter to
+   `unauth`.
+
+   For example: 
+
+    ```json
+    {
+      "description": "Default GUI auth method",
+      "config": {
+        "listing_visibility": "unauth"
+      }
+    }
+    ```
+
+1. Make a `POST` call to
+   [`/sys/auth/{plugin_mount_path}`](/vault/api-docs/system/auth#enable-auth-method)
+   with the JSON data:
+
+    ```shell-session
+    $ curl                                             \
+      --request POST                                   \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"         \
+      --header "X-Vault-namespace-path: ${VAULT_NAMESPACE}" \
+      --data @data.json                                \
+      ${VAULT_ADDR}/v1/sys/auth/<plugin_mount_path>
+    ```
+
+  For example:
+  
+  <CodeBlockConfig hideClipboard>
+
+  ```shell-session
+  $ curl                                               \
+      --request POST                                   \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"         \
+      --header "X-Vault-namespace-path: ${VAULT_NAMESPACE}" \
+      --data @data.json                         \
+      ${VAULT_ADDR}/v1/sys/auth/gui/ldap | jq
+  ```
+
+  </CodeBlockConfig>
+
+  `/sys/auth/{plugin_mount_path}` does not return data on success.
+
+</Tab>
+</Tabs>
+
+### Option 2: Update an existing plugin
+
+<Tabs>
+<Tab heading="CLI" group="cli">
+
+Use `vault auth tune` to update the `-listing-visibility` flag to `unauth`:
+    
+```shell-session
+$ vault auth tune              \
+  -namespace-path <plugin_namespace>  \
+  -description <visibility_note> \
+  -listing-visibility "unauth"   \
+  <mount_path>
+```
+    
+For example:
+    
+<CodeBlockConfig hideClipboard="true">
+
+```shell-session
+$ vault auth tune                        \
+  -namespace-path admin                       \
+  -description "Default GUI auth method" \
+  -listing-visibility "unauth"           \
+  gui/ldap
+
+Success! Tuned the auth method at: gui/ldap/
+```
+
+</CodeBlockConfig>
+
+</Tab>
+<Tab heading="GUI" group="gui">
+
+@include 'gui-instructions/update-authn-plugin.mdx'
+
+- Click **Configure >**.
+- Enable **Use as preferred UI login method** toggle.
+- Optional: Update **Description** to let teams know to use this method.
+- Click **Update options**.
+
+</Tab>
+<Tab heading="API" group="api">
+
+1. Create a JSON file with the updated configuration information for your
+   authentication plugin and set the `listing_visibility` parameter to `unauth`.
+   
+   For example:
+
+    ```json
+    {
+      "description": "Default GUI auth method",
+      "listing_visibility": "unauth"
+    }
+    ```
+
+1. Make a `POST` call to
+   [`/sys/auth/{plugin_mount_path}/tune`](/vault/api-docs/system/auth#tune-auth-method)
+   with the JSON data:
+
+    ```shell-session
+    $ curl                                             \
+      --request POST                                   \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"         \
+      --header "X-Vault-namespace-path: ${VAULT_NAMESPACE}" \
+      --data @data.json                                \
+      ${VAULT_ADDR}/v1/sys/auth/<plugin_mount_path>/tune
+    ```
+
+    For example:
+
+    <CodeBlockConfig hideClipboard>
+
+    ```shell-session
+    $ curl                                               \
+        --request POST                                   \
+        --header "X-Vault-Token: ${VAULT_TOKEN}"         \
+        --header "X-Vault-namespace-path: ${VAULT_NAMESPACE}" \
+        --data @data.json                         \
+        ${VAULT_ADDR}/v1/sys/auth/gui/userpass/tune | jq
+    ```
+
+    </CodeBlockConfig>
+
+    `/sys/auth/{plugin_mount_path}/tune` does not return data on success.
+
+</Tab>
+</Tabs>
+
+## Step 3: Set your default and backup authentication methods
+
+The following authentication method types are supported:
+
+@include 'ui/supported-login-methods-api-docs.mdx'
+
+<Tip>
+
+- To apply a login customization to the `root` namespace, pass an empty string: `namespace_path=""`.
+
+- **Login settings are inheritable by default**. Namespaces inherit login settings from their parent 
+unless inheritance is explicitly disabled. To scope a login setting to a specific namespace, 
+set: `disable_inheritance=true`.
+
+</Tip>
+
+<Tabs>
+<Tab heading="CLI" group="cli">
+
+1. Use `vault write` with the
+   [`sys/config/ui/login/default-auth`](/vault/api-docs/system/config-ui-login-default-auth)
+   endpoint to set the default and/or backup GUI authentication method(s).
+
+    ```shell-session
+    $ vault write sys/config/ui/login/default-auth/<unique_rule_name> \
+      default_auth_type=<default_auth_type>                           \
+      backup_auth_types=<backup_auth_type>                            \
+      backup_auth_types=<backup_auth_type>                            \
+      disable_inheritance=<true_or_false>                             \
+      namespace_path=<namespace_where_the_rule_applies>
+    ```
+
+    For example, to customize the login options for the `dev` namespace and set 
+    `userpass` as the default authentication method with `ldap` and `token` 
+    as additional, backup options:
+
+    <CodeBlockConfig hideClipboard>
+
+    ```shell-session
+    $ vault write sys/config/ui/login/default-auth/dev-gui-login  \
+      default_auth_type=userpass                                  \
+      backup_auth_types=ldap                                      \
+      backup_auth_types=token                                     \
+      disable_inheritance=false                                   \
+      namespace_path=dev
+    ```
+
+    </CodeBlockConfig>
+
+1. Use `vault read` with the
+   [`sys/config/ui/login/default-auth/{rule_name}`](/vault/api-docs/system/config-ui-login-default-auth)
+   endpoint and the new rule name to verify the login configuration. 
+   
+   For example:
+
+    <CodeBlockConfig hideClipboard>
+
+    ```shell-session
+    $ vault read sys/config/ui/login/default-auth/dev-gui-login
+
+    Key                    Value
+    ---                    -----
+    backup_auth_types      [ldap token]
+    default_auth_type      userpass
+    disable_inheritance    false
+    namespace_path         dev/
+    ```
+
+    </CodeBlockConfig>
+
+</Tab>
+<Tab heading="GUI" group="gui">
+
+<Note>
+Login settings can only be viewed or deleted using the Vault GUI. 
+Creating login customizations is only available using the CLI or API to encourage best practices.
+</Note>
+
+- Navigate to the **Settings** section in the Vault GUI sidebar and select **UI Login Settings**.
+- View list of existing login settings.
+- Click on a customization to view more details.
+
+</Tab>
+<Tab heading="API" group="api">
+
+1. Create a JSON file with a new custom login configuration rule that sets your
+   default and/or backup GUI authentication methods:
+   
+    ```json
+    {
+      "namespace_path": "<namespace_where_the_rule_applies>",
+      "default_auth_type": "<default_auth_type>",
+      "disable_inheritance": <true_or_false>,
+      "backup_auth_types": [
+        <list_of_backup_auth_type>
+      ]
+    }
+    ```
+
+    For example, to customize the login options for the `dev` namespace and set 
+    `userpass` as the default authentication method with `ldap` and `token` 
+    as additional, backup options:
+
+    <CodeBlockConfig hideClipboard>
+
+    ```json
+    {
+      "namespace_path": "dev",
+      "default_auth_type": "userpass",
+      "disable_inheritance": false,
+      "backup_auth_types": ["ldap", "token"]
+    }
+    ```
+
+    </CodeBlockConfig>
+
+1. Make a `POST` call to
+   [`sys/config/ui/login/default-auth/{rule_name}`](/vault/api-docs/system/config-ui-login-default-auth)
+   with the JSON data:
+
+    ```shell-session
+    $ curl                                             \
+      --request POST                                   \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"         \
+      --data @data.json                                \
+      ${VAULT_ADDR}/v1/sys/config/ui/login/default-auth/<unique_rule_name>
+    ```
+
+    For example, to create a new login rule called "dev-gui-login":
+
+    <CodeBlockConfig hideClipboard>
+
+    ```shell-session
+    $ curl                                               \
+        --request POST                                   \
+        --header "X-Vault-Token: ${VAULT_TOKEN}"         \
+        --data @data.json                                \
+        ${VAULT_ADDR}/v1/sys/config/ui/login/default-auth/dev-gui-login | jq
+    ```
+
+    </CodeBlockConfig>
+
+  `/sys/config/ui/login/default-auth/{rule_name}` does not return data on success.
+
+1. Make a `GET` call to
+   [`sys/config/ui/login/default-auth/{rule_name}`](/vault/api-docs/system/config-ui-login-default-auth)
+   with the new rule name to verify the login configuration.
+
+   For example:
+
+    <CodeBlockConfig hideClipboard>
+
+    ```shell-session
+    $ curl                                               \
+        --request GET                                    \
+        --header "X-Vault-Token: ${VAULT_TOKEN}"         \
+        ${VAULT_ADDR}/v1/sys/config/ui/login/default-auth/dev-gui-login | jq
+    ```
+
+    </CodeBlockConfig>
+    <br/>
+    <CodeBlockConfig hideClipboard>
+
+    ```json
+    {
+      "data": {
+        "backup_auth_types": [
+          "ldap",
+          "token"
+        ],
+        "default_auth_type": "userpass",
+        "disable_inheritance": false,
+        "namespace_path": "dev/"
+      },
+    }
+    ```
+
+    </CodeBlockConfig>
+
+</Tab>
+</Tabs>
+
+
+## Delete a login rule
+
+<Tabs>
+<Tab heading="CLI" group="cli">
+
+Use `vault delete` with the 
+[`sys/config/ui/login/default-auth/{rule_name}`](/vault/api-docs/system/config-ui-login-default-auth)
+endpoint and rule name to delete a login setting for a namespace. 
+
+```shell-session
+$ vault delete sys/config/ui/login/default-auth/<unique_rule_name>
+```
+
+For example:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault delete sys/config/ui/login/default-auth/dev-gui-login
+```
+
+</CodeBlockConfig>
+
+</Tab>
+<Tab heading="GUI" group="gui">
+
+You can delete a login rule in two places from the **UI Login Settings** page.
+
+**From the additional options menu for the customization**:
+
+1. Find the login rule you want to delete.
+1. Click the additional option button (three dots).
+1. Select **Delete** from the dropdown menu to bring up the delete confirmation modal.
+
+**From the customization details page**:
+
+1. Find the login rule you want to delete.
+1. Select it to open the login settings details page.
+1. Click the **Delete Rule** button to bring up the delete confirmation modal.
+
+</Tab>
+<Tab heading="API" group="api">
+
+Make a `DELETE` call to the
+[`sys/config/ui/login/default-auth/{rule_name}`](/vault/api-docs/system/config-ui-login-default-auth)
+endpoint to delete a login setting for a namespace. 
+
+```shell-session
+$ curl                                             \
+  --request DELETE                                 \
+  --header "X-Vault-Token: ${VAULT_TOKEN}"         \
+  http://127.0.0.1:8200/v1/sys/config/ui/login/default-auth/<unique_rule_name>| jq
+```
+
+For example, to delete the rule "dev-gui-login":
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ curl                                               \
+    --request DELETE                                 \
+    --header "X-Vault-Token: ${VAULT_TOKEN}"         \
+    ${VAULT_ADDR}/v1/sys/config/ui/login/default-auth/dev-gui-login | jq
+```
+
+</CodeBlockConfig>
+
+</Tab>
+</Tabs>
+
+## Using a Direct Link
+
+The `?with=` query parameter can be used at any point to override login customizations. For example,
+if a Vault GUI user is unable to authenticate with the default or backup method(s) they can bypass
+the login settings using a direct URL for their mount of choice. 
+
+The query parameter value can specify either a method [type](/vault/api-docs/system/auth#type) 
+or [path](/vault/api-docs/system/auth#path).
+
+Description              | Sample URL                                                       
+------------------------ | ---------------------------------------------------------------- 
+`root` namespace         | `${VAULT_ADDR}/ui/vault/auth?with=<value>`                       
+child namespace          | `${VAULT_ADDR}/ui/vault/auth?namespace=<namespace>&with=<value>` 
+type: `token`            | `${VAULT_ADDR}/ui/vault/auth?with=token`                         
+path: `gui/ldap`\*       | `${VAULT_ADDR}/ui/vault/auth?with=gui%2Fldap%2F`                 
+_*When specifying a path, the mount must be tuned with `listing_visibility="unauth"`_ 
+
+### Copy a direct link in the Vault GUI
+
+The Vault GUI generates a login URL for each mount, which can be copied from the mount's configuration details page.
+
+@include 'gui-instructions/update-authn-plugin.mdx'
+
+* Click the clipboard to copy the "UI login link"
