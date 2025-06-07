@@ -112,7 +112,7 @@ module('Acceptance | ssh | roles', function (hooks) {
     await click(SES.configTab);
     await click(SES.configure);
     // default has generate CA checked so we just submit the form
-    await click(SES.ssh.save);
+    await click(GENERAL.submitButton);
     // There is a delay in the backend for the public key to be generated, wait for it to complete by checking that the public key is displayed
     await waitFor(GENERAL.infoRowLabel('Public key'));
     await click(GENERAL.tab(sshPath));
@@ -145,7 +145,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       }
 
       // generate creds
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       await settled(); // eslint-disable-line
       role.assertAfterGenerate(assert, sshPath);
 
@@ -231,7 +231,7 @@ module('Acceptance | ssh | roles', function (hooks) {
 
       await fillIn(GENERAL.inputByAttr('username'), 'admin');
       await fillIn(GENERAL.inputByAttr('ip'), '192.168.1.1');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert.ok(generatePage.warningIsPresent, 'shows warning');
       await click(GENERAL.backButton);
       assert.ok(generatePage.userIsPresent, 'clears generate, shows user input');

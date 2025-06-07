@@ -51,11 +51,19 @@ const unauthenticatedMessageResponse = {
   auth: null,
   mount_type: '',
 };
-
 // custom messages is an enterprise feature, but since we're using mirage enterprise is omitted from the module name.
 module('Acceptance | auth custom messages auth tests', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
+
+  hooks.beforeEach(async function () {
+    // clean up messages after creation to avoid test pollution
+    this.deleteMessage = async (messageId) => {
+      await visit(`vault/config-ui/messages/${messageId}/details`);
+      await click(GENERAL.confirmTrigger);
+      await click(GENERAL.confirmButton);
+    };
+  });
 
   module('auth and unauth messages', function (hooks) {
     hooks.beforeEach(function () {
@@ -73,11 +81,11 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
       assert.dom(CUSTOM_MESSAGES.modalTitle(modalId)).hasText('Modal title');
       assert.dom(CUSTOM_MESSAGES.modalBody(modalId)).exists();
       assert.dom(CUSTOM_MESSAGES.modalBody(modalId)).hasText('here is a cool message');
-      await click(CUSTOM_MESSAGES.modalButton(modalId));
       assert.dom(CUSTOM_MESSAGES.alertTitle(alertId)).hasText('Banner title');
       assert.dom(CUSTOM_MESSAGES.alertDescription(alertId)).hasText('hello world hello wolrd');
       assert.dom(CUSTOM_MESSAGES.alertAction('link')).hasText('some alert link');
     });
+
     test('it shows the multiple modal messages', async function (assert) {
       const modalIdOne = 'some-awesome-id-2';
       const modalIdTwo = 'some-awesome-id-1';
@@ -94,13 +102,12 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
       assert.dom(CUSTOM_MESSAGES.modalTitle(modalIdOne)).hasText('Modal title 1');
       assert.dom(CUSTOM_MESSAGES.modalBody(modalIdOne)).exists();
       assert.dom(CUSTOM_MESSAGES.modalBody(modalIdOne)).hasText('hello world hello wolrd some alert link');
-      await click(CUSTOM_MESSAGES.modalButton(modalIdOne));
       assert.dom(CUSTOM_MESSAGES.modal(modalIdTwo)).exists();
       assert.dom(CUSTOM_MESSAGES.modalTitle(modalIdTwo)).hasText('Modal title 2');
       assert.dom(CUSTOM_MESSAGES.modalBody(modalIdTwo)).exists();
       assert.dom(CUSTOM_MESSAGES.modalBody(modalIdTwo)).hasText('here is a cool message');
-      await click(CUSTOM_MESSAGES.modalButton(modalIdTwo));
     });
+
     test('it shows the multiple banner messages', async function (assert) {
       const bannerIdOne = 'some-awesome-id-2';
       const bannerIdTwo = 'some-awesome-id-1';
@@ -122,15 +129,13 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
   });
 
   test('it should display an active authenticated message after creation on enterprise', async function (assert) {
-    assert.expect(4);
     await login();
-    await visit('vault/config-ui/messages');
-    await click(CUSTOM_MESSAGES.button('create message'));
-    await fillIn(CUSTOM_MESSAGES.input('title'), 'Awesome custom message title');
+    await visit('vault/config-ui/messages/create');
+    await fillIn(CUSTOM_MESSAGES.input('title'), 'active authenticated message title');
     await click(CUSTOM_MESSAGES.radio('banner'));
     await fillIn(
       CUSTOM_MESSAGES.input('message'),
-      'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pulvinar mattis nunc sed blandit libero volutpat sed cras ornare.'
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'
     );
     await fillIn(
       CUSTOM_MESSAGES.input('startTime'),
@@ -138,15 +143,17 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
     );
     await fillIn('[data-test-kv-key="0"]', 'Learn more');
     await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
-
-    await click(CUSTOM_MESSAGES.button('create-message'));
-    assert.dom(GENERAL.title).hasText('Awesome custom message title', 'on the details screen');
+    await click(GENERAL.submitButton);
+    assert.dom(GENERAL.title).hasText('active authenticated message title', 'title is correct');
     assert.dom('.hds-alert').exists('active custom message displays on authenticated.');
+    //  confirm message shows within a namespace
     await runCmd(createNS('world'), false);
     await visit('vault/config-ui/messages');
-    assert.dom('.hds-alert').exists('active custom message displays on namespace authenticated.');
-    await click(CUSTOM_MESSAGES.listItem('Awesome custom message title'));
-    await click(CUSTOM_MESSAGES.confirmActionButton('Delete message'));
+    assert
+      .dom('.hds-alert')
+      .exists('active custom message displays on namespace authenticated from within a namespace');
+    await click(CUSTOM_MESSAGES.listItem('active authenticated message title'));
+    await click(GENERAL.confirmTrigger);
     await click(GENERAL.confirmButton);
     assert.strictEqual(
       currentRouteName(),

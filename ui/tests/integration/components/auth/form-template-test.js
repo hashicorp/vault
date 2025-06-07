@@ -57,7 +57,9 @@ module('Integration | Component | auth | form template', function (hooks) {
   test('it does not show toggle buttons if @alternateView does not exist', async function (assert) {
     await this.renderComponent();
     assert.dom(GENERAL.backButton).doesNotExist('"Back" button does not render');
-    assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('"Sign in with other methods" does not render');
+    assert
+      .dom(GENERAL.button('Sign in with other methods'))
+      .doesNotExist('"Sign in with other methods" does not render');
   });
 
   test('it initializes with preset auth type', async function (assert) {
@@ -70,7 +72,7 @@ module('Integration | Component | auth | form template', function (hooks) {
     const authenticateStub = sinon.stub(this.owner.lookup('service:auth'), 'authenticate');
     authenticateStub.throws('permission denied');
     await this.renderComponent();
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.messageError)
       .hasText('Error Authentication failed: permission denied: Sinon-provided permission denied');
@@ -169,9 +171,9 @@ module('Integration | Component | auth | form template', function (hooks) {
       await this.renderComponent();
       assert.dom(AUTH_FORM.tabs).exists({ count: 3 }, 'tabs render by default');
       assert.dom(GENERAL.backButton).doesNotExist();
-      await click(AUTH_FORM.otherMethodsBtn);
+      await click(GENERAL.button('Sign in with other methods'));
       assert
-        .dom(AUTH_FORM.otherMethodsBtn)
+        .dom(GENERAL.button('Sign in with other methods'))
         .doesNotExist('"Sign in with other methods" does not render after it is clicked');
       assert
         .dom(GENERAL.selectByAttr('auth type'))
@@ -179,7 +181,9 @@ module('Integration | Component | auth | form template', function (hooks) {
       await click(GENERAL.backButton);
       assert.dom(GENERAL.backButton).doesNotExist('"Back" button does not render after it is clicked');
       assert.dom(AUTH_FORM.tabs).exists({ count: 3 }, 'clicking "Back" renders tabs again');
-      assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders again');
+      assert
+        .dom(GENERAL.button('Sign in with other methods'))
+        .exists('"Sign in with other methods" renders again');
     });
 
     test('it resets selected tab after clicking "Sign in with other methods" and then "Back"', async function (assert) {
@@ -192,7 +196,7 @@ module('Integration | Component | auth | form template', function (hooks) {
       await click(AUTH_FORM.tabBtn('oidc'));
       assert.dom(AUTH_FORM.tabBtn('oidc')).hasAttribute('aria-selected', 'true');
       assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'false');
-      await click(AUTH_FORM.otherMethodsBtn);
+      await click(GENERAL.button('Sign in with other methods'));
       assert.dom(GENERAL.selectByAttr('auth type')).exists('it renders dropdown instead of tabs');
       await click(GENERAL.backButton);
       // assert tab selection is reset
@@ -216,7 +220,9 @@ module('Integration | Component | auth | form template', function (hooks) {
       assert.dom(GENERAL.inputByAttr('password')).exists();
 
       assert.dom(GENERAL.backButton).exists('"Back" button renders');
-      assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('"Sign in with other methods" does not render');
+      assert
+        .dom(GENERAL.button('Sign in with other methods'))
+        .doesNotExist('"Sign in with other methods" does not render');
     });
   });
 
@@ -369,7 +375,7 @@ module('Integration | Component | auth | form template', function (hooks) {
       await fillIn(GENERAL.inputByAttr('role'), 'foo');
       await fillIn(GENERAL.inputByAttr('path'), 'foo-oidc');
       assert.dom(GENERAL.inputByAttr('role')).hasValue('foo', 'role is retained when mount path is changed');
-      await click(AUTH_FORM.login);
+      await click(GENERAL.submitButton);
     });
   });
 });

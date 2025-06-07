@@ -56,7 +56,7 @@ module('Integration | Component | page/pki-issuer-generate-intermediate', functi
     assert.dom(GENERAL.title).hasText('Generate intermediate CSR');
     await fillIn(GENERAL.inputByAttr('type'), 'internal');
     await fillIn(GENERAL.inputByAttr('commonName'), 'foobar');
-    await click('[data-test-save]');
+    await click('[data-test-submit]');
     assert.dom(GENERAL.title).hasText('View Generated CSR');
   });
 
@@ -77,7 +77,7 @@ module('Integration | Component | page/pki-issuer-generate-intermediate', functi
     // Fill in
     await fillIn(GENERAL.inputByAttr('type'), 'internal');
     await fillIn(GENERAL.inputByAttr('commonName'), 'foobar');
-    await click('[data-test-save]');
+    await click('[data-test-submit]');
     assert
       .dom(GENERAL.title)
       .hasText('Generate intermediate CSR', 'title does not change if response is unsuccessful');

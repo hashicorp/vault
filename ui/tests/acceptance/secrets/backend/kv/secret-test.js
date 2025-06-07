@@ -55,7 +55,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await click('[data-test-toggle-label="Automate secret deletion"]');
       await fillIn('[data-test-select="ttl-unit"]', 's');
       await fillIn('[data-test-ttl-value="Automate secret deletion"]', '1');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
 
       await click(PAGE.secretTab('Configuration'));
 
@@ -140,7 +140,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await fillIn(GENERAL.inputByAttr('path'), this.backend);
       await click(GENERAL.toggleGroup('Method Options'));
       await mountSecrets.version(1);
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
     });
     hooks.afterEach(async function () {
       await runCmd([`delete sys/mounts/${this.backend}`]);
@@ -340,7 +340,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await fillIn(SS.secretPath('create'), secretPath);
       await click(GENERAL.toggleInput('json'));
       codemirror().setValue(content);
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
 
       assert.strictEqual(
         currentRouteName(),

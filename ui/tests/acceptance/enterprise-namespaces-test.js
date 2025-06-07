@@ -18,7 +18,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { runCmd, createNS, deleteNS } from 'vault/tests/helpers/commands';
 import { login, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
-import { GENERAL } from '../helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { NAMESPACE_PICKER_SELECTORS } from '../helpers/namespace-picker';
 
 import sinon from 'sinon';
@@ -74,7 +74,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     fetchSpy.restore();
   });
 
-  test('it focuses the search input field when the component is loaded', async function (assert) {
+  test('it focuses the search input field when user toggles namespace picker', async function (assert) {
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify that the search input field is focused
@@ -92,8 +92,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await createNamespaces(namespaces);
 
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
-    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
-
+    await click(GENERAL.button('Refresh list'));
     assert.dom(NAMESPACE_PICKER_SELECTORS.searchInput).exists('The namespace search field exists');
 
     // Simulate typing into the search input
@@ -123,7 +122,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await createNamespaces(namespaces);
 
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
-    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
+    await click(GENERAL.button('Refresh list'));
 
     // Verify all namespaces are displayed initially
     assert.dom(NAMESPACE_PICKER_SELECTORS.link()).exists('Namespace link(s) exist');
@@ -186,8 +185,8 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     );
 
     // Refresh the list of namespaces
-    assert.dom(NAMESPACE_PICKER_SELECTORS.refreshList).exists('Refresh list button exists');
-    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
+    assert.dom(GENERAL.button('Refresh list')).exists('Refresh list button exists');
+    await click(GENERAL.button('Refresh list'));
 
     // Verify that the namespace list was fetched on refresh
     listNamespaceRequests = fetchSpy
@@ -209,7 +208,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await createNamespaces(namespaces);
 
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
-    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
+    await click(GENERAL.button('Refresh list'));
 
     // Verify the "Manage" button is rendered and has the correct URL
     assert
@@ -247,7 +246,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await createNamespaces(namespaces);
 
     await click(NAMESPACE_PICKER_SELECTORS.toggle);
-    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
+    await click(GENERAL.button('Refresh list'));
 
     // Login with a namespace prefixed with /
     await loginNs('/beep/boop');

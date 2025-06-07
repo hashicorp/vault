@@ -85,7 +85,7 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
     this.model = this.newModel;
 
     await this.renderComponent();
-    await click('[data-test-save]');
+    await click('[data-test-submit]');
 
     assert
       .dom(GENERAL.validationErrorByAttr('name'))
@@ -122,7 +122,7 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
     await fillIn('[data-test-string-list-input="1"]', 'bar@baz.com');
     await click('[data-test-string-list-button="add"]');
     await click('[data-test-input-group="disable_check_in_enforcement"] input#Disabled');
-    await click('[data-test-save]');
+    await click('[data-test-submit]');
 
     assert.ok(
       this.transitionCalledWith('libraries.library.details', 'new-library'),
@@ -150,7 +150,7 @@ module('Integration | Component | ldap | Page::Library::CreateAndEdit', function
 
     await click('[data-test-string-list-row="0"] [data-test-string-list-button="delete"]');
     await click('[data-test-input-group="disable_check_in_enforcement"] input#Disabled');
-    await click('[data-test-save]');
+    await click('[data-test-submit]');
 
     assert.ok(
       this.transitionCalledWith('libraries.library.details', 'test-library'),

@@ -7,6 +7,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import sinon from 'sinon';
 import { click, fillIn, render } from '@ember/test-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import hbs from 'htmlbars-inline-precompile';
 
 module('Integration | Component | confirmation-modal', function (hooks) {
@@ -37,7 +38,7 @@ module('Integration | Component | confirmation-modal', function (hooks) {
     await fillIn('[data-test-confirmation-modal-input="Confirmation Modal"]', 'Destructive Thing');
     assert.dom('[data-test-confirm-button="Confirmation Modal"]').isNotDisabled();
 
-    await click('[data-test-cancel-button]');
+    await click(GENERAL.cancelButton);
     assert.true(closeAction.called, 'executes passed in onClose function');
     await click('[data-test-confirm-button]');
     assert.true(confirmAction.called, 'executes passed in onConfirm function');

@@ -21,12 +21,7 @@
       />
     {{/if}}
     {{#if @onCancel}}
-      <Hds::Button
-        @text={{or @cancelButtonText "Cancel"}}
-        @color="secondary"
-        {{on "click" @onCancel}}
-        data-test-cancel-button
-      />
+      <Hds::Button @text={{or @cancelButtonText "Cancel"}} @color="secondary" {{on "click" @onCancel}} data-test-cancel />
     {{/if}}
   </Hds::ButtonSet>
   {{yield to="error"}}

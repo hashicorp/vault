@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, currentURL, find, fillIn, typeIn, visit, waitFor } from '@ember/test-helpers';
+import { click, currentURL, fillIn, typeIn, visit, waitFor } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
@@ -136,7 +136,7 @@ module('Acceptance | auth login form', function (hooks) {
       assert.dom(GENERAL.inputByAttr('role')).exists();
       assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
       assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
-      assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders');
+      assert.dom(GENERAL.button('Sign in with other methods')).exists('"Sign in with other methods" renders');
 
       assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
       assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
@@ -151,7 +151,7 @@ module('Acceptance | auth login form', function (hooks) {
         .hasAttribute('aria-selected', 'true', 'it selects tab matching query param');
       assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
       assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
-      assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders');
+      assert.dom(GENERAL.button('Sign in with other methods')).exists('"Sign in with other methods" renders');
       assert.dom(GENERAL.backButton).doesNotExist();
     });
 
@@ -161,7 +161,7 @@ module('Acceptance | auth login form', function (hooks) {
       assert.dom(GENERAL.selectByAttr('auth type')).hasValue('token');
       assert.dom(GENERAL.backButton).exists('it renders "Back" button because tabs do exist');
       assert
-        .dom(AUTH_FORM.otherMethodsBtn)
+        .dom(GENERAL.button('Sign in with other methods'))
         .doesNotExist(
           'Tabs exist but query param does not match so login is showing "other" methods and this button should not render'
         );
@@ -294,7 +294,7 @@ module('Acceptance | auth login form', function (hooks) {
           if (key === 'jwt') return;
           await fillIn(GENERAL.inputByAttr(key), `some-${key}`);
         }
-        await click(AUTH_FORM.login);
+        await click(GENERAL.submitButton);
       });
     }
   });
@@ -316,6 +316,8 @@ module('Acceptance | auth login form', function (hooks) {
     // subsequent capability checks fail because they would not be queried with the appropriate namespace header
     // if this test fails because a POST /v1/sys/capabilities-self returns a 403, then we have a problem!
     test('it sets namespace when renewing token', async function (assert) {
+      // Sinon spy for clipboard
+      const clipboardSpy = sinon.stub(navigator.clipboard, 'writeText').resolves();
       const uid = uuidv4();
       const ns = `admin-${uid}`;
       // log in to root to create namespace
@@ -351,9 +353,11 @@ module('Acceptance | auth login form', function (hooks) {
 
       // login as user just to get token (this is the only way to generate a token in the UI right now..)
       await loginMethod(inputValues, { authType: 'userpass', toggleOptions: true });
-      await click(GENERAL.testButton('user-menu-trigger'));
-      const token = find('[data-test-copy-button]').getAttribute('data-test-copy-button');
-
+      await click(GENERAL.button('user-menu-trigger'));
+      await click(GENERAL.copyButton);
+      assert.true(clipboardSpy.calledOnce, 'Clipboard was called once');
+      const token = clipboardSpy.firstCall.args[0];
+      clipboardSpy.restore(); // restore original clipboard
       // login with token to reproduce bug
       await loginNs(ns, token);
       await visit(`/vault/secrets/${db}/overview?namespace=${ns}`);
@@ -361,7 +365,7 @@ module('Acceptance | auth login form', function (hooks) {
         .dom('[data-test-overview-card="Roles"]')
         .hasText('Roles Create new', 'database overview renders');
       // renew token
-      await click(GENERAL.testButton('user-menu-trigger'));
+      await click(GENERAL.button('user-menu-trigger'));
       await click('[data-test-user-menu-item="renew token"]');
       // navigate out and back to overview tab to re-request capabilities
       await click(GENERAL.secretTab('Roles'));

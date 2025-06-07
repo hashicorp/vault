@@ -13,9 +13,10 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { selectChoose } from 'ember-power-select/test-support';
 import { Response } from 'miragejs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const { destinations, searchSelect, messageError, kvSuggestion } = PAGE;
-const { mountSelect, mountInput, submit, cancel, successMessage } = destinations.sync;
+const { mountSelect, mountInput, successMessage } = destinations.sync;
 
 module('Integration | Component | sync | Secrets::Page::Destinations::Destination::Sync', function (hooks) {
   setupRenderingTest(hooks);
@@ -78,17 +79,16 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
       assert.deepEqual(data, expected, 'Sync request made with mount and secret name');
       return { data: { associated_secrets: { 'my-kv_12345': data } } };
     });
-
-    assert.dom(submit).isDisabled('Submit button is disabled when mount is not selected');
-    assert.dom(cancel).hasText('Back', 'back button renders');
+    assert.dom(GENERAL.submitButton).isDisabled('Submit button is disabled when mount is not selected');
+    assert.dom(GENERAL.cancelButton).hasText('Back', 'back button renders');
     await selectChoose(mountSelect, '.ember-power-select-option', 1);
-    assert.dom(submit).isDisabled('Submit button is disabled when secret is not selected');
+    assert.dom(GENERAL.submitButton).isDisabled('Submit button is disabled when secret is not selected');
     await click(kvSuggestion.input);
     await click(searchSelect.option(1));
-    await click(submit);
-    assert.dom(cancel).hasText('View synced secrets', 'view secrets tertiary renders');
+    await click(GENERAL.submitButton);
+    assert.dom(GENERAL.cancelButton).hasText('View synced secrets', 'view secrets tertiary renders');
     assert.dom(kvSuggestion.input).hasNoValue('Secret path is unset after submit success');
-    assert.dom(submit).isDisabled('Submit button is disabled');
+    assert.dom(GENERAL.submitButton).isDisabled('Submit button is disabled');
     assert
       .dom(successMessage)
       .includesText('Sync operation successfully initiated for my-secret.', 'Success banner renders');
@@ -118,7 +118,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
     await fillIn(mountInput, 'my-kv');
     await click(kvSuggestion.input);
     await click(searchSelect.option(1));
-    await click(submit);
+    await click(GENERAL.submitButton);
   });
 
   test('it should render alert banner on sync error', async function (assert) {
@@ -133,7 +133,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::Destinatio
     await selectChoose(mountSelect, '.ember-power-select-option', 1);
     await click(kvSuggestion.input);
     await click(searchSelect.option(1));
-    await click(submit);
+    await click(GENERAL.submitButton);
 
     assert.dom(messageError).hasTextContaining(error, 'Error renders in alert banner');
   });
