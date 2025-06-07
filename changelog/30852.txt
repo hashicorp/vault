@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/transit: ensure verify endpoint always returns valid field in batch_results with HMAC
+```
