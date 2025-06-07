@@ -11,7 +11,6 @@ locals {
     pw                = var.ldap_pw
     vault_policy_name = local.kv_output.writer_policy_name
   }
-
 }
 
 output "ldap" {
