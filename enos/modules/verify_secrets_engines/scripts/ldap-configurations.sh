@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+set -e
+
+fail() {
+  echo "$1" 1>&2
+  exit 1
+}
+
+install_ldap_tools() {
+  echo "Installing OpenLDAP client tools..."
+  if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    if [ -x "$(command -v apt-get)" ]; then
+      sudo apt-get update
+      sudo apt-get install -y ldap-utils
+    elif [ -x "$(command -v yum)" ]; then
+      sudo yum install -y openldap-clients
+    else
+      echo "Unsupported Linux package manager."
+      exit 1
+    fi
+  elif [[ "$OSTYPE" == "darwin"* ]]; then
+    if ! command -v brew &> /dev/null; then
+      echo "Homebrew not found. Installing Homebrew first..."
+      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    fi
+    brew install openldap
+  else
+    echo "Unsupported OS: $OSTYPE"
+    exit 1
+  fi
+}
+
+[[ -z "$MOUNT" ]] && fail "MOUNT env variable has not been set"
+[[ -z "$LDAP_HOST" ]] && fail "LDAP_HOST env variable has not been set"
+[[ -z "$LDAP_PORT" ]] && fail "LDAP_PORT env variable has not been set"
+[[ -z "$LDAP_USERNAME" ]] && fail "LDAP_USERNAME env variable has not been set"
+[[ -z "$LDAP_ADMIN_PW" ]] && fail "LDAP_ADMIN_PW env variable has not been set"
+[[ -z "$VAULT_POLICY" ]] && fail "VAULT_POLICY env variable has not been set"
+[[ -z "$VAULT_ADDR" ]] && fail "VAULT_ADDR env variable has not been set"
+[[ -z "$VAULT_INSTALL_DIR" ]] && fail "VAULT_INSTALL_DIR env variable has not been set"
+[[ -z "$VAULT_TOKEN" ]] && fail "VAULT_TOKEN env variable has not been set"
+
+binpath=${VAULT_INSTALL_DIR}/vault
+test -x "$binpath" || fail "unable to locate vault binary at $binpath"
+
+export VAULT_FORMAT=json
+
+# Installing LDAP tools
+install_ldap_tools
+
+# Verify ldap connection
+ldapsearch -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" -b "dc=${LDAP_USERNAME},dc=com" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w ${LDAP_ADMIN_PW}
+
+# Creating Users Org Unit LDIF file and adding users organizational unit
+USER_OU_LDIF="users-ou.ldif"
+cat <<EOF > ${USER_OU_LDIF}
+dn: ou=users,dc=enos,dc=com
+objectClass: organizationalUnit
+ou: users
+EOF
+ldapadd -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w ${LDAP_ADMIN_PW} -f ${USER_OU_LDIF}
+
+# Creating User LDIF file and adding user to LDAP
+USER_LDIF="user.ldif"
+cat <<EOF > ${USER_LDIF}
+dn: uid=$LDAP_USERNAME,ou=users,dc=$LDAP_USERNAME,dc=com
+objectClass: inetOrgPerson
+sn: user
+cn: enos user
+uid: $LDAP_USERNAME
+userPassword: $LDAP_ADMIN_PW
+EOF
+ldapadd -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w ${LDAP_ADMIN_PW} -f ${USER_LDIF}
+
+# Configure the Vault LDAP Connection
+vault write auth/ldap/config \
+  url="ldap://${LDAP_HOST}:${LDAP_PORT}" \
+  binddn="cn=admin,dc=${LDAP_USERNAME},dc=com" \
+  bindpass="${LDAP_ADMIN_PW}" \
+  userdn="ou=users,dc=${LDAP_USERNAME},dc=com" \
+  userattr="uid" \
+  groupdn="ou=groups,dc=${LDAP_USERNAME},dc=com" \
+  groupfilter="(&(objectClass=groupOfNames)(member={{.UserDN}}))" \
+  groupattr="cn" \
+  insecure_tls=true
+
+# Creating Vault Policy for LDAP and assigning user to policy
+VAULT_LDAP_POLICY="ldap_reader.hcl"
+cat <<EOF > ${VAULT_LDAP_POLICY}
+path "secret/data/*" {
+  capabilities = ["read", "list"]
+}
+EOF
+vault policy write reader "${VAULT_LDAP_POLICY}"
+vault "write auth/ldap/users/${LDAP_USERNAME}" \
+    policies="reader"
+
+# Authenticate Using LDAP
+vault login -method=${MOUNT} username=${LDAP_USERNAME} password=${LDAP_ADMIN_PW}
