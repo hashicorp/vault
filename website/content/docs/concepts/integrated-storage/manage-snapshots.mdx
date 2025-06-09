@@ -468,29 +468,141 @@ instructions in the [automatic snapshots with integrated storage documentation](
 with options specified in the [API
 documentation](/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config).
 
-<Tip>
-
-You should configure each Vault cluster (forming the Primary and Secondary Vault Performance Replicas) to create separate automatic snapshots.
-
-</Tip>
-
 ```shell-session
 $ vault write sys/storage/raft/snapshot-auto/config/[:name] [options]
 ```
 
-Learn more in the [CLI documentation](/vault/docs/commands/write).
+#### Enable automatic snapshots on primary cluster
+
+The following command creates an automatic snapshot configuration named,
+`paris-primary` with a user defined location and interval.
+
+This example specifies AWS S3 storage with appropriate AWS configuration options for the bucket name, the region, and required credentials. Snapshots are further protected with server side encryption.
+
+```shell-session
+$ vault write sys/storage/raft/snapshot-auto/config/paris-primary \
+    storage_type="aws-s3" \
+    file_prefix="paris" \
+    interval="8h" \
+    retain=30 \
+    local_max_space=2621440000 \
+    path_prefix="primary" \
+    aws_s3_bucket="vault-snapshots" \
+    aws_s3_region="eu-west-3" \
+    aws_access_key_id="ASI...COFFEE" \
+    aws_secret_access_key="wJalr...COFFEEKEY" \
+    aws_session_token="IQoJb3JpZ2luX2IQ...COFFEE" \
+    aws_s3_server_side_encryption=true
+```
+
+The configuration also specifies local storage with both a filename and path prefix, a 120 minute snapshot interval, and retaining up to 7 snapshots before deleting earlier snapshots. The configuration also requires that the snapshots with the given `file_prefix` value and in the specified `path_prefix` value consume no more than 250 megabytes (262144000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
+
+#### Enable automatic snapshots on secondary cluster
+
+The following command creates an automatic snapshot configuration named,
+`zurich-secondary` with a user defined location and interval.
+
+This example specifies AWS S3 storage with appropriate AWS configuration options for the bucket name, the region, and required credentials. Snapshots are further protected with server side encryption.
+
+```shell-session
+$ vault write sys/storage/raft/snapshot-auto/config/zurich-secondary \
+    storage_type="aws-s3" \
+    file_prefix="zurich" \
+    interval="8h" \
+    retain=30 \
+    local_max_space=2621440000 \
+    path_prefix="secondary" \
+    aws_s3_bucket="vault-snapshots" \
+    aws_s3_region="eu-central-2" \
+    aws_access_key_id="ASI...COFFEE" \
+    aws_secret_access_key="wJalr...COFFEEKEY" \
+    aws_session_token="IQoJb3JpZ2luX2IQ...COFFEE" \
+    aws_s3_server_side_encryption=true
+```
+
+The configuration further defines local storage with both a filename and path prefix, a 12 hour snapshot interval, and retaining up to 14 snapshots before deleting earlier snapshots. The configuration also requires that the snapshots with the given `file_prefix` value and in the specified `path_prefix` value consume no more than 2.6 gigabytes (2621440000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
+
+Learn more in the [API documentation](/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config).
 
 </Tab>
 
 <Tab heading="API" group="api">
 
-Use cURL with the Vault API to...
+#### Enable automatic snapshots on primary cluster
+
+Create a JSON payload to configure automatic snapshot settings for the **primary** DR cluster.
+
+This example specifies AWS S3 storage with appropriate AWS configuration options for the bucket name, the region, and required credentials. Snapshots are further protected with server side encryption.
 
 ```shell-session
-$ 
+$ cat > payload.json << EOF
+{
+    "storage_type": "aws-s3",
+    "aws_s3_bucket": "vault-snapshots",
+    "aws_s3_region": "eu-west-3",
+    "aws_access_key_id": "ASIAIOSFODNN7ECOFFEE",
+    "aws_secret_access_key ": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYECOFFEEKEY",
+    "aws_session_token": "IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZVERYLONGSTRINGECOFFEE",
+    "aws_s3_server_side_encryption": true,
+    "file_prefix": "paris",
+    "interval": "8h",
+    "retain": "30",
+    "local_max_space": "2621440000",
+    "path_prefix": "primary"
+}
+EOF
 ```
 
-Learn more in the [FIXME](/vault/api-docs/system/storage/raft#take-a-snapshot-of-the-raft-cluster) documentation.
+The configuration further defines both a filename and path prefix, an 8 hour snapshot interval, and retaining up to 30 snapshots before deleting earlier snapshots. Snapshots with the given `file_prefix` value and in the specified `path_prefix` value must not consume more than 2.6 gigabytes (2621440000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
+
+Use cURL with the Vault API to create an automatic snapshot configuration named `paris-primary` for the DR primary cluster.
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-auto/config/paris-primary
+```
+
+#### Enable automatic snapshots on secondary cluster
+
+Create a JSON payload to configure automatic snapshot settings for the **secondary** DR cluster.
+
+This example specifies AWS S3 storage with appropriate AWS configuration options for the bucket name, the region, and required credentials. Snapshots are further protected with server side encryption.
+
+```shell-session
+$ cat > payload.json << EOF
+{
+    "storage_type": "aws-s3",
+    "aws_s3_bucket": "vault-snapshots",
+    "aws_s3_region": "eu-central-2",
+    "aws_access_key_id": "ASIAIOSFODNN7ECOFFEE",
+    "aws_secret_access_key ": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYECOFFEEKEY",
+    "aws_session_token": "IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZVERYLONGSTRINGECOFFEE",
+    "aws_s3_server_side_encryption": true,
+    "file_prefix": "zurich",
+    "interval": "8h",
+    "retain": "30",
+    "local_max_space": "2621440000",
+    "path_prefix": "secondary"
+}
+EOF
+```
+
+The configuration further defines both a filename and path prefix, an 8 hour snapshot interval, and retaining up to 30 snapshots before deleting earlier snapshots. Snapshots with the given `file_prefix` value and in the specified `path_prefix` value must not consume more than 2.6 gigabytes (2621440000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
+
+Use cURL with the Vault API to create an automatic snapshot configuration named `zurich-secondary` for the DR secondary cluster.
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-auto/config/zurich-seconary
+```
+
+Learn more in the [API documentation](/vault/api-docs/system/storage/raftautosnapshots).
 
 </Tab>
 
@@ -508,19 +620,23 @@ Refer to the [configure Vault cluster with Integrated Storage](/vault/tutorials/
 
 ## Restore a cluster snapshot
 
+These examples show how to restore a cluster snapshot with the Vault CLI or API.
+
 <Tabs>
 
 <Tab heading="Single cluster" group="single">
 
 ### Restore a single cluster snapshot
 
+Use these examples to learn how to restore a snapshot to a single Vault cluster.
+
 <Tabs>
 
 <Tab heading="CLI" group="cli">
 
 1. Bring your Vault cluster back online following the circumstances that
-required you to restore from backup. You must reinitialise your Vault
-cluster with new storage, and authenticate with the new initial root token generated during this re-initialisation. Note that this situation is temporary- you still need the original cluster unseal keys to unseal Vault after restoring the snapshot.
+required you to restore from backup. You must reinitialize your Vault
+cluster with new storage, and authenticate with the new initial root token generated during this re-initialization. Note that this situation is temporary- you still need the original cluster unseal keys to unseal Vault after restoring the snapshot.
 
 1. Copy your Vault snapshot file to a Vault cluster member and run the
 example command, replacing the example filename with that of your snapshot file. Note that you must use the `-force` flag in this command since the Auto-unseal or Shamir keys will not be consistent with the snapshot data as you are restoring a snapshot from a different cluster.
@@ -529,10 +645,10 @@ example command, replacing the example filename with that of your snapshot file.
    $ vault operator raft snapshot restore -force backup.snap
    ```
 
-   Learn more in the [CLI documentation](https://developer.hashicorp.com/vault/docs/commands/operator/raft#snapshot-restore).
+   Learn more in the [CLI documentation](/vault/docs/commands/operator/raft#snapshot-restore).
 
-1. Once you have restored the snapshot, you need to unseal your Vault
-cluster again using a command like this example, run for each number of key shares required by the quroum defined in your original cluster configuration.
+1. After restoring the snapshot, you must unseal your Vault
+cluster again using a command like this example. Typically each person with a key share would execute the unseal command and pass in their key share until reaching the number of key shares required by the quroum defined in your original cluster configuration.
 
    ```shell-session
    $ vault operator unseal [unseal_key]
@@ -544,13 +660,46 @@ cluster again using a command like this example, run for each number of key shar
 
 <Tab heading="API" group="api">
 
-Use cURL with the Vault API to...
+1. Bring your Vault cluster back online following the circumstances that
+required you to restore from backup. You must reinitialize your Vault
+cluster with new storage, and authenticate with the new initial root token generated during this re-initialization. Note that this situation is temporary- you still need the original cluster unseal keys to unseal Vault after restoring the snapshot.
 
-```shell-session
-$ 
-```
+1. Copy your Vault snapshot file to a Vault cluster member and run the
+example command, replacing the example filename with that of your snapshot file. Note that you must use the `snapshot-force` API endpoint in this command since the Auto-unseal or Shamir keys will not be consistent with the snapshot data as you are restoring a snapshot from a different cluster.
 
-Learn more in the [FIXME](/vault/api-docs/system/storage/raft#take-a-snapshot-of-the-raft-cluster) documentation.
+   ```shell-session
+   $ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data-binary @backup.snap \
+    http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-force
+   ```
+
+   Learn more in the [API documentation](/vault/api-docs/system/storage/raft#force-restore-raft-using-a-snapshot).
+
+1. After restoring the snapshot, you must unseal your Vault
+cluster again using a command like this example. Typically each person with a key share would execute the unseal command and pass in their key share until reaching the number of key shares required by the quroum defined in your original cluster configuration.
+
+   Create an key share payload that holds one of the key shares.
+
+   ```shell-session
+   $ cat > payload.json << EOF
+   {
+   "key": "abcd1234..."
+   }
+   EOF
+   ```
+
+   Use cURL with the Vault API to unseal Vault.
+   
+   ```shell-session
+   $ curl \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/unseal
+   ```
+
+   Learn more in the [API documentation](/vault/api-docs/system/unseal).
 
 </Tab>
 
