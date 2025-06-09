@@ -7,13 +7,17 @@ description: >-
 
 # Manage snapshots
 
-All Vault editions support data backup and restoration through manual snapshots of the cluster state. Vault Enterprise and HCP Vault add support for automated snapshots
+All Vault editions support data backup and restoration with manual snapshots of the cluster state. Vault Enterprise adds support for configurable automatic snapshots to local and cloud storage.
 
-Taking regular snapshots protects your Vault cluster against data corruption or sabotage of which Disaster Recovery Replication might be unable to protect against. Retaining cluster snapshots outside cluster storage or physical datacenters where the clusters operate supports data availability in the event of catastrophic failure.
+When you save regular Vault cluster snapshots, you help defend against data corruption or sabotage. You can further support data availability in the event of catastrophic failure by retaining cluster snapshots outside cluster storage or physical datacenters where clusters operate.
 
-This guidance provides snapshot management details, and command examples for the Vault CLI and API. Refer to the [Resources](#resources) section of this document to learn more about the API endpoints and CLI commands shown in the examples.
+This guidance provides snapshot management details, and command examples for the Vault CLI and API. Refer to the [Resources](#resources) section of this document for more details about the API endpoints and CLI commands shown in the examples.
+
+<Tip>
 
 If you're saving a snapshot in preparation for Vault Enterprise upgrade, review the [Automate upgrades with Vault Enterprise](/vault/tutorials/raft/raft-upgrade-automation) guide to learn how Autopilot can automate your upgrades.
+
+</Tip>
 
 ## Prerequisites
 
@@ -35,7 +39,7 @@ All Vault editions offer support for manually saving cluster snapshots with the 
 
 <Note> 
 
-The exact steps needed depends on your Vault architecture and storage type, and can differ from these examples.
+Keep in mind that the exact steps needed depend on your specific Vault architecture and storage type, and can differ from the examples shown here.
 
 </Note>
 
@@ -203,7 +207,7 @@ Learn more in the [snapshot API documentation](/vault/api-docs/system/storage/ra
 
 <Tip>
 
-As a best practice, you should always store the snapshot files in a secure place away from the Vault clusters and their infrastructure.
+As a best practice, you should retain snapshot files in a secure place away from the Vault clusters and their infrastructure.
 
 </Tip>
 
@@ -211,7 +215,7 @@ As a best practice, you should always store the snapshot files in a secure place
 
 @include 'alerts/enterprise-only.mdx'
 
-Vault Enterprise features configurable automatic snapshots on an interval, to local or cloud storage. Follow these steps to backup Vault using automated snapshots.
+Vault Enterprise features configurable automatic snapshots written to local or cloud storage on an interval. Follow these steps to configure Vault to enable automatic snapshots.
 
 <Tabs>
 
@@ -225,7 +229,7 @@ These examples show how to configure automatic snapshots for a single cluster wi
 
 <Tab heading="CLI" group="cli">
 
-Enable automated snapshots with the following example commands, based on the
+Enable automatic snapshots with the following example commands, based on the
 instructions in the [automatic snapshots with integrated storage documentation](/vault/docs/enterprise/automated-integrated-storage-snapshots)
 with options specified in the [API
 documentation](/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config).
@@ -237,8 +241,7 @@ $ vault write sys/storage/raft/snapshot-auto/config/[:name] [options]
 **Example:**
 
 The following command creates a automatic snapshot configuration named,
-`testsnap` with a user defined location and interval. It retains up to 7
-snapshots before deleting earlier snapshots.
+`testsnap` with a user defined location and interval.
 
 ```shell-session
 $ vault write sys/storage/raft/snapshot-auto/config/testsnap \
@@ -246,26 +249,43 @@ $ vault write sys/storage/raft/snapshot-auto/config/testsnap \
      file_prefix=testsnappy \
      interval=120m \
      retain=7 \
-     local_max_space=1000000 \
+     local_max_space=262144000 \
      path_prefix=/opt/vault/
 ```
 
-Learn more in the [CLI documentation](/vault/docs/commands/write).
+This configuration specifies local storage with both a filename and path prefix, a 120 minute snapshot interval, and retaining up to 7 snapshots before deleting earlier snapshots. The configuration also requires that the snapshots with the given `file_prefix` value and in the specified `path_prefix` value consume no more than 250 megabytes (262144000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
 
-<Tip title="Tutorial">
-
-Refer to the [configure Vault cluster with Integrated Storage](/vault/tutorials/raft/raft-storage#automated-snapshots) tutorial to learn more.
-
-</Tip>
+Learn more in the [API documentation](/vault/api-docs/system/storage/raftautosnapshots).
 
 </Tab>
 
 <Tab heading="API" group="api">
 
-Use cURL with the Vault API to...
+Create a JSON payload to configure automatic snapshot settings.
 
 ```shell-session
-$ 
+$ cat > payload.json << EOF
+{
+    "storage_type": "local",
+    "file_prefix": "testsnappy",
+    "interval": "120m",
+    "retain": "7",
+    "local_max_space": "262144000",
+    "path_prefix": "/opt/vault/"
+}
+EOF
+```
+
+This configuration specifies local storage with both a filename and path prefix, a 120 minute snapshot interval, and retaining up to 7 snapshots before deleting earlier snapshots. The configuration also requires that the snapshots with the given `file_prefix` value and in the specified `path_prefix` value consume no more than 250 megabytes (262144000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
+
+Use cURL with the Vault API to configure automatic snapshots.
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-auto/config/testsnap
 ```
 
 Learn more in the [API documentation](/vault/api-docs/system/storage/raftautosnapshots).
@@ -286,7 +306,7 @@ These examples show how to configure automatic snapshots for a cluster participa
 
 <Tab heading="CLI" group="cli">
 
-Enable automated snapshots with the following example commands, based on the
+Enable automatic snapshots with the following example commands, based on the
 instructions in the [automatic snapshots with integrated storage documentation](/vault/docs/enterprise/automated-integrated-storage-snapshots)
 with options specified in the [API
 documentation](/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config).
@@ -295,16 +315,45 @@ documentation](/vault/api-docs/system/storage/raftautosnapshots#create-update-an
 $ vault write sys/storage/raft/snapshot-auto/config/[:name] [options]
 ```
 
-Learn more in the [CLI documentation](/vault/docs/commands/write).
+Learn more in the [API documentation](/vault/api-docs/system/storage/raftautosnapshots).
 
 </Tab>
 
 <Tab heading="API" group="api">
 
-Use cURL with the Vault API to...
+Create a JSON payload to configure automatic snapshot settings for the primary DR cluster.
 
 ```shell-session
-$ 
+$ cat > payload.json << EOF
+{
+    "storage_type": "aws-s3",
+    "aws_s3_bucket": "vault-snapshots",
+    "aws_s3_region": "eu-west-3",
+    "aws_access_key_id": "ASIAIOSFODNN7ECOFFEE",
+    "aws_secret_access_key ": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYECOFFEEKEY",
+    "aws_session_token": "IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZVERYLONGSTRINGECOFFEE",
+    "aws_s3_server_side_encryption": true,
+    "file_prefix": "paris",
+    "interval": "8h",
+    "retain": "30",
+    "local_max_space": "2621440000",
+    "path_prefix": "primary"
+}
+EOF
+```
+
+This configuration specifies AWS S3 storage with appropriate AWS configuration options for the bucket name, the region, and required credentials.
+
+The configuration further defines both a filename and path prefix, an 8 hour snapshot interval, and retaining up to 30 snapshots before deleting earlier snapshots. Snapshots with the given `file_prefix` value and in the specified `path_prefix` value must not consume more than 2.5 gigabytes (2621440000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
+
+Use cURL with the Vault API to configure automatic snapshots for the DR primary cluster.
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-auto/config/testsnap
 ```
 
 Learn more in the [API documentation](/vault/api-docs/system/storage/raftautosnapshots).
@@ -325,14 +374,14 @@ These examples show how to configure automatic snapshots for a cluster participa
 
 <Tab heading="CLI" group="cli">
 
-Enable automated snapshots with the following example commands, based on the
+Enable automatic snapshots with the following example commands, based on the
 instructions in the [automatic snapshots with integrated storage documentation](/vault/docs/enterprise/automated-integrated-storage-snapshots)
 with options specified in the [API
 documentation](/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config).
 
 <Tip>
 
-You should configure each Vault cluster (forming the Primary and Secondary Vault Performance Replicas) to create separate automated snapshots.
+You should configure each Vault cluster (forming the Primary and Secondary Vault Performance Replicas) to create separate automatic snapshots.
 
 </Tip>
 
@@ -361,6 +410,12 @@ Learn more in the [FIXME](/vault/api-docs/system/storage/raft#take-a-snapshot-of
 </Tab>
 
 </Tabs>
+
+<Tip title="Tutorial">
+
+Refer to the [configure Vault cluster with Integrated Storage](/vault/tutorials/raft/raft-storage#automated-snapshots) tutorial to learn more.
+
+</Tip>
 
 ## Restore a cluster snapshot
 
