@@ -279,11 +279,9 @@
     ]
   },
 
-
   { "divider": true },
   { "heading": "OPERATIONS" },
 
-  
   {
     "title": "Get Vault",
     "routes": [
@@ -396,7 +394,7 @@
         "path": "configuration/create-rate-limit-quota"
       },
       {
-        "title": "Rate limit quotas by IP or entity",
+        "title": "Rate limit quotas group_by modes",
         "badge": {
           "text": "ENT",
           "type": "filled",
