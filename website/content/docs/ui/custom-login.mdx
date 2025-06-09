@@ -76,7 +76,7 @@ Vault GUI.
     ```shell-session
     $ vault auth enable              \
       -path <mount_path>             \
-      -namespace-path <plugin_namespace>  \
+      -namespace <plugin_namespace>  \
       -description <visibility_note> \
       -listing-visibility "unauth"   \
       <authentication_method>
@@ -89,7 +89,7 @@ Vault GUI.
     ```shell-session
     $ vault auth enable                      \
       -path gui/ldap                         \
-      -namespace-path admin                       \
+      -namespace admin                       \
       -description "Default GUI auth method" \
       -listing-visibility "unauth"           \
       ldap
@@ -106,7 +106,7 @@ Vault GUI.
   <CodeBlockConfig hideClipboard>
 
   ```shell-session
-  $ vault auth list -namespace-path=admin
+  $ vault auth list -namespace=admin
   
   Path         Type        Accessor                  Description                Version
   ----         ----        --------                  -----------                -------
@@ -153,7 +153,7 @@ Vault GUI.
     $ curl                                             \
       --request POST                                   \
       --header "X-Vault-Token: ${VAULT_TOKEN}"         \
-      --header "X-Vault-namespace-path: ${VAULT_NAMESPACE}" \
+      --header "X-Vault-Namespace: ${VAULT_NAMESPACE}" \
       --data @data.json                                \
       ${VAULT_ADDR}/v1/sys/auth/<plugin_mount_path>
     ```
@@ -166,7 +166,7 @@ Vault GUI.
   $ curl                                               \
       --request POST                                   \
       --header "X-Vault-Token: ${VAULT_TOKEN}"         \
-      --header "X-Vault-namespace-path: ${VAULT_NAMESPACE}" \
+      --header "X-Vault-Namespace: ${VAULT_NAMESPACE}" \
       --data @data.json                         \
       ${VAULT_ADDR}/v1/sys/auth/gui/ldap | jq
   ```
@@ -187,7 +187,7 @@ Use `vault auth tune` to update the `-listing-visibility` flag to `unauth`:
     
 ```shell-session
 $ vault auth tune              \
-  -namespace-path <plugin_namespace>  \
+  -namespace <plugin_namespace>  \
   -description <visibility_note> \
   -listing-visibility "unauth"   \
   <mount_path>
@@ -199,7 +199,7 @@ For example:
 
 ```shell-session
 $ vault auth tune                        \
-  -namespace-path admin                       \
+  -namespace admin                       \
   -description "Default GUI auth method" \
   -listing-visibility "unauth"           \
   gui/ldap
@@ -242,7 +242,7 @@ Success! Tuned the auth method at: gui/ldap/
     $ curl                                             \
       --request POST                                   \
       --header "X-Vault-Token: ${VAULT_TOKEN}"         \
-      --header "X-Vault-namespace-path: ${VAULT_NAMESPACE}" \
+      --header "X-Vault-Namespace: ${VAULT_NAMESPACE}" \
       --data @data.json                                \
       ${VAULT_ADDR}/v1/sys/auth/<plugin_mount_path>/tune
     ```
@@ -255,7 +255,7 @@ Success! Tuned the auth method at: gui/ldap/
     $ curl                                               \
         --request POST                                   \
         --header "X-Vault-Token: ${VAULT_TOKEN}"         \
-        --header "X-Vault-namespace-path: ${VAULT_NAMESPACE}" \
+        --header "X-Vault-Namespace: ${VAULT_NAMESPACE}" \
         --data @data.json                         \
         ${VAULT_ADDR}/v1/sys/auth/gui/userpass/tune | jq
     ```
@@ -520,7 +520,7 @@ $ curl                                               \
 </Tab>
 </Tabs>
 
-## Using a Direct Link
+## Using a direct link
 
 The `?with=` query parameter can be used at any point to override login customizations. For example,
 if a Vault GUI user is unable to authenticate with the default or backup method(s) they can bypass
@@ -535,7 +535,7 @@ Description              | Sample URL
 child namespace          | `${VAULT_ADDR}/ui/vault/auth?namespace=<namespace>&with=<value>` 
 type: `token`            | `${VAULT_ADDR}/ui/vault/auth?with=token`                         
 path: `gui/ldap`\*       | `${VAULT_ADDR}/ui/vault/auth?with=gui%2Fldap%2F`                 
-_*When specifying a path, the mount [listing_visibility](/vault/api-docs/system/auth#listing_visibility-1) must be tuned to `unauth`_ 
+_*When specifying a path for the direct link, the corresponding mount’s [listing_visibility](/vault/api-docs/system/auth#listing_visibility-1) must be tuned to `unauth`._
 
 ### Copy a direct link in the Vault GUI
 
