@@ -1198,10 +1198,6 @@
         "title": "<code>hcp</code>",
         "routes": [
           {
-            "title": "Overview",
-            "path": "commands/hcp"
-          },
-          {
             "title": "<code>connect</code>",
             "path": "commands/hcp/connect"
           },
