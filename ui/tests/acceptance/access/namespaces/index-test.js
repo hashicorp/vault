@@ -346,4 +346,20 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     // Cleanup: Delete namespace(s) via the CLI
     await deleteNSFromPaths([namespace]);
   });
+
+  test('it should render updated namespace after switching from access page', async function (assert) {
+    await visit('/vault/access/namespaces');
+
+    this.server.get('/sys/internal/ui/mounts', () => ({
+      data: {},
+    }));
+
+    await click(GENERAL.menuTrigger);
+    await click(GENERAL.menuItem('switch'));
+
+    // Verify that we switched namespaces
+    assert.dom(NAMESPACE_PICKER_SELECTORS.toggle).hasText('ns1');
+    assert.dom('[data-test-badge-namespace]').hasText('ns1');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.dashboard', 'navigates to the correct route');
+  });
 });
