@@ -45,7 +45,7 @@ module('Integration | Component | mount backend form', function (hooks) {
     test('it renders default state', async function (assert) {
       assert.expect(15);
       await render(
-        hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+        hbs`<MountBackendForm @mountType="auth" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       assert
         .dom(GENERAL.title)
@@ -60,7 +60,7 @@ module('Integration | Component | mount backend form', function (hooks) {
 
     test('it changes path when type is changed', async function (assert) {
       await render(
-        hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+        hbs`<MountBackendForm @mountType="auth" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
 
       await click(MOUNT_BACKEND_FORM.mountType('aws'));
@@ -72,7 +72,7 @@ module('Integration | Component | mount backend form', function (hooks) {
 
     test('it keeps path value if the user has changed it', async function (assert) {
       await render(
-        hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+        hbs`<MountBackendForm @mountType="auth" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       await click(MOUNT_BACKEND_FORM.mountType('approle'));
       assert.strictEqual(this.model.type, 'approle', 'Updates type on model');
@@ -89,7 +89,7 @@ module('Integration | Component | mount backend form', function (hooks) {
 
     test('it does not show a selected token type when first mounting an auth method', async function (assert) {
       await render(
-        hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+        hbs`<MountBackendForm @mountType="auth" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       await click(MOUNT_BACKEND_FORM.mountType('github'));
       await click(GENERAL.toggleGroup('Method Options'));
@@ -114,7 +114,7 @@ module('Integration | Component | mount backend form', function (hooks) {
       this.set('onMountSuccess', spy);
 
       await render(
-        hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+        hbs`<MountBackendForm @mountType="auth" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       await mountBackend('approle', 'foo');
       later(() => cancelTimers(), 50);

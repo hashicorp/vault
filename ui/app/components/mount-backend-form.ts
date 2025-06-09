@@ -15,6 +15,7 @@ import { filterEnginesByMountType } from 'vault/utils/all-engines-metadata';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type Store from '@ember-data/store';
 import type AdapterError from '@ember-data/adapter/error';
+import { debug } from '@ember/debug';
 
 import type { AuthEnableModel } from 'vault/routes/vault/cluster/settings/auth/enable';
 import type { MountSecretBackendModel } from 'vault/routes/vault/cluster/settings/mount-secret-backend';
@@ -27,7 +28,7 @@ import type { MountSecretBackendModel } from 'vault/routes/vault/cluster/setting
  *   <MountBackendForm @mountType="secret" @onMountSuccess={{this.onMountSuccess}} />```
  *
  * @param {function} onMountSuccess - A function that transitions once the Mount has been successfully posted.
- * @param {string} [mountType=auth] - The type of backend we want to mount.
+ * @param {string} mountType=auth - The type of engine to mount, either 'secret' or 'auth'.
  *
  */
 
@@ -49,6 +50,14 @@ export default class MountBackendForm extends Component<Args> {
 
   @tracked errorMessage: string | string[] = '';
 
+  constructor(owner: unknown, args: Args) {
+    super(owner, args);
+
+    if (!this.args.mountType) {
+      debug(`'mountType' is required to be passed into the component. Must return "auth" or "secret".`);
+    }
+  }
+
   willDestroy() {
     // components are torn down after store is unloaded and will cause an error if attempt to unload record
     const noTeardown = this.store && !this.store.isDestroying;
@@ -62,14 +71,15 @@ export default class MountBackendForm extends Component<Args> {
     if (!backendType) return;
     const mount = this.args.mountModel;
     const currentPath = mount.path;
-    const mountGroup = this.args.mountType ? this.args.mountType : 'auth';
-    const mountTypes = filterEnginesByMountType(mountGroup, mountGroup === 'secret' ? true : false).map(
-      (engine) => engine.type
-    );
+    // while mountType is always set to 'secret' or 'auth', there's situations where we pass in an empty string (such as on setMountType) and in this case we want to default to returning auth methods.
+    const mountsByType = filterEnginesByMountType(
+      this.args.mountType ? this.args.mountType : 'auth',
+      true
+    ).map((engine) => engine.type);
 
     // if the current path has not been altered by user,
     // change it here to match the new type
-    if (!currentPath || mountTypes.includes(currentPath)) {
+    if (!currentPath || mountsByType.includes(currentPath)) {
       mount.path = backendType;
     }
   }
