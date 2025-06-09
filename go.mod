@@ -79,7 +79,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
-	github.com/hashicorp/cap v0.8.0
+	github.com/hashicorp/cap v0.9.0
 	github.com/hashicorp/cap/ldap v0.0.0-20250106213447-9047b8b3240f
 	github.com/hashicorp/cli v1.1.7
 	github.com/hashicorp/consul-template v0.39.1
@@ -140,10 +140,10 @@ require (
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.21.0
 	github.com/hashicorp/vault-plugin-auth-azure v0.20.4
 	github.com/hashicorp/vault-plugin-auth-cf v0.21.0
-	github.com/hashicorp/vault-plugin-auth-gcp v0.20.2
-	github.com/hashicorp/vault-plugin-auth-jwt v0.23.2
+	github.com/hashicorp/vault-plugin-auth-gcp v0.21.0
+	github.com/hashicorp/vault-plugin-auth-jwt v0.24.1
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.15.0
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.21.0
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.22.1
 	github.com/hashicorp/vault-plugin-auth-oci v0.19.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.14.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.18.0
