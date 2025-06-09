@@ -7,11 +7,23 @@ description: >-
 
 # Create a rate limit quota
 
-Rate limit quotas protect Vault against external distributed denial of service
-(DDoS) attacks and are fundamental to Vault's security model. Therefore, it is a
-part of Vault's core feature set available in both Community and Enterprise
-Editions.
+Vault's rate limit quota feature allows Vault admin to control how traffic
+enters the Vault cluster by setting a limit on the target namespace, mount,
+path, or role. It is a part of Vault's core feature set available in both
+Community and Enterprise Editions.
 
+<Tip title="Community vs. Enterprise">
+
+The default behavior of rate limit quota is to group incoming requests based on
+its source IP address to apply the rate limit. That is the only available mode
+for Vault Community Edition.
+
+Vault Enterprise offers additional modes. To learn more, read the [Rate limit
+quotas - collective, by IP, by
+entity](/vault/docs/configuration/identity-based-rate-limit) page for additional
+capability.
+
+</Tip>
 
 ## Before you start 
 
@@ -200,10 +212,10 @@ $ vault write sys/quotas/rate-limit/<QUOTA_NAME> \
 **Example:** Create a rate limit quota applies on the Vault cluster.
 
 1. Create a rate limit quota named, "global-rate" which limits inbound workload
-   to 1500 requests per second.
+   to 100 requests per second.
 
    ```shell-session
-   $ vault write sys/quotas/rate-limit/global-rate rate=1500
+   $ vault write sys/quotas/rate-limit/global-rate rate=100
    Success! Data written to: sys/quotas/rate-limit/global-rate
    ```
 
@@ -215,11 +227,12 @@ $ vault write sys/quotas/rate-limit/<QUOTA_NAME> \
    Key               Value
    ---               -----
    block_interval    0
+   group_by          ip
    inheritable       true
    interval          1
    name              global-rate
    path              n/a
-   rate              1500
+   rate              100
    role              n/a
    type              rate-limit
    ```
@@ -275,6 +288,7 @@ seconds).
    Key               Value
    ---               -----
    block_interval    0
+   group_by          ip
    inheritable       true
    interval          60
    name              transit-limit
@@ -353,6 +367,7 @@ encryption requests using `orders` key to be 500 per second.
    Key               Value
    ---               -----
    block_interval    0
+   group_by          ip
    inheritable       true
    interval          1
    name              transit-order
@@ -419,6 +434,7 @@ its child namespaces inheritably by setting the `inheritable` parameter to
    Key               Value
    ---               -----
    block_interval    0
+   group_by          ip
    inheritable       true
    interval          60
    name              us-west
@@ -451,14 +467,14 @@ Create a payload file with your quota settings, and then invoke the
 </CodeBlockConfig>
 
 **Example:** Create a rate limit quota named, "global-rate" which limits inbound
-workload to 1500 requests per second.
+workload to 100 requests per second.
 
 1. Invoke the `sys/quotas/rate-limit` endpoint.
 
    ```shell-session
    $ curl --header "X-Vault-Token: $VAULT_TOKEN" \
        --request POST \
-       --data '{ "rate": 1500 }' \
+       --data '{ "rate": 100 }' \
        $VAULT_ADDR/v1/sys/quotas/rate-limit/global-rate
    ```
 
@@ -476,11 +492,12 @@ workload to 1500 requests per second.
    ```json
    {
       "block_interval": 0,
+      "group_by": "ip",
       "inheritable": true,
       "interval": 1,
       "name": "global-rate",
       "path": "",
-      "rate": 1500,
+      "rate": 100,
       "role": "",
       "type": "rate-limit"
    }
@@ -530,6 +547,7 @@ seconds).
    ```json
    {
       "block_interval": 0,
+      "group_by": "ip",
       "inheritable": true,
       "interval": 60,
       "name": "transit-limit",
@@ -581,6 +599,7 @@ encryption requests using `orders` key to be 500 per second.
    ```json
    {
       "block_interval": 0,
+      "group_by": "ip",
       "inheritable": true,
       "interval": 1,
       "name": "transit-order",
@@ -644,6 +663,7 @@ its child namespaces inheritably by setting the `inheritable` parameter to
    ```json
    {
       "block_interval": 0,
+      "group_by": "ip",
       "inheritable": true,
       "interval": 60,
       "name": "us-west",
@@ -671,11 +691,11 @@ You can use [HashiCorp Terraform](/terraform/docs) to set the rate limit quotas.
    # Use Vault provider
    provider vault {}
 
-   # Create "global-rate" which limits inbound workload to 1500 requests per second
+   # Create "global-rate" which limits inbound workload to 100 requests per second
    resource "vault_quota_rate_limit" "global" {
       name = "global-rate"
       path = ""
-      rate = 1500
+      rate = 100
    }
 
    # Create "transit-limit" which limits the access to the Transit secrets engine to be 1000 requests per minute (60 seconds)
@@ -715,7 +735,7 @@ You can use [HashiCorp Terraform](/terraform/docs) to set the rate limit quotas.
    The `main.tf` performs the following operations:
 
    - Create a rate limit quota named, "global-rate" which limits inbound workload
-   to 1500 requests per second (line 5 - 9)
+   to 100 requests per second (line 5 - 9)
 
    - Create a rate limit quota named, "transit-limit" which limits the access to
    the Transit secrets engine to be 1000 requests per minute (line 12 - 19)
@@ -825,4 +845,4 @@ problems before they escalate.
 
 - Brush up on [general Vault resource quotas](/vault/docs/concepts/resource-quotas) in general.
 - Learn about [lease count quotas for Vault Enterprise](/vault/docs/enterprise/lease-count-quotas).
-- Review [identity-based rate limit quotas](/vault/docs/configuration/identity-based-rate-limit) if you are running Vault Enterprise clusters.
+- Review [Rate limit quotas - collective, by IP, by entity](/vault/docs/configuration/identity-based-rate-limit) if you are running Vault Enterprise clusters.

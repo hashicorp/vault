@@ -35,8 +35,8 @@ The available `group_by` modes are:
   requests with authentication that is not connected to an entity)
 
 The `group_by` option with `entity_then_ip` or `entity_then_none` mode allows
-you to set a secondary rate limit (**`secondary_rate`**). This rate limit applies to
-the requests that fall under the `ip` or `none` groupings, while the
+you to set a secondary rate limit (**`secondary_rate`**). This rate limit
+applies to the requests that fall under the IP or "none" groupings, while the
 authenticated requests that contain an entity ID are subject to the primary rate
 limit set by the `rate` parameter.
 
@@ -44,7 +44,10 @@ limit set by the `rate` parameter.
 
 The command below creates a rate limit quota with rate of 1,000 requests per
 second with `group_by` mode is `entity_then_none`, and the secondary rate is
-2,000 requests per second.
+2,000 requests per second. This means 1,000 requests per second for each entity
+regardless of how many IP addresses authenticate the same entity. The secondary
+rate of 2,000 requests per second applies to all requests that don't have an
+entity such as unauthenticated requests.
 
 ```shell-session
 $ vault write sys/quotas/rate-limit/my-rate \
@@ -60,13 +63,13 @@ attached entity. This helps when your organization has:
 - single workloads using many IPs which may scale up or down
 - dynamic IPs that change frequently
 
-The group by `none` option creates one bucket for all requests at the designated
+The group by "none" option creates one bucket for all requests at the designated
 level (namespace, mount, or path) for that rate limit. For example, if your
 organization provides Vault as a service to your customers, you segregate the
 customers each into their own namespace. The default behavior of any rate limit
 set for the namespace creates a bucket per IP. If the desired behavior is to set
 a collective rate limit for all entities and workloads coming into the
-namespace, the `none` option can achieve that.
+namespace, the "none" option can achieve that.
 
 
 ![Diagram indicating possible user paths](/img/resource-quotas/group-by_light.png#light-theme-only)
