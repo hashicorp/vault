@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/observations"
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/mitchellh/copystructure"
 )
@@ -784,6 +785,18 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	if c.logger.IsInfo() {
 		c.logger.Info("successful mount", "namespace", entry.Namespace().Path, "path", entry.Path, "type", entry.Type, "version", entry.RunningVersion)
 	}
+
+	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountSecretsEnable, ns, map[string]interface{}{
+		"path":        entry.Path,
+		"local_mount": entry.Local,
+		"type":        entry.Type,
+		"accessor":    entry.Accessor,
+		"version":     entry.RunningVersion,
+	})
+	if err != nil {
+		c.logger.Error("failed to record observation after enabling mount backend", "path", entry.Path, "error", err)
+	}
+
 	return nil
 }
 
@@ -965,6 +978,17 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 
 	if c.logger.IsInfo() {
 		c.logger.Info("successfully unmounted", "path", path, "namespace", ns.Path)
+	}
+
+	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountSecretsDisable, ns, map[string]interface{}{
+		"path":        entry.Path,
+		"local_mount": entry.Local,
+		"type":        entry.Type,
+		"accessor":    entry.Accessor,
+		"version":     entry.RunningVersion,
+	})
+	if err != nil {
+		c.logger.Error("failed to record observation after enabling mount backend", "path", entry.Path, "error", err)
 	}
 
 	return nil
