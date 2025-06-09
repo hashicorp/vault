@@ -535,7 +535,7 @@ Description              | Sample URL
 child namespace          | `${VAULT_ADDR}/ui/vault/auth?namespace=<namespace>&with=<value>` 
 type: `token`            | `${VAULT_ADDR}/ui/vault/auth?with=token`                         
 path: `gui/ldap`\*       | `${VAULT_ADDR}/ui/vault/auth?with=gui%2Fldap%2F`                 
-_*When specifying a path, the mount must be tuned with `[listing_visibility](/vault/api-docs/system/auth#listing_visibility-1)="unauth"`_ 
+_*When specifying a path, the mount [listing_visibility](/vault/api-docs/system/auth#listing_visibility-1) must be tuned to `unauth`_ 
 
 ### Copy a direct link in the Vault GUI
 
