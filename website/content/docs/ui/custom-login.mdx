@@ -42,7 +42,7 @@ Default and backup(s)   | Users see the default method first but can access the 
 ## Step 2: Make the authentication method visible to the GUI. (Optional, but recommended) 
 
 Set the [listing visibility](/vault/api-docs/system/auth#listing_visibility-1) of your authentication plugin to `unauth` 
-so the Vault GUI knows which login URL to authenticate against.
+so the Vault GUI knows which login URL to use for authentication.
 
 <Warning title="Listing visibility and plugin mount paths">
 
@@ -60,7 +60,7 @@ Otherwise, users will be unable to authenticate through the customized login vie
 <Tip title="Make use of metadata">
 
 Set the [mount description field](/vault/api-docs/system/auth#description) to
-make it obvious that the mount is a default or backup login method(s) for the
+clearly indicate that the mount is a default or backup login method(s) for the
 Vault GUI.
 
 </Tip>
