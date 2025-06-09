@@ -25,6 +25,9 @@ func CubbyholeBackendFactory(ctx context.Context, conf *logical.BackendConfig) (
 	}
 
 	b.Backend.Paths = append(b.Backend.Paths, b.paths()...)
+	b.Backend.PathsSpecial = &logical.Paths{
+		AllowSnapshotRead: []string{"*"},
+	}
 
 	if conf == nil {
 		return nil, fmt.Errorf("configuration passed into backend is nil")
@@ -98,6 +101,13 @@ func (b *CubbyholeBackend) paths() []*framework.Path {
 					},
 					Summary:     "List secret entries at the specified location.",
 					Description: "Folders are suffixed with /. The input must be a folder; list on a file will not return a value. The values themselves are not accessible via this command.",
+				},
+				logical.RecoverOperation: &framework.PathOperation{
+					Callback: b.handleWrite,
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "recover",
+					},
+					Summary: "Recover a secret at the specified location.",
 				},
 			},
 

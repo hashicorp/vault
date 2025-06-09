@@ -110,6 +110,7 @@ type IdentityStore struct {
 	namespacer    Namespacer
 	metrics       metricsutil.Metrics
 	totpPersister TOTPPersister
+	groupUpdater  GroupUpdater
 	tokenStorer   TokenStorer
 	entityCreator EntityCreator
 	mountLister   MountLister
@@ -159,6 +160,12 @@ type TOTPPersister interface {
 }
 
 var _ TOTPPersister = &Core{}
+
+type GroupUpdater interface {
+	SendGroupUpdate(ctx context.Context, group *identity.Group) error
+}
+
+var _ GroupUpdater = &Core{}
 
 type TokenStorer interface {
 	LookupToken(context.Context, string) (*logical.TokenEntry, error)

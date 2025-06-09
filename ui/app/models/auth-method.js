@@ -12,7 +12,8 @@ import { allMethods } from 'vault/helpers/mountable-auth-methods';
 import lazyCapabilities from 'vault/macros/lazy-capabilities';
 import { action } from '@ember/object';
 import { camelize } from '@ember/string';
-import { WHITESPACE_WARNING } from 'vault/utils/model-helpers/validators';
+import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
+import { supportedTypes } from 'vault/utils/supported-login-methods';
 
 const validations = {
   path: [
@@ -27,7 +28,9 @@ const validations = {
 
 @withModelValidations(validations)
 export default class AuthMethodModel extends Model {
+  @service namespace;
   @service store;
+  @service version;
 
   @belongsTo('mount-config', { async: false, inverse: null }) config; // one-to-none that replaces former fragment
   @hasMany('auth-config', { polymorphic: true, inverse: 'backend', async: false }) authConfigs;
@@ -40,11 +43,22 @@ export default class AuthMethodModel extends Model {
   get methodType() {
     return this.type.replace(/^ns_/, '');
   }
+
   get icon() {
     const authMethods = allMethods().find((backend) => backend.type === this.methodType);
 
     return authMethods?.glyph || 'users';
   }
+
+  get directLoginLink() {
+    const ns = this.namespace.path;
+    const nsQueryParam = ns ? `namespace=${encodeURIComponent(ns)}&` : '';
+    const isSupported = supportedTypes(this.version.isEnterprise).includes(this.methodType);
+    return isSupported
+      ? `${window.origin}/ui/vault/auth?${nsQueryParam}with=${encodeURIComponent(this.path)}`
+      : '';
+  }
+
   @attr('string', {
     editType: 'textarea',
   })

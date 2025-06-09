@@ -21,14 +21,14 @@ scenario "dev_pr_replication" {
     arch              = ["amd64", "arm64"]
     artifact          = ["local", "deb", "rpm", "zip"]
     distro            = ["amzn", "leap", "rhel", "sles", "ubuntu"]
-    edition           = ["ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+    edition           = ["ent", "ent.fips1403", "ent.hsm", "ent.hsm.fips1403"]
     primary_backend   = ["consul", "raft"]
     primary_seal      = ["awskms", "pkcs11", "shamir"]
     secondary_backend = ["consul", "raft"]
     secondary_seal    = ["awskms", "pkcs11", "shamir"]
 
     exclude {
-      edition = ["ent.hsm", "ent.fips1402", "ent.hsm.fips1402"]
+      edition = ["ent.hsm", "ent.fips1403", "ent.hsm.fips1403"]
       arch    = ["arm64"]
     }
 
@@ -39,17 +39,22 @@ scenario "dev_pr_replication" {
 
     exclude {
       artifact = ["deb"]
-      distro   = ["rhel"]
+      distro   = ["rhel", "amzn"]
+    }
+
+    exclude {
+      artifact = ["deb", "rpm"]
+      distro   = ["sles", "leap"]
     }
 
     exclude {
       primary_seal = ["pkcs11"]
-      edition      = ["ce", "ent", "ent.fips1402"]
+      edition      = ["ce", "ent", "ent.fips1403"]
     }
 
     exclude {
       secondary_seal = ["pkcs11"]
-      edition        = ["ce", "ent", "ent.fips1402"]
+      edition        = ["ce", "ent", "ent.fips1403"]
     }
   }
 

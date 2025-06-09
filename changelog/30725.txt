@@ -1,0 +1,3 @@
+```release-note:improvement
+events: Add `vault_index` to an event's metadata if the metadata contains `modified=true`, to support client consistency controls when reading from Vault in response to an event where storage was modified.
+```

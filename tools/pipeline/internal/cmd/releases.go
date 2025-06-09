@@ -11,8 +11,7 @@ func newReleasesCmd() *cobra.Command {
 		Short: "Releases API related tasks",
 		Long:  "Releases API related tasks",
 	}
-
-	releases.AddCommand(newReleasesVersionsBetweenCmd())
+	releases.AddCommand(newReleasesListCmd())
 
 	return releases
 }

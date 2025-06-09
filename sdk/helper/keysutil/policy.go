@@ -74,6 +74,7 @@ const (
 	KeyType_AES256_CMAC
 	KeyType_ML_DSA
 	KeyType_HYBRID
+	KeyType_AES192_CMAC
 	// If adding to this list please update allTestKeyTypes in policy_test.go
 )
 
@@ -222,7 +223,7 @@ func (kt KeyType) AssociatedDataSupported() bool {
 
 func (kt KeyType) CMACSupported() bool {
 	switch kt {
-	case KeyType_AES128_CMAC, KeyType_AES256_CMAC:
+	case KeyType_AES128_CMAC, KeyType_AES256_CMAC, KeyType_AES192_CMAC:
 		return true
 	default:
 		return false
@@ -300,6 +301,8 @@ func (kt KeyType) String() string {
 		return "ml-dsa"
 	case KeyType_HYBRID:
 		return "hybrid"
+	case KeyType_AES192_CMAC:
+		return "aes192-cmac"
 	}
 
 	return "[unknown]"
@@ -1657,11 +1660,12 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 
 	if ((p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES128_CMAC) && len(key) != 16) ||
 		((p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305 || p.Type == KeyType_AES256_CMAC) && len(key) != 32) ||
+		(p.Type == KeyType_AES192_CMAC && len(key) != 24) ||
 		(p.Type == KeyType_HMAC && (len(key) < HmacMinKeySize || len(key) > HmacMaxKeySize)) {
 		return fmt.Errorf("invalid key size %d bytes for key type %s", len(key), p.Type)
 	}
 
-	if p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305 || p.Type == KeyType_HMAC || p.Type == KeyType_AES128_CMAC || p.Type == KeyType_AES256_CMAC {
+	if p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305 || p.Type == KeyType_HMAC || p.Type == KeyType_AES128_CMAC || p.Type == KeyType_AES256_CMAC || p.Type == KeyType_AES192_CMAC {
 		entry.Key = key
 		if p.Type == KeyType_HMAC {
 			p.KeySize = len(key)
@@ -1773,7 +1777,7 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 		DeprecatedCreationTime: now.Unix(),
 	}
 
-	if p.Type != KeyType_AES128_CMAC && p.Type != KeyType_AES256_CMAC && p.Type != KeyType_HMAC {
+	if p.Type != KeyType_AES128_CMAC && p.Type != KeyType_AES256_CMAC && p.Type != KeyType_HMAC && p.Type != KeyType_AES192_CMAC {
 		hmacKey, err := uuid.GenerateRandomBytesWithReader(32, randReader)
 		if err != nil {
 			return err
@@ -1783,11 +1787,13 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 
 	var err error
 	switch p.Type {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES256_CMAC:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES256_CMAC, KeyType_AES192_CMAC:
 		// Default to 256 bit key
 		numBytes := 32
 		if p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES128_CMAC {
 			numBytes = 16
+		} else if p.Type == KeyType_AES192_CMAC {
+			numBytes = 24
 		} else if p.Type == KeyType_HMAC {
 			numBytes = p.KeySize
 			if numBytes < HmacMinKeySize || numBytes > HmacMaxKeySize {
@@ -2535,7 +2541,7 @@ func (ke *KeyEntry) WrapKey(targetKey any, targetKeyType KeyType, hash hash.Hash
 
 	var preppedTargetKey []byte
 	switch targetKeyType {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES256_CMAC:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES256_CMAC, KeyType_AES192_CMAC:
 		var ok bool
 		preppedTargetKey, ok = targetKey.([]byte)
 		if !ok {

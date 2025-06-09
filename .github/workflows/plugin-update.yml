@@ -50,6 +50,7 @@ jobs:
         env:
           # Use elevated token to read private repos.
           GITHUB_TOKEN: ${{secrets.ELEVATED_GITHUB_TOKEN}}
+          GOPRIVATE: github.com/hashicorp/*
         run: |
           git config --global url."https://${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"
           (cd vault_ent && go get "github.com/hashicorp/${{ inputs.plugin }}@v${{ inputs.version }}" && go mod tidy)

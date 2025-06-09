@@ -11,6 +11,9 @@ inputs:
   no-restore:
     description: Whether or not to restore the Go module cache on a cache hit
     default: "false"
+  no-save:
+    description: Whether or not to create a Go module cache on cache miss
+    default: "false"
   go-version:
     description: "Override .go-version"
     default: ""
@@ -44,9 +47,20 @@ runs:
     - id: metadata
       shell: bash
       run: |
+        # Cache restore have some surprising relative pathing behavior we need
+        # to deal with. When actions/cache restores something it does it
+        # realtive to the check working directory. Since that can be different
+        # depending on our self-hosted vs Github hosted runners
+        #   /home/runner/actions-runner/_work vs. /home/runner/work
+        # we need to factor in the absolute path of our working directory in our
+        # cache key. If we don't then cache restores will be incompatible on one
+        # or the other runner.
+        #
+        # See: https://github.com/actions/cache/issues/1127
+        wd_hash=$(realpath . | sha256sum | head -c 8)
         {
-          echo "cache-path=$(go env GOMODCACHE)"
-          echo "cache-key=go-modules-${{ hashFiles('**/go.sum') }}"
+          echo "cache-path=$(go env GOMODCACHE)/cache"
+          echo "cache-key=go-modules-${wd_hash}-${{ hashFiles('**/go.sum') }}"
         } | tee -a "$GITHUB_OUTPUT"
     - id: cache-modules
       uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
@@ -68,7 +82,7 @@ runs:
         # keeps cache upload time, download time, and storage size to a minimum.
         path: ${{ steps.metadata.outputs.cache-path }}
         key: ${{ steps.metadata.outputs.cache-key }}
-    - if: steps.cache-modules.outputs.cache-hit != 'true'
+    - if: steps.cache-modules.outputs.cache-hit != 'true' && inputs.no-save != 'true'
       name: Download go modules
       shell: bash
       env:

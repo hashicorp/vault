@@ -10,9 +10,9 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import hbs from 'htmlbars-inline-precompile';
 import { render } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
-import { syncDestinations } from 'vault/helpers/sync-destinations';
+import { syncDestinations, findDestination } from 'vault/helpers/sync-destinations';
 import { toLabel } from 'vault/helpers/to-label';
-import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { setupDataStubs } from 'vault/tests/helpers/sync/setup-hooks';
 
 const SYNC_DESTINATIONS = syncDestinations();
 module(
@@ -21,15 +21,12 @@ module(
     setupRenderingTest(hooks);
     setupEngine(hooks, 'sync');
     setupMirage(hooks);
+    setupDataStubs(hooks);
 
     hooks.beforeEach(function () {
-      this.store = this.owner.lookup('service:store');
-
-      this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
-
-      this.renderFormComponent = () => {
+      this.renderComponent = () => {
         return render(
-          hbs` <Secrets::Page::Destinations::Destination::Details @destination={{this.model}} />`,
+          hbs` <Secrets::Page::Destinations::Destination::Details @destination={{this.destination}} @capabilities={{this.capabilities}} />`,
           { owner: this.engine }
         );
       };
@@ -37,18 +34,8 @@ module(
 
     test('it renders toolbar with actions', async function (assert) {
       assert.expect(3);
-      const type = SYNC_DESTINATIONS[0].type;
-      const data = this.server.create('sync-destination', type);
 
-      const id = `${type}/${data.name}`;
-      data.id = id;
-      this.store.pushPayload(`sync/destinations/${type}`, {
-        modelName: `sync/destinations/${type}`,
-        ...data,
-      });
-      this.model = this.store.peekRecord(`sync/destinations/${type}`, id);
-
-      await this.renderFormComponent();
+      await this.renderComponent();
 
       assert.dom(PAGE.toolbar('Delete destination')).exists();
       assert.dom(PAGE.toolbar('Sync secrets')).exists();
@@ -60,68 +47,84 @@ module(
       const { type } = destination;
       module(`destination: ${type}`, function (hooks) {
         hooks.beforeEach(function () {
-          const data = this.server.create('sync-destination', type);
+          this.setupStubsForType(type);
 
-          const id = `${type}/${data.name}`;
-          data.id = id;
-          this.store.pushPayload(`sync/destinations/${type}`, {
-            modelName: `sync/destinations/${type}`,
-            ...data,
-          });
-          this.model = this.store.peekRecord(`sync/destinations/${type}`, id);
-          const { maskedParams } = this.model;
-          this.maskedAttrs = this.model.formFields.filter((attr) => maskedParams.includes(attr.name));
-          this.unmaskedAttrs = this.model.formFields.filter((attr) => !maskedParams.includes(attr.name));
+          const { name, connectionDetails, options } = this.destination;
+          this.details = { name, ...connectionDetails, ...options };
+          this.fields = Object.keys(this.details).reduce((arr, key) => {
+            const noCustomTags = ['gh', 'vercel-project'].includes(type) && key === 'customTags';
+            return noCustomTags ? arr : [...arr, key];
+          }, []);
+
+          const { maskedParams } = findDestination(type);
+          this.maskedParams = maskedParams;
+
+          this.getLabel = (field) => {
+            const customLabel = {
+              granularityLevel: 'Secret sync granularity',
+              accessKeyId: 'Access key ID',
+              roleArn: 'Role ARN',
+              externalId: 'External ID',
+              keyVaultUri: 'Key Vault URI',
+              clientId: 'Client ID',
+              tenantId: 'Tenant ID',
+              projectId: 'Project ID',
+              credentials: 'JSON credentials',
+              teamId: 'Team ID',
+            }[field];
+
+            return customLabel || toLabel([field]);
+          };
         });
 
         test('it renders destination details with connection_details and options', async function (assert) {
-          assert.expect(this.model.formFields.length);
+          assert.expect(this.fields.length);
 
-          await this.renderFormComponent();
+          await this.renderComponent();
 
-          // these values are returned by the API masked: '*****'
-          this.maskedAttrs.forEach((attr) => {
-            const label = attr.options?.label || toLabel([attr.name]);
-            assert.dom(PAGE.infoRowValue(label)).hasText('Destination credentials added');
-          });
-
-          // assert the remaining model attributes render
-          this.unmaskedAttrs.forEach(({ name, options, type }) => {
-            let label, value;
-            if (type === 'object') {
-              [label] = Object.keys(this.model[name]);
-              [value] = Object.values(this.model[name]);
+          this.fields.forEach((field) => {
+            if (this.maskedParams.includes(field)) {
+              // these values are returned by the API masked: '*****'
+              const label = this.getLabel(field);
+              assert.dom(PAGE.infoRowValue(label)).hasText('Destination credentials added');
             } else {
-              label = options.label || toLabel([name]);
-              value = Array.isArray(this.model[name]) ? this.model[name].join(',') : this.model[name];
+              // assert the remaining model attributes render
+              const fieldValue = this.details[field];
+              let label, value;
+              if (field === 'customTags') {
+                [label] = Object.keys(fieldValue);
+                [value] = Object.values(fieldValue);
+              } else {
+                label = this.getLabel(field);
+                value = Array.isArray(fieldValue) ? fieldValue.join(',') : fieldValue;
+              }
+              assert.dom(PAGE.infoRowValue(label)).hasText(value);
             }
-            assert.dom(PAGE.infoRowValue(label)).hasText(value);
           });
         });
 
         test('it renders destination details without connection_details or options', async function (assert) {
-          assert.expect(this.maskedAttrs.length + 4);
+          assert.expect(this.maskedParams.length + 4);
 
-          this.maskedAttrs.forEach((attr) => {
+          this.maskedParams.forEach((param) => {
             // these values are undefined when environment variables are set
-            this.model[attr.name] = undefined;
+            this.destination.connectionDetails[param] = undefined;
           });
-          // assert custom tags section header does not render
-          if (this.model?.get('customTags')) {
-            this.model['customTags'] = undefined;
-          }
 
-          await this.renderFormComponent();
+          // assert custom tags section header does not render
+          this.destination.options.customTags = undefined;
+
+          await this.renderComponent();
 
           assert
             .dom(PAGE.destinations.details.sectionHeader)
             .doesNotExist('does not render Custom tags header');
-          assert.dom(PAGE.title).hasTextContaining(this.model.name);
-          assert.dom(PAGE.icon(this.model.icon)).exists();
-          assert.dom(PAGE.infoRowValue('Name')).hasText(this.model.name);
+          assert.dom(PAGE.title).hasTextContaining(this.destination.name);
+          assert.dom(PAGE.icon(findDestination(destination.type).icon)).exists();
+          assert.dom(PAGE.infoRowValue('Name')).hasText(this.destination.name);
 
-          this.maskedAttrs.forEach((attr) => {
-            const label = attr.options?.label || toLabel([attr.name]);
+          this.maskedParams.forEach((param) => {
+            const label = this.getLabel(param);
             assert.dom(PAGE.infoRowValue(label)).hasText('Using environment variable');
           });
         });

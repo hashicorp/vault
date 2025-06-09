@@ -138,7 +138,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       'redirects to configuration page after saving config'
     );
     assert.notOk(scopesPage.isEmpty, 'configuration page no longer renders empty state');
-    assert.dom('[data-test-value-div="Listen addrs"]').hasText(addr, 'renders the correct listen address');
+    assert.dom(GENERAL.infoRowValue('Listen addrs')).hasText(addr, 'renders the correct listen address');
   });
 
   test('it can revoke from the credentials show page', async function (assert) {
@@ -335,12 +335,36 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     assert.strictEqual(
       currentRouteName(),
-      'vault.cluster.secrets.backend.kmip.credentials.show',
-      'generate redirects to the show page'
+      'vault.cluster.secrets.backend.kmip.credentials.generate',
+      'it remains in the generate route'
     );
+    assert
+      .dom(GENERAL.infoRowValue('Private key'))
+      .hasText(
+        'Warning You will not be able to access the private key later, so please copy the information below. ***********',
+        'it renders private key after generating'
+      );
     await credentialsPage.backToRoleLink();
     await settled();
     assert.strictEqual(credentialsPage.listItemLinks.length, 1, 'renders a single credential');
+  });
+
+  test('it can revoke a credential from the generate view', async function (assert) {
+    const { backend, scope, role } = await createRole(this.backend);
+    await credentialsPage.visit({ backend, scope, role });
+    await credentialsPage.generateCredentialsLink();
+    await credentialsPage.submit();
+    // revoke the credentials
+    await waitUntil(() => find('[data-test-confirm-action-trigger]'));
+    assert.dom('[data-test-confirm-action-trigger]').exists('delete button exists');
+    await credentialsPage.delete().confirmDelete();
+    await settled();
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}/credentials`,
+      'redirects to the credentials list'
+    );
+    assert.true(credentialsPage.isEmpty, 'renders an empty credentials page');
   });
 
   test('it can revoke a credential from the list', async function (assert) {

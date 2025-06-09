@@ -1,0 +1,136 @@
+---
+layout: docs
+page_title: Deprecation notices
+description: >-
+  Deprecation announcements, updates, and migration plans for Vault.
+---
+
+# Deprecation notices
+
+Vault implements a multi-phased approach to deprecations to provide users with
+advanced warning, minimize business disruptions, and allow for the safe handling
+of data affected by a feature removal.
+
+<Highlight title="Have questions?">
+
+If you have questions or concerns about a deprecated feature, please create a
+topic on the [Vault community forum](https://discuss.hashicorp.com/c/vault/30)
+or raise a ticket with your support team.
+
+</Highlight>
+
+<a id="announcements" />
+
+## Recent announcements
+
+<Tabs>
+<Tab heading="DEPRECATED">
+
+<EnterpriseAlert product="vault">
+  The Vault Support Team can provide <b>limited</b> help with a deprecated feature.
+  Limited support includes troubleshooting solutions and workarounds but does not
+  include software patches or bug fixes. Refer to
+  the <a href="https://support.hashicorp.com/hc/en-us/articles/360021185113-Support-Period-and-End-of-Life-EOL-Policy">HashiCorp Support Policy</a> for
+  more information on the product support timeline.
+</EnterpriseAlert>
+
+@include 'deprecation/ruby-client-library.mdx'
+
+@include 'deprecation/snowflake-password-auth.mdx'
+
+</Tab>
+<Tab heading="PENDING REMOVAL">
+
+@include 'deprecation/vault-agent-api-proxy.mdx'
+
+@include 'deprecation/aws-field-change.mdx'
+
+@include 'deprecation/centrify-auth-method.mdx'
+
+@include 'deprecation/duplicate-hcl-attributes.mdx'
+
+</Tab>
+<Tab heading="REMOVED">
+
+@include 'deprecation/active-directory-secrets-engine.mdx'
+
+@include 'deprecation/duplicative-docker-images.mdx'
+
+@include 'deprecation/azure-password-policy.mdx'
+
+@include 'deprecation/internal-counters-tokens-api.mdx'
+
+</Tab>
+</Tabs>
+
+<a id="phases" />
+
+## Deprecation phases
+
+The lifecycle of a Vault feature or plugin includes 4 phases:
+
+- **supported** - generally available (GA), functioning as expected, and under
+  active maintenance
+- **deprecated** - marked for removal in a future release
+- **pending removal** - support ended or replaced by another feature
+- **removed** - end of lifecycle
+
+### Deprecated ((#deprecated))
+
+"Deprecated" is the first phase of the deprecation process and indicates that
+the feature is marked for removal in a future release. When you upgrade Vault,
+newly deprecated features will begin alerting that the feature is deprecated:
+
+- Built-in authentication and secrets plugins log `Warn`-level messages on
+  unseal.
+- All deprecated features log `Warn`-level messages.
+- All `POST`, `GET`, and `LIST` endpoints associated with the feature return
+  warnings in response data.
+
+Built-in Vault authentication and secrets plugins also expose their deprecation
+status through the Vault CLI and Vault API.
+
+CLI command                                                                  | API endpoint
+---------------------------------------------------------------------------- | --------------
+N/A                                                                          | [`/sys/plugins/catalog`](/vault/api-docs/system/plugins-catalog)
+[`vault plugin info auth <PLUGIN_NAME>`](/vault/docs/commands/plugin/info)   | [`/sys/plugins/catalog/auth/:name`](/vault/api-docs/system/plugins-catalog#list-plugins-1)
+[`vault plugin info secret <PLUGIN_NAME>`](/vault/docs/commands/plugin/info) | [`/sys/plugins/catalog/secret/:name`](/vault/api-docs/system/plugins-catalog#list-plugins-1)
+
+### Pending removal
+
+"Pending removal" is the second phase of the deprecation process and indicates
+that the feature behavior is fundamentally altered in the following ways:
+
+- Built-in authentication and secrets plugins log `Error`-level messages and
+  cause an immediate shutdown of the Vault core.
+- All features pending removal fail and log `Error`-level messages.
+- All CLI commands and API endpoints associated with the feature fail and return
+  errors.
+
+<Warning title="Use with caution">
+
+  In critical situations, you may be able to override the pending removal behavior with the
+  [`VAULT_ALLOW_PENDING_REMOVAL_MOUNTS`](/vault/docs/commands/server#vault_allow_pending_removal_mounts)
+  environment variable, which forces Vault to treat some features that are pending
+  removal as if they were still only deprecated.
+
+</Warning>
+
+### Removed
+
+"Removed" is the last phase of the deprecation process and indicates that the
+feature is no longer supported and no longer exists within Vault.
+
+## Migrate from deprecated features
+
+Features in the "pending removal" and "removed" phases will fail, log errors,
+and, for built-in authentication or secret plugins, cause an immediate shutdown
+of the Vault core.
+
+Migrate away from a deprecated feature and successfully upgrade to newer Vault
+versions, you must eliminate the deprecated features:
+
+1. Downgrade Vault to a previous version if necessary.
+1. Replace any "Removed" or "Pending removal" feature with the recommended
+   alternative.
+1. Upgrade to latest desired version.

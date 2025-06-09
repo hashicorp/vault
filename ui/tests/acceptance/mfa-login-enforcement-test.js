@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentRouteName, fillIn, visit, waitFor } from '@ember/test-helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import mfaConfigHandlers from 'vault/mirage/handlers/mfa-config';
 
@@ -16,7 +16,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
 
   hooks.beforeEach(function () {
     mfaConfigHandlers(this.server);
-    return authPage.login();
+    return login();
   });
 
   test('it should send the correct data when creating an enforcement', async function (assert) {

@@ -106,6 +106,9 @@ var KeyUsageOID = asn1.ObjectIdentifier([]int{2, 5, 29, 15})
 // id-ce-extKeyUsage OBJECT IDENTIFIER ::= { id-ce 37 }
 var ExtendedKeyUsageOID = asn1.ObjectIdentifier([]int{2, 5, 29, 37})
 
+// OID for Freshest (aka Delta) CRL from RFC 5280: https://datatracker.ietf.org/doc/html/rfc5280#section-4.2.1.15
+var FreshestCrlOid = asn1.ObjectIdentifier([]int{2, 5, 29, 46})
+
 // GetHexFormatted returns the byte buffer formatted in hex with
 // the specified separator between bytes.
 func GetHexFormatted(buf []byte, sep string) string {
@@ -536,9 +539,10 @@ func ParsePublicKeyPEM(data []byte) (interface{}, error) {
 func AddPolicyIdentifiers(data *CreationBundle, certTemplate *x509.Certificate) {
 	oidOnly := true
 	for _, oidStr := range data.Params.PolicyIdentifiers {
-		oid, err := StringToOid(oidStr)
+		// Compatible with Go 1.24 and higher only (or 1.22 with x509usepolicies=1)
+		x509Oid, err := x509.ParseOID(oidStr)
 		if err == nil {
-			certTemplate.PolicyIdentifiers = append(certTemplate.PolicyIdentifiers, oid)
+			certTemplate.Policies = append(certTemplate.Policies, x509Oid)
 		}
 		if err != nil {
 			oidOnly = false
@@ -964,6 +968,10 @@ func createCertificate(data *CreationBundle, randReader io.Reader, privateKeyGen
 
 	certTemplate.IssuingCertificateURL = data.Params.URLs.IssuingCertificates
 	certTemplate.CRLDistributionPoints = data.Params.URLs.CRLDistributionPoints
+	err = AddDeltaCRLExtension(data, certTemplate)
+	if err != nil {
+		return nil, err
+	}
 	certTemplate.OCSPServer = data.Params.URLs.OCSPServers
 
 	var certBytes []byte
@@ -1344,6 +1352,10 @@ func signCertificate(data *CreationBundle, randReader io.Reader) (*ParsedCertBun
 
 	certTemplate.IssuingCertificateURL = data.Params.URLs.IssuingCertificates
 	certTemplate.CRLDistributionPoints = data.Params.URLs.CRLDistributionPoints
+	err = AddDeltaCRLExtension(data, certTemplate)
+	if err != nil {
+		return nil, err
+	}
 	certTemplate.OCSPServer = data.SigningBundle.URLs.OCSPServers
 
 	if data.Params.IsCA {
@@ -2148,4 +2160,100 @@ func IsPSS(algorithm x509.SignatureAlgorithm) bool {
 	default:
 		return false
 	}
+}
+
+// Per RFC 5280 4.2.1.15; the same as distribution point
+type deltaDistributionPoint struct {
+	DistributionPoint distributionPointName `asn1:"optional,tag:0"`
+	Reason            asn1.BitString        `asn1:"optional,tag:1"`
+	CRLIssuer         asn1.RawValue         `asn1:"optional,tag:2"`
+}
+type distributionPointName struct {
+	FullName     []asn1.RawValue  `asn1:"optional,tag:0"`
+	RelativeName pkix.RDNSequence `asn1:"optional,tag:1"`
+}
+
+func CreateDeltaCRLExtension(deltaUrls []string) (pkix.Extension, error) {
+	if deltaUrls == nil || len(deltaUrls) == 0 {
+		return pkix.Extension{}, fmt.Errorf("since no delta crl distribution points were provided, the extension returned is empty")
+	}
+	var deltaDistributionPoints []deltaDistributionPoint
+	for _, deltaUrl := range deltaUrls {
+		delta := deltaDistributionPoint{
+			DistributionPoint: distributionPointName{
+				FullName: []asn1.RawValue{
+					{
+						Tag:   6,
+						Class: 2,
+						Bytes: []byte(deltaUrl),
+					},
+				},
+			},
+		}
+		deltaDistributionPoints = append(deltaDistributionPoints, delta)
+	}
+	asn1Value, err := asn1.Marshal(deltaDistributionPoints)
+	if err != nil {
+		return pkix.Extension{}, err
+	}
+	return pkix.Extension{
+		Id:       FreshestCrlOid,
+		Value:    asn1Value,
+		Critical: false,
+	}, nil
+}
+
+// Adapted From: https://cs.opensource.google/go/go/+/master:src/crypto/x509/parser.go?q=CRLDistributionPoints&ss=go%2Fgo
+func ParseDeltaCRLExtension(certificate *x509.Certificate) ([]string, error) {
+	urls := []string{}
+	for _, extension := range certificate.Extensions {
+		if extension.Id.Equal(FreshestCrlOid) {
+			val := cryptobyte.String(extension.Value)
+			answer := !val.ReadASN1(&val, asn1.TagSequence|32)
+			if answer { // classConstructed SEQUENCE
+				return urls, errors.New("x509: invalid CRL distribution points")
+			}
+			for !val.Empty() {
+				var dpDER cryptobyte.String
+				if !val.ReadASN1(&dpDER, asn1.TagSequence|32) {
+					return urls, errors.New("x509: invalid CRL distribution point")
+				}
+				var dpNameDER cryptobyte.String
+				var dpNamePresent bool
+				if !dpDER.ReadOptionalASN1(&dpNameDER, &dpNamePresent, asn1.ClassUniversal|32|128) {
+					return urls, errors.New("x509: invalid CRL distribution point")
+				}
+				if !dpNamePresent {
+					continue
+				}
+				if !dpNameDER.ReadASN1(&dpNameDER, asn1.ClassUniversal|32|128) {
+					return urls, errors.New("x509: invalid CRL distribution point")
+				}
+				for !dpNameDER.Empty() {
+					if !dpNameDER.PeekASN1Tag(asn1.TagOID | 128) { // Context is GeneralName
+						break
+					}
+					var uri cryptobyte.String
+					if !dpNameDER.ReadASN1(&uri, asn1.TagOID|128) { // Context is GeneralName
+						return urls, errors.New("x509: invalid CRL distribution point")
+					}
+					urls = append(urls, string(uri))
+				}
+			}
+			return urls, nil
+		}
+	}
+	return urls, nil
+}
+
+func AddDeltaCRLExtension(data *CreationBundle, certTemplate *x509.Certificate) error {
+	if data.Params != nil && data.Params.URLs != nil && data.Params.URLs.DeltaCRLDistributionPoints != nil &&
+		len(data.Params.URLs.DeltaCRLDistributionPoints) > 0 {
+		extension, err := CreateDeltaCRLExtension(data.Params.URLs.DeltaCRLDistributionPoints)
+		if err != nil {
+			return fmt.Errorf("failed to create delta crl extension: %w", err)
+		}
+		certTemplate.ExtraExtensions = append(certTemplate.ExtraExtensions, extension)
+	}
+	return nil
 }

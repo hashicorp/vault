@@ -118,22 +118,18 @@ clusters to create individual automated snapshots replicas.
 The primary cluster's mount configuration gets replicated across its secondary
 clusters when you enable Performance Replication. In some cases, you may not
 want all data to be replicated. For example, your primary cluster is in the EU
-region, and you have a secondary cluster outside of the EU region. [General Data
-Protection Regulation (GDPR)](https://gdpr.eu/) requires that personally
-identifiable data not be physically transferred to locations outside the
-European Union unless the region or country has an equal rigor of data
-protection regulation as the EU.
+region, and you have a secondary cluster outside of the EU region that you do
+not want data to be replicated to.
 
-To comply with GDPR, leverage Vault's **paths filter**  feature to abide by
-data movements and sovereignty regulations while ensuring performance access
-across geographically distributed regions.
+To support this, leverage Vault's **paths filter** while ensuring performant
+access across geographically distributed regions.
 
 You can set filters based on the mount path of the secrets engines and
 namespaces.
 
 ![Performance Replication - primary](/img/vault-mount-filter-7.png)
 
-In the above example, the `EU_GDPR_data/` path and `office_FR` namespace will
+In the above example, the `path1/` path and `path2` namespace will
 not be replicated and remain only on the primary cluster.
 
 On a similar note, if you want to avoid secondary cluster's data to be

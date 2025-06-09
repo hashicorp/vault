@@ -98,5 +98,7 @@ func (c *SharedConfig) Merge(c2 *SharedConfig) *SharedConfig {
 		result.ClusterName = c2.ClusterName
 	}
 
+	result.FoundKeys = append(c.FoundKeys, c2.FoundKeys...)
+
 	return result
 }

@@ -10,12 +10,14 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { capabilitiesStub } from 'vault/tests/helpers/stubs';
 import { click, fillIn } from '@ember/test-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | database-role-edit', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    this.version = this.owner.lookup('service:version');
     this.store = this.owner.lookup('service:store');
     this.store.pushPayload('database-role', {
       modelName: 'database/role',
@@ -51,7 +53,7 @@ module('Integration | Component | database-role-edit', function (hooks) {
     this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['create']));
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelEmpty}} @mode="create"/>`);
-    await click('[data-test-secret-save]');
+    await click(GENERAL.saveButton);
 
     assert.dom('[data-test-inline-error-message]').exists('Inline form errors exist');
   });
@@ -73,10 +75,11 @@ module('Integration | Component | database-role-edit', function (hooks) {
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="edit"/>`);
     await fillIn('[data-test-ttl-value="Rotation period"]', '20');
-    await click('[data-test-secret-save]');
+    await click(GENERAL.saveButton);
   });
 
-  test('it should successfully create user with skip import rotation', async function (assert) {
+  test('enterprise: it should successfully create user that does not rotate immediately', async function (assert) {
+    this.version.type = 'enterprise';
     this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['create']));
     this.server.post(`/database/static-roles/my-static-role`, (schema, req) => {
       assert.true(true, 'request made to create static role');
@@ -85,6 +88,7 @@ module('Integration | Component | database-role-edit', function (hooks) {
         {
           path: 'static-roles',
           username: 'staticTestUser',
+          password: 'testPassword',
           rotation_period: '172800s', // 2 days in seconds
           skip_import_rotation: true,
         },
@@ -93,13 +97,46 @@ module('Integration | Component | database-role-edit', function (hooks) {
     });
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="create"/>`);
-    await fillIn('[data-test-ttl-value="Rotation period"]', '2');
-    await click('[data-test-toggle-input="toggle-skip_import_rotation"]');
+    await fillIn(GENERAL.ttl.input('Rotation period'), '2');
+    await click(GENERAL.toggleInput('toggle-skip_import_rotation'));
+    await fillIn(GENERAL.inputByAttr('password'), 'testPassword'); // fill in password field
 
-    await click('[data-test-secret-save]');
+    await click(GENERAL.saveButton);
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="show"/>`);
-    assert.dom('[data-test-value-div="Skip initial rotation"]').containsText('Yes');
+    assert.dom(GENERAL.infoRowValue('Rotate immediately')).containsText('No');
+    assert.dom(GENERAL.infoRowValue('password')).doesNotExist(); // verify password field doesn't show on details view
+  });
+
+  test('enterprise: it should show edit button for password when role has not been rotated', async function (assert) {
+    this.version.type = 'enterprise';
+    this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['update']));
+
+    await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="edit"/>`);
+    assert.dom(GENERAL.icon('edit')).exists(); // verify password field is enabled for edit & enable button is rendered bc role hasn't been rotated
+  });
+
+  test('enterprise: it should not show edit button for password when role has been rotated', async function (assert) {
+    this.version.type = 'enterprise';
+    this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['update']));
+
+    this.modelStatic.last_vault_rotation = '2025-04-21T12:51:59.063124-04:00'; // Setting a sample rotation time here to simulate what returns from BE after rotation
+    await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="edit"/>`);
+    assert.dom(GENERAL.icon('edit')).doesNotExist(); // verify password field is disabled for edit & enable button isn't rendered bc role has already been rotated
+  });
+
+  test('enterprise: it should successfully create user that does rotate immediately & verify warning modal pops up', async function (assert) {
+    this.version.type = 'enterprise';
+    this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['create']));
+
+    await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="create"/>`);
+    await click(GENERAL.saveButton);
+
+    assert.dom('[data-test-issuer-warning]').exists(); // check if warning modal shows after clicking save
+    await click('[data-test-issuer-save]'); // click continue button on modal
+
+    await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="show"/>`);
+    assert.dom(GENERAL.infoRowValue('Rotate immediately')).containsText('Yes');
   });
 
   test('it should show Get credentials button when a user has the correct policy', async function (assert) {

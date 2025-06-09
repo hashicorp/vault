@@ -370,6 +370,15 @@
         }
       },
       {
+        "title": "SCEP",
+        "path": "auth/scep",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "TLS Certificates",
         "path": "auth/cert"
       },
@@ -569,6 +578,10 @@
       {
         "title": "<code>/sys/locked-users</code>",
         "path": "system/user-lockout"
+      },
+      {
+        "title": "<code>/sys/utilization-report</code>",
+        "path": "system/utilization-report"
       },
       {
         "title": "<code>/sys/loggers</code>",

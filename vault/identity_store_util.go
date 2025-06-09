@@ -799,12 +799,20 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 		entity.NamespaceID = namespace.RootNamespaceID
 	}
 
+	ns, err := i.namespacer.NamespaceByID(ctx, entity.NamespaceID)
+	if err != nil {
+		return false, err
+	}
+
+	nsCtx := namespace.ContextWithNamespace(ctx, ns)
+
 	if previousEntity != nil && previousEntity.NamespaceID != entity.NamespaceID {
 		return false, errors.New("entity and previous entity are not in the same namespace")
 	}
 
 	aliasFactors := make([]string, len(entity.Aliases))
 
+	var localAliasesToDrop []*identity.Alias
 	for index, alias := range entity.Aliases {
 		// Verify that alias is not associated to a different one already
 		aliasByFactors, err := i.MemDBAliasByFactorsInTxn(txn, alias.MountAccessor, alias.Name, false, false)
@@ -829,6 +837,20 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 			if aliasByFactors.NamespaceID != entity.NamespaceID {
 				return false, errors.New("alias from factors and entity are not in the same namespace")
 			}
+
+		case i.localNode.ReplicationState().HasState(consts.ReplicationPerformanceSecondary) && alias.Local:
+			// If this alias is local and we're on the perf secondary, don't
+			// merge! We do this because we can't persist the entity merge to
+			// storage on a secondary and sending it upstream to the primary
+			// leads to all sorts of distributed state problems. Instead, just
+			// let the first alias win and remove any duplicates from the local
+			// alias packer.
+			//
+			// Rather than delete immediately, keep track of the list of local
+			// aliases to delete once we're done iterating.
+			i.logger.Trace("skipping entity merge and dropping local alias on secondary")
+			localAliasesToDrop = append(localAliasesToDrop, alias)
+			continue
 
 		case previousEntity != nil && aliasByFactors.CanonicalID == previousEntity.ID:
 			// previousEntity isn't upserted yet so may still contain the old
@@ -864,7 +886,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 				"alias_by_factors", aliasByFactors)
 
 			persistMerge := persist || persistMerges
-			respErr, intErr := i.mergeEntityAsPartOfUpsert(ctx, txn, entity, aliasByFactors.CanonicalID, persistMerge)
+			respErr, intErr := i.mergeEntityAsPartOfUpsert(nsCtx, txn, entity, aliasByFactors.CanonicalID, persistMerge)
 			switch {
 			case respErr != nil:
 				return false, respErr
@@ -894,7 +916,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 		// are in case-sensitive mode so we can report these to the operator ahead
 		// of them disabling case-sensitive mode. Note that alias resolvers don't
 		// ever modify right now so ignore the bool.
-		_, conflictErr := i.conflictResolver.ResolveAliases(ctx, entity, aliasByFactors, alias)
+		_, conflictErr := i.conflictResolver.ResolveAliases(nsCtx, entity, aliasByFactors, alias)
 
 		// This appears to be accounting for any duplicate aliases for the same
 		// Entity. In that case we would have skipped over the merge above in the
@@ -926,10 +948,16 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 
 		if persist {
 			// Persist the previous entity object
-			if err := i.persistEntity(ctx, previousEntity); err != nil {
+			if err := i.persistEntity(nsCtx, previousEntity); err != nil {
 				return false, err
 			}
 		}
+	}
+
+	// Now that we've gone through all aliases, we can update this entity and
+	// remove any local aliases before upserting in MemDB.
+	for _, alias := range localAliasesToDrop {
+		entity.DeleteAliasByID(alias.ID)
 	}
 
 	// Insert or update entity in MemDB using the transaction created above
@@ -939,8 +967,20 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 	}
 
 	if persist {
-		if err := i.persistEntity(ctx, entity); err != nil {
+		if err := i.persistEntity(nsCtx, entity); err != nil {
 			return false, err
+		}
+	}
+
+	// Drop any local aliases detected above from the local alias packer on the
+	// Secondary active node. We'll only populate the localAliasesToDrop slice
+	// on Perf Secondaries, so check here to see if we're an active node so we
+	// can persist the change.
+	if i.localNode.HAState() == consts.Active {
+		for _, alias := range localAliasesToDrop {
+			if err := i.localAliasPacker.DeleteItem(nsCtx, alias.CanonicalID); err != nil {
+				i.logger.Warn("failed to delete entity from local alias packer", "entity_id", alias.CanonicalID)
+			}
 		}
 	}
 
@@ -2654,7 +2694,13 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(ctx context.Co
 			group.MemberEntityIDs = append(group.MemberEntityIDs, entityID)
 
 			err = i.UpsertGroupInTxn(ctx, txn, group, true)
-			if err != nil {
+			if errors.Is(err, logical.ErrReadOnly) {
+				i.logger.Info("forwarding update group request to active", "group_id", group.ID)
+				// Forward the group update to the active node
+				if err := i.groupUpdater.SendGroupUpdate(ctx, group); err != nil {
+					return false, nil, err
+				}
+			} else if err != nil {
 				return false, nil, err
 			}
 		}
@@ -2682,7 +2728,13 @@ func (i *IdentityStore) refreshExternalGroupMembershipsByEntityID(ctx context.Co
 			group.MemberEntityIDs = strutil.StrListDelete(group.MemberEntityIDs, entityID)
 
 			err = i.UpsertGroupInTxn(ctx, txn, group, true)
-			if err != nil {
+			if errors.Is(err, logical.ErrReadOnly) {
+				i.logger.Info("forwarding update group request to active", "group_id", group.ID)
+				// Forward the group update to the active node
+				if err := i.groupUpdater.SendGroupUpdate(ctx, group); err != nil {
+					return false, nil, err
+				}
+			} else if err != nil {
 				return false, nil, err
 			}
 		}
@@ -3010,19 +3062,24 @@ func makeLocalAliasWithName(t *testing.T, name, entityID string, bucketKey strin
 // MakeDeduplicationDoneChan creates a new done channel for synchronization
 // with tests outside of the vault package (e.g. in external_tests).
 func (i *IdentityStore) MakeDeduplicationDoneChan() {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
 	i.activateDeduplicationDone = make(chan struct{})
 }
 
 // WaitForActivateDeduplicationDone is a test helper to wait for the identity
 // deduplication activation to finish.
 func (i *IdentityStore) WaitForActivateDeduplicationDone(ctx context.Context) error {
-	timeoutCtx, cancel := context.WithTimeout(ctx, 90*time.Second)
+	i.logger.Trace("waiting for activation", "channel", i.activateDeduplicationDone)
+
+	timeoutCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	select {
 	case <-i.activateDeduplicationDone:
+		i.logger.Trace("activation write received", "channel", i.activateDeduplicationDone)
 		return nil
 	case <-timeoutCtx.Done():
 		return fmt.Errorf("timed out waiting for deduplication")
-
 	}
 }

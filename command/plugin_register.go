@@ -17,6 +17,12 @@ var (
 	_ cli.CommandAutocomplete = (*PluginRegisterCommand)(nil)
 )
 
+func NewPluginRegisterCommand(baseCommand *BaseCommand) cli.Command {
+	return &PluginRegisterCommand{
+		BaseCommand: baseCommand,
+	}
+}
+
 type PluginRegisterCommand struct {
 	*BaseCommand
 
@@ -144,8 +150,8 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 	case len(args) > 2:
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1 or 2, got %d)", len(args)))
 		return 1
-	case c.flagSHA256 == "":
-		c.UI.Error("SHA256 is required for all plugins, please provide -sha256")
+	case c.flagSHA256 == "" && c.flagVersion == "":
+		c.UI.Error("One of -sha256 or -version is required. If registering with binary, please provide at least -sha256 (-version optional). If registering with extracted artifact directory, please provide -version only.")
 		return 1
 
 	// These cases should come after invalid cases have been checked

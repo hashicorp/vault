@@ -112,6 +112,16 @@ LANGUAGE plpgsql;
   for storing high availability information. This table must already exist (Vault
   will not attempt to create it).
 
+- `auth_mode` `(string: "standard|aws_iam|azure_msi|gcp_iam")` - Defaults to standard auth.
+  For mode details, see the cloud authentication section below.
+
+- `aws_db_region` `(string: "")` -  Specifies the AWS region where DB is situated.
+  Required when `auth_mode` is set to `aws_iam`
+
+- `azure_client_id` `(string: "")` - Client ID of a user-assigned Managed Service Identity in Azure.
+  System-assigned Managed Service Identity is used if `azure_client_id` is not provided and
+  `auth_mode` is set to `azure_msi`.
+
 ## `postgresql` examples
 
 ### Custom SSL verification
@@ -134,7 +144,49 @@ storage "postgresql" {
 }
 ```
 
+## Authentication in cloud via cloud identities
+
+### AWS IAM
+You can authenticate to your DB instance using AWS Identity and Access Management (IAM) database authentication. For more information
+please see the [AWS documentation][aws_iam]. 
+AWS default credentials is used for authentication.
+
+```hcl
+storage "postgresql" {
+  connection_url  = "postgres://iam_user@db.xx.us-west-2.rds.amazonaws.com:5432/database?sslmode=require"
+  auth_mode       = "aws_iam"
+  aws_db_region   = "us-west-2"
+}
+```
+
+### Azure MSI
+You can use both system-assigned and user-assigned managed identities to authenticate to Azure Database for PostgreSQL flexible server.
+For more information please see the [Azure documentation][azure_msi]. 
+
+```hcl
+storage "postgresql" {
+  connection_url  = "postgres://msi_user@server.postgres.database.azure.com:5432/database?sslmode=require"
+  auth_mode       = "azure_msi"
+}
+```
+
+### GCP IAM
+You can use Google Cloud Identity and Access Management (IAM) to authenticate with Cloud SQL resources.
+For more information please see the [Google documentation][google_iam]. 
+[Application Default Credentials][google_default_creds] is used for authentication.
+
+```hcl
+storage "postgresql" {
+  connection_url    = "postgres://iam-sa@xxxx.iam@203.0.113.0:5432/database?sslmode=require"
+  auth_mode         = "gcp_iam"
+}
+```
+
 [golang_setmaxidleconns]: https://golang.org/pkg/database/sql/#DB.SetMaxIdleConns
 [postgresql]: https://www.postgresql.org/
 [pgxlib]: https://pkg.go.dev/github.com/jackc/pgx/stdlib
 [pg_conn_docs]: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING
+[aws_iam]: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.IAMDBAuth.html
+[azure_msi]: https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/how-to-connect-with-managed-identity
+[google_iam]: https://cloud.google.com/sql/docs/postgres/iam-authentication
+[google_default_creds]: https://cloud.google.com/docs/authentication/provide-credentials-adc#how-to

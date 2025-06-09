@@ -9,6 +9,7 @@ import { tracked } from '@glimmer/tracking';
 interface Args {
   attr?: AttrData;
   label?: string;
+  disabled?: boolean; // specifically used for disabling on edit
 }
 interface AttrData {
   name: string; // required if @attr is passed
@@ -38,6 +39,7 @@ interface AttrData {
 
  * @param {object} [attr] - used to generate label for `ReadonlyFormField`, `name` key is required. Can be an attribute from a model exported with expandAttributeMeta.
  * @param {string} [label] - required if no attr passed. Used to ensure a11y conformance for the readonly input.
+ * @param {boolean} [disabled=false] - to be used in specific scenarios where a user can visually see but not interact with the input field. ie. disabling a field on edit
  */
 
 export default class EnableInputComponent extends Component<Args> {

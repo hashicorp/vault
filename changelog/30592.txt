@@ -1,0 +1,3 @@
+```release-note:feature
+**Custom login settings**: Adds view to list, read and delete rules defining customizations for the web UI login form
+```
