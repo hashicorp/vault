@@ -122,9 +122,27 @@ well as any progress made. This must be called to change the parameters of the
 rekey. Note: verification is still a part of a rekey. If rekeying is canceled
 during the verification flow, the current unseal keys remain valid.
 
+<Note title="Unrestricted endpoint">
+  Clients can call the endpoint without authenticating to Vault.
+</Note>
+
 | Method   | Path              |
 | :------- | :---------------- |
 | `DELETE` | `/sys/rekey/init` |
+
+### Parameters
+
+- `nonce` `(string: <optional>)` – Specifies the nonce of the rekey operation. If
+  the rekey was initialized within the last 10 minutes, you must provide the
+  nonce to cancel the operation.
+
+### Sample payload
+
+```json
+{
+  "nonce": "abcd1234..."
+}
+```
 
 ### Sample request
 
@@ -132,6 +150,7 @@ during the verification flow, the current unseal keys remain valid.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request DELETE \
+    --data @payload.json \
     http://127.0.0.1:8200/v1/sys/rekey/init
 ```
 
