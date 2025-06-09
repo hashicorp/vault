@@ -814,6 +814,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 
 	var localAliasesToDrop []*identity.Alias
 	for index, alias := range entity.Aliases {
+		var conflictErr error
 		// Verify that alias is not associated to a different one already
 		aliasByFactors, err := i.MemDBAliasByFactorsInTxn(txn, alias.MountAccessor, alias.Name, false, false)
 		if err != nil {
@@ -866,6 +867,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 			// If we didn't find the alias still tied to previousEntity, we
 			// shouldn't use the merging logic and should bail
 			if !found {
+				_, conflictErr = i.conflictResolver.ResolveAliases(nsCtx, entity, aliasByFactors, alias)
 				break
 			}
 
@@ -916,7 +918,6 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 		// are in case-sensitive mode so we can report these to the operator ahead
 		// of them disabling case-sensitive mode. Note that alias resolvers don't
 		// ever modify right now so ignore the bool.
-		_, conflictErr := i.conflictResolver.ResolveAliases(nsCtx, entity, aliasByFactors, alias)
 
 		// This appears to be accounting for any duplicate aliases for the same
 		// Entity. In that case we would have skipped over the merge above in the

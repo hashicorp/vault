@@ -43,5 +43,5 @@ func identityStoreDuplicateReportTestWantDuplicateCounts() (int, int, int, int) 
 	// test it behaves as expected in the CE code. It's maybe just about possible
 	// that this could happen in real life too because of a downgrade from
 	// Enterprise.
-	return 1, 1, 1, 1
+	return 0, 0, 1, 1
 }
