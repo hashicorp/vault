@@ -370,6 +370,15 @@
         }
       },
       {
+        "title": "SCEP",
+        "path": "auth/scep",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "TLS Certificates",
         "path": "auth/cert"
       },

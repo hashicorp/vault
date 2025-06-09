@@ -15,11 +15,11 @@ import (
 
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-pgmultiauth"
 	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/hashicorp/vault/sdk/physical"
-	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
 const (
@@ -129,8 +129,14 @@ func NewPostgreSQLBackend(conf map[string]string, logger log.Logger) (physical.B
 		}
 	}
 
+	ctx := context.Background()
+	config, err := getAuthConfig(ctx, connURL, conf, logger)
+	if err != nil {
+		return nil, fmt.Errorf("creating db auth config: %w", err)
+	}
+
 	// Create PostgreSQL handle for the database.
-	db, err := sql.Open("pgx", connURL)
+	db, err := pgmultiauth.Open(ctx, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to postgres: %w", err)
 	}
@@ -211,6 +217,36 @@ func connectionURL(conf map[string]string) string {
 	}
 
 	return connURL
+}
+
+func getAuthConfig(ctx context.Context, url string, conf map[string]string, log log.Logger) (pgmultiauth.Config, error) {
+	authOptions := pgmultiauth.DefaultAuthConfigOptions{
+		AuthMethod: pgmultiauth.StandardAuth,
+	}
+
+	switch conf["auth_mode"] {
+	case "aws_iam":
+		if conf["aws_db_region"] == "" {
+			return pgmultiauth.Config{}, fmt.Errorf("aws_db_region is required when auth_mode is aws_iam")
+		}
+
+		authOptions.AuthMethod = pgmultiauth.AWSAuth
+		authOptions.AWSDBRegion = conf["aws_db_region"]
+	case "azure_msi":
+		authOptions.AuthMethod = pgmultiauth.AzureAuth
+		authOptions.AzureClientID = conf["azure_client_id"]
+	case "gcp_iam":
+		authOptions.AuthMethod = pgmultiauth.GCPAuth
+	default:
+		// Using standard authentication method (default)
+	}
+
+	config, err := pgmultiauth.DefaultConfig(ctx, url, authOptions, pgmultiauth.WithLogger(log))
+	if err != nil {
+		return pgmultiauth.Config{}, fmt.Errorf("creating multi auth config: %w", err)
+	}
+
+	return config, nil
 }
 
 // splitKey is a helper to split a full path key into individual
