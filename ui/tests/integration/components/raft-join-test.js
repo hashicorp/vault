@@ -6,6 +6,7 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, render } from '@ember/test-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
@@ -26,7 +27,7 @@ module('Integration | Component | raft-join', function (hooks) {
     await render(hbs`<RaftJoin />`);
     await click('[data-test-next]');
     assert.dom('[data-test-join-header]').exists();
-    await click('[data-test-cancel-button]');
+    await click(GENERAL.cancelButton);
     assert.dom('[data-test-join-choice]').exists();
   });
 

@@ -32,15 +32,15 @@ module('Integration | Component | tools/random', function (hooks) {
     assert.dom('h1').hasText('Random Bytes', 'Title renders');
     assert.dom('#bytes').hasValue('32');
     assert.dom('#format').hasValue('base64');
-    assert.dom(TS.submit).hasText('Generate');
+    assert.dom(GENERAL.submitButton).hasText('Generate');
     assert.dom(TS.toolsInput('random-bytes')).doesNotExist();
-    assert.dom(TS.button('Done')).doesNotExist();
+    assert.dom(GENERAL.button('Done')).doesNotExist();
   });
 
   test('it renders errors', async function (assert) {
     this.server.post('sys/tools/random', () => new Response(500, {}, { errors: ['Something is wrong'] }));
     await this.renderComponent();
-    await click(TS.submit);
+    await click(GENERAL.submitButton);
     await waitUntil(() => find(GENERAL.messageError));
     assert.dom(GENERAL.messageError).hasText('Error Something is wrong');
   });
@@ -58,7 +58,7 @@ module('Integration | Component | tools/random', function (hooks) {
     await this.renderComponent();
 
     // test submit
-    await click(TS.submit);
+    await click(GENERAL.submitButton);
 
     // test random bytes view
     await waitUntil(() => TS.toolsInput('random-bytes'));
@@ -69,7 +69,7 @@ module('Integration | Component | tools/random', function (hooks) {
     assert.dom('#format').doesNotExist();
 
     // clicking 'Done' resets form
-    await click(TS.button('Done'));
+    await click(GENERAL.button('Done'));
     assert.dom('#bytes').hasValue('32');
     assert.dom('#format').hasValue('base64');
   });
@@ -87,6 +87,6 @@ module('Integration | Component | tools/random', function (hooks) {
     await this.renderComponent();
     await fillIn('#bytes', '44');
     await fillIn('#format', 'hex');
-    await click(TS.submit);
+    await click(GENERAL.submitButton);
   });
 });

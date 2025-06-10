@@ -33,7 +33,7 @@ module('Acceptance | Enterprise | auth form custom login settings', function (ho
     // cleanup login rules
     await visit('/vault/auth?with=token');
     await fillIn(GENERAL.inputByAttr('token'), rootToken);
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
     await runCmd([
       'delete sys/config/ui/login/default-auth/root-rule',
       'delete sys/config/ui/login/default-auth/ns-rule',
@@ -50,7 +50,7 @@ module('Acceptance | Enterprise | auth form custom login settings', function (ho
     assert.dom(AUTH_FORM.authForm('okta')).exists('it renders default method');
     assert.dom(AUTH_FORM.advancedSettings).exists();
 
-    await click(AUTH_FORM.otherMethodsBtn);
+    await click(GENERAL.button('Sign in with other methods'));
     assert.dom(AUTH_FORM.authForm('token')).exists('it renders backup method');
   });
 
@@ -60,7 +60,9 @@ module('Acceptance | Enterprise | auth form custom login settings', function (ho
     await waitFor(AUTH_FORM.authForm('ldap'));
     assert.dom(AUTH_FORM.authForm('ldap')).exists('it renders default method');
     assert.dom(AUTH_FORM.advancedSettings).exists();
-    assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('it does not render alternate view');
+    assert
+      .dom(GENERAL.button('Sign in with other methods'))
+      .doesNotExist('it does not render alternate view');
 
     // type in so that the namespace is "test-ns/child"
     await typeIn(GENERAL.inputByAttr('namespace'), '/child');
@@ -78,7 +80,7 @@ module('Acceptance | Enterprise | auth form custom login settings', function (ho
       .hasAttribute('aria-selected', 'true', 'it selects tab matching query param');
     assert.dom(AUTH_FORM.authForm('oidc')).exists();
     assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
-    await click(AUTH_FORM.otherMethodsBtn);
+    await click(GENERAL.button('Sign in with other methods'));
     assert.dom(GENERAL.selectByAttr('auth type')).exists('dropdown renders as fallback view');
   });
 
