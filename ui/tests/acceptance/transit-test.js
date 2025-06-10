@@ -162,7 +162,7 @@ const testConvergentEncryption = async function (assert, keyName) {
       await click('[data-test-transit-b64-toggle="context"]');
     }
     assert.dom('[data-test-encrypt-modal]').doesNotExist(`${keyName}: is not open before encrypt`);
-    await click('[data-test-button-encrypt]');
+    await click(GENERAL.submitButton);
 
     if (testCase.assertAfterEncrypt) {
       await settled();
@@ -181,7 +181,7 @@ const testConvergentEncryption = async function (assert, keyName) {
     }
 
     codemirror('#ciphertext-control').setValue(copiedCiphertext);
-    await click('[data-test-button-decrypt]');
+    await click(GENERAL.submitButton);
 
     if (testCase.assertAfterDecrypt) {
       await settled();
