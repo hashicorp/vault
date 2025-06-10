@@ -13,13 +13,13 @@ Namespaces in Vault Enterprise allow you to create isolated environments within 
 
 <Tip title="Best practices for namespaces">
 
-For best practices on structuring namespaces, see [Best practices for namespaces and mount paths](/vault/docs/enterprise/namespaces/namespace-structure).
+For guidance on structuring namespaces, see [Best practices for namespaces and mount paths](/vault/docs/enterprise/namespaces/namespace-structure).
 
 </Tip>
 
 ## Before you start
 
-- **You must have Vault Enterprise 1.20.0 or higher installed.**
+- **Vault Enterprise 1.20.0 or higher is required.**
 - **You must have the appropriate permissions** to create, read, list, delete, or manage namespaces.
 
 ## Create a namespace
@@ -32,9 +32,14 @@ For best practices on structuring namespaces, see [Best practices for namespaces
 
 > **Note:** To create a nested namespace, see the next section.
 
-![Create namespace](/img/create-namespace.png)
-
-![Save namespace](/img/save-namespace.png)
+<figure>
+  <img src="/img/create-namespace.png" alt="Create namespace" />
+  <figcaption>List of namespaces in the Vault UI</figcaption>
+</figure>
+<figure>
+  <img src="/img/save-namespace.png" alt="Save namespace" />
+  <figcaption>Create namespace form in the Vault UI</figcaption>
+</figure>
 
 ## Create a nested namespace
 
@@ -45,7 +50,7 @@ To create a nested namespace:
 3. Once in the parent namespace context, click the **Create namespace +** button and enter a name for the new namespace. The new namespace will be nested under the selected parent.
 4. Click **Save** to create the nested namespace.
 
-> **Note:** Nested namespaces are displayed in the UI with their parent namespace as a prefix. For example, a `dev` namespace nested under `engineering` will appear as `engineering/dev`._
+> **Note:** Nested namespaces are displayed in the UI with their parent namespace as a prefix. For example, a `dev` namespace nested under `engineering` will appear as `engineering/dev`.
 >
 > For more information, see [Best practices for namespaces and mount paths](/vault/docs/enterprise/namespaces/namespace-structure).
 
@@ -62,21 +67,44 @@ To create a nested namespace:
 
 > **Note:** You cannot delete a namespace if it contains child namespaces. Delete or move all child namespaces first.
 
-![Delete namespace](/img/delete-namespace.png)
-![Delete namespace modal](/img/delete-namespace-modal.png)
+<figure>
+  <img src="/img/delete-namespace.png" alt="Delete namespace" />
+  <figcaption>Delete namespace option in the Vault UI</figcaption>
+</figure>
+<figure>
+  <img src="/img/delete-namespace-modal.png" alt="Delete namespace modal" />
+  <figcaption>Delete namespace confirmation modal</figcaption>
+</figure>
 
 ## Switch between namespaces using the Manage Namespace page
 
 1. Navigate to **Access** > **Namespaces**.
-2. Click on the namespace name in the list to view its details.
-3. Use the **Switch to namespace** button to enter that namespace context.
+2. Click the additional options button (three dots) next to the namespace you want to switch to.
+3. Select **Switch to namespace** from the dropdown menu to enter that namespace context.
 
-![Switch to namespace](/img/switch-to-namespace.png)
+<figure>
+  <img src="/img/switch-to-namespace.png" alt="Switch to namespace" />
+  <figcaption>Switch to namespace option in the Vault UI</figcaption>
+</figure>
 
 ## Switch between namespaces using the namespace picker
 
-1. In the Vault UI header, locate the **Namespace picker** dropdown.
+1. In the Vault UI, locate the **Namespace picker** dropdown.
 2. Click the dropdown to view available namespaces.
-3. Select the namespace you want to switch to.
+3. (Optional) To filter the list, start typing part of a namespace name in the search bar. The list will filter as you type, allowing you to quickly find and switch to any namespace you have access to.
+4. Select the namespace you want to switch to by clicking on it.
 
-![Namespace picker](/img/namespace-picker.png)
+Alternatively, you can type an exact namespace path directly into the namespace picker’s search bar and press **Enter** to navigate directly to that namespace context.
+
+<figure>
+  <img src="/img/namespace-picker.png" alt="Namespace picker" />
+  <figcaption>The Namespace picker dropdown in the Vault UI</figcaption>
+</figure>
+<figure>
+  <img src="/img/namespace-picker-root-search.png" alt="Namespace picker search root" />
+  <figcaption>Searching for a root namespace in the Namespace picker</figcaption>
+</figure>
+<figure>
+  <img src="/img/namespace-picker-path-search.png" alt="Namespace picker search path" />
+  <figcaption>Searching for a nested namespace path in the Namespace picker</figcaption>
+</figure>
