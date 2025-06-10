@@ -27,7 +27,7 @@
       @textToCopy={{this.copyValue}}
       @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
       class="transparent"
-      data-test-copy-button={{or this.copyValue true}}
+      data-test-copy-button
     />
   </div>
 </Hds::Card::Container>

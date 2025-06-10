@@ -12,6 +12,7 @@ import hbs from 'htmlbars-inline-precompile';
 import { Response } from 'miragejs';
 import sinon from 'sinon';
 import { generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const selectors = {
   radioCard: '[data-test-radio-card="OpenLDAP"]',
@@ -30,7 +31,8 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
     await fillIn(selectors.binddn, 'foo');
     await fillIn(selectors.bindpass, 'bar');
     await click(selectors.save);
-    await click(`[data-test-save-${rotate}-rotate]`);
+    const buttonLabel = rotate === 'without' ? 'Save without rotating' : 'Save and rotate';
+    await click(GENERAL.button(buttonLabel));
   };
 
   hooks.beforeEach(function () {

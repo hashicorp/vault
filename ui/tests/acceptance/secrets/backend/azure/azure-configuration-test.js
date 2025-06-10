@@ -127,7 +127,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
         await click(SES.configTab);
         await click(SES.configure);
         await fillInAzureConfig();
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
         assert.true(
           this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
           'Success flash message is rendered showing the azure model configuration was saved.'
@@ -180,7 +180,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
         });
         await fillIn(GENERAL.inputByAttr('subscriptionId'), 'subscription-id-updated');
         await click(GENERAL.enableField('clientSecret'));
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
       });
@@ -207,7 +207,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
         await click(GENERAL.enableField('clientSecret'));
         await click('[data-test-button="toggle-masked"]');
         await fillIn(GENERAL.inputByAttr('clientSecret'), 'client-secret-updated');
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
       });
@@ -225,7 +225,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
         await click(SES.configTab);
         await click(SES.configure);
         await fillInAzureConfig();
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
 
         assert.dom(GENERAL.messageError).hasText('Error welp, that did not work!', 'API error shows on form');
         assert.strictEqual(
@@ -335,7 +335,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
         await click(SES.configure);
         await click(SES.wif.accessType('wif'));
         await fillIn(GENERAL.inputByAttr('issuer'), newIssuer);
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
         await click(SES.wif.issuerWarningSave);
         assert.true(
           this.flashSuccessSpy.calledWith(`Issuer saved successfully`),
@@ -364,7 +364,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
         await click(SES.configTab);
         await click(SES.configure);
         await fillInAzureConfig(true);
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
         assert.dom(SES.wif.issuerWarningModal).doesNotExist('issuer warning modal does not show');
         assert.true(
           this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
@@ -398,7 +398,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
           .dom(GENERAL.inputByAttr('issuer'))
           .hasValue(oldIssuer, 'issuer defaults to previously saved value');
         await fillIn(GENERAL.inputByAttr('issuer'), 'http://new.issuererrors');
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
         await click(SES.wif.issuerWarningSave);
         assert.true(
           this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
@@ -440,7 +440,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
           .dom(GENERAL.inputByAttr('issuer'))
           .hasValue(oldIssuer, 'issuer defaults to previously saved value');
         await fillIn(GENERAL.inputByAttr('issuer'), newIssuer);
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
         await click(SES.wif.issuerWarningSave);
         assert.true(
           this.flashSuccessSpy.calledWith(`Issuer saved successfully`),
@@ -467,13 +467,13 @@ module('Acceptance | Azure | configuration', function (hooks) {
         await click(SES.configTab);
         await click(SES.configure);
         await fillInAzureConfig(true);
-        await click(GENERAL.saveButton); // finished creating attributes, go back and edit them.
+        await click(GENERAL.submitButton); // finished creating attributes, go back and edit them.
         assert
           .dom(GENERAL.infoRowValue('Identity token audience'))
           .hasText('azure-audience', `value for identity token audience shows on the config details view.`);
         await click(SES.configure);
         await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'new-audience');
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
         assert
           .dom(GENERAL.infoRowValue('Identity token audience'))
           .hasText('new-audience', `value for identity token audience shows on the config details view.`);

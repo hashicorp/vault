@@ -6,8 +6,7 @@
 export const AUTH_FORM = {
   description: '[data-test-description]',
   form: '[data-test-auth-form]',
-  linkedBlockAuth: (type: string) => `[data-test-auth-backend-link="${type}"]`,
-  login: '[data-test-auth-submit]',
+  linkedBlockAuth: (path: string) => `[data-test-auth-backend-link="${path}"]`,
   selectMethod: '[data-test-select="auth type"]',
   tabBtn: (method: string) => `[data-test-auth-tab="${method}"] button`, // method is all lowercased
   tabs: '[data-test-auth-tab]',
@@ -19,5 +18,4 @@ export const AUTH_FORM = {
   helpText: '[data-test-auth-helptext]',
   logo: '[data-test-auth-logo]',
   managedNsRoot: '[data-test-managed-namespace-root]',
-  otherMethodsBtn: '[data-test-other-methods-button]',
 };

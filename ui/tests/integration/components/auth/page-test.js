@@ -113,7 +113,9 @@ module('Integration | Component | auth | page', function (hooks) {
     await click(AUTH_FORM.advancedSettings);
     assert.dom(GENERAL.inputByAttr('path')).exists({ count: 1 });
     assert.dom(GENERAL.backButton).doesNotExist();
-    assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('"Sign in with other methods" does not render');
+    assert
+      .dom(GENERAL.button('Sign in with other methods'))
+      .doesNotExist('"Sign in with other methods" does not render');
   });
 
   module('listing visibility', function (hooks) {
@@ -147,8 +149,10 @@ module('Integration | Component | auth | page', function (hooks) {
       await this.renderComponent();
       assert.dom(AUTH_FORM.tabs).exists({ count: 3 }, 'tabs render by default');
       assert.dom(GENERAL.backButton).doesNotExist();
-      await click(AUTH_FORM.otherMethodsBtn);
-      assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('button disappears after it is clicked');
+      await click(GENERAL.button('Sign in with other methods'));
+      assert
+        .dom(GENERAL.button('Sign in with other methods'))
+        .doesNotExist('button disappears after it is clicked');
       assert.dom(GENERAL.selectByAttr('auth type')).hasValue('userpass', 'dropdown has userpass selected');
       assert.dom(AUTH_FORM.advancedSettings).exists('toggle renders even though userpass has visible mounts');
       await click(AUTH_FORM.advancedSettings);
@@ -163,7 +167,9 @@ module('Integration | Component | auth | page', function (hooks) {
       await click(GENERAL.backButton);
       assert.dom(GENERAL.backButton).doesNotExist('"Back" button does not render after it is clicked');
       assert.dom(AUTH_FORM.tabs).exists({ count: 3 }, 'clicking "Back" renders tabs again');
-      assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders again');
+      assert
+        .dom(GENERAL.button('Sign in with other methods'))
+        .exists('"Sign in with other methods" renders again');
     });
 
     module('with a direct link', function (hooks) {
@@ -183,7 +189,9 @@ module('Integration | Component | auth | page', function (hooks) {
         assert.dom(GENERAL.inputByAttr('password')).exists();
         await click(AUTH_FORM.advancedSettings);
         assert.dom(GENERAL.inputByAttr('path')).exists({ count: 1 });
-        assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('"Sign in with other methods" does not render');
+        assert
+          .dom(GENERAL.button('Sign in with other methods'))
+          .doesNotExist('"Sign in with other methods" does not render');
         assert.dom(GENERAL.backButton).exists('back button renders because tabs exist for other methods');
         await click(GENERAL.backButton);
         assert
@@ -200,7 +208,9 @@ module('Integration | Component | auth | page', function (hooks) {
         assert.dom(GENERAL.inputByAttr('role')).exists();
         assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
         assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
-        assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders');
+        assert
+          .dom(GENERAL.button('Sign in with other methods'))
+          .exists('"Sign in with other methods" renders');
         assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist();
         assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
         assert.dom(GENERAL.backButton).doesNotExist();
@@ -215,10 +225,10 @@ module('Integration | Component | auth | page', function (hooks) {
         this.server.post(requestUrl, () => setupTotpMfaResponse(authType));
 
         await this.renderComponent();
-        await click(AUTH_FORM.otherMethodsBtn);
+        await click(GENERAL.button('Sign in with other methods'));
         await fillIn(AUTH_FORM.selectMethod, authType);
         await fillInLoginFields(loginData);
-        await click(AUTH_FORM.login);
+        await click(GENERAL.submitButton);
         await waitFor('[data-test-mfa-description]'); // wait until MFA validation renders
         await click(GENERAL.backButton);
         assert.dom(AUTH_FORM.selectMethod).hasValue(authType, 'Okta is selected in dropdown');
@@ -234,7 +244,7 @@ module('Integration | Component | auth | page', function (hooks) {
         await this.renderComponent();
         await fillIn(AUTH_FORM.selectMethod, authType);
         await fillInLoginFields(loginData);
-        await click(AUTH_FORM.login);
+        await click(GENERAL.submitButton);
         await click(GENERAL.backButton);
         assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
       });
@@ -271,7 +281,7 @@ module('Integration | Component | auth | page', function (hooks) {
       await this.renderComponent();
       await fillIn(AUTH_FORM.selectMethod, authType);
       await fillInLoginFields(loginData);
-      await click(AUTH_FORM.login);
+      await click(GENERAL.submitButton);
       const [actual] = this.onAuthSuccess.lastCall.args;
       const expected = {
         namespace: '',
@@ -282,7 +292,6 @@ module('Integration | Component | auth | page', function (hooks) {
     });
 
     test(`${authType}: it calls onAuthSuccess on submit for custom path`, async function (assert) {
-      assert.expect(1);
       const customPath = `${authType}-custom`;
       const { loginData, url } = options;
       const loginDataWithPath = { ...loginData, path: customPath };
@@ -295,7 +304,7 @@ module('Integration | Component | auth | page', function (hooks) {
       // await fillIn(AUTH_FORM.selectMethod, authType);
       // toggle mount path input to specify custom path
       await fillInLoginFields(loginDataWithPath, { toggleOptions: true });
-      await click(AUTH_FORM.login);
+      await click(GENERAL.submitButton);
 
       const [actual] = this.onAuthSuccess.lastCall.args;
       const expected = {
@@ -315,7 +324,7 @@ module('Integration | Component | auth | page', function (hooks) {
       await this.renderComponent();
       await fillIn(AUTH_FORM.selectMethod, authType);
       await fillInLoginFields(loginData);
-      await click(AUTH_FORM.login);
+      await click(GENERAL.submitButton);
       await click(GENERAL.backButton);
       assert.dom(AUTH_FORM.selectMethod).hasValue(authType, `${authType} is selected in dropdown`);
     });
@@ -332,7 +341,7 @@ module('Integration | Component | auth | page', function (hooks) {
     await fillIn(AUTH_FORM.selectMethod, 'token');
     // await fillIn(AUTH_FORM.selectMethod, 'token');
     await fillInLoginFields({ token: 'mysupersecuretoken' });
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
     const [actual] = this.onAuthSuccess.lastCall.args;
     const expected = {
       namespace: '',
@@ -380,7 +389,7 @@ module('Integration | Component | auth | page', function (hooks) {
       assert.dom(AUTH_FORM.authForm('oidc')).exists();
       assert.dom(GENERAL.backButton).doesNotExist();
       await this.assertPathInput(assert);
-      await click(AUTH_FORM.otherMethodsBtn);
+      await click(GENERAL.button('Sign in with other methods'));
       assert.dom(GENERAL.backButton).exists();
       assert.dom(AUTH_FORM.tabs).exists({ count: 2 }, 'it renders 2 backup type tabs');
       assert
@@ -403,8 +412,7 @@ module('Integration | Component | auth | page', function (hooks) {
       assert
         .dom(AUTH_FORM.tabs)
         .exists({ count: 1 }, 'it is rendering the default view because only one tab renders');
-
-      await click(AUTH_FORM.otherMethodsBtn);
+      await click(GENERAL.button('Sign in with other methods'));
       assert.dom(GENERAL.backButton).exists('it toggles to backup method view');
       assert.dom(AUTH_FORM.tabs).exists({ count: 3 }, 'it renders 3 backup type tabs');
       assert
@@ -418,7 +426,7 @@ module('Integration | Component | auth | page', function (hooks) {
       assert.dom(AUTH_FORM.tabBtn('oidc')).hasText('OIDC', 'it renders default method');
       assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
       assert.dom(GENERAL.backButton).doesNotExist();
-      assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist();
+      assert.dom(GENERAL.button('Sign in with other methods')).doesNotExist();
     });
 
     test('(backups only): it initially renders backup types if no default is set', async function (assert) {
@@ -431,7 +439,7 @@ module('Integration | Component | auth | page', function (hooks) {
         .hasAttribute('aria-selected', 'true', 'it selects the first backup type');
       await this.assertPathInput(assert);
       assert.dom(GENERAL.backButton).doesNotExist();
-      assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist();
+      assert.dom(GENERAL.button('Sign in with other methods')).doesNotExist();
     });
 
     module('all methods have visible mounts', function (hooks) {
@@ -448,7 +456,7 @@ module('Integration | Component | auth | page', function (hooks) {
         assert.dom(AUTH_FORM.tabBtn('oidc')).hasText('OIDC', 'it renders default method');
         assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
         this.assertPathInput(assert, { isHidden: true, value: 'my-oidc/' });
-        await click(AUTH_FORM.otherMethodsBtn);
+        await click(GENERAL.button('Sign in with other methods'));
         assert.dom(AUTH_FORM.tabs).exists({ count: 2 }, 'it renders 2 backup type tabs');
         assert
           .dom(AUTH_FORM.tabBtn('userpass'))
@@ -468,7 +476,7 @@ module('Integration | Component | auth | page', function (hooks) {
         assert.dom(AUTH_FORM.authForm('oidc')).exists();
         this.assertPathInput(assert, { isHidden: true, value: 'my-oidc/' });
         assert.dom(GENERAL.backButton).doesNotExist();
-        assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist();
+        assert.dom(GENERAL.button('Sign in with other methods')).doesNotExist();
       });
 
       test('(backups only): it hides advanced settings and renders hidden input', async function (assert) {
@@ -480,7 +488,7 @@ module('Integration | Component | auth | page', function (hooks) {
           .hasAttribute('aria-selected', 'true', 'it selects the first backup type');
         assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
         assert.dom(GENERAL.backButton).doesNotExist();
-        assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist();
+        assert.dom(GENERAL.button('Sign in with other methods')).doesNotExist();
       });
     });
 
@@ -497,7 +505,7 @@ module('Integration | Component | auth | page', function (hooks) {
         this.visibleAuthMounts = { ...this.mountData('my-oidc/') };
         await this.renderComponent();
         this.assertPathInput(assert, { isHidden: true, value: 'my-oidc/' });
-        await click(AUTH_FORM.otherMethodsBtn);
+        await click(GENERAL.button('Sign in with other methods'));
         assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
         await this.assertPathInput(assert);
         await click(AUTH_FORM.tabBtn('ldap'));
@@ -513,7 +521,7 @@ module('Integration | Component | auth | page', function (hooks) {
         };
         await this.renderComponent();
         assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
-        await click(AUTH_FORM.otherMethodsBtn);
+        await click(GENERAL.button('Sign in with other methods'));
         assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
         assert.dom(GENERAL.selectByAttr('path')).exists();
         assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
@@ -526,7 +534,7 @@ module('Integration | Component | auth | page', function (hooks) {
         await this.renderComponent();
         assert.dom(AUTH_FORM.authForm('oidc')).exists();
         assert.dom(AUTH_FORM.advancedSettings).exists();
-        await click(AUTH_FORM.otherMethodsBtn);
+        await click(GENERAL.button('Sign in with other methods'));
         assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
         assert.dom(AUTH_FORM.advancedSettings).exists();
         await click(AUTH_FORM.tabBtn('ldap'));
@@ -558,7 +566,7 @@ module('Integration | Component | auth | page', function (hooks) {
         const testHelper = (assert) => {
           assert.dom(AUTH_FORM.selectMethod).hasValue('okta');
           assert.dom(AUTH_FORM.authForm('okta')).exists();
-          assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist();
+          assert.dom(GENERAL.button('Sign in with other methods')).doesNotExist();
           assert.dom(GENERAL.backButton).doesNotExist();
         };
 
@@ -601,7 +609,7 @@ module('Integration | Component | auth | page', function (hooks) {
           assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
           assert.dom(GENERAL.inputByAttr('path')).hasValue('my-okta/');
           assert.dom(GENERAL.inputByAttr('path')).exists({ count: 1 });
-          await click(AUTH_FORM.otherMethodsBtn);
+          await click(GENERAL.button('Sign in with other methods'));
           assert
             .dom(GENERAL.selectByAttr('auth type'))
             .exists('it renders dropdown after clicking "Sign in with other"');
@@ -636,10 +644,10 @@ module('Integration | Component | auth | page', function (hooks) {
           assert.dom(GENERAL.backButton).exists('back button renders because other methods have tabs');
           assert.dom(AUTH_FORM.selectMethod).hasValue('okta');
           assert.dom(AUTH_FORM.authForm('okta')).exists();
-          assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist();
+          assert.dom(GENERAL.button('Sign in with other methods')).doesNotExist();
           await click(GENERAL.backButton);
           assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
-          await click(AUTH_FORM.otherMethodsBtn);
+          await click(GENERAL.button('Sign in with other methods'));
           assert.dom(AUTH_FORM.selectMethod).exists('it toggles back to dropdown');
         };
 
@@ -672,7 +680,7 @@ module('Integration | Component | auth | page', function (hooks) {
           assert.dom(AUTH_FORM.tabBtn('oidc')).hasAttribute('aria-selected', 'true');
           assert.dom(AUTH_FORM.authForm('oidc')).exists();
           assert.dom(GENERAL.backButton).doesNotExist();
-          await click(AUTH_FORM.otherMethodsBtn);
+          await click(GENERAL.button('Sign in with other methods'));
           assert.dom(AUTH_FORM.selectMethod).exists('it toggles to view dropdown');
           await click(GENERAL.backButton);
           assert.dom(AUTH_FORM.tabs).exists('it toggles back to tabs');
