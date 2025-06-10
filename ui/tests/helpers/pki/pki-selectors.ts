@@ -173,7 +173,6 @@ export const PKI_KEYS = {
   popupMenuEdit: '[data-test-key-menu-link="edit"]',
   // key details
   keyDeleteButton: '[data-test-pki-key-delete]',
-  downloadButton: '[data-test-download-button]',
   keyEditLink: '[data-test-pki-key-edit]',
   nextStepsAlert: '[data-test-pki-key-next-steps]',
 };

@@ -276,7 +276,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await click('.linked-block');
       // details page
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`);
-      assert.dom(PKI_KEYS.downloadButton).doesNotExist('does not download button for private key');
+      assert.dom(GENERAL.button('Download')).doesNotExist('does not download button for private key');
 
       // edit page
       await click(PKI_KEYS.keyEditLink);
@@ -317,7 +317,7 @@ module('Acceptance | pki workflow', function (hooks) {
           'Next steps This private key material will only be available once. Copy or download it now.',
           'renders banner to save private key'
         );
-      assert.dom(PKI_KEYS.downloadButton).exists('renders download button');
+      assert.dom(GENERAL.button('Download')).exists('renders download button');
       await click(PKI_KEYS.keyDeleteButton);
       await click(GENERAL.confirmButton);
       assert.strictEqual(
