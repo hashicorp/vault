@@ -48,10 +48,14 @@ Before nesting namespaces, we recommend reading the
 [Best practices for namespaces and mount paths](/vault/docs/enterprise/namespaces/namespace-structure)
 guide.
 
-1. First, create the parent namespace if it does not already exist.
-2. In the Vault UI, switch to the parent namespace context using the namespace picker or the namespaces list.
-3. Once in the parent namespace context, click the **Create namespace +** button and enter a name for the new namespace. The new namespace will be nested under the selected parent.
-4. Click **Save** to create the nested namespace.
+1. Create the parent namespace or select an existing namespace from the
+   namespace picker or namespace list in the Vault GUI.
+1. Confirm you are in the correct parent namespace context.
+1. Click **Create namespace +**.
+1. On the **Create a Namespace** screen, enter a path for the new, child
+   namespace.
+1. Click **Save** to create a namespace nested under the selected parent
+   namespace.
 
 > **Note:** Nested namespaces are displayed in the UI with their parent namespace as a prefix. For example, a `dev` namespace nested under `engineering` will appear as `engineering/dev`.
 >
