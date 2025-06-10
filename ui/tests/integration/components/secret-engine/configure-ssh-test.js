@@ -9,7 +9,6 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
-import { createConfig } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import sinon from 'sinon';
 
@@ -29,9 +28,9 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
   test('it shows create fields if not configured', async function (assert) {
     await render(hbs`
       <SecretEngine::ConfigureSsh
-    @model={{this.model}}
-    @id={{this.id}}
-  />
+        @model={{this.model}}
+        @id={{this.id}}
+      />
     `);
     assert.dom(GENERAL.inputByAttr('privateKey')).hasNoText('Private key is empty and reset');
     assert.dom(GENERAL.inputByAttr('publicKey')).hasNoText('Public key is empty and reset');
@@ -43,9 +42,9 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
   test('it should go back to parent route on cancel', async function (assert) {
     await render(hbs`
       <SecretEngine::ConfigureSsh
-    @model={{this.model}}
-    @id={{this.id}}
-  />
+        @model={{this.model}}
+        @id={{this.id}}
+      />
     `);
 
     await click(SES.ssh.cancel);
@@ -59,9 +58,9 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
   test('it should validate form fields', async function (assert) {
     await render(hbs`
       <SecretEngine::ConfigureSsh
-    @model={{this.model}}
-    @id={{this.id}}
-  />
+        @model={{this.model}}
+        @id={{this.id}}
+      />
     `);
     await fillIn(GENERAL.inputByAttr('publicKey'), 'hello');
     await click(SES.ssh.save);
@@ -94,9 +93,9 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
     });
     await render(hbs`
       <SecretEngine::ConfigureSsh
-    @model={{this.model}}
-    @id={{this.id}}
-  />
+        @model={{this.model}}
+        @id={{this.id}}
+      />
     `);
 
     await click(SES.ssh.save);
@@ -106,15 +105,24 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
   module('editing', function (hooks) {
     hooks.beforeEach(function () {
       this.editId = 'ssh-edit-me';
-      this.editModel = createConfig(this.store, 'ssh-edit-me', 'ssh');
+      this.store.pushPayload('ssh/ca-config', {
+        id: this.editId,
+        modelName: 'ssh/ca-config',
+        data: {
+          backend: this.editId,
+          public_key: 'public-key',
+          generate_signing_key: true,
+        },
+      });
+      this.editModel = this.store.peekRecord('ssh/ca-config', this.editId);
     });
     test('it populates fields when editing', async function (assert) {
       await render(hbs`
-      <SecretEngine::ConfigureSsh
-    @model={{this.editModel}}
-    @id={{this.editId}}
-  />
-    `);
+        <SecretEngine::ConfigureSsh
+          @model={{this.editModel}}
+          @id={{this.editId}}
+        />
+      `);
       assert
         .dom(SES.ssh.editConfigSection)
         .exists('renders the edit configuration section of the form and not the create part');
@@ -131,11 +139,11 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
         assert.true(true, 'DELETE request made to ca-config with correct properties');
       });
       await render(hbs`
-      <SecretEngine::ConfigureSsh
-    @model={{this.editModel}}
-    @id={{this.editId}}
-  />
-    `);
+        <SecretEngine::ConfigureSsh
+          @model={{this.editModel}}
+          @id={{this.editId}}
+        />
+      `);
       // delete Public key
       await click(SES.ssh.delete);
       assert.dom(GENERAL.confirmMessage).hasText('Confirming will remove the CA certificate information.');

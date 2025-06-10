@@ -65,8 +65,9 @@ export default class ApiService extends Service {
     const headers = new Headers(init.headers);
     // unauthenticated or clientToken requests should set the header in initOverrides
     // unauthenticated value should be empty string, not undefined or null
-    if (!headers.has('X-Vault-Token')) {
-      headers.set('X-Vault-Token', this.authService.currentToken);
+    const { currentToken } = this.authService;
+    if (!headers.has('X-Vault-Token') && currentToken) {
+      headers.set('X-Vault-Token', currentToken);
     }
     if (init.method === 'PATCH') {
       headers.set('Content-Type', 'application/merge-patch+json');
@@ -199,5 +200,22 @@ export default class ApiService extends Service {
       },
       [] as Record<string, unknown>[]
     );
+  }
+
+  // some responses return an object with a uuid as the key rather than an array
+  // in most cases it is easier to work with an array with the uuid set as a property on the object
+  // for example, internalUiListEnabledVisibleMounts returns an object like: { secret: { '/path/to/secret': { ... } } }
+  // usage for above example -> this.api.objectToArray(response.secret, 'path');
+  // this would return an array of objects like: [{ path: '/path/to/secret', ... }]
+  responseObjectToArray<T extends object>(obj?: T, uuidKey?: string) {
+    if (obj) {
+      return Object.entries(obj).map(([key, value]) => {
+        if (uuidKey) {
+          return { [uuidKey]: key, ...value };
+        }
+        return { ...value };
+      });
+    }
+    return [];
   }
 }
