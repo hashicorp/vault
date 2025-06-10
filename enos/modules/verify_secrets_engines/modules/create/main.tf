@@ -45,7 +45,7 @@ variable "ldap_port" {
 variable "ldap_pw" {
   type        = string
   description = "The LDAP Server admin password"
-  default     = "testing"
+  default     = "password1"
 }
 
 variable "leader_host" {

@@ -12,8 +12,8 @@ terraform {
 locals {
   ldap_server = {
     domain     = "enos.com"
-    org        = "enos"
-    admin_pw   = "testing"
+    org        = "hashicorp"
+    admin_pw   = "password1"
     version    = var.ldap_version
     port       = "389"
     ip_address = var.hosts[0].public_ip

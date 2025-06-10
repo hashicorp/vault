@@ -42,7 +42,6 @@ resource "enos_remote_exec" "ldap-configurations" {
     enos_remote_exec.policy_write_kv_writer,
     enos_remote_exec.secrets_enable_ldap_secret
   ]
-  for_each   = var.hosts
 
   environment = {
     MOUNT             = local.ldap_output.ldap_mount
@@ -56,11 +55,11 @@ resource "enos_remote_exec" "ldap-configurations" {
     VAULT_TOKEN       = var.vault_root_token
   }
 
-  scripts = [abspath("${path.module}/../../scripts/ldap-configurations.sh")]
+  scripts = [abspath("${path.module}/../../scripts/ldap-configs.sh")]
 
   transport = {
     ssh = {
-      host = each.value.public_ip
+      host = var.leader_host.public_ip
     }
   }
 }

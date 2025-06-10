@@ -38,7 +38,6 @@ install_ldap_tools() {
 [[ -z "$LDAP_PORT" ]] && fail "LDAP_PORT env variable has not been set"
 [[ -z "$LDAP_USERNAME" ]] && fail "LDAP_USERNAME env variable has not been set"
 [[ -z "$LDAP_ADMIN_PW" ]] && fail "LDAP_ADMIN_PW env variable has not been set"
-[[ -z "$VAULT_POLICY" ]] && fail "VAULT_POLICY env variable has not been set"
 [[ -z "$VAULT_ADDR" ]] && fail "VAULT_ADDR env variable has not been set"
 [[ -z "$VAULT_INSTALL_DIR" ]] && fail "VAULT_INSTALL_DIR env variable has not been set"
 [[ -z "$VAULT_TOKEN" ]] && fail "VAULT_TOKEN env variable has not been set"
@@ -49,34 +48,36 @@ test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 export VAULT_FORMAT=json
 
 # Installing LDAP tools
-install_ldap_tools
+install_ldap_tools > /dev/null 2>&1
 
-# Verify ldap connection
+echo "OpenLDAP: Checking for OpenLDAP Server Connection: ${LDAP_HOST}:${LDAP_PORT}"
 ldapsearch -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" -b "dc=${LDAP_USERNAME},dc=com" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w ${LDAP_ADMIN_PW}
 
 # Creating Users Org Unit LDIF file and adding users organizational unit
-USER_OU_LDIF="users-ou.ldif"
+echo "OpenLDAP: Creating Users Org Unit LDIF file and adding users organizational unit"
+GROUP_LDIF="group.ldif"
 cat <<EOF > ${USER_OU_LDIF}
-dn: ou=users,dc=enos,dc=com
+dn: ou=users,dc=$LDAP_USERNAME,dc=com
 objectClass: organizationalUnit
 ou: users
 EOF
-ldapadd -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w ${LDAP_ADMIN_PW} -f ${USER_OU_LDIF}
+ldapadd -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w ${LDAP_ADMIN_PW} -f ${GROUP_LDIF}
 
-# Creating User LDIF file and adding user to LDAP
+echo "OpenLDAP: Creating User LDIF file and adding user to LDAP"
 USER_LDIF="user.ldif"
 cat <<EOF > ${USER_LDIF}
 dn: uid=$LDAP_USERNAME,ou=users,dc=$LDAP_USERNAME,dc=com
 objectClass: inetOrgPerson
 sn: user
-cn: enos user
+cn: $LDAP_USERNAME user
 uid: $LDAP_USERNAME
 userPassword: $LDAP_ADMIN_PW
 EOF
 ldapadd -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w ${LDAP_ADMIN_PW} -f ${USER_LDIF}
 
-# Configure the Vault LDAP Connection
-vault write auth/ldap/config \
+echo "Vault: Creating ldap auth and creating auth/ldap/config route"
+"$binpath" auth enable ${MOUNT} > /dev/null 2>&1 || echo "Warning: Vault ldap auth already enabled"
+"$binpath" write "auth/${MOUNT}/config" \
   url="ldap://${LDAP_HOST}:${LDAP_PORT}" \
   binddn="cn=admin,dc=${LDAP_USERNAME},dc=com" \
   bindpass="${LDAP_ADMIN_PW}" \
@@ -87,16 +88,17 @@ vault write auth/ldap/config \
   groupattr="cn" \
   insecure_tls=true
 
-# Creating Vault Policy for LDAP and assigning user to policy
+echo "Vault: Creating Vault Policy for LDAP and assigning user to policy"
 VAULT_LDAP_POLICY="ldap_reader.hcl"
 cat <<EOF > ${VAULT_LDAP_POLICY}
 path "secret/data/*" {
   capabilities = ["read", "list"]
 }
 EOF
-vault policy write reader "${VAULT_LDAP_POLICY}"
-vault "write auth/ldap/users/${LDAP_USERNAME}" \
-    policies="reader"
+"$binpath" policy write reader "${VAULT_LDAP_POLICY}"
+"$binpath" write "auth/${MOUNT}/users/${LDAP_USERNAME}" policies="reader"
 
 # Authenticate Using LDAP
-vault login -method=${MOUNT} username=${LDAP_USERNAME} password=${LDAP_ADMIN_PW}
+echo "Vault: Authenticating Vault LDAP"
+"$binpath" login -method=${MOUNT} username=${LDAP_USERNAME} password=${LDAP_ADMIN_PW}
+echo "TEST4"
