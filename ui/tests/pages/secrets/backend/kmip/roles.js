@@ -12,7 +12,6 @@ export default create({
   visitDetail: visitable('/vault/secrets/:backend/kmip/scopes/:scope/roles/:role'),
   create: clickable('[data-test-role-create]'),
   roleName: fillable('[data-test-input="role"]'),
-  submit: clickable('[data-test-edit-form-submit]'),
   detailEditLink: clickable('[data-test-kmip-link-edit-role]'),
   cancelLink: clickable('[data-test-edit-form-cancel]'),
 });

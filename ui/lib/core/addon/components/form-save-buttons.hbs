@@ -9,8 +9,8 @@
       @text={{or @saveButtonText "Save"}}
       @icon={{if @isSaving "loading"}}
       type="submit"
-      data-test-edit-form-submit
       disabled={{@isSaving}}
+      data-test-submit
     />
     {{#if this.cancelLink}}
       <Hds::Button

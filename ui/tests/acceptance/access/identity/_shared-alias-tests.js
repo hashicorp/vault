@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentRouteName, find, settled, waitUntil } from '@ember/test-helpers';
+import { click, currentRouteName, find, settled, waitUntil } from '@ember/test-helpers';
 import page from 'vault/tests/pages/access/identity/aliases/add';
 import aliasIndexPage from 'vault/tests/pages/access/identity/aliases/index';
 import aliasShowPage from 'vault/tests/pages/access/identity/aliases/show';
@@ -27,8 +27,9 @@ export const testAliasCRUD = async function (name, itemType, assert) {
   );
   await page.visit({ item_type: itemType, id: itemID });
   await settled();
-  await page.editForm.name(name).submit();
+  await page.editForm.name(name);
   await settled();
+  await click(GENERAL.submitButton);
   assert.ok(
     aliasShowPage.flashMessage.latestMessage.startsWith('Successfully saved'),
     `${itemType}: shows a flash message`
@@ -60,7 +61,6 @@ export const testAliasCRUD = async function (name, itemType, assert) {
   await aliasIndexPage.delete();
   await settled();
   await click(GENERAL.confirmButton);
-  await settled();
   assert.dom(GENERAL.latestFlashContent).includesText(`Successfully deleted`);
 
   assert.strictEqual(
@@ -87,8 +87,8 @@ export const testAliasDeleteFromForm = async function (name, itemType, assert) {
   );
   await page.visit({ item_type: itemType, id: itemID });
   await settled();
-  await page.editForm.name(name).submit();
-  await settled();
+  await page.editForm.name(name);
+  await click(GENERAL.submitButton);
   const aliasID = await waitUntil(
     function () {
       return find(GENERAL.infoRowValue('ID')).textContent.trim();
@@ -104,7 +104,6 @@ export const testAliasDeleteFromForm = async function (name, itemType, assert) {
   );
   await page.editForm.delete();
   await click(GENERAL.confirmButton);
-  await settled();
   assert.dom(GENERAL.latestFlashContent).includesText(`Successfully deleted`);
   assert.strictEqual(
     currentRouteName(),

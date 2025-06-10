@@ -13,6 +13,7 @@ import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
 import sinon from 'sinon';
 import { LDAP_SELECTORS } from 'vault/tests/helpers/ldap/ldap-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | ldap | Page::Roles', function (hooks) {
   setupRenderingTest(hooks);
@@ -103,7 +104,7 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
       .dom('[data-test-role-type-badge="static-test"]')
       .hasText(this.roles[0].type, 'List item type badge renders');
 
-    await click('[data-test-popup-menu-trigger]');
+    await click(GENERAL.menuTrigger);
     assert.dom('[data-test-edit]').hasText('Edit', 'Edit link renders in menu');
     assert.dom('[data-test-get-creds]').hasText('Get credentials', 'Get credentials link renders in menu');
     assert

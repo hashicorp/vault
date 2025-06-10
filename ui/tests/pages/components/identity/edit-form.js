@@ -16,7 +16,6 @@ export default {
   metadataKey: fillable('[data-test-kv-key]'),
   metadataValue: fillable('[data-test-kv-value]'),
   type: fillable('[data-test-input="type"]'),
-  delete: clickable('[data-test-confirm-action-trigger]'),
   waitForFlash() {
     return waitFor('[data-test-flash-message-body]');
   },

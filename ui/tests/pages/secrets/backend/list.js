@@ -31,7 +31,6 @@ export default create({
   menuItems: collection('.ember-basic-dropdown-content li', {
     testContainer: '#ember-testing',
   }),
-  delete: clickable('[data-test-confirm-action-trigger]'),
   backendIsEmpty: getter(function () {
     return this.secrets.length === 0;
   }),

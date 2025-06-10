@@ -11,7 +11,6 @@ import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
 const SELECTORS = {
-  downloadIcon: '[data-test-download-icon]',
   stringify: '[data-test-stringify-toggle]',
 };
 module('Integration | Component | masked input', function (hooks) {
@@ -54,9 +53,9 @@ module('Integration | Component | masked input', function (hooks) {
 
   test('it renders a download button when allowDownload is true', async function (assert) {
     await render(hbs`<MaskedInput @allowDownload={{true}} /> `);
-    assert.dom(SELECTORS.downloadIcon).exists();
+    assert.dom(GENERAL.button('Download secret value')).exists();
 
-    await click(SELECTORS.downloadIcon);
+    await click(GENERAL.button('Download secret value'));
     assert.dom(GENERAL.button('Download')).exists('clicking download icon opens modal with download button');
   });
 
@@ -121,7 +120,7 @@ module('Integration | Component | masked input', function (hooks) {
     `);
     assert.dom('[data-test-masked-input]').exists('shows masked input');
     assert.dom(GENERAL.copyButton).exists();
-    assert.dom(SELECTORS.downloadIcon).exists();
+    assert.dom(GENERAL.button('Download secret value')).exists();
     assert.dom(GENERAL.button('toggle-masked')).exists('shows toggle mask button');
 
     await click(GENERAL.button('toggle-masked'));
@@ -155,11 +154,11 @@ module('Integration | Component | masked input', function (hooks) {
       />
     `);
 
-    await click(SELECTORS.downloadIcon);
+    await click(GENERAL.button('Download secret value'));
     assert.dom(SELECTORS.stringify).isNotChecked('Stringify toggle off as default');
     await click(GENERAL.button('Download'));
 
-    await click(SELECTORS.downloadIcon);
+    await click(GENERAL.button('Download secret value'));
     await click(SELECTORS.stringify);
     await click(GENERAL.button('Download'));
   });

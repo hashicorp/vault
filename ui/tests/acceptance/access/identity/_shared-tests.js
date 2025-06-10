@@ -13,13 +13,14 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 const SELECTORS = {
   identityRow: (name) => `[data-test-identity-row="${name}"]`,
   popupMenu: '[data-test-popup-menu-trigger]',
-  menuDelete: (name) => `[data-test-identity-row="${name}"] [data-test-button="popup-delete"]`,
+  menuDelete: (name) => `[data-test-identity-row="${name}"] [data-test-popup-menu="delete]`,
 };
 export const testCRUD = async (name, itemType, assert) => {
   await page.visit({ item_type: itemType });
   await settled();
-  await page.editForm.name(name).submit();
+  await page.editForm.name(name);
   await settled();
+  await click(GENERAL.submitButton);
   assert.dom(GENERAL.latestFlashContent).includesText('Successfully saved');
   assert.strictEqual(
     currentRouteName(),

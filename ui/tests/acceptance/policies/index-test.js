@@ -134,7 +134,7 @@ module('Acceptance | policies/acl', function (hooks) {
 
     await click('[data-test-policy-edit-toggle]');
 
-    await click('[data-test-confirm-action-trigger]');
+    await click(GENERAL.confirmTrigger);
 
     await click(GENERAL.confirmButton);
     await waitUntil(() => currentURL() === `/vault/policies/acl`);

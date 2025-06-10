@@ -7,6 +7,7 @@ import EmberObject from '@ember/object';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click } from '@ember/test-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import hbs from 'htmlbars-inline-precompile';
 
 module('Integration | Component | transform-list-item', function (hooks) {
@@ -53,7 +54,7 @@ module('Integration | Component | transform-list-item', function (hooks) {
     />`);
 
     assert.dom('[data-test-secret-link="template/foo"]').exists('shows clickable list item');
-    await click('[data-test-popup-menu-trigger]');
+    await click(GENERAL.menuTrigger);
     assert.dom('.hds-dropdown li').exists({ count: 1 }, 'has one option');
   });
 
@@ -76,7 +77,7 @@ module('Integration | Component | transform-list-item', function (hooks) {
     />`);
 
     assert.dom('[data-test-secret-link="alphabet/foo"]').exists('shows clickable list item');
-    await click('[data-test-popup-menu-trigger]');
+    await click(GENERAL.menuTrigger);
     assert.dom('.hds-dropdown li').exists({ count: 2 }, 'has both options');
   });
 
