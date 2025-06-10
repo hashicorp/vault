@@ -126,7 +126,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     await visit('/vault/logout');
   });
 
-  test.skip('it should show an empty state when no messages are created', async function (assert) {
+  test('it should show an empty state when no messages are created', async function (assert) {
     await click(CUSTOM_MESSAGES.navLink);
     assert.dom(GENERAL.emptyStateTitle).exists();
     assert.dom(GENERAL.emptyStateTitle).hasText('No messages yet');
