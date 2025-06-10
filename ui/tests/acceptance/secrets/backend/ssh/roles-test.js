@@ -192,8 +192,9 @@ module('Acceptance | ssh | roles', function (hooks) {
       await settled();
       await showPage.visit({ backend: path, id: 'role' });
       await settled();
-      await showPage.deleteRole();
-      await settled();
+      await click(GENERAL.confirmTrigger);
+      await click(GENERAL.confirmButton);
+
       assert.strictEqual(
         currentRouteName(),
         'vault.cluster.secrets.backend.list-root',

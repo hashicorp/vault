@@ -59,7 +59,7 @@ export const testAliasCRUD = async function (name, itemType, assert) {
   await settled();
   await aliasIndexPage.delete();
   await settled();
-  await aliasIndexPage.confirmDelete();
+  await click(GENERAL.confirmButton);
   await settled();
   assert.dom(GENERAL.latestFlashContent).includesText(`Successfully deleted`);
 
@@ -103,8 +103,7 @@ export const testAliasDeleteFromForm = async function (name, itemType, assert) {
     `${itemType}: navigates to edit on create`
   );
   await page.editForm.delete();
-  await page.editForm.waitForConfirm();
-  await page.editForm.confirmDelete();
+  await click(GENERAL.confirmButton);
   await settled();
   assert.dom(GENERAL.latestFlashContent).includesText(`Successfully deleted`);
   assert.strictEqual(

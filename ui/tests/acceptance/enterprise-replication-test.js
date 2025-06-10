@@ -22,6 +22,8 @@ import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { create } from 'ember-cli-page-object';
 import flashMessage from 'vault/tests/pages/components/flash-message';
 import ss from 'vault/tests/pages/components/search-select';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+
 import { disableReplication } from 'vault/tests/helpers/replication';
 const searchSelect = create(ss);
 const flash = create(flashMessage);
@@ -208,7 +210,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await pollCluster(this.owner);
     await visit('/vault/replication/dr/manage');
 
-    await click('[data-test-demote-replication] [data-test-replication-action-trigger]');
+    await click(GENERAL.button('Generate token'));
 
     assert.ok(findAll('[data-test-demote-warning]').length, 'displays the demotion warning');
   });
@@ -355,7 +357,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('[data-test-replication-link="manage"]');
 
     // open demote modal
-    await click('[data-test-demote-replication] [data-test-replication-action-trigger]');
+    await click(GENERAL.button('Generate token'));
 
     // enter confirmation text
     await fillIn('[data-test-confirmation-modal-input="Demote to secondary?"]', 'Performance');

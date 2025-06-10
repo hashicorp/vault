@@ -166,7 +166,7 @@ module('Acceptance | mfa-method', function (hooks) {
     const methodCount = this.element.querySelectorAll('[data-test-mfa-method-list-item]').length;
     await click('[data-test-mfa-method-list-item]');
     await click('[data-test-confirm-action-trigger]');
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
     assert.dom('[data-test-mfa-method-list-item]').exists({ count: methodCount - 1 }, 'Method was deleted');
   });
 
@@ -292,7 +292,7 @@ module('Acceptance | mfa-method', function (hooks) {
     await fillIn('[data-test-input="max_validation_attempts"]', 10);
     await click('[data-test-mfa-save]');
     await fillIn('[data-test-confirmation-modal-input]', model.type);
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
 
     assert.dom('[data-test-row-value="Issuer"]').hasText('foo', 'Issuer field is updated');
     assert.dom('[data-test-row-value="Algorithm"]').hasText('SHA1', 'Algorithm field is updated');

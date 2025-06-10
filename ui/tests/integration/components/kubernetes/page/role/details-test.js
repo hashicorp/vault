@@ -11,6 +11,7 @@ import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { duration } from 'core/helpers/format-duration';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const allFields = [
   { label: 'Role name', key: 'name' },
@@ -111,7 +112,7 @@ module('Integration | Component | kubernetes | Page::Role::Details', function (h
     assert.dom('[data-test-edit]').hasText('Edit role', 'Edit action renders');
 
     await click('[data-test-delete]');
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
     assert.ok(
       transitionStub.calledWith('vault.cluster.secrets.backend.kubernetes.roles'),
       'Transitions to roles route on delete success'

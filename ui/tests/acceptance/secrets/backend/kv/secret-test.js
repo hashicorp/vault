@@ -184,16 +184,14 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       // delete the items
       await click(SS.secretLinkMenu('1/2/3/4'));
       await click(SS.secretLinkMenuDelete('1/2/3/4'));
-      await listPage.confirmDelete();
-      await settled();
+      await click(GENERAL.confirmButton);
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.list');
       assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/list/1/2/3/`, 'remains on the page');
 
       assert.dom('[data-test-secret-link]').exists({ count: 1 });
       await listPage.secrets.objectAt(0).menuToggle();
       await listPage.delete();
-      await listPage.confirmDelete();
-      await settled();
+      await click(GENERAL.confirmButton);
       assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/list/1/2/3/`, 'remains on the page');
       assert.dom(GENERAL.emptyStateTitle).hasText('No secrets under "1/2/3/".');
       await fillIn('[data-test-component="navigate-input"]', '1/2/');
@@ -207,7 +205,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       const secretPath = 'test';
       await click(SS.createSecretLink);
       await createSecret(secretPath, 'foo', 'bar');
-      await showPage.deleteSecretV1();
+      await click(GENERAL.confirmButton);
       assert.strictEqual(
         currentRouteName(),
         'vault.cluster.secrets.backend.list-root',

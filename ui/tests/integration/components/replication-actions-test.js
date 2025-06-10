@@ -9,6 +9,7 @@ import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, fillIn, render } from '@ember/test-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
@@ -170,11 +171,11 @@ module('Integration | Component | replication actions', function (hooks) {
         .dom(`[data-test-${action}-replication] h3`)
         .hasText(headerText, `${testKey}: renders the ${action} component header`);
 
-      await click(`[data-test-replication-action-trigger="${action}"]`);
+      await click(GENERAL.button(action));
       if (typeof fillInFn === 'function') {
         await fillInFn.call(this);
       }
-      await click('[data-test-confirm-button]');
+      await click(GENERAL.confirmButton);
     });
   }
 });

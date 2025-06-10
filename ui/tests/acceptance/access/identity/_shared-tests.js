@@ -13,7 +13,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 const SELECTORS = {
   identityRow: (name) => `[data-test-identity-row="${name}"]`,
   popupMenu: '[data-test-popup-menu-trigger]',
-  menuDelete: (name) => `[data-test-identity-row="${name}"] [data-test-popup-menu="delete"]`,
+  menuDelete: (name) => `[data-test-identity-row="${name}"] [data-test-button="popup-delete"]`,
 };
 export const testCRUD = async (name, itemType, assert) => {
   await page.visit({ item_type: itemType });
@@ -38,8 +38,7 @@ export const testCRUD = async (name, itemType, assert) => {
   await click(`${SELECTORS.identityRow(name)} ${SELECTORS.popupMenu}`);
   await waitUntil(() => find(SELECTORS.menuDelete(name)));
   await click(SELECTORS.menuDelete(name));
-  await indexPage.confirmDelete();
-  await settled();
+  await click(GENERAL.confirmButton);
   assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted');
   assert.strictEqual(indexPage.items.filterBy('name', name).length, 0, `${itemType}: the row is deleted`);
 };
@@ -67,8 +66,7 @@ export const testDeleteFromForm = async (name, itemType, assert) => {
   await settled();
   await page.editForm.delete();
   await settled();
-  await page.editForm.confirmDelete();
-  await settled();
+  await click(GENERAL.confirmButton);
   assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted');
   assert.strictEqual(
     currentRouteName(),

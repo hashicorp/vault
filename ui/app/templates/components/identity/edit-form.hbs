@@ -67,7 +67,7 @@
           @text={{if (eq this.mode "create") "Create" "Save"}}
           @icon={{if this.save.isRunning "loading"}}
           type="submit"
-          data-test-identity-submit
+          data-test-save
           disabled={{this.save.isRunning}}
         />
         {{#if (or (eq this.mode "merge") (eq this.mode "create"))}}

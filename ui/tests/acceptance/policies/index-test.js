@@ -25,8 +25,6 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 const SELECT = {
   policyByName: (name) => `[data-test-policy-link="${name}"]`,
   filterBar: '[data-test-component="navigate-input"]',
-  delete: '[data-test-confirm-action-trigger]',
-  confirmDelete: '[data-test-confirm-button]',
   createPolicy: '[data-test-policy-create-link]',
   nameInput: '[data-test-policy-input="name"]',
   createError: '[data-test-message-error]',
@@ -72,8 +70,8 @@ module('Acceptance | policies/acl', function (hooks) {
     await waitFor(SELECT.policyByName(policyName));
     assert.dom(SELECT.policyByName(policyName)).exists('policy is shown in list');
     await click(`${SELECT.policyByName(policyName)} [data-test-popup-menu-trigger]`);
-    await click(SELECT.delete);
-    await click(SELECT.confirmDelete);
+    await click(GENERAL.confirmTrigger);
+    await click(GENERAL.confirmButton);
     assert.dom(SELECT.policyByName(policyName)).doesNotExist('policy is deleted successfully');
   });
 
@@ -138,7 +136,7 @@ module('Acceptance | policies/acl', function (hooks) {
 
     await click('[data-test-confirm-action-trigger]');
 
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
     await waitUntil(() => currentURL() === `/vault/policies/acl`);
     assert.strictEqual(
       currentURL(),

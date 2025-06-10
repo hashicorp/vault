@@ -191,9 +191,9 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
         'Toolbar edit action has link to edit route'
       );
     await click('[data-test-enforcement-delete]');
-    assert.dom('[data-test-confirm-button]').isDisabled('Delete button disabled with no confirmation');
+    assert.dom(GENERAL.confirmButton).isDisabled('Delete button disabled with no confirmation');
     await fillIn('[data-test-confirmation-modal-input]', enforcement.name);
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.enforcements.index',
