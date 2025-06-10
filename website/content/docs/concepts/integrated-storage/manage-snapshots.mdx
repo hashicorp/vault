@@ -916,7 +916,16 @@ Your Vault token must have the `recover` capability on a path to recover that pa
 $ vault operator raft snapshot load backup.snap
 ```
 
-Vault returns information about the snapshot, including a `snapshot_id` value that you can use to perform further operations with the snapshot.
+Vault returns information about the snapshot, including a `snapshot_id` value that you can use to perform further operations with the snapshot and the snapshot status.
+
+```plaintext
+Key                                   Value
+---                                   -----
+cluster_id                            990195d2-9f10-4e5c-84c5-543b4c250dc6
+expires_at                            2025-06-14T09:00:00.675319+05:00
+snapshot_id                           e57cd0cf-c3fa-4e5e-96ea-4a68fa8f3269
+status                                loading
+```
 
 Learn more in the [CLI documentation](/vault/docs/commands/operator/raft#snapshot-load).
 
@@ -932,17 +941,14 @@ $ vault operator raft snapshot load \
 
 Vault returns information about the snapshot, including a `snapshot_id` value that you can use to perform further operations with the snapshot.
 
-```json
-{
-  "data": {
-    "auto_config_name": "paris-primary",
-    "cluster_id": "7430fa38-8fb6-4b35-b2a7-27ed4c831a44",
-    "expires_at": "2025-07-16T03:24:42.867531+05:00",
-    "snapshot_id": "9465df92-8236-4af9-8cc8-b7460d882e41",
-    "url": "https://bucket.example.com/vault-snapshots/primary/paris-backup.snap",
-    "status": "loading"
-  }
-}
+```plaintext
+Key                                   Value
+---                                   -----
+auto_config_name                      paris-primary
+cluster_id                            7430fa38-8fb6-4b35-b2a7-27ed4c831a44
+expires_at                            2025-07-16T03:24:42.867531+05:00
+snapshot_id                           9465df92-8236-4af9-8cc8-b7460d882e41
+status                                loading
 ```
 
 Learn more in the [CLI documentation](/vault/docs/commands/operator/raft#snapshot-load).
@@ -950,22 +956,20 @@ Learn more in the [CLI documentation](/vault/docs/commands/operator/raft#snapsho
 After you start the snapshot load, you can check the snapshot loading status by reading the snapshot ID returned in the load output.
 
 ```shell-session
-$ /sys/storage/raft/snapshot-load/9465df92-8236-4af9-8cc8-b7460d882e41
+$ vault read \
+    /sys/storage/raft/snapshot-load/9465df92-8236-4af9-8cc8-b7460d882e41
 ```
 
 Vault responds with snapshot details.
 
-```json
-{
-  "data": {
-    "auto_config_name": "paris-primary",
-    "cluster_id": "7430fa38-8fb6-4b35-b2a7-27ed4c831a44",
-    "expires_at": "2025-07-16T03:24:42.867531+05:00",
-    "snapshot_id": "9465df92-8236-4af9-8cc8-b7460d882e41s",
-    "url": "https://bucket.example.com/vault-snapshots/primary/paris-backup.snap",
-    "status": "ready"
-  }
-}
+```plaintext
+Key                                   Value
+---                                   -----
+auto_config_name                      paris-primary
+cluster_id                            7430fa38-8fb6-4b35-b2a7-27ed4c831a44
+expires_at                            2025-07-16T03:24:42.867531+05:00
+snapshot_id                           9465df92-8236-4af9-8cc8-b7460d882e41
+status                                ready
 ```
 
 When Vault loads the snapshot, the status value is `loading` until loading is complete, and the value changes to `ready` when you can use the snapshot for secret recovery.
@@ -978,7 +982,9 @@ You can't recover secrets from a snapshot with an `error` status.
 
 </Note>
 
-When the snapshot is ready, you can recover the secret by specifying its path. In this example, recover the secret named `api-key` from the key/value version 1 secrets engine enabled at the path `telemetry-systems`.
+When the snapshot status is **ready**, you can recover the secret by specifying its path. 
+
+In this example, recover the secret named `api-key` from the key/value version 1 secrets engine enabled at the path `telemetry-systems`.
 
 ```shell-session
 $ vault read \
@@ -986,7 +992,22 @@ $ vault read \
     telemetry-systems/api-key
 ```
 
-Vault reads the secret at the path from the snapshot, then sends that data to the secrets engine to recover the secret. The secrets engine uses this data potientally with its own information to create or update the data at the specified path in live storage.
+Vault reads the secret at the specified path from the snapshot, then sends that data to the secrets engine to recover the secret. The secrets engine uses this data potientally with its own information to create or update the data at the specified path in live cluster storage.
+
+You can read the secret from its usual path in the secrets engine to test recovery.
+
+```shell-session
+$ vault kv get telemetry-systems/api-key
+```
+
+Vault responds with the secret data.
+
+```plaintext
+=== Data ===
+Key    Value
+---    -----
+key    9C016BB3-F574-4A24-B8A7-8CE1F1CE2128
+```
 
 </Tab>
 
@@ -1007,9 +1028,9 @@ Vault responds with details about the snapshot:
 ```json
 {
   "data": {
-    "cluster_id": "2ec84695-cfe5-44f3-b351-3f08a9ccc0c8",
-    "expires_at": "2025-05-25T15:07:58.187769+01:00",
-    "snapshot_id": "2403d301-94f2-46a1-a39d-02be83e2831a",
+    "cluster_id": "990195d2-9f10-4e5c-84c5-543b4c250dc6",
+    "expires_at": "2025-06-14T09:00:00.675319+05:00",
+    "snapshot_id": "e57cd0cf-c3fa-4e5e-96ea-4a68fa8f3269",
     "status": "loading"
   }
 }
@@ -1024,7 +1045,7 @@ Create a JSON payload that defines the URL to the automated snapshot you need to
 ```shell-session
 $ cat > payload.json << EOF
 {
-  "url": "https://example.com/raft.snap"
+  "url": "https://bucket.example.com/vault-snapshots/primary/paris-backup.snap"
 }
 ```
 
@@ -1035,10 +1056,25 @@ $ curl \
     --header "X-Vault-Token: ..." \
     --request POST \
     --data @payload.json \
-    http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-auto/snapshot-load/my-snapshot-configuration
+    http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-auto/snapshot-load/paris-primary
 ```
 
-Restore the secret by specifying its path.
+Vault responds with snapshot details.
+
+```json
+{
+  "data": {
+    "auto_config_name": "paris-primary",
+    "cluster_id": "7430fa38-8fb6-4b35-b2a7-27ed4c831a44",
+    "expires_at": "2025-07-16T03:24:42.867531+05:00",
+    "snapshot_id": "9465df92-8236-4af9-8cc8-b7460d882e41s",
+    "url": "https://bucket.example.com/vault-snapshots/primary/paris-backup.snap",
+    "status": "ready"
+  }
+}
+```
+
+When the snapshot status is **ready**, you can recover the secret by specifying its path.
 
 ```shell-session
 $ curl ...
@@ -1055,6 +1091,12 @@ $ curl ...
 ### Recover a DR Replication cluster secret
 
 Use these examples to learn how to recover a secret from a snapshot to a DR Replication cluster.
+
+<Note>
+
+Disaster recovery secondary clusters cannot load snapshots.
+
+</Note>
 
 <Tabs>
 
@@ -1098,6 +1140,10 @@ $ curl ...
 
 ### Recover a Performance Replication cluster secret
 
+Performance primary and secondary clusters can each load their own snapshots.
+
+Performance secondary clusters can perform snapshot operations on paths corresponding to local mounts, but can't perform snapshot operations on any shared paths.
+
 Use these examples to learn how to recover a secret from a snapshot to a Performance Replication cluster.
 
 <Tabs>
@@ -1110,7 +1156,7 @@ Load the snapshot that holds the secret you need to recover.
 $ ...
 ```
 
-Restore the secret by specifying its path.
+Recover the secret by specifying its path.
 
 ```shell-session
 $ ...
