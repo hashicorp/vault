@@ -56,7 +56,7 @@ ldapsearch -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" -b "dc=${LDAP_USERNAME},dc=c
 # Creating Users Org Unit LDIF file and adding users organizational unit
 echo "OpenLDAP: Creating Users Org Unit LDIF file and adding users organizational unit"
 GROUP_LDIF="group.ldif"
-cat <<EOF > ${USER_OU_LDIF}
+cat <<EOF > ${GROUP_LDIF}
 dn: ou=users,dc=$LDAP_USERNAME,dc=com
 objectClass: organizationalUnit
 ou: users
