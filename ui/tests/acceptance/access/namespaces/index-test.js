@@ -80,7 +80,8 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
   });
 
   test('it should show button to refresh namespace list', async function (assert) {
-    const testNS = 'test-refresh-ns';
+    let refreshNetworkRequestTriggered;
+    const refreshNamespaceButton = GENERAL.button('refresh-namespace-list');
 
     // Setup: Create namespace via the CLI
     const namespaces = [testNS];

@@ -28,8 +28,12 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await login();
   });
 
+  hooks.afterEach(() => {
+    fetchSpy.restore();
+  });
+
   test('it focuses the search input field when user toggles namespace picker', async function (assert) {
-    await click(GENERAL.toggleInput('namespace-id'));
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
 
     // Verify that the search input field is focused
     const searchInput = find(NAMESPACE_PICKER_SELECTORS.searchInput);
@@ -43,9 +47,9 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
   test('it navigates to the matching namespace when Enter is pressed', async function (assert) {
     // Setup: Create namespace(s) via the CLI
     const namespaces = ['beep/boop'];
-    await createNSFromPaths(namespaces);
+    await createNamespaces(namespaces);
 
-    await click(GENERAL.toggleInput('namespace-id'));
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
     await click(GENERAL.button('Refresh list'));
     assert.dom(NAMESPACE_PICKER_SELECTORS.searchInput).exists('The namespace search field exists');
 
@@ -75,7 +79,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     const namespaces = ['beep/boop/bop'];
     await createNSFromPaths(namespaces);
 
-    await click(GENERAL.toggleInput('namespace-id'));
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
     await click(GENERAL.button('Refresh list'));
 
     // Verify all namespaces are displayed initially
@@ -194,8 +198,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     const namespaces = ['beep'];
     await createNSFromPaths(namespaces);
 
-    // Open the namespace picker & refresh the list of namespaces
-    await click(GENERAL.toggleInput('namespace-id'));
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
     await click(GENERAL.button('Refresh list'));
 
     // Verify the "Manage" button is rendered and has the correct URL
@@ -250,7 +253,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     const namespaces = ['beep/boop/bop'];
     await createNSFromPaths(namespaces);
 
-    await click(GENERAL.toggleInput('namespace-id'));
+    await click(NAMESPACE_PICKER_SELECTORS.toggle);
     await click(GENERAL.button('Refresh list'));
 
     // Login with a namespace prefixed with /

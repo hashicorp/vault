@@ -5,5 +5,6 @@
 
 export const NAMESPACE_PICKER_SELECTORS = {
   link: (link) => (link ? `[data-test-namespace-link="${link}"]` : '[data-test-namespace-link]'),
+  toggle: '[data-test-namespace-toggle]',
   searchInput: 'input[type="search"]',
 };
