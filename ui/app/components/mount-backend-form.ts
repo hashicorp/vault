@@ -11,11 +11,11 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { isAddonEngine } from 'vault/helpers/mountable-secret-engines';
 import { filterEnginesByMountType } from 'vault/utils/all-engines-metadata';
+import { debug } from '@ember/debug';
 
 import type FlashMessageService from 'vault/services/flash-messages';
 import type Store from '@ember-data/store';
 import type AdapterError from '@ember-data/adapter/error';
-import { debug } from '@ember/debug';
 
 import type { AuthEnableModel } from 'vault/routes/vault/cluster/settings/auth/enable';
 import type { MountSecretBackendModel } from 'vault/routes/vault/cluster/settings/mount-secret-backend';
@@ -71,12 +71,12 @@ export default class MountBackendForm extends Component<Args> {
     if (!backendType) return;
     const mount = this.args.mountModel;
     const currentPath = mount.path;
-    // while mountType is always set to 'secret' or 'auth', there's situations where we pass in an empty string (such as on setMountType) and in this case we want to default to returning auth methods.
-    const mountsByType = filterEnginesByMountType(
-      this.args.mountType ? this.args.mountType : 'auth',
-      true
-    ).map((engine) => engine.type);
-
+    // mountType is usually 'secret' or 'auth', but sometimes an empty string is passed in (like when we click the cancel button).
+    // In these cases, we should default to returning auth methods.
+    const mountsByType = filterEnginesByMountType({
+      mountGroup: this.args.mountType ?? 'auth',
+      isEnterprise: true,
+    }).map((engine) => engine.type);
     // if the current path has not been altered by user,
     // change it here to match the new type
     if (!currentPath || mountsByType.includes(currentPath)) {

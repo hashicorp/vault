@@ -15,10 +15,10 @@ import { filterEnginesByMountType } from 'vault/utils/all-engines-metadata';
 
 const secretTypes = mountableEngines().map((engine) => engine.type);
 const allSecretTypes = allEngines().map((engine) => engine.type);
-const authTypes = filterEnginesByMountType('auth')
+const authTypes = filterEnginesByMountType({ mountGroup: 'auth', isEnterprise: false })
   .filter((engine) => engine.type !== 'token')
   .map((auth) => auth.type);
-const allAuthTypes = filterEnginesByMountType('auth', true)
+const allAuthTypes = filterEnginesByMountType({ mountGroup: 'auth', isEnterprise: true })
   .filter((engine) => engine.type !== 'token')
   .map((auth) => auth.type);
 

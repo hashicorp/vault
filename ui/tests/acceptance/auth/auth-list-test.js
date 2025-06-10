@@ -80,7 +80,7 @@ module('Acceptance | auth backend list', function (hooks) {
     });
 
     // Test all auth methods, not just those you can log in with
-    filterEnginesByMountType('auth')
+    filterEnginesByMountType({ mountGroup: 'auth', isEnterprise: false })
       .map((backend) => backend.type)
       .forEach((type) => {
         test(`${type} auth method`, async function (assert) {

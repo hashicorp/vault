@@ -22,7 +22,13 @@ export interface EngineDisplayData {
  * @param isEnterprise - Optional boolean to indicate if enterprise engines should be included in the results.
  * @returns Filtered array of engines that match the given mount type
  */
-export function filterEnginesByMountType(mountGroup: 'auth' | 'secret', isEnterprise?: boolean) {
+export function filterEnginesByMountType({
+  mountGroup,
+  isEnterprise = false,
+}: {
+  mountGroup: 'auth' | 'secret';
+  isEnterprise: boolean;
+}) {
   return isEnterprise
     ? ALL_ENGINES.filter((engine) => engine.mountGroup.includes(mountGroup))
     : ALL_ENGINES.filter((engine) => engine.mountGroup.includes(mountGroup) && !engine.requiresEnterprise);

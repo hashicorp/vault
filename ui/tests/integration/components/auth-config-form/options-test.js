@@ -12,7 +12,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { filterEnginesByMountType } from 'vault/utils/all-engines-metadata';
 
 const userLockoutSupported = ['approle', 'ldap', 'userpass'];
-const userLockoutUnsupported = filterEnginesByMountType('auth')
+const userLockoutUnsupported = filterEnginesByMountType({ mountGroup: 'auth', isEnterprise: false })
   .map((m) => m.type)
   .filter((m) => !userLockoutSupported.includes(m));
 

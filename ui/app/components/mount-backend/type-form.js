@@ -27,13 +27,13 @@ export default class MountBackendTypeForm extends Component {
   get secretEngines() {
     // If an enterprise license is present, return all secret engines;
     // otherwise, return only the secret engines supported in OSS.
-    return filterEnginesByMountType('secret', this.version.isEnterprise);
+    return filterEnginesByMountType({ mountGroup: 'secret', isEnterprise: this.version.isEnterprise });
   }
 
   get authMethods() {
     // If an enterprise license is present, return all auth methods;
     // otherwise, return only the auth methods supported in OSS.
-    return filterEnginesByMountType('auth', this.version.isEnterprise);
+    return filterEnginesByMountType({ mountGroup: 'auth', isEnterprise: this.version.isEnterprise });
   }
 
   get mountTypes() {
