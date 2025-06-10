@@ -14,5 +14,5 @@ import (
 
 // DownloadExtractVerifyPlugin returns an error as this is an enterprise only feature
 func (d dynamicSystemView) DownloadExtractVerifyPlugin(_ context.Context, _ *pluginutil.PluginRunner) error {
-	return fmt.Errorf("Enterprise only feature")
+	return fmt.Errorf("enterprise only feature")
 }
