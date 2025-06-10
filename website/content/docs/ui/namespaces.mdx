@@ -39,7 +39,14 @@ For guidance on structuring namespaces, see [Best practices for namespaces and m
 
 ## Create a nested namespace
 
-To create a nested namespace:
+A nested namespace is any namespace that exists within another non-root
+namespace. Vault displays nested namespaces in the GUI with the parent namespace
+as a prefix. For example, a `dev` namespace nested under `engineering` appears
+as `engineering/dev` in the GUI.
+
+Before nesting namespaces, we recommend reading the
+[Best practices for namespaces and mount paths](/vault/docs/enterprise/namespaces/namespace-structure)
+guide.
 
 1. First, create the parent namespace if it does not already exist.
 2. In the Vault UI, switch to the parent namespace context using the namespace picker or the namespaces list.
