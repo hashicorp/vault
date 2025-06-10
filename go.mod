@@ -79,7 +79,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-metrics-stackdriver v0.2.0
-	github.com/hashicorp/cap v0.8.0
+	github.com/hashicorp/cap v0.9.0
 	github.com/hashicorp/cap/ldap v0.0.0-20250106213447-9047b8b3240f
 	github.com/hashicorp/cli v1.1.7
 	github.com/hashicorp/consul-template v0.39.1
@@ -141,9 +141,9 @@ require (
 	github.com/hashicorp/vault-plugin-auth-azure v0.21.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.21.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.21.0
-	github.com/hashicorp/vault-plugin-auth-jwt v0.23.2
+	github.com/hashicorp/vault-plugin-auth-jwt v0.24.1
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.15.0
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.21.0
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.22.1
 	github.com/hashicorp/vault-plugin-auth-oci v0.19.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.14.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.18.0
@@ -153,7 +153,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-snowflake v0.14.1
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.21.0
-	github.com/hashicorp/vault-plugin-secrets-alicloud v0.19.0
+	github.com/hashicorp/vault-plugin-secrets-alicloud v0.20.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.22.0
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.22.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.21.0
@@ -161,7 +161,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kv v0.24.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.14.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.16.0
-	github.com/hashicorp/vault-plugin-secrets-terraform v0.11.0
+	github.com/hashicorp/vault-plugin-secrets-terraform v0.12.0
 	github.com/hashicorp/vault-testing-stepwise v0.3.2
 	github.com/hashicorp/vault/api v1.20.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
@@ -220,14 +220,14 @@ require (
 	go.uber.org/atomic v1.11.0
 	go.uber.org/goleak v1.3.0
 	golang.org/x/crypto v0.38.0
-	golang.org/x/exp v0.0.0-20240909161429-701f63a606c0
+	golang.org/x/exp v0.0.0-20250531010427-b6e5de432a8b
 	golang.org/x/net v0.40.0
 	golang.org/x/oauth2 v0.30.0
 	golang.org/x/sync v0.14.0
 	golang.org/x/sys v0.33.0
 	golang.org/x/term v0.32.0
 	golang.org/x/text v0.25.0
-	golang.org/x/tools v0.29.0
+	golang.org/x/tools v0.33.0
 	google.golang.org/api v0.235.0
 	google.golang.org/grpc v1.72.2
 	google.golang.org/protobuf v1.36.6
@@ -429,9 +429,9 @@ require (
 	github.com/hashicorp/go-msgpack/v2 v2.1.2 // indirect
 	github.com/hashicorp/go-secure-stdlib/fileutil v0.1.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.4.1 // indirect
-	github.com/hashicorp/go-slug v0.16.3 // indirect
-	github.com/hashicorp/go-tfe v1.74.1 // indirect
-	github.com/hashicorp/jsonapi v1.3.2 // indirect
+	github.com/hashicorp/go-slug v0.16.4 // indirect
+	github.com/hashicorp/go-tfe v1.81.0 // indirect
+	github.com/hashicorp/jsonapi v1.4.3-0.20250220162346-81a76b606f3e // indirect
 	github.com/hashicorp/logutils v1.0.0 // indirect
 	github.com/hashicorp/mdns v1.0.4 // indirect
 	github.com/hashicorp/net-rpc-msgpackrpc/v2 v2.0.0 // indirect
