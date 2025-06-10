@@ -7,7 +7,7 @@ description: >-
 
 # Manage snapshots
 
-All Vault editions support data backup and restoration with manual snapshots of the cluster state. Vault Enterprise adds support for configurable automatic snapshots to local and cloud storage.
+All Vault editions support data backup and restoration with manual snapshots of the cluster state. Vault Enterprise adds support for configurable automated snapshots to local and cloud storage.
 
 When you save and securely retain Vault cluster snapshots, you help defend against data corruption or sabotage. You can further support data availability in the event of catastrophic failure by retaining cluster snapshots outside cluster storage or physical datacenters where clusters operate.
 
@@ -211,26 +211,26 @@ As a best practice, you should retain snapshot files in a secure place away from
 
 </Tip>
 
-## Enable automatic cluster snapshots
+## Enable automated cluster snapshots
 
 @include 'alerts/enterprise-only.mdx'
 
-Vault Enterprise features configurable automatic snapshots written to local or cloud storage on an interval. Follow these steps to enable automatic snapshots.
+Vault Enterprise features configurable automated snapshots written to local or cloud storage on an interval. Follow these steps to enable automated snapshots.
 
 <Tabs>
 
 <Tab heading="Single cluster" group="single">
 
-### Enable a single cluster automatic snapshot
+### Enable a single cluster automated snapshot
 
-These examples show how to configure automatic snapshots for a single cluster with the Vault CLI or API.
+These examples show how to configure automated snapshots for a single cluster with the Vault CLI or API.
 
 <Tabs>
 
 <Tab heading="CLI" group="cli">
 
-Enable automatic snapshots with the following example commands, based on the
-instructions in the [automatic snapshots with integrated storage documentation](/vault/docs/enterprise/automated-integrated-storage-snapshots)
+Enable automated snapshots with the following example commands, based on the
+instructions in the [automated snapshots with integrated storage documentation](/vault/docs/enterprise/automated-integrated-storage-snapshots)
 with options specified in the [API
 documentation](/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config).
 
@@ -240,7 +240,7 @@ $ vault write sys/storage/raft/snapshot-auto/config/[:name] [options]
 
 **Example:**
 
-The following command creates an automatic snapshot configuration named,
+The following command creates an automated snapshot configuration named,
 `testsnap` with a user defined location and interval.
 
 ```shell-session
@@ -261,7 +261,7 @@ Learn more in the [API documentation](/vault/api-docs/system/storage/raftautosna
 
 <Tab heading="API" group="api">
 
-Create a JSON payload to configure automatic snapshot settings.
+Create a JSON payload to configure automated snapshot settings.
 
 ```shell-session
 $ cat > payload.json << EOF
@@ -278,7 +278,7 @@ EOF
 
 This example specifies local storage with both a filename and path prefix, a 120 minute snapshot interval, and retainins up to 7 snapshots before deleting earlier snapshots. The configuration also requires that the snapshots with the given `file_prefix` value and in the specified `path_prefix` value consume no more than 250 megabytes (262144000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
 
-Use cURL with the Vault API and JSON payload to configure automatic snapshots.
+Use cURL with the Vault API and JSON payload to configure automated snapshots.
 
 ```shell-session
 $ curl \
@@ -298,16 +298,16 @@ Learn more in the [API documentation](/vault/api-docs/system/storage/raftautosna
 
 <Tab heading="DR Replication cluster" group="dr">
 
-### Enable DR Replication cluster automatic snapshots
+### Enable DR Replication cluster automated snapshots
 
-These examples show how to configure automatic snapshots for a cluster participating in DR Replication with the Vault CLI or API.
+These examples show how to configure automated snapshots for a cluster participating in DR Replication with the Vault CLI or API.
 
 <Tabs>
 
 <Tab heading="CLI" group="cli">
 
-Enable automatic snapshots with the following example commands, based on the
-instructions in the [automatic snapshots with integrated storage documentation](/vault/docs/enterprise/automated-integrated-storage-snapshots)
+Enable automated snapshots with the following example commands, based on the
+instructions in the [automated snapshots with integrated storage documentation](/vault/docs/enterprise/automated-integrated-storage-snapshots)
 with options specified in the [API
 documentation](/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config).
 
@@ -315,9 +315,9 @@ documentation](/vault/api-docs/system/storage/raftautosnapshots#create-update-an
 $ vault write sys/storage/raft/snapshot-auto/config/[:name] [options]
 ```
 
-#### Enable automatic snapshots on primary cluster
+#### Enable automated snapshots on primary cluster
 
-The following command creates an automatic snapshot configuration named,
+The following command creates an automated snapshot configuration named,
 `paris-primary` with a user defined location and interval.
 
 This example specifies AWS S3 storage with appropriate AWS configuration options for the bucket name, the region, and required credentials. Snapshots are further protected with server side encryption.
@@ -340,9 +340,9 @@ $ vault write sys/storage/raft/snapshot-auto/config/paris-primary \
 
 The configuration also specifies local storage with both a filename and path prefix, a 120 minute snapshot interval, and retainins up to 7 snapshots before deleting earlier snapshots. The configuration also requires that the snapshots with the given `file_prefix` value and in the specified `path_prefix` value consume no more than 250 megabytes (262144000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
 
-#### Enable automatic snapshots on secondary cluster
+#### Enable automated snapshots on secondary cluster
 
-The following command creates an automatic snapshot configuration named,
+The following command creates an automated snapshot configuration named,
 `zurich-secondary` with a user defined location and interval.
 
 This example specifies AWS S3 storage with appropriate AWS configuration options for the bucket name, the region, and required credentials. Snapshots are further protected with server side encryption.
@@ -371,9 +371,9 @@ Learn more in the [API documentation](/vault/api-docs/system/storage/raftautosna
 
 <Tab heading="API" group="api">
 
-#### Enable automatic snapshots on primary cluster
+#### Enable automated snapshots on primary cluster
 
-Create a JSON payload to configure automatic snapshot settings for the **primary** DR cluster.
+Create a JSON payload to configure automated snapshot settings for the **primary** DR cluster.
 
 This example specifies AWS S3 storage with appropriate AWS configuration options for the bucket name, the region, and required credentials. Snapshots are further protected with server side encryption.
 
@@ -398,7 +398,7 @@ EOF
 
 The configuration further defines both a filename and path prefix, an 8 hour snapshot interval, and retainins up to 30 snapshots before deleting earlier snapshots. Snapshots with the given `file_prefix` value and in the specified `path_prefix` value must not consume more than 2.6 gigabytes (2621440000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
 
-Use cURL with the Vault API to create an automatic snapshot configuration named `paris-primary` for the DR primary cluster.
+Use cURL with the Vault API to create an automated snapshot configuration named `paris-primary` for the DR primary cluster.
 
 ```shell-session
 $ curl \
@@ -408,9 +408,9 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-auto/config/paris-primary
 ```
 
-#### Enable automatic snapshots on secondary cluster
+#### Enable automated snapshots on secondary cluster
 
-Create a JSON payload to configure automatic snapshot settings for the **secondary** DR cluster.
+Create a JSON payload to configure automated snapshot settings for the **secondary** DR cluster.
 
 This example specifies AWS S3 storage with appropriate AWS configuration options for the bucket name, the region, and required credentials. Snapshots are further protected with server side encryption.
 
@@ -435,7 +435,7 @@ EOF
 
 The configuration further defines both a filename and path prefix, an 8 hour snapshot interval, and retainins up to 30 snapshots before deleting earlier snapshots. Snapshots with the given `file_prefix` value and in the specified `path_prefix` value must not consume more than 2.6 gigabytes (2621440000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
 
-Use cURL with the Vault API to create an automatic snapshot configuration named `zurich-secondary` for the DR secondary cluster.
+Use cURL with the Vault API to create an automated snapshot configuration named `zurich-secondary` for the DR secondary cluster.
 
 ```shell-session
 $ curl \
@@ -455,16 +455,16 @@ Learn more in the [API documentation](/vault/api-docs/system/storage/raftautosna
 
 <Tab heading="Performance Replication cluster" group="perf">
 
-### Enable Performance Replication cluster automatic snapshots
+### Enable Performance Replication cluster automated snapshots
 
-These examples show how to configure automatic snapshots for a cluster participating in performance replication with the Vault CLI or API.
+These examples show how to configure automated snapshots for a cluster participating in performance replication with the Vault CLI or API.
 
 <Tabs>
 
 <Tab heading="CLI" group="cli">
 
-Enable automatic snapshots with the following example commands, based on the
-instructions in the [automatic snapshots with integrated storage documentation](/vault/docs/enterprise/automated-integrated-storage-snapshots)
+Enable automated snapshots with the following example commands, based on the
+instructions in the [automated snapshots with integrated storage documentation](/vault/docs/enterprise/automated-integrated-storage-snapshots)
 with options specified in the [API
 documentation](/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config).
 
@@ -472,9 +472,9 @@ documentation](/vault/api-docs/system/storage/raftautosnapshots#create-update-an
 $ vault write sys/storage/raft/snapshot-auto/config/[:name] [options]
 ```
 
-#### Enable automatic snapshots on primary cluster
+#### Enable automated snapshots on primary cluster
 
-The following command creates an automatic snapshot configuration named,
+The following command creates an automated snapshot configuration named,
 `paris-primary` with a user defined location and interval.
 
 This example specifies AWS S3 storage with appropriate AWS configuration options for the bucket name, the region, and required credentials. Snapshots are further protected with server side encryption.
@@ -497,9 +497,9 @@ $ vault write sys/storage/raft/snapshot-auto/config/paris-primary \
 
 The configuration also specifies local storage with both a filename and path prefix, a 120 minute snapshot interval, and retainins up to 7 snapshots before deleting earlier snapshots. The configuration also requires that the snapshots with the given `file_prefix` value and in the specified `path_prefix` value consume no more than 250 megabytes (262144000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
 
-#### Enable automatic snapshots on secondary cluster
+#### Enable automated snapshots on secondary cluster
 
-The following command creates an automatic snapshot configuration named,
+The following command creates an automated snapshot configuration named,
 `zurich-secondary` with a user defined location and interval.
 
 This example specifies AWS S3 storage with appropriate AWS configuration options for the bucket name, the region, and required credentials. Snapshots are further protected with server side encryption.
@@ -528,9 +528,9 @@ Learn more in the [API documentation](/vault/api-docs/system/storage/raftautosna
 
 <Tab heading="API" group="api">
 
-#### Enable automatic snapshots on primary cluster
+#### Enable automated snapshots on primary cluster
 
-Create a JSON payload to configure automatic snapshot settings for the **primary** DR cluster.
+Create a JSON payload to configure automated snapshot settings for the **primary** DR cluster.
 
 This example specifies AWS S3 storage with appropriate AWS configuration options for the bucket name, the region, and required credentials. Snapshots are further protected with server side encryption.
 
@@ -555,7 +555,7 @@ EOF
 
 The configuration further defines both a filename and path prefix, an 8 hour snapshot interval, and retainins up to 30 snapshots before deleting earlier snapshots. Snapshots with the given `file_prefix` value and in the specified `path_prefix` value must not consume more than 2.6 gigabytes (2621440000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
 
-Use cURL with the Vault API to create an automatic snapshot configuration named `paris-primary` for the DR primary cluster.
+Use cURL with the Vault API to create an automated snapshot configuration named `paris-primary` for the DR primary cluster.
 
 ```shell-session
 $ curl \
@@ -565,9 +565,9 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-auto/config/paris-primary
 ```
 
-#### Enable automatic snapshots on secondary cluster
+#### Enable automated snapshots on secondary cluster
 
-Create a JSON payload to configure automatic snapshot settings for the **secondary** DR cluster.
+Create a JSON payload to configure automated snapshot settings for the **secondary** DR cluster.
 
 This example specifies AWS S3 storage with appropriate AWS configuration options for the bucket name, the region, and required credentials. Snapshots are further protected with server side encryption.
 
@@ -592,7 +592,7 @@ EOF
 
 The configuration further defines both a filename and path prefix, an 8 hour snapshot interval, and retainins up to 30 snapshots before deleting earlier snapshots. Snapshots with the given `file_prefix` value and in the specified `path_prefix` value must not consume more than 2.6 gigabytes (2621440000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
 
-Use cURL with the Vault API to create an automatic snapshot configuration named `zurich-secondary` for the DR secondary cluster.
+Use cURL with the Vault API to create an automated snapshot configuration named `zurich-secondary` for the DR secondary cluster.
 
 ```shell-session
 $ curl \
@@ -877,6 +877,14 @@ Vault Enterprise features a flexible, robust, and delegatable recovery mechanism
 
 Secret Recovery enables you to delegate recovery of specific individual secrets from a cluster snapshot without restoring the complete cluster state or negatively impacting the Vault cluster.
 
+You can use Secret Recovery to recover secrets from the following secrets engines:
+
+- [Cubbyhole](/vault/docs/secrets/cubbyhole)
+- [KV secrets engine - version 1](/vault/docs/secrets/kv/kv-v1)
+
+TODO: this doesn't exist yet, but will:
+`@include 'recover/deletedmounts.mdx'`
+
 <Tabs>
 
 <Tab heading="Single cluster" group="single">
@@ -889,28 +897,145 @@ Use these examples to learn how to recover a secret from a snapshot to a single 
 
 <Tab heading="CLI" group="cli">
 
-Load the snapshot that holds the secret you need to recover.
+Load the snapshot that holds the secret you need to recover. Note that you load snapshots differently based on whether you use automated snapshots.
+
+TODO: this doesn't exist yet, but will:
+`@include 'recover/loadedsnapshots.mdx'`
+
+Before you can load a manual snapshot, you must transfer the snapshot file from secure storage to a system with access to the cluster. 
+
+<Note>
+
+Your Vault token must have the `recover` capability on a path to recover that path from a snapshot.
+
+</Note>
+
+#### Load a manual snapshot without automated snapshots
 
 ```shell-session
-$ ...
+$ vault operator raft snapshot load backup.snap
 ```
 
-Learn more in the [CLI documentation](/vault/docs/concepts/integrated-storage/snapshot-recover).
+Vault returns information about the snapshot, including a `snapshot_id` value that you can use to perform further operations with the snapshot.
 
-Restore the secret by specifying its path.
+Learn more in the [CLI documentation](/vault/docs/commands/operator/raft#snapshot-load).
+
+#### Load an automated snapshot 
+
+When you use Vault Enterprise with automated snapshots, you don't need to first transfer the snapshot file. You can load a snapshot that Vault saved to cloud storage directly from its URL.
 
 ```shell-session
-$ ...
+$ vault operator raft snapshot load \
+    auto_config_name=paris-primary \
+    url="https://bucket.example.com/vault-snapshots/primary/paris-backup.snap"
 ```
+
+Vault returns information about the snapshot, including a `snapshot_id` value that you can use to perform further operations with the snapshot.
+
+```json
+{
+  "data": {
+    "auto_config_name": "paris-primary",
+    "cluster_id": "7430fa38-8fb6-4b35-b2a7-27ed4c831a44",
+    "expires_at": "2025-07-16T03:24:42.867531+05:00",
+    "snapshot_id": "9465df92-8236-4af9-8cc8-b7460d882e41",
+    "url": "https://bucket.example.com/vault-snapshots/primary/paris-backup.snap",
+    "status": "loading"
+  }
+}
+```
+
+Learn more in the [CLI documentation](/vault/docs/commands/operator/raft#snapshot-load).
+
+After you start the snapshot load, you can check the snapshot loading status by reading the snapshot ID returned in the load output.
+
+```shell-session
+$ /sys/storage/raft/snapshot-load/9465df92-8236-4af9-8cc8-b7460d882e41
+```
+
+Vault responds with snapshot details.
+
+```json
+{
+  "data": {
+    "auto_config_name": "paris-primary",
+    "cluster_id": "7430fa38-8fb6-4b35-b2a7-27ed4c831a44",
+    "expires_at": "2025-07-16T03:24:42.867531+05:00",
+    "snapshot_id": "9465df92-8236-4af9-8cc8-b7460d882e41s",
+    "url": "https://bucket.example.com/vault-snapshots/primary/paris-backup.snap",
+    "status": "ready"
+  }
+}
+```
+
+When Vault loads the snapshot, the status value is `loading` until loading is complete, and the value changes to `ready` when you can use the snapshot for secret recovery.
+
+If a problem occurs during loading, Vault sets the status to `error` and shares details about the problem.
+
+<Note>
+
+You can't recover secrets from a snapshot with an `error` status.
+
+</Note>
+
+When the snapshot is ready, you can recover the secret by specifying its path. In this example, recover the secret named `api-key` from the key/value version 1 secrets engine enabled at the path `telemetry-systems`.
+
+```shell-session
+$ vault read \
+    -snapshot-id 9465df92-8236-4af9-8cc8-b7460d882e41s \
+    telemetry-systems/api-key
+```
+
+Vault reads the secret at the path from the snapshot, then sends that data to the secrets engine to recover the secret. The secrets engine uses this data potientally with its own information to create or update the data at the specified path in live storage.
 
 </Tab>
 
 <Tab heading="API" group="api">
 
+Load a **manual snapshot** without automated snapshots.
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data-binary @backup.snap \
+    http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-load
+```
+
+Vault responds with details about the snapshot:
+
+```json
+{
+  "data": {
+    "cluster_id": "2ec84695-cfe5-44f3-b351-3f08a9ccc0c8",
+    "expires_at": "2025-05-25T15:07:58.187769+01:00",
+    "snapshot_id": "2403d301-94f2-46a1-a39d-02be83e2831a",
+    "status": "loading"
+  }
+}
+```
+
+Load an **automated snapshot**.
+
+When you use Vault Enterprise with automated snapshots, you don't need to first transfer the snapshot file. You can load a snapshot that Vault saved to cloud storage directly from its URL. 
+
+Create a JSON payload that defines the URL to the automated snapshot you need to load.
+
+```shell-session
+$ cat > payload.json << EOF
+{
+  "url": "https://example.com/raft.snap"
+}
+```
+
 Load the snapshot that holds the secret you need to recover.
 
 ```shell-session
-$ curl ...
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-auto/snapshot-load/my-snapshot-configuration
 ```
 
 Restore the secret by specifying its path.
