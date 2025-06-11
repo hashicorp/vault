@@ -12,7 +12,7 @@ import { allowAllCapabilitiesStub, noopStub } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
-import { methods } from 'vault/helpers/mountable-auth-methods';
+import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 import { mountableEngines, WIF_ENGINES } from 'vault/helpers/mountable-secret-engines';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
@@ -45,13 +45,16 @@ module('Integration | Component | mount backend form', function (hooks) {
     test('it renders default state', async function (assert) {
       assert.expect(15);
       await render(
-        hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+        hbs`<MountBackendForm @mountCategory="auth" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       assert
         .dom(GENERAL.title)
         .hasText('Enable an Authentication Method', 'renders auth header in default state');
 
-      for (const method of methods()) {
+      for (const method of filterEnginesByMountCategory({
+        mountCategory: 'auth',
+        isEnterprise: false,
+      }).filter((engine) => engine.type !== 'token')) {
         assert
           .dom(MOUNT_BACKEND_FORM.mountType(method.type))
           .hasText(method.displayName, `renders type:${method.displayName} picker`);
@@ -60,7 +63,7 @@ module('Integration | Component | mount backend form', function (hooks) {
 
     test('it changes path when type is changed', async function (assert) {
       await render(
-        hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+        hbs`<MountBackendForm @mountCategory="auth" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
 
       await click(MOUNT_BACKEND_FORM.mountType('aws'));
@@ -72,7 +75,7 @@ module('Integration | Component | mount backend form', function (hooks) {
 
     test('it keeps path value if the user has changed it', async function (assert) {
       await render(
-        hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+        hbs`<MountBackendForm @mountCategory="auth" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       await click(MOUNT_BACKEND_FORM.mountType('approle'));
       assert.strictEqual(this.model.type, 'approle', 'Updates type on model');
@@ -89,7 +92,7 @@ module('Integration | Component | mount backend form', function (hooks) {
 
     test('it does not show a selected token type when first mounting an auth method', async function (assert) {
       await render(
-        hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+        hbs`<MountBackendForm @mountCategory="auth" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       await click(MOUNT_BACKEND_FORM.mountType('github'));
       await click(GENERAL.toggleGroup('Method Options'));
@@ -114,7 +117,7 @@ module('Integration | Component | mount backend form', function (hooks) {
       this.set('onMountSuccess', spy);
 
       await render(
-        hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+        hbs`<MountBackendForm @mountCategory="auth" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       await mountBackend('approle', 'foo');
       later(() => cancelTimers(), 50);
@@ -137,7 +140,7 @@ module('Integration | Component | mount backend form', function (hooks) {
     test('it renders secret engine specific headers', async function (assert) {
       assert.expect(17);
       await render(
-        hbs`<MountBackendForm  @mountType="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+        hbs`<MountBackendForm  @mountCategory="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       assert.dom(GENERAL.title).hasText('Enable a Secrets Engine', 'renders secrets header');
       for (const method of mountableEngines()) {
@@ -149,7 +152,7 @@ module('Integration | Component | mount backend form', function (hooks) {
 
     test('it changes path when type is changed', async function (assert) {
       await render(
-        hbs`<MountBackendForm @mountType="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+        hbs`<MountBackendForm @mountCategory="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       await click(MOUNT_BACKEND_FORM.mountType('azure'));
       assert.dom(GENERAL.inputByAttr('path')).hasValue('azure', 'sets the value of the type');
@@ -160,7 +163,7 @@ module('Integration | Component | mount backend form', function (hooks) {
 
     test('it keeps path value if the user has changed it', async function (assert) {
       await render(
-        hbs`<MountBackendForm @mountType="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+        hbs`<MountBackendForm @mountCategory="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       await click(MOUNT_BACKEND_FORM.mountType('kv'));
       assert.strictEqual(this.model.type, 'kv', 'Updates type on model');
@@ -186,7 +189,7 @@ module('Integration | Component | mount backend form', function (hooks) {
       this.set('onMountSuccess', spy);
 
       await render(
-        hbs`<MountBackendForm @mountType="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+        hbs`<MountBackendForm @mountCategory="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
 
       await mountBackend('ssh', 'foo');
@@ -203,7 +206,7 @@ module('Integration | Component | mount backend form', function (hooks) {
     module('WIF secret engines', function () {
       test('it shows identityTokenKey when type is a WIF engine and hides when its not', async function (assert) {
         await render(
-          hbs`<MountBackendForm @mountType="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+          hbs`<MountBackendForm @mountCategory="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
         );
         for (const engine of WIF_ENGINES) {
           await click(MOUNT_BACKEND_FORM.mountType(engine));
@@ -226,7 +229,7 @@ module('Integration | Component | mount backend form', function (hooks) {
 
       test('it updates identityTokeKey if user has changed it', async function (assert) {
         await render(
-          hbs`<MountBackendForm @mountType="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+          hbs`<MountBackendForm @mountCategory="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
         );
         assert.strictEqual(
           this.model.config.identityTokenKey,
