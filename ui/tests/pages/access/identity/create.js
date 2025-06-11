@@ -5,14 +5,17 @@
 
 import { create, visitable } from 'ember-cli-page-object';
 import editForm from 'vault/tests/pages/components/identity/edit-form';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 export default create({
   visit: visitable('/vault/access/identity/:item_type/create'),
   editForm,
   async createItem(item_type, type) {
     if (type) {
-      return await this.visit({ item_type }).editForm.type(type).submit();
+      await this.visit({ item_type }).editForm.type(type);
+      await click(GENERAL.submitButton);
     }
-    return await this.visit({ item_type }).editForm.submit();
+    await this.visit({ item_type }).editForm;
+    await click(GENERAL.submitButton);
   },
 });

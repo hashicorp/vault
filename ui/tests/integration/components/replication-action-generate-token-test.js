@@ -23,6 +23,6 @@ module('Integration | Component | replication-action-generate-token', function (
             {{replication-action-generate-token}}
     `);
     assert.dom('h4.title').hasText('Generate operation token', 'renders default title');
-    assert.exists(GENERAL.button('Generate token'), 'renders default CTA');
+    assert.dom(GENERAL.button('Generate token')).exists('renders default CTA');
   });
 });

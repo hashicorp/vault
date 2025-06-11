@@ -84,17 +84,25 @@ module('Integration | Component | enable-replication-form', function (hooks) {
       assert
         .dom(ENABLE_FORM.notAllowed)
         .hasText('The token you are using is not authorized to enable primary replication.');
-      ['clusterAddr', 'submitButton'].forEach((field) => {
-        assert.dom(ENABLE_FORM[field]).doesNotExist();
+      ['clusterAddr'].forEach((field) => {
+        assert
+          .dom(ENABLE_FORM[field])
+          .doesNotExist(`${field}: field does not exist on primary form when not allowed`);
       });
+      assert
+        .dom(GENERAL.submitButton)
+        .doesNotExist('on a primary the submit button does not exist when not allowed');
 
       await fillIn(ENABLE_FORM.clusterMode, 'secondary');
       assert
         .dom(ENABLE_FORM.notAllowed)
         .hasText('The token you are using is not authorized to enable secondary replication.');
-      ['secondaryToken', 'primaryAddr', 'caFile', 'caPath', 'submitButton'].forEach((field) => {
+      ['secondaryToken', 'primaryAddr', 'caFile', 'caPath'].forEach((field) => {
         assert.dom(ENABLE_FORM[field]).doesNotExist();
       });
+      assert
+        .dom(GENERAL.submitButton)
+        .doesNotExist('on a secondary the submit button does not exist when not allowed');
     });
   });
 

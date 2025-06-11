@@ -18,18 +18,8 @@ import secretEdit from 'vault/tests/pages/secrets/backend/kv/edit-secret';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-// import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
-// import { login } from 'vault/tests/helpers/auth/auth-helpers';
-
 module('Acceptance | leases', function (hooks) {
   setupApplicationTest(hooks);
-
-  hooks.beforeEach(async function () {
-    // await login();
-    // this.enginePath = `kv-for-lease-${uuidv4()}`;
-    // // need a version 1 mount for leased secrets here
-    // return mountSecrets.visit().path(this.enginePath).type('kv').version(1).submit();
-  });
 
   const createSecret = async (context, isRenewable) => {
     context.name = `secret-${uuidv4()}`;

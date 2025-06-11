@@ -53,7 +53,7 @@ export const testDeleteFromForm = async (name, itemType, assert) => {
   await clickTrigger('#policies');
   // first option should be "default"
   await selectChoose('#policies', '.ember-power-select-option', 0);
-  await page.editForm.submit();
+  await click(GENERAL.submitButton);
   await click('[data-test-tab-subnav="policies"]');
   assert.dom('.list-item-row').exists({ count: 1 }, 'One item is under policies');
   await click('[data-test-tab-subnav="metadata"]');
@@ -65,8 +65,7 @@ export const testDeleteFromForm = async (name, itemType, assert) => {
     `${itemType}: navigates to edit on create`
   );
   await settled();
-  await page.editForm.delete();
-  await settled();
+  await click(GENERAL.confirmTrigger);
   await click(GENERAL.confirmButton);
   assert.dom(GENERAL.latestFlashContent).includesText('Successfully deleted');
   assert.strictEqual(

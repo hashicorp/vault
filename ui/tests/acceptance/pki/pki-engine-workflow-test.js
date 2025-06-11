@@ -318,7 +318,7 @@ module('Acceptance | pki workflow', function (hooks) {
           'renders banner to save private key'
         );
       assert.dom(GENERAL.button('Download')).exists('renders download button');
-      await click(PKI_KEYS.keyDeleteButton);
+      await click(GENERAL.button('Delete key?'));
       await click(GENERAL.confirmButton);
       assert.strictEqual(
         currentURL(),
@@ -341,7 +341,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(PKI_KEYS.popupMenuEdit).doesNotExist('popup menu edit link is not shown');
       await click(PKI_KEYS.popupMenuDetails);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`);
-      assert.dom(PKI_KEYS.keyDeleteButton).doesNotExist('Delete key button is not shown');
+      assert.dom(GENERAL.button('Delete key?')).doesNotExist('Delete key button is not shown');
       assert.dom(PKI_KEYS.keyEditLink).doesNotExist('Edit key button does not render');
     });
 
@@ -358,7 +358,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await click(GENERAL.menuTrigger);
       assert.dom(PKI_KEYS.popupMenuEdit).doesNotHaveClass('disabled', 'popup menu edit link is not disabled');
       await click('.linked-block');
-      assert.dom(PKI_KEYS.keyDeleteButton).doesNotExist('Delete key button is not shown');
+      assert.dom(GENERAL.button('Delete key?')).doesNotExist('Delete key button is not shown');
       await click(PKI_KEYS.keyEditLink);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/edit`);
       assert.dom(GENERAL.title).hasText('Edit Key');

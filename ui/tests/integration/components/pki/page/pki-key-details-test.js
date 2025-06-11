@@ -56,8 +56,8 @@ module('Integration | Component | pki key details page', function (hooks) {
     assert.dom(GENERAL.infoRowValue('Key type')).hasText('ec', 'key type renders');
     assert.dom(GENERAL.infoRowLabel('Key bits')).doesNotExist('does not render empty value');
     assert.dom(PKI_KEYS.keyEditLink).exists('renders edit link');
-    assert.dom(PKI_KEYS.keyDeleteButton).exists('renders delete button');
-    await click(PKI_KEYS.keyDeleteButton);
+    assert.dom(GENERAL.button('Delete key?')).exists('renders delete button');
+    await click(GENERAL.button('Delete key?'));
     await click(GENERAL.confirmButton);
   });
 
@@ -75,7 +75,7 @@ module('Integration | Component | pki key details page', function (hooks) {
       { owner: this.engine }
     );
 
-    assert.dom(PKI_KEYS.keyDeleteButton).doesNotExist('does not render delete button if no permission');
+    assert.dom(GENERAL.button('Delete key?')).doesNotExist('does not render delete button if no permission');
     assert.dom(PKI_KEYS.keyEditLink).doesNotExist('does not render edit button if no permission');
   });
 
