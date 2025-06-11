@@ -71,7 +71,7 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
   });
 
   test('it should display validation errors for invalid form fields', async function (assert) {
-    assert.expect(8);
+    assert.expect(7);
 
     await this.renderComponent();
 
@@ -82,8 +82,7 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
     assert
       .dom(`${CUSTOM_MESSAGES.fieldValidation('title')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
       .hasText('Title is required.');
-    assert.dom(CUSTOM_MESSAGES.input('message')).hasClass('hds-form-textarea--is-invalid');
-    assert.dom(`${CUSTOM_MESSAGES.fieldValidation('message')}`).hasText('Message is required.');
+    assert.dom(`${GENERAL.validationErrorByAttr('message')}`).hasText('Message is required.');
     assert.dom(CUSTOM_MESSAGES.input('startTime')).hasClass('has-error-border');
     assert
       .dom(`${CUSTOM_MESSAGES.fieldValidation('startTime')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
@@ -132,10 +131,7 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
     assert
       .dom(`${CUSTOM_MESSAGES.fieldValidation('title')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
       .hasText('Title is required.');
-    assert
-      .dom(CUSTOM_MESSAGES.input('message'))
-      .hasClass('hds-form-textarea--is-invalid', 'show error border for message field');
-    assert.dom(`${CUSTOM_MESSAGES.fieldValidation('message')}`).hasText('Message is required.');
+    assert.dom(`${GENERAL.validationErrorByAttr('message')}`).hasText('Message is required.');
   });
 
   test('it should prepopulate form if form is in edit mode', async function (assert) {
