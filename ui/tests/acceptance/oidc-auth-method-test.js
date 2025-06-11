@@ -71,7 +71,7 @@ module('Acceptance | oidc auth method', function (hooks) {
 
     triggerMessageEvent('oidc');
 
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
   });
 
   test('it should login with oidc from listed auth mount tab', async function (assert) {
@@ -93,7 +93,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     });
     await visit('/vault/auth');
     triggerMessageEvent('oidc');
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
   });
 
   // coverage for bug where token was selected as auth method for oidc and jwt
@@ -104,7 +104,7 @@ module('Acceptance | oidc auth method', function (hooks) {
 
     triggerMessageEvent('oidc');
 
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
     await waitFor('[data-test-dashboard-card-header="Vault version"]');
     assert
       .dom('[data-test-dashboard-card-header="Vault version"]')
@@ -142,13 +142,13 @@ module('Acceptance | oidc auth method', function (hooks) {
     });
     await logout();
     await this.selectMethod('oidc');
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
     assert
       .dom('[data-test-message-error-description]')
       .hasText('Authentication failed: Invalid role. Please try again.');
 
     await fillIn(GENERAL.inputByAttr('role'), 'test');
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
     assert
       .dom('[data-test-message-error-description]')
       .hasText('Authentication failed: Error fetching role: permission denied');
@@ -163,7 +163,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     await this.selectMethod('oidc');
     triggerMessageEvent('oidc');
 
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
     await waitUntil(() => find('[data-test-mfa-form]'));
     assert.dom('[data-test-mfa-form]').exists('it renders TOTP MFA form');
   });
@@ -174,7 +174,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     await logout();
     await this.selectMethod('oidc');
     triggerMessageEvent('oidc');
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
     const [actual] = authSpy.lastCall.args;
     const expected = {
       // even though this is the oidc auth method,
@@ -224,7 +224,7 @@ module('Acceptance | oidc auth method', function (hooks) {
       window.postMessage(callbackData({ source: 'oidc-callback' }), window.origin);
     }, DELAY_IN_MS);
 
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
     // cleanup
     window.removeEventListener('message', assertEvent);
   });
@@ -237,7 +237,7 @@ module('Acceptance | oidc auth method', function (hooks) {
       // callback params are missing "code"
       window.postMessage({ source: 'oidc-callback', state: 'state', foo: 'bar' }, window.origin);
     }, DELAY_IN_MS);
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.messageError)
       .hasText(`Error Authentication failed: ${ERROR_MISSING_PARAMS}`, 'displays error when missing params');
@@ -249,7 +249,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     this.setupMocks();
     await logout();
     await this.selectMethod('oidc');
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.messageError)
       .hasText(`Error Authentication failed: ${ERROR_WINDOW_CLOSED}`, 'displays error when missing params');

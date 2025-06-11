@@ -15,7 +15,7 @@ export async function createSecret(path, key, value) {
   await fillIn(SES.secretPath('create'), path);
   await fillIn('[data-test-secret-key]', key);
   await fillIn('[data-test-secret-value] textarea', value);
-  await click(GENERAL.saveButton);
+  await click(GENERAL.submitButton);
   return;
 }
 

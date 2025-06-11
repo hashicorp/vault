@@ -6,7 +6,7 @@
 import EmberObject from '@ember/object';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn, findAll } from '@ember/test-helpers';
+import { render, click, fillIn, findAll, setupOnerror } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { create } from 'ember-cli-page-object';
 import sinon from 'sinon';
@@ -46,6 +46,61 @@ module('Integration | Component | form field', function (hooks) {
     await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} />`);
     assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
     assert.notOk(component.hasInput, 'renders only the label');
+  });
+
+  test('it throws an error when @attr does not include a "name" key', async function (assert) {
+    assert.expect(1);
+    this.model = EmberObject.create({});
+    this.attr = { options: { fieldValue: 'foo' } };
+    setupOnerror((error) => {
+      assert.strictEqual(
+        error.message,
+        'Assertion Failed: @name is required',
+        'throws assertion error when @attr does not include a "name" key'
+      );
+    });
+    await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} />`);
+  });
+
+  test('it throws an error when @model is not present', async function (assert) {
+    assert.expect(1);
+    this.attr = { name: 'foo' };
+    setupOnerror((error) => {
+      assert.strictEqual(
+        error.message,
+        'Assertion Failed: @model (or resource object being updated) is required',
+        'throws assertion error when @model arg does not exist'
+      );
+    });
+    await render(hbs`<FormField @attr={{this.attr}} />`);
+  });
+
+  test('it throws an error when "name" is "ID"', async function (assert) {
+    assert.expect(1);
+    this.model = EmberObject.create({});
+    this.attr = { name: 'id' };
+    setupOnerror((error) => {
+      assert.strictEqual(
+        error.message,
+        'Assertion Failed: Form is attempting to modify an ID. Ember-data does not allow this.',
+        'throws assertion error when component attempts to modify an ID'
+      );
+    });
+    await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} />`);
+  });
+
+  test('it throws an error when "fieldValue" is "ID"', async function (assert) {
+    assert.expect(1);
+    this.model = EmberObject.create({});
+    this.attr = { name: 'foo', options: { fieldValue: 'id' } };
+    setupOnerror((error) => {
+      assert.strictEqual(
+        error.message,
+        'Assertion Failed: Form is attempting to modify an ID. Ember-data does not allow this.',
+        'throws assertion error when component attempts to modify an ID'
+      );
+    });
+    await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} />`);
   });
 
   // ------------------
@@ -123,7 +178,7 @@ module('Integration | Component | form field', function (hooks) {
       })
     );
     assert.ok(component.hasToggleButton, 'renders a toggle button');
-    assert.dom('[data-test-toggle-input]').isNotChecked();
+    assert.dom(GENERAL.toggleInput('toggle-foobar')).isNotChecked();
     assert.dom('[data-test-toggle-subtext]').hasText('Toggled off');
 
     await component.fields.objectAt(0).toggleButton();

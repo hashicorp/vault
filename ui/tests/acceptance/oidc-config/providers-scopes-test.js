@@ -153,7 +153,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
 
     // try to delete scope
     await click(SELECTORS.scopeDeleteButton);
-    await click(SELECTORS.confirmActionButton);
+    await click(GENERAL.confirmButton);
     assert.strictEqual(
       flashMessage.latestMessage,
       'unable to delete scope "test-scope" because it is currently referenced by these providers: test-provider',
@@ -310,7 +310,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     // delete
     await click(SELECTORS.providerDetailsTab);
     await click(SELECTORS.providerDeleteButton);
-    await click(SELECTORS.confirmActionButton);
+    await click(GENERAL.confirmButton);
     assert.strictEqual(
       flashMessage.latestMessage,
       'Provider deleted successfully',
@@ -325,7 +325,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     // delete scope
     await visit(OIDC_BASE_URL + '/scopes/test-scope/details');
     await click(SELECTORS.scopeDeleteButton);
-    await click(SELECTORS.confirmActionButton);
+    await click(GENERAL.confirmButton);
     assert.strictEqual(
       flashMessage.latestMessage,
       'Scope deleted successfully',
