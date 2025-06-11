@@ -991,16 +991,16 @@ module('Integration | Component | form field', function (hooks) {
     assert.ok(spy.calledWith('myfield', 'bar'), 'onChange called with correct args');
   });
 
-  test('it renders: editType=textarea / type=string - with passed label, placeholder, subtext, helptext, doclink', async function (assert) {
+  test('it renders: editType=textarea / type=string - with passed docLink, helpText, label, placeholder, subText', async function (assert) {
     await setup.call(
       this,
       createAttr('myfield', 'string', {
         editType: 'textarea',
-        placeholder: 'Custom placeholder',
-        label: 'Custom label',
-        subText: 'Some subtext',
-        helpText: 'Some helptext',
         docLink: '/docs',
+        helpText: 'Some helpText',
+        label: 'Custom label',
+        placeholder: 'Custom placeholder',
+        subText: 'Some subText',
       })
     );
     assert.dom(GENERAL.fieldLabel()).hasText('Custom label', 'renders the custom label from options');
@@ -1008,19 +1008,19 @@ module('Integration | Component | form field', function (hooks) {
       .dom(GENERAL.inputByAttr('myfield'))
       .hasAttribute('placeholder', 'Custom placeholder', 'renders the placeholder from options');
     assert
-      .dom(GENERAL.helpTextByAttr('Some subtext'))
+      .dom(GENERAL.helpTextByAttr('Some subText'))
       .exists('renders `subText` option as HelperText')
       .hasText(
-        'Some subtext See our documentation for help.',
-        'renders the right subtext string from options'
+        'Some subText See our documentation for help.',
+        'renders the right subText string from options'
       );
     assert
-      .dom(`${GENERAL.helpTextByAttr('Some subtext')} ${GENERAL.docLinkByAttr('/docs')}`)
-      .exists('renders `docLink` option as as link inside the subtext');
+      .dom(`${GENERAL.helpTextByAttr('Some subText')} ${GENERAL.docLinkByAttr('/docs')}`)
+      .exists('renders `docLink` option as as link inside the subText');
     assert
-      .dom(GENERAL.helpTextByAttr('Some helptext'))
-      .exists('renders `helptext` option as HelperText')
-      .hasText('Some helptext', 'renders the right help text string from options');
+      .dom(GENERAL.helpTextByAttr('Some helpText'))
+      .exists('renders `helpText` option as HelperText')
+      .hasText('Some helpText', 'renders the right help text string from options');
   });
 
   test('it renders: editType=textarea / type=string - with validation errors and warnings', async function (assert) {
