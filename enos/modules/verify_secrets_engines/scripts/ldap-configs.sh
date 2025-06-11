@@ -97,8 +97,3 @@ path "secret/data/*" {
 EOF
 "$binpath" policy write reader "${VAULT_LDAP_POLICY}"
 "$binpath" write "auth/${MOUNT}/users/${LDAP_USERNAME}" policies="reader"
-
-# Authenticate Using LDAP
-echo "Vault: Authenticating Vault LDAP"
-"$binpath" login -method=${MOUNT} username=${LDAP_USERNAME} password=${LDAP_ADMIN_PW}
-echo "TEST4"

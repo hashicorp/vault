@@ -81,5 +81,6 @@ output "state" {
     kv       = local.kv_output
     pki      = local.pki_output
     aws      = local.aws_state
+    ldap     = local.ldap_output
   }
 }

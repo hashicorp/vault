@@ -4,7 +4,7 @@
 locals {
   // Output
   ldap_output = {
-    ldap_mount = "ldap"
+    ldap_mount        = "ldap"
     host              = var.ldap_host
     port              = var.ldap_port
     username          = "enos"
@@ -36,8 +36,8 @@ resource "enos_remote_exec" "secrets_enable_ldap_secret" {
   }
 }
 
-# Issue RSA Certificate
-resource "enos_remote_exec" "ldap-configurations" {
+# Configuring Openldap Server and Vault LDAP
+resource "enos_remote_exec" "ldap_configurations" {
   depends_on = [
     enos_remote_exec.policy_write_kv_writer,
     enos_remote_exec.secrets_enable_ldap_secret
