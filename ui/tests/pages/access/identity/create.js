@@ -3,6 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { click } from '@ember/test-helpers';
 import { create, visitable } from 'ember-cli-page-object';
 import editForm from 'vault/tests/pages/components/identity/edit-form';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
