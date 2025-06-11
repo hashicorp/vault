@@ -166,10 +166,6 @@
             }
           },
           {
-            "title": "Manage snapshots",
-            "path": "concepts/integrated-storage/manage-snapshots"
-          },
-          {
             "title": "Migration checklist",
             "path": "concepts/integrated-storage/migration-checklist"
           },
@@ -390,6 +386,10 @@
       {
         "title": "Manage resources programmatically",
         "path": "configuration/programmatic-management"
+      },
+      {
+        "title": "Manage snapshots",
+        "path": "configuration/manage-snapshots"
       },
       {
         "title": "Prevent lease explosions",
