@@ -9,8 +9,9 @@ import { equal } from '@ember/object/computed'; // eslint-disable-line
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
-import { isAddonEngine, allEngines, WIF_ENGINES } from 'vault/helpers/mountable-secret-engines';
 import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
+import { isAddonEngine, WIF_ENGINES } from 'vault/utils/all-engines-metadata';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 const LINKED_BACKENDS = supportedSecretBackends();
 
@@ -117,7 +118,7 @@ export default class SecretEngineModel extends Model {
   }
 
   get icon() {
-    const engineData = allEngines().find((engine) => engine.type === this.engineType);
+    const engineData = engineDisplayData(this.engineType);
 
     return engineData?.glyph || 'lock';
   }
@@ -139,7 +140,7 @@ export default class SecretEngineModel extends Model {
       return 'vault.cluster.secrets.backend.overview';
     }
     if (isAddonEngine(this.engineType, this.version)) {
-      const { engineRoute } = allEngines().find((engine) => engine.type === this.engineType);
+      const { engineRoute } = engineDisplayData(this.engineType);
       return `vault.cluster.secrets.backend.${engineRoute}`;
     }
     if (this.isV2KV) {

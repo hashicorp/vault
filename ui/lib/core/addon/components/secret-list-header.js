@@ -5,7 +5,7 @@
 
 import Component from '@glimmer/component';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
-import { CONFIGURATION_ONLY } from 'vault/helpers/mountable-secret-engines';
+import { CONFIGURATION_ONLY } from 'vault/utils/all-engines-metadata';
 
 /**
  * @module SecretListHeader

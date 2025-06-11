@@ -25,7 +25,6 @@ import configPage from 'vault/tests/pages/secrets/backend/configuration';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
-import { CONFIGURATION_ONLY, mountableEngines } from 'vault/helpers/mountable-secret-engines';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
@@ -33,6 +32,7 @@ import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { SELECTORS as OIDC } from 'vault/tests/helpers/oidc-config';
 import { adminOidcCreateRead, adminOidcCreate } from 'vault/tests/helpers/secret-engine/policy-generator';
+import { filterEnginesByMountCategory, CONFIGURATION_ONLY } from 'vault/utils/all-engines-metadata';
 
 const consoleComponent = create(consoleClass);
 
@@ -203,7 +203,9 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
   test('it should transition to mountable addon engine after mount success', async function (assert) {
     // test supported backends that ARE ember engines (enterprise only engines are tested individually)
-    const addons = mountableEngines().filter((e) => BACKENDS_WITH_ENGINES.includes(e.type));
+    const addons = filterEnginesByMountCategory({ mountGroup: 'secret', isEnterprise: false }).filter((e) =>
+      BACKENDS_WITH_ENGINES.includes(e.type)
+    );
     assert.expect(addons.length);
 
     for (const engine of addons) {
@@ -230,7 +232,9 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     // test supported backends that are not ember engines (enterprise only engines are tested individually)
     const nonEngineBackends = supportedSecretBackends().filter((b) => !BACKENDS_WITH_ENGINES.includes(b));
     // add back kv because we want to test v1
-    const engines = mountableEngines().filter((e) => nonEngineBackends.includes(e.type) || e.type === 'kv');
+    const engines = filterEnginesByMountCategory({ mountGroup: 'secret', isEnterprise: false }).filter(
+      (e) => nonEngineBackends.includes(e.type) || e.type === 'kv'
+    );
     assert.expect(engines.length);
 
     for (const engine of engines) {
@@ -262,7 +266,9 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
   });
 
   test('it should transition back to backend list for unsupported backends', async function (assert) {
-    const unsupported = mountableEngines().filter((e) => !supportedSecretBackends().includes(e.type));
+    const unsupported = filterEnginesByMountCategory({ mountGroup: 'secret', isEnterprise: false }).filter(
+      (e) => !supportedSecretBackends().includes(e.type)
+    );
     assert.expect(unsupported.length);
 
     for (const engine of unsupported) {

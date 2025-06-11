@@ -12,8 +12,8 @@ import { allowAllCapabilitiesStub, noopStub } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
-import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
-import { mountableEngines, WIF_ENGINES } from 'vault/helpers/mountable-secret-engines';
+import { filterEnginesByMountCategory, WIF_ENGINES } from 'vault/utils/all-engines-metadata';
+
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
@@ -143,7 +143,7 @@ module('Integration | Component | mount backend form', function (hooks) {
         hbs`<MountBackendForm  @mountCategory="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       assert.dom(GENERAL.title).hasText('Enable a Secrets Engine', 'renders secrets header');
-      for (const method of mountableEngines()) {
+      for (const method of filterEnginesByMountCategory({ mountGroup: 'secret', isEnterprise: false })) {
         assert
           .dom(MOUNT_BACKEND_FORM.mountType(method.type))
           .hasText(method.displayName, `renders type:${method.displayName} picker`);
@@ -216,7 +216,10 @@ module('Integration | Component | mount backend form', function (hooks) {
             .exists(`Identity token key field shows when type=${this.model.type}`);
           await click(GENERAL.backButton);
         }
-        for (const engine of mountableEngines().filter((e) => !WIF_ENGINES.includes(e.type))) {
+        for (const engine of filterEnginesByMountCategory({
+          mountGroup: 'secret',
+          isEnterprise: false,
+        }).filter((e) => !WIF_ENGINES.includes(e.type))) {
           // check non-wif engine
           await click(MOUNT_BACKEND_FORM.mountType(engine.type));
           await click(GENERAL.toggleGroup('Method Options'));
