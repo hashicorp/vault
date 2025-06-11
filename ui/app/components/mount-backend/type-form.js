@@ -37,6 +37,6 @@ export default class MountBackendTypeForm extends Component {
   }
 
   get mountTypes() {
-    return this.args.mountType === 'secret' ? this.secretEngines : this.authMethods;
+    return this.args.mountCategory === 'secret' ? this.secretEngines : this.authMethods;
   }
 }

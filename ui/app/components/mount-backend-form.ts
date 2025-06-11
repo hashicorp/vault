@@ -70,7 +70,7 @@ export default class MountBackendForm extends Component<Args> {
     if (!backendType) return;
     const mount = this.args.mountModel;
     const currentPath = mount.path;
-    // mountType is usually 'secret' or 'auth', but sometimes an empty string is passed in (like when we click the cancel button).
+    // mountCategory is usually 'secret' or 'auth', but sometimes an empty string is passed in (like when we click the cancel button).
     // In these cases, we should default to returning auth methods.
     const mountsByType = filterEnginesByMountCategory({
       mountCategory: this.args.mountCategory ?? 'auth',
