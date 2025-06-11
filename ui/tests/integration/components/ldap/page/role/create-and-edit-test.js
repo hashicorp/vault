@@ -11,6 +11,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { ldapRoleID } from 'vault/adapters/ldap/role';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (hooks) {
   setupRenderingTest(hooks);
@@ -135,9 +136,7 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
       await click('[data-test-submit]');
 
       fields.forEach((field) => {
-        assert
-          .dom(`[data-test-field="${field}"] [data-test-inline-error-message]`)
-          .exists('Validation message renders');
+        assert.dom(GENERAL.validationErrorByAttr(field)).exists('Validation message renders');
       });
 
       assert
