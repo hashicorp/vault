@@ -75,12 +75,12 @@ namespace, the "none" option can achieve that.
 
 <Note title="You cannot configure quotas on entities">
 
-You can define quotas on namespaces, mounts, paths, and role. But you cannot
-configure a rate limit quota on entities.
+You can define quotas on namespaces, mounts, paths, and roles. But you cannot
+configure a rate limit quota for a specific entity.
 
-For example, you can create a rate limit quota on a "customer-A" namespace
-with "group by entity" mode. Vault checks the entity ID of the requests coming
-into the "customer-A" namespace, and group them based on the matching entity ID.
+For example, you can create a rate limit quota on "customer-A" namespace with
+**group by entity** mode. Vault checks the entity ID of the requests coming into
+the "customer-A" namespace, and group them based on the matching entity ID. 
 
 </Note>
 
