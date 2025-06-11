@@ -942,7 +942,7 @@ module('Integration | Component | form field', function (hooks) {
     assert.dom(GENERAL.inputByAttr('myfield')).hasValue('default', 'renders default value');
     await fillIn(GENERAL.inputByAttr('myfield'), 'bar');
     assert.strictEqual(model.get('myfield'), 'bar');
-    assert.ok(spy.calledWith('myfield', 'bar'), 'onChange called with correct args');
+    assert.true(spy.calledWith('myfield', 'bar'), 'onChange called with correct args');
   });
 
   test('it renders: editType=textarea / type=number - as Hds::Form::Textarea', async function (assert) {
@@ -961,7 +961,7 @@ module('Integration | Component | form field', function (hooks) {
     assert.dom(GENERAL.inputByAttr('myfield')).hasValue('123', 'renders default value');
     await fillIn(GENERAL.inputByAttr('myfield'), 'bar');
     assert.strictEqual(model.get('myfield'), 'bar');
-    assert.ok(spy.calledWith('myfield', 'bar'), 'onChange called with correct args');
+    assert.true(spy.calledWith('myfield', 'bar'), 'onChange called with correct args');
   });
 
   test('it renders: editType=textarea / type=string - with passed docLink, helpText, label, placeholder, subText', async function (assert) {
