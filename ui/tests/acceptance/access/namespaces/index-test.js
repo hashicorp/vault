@@ -348,18 +348,20 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
   });
 
   test('it should render updated namespace after switching from access page', async function (assert) {
+    // Setup: Create namespace(s) via the CLI
+    const testNS = 'test-create-ns';
+    await createNSFromPaths([testNS]);
+
+    // Go to the manage namespaces page
     await visit('/vault/access/namespaces');
 
-    this.server.get('/sys/internal/ui/mounts', () => ({
-      data: {},
-    }));
-
+    // Switch namespace
     await click(GENERAL.menuTrigger);
     await click(GENERAL.menuItem('switch'));
 
     // Verify that we switched namespaces
-    assert.dom(NAMESPACE_PICKER_SELECTORS.toggle).hasText('ns1');
-    assert.dom('[data-test-badge-namespace]').hasText('ns1');
+    await click(GENERAL.toggleInput('namespace-id'));
+    assert.dom('[data-test-badge-namespace]').hasText(testNS);
     assert.strictEqual(currentRouteName(), 'vault.cluster.dashboard', 'navigates to the correct route');
   });
 });
