@@ -94,12 +94,4 @@ export default function (server) {
       },
     };
   });
-
-  server.get('sys/internal/ui/namespaces', function () {
-    return {
-      data: {
-        keys: ['ns1/', 'ns2/', 'ns3/', 'ns4/', 'ns5/', 'ns6/', 'ns7/', 'ns8/', 'ns9/', 'ns10/'],
-      },
-    };
-  });
 }

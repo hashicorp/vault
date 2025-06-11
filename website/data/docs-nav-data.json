@@ -157,6 +157,15 @@
             "path": "concepts/integrated-storage/autopilot"
           },
           {
+            "title": "Item Recovery",
+            "path": "concepts/integrated-storage/snapshot-recover",
+            "badge": {
+              "text": "ENT",
+              "type": "filled",
+              "color": "neutral"
+            }
+          },
+          {
             "title": "Migration checklist",
             "path": "concepts/integrated-storage/migration-checklist"
           },
@@ -1532,6 +1541,10 @@
         "path": "commands/read"
       },
       {
+        "title": "<code>recover</code>",
+        "path": "commands/recover"
+      },
+      {
         "title": "<code>secrets</code>",
         "routes": [
           {
@@ -1657,8 +1670,26 @@
         "path": "ui/browser-support"
       },
       {
-        "title": "Custom Messages",
+        "title": "Custom login",
+        "path": "ui/custom-login",
+        "badge": {
+          "text": "ENT",
+          "type": "filled",
+          "color": "neutral"
+        }
+      },
+      {
+        "title": "Custom messages",
         "path": "ui/custom-messages",
+        "badge": {
+          "text": "ENT",
+          "type": "filled",
+          "color": "neutral"
+        }
+      },
+      {
+        "title": "Namespaces",
+        "path": "ui/namespaces",
         "badge": {
           "text": "ENT",
           "type": "filled",

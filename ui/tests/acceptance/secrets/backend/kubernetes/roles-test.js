@@ -85,7 +85,7 @@ module('Acceptance | kubernetes | roles', function (hooks) {
     await fillIn('[data-test-input="name"]', 'new-test-role');
     await fillIn('[data-test-input="serviceAccountName"]', 'default');
     await fillIn('[data-test-input="allowedKubernetesNamespaces"]', '*');
-    await click('[data-test-save]');
+    await click('[data-test-submit]');
     this.validateRoute(assert, 'roles.role.details', 'Transitions to details route on save success');
     await click('[data-test-breadcrumbs] li:nth-child(2) a');
     assert.dom('[data-test-role="new-test-role"]').exists('New role renders in list');

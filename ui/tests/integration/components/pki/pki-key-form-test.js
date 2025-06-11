@@ -44,7 +44,7 @@ module('Integration | Component | pki key form', function (hooks) {
     assert.dom(GENERAL.inputByAttr('keyType')).exists('renders key type input');
     assert.dom(GENERAL.inputByAttr('keyBits')).exists('renders key bits input');
 
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.validationErrorByAttr('type'))
       .hasTextContaining('Type is required.', 'renders presence validation for type of key');
@@ -90,7 +90,7 @@ module('Integration | Component | pki key form', function (hooks) {
     await fillIn(GENERAL.inputByAttr('type'), 'exported');
     assert.dom(GENERAL.inputByAttr('keyBits')).isDisabled('key bits disabled when no key type selected');
     await fillIn(GENERAL.inputByAttr('keyType'), 'rsa');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
   });
 
   test('it generates a key type=internal', async function (assert) {
@@ -126,6 +126,6 @@ module('Integration | Component | pki key form', function (hooks) {
     await fillIn(GENERAL.inputByAttr('type'), 'internal');
     assert.dom(GENERAL.inputByAttr('keyBits')).isDisabled('key bits disabled when no key type selected');
     await fillIn(GENERAL.inputByAttr('keyType'), 'rsa');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
   });
 });

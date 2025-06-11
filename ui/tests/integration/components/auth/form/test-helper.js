@@ -28,7 +28,7 @@ export default (test, { standardSubmit = true } = {}) => {
   test('it fires onError callback', async function (assert) {
     this.authenticateStub.throws('permission denied');
     await this.renderComponent();
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
 
     const [actual] = this.onError.lastCall.args;
     assert.strictEqual(
@@ -41,7 +41,7 @@ export default (test, { standardSubmit = true } = {}) => {
   test('it fires onSuccess callback', async function (assert) {
     this.authenticateStub.returns('success!');
     await this.renderComponent();
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
 
     const [actual] = this.onSuccess.lastCall.args;
     assert.strictEqual(actual, 'success!', 'it calls onSuccess');
@@ -57,7 +57,7 @@ export default (test, { standardSubmit = true } = {}) => {
       for (const [field, value] of Object.entries(loginData)) {
         await fillIn(GENERAL.inputByAttr(field), value);
       }
-      await click(AUTH_FORM.login);
+      await click(GENERAL.submitButton);
       const [actual] = this.authenticateStub.lastCall.args;
       assert.propEqual(
         actual.data,
@@ -78,7 +78,7 @@ export default (test, { standardSubmit = true } = {}) => {
       }
       await fillIn(GENERAL.inputByAttr('path'), `custom-${this.authType}`);
 
-      await click(AUTH_FORM.login);
+      await click(GENERAL.submitButton);
       const [actual] = this.authenticateStub.lastCall.args;
       assert.propEqual(
         actual.data,

@@ -11,7 +11,6 @@ export default create({
   visit: visitable('/vault/secrets/:backend/list?tab=templates'),
   visitCreate: visitable('/vault/secrets/:backend/create?itemType=template'),
   editLink: clickable('[data-test-edit-link]'),
-  deleteLink: clickable('[data-test-transformation-template-delete]'),
   name: fillable('[data-test-input="name"]'),
   pattern: fillable('[data-test-input="pattern"'),
   alphabet: fillable('[data-test-input="alphabet"'),
