@@ -184,3 +184,10 @@ $ vault audit enable -path=audit/file file file_path=/tmp/my-file.txt
 Success! Enabled the file audit device at: audit/file/
 ```
 
+Enable a local audit device at the default path, `file/`:
+
+```shell-session
+$ vault audit enable -local file file_path=/tmp/my-file.txt
+Success! Enabled the file audit device at: file/
+```
+
