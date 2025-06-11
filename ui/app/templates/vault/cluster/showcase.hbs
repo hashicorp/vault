@@ -215,7 +215,7 @@
                 )
                 type=attrType
                 options=(hash
-                  editType=editType
+                  editType=(if (eq editType "input") undefined editType)
                   label=(unless (eq variant "base") (concat "This is the label of the '" editType "' type of field"))
                   isSectionHeader=(if (eq variant "with label as section header") true)
                   helpText=(if
