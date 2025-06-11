@@ -10,9 +10,9 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { v4 as uuidv4 } from 'uuid';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { mountAuthCmd, runCmd } from 'vault/tests/helpers/commands';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import { sanitizeStart } from 'core/utils/sanitize-path';
 
 const { searchSelect } = GENERAL;
 
@@ -79,7 +79,7 @@ module('Acceptance | auth-methods list view', function (hooks) {
     await visit('/vault/access/');
     for (const [key] of Object.entries(authPayload)) {
       assert
-        .dom(AUTH_FORM.linkedBlockAuth(key.replace(/\/$/, ''))) // remove the forward slash
+        .dom(GENERAL.linkedBlock(sanitizeStart(key)))
         .exists({ count: 1 }, `auth method ${key} appears in list view`);
     }
     await visit('/vault/settings/auth/enable');
@@ -87,7 +87,7 @@ module('Acceptance | auth-methods list view', function (hooks) {
     await visit('/vault/access/');
     for (const [key] of Object.entries(authPayload)) {
       assert
-        .dom(AUTH_FORM.linkedBlockAuth(key.replace(/\/$/, '')))
+        .dom(GENERAL.linkedBlock(sanitizeStart(key)))
         .exists({ count: 1 }, `auth method ${key} appears in list view after navigating from OIDC Provider`);
     }
   });
