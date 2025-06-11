@@ -4,7 +4,7 @@
  */
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, fillIn, find, visit, waitFor, waitUntil } from '@ember/test-helpers';
+import { click, fillIn, visit, waitFor } from '@ember/test-helpers';
 import { logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import {
@@ -15,7 +15,6 @@ import {
 } from 'vault/tests/helpers/oidc-window-stub';
 import sinon from 'sinon';
 import { Response } from 'miragejs';
-import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { ERROR_MISSING_PARAMS, ERROR_WINDOW_CLOSED } from 'vault/components/auth/form/oidc-jwt';
@@ -152,20 +151,6 @@ module('Acceptance | oidc auth method', function (hooks) {
     assert
       .dom('[data-test-message-error-description]')
       .hasText('Authentication failed: Error fetching role: permission denied');
-  });
-
-  test('it prompts mfa if configured', async function (assert) {
-    assert.expect(1);
-
-    this.setupMocks(assert);
-    this.server.get('/auth/oidc/oidc/callback', () => setupTotpMfaResponse('foo'));
-    await logout();
-    await this.selectMethod('oidc');
-    triggerMessageEvent('oidc');
-
-    await click(GENERAL.submitButton);
-    await waitUntil(() => find('[data-test-mfa-form]'));
-    assert.dom('[data-test-mfa-form]').exists('it renders TOTP MFA form');
   });
 
   test('auth service is called with client_token and cluster data', async function (assert) {

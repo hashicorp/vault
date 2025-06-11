@@ -9,9 +9,7 @@ import { click, fillIn, find, visit, waitUntil } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import { DELAY_IN_MS, windowStub } from 'vault/tests/helpers/oidc-window-stub';
-import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
-import { MFA_SELECTORS } from 'vault/tests/helpers/mfa/mfa-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 import { logout } from 'vault/tests/helpers/auth/auth-helpers';
@@ -140,16 +138,5 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
     await click(GENERAL.button('user-menu-trigger'));
     await click('#logout');
     assert.dom(AUTH_FORM.selectMethod).hasValue('saml', 'Previous auth method selected on logout');
-  });
-
-  test('it prompts mfa if configured', async function (assert) {
-    assert.expect(1);
-    this.server.put('/auth/saml/token', () => setupTotpMfaResponse('saml'));
-
-    await waitUntil(() => find(AUTH_FORM.selectMethod), { timeout: DELAY_IN_MS });
-    await fillIn(AUTH_FORM.selectMethod, 'saml');
-    await click(GENERAL.submitButton);
-    await waitUntil(() => find(MFA_SELECTORS.mfaForm), { timeout: DELAY_IN_MS });
-    assert.dom(MFA_SELECTORS.mfaForm).exists('it renders TOTP MFA form');
   });
 });

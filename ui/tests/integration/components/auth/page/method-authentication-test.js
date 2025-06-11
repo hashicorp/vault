@@ -13,7 +13,7 @@ import { RESPONSE_STUBS, TOKEN_DATA } from 'vault/tests/helpers/auth/response-st
 import { windowStub } from 'vault/tests/helpers/oidc-window-stub';
 import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
-import { methodAuthenticationTests, setupTestContext } from './page-test-helpers';
+import { methodAuthenticationTests, setupTestContext } from './test-helper';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
@@ -25,9 +25,6 @@ module('Integration | Component | auth | page | method authentication', function
     setupTestContext(this);
     this.auth = this.owner.lookup('service:auth');
     this.setTokenDataSpy = sinon.spy(this.auth, 'setTokenData');
-    // this.server.get('/sys/internal/ui/resultant-acl', () =>
-    //   this.server.create('configuration', { data: { root: true } })
-    // );
   });
 
   module('github', function (hooks) {
@@ -87,8 +84,8 @@ module('Integration | Component | auth | page | method authentication', function
   module('oidc', function (hooks) {
     hooks.beforeEach(async function () {
       this.authType = 'oidc';
-      this.path = this.authType;
       this.loginData = { role: 'some-dev' };
+      this.path = this.authType;
       this.response = RESPONSE_STUBS.oidc['oidc/callback'];
       this.tokenName = 'vault-token☃1';
       // Requests are stubbed in the order they are hit
