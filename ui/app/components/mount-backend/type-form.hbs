@@ -32,7 +32,7 @@
   <Hds::Button
     @text="Cancel"
     @color="secondary"
-    @route={{if (eq @mountType "secret") "vault.cluster.secrets.backends" "vault.cluster.access.methods"}}
+    @route={{if (eq @mountCategory "secret") "vault.cluster.secrets.backends" "vault.cluster.access.methods"}}
     data-test-cancel
   />
 </div>
