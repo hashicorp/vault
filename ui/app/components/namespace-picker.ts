@@ -256,4 +256,10 @@ export default class NamespacePicker extends Component {
     this.searchInput = '';
     await this.loadOptions();
   }
+
+  @action
+  toggleNamespacePicker() {
+    // Reset the search input when the dropdown is toggled
+    this.searchInput = '';
+  }
 }

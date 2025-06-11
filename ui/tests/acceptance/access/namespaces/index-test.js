@@ -204,14 +204,14 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     assert.dom('.list-item-row').exists({ count: 0 }, `"${testNS}" namespace is not displayed on the page`);
 
     // Verify test-create-ns does not exist in the Namespace Picker
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(GENERAL.toggleInput('namespace-id'));
     await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, testNS);
     assert.strictEqual(
       findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
       0,
       `"${testNS}" is not displayed in the namespace picker`
     );
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(GENERAL.toggleInput('namespace-id'));
 
     // Create a new namespace
     assert
@@ -229,14 +229,14 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     assert.dom('.list-item-row').exists({ count: 1 }, `"${testNS}" namespace is displayed on the page`);
 
     // Verify test-create-ns exists in the Namespace Picker without refresh
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(GENERAL.toggleInput('namespace-id'));
     await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, testNS);
     assert.strictEqual(
       findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
       1,
       `"${testNS}" is displayed in the namespace picker`
     );
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(GENERAL.toggleInput('namespace-id'));
 
     // Delete the created namespace
     assert.dom(GENERAL.menuTrigger).exists('Namespace options menu is displayed');
@@ -254,14 +254,14 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     assert.dom('.list-item-row').exists({ count: 0 }, `"${testNS}" namespace is not displayed on the page`);
 
     // Verify test-create-ns does not exist in the Namespace Picker
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(GENERAL.toggleInput('namespace-id'));
     await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, testNS);
     assert.strictEqual(
       findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
       0,
       `"${testNS}" is not displayed in the namespace picker`
     );
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(GENERAL.toggleInput('namespace-id'));
   });
 
   test('it should filter namespaces based on search input', async function (assert) {
@@ -319,8 +319,8 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     await visit('/vault/access/namespaces');
 
     // Hack: Trigger refresh internal namespaces endpoint
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
-    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
+    await click(GENERAL.toggleInput('namespace-id'));
+    await click(GENERAL.button('Refresh list'));
 
     // Enter search text
     await fillIn(GENERAL.filterInputExplicit, namespace);

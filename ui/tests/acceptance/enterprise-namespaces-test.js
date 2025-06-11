@@ -171,8 +171,8 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await click(GENERAL.toggleInput('namespace-id'));
 
     // Refresh the list of namespaces
-    assert.dom(NAMESPACE_PICKER_SELECTORS.refreshList).exists('Refresh list button exists');
-    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
+    assert.dom(GENERAL.button('Refresh list')).exists('Refresh list button exists');
+    await click(GENERAL.button('Refresh list'));
 
     // Verify the search input field exists
     assert.dom(NAMESPACE_PICKER_SELECTORS.searchInput).exists('The namespace search field exists');
@@ -235,7 +235,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await login();
 
     // Open the namespace picker & verify that the foo namespace does exist
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(GENERAL.toggleInput('namespace-id'));
     assert
       .dom(NAMESPACE_PICKER_SELECTORS.link(namespace))
       .exists({ count: 1 }, 'foo should exist in the namespace picker');
@@ -308,7 +308,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
 
     // Verify that the namespace exists in the namespace picker
     await click(GENERAL.toggleInput('namespace-id'));
-    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
+    await click(GENERAL.button('Refresh list'));
     await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, namespace);
 
     assert
@@ -346,7 +346,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
 
     // Verify that the namespace does not exist in the namespace picker
     await click(GENERAL.toggleInput('namespace-id'));
-    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
+    await click(GENERAL.button('Refresh list'));
     await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, namespace);
     assert
       .dom(NAMESPACE_PICKER_SELECTORS.link())

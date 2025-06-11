@@ -11,6 +11,7 @@
       @text={{or this.selectedNamespace.id "-"}}
       @isFullWidth={{true}}
       data-test-toggle-input="namespace-id"
+      {{on "click" this.toggleNamespacePicker}}
     />
 
     {{#if this.errorLoadingNamespaces}}

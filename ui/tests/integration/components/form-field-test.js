@@ -178,7 +178,7 @@ module('Integration | Component | form field', function (hooks) {
       })
     );
     assert.ok(component.hasToggleButton, 'renders a toggle button');
-    assert.dom('[data-test-toggle-input]').isNotChecked();
+    assert.dom(GENERAL.toggleInput('toggle-foobar')).isNotChecked();
     assert.dom('[data-test-toggle-subtext]').hasText('Toggled off');
 
     await component.fields.objectAt(0).toggleButton();
