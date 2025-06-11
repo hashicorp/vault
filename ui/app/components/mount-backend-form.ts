@@ -9,8 +9,10 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import { methods } from 'vault/helpers/mountable-auth-methods';
-import { isAddonEngine, allEngines } from 'vault/helpers/mountable-secret-engines';
+import { isAddonEngine } from 'vault/helpers/mountable-secret-engines';
+import { presence } from 'vault/utils/forms/validators';
+import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
+import { assert } from '@ember/debug';
 
 import type FlashMessageService from 'vault/services/flash-messages';
 import type Store from '@ember-data/store';
@@ -24,10 +26,10 @@ import type { MountSecretBackendModel } from 'vault/routes/vault/cluster/setting
  * The `MountBackendForm` is used to mount either a secret or auth backend.
  *
  * @example ```js
- *   <MountBackendForm @mountType="secret" @onMountSuccess={{this.onMountSuccess}} />```
+ *   <MountBackendForm @mountCategory="secret" @onMountSuccess={{this.onMountSuccess}} />```
  *
  * @param {function} onMountSuccess - A function that transitions once the Mount has been successfully posted.
- * @param {string} [mountType=auth] - The type of backend we want to mount.
+ * @param {string} mountCategory=auth - The type of engine to mount, either 'secret' or 'auth'.
  *
  */
 
@@ -35,7 +37,7 @@ type MountModel = MountSecretBackendModel | AuthEnableModel;
 
 interface Args {
   mountModel: MountModel;
-  mountType: 'secret' | 'auth';
+  mountCategory: 'secret' | 'auth';
   onMountSuccess: (type: string, path: string, useEngineRoute: boolean) => void;
 }
 
@@ -49,6 +51,12 @@ export default class MountBackendForm extends Component<Args> {
 
   @tracked errorMessage: string | string[] = '';
 
+  constructor(owner: unknown, args: Args) {
+    super(owner, args);
+
+    assert(`@mountCategory is required. Must be "auth" or "secret".`, presence(this.args.mountCategory));
+  }
+
   willDestroy() {
     // components are torn down after store is unloaded and will cause an error if attempt to unload record
     const noTeardown = this.store && !this.store.isDestroying;
@@ -58,23 +66,25 @@ export default class MountBackendForm extends Component<Args> {
     super.willDestroy();
   }
 
-  checkPathChange(type: string) {
-    if (!type) return;
+  checkPathChange(backendType: string) {
+    if (!backendType) return;
     const mount = this.args.mountModel;
     const currentPath = mount.path;
-    const mountTypes =
-      this.args.mountType === 'secret'
-        ? allEngines().map((engine) => engine.type)
-        : methods().map((auth) => auth.type);
+    // mountCategory is usually 'secret' or 'auth', but sometimes an empty string is passed in (like when we click the cancel button).
+    // In these cases, we should default to returning auth methods.
+    const mountsByType = filterEnginesByMountCategory({
+      mountCategory: this.args.mountCategory ?? 'auth',
+      isEnterprise: true,
+    }).map((engine) => engine.type);
     // if the current path has not been altered by user,
     // change it here to match the new type
-    if (!currentPath || mountTypes.includes(currentPath)) {
-      mount.path = type;
+    if (!currentPath || mountsByType.includes(currentPath)) {
+      mount.path = backendType;
     }
   }
 
   typeChangeSideEffect(type: string) {
-    if (this.args.mountType !== 'secret') return;
+    if (this.args.mountCategory !== 'secret') return;
     if (type === 'pki') {
       // If type PKI, set max lease to ~10years
       this.args.mountModel.config.maxLeaseTtl = '3650d';
@@ -172,7 +182,7 @@ export default class MountBackendForm extends Component<Args> {
     }
     this.flashMessages.success(
       `Successfully mounted the ${type} ${
-        this.args.mountType === 'secret' ? 'secrets engine' : 'auth method'
+        this.args.mountCategory === 'secret' ? 'secrets engine' : 'auth method'
       } at ${path}.`
     );
     // Check whether to use the engine route, since KV version 1 does not

@@ -9,14 +9,18 @@ import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
 import { allEngines, mountableEngines } from 'vault/helpers/mountable-secret-engines';
-import { allMethods, methods } from 'vault/helpers/mountable-auth-methods';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
+import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 
 const secretTypes = mountableEngines().map((engine) => engine.type);
 const allSecretTypes = allEngines().map((engine) => engine.type);
-const authTypes = methods().map((auth) => auth.type);
-const allAuthTypes = allMethods().map((auth) => auth.type);
+const authTypes = filterEnginesByMountCategory({ mountCategory: 'auth', isEnterprise: false })
+  .filter((engine) => engine.type !== 'token')
+  .map((auth) => auth.type);
+const allAuthTypes = filterEnginesByMountCategory({ mountCategory: 'auth', isEnterprise: true })
+  .filter((engine) => engine.type !== 'token')
+  .map((auth) => auth.type);
 
 module('Integration | Component | mount-backend/type-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -29,7 +33,7 @@ module('Integration | Component | mount-backend/type-form', function (hooks) {
     assert.expect(secretTypes.length + 1, 'renders all mountable engines plus calls a spy');
     const spy = sinon.spy();
     this.set('setType', spy);
-    await render(hbs`<MountBackend::TypeForm @mountType="secret" @setMountType={{this.setType}} />`);
+    await render(hbs`<MountBackend::TypeForm @mountCategory="secret" @setMountType={{this.setType}} />`);
 
     for (const type of secretTypes) {
       assert.dom(MOUNT_BACKEND_FORM.mountType(type)).exists(`Renders ${type} mountable secret engine`);
@@ -65,7 +69,7 @@ module('Integration | Component | mount-backend/type-form', function (hooks) {
           'color-contrast': { enabled: false },
         },
       });
-      await render(hbs`<MountBackend::TypeForm @mountType="secret" @setMountType={{this.setType}} />`);
+      await render(hbs`<MountBackend::TypeForm @mountCategory="secret" @setMountType={{this.setType}} />`);
       for (const type of allSecretTypes) {
         assert.dom(MOUNT_BACKEND_FORM.mountType(type)).exists(`Renders ${type} secret engine`);
       }
@@ -73,7 +77,7 @@ module('Integration | Component | mount-backend/type-form', function (hooks) {
 
     test('it renders correct items for enterprise auth methods', async function (assert) {
       assert.expect(allAuthTypes.length, 'renders all enterprise auth engines');
-      await render(hbs`<MountBackend::TypeForm @mountType="auth" @setMountType={{this.setType}} />`);
+      await render(hbs`<MountBackend::TypeForm @mountCategory="auth" @setMountType={{this.setType}} />`);
       for (const type of allAuthTypes) {
         assert.dom(MOUNT_BACKEND_FORM.mountType(type)).exists(`Renders ${type} auth engine`);
       }
