@@ -1231,17 +1231,17 @@ module('Integration | Component | form field', function (hooks) {
     assert.ok(spy.calledWith('myfield', '1234'), 'onChange called with correct args');
   });
 
-  test('it renders: editType=undefined - with passed label, placeholder, subText, helpText, doclink, disabled, characterLimit', async function (assert) {
+  test('it renders: editType=undefined - with passed characterLimit, docLink, editDisabled, helpText, label, placeholder, subText', async function (assert) {
     await setup.call(
       this,
       createAttr('myfield', 'string', {
-        placeholder: 'Custom placeholder',
-        label: 'Custom label',
-        subText: 'Some subtext',
-        helpText: 'Some helptext',
+        characterLimit: 10,
         docLink: '/docs',
         editDisabled: true,
-        characterLimit: 10,
+        helpText: 'Some helpText',
+        label: 'Custom label',
+        placeholder: 'Custom placeholder',
+        subText: 'Some subText',
       })
     );
     assert.dom(GENERAL.fieldLabel()).hasText('Custom label', 'renders the custom label from options');
@@ -1251,19 +1251,19 @@ module('Integration | Component | form field', function (hooks) {
       .hasAttribute('disabled', '', 'renders the disabled attribute from options')
       .hasAttribute('maxlength', '10', 'renders the characterLimit from options');
     assert
-      .dom(GENERAL.helpTextByAttr('Some subtext'))
+      .dom(GENERAL.helpTextByAttr('Some subText'))
       .exists('renders `subText` option as HelperText')
       .hasText(
-        'Some subtext See our documentation for help.',
+        'Some subText See our documentation for help.',
         'renders the right subText string from options'
       );
     assert
-      .dom(`${GENERAL.helpTextByAttr('Some subtext')} ${GENERAL.docLinkByAttr('/docs')}`)
-      .exists('renders `docLink` option as as link inside the subtext');
+      .dom(`${GENERAL.helpTextByAttr('Some subText')} ${GENERAL.docLinkByAttr('/docs')}`)
+      .exists('renders `docLink` option as as link inside the subText');
     assert
-      .dom(GENERAL.helpTextByAttr('Some helptext'))
-      .exists('renders `helptext` option as HelperText')
-      .hasText('Some helptext', 'renders the right helpText string from options');
+      .dom(GENERAL.helpTextByAttr('Some helpText'))
+      .exists('renders `helpText` option as HelperText')
+      .hasText('Some helpText', 'renders the right helpText string from options');
   });
 
   test('it renders: editType=undefined - with readOnly when mode=edit', async function (assert) {
