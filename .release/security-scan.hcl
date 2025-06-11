@@ -27,6 +27,7 @@ container {
   triage {
     suppress {
       vulnerabilities = [
+        "GHSA-2x5j-vhc8-9cwm", // does not affect Vault, will be addressed in an upcoming release
         // We can't do anything about these two CVEs until a new Alpine container with busybox 1.38 is available.
         "CVE-2025-46394",
         "CVE-2024-58251",
