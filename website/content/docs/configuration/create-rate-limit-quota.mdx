@@ -245,8 +245,8 @@ $ vault write sys/quotas/rate-limit/<QUOTA_NAME> \
    </Note>
 
 **Example:** Create a rate limit quota named, "transit-limit" which limits the
-access to the Transit secrets engine to be 1000 requests per minute (60
-seconds).
+access to the Transit secrets engine to be 1,000 requests per minute (60
+seconds). It groups requests by their source IP address.
 
 1. Enable Transit secrets engine at `transit`.
 
