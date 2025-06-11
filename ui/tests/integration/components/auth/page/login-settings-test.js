@@ -1,10 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
+import { click } from '@ember/test-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click } from '@ember/test-helpers';
-import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { SYS_INTERNAL_UI_MOUNTS } from 'vault/tests/helpers/auth/auth-helpers';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { setupTestContext } from './test-helper';
+import setupTestContext from './setup-test-context';
 
 /* 
   Login settings are an enterprise only feature but the component is version agnostic (and subsequently so are these tests) 

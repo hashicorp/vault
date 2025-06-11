@@ -3,15 +3,15 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
-import { setupTestContext } from './test-helper';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
-import { setupMirage } from 'ember-cli-mirage/test-support';
-import { fillInLoginFields, SYS_INTERNAL_UI_MOUNTS } from 'vault/tests/helpers/auth/auth-helpers';
 import { click, fillIn, waitFor } from '@ember/test-helpers';
+import { fillInLoginFields, SYS_INTERNAL_UI_MOUNTS } from 'vault/tests/helpers/auth/auth-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { module, test } from 'qunit';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { setupRenderingTest } from 'ember-qunit';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
+import setupTestContext from './setup-test-context';
 
 module('Integration | Component | auth | page | listing visibility', function (hooks) {
   setupRenderingTest(hooks);

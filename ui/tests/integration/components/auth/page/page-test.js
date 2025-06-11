@@ -9,8 +9,13 @@ import { click, fillIn, waitFor } from '@ember/test-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CSP_ERROR } from 'vault/components/auth/page';
-import { setupTestContext } from './test-helper';
+import setupTestContext from './setup-test-context';
 
+/*
+The AuthPage parents much of the authentication workflow and so it can be used to test lots of auth functionality.
+This file tests the base component functionality. The other files test method authentication, listing visibility, 
+login settings (enterprise feature), and mfa.
+*/
 module('Integration | Component | auth | page', function (hooks) {
   setupRenderingTest(hooks);
 

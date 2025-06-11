@@ -3,19 +3,74 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { module, test } from 'qunit';
-import { setupRenderingTest } from 'ember-qunit';
-import { click, fillIn } from '@ember/test-helpers';
-import sinon from 'sinon';
-import { setupMirage } from 'ember-cli-mirage/test-support';
-import { fillInLoginFields } from 'vault/tests/helpers/auth/auth-helpers';
-import { RESPONSE_STUBS, TOKEN_DATA } from 'vault/tests/helpers/auth/response-stubs';
-import { windowStub } from 'vault/tests/helpers/oidc-window-stub';
-import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
-import { overrideResponse } from 'vault/tests/helpers/stubs';
-import { methodAuthenticationTests, setupTestContext } from './test-helper';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
+import { click, fillIn, waitUntil } from '@ember/test-helpers';
+import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
+import { fillInLoginFields } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { module, test } from 'qunit';
+import { overrideResponse } from 'vault/tests/helpers/stubs';
+import { RESPONSE_STUBS, TOKEN_DATA } from 'vault/tests/helpers/auth/response-stubs';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { setupRenderingTest } from 'ember-qunit';
+import { triggerMessageEvent, windowStub } from 'vault/tests/helpers/oidc-window-stub';
+import setupTestContext from './setup-test-context';
+import sinon from 'sinon';
+
+const methodAuthenticationTests = (test) => {
+  test('it sets token data on login for default path', async function (assert) {
+    assert.expect(5);
+    // Setup
+    this.stubRequests();
+    // Render and log in
+    await this.renderComponent();
+    await fillIn(AUTH_FORM.selectMethod, this.authType);
+    await fillInLoginFields(this.loginData);
+    if (this.authType === 'oidc') {
+      triggerMessageEvent(this.path);
+    }
+    await click(GENERAL.submitButton);
+    await waitUntil(() => this.setTokenDataSpy.calledOnce);
+    const [tokenName, persistedTokenData] = this.setTokenDataSpy.lastCall.args;
+
+    const expectedData = {
+      ...TOKEN_DATA[this.authType],
+      // there are other tests that confirm this calculation happens as expected, just copy value from spy
+      tokenExpirationEpoch: persistedTokenData.tokenExpirationEpoch,
+    };
+
+    assert.strictEqual(tokenName, this.tokenName, 'setTokenData is called with expected token name');
+    assert.propEqual(persistedTokenData, expectedData, 'setTokenData is called with expected data');
+
+    // propEqual failures are challenging to parse in CI so pulling out a couple of important attrs
+    const { token, displayName, entity_id } = expectedData;
+    assert.strictEqual(persistedTokenData.token, token, 'setTokenData has expected token');
+    assert.strictEqual(persistedTokenData.displayName, displayName, 'setTokenData has expected display name');
+    assert.strictEqual(persistedTokenData.entity_id, entity_id, 'setTokenData has expected entity_id');
+  });
+
+  test('it calls onAuthSuccess on submit for custom path', async function (assert) {
+    assert.expect(1);
+    // Setup
+    this.path = `${this.authType}-custom`;
+    this.loginData = { ...this.loginData, path: this.path };
+    this.stubRequests();
+    // Render and log in
+    await this.renderComponent();
+    await fillIn(AUTH_FORM.selectMethod, this.authType);
+    // toggle mount path input to specify custom path
+    await fillInLoginFields(this.loginData, { toggleOptions: true });
+    if (this.authType === 'oidc') {
+      triggerMessageEvent(this.path);
+    }
+    await click(GENERAL.submitButton);
+
+    await waitUntil(() => this.onAuthSuccess.calledOnce);
+    const [actual] = this.onAuthSuccess.lastCall.args;
+    const expected = { namespace: '', token: this.tokenName, isRoot: false };
+    assert.propEqual(actual, expected, `onAuthSuccess called with: ${JSON.stringify(actual)}`);
+  });
+};
 
 module('Integration | Component | auth | page | method authentication', function (hooks) {
   setupRenderingTest(hooks);
