@@ -215,7 +215,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
 
     const token = await runCmd(`write -field=client_token auth/token/create policies=default`);
     await login(token);
-    
+
     // Open the namespace picker
     await click(GENERAL.toggleInput('namespace-id'));
 
