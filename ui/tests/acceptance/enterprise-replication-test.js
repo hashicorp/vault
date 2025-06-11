@@ -25,6 +25,7 @@ import ss from 'vault/tests/pages/components/search-select';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 import { disableReplication } from 'vault/tests/helpers/replication';
+import { GENERAL } from '../helpers/general-selectors';
 const searchSelect = create(ss);
 const flash = create(flashMessage);
 
@@ -273,7 +274,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('[data-test-secondary-add]');
 
     await fillIn('[data-test-replication-secondary-id]', secondaryNameSecond);
-    await click('[data-test-toggle-input]');
+    await click(GENERAL.toggleInput('Time to Live (TTL) for generated secondary token'));
 
     await fillIn('[data-test-ttl-value]', 3);
     await click('[data-test-secondary-add]');
