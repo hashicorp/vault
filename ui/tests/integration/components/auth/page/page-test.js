@@ -248,7 +248,7 @@ module('Integration | Component | auth | page', function (hooks) {
       await this.renderComponent();
       await fillIn(AUTH_FORM.selectMethod, authType);
       await fillInLoginFields(loginData);
-      await click(AUTH_FORM.login);
+      await click(GENERAL.submitButton);
       const [actual] = this.onAuthSuccess.lastCall.args;
       const expected = {
         namespace: '',
@@ -272,7 +272,7 @@ module('Integration | Component | auth | page', function (hooks) {
       // await fillIn(AUTH_FORM.selectMethod, authType);
       // toggle mount path input to specify custom path
       await fillInLoginFields(loginDataWithPath, { toggleOptions: true });
-      await click(AUTH_FORM.login);
+      await click(GENERAL.submitButton);
 
       const [actual] = this.onAuthSuccess.lastCall.args;
       const expected = {
@@ -292,7 +292,7 @@ module('Integration | Component | auth | page', function (hooks) {
       await this.renderComponent();
       await fillIn(AUTH_FORM.selectMethod, authType);
       await fillInLoginFields(loginData);
-      await click(AUTH_FORM.login);
+      await click(GENERAL.submitButton);
       await click(GENERAL.backButton);
       assert.dom(AUTH_FORM.selectMethod).hasValue(authType, `${authType} is selected in dropdown`);
     });
@@ -309,7 +309,7 @@ module('Integration | Component | auth | page', function (hooks) {
     await fillIn(AUTH_FORM.selectMethod, 'token');
     // await fillIn(AUTH_FORM.selectMethod, 'token');
     await fillInLoginFields({ token: 'mysupersecuretoken' });
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
     const [actual] = this.onAuthSuccess.lastCall.args;
     const expected = {
       namespace: '',

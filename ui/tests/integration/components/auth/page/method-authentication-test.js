@@ -15,6 +15,7 @@ import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { methodAuthenticationTests, setupTestContext } from './page-test-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | auth | page | method authentication', function (hooks) {
   setupRenderingTest(hooks);
@@ -154,7 +155,7 @@ module('Integration | Component | auth | page | method authentication', function
       await this.renderComponent();
       await fillIn(AUTH_FORM.selectMethod, this.authType);
       await fillInLoginFields({ token: 'mysupersecuretoken' });
-      await click(AUTH_FORM.login);
+      await click(GENERAL.submitButton);
 
       const [actual] = this.onAuthSuccess.lastCall.args;
       const expected = { namespace: '', token: this.tokenName, isRoot: false };

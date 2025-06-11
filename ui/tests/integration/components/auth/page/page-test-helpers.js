@@ -9,6 +9,7 @@ import sinon from 'sinon';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { fillInLoginFields } from 'vault/tests/helpers/auth/auth-helpers';
 import { TOKEN_DATA } from 'vault/tests/helpers/auth/response-stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { triggerMessageEvent } from 'vault/tests/helpers/oidc-window-stub';
 
 export const setupTestContext = (context) => {
@@ -48,7 +49,7 @@ export const methodAuthenticationTests = (test) => {
     if (this.authType === 'oidc') {
       triggerMessageEvent(this.path);
     }
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
     await waitUntil(() => this.setTokenDataSpy.calledOnce);
     const [tokenName, persistedTokenData] = this.setTokenDataSpy.lastCall.args;
 
@@ -82,7 +83,7 @@ export const methodAuthenticationTests = (test) => {
     if (this.authType === 'oidc') {
       triggerMessageEvent(this.path);
     }
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
 
     await waitUntil(() => this.onAuthSuccess.calledOnce);
     const [actual] = this.onAuthSuccess.lastCall.args;
