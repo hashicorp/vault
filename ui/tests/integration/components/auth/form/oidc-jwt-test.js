@@ -311,6 +311,7 @@ module('Integration | Component | auth | form | oidc-jwt', function (hooks) {
 
   hooks.afterEach(function () {
     this.authenticateStub.restore();
+    this.routerStub.restore();
   });
 
   test('it renders helper text', async function (assert) {

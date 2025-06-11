@@ -12,10 +12,14 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { MFA_SELECTORS } from 'vault/tests/helpers/mfa/mfa-selectors';
 import { constraintId, setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
 import { AUTH_METHOD_MAP, fillInLoginFields } from 'vault/tests/helpers/auth/auth-helpers';
-import { callbackData, windowStub } from 'vault/tests/helpers/oidc-window-stub';
+import {
+  callbackData,
+  DELAY_IN_MS,
+  triggerMessageEvent,
+  windowStub,
+} from 'vault/tests/helpers/oidc-window-stub';
 
 const ENT_ONLY = ['saml'];
-const DELAY_IN_MS = 500;
 
 for (const method of AUTH_METHOD_MAP) {
   const { authType, options } = method;
@@ -54,10 +58,8 @@ for (const method of AUTH_METHOD_MAP) {
 
       if (options?.hasPopupWindow) {
         // fires "message" event which methods that rely on popup windows wait for
-        setTimeout(() => {
-          // set path which is used to set :mount param in the callback url => /auth/:mount/oidc/callback
-          window.postMessage(callbackData({ path: this.mountPath }), window.origin);
-        }, DELAY_IN_MS);
+        // pass mount path which is used to set :mount param in the callback url => /auth/:mount/oidc/callback
+        triggerMessageEvent(this.mountPath);
       }
 
       await click(AUTH_FORM.login);

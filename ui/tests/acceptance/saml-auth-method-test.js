@@ -8,15 +8,13 @@ import { setupApplicationTest } from 'ember-qunit';
 import { click, fillIn, find, visit, waitUntil } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
-import { windowStub } from 'vault/tests/helpers/oidc-window-stub';
+import { DELAY_IN_MS, windowStub } from 'vault/tests/helpers/oidc-window-stub';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { MFA_SELECTORS } from 'vault/tests/helpers/mfa/mfa-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 import { logout } from 'vault/tests/helpers/auth/auth-helpers';
-
-const DELAY_IN_MS = 500;
 
 module('Acceptance | enterprise saml auth method', function (hooks) {
   setupApplicationTest(hooks);

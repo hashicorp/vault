@@ -7,15 +7,18 @@ import { setupApplicationTest } from 'ember-qunit';
 import { click, fillIn, find, visit, waitFor, waitUntil } from '@ember/test-helpers';
 import { logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { callbackData, windowStub } from 'vault/tests/helpers/oidc-window-stub';
+import {
+  callbackData,
+  DELAY_IN_MS,
+  triggerMessageEvent,
+  windowStub,
+} from 'vault/tests/helpers/oidc-window-stub';
 import sinon from 'sinon';
 import { Response } from 'miragejs';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { ERROR_MISSING_PARAMS, ERROR_WINDOW_CLOSED } from 'vault/components/auth/form/oidc-jwt';
-
-const DELAY_IN_MS = 500;
 
 module('Acceptance | oidc auth method', function (hooks) {
   setupApplicationTest(hooks);
@@ -66,9 +69,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     await logout();
     await this.selectMethod('oidc');
 
-    setTimeout(() => {
-      window.postMessage(callbackData({ path: 'oidc' }), window.origin);
-    }, DELAY_IN_MS);
+    triggerMessageEvent('oidc');
 
     await click(AUTH_FORM.login);
   });
@@ -91,9 +92,7 @@ module('Acceptance | oidc auth method', function (hooks) {
       return { data: { auth_url: 'http://example.com' } };
     });
     await visit('/vault/auth');
-    setTimeout(() => {
-      window.postMessage(callbackData({ path: 'oidc' }), window.origin);
-    }, DELAY_IN_MS);
+    triggerMessageEvent('oidc');
     await click(AUTH_FORM.login);
   });
 
@@ -103,9 +102,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     await logout();
     await this.selectMethod('oidc');
 
-    setTimeout(() => {
-      window.postMessage(callbackData({ path: 'oidc' }), window.origin);
-    }, 500);
+    triggerMessageEvent('oidc');
 
     await click(AUTH_FORM.login);
     await waitFor('[data-test-dashboard-card-header="Vault version"]');
@@ -164,9 +161,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     this.server.get('/auth/oidc/oidc/callback', () => setupTotpMfaResponse('foo'));
     await logout();
     await this.selectMethod('oidc');
-    setTimeout(() => {
-      window.postMessage(callbackData({ path: 'oidc' }), window.origin);
-    }, DELAY_IN_MS);
+    triggerMessageEvent('oidc');
 
     await click(AUTH_FORM.login);
     await waitUntil(() => find('[data-test-mfa-form]'));
@@ -178,9 +173,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     this.setupMocks();
     await logout();
     await this.selectMethod('oidc');
-    setTimeout(() => {
-      window.postMessage(callbackData({ path: 'oidc' }), window.origin);
-    }, DELAY_IN_MS);
+    triggerMessageEvent('oidc');
     await click(AUTH_FORM.login);
     const [actual] = authSpy.lastCall.args;
     const expected = {
