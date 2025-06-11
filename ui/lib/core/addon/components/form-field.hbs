@@ -201,9 +201,7 @@
           data-test-input={{@attr.name}}
           as |F|
         >
-          {{#if this.labelString}}
-            <F.Label data-test-form-field-label>{{this.labelString}}</F.Label>
-          {{/if}}
+          <F.Label data-test-form-field-label>{{this.labelString}}</F.Label>
           {{#if (or this.helpTextString @attr.options.subText)}}
             <F.HelperText>
               {{#if this.helpTextString}}
