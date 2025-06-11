@@ -1641,8 +1641,26 @@
         "path": "ui/browser-support"
       },
       {
-        "title": "Custom Messages",
+        "title": "Custom login",
+        "path": "ui/custom-login",
+        "badge": {
+          "text": "ENT",
+          "type": "filled",
+          "color": "neutral"
+        }
+      },
+      {
+        "title": "Custom messages",
         "path": "ui/custom-messages",
+        "badge": {
+          "text": "ENT",
+          "type": "filled",
+          "color": "neutral"
+        }
+      },
+      {
+        "title": "Namespaces",
+        "path": "ui/namespaces",
         "badge": {
           "text": "ENT",
           "type": "filled",

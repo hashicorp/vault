@@ -57,7 +57,7 @@ module('Integration | Component | messages/page/details', function (hooks) {
       hbs`<Messages::Page::Details @message={{this.message}} @capabilities={{this.capabilities}} />`,
       this.context
     );
-    assert.dom('[data-test-page-title]').hasText('Message title 1');
+    assert.dom(GENERAL.title).hasText('Message title 1');
     assert
       .dom('[data-test-component="info-table-row"]')
       .exists({ count: allFields.length }, 'Correct number of filtered fields render');
@@ -84,7 +84,7 @@ module('Integration | Component | messages/page/details', function (hooks) {
       }
     });
 
-    assert.dom('[data-test-confirm-action="Delete message"]').exists();
-    assert.dom('[data-test-link="edit"]').exists();
+    assert.dom(GENERAL.confirmTrigger).exists('delete button exists');
+    assert.dom(GENERAL.linkTo('edit')).exists();
   });
 });

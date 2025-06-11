@@ -76,7 +76,7 @@ module('Acceptance | sync | overview', function (hooks) {
       await waitFor(ts.overview.table.actionToggle(0));
       await click(ts.overview.table.actionToggle(0));
       await click(ts.overview.table.action('sync'));
-      await click(ts.destinations.sync.cancel);
+      await click(GENERAL.cancelButton);
       await click(ts.breadcrumbLink('Secrets Sync'));
       await waitFor(ts.overview.table.actionToggle(0));
       await click(ts.overview.table.actionToggle(0));

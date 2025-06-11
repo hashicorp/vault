@@ -1742,6 +1742,13 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 			runningSha = hex.EncodeToString(plug.Sha256)
 		}
 
+		if plug.Download {
+			if err = sysView.DownloadExtractVerifyPlugin(ctx, plug); err != nil {
+				return nil, fmt.Errorf("failed to extract and verify plugin=%q version=%q before mounting: %w",
+					plug.Name, plug.Version, err)
+			}
+		}
+
 		factory = plugin.Factory
 		if !plug.Builtin {
 			factory = wrapFactoryCheckPerms(c, factory)
