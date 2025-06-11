@@ -10,7 +10,7 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 import { isPresent } from '@ember/utils';
 import { service } from '@ember/service';
 import { addManyToArray, addToArray } from 'vault/helpers/add-to-array';
-import { filterEnginesByMountType } from 'vault/utils/all-engines-metadata';
+import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 
 const validations = {
   name: [{ type: 'presence', message: 'Name is required' }],
@@ -109,7 +109,7 @@ export default class MfaLoginEnforcementModel extends Model {
   }
 
   iconForMount(type) {
-    const mountableMethods = filterEnginesByMountType({ mountGroup: 'auth', isEnterprise: true });
+    const mountableMethods = filterEnginesByMountCategory({ mountCategory: 'auth', isEnterprise: true });
     const mount = mountableMethods.find((method) => method.type === type);
     return mount ? mount.glyph || mount.type : 'token';
   }

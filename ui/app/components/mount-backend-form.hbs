@@ -9,13 +9,13 @@
       {{#if this.showEnable}}
         {{#let (find-by "type" @mountModel.type @mountTypes) as |typeInfo|}}
           <Icon @name={{typeInfo.glyph}} @size="24" class="has-text-grey-light" />
-          {{#if (eq @mountType "secret")}}
+          {{#if (eq @mountCategory "secret")}}
             {{concat "Enable " typeInfo.displayName " Secrets Engine"}}
           {{else}}
             {{concat "Enable " typeInfo.displayName " Authentication Method"}}
           {{/if}}
         {{/let}}
-      {{else if (eq @mountType "secret")}}
+      {{else if (eq @mountCategory "secret")}}
         Enable a Secrets Engine
       {{else}}
         Enable an Authentication Method
@@ -25,7 +25,7 @@
 </PageHeader>
 
 <div class="box is-sideless is-bottomless is-fullwidth is-marginless">
-  <NamespaceReminder @mode="enable" @noun={{if (eq @mountType "secret") "Secret Engine" "Auth Method"}} />
+  <NamespaceReminder @mode="enable" @noun={{if (eq @mountCategory "secret") "Secret Engine" "Auth Method"}} />
   <MessageError @errorMessage={{this.errorMessage}} />
   {{#if @mountModel.type}}
     <form {{on "submit" (perform this.mountBackend)}}>
@@ -56,7 +56,7 @@
       <div class="field is-grouped box is-fullwidth is-bottomless">
         <div class="control">
           <Hds::Button
-            @text={{if (eq @mountType "secret") "Enable engine" "Enable method"}}
+            @text={{if (eq @mountCategory "secret") "Enable engine" "Enable method"}}
             @icon={{if this.mountBackend.isRunning "loading"}}
             type="submit"
             data-test-save
@@ -75,6 +75,6 @@
     </form>
   {{else}}
     {{!  Type not yet set, show type options }}
-    <MountBackend::TypeForm @setMountType={{this.setMountType}} @mountType={{@mountType}} />
+    <MountBackend::TypeForm @setMountType={{this.setMountType}} @mountCategory={{@mountCategory}} />
   {{/if}}
 </div>

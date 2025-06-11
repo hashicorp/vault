@@ -14,7 +14,7 @@ import { deleteAuthCmd, mountAuthCmd, runCmd, createNS } from 'vault/tests/helpe
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
-import { filterEnginesByMountType } from 'vault/utils/all-engines-metadata';
+import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 
 const SELECTORS = {
   createUser: '[data-test-entity-create-link="user"]',
@@ -80,7 +80,7 @@ module('Acceptance | auth backend list', function (hooks) {
     });
 
     // Test all auth methods, not just those you can log in with
-    filterEnginesByMountType({ mountGroup: 'auth', isEnterprise: false })
+    filterEnginesByMountCategory({ mountCategory: 'auth', isEnterprise: false })
       .map((backend) => backend.type)
       .forEach((type) => {
         test(`${type} auth method`, async function (assert) {

@@ -5,7 +5,7 @@
 
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
-import { filterEnginesByMountType } from 'vault/utils/all-engines-metadata';
+import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 
 /**
  *
@@ -15,10 +15,10 @@ import { filterEnginesByMountType } from 'vault/utils/all-engines-metadata';
  *
  * @example
  * ```js
- * <MountBackend::TypeForm @setMountType={{this.setMountType}} @mountType="secret" />
+ * <MountBackend::TypeForm @setMountType={{this.setMountType}} @mountCategory="secret" />
  * ```
  * @param {CallableFunction} setMountType - function will receive the mount type string. Should update the model type value
- * @param {string} [mountType=auth] - mount type can be `auth` or `secret`
+ * @param {string} [mountCategory=auth] - mount category type can be `auth` or `secret`
  */
 
 export default class MountBackendTypeForm extends Component {
@@ -27,13 +27,13 @@ export default class MountBackendTypeForm extends Component {
   get secretEngines() {
     // If an enterprise license is present, return all secret engines;
     // otherwise, return only the secret engines supported in OSS.
-    return filterEnginesByMountType({ mountGroup: 'secret', isEnterprise: this.version.isEnterprise });
+    return filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: this.version.isEnterprise });
   }
 
   get authMethods() {
     // If an enterprise license is present, return all auth methods;
     // otherwise, return only the auth methods supported in OSS.
-    return filterEnginesByMountType({ mountGroup: 'auth', isEnterprise: this.version.isEnterprise });
+    return filterEnginesByMountCategory({ mountCategory: 'auth', isEnterprise: this.version.isEnterprise });
   }
 
   get mountTypes() {
