@@ -62,7 +62,7 @@ module('Integration | Component | namespace-picker', function (hooks) {
 
   test('it focuses the search input field when the component is loaded', async function (assert) {
     await render(hbs`<NamespacePicker />`);
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(GENERAL.toggleInput('namespace-id'));
 
     // Verify that the search input field is focused
     const searchInput = find(NAMESPACE_PICKER_SELECTORS.searchInput);
@@ -75,7 +75,7 @@ module('Integration | Component | namespace-picker', function (hooks) {
 
   test('it filters namespace options based on search input', async function (assert) {
     await render(hbs`<NamespacePicker/>`);
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(GENERAL.toggleInput('namespace-id'));
 
     // Verify all namespaces are displayed initially
     await waitFor(NAMESPACE_PICKER_SELECTORS.link());
@@ -117,7 +117,7 @@ module('Integration | Component | namespace-picker', function (hooks) {
     });
 
     await render(hbs`<NamespacePicker />`);
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(GENERAL.toggleInput('namespace-id'));
 
     // Verify that the "Refresh List" button is visible
     assert.dom(GENERAL.button('Refresh list')).exists('Refresh List button is visible');
@@ -134,7 +134,7 @@ module('Integration | Component | namespace-picker', function (hooks) {
     });
 
     await render(hbs`<NamespacePicker />`);
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(GENERAL.toggleInput('namespace-id'));
 
     // Verify that the buttons are hidden
     assert.dom(GENERAL.button('Refresh list')).doesNotExist('Refresh List button is hidden');
@@ -148,7 +148,7 @@ module('Integration | Component | namespace-picker', function (hooks) {
     });
 
     await render(hbs`<NamespacePicker />`);
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(GENERAL.toggleInput('namespace-id'));
 
     // Verify that the buttons are hidden
     assert.dom(GENERAL.button('Refresh list')).doesNotExist('Refresh List button is hidden');
@@ -167,7 +167,7 @@ module('Integration | Component | namespace-picker', function (hooks) {
     });
 
     await render(hbs`<NamespacePicker />`);
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(GENERAL.toggleInput('namespace-id'));
 
     // Dynamically modify the `findNamespacesForUser.perform` method for this test
     const namespaceService = this.owner.lookup('service:namespace');
