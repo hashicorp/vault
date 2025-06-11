@@ -5,49 +5,21 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, fillIn, render, waitFor } from '@ember/test-helpers';
-import hbs from 'htmlbars-inline-precompile';
-import sinon from 'sinon';
+import { click, fillIn, waitFor } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { fillInLoginFields, SYS_INTERNAL_UI_MOUNTS } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CSP_ERROR } from 'vault/components/auth/page';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
+import { setupTestContext } from './page-test-helpers';
 
 module('Integration | Component | auth | page', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.version = this.owner.lookup('service:version');
-    this.cluster = { id: '1' };
-    this.directLinkData = null;
-    this.loginSettings = null;
-    this.namespaceQueryParam = '';
-    this.oidcProviderQueryParam = '';
-    this.onAuthSuccess = sinon.spy();
-    this.onNamespaceUpdate = sinon.spy();
-    this.visibleAuthMounts = false;
-
-    this.renderComponent = () => {
-      return render(hbs`
-        <Auth::Page
-          @cluster={{this.cluster}}
-          @directLinkData={{this.directLinkData}}
-          @loginSettings={{this.loginSettings}}
-          @namespaceQueryParam={{this.namespaceQueryParam}}
-          @oidcProviderQueryParam={{this.oidcProviderQueryParam}}
-          @onAuthSuccess={{this.onAuthSuccess}}
-          @onNamespaceUpdate={{this.onNamespaceUpdate}}
-          @visibleAuthMounts={{this.visibleAuthMounts}}
-        />
-        `);
-    };
-
-    // in the real world more info is returned by auth requests
-    // only including pertinent data for testing
-    this.authRequest = (url) => this.server.post(url, () => ({ auth: { policies: ['default'] } }));
+    setupTestContext(this);
   });
 
   test('it renders error on CSP violation', async function (assert) {
@@ -210,14 +182,11 @@ module('Integration | Component | auth | page', function (hooks) {
         assert.expect(1);
         this.directLinkData = this.directLinkIsVisibleMount;
         const authType = 'okta';
-        const { loginData, url } = REQUEST_DATA.username;
-        const requestUrl = url({ path: authType, username: loginData?.username });
-        this.server.post(requestUrl, () => setupTotpMfaResponse(authType));
-
+        this.server.post(`/auth/okta/login/matilda`, () => setupTotpMfaResponse(authType));
         await this.renderComponent();
         await click(AUTH_FORM.otherMethodsBtn);
         await fillIn(AUTH_FORM.selectMethod, authType);
-        await fillInLoginFields(loginData);
+        await fillInLoginFields({ username: 'matilda', password: 'password' });
         await click(AUTH_FORM.login);
         await waitFor('[data-test-mfa-description]'); // wait until MFA validation renders
         await click(GENERAL.backButton);
@@ -228,118 +197,15 @@ module('Integration | Component | auth | page', function (hooks) {
         assert.expect(1);
         this.directLinkData = this.directLinkIsJustType;
         const authType = 'userpass';
-        const { loginData, url } = REQUEST_DATA.username;
-        const requestUrl = url({ path: authType, username: loginData?.username });
-        this.server.post(requestUrl, () => setupTotpMfaResponse(authType));
+        this.server.post(`/auth/okta/login/matilda`, () => setupTotpMfaResponse(authType));
         await this.renderComponent();
         await fillIn(AUTH_FORM.selectMethod, authType);
-        await fillInLoginFields(loginData);
+        await fillInLoginFields({ username: 'matilda', password: 'password' });
         await click(AUTH_FORM.login);
         await click(GENERAL.backButton);
         assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
       });
     });
-  });
-
-  const REQUEST_DATA = {
-    username: {
-      loginData: { username: 'matilda', password: 'password' },
-      url: ({ path, username }) => `/auth/${path}/login/${username}`,
-    },
-    github: {
-      loginData: { token: 'mysupersecuretoken' },
-      url: ({ path }) => `/auth/${path}/login`,
-    },
-  };
-
-  // only testing methods that submit via AuthForm (and not separate, child component)
-  const AUTH_METHOD_TEST_CASES = [
-    { authType: 'github', options: REQUEST_DATA.github },
-    { authType: 'userpass', options: REQUEST_DATA.username },
-    { authType: 'ldap', options: REQUEST_DATA.username },
-    { authType: 'okta', options: REQUEST_DATA.username },
-    { authType: 'radius', options: REQUEST_DATA.username },
-  ];
-
-  for (const { authType, options } of AUTH_METHOD_TEST_CASES) {
-    test(`${authType}: it calls onAuthSuccess on submit for default path`, async function (assert) {
-      assert.expect(1);
-      const { loginData, url } = options;
-      const requestUrl = url({ path: authType, username: loginData?.username });
-      this.authRequest(requestUrl);
-
-      await this.renderComponent();
-      await fillIn(AUTH_FORM.selectMethod, authType);
-      await fillInLoginFields(loginData);
-      await click(AUTH_FORM.login);
-      const [actual] = this.onAuthSuccess.lastCall.args;
-      const expected = {
-        namespace: '',
-        token: `vault-${authType}☃1`,
-        isRoot: false,
-      };
-      assert.propEqual(actual, expected, `onAuthSuccess called with: ${JSON.stringify(actual)}`);
-    });
-
-    test(`${authType}: it calls onAuthSuccess on submit for custom path`, async function (assert) {
-      assert.expect(1);
-      const customPath = `${authType}-custom`;
-      const { loginData, url } = options;
-      const loginDataWithPath = { ...loginData, path: customPath };
-      // pass custom path to request URL
-      const requestUrl = url({ path: customPath, username: loginData?.username });
-      this.authRequest(requestUrl);
-
-      await this.renderComponent();
-      await fillIn(AUTH_FORM.selectMethod, authType);
-      // await fillIn(AUTH_FORM.selectMethod, authType);
-      // toggle mount path input to specify custom path
-      await fillInLoginFields(loginDataWithPath, { toggleOptions: true });
-      await click(AUTH_FORM.login);
-
-      const [actual] = this.onAuthSuccess.lastCall.args;
-      const expected = {
-        namespace: '',
-        token: `vault-${authType}☃1`,
-        isRoot: false,
-      };
-      assert.propEqual(actual, expected, `onAuthSuccess called with: ${JSON.stringify(actual)}`);
-    });
-
-    test('it preselects auth type from canceled mfa', async function (assert) {
-      assert.expect(1);
-      const { loginData, url } = options;
-      const requestUrl = url({ path: authType, username: loginData?.username });
-      this.server.post(requestUrl, () => setupTotpMfaResponse(authType));
-
-      await this.renderComponent();
-      await fillIn(AUTH_FORM.selectMethod, authType);
-      await fillInLoginFields(loginData);
-      await click(AUTH_FORM.login);
-      await click(GENERAL.backButton);
-      assert.dom(AUTH_FORM.selectMethod).hasValue(authType, `${authType} is selected in dropdown`);
-    });
-  }
-
-  // token makes a GET request so test separately
-  test('token: it calls onAuthSuccess on submit', async function (assert) {
-    assert.expect(1);
-    this.server.get('/auth/token/lookup-self', () => {
-      return { data: { policies: ['default'] } };
-    });
-
-    await this.renderComponent();
-    await fillIn(AUTH_FORM.selectMethod, 'token');
-    // await fillIn(AUTH_FORM.selectMethod, 'token');
-    await fillInLoginFields({ token: 'mysupersecuretoken' });
-    await click(AUTH_FORM.login);
-    const [actual] = this.onAuthSuccess.lastCall.args;
-    const expected = {
-      namespace: '',
-      token: `vault-token☃1`,
-      isRoot: false,
-    };
-    assert.propEqual(actual, expected, `onAuthSuccess called with: ${JSON.stringify(actual)}`);
   });
 
   /* 

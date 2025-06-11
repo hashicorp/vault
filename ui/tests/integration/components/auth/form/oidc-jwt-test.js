@@ -16,7 +16,7 @@ import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import * as parseURL from 'core/utils/parse-url';
 import sinon from 'sinon';
-import testHelper from './test-helper';
+import testHelper from './auth-form-test-helper';
 
 /* 
 The OIDC and JWT mounts call the same endpoint (see docs https://developer.hashicorp.com/vault/docs/auth/jwt )
