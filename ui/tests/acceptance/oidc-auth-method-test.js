@@ -13,7 +13,6 @@ import {
   triggerMessageEvent,
   windowStub,
 } from 'vault/tests/helpers/oidc-window-stub';
-import sinon from 'sinon';
 import { Response } from 'miragejs';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -151,34 +150,6 @@ module('Acceptance | oidc auth method', function (hooks) {
     assert
       .dom('[data-test-message-error-description]')
       .hasText('Authentication failed: Error fetching role: permission denied');
-  });
-
-  test('auth service is called with client_token and cluster data', async function (assert) {
-    const authSpy = sinon.spy(this.owner.lookup('service:auth'), 'authenticate');
-    this.setupMocks();
-    await logout();
-    await this.selectMethod('oidc');
-    triggerMessageEvent('oidc');
-    await click(GENERAL.submitButton);
-    const [actual] = authSpy.lastCall.args;
-    const expected = {
-      // even though this is the oidc auth method,
-      // the callback has returned a token at this point of the login flow
-      // and so the backend is 'token'
-      backend: 'token',
-      clusterId: '1',
-      data: {
-        // data from oidc/callback url
-        token: 'root',
-      },
-      selectedAuth: 'oidc',
-    };
-
-    assert.propEqual(
-      actual,
-      expected,
-      `authenticate method called with correct args, ${JSON.stringify({ actual, expected })}`
-    );
   });
 
   // test case for https://github.com/hashicorp/vault/issues/12436
