@@ -171,6 +171,13 @@ export default class ShowcaseController extends Controller {
           errors: ['This is the validation error message #1', 'This is the validation error message #2'],
         };
       }
+    } else if (editType === 'input') {
+      if (variant === 'with validation errors') {
+        modelValidations.input = {
+          isValid: false,
+          errors: ['This is the validation error message #1', 'This is the validation error message #2'],
+        };
+      }
     } else if (editType === 'file') {
       if (variant === 'with validation errors') {
         // NOTICE! this generates a double error message, it's a bug in the code (error is already output by the `FormField`, see line 374, but is also output by `TextFile` via the argument `@validationError`)
