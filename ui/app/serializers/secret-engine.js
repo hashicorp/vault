@@ -5,7 +5,7 @@
 
 import ApplicationSerializer from './application';
 import { EmbeddedRecordsMixin } from '@ember-data/serializer/rest';
-import { WIF_ENGINES } from 'vault/helpers/mountable-secret-engines';
+import { WIF_ENGINES } from 'vault/utils/all-engines-metadata';
 
 export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
   attrs: {

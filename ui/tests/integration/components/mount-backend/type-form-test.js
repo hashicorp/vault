@@ -8,13 +8,16 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
-import { allEngines, mountableEngines } from 'vault/helpers/mountable-secret-engines';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 import { filterEnginesByMountType } from 'vault/utils/all-engines-metadata';
 
-const secretTypes = mountableEngines().map((engine) => engine.type);
-const allSecretTypes = allEngines().map((engine) => engine.type);
+const secretTypes = filterEnginesByMountType({ mountGroup: 'secret', isEnterprise: false }).map(
+  (engine) => engine.type
+);
+const allSecretTypes = filterEnginesByMountType({ mountGroup: 'secret', isEnterprise: true }).map(
+  (engine) => engine.type
+);
 const authTypes = filterEnginesByMountType({ mountGroup: 'auth', isEnterprise: false })
   .filter((engine) => engine.type !== 'token')
   .map((auth) => auth.type);

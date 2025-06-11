@@ -9,8 +9,7 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import { isAddonEngine } from 'vault/helpers/mountable-secret-engines';
-import { filterEnginesByMountType } from 'vault/utils/all-engines-metadata';
+import { filterEnginesByMountType, isAddonEngine } from 'vault/utils/all-engines-metadata';
 import { debug } from '@ember/debug';
 
 import type FlashMessageService from 'vault/services/flash-messages';
