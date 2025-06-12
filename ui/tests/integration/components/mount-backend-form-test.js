@@ -140,10 +140,10 @@ module('Integration | Component | mount backend form', function (hooks) {
     test('it renders secret engine specific headers', async function (assert) {
       assert.expect(17);
       await render(
-        hbs`<MountBackendForm  @mountCategory="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+        hbs`<MountBackendForm @mountCategory="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       assert.dom(GENERAL.title).hasText('Enable a Secrets Engine', 'renders secrets header');
-      for (const method of filterEnginesByMountCategory({ mountGroup: 'secret', isEnterprise: false })) {
+      for (const method of filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: false })) {
         assert
           .dom(MOUNT_BACKEND_FORM.mountType(method.type))
           .hasText(method.displayName, `renders type:${method.displayName} picker`);
@@ -217,7 +217,7 @@ module('Integration | Component | mount backend form', function (hooks) {
           await click(GENERAL.backButton);
         }
         for (const engine of filterEnginesByMountCategory({
-          mountGroup: 'secret',
+          mountCategory: 'secret',
           isEnterprise: false,
         }).filter((e) => !WIF_ENGINES.includes(e.type))) {
           // check non-wif engine

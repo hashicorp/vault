@@ -203,8 +203,8 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
   test('it should transition to mountable addon engine after mount success', async function (assert) {
     // test supported backends that ARE ember engines (enterprise only engines are tested individually)
-    const addons = filterEnginesByMountCategory({ mountGroup: 'secret', isEnterprise: false }).filter((e) =>
-      BACKENDS_WITH_ENGINES.includes(e.type)
+    const addons = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: false }).filter(
+      (e) => BACKENDS_WITH_ENGINES.includes(e.type)
     );
     assert.expect(addons.length);
 
@@ -232,7 +232,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     // test supported backends that are not ember engines (enterprise only engines are tested individually)
     const nonEngineBackends = supportedSecretBackends().filter((b) => !BACKENDS_WITH_ENGINES.includes(b));
     // add back kv because we want to test v1
-    const engines = filterEnginesByMountCategory({ mountGroup: 'secret', isEnterprise: false }).filter(
+    const engines = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: false }).filter(
       (e) => nonEngineBackends.includes(e.type) || e.type === 'kv'
     );
     assert.expect(engines.length);
@@ -266,7 +266,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
   });
 
   test('it should transition back to backend list for unsupported backends', async function (assert) {
-    const unsupported = filterEnginesByMountCategory({ mountGroup: 'secret', isEnterprise: false }).filter(
+    const unsupported = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: false }).filter(
       (e) => !supportedSecretBackends().includes(e.type)
     );
     assert.expect(unsupported.length);
