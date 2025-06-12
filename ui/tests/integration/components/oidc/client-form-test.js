@@ -15,6 +15,7 @@ import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
 import { OIDC_BASE_URL, SELECTORS } from 'vault/tests/helpers/oidc-config';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const searchSelect = create(ss);
 
@@ -101,10 +102,12 @@ module('Integration | Component | oidc/client-form', function (hooks) {
 
     const validationErrors = findAll(SELECTORS.inlineAlert);
     assert
-      .dom(validationErrors[0])
+      .dom(GENERAL.validationErrorByAttr('name'))
       .hasText('Name is required. Name cannot contain whitespace.', 'Validation messages are shown for name');
-    assert.dom(validationErrors[1]).hasText('Key is required.', 'Validation message is shown for key');
-    assert.dom(validationErrors[2]).hasText('There are 3 errors with this form.', 'Renders form error count');
+    assert
+      .dom(GENERAL.validationErrorByAttr('key'))
+      .hasText('Key is required.', 'Validation message is shown for key');
+    assert.dom(validationErrors[1]).hasText('There are 3 errors with this form.', 'Renders form error count');
 
     // fill out form with valid inputs
     await clickTrigger();
