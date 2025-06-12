@@ -9,6 +9,6 @@ fail() {
   exit 1
 }
 
-sudo dnf install -y docker
-sudo systemctl enable --now docker
-docker version
+#sudo dnf install -y docker
+#sudo systemctl enable --now docker
+#docker version

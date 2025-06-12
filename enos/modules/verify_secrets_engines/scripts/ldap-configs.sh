@@ -51,7 +51,7 @@ export VAULT_FORMAT=json
 install_ldap_tools > /dev/null 2>&1
 
 echo "OpenLDAP: Checking for OpenLDAP Server Connection: ${LDAP_HOST}:${LDAP_PORT}"
-ldapsearch -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" -b "dc=${LDAP_USERNAME},dc=com" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w ${LDAP_ADMIN_PW}
+ldapsearch -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" -b "dc=${LDAP_USERNAME},dc=com" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}"
 
 # Creating Users Org Unit LDIF file and adding users organizational unit
 echo "OpenLDAP: Creating Users Org Unit LDIF file and adding users organizational unit"
@@ -61,7 +61,7 @@ dn: ou=users,dc=$LDAP_USERNAME,dc=com
 objectClass: organizationalUnit
 ou: users
 EOF
-ldapadd -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w ${LDAP_ADMIN_PW} -f ${GROUP_LDIF}
+ldapadd -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}" -f ${GROUP_LDIF}
 
 echo "OpenLDAP: Creating User LDIF file and adding user to LDAP"
 USER_LDIF="user.ldif"
@@ -73,10 +73,10 @@ cn: $LDAP_USERNAME user
 uid: $LDAP_USERNAME
 userPassword: $LDAP_ADMIN_PW
 EOF
-ldapadd -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w ${LDAP_ADMIN_PW} -f ${USER_LDIF}
+ldapadd -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}" -f ${USER_LDIF}
 
 echo "Vault: Creating ldap auth and creating auth/ldap/config route"
-"$binpath" auth enable ${MOUNT} > /dev/null 2>&1 || echo "Warning: Vault ldap auth already enabled"
+"$binpath" auth enable "${MOUNT}" > /dev/null 2>&1 || echo "Warning: Vault ldap auth already enabled"
 "$binpath" write "auth/${MOUNT}/config" \
   url="ldap://${LDAP_HOST}:${LDAP_PORT}" \
   binddn="cn=admin,dc=${LDAP_USERNAME},dc=com" \
