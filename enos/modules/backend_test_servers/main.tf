@@ -28,6 +28,17 @@ output "state" {
 }
 
 # Creating OpenLDAP Server
+resource "enos_remote_exec" "setup_docker" {
+  scripts = [abspath("${path.module}/scripts/setup_docker.sh")]
+
+  transport = {
+    ssh = {
+      host = local.ldap_server.ip_address
+    }
+  }
+}
+
+# Creating OpenLDAP Server
 resource "enos_remote_exec" "create_openldap" {
   environment = {
     LDAP_DOMAIN   = local.ldap_server.domain
