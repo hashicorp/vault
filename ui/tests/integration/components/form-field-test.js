@@ -1086,7 +1086,7 @@ module('Integration | Component | form field', function (hooks) {
     assert.dom(GENERAL.inputByAttr('myfield')).isChecked('input[type="checkbox"] is checked');
     await click(GENERAL.inputByAttr('myfield'));
     assert.false(model.get('myfield'));
-    assert.ok(spy.calledWith('myfield', false), 'onChange called with correct args');
+    assert.true(spy.calledWith('myfield', false), 'onChange called with correct args');
   });
 
   test('it renders: editType=boolean - with passed label, subtext, helptext, doclink', async function (assert) {
