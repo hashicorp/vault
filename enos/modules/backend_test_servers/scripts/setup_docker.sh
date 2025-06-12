@@ -4,6 +4,14 @@
 
 set -e
 
+# Function to check if Docker is already installed
+check_docker_installed() {
+  if command -v docker &> /dev/null; then
+    echo "Docker is already installed: $(docker --version)"
+    exit 0
+  fi
+}
+
 # Function to detect the OS
 detect_os() {
   if [ -f /etc/os-release ]; then
@@ -15,6 +23,8 @@ detect_os() {
 }
 
 # Main logic
+check_docker_installed
+
 echo "Installing Docker..."
 os_id=$(detect_os)
 case "$os_id" in
