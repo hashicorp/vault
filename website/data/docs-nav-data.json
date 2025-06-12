@@ -288,10 +288,8 @@
     ]
   },
 
-
   { "divider": true },
   { "heading": "OPERATIONS" },
-
 
   {
     "title": "Get Vault",
@@ -393,7 +391,25 @@
       },
       {
         "title": "Create a lease count quota",
+        "badge": {
+          "text": "ENT",
+          "type": "filled",
+          "color": "neutral"
+        },
         "path": "configuration/create-lease-count-quota"
+      },
+      {
+        "title": "Create a rate limit quota",
+        "path": "configuration/create-rate-limit-quota"
+      },
+      {
+        "title": "Rate limit quotas group_by modes",
+        "badge": {
+          "text": "ENT",
+          "type": "filled",
+          "color": "neutral"
+        },
+        "path": "configuration/identity-based-rate-limit"
       },
       {
         "title": "Configure completed request logging",
@@ -2638,7 +2654,7 @@
       },
       {
         "title": "Rollback upgrades",
-        "path" : "plugins/rollback"
+        "path": "plugins/rollback"
       },
       {
         "title": "Plugin development",
