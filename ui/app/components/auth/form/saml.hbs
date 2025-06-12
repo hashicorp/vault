@@ -18,14 +18,7 @@
 
       {{yield to="advancedSettings"}}
 
-      <Hds::Button
-        @icon={{if this.tasksAreRunning "loading"}}
-        @isFullWidth={{true}}
-        @text="Sign in with SAML provider"
-        class="has-top-margin-xl has-bottom-margin-xl"
-        type="submit"
-        data-test-submit
-      />
+      <Auth::SignInButton @text="Sign in with SAML provider" @icon={{if this.tasksAreRunning "loading"}} />
 
     {{else}}
       <Hds::Alert @type="inline" @color="warning" data-test-saml-auth-not-allowed class="has-bottom-margin-m" as |A|>
