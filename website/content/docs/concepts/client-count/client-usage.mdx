@@ -29,15 +29,15 @@ need to enable usage data collection since it is disabled by default.
 
 1. Select **Edit configuration**.
 
-   ![Edit configuration](/img/ui-client-usage-config.png)
+   ![Edit configuration button location emphasized](/img/ui-client-usage-config.png)
 
 1. Select the toggle for **Usage data collection** so that the text reads **Data
-   collection  is on**.
+   collection is on**.
 
    <Tip title="Retention period">
 
-    The retention period sets the number of months for which Vault will maintain
-    activity logs to track active clients. (Default: 48 months)
+   The retention period sets the number of months for which Vault will maintain
+   activity logs to track active clients. (Default: 48 months)
 
     </Tip>
 
@@ -56,7 +56,7 @@ Valid values for `enabled` parameter are: `default`, `enable`, and `disable`.
 
 <Tip title="Retention period">
 
- By default, Vault maintains activity logs to track
+By default, Vault maintains activity logs to track
 active clients for 24 months. If you wish to change the retention period, use
 the `retention_months` parameter.
 
@@ -84,7 +84,7 @@ Valid values for `enabled` parameter are: `default`, `enable`, and `disable`.
 
 <Tip title="Retention period">
 
- By default, Vault maintains activity logs to track
+By default, Vault maintains activity logs to track
 active clients for 24 months. If you wish to change the retention period, use
 the `retention_months` parameter.
 
@@ -147,35 +147,35 @@ $ curl --header "X-Vault-Token: <TOKEN>" \
   [documentation](/vault/docs/concepts/client-count#entity-assignment-with-acme)
   for more details.
 
-    ![ACME clients example](/img/ui-client-usage-acme.png)
-
+  ![view with ACME clients tab view selected](/img/ui-client-usage-acme.png)
 
 ## Select a data range
 
 For Vault Enterprise, under the **Change billing period**, select **Billing start date** to query the data for
 a different billing period.
 
-![Query](/img/ui-client-usage-period-enterprise.png)
+![Example of Enterprise date picker dropdown options](/img/ui-client-usage-period-enterprise.png)
 
 For Vault Community, under the **Client counting period**, select **Edit** to query the data for
 a different billing period.
-![Query](/img/ui-client-usage-period-ce.png)
+![Example of Community date picker modal](/img/ui-client-usage-period-ce.png)
 
 Keep in mind that Vault begins collecting data when the feature is enabled. For
 example, if you enabled the usage metrics in March of 2023, you cannot query
 data in January of 2023.
 
-Vault will return metrics from March of 2023 through most recent full month. 
+Vault will return metrics from March of 2023 through most recent full month.
 
 ## Filter by namespaces
 
 Use the **Filters** to view the metrics data of a specific namespace.
 
-![Filter by namespace](/img/ui-client-usage-filter.png)
+![Filter by namespace input field emphasized](/img/ui-client-usage-filter.png)
 
 ## Filter by month
-Use the **Client attribution table** to view the metrics data of a specific month. 
-![Filter by namespace](/img/ui-client-usage-table.png)
+
+Use the **Client attribution table** to view the metrics data of a specific month.
+![Month filter and table view for client attribution](/img/ui-client-usage-table.png)
 
 ## Query usage metrics via CLI
 
@@ -244,7 +244,7 @@ time.
 ```shell-session
 $ vault operator usage \
      -start-time=2024-06-01T00:00:00Z \
-     -end-time=2024-06-30T23:59:59Z 
+     -end-time=2024-06-30T23:59:59Z
 ```
 
 **Example output:**
@@ -273,19 +273,17 @@ Total                                                 90               92       
 
 </CodeBlockConfig>
 
-
 ## Export the metrics data
 
 You can export the metrics data by clicking on the **Export attribution data**
 button.
 
-![Metrics UI](/img/ui-client-usage-export.png)
+![Export button popup modal emphasized](/img/ui-client-usage-export.png)
 
 This downloads the usage metrics data on your local drive in comma separated
 values format (`.csv`) or JSON.
 
-
-## API 
+## API
 
 - Refer to the
   [`sys/internal/counters`](/vault/api-docs/system/internal-counters#client-count)
