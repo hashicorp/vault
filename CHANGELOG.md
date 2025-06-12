@@ -29,8 +29,7 @@ CHANGES:
 * auth/kubernetes: Update plugin to v0.22.1 [[GH-30910](https://github.com/hashicorp/vault/pull/30910)]
 * auth/oci: Update plugin to v0.19.0 [[GH-30841](https://github.com/hashicorp/vault/pull/30841)]
 * auth/saml: Update plugin to v0.6.0
-* core: Bump Go version to 1.23.8
-* core: Bump Go version to 1.24.4.
+* core: Bump Go version to 1.24.4
 * core: Verify that the client IP address extracted from an X-Forwarded-For header is a valid IPv4 or IPv6 address [[GH-29774](https://github.com/hashicorp/vault/pull/29774)]
 * database/couchbase: Update plugin to v0.14.0 [[GH-30836](https://github.com/hashicorp/vault/pull/30836)]
 * database/elasticsearch: Update plugin to v0.18.0 [[GH-30796](https://github.com/hashicorp/vault/pull/30796)]
@@ -72,7 +71,7 @@ The field is configurable via HCL and indicates whether the cluster is being use
 * **Secret Recovery from Snapshot (Enterprise)**: Adds a framework to load an integrated storage snapshot into Vault and read, list, and recover KV v1 and cubbyhole secrets from the snapshot.
 * **SSH Key Signing Improvements (Enterprise)**: Add support for using managed keys to sign SSH keys in the SSH secrets engine.
 * **UI Secrets Engines**: TOTP secrets engine is now supported. [[GH-29751](https://github.com/hashicorp/vault/pull/29751)]
-* **UI Telemetry**: add Posthog for UI telemetry tracking on HVD managed clusters [[GH-30425](https://github.com/hashicorp/vault/pull/30425)]
+* **UI Telemetry**: add Posthog for UI telemetry tracking on HashiCorp Cloud-managed clusters [[GH-30425](https://github.com/hashicorp/vault/pull/30425)]
 * **Vault Namespace Picker**: Updating the Vault Namespace Picker to enable search functionality, allow direct navigation to nested namespaces and improve accessibility. [[GH-30490](https://github.com/hashicorp/vault/pull/30490)]
 * **Vault PKI SCEP Server (Enterprise)**: Support for the Simple Certificate Enrollment Protocol (SCEP) has been added to the Vault PKI Plugin. This allows standard SCEP clients to request certificates from a Vault server with no knowledge of Vault APIs.
 
