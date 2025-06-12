@@ -167,9 +167,9 @@ resource "aws_security_group" "target" {
   }
 
   ingress {
-    from_port   = 389
-    to_port     = 389
-    protocol    = "tcp"
+    from_port = 389
+    to_port   = 389
+    protocol  = "tcp"
     cidr_blocks = [
       "0.0.0.0/0"
     ]
