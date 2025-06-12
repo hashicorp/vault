@@ -2,7 +2,6 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-
 set -e
 
 fail() {
@@ -13,4 +12,3 @@ fail() {
 sudo dnf install -y docker
 sudo systemctl enable --now docker
 docker version
-
