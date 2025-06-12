@@ -35,7 +35,9 @@ module('Integration | Component | SecretEngine::ConfigurationDetails', function 
       .hasText(`Get started by configuring your Display Name secrets engine.`);
   });
 
-  for (const type of ALL_ENGINES.filter((engine) => engine.isConfigurable).map((engine) => engine.type)) {
+  for (const type of ALL_ENGINES.filter((engine) => engine.isConfigurable ?? false).map(
+    (engine) => engine.type
+  )) {
     test(`${type}: it shows config details if configModel(s) are passed in`, async function (assert) {
       const backend = `test-${type}`;
       this.configModels = createConfig(this.store, backend, type);

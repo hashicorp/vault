@@ -41,7 +41,7 @@ export default class SecretsBackendConfigurationRoute extends Route {
       }
     }
     // If the engine is configurable fetch the config model(s) for the engine and return it alongside the model
-    if (engineDisplayData(secretEngineModel.type).isConfigurable) {
+    if (engineDisplayData(secretEngineModel.type).isConfigurable ?? false) {
       let configModels = await this.fetchConfig(secretEngineModel.type, secretEngineModel.id);
       configModels = this.standardizeConfigModels(configModels);
 
@@ -177,7 +177,7 @@ export default class SecretsBackendConfigurationRoute extends Route {
     super.setupController(controller, resolvedModel);
     const engine = engineDisplayData(resolvedModel.secretEngineModel.type);
     controller.typeDisplay = engine.displayName;
-    controller.isConfigurable = engine.isConfigurable;
+    controller.isConfigurable = engine.isConfigurable ?? false;
     controller.modelId = resolvedModel.secretEngineModel.id;
   }
 }

@@ -17,7 +17,7 @@ import { ALL_ENGINES, filterEnginesByMountCategory } from 'vault/utils/all-engin
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
-const WIF_ENGINES = ALL_ENGINES.filter((e) => e.isWIF).map((e) => e.type);
+const WIF_ENGINES = ALL_ENGINES.filter((e) => e.isWIF ?? false).map((e) => e.type);
 
 module('Integration | Component | mount backend form', function (hooks) {
   setupRenderingTest(hooks);
@@ -235,7 +235,7 @@ module('Integration | Component | mount backend form', function (hooks) {
         }
       });
 
-      test('it updates identityTokeKey if user has changed it', async function (assert) {
+      test('it updates identityTokenKey if user has changed it', async function (assert) {
         await render(
           hbs`<MountBackendForm @mountCategory="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
         );

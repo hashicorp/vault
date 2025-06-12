@@ -45,7 +45,7 @@ export default class SecretsBackendConfigurationEdit extends Route {
     const type = secretEngineRecord.type;
 
     // if the engine type is not configurable, return a 404.
-    if (!secretEngineRecord || !engineDisplayData(type)?.isConfigurable) {
+    if (!secretEngineRecord || !(engineDisplayData(type)?.isConfigurable ?? false)) {
       const error = new AdapterError();
       set(error, 'httpStatus', 404);
       throw error;
@@ -93,7 +93,7 @@ export default class SecretsBackendConfigurationEdit extends Route {
     }
     // if the type is a WIF engine and it's enterprise, we also fetch the issuer
     // from a global endpoint which has no associated model/adapter
-    if (engineDisplayData(type)?.isWIF && this.version.isEnterprise) {
+    if ((engineDisplayData(type)?.isWIF ?? false) && this.version.isEnterprise) {
       try {
         const response = await this.store.queryRecord('identity/oidc/config', {});
         model['identity-oidc-config'] = response;
