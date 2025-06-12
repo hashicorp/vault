@@ -50,7 +50,7 @@ module('Acceptance | Create aliases for groups and entities', function (hooks) {
 
   for (const itemType of ['groups', 'entities']) {
     test(`${itemType}: it allows create, list, delete of an entity alias`, async function (assert) {
-      const name = `alias-${uuidv4()}`;
+      const name = `${itemType}-${uuidv4()}`;
       const itemGeneratedId = await createEntityOrGroup(itemType, name);
 
       assert.true(
@@ -86,7 +86,7 @@ module('Acceptance | Create aliases for groups and entities', function (hooks) {
     });
 
     test(`${itemType}: it allows delete from the edit form`, async function (assert) {
-      const name = `alias-${uuidv4()}`;
+      const name = `${itemType}-${uuidv4()}`;
       const itemGeneratedId = await createEntityOrGroup(itemType, name);
       const aliasGeneratedId = await createAlias(itemType, itemGeneratedId, name);
 
@@ -105,6 +105,23 @@ module('Acceptance | Create aliases for groups and entities', function (hooks) {
         `/vault/access/identity/${itemType}/aliases`,
         `${itemType}: navigates to the list page after deletion`
       );
+    });
+
+    test(`${itemType}: it allows you to delete the ${itemType} from the list view`, async function (assert) {
+      const name = `${itemType}-${uuidv4()}`;
+      await createEntityOrGroup(itemType, name);
+      await visit(`/vault/access/identity/${itemType}`);
+
+      const rowSelector = `[data-test-identity-row="${name}"]`;
+      const menuTriggerSelector = `${rowSelector} ${GENERAL.menuTrigger}`;
+
+      assert.dom(rowSelector).exists(`${itemType}: is in the list view`);
+
+      await click(menuTriggerSelector);
+      await click(GENERAL.menuItem('delete'));
+      await click(GENERAL.confirmButton);
+
+      assert.dom(rowSelector).doesNotExist(`${itemType}: is NOT in the list view`);
     });
   }
 });
