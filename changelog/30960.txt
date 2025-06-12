@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix initial setting of form toggle inputs for parameters nested within the `config` block
+```
