@@ -133,7 +133,7 @@ performance replication secondary cluster can trigger duplicate password changes
 This occurs because the LDAP client on the local node successfully modifies the password before Vault 
 forwards the check-in request to the active node, which then performs a second password update. 
 While users still receive the latest password, it may lead to unexpected LDAP activity and cause 
-confusing interpreting audit logs.
+confusion interpreting audit logs.
 
 ### Recommendation:
 
