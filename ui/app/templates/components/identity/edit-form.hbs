@@ -67,8 +67,7 @@
           @text={{if (eq this.mode "create") "Create" "Save"}}
           @icon={{if this.save.isRunning "loading"}}
           type="submit"
-          data-test-identity-submit
-          disabled={{this.save.isRunning}}
+          data-test-submit
         />
         {{#if (or (eq this.mode "merge") (eq this.mode "create"))}}
           <Hds::Button @text="Cancel" @color="secondary" @route={{this.cancelLink}} data-test-cancel-link />
