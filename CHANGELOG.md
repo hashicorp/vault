@@ -3,6 +3,170 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 1.20.0-rc1
+### June 11, 2025
+
+SECURITY:
+
+* core: require a nonce when cancelling a rekey operation that was initiated within the last 10 minutes. [[GH-30794](https://github.com/hashicorp/vault/pull/30794)]
+
+CHANGES:
+
+* UI: remove outdated and unneeded js string extensions [[GH-29834](https://github.com/hashicorp/vault/pull/29834)]
+* activity (enterprise): The sys/internal/counters/activity endpoint will return actual values for new clients in the current month.
+* activity (enterprise): provided values for `start_time` and `end_time` in `sys/internal/counters/activity` are aligned to the corresponding billing period.
+* activity: provided value for `end_time` in `sys/internal/counters/activity` is now capped at the end of the last completed month. [[GH-30164](https://github.com/hashicorp/vault/pull/30164)]
+* auth/alicloud: Update plugin to v0.21.0 [[GH-30810](https://github.com/hashicorp/vault/pull/30810)]
+* auth/azure: Update plugin to v0.20.2. Login requires `resource_group_name`, `vm_name`, and `vmss_name` to match token claims [[GH-30052](https://github.com/hashicorp/vault/pull/30052)]
+* auth/azure: Update plugin to v0.20.3 [[GH-30082](https://github.com/hashicorp/vault/pull/30082)]
+* auth/azure: Update plugin to v0.20.4 [[GH-30543](https://github.com/hashicorp/vault/pull/30543)]
+* auth/cf: Update plugin to v0.20.1 [[GH-30583](https://github.com/hashicorp/vault/pull/30583)]
+* auth/cf: Update plugin to v0.21.0 [[GH-30842](https://github.com/hashicorp/vault/pull/30842)]
+* auth/gcp: Update plugin to v0.20.2 [[GH-30081](https://github.com/hashicorp/vault/pull/30081)]
+* auth/jwt: Update plugin to v0.23.2 [[GH-30431](https://github.com/hashicorp/vault/pull/30431)]
+* auth/jwt: Update plugin to v0.24.1 [[GH-30876](https://github.com/hashicorp/vault/pull/30876)]
+* auth/kerberos: Update plugin to v0.15.0 [[GH-30845](https://github.com/hashicorp/vault/pull/30845)]
+* auth/kubernetes: Update plugin to v0.22.1 [[GH-30910](https://github.com/hashicorp/vault/pull/30910)]
+* auth/oci: Update plugin to v0.19.0 [[GH-30841](https://github.com/hashicorp/vault/pull/30841)]
+* auth/saml: Update plugin to v0.6.0
+* core: Bump Go version to 1.23.8
+* core: Bump Go version to 1.24.4.
+* core: Verify that the client IP address extracted from an X-Forwarded-For header is a valid IPv4 or IPv6 address [[GH-29774](https://github.com/hashicorp/vault/pull/29774)]
+* database/couchbase: Update plugin to v0.14.0 [[GH-30836](https://github.com/hashicorp/vault/pull/30836)]
+* database/elasticsearch: Update plugin to v0.18.0 [[GH-30796](https://github.com/hashicorp/vault/pull/30796)]
+* database/mongodbatlas: Update plugin to v0.15.0 [[GH-30856](https://github.com/hashicorp/vault/pull/30856)]
+* database/redis-elasticache: Update plugin to v0.7.0 [[GH-30785](https://github.com/hashicorp/vault/pull/30785)]
+* database/redis: Update plugin to v0.6.0 [[GH-30797](https://github.com/hashicorp/vault/pull/30797)]
+* database/snowflake: Update plugin to v0.14.0 [[GH-30748](https://github.com/hashicorp/vault/pull/30748)]
+* secrets/ad: Update plugin to v0.21.0 [[GH-30819](https://github.com/hashicorp/vault/pull/30819)]
+* secrets/alicloud: Update plugin to v0.20.0 [[GH-30809](https://github.com/hashicorp/vault/pull/30809)]
+* secrets/azure: Update plugin to v0.21.2 [[GH-30037](https://github.com/hashicorp/vault/pull/30037)]
+* secrets/azure: Update plugin to v0.21.3 [[GH-30083](https://github.com/hashicorp/vault/pull/30083)]
+* secrets/azure: Update plugin to v0.22.0 [[GH-30832](https://github.com/hashicorp/vault/pull/30832)]
+* secrets/gcp: Update plugin to v0.21.2 [[GH-29970](https://github.com/hashicorp/vault/pull/29970)]
+* secrets/gcp: Update plugin to v0.21.3 [[GH-30080](https://github.com/hashicorp/vault/pull/30080)]
+* secrets/gcp: Update plugin to v0.22.0 [[GH-30846](https://github.com/hashicorp/vault/pull/30846)]
+* secrets/gcpkms: Update plugin to v0.21.0 [[GH-30835](https://github.com/hashicorp/vault/pull/30835)]
+* secrets/kubernetes: Update plugin to v0.11.0 [[GH-30855](https://github.com/hashicorp/vault/pull/30855)]
+* secrets/kv: Update plugin to v0.24.0 [[GH-30826](https://github.com/hashicorp/vault/pull/30826)]
+* secrets/openldap: Update plugin to v0.15.2 [[GH-30079](https://github.com/hashicorp/vault/pull/30079)]
+* secrets/openldap: Update plugin to v0.15.4 [[GH-30279](https://github.com/hashicorp/vault/pull/30279)]
+* secrets/openldap: Update plugin to v0.16.0 [[GH-30844](https://github.com/hashicorp/vault/pull/30844)]
+* server: disable_mlock configuration option is now required for integrated storage and no longer has a default. If you are using the default value with integrated storage, you must now explicitly set disable_mlock to true or false or Vault server will fail to start. [[GH-29974](https://github.com/hashicorp/vault/pull/29974)]
+* ui/activity: Replaces mount and namespace attribution charts with a table to allow sorting 
+client count data by `namespace`, `mount_path`, `mount_type` or number of clients for 
+a selected month. [[GH-30678](https://github.com/hashicorp/vault/pull/30678)]
+* ui: Client count side nav link 'Vault Usage Metrics' renamed to 'Client Usage' [[GH-30765](https://github.com/hashicorp/vault/pull/30765)]
+* ui: Client counting "running total" charts now reflect new clients only [[GH-30506](https://github.com/hashicorp/vault/pull/30506)]
+* ui: Removed `FormError` component (not used) [[GH-34699](https://github.com/hashicorp/vault/pull/34699)]
+* ui: Selecting a different method in the login form no longer updates the `/vault/auth?with=` query parameter [[GH-30500](https://github.com/hashicorp/vault/pull/30500)]
+* ui: `/vault/auth?with=` query parameter now exclusively refers to the auth mount path and renders a simplified form [[GH-30500](https://github.com/hashicorp/vault/pull/30500)]
+
+FEATURES:
+
+* **Add Default Auth Method Configuration for UI (enterprise)**: Added the ability to choose default authentication methods for the UI.
+* **Auto Irrevocable Lease Removal (enterprise)**: Add the Vault Enterprise configuration param, `remove_irrevocable_lease_after`. When set to a non-zero value, this will automatically delete irrevocable leases after the configured duration exceeds the lease's expire time. The minimum duration allowed for this field is two days. [[GH-30703](https://github.com/hashicorp/vault/pull/30703)]
+* **Custom login settings**: Adds view to list, read and delete rules defining customizations for the web UI login form [[GH-30592](https://github.com/hashicorp/vault/pull/30592)]
+* **Development Cluster Configuration** (enterprise): Added `development_cluster` as a field to Vault's utilization reports.
+The field is configurable via HCL and indicates whether the cluster is being used in a development environment, defaults to false if not set. [[GH-30659](https://github.com/hashicorp/vault/pull/30659)]
+* **Entity-based and collective rate limit quotas** (enterprise): Add new `group_by` field to the rate limit quota API to support different grouping modes.
+* **Login form customization** (enterprise): Adds support to choose a default and/or backup auth methods for the web UI login form to streamline the web UI login experience. [[GH-30700](https://github.com/hashicorp/vault/pull/30700)]
+* **UI Secrets Engines**: TOTP secrets engine is now supported. [[GH-29751](https://github.com/hashicorp/vault/pull/29751)]
+* **UI Telemetry**: add Posthog for UI telemetry tracking on HVD managed clusters [[GH-30425](https://github.com/hashicorp/vault/pull/30425)]
+* **Vault Namespace Picker**: Updating the Vault Namespace Picker to enable search functionality, allow direct navigation to nested namespaces and improve accessibility. [[GH-30490](https://github.com/hashicorp/vault/pull/30490)]
+* plugins (enterprise): support automatically downloading official HashiCorp plugins from releases.hashicorp.com
+
+IMPROVEMENTS:
+
+* Namespaces (enterprise): allow a root token to relock a namespace
+* activity (enterprise): Added vault.client.billing_period.activity telemetry metric to emit information about the total number of distinct clients used in the current billing period.
+* activity: mount_type was added to the API response of sys/internal/counters/activity [[GH-30071](https://github.com/hashicorp/vault/pull/30071)]
+* activity: mount_type was added to the API response of sys/internal/counters/activity
+* api (enterprise): Added a new API, `/sys/utilization-report`, giving a snapshot overview of Vault's utilization at a high level.
+* api/client: Add Cert auth method support. This allows the client to authenticate using a client certificate. [[GH-29546](https://github.com/hashicorp/vault/pull/29546)]
+* core (enterprise): Updated code and documentation to support FIPS 140-3 compliant algorithms.
+* core (enterprise): report errors from the underlying seal when getting entropy.
+* core (enterprise): update to FIPS 140-3 cryptographic module in the FIPS builds.
+* core/metrics: added a new telemetry metric, `vault.core.response_status_code`, with two labels, `code`, and `type`, detailing the status codes of all responses to requests that Vault handles. [[GH-30354](https://github.com/hashicorp/vault/pull/30354)]
+* core: Updated code and documentation to support FIPS 140-3 compliant algorithms. [[GH-30576](https://github.com/hashicorp/vault/pull/30576)]
+* core: support for X25519MLKEM768 (post quantum key agreement) in the Go TLS stack. [[GH-30603](https://github.com/hashicorp/vault/pull/30603)]
+* events: Add `vault_index` to an event's metadata if the metadata contains `modified=true`, to support client consistency controls when reading from Vault in response to an event where storage was modified. [[GH-30725](https://github.com/hashicorp/vault/pull/30725)]
+* physical/postgres: Adds support to authenticate with the PostgreSQL Backend server with cloud based identities (AWS IAM, Azure MSI and GCP IAM) [[GH-30681](https://github.com/hashicorp/vault/pull/30681)]
+* plugins: Support registration of CE plugins with extracted artifact directory. [[GH-30673](https://github.com/hashicorp/vault/pull/30673)]
+* secrets/aws: Add LIST endpoint to the AWS secrets engine static roles. [[GH-29842](https://github.com/hashicorp/vault/pull/29842)]
+* secrets/pki: Add Delta (Freshest) CRL support to AIA information (both mount-level and issuer configured) [[GH-30319](https://github.com/hashicorp/vault/pull/30319)]
+* secrets/transit (enterprise): enable the use of 192-bit keys for AES CMAC
+* storage/mysql: Added support for getting mysql backend username and password from the environment variables `VAULT_MYSQL_USERNAME` and `VAULT_MYSQL_PASSWORD`. [[GH-30136](https://github.com/hashicorp/vault/pull/30136)]
+* storage/raft: Upgrade hashicorp/raft library to v1.7.3 which includes additional logging on the leader when opening and sending a snapshot to a follower. [[GH-29976](https://github.com/hashicorp/vault/pull/29976)]
+* transit: Exclude the partial wrapping key path from the transit/keys LIST operation. [[GH-30728](https://github.com/hashicorp/vault/pull/30728)]
+* ui (enterprise): Replace date selector in client count usage page with fixed start and end dates that align with billing periods in order to return more relevant client counting data. [[GH-30349](https://github.com/hashicorp/vault/pull/30349)]
+* ui/database: Adding input field for setting skip static role password rotation for database connection config, updating static role skip field to use toggle button [[GH-29820](https://github.com/hashicorp/vault/pull/29820)]
+* ui/database: Adding password input field for creating a static role [[GH-30275](https://github.com/hashicorp/vault/pull/30275)]
+* ui/database: Adding warning modal pop up when creating a static role that will be rotated immediately [[GH-30119](https://github.com/hashicorp/vault/pull/30119)]
+* ui/database: Glimmerizing and adding validations to role create [[GH-29754](https://github.com/hashicorp/vault/pull/29754)]
+* ui/database: Updating toggle buttons for skip_rotation_import to reverse polarity of values that get displayed versus whats sent to api [[GH-30055](https://github.com/hashicorp/vault/pull/30055)]
+* ui: Add 'Refresh list' button to the namespace list page. [[GH-30692](https://github.com/hashicorp/vault/pull/30692)]
+* ui: Enable search for a namespace on the namespace list page. [[GH-30680](https://github.com/hashicorp/vault/pull/30680)]
+* ui: Hide "Other" tab when mounts are configured with `listing_visibility="unauth"`; all methods can be accessed via the "Sign in with other methods" link [[GH-30500](https://github.com/hashicorp/vault/pull/30500)]
+* ui: Improve accessibility of login form to meet a11y standards [[GH-30500](https://github.com/hashicorp/vault/pull/30500)]
+* ui: Replaces all instances of the deprecated event.keyCode with event.key [[GH-30493](https://github.com/hashicorp/vault/pull/30493)]
+* ui: Update date selector in client count usage page to disable current month selection for Vault clusters without a license. [[GH-30488](https://github.com/hashicorp/vault/pull/30488)]
+* ui: Use Hds::CodeBlock component to replace readonly JsonEditor instances [[GH-29720](https://github.com/hashicorp/vault/pull/29720)]
+* ui: adds key value pair string inputs as optional form for wrap tool [[GH-29677](https://github.com/hashicorp/vault/pull/29677)]
+* ui: remove ember-svg-jar dependency [[GH-30181](https://github.com/hashicorp/vault/pull/30181)]
+
+DEPRECATIONS:
+
+* api: Deprecated the `/sys/internal/counters/tokens` endpoint. Attempting to call this endpoint will return a 403 "unsupported path" exception. [[GH-30561](https://github.com/hashicorp/vault/pull/30561)]
+* core: deprecate duplicate attributes in HCL configuration files and policy definitions [[GH-30386](https://github.com/hashicorp/vault/pull/30386)]
+
+BUG FIXES:
+
+* api/tokenhelper: Exec token_helper without a shell [[GH-29653](https://github.com/hashicorp/vault/pull/29653)]
+* auth/aws: fix a panic when a performance standby node attempts to write/update config. [[GH-30039](https://github.com/hashicorp/vault/pull/30039)]
+* auth/ldap: Fix a bug that does not properly delete users and groups by first converting their names to lowercase when case senstivity option is off. [[GH-29922](https://github.com/hashicorp/vault/pull/29922)]
+* auth/ldap: fix a panic when a performance standby node attempts to write/update config. [[GH-30039](https://github.com/hashicorp/vault/pull/30039)]
+* aws/secrets: Prevent vault from rejecting secret role configurations where no regions or endpoints are set [[GH-29996](https://github.com/hashicorp/vault/pull/29996)]
+* core (enterprise): add nil check before attempting to use Rotation Manager operations.
+* core (enterprise): fix a bug where plugin automated root rotations would stop after seal/unseal operations
+* core (enterprise): fix issue with errors being swallowed on failed HSM logins. 
+core/managed-keys (enterprise): fix RSA encryption/decryption with OAEP on managed keys.
+* core: Fix a bug that prevents certain loggers from writing to a log file. [[GH-29917](https://github.com/hashicorp/vault/pull/29917)]
+* database: Prevent static roles created in versions prior to 1.15.0 from rotating on backend restart. [[GH-30320](https://github.com/hashicorp/vault/pull/30320)]
+* database: no longer incorrectly add an "unrecognized parameters" warning for certain SQL database secrets config operations when another warning is returned [[GH-30327](https://github.com/hashicorp/vault/pull/30327)]
+* identity: Fix non-deterministic merge behavior when two entities have
+conflicting local aliases. [[GH-30390](https://github.com/hashicorp/vault/pull/30390)]
+* identity: reintroduce RPC functionality for group creates, allowing performance standbys to handle external group changes during login and token renewal [[GH-30069](https://github.com/hashicorp/vault/pull/30069)]
+* plugins (enterprise): Fix an issue where Enterprise plugins can't run on a standby node
+when it becomes active because standby nodes don't extract the artifact when the plugin
+is registered. Remove extracting from Vault and require the operator to place
+the extracted artifact in the plugin directory before registration.
+* plugins (enterprise): Fix plugin registration with artifact when a binary for the same plugin is already present in the plugin directory.
+* plugins: plugin registration should honor the `plugin_tmpdir` config [[GH-29978](https://github.com/hashicorp/vault/pull/29978)]
+* plugins: plugin registration should honor the `plugin_tmpdir` config
+* raft/retry_join: Fix decoding `auto_join` configurations that include escape characters [[GH-29874](https://github.com/hashicorp/vault/pull/29874)]
+* secrets/aws: fix a bug where environment and shared credential providers were overriding the WIF configuration [[GH-29982](https://github.com/hashicorp/vault/pull/29982)]
+* secrets/aws: fix a case where GovCloud wasn't taken into account; fix a case where the region setting wasn't respected [[GH-30312](https://github.com/hashicorp/vault/pull/30312)]
+* secrets/aws: fix a panic when a performance standby node attempts to write/update config. [[GH-30039](https://github.com/hashicorp/vault/pull/30039)]
+* secrets/database: Fix a bug where a global database plugin reload exits if any of the database connections are not available [[GH-29519](https://github.com/hashicorp/vault/pull/29519)]
+* secrets/db: fix a panic when a performance standby node attempts to write/update config. [[GH-30039](https://github.com/hashicorp/vault/pull/30039)]
+* secrets/openldap: Prevent static role rotation on upgrade when `NextVaultRotation` is nil.
+Fixes an issue where static roles were unexpectedly rotated after upgrade due to a missing `NextVaultRotation` value. 
+Now sets it to either `LastVaultRotation + RotationPeriod` or `now + RotationPeriod`. [[GH-30265](https://github.com/hashicorp/vault/pull/30265)]
+* secrets/pki (enterprise): Address a parsing bug that rejected CMPv2 requests containing a validity field.
+* secrets/pki: Fix a bug that prevents enabling automatic tidying of the CMPv2 nonce store. [[GH-29852](https://github.com/hashicorp/vault/pull/29852)]
+* secrets/pki: fix a bug where key_usage was ignored when generating root certificates, and signing certain
+intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/30034)]
+* secrets/transit (enterprise): ensure verify endpoint always returns valid field in batch_results with CMAC
+* secrets/transit (enterprise): fixed encryption/decryption with RSA against PKCS#11 managed keys
+* secrets/transit: ensure verify endpoint always returns valid field in batch_results with HMAC [[GH-30852](https://github.com/hashicorp/vault/pull/30852)]
+* secrets/transit: fix a panic when rotating on a managed key returns an error [[GH-30214](https://github.com/hashicorp/vault/pull/30214)]
+* ui/database: Added input field for setting 'skip_import_rotation' when creating a static role [[GH-29633](https://github.com/hashicorp/vault/pull/29633)]
+* ui/kmip: Fixes KMIP credentials view and displays `private_key` after generating [[GH-30778](https://github.com/hashicorp/vault/pull/30778)]
+* ui: Fix broken link to Hashicorp Vault developer site in the Web REPL help. [[GH-30670](https://github.com/hashicorp/vault/pull/30670)]
+* ui: Fix refresh namespace list after deleting a namespace. [[GH-30680](https://github.com/hashicorp/vault/pull/30680)]
+* ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
+* ui: Redirect users authenticating with Vault as an OIDC provider to log in again when token expires. [[GH-30838](https://github.com/hashicorp/vault/pull/30838)]
 
 ## 1.19.5
 ### May 30, 2025
