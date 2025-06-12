@@ -121,3 +121,21 @@ Duplicate HSM keys can cause the following errors:
 
 Always run Vault with `generate_key = false` and manually create all required
 keys within the HSM during the setup process.
+
+### Duplicate LDAP Password Rotations on Standby Node Check-In ((#ldap-checkin))
+
+| Change       | Affected version                          | Fixed version
+| ------------ | ----------------------------------------- | --------------------
+| Known issue  | 1.12.0+                                   | N/A
+
+Vault check-ins for LDAP service accounts performed on a performance standby node or a node in a 
+performance replication secondary cluster can trigger duplicate password changes on the LDAP server. 
+This occurs because the LDAP client on the local node successfully modifies the password before Vault 
+forwards the check-in request to the active node, which then performs a second password update. 
+While users still receive the latest password, it may lead to unexpected LDAP activity and cause 
+confusing interpreting audit logs.
+
+### Recommendation:
+
+Send check-in requests directly to the active node of the primary cluster to prevent duplicate password 
+rotations on the LDAP server.
