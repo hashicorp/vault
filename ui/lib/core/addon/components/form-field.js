@@ -82,7 +82,7 @@ export default class FormFieldComponent extends Component {
     );
     assert('@name is required', presence(attr.name));
     assert('@model (or resource object being updated) is required', presence(model));
-    const modelValue = model[valuePath];
+    const modelValue = model.get(valuePath);
     this.showToggleTextInput = !!modelValue;
     this.toggleInputEnabled = !!modelValue;
   }
