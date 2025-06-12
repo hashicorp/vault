@@ -164,9 +164,9 @@ entities attempting to login.
 
 - `name` `(string: <required>)` - Name of the role.
 - `bound_service_principal_ids` `(array: [])` - The list of Service Principal IDs
-  that login is restricted to.
+  that login is restricted to. Either this parameter or `bound_group_ids` must be set.
 - `bound_group_ids` `(array: [])` - The list of group ids that login is restricted
-  to.
+  to. Either this parameter or `bound_service_principal_ids` must be set.
 - `bound_locations` `(array: [])` - The list of locations that login is restricted to.
 - `bound_subscription_ids` `(array: [])` - The list of subscription IDs that login
   is restricted to.
@@ -177,6 +177,8 @@ entities attempting to login.
 
 @include 'tokenfields.mdx'
 
+~> **Note:** When creating a role, you must specify either `bound_service_principal_ids` or `bound_group_ids`. These parameters are mutually exclusive - you cannot set both, but you must set one of them.
+
 ### Sample payload
 
 ```json
@@ -184,7 +186,8 @@ entities attempting to login.
   "token_policies": ["default", "dev", "prod"],
   "max_ttl": 1800000,
   "max_jwt_exp": 10000,
-  "bound_resource_groups": ["vault-dev", "vault-staging", "vault-prod"]
+  "bound_resource_groups": ["vault-dev", "vault-staging", "vault-prod"],
+  "bound_service_principal_ids": ["3cb88732-1356-4782-b671-4877166be01a"]
 }
 ```
 
