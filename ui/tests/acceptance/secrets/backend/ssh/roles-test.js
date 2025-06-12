@@ -12,6 +12,7 @@ import {
   waitUntil,
   currentRouteName,
   waitFor,
+  visit,
 } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -20,7 +21,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import listPage from 'vault/tests/pages/secrets/backend/list';
-import editPage from 'vault/tests/pages/secrets/backend/ssh/edit-role';
 import showPage from 'vault/tests/pages/secrets/backend/ssh/show';
 import generatePage from 'vault/tests/pages/secrets/backend/ssh/generate-otp';
 import { runCmd } from 'vault/tests/helpers/commands';
@@ -187,13 +187,14 @@ module('Acceptance | ssh | roles', function (hooks) {
       const path = `ssh-${this.uid}`;
       await enablePage.enable('ssh', path);
       await settled();
-      await editPage.visitRoot({ backend: path });
+      await visit(`/vault/secrets/${path}/create`);
       await createOTPRole('role');
       await settled();
       await showPage.visit({ backend: path, id: 'role' });
       await settled();
       await click(GENERAL.confirmTrigger);
       await click(GENERAL.confirmButton);
+
       assert.strictEqual(
         currentRouteName(),
         'vault.cluster.secrets.backend.list-root',
@@ -208,8 +209,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       assert.expect(6);
       const path = `ssh-${this.uid}`;
       await enablePage.enable('ssh', path);
-      await settled();
-      await editPage.visitRoot({ backend: path });
+      await visit(`/vault/secrets/${path}/create`);
       await createOTPRole('role');
       await settled();
       assert.strictEqual(

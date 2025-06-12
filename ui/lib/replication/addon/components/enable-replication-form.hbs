@@ -172,7 +172,7 @@
     (or (and (eq this.data.mode "primary") @canEnablePrimary) (and (eq this.data.mode "secondary") @canEnableSecondary))
   }}
     <div class="field is-grouped box is-fullwidth is-bottomless">
-      <Hds::Button @text="Enable Replication" type="submit" disabled={{this.disallowEnable}} data-test-replication-enable />
+      <Hds::Button @text="Enable Replication" type="submit" disabled={{this.disallowEnable}} data-test-submit />
     </div>
   {{/if}}
 </form>

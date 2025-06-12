@@ -10,9 +10,6 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
-const SELECTORS = {
-  icon: '[data-test-icon="download"]',
-};
 module('Integration | Component | download button', function (hooks) {
   setupRenderingTest(hooks);
 
@@ -28,14 +25,14 @@ module('Integration | Component | download button', function (hooks) {
   test('it renders', async function (assert) {
     await render(hbs`
      <DownloadButton /> `);
-    assert.dom(SELECTORS.icon).exists('renders download icon');
+    assert.dom(GENERAL.icon('download')).exists('renders download icon');
     assert.dom(GENERAL.button('Download')).hasText('Download', 'renders default text');
   });
 
   test('it renders passed args', async function (assert) {
     await render(hbs`
      <DownloadButton @text="I do something" @hideIcon={{true}} /> `);
-    assert.dom(SELECTORS.icon).doesNotExist('hides icon');
+    assert.dom(GENERAL.icon('download')).doesNotExist('hides icon');
     assert.dom(GENERAL.button('Download')).hasText('I do something', 'renders passed text');
   });
 

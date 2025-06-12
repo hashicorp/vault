@@ -130,8 +130,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     );
     const addr = `127.0.0.1:${getRandomPort()}`;
     await fillIn('[data-test-string-list-input="0"]', addr);
-    await scopesPage.submit();
-    await settled();
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/kmip/configuration`,
@@ -146,8 +145,8 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     await credentialsPage.visitDetail({ backend, scope, role, serial });
     await settled();
-    await waitUntil(() => find('[data-test-confirm-action-trigger]'));
-    assert.dom('[data-test-confirm-action-trigger]').exists('delete button exists');
+    await waitUntil(() => find(GENERAL.confirmTrigger));
+    assert.dom(GENERAL.confirmTrigger).exists('delete button exists');
     await credentialsPage.delete().confirmDelete();
     await settled();
 
@@ -174,8 +173,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     // create scope
     await scopesPage.scopeName('foo');
     await settled();
-    await scopesPage.submit();
-    await settled();
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/kmip/scopes`,
@@ -331,8 +329,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}/credentials/generate`,
       'navigates to generate credentials'
     );
-    await credentialsPage.submit();
-    await settled();
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backend.kmip.credentials.generate',
@@ -353,10 +350,10 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     const { backend, scope, role } = await createRole(this.backend);
     await credentialsPage.visit({ backend, scope, role });
     await credentialsPage.generateCredentialsLink();
-    await credentialsPage.submit();
+    await click(GENERAL.submitButton);
+    await waitUntil(() => find(GENERAL.confirmTrigger));
+    assert.dom(GENERAL.confirmTrigger).exists('delete button exists');
     // revoke the credentials
-    await waitUntil(() => find('[data-test-confirm-action-trigger]'));
-    assert.dom('[data-test-confirm-action-trigger]').exists('delete button exists');
     await credentialsPage.delete().confirmDelete();
     await settled();
     assert.strictEqual(

@@ -70,7 +70,7 @@ module('Acceptance | mfa-method', function (hooks) {
         'Copy renders for list item'
       );
 
-    await click('[data-test-popup-menu-trigger]');
+    await click(GENERAL.menuTrigger);
     await click('[data-test-mfa-method-menu-link="details"]');
     assert.strictEqual(
       currentRouteName(),
@@ -78,7 +78,7 @@ module('Acceptance | mfa-method', function (hooks) {
       'Details more menu action transitions to method route'
     );
     await click('.hds-breadcrumb a');
-    await click('[data-test-popup-menu-trigger]');
+    await click(GENERAL.menuTrigger);
     await click('[data-test-mfa-method-menu-link="edit"]');
     assert.strictEqual(
       currentRouteName(),

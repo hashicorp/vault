@@ -8,6 +8,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/policy/edit';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | policy/acl/:name/edit', function (hooks) {
   setupApplicationTest(hooks);
@@ -27,7 +28,7 @@ module('Acceptance | policy/acl/:name/edit', function (hooks) {
 
   test('it does not show delete for default policy', async function (assert) {
     await page.visit({ type: 'acl', name: 'default' });
-    assert.notOk(page.deleteIsPresent, 'there is no delete button');
+    assert.notOk(GENERAL.confirmButton, 'there is no delete button');
   });
 
   test('it navigates to show when the toggle is clicked', async function (assert) {

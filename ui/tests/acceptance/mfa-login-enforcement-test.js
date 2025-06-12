@@ -110,7 +110,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
       .hasClass('hds-icon-lock', 'Lock icon renders for list item');
     assert.dom(`[data-test-list-item-title="${item.name}"]`).hasText(item.name, 'Enforcement name renders');
 
-    await click('[data-test-popup-menu-trigger]');
+    await click(GENERAL.menuTrigger);
     await click('[data-test-list-item-link="details"]');
     assert.strictEqual(
       currentRouteName(),
@@ -118,7 +118,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
       'Details more menu action transitions to enforcement route'
     );
     await click('.hds-breadcrumb a');
-    await click('[data-test-popup-menu-trigger]');
+    await click(GENERAL.menuTrigger);
     await click('[data-test-list-item-link="edit"]');
     assert.strictEqual(
       currentRouteName(),
@@ -175,7 +175,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
         `${method.name} ${method.id} Namespace: ${method.namespace_path}`,
         'Method list item renders'
       );
-    await click('[data-test-popup-menu-trigger]');
+    await click(GENERAL.menuTrigger);
     assert
       .dom(`[data-test-mfa-method-menu-link="details"]`)
       .hasAttribute('href', `/ui/vault/access/mfa/methods/${method.id}`, `Details link renders for method`);
@@ -204,7 +204,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
   test('it should edit login enforcement', async function (assert) {
     await visit('/vault/access/mfa/enforcements');
     const enforcement = this.server.db.mfaLoginEnforcements.where({})[0];
-    await click('[data-test-popup-menu-trigger]');
+    await click(GENERAL.menuTrigger);
     await click('[data-test-list-item-link="edit"]');
 
     assert.dom('h1').hasText('Update enforcement', 'Title renders');

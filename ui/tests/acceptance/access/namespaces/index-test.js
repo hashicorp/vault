@@ -220,8 +220,8 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     await click(GENERAL.linkTo('create-namespace'));
     assert.dom(GENERAL.inputByAttr('path')).exists('Create namespace input field is displayed');
     await fillIn(GENERAL.inputByAttr('path'), testNS);
-    assert.dom('[data-test-edit-form-submit]').exists('Save button is displayed');
-    await click('[data-test-edit-form-submit]');
+    assert.dom(GENERAL.submitButton).exists('Save button is displayed');
+    await click(GENERAL.submitButton);
 
     // Verify test-create-ns does not exist in the Manage Namespace page
     await fillIn(GENERAL.filterInputExplicit, testNS);
