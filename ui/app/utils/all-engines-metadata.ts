@@ -12,6 +12,7 @@ export interface EngineDisplayData {
   displayName: string;
   engineRoute?: string;
   glyph?: string;
+  isWIF?: boolean;
   mountCategory: string[];
   requiresEnterprise?: boolean;
   type: string;
@@ -45,8 +46,6 @@ export function isAddonEngine(type: string, version: number) {
 }
 
 //copied over from mountable secret engines file, tbd deletion
-// A list of Workload Identity Federation engines.
-export const WIF_ENGINES = ['aws', 'azure', 'gcp'];
 
 // Secret engines that have their own configuration page and actions
 // These engines do not exist in their own Ember engine.
@@ -77,6 +76,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'cloud',
     displayName: 'AWS',
     glyph: 'aws-color',
+    isWIF: true,
     mountCategory: ['auth', 'secret'],
     type: 'aws',
   },
@@ -84,6 +84,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'cloud',
     displayName: 'Azure',
     glyph: 'azure-color',
+    isWIF: true,
     mountCategory: ['auth', 'secret'],
     type: 'azure',
   },
@@ -118,6 +119,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'cloud',
     displayName: 'Google Cloud',
     glyph: 'gcp-color',
+    isWIF: true,
     mountCategory: ['auth', 'secret'],
     type: 'gcp',
   },

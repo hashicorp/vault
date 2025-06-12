@@ -7,13 +7,14 @@ import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { CONFIGURABLE_SECRET_ENGINES, WIF_ENGINES } from 'vault/utils/all-engines-metadata';
+import { CONFIGURABLE_SECRET_ENGINES } from 'vault/utils/all-engines-metadata';
 import errorMessage from 'vault/utils/error-message';
 import { action } from '@ember/object';
 
 import type Store from '@ember-data/store';
 import type SecretEngineModel from 'vault/models/secret-engine';
 import type VersionService from 'vault/services/version';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 // This route file is reused for all configurable secret engines.
 // It generates config models based on the engine type.
@@ -93,7 +94,7 @@ export default class SecretsBackendConfigurationEdit extends Route {
     }
     // if the type is a WIF engine and it's enterprise, we also fetch the issuer
     // from a global endpoint which has no associated model/adapter
-    if (WIF_ENGINES.includes(type) && this.version.isEnterprise) {
+    if (engineDisplayData(type)?.isWIF && this.version.isEnterprise) {
       try {
         const response = await this.store.queryRecord('identity/oidc/config', {});
         model['identity-oidc-config'] = response;

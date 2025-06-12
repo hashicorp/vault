@@ -23,7 +23,14 @@ import {
 import { capabilitiesStub } from 'vault/tests/helpers/stubs';
 import waitForError from 'vault/tests/helpers/wait-for-error';
 import engineDisplayData from 'vault/helpers/engines-display-data';
-import { WIF_ENGINES } from 'vault/utils/all-engines-metadata';
+import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
+
+const WIF_ENGINES = filterEnginesByMountCategory({
+  mountCategory: 'secret',
+  isEnterprise: false,
+})
+  .filter((engine) => engine.isWIF)
+  .map((e) => e.type);
 
 module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) {
   setupRenderingTest(hooks);

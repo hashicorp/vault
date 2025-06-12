@@ -10,7 +10,7 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
-import { isAddonEngine, WIF_ENGINES } from 'vault/utils/all-engines-metadata';
+import { ALL_ENGINES, isAddonEngine } from 'vault/utils/all-engines-metadata';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 
 const LINKED_BACKENDS = supportedSecretBackends();
@@ -182,7 +182,7 @@ export default class SecretEngineModel extends Model {
       fields.push('casRequired', 'deleteVersionAfter', 'maxVersions');
     }
     // For WIF Secret engines, allow users to set the identity token key when mounting the engine.
-    if (WIF_ENGINES.includes(type)) {
+    if (engineDisplayData(type).isWIF) {
       fields.push('config.identityTokenKey');
     }
     return fields;
@@ -234,7 +234,7 @@ export default class SecretEngineModel extends Model {
         // no ttl options for keymgmt
         optionFields = [...CORE_OPTIONS, 'config.allowedManagedKeys', ...STANDARD_CONFIG];
         break;
-      case WIF_ENGINES.find((type) => type === this.engineType):
+      case ALL_ENGINES.find((engine) => engine.type === this.engineType && engine.isWIF):
         defaultFields = ['path'];
         optionFields = [
           ...CORE_OPTIONS,

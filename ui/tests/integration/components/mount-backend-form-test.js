@@ -12,10 +12,12 @@ import { allowAllCapabilitiesStub, noopStub } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
-import { filterEnginesByMountCategory, WIF_ENGINES } from 'vault/utils/all-engines-metadata';
+import { ALL_ENGINES, filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
+
+const WIF_ENGINES = ALL_ENGINES.filter((e) => e.isWIF).map((e) => e.type);
 
 module('Integration | Component | mount backend form', function (hooks) {
   setupRenderingTest(hooks);
@@ -222,7 +224,7 @@ module('Integration | Component | mount backend form', function (hooks) {
         for (const engine of filterEnginesByMountCategory({
           mountCategory: 'secret',
           isEnterprise: false,
-        }).filter((e) => !WIF_ENGINES.includes(e.type) && e.type !== 'cubbyhole')) {
+        }).filter((e) => !e.isWIF && e.type !== 'cubbyhole')) {
           // check non-wif engine
           await click(MOUNT_BACKEND_FORM.mountType(engine.type));
           await click(GENERAL.toggleGroup('Method Options'));
