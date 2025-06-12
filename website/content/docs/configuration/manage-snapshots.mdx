@@ -1338,6 +1338,8 @@ $ curl \
 
 Vault responds with snapshot details, including the status.
 
+<CodeBlockConfig hideClipboard>
+
 ```json
 {
   "data": {
@@ -1350,6 +1352,8 @@ Vault responds with snapshot details, including the status.
   }
 }
 ```
+
+</CodeBlockConfig>
 
 When Vault loads the snapshot, the status value is `loading` until loading is complete, and the value changes to `ready` when you can use the snapshot for secret recovery.
 
