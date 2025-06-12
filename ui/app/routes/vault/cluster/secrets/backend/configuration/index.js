@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Route from '@ember/routing/route';
 import { CONFIGURABLE_SECRET_ENGINES, allEngines } from 'vault/helpers/mountable-secret-engines';
 
