@@ -64,26 +64,25 @@ a selected month. [[GH-30678](https://github.com/hashicorp/vault/pull/30678)]
 
 FEATURES:
 
-* **Add Default Auth Method Configuration for UI (enterprise)**: Added the ability to choose default authentication methods for the UI.
-* **Auto Irrevocable Lease Removal (enterprise)**: Add the Vault Enterprise configuration param, `remove_irrevocable_lease_after`. When set to a non-zero value, this will automatically delete irrevocable leases after the configured duration exceeds the lease's expire time. The minimum duration allowed for this field is two days. [[GH-30703](https://github.com/hashicorp/vault/pull/30703)]
-* **Custom login settings**: Adds view to list, read and delete rules defining customizations for the web UI login form [[GH-30592](https://github.com/hashicorp/vault/pull/30592)]
+* **Auto Irrevocable Lease Removal (Enterprise)**: Add the Vault Enterprise configuration param, `remove_irrevocable_lease_after`. When set to a non-zero value, this will automatically delete irrevocable leases after the configured duration exceeds the lease's expire time. The minimum duration allowed for this field is two days. [[GH-30703](https://github.com/hashicorp/vault/pull/30703)]
 * **Development Cluster Configuration** (enterprise): Added `development_cluster` as a field to Vault's utilization reports.
 The field is configurable via HCL and indicates whether the cluster is being used in a development environment, defaults to false if not set. [[GH-30659](https://github.com/hashicorp/vault/pull/30659)]
 * **Entity-based and collective rate limit quotas** (enterprise): Add new `group_by` field to the rate limit quota API to support different grouping modes.
 * **Login form customization** (enterprise): Adds support to choose a default and/or backup auth methods for the web UI login form to streamline the web UI login experience. [[GH-30700](https://github.com/hashicorp/vault/pull/30700)]
+* **Secret Recovery from Snapshot (Enterprise)**: Adds a framework to load an integrated storage snapshot into Vault and read, list, and recover KV v1 and cubbyhole secrets from the snapshot.
+* **SSH Key Signing Improvements (Enterprise)**: Add support for using managed keys to sign SSH keys in the SSH secrets engine.
 * **UI Secrets Engines**: TOTP secrets engine is now supported. [[GH-29751](https://github.com/hashicorp/vault/pull/29751)]
 * **UI Telemetry**: add Posthog for UI telemetry tracking on HVD managed clusters [[GH-30425](https://github.com/hashicorp/vault/pull/30425)]
 * **Vault Namespace Picker**: Updating the Vault Namespace Picker to enable search functionality, allow direct navigation to nested namespaces and improve accessibility. [[GH-30490](https://github.com/hashicorp/vault/pull/30490)]
-* plugins (enterprise): support automatically downloading official HashiCorp plugins from releases.hashicorp.com
+* **Vault PKI SCEP Server (Enterprise)**: Support for the Simple Certificate Enrollment Protocol (SCEP) has been added to the Vault PKI Plugin. This allows standard SCEP clients to request certificates from a Vault server with no knowledge of Vault APIs.
 
 IMPROVEMENTS:
 
-* Namespaces (enterprise): allow a root token to relock a namespace
 * activity (enterprise): Added vault.client.billing_period.activity telemetry metric to emit information about the total number of distinct clients used in the current billing period.
 * activity: mount_type was added to the API response of sys/internal/counters/activity [[GH-30071](https://github.com/hashicorp/vault/pull/30071)]
-* activity: mount_type was added to the API response of sys/internal/counters/activity
 * api (enterprise): Added a new API, `/sys/utilization-report`, giving a snapshot overview of Vault's utilization at a high level.
 * api/client: Add Cert auth method support. This allows the client to authenticate using a client certificate. [[GH-29546](https://github.com/hashicorp/vault/pull/29546)]
+* core (enterprise): allow a root token to relock a namespacej locked by the Namespace API Lock feature
 * core (enterprise): Updated code and documentation to support FIPS 140-3 compliant algorithms.
 * core (enterprise): report errors from the underlying seal when getting entropy.
 * core (enterprise): update to FIPS 140-3 cryptographic module in the FIPS builds.
@@ -96,9 +95,9 @@ IMPROVEMENTS:
 * secrets/aws: Add LIST endpoint to the AWS secrets engine static roles. [[GH-29842](https://github.com/hashicorp/vault/pull/29842)]
 * secrets/pki: Add Delta (Freshest) CRL support to AIA information (both mount-level and issuer configured) [[GH-30319](https://github.com/hashicorp/vault/pull/30319)]
 * secrets/transit (enterprise): enable the use of 192-bit keys for AES CMAC
+* secrets/transit: Exclude the partial wrapping key path from the transit/keys LIST operation. [[GH-30728](https://github.com/hashicorp/vault/pull/30728)]
 * storage/mysql: Added support for getting mysql backend username and password from the environment variables `VAULT_MYSQL_USERNAME` and `VAULT_MYSQL_PASSWORD`. [[GH-30136](https://github.com/hashicorp/vault/pull/30136)]
 * storage/raft: Upgrade hashicorp/raft library to v1.7.3 which includes additional logging on the leader when opening and sending a snapshot to a follower. [[GH-29976](https://github.com/hashicorp/vault/pull/29976)]
-* transit: Exclude the partial wrapping key path from the transit/keys LIST operation. [[GH-30728](https://github.com/hashicorp/vault/pull/30728)]
 * ui (enterprise): Replace date selector in client count usage page with fixed start and end dates that align with billing periods in order to return more relevant client counting data. [[GH-30349](https://github.com/hashicorp/vault/pull/30349)]
 * ui/database: Adding input field for setting skip static role password rotation for database connection config, updating static role skip field to use toggle button [[GH-29820](https://github.com/hashicorp/vault/pull/29820)]
 * ui/database: Adding password input field for creating a static role [[GH-30275](https://github.com/hashicorp/vault/pull/30275)]
@@ -130,12 +129,11 @@ BUG FIXES:
 * core (enterprise): add nil check before attempting to use Rotation Manager operations.
 * core (enterprise): fix a bug where plugin automated root rotations would stop after seal/unseal operations
 * core (enterprise): fix issue with errors being swallowed on failed HSM logins. 
-core/managed-keys (enterprise): fix RSA encryption/decryption with OAEP on managed keys.
+* core/managed-keys (enterprise): fix RSA encryption/decryption with OAEP on managed keys.
 * core: Fix a bug that prevents certain loggers from writing to a log file. [[GH-29917](https://github.com/hashicorp/vault/pull/29917)]
 * database: Prevent static roles created in versions prior to 1.15.0 from rotating on backend restart. [[GH-30320](https://github.com/hashicorp/vault/pull/30320)]
 * database: no longer incorrectly add an "unrecognized parameters" warning for certain SQL database secrets config operations when another warning is returned [[GH-30327](https://github.com/hashicorp/vault/pull/30327)]
-* identity: Fix non-deterministic merge behavior when two entities have
-conflicting local aliases. [[GH-30390](https://github.com/hashicorp/vault/pull/30390)]
+* identity: Fix non-deterministic merge behavior when two entities have conflicting local aliases. [[GH-30390](https://github.com/hashicorp/vault/pull/30390)]
 * identity: reintroduce RPC functionality for group creates, allowing performance standbys to handle external group changes during login and token renewal [[GH-30069](https://github.com/hashicorp/vault/pull/30069)]
 * plugins (enterprise): Fix an issue where Enterprise plugins can't run on a standby node
 when it becomes active because standby nodes don't extract the artifact when the plugin
@@ -143,7 +141,6 @@ is registered. Remove extracting from Vault and require the operator to place
 the extracted artifact in the plugin directory before registration.
 * plugins (enterprise): Fix plugin registration with artifact when a binary for the same plugin is already present in the plugin directory.
 * plugins: plugin registration should honor the `plugin_tmpdir` config [[GH-29978](https://github.com/hashicorp/vault/pull/29978)]
-* plugins: plugin registration should honor the `plugin_tmpdir` config
 * raft/retry_join: Fix decoding `auto_join` configurations that include escape characters [[GH-29874](https://github.com/hashicorp/vault/pull/29874)]
 * secrets/aws: fix a bug where environment and shared credential providers were overriding the WIF configuration [[GH-29982](https://github.com/hashicorp/vault/pull/29982)]
 * secrets/aws: fix a case where GovCloud wasn't taken into account; fix a case where the region setting wasn't respected [[GH-30312](https://github.com/hashicorp/vault/pull/30312)]
