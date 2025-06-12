@@ -36,6 +36,7 @@ export const GENERAL = {
   menuTrigger: '[data-test-popup-menu-trigger]',
   menuItem: (name: string) => `[data-test-popup-menu="${name}"]`,
   listItem: '[data-test-list-item-link]',
+  linkedBlock: (item: string) => `[data-test-linked-block="${item}"]`,
 
   /* ────── Inputs / Form Fields ────── */
   checkboxByAttr: (attr: string) => `[data-test-checkbox="${attr}"]`,
