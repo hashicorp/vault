@@ -15,16 +15,30 @@ valid_change_types: >-
 
 # Important changes
 
-**Last updated**: 2025-06-05
+**Last updated**: 2025-06-12
 
 Always review important or breaking changes and remediation recommendations
 before upgrading Vault.
 
-## New behavior 
+## New behavior
 
-None.
+## Key Pair Authentication for Snowflake DB Secrets Engine
 
-## Breaking changes 
+| Change       | Affected version | Affected deployments
+| ------------ | ---------------- | --------------------
+| New behavior | 1.20.0           | any
+
+As of version 1.20.0, Vault has added support for [authenticating to Snowflake
+databases using key pairs](/vault/api-docs/secret/databases#configure-connection).
+Snowflake is disabling password authentication for all users in November 2025,
+and password authentication will eventually be removed in subsequent Vault releases.
+
+Vault currently does not support rotate root for key pairs. Users can manually rotate the key pairs
+by updating both the root configuration in Vault with the new private key and the public
+key associated with the user within Snowflake. For more information on rotating key pairs, please refer
+to the official [Snowflake documentation](https://docs.snowflake.com/en/user-guide/key-pair-auth#configuring-key-pair-rotation).
+
+## Breaking changes
 
 ### Breaking configuration change for disable_mlock ((#disable_mlock-config))
 
