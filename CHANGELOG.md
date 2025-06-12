@@ -81,7 +81,7 @@ IMPROVEMENTS:
 * activity: mount_type was added to the API response of sys/internal/counters/activity [[GH-30071](https://github.com/hashicorp/vault/pull/30071)]
 * api (enterprise): Added a new API, `/sys/utilization-report`, giving a snapshot overview of Vault's utilization at a high level.
 * api/client: Add Cert auth method support. This allows the client to authenticate using a client certificate. [[GH-29546](https://github.com/hashicorp/vault/pull/29546)]
-* core (enterprise): allow a root token to relock a namespacej locked by the Namespace API Lock feature
+* core (enterprise): allow a root token to relock a namespace locked by the Namespace API Lock feature.
 * core (enterprise): Updated code and documentation to support FIPS 140-3 compliant algorithms.
 * core (enterprise): report errors from the underlying seal when getting entropy.
 * core (enterprise): update to FIPS 140-3 cryptographic module in the FIPS builds.
