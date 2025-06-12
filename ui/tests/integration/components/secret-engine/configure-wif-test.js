@@ -29,7 +29,7 @@ const WIF_ENGINES = filterEnginesByMountCategory({
   mountCategory: 'secret',
   isEnterprise: false,
 })
-  .filter((engine) => engine.isWIF ?? false)
+  .filter((engine) => engine.isWIF)
   .map((e) => e.type);
 
 module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) {

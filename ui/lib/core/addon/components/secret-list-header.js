@@ -30,8 +30,7 @@ export default class SecretListHeader extends Component {
     // only show the list tab if the engine is not a configuration only engine and the UI supports it
     const { engineType } = this.args.model;
     return (
-      supportedSecretBackends().includes(engineType) &&
-      !(engineDisplayData(engineType).isConfigurationOnly ?? false)
+      supportedSecretBackends().includes(engineType) && !engineDisplayData(engineType)?.isConfigurationOnly
     );
   }
 }

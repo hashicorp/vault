@@ -17,7 +17,7 @@ import { ALL_ENGINES, filterEnginesByMountCategory } from 'vault/utils/all-engin
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
-const WIF_ENGINES = ALL_ENGINES.filter((e) => e.isWIF ?? false).map((e) => e.type);
+const WIF_ENGINES = ALL_ENGINES.filter((e) => e.isWIF).map((e) => e.type);
 
 module('Integration | Component | mount backend form', function (hooks) {
   setupRenderingTest(hooks);

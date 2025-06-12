@@ -252,8 +252,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       }
       await click(GENERAL.submitButton);
 
-      const route =
-        engineDisplayData(engine.type).isConfigurationOnly ?? false ? 'configuration.index' : 'list-root';
+      const route = engineDisplayData(engine.type)?.isConfigurationOnly ? 'configuration.index' : 'list-root';
       assert.strictEqual(
         currentRouteName(),
         `vault.cluster.secrets.backend.${route}`,
