@@ -1475,6 +1475,8 @@ $ vault read \
 
 Vault responds with snapshot details, including the status.
 
+<CodeBlockConfig hideClipboard>
+
 ```plaintext
 Key                                   Value
 ---                                   -----
@@ -1484,6 +1486,8 @@ expires_at                            2025-06-25T09:00:42.828919+00:00
 snapshot_id                           37cc5b09-e6fb-4b2a-970b-dc8341af9cd0
 status                                ready
 ```
+
+</CodeBlockConfig>
 
 When Vault loads the snapshot, the status value is `loading` until loading is complete, and the value changes to `ready` when you can use the snapshot for secret recovery.
 
