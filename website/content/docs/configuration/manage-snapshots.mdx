@@ -1450,6 +1450,8 @@ $ vault operator raft snapshot load \
 
 Vault returns information about the snapshot, including a `snapshot_id` value that you can use to perform further operations with the snapshot.
 
+<CodeBlockConfig hideClipboard>
+
 ```plaintext
 Key                                   Value
 ---                                   -----
@@ -1459,6 +1461,8 @@ expires_at                            2025-06-25T09:00:42.828919+00:00
 snapshot_id                           37cc5b09-e6fb-4b2a-970b-dc8341af9cd0
 status                                loading
 ```
+
+</CodeBlockConfig>
 
 Learn more in the [CLI documentation](/vault/docs/commands/operator/raft#snapshot-load).
 
