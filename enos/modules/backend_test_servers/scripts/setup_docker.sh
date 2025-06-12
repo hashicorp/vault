@@ -26,14 +26,14 @@ detect_os() {
 # Main logic
 check_docker_installed
 
-echo "Installing Docker..."
 os_id=$(detect_os)
+echo "Installing Docker for: ${os_id}"
 case "$os_id" in
   amzn)
     sudo dnf install -y docker
     ;;
   ubuntu)
-    sudo apt install docker
+    sudo apt install docker.io
     ;;
   rhel | centos)
     sudo yum install docker
