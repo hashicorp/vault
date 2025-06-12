@@ -73,16 +73,16 @@ namespace, the "none" option can achieve that.
 ![Diagram indicating possible user paths](/img/resource-quotas/group-by_light.png#light-theme-only)
 ![Diagram indicating possible user paths](/img/resource-quotas/group-by_dark.png#dark-theme-only)
 
-<Note title="You cannot configure quotas on entities">
+<Tip title="You do not configure quotas on entities">
 
-You can define quotas on namespaces, mounts, paths, and roles. But you cannot
+You can configure quotas on namespaces, mounts, paths, and roles. But you cannot
 configure a rate limit quota for a specific entity.
 
-For example, you can create a rate limit quota on "customer-A" namespace with
-**group by entity** mode. Vault checks the entity ID of the requests coming into
-the "customer-A" namespace, and group them based on the matching entity ID. 
+Assume you created a rate limit quota on "customer-A" namespace with **group by
+entity** mode. Vault checks the entity ID of the requests coming into the
+"customer-A" namespace, and group them based on the matching entity ID. 
 
-</Note>
+</Tip>
 
 
 ## Resource quota best practices
@@ -106,3 +106,10 @@ problematic path. The most granular rate limit quotas takes the effect.
   ![A diagram to show the granularity of target paths and corresponding rate](/img/resource-quotas/quota-granularity_dark.png#dark-theme-only)
 
   Refer to the [Resource Quotas](/vault/docs/concepts/resource-quotas#rate-limit-quota-precedence) page to understand which rate limit quota rule applies to a request. 
+
+- Use the `none` and `entity_then_none` modes with caution. 
+  When you configure a rate limit quota at a high-level (for example, global
+  rate limit) with group by **none** mode, your Vault environment can become
+  vulnerable to becoming unresponsive if a single application purposefully or
+  erroneously exhausts the quota. At that point, no other applications or users
+  can send requests.
