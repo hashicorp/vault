@@ -56,7 +56,7 @@ ldapsearch -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" -b "dc=${LDAP_USERNAME},dc=c
 # Creating Users Org Unit LDIF file and adding users organizational unit
 echo "OpenLDAP: Creating Users Org Unit LDIF file and adding users organizational unit"
 GROUP_LDIF="group.ldif"
-cat <<EOF > ${GROUP_LDIF}
+cat << EOF > ${GROUP_LDIF}
 dn: ou=users,dc=$LDAP_USERNAME,dc=com
 objectClass: organizationalUnit
 ou: users
@@ -65,7 +65,7 @@ ldapadd -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME
 
 echo "OpenLDAP: Creating User LDIF file and adding user to LDAP"
 USER_LDIF="user.ldif"
-cat <<EOF > ${USER_LDIF}
+cat << EOF > ${USER_LDIF}
 dn: uid=$LDAP_USERNAME,ou=users,dc=$LDAP_USERNAME,dc=com
 objectClass: inetOrgPerson
 sn: user
@@ -90,7 +90,7 @@ echo "Vault: Creating ldap auth and creating auth/ldap/config route"
 
 echo "Vault: Creating Vault Policy for LDAP and assigning user to policy"
 VAULT_LDAP_POLICY="ldap_reader.hcl"
-cat <<EOF > ${VAULT_LDAP_POLICY}
+cat << EOF > ${VAULT_LDAP_POLICY}
 path "secret/data/*" {
   capabilities = ["read", "list"]
 }
