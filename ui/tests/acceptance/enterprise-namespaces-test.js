@@ -12,6 +12,7 @@ import {
   findAll,
   triggerKeyEvent,
   find,
+  waitFor,
 } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -346,6 +347,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
 
     // Verify that the namespace does not exist in the namespace picker
     await click(GENERAL.toggleInput('namespace-id'));
+    await waitFor(GENERAL.button('Refresh list'));
     await click(GENERAL.button('Refresh list'));
     await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, namespace);
     assert

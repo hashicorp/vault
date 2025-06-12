@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentRouteName, visit, click, fillIn, currentURL, findAll } from '@ember/test-helpers';
+import { currentRouteName, visit, click, fillIn, currentURL, findAll, waitFor } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
@@ -223,7 +223,7 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     assert.dom('[data-test-edit-form-submit]').exists('Save button is displayed');
     await click('[data-test-edit-form-submit]');
 
-    // Verify test-create-ns does not exist in the Manage Namespace page
+    // Verify test-create-ns exists in the Manage Namespace page
     await fillIn(GENERAL.filterInputExplicit, testNS);
     await click(GENERAL.filterInputExplicitSearch);
     assert.dom('.list-item-row').exists({ count: 1 }, `"${testNS}" namespace is displayed on the page`);
@@ -255,6 +255,7 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
 
     // Verify test-create-ns does not exist in the Namespace Picker
     await click(GENERAL.toggleInput('namespace-id'));
+    await waitFor(NAMESPACE_PICKER_SELECTORS.searchInput);
     await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, testNS);
     assert.strictEqual(
       findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
@@ -355,6 +356,10 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     // Go to the manage namespaces page
     await visit('/vault/access/namespaces');
 
+    // Hack: Trigger refresh internal namespaces endpoint
+    await click(GENERAL.toggleInput('namespace-id'));
+    await click(GENERAL.button('Refresh list'));
+
     // Switch namespace
     await click(GENERAL.menuTrigger);
     await click(GENERAL.menuItem('switch'));
@@ -363,5 +368,8 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     await click(GENERAL.toggleInput('namespace-id'));
     assert.dom('[data-test-badge-namespace]').hasText(testNS);
     assert.strictEqual(currentRouteName(), 'vault.cluster.dashboard', 'navigates to the correct route');
+
+    // Cleanup: Delete namespace(s) via the CLI
+    await deleteNSFromPaths([testNS]);
   });
 });
