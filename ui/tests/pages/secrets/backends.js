@@ -14,6 +14,5 @@ export default create({
     menu: clickable('[data-test-popup-menu-trigger]'),
   }),
   disableButton: clickable('[data-test-confirm-action-trigger]'),
-  confirmDisable: clickable('[data-test-confirm-button]'),
   console: uiPanel,
 });

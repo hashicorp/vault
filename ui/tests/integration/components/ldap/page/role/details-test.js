@@ -84,7 +84,7 @@ module('Integration | Component | ldap | Page::Role::Details', function (hooks) 
       .doesNotExist('Rotate credentials action is hidden for dynamic role');
 
     await click('[data-test-delete]');
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
     assert.ok(
       transitionStub.calledWith('vault.cluster.secrets.backend.ldap.roles'),
       'Transitions to roles route on delete success'

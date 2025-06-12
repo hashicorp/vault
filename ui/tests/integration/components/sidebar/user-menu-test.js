@@ -66,7 +66,7 @@ module('Integration | Component | sidebar-user-menu', function (hooks) {
     assert.dom('[data-test-user-menu-item="mfa"]').hasText('Multi-factor authentication', 'MFA link renders');
 
     await click('[data-test-user-menu-item="revoke token"]');
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
     assert.true(revokeStub.calledOnce, 'Auth revoke token method called on revoke confirm');
     assert.true(
       transitionStub.calledWith('vault.cluster.logout'),

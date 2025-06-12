@@ -25,7 +25,6 @@ const SELECTORS = {
   versionRow: (version) => `[data-test-transit-version="${version}"]`,
   rotate: {
     trigger: '[data-test-transit-key-rotate]',
-    confirm: '[data-test-confirm-button]',
   },
 };
 
@@ -352,7 +351,7 @@ module('Acceptance | transit', function (hooks) {
     assert.dom(SELECTORS.versionRow(1)).hasTextContaining('Version 1', `${name}: only one key version`);
 
     await click(SELECTORS.rotate.trigger);
-    await click(SELECTORS.rotate.confirm);
+    await click(GENERAL.confirmButton);
 
     assert.dom(SELECTORS.versionRow(2)).exists('two key versions after rotate');
 
@@ -473,7 +472,7 @@ module('Acceptance | transit', function (hooks) {
       assert.dom('[data-test-transit-version]').exists({ count: 1 }, `${name}: only one key version`);
       await click(SELECTORS.rotate.trigger);
 
-      await click(SELECTORS.rotate.confirm);
+      await click(GENERAL.confirmButton);
       assert
         .dom('[data-test-transit-version]')
         .exists({ count: 2 }, `${name}: two key versions after rotate`);

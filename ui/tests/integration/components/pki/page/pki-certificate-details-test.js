@@ -104,7 +104,7 @@ module('Integration | Component | pki | Page::PkiCertificateDetails', function (
     );
 
     await click('[data-test-confirm-action-trigger]');
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
 
     assert.dom(GENERAL.infoRowValue('Revocation time')).exists('Revocation time is displayed');
   });
@@ -154,7 +154,7 @@ module('Integration | Component | pki | Page::PkiCertificateDetails', function (
     );
 
     await click('[data-test-confirm-action-trigger]');
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
 
     assert.dom(GENERAL.infoRowValue('Revocation time')).exists('Revocation time is displayed');
   });
@@ -186,6 +186,6 @@ module('Integration | Component | pki | Page::PkiCertificateDetails', function (
       owner: this.engine,
     });
     await click('[data-test-confirm-action-trigger]');
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
   });
 });

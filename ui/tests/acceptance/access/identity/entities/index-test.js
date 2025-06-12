@@ -16,7 +16,7 @@ const SELECTORS = {
   listItem: (name) => `[data-test-identity-row="${name}"]`,
   menu: `[data-test-popup-menu-trigger]`,
   menuItem: (element) => `[data-test-popup-menu="${element}"]`,
-  confirm: '[data-test-confirm-button]',
+  confirm: GENERAL.confirmButton,
 };
 module('Acceptance | /access/identity/entities', function (hooks) {
   setupApplicationTest(hooks);
