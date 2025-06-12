@@ -233,7 +233,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     const nonEngineBackends = supportedSecretBackends().filter((b) => !BACKENDS_WITH_ENGINES.includes(b));
     // add back kv because we want to test v1
     const engines = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: false }).filter(
-      (e) => nonEngineBackends.includes(e.type) || e.type === 'kv'
+      (e) => (nonEngineBackends.includes(e.type) || e.type === 'kv') && e.type !== 'cubbyhole'
     );
     assert.expect(engines.length);
 

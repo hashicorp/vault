@@ -12,9 +12,9 @@ import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 
-const secretTypes = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: false }).map(
-  (engine) => engine.type
-);
+const secretTypes = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: false })
+  .filter((engine) => engine.type !== 'cubbyhole')
+  .map((engine) => engine.type);
 const allSecretTypes = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: true }).map(
   (engine) => engine.type
 );

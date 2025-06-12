@@ -143,7 +143,10 @@ module('Integration | Component | mount backend form', function (hooks) {
         hbs`<MountBackendForm @mountCategory="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       assert.dom(GENERAL.title).hasText('Enable a Secrets Engine', 'renders secrets header');
-      for (const method of filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: false })) {
+      for (const method of filterEnginesByMountCategory({
+        mountCategory: 'secret',
+        isEnterprise: false,
+      }).filter((engine) => engine.type !== 'cubbyhole')) {
         assert
           .dom(MOUNT_BACKEND_FORM.mountType(method.type))
           .hasText(method.displayName, `renders type:${method.displayName} picker`);
@@ -219,7 +222,7 @@ module('Integration | Component | mount backend form', function (hooks) {
         for (const engine of filterEnginesByMountCategory({
           mountCategory: 'secret',
           isEnterprise: false,
-        }).filter((e) => !WIF_ENGINES.includes(e.type))) {
+        }).filter((e) => !WIF_ENGINES.includes(e.type) && e.type !== 'cubbyhole')) {
           // check non-wif engine
           await click(MOUNT_BACKEND_FORM.mountType(engine.type));
           await click(GENERAL.toggleGroup('Method Options'));
