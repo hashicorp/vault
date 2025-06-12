@@ -99,7 +99,9 @@ export default class FormFieldComponent extends Component {
     if (options?.possibleValues?.length > 0) {
       return true;
     } else {
-      if (type === 'number' || type === 'string') {
+      if (options?.editType === 'dateTimeLocal') {
+        return true;
+      } else if (type === 'number' || type === 'string') {
         if (options?.editType === 'password' || options?.editType === 'textarea') {
           return true;
         } else {
