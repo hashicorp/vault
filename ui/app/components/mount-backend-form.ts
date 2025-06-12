@@ -28,7 +28,7 @@ import type { MountSecretBackendModel } from 'vault/routes/vault/cluster/setting
  *   <MountBackendForm @mountCategory="secret" @onMountSuccess={{this.onMountSuccess}} />```
  *
  * @param {function} onMountSuccess - A function that transitions once the Mount has been successfully posted.
- * @param {string} mountCategory=auth - The type of engine to mount, either 'secret' or 'auth'.
+ * @param {string} mountCategory - The type of engine to mount, either 'secret' or 'auth'.
  *
  */
 
