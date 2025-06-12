@@ -16,7 +16,6 @@ const SELECTORS = {
   listItem: (name) => `[data-test-identity-row="${name}"]`,
   menu: `[data-test-popup-menu-trigger]`,
   menuItem: (element) => `[data-test-popup-menu="${element}"]`,
-  submit: '[data-test-identity-submit]',
   confirm: '[data-test-confirm-button]',
 };
 module('Acceptance | /access/identity/entities', function (hooks) {
@@ -79,7 +78,7 @@ module('Acceptance | /access/identity/entities', function (hooks) {
     await click(`${SELECTORS.listItem(name)} ${SELECTORS.menu}`);
     await click(SELECTORS.menuItem('create alias'));
     await fillIn(GENERAL.inputByAttr('name'), 'alias-test');
-    await click(SELECTORS.submit);
+    await click(GENERAL.submitButton);
 
     await visit('/vault/access/identity/groups');
     await click(`${SELECTORS.listItem(name)} ${SELECTORS.menu}`);
