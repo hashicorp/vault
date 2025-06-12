@@ -32,8 +32,9 @@ async function createAlias(itemType, itemGeneratedId, name) {
   return document.querySelector(GENERAL.infoRowValue('ID')).innerText;
 }
 
-// the module name is different from the file path convention because we are testing both groups and entities in the same module
-module('Acceptance | Create aliases for Groups and Entities', function (hooks) {
+// This module covers both groups and entities, so the module name differs from the file path.
+// Creation of an Entity or Group is inherently tested as part of the alias flow, so no separate test is needed.
+module('Acceptance | Create aliases for groups and entities', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
