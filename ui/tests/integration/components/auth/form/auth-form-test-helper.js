@@ -5,7 +5,7 @@
 
 import { click, fillIn, findAll } from '@ember/test-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
-import { AUTH_METHOD_MAP } from 'vault/tests/helpers/auth/auth-helpers';
+import { AUTH_METHOD_LOGIN_DATA, fillInLoginFields } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 /*
@@ -51,12 +51,9 @@ export default (test, { standardSubmit = true } = {}) => {
   if (standardSubmit) {
     test('it submits form data with defaults', async function (assert) {
       await this.renderComponent();
-      const { options } = AUTH_METHOD_MAP.find((m) => m.authType === this.authType);
-      const { loginData } = options;
+      const loginData = AUTH_METHOD_LOGIN_DATA[this.authType];
 
-      for (const [field, value] of Object.entries(loginData)) {
-        await fillIn(GENERAL.inputByAttr(field), value);
-      }
+      await fillInLoginFields(loginData);
       await click(GENERAL.submitButton);
       const [actual] = this.authenticateStub.lastCall.args;
       assert.propEqual(
@@ -70,12 +67,9 @@ export default (test, { standardSubmit = true } = {}) => {
     // component here just yields <:advancedSettings> to test form submits data from yielded inputs
     test('it submits form data from yielded inputs', async function (assert) {
       await this.renderComponent({ yieldBlock: true });
-      const { options } = AUTH_METHOD_MAP.find((m) => m.authType === this.authType);
-      const { loginData } = options;
+      const loginData = AUTH_METHOD_LOGIN_DATA[this.authType];
 
-      for (const [field, value] of Object.entries(loginData)) {
-        await fillIn(GENERAL.inputByAttr(field), value);
-      }
+      await fillInLoginFields(loginData);
       await fillIn(GENERAL.inputByAttr('path'), `custom-${this.authType}`);
 
       await click(GENERAL.submitButton);
