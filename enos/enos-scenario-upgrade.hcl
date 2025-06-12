@@ -245,7 +245,7 @@ scenario "upgrade" {
     }
 
     variables {
-      hosts = step.create_test_servers_target.hosts
+      hosts        = step.create_test_servers_target.hosts
       ldap_version = "1.5.0"
     }
   }
@@ -458,10 +458,10 @@ scenario "upgrade" {
     ]
 
     variables {
-      hosts             = step.create_vault_cluster_targets.hosts
-      ldap_host         = step.create_test_servers.state.ldap.ip_address
-      leader_host       = step.get_vault_cluster_ips.leader_host
-      vault_addr        = step.create_vault_cluster.api_addr_localhost
+      hosts       = step.create_vault_cluster_targets.hosts
+      ldap_host   = step.create_test_servers.state.ldap.ip_address
+      leader_host = step.get_vault_cluster_ips.leader_host
+      vault_addr  = step.create_vault_cluster.api_addr_localhost
       // Use the install dir for our initial version, which always comes from a zip bundle
       vault_install_dir = global.vault_install_dir["bundle"]
       vault_root_token  = step.create_vault_cluster.root_token

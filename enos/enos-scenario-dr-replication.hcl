@@ -317,7 +317,7 @@ scenario "dr_replication" {
     }
 
     variables {
-      hosts = step.create_test_servers_target.hosts
+      hosts        = step.create_test_servers_target.hosts
       ldap_version = "1.5.0"
     }
   }

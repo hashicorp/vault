@@ -236,7 +236,7 @@ scenario "agent" {
     }
 
     variables {
-      hosts = step.create_test_servers_target.hosts
+      hosts        = step.create_test_servers_target.hosts
       ldap_version = "1.5.0"
     }
   }
@@ -513,7 +513,7 @@ scenario "agent" {
   step "verify_secrets_engines_create" {
     description = global.description.verify_secrets_engines_create
     module      = module.vault_verify_secrets_engines_create
-    depends_on  = [
+    depends_on = [
       step.verify_vault_unsealed,
       step.create_test_servers
     ]

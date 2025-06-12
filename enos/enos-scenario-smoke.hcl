@@ -346,7 +346,7 @@ scenario "smoke" {
     }
 
     variables {
-      hosts = step.create_test_servers_target.hosts
+      hosts        = step.create_test_servers_target.hosts
       ldap_version = "1.5.0"
     }
   }
@@ -593,7 +593,7 @@ scenario "smoke" {
   step "verify_secrets_engines_create" {
     description = global.description.verify_secrets_engines_create
     module      = module.vault_verify_secrets_engines_create
-    depends_on  = [
+    depends_on = [
       step.vault_remove_node_and_verify,
       step.create_test_servers
     ]
