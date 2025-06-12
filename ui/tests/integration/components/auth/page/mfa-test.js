@@ -174,6 +174,10 @@ module('Integration | Component | auth | page | mfa', function (hooks) {
       };
     });
 
+    hooks.afterEach(function () {
+      this.routerStub.restore();
+    });
+
     mfaTests(test);
   });
 

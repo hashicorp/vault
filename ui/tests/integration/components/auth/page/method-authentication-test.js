@@ -82,6 +82,10 @@ module('Integration | Component | auth | page | method authentication', function
     this.setTokenDataSpy = sinon.spy(this.auth, 'setTokenData');
   });
 
+  hooks.afterEach(function () {
+    window.localStorage.clear();
+  });
+
   module('github', function (hooks) {
     hooks.beforeEach(async function () {
       this.authType = 'github';
@@ -115,6 +119,10 @@ module('Integration | Component | auth | page | method authentication', function
         this.server.post(`/auth/${this.path}/login`, () => this.response);
         this.server.get(`/auth/token/lookup-self`, () => RESPONSE_STUBS.jwt['lookup-self']);
       };
+    });
+
+    hooks.afterEach(function () {
+      this.routerStub.restore();
     });
 
     methodAuthenticationTests(test);

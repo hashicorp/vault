@@ -20,7 +20,6 @@ module('Integration | Component | auth | page | listing visibility', function (h
   hooks.beforeEach(function () {
     setupTestContext(this);
     this.visibleAuthMounts = SYS_INTERNAL_UI_MOUNTS;
-    window.localStorage.clear();
   });
 
   test('it formats and renders tabs if visible auth mounts exist', async function (assert) {
