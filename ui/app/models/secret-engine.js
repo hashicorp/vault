@@ -140,8 +140,7 @@ export default class SecretEngineModel extends Model {
       return 'vault.cluster.secrets.backend.overview';
     }
     if (isAddonEngine(this.engineType, this.version)) {
-      const { engineRoute } = engineDisplayData(this.engineType);
-      return `vault.cluster.secrets.backend.${engineRoute}`;
+      return `vault.cluster.secrets.backend.${engineDisplayData(this.engineType).engineRoute}`;
     }
     if (this.isV2KV) {
       // if it's KV v2 but not registered as an addon, it's type generic
