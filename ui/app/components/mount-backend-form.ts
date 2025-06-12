@@ -173,7 +173,7 @@ export default class MountBackendForm extends Component<Args> {
         } at ${path}.`
       );
       // Check whether to use the engine route, since KV version 1 does not
-      const useEngineRoute = isAddonEngine(mountModel.engineType, Number(formData.options?.version));
+      const useEngineRoute = isAddonEngine(mountModel.engineType, Number(formData?.options?.version));
       this.args.onMountSuccess(type, path, useEngineRoute);
     } catch (error) {
       if (error instanceof ResponseError) {
