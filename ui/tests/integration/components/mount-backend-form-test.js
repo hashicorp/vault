@@ -224,7 +224,7 @@ module('Integration | Component | mount backend form', function (hooks) {
         for (const engine of filterEnginesByMountCategory({
           mountCategory: 'secret',
           isEnterprise: false,
-        }).filter((e) => !e.isWIF && e.type !== 'cubbyhole')) {
+        }).filter((e) => !WIF_ENGINES.includes(e.type) && e.type !== 'cubbyhole')) {
           // check non-wif engine
           await click(MOUNT_BACKEND_FORM.mountType(engine.type));
           await click(GENERAL.toggleGroup('Method Options'));

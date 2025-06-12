@@ -8,7 +8,7 @@ import engineDisplayData from 'vault/helpers/engines-display-data';
 
 export default class SecretsBackendConfigurationEditController extends Controller {
   get isWifEngine() {
-    return engineDisplayData(this.model.type).isWIF;
+    return engineDisplayData(this.model.type).isWIF ?? false;
   }
   get displayName() {
     return engineDisplayData(this.model.type).displayName;

@@ -13,7 +13,7 @@ import {
   expectedConfigKeys,
   expectedValueOfConfigKeys,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
-import { CONFIGURABLE_SECRET_ENGINES } from 'vault/utils/all-engines-metadata';
+import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 
 module('Integration | Component | SecretEngine::ConfigurationDetails', function (hooks) {
@@ -35,7 +35,7 @@ module('Integration | Component | SecretEngine::ConfigurationDetails', function 
       .hasText(`Get started by configuring your Display Name secrets engine.`);
   });
 
-  for (const type of CONFIGURABLE_SECRET_ENGINES) {
+  for (const type of ALL_ENGINES.filter((engine) => engine.isConfigurable).map((engine) => engine.type)) {
     test(`${type}: it shows config details if configModel(s) are passed in`, async function (assert) {
       const backend = `test-${type}`;
       this.configModels = createConfig(this.store, backend, type);

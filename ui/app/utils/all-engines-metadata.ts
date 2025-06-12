@@ -12,9 +12,11 @@ export interface EngineDisplayData {
   displayName: string;
   engineRoute?: string;
   glyph?: string;
-  isWIF?: boolean;
+  isWIF?: boolean; // flag for 'Workload Identity Federation' engines.
   mountCategory: string[];
   requiresEnterprise?: boolean;
+  isConfigurable?: boolean; // for secret engines that have their own configuration page and actions. - These engines do not exist in their own Ember engine.
+  isConfigurationOnly?: boolean; // The UI only supports configuration views for these secrets engines. The CLI must be used to manage other engine resources (i.e. roles, credentials).
   type: string;
   value?: string;
 }
@@ -38,23 +40,12 @@ export function filterEnginesByMountCategory({
       );
 }
 
-/** Copied over from mountable-secret-engines */
+/** Copied function from mountable-secret-engines */
 export function isAddonEngine(type: string, version: number) {
   if (type === 'kv' && version === 1) return false;
   const engineRoute = ALL_ENGINES.find((engine) => engine.type === type)?.engineRoute;
   return !!engineRoute;
 }
-
-//copied over from mountable secret engines file, tbd deletion
-
-// Secret engines that have their own configuration page and actions
-// These engines do not exist in their own Ember engine.
-export const CONFIGURABLE_SECRET_ENGINES = ['aws', 'azure', 'gcp', 'ssh'];
-
-// The UI only supports configuration views for these secrets engines. The CLI must be used to manage other engine resources (i.e. roles, credentials).
-export const CONFIGURATION_ONLY = ['azure', 'gcp'];
-
-/** end copied exports */
 
 export const ALL_ENGINES: EngineDisplayData[] = [
   {
@@ -76,6 +67,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'cloud',
     displayName: 'AWS',
     glyph: 'aws-color',
+    isConfigurable: true,
     isWIF: true,
     mountCategory: ['auth', 'secret'],
     type: 'aws',
@@ -84,6 +76,8 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'cloud',
     displayName: 'Azure',
     glyph: 'azure-color',
+    isConfigurationOnly: true,
+    isConfigurable: true,
     isWIF: true,
     mountCategory: ['auth', 'secret'],
     type: 'azure',
@@ -119,6 +113,8 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'cloud',
     displayName: 'Google Cloud',
     glyph: 'gcp-color',
+    isConfigurationOnly: true,
+    isConfigurable: true,
     isWIF: true,
     mountCategory: ['auth', 'secret'],
     type: 'gcp',
@@ -246,6 +242,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'generic',
     displayName: 'SSH',
     glyph: 'terminal-screen',
+    isConfigurable: true,
     mountCategory: ['secret'],
     type: 'ssh',
   },

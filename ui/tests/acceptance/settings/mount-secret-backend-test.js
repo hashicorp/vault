@@ -32,7 +32,8 @@ import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { SELECTORS as OIDC } from 'vault/tests/helpers/oidc-config';
 import { adminOidcCreateRead, adminOidcCreate } from 'vault/tests/helpers/secret-engine/policy-generator';
-import { filterEnginesByMountCategory, CONFIGURATION_ONLY } from 'vault/utils/all-engines-metadata';
+import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 const consoleComponent = create(consoleClass);
 
@@ -251,7 +252,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       }
       await click(GENERAL.submitButton);
 
-      const route = CONFIGURATION_ONLY.includes(engine.type) ? 'configuration.index' : 'list-root';
+      const route = engineDisplayData(engine.type).isConfigurationOnly ? 'configuration.index' : 'list-root';
       assert.strictEqual(
         currentRouteName(),
         `vault.cluster.secrets.backend.${route}`,

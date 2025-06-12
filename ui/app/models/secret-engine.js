@@ -234,7 +234,9 @@ export default class SecretEngineModel extends Model {
         // no ttl options for keymgmt
         optionFields = [...CORE_OPTIONS, 'config.allowedManagedKeys', ...STANDARD_CONFIG];
         break;
-      case ALL_ENGINES.find((engine) => engine.type === this.engineType && engine.isWIF):
+      case ALL_ENGINES.filter((engine) => engine.isWIF)
+        .map((engine) => engine.type)
+        .find((engine) => engine.type === this.engineType):
         defaultFields = ['path'];
         optionFields = [
           ...CORE_OPTIONS,

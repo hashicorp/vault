@@ -7,7 +7,6 @@ import AdapterError from '@ember-data/adapter/error';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { CONFIGURABLE_SECRET_ENGINES } from 'vault/utils/all-engines-metadata';
 import errorMessage from 'vault/utils/error-message';
 import { action } from '@ember/object';
 
@@ -46,7 +45,7 @@ export default class SecretsBackendConfigurationEdit extends Route {
     const type = secretEngineRecord.type;
 
     // if the engine type is not configurable, return a 404.
-    if (!secretEngineRecord || !CONFIGURABLE_SECRET_ENGINES.includes(type)) {
+    if (!secretEngineRecord || !engineDisplayData(type)?.isConfigurable) {
       const error = new AdapterError();
       set(error, 'httpStatus', 404);
       throw error;

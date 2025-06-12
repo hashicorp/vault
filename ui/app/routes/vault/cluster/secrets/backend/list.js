@@ -7,15 +7,12 @@ import { set } from '@ember/object';
 import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
-import {
-  isAddonEngine,
-  CONFIGURATION_ONLY,
-  filterEnginesByMountCategory,
-} from 'vault/utils/all-engines-metadata';
+import { isAddonEngine, filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 import { service } from '@ember/service';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
 import { assert } from '@ember/debug';
 import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 const SUPPORTED_BACKENDS = supportedSecretBackends();
 
@@ -89,7 +86,7 @@ export default Route.extend({
     const type = secretEngine?.engineType;
     assert('secretEngine.engineType is not defined', !!type);
     // if configuration only, redirect to configuration route
-    if (CONFIGURATION_ONLY.includes(type)) {
+    if (engineDisplayData(type).isConfigurationOnly) {
       return this.router.transitionTo('vault.cluster.secrets.backend.configuration', backend);
     }
 
