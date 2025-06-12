@@ -30,13 +30,16 @@ os_id=$(detect_os)
 echo "Installing Docker for: ${os_id}"
 case "$os_id" in
   amzn)
+    sudo dnf upgrade --refresh -y
     sudo dnf install -y docker
     ;;
   ubuntu)
-    sudo apt install docker.io
+    sudo apt update -y
+    sudo apt install -y docker.io
     ;;
   rhel | centos)
-    sudo yum install docker
+    sudo yum update -y
+    sudo yum install -y docker
     ;;
   *)
     echo "Unsupported or unknown OS: $os_id"
