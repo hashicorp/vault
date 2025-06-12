@@ -144,10 +144,6 @@ export default class NamespacePicker extends Component {
     return this.hasSearchInput ? noMatchingNamespacesHelpText : noNamespacesMessage;
   }
 
-  get selected(): NamespaceOption | null {
-    return this.getSelected(this.allNamespaces, this.namespace?.path) ?? null;
-  }
-
   get showNoNamespacesMessage(): boolean {
     const hasError = this.errorLoadingNamespaces !== '';
     return this.namespaceCount === 0 && !hasError;
