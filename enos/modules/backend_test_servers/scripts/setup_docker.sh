@@ -15,10 +15,11 @@ check_docker_installed() {
 # Function to detect the OS
 detect_os() {
   if [ -f /etc/os-release ]; then
+    # shellcheck disable=SC1091
     . /etc/os-release
-    echo "OS: $ID"
+    echo "$ID"
   else
-    echo "unknown"
+    echo "Unknown OS: /etc/os-release not found"
   fi
 }
 
