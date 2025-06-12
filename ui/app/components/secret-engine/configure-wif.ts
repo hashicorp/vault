@@ -153,7 +153,7 @@ export default class ConfigureWif extends Component<Args> {
         await this.api.secrets.awsConfigureLease(backendPath, { lease, leaseMax });
       } catch (e) {
         const { message } = await this.api.parseError(e);
-        this.flashMessages.warning(`Error saving lease configuration: ${message}`);
+        this.flashMessages.danger(`Error saving lease configuration: ${message}`);
       }
     } else if (type === 'azure') {
       await this.api.secrets.azureConfigure(backendPath, data);
