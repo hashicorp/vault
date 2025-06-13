@@ -22,6 +22,7 @@ import { allEngines } from 'vault/helpers/mountable-secret-engines';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { v4 as uuidv4 } from 'uuid';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const searchSelectComponent = create(searchSelect);
 
@@ -308,8 +309,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     );
     await alphabetsPage.name(alphabetName);
     await alphabetsPage.alphabet('aeiou');
-    await alphabetsPage.submit();
-    await settled();
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/show/alphabet/${alphabetName}`,

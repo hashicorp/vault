@@ -158,7 +158,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
       if (testCase.reset) {
         await click(CLIENT_COUNT.dateRange.reset);
       }
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert.dom(CLIENT_COUNT.dateRange.dateDisplay('start')).hasText(testCase.expectedStart);
       assert.dom(CLIENT_COUNT.dateRange.dateDisplay('end')).hasText(testCase.expectedEnd);
     });

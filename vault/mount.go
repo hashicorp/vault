@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/observations"
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/mitchellh/copystructure"
 )
@@ -784,6 +785,18 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	if c.logger.IsInfo() {
 		c.logger.Info("successful mount", "namespace", entry.Namespace().Path, "path", entry.Path, "type", entry.Type, "version", entry.RunningVersion)
 	}
+
+	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountSecretsEnable, ns, map[string]interface{}{
+		"path":        entry.Path,
+		"local_mount": entry.Local,
+		"type":        entry.Type,
+		"accessor":    entry.Accessor,
+		"version":     entry.RunningVersion,
+	})
+	if err != nil {
+		c.logger.Error("failed to record observation after enabling mount backend", "path", entry.Path, "error", err)
+	}
+
 	return nil
 }
 
@@ -965,6 +978,17 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 
 	if c.logger.IsInfo() {
 		c.logger.Info("successfully unmounted", "path", path, "namespace", ns.Path)
+	}
+
+	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountSecretsDisable, ns, map[string]interface{}{
+		"path":        entry.Path,
+		"local_mount": entry.Local,
+		"type":        entry.Type,
+		"accessor":    entry.Accessor,
+		"version":     entry.RunningVersion,
+	})
+	if err != nil {
+		c.logger.Error("failed to record observation after enabling mount backend", "path", entry.Path, "error", err)
 	}
 
 	return nil
@@ -1716,6 +1740,13 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		}
 		if len(plug.Sha256) > 0 {
 			runningSha = hex.EncodeToString(plug.Sha256)
+		}
+
+		if plug.Download {
+			if err = sysView.DownloadExtractVerifyPlugin(ctx, plug); err != nil {
+				return nil, fmt.Errorf("failed to extract and verify plugin=%q version=%q before mounting: %w",
+					plug.Name, plug.Version, err)
+			}
 		}
 
 		factory = plugin.Factory

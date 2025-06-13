@@ -591,7 +591,6 @@ func (c *Core) GetAuthenticatedCustomBanners() int {
 	filter := uicustommessages.FindFilter{
 		IncludeAncestors: false,
 	}
-	filter.Active(true)
 	filter.Authenticated(true)
 	for _, ns := range allNamespaces {
 		messages, err := c.customMessageManager.FindMessages(namespace.ContextWithNamespace(ctx, ns), filter)
@@ -612,7 +611,6 @@ func (c *Core) GetUnauthenticatedCustomBanners() int {
 	filter := uicustommessages.FindFilter{
 		IncludeAncestors: false,
 	}
-	filter.Active(true)
 	filter.Authenticated(false)
 	for _, ns := range allNamespaces {
 		messages, err := c.customMessageManager.FindMessages(namespace.ContextWithNamespace(ctx, ns), filter)
@@ -1077,7 +1075,6 @@ func (c *Core) GetAutopilotUpgradeEnabled() float64 {
 
 	config := raftBackend.AutopilotConfig()
 	if config == nil {
-		c.logger.Error("failed to get autopilot config")
 		return 0.0
 	}
 
