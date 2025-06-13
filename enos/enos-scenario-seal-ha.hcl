@@ -472,6 +472,7 @@ scenario "seal_ha" {
       step.create_vault_cluster,
       step.get_vault_cluster_ips,
       step.verify_vault_unsealed,
+      step.create_test_servers
     ]
 
     providers = {

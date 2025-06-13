@@ -431,6 +431,7 @@ scenario "upgrade" {
     depends_on = [
       step.create_vault_cluster,
       step.get_vault_cluster_ips,
+      step.create_test_servers
     ]
 
     providers = {

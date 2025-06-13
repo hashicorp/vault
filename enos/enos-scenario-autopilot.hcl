@@ -383,7 +383,8 @@ scenario "autopilot" {
     module      = module.vault_verify_secrets_engines_create
     depends_on = [
       step.create_vault_cluster,
-      step.get_vault_cluster_ips
+      step.get_vault_cluster_ips,
+      step.create_test_servers
     ]
 
     providers = {

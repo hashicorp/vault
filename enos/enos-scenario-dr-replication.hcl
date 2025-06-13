@@ -713,7 +713,10 @@ scenario "dr_replication" {
   step "verify_secrets_engines_on_primary" {
     description = global.description.verify_secrets_engines_create
     module      = module.vault_verify_secrets_engines_create
-    depends_on  = [step.get_primary_cluster_ips]
+    depends_on  = [
+      step.get_primary_cluster_ips,
+      step.create_test_servers
+    ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]

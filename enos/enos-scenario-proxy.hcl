@@ -490,7 +490,10 @@ scenario "proxy" {
   step "verify_secrets_engines_create" {
     description = global.description.verify_secrets_engines_create
     module      = module.vault_verify_secrets_engines_create
-    depends_on  = [step.verify_vault_unsealed]
+    depends_on  = [
+      step.verify_vault_unsealed,
+      step.create_test_servers
+    ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
