@@ -54,28 +54,48 @@ Output:
 ## Configuration
 
 The `operator import` command uses a dedicated configuration file to specify the source,
-destination, and mapping rules. To learn more about these types and secrets importing in 
+destination, and mapping rules. To learn more about these types and secrets importing in
 general, refer to the [Secrets Import documentation](/vault/docs/import).
 
 ```hcl
 source_gcp {
-  name        = "my-gcp-source-1"
-  credentials = "@/path/to/service-account-key.json"
+  name             = "my-src-1"
+  credentials_file = "/path/to/service-account-key.json"
+}
+
+source_aws {
+  name                = "my-src-2"
+  credentials_profile = "my-profile-name"
+}
+
+source_azure {
+  name                = "my-src-3"
+  # Use default credentials from doing an az login
 }
 
 destination_vault {
   name      = "my-dest-1"
   address   = "http://127.0.0.1:8200/"
-  token     = "root"
   namespace = "ns-1"
   mount     = "mount-1"
 }
 
-mapping_passthrough {
+mapping {
   name        = "my-map-1"
-  source      = "my-gcp-1"
+  source      = "my-src-1"
   destination = "my-dest-1"
-  priority    = 1
+}
+
+mapping {
+  name        = "my-map-2"
+  source      = "my-src-2"
+  destination = "my-dest-1"
+}
+
+mapping {
+  name        = "my-map-3"
+  source      = "my-src-3"
+  destination = "my-dest-1"
 }
 ```
 
