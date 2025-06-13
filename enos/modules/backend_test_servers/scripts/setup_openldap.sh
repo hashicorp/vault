@@ -17,11 +17,11 @@ fail() {
 
 # Pull OpenLDAP Docker image
 LDAP_DOCKER_NAME="osixia/openldap:${LDAP_VERSION}"
-docker pull "${LDAP_DOCKER_NAME}"
+sudo docker pull "${LDAP_DOCKER_NAME}"
 
 # Run OpenLDAP container
 echo "Starting OpenLDAP container..."
-docker run -d \
+sudo docker run -d \
   --name openldap \
   -p "${LDAP_PORT}:${LDAP_PORT}" \
   -p 636:636 \
