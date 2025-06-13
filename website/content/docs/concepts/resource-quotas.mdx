@@ -52,6 +52,37 @@ Vault also allows the inspection of the state of rate limiting in a Vault node
 through various [metrics](/vault/docs/internals/telemetry/metrics/core-system#quota-metrics) exposed
 and through enabling optional audit logging.
 
+<table>
+  <thead>
+    <tr>
+      <th>Feature</th>
+      <th>Description</th>
+      <th>Community Edition</th>
+      <th>Enterprise</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td rowSpan={2}><a href="/vault/docs/configuration/create-rate-limit-quota">Rate limit quotas</a></td>
+      <td>Limit maximum amount of requests per second (RPS) to a system or mount to protect network bandwidth</td>
+      <td style={{verticalAlign: 'middle', textAlign: 'center'}}>&#9989;</td>
+      <td style={{verticalAlign: 'middle', textAlign: 'center'}}>&#9989;</td>
+    </tr>
+    <tr>
+      <td>Identity-based and collective rate limits <a href="/vault/docs/configuration/identity-based-rate-limit">with <code>group_by</code> modes</a></td>
+      <td style={{verticalAlign: 'middle', textAlign: 'center'}}>&#10060;</td>
+      <td style={{verticalAlign: 'middle', textAlign: 'center'}}>&#9989;</td>
+    </tr>
+    <tr>
+      <td><a href="/vault/docs/configuration/create-lease-count-quota">Lease count quotas</a></td>
+      <td>Cap number of leases generated in a system or mount to protect system stability and storage performance at scale</td>
+      <td style={{verticalAlign: 'middle', textAlign: 'center'}}>&#10060;</td>
+      <td style={{verticalAlign: 'middle', textAlign: 'center'}}>&#9989;</td>
+    </tr>
+  </tbody>
+</table>
+
+
 ## Exempt routes
 
 By default, the following paths are exempt from rate limiting. However, Vault
@@ -84,11 +115,27 @@ set up a local mount on both clusters with the same path, a user that only has
 access to the performance secondary cluster can create/update a quota for this
 path that will apply to the performance primary cluster.
 
-## Tutorial
+## Rate limit quota precedence
 
-Refer to [Protecting Vault with Resource
-Quotas](/vault/tutorials/operations/resource-quotas) for a
-step-by-step tutorial.
+You can define quotas on namespaces, mounts, and paths. If the path is an auth
+mount with a concept of roles (such as `/auth/approle/`), the rate limit quota
+restricts login requests to that mount with the specified role. 
+
+Only one rate limit quota rule can exist for any given path, and the most
+granular rate limit quota takes effect on the requests. 
+
+To understand which rate limit quota rule applies to a request, here is the
+order of precedence:
+
+1. The rate limit quota matching the target namespace, mount, and role
+1. The rate limit quota matching the target namespace, mount, and path
+1. The rate limit quota matching the target namespace, mount, and the longest
+   prefix of the target path that ends with a trailing glob (*)
+1. The rate limit quota matching the target namespace, and mount
+1. The rate limit quota matching the target namespace
+1. The rate limit quota matching the closest parent namespace, as long as the
+   match has the `inheritable` field set
+1. Global rate limit quota
 
 ## API
 
