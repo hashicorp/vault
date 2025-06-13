@@ -31,12 +31,17 @@
     <form {{on "submit" (perform this.mountBackend)}}>
       <FormFieldGroups
         @model={{@mountModel}}
+        @groupName={{if (eq @mountType "secret") "formFieldGroups"}}
         @renderGroup="default"
         @modelValidations={{this.modelValidations}}
         @onKeyUp={{this.onKeyUp}}
       />
 
-      <FormFieldGroups @model={{@mountModel}} @renderGroup="Method Options">
+      <FormFieldGroups
+        @model={{@mountModel}}
+        @renderGroup="Method Options"
+        @groupName={{if (eq @mountType "secret") "formFieldGroups"}}
+      >
         <:identityTokenKey>
           <SearchSelectWithModal
             @id="key"

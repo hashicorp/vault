@@ -115,11 +115,6 @@ module('Acceptance | aws | configuration', function (hooks) {
         `Successfully saved ${path}'s configuration.`,
         'first flash message about the first model config.'
       );
-      assert.strictEqual(
-        this.flashSuccessSpy.args[2][0],
-        'Issuer saved successfully',
-        'second success message is about the issuer.'
-      );
       assert.dom(GENERAL.infoRowValue('Issuer')).exists('Issuer has been set and is shown.');
       assert.dom(GENERAL.infoRowValue('Role ARN')).hasText('foo-role', 'Role ARN has been set.');
       assert
@@ -266,46 +261,10 @@ module('Acceptance | aws | configuration', function (hooks) {
       await runCmd(`delete sys/mounts/${path}`);
     });
 
-    test('it should not make a post request if lease or root data was unchanged', async function (assert) {
-      assert.expect(3);
-      const path = `aws-${this.uid}`;
-      const type = 'aws';
-      await enablePage.enable(type, path);
-
-      this.server.post(configUrl(type, path), () => {
-        throw new Error(`post request was made to config/root when it should not have been.`);
-      });
-      this.server.post(configUrl('aws-lease', path), () => {
-        throw new Error(`post request was made to config/lease when it should not have been.`);
-      });
-
-      await click(SES.configTab);
-      await click(SES.configure);
-      await click(GENERAL.saveButton);
-      assert.true(
-        this.flashInfoSpy.calledWith('No changes detected.'),
-        'Flash message shows no changes detected.'
-      );
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${path}/configuration`,
-        'navigates back to the configuration index view'
-      );
-      assert.dom(GENERAL.emptyStateTitle).hasText('AWS not configured');
-      // cleanup
-      await runCmd(`delete sys/mounts/${path}`);
-    });
-
     test('it saves lease configuration if root configuration was not changed', async function (assert) {
       assert.expect(2);
       const path = `aws-${this.uid}`;
       await enablePage.enable('aws', path);
-
-      this.server.post(configUrl('aws', path), () => {
-        throw new Error(
-          `Request was made to save the config/root when it should not have been because the user did not make any changes to this config.`
-        );
-      });
 
       await click(SES.configTab);
       await click(SES.configure);
@@ -313,7 +272,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(GENERAL.saveButton);
 
       assert.true(
-        this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s lease configuration.`),
+        this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
         'Success flash message is rendered showing the lease configuration was saved.'
       );
       assert.strictEqual(
@@ -381,21 +340,17 @@ module('Acceptance | aws | configuration', function (hooks) {
         const path = `aws-${this.uid}`;
         await enablePage.enable('aws', path);
 
-        this.server.post(configUrl('aws', path), () => {
-          throw new Error(
-            `Request was made to save the config/root when it should not have been because the user did not make any changes to this config.`
-          );
-        });
         this.server.post(configUrl('aws-lease', path), () => {
           return overrideResponse(400, { errors: ['bad request!'] });
         });
+
         await click(SES.configTab);
         await click(SES.configure);
         await fillInAwsConfig('withLease');
         await click(GENERAL.saveButton);
 
         assert.true(
-          this.flashDangerSpy.calledWith(`Lease configuration was not saved: bad request!`),
+          this.flashDangerSpy.calledWith(`Error saving lease configuration: bad request!`),
           'flash danger message is rendered showing the lease configuration was NOT saved.'
         );
         assert.strictEqual(

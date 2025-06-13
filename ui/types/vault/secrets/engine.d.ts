@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import type { MountsEnableSecretsEngineRequest } from '@hashicorp/vault-client-typescript';
+
 export type EngineConfig = {
   forceNoCache: boolean;
   listingVisibility: string;
@@ -17,7 +19,7 @@ export type EngineConfig = {
 };
 
 export type EngineOptions = {
-  version: string;
+  version: number;
 };
 
 export type SecretsEngine = {
@@ -77,4 +79,15 @@ export type GcpConfig = CommonConfigParams & {
 export type SshConfig = {
   publicKey: string;
   generateSigningKey: boolean;
+};
+
+export type SecretsEngineFormData = MountsEnableSecretsEngineRequest & {
+  path: string;
+  config?: EngineConfig;
+  options?: EngineOptions;
+  kvConfig?: {
+    maxVersions?: number;
+    casRequired?: boolean;
+    deleteVersionAfter?: string;
+  };
 };
