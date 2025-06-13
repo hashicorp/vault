@@ -10,7 +10,7 @@ import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { presence } from 'vault/utils/forms/validators';
-import { filterEnginesByMountCategory, isAddonEngine } from 'vault/utils/all-engines-metadata';
+import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 import { assert } from '@ember/debug';
 
 import type FlashMessageService from 'vault/services/flash-messages';
@@ -19,6 +19,7 @@ import type AdapterError from '@ember-data/adapter/error';
 
 import type { AuthEnableModel } from 'vault/routes/vault/cluster/settings/auth/enable';
 import type { MountSecretBackendModel } from 'vault/routes/vault/cluster/settings/mount-secret-backend';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 /**
  * @module MountBackendForm
@@ -184,8 +185,9 @@ export default class MountBackendForm extends Component<Args> {
       } at ${path}.`
     );
     // Check whether to use the engine route, since KV version 1 does not
-    const useEngineRoute = isAddonEngine(mountModel.engineType, mountModel.version);
-    yield this.args.onMountSuccess(type, path, useEngineRoute);
+    if (mountModel.engineType !== 'kv' && mountModel.version !== 1) {
+      yield this.args.onMountSuccess(type, path, !!engineDisplayData(mountModel.engineType)?.engineRoute);
+    }
     return;
   }
 

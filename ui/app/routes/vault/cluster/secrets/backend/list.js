@@ -7,7 +7,6 @@ import { set } from '@ember/object';
 import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
-import { isAddonEngine, filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 import { service } from '@ember/service';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
 import { assert } from '@ember/debug';
@@ -90,16 +89,14 @@ export default Route.extend({
       return this.router.transitionTo('vault.cluster.secrets.backend.configuration', backend);
     }
 
-    const engineRoute = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: true }).find(
-      (engine) => engine.type === type
-    )?.engineRoute;
+    const engineRoute = engineDisplayData(type)?.engineRoute;
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {
       return this.router.transitionTo('vault.cluster.secrets');
     }
     if (this.routeName === 'vault.cluster.secrets.backend.list' && !secret.endsWith('/')) {
       return this.router.replaceWith('vault.cluster.secrets.backend.list', secret + '/');
     }
-    if (isAddonEngine(type, secretEngine.version)) {
+    if (type !== 'kv' && secretEngine.version !== 1 && !!engineDisplayData(type)?.engineRoute) {
       if (engineRoute === 'kv.list' && pathIsDirectory(secret)) {
         return this.router.transitionTo('vault.cluster.secrets.backend.kv.list-directory', backend, secret);
       }
