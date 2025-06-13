@@ -61,7 +61,7 @@ environment variables or files on disk in predefined locations.
 #### storage_type=local
 
 - `local_max_space` `(integer: <required>)` - For `storage_type=local`, the maximum
-  space, in bytes, to use for all snapshots with the given `file_prefix` in the `path_prefix` directory. 
+  space, in bytes, to use for all snapshots with the given `file_prefix` in the `path_prefix` directory.
   Snapshot attempts will fail if there is not enough
   space left in this allowance.
 
@@ -278,8 +278,72 @@ $ curl \
     "last_snapshot_error": "",
     "last_snapshot_start": "2020-10-28T11:17:21-04:00",
     "last_snapshot_url": "file:///opt/vault/snapshots/vault-snapshot-1603898241699731000.snap",
-    "snapshot_start": "2020-10-28T11:17:21-04:00",
+    "snapshot_start": "2020-108T11:17:21-04:00",
     "snapshot_url": "file:///opt/vault/snapshots/vault-snapshot-1603898241699731000.snap"
   }
 }
 ```
+
+## Load a snapshot from an automated snapshot configuration
+
+Load a new snapshot into the Vault cluster without overwriting the cluster with
+the snapshot's data. After loading a snapshot, you can recover, read, and list
+individual pieces of data from the loaded snapshot.
+
+To manage the state of your loaded snapshot, use the [`/sys/storage/raft/snapshot-load`](/vault/api-docs/system/storage/raftsnapshotload)
+endpoints.
+
+@include 'recover/loadedsnapshots.mdx'
+
+<Note>
+
+  You cannot load a snapshot from an automated snapshot configuration with `storage_type=local`.
+  Instead, upload the snapshot file using the
+  [`/sys/storage/raft/snapshot-load`](/vault/api-docs/system/storage/raftsnapshotload) endpoint.
+
+</Note>
+
+| Method | Path                                                  |
+| :----- | :---------------------------------------------------- |
+| `POST` | `/sys/storage/raft/snapshot-auto/snapshot-load/:name` |
+
+
+### Parameters
+
+- `name` `(string: <required>)` – Name of the configuration that created the snapshot.
+
+- `url` `(string: <required>)` - The snapshot URL to load as returned by the
+  `status` endpoint.
+
+### Sample payload
+```json
+{
+  "url": "https://example.com/raft.snap"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json \
+    http://127.0.0.1:8200/v1/sys/storage/raft/snapshot-auto/snapshot-load/config1
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "auto_config_name": "config1",
+    "cluster_id": "2ec84695-cfe5-44f3-b351-3f08a9ccc0c8",
+    "expires_at": "2025-05-25T15:07:58.187769+01:00",
+    "snapshot_id": "2403d301-94f2-46a1-a39d-02be83e2831a",
+    "url": "https://example.com/raft.snap",
+    "status": "ready"
+  }
+}
+```
+

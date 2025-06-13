@@ -13,6 +13,7 @@ import { assert } from '@ember/debug';
 import { addToArray } from 'vault/helpers/add-to-array';
 import { removeFromArray } from 'vault/helpers/remove-from-array';
 import { isEmpty } from '@ember/utils';
+import { get } from '@ember/object';
 
 /**
  * @module FormField
@@ -79,7 +80,7 @@ export default class FormFieldComponent extends Component {
       'Form is attempting to modify an ID. Ember-data does not allow this.',
       valuePath.toLowerCase() !== 'id'
     );
-    const modelValue = model[valuePath];
+    const modelValue = get(model, valuePath);
     this.showToggleTextInput = !!modelValue;
     this.toggleInputEnabled = !!modelValue;
   }

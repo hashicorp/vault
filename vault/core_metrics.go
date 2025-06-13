@@ -1077,7 +1077,6 @@ func (c *Core) GetAutopilotUpgradeEnabled() float64 {
 
 	config := raftBackend.AutopilotConfig()
 	if config == nil {
-		c.logger.Error("failed to get autopilot config")
 		return 0.0
 	}
 

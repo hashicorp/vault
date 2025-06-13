@@ -45,6 +45,7 @@ type RunnerUtil interface {
 	MlockEnabled() bool
 	VaultVersion(ctx context.Context) (string, error)
 	ClusterID(ctx context.Context) (string, error)
+	DownloadExtractVerifyPlugin(ctx context.Context, pr *PluginRunner) error
 }
 
 // LookRunnerUtil defines the functions for both Looker and Wrapper
@@ -75,6 +76,7 @@ type PluginRunner struct {
 	Sha256         []byte                      `json:"sha256" structs:"sha256"`
 	Builtin        bool                        `json:"builtin" structs:"builtin"`
 	Tier           consts.PluginTier           `json:"tier" structs:"tier"`
+	Download       bool                        `json:"download" structs:"download"`
 	BuiltinFactory func() (interface{}, error) `json:"-" structs:"-"`
 	RuntimeConfig  *prutil.PluginRuntimeConfig `json:"-" structs:"-"`
 	Tmpdir         string                      `json:"-" structs:"-"`
@@ -111,6 +113,8 @@ type SetPluginInput struct {
 	Args     []string
 	Env      []string
 	Sha256   []byte
+	Tier     consts.PluginTier
+	Download bool
 }
 
 // Run takes a wrapper RunnerUtil instance along with the go-plugin parameters and

@@ -160,3 +160,7 @@ func (m *mockRunnerUtil) MlockEnabled() bool {
 func (m *mockRunnerUtil) ClusterID(ctx context.Context) (string, error) {
 	return "clusterid", nil
 }
+
+func (m *mockRunnerUtil) DownloadExtractVerifyPlugin(_ context.Context, _ *pluginutil.PluginRunner) error {
+	return nil
+}

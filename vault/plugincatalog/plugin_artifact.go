@@ -5,20 +5,45 @@ package plugincatalog
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/ProtonMail/gopenpgp/v3/crypto"
 )
 
-// hashiCorpPGPPubKey is HashiCorp's PGP public key at https://www.hashicorp.com/.well-known/pgp-key.txt.
-// This key is used to verify the authenticity of HashiCorp plugins.
-const hashiCorpPGPPubKey = `
+const (
+	extractedArtifactDirFmt = "%s_%s_%s_%s" // vault-plugin-database-oracle_1.2.3+ent_linux_amd64
+	metadataFile            = "metadata.json"
+	metadataSig             = "metadata.json.sig"
+)
+
+var (
+	once     sync.Once
+	verifier crypto.PGPVerify
+
+	errExtractedArtifactDirNotFound = errors.New("extracted artifact directory not found")
+	errReadMetadata                 = errors.New("failed to read metadata")
+	errReadMetadataSig              = errors.New("failed to read metadata signature")
+	errReadPlugin                   = errors.New("failed to read plugin binary")
+	errReadPluginMetadata           = errors.New("failed to read plugin metadata")
+	errReadPluginPGPSig             = errors.New("failed to read plugin binary PGP signature")
+	errVerifyMetadataSig            = errors.New("failed to verify metadata detached signature")
+	errVerifyPluginSig              = errors.New("failed to verify plugin binary PGP signature")
+)
+
+func load() error {
+	var errs error
+	once.Do(func() {
+		// hashiCorpPGPPubKey is HashiCorp's PGP public key
+		// at https://www.hashicorp.com/.well-known/pgp-key.txt.
+		// This key is used to verify the authenticity of HashiCorp plugins.
+		const hashiCorpPGPPubKey = `
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 
 mQINBGB9+xkBEACabYZOWKmgZsHTdRDiyPJxhbuUiKX65GUWkyRMJKi/1dviVxOX
@@ -143,26 +168,26 @@ ZF5q4h4I33PSGDdSvGXn9UMY5Isjpg==
 -----END PGP PUBLIC KEY BLOCK-----
 `
 
-var defaultPGPPubKey = hashiCorpPGPPubKey
+		pgp := crypto.PGP()
+		key, err := crypto.NewKeyFromArmored(hashiCorpPGPPubKey)
+		if err != nil {
+			errs = errors.Join(errs, err)
+		}
 
-const (
-	extractedArtifactDirFmt = "%s_%s_%s_%s" // vault-plugin-database-oracle_1.2.3+ent_linux_amd64
-	metadataFile            = "metadata.json"
-	metadataSig             = "metadata.json.sig"
-)
+		verifier, err = pgp.Verify().VerificationKey(key).New()
+		if err != nil {
+			errs = errors.Join(errs, err)
+		}
+	})
 
-var (
-	errExtractedArtifactDirNotFound = errors.New("extracted artifact directory not found")
-	errReadMetadata                 = errors.New("failed to read metadata")
-	errReadMetadataSig              = errors.New("failed to read metadata signature")
-	errReadPlugin                   = errors.New("failed to read plugin binary")
-	errReadPluginMetadata           = errors.New("failed to read plugin metadata")
-	errReadPluginPGPSig             = errors.New("failed to read plugin binary PGP signature")
-	errVerifyMetadataSig            = errors.New("failed to verify metadata detached signature")
-	errVerifyPluginSig              = errors.New("failed to verify plugin binary PGP signature")
-)
+	if verifier == nil {
+		errs = errors.Join(errs, errors.New("verifier is nil after initialization"))
+	}
 
-func getExtractedArtifactDir(pluginName, pluginVersion string) string {
+	return errs
+}
+
+func GetExtractedArtifactDir(pluginName, pluginVersion string) string {
 	if strings.HasPrefix(pluginVersion, "v") {
 		pluginVersion = pluginVersion[1:]
 	}
@@ -170,28 +195,32 @@ func getExtractedArtifactDir(pluginName, pluginVersion string) string {
 	return fmt.Sprintf(extractedArtifactDirFmt, pluginName, pluginVersion, runtime.GOOS, runtime.GOARCH)
 }
 
-func verifyPlugin(pluginDir, pluginName, pubKey string) (*pluginMetadata, error) {
-	// verify the extracted plugin artifact directory structure and each file inside
-	// vault-plugin-secrets-example_1.2.3+ent_darwin_arm64/EULA.txt (optional)
-	// vault-plugin-secrets-example_1.2.3+ent_darwin_arm64/TermsOfEvaluation.txt (optional)
-	// vault-plugin-secrets-example_1.2.3+ent_darwin_arm64/LICENSE (optional)
-	// vault-plugin-secrets-example_1.2.3+ent_darwin_arm64/vault-plugin-secrets-example
-	// vault-plugin-secrets-example_1.2.3+ent_darwin_arm64/metadata.json
-	// vault-plugin-secrets-example_1.2.3+ent_darwin_arm64/metadata.json.sig
+type verifyFunc func(data, sig []byte) error
 
-	if _, err := os.Stat(pluginDir); os.IsNotExist(err) {
-		return nil, fmt.Errorf("%w: %w", errExtractedArtifactDirNotFound, err)
+func verifyPGPSignatureDetached(data, sig []byte) error {
+	if err := load(); err != nil {
+		return fmt.Errorf("failed to load verifier: %w", err)
 	}
 
-	pgp := crypto.PGP()
-	key, err := crypto.NewKeyFromArmored(pubKey)
+	verifyResult, err := verifier.VerifyDetached(data, sig, crypto.Armor)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("failed to verify data: %w", err)
+	}
+	if sigErr := verifyResult.SignatureError(); sigErr != nil {
+		return fmt.Errorf("unexpected signature error: %w", sigErr)
 	}
 
-	verifier, err := pgp.Verify().VerificationKey(key).New()
-	if err != nil {
-		return nil, err
+	return nil
+}
+
+func VerifyPlugin(pluginDir string, pluginName string, verifyFunc verifyFunc) (*PluginMetadata, error) {
+	if st, err := os.Stat(pluginDir); err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("%w: %s", errExtractedArtifactDirNotFound, pluginDir)
+		}
+		return nil, fmt.Errorf("unexpected err %w", err)
+	} else if !st.IsDir() {
+		return nil, fmt.Errorf("%w: %s is not a directory", errExtractedArtifactDirNotFound, pluginDir)
 	}
 
 	// verify metadata.json is untampered
@@ -206,15 +235,12 @@ func verifyPlugin(pluginDir, pluginName, pubKey string) (*pluginMetadata, error)
 		return nil, fmt.Errorf("%w: %w", errReadMetadataSig, err)
 	}
 
-	verifyResult, err := verifier.VerifyDetached(metadataBytes, metadataSigBytes, crypto.Armor)
-	if err != nil {
+	if err := verifyFunc(metadataBytes, metadataSigBytes); err != nil {
 		return nil, fmt.Errorf("%w: %w", errVerifyMetadataSig, err)
 	}
-	if sigErr := verifyResult.SignatureError(); sigErr != nil {
-		return nil, fmt.Errorf("%w: %w", errVerifyMetadataSig, sigErr)
-	}
 
-	// verify plugin binary is untampred
+	// verify plugin binary is untampered
+	// TODO: We should update this to not read in the whole file into memory to be more efficient. Reference the secure-plugin-api's HashFile function.
 	pluginBytes, err := os.ReadFile(path.Join(pluginDir, pluginName))
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", errReadPlugin, err)
@@ -225,28 +251,17 @@ func verifyPlugin(pluginDir, pluginName, pubKey string) (*pluginMetadata, error)
 		return nil, fmt.Errorf("%w: %w", errReadPluginMetadata, err)
 	}
 
-	verifyResult, err = verifier.VerifyDetached(pluginBytes, []byte(metadata.Plugin.PGPSig), crypto.Armor)
-	if err != nil {
+	if err := verifyFunc(pluginBytes, []byte(metadata.Plugin.PGPSig)); err != nil {
 		return nil, fmt.Errorf("%w: %w", errVerifyPluginSig, err)
 	}
-	if sigErr := verifyResult.SignatureError(); sigErr != nil {
-		return nil, fmt.Errorf("%w: %w", errVerifyPluginSig, sigErr)
+
+	// TODO: Once we set sha256 on the metadata file from releases.hashicorp.com,
+	// we should compare the file hash with the metadata file's sha256.
+	hasher := sha256.New()
+	if _, err := hasher.Write(pluginBytes); err != nil {
+		return nil, fmt.Errorf("failed to hash plugin binary: %w", err)
 	}
+	metadata.Plugin.Sha256 = hex.EncodeToString(hasher.Sum(nil))
 
 	return metadata, nil
-}
-
-func pluginSHA256Sum(path string) ([]byte, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	hash := sha256.New()
-	if _, err = io.Copy(hash, file); err != nil {
-		return nil, err
-	}
-
-	return hash.Sum(nil), nil
 }
