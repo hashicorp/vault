@@ -130,7 +130,7 @@ keys within the HSM during the setup process.
 
 Vault check-ins for LDAP service accounts performed on a performance standby node or a node in a 
 performance replication secondary cluster can trigger duplicate password changes on the LDAP server. 
-This occurs because the LDAP client on the local node successfully modifies the password before Vault 
+Duplication occurs because the LDAP client on the local node successfully modifies the password before Vault 
 forwards the check-in request to the active node, which then performs a second password update. 
 While users still receive the latest password, it may lead to unexpected LDAP activity and cause 
 confusion interpreting audit logs.
