@@ -70,7 +70,7 @@ module('Integration | Component | auth | form | saml', function (hooks) {
 
   hooks.afterEach(function () {
     this.windowStub.restore();
-    sinon.restore();
+    this.authenticateStub.restore();
   });
 
   test('it renders helper text', async function (assert) {

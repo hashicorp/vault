@@ -10,13 +10,9 @@ import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
-import { AUTH_METHOD_MAP } from 'vault/tests/helpers/auth/auth-helpers';
+import { AUTH_METHOD_LOGIN_DATA } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import {
-  ALL_LOGIN_METHODS,
-  BASE_LOGIN_METHODS,
-  ENTERPRISE_LOGIN_METHODS,
-} from 'vault/utils/supported-login-methods';
+import { ENTERPRISE_LOGIN_METHODS, supportedTypes } from 'vault/utils/supported-login-methods';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
 
@@ -81,7 +77,7 @@ module('Integration | Component | auth | form template', function (hooks) {
 
   test('dropdown does not include enterprise methods on community versions', async function (assert) {
     this.version.type = 'community';
-    const supported = BASE_LOGIN_METHODS.map((m) => m.type);
+    const supported = supportedTypes(false);
     const unsupported = ENTERPRISE_LOGIN_METHODS.map((m) => m.type);
     assert.expect(supported.length + unsupported.length);
     await this.renderComponent();
@@ -234,21 +230,23 @@ module('Integration | Component | auth | form template', function (hooks) {
       this.namespaceQueryParam = '';
     });
 
-    // in th ent module to test ALL supported login methods
+    // in the ent module to test ALL supported login methods
     // iterating in tests should generally be avoided, but purposefully wanted to test the component
     // renders as expected as auth types change
     test('it selects each supported auth type and renders its form and relevant fields', async function (assert) {
-      const fieldCount = AUTH_METHOD_MAP.map((m) => Object.keys(m.options.loginData).length);
-      const sum = fieldCount.reduce((a, b) => a + b, 0);
-      const methodCount = AUTH_METHOD_MAP.length;
+      const authMethodTypes = supportedTypes(true);
+      const totalFields = Object.values(AUTH_METHOD_LOGIN_DATA).reduce(
+        (sum, obj) => sum + Object.keys(obj).length,
+        0
+      );
       // 3 assertions per method, plus an assertion for each expected field
-      assert.expect(3 * methodCount + sum); // count at time of writing is 40
+      assert.expect(3 * authMethodTypes.length + totalFields); // count at time of writing is 40
 
       await this.renderComponent();
-      for (const method of AUTH_METHOD_MAP) {
-        const { authType, options } = method;
+      for (const authType of authMethodTypes) {
+        const loginData = AUTH_METHOD_LOGIN_DATA[authType];
 
-        const fields = Object.keys(options.loginData);
+        const fields = Object.keys(loginData);
         await fillIn(GENERAL.selectByAttr('auth type'), authType);
 
         assert.dom(GENERAL.selectByAttr('auth type')).hasValue(authType), `${authType}: it selects type`;
@@ -273,7 +271,7 @@ module('Integration | Component | auth | form template', function (hooks) {
     });
 
     test('dropdown includes enterprise methods', async function (assert) {
-      const supported = ALL_LOGIN_METHODS.map((m) => m.type);
+      const supported = supportedTypes(true);
       assert.expect(supported.length);
       await this.renderComponent();
 
