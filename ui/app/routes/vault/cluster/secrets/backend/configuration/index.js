@@ -5,8 +5,8 @@
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import { CONFIGURABLE_SECRET_ENGINES, allEngines } from 'vault/helpers/mountable-secret-engines';
 import { reject } from 'rsvp';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 /**
  * This route is responsible for fetching all configuration model(s).
@@ -41,7 +41,7 @@ export default class SecretsBackendConfigurationRoute extends Route {
       }
     }
     // If the engine is configurable fetch the config model(s) for the engine and return it alongside the model
-    if (CONFIGURABLE_SECRET_ENGINES.includes(secretEngineModel.type)) {
+    if (engineDisplayData(secretEngineModel.type)?.isConfigurable) {
       let configModels = await this.fetchConfig(secretEngineModel.type, secretEngineModel.id);
       configModels = this.standardizeConfigModels(configModels);
 
@@ -175,10 +175,9 @@ export default class SecretsBackendConfigurationRoute extends Route {
 
   setupController(controller, resolvedModel) {
     super.setupController(controller, resolvedModel);
-    controller.typeDisplay = allEngines().find(
-      (engine) => engine.type === resolvedModel.secretEngineModel.type
-    )?.displayName;
-    controller.isConfigurable = CONFIGURABLE_SECRET_ENGINES.includes(resolvedModel.secretEngineModel.type);
+    const engine = engineDisplayData(resolvedModel.secretEngineModel.type);
+    controller.typeDisplay = engine.displayName;
+    controller.isConfigurable = engine.isConfigurable ?? false;
     controller.modelId = resolvedModel.secretEngineModel.id;
   }
 }

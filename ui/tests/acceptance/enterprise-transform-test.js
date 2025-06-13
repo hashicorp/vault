@@ -18,11 +18,11 @@ import templatesPage from 'vault/tests/pages/secrets/backend/transform/templates
 import alphabetsPage from 'vault/tests/pages/secrets/backend/transform/alphabets';
 import searchSelect from 'vault/tests/pages/components/search-select';
 import { runCmd } from '../helpers/commands';
-import { allEngines } from 'vault/helpers/mountable-secret-engines';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { v4 as uuidv4 } from 'uuid';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 const searchSelectComponent = create(searchSelect);
 
@@ -67,7 +67,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
 
   test('it transitions to list route after mount success', async function (assert) {
     assert.expect(1);
-    const engine = allEngines().find((e) => e.type === 'transform');
+    const engine = engineDisplayData('transform');
 
     // delete any previous mount with same name
     await runCmd([`delete sys/mounts/${engine.type}`]);

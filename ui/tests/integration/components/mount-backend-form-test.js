@@ -12,10 +12,12 @@ import { allowAllCapabilitiesStub, noopStub } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
-import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
-import { mountableEngines, WIF_ENGINES } from 'vault/helpers/mountable-secret-engines';
+import { ALL_ENGINES, filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
+
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
+
+const WIF_ENGINES = ALL_ENGINES.filter((e) => e.isWIF).map((e) => e.type);
 
 module('Integration | Component | mount backend form', function (hooks) {
   setupRenderingTest(hooks);
@@ -140,10 +142,13 @@ module('Integration | Component | mount backend form', function (hooks) {
     test('it renders secret engine specific headers', async function (assert) {
       assert.expect(17);
       await render(
-        hbs`<MountBackendForm  @mountCategory="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
+        hbs`<MountBackendForm @mountCategory="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       assert.dom(GENERAL.title).hasText('Enable a Secrets Engine', 'renders secrets header');
-      for (const method of mountableEngines()) {
+      for (const method of filterEnginesByMountCategory({
+        mountCategory: 'secret',
+        isEnterprise: false,
+      }).filter((engine) => engine.type !== 'cubbyhole')) {
         assert
           .dom(MOUNT_BACKEND_FORM.mountType(method.type))
           .hasText(method.displayName, `renders type:${method.displayName} picker`);
@@ -216,7 +221,10 @@ module('Integration | Component | mount backend form', function (hooks) {
             .exists(`Identity token key field shows when type=${this.model.type}`);
           await click(GENERAL.backButton);
         }
-        for (const engine of mountableEngines().filter((e) => !WIF_ENGINES.includes(e.type))) {
+        for (const engine of filterEnginesByMountCategory({
+          mountCategory: 'secret',
+          isEnterprise: false,
+        }).filter((e) => !WIF_ENGINES.includes(e.type) && e.type !== 'cubbyhole')) {
           // check non-wif engine
           await click(MOUNT_BACKEND_FORM.mountType(engine.type));
           await click(GENERAL.toggleGroup('Method Options'));
@@ -227,7 +235,7 @@ module('Integration | Component | mount backend form', function (hooks) {
         }
       });
 
-      test('it updates identityTokeKey if user has changed it', async function (assert) {
+      test('it updates identityTokenKey if user has changed it', async function (assert) {
         await render(
           hbs`<MountBackendForm @mountCategory="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
         );

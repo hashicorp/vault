@@ -66,7 +66,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await visit('/vault/secrets');
     await page.enableEngine();
     await click(MOUNT_BACKEND_FORM.mountType('nomad'));
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-type'), 'nomad');
 
@@ -85,7 +85,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await visit('/vault/secrets');
     await page.enableEngine();
     await click(MOUNT_BACKEND_FORM.mountType('ssh'));
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await click(GENERAL.breadcrumbLink('Secrets'));
 
     await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-type'), 'kv');
