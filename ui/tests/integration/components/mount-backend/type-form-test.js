@@ -15,9 +15,9 @@ import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend
 const secretTypes = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: false })
   .filter((engine) => engine.type !== 'cubbyhole')
   .map((engine) => engine.type);
-const allSecretTypes = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: true }).map(
-  (engine) => engine.type
-);
+const allSecretTypes = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: true })
+  .filter((engine) => engine.type !== 'cubbyhole')
+  .map((engine) => engine.type);
 const authTypes = filterEnginesByMountCategory({ mountCategory: 'auth', isEnterprise: false })
   .filter((engine) => engine.type !== 'token')
   .map((auth) => auth.type);
