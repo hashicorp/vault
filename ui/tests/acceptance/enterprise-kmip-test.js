@@ -23,9 +23,9 @@ import credentialsPage from 'vault/tests/pages/secrets/backend/kmip/credentials'
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 import { mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { v4 as uuidv4 } from 'uuid';
-import engineDisplayData from 'vault/helpers/engines-display-data';
 
 // port has a lower limit of 1024
 const getRandomPort = () => Math.floor(Math.random() * 5000 + 1024);

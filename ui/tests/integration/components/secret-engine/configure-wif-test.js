@@ -12,6 +12,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { v4 as uuidv4 } from 'uuid';
 import { hbs } from 'ember-cli-htmlbars';
+import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import {
   expectedConfigKeys,
@@ -23,14 +24,8 @@ import {
 import { capabilitiesStub } from 'vault/tests/helpers/stubs';
 import waitForError from 'vault/tests/helpers/wait-for-error';
 import engineDisplayData from 'vault/helpers/engines-display-data';
-import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 
-const WIF_ENGINES = filterEnginesByMountCategory({
-  mountCategory: 'secret',
-  isEnterprise: false,
-})
-  .filter((engine) => engine.isWIF)
-  .map((e) => e.type);
+const WIF_ENGINES = ALL_ENGINES.filter((e) => e.isWIF).map((e) => e.type);
 
 module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) {
   setupRenderingTest(hooks);

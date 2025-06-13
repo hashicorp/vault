@@ -5,10 +5,9 @@
 
 import { service } from '@ember/service';
 import Controller from '@ember/controller';
+import { action } from '@ember/object';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import engineDisplayData from 'vault/helpers/engines-display-data';
-
-import { action } from '@ember/object';
 
 const SUPPORTED_BACKENDS = supportedSecretBackends();
 
