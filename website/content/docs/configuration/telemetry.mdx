@@ -21,10 +21,10 @@ telemetry {
 <Tip title="Metrics from Leader vs Standby nodes">
 
   Metrics from the telemetry end point are node specific.
-  In most cases the telemetry from the active leader node is what
-  will be of interest most times and or initially. Certian metrics are
-  **only reported by the leader** node including for example active: 
-  [`vault.identity.*` metrics](/vault/docs/internals/telemetry/metrics/all#vault-identity-entity-active-monthly).
+  In most cases the active leader node telemetry is most useful, particularly
+  after initial startup. Some metrics are **only** reported by the leader node,
+  for example
+  [active `vault.identity.*` metrics](/vault/docs/internals/telemetry/metrics/all#vault-identity-entity-active-monthly).
 
 </Tip>
 
