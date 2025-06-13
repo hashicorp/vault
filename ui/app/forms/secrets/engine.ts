@@ -140,7 +140,7 @@ export default class SecretsEngineForm extends Form {
         ...this.coreOptionFields,
         defaultTtl,
         maxTtl,
-        new FormField('config.identityTokenKey', 'string', {
+        new FormField('config.identityTokenKey', undefined, {
           label: 'Identity token key',
           subText: `A named key to sign tokens. If not provided, this will default to Vault's OIDC default key.`,
           editType: 'yield',
@@ -173,11 +173,20 @@ export default class SecretsEngineForm extends Form {
   }
 
   toJSON() {
-    const data = { type: this.type, ...this.data };
+    const { config } = this.data;
+    const data = {
+      type: this.type,
+      ...this.data,
+      config: {
+        ...(config || {}),
+        listingVisibility: config?.listingVisibility ? 'unauth' : 'hidden',
+      },
+    };
     // options are only relevant for kv/generic engines
     if (!['kv', 'generic'].includes(this.type)) {
       delete data.options;
     }
+
     return super.toJSON(data);
   }
 }
