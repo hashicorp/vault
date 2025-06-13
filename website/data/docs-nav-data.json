@@ -1672,6 +1672,15 @@
         }
       },
       {
+        "title": "Namespaces",
+        "path": "ui/namespaces",
+        "badge": {
+          "text": "ENT",
+          "type": "filled",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "CLI emulation",
         "path": "ui/web-cli"
       }
