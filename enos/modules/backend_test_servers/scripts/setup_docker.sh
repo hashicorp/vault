@@ -52,4 +52,4 @@ case "$os_id" in
 esac
 
 echo "Successfully installed Docker."
-sudo docker version
+sudo docker --version

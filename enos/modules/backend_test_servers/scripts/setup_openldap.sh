@@ -15,13 +15,16 @@ fail() {
 [[ -z "$LDAP_VERSION" ]] && fail "LDAP_VERSION env variable has not been set"
 [[ -z "$LDAP_PORT" ]] && fail "LDAP_PORT env variable has not been set"
 
-# Pull OpenLDAP Docker image
-LDAP_DOCKER_NAME="osixia/openldap:${LDAP_VERSION}"
-sudo docker pull "${LDAP_DOCKER_NAME}"
+
+# Pulling image
+CONTAINER_CMD="sudo docker"
+echo "Pulling image: ${LDAP_DOCKER_NAME}"
+LDAP_DOCKER_NAME="docker.io/osixia/openldap:${LDAP_VERSION}"
+$CONTAINER_CMD pull "${LDAP_DOCKER_NAME}"
 
 # Run OpenLDAP container
 echo "Starting OpenLDAP container..."
-sudo docker run -d \
+$CONTAINER_CMD run -d \
   --name openldap \
   -p "${LDAP_PORT}:${LDAP_PORT}" \
   -p 636:636 \

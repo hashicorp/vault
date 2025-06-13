@@ -40,6 +40,8 @@ resource "enos_remote_exec" "setup_docker" {
 
 # Creating OpenLDAP Server
 resource "enos_remote_exec" "create_openldap" {
+  depends_on = [enos_remote_exec.setup_docker]
+
   environment = {
     LDAP_DOMAIN   = local.ldap_server.domain
     LDAP_ORG      = local.ldap_server.org
