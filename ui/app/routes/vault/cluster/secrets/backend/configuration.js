@@ -109,7 +109,10 @@ export default class SecretsBackendConfigurationRoute extends Route {
       return data;
     } catch (e) {
       const error = await this.parseApiError(e);
-      if (error.httpStatus === 400 && error.errors[0] === `keys haven't been configured yet`) {
+      if (
+        error.httpStatus === 400 &&
+        error.errors?.some((str) => str.includes(`keys haven't been configured yet`))
+      ) {
         // When first mounting a SSH engine it throws a 400 error with this specific message.
         // We want to catch this situation and return nothing so that the component can handle it correctly.
         return;

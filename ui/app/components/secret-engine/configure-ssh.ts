@@ -22,7 +22,7 @@ import type ApiService from 'vault/services/api';
  * @example
  * ```js
  * <SecretEngine::ConfigureSsh
- *    @form={{this.model.configForm}}
+ *    @configForm={{this.model.configForm}}
  *    @id={{this.model.id}}
  *  />
  * ```

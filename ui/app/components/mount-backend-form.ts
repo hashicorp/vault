@@ -109,10 +109,10 @@ export default class MountBackendForm extends Component<Args> {
   async saveKvConfig(path: string, formData: SecretsEngineForm['data']) {
     const { options, kvConfig = {} } = formData;
     const { maxVersions, casRequired, deleteVersionAfter } = kvConfig;
-    const isKV = options?.version === 2 && ['kv', 'generic'].includes(this.args.mountModel.engineType);
+    const isKvV2 = options?.version === 2 && ['kv', 'generic'].includes(this.args.mountModel.engineType);
     const hasConfig = maxVersions || casRequired || deleteVersionAfter;
 
-    if (isKV && hasConfig) {
+    if (isKvV2 && hasConfig) {
       try {
         const { canUpdate } = await this.capabilities.for('kvConfig', { path });
         if (canUpdate) {
@@ -172,7 +172,7 @@ export default class MountBackendForm extends Component<Args> {
           this.args.mountType === 'secret' ? 'secrets engine' : 'auth method'
         } at ${path}.`
       );
-      // Check whether to use the engine route, since KV version 1 does not
+      // check whether to use the Ember engine route
       const useEngineRoute = isAddonEngine(mountModel.engineType, Number(formData?.options?.version));
       this.args.onMountSuccess(type, path, useEngineRoute);
     } catch (error) {
