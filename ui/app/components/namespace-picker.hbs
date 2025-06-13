@@ -6,7 +6,13 @@
 <div class="namespace-picker side-padding-4" ...attributes>
   <Hds::Dropdown @enableCollisionDetection={{true}} as |D|>
 
-    <D.ToggleButton @icon="org" @text={{or this.selected.id "-"}} @isFullWidth={{true}} data-test-namespace-toggle />
+    <D.ToggleButton
+      @icon="org"
+      @text={{or this.selectedNamespace.id "-"}}
+      @isFullWidth={{true}}
+      data-test-toggle-input="namespace-id"
+      {{on "click" this.toggleNamespacePicker}}
+    />
 
     {{#if this.errorLoadingNamespaces}}
 
@@ -52,7 +58,7 @@
       <div class="is-overflow-y-auto is-max-drawer-height" {{did-insert this.setupScrollListener}}>
         {{#each this.visibleNamespaceOptions as |option|}}
           <D.Checkmark
-            @selected={{eq option.id this.selected.id}}
+            @selected={{eq option.id this.selectedNamespace.id}}
             {{on "click" (fn this.onChange option)}}
             data-test-namespace-link={{option.path}}
           >

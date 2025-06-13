@@ -39,7 +39,6 @@ export default class NamespacePicker extends Component {
   // Load 200 namespaces in the namespace picker at a time
   @tracked batchSize = 200;
 
-  @tracked allNamespaces: NamespaceOption[] = [];
   @tracked canManageNamespaces = false; // Show/hide manage namespaces button
   @tracked canRefreshNamespaces = false; // Show/hide refresh list button
   @tracked errorLoadingNamespaces = '';
@@ -47,11 +46,22 @@ export default class NamespacePicker extends Component {
   @tracked searchInput = '';
   @tracked searchInputHelpText =
     "Enter a full path in the search bar and hit the 'Enter' ↵ key to navigate faster.";
-  @tracked selected: NamespaceOption | null = null;
 
   constructor(owner: unknown, args: Record<string, never>) {
     super(owner, args);
     this.loadOptions();
+  }
+
+  get allNamespaces(): NamespaceOption[] {
+    return this.getOptions(
+      this.namespace?.accessibleNamespaces,
+      this.namespace?.currentNamespace,
+      this.namespace?.path
+    );
+  }
+
+  get selectedNamespace(): NamespaceOption | null {
+    return this.getSelected(this.allNamespaces, this.namespace?.path) ?? null;
   }
 
   private matchesPath(option: NamespaceOption, currentPath: string): boolean {
@@ -62,7 +72,11 @@ export default class NamespacePicker extends Component {
     return options.find((option) => this.matchesPath(option, currentPath));
   }
 
-  private getOptions(namespace: NamespaceService): NamespaceOption[] {
+  private getOptions(
+    accessibleNamespaces: string[],
+    currentNamespace: string,
+    path: string
+  ): NamespaceOption[] {
     /* Each namespace option has 3 properties: { id, path, and label }
      *   - id: node / namespace name (displayed when the namespace picker is closed)
      *   - path: full namespace path (used to navigate to the namespace)
@@ -76,7 +90,7 @@ export default class NamespacePicker extends Component {
      *   | 'child'  | 'parent/child' | 'parent/child' |
      */
     const options = [
-      ...(namespace?.accessibleNamespaces || []).map((ns: string) => {
+      ...(accessibleNamespaces || []).map((ns: string) => {
         const parts = ns.split('/');
         return { id: parts[parts.length - 1] || '', path: ns, label: ns };
       }),
@@ -91,9 +105,9 @@ export default class NamespacePicker extends Component {
     // to the list of options. This is a fallback for when the user has access to a single namespace.
     if (options.length === 0) {
       options.push({
-        id: namespace.currentNamespace,
-        path: namespace.path,
-        label: namespace.path,
+        id: currentNamespace,
+        path: path,
+        label: path,
       });
     }
 
@@ -187,9 +201,6 @@ export default class NamespacePicker extends Component {
       this.errorLoadingNamespaces = errorMessage(error);
     }
 
-    this.allNamespaces = this.getOptions(this.namespace);
-    this.selected = this.getSelected(this.allNamespaces, this.namespace?.path) ?? null;
-
     await this.fetchListCapability();
   }
 
@@ -216,7 +227,6 @@ export default class NamespacePicker extends Component {
 
   @action
   async onChange(selected: NamespaceOption): Promise<void> {
-    this.selected = selected;
     this.searchInput = '';
     this.router.transitionTo('vault.cluster.dashboard', { queryParams: { namespace: selected.path } });
   }
@@ -227,7 +237,6 @@ export default class NamespacePicker extends Component {
       const matchingNamespace = this.allNamespaces.find((ns) => ns.label === this.searchInput.trim());
 
       if (matchingNamespace) {
-        this.selected = matchingNamespace;
         this.searchInput = '';
         this.router.transitionTo('vault.cluster.dashboard', {
           queryParams: { namespace: matchingNamespace.path },
@@ -246,5 +255,11 @@ export default class NamespacePicker extends Component {
   async refreshList(): Promise<void> {
     this.searchInput = '';
     await this.loadOptions();
+  }
+
+  @action
+  toggleNamespacePicker() {
+    // Reset the search input when the dropdown is toggled
+    this.searchInput = '';
   }
 }
