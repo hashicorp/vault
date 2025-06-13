@@ -1,25 +1,25 @@
 ## Functional changes
 
-Type            | Introduced | Recs | Change
---------------- | ---------- | --------------- | -------
-Breaking change | 1.17.x     | **Yes**         | [Rekey cancellations use a nonce](/vault/docs/v1.17.x/updates/important-changes#rekey-cancel-nonce)
-New behavior    | 1.17.x     | No              | [Allowed audit headers now have unremovable defaults](/vault/docs/v1.17.x/updates/important-changes#audit-headers)
-New behavior    | 1.17.x     | **Yes**         | [JWT auth login requires `bound_audiences` parameter on role](/vault/docs/v1.17.x/updates/important-changes#jwt-auth-login-requires-bound-audiences-on-the-role)
-New behavior    | 1.17.x     | No              | [Strict validation for Azure auth login requests](/vault/docs/v1.17.x/updates/important-changes#strict-azure)
-New behavior    | 1.17.x     | **Yes**         | [Secrets Sync SSRF Protection May Block Private Endpoints](/vault/docs/v1.17.x/updates/important-changes#secrets-sync-ssrf-protection-may-block-private-endpoints)
-New behavior    | 1.17.x     | No              | [Default report months deprecated for `sys/internal/counters`](/vault/docs/v1.17.x/updates/important-changes#activity-log-changes)
-New behavior    | 1.17.x     | **Yes**         | [Vault product usage metrics reporting](/vault/docs/v1.17.x/updates/important-changes#product-usage-reporting)
-New behavior    | 1.18.x     | No              | [Activity log changes](/vault/docs/v1.18.x/updates/important-changes#default-activity-log-querying-period)
-New behavior    | 1.18.x     | **Yes**         | [Docker image no longer contains curl](/vault/docs/v1.18.x/updates/important-changes#docker-image-no-longer-contains-curl)
-New behavior    | 1.18.x     | **Yes**         | [Anonymous product usage metrics collection](/vault/docs/v1.18.x/updates/important-changes#product-usage-reporting)
-New behavior    | 1.18.x     | No              | [Strict validation for Azure auth login requests](/vault/docs/v1.18.x/updates/important-changes#azure-auth-plugin-requires-resource_group_name-vm_name-and-vmss_name-to-match-the-jwt-claims-on-login)
-Breaking change | 1.19.x     | **Yes**         | [Security improvement for LDAP user DN search with upndomain](/vault/docs/v1.19.x/updates/important-changes#ldap)
-Breaking change | 1.19.x     | **Yes**         | [Rekey cancellations use a nonce](/vault/docs/v1.20.x/updates/important-changes#rekey-cancel-nonce)
-New behavior    | 1.19.x     | No              | [Anonymized cluster data returned with license utilization](/vault/docs/v1.19.x/updates/important-changes#anon-data)
-New behavior    | 1.19.x     | **Yes**         | [Identity system duplicate cleanup](/vault/docs/v1.19.x/updates/important-changes#dedupe)
-New behavior    | 1.19.x     | No              | [RADIUS authentication is no longer case sensitive](/vault/docs/v1.19.x/updates/important-changes#case-sensitive)
-New behavior    | 1.19.x     | No              | [Transit support for Ed25519ph and Ed25519ctx signatures](/vault/docs/v1.19.x/updates/important-changes#ed25519)
-New behavior    | 1.19.x     | **Yes**         | [Strict validation for Azure auth login requests](/vault/docs/v1.19.x/updates/important-changes#strict-azure)
+Type            | Introduced | Recs    | Change
+--------------- | ---------- | ------- | -------
+Breaking change | 1.17.x     | **Yes** | [Rekey cancellations use a nonce](/vault/docs/v1.17.x/updates/important-changes#rekey-cancel-nonce)
+New behavior    | 1.17.x     | No      | [Allowed audit headers now have unremovable defaults](/vault/docs/v1.17.x/updates/important-changes#audit-headers)
+New behavior    | 1.17.x     | **Yes** | [JWT auth login requires `bound_audiences` parameter on role](/vault/docs/v1.17.x/updates/important-changes#jwt-auth-login-requires-bound-audiences-on-the-role)
+New behavior    | 1.17.x     | No      | [Strict validation for Azure auth login requests](/vault/docs/v1.17.x/updates/important-changes#strict-azure)
+New behavior    | 1.17.x     | **Yes** | [Secrets Sync SSRF Protection May Block Private Endpoints](/vault/docs/v1.17.x/updates/important-changes#secrets-sync-ssrf-protection-may-block-private-endpoints)
+New behavior    | 1.17.x     | No      | [Default report months deprecated for `sys/internal/counters`](/vault/docs/v1.17.x/updates/important-changes#activity-log-changes)
+New behavior    | 1.17.x     | **Yes** | [Vault product usage metrics reporting](/vault/docs/v1.17.x/updates/important-changes#product-usage-reporting)
+New behavior    | 1.18.x     | No      | [Activity log changes](/vault/docs/v1.18.x/updates/important-changes#default-activity-log-querying-period)
+New behavior    | 1.18.x     | **Yes** | [Docker image no longer contains curl](/vault/docs/v1.18.x/updates/important-changes#docker-image-no-longer-contains-curl)
+New behavior    | 1.18.x     | **Yes** | [Anonymous product usage metrics collection](/vault/docs/v1.18.x/updates/important-changes#product-usage-reporting)
+New behavior    | 1.18.x     | No      | [Strict validation for Azure auth login requests](/vault/docs/v1.18.x/updates/important-changes#azure-auth-plugin-requires-resource_group_name-vm_name-and-vmss_name-to-match-the-jwt-claims-on-login)
+Breaking change | 1.19.x     | **Yes** | [Security improvement for LDAP user DN search with upndomain](/vault/docs/v1.19.x/updates/important-changes#ldap)
+Breaking change | 1.19.x     | **Yes** | [Rekey cancellations use a nonce](/vault/docs/v1.20.x/updates/important-changes#rekey-cancel-nonce)
+New behavior    | 1.19.x     | No      | [Anonymized cluster data returned with license utilization](/vault/docs/v1.19.x/updates/important-changes#anon-data)
+New behavior    | 1.19.x     | **Yes** | [Identity system duplicate cleanup](/vault/docs/v1.19.x/updates/important-changes#dedupe)
+New behavior    | 1.19.x     | No      | [RADIUS authentication is no longer case sensitive](/vault/docs/v1.19.x/updates/important-changes#case-sensitive)
+New behavior    | 1.19.x     | No      | [Transit support for Ed25519ph and Ed25519ctx signatures](/vault/docs/v1.19.x/updates/important-changes#ed25519)
+New behavior    | 1.19.x     | **Yes** | [Strict validation for Azure auth login requests](/vault/docs/v1.19.x/updates/important-changes#strict-azure)
 
 ## Open bugs
 
