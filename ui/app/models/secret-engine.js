@@ -182,7 +182,7 @@ export default class SecretEngineModel extends Model {
       fields.push('casRequired', 'deleteVersionAfter', 'maxVersions');
     }
     // For WIF Secret engines, allow users to set the identity token key when mounting the engine.
-    if (engineDisplayData(type)?.isWIF ?? false) {
+    if (engineDisplayData(type)?.isWIF) {
       fields.push('config.identityTokenKey');
     }
     return fields;

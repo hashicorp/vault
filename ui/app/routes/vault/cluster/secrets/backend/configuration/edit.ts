@@ -45,7 +45,7 @@ export default class SecretsBackendConfigurationEdit extends Route {
     const type = secretEngineRecord.type;
 
     // if the engine type is not configurable, return a 404.
-    if (!secretEngineRecord || !(engineDisplayData(type)?.isConfigurable ?? false)) {
+    if (!secretEngineRecord || !engineDisplayData(type)?.isConfigurable) {
       const error = new AdapterError();
       set(error, 'httpStatus', 404);
       throw error;
