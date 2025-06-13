@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import hbs from 'htmlbars-inline-precompile';
 import { click, fillIn, find, render } from '@ember/test-helpers';
 import sinon from 'sinon';
-import testHelper from './test-helper';
+import testHelper from './auth-form-test-helper';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 // These auth types all use the default methods in auth/form/base
