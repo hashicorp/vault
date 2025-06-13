@@ -42,7 +42,6 @@ export const PKI_DELETE_ALL_ISSUERS = {
   issuerLink: '[data-test-delete-all-issuers-link]',
   deleteAllIssuerModal: '#confirmation-modal',
   deleteAllIssuerInput: '[data-test-confirmation-modal-input="Delete all issuers?"]',
-  deleteAllIssuerButton: '[data-test-confirm-button="Delete all issuers?"]',
 };
 
 export const PKI_GENERATE_ROOT = {

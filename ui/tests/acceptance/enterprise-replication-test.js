@@ -361,7 +361,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     // enter confirmation text
     await fillIn('[data-test-confirmation-modal-input="Demote to secondary?"]', 'Performance');
     // Click confirm button
-    await click('[data-test-confirm-button="Demote to secondary?"]');
+    await click(GENERAL.confirmButton);
 
     await pollCluster(this.owner);
     await settled();
