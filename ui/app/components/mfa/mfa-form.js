@@ -19,7 +19,7 @@ import { numberToWord } from 'vault/helpers/number-to-word';
  * <Mfa::MfaForm @clusterId={this.model.id} @authData={this.authData} />
  * ```
  * @param {string} clusterId - id of selected cluster
- * @param {object} authData - data from initial auth request -- { mfa_requirement, backend, data }
+ * @param {object} authData - data from initial auth request -- { mfaRequirement, backend, data }
  * @param {function} onSuccess - fired when passcode passes validation
  * @param {function} onError - fired for multi-method or non-passcode method validation errors
  */
@@ -46,7 +46,7 @@ export default class MfaForm extends Component {
   }
 
   get constraints() {
-    return this.args.authData.mfa_requirement.mfa_constraints;
+    return this.args.authData.mfaRequirement.mfaConstraints;
   }
   get multiConstraint() {
     return this.constraints.length > 1;

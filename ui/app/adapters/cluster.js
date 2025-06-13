@@ -143,7 +143,8 @@ export default ApplicationAdapter.extend({
     return this.ajax(url, verb, options);
   },
 
-  mfaValidate({ mfa_request_id, mfa_constraints }) {
+  mfaValidate(mfaRequirement) {
+    const { mfaRequestId: mfa_request_id, mfaConstraints: mfa_constraints } = mfaRequirement;
     const options = {
       data: {
         mfa_request_id,

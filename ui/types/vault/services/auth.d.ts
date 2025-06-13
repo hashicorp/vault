@@ -24,7 +24,7 @@ export interface AuthResponse {
   isRoot: boolean;
 }
 export interface AuthResponseWithMfa {
-  mfa_requirement: MfaRequirementApiResponse;
+  mfaRequirement: MfaRequirementApiResponse;
 }
 
 export default class AuthService extends Service {

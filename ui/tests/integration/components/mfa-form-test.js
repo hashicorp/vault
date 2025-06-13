@@ -25,14 +25,14 @@ module('Integration | Component | mfa-form', function (hooks) {
       data: { username: 'foo', password: 'bar' },
     };
     this.authService = this.owner.lookup('service:auth');
-    // setup basic totp mfa_requirement
+    // setup basic totp mfaRequirement
     // override in tests that require different scenarios
     this.totpConstraint = this.server.create('mfa-method', { type: 'totp' });
-    const { mfa_requirement } = this.authService._parseMfaResponse({
+    const { mfaRequirement } = this.authService._parseMfaResponse({
       mfa_request_id: 'test-mfa-id',
       mfa_constraints: { test_mfa: { any: [this.totpConstraint] } },
     });
-    this.mfaAuthData.mfa_requirement = mfa_requirement;
+    this.mfaAuthData.mfaRequirement = mfaRequirement;
   });
 
   test('it should render correct descriptions', async function (assert) {
@@ -40,10 +40,10 @@ module('Integration | Component | mfa-form', function (hooks) {
     const oktaConstraint = this.server.create('mfa-method', { type: 'okta' });
     const duoConstraint = this.server.create('mfa-method', { type: 'duo' });
 
-    this.mfaAuthData.mfa_requirement = this.authService._parseMfaResponse({
+    this.mfaAuthData.mfaRequirement = this.authService._parseMfaResponse({
       mfa_request_id: 'test-mfa-id',
       mfa_constraints: { test_mfa_1: { any: [totpConstraint] } },
-    }).mfa_requirement;
+    }).mfaRequirement;
 
     await render(
       hbs`<Mfa::MfaForm
@@ -60,10 +60,10 @@ module('Integration | Component | mfa-form', function (hooks) {
         'Correct description renders for single passcode'
       );
 
-    this.mfaAuthData.mfa_requirement = this.authService._parseMfaResponse({
+    this.mfaAuthData.mfaRequirement = this.authService._parseMfaResponse({
       mfa_request_id: 'test-mfa-id',
       mfa_constraints: { test_mfa_1: { any: [duoConstraint, oktaConstraint] } },
-    }).mfa_requirement;
+    }).mfaRequirement;
 
     await render(
       hbs`<Mfa::MfaForm
@@ -80,10 +80,10 @@ module('Integration | Component | mfa-form', function (hooks) {
         'Correct description renders for multiple methods'
       );
 
-    this.mfaAuthData.mfa_requirement = this.authService._parseMfaResponse({
+    this.mfaAuthData.mfaRequirement = this.authService._parseMfaResponse({
       mfa_request_id: 'test-mfa-id',
       mfa_constraints: { test_mfa_1: { any: [oktaConstraint] }, test_mfa_2: { any: [duoConstraint] } },
-    }).mfa_requirement;
+    }).mfaRequirement;
 
     await render(
       hbs`<Mfa::MfaForm
@@ -116,7 +116,7 @@ module('Integration | Component | mfa-form', function (hooks) {
     const duoConstraint = this.server.create('mfa-method', { type: 'duo', uses_passcode: true });
     const oktaConstraint = this.server.create('mfa-method', { type: 'okta' });
     const pingidConstraint = this.server.create('mfa-method', { type: 'pingid' });
-    const { mfa_requirement } = this.authService._parseMfaResponse({
+    const { mfaRequirement } = this.authService._parseMfaResponse({
       mfa_request_id: 'test-mfa-id',
       mfa_constraints: {
         test_mfa_1: {
@@ -127,7 +127,7 @@ module('Integration | Component | mfa-form', function (hooks) {
         },
       },
     });
-    this.mfaAuthData.mfa_requirement = mfa_requirement;
+    this.mfaAuthData.mfaRequirement = mfaRequirement;
 
     this.server.post('/sys/mfa/validate', (schema, req) => {
       const json = JSON.parse(req.requestBody);
@@ -141,8 +141,8 @@ module('Integration | Component | mfa-form', function (hooks) {
 
     this.owner.lookup('service:auth').reopen({
       // override to avoid authSuccess method since it expects an auth payload
-      async totpValidate({ mfa_requirement }) {
-        await this.clusterAdapter().mfaValidate(mfa_requirement);
+      async totpValidate({ mfaRequirement }) {
+        await this.clusterAdapter().mfaValidate(mfaRequirement);
         return 'test response';
       },
     });
@@ -186,7 +186,7 @@ module('Integration | Component | mfa-form', function (hooks) {
         );
         assert.dom('[data-test-mfa-validate]').isDisabled('Button is disabled while loading');
         assert.deepEqual(authData, expectedAuthData, 'Mfa auth data passed to validate method');
-        await this.clusterAdapter().mfaValidate(authData.mfa_requirement);
+        await this.clusterAdapter().mfaValidate(authData.mfaRequirement);
         return 'test response';
       },
     });

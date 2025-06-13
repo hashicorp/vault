@@ -67,7 +67,7 @@ export default class AuthBase extends Component<Args> {
     })
   );
 
-  // Standard methods get mfa_requirements from the authenticate method in the auth service
+  // Standard methods get mfaRequirements from the authenticate method in the auth service
   // methodData is necessary if there's an MfaRequirement because persisting auth data happens after that
   handleAuthResponse(authResponse: AuthResponse | ParsedMfaRequirement, path?: string) {
     const methodData: { selectedAuth: string; path?: string } = { selectedAuth: this.args.authType, path };

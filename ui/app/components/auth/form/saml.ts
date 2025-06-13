@@ -107,10 +107,10 @@ export default class AuthFormSaml extends AuthBase {
 
     // We've got a response from the polling request
     // pass MFA data or use the Vault token (client_token) to continue the auth
-    const mfa_requirement = resp?.mfa_requirement;
+    const mfaRequirement = resp?.mfa_requirement;
     const client_token = resp?.client_token;
-    if (mfa_requirement) {
-      this.handleMfa(mfa_requirement, path);
+    if (mfaRequirement) {
+      this.handleMfa(mfaRequirement, path);
       return;
     }
     if (client_token) {

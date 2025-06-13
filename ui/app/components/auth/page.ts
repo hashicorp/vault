@@ -89,7 +89,7 @@ interface Args {
 }
 
 interface MfaAuthData {
-  mfa_requirement: object;
+  mfaRequirement: object;
   path: string;
   selectedAuth: string;
 }
@@ -236,17 +236,17 @@ export default class AuthPage extends Component<Args> {
   // ACTIONS
   @action
   onAuthResponse(authResponse: AuthResponse | AuthResponseWithMfa, { selectedAuth = '', path = '' }) {
-    const mfa_requirement = 'mfa_requirement' in authResponse ? authResponse.mfa_requirement : undefined;
+    const mfaRequirement = 'mfaRequirement' in authResponse ? authResponse.mfaRequirement : undefined;
     /*
-    Checking for an mfa_requirement happens in two places.
+    Checking for an mfaRequirement happens in two places.
     If doSubmit in <AuthForm> is called directly (by the <form> component) mfa is just handled here.
   
     Login methods submitted using a child form component of <AuthForm> are first checked for mfa 
     in the Auth::LoginForm "authenticate" task, and then that data eventually bubbles up here.
     */
-    if (mfa_requirement) {
+    if (mfaRequirement) {
       // if an mfa requirement exists further action is required
-      this.mfaAuthData = { mfa_requirement, selectedAuth, path };
+      this.mfaAuthData = { mfaRequirement, selectedAuth, path };
     } else {
       // calls authSuccess in auth.js controller
       this.args.onAuthSuccess(authResponse);
