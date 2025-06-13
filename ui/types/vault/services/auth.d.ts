@@ -14,7 +14,7 @@ export interface AuthData {
   token: string;
   policies: string[];
   renewable: boolean;
-  entity_id: string;
+  entityId: string;
   displayName?: string;
 }
 
