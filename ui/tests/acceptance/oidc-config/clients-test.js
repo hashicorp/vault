@@ -32,7 +32,7 @@ const flashMessage = create(fm);
 // in congruency with backend verbiage 'applications' are referred to as 'clients'
 // throughout the codebase and the term 'applications' only appears in the UI
 
-module('Acceptance | oidc-config clients shannontest', function (hooks) {
+module('Acceptance | oidc-config clients', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 

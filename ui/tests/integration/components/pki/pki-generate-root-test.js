@@ -14,7 +14,7 @@ import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { PKI_GENERATE_ROOT } from 'vault/tests/helpers/pki/pki-selectors';
 
-module('Integration | Component | pki-generate-root shannontest', function (hooks) {
+module('Integration | Component | pki-generate-root', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
   setupEngine(hooks, 'pki');

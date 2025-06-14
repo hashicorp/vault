@@ -227,7 +227,7 @@ const connectionTests = [
   },
 ];
 
-module('Acceptance | secrets/database/* shannontest', function (hooks) {
+module('Acceptance | secrets/database/*', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 

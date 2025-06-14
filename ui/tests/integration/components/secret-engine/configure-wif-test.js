@@ -26,7 +26,7 @@ import waitForError from 'vault/tests/helpers/wait-for-error';
 
 const allEnginesArray = allEngines(); // saving as const so we don't invoke the method multiple times in the for loop
 
-module('Integration | Component | SecretEngine::ConfigureWif shannontest', function (hooks) {
+module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 

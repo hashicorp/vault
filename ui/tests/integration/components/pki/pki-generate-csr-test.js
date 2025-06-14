@@ -13,7 +13,7 @@ import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
 
-module('Integration | Component | pki-generate-csr shannontest', function (hooks) {
+module('Integration | Component | pki-generate-csr', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
   setupMirage(hooks);

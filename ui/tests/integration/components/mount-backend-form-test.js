@@ -17,7 +17,7 @@ import { mountableEngines, WIF_ENGINES } from 'vault/helpers/mountable-secret-en
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
-module('Integration | Component | mount backend form shannontest', function (hooks) {
+module('Integration | Component | mount backend form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 

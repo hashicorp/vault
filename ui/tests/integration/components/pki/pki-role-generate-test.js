@@ -14,7 +14,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { PKI_ROLE_GENERATE } from 'vault/tests/helpers/pki/pki-selectors';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
-module('Integration | Component | pki-role-generate shannontest', function (hooks) {
+module('Integration | Component | pki-role-generate', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
   setupEngine(hooks, 'pki');

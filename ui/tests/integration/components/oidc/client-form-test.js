@@ -19,7 +19,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const searchSelect = create(ss);
 
-module('Integration | Component | oidc/client-form shannontest', function (hooks) {
+module('Integration | Component | oidc/client-form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 

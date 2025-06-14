@@ -24,7 +24,7 @@ import {
   fillInGcpConfig,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
-module('Acceptance | GCP | configuration shannontest', function (hooks) {
+module('Acceptance | GCP | configuration', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
