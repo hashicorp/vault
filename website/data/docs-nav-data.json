@@ -963,6 +963,10 @@
         "path": "upgrade/replicated-deployment"
       },
       {
+        "title": "LTS Vault upgrades",
+        "path": "upgrade/lts-upgrade"
+      },
+      {
         "title": "Rollback an upgrade",
         "path": "upgrade/rollback"
       },
