@@ -63,7 +63,6 @@ export const GENERAL = {
   radioByAttr: (attr: string) => `[data-test-radio="${attr}"]`,
   selectByAttr: (attr: string) => `[data-test-select="${attr}"]`,
   toggleInput: (attr: string) => `[data-test-toggle-input="${attr}"]`,
-  toggleGroup: (attr: string) => `[data-test-toggle-group="${attr}"]`,
   textToggle: '[data-test-text-toggle]',
   textToggleTextarea: '[data-test-text-file-textarea]',
   filter: (name: string) => `[data-test-filter="${name}"]`,

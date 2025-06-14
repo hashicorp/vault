@@ -193,7 +193,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await fillIn(GENERAL.inputByAttr('type'), 'internal');
       await typeIn(GENERAL.inputByAttr('commonName'), commonName);
       await typeIn(GENERAL.inputByAttr('issuerName'), issuerName);
-      await click(PKI_GENERATE_ROOT.keyParamsGroupToggle);
+      await click(GENERAL.button('Key parameters'));
       await typeIn(GENERAL.inputByAttr('keyName'), keyName);
       await click(GENERAL.submitButton);
 
