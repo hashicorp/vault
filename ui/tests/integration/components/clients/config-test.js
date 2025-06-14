@@ -105,6 +105,9 @@ module('Integration | Component | client count config', function (hooks) {
       'Route transitions correctly on save success'
     );
 
+    // we need to close the modal
+    await click('[data-test-clients-config-modal="cancel"]');
+
     await click('[data-test-input="enabled"]');
     await click(GENERAL.submitButton);
     assert.dom('[data-test-clients-config-modal]').exists('Modal renders');
