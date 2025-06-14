@@ -15,7 +15,7 @@ import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/com
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 
-module('Acceptance | secret engine mount settings', function (hooks) {
+module('Acceptance | secret engine mount settings shannontest', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
@@ -37,7 +37,7 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     );
     await click(MOUNT_BACKEND_FORM.mountType(type));
     await fillIn(GENERAL.inputByAttr('path'), path);
-    await click(GENERAL.toggleGroup('Method Options'));
+    await click(GENERAL.button('Method Options'));
     await mountSecrets.enableDefaultTtl().defaultTTLUnit('s').defaultTTLVal(100);
     await click(GENERAL.submitButton);
 

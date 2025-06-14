@@ -32,7 +32,7 @@ const flashMessage = create(fm);
 // in congruency with backend verbiage 'applications' are referred to as 'clients'
 // throughout the codebase and the term 'applications' only appears in the UI
 
-module('Acceptance | oidc-config clients', function (hooks) {
+module('Acceptance | oidc-config clients shannontest', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
@@ -124,7 +124,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       await visit(OIDC_BASE_URL + '/clients');
       await click('[data-test-oidc-client-create]');
       await fillIn('[data-test-input="name"]', 'client-with-test-key');
-      await click('[data-test-toggle-group="More options"]');
+      await click(GENERAL.button('More options'));
       await click('[data-test-component="search-select"] [data-test-icon="trash"]');
       await clickTrigger('#key');
       await selectChoose('[data-test-component="search-select"]#key', 'test-key');
@@ -383,7 +383,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
         'navigates to create form'
       );
       await fillIn('[data-test-input="name"]', 'test-app');
-      await click('[data-test-toggle-group="More options"]');
+      await click(GENERAL.button('More options'));
       // toggle ttls to false, testing it sets correct default duration
       await click('[data-test-input="idTokenTtl"]');
       await click('[data-test-input="accessTokenTtl"]');

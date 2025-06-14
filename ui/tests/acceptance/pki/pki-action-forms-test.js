@@ -18,7 +18,7 @@ import { PKI_CONFIGURE_CREATE, PKI_GENERATE_ROOT } from 'vault/tests/helpers/pki
 
 const { issuerPemBundle } = CERTIFICATES;
 
-module('Acceptance | pki action forms test', function (hooks) {
+module('Acceptance | pki action forms test shannontest', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
@@ -193,7 +193,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await fillIn(GENERAL.inputByAttr('type'), 'internal');
       await typeIn(GENERAL.inputByAttr('commonName'), commonName);
       await typeIn(GENERAL.inputByAttr('issuerName'), issuerName);
-      await click(PKI_GENERATE_ROOT.keyParamsGroupToggle);
+      await click(GENERAL.button('Key parameters'));
       await typeIn(GENERAL.inputByAttr('keyName'), keyName);
       await click(GENERAL.submitButton);
 

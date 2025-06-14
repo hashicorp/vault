@@ -13,7 +13,7 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { v4 as uuidv4 } from 'uuid';
 import sinon from 'sinon';
 
-module('Acceptance | totp key backend', function (hooks) {
+module('Acceptance | totp key backend shannontest', function (hooks) {
   setupApplicationTest(hooks);
 
   const createVaultKey = async (keyName, issuer, accountName, exported = true, qrSize = 200) => {
@@ -24,7 +24,7 @@ module('Acceptance | totp key backend', function (hooks) {
       await click(GENERAL.ttl.toggle('toggle-exported'));
     }
     if (qrSize !== 200) {
-      await click(GENERAL.toggleGroup('Provider Options'));
+      await click(GENERAL.button('Provider Options'));
       await fillIn(GENERAL.inputByAttr('qrSize'), qrSize);
     }
     await click(GENERAL.submitButton);
