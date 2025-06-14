@@ -33,7 +33,7 @@ const deleteEngine = async function (enginePath, assert) {
   );
 };
 
-module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
+module('Acceptance | secrets/secret/create, read, delete shannontest', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
@@ -138,7 +138,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await mountSecrets.visit();
       await click(MOUNT_BACKEND_FORM.mountType('kv'));
       await fillIn(GENERAL.inputByAttr('path'), this.backend);
-      await click(GENERAL.toggleGroup('Method Options'));
+      await click(GENERAL.button('Method Options'));
       await mountSecrets.version(1);
       await click(GENERAL.submitButton);
     });

@@ -24,7 +24,7 @@ import {
   fillInAwsConfig,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
-module('Acceptance | aws | configuration', function (hooks) {
+module('Acceptance | aws | configuration shannontest', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
@@ -185,7 +185,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await fillIn(GENERAL.inputByAttr('roleArn'), 'foo-role');
       await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'foo-audience');
       // manually fill in non-access type specific fields on root config so we can exclude Max Retries.
-      await click(GENERAL.toggleGroup('Root config options'));
+      await click(GENERAL.button('Root config options'));
       await fillIn(GENERAL.inputByAttr('region'), 'eu-central-1');
       await click(GENERAL.submitButton);
       assert
@@ -244,7 +244,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(SES.configure);
       // edit root config details
       await fillIn(GENERAL.inputByAttr('accessKey'), 'not-foo');
-      await click(GENERAL.toggleGroup('Root config options'));
+      await click(GENERAL.button('Root config options'));
       await fillIn(GENERAL.inputByAttr('region'), 'ap-southeast-2');
       // add lease config details
       await fillInAwsConfig('withLease');
@@ -300,7 +300,7 @@ module('Acceptance | aws | configuration', function (hooks) {
         .dom(SES.wif.accessTypeSection)
         .doesNotExist('Access type section does not render for a community user');
       // check all the form fields are present
-      await click(GENERAL.toggleGroup('Root config options'));
+      await click(GENERAL.button('Root config options'));
       for (const key of expectedConfigKeys('aws', true)) {
         assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for root section.`);
       }

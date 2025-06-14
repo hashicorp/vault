@@ -10,11 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-const SELECTORS = {
-  toggleGroup: (name) => `[data-test-toggle-group="${name}"]`,
-};
-
-module('Integration | Component | totp/key-form', function (hooks) {
+module('Integration | Component | totp/key-form shannontest', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
@@ -152,16 +148,14 @@ module('Integration | Component | totp/key-form', function (hooks) {
     `);
 
     // check generated groups
-    assert.dom(SELECTORS.toggleGroup('TOTP Code Options')).exists('Common group is shown');
-    assert.dom(SELECTORS.toggleGroup('Provider Options')).exists('Generated exclusive group is shown');
+    assert.dom(GENERAL.button('TOTP Code Options')).exists('Common group is shown');
+    assert.dom(GENERAL.button('Provider Options')).exists('Generated exclusive group is shown');
 
     // switch to non-generated form fields
     await click(GENERAL.radioByAttr('Other service'));
 
     // check non generated groups
-    assert.dom(SELECTORS.toggleGroup('TOTP Code Options')).exists('Common group is shown');
-    assert
-      .dom(SELECTORS.toggleGroup('Provider Options'))
-      .doesNotExist('Generated exclusive group is not shown');
+    assert.dom(GENERAL.button('TOTP Code Options')).exists('Common group is shown');
+    assert.dom(GENERAL.button('Provider Options')).doesNotExist('Generated exclusive group is not shown');
   });
 });

@@ -18,7 +18,7 @@ import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import SecretsEngineForm from 'vault/forms/secrets/engine';
 
-module('Integration | Component | mount backend form', function (hooks) {
+module('Integration | Component | mount backend form shannontest', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
@@ -93,7 +93,7 @@ module('Integration | Component | mount backend form', function (hooks) {
         hbs`<MountBackendForm @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       await click(MOUNT_BACKEND_FORM.mountType('github'));
-      await click(GENERAL.toggleGroup('Method Options'));
+      await click(GENERAL.button('Method Options'));
       assert
         .dom('[data-test-input="config.tokenType"]')
         .hasValue('', 'token type does not have a default value.');
@@ -216,7 +216,7 @@ module('Integration | Component | mount backend form', function (hooks) {
         );
         for (const engine of WIF_ENGINES) {
           await click(MOUNT_BACKEND_FORM.mountType(engine));
-          await click(GENERAL.toggleGroup('Method Options'));
+          await click(GENERAL.button('Method Options'));
           assert
             .dom(GENERAL.fieldByAttr('config.identityTokenKey'))
             .exists(`Identity token key field shows when type=${this.model.type}`);
@@ -225,7 +225,7 @@ module('Integration | Component | mount backend form', function (hooks) {
         for (const engine of mountableEngines().filter((e) => !WIF_ENGINES.includes(e.type))) {
           // check non-wif engine
           await click(MOUNT_BACKEND_FORM.mountType(engine.type));
-          await click(GENERAL.toggleGroup('Method Options'));
+          await click(GENERAL.button('Method Options'));
           assert
             .dom(GENERAL.fieldByAttr('config.identityTokenKey'))
             .doesNotExist(`Identity token key field hidden when type=${this.model.type}`);
@@ -244,7 +244,7 @@ module('Integration | Component | mount backend form', function (hooks) {
         );
         for (const engine of WIF_ENGINES) {
           await click(MOUNT_BACKEND_FORM.mountType(engine));
-          await click(GENERAL.toggleGroup('Method Options'));
+          await click(GENERAL.button('Method Options'));
           await typeIn(GENERAL.inputSearch('key'), `${engine}+specialKey`); // set to something else
 
           assert.strictEqual(

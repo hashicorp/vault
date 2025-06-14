@@ -24,7 +24,7 @@ import {
   fillInGcpConfig,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
-module('Acceptance | GCP | configuration', function (hooks) {
+module('Acceptance | GCP | configuration shannontest', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
@@ -187,7 +187,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
           );
         });
 
-        await click(GENERAL.toggleGroup('More options'));
+        await click(GENERAL.button('More options'));
         await click(GENERAL.ttl.toggle('Config TTL'));
         await fillIn(GENERAL.ttl.input('Config TTL'), '10800');
         await click(GENERAL.submitButton);

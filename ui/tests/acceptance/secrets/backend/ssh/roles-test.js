@@ -30,7 +30,7 @@ import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engin
 // There is duplication within this test suite. The duplication occurred because two test suites both testing ssh roles were merged.
 // refactoring the tests to remove the duplication would be a good next step as well as removing the tests/pages.
 
-module('Acceptance | ssh | roles', function (hooks) {
+module('Acceptance | ssh | roles shannontest', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
@@ -47,7 +47,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       credsRoute: 'vault.cluster.secrets.backend.sign',
       async fillInCreate() {
         await click(GENERAL.inputByAttr('allowUserCertificates'));
-        await click(GENERAL.toggleGroup('Options'));
+        await click(GENERAL.button('Options'));
         // it's recommended to keep allow_empty_principals false, check for testing so we don't have to input an extra field when signing a key
         await click(GENERAL.inputByAttr('allowEmptyPrincipals'));
       },
@@ -84,7 +84,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       credsRoute: 'vault.cluster.secrets.backend.credentials',
       async fillInCreate() {
         await fillIn(GENERAL.inputByAttr('defaultUser'), 'admin');
-        await click(GENERAL.toggleGroup('Options'));
+        await click(GENERAL.button('Options'));
         await fillIn(GENERAL.inputByAttr('cidrList'), '1.2.3.4/32');
       },
       async fillInGenerate() {
@@ -176,7 +176,7 @@ module('Acceptance | ssh | roles', function (hooks) {
     const createOTPRole = async (name) => {
       await fillIn(GENERAL.inputByAttr('name'), name);
       await fillIn(GENERAL.inputByAttr('keyType'), name);
-      await click(GENERAL.toggleGroup('Options'));
+      await click(GENERAL.button('Options'));
       await fillIn(GENERAL.inputByAttr('keyType'), 'otp');
       await fillIn(GENERAL.inputByAttr('defaultUser'), 'admin');
       await fillIn(GENERAL.inputByAttr('cidrList'), '0.0.0.0/0');

@@ -23,7 +23,7 @@ import {
 } from 'vault/tests/helpers/pki/pki-selectors';
 
 const { issuerPemBundle } = CERTIFICATES;
-module('Acceptance | pki configuration test', function (hooks) {
+module('Acceptance | pki configuration test shannontest', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
@@ -237,7 +237,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       await click(PKI_ISSUER_LIST.generateIssuerRoot);
       await fillIn(GENERAL.inputByAttr('type'), 'internal');
       await fillIn(GENERAL.inputByAttr('commonName'), 'my-certificate');
-      await click(PKI_GENERATE_ROOT.keyParamsGroupToggle);
+      await click(GENERAL.button('Key parameters'));
       await fillIn(GENERAL.inputByAttr('keyType'), 'ed25519');
       await click(GENERAL.submitButton);
 
