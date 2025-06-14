@@ -10,7 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-module('Integration | Component | totp/key-form shannontest', function (hooks) {
+module('Integration | Component | totp/key-form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 

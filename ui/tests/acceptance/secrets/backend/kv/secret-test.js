@@ -33,7 +33,7 @@ const deleteEngine = async function (enginePath, assert) {
   );
 };
 
-module('Acceptance | secrets/secret/create, read, delete shannontest', function (hooks) {
+module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {

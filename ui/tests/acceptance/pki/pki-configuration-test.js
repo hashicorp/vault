@@ -23,7 +23,7 @@ import {
 } from 'vault/tests/helpers/pki/pki-selectors';
 
 const { issuerPemBundle } = CERTIFICATES;
-module('Acceptance | pki configuration test shannontest', function (hooks) {
+module('Acceptance | pki configuration test', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {

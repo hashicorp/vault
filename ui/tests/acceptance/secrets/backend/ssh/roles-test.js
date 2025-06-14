@@ -30,7 +30,7 @@ import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engin
 // There is duplication within this test suite. The duplication occurred because two test suites both testing ssh roles were merged.
 // refactoring the tests to remove the duplication would be a good next step as well as removing the tests/pages.
 
-module('Acceptance | ssh | roles shannontest', function (hooks) {
+module('Acceptance | ssh | roles', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {

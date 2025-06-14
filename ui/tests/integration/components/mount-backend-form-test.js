@@ -18,7 +18,7 @@ import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import SecretsEngineForm from 'vault/forms/secrets/engine';
 
-module('Integration | Component | mount backend form shannontest', function (hooks) {
+module('Integration | Component | mount backend form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 

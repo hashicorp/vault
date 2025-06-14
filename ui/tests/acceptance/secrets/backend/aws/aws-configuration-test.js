@@ -24,7 +24,7 @@ import {
   fillInAwsConfig,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
-module('Acceptance | aws | configuration shannontest', function (hooks) {
+module('Acceptance | aws | configuration', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 

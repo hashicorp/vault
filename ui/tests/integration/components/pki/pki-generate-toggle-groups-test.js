@@ -10,7 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
-module('Integration | Component | PkiGenerateToggleGroups shannontest', function (hooks) {
+module('Integration | Component | PkiGenerateToggleGroups', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
 

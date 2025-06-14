@@ -24,7 +24,7 @@ import {
   fillInAzureConfig,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
-module('Acceptance | Azure | configuration shannontest', function (hooks) {
+module('Acceptance | Azure | configuration', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 

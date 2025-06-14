@@ -13,7 +13,7 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { v4 as uuidv4 } from 'uuid';
 import sinon from 'sinon';
 
-module('Acceptance | totp key backend shannontest', function (hooks) {
+module('Acceptance | totp key backend', function (hooks) {
   setupApplicationTest(hooks);
 
   const createVaultKey = async (keyName, issuer, accountName, exported = true, qrSize = 200) => {

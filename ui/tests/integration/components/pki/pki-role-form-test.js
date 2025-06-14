@@ -13,7 +13,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 
-module('Integration | Component | pki-role-form shannontest', function (hooks) {
+module('Integration | Component | pki-role-form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
   setupEngine(hooks, 'pki'); // https://github.com/ember-engines/ember-engines/pull/653

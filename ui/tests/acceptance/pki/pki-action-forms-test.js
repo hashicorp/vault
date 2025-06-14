@@ -18,7 +18,7 @@ import { PKI_CONFIGURE_CREATE, PKI_GENERATE_ROOT } from 'vault/tests/helpers/pki
 
 const { issuerPemBundle } = CERTIFICATES;
 
-module('Acceptance | pki action forms test shannontest', function (hooks) {
+module('Acceptance | pki action forms test', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {

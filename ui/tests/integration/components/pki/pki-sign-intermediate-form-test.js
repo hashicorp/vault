@@ -19,7 +19,7 @@ const selectors = {
   formError: '[data-test-form-error]',
   resultsContainer: '[data-test-sign-intermediate-result]',
 };
-module('Integration | Component | pki-sign-intermediate-form shannontest', function (hooks) {
+module('Integration | Component | pki-sign-intermediate-form', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'pki');
   setupMirage(hooks);

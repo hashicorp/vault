@@ -15,7 +15,7 @@ import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/com
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 
-module('Acceptance | secret engine mount settings shannontest', function (hooks) {
+module('Acceptance | secret engine mount settings', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
