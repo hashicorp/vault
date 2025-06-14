@@ -25,11 +25,11 @@ export const GENERAL = {
   backButton: '[data-test-back-button]',
   cancelButton: '[data-test-cancel]',
   confirmButton: '[data-test-confirm-button]', // used most often on modal or confirm popups
+  confirmTrigger: '[data-test-confirm-action-trigger]',
   copyButton: '[data-test-copy-button]',
   // there should only be one save button per view (e.g. one per form) so this does not need to be dynamic
   // this button should be used for any kind of "submit" on a form or "save" action.
   submitButton: '[data-test-submit]',
-  confirmTrigger: '[data-test-confirm-action-trigger]',
   button: (label: string) => `[data-test-button="${label}"]`,
 
   /* ────── Menus & Lists ────── */

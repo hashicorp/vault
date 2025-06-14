@@ -124,7 +124,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     assert.dom(PAGE.title).includesText(this.model.path, 'renders secret path as page title');
     assert.dom(PAGE.infoRowValue('foo')).exists('renders row for secret data');
     assert.dom(PAGE.infoRowValue('foo')).hasText('***********');
-    await click(FORM.toggleMasked);
+    await click(GENERAL.button('toggle-masked'));
     assert.dom(PAGE.infoRowValue('foo')).hasText('bar', 'renders secret value');
     await click(FORM.toggleJson);
     assert.dom(GENERAL.codeBlock('secret-data')).hasText(

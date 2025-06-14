@@ -789,7 +789,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           });
 
           await click(GENERAL.enableField('clientSecret'));
-          await click('[data-test-button="toggle-masked"]');
+          await click(GENERAL.button('toggle-masked'));
           await fillIn(GENERAL.inputByAttr('clientSecret'), 'new-secret');
           await click(GENERAL.submitButton);
         });
@@ -858,7 +858,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           });
 
           await click(GENERAL.enableField('secretKey'));
-          await click('[data-test-button="toggle-masked"]');
+          await click(GENERAL.button('toggle-masked'));
           await fillIn(GENERAL.inputByAttr('secretKey'), 'new-secret');
           await click(GENERAL.submitButton);
         });
