@@ -18,28 +18,13 @@ variable "hosts" {
     private_ip = string
     public_ip  = string
   }))
-  description = "The vault hosts"
-}
-
-variable "vault_addr" {
-  type        = string
-  description = "The local vault api address"
-}
-
-variable "vault_install_dir" {
-  type        = string
-  description = "The directory where the vault binary is installed"
+  description = "The consul hosts"
 }
 
 resource "enos_remote_exec" "restart" {
   for_each = var.hosts
 
-  environment = {
-    VAULT_ADDR        = var.vault_addr
-    VAULT_INSTALL_DIR = var.vault_install_dir
-  }
-
-  scripts = [abspath("${path.module}/scripts/restart-vault.sh")]
+  scripts = [abspath("${path.module}/scripts/restart-consul.sh")]
 
   transport = {
     ssh = {

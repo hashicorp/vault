@@ -9,3 +9,8 @@ output "hosts" {
   description = "The ec2 instance target hosts"
   value       = local.hosts
 }
+
+output "security_group_id" {
+  description = "The target security group ID"
+  value       = aws_security_group.target.id
+}
