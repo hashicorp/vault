@@ -293,6 +293,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     assert.dom('input[name="namespace"]').hasAttribute('placeholder', '/ (root)');
     await fillIn('input[name="namespace"]', '/foo/bar ');
     const encodedNamespace = encodeURIComponent('foo/bar');
+    await waitUntil(() => currentURL() === `/vault/auth?namespace=${encodedNamespace}`);
     assert.strictEqual(
       currentURL(),
       `/vault/auth?namespace=${encodedNamespace}`,
@@ -334,7 +335,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     assert.dom(GENERAL.confirmButton).hasText('Confirm', 'Confirm namespace deletion button is shown');
     await click(GENERAL.confirmButton);
 
-    // Verify that the namespace does not exist in the nmanage namespace page
+    // Verify that the namespace does not exist in the manage namespace page
     assert.strictEqual(
       currentURL(),
       `/vault/access/namespaces?page=1&pageFilter=${namespace}`,
