@@ -17,7 +17,7 @@ export const disableReplication = async (type, assert) => {
 
     const typeDisplay = type === 'dr' ? 'Disaster Recovery' : 'Performance';
     await fillIn('[data-test-confirmation-modal-input="Disable Replication?"]', typeDisplay);
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
     await settled(); // eslint-disable-line
 
     if (assert) {

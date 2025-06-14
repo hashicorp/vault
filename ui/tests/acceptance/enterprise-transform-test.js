@@ -37,8 +37,7 @@ const newTransformation = async (backend, name, submit = false) => {
   await settled();
   // Don't automatically choose role because we might be testing that
   if (submit) {
-    await transformationsPage.submit();
-    await settled();
+    await click(GENERAL.submitButton);
   }
   return transformationName;
 };
@@ -53,8 +52,7 @@ const newRole = async (backend, name) => {
   await settled();
   await selectChoose('#transformations', '.ember-power-select-option', 0);
   await settled();
-  await rolesPage.submit();
-  await settled();
+  await click(GENERAL.submitButton);
   return roleName;
 };
 
@@ -138,8 +136,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     await settled();
     await selectChoose('#allowed_roles', '.ember-power-select-option', 0);
     await settled();
-    await transformationsPage.submit();
-    await settled();
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/show/${transformationName}`,
@@ -179,8 +176,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     await clickTrigger('#transformations');
     assert.strictEqual(searchSelectComponent.options.length, 1, 'lists the transformation');
     await selectChoose('#transformations', '.ember-power-select-option', 0);
-    await rolesPage.submit();
-    await settled();
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/show/role/${roleName}`,
@@ -271,8 +267,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     assert.ok(searchSelectComponent.options.length > 0, 'lists built-in alphabets');
     await selectChoose('#alphabet', '.ember-power-select-option', 0);
     assert.dom('#alphabet .ember-power-select-trigger').doesNotExist('Alphabet input no longer searchable');
-    await templatesPage.submit();
-    await settled();
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/show/template/${templateName}`,
