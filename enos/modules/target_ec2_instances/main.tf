@@ -166,6 +166,16 @@ resource "aws_security_group" "target" {
     self      = true
   }
 
+  ingress {
+    from_port = 389
+    to_port   = 389
+    protocol  = "tcp"
+    cidr_blocks = [
+      "0.0.0.0/0"
+    ]
+    ipv6_cidr_blocks = ["::/0"]
+  }
+
   # External traffic
   egress {
     from_port        = 0
