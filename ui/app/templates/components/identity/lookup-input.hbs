@@ -1,13 +1,19 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <form {{action (perform this.lookup) on="submit"}}>
   <div class="field is-flex">
     <div class="control">
       <div class="select is-fullwidth">
-        <select name="param" id="param" onchange={{action (mut this.param) value="target.value"}}>
+        <select
+          name="param"
+          id="param"
+          onchange={{action (mut this.param) value="target.value"}}
+          aria-label="lookup by alias name"
+          data-test-select="lookup-param-select"
+        >
           {{#each (array "alias name" "name" "id" "alias id") as |paramOption|}}
             <option selected={{eq this.param paramOption}} value={{paramOption}}>
               Lookup by
@@ -23,10 +29,11 @@
       {{/if}}
     </div>
     <div class="control is-expanded">
-      <Input class="input" @value={{this.paramValue}} placeholder={{capitalize this.param}} />
+      <Input class="input" @value={{this.paramValue}} placeholder={{capitalize this.param}} data-test-input="param-value" />
     </div>
     <div class="control">
-      <Hds::Button @text="Lookup" @color="secondary" class="is-hidden" type="submit" />
+      here
+      <Hds::Button @text="Lookup" @color="secondary" class="is-hidden" type="submit" data-test-submit />
     </div>
   </div>
 </form>

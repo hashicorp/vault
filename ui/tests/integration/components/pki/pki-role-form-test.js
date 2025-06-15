@@ -121,7 +121,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
       { owner: this.engine }
     );
 
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     assert
       .dom(GENERAL.inputByAttr('name'))
@@ -144,7 +144,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
       'some-serial-number'
     );
 
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
   });
 
   test('it should update attributes on the model on update', async function (assert) {
@@ -172,7 +172,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
     );
     await click(GENERAL.ttl.toggle('issuerRef-toggle'));
     await fillIn(GENERAL.selectByAttr('issuerRef'), 'issuer-1');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.strictEqual(this.role.issuerRef, 'issuer-1', 'Issuer Ref correctly saved on create');
   });
 
@@ -191,6 +191,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
           key_usage: ['DigitalSignature', 'KeyAgreement', 'KeyEncipherment'],
           not_before_duration: '30s',
           require_cn: true,
+          serial_number_source: 'json-csr',
           signature_bits: '384',
           use_csr_common_name: true,
           use_csr_sans: true,
@@ -246,7 +247,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
       .dom(GENERAL.inputByAttr('signatureBits'))
       .hasValue('384', 'dropdown has selected value, not default value (0)');
 
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.strictEqual(this.role.issuerRef, 'issuer-1', 'Issuer Ref correctly saved on create');
   });
 });

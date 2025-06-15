@@ -1,0 +1,11 @@
+```release-note:feature
+**Automated Root Rotation**: Adds Automated Root Rotation capabilities to the AWS Auth and AWS Secrets
+plugins. This allows plugin users to automate their root credential rotations based on configurable
+schedules/periods via the Rotation Manager. Note: Enterprise only.
+```
+```release-note:change
+secrets/aws: The AWS Secrets engine now persists entries to storage between writes. This enables users
+to not have to pass every required field on each write and to make individual updates as necessary.
+Note: in order to zero out a value that is previously configured, users must now explicitly set the
+field to its zero value on an update.
+```

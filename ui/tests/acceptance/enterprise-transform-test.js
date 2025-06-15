@@ -10,7 +10,7 @@ import { create } from 'ember-cli-page-object';
 import { selectChoose } from 'ember-power-select/test-support';
 import { typeInSearch, clickTrigger } from 'ember-power-select/test-support/helpers';
 
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import transformationsPage from 'vault/tests/pages/secrets/backend/transform/transformations';
 import rolesPage from 'vault/tests/pages/secrets/backend/transform/roles';
@@ -21,6 +21,8 @@ import { runCmd } from '../helpers/commands';
 import { allEngines } from 'vault/helpers/mountable-secret-engines';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { v4 as uuidv4 } from 'uuid';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const searchSelectComponent = create(searchSelect);
 
@@ -35,8 +37,7 @@ const newTransformation = async (backend, name, submit = false) => {
   await settled();
   // Don't automatically choose role because we might be testing that
   if (submit) {
-    await transformationsPage.submit();
-    await settled();
+    await click(GENERAL.submitButton);
   }
   return transformationName;
 };
@@ -51,8 +52,7 @@ const newRole = async (backend, name) => {
   await settled();
   await selectChoose('#transformations', '.ember-power-select-option', 0);
   await settled();
-  await rolesPage.submit();
-  await settled();
+  await click(GENERAL.submitButton);
   return roleName;
 };
 
@@ -60,7 +60,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
-    return authPage.login();
+    return login();
   });
 
   test('it transitions to list route after mount success', async function (assert) {
@@ -107,8 +107,8 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     const transformationName = 'foo';
     const roleName = 'foo-role';
     await settled();
-    await transformationsPage.createLink({ backend });
-    await settled();
+    await click(SES.createSecretLink);
+
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/create`,
@@ -136,8 +136,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     await settled();
     await selectChoose('#allowed_roles', '.ember-power-select-option', 0);
     await settled();
-    await transformationsPage.submit();
-    await settled();
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/show/${transformationName}`,
@@ -167,7 +166,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     await click('[data-test-secret-list-tab="Roles"]');
     assert.strictEqual(currentURL(), `/vault/secrets/${backend}/list?tab=role`, 'links to role list page');
     // create role with transformation attached
-    await rolesPage.createLink();
+    await click(SES.createSecretLink);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/create?itemType=role`,
@@ -177,8 +176,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     await clickTrigger('#transformations');
     assert.strictEqual(searchSelectComponent.options.length, 1, 'lists the transformation');
     await selectChoose('#transformations', '.ember-power-select-option', 0);
-    await rolesPage.submit();
-    await settled();
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/show/role/${roleName}`,
@@ -256,7 +254,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
       'links to template list page'
     );
     await settled();
-    await templatesPage.createLink();
+    await click(SES.createSecretLink);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/create?itemType=template`,
@@ -269,8 +267,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     assert.ok(searchSelectComponent.options.length > 0, 'lists built-in alphabets');
     await selectChoose('#alphabet', '.ember-power-select-option', 0);
     assert.dom('#alphabet .ember-power-select-trigger').doesNotExist('Alphabet input no longer searchable');
-    await templatesPage.submit();
-    await settled();
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/show/template/${templateName}`,
@@ -299,8 +296,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
       `/vault/secrets/${backend}/list?tab=alphabet`,
       'links to alphabet list page'
     );
-    await alphabetsPage.createLink();
-    await settled();
+    await click(SES.createSecretLink);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/create?itemType=alphabet`,
@@ -308,8 +304,7 @@ module('Acceptance | Enterprise | Transform secrets', function (hooks) {
     );
     await alphabetsPage.name(alphabetName);
     await alphabetsPage.alphabet('aeiou');
-    await alphabetsPage.submit();
-    await settled();
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/show/alphabet/${alphabetName}`,

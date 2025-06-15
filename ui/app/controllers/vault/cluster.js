@@ -8,6 +8,7 @@ import { service } from '@ember/service';
 import { alias } from '@ember/object/computed';
 import Controller from '@ember/controller';
 import { observer } from '@ember/object';
+
 export default Controller.extend({
   auth: service(),
   store: service(),

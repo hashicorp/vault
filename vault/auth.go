@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/observations"
 	"github.com/hashicorp/vault/vault/plugincatalog"
 )
 
@@ -248,6 +249,18 @@ func (c *Core) enableCredentialInternal(ctx context.Context, entry *MountEntry, 
 	if c.logger.IsInfo() {
 		c.logger.Info("enabled credential backend", "path", entry.Path, "type", entry.Type, "version", entry.RunningVersion)
 	}
+
+	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountAuthEnable, ns, map[string]interface{}{
+		"path":        entry.Path,
+		"local_mount": entry.Local,
+		"type":        entry.Type,
+		"accessor":    entry.Accessor,
+		"version":     entry.RunningVersion,
+	})
+	if err != nil {
+		c.logger.Error("failed to record observation after enabling credential backend", "path", entry.Path, "error", err)
+	}
+
 	return nil
 }
 
@@ -378,6 +391,17 @@ func (c *Core) disableCredentialInternal(ctx context.Context, path string, updat
 
 	if c.logger.IsInfo() {
 		c.logger.Info("disabled credential backend", "path", path)
+	}
+
+	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountAuthDisable, ns, map[string]interface{}{
+		"path":        path,
+		"local_mount": entry.Local,
+		"type":        entry.Type,
+		"accessor":    entry.Accessor,
+		"version":     entry.RunningVersion,
+	})
+	if err != nil {
+		c.logger.Error("failed to record observation after disabling auth backend", "path", path, "error", err)
 	}
 
 	return nil
@@ -962,6 +986,8 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 	if err != nil {
 		return nil, err
 	}
+
+	conf := make(map[string]string)
 	var runningSha string
 	factory, ok := c.credentialBackends[t]
 	if !ok {
@@ -980,13 +1006,22 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 			runningSha = hex.EncodeToString(plug.Sha256)
 		}
 
+		if plug.Download {
+			if err = sysView.DownloadExtractVerifyPlugin(ctx, plug); err != nil {
+				return nil, fmt.Errorf("failed to extract and verify plugin=%q version=%q before mounting: %w",
+					plug.Name, plug.Version, err)
+			}
+		}
+
 		factory = plugin.Factory
 		if !plug.Builtin {
 			factory = wrapFactoryCheckPerms(c, plugin.Factory)
 		}
+
+		setExternalPluginConfig(plug, conf)
 	}
+
 	// Set up conf to pass in plugin_name
-	conf := make(map[string]string)
 	for k, v := range entry.Options {
 		conf[k] = v
 	}
@@ -1015,13 +1050,26 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 		return nil, err
 	}
 
+	pluginObservationRecorder, err := c.observations.WithPlugin(entry.namespace, &logical.EventPluginInfo{
+		MountClass:    consts.PluginTypeCredential.String(),
+		MountAccessor: entry.Accessor,
+		MountPath:     entry.Path,
+		Plugin:        entry.Type,
+		PluginVersion: pluginVersion,
+		Version:       entry.Options["version"],
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	config := &logical.BackendConfig{
-		StorageView:  view,
-		Logger:       authLogger,
-		Config:       conf,
-		System:       sysView,
-		BackendUUID:  entry.BackendAwareUUID,
-		EventsSender: pluginEventSender,
+		StorageView:         view,
+		Logger:              authLogger,
+		Config:              conf,
+		System:              sysView,
+		BackendUUID:         entry.BackendAwareUUID,
+		EventsSender:        pluginEventSender,
+		ObservationRecorder: pluginObservationRecorder,
 	}
 
 	backend, err := factory(ctx, config)

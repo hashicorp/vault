@@ -13,6 +13,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -25,9 +26,13 @@ var (
 )
 
 type gRPCClient struct {
+	entGRPCClient
 	client        proto.DatabaseClient
 	versionClient logical.PluginVersionClient
 	doneCtx       context.Context
+
+	// tier is the plugin tier
+	tier consts.PluginTier
 }
 
 func (c gRPCClient) PluginVersion() logical.PluginVersion {
@@ -283,20 +288,6 @@ func (c gRPCClient) Type() (string, error) {
 		return "", fmt.Errorf("unable to get database plugin type: %w", err)
 	}
 	return typeResp.GetType(), nil
-}
-
-func (c gRPCClient) Close() error {
-	ctx, cancel := getContextWithTimeout(pluginutil.PluginGRPCTimeoutClose)
-	defer cancel()
-
-	_, err := c.client.Close(ctx, &proto.Empty{})
-	if err != nil {
-		if c.doneCtx.Err() != nil {
-			return ErrPluginShutdown
-		}
-		return err
-	}
-	return nil
 }
 
 func getContextWithTimeout(env string) (context.Context, context.CancelFunc) {

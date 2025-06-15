@@ -76,3 +76,7 @@ func (c *Core) mountEntrySysView(entry *MountEntry) extendedSystemView {
 func (c *Core) entBuiltinPluginMetrics(ctx context.Context, entry *MountEntry, val float32) error {
 	return nil
 }
+
+func newSnapshotStorageRouter(c *Core, storage logical.Storage) logical.Storage {
+	return storage
+}

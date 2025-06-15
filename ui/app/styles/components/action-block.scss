@@ -1,3 +1,7 @@
+@use '../utils/font_variables';
+@use '../utils/mixins';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -8,7 +12,7 @@
   grid-row: 1/1;
 }
 @mixin stacked-content {
-  margin-bottom: $spacing-24;
+  margin-bottom: size_variables.$spacing-24;
 }
 
 .action-block-width {
@@ -18,17 +22,17 @@
 .action-block {
   grid-template-columns: 2fr 1fr;
   display: grid;
-  padding: $spacing-16 $spacing-24;
+  padding: size_variables.$spacing-16 size_variables.$spacing-24;
   line-height: inherit;
-  grid-gap: $spacing-16;
+  grid-gap: size_variables.$spacing-16;
 
-  @include until($mobile) {
+  @include mixins.until(size_variables.$mobile) {
     @include stacked-grid();
   }
 }
 
 .action-block-info {
-  @include until($mobile) {
+  @include mixins.until(size_variables.$mobile) {
     @include stacked-content();
   }
 }
@@ -41,12 +45,12 @@
 }
 
 .action-block-title {
-  font-size: $size-5;
-  font-weight: $font-weight-bold;
+  font-size: size_variables.$size-5;
+  font-weight: font_variables.$font-weight-bold;
 }
 .action-block-action {
   text-align: right;
-  @include until($mobile) {
+  @include mixins.until(size_variables.$mobile) {
     text-align: left;
   }
 }
@@ -55,22 +59,22 @@
 .replication-actions-grid-layout {
   display: flex;
   flex-wrap: wrap;
-  margin: $spacing-16 0;
-  @include until($mobile) {
+  margin: size_variables.$spacing-16 0;
+  @include mixins.until(size_variables.$mobile) {
     display: block;
   }
 }
 
 .replication-actions-grid-item {
   flex-basis: 50%;
-  padding: $spacing-12;
+  padding: size_variables.$spacing-12;
   display: flex;
   width: 100%;
 }
 
 .replication-actions-grid-item .action-block {
   width: 100%;
-  @include until($mobile) {
+  @include mixins.until(size_variables.$mobile) {
     height: inherit;
   }
 }

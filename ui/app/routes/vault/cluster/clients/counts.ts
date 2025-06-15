@@ -7,10 +7,10 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { fromUnixTime } from 'date-fns';
 
-import type AdapterError from '@ember-data/adapter';
+import type AdapterError from '@ember-data/adapter/error';
 import type FlagsService from 'vault/services/flags';
 import type NamespaceService from 'vault/services/namespace';
-import type StoreService from 'vault/services/store';
+import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
 import type { ModelFrom } from 'vault/vault/route';
 import type ClientsRoute from '../clients';
@@ -35,7 +35,7 @@ export type ClientsCountsRouteModel = ModelFrom<ClientsCountsRoute>;
 export default class ClientsCountsRoute extends Route {
   @service declare readonly flags: FlagsService;
   @service declare readonly namespace: NamespaceService;
-  @service declare readonly store: StoreService;
+  @service declare readonly store: Store;
   @service declare readonly version: VersionService;
 
   queryParams = {
@@ -69,15 +69,14 @@ export default class ClientsCountsRoute extends Route {
   }
 
   async getActivity(params: ClientsCountsRouteParams): Promise<{
-    activity: ClientsActivityModel;
-    activityError: AdapterError;
+    activity?: ClientsActivityModel;
+    activityError?: AdapterError;
   }> {
     let activity, activityError;
-    // if CE without start time we want to skip the activity call
+    // if CE without both start time and end time, we want to skip the activity call
     // so that the user is forced to choose a date range
-    if (this.version.isEnterprise || params.start_time) {
+    if (this.version.isEnterprise || (this.version.isCommunity && params.start_time && params.end_time)) {
       const query: ActivityAdapterQuery = {
-        // start and end params are optional -- if not provided, will fallback to API default
         start_time: this.formatTimeQuery(params?.start_time),
         end_time: this.formatTimeQuery(params?.end_time),
       };
@@ -88,7 +87,7 @@ export default class ClientsCountsRoute extends Route {
       try {
         activity = await this.store.queryRecord('clients/activity', query);
       } catch (error) {
-        activityError = error;
+        activityError = error as AdapterError;
       }
     }
     return {

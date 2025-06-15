@@ -62,7 +62,9 @@ func (m *mockIAMClient) CreateUserWithContext(_ aws.Context, input *iam.CreateUs
 }
 
 func getBackend(t *testing.T) logical.Backend {
-	be, _ := Factory(context.Background(), logical.TestBackendConfig())
+	cfg := logical.TestBackendConfig()
+	cfg.System = &testSystemView{}
+	be, _ := Factory(context.Background(), cfg)
 	return be
 }
 

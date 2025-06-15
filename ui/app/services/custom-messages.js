@@ -7,8 +7,10 @@ import { action } from '@ember/object';
 import Service, { inject as service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { TrackedObject } from 'tracked-built-ins';
+import { decodeString } from 'core/utils/b64';
+
 export default class CustomMessagesService extends Service {
-  @service store;
+  @service api;
   @service namespace;
   @service auth;
   @tracked messages = [];
@@ -17,38 +19,35 @@ export default class CustomMessagesService extends Service {
 
   constructor() {
     super(...arguments);
-    this.fetchMessages(this.namespace.path);
+    this.fetchMessages();
   }
 
   get bannerMessages() {
-    if (!this.messages || !this.messages.length) return [];
-    return this.messages?.filter((message) => message?.type === 'banner');
+    return this.messages?.filter((message) => message?.type === 'banner') || [];
   }
 
   get modalMessages() {
-    if (!this.messages || !this.messages.length) return [];
-    return this.messages?.filter((message) => message?.type === 'modal');
+    return this.messages?.filter((message) => message?.type === 'modal') || [];
   }
 
-  async fetchMessages(ns) {
+  async fetchMessages() {
     try {
-      const url = this.auth.currentToken
-        ? '/v1/sys/internal/ui/authenticated-messages'
-        : '/v1/sys/internal/ui/unauthenticated-messages';
-      const opts = {
-        method: 'GET',
-        headers: {},
-      };
-      if (this.auth.currentToken) opts.headers['X-Vault-Token'] = this.auth.currentToken;
-      if (ns) opts.headers['X-Vault-Namespace'] = ns;
-      const result = await fetch(url, opts);
-      const body = await result.json();
-      if (body.errors) return (this.messages = []);
-      const serializer = this.store.serializerFor('config-ui/message');
-      this.messages = serializer.mapPayload(body);
+      const type = this.auth.currentToken ? 'Authenticated' : 'Unauthenticated';
+      const method = `internalUiRead${type}ActiveCustomMessages`;
+      const { keys = [], keyInfo } = await this.api.sys[method]();
+
+      this.messages = keys.map((key) => {
+        const data = keyInfo[key];
+        return {
+          id: key,
+          ...data,
+          message: data.message ? decodeString(data.message) : data.message,
+        };
+      });
+
       this.bannerMessages?.forEach((bm) => (this.bannerState[bm.id] = true));
     } catch (e) {
-      return e;
+      this.clearCustomMessages();
     }
   }
 

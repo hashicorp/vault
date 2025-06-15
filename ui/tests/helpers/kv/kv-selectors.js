@@ -12,8 +12,8 @@ export const PAGE = {
   breadcrumbCurrentAtIdx: (idx) =>
     `[data-test-breadcrumbs] li:nth-child(${idx + 1}) .hds-breadcrumb__current`,
   infoRow: '[data-test-component="info-table-row"]',
-  infoRowValue: (label) => `[data-test-value-div="${label}"]`,
-  infoRowToggleMasked: (label) => `[data-test-value-div="${label}"] [data-test-button="toggle-masked"]`,
+  infoRowValue: (label) => `[data-test-row-value="${label}"]`, // TODO replace with GENERAL.infoRowValue
+  infoRowToggleMasked: (label) => `[data-test-row-value="${label}"] [data-test-button="toggle-masked"]`,
   secretTab: (tab) => (tab ? `[data-test-secrets-tab="${tab}"]` : '[data-test-secrets-tab]'),
   emptyStateTitle: '[data-test-empty-state-title]',
   emptyStateMessage: '[data-test-empty-state-message]',
@@ -27,9 +27,6 @@ export const PAGE = {
   toolbarAction: 'nav.toolbar-actions .toolbar-link, nav.toolbar-actions .toolbar-button',
   secretRow: '[data-test-component="info-table-row"]', // replace with infoRow
   // specific page selectors
-  backends: {
-    link: (backend) => `[data-test-secrets-backend-link="${backend}"]`,
-  },
   metadata: {
     requestData: '[data-test-request-data]',
     editBtn: '[data-test-edit-metadata]',
@@ -48,7 +45,6 @@ export const PAGE = {
     destroy: '[data-test-kv-delete="destroy"]',
     undelete: '[data-test-kv-delete="undelete"]',
     copy: '[data-test-copy-menu-trigger]',
-    wrap: '[data-test-wrap-button]',
     deleteModal: '[data-test-delete-modal]',
     deleteModalTitle: '[data-test-delete-modal] [data-test-modal-title]',
     deleteOption: 'input#delete-version',
@@ -67,7 +63,6 @@ export const PAGE = {
     listMenuDelete: `[data-test-popup-metadata-delete]`,
     overviewCard: '[data-test-overview-card-container="View secret"]',
     overviewInput: '[data-test-view-secret] input',
-    overviewButton: '[data-test-submit-button]',
     pagination: '[data-test-pagination]',
     paginationInfo: '.hds-pagination-info',
     paginationNext: '.hds-pagination-nav__arrow--direction-next',
@@ -89,7 +84,6 @@ export const PAGE = {
     metadataSection: '[data-test-metadata-section]',
   },
   paths: {
-    copyButton: (label) => `${PAGE.infoRowValue(label)} button`,
     codeSnippet: (section) => `[data-test-code-block="${section}"] code`,
     snippetCopy: (section) => `[data-test-code-block="${section}"] button`,
   },
@@ -100,7 +94,6 @@ export const FORM = {
   inputByAttr: (attr) => `[data-test-input="${attr}"]`,
   fieldByAttr: (attr) => `[data=test=field="${attr}"]`, // formfield
   toggleJson: '[data-test-toggle-input="json"]',
-  toggleMasked: '[data-test-button="toggle-masked"]',
   toggleMetadata: '[data-test-metadata-toggle]',
   jsonEditor: '[data-test-component="code-mirror-modifier"]',
   ttlValue: (name) => `[data-test-ttl-value="${name}"]`,

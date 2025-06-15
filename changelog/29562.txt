@@ -1,0 +1,3 @@
+```release-note:bug
+export API: Normalize the start_date parameter to the start of the month as is done in the sys/counters API to keep the results returned from both of the API's consistent.
+```

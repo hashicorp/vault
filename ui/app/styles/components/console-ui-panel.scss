@@ -1,3 +1,9 @@
+@use 'sass:color';
+@use '../utils/box-shadow_variables';
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -15,42 +21,42 @@ $console-close-height: 35px;
   position: fixed;
   bottom: 0;
   transition:
-    min-height $speed $easing,
-    transform $speed ease-in;
+    min-height size_variables.$speed size_variables.$easing,
+    transform size_variables.$speed ease-in;
   will-change: transform, min-height;
   -webkit-overflow-scrolling: touch;
   z-index: 199;
 }
 
 .console-ui-panel-content {
-  color: $white;
+  color: color_variables.$white;
   display: flex;
   flex-direction: column;
-  font-size: $size-7;
-  font-weight: $font-weight-semibold;
+  font-size: size_variables.$size-7;
+  font-weight: font_variables.$font-weight-semibold;
   justify-content: flex-end;
   min-height: calc(100% - $console-close-height); // account for close button that is sticky positioned
-  padding: $spacing-12 $spacing-12 $spacing-18;
-  transition: justify-content $speed ease-in;
+  padding: size_variables.$spacing-12 size_variables.$spacing-12 size_variables.$spacing-18;
+  transition: justify-content size_variables.$speed ease-in;
 
   pre,
   p {
     background: none;
     color: inherit;
-    font-size: $size-7;
+    font-size: size_variables.$size-7;
     min-height: 2rem;
     padding: 0;
 
     &:not(.console-ui-command):not(.CodeMirror-line) {
-      padding-left: $spacing-20;
+      padding-left: size_variables.$spacing-20;
     }
   }
 
   .cm-s-hashi.CodeMirror {
-    background-color: rgba($black, 0.5) !important;
-    font-weight: $font-weight-normal;
-    margin-left: $spacing-20;
-    padding: $spacing-12 $spacing-20;
+    background-color: rgba(color_variables.$black, 0.5) !important;
+    font-weight: font_variables.$font-weight-normal;
+    margin-left: size_variables.$spacing-20;
+    padding: size_variables.$spacing-12 size_variables.$spacing-20;
   }
 
   .console-ui-panel-intro {
@@ -63,19 +69,19 @@ $console-close-height: 35px;
   display: flex;
 
   input {
-    background-color: rgba($black, 0.5);
+    background-color: rgba(color_variables.$black, 0.5);
     border: 1px solid var(--token-color-palette-neutral-500);
     border-radius: var(--token-side-nav-body-list-item-border-radius);
-    caret-color: $white;
-    color: $white;
+    caret-color: color_variables.$white;
+    color: color_variables.$white;
     flex: 1 1 auto;
-    font-family: $family-monospace;
-    font-size: $size-6;
-    font-weight: $font-weight-bold;
+    font-family: font_variables.$family-monospace;
+    font-size: size_variables.$size-6;
+    font-weight: font_variables.$font-weight-bold;
     outline: none;
-    padding: $spacing-8;
-    margin-right: $spacing-8;
-    transition: background-color $speed;
+    padding: size_variables.$spacing-8;
+    margin-right: size_variables.$spacing-8;
+    transition: background-color size_variables.$speed;
   }
 }
 
@@ -84,9 +90,9 @@ $console-close-height: 35px;
 }
 
 .console-ui-output {
-  transition: background-color $speed ease-in-out;
+  transition: background-color size_variables.$speed ease-in-out;
   will-change: background-color;
-  padding-right: $spacing-36;
+  padding-right: size_variables.$spacing-36;
   position: relative;
   background-color: rgba(#000, 0);
   color: var(--token-color-palette-neutral-400);
@@ -96,7 +102,7 @@ $console-close-height: 35px;
 }
 
 .console-ui-alert {
-  margin-left: calc(#{$spacing-20} - 0.33rem);
+  margin-left: calc(#{size_variables.$spacing-20} - 0.33rem);
   position: relative;
   color: var(--token-color-palette-neutral-400);
 
@@ -109,17 +115,17 @@ $console-close-height: 35px;
   &.console-ui-alert--error {
     // HDS tokens are not light enough on the dark background to pass a11y tests.
     // hex value for --token-color-foreground-critical
-    color: lighten(#e52228, 20%);
+    color: color.adjust(#e52228, $lightness: 20%);
   }
   &.console-ui-alert--success {
     // HDS tokens are not light enough on the dark background to pass a11y tests.
     // hex value for --token-color-foreground-success
-    color: lighten(#008a22, 20%);
+    color: color.adjust(#008a22, $lightness: 20%);
   }
 }
 
 .panel-open .console-ui-panel {
-  box-shadow: $box-shadow-highest;
+  box-shadow: box-shadow_variables.$box-shadow-highest;
   min-height: 425px;
 }
 
@@ -151,13 +157,13 @@ $console-close-height: 35px;
 
 .console-close-button {
   position: sticky;
-  top: $spacing-8;
+  top: size_variables.$spacing-8;
   height: $console-close-height;
   display: flex;
   justify-content: flex-end;
   z-index: 210;
 
   button {
-    margin-right: $spacing-8;
+    margin-right: size_variables.$spacing-8;
   }
 }

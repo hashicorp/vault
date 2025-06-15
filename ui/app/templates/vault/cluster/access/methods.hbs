@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <PageHeader as |p|>
   <p.levelLeft>
@@ -50,15 +50,19 @@
   <LinkedBlock
     @params={{array "vault.cluster.access.method" method.id}}
     class="list-item-row"
-    data-test-auth-backend-link={{method.id}}
+    data-test-linked-block={{or method.id method.accessor}}
   >
     <div class="level is-mobile">
-      <div class="level-left">
-        <div>
-          <Hds::TooltipButton @text={{method.methodType}} aria-label="Type of auth mount">
+      <div>
+        <div class="is-grid align-items-center linked-block-title">
+          <Hds::TooltipButton
+            @text={{method.methodType}}
+            aria-label="Type of auth mount"
+            data-test-button={{method.methodType}}
+          >
             <Icon @name={{method.icon}} class="has-text-grey-light" />
           </Hds::TooltipButton>
-          <span data-test-path data-test-id={{method.id}} class="has-text-weight-semibold has-text-black">
+          <span class="has-text-weight-semibold has-text-black overflow-wrap">
             {{method.path}}
           </span>
           <br />

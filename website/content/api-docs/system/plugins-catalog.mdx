@@ -142,7 +142,8 @@ supplied name.
 
 - `name` `(string: <required>)` – Specifies the name for this plugin. The name
   is what is used to look up plugins in the catalog. This is part of the request
-  URL.
+  URL. Enterprise plugin names must match the name listed on the
+  [HashiCorp releases page](https://releases.hashicorp.com/)
 
 - `type` `(string: <required>)` – Specifies the type of this plugin. May be
   "auth", "database", or "secret".
@@ -157,13 +158,15 @@ supplied name.
 - `version` `(string: "")` - Specifies the semantic version of the plugin. Used as the tag
   when specifying `oci_image`, but with any leading 'v' trimmed.
 
-- `sha256` `(string: <required>)` – This is the SHA256 sum of the plugin's
+- `sha256` `(string: <required>)` – The SHA256 sum of a Community plugin
   binary or the OCI image. Before a plugin is run, its SHA will be checked against this value.
-  If they do not match the plugin can not be run.
+  If the actual SHA of the plugin binary and the SHA provided in `sha256` do not match, Vault will not run the plugin. The `sha256` parameter is only required for Community plugins. Enterprise plugins do not require SHA confirmation.
 
 - `command` `(string: <required>)` - Specifies the command used to execute the
   plugin. This is relative to the plugin directory. e.g. `"myplugin"`, or if `oci_image`
   is also specified, it is relative to the image's working directory.
+  The `command` parameter is only required for Community plugins as
+  the run command is known for Enterprise plugins.
 
 - `args` `(array: [])` – Specifies the arguments used to execute the plugin. If
   the arguments are provided here, the `command` parameter should only contain
@@ -175,10 +178,23 @@ supplied name.
 
 ### Sample payload
 
+#### Community plugins
+
 ```json
 {
   "sha256": "d130b9a0fbfddef9709d8ff92e5e6053ccd246b78632fc03b8548457026961e9",
-  "command": "mysql-database-plugin"
+  "command": "mysql-database-plugin",
+  "type": "database"
+}
+```
+
+#### Enterprise plugins
+
+```json
+{
+  "version": "0.16.0+ent",
+  "name": "vault-plugin-secrets-keymgmt",
+  "type": "secret"
 }
 ```
 

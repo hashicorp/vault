@@ -44,7 +44,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
   });
 
   module('Create view', function () {
-    module('isEnterprise', function (hooks) {
+    module('Enterprise', function (hooks) {
       hooks.beforeEach(function () {
         this.version.type = 'enterprise';
       });
@@ -74,11 +74,20 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           toggleGroup ? await click(toggleGroup) : null;
 
           for (const key of expectedConfigKeys(type, true)) {
-            assert
-              .dom(GENERAL.inputByAttr(key))
-              .exists(
-                `${key} shows for ${type} configuration create section when wif is not the access type`
-              );
+            if (key === 'configTtl' || key === 'maxTtl') {
+              // because toggle.hbs passes in the name rather than the camelized attr, we have a difference of data-test=attrName vs data-test="Item name" being passed into the data-test selectors. Long-term solution we should match toggle.hbs selectors to formField.hbs selectors syntax
+              assert
+                .dom(GENERAL.ttl.toggle(key === 'configTtl' ? 'Config TTL' : 'Max TTL'))
+                .exists(
+                  `${key} shows for ${type} configuration create section when wif is not the access type.`
+                );
+            } else {
+              assert
+                .dom(GENERAL.inputByAttr(key))
+                .exists(
+                  `${key} shows for ${type} configuration create section when wif is not the access type`
+                );
+            }
           }
           assert
             .dom(GENERAL.inputByAttr('issuer'))
@@ -104,6 +113,9 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}} @additionalConfigModel={{this.additionalConfigModel}}/>
               `);
           await click(SES.wif.accessType('wif'));
+          // toggle grouped fields if it exists
+          const toggleGroup = document.querySelector('[data-test-toggle-group]');
+          toggleGroup ? await click(toggleGroup) : null;
           // check for the wif fields only
           for (const key of expectedConfigKeys(`${type}-wif`, true)) {
             if (key === 'Identity token TTL') {
@@ -138,7 +150,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
               `Request was made to save the issuer when it should not have been because the user canceled out of the flow.`
             );
           });
-          await fillInAzureConfig('withWif');
+          await fillInAzureConfig(true);
           await click(GENERAL.cancelButton);
 
           assert.true(this.flashDangerSpy.notCalled, 'No danger flash messages called.');
@@ -186,7 +198,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
             return overrideResponse(400, { errors: ['bad request'] });
           });
           await fillInAwsConfig('withWif');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           await click(SES.wif.issuerWarningSave);
 
           assert.true(
@@ -226,7 +238,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           // fill in both lease and root endpoints to ensure that both payloads are attempted to be sent
           await fillInAwsConfig('withAccess');
           await fillInAwsConfig('withLease');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           assert.dom(GENERAL.messageError).exists('API error surfaced to user');
           assert.dom(GENERAL.inlineError).exists('User shown inline error message');
         });
@@ -244,14 +256,15 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
               `);
-          await fillInAzureConfig('azure');
+          await fillInAzureConfig();
           await click(SES.wif.accessType('wif'));
-          await fillInAzureConfig('withWif');
+          await fillInAzureConfig(true);
           await click(SES.wif.accessType('azure'));
+          await click(GENERAL.toggleGroup('More options'));
 
           assert
             .dom(GENERAL.toggleInput('Root password TTL'))
-            .isNotChecked('rootPasswordTtl is cleared after toggling accessType');
+            .isChecked('rootPasswordTtl is not cleared after toggling accessType');
           assert
             .dom(GENERAL.inputByAttr('clientSecret'))
             .hasValue('', 'clientSecret is cleared after toggling accessType');
@@ -368,7 +381,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           });
           await click(GENERAL.ttl.toggle('Default Lease TTL'));
           await fillIn(GENERAL.ttl.input('Default Lease TTL'), '33');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           assert
             .dom(GENERAL.inlineError)
             .hasText('Lease TTL and Max Lease TTL are both required if one of them is set.');
@@ -391,7 +404,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           // fill in both lease and root endpoints to ensure that both payloads are attempted to be sent
           await fillInAwsConfig('withAccess');
           await fillInAwsConfig('withLease');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           assert.true(
             this.flashDangerSpy.calledWith('Lease configuration was not saved: bad request!!'),
             'Flash message shows that lease was not saved.'
@@ -458,7 +471,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
               `);
           await click(SES.wif.accessType('wif'));
           await fillIn(GENERAL.inputByAttr('issuer'), 'http://change.me.no.read');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           assert
             .dom(SES.wif.issuerWarningMessage)
             .hasText(
@@ -488,7 +501,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
             .hasAttribute('placeholder', 'https://vault-test.com', 'shows issuer placeholder');
           assert.dom(GENERAL.inputByAttr('issuer')).hasValue('', 'shows issuer is empty when not passed');
           await fillIn(GENERAL.inputByAttr('issuer'), 'http://bar.foo');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           assert.dom(SES.wif.issuerWarningMessage).exists('issuer modal exists');
           assert
             .dom(SES.wif.issuerWarningMessage)
@@ -528,7 +541,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           await click(SES.wif.accessType('wif'));
           assert.dom(GENERAL.inputByAttr('issuer')).hasValue('', 'issuer defaults to empty string');
           await fillIn(GENERAL.inputByAttr('issuer'), newIssuer);
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           assert.dom(SES.wif.issuerWarningMessage).exists('issuer warning modal exists');
 
           await click(SES.wif.issuerWarningSave);
@@ -565,7 +578,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
 
           await fillIn(GENERAL.inputByAttr('issuer'), 'http://foo.bar');
           await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'some-value');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           assert.dom(SES.wif.issuerWarningMessage).exists('issuer warning modal exists');
           await click(SES.wif.issuerWarningSave);
 
@@ -604,7 +617,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       });
     });
 
-    module('isCommunity', function (hooks) {
+    module('Community', function (hooks) {
       hooks.beforeEach(function () {
         this.version.type = 'community';
       });
@@ -637,7 +650,13 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           toggleGroup ? await click(toggleGroup) : null;
           // check all the form fields are present
           for (const key of expectedConfigKeys(type, true)) {
-            assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for ${type} account access section.`);
+            if (key === 'configTtl' || key === 'maxTtl') {
+              assert
+                .dom(GENERAL.ttl.toggle(key === 'configTtl' ? 'Config TTL' : 'Max TTL'))
+                .exists(`${key} shows for ${type} account access section.`);
+            } else {
+              assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for ${type} account access section.`);
+            }
           }
           assert.dom(GENERAL.inputByAttr('issuer')).doesNotExist();
         });
@@ -646,7 +665,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
   });
 
   module('Edit view', function () {
-    module('isEnterprise', function (hooks) {
+    module('Enterprise', function (hooks) {
       hooks.beforeEach(function () {
         this.version.type = 'enterprise';
       });
@@ -697,33 +716,47 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       }
 
       module('Azure specific', function (hooks) {
+        // "clientSecret" is the only mutually exclusive Azure account attr and it's never returned from the API. Thus, we can only check for the presence of configured wif fields to determine if the accessType should be preselected to wif and disabled.
         hooks.beforeEach(function () {
           this.id = `azure-${this.uid}`;
+          this.type = 'azure';
           this.mountConfigModel = createConfig(this.store, this.id, 'azure');
         });
 
-        test('it defaults to Azure accessType if Azure account fields are already set', async function (assert) {
+        test('it allows you to change access type if no wif fields are set', async function (assert) {
           await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName='Azure' @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
+                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName='Azure' @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
               `);
 
           assert.dom(SES.wif.accessType('azure')).isChecked('Azure accessType is checked');
-          assert.dom(SES.wif.accessType('azure')).isDisabled('Azure accessType is disabled');
+          assert
+            .dom(SES.wif.accessType('azure'))
+            .isNotDisabled(
+              'Azure accessType is not disabled because we cannot determine if client secret was set as it is not returned by the api.'
+            );
           assert.dom(SES.wif.accessType('wif')).isNotChecked('WIF accessType is not checked');
-          assert.dom(SES.wif.accessType('wif')).isDisabled('WIF accessType is disabled');
+          assert.dom(SES.wif.accessType('wif')).isNotDisabled('WIF accessType is disabled');
+          assert
+            .dom(SES.wif.accessTypeSubtext)
+            .hasText(
+              'Choose the way to configure access to Azure. Access can be configured either using Azure account credentials or with the Plugin Workload Identity Federation (WIF).'
+            );
+        });
+
+        test('it sets access type to wif if wif fields are set', async function (assert) {
+          this.mountConfigModel = createConfig(this.store, this.id, 'azure-wif');
+          await render(hbs`
+                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
+              `);
+
+          assert.dom(SES.wif.accessType('wif')).isChecked('WIF accessType is checked');
+          assert
+            .dom(SES.wif.accessType('azure'))
+            .isDisabled('Azure accessType IS disabled because wif attributes are set.');
+
           assert
             .dom(SES.wif.accessTypeSubtext)
             .hasText('You cannot edit Access Type if you have already saved access credentials.');
-        });
-
-        test('it allows you to change accessType if record does not have wif or azure values already set', async function (assert) {
-          this.mountConfigModel = createConfig(this.store, this.id, 'azure-generic');
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName='Azure' @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
-
-          assert.dom(SES.wif.accessType('wif')).isNotDisabled('WIF accessType is NOT disabled');
-          assert.dom(SES.wif.accessType('azure')).isNotDisabled('Azure accessType is NOT disabled');
         });
 
         test('it shows previously saved config information', async function (assert) {
@@ -756,9 +789,9 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           });
 
           await click(GENERAL.enableField('clientSecret'));
-          await click('[data-test-button="toggle-masked"]');
+          await click(GENERAL.button('toggle-masked'));
           await fillIn(GENERAL.inputByAttr('clientSecret'), 'new-secret');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
         });
       });
 
@@ -825,14 +858,71 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           });
 
           await click(GENERAL.enableField('secretKey'));
-          await click('[data-test-button="toggle-masked"]');
+          await click(GENERAL.button('toggle-masked'));
           await fillIn(GENERAL.inputByAttr('secretKey'), 'new-secret');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
+        });
+      });
+
+      module('GCP specific', function (hooks) {
+        // "credentials" is the only mutually exclusive GCP account attr and it's never returned from the API. Thus, we can only check for the presence of configured wif fields to determine if the accessType should be preselected to wif and disabled.
+        // If the user has configured the credentials field, the ui will not know until the user tries to save WIF fields. This is a limitation of the API and surfaced to the user in a descriptive API error.
+        // We cover some of this workflow here and error testing in the gcp-configuration acceptance test.
+        hooks.beforeEach(function () {
+          this.id = `gcp-${this.uid}`;
+          this.mountConfigModel = createConfig(this.store, this.id, 'gcp');
+          this.type = 'gcp';
+          this.displayName = 'Google Cloud';
+        });
+        test('it allows you to change access type if no wif fields are set', async function (assert) {
+          await render(hbs`
+                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
+              `);
+
+          assert.dom(SES.wif.accessType('gcp')).isChecked('GCP accessType is checked');
+          assert
+            .dom(SES.wif.accessType('gcp'))
+            .isNotDisabled(
+              'GCP accessType is not disabled because we cannot determine if credentials was set as it is not returned by the api.'
+            );
+          assert.dom(SES.wif.accessType('wif')).isNotChecked('WIF accessType is not checked');
+          assert.dom(SES.wif.accessType('wif')).isNotDisabled('WIF accessType is not disabled');
+          assert
+            .dom(SES.wif.accessTypeSubtext)
+            .hasText(
+              'Choose the way to configure access to Google Cloud. Access can be configured either using Google Cloud account credentials or with the Plugin Workload Identity Federation (WIF).'
+            );
+        });
+
+        test('it sets access type to wif if wif fields are set', async function (assert) {
+          this.mountConfigModel = createConfig(this.store, this.id, 'gcp-wif');
+          await render(hbs`
+                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
+              `);
+
+          assert.dom(SES.wif.accessType('wif')).isChecked('WIF accessType is checked');
+          assert
+            .dom(SES.wif.accessType('gcp'))
+            .isDisabled('GCP accessType IS disabled because wif attributes are set.');
+
+          assert
+            .dom(SES.wif.accessTypeSubtext)
+            .hasText('You cannot edit Access Type if you have already saved access credentials.');
+        });
+
+        test('it shows previously saved config information', async function (assert) {
+          this.mountConfigModel = createConfig(this.store, this.id, 'gcp-generic');
+          await render(hbs`
+                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
+              `);
+          await click(GENERAL.toggleGroup('More options'));
+          assert.dom(GENERAL.ttl.input('Config TTL')).hasValue('100');
+          assert.dom(GENERAL.ttl.input('Max TTL')).hasValue('101');
         });
       });
     });
 
-    module('isCommunity', function (hooks) {
+    module('Community', function (hooks) {
       hooks.beforeEach(function () {
         this.version.type = 'community';
       });
@@ -849,15 +939,29 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           // toggle grouped fields if it exists
           const toggleGroup = document.querySelector('[data-test-toggle-group]');
           toggleGroup ? await click(toggleGroup) : null;
-
           for (const key of expectedConfigKeys(type, true)) {
-            if (key === 'secretKey' || key === 'clientSecret') return; // these keys are not returned by the API
-            assert
-              .dom(GENERAL.inputByAttr(key))
-              .hasValue(
-                this.mountConfigModel[key],
-                `${key} for ${type}: has the expected value set on the config`
-              );
+            if (key === 'secretKey' || key === 'clientSecret' || key === 'credentials') return; // these keys are not returned by the API
+            // same issues noted in wif enterprise tests with how toggle.hbs passes in name vs how formField input passes in attr to data test selector
+            if (key === 'configTtl') {
+              assert
+                .dom(GENERAL.ttl.input('Config TTL'))
+                .hasValue('100', `${key} for ${type}: has the expected value set on the config`);
+            } else if (key === 'maxTtl') {
+              assert
+                .dom(GENERAL.ttl.input('Max TTL'))
+                .hasValue('101', `${key} for ${type}: has the expected value set on the config`);
+            } else if (key === 'rootPasswordTtl') {
+              assert
+                .dom(GENERAL.ttl.input('Root password TTL'))
+                .hasValue('500', `${key} for ${type}: has the expected value set on the config`);
+            } else {
+              assert
+                .dom(GENERAL.inputByAttr(key))
+                .hasValue(
+                  this.mountConfigModel[key],
+                  `${key} for ${type}: has the expected value set on the config`
+                );
+            }
           }
         });
       }

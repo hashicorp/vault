@@ -17,7 +17,8 @@ import {
 import { setupApplicationTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { selectChoose } from 'ember-power-select/test-support';
-import authPage from 'vault/tests/pages/auth';
+import { clickTrigger } from 'ember-power-select/test-support/helpers';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import clientsHandlers from 'vault/mirage/handlers/clients';
 import { formatNumber } from 'core/helpers/format-number';
@@ -74,13 +75,13 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
   test('navigate to dashboard on login', async function (assert) {
     assert.expect(1);
-    await authPage.login();
+    await login();
     assert.strictEqual(currentURL(), '/vault/dashboard');
   });
 
   test('display the version number for the title', async function (assert) {
     assert.expect(1);
-    await authPage.login();
+    await login();
     await visit('/vault/dashboard');
     const version = this.owner.lookup('service:version');
     // Since we're using mirage, version is mocked static value
@@ -93,7 +94,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
   module('secrets engines card', function (hooks) {
     hooks.beforeEach(async function () {
-      await authPage.login();
+      await login();
     });
 
     test('shows a secrets engine card', async function (assert) {
@@ -218,7 +219,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
     test('hides the configuration details card on a non-root namespace enterprise version', async function (assert) {
       assert.expect(3);
-      await authPage.login();
+      await login();
       await visit('/vault/dashboard');
       const version = this.owner.lookup('service:version');
       assert.true(version.isEnterprise, 'vault is enterprise');
@@ -230,7 +231,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
     test('shows the configuration details card', async function (assert) {
       assert.expect(8);
-      await authPage.login();
+      await login();
       await visit('/vault/dashboard');
       assert.dom(DASHBOARD.cardHeader('configuration')).hasText('Configuration details');
       assert
@@ -250,7 +251,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       this.data.listeners[0].config.tls_cert_file = './cert.pem';
       this.data.listeners[0].config.tls_key_file = './key.pem';
 
-      await authPage.login();
+      await login();
       await visit('/vault/dashboard');
       assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('tls')).hasText('Enabled');
     });
@@ -260,7 +261,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       delete this.data.listeners[0].config.tls_disable;
       this.data.listeners[0].config.tls_cert_file = './cert.pem';
       this.data.listeners[0].config.tls_key_file = './key.pem';
-      await authPage.login();
+      await login();
       await visit('/vault/dashboard');
       assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('tls')).hasText('Enabled');
     });
@@ -268,7 +269,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
     test('it should show tls as disabled if there is no tls information in the config', async function (assert) {
       assert.expect(1);
       this.data.listeners = [];
-      await authPage.login();
+      await login();
       await visit('/vault/dashboard');
       assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('tls')).hasText('Disabled');
     });
@@ -276,7 +277,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
   module('quick actions card', function (hooks) {
     hooks.beforeEach(async function () {
-      await authPage.login();
+      await login();
     });
 
     test('shows the default state of the quick actions card', async function (assert) {
@@ -344,7 +345,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await connectionPage.name(name);
       await connectionPage.connectionUrl(`mongodb://127.0.0.1:4321/${name}`);
       await connectionPage.toggleVerify();
-      await connectionPage.save();
+      await click(GENERAL.submitButton);
       await connectionPage.enable();
       return name;
     };
@@ -381,7 +382,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await runCmd([`write sys/mounts/kv1 type=kv`]);
       await settled();
       await visit('/vault/dashboard');
-      await click('[data-test-component="search-select"] .ember-basic-dropdown-trigger');
+      await clickTrigger('#type-to-select-a-mount');
       assert
         .dom('.ember-power-select-option')
         .doesNotHaveTextContaining('kv1', 'dropdown does not show kv1 mount');
@@ -394,7 +395,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       clientsHandlers(this.server);
       this.store = this.owner.lookup('service:store');
 
-      await authPage.login();
+      await login();
     });
 
     test('shows the client count card for enterprise', async function (assert) {
@@ -421,7 +422,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
   module('replication card enterprise', function (hooks) {
     hooks.beforeEach(async function () {
-      await authPage.login();
+      await login();
       await settled();
       await disableReplication('dr');
       await settled();
@@ -458,7 +459,7 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.strictEqual(currentURL(), '/vault/replication');
       await click('[data-test-replication-type-select="performance"]');
       await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
-      await click('[data-test-replication-enable]');
+      await click(GENERAL.submitButton);
       await pollCluster(this.owner);
       assert.ok(
         await waitUntil(() => find('[data-test-replication-dashboard]')),
@@ -490,11 +491,11 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(CUSTOM_MESSAGES.modalTitle(modalId)).hasText('Modal title');
       assert.dom(CUSTOM_MESSAGES.modalBody(modalId)).exists();
       assert.dom(CUSTOM_MESSAGES.modalBody(modalId)).hasText('here is a cool message');
-      await click(CUSTOM_MESSAGES.modalButton(modalId));
       assert.dom(CUSTOM_MESSAGES.alertTitle(alertId)).hasText('Banner title');
       assert.dom(CUSTOM_MESSAGES.alertDescription(alertId)).hasText('hello world hello wolrd');
       assert.dom(CUSTOM_MESSAGES.alertAction('link')).hasText('some link title');
     });
+
     test('it shows the multiple modal messages', async function (assert) {
       const modalIdOne = 'some-awesome-id-2';
       const modalIdTwo = 'some-awesome-id-1';
@@ -511,13 +512,12 @@ module('Acceptance | landing page dashboard', function (hooks) {
       assert.dom(CUSTOM_MESSAGES.modalTitle(modalIdOne)).hasText('Modal title 1');
       assert.dom(CUSTOM_MESSAGES.modalBody(modalIdOne)).exists();
       assert.dom(CUSTOM_MESSAGES.modalBody(modalIdOne)).hasText('hello world hello wolrd some link title');
-      await click(CUSTOM_MESSAGES.modalButton(modalIdOne));
       assert.dom(CUSTOM_MESSAGES.modal(modalIdTwo)).exists();
       assert.dom(CUSTOM_MESSAGES.modalTitle(modalIdTwo)).hasText('Modal title 2');
       assert.dom(CUSTOM_MESSAGES.modalBody(modalIdTwo)).exists();
       assert.dom(CUSTOM_MESSAGES.modalBody(modalIdTwo)).hasText('here is a cool message');
-      await click(CUSTOM_MESSAGES.modalButton(modalIdTwo));
     });
+
     test('it shows the multiple banner messages', async function (assert) {
       const bannerIdOne = 'some-awesome-id-2';
       const bannerIdTwo = 'some-awesome-id-1';

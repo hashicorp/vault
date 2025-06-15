@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import { GENERAL } from '../general-selectors';
+
 export const PKI_OVERVIEW = {
   issueCertificateInput: '[data-test-issue-certificate-input]',
   issueCertificatePowerSearch: '[data-test-issue-certificate-input] span',
@@ -40,7 +42,6 @@ export const PKI_DELETE_ALL_ISSUERS = {
   issuerLink: '[data-test-delete-all-issuers-link]',
   deleteAllIssuerModal: '#confirmation-modal',
   deleteAllIssuerInput: '[data-test-confirmation-modal-input="Delete all issuers?"]',
-  deleteAllIssuerButton: '[data-test-confirm-button="Delete all issuers?"]',
 };
 
 export const PKI_GENERATE_ROOT = {
@@ -56,14 +57,14 @@ export const PKI_GENERATE_ROOT = {
   urlField: '[data-test-urls-section] [data-test-input]',
   // Shown values after save
   saved: {
-    certificate: '[data-test-value-div="Certificate"] [data-test-certificate-card]',
-    commonName: '[data-test-row-value="Common name"]',
-    issuerName: '[data-test-row-value="Issuer name"]',
-    issuerLink: '[data-test-value-div="Issuer ID"] a',
-    keyName: '[data-test-row-value="Key name"]',
-    keyLink: '[data-test-value-div="Key ID"] a',
-    privateKey: '[data-test-value-div="Private key"] [data-test-certificate-card]',
-    serialNumber: '[data-test-row-value="Serial number"]',
+    certificate: `${GENERAL.infoRowValue('Certificate')} [data-test-certificate-card]`,
+    commonName: GENERAL.infoRowValue('Common name'),
+    issuerName: GENERAL.infoRowValue('Issuer name'),
+    issuerLink: `${GENERAL.infoRowValue('Issuer ID')} a`,
+    keyName: GENERAL.infoRowValue('Key name'),
+    keyLink: `${GENERAL.infoRowValue('Key ID')} a`,
+    privateKey: `${GENERAL.infoRowValue('Private key')} [data-test-certificate-card]`,
+    serialNumber: GENERAL.infoRowValue('Serial number'),
   },
 };
 
@@ -73,13 +74,13 @@ export const PKI_CROSS_SIGN = {
   statusCount: '[data-test-cross-sign-status-count]',
   signedIssuerRow: (row = 0) => `[data-test-info-table-row="${row}"]`,
   signedIssuerCol: (attr: string) => `[data-test-info-table-column="${attr}"]`,
-  rowValue: (attr: string) => `[data-test-row-value="${attr}"]`,
-  copyButton: (attr: string) => `[data-test-value-div="${attr}"] [data-test-copy-button]`,
+  rowValue: (attr: string) => `[data-test-row-value="${attr}"]`, // TODO replace with the GENERAL.infoRowValue
+  copyButton: (attr: string) => `[data-test-row-value="${attr}"] ${GENERAL.copyButton}`,
 };
 
 export const PKI_ISSUER_DETAILS = {
   configure: '[data-test-pki-issuer-configure]',
-  copyButtonByName: (name: string) => `[data-test-value-div="${name}"] [data-test-copy-button]`,
+  copyButtonByName: (name: string) => `[data-test-row-value="${name}"] ${GENERAL.copyButton}`,
   crossSign: '[data-test-pki-issuer-cross-sign]',
   defaultGroup: '[data-test-details-group="default"]',
   download: '[data-test-issuer-download]',
@@ -91,7 +92,6 @@ export const PKI_ISSUER_DETAILS = {
   row: '[data-test-component="info-table-row"]',
   signIntermediate: '[data-test-pki-issuer-sign-int]',
   urlsGroup: '[data-test-details-group="Issuer URLs"]',
-  valueByName: (name: string) => `[data-test-value-div="${name}"]`,
 };
 
 export const PKI_KEY_FORM = {
@@ -172,18 +172,17 @@ export const PKI_KEYS = {
   popupMenuEdit: '[data-test-key-menu-link="edit"]',
   // key details
   keyDeleteButton: '[data-test-pki-key-delete]',
-  downloadButton: '[data-test-download-button]',
   keyEditLink: '[data-test-pki-key-edit]',
   nextStepsAlert: '[data-test-pki-key-next-steps]',
 };
 
 export const PKI_ROLE_DETAILS = {
   issuerLabel: '[data-test-row-label="Issuer"]',
-  noStoreValue: '[data-test-value-div="Store in storage backend"]',
-  noStoreMetadataValue: '[data-test-value-div="Store metadata in storage backend"]',
-  keyUsageValue: '[data-test-value-div="Key usage"]',
-  extKeyUsageValue: '[data-test-value-div="Ext key usage"]',
-  customTtlValue: '[data-test-value-div="Issued certificates expire after"]',
+  noStoreValue: GENERAL.infoRowValue('Store in storage backend'),
+  noStoreMetadataValue: GENERAL.infoRowValue('Store metadata in storage backend'),
+  keyUsageValue: GENERAL.infoRowValue('Key usage'),
+  extKeyUsageValue: GENERAL.infoRowValue('Ext key usage'),
+  customTtlValue: GENERAL.infoRowValue('Issued certificates expire after'),
   deleteRoleButton: '[data-test-pki-role-delete]',
   generateCertLink: '[data-test-pki-role-generate-cert]',
   signCertLink: '[data-test-pki-role-sign-cert]',
@@ -210,8 +209,8 @@ export const PKI_TIDY = {
   alertUpdatedAt: '[data-test-tidy-status-alert-updated-at]',
   cancelTidyAction: '[data-test-cancel-tidy-action]',
   hdsAlertButtonText: '[data-test-cancel-tidy-action] .hds-button__text',
-  timeStartedRow: '[data-test-value-div="Time started"]',
-  timeFinishedRow: '[data-test-value-div="Time finished"]',
+  timeStartedRow: GENERAL.infoRowValue('Time started'),
+  timeFinishedRow: GENERAL.infoRowValue('Time finished'),
   cancelTidyModalBackground: '#pki-cancel-tidy-modal',
   tidyEmptyStateConfigure: '[data-test-tidy-empty-state-configure]',
   manualTidyToolbar: '[data-test-pki-manual-tidy-config]',

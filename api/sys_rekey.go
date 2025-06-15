@@ -147,11 +147,29 @@ func (c *Sys) RekeyCancel() error {
 	return c.RekeyCancelWithContext(context.Background())
 }
 
+func (c *Sys) RekeyCancelWithNonce(nonce string) error {
+	return c.RekeyCancelWithContextWithNonce(context.Background(), nonce)
+}
+
 func (c *Sys) RekeyCancelWithContext(ctx context.Context) error {
+	return c.RekeyCancelWithContextWithNonce(ctx, "")
+}
+
+func (c *Sys) RekeyCancelWithContextWithNonce(ctx context.Context, nonce string) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
 	r := c.c.NewRequest(http.MethodDelete, "/v1/sys/rekey/init")
+	if nonce != "" {
+		body := map[string]interface{}{
+			"nonce": nonce,
+		}
+
+		if err := r.SetJSONBody(body); err != nil {
+			return err
+		}
+
+	}
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
@@ -164,12 +182,28 @@ func (c *Sys) RekeyRecoveryKeyCancel() error {
 	return c.RekeyRecoveryKeyCancelWithContext(context.Background())
 }
 
+func (c *Sys) RekeyRecoveryKeyCancelWithNonce(nonce string) error {
+	return c.RekeyRecoveryKeyCancelWithContextWithNonce(context.Background(), nonce)
+}
+
 func (c *Sys) RekeyRecoveryKeyCancelWithContext(ctx context.Context) error {
+	return c.RekeyCancelWithContextWithNonce(ctx, "")
+}
+
+func (c *Sys) RekeyRecoveryKeyCancelWithContextWithNonce(ctx context.Context, nonce string) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
-
 	r := c.c.NewRequest(http.MethodDelete, "/v1/sys/rekey-recovery-key/init")
 
+	if nonce != "" {
+		body := map[string]interface{}{
+			"nonce": nonce,
+		}
+
+		if err := r.SetJSONBody(body); err != nil {
+			return err
+		}
+	}
 	resp, err := c.c.rawRequestWithContext(ctx, r)
 	if err == nil {
 		defer resp.Body.Close()

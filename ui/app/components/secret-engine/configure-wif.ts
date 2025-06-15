@@ -18,7 +18,7 @@ import type MountConfigModel from 'vault/vault/models/secret-engine/mount-config
 import type AdditionalConfigModel from 'vault/vault/models/secret-engine/additional-config';
 import type IdentityOidcConfigModel from 'vault/models/identity/oidc/config';
 import type Router from '@ember/routing/router';
-import type StoreService from 'vault/services/store';
+import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
 import type FlashMessageService from 'vault/services/flash-messages';
 
@@ -57,7 +57,7 @@ interface Args {
 
 export default class ConfigureWif extends Component<Args> {
   @service declare readonly router: Router;
-  @service declare readonly store: StoreService;
+  @service declare readonly store: Store;
   @service declare readonly version: VersionService;
   @service declare readonly flashMessages: FlashMessageService;
 
@@ -236,7 +236,7 @@ export default class ConfigureWif extends Component<Args> {
       // reset all "account" attributes that are mutually exclusive with "wif" attributes
       // these attributes are different for each engine
       type === 'azure'
-        ? (mountConfigModel.clientSecret = mountConfigModel.rootPasswordTtl = undefined)
+        ? (mountConfigModel.clientSecret = undefined)
         : type === 'aws'
         ? (mountConfigModel.accessKey = undefined)
         : null;

@@ -16,16 +16,19 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-discover"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/osutil"
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/helper/testcluster"
+	"github.com/hashicorp/vault/vault/observations"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -67,6 +70,9 @@ type Config struct {
 	DefaultLeaseTTL    time.Duration `hcl:"-"`
 	DefaultLeaseTTLRaw interface{}   `hcl:"default_lease_ttl,alias:DefaultLeaseTTL"`
 
+	RemoveIrrevocableLeaseAfter    time.Duration `hcl:"-"`
+	RemoveIrrevocableLeaseAfterRaw interface{}   `hcl:"remove_irrevocable_lease_after,alias:RemoveIrrevocableLeaseAfter"`
+
 	ClusterCipherSuites string `hcl:"cluster_cipher_suites"`
 
 	PluginDirectory string `hcl:"plugin_directory"`
@@ -107,6 +113,8 @@ type Config struct {
 	LogRequestsLevelRaw interface{} `hcl:"log_requests_level"`
 
 	DetectDeadlocks string `hcl:"detect_deadlocks"`
+
+	Observations *observations.ObservationSystemConfig `hcl:"observations"`
 
 	ImpreciseLeaseRoleTracking bool `hcl:"imprecise_lease_role_tracking"`
 
@@ -325,6 +333,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DefaultLeaseTTL = c2.DefaultLeaseTTL
 	}
 
+	result.RemoveIrrevocableLeaseAfter = c.RemoveIrrevocableLeaseAfter
+	if c2.RemoveIrrevocableLeaseAfter > result.RemoveIrrevocableLeaseAfter {
+		result.RemoveIrrevocableLeaseAfter = c2.RemoveIrrevocableLeaseAfter
+	}
+
 	result.ClusterCipherSuites = c.ClusterCipherSuites
 	if c2.ClusterCipherSuites != "" {
 		result.ClusterCipherSuites = c2.ClusterCipherSuites
@@ -414,6 +427,20 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DetectDeadlocks = c2.DetectDeadlocks
 	}
 
+	result.DisablePrintableCheck = c.DisablePrintableCheck
+	if c2.DisablePrintableCheckRaw != nil {
+		result.DisablePrintableCheck = c2.DisablePrintableCheck
+	}
+	result.Observations = c.Observations
+	if c2.Observations != nil {
+		if result.Observations == nil {
+			result.Observations = &observations.ObservationSystemConfig{}
+		}
+		if c2.Observations.LedgerPath != "" {
+			result.Observations.LedgerPath = c2.Observations.LedgerPath
+		}
+	}
+
 	result.ImpreciseLeaseRoleTracking = c.ImpreciseLeaseRoleTracking
 	if c2.ImpreciseLeaseRoleTracking {
 		result.ImpreciseLeaseRoleTracking = c2.ImpreciseLeaseRoleTracking
@@ -477,11 +504,18 @@ func (c *Config) Merge(c2 *Config) *Config {
 }
 
 // LoadConfig loads the configuration at the given path, regardless if
-// its a file or directory.
+// it's a file or directory.
 func LoadConfig(path string) (*Config, error) {
+	cfg, _, err := LoadConfigCheckDuplicate(path)
+	return cfg, err
+}
+
+// LoadConfigCheckDuplicate is the same as the above function but also checks for duplicate attributes
+// TODO (HCL_DUP_KEYS_DEPRECATION): keep only LoadConfig once deprecation is complete
+func LoadConfigCheckDuplicate(path string) (cfg *Config, duplicate bool, err error) {
 	fi, err := os.Stat(path)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	if fi.IsDir() {
@@ -491,31 +525,38 @@ func LoadConfig(path string) (*Config, error) {
 			var err error
 			enableFilePermissionsCheck, err = strconv.ParseBool(enableFilePermissionsCheckEnv)
 			if err != nil {
-				return nil, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
+				return nil, false, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
 			}
 		}
 		f, err := os.Open(path)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		defer f.Close()
 
 		if enableFilePermissionsCheck {
 			err = osutil.OwnerPermissionsMatchFile(f, 0, 0)
 			if err != nil {
-				return nil, err
+				return nil, false, err
 			}
 		}
-		return CheckConfig(LoadConfigDir(path))
+
+		cfg, duplicate, err = LoadConfigDirCheckDuplicate(path)
+		if err != nil {
+			return nil, duplicate, err
+		}
+	} else {
+		cfg, duplicate, err = LoadConfigFileCheckDuplicate(path)
+		if err != nil {
+			return nil, duplicate, err
+		}
 	}
-	return CheckConfig(LoadConfigFile(path))
+
+	cfg, err = CheckConfig(cfg)
+	return cfg, duplicate, err
 }
 
-func CheckConfig(c *Config, e error) (*Config, error) {
-	if e != nil {
-		return c, e
-	}
-
+func CheckConfig(c *Config) (*Config, error) {
 	if err := c.checkSealConfig(); err != nil {
 		return nil, err
 	}
@@ -538,21 +579,28 @@ func CheckConfig(c *Config, e error) (*Config, error) {
 
 // LoadConfigFile loads the configuration from the given file.
 func LoadConfigFile(path string) (*Config, error) {
+	cfg, _, err := LoadConfigFileCheckDuplicate(path)
+	return cfg, err
+}
+
+// LoadConfigFileCheckDuplicate is the same as the above function but also checks for duplicate attributes
+// TODO (HCL_DUP_KEYS_DEPRECATION): keep only ParseConfig once deprecation is complete
+func LoadConfigFileCheckDuplicate(path string) (cfg *Config, duplicate bool, err error) {
 	// Open the file
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	defer f.Close()
 	// Read the file
 	d, err := io.ReadAll(f)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
-	conf, err := ParseConfig(string(d), path)
+	conf, duplicate, err := ParseConfigCheckDuplicate(string(d), path)
 	if err != nil {
-		return nil, err
+		return nil, duplicate, err
 	}
 
 	var enableFilePermissionsCheck bool
@@ -560,7 +608,7 @@ func LoadConfigFile(path string) (*Config, error) {
 		var err error
 		enableFilePermissionsCheck, err = strconv.ParseBool(enableFilePermissionsCheckEnv)
 		if err != nil {
-			return nil, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
+			return nil, duplicate, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
 		}
 	}
 
@@ -568,139 +616,152 @@ func LoadConfigFile(path string) (*Config, error) {
 		// check permissions of the config file
 		err = osutil.OwnerPermissionsMatchFile(f, 0, 0)
 		if err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 		// check permissions of the plugin directory
 		if conf.PluginDirectory != "" {
 
 			err = osutil.OwnerPermissionsMatch(conf.PluginDirectory, conf.PluginFileUid, conf.PluginFilePermissions)
 			if err != nil {
-				return nil, err
+				return nil, duplicate, err
 			}
 		}
 	}
-	return conf, nil
+	return conf, duplicate, nil
 }
 
 func ParseConfig(d, source string) (*Config, error) {
+	cfg, _, err := ParseConfigCheckDuplicate(d, source)
+	return cfg, err
+}
+
+// TODO (HCL_DUP_KEYS_DEPRECATION): keep only ParseConfig once deprecation is complete
+func ParseConfigCheckDuplicate(d, source string) (cfg *Config, duplicate bool, err error) {
 	// Parse!
-	obj, err := hcl.Parse(d)
+	obj, duplicate, err := random.ParseAndCheckForDuplicateHclAttributes(d)
 	if err != nil {
-		return nil, err
+		return nil, duplicate, err
 	}
 
 	// Start building the result
 	result := NewConfig()
 	if err := hcl.DecodeObject(result, obj); err != nil {
-		return nil, err
+		return nil, duplicate, err
 	}
 
 	if rendered, err := configutil.ParseSingleIPTemplate(result.APIAddr); err != nil {
-		return nil, err
+		return nil, duplicate, err
 	} else {
 		result.APIAddr = rendered
 	}
 	if rendered, err := configutil.ParseSingleIPTemplate(result.ClusterAddr); err != nil {
-		return nil, err
+		return nil, duplicate, err
 	} else {
 		result.ClusterAddr = rendered
 	}
 
-	sharedConfig, err := configutil.ParseConfig(d)
+	sharedConfig, dup, err := configutil.ParseConfigCheckDuplicate(d)
 	if err != nil {
-		return nil, err
+		return nil, duplicate, err
 	}
+	duplicate = duplicate || dup
 	result.SharedConfig = sharedConfig
 
 	if result.MaxLeaseTTLRaw != nil {
 		if result.MaxLeaseTTL, err = parseutil.ParseDurationSecond(result.MaxLeaseTTLRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 	if result.DefaultLeaseTTLRaw != nil {
 		if result.DefaultLeaseTTL, err = parseutil.ParseDurationSecond(result.DefaultLeaseTTLRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
+		}
+	}
+
+	if result.RemoveIrrevocableLeaseAfterRaw != nil {
+		if result.RemoveIrrevocableLeaseAfter, err = parseutil.ParseDurationSecond(result.RemoveIrrevocableLeaseAfterRaw); err != nil {
+			return nil, duplicate, err
 		}
 	}
 
 	if result.EnableUIRaw != nil {
 		if result.EnableUI, err = parseutil.ParseBool(result.EnableUIRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 
 	if result.DisableCacheRaw != nil {
 		if result.DisableCache, err = parseutil.ParseBool(result.DisableCacheRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 
 	if result.DisablePrintableCheckRaw != nil {
 		if result.DisablePrintableCheck, err = parseutil.ParseBool(result.DisablePrintableCheckRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 
 	if result.EnableRawEndpointRaw != nil {
 		if result.EnableRawEndpoint, err = parseutil.ParseBool(result.EnableRawEndpointRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 
 	if result.EnableIntrospectionEndpointRaw != nil {
 		if result.EnableIntrospectionEndpoint, err = parseutil.ParseBool(result.EnableIntrospectionEndpointRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 
 	if result.DisableClusteringRaw != nil {
 		if result.DisableClustering, err = parseutil.ParseBool(result.DisableClusteringRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 
 	if result.PluginFilePermissionsRaw != nil {
 		octalPermissionsString, err := parseutil.ParseString(result.PluginFilePermissionsRaw)
 		if err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 		pluginFilePermissions, err := strconv.ParseInt(octalPermissionsString, 8, 64)
 		if err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 		if pluginFilePermissions < math.MinInt || pluginFilePermissions > math.MaxInt {
-			return nil, fmt.Errorf("file permission value %v cannot be safely cast to int: exceeds bounds (%v, %v)", pluginFilePermissions, math.MinInt, math.MaxInt)
+			return nil, duplicate, fmt.Errorf("file permission value %v cannot be safely cast to int: exceeds bounds (%v, %v)", pluginFilePermissions, math.MinInt, math.MaxInt)
 		}
 		result.PluginFilePermissions = int(pluginFilePermissions)
 	}
 
 	if result.DisableSentinelTraceRaw != nil {
 		if result.DisableSentinelTrace, err = parseutil.ParseBool(result.DisableSentinelTraceRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 
 	if result.DisablePerformanceStandbyRaw != nil {
 		if result.DisablePerformanceStandby, err = parseutil.ParseBool(result.DisablePerformanceStandbyRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 
 	if result.DisableSealWrapRaw != nil {
 		if result.DisableSealWrap, err = parseutil.ParseBool(result.DisableSealWrapRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 
 	if result.DisableIndexingRaw != nil {
 		if result.DisableIndexing, err = parseutil.ParseBool(result.DisableIndexingRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 
 	if result.EnableResponseHeaderHostnameRaw != nil {
 		if result.EnableResponseHeaderHostname, err = parseutil.ParseBool(result.EnableResponseHeaderHostnameRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 
@@ -711,27 +772,27 @@ func ParseConfig(d, source string) (*Config, error) {
 
 	if result.EnableResponseHeaderRaftNodeIDRaw != nil {
 		if result.EnableResponseHeaderRaftNodeID, err = parseutil.ParseBool(result.EnableResponseHeaderRaftNodeIDRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
-		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
+		return nil, duplicate, fmt.Errorf("error parsing: file doesn't contain a root object")
 	}
 
 	// Look for storage but still support old backend
 	if o := list.Filter("storage"); len(o.Items) > 0 {
 		delete(result.UnusedKeys, "storage")
 		if err := ParseStorage(result, o, "storage"); err != nil {
-			return nil, fmt.Errorf("error parsing 'storage': %w", err)
+			return nil, duplicate, fmt.Errorf("error parsing 'storage': %w", err)
 		}
 		result.found(result.Storage.Type, result.Storage.Type)
 	} else {
 		delete(result.UnusedKeys, "backend")
 		if o := list.Filter("backend"); len(o.Items) > 0 {
 			if err := ParseStorage(result, o, "backend"); err != nil {
-				return nil, fmt.Errorf("error parsing 'backend': %w", err)
+				return nil, duplicate, fmt.Errorf("error parsing 'backend': %w", err)
 			}
 		}
 	}
@@ -739,13 +800,13 @@ func ParseConfig(d, source string) (*Config, error) {
 	if o := list.Filter("ha_storage"); len(o.Items) > 0 {
 		delete(result.UnusedKeys, "ha_storage")
 		if err := parseHAStorage(result, o, "ha_storage"); err != nil {
-			return nil, fmt.Errorf("error parsing 'ha_storage': %w", err)
+			return nil, duplicate, fmt.Errorf("error parsing 'ha_storage': %w", err)
 		}
 	} else {
 		if o := list.Filter("ha_backend"); len(o.Items) > 0 {
 			delete(result.UnusedKeys, "ha_backend")
 			if err := parseHAStorage(result, o, "ha_backend"); err != nil {
-				return nil, fmt.Errorf("error parsing 'ha_backend': %w", err)
+				return nil, duplicate, fmt.Errorf("error parsing 'ha_backend': %w", err)
 			}
 		}
 	}
@@ -754,16 +815,16 @@ func ParseConfig(d, source string) (*Config, error) {
 	if o := list.Filter("service_registration"); len(o.Items) > 0 {
 		delete(result.UnusedKeys, "service_registration")
 		if err := parseServiceRegistration(result, o, "service_registration"); err != nil {
-			return nil, fmt.Errorf("error parsing 'service_registration': %w", err)
+			return nil, duplicate, fmt.Errorf("error parsing 'service_registration': %w", err)
 		}
 	}
 
 	if err := validateExperiments(result.Experiments); err != nil {
-		return nil, fmt.Errorf("error validating experiment(s) from config: %w", err)
+		return nil, duplicate, fmt.Errorf("error validating experiment(s) from config: %w", err)
 	}
 
 	if err := result.parseConfig(list, source); err != nil {
-		return nil, fmt.Errorf("error parsing enterprise config: %w", err)
+		return nil, duplicate, fmt.Errorf("error parsing enterprise config: %w", err)
 	}
 
 	// Remove all unused keys from Config that were satisfied by SharedConfig.
@@ -775,7 +836,7 @@ func ParseConfig(d, source string) (*Config, error) {
 		}
 	}
 
-	return result, nil
+	return result, duplicate, nil
 }
 
 func ExperimentsFromEnvAndCLI(config *Config, envKey string, flagExperiments []string) error {
@@ -844,18 +905,25 @@ func mergeExperiments(left, right []string) []string {
 // LoadConfigDir loads all the configurations in the given directory
 // in alphabetical order.
 func LoadConfigDir(dir string) (*Config, error) {
+	cfg, _, err := LoadConfigDirCheckDuplicate(dir)
+	return cfg, err
+}
+
+// LoadConfigDirCheckDuplicate is the same as the above but checks for duplciate HCL attributes
+// TODO (HCL_DUP_KEYS_DEPRECATION): keep only LoadConfigDir once deprecation is complete
+func LoadConfigDirCheckDuplicate(dir string) (cfg *Config, duplicate bool, err error) {
 	f, err := os.Open(dir)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	defer f.Close()
 
 	fi, err := f.Stat()
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if !fi.IsDir() {
-		return nil, fmt.Errorf("configuration path must be a directory: %q", dir)
+		return nil, false, fmt.Errorf("configuration path must be a directory: %q", dir)
 	}
 
 	var files []string
@@ -864,7 +932,7 @@ func LoadConfigDir(dir string) (*Config, error) {
 		var fis []os.FileInfo
 		fis, err = f.Readdir(128)
 		if err != nil && err != io.EOF {
-			return nil, err
+			return nil, false, err
 		}
 
 		for _, fi := range fis {
@@ -892,10 +960,11 @@ func LoadConfigDir(dir string) (*Config, error) {
 
 	result := NewConfig()
 	for _, f := range files {
-		config, err := LoadConfigFile(f)
+		config, dup, err := LoadConfigFileCheckDuplicate(f)
 		if err != nil {
-			return nil, fmt.Errorf("error loading %q: %w", f, err)
+			return nil, duplicate, fmt.Errorf("error loading %q: %w", f, err)
 		}
+		duplicate = duplicate || dup
 
 		if result == nil {
 			result = config
@@ -904,7 +973,7 @@ func LoadConfigDir(dir string) (*Config, error) {
 		}
 	}
 
-	return result, nil
+	return result, duplicate, nil
 }
 
 // isTemporaryFile returns true or false depending on whether the
@@ -993,11 +1062,11 @@ func ParseStorage(result *Config, list *ast.ObjectList, name string) error {
 
 	// Override with top-level values if they are set
 	if result.APIAddr != "" {
-		redirectAddr = result.APIAddr
+		redirectAddr = configutil.NormalizeAddr(result.APIAddr)
 	}
 
 	if result.ClusterAddr != "" {
-		clusterAddr = result.ClusterAddr
+		clusterAddr = configutil.NormalizeAddr(result.ClusterAddr)
 	}
 
 	if result.DisableClusteringRaw != nil {
@@ -1101,20 +1170,17 @@ func normalizeRaftRetryJoin(val any) ([]byte, error) {
 		for k, v := range stanza {
 			switch k {
 			case "auto_join":
-				pairs := strings.Split(v.(string), " ")
-				for i, pair := range pairs {
-					pairParts := strings.Split(pair, "=")
-					if len(pairParts) != 2 {
-						return nil, fmt.Errorf("malformed auto_join pair %s, expected key=value", pair)
-					}
+				cfg, err := discover.Parse(v.(string))
+				if err != nil {
+					return nil, err
+				}
+				for k, v := range cfg {
 					// These are auto_join keys that are valid for the provider in go-discover
-					if slices.Contains([]string{"domain", "auth_url", "url", "host"}, pairParts[0]) {
-						pairParts[1] = configutil.NormalizeAddr(pairParts[1])
-						pair = strings.Join(pairParts, "=")
-						pairs[i] = pair
+					if slices.Contains([]string{"domain", "auth_url", "url", "host"}, k) {
+						cfg[k] = configutil.NormalizeAddr(v)
 					}
 				}
-				normalizedStanza[k] = strings.Join(pairs, " ")
+				normalizedStanza[k] = cfg.String()
 			case "leader_api_addr":
 				normalizedStanza[k] = configutil.NormalizeAddr(v.(string))
 			default:
@@ -1205,11 +1271,11 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 
 	// Override with top-level values if they are set
 	if result.APIAddr != "" {
-		redirectAddr = result.APIAddr
+		redirectAddr = configutil.NormalizeAddr(result.APIAddr)
 	}
 
 	if result.ClusterAddr != "" {
-		clusterAddr = result.ClusterAddr
+		clusterAddr = configutil.NormalizeAddr(result.ClusterAddr)
 	}
 
 	if result.DisableClusteringRaw != nil {
@@ -1283,6 +1349,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"max_lease_ttl":     c.MaxLeaseTTL / time.Second,
 		"default_lease_ttl": c.DefaultLeaseTTL / time.Second,
 
+		"remove_irrevocable_lease_after": c.RemoveIrrevocableLeaseAfter / time.Second,
+
 		"cluster_cipher_suites": c.ClusterCipherSuites,
 
 		"plugin_directory": c.PluginDirectory,
@@ -1338,9 +1406,20 @@ func (c *Config) Sanitized() map[string]interface{} {
 			sanitizedStorage["raft"] = map[string]interface{}{
 				"max_entry_size": c.Storage.Config["max_entry_size"],
 			}
+			for k, v := range c.Storage.Config {
+				sanitizedStorage["raft"].(map[string]interface{})[k] = v
+			}
 		}
 
 		result["storage"] = sanitizedStorage
+	}
+
+	// Sanitize observations stanza
+	if c.Observations != nil {
+		sanitizedObservations := map[string]interface{}{
+			"ledger_path": c.Observations.LedgerPath,
+		}
+		result["observations"] = sanitizedObservations
 	}
 
 	// Sanitize HA storage stanza

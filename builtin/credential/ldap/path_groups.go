@@ -87,7 +87,20 @@ func (b *backend) Group(ctx context.Context, s logical.Storage, n string) (*Grou
 }
 
 func (b *backend) pathGroupDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete(ctx, "group/"+d.Get("name").(string))
+	groupname := d.Get("name").(string)
+
+	cfg, err := b.Config(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return logical.ErrorResponse("ldap backend not configured"), nil
+	}
+	if !*cfg.CaseSensitiveNames {
+		groupname = strings.ToLower(groupname)
+	}
+
+	err = req.Storage.Delete(ctx, "group/"+groupname)
 	if err != nil {
 		return nil, err
 	}

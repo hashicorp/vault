@@ -43,4 +43,16 @@ seal "pkcs11" {
 For configuration options which also read an environment variable, the
 environment variable will take precedence over values in the configuration file.
 
+### Indirect value references
+
+Some configuration options, considered sensitive, may use a special syntax
+in the value of the option that indicates the final value should be sourced
+from the environment or a file.  Two URL style forms are supported:
+
+* `env://name`: The final value will be the contents of the environment
+  variable with key `name`.
+* `file://path`: The final value will be the contents of the file at
+  `path`.  Path may be absolute or relative, and if relative, is relative to
+  the working directory of the Vault process.
+
 [sealwrap]: /vault/docs/enterprise/sealwrap

@@ -26,9 +26,9 @@ interface RouteController extends Controller {
 
 interface RouteParams {
   page?: string;
-  pageFilter: string;
-  path_to_role: string;
-  type: string;
+  pageFilter?: string;
+  path_to_role?: string;
+  type?: string;
 }
 
 export default class LdapRolesSubdirectoryRoute extends LdapRolesRoute {

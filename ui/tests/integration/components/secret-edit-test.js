@@ -11,6 +11,7 @@ import { run } from '@ember/runloop';
 import Service from '@ember/service';
 import hbs from 'htmlbars-inline-precompile';
 import codemirror from 'vault/tests/helpers/codemirror';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 let capabilities;
 const storeService = Service.extend({
@@ -86,7 +87,7 @@ module('Integration | Component | secret edit', function (hooks) {
       },
     });
     await render(hbs`<SecretEdit @mode={{this.mode}} @model={{this.model}} @key={{this.key}} />`);
-    assert.dom('[data-test-secret-save]').isNotDisabled();
+    assert.dom(GENERAL.submitButton).isNotDisabled();
   });
 
   test('it shows an error when editing and the data is not an object', async function (assert) {

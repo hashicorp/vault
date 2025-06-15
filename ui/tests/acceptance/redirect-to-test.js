@@ -3,12 +3,14 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentURL, visit as _visit, settled } from '@ember/test-helpers';
+import { currentURL, visit as _visit, settled, fillIn, click } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
-import auth from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const visit = async (url) => {
   try {
@@ -41,13 +43,7 @@ const wrappedAuth = async () => {
 };
 
 const setupWrapping = async () => {
-  await auth.logout();
-  await settled();
-  await auth.visit();
-  await settled();
-  await auth.authType('token');
-  await auth.tokenInput('root').submit();
-  await settled();
+  await login();
   const wrappedToken = await wrappedAuth();
   return wrappedToken;
 };
@@ -68,10 +64,10 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
       currentURL().includes(`redirect_to=${encodeURIComponent(url)}`),
       `encodes url for the query param in ${currentURL()}`
     );
-    await auth.authType('token');
+    await fillIn(AUTH_FORM.selectMethod, 'token');
     // the login method on this page does another visit call that we don't want here
-    await auth.tokenInput('root').submit();
-    await settled();
+    await fillIn(GENERAL.inputByAttr('token'), 'root');
+    await click(GENERAL.submitButton);
     assert.strictEqual(currentURL(), url, 'navigates to the redirect_to url after auth');
   });
 
@@ -88,9 +84,9 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
       currentURL().includes(`?redirect_to=${encodeURIComponent(url)}`),
       'encodes url for the query param'
     );
-    await auth.authType('token');
-    await auth.tokenInput('root').submit();
-    await settled();
+    await fillIn(AUTH_FORM.selectMethod, 'token');
+    await fillIn(GENERAL.inputByAttr('token'), 'root');
+    await click(GENERAL.submitButton);
     assert.strictEqual(currentURL(), url, 'navigates to the redirect_to with the query param after auth');
   });
 
@@ -98,12 +94,7 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
     const wrappedToken = await setupWrapping();
     const url = '/vault/secrets/cubbyhole/create';
 
-    await auth.logout({
-      redirect_to: url,
-      wrapped_token: wrappedToken,
-    });
-    await settled();
-
+    await visit(`/vault/logout?redirect_to=${url}&wrapped_token=${wrappedToken}`);
     assert.strictEqual(currentURL(), url, 'authenticates then navigates to the redirect_to url after auth');
   });
 });

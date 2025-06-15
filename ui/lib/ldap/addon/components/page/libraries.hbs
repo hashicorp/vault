@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
   <:toolbarFilters>
@@ -9,7 +9,7 @@
       <FilterInput
         aria-label="Filter libraries"
         placeholder="Filter libraries"
-        value={{this.filterValue}}
+        @value={{this.filterValue}}
         @wait={{200}}
         @onInput={{fn (mut this.filterValue)}}
       />

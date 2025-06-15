@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <form {{on "submit" (perform this.save)}} aria-label="save ssh creds" class="has-top-padding-m" data-test-configure-form>
   <NamespaceReminder @mode="save" @noun="configuration" />
@@ -17,14 +17,14 @@
         @icon={{if this.save.isRunning "loading"}}
         type="submit"
         disabled={{this.save.isRunning}}
-        data-test-configure-save-button
+        data-test-submit
       />
       <Hds::Button
         @text="Cancel"
         @color="secondary"
         disabled={{this.save.isRunning}}
         {{on "click" this.onCancel}}
-        data-test-cancel-button
+        data-test-cancel
       />
     </Hds::ButtonSet>
     {{#if this.invalidFormAlert}}
@@ -68,7 +68,7 @@
         @buttonColor="secondary"
         @confirmMessage="Confirming will remove the CA certificate information."
         @onConfirmAction={{this.deleteCaConfig}}
-        data-test-delete-public-key
+        data-test-button="delete-public-key"
       />
     </Hds::ButtonSet>
   {{/if}}

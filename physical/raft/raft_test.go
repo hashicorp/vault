@@ -894,7 +894,7 @@ func TestRaft_Backend_Performance(t *testing.T) {
 
 		defaultConfig := raft.DefaultConfig()
 		localConfig := raft.DefaultConfig()
-		err := b.applyConfigSettings(localConfig)
+		err := ApplyConfigSettings(b.logger, b.conf, localConfig)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -915,7 +915,7 @@ func TestRaft_Backend_Performance(t *testing.T) {
 		}
 
 		localConfig = raft.DefaultConfig()
-		err = b.applyConfigSettings(localConfig)
+		err = ApplyConfigSettings(b.logger, b.conf, localConfig)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -936,7 +936,7 @@ func TestRaft_Backend_Performance(t *testing.T) {
 		}
 
 		localConfig = raft.DefaultConfig()
-		err = b.applyConfigSettings(localConfig)
+		err = ApplyConfigSettings(b.logger, b.conf, localConfig)
 		if err != nil {
 			t.Fatal(err)
 		}

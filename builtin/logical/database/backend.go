@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/rpc"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -38,6 +39,8 @@ const (
 	databaseStaticRolePath  = "static-role/"
 	minRootCredRollbackAge  = 1 * time.Minute
 )
+
+var databaseConfigNameFromRotationIDRegex = regexp.MustCompile("^.+/config/(.+$)")
 
 type dbPluginInstance struct {
 	sync.RWMutex
@@ -127,6 +130,14 @@ func Backend(conf *logical.BackendConfig) *databaseBackend {
 		WALRollback:       b.walRollback,
 		WALRollbackMinAge: minRootCredRollbackAge,
 		BackendType:       logical.TypeLogical,
+		RotateCredential: func(ctx context.Context, request *logical.Request) error {
+			name, err := b.getDatabaseConfigNameFromRotationID(request.RotationID)
+			if err != nil {
+				return err
+			}
+			_, err = b.rotateRootCredentials(ctx, request, name)
+			return err
+		},
 	}
 
 	b.logger = conf.Logger
@@ -481,6 +492,17 @@ func (b *databaseBackend) dbEvent(ctx context.Context,
 	if err != nil && !errors.Is(err, framework.ErrNoEvents) {
 		b.Logger().Error("Error sending event", "error", err)
 	}
+}
+
+func (b *databaseBackend) getDatabaseConfigNameFromRotationID(path string) (string, error) {
+	if !databaseConfigNameFromRotationIDRegex.MatchString(path) {
+		return "", fmt.Errorf("no name found from rotation ID")
+	}
+	res := databaseConfigNameFromRotationIDRegex.FindStringSubmatch(path)
+	if len(res) != 2 {
+		return "", fmt.Errorf("unexpected number of matches (%d) for name in rotation ID", len(res))
+	}
+	return res[1], nil
 }
 
 const backendHelp = `

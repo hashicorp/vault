@@ -3,21 +3,19 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { create } from 'ember-cli-page-object';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
+import sinon from 'sinon';
 
-import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
-import authForm from 'vault/tests/pages/components/auth-form';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/auth/enable';
-import { visit, settled, currentURL, waitFor, currentRouteName } from '@ember/test-helpers';
+import { visit, settled, currentURL, waitFor, currentRouteName, fillIn, click } from '@ember/test-helpers';
 import { clearRecord } from 'vault/tests/helpers/oidc-config';
 import { runCmd } from 'vault/tests/helpers/commands';
 import queryParamString from 'vault/utils/query-param-string';
-
-const authFormComponent = create(authForm);
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
 const OIDC_USER = 'end-user';
 const USER_PASSWORD = 'mypassword';
@@ -124,14 +122,14 @@ module('Acceptance | oidc provider', function (hooks) {
   hooks.beforeEach(async function () {
     this.uid = uuidv4();
     this.store = this.owner.lookup('service:store');
-    await authPage.login();
+    await login();
     await settled();
     this.oidcSetupInformation = await setupOidc(this.uid);
     return;
   });
 
   hooks.afterEach(async function () {
-    await authPage.login();
+    await login();
   });
 
   test('OIDC Provider logs in and redirects correctly', async function (assert) {
@@ -140,8 +138,7 @@ module('Acceptance | oidc provider', function (hooks) {
     assert
       .dom(`[data-test-oidc-client-linked-block='${WEB_APP_NAME}']`)
       .exists({ count: 1 }, 'shows webapp in oidc provider list');
-    await logout.visit();
-    await settled();
+    await visit('/vault/logout');
     const url = getAuthzUrl(providerName, callback, clientId);
     await visit(url);
 
@@ -159,11 +156,13 @@ module('Acceptance | oidc provider', function (hooks) {
         'Once you log in, you will be redirected back to your application. If you require login credentials, contact your administrator.',
         'Has updated text for client authorization flow'
       );
-    await authFormComponent.selectMethod(authMethodPath);
-    await authFormComponent.username(OIDC_USER);
-    await authFormComponent.password(USER_PASSWORD);
-    await authFormComponent.login();
-    await settled();
+
+    await fillIn(AUTH_FORM.selectMethod, 'userpass');
+    await fillIn(GENERAL.inputByAttr('username'), OIDC_USER);
+    await fillIn(GENERAL.inputByAttr('password'), USER_PASSWORD);
+    await click(AUTH_FORM.advancedSettings);
+    await fillIn(GENERAL.inputByAttr('path'), authMethodPath);
+    await click(GENERAL.submitButton);
     assert.strictEqual(currentURL(), url, 'URL is as expected after login');
     assert
       .dom('[data-test-oidc-redirect]')
@@ -189,26 +188,30 @@ module('Acceptance | oidc provider', function (hooks) {
       currentURL().includes('prompt=login'),
       'Url params no longer include prompt=login after redirect'
     );
-    await authFormComponent.selectMethod(authMethodPath);
-    await authFormComponent.username(OIDC_USER);
-    await authFormComponent.password(USER_PASSWORD);
-    await authFormComponent.login();
-    await settled();
+
+    await fillIn(AUTH_FORM.selectMethod, 'userpass');
+    await click(AUTH_FORM.advancedSettings);
+    await fillIn(GENERAL.inputByAttr('path'), authMethodPath);
+    await fillIn(GENERAL.inputByAttr('username'), OIDC_USER);
+    await fillIn(GENERAL.inputByAttr('password'), USER_PASSWORD);
+    await click(GENERAL.submitButton);
     assert
       .dom('[data-test-oidc-redirect]')
       .hasTextContaining(`click here to go back to app`, 'Shows link back to app');
     const link = document.querySelector('[data-test-oidc-redirect]').getAttribute('href');
-    assert.ok(link.includes('/callback?code='), 'Redirects to correct url');
+    assert.true(link.includes('/callback?code='), 'Redirects to correct url');
   });
 
   test('OIDC Provider shows consent form when prompt = consent', async function (assert) {
     const { providerName, callback, clientId, authMethodPath } = this.oidcSetupInformation;
     const url = getAuthzUrl(providerName, callback, clientId, { prompt: 'consent' });
-    await logout.visit();
-    await authFormComponent.selectMethod(authMethodPath);
-    await authFormComponent.username(OIDC_USER);
-    await authFormComponent.password(USER_PASSWORD);
-    await authFormComponent.login();
+    await visit('/vault/logout');
+    await fillIn(AUTH_FORM.selectMethod, 'userpass');
+    await click(AUTH_FORM.advancedSettings);
+    await fillIn(GENERAL.inputByAttr('path'), authMethodPath);
+    await fillIn(GENERAL.inputByAttr('username'), OIDC_USER);
+    await fillIn(GENERAL.inputByAttr('password'), USER_PASSWORD);
+    await click(GENERAL.submitButton);
     await visit(url);
 
     assert.notOk(
@@ -219,6 +222,55 @@ module('Acceptance | oidc provider', function (hooks) {
     assert.dom('[data-test-consent-form]').exists('Consent form exists');
 
     //* clean up test state
+    await clearRecord(this.store, 'oidc/client', WEB_APP_NAME);
+    await clearRecord(this.store, 'oidc/provider', PROVIDER_NAME);
+  });
+
+  // Error handling test coverage, see issue for more context https://github.com/hashicorp/vault/issues/27772
+  test('OIDC Provider redirects if authorization request throws a permission denied error', async function (assert) {
+    this.auth = this.owner.lookup('service:auth');
+    const { providerName, callback, clientId, authMethodPath } = this.oidcSetupInformation;
+    // oidc provider authorization url, see https://developer.hashicorp.com/vault/docs/concepts/oidc-provider#authorization-endpoint
+    const url = getAuthzUrl(providerName, callback, clientId);
+
+    // stub ajax request made by the model hook in routes/vault/cluster/oidc-provider.js
+    const authStub = sinon.stub(this.auth, 'ajax');
+    authStub.rejects({
+      json: () =>
+        Promise.resolve({
+          errors: ['2 errors occurred:\n\t* permission denied\n\t* invalid token\n\n'],
+        }),
+    });
+
+    await visit('/vault/logout');
+
+    // set spy here so they only spy on the relevant logic
+    const deleteTokenSpy = sinon.spy(this.auth, 'deleteToken');
+
+    // visit the OIDC authorization url to trigger the stubbed (and rejected) auth service ajax request
+    await visit(url);
+
+    await waitFor('[data-test-auth-form]', { timeout: 5000 });
+    await fillIn(AUTH_FORM.selectMethod, 'userpass');
+    await fillIn(GENERAL.inputByAttr('username'), OIDC_USER);
+    await fillIn(GENERAL.inputByAttr('password'), USER_PASSWORD);
+    await click(AUTH_FORM.advancedSettings);
+    await fillIn(GENERAL.inputByAttr('path'), authMethodPath);
+    await click(GENERAL.submitButton);
+
+    // permission denied error redirect user to log in
+    // if the route remains "vault.cluster.oidc-provider" - it did not redirect
+    assert.strictEqual(currentRouteName(), 'vault.cluster.auth', 'it redirects to auth route');
+
+    // assert permission denied error deletes OIDC user's token
+    assert.true(
+      deleteTokenSpy.calledOnce,
+      'deleteToken is called because _redirectToAuth was called with logout:true'
+    );
+
+    //* clean up test state
+    authStub.restore();
+    await login();
     await clearRecord(this.store, 'oidc/client', WEB_APP_NAME);
     await clearRecord(this.store, 'oidc/provider', PROVIDER_NAME);
   });

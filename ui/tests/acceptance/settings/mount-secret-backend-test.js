@@ -22,9 +22,8 @@ import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { create } from 'ember-cli-page-object';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
 import configPage from 'vault/tests/pages/secrets/backend/configuration';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-import logout from 'vault/tests/pages/logout';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { CONFIGURATION_ONLY, mountableEngines } from 'vault/helpers/mountable-secret-engines';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
@@ -49,7 +48,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       const remainder = hours % 24;
       return `${days} days ${remainder} hours`;
     };
-    return authPage.login();
+    return login();
   });
 
   test('it sets the ttl correctly when mounting', async function (assert) {
@@ -70,7 +69,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       .enableMaxTtl()
       .maxTTLUnit('h')
       .maxTTLVal(maxTTLHours);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await configPage.visit({ backend: path });
     assert.strictEqual(configPage.defaultTTL, `${this.calcDays(defaultTTLHours)}`, 'shows the proper TTL');
     assert.strictEqual(configPage.maxTTL, `${this.calcDays(maxTTLHours)}`, 'shows the proper max TTL');
@@ -92,7 +91,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await fillIn(GENERAL.inputByAttr('path'), path);
     await click(GENERAL.toggleGroup('Method Options'));
     await page.enableDefaultTtl().enableMaxTtl().maxTTLUnit('h').maxTTLVal(maxTTLHours);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await configPage.visit({ backend: path });
     assert.strictEqual(configPage.defaultTTL, '1 month 1 day', 'shows system default TTL');
     assert.strictEqual(configPage.maxTTL, `${this.calcDays(maxTTLHours)}`, 'shows the proper max TTL');
@@ -143,9 +142,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
     await page.secretList();
     await settled();
-    assert
-      .dom(`[data-test-secrets-backend-link=${path}]`)
-      .exists({ count: 1 }, 'renders only one instance of the engine');
+    assert.dom(SES.secretsBackendLink(path)).exists({ count: 1 }, 'renders only one instance of the engine');
   });
 
   test('version 2 with no update to config endpoint still allows mount of secret engine', async function (assert) {
@@ -181,14 +178,14 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     );
     await settled();
     const userToken = consoleComponent.lastLogOutput;
-    await logout.visit();
-    await authPage.login(userToken);
+
+    await login(userToken);
     // create the engine
     await mountSecrets.visit();
     await click(MOUNT_BACKEND_FORM.mountType('kv'));
     await fillIn(GENERAL.inputByAttr('path'), enginePath);
     await mountSecrets.setMaxVersion(101);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     assert
       .dom('[data-test-flash-message]')
@@ -248,7 +245,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         await click(GENERAL.toggleGroup('Method Options'));
         await mountSecrets.version(1);
       }
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
 
       const route = CONFIGURATION_ONLY.includes(engine.type) ? 'configuration.index' : 'list-root';
       assert.strictEqual(
@@ -310,7 +307,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await fillIn(GENERAL.inputByAttr('path'), v1);
     await click(GENERAL.toggleGroup('Method Options'));
     await mountSecrets.version(1);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     assert.strictEqual(currentURL(), `/vault/secrets/${v1}/list`, `${v1} navigates to list url`);
     assert.strictEqual(
@@ -347,9 +344,8 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     });
 
     test('it allows a user with permissions to oidc/key to create an identity_token_key', async function (assert) {
-      logout.visit();
       const engine = 'aws'; // only testing aws of the WIF engines as the functionality for all others WIF engines in this form are the same
-      await authPage.login();
+      await login();
       const path = `secrets-adminPolicy-${engine}`;
       const newKey = `key-${engine}-${uuidv4()}`;
       const secrets_admin_policy = adminOidcCreateRead(path);
@@ -357,8 +353,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         tokenWithPolicyCmd(`secrets-admin-${path}`, secrets_admin_policy)
       );
 
-      await logout.visit();
-      await authPage.login(secretsAdminToken);
+      await login(secretsAdminToken);
       await visit('/vault/settings/mount-secret-backend');
       await click(MOUNT_BACKEND_FORM.mountType(engine));
       await fillIn(GENERAL.inputByAttr('path'), path);
@@ -376,7 +371,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       assert.dom('#search-select-modal').doesNotExist(`modal disappears onSave for engine ${engine}`);
       assert.dom(GENERAL.searchSelect.selectedOption()).hasText(newKey, `${newKey} is now selected`);
 
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       await visit(`/vault/secrets/${path}/configuration`);
       await click(SES.configurationToggle);
       assert
@@ -387,13 +382,11 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       await runCmd(`delete sys/mounts/${path}`);
       await runCmd(`delete identity/oidc/key/some-key`);
       await runCmd(`delete identity/oidc/key/${newKey}`);
-      await logout.visit();
     });
 
     test('it allows user with NO access to oidc/key to manually input an identity_token_key', async function (assert) {
-      await logout.visit();
       const engine = 'aws'; // only testing aws of the WIF engines as the functionality for all others WIF engines in this form are the same
-      await authPage.login();
+      await login();
       const path = `secrets-noOidcAdmin-${engine}`;
       const secretsNoOidcAdminPolicy = adminOidcCreate(path);
       const secretsNoOidcAdminToken = await runCmd(
@@ -402,15 +395,14 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       // create an oidc/key that they can then use even if they can't read it.
       await runCmd(`write identity/oidc/key/general-key allowed_client_ids="*"`);
 
-      await logout.visit();
-      await authPage.login(secretsNoOidcAdminToken);
+      await login(secretsNoOidcAdminToken);
       await page.visit();
       await click(MOUNT_BACKEND_FORM.mountType(engine));
       await fillIn(GENERAL.inputByAttr('path'), path);
       await click(GENERAL.toggleGroup('Method Options'));
       // type-in fallback component to create new key
       await typeIn(GENERAL.inputSearch('key'), 'general-key');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert
         .dom(GENERAL.latestFlashContent)
         .hasText(`Successfully mounted the ${engine} secrets engine at ${path}.`);
@@ -424,7 +416,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
       // cleanup
       await runCmd(`delete sys/mounts/${path}`);
-      await logout.visit();
     });
   });
 });

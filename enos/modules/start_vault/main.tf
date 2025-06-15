@@ -188,7 +188,9 @@ resource "enos_vault_start" "leader" {
   bin_path    = local.bin_path
   config_dir  = var.config_dir
   config_mode = var.config_mode
-  environment = var.environment
+  environment = merge(var.environment, {
+    VAULT_DISABLE_MLOCK = var.disable_mlock
+  })
   config = {
     api_addr     = local.api_addrs_internal[tonumber(each.value)][var.ip_version]
     cluster_addr = local.cluster_addrs_internal[tonumber(each.value)][var.ip_version]
@@ -230,7 +232,9 @@ resource "enos_vault_start" "followers" {
   bin_path    = local.bin_path
   config_dir  = var.config_dir
   config_mode = var.config_mode
-  environment = var.environment
+  environment = merge(var.environment, {
+    VAULT_DISABLE_MLOCK = var.disable_mlock
+  })
   config = {
     api_addr     = local.api_addrs_internal[tonumber(each.value)][var.ip_version]
     cluster_addr = local.cluster_addrs_internal[tonumber(each.value)][var.ip_version]

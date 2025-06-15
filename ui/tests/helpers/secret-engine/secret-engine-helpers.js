@@ -9,6 +9,16 @@ import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engin
 import { stringArrayToCamelCase } from 'vault/helpers/string-array-to-camel';
 import { v4 as uuidv4 } from 'uuid';
 
+/* Secret Create/Edit methods */
+// ARG TODO unsure if should be moved to another file
+export async function createSecret(path, key, value) {
+  await fillIn(SES.secretPath('create'), path);
+  await fillIn('[data-test-secret-key]', key);
+  await fillIn('[data-test-secret-value] textarea', value);
+  await click(GENERAL.submitButton);
+  return;
+}
+
 export const createSecretsEngine = (store, type, path) => {
   store.pushPayload('secret-engine', {
     modelName: 'secret-engine',
@@ -129,7 +139,7 @@ const createAzureConfig = (store, backend, accessType = 'generic') => {
         subscription_id: 'subscription-id',
         tenant_id: 'tenant-id',
         client_id: 'client-id',
-        root_password_ttl: '20 days 20 hours',
+        root_password_ttl: '1800000s',
         environment: 'AZUREPUBLICCLOUD',
       },
     });
@@ -144,7 +154,7 @@ const createAzureConfig = (store, backend, accessType = 'generic') => {
         client_id: 'client-id',
         identity_token_audience: 'audience',
         identity_token_ttl: 7200,
-        root_password_ttl: '20 days 20 hours',
+        root_password_ttl: '1800000s',
         environment: 'AZUREPUBLICCLOUD',
       },
     });
@@ -158,6 +168,7 @@ const createAzureConfig = (store, backend, accessType = 'generic') => {
         tenant_id: 'tenant-id-2',
         client_id: 'client-id-2',
         environment: 'AZUREPUBLICCLOUD',
+        root_password_ttl: '1800000s',
       },
     });
   }
@@ -185,8 +196,8 @@ const createGcpConfig = (store, backend, accessType = 'gcp') => {
       data: {
         backend,
         credentials: '{"some-key":"some-value"}',
-        ttl: '1 hour',
-        max_ttl: '4 hours',
+        ttl: '100s',
+        max_ttl: '101s',
       },
     });
   }
@@ -215,7 +226,10 @@ export const createConfig = (store, backend, type) => {
     case 'azure-generic':
       return createAzureConfig(store, backend, 'generic');
     case 'gcp':
+    case 'gcp-generic':
       return createGcpConfig(store, backend);
+    case 'gcp-wif':
+      return createGcpConfig(store, backend, 'wif');
   }
 };
 /* Manually create the configuration by filling in the configuration form */
@@ -247,22 +261,39 @@ export const fillInAwsConfig = async (situation = 'withAccess') => {
   }
 };
 
-export const fillInAzureConfig = async (situation = 'azure') => {
-  await fillIn(GENERAL.inputByAttr('subscriptionId'), 'subscription-id');
-  await fillIn(GENERAL.inputByAttr('tenantId'), 'tenant-id');
-  await fillIn(GENERAL.inputByAttr('clientId'), 'client-id');
-  await fillIn(GENERAL.inputByAttr('environment'), 'AZUREPUBLICCLOUD');
-
-  if (situation === 'azure') {
-    await fillIn(GENERAL.inputByAttr('clientSecret'), 'client-secret');
-    await click(GENERAL.ttl.toggle('Root password TTL'));
-    await fillIn(GENERAL.ttl.input('Root password TTL'), '5200');
-  }
-  if (situation === 'withWif') {
+export const fillInAzureConfig = async (withWif = false) => {
+  if (withWif) {
     await click(SES.wif.accessType('wif')); // toggle to wif
     await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'azure-audience');
     await click(GENERAL.ttl.toggle('Identity token TTL'));
     await fillIn(GENERAL.ttl.input('Identity token TTL'), '7200');
+  } else {
+    await fillIn(GENERAL.inputByAttr('subscriptionId'), 'subscription-id');
+    await fillIn(GENERAL.inputByAttr('tenantId'), 'tenant-id');
+    await fillIn(GENERAL.inputByAttr('clientId'), 'client-id');
+    await click(GENERAL.toggleGroup('More options'));
+    await fillIn(GENERAL.inputByAttr('environment'), 'AZUREPUBLICCLOUD');
+    await click(GENERAL.ttl.toggle('Root password TTL'));
+    await fillIn(GENERAL.ttl.input('Root password TTL'), '200');
+    await fillIn(GENERAL.inputByAttr('clientSecret'), 'client-secret');
+  }
+};
+
+export const fillInGcpConfig = async (withWif = false) => {
+  if (withWif) {
+    await click(SES.wif.accessType('wif')); // toggle to wif
+    await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'azure-audience');
+    await click(GENERAL.ttl.toggle('Identity token TTL'));
+    await fillIn(GENERAL.ttl.input('Identity token TTL'), '7200');
+    await fillIn(GENERAL.inputByAttr('serviceAccountEmail'), 'some@email.com');
+  } else {
+    await click(GENERAL.toggleGroup('More options'));
+    await click(GENERAL.ttl.toggle('Config TTL'));
+    await fillIn(GENERAL.ttl.input('Config TTL'), '7200');
+    await click(GENERAL.ttl.toggle('Max TTL'));
+    await fillIn(GENERAL.ttl.input('Max TTL'), '8200');
+    await click(GENERAL.textToggle);
+    await fillIn(GENERAL.textToggleTextarea, '{"some-key":"some-value"}');
   }
 };
 
@@ -277,13 +308,13 @@ const awsLeaseKeys = ['Default Lease TTL', 'Max Lease TTL'];
 const awsKeys = ['Access key', 'Secret key', 'Region', 'IAM endpoint', 'STS endpoint', 'Max retries'];
 const awsWifKeys = ['Issuer', 'Role ARN', ...genericWifKeys];
 // Azure specific keys
-const genericAzureKeys = ['Subscription ID', 'Tenant ID', 'Client ID', 'Environment'];
-const azureKeys = [...genericAzureKeys, 'Client secret', 'Root password TTL'];
+const genericAzureKeys = ['Subscription ID', 'Tenant ID', 'Client ID', 'Environment', 'Root password TTL'];
+const azureKeys = [...genericAzureKeys, 'Client secret'];
 const azureWifKeys = [...genericAzureKeys, ...genericWifKeys];
 // GCP specific keys
 const genericGcpKeys = ['Config TTL', 'Max TTL'];
 const gcpKeys = [...genericGcpKeys, 'Credentials'];
-const gcpWifKeys = [...genericGcpKeys, ...genericWifKeys, 'Service account email'];
+const gcpWifKeys = [...genericWifKeys, 'Service account email'];
 // SSH specific keys
 const sshKeys = ['Private key', 'Public key', 'Generate signing key'];
 
@@ -349,9 +380,9 @@ const valueOfGcpKeys = (string) => {
     case 'Service account email':
       return 'service-email';
     case 'Config TTL':
-      return '1 hour';
+      return '1 minute 40 seconds';
     case 'Max TTL':
-      return '4 hours';
+      return '1 minute 41 seconds';
     case 'Identity token audience':
       return 'audience';
     case 'Identity token TTL':

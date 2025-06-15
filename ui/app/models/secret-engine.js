@@ -10,7 +10,7 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { isAddonEngine, allEngines, WIF_ENGINES } from 'vault/helpers/mountable-secret-engines';
-import { WHITESPACE_WARNING } from 'vault/utils/model-helpers/validators';
+import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
 
 const LINKED_BACKENDS = supportedSecretBackends();
 

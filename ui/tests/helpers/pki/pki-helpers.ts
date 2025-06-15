@@ -3,13 +3,13 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import type StoreService from 'vault/services/store';
+import type Store from '@ember-data/store';
 
 export const PKI_BASE_URL = `/vault/cluster/secrets/backend/pki/roles`;
 
 // Clears pki-related data and capabilities so that admin
 // capabilities from setup don't rollover
-export function clearRecords(store: StoreService) {
+export function clearRecords(store: Store) {
   store.unloadAll('pki/action');
   store.unloadAll('pki/issuer');
   store.unloadAll('pki/key');

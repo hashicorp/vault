@@ -45,7 +45,8 @@ func TestFilters_AddRemoveMatchLocal(t *testing.T) {
 	assert.False(t, f.anyMatch(ns, "abc"))
 }
 
-// TestFilters_Watch checks that adding a watch for a cluster will send a notification when the patterns are modified.
+// TestFilters_Watch checks that adding a watch for a cluster node will send a
+// notification when the patterns are modified.
 func TestFilters_Watch(t *testing.T) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	t.Cleanup(cancelFunc)
@@ -135,7 +136,7 @@ func TestFilters_AddRemoveClear(t *testing.T) {
 	f.removePattern("somecluster", []string{"ns1"}, "abc")
 	assert.Equal(t, "", f.filters["somecluster"].String())
 	f.addPattern("somecluster", []string{"ns1"}, "abc")
-	f.clearClusterPatterns("somecluster")
+	f.clearClusterNodePatterns("somecluster")
 	assert.NotContains(t, f.filters, "somecluster")
 
 	f.addGlobalPattern([]string{"ns1"}, "abc")

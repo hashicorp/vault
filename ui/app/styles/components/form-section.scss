@@ -1,3 +1,5 @@
+@use '../utils/color_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -5,7 +7,7 @@
 
 .form-section {
   padding: 1.75rem 0;
-  box-shadow: 0 -1px 0 0 rgba($black, 0.1);
+  box-shadow: 0 -1px 0 0 rgba(color_variables.$black, 0.1);
 }
 
 .field:first-child .form-section,
@@ -19,6 +21,6 @@
   background-color: black;
 
   pre {
-    color: $ui-gray-010;
+    color: color_variables.$ui-gray-010;
   }
 }

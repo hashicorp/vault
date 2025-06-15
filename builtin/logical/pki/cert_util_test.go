@@ -1195,7 +1195,7 @@ func TestVerify_chained_name_constraints(t *testing.T) {
 		resp, err := CBWrite(bRoot, sRoot, "root/generate/internal", map[string]interface{}{
 			"ttl":                   "40h",
 			"common_name":           "myvault.com",
-			"permitted_dns_domains": ".example.com",
+			"permitted_dns_domains": ".example.com,myint.com",
 			"excluded_dns_domains":  "bad.example.com",
 		})
 		require.NoError(t, err)

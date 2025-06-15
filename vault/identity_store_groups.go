@@ -71,8 +71,9 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 			Fields: groupPathFields(),
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.UpdateOperation: &framework.PathOperation{
-					Callback:                  i.pathGroupRegister(),
-					ForwardPerformanceStandby: true,
+					Callback:                    i.pathGroupRegister(),
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
 				},
 			},
 
@@ -95,6 +96,8 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb: "update",
 					},
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: i.pathGroupIDRead(),
@@ -107,6 +110,8 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb: "delete",
 					},
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
 				},
 			},
 
@@ -144,6 +149,8 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb: "update",
 					},
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
 				},
 				logical.ReadOperation: &framework.PathOperation{
 					Callback: i.pathGroupNameRead(),
@@ -156,6 +163,8 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 					DisplayAttrs: &framework.DisplayAttributes{
 						OperationVerb: "delete",
 					},
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
 				},
 			},
 
@@ -180,6 +189,7 @@ func groupPaths(i *IdentityStore) []*framework.Path {
 	}
 }
 
+// pathGroupRegister is always called by the active primary node of the cluster.
 func (i *IdentityStore) pathGroupRegister() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		_, ok := d.GetOk("id")
@@ -199,6 +209,7 @@ func (i *IdentityStore) pathGroupRegister() framework.OperationFunc {
 	}
 }
 
+// pathGroupIDUpdate is always called by the active primary node of the cluster.
 func (i *IdentityStore) pathGroupIDUpdate() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		groupID := d.Get("id").(string)
@@ -221,6 +232,7 @@ func (i *IdentityStore) pathGroupIDUpdate() framework.OperationFunc {
 	}
 }
 
+// pathGroupNameUpdate is always called by the active primary node of the cluster.
 func (i *IdentityStore) pathGroupNameUpdate() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		groupName := d.Get("name").(string)
@@ -239,6 +251,7 @@ func (i *IdentityStore) pathGroupNameUpdate() framework.OperationFunc {
 	}
 }
 
+// handleGroupUpdateCommon is always handled by the active primary node of the cluster.
 func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logical.Request, d *framework.FieldData, group *identity.Group) (*logical.Response, error) {
 	var newGroup bool
 	if group == nil {
@@ -442,6 +455,7 @@ func (i *IdentityStore) handleGroupReadCommon(ctx context.Context, group *identi
 	}, nil
 }
 
+// pathGroupIDDelete is always called by the active primary node of the cluster.
 func (i *IdentityStore) pathGroupIDDelete() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		groupID := d.Get("id").(string)
@@ -453,6 +467,7 @@ func (i *IdentityStore) pathGroupIDDelete() framework.OperationFunc {
 	}
 }
 
+// pathGroupNameDelete is always called by the active primary node of the cluster.
 func (i *IdentityStore) pathGroupNameDelete() framework.OperationFunc {
 	return func(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 		groupName := d.Get("name").(string)
@@ -464,6 +479,7 @@ func (i *IdentityStore) pathGroupNameDelete() framework.OperationFunc {
 	}
 }
 
+// handleGroupDeleteCommon is always handled by the active primary node of the cluster.
 func (i *IdentityStore) handleGroupDeleteCommon(ctx context.Context, key string, byID bool) (*logical.Response, error) {
 	// Acquire the lock to modify the group storage entry
 	i.groupLock.Lock()

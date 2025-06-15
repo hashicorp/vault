@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <PageHeader as |p|>
   <p.levelLeft>
@@ -59,7 +59,7 @@
             @text={{if (eq @mountType "secret") "Enable engine" "Enable method"}}
             @icon={{if this.mountBackend.isRunning "loading"}}
             type="submit"
-            data-test-save
+            data-test-submit
             disabled={{this.mountBackend.isRunning}}
           />
         </div>
