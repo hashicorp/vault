@@ -430,6 +430,7 @@ scenario "upgrade" {
       // Use the install dir for our initial version, which always comes from a zip bundle
       vault_install_dir = global.vault_install_dir["bundle"]
       vault_root_token  = step.create_vault_cluster.root_token
+      vault_edition     = matrix.edition
     }
   }
 

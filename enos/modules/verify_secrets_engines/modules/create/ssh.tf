@@ -3,14 +3,54 @@
 
 locals {
   // Variables
-  ssh_role_name  = "ssh_role"
+  otp_role_name = "ssh_role_otp"
+  otp_role_params = {
+    key_type               = "otp"
+    default_user           = local.ssh_test_user
+    default_user_template  = false
+    allowed_users          = local.ssh_test_user
+    allowed_users_template = false
+    cidr_list              = local.ssh_test_ip
+    exclude_cidr_list      = "10.0.0.0/8"
+    port                   = 22
+    ttl                    = "30m"
+    max_ttl                = "1h"
+  }
+
+  ca_role_name = "ssh_role_ca"
+  ca_role_params = {
+    key_type                = "ca"
+    default_user            = local.ssh_test_user
+    default_user_template   = false
+    allow_user_certificates = true
+    allow_host_certificates = true
+    allowed_users           = local.ssh_test_user
+    allowed_users_template  = false
+    port                    = 22
+    ttl                     = "1h"
+    max_ttl                 = "2h"
+    key_id_format           = "custom-keyid-{{token_display_name}}"
+    allowed_extensions      = "*"
+    default_extensions = {
+      "permit-pty" = ""
+    }
+    allow_user_key_ids     = true
+    allow_empty_principals = false
+    algorithm_signer       = "default"
+  }
+
+  is_fips = contains(lower(var.vault_edition), "fips")
+
+  ca_key_types = local.is_fips ? [
+    "ssh-rsa", "ecdsa-sha2-nistp256", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp521"
+    ] : [
+    "ssh-rsa", "ecdsa-sha2-nistp256", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp521", "ssh-ed25519"
+  ]
+
   ssh_mount      = "ssh"
-  ca_key_types   = ["ssh-rsa", "ecdsa-sha2-nistp256", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp521", "ssh-ed25519"]
   ca_key_type    = local.ca_key_types[random_integer.ca_key_type_idx.result]
-  role_key_types = ["ca", "otp"]
-  role_key_type  = local.role_key_types[random_integer.role_key_type_idx.result]
   cert_key_types = ["rsa", "ed25519", "ec"]
-  cert_key_type  = local.cert_key_types[random_integer.cert_key_type_idx.result]
+  cert_key_type  = local.cert_key_types[random_integer.cert_key_idx.result]
   ssh_test_ip    = "192.168.1.1"
   ssh_test_user  = "testuser"
   ssh_public_key = tls_private_key.test_ssh_key.public_key_openssh
@@ -41,17 +81,19 @@ locals {
 
   // Output
   ssh_output = {
-    role_name     = local.ssh_role_name
+    ca_role_name  = local.ca_role_name
+    otp_role_name = local.otp_role_name
     mount         = local.ssh_mount
     ca_key_type   = local.ca_key_type
-    role_key_type = local.role_key_type
     cert_key_type = local.cert_key_type
     test_ip       = local.ssh_test_ip
     test_user     = local.ssh_test_user
     data = {
-      sign_key      = local.ssh_sign_key_data
-      generate_otp  = local.ssh_generate_otp_data
-      generate_cert = local.ssh_generate_cert_data
+      sign_key        = local.ssh_sign_key_data
+      generate_otp    = local.ssh_generate_otp_data
+      generate_cert   = local.ssh_generate_cert_data
+      otp_role_params = local.otp_role_params
+      ca_role_params  = local.ca_role_params
     }
   }
 }
@@ -70,12 +112,7 @@ resource "random_integer" "ca_key_type_idx" {
   max = length(local.ca_key_types) - 1
 }
 
-resource "random_integer" "role_key_type_idx" {
-  min = 0
-  max = length(local.role_key_types) - 1
-}
-
-resource "random_integer" "cert_key_type_idx" {
+resource "random_integer" "cert_key_idx" {
   min = 0
   max = length(local.cert_key_types) - 1
 }
@@ -123,12 +160,31 @@ resource "enos_remote_exec" "ssh_configure_ca" {
   }
 }
 
-# Create SSH role
-resource "enos_remote_exec" "ssh_create_role" {
+resource "enos_remote_exec" "ssh_create_ca_role" {
   depends_on = [enos_remote_exec.ssh_configure_ca]
   environment = {
-    REQPATH           = "ssh/roles/${local.ssh_role_name}"
-    PAYLOAD           = jsonencode({ key_type = local.role_key_type, default_user = local.ssh_test_user, allow_user_certificates = true })
+    REQPATH           = "ssh/roles/${local.ca_role_name}"
+    PAYLOAD           = jsonencode(local.ca_role_params)
+    VAULT_ADDR        = var.vault_addr
+    VAULT_TOKEN       = var.vault_root_token
+    VAULT_INSTALL_DIR = var.vault_install_dir
+  }
+
+  scripts = [abspath("${path.module}/../../scripts/write-payload.sh")]
+
+  transport = {
+    ssh = {
+      host = var.leader_host.public_ip
+    }
+  }
+}
+
+# Create SSH OTP role
+resource "enos_remote_exec" "ssh_create_otp_role" {
+  depends_on = [enos_remote_exec.secrets_enable_ssh]
+  environment = {
+    REQPATH           = "ssh/roles/${local.otp_role_name}"
+    PAYLOAD           = jsonencode(local.otp_role_params)
     VAULT_ADDR        = var.vault_addr
     VAULT_TOKEN       = var.vault_root_token
     VAULT_INSTALL_DIR = var.vault_install_dir
@@ -145,9 +201,9 @@ resource "enos_remote_exec" "ssh_create_role" {
 
 # Sign SSH key
 resource "enos_remote_exec" "ssh_sign_key" {
-  depends_on = [enos_remote_exec.ssh_create_role]
+  depends_on = [enos_remote_exec.ssh_create_ca_role]
   environment = {
-    REQPATH           = "ssh/sign/${local.ssh_role_name}"
+    REQPATH           = "ssh/sign/ssh_role_ca"
     PAYLOAD           = jsonencode({ public_key = local.ssh_public_key })
     VAULT_ADDR        = var.vault_addr
     VAULT_TOKEN       = var.vault_root_token
@@ -165,9 +221,9 @@ resource "enos_remote_exec" "ssh_sign_key" {
 
 # Generate SSH OTP credential
 resource "enos_remote_exec" "ssh_generate_otp" {
-  depends_on = [enos_remote_exec.ssh_create_role]
+  depends_on = [enos_remote_exec.ssh_create_otp_role]
   environment = {
-    REQPATH           = "ssh/creds/${local.ssh_role_name}"
+    REQPATH           = "ssh/creds/ssh_role_otp"
     PAYLOAD           = jsonencode({ ip = local.ssh_test_ip, username = local.ssh_test_user })
     VAULT_ADDR        = var.vault_addr
     VAULT_TOKEN       = var.vault_root_token
@@ -185,10 +241,10 @@ resource "enos_remote_exec" "ssh_generate_otp" {
 
 # Generate SSH Certificate and Key
 resource "enos_remote_exec" "ssh_generate_cert" {
-  depends_on = [enos_remote_exec.ssh_create_role]
+  depends_on = [enos_remote_exec.ssh_create_ca_role]
 
   environment = {
-    REQPATH           = "ssh/issue/${local.ssh_role_name}"
+    REQPATH           = "ssh/issue/ssh_role_ca"
     PAYLOAD           = jsonencode({ key_type = local.cert_key_type })
     VAULT_ADDR        = var.vault_addr
     VAULT_TOKEN       = var.vault_root_token
@@ -196,6 +252,46 @@ resource "enos_remote_exec" "ssh_generate_cert" {
   }
 
   scripts = [abspath("${path.module}/../../scripts/write-payload.sh")]
+
+  transport = {
+    ssh = {
+      host = var.leader_host.public_ip
+    }
+  }
+}
+
+# Delete SSH CA role
+resource "enos_remote_exec" "ssh_delete_ca_role" {
+  depends_on = [enos_remote_exec.ssh_list_roles]
+
+  environment = {
+    REQPATH           = "ssh/roles/${local.ca_role_name}"
+    VAULT_ADDR        = var.vault_addr
+    VAULT_TOKEN       = var.vault_root_token
+    VAULT_INSTALL_DIR = var.vault_install_dir
+  }
+
+  scripts = [abspath("${path.module}/../../scripts/delete-payload.sh")]
+
+  transport = {
+    ssh = {
+      host = var.leader_host.public_ip
+    }
+  }
+}
+
+# Delete SSH OTP role
+resource "enos_remote_exec" "ssh_delete_otp_role" {
+  depends_on = [enos_remote_exec.ssh_list_roles]
+
+  environment = {
+    REQPATH           = "ssh/roles/${local.otp_role_name}"
+    VAULT_ADDR        = var.vault_addr
+    VAULT_TOKEN       = var.vault_root_token
+    VAULT_INSTALL_DIR = var.vault_install_dir
+  }
+
+  scripts = [abspath("${path.module}/../../scripts/delete-payload.sh")]
 
   transport = {
     ssh = {

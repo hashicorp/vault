@@ -488,6 +488,7 @@ scenario "proxy" {
       vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
+      vault_edition     = matrix.edition
     }
   }
 

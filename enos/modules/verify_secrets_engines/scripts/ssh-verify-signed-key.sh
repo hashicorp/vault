@@ -15,9 +15,8 @@ fail() {
 [[ -z "$VAULT_TOKEN" ]] && fail "VAULT_TOKEN env variable has not been set"
 [[ -z "$VAULT_INSTALL_DIR" ]] && fail "VAULT_INSTALL_DIR env variable has not been set"
 
-SIGNED_KEY_PATH="/signed-key.pub"
-
-# Save the signed key to a file
+SIGNED_KEY_PATH=$(mktemp)
+trap 'rm -f "$SIGNED_KEY_PATH"' EXIT
 echo "$SIGNED_KEY" > "$SIGNED_KEY_PATH"
 
 # Inspect the signed key
