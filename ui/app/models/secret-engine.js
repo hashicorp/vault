@@ -10,7 +10,7 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
-import { ALL_ENGINES, isAddonEngine } from 'vault/utils/all-engines-metadata';
+import { isAddonEngine } from 'vault/utils/all-engines-metadata';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 
 const LINKED_BACKENDS = supportedSecretBackends();
@@ -234,9 +234,7 @@ export default class SecretEngineModel extends Model {
         // no ttl options for keymgmt
         optionFields = [...CORE_OPTIONS, 'config.allowedManagedKeys', ...STANDARD_CONFIG];
         break;
-      case ALL_ENGINES.filter((engine) => engine.isWIF)
-        .map((engine) => engine.type)
-        .find((engine) => engine === this.engineType):
+      case engineDisplayData(this.engineType).isWIF ? this.engineType : '':
         defaultFields = ['path'];
         optionFields = [
           ...CORE_OPTIONS,
