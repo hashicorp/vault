@@ -23,7 +23,8 @@ import { create } from 'ember-cli-page-object';
 import flashMessage from 'vault/tests/pages/components/flash-message';
 import ss from 'vault/tests/pages/components/search-select';
 import { disableReplication } from 'vault/tests/helpers/replication';
-import { GENERAL } from '../helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+
 const searchSelect = create(ss);
 const flash = create(flashMessage);
 
@@ -75,7 +76,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
 
-    await click('[data-test-replication-enable]');
+    await click(GENERAL.submitButton);
 
     await pollCluster(this.owner);
 
@@ -99,7 +100,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     // click into the added secondary's mount filter config
     await click('[data-test-replication-link="secondaries"]');
 
-    await click('[data-test-popup-menu-trigger]');
+    await click(GENERAL.menuTrigger);
 
     await click('[data-test-replication-path-filter-link]');
 
@@ -195,7 +196,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     // enable perf replication
     await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
-    await click('[data-test-replication-enable]');
+    await click(GENERAL.submitButton);
 
     await pollCluster(this.owner);
 
@@ -204,13 +205,12 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
     await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
 
-    await click('[data-test-replication-enable]');
+    await click(GENERAL.submitButton);
 
     await pollCluster(this.owner);
     await visit('/vault/replication/dr/manage');
 
-    await click('[data-test-demote-replication] [data-test-replication-action-trigger]');
-
+    await click(GENERAL.button('demote'));
     assert.ok(findAll('[data-test-demote-warning]').length, 'displays the demotion warning');
   });
 
@@ -220,7 +220,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await visit('/vault/replication/dr');
 
     await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
-    await click('[data-test-replication-enable]');
+    await click(GENERAL.submitButton);
     await settled(); // eslint-disable-line
     await pollCluster(this.owner);
     await visit('/vault/replication-dr-promote/details');
@@ -243,7 +243,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('[data-test-replication-type-select="performance"]');
 
     await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
-    await click('[data-test-replication-enable]');
+    await click(GENERAL.submitButton);
 
     await pollCluster(this.owner);
     await settled();
@@ -301,7 +301,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('[data-test-replication-type-select="performance"]');
 
     await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
-    await click('[data-test-replication-enable]');
+    await click(GENERAL.submitButton);
 
     await pollCluster(this.owner);
     await settled();
@@ -316,7 +316,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('[data-test-sidebar-nav-link="Disaster Recovery"]');
     // let the controller set replicationMode in afterModel
     await waitFor('[data-test-replication-enable-form]');
-    await click('[data-test-replication-enable]');
+    await click(GENERAL.submitButton);
 
     await pollCluster(this.owner);
     await settled();
@@ -347,7 +347,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('[data-test-replication-type-select="performance"]');
 
     await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
-    await click('[data-test-replication-enable]');
+    await click(GENERAL.submitButton);
 
     await pollCluster(this.owner);
     await settled();
@@ -356,12 +356,12 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await click('[data-test-replication-link="manage"]');
 
     // open demote modal
-    await click('[data-test-demote-replication] [data-test-replication-action-trigger]');
+    await click(GENERAL.button('demote'));
 
     // enter confirmation text
     await fillIn('[data-test-confirmation-modal-input="Demote to secondary?"]', 'Performance');
     // Click confirm button
-    await click('[data-test-confirm-button="Demote to secondary?"]');
+    await click(GENERAL.confirmButton);
 
     await pollCluster(this.owner);
     await settled();

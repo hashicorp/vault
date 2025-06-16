@@ -205,7 +205,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
         });
         await fillIn(GENERAL.inputByAttr('subscriptionId'), 'subscription-id-updated-again');
         await click(GENERAL.enableField('clientSecret'));
-        await click('[data-test-button="toggle-masked"]');
+        await click(GENERAL.button('toggle-masked'));
         await fillIn(GENERAL.inputByAttr('clientSecret'), 'client-secret-updated');
         await click(GENERAL.submitButton);
         // cleanup

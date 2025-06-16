@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentRouteName, visit, click, fillIn, currentURL, findAll } from '@ember/test-helpers';
+import { currentRouteName, visit, click, fillIn, currentURL, findAll, waitFor } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
@@ -220,10 +220,10 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     await click(GENERAL.linkTo('create-namespace'));
     assert.dom(GENERAL.inputByAttr('path')).exists('Create namespace input field is displayed');
     await fillIn(GENERAL.inputByAttr('path'), testNS);
-    assert.dom('[data-test-edit-form-submit]').exists('Save button is displayed');
-    await click('[data-test-edit-form-submit]');
+    assert.dom(GENERAL.submitButton).exists('Save button is displayed');
+    await click(GENERAL.submitButton);
 
-    // Verify test-create-ns does not exist in the Manage Namespace page
+    // Verify test-create-ns exists in the Manage Namespace page
     await fillIn(GENERAL.filterInputExplicit, testNS);
     await click(GENERAL.filterInputExplicitSearch);
     assert.dom('.list-item-row').exists({ count: 1 }, `"${testNS}" namespace is displayed on the page`);
@@ -255,6 +255,7 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
 
     // Verify test-create-ns does not exist in the Namespace Picker
     await click(GENERAL.toggleInput('namespace-id'));
+    await waitFor(NAMESPACE_PICKER_SELECTORS.searchInput);
     await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, testNS);
     assert.strictEqual(
       findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
@@ -337,13 +338,6 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     assert
       .dom(switchNamespaceButton)
       .hasText('Switch to namespace', 'Allow users to switch to different namespace');
-    assert
-      .dom(`${switchNamespaceButton} a`)
-      .hasAttribute(
-        'href',
-        `http://localhost:7357/ui/vault/dashboard?namespace=${namespace}`,
-        'Switch namespace button has the correct href attribute'
-      );
 
     // Verify that the user can delete the namespace
     assert
@@ -352,5 +346,30 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
 
     // Cleanup: Delete namespace(s) via the CLI
     await deleteNSFromPaths([namespace]);
+  });
+
+  test('it should render updated namespace after switching from access page', async function (assert) {
+    // Setup: Create namespace(s) via the CLI
+    const testNS = 'test-create-ns';
+    await createNSFromPaths([testNS]);
+
+    // Go to the manage namespaces page
+    await visit('/vault/access/namespaces');
+
+    // Hack: Trigger refresh internal namespaces endpoint
+    await click(GENERAL.toggleInput('namespace-id'));
+    await click(GENERAL.button('Refresh list'));
+
+    // Switch namespace
+    await click(GENERAL.menuTrigger);
+    await click(GENERAL.menuItem('switch'));
+
+    // Verify that we switched namespaces
+    await click(GENERAL.toggleInput('namespace-id'));
+    assert.dom('[data-test-badge-namespace]').hasText(testNS);
+    assert.strictEqual(currentRouteName(), 'vault.cluster.dashboard', 'navigates to the correct route');
+
+    // Cleanup: Delete namespace(s) via the CLI
+    await deleteNSFromPaths([testNS]);
   });
 });
