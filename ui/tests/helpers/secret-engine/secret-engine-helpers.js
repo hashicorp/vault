@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn } from '@ember/test-helpers';
+import { click, fillIn, find } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { stringArrayToCamelCase } from 'vault/helpers/string-array-to-camel';
@@ -199,6 +199,16 @@ export const fillInAzureConfig = async (withWif = false) => {
   await fillIn(GENERAL.inputByAttr('subscriptionId'), 'subscription-id');
   await fillIn(GENERAL.inputByAttr('tenantId'), 'tenant-id');
   await fillIn(GENERAL.inputByAttr('clientId'), 'client-id');
+  // options may already be toggled so check before clicking
+  if (!find(GENERAL.inputByAttr('environment'))) {
+    await click(GENERAL.toggleGroup('More options'));
+  }
+  await fillIn(GENERAL.inputByAttr('environment'), 'AZUREPUBLICCLOUD');
+  // similarly, the root password TTL may already be toggled
+  if (!find(GENERAL.ttl.input('Root password TTL'))) {
+    await click(GENERAL.ttl.toggle('Root password TTL'));
+  }
+  await fillIn(GENERAL.ttl.input('Root password TTL'), '200');
 
   if (withWif) {
     await click(SES.wif.accessType('wif')); // toggle to wif
@@ -207,10 +217,6 @@ export const fillInAzureConfig = async (withWif = false) => {
     await fillIn(GENERAL.ttl.input('Identity token TTL'), '7200');
   } else {
     await fillIn(GENERAL.inputByAttr('clientSecret'), 'client-secret');
-    await click(GENERAL.toggleGroup('More options'));
-    await fillIn(GENERAL.inputByAttr('environment'), 'AZUREPUBLICCLOUD');
-    await click(GENERAL.ttl.toggle('Root password TTL'));
-    await fillIn(GENERAL.ttl.input('Root password TTL'), '200');
   }
 };
 
