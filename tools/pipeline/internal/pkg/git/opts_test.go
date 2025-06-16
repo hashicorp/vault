@@ -631,6 +631,128 @@ func TestOptsStringers(t *testing.T) {
 			},
 			"--show-current-patch",
 		},
+		"remote": {
+			&RemoteOpts{
+				Verbose: true,
+			},
+			"-v",
+		},
+		"remote add": {
+			&RemoteOpts{
+				Command: RemoteCommandAdd,
+				Track:   []string{"branch-a", "branch-b"},
+				Master:  "main",
+				Fetch:   true,
+				Tags:    true,
+				NoTags:  true,
+				Name:    "origin",
+				URL:     "git@github.com:hashicorp/vault.git",
+			},
+			"add -f --tags --no-tags -m main -t branch-a -t branch-b origin git@github.com:hashicorp/vault.git",
+		},
+		"remote rename": {
+			&RemoteOpts{
+				Command:    RemoteCommandRename,
+				Progress:   true,
+				NoProgress: true,
+				Old:        "old-remote",
+				New:        "new-remote",
+			},
+			"rename --progress --no-progress old-remote new-remote",
+		},
+		"remote remove": {
+			&RemoteOpts{
+				Command: RemoteCommandRemove,
+				Name:    "remote",
+			},
+			"remove remote",
+		},
+		"remote set-head": {
+			&RemoteOpts{
+				Command: RemoteCommandSetHead,
+				Name:    "my-remote",
+				Auto:    true,
+				Delete:  true,
+				Branch:  "my-branch",
+			},
+			"set-head my-remote --auto --delete my-branch",
+		},
+		"remote set-branches": {
+			&RemoteOpts{
+				Command:  RemoteCommandSetBranches,
+				Add:      true,
+				Name:     "my-remote",
+				Branch:   "branch-a",
+				Branches: []string{"branch-b", "branch-c"},
+			},
+			"set-branches --add my-remote branch-a branch-b branch-c",
+		},
+		"remote get-url": {
+			&RemoteOpts{
+				Command: RemoteCommandGetURL,
+				Push:    true,
+				All:     true,
+				Name:    "my-remote",
+			},
+			"get-url --push --all my-remote",
+		},
+		"remote set-url oldurl": {
+			&RemoteOpts{
+				Command: RemoteCommandSetURL,
+				Push:    true,
+				Name:    "my-remote",
+				NewURL:  "git@github.com:hashicorp/vault-enterprise.git",
+				OldURL:  "git@github.com:hashicorp/vault.git",
+			},
+			"set-url --push my-remote git@github.com:hashicorp/vault-enterprise.git git@github.com:hashicorp/vault.git",
+		},
+		"remote set-url add": {
+			&RemoteOpts{
+				Command: RemoteCommandSetURL,
+				Add:     true,
+				Push:    true,
+				Name:    "my-remote",
+				NewURL:  "git@github.com:hashicorp/vault-enterprise.git",
+			},
+			"set-url --add --push my-remote git@github.com:hashicorp/vault-enterprise.git",
+		},
+		"remote set-url delete": {
+			&RemoteOpts{
+				Command: RemoteCommandSetURL,
+				Delete:  true,
+				Push:    true,
+				Name:    "my-remote",
+				URL:     "git@github.com:hashicorp/vault-enterprise.git",
+			},
+			"set-url --delete --push my-remote git@github.com:hashicorp/vault-enterprise.git",
+		},
+		"remote show": {
+			&RemoteOpts{
+				Command: RemoteCommandShow,
+				Verbose: true,
+				NoQuery: true,
+				Name:    "my-remote",
+			},
+			"-v show -n my-remote",
+		},
+		"remote prune": {
+			&RemoteOpts{
+				Command: RemoteCommandPrune,
+				NoQuery: true,
+				DryRun:  true,
+				Name:    "branch-a",
+				Names:   []string{"branch-b", "branch-c"},
+			},
+			"prune -n --dry-run branch-a branch-b branch-c",
+		},
+		"remote update": {
+			&RemoteOpts{
+				Command: RemoteCommandUpdate,
+				Verbose: true,
+				Prune:   true,
+			},
+			"-v update --prune",
+		},
 		"reset": {
 			&ResetOpts{
 				Mode:      ResetModeHard,
