@@ -199,7 +199,8 @@ variable setting will take precedence.
 As of 1.20.0, clusters now report the `development_cluster` metadata field, which
 indicates whether the cluster is used for development (non-production) purposes. By default, the field is set to `false`,
 indicating the cluster is running in a production environment. Changing the value is done via HCL configuration by adding
-the `development_cluster` field to the `license` parameter within the `reporting` stanza.
+the `development_cluster` field to the `license` parameter within the `reporting` stanza. Only set the field to `true` if
+the cluster is not used for production purposes -- there are EULA implications if set on a production cluster.
 
 ```hcl
 reporting {
@@ -229,7 +230,7 @@ by all clusters in the replication group. Inconsistent configurations between cl
 reported `development_cluster` value when the primary cluster changes.
 
 Within each cluster, each node must have the same `development_cluster` setting in its configuration to be consistent.
-In the event of leadership change, nodes will use its server configuration to determine the value to report.
+In the event of leadership change, the active node will use its own server configuration to determine the value to report.
 Inconsistent configuration between nodes will change the `development_cluster` setting reported upon active unseal.
 
 </Warning>
@@ -279,7 +280,7 @@ HashiCorp collects the following utilization data as JSON payloads:
     </Note>
 
    - `cluster_id` - The cluster UUID as shown by `vault status` on the reporting
-     cluster
+     cluster.
    - `development_cluster` - Whether the cluster is operating as a development (non-production) cluster.
 
 <CodeBlockConfig hideClipboard>
