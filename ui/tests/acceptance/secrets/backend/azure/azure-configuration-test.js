@@ -369,7 +369,11 @@ module('Acceptance | Azure | configuration', function (hooks) {
 
       test('it should transition and show issuer error if config saved but issuer encountered an error', async function (assert) {
         const path = `azure-${this.uid}`;
+        const oldIssuer = 'http://old.issuer';
 
+        this.server.get('/identity/oidc/config', () => {
+          return { data: { issuer: oldIssuer } };
+        });
         this.server.post('/identity/oidc/config', () => {
           return overrideResponse(400, { errors: ['bad request'] });
         });
@@ -398,7 +402,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
           .hasText('2 hours', 'Identity token TTL has been set.');
         assert
           .dom(GENERAL.infoRowValue('Issuer'))
-          .doesNotExist('Issuer is not displayed since it was not saved.');
+          .hasText(oldIssuer, 'Issuer is shows the old saved value not the new value that errors on save.');
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
       });

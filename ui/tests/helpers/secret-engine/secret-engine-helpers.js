@@ -199,10 +199,6 @@ export const fillInAzureConfig = async (withWif = false) => {
   await fillIn(GENERAL.inputByAttr('subscriptionId'), 'subscription-id');
   await fillIn(GENERAL.inputByAttr('tenantId'), 'tenant-id');
   await fillIn(GENERAL.inputByAttr('clientId'), 'client-id');
-  await click(GENERAL.toggleGroup('More options'));
-  await fillIn(GENERAL.inputByAttr('environment'), 'AZUREPUBLICCLOUD');
-  await click(GENERAL.ttl.toggle('Root password TTL'));
-  await fillIn(GENERAL.ttl.input('Root password TTL'), '200');
 
   if (withWif) {
     await click(SES.wif.accessType('wif')); // toggle to wif
@@ -211,6 +207,10 @@ export const fillInAzureConfig = async (withWif = false) => {
     await fillIn(GENERAL.ttl.input('Identity token TTL'), '7200');
   } else {
     await fillIn(GENERAL.inputByAttr('clientSecret'), 'client-secret');
+    await click(GENERAL.toggleGroup('More options'));
+    await fillIn(GENERAL.inputByAttr('environment'), 'AZUREPUBLICCLOUD');
+    await click(GENERAL.ttl.toggle('Root password TTL'));
+    await fillIn(GENERAL.ttl.input('Root password TTL'), '200');
   }
 };
 
