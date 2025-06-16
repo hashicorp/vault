@@ -16,7 +16,7 @@ export interface EngineDisplayData {
   mountCategory: string[];
   requiresEnterprise?: boolean;
   isConfigurable?: boolean; // for secret engines that have their own configuration page and actions. - These engines do not exist in their own Ember engine.
-  isConfigurationOnly?: boolean; // The UI only supports configuration views for these secrets engines. The CLI must be used to manage other engine resources (i.e. roles, credentials).
+  isOnlyMountable?: boolean; // The UI only supports configuration views for these secrets engines. The CLI must be used to manage other engine resources (i.e. roles, credentials).
   type: string;
   value?: string;
 }
@@ -76,7 +76,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'cloud',
     displayName: 'Azure',
     glyph: 'azure-color',
-    isConfigurationOnly: true,
+    isOnlyMountable: true,
     isConfigurable: true,
     isWIF: true,
     mountCategory: ['auth', 'secret'],
@@ -113,7 +113,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'cloud',
     displayName: 'Google Cloud',
     glyph: 'gcp-color',
-    isConfigurationOnly: true,
+    isOnlyMountable: true,
     isConfigurable: true,
     isWIF: true,
     mountCategory: ['auth', 'secret'],
