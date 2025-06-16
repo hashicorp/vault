@@ -196,14 +196,17 @@ resource "enos_remote_exec" "auth_write_ldap_config" {
   }
 }
 
-# Update the ldap config on all nodes
-# This ensures that a write to the non-leader nodes will not panic.
+# Update the ldap config. Choose a random node each time to ensure that writes
+# to all nodes are forwarded correctly and behave as we expect.
+resource "random_integer" "auth_update_ldap_config_idx" {
+  min = 0
+  max = length(var.hosts) - 1
+}
+
 resource "enos_remote_exec" "auth_update_ldap_config" {
   depends_on = [
-    enos_remote_exec.auth_enable_ldap
+    enos_remote_exec.auth_write_ldap_config
   ]
-
-  for_each = var.hosts
 
   environment = {
     AUTH_PATH         = local.auth_ldap_path
@@ -224,7 +227,7 @@ resource "enos_remote_exec" "auth_update_ldap_config" {
 
   transport = {
     ssh = {
-      host = each.value.public_ip
+      host = var.hosts[random_integer.auth_update_ldap_config_idx.result].public_ip
     }
   }
 }

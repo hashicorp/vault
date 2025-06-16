@@ -13,6 +13,8 @@ import { assert } from '@ember/debug';
 import { addToArray } from 'vault/helpers/add-to-array';
 import { removeFromArray } from 'vault/helpers/remove-from-array';
 import { isEmpty } from '@ember/utils';
+import { presence } from 'vault/utils/forms/validators';
+import { get } from '@ember/object';
 
 /**
  * @module FormField
@@ -79,7 +81,9 @@ export default class FormFieldComponent extends Component {
       'Form is attempting to modify an ID. Ember-data does not allow this.',
       valuePath.toLowerCase() !== 'id'
     );
-    const modelValue = model[valuePath];
+    assert('@name is required', presence(attr.name));
+    assert('@model (or resource object being updated) is required', presence(model));
+    const modelValue = get(model, valuePath);
     this.showToggleTextInput = !!modelValue;
     this.toggleInputEnabled = !!modelValue;
   }
@@ -144,13 +148,7 @@ export default class FormFieldComponent extends Component {
   // used in the label element next to the form element
   get labelString() {
     const label = this.args.attr.options?.label || '';
-    if (label) {
-      return label;
-    }
-    if (this.args.attr.name) {
-      return capitalize([humanize([dasherize([this.args.attr.name])])]);
-    }
-    return '';
+    return label ? label : capitalize([humanize([dasherize([this.args.attr.name])])]);
   }
 
   // both the path to mutate on the model, and the path to read the value from
