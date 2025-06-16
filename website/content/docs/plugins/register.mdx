@@ -16,6 +16,11 @@ If you register an external plugin with the same name as a pre-registered plugin
 Vault defaults to the manually registered plugin when you enable a new mount
 with that name.
 
+Vault Enterprise v1.20.0 introduces the `download` **(BETA)** parameter to the
+plugin register API. Vault downloads the plugin binary from the
+[HashiCorp release page](https://releases.hashicorp.com/) when you set `download`
+to `true`. See [`download`](/vault/api-docs/system/plugins-catalog#download) for
+more information.
 
 ## Before you start
 
