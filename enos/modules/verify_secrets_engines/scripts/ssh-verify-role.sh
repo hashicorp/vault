@@ -9,11 +9,36 @@ fail() {
   exit 1
 }
 
+# Common required vars
 [[ -z "$ROLE_NAME" ]] && fail "ROLE_NAME env variable has not been set"
 [[ -z "$KEY_TYPE" ]] && fail "KEY_TYPE env variable has not been set"
 [[ -z "$VAULT_ADDR" ]] && fail "VAULT_ADDR env variable has not been set"
 [[ -z "$VAULT_TOKEN" ]] && fail "VAULT_TOKEN env variable has not been set"
 [[ -z "$VAULT_INSTALL_DIR" ]] && fail "VAULT_INSTALL_DIR env variable has not been set"
+
+# Always required for both types
+[[ -z "$DEFAULT_USER" ]] && fail "DEFAULT_USER env variable has not been set"
+[[ -z "$DEFAULT_USER_TEMPLATE" ]] && fail "DEFAULT_USER_TEMPLATE env variable has not been set"
+[[ -z "$ALLOWED_USERS" ]] && fail "ALLOWED_USERS env variable has not been set"
+[[ -z "$ALLOWED_USERS_TEMPLATE" ]] && fail "ALLOWED_USERS_TEMPLATE env variable has not been set"
+[[ -z "$TTL" ]] && fail "TTL env variable has not been set"
+[[ -z "$MAX_TTL" ]] && fail "MAX_TTL env variable has not been set"
+[[ -z "$PORT" ]] && fail "PORT env variable has not been set"
+
+# Type-specific required vars
+if [[ "$KEY_TYPE" == "otp" ]]; then
+  [[ -z "$CIDR_LIST" ]] && fail "CIDR_LIST env variable has not been set"
+  [[ -z "$EXCLUDE_CIDR_LIST" ]] && fail "EXCLUDE_CIDR_LIST env variable has not been set"
+elif [[ "$KEY_TYPE" == "ca" ]]; then
+  [[ -z "$KEY_ID_FORMAT" ]] && fail "KEY_ID_FORMAT env variable has not been set"
+  [[ -z "$ALLOWED_EXTENSIONS" ]] && fail "ALLOWED_EXTENSIONS env variable has not been set"
+  [[ -z "$DEFAULT_EXTENSIONS" ]] && fail "DEFAULT_EXTENSIONS env variable has not been set"
+  [[ -z "$ALLOW_USER_CERTIFICATES" ]] && fail "ALLOW_USER_CERTIFICATES env variable has not been set"
+  [[ -z "$ALLOW_HOST_CERTIFICATES" ]] && fail "ALLOW_HOST_CERTIFICATES env variable has not been set"
+  [[ -z "$ALLOW_USER_KEY_IDS" ]] && fail "ALLOW_USER_KEY_IDS env variable has not been set"
+  [[ -z "$ALLOW_EMPTY_PRINCIPALS" ]] && fail "ALLOW_EMPTY_PRINCIPALS env variable has not been set"
+  [[ -z "$ALGORITHM_SIGNER" ]] && fail "ALGORITHM_SIGNER env variable has not been set"
+fi
 
 binpath=${VAULT_INSTALL_DIR}/vault
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
@@ -26,13 +51,25 @@ fi
 key_type=$(echo "$output" | jq -r '.data.key_type')
 default_user=$(echo "$output" | jq -r '.data.default_user')
 allowed_users=$(echo "$output" | jq -r '.data.allowed_users')
-cidr_list=$(echo "$output" | jq -r '.data.cidr_list')
 port=$(echo "$output" | jq -r '.data.port')
 default_user_template=$(echo "$output" | jq -r '.data.default_user_template')
 allowed_users_template=$(echo "$output" | jq -r '.data.allowed_users_template')
-exclude_cidr_list=$(echo "$output" | jq -r '.data.exclude_cidr_list')
 ttl=$(echo "$output" | jq -r '.data.ttl')
 max_ttl=$(echo "$output" | jq -r '.data.max_ttl')
+
+if [[ "$KEY_TYPE" == "otp" ]]; then
+  cidr_list=$(echo "$output" | jq -r '.data.cidr_list')
+  exclude_cidr_list=$(echo "$output" | jq -r '.data.exclude_cidr_list')
+elif [[ "$KEY_TYPE" == "ca" ]]; then
+  key_id_format=$(echo "$output" | jq -r '.data.key_id_format')
+  allowed_extensions=$(echo "$output" | jq -r '.data.allowed_extensions')
+  default_extensions=$(echo "$output" | jq -r '.data.default_extensions')
+  allow_user_certificates=$(echo "$output" | jq -r '.data.allow_user_certificates')
+  allow_host_certificates=$(echo "$output" | jq -r '.data.allow_host_certificates')
+  allow_user_key_ids=$(echo "$output" | jq -r '.data.allow_user_key_ids')
+  allow_empty_principals=$(echo "$output" | jq -r '.data.allow_empty_principals')
+  algorithm_signer=$(echo "$output" | jq -r '.data.algorithm_signer')
+fi
 
 # Verify
 [[ "$key_type" != "$KEY_TYPE" ]] && fail "Key type mismatch: expected $KEY_TYPE, got $key_type"

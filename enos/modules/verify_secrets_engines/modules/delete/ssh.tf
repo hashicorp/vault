@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 # Delete SSH CA role
 resource "enos_remote_exec" "ssh_delete_ca_role" {
 
