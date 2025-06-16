@@ -70,11 +70,7 @@
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
       <Hds::ButtonSet>
-        <Hds::Button
-          @text={{if (eq @mode "create") "Create template" "Save"}}
-          type="submit"
-          data-test-template-transform-create
-        />
+        <Hds::Button @text={{if (eq @mode "create") "Create template" "Save"}} type="submit" data-test-submit />
         {{#if (eq @mode "create")}}
           <Hds::Button
             @text="Cancel"
