@@ -128,7 +128,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
         await click(GENERAL.submitButton);
         assert.true(
           this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
-          'Success flash message is rendered showing the azure model configuration was saved.'
+          'Success flash message is rendered showing the azure configuration was saved.'
         );
         assert
           .dom(GENERAL.infoRowValue('Root password TTL'))
@@ -307,8 +307,8 @@ module('Acceptance | Azure | configuration', function (hooks) {
     });
 
     module('create', function () {
-      test('it should transition and save issuer if model was not changed but issuer was', async function (assert) {
-        assert.expect(3);
+      test('it should transition and save issuer if config was not changed but issuer was', async function (assert) {
+        assert.expect(2);
         const path = `azure-${this.uid}`;
         await enablePage.enable(this.type, path);
         const newIssuer = `http://new.issuer.${this.uid}`;
@@ -324,9 +324,6 @@ module('Acceptance | Azure | configuration', function (hooks) {
             ],
           };
         });
-        this.server.post(configUrl(this.type, path), () => {
-          throw new Error('post request was incorrectly made to update the azure config model');
-        });
 
         await click(SES.configTab);
         await click(SES.configure);
@@ -335,21 +332,14 @@ module('Acceptance | Azure | configuration', function (hooks) {
         await click(GENERAL.submitButton);
         await click(SES.wif.issuerWarningSave);
         assert.true(
-          this.flashSuccessSpy.calledWith(`Issuer saved successfully`),
-          'Shows issuer saved message'
+          this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
+          'Success message renders'
         );
-
-        assert
-          .dom(GENERAL.emptyStateTitle)
-          .hasText(
-            'Azure not configured',
-            'Empty state message is displayed because the model was not saved only the issuer'
-          );
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
       });
 
-      test('it should transition and save model if the model was changed but issuer was not', async function (assert) {
+      test('it should transition on save if config was changed but issuer was not', async function (assert) {
         assert.expect(4);
         const path = `azure-${this.uid}`;
         await enablePage.enable(this.type, path);
@@ -365,7 +355,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
         assert.dom(SES.wif.issuerWarningModal).doesNotExist('issuer warning modal does not show');
         assert.true(
           this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
-          'Success flash message is rendered showing the azure model configuration was saved.'
+          'Success flash message is rendered showing the azure configuration was saved.'
         );
         assert
           .dom(GENERAL.infoRowValue('Identity token audience'))
@@ -377,29 +367,24 @@ module('Acceptance | Azure | configuration', function (hooks) {
         await runCmd(`delete sys/mounts/${path}`);
       });
 
-      test('it should transition and show issuer error if model saved but issuer encountered an error', async function (assert) {
+      test('it should transition and show issuer error if config saved but issuer encountered an error', async function (assert) {
         const path = `azure-${this.uid}`;
-        const oldIssuer = 'http://old.issuer';
-        await enablePage.enable(this.type, path);
-        this.server.get('/identity/oidc/config', () => {
-          return { data: { issuer: 'http://old.issuer' } };
-        });
+
         this.server.post('/identity/oidc/config', () => {
           return overrideResponse(400, { errors: ['bad request'] });
         });
 
+        await enablePage.enable(this.type, path);
         await click(SES.configTab);
         await click(SES.configure);
         await fillInAzureConfig(true);
-        assert
-          .dom(GENERAL.inputByAttr('issuer'))
-          .hasValue(oldIssuer, 'issuer defaults to previously saved value');
         await fillIn(GENERAL.inputByAttr('issuer'), 'http://new.issuererrors');
         await click(GENERAL.submitButton);
         await click(SES.wif.issuerWarningSave);
+
         assert.true(
           this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
-          'Success flash message is rendered showing the azure model configuration was saved.'
+          'Success flash message is rendered showing the azure configuration was saved.'
         );
         assert.true(
           this.flashDangerSpy.calledWith(`Issuer was not saved: bad request`),
@@ -413,36 +398,27 @@ module('Acceptance | Azure | configuration', function (hooks) {
           .hasText('2 hours', 'Identity token TTL has been set.');
         assert
           .dom(GENERAL.infoRowValue('Issuer'))
-          .hasText(oldIssuer, 'Issuer is shows the old saved value not the new value that errors on save.');
+          .doesNotExist('Issuer is not displayed since it was not saved.');
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
       });
 
-      test('it should NOT transition and show error if model errored but issuer was saved', async function (assert) {
+      test('it should NOT transition and show error if config errors', async function (assert) {
         const path = `azure-${this.uid}`;
         const newIssuer = `http://new.issuer.${this.uid}`;
-        const oldIssuer = 'http://old.issuer';
-        await enablePage.enable(this.type, path);
-        this.server.get('/identity/oidc/config', () => {
-          return { data: { issuer: oldIssuer } };
-        });
+
         this.server.post(configUrl(this.type, path), () => {
           return overrideResponse(400, { errors: ['bad request'] });
         });
 
+        await enablePage.enable(this.type, path);
         await click(SES.configTab);
         await click(SES.configure);
         await fillInAzureConfig(true);
-        assert
-          .dom(GENERAL.inputByAttr('issuer'))
-          .hasValue(oldIssuer, 'issuer defaults to previously saved value');
         await fillIn(GENERAL.inputByAttr('issuer'), newIssuer);
         await click(GENERAL.submitButton);
         await click(SES.wif.issuerWarningSave);
-        assert.true(
-          this.flashSuccessSpy.calledWith(`Issuer saved successfully`),
-          'Success flash message is rendered showing the issuer configuration was saved.'
-        );
+
         assert.dom(GENERAL.messageError).hasText('Error bad request', 'Error message is displayed.');
         assert.strictEqual(
           currentURL(),

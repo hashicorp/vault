@@ -80,9 +80,10 @@ export default class ConfigureWif extends Component<Args> {
       });
       // if wif or account only attributes are defined, disable the user's ability to change the access type
       this.disableAccessType = isWifPluginConfigured || isAccountPluginConfigured;
-      // cache the issuer to check if it has been changed later
-      this.originalIssuer = this.args.configForm['issuer'] as string | undefined;
     }
+
+    // cache the issuer to check if it has been changed later
+    this.originalIssuer = this.args.configForm.data['issuer'] as string | undefined;
   }
 
   @action continueSubmitForm() {
@@ -124,7 +125,9 @@ export default class ConfigureWif extends Component<Args> {
         const { data } = this.args.configForm.toJSON();
         const { issuer } = data;
         await this.saveConfig(data);
-        await this.updateIssuer(issuer as string);
+        if (this.originalIssuer !== issuer) {
+          await this.updateIssuer(issuer as string);
+        }
         this.flashMessages.success(`Successfully saved ${this.args.backendPath}'s configuration.`);
         this.transition();
       } catch (e) {
