@@ -106,7 +106,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(SES.configTab);
       await click(SES.configure);
       await fillInAwsConfig('withWif');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert.dom(SES.wif.issuerWarningModal).exists('issuer warning modal exists');
       await click(SES.wif.issuerWarningSave);
       // three flash messages, the first is about mounting the engine, only care about the last two
@@ -160,7 +160,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(SES.configTab);
       await click(SES.configure);
       await fillInAwsConfig('withAccess');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert.true(
         this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
         'Success flash message is rendered showing the configuration was saved.'
@@ -187,7 +187,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       // manually fill in non-access type specific fields on root config so we can exclude Max Retries.
       await click(GENERAL.toggleGroup('Root config options'));
       await fillIn(GENERAL.inputByAttr('region'), 'eu-central-1');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert
         .dom(GENERAL.infoRowValue('Identity token TTL'))
         .hasText('0', 'Identity token TTL shows default.');
@@ -235,7 +235,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(SES.configTab);
       await click(SES.configure);
       await fillInAwsConfig('withAccess');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert.dom(GENERAL.infoRowValue('Access key')).hasText('foo', 'Access key is foo');
       assert
         .dom(GENERAL.infoRowValue('Region'))
@@ -248,7 +248,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await fillIn(GENERAL.inputByAttr('region'), 'ap-southeast-2');
       // add lease config details
       await fillInAwsConfig('withLease');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert
         .dom(GENERAL.infoRowValue('Access key'))
         .hasText('not-foo', 'Access key has been updated to not-foo');
@@ -269,7 +269,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(SES.configTab);
       await click(SES.configure);
       await fillInAwsConfig('withLease');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
 
       assert.true(
         this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
@@ -330,7 +330,7 @@ module('Acceptance | aws | configuration', function (hooks) {
         await click(SES.configure);
         await fillInAwsConfig('withAccess');
         await fillInAwsConfig('withLease');
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
       });
@@ -347,7 +347,7 @@ module('Acceptance | aws | configuration', function (hooks) {
         await click(SES.configTab);
         await click(SES.configure);
         await fillInAwsConfig('withLease');
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
 
         assert.true(
           this.flashDangerSpy.calledWith(`Error saving lease configuration: bad request!`),
@@ -373,7 +373,7 @@ module('Acceptance | aws | configuration', function (hooks) {
         await click(SES.configTab);
         await click(SES.configure);
         await fillInAwsConfig('withAccess');
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
 
         assert.dom(GENERAL.messageError).hasText('Error welp, that did not work!', 'API error shows on form');
         assert.strictEqual(

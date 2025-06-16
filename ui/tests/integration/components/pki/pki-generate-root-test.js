@@ -171,7 +171,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
       }
     );
 
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.dom(PKI_GENERATE_ROOT.formInvalidError).exists('Shows overall error form');
     assert.ok(saveSpy.notCalled);
   });

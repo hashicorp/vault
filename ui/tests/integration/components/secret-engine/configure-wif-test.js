@@ -199,7 +199,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           await this.renderComponent();
 
           await fillInAwsConfig('withWif');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           await click(SES.wif.issuerWarningSave);
 
           assert.true(
@@ -236,7 +236,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           // fill in both lease and root endpoints to ensure that both payloads are attempted to be sent
           await fillInAwsConfig('withAccess');
           await fillInAwsConfig('withLease');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           assert.dom(GENERAL.messageError).exists('API error surfaced to user');
           assert.dom(GENERAL.inlineError).exists('User shown inline error message');
         });
@@ -365,7 +365,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
 
           await click(GENERAL.ttl.toggle('Default Lease TTL'));
           await fillIn(GENERAL.ttl.input('Default Lease TTL'), '33');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           assert
             .dom(GENERAL.inlineError)
             .hasText('Lease TTL and Max Lease TTL are both required if one of them is set.');
@@ -387,7 +387,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           // fill in both lease and root endpoints to ensure that both payloads are attempted to be sent
           await fillInAwsConfig('withAccess');
           await fillInAwsConfig('withLease');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           assert.true(
             this.flashDangerSpy.calledWith('Error saving lease configuration: bad request!!'),
             'Flash message shows that lease was not saved.'
@@ -447,7 +447,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           await this.renderComponent();
           await click(SES.wif.accessType('wif'));
           await fillIn(GENERAL.inputByAttr('issuer'), 'http://change.me.no.read');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           assert
             .dom(SES.wif.issuerWarningMessage)
             .hasText(
@@ -475,7 +475,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
             .hasAttribute('placeholder', 'https://vault-test.com', 'shows issuer placeholder');
           assert.dom(GENERAL.inputByAttr('issuer')).hasValue('', 'shows issuer is empty when not passed');
           await fillIn(GENERAL.inputByAttr('issuer'), 'http://bar.foo');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           assert.dom(SES.wif.issuerWarningMessage).exists('issuer modal exists');
           assert
             .dom(SES.wif.issuerWarningMessage)
@@ -512,7 +512,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           await click(SES.wif.accessType('wif'));
           assert.dom(GENERAL.inputByAttr('issuer')).hasValue('', 'issuer defaults to empty string');
           await fillIn(GENERAL.inputByAttr('issuer'), newIssuer);
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           assert.dom(SES.wif.issuerWarningMessage).exists('issuer warning modal exists');
 
           await click(SES.wif.issuerWarningSave);
@@ -543,7 +543,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
 
           await fillIn(GENERAL.inputByAttr('issuer'), 'http://foo.bar');
           await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'some-value');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           assert.dom(SES.wif.issuerWarningMessage).exists('issuer warning modal exists');
           await click(SES.wif.issuerWarningSave);
 
@@ -735,9 +735,9 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           });
 
           await click(GENERAL.enableField('clientSecret'));
-          await click('[data-test-button="toggle-masked"]');
+          await click(GENERAL.button('toggle-masked'));
           await fillIn(GENERAL.inputByAttr('clientSecret'), 'new-secret');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
         });
       });
 
@@ -803,9 +803,9 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
 
           await this.renderComponent();
           await click(GENERAL.enableField('secretKey'));
-          await click('[data-test-button="toggle-masked"]');
+          await click(GENERAL.button('toggle-masked'));
           await fillIn(GENERAL.inputByAttr('secretKey'), 'new-secret');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
         });
       });
 

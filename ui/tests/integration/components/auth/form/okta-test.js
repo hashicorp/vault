@@ -9,8 +9,8 @@ import hbs from 'htmlbars-inline-precompile';
 import { click, fillIn, render } from '@ember/test-helpers';
 import sinon from 'sinon';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import testHelper from './test-helper';
-import { LOGIN_DATA } from 'vault/tests/helpers/auth/auth-helpers';
+import testHelper from './auth-form-test-helper';
+import { fillInLoginFields } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import * as uuid from 'core/utils/uuid';
@@ -36,13 +36,6 @@ module('Integration | Component | auth | form | okta', function (hooks) {
     this.expectedSubmit = {
       default: { path: 'okta', username: 'matilda', password: 'password', nonce: this.nonce },
       custom: { path: 'custom-okta', username: 'matilda', password: 'password', nonce: this.nonce },
-    };
-
-    this.fillInForm = async () => {
-      const { loginData } = LOGIN_DATA.username;
-      for (const [field, value] of Object.entries(loginData)) {
-        await fillIn(GENERAL.inputByAttr(field), value);
-      }
     };
 
     this.renderComponent = ({ yieldBlock = false } = {}) => {
@@ -85,8 +78,9 @@ module('Integration | Component | auth | form | okta', function (hooks) {
     });
 
     await this.renderComponent();
-    await this.fillInForm();
-    await click(AUTH_FORM.login);
+    await fillInLoginFields({ username: 'matilda', password: 'password' });
+
+    await click(GENERAL.submitButton);
     const [actual] = this.authenticateStub.lastCall.args;
     assert.propEqual(
       actual.data,
@@ -106,9 +100,9 @@ module('Integration | Component | auth | form | okta', function (hooks) {
     });
 
     await this.renderComponent({ yieldBlock: true });
-    await this.fillInForm();
+    await fillInLoginFields({ username: 'matilda', password: 'password' });
     await fillIn(GENERAL.inputByAttr('path'), `custom-${this.authType}`);
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
     const [actual] = this.authenticateStub.lastCall.args;
     assert.propEqual(
       actual.data,
@@ -119,8 +113,8 @@ module('Integration | Component | auth | form | okta', function (hooks) {
 
   test('it displays okta number challenge answer', async function (assert) {
     await this.renderComponent();
-    await this.fillInForm();
-    await click(AUTH_FORM.login);
+    await fillInLoginFields({ username: 'matilda', password: 'password' });
+    await click(GENERAL.submitButton);
     assert
       .dom('[data-test-okta-number-challenge]')
       .hasText(
@@ -130,8 +124,8 @@ module('Integration | Component | auth | form | okta', function (hooks) {
 
   test('it returns to login when "Back to login" is clicked', async function (assert) {
     await this.renderComponent();
-    await this.fillInForm();
-    await click(AUTH_FORM.login);
+    await fillInLoginFields({ username: 'matilda', password: 'password' });
+    await click(GENERAL.submitButton);
     assert.dom('[data-test-okta-number-challenge]').exists();
     await click(GENERAL.backButton);
     assert.dom(AUTH_FORM.authForm('okta')).exists('it returns to okta form');
@@ -160,15 +154,15 @@ module('Integration | Component | auth | form | okta', function (hooks) {
     });
 
     await this.renderComponent();
-    await this.fillInForm();
-    await click(AUTH_FORM.login);
+    await fillInLoginFields({ username: 'matilda', password: 'password' });
+    await click(GENERAL.submitButton);
   });
 
   test('it renders error message when okta verify request errors', async function (assert) {
     this.server.get(`/auth/okta/verify/${this.nonce}`, () => new Response(500));
     await this.renderComponent();
-    await this.fillInForm();
-    await click(AUTH_FORM.login);
+    await fillInLoginFields({ username: 'matilda', password: 'password' });
+    await click(GENERAL.submitButton);
     assert.dom(GENERAL.messageError).hasText('Error An error occurred, please try again');
   });
 });

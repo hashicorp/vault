@@ -124,7 +124,7 @@ function build() {
   mkdir -p out
   set -x
   go env
-  go build -v -tags "$GO_TAGS" -ldflags "$ldflags" -o dist/
+  go build -v -buildvcs=false -tags "$GO_TAGS" -ldflags "$ldflags" -o dist/
   set +x
   popd
 }

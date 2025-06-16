@@ -10,4 +10,9 @@ const (
 	ObservationTypeLeaseRenewNonAuth    = "lease/renew/non-auth"
 	ObservationTypeLeaseLazyRevoke      = "lease/lazy-revoke"
 	ObservationTypeLeaseRevocation      = "lease/revoke"
+	ObservationTypePolicyACLEvaluation  = "policy/acl/evaluation"
+	ObservationTypeMountAuthEnable      = "mount/auth/enable"
+	ObservationTypeMountAuthDisable     = "mount/auth/disable"
+	ObservationTypeMountSecretsEnable   = "mount/secrets/enable"
+	ObservationTypeMountSecretsDisable  = "mount/secrets/disable"
 )

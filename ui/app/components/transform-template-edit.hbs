@@ -25,13 +25,7 @@
   <Toolbar>
     <ToolbarActions>
       {{#if @model.updatePath.canDelete}}
-        <Hds::Button
-          @text="Delete template"
-          @color="secondary"
-          class="toolbar-button"
-          {{on "click" this.onDelete}}
-          data-test-transformation-template-delete
-        />
+        <Hds::Button @text="Delete template" @color="secondary" class="toolbar-button" {{on "click" this.onDelete}} />
         <div class="toolbar-separator"></div>
       {{/if}}
       {{#if @model.updatePath.canUpdate}}

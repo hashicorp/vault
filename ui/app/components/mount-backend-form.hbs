@@ -64,7 +64,7 @@
             @text={{if (eq @mountType "secret") "Enable engine" "Enable method"}}
             @icon={{if this.mountBackend.isRunning "loading"}}
             type="submit"
-            data-test-save
+            data-test-submit
             disabled={{this.mountBackend.isRunning}}
           />
         </div>

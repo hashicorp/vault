@@ -47,7 +47,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
       />
     `);
 
-    await click(SES.ssh.cancel);
+    await click(GENERAL.cancelButton);
 
     assert.true(
       this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', 'ssh-test'),
@@ -63,7 +63,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
       />
     `);
     await fillIn(GENERAL.inputByAttr('publicKey'), 'hello');
-    await click(SES.ssh.save);
+    await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.inlineError)
       .hasText(
@@ -72,7 +72,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
       );
 
     await click(GENERAL.inputByAttr('generateSigningKey'));
-    await click(SES.ssh.save);
+    await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.inlineError)
       .hasText(
@@ -97,7 +97,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
       />
     `);
 
-    await click(SES.ssh.save);
+    await click(GENERAL.submitButton);
     assert.true(
       this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
       'Transitions to details route on save success.'
@@ -124,7 +124,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
         .dom(SES.ssh.editConfigSection)
         .exists('renders the edit configuration section of the form and not the create part');
       assert.dom(GENERAL.inputByAttr('public-key')).hasText('***********', 'public key is masked');
-      await click('[data-test-button="toggle-masked"]');
+      await click(GENERAL.button('toggle-masked'));
       assert
         .dom(GENERAL.inputByAttr('public-key'))
         .hasText(this.publicKey, 'public key is unmasked and shows the actual value');
@@ -142,7 +142,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
         />
       `);
       // delete Public key
-      await click(SES.ssh.delete);
+      await click(GENERAL.button('delete-public-key'));
       assert.dom(GENERAL.confirmMessage).hasText('Confirming will remove the CA certificate information.');
       await click(GENERAL.confirmButton);
       assert.true(
