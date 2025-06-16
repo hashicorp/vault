@@ -8,7 +8,7 @@
     <ToolbarActions>
       {{#if this.model.replicationAttrs.knownSecondaries.length}}
         {{#if this.model.canRevokeSecondary}}
-          <ToolbarLink @route="mode.secondaries.revoke" @model={{this.replicationMode}}>
+          <ToolbarLink @route="mode.secondaries.revoke" @model={{this.replicationMode}} data-test-link="Revoke secondary">
             Revoke secondary
           </ToolbarLink>
         {{/if}}
@@ -40,7 +40,7 @@
                   <dd.Interactive
                     @route="mode.secondaries.config-show"
                     @models={{array this.replicationMode secondary}}
-                    data-test-replication-path-filter-link={{true}}
+                    data-test-replication-path-filter-link
                   >Path filter config</dd.Interactive>
                 {{/if}}
                 {{#if this.model.canRevokeSecondary}}

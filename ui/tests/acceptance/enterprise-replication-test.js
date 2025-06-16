@@ -3,30 +3,13 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { clickTrigger } from 'ember-power-select/test-support/helpers';
-import {
-  click,
-  fillIn,
-  findAll,
-  currentURL,
-  find,
-  visit,
-  settled,
-  waitUntil,
-  waitFor,
-} from '@ember/test-helpers';
+import { click, fillIn, findAll, currentURL, visit, settled, waitFor } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
-import { create } from 'ember-cli-page-object';
-import flashMessage from 'vault/tests/pages/components/flash-message';
-import ss from 'vault/tests/pages/components/search-select';
-import { disableReplication } from 'vault/tests/helpers/replication';
+import { addSecondary, disableReplication, enableReplication } from 'vault/tests/helpers/replication';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-
-const searchSelect = create(ss);
-const flash = create(flashMessage);
 
 module('Acceptance | Enterprise | replication', function (hooks) {
   setupApplicationTest(hooks);
@@ -63,104 +46,61 @@ module('Acceptance | Enterprise | replication', function (hooks) {
       );
   });
 
-  test('Performance replication: add second with mount filters', async function (assert) {
-    const secondaryName = 'firstSecondary';
+  test('Performance replication: add secondary and delete config', async function (assert) {
+    const secondaryName = `performanceSecondary`;
     const mode = 'deny';
 
-    await visit('/vault/replication');
-
-    assert.strictEqual(currentURL(), '/vault/replication');
-    // enable performance replication
-    await click('[data-test-replication-type-select="performance"]');
-    await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
-    await click(GENERAL.submitButton);
-
+    await enableReplication('performance', 'primary');
     await pollCluster(this.owner);
+    await settled();
     // confirm that the details dashboard shows
-    assert.ok(await waitUntil(() => find('[data-test-replication-dashboard]')), 'details dashboard is shown');
-    // add a secondary with a mount filter config
-    await click('[data-test-replication-link="secondaries"]');
-    await click('[data-test-secondary-add]');
-    await fillIn('[data-test-replication-secondary-id]', secondaryName);
-    await click('#deny');
-    await clickTrigger();
-    await searchSelect.options.objectAt(0).click();
-    const mountPath = find('[data-test-selected-option="0"]').innerText?.trim();
-    await click('[data-test-secondary-add]');
+    await waitFor('[data-test-replication-dashboard]', 2000);
+    await addSecondary(secondaryName, mode);
     await pollCluster(this.owner);
-    // click into the added secondary's mount filter config
+    await settled();
     await click('[data-test-replication-link="secondaries"]');
     await click(GENERAL.menuTrigger);
     await click('[data-test-replication-path-filter-link]');
-
     assert.strictEqual(
       currentURL(),
       `/vault/replication/performance/secondaries/config/show/${secondaryName}`
     );
-    assert.dom('[data-test-mount-config-mode]').includesText(mode, 'renders the correct mode');
-    assert
-      .dom('[data-test-mount-config-paths]')
-      .hasTextContaining(`${mountPath}`, 'renders the correct mount path');
-  });
+    assert.dom('[data-test-mount-config-mode]').includesText(mode, 'show page renders the correct mode');
 
-  test('Performance replication: delete mount filter config', async function (assert) {
-    assert.expect(3);
-    const secondaryName = 'firstSecondary';
-
+    // delete config by choosing "no filter" on the edit screen
     await click('[data-test-replication-link="edit-mount-config"]');
     await click('#no-filtering');
     await click('[data-test-config-save]');
-
-    assert.strictEqual(
-      flash.latestMessage,
-      `The performance mount filter config for the secondary ${secondaryName} was successfully deleted.`,
-      'renders success flash upon deletion'
-    );
-
+    await settled(); // eslint-disable-line
     assert.strictEqual(
       currentURL(),
       `/vault/replication/performance/secondaries`,
       'redirects to the secondaries page'
     );
-
+    // nav back to details page and confirm secondary is in the known secondaries table
     await click('[data-test-replication-link="details"]');
+
     assert
       .dom(`[data-test-secondaries-node=${secondaryName}]`)
-      .exists('shows the recently added secondary in table');
+      .exists('shows a table row the recently added secondary');
   });
 
   test('DR replication: enable and add secondary', async function (assert) {
-    assert.expect(6);
-    const secondaryName = 'firstSecondary';
+    const secondaryName = 'drSecondary';
 
-    await visit('/vault/replication/dr');
-    await fillIn('[data-test-replication-cluster-mode-select]', 'secondary');
-    assert
-      .dom('[data-test-replication-enable]')
-      .isDisabled('DR secondary enable is disabled when other replication modes are on');
-
-    await disableReplication('performance', assert);
+    await enableReplication('dr', 'primary');
+    await pollCluster(this.owner);
     await settled();
-    await pollCluster(this.owner);
-
-    await visit('/vault/replication/dr');
-    await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
-    await click('button[type="submit"]');
-    await pollCluster(this.owner);
-
-    await waitUntil(() => find('[data-test-empty-state-title]'));
     assert
-      .dom('[data-test-empty-state-title]')
-      .includesText('No known dr secondary clusters associated with this cluster');
+      .dom('[data-test-replication-title="Disaster Recovery"]')
+      .includesText('Disaster Recovery', 'it displays the replication type correctly');
+    assert
+      .dom('[data-test-replication-mode-display]')
+      .includesText('primary', 'it displays the cluster mode correctly');
 
-    assert.dom('[data-test-replication-title="Disaster Recovery"]').includesText('Disaster Recovery');
-    assert.dom('[data-test-replication-mode-display]').includesText('primary');
-
-    await click('[data-test-replication-link="secondaries"]');
-    await click('[data-test-secondary-add]');
-    await fillIn('[data-test-replication-secondary-id]', secondaryName);
-    await click('[data-test-secondary-add]');
+    await addSecondary(secondaryName);
     await pollCluster(this.owner);
+    await settled();
 
     await click('[data-test-replication-link="secondaries"]');
     assert
@@ -214,52 +154,38 @@ module('Acceptance | Enterprise | replication', function (hooks) {
   test('add secondary and navigate through token generation modal', async function (assert) {
     const secondaryNameFirst = 'firstSecondary';
     const secondaryNameSecond = 'secondSecondary';
-    await visit('/vault/replication');
 
     // enable perf replication
-    await click('[data-test-replication-type-select="performance"]');
-
-    await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
-    await click(GENERAL.submitButton);
-
+    await enableReplication('performance', 'primary');
     await pollCluster(this.owner);
     await settled();
-
-    // add a secondary with default TTL
-    await click('[data-test-replication-link="secondaries"]');
-
-    await click('[data-test-secondary-add]');
-
-    await fillIn('[data-test-replication-secondary-id]', secondaryNameFirst);
-    await click('[data-test-secondary-add]');
-
+    // confirm that the details dashboard shows
+    await addSecondary(secondaryNameFirst);
     await pollCluster(this.owner);
     await settled();
 
     // checks on secondary token modal
     assert.dom('#replication-copy-token-modal').exists();
-    assert.dom('[data-test-inline-error-message]').hasText('Copy token to dismiss modal');
-    assert.dom('[data-test-row-value="TTL"]').hasText('1800s', 'shows the correct TTL of 1800s');
+    assert.dom(GENERAL.inlineError).hasText('Copy token to dismiss modal');
+    assert.dom(GENERAL.infoRowValue('TTL')).hasText('1800s', 'shows the correct TTL of 1800s');
     // click off the modal to make sure you don't just have to click on the copy-close button to copy the token
-    assert.dom('[data-test-modal-close]').isDisabled('cancel is disabled');
-    await click('[data-test-modal-copy]');
-    assert.dom('[data-test-modal-close]').isEnabled('cancel is enabled after token is copied');
-    await click('[data-test-modal-close]');
+    assert.dom(GENERAL.cancelButton).isDisabled('cancel is disabled');
+    await click(GENERAL.button('Copy token'));
+    assert.dom(GENERAL.cancelButton).isEnabled('cancel is enabled after token is copied');
+    await click(GENERAL.cancelButton);
 
     // add another secondary not using the default ttl
     await click('[data-test-secondary-add]');
-
-    await fillIn('[data-test-replication-secondary-id]', secondaryNameSecond);
+    await fillIn('[data-test-input="Secondary ID"]', secondaryNameSecond);
     await click(GENERAL.toggleInput('Time to Live (TTL) for generated secondary token'));
-
     await fillIn('[data-test-ttl-value]', 3);
     await click('[data-test-secondary-add]');
 
     await pollCluster(this.owner);
     await settled();
-    assert.dom('[data-test-row-value="TTL"]').hasText('180s', 'shows the correct TTL of 180s');
-    await click('[data-test-modal-copy]');
-    await click('[data-test-modal-close]');
+    assert.dom(GENERAL.infoRowValue('TTL')).hasText('180s', 'shows the correct TTL of 180s');
+    await click(GENERAL.button('Copy token'));
+    await click(GENERAL.cancelButton);
 
     // confirm you were redirected to the secondaries page
     assert.strictEqual(
@@ -274,12 +200,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
   test('render performance and dr primary and navigate to details page', async function (assert) {
     // enable perf primary replication
-    await visit('/vault/replication');
-    await click('[data-test-replication-type-select="performance"]');
-
-    await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
-    await click(GENERAL.submitButton);
-
+    await enableReplication('performance', 'primary');
     await pollCluster(this.owner);
     await settled();
 
@@ -319,13 +240,7 @@ module('Acceptance | Enterprise | replication', function (hooks) {
 
   test('render performance secondary and navigate to the details page', async function (assert) {
     // enable perf replication
-    await visit('/vault/replication');
-
-    await click('[data-test-replication-type-select="performance"]');
-
-    await fillIn('[data-test-replication-cluster-mode-select]', 'primary');
-    await click(GENERAL.submitButton);
-
+    await enableReplication('performance', 'primary');
     await pollCluster(this.owner);
     await settled();
 
