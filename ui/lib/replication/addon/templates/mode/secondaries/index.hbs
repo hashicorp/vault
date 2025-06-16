@@ -8,7 +8,7 @@
     <ToolbarActions>
       {{#if this.model.replicationAttrs.knownSecondaries.length}}
         {{#if this.model.canRevokeSecondary}}
-          <ToolbarLink @route="mode.secondaries.revoke" @model={{this.replicationMode}} data-test-link="Revoke secondary">
+          <ToolbarLink @route="mode.secondaries.revoke" @model={{this.replicationMode}}>
             Revoke secondary
           </ToolbarLink>
         {{/if}}
