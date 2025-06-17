@@ -18,11 +18,11 @@ import Component from '@glimmer/component';
 
 export default class DashboardSecretsEnginesCard extends Component {
   get tls() {
-    // since the default for tls_disable is false it may not be in the config
-    // consider tls enabled if tls_disable is undefined or false AND both tls_cert_file and tls_key_file are defined
+    // since the default for tlsDisable is false it may not be in the config
+    // consider tls enabled if tlsDisable is undefined or false AND both tlsCertFile and tlsKeyFile are defined
     const tlsListener = this.args.vaultConfiguration?.listeners.find((listener) => {
-      const { tls_disable, tls_cert_file, tls_key_file } = listener.config || {};
-      return !tls_disable && tls_cert_file && tls_key_file;
+      const { tlsDisable, tlsCertFile, tlsKeyFile } = listener.config || {};
+      return !tlsDisable && tlsCertFile && tlsKeyFile;
     });
 
     return tlsListener ? 'Enabled' : 'Disabled';

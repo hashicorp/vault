@@ -130,8 +130,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     );
     const addr = `127.0.0.1:${getRandomPort()}`;
     await fillIn('[data-test-string-list-input="0"]', addr);
-    await scopesPage.submit();
-    await settled();
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/kmip/configuration`,
@@ -144,19 +143,26 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
   test('it can revoke from the credentials show page', async function (assert) {
     const { backend, scope, role, serial } = await generateCreds(this.backend);
     await settled();
-    await credentialsPage.visitDetail({ backend, scope, role, serial });
-    await settled();
-    await waitUntil(() => find('[data-test-confirm-action-trigger]'));
-    assert.dom('[data-test-confirm-action-trigger]').exists('delete button exists');
-    await credentialsPage.delete().confirmDelete();
-    await settled();
+    await visit(`/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}/credentials/${serial}`);
+
+    // Wait for the delete/revoke button to appear
+    await waitUntil(() => find(GENERAL.confirmTrigger));
+    assert.dom(GENERAL.confirmTrigger).exists('Confirm trigger exists before clicking');
+    await click(GENERAL.confirmTrigger);
+
+    // Wait for the confirm delete button to appear
+    await waitUntil(() => find(GENERAL.confirmButton));
+    assert.dom(GENERAL.confirmButton).exists('Confirm delete exists before clicking');
+    await click(GENERAL.confirmButton);
 
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}/credentials`,
       'redirects to the credentials list'
     );
-    assert.ok(credentialsPage.isEmpty, 'renders an empty credentials page');
+    assert
+      .dom(GENERAL.emptyStateTitle)
+      .hasText('No credentials yet for this role', 'renders an empty credentials page');
   });
 
   test('it can create a scope', async function (assert) {
@@ -174,8 +180,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     // create scope
     await scopesPage.scopeName('foo');
     await settled();
-    await scopesPage.submit();
-    await settled();
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/kmip/scopes`,
@@ -204,10 +209,8 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     // delete the scope
     await scopesPage.listItemLinks.objectAt(0).menuToggle();
     await settled();
-    await scopesPage.delete();
-    await settled();
-    await scopesPage.confirmDelete();
-    await settled();
+    await click(GENERAL.confirmTrigger);
+    await click(GENERAL.confirmButton);
     assert.strictEqual(scopesPage.listItemLinks.length, 0, 'no scopes');
     assert.ok(scopesPage.isEmpty, 'renders the empty state');
   });
@@ -282,10 +285,8 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     // delete the role
     await rolesPage.listItemLinks.objectAt(0).menuToggle();
     await settled();
-    await rolesPage.delete();
-    await settled();
-    await rolesPage.confirmDelete();
-    await settled();
+    await click(GENERAL.confirmTrigger);
+    await click(GENERAL.confirmButton);
     assert.strictEqual(rolesPage.listItemLinks.length, 0, 'renders no roles');
     assert.ok(rolesPage.isEmpty, 'renders empty');
   });
@@ -309,8 +310,8 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}`,
       'cancel navigates to role show'
     );
-    await rolesPage.delete().confirmDelete();
-    await settled();
+    await click(GENERAL.confirmTrigger);
+    await click(GENERAL.confirmButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/kmip/scopes/${scope}/roles`,
@@ -331,8 +332,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
       `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}/credentials/generate`,
       'navigates to generate credentials'
     );
-    await credentialsPage.submit();
-    await settled();
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.secrets.backend.kmip.credentials.generate',
@@ -353,12 +353,12 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     const { backend, scope, role } = await createRole(this.backend);
     await credentialsPage.visit({ backend, scope, role });
     await credentialsPage.generateCredentialsLink();
-    await credentialsPage.submit();
+    await click(GENERAL.submitButton);
+    await waitUntil(() => find(GENERAL.confirmTrigger));
+    assert.dom(GENERAL.confirmTrigger).exists('delete button exists');
     // revoke the credentials
-    await waitUntil(() => find('[data-test-confirm-action-trigger]'));
-    assert.dom('[data-test-confirm-action-trigger]').exists('delete button exists');
-    await credentialsPage.delete().confirmDelete();
-    await settled();
+    await click(GENERAL.confirmTrigger);
+    await click(GENERAL.confirmButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${backend}/kmip/scopes/${scope}/roles/${role}/credentials`,
@@ -374,8 +374,11 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
     await settled();
     await credentialsPage.listItemLinks.objectAt(0).menuToggle();
     await settled();
-    await credentialsPage.delete().confirmDelete();
-    await settled();
+    await waitUntil(() => find(GENERAL.confirmTrigger));
+    assert.dom(GENERAL.confirmTrigger).exists('delete button exists');
+    // revoke the credentials
+    await click(GENERAL.confirmTrigger);
+    await click(GENERAL.confirmButton);
     assert.strictEqual(credentialsPage.listItemLinks.length, 0, 'renders no credentials');
     assert.ok(credentialsPage.isEmpty, 'renders empty');
   });

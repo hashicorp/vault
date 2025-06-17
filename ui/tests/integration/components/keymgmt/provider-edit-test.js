@@ -110,7 +110,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
         'This provider cannot be deleted until all 2 key(s) distributed to it are revoked. This can be done from the Keys tab.',
         'Renders disabled message'
       );
-    await click('[data-test-confirm-cancel-button]');
+    await click(GENERAL.cancelButton);
   });
 
   test('it should delete a provider', async function (assert) {
@@ -155,7 +155,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
       .hasText('None', 'None is displayed when no keys exist for provider');
 
     await click(`[${ts}-delete]`);
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
   });
 
   test('it should render create view', async function (assert) {

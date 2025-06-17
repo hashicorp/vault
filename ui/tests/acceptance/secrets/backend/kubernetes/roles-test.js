@@ -62,7 +62,7 @@ module('Acceptance | kubernetes | roles', function (hooks) {
       await click('[data-test-list-item-popup] button');
       await click(`[data-test-${action}]`);
       if (action === 'delete') {
-        await click('[data-test-confirm-button]');
+        await click(GENERAL.confirmButton);
         assert.dom('[data-test-list-item-link]').exists({ count: 2 }, 'Deleted role removed from list');
       } else {
         this.validateRoute(
@@ -103,7 +103,7 @@ module('Acceptance | kubernetes | roles', function (hooks) {
     await click('[data-test-cancel]');
     await click('[data-test-list-item-link]');
     await click('[data-test-delete]');
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
     assert
       .dom('[data-test-list-item-link]')
       .exists({ count: 2 }, 'Transitions to roles route and deleted role removed from list');

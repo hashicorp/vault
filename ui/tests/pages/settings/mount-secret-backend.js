@@ -9,8 +9,8 @@ import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-
 
 export default create({
   visit: visitable('/vault/settings/mount-secret-backend'),
-  version: fillable('[data-test-input="version"]'),
-  setMaxVersion: fillable('[data-test-input="maxVersions"]'),
+  version: fillable('[data-test-input="options.version"]'),
+  setMaxVersion: fillable('[data-test-input="kvConfig.maxVersions"]'),
   enableMaxTtl: clickable('[data-test-toggle-input="Max Lease TTL"]'),
   maxTTLVal: fillable('[data-test-ttl-value="Max Lease TTL"]'),
   maxTTLUnit: fillable('[data-test-ttl-unit="Max Lease TTL"] [data-test-select="ttl-unit"]'),

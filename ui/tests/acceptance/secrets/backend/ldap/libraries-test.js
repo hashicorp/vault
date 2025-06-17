@@ -14,6 +14,7 @@ import { click, currentURL } from '@ember/test-helpers';
 import { isURL, visitURL } from 'vault/tests/helpers/ldap/ldap-helpers';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { LDAP_SELECTORS } from 'vault/tests/helpers/ldap/ldap-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | ldap | libraries', function (hooks) {
   setupApplicationTest(hooks);
@@ -82,7 +83,7 @@ module('Acceptance | ldap | libraries', function (hooks) {
     assert.expect(2);
 
     for (const action of ['edit', 'details']) {
-      await click('[data-test-popup-menu-trigger]');
+      await click(GENERAL.menuTrigger);
       await click(`[data-test-${action}]`);
       const uri = action === 'details' ? 'details/accounts' : action;
       assert.true(

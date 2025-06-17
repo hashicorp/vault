@@ -97,7 +97,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
       assert
         .dom(usageStats('Secrets sync usage'))
         .hasText(
-          `Secrets sync usage Usage metrics tutorial Secrets sync clients which interacted with Vault for the first time each month. Each bar represents the total new sync clients for that month. Total sync clients ${expectedTotal}`,
+          `Secrets sync usage Client usage tutorial Secrets sync clients which interacted with Vault for the first time each month. Each bar represents the total new sync clients for that month. Total sync clients ${expectedTotal}`,
           'it renders usage stats with single month copy'
         );
     });

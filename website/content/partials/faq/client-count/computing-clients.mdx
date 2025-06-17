@@ -1,14 +1,3 @@
-### Can I compute clients for Vault versions before v1.6? ((#before-1-6))
-
-@include 'alerts/auditor-deprecated.mdx'
-
-**Yes**.
-
-Use the [Vault auditor tool](/vault/tutorials/monitoring/usage-metrics#vault-auditor-tool)
-to compute and display client count data for Vault v1.3 &ndash; v1.5 using the
-client compute logic available in Vault 1.7. Auditor use with Vault versions
-older than 1.3 is untested.
-
 ### Can I compute KMIP clients for Vault? ((#kmip))
 
 **No**.
@@ -55,13 +44,13 @@ details.
 The [Nomad Vault integration](/nomad/docs/integrations/vault-integration)
 uses either Workload Identity (JWT) or token roles for client count:
 
-	- Vault bases Workload Identity client counts on the
-	  [`user_claim`](/vault/api-docs/auth/jwt#user_claim) field. The
-	  recommended default is `nomad_job`, which results in 1 client per
-	  Nomad job.
-	- Nomad deprecated token roles and will remove the feature in v1.10. Client
-	  counts for legacy token roles treat each unique policy combination as 1
-		non-entity client.
+    - Vault bases Workload Identity client counts on the
+      [`user_claim`](/vault/api-docs/auth/jwt#user_claim) field. The
+      recommended default is `nomad_job`, which results in 1 client per
+      Nomad job.
+    - Nomad deprecated token roles and will remove the feature in v1.10. Client
+      counts for legacy token roles treat each unique policy combination as 1
+    	non-entity client.
 
 ### Are batch tokens counted differently than service tokens? ((#batch-tokens))
 
@@ -92,5 +81,5 @@ If you are using Vault 1.10+:
 - Migrating mounts **across** namespace will create duplication in the client count.
 - Migrating mounts **within** a namespace will not affect client count.
 
-If you are using an older version of Vault, migrating mounts will always create 
+If you are using an older version of Vault, migrating mounts will always create
 duplication in the client count.
