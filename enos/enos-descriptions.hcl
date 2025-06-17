@@ -25,6 +25,15 @@ globals {
       for Vault target nodes to access it the AWSKMS key are handled in the target modules.
     EOF
 
+    create_test_servers = <<-EOF
+      Provision test servers required for development and QA activities. Additional servers will be
+      deployed as necessary to support testing requirements (e.g., OpenLDAP).
+    EOF
+
+    create_test_servers_target = <<-EOF
+      Create the target machine for test servers.
+    EOF
+
     create_vault_cluster = <<-EOF
       Create the the Vault cluster. In this module we'll install, configure, start, initialize and
       unseal all the nodes in the Vault. After initialization it also enables various audit engines.
