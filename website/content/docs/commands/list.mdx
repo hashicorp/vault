@@ -21,5 +21,9 @@ $ vault list identity/entity/id
 
 ## Usage
 
-There are no flags beyond the [standard set of flags](/vault/docs/commands)
-included on all commands.
+The following flag is available in addition to the [standard set of
+flags](/vault/docs/commands) included on all commands.
+
+### Command options
+
+- `snapshot-id` `(string: "")` - The ID of raft snapshot previously loaded into the cluster that you want to list data from.

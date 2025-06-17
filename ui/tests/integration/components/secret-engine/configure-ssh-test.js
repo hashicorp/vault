@@ -9,19 +9,18 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
-import { createConfig } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import sinon from 'sinon';
+import SshConfigForm from 'vault/forms/secrets/ssh-config';
 
 module('Integration | Component | SecretEngine/configure-ssh', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
     const router = this.owner.lookup('service:router');
     this.id = 'ssh-test';
-    this.model = this.store.createRecord('ssh/ca-config', { backend: this.id });
+    this.form = new SshConfigForm({ generateSigningKey: true }, { isNew: true });
     this.transitionStub = sinon.stub(router, 'transitionTo');
     this.refreshStub = sinon.stub(router, 'refresh');
   });
@@ -29,9 +28,9 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
   test('it shows create fields if not configured', async function (assert) {
     await render(hbs`
       <SecretEngine::ConfigureSsh
-    @model={{this.model}}
-    @id={{this.id}}
-  />
+        @configForm={{this.form}}
+        @id={{this.id}}
+      />
     `);
     assert.dom(GENERAL.inputByAttr('privateKey')).hasNoText('Private key is empty and reset');
     assert.dom(GENERAL.inputByAttr('publicKey')).hasNoText('Public key is empty and reset');
@@ -43,12 +42,12 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
   test('it should go back to parent route on cancel', async function (assert) {
     await render(hbs`
       <SecretEngine::ConfigureSsh
-    @model={{this.model}}
-    @id={{this.id}}
-  />
+        @configForm={{this.form}}
+        @id={{this.id}}
+      />
     `);
 
-    await click(SES.ssh.cancel);
+    await click(GENERAL.cancelButton);
 
     assert.true(
       this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', 'ssh-test'),
@@ -59,12 +58,12 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
   test('it should validate form fields', async function (assert) {
     await render(hbs`
       <SecretEngine::ConfigureSsh
-    @model={{this.model}}
-    @id={{this.id}}
-  />
+        @configForm={{this.form}}
+        @id={{this.id}}
+      />
     `);
     await fillIn(GENERAL.inputByAttr('publicKey'), 'hello');
-    await click(SES.ssh.save);
+    await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.inlineError)
       .hasText(
@@ -73,7 +72,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
       );
 
     await click(GENERAL.inputByAttr('generateSigningKey'));
-    await click(SES.ssh.save);
+    await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.inlineError)
       .hasText(
@@ -87,42 +86,48 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
     this.server.post('/ssh-test/config/ca', (schema, req) => {
       const data = JSON.parse(req.requestBody);
       const expected = {
-        backend: this.id,
         generate_signing_key: true,
       };
       assert.deepEqual(expected, data, 'POST request made to save ca-config with correct properties');
     });
     await render(hbs`
       <SecretEngine::ConfigureSsh
-    @model={{this.model}}
-    @id={{this.id}}
-  />
+        @configForm={{this.form}}
+        @id={{this.id}}
+      />
     `);
 
-    await click(SES.ssh.save);
-    assert.dom(SES.ssh.editConfigSection).exists('renders the edit configuration section of the form');
+    await click(GENERAL.submitButton);
+    assert.true(
+      this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
+      'Transitions to details route on save success.'
+    );
   });
 
   module('editing', function (hooks) {
     hooks.beforeEach(function () {
       this.editId = 'ssh-edit-me';
-      this.editModel = createConfig(this.store, 'ssh-edit-me', 'ssh');
+      this.publicKey = 'public-key';
+      this.form = new SshConfigForm({
+        publicKey: this.publicKey,
+        generateSigningKey: true,
+      });
     });
     test('it populates fields when editing', async function (assert) {
       await render(hbs`
-      <SecretEngine::ConfigureSsh
-    @model={{this.editModel}}
-    @id={{this.editId}}
-  />
-    `);
+        <SecretEngine::ConfigureSsh
+          @configForm={{this.form}}
+          @id={{this.editId}}
+        />
+      `);
       assert
         .dom(SES.ssh.editConfigSection)
         .exists('renders the edit configuration section of the form and not the create part');
       assert.dom(GENERAL.inputByAttr('public-key')).hasText('***********', 'public key is masked');
-      await click('[data-test-button="toggle-masked"]');
+      await click(GENERAL.button('toggle-masked'));
       assert
         .dom(GENERAL.inputByAttr('public-key'))
-        .hasText(this.editModel.publicKey, 'public key is unmasked and shows the actual value');
+        .hasText(this.publicKey, 'public key is unmasked and shows the actual value');
     });
 
     test('it allows you to delete a public key', async function (assert) {
@@ -131,13 +136,13 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
         assert.true(true, 'DELETE request made to ca-config with correct properties');
       });
       await render(hbs`
-      <SecretEngine::ConfigureSsh
-    @model={{this.editModel}}
-    @id={{this.editId}}
-  />
-    `);
+        <SecretEngine::ConfigureSsh
+          @configForm={{this.form}}
+          @id={{this.editId}}
+        />
+      `);
       // delete Public key
-      await click(SES.ssh.delete);
+      await click(GENERAL.button('delete-public-key'));
       assert.dom(GENERAL.confirmMessage).hasText('Confirming will remove the CA certificate information.');
       await click(GENERAL.confirmButton);
       assert.true(

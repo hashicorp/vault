@@ -57,7 +57,7 @@
                 @onError={{(fn
                   (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
                 )}}
-                data-test-copy-button={{this.auth.currentToken}}
+                data-test-copy-button
               />
             </li>
             {{#if (is-before (now interval=1000) this.auth.tokenExpirationDate)}}
