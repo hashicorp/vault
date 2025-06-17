@@ -42,7 +42,6 @@ export const PKI_DELETE_ALL_ISSUERS = {
   issuerLink: '[data-test-delete-all-issuers-link]',
   deleteAllIssuerModal: '#confirmation-modal',
   deleteAllIssuerInput: '[data-test-confirmation-modal-input="Delete all issuers?"]',
-  deleteAllIssuerButton: '[data-test-confirm-button="Delete all issuers?"]',
 };
 
 export const PKI_GENERATE_ROOT = {
@@ -173,7 +172,6 @@ export const PKI_KEYS = {
   popupMenuEdit: '[data-test-key-menu-link="edit"]',
   // key details
   keyDeleteButton: '[data-test-pki-key-delete]',
-  downloadButton: '[data-test-download-button]',
   keyEditLink: '[data-test-pki-key-edit]',
   nextStepsAlert: '[data-test-pki-key-next-steps]',
 };
