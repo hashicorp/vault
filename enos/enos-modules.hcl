@@ -56,6 +56,10 @@ module "create_vpc" {
   common_tags = var.tags
 }
 
+module "create_test_servers" {
+  source = "./modules/backend_test_servers"
+}
+
 module "choose_follower_host" {
   source = "./modules/choose_follower_host"
 }
