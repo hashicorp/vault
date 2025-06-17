@@ -77,7 +77,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
         .hasText('default', 'index page lists default key');
 
       // navigate to default key details from pop-up menu
-      await click('[data-test-popup-menu-trigger]');
+      await click(GENERAL.menuTrigger);
       await click('[data-test-oidc-key-menu-link="details"]');
       assert.dom(SELECTORS.keyDeleteButton).doesNotExist('delete button is hidden for default key');
       await click(SELECTORS.keyEditButton);
@@ -600,7 +600,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
         'create form navigates back to assignment index on cancel'
       );
 
-      await click('[data-test-popup-menu-trigger]');
+      await click(GENERAL.menuTrigger);
       await click('[data-test-oidc-assignment-menu-link="edit"]');
       assert.strictEqual(
         currentRouteName(),
@@ -615,7 +615,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       );
       // navigate to details from index page
       await visit('/vault/access/oidc/assignments');
-      await click('[data-test-popup-menu-trigger]');
+      await click(GENERAL.menuTrigger);
       await click('[data-test-oidc-assignment-menu-link="details"]');
       assert.strictEqual(
         currentRouteName(),

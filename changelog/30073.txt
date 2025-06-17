@@ -1,0 +1,3 @@
+```release-note:bug
+mongodb: fix mongodb connection issue when using TLS client + username/password authentication
+```

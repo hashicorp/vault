@@ -8,6 +8,8 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import keys from 'core/utils/keys';
+import { buildWaiter } from '@ember/test-waiters';
+
 import type Router from 'vault/router';
 import type NamespaceService from 'vault/services/namespace';
 import type AuthService from 'vault/vault/services/auth';
@@ -19,6 +21,8 @@ interface NamespaceOption {
   path: string;
   label: string;
 }
+
+const waiter = buildWaiter('namespace-picker');
 
 /**
  * @module NamespacePicker
@@ -176,6 +180,7 @@ export default class NamespacePicker extends Component {
 
   @action
   async fetchListCapability(): Promise<void> {
+    const waiterToken = waiter.beginAsync();
     try {
       const namespacePermission = await this.store.findRecord('capabilities', 'sys/namespaces/');
       this.canRefreshNamespaces = namespacePermission.get('canList');
@@ -183,6 +188,8 @@ export default class NamespacePicker extends Component {
     } catch (error) {
       // If the findRecord call fails, the user lacks permissions to refresh or manage namespaces.
       this.canRefreshNamespaces = this.canManageNamespaces = false;
+    } finally {
+      waiter.endAsync(waiterToken);
     }
   }
 

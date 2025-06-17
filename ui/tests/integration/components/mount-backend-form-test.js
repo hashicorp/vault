@@ -16,6 +16,7 @@ import { methods } from 'vault/helpers/mountable-auth-methods';
 import { mountableEngines, WIF_ENGINES } from 'vault/helpers/mountable-secret-engines';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
+import SecretsEngineForm from 'vault/forms/secrets/engine';
 
 module('Integration | Component | mount backend form', function (hooks) {
   setupRenderingTest(hooks);
@@ -130,8 +131,16 @@ module('Integration | Component | mount backend form', function (hooks) {
 
   module('secrets engine', function (hooks) {
     hooks.beforeEach(function () {
-      this.model = this.store.createRecord('secret-engine');
-      this.model.set('config', this.store.createRecord('mount-config'));
+      const defaults = {
+        config: { listingVisibility: false },
+        kvConfig: {
+          maxVersions: 0,
+          casRequired: false,
+          deleteVersionAfter: 0,
+        },
+        options: { version: 2 },
+      };
+      this.model = new SecretsEngineForm(defaults, { isNew: true });
     });
 
     test('it renders secret engine specific headers', async function (assert) {
@@ -190,8 +199,8 @@ module('Integration | Component | mount backend form', function (hooks) {
       );
 
       await mountBackend('ssh', 'foo');
-      later(() => cancelTimers(), 50);
-      await settled();
+      // later(() => cancelTimers(), 50);
+      // await settled();
 
       assert.true(spy.calledOnce, 'calls the passed success method');
       assert.true(
@@ -209,7 +218,7 @@ module('Integration | Component | mount backend form', function (hooks) {
           await click(MOUNT_BACKEND_FORM.mountType(engine));
           await click(GENERAL.toggleGroup('Method Options'));
           assert
-            .dom(GENERAL.fieldByAttr('identityTokenKey'))
+            .dom(GENERAL.fieldByAttr('config.identityTokenKey'))
             .exists(`Identity token key field shows when type=${this.model.type}`);
           await click(GENERAL.backButton);
         }
@@ -218,7 +227,7 @@ module('Integration | Component | mount backend form', function (hooks) {
           await click(MOUNT_BACKEND_FORM.mountType(engine.type));
           await click(GENERAL.toggleGroup('Method Options'));
           assert
-            .dom(GENERAL.fieldByAttr('identityTokenKey'))
+            .dom(GENERAL.fieldByAttr('config.identityTokenKey'))
             .doesNotExist(`Identity token key field hidden when type=${this.model.type}`);
           await click(GENERAL.backButton);
         }
