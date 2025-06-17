@@ -46,7 +46,7 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
   });
 
   test('it should render fields and save', async function (assert) {
-    assert.expect(9);
+    assert.expect(11);
 
     this.server.post('/pki-test/issuers/generate/intermediate/exported', (schema, req) => {
       const payload = JSON.parse(req.requestBody);
@@ -73,11 +73,15 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
       assert.dom(`[data-test-input="${key}"]`).exists(`${key} form field renders`);
     });
 
-    assert.dom('[data-test-toggle-group]').exists({ count: 3 }, 'Toggle groups render');
+    assert.dom(GENERAL.button('Key parameters')).exists('Key parameters toggle renders');
+    assert.dom(GENERAL.button('Subject Alternative Name (SAN) Options')).exists('SAN options toggle renders');
+    assert
+      .dom(GENERAL.button('Additional subject fields'))
+      .exists('Additional subject fields toggle renders');
 
-    await fillIn('[data-test-input="type"]', 'exported');
-    await fillIn('[data-test-input="commonName"]', 'foo');
-    await click('[data-test-submit]');
+    await fillIn(GENERAL.inputByAttr('type'), 'exported');
+    await fillIn(GENERAL.inputByAttr('commonName'), 'foo');
+    await click(GENERAL.submitButton);
 
     const savedRecord = this.store.peekAll('pki/action')[0];
     assert.false(savedRecord.isNew, 'record is saved');
@@ -95,7 +99,7 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
       }
     );
 
-    await click('[data-test-submit]');
+    await click(GENERAL.submitButton);
 
     assert
       .dom(GENERAL.validationErrorByAttr('type'))
