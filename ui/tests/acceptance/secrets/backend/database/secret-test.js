@@ -78,7 +78,7 @@ const connectionTests = [
       assert.dom(GENERAL.inputByAttr('username')).exists(`Username field exists for ${name}`);
       assert.dom(GENERAL.inputByAttr('password')).exists(`Password field exists for ${name}`);
       assert.dom(GENERAL.inputByAttr('write_concern')).exists(`Write concern field exists for ${name}`);
-      assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
+      assert.dom(GENERAL.button('TLS options')).exists('TLS options toggle exists');
       assert
         .dom(GENERAL.inputByAttr('root_rotation_statements'))
         .exists(`Root rotation statements exists for ${name}`);
@@ -123,7 +123,7 @@ const connectionTests = [
       assert
         .dom(GENERAL.inputByAttr('max_connection_lifetime'))
         .exists(`Max connection lifetime exists for ${name}`);
-      assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
+      assert.dom(GENERAL.button('TLS options')).exists('TLS options toggle exists');
       assert
         .dom(GENERAL.inputByAttr('root_rotation_statements'))
         .exists(`Root rotation statements exists for ${name}`);
@@ -146,7 +146,7 @@ const connectionTests = [
       assert
         .dom(GENERAL.inputByAttr('max_connection_lifetime'))
         .exists(`Max connection lifetime exists for ${name}`);
-      assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
+      assert.dom(GENERAL.button('TLS options')).exists('TLS options toggle exists');
       assert
         .dom(GENERAL.inputByAttr('root_rotation_statements'))
         .exists(`Root rotation statements exists for ${name}`);
@@ -169,7 +169,7 @@ const connectionTests = [
       assert
         .dom(GENERAL.inputByAttr('max_connection_lifetime'))
         .exists(`Max connection lifetime exists for ${name}`);
-      assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
+      assert.dom(GENERAL.button('TLS options')).exists('TLS options toggle exists');
       assert
         .dom(GENERAL.inputByAttr('root_rotation_statements'))
         .exists(`Root rotation statements exists for ${name}`);
@@ -192,7 +192,7 @@ const connectionTests = [
       assert
         .dom(GENERAL.inputByAttr('max_connection_lifetime'))
         .exists(`Max connection lifetime exists for ${name}`);
-      assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
+      assert.dom(GENERAL.button('TLS options')).exists('TLS options toggle exists');
       assert
         .dom(GENERAL.inputByAttr('root_rotation_statements'))
         .exists(`Root rotation statements exists for ${name}`);
@@ -490,7 +490,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       .dom('[data-test-confirmation-modal-title]')
       .hasText('Delete connection?', 'Modal appears asking to confirm delete action');
     await fillIn('[data-test-confirmation-modal-input="Delete connection?"]', connectionDetails.id);
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
 
     assert.strictEqual(currentURL(), `/vault/secrets/${backend}/list`, 'Redirects to connection list page');
     assert

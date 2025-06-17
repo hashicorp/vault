@@ -11,9 +11,6 @@ import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
 const SELECTORS = {
-  downloadBtn: '[data-test-download-button]',
-  toggle: '[data-test-button="toggle-masked"]',
-  downloadIcon: '[data-test-download-icon]',
   stringify: '[data-test-stringify-toggle]',
 };
 module('Integration | Component | masked input', function (hooks) {
@@ -32,11 +29,11 @@ module('Integration | Component | masked input', function (hooks) {
     assert.dom('textarea').exists();
     assert.dom('textarea').hasClass('masked-font', 'it renders an input with obscure font');
     assert.dom(GENERAL.copyButton).doesNotExist('does not render copy button by default');
-    assert.dom('[data-test-download-button]').doesNotExist('does not render download button by default');
+    assert.dom(GENERAL.button('Download')).doesNotExist('does not render download button by default');
 
-    await click(SELECTORS.toggle);
+    await click(GENERAL.button('toggle-masked'));
     assert.dom('.masked-value').doesNotHaveClass('masked-font', 'it unmasks when show button is clicked');
-    await click(SELECTORS.toggle);
+    await click(GENERAL.button('toggle-masked'));
     assert.dom('.masked-value').hasClass('masked-font', 'it remasks text when button is clicked');
   });
 
@@ -56,10 +53,10 @@ module('Integration | Component | masked input', function (hooks) {
 
   test('it renders a download button when allowDownload is true', async function (assert) {
     await render(hbs`<MaskedInput @allowDownload={{true}} /> `);
-    assert.dom(SELECTORS.downloadIcon).exists();
+    assert.dom(GENERAL.button('Download secret value')).exists();
 
-    await click(SELECTORS.downloadIcon);
-    assert.dom(SELECTORS.downloadBtn).exists('clicking download icon opens modal with download button');
+    await click(GENERAL.button('Download secret value'));
+    assert.dom(GENERAL.button('Download')).exists('clicking download icon opens modal with download button');
   });
 
   test('it shortens all outputs when displayOnly and masked', async function (assert) {
@@ -68,7 +65,7 @@ module('Integration | Component | masked input', function (hooks) {
     const maskedValue = document.querySelector('.masked-value').innerText;
     assert.strictEqual(maskedValue.length, 11);
 
-    await click(SELECTORS.toggle);
+    await click(GENERAL.button('toggle-masked'));
     const unMaskedValue = document.querySelector('.masked-value').innerText;
     assert.strictEqual(unMaskedValue.length, this.value.length);
   });
@@ -106,7 +103,7 @@ module('Integration | Component | masked input', function (hooks) {
     this.set('value', 'hello');
     await render(hbs`<MaskedInput @value={{this.value}} />`);
     await triggerKeyEvent('textarea', 'keydown', 9);
-    await click(SELECTORS.toggle);
+    await click(GENERAL.button('toggle-masked'));
     const unMaskedValue = document.querySelector('.masked-value').value;
     assert.strictEqual(unMaskedValue, this.value);
   });
@@ -123,10 +120,10 @@ module('Integration | Component | masked input', function (hooks) {
     `);
     assert.dom('[data-test-masked-input]').exists('shows masked input');
     assert.dom(GENERAL.copyButton).exists();
-    assert.dom(SELECTORS.downloadIcon).exists();
-    assert.dom(SELECTORS.toggle).exists('shows toggle mask button');
+    assert.dom(GENERAL.button('Download secret value')).exists();
+    assert.dom(GENERAL.button('toggle-masked')).exists('shows toggle mask button');
 
-    await click(SELECTORS.toggle);
+    await click(GENERAL.button('toggle-masked'));
     assert.dom('.masked-value').doesNotHaveClass('masked-font', 'it unmasks when show button is clicked');
     assert
       .dom('[data-test-icon="minus"]')
@@ -157,12 +154,12 @@ module('Integration | Component | masked input', function (hooks) {
       />
     `);
 
-    await click(SELECTORS.downloadIcon);
+    await click(GENERAL.button('Download secret value'));
     assert.dom(SELECTORS.stringify).isNotChecked('Stringify toggle off as default');
-    await click(SELECTORS.downloadBtn);
+    await click(GENERAL.button('Download'));
 
-    await click(SELECTORS.downloadIcon);
+    await click(GENERAL.button('Download secret value'));
     await click(SELECTORS.stringify);
-    await click(SELECTORS.downloadBtn);
+    await click(GENERAL.button('Download'));
   });
 });
