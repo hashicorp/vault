@@ -181,7 +181,8 @@ supplied name.
   [HashiCorp releases page](https://releases.hashicorp.com/). Automatic
   downloads only support secret and auth plugins with artifacts containing
   `metadata.json` and `metadata.json.sig`. To use automatic downloads, your
-  network must permit communication between Vault and `releases.hashicorp.com`.
+  network must permit HTTPS and TCP port 443 between all
+  Vault cluster nodes and `releases.hashicorp.com`.
 
 
 ### Sample payload
