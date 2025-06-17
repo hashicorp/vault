@@ -12,7 +12,6 @@ export default create({
   visitCreate: visitable('/vault/secrets/:backend/kmip/scopes/create'),
   createLink: clickable('[data-test-scope-create]'),
   scopeName: fillable('[data-test-input="name"]'),
-  submit: clickable('[data-test-edit-form-submit]'),
   configurationLink: clickable('[data-test-kmip-link-config]'),
   configureLink: clickable('[data-test-kmip-link-configure]'),
   scopesLink: clickable('[data-test-kmip-link-scopes]'),

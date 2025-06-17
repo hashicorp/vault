@@ -1,3 +1,5 @@
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -12,5 +14,13 @@
   .opblock-summary-path-description-wrapper {
     width: min-content;
     flex-grow: 1;
+  }
+
+  .info {
+    margin: size_variables.$spacing-8 0;
+
+    .title {
+      font-size: size_variables.$size-5;
+    }
   }
 }

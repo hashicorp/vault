@@ -17,8 +17,6 @@ export default class Form {
   [key: string]: unknown; // Add an index signature to allow dynamic property assignment for set shim
   declare data: Record<string, unknown>;
   declare validations: Validations;
-  declare formFields: FormField[];
-  declare formFieldGroups: FormFieldGroup[];
   declare isNew: boolean;
 
   constructor(data = {}, options: FormOptions = {}, validations?: Validations) {
@@ -33,17 +31,22 @@ export default class Form {
     // this allows for form field properties to be accessed directly on the class rather than form.data.someField
     const proxyTarget = (target: this, prop: string) => {
       // check if the property that is being accessed is a form field
-      let formFields = Array.isArray(target.formFields) ? target.formFields : [];
+      const formFields = Array.isArray(target['formFields']) ? target['formFields'] : [];
       // in the case of formFieldGroups we need extract the fields out into a flat array
-      if (Array.isArray(target.formFieldGroups)) {
-        formFields = target.formFieldGroups.reduce((arr: FormField[], group) => {
-          const values = Object.values(group)[0] || [];
-          return [...arr, ...values];
-        }, []);
-      }
-      const formDataKeys = formFields.map((field) => field.name) || [];
+      const formGroupFields = Array.isArray(target['formFieldGroups'])
+        ? target['formFieldGroups'].reduce((arr: FormField[], group: FormFieldGroup) => {
+            const values = Object.values(group)[0] || [];
+            return [...arr, ...values];
+          }, [])
+        : [];
+      // combine the formFields and formGroupFields into a single array
+      const allFields = [...formFields, ...formGroupFields];
+      const formDataKeys = allFields.map((field) => field.name) || [];
       // if the property is a form field return the data object as the target, otherwise return the original target (this)
-      return !Reflect.has(target, prop) && formDataKeys.includes(prop) ? target.data : target;
+      // account for nested form data properties like 'config.maxLeaseTtl' when accessing the object like this.config
+      const isDataProp = formDataKeys.some((key) => key === prop || key.split('.').includes(prop));
+
+      return !Reflect.has(target, prop) && isDataProp ? target.data : target;
     };
 
     return new Proxy(this, {

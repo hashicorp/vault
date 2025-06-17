@@ -42,7 +42,6 @@ export const PKI_DELETE_ALL_ISSUERS = {
   issuerLink: '[data-test-delete-all-issuers-link]',
   deleteAllIssuerModal: '#confirmation-modal',
   deleteAllIssuerInput: '[data-test-confirmation-modal-input="Delete all issuers?"]',
-  deleteAllIssuerButton: '[data-test-confirm-button="Delete all issuers?"]',
 };
 
 export const PKI_GENERATE_ROOT = {
@@ -76,12 +75,12 @@ export const PKI_CROSS_SIGN = {
   signedIssuerRow: (row = 0) => `[data-test-info-table-row="${row}"]`,
   signedIssuerCol: (attr: string) => `[data-test-info-table-column="${attr}"]`,
   rowValue: (attr: string) => `[data-test-row-value="${attr}"]`, // TODO replace with the GENERAL.infoRowValue
-  copyButton: (attr: string) => `[data-test-row-value="${attr}"] [data-test-copy-button]`,
+  copyButton: (attr: string) => `[data-test-row-value="${attr}"] ${GENERAL.copyButton}`,
 };
 
 export const PKI_ISSUER_DETAILS = {
   configure: '[data-test-pki-issuer-configure]',
-  copyButtonByName: (name: string) => `[data-test-row-value="${name}"] [data-test-copy-button]`,
+  copyButtonByName: (name: string) => `[data-test-row-value="${name}"] ${GENERAL.copyButton}`,
   crossSign: '[data-test-pki-issuer-cross-sign]',
   defaultGroup: '[data-test-details-group="default"]',
   download: '[data-test-issuer-download]',
@@ -173,7 +172,6 @@ export const PKI_KEYS = {
   popupMenuEdit: '[data-test-key-menu-link="edit"]',
   // key details
   keyDeleteButton: '[data-test-pki-key-delete]',
-  downloadButton: '[data-test-download-button]',
   keyEditLink: '[data-test-pki-key-edit]',
   nextStepsAlert: '[data-test-pki-key-next-steps]',
 };

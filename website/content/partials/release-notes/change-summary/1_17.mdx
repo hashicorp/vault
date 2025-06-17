@@ -1,0 +1,56 @@
+### General updates
+
+Change          | Found   | Fixed   | Recs    | Edition    | Issue
+--------------- | ------- |-------- | ------- | ---------- | -----
+Beta deprecated | 1.17.0  | N/A     | No      | All        | [Request limiter deprecated](/vault/docs/v1.17.x/updates/important-changes#request-limiter)
+Opt out feature | 1.17.0  | N/A     | **Yes** | All        | [PKI sign-intermediate now truncates `notAfter` field to signing issuer](/vault/docs/v1.17.x/updates/important-changes#pki-truncate)
+
+
+### Breaking changes
+
+Found   | Recommendations | Edition    | Issue
+------- | --------------- | ---------- | -----
+1.17.18 | **Yes**         | All        | [Rekey cancellations use a nonce](/vault/docs/v1.20.x/updates/important-changes#rekey-cancel-nonce)
+
+
+### New behavior
+
+Found   | Recommendations | Edition    | Issue
+------- | --------------- | ---------- | -----
+1.17.0  | No              | All        | [Allowed audit headers now have unremovable defaults](/vault/docs/v1.17.x/updates/important-changes#audit-headers)
+1.17.0  | **Yes**         | All        | [JWT auth login requires `bound_audiences` parameter on role](/vault/docs/v1.17.x/updates/important-changes#jwt-auth-login-requires-bound-audiences-on-the-role)
+1.17.14 | No              | All        | [Strict validation for Azure auth login requests](/vault/docs/v1.17.x/updates/important-changes#strict-azure)
+1.17.3  | **Yes**         | All        | [Secrets Sync SSRF Protection May Block Private Endpoints](/vault/docs/v1.17.x/updates/important-changes#secrets-sync-ssrf-protection-may-block-private-endpoints)
+1.17.9  | No              | All        | [Default report months deprecated for `sys/internal/counters`](/vault/docs/v1.17.x/updates/important-changes#activity-log-changes)
+1.17.9  | **Yes**         | All        | [Vault product usage metrics reporting](/vault/docs/v1.17.x/updates/important-changes#product-usage-reporting)
+
+
+### Bugs
+
+Found   | Fixed   | Workaround    | Edition    | Issue
+------- |-------- | ------- | ---------- | -----
+1.17.0  | 1.17.17 | **Yes** | Enterprise | [External Enterprise plugins cannot run on a standby node when it becomes active](/vault/docs/v1.17.x/updates/important-changes#external-ent-plugins)
+1.17.0  | 1.17.14 | Upgrade | All        | [Vault log file missing subsystem logs](/vault/docs/v1.17.x/updates/important-changes#vault-log-file-missing-subsystem-logs)
+1.17.14 | 1.17.17 | **Yes** | All        | [Azure authN fails to authenticate Uniform VMSS instances](/vault/docs/v1.17.x/updates/important-changes#azure-auth-fails-to-authenticate-uniform-vmss-instances)
+
+
+### Known issues
+
+Found   | Fixed   | Workaround    | Edition    | Issue
+------- |-------- | ------- | ---------- | -----
+1.17.0  | 1.17.4  | **Yes** | All        | [AWS Auth Role configuration requires an external_id](/vault/docs/v1.17.x/updates/important-changes#aws-auth-role-configuration-requires-an-external_id)
+1.17.0  | 1.17.6  | **Yes** | All        | [Cached activation flags for secrets sync on follower nodes are not updated](/vault/docs/v1.17.x/updates/important-changes#cached-activation-flags-for-secrets-sync-on-follower-nodes-are-not-updated)
+1.17.0  | 1.17.5  | Upgrade | All        | [Client tokens and token accessors audited in plaintext](/vault/docs/v1.17.x/updates/important-changes#client-tokens-and-token-accessors-audited-in-plaintext)
+1.17.0  | 1.17.3  | Upgrade | All        | [Deleting an entity-aliases does not remove it from the in-memory database on standby nodes](/vault/docs/v1.17.x/updates/important-changes#deleting-an-entity-aliases-does-not-remove-it-from-the-in-memory-database-on-standby-nodes)
+1.17.0  | No      | **Yes** | Enterprise | [Duplicate identity groups created when concurrent requests sent to the primary and PR secondary cluster](/vault/docs/v1.17.x/updates/important-changes#duplicate-identity-groups-created-when-concurrent-requests-sent-to-the-primary-and-pr-secondary-cluster)
+1.17.0  | No      | **Yes** | All        | [Duplicate unseal/seal wrap HSM keys](/vault/docs/v1.17.x/updates/important-changes#seal-seal-wrapped-duplicate-hsm-keys)
+1.17.0  | 1.17.2  | Upgrade | Enterprise | [Input data on Transit Generate CMAC Response](/vault/docs/v1.17.x/updates/important-changes#input-data-on-transit-generate-cmac-response)
+1.17.0  | No      | **Yes** | Enterprise | [Manual entity merges sent to a PR secondary cluster are not persisted to storage](/vault/docs/v1.17.x/updates/important-changes#manual-entity-merges-sent-to-a-pr-secondary-cluster-are-not-persisted-to-storage)
+1.17.0  | No      | **Yes** | All        | [PKI OCSP GET requests can return HTTP redirect responses](/vault/docs/v1.17.x/updates/important-changes#pki-ocsp)
+1.17.0  | No      | Upgrade | All        | [Unwanted secret rotation for DB and LDAP roles on restart](/vault/docs/v1.17.x/updates/important-changes#database-and-ldap-secrets-engine-unwanted-secret-rotation-on-backend-restart)
+1.17.0  | 1.17.1  | Upgrade | All        | [Vault Agent and Vault Proxy consume an excessive amount of CPU](/vault/docs/v1.17.x/updates/important-changes#vault-agent-and-vault-proxy-consume-an-excessive-amount-of-cpu)
+1.17.0  | 1.17.3  | Upgrade | Enterprise | [Vault standby nodes not deleting removed entity-aliases from in-memory database](/vault/docs/v1.17.x/updates/important-changes#deleting-an-entity-aliases-does-not-remove-it-from-the-in-memory-database-on-standby-nodes)
+1.17.1  | 1.17.2  | **Yes** | All        | [Potential DoS when using the deny_unauthorized proxy protocol behavior for a TCP listener](/vault/docs/v1.17.x/updates/important-changes#potential-dos-when-using-the-deny_unauthorized-proxy-protocol-behavior-for-a-tcp-listener)
+1.17.12 | No      | No      | All        | [Authorization failure with Azure federated identity credentials](/vault/docs/v1.17.x/updates/important-changes#authorization-failures-using-azure-federated-identity-credentials)
+1.17.12 | 1.17.16 | Upgrade | All        | [Unexpected DB static role rotations on upgrade](/vault/docs/v1.17.x/updates/important-changes#database-static-role-rotations-on-upgrade)
+1.17.12 | 1.17.16 | Upgrade | All        | [Unexpected LDAP static role rotations on upgrade](/vault/docs/v1.17.x/updates/important-changes#ldap-static-role-rotations-on-upgrade)
