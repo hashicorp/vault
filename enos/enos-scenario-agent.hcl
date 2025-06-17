@@ -171,6 +171,23 @@ scenario "agent" {
     }
   }
 
+  step "create_test_servers_target" {
+    description = global.description.create_test_servers_target
+    module      = module.target_ec2_instances
+    depends_on  = [step.create_vpc]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      ami_id          = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
+      cluster_tag_key = global.vault_tag_key
+      common_tags     = global.tags
+      vpc_id          = step.create_vpc.id
+    }
+  }
+
   step "create_vault_cluster_targets" {
     description = global.description.create_vault_cluster_targets
     module      = module.target_ec2_instances
@@ -204,6 +221,23 @@ scenario "agent" {
       common_tags     = global.tags
       seal_key_names  = step.create_seal_key.resource_names
       vpc_id          = step.create_vpc.id
+    }
+  }
+
+  step "create_test_servers" {
+    description = global.description.create_test_servers
+    module      = module.create_test_servers
+    depends_on = [
+      step.create_test_servers_target
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      hosts        = step.create_test_servers_target.hosts
+      ldap_version = "1.5.0"
     }
   }
 
@@ -479,7 +513,10 @@ scenario "agent" {
   step "verify_secrets_engines_create" {
     description = global.description.verify_secrets_engines_create
     module      = module.vault_verify_secrets_engines_create
-    depends_on  = [step.verify_vault_unsealed]
+    depends_on = [
+      step.verify_vault_unsealed,
+      step.create_test_servers
+    ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -507,6 +544,7 @@ scenario "agent" {
 
     variables {
       hosts             = step.create_vault_cluster_targets.hosts
+      ldap_host         = step.create_test_servers.state.ldap.ip_address
       leader_host       = step.get_vault_cluster_ips.leader_host
       vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
@@ -635,6 +673,11 @@ scenario "agent" {
   output "audit_device_file_path" {
     description = "The file path for the file audit device, if enabled"
     value       = step.create_vault_cluster.audit_device_file_path
+  }
+
+  output "backend_test_servers_ldap" {
+    description = "The LDAP test servers info"
+    value       = step.create_test_servers.state.ldap
   }
 
   output "cluster_name" {
