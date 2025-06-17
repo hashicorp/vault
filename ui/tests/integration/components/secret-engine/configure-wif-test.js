@@ -82,9 +82,12 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           assert.dom(SES.configureForm).exists(`it lands on the ${type} configuration form`);
           assert.dom(SES.wif.accessType(type)).isChecked(`defaults to showing ${type} access type checked`);
           assert.dom(SES.wif.accessType('wif')).isNotChecked('wif access type is not checked');
-          // toggle grouped fields if it exists
-          const toggleGroup = document.querySelector('[data-test-toggle-group]');
-          toggleGroup ? await click(toggleGroup) : null;
+
+          let toggleGroup = GENERAL.button('More options');
+          if (type === 'aws') {
+            toggleGroup = GENERAL.button('Root config options');
+          }
+          await click(toggleGroup);
 
           for (const key of expectedConfigKeys(type, true)) {
             if (key === 'configTtl' || key === 'maxTtl') {
@@ -117,9 +120,13 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
 
           await this.renderComponent();
           await click(SES.wif.accessType('wif'));
-          // toggle grouped fields if it exists
-          const toggleGroup = document.querySelector('[data-test-toggle-group]');
-          toggleGroup ? await click(toggleGroup) : null;
+
+          let toggleGroup = GENERAL.button('More options');
+          if (type === 'aws') {
+            toggleGroup = GENERAL.button('Root config options');
+          }
+          await click(toggleGroup);
+
           // check for the wif fields only
           for (const key of expectedConfigKeys(`${type}-wif`, true)) {
             if (key === 'Identity token TTL') {
@@ -599,9 +606,13 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           assert
             .dom(SES.wif.accessTypeSection)
             .doesNotExist('Access type section does not render for a community user');
-          // toggle grouped fields if it exists
-          const toggleGroup = document.querySelector('[data-test-toggle-group]');
-          toggleGroup ? await click(toggleGroup) : null;
+
+          let toggleGroup = GENERAL.button('More options');
+          if (type === 'aws') {
+            toggleGroup = GENERAL.button('Root config options');
+          }
+          await click(toggleGroup);
+
           // check all the form fields are present
           for (const key of expectedConfigKeys(type, true)) {
             if (key === 'configTtl' || key === 'maxTtl') {
@@ -781,7 +792,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
             .dom(GENERAL.inputByAttr('secretKey'))
             .hasValue('**********', 'secretKey is masked on edit the value');
 
-          await click(GENERAL.toggleGroup('Root config options'));
+          await click(GENERAL.button('Root config options'));
           assert.dom(GENERAL.inputByAttr('region')).hasValue(this.form.region);
           assert.dom(GENERAL.inputByAttr('iamEndpoint')).hasValue(this.form.iamEndpoint);
           assert.dom(GENERAL.inputByAttr('stsEndpoint')).hasValue(this.form.stsEndpoint);
@@ -858,7 +869,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           const config = createConfig('gcp-generic');
           this.form = this.getForm('gcp', config);
           await this.renderComponent();
-          await click(GENERAL.toggleGroup('More options'));
+          await click(GENERAL.button('More options'));
           assert.dom(GENERAL.ttl.input('Config TTL')).hasValue('100');
           assert.dom(GENERAL.ttl.input('Max TTL')).hasValue('101');
         });
@@ -879,9 +890,13 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
 
           await this.renderComponent();
           assert.dom(SES.wif.accessTypeSection).doesNotExist('Access type section does not render');
-          // toggle grouped fields if it exists
-          const toggleGroup = document.querySelector('[data-test-toggle-group]');
-          toggleGroup ? await click(toggleGroup) : null;
+
+          let toggleGroup = GENERAL.button('More options');
+          if (type === 'aws') {
+            toggleGroup = GENERAL.button('Root config options');
+          }
+          await click(toggleGroup);
+
           for (const key of expectedConfigKeys(type, true)) {
             if (key === 'secretKey' || key === 'clientSecret' || key === 'credentials') return; // these keys are not returned by the API
             // same issues noted in wif enterprise tests with how toggle.hbs passes in name vs how formField input passes in attr to data test selector
