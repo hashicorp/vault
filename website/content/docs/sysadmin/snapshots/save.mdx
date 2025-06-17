@@ -1,0 +1,179 @@
+---
+layout: docs
+page_title: Save a Vault snapshot
+description: >-
+  Manually back up the data in your Vault cluster.
+---
+
+# Save a Vault snapshot
+
+Manually back up data from your Vault cluster leader node with a snapshot.
+
+<Tip>
+
+If you are taking snapshots as preparation for a Vault Enterprise upgrade,
+review the
+[Automate upgrades with Vault Enterprise](/vault/tutorials/raft/raft-upgrade-automation)
+tutorial to learn how you can automate your upgrades with autopilot.
+
+</Tip>
+
+
+## Before you start
+
+- **You must a working knowledge of how Vault saves data**.
+- **You must have a valid Vault cluster configuration using integratd storage**.
+- **You must know, and be able to contact your unseal/recovery key holders**.
+- **You must have permission to access encrypted data in backed storage**.
+- **You should have a secure location, away from your Vault cluster
+  infrastructure, to save the snapshot file**.
+
+
+## Save a single cluster snapshot
+
+Take a snapshot of a single Vault cluster.
+
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+Use the Vault CLI to take a snapshot from the cluster members with a command like this example.
+
+```shell-session
+$ vault operator raft snapshot save backup.snap
+```
+
+This command writes a snapshot to the local file `backup.snap`.
+
+Learn more in the [snapshot CLI documentation](/vault/docs/commands/operator/raft#snapshot).
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+Use cURL with the Vault API to take a snapshot from the cluster members with a command like this example.
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    https://127.0.0.1:8200/v1/sys/storage/raft/snapshot > backup.snap
+```
+
+This command writes a snapshot to the local file `backup.snap`.
+
+Learn more in the [snapshot API documentation](/vault/api-docs/system/storage/raft#take-a-snapshot-of-the-raft-cluster).
+
+</Tab>
+
+</Tabs>
+
+
+
+## Save a DR replication cluster snapshot
+
+Take a snapshot of a cluster participating in disater recovery replication.
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+Take snapshots from the cluster members on the DR Primary cluster using a command like this example.
+
+```shell-session
+$ vault operator raft snapshot save primary.snap
+```
+
+This command writes a snapshot to the local file `primary.snap`.
+
+Learn more in the [snapshot CLI documentation](/vault/docs/commands/operator/raft#snapshot).
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+Use cURL with the Vault API to take snapshots from the cluster members with a command like this example.
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    https://127.0.0.1:8200/v1/sys/storage/raft/snapshot > primary.snap
+```
+
+This command writes a snapshot to the local file `primary.snap`.
+
+Learn more in the [snapshot API documentation](/vault/api-docs/system/storage/raft#take-a-snapshot-of-the-raft-cluster).
+
+</Tab>
+
+</Tabs>
+
+
+
+## Save a performance replication (PR) cluster snapshot
+
+Take a manual snapshot of a cluster participating in performance replication.
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+Take separate snapshots from the Vault Integrated Storage (Raft) cluster members
+supporting both the Performance Primary cluster and Performance Secondary
+cluster using commands like these examples.
+
+First, take a snapshot on the primary cluster.
+
+```shell-session
+$ vault operator raft snapshot save primary.snap
+```
+
+This command writes a snapshot to the local file `primary.snap`.
+
+Next, take a snapshot on the secondary cluster.
+
+```shell-session
+$ vault operator raft snapshot save secondary.snap
+```
+
+This command writes a snapshot to the local file `secondary.snap`.
+
+Learn more in the [snapshot CLI documentation](/vault/docs/commands/operator/raft#snapshot).
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+Take separate snapshots from the Vault Integrated Storage (Raft) cluster members
+supporting both the Performance Primary cluster and Performance Secondary
+cluster using commands like these examples.
+
+First, take a snapshot on the primary cluster.
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    https://127.0.0.1:8200/v1/sys/storage/raft/snapshot > primary.snap
+```
+
+This command writes a snapshot to the local file `primary.snap`.
+
+Next, take a snapshot on the secondary cluster.
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    https://127.0.0.1:8200/v1/sys/storage/raft/snapshot > secondary.snap
+```
+
+This command writes a snapshot to the local file `secondary.snap`.
+
+Learn more in the [snapshot API documentation](/vault/api-docs/system/storage/raft#take-a-snapshot-of-the-raft-cluster).
+
+</Tab>
+
+</Tabs>
