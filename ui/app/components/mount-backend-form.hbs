@@ -31,7 +31,7 @@
     <form {{on "submit" (perform this.mountBackend)}}>
       <FormFieldGroups
         @model={{@mountModel}}
-        @groupName={{if (eq @mountType "secret") "formFieldGroups"}}
+        @groupName={{if (eq @mountCategory "secret") "formFieldGroups"}}
         @renderGroup="default"
         @modelValidations={{this.modelValidations}}
         @onKeyUp={{this.onKeyUp}}
@@ -40,7 +40,7 @@
       <FormFieldGroups
         @model={{@mountModel}}
         @renderGroup="Method Options"
-        @groupName={{if (eq @mountType "secret") "formFieldGroups"}}
+        @groupName={{if (eq @mountCategory "secret") "formFieldGroups"}}
       >
         <:identityTokenKey>
           <SearchSelectWithModal
