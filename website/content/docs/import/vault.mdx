@@ -15,14 +15,13 @@ Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common 
 ## Additional arguments
 
 - `address` `(string: "")` - API address of source vault cluster. If absent, the CLI uses the
-environment variable VAULT_ADDR for destination and IMPORT_SOURCE_VAULT_ADDR for source.
+environment variable VAULT_ADDR for destination.
 - `namespace` `(string: "")` - Optional namespace to read from. If absent, the CLI uses the
-environment variable VAULT_NAMESPACE for destination and IMPORT_SOURCE_VAULT_NAMESPACE for source.
+environment variable VAULT_NAMESPACE for destination.
 - `mount` `(string: required)` - KV-v2 mount to read from.
 - `credentials_file` `(string: "")` - Path to a file containing a vault token.  If absent, the CLI uses the
-environment variable VAULT_TOKEN for destination and IMPORT_SOURCE_VAULT_TOKEN for source.
+environment variable VAULT_TOKEN for destination.
 - `is_hcp_vault_cluster` `(boolean: false)` - Set to true if destination vault belongs to HCP Vault Dedicated. 
-If true `namespace` field will be relative to `admin` namespace of HCP Vault Dedicated.
 
 
 ## Example
