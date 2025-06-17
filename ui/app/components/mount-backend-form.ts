@@ -9,9 +9,8 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import { isAddonEngine } from 'vault/helpers/mountable-secret-engines';
 import { presence } from 'vault/utils/forms/validators';
-import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
+import { filterEnginesByMountCategory, isAddonEngine } from 'vault/utils/all-engines-metadata';
 import { assert } from '@ember/debug';
 
 import type FlashMessageService from 'vault/services/flash-messages';
@@ -29,7 +28,7 @@ import type { MountSecretBackendModel } from 'vault/routes/vault/cluster/setting
  *   <MountBackendForm @mountCategory="secret" @onMountSuccess={{this.onMountSuccess}} />```
  *
  * @param {function} onMountSuccess - A function that transitions once the Mount has been successfully posted.
- * @param {string} mountCategory=auth - The type of engine to mount, either 'secret' or 'auth'.
+ * @param {string} mountCategory - The type of engine to mount, either 'secret' or 'auth'.
  *
  */
 

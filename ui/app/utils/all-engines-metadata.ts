@@ -10,9 +10,13 @@
 export interface EngineDisplayData {
   category?: string;
   displayName: string;
+  engineRoute?: string;
   glyph?: string;
+  isWIF?: boolean; // flag for 'Workload Identity Federation' engines.
   mountCategory: string[];
   requiresEnterprise?: boolean;
+  isConfigurable?: boolean; // for secret engines that have their own configuration page and actions. - These engines do not exist in their own Ember engine.
+  isOnlyMountable?: boolean; // The UI only supports configuration views for these secrets engines. The CLI must be used to manage other engine resources (i.e. roles, credentials).
   type: string;
   value?: string;
 }
@@ -36,6 +40,13 @@ export function filterEnginesByMountCategory({
       );
 }
 
+/** Copied function from mountable-secret-engines */
+export function isAddonEngine(type: string, version: number) {
+  if (type === 'kv' && version === 1) return false;
+  const engineRoute = ALL_ENGINES.find((engine) => engine.type === type)?.engineRoute;
+  return !!engineRoute;
+}
+
 export const ALL_ENGINES: EngineDisplayData[] = [
   {
     category: 'cloud',
@@ -56,6 +67,8 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'cloud',
     displayName: 'AWS',
     glyph: 'aws-color',
+    isConfigurable: true,
+    isWIF: true,
     mountCategory: ['auth', 'secret'],
     type: 'aws',
   },
@@ -63,6 +76,9 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'cloud',
     displayName: 'Azure',
     glyph: 'azure-color',
+    isOnlyMountable: true,
+    isConfigurable: true,
+    isWIF: true,
     mountCategory: ['auth', 'secret'],
     type: 'azure',
   },
@@ -97,6 +113,9 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'cloud',
     displayName: 'Google Cloud',
     glyph: 'gcp-color',
+    isOnlyMountable: true,
+    isConfigurable: true,
+    isWIF: true,
     mountCategory: ['auth', 'secret'],
     type: 'gcp',
   },
@@ -118,6 +137,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
   {
     category: 'generic',
     displayName: 'KV',
+    engineRoute: 'kv.list',
     glyph: 'key-values',
     mountCategory: ['secret'],
     type: 'kv',
@@ -125,6 +145,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
   {
     category: 'generic',
     displayName: 'KMIP',
+    engineRoute: 'kmip.scopes.index',
     glyph: 'lock',
     mountCategory: ['secret'],
     requiresEnterprise: true,
@@ -149,6 +170,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
   {
     category: 'generic',
     displayName: 'Kubernetes',
+    engineRoute: 'kubernetes.overview',
     glyph: 'kubernetes-color',
     mountCategory: ['auth', 'secret'],
     type: 'kubernetes',
@@ -156,6 +178,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
   {
     category: 'generic',
     displayName: 'LDAP',
+    engineRoute: 'ldap.overview',
     glyph: 'folder-users',
     mountCategory: ['auth', 'secret'],
     type: 'ldap',
@@ -186,6 +209,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
   {
     category: 'generic',
     displayName: 'PKI Certificates',
+    engineRoute: 'pki.overview',
     glyph: 'certificate',
     mountCategory: ['secret'],
     type: 'pki',
@@ -218,6 +242,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     category: 'generic',
     displayName: 'SSH',
     glyph: 'terminal-screen',
+    isConfigurable: true,
     mountCategory: ['secret'],
     type: 'ssh',
   },

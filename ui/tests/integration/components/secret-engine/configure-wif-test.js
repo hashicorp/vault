@@ -12,6 +12,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { v4 as uuidv4 } from 'uuid';
 import { hbs } from 'ember-cli-htmlbars';
+import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import {
   expectedConfigKeys,
@@ -21,10 +22,10 @@ import {
   fillInAwsConfig,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 import { capabilitiesStub } from 'vault/tests/helpers/stubs';
-import { WIF_ENGINES, allEngines } from 'vault/helpers/mountable-secret-engines';
 import waitForError from 'vault/tests/helpers/wait-for-error';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
-const allEnginesArray = allEngines(); // saving as const so we don't invoke the method multiple times in the for loop
+const WIF_ENGINES = ALL_ENGINES.filter((e) => e.isWIF).map((e) => e.type);
 
 module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) {
   setupRenderingTest(hooks);
@@ -52,7 +53,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       for (const type of WIF_ENGINES) {
         test(`${type}: it renders default fields`, async function (assert) {
           this.id = `${type}-${this.uid}`;
-          this.displayName = allEnginesArray.find((engine) => engine.type === type)?.displayName;
+          this.displayName = engineDisplayData(type).displayName;
           this.issuerConfig = createConfig(this.store, this.id, 'issuer');
           this.mountConfigModel =
             type === 'aws'
@@ -98,7 +99,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       for (const type of WIF_ENGINES) {
         test(`${type}: it renders wif fields when user selects wif access type`, async function (assert) {
           this.id = `${type}-${this.uid}`;
-          this.displayName = allEnginesArray.find((engine) => engine.type === type)?.displayName;
+          this.displayName = engineDisplayData(type).displayName;
           this.issuerConfig = createConfig(this.store, this.id, 'issuer');
           this.mountConfigModel =
             type === 'aws'
@@ -625,7 +626,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       for (const type of WIF_ENGINES) {
         test(`${type}: it renders fields`, async function (assert) {
           this.id = `${type}-${this.uid}`;
-          this.displayName = allEnginesArray.find((engine) => engine.type === type)?.displayName;
+          this.displayName = engineDisplayData(type).displayName;
           this.issuerConfig = createConfig(this.store, this.id, 'issuer');
           this.mountConfigModel =
             type === 'aws'
@@ -672,7 +673,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       for (const type of WIF_ENGINES) {
         test(`${type}: it defaults to WIF accessType if WIF fields are already set`, async function (assert) {
           this.id = `${type}-${this.uid}`;
-          this.displayName = allEnginesArray.find((engine) => engine.type === type)?.displayName;
+          this.displayName = engineDisplayData(type).displayName;
           this.mountConfigModel = createConfig(this.store, this.id, `${type}-wif`);
           this.type = type;
           await render(hbs`
@@ -695,7 +696,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       for (const type of WIF_ENGINES) {
         test(`${type}: it renders issuer if global issuer is already set`, async function (assert) {
           this.id = `${type}-${this.uid}`;
-          this.displayName = allEnginesArray.find((engine) => engine.type === type)?.displayName;
+          this.displayName = engineDisplayData(type).displayName;
           this.mountConfigModel = createConfig(this.store, this.id, `${type}-wif`);
           this.issuerConfig = createConfig(this.store, this.id, 'issuer');
           this.issuerConfig.issuer = 'https://foo-bar-blah.com';
@@ -930,7 +931,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
         test(`${type}:it does not show access type but defaults to type "account" fields`, async function (assert) {
           this.id = `${type}-${this.uid}`;
           this.mountConfigModel = createConfig(this.store, this.id, `${type}-generic`);
-          this.displayName = allEnginesArray.find((engine) => engine.type === type)?.displayName;
+          this.displayName = engineDisplayData(type).displayName;
           this.type = type;
           await render(hbs`
                 <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}} @additionalConfigModel={{this.additionalConfigModel}}/>
