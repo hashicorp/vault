@@ -123,7 +123,7 @@ module('Acceptance | mfa-method', function (hooks) {
       );
 
     // we need to close the modal
-    await click('[data-test-confirm-cancel-button]');
+    await click(GENERAL.cancelButton);
 
     const fields = [
       ['Issuer', 'Period', 'Key size', 'QR size', 'Algorithm', 'Digits', 'Skew', 'Max validation attempts'],
