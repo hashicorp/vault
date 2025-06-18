@@ -39,12 +39,18 @@ data "aws_subnets" "vpc" {
   }
 }
 
+resource "random_shuffle" "az" {
+  input        = data.aws_availability_zones.available.names
+  result_count = 1
+}
+
 resource "aws_instance" "k6" {
   ami                    = var.ami_id
   instance_type          = var.k6_instance_type
   key_name               = var.ssh_keypair
   subnet_id              = data.aws_subnets.vpc.ids[0]
   vpc_security_group_ids = [var.metrics_security_group_ids["prometheus"], var.target_security_group_id]
+  availability_zone      = random_shuffle.az.result[0]
 
   tags = {
     Name = "${var.project_name}-k6"
@@ -57,6 +63,7 @@ resource "aws_instance" "metrics" {
   key_name               = var.ssh_keypair
   subnet_id              = data.aws_subnets.vpc.ids[0]
   vpc_security_group_ids = [var.metrics_security_group_ids["grafana"], var.target_security_group_id]
+  availability_zone      = random_shuffle.az.result[0]
 
   tags = {
     Name = "${var.project_name}-metrics"
