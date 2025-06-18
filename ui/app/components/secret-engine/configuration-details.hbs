@@ -3,23 +3,19 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{#each @configModels as |configModel|}}
-  {{#each configModel.displayAttrs as |attr|}}
+{{#if @config}}
+  {{#each this.displayFields as |field|}}
     {{! public key while not sensitive when editing/creating, should be hidden by default on viewing }}
-    {{#if (or attr.options.sensitive (eq attr.name "publicKey"))}}
-      <InfoTableRow
-        alwaysRender={{not (is-empty-value (get configModel attr.name))}}
-        @label={{or attr.options.label (to-label attr.name)}}
-        @value={{get configModel (or attr.options.fieldValue attr.name)}}
-      >
-        <MaskedInput @value={{get configModel attr.name}} @name={{attr.name}} @displayOnly={{true}} @allowCopy={{true}} />
+    {{#if (eq field "publicKey")}}
+      <InfoTableRow @label="Public key" @value={{@config.publicKey}}>
+        <MaskedInput @value={{@config.publicKey}} @name={{field}} @displayOnly={{true}} @allowCopy={{true}} />
       </InfoTableRow>
     {{else}}
       <InfoTableRow
-        @alwaysRender={{not (is-empty-value (get @model attr.name))}}
-        @label={{or attr.options.label (to-label attr.name)}}
-        @value={{get configModel (or attr.options.fieldValue attr.name)}}
-        @formatTtl={{eq attr.options.editType "ttl"}}
+        @alwaysRender={{not (is-empty-value (get @config field))}}
+        @label={{this.label field}}
+        @value={{get @config field}}
+        @formatTtl={{this.isDuration field}}
       />
     {{/if}}
   {{/each}}
@@ -38,4 +34,4 @@
       @model={{@id}}
     />
   </EmptyState>
-{{/each}}
+{{/if}}
