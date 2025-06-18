@@ -13,7 +13,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { datetimeLocalStringFormat } from 'core/utils/date-formatters';
 import { format, addDays, startOfDay } from 'date-fns';
-import { createNS, runCmd } from '../../../helpers/commands';
+import { createNS, deleteNS, runCmd } from '../../../helpers/commands';
 
 const unauthenticatedMessageResponse = {
   request_id: '664fbad0-fcd8-9023-4c5b-81a7962e9f4b',
@@ -160,5 +160,7 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
       'vault.cluster.config-ui.messages.index',
       'redirects to messages page after delete'
     );
+    // clean up namespace pollution
+    await runCmd(deleteNS('world'));
   });
 });

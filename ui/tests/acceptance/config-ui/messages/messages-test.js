@@ -87,8 +87,9 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
       for (const id of Object.values(messageIdObject)) {
         await runCmd(`vault delete sys/config/ui/custom-messages/${id}`);
       }
-      await visit(`/vault/config-ui/messages/index`); // redirect to messages index after delete to ensure the state is refreshed
+      await visit(`/vault/config-ui/messages`); // redirect to messages index after delete to ensure the state is refreshed
     };
+
     this.createMessageBrowser = async ({
       title,
       type = 'banner',
@@ -349,5 +350,13 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     await click(GENERAL.button('preview'));
     assert.dom(CUSTOM_MESSAGES.modal('preview image')).doesNotExist('preview image does not show');
     assert.dom(CUSTOM_MESSAGES.input('title')).hasClass('has-error-border', 'error around title shows');
+  });
+
+  test('cleanup message pollution', async function (assert) {
+    // This test is to ensure that the message pollution is cleaned up after the tests run.
+    // Theoretically, we shouldn't need this because we clean up the messages in the tests they are created in, but IRL, they still exists and cause flaky tests.
+    await this.deleteMessages();
+    await visit('/vault/config-ui/messages');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No messages yet', 'no messages exist after cleanup');
   });
 });

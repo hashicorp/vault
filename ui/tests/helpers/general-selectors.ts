@@ -57,7 +57,6 @@ export const GENERAL = {
   inputSearch: (attr: string) => `[data-test-input-search="${attr}"]`,
   filterInput: '[data-test-filter-input]',
   filterInputExplicit: '[data-test-filter-input-explicit]',
-  filterInputExplicitSearch: '[data-test-filter-input-explicit-search]',
   labelById: (id: string) => `label[id="${id}"]`,
   labelByGroupControlIndex: (index: number) => `.hds-form-group__control-field:nth-of-type(${index}) label`,
   radioByAttr: (attr: string) => `[data-test-radio="${attr}"]`,
