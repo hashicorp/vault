@@ -270,7 +270,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
           return { data: { id: path, type: this.type, ...wifAttrs } };
         });
         await enablePage.enable(this.type, path);
-        GENERAL.toggleGroup('More options');
+        GENERAL.button('More options');
 
         for (const key of expectedConfigKeys('azure-wif')) {
           const responseKeyAndValue = expectedValueOfConfigKeys(this.type, key);

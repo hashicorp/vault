@@ -61,7 +61,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await click(MOUNT_BACKEND_FORM.mountType('kv'));
     await fillIn(GENERAL.inputByAttr('path'), path);
-    await click(GENERAL.toggleGroup('Method Options'));
+    await click(GENERAL.button('Method Options'));
     await page
       .enableDefaultTtl()
       .defaultTTLUnit('h')
@@ -89,7 +89,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     );
     await click(MOUNT_BACKEND_FORM.mountType('kv'));
     await fillIn(GENERAL.inputByAttr('path'), path);
-    await click(GENERAL.toggleGroup('Method Options'));
+    await click(GENERAL.button('Method Options'));
     await page.enableDefaultTtl().enableMaxTtl().maxTTLUnit('h').maxTTLVal(maxTTLHours);
     await click(GENERAL.submitButton);
     await configPage.visit({ backend: path });
@@ -242,7 +242,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       await click(MOUNT_BACKEND_FORM.mountType(engine.type));
       await fillIn(GENERAL.inputByAttr('path'), engine.type);
       if (engine.type === 'kv') {
-        await click(GENERAL.toggleGroup('Method Options'));
+        await click(GENERAL.button('Method Options'));
         await mountSecrets.version(1);
       }
       await click(GENERAL.submitButton);
@@ -305,7 +305,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await mountSecrets.visit();
     await click(MOUNT_BACKEND_FORM.mountType('kv'));
     await fillIn(GENERAL.inputByAttr('path'), v1);
-    await click(GENERAL.toggleGroup('Method Options'));
+    await click(GENERAL.button('Method Options'));
     await mountSecrets.version(1);
     await click(GENERAL.submitButton);
 
@@ -324,7 +324,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
       await page.visit();
       await click(MOUNT_BACKEND_FORM.mountType('aws')); // only testing aws of the WIF engines as the functionality for all others WIF engines in this form are the same
-      await click(GENERAL.toggleGroup('Method Options'));
+      await click(GENERAL.button('Method Options'));
       assert.dom('[data-test-search-select-with-modal]').exists('Search select with modal component renders');
       await clickTrigger('#key');
       const dropdownOptions = findAll('[data-option-index]').map((o) => o.innerText);
@@ -357,7 +357,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       await visit('/vault/settings/mount-secret-backend');
       await click(MOUNT_BACKEND_FORM.mountType(engine));
       await fillIn(GENERAL.inputByAttr('path'), path);
-      await click(GENERAL.toggleGroup('Method Options'));
+      await click(GENERAL.button('Method Options'));
       await clickTrigger('#key');
       // create new key
       await fillIn(GENERAL.searchSelect.searchInput, newKey);
@@ -399,7 +399,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       await page.visit();
       await click(MOUNT_BACKEND_FORM.mountType(engine));
       await fillIn(GENERAL.inputByAttr('path'), path);
-      await click(GENERAL.toggleGroup('Method Options'));
+      await click(GENERAL.button('Method Options'));
       // type-in fallback component to create new key
       await typeIn(GENERAL.inputSearch('key'), 'general-key');
       await click(GENERAL.submitButton);
