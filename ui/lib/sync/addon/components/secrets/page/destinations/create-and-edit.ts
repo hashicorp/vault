@@ -111,8 +111,8 @@ export default class DestinationsCreateForm extends Component<Args> {
       this.modelValidations = null;
 
       const { form, type } = this.args;
+      const { name } = form.data;
       const { isValid, state, invalidFormMessage, data } = form.toJSON();
-      const { name } = data;
 
       this.modelValidations = isValid ? null : state;
       this.invalidFormMessage = isValid ? '' : invalidFormMessage;
