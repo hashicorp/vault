@@ -17,7 +17,7 @@ output "ldap" {
   value = local.ldap_output
 }
 
-# Enable pki secrets engine
+# Enable LDAP secrets engine
 resource "enos_remote_exec" "secrets_enable_ldap_secret" {
   environment = {
     ENGINE            = local.ldap_output.ldap_mount

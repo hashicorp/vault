@@ -80,6 +80,19 @@ ldapadd -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME
 echo "Vault: Creating ldap auth and creating auth/ldap/config route"
 "$binpath" auth enable "${MOUNT}" > /dev/null 2>&1 || echo "Warning: Vault ldap auth already enabled"
 "$binpath" write "auth/${MOUNT}/config" \
+  url="ldap://test_${LDAP_HOST}:${LDAP_PORT}" \
+  binddn="cn=admin,dc=${LDAP_USERNAME},dc=com" \
+  bindpass="${LDAP_ADMIN_PW}" \
+  userdn="ou=users,dc=${LDAP_USERNAME},dc=com" \
+  userattr="uid" \
+  groupdn="ou=groups,dc=${LDAP_USERNAME},dc=com" \
+  groupfilter="(&(objectClass=groupOfNames)(member={{.UserDN}}))" \
+  groupattr="cn" \
+  insecure_tls=true
+
+echo "Vault: Updating ldap auth and creating auth/ldap/config route"
+"$binpath" auth enable "${MOUNT}" > /dev/null 2>&1 || echo "Warning: Vault ldap auth already enabled"
+"$binpath" write "auth/${MOUNT}/config" \
   url="ldap://${LDAP_HOST}:${LDAP_PORT}" \
   binddn="cn=admin,dc=${LDAP_USERNAME},dc=com" \
   bindpass="${LDAP_ADMIN_PW}" \
