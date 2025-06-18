@@ -214,8 +214,18 @@ reporting {
 
 The `development_cluster` configuration cannot differ across replicated clusters.
 In [performance replication](/vault/docs/enterprise/replication#performance-replication), secondary clusters inherit the
-`development_cluster` value from the primary cluster, regardless of their own HCL configuration. If the secondary cluster
-is promoted to a primary, it will begin to report its own `development_cluster` value determined by its HCL configuration.
+`development_cluster` value from the primary cluster, regardless of their own HCL configuration.
+
+<Note>
+
+If the inherited value from the primary differs from the HCL configuration on the secondary, the secondary will log the
+following error to warn that it will be reporting a different value than its configuration:
+
+> "development cluster setting in config does not match that of the primary, updating to follow the primary config setting"
+
+</Note>
+
+If the secondary cluster is promoted to a primary, it will begin to report its own `development_cluster` value determined by its HCL configuration.
 The reverse is also true, if the primary cluster is demoted to a secondary, it will report the `development_cluster`
 value of its new primary.
 
@@ -227,12 +237,7 @@ However, if promoted to primary during failover, they will report their own `dev
 All clusters in a replication group must have the same `development_cluster` setting in their HCL configuration.
 In the event of a promotion or failover, the new primary cluster's HCL configuration will determine the value reported
 by all clusters in the replication group. Inconsistent configurations between clusters can lead to changes to the
-reported `development_cluster` value when the primary cluster changes. The error message:
-
-> "development cluster setting in config does not match that of the primary, updating to follow the primary config setting"
-
-is logged on the secondary when the cluster's reported value is different from its HCL configuration, to warn of the inconsistency
-between the primary and secondary configurations.
+reported `development_cluster` value when the primary cluster changes.
 
 Within each cluster, each node must have the same `development_cluster` setting in its configuration to be consistent.
 In the event of leadership change, the active node will use its own server configuration to determine the value to report.
