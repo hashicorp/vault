@@ -66,7 +66,7 @@ scenario "smoke" {
     // softhsm packages not available for leap/sles.
     exclude {
       seal   = ["pkcs11"]
-      distro = ["leap", "sles"]
+#       distro = ["leap", "sles"] # TESTINGGGG
     }
 
     // Testing in IPV6 mode is currently implemented for integrated Raft storage only
