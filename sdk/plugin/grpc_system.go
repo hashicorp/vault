@@ -508,3 +508,7 @@ func (s *gRPCSystemViewServer) DeregisterRotationJob(ctx context.Context, req *p
 
 	return &pb.Empty{}, nil
 }
+
+func (s *gRPCSystemViewClient) DownloadExtractVerifyPlugin(_ context.Context, _ *pluginutil.PluginRunner) error {
+	return fmt.Errorf("cannot call DownloadExtractVerifyPlugin from a plugin backend")
+}

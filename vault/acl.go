@@ -17,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/observations"
 	"github.com/mitchellh/copystructure"
 )
 
@@ -740,6 +741,42 @@ SWCPATH:
 	return wcPathDescrs[len(wcPathDescrs)-1].perms
 }
 
+func (c *Core) recordPolicyEvaluationObservation(ctx context.Context, te *logical.TokenEntry, req *logical.Request, results *AuthResults) {
+	observation := map[string]interface{}{
+		"request_id": req.ID,
+		"path":       req.Path,
+		"entity_id":  req.EntityID,
+		"client_id":  req.ClientID,
+	}
+	if te != nil {
+		observation["policies"] = te.Policies
+		observation["is_root"] = te.IsRoot()
+	}
+
+	if results != nil {
+		if results.ACLResults != nil {
+			observation["request_allowed"] = results.Allowed
+			observation["request_acl_allowed"] = results.ACLResults.Allowed
+
+			grantingPolicies := make([]logical.PolicyInfo, 0)
+			if len(results.ACLResults.GrantingPolicies) > 0 {
+				grantingPolicies = append(grantingPolicies, results.ACLResults.GrantingPolicies...)
+			}
+			if results.SentinelResults != nil && len(results.SentinelResults.GrantingPolicies) > 0 {
+				grantingPolicies = append(grantingPolicies, results.SentinelResults.GrantingPolicies...)
+			}
+			if len(grantingPolicies) > 0 {
+				observation["granting_policies"] = grantingPolicies
+			}
+
+			err := c.Observations().RecordObservationToLedger(ctx, observations.ObservationTypePolicyACLEvaluation, nil, observation)
+			if err != nil {
+				c.logger.Error("error recording observation for policy checks", "error", err)
+			}
+		}
+	}
+}
+
 func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.TokenEntry, req *logical.Request, inEntity *identity.Entity, opts *PolicyCheckOpts) *AuthResults {
 	ret := new(AuthResults)
 
@@ -751,22 +788,25 @@ func (c *Core) performPolicyChecks(ctx context.Context, acl *ACL, te *logical.To
 		ret.RootPrivs = ret.ACLResults.RootPrivs
 		// Root is always allowed; skip Sentinel/MFA checks
 		if ret.ACLResults.IsRoot {
-			// logger.Warn("token is root, skipping checks")
 			ret.Allowed = true
+			c.recordPolicyEvaluationObservation(ctx, te, req, ret)
 			return ret
 		}
 		if !ret.ACLResults.Allowed {
+			c.recordPolicyEvaluationObservation(ctx, te, req, ret)
 			return ret
 		}
 		// Since HelpOperation was fast-pathed inside AllowOperation, RootPrivs will not have been populated in this
 		// case, so we need to special-case that here as well, or we'll block HelpOperation on all sudo-protected paths.
 		if !ret.RootPrivs && opts.RootPrivsRequired && req.Operation != logical.HelpOperation {
+			c.recordPolicyEvaluationObservation(ctx, te, req, ret)
 			return ret
 		}
 	}
 
 	c.performEntPolicyChecks(ctx, acl, te, req, inEntity, opts, ret)
 
+	c.recordPolicyEvaluationObservation(ctx, te, req, ret)
 	return ret
 }
 

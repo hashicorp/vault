@@ -89,7 +89,6 @@ jobs:
       changed-files: ${{ steps.changed-files.outputs.changed-files }}
       checkout-ref: ${{ steps.checkout.outputs.ref }}
       compute-build: ${{ steps.metadata.outputs.compute-build }}
-      compute-build-compat: ${{ steps.metadata.outputs.compute-build-compat }}
       compute-build-ui: ${{ steps.metadata.outputs.compute-build-ui }}
       compute-small: ${{ steps.metadata.outputs.compute-small }}
       is-draft: ${{ steps.metadata.outputs.is-draft }}
@@ -237,7 +236,6 @@ jobs:
       build-date: ${{ needs.setup.outputs.build-date }}
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       compute-build: ${{ needs.setup.outputs.compute-build }}
-      compute-build-compat: ${{ needs.setup.outputs.compute-build-compat }}
       compute-small: ${{ needs.setup.outputs.compute-small }}
       vault-revision: ${{ needs.setup.outputs.vault-revision }}
       vault-version: ${{ needs.setup.outputs.vault-version }}

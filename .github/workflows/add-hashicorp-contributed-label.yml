@@ -19,8 +19,11 @@ jobs:
     if: ${{ github.repository == 'hashicorp/vault' && (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) }}
     runs-on: ubuntu-latest
     steps:
+      # gh pr edit needs a .git directory so we'll do a shallow checkout
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: "Add label to PR"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ github.event.pull_request.html_url }}
-        run: gh pr edit "$PR" --add-label 'hashicorp-contributed-pr'
+        run: |
+          gh pr edit "$PR" --add-label 'hashicorp-contributed-pr'

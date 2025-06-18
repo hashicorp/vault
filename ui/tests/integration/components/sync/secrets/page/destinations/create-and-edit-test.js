@@ -143,7 +143,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     await click(GENERAL.kvObjectEditor.addRow);
     await fillIn(GENERAL.kvObjectEditor.key(1), 'added');
     await fillIn(GENERAL.kvObjectEditor.value(1), 'key');
-    await click(PAGE.saveButton);
+    await click(GENERAL.submitButton);
   });
 
   test('edit: it adds custom_tags when previously there are none', async function (assert) {
@@ -160,7 +160,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
     await this.renderComponent();
     await PAGE.form.fillInByAttr('customTags', 'blah');
-    await click(PAGE.saveButton);
+    await click(GENERAL.submitButton);
   });
 
   test('edit: payload does not contain any custom_tags when removed in form', async function (assert) {
@@ -176,7 +176,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
     await this.renderComponent();
     await click(PAGE.kvObjectEditor.deleteRow());
-    await click(PAGE.saveButton);
+    await click(GENERAL.submitButton);
   });
 
   test('edit: payload only contains masked inputs when they have changed', async function (assert) {
@@ -203,7 +203,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     await click(PAGE.inputByAttr('accessKeyId')); // click on input but do not change value
     await click(PAGE.enableField('secretAccessKey'));
     await fillIn(PAGE.inputByAttr('secretAccessKey'), 'new-secret');
-    await click(PAGE.saveButton);
+    await click(GENERAL.submitButton);
   });
 
   test('it renders API errors', async function (assert) {
@@ -224,7 +224,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
     await this.renderComponent();
 
-    await click(PAGE.saveButton);
+    await click(GENERAL.submitButton);
     assert
       .dom(PAGE.messageError)
       .hasText(
@@ -324,7 +324,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
         for (const field of this.formFields) {
           await PAGE.form.fillInByAttr(field.name, `my-${field.name}`);
         }
-        await click(PAGE.saveButton);
+        await click(GENERAL.submitButton);
         const actualArgs = this.transitionStub.lastCall.args;
         const expectedArgs = ['vault.cluster.sync.secrets.destinations.destination.details', type, name];
         assert.propEqual(actualArgs, expectedArgs, 'transitionTo called with expected args');
@@ -342,7 +342,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
         assert.expect(Object.keys(validationAssertions).length);
 
         await this.renderComponent();
-        await click(PAGE.saveButton);
+        await click(GENERAL.submitButton);
 
         // only asserts validations for presence, refactor if validations change
         for (const attr in validationAssertions) {
@@ -420,7 +420,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
           }
         }
 
-        await click(PAGE.saveButton);
+        await click(GENERAL.submitButton);
         const actualArgs = this.transitionStub.lastCall.args;
         const expectedArgs = [
           'vault.cluster.sync.secrets.destinations.destination.details',

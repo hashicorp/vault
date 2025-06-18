@@ -187,7 +187,7 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
     for (const field of FIELDS) {
       await fillIn(PKI_CROSS_SIGN.objectListInput(field.key), this.testInputs[field.key]);
     }
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     assert.dom(PKI_CROSS_SIGN.statusCount).hasText('Cross-signing complete (1 successful, 0 errors)');
     assert
@@ -253,7 +253,7 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
     for (const field of FIELDS) {
       await fillIn(PKI_CROSS_SIGN.objectListInput(field.key, 2), unsupportedCert[field.key]);
     }
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     assert.dom(PKI_CROSS_SIGN.statusCount).hasText('Cross-signing complete (0 successful, 3 errors)');
     for (const field of FIELDS) {
@@ -293,7 +293,7 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
     for (const field of FIELDS) {
       await fillIn(PKI_CROSS_SIGN.objectListInput(field.key), this.testInputs[field.key]);
     }
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     assert.dom(PKI_CROSS_SIGN.statusCount).hasText('Cross-signing complete (0 successful, 1 error)');
     assert
@@ -326,7 +326,7 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
     for (const field of FIELDS) {
       await fillIn(PKI_CROSS_SIGN.objectListInput(field.key), this.testInputs[field.key]);
     }
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.dom(PKI_CROSS_SIGN.statusCount).hasText('Cross-signing complete (0 successful, 1 error)');
     assert
       .dom(`${PKI_CROSS_SIGN.signedIssuerRow()} [data-test-icon="alert-circle-fill"]`)
@@ -365,7 +365,7 @@ module('Integration | Component | pki issuer cross sign', function (hooks) {
     for (const field of FIELDS) {
       await fillIn(PKI_CROSS_SIGN.objectListInput(field.key), this.testInputs[field.key]);
     }
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.dom(PKI_CROSS_SIGN.statusCount).hasText('Cross-signing complete (0 successful, 1 error)');
     assert
       .dom(`${PKI_CROSS_SIGN.signedIssuerRow()} [data-test-icon="alert-circle-fill"]`)

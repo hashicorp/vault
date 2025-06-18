@@ -8,13 +8,7 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, render, settled } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
-
-const selectors = {
-  keys: '[data-test-toggle-group="Key parameters"]',
-  sanOptions: '[data-test-toggle-group="Subject Alternative Name (SAN) Options"]',
-  subjectFields: '[data-test-toggle-group="Additional subject fields"]',
-  toggleByName: (name) => `[data-test-toggle-group="${name}"]`,
-};
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | PkiGenerateToggleGroups', function (hooks) {
   setupRenderingTest(hooks);
@@ -29,9 +23,9 @@ module('Integration | Component | PkiGenerateToggleGroups', function (hooks) {
   test('it should render key parameters', async function (assert) {
     await render(hbs`<PkiGenerateToggleGroups @model={{this.model}} />`, { owner: this.engine });
 
-    assert.dom(selectors.keys).hasText('Key parameters', 'Key parameters group renders');
+    assert.dom(GENERAL.button('Key parameters')).hasText('Key parameters', 'Key parameters group renders');
 
-    await click(selectors.keys);
+    await click(GENERAL.button('Key parameters'));
 
     assert
       .dom('[data-test-toggle-group-description]')
@@ -61,10 +55,10 @@ module('Integration | Component | PkiGenerateToggleGroups', function (hooks) {
     await render(hbs`<PkiGenerateToggleGroups @model={{this.model}} />`, { owner: this.engine });
 
     assert
-      .dom(selectors.sanOptions)
+      .dom(GENERAL.button('Subject Alternative Name (SAN) Options'))
       .hasText('Subject Alternative Name (SAN) Options', 'SAN options group renders');
 
-    await click(selectors.sanOptions);
+    await click(GENERAL.button('Subject Alternative Name (SAN) Options'));
 
     const fields = ['excludeCnFromSans', 'subjectSerialNumber', 'altNames', 'ipSans', 'uriSans', 'otherSans'];
     assert.dom('[data-test-field]').exists({ count: 6 }, `Correct number of fields render`);
@@ -90,9 +84,11 @@ module('Integration | Component | PkiGenerateToggleGroups', function (hooks) {
   test('it should render additional subject fields', async function (assert) {
     await render(hbs`<PkiGenerateToggleGroups @model={{this.model}} />`, { owner: this.engine });
 
-    assert.dom(selectors.subjectFields).hasText('Additional subject fields', 'SAN options group renders');
+    assert
+      .dom(GENERAL.button('Additional subject fields'))
+      .hasText('Additional subject fields', 'SAN options group renders');
 
-    await click(selectors.subjectFields);
+    await click(GENERAL.button('Additional subject fields'));
 
     const fields = ['ou', 'organization', 'country', 'locality', 'province', 'streetAddress', 'postalCode'];
     assert.dom('[data-test-field]').exists({ count: fields.length }, 'Correct number of fields render');
@@ -113,16 +109,16 @@ module('Integration | Component | PkiGenerateToggleGroups', function (hooks) {
       owner: this.engine,
     });
 
-    assert.dom(selectors.toggleByName('Group A')).hasText('Group A', 'First group renders');
-    assert.dom(selectors.toggleByName('Group Z')).hasText('Group Z', 'Second group renders');
+    assert.dom(GENERAL.button('Group A')).hasText('Group A', 'First group renders');
+    assert.dom(GENERAL.button('Group Z')).hasText('Group Z', 'Second group renders');
 
-    await click(selectors.toggleByName('Group A'));
+    await click(GENERAL.button('Group A'));
     assert.dom('[data-test-field]').exists({ count: fieldsA.length }, 'Correct number of fields render');
     fieldsA.forEach((key) => {
       assert.dom(`[data-test-input="${key}"]`).exists(`${key} input renders`);
     });
 
-    await click(selectors.toggleByName('Group Z'));
+    await click(GENERAL.button('Group Z'));
     assert.dom('[data-test-field]').exists({ count: fieldsZ.length }, 'Correct number of fields render');
     fieldsZ.forEach((key) => {
       assert.dom(`[data-test-input="${key}"]`).exists(`${key} input renders`);
