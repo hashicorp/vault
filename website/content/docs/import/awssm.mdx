@@ -73,9 +73,6 @@ credentials. If you leave one of the required arguments unset, or try to set
 
 Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common to all source types.
 
-- `credentials_profile` `(string: "")` - The name of the profile in your credentials file to authenticate with.
-  If not set, Vault uses the default credential provider mechanisms.
-
 - `vault_mount_path` `(string: "")` - The Vault mount path to a pre-configured AWS
   secrets engine used to generate dynamic credentials for the importer.
 
@@ -90,3 +87,6 @@ Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common 
   credentials.
 
 - `vault_credentials_file` `(string: "")` - The path to a file containing a Vault token for the vault server configured above.
+
+- `credentials_profile` `(string: "")` - The name of the profile in your credentials file to authenticate with.
+  If not set, Vault uses the default credential provider mechanisms.

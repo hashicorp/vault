@@ -68,8 +68,6 @@ If one of `vault_mount_path`,`vault_role_name`, `vault_namespace`,`vault_address
 
 Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common to all source types.
 
-- `credentials_file` `(string: "")` - The path to the service account key credentials file to authenticate with.
-
 - `vault_mount_path` `(string: "")` - The Vault mount path to a pre-configured GCP
   secrets engine used to generate dynamic credentials for the importer.
 
@@ -85,3 +83,5 @@ Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common 
 - `vault_credentials_file` `(string: "")` - Local path to a file containing a
   valid token for the Vault server at `vault_address`. Only required for dynamic
   credentials.
+
+- `credentials_file` `(string: "")` - The path to the service account key credentials file to authenticate with.
