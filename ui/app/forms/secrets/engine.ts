@@ -135,7 +135,7 @@ export default class SecretsEngineForm extends Form {
     if (this.engineType === 'pki') {
       return [...this.coreOptionFields, ...this.standardConfigFields];
     }
-    if (ALL_ENGINES.find((engine) => engine.type === this.engineType && engine.isWIF)) {
+    if (ALL_ENGINES.find((engine) => engine.type === this.engineType && engine.isWIF)?.type) {
       return [
         ...this.coreOptionFields,
         defaultTtl,
