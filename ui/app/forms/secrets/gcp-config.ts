@@ -7,7 +7,9 @@ import WifConfigForm from './wif-config';
 import FormField from 'vault/utils/forms/field';
 import FormFieldGroup from 'vault/utils/forms/field-group';
 
-export default class AzureConfigForm extends WifConfigForm {
+import type { GcpConfigFormData } from 'vault/secrets/engine';
+
+export default class AzureConfigForm extends WifConfigForm<GcpConfigFormData> {
   // the "credentials" param is not checked for "isAccountPluginConfigured" because it's never return by the API
   // additionally credentials can be set via GOOGLE_APPLICATION_CREDENTIALS env var so we cannot call it a required field in the ui.
   // thus we can never say for sure if the account accessType has been configured so we always return false

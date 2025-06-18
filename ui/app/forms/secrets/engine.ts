@@ -13,8 +13,7 @@ import { tracked } from '@glimmer/tracking';
 import type { SecretsEngineFormData } from 'vault/secrets/engine';
 import type { Validations } from 'vault/app-types';
 
-export default class SecretsEngineForm extends Form {
-  declare data: Partial<SecretsEngineFormData>;
+export default class SecretsEngineForm extends Form<SecretsEngineFormData> {
   @tracked declare type: string;
 
   validations: Validations = {
@@ -179,6 +178,7 @@ export default class SecretsEngineForm extends Form {
       ...this.data,
       config: {
         ...(config || {}),
+        forceNoCache: config?.forceNoCache ?? false,
         listingVisibility: config?.listingVisibility ? 'unauth' : 'hidden',
       },
     };

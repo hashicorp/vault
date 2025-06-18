@@ -39,15 +39,17 @@ export default class DestinationsCreateForm extends Component<Args> {
     super(owner, args);
     // cache initial custom tags value to compare against updates
     // tags that are removed when editing need to be added to the payload
-    if (args.form['customTags']) {
-      this.initialCustomTags = { ...args.form['customTags'] };
+    // cast type here since not all types have customTags
+    const { customTags } = args.form.data as unknown as Record<string, unknown>;
+    if (customTags) {
+      this.initialCustomTags = { ...customTags };
     }
   }
 
   get header() {
     const { type, form } = this.args;
     const { name: typeDisplayName } = findDestination(type);
-    const { name } = form;
+    const { name } = form.data;
 
     return form.isNew
       ? {
@@ -87,18 +89,18 @@ export default class DestinationsCreateForm extends Component<Args> {
     }
   }
 
-  diffCustomTags(customTags?: Record<string, string>) {
+  diffCustomTags(payload: Record<string, unknown>) {
     // if tags were removed we need to add them to the payload
-    const { form } = this.args;
-    if (!form.isNew && customTags && this.initialCustomTags) {
+    const { isNew } = this.args.form;
+    const { customTags } = payload;
+    if (!isNew && customTags && this.initialCustomTags) {
       // compare the new and old keys of customTags object to determine which need to be removed
       const oldKeys = Object.keys(this.initialCustomTags).filter((k) => !Object.keys(customTags).includes(k));
       // add tagsToRemove to the payload if there is a diff
       if (oldKeys.length > 0) {
-        return { tagsToRemove: oldKeys };
+        payload['tagsToRemove'] = oldKeys;
       }
     }
-    return {};
   }
 
   save = task(
@@ -110,20 +112,17 @@ export default class DestinationsCreateForm extends Component<Args> {
 
       const { form, type } = this.args;
       const { isValid, state, invalidFormMessage, data } = form.toJSON();
-      const name = form['name'] as string;
+      const { name } = data;
 
       this.modelValidations = isValid ? null : state;
       this.invalidFormMessage = isValid ? '' : invalidFormMessage;
 
       if (isValid) {
         try {
-          const { tagsToRemove } = this.diffCustomTags(data['customTags'] as Record<string, string>);
-          if (tagsToRemove) {
-            data['tagsToRemove'] = tagsToRemove;
-          }
-
-          const method = apiMethodResolver(form.isNew ? 'write' : 'patch', this.args.type);
-          await this.api.sys[method](name, data);
+          const payload = data as unknown as Record<string, unknown>;
+          this.diffCustomTags(payload);
+          const method = apiMethodResolver(form.isNew ? 'write' : 'patch', type);
+          await this.api.sys[method](name, payload);
 
           this.router.transitionTo('vault.cluster.sync.secrets.destinations.destination.details', type, name);
         } catch (error) {

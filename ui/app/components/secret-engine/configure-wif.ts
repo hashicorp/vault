@@ -56,7 +56,6 @@ export default class ConfigureWif extends Component<Args> {
   @service declare readonly version: VersionService;
   @service declare readonly flashMessages: FlashMessageService;
 
-  @tracked accessType = 'account'; // for community users they will not be able to change this. for enterprise users, they will have the option to select "wif".
   @tracked errorMessage = '';
   @tracked invalidFormAlert = '';
   @tracked saveIssuerWarning = '';
@@ -68,7 +67,7 @@ export default class ConfigureWif extends Component<Args> {
   constructor(owner: Owner, args: Args) {
     super(owner, args);
     // the following checks are only relevant to existing enterprise configurations
-    const { isNew, isWifPluginConfigured, isAccountPluginConfigured } = this.args.configForm;
+    const { isNew, data, isWifPluginConfigured, isAccountPluginConfigured } = this.args.configForm;
 
     if (this.version.isEnterprise && !isNew) {
       assert(
@@ -83,7 +82,7 @@ export default class ConfigureWif extends Component<Args> {
     }
 
     // cache the issuer to check if it has been changed later
-    this.originalIssuer = this.args.configForm.data['issuer'] as string | undefined;
+    this.originalIssuer = data.issuer;
   }
 
   @action continueSubmitForm() {
@@ -105,7 +104,7 @@ export default class ConfigureWif extends Component<Args> {
         return;
       }
 
-      if (this.originalIssuer !== data['issuer']) {
+      if (this.originalIssuer !== data.issuer) {
         // if the issuer has changed show modal with warning that the config will change
         // if the modal is shown, the user has to click confirm to continue saving
         this.saveIssuerWarning = `You are updating the global issuer config. This will overwrite Vault's current issuer ${
@@ -178,19 +177,19 @@ export default class ConfigureWif extends Component<Args> {
   @action
   onChangeAccessType(accessType: 'account' | 'wif') {
     const { configForm, type } = this.args;
-    configForm['accessType'] = accessType;
+    configForm.accessType = accessType;
 
     if (accessType === 'account') {
       // reset all "wif" attributes that are mutually exclusive with "account" attributes
       // these attributes are the same for each engine
-      configForm['identityTokenAudience'] = configForm['identityTokenTtl'] = undefined;
+      configForm.data.identityTokenAudience = configForm.data.identityTokenTtl = undefined;
     } else if (accessType === 'wif') {
       // reset all "account" attributes that are mutually exclusive with "wif" attributes
       // these attributes are different for each engine
       if (type === 'azure') {
-        configForm['clientSecret'] = undefined;
+        (configForm as AzureConfigForm).data.clientSecret = undefined;
       } else if (type === 'aws') {
-        configForm['accessKey'] = undefined;
+        (configForm as AwsConfigForm).data.accessKey = undefined;
       }
     }
   }
