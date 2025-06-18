@@ -34,8 +34,9 @@ read from, and how to filter this data. Three HCL blocks make this possible:
 
 ## Activate secrets import
 
-The secrets import feature requires manual activation through a one-time trigger. If a import-related endpoint is called prior to
-activation, an error response will be received indicating that the feature has not been activated yet.
+You must activate the secrets import feature with the feature activation
+endpoint before you can import secrets. Vault returns an error if you call
+import-related endpoints before activation.
 
 <Tabs>
 <Tab heading="CLI" group="cli">
