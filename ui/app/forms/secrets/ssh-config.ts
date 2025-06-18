@@ -13,8 +13,8 @@ export default class SshConfigForm extends Form<SshConfigureCaRequest> {
   validations: Validations = {
     generateSigningKey: [
       {
-        validator(form: SshConfigForm) {
-          const { publicKey, privateKey, generateSigningKey } = form.data;
+        validator(data: SshConfigForm['data']) {
+          const { publicKey, privateKey, generateSigningKey } = data;
           // if generateSigningKey is false, both public and private keys are required
           if (!generateSigningKey && (!publicKey || !privateKey)) {
             return false;
@@ -26,8 +26,8 @@ export default class SshConfigForm extends Form<SshConfigureCaRequest> {
     ],
     publicKey: [
       {
-        validator(form: SshConfigForm) {
-          const { publicKey, privateKey } = form.data;
+        validator(data: SshConfigForm['data']) {
+          const { publicKey, privateKey } = data;
           // regardless of generateSigningKey, if one key is set they both need to be set.
           return publicKey || privateKey ? !!(publicKey && privateKey) : true;
         },

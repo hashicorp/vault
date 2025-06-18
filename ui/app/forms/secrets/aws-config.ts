@@ -15,8 +15,8 @@ export default class AwsConfigForm extends WifConfigForm<AwsConfigFormData> {
   validations: Validations = {
     lease: [
       {
-        validator(form: AwsConfigForm) {
-          const { lease, leaseMax } = form.data;
+        validator(data: AwsConfigForm['data']) {
+          const { lease, leaseMax } = data;
           return (lease && leaseMax) || (!lease && !leaseMax) ? true : false;
         },
         message: 'Lease TTL and Max Lease TTL are both required if one of them is set.',
