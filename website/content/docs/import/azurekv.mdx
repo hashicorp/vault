@@ -86,7 +86,9 @@ by a preceding `az login`.
 - `cloud_name` `(string: "AzureCloud")` - Azure cloud name of your credential provider. Leave unset to use `az login` credentials.
 - `tenant_id` `(string: "")` - Tenant ID of your Azure credential provider. Leave unset to use `az login` credentials.
 - `client_id` `(string: "")` - Client ID of your Azure credential provider. Leave unset to use `az login` credentials.
-- `credentials_file` `(string: "")` - Path to a file with the client secret
+- `credentials_file` `(string: "")` - Path to a file on your Azure credential
+  provider with authentication credentials. Leave unset to use `az login`
+  credentials.
 
 - `vault_mount_path` `(string: "")` - The Vault mount path to a pre-configured Azure
   secrets engine used to generate dynamic credentials for the importer.
