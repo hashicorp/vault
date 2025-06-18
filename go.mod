@@ -88,7 +88,7 @@ require (
 	github.com/hashicorp/eventlogger v0.2.10
 	github.com/hashicorp/go-bexpr v0.1.12
 	github.com/hashicorp/go-cleanhttp v0.5.2
-	github.com/hashicorp/go-discover v0.0.0-20210818145131-c573d69da192
+	github.com/hashicorp/go-discover v1.1.0
 	github.com/hashicorp/go-gcp-common v0.9.2
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-kms-wrapping/entropy/v2 v2.0.1
@@ -138,7 +138,7 @@ require (
 	github.com/hashicorp/raft-wal v0.4.0
 	github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16
 	github.com/hashicorp/vault-plugin-auth-alicloud v0.21.0
-	github.com/hashicorp/vault-plugin-auth-azure v0.20.4
+	github.com/hashicorp/vault-plugin-auth-azure v0.21.0
 	github.com/hashicorp/vault-plugin-auth-cf v0.21.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.21.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.24.1
@@ -150,7 +150,7 @@ require (
 	github.com/hashicorp/vault-plugin-database-mongodbatlas v0.15.0
 	github.com/hashicorp/vault-plugin-database-redis v0.6.0
 	github.com/hashicorp/vault-plugin-database-redis-elasticache v0.7.0
-	github.com/hashicorp/vault-plugin-database-snowflake v0.14.0
+	github.com/hashicorp/vault-plugin-database-snowflake v0.14.1
 	github.com/hashicorp/vault-plugin-mock v0.16.1
 	github.com/hashicorp/vault-plugin-secrets-ad v0.21.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.20.0
@@ -159,9 +159,9 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.21.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.11.0
 	github.com/hashicorp/vault-plugin-secrets-kv v0.24.0
-	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.14.0
+	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.16.0
-	github.com/hashicorp/vault-plugin-secrets-terraform v0.11.0
+	github.com/hashicorp/vault-plugin-secrets-terraform v0.12.0
 	github.com/hashicorp/vault-testing-stepwise v0.3.2
 	github.com/hashicorp/vault/api v1.20.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
@@ -247,11 +247,14 @@ require (
 	github.com/apache/arrow-go/v18 v18.0.0 // indirect
 	github.com/avast/retry-go/v4 v4.6.1 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/rds/auth v1.5.11 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.200.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ecs v1.53.8 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect
 	github.com/envoyproxy/go-control-plane/envoy v1.32.4 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.1.0 // indirect
+	github.com/hashicorp/go-discover/provider/gce v0.0.0-20241120163552-5eb1507d16b4 // indirect
 	github.com/hashicorp/go-hmac-drbg v0.0.0-20210916214228-a6e5a68489f6 // indirect
 	github.com/hashicorp/go-metrics v0.5.4 // indirect
 	github.com/hashicorp/go-secure-stdlib/cryptoutil v0.1.1 // indirect
@@ -429,9 +432,9 @@ require (
 	github.com/hashicorp/go-msgpack/v2 v2.1.2 // indirect
 	github.com/hashicorp/go-secure-stdlib/fileutil v0.1.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.4.1 // indirect
-	github.com/hashicorp/go-slug v0.16.3 // indirect
-	github.com/hashicorp/go-tfe v1.74.1 // indirect
-	github.com/hashicorp/jsonapi v1.3.2 // indirect
+	github.com/hashicorp/go-slug v0.16.4 // indirect
+	github.com/hashicorp/go-tfe v1.81.0 // indirect
+	github.com/hashicorp/jsonapi v1.4.3-0.20250220162346-81a76b606f3e // indirect
 	github.com/hashicorp/logutils v1.0.0 // indirect
 	github.com/hashicorp/mdns v1.0.4 // indirect
 	github.com/hashicorp/net-rpc-msgpackrpc/v2 v2.0.0 // indirect
