@@ -219,9 +219,8 @@ In [performance replication](/vault/docs/enterprise/replication#performance-repl
 <Note>
 
 If the inherited value from the primary differs from the HCL configuration on the secondary, the secondary will log the
-following error to warn that it will be reporting a different value than its configuration:
-
-> "development cluster setting in config does not match that of the primary, updating to follow the primary config setting"
+error `"development cluster setting in config does not match that of the primary, updating to follow the primary config setting"`
+to warn that it will be reporting a different value than what is set in its config.
 
 </Note>
 
