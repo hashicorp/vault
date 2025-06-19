@@ -37,13 +37,14 @@ const (
 	// ErrWaitingForClientIDsToLoadToMemory is an error string that is used to indicate that the clientIDs are currently being loaded to memory which is needed to compute the actual values for new clients in the current month.
 	ErrWaitingForClientIDsToLoadToMemory = "We are gathering the most up-to-date client usage information. Please try again later."
 
-	// WarningCurrentMonthDataNotIncluded is a warning string that is used to indicate the the current month's data will be included in the next billing period, and not the current, if the given end_time overlaps with the auto-rolling date.
-	WarningCurrentMonthDataNotIncluded = "The current month's data will not be included in the current billing period if the end_time is in the same month as when the aut-rolling occurs. This data will be included in the next billing period"
+	// WarningCurrentMonthDataNotIncluded is a warning string that is used to indicate the the current month's data will be included in the next billing period, and not the current
+	WarningCurrentMonthDataNotIncluded = "The current month's data will not be included in the current billing period client count as this month is outside of the 12 month billing period. This data will be included in the next billing period"
 )
 
 type StartEndTimesWarnings struct {
-	TimesAlignedToBilling      bool
-	EndTimeAdjustedToPastMonth bool
+	TimesAlignedToBilling       bool
+	EndTimeAdjustedToPastMonth  bool
+	CurrentMonthDataNotIncluded bool
 }
 
 // activityQueryPath is available in every namespace
@@ -368,8 +369,9 @@ func (b *SystemBackend) handleClientMetricQuery(ctx context.Context, req *logica
 	if timeWarnings.TimesAlignedToBilling {
 		warnings = append(warnings, WarningProvidedStartAndEndTimesIgnored)
 	}
-
-	warnings = append(warnings, WarningCurrentMonthDataNotIncluded)
+	if timeWarnings.CurrentMonthDataNotIncluded {
+		warnings = append(warnings, WarningCurrentMonthDataNotIncluded)
+	}
 
 	return &logical.Response{
 		Warnings: warnings,
