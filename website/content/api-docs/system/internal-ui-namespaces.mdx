@@ -2,17 +2,16 @@
 layout: api
 page_title: /sys/internal/ui/namespaces - HTTP API
 description: >-
-  The `/sys/internal/ui/namespaces` endpoint exposes namespaces to the UI.
+  The `/sys/internal/ui/namespaces` endpoint exposes namespaces to the GUI.
 ---
 
 # `/sys/internal/ui/namespaces`
 
-The `/sys/internal/ui/namespaces` endpoint is used to expose namespaces
-to the GUI so that it can change its behavior in response, even before a user logs in.
+The `/sys/internal/ui/namespaces` endpoint returns the namespaces that the current user has access to.
 
-This is currently only being used internally for the UI and is
-an unauthenticated endpoint. Due to the nature of its intended usage, there is no
-guarantee on backwards compatibility for this endpoint.
+This endpoint is used internally by the GUI and is an authenticated endpoint (requires a valid Vault token). You do not need to explicitly grant capabilities on the `/sys/internal/ui/namespaces` path in your policy. If your token has any access to a namespace, that namespace will be included in the response. For more information about namespace policies, see the [sys/namespaces API documentation](https://developer.hashicorp.com/vault/api-docs/system/namespaces).
+
+Due to the nature of its intended usage, there is no guarantee on backwards compatibility for this endpoint.
 
 ## Get namespaces
 
