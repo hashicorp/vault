@@ -56,10 +56,6 @@ module "create_vpc" {
   common_tags = var.tags
 }
 
-module "create_metrics_security_groups" {
-  source = "./modules/create_metrics_security_groups"
-}
-
 module "choose_follower_host" {
   source = "./modules/choose_follower_host"
 }

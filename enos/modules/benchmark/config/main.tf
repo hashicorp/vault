@@ -61,6 +61,18 @@ variable "prometheus_version" {
   default = "3.3.0"
 }
 
+variable "storage_disk_iops" {
+  description = <<-EOF
+    The IOPS to request for storage disk. AWS accounts have a 100,000 IOPS limit
+    by default so our default limit is 16,000. Some scenarios (backend:raft) can
+    be configured to use the 24,000 maximum without requests. If you wish to
+    test the backend:consul scenarios at the maximum you'll need to request
+    a limit increase for your account.
+  EOF
+  type        = number
+  default     = 16000
+}
+
 variable "vault_node_instance_types" {
   description = "The instance types to use depending on architecture"
   type = object({
@@ -148,6 +160,10 @@ output "prometheus_version" {
 
 output "required_ports" {
   value = local.required_ports
+}
+
+output "storage_disk_iops" {
+  value = var.storage_disk_iops
 }
 
 output "vault_node_instance_types" {

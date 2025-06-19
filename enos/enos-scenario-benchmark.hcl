@@ -42,13 +42,13 @@ scenario "benchmark" {
     The benchmark module that implements much of the actual benchmark logic has subdirectories for grafana dashboards
     that will get automatically uploaded and installed, as well as k6 templates for different benchmarking scenarios.
 
-    It's also worth noting that this scenario, if you use Consul storage, will provision 6 EC2 nodes, each with a
-    24K IOPs disk. Our AWS dev accounts that are setup in doormat have a default provisioned IOPs quota of 100K,
-    and some quick math will tell you that 24K * 6 > 100K, so that will fail by default. When I ran these benchmarks,
-    I requested a quota increase from AWS for more IOPs, which is how I was able to run this scenario successfully.
-    You may need to do the same, or if you're not benchmarking Consul's raw performance specifically, you can adjust
-    some of the disk parameters in the create_vault_cluster_backend_targets to provision less IOPs, or use io1 instead
-    of io2, etc.
+    It's worth mentioning that by default we've configured IOPS of the underlying storage volume to 16k. This is below
+    the maximum but allows us to create 6 machines and stay below the 100,000 limit in AWS accounts. If you test with
+    raft storage you can increase the IOPs to 24k, but beware that consul storage will need to stay at 16k unless you
+    get an exception for the account from AWS. When I ran these benchmarks, I requested a quota increase from AWS for
+    more IOPs, which is how I was able to run this scenario successfully. You may need to do the same, or if you're not
+    benchmarking Consul's raw performance specifically, you can adjust some of the disk parameters in the
+    create_vault_cluster_backend_targets to provision less IOPs, or use io1 instead of io2, etc.
 
     Once the scenario has been launched, and everything has finished, grab the public IP of the metrics node and open
     it in a browser on port 3000. Log into grafana with admin/admin and choose whatever dashboard you wish to see.
@@ -213,6 +213,7 @@ scenario "benchmark" {
       enos = local.enos_provider[matrix.distro]
     }
 
+
     variables {
       ami_id          = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
       cluster_tag_key = "benchmark-k6"
@@ -263,7 +264,7 @@ scenario "benchmark" {
       ports_ingress    = step.benchmark_config.required_ports
       root_volume_type = "io2"
       root_volume_size = 24
-      root_volume_iops = 24000
+      root_volume_iops = step.benchmark_config.storage_disk_iops
       seal_key_names   = step.create_seal_key.resource_names
       vpc_id           = step.create_vpc.id
     }
@@ -291,7 +292,7 @@ scenario "benchmark" {
       ports_ingress    = step.benchmark_config.required_ports
       root_volume_type = "io2"
       root_volume_size = 24
-      root_volume_iops = 24000
+      root_volume_iops = step.benchmark_config.storage_disk_iops
       seal_key_names   = step.create_seal_key.resource_names
       vpc_id           = step.create_vpc.id
     }

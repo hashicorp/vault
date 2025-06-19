@@ -16,11 +16,6 @@ globals {
       Vault cluster nodes will provide their own integrated storage.
     EOF
 
-    create_metrics_security_groups = <<-EOF
-      Create two security groups, one for grafana and one for prometheus. The grafana one allows
-      ingress on port 3000 and the prometheus one allows ingress on port 9100.
-    EOF
-
     create_seal_key = <<-EOF
       Create the necessary seal key infrastructure for Vaults auto-unseal functionality. Depending
       on the 'seal' variant this step will perform different actions. When using 'shamir' the step
