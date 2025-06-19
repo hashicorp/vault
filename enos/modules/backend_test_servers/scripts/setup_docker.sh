@@ -51,3 +51,4 @@ CONTAINER_CMD="sudo docker"
 LDAP_DOCKER_NAME="docker.io/osixia/openldap:1.5.0"
 echo "Pulling image: ${LDAP_DOCKER_NAME}"
 $CONTAINER_CMD pull "${LDAP_DOCKER_NAME}"
+exit 1
