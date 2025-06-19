@@ -10,7 +10,7 @@ terraform {
 }
 
 locals {
-  distro      = var.distro
+  distro = var.distro
   ldap_server = {
     domain     = "enos.com"
     org        = "hashicorp"
@@ -33,7 +33,7 @@ resource "enos_remote_exec" "setup_docker" {
   scripts = [abspath("${path.module}/scripts/setup_docker.sh")]
 
   environment = {
-    DISTRO   = local.distro
+    DISTRO = local.distro
   }
 
   transport = {
