@@ -13,14 +13,14 @@
         id={{type.type}}
         class="has-top-padding-l has-text-centered small-card"
         @onClick={{fn @setMountType type.type}}
-        @disabled={{if type.requiredFeature (not (has-feature type.requiredFeature)) false}}
+        @disabled={{if type.requiresADP (not (has-feature type.requiresADP)) false}}
         data-test-mount-type={{type.type}}
       >
         <Icon @name={{type.glyph}} @size="24" class="has-bottom-margin-xs" />
         <Hds::Text::Body @tag="h3" @size="300">
           {{type.displayName}}
         </Hds::Text::Body>
-        {{#if (and type.requiredFeature (not (has-feature type.requiredFeature)))}}
+        {{#if (and type.requiresADP (not (has-feature type.requiresADP)))}}
           <Hds::Badge @text="Enterprise" @icon="enterprise" @size="small" />
         {{/if}}
       </SelectableCard>
