@@ -16,7 +16,6 @@ const SELECTORS = {
   listItem: (name) => `[data-test-identity-row="${name}"]`,
   menu: `[data-test-popup-menu-trigger]`,
   menuItem: (element) => `[data-test-popup-menu="${element}"]`,
-  confirm: '[data-test-confirm-button]',
 };
 module('Acceptance | /access/identity/entities', function (hooks) {
   setupApplicationTest(hooks);
@@ -54,7 +53,7 @@ module('Acceptance | /access/identity/entities', function (hooks) {
       .dom('.hds-dropdown ul')
       .hasText('Details Create alias Edit Disable Delete', 'all actions render for entities');
     await click(`${SELECTORS.listItem(name)} ${SELECTORS.menuItem('delete')}`);
-    await click(SELECTORS.confirm);
+    await click(GENERAL.confirmButton);
   });
 
   test('it renders popup menu for external groups', async function (assert) {
@@ -68,7 +67,7 @@ module('Acceptance | /access/identity/entities', function (hooks) {
       .dom('.hds-dropdown ul')
       .hasText('Details Create alias Edit Delete', 'all actions render for external groups');
     await click(`${SELECTORS.listItem(name)} ${SELECTORS.menuItem('delete')}`);
-    await click(SELECTORS.confirm);
+    await click(GENERAL.confirmButton);
   });
 
   test('it renders popup menu for external groups with alias', async function (assert) {
@@ -86,7 +85,7 @@ module('Acceptance | /access/identity/entities', function (hooks) {
       .dom('.hds-dropdown ul')
       .hasText('Details Edit Delete', 'no "Create alias" option for external groups with an alias');
     await click(`${SELECTORS.listItem(name)} ${SELECTORS.menuItem('delete')}`);
-    await click(SELECTORS.confirm);
+    await click(GENERAL.confirmButton);
   });
 
   test('it renders popup menu for internal groups', async function (assert) {
@@ -98,6 +97,6 @@ module('Acceptance | /access/identity/entities', function (hooks) {
       .dom('.hds-dropdown ul')
       .hasText('Details Edit Delete', 'no "Create alias" option for internal groups');
     await click(`${SELECTORS.listItem(name)} ${SELECTORS.menuItem('delete')}`);
-    await click(SELECTORS.confirm);
+    await click(GENERAL.confirmButton);
   });
 });
