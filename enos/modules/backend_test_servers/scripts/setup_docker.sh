@@ -41,7 +41,13 @@ esac
 
 # Enable and start Docker
 echo "Enabling and starting Docker service..."
-sudo systemctl enable docker || true
 sudo systemctl start docker || true
+sudo systemctl enable docker || true
 echo "Docker installation complete."
 docker --version
+
+# Pulling image
+CONTAINER_CMD="sudo docker"
+LDAP_DOCKER_NAME="docker.io/osixia/openldap:1.5.0"
+echo "Pulling image: ${LDAP_DOCKER_NAME}"
+$CONTAINER_CMD pull "${LDAP_DOCKER_NAME}"
