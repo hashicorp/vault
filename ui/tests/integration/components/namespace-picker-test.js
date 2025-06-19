@@ -179,21 +179,19 @@ module('Integration | Component | namespace-picker', function (hooks) {
     });
 
     // Verify initial namespaces are displayed
-    assert.strictEqual(findAll(GENERAL.button()).length, 3, 'Initially, three namespaces are displayed');
+    assert.dom(GENERAL.button('parent1')).exists('Namespace "parent1" is displayed');
+    assert.dom(GENERAL.button('parent1/child1')).exists('Namespace "parent1/child1" is displayed');
+    assert.dom(GENERAL.button('root')).exists('Namespace "root" is displayed');
+    assert
+      .dom(GENERAL.button('new-namespace'))
+      .doesNotExist('Namespace "new-namespace" is not displayed initially');
 
     // Click the "Refresh list" button
     await click(GENERAL.button('Refresh list'));
 
     // Verify the new namespace is displayed
-    assert.strictEqual(
-      findAll(GENERAL.button()).length,
-      4,
-      'After refreshing, four namespaces are displayed'
-    );
-
-    // Verify the new namespace is specifically shownß
     assert
       .dom(GENERAL.button('new-namespace'))
-      .exists('The new namespace "new-namespace" is displayed after refreshing');
+      .exists('Namespace "new-namespace" is displayed after refreshing');
   });
 });

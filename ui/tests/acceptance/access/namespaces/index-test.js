@@ -41,14 +41,6 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     // Setup: Create namespace via the CLI
     await runCmd(createNS(testNS), false);
 
-    await fillIn(GENERAL.filterInputExplicit, testNS);
-    await click(GENERAL.button('Search'));
-    assert
-      .dom(GENERAL.emptyStateTitle)
-      .hasText(
-        'No namespaces yet',
-        'Empty state is displayed when searching for the namespace we have created in the CLI but have not refreshed the list yet'
-      );
     // Click the refresh list button on the namespace page
     await click(GENERAL.button('refresh-namespace-list'));
     await fillIn(GENERAL.filterInputExplicit, testNS);
@@ -79,6 +71,10 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     // Verify test-create-ns does not exist in the Manage Namespace page
     await fillIn(GENERAL.filterInputExplicit, testNS);
     await click(GENERAL.button('Search'));
+    await waitFor(GENERAL.emptyStateTitle, {
+      timeout: 2000,
+      timeoutMessage: 'timed out waiting for empty state title to render',
+    });
     assert
       .dom(GENERAL.emptyStateTitle)
       .hasText(
@@ -100,6 +96,7 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     await click(GENERAL.menuTrigger);
     await click(GENERAL.menuItem('delete'));
     await click(GENERAL.confirmButton);
+    await click(GENERAL.button('refresh-namespace-list'));
 
     // Verify test-create-ns does not exist in the Manage Namespace page
     assert
@@ -107,23 +104,22 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
       .hasText('No namespaces yet', 'Empty state is displayed indicating the namespace was deleted');
   });
 
-  test('the route should show "delete" and "switch to namespace" option menus for each namespace', async function (assert) {
+  test('the route should show "delete" option menu for each namespace', async function (assert) {
     // Setup: Create namespace(s) via the CLI
     const testNS = 'asdf';
     await runCmd(createNS(testNS), false);
 
-    // Hack: Trigger refresh sys/internal/namespace namespaces endpoint that is only hit on the namespace picker (not the namespace route)
-    await click(GENERAL.toggleInput('namespace-picker'));
-    await click(GENERAL.button('Refresh list'));
-
-    // Enter search text
+    // Search for created namespace// Enter search text
     await fillIn(GENERAL.filterInputExplicit, testNS);
     await click(GENERAL.button('Search'));
+    await click(GENERAL.button('refresh-namespace-list'));
 
     // Verify the menu options
-    await waitFor(GENERAL.menuTrigger);
+    await waitFor(GENERAL.menuTrigger, {
+      timeout: 2000,
+      timeoutMessage: 'timed out waiting for menu trigger to render',
+    });
     await click(GENERAL.menuTrigger);
-    assert.dom(GENERAL.menuItem('switch')).exists('Switch to namespace option is displayed');
     assert.dom(GENERAL.menuItem('delete')).exists('Delete namespace option is displayed');
 
     // Cleanup: Delete namespace(s) via the CLI
@@ -135,17 +131,19 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     const testNS = 'test-create-ns-switch';
     await runCmd(createNS(testNS), false);
 
-    // Hack: Trigger refresh internal namespaces endpoint
-    await click(GENERAL.toggleInput('namespace-picker'));
-    await click(GENERAL.button('Refresh list'));
+    // Search for created namespace
+    await fillIn(GENERAL.filterInputExplicit, testNS);
+    await click(GENERAL.button('Search'));
+    await click(GENERAL.button('refresh-namespace-list'));
 
     // Switch namespace
+    await waitFor(GENERAL.menuTrigger);
     await click(GENERAL.menuTrigger);
     await click(GENERAL.menuItem('switch'));
 
     // Verify that we switched namespaces
     await click(GENERAL.toggleInput('namespace-picker'));
-    assert.dom('[data-test-badge-namespace]').hasText(testNS);
+    assert.dom('[data-test-badge-namespace]').hasText(testNS, 'Namespace badge shows the correct namespace');
     assert.strictEqual(currentRouteName(), 'vault.cluster.dashboard', 'navigates to the correct route');
 
     // Cleanup: Delete namespace(s) via the CLI

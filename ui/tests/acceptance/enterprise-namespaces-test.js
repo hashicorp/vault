@@ -135,8 +135,8 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await logout();
     assert.strictEqual(currentURL(), '/vault/auth', 'Does not redirect');
     assert.dom(AUTH_FORM.managedNsRoot).doesNotExist('Managed namespace indicator does not exist');
-    assert.dom('input[name="namespace"]').hasAttribute('placeholder', '/ (root)');
-    await fillIn('input[name="namespace"]', '/foo/bar ');
+    assert.dom(GENERAL.inputByAttr('namespace')).hasAttribute('placeholder', '/ (root)');
+    await fillIn(GENERAL.inputByAttr('namespace'), '/foo/bar ');
     const encodedNamespace = encodeURIComponent('foo/bar');
     assert.strictEqual(
       currentURL(),
