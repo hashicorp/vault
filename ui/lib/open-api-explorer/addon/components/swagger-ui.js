@@ -112,6 +112,7 @@ export default class SwaggerUiComponent extends Component {
       },
       onComplete: () => {
         componentInstance.swaggerLoading = false;
+        this.updateCaretTabIndex();
       },
     };
   };
@@ -120,5 +121,11 @@ export default class SwaggerUiComponent extends Component {
   @action async swaggerInit() {
     const configSettings = this.CONFIG(SwaggerUIBundle, this);
     SwaggerUIBundle(configSettings);
+  }
+
+  updateCaretTabIndex() {
+    document.querySelectorAll('.opblock-control-arrow').forEach((el) => {
+      el.tabIndex = 0;
+    });
   }
 }
