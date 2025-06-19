@@ -10,26 +10,17 @@ if command -v docker &> /dev/null; then
   exit 0
 fi
 
-# Detect OS
-if [ -f /etc/os-release ]; then
-  # shellcheck disable=SC1091
-  . /etc/os-release
-  OS_ID=$ID
-  VERSION=$VERSION_ID
-else
-  echo "Cannot detect OS. /etc/os-release not found."
-  exit 1
-fi
-echo "Detected OS: name=$NAME, id=$OS_ID, version=$VERSION"
+[[ -z "$DISTRO" ]] && fail "DISTRO env variable has not been set"
 
 # Install Docker based on distro
-case "$OS_ID" in
-  "ubuntu" | "debian")
+echo "Installing Docker for distro: $DISTRO"
+case "$DISTRO" in
+  "ubuntu")
     sudo apt update -y
     sudo apt install apt-transport-https ca-certificates curl software-properties-common -y
     curl -fsSL https://get.docker.com | sudo sh
     ;;
-  "centos" | "rhel" | "fedora")
+  "rhel")
     sudo yum update -y
     sudo yum install -y docker
     ;;
@@ -38,16 +29,12 @@ case "$OS_ID" in
     sudo amazon-linux-extras enable docker
     sudo yum install -y docker
     ;;
-  "sles" | "opensuse-leap" | "leap")
+  "sles" | "leap")
     sudo zypper refresh
     sudo zypper install -y docker
     ;;
-  "alpine")
-    sudo apk update
-    sudo apk add docker
-    ;;
   *)
-    echo "Unsupported OS: $OS_ID"
+    echo "Unsupported OS: $DISTRO"
     exit 1
     ;;
 esac

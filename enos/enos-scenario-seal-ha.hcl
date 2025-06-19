@@ -277,6 +277,7 @@ scenario "seal_ha" {
     variables {
       hosts        = step.create_test_servers_target.hosts
       ldap_version = "1.5.0"
+      distro       = matrix.distro
     }
   }
 
