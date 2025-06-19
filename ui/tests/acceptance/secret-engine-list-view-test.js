@@ -74,7 +74,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     assert
       .dom('.hds-tooltip-container')
       .hasText(
-        'This secret engine type is not currently supported by the UI.',
+        'The UI only supports configuration views for these secret engines. The CLI must be used to manage other engine resources.',
         'shows tooltip text for unsupported engine'
       );
     // cleanup
