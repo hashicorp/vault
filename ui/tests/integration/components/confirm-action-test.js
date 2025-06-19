@@ -9,13 +9,11 @@ import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECTORS = {
-  modalToggle: '[data-test-confirm-action-trigger]',
   title: '[data-test-confirm-action-title]',
   message: '[data-test-confirm-action-message]',
-  confirm: '[data-test-confirm-button]',
-  cancel: '[data-test-confirm-cancel-button]',
 };
 module('Integration | Component | confirm-action', function (hooks) {
   setupRenderingTest(hooks);
@@ -32,20 +30,22 @@ module('Integration | Component | confirm-action', function (hooks) {
       />
       `);
 
-    assert.dom(SELECTORS.modalToggle).hasText('DELETE', 'renders button text');
-    await click(SELECTORS.modalToggle);
+    assert.dom(GENERAL.confirmTrigger).hasText('DELETE', 'renders button text');
+    await click(GENERAL.confirmTrigger);
     assert
       .dom('#confirm-action-modal')
       .hasClass('hds-modal--color-critical', 'renders critical modal color by default');
-    assert.dom(SELECTORS.confirm).hasClass('hds-button--color-critical', 'renders critical confirm button');
+    assert
+      .dom(GENERAL.confirmButton)
+      .hasClass('hds-button--color-critical', 'renders critical confirm button');
     assert.dom(SELECTORS.title).hasText('Are you sure?', 'renders default title');
     assert
       .dom(SELECTORS.message)
       .hasText('You will not be able to recover it later.', 'renders default body text');
-    await click(SELECTORS.cancel);
+    await click(GENERAL.cancelButton);
     assert.false(this.onConfirm.called, 'does not call the action when Cancel is clicked');
-    await click(SELECTORS.modalToggle);
-    await click(SELECTORS.confirm);
+    await click(GENERAL.confirmTrigger);
+    await click(GENERAL.confirmButton);
     assert.true(this.onConfirm.called, 'calls the action when Confirm is clicked');
     assert.dom(SELECTORS.title).doesNotExist('modal closes after confirm is clicked');
   });
@@ -65,17 +65,17 @@ module('Integration | Component | confirm-action', function (hooks) {
       />
       `);
 
-    assert.dom(`li ${SELECTORS.modalToggle}`).exists('element renders inside <li>');
-    assert.dom(SELECTORS.modalToggle).hasClass('hds-confirm-action-critical', 'button has dropdown styling');
-    await click(SELECTORS.modalToggle);
+    assert.dom(`li ${GENERAL.confirmTrigger}`).exists('element renders inside <li>');
+    assert.dom(GENERAL.confirmTrigger).hasClass('hds-confirm-action-critical', 'button has dropdown styling');
+    await click(GENERAL.confirmTrigger);
     assert.dom(SELECTORS.title).hasText('Are you sure?', 'renders default title');
     assert
       .dom(SELECTORS.message)
       .hasText('You will not be able to recover it later.', 'renders default body text');
-    await click('[data-test-confirm-cancel-button]');
+    await click(GENERAL.cancelButton);
     assert.false(this.onConfirm.called, 'does not call the action when Cancel is clicked');
-    await click(SELECTORS.modalToggle);
-    await click(SELECTORS.confirm);
+    await click(GENERAL.confirmTrigger);
+    await click(GENERAL.confirmButton);
     assert.true(this.onConfirm.called, 'calls the action when Confirm is clicked');
     assert.dom(SELECTORS.title).doesNotExist('modal closes after confirm is clicked');
   });
@@ -89,9 +89,9 @@ module('Integration | Component | confirm-action', function (hooks) {
       />
       `);
 
-    await click(SELECTORS.modalToggle);
+    await click(GENERAL.confirmTrigger);
 
-    assert.dom(SELECTORS.confirm).isDisabled('disables confirm button when loading');
+    assert.dom(GENERAL.confirmButton).isDisabled('disables confirm button when loading');
     assert.dom('[data-test-confirm-button] [data-test-icon="loading"]').exists('it renders loading icon');
   });
 
@@ -106,7 +106,7 @@ module('Integration | Component | confirm-action', function (hooks) {
       />
       `);
 
-    await click(SELECTORS.modalToggle);
+    await click(GENERAL.confirmTrigger);
     assert
       .dom('#confirm-action-modal')
       .hasClass('hds-modal--color-neutral', 'renders neutral modal because disabledMessage is present');
@@ -114,8 +114,8 @@ module('Integration | Component | confirm-action', function (hooks) {
     assert
       .dom(SELECTORS.message)
       .hasText('This is the reason you cannot do the thing', 'renders disabled message as body text');
-    assert.dom(SELECTORS.confirm).doesNotExist('does not render confirm action button');
-    assert.dom(SELECTORS.cancel).hasText('Close');
+    assert.dom(GENERAL.confirmButton).doesNotExist('does not render confirm action button');
+    assert.dom(GENERAL.cancelButton).hasText('Close');
   });
 
   test('it renders passed args', async function (assert) {
@@ -132,12 +132,14 @@ module('Integration | Component | confirm-action', function (hooks) {
       />
       `);
 
-    assert.dom(SELECTORS.modalToggle).hasClass('hds-button--color-secondary', 'renders @buttonColor classes');
-    await click(SELECTORS.modalToggle);
+    assert
+      .dom(GENERAL.confirmTrigger)
+      .hasClass('hds-button--color-secondary', 'renders @buttonColor classes');
+    await click(GENERAL.confirmTrigger);
     assert.dom('#confirm-action-modal').hasClass('hds-modal--color-warning', 'renders warning modal');
-    assert.dom(SELECTORS.confirm).hasClass('hds-button--color-primary', 'renders primary confirm button');
+    assert.dom(GENERAL.confirmButton).hasClass('hds-button--color-primary', 'renders primary confirm button');
     assert.dom(SELECTORS.title).hasText('Do this?', 'renders passed title');
     assert.dom(SELECTORS.message).hasText('Are you really, really sure?', 'renders passed body text');
-    assert.dom(SELECTORS.confirm).hasText('Confirm');
+    assert.dom(GENERAL.confirmButton).hasText('Confirm');
   });
 });

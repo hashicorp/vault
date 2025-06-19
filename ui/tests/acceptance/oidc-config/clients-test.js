@@ -77,7 +77,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
         .hasText('default', 'index page lists default key');
 
       // navigate to default key details from pop-up menu
-      await click('[data-test-popup-menu-trigger]');
+      await click(GENERAL.menuTrigger);
       await click('[data-test-oidc-key-menu-link="details"]');
       assert.dom(SELECTORS.keyDeleteButton).doesNotExist('delete button is hidden for default key');
       await click(SELECTORS.keyEditButton);
@@ -124,7 +124,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       await visit(OIDC_BASE_URL + '/clients');
       await click('[data-test-oidc-client-create]');
       await fillIn('[data-test-input="name"]', 'client-with-test-key');
-      await click('[data-test-toggle-group="More options"]');
+      await click(GENERAL.button('More options'));
       await click('[data-test-component="search-select"] [data-test-icon="trash"]');
       await clickTrigger('#key');
       await selectChoose('[data-test-component="search-select"]#key', 'test-key');
@@ -383,7 +383,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
         'navigates to create form'
       );
       await fillIn('[data-test-input="name"]', 'test-app');
-      await click('[data-test-toggle-group="More options"]');
+      await click(GENERAL.button('More options'));
       // toggle ttls to false, testing it sets correct default duration
       await click('[data-test-input="idTokenTtl"]');
       await click('[data-test-input="accessTokenTtl"]');
@@ -600,7 +600,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
         'create form navigates back to assignment index on cancel'
       );
 
-      await click('[data-test-popup-menu-trigger]');
+      await click(GENERAL.menuTrigger);
       await click('[data-test-oidc-assignment-menu-link="edit"]');
       assert.strictEqual(
         currentRouteName(),
@@ -615,7 +615,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       );
       // navigate to details from index page
       await visit('/vault/access/oidc/assignments');
-      await click('[data-test-popup-menu-trigger]');
+      await click(GENERAL.menuTrigger);
       await click('[data-test-oidc-assignment-menu-link="details"]');
       assert.strictEqual(
         currentRouteName(),
