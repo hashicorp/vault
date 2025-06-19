@@ -15,6 +15,7 @@ import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
 import { OIDC_BASE_URL, SELECTORS } from 'vault/tests/helpers/oidc-config';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const searchSelect = create(ss);
 
@@ -81,7 +82,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
         @onSave={{this.onSave}}
       />
     `);
-    await click('[data-test-toggle-group="More options"]');
+    await click(GENERAL.button('More options'));
     assert
       .dom('[data-test-oidc-client-title]')
       .hasText('Create Application', 'Form title renders correct text');
@@ -146,7 +147,7 @@ module('Integration | Component | oidc/client-form', function (hooks) {
         @onSave={{this.onSave}}
       />
     `);
-    await click('[data-test-toggle-group="More options"]');
+    await click(GENERAL.button('More options'));
     assert.dom('[data-test-oidc-client-title]').hasText('Edit Application', 'Title renders correct text');
     assert.dom(SELECTORS.clientSaveButton).hasText('Update', 'Save button has correct text');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');

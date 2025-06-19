@@ -14,7 +14,7 @@ active_versions {
   }
 
   version "1.19.x" {
-    ce_active = true
+    ce_active = false
     lts       = true
   }
 

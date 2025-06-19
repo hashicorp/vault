@@ -67,8 +67,12 @@
     @title="No UI login settings yet"
     @message="Login settings can be used to customize which methods display in the web UI login form by setting a default and back up login methods. Available to be created via the CLI or HTTP API."
   >
-    {{! TODO: update href with tutorial link }}
-    {{! <Hds::Link::Standalone @icon="arrow-right" @iconPosition="trailing" @text="Learn more" @href="/" /> }}
+    <Hds::Link::Standalone
+      @icon="docs-link"
+      @iconPosition="trailing"
+      @text="UI login settings documentation"
+      @href={{doc-link "/vault/docs/ui/custom-login"}}
+    />
   </EmptyState>
 {{/if}}
 

@@ -64,11 +64,8 @@
               as |targetNamespace|
             }}
               {{#if (includes targetNamespace this.namespaceService.accessibleNamespaces)}}
-                <dd.Generic>
-                  <NamespaceLink @targetNamespace={{targetNamespace}} @unparsed={{true}} @class="ns-dropdown-item">
-                    Switch to namespace
-                  </NamespaceLink>
-                </dd.Generic>
+                <dd.Interactive {{on "click" (fn this.switchNamespace targetNamespace)}} data-test-popup-menu="switch">Switch
+                  to namespace</dd.Interactive>
               {{/if}}
             {{/let}}
             <dd.Interactive @color="critical" {{on "click" (fn (mut this.nsToDelete) list.item)}}>Delete</dd.Interactive>

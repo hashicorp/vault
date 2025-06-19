@@ -30,13 +30,13 @@ module('Integration | Component | tools/rewrap', function (hooks) {
     assert.dom('label').hasText('Wrapped token');
     assert.dom(TS.toolsInput('original-token')).hasValue('');
     assert.dom(TS.toolsInput('rewrapped-token')).doesNotExist();
-    assert.dom(TS.button('Done')).doesNotExist();
+    assert.dom(GENERAL.button('Done')).doesNotExist();
   });
 
   test('it renders errors', async function (assert) {
     this.server.post('sys/wrapping/rewrap', () => new Response(500, {}, { errors: ['Something is wrong'] }));
     await this.renderComponent();
-    await click(TS.submit);
+    await click(GENERAL.submitButton);
     await waitUntil(() => find(GENERAL.messageError));
     assert.dom(GENERAL.messageError).hasText('Error Something is wrong', 'Error renders');
   });
@@ -64,7 +64,7 @@ module('Integration | Component | tools/rewrap', function (hooks) {
 
     // test submit
     await fillIn(TS.toolsInput('original-token'), original_token);
-    await click(TS.submit);
+    await click(GENERAL.submitButton);
 
     // test rewrapped token view
     await waitUntil(() => TS.toolsInput('rewrapped-token'));
@@ -74,7 +74,7 @@ module('Integration | Component | tools/rewrap', function (hooks) {
     assert.dom(TS.toolsInput('original-token')).doesNotExist();
 
     // form resets clicking 'Done'
-    await click(TS.button('Done'));
+    await click(GENERAL.button('Done'));
     assert.dom('label').hasText('Wrapped token');
     assert.dom(TS.toolsInput('original-token')).hasValue('', 'token input resets');
   });
@@ -90,6 +90,6 @@ module('Integration | Component | tools/rewrap', function (hooks) {
     await this.renderComponent();
 
     await fillIn(TS.toolsInput('original-token'), `${data.token}  `);
-    await click(TS.submit);
+    await click(GENERAL.submitButton);
   });
 });

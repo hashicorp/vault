@@ -31,13 +31,13 @@ module('Integration | Component | tools/hash', function (hooks) {
     assert.dom('#algorithm').hasValue('sha2-256');
     assert.dom('#format').hasValue('base64');
     assert.dom(TS.toolsInput('sum')).doesNotExist();
-    assert.dom(TS.button('Done')).doesNotExist();
+    assert.dom(GENERAL.button('Done')).doesNotExist();
   });
 
   test('it renders errors', async function (assert) {
     this.server.post('sys/tools/hash', () => new Response(500, {}, { errors: ['Something is wrong'] }));
     await this.renderComponent();
-    await click(TS.submit);
+    await click(GENERAL.submitButton);
     await waitUntil(() => find(GENERAL.messageError));
     assert.dom(GENERAL.messageError).hasText('Error Something is wrong');
   });
@@ -60,7 +60,7 @@ module('Integration | Component | tools/hash', function (hooks) {
 
     // test submit
     await fillIn(TS.toolsInput('hash-input'), 'blah');
-    await click(TS.submit);
+    await click(GENERAL.submitButton);
 
     // test sum view
     await waitUntil(() => TS.toolsInput('sum'));
@@ -71,7 +71,7 @@ module('Integration | Component | tools/hash', function (hooks) {
     assert.dom('#format').doesNotExist();
 
     // test form reset clicking 'Done'
-    await click(TS.button('Done'));
+    await click(GENERAL.button('Done'));
     assert.dom('#algorithm').hasValue('sha2-256');
     assert.dom('#format').hasValue('base64');
     assert.dom(TS.toolsInput('hash-input')).hasValue('', 'inputs reset to default values');
@@ -96,6 +96,6 @@ module('Integration | Component | tools/hash', function (hooks) {
     await fillIn(TS.toolsInput('hash-input'), 'blah');
     await fillIn('#algorithm', 'sha2-224');
     await fillIn('#format', 'hex');
-    await click(TS.submit);
+    await click(GENERAL.submitButton);
   });
 });

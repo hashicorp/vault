@@ -58,7 +58,7 @@
       </M.Body>
 
       <M.Footer as |F|>
-        <Hds::Button @text="Confirm" {{on "click" F.close}} data-test-modal-button={{modalMessage.id}} />
+        <Hds::Button @text="Confirm" {{on "click" F.close}} />
       </M.Footer>
     </Hds::Modal>
   {{/each}}
