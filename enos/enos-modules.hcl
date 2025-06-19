@@ -16,10 +16,12 @@ module "backend_raft" {
   source = "./modules/backend_raft"
 }
 
-module "benchmark" {
-  source = "./modules/benchmark"
+module "benchmark_config" {
+  source = "./modules/benchmark/config"
+}
 
-  ssh_keypair = var.aws_ssh_keypair_name
+module "benchmark_setup" {
+  source = "./modules/benchmark/setup"
 }
 
 // Find any artifact in Artifactory. Requires the version, revision, and edition.

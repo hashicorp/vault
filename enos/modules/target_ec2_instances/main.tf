@@ -194,11 +194,8 @@ resource "aws_instance" "targets" {
   instance_type                        = local.instance_type
   key_name                             = var.ssh_keypair
   subnet_id                            = data.aws_subnets.vpc.ids[tonumber(each.key) % length(data.aws_subnets.vpc.ids)]
-  vpc_security_group_ids = compact([
-    aws_security_group.target.id,
-    try(var.metrics_security_group_ids["prometheus"], null)
-  ])
-  ebs_optimized = var.ebs_optimized
+  vpc_security_group_ids               = [aws_security_group.target.id]
+  ebs_optimized                        = var.ebs_optimized
 
   root_block_device {
     encrypted   = true

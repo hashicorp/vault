@@ -145,6 +145,15 @@ scenario "benchmark" {
     }
   }
 
+  step "benchmark_config" {
+    description = "Get our configuration for our benchmark modules"
+    module      = module.benchmark_config
+
+    variables {
+      ports_ingress = values(global.ports)
+    }
+  }
+
   step "ec2_info" {
     description = global.description.ec2_info
     module      = module.ec2_info
@@ -195,14 +204,43 @@ scenario "benchmark" {
     }
   }
 
-  step "create_metrics_security_groups" {
-    description = global.description.create_metrics_security_groups
-    module      = module.create_metrics_security_groups
+  step "create_k6_target" {
+    description = "Create the k6 load generator target machine"
+    module      = module.target_ec2_instances
     depends_on  = [step.create_vpc]
 
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
     variables {
-      vpc_id       = step.create_vpc.id
-      project_name = var.project_name
+      ami_id          = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
+      cluster_tag_key = "benchmark-k6"
+      common_tags     = global.tags
+      instance_count  = 1
+      instance_types  = step.benchmark_config.k6_instance_types
+      ports_ingress   = step.benchmark_config.required_ports
+      vpc_id          = step.create_vpc.id
+    }
+  }
+
+  step "create_metrics_collector_target" {
+    description = "Create the benchmark metrics collector target machine"
+    module      = module.target_ec2_instances
+    depends_on  = [step.create_vpc]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      ami_id          = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
+      cluster_tag_key = "benchmark-collector"
+      common_tags     = global.tags
+      instance_count  = 1
+      instance_types  = step.benchmark_config.metrics_instance_types
+      ports_ingress   = step.benchmark_config.required_ports
+      vpc_id          = step.create_vpc.id
     }
   }
 
@@ -216,21 +254,18 @@ scenario "benchmark" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
-      cluster_tag_key = global.vault_tag_key
-      common_tags     = global.tags
-      ebs_optimized   = true
-      instance_count  = 3
-      instance_types = {
-        amd64 = "i3.4xlarge"
-        arm64 = "t4g.small"
-      }
-      root_volume_type           = "io2"
-      root_volume_size           = 24
-      root_volume_iops           = 24000
-      metrics_security_group_ids = step.create_metrics_security_groups.ids
-      seal_key_names             = step.create_seal_key.resource_names
-      vpc_id                     = step.create_vpc.id
+      ami_id           = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
+      cluster_tag_key  = global.vault_tag_key
+      common_tags      = global.tags
+      ebs_optimized    = true
+      instance_count   = 3
+      instance_types   = step.benchmark_config.vault_node_instance_types
+      ports_ingress    = step.benchmark_config.required_ports
+      root_volume_type = "io2"
+      root_volume_size = 24
+      root_volume_iops = 24000
+      seal_key_names   = step.create_seal_key.resource_names
+      vpc_id           = step.create_vpc.id
     }
   }
 
@@ -253,12 +288,12 @@ scenario "benchmark" {
         amd64 = "i3.4xlarge"
         arm64 = "t4g.small"
       }
-      metrics_security_group_ids = step.create_metrics_security_groups.ids
-      root_volume_type           = "io2"
-      root_volume_size           = 24
-      root_volume_iops           = 24000
-      seal_key_names             = step.create_seal_key.resource_names
-      vpc_id                     = step.create_vpc.id
+      ports_ingress    = step.benchmark_config.required_ports
+      root_volume_type = "io2"
+      root_volume_size = 24
+      root_volume_iops = 24000
+      seal_key_names   = step.create_seal_key.resource_names
+      vpc_id           = step.create_vpc.id
     }
   }
 
@@ -453,24 +488,31 @@ scenario "benchmark" {
     }
   }
 
-  step "benchmark" {
-    module     = module.benchmark
-    depends_on = [step.verify_vault_unsealed, step.get_vault_cluster_ips]
+  step "benchmark_setup" {
+    module = module.benchmark_setup
+    depends_on = [
+      step.create_metrics_collector_target,
+      step.create_k6_target,
+      step.verify_vault_unsealed,
+      step.get_vault_cluster_ips,
+    ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
     }
 
     variables {
-      ami_id                     = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
-      metrics_security_group_ids = step.create_metrics_security_groups.ids
-      target_security_group_id   = step.create_vault_cluster_targets.security_group_id
-      leader_addr                = step.get_vault_cluster_ips.leader_private_ip
-      vault_token                = step.create_vault_cluster.root_token
-      vpc_id                     = step.create_vpc.id
-      hosts                      = step.create_vault_cluster_targets.hosts
-      consul_hosts               = matrix.backend == "consul" ? step.create_vault_cluster_backend_targets.hosts : {}
-      project_name               = var.project_name
+      consul_hosts                     = matrix.backend == "consul" ? step.create_vault_cluster_backend_targets.hosts : {}
+      grafana_version                  = step.benchmark_config.grafana_version
+      grafana_http_port                = step.benchmark_config.grafana_http_port
+      k6_host                          = step.create_k6_target.hosts[0]
+      leader_addr                      = step.get_vault_cluster_ips.leader_private_ip
+      metrics_host                     = step.create_metrics_collector_target.hosts[0]
+      prometheus_node_exporter_version = step.benchmark_config.prometheus_node_exporter_version
+      prometheus_version               = step.benchmark_config.prometheus_version
+      vault_hosts                      = step.create_vault_cluster_targets.hosts
+      vault_token                      = step.create_vault_cluster.root_token
+      vpc_id                           = step.create_vpc.id
     }
   }
 
@@ -481,7 +523,7 @@ scenario "benchmark" {
 
   output "dashboard_url" {
     description = "The URL for viewing the dashboard in grafana"
-    value       = step.benchmark.dashboard_url
+    value       = step.benchmark_setup.dashboard_url
   }
 
   output "cluster_name" {

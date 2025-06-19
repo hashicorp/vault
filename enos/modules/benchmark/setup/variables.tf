@@ -1,10 +1,3 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: BUSL-1.1
-
-variable "ami_id" {
-  type = string
-}
-
 variable "consul_hosts" {
   type = map(object({
     ipv6       = string
@@ -15,54 +8,41 @@ variable "consul_hosts" {
 }
 
 variable "grafana_version" {
-  type    = string
-  default = "11.6.0"
+  type = string
 }
 
-variable "hosts" {
-  type = map(object({
+variable "grafana_http_port" {
+  type = number
+}
+
+variable "k6_host" {
+  type = object({
     ipv6       = string
     private_ip = string
     public_ip  = string
-  }))
-  description = "The vault cluster instances"
-}
-
-variable "k6_instance_type" {
-  type    = string
-  default = "c5d.4xlarge"
+  })
+  description = "The k6 target host"
 }
 
 variable "leader_addr" {
   type = string
 }
 
-variable "metrics_instance_type" {
-  type    = string
-  default = "m4.large"
-}
-
-variable "metrics_security_group_ids" {
+variable "metrics_host" {
   type = object({
-    grafana    = string
-    prometheus = string
+    ipv6       = string
+    private_ip = string
+    public_ip  = string
   })
-  default = null
-}
-
-variable "project_name" {
-  type    = string
-  default = ""
+  description = "The metrics target host"
 }
 
 variable "prometheus_node_exporter_version" {
-  type    = string
-  default = "1.9.1"
+  type = string
 }
 
 variable "prometheus_version" {
-  type    = string
-  default = "3.3.0"
+  type = string
 }
 
 variable "retry_interval" {
@@ -71,18 +51,19 @@ variable "retry_interval" {
   default     = 2
 }
 
-variable "ssh_keypair" {
-  type = string
-}
-
-variable "target_security_group_id" {
-  type = string
-}
-
 variable "timeout" {
   type        = number
   description = "The max number of seconds to wait before timing out. This is applied to each step so total timeout will be longer."
   default     = 120
+}
+
+variable "vault_hosts" {
+  type = map(object({
+    ipv6       = string
+    private_ip = string
+    public_ip  = string
+  }))
+  description = "The vault cluster hosts"
 }
 
 variable "vault_token" {

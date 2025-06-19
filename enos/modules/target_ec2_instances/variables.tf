@@ -54,15 +54,6 @@ variable "instance_types" {
   }
 }
 
-variable "metrics_security_group_ids" {
-  type = object({
-    grafana    = string
-    prometheus = string
-  })
-  description = "Security group IDs to attach to the target instances"
-  default     = null
-}
-
 variable "ports_ingress" {
   description = "Ports mappings to allow for ingress"
   type = list(object({

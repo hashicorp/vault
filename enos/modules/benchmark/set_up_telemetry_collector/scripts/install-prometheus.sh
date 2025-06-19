@@ -14,6 +14,8 @@ logger() {
   echo "$DT $0: $1"
 }
 
+env
+
 [[ -z "${PROMETHEUS_VERSION}" ]] && fail "PROMETHEUS_VERSION env variable has not been set"
 [[ -z "${RETRY_INTERVAL}" ]] && fail "RETRY_INTERVAL env variable has not been set"
 [[ -z "${TIMEOUT_SECONDS}" ]] && fail "TIMEOUT_SECONDS env variable has not been set"

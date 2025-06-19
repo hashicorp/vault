@@ -25,7 +25,6 @@ variable "instance_mem_max" { default = null }
 variable "instance_mem_min" { default = null }
 variable "instance_types" { default = null }
 variable "max_price" { default = null }
-variable "metrics_security_group_ids" { default = null }
 variable "ports_ingress" { default = null }
 variable "project_name" { default = null }
 variable "root_volume_iops" { default = null }
