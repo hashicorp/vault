@@ -1,0 +1,3 @@
+```release-note:improvement
+plugins: Clarify usage of sha256, command, and version for plugin registration with API and CLI using binary or artifact.
+```
