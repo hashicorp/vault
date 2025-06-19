@@ -15,3 +15,9 @@ variable "ldap_version" {
   description = "OpenLDAP Server Version to use"
   default     = "1.5.0"
 }
+
+variable "distro" {
+  type        = string
+  description = "OS Distribution"
+  default     = "ubuntu"
+}
