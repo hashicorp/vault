@@ -7,7 +7,9 @@ import WifConfigForm from './wif-config';
 import FormField from 'vault/utils/forms/field';
 import FormFieldGroup from 'vault/utils/forms/field-group';
 
-export default class AzureConfigForm extends WifConfigForm {
+import type { AzureConfigFormData } from 'vault/vault/secrets/engine';
+
+export default class AzureConfigForm extends WifConfigForm<AzureConfigFormData> {
   // the "clientSecret" param is not checked because it's never returned by the API.
   // thus we can never say for sure if the account accessType has been configured so we always return false
   isAccountPluginConfigured = false;
