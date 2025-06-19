@@ -152,7 +152,7 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
     assert
       .dom('.hds-alert')
       .exists('active custom message displays on namespace authenticated from within a namespace');
-    await click(CUSTOM_MESSAGES.listItem('active authenticated message title'));
+    await click(GENERAL.listItem('active authenticated message title'));
     await click(GENERAL.confirmTrigger);
     await click(GENERAL.confirmButton);
     assert.strictEqual(

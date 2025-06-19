@@ -35,7 +35,7 @@ export const GENERAL = {
   /* ────── Menus & Lists ────── */
   menuTrigger: '[data-test-popup-menu-trigger]',
   menuItem: (name: string) => `[data-test-popup-menu="${name}"]`,
-  listItem: '[data-test-list-item-link]',
+  listItem: (label: string) => `[data-test-list-item="${label}"]`,
   linkedBlock: (item: string) => `[data-test-linked-block="${item}"]`,
 
   /* ────── Inputs / Form Fields ────── */
