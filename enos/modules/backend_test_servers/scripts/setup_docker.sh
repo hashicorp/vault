@@ -10,16 +10,14 @@ check_docker_running() {
   if sudo docker info > /dev/null 2>&1; then
     return 0
   fi
-
-  echo "Docker daemon not running. Starting it..."
-  sudo systemctl start docker || true
-  sudo systemctl enable docker || true
-
+  echo "Docker daemon not running."
+  if [[ "$DISTRO" == "leap" || "$DISTRO" == "sles" ]]; then
+    echo "Detected distro: $DISTRO. Attempting to start and enable Docker..."
+    sudo systemctl start docker || true
+    sudo systemctl enable docker || true
+  fi
   echo "Waiting for Docker to start..."
-  until sudo docker info > /dev/null 2>&1; do
-    sleep 1
-  done
-
+  sudo docker info
   echo "Docker is now running."
 }
 
