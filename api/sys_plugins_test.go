@@ -24,7 +24,7 @@ func TestRegisterPlugin(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resp, err := client.Sys().RegisterPluginWithContext(context.Background(), &RegisterPluginInput{
+	resp, err := client.Sys().RegisterPluginWithContextV2(context.Background(), &RegisterPluginInput{
 		Version: "v1.0.0",
 	})
 	if err != nil {

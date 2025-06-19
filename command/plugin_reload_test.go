@@ -108,7 +108,7 @@ func TestPluginReloadCommand_Run(t *testing.T) {
 		ui, cmd := testPluginReloadCommand(t)
 		cmd.client = client
 
-		resp, err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
+		resp, err := client.Sys().RegisterPluginV2(&api.RegisterPluginInput{
 			Name:    pluginName,
 			Type:    api.PluginTypeCredential,
 			Command: pluginName,

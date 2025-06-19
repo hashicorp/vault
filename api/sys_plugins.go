@@ -226,12 +226,38 @@ type RegisterPluginResponse struct {
 }
 
 // RegisterPlugin wraps RegisterPluginWithContext using context.Background.
-func (c *Sys) RegisterPlugin(i *RegisterPluginInput) (*RegisterPluginResponse, error) {
+// Deprecated: Use RegisterPluginV2 instead.
+func (c *Sys) RegisterPlugin(i *RegisterPluginInput) error {
 	return c.RegisterPluginWithContext(context.Background(), i)
 }
 
 // RegisterPluginWithContext registers the plugin with the given information.
-func (c *Sys) RegisterPluginWithContext(ctx context.Context, i *RegisterPluginInput) (*RegisterPluginResponse, error) {
+// Deprecated: Use RegisterPluginWithContextV2 instead.
+func (c *Sys) RegisterPluginWithContext(ctx context.Context, i *RegisterPluginInput) error {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	path := catalogPathByType(i.Type, i.Name)
+	req := c.c.NewRequest(http.MethodPut, path)
+
+	if err := req.SetJSONBody(i); err != nil {
+		return err
+	}
+
+	resp, err := c.c.rawRequestWithContext(ctx, req)
+	if err == nil {
+		defer resp.Body.Close()
+	}
+	return err
+}
+
+// RegisterPluginV2 wraps RegisterPluginWithContextV2 using context.Background.
+func (c *Sys) RegisterPluginV2(i *RegisterPluginInput) (*RegisterPluginResponse, error) {
+	return c.RegisterPluginWithContextV2(context.Background(), i)
+}
+
+// RegisterPluginWithContextV2 registers the plugin with the given information.
+func (c *Sys) RegisterPluginWithContextV2(ctx context.Context, i *RegisterPluginInput) (*RegisterPluginResponse, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 

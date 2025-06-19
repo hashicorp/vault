@@ -45,7 +45,7 @@ func testPluginCreateAndRegister(tb testing.TB, client *api.Client, dir, name st
 
 	pth, sha256Sum := testPluginCreate(tb, dir, name)
 
-	resp, err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
+	resp, err := client.Sys().RegisterPluginV2(&api.RegisterPluginInput{
 		Name:    name,
 		Type:    pluginType,
 		Command: name,
@@ -68,7 +68,7 @@ func testPluginCreateAndRegisterVersioned(tb testing.TB, client *api.Client, dir
 
 	pth, sha256Sum := testPluginCreate(tb, dir, name)
 
-	resp, err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
+	resp, err := client.Sys().RegisterPluginV2(&api.RegisterPluginInput{
 		Name:    name,
 		Type:    pluginType,
 		Command: name,

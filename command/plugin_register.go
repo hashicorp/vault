@@ -188,7 +188,7 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 		command = pluginName
 	}
 
-	resp, err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
+	resp, err := client.Sys().RegisterPluginV2(&api.RegisterPluginInput{
 		Name:     pluginName,
 		Type:     pluginType,
 		Args:     c.flagArgs,
