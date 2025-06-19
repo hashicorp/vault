@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Improve memory management for backend path routing.
+```
