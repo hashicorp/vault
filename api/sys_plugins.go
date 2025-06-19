@@ -216,6 +216,9 @@ type RegisterPluginInput struct {
 	// Env specifies a list of key=value pairs to add to the plugin's environment
 	// variables.
 	Env []string `json:"env,omitempty"`
+
+	// Download the plugin when set to true. This is only applicable for external plugins.
+	Download bool `json:"download,omitempty"`
 }
 
 type RegisterPluginResponse struct {

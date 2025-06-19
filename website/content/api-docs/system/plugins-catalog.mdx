@@ -180,6 +180,15 @@ supplied name.
   execution of the plugin. Each entry is of the form "key=value". e.g
   `"FOO=BAR"`.
 
+- `download` `(bool: false)` - <EnterpriseAlert inline="true" /> **( BETA )**
+  Tells Vault to download the specified plugin from the
+  [HashiCorp releases page](https://releases.hashicorp.com/). Automatic
+  downloads only support secret and auth plugins with artifacts containing
+  `metadata.json` and `metadata.json.sig`. To use automatic downloads, your
+  network must permit HTTPS and TCP port 443 between all
+  Vault cluster nodes and `releases.hashicorp.com`.
+
+
 ### Sample payload
 
 #### Community plugins
@@ -192,6 +201,13 @@ supplied name.
 }
 ```
 
+```json
+{
+  "version": "0.24.0",
+  "download": true
+}
+```
+
 #### Enterprise plugins
 
 ```json
@@ -199,6 +215,13 @@ supplied name.
   "version": "0.16.0+ent",
   "name": "vault-plugin-secrets-keymgmt",
   "type": "secret"
+}
+```
+
+```json
+{
+  "version": "0.16.0+ent",
+  "download": true
 }
 ```
 

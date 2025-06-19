@@ -61,7 +61,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await click(MOUNT_BACKEND_FORM.mountType('kv'));
     await fillIn(GENERAL.inputByAttr('path'), path);
-    await click(GENERAL.toggleGroup('Method Options'));
+    await click(GENERAL.button('Method Options'));
     await page
       .enableDefaultTtl()
       .defaultTTLUnit('h')
@@ -69,7 +69,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       .enableMaxTtl()
       .maxTTLUnit('h')
       .maxTTLVal(maxTTLHours);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await configPage.visit({ backend: path });
     assert.strictEqual(configPage.defaultTTL, `${this.calcDays(defaultTTLHours)}`, 'shows the proper TTL');
     assert.strictEqual(configPage.maxTTL, `${this.calcDays(maxTTLHours)}`, 'shows the proper max TTL');
@@ -89,9 +89,9 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     );
     await click(MOUNT_BACKEND_FORM.mountType('kv'));
     await fillIn(GENERAL.inputByAttr('path'), path);
-    await click(GENERAL.toggleGroup('Method Options'));
+    await click(GENERAL.button('Method Options'));
     await page.enableDefaultTtl().enableMaxTtl().maxTTLUnit('h').maxTTLVal(maxTTLHours);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await configPage.visit({ backend: path });
     assert.strictEqual(configPage.defaultTTL, '1 month 1 day', 'shows system default TTL');
     assert.strictEqual(configPage.maxTTL, `${this.calcDays(maxTTLHours)}`, 'shows the proper max TTL');
@@ -101,23 +101,23 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await page.visit();
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await click(MOUNT_BACKEND_FORM.mountType('pki'));
-    assert.dom('[data-test-input="maxLeaseTtl"]').exists();
+    assert.dom('[data-test-input="config.maxLeaseTtl"]').exists();
     assert
-      .dom('[data-test-input="maxLeaseTtl"] [data-test-ttl-toggle]')
+      .dom('[data-test-input="config.maxLeaseTtl"] [data-test-ttl-toggle]')
       .isChecked('Toggle is checked by default');
-    assert.dom('[data-test-input="maxLeaseTtl"] [data-test-ttl-value]').hasValue('3650');
-    assert.dom('[data-test-input="maxLeaseTtl"] [data-test-select="ttl-unit"]').hasValue('d');
+    assert.dom('[data-test-input="config.maxLeaseTtl"] [data-test-ttl-value]').hasValue('3650');
+    assert.dom('[data-test-input="config.maxLeaseTtl"] [data-test-select="ttl-unit"]').hasValue('d');
 
     // Go back and choose a different type
     await click(GENERAL.backButton);
     await click(MOUNT_BACKEND_FORM.mountType('database'));
-    assert.dom('[data-test-input="maxLeaseTtl"]').exists('3650');
+    assert.dom('[data-test-input="config.maxLeaseTtl"]').exists('3650');
     assert
-      .dom('[data-test-input="maxLeaseTtl"] [data-test-ttl-toggle]')
+      .dom('[data-test-input="config.maxLeaseTtl"] [data-test-ttl-toggle]')
       .isNotChecked('Toggle is unchecked by default');
     await page.enableMaxTtl();
-    assert.dom('[data-test-input="maxLeaseTtl"] [data-test-ttl-value]').hasValue('');
-    assert.dom('[data-test-input="maxLeaseTtl"] [data-test-select="ttl-unit"]').hasValue('s');
+    assert.dom('[data-test-input="config.maxLeaseTtl"] [data-test-ttl-value]').hasValue('');
+    assert.dom('[data-test-input="config.maxLeaseTtl"] [data-test-select="ttl-unit"]').hasValue('s');
   });
 
   test('it throws error if setting duplicate path name', async function (assert) {
@@ -185,7 +185,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await click(MOUNT_BACKEND_FORM.mountType('kv'));
     await fillIn(GENERAL.inputByAttr('path'), enginePath);
     await mountSecrets.setMaxVersion(101);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     assert
       .dom('[data-test-flash-message]')
@@ -242,10 +242,10 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       await click(MOUNT_BACKEND_FORM.mountType(engine.type));
       await fillIn(GENERAL.inputByAttr('path'), engine.type);
       if (engine.type === 'kv') {
-        await click(GENERAL.toggleGroup('Method Options'));
+        await click(GENERAL.button('Method Options'));
         await mountSecrets.version(1);
       }
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
 
       const route = CONFIGURATION_ONLY.includes(engine.type) ? 'configuration.index' : 'list-root';
       assert.strictEqual(
@@ -305,9 +305,9 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await mountSecrets.visit();
     await click(MOUNT_BACKEND_FORM.mountType('kv'));
     await fillIn(GENERAL.inputByAttr('path'), v1);
-    await click(GENERAL.toggleGroup('Method Options'));
+    await click(GENERAL.button('Method Options'));
     await mountSecrets.version(1);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     assert.strictEqual(currentURL(), `/vault/secrets/${v1}/list`, `${v1} navigates to list url`);
     assert.strictEqual(
@@ -324,7 +324,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
       await page.visit();
       await click(MOUNT_BACKEND_FORM.mountType('aws')); // only testing aws of the WIF engines as the functionality for all others WIF engines in this form are the same
-      await click(GENERAL.toggleGroup('Method Options'));
+      await click(GENERAL.button('Method Options'));
       assert.dom('[data-test-search-select-with-modal]').exists('Search select with modal component renders');
       await clickTrigger('#key');
       const dropdownOptions = findAll('[data-option-index]').map((o) => o.innerText);
@@ -357,7 +357,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       await visit('/vault/settings/mount-secret-backend');
       await click(MOUNT_BACKEND_FORM.mountType(engine));
       await fillIn(GENERAL.inputByAttr('path'), path);
-      await click(GENERAL.toggleGroup('Method Options'));
+      await click(GENERAL.button('Method Options'));
       await clickTrigger('#key');
       // create new key
       await fillIn(GENERAL.searchSelect.searchInput, newKey);
@@ -371,7 +371,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       assert.dom('#search-select-modal').doesNotExist(`modal disappears onSave for engine ${engine}`);
       assert.dom(GENERAL.searchSelect.selectedOption()).hasText(newKey, `${newKey} is now selected`);
 
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       await visit(`/vault/secrets/${path}/configuration`);
       await click(SES.configurationToggle);
       assert
@@ -399,10 +399,10 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       await page.visit();
       await click(MOUNT_BACKEND_FORM.mountType(engine));
       await fillIn(GENERAL.inputByAttr('path'), path);
-      await click(GENERAL.toggleGroup('Method Options'));
+      await click(GENERAL.button('Method Options'));
       // type-in fallback component to create new key
       await typeIn(GENERAL.inputSearch('key'), 'general-key');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert
         .dom(GENERAL.latestFlashContent)
         .hasText(`Successfully mounted the ${engine} secrets engine at ${path}.`);

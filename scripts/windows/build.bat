@@ -63,7 +63,7 @@ del /f "%_GO_ENV_TMP_FILE%" 2>nul
 REM Build!
 echo ==^> Building...
 go build^
- -ldflags "-X github.com/hashicorp/vault/version.GitCommit=%_GIT_COMMIT%%_GIT_DIRTY% -X github.com/hashicorp/vault/version.BuildDate=%_BUILD_DATE%"^
+ -buildvcs=false -ldflags "-X github.com/hashicorp/vault/version.GitCommit=%_GIT_COMMIT%%_GIT_DIRTY% -X github.com/hashicorp/vault/version.BuildDate=%_BUILD_DATE%"^
  -o "bin/vault.exe"^
  .
 

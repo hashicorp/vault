@@ -87,7 +87,7 @@ module('Integration | Component | secret edit', function (hooks) {
       },
     });
     await render(hbs`<SecretEdit @mode={{this.mode}} @model={{this.model}} @key={{this.key}} />`);
-    assert.dom(GENERAL.saveButton).isNotDisabled();
+    assert.dom(GENERAL.submitButton).isNotDisabled();
   });
 
   test('it shows an error when editing and the data is not an object', async function (assert) {
