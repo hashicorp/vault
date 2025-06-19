@@ -1449,8 +1449,8 @@ github.com/hashicorp/go-plugin v1.6.1/go.mod h1:XPHFku2tFo3o3QKFgSYo+cghcUhw1NA1
 github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a h1:FmnBDwGwlTgugDGbVxwV8UavqSMACbGrUpfc98yFLR4=
 github.com/hashicorp/go-raftchunking v0.6.3-0.20191002164813-7e9e8525653a/go.mod h1:xbXnmKqX9/+RhPkJ4zrEx4738HacP72aaUPlT2RZ4sU=
 github.com/hashicorp/go-retryablehttp v0.5.3/go.mod h1:9B5zBasrRhHXnJnui7y6sL7es7NDiJgTc6Er0maI1Xs=
-github.com/hashicorp/go-retryablehttp v0.7.7 h1:C8hUCYzor8PIfXHa4UrZkU4VvK8o9ISHxT2Q8+VepXU=
-github.com/hashicorp/go-retryablehttp v0.7.7/go.mod h1:pkQpWZeYWskR+D1tR2O5OcBFOxfA7DoAO6xtkuQnHTk=
+github.com/hashicorp/go-retryablehttp v0.7.8 h1:ylXZWnqa7Lhqpk0L1P1LzDtGcCR0rPVUrx/c8Unxc48=
+github.com/hashicorp/go-retryablehttp v0.7.8/go.mod h1:rjiScheydd+CxvumBsIrFKlx3iS0jrZ7LvzFGFmuKbw=
 github.com/hashicorp/go-rootcerts v1.0.2 h1:jzhAVGtqPKbwpyCPELlgNWhE1znq+qwJtW5Oi2viEzc=
 github.com/hashicorp/go-rootcerts v1.0.2/go.mod h1:pqUvnprVnM5bf7AOirdbb01K4ccR319Vf4pU3K5EGc8=
 github.com/hashicorp/go-secure-stdlib/awsutil v0.3.0 h1:I8bynUKMh9I7JdwtW9voJ0xmHvBpxQtLjrMFDYmhOxY=
@@ -1552,8 +1552,8 @@ github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16 h1:OYPMX3T
 github.com/hashicorp/vault-hcp-lib v0.0.0-20250306185756-615fe2449b16/go.mod h1:v4RnW8isIioLAc11prbTczNCq9TiEWE5MwizMsgY5mE=
 github.com/hashicorp/vault-plugin-auth-alicloud v0.21.0 h1:5nw3SbWPZNeOx/C7jPzKnfUMHzlGSnyUO+EuCimOWlM=
 github.com/hashicorp/vault-plugin-auth-alicloud v0.21.0/go.mod h1:b74ZlQ/vh4MNPIOJiUDlXtdhr2Qmby7FAUeO+5q+1M0=
-github.com/hashicorp/vault-plugin-auth-azure v0.21.0 h1:xbp7SMLNrVF5dQEgZZXxNabhqMJcPvohi9+2VHFaZyE=
-github.com/hashicorp/vault-plugin-auth-azure v0.21.0/go.mod h1:aJbsRQ5rGoutoJ/SwTkPlCgOL0uALPj5BJ73YICQZ5M=
+github.com/hashicorp/vault-plugin-auth-azure v0.21.1 h1:EWiajfcAeLfuA64RaOS0x7K7SxhtEHd+wt470cXQMgs=
+github.com/hashicorp/vault-plugin-auth-azure v0.21.1/go.mod h1:aJbsRQ5rGoutoJ/SwTkPlCgOL0uALPj5BJ73YICQZ5M=
 github.com/hashicorp/vault-plugin-auth-cf v0.21.0 h1:yELepQ3qV/QtbhtbfnhArTjYG4f6a5RyRVDsQV/+Y8g=
 github.com/hashicorp/vault-plugin-auth-cf v0.21.0/go.mod h1:cwskmYdDcdF71m+Wsz7Vq0oWDef+gMHZViXkCAHGoTM=
 github.com/hashicorp/vault-plugin-auth-gcp v0.21.0 h1:KRCGEEAP9mwxRTOOWJpQk/mi6Twxi1PHtfRAJfLEse4=
@@ -1578,8 +1578,6 @@ github.com/hashicorp/vault-plugin-database-redis-elasticache v0.7.0 h1:0U6u57SzH
 github.com/hashicorp/vault-plugin-database-redis-elasticache v0.7.0/go.mod h1:jn8+JnaS5DLNAGNYK+z24bL26jCQkJ6kVX0PKpnKyyc=
 github.com/hashicorp/vault-plugin-database-snowflake v0.14.1 h1:7WUjMsEfsJFVcrm3O74i9eR+c3xGpurLLHehqRv2CDs=
 github.com/hashicorp/vault-plugin-database-snowflake v0.14.1/go.mod h1:6FMpVX+clx1wc7s1MfY6/+N5yNhhVgDxHj1wsrr89bY=
-github.com/hashicorp/vault-plugin-mock v0.16.1 h1:5QQvSUHxDjEEbrd2REOeacqyJnCLPD51IQzy71hx8P0=
-github.com/hashicorp/vault-plugin-mock v0.16.1/go.mod h1:83G4JKlOwUtxVourn5euQfze3ZWyXcUiLj2wqrKSDIM=
 github.com/hashicorp/vault-plugin-secrets-ad v0.21.0 h1:hQ3NmPvlfqjUJOFVPsmLKtVjJLgTGC6svkL2CGoo8zs=
 github.com/hashicorp/vault-plugin-secrets-ad v0.21.0/go.mod h1:+DVIGigIqw63QjP3/3tHQnB8EYzc1YfhKsTr+WJGZns=
 github.com/hashicorp/vault-plugin-secrets-alicloud v0.20.0 h1:r0ynX2WP8jYfnw6LZ1BnRSO0OlAdv5PW1dj4QPbiiWk=

@@ -21,7 +21,7 @@ export default class VaultClusterSettingsMountSecretBackendRoute extends Route {
       kvConfig: {
         maxVersions: 0,
         casRequired: false,
-        deleteVersionAfter: 0,
+        deleteVersionAfter: undefined,
       },
       options: { version: 2 },
     };

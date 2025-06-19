@@ -10,11 +10,11 @@ import { commonFields, getPayload } from './shared';
 
 import type { SystemWriteSyncDestinationsAzureKvNameRequest } from '@hashicorp/vault-client-typescript';
 
-type AzureKvFormData = Partial<SystemWriteSyncDestinationsAzureKvNameRequest>;
+type AzureKvFormData = SystemWriteSyncDestinationsAzureKvNameRequest & {
+  name: string;
+};
 
-export default class AzureKvForm extends Form {
-  declare data: AzureKvFormData;
-
+export default class AzureKvForm extends Form<AzureKvFormData> {
   formFieldGroups = [
     new FormFieldGroup('default', [
       commonFields.name,
@@ -57,6 +57,7 @@ export default class AzureKvForm extends Form {
 
   toJSON() {
     const formState = super.toJSON();
-    return { ...formState, data: getPayload('azure-kv', this.data, this.isNew) };
+    const data = getPayload<AzureKvFormData>('azure-kv', this.data, this.isNew);
+    return { ...formState, data };
   }
 }
