@@ -7,11 +7,12 @@ set -e
 # Checking if docker is installed
 if command -v docker &> /dev/null; then
   echo "Docker is already installed: $(sudo docker --version)"
-  echo "Enabling and starting Docker service..."
-  sudo systemctl start docker || true
-  sudo systemctl enable docker || true
   sudo docker info
-  exit 1
+  if [ "$DISTRO" = "leap" ]; then
+      echo "--------0-----DISTRO: $DISTRO}"
+      exit 1
+  fi
+  exit 0
 fi
 
 [[ -z "$DISTRO" ]] && fail "DISTRO env variable has not been set"
@@ -48,8 +49,11 @@ echo "Enabling and starting Docker service..."
 sudo systemctl start docker || true
 sudo systemctl enable docker || true
 echo "Docker installation complete."
-sudo docker --version
+sudo docker --info
 
 sudo docker info
-exit 1
+if [ "$DISTRO" = "leap" ]; then
+    echo "---------1----DISTRO: $DISTRO}"
+    exit 1
+fi
 
