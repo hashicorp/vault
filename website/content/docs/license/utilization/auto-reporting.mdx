@@ -199,8 +199,9 @@ variable setting will take precedence.
 As of 1.20.0, clusters now report the `development_cluster` metadata field, which
 indicates whether the cluster is used for development (non-production) purposes. By default, the field is set to `false`,
 indicating the cluster is running in a production environment. Changing the value is done via HCL configuration by adding
-the `development_cluster` field to the `license` parameter within the `reporting` stanza. Only set the field to `true` if
-the cluster is not used for production purposes — there are EULA implications if set on a production cluster.
+the `development_cluster` field to the `license` parameter within the `reporting` stanza.
+Do not use `development_cluster` outside of development environments. Setting
+`development_cluster` to `true` on production clusters can violate EULA obligations.
 
 ```hcl
 reporting {
@@ -216,15 +217,14 @@ The `development_cluster` configuration cannot differ across replicated clusters
 In [performance replication](/vault/docs/enterprise/replication#performance-replication), secondary clusters inherit the
 `development_cluster` value from the primary cluster, regardless of their own HCL configuration.
 
-<Note>
+If the `development_cluster` setting in the secondary cluster configuration
+differs from the value inherited from the primary cluster, the secondary cluster
+logs the following error to warn about the discrepancy:
 
-If the inherited value from the primary differs from the HCL configuration on the secondary, the secondary will log the
-error `"development cluster setting in config does not match that of the primary, updating to follow the primary config setting"`
-to warn that it will be reporting a different value than what is set in its config.
+`"development cluster setting in config does not match that of the primary, updating to follow the primary config setting"`
 
-</Note>
-
-If the secondary cluster is promoted to a primary, it will begin to report its own `development_cluster` value determined by its HCL configuration.
+If the secondary cluster is promoted to a primary, it reports the
+`development_cluster` value determined by its own HCL configuration.
 The reverse is also true, if the primary cluster is demoted to a secondary, it will report the `development_cluster`
 value of its new primary.
 
