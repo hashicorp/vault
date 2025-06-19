@@ -22,26 +22,6 @@ before upgrading Vault.
 
 ## New behavior
 
-## Key Pair Authentication for Snowflake DB Secrets Engine
-
-| Change       | Affected version | Affected deployments
-| ------------ | ---------------- | --------------------
-| New behavior | 1.20.0           | any
-
-As of version 1.20.0, Vault supports
-[Snowflake database authentication using key pairs](/vault/api-docs/secret/databases#configure-connection)
-as an alternative to password authentication, which Snowflake plans to disable
-in November 2025. Vault support for password authentication with Snowflake is
-now deprecated and will be removed in a future release.
-
-Vault currently does not support rotate root for key pairs. To manually rotate key pairs, users can:
-
-  - update the root configuration in Vault with the new private key
-  - update the public key associated with the user in Snowflake
-
-For more information on rotating key pairs, please refer
-to the official [Snowflake documentation](https://docs.snowflake.com/en/user-guide/key-pair-auth#configuring-key-pair-rotation).
-
 ### Transit support for Ed25519ph and Ed25519ctx signatures ((#ed25519))
 
 | Change       | Affected version | Fixed version
