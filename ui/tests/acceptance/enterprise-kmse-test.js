@@ -13,7 +13,7 @@ import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-
 import { runCmd } from '../helpers/commands';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import engineDisplayData from 'vault/helpers/engines-display-data';
-import { GENERAL } from '../helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | Enterprise | keymgmt', function (hooks) {
   setupApplicationTest(hooks);

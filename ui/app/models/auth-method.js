@@ -46,8 +46,8 @@ export default class AuthMethodModel extends Model {
 
   get icon() {
     // methodType refers to the backend type (e.g., "aws", "azure") and is set on a getter.
-    const authMethods = engineDisplayData(this.methodType);
-    return authMethods?.glyph || 'users';
+    const engineData = engineDisplayData(this.methodType);
+    return engineData?.glyph || 'users';
   }
 
   get directLoginLink() {

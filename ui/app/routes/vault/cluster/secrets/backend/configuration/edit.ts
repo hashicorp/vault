@@ -9,11 +9,11 @@ import AwsConfigForm from 'vault/forms/secrets/aws-config';
 import AzureConfigForm from 'vault/forms/secrets/azure-config';
 import GcpConfigForm from 'vault/forms/secrets/gcp-config';
 import SshConfigForm from 'vault/forms/secrets/ssh-config';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type ApiService from 'vault/services/api';
 import type VersionService from 'vault/services/version';
-import engineDisplayData from 'vault/helpers/engines-display-data';
 
 type SecretsBackendConfigurationModel = {
   secretsEngine: SecretsEngineResource;

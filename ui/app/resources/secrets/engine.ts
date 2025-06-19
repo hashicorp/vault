@@ -6,9 +6,9 @@
 import { baseResourceFactory } from 'vault/resources/base-factory';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { isAddonEngine } from 'vault/utils/all-engines-metadata';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 import type { SecretsEngine } from 'vault/secrets/engine';
-import engineDisplayData from 'vault/helpers/engines-display-data';
 
 export default class SecretsEngineResource extends baseResourceFactory<SecretsEngine>() {
   id: string;
