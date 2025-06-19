@@ -10,6 +10,7 @@ terraform {
 }
 
 locals {
+  distro      = var.distro
   ldap_server = {
     domain     = "enos.com"
     org        = "hashicorp"
@@ -30,6 +31,10 @@ output "state" {
 # Creating OpenLDAP Server
 resource "enos_remote_exec" "setup_docker" {
   scripts = [abspath("${path.module}/scripts/setup_docker.sh")]
+
+  environment = {
+    DISTRO   = local.distro
+  }
 
   transport = {
     ssh = {
