@@ -6,45 +6,30 @@ set -e
 
 [[ -z "$DISTRO" ]] && fail "DISTRO env variable has not been set"
 
-check_docker_running() {
-  if docker info > /dev/null 2>&1; then
-    return 0
-  fi
-  echo "Docker daemon not running."
-  if [[ "$DISTRO" == "leap" || "$DISTRO" == "sles" ]]; then
-    echo "Detected distro: $DISTRO. Attempting to start and enable Docker..."
-    sudo systemctl start docker || true
-    sudo systemctl enable docker || true
-  fi
-  echo "Waiting for Docker to start..."
-  docker info
-  echo "Docker is now running."
-}
-
-# Check if Docker is already installed
-if command -v sudo docker &>/dev/null; then
-  echo "Docker is already installed: $(sudo docker --version)"
-  check_docker_running
+# Checking if docker is installed
+if command -v docker &> /dev/null; then
+  echo "Docker is already installed: $(docker --version)"
   exit 0
 fi
 
+# Install Docker based on distro
 echo "Installing Docker for distro: $DISTRO"
 case "$DISTRO" in
-  ubuntu)
+  "ubuntu")
     sudo apt update -y
-    sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
+    sudo apt install apt-transport-https ca-certificates curl software-properties-common -y
     curl -fsSL https://get.docker.com | sudo sh
     ;;
-  rhel)
+  "rhel")
     sudo yum update -y
     sudo yum install -y docker
     ;;
-  amzn)
+  "amzn")
     sudo yum update -y
     sudo amazon-linux-extras enable docker
     sudo yum install -y docker
     ;;
-  sles | leap)
+  "sles" | "leap")
     sudo zypper refresh
     sudo zypper install -y docker
     ;;
@@ -54,9 +39,11 @@ case "$DISTRO" in
     ;;
 esac
 
-echo "Enabling and starting Docker service..."
-sudo systemctl start docker || true
-sudo systemctl enable docker || true
-
+# Enable and start Docker
+if [[ "$DISTRO" == "leap" || "$DISTRO" == "sles" ]]; then
+  echo "Detected distro: $DISTRO. Attempting to start and enable Docker..."
+  sudo systemctl start docker || true
+  sudo systemctl enable docker || true
+fi
 echo "Docker installation complete."
-sudo docker --version
+sudo docker info
