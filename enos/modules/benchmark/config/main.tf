@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 variable "consul_node_instance_types" {
   description = "The instance types to use depending on architecture"
   type = object({
