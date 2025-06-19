@@ -6,12 +6,11 @@ set -e
 
 # Checking if docker is installed
 if command -v docker &> /dev/null; then
-  echo "Docker is already installed: $(docker --version)"
+  echo "Docker is already installed: $(sudo docker --version)"
   echo "Enabling and starting Docker service..."
   sudo systemctl start docker || true
   sudo systemctl enable docker || true
   sudo docker info
-
   exit 1
 fi
 
@@ -49,4 +48,8 @@ echo "Enabling and starting Docker service..."
 sudo systemctl start docker || true
 sudo systemctl enable docker || true
 echo "Docker installation complete."
-docker --version
+sudo docker --version
+
+sudo docker info
+exit 1
+
