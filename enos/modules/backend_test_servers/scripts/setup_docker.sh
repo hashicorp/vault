@@ -7,7 +7,12 @@ set -e
 # Checking if docker is installed
 if command -v docker &> /dev/null; then
   echo "Docker is already installed: $(docker --version)"
-  exit 0
+  echo "Enabling and starting Docker service..."
+  sudo systemctl start docker || true
+  sudo systemctl enable docker || true
+  sudo docker info
+
+  exit 1
 fi
 
 [[ -z "$DISTRO" ]] && fail "DISTRO env variable has not been set"
@@ -45,10 +50,3 @@ sudo systemctl start docker || true
 sudo systemctl enable docker || true
 echo "Docker installation complete."
 docker --version
-
-# Pulling image
-CONTAINER_CMD="sudo docker"
-LDAP_DOCKER_NAME="docker.io/osixia/openldap:1.5.0"
-echo "Pulling image: ${LDAP_DOCKER_NAME}"
-$CONTAINER_CMD pull "${LDAP_DOCKER_NAME}"
-exit 1
