@@ -3,36 +3,34 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, currentRouteName, fillIn, visit } from '@ember/test-helpers';
+import { click, currentRouteName, fillIn, visit, waitFor } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { createNSFromPaths, deleteNSFromPaths } from 'vault/tests/helpers/commands';
+import { createNS, deleteNS, runCmd } from 'vault/tests/helpers/commands';
 
 module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async () => {
     await login();
+
+    // Go to the manage namespaces page
+    await visit('/vault/access/namespaces');
   });
 
   test('the route url navigates to namespace index page', async function (assert) {
-    // Go to the manage namespaces page
-    await visit('/vault/access/namespaces');
-
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.namespaces.index',
       'navigates to the correct route'
     );
-    assert.dom(GENERAL.pageTitle).hasText('Namespaces', 'Page title is displayed correctly');
+
+    assert.dom(GENERAL.title).hasText('Namespaces', 'Page title is displayed correctly');
   });
 
   test('the route displays the breadcrumb trail', async function (assert) {
-    // Go to the manage namespaces page
-    await visit('/vault/access/namespaces');
-
     assert.dom(GENERAL.breadcrumb).exists({ count: 1 }, 'Only one breadcrumb is displayed');
     assert.dom(GENERAL.breadcrumb).hasText('Namespaces', 'Breadcrumb trail is displayed correctly');
   });
@@ -41,11 +39,7 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     const testNS = 'test-refresh-ns-cli';
 
     // Setup: Create namespace via the CLI
-    const namespaces = [testNS];
-    await createNSFromPaths(namespaces);
-
-    // Go to the manage namespaces page
-    await visit('/vault/access/namespaces');
+    await runCmd(createNS(testNS), false);
 
     await fillIn(GENERAL.filterInputExplicit, testNS);
     await click(GENERAL.button('Search'));
@@ -62,7 +56,7 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     assert.dom('[data-test-list-item]').hasText(testNS, 'Namespace is displayed after refreshing the list');
 
     // Delete the created namespace via the CLI
-    await deleteNSFromPaths(namespaces);
+    await runCmd(deleteNS(testNS), false);
     await visit('/vault/access/namespaces');
 
     // Search for the deleted namespace
@@ -81,9 +75,6 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
 
   test('the route should update namespace list after create/delete WITHOUT manual refresh in the UI', async function (assert) {
     const testNS = 'test-create-ns-ui';
-
-    // Go to the manage namespaces page
-    await visit('/vault/access/namespaces');
 
     // Verify test-create-ns does not exist in the Manage Namespace page
     await fillIn(GENERAL.filterInputExplicit, testNS);
@@ -118,36 +109,31 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
 
   test('the route should show "delete" and "switch to namespace" option menus for each namespace', async function (assert) {
     // Setup: Create namespace(s) via the CLI
-    const namespace = 'asdf';
-    await createNSFromPaths([namespace]);
-
-    // Go to the manage namespaces page
-    await visit('/vault/access/namespaces');
+    const testNS = 'asdf';
+    await runCmd(createNS(testNS), false);
 
     // Hack: Trigger refresh sys/internal/namespace namespaces endpoint that is only hit on the namespace picker (not the namespace route)
     await click(GENERAL.toggleInput('namespace-picker'));
     await click(GENERAL.button('Refresh list'));
 
     // Enter search text
-    await fillIn(GENERAL.filterInputExplicit, namespace);
+    await fillIn(GENERAL.filterInputExplicit, testNS);
     await click(GENERAL.button('Search'));
 
     // Verify the menu options
+    await waitFor(GENERAL.menuTrigger);
     await click(GENERAL.menuTrigger);
     assert.dom(GENERAL.menuItem('switch')).exists('Switch to namespace option is displayed');
     assert.dom(GENERAL.menuItem('delete')).exists('Delete namespace option is displayed');
 
     // Cleanup: Delete namespace(s) via the CLI
-    await deleteNSFromPaths([namespace]);
+    await runCmd(deleteNS(testNS), false);
   });
 
   test('the route should switch to the selected namespace on click "Switch to namespace"', async function (assert) {
     // Setup: Create namespace(s) via the CLI
     const testNS = 'test-create-ns-switch';
-    await createNSFromPaths([testNS]);
-
-    // Go to the manage namespaces page
-    await visit('/vault/access/namespaces');
+    await runCmd(createNS(testNS), false);
 
     // Hack: Trigger refresh internal namespaces endpoint
     await click(GENERAL.toggleInput('namespace-picker'));
@@ -163,6 +149,6 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     assert.strictEqual(currentRouteName(), 'vault.cluster.dashboard', 'navigates to the correct route');
 
     // Cleanup: Delete namespace(s) via the CLI
-    await deleteNSFromPaths([testNS]);
+    await runCmd(deleteNS(testNS), false);
   });
 });

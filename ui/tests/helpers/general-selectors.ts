@@ -30,7 +30,7 @@ export const GENERAL = {
   // there should only be one save button per view (e.g. one per form) so this does not need to be dynamic
   // this button should be used for any kind of "submit" on a form or "save" action.
   submitButton: '[data-test-submit]',
-  button: (label: string) => `[data-test-button="${label}"]`,
+  button: (label: string) => (label ? `[data-test-button="${label}"]` : '[data-test-button]'),
 
   /* ────── Menus & Lists ────── */
   menuTrigger: '[data-test-popup-menu-trigger]',

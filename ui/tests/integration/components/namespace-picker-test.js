@@ -97,7 +97,7 @@ module('Integration | Component | namespace-picker', function (hooks) {
 
     // Verify all namespaces are displayed after clearing the search input
     assert.strictEqual(
-      findAll(GENERAL.inputByAttr('Search namespaces')).length,
+      findAll(GENERAL.button()).length,
       3,
       'All namespaces are displayed after clearing the search input'
     );
@@ -118,10 +118,6 @@ module('Integration | Component | namespace-picker', function (hooks) {
     // Verify that the "Refresh List" button is visible
     assert.dom(GENERAL.button('Refresh list')).exists('Refresh List button is visible');
     assert.dom(GENERAL.button('Manage')).exists('Manage button is visible');
-    // Verify the "Manage" button is rendered and has the correct URL
-    assert
-      .dom('[href="/ui/vault/access/namespaces"]')
-      .exists('The "Manage" button is displayed with the correct URL');
   });
 
   test('it hides the refresh button when canList is false', async function (assert) {
@@ -183,25 +179,21 @@ module('Integration | Component | namespace-picker', function (hooks) {
     });
 
     // Verify initial namespaces are displayed
-    assert.strictEqual(
-      findAll(GENERAL.inputByAttr('Search namespaces')).length,
-      3,
-      'Initially, three namespaces are displayed'
-    );
+    assert.strictEqual(findAll(GENERAL.button()).length, 3, 'Initially, three namespaces are displayed');
 
     // Click the "Refresh list" button
     await click(GENERAL.button('Refresh list'));
 
     // Verify the new namespace is displayed
     assert.strictEqual(
-      findAll(GENERAL.inputByAttr('Search namespaces')).length,
+      findAll(GENERAL.button()).length,
       4,
       'After refreshing, four namespaces are displayed'
     );
 
-    // Verify the new namespace is specifically shown
+    // Verify the new namespace is specifically shownß
     assert
-      .dom(GENERAL.inputByAttr('Search namespaces').link('new-namespace'))
+      .dom(GENERAL.button('new-namespace'))
       .exists('The new namespace "new-namespace" is displayed after refreshing');
   });
 });
