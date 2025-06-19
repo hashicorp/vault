@@ -7,7 +7,7 @@ import Form from 'vault/forms/form';
 import FormField from 'vault/utils/forms/field';
 import { tracked } from '@glimmer/tracking';
 
-export default class WifConfigForm extends Form {
+export default class WifConfigForm<T extends object> extends Form<T> {
   // for community users they will not be able to change this. for enterprise users, they will have the option to select "wif".
   @tracked accessType: 'account' | 'wif' = 'account';
 
