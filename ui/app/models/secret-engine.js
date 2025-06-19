@@ -100,6 +100,12 @@ export default class SecretEngineModel extends Model {
   })
   deleteVersionAfter;
 
+  // `plugin_version` represents the version specified at mount time (if any), and is only used for external plugins.
+  // For built-in plugins, this field is intentionally left empty to simplify upgrades.
+  //
+  // `running_plugin_version` reflects the actual version of the plugin currently running,
+  // regardless of whether it is built-in or external. This provides a reliable source of truth
+  // and is why we are surfacing it over plugin_version.
   @attr('string') runningPluginVersion;
 
   /* GETTERS */

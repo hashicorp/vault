@@ -25,7 +25,8 @@ export default class MountSecretBackendController extends Controller {
           path
         );
       } else {
-        const queryParams = engineInfo?.routeQueryParams || {};
+        // For keymgmt, we need to land on provider tab by default using query params
+        const queryParams = engineInfo.type === 'keymgmt' ? { tab: 'provider' } : {};
         transition = this.router.transitionTo('vault.cluster.secrets.backend.index', path, { queryParams });
       }
     } else {

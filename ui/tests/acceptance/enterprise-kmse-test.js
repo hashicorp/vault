@@ -13,7 +13,6 @@ import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-
 import { runCmd } from '../helpers/commands';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import engineDisplayData from 'vault/helpers/engines-display-data';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | Enterprise | keymgmt', function (hooks) {
   setupApplicationTest(hooks);
@@ -47,7 +46,6 @@ module('Acceptance | Enterprise | keymgmt', function (hooks) {
     this.server.put(`/${path}/kms/test-keyvault/key/test-key`, () => ({}));
 
     await mountSecrets.enable('keymgmt', path);
-    await click(GENERAL.secretTab('Providers'));
     await click(SES.createSecretLink);
     await fillIn('[data-test-input="provider"]', 'azurekeyvault');
     await fillIn('[data-test-input="name"]', 'test-keyvault');
