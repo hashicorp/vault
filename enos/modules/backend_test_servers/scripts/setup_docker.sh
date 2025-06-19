@@ -7,7 +7,7 @@ set -e
 [[ -z "$DISTRO" ]] && fail "DISTRO env variable has not been set"
 
 check_docker_running() {
-  if sudo docker info > /dev/null 2>&1; then
+  if docker info > /dev/null 2>&1; then
     return 0
   fi
   echo "Docker daemon not running."
@@ -17,7 +17,7 @@ check_docker_running() {
     sudo systemctl enable docker || true
   fi
   echo "Waiting for Docker to start..."
-  sudo docker info
+  docker info
   echo "Docker is now running."
 }
 
