@@ -9,6 +9,7 @@ package vault
 
 import (
 	"context"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
 	"github.com/hashicorp/vault/sdk/rotation"
@@ -24,10 +25,17 @@ func (c *Core) stopRotation() error {
 	return nil
 }
 
+func (c *Core) GetRotationInformation(_ context.Context, _ *rotation.RotationInfoRequest) (time.Time, error) {
+	return time.Time{}, automatedrotationutil.ErrRotationManagerUnsupported
+}
+
 func (c *Core) RegisterRotationJob(_ context.Context, _ *rotation.RotationJob) (string, error) {
 	return "", automatedrotationutil.ErrRotationManagerUnsupported
 }
 
+// The DeregisterRotationJob stub returns nil instead of an error because it is intended to be valid to send a deregister
+// request for a non-existent job. As a result, the plugin sends a deregister request whenever the relevant rotation
+// values are unset. This means that for a plugin running in CE Vault, it will _always_ try to send a deregister request.
 func (c *Core) DeregisterRotationJob(_ context.Context, _ *rotation.RotationJobDeregisterRequest) error {
 	return nil
 }

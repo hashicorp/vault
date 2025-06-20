@@ -617,6 +617,16 @@ message GenerateIdentityTokenResponse {
   int64 ttl = 2;
 }
 
+message RotationInfoRequest {
+  string mount_point = 1;
+  string mount_path = 2;
+}
+
+message RotationInfoReply {
+  int64 timestamp = 1;
+}
+
+
 message RegisterRotationJobRequest {
   RotationJobInput job = 1;
 }
@@ -702,6 +712,9 @@ service SystemView {
 
   // GenerateIdentityToken returns an identity token for the requesting plugin.
   rpc GenerateIdentityToken(GenerateIdentityTokenRequest) returns (GenerateIdentityTokenResponse);
+
+  // GetRotationInformation returns the time remaining in a rotation job for the requested credential.
+  rpc GetRotationInformation(RotationInfoRequest) returns (RotationInfoReply);
 
   // RegisterRotationJob returns a rotation ID for the requested plugin credential.
   rpc RegisterRotationJob(RegisterRotationJobRequest) returns (RegisterRotationJobResponse);
