@@ -32,7 +32,7 @@ module('Acceptance | kubernetes | roles', function (hooks) {
     await this.visitRoles();
     assert.dom('[data-test-list-item-link]').exists({ count: 3 }, 'Roles list renders');
     await fillIn(GENERAL.filterInputExplicit, '1');
-    await click(GENERAL.filterInputExplicitSearch);
+    await click(GENERAL.button('Search'));
     assert.dom('[data-test-list-item-link]').exists({ count: 1 }, 'Filtered roles list renders');
     assert.ok(currentURL().includes('pageFilter=1'), 'pageFilter query param value is set');
   });

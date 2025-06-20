@@ -41,7 +41,7 @@ module('Acceptance | sync | destination (singular)', function (hooks) {
   test('it should transition to correct routes when performing actions', async function (assert) {
     await click(ts.navLink('Secrets Sync'));
     await click(GENERAL.tab('Destinations'));
-    await click(ts.listItem);
+    await click(GENERAL.listItemLink);
     assert.dom(GENERAL.tab('Secrets')).hasClass('active', 'Secrets hdsTab is active');
 
     await click(GENERAL.tab('Details'));

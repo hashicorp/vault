@@ -97,8 +97,7 @@ module('Integration | Component | messages/page/list', function (hooks) {
     await this.renderComponent();
     assert.dom('[data-test-icon="message-circle"]').exists();
     for (const message of this.messages) {
-      assert.dom(CUSTOM_MESSAGES.listItem('Message title 1')).exists();
-      assert.dom(`[data-linked-block-title="${message.id}"]`).hasText(message.title);
+      assert.dom(GENERAL.listItem(message.title)).exists('Message title is displayed');
     }
   });
 

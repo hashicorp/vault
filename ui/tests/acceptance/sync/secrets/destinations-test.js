@@ -85,15 +85,15 @@ module('Acceptance | sync | destinations (plural)', function (hooks) {
 
   test('it should filter destinations list', async function (assert) {
     await visit('vault/sync/secrets/destinations');
-    assert.dom(ts.listItem).exists({ count: 6 }, 'All destinations render');
+    assert.dom(GENERAL.listItemLink).exists({ count: 6 }, 'All destinations render');
     await click(`${ts.filter('type')} .ember-basic-dropdown-trigger`);
     await click(ts.searchSelect.option());
-    assert.dom(ts.listItem).exists({ count: 2 }, 'Destinations are filtered by type');
+    assert.dom(GENERAL.listItemLink).exists({ count: 2 }, 'Destinations are filtered by type');
     await fillIn(ts.filter('name'), 'new');
-    assert.dom(ts.listItem).exists({ count: 1 }, 'Destinations are filtered by type and name');
+    assert.dom(GENERAL.listItemLink).exists({ count: 1 }, 'Destinations are filtered by type and name');
     await click(ts.searchSelect.removeSelected);
     await fillIn(ts.filter('name'), 'gcp');
-    assert.dom(ts.listItem).exists({ count: 1 }, 'Destinations are filtered by name');
+    assert.dom(GENERAL.listItemLink).exists({ count: 1 }, 'Destinations are filtered by name');
   });
 
   test('it should transition to correct routes when performing actions', async function (assert) {
