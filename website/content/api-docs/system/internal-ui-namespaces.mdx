@@ -2,21 +2,20 @@
 layout: api
 page_title: /sys/internal/ui/namespaces - HTTP API
 description: >-
-  The `/sys/internal/ui/namespaces` endpoint exposes namespaces to the UI.
+  The `/sys/internal/ui/namespaces` endpoint exposes namespaces to the GUI.
 ---
 
 # `/sys/internal/ui/namespaces`
 
-The `/sys/internal/ui/namespaces` endpoint is used to expose namespaces
-to the UI so that it can change its behavior in response, even before a user logs in.
+The `/sys/internal/ui/namespaces` endpoint returns the namespaces that the current user has access to.
 
-This is currently only being used internally for the UI and is
-an unauthenticated endpoint. Due to the nature of its intended usage, there is no
-guarantee on backwards compatibility for this endpoint.
+This endpoint is used internally by the GUI and is an authenticated endpoint (requires a valid Vault token). You do not need to explicitly grant capabilities on the `/sys/internal/ui/namespaces` path in your policy. If your token has any access to a namespace, that namespace will be included in the response. For more information about namespace policies, see the [sys/namespaces API documentation](https://developer.hashicorp.com/vault/api-docs/system/namespaces).
+
+Due to the nature of its intended usage, there is no guarantee on backwards compatibility for this endpoint.
 
 ## Get namespaces
 
-This endpoint lists the namespaces relevant to the UI.
+This endpoint lists the namespaces relevant to the GUI.
 
 | Method | Path                             |
 | :----- | :------------------------------- |
@@ -26,6 +25,8 @@ This endpoint lists the namespaces relevant to the UI.
 
 ```shell-session
 $ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
     http://127.0.0.1:8200/v1/sys/internal/ui/namespaces
 ```
 
@@ -33,6 +34,31 @@ $ curl \
 
 ```json
 {
-  "namespaces": []
+    "request_id": "28a1ca80-cc97-913d-8ed2-844ea501ae0d",
+    "lease_id": "",
+    "renewable": false,
+    "lease_duration": 0,
+    "data": {
+        "keys": [
+            "parent/",
+            "parent/child/",
+            "parent/child/grandchild/",
+            "parent2/"
+        ]
+    },
+    "wrap_info": null,
+    "warnings": null,
+    "auth": null,
+    "mount_type": ""
 }
 ```
+
+The `keys` array in the response lists all available namespaces, with each entry representing a namespace path.
+
+In the sample response above:
+- `parent/` is a namespace that contains a nested namespace `child/`.
+- `parent/child/` is a nested namespace under `parent/` and contains its own nested namespace `grandchild/`.
+- `parent/child/grandchild/` is a nested namespace under `parent/child/`.
+- `parent2/` is a namespace that does not have any nested namespaces.
+
+> **Note:** The `root` namespace is never included in this list of namespaces.
