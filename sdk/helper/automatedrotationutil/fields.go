@@ -87,11 +87,15 @@ func (p *AutomatedRotationParams) PopulateAutomatedRotationData(m map[string]int
 }
 
 func (p *AutomatedRotationParams) ShouldRegisterRotationJob() bool {
-	return p.RotationSchedule != "" || p.RotationPeriod != 0
+	return p.HasRotationParams()
 }
 
 func (p *AutomatedRotationParams) ShouldDeregisterRotationJob() bool {
 	return p.DisableAutomatedRotation || (p.RotationSchedule == "" && p.RotationPeriod == 0)
+}
+
+func (p *AutomatedRotationParams) HasRotationParams() bool {
+	return p.RotationSchedule != "" || p.RotationPeriod != 0
 }
 
 // AddAutomatedRotationFields adds plugin identity token fields to the given
