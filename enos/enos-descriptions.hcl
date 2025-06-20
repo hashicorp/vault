@@ -25,13 +25,8 @@ globals {
       for Vault target nodes to access it the AWSKMS key are handled in the target modules.
     EOF
 
-    create_test_servers = <<-EOF
-      Provision test servers required for development and QA activities. Additional servers will be
-      deployed as necessary to support testing requirements (e.g., OpenLDAP).
-    EOF
-
-    create_test_servers_target = <<-EOF
-      Create the target machine for test servers.
+    create_external_integration_target = <<-EOF
+      Creates the infrastructure necessary to host external services that we need to test some integrations.
     EOF
 
     create_vault_cluster = <<-EOF
@@ -109,6 +104,10 @@ globals {
     start_vault_agent = <<-EOF
       Create an agent approle in the auth engine, generate a Vault Agent configuration file, and
       start the Vault agent.
+    EOF
+
+    set_up_external_integration_target = <<-EOF
+      Installs and configures software services on those target machines to test integrations.
     EOF
 
     stop_vault = <<-EOF
