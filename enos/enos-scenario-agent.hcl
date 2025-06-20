@@ -288,7 +288,8 @@ scenario "agent" {
     depends_on = [
       step.create_backend_cluster,
       step.build_vault,
-      step.create_vault_cluster_targets
+      step.create_vault_cluster_targets,
+      step.set_up_external_integration_target
     ]
 
     providers = {
@@ -515,8 +516,7 @@ scenario "agent" {
     description = global.description.verify_secrets_engines_create
     module      = module.vault_verify_secrets_engines_create
     depends_on = [
-      step.verify_vault_unsealed,
-      step.set_up_external_integration_target
+      step.verify_vault_unsealed
     ]
 
     providers = {

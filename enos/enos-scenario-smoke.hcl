@@ -225,7 +225,8 @@ scenario "smoke" {
     description = global.description.create_backend_cluster
     module      = "backend_${matrix.backend}"
     depends_on = [
-      step.create_vault_cluster_backend_targets
+      step.create_vault_cluster_backend_targets,
+      step.set_up_external_integration_target
     ]
 
     providers = {
@@ -595,8 +596,7 @@ scenario "smoke" {
     description = global.description.verify_secrets_engines_create
     module      = module.vault_verify_secrets_engines_create
     depends_on = [
-      step.vault_remove_node_and_verify,
-      step.set_up_external_integration_target
+      step.vault_remove_node_and_verify
     ]
 
     providers = {

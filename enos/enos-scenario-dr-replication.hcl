@@ -369,7 +369,8 @@ scenario "dr_replication" {
     depends_on = [
       step.create_primary_backend_cluster,
       step.build_vault,
-      step.create_primary_cluster_targets
+      step.create_primary_cluster_targets,
+      step.set_up_external_integration_target
     ]
 
     providers = {
@@ -715,8 +716,7 @@ scenario "dr_replication" {
     description = global.description.verify_secrets_engines_create
     module      = module.vault_verify_secrets_engines_create
     depends_on = [
-      step.get_primary_cluster_ips,
-      step.set_up_external_integration_target
+      step.get_primary_cluster_ips
     ]
 
     providers = {

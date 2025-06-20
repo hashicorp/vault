@@ -285,7 +285,8 @@ scenario "seal_ha" {
     description = global.description.create_backend_cluster
     module      = "backend_${matrix.backend}"
     depends_on = [
-      step.create_vault_cluster_backend_targets
+      step.create_vault_cluster_backend_targets,
+      step.set_up_external_integration_target
     ]
 
     providers = {
@@ -472,8 +473,7 @@ scenario "seal_ha" {
     depends_on = [
       step.create_vault_cluster,
       step.get_vault_cluster_ips,
-      step.verify_vault_unsealed,
-      step.set_up_external_integration_target
+      step.verify_vault_unsealed
     ]
 
     providers = {
