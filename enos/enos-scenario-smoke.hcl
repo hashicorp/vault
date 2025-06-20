@@ -221,12 +221,28 @@ scenario "smoke" {
     }
   }
 
+  step "set_up_external_integration_target" {
+    description = global.description.set_up_external_integration_target
+    module      = module.set_up_external_integration_target
+    depends_on = [
+      step.create_external_integration_target
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      hosts        = step.create_external_integration_target.hosts
+      distro       = matrix.distro
+    }
+  }
+
   step "create_backend_cluster" {
     description = global.description.create_backend_cluster
     module      = "backend_${matrix.backend}"
     depends_on = [
-      step.create_vault_cluster_backend_targets,
-      step.set_up_external_integration_target
+      step.create_vault_cluster_backend_targets
     ]
 
     providers = {
@@ -269,6 +285,7 @@ scenario "smoke" {
       step.create_backend_cluster,
       step.build_vault,
       step.create_vault_cluster_targets,
+      step.set_up_external_integration_target
     ]
 
     providers = {
@@ -332,24 +349,6 @@ scenario "smoke" {
       seal_attributes      = step.create_seal_key.attributes
       seal_type            = matrix.seal
       storage_backend      = matrix.backend
-    }
-  }
-
-  step "set_up_external_integration_target" {
-    description = global.description.set_up_external_integration_target
-    module      = module.set_up_external_integration_target
-    depends_on = [
-      step.create_external_integration_target
-    ]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    variables {
-      hosts        = step.create_external_integration_target.hosts
-      ldap_version = "1.5.0"
-      distro       = matrix.distro
     }
   }
 
