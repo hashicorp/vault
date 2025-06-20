@@ -161,8 +161,14 @@ Router.map(function () {
         });
       });
       this.route('secrets', function () {
-        this.route('backends', { path: '/' });
+        this.route('backends', { path: '/' }); // this is the list view of all secret engines
+        this.route('mount', function () {
+          this.route('create', { path: '/:mount_type/create' });
+          this.route('edit', { path: '/:mount_name/details' });
+          // Note: details and edit are handled in the same view
+        });
         this.route('backend', { path: '/:backend' }, function () {
+          // These are ember engines and their routes are defined in their own directories.
           this.mount('kmip');
           this.mount('kubernetes');
           this.mount('kv');
