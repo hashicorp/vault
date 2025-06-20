@@ -56,7 +56,7 @@ module "create_vpc" {
   common_tags = var.tags
 }
 
-module "create_test_servers" {
+module "set_up_external_integration_target" {
   source = "./modules/backend_test_servers"
 }
 
