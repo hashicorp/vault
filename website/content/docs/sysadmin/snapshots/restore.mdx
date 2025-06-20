@@ -1,0 +1,256 @@
+---
+layout: docs
+page_title: Manage snapshots
+description: >-
+  Save and restore data from cluster snapshots.
+---
+
+# Restore a cluster snapshot
+
+Manually restore data for a Vault cluster leader node with a saved snapshot.
+
+## Before you start
+
+- **You must a working knowledge of how Vault saves data**.
+- **You must have a valid Vault cluster configuration using integratd storage**.
+- **You must know, and be able to contact your unseal/recovery key holders**.
+- **You must have permission to access encrypted data in backed storage**.
+- **You should have a secure location, away from your Vault cluster
+  infrastructure, to save the snapshot file**.
+
+
+
+## Restore a single cluster snapshot
+
+Use these examples to learn how to restore a snapshot to a single Vault cluster.
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+1. Bring your Vault cluster back online following the circumstances that
+required you to restore from backup. You must reinitialize your Vault
+cluster with new storage, and authenticate with the new initial root token generated during this re-initialization. Note that this situation is temporary- you still need the original cluster unseal keys to unseal Vault after restoring the snapshot.
+
+1. Copy your Vault snapshot file to a Vault cluster member and run the
+example command, replacing the example filename with that of your snapshot file. Note that you must use the `-force` flag in this command since the Auto-unseal or Shamir keys will not be consistent with the snapshot data as you are restoring a snapshot from a different cluster.
+
+   ```shell-session
+   $ vault operator raft snapshot restore -force backup.snap
+   ```
+
+   Learn more in the [CLI documentation](/vault/docs/commands/operator/raft#snapshot-restore).
+
+1. After restoring the snapshot, you must unseal your Vault
+cluster again using a command like this example. Typically each person with a key share would execute the unseal command and pass in their key share until reaching the number of key shares required by the quroum defined in your original cluster configuration.
+
+   ```shell-session
+   $ vault operator unseal [unseal_key]
+   ```
+
+   Learn more in the [CLI documentation](/vault/docs/commands/operator/unseal).
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+1. Bring your Vault cluster back online following the circumstances that
+required you to restore from backup. You must reinitialize your Vault
+cluster with new storage, and authenticate with the new initial root token generated during this re-initialization. Note that this situation is temporary- you still need the original cluster unseal keys to unseal Vault after restoring the snapshot.
+
+1. Copy your Vault snapshot file to a Vault cluster member and run the
+example command, replacing the example filename with that of your snapshot file. Note that you must use the `snapshot-force` API endpoint in this command since the Auto-unseal or Shamir keys will not be consistent with the snapshot data as you are restoring a snapshot from a different cluster.
+
+   ```shell-session
+   $ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data-binary @backup.snap \
+    https://127.0.0.1:8200/v1/sys/storage/raft/snapshot-force
+   ```
+
+   Learn more in the [API documentation](/vault/api-docs/system/storage/raft#force-restore-raft-using-a-snapshot).
+
+1. After restoring the snapshot, you must unseal your Vault
+cluster again using a command like this example. Typically each person with a key share would execute the unseal command and pass in their key share until reaching the number of key shares required by the quroum defined in your original cluster configuration.
+
+   Create a key share payload that holds one of the key shares.
+
+   ```shell-session
+   $ cat > payload.json << EOF
+   {
+   "key": "abcd1234..."
+   }
+   EOF
+   ```
+
+   Use cURL with the Vault API to unseal Vault.
+   
+   ```shell-session
+   $ curl \
+    --request POST \
+    --data @payload.json \
+    https://127.0.0.1:8200/v1/sys/unseal
+   ```
+
+   Learn more in the [API documentation](/vault/api-docs/system/unseal).
+
+</Tab>
+
+</Tabs>
+
+
+
+## Restore a disaster recovery replication cluster snapshot
+
+Use these examples to learn how to restore a snapshot to a DR Replication Vault cluster.
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+1. Bring your Vault cluster back online following the circumstances that
+required you to restore from backup. You must reinitialise your Vault
+cluster with new storage, and authenticate with the new initial root token generated during this re-initialisation. Note that this situation is temporary- you still need the original cluster unseal keys to unseal Vault after restoring the snapshot.
+
+1. Copy your Vault snapshot files for the Primary and DR replica clusters onto restored members of the respective clusters and run the following example command, replacing the example filename with that of your snapshot file. Note that you must use the `-force` flag in this command since the Auto-unseal or Shamir keys will not be consistent with the snapshot data as you are restoring a snapshot from a different cluster.
+
+   ```shell-session
+   $ vault operator raft snapshot restore -force backup.snap
+   ```
+
+   Learn more in the [CLI documentation](/vault/docs/commands/operator/raft#snapshot-restore).
+
+1. After restoring the snapshot, you must unseal your Vault
+cluster again using a command like this example. Typically each person with a key share would execute the unseal command and pass in their key share until reaching the number of key shares required by the quroum defined in your original cluster configuration.
+
+   ```shell-session
+   $ vault operator unseal [unseal_key]
+   ```
+
+   Learn more in the [CLI documentation](/vault/docs/commands/operator/unseal).
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+1. Bring your Vault cluster back online following the circumstances that
+required you to restore from backup. You must reinitialise your Vault
+cluster with new storage, and authenticate with the new initial root token generated during this re-initialisation. Note that this situation is temporary- you still need the original cluster unseal keys to unseal Vault after restoring the snapshot.
+
+1. Copy your Vault snapshot file to a Vault cluster member and run the
+example command, replacing the example filename with that of your snapshot file. Note that you must use the `snapshot-force` API endpoint in this command since the Auto-unseal or Shamir keys will not be consistent with the snapshot data as you are restoring a snapshot from a different cluster.
+
+   ```shell-session
+   $ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data-binary @backup.snap \
+    https://127.0.0.1:8200/v1/sys/storage/raft/snapshot-force
+   ```
+
+1. After restoring the snapshot, you must unseal your Vault
+cluster again using a command like this example. Typically each person with a key share would execute the unseal command and pass in their key share until reaching the number of key shares required by the quroum defined in your original cluster configuration.
+
+   Create a key share payload that holds one of the key shares.
+
+   ```shell-session
+   $ cat > payload.json << EOF
+   {
+   "key": "abcd1234..."
+   }
+   EOF
+   ```
+
+   Use cURL with the Vault API to unseal Vault.
+   
+   ```shell-session
+   $ curl \
+    --request POST \
+    --data @payload.json \
+    https://127.0.0.1:8200/v1/sys/unseal
+   ```
+
+   Learn more in the [API documentation](/vault/api-docs/system/unseal).
+
+</Tab>
+
+</Tabs>
+
+
+
+## Restore a performance replication cluster snapshot
+
+Use these examples to learn how to restore a snapshot to a Performance Replication cluster.
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+1. Bring your Vault cluster back online following the circumstances that
+required you to restore from backup. You must reinitialise your Vault
+cluster with new storage, and authenticate with the new initial root token generated during this re-initialisation. Note that this situation is temporary- you still need the original cluster unseal keys to unseal Vault after restoring the snapshot.
+
+1. Copy your Vault Raft Snapshots for the Primary and Secondary Performance
+Replica clusters onto restored members of the respective clusters and run the following example command, replacing the example filename with that of your snapshot file. Note that you must use the `-force` flag in this command since the Auto-unseal or Shamir keys will not be consistent with the snapshot data as you are restoring a snapshot from a different cluster.
+
+   ```shell-session
+   $ vault operator raft snapshot restore -force backup.snap
+   ```
+
+1. After restoring the snapshot, you must unseal your Vault
+cluster again using a command like this example. Typically each person with a key share would execute the unseal command and pass in their key share until reaching the number of key shares required by the quroum defined in your original cluster configuration.
+
+   ```shell-session
+   $ vault operator unseal [unseal_key]
+   ```
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+1. Bring your Vault cluster back online following the circumstances that
+required you to restore from backup. You must reinitialise your Vault
+cluster with new storage, and authenticate with the new initial root token generated during this re-initialisation. Note that this situation is temporary- you still need the original cluster unseal keys to unseal Vault after restoring the snapshot.
+
+1. Copy your Vault Raft Snapshots for the Primary and Secondary Performance
+Replica clusters onto restored members of the respective clusters and run the following example command, replacing the example filename with that of your snapshot file. Note that you must use the `-force` flag in this command since the Auto-unseal or Shamir keys will not be consistent with the snapshot data as you are restoring a snapshot from a different cluster.
+
+1. Copy your Vault snapshot file to a Vault cluster member and run the
+example command, replacing the example filename with that of your snapshot file. Note that you must use the `snapshot-force` API endpoint in this command since the Auto-unseal or Shamir keys will not be consistent with the snapshot data as you are restoring a snapshot from a different cluster.
+
+   ```shell-session
+   $ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    --data-binary @backup.snap \
+    https://127.0.0.1:8200/v1/sys/storage/raft/snapshot-force
+   ```
+
+1. After restoring the snapshot, you must unseal your Vault
+cluster again using a command like this example. Typically each person with a key share would execute the unseal command and pass in their key share until reaching the number of key shares required by the quroum defined in your original cluster configuration.
+
+   Create a key share payload that holds one of the key shares.
+
+   ```shell-session
+   $ cat > payload.json << EOF
+   {
+   "key": "abcd1234..."
+   }
+   EOF
+   ```
+
+   Use cURL with the Vault API to unseal Vault.
+   
+   ```shell-session
+   $ curl \
+    --request POST \
+    --data @payload.json \
+    https://127.0.0.1:8200/v1/sys/unseal
+   ```
+
+   Learn more in the [API documentation](/vault/api-docs/system/unseal).
+
+</Tab>
+
+</Tabs>
