@@ -15,7 +15,7 @@ valid_change_types: >-
 
 # Important changes
 
-**Last updated**: 2025-06-12
+**Last updated**: 2025-06-20
 
 Always review important or breaking changes and remediation recommendations
 before upgrading Vault.
@@ -77,6 +77,36 @@ For clusters that already set a value for `disable_mlock`, no change is required
 | Performance Secondary      | Yes                      | value depends on cluster specifics. [See docs](/vault/docs/configuration#disable_mlock)
 | DR Secondary               | Yes                      | value depends on cluster specifics. [See docs](/vault/docs/configuration#disable_mlock)
 
+
+### One of bound_group_ids or bound_service_principal_ids Must Be Specified in the Role Definition for Azure Authentication Roles
+
+Azure authentication roles must specify either `bound_group_ids` or `bound_service_principal_ids` in the role definition to prevent
+excessively permissive access. This ensures that the role is tailored to the specific needs of the application or service. More information about Azure
+authentication roles can be found [here](/vault/docs/auth/azure). Here's an updated example for reference:
+
+```shell-session
+$ vault write auth/azure/role/dev-role \
+    policies="prod,dev" \
+    bound_subscription_ids=6a1d5988-5917-4221-b224-904cd7e24a25 \
+    bound_resource_groups=vault \
+    bound_service_principal_ids=3cb88732-1356-4782-b671-4877166be01a
+```
+
+### Audiences Will Be Required for Kubernetes Authentication Roles in Vault 1.21+
+
+Starting in Vault 1.21+, specifying an **audience** will be **mandatory** for all Kubernetes authentication roles. This ensures that the JWT token's aud (audience) claim is explicitly validated, confirming that the token is intended for Vault and not another service.
+
+Currently, creating or updating a Kubernetes auth role without an audience will result in a warning. However, once Vault 1.21 is released, **any role that does not specify an audience will fail authentication.**
+
+To prepare for this change, make sure to include the audience parameter when defining Kubernetes auth roles. More information about Kubernetes authentication roles can be found [here](/vault/docs/auth/kubernetes). Here's an updated example:
+
+```shell-session
+vault write auth/kubernetes/role/demo \
+    bound_service_account_names=myapp \
+    bound_service_account_namespaces=default \
+    policies=default \
+    ttl=1h
+```
 
 #### Additional Considerations
 
