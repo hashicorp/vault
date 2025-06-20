@@ -57,7 +57,7 @@ module('Integration | Component | pki-sign-intermediate-form', function (hooks) 
   });
 
   test('it shows the returned values on successful save', async function (assert) {
-    assert.expect(13);
+    assert.expect(12);
     await render(hbs`<PkiSignIntermediateForm @onCancel={{this.onCancel}} @model={{this.model}} />`, {
       owner: this.engine,
     });
@@ -77,8 +77,7 @@ module('Integration | Component | pki-sign-intermediate-form', function (hooks) 
     });
     await click(selectors.saveButton);
     assert.dom(selectors.formError).hasText('There is an error with this form.', 'Shows validation errors');
-    assert.dom(GENERAL.inputByAttr('csr')).hasClass('has-error-border');
-    assert.dom(GENERAL.inlineAlert).hasText('CSR is required.');
+    assert.dom(GENERAL.validationErrorByAttr('csr')).hasText('CSR is required.');
 
     await fillIn(GENERAL.inputByAttr('csr'), 'example-data');
     await click(selectors.saveButton);
