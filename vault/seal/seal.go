@@ -112,7 +112,7 @@ func (sgi *SealGenerationInfo) Validate(existingSgi *SealGenerationInfo, hasPart
 	}
 
 	if !previousShamirConfigured && (!existingSgi.IsRewrapped() || hasPartiallyWrappedPaths) && os.Getenv("VAULT_SEAL_REWRAP_SAFETY") != "disable" {
-		return errors.New("cannot make seal config changes while seal rewrap is in progress, please revert any seal configuration changes")
+		return errors.New("cannot make seal config changes while seal re-wrap is in progress, please revert any seal configuration changes")
 	}
 
 	numSealsToAdd := 0
