@@ -373,7 +373,7 @@ func TestOptsStringers(t *testing.T) {
 				Squash:           true,
 				Stat:             true,
 				Strategy:         MergeStrategyORT,
-				StragegyOptions: []MergeStrategyOption{
+				StrategyOptions: []MergeStrategyOption{
 					MergeStrategyOptionDiffAlgorithmMyers,
 					MergeStrategyOptionFindRenames,
 				},
@@ -460,7 +460,7 @@ func TestOptsStringers(t *testing.T) {
 				Repository:              "my-repo",
 				Stat:                    true,
 				Strategy:                MergeStrategyOctopus,
-				StragegyOptions: []MergeStrategyOption{
+				StrategyOptions: []MergeStrategyOption{
 					MergeStrategyOptionDiffAlgorithmMinimal,
 					MergeStrategyOptionIgnoreCRAtEOL,
 				},
@@ -579,7 +579,7 @@ func TestOptsStringers(t *testing.T) {
 				RebaseMerges:           RebaseMergesCousins,
 				ReReReAutoupdate:       true,
 				Strategy:               MergeStrategySubtree,
-				StragegyOptions: []MergeStrategyOption{
+				StrategyOptions: []MergeStrategyOption{
 					MergeStrategyOptionDiffAlgorithmPatience,
 					MergeStrategyOptionNoRenormalize,
 				},

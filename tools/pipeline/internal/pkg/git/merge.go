@@ -70,7 +70,7 @@ type MergeOpts struct {
 	Squash             bool                  // --squash
 	Stat               bool                  // --stat
 	Strategy           MergeStrategy         // --stategy=<strategy>
-	StragegyOptions    []MergeStrategyOption // --strategy-option=<option>
+	StrategyOptions    []MergeStrategyOption // --strategy-option=<option>
 	Verbose            bool                  // --verbose
 
 	// Targets
@@ -164,7 +164,7 @@ func (m *MergeOpts) Strings() []string {
 		opts = append(opts, fmt.Sprintf("--strategy=%s", string(m.Strategy)))
 	}
 
-	for _, opt := range m.StragegyOptions {
+	for _, opt := range m.StrategyOptions {
 		opts = append(opts, fmt.Sprintf("--strategy-option=%s", string(opt)))
 	}
 
