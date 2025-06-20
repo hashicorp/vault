@@ -116,6 +116,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.2.0
 	github.com/hashicorp/go-secure-stdlib/password v0.1.1
 	github.com/hashicorp/go-secure-stdlib/permitpool v1.0.0
+	github.com/hashicorp/go-secure-stdlib/regexp v1.0.0
 	github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2
 	github.com/hashicorp/go-secure-stdlib/tlsutil v0.1.3
@@ -157,7 +158,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-gcp v0.22.0
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.21.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.11.0
-	github.com/hashicorp/vault-plugin-secrets-kv v0.24.0
+	github.com/hashicorp/vault-plugin-secrets-kv v0.24.1
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.12.0

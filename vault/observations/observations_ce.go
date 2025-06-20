@@ -20,7 +20,7 @@ type pluginObservationSystem struct{}
 
 func (observations *ObservationSystem) Start() {}
 
-func (observations *ObservationSystem) WithPlugin(_ *namespace.Namespace, _ *logical.EventPluginInfo) (*pluginObservationSystem, error) {
+func (observations *ObservationSystem) WithPlugin(_ *namespace.Namespace, _ *logical.ObservationPluginInfo) (*pluginObservationSystem, error) {
 	return &pluginObservationSystem{}, nil
 }
 
