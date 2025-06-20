@@ -229,8 +229,7 @@ func (s *gRPCSystemViewClient) GenerateIdentityToken(ctx context.Context, req *p
 
 func (s *gRPCSystemViewClient) GetRotationInformation(ctx context.Context, req *rotation.RotationInfoRequest) (time.Time, error) {
 	resp, err := s.client.GetRotationInformation(ctx, &pb.RotationInfoRequest{
-		MountPoint: req.ReqMount,
-		MountPath:  req.ReqPath,
+		MountPath: req.ReqPath,
 	})
 	if err != nil {
 		return time.Time{}, err
@@ -482,8 +481,7 @@ func (s *gRPCSystemViewServer) GetRotationInformation(ctx context.Context, req *
 	}
 
 	cfgReq := &rotation.RotationInfoRequest{
-		ReqMount: req.MountPoint,
-		ReqPath:  req.MountPath,
+		ReqPath: req.MountPath,
 	}
 
 	t, err := s.impl.GetRotationInformation(ctx, cfgReq)

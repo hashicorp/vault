@@ -362,7 +362,7 @@ func (d dynamicSystemView) GetRotationInformation(ctx context.Context, req *rota
 	}
 	nsCtx := namespace.ContextWithNamespace(ctx, mountEntry.Namespace())
 
-	return d.core.GetRotationInformation(nsCtx, req)
+	return d.core.GetRotationInformation(nsCtx, mountEntry.APIPath(), req)
 }
 
 func (d dynamicSystemView) RegisterRotationJob(ctx context.Context, req *rotation.RotationJobConfigureRequest) (string, error) {

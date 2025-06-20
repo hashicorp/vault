@@ -50,8 +50,7 @@ type RotationJobDeregisterRequest struct {
 }
 
 type RotationInfoRequest struct {
-	ReqMount string
-	ReqPath  string
+	ReqPath string
 }
 
 func (s *RotationJob) Validate() error {

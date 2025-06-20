@@ -618,8 +618,7 @@ message GenerateIdentityTokenResponse {
 }
 
 message RotationInfoRequest {
-  string mount_point = 1;
-  string mount_path = 2;
+  string mount_path = 1;
 }
 
 message RotationInfoReply {

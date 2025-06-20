@@ -25,7 +25,7 @@ func (c *Core) stopRotation() error {
 	return nil
 }
 
-func (c *Core) GetRotationInformation(_ context.Context, _ *rotation.RotationInfoRequest) (time.Time, error) {
+func (c *Core) GetRotationInformation(_ context.Context, _ string, _ *rotation.RotationInfoRequest) (time.Time, error) {
 	return time.Time{}, automatedrotationutil.ErrRotationManagerUnsupported
 }
 
