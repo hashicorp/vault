@@ -112,6 +112,7 @@ export default class SwaggerUiComponent extends Component {
       },
       onComplete: () => {
         componentInstance.swaggerLoading = false;
+        this.applyA11yFixes();
       },
     };
   };
@@ -120,5 +121,60 @@ export default class SwaggerUiComponent extends Component {
   @action async swaggerInit() {
     const configSettings = this.CONFIG(SwaggerUIBundle, this);
     SwaggerUIBundle(configSettings);
+  }
+
+  applyA11yFixes() {
+    const container = document.querySelector('.swagger-ui');
+    if (container) {
+      const observer = new MutationObserver(() => {
+        this.updateCaretTabIndex();
+        this.updateCopyToClipboard();
+        this.updateTryItOutButtonDescription();
+      });
+      observer.observe(container, { childList: true, subtree: true });
+      // Run once on initial load
+      this.updateCaretTabIndex();
+      this.updateCopyToClipboard();
+      this.updateTryItOutButtonDescription();
+    }
+  }
+
+  updateCaretTabIndex() {
+    document.querySelectorAll('.opblock-control-arrow').forEach((el) => {
+      el.tabIndex = 0;
+    });
+  }
+
+  updateCopyToClipboard() {
+    document.querySelectorAll('.copy-to-clipboard').forEach((div) => {
+      div.tabIndex = 0;
+      div.setAttribute('role', 'button');
+      div.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          const svg = div.querySelector('svg');
+          if (svg) {
+            svg.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+          }
+          e.preventDefault();
+        }
+      });
+    });
+  }
+
+  updateTryItOutButtonDescription() {
+    document.querySelectorAll('.try-out button').forEach((el) => {
+      let warning =
+        'Caution: This will make requests to the Vault server on your behalf which may create or delete items.';
+      const opblock = el.closest('.opblock');
+      if (opblock) {
+        const operationId = opblock.querySelector('.opblock-summary-operation-id')?.textContent?.trim();
+        if (operationId)
+        {
+          warning += ` Operation: ${operationId}`
+        }
+      }
+      
+      el.setAttribute('aria-description', warning)
+    })
   }
 }
