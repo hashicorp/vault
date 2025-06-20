@@ -30,7 +30,7 @@ output "state" {
 
 # Creating OpenLDAP Server
 resource "enos_remote_exec" "setup_docker" {
-  scripts = [abspath("${path.module}/scripts/setup_docker.sh")]
+  scripts = [abspath("${path.module}/scripts/set-up-docker.sh")]
 
   environment = {
     DISTRO = local.distro
@@ -55,7 +55,7 @@ resource "enos_remote_exec" "setup_openldap" {
     LDAP_PORT     = local.ldap_server.port
   }
 
-  scripts = [abspath("${path.module}/scripts/setup_openldap.sh")]
+  scripts = [abspath("${path.module}/scripts/set-up-openldap.sh")]
 
   transport = {
     ssh = {
