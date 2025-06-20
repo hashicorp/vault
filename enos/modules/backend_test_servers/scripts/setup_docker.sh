@@ -9,6 +9,11 @@ set -e
 # Checking if docker is installed
 if command -v docker &> /dev/null; then
   echo "Docker is already installed: $(docker --version)"
+  if [[ "$DISTRO" == "leap" || "$DISTRO" == "sles" ]]; then
+    echo "Detected distro: $DISTRO. Attempting to start and enable Docker..."
+    sudo systemctl start docker || true
+    sudo systemctl enable docker || true
+  fi
   exit 0
 fi
 
@@ -39,11 +44,5 @@ case "$DISTRO" in
     ;;
 esac
 
-# Enable and start Docker
-if [[ "$DISTRO" == "leap" || "$DISTRO" == "sles" ]]; then
-  echo "Detected distro: $DISTRO. Attempting to start and enable Docker..."
-  sudo systemctl start docker || true
-  sudo systemctl enable docker || true
-fi
 echo "Docker installation complete."
 sudo docker info
