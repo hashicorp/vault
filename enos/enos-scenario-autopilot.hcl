@@ -251,7 +251,8 @@ scenario "autopilot" {
     module = module.vault_cluster
     depends_on = [
       step.build_vault,
-      step.create_vault_cluster_targets
+      step.create_vault_cluster_targets,
+      step.set_up_external_integration_target
     ]
 
     providers = {
@@ -384,8 +385,7 @@ scenario "autopilot" {
     module      = module.vault_verify_secrets_engines_create
     depends_on = [
       step.create_vault_cluster,
-      step.get_vault_cluster_ips,
-      step.set_up_external_integration_target
+      step.get_vault_cluster_ips
     ]
 
     providers = {
