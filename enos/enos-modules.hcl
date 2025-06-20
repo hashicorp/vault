@@ -58,6 +58,8 @@ module "create_vpc" {
 
 module "set_up_external_integration_target" {
   source = "./modules/backend_test_servers"
+
+  ldap_version = "1.5.0"
 }
 
 module "choose_follower_host" {

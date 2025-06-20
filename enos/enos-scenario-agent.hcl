@@ -237,7 +237,6 @@ scenario "agent" {
 
     variables {
       hosts        = step.create_external_integration_target.hosts
-      ldap_version = "1.5.0"
       distro       = matrix.distro
     }
   }
