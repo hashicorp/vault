@@ -253,7 +253,8 @@ scenario "proxy" {
     description = global.description.create_backend_cluster
     module      = "backend_${matrix.backend}"
     depends_on = [
-      step.create_vault_cluster_backend_targets
+      step.create_vault_cluster_backend_targets,
+      step.set_up_external_integration_target
     ]
 
     providers = {
@@ -492,8 +493,7 @@ scenario "proxy" {
     description = global.description.verify_secrets_engines_create
     module      = module.vault_verify_secrets_engines_create
     depends_on = [
-      step.verify_vault_unsealed,
-      step.set_up_external_integration_target
+      step.verify_vault_unsealed
     ]
 
     providers = {
