@@ -625,7 +625,6 @@ message RotationInfoReply {
   int64 timestamp = 1;
 }
 
-
 message RegisterRotationJobRequest {
   RotationJobInput job = 1;
 }
