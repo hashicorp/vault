@@ -168,8 +168,8 @@ scenario "autopilot" {
     }
   }
 
-  step "create_test_servers_target" {
-    description = global.description.create_test_servers_target
+  step "create_external_integration_target" {
+    description = global.description.create_external_integration_target
     module      = module.target_ec2_instances
     depends_on  = [step.create_vpc]
 
@@ -224,11 +224,11 @@ scenario "autopilot" {
     }
   }
 
-  step "create_test_servers" {
-    description = global.description.create_test_servers
-    module      = module.create_test_servers
+  step "set_up_external_integration_target" {
+    description = global.description.set_up_external_integration_target
+    module      = module.set_up_external_integration_target
     depends_on = [
-      step.create_test_servers_target
+      step.create_external_integration_target
     ]
 
     providers = {
@@ -236,7 +236,7 @@ scenario "autopilot" {
     }
 
     variables {
-      hosts        = step.create_test_servers_target.hosts
+      hosts        = step.create_external_integration_target.hosts
       ldap_version = "1.5.0"
       distro       = matrix.distro
     }
@@ -385,7 +385,7 @@ scenario "autopilot" {
     depends_on = [
       step.create_vault_cluster,
       step.get_vault_cluster_ips,
-      step.create_test_servers
+      step.set_up_external_integration_target
     ]
 
     providers = {
@@ -414,7 +414,7 @@ scenario "autopilot" {
 
     variables {
       hosts             = step.create_vault_cluster.hosts
-      ldap_host         = step.create_test_servers.state.ldap.ip_address
+      ldap_host         = step.set_up_external_integration_target.state.ldap.ip_address
       leader_host       = step.get_vault_cluster_ips.leader_host
       vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = local.vault_install_dir
@@ -951,9 +951,9 @@ scenario "autopilot" {
     value       = step.create_vault_cluster.audit_device_file_path
   }
 
-  output "backend_test_servers_ldap" {
+  output "external_integration_server_ldap" {
     description = "The LDAP test servers info"
-    value       = step.create_test_servers.state.ldap
+    value       = step.set_up_external_integration_target.state.ldap
   }
 
   output "cluster_name" {
