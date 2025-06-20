@@ -107,8 +107,12 @@ management tool.
       bound_service_account_names=myapp \
       bound_service_account_namespaces=default \
       policies=default \
+      audience=myapp \
       ttl=1h
   ```
+
+  !> **Note:** `audience` will be a required field in Vault 1.21+. This field is used
+  to verify the JWT token's audience claim.
 
   This role authorizes the "myapp" service account in the default
   namespace and it gives it the default policy.
