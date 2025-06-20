@@ -2395,12 +2395,20 @@
         }
       },
       {
+        "title": "AWS Secret Manager",
+        "path": "import/awssm"
+      },
+      {
+        "title": "Azure KeyVault",
+        "path": "import/azurekv"
+      },
+      {
         "title": "GCP Secret Manager",
         "path": "import/gcpsm"
       },
       {
-        "title": "Mappings",
-        "path": "import/mappings"
+        "title": "HashiCorp Vault",
+        "path": "import/vault"
       }
     ]
   },
