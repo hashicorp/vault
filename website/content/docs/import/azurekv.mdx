@@ -1,0 +1,103 @@
+---
+layout: docs
+page_title: Azure Key Vault secret import source
+description: The Azure Key Vault source imports secrets from Azure to Vault.
+---
+
+# Azure secret import source
+
+Use the Azure importer to read secret data from Azure Key Vault into your Vault
+instance. All secrets including expired ones will imported from the provided Azure Key Vault URI
+
+## Before you start
+- **You must know the relevant Azure credentials**. You can provide the credentials
+  as environment variables, as explicit arguments, or use dynamic credentials
+  from an existing [Azure secrets plugin](/vault/docs/secrets/azure) mount path.
+
+
+## Step 1: Set Azure Identity permissions
+
+To use Azure import, you must grant the associated Azure identity permission to read secrets
+from the specified Key Vault:
+
+```shell-session
+"Get",
+"List",
+```
+
+## Step 2: Define the Azure source
+
+<Tabs>
+<Tab heading="Static credentials">
+
+The following configuration example uses Azure static credentials to
+import secrets from Azure Key Vault:
+
+```hcl
+source_azure {
+  name = "my-azure-source-1"
+  key_vault_uri = "https://keyvault-1234abcd.vault.azure.net"
+  tenant_id = "<your tenant id>"
+  client_id = "<your client id>"
+  credentials_file = "/path/to/client-secret"
+}
+```
+
+ If `tenant_id`, `client_id` and `credentials_file` is set, then `vault_mount_path`, `vault_role_name`,`vault_namespace`,`vault_address` and `vault_credentials_file` must be unset.
+
+</Tab>
+<Tab heading="Dynamic credentials">
+
+Alternatively, source credentials can also be derived dynamically using the [Azure Secret Engine](/vault/docs/secrets/azure)
+
+This uses the Azure secrets engine configured at the given `vault_address` to generate dynamic secrets in order to scan secrets in Azure KeyVault.
+
+```hcl
+source_azure {
+  name             = "my-azure-source-2"
+  vault_mount_path = "azure"
+  vault_role_name  = "my-azure-role-1"
+  vault_namespace  = "ns-1"
+  vault_address    = "https://vault.example.com:8200"
+  vault_credentials_file = "/path/to/vault/token"
+}
+```
+
+If one of `vault_mount_path`,`vault_role_name`, `vault_namespace`,`vault_address` or `vault_credentials_file`  are set, then `tenant_id`, `client_id` and `credentials_file`  must be unset.
+
+</Tab>
+</Tabs>
+
+## Argument reference
+
+Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common to all source types.
+
+
+- `vault_mount_path` `(string: "")` - The Vault mount path to a pre-configured Azure
+  secrets engine used to generate dynamic credentials for the importer.
+
+- `vault_role_name` `(string: "")` - Azure secrets plugin role used to generate
+  dynamic credentials for the importer. Only required for dynamic credentials.
+
+- `vault_namespace` `(string: "")` - Vault namespace for the mount path
+  specified in `vault_mount_path`. Only required for dynamic credentials.
+
+- `vault_address` `(string: "")` - The address of your Vault server. Only
+  required for dynamic credentials. 
+
+- `vault_credentials_file` `(string: "")` - Local path to a file containing a
+  valid token for the Vault server at `vault_address`. Only required for dynamic
+  credentials.
+
+- `key_vault_uri` `(string: <required>)` - The URI of the Azure Key Vault you want to import from.
+
+The following parameters are optional. If you leave these parameters unset,
+Vault uses the default credential provider mechanisms, e.g. the credentials persisted to disk
+by a preceding `az login`.
+
+- `cloud_name` `(string: "AzureCloud")` - Azure cloud name of your credential provider. Leave unset to use `az login` credentials.
+- `tenant_id` `(string: "")` - Tenant ID of your Azure credential provider. Leave unset to use `az login` credentials.
+- `client_id` `(string: "")` - Client ID of your Azure credential provider. Leave unset to use `az login` credentials.
+- `credentials_file` `(string: "")` - Path to a file on your Azure credential
+  provider with authentication credentials. Leave unset to use `az login`
+  credentials.
