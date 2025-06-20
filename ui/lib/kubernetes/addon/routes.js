@@ -16,5 +16,13 @@ export default buildRoutes(function () {
     });
   });
   this.route('configure');
-  this.route('configuration');
+  this.route('configuration', function () {
+    // index here is the route that shows the tabs for "General settings" and "Aws settings"
+    this.route('plugin-settings', function () {
+      this.route('edit');
+    });
+    this.route('mount', function () {
+      this.route('edit');
+    });
+  });
 });

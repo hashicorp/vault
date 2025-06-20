@@ -161,8 +161,14 @@ Router.map(function () {
         });
       });
       this.route('secrets', function () {
-        this.route('backends', { path: '/' });
+        this.route('backends', { path: '/' }); // this is the list view of all secret engines
+        this.route('mount', function () {
+          this.route('create', { path: '/:mount_type/create' });
+          this.route('edit', { path: '/:mount_name/details' }); // bulk edit of the mount (e.g. pin and reload module)
+          // Note: details and edit are handled in the same view
+        });
         this.route('backend', { path: '/:backend' }, function () {
+          // These are ember engines and their routes are defined in their own directories.
           this.mount('kmip');
           this.mount('kubernetes');
           this.mount('kv');
@@ -170,7 +176,14 @@ Router.map(function () {
           this.mount('pki');
           this.route('index', { path: '/' });
           this.route('configuration', function () {
-            // only CONFIGURABLE_SECRET_ENGINES can be configured and access the edit route
+            // index here is the route that shows the tabs for "General settings" and "Aws settings"
+            this.route('plugin-settings', function () {
+              this.route('edit');
+            });
+            this.route('mount', function () {
+              this.route('edit');
+            });
+            // remove this route when ready because it will be replace by the plugin-settings edit route
             this.route('edit');
           });
           // because globs / params can't be empty,
