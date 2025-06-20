@@ -541,6 +541,7 @@ error and restart Vault.`)
 			d.allSealsHealthy = allHealthy
 		}
 
+		check(time.Now())
 		for {
 			select {
 			case <-healthCheckStop:
