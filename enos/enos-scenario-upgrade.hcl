@@ -256,6 +256,7 @@ scenario "upgrade" {
     module      = "backend_${matrix.backend}"
     depends_on = [
       step.create_vault_cluster_backend_targets,
+      step.set_up_external_integration_target
     ]
 
     providers = {
@@ -434,8 +435,7 @@ scenario "upgrade" {
     module      = module.vault_verify_secrets_engines_create
     depends_on = [
       step.create_vault_cluster,
-      step.get_vault_cluster_ips,
-      step.set_up_external_integration_target
+      step.get_vault_cluster_ips
     ]
 
     providers = {
