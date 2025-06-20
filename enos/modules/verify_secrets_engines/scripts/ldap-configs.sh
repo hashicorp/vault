@@ -23,12 +23,6 @@ install_ldap_tools() {
       echo "Unsupported Linux package manager."
       exit 1
     fi
-  elif [[ "$OSTYPE" == "darwin"* ]]; then
-    if ! command -v brew &> /dev/null; then
-      echo "Homebrew not found. Installing Homebrew first..."
-      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    fi
-    brew install openldap
   else
     echo "Unsupported OS: $OSTYPE"
     exit 1
