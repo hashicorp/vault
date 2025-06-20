@@ -386,6 +386,10 @@
         "path": "configuration/programmatic-management"
       },
       {
+        "title": "Manage snapshots",
+        "path": "configuration/manage-snapshots"
+      },
+      {
         "title": "Prevent lease explosions",
         "path": "configuration/prevent-lease-explosions"
       },
