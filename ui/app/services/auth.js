@@ -6,8 +6,7 @@
 import Ember from 'ember';
 import { task, timeout } from 'ember-concurrency';
 import { getOwner } from '@ember/owner';
-import { isArray } from '@ember/array';
-import { computed, get } from '@ember/object';
+import { computed } from '@ember/object';
 import { alias } from '@ember/object/computed';
 import Service, { inject as service } from '@ember/service';
 import { capitalize } from '@ember/string';
@@ -15,13 +14,11 @@ import { resolve, reject } from 'rsvp';
 
 import getStorage from 'vault/lib/token-storage';
 import ENV from 'vault/config/environment';
-import { allSupportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import { addToArray } from 'vault/helpers/add-to-array';
 
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
 const ROOT_PREFIX = '_root_';
-const BACKENDS = allSupportedAuthBackends();
 
 export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
 
@@ -81,8 +78,9 @@ export default Service.extend({
     if (!tokenName) {
       return;
     }
-
-    const { tokenExpirationEpoch } = this.getTokenData(tokenName);
+    // const { tokenExpirationEpoch } = this.getTokenData(tokenName);
+    const tokenData = this.getTokenData(tokenName);
+    const tokenExpirationEpoch = tokenData ? tokenData?.tokenExpirationEpoch : undefined;
     const expirationDate = new Date(0);
 
     return tokenExpirationEpoch ? expirationDate.setUTCMilliseconds(tokenExpirationEpoch) : null;
@@ -216,15 +214,28 @@ export default Service.extend({
     return this.ajax(url, 'POST', { namespace });
   },
 
-  calculateExpiration(resp, now) {
-    const ttl = resp.ttl || resp.lease_duration;
-    const tokenExpirationEpoch = resp.expire_time ? new Date(resp.expire_time).getTime() : now + ttl * 1e3;
+  // ttl is either the "ttl" or "lease_duration" returned by the auth data response
+  calculateExpiration(expirationData, now) {
+    // calculateExpiration(ttl, expire_time, now) {
+    const ttl = expirationData.ttl || expirationData.lease_duration;
+    const tokenExpirationEpoch = expirationData.expire_time
+      ? new Date(expirationData.expire_time).getTime()
+      : now + ttl * 1e3;
 
     return { ttl, tokenExpirationEpoch };
   },
 
-  setExpirationSettings(resp, now) {
-    if (resp.renewable) {
+  // setExpirationSettings(resp, now) {
+  //   if (resp.renewable) {
+  //     this.set('expirationCalcTS', now);
+  //     this.set('allowExpiration', false);
+  //   } else {
+  //     this.set('allowExpiration', true);
+  //   }
+  // },
+
+  setExpirationSettings(renewable, now) {
+    if (renewable) {
       this.set('expirationCalcTS', now);
       this.set('allowExpiration', false);
     } else {
@@ -232,13 +243,13 @@ export default Service.extend({
     }
   },
 
-  calculateRootNamespace(currentNamespace, namespace_path, backend) {
+  calculateRootNamespace(currentNamespace, namespacePath, backend) {
     // here we prefer namespace_path if its defined,
     // else we look and see if there's already a namespace saved
     // and then finally we'll use the current query param if the others
     // haven't set a value yet
     // all of the typeof checks are necessary because the root namespace is ''
-    let userRootNamespace = namespace_path && namespace_path.replace(/\/$/, '');
+    let userRootNamespace = namespacePath && namespacePath.replace(/\/$/, '');
     // renew-self does not return namespace_path, so we manually setting in renew().
     // so if we're logging in with token and there's no namespace_path, we can assume
     // that the token belongs to the root namespace
@@ -260,64 +271,104 @@ export default Service.extend({
   // 1. generate token name and set token data
   // 2. calculate and set expiration
   // 3. (maybe) calculate root namespace
-  async persistAuthData() {
-    const [firstArg, resp] = arguments;
+  // async persistAuthData() {
+  //   const [firstArg, resp] = arguments;
+  //   const currentNamespace = this.namespaceService.path || '';
+  //   // dropdown vs tab format
+  //   //
+  //   // TODO adding ANOTHER conditional until this method is un-abstracted :(
+  //   const mountPath = firstArg?.path || firstArg?.data?.path || firstArg?.selectedAuth;
+  //   let tokenName;
+  //   let options;
+  //   let backend;
+
+  //   // TODO move setting current backend, options, etc to method's component
+  //   if (typeof firstArg === 'string') {
+  //     tokenName = firstArg;
+  //     backend = this.backendFromTokenName(tokenName);
+  //   } else {
+  //     options = firstArg;
+  //     // backend is old news since it's confusing whether it refers to the auth mount path or auth type,
+  //     // new auth flow explicitly defines "selectedAuth" and "path"
+  //     backend = options?.backend || options.selectedAuth;
+  //   }
+
+  //   const currentBackend = {
+  //     mountPath,
+  //     ...BACKENDS.find((b) => b.type === backend),
+  //   };
+
+  //   const { entity_id, policies, renewable, namespace_path } = resp;
+  //   const userRootNamespace = this.calculateRootNamespace(currentNamespace, namespace_path, backend);
+  //   const data = {
+  //     userRootNamespace,
+  //     displayName: null, // set below
+  //     token: resp.client_token || get(resp, currentBackend.tokenPath),
+  //     policies,
+  //     renewable,
+  //     entityId: entity_id,
+  //     authMethodType: options?.selectedAuth,
+  //     authMountPath: mountPath,
+  //   };
+
+  //   tokenName = this.generateTokenName(
+  //     {
+  //       backend,
+  //       clusterId: (options && options.clusterId) || this.activeClusterId,
+  //     },
+  //     resp.policies
+  //   );
+
+  //   const now = this.now();
+
+  //   Object.assign(data, this.calculateExpiration(resp, now));
+  //   this.setExpirationSettings(resp, now);
+
+  //   // ensure we don't call renew-self within tests
+  //   // this is intentionally not included in setExpirationSettings so we can unit test that method
+  //   if (Ember.testing) this.set('allowExpiration', false);
+
+  //   data.displayName = await this.setDisplayName(resp, currentBackend.displayNamePath, tokenName);
+
+  //   this.set('tokens', addToArray(this.tokens, tokenName));
+  //   this.setTokenData(tokenName, data);
+
+  //   return resolve({
+  //     namespace: currentNamespace || data.userRootNamespace,
+  //     token: tokenName,
+  //     isRoot: policies.includes('root'),
+  //   });
+  // },
+
+  async persistAuthData(clusterId, authResponseData) {
     const currentNamespace = this.namespaceService.path || '';
-    // dropdown vs tab format
-    //
-    // TODO adding ANOTHER conditional until this method is un-abstracted :(
-    const mountPath = firstArg?.path || firstArg?.data?.path || firstArg?.selectedAuth;
-    let tokenName;
-    let options;
-    let backend;
+    // displayName will be set by auth method (not here by auth service)
+    // namespace_path only returned for methods that use a token exchange to authenticate (i.e. token, oidc)
+    const { authMethodType, expireTime, namespacePath, policies, renewable, ttl } = authResponseData;
 
-    // TODO move setting current backend, options, etc to method's component
-    if (typeof firstArg === 'string') {
-      tokenName = firstArg;
-      backend = this.backendFromTokenName(tokenName);
-    } else {
-      options = firstArg;
-      // backend is old news since it's confusing whether it refers to the auth mount path or auth type,
-      // new auth flow explicitly defines "selectedAuth" and "path"
-      backend = options?.backend || options.selectedAuth;
-    }
-
-    const currentBackend = {
-      mountPath,
-      ...BACKENDS.find((b) => b.type === backend),
-    };
-
-    const { entity_id, policies, renewable, namespace_path } = resp;
-    const userRootNamespace = this.calculateRootNamespace(currentNamespace, namespace_path, backend);
     const data = {
-      userRootNamespace,
-      displayName: null, // set below
-      token: resp.client_token || get(resp, currentBackend.tokenPath),
-      policies,
-      renewable,
-      entityId: entity_id,
-      authMethodType: options?.selectedAuth,
-      authMountPath: mountPath,
+      userRootNamespace: this.calculateRootNamespace(currentNamespace, namespacePath, authMethodType),
+      ...authResponseData,
     };
 
-    tokenName = this.generateTokenName(
-      {
-        backend,
-        clusterId: (options && options.clusterId) || this.activeClusterId,
-      },
-      resp.policies
+    const tokenName = this.generateTokenName(
+      { backend: authMethodType, clusterId: clusterId || this.activeClusterId },
+      policies
     );
 
     const now = this.now();
+    const expirationData = { ttl, expire_time: expireTime };
+    Object.assign(data, this.calculateExpiration(expirationData, now));
+    this.setExpirationSettings(renewable, now);
 
-    Object.assign(data, this.calculateExpiration(resp, now));
-    this.setExpirationSettings(resp, now);
+    if (!data.displayName) {
+      const lookupDisplayName = await this.setDisplayName(data.token);
+      data.displayName = lookupDisplayName || authMethodType;
+    }
 
     // ensure we don't call renew-self within tests
     // this is intentionally not included in setExpirationSettings so we can unit test that method
     if (Ember.testing) this.set('allowExpiration', false);
-
-    data.displayName = await this.setDisplayName(resp, currentBackend.displayNamePath, tokenName);
 
     this.set('tokens', addToArray(this.tokens, tokenName));
     this.setTokenData(tokenName, data);
@@ -325,37 +376,22 @@ export default Service.extend({
     return resolve({
       namespace: currentNamespace || data.userRootNamespace,
       token: tokenName,
-      isRoot: policies.includes('root'),
+      isRoot: (policies || []).includes('root'),
     });
   },
 
-  async setDisplayName(resp, displayNamePath, tokenName) {
-    let displayName;
-
-    // first check if auth response includes a display name
-    displayName = isArray(displayNamePath)
-      ? displayNamePath.map((name) => get(resp, name)).join('/')
-      : get(resp, displayNamePath);
-
-    // if not, check stored token data
-    if (!displayName) {
-      displayName = (this.getTokenData(tokenName) || {}).displayName;
-    }
-
+  async setDisplayName(clientToken) {
     // this is a fallback for any methods that don't return a display name from the initial auth request (i.e. JWT)
     // or for OIDC/SAML with mfa configured because the mfa/validate endpoint does not consistently
     // return display_name (or metadata that includes something to be used as such).
     // this if block can be removed if/when the API consistently returns a display_name.
-    if (!displayName) {
-      // if still nothing, request token data as a last resort
-      try {
-        const { data } = await this.lookupSelf(resp.client_token);
-        displayName = data.display_name;
-      } catch {
-        // silently fail since we're just trying to set a display name
-      }
+    // if still nothing, request token data as a last resort
+    try {
+      const { data } = await this.lookupSelf(clientToken);
+      return data.display_name;
+    } catch {
+      // silently fail since we're just trying to set a display name
     }
-    return displayName;
   },
 
   setTokenData(token, data) {
@@ -459,7 +495,7 @@ export default Service.extend({
     // mfaRequirement response comes back in a shape that is not easy to work with
     // convert to array of objects and add necessary properties to satisfy the view
     if (mfaRequirement) {
-      const { mfa_request_id: mfaRequestId, mfa_constraints: mfaConstraints } = mfaRequirement;
+      const { mfaRequestId, mfaConstraints } = mfaRequirement;
       const constraints = [];
       for (const key in mfaConstraints) {
         const methods = mfaConstraints[key].any;
@@ -476,10 +512,7 @@ export default Service.extend({
           selectedMethod: isMulti ? null : methods[0],
         });
       }
-
-      return {
-        mfaRequirement: { mfaRequestId, mfaConstraints: constraints },
-      };
+      return { mfaRequestId, mfaConstraints: constraints };
     }
     return {};
   },
@@ -497,16 +530,33 @@ export default Service.extend({
     return this.authSuccess(options, resp.auth || resp.data);
   },
 
-  async totpValidate({ mfaRequirement, ...options }) {
+  // async totpValidate({ mfaRequirement, ...options }) {
+  //   const resp = await this.clusterAdapter().mfaValidate(mfaRequirement);
+  //   return this.authSuccess(options, resp.auth || resp.data);
+  // },
+
+  async totpValidate({ clusterId, mfaRequirement, authMethodType, authMountPath }) {
     const resp = await this.clusterAdapter().mfaValidate(mfaRequirement);
-    return this.authSuccess(options, resp.auth || resp.data);
+    const data = resp?.data || resp?.auth;
+    const normalizedAuthData = {
+      authMethodType,
+      authMountPath,
+      entityId: data.entity_id,
+      token: data?.client_token || data?.id,
+      renewable: data.renewable,
+      ttl: data?.lease_duration || data?.ttl,
+      policies: data.policies,
+      displayName: data?.display_name || data?.metadata?.username || data?.metadata?.org,
+    };
+    return this.authSuccess(clusterId, normalizedAuthData);
   },
 
-  async authSuccess(options, response) {
+  async authSuccess(clusterId, authResponse) {
     // persist selectedAuth to localStorage to rehydrate auth form on logout
-    localStorage.setItem('selectedAuth', options.selectedAuth);
-    const authData = await this.persistAuthData(options, response, this.namespaceService.path);
-    await this.permissions.getPaths.perform();
+    localStorage.setItem('selectedAuth', authResponse.authMethodType);
+    const authData = await this.persistAuthData(clusterId, authResponse);
+    // TODO why does this line ruin everything???
+    // await this.permissions.getPaths.perform();
     return authData;
   },
 
