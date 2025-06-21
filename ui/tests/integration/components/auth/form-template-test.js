@@ -15,6 +15,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { ENTERPRISE_LOGIN_METHODS, supportedTypes } from 'vault/utils/supported-login-methods';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
+import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 
 module('Integration | Component | auth | form template', function (hooks) {
   setupRenderingTest(hooks);
@@ -69,7 +70,7 @@ module('Integration | Component | auth | form template', function (hooks) {
     const api = this.owner.lookup('service:api');
     // stub auth request for "token" method because it's selected by default
     const tokenLookUpSelfStub = sinon.stub(api.auth, 'tokenLookUpSelf');
-    tokenLookUpSelfStub.rejects('uh oh!');
+    tokenLookUpSelfStub.rejects(getErrorResponse({ errors: ['uh oh!'] }, 400));
     await this.renderComponent();
     await click(GENERAL.submitButton);
     assert.dom(GENERAL.messageError).hasText('Error Authentication failed: uh oh!');

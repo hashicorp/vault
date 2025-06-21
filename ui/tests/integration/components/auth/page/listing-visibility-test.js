@@ -12,6 +12,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
 import setupTestContext from './setup-test-context';
+import sinon from 'sinon';
 
 module('Integration | Component | auth | page | listing visibility', function (hooks) {
   setupRenderingTest(hooks);
@@ -20,6 +21,12 @@ module('Integration | Component | auth | page | listing visibility', function (h
   hooks.beforeEach(function () {
     setupTestContext(this);
     this.visibleAuthMounts = SYS_INTERNAL_UI_MOUNTS;
+    // extra setup for when the "oidc" is selected and the oidc-jwt component renders
+    this.routerStub = sinon.stub(this.owner.lookup('service:router'), 'urlFor').returns('123-example.com');
+  });
+
+  hooks.afterEach(function () {
+    this.routerStub.restore();
   });
 
   test('it formats and renders tabs if visible auth mounts exist', async function (assert) {
