@@ -1,0 +1,3 @@
+```release-note:change
+ssh: Add -extensions flag with the role's default extensions by default
+```
