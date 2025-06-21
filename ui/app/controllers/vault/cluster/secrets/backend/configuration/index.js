@@ -4,8 +4,8 @@
  */
 
 import Controller from '@ember/controller';
-import { WIF_ENGINES } from 'vault/helpers/mountable-secret-engines';
 import { toLabel } from 'core/helpers/to-label';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 export default class SecretsBackendConfigurationController extends Controller {
   get displayFields() {
@@ -26,7 +26,7 @@ export default class SecretsBackendConfigurationController extends Controller {
       fields.push('version');
     }
     // For WIF Secret engines, allow users to set the identity token key when mounting the engine.
-    if (WIF_ENGINES.includes(engineType)) {
+    if (engineDisplayData(engineType)?.isWIF) {
       fields.push('config.identityTokenKey');
     }
     return fields;

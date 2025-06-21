@@ -25,7 +25,6 @@ import configPage from 'vault/tests/pages/secrets/backend/configuration';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
-import { CONFIGURATION_ONLY, mountableEngines } from 'vault/helpers/mountable-secret-engines';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
@@ -33,6 +32,8 @@ import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { SELECTORS as OIDC } from 'vault/tests/helpers/oidc-config';
 import { adminOidcCreateRead, adminOidcCreate } from 'vault/tests/helpers/secret-engine/policy-generator';
+import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 const consoleComponent = create(consoleClass);
 
@@ -203,7 +204,9 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
   test('it should transition to mountable addon engine after mount success', async function (assert) {
     // test supported backends that ARE ember engines (enterprise only engines are tested individually)
-    const addons = mountableEngines().filter((e) => BACKENDS_WITH_ENGINES.includes(e.type));
+    const addons = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: false }).filter(
+      (e) => BACKENDS_WITH_ENGINES.includes(e.type)
+    );
     assert.expect(addons.length);
 
     for (const engine of addons) {
@@ -230,7 +233,9 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     // test supported backends that are not ember engines (enterprise only engines are tested individually)
     const nonEngineBackends = supportedSecretBackends().filter((b) => !BACKENDS_WITH_ENGINES.includes(b));
     // add back kv because we want to test v1
-    const engines = mountableEngines().filter((e) => nonEngineBackends.includes(e.type) || e.type === 'kv');
+    const engines = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: false }).filter(
+      (e) => (nonEngineBackends.includes(e.type) || e.type === 'kv') && e.type !== 'cubbyhole'
+    );
     assert.expect(engines.length);
 
     for (const engine of engines) {
@@ -247,7 +252,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       }
       await click(GENERAL.submitButton);
 
-      const route = CONFIGURATION_ONLY.includes(engine.type) ? 'configuration.index' : 'list-root';
+      const route = engineDisplayData(engine.type)?.isOnlyMountable ? 'configuration.index' : 'list-root';
       assert.strictEqual(
         currentRouteName(),
         `vault.cluster.secrets.backend.${route}`,
@@ -262,7 +267,9 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
   });
 
   test('it should transition back to backend list for unsupported backends', async function (assert) {
-    const unsupported = mountableEngines().filter((e) => !supportedSecretBackends().includes(e.type));
+    const unsupported = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: false }).filter(
+      (e) => !supportedSecretBackends().includes(e.type)
+    );
     assert.expect(unsupported.length);
 
     for (const engine of unsupported) {
@@ -375,7 +382,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       await visit(`/vault/secrets/${path}/configuration`);
       await click(SES.configurationToggle);
       assert
-        .dom(GENERAL.infoRowValue('Identity Token Key'))
+        .dom(GENERAL.infoRowValue('Identity token key'))
         .hasText(newKey, `shows identity token key on configuration page for engine: ${engine}`);
 
       // cleanup
@@ -411,7 +418,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
 
       await click(SES.configurationToggle);
       assert
-        .dom(GENERAL.infoRowValue('Identity Token Key'))
+        .dom(GENERAL.infoRowValue('Identity token key'))
         .hasText('general-key', `shows identity token key on configuration page for engine: ${engine}`);
 
       // cleanup
