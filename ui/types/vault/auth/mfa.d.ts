@@ -4,8 +4,8 @@
  */
 
 export interface MfaRequirementApiResponse {
-  mfa_request_id: string;
-  mfa_constraints: MfaConstraints;
+  mfaRequestId: string;
+  mfaConstraints: MfaConstraints;
 }
 
 interface MfaConstraint {
@@ -21,9 +21,9 @@ interface MfaConstraints {
 }
 
 export interface ParsedMfaRequirement {
-  mfa_requirement: {
-    mfa_request_id: string;
-    mfa_constraints: MfaConstraint[];
+  mfaRequirement: {
+    mfaRequestId: string;
+    mfaConstraints: MfaConstraint[];
   };
 }
 

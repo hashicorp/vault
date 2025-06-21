@@ -24,7 +24,7 @@ export default Component.extend({
     this.set('controlGroupResponse', data);
   },
 
-  currentUserEntityId: alias('auth.authData.entity_id'),
+  currentUserEntityId: alias('auth.authData.entityId'),
 
   currentUserIsRequesting: computed('currentUserEntityId', 'model.requestEntity.id', function () {
     if (!this.model.requestEntity) return false;

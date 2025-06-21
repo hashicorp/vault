@@ -7,7 +7,8 @@ import { run } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX } from 'vault/services/auth';
-import { setupMirage } from 'ember-cli-mirage/test-support';
+import timestamp from 'core/utils/timestamp';
+import { addSeconds } from 'date-fns';
 
 function storage() {
   return {
@@ -40,15 +41,20 @@ const ROOT_TOKEN_RESPONSE = {
     accessor: '1dd25306-fdb9-0f43-8169-48ad702041b0',
     creation_time: 1477671134,
     creation_ttl: 0,
-    display_name: 'root',
+    display_name: 'token',
+    entity_id: '',
+    expire_time: null,
     explicit_max_ttl: 0,
-    id: '',
+    id: 'test',
+    issue_time: '2016-10-28T11:57:34.488374-04:00',
     meta: null,
     num_uses: 0,
     orphan: true,
-    path: 'auth/token/root',
+    path: 'auth/token/create',
     policies: ['root'],
+    renewable: false,
     ttl: 0,
+    type: 'service',
   },
   wrap_info: null,
   warnings: null,
@@ -56,25 +62,32 @@ const ROOT_TOKEN_RESPONSE = {
 };
 
 const TOKEN_NON_ROOT_RESPONSE = function () {
+  const now = timestamp.now();
+  const ttl = 2764800;
+  const expiry = addSeconds(now, ttl);
   return {
     request_id: '3ca32cd9-fd40-891d-02d5-ea23138e8642',
     lease_id: '',
     renewable: false,
     lease_duration: 0,
     data: {
-      accessor: '4ef32471-a94c-79ee-c290-aeba4d63bdc9',
-      creation_time: Math.floor(Date.now() / 1000),
-      creation_ttl: 2764800,
+      accessor: 'W5jBjXRu3vcWJ19dNWSEiGDu',
+      creation_time: now,
+      creation_ttl: ttl,
       display_name: 'token',
+      entity_id: '',
+      expire_time: expiry.toISOString(),
       explicit_max_ttl: 0,
-      id: '6d83e912-1b21-9df9-b51a-d201b709f3d5',
+      id: 'test', // token value
+      issue_time: now.toISOString(),
       meta: null,
       num_uses: 0,
       orphan: false,
       path: 'auth/token/create',
       policies: ['default', 'userpass'],
       renewable: true,
-      ttl: 2763327,
+      ttl: ttl,
+      type: 'service',
     },
     wrap_info: null,
     warnings: null,
@@ -209,28 +222,11 @@ const USERPASS_SERVICE_TOKEN_RESPONSE = {
 
 module('Integration | Service | auth', function (hooks) {
   setupTest(hooks);
-  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.owner.lookup('service:flash-messages').registerTypes(['warning']);
     this.store = storage();
     this.memStore = storage();
-    this.server.get('/auth/token/lookup-self', function (_, request) {
-      const resp = { ...ROOT_TOKEN_RESPONSE };
-      resp.id = request.requestHeaders['X-Vault-Token'];
-      resp.data.id = request.requestHeaders['X-Vault-Token'];
-      return resp;
-    });
-    this.server.post('/auth/userpass/login/:username', function (_, request) {
-      const { username } = request.params;
-      const resp = { ...USERPASS_RESPONSE };
-      resp.auth.metadata.username = username;
-      return resp;
-    });
-
-    this.server.post('/auth/github/login', function () {
-      return { ...GITHUB_RESPONSE };
-    });
   });
 
   test('token authentication: root token', function (assert) {
@@ -252,7 +248,15 @@ module('Integration | Service | auth', function (hooks) {
     });
     run(() => {
       service
-        .authenticate({ clusterId: '1', backend: 'token', data: { token: 'test' } })
+        .authSuccess(
+          {
+            clusterId: '1',
+            backend: 'token',
+            data: { token: 'test', namespace: '' },
+            selectedAuth: 'token',
+          },
+          ROOT_TOKEN_RESPONSE.data
+        )
         .then(() => {
           const clusterTokenName = service.get('currentTokenName');
           const clusterToken = service.get('currentToken');
@@ -265,7 +269,7 @@ module('Integration | Service | auth', function (hooks) {
             clusterTokenName,
             'token name is saved properly'
           );
-          assert.strictEqual(authData.backend.type, 'token', 'backend is saved properly');
+          assert.strictEqual(authData.authMethodType, 'token', 'backend is saved properly');
           assert.strictEqual(
             ROOT_TOKEN_RESPONSE.data.display_name,
             authData.displayName,
@@ -299,7 +303,15 @@ module('Integration | Service | auth', function (hooks) {
       },
       environment: () => 'development',
     });
-    await service.authenticate({ clusterId: '1', backend: 'token', data: { token: 'test' } });
+    await service.authSuccess(
+      {
+        clusterId: '1',
+        backend: 'token',
+        data: { token: 'test', namespace: '' },
+        selectedAuth: 'token',
+      },
+      ROOT_TOKEN_RESPONSE.data
+    );
     const clusterTokenName = service.get('currentTokenName');
     const clusterToken = service.get('currentToken');
     const authData = service.get('authData');
@@ -311,7 +323,7 @@ module('Integration | Service | auth', function (hooks) {
       clusterTokenName,
       'token name is saved properly'
     );
-    assert.strictEqual(authData.backend.type, 'token', 'backend is saved properly');
+    assert.strictEqual(authData.authMethodType, 'token', 'backend is saved properly');
     assert.strictEqual(
       ROOT_TOKEN_RESPONSE.data.display_name,
       authData.displayName,
@@ -329,24 +341,34 @@ module('Integration | Service | auth', function (hooks) {
     });
 
     run(() => {
-      service.authenticate({ clusterId: '1', backend: 'github', data: { token: 'test' } }).then(() => {
-        const clusterTokenName = service.get('currentTokenName');
-        const clusterToken = service.get('currentToken');
-        const authData = service.get('authData');
-        const expectedTokenName = `${TOKEN_PREFIX}github${TOKEN_SEPARATOR}1`;
+      service
+        .authSuccess(
+          {
+            clusterId: '1',
+            backend: 'github',
+            data: { token: 'test', namespace: '' },
+            selectedAuth: 'github',
+          },
+          GITHUB_RESPONSE.auth
+        )
+        .then(() => {
+          const clusterTokenName = service.get('currentTokenName');
+          const clusterToken = service.get('currentToken');
+          const authData = service.get('authData');
+          const expectedTokenName = `${TOKEN_PREFIX}github${TOKEN_SEPARATOR}1`;
 
-        assert.strictEqual(GITHUB_RESPONSE.auth.client_token, clusterToken, 'token is saved properly');
-        assert.strictEqual(expectedTokenName, clusterTokenName, 'token name is saved properly');
-        assert.strictEqual(authData.backend.type, 'github', 'backend is saved properly');
-        assert.strictEqual(
-          GITHUB_RESPONSE.auth.metadata.org + '/' + GITHUB_RESPONSE.auth.metadata.username,
-          authData.displayName,
-          'displayName is saved properly'
-        );
-        assert.strictEqual(this.memStore.keys().length, 0, 'mem storage is empty');
-        assert.ok(this.store.keys().includes(expectedTokenName), 'normal storage contains the token');
-        done();
-      });
+          assert.strictEqual(GITHUB_RESPONSE.auth.client_token, clusterToken, 'token is saved properly');
+          assert.strictEqual(expectedTokenName, clusterTokenName, 'token name is saved properly');
+          assert.strictEqual(authData.authMethodType, 'github', 'backend is saved properly');
+          assert.strictEqual(
+            GITHUB_RESPONSE.auth.metadata.org + '/' + GITHUB_RESPONSE.auth.metadata.username,
+            authData.displayName,
+            'displayName is saved properly'
+          );
+          assert.strictEqual(this.memStore.keys().length, 0, 'mem storage is empty');
+          assert.ok(this.store.keys().includes(expectedTokenName), 'normal storage contains the token');
+          done();
+        });
     });
   });
 
@@ -356,11 +378,15 @@ module('Integration | Service | auth', function (hooks) {
     const service = this.owner.factoryFor('service:auth').create({ storage: () => this.store });
     run(() => {
       service
-        .authenticate({
-          clusterId: '1',
-          backend: 'userpass',
-          data: { username: USERPASS_RESPONSE.auth.metadata.username, password: 'passoword' },
-        })
+        .authSuccess(
+          {
+            clusterId: '1',
+            backend: 'userpass',
+            data: { username: USERPASS_RESPONSE.auth.metadata.username, password: 'password' },
+            selectedAuth: 'userpass',
+          },
+          USERPASS_RESPONSE.auth
+        )
         .then(() => {
           const clusterTokenName = service.get('currentTokenName');
           const clusterToken = service.get('currentToken');
@@ -372,7 +398,7 @@ module('Integration | Service | auth', function (hooks) {
             clusterTokenName,
             'token name is saved properly'
           );
-          assert.strictEqual(authData.backend.type, 'userpass', 'backend is saved properly');
+          assert.strictEqual(authData.authMethodType, 'userpass', 'backend is saved properly');
           assert.strictEqual(
             USERPASS_RESPONSE.auth.metadata.username,
             authData.displayName,
@@ -386,96 +412,95 @@ module('Integration | Service | auth', function (hooks) {
   test('token auth expiry with non-root token', function (assert) {
     assert.expect(5);
     const tokenResp = TOKEN_NON_ROOT_RESPONSE();
-    this.server.get('/auth/token/lookup-self', function (_, request) {
-      const resp = { ...tokenResp };
-      resp.id = request.requestHeaders['X-Vault-Token'];
-      resp.data.id = request.requestHeaders['X-Vault-Token'];
-      return resp;
-    });
 
     const done = assert.async();
     const service = this.owner.factoryFor('service:auth').create({ storage: () => this.store });
     run(() => {
-      service.authenticate({ clusterId: '1', backend: 'token', data: { token: 'test' } }).then(() => {
-        const clusterTokenName = service.get('currentTokenName');
-        const clusterToken = service.get('currentToken');
-        const authData = service.get('authData');
+      service
+        .authSuccess(
+          {
+            clusterId: '1',
+            backend: 'token',
+            data: { token: 'test', namespace: '' },
+            selectedAuth: 'token',
+          },
+          tokenResp.data
+        )
+        .then(() => {
+          const clusterTokenName = service.get('currentTokenName');
+          const clusterToken = service.get('currentToken');
+          const authData = service.get('authData');
 
-        assert.strictEqual(clusterToken, 'test', 'token is saved properly');
-        assert.strictEqual(
-          `${TOKEN_PREFIX}token${TOKEN_SEPARATOR}1`,
-          clusterTokenName,
-          'token name is saved properly'
-        );
-        assert.strictEqual(authData.backend.type, 'token', 'backend is saved properly');
-        assert.strictEqual(
-          authData.displayName,
-          tokenResp.data.display_name,
-          'displayName is saved properly'
-        );
-        assert.false(service.get('tokenExpired'), 'token is not expired');
-        done();
-      });
+          assert.strictEqual(clusterToken, 'test', 'token is saved properly');
+          assert.strictEqual(
+            `${TOKEN_PREFIX}token${TOKEN_SEPARATOR}1`,
+            clusterTokenName,
+            'token name is saved properly'
+          );
+          assert.strictEqual(authData.authMethodType, 'token', 'backend is saved properly');
+          assert.strictEqual(
+            authData.displayName,
+            tokenResp.data.display_name,
+            'displayName is saved properly'
+          );
+          assert.false(service.get('tokenExpired'), 'token is not expired');
+          done();
+        });
     });
   });
 
   module('token types', function (hooks) {
     hooks.beforeEach(function () {
-      this.server.post('/auth/userpass/login/:username', (_, request) => {
-        const { username } = request.params;
-        const resp =
-          username === 'batch'
-            ? { ...USERPASS_BATCH_TOKEN_RESPONSE }
-            : { ...USERPASS_SERVICE_TOKEN_RESPONSE };
-        resp.auth.metadata.username = username;
-        return resp;
-      });
-
       this.service = this.owner.factoryFor('service:auth').create({ storage: () => this.store });
     });
 
-    module('batch tokens', function () {
-      test('batch tokens generated by token auth method', async function (assert) {
-        this.server.get('/auth/token/lookup-self', () => {
-          return { ...BATCH_TOKEN_RESPONSE };
-        });
-
-        await this.service.authenticate({
+    test('batch tokens generated by token auth method', async function (assert) {
+      await this.service.authSuccess(
+        {
           clusterId: '1',
           backend: 'token',
-          data: { token: 'test' },
-        });
+          data: { token: 'test', namespace: '' },
+          selectedAuth: 'token',
+        },
+        BATCH_TOKEN_RESPONSE.data
+      );
 
-        // exact expiration time is calculated in unit tests
-        assert.notEqual(
-          this.service.tokenExpirationDate,
-          undefined,
-          'expiration is calculated for batch tokens'
-        );
-      });
+      // exact expiration time is calculated in unit tests
+      assert.notEqual(
+        this.service.tokenExpirationDate,
+        undefined,
+        'expiration is calculated for batch tokens'
+      );
+    });
 
-      test('batch tokens generated by auth methods', async function (assert) {
-        await this.service.authenticate({
+    test('batch tokens generated by auth methods', async function (assert) {
+      await this.service.authSuccess(
+        {
           clusterId: '1',
           backend: 'userpass',
           data: { username: 'batch', password: 'password' },
-        });
+          selectedAuth: 'userpass',
+        },
+        USERPASS_BATCH_TOKEN_RESPONSE.auth
+      );
 
-        // exact expiration time is calculated in unit tests
-        assert.notEqual(
-          this.service.tokenExpirationDate,
-          undefined,
-          'expiration is calculated for batch tokens'
-        );
-      });
+      // exact expiration time is calculated in unit tests
+      assert.notEqual(
+        this.service.tokenExpirationDate,
+        undefined,
+        'expiration is calculated for batch tokens'
+      );
     });
 
     test('service token authentication', async function (assert) {
-      await this.service.authenticate({
-        clusterId: '1',
-        backend: 'userpass',
-        data: { username: 'service', password: 'password' },
-      });
+      await this.service.authSuccess(
+        {
+          clusterId: '1',
+          backend: 'userpass',
+          data: { username: 'service', password: 'password' },
+        },
+        USERPASS_SERVICE_TOKEN_RESPONSE.auth
+      );
 
       // exact expiration time is calculated in unit tests
       assert.notEqual(
