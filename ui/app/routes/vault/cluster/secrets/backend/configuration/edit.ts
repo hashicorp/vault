@@ -5,11 +5,11 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { CONFIGURABLE_SECRET_ENGINES } from 'vault/helpers/mountable-secret-engines';
 import AwsConfigForm from 'vault/forms/secrets/aws-config';
 import AzureConfigForm from 'vault/forms/secrets/azure-config';
 import GcpConfigForm from 'vault/forms/secrets/gcp-config';
 import SshConfigForm from 'vault/forms/secrets/ssh-config';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type ApiService from 'vault/services/api';
@@ -47,7 +47,7 @@ export default class SecretsBackendConfigurationEdit extends Route {
     }[type] || { issuer: '' };
 
     // if the engine type is not configurable or a form class does not exist for the type return a 404.
-    if (!CONFIGURABLE_SECRET_ENGINES.includes(type) || !formClass) {
+    if (!engineDisplayData(type)?.isConfigurable || !formClass) {
       throw { httpStatus: 404, backend };
     }
 

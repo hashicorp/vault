@@ -24,6 +24,7 @@ import (
 	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	iRegexp "github.com/hashicorp/go-secure-stdlib/regexp"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -537,8 +538,10 @@ func (b *Backend) init() {
 			p.Pattern = p.Pattern + "$"
 		}
 
-		// Detect the coding error of an invalid Pattern
-		b.pathsRe[i] = regexp.MustCompile(p.Pattern)
+		// Detect the coding error of an invalid Pattern. We are using an interned
+		// regexps library here to save memory, since we can have many instances of the
+		// same backend.
+		b.pathsRe[i] = iRegexp.MustCompileInterned(p.Pattern)
 	}
 }
 

@@ -15,16 +15,34 @@ valid_change_types: >-
 
 # Important changes
 
-**Last updated**: 2025-06-05
+**Last updated**: 2025-06-12
 
 Always review important or breaking changes and remediation recommendations
 before upgrading Vault.
 
-## New behavior 
+## New behavior
 
-None.
+### Key pair authentication for Snowflake DB secrets engine
 
-## Breaking changes 
+| Change       | Affected version | Affected deployments
+| ------------ | ---------------- | --------------------
+| New behavior | 1.20.0           | any
+
+As of version 1.20.0, Vault supports
+[Snowflake database authentication using key pairs](/vault/api-docs/secret/databases#configure-connection)
+as an alternative to password authentication, which Snowflake plans to disable
+in November 2025. Vault support for password authentication with Snowflake is
+now deprecated and will be removed in a future release.
+
+Vault currently does not support rotate root for key pairs. To manually rotate key pairs, users can:
+
+  - update the root configuration in Vault with the new private key
+  - update the public key associated with the user in Snowflake
+
+For more information on rotating key pairs, please refer
+to the official [Snowflake documentation](https://docs.snowflake.com/en/user-guide/key-pair-auth#configuring-key-pair-rotation).
+
+## Breaking changes
 
 ### Breaking configuration change for disable_mlock ((#disable_mlock-config))
 
@@ -128,14 +146,14 @@ keys within the HSM during the setup process.
 | ------------ | ----------------------------------------- | --------------------
 | Known issue  | 1.12.0+                                   | N/A
 
-Vault check-ins for LDAP service accounts performed on a performance standby node or a node in a 
-performance replication secondary cluster can trigger duplicate password changes on the LDAP server. 
-Duplication occurs because the LDAP client on the local node successfully modifies the password before Vault 
-forwards the check-in request to the active node, which then performs a second password update. 
-While users still receive the latest password, it may lead to unexpected LDAP activity and cause 
+Vault check-ins for LDAP service accounts performed on a performance standby node or a node in a
+performance replication secondary cluster can trigger duplicate password changes on the LDAP server.
+Duplication occurs because the LDAP client on the local node successfully modifies the password before Vault
+forwards the check-in request to the active node, which then performs a second password update.
+While users still receive the latest password, it may lead to unexpected LDAP activity and cause
 confusion interpreting audit logs.
 
 ### Recommendation:
 
-Send check-in requests directly to the active node of the primary cluster to prevent duplicate password 
+Send check-in requests directly to the active node of the primary cluster to prevent duplicate password
 rotations on the LDAP server.

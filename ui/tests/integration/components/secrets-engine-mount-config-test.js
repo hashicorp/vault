@@ -52,12 +52,12 @@ module('Integration | Component | secrets-engine-mount-config', function (hooks)
     await click(selectors.toggle);
 
     assert
-      .dom(GENERAL.infoRowValue('Secret Engine Type'))
+      .dom(GENERAL.infoRowValue('Secret engine type'))
       .hasText(this.secretsEngine.engineType, 'Secret engine type renders');
     assert.dom(GENERAL.infoRowValue('Path')).hasText(this.secretsEngine.path, 'Path renders');
     assert.dom(GENERAL.infoRowValue('Accessor')).hasText(this.secretsEngine.accessor, 'Accessor renders');
     assert.dom(GENERAL.infoRowValue('Local')).includesText('No', 'Local renders');
-    assert.dom(GENERAL.infoRowValue('Seal Wrap')).includesText('Yes', 'Seal wrap renders');
+    assert.dom(GENERAL.infoRowValue('Seal wrap')).includesText('Yes', 'Seal wrap renders');
     assert.dom(GENERAL.infoRowValue('Default Lease TTL')).includesText('0', 'Default Lease TTL renders');
     assert
       .dom(GENERAL.infoRowValue('Max Lease TTL'))

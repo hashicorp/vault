@@ -12,6 +12,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { v4 as uuidv4 } from 'uuid';
 import { hbs } from 'ember-cli-htmlbars';
+import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import {
   expectedConfigKeys,
@@ -21,14 +22,14 @@ import {
   fillInAwsConfig,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 import { capabilitiesStub } from 'vault/tests/helpers/stubs';
-import { WIF_ENGINES, allEngines } from 'vault/helpers/mountable-secret-engines';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 import waitForError from 'vault/tests/helpers/wait-for-error';
 import AwsConfigForm from 'vault/forms/secrets/aws-config';
 import AzureConfigForm from 'vault/forms/secrets/azure-config';
 import GcpConfigForm from 'vault/forms/secrets/gcp-config';
 import SshConfigForm from 'vault/forms/secrets/ssh-config';
 
-const allEnginesArray = allEngines(); // saving as const so we don't invoke the method multiple times in the for loop
+const WIF_ENGINES = ALL_ENGINES.filter((e) => e.isWIF).map((e) => e.type);
 
 module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) {
   setupRenderingTest(hooks);
@@ -73,7 +74,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       for (const type of WIF_ENGINES) {
         test(`${type}: it renders default fields`, async function (assert) {
           this.id = `${type}-${this.uid}`;
-          this.displayName = allEnginesArray.find((engine) => engine.type === type)?.displayName;
+          this.displayName = engineDisplayData(type).displayName;
           this.form = this.getForm(type, {}, { isNew: true });
           this.type = type;
 
@@ -114,7 +115,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       for (const type of WIF_ENGINES) {
         test(`${type}: it renders wif fields when user selects wif access type`, async function (assert) {
           this.id = `${type}-${this.uid}`;
-          this.displayName = allEnginesArray.find((engine) => engine.type === type)?.displayName;
+          this.displayName = engineDisplayData(type).displayName;
           this.form = this.getForm(type, {}, { isNew: true });
           this.type = type;
 
@@ -597,7 +598,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       for (const type of WIF_ENGINES) {
         test(`${type}: it renders fields`, async function (assert) {
           this.id = `${type}-${this.uid}`;
-          this.displayName = allEnginesArray.find((engine) => engine.type === type)?.displayName;
+          this.displayName = engineDisplayData(type).displayName;
           this.form = this.getForm(type, {}, { isNew: true });
           this.type = type;
 
@@ -637,7 +638,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       for (const type of WIF_ENGINES) {
         test(`${type}: it defaults to WIF accessType if WIF fields are already set`, async function (assert) {
           this.id = `${type}-${this.uid}`;
-          this.displayName = allEnginesArray.find((engine) => engine.type === type)?.displayName;
+          this.displayName = engineDisplayData(type).displayName;
           const config = createConfig(`${type}-wif`);
           this.form = this.getForm(type, config);
           this.type = type;
@@ -658,7 +659,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       for (const type of WIF_ENGINES) {
         test(`${type}: it renders issuer if global issuer is already set`, async function (assert) {
           this.id = `${type}-${this.uid}`;
-          this.displayName = allEnginesArray.find((engine) => engine.type === type)?.displayName;
+          this.displayName = engineDisplayData(type).displayName;
           this.issuer = 'https://foo-bar-blah.com';
           const config = createConfig(`${type}-wif`);
           this.form = this.getForm(type, { ...config, issuer: this.issuer });
@@ -885,7 +886,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           this.id = `${type}-${this.uid}`;
           const config = createConfig(`${type}-generic`);
           this.form = this.getForm(type, config);
-          this.displayName = allEnginesArray.find((engine) => engine.type === type)?.displayName;
+          this.displayName = engineDisplayData(type).displayName;
           this.type = type;
 
           await this.renderComponent();

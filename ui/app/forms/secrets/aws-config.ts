@@ -9,13 +9,14 @@ import FormFieldGroup from 'vault/utils/forms/field-group';
 import { regions } from 'vault/helpers/aws-regions';
 
 import type { Validations } from 'vault/app-types';
+import type { AwsConfigFormData } from 'vault/secrets/engine';
 
-export default class AwsConfigForm extends WifConfigForm {
+export default class AwsConfigForm extends WifConfigForm<AwsConfigFormData> {
   validations: Validations = {
     lease: [
       {
-        validator(form: AwsConfigForm) {
-          const { lease, leaseMax } = form;
+        validator(data: AwsConfigForm['data']) {
+          const { lease, leaseMax } = data;
           return (lease && leaseMax) || (!lease && !leaseMax) ? true : false;
         },
         message: 'Lease TTL and Max Lease TTL are both required if one of them is set.',
@@ -24,7 +25,7 @@ export default class AwsConfigForm extends WifConfigForm {
   };
 
   get isAccountPluginConfigured() {
-    return !!this.data['accessKey'];
+    return !!this.data.accessKey;
   }
 
   get isWifPluginConfigured() {
