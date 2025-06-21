@@ -157,3 +157,18 @@ confusion interpreting audit logs.
 
 Send check-in requests directly to the active node of the primary cluster to prevent duplicate password
 rotations on the LDAP server.
+
+### Development Cluster Setting Overwritten on Secondary Cluster Reload
+
+| Change       | Affected version | Fixed version
+| ------------ |------------------| --------------------
+| Known issue  | 1.20.0           | N/A
+
+If a performance replication secondary is reloaded by sending a `SIGHUP` to the Vault process, the cluster will start
+to use the `development_cluster` value set in its HCL configuration when reporting license utilization, instead of following
+the value configured on the primary as expected.
+
+#### Recommendation:
+
+Ensure all clusters in a performance replication group have the same `development_cluster` value configured in HCL to
+prevent unexpected changes to the reported value.
