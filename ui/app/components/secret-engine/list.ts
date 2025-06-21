@@ -29,7 +29,7 @@ interface Args {
   secretEngines: Array<SecretsEngineResource>;
 }
 
-export default class SecretListItem extends Component<Args> {
+export default class SecretEngineList extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly api: ApiService;
   @service declare readonly router: RouterService;

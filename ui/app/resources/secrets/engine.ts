@@ -4,8 +4,9 @@
  */
 
 import { baseResourceFactory } from 'vault/resources/base-factory';
-import { isAddonEngine, allEngines } from 'vault/helpers/mountable-secret-engines';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+import { isAddonEngine } from 'vault/utils/all-engines-metadata';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 import type { SecretsEngine } from 'vault/secrets/engine';
 
@@ -30,7 +31,7 @@ export default class SecretsEngineResource extends baseResourceFactory<SecretsEn
   }
 
   get icon() {
-    const engineData = allEngines().find((engine) => engine.type === this.engineType);
+    const engineData = engineDisplayData(this.engineType);
 
     return engineData?.glyph || 'lock';
   }
@@ -52,7 +53,7 @@ export default class SecretsEngineResource extends baseResourceFactory<SecretsEn
       return 'vault.cluster.secrets.backend.overview';
     }
     if (isAddonEngine(this.engineType, this.version)) {
-      const engine = allEngines().find((engine) => engine.type === this.engineType);
+      const engine = engineDisplayData(this.engineType);
       if (engine?.engineRoute) {
         return `vault.cluster.secrets.backend.${engine.engineRoute}`;
       }
