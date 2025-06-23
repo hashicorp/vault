@@ -7,7 +7,6 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentURL, fillIn, typeIn, visit, waitFor } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import {
   createNS,
@@ -30,6 +29,7 @@ import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { v4 as uuidv4 } from 'uuid';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
+import { supportedTypes } from 'vault/utils/auth-form-helpers';
 
 const { rootToken } = VAULT_KEYS;
 
@@ -49,9 +49,9 @@ module('Acceptance | auth login', function (hooks) {
   });
 
   test('it selects auth method if "with" query param is a supported auth method', async function (assert) {
-    const backends = supportedAuthBackends();
-    assert.expect(backends.length);
-    for (const backend of backends.reverse()) {
+    const authTypes = supportedTypes(false);
+    assert.expect(authTypes.length);
+    for (const backend of authTypes.reverse()) {
       await visit(`/vault/auth?with=${backend.type}`);
       assert.dom(AUTH_FORM.selectMethod).hasValue(backend.type);
     }

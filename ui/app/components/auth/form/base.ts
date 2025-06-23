@@ -9,7 +9,7 @@ import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { sanitizePath } from 'core/utils/sanitize-path';
-import { POSSIBLE_FIELDS } from 'vault/utils/supported-login-methods';
+import { POSSIBLE_FIELDS } from 'vault/utils/auth-form-helpers';
 import { ResponseError } from '@hashicorp/vault-client-typescript';
 
 import type { HTMLElementEvent } from 'vault/forms';

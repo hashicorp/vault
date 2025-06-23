@@ -17,7 +17,7 @@ import * as parseURL from 'core/utils/parse-url';
 import sinon from 'sinon';
 import authFormTestHelper from './auth-form-test-helper';
 import { RESPONSE_STUBS } from 'vault/tests/helpers/auth/response-stubs';
-import { DOMAIN_PROVIDER_MAP } from 'vault/utils/supported-login-methods';
+import { DOMAIN_PROVIDER_MAP } from 'vault/utils/auth-form-helpers';
 import { dasherize } from '@ember/string';
 
 /* 
