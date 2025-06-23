@@ -165,8 +165,8 @@ export default class SwaggerUiComponent extends Component {
     document.querySelectorAll('.try-out button').forEach((el) => {
       const warning =
         'Caution: This will make requests to the Vault server on your behalf which may create or delete items.';
-      
-      el.setAttribute('aria-description', warning)
-    })
+
+      el.setAttribute('aria-description', warning);
+    });
   }
 }
