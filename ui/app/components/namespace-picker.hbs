@@ -10,7 +10,7 @@
       @icon="org"
       @text={{or this.selectedNamespace.id "-"}}
       @isFullWidth={{true}}
-      data-test-toggle-input="namespace-id"
+      data-test-toggle-input="namespace-picker"
       {{on "click" this.toggleNamespacePicker}}
     />
 
@@ -29,6 +29,7 @@
             @type="search"
             aria-label="Search namespaces"
             placeholder="Search"
+            data-test-input="Search namespaces"
             {{on "keydown" this.onKeyDown}}
             {{on "input" this.onSearchInput}}
             {{did-insert this.focusSearchInput}}
@@ -50,7 +51,7 @@
       </D.Header>
 
       {{#if this.showNoNamespacesMessage}}
-        <D.Generic class="sub-text is-marginless" {{did-insert this.adjustElementWidth}}>
+        <D.Generic class="sub-text is-marginless" {{did-insert this.adjustElementWidth}} data-test-help-text="no namespaces">
           {{this.noNamespacesMessage}}
         </D.Generic>
       {{/if}}
@@ -60,7 +61,7 @@
           <D.Checkmark
             @selected={{eq option.id this.selectedNamespace.id}}
             {{on "click" (fn this.onChange option)}}
-            data-test-namespace-link={{option.path}}
+            data-test-button={{option.label}}
           >
             <span class="is-fullwidth is-word-break right-padding-4">{{option.label}}</span>
           </D.Checkmark>
