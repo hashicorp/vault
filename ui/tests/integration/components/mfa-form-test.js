@@ -21,16 +21,16 @@ module('Integration | Component | mfa-form', function (hooks) {
     this.onCancel = sinon.spy();
     this.clusterId = '123456';
     this.mfaAuthData = {
-      backend: 'userpass',
-      data: { username: 'foo', password: 'bar' },
+      authMethodType: 'userpass',
+      authMountPath: 'userpass',
     };
     this.authService = this.owner.lookup('service:auth');
     // setup basic totp mfaRequirement
     // override in tests that require different scenarios
     this.totpConstraint = this.server.create('mfa-method', { type: 'totp' });
-    const { mfaRequirement } = this.authService._parseMfaResponse({
-      mfa_request_id: 'test-mfa-id',
-      mfa_constraints: { test_mfa: { any: [this.totpConstraint] } },
+    const mfaRequirement = this.authService.parseMfaResponse({
+      mfaRequestId: 'test-mfa-id',
+      mfaConstraints: { test_mfa: { any: [this.totpConstraint] } },
     });
     this.mfaAuthData.mfaRequirement = mfaRequirement;
   });
@@ -40,10 +40,10 @@ module('Integration | Component | mfa-form', function (hooks) {
     const oktaConstraint = this.server.create('mfa-method', { type: 'okta' });
     const duoConstraint = this.server.create('mfa-method', { type: 'duo' });
 
-    this.mfaAuthData.mfaRequirement = this.authService._parseMfaResponse({
-      mfa_request_id: 'test-mfa-id',
-      mfa_constraints: { test_mfa_1: { any: [totpConstraint] } },
-    }).mfaRequirement;
+    this.mfaAuthData.mfaRequirement = this.authService.parseMfaResponse({
+      mfaRequestId: 'test-mfa-id',
+      mfaConstraints: { test_mfa_1: { any: [totpConstraint] } },
+    });
 
     await render(
       hbs`<Mfa::MfaForm
@@ -60,10 +60,10 @@ module('Integration | Component | mfa-form', function (hooks) {
         'Correct description renders for single passcode'
       );
 
-    this.mfaAuthData.mfaRequirement = this.authService._parseMfaResponse({
-      mfa_request_id: 'test-mfa-id',
-      mfa_constraints: { test_mfa_1: { any: [duoConstraint, oktaConstraint] } },
-    }).mfaRequirement;
+    this.mfaAuthData.mfaRequirement = this.authService.parseMfaResponse({
+      mfaRequestId: 'test-mfa-id',
+      mfaConstraints: { test_mfa_1: { any: [duoConstraint, oktaConstraint] } },
+    });
 
     await render(
       hbs`<Mfa::MfaForm
@@ -80,10 +80,10 @@ module('Integration | Component | mfa-form', function (hooks) {
         'Correct description renders for multiple methods'
       );
 
-    this.mfaAuthData.mfaRequirement = this.authService._parseMfaResponse({
-      mfa_request_id: 'test-mfa-id',
-      mfa_constraints: { test_mfa_1: { any: [oktaConstraint] }, test_mfa_2: { any: [duoConstraint] } },
-    }).mfaRequirement;
+    this.mfaAuthData.mfaRequirement = this.authService.parseMfaResponse({
+      mfaRequestId: 'test-mfa-id',
+      mfaConstraints: { test_mfa_1: { any: [oktaConstraint] }, test_mfa_2: { any: [duoConstraint] } },
+    });
 
     await render(
       hbs`<Mfa::MfaForm
@@ -116,9 +116,9 @@ module('Integration | Component | mfa-form', function (hooks) {
     const duoConstraint = this.server.create('mfa-method', { type: 'duo', uses_passcode: true });
     const oktaConstraint = this.server.create('mfa-method', { type: 'okta' });
     const pingidConstraint = this.server.create('mfa-method', { type: 'pingid' });
-    const { mfaRequirement } = this.authService._parseMfaResponse({
-      mfa_request_id: 'test-mfa-id',
-      mfa_constraints: {
+    const mfaRequirement = this.authService.parseMfaResponse({
+      mfaRequestId: 'test-mfa-id',
+      mfaConstraints: {
         test_mfa_1: {
           any: [pingidConstraint, oktaConstraint],
         },
