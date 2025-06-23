@@ -32,7 +32,7 @@ import sinon from 'sinon';
 const ENT_AUTH_METHODS = ['saml'];
 const { rootToken } = VAULT_KEYS;
 
-module('Acceptance | auth login form', function (hooks) {
+module('Acceptance | auth login', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
@@ -190,7 +190,7 @@ module('Acceptance | auth login form', function (hooks) {
         this.assertReq(req);
         req.passthrough();
       });
-      this.server.put('/auth/:mount/sso_service_url', (schema, req) => {
+      this.server.post('/auth/:mount/sso_service_url', (schema, req) => {
         // SAML only (enterprise)
         this.assertReq(req);
         req.passthrough();
@@ -199,7 +199,7 @@ module('Acceptance | auth login form', function (hooks) {
         token: {
           url: '/v1/auth/token/lookup-self',
           payload: {
-            'X-Vault-Token': 'some-token',
+            'x-vault-token': 'some-token',
           },
         },
         userpass: {
@@ -235,8 +235,9 @@ module('Acceptance | auth login form', function (hooks) {
           },
         },
         radius: {
-          url: '/v1/auth/custom-radius/login/some-username',
+          url: '/v1/auth/custom-radius/login',
           payload: {
+            username: 'some-username',
             password: 'some-password',
           },
         },
@@ -262,7 +263,7 @@ module('Acceptance | auth login form', function (hooks) {
         const { type } = backend;
         const expected = this.expected[type];
         const isOidc = ['oidc', 'jwt'].includes(type);
-        assert.expect(isOidc ? 3 : 2);
+        assert.expect(isOidc || type === 'radius' ? 3 : 2);
 
         this.assertReq = (req) => {
           const body = type === 'token' ? req.requestHeaders : JSON.parse(req.requestBody);
