@@ -80,7 +80,7 @@ export default Service.extend({
     }
     const tokenData = this.getTokenData(tokenName);
     const tokenExpirationEpoch = tokenData ? tokenData?.tokenExpirationEpoch : undefined;
-    const expirationDate = new Date(0);
+    const expirationDate = new Date(0); // Creates a "zeroed" date object
 
     return tokenExpirationEpoch ? expirationDate.setUTCMilliseconds(tokenExpirationEpoch) : null;
   }),
@@ -215,8 +215,11 @@ export default Service.extend({
 
   // ttl is originally either the "ttl" or "lease_duration" returned by the auth data response
   calculateExpiration({ now, ttl, expireTime }) {
-    const tokenExpirationEpoch = expireTime ? new Date(expireTime).getTime() : now + ttl * 1e3;
-
+    // First check if the ttl is falsy, including 0, before converting to milliseconds.
+    // Obviously a ttl of zero seconds is not recommended, but root tokens have a `0` ttl because they never expire.
+    // Note - this is different from mount configurations where a `ttl: 0` actually means the value is "unset" and to use system defaults.
+    const convertToMilliseconds = () => (ttl ? now + ttl * 1e3 : null);
+    const tokenExpirationEpoch = expireTime ? new Date(expireTime).getTime() : convertToMilliseconds();
     return { ttl, tokenExpirationEpoch };
   },
 
