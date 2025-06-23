@@ -33,3 +33,16 @@ export interface VisibleAuthMounts {
     options: null | {};
   };
 }
+
+// Auth data returned from each method's login response is
+// normalized so each method's information maps to the same key names
+interface NormalizedAuthData {
+  authMethodType: string;
+  authMountPath: string;
+  displayName: string; // if not from the "display_name" key, then this is set from either "meta" or "metadata"
+  expireTime?: string;
+  namespacePath?: string;
+  token: string; // was "client_token" or "id" key for some methods
+  ttl: number; // was "lease_duration" key for some methods
+  mfaRequirement?: MfaRequirementApiResponse | null;
+}
