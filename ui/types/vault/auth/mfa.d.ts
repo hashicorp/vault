@@ -21,10 +21,8 @@ interface MfaConstraints {
 }
 
 export interface ParsedMfaRequirement {
-  mfaRequirement: {
-    mfa_request_id: string;
-    mfa_constraints: MfaConstraint[];
-  };
+  mfaRequestId: string;
+  mfaConstraints: MfaConstraint[];
 }
 
 interface MfaMethod {
