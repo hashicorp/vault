@@ -370,6 +370,15 @@
         }
       },
       {
+        "title": "SCEP",
+        "path": "auth/scep",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "TLS Certificates",
         "path": "auth/cert"
       },
@@ -773,6 +782,10 @@
           {
             "title": "<code>/sys/storage/raft/snapshot-auto</code>",
             "path": "system/storage/raftautosnapshots"
+          },
+          {
+            "title": "<code>/sys/storage/raft/snapshot-load</code>",
+            "path": "system/storage/raftsnapshotload"
           }
         ]
       },

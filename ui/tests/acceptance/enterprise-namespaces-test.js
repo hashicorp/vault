@@ -12,70 +12,25 @@ import {
   findAll,
   triggerKeyEvent,
   find,
+  waitFor,
 } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { runCmd, createNS, deleteNS } from 'vault/tests/helpers/commands';
+import { runCmd, createNSFromPaths, deleteNSFromPaths } from 'vault/tests/helpers/commands';
 import { login, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
-import { GENERAL } from '../helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { NAMESPACE_PICKER_SELECTORS } from '../helpers/namespace-picker';
-
-import sinon from 'sinon';
-
-async function createNamespaces(namespaces) {
-  for (const ns of namespaces) {
-    // Note: iterate through the namespace parts to create the full namespace path
-    const parts = ns.split('/');
-    let currentPath = '';
-
-    for (const part of parts) {
-      // Visit the parent namespace
-      const url = `/vault/dashboard${currentPath && `?namespace=${currentPath.replaceAll('/', '%2F')}`}`;
-      await visit(url);
-
-      currentPath = currentPath ? `${currentPath}/${part}` : part;
-
-      // Create the current namespace
-      await runCmd(createNS(part), false);
-      await settled();
-    }
-
-    // Reset to the root namespace
-    const url = '/vault/dashboard';
-    await visit(url);
-  }
-}
-
-async function deleteNamespaces(namespaces) {
-  // Reset to the root namespace
-  const url = '/vault/dashboard';
-  await visit(url);
-
-  for (const ns of namespaces) {
-    // Note: delete the parent namespace to delete all child namespaces
-    const part = ns.split('/')[0];
-    await runCmd(deleteNS(part), false);
-    await settled();
-  }
-}
 
 module('Acceptance | Enterprise | namespaces', function (hooks) {
   setupApplicationTest(hooks);
 
-  let fetchSpy;
-
-  hooks.beforeEach(() => {
-    fetchSpy = sinon.spy(window, 'fetch');
-    return login();
+  hooks.beforeEach(async () => {
+    await login();
   });
 
-  hooks.afterEach(() => {
-    fetchSpy.restore();
-  });
-
-  test('it focuses the search input field when the component is loaded', async function (assert) {
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+  test('it focuses the search input field when user toggles namespace picker', async function (assert) {
+    await click(GENERAL.toggleInput('namespace-id'));
 
     // Verify that the search input field is focused
     const searchInput = find(NAMESPACE_PICKER_SELECTORS.searchInput);
@@ -87,13 +42,12 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
   });
 
   test('it navigates to the matching namespace when Enter is pressed', async function (assert) {
-    // Test Setup
+    // Setup: Create namespace(s) via the CLI
     const namespaces = ['beep/boop'];
-    await createNamespaces(namespaces);
+    await createNSFromPaths(namespaces);
 
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
-    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
-
+    await click(GENERAL.toggleInput('namespace-id'));
+    await click(GENERAL.button('Refresh list'));
     assert.dom(NAMESPACE_PICKER_SELECTORS.searchInput).exists('The namespace search field exists');
 
     // Simulate typing into the search input
@@ -113,17 +67,17 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       'Navigates to the correct namespace when Enter is pressed'
     );
 
-    // Test Cleanup
-    await deleteNamespaces(namespaces);
+    // Cleanup: Delete namespace(s) via the CLI
+    await deleteNSFromPaths(namespaces);
   });
 
   test('it filters namespaces based on search input', async function (assert) {
-    // Test Setup
+    // Setup: Create namespace(s) via the CLI
     const namespaces = ['beep/boop/bop'];
-    await createNamespaces(namespaces);
+    await createNSFromPaths(namespaces);
 
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
-    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
+    await click(GENERAL.toggleInput('namespace-id'));
+    await click(GENERAL.button('Refresh list'));
 
     // Verify all namespaces are displayed initially
     assert.dom(NAMESPACE_PICKER_SELECTORS.link()).exists('Namespace link(s) exist');
@@ -164,101 +118,152 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       'All namespaces are displayed after clearing search input'
     );
 
-    // Test Cleanup
-    await deleteNamespaces(namespaces);
+    // Cleanup: Delete namespace(s) via the CLI
+    await deleteNSFromPaths(namespaces);
   });
 
   test('it updates the namespace list after clicking "Refresh list"', async function (assert) {
-    // Test Setup
-    const namespaces = ['beep'];
-    await createNamespaces(namespaces);
+    // Open the namespace picker
+    await click(GENERAL.toggleInput('namespace-id'));
 
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    // Verify the search input field exists
+    assert.dom(NAMESPACE_PICKER_SELECTORS.searchInput).exists('The namespace search field exists');
 
-    // Verify that the namespace list was fetched on load
-    let listNamespaceRequests = fetchSpy
-      .getCalls()
-      .filter((call) => call.args[0].includes('/v1/sys/internal/ui/namespaces'));
+    // Verify 0 namespaces are displayed after searching for "beep"
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, 'beep');
     assert.strictEqual(
-      listNamespaceRequests.length,
-      1,
-      'The network call to the specific endpoint was made twice (once on load, once on refresh)'
+      findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
+      0,
+      'No namespaces are displayed after searching for "beep"'
     );
+
+    // Close the namespace picker
+    await click(GENERAL.toggleInput('namespace-id'));
+
+    // Create 'beep' namespace via the CLI
+    const namespaces = ['beep'];
+    await createNSFromPaths(namespaces);
+
+    // Open the namespace picker
+    await click(GENERAL.toggleInput('namespace-id'));
 
     // Refresh the list of namespaces
-    assert.dom(NAMESPACE_PICKER_SELECTORS.refreshList).exists('Refresh list button exists');
-    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
+    assert.dom(GENERAL.button('Refresh list')).exists('Refresh list button exists');
+    await click(GENERAL.button('Refresh list'));
 
-    // Verify that the namespace list was fetched on refresh
-    listNamespaceRequests = fetchSpy
-      .getCalls()
-      .filter((call) => call.args[0].includes('/v1/sys/internal/ui/namespaces'));
+    // Verify the search input field exists
+    assert.dom(NAMESPACE_PICKER_SELECTORS.searchInput).exists('The namespace search field exists');
+
+    // Verify 1 namespace is displayed after searching for "beep"
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, 'beep');
     assert.strictEqual(
-      listNamespaceRequests.length,
-      2,
-      'The network call to the specific endpoint was made twice (once on load, once on refresh)'
+      findAll(NAMESPACE_PICKER_SELECTORS.link('beep')).length,
+      1,
+      '1 namespace is displayed after searching for "beep"'
     );
 
-    // Test Cleanup
-    await deleteNamespaces(namespaces);
+    // Close the namespace picker
+    await click(GENERAL.toggleInput('namespace-id'));
+
+    // Delete the 'beep' namespace via the CLI
+    await deleteNSFromPaths(namespaces);
+
+    // Open the namespace picker
+    await click(GENERAL.toggleInput('namespace-id'));
+
+    // Refresh the list of namespaces
+    assert.dom(GENERAL.button('Refresh list')).exists('Refresh list button exists');
+    await click(GENERAL.button('Refresh list'));
+
+    // Verify the search input field exists
+    assert.dom(NAMESPACE_PICKER_SELECTORS.searchInput).exists('The namespace search field exists');
+
+    // Verify 0 namespaces are displayed after searching for "beep"
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, 'beep');
+    assert.strictEqual(
+      findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
+      0,
+      'No namespaces are displayed after searching for "beep"'
+    );
+
+    // Close the namespace picker
+    await click(GENERAL.toggleInput('namespace-id'));
   });
 
   test('it displays the "Manage" button with the correct URL', async function (assert) {
-    // Test Setup
+    // Setup: Create namespace(s) via the CLI
     const namespaces = ['beep'];
-    await createNamespaces(namespaces);
+    await createNSFromPaths(namespaces);
 
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
-    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
+    // Open the namespace picker & refresh the list of namespaces
+    await click(GENERAL.toggleInput('namespace-id'));
+    await click(GENERAL.button('Refresh list'));
 
     // Verify the "Manage" button is rendered and has the correct URL
     assert
       .dom('[href="/ui/vault/access/namespaces"]')
       .exists('The "Manage" button is displayed with the correct URL');
 
-    // Test Cleanup
-    await deleteNamespaces(namespaces);
+    // Cleanup: Delete namespace(s) via the CLI
+    await deleteNSFromPaths(namespaces);
   });
 
   // This test originated from this PR: https://github.com/hashicorp/vault/pull/7186
   test('it clears namespaces when you log out', async function (assert) {
     // Test Setup
-    const namespaces = ['foo'];
-    await createNamespaces(namespaces);
+    const namespace = 'foo';
+    await createNSFromPaths([namespace]);
 
-    const ns = 'foo';
-    await runCmd(createNS(ns), false);
     const token = await runCmd(`write -field=client_token auth/token/create policies=default`);
     await login(token);
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+
+    // Open the namespace picker
+    await click(GENERAL.toggleInput('namespace-id'));
+
+    // Verify that the root namespace is selected by default
     assert.dom(NAMESPACE_PICKER_SELECTORS.link()).hasText('root', 'root renders as current namespace');
     assert
       .dom(`${NAMESPACE_PICKER_SELECTORS.link()} svg${GENERAL.icon('check')}`)
       .exists('The root namespace is selected');
 
-    // Test Cleanup
-    await deleteNamespaces(namespaces);
+    // Verify that the foo namespace does not exist in the namespace picker
+    assert
+      .dom(NAMESPACE_PICKER_SELECTORS.link(namespace))
+      .exists({ count: 0 }, 'foo should not exist in the namespace picker');
+
+    // Logout and log back into root
+    await logout();
+    await login();
+
+    // Open the namespace picker & verify that the foo namespace does exist
+    await click(GENERAL.toggleInput('namespace-id'));
+    assert
+      .dom(NAMESPACE_PICKER_SELECTORS.link(namespace))
+      .exists({ count: 1 }, 'foo should exist in the namespace picker');
+
+    // Cleanup: Delete namespace(s) via the CLI
+    await deleteNSFromPaths([namespace]);
   });
 
   // This test originated from this PR: https://github.com/hashicorp/vault/pull/7186
   test('it displays namespaces whether you log in with a namespace prefixed with / or not', async function (assert) {
-    // Test Setup
+    // Setup: Create namespace(s) via the CLI
     const namespaces = ['beep/boop/bop'];
-    await createNamespaces(namespaces);
+    await createNSFromPaths(namespaces);
 
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
-    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
+    await click(GENERAL.toggleInput('namespace-id'));
+    await click(GENERAL.button('Refresh list'));
 
     // Login with a namespace prefixed with /
     await loginNs('/beep/boop');
     await settled();
 
     assert
-      .dom(NAMESPACE_PICKER_SELECTORS.toggle)
+      .dom(GENERAL.toggleInput('namespace-id'))
       .hasText('boop', `shows the namespace 'boop' in the toggle component`);
 
     // Open the namespace picker & wait for it to render
-    await click(NAMESPACE_PICKER_SELECTORS.toggle);
+    await click(GENERAL.toggleInput('namespace-id'));
     assert.dom(`svg${GENERAL.icon('check')}`).exists('The check icon is rendered');
 
     // Find the selected element with the check icon & ensure it exists
@@ -276,8 +281,8 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
       'The current namespace does not begin or end with /'
     );
 
-    // Test Cleanup
-    await deleteNamespaces(namespaces);
+    // Cleanup: Delete namespace(s) via the CLI
+    await deleteNSFromPaths(namespaces);
   });
 
   test('it shows the regular namespace toolbar when not managed', async function (assert) {
@@ -296,37 +301,57 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
   });
 
   test('it should allow the user to delete a namespace', async function (assert) {
-    // Test Setup
-    const namespaces = ['test-delete-me'];
-    await createNamespaces(namespaces);
+    // Setup: Create namespace(s) via the CLI
+    const namespace = 'test-delete-me';
+    await createNSFromPaths([namespace]);
 
     await visit('/vault/access/namespaces');
 
-    const searchInput = GENERAL.filterInputExplicit;
-    const searchButton = GENERAL.filterInputExplicitSearch;
+    // Verify that the namespace exists in the namespace picker
+    await click(GENERAL.toggleInput('namespace-id'));
+    await click(GENERAL.button('Refresh list'));
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, namespace);
 
-    await fillIn(searchInput, 'test-delete-me');
-    await click(searchButton);
+    assert
+      .dom(NAMESPACE_PICKER_SELECTORS.link(namespace))
+      .exists({ count: 1 }, 'Namespace exists in the namespace picker');
+
+    // Close the namespace picker
+    await click(GENERAL.toggleInput('namespace-id'));
+
+    // Verify that the namespace exists in the manage namespaces page
+    await fillIn(GENERAL.filterInputExplicit, namespace);
+    await click(GENERAL.filterInputExplicitSearch);
 
     assert.dom(GENERAL.menuTrigger).exists();
     await click(GENERAL.menuTrigger);
 
-    // Verify that the user can delete the namespace
-    const deleteNamespaceButton = '.hds-dropdown-list-item:nth-of-type(1)';
-    assert.dom(deleteNamespaceButton).hasText('Delete', 'Allow users to delete the namespace');
+    // Delete the namespace
+    const deleteNamespaceButton = '.hds-dropdown-list-item:nth-of-type(2)';
+    assert.dom(deleteNamespaceButton).hasText('Delete', 'Delete namespace button exists');
     await click(`${deleteNamespaceButton} button`);
 
-    assert.dom(GENERAL.confirmButton).hasText('Confirm', 'Allow users to delete the namespace');
+    assert.dom(GENERAL.confirmButton).hasText('Confirm', 'Confirm namespace deletion button is shown');
     await click(GENERAL.confirmButton);
 
+    // Verify that the namespace does not exist in the nmanage namespace page
     assert.strictEqual(
       currentURL(),
-      '/vault/access/namespaces?page=1&pageFilter=test-delete-me',
+      `/vault/access/namespaces?page=1&pageFilter=${namespace}`,
       'Should remain on the manage namespaces page after deletion'
     );
 
     assert
       .dom('.list-item-row')
       .exists({ count: 0 }, 'Namespace should be deleted and not displayed in the list');
+
+    // Verify that the namespace does not exist in the namespace picker
+    await click(GENERAL.toggleInput('namespace-id'));
+    await waitFor(GENERAL.button('Refresh list'));
+    await click(GENERAL.button('Refresh list'));
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, namespace);
+    assert
+      .dom(NAMESPACE_PICKER_SELECTORS.link())
+      .exists({ count: 0 }, 'Deleted namespace does not exist in the namespace picker');
   });
 });

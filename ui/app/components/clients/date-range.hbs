@@ -110,8 +110,8 @@
         </Hds::Text::Body>
       </M.Body>
       <M.Footer as |F|>
-        <Hds::Button data-test-save @text="Save" {{on "click" this.handleSave}} />
-        <Hds::Button data-test-cancel @text="Cancel" @color="secondary" {{on "click" F.close}} />
+        <Hds::Button @text="Save" {{on "click" this.handleSave}} data-test-submit />
+        <Hds::Button @text="Cancel" @color="secondary" {{on "click" F.close}} data-test-cancel />
       </M.Footer>
     </Hds::Modal>
   {{/if}}

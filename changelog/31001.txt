@@ -1,0 +1,3 @@
+```release-note:improvement
+ui/secrets: Display the plugin version on the secret engine list view. Move KV's version to a tooltip that appears when hovering over the engine's name.
+```

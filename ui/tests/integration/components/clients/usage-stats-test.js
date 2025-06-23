@@ -27,6 +27,6 @@ module('Integration | Component | clients/usage-stats', function (hooks) {
       .hasTextContaining('yielded content!', 'it renders yielded content');
     assert
       .dom('a')
-      .hasAttribute('href', 'https://developer.hashicorp.com/vault/tutorials/monitoring/usage-metrics');
+      .hasAttribute('href', 'https://developer.hashicorp.com/vault/docs/concepts/client-count/client-usage');
   });
 });
