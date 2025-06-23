@@ -26,7 +26,7 @@ import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { disableReplication } from 'vault/tests/helpers/replication';
 import connectionPage from 'vault/tests/pages/secrets/backend/database/connection';
 import { v4 as uuidv4 } from 'uuid';
-import { runCmd, deleteEngineCmd, createNS } from 'vault/tests/helpers/commands';
+import { runCmd, deleteEngineCmd, createNS, deleteNS } from 'vault/tests/helpers/commands';
 
 import { DASHBOARD } from 'vault/tests/helpers/components/dashboard/dashboard-selectors';
 import { CUSTOM_MESSAGES } from 'vault/tests/helpers/config-ui/message-selectors';
@@ -227,6 +227,8 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await runCmd(createNS('world'), false);
       await visit('/vault/dashboard?namespace=world');
       assert.dom(DASHBOARD.cardName('configuration-details')).doesNotExist();
+      // clean up namespace pollution
+      await runCmd(deleteNS('world'));
     });
 
     test('shows the configuration details card', async function (assert) {
@@ -450,6 +452,8 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await runCmd(createNS('blah'), false);
       await visit('/vault/dashboard?namespace=blah');
       assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
+      // clean up namespace pollution
+      await runCmd(deleteNS('blah'));
     });
 
     test('it should show replication status if both dr and performance replication are enabled as features in enterprise', async function (assert) {

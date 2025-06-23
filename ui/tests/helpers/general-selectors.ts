@@ -30,12 +30,13 @@ export const GENERAL = {
   // there should only be one save button per view (e.g. one per form) so this does not need to be dynamic
   // this button should be used for any kind of "submit" on a form or "save" action.
   submitButton: '[data-test-submit]',
-  button: (label: string) => `[data-test-button="${label}"]`,
+  button: (label: string) => (label ? `[data-test-button="${label}"]` : '[data-test-button]'),
 
   /* ────── Menus & Lists ────── */
   menuTrigger: '[data-test-popup-menu-trigger]',
   menuItem: (name: string) => `[data-test-popup-menu="${name}"]`,
-  listItem: '[data-test-list-item-link]',
+  listItem: (label: string) => `[data-test-list-item="${label}"]`,
+  listItemLink: '[data-test-list-item-link]',
   linkedBlock: (item: string) => `[data-test-linked-block="${item}"]`,
 
   /* ────── Inputs / Form Fields ────── */
@@ -57,7 +58,6 @@ export const GENERAL = {
   inputSearch: (attr: string) => `[data-test-input-search="${attr}"]`,
   filterInput: '[data-test-filter-input]',
   filterInputExplicit: '[data-test-filter-input-explicit]',
-  filterInputExplicitSearch: '[data-test-filter-input-explicit-search]',
   labelById: (id: string) => `label[id="${id}"]`,
   labelByGroupControlIndex: (index: number) => `.hds-form-group__control-field:nth-of-type(${index}) label`,
   radioByAttr: (attr: string) => `[data-test-radio="${attr}"]`,
