@@ -10,11 +10,11 @@ description: The '/sys/config/ui/login/default-auth' endpoint configures default
 
 @include 'alerts/restricted-admin.mdx'
 
-The `/sys/config/ui/login/default-auth` endpoint is used to list, create, read, update, or delete login customization configurations for the Vault GUI. These configurations determine which methods to display in the login form.
+The `/sys/config/ui/login/default-auth` endpoint is used to list, create, read, update, or delete login configurations for the Vault GUI. Setting this configuration customizes the Vault UI login form and determines which methods to display in the login form.
 
-## Create UI default login customization configuration
+## Create UI default login configuration
 
-This endpoint allows the creation of a new UI default login customization configuration. Only one UI default login configuration is
+This endpoint allows the creation of a new UI default login configuration. Only one UI login configuration is
 allowed per namespace. Namespaces can inherit from their parent if the parent's configuration has `disable_inheritance`
 set to `false`. If no namespace is provided, the rule will be applied to the root namespace. One of `default_auth_type`,
 or `backup_auth_types` is required during creation.
@@ -29,11 +29,11 @@ or `backup_auth_types` is required during creation.
 
 - `namespace_path` `(string: "")` - Namespace to apply this configuration to.
 
-- `default_auth_type` `(string: <required>)` - The type of auth method to be presented by default. Only UI supported auth types are allowed: `github`,`jwt`,`ldap`,`oidc`,`okta`,`radius`,`saml`,token`,and `userpass`
+- `default_auth_type` `(string: <required>)` - The type of auth method to be presented by default. Only UI supported auth types are allowed: `github`,`jwt`,`ldap`,`oidc`,`okta`,`radius`,`saml`,'token`,and `userpass`
 
 - `backup_auth_types` `(array: [])` - Backup auth types to be presented in the `Sign in with other methods` tab. Only UI supported auth types are allowed: `github`,`jwt`,`ldap`,`oidc`,`okta`,`radius`,`saml`, `token`,and `userpass`
 
-- `disable_inheritance` `(bool: false)` - Defaults to `false` which means child namespaces inherit `default_auth_type` and `backup_auth_types from their parent. If set to `true`, the config will not be inherited.
+- `disable_inheritance` `(bool: false)` - Defaults to `false` which means child namespaces inherit `default_auth_type` and `backup_auth_types` from their parent. If set to `true`, the config will not be inherited.
 
 ### Sample payload
 
@@ -55,9 +55,9 @@ $ curl --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/config/ui/login/default-auth/it-admin-rule
 ```
 
-## List UI default login customization configurations
+## List UI default login configurations
 
-This endpoint returns a list of all UI default login customization configurations that exist.
+This endpoint returns a list of all UI default login configurations that exist.
 
 | Method | Path                              |
 | :----- | :-------------------------------- |
@@ -90,9 +90,9 @@ $ curl --header "X-Vault-Token: ..." \
 
 
 
-## Read UI default auth customization configuration
+## Read UI default auth configuration
 
-This endpoint returns the properties of a specific UI default auth customization configuration.
+This endpoint returns the properties of a specific UI default auth configuration.
 
 | Method |                                      |
 | :----- | :----------------------------------- |
@@ -122,9 +122,9 @@ $ curl --header "X-Vault-Token: ..." \
 }
 ```
 
-## Update UI default auth customization configuration
+## Update UI default auth configuration
 
-This endpoint updates the properties of a specific UI default auth customization configuration.
+This endpoint updates the properties of a specific UI default auth configuration.
 
 | Method |                                      |
 | :----- | :----------------------------------- |
@@ -160,9 +160,9 @@ $ curl --header "X-Vault-Token: ..." \
     http://127.0.0.1:8200/v1/sys/config/ui/login/default-auth/it-admin-rule
 ```
 
-## Delete UI default auth customization configuration
+## Delete UI default auth configuration
 
-This endpoint deletes a specific UI default auth customization configuration.
+This endpoint deletes a specific UI default auth configuration.
 
 | Method   |                                      |
 | :------- | :----------------------------------- |
