@@ -1479,6 +1479,8 @@ github.com/hashicorp/go-secure-stdlib/permitpool v1.0.0 h1:U6y5MXGiDVOOtkWJ6o/tu
 github.com/hashicorp/go-secure-stdlib/permitpool v1.0.0/go.mod h1:ecDb3o+8D4xtP0nTCufJaAVawHavy5M2eZ64Nq/8/LM=
 github.com/hashicorp/go-secure-stdlib/plugincontainer v0.4.1 h1:JY+zGg8gOmslwif1fiCqT5Hu1SikLZQcHkmQhCoA9gY=
 github.com/hashicorp/go-secure-stdlib/plugincontainer v0.4.1/go.mod h1:jW3KCTvdPyAdVecOUwiiO2XaYgUJ/isigt++ISkszkY=
+github.com/hashicorp/go-secure-stdlib/regexp v1.0.0 h1:08mz6j5MsCG9sf8tvC8Lhboe/ZMiNg41IPSh6unK5T4=
+github.com/hashicorp/go-secure-stdlib/regexp v1.0.0/go.mod h1:n/Gj3sYIEEOYds8uKS55bFf7XiYvWN4e+d+UOA7r/YU=
 github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1 h1:SMGUnbpAcat8rIKHkBPjfv81yC46a8eCNZ2hsR2l1EI=
 github.com/hashicorp/go-secure-stdlib/reloadutil v0.1.1/go.mod h1:Ch/bf00Qnx77MZd49JRgHYqHQjtEmTgGU2faufpVZb0=
 github.com/hashicorp/go-secure-stdlib/strutil v0.1.2 h1:kes8mmyCpxJsI7FTwtzRqEy9CdjCtrXrXGuOpxEA7Ts=
@@ -1562,8 +1564,8 @@ github.com/hashicorp/vault-plugin-auth-jwt v0.24.1 h1:SsSHcbmoMFz3cZDr+HyVZ1oppP
 github.com/hashicorp/vault-plugin-auth-jwt v0.24.1/go.mod h1:d0aS4WgdsuEOAKmRxZJFD0t/WkejqbiRAFu3ChLmYpQ=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.15.0 h1:e+y3RAe3WgvQ6zblWPqEfa1MtlS9f6Nduw1UxfhUxM8=
 github.com/hashicorp/vault-plugin-auth-kerberos v0.15.0/go.mod h1:VJn5xKHXzRmOosi97aBD2OK4JozHuEwg5vXfnkVczMg=
-github.com/hashicorp/vault-plugin-auth-kubernetes v0.22.1 h1:v7ZkGy70CTHgLsor5+kc9A/66PJyEoVpWpLSLXUysIE=
-github.com/hashicorp/vault-plugin-auth-kubernetes v0.22.1/go.mod h1:lng3FUkJ1xohs09QfR6RokYBosxRfiRnFk1aiGTDQXI=
+github.com/hashicorp/vault-plugin-auth-kubernetes v0.22.2 h1:uiAXyeQp5c+EbRcs+RV1CMAgndCmURLtyW5SE82gZ24=
+github.com/hashicorp/vault-plugin-auth-kubernetes v0.22.2/go.mod h1:JGq6yIefnr3eXJ4OA8LqJCMK19asETJaTLYHlm80YqY=
 github.com/hashicorp/vault-plugin-auth-oci v0.19.0 h1:S0ZyVhcgxe8tCVTCXKvs5B5/RPzsLC9RAadeloAHyOw=
 github.com/hashicorp/vault-plugin-auth-oci v0.19.0/go.mod h1:O09a7mLRDEJpSsg+ECiQ7+Lb3VYkCoIqEet6YDWytDg=
 github.com/hashicorp/vault-plugin-database-couchbase v0.14.0 h1:0uy7F3QbkXzabSaZqNJwZDi+L+C8c2yBLtj5T0UDa/s=
@@ -1590,8 +1592,8 @@ github.com/hashicorp/vault-plugin-secrets-gcpkms v0.21.0 h1:gK2PNyQulWM31gPN1Pm9
 github.com/hashicorp/vault-plugin-secrets-gcpkms v0.21.0/go.mod h1:qn7kl/rhe3VN8+9LVjJfGfoSocC9EQyntVHvYSSkIk8=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.11.0 h1:MHG9/kUkV41ZIEM3O4HCFzW7mvu9f17ADGTHhuXxFZY=
 github.com/hashicorp/vault-plugin-secrets-kubernetes v0.11.0/go.mod h1:Kl1Qnw0z6Rl047aIqWJwxVvb3fliXR32urY0QpEQKDQ=
-github.com/hashicorp/vault-plugin-secrets-kv v0.24.0 h1:LRL9eeEgQxVzf05IEJWg6uApFZeDOCJEU9M0LbnVB1U=
-github.com/hashicorp/vault-plugin-secrets-kv v0.24.0/go.mod h1:U+aKQtbJH78mP/X6k/nxaPXIzdqLyNfo1LaP9570yAQ=
+github.com/hashicorp/vault-plugin-secrets-kv v0.24.1 h1:RGgCo768KTRxwEymy7j1zDOlQsAqXzh6wshnRB3fZiE=
+github.com/hashicorp/vault-plugin-secrets-kv v0.24.1/go.mod h1:U+aKQtbJH78mP/X6k/nxaPXIzdqLyNfo1LaP9570yAQ=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.15.0 h1:U/7KNMLj6voIswIyIGMUB3MdQNQlNxe6uK/rw6cju7U=
 github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.15.0/go.mod h1:dJcwyr8tHFJEET32dKEIgGp1PBp5EMDOI9n4HaEruy8=
 github.com/hashicorp/vault-plugin-secrets-openldap v0.16.0 h1:tYq6WpTX/5O+ncf0ySCiM/mgbItGN82OKywW7gYlJ+0=

@@ -15,4 +15,7 @@ const (
 	ObservationTypeMountAuthDisable     = "mount/auth/disable"
 	ObservationTypeMountSecretsEnable   = "mount/secrets/enable"
 	ObservationTypeMountSecretsDisable  = "mount/secrets/disable"
+	ObservationTypeMountNamespaceCreate = "namespace/create"
+	ObservationTypeMountNamespacePatch  = "namespace/patch"
+	ObservationTypeMountNamespaceDelete = "namespace/delete"
 )
