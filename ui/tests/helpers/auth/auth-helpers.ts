@@ -71,7 +71,7 @@ export const fillInLoginFields = async (loginFields: LoginFields, { toggleOption
 
 const LOGIN_DATA = {
   token: { token: 'mysupersecuretoken' },
-  username: { username: 'matilda', password: 'password' },
+  username: { username: 'matilda', password: 'some-password' },
   role: { role: 'some-dev' },
 };
 // maps auth type to login input data

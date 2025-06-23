@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentURL, fillIn, typeIn, visit, waitFor } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { allSupportedAuthBackends, supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
+import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import {
   createNS,
@@ -18,6 +18,8 @@ import {
   runCmd,
 } from 'vault/tests/helpers/commands';
 import {
+  AUTH_METHOD_LOGIN_DATA,
+  fillInLoginFields,
   login,
   loginMethod,
   loginNs,
@@ -29,7 +31,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
 
-const ENT_AUTH_METHODS = ['saml'];
 const { rootToken } = VAULT_KEYS;
 
 module('Acceptance | auth login', function (hooks) {
@@ -169,136 +170,155 @@ module('Acceptance | auth login', function (hooks) {
     });
   });
 
+  // PAYLOAD TESTS FOR EACH AUTH METHOD
+  // Assertion count is one for the URL and one for each payload key
   module('it sends the right payload when authenticating', function (hooks) {
     hooks.beforeEach(function () {
-      this.assertReq = () => {};
-      this.server.get('/auth/token/lookup-self', (schema, req) => {
-        this.assertReq(req);
-        req.passthrough();
-      });
-      this.server.post('/auth/:mount/login', (schema, req) => {
-        // github only
-        this.assertReq(req);
-        req.passthrough();
-      });
-      this.server.post('/auth/:mount/oidc/auth_url', (schema, req) => {
-        // For JWT and OIDC
-        this.assertReq(req);
-        req.passthrough();
-      });
-      this.server.post('/auth/:mount/login/:username', (schema, req) => {
-        this.assertReq(req);
-        req.passthrough();
-      });
-      this.server.post('/auth/:mount/sso_service_url', (schema, req) => {
-        // SAML only (enterprise)
-        this.assertReq(req);
-        req.passthrough();
-      });
-      this.expected = {
-        token: {
-          url: '/v1/auth/token/lookup-self',
-          payload: {
-            'x-vault-token': 'some-token',
-          },
-        },
-        userpass: {
-          url: '/v1/auth/custom-userpass/login/some-username',
-          payload: {
-            password: 'some-password',
-          },
-        },
-        ldap: {
-          url: '/v1/auth/custom-ldap/login/some-username',
-          payload: {
-            password: 'some-password',
-          },
-        },
-        okta: {
-          url: '/v1/auth/custom-okta/login/some-username',
-          payload: {
-            password: 'some-password',
-          },
-        },
-        jwt: {
-          url: '/v1/auth/custom-jwt/oidc/auth_url',
-          payload: {
-            redirect_uri: 'http://localhost:7357/ui/vault/auth/custom-jwt/oidc/callback',
-            role: 'some-role',
-          },
-        },
-        oidc: {
-          url: '/v1/auth/custom-oidc/oidc/auth_url',
-          payload: {
-            redirect_uri: 'http://localhost:7357/ui/vault/auth/custom-oidc/oidc/callback',
-            role: 'some-role',
-          },
-        },
-        radius: {
-          url: '/v1/auth/custom-radius/login',
-          payload: {
-            username: 'some-username',
-            password: 'some-password',
-          },
-        },
-        github: {
-          url: '/v1/auth/custom-github/login',
-          payload: {
-            token: 'some-token',
-          },
-        },
-        saml: {
-          url: '/v1/auth/custom-saml/sso_service_url',
-          payload: {
-            role: 'some-role',
-          },
-        },
+      this.assertAuthRequest = (assert, req, expectedPayload) => {
+        const body = JSON.parse(req.requestBody);
+        assert.true(true, `it calls the correct URL: ${req.url}`);
+
+        for (const [expKey, expValue] of Object.entries(expectedPayload)) {
+          assert.strictEqual(body[expKey], expValue, `payload includes ${expKey}: ${expValue}`);
+        }
+      };
+
+      this.fillAndLogIn = async () => {
+        await visit('/vault/auth');
+        await fillIn(AUTH_FORM.selectMethod, this.authType);
+
+        const loginData = { ...AUTH_METHOD_LOGIN_DATA[this.authType], path: `custom-${this.authType}` };
+        await fillInLoginFields(loginData, { toggleOptions: true });
+        await click(GENERAL.submitButton);
       };
     });
 
-    for (const backend of allSupportedAuthBackends().reverse()) {
-      test(`for ${backend.type} ${
-        ENT_AUTH_METHODS.includes(backend.type) ? '(enterprise)' : ''
-      }`, async function (assert) {
-        const { type } = backend;
-        const expected = this.expected[type];
-        const isOidc = ['oidc', 'jwt'].includes(type);
-        assert.expect(isOidc || type === 'radius' ? 3 : 2);
+    test('token', async function (assert) {
+      assert.expect(2);
+      this.authType = 'token';
+      this.expectedPayload = { 'x-vault-token': 'mysupersecuretoken' };
+      const headerKey = 'x-vault-token';
+      const expectedToken = this.expectedPayload[headerKey];
 
-        this.assertReq = (req) => {
-          const body = type === 'token' ? req.requestHeaders : JSON.parse(req.requestBody);
-          if (isOidc && !body.role) {
-            // OIDC and JWT auth form calls the endpoint every time the role or mount is updated.
-            // if role is not provided, it means we haven't filled out the full info yet so don't
-            // validate the payload until all data is provided
-            // eslint-disable-next-line qunit/no-early-return
-            return {};
-          }
-          assert.strictEqual(req.url, expected.url, `${type} calls the correct URL`);
-          Object.keys(expected.payload).forEach((expKey) => {
-            assert.strictEqual(
-              body[expKey],
-              expected.payload[expKey],
-              `${type} payload includes ${expKey} with expected value`
-            );
-          });
-        };
-        await visit('/vault/auth');
-        await fillIn(AUTH_FORM.selectMethod, type);
-
-        if (type !== 'token') {
-          // set custom mount
-          await click(AUTH_FORM.advancedSettings);
-          await fillIn(GENERAL.inputByAttr('path'), `custom-${type}`);
-        }
-        for (const key of backend.formAttributes) {
-          // fill in all form items, except JWT which is not rendered
-          if (key === 'jwt') return;
-          await fillIn(GENERAL.inputByAttr(key), `some-${key}`);
-        }
-        await click(GENERAL.submitButton);
+      this.server.get('/auth/token/lookup-self', (schema, req) => {
+        const actualToken = req.requestHeaders[headerKey];
+        assert.true(true, `it calls the correct URL: ${req.url}`);
+        assert.strictEqual(actualToken, expectedToken, 'headers include token');
+        req.passthrough();
       });
-    }
+
+      await visit('/vault/auth');
+      await fillIn(AUTH_FORM.selectMethod, this.authType);
+      const loginData = AUTH_METHOD_LOGIN_DATA[this.authType];
+      await fillInLoginFields(loginData);
+      await click(GENERAL.submitButton);
+    });
+
+    test('github', async function (assert) {
+      assert.expect(2);
+      this.authType = 'github';
+      this.expectedPayload = { token: 'mysupersecuretoken' };
+      this.server.post('/auth/custom-github/login', (schema, req) => {
+        this.assertAuthRequest(assert, req, this.expectedPayload);
+        req.passthrough();
+      });
+
+      await this.fillAndLogIn();
+    });
+
+    test('ldap', async function (assert) {
+      assert.expect(2);
+      this.authType = 'ldap';
+      this.expectedPayload = { password: 'some-password' };
+      this.server.post('/auth/custom-ldap/login/matilda', (schema, req) => {
+        this.assertAuthRequest(assert, req, this.expectedPayload);
+        req.passthrough();
+      });
+
+      await this.fillAndLogIn();
+    });
+
+    test('jwt', async function (assert) {
+      // auth_url is hit twice (once when inputs are filled and again on submit)
+      // so the assertion count is doubled
+      assert.expect(6);
+      this.authType = 'jwt';
+      this.expectedPayload = {
+        redirect_uri: 'http://localhost:7357/ui/vault/auth/custom-jwt/oidc/callback',
+        role: 'some-dev',
+      };
+      this.server.post('/auth/custom-jwt/oidc/auth_url', (schema, req) => {
+        this.assertAuthRequest(assert, req, this.expectedPayload);
+        req.passthrough();
+      });
+
+      await this.fillAndLogIn();
+    });
+
+    test('oidc', async function (assert) {
+      // auth_url is hit twice (once when inputs are filled and again on submit)
+      // so the assertion count is doubled
+      assert.expect(6);
+      this.authType = 'oidc';
+      this.expectedPayload = {
+        redirect_uri: 'http://localhost:7357/ui/vault/auth/custom-oidc/oidc/callback',
+        role: 'some-dev',
+      };
+      this.server.post('/auth/custom-oidc/oidc/auth_url', (schema, req) => {
+        this.assertAuthRequest(assert, req, this.expectedPayload);
+        req.passthrough();
+      });
+
+      await this.fillAndLogIn();
+    });
+
+    test('okta', async function (assert) {
+      assert.expect(2);
+      this.authType = 'okta';
+      this.expectedPayload = { password: 'some-password' };
+      this.server.post('/auth/custom-okta/login/matilda', (schema, req) => {
+        this.assertAuthRequest(assert, req, this.expectedPayload);
+        req.passthrough();
+      });
+
+      await this.fillAndLogIn();
+    });
+
+    test('radius', async function (assert) {
+      assert.expect(3);
+      this.authType = 'radius';
+      this.expectedPayload = { username: 'matilda', password: 'some-password' };
+      this.server.post('/auth/custom-radius/login', (schema, req) => {
+        this.assertAuthRequest(assert, req, this.expectedPayload);
+        req.passthrough();
+      });
+
+      await this.fillAndLogIn();
+    });
+
+    test('userpass', async function (assert) {
+      assert.expect(2);
+      this.authType = 'userpass';
+      this.expectedPayload = { password: 'some-password' };
+      this.server.post('/auth/custom-userpass/login/matilda', (schema, req) => {
+        this.assertAuthRequest(assert, req, this.expectedPayload);
+        req.passthrough();
+      });
+
+      await this.fillAndLogIn();
+    });
+
+    test('enterprise: saml', async function (assert) {
+      assert.expect(2);
+      this.authType = 'saml';
+      this.expectedPayload = { role: 'some-dev' };
+      this.server.post('/auth/custom-saml/sso_service_url', (schema, req) => {
+        this.assertAuthRequest(assert, req, this.expectedPayload);
+        req.passthrough();
+      });
+
+      await this.fillAndLogIn();
+    });
   });
 
   test('it does not call renew-self after successful login with non-renewable token', async function (assert) {
