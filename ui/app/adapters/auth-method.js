@@ -83,12 +83,6 @@ export default ApplicationAdapter.extend({
     return this.url(snapshot.id);
   },
 
-  pollSAMLToken(path, token_poll_id, client_verifier) {
-    return this.ajax(`/v1/auth/${encodePath(path)}/token`, 'PUT', {
-      data: { token_poll_id, client_verifier },
-    });
-  },
-
   tune(path, data) {
     const url = `${this.buildURL()}/${this.pathForType()}/${encodePath(path)}tune`;
     return this.ajax(url, 'POST', { data });
