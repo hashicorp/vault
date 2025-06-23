@@ -12,6 +12,7 @@ import {
   triggerKeyEvent,
   find,
   waitFor,
+  waitUntil,
 } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -138,6 +139,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     assert.dom(GENERAL.inputByAttr('namespace')).hasAttribute('placeholder', '/ (root)');
     await fillIn(GENERAL.inputByAttr('namespace'), '/foo/bar ');
     const encodedNamespace = encodeURIComponent('foo/bar');
+    await waitUntil(() => currentURL() === `/vault/auth?namespace=${encodedNamespace}`);
     assert.strictEqual(
       currentURL(),
       `/vault/auth?namespace=${encodedNamespace}`,
@@ -170,6 +172,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await click(GENERAL.menuTrigger);
     await click(GENERAL.menuItem('delete'));
     await click(GENERAL.confirmButton);
+
     assert.strictEqual(
       currentURL(),
       `/vault/access/namespaces?page=1&pageFilter=${namespace}`,
