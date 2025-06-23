@@ -227,15 +227,17 @@ func (s *gRPCSystemViewClient) GenerateIdentityToken(ctx context.Context, req *p
 	}, nil
 }
 
-func (s *gRPCSystemViewClient) GetRotationInformation(ctx context.Context, req *rotation.RotationInfoRequest) (time.Time, error) {
+func (s *gRPCSystemViewClient) GetRotationInformation(ctx context.Context, req *rotation.RotationInfoRequest) (*rotation.RotationInfoResponse, error) {
 	resp, err := s.client.GetRotationInformation(ctx, &pb.RotationInfoRequest{
 		MountPath: req.ReqPath,
 	})
 	if err != nil {
-		return time.Time{}, err
+		return nil, err
 	}
 
-	return time.Unix(resp.Timestamp, 0), nil
+	return &rotation.RotationInfoResponse{
+		NextRotationTime: time.Unix(resp.Timestamp, 0),
+	}, nil
 }
 
 func (s *gRPCSystemViewClient) RegisterRotationJob(ctx context.Context, req *rotation.RotationJobConfigureRequest) (id string, retErr error) {
@@ -484,13 +486,13 @@ func (s *gRPCSystemViewServer) GetRotationInformation(ctx context.Context, req *
 		ReqPath: req.MountPath,
 	}
 
-	t, err := s.impl.GetRotationInformation(ctx, cfgReq)
+	resp, err := s.impl.GetRotationInformation(ctx, cfgReq)
 	if err != nil {
 		return &pb.RotationInfoReply{}, status.Error(codes.Internal, err.Error())
 	}
 
 	return &pb.RotationInfoReply{
-		Timestamp: t.Unix(),
+		Timestamp: resp.NextRotationTime.Unix(),
 	}, nil
 }
 

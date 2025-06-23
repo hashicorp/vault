@@ -9,7 +9,6 @@ package vault
 
 import (
 	"context"
-	"time"
 
 	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
 	"github.com/hashicorp/vault/sdk/rotation"
@@ -25,8 +24,8 @@ func (c *Core) stopRotation() error {
 	return nil
 }
 
-func (c *Core) GetRotationInformation(_ context.Context, _ string, _ *rotation.RotationInfoRequest) (time.Time, error) {
-	return time.Time{}, automatedrotationutil.ErrRotationManagerUnsupported
+func (c *Core) GetRotationInformation(_ context.Context, _ string, _ *rotation.RotationInfoRequest) (*rotation.RotationInfoResponse, error) {
+	return nil, automatedrotationutil.ErrRotationManagerUnsupported
 }
 
 func (c *Core) RegisterRotationJob(_ context.Context, _ *rotation.RotationJob) (string, error) {

@@ -103,7 +103,7 @@ type SystemView interface {
 	GenerateIdentityToken(ctx context.Context, req *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error)
 
 	// GetRotationInformation gets rotation information
-	GetRotationInformation(ctx context.Context, req *rotation.RotationInfoRequest) (time.Time, error)
+	GetRotationInformation(ctx context.Context, req *rotation.RotationInfoRequest) (*rotation.RotationInfoResponse, error)
 
 	// RegisterRotationJob returns a rotation ID after registering a
 	// rotation job for the requesting plugin.
@@ -300,8 +300,8 @@ func (d StaticSystemView) GenerateIdentityToken(_ context.Context, _ *pluginutil
 	return nil, errors.New("GenerateIdentityToken is not implemented in StaticSystemView")
 }
 
-func (d StaticSystemView) GetRotationInformation(ctx context.Context, req *rotation.RotationInfoRequest) (time.Time, error) {
-	return time.Time{}, errors.New("GetRotationInformation is not implemented in StaticSystemView")
+func (d StaticSystemView) GetRotationInformation(ctx context.Context, req *rotation.RotationInfoRequest) (*rotation.RotationInfoResponse, error) {
+	return nil, errors.New("GetRotationInformation is not implemented in StaticSystemView")
 }
 
 func (d StaticSystemView) APILockShouldBlockRequest() (bool, error) {

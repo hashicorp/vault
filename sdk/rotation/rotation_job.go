@@ -53,6 +53,10 @@ type RotationInfoRequest struct {
 	ReqPath string
 }
 
+type RotationInfoResponse struct {
+	NextRotationTime time.Time
+}
+
 func (s *RotationJob) Validate() error {
 	if s.MountPoint == "" {
 		return fmt.Errorf("MountPoint is required")

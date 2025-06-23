@@ -355,10 +355,10 @@ func (d dynamicSystemView) GenerateIdentityToken(ctx context.Context, req *plugi
 	}, nil
 }
 
-func (d dynamicSystemView) GetRotationInformation(ctx context.Context, req *rotation.RotationInfoRequest) (time.Time, error) {
+func (d dynamicSystemView) GetRotationInformation(ctx context.Context, req *rotation.RotationInfoRequest) (*rotation.RotationInfoResponse, error) {
 	mountEntry := d.mountEntry
 	if mountEntry == nil {
-		return time.Time{}, fmt.Errorf("no mount entry")
+		return nil, fmt.Errorf("no mount entry")
 	}
 	nsCtx := namespace.ContextWithNamespace(ctx, mountEntry.Namespace())
 
