@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { fillIn, render, typeIn } from '@ember/test-helpers';
+import { click, fillIn, render, typeIn, waitFor, waitUntil } from '@ember/test-helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { hbs } from 'ember-cli-htmlbars';
@@ -18,6 +18,9 @@ const SELECTORS = {
   searchInput: 'input.operation-filter-input',
   apiPathBlock: '.opblock-post',
   operationId: '.opblock-summary-operation-id',
+  controlArrowButton: '.opblock-control-arrow',
+  copyButton: '.copy-to-clipboard',
+  tryItOutButton: '.try-out button',
 };
 
 module('Integration | Component | open-api-explorer | swagger-ui', function (hooks) {
@@ -73,6 +76,62 @@ module('Integration | Component | open-api-explorer | swagger-ui', function (hoo
     await this.renderComponent();
 
     assert.dom(SELECTORS.operationId).doesNotExist('operation ids are hidden in production environment');
+
+    envStub.restore();
+  });
+
+  test('it contains a11y fixes', async function (assert) {
+    const envStub = sinon.stub(config, 'environment').value('development');
+
+    await this.renderComponent();
+
+    await waitUntil(() => {
+      return document.querySelector(SELECTORS.controlArrowButton).getAttribute('tabindex') === '0';
+    });
+    assert.dom(SELECTORS.controlArrowButton).hasAttribute('tabindex', '0');
+
+    await waitUntil(() => {
+      return document.querySelector(SELECTORS.copyButton).getAttribute('tabindex') === '0';
+    });
+    assert.dom(SELECTORS.copyButton).hasAttribute('tabindex', '0');
+
+    await click(SELECTORS.controlArrowButton);
+    await waitFor(SELECTORS.tryItOutButton);
+    assert
+      .dom(SELECTORS.tryItOutButton)
+      .hasAttribute(
+        'aria-description',
+        'Caution: This will make requests to the Vault server on your behalf which may create or delete items.'
+      );
+
+    envStub.restore();
+  });
+
+  test('it retains a11y fixes after filtering', async function (assert) {
+    const envStub = sinon.stub(config, 'environment').value('production');
+
+    await this.renderComponent();
+    await fillIn(SELECTORS.searchInput, 'create');
+    await typeIn(SELECTORS.searchInput, 'create');
+
+    await waitUntil(() => {
+      return document.querySelector(SELECTORS.controlArrowButton).getAttribute('tabindex') === '0';
+    });
+    assert.dom(SELECTORS.controlArrowButton).hasAttribute('tabindex', '0');
+
+    await waitUntil(() => {
+      return document.querySelector(SELECTORS.copyButton).getAttribute('tabindex') === '0';
+    });
+    assert.dom(SELECTORS.copyButton).hasAttribute('tabindex', '0');
+
+    await click(SELECTORS.controlArrowButton);
+    await waitFor(SELECTORS.tryItOutButton);
+    assert
+      .dom(SELECTORS.tryItOutButton)
+      .hasAttribute(
+        'aria-description',
+        'Caution: This will make requests to the Vault server on your behalf which may create or delete items.'
+      );
 
     envStub.restore();
   });

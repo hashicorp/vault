@@ -163,16 +163,8 @@ export default class SwaggerUiComponent extends Component {
 
   updateTryItOutButtonDescription() {
     document.querySelectorAll('.try-out button').forEach((el) => {
-      let warning =
+      const warning =
         'Caution: This will make requests to the Vault server on your behalf which may create or delete items.';
-      const opblock = el.closest('.opblock');
-      if (opblock) {
-        const operationId = opblock.querySelector('.opblock-summary-operation-id')?.textContent?.trim();
-        if (operationId)
-        {
-          warning += ` Operation: ${operationId}`
-        }
-      }
       
       el.setAttribute('aria-description', warning)
     })
