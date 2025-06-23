@@ -3,13 +3,19 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import type { MountsEnableSecretsEngineRequest } from '@hashicorp/vault-client-typescript';
+import type {
+  MountsEnableSecretsEngineRequest,
+  AwsConfigureRootIamCredentialsRequest,
+  AwsConfigureLeaseRequest,
+  AzureConfigureRequest,
+  GoogleCloudConfigureRequest,
+} from '@hashicorp/vault-client-typescript';
 
 export type EngineConfig = {
-  forceNoCache: boolean;
-  listingVisibility: string;
-  defaultLeaseTtl: number;
-  maxLeaseTtl: number;
+  forceNoCache?: boolean;
+  listingVisibility?: string | boolean;
+  defaultLeaseTtl?: number;
+  maxLeaseTtl?: number;
   allowedManagedKeys?: string[];
   auditNonHmacRequestKeys?: string[];
   auditNonHmacResponseKeys?: string[];
@@ -91,3 +97,11 @@ export type SecretsEngineFormData = MountsEnableSecretsEngineRequest & {
     deleteVersionAfter?: string;
   };
 };
+
+type Issuer = {
+  issuer?: string;
+};
+
+export type AwsConfigFormData = AwsConfigureRootIamCredentialsRequest & AwsConfigureLeaseRequest & Issuer;
+export type AzureConfigFormData = AzureConfigureRequest & Issuer;
+export type GcpConfigFormData = GoogleCloudConfigureRequest & Issuer;

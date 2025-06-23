@@ -9,13 +9,14 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
-import { methods } from 'vault/helpers/mountable-auth-methods';
-import { isAddonEngine, allEngines } from 'vault/helpers/mountable-secret-engines';
+import { presence } from 'vault/utils/forms/validators';
+import { filterEnginesByMountCategory, isAddonEngine } from 'vault/utils/all-engines-metadata';
+import { assert } from '@ember/debug';
 import { ResponseError } from '@hashicorp/vault-client-typescript';
+import AdapterError from '@ember-data/adapter/error';
 
 import type FlashMessageService from 'vault/services/flash-messages';
 import type Store from '@ember-data/store';
-import type AdapterError from '@ember-data/adapter/error';
 import type { AuthEnableModel } from 'vault/routes/vault/cluster/settings/auth/enable';
 import type SecretsEngineForm from 'vault/forms/secrets/engine';
 import type CapabilitiesService from 'vault/services/capabilities';
@@ -27,10 +28,10 @@ import type { ApiError } from '@ember-data/adapter/error';
  * The `MountBackendForm` is used to mount either a secret or auth backend.
  *
  * @example ```js
- *   <MountBackendForm @mountType="secret" @onMountSuccess={{this.onMountSuccess}} />```
+ *   <MountBackendForm @mountCategory="secret" @onMountSuccess={{this.onMountSuccess}} />```
  *
  * @param {function} onMountSuccess - A function that transitions once the Mount has been successfully posted.
- * @param {string} [mountType=auth] - The type of backend we want to mount.
+ * @param {string} mountCategory - The type of engine to mount, either 'secret' or 'auth'.
  *
  */
 
@@ -38,7 +39,7 @@ type MountModel = SecretsEngineForm | AuthEnableModel;
 
 interface Args {
   mountModel: MountModel;
-  mountType: 'secret' | 'auth';
+  mountCategory: 'secret' | 'auth';
   onMountSuccess: (type: string, path: string, useEngineRoute: boolean) => void;
 }
 
@@ -54,41 +55,47 @@ export default class MountBackendForm extends Component<Args> {
 
   @tracked errorMessage: string | string[] = '';
 
+  constructor(owner: unknown, args: Args) {
+    super(owner, args);
+    assert(`@mountCategory is required. Must be "auth" or "secret".`, presence(this.args.mountCategory));
+  }
+
   willDestroy() {
     // components are torn down after store is unloaded and will cause an error if attempt to unload record
     const noTeardown = this.store && !this.store.isDestroying;
-    if (noTeardown && this.args.mountType === 'auth' && this.args?.mountModel?.isNew) {
+    if (noTeardown && this.args.mountCategory === 'auth' && this.args?.mountModel?.isNew) {
       this.args.mountModel.unloadRecord();
     }
     super.willDestroy();
   }
 
-  checkPathChange(type: string) {
-    if (!type) return;
+  checkPathChange(backendType: string) {
+    if (!backendType) return;
     const mount = this.args.mountModel;
     const currentPath = mount.path;
-    const mountTypes =
-      this.args.mountType === 'secret'
-        ? allEngines().map((engine) => engine.type)
-        : methods().map((auth) => auth.type);
+    // mountCategory is usually 'secret' or 'auth', but sometimes an empty string is passed in (like when we click the cancel button).
+    // In these cases, we should default to returning auth methods.
+    const mountsByType = filterEnginesByMountCategory({
+      mountCategory: this.args.mountCategory ?? 'auth',
+      isEnterprise: true,
+    }).map((engine) => engine.type);
     // if the current path has not been altered by user,
     // change it here to match the new type
-    if (!currentPath || mountTypes.includes(currentPath)) {
-      mount.path = type;
+    if (!currentPath || mountsByType.includes(currentPath)) {
+      mount.path = backendType;
     }
   }
 
   typeChangeSideEffect(type: string) {
-    if (this.args.mountType === 'secret') {
-      // If type PKI, set max lease to ~10years
-      this.args.mountModel.config.maxLeaseTtl = type === 'pki' ? '3650d' : 0;
-    }
+    if (this.args.mountCategory !== 'secret') return;
+    // If type PKI, set max lease to ~10years
+    this.args.mountModel.config.maxLeaseTtl = type === 'pki' ? '3650d' : 0;
   }
 
   checkModelValidity(model: MountModel) {
-    const { mountType } = this.args;
+    const { mountCategory } = this.args;
     const { isValid, state, invalidFormMessage, data } =
-      mountType === 'secret' ? model.toJSON() : model.validate();
+      mountCategory === 'secret' ? model.toJSON() : model.validate();
     this.modelValidations = state;
     this.invalidFormAlert = invalidFormMessage;
     return { isValid, data };
@@ -97,8 +104,8 @@ export default class MountBackendForm extends Component<Args> {
   checkModelWarnings() {
     // check for warnings on change
     // since we only show errors on submit we need to clear those out and only send warning state
-    const { mountType, mountModel } = this.args;
-    const { state } = mountType === 'secret' ? mountModel.toJSON() : mountModel.validate();
+    const { mountCategory, mountModel } = this.args;
+    const { state } = mountCategory === 'secret' ? mountModel.toJSON() : mountModel.validate();
     for (const key in state) {
       state[key].errors = [];
     }
@@ -152,7 +159,7 @@ export default class MountBackendForm extends Component<Args> {
   @waitFor
   *mountBackend(event: Event) {
     event.preventDefault();
-    const { mountModel, mountType } = this.args;
+    const { mountModel, mountCategory } = this.args;
     const { type, path } = mountModel;
     // only submit form if validations pass
     const { isValid, data: formData } = this.checkModelValidity(mountModel);
@@ -161,7 +168,7 @@ export default class MountBackendForm extends Component<Args> {
     }
 
     try {
-      if (mountType === 'secret') {
+      if (mountCategory === 'secret') {
         yield this.api.sys.mountsEnableSecretsEngine(path, formData);
         yield this.saveKvConfig(path, formData);
       } else {
@@ -169,7 +176,7 @@ export default class MountBackendForm extends Component<Args> {
       }
       this.flashMessages.success(
         `Successfully mounted the ${type} ${
-          this.args.mountType === 'secret' ? 'secrets engine' : 'auth method'
+          this.args.mountCategory === 'secret' ? 'secrets engine' : 'auth method'
         } at ${path}.`
       );
       // check whether to use the Ember engine route

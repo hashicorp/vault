@@ -10,11 +10,11 @@ import { commonFields, getPayload } from './shared';
 
 import type { SystemWriteSyncDestinationsVercelProjectNameRequest } from '@hashicorp/vault-client-typescript';
 
-type VercelProjectFormData = Partial<SystemWriteSyncDestinationsVercelProjectNameRequest>;
+type VercelProjectFormData = SystemWriteSyncDestinationsVercelProjectNameRequest & {
+  name: string;
+};
 
-export default class GcpSmForm extends Form {
-  declare data: VercelProjectFormData;
-
+export default class VercelProjectForm extends Form<VercelProjectFormData> {
   formFieldGroups = [
     new FormFieldGroup('default', [
       commonFields.name,
@@ -45,6 +45,7 @@ export default class GcpSmForm extends Form {
 
   toJSON() {
     const formState = super.toJSON();
-    return { ...formState, data: getPayload('vercel-project', this.data, this.isNew) };
+    const data = getPayload<VercelProjectFormData>('vercel-project', this.data, this.isNew);
+    return { ...formState, data };
   }
 }

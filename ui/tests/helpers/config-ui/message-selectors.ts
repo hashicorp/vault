@@ -21,5 +21,4 @@ export const CUSTOM_MESSAGES = {
   alertAction: (name: string) => `[data-test-custom-alert-action="${name}"]`,
   badge: (name: string) => `[data-test-badge="${name}"]`,
   tab: (name: string) => `[data-test-custom-messages-tab="${name}"]`,
-  listItem: (name: string) => `[data-test-list-item="${name}"]`,
 };
