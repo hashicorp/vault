@@ -24,6 +24,7 @@ module('Integration | Component | auth | form template', function (hooks) {
   hooks.beforeEach(function () {
     window.localStorage.clear();
     this.version = this.owner.lookup('service:version');
+    this.router = this.owner.lookup('service:router');
     this.cluster = { id: '1' };
 
     this.alternateView = null;
@@ -245,6 +246,10 @@ module('Integration | Component | auth | form template', function (hooks) {
 
       await this.renderComponent();
       for (const authType of authMethodTypes) {
+        let stub;
+        if (['oidc', 'jwt'].includes(authType)) {
+          stub = sinon.stub(this.router, 'urlFor').returns('123-example.com');
+        }
         const loginData = AUTH_METHOD_LOGIN_DATA[authType];
 
         const fields = Object.keys(loginData);
@@ -268,6 +273,10 @@ module('Integration | Component | auth | form template', function (hooks) {
         fields.forEach((field) => {
           assert.dom(GENERAL.inputByAttr(field)).exists(`${authType}: ${field} input renders`);
         });
+
+        if (stub) {
+          stub.restore();
+        }
       }
     });
 
@@ -288,9 +297,7 @@ module('Integration | Component | auth | form template', function (hooks) {
   // in the corresponding the Auth::Form::<Type> integration tests
   module('oidc-jwt', function (hooks) {
     hooks.beforeEach(async function () {
-      this.store = this.owner.lookup('service:store');
-      this.routerStub = (path) =>
-        sinon.stub(this.owner.lookup('service:router'), 'urlFor').returns(`/auth/${path}/oidc/callback`);
+      this.routerStub = (path) => sinon.stub(this.router, 'urlFor').returns(`/auth/${path}/oidc/callback`);
     });
 
     test('it re-requests the auth_url when authType changes', async function (assert) {

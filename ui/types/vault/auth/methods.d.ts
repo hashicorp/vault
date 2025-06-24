@@ -44,6 +44,9 @@ export interface GithubLoginApiResponse extends ApiResponse {
     metadata: { org: string; username: string };
   };
 }
+export interface JwtOidcLoginApiResponse extends ApiResponse {
+  auth: AuthResponseAuthKey;
+}
 export interface OidcApiResponse extends ApiResponse {
   auth: AuthResponseData['auth'] & {
     client_token: string;
