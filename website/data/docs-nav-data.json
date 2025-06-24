@@ -157,15 +157,6 @@
             "path": "concepts/integrated-storage/autopilot"
           },
           {
-            "title": "Item Recovery",
-            "path": "concepts/integrated-storage/snapshot-recover",
-            "badge": {
-              "text": "ENT",
-              "type": "filled",
-              "color": "neutral"
-            }
-          },
-          {
             "title": "Migration checklist",
             "path": "concepts/integrated-storage/migration-checklist"
           },
@@ -1028,6 +1019,11 @@
         },
         {
           "title": "Recover a secret",
+          "badge": {
+            "text": "ENT",
+            "type": "filled",
+            "color": "neutral"
+          },
           "routes": [
             {
               "title": "Overview",

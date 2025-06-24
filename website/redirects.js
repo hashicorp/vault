@@ -309,5 +309,16 @@ module.exports = [
     source: '/vault/docs/enterprise/license/faq',
     destination: '/vault/docs/license',
     permanent: true,
+  },
+  {
+    source: '/vault/docs/enterprise/automated-integrated-storage-snapshots',
+    destination: '/vault/docs/sysadmin/snapshots/automation-overview',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/v:version(1\.(?:7|8|9|10|11|12|13|14|15|16|17|18|19)\.x)/sysadmin/snapshots/automation-overview',
+    destination: '/vault/docs/:version/enterprise/automated-integrated-storage-snapshots',
+    permanent: true,
   }
+  
 ]
