@@ -990,6 +990,10 @@
     "title": "System admin",
     "routes": [
       {
+        "title": "TBD",
+        "path": "sysadmin"
+      },
+      {
         "title": "Manage snapshots",
         "routes": [
         {
@@ -1024,7 +1028,20 @@
         },
         {
           "title": "Recover a secret",
-          "path": "sysadmin/snapshots/recover-a-secret"
+          "routes": [
+            {
+              "title": "Overview",
+              "path": "sysadmin/snapshots/recover-a-secret"
+            },
+            {
+              "title": "Restore to a replicated cluster",
+              "path": "sysadmin/snapshots/recover-a-secret/replicated-cluster"
+            },
+            {
+              "title": "Restore to an unreplicated cluster",
+              "path": "sysadmin/snapshots/recover-a-secret/single-cluster"
+            }
+          ]
         }
         ]
       }

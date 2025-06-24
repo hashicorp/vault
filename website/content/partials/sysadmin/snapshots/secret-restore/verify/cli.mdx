@@ -1,0 +1,11 @@
+To verify secret recovery, read the secret from the expected path. For example,
+if you recovered a secret from a `kv` plugin at `telemetry-systems/api-key`:
+
+```shell-session
+$ vault kv get telemetry-systems/api-key
+
+=== Data ===
+Key    Value
+---    -----
+key    9C016BB3-F574-4A24-B8A7-8CE1F1CE2128
+```
