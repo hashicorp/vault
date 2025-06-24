@@ -1,0 +1,159 @@
+---
+layout: docs
+page_title: Important changes
+description: >-
+  Deprecations, important or breaking changes, and remediation recommendations
+  for upgrading Vault.
+
+valid_change_types: >-
+  - Bug --> must include workaround/recommendation info
+  - New default
+  - New behavior
+  - Breaking --> must include workaround/recommendation info
+  - Change in support
+---
+
+# Important changes
+
+**Last updated**: 2025-06-12
+
+Always review important or breaking changes and remediation recommendations
+before upgrading Vault.
+
+## New behavior
+
+### Key pair authentication for Snowflake DB secrets engine
+
+| Change       | Affected version | Affected deployments
+| ------------ | ---------------- | --------------------
+| New behavior | 1.20.0           | any
+
+As of version 1.20.0, Vault supports
+[Snowflake database authentication using key pairs](/vault/api-docs/secret/databases#configure-connection)
+as an alternative to password authentication, which Snowflake plans to disable
+in November 2025. Vault support for password authentication with Snowflake is
+now deprecated and will be removed in a future release.
+
+Vault currently does not support rotate root for key pairs. To manually rotate key pairs, users can:
+
+  - update the root configuration in Vault with the new private key
+  - update the public key associated with the user in Snowflake
+
+For more information on rotating key pairs, please refer
+to the official [Snowflake documentation](https://docs.snowflake.com/en/user-guide/key-pair-auth#configuring-key-pair-rotation).
+
+## Breaking changes
+
+### Breaking configuration change for disable_mlock ((#disable_mlock-config))
+
+| Change       | Affected version | Fixed version
+| ------------ | ---------------- | --------------------
+| Breaking     | 1.20.0           | N/A
+
+In Vault 1.20.0 `disable_mlock` is a required configuration setting for
+clusters using *integrated storage*. This means that if you are not explicitly
+setting a value for `disable_mlock`, the following changes must be made prior
+to upgrading.
+
+<Warning>
+
+Clusters missing this config value will fail to start after the upgrade to 1.20.0.
+
+</Warning>
+
+Before upgrading to Vault 1.20.0, administrators must explicitly add a value for
+`disable_mlock` to the outermost level of the server configuration. Refer to the [documentation](/vault/docs/configuration#parameters).
+This must be done for all server nodes. Prior to Vault 1.20, the default setting
+for `disable_mlock` was false. Therefore, if you do not currently have a value
+set for `disable_mlock`, you are using the default setting. If you wish to
+maintain this behavior, you will need to explicitly set
+`disable_mlock = false` prior to upgrade.
+
+For clusters that already set a value for `disable_mlock`, no change is required.
+
+| Cluster Type               | `disable_mlock` required | Note
+|----------------------------|--------------------------|-----
+| Primary                    | Yes                      | value depends on cluster specifics. [See docs](/vault/docs/configuration#disable_mlock)
+| Performance Secondary      | Yes                      | value depends on cluster specifics. [See docs](/vault/docs/configuration#disable_mlock)
+| DR Secondary               | Yes                      | value depends on cluster specifics. [See docs](/vault/docs/configuration#disable_mlock)
+
+
+#### Additional Considerations
+
+- **Autopilot** - New 1.20.0 nodes are added to the cluster until there is a
+  quorum of upgraded nodes. Each of these new nodes will need to have a value
+  for `disable_mlock` set.
+
+- **Rolling upgrades** - Standby nodes are stopped and upgraded one at a time.
+  These node configurations will need to be updated before restarting the vault
+  process on the node.
+
+- **`dev` mode** - If no config is provided, dev mode will start as usual. If a
+  config is provided, it must have a value for `disable_mlock`.
+
+
+### Rekey cancellations use a nonce ((#rekey-cancel-nonce))
+
+| Change       | Affected version                          | Fixed version
+| ------------ | ----------------------------------------- | --------------------
+| Breaking     | 1.20.0, 1.19.6, 1.18.11, 1.17.18, 1.16.21 | N/A
+
+Vault 1.20.0, 1.19.6, 1.18.11, 1.17.18, and 1.16.21 require a nonce to cancel
+[rekey](/vault/api-docs/system/rekey) and
+[rekey recovery key](/vault/api-docs/system/rekey-recovery-key) operations
+within 10 minutes of initializing a rekey request. Cancellation requests after
+the 10 minute window do not require a nonce and succeed as expected.
+
+#### Recommendation
+
+To cancel a rekey operation, provide the nonce value from the
+`/sys/rekey/init` or `sys/rekey-recovery-key/init` response.
+
+
+## Bugs
+
+None.
+
+
+## Known issues
+
+### Duplicate unseal/seal wrap HSM keys ((#hsm-keys)) <EnterpriseAlert inline="true" />
+
+| Change      | Status | Affected version                       | Fixed version
+| ----------- | ------ | -------------------------------------- | --------------------
+| Known issue | Open   | 1.20.x, 1.19.x, 1.18.x, 1.17.x, 1.16.x | None
+
+In HSM-HA configurations migrating from Shamir to HSM-backed unseal/seal wraps,
+Vault may create duplicate HSM keys when you migrate from Shamir to an
+HSM-backed unseal configuration for high availability (HA) HSM deployments. Key
+duplication can happen even after a seal migration to HSM that initially
+appears successful.
+
+Duplicate HSM keys can cause the following errors:
+
+- intermittent read failures with errors such as `CKR_SIGNATURE_INVALID` and `CKR_KEY_HANDLE_INVALID` for
+[seal-wrapped values](/vault/docs/enterprise/sealwrap#wrapped-parameters).
+- nodes fail to unseal after a restart with errors such as `CKR_DATA_INVALID`.
+
+#### Recommendation
+
+Always run Vault with `generate_key = false` and manually create all required
+keys within the HSM during the setup process.
+
+### Duplicate LDAP Password Rotations on Standby Node Check-In ((#ldap-checkin))
+
+| Change       | Affected version                          | Fixed version
+| ------------ | ----------------------------------------- | --------------------
+| Known issue  | 1.12.0+                                   | N/A
+
+Vault check-ins for LDAP service accounts performed on a performance standby node or a node in a
+performance replication secondary cluster can trigger duplicate password changes on the LDAP server.
+Duplication occurs because the LDAP client on the local node successfully modifies the password before Vault
+forwards the check-in request to the active node, which then performs a second password update.
+While users still receive the latest password, it may lead to unexpected LDAP activity and cause
+confusion interpreting audit logs.
+
+### Recommendation:
+
+Send check-in requests directly to the active node of the primary cluster to prevent duplicate password
+rotations on the LDAP server.

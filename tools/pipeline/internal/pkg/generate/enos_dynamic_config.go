@@ -135,7 +135,7 @@ func (e *EnosDynamicConfigReq) getSampleAttrs(ctx context.Context) (*SampleAttrs
 		// Current distro defaults
 		DistroVersionAmzn:   []string{"2023"},
 		DistroVersionLeap:   []string{"15.6"},
-		DistroVersionRhel:   []string{"8.10", "9.4"},
+		DistroVersionRhel:   []string{"8.10", "9.5"},
 		DistroVersionSles:   []string{"15.6"},
 		DistroVersionUbuntu: []string{"20.04", "24.04"},
 	}

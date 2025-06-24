@@ -10,7 +10,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import backendsPage from 'vault/tests/pages/secrets/backends';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 
 module('Acceptance | alicloud/enable', function (hooks) {
@@ -18,7 +18,7 @@ module('Acceptance | alicloud/enable', function (hooks) {
 
   hooks.beforeEach(function () {
     this.uid = uuidv4();
-    return authPage.login();
+    return login();
   });
 
   test('enable alicloud', async function (assert) {

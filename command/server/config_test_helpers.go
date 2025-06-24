@@ -45,6 +45,7 @@ func testConfigRaftRetryJoin(t *testing.T) {
 		{"auto_join": "provider=packet address_type=public_v6 auth_token=token project=uuid url=https://[2001:db8::2:1]"},
 		{"auto_join": "provider=vsphere category_name=consul-role host=https://[2001:db8::2:1] insecure_ssl=false password=bar tag_name=consul-server user=foo"},
 		{"auto_join": "provider=k8s label_selector=\"app.kubernetes.io/name=vault, component=server\" namespace=vault"},
+		{"auto_join": "provider=k8s label_selector=\"app.kubernetes.io/name=vault1,component=server\" namespace=vault1"},
 	}
 	for _, cfg := range []string{
 		"attr",
@@ -184,6 +185,9 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 		MaxLeaseTTLRaw:     "10h",
 		DefaultLeaseTTL:    10 * time.Hour,
 		DefaultLeaseTTLRaw: "10h",
+
+		RemoveIrrevocableLeaseAfter:    10 * 24 * time.Hour,
+		RemoveIrrevocableLeaseAfterRaw: "10d",
 
 		APIAddr:     "top_level_api_addr",
 		ClusterAddr: "top_level_cluster_addr",
@@ -491,6 +495,9 @@ func testLoadConfigFile(t *testing.T) {
 		DefaultLeaseTTL:    10 * time.Hour,
 		DefaultLeaseTTLRaw: "10h",
 
+		RemoveIrrevocableLeaseAfter:    10 * 24 * time.Hour,
+		RemoveIrrevocableLeaseAfterRaw: "10d",
+
 		EnableResponseHeaderHostname:      true,
 		EnableResponseHeaderHostnameRaw:   true,
 		EnableResponseHeaderRaftNodeID:    true,
@@ -600,6 +607,13 @@ func testUnknownFieldValidationHcl(t *testing.T) {
 	}
 }
 
+func testDuplicateKeyValidationHcl(t *testing.T) {
+	_, duplicate, err := LoadConfigFileCheckDuplicate("./test-fixtures/invalid_config_duplicate_key.hcl")
+	// TODO (HCL_DUP_KEYS_DEPRECATION): require error once deprecation is done
+	require.NoError(t, err)
+	require.True(t, duplicate)
+}
+
 // testConfigWithAdministrativeNamespaceJson tests that a config with a valid administrative namespace path is correctly validated and loaded.
 func testConfigWithAdministrativeNamespaceJson(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/config_with_valid_admin_ns.json")
@@ -685,17 +699,19 @@ func testLoadConfigFile_json(t *testing.T) {
 
 		ClusterCipherSuites: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
 
-		MaxLeaseTTL:          10 * time.Hour,
-		MaxLeaseTTLRaw:       "10h",
-		DefaultLeaseTTL:      10 * time.Hour,
-		DefaultLeaseTTLRaw:   "10h",
-		DisableCacheRaw:      interface{}(nil),
-		EnableUI:             true,
-		EnableUIRaw:          true,
-		EnableRawEndpoint:    true,
-		EnableRawEndpointRaw: true,
-		DisableSealWrap:      true,
-		DisableSealWrapRaw:   true,
+		MaxLeaseTTL:                    10 * time.Hour,
+		MaxLeaseTTLRaw:                 "10h",
+		DefaultLeaseTTL:                10 * time.Hour,
+		DefaultLeaseTTLRaw:             "10h",
+		RemoveIrrevocableLeaseAfter:    10 * 24 * time.Hour,
+		RemoveIrrevocableLeaseAfterRaw: "10d",
+		DisableCacheRaw:                interface{}(nil),
+		EnableUI:                       true,
+		EnableUIRaw:                    true,
+		EnableRawEndpoint:              true,
+		EnableRawEndpointRaw:           true,
+		DisableSealWrap:                true,
+		DisableSealWrapRaw:             true,
 	}
 
 	addExpectedEntConfig(expected, []string{})
@@ -874,10 +890,11 @@ func testConfig_Sanitized(t *testing.T) {
 			"add_lease_metrics_namespace_labels":     false,
 			"add_mount_point_rollback_metrics":       false,
 		},
-		"administrative_namespace_path": "admin/",
-		"imprecise_lease_role_tracking": false,
-		"enable_post_unseal_trace":      true,
-		"post_unseal_trace_directory":   "/tmp",
+		"administrative_namespace_path":  "admin/",
+		"imprecise_lease_role_tracking":  false,
+		"enable_post_unseal_trace":       true,
+		"post_unseal_trace_directory":    "/tmp",
+		"remove_irrevocable_lease_after": (30 * 24 * time.Hour) / time.Second,
 	}
 
 	addExpectedEntSanitizedConfig(expected, []string{"http"})
@@ -1597,6 +1614,9 @@ func testLoadConfigFileLeaseMetrics(t *testing.T) {
 		MaxLeaseTTLRaw:     "10h",
 		DefaultLeaseTTL:    10 * time.Hour,
 		DefaultLeaseTTLRaw: "10h",
+
+		RemoveIrrevocableLeaseAfter:    10 * 24 * time.Hour,
+		RemoveIrrevocableLeaseAfterRaw: "10d",
 	}
 
 	addExpectedEntConfig(expected, []string{})

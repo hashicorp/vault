@@ -12,6 +12,8 @@ import { dasherize } from 'vault/helpers/dasherize';
 import { assert } from '@ember/debug';
 import { addToArray } from 'vault/helpers/add-to-array';
 import { removeFromArray } from 'vault/helpers/remove-from-array';
+import { isEmpty } from '@ember/utils';
+import { get } from '@ember/object';
 
 /**
  * @module FormField
@@ -68,6 +70,8 @@ export default class FormFieldComponent extends Component {
   @tracked showToggleTextInput = false;
   @tracked toggleInputEnabled = false;
 
+  radioValue = (item) => (isEmpty(item.value) ? item : item.value);
+
   constructor() {
     super(...arguments);
     const { attr, model } = this.args;
@@ -76,7 +80,7 @@ export default class FormFieldComponent extends Component {
       'Form is attempting to modify an ID. Ember-data does not allow this.',
       valuePath.toLowerCase() !== 'id'
     );
-    const modelValue = model[valuePath];
+    const modelValue = get(model, valuePath);
     this.showToggleTextInput = !!modelValue;
     this.toggleInputEnabled = !!modelValue;
   }
@@ -92,12 +96,7 @@ export default class FormFieldComponent extends Component {
 
     // here we replicate the logic in the template, to make sure we don't change the order in which the "ifs" are evaluated
     if (options?.possibleValues?.length > 0) {
-      // we still have to migrate the `radio` use case
-      if (options?.editType === 'radio') {
-        return false;
-      } else {
-        return true;
-      }
+      return true;
     } else {
       if (type === 'number' || type === 'string') {
         if (options?.editType === 'password') {
@@ -113,8 +112,13 @@ export default class FormFieldComponent extends Component {
   }
 
   get hasRadioSubText() {
-    // for 'radio' editType, check to see if every of the possibleValues has a subText and label
+    // for 'radio' editType, check to see if any of the possibleValues has a subText
     return this.args?.attr?.options?.possibleValues?.any((v) => v.subText);
+  }
+
+  get hasRadioHelpText() {
+    // for 'radio' editType, check to see if any of the possibleValues has a helpText
+    return this.args?.attr?.options?.possibleValues?.any((v) => v.helpText);
   }
 
   get hideLabel() {
@@ -149,19 +153,23 @@ export default class FormFieldComponent extends Component {
     }
     return '';
   }
+
   // both the path to mutate on the model, and the path to read the value from
   get valuePath() {
     return this.args.attr.options?.fieldValue || this.args.attr.name;
   }
+
   get isReadOnly() {
     const readonly = this.args.attr.options?.readOnly || false;
     return readonly && this.args.mode === 'edit';
   }
+
   get validationError() {
     const validations = this.args.modelValidations || {};
     const state = validations[this.valuePath];
     return state && !state.isValid ? state.errors.join(' ') : null;
   }
+
   get validationWarning() {
     const validations = this.args.modelValidations || {};
     const state = validations[this.valuePath];
@@ -189,6 +197,22 @@ export default class FormFieldComponent extends Component {
   @action
   setAndBroadcastBool(trueVal, falseVal, event) {
     const valueToSet = event.target.checked === true ? trueVal : falseVal;
+    this.setAndBroadcast(valueToSet);
+  }
+  @action
+  setAndBroadcastChecklist(event) {
+    let updatedValue = this.args.model[this.valuePath];
+    if (event.target.checked) {
+      updatedValue = addToArray(updatedValue, event.target.value);
+    } else {
+      updatedValue = removeFromArray(updatedValue, event.target.value);
+    }
+    this.setAndBroadcast(updatedValue);
+  }
+  @action
+  setAndBroadcastRadio(item) {
+    // we want to read the original value instead of `event.target.value` so we have `false` (boolean) and not `"false"` (string)
+    const valueToSet = this.radioValue(item);
     this.setAndBroadcast(valueToSet);
   }
   @action
@@ -239,16 +263,5 @@ export default class FormFieldComponent extends Component {
   onChangeWithEvent(event) {
     const prop = event.target.type === 'checkbox' ? 'checked' : 'value';
     this.setAndBroadcast(event.target[prop]);
-  }
-
-  @action
-  handleChecklist(event) {
-    let updatedValue = this.args.model[this.valuePath];
-    if (event.target.checked) {
-      updatedValue = addToArray(updatedValue, event.target.value);
-    } else {
-      updatedValue = removeFromArray(updatedValue, event.target.value);
-    }
-    this.setAndBroadcast(updatedValue);
   }
 }

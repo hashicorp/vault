@@ -3,12 +3,11 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { resolve } from 'rsvp';
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import ControlGroupError from 'vault/lib/control-group-error';
 
-const SUPPORTED_DYNAMIC_BACKENDS = ['database', 'ssh', 'aws'];
+const SUPPORTED_DYNAMIC_BACKENDS = ['database', 'ssh', 'aws', 'totp'];
 
 export default Route.extend({
   templateName: 'vault/cluster/secrets/backend/credentials',
@@ -16,7 +15,7 @@ export default Route.extend({
   router: service(),
   store: service(),
 
-  beforeModel() {
+  beforeModel(transition) {
     const { id: backendPath, type: backendType } = this.modelFor('vault.cluster.secrets.backend');
     // redirect if the backend type does not support credentials
     if (!SUPPORTED_DYNAMIC_BACKENDS.includes(backendType)) {
@@ -25,6 +24,12 @@ export default Route.extend({
     // hydrate model if backend type is ssh
     if (backendType === 'ssh') {
       this.pathHelp.hydrateModel('ssh-otp-credential', backendPath);
+    }
+
+    // assign back button route
+    if (backendType === 'totp') {
+      const previousRoute = transition.from?.name ?? 'vault.cluster.secrets.backend.list-root';
+      this.set('backRoute', previousRoute);
     }
   },
 
@@ -64,25 +69,39 @@ export default Route.extend({
     }
   },
 
+  async getTotpKey(backend, keyName) {
+    try {
+      const key = await this.store.queryRecord('totp-key', { id: keyName, backend });
+      return key;
+    } catch (e) {
+      // swallow error, non-essential data
+      return;
+    }
+  },
+
   async model(params) {
     const role = params.secret;
     const { id: backendPath, type: backendType } = this.modelFor('vault.cluster.secrets.backend');
+    const backendData = { backendPath, backendType };
     const roleType = params.roleType;
-    let dbCred, awsRole;
+    let dbCred, awsRole, totpCodePeriod, backRoute;
     if (backendType === 'database') {
       dbCred = await this.getDatabaseCredential(backendPath, role, roleType);
     } else if (backendType === 'aws') {
       awsRole = await this.getAwsRole(backendPath, role);
+    } else if (backendType === 'totp') {
+      totpCodePeriod = (await this.getTotpKey(backendPath, role))?.period ?? 30;
+      backRoute = this.backRoute;
+      return { ...backendData, keyName: role, totpCodePeriod, backRoute };
     }
 
-    return resolve({
-      backendPath,
-      backendType,
+    return {
+      ...backendData,
       roleName: role,
       roleType,
       dbCred,
       awsRoleType: awsRole?.credentialType,
-    });
+    };
   },
 
   resetController(controller) {

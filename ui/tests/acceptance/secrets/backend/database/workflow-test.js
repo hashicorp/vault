@@ -12,26 +12,24 @@ import { create } from 'ember-cli-page-object';
 
 import databaseHandlers from 'vault/mirage/handlers/database';
 import { setupApplicationTest } from 'vault/tests/helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import flashMessage from 'vault/tests/pages/components/flash-message';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 const flash = create(flashMessage);
 
 const PAGE = {
   // GENERIC
   emptyStateTitle: '[data-test-empty-state-title]',
-  emptyStateAction: '[data-test-secret-create="connections"]',
   infoRow: '[data-test-component="info-table-row"]',
-  infoRowLabel: (label) => `[data-test-row-label="${label}"]`,
-  infoRowValue: (label) => `[data-test-row-value="${label}"]`,
-  infoRowValueDiv: (label) => `[data-test-value-div="${label}"]`,
   // CONNECTIONS
   rotateModal: '[data-test-db-connection-modal-title]',
   confirmRotate: '[data-test-enable-rotate-connection]',
   skipRotate: '[data-test-enable-connection]',
   // ROLES
-  addRole: '[data-test-secret-create]',
+  addRole: '[data-test-add-role]',
   roleSettingsSection: '[data-test-role-settings-section]',
   statementsSection: '[data-test-statements-section]',
   editRole: '[data-test-edit-link]',
@@ -39,18 +37,16 @@ const PAGE = {
 };
 
 const FORM = {
-  inputByAttr: (attr) => `[data-test-input="${attr}"]`,
   creationStatement: (idx = 0) =>
     `[data-test-input="creation_statements"] [data-test-string-list-input="${idx}"]`,
-  saveBtn: '[data-test-secret-save]',
 };
 
 async function fillOutConnection(name) {
-  await fillIn(FORM.inputByAttr('name'), name);
-  await fillIn(FORM.inputByAttr('plugin_name'), 'mysql-database-plugin');
-  await fillIn(FORM.inputByAttr('connection_url'), '{{username}}:{{password}}@tcp(127.0.0.1:33060)/');
-  await fillIn(FORM.inputByAttr('username'), 'admin');
-  await fillIn(FORM.inputByAttr('password'), 'very-secure');
+  await fillIn(GENERAL.inputByAttr('name'), name);
+  await fillIn(GENERAL.inputByAttr('plugin_name'), 'mysql-database-plugin');
+  await fillIn(GENERAL.inputByAttr('connection_url'), '{{username}}:{{password}}@tcp(127.0.0.1:33060)/');
+  await fillIn(GENERAL.inputByAttr('username'), 'admin');
+  await fillIn(GENERAL.inputByAttr('password'), 'very-secure');
 }
 
 /**
@@ -64,12 +60,12 @@ module('Acceptance | database workflow', function (hooks) {
     databaseHandlers(this.server);
     this.backend = `db-workflow-${uuidv4()}`;
     this.store = this.owner.lookup('service:store');
-    await authPage.login();
+    await login();
     await runCmd(mountEngineCmd('database', this.backend), false);
   });
 
   hooks.afterEach(async function () {
-    await authPage.login();
+    await login();
     return runCmd(deleteEngineCmd(this.backend));
   });
 
@@ -99,7 +95,7 @@ module('Acceptance | database workflow', function (hooks) {
       });
       await visit(`/vault/secrets/${this.backend}/overview`);
       assert.dom(PAGE.emptyStateTitle).hasText('Connect a database', 'empty state title is correct');
-      await click(PAGE.emptyStateAction);
+      await click(SES.createSecretLink);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/create?itemType=connection`,
@@ -108,7 +104,7 @@ module('Acceptance | database workflow', function (hooks) {
 
       // fill in connection details
       await fillOutConnection(`connect-${this.backend}`);
-      await click(FORM.saveBtn);
+      await click(GENERAL.saveButton);
 
       assert.dom(PAGE.rotateModal).hasText('Rotate your root credentials?', 'rotate modal is shown');
       await click(PAGE.confirmRotate);
@@ -120,12 +116,8 @@ module('Acceptance | database workflow', function (hooks) {
       );
       assert.dom(PAGE.infoRow).exists({ count: this.expectedRows.length }, 'correct number of rows');
       this.expectedRows.forEach(({ label, value }) => {
-        const valueSelector =
-          label === 'Rotate static roles immediately'
-            ? PAGE.infoRowValueDiv(label)
-            : PAGE.infoRowValue(label);
-        assert.dom(PAGE.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
-        assert.dom(valueSelector).hasText(value, `Value for ${label} is correct`);
+        assert.dom(GENERAL.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
+        assert.dom(GENERAL.infoRowValue(label)).hasText(value, `Value for ${label} is correct`);
       });
     });
     test('create without rotate', async function (assert) {
@@ -136,7 +128,7 @@ module('Acceptance | database workflow', function (hooks) {
       });
       await visit(`/vault/secrets/${this.backend}/overview`);
       assert.dom(PAGE.emptyStateTitle).hasText('Connect a database', 'empty state title is correct');
-      await click(PAGE.emptyStateAction);
+      await click(SES.createSecretLink);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/create?itemType=connection`,
@@ -145,7 +137,7 @@ module('Acceptance | database workflow', function (hooks) {
 
       // fill in connection details
       await fillOutConnection(`connect-${this.backend}`);
-      await click(FORM.saveBtn);
+      await click(GENERAL.saveButton);
 
       assert.dom(PAGE.rotateModal).hasText('Rotate your root credentials?', 'rotate modal is shown');
       await click(PAGE.skipRotate);
@@ -157,12 +149,8 @@ module('Acceptance | database workflow', function (hooks) {
       );
       assert.dom(PAGE.infoRow).exists({ count: this.expectedRows.length }, 'correct number of rows');
       this.expectedRows.forEach(({ label, value }) => {
-        const valueSelector =
-          label === 'Rotate static roles immediately'
-            ? PAGE.infoRowValueDiv(label)
-            : PAGE.infoRowValue(label);
-        assert.dom(PAGE.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
-        assert.dom(valueSelector).hasText(value, `Value for ${label} is correct`);
+        assert.dom(GENERAL.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
+        assert.dom(GENERAL.infoRowValue(label)).hasText(value, `Value for ${label} is correct`);
       });
     });
     test('create failure', async function (assert) {
@@ -174,7 +162,7 @@ module('Acceptance | database workflow', function (hooks) {
       });
       await visit(`/vault/secrets/${this.backend}/overview`);
       assert.dom(PAGE.emptyStateTitle).hasText('Connect a database', 'empty state title is correct');
-      await click(PAGE.emptyStateAction);
+      await click(SES.createSecretLink);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/create?itemType=connection`,
@@ -183,14 +171,14 @@ module('Acceptance | database workflow', function (hooks) {
 
       // fill in connection details
       await fillOutConnection(`bad-connection`);
-      await click(FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.strictEqual(
         flash.latestMessage,
         `error creating database object: error verifying - ping: Error 1045 (28000): Access denied for user 'admin'@'192.168.65.1' (using password: YES)`,
         'shows the error message from API'
       );
-      await fillIn(FORM.inputByAttr('name'), `connect-${this.backend}`);
-      await click(FORM.saveBtn);
+      await fillIn(GENERAL.inputByAttr('name'), `connect-${this.backend}`);
+      await click(GENERAL.saveButton);
       assert.dom(PAGE.rotateModal).hasText('Rotate your root credentials?', 'rotate modal is shown');
       await click(PAGE.confirmRotate);
 
@@ -201,19 +189,15 @@ module('Acceptance | database workflow', function (hooks) {
       );
       assert.dom(PAGE.infoRow).exists({ count: this.expectedRows.length }, 'correct number of rows');
       this.expectedRows.forEach(({ label, value }) => {
-        const valueSelector =
-          label === 'Rotate static roles immediately'
-            ? PAGE.infoRowValueDiv(label)
-            : PAGE.infoRowValue(label);
-        assert.dom(PAGE.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
-        assert.dom(valueSelector).hasText(value, `Value for ${label} is correct`);
+        assert.dom(GENERAL.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
+        assert.dom(GENERAL.infoRowValue(label)).hasText(value, `Value for ${label} is correct`);
       });
     });
 
     test('create connection with rotate failure', async function (assert) {
       await visit(`/vault/secrets/${this.backend}/overview`);
       assert.dom(PAGE.emptyStateTitle).hasText('Connect a database', 'empty state title is correct');
-      await click(PAGE.emptyStateAction);
+      await click(SES.createSecretLink);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/create?itemType=connection`,
@@ -222,7 +206,7 @@ module('Acceptance | database workflow', function (hooks) {
 
       // fill in connection details
       await fillOutConnection(`fail-rotate`);
-      await click(FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.dom(PAGE.rotateModal).hasText('Rotate your root credentials?', 'rotate modal is shown');
       await click(PAGE.confirmRotate);
 
@@ -243,7 +227,7 @@ module('Acceptance | database workflow', function (hooks) {
       this.connection = `connect-${this.backend}`;
       await visit(`/vault/secrets/${this.backend}/create`);
       await fillOutConnection(this.connection);
-      await click(FORM.saveBtn);
+      await click(GENERAL.saveButton);
       await visit(`/vault/secrets/${this.backend}/show/${this.connection}`);
     });
 
@@ -263,10 +247,10 @@ module('Acceptance | database workflow', function (hooks) {
         .dom(`${PAGE.statementsSection} ${PAGE.emptyStateTitle}`)
         .hasText('No role type selected', 'statements section shows empty state before selecting role type');
 
-      await fillIn(FORM.inputByAttr('name'), roleName);
+      await fillIn(GENERAL.inputByAttr('name'), roleName);
       assert.dom('[data-test-selected-option]').hasText(this.connection, 'Connection is selected by default');
 
-      await fillIn(FORM.inputByAttr('type'), 'dynamic');
+      await fillIn(GENERAL.inputByAttr('type'), 'dynamic');
       assert
         .dom(`${PAGE.roleSettingsSection} ${PAGE.emptyStateTitle}`)
         .doesNotExist('roles section no longer has empty state');
@@ -278,7 +262,7 @@ module('Acceptance | database workflow', function (hooks) {
       await fillIn(FORM.creationStatement(), `GRANT SELECT ON *.* TO '{{name}}'@'%'`);
       await click(`[data-test-string-list-row="0"] [data-test-string-list-button="add"]`);
       await fillIn(FORM.creationStatement(1), `GRANT CREATE ON *.* TO '{{name}}'@'%'`);
-      await click(FORM.saveBtn);
+      await click(GENERAL.saveButton);
       // DETAILS
       assert.strictEqual(
         currentURL(),
@@ -298,10 +282,8 @@ module('Acceptance | database workflow', function (hooks) {
         },
         { label: 'Revocation statements', value: 'Default' },
       ].forEach(({ label, value }) => {
-        const valueSelector =
-          label === 'Creation statements' ? PAGE.infoRowValueDiv(label) : PAGE.infoRowValue(label);
-        assert.dom(PAGE.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
-        assert.dom(valueSelector).hasText(value, `Value for ${label} is correct`);
+        assert.dom(GENERAL.infoRowLabel(label)).hasText(label, `Label for ${label} is correct`);
+        assert.dom(GENERAL.infoRowValue(label)).hasText(value, `Value for ${label} is correct`);
       });
       // EDIT
       await click(PAGE.editRole);
@@ -311,18 +293,18 @@ module('Acceptance | database workflow', function (hooks) {
         'Takes you to edit page for role'
       );
       // TODO: these should be readonly not disabled
-      assert.dom(FORM.inputByAttr('name')).isDisabled('Name is read-only');
-      assert.dom(FORM.inputByAttr('database')).isDisabled('Database is read-only');
-      assert.dom(FORM.inputByAttr('type')).isDisabled('Type is read-only');
+      assert.dom(GENERAL.inputByAttr('name')).isDisabled('Name is read-only');
+      assert.dom(GENERAL.inputByAttr('database')).isDisabled('Database is read-only');
+      assert.dom(GENERAL.inputByAttr('type')).isDisabled('Type is read-only');
       await fillIn('[data-test-ttl-value="Generated credentials’s Time-to-Live (TTL)"]', '2');
-      await click(FORM.saveBtn);
+      await click(GENERAL.saveButton);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/show/role/${roleName}`,
         'Takes you to details page for role after save'
       );
       assert
-        .dom(PAGE.infoRowValue('Generated credentials’s Time-to-Live (TTL)'))
+        .dom(GENERAL.infoRowValue('Generated credentials’s Time-to-Live (TTL)'))
         .hasText('2 hours', 'Shows updated TTL');
 
       // CREDENTIALS
@@ -336,23 +318,27 @@ module('Acceptance | database workflow', function (hooks) {
         .dom('[data-test-credentials-warning]')
         .exists('shows warning about credentials only being available once');
       assert
-        .dom(`[data-test-value-div="Username"] [data-test-masked-input]`)
+        .dom(`${GENERAL.infoRowValue('Username')} [data-test-masked-input]`)
         .hasText('***********', 'Username is masked');
-      await click(`[data-test-value-div="Username"] [data-test-button="toggle-masked"]`);
+
+      await click(`${GENERAL.infoRowValue('Username')} ${GENERAL.testButton('toggle-masked')}`);
       assert
-        .dom(`[data-test-value-div="Username"] [data-test-masked-input]`)
+        .dom(`${GENERAL.infoRowValue('Username')} [data-test-masked-input]`)
         .hasText('generated-username', 'Username is generated');
 
       assert
-        .dom(`[data-test-value-div="Password"] [data-test-masked-input]`)
+        .dom(`${GENERAL.infoRowValue('Password')} [data-test-masked-input]`)
         .hasText('***********', 'Password is masked');
-      await click(`[data-test-value-div="Password"] [data-test-button="toggle-masked"]`);
+
+      await click(`${GENERAL.infoRowValue('Password')} ${GENERAL.testButton('toggle-masked')}`);
       assert
-        .dom(`[data-test-value-div="Password"] [data-test-masked-input]`)
+        .dom(`${GENERAL.infoRowValue('Password')} [data-test-masked-input]`)
         .hasText('generated-password', 'Password is generated');
-      assert.dom(PAGE.infoRowValue('Lease Duration')).hasText('3600', 'shows lease duration from response');
       assert
-        .dom(PAGE.infoRowValue('Lease ID'))
+        .dom(GENERAL.infoRowValue('Lease Duration'))
+        .hasText('3600', 'shows lease duration from response');
+      assert
+        .dom(GENERAL.infoRowValue('Lease ID'))
         .hasText(`database/creds/${roleName}/abcd`, 'shows lease ID from response');
     });
   });
@@ -366,7 +352,7 @@ module('Acceptance | database workflow', function (hooks) {
         if (toggleRotateOff) {
           await click('[data-test-toggle-input="toggle-skip_static_role_rotation_import"]');
         }
-        await click(FORM.saveBtn);
+        await click(GENERAL.saveButton);
         await visit(`/vault/secrets/${this.backend}/show/${this.connection}`);
       };
     });
@@ -382,9 +368,9 @@ module('Acceptance | database workflow', function (hooks) {
         'Takes you to create role page'
       );
 
-      await fillIn(FORM.inputByAttr('name'), roleName);
+      await fillIn(GENERAL.inputByAttr('name'), roleName);
 
-      await fillIn(FORM.inputByAttr('type'), 'static');
+      await fillIn(GENERAL.inputByAttr('type'), 'static');
 
       assert
         .dom('[data-test-toggle-subtext]')
@@ -402,9 +388,9 @@ module('Acceptance | database workflow', function (hooks) {
         'Takes you to create role page'
       );
 
-      await fillIn(FORM.inputByAttr('name'), roleName);
+      await fillIn(GENERAL.inputByAttr('name'), roleName);
 
-      await fillIn(FORM.inputByAttr('type'), 'static');
+      await fillIn(GENERAL.inputByAttr('type'), 'static');
 
       assert
         .dom('[data-test-toggle-subtext]')

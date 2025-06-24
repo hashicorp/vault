@@ -176,11 +176,12 @@ func TestSysConfigState_Sanitized(t *testing.T) {
 						"type":   "tcp",
 					},
 				},
-				"storage":                       tc.expectedStorageOutput,
-				"administrative_namespace_path": "",
-				"imprecise_lease_role_tracking": false,
-				"enable_post_unseal_trace":      false,
-				"post_unseal_trace_directory":   "",
+				"storage":                        tc.expectedStorageOutput,
+				"administrative_namespace_path":  "",
+				"imprecise_lease_role_tracking":  false,
+				"enable_post_unseal_trace":       false,
+				"post_unseal_trace_directory":    "",
+				"remove_irrevocable_lease_after": json.Number("0"),
 			}
 
 			if tc.expectedHAStorageOutput != nil {

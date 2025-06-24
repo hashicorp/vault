@@ -26,6 +26,12 @@ export interface PkiWriteIssuerRequest {
      */
     crlDistributionPoints?: Array<string>;
     /**
+     * Comma-separated list of URLs to be used for the Delta CRL distribution points attribute, also known as Freshest CRL distribution points attribute. See also RFC 5280 Section 4.2.1.15.
+     * @type {Array<string>}
+     * @memberof PkiWriteIssuerRequest
+     */
+    deltaCrlDistributionPoints?: Array<string>;
+    /**
      * Whether critical extension checks should be performed when issuing certificates. (Enterprise only)
      * @type {boolean}
      * @memberof PkiWriteIssuerRequest
@@ -117,6 +123,7 @@ export function PkiWriteIssuerRequestFromJSONTyped(json: any, ignoreDiscriminato
     return {
         
         'crlDistributionPoints': json['crl_distribution_points'] == null ? undefined : json['crl_distribution_points'],
+        'deltaCrlDistributionPoints': json['delta_crl_distribution_points'] == null ? undefined : json['delta_crl_distribution_points'],
         'disableCriticalExtensionChecks': json['disable_critical_extension_checks'] == null ? undefined : json['disable_critical_extension_checks'],
         'disableNameChecks': json['disable_name_checks'] == null ? undefined : json['disable_name_checks'],
         'disableNameConstraintChecks': json['disable_name_constraint_checks'] == null ? undefined : json['disable_name_constraint_checks'],
@@ -144,6 +151,7 @@ export function PkiWriteIssuerRequestToJSONTyped(value?: PkiWriteIssuerRequest |
     return {
         
         'crl_distribution_points': value['crlDistributionPoints'],
+        'delta_crl_distribution_points': value['deltaCrlDistributionPoints'],
         'disable_critical_extension_checks': value['disableCriticalExtensionChecks'],
         'disable_name_checks': value['disableNameChecks'],
         'disable_name_constraint_checks': value['disableNameConstraintChecks'],

@@ -2918,33 +2918,6 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-requests"][1]),
 		},
 		{
-			Pattern: "internal/counters/tokens",
-			DisplayAttrs: &framework.DisplayAttributes{
-				OperationPrefix: "internal",
-				OperationVerb:   "count",
-				OperationSuffix: "tokens",
-			},
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.pathInternalCountersTokens,
-					Summary:  "Backwards compatibility is not guaranteed for this API",
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"counters": {
-									Type:     framework.TypeMap,
-									Required: true,
-								},
-							},
-						}},
-					},
-				},
-			},
-			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-tokens"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-tokens"][1]),
-		},
-		{
 			Pattern: "internal/counters/entities",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "internal",
@@ -3106,6 +3079,10 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 				"paths": {
 					Type:        framework.TypeCommaStringSlice,
 					Description: "Paths on which capabilities are being queried.",
+				},
+				"namespace": {
+					Type:        framework.TypeString,
+					Description: "Namespace for which capabilities are being queried.",
 				},
 			},
 

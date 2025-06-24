@@ -34,6 +34,12 @@ export interface PkiPatchIssuerResponse {
      */
     crlDistributionPoints?: Array<string>;
     /**
+     * Delta CRL Distribution Points
+     * @type {Array<string>}
+     * @memberof PkiPatchIssuerResponse
+     */
+    deltaCrlDistributionPoints?: Array<string>;
+    /**
      * Whether critical extension checks should be performed when issuing certificates. (Enterprise only)
      * @type {boolean}
      * @memberof PkiPatchIssuerResponse

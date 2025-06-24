@@ -34,14 +34,25 @@ export const GENERAL = {
   emptyStateMessage: '[data-test-empty-state-message]',
   emptyStateActions: '[data-test-empty-state-actions]',
   menuTrigger: '[data-test-popup-menu-trigger]',
+  menuItem: (name: string) => `[data-test-popup-menu="${name}"]`,
   listItem: '[data-test-list-item-link]',
   // FORMS
   checkboxByAttr: (attr: string) => `[data-test-checkbox="${attr}"]`,
+  docLinkByAttr: (attr: string) => `[data-test-doc-link="${attr}"]`,
   enableField: (attr: string) => `[data-test-enable-field="${attr}"] button`,
   fieldByAttr: (attr: string) => `[data-test-field="${attr}"]`,
-  infoRowLabel: (label: string) => `[data-test-row-label="${label}"]`,
-  infoRowValue: (label: string) => `[data-test-value-div="${label}"]`,
+  fieldLabel: () => `[data-test-form-field-label]`,
+  fieldLabelbyAttr: (attr: string) => `[data-test-form-field-label="${attr}"]`,
+  helpText: () => `[data-test-help-text]`,
+  helpTextByAttr: (attr: string) => `[data-test-help-text="${attr}"]`,
+  helpTextByGroupControlIndex: (index: number) =>
+    `.hds-form-group__control-field:nth-of-type(${index}) [data-test-help-text]`,
   inputByAttr: (attr: string) => `[data-test-input="${attr}"]`,
+  groupControlByIndex: (index: number) => `.hds-form-group__control-field:nth-of-type(${index})`,
+  inputGroupByAttr: (attr: string) => `[data-test-input-group="${attr}"]`,
+  labelById: (id: string) => `label[id="${id}"]`,
+  labelByGroupControlIndex: (index: number) => `.hds-form-group__control-field:nth-of-type(${index}) label`,
+  radioByAttr: (attr: string) => `[data-test-radio="${attr}"]`,
   selectByAttr: (attr: string) => `[data-test-select="${attr}"]`,
   textToggle: '[data-test-text-toggle]',
   textToggleTextarea: '[data-test-text-file-textarea]',
@@ -51,19 +62,26 @@ export const GENERAL = {
     toggle: (attr: string) => `[data-test-toggle-label="${attr}"]`,
     input: (attr: string) => `[data-test-ttl-value="${attr}"]`,
   },
-
-  validation: (attr: string) => `[data-test-field-validation=${attr}]`,
-  validationWarning: (attr: string) => `[data-test-validation-warning=${attr}]`,
+  // Info Table Row
+  infoRowLabel: (label: string) => `[data-test-row-label="${label}"]`,
+  infoRowValue: (label: string) => `[data-test-row-value="${label}"]`,
+  // Validation
+  validationErrorByAttr: (attr: string) => `[data-test-validation-error=${attr}]`,
+  validationWarningByAttr: (attr: string) => `[data-test-validation-warning=${attr}]`,
   messageError: '[data-test-message-error]',
   notFound: '[data-test-not-found]',
   pageError: {
     error: '[data-test-page-error]',
     errorTitle: (httpStatus: number) => `[data-test-page-error-title="${httpStatus}"]`,
+    errorSubtitle: '[data-test-page-error-subtitle]',
     errorMessage: '[data-test-page-error-message]',
     errorDetails: '[data-test-page-error-details]',
   },
   inlineError: '[data-test-inline-error-message]',
   kvObjectEditor: {
+    key: (idx = 0) => `[data-test-kv-key="${idx}"]`,
+    value: (idx = 0) => `[data-test-kv-value="${idx}"]`,
+    addRow: '[data-test-kv-add-row]',
     deleteRow: (idx = 0) => `[data-test-kv-delete-row="${idx}"]`,
   },
   searchSelect: {
@@ -93,11 +111,16 @@ export const GENERAL = {
     input: '[data-test-kv-suggestion-input]',
     select: '[data-test-kv-suggestion-select]',
   },
-  navLink: (label: string) => `[data-test-sidebar-nav-link="${label}"]`,
-  cancelButton: '[data-test-cancel]',
-  saveButton: '[data-test-save]',
+  // Links and buttons
   backButton: '[data-test-back-button]',
+  cancelButton: '[data-test-cancel]',
+  linkTo: (label: string) => `[data-test-link-to="${label}"]`,
+  navLink: (label: string) => `[data-test-sidebar-nav-link="${label}"]`,
+  saveButton: '[data-test-save]',
+  testButton: (label: string) => `[data-test-button="${label}"]`,
+  // Code blocks
   codeBlock: (label: string) => `[data-test-code-block="${label}"]`,
+  // TODO replace data-test-component="value" as a higher level selector
   codemirror: `[data-test-component="code-mirror-modifier"]`,
   codemirrorTextarea: `[data-test-component="code-mirror-modifier"] textarea`,
 };

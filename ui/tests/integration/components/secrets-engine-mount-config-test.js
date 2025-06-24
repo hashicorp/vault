@@ -7,11 +7,11 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const selectors = {
   toggle: '[data-test-mount-config-toggle]',
   field: '[data-test-mount-config-field]',
-  rowValue: (label) => `[data-test-value-div="${label}"]`,
 };
 
 module('Integration | Component | secrets-engine-mount-config', function (hooks) {
@@ -56,15 +56,15 @@ module('Integration | Component | secrets-engine-mount-config', function (hooks)
     await click(selectors.toggle);
 
     assert
-      .dom(selectors.rowValue('Secret Engine Type'))
+      .dom(GENERAL.infoRowValue('Secret Engine Type'))
       .hasText(this.model.engineType, 'Secret engine type renders');
-    assert.dom(selectors.rowValue('Path')).hasText(this.model.path, 'Path renders');
-    assert.dom(selectors.rowValue('Accessor')).hasText(this.model.accessor, 'Accessor renders');
-    assert.dom(selectors.rowValue('Local')).includesText('No', 'Local renders');
-    assert.dom(selectors.rowValue('Seal Wrap')).includesText('Yes', 'Seal wrap renders');
-    assert.dom(selectors.rowValue('Default Lease TTL')).includesText('0', 'Default Lease TTL renders');
+    assert.dom(GENERAL.infoRowValue('Path')).hasText(this.model.path, 'Path renders');
+    assert.dom(GENERAL.infoRowValue('Accessor')).hasText(this.model.accessor, 'Accessor renders');
+    assert.dom(GENERAL.infoRowValue('Local')).includesText('No', 'Local renders');
+    assert.dom(GENERAL.infoRowValue('Seal Wrap')).includesText('Yes', 'Seal wrap renders');
+    assert.dom(GENERAL.infoRowValue('Default Lease TTL')).includesText('0', 'Default Lease TTL renders');
     assert
-      .dom(selectors.rowValue('Max Lease TTL'))
+      .dom(GENERAL.infoRowValue('Max Lease TTL'))
       .includesText('2 hours 46 minutes 40 seconds', 'Max Lease TTL renders');
   });
 

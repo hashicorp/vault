@@ -11,6 +11,8 @@ description: |
   to maintain compatibility in both execution contexts.
 
 inputs:
+  github-token:
+    description: An elevated Github token to use for searching labels
   vault-version:
     description: |
       The version of vault from hashicorp/action-set-product-version. If set we'll utilize this
@@ -22,9 +24,6 @@ outputs:
   compute-build:
     description: A JSON encoded "runs-on" for App build worfkflows.
     value: ${{ steps.workflow-metadata.outputs.compute-build }}
-  compute-build-compat:
-    description: A JSON encoded "runs-on" for App build workflows that need an older glibc to link against.
-    value: ${{ steps.workflow-metadata.outputs.compute-build-compat }}
   compute-build-ui:
     description: A JSON encoded "runs-on" for web UI build workflows.
     value: ${{ steps.workflow-metadata.outputs.compute-build-ui }}
@@ -97,7 +96,7 @@ runs:
       name: workflow-metadata
       shell: bash
       env:
-        GH_TOKEN: ${{ github.token }}
+        GH_TOKEN: ${{ inputs.github-token || github.token }}
       run: |
         if [ '${{ github.event_name }}' = 'pull_request' ]; then
           is_draft='${{ github.event.pull_request.draft }}'
@@ -151,7 +150,6 @@ runs:
         if [ "$is_enterprise" = 'true' ]; then
           {
             echo 'compute-build=["self-hosted","ondemand","os=linux","disk_gb=64","type=c6a.4xlarge"]'
-            echo 'compute-build-compat=["self-hosted","ubuntu-20.04"]' # for older glibc compatibility, m6a.4xlarge
             echo 'compute-build-ui=["self-hosted","ondemand","os=linux", "disk_gb=64", "type=c6a.2xlarge"]'
             echo 'compute-test-go=["self-hosted","ondemand","os=linux","disk_gb=64","type=c6a.2xlarge"]'
             echo 'compute-test-ui=["self-hosted","ondemand","os=linux","type=m6a.2xlarge"]'
@@ -163,7 +161,6 @@ runs:
         else
           {
             echo 'compute-build="custom-linux-medium-vault-latest"'
-            echo 'compute-build-compat="custom-linux-medium-vault-latest"'
             echo 'compute-build-ui="custom-linux-xl-vault-latest"'
             echo 'compute-test-go="custom-linux-medium-vault-latest"'
             echo 'compute-test-ui="custom-linux-medium-vault-latest"'

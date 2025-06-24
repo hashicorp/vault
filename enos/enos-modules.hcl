@@ -16,6 +16,14 @@ module "backend_raft" {
   source = "./modules/backend_raft"
 }
 
+module "benchmark_config" {
+  source = "./modules/benchmark/config"
+}
+
+module "benchmark_setup" {
+  source = "./modules/benchmark/setup"
+}
+
 // Find any artifact in Artifactory. Requires the version, revision, and edition.
 module "build_artifactory" {
   source = "./modules/build_artifactory_artifact"
@@ -296,7 +304,7 @@ module "vault_verify_dr_replication" {
 }
 
 module "vault_verify_removed_node" {
-  source = "./modules/vault_verify_raft_removed"
+  source = "./modules/vault_verify_removed_node"
 
   vault_install_dir = var.vault_install_dir
 }
@@ -306,17 +314,18 @@ module "vault_verify_removed_node_shim" {
   vault_install_dir = var.vault_install_dir
 }
 
-
 module "vault_verify_secrets_engines_create" {
   source = "./modules/verify_secrets_engines/modules/create"
 
-  vault_install_dir = var.vault_install_dir
+  create_aws_secrets_engine = var.verify_aws_secrets_engine
+  vault_install_dir         = var.vault_install_dir
 }
 
 module "vault_verify_secrets_engines_read" {
   source = "./modules/verify_secrets_engines/modules/read"
 
-  vault_install_dir = var.vault_install_dir
+  verify_aws_secrets_engine = var.verify_aws_secrets_engine
+  vault_install_dir         = var.vault_install_dir
 }
 
 module "vault_verify_default_lcq" {

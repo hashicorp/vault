@@ -26,18 +26,18 @@ type (
 )
 
 const (
-	FileGroupAutopilot  FileGroup = "autopilot"
-	FileGroupChangelog  FileGroup = "changelog"
-	FileGroupCommunity  FileGroup = "community"
-	FileGroupDocs       FileGroup = "docs"
-	FileGroupEnos       FileGroup = "enos"
-	FileGroupEnterprise FileGroup = "enterprise"
-	FileGroupGoApp      FileGroup = "app"
-	FileGroupGoModules  FileGroup = "gomod"
-	FileGroupPipeline   FileGroup = "pipeline"
-	FileGroupProto      FileGroup = "proto"
-	FileGroupTools      FileGroup = "tools"
-	FileGroupWebUI      FileGroup = "ui"
+	FileGroupAutopilot   FileGroup = "autopilot"
+	FileGroupChangelog   FileGroup = "changelog"
+	FileGroupCommunity   FileGroup = "community"
+	FileGroupDocs        FileGroup = "docs"
+	FileGroupEnos        FileGroup = "enos"
+	FileGroupEnterprise  FileGroup = "enterprise"
+	FileGroupGoApp       FileGroup = "app"
+	FileGroupGoToolchain FileGroup = "gotoolchain"
+	FileGroupPipeline    FileGroup = "pipeline"
+	FileGroupProto       FileGroup = "proto"
+	FileGroupTools       FileGroup = "tools"
+	FileGroupWebUI       FileGroup = "ui"
 )
 
 // Name is the file name of the changed file
@@ -68,14 +68,43 @@ func (g FileGroups) In(group FileGroup) (int, bool) {
 	return slices.BinarySearch(g, group)
 }
 
-// String is a string representation of all groups a file is in
-func (g FileGroups) String() string {
+// All takes another FileGroups and determines whether or not all of the groups in the
+// in group are included in FileGroups.
+func (g FileGroups) All(groups FileGroups) bool {
+	for _, group := range groups {
+		if _, in := g.In(group); !in {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Any takes another FileGroups and determines whether or not any of the groups in the
+// in group are included in FileGroups.
+func (g FileGroups) Any(groups FileGroups) bool {
+	for _, group := range groups {
+		if _, in := g.In(group); in {
+			return true
+		}
+	}
+
+	return false
+}
+
+// Groups returns the FileGroups as a slice of strings
+func (g FileGroups) Groups() []string {
 	groups := []string{}
 	for _, g := range g {
 		groups = append(groups, string(g))
 	}
 
-	return strings.Join(groups, ", ")
+	return groups
+}
+
+// String is a string representation of all groups a file is in
+func (g FileGroups) String() string {
+	return strings.Join(g.Groups(), ", ")
 }
 
 // Names returns a list of file names
@@ -89,4 +118,27 @@ func (f Files) Names() []string {
 	}
 
 	return files
+}
+
+// EachHasAnyGroup determines whether each file contains the any of the given groups
+func (f Files) EachHasAnyGroup(groups FileGroups) bool {
+	if f == nil {
+		return false
+	}
+
+	if len(groups) == 0 {
+		return true
+	}
+
+	for _, file := range f {
+		if file.Groups == nil {
+			return false
+		}
+
+		if !file.Groups.Any(groups) {
+			return false
+		}
+	}
+
+	return true
 }

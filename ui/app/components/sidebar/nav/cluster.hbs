@@ -91,6 +91,9 @@
       data-test-sidebar-nav-link="Client Count"
     />
   {{/if}}
+  {{#if this.canAccessVaultUsageDashboard}}
+    <Nav.Link @route="vault.cluster.usage-reporting" @text="Vault Usage" data-test-sidebar-nav-link="Vault Usage" />
+  {{/if}}
   {{#if
     (and
       this.version.features
@@ -122,5 +125,12 @@
       @text="Custom Messages"
       data-test-sidebar-nav-link="Custom Messages"
     />
+    {{#if (or this.isRootNamespace this.namespace.isHvdAdminNamespace)}}
+      <Nav.Link
+        @route="vault.cluster.config-ui.login-settings"
+        @text="UI Login Settings"
+        data-test-sidebar-nav-link="UI Login Settings"
+      />
+    {{/if}}
   {{/if}}
 </Hds::SideNav::Portal>

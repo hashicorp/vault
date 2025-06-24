@@ -1,107 +1,160 @@
 ---
 layout: docs
-page_title: Plugin system
+page_title: Plugin ecosystem
 description: >- 
-   Learn about three types of Vault's plugins; auth methods, secret engines, and database plugins.
+   Learn about the plugin ecosystem and the difference between built-in and
+   external plugins.
 ---
 
 
-# Plugin system
+# The Vault plugin ecosystem
 
-Vault supports 3 types of plugins; auth methods, secret engines, and database
-plugins. This concept allows both built-in and external plugins to be treated
-like building blocks. Any plugin can exist at multiple different mount paths.
-Different versions of a plugin may be at each location, with each version differing
-from Vault's version.
+Plugins act as building blocks in Vault that help you control how data moves
+through your environment and how clients access that data.
 
-A plugin is uniquely identified by its type (one of `secret`, `auth`, or
-`database`), name (e.g. `aws`), and version (e.g `v1.0.0`). An empty version
-implies either the built-in plugin or the single unversioned plugin that can
-be registered.
+Vault supports the following plugin types:
 
-See [Plugin Upgrade Procedure](/vault/docs/upgrading/plugins#plugin-upgrade-procedure)
-for details on how to upgrade a built-in plugin in-place.
+- **`auth`** plugins handle authentication flows and allow clients to authenticate to Vault.
+- **`secret`** plugins act as secret engines that generate, store, and manage sensitive information.
+- **`database`** plugins provide dynamic credentials that allow clients to access database data.
 
-## Built-In plugins
+Clients access plugins on unique mount paths and you can run different versions
+of the same plugin at each location.
 
-Built-in plugins are shipped with Vault, often for commonly used integrations,
-and can be used without any prerequisite steps.
+Vault uniquely identifies plugins based on its type, name, and version.
+Built-in plugin and single, unversioned plugins may leave version information
+unset.
 
-## External plugins
+Refer to the [plugin upgrade guide](/vault/docs/plugins/upgrade) for more
+information on upgrading plugins.
 
-External plugins are not shipped with Vault and require additional operator
-intervention to run.
 
-Vault's external plugins are completely separate, standalone applications that
-Vault executes and communicates with over RPC. Each time a Vault secret engine,
-auth method, or database plugin is mounted, a new process or container is spawned. However,
-plugins can be made to implement [plugin multiplexing](/vault/docs/plugins/plugin-architecture#plugin-multiplexing)
-to improve performance. Plugin multiplexing allows plugin instances to be
-reused across all mounts of a given type.
+## Plugin sources
 
--> **NOTE:** See the [Vault Integrations](/vault/integrations) page to find a
-curated collection of official, partner, and community Vault plugins.
+Plugin code falls into one of the following categories:
 
-### Community plugins
+- **embedded plugins** build from code maintained within
+  [the Vault repository on GitHub](https://github.com/hashicorp/vault).
+  HashiCorp develops and maintains all embedded plugins.
+- **discrete plugins** build from code maintained independently from the Vault
+  code. External plugins can be HashiCorp plugins, third-party plugins, or
+  community plugins.
+- **custom plugins** are discrete plugins built from specialized code either
+  written from scratch or by modifying an existing plugin. Typically, custom
+  plugins solve a specific, niche problem and are not publicly available.
 
-To run an external Community plugin, a binary or container image of the plugin is required.
-Plugin binaries can be obtained from the [HashiCorp releases page](https://releases.hashicorp.com/)
-or they can be [built from source](/vault/docs/plugins/plugin-development#building-a-plugin-from-source).
-Some containerized plugins can be obtained from [HashiCorp Docker Registry](https://hub.docker.com/u/hashicorp)
-or [HashiCorp AWS Elastic Container Registry (ECR)](https://gallery.ecr.aws/hashicorp).
-Containerized plugins can also be built.
 
-### Enterprise plugins
+## Built-in vs external plugins
+
+Plugins run within Vault as **built-in** or **external** plugins.
+
+Vault ships with a set of built-in plugins for commonly used integrations. Vault
+preregisters built-in plugins and runs those plugins within the main Vault
+process. You can enable and use built-in plugins without manually registering
+them, regardless of whether the plugin build from an embedded or discrete source.
+
+External plugins run as separate, standalone applications that Vault executes
+and communicates with over RPC. When you mount an external plugin, Vault spawns
+a new process or container to run the code. Vault also supports
+[plugin multiplexing](/vault/docs/plugins/plugin-architecture#plugin-multiplexing)
+to improve performance by reusing plugin instances across all mounts of a given
+type.
+
+@include 'tips/get-plugins.mdx'
+
+
+## Community plugins
+
+You must have a binary or runnable container to register and run external,
+community plugins.
+
+- You can download compiled binaries from the
+  [HashiCorp releases page](https://releases.hashicorp.com/) or build community
+  plugins
+  [from source code](/vault/docs/plugins/plugin-development#building-a-plugin-from-source).
+- You can download containerized plugins from the
+  [HashiCorp Docker Registry](https://hub.docker.com/u/hashicorp) or
+  [HashiCorp AWS Elastic Container Registry (ECR)](https://gallery.ecr.aws/hashicorp),
+  or [containerize the plugin source code yourself](/vault/docs/plugins/containerized-plugins).
+
+
+## Enterprise plugins
 
 @include 'alerts/enterprise-and-hcp.mdx'
 
-To run an external Enterprise plugin, a `.zip` plugin artifact is required.
-Enterprise plugin artifacts can be obtained from the
+You must have the compiled binary or `.zip` to register and run external,
+Enterprise plugins. You can download Enterprise plugin artifacts from the
 [HashiCorp releases page](https://releases.hashicorp.com/).
+
 
 ## Plugin versioning
 
-Vault supports managing, running and upgrading plugins using semantic version
-information.
+Vault supports semantic versioning for plugins. You can assign a semantic
+version when you register an external plugin and register multiple versions of
+the same plugin simultaneously. You can assign an explicit version when you
+mount a plugin and/or pin a default version to enforce uniform cluster-wide
+version selection. Pinning a version disallows explicit version selection in the
+configuration for a specific plugin mount. Embedded plugins compile as part of
+the Vault binary, so they always have the same version number as your Vault
+version.
 
-The plugin catalog optionally supports specifying a semantic version when
-registering an external plugin. Multiple versions of a plugin can be registered
-in the catalog simultaneously, and a version can be selected when mounting a
-plugin or tuning an existing mount in-place.
+Built-in plugin versions include tags to show whether the plugin was
+preregistered as an embedded plugin (`+builtin.vault`) or a discrete plugin
+(`+builtin`).
 
-Alternatively, users can select pinned versions to enforce uniform cluster-wide
-version selection. When a pinned version is in effect, versions cannot be
-specified in mount config, and existing mounts that specify a version will
-ignore the locally configured version. See the
-[pinned versions](/vault/api-docs/system/plugins-pins) API for more details.
+For example, in the following CLI output:
 
-If no version is specified when creating a new mount, the following precedence is used
-for any available plugins whose type and name match:
-
-1. The pinned version of the plugin, if any exists.
-1. The plugin registered with no version.
-1. The plugin with the most recent semantic version among any registered versions.
-1. The plugin built into Vault.
-
-### Built-In versions
-
-Vault will report a version for built-in plugins to indicate what version of the
-plugin code got built into Vault as a dependency. For example:
+- **`azure`** is version 0.20.1 of a built-in, discrete plugin.
+- **`aws`** is version 1.18.5 of a built-in, embedded plugin.
+- **`mykv`** is version 1.0.0 of an external plugin.
+- **`testkv`** is an unversioned external plugin.
 
 ```shell-session
 $ vault plugin list secret
-Name                Version
-----                -------
-ad                  v0.14.0+builtin
-alicloud            v0.13.0+builtin
-aws                 v1.12.0+builtin.vault
-# ...
+Name                   Version
+----                   -------
+aws                    v1.18.5+builtin.vault
+azure                  v0.20.1+builtin
+gcp                    v0.20.1+builtin
+gcpkms                 v0.19.0+builtin
+keymgmt                v0.13.0+builtin
+kmip                   v0.16.1+builtin
+kubernetes             v0.9.0+builtin
+kv                     v0.20.0+builtin
+ldap                   v1.18.5+builtin.vault
+mongodbatlas           v0.13.0+builtin
+mykv                   v1.0.0
+nomad                  v1.18.5+builtin.vault
+openldap               v0.14.5+builtin
+pki                    v1.18.5+builtin.vault
+rabbitmq               v1.18.5+builtin.vault
+testkv                 n/a
+ssh                    v1.18.5+builtin.vault
+terraform              v0.10.0+builtin
+testing/custom/mykv    v1.0.0
+totp                   v1.18.5+builtin.vault
+transform              v0.16.1+builtin
+transit                v1.18.5+builtin.vault
 ```
 
-Here, Vault has a dependency on `v0.14.0` of the [hashicorp/vault-plugin-secrets-ad](https://github.com/hashicorp/vault-plugin-secrets-ad)
-repo, and the `vault` metadata identifier for `aws` indicates that plugin's code was
-within the Vault repo. For plugins within the Vault repo, Vault's own major, minor,
-and patch versions are used to form the plugin version.
+New mounts for plugins adhere to the following precedence when determining
+the appropriate version:
 
-The `builtin` metadata identifier is reserved and cannot be used when registering
-external plugins.
+1. Use the pinned version of the plugin, if it exists.
+1. Use the most recent semantic version registered in the plugin catalog.
+1. Ignore version if the version in the plugin catalog is unset or "n/a".
+
+
+<Note title="Reserved word">
+
+Vault reserves the `+builtin` metadata identifier for built-in plugins.
+You cannot use the `+builtin` string when manually registering an external
+plugin.
+
+</Note>
+
+## Tutorial
+
+Refer to the [custom secrets engines](/vault/tutorials/custom-secrets-engine)
+tutorials to build a custom secrets engine to rotate your own tokens, passwords,
+and more with Vault.

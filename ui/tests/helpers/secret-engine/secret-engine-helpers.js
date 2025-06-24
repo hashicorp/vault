@@ -9,6 +9,16 @@ import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engin
 import { stringArrayToCamelCase } from 'vault/helpers/string-array-to-camel';
 import { v4 as uuidv4 } from 'uuid';
 
+/* Secret Create/Edit methods */
+// ARG TODO unsure if should be moved to another file
+export async function createSecret(path, key, value) {
+  await fillIn(SES.secretPath('create'), path);
+  await fillIn('[data-test-secret-key]', key);
+  await fillIn('[data-test-secret-value] textarea', value);
+  await click(GENERAL.saveButton);
+  return;
+}
+
 export const createSecretsEngine = (store, type, path) => {
   store.pushPayload('secret-engine', {
     modelName: 'secret-engine',

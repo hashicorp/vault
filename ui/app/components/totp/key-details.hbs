@@ -1,0 +1,28 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Toolbar>
+  <ToolbarActions>
+    <ToolbarLink @route="vault.cluster.secrets.backend.credentials" @model={{@model.id}}>
+      Generate code
+    </ToolbarLink>
+    {{#if @model.canDelete}}
+      <ConfirmAction
+        @buttonText="Delete key"
+        class="toolbar-button"
+        @buttonColor="secondary"
+        @onConfirmAction={{@onDelete}}
+      />
+    {{/if}}
+  </ToolbarActions>
+</Toolbar>
+<div class="box is-fullwidth is-sideless is-paddingless is-marginless" data-test-totp-key-details>
+  {{#each @model.attrs as |attr|}}
+    <InfoTableRow
+      @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+      @value={{get @model attr.name}}
+    />
+  {{/each}}
+</div>

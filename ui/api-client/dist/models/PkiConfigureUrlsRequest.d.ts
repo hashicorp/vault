@@ -22,6 +22,12 @@ export interface PkiConfigureUrlsRequest {
      */
     crlDistributionPoints?: Array<string>;
     /**
+     * Comma-separated list of URLs to be used for the Delta CRL distribution points attribute. See also RFC 5280 Section 4.2.1.15.
+     * @type {Array<string>}
+     * @memberof PkiConfigureUrlsRequest
+     */
+    deltaCrlDistributionPoints?: Array<string>;
+    /**
      * Whether or not to enabling templating of the above AIA fields. When templating is enabled the special values '{{issuer_id}}', '{{cluster_path}}', and '{{cluster_aia_path}}' are available, but the addresses are not checked for URI validity until issuance time. Using '{{cluster_path}}' requires /config/cluster's 'path' member to be set on all PR Secondary clusters and using '{{cluster_aia_path}}' requires /config/cluster's 'aia_path' member to be set on all PR secondary clusters.
      * @type {boolean}
      * @memberof PkiConfigureUrlsRequest

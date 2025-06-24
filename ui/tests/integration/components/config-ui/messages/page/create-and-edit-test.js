@@ -15,6 +15,7 @@ import { CUSTOM_MESSAGES } from 'vault/tests/helpers/config-ui/message-selectors
 import timestamp from 'core/utils/timestamp';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
+import CustomMessage from 'vault/forms/custom-message';
 
 module('Integration | Component | messages/page/create-and-edit', function (hooks) {
   setupRenderingTest(hooks);
@@ -24,21 +25,32 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
   hooks.beforeEach(function () {
     const now = new Date('2023-07-02T00:00:00Z'); // stub "now" for testing
     sinon.replace(timestamp, 'now', sinon.fake.returns(now));
-    this.context = { owner: this.engine };
-    this.store = this.owner.lookup('service:store');
-    this.message = this.store.createRecord('config-ui/message');
+
+    this.message = new CustomMessage(
+      {
+        authenticated: true,
+        type: 'banner',
+        startTime: addDays(startOfDay(timestamp.now()), 1).toISOString(),
+      },
+      { isNew: true }
+    );
+
+    this.renderComponent = () =>
+      render(hbs`<Messages::Page::CreateAndEdit @message={{this.message}} @messages={{this.messages}} />`, {
+        owner: this.engine,
+      });
   });
 
   test('it should display all the create form fields and default radio button values', async function (assert) {
-    await render(hbs`<Messages::Page::CreateAndEdit @message={{this.message}} />`, {
-      owner: this.engine,
-    });
+    await this.renderComponent();
 
     assert.dom(GENERAL.title).hasText('Create message');
+    assert.dom(GENERAL.fieldLabelbyAttr('authenticated')).hasText('Where should we display this message?');
     assert.dom(CUSTOM_MESSAGES.radio('authenticated')).exists();
     assert.dom(CUSTOM_MESSAGES.radio('unauthenticated')).exists();
     assert.dom(CUSTOM_MESSAGES.radio('authenticated')).isChecked();
     assert.dom(CUSTOM_MESSAGES.radio('unauthenticated')).isNotChecked();
+    assert.dom(GENERAL.fieldLabelbyAttr('type')).hasText('Type');
     assert.dom(CUSTOM_MESSAGES.radio('banner')).exists();
     assert.dom(CUSTOM_MESSAGES.radio('modal')).exists();
     assert.dom(CUSTOM_MESSAGES.radio('banner')).isChecked();
@@ -60,9 +72,8 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
 
   test('it should display validation errors for invalid form fields', async function (assert) {
     assert.expect(8);
-    await render(hbs`<Messages::Page::CreateAndEdit @message={{this.message}} />`, {
-      owner: this.engine,
-    });
+
+    await this.renderComponent();
 
     await fillIn(CUSTOM_MESSAGES.input('startTime'), '2024-01-20T00:00');
     await fillIn(CUSTOM_MESSAGES.input('endTime'), '2024-01-01T00:00');
@@ -92,9 +103,8 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
       assert.ok(true, 'POST request made to create message');
     });
 
-    await render(hbs`<Messages::Page::CreateAndEdit @message={{this.message}} />`, {
-      owner: this.engine,
-    });
+    await this.renderComponent();
+
     await fillIn(CUSTOM_MESSAGES.input('title'), 'Awesome custom message title');
     await fillIn(
       CUSTOM_MESSAGES.input('message'),
@@ -116,9 +126,9 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
 
   test('it should have form vaildations', async function (assert) {
     assert.expect(4);
-    await render(hbs`<Messages::Page::CreateAndEdit @message={{this.message}} />`, {
-      owner: this.engine,
-    });
+
+    await this.renderComponent();
+
     await click(CUSTOM_MESSAGES.button('create-message'));
     assert
       .dom(CUSTOM_MESSAGES.input('title'))
@@ -136,21 +146,19 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
 
   test('it should prepopulate form if form is in edit mode', async function (assert) {
     assert.expect(13);
-    this.store.pushPayload('config-ui/message', {
-      modelName: 'config-ui/message',
+
+    this.message = new CustomMessage({
       id: 'hhhhh-iiii-lllll-dddd',
       type: 'modal',
       authenticated: false,
       title: 'Hello world',
       message: 'Blah blah blah. Some super long message.',
-      start_time: '2023-12-12T08:00:00.000Z',
-      end_time: '2023-12-21T08:00:00.000Z',
+      startTime: new Date('2023-12-12T08:00:00.000Z'),
+      endTime: new Date('2023-12-21T08:00:00.000Z'),
       link: { 'Learn more': 'www.learnmore.com' },
     });
-    this.message = this.store.peekRecord('config-ui/message', 'hhhhh-iiii-lllll-dddd');
-    await render(hbs`<Messages::Page::CreateAndEdit @message={{this.message}} />`, {
-      owner: this.engine,
-    });
+
+    await this.renderComponent();
 
     assert.dom(GENERAL.title).hasText('Edit message');
     assert.dom(CUSTOM_MESSAGES.radio('authenticated')).exists();
@@ -174,9 +182,9 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
 
   test('it should show a preview image modal when preview is clicked', async function (assert) {
     assert.expect(6);
-    await render(hbs`<Messages::Page::CreateAndEdit @message={{this.message}} />`, {
-      owner: this.engine,
-    });
+
+    await this.renderComponent();
+
     await fillIn(CUSTOM_MESSAGES.input('title'), 'Awesome custom message title');
     await fillIn(
       CUSTOM_MESSAGES.input('message'),
@@ -202,9 +210,9 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
 
   test('it should show a preview modal when preview is clicked', async function (assert) {
     assert.expect(4);
-    await render(hbs`<Messages::Page::CreateAndEdit @message={{this.message}} />`, {
-      owner: this.engine,
-    });
+
+    await this.renderComponent();
+
     await click(CUSTOM_MESSAGES.radio('modal'));
     await fillIn(CUSTOM_MESSAGES.input('title'), 'Preview modal title');
     await fillIn(CUSTOM_MESSAGES.input('message'), 'Some preview modal message thats super long.');
@@ -220,39 +228,33 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
   test('it should show multiple modal message', async function (assert) {
     assert.expect(2);
 
-    this.store.pushPayload('config-ui/message', {
-      modelName: 'config-ui/message',
-      id: '01234567-89ab-cdef-0123-456789abcdef',
-      active: true,
-      type: 'modal',
-      authenticated: true,
-      title: 'Message title 1',
-      message: 'Some long long long message',
-      link: { here: 'www.example.com' },
-      startTime: '2021-08-01T00:00:00Z',
-      endTime: '',
-    });
-    this.store.pushPayload('config-ui/message', {
-      modelName: 'config-ui/message',
-      id: '01234567-89ab-vvvv-0123-456789abcdef',
-      active: true,
-      type: 'modal',
-      authenticated: false,
-      title: 'Message title 2',
-      message: 'Some long long long message',
-      link: { here: 'www.example.com' },
-      startTime: '2021-08-01T00:00:00Z',
-      endTime: '2090-08-01T00:00:00Z',
-    });
-
-    this.messages = this.store.peekAll('config-ui/message');
-
-    await render(
-      hbs`<Messages::Page::CreateAndEdit @message={{this.message}} @messages={{this.messages}} @hasSomeActiveModals={{true}} />`,
+    this.messages = [
       {
-        owner: this.engine,
-      }
-    );
+        id: '01234567-89ab-cdef-0123-456789abcdef',
+        active: true,
+        type: 'modal',
+        authenticated: true,
+        title: 'Message title 1',
+        message: 'Some long long long message',
+        link: { here: 'www.example.com' },
+        startTime: new Date('2021-08-01T00:00:00Z'),
+        endTime: '',
+      },
+      {
+        id: '01234567-89ab-vvvv-0123-456789abcdef',
+        active: true,
+        type: 'modal',
+        authenticated: false,
+        title: 'Message title 2',
+        message: 'Some long long long message',
+        link: { here: 'www.example.com' },
+        startTime: new Date('2021-08-01T00:00:00Z'),
+        endTime: new Date('2090-08-01T00:00:00Z'),
+      },
+    ];
+
+    await this.renderComponent();
+
     await fillIn(CUSTOM_MESSAGES.input('title'), 'Awesome custom message title');
     await fillIn(
       CUSTOM_MESSAGES.input('message'),

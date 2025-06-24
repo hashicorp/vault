@@ -71,9 +71,11 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
       'Replication',
       'Raft Storage',
       'Client Count',
+      'Vault Usage',
       'License',
       'Seal Vault',
       'Custom Messages',
+      'UI Login Settings',
     ];
     stubFeaturesAndPermissions(this.owner, true, true);
     await renderComponent();
@@ -204,5 +206,60 @@ module('Integration | Component | sidebar-nav-cluster', function (hooks) {
     this.flags.activatedFlags = [];
     await renderComponent();
     assert.dom(GENERAL.navLink('Secrets Sync')).exists();
+  });
+
+  test('it shows Vault Usage when user is enterprise and in root namespace', async function (assert) {
+    stubFeaturesAndPermissions(this.owner, true);
+    await renderComponent();
+    assert.dom(GENERAL.navLink('Vault Usage')).exists();
+  });
+
+  test('it does NOT show Vault Usage when user is user is on CE || OSS || community', async function (assert) {
+    stubFeaturesAndPermissions(this.owner, false);
+    await renderComponent();
+    assert.dom(GENERAL.navLink('Vault Usage')).doesNotExist();
+  });
+
+  test('it does NOT show Vault Usage when user is enterprise but not in root namespace', async function (assert) {
+    stubFeaturesAndPermissions(this.owner, true);
+
+    this.owner.lookup('service:namespace').set('path', 'foo');
+
+    await renderComponent();
+    assert.dom(GENERAL.navLink('Vault Usage')).doesNotExist();
+  });
+
+  test('it does NOT show Vault Usage when user lacks the necessary permission', async function (assert) {
+    // no permissions
+    stubFeaturesAndPermissions(this.owner, true, false, [], false);
+
+    await renderComponent();
+    assert.dom(GENERAL.navLink('Vault Usage')).doesNotExist();
+  });
+
+  test('it does NOT Vault Usage if the user has the necessary permission but user is on CE || OSS || community', async function (assert) {
+    // no permissions
+    const stubs = stubFeaturesAndPermissions(this.owner, false, false, [], false);
+
+    // allow the route
+    stubs.hasNavPermission.callsFake((route) => route === 'monitoring');
+
+    await renderComponent();
+
+    assert.dom(GENERAL.navLink('Vault Usage')).doesNotExist();
+  });
+
+  test('it shows Vault Usage when user is in HVD admin namespace', async function (assert) {
+    const stubs = stubFeaturesAndPermissions(this.owner, true, false, [], false);
+    stubs.hasNavPermission.callsFake((route) => route === 'monitoring');
+
+    this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+
+    const namespace = this.owner.lookup('service:namespace');
+    namespace.setNamespace('admin');
+
+    await renderComponent();
+
+    assert.dom(GENERAL.navLink('Vault Usage')).exists();
   });
 });

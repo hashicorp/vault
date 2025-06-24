@@ -68,7 +68,7 @@ func (r *ListChangedFilesReq) Run(ctx context.Context, client *gh.Client) (*List
 	}
 
 	if r.GroupFiles {
-		r.groupChangedFiles(ctx, res.Files, changed.DefaultFileGroupCheckers...)
+		changed.GroupFiles(ctx, res.Files, changed.DefaultFileGroupCheckers...)
 		res.Groups = changed.FileGroups{}
 		for _, file := range res.Files {
 			for _, group := range file.Groups {
@@ -125,7 +125,7 @@ func (r *ListChangedFilesReq) getCommitFiles(ctx context.Context, client *gh.Cli
 	}
 }
 
-// getCommitFiles attempts to locate the workflow associated with our workflow name.
+// getPullFiles attempts to locate the workflow associated with our workflow name.
 func (r *ListChangedFilesReq) getPullFiles(ctx context.Context, client *gh.Client) (changed.Files, error) {
 	opts := &gh.ListOptions{PerPage: PerPageMax}
 	files := changed.Files{}
@@ -144,24 +144,6 @@ func (r *ListChangedFilesReq) getPullFiles(ctx context.Context, client *gh.Clien
 		}
 
 		opts.Page = res.NextPage
-	}
-}
-
-// groupChangedFiles runs the changed files through the default group checkers
-// to add group metadata. It also aggregates a combined group set for all files.
-func (r *ListChangedFilesReq) groupChangedFiles(
-	ctx context.Context,
-	files changed.Files,
-	checks ...changed.FileGroupCheck,
-) {
-	if len(files) < 1 {
-		return
-	}
-
-	for _, file := range files {
-		for _, check := range checks {
-			file.Groups = file.Groups.Add(check(ctx, file)...)
-		}
 	}
 }
 

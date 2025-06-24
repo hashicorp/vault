@@ -289,7 +289,7 @@ func getExportKey(policy *keysutil.Policy, key *keysutil.KeyEntry, exportType st
 		return certChain, nil
 	case exportTypeCMACKey:
 		switch policy.Type {
-		case keysutil.KeyType_AES128_CMAC, keysutil.KeyType_AES256_CMAC:
+		case keysutil.KeyType_AES128_CMAC, keysutil.KeyType_AES256_CMAC, keysutil.KeyType_AES192_CMAC:
 			return strings.TrimSpace(base64.StdEncoding.EncodeToString(key.Key)), nil
 		}
 	}

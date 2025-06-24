@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { settled } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { testAliasCRUD, testAliasDeleteFromForm } from '../../_shared-alias-tests';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { v4 as uuidv4 } from 'uuid';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 
@@ -21,7 +21,7 @@ module('Acceptance | /access/identity/groups/aliases/add', function (hooks) {
         'color-contrast': { enabled: false },
       },
     });
-    await authPage.login();
+    await login();
     return;
   });
 

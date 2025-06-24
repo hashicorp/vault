@@ -10,15 +10,18 @@ import { setupEngine } from 'ember-engines/test-support';
 import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { CUSTOM_MESSAGES } from 'vault/tests/helpers/config-ui/message-selectors';
-import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
+import { addDays, startOfDay } from 'date-fns';
+import timestamp from 'core/utils/timestamp';
 
 const META = {
-  currentPage: 1,
-  lastPage: 1,
-  nextPage: 1,
-  prevPage: 1,
-  total: 3,
-  pageSize: 15,
+  value: {
+    currentPage: 1,
+    lastPage: 1,
+    nextPage: 1,
+    prevPage: 1,
+    total: 3,
+    pageSize: 15,
+  },
 };
 
 module('Integration | Component | messages/page/list', function (hooks) {
@@ -27,52 +30,62 @@ module('Integration | Component | messages/page/list', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.server.post('/sys/capabilities-self', allowAllCapabilitiesStub());
-    this.store = this.owner.lookup('service:store');
+    this.messages = [
+      {
+        id: '0',
+        active: true,
+        type: 'banner',
+        authenticated: true,
+        title: 'Message title 1',
+        message: 'Some long long long message',
+        link: { title: 'here', href: 'www.example.com' },
+        startTime: new Date('2021-08-01T00:00:00Z'),
+        endTime: undefined,
+      },
+      {
+        id: '1',
+        active: false,
+        type: 'modal',
+        authenticated: true,
+        title: 'Message title 2',
+        message: 'Some long long long message blah blah blah',
+        link: { title: 'here', href: 'www.example2.com' },
+        startTime: new Date('2023-07-01T00:00:00Z'),
+        endTime: new Date('2023-08-01T00:00:00Z'),
+      },
+      {
+        id: '2',
+        active: false,
+        type: 'banner',
+        authenticated: false,
+        title: 'Message title 3',
+        message: 'Some long long long message',
+        link: { title: 'here', href: 'www.example.com' },
+      },
+    ];
+    Object.defineProperty(this.messages, 'meta', META);
 
-    this.store.pushPayload('config-ui/message', {
-      modelName: 'config-ui/message',
-      id: '0',
-      active: true,
-      type: 'banner',
-      authenticated: true,
-      title: 'Message title 1',
-      message: 'Some long long long message',
-      link: { title: 'here', href: 'www.example.com' },
-      start_time: '2021-08-01T00:00:00Z',
-      end_time: '',
-    });
-    this.store.pushPayload('config-ui/message', {
-      modelName: 'config-ui/message',
-      id: '1',
-      active: false,
-      type: 'modal',
-      authenticated: true,
-      title: 'Message title 2',
-      message: 'Some long long long message blah blah blah',
-      link: { title: 'here', href: 'www.example2.com' },
-      start_time: '2023-07-01T00:00:00Z',
-      end_time: '2023-08-01T00:00:00Z',
-    });
-    this.store.pushPayload('config-ui/message', {
-      modelName: 'config-ui/message',
-      id: '2',
-      active: false,
-      type: 'banner',
-      authenticated: false,
-      title: 'Message title 3',
-      message: 'Some long long long message',
-      link: { title: 'here', href: 'www.example.com' },
-    });
+    this.renderComponent = () => {
+      const capabilitiesService = this.owner.lookup('service:capabilities');
+      this.capabilities = this.messages.reduce((obj, { id }) => {
+        const path = capabilitiesService.pathFor('customMessages', { id });
+        obj[path] = { canUpdate: true, canDelete: true };
+        return obj;
+      }, {});
+
+      return render(
+        hbs`<Messages::Page::List @messages={{this.messages}} @capabilities={{this.capabilities}} />`,
+        {
+          owner: this.engine,
+        }
+      );
+    };
   });
 
   test('it should show the messages empty state', async function (assert) {
     this.messages = [];
 
-    await render(hbs`<Messages::Page::List @messages={{this.messages}} />`, {
-      owner: this.engine,
-    });
-
+    await this.renderComponent();
     assert.dom('[data-test-empty-state-title]').hasText('No messages yet');
     assert
       .dom('[data-test-empty-state-message]')
@@ -82,11 +95,7 @@ module('Integration | Component | messages/page/list', function (hooks) {
   });
 
   test('it should show the list of custom messages', async function (assert) {
-    this.messages = this.store.peekAll('config-ui/message', {});
-    this.messages.meta = META;
-    await render(hbs`<Messages::Page::List @messages={{this.messages}} />`, {
-      owner: this.engine,
-    });
+    await this.renderComponent();
     assert.dom('[data-test-icon="message-circle"]').exists();
     for (const message of this.messages) {
       assert.dom(CUSTOM_MESSAGES.listItem('Message title 1')).exists();
@@ -96,8 +105,7 @@ module('Integration | Component | messages/page/list', function (hooks) {
 
   test('it should show max message warning modal', async function (assert) {
     for (let i = 0; i < 97; i++) {
-      this.store.pushPayload('config-ui/message', {
-        modelName: 'config-ui/message',
+      this.messages.push({
         id: `${i}-a`,
         active: true,
         type: 'banner',
@@ -105,22 +113,13 @@ module('Integration | Component | messages/page/list', function (hooks) {
         title: `Message title ${i}`,
         message: 'Some long long long message',
         link: { title: 'here', href: 'www.example.com' },
-        start_time: '2021-08-01T00:00:00Z',
+        startTime: new Date('2021-08-01T00:00:00Z'),
       });
     }
+    this.messages.meta.total = this.messages.length;
+    this.messages.meta.pageSize = 100;
 
-    this.messages = this.store.peekAll('config-ui/message', {});
-    this.messages.meta = {
-      currentPage: 1,
-      lastPage: 1,
-      nextPage: 1,
-      prevPage: 1,
-      total: this.messages.length,
-      pageSize: 100,
-    };
-    await render(hbs`<Messages::Page::List @messages={{this.messages}} />`, {
-      owner: this.engine,
-    });
+    await this.renderComponent();
     await click(CUSTOM_MESSAGES.button('create message'));
     assert
       .dom(CUSTOM_MESSAGES.modalTitle('maximum-message-modal'))
@@ -134,11 +133,9 @@ module('Integration | Component | messages/page/list', function (hooks) {
   });
 
   test('it should show the correct badge colors based on badge status', async function (assert) {
-    this.messages = this.store.peekAll('config-ui/message', {});
-    this.messages.meta = META;
-    await render(hbs`<Messages::Page::List @messages={{this.messages}} />`, {
-      owner: this.engine,
-    });
+    this.messages[2].startTime = addDays(startOfDay(timestamp.now()), 1);
+
+    await this.renderComponent();
     assert.dom(CUSTOM_MESSAGES.badge('0')).hasClass('hds-badge--color-success');
     assert.dom(CUSTOM_MESSAGES.badge('1')).hasClass('hds-badge--color-neutral');
     assert.dom(CUSTOM_MESSAGES.badge('2')).hasClass('hds-badge--color-highlight');

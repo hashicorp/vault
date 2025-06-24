@@ -3,19 +3,23 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
+{{#if this.cspError}}
+  <Hds::Alert @type="page" @color="critical" data-test-page-error as |A|>
+    <A.Description>{{this.cspError}}</A.Description>
+  </Hds::Alert>
+{{/if}}
+
 {{#if this.mfaErrors}}
-  <div class="has-top-margin-xxl" data-test-mfa-error>
-    <EmptyState
-      @title="Unauthorized"
-      @message="Multi-factor authentication is required, but failed. Go back and try again, or contact your administrator."
-      @icon="alert-circle"
-      @bottomBorder={{true}}
-      @subTitle={{join ". " this.mfaErrors}}
-      class="is-shadowless"
-    >
-      <Hds::Button @text="Go back" @icon="chevron-left" @color="tertiary" {{on "click" this.onMfaErrorDismiss}} />
-    </EmptyState>
-  </div>
+  <Hds::ApplicationState class="has-top-margin-xxl" data-test-error as |A|>
+    <A.Header @title="Authentication error" />
+    <A.Body
+      @text="Multi-factor authentication is required, but failed. Go back and try again, or contact your administrator."
+    />
+    <A.Body @text="Error: {{this.mfaErrors}}" />
+    <A.Footer as |F|>
+      <F.Button @icon="arrow-left" @color="tertiary" @text="Go back" {{on "click" this.onMfaErrorDismiss}} />
+    </A.Footer>
+  </Hds::ApplicationState>
 {{else}}
   <SplashPage>
     <:header>
@@ -29,61 +33,11 @@
             <Icon @name="vault" @size="24" @stretched={{true}} />
           </div>
         </div>
-        <div class="is-flex-row">
-          {{#if this.mfaAuthData}}
-            <Hds::Button
-              @text="Back to login"
-              @icon="arrow-left"
-              @isIconOnly={{true}}
-              @color="tertiary"
-              {{on "click" (fn (mut this.mfaAuthData) null)}}
-              data-test-back-button
-            />
-          {{/if}}
-          <h1 class="title is-3">
-            {{if this.mfaAuthData "Authenticate" "Sign in to Vault"}}
-          </h1>
-        </div>
+        <h1 class="title is-3">
+          Sign in to Vault
+        </h1>
       {{/if}}
     </:header>
-
-    <:subHeader>
-      {{#if (has-feature "Namespaces")}}
-        {{#unless this.mfaAuthData}}
-          <Toolbar class="toolbar-namespace-picker">
-            <div class="field is-horizontal" data-test-namespace-toolbar>
-              <div class="field-label is-normal">
-                <label class="is-label" for="namespace">Namespace</label>
-              </div>
-              {{#if this.flags.hvdManagedNamespaceRoot}}
-                <div class="field-label">
-                  <span class="has-text-grey" data-test-managed-namespace-root>/{{this.flags.hvdManagedNamespaceRoot}}</span>
-                </div>
-              {{/if}}
-              <div class="field-body">
-                <div class="field">
-                  <div class="control">
-                    <input
-                      data-test-auth-form-ns-input
-                      value={{this.namespaceInput}}
-                      placeholder={{if this.flags.hvdManagedNamespaceRoot "/ (Default)" "/ (Root)"}}
-                      {{on "input" this.handleNamespaceUpdate}}
-                      autocomplete="off"
-                      spellcheck="false"
-                      name="namespace"
-                      id="namespace"
-                      class="input"
-                      type="text"
-                      disabled={{@oidcProviderQueryParam}}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Toolbar>
-        {{/unless}}
-      {{/if}}
-    </:subHeader>
 
     <:content>
       {{#if this.mfaAuthData}}
@@ -91,16 +45,28 @@
           @clusterId={{@cluster.id}}
           @authData={{this.mfaAuthData}}
           @onSuccess={{this.onMfaSuccess}}
+          @onCancel={{this.onCancelMfa}}
           @onError={{fn (mut this.mfaErrors)}}
         />
       {{else}}
-        <Auth::LoginForm
-          @wrappedToken={{@wrappedToken}}
+        <Auth::FormTemplate
+          @alternateView={{this.formViews.alternateView}}
           @cluster={{@cluster}}
-          @namespace={{@namespaceQueryParam}}
-          @selectedAuth={{@authMethodQueryParam}}
+          @defaultView={{this.formViews.defaultView}}
+          @initialFormState={{this.initialFormState}}
           @onSuccess={{this.onAuthResponse}}
-        />
+          @visibleMountTypes={{this.visibleMountTypes}}
+        >
+          {{! yielded for accessibility so namespace submits as an input of the <form> element }}
+          {{#if (has-feature "Namespaces")}}
+            <Auth::NamespaceInput
+              @disabled={{if @oidcProviderQueryParam true false}}
+              @handleNamespaceUpdate={{@onNamespaceUpdate}}
+              @namespaceQueryParam={{@namespaceQueryParam}}
+              @shouldRefocusNamespaceInput={{@shouldRefocusNamespaceInput}}
+            />
+          {{/if}}
+        </Auth::FormTemplate>
       {{/if}}
     </:content>
 

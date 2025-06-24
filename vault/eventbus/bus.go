@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/eventlogger/formatter_filters/cloudevents"
 	"github.com/hashicorp/go-bexpr"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -30,8 +31,9 @@ const (
 	// eventTypeAll is purely internal to the event bus. We use it to send all
 	// events down one big firehose, and pipelines define their own filtering
 	// based on what each subscriber is interested in.
-	eventTypeAll   = "*"
-	defaultTimeout = 60 * time.Second
+	eventTypeAll            = "*"
+	defaultTimeout          = 60 * time.Second
+	eventMetadataVaultIndex = "vault_index"
 )
 
 var (
@@ -55,6 +57,13 @@ type EventBus struct {
 	timeout                    time.Duration
 	filters                    *Filters
 	cloudEventsFormatterFilter *cloudevents.FormatterFilter
+	walGetter                  StorageWALGetter
+}
+
+// StorageWALGetter is an interface used to fetch the current storage index
+// from core without importing core
+type StorageWALGetter interface {
+	GetCurrentWALHeader() string
 }
 
 type pluginEventBus struct {
@@ -111,6 +120,25 @@ func patchMountPath(data *logical.EventData, pluginInfo *logical.EventPluginInfo
 	return data
 }
 
+// getIndexForEvent returns the storage index (wal header) for events with
+// metadata.modified=true.
+func (bus *EventBus) getIndexForEvent(event *logical.EventReceived) (string, error) {
+	if event.Event == nil || event.Event.Metadata == nil || bus.walGetter == nil {
+		return "", nil
+	}
+	eventMetadataModified := event.Event.Metadata.GetFields()[logical.EventMetadataModified]
+	if eventMetadataModified != nil {
+		isModified, err := parseutil.ParseBool(eventMetadataModified.GetStringValue())
+		if err != nil {
+			return "", fmt.Errorf("failed to parse event metadata modified: %w", err)
+		}
+		if isModified {
+			return bus.walGetter.GetCurrentWALHeader(), nil
+		}
+	}
+	return "", nil
+}
+
 // SendEventInternal sends an event to the event bus and routes it to all relevant subscribers.
 // This function does *not* wait for all subscribers to acknowledge before returning.
 // This function is meant to be used by trusted internal code, so it can specify details like the namespace
@@ -136,6 +164,13 @@ func (bus *EventBus) SendEventInternal(_ context.Context, ns *namespace.Namespac
 		eventReceived.Event = data
 	} else {
 		eventReceived.Event = patchMountPath(data, pluginInfo)
+		walStr, err := bus.getIndexForEvent(eventReceived)
+		if err != nil {
+			bus.logger.Warn("Failed to get index for event", "error", err)
+		}
+		if walStr != "" {
+			eventReceived.Event.Metadata.Fields[eventMetadataVaultIndex] = structpb.NewStringValue(walStr)
+		}
 	}
 
 	// We can't easily know when the SendEvent is complete, so we can't call the cancel function.
@@ -170,7 +205,7 @@ func (bus *pluginEventBus) SendEvent(ctx context.Context, eventType logical.Even
 	return bus.bus.SendEventInternal(ctx, bus.namespace, bus.pluginInfo, eventType, false, data)
 }
 
-func NewEventBus(localNodeID string, logger hclog.Logger) (*EventBus, error) {
+func NewEventBus(localNodeID string, logger hclog.Logger, c StorageWALGetter) (*EventBus, error) {
 	broker, err := eventlogger.NewBroker()
 	if err != nil {
 		return nil, err
@@ -205,6 +240,7 @@ func NewEventBus(localNodeID string, logger hclog.Logger) (*EventBus, error) {
 		timeout:                    defaultTimeout,
 		cloudEventsFormatterFilter: cloudEventsFormatterFilter,
 		filters:                    NewFilters(localNodeID),
+		walGetter:                  c,
 	}, nil
 }
 

@@ -20,6 +20,12 @@ import { mapValues } from '../runtime';
  */
 export interface QueryTokenSelfCapabilitiesRequest {
     /**
+     * Namespace for which capabilities are being queried.
+     * @type {string}
+     * @memberof QueryTokenSelfCapabilitiesRequest
+     */
+    namespace?: string;
+    /**
      * Use 'paths' instead.
      * @type {Array<string>}
      * @memberof QueryTokenSelfCapabilitiesRequest
@@ -57,6 +63,7 @@ export function QueryTokenSelfCapabilitiesRequestFromJSONTyped(json: any, ignore
     }
     return {
         
+        'namespace': json['namespace'] == null ? undefined : json['namespace'],
         'path': json['path'] == null ? undefined : json['path'],
         'paths': json['paths'] == null ? undefined : json['paths'],
         'token': json['token'] == null ? undefined : json['token'],
@@ -74,6 +81,7 @@ export function QueryTokenSelfCapabilitiesRequestToJSONTyped(value?: QueryTokenS
 
     return {
         
+        'namespace': value['namespace'],
         'path': value['path'],
         'paths': value['paths'],
         'token': value['token'],

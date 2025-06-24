@@ -1,0 +1,41 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<form {{on "submit" this.onSubmit}} data-test-auth-form={{@authType}}>
+
+  {{yield to="namespace"}}
+
+  <div class="has-padding-l">
+    {{yield to="back"}}
+    {{yield to="authSelectOptions"}}
+    {{yield to="error"}}
+
+    {{! Authenticating with SAML requires a secure context }}
+    {{#if this.canLoginSaml}}
+      <Auth::Fields @loginFields={{this.loginFields}} />
+
+      {{yield to="advancedSettings"}}
+
+      <Auth::SignInButton @text="Sign in with SAML provider" @icon={{if this.tasksAreRunning "loading"}} />
+
+    {{else}}
+      <Hds::Alert @type="inline" @color="warning" data-test-saml-auth-not-allowed class="has-bottom-margin-m" as |A|>
+        <A.Title>Insecure context detected</A.Title>
+        <A.Description>
+          Logging in with a SAML auth method requires a browser in a secure context.
+        </A.Description>
+        <A.Description class="has-top-margin-xs">
+          <Hds::Link::Standalone
+            @icon="external-link"
+            @text="Read more about secure contexts."
+            @href="https://developer.mozilla.org/en-US/docs/Web/Security/Secure_Contexts"
+          />
+        </A.Description>
+      </Hds::Alert>
+    {{/if}}
+
+    {{yield to="footer"}}
+  </div>
+</form>

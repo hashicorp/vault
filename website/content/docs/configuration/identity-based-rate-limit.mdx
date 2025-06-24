@@ -1,0 +1,124 @@
+---
+layout: docs
+page_title: Rate limit quotas - collective, by IP, by entity
+description: >-
+  Implement protections to prevent misbehaving applications and clients from impacting Vault performance.
+---
+
+# Rate limit quotas - collective, by IP, by entity
+
+As the number of Vault client applications increases, the incoming requests to
+Vault can degrade Vault's performance. To protect your Vault environment's
+stability and network, as well as storage resource consumption, use [rate limit
+quotas](/vault/docs/configuration/create-lease-count-quota) and [lease count
+quotas](/vault/docs/configuration/create-rate-limit-quota).
+
+The rate limit quotas enforce API rate limiting using a [token
+bucket](https://en.wikipedia.org/wiki/Token_bucket) algorithm. For Vault
+Enterprise clusters, the rate limit quota supports a **`group_by`** option to
+define a group of requests based on the characteristic they have in common, and
+put them in the same bucket. 
+
+The available `group_by` modes are:
+
+- `ip` - groups requests by their source IP address (_Default_)
+
+- `none` - groups together all requests that match the rate limit quota rule
+
+- `entity_then_ip` - groups requests by their entity ID for authenticated
+  requests that carry one, or by their IP for unauthenticated requests (or
+  requests whose authentication is not connected to an entity)
+
+- `entity_then_none` - groups requests by their entity ID when available, but
+  the rest is all grouped together (for example, unauthenticated requests, and
+  requests with authentication that is not connected to an entity)
+
+The `group_by` option with `entity_then_ip` or `entity_then_none` mode allows
+you to set a secondary rate limit (**`secondary_rate`**). This rate limit
+applies to the requests that fall under the IP or "none" groupings, while the
+authenticated requests that contain an entity ID are subject to the primary rate
+limit set by the `rate` parameter.
+
+**Example:**
+
+The command below creates a rate limit quota named "my-rate" with rate of 1,000
+requests per second where `group_by` mode is `entity_then_none`. The secondary
+rate is 2,000 requests per second. This means 1,000 requests per second for each
+entity regardless of how many IP addresses authenticate the same entity. The
+secondary rate of 2,000 requests per second applies to all requests that don't
+have an entity such as unauthenticated requests.
+
+```shell-session
+$ vault write sys/quotas/rate-limit/my-rate \
+    rate=1000 \
+    group_by=entity_then_none \
+    secondary_rate=2000     
+```
+
+The `entity_then_none` or `entity_then_ip` mode groups requests based on their
+attached entity. This helps when your organization has:
+
+- many workloads using the same IP
+- single workloads using many IPs which may scale up or down
+- dynamic IPs that change frequently
+
+The group by "none" option creates one bucket for all requests at the designated
+level (namespace, mount, or path) for that rate limit. For example, if your
+organization provides Vault as a service to your customers, you segregate the
+customers each into their own namespace. The default behavior of any rate limit
+set for the namespace creates a bucket per IP. If the desired behavior is to set
+a collective rate limit for all entities and workloads coming into the
+namespace, the "none" option can achieve that.
+
+![Diagram indicating possible user paths](/img/resource-quotas/group-by_light.png#light-theme-only)
+![Diagram indicating possible user paths](/img/resource-quotas/group-by_dark.png#dark-theme-only)
+
+<Tip title="You do not configure quotas on entities">
+
+You can configure quotas on namespaces, mounts, paths, and roles. But you cannot
+configure a rate limit quota for a specific entity.
+
+Assume you created a rate limit quota on "customer-A" namespace with **group by
+entity** mode. Vault checks the entity ID of the requests coming into the
+"customer-A" namespace, and group them based on the matching entity ID. 
+
+</Tip>
+
+
+## Resource quota best practices
+
+The `group_by` option supplements the existing quota features.
+
+![Diagram indicating possible user paths](/img/resource-quotas/resource-quotas-use-cases_light.png#light-theme-only)
+![Diagram indicating possible user paths](/img/resource-quotas/resource-quotas-use-cases_dark.png#dark-theme-only)
+
+- Use [Terraform Vault
+  provider](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/resources/quota_rate_limit)
+  to configure and implement quotas instead of making API calls.
+
+- Define at least one lease count quota to protect your Vault cluster from
+  [lease explosions](/vault/docs/configuration/prevent-lease-explosions).
+
+- Configure low limits at the namespace level, and higher limits at the specific
+problematic path. The most granular rate limit quotas takes the effect. 
+
+  ![A diagram to show the granularity of target paths and corresponding rate](/img/resource-quotas/quota-granularity_light.png#light-theme-only)
+  ![A diagram to show the granularity of target paths and corresponding rate](/img/resource-quotas/quota-granularity_dark.png#dark-theme-only)
+
+  Refer to the [Resource Quotas](/vault/docs/concepts/resource-quotas#rate-limit-quota-precedence) page to understand which rate limit quota rule applies to a request. 
+
+- Use the `none` and `entity_then_none` modes with caution. 
+  When you configure a rate limit quota at a high-level (for example, global
+  rate limit) with group by **none** mode, your Vault environment can become
+  vulnerable to becoming unresponsive if a single application purposefully or
+  erroneously exhausts the quota. At that point, no other applications or users
+  can send requests.
+
+<Tip title="Vault benchmark tool">
+
+To help you measure your Vault environment's performance, you can use the
+benchmark tool. Refer to the [Benchmark Vault
+performance](/vault/tutorials/operations/benchmark-vault) tutorial to learn
+more.
+
+</Tip>

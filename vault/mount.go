@@ -677,8 +677,12 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 		return fmt.Errorf("error creating forwarded writer: %v", err)
 	}
 
+	// add the snapshot storage router, which will use the context to determine
+	// whether a read will be from a snapshot or from the normal barrier storage
+	router := newSnapshotStorageRouter(c, forwarded)
+
 	viewPath := entry.ViewPath()
-	view := NewBarrierView(forwarded, viewPath)
+	view := NewBarrierView(router, viewPath)
 
 	// Singleton mounts cannot be filtered manually on a per-secondary basis
 	// from replication.
@@ -1525,8 +1529,10 @@ func (c *Core) setupMounts(ctx context.Context) error {
 			return fmt.Errorf("error creating forwarded writer: %v", err)
 		}
 
+		storageRouter := newSnapshotStorageRouter(c, forwarded)
+
 		// Create a barrier storage view using the UUID
-		view := NewBarrierView(forwarded, barrierPath)
+		view := NewBarrierView(storageRouter, barrierPath)
 
 		// Singleton mounts cannot be filtered manually on a per-secondary basis
 		// from replication
@@ -1712,12 +1718,19 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 			runningSha = hex.EncodeToString(plug.Sha256)
 		}
 
+		if plug.Download {
+			if err = sysView.DownloadExtractVerifyPlugin(ctx, plug); err != nil {
+				return nil, fmt.Errorf("failed to extract and verify plugin=%q version=%q before mounting: %w",
+					plug.Name, plug.Version, err)
+			}
+		}
+
 		factory = plugin.Factory
 		if !plug.Builtin {
 			factory = wrapFactoryCheckPerms(c, factory)
 		}
 
-		entSetExternalPluginConfig(plug, conf)
+		setExternalPluginConfig(plug, conf)
 	}
 
 	// Set up conf to pass in plugin_name
@@ -1748,13 +1761,27 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	if err != nil {
 		return nil, err
 	}
+
+	pluginObservationRecorder, err := c.observations.WithPlugin(entry.namespace, &logical.EventPluginInfo{
+		MountClass:    consts.PluginTypeCredential.String(),
+		MountAccessor: entry.Accessor,
+		MountPath:     entry.Path,
+		Plugin:        entry.Type,
+		PluginVersion: pluginVersion,
+		Version:       entry.Options["version"],
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	config := &logical.BackendConfig{
-		StorageView:  view,
-		Logger:       backendLogger,
-		Config:       conf,
-		System:       sysView,
-		BackendUUID:  entry.BackendAwareUUID,
-		EventsSender: pluginEventSender,
+		StorageView:         view,
+		Logger:              backendLogger,
+		Config:              conf,
+		System:              sysView,
+		BackendUUID:         entry.BackendAwareUUID,
+		EventsSender:        pluginEventSender,
+		ObservationRecorder: pluginObservationRecorder,
 	}
 
 	ctx = namespace.ContextWithNamespace(ctx, entry.namespace)

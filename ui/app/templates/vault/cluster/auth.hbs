@@ -3,12 +3,25 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Auth::Page
-  @authMethodQueryParam={{this.authMethod}}
-  @cluster={{this.model}}
-  @namespaceQueryParam={{this.namespaceQueryParam}}
-  @oidcProviderQueryParam={{this.oidcProvider}}
-  @onAuthSuccess={{action "authSuccess"}}
-  @onNamespaceUpdate={{perform this.updateNamespace}}
-  @wrappedToken={{this.wrappedToken}}
-/>
+{{#if this.unwrapTokenError}}
+  <Hds::ApplicationState class="has-top-margin-xxl" data-test-page-error as |A|>
+    <A.Header @title="Authentication error" />
+    <A.Body @text="Token unwrap failed" />
+    <A.Body @text="Error: {{this.unwrapTokenError}}" />
+    <A.Footer as |F|>
+      <F.Button @icon="arrow-left" @color="tertiary" @text="Go back" {{on "click" (action "backToLogin")}} />
+    </A.Footer>
+  </Hds::ApplicationState>
+{{else}}
+  <Auth::Page
+    @cluster={{this.model.clusterModel}}
+    @directLinkData={{this.model.directLinkData}}
+    @loginSettings={{this.model.loginSettings}}
+    @namespaceQueryParam={{this.namespaceQueryParam}}
+    @oidcProviderQueryParam={{this.oidcProvider}}
+    @onAuthSuccess={{action "authSuccess"}}
+    @onNamespaceUpdate={{perform this.updateNamespace}}
+    @visibleAuthMounts={{this.model.visibleAuthMounts}}
+    @shouldRefocusNamespaceInput={{this.shouldRefocusNamespaceInput}}
+  />
+{{/if}}

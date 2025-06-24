@@ -720,7 +720,7 @@ path "bar/baz" {
 	capabilities = ["read", "update"]
 }
 path "bar/baz" {
-	capabilities = ["delete"]
+	capabilities = ["delete", "recover"]
 }
 `
 
@@ -828,7 +828,7 @@ func TestSystemBackend_PathCapabilities(t *testing.T) {
 		expected1 := []string{"create", "sudo", "update"}
 		expected2 := expected1
 		expected3 := []string{"update"}
-		expected4 := []string{"delete", "read", "update"}
+		expected4 := []string{"delete", "read", "recover", "update"}
 
 		if !reflect.DeepEqual(resp.Data[path1], expected1) ||
 			!reflect.DeepEqual(resp.Data[path2], expected2) ||
@@ -2702,6 +2702,8 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
 		t.Fatalf("bad: %#v", resp)
 	}
+	// TODO (HCL_DUP_KEYS_DEPRECATION): remove this expectation once deprecation is done
+	require.NotContains(t, resp.Warnings, "policy contains duplicate attributes, which will no longer be supported in a future version")
 
 	// validate the response structure for policy named Update
 	schema.ValidateResponse(
@@ -2806,6 +2808,26 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
 	}
+}
+
+// TestSystemBackend_writeHCLDuplicateAttributes checks that trying to create a policy with duplicate HCL attributes
+// results in a warning being returned by the API
+func TestSystemBackend_writeHCLDuplicateAttributes(t *testing.T) {
+	b := testSystemBackend(t)
+
+	// policy with duplicate attribute
+	rules := `path "foo/" { policy = "read" policy = "read" }`
+	req := logical.TestRequest(t, logical.UpdateOperation, "policy/foo")
+	req.Data["policy"] = rules
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	// TODO (HCL_DUP_KEYS_DEPRECATION): change this test to expect an error when creating a policy with duplicate attributes
+	if err != nil {
+		t.Fatalf("err: %v %#v", err, resp)
+	}
+	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
+		t.Fatalf("bad: %#v", resp)
+	}
+	require.Contains(t, resp.Warnings, "policy contains duplicate attributes, which will no longer be supported in a future version")
 }
 
 func TestSystemBackend_enableAudit(t *testing.T) {
