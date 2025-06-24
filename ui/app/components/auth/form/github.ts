@@ -23,9 +23,9 @@ export default class AuthFormGithub extends AuthBase {
     });
 
     const { metadata } = auth;
-
+    const displayName = metadata ? `${metadata?.org}/${metadata?.username}` : '';
     return this.normalizeAuthResponse(auth, {
-      displayName: `${metadata?.org}/${metadata.username}`,
+      displayName,
       path,
       tokenKey: 'clientToken',
       ttlKey: 'leaseDuration',
