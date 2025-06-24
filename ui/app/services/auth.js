@@ -81,8 +81,8 @@ export default Service.extend({
     if (!tokenName) {
       return;
     }
-
-    const { tokenExpirationEpoch } = this.getTokenData(tokenName);
+    const tokenData = this.getTokenData(tokenName);
+    const tokenExpirationEpoch = tokenData ? tokenData?.tokenExpirationEpoch : undefined;
     const expirationDate = new Date(0);
 
     return tokenExpirationEpoch ? expirationDate.setUTCMilliseconds(tokenExpirationEpoch) : null;
@@ -216,9 +216,12 @@ export default Service.extend({
     return this.ajax(url, 'POST', { namespace });
   },
 
-  calculateExpiration(resp, now) {
-    const ttl = resp.ttl || resp.lease_duration;
-    const tokenExpirationEpoch = resp.expire_time ? new Date(resp.expire_time).getTime() : now + ttl * 1e3;
+  calculateExpiration({ now, ttl, expireTime }) {
+    // First check if the ttl is falsy, including 0, before converting to milliseconds.
+    // Obviously a ttl of zero seconds is not recommended, but root tokens have a `0` ttl because they never expire.
+    // Note - this is different from mount configurations where a `ttl: 0` actually means the value is "unset" and to use system defaults.
+    const convertToMilliseconds = () => (ttl ? now + ttl * 1e3 : null);
+    const tokenExpirationEpoch = expireTime ? new Date(expireTime).getTime() : convertToMilliseconds();
 
     return { ttl, tokenExpirationEpoch };
   },
@@ -310,7 +313,10 @@ export default Service.extend({
 
     const now = this.now();
 
-    Object.assign(data, this.calculateExpiration(resp, now));
+    Object.assign(
+      data,
+      this.calculateExpiration({ now, ttl: resp.ttl || resp.lease_duration, expireTime: resp.expire_time })
+    );
     this.setExpirationSettings(resp, now);
 
     // ensure we don't call renew-self within tests
