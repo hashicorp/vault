@@ -1,0 +1,17 @@
+steal dashboard stuff for cards
+<Hds::Card::Container @hasBorder={{true}} class="has-padding-l" data-test-card="configuration-details">
+  <h3 class="title is-4" data-test-dashboard-card-header="configuration">Configuration details</h3>
+
+  <Hds::Table @caption="Vault configuration details" class="is-border-spacing-revert">
+    <:body as |B|>
+      <B.Tr>
+        <B.Td>API_ADDR</B.Td>
+        <B.Td data-test-vault-config-details="api_addr">hi</B.Td>
+      </B.Tr>
+      <B.Tr>
+        <B.Td>Default lease TTL</B.Td>
+        <B.Td data-test-vault-config-details="default_lease_ttl">hi</B.Td>
+      </B.Tr>
+    </:body>
+  </Hds::Table>
+</Hds::Card::Container>
