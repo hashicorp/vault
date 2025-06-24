@@ -277,9 +277,10 @@ func (c *Sys) RegisterPluginWithContextDetailed(ctx context.Context, i *Register
 	}
 
 	var registerResp RegisterPluginResponse
-	err = resp.DecodeJSON(&registerResp)
-	if err != nil {
-		return nil, err
+	if resp != nil && resp.StatusCode != http.StatusNoContent {
+		if err := resp.DecodeJSON(&registerResp); err != nil {
+			return nil, err
+		}
 	}
 
 	// Filter out the `Endpoint replaced the value of these parameters with the values captured from the endpoint's path: [type]`
