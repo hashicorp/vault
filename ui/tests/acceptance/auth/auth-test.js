@@ -190,7 +190,7 @@ module('Acceptance | auth login form', function (hooks) {
         this.assertReq(req);
         req.passthrough();
       });
-      this.server.put('/auth/:mount/sso_service_url', (schema, req) => {
+      this.server.post('/auth/:mount/sso_service_url', (schema, req) => {
         // SAML only (enterprise)
         this.assertReq(req);
         req.passthrough();

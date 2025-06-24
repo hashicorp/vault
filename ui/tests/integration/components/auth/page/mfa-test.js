@@ -261,13 +261,13 @@ module('Integration | Component | auth | page | mfa', function (hooks) {
       this.loginData = { role: 'some-dev' };
       // Requests are stubbed in the order they are hit
       this.stubRequests = () => {
-        this.server.put(`/auth/${this.path}/sso_service_url`, () => ({
+        this.server.post(`/auth/${this.path}/sso_service_url`, () => ({
           data: {
             sso_service_url: 'test/fake/sso/route',
             token_poll_id: '1234',
           },
         }));
-        this.server.put(`/auth/${this.path}/token`, () => setupTotpMfaResponse(this.authType));
+        this.server.post(`/auth/${this.path}/token`, () => setupTotpMfaResponse(this.authType));
       };
       this.windowStub = windowStub();
     });

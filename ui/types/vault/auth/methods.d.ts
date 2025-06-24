@@ -58,11 +58,15 @@ export interface OidcApiResponse extends ApiResponse {
 export interface OktaVerifyApiResponse extends ApiResponse {
   data: { correctAnswer: number };
 }
-export interface SamlApiResponse extends ApiResponse {
-  auth: AuthResponseData['auth'] & {
-    client_token: string;
-    token_policies: string[];
-    num_uses: number;
+
+export interface SamlLoginApiResponse extends ApiResponse {
+  auth: AuthResponseAuthKey;
+}
+
+export interface SamlSsoServiceUrlApiResponse extends ApiResponse {
+  data: {
+    ssoServiceUrl: string;
+    tokenPollId: string;
   };
 }
 
@@ -70,7 +74,7 @@ export interface TokenLoginApiResponse extends ApiResponse {
   data: AuthResponseDataKey;
 }
 
-// auth types: ldap, radius, userpass
+// auth types: ldap, okta, radius, userpass
 export interface UsernameLoginResponse extends ApiResponse {
   auth: AuthResponseAuthKey & {
     metadata: { username: string };

@@ -265,16 +265,16 @@ module('Integration | Component | auth | page | method authentication', function
       this.path = this.authType;
       this.loginData = { role: 'some-dev' };
       this.response = RESPONSE_STUBS.saml['saml/token'];
-      this.tokenName = 'vault-token☃1';
+      this.tokenName = 'vault-saml☃1';
       // Requests are stubbed in the order they are hit
       this.stubRequests = () => {
-        this.server.put(`/auth/${this.path}/sso_service_url`, () => ({
+        this.server.post(`/auth/${this.path}/sso_service_url`, () => ({
           data: {
             sso_service_url: 'test/fake/sso/route',
             token_poll_id: '1234',
           },
         }));
-        this.server.put(`/auth/${this.path}/token`, () => this.response);
+        this.server.post(`/auth/${this.path}/token`, () => this.response);
         this.server.get(`/auth/token/lookup-self`, () => RESPONSE_STUBS.saml['lookup-self']);
       };
       this.windowStub = windowStub();
