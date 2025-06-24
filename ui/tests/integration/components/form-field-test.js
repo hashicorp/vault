@@ -346,7 +346,7 @@ module('Integration | Component | form field', function (hooks) {
 
     await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} @onChange={{this.onChange}} />`);
     assert
-      .dom('[data-test-toggle-input="Foo"]')
+      .dom(GENERAL.toggleInput('Foo'))
       .isNotChecked('Toggle is initially unchecked when given default value');
     assert.dom('[data-test-ttl-picker-group="Foo"]').doesNotExist('Ttl input is hidden');
   });
@@ -361,7 +361,7 @@ module('Integration | Component | form field', function (hooks) {
     });
 
     await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} @onChange={{this.onChange}} />`);
-    assert.dom('[data-test-toggle-input="Foo"]').isChecked('Toggle is initially checked when given value');
+    assert.dom(GENERAL.toggleInput('Foo')).isChecked('Toggle is initially checked when given value');
     assert.dom('[data-test-ttl-value="Foo"]').hasValue('1', 'Ttl input displays with correct value');
   });
 
