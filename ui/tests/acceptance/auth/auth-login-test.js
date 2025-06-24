@@ -52,8 +52,8 @@ module('Acceptance | auth login', function (hooks) {
     const authTypes = supportedTypes(false);
     assert.expect(authTypes.length);
     for (const backend of authTypes.reverse()) {
-      await visit(`/vault/auth?with=${backend.type}`);
-      assert.dom(AUTH_FORM.selectMethod).hasValue(backend.type);
+      await visit(`/vault/auth?with=${backend}`);
+      assert.dom(AUTH_FORM.selectMethod).hasValue(backend);
     }
   });
 
@@ -285,10 +285,10 @@ module('Acceptance | auth login', function (hooks) {
     });
 
     test('radius', async function (assert) {
-      assert.expect(3);
+      assert.expect(2);
       this.authType = 'radius';
-      this.expectedPayload = { username: 'matilda', password: 'some-password' };
-      this.server.post('/auth/custom-radius/login', (schema, req) => {
+      this.expectedPayload = { password: 'some-password' };
+      this.server.post('/auth/custom-radius/login/matilda', (schema, req) => {
         this.assertAuthRequest(assert, req, this.expectedPayload);
         req.passthrough();
       });

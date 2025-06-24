@@ -125,14 +125,14 @@ module('Integration | Component | auth | form | base', function (hooks) {
 
   module('radius', function (hooks) {
     hooks.beforeEach(function () {
-      this.setup('radius', 'radiusLogin');
+      this.setup('radius', 'radiusLoginWithUsername');
       this.assertSubmit = (assert, loginRequestArgs, loginData) => {
-        const [path, { username, password }] = loginRequestArgs;
+        const [username, path, { password }] = loginRequestArgs;
         // if path is included in loginData, a custom path was submitted
         const expectedPath = loginData?.path || this.authType;
-        assert.strictEqual(path, expectedPath, 'it calls radiusLogin with expected path');
-        assert.strictEqual(username, loginData.username, 'it calls radiusLogin with username');
-        assert.strictEqual(password, loginData.password, 'it calls radiusLogin with password');
+        assert.strictEqual(username, loginData.username, 'it calls radiusLoginWithUsername with username');
+        assert.strictEqual(path, expectedPath, 'it calls radiusLoginWithUsername with expected path');
+        assert.strictEqual(password, loginData.password, 'it calls radiusLoginWithUsername with password');
       };
       this.renderComponent = ({ yieldBlock = false } = {}) => {
         if (yieldBlock) {

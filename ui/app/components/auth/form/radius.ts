@@ -18,8 +18,7 @@ export default class AuthFormRadius extends AuthBase {
   async loginRequest(formData: { path: string; username: string; password: string }) {
     const { path, username, password } = formData;
 
-    const { auth } = <UsernameLoginResponse>await this.api.auth.radiusLogin(path, {
-      username,
+    const { auth } = <UsernameLoginResponse>await this.api.auth.radiusLoginWithUsername(username, path, {
       password,
     });
 

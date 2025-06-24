@@ -207,19 +207,6 @@ module('Integration | Component | auth | page | mfa', function (hooks) {
     mfaTests(test);
   });
 
-  module('radius', function (hooks) {
-    hooks.beforeEach(async function () {
-      this.authType = 'radius';
-      this.path = this.authType;
-      this.loginData = { username: 'matilda', password: 'password' };
-      this.stubRequests = () => {
-        this.server.post(`/auth/${this.path}/login`, () => setupTotpMfaResponse(this.path));
-      };
-    });
-
-    mfaTests(test);
-  });
-
   module('username and password methods', function (hooks) {
     hooks.beforeEach(async function () {
       this.loginData = { username: 'matilda', password: 'password' };
@@ -240,6 +227,15 @@ module('Integration | Component | auth | page | mfa', function (hooks) {
     module('okta', function (hooks) {
       hooks.beforeEach(async function () {
         this.authType = 'okta';
+        this.path = this.authType;
+      });
+
+      mfaTests(test);
+    });
+
+    module('radius', function (hooks) {
+      hooks.beforeEach(async function () {
+        this.authType = 'radius';
         this.path = this.authType;
       });
 

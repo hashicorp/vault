@@ -196,7 +196,7 @@ module('Integration | Component | auth | page | method authentication', function
       this.response = RESPONSE_STUBS.radius;
       this.tokenName = 'vault-radius☃1';
       this.stubRequests = () => {
-        this.server.post(`/auth/${this.path}/login`, () => this.response);
+        this.server.post(`/auth/${this.path}/login/matilda`, () => this.response);
       };
     });
 
