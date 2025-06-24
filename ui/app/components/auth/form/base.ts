@@ -133,7 +133,7 @@ export default abstract class AuthBase extends Component<Args> {
     { path = '', tokenKey = '', ttlKey = '', displayName = '' }
   ) => {
     return {
-      // authResponse will include an mfaRequirement, if and enforcement is configured.
+      // authResponse will include enforcement data in the `mfaRequirement` key - if MFA is configured.
       ...authResponse,
       authMethodType: this.args.authType,
       authMountPath: path,
