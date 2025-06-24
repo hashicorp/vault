@@ -173,5 +173,6 @@ export default class SwaggerUiComponent extends Component {
 
   willDestroy() {
     this.observer.disconnect();
+    super.willDestroy();
   }
 }
