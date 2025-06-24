@@ -16,7 +16,7 @@ import { camelize } from '@ember/string';
 const SELECTORS = {
   container: '[data-test-swagger-ui]',
   searchInput: 'input.operation-filter-input',
-  apiPathBlock: '.opblock-post',
+  apiPathBlock: '.opblock',
   operationId: '.opblock-summary-operation-id',
   controlArrowButton: '.opblock-control-arrow',
   copyButton: '.copy-to-clipboard',
@@ -105,8 +105,13 @@ module('Integration | Component | open-api-explorer | swagger-ui', function (hoo
     });
     assert.dom(SELECTORS.copyButton).hasAttribute('tabindex', '0');
 
-    await click(SELECTORS.controlArrowButton);
+    const controlArrowButton = document.querySelectorAll(SELECTORS.controlArrowButton)[1];
+    await click(controlArrowButton);
     await waitFor(SELECTORS.tryItOutButton);
+
+    const input = document.querySelector('.parameters input:read-only');
+    assert.dom(input).exists('parameter input is readonly');
+
     assert
       .dom(SELECTORS.tryItOutButton)
       .hasAttribute(
@@ -134,8 +139,12 @@ module('Integration | Component | open-api-explorer | swagger-ui', function (hoo
     });
     assert.dom(SELECTORS.copyButton).hasAttribute('tabindex', '0');
 
-    await click(SELECTORS.controlArrowButton);
+    const controlArrowButton = document.querySelectorAll(SELECTORS.controlArrowButton)[1];
+    await click(controlArrowButton);
     await waitFor(SELECTORS.tryItOutButton);
+
+    const input = document.querySelector('.parameters input:read-only');
+    assert.dom(input).exists('parameter input is readonly');
     assert
       .dom(SELECTORS.tryItOutButton)
       .hasAttribute(
