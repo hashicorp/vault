@@ -220,7 +220,8 @@ export default Service.extend({
     // Note - this is different from mount configurations where a `ttl: 0` actually means the value is "unset" and to use system defaults.
     const convertToMilliseconds = () => (ttl ? now + ttl * 1e3 : null);
     const tokenExpirationEpoch = expireTime ? new Date(expireTime).getTime() : convertToMilliseconds();
-    return { ttl, tokenExpirationEpoch };
+    // To avoid confusion, if a TTL is `0` return null
+    return { ttl: ttl || null, tokenExpirationEpoch };
   },
 
   setExpirationSettings(renewable, now) {
@@ -257,12 +258,31 @@ export default Service.extend({
   async persistAuthData(clusterId, authResponseData) {
     // An empty string denotes the "root" namespace
     const currentNamespace = this.namespaceService.path || '';
-    // namespace_path is only returned for methods that use a token exchange to authenticate (i.e. token, oidc)
-    const { authMethodType, expireTime, namespacePath, policies, renewable, ttl } = authResponseData;
+    // Only pull out the necessary data
+    const {
+      authMethodType,
+      authMountPath,
+      displayName,
+      entityId,
+      expireTime,
+      // namespace_path is only returned for methods that use a token exchange to authenticate (i.e. token, oidc)
+      namespacePath,
+      policies,
+      renewable,
+      token,
+      ttl,
+    } = authResponseData;
 
-    const data = {
+    const persistedTokenData = {
+      authMethodType,
+      authMountPath,
+      displayName,
+      entityId,
+      namespacePath,
+      policies,
+      renewable,
+      token,
       userRootNamespace: this.calculateRootNamespace(currentNamespace, namespacePath, authMethodType),
-      ...authResponseData,
     };
 
     const tokenName = this.generateTokenName(
@@ -270,15 +290,18 @@ export default Service.extend({
       policies
     );
 
+    // Set stored ttl and tokenExpirationEpoch
     const now = this.now();
-    Object.assign(data, this.calculateExpiration({ now, ttl, expireTime }));
+    const { ttl: calculatedTtl, tokenExpirationEpoch } = this.calculateExpiration({ now, ttl, expireTime });
+    persistedTokenData.ttl = calculatedTtl;
+    persistedTokenData.tokenExpirationEpoch = tokenExpirationEpoch;
     this.setExpirationSettings(renewable, now);
 
     // Only a few auth responses do not include a displayName or metadata with those details,
     // so perform an additional request to lookupSelf to set
-    if (!data.displayName) {
-      const lookupDisplayName = await this.setDisplayName(data.token);
-      data.displayName = lookupDisplayName || authMethodType;
+    if (!displayName) {
+      const lookupDisplayName = await this.lookupDisplayName(persistedTokenData.token);
+      persistedTokenData.displayName = lookupDisplayName || authMethodType;
     }
 
     // ensure we don't call renew-self within tests
@@ -286,16 +309,16 @@ export default Service.extend({
     if (Ember.testing) this.set('allowExpiration', false);
 
     this.set('tokens', addToArray(this.tokens, tokenName));
-    this.setTokenData(tokenName, data);
+    this.setTokenData(tokenName, persistedTokenData);
 
     return resolve({
-      namespace: currentNamespace || data.userRootNamespace,
+      namespace: currentNamespace || persistedTokenData.userRootNamespace,
       token: tokenName,
       isRoot: (policies || []).includes('root'),
     });
   },
 
-  async setDisplayName(clientToken) {
+  async lookupDisplayName(clientToken) {
     // this is a fallback for any methods that don't return a display name from the initial auth request (i.e. JWT)
     // or for OIDC/SAML with mfa configured because the mfa/validate endpoint does not consistently
     // return display_name (or metadata that includes something to be used as such).
@@ -440,6 +463,7 @@ export default Service.extend({
       authMethodType,
       authMountPath,
       entityId: data.entity_id,
+      expireTime: data?.expire_time,
       token: data?.client_token || data?.id,
       renewable: data.renewable,
       ttl: data?.lease_duration || data?.ttl,

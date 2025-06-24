@@ -150,7 +150,7 @@ module('Integration | Component | auth | page | method authentication', function
       this.loginData = { role: 'some-dev' };
       this.path = this.authType;
       this.response = RESPONSE_STUBS.oidc['oidc/callback'];
-      this.tokenName = 'vault-token☃1';
+      this.tokenName = 'vault-oidc☃1';
       // Requests are stubbed in the order they are hit
       this.stubRequests = () => {
         this.server.post(`/auth/${this.path}/oidc/auth_url`, () => {
@@ -196,7 +196,7 @@ module('Integration | Component | auth | page | method authentication', function
       this.response = RESPONSE_STUBS.radius;
       this.tokenName = 'vault-radius☃1';
       this.stubRequests = () => {
-        this.server.post(`/auth/${this.path}/login/${this.loginData.username}`, () => this.response);
+        this.server.post(`/auth/${this.path}/login`, () => this.response);
       };
     });
 
