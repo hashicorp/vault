@@ -260,30 +260,28 @@ export default Service.extend({
     // An empty string denotes the "root" namespace
     const currentNamespace = this.namespaceService.path || '';
     // Only pull out the necessary data
-    const {
-      authMethodType,
-      authMountPath,
-      displayName,
-      entityId,
-      expireTime,
-      namespacePath,
-      policies,
-      renewable,
-      token,
-      ttl,
-    } = authResponseData;
+    const { authMethodType, authMountPath, entityId, policies, renewable, token, ttl } = authResponseData;
+
+    // Lookup token for additional data that may be missing from the method's login response
+    const { displayName, expireTime, namespacePath } = await this.lookupTokenData(token, !!currentNamespace, {
+      displayName: authResponseData?.displayName,
+      expireTime: authResponseData?.expireTime,
+      namespacePath: authResponseData?.namespacePath,
+    });
+
+    const userRootNamespace = this.calculateRootNamespace(currentNamespace, namespacePath, authMethodType);
 
     const persistedTokenData = {
       authMethodType,
       authMountPath,
-      displayName,
+      displayName: displayName || authMethodType,
       entityId,
       policies,
       renewable,
       token,
-      userRootNamespace: this.calculateRootNamespace(currentNamespace, namespacePath, authMethodType),
-      // only include namespacePath if it has a value
-      ...(namespacePath !== undefined && { namespacePath }),
+      userRootNamespace,
+      // Only include namespacePath if it exists
+      ...(namespacePath && { namespacePath }),
     };
 
     // Set stored ttl and tokenExpirationEpoch
@@ -296,7 +294,7 @@ export default Service.extend({
     // this is intentionally not included in setExpirationSettings so we can unit test that method
     if (Ember.testing) this.set('allowExpiration', false);
 
-    // Set token name and store date
+    // Set token name and store data
     const tokenName = this.generateTokenName(
       { backend: authMethodType, clusterId: clusterId || this.activeClusterId },
       policies
@@ -308,6 +306,25 @@ export default Service.extend({
       token: tokenName,
       isRoot: (policies || []).includes('root'),
     });
+  },
+
+  async lookupTokenData(token, hasNamespace, { displayName, expireTime, namespacePath }) {
+    // Only lookup if we're missing displayName or namespacePath in a non-root namespace
+    if (!displayName || (!namespacePath && hasNamespace)) {
+      try {
+        const { data } = await this.lookupSelf(token);
+        return {
+          displayName: displayName || data?.display_name,
+          namespacePath: namespacePath || data?.namespace_path,
+          expireTime: expireTime || data?.expire_time,
+        };
+      } catch {
+        // It would be unusual for this request to fail, but swallowing it because we're
+        // essentially setting "nice to have" data here.
+      }
+    }
+    // Return original values as fallback
+    return { displayName, namespacePath, expireTime };
   },
 
   setTokenData(token, data) {
