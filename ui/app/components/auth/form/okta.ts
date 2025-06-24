@@ -86,5 +86,6 @@ export default class AuthFormOkta extends AuthBase {
     this.oktaVerifyError = '';
     this.showNumberChallenge = false;
     this.pollForOktaNumberChallenge.cancelAll();
+    this.login.cancelAll();
   }
 }

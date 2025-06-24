@@ -152,6 +152,10 @@ export default class AuthFormOidcJwt extends AuthBase {
     }
   }
 
+  cancelLogin() {
+    this.login.cancelAll();
+  }
+
   async loginJwt(formData: JwtLoginData) {
     const { path, jwt, role } = formData;
     const { auth } = <JwtOidcLoginApiResponse>await this.api.auth.jwtLogin(path, { jwt, role });

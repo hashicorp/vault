@@ -73,6 +73,10 @@ export default class AuthFormSaml extends AuthBase {
     }
   }
 
+  cancelLogin() {
+    this.login.cancelAll();
+  }
+
   // Fetch role to get sso_service_url which is where popup is opened
   async fetchSamlRole({ namespace = '', path = '', role = '' }): Promise<SamlRole> {
     // Create the client verifier and challenge
