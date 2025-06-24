@@ -461,14 +461,14 @@ export default Service.extend({
     });
   },
 
-  _parseMfaResponse(mfa_requirement) {
-    // mfa_requirement response comes back in a shape that is not easy to work with
+  parseMfaResponse(mfaRequirement) {
+    // mfaRequirement response comes back in a shape that is not easy to work with
     // convert to array of objects and add necessary properties to satisfy the view
-    if (mfa_requirement) {
-      const { mfa_request_id, mfa_constraints } = mfa_requirement;
+    if (mfaRequirement) {
+      const { mfa_request_id: mfaRequestId, mfa_constraints: mfaConstraints } = mfaRequirement;
       const constraints = [];
-      for (const key in mfa_constraints) {
-        const methods = mfa_constraints[key].any;
+      for (const key in mfaConstraints) {
+        const methods = mfaConstraints[key].any;
         const isMulti = methods.length > 1;
 
         // friendly label for display in MfaForm
@@ -484,7 +484,7 @@ export default Service.extend({
       }
 
       return {
-        mfa_requirement: { mfa_request_id, mfa_constraints: constraints },
+        mfaRequirement: { mfaRequestId, mfaConstraints: constraints },
       };
     }
     return {};
@@ -496,14 +496,15 @@ export default Service.extend({
     const resp = await adapter.authenticate(options);
 
     if (resp.auth?.mfa_requirement) {
-      return this._parseMfaResponse(resp.auth?.mfa_requirement);
+      const mfaRequirement = resp.auth?.mfa_requirement;
+      return this.parseMfaResponse(mfaRequirement);
     }
 
     return this.authSuccess(options, resp.auth || resp.data);
   },
 
-  async totpValidate({ mfa_requirement, ...options }) {
-    const resp = await this.clusterAdapter().mfaValidate(mfa_requirement);
+  async totpValidate({ mfaRequirement, ...options }) {
+    const resp = await this.clusterAdapter().mfaValidate(mfaRequirement);
     return this.authSuccess(options, resp.auth || resp.data);
   },
 

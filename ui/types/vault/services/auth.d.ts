@@ -49,5 +49,5 @@ export default class AuthService extends Service {
     }
   ) => Promise<any>;
   getAuthType(): string | undefined;
-  _parseMfaResponse(mfaResponse: MfaRequirementApiResponse): ParsedMfaRequirement;
+  parseMfaResponse(mfaResponse: MfaRequirementApiResponse): ParsedMfaRequirement;
 }

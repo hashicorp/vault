@@ -233,9 +233,10 @@ export default class AuthFormOidcJwt extends AuthBase {
       return this.cancelLogin(oidcWindow, errorMessage(e));
     }
 
-    const { client_token, mfa_requirement } = resp.auth;
-    if (mfa_requirement) {
-      return this.handleMfa(mfa_requirement, path);
+    const mfaRequirement = resp.auth.mfa_requirement;
+    const { client_token } = resp.auth;
+    if (mfaRequirement) {
+      return this.handleMfa(mfaRequirement, path);
     } else if (client_token) {
       return this.continueLogin({ token: client_token });
     } else {
