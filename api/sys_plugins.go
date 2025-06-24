@@ -226,13 +226,13 @@ type RegisterPluginResponse struct {
 }
 
 // RegisterPlugin wraps RegisterPluginWithContext using context.Background.
-// Deprecated: Use RegisterPluginV2 instead.
+// Deprecated: Use RegisterPluginDetailed instead.
 func (c *Sys) RegisterPlugin(i *RegisterPluginInput) error {
 	return c.RegisterPluginWithContext(context.Background(), i)
 }
 
 // RegisterPluginWithContext registers the plugin with the given information.
-// Deprecated: Use RegisterPluginWithContextV2 instead.
+// Deprecated: Use RegisterPluginWithContextDetailed instead.
 func (c *Sys) RegisterPluginWithContext(ctx context.Context, i *RegisterPluginInput) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
@@ -251,13 +251,13 @@ func (c *Sys) RegisterPluginWithContext(ctx context.Context, i *RegisterPluginIn
 	return err
 }
 
-// RegisterPluginV2 wraps RegisterPluginWithContextV2 using context.Background.
-func (c *Sys) RegisterPluginV2(i *RegisterPluginInput) (*RegisterPluginResponse, error) {
-	return c.RegisterPluginWithContextV2(context.Background(), i)
+// RegisterPluginDetailed wraps RegisterPluginWtihContextDetailed using context.Background.
+func (c *Sys) RegisterPluginDetailed(i *RegisterPluginInput) (*RegisterPluginResponse, error) {
+	return c.RegisterPluginWithContextDetailed(context.Background(), i)
 }
 
-// RegisterPluginWithContextV2 registers the plugin with the given information.
-func (c *Sys) RegisterPluginWithContextV2(ctx context.Context, i *RegisterPluginInput) (*RegisterPluginResponse, error) {
+// RegisterPluginWithContextDetailed registers the plugin with the given information.
+func (c *Sys) RegisterPluginWithContextDetailed(ctx context.Context, i *RegisterPluginInput) (*RegisterPluginResponse, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 

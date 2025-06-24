@@ -91,7 +91,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		ui, cmd := testPluginDeregisterCommand(t)
 		cmd.client = client
 
-		registerResp, err := client.Sys().RegisterPluginV2(&api.RegisterPluginInput{
+		registerResp, err := client.Sys().RegisterPluginDetailed(&api.RegisterPluginInput{
 			Name:    pluginName,
 			Type:    api.PluginTypeCredential,
 			Command: pluginName,
