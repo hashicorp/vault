@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { click, fillIn, render, typeIn, waitFor, waitUntil } from '@ember/test-helpers';
+import { click, render, waitFor, waitUntil } from '@ember/test-helpers';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { hbs } from 'ember-cli-htmlbars';
@@ -21,6 +21,19 @@ const SELECTORS = {
   controlArrowButton: '.opblock-control-arrow',
   copyButton: '.copy-to-clipboard',
   tryItOutButton: '.try-out button',
+};
+
+// for some reason search filtering does not update with ember test helpers
+// possibly due to swagger-ui event implementation
+// using native window fn to workaround
+const setNativeInputValue = (value) => {
+  const input = document.querySelector(SELECTORS.searchInput);
+  let nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+    window.HTMLInputElement.prototype,
+    'value'
+  ).set;
+  nativeInputValueSetter.call(input, value);
+  input.dispatchEvent(new Event('input', { bubbles: true }));
 };
 
 module('Integration | Component | open-api-explorer | swagger-ui', function (hooks) {
@@ -50,13 +63,10 @@ module('Integration | Component | open-api-explorer | swagger-ui', function (hoo
 
   test('it can search', async function (assert) {
     await this.renderComponent();
-    // in testing only the input is not filling correctly except after the second time
-    await fillIn(SELECTORS.searchInput, 'moot');
-    await typeIn(SELECTORS.searchInput, 'token');
-    // for some reason search results are not rendered immediately in tests,
-    // so asserting that the search input has the value we expect is the best we can do here
-    // if the search fn breaks, this test will fail
+
+    setNativeInputValue('token');
     assert.dom(SELECTORS.searchInput).hasValue('token', 'search input has value');
+    assert.dom(SELECTORS.apiPathBlock).exists({ count: 1 }, 'renders filtered api paths');
   });
 
   test('it should render camelized operation ids', async function (assert) {
@@ -108,11 +118,11 @@ module('Integration | Component | open-api-explorer | swagger-ui', function (hoo
   });
 
   test('it retains a11y fixes after filtering', async function (assert) {
-    const envStub = sinon.stub(config, 'environment').value('production');
+    const envStub = sinon.stub(config, 'environment').value('development');
 
     await this.renderComponent();
-    await fillIn(SELECTORS.searchInput, 'create');
-    await typeIn(SELECTORS.searchInput, 'create');
+
+    setNativeInputValue('secret');
 
     await waitUntil(() => {
       return document.querySelector(SELECTORS.controlArrowButton).getAttribute('tabindex') === '0';

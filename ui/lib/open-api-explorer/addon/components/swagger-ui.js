@@ -7,12 +7,14 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import { willDestroy } from '@ember/destroyable';
 import parseURL from 'core/utils/parse-url';
 import config from 'vault/config/environment';
 import openApiExplorerConfig from 'open-api-explorer/config/environment';
 import { guidFor } from '@ember/object/internals';
 import SwaggerUIBundle from 'swagger-ui-dist/swagger-ui-bundle.js';
 import { camelize } from '@ember/string';
+import keys from 'core/utils/keys';
 
 const { APP } = openApiExplorerConfig;
 
@@ -126,12 +128,12 @@ export default class SwaggerUiComponent extends Component {
   applyA11yFixes() {
     const container = document.querySelector('.swagger-ui');
     if (container) {
-      const observer = new MutationObserver(() => {
+      this.observer = new MutationObserver(() => {
         this.updateCaretTabIndex();
         this.updateCopyToClipboard();
         this.updateTryItOutButtonDescription();
       });
-      observer.observe(container, { childList: true, subtree: true });
+      this.observer.observe(container, { childList: true, subtree: true });
       // Run once on initial load
       this.updateCaretTabIndex();
       this.updateCopyToClipboard();
@@ -150,7 +152,7 @@ export default class SwaggerUiComponent extends Component {
       div.tabIndex = 0;
       div.setAttribute('role', 'button');
       div.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') {
+        if (e.key === keys.ENTER || e.key === keys.SPACE) {
           const svg = div.querySelector('svg');
           if (svg) {
             svg.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -168,5 +170,9 @@ export default class SwaggerUiComponent extends Component {
 
       el.setAttribute('aria-description', warning);
     });
+  }
+
+  willDestroy() {
+    this.observer.disconnect();
   }
 }
