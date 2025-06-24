@@ -221,7 +221,12 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			continue
 		}
 
-		plaintext, err := p.DecryptWithFactory(item.DecodedContext, item.DecodedNonce, item.Ciphertext, factories...)
+		opts := keysutil.EncryptionOptions{
+			Context: item.DecodedContext,
+			Nonce:   item.DecodedNonce,
+		}
+
+		plaintext, err := p.DecryptWithFactory(opts, item.Ciphertext, factories...)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
@@ -246,7 +251,13 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			warnAboutNonceUsage = true
 		}
 
-		ciphertext, err := p.EncryptWithFactory(item.KeyVersion, item.DecodedContext, item.DecodedNonce, plaintext, factories...)
+		opts = keysutil.EncryptionOptions{
+			KeyVersion: item.KeyVersion,
+			Context:    item.DecodedContext,
+			Nonce:      item.DecodedNonce,
+		}
+
+		ciphertext, err := p.EncryptWithFactory(opts, plaintext, factories...)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:

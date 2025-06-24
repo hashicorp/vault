@@ -373,7 +373,7 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 		// because we don't know if the parameters match.
 
 		switch req.KeyType {
-		case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
+		case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_AES128_CBC, KeyType_AES256_CBC:
 			if req.Convergent && !req.Derived {
 				cleanup()
 				return nil, false, fmt.Errorf("convergent encryption requires derivation to be enabled")

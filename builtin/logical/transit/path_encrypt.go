@@ -52,6 +52,12 @@ type BatchRequestItem struct {
 	// Reference is an arbitrary caller supplied string value that will be placed on the
 	// batch response to ease correlation between inputs and outputs
 	Reference string `json:"reference" structs:"reference" mapstructure:"reference"`
+
+	// IV is the user-supplied IV to be used for AES-CBC encryption
+	IV string `json:"iv" structs:"iv" mapstructure:"iv"`
+
+	// DecodedIV is the base64 decoded version of IV
+	DecodedIV []byte
 }
 
 // EncryptBatchResponseItem represents a response item for batch processing
@@ -186,6 +192,12 @@ Specifies a list of items to be encrypted in a single batch. When this parameter
 is set, if the parameters 'plaintext', 'context' and 'nonce' are also set, they
 will be ignored. Any batch output will preserve the order of the batch input.`,
 			},
+			"iv": {
+				Type: framework.TypeString,
+				Description: `
+Specifies a base64-encoded IV to use with AES-CBC. The length of the IV must
+be 16 bytes (128 bits).'`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -318,6 +330,15 @@ func decodeBatchRequestItems(src interface{}, requirePlaintext bool, requireCiph
 				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].reference' expected type 'string', got unconvertible type '%T'", i, item["reference"]))
 			}
 		}
+
+		if v, has := item["iv"]; has {
+			if !reflect.ValueOf(v).IsValid() {
+			} else if casted, ok := v.(string); ok {
+				(*dst)[i].IV = casted
+			} else {
+				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].iv' expected type 'string', got unconvertible type '%T'", i, item["iv"]))
+			}
+		}
 	}
 
 	if len(errs.Errors) > 0 {
@@ -373,6 +394,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			Nonce:          d.Get("nonce").(string),
 			KeyVersion:     d.Get("key_version").(int),
 			AssociatedData: d.Get("associated_data").(string),
+			IV:             d.Get("iv").(string),
 		}
 		if psRaw, ok := d.GetOk("padding_scheme"); ok {
 			if ps, ok := psRaw.(string); ok {
@@ -424,6 +446,16 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 				continue
 			}
 		}
+
+		// Decode the IV
+		if len(item.IV) > 0 {
+			batchInputItems[i].DecodedIV, err = base64.StdEncoding.DecodeString(item.IV)
+			if err != nil {
+				userErrorInBatch = true
+				batchResponseItems[i].Error = err.Error()
+				continue
+			}
+		}
 	}
 
 	// Get the policy
@@ -468,6 +500,10 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			return logical.ErrorResponse(fmt.Sprintf("key type %v not supported for this operation", keyType)), logical.ErrInvalidRequest
 		case "managed_key":
 			polReq.KeyType = keysutil.KeyType_MANAGED_KEY
+		case "aes128-cbc":
+			polReq.KeyType = keysutil.KeyType_AES128_CBC
+		case "aes256-cbc":
+			polReq.KeyType = keysutil.KeyType_AES256_CBC
 		default:
 			return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 		}
@@ -544,7 +580,14 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			})
 		}
 
-		ciphertext, err := p.EncryptWithFactory(item.KeyVersion, item.DecodedContext, item.DecodedNonce, item.Plaintext, factories...)
+		opts := keysutil.EncryptionOptions{
+			KeyVersion: item.KeyVersion,
+			Context:    item.DecodedContext,
+			Nonce:      item.DecodedNonce,
+			IV:         item.DecodedIV,
+		}
+
+		ciphertext, err := p.EncryptWithFactory(opts, item.Plaintext, factories...)
 		if err != nil {
 			switch err.(type) {
 			case errutil.InternalError:

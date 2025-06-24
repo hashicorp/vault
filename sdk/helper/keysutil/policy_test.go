@@ -37,7 +37,7 @@ var allTestKeyTypes = []KeyType{
 	KeyType_AES256_GCM96, KeyType_ECDSA_P256, KeyType_ED25519, KeyType_RSA2048,
 	KeyType_RSA4096, KeyType_ChaCha20_Poly1305, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_AES128_GCM96,
 	KeyType_RSA3072, KeyType_MANAGED_KEY, KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES256_CMAC, KeyType_ML_DSA,
-	KeyType_HYBRID, KeyType_AES192_CMAC,
+	KeyType_HYBRID, KeyType_AES192_CMAC, KeyType_AES128_CBC, KeyType_AES256_CBC,
 }
 
 func TestPolicy_KeyTypes(t *testing.T) {
@@ -942,7 +942,7 @@ func autoVerifyDecrypt(depth int, t *testing.T, p *Policy, input []byte, ct stri
 	t.Log(tabs, "Automatically decrypting with options:", factories)
 
 	tabs = strings.Repeat("\t", depth+1)
-	ptb64, err := p.DecryptWithFactory(nil, nil, ct, factories...)
+	ptb64, err := p.DecryptWithFactory(EncryptionOptions{}, ct, factories...)
 	if err != nil {
 		t.Fatal(tabs, "❌ Failed to automatically verify signature:", err)
 	}
@@ -1123,7 +1123,7 @@ func Test_RSA_PKCS1Encryption(t *testing.T) {
 	test_RSA_PKCS1 := func(t *testing.T, p *Policy, rsaKey *rsa.PrivateKey, padding PaddingScheme) {
 		// 1. Make a signature with the given key size and hash algorithm.
 		t.Log(tabs[3], "Make an automatic signature")
-		ct, err := p.EncryptWithFactory(0, nil, nil, string(input), padding)
+		ct, err := p.EncryptWithFactory(EncryptionOptions{}, string(input), padding)
 		if err != nil {
 			t.Fatal(tabs[4], "❌ Failed to automatically encrypt:", err)
 		}
