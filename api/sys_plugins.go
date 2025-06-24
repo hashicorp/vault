@@ -221,6 +221,7 @@ type RegisterPluginInput struct {
 	Download bool `json:"download,omitempty"`
 }
 
+// RegisterPluginResponse is the response from the RegisterPluginDetailed call.
 type RegisterPluginResponse struct {
 	Warnings []string `json:"warnings"`
 }
