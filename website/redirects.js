@@ -319,5 +319,10 @@ module.exports = [
     source: '/vault/docs/v:version(1\.(?:7|8|9|10|11|12|13|14|15|16|17|18|19)\.x)/sysadmin/snapshots/automation-overview',
     destination: '/vault/docs/:version/enterprise/automated-integrated-storage-snapshots',
     permanent: true,
+  },
+  {
+    source: '/vault/docs/concepts/client-count/usage-metrics',
+    destination: '/vault/docs/concepts/client-count/client-usage',
+    permanent: true,
   }
 ]
