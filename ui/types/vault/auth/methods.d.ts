@@ -37,3 +37,7 @@ export interface SamlApiResponse extends ApiResponse {
     num_uses: number;
   };
 }
+
+export interface TokenLoginApiResponse extends ApiResponse {
+  data: AuthResponseDataKey;
+}

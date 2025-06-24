@@ -10,15 +10,14 @@ import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { sanitizePath } from 'core/utils/sanitize-path';
 import { POSSIBLE_FIELDS } from 'vault/utils/supported-login-methods';
+import { ResponseError } from '@hashicorp/vault-client-typescript';
 
-import type AuthService from 'vault/vault/services/auth';
+import type { HTMLElementEvent } from 'vault/forms';
+import type { LoginFields, NormalizedAuthData } from 'vault/vault/auth/form';
+import type ApiService from 'vault/services/api';
 import type ClusterModel from 'vault/models/cluster';
 import type FlagsService from 'vault/services/flags';
 import type VersionService from 'vault/services/version';
-import type { AuthResponse } from 'vault/vault/services/auth';
-import type { HTMLElementEvent } from 'vault/forms';
-import type { LoginFields } from 'vault/vault/auth/form';
-import type { MfaRequirementApiResponse, ParsedMfaRequirement } from 'vault/vault/auth/mfa';
 
 /**
  * @module Auth::Base
@@ -36,8 +35,11 @@ interface Args {
   onSuccess: CallableFunction;
 }
 
-export default class AuthBase extends Component<Args> {
-  @service declare readonly auth: AuthService;
+// This an "abstract" class because it is not meant to be instantiated directly and should be extended from by each auth method type.
+// If at any point the Vault UI wants to support a dynamic list of login methods (for example, via custom auth plugins) this class can be
+// refactored to handle general auth types, but the Vault UI does not currently support this.
+export default abstract class AuthBase extends Component<Args> {
+  @service declare readonly api: ApiService;
   @service declare readonly flags: FlagsService;
   @service declare readonly version: VersionService;
 
@@ -52,41 +54,41 @@ export default class AuthBase extends Component<Args> {
   login = task(
     waitFor(async (formData) => {
       try {
-        const authResponse = await this.auth.authenticate({
-          clusterId: this.args.cluster.id,
-          backend: this.args.authType,
-          data: formData,
-          selectedAuth: this.args.authType,
-        });
-
-        const path = formData?.path;
-        this.handleAuthResponse(authResponse, path);
+        const normalizedAuthData = await this.loginRequest(formData);
+        // calls onAuthResponse in parent auth/page.js component
+        this.args.onSuccess(normalizedAuthData);
       } catch (error) {
-        this.onError(error as Error);
+        this.onError(error as ResponseError);
       }
     })
   );
 
-  // Standard methods get mfaRequirements from the authenticate method in the auth service
-  // methodData is necessary if there's an MfaRequirement because persisting auth data happens after that
-  handleAuthResponse(authResponse: AuthResponse | ParsedMfaRequirement, path?: string) {
-    const methodData: { selectedAuth: string; path?: string } = { selectedAuth: this.args.authType, path };
-    // calls onAuthResponse in parent auth/page.js component
-    this.args.onSuccess(authResponse, methodData);
-  }
+  // This method must be defined by child components and invokes the relevant login method
+  abstract loginRequest(formData: Record<string, any>): Promise<NormalizedAuthData>;
 
-  // SSO methods with a different token exchange workflow skip the auth service authenticate method
-  // and need mfa handle separately
-  handleMfa(mfaRequirement: MfaRequirementApiResponse, path: string) {
-    const parsedMfaAuthResponse = this.auth.parseMfaResponse(mfaRequirement);
-    this.handleAuthResponse(parsedMfaAuthResponse, path);
-  }
+  // Optional method for canceling any additional login items that may be relevant the
+  // authentication workflow for that method, such as canceling polling tasks.
+  cancelLogin?(): void;
 
-  onError(error: Error | string) {
-    if (!this.auth.mfaErrors) {
-      const errorMessage = `Authentication failed: ${this.auth.handleError(error)}`;
-      this.args.onError(errorMessage);
+  async onError(error: ResponseError | string) {
+    // Cancel any additional login items that may be relevant to that method.
+    // For example, polling tasks or popup windows.
+    if (this.cancelLogin) {
+      this.cancelLogin();
     }
+
+    let errorMessage = '';
+    if (error instanceof ResponseError) {
+      // If error has not been parsed already then parse and render error message
+      const { message } = await this.api.parseError(error);
+      errorMessage = message;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    } else {
+      errorMessage = 'An error occurred, check the Vault logs.';
+    }
+
+    this.args.onError(`Authentication failed: ${errorMessage}`);
   }
 
   parseFormData(formData: FormData) {
@@ -116,9 +118,28 @@ export default class AuthBase extends Component<Args> {
         // HVD managed clusters can only input child namespaces, manually prepend with the hvd root
         namespace = namespace ? `${hvdRootNs}/${namespace}` : hvdRootNs;
       }
+      // The namespace input is only sent because some methods use it for additional login steps (i.e. generating callback URLs).
+      // It is not used to set the header for the actual login request because the API service sets the namespace header using
+      // the namespace service, which is updated when the URL "namespace" query param changes.
       data['namespace'] = namespace;
     }
 
     return data;
   }
+
+  // normalize auth data so stored token data has the same keys regardless of auth type
+  normalizeAuthResponse = (
+    authResponse: any,
+    { path = '', tokenKey = '', ttlKey = '', displayName = '' }
+  ) => {
+    return {
+      // authResponse will include enforcement data in the `mfaRequirement` key - if MFA is configured.
+      ...authResponse,
+      authMethodType: this.args.authType,
+      authMountPath: path,
+      displayName,
+      token: authResponse[tokenKey],
+      ttl: authResponse[ttlKey],
+    };
+  };
 }

@@ -391,7 +391,7 @@ export const TOKEN_DATA = {
   },
   token: {
     authMethodType: 'token',
-    authMountPath: 'token',
+    authMountPath: '',
     displayName: 'token',
     entityId: RESPONSE_STUBS.token.data.entity_id,
     policies: RESPONSE_STUBS.token.data.policies,

@@ -6,10 +6,13 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import hbs from 'htmlbars-inline-precompile';
-import { click, fillIn, find, render } from '@ember/test-helpers';
+import { find, render } from '@ember/test-helpers';
 import sinon from 'sinon';
 import testHelper from './auth-form-test-helper';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { RESPONSE_STUBS } from 'vault/tests/helpers/auth/response-stubs';
+import { AUTH_METHOD_LOGIN_DATA } from 'vault/tests/helpers/auth/auth-helpers';
+import authFormTestHelper from './auth-form-test-helper';
 
 // These auth types all use the default methods in auth/form/base
 // Any auth types with custom logic should be in a separate test file, i.e. okta
@@ -18,14 +21,16 @@ module('Integration | Component | auth | form | base', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.authenticateStub = sinon.stub(this.owner.lookup('service:auth'), 'authenticate');
     this.cluster = { id: 1 };
     this.onError = sinon.spy();
     this.onSuccess = sinon.spy();
-  });
-
-  hooks.afterEach(function () {
-    this.authenticateStub.restore();
+    const api = this.owner.lookup('service:api');
+    this.setup = (authType, loginMethod) => {
+      this.authType = authType;
+      this.authenticateStub = sinon.stub(api.auth, loginMethod);
+      this.authResponse = RESPONSE_STUBS[authType];
+      this.loginData = AUTH_METHOD_LOGIN_DATA[authType];
+    };
   });
 
   module('github', function (hooks) {
@@ -144,8 +149,11 @@ module('Integration | Component | auth | form | base', function (hooks) {
 
   module('token', function (hooks) {
     hooks.beforeEach(function () {
-      this.authType = 'token';
-      this.expectedFields = ['token'];
+      this.setup('token', 'tokenLookUpSelf');
+      this.assertSubmit = (assert, loginRequestArgs) => {
+        const [{ headers }] = loginRequestArgs;
+        assert.strictEqual(headers['X-Vault-Token'], 'mysupersecuretoken', 'token is submitted as header');
+      };
       this.renderComponent = ({ yieldBlock = false } = {}) => {
         if (yieldBlock) {
           return render(hbs`
@@ -171,33 +179,11 @@ module('Integration | Component | auth | form | base', function (hooks) {
       };
     });
 
-    testHelper(test, { standardSubmit: false });
-
-    test('it submits form data with defaults', async function (assert) {
-      await this.renderComponent();
-      await fillIn(GENERAL.inputByAttr('token'), 'mytoken');
-      await click(GENERAL.submitButton);
-      const [actual] = this.authenticateStub.lastCall.args;
-      assert.propEqual(
-        actual.data,
-        { token: 'mytoken' },
-        'auth service "authenticate" method is called with form data'
-      );
+    hooks.afterEach(function () {
+      this.authenticateStub.restore();
     });
 
-    test('it submits form data from yielded inputs', async function (assert) {
-      await this.renderComponent({ yieldBlock: true });
-      await fillIn(GENERAL.inputByAttr('token'), 'mytoken');
-      // token doesn't support custom paths, so testing path is not sent
-      await fillIn(GENERAL.inputByAttr('path'), `path-${this.authType}`);
-      await click(GENERAL.submitButton);
-      const [actual] = this.authenticateStub.lastCall.args;
-      assert.propEqual(
-        actual.data,
-        { token: 'mytoken' },
-        'auth service "authenticate" method is called without "path"'
-      );
-    });
+    authFormTestHelper(test);
   });
 
   module('userpass', function (hooks) {

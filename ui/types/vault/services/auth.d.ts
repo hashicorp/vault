@@ -8,8 +8,9 @@
 
 import Service from '@ember/service';
 import type { MfaRequirementApiResponse, ParsedMfaRequirement } from 'vault/auth/mfa';
+import type { NormalizedAuthData } from 'vault/auth/form';
 
-export interface AuthData {
+interface AuthData {
   userRootNamespace: string;
   token: string;
   policies: string[];
@@ -18,7 +19,7 @@ export interface AuthData {
   displayName?: string;
 }
 
-export interface AuthResponse {
+export interface AuthSuccessResponse {
   namespace: string;
   token: string; // the name of the token in local storage, not the actual token
   isRoot: boolean;
@@ -32,13 +33,7 @@ export default class AuthService extends Service {
   currentToken: string;
   mfaErrors: null | Errors[];
   setLastFetch: (time: number) => void;
-  handleError: (error: Error | string) => string | error[] | [error];
-  authenticate(params: {
-    clusterId: string;
-    backend: string;
-    data: object;
-    selectedAuth: string;
-  }): Promise<AuthResponse>;
+  authSuccess(clusterId: string, authData: NormalizedAuthData): Promise<AuthSuccessResponse>;
   ajax: (
     url: string,
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
