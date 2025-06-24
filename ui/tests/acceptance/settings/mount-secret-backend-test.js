@@ -63,13 +63,10 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await click(MOUNT_BACKEND_FORM.mountType('kv'));
     await fillIn(GENERAL.inputByAttr('path'), path);
     await click(GENERAL.button('Method Options'));
-    await page
-      .enableDefaultTtl()
-      .defaultTTLUnit('h')
-      .defaultTTLVal(defaultTTLHours)
-      .enableMaxTtl()
-      .maxTTLUnit('h')
-      .maxTTLVal(maxTTLHours);
+    await click(GENERAL.toggleInput('Default Lease TTL'));
+    await page.defaultTTLUnit('h').defaultTTLVal(defaultTTLHours);
+    await click(GENERAL.toggleInput('Max Lease TTL'));
+    await page.maxTTLUnit('h').maxTTLVal(maxTTLHours);
     await click(GENERAL.submitButton);
     await configPage.visit({ backend: path });
     assert.strictEqual(configPage.defaultTTL, `${this.calcDays(defaultTTLHours)}`, 'shows the proper TTL');
@@ -91,7 +88,9 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await click(MOUNT_BACKEND_FORM.mountType('kv'));
     await fillIn(GENERAL.inputByAttr('path'), path);
     await click(GENERAL.button('Method Options'));
-    await page.enableDefaultTtl().enableMaxTtl().maxTTLUnit('h').maxTTLVal(maxTTLHours);
+    await click(GENERAL.toggleInput('Default Lease TTL'));
+    await click(GENERAL.toggleInput('Max Lease TTL'));
+    await page.maxTTLUnit('h').maxTTLVal(maxTTLHours);
     await click(GENERAL.submitButton);
     await configPage.visit({ backend: path });
     assert.strictEqual(configPage.defaultTTL, '1 month 1 day', 'shows system default TTL');
@@ -116,7 +115,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     assert
       .dom('[data-test-input="config.maxLeaseTtl"] [data-test-ttl-toggle]')
       .isNotChecked('Toggle is unchecked by default');
-    await page.enableMaxTtl();
+    await click(GENERAL.toggleInput('Max Lease TTL'));
     assert.dom('[data-test-input="config.maxLeaseTtl"] [data-test-ttl-value]').hasValue('');
     assert.dom('[data-test-input="config.maxLeaseTtl"] [data-test-select="ttl-unit"]').hasValue('s');
   });
