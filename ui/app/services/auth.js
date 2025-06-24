@@ -118,15 +118,8 @@ export default Service.extend({
     if (!token) {
       return;
     }
-    const backend = this.backendFromTokenName(token);
     const stored = this.getTokenData(token);
-    return Object.assign(stored, {
-      backend: {
-        // add mount path for password reset
-        mountPath: stored.backend.mountPath,
-        ...BACKENDS.find((b) => b.type === backend),
-      },
-    });
+    return Object.assign(stored);
   }),
 
   init() {
@@ -299,11 +292,12 @@ export default Service.extend({
     const data = {
       userRootNamespace,
       displayName: null, // set below
-      backend: currentBackend,
       token: resp.client_token || get(resp, currentBackend.tokenPath),
       policies,
       renewable,
-      entity_id,
+      entityId: entity_id,
+      authMethodType: options?.selectedAuth,
+      authMountPath: mountPath,
     };
 
     tokenName = this.generateTokenName(
@@ -532,7 +526,7 @@ export default Service.extend({
     const selectedAuth = localStorage.getItem('selectedAuth');
     if (selectedAuth) return selectedAuth;
     // fallback to authData which discerns backend type from token
-    return this.authData ? this.authData.backend.type : null;
+    return this.authData ? this.authData.authMethodType : null;
   },
 
   deleteCurrentToken() {
@@ -545,22 +539,5 @@ export default Service.extend({
     const tokenNames = this.tokens.without(tokenName);
     this.removeTokenData(tokenName);
     this.set('tokens', tokenNames);
-  },
-
-  getOktaNumberChallengeAnswer(nonce, mount) {
-    const url = `/v1/auth/${mount}/verify/${nonce}`;
-    return this.ajax(url, 'GET', {}).then(
-      (resp) => {
-        return resp.data.correct_answer;
-      },
-      (e) => {
-        // if error status is 404, return and keep polling for a response
-        if (e.status === 404) {
-          return null;
-        } else {
-          throw e;
-        }
-      }
-    );
   },
 });
