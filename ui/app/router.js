@@ -177,10 +177,10 @@ Router.map(function () {
           this.route('index', { path: '/' });
           this.route('configuration', function () {
             // index here is the route that shows the tabs for "General settings" and "Aws settings"
-            this.route('plugin-settings', function () {
+            this.route('mount', function () {
               this.route('edit');
             });
-            this.route('mount', function () {
+            this.route('plugin-settings', function () {
               this.route('edit');
             });
             // remove this route when ready because it will be replace by the plugin-settings edit route
