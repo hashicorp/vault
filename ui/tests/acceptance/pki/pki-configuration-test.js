@@ -68,7 +68,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       await waitFor(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal, { timeout: 5000 });
       assert.dom(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal).exists();
       await fillIn(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerInput, 'delete-all');
-      await click(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerButton);
+      await click(GENERAL.confirmButton);
       await settled();
       await waitUntil(() => !find(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal));
 
@@ -106,7 +106,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       await waitFor(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal);
       assert.dom(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal).exists();
       await fillIn(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerInput, 'delete-all');
-      await click(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerButton);
+      await click(GENERAL.confirmButton);
       await waitUntil(() => !find(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal));
       assert.dom(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal).doesNotExist('delete all issuers modal closes');
       assert.strictEqual(
@@ -183,7 +183,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       await waitFor(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal);
       assert.dom(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal).exists();
       await fillIn(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerInput, 'delete-all');
-      await click(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerButton);
+      await click(GENERAL.confirmButton);
       await settled();
       await waitUntil(() => !find(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal));
       assert.dom(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal).doesNotExist();

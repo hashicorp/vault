@@ -13,6 +13,7 @@ import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import reducedDisclosureHandlers from 'vault/mirage/handlers/reduced-disclosure';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const { unsealKeys } = VAULT_KEYS;
 const SELECTORS = {
@@ -92,9 +93,7 @@ module('Acceptance | reduced disclosure test', function (hooks) {
 
     // seal
     await click('[data-test-seal]');
-
-    await click('[data-test-confirm-button]');
-
+    await click(GENERAL.confirmButton);
     await pollCluster(this.owner);
     await settled();
     assert.strictEqual(currentURL(), '/vault/unseal', 'vault is on the unseal page');

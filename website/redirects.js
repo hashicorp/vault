@@ -320,5 +320,4 @@ module.exports = [
     destination: '/vault/docs/:version/enterprise/automated-integrated-storage-snapshots',
     permanent: true,
   }
-  
 ]

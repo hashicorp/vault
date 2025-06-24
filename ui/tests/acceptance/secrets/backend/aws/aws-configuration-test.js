@@ -18,7 +18,6 @@ import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import {
-  createConfig,
   expectedConfigKeys,
   expectedValueOfConfigKeys,
   configUrl,
@@ -31,12 +30,20 @@ module('Acceptance | aws | configuration', function (hooks) {
 
   hooks.beforeEach(function () {
     const flash = this.owner.lookup('service:flash-messages');
-    this.store = this.owner.lookup('service:store');
     this.flashSuccessSpy = spy(flash, 'success');
     this.flashInfoSpy = spy(flash, 'info');
     this.flashDangerSpy = spy(flash, 'danger');
     this.version = this.owner.lookup('service:version');
     this.uid = uuidv4();
+    this.awsRootConfigResponse = {
+      data: {
+        region: 'us-west-2',
+        access_key: '123-key',
+        iam_endpoint: 'iam-endpoint',
+        sts_endpoint: 'sts-endpoint',
+        max_retries: 1,
+      },
+    };
     return login();
   });
 
@@ -108,11 +115,6 @@ module('Acceptance | aws | configuration', function (hooks) {
         `Successfully saved ${path}'s configuration.`,
         'first flash message about the first model config.'
       );
-      assert.strictEqual(
-        this.flashSuccessSpy.args[2][0],
-        'Issuer saved successfully',
-        'second success message is about the issuer.'
-      );
       assert.dom(GENERAL.infoRowValue('Issuer')).exists('Issuer has been set and is shown.');
       assert.dom(GENERAL.infoRowValue('Role ARN')).hasText('foo-role', 'Role ARN has been set.');
       assert
@@ -129,16 +131,16 @@ module('Acceptance | aws | configuration', function (hooks) {
     test('it should not show issuer if no root WIF configuration data is returned', async function (assert) {
       const path = `aws-${this.uid}`;
       const type = 'aws';
-      this.server.get(`${path}/config/root`, (schema, req) => {
-        const payload = JSON.parse(req.requestBody);
+
+      this.server.get(`${path}/config/root`, () => {
         assert.true(true, 'request made to config/root when navigating to the configuration page.');
-        return { data: { id: path, type, attributes: payload } };
+        return this.awsRootConfigResponse;
       });
       this.server.get(`identity/oidc/config`, () => {
         throw new Error(`Request was made to return the issuer when it should not have been.`);
       });
+
       await enablePage.enable(type, path);
-      createConfig(this.store, path, type); // create the aws root config in the store
       await click(SES.configTab);
       assert.dom(GENERAL.infoRowLabel('Issuer')).doesNotExist(`Issuer does not exists on config details.`);
       assert.dom(GENERAL.infoRowLabel('Access key')).exists(`Access key does exists on config details.`);
@@ -199,14 +201,15 @@ module('Acceptance | aws | configuration', function (hooks) {
     test('it shows AWS mount configuration details', async function (assert) {
       const path = `aws-${this.uid}`;
       const type = 'aws';
-      this.server.get(`${path}/config/root`, (schema, req) => {
-        const payload = JSON.parse(req.requestBody);
+
+      this.server.get(`${path}/config/root`, () => {
         assert.true(true, 'request made to config/root when navigating to the configuration page.');
-        return { data: { id: path, type, attributes: payload } };
+        return this.awsRootConfigResponse;
       });
+
       await enablePage.enable(type, path);
-      createConfig(this.store, path, type); // create the aws root config in the store
       await click(SES.configTab);
+
       for (const key of expectedConfigKeys(type)) {
         if (key === 'Secret key') continue; // secret-key is not returned by the API
         assert.dom(GENERAL.infoRowLabel(key)).exists(`${key} on the ${type} config details exists.`);
@@ -258,68 +261,10 @@ module('Acceptance | aws | configuration', function (hooks) {
       await runCmd(`delete sys/mounts/${path}`);
     });
 
-    test('it should not make a post request if lease or root data was unchanged', async function (assert) {
-      assert.expect(3);
-      const path = `aws-${this.uid}`;
-      const type = 'aws';
-      await enablePage.enable(type, path);
-
-      this.server.post(configUrl(type, path), () => {
-        throw new Error(`post request was made to config/root when it should not have been.`);
-      });
-      this.server.post(configUrl('aws-lease', path), () => {
-        throw new Error(`post request was made to config/lease when it should not have been.`);
-      });
-
-      await click(SES.configTab);
-      await click(SES.configure);
-      await click(GENERAL.submitButton);
-      assert.true(
-        this.flashInfoSpy.calledWith('No changes detected.'),
-        'Flash message shows no changes detected.'
-      );
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${path}/configuration`,
-        'navigates back to the configuration index view'
-      );
-      assert.dom(GENERAL.emptyStateTitle).hasText('AWS not configured');
-      // cleanup
-      await runCmd(`delete sys/mounts/${path}`);
-    });
-
-    test('it should reset models after saving', async function (assert) {
-      const path = `aws-${this.uid}`;
-      const type = 'aws';
-      await enablePage.enable(type, path);
-      await click(SES.configTab);
-      await click(SES.configure);
-      await fillInAwsConfig('withAccess');
-      //  the way to tell if a record has been unloaded is if the private key is not saved in the store (the API does not return it, but if the record was not unloaded it would have stayed.)
-      await click(GENERAL.submitButton); // save the configuration
-      await click(SES.configure);
-      const privateKeyExists = this.store.peekRecord('aws/root-config', path).privateKey ? true : false;
-      assert.false(
-        privateKeyExists,
-        'private key is not on the store record, meaning it was unloaded after save. This new record without the key comes from the API.'
-      );
-      assert
-        .dom(GENERAL.enableField('secretKey'))
-        .exists('secret key field is wrapped inside an enableInput component');
-      // cleanup
-      await runCmd(`delete sys/mounts/${path}`);
-    });
-
     test('it saves lease configuration if root configuration was not changed', async function (assert) {
       assert.expect(2);
       const path = `aws-${this.uid}`;
       await enablePage.enable('aws', path);
-
-      this.server.post(configUrl('aws', path), () => {
-        throw new Error(
-          `Request was made to save the config/root when it should not have been because the user did not make any changes to this config.`
-        );
-      });
 
       await click(SES.configTab);
       await click(SES.configure);
@@ -327,7 +272,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(GENERAL.submitButton);
 
       assert.true(
-        this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s lease configuration.`),
+        this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
         'Success flash message is rendered showing the lease configuration was saved.'
       );
       assert.strictEqual(
@@ -395,21 +340,17 @@ module('Acceptance | aws | configuration', function (hooks) {
         const path = `aws-${this.uid}`;
         await enablePage.enable('aws', path);
 
-        this.server.post(configUrl('aws', path), () => {
-          throw new Error(
-            `Request was made to save the config/root when it should not have been because the user did not make any changes to this config.`
-          );
-        });
         this.server.post(configUrl('aws-lease', path), () => {
           return overrideResponse(400, { errors: ['bad request!'] });
         });
+
         await click(SES.configTab);
         await click(SES.configure);
         await fillInAwsConfig('withLease');
         await click(GENERAL.submitButton);
 
         assert.true(
-          this.flashDangerSpy.calledWith(`Lease configuration was not saved: bad request!`),
+          this.flashDangerSpy.calledWith(`Error saving lease configuration: bad request!`),
           'flash danger message is rendered showing the lease configuration was NOT saved.'
         );
         assert.strictEqual(

@@ -8,6 +8,8 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { click } from '@ember/test-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import initPage from 'vault/tests/pages/init';
 
 const CLOUD_SEAL_RESPONSE = {
@@ -91,13 +93,14 @@ module('Acceptance | init', function (hooks) {
     });
 
     await initPage.init(5, 3);
-    await waitFor('[data-test-advance-button]');
+    await click(GENERAL.submitButton);
+    await waitFor(GENERAL.button('Continue to Authenticate'));
     assert.strictEqual(
       initPage.keys.length,
       CLOUD_SEAL_RESPONSE.recovery_keys.length,
       'shows all of the recovery keys'
     );
-    assert.strictEqual(initPage.buttonText, 'Continue to Authenticate', 'links to authenticate');
+    assert.dom(GENERAL.button('Continue to Authenticate')).exists('links to authenticate');
   });
 
   test('shamir seal init', async function (assert) {
@@ -112,8 +115,9 @@ module('Acceptance | init', function (hooks) {
     });
 
     await initPage.init(3, 2);
-    await waitFor('[data-test-advance-button]');
+    await click(GENERAL.submitButton);
+    await waitFor(GENERAL.button('Continue to Unseal'));
     assert.strictEqual(initPage.keys.length, SEAL_RESPONSE.keys.length, 'shows all of the recovery keys');
-    assert.strictEqual(initPage.buttonText, 'Continue to Unseal', 'links to unseal');
+    assert.dom(GENERAL.button('Continue to Unseal')).exists('links to unseal');
   });
 });

@@ -170,7 +170,7 @@ module('Integration | Component | form field', function (hooks) {
   test('it renders: toggleButton', async function (assert) {
     const [model, spy] = await setup.call(
       this,
-      createAttr('foobar', 'toggleButton', {
+      createAttr('foobar', 'boolean', {
         defaultValue: false,
         editType: 'toggleButton',
         helperTextEnabled: 'Toggled on',
@@ -185,6 +185,33 @@ module('Integration | Component | form field', function (hooks) {
 
     assert.true(model.get('foobar'));
     assert.ok(spy.calledWith('foobar', true), 'onChange called with correct args');
+  });
+
+  test('it sets nested attribute value for toggleButton', async function (assert) {
+    this.setProperties({
+      attr: createAttr('config.foo', 'boolean', {
+        editType: 'toggleButton',
+        defaultValue: false,
+      }),
+      model: { config: { foo: true } },
+      onChange: () => {},
+    });
+    await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} @onChange={{this.onChange}} />`);
+    assert.dom(GENERAL.toggleInput('toggle-config.foo')).isChecked();
+  });
+
+  test('it sets nested attribute value for optionalText', async function (assert) {
+    this.setProperties({
+      attr: createAttr('foo.bar', 'string', {
+        editType: 'optionalText',
+        defaultValue: 'lemon',
+      }),
+      model: { foo: { bar: 'apple' } },
+      onChange: () => {},
+    });
+    await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} @onChange={{this.onChange}} />`);
+    assert.dom(GENERAL.toggleInput('show-foo.bar')).isChecked();
+    assert.dom(GENERAL.inputByAttr('foo.bar')).hasValue('apple');
   });
 
   test('it renders: editType file', async function (assert) {
