@@ -44,15 +44,20 @@ export interface GithubLoginApiResponse extends ApiResponse {
     metadata: { org: string; username: string };
   };
 }
+
 export interface JwtOidcLoginApiResponse extends ApiResponse {
   auth: AuthResponseAuthKey;
 }
+
 export interface OidcApiResponse extends ApiResponse {
   auth: AuthResponseData['auth'] & {
     client_token: string;
   };
 }
 
+export interface OktaVerifyApiResponse extends ApiResponse {
+  data: { correctAnswer: number };
+}
 export interface SamlApiResponse extends ApiResponse {
   auth: AuthResponseData['auth'] & {
     client_token: string;
