@@ -9,7 +9,11 @@ description: >-
 
 The `/sys/internal/ui/namespaces` endpoint returns the namespaces that the current user has access to.
 
-This endpoint is used internally by the GUI and is an authenticated endpoint (requires a valid Vault token). You do not need to explicitly grant capabilities on the `/sys/internal/ui/namespaces` path in your policy. If your token has any access to a namespace, that namespace will be included in the response. For more information about namespace policies, see the [sys/namespaces API documentation](/vault/api-docs/system/namespaces).
+The namespaces endpoint is an authenticated endpoint used internally by the
+Vault GUI to return all namespaces associated with the provided toekn. You do
+not need to explicitly grant capabilities on the `/sys/internal/ui/namespaces`
+path in your policy. For more information about namespace policies, see the
+[sys/namespaces API documentation](/vault/api-docs/system/namespaces).
 
 Due to the nature of its intended usage, there is no guarantee on backwards compatibility for this endpoint.
 
