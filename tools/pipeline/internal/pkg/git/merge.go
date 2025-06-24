@@ -48,6 +48,7 @@ type MergeOpts struct {
 	// Options
 	Autostash          bool                  // --autostash
 	DoCommit           bool                  // --commit
+	File               string                // --file=<file>
 	FF                 bool                  // --ff
 	FFOnly             bool                  // --ff-onnly
 	IntoName           string                // --into-name
@@ -130,6 +131,10 @@ func (m *MergeOpts) Strings() []string {
 
 	if m.DoCommit {
 		opts = append(opts, "--commit")
+	}
+
+	if m.File != "" {
+		opts = append(opts, fmt.Sprintf("--file=%s", m.File))
 	}
 
 	if m.FF {

@@ -363,6 +363,7 @@ func TestOptsStringers(t *testing.T) {
 				Autostash:        true,
 				DoCommit:         true,
 				Commit:           "1234ABCD",
+				File:             "/path/to/file",
 				FF:               true,
 				FFOnly:           true,
 				IntoName:         "my-other-branch",
@@ -379,7 +380,7 @@ func TestOptsStringers(t *testing.T) {
 				},
 				Verbose: true,
 			},
-			"--autostash --commit --ff --ff-only --into-name my-other-branch --log=2 --rerere-autoupdate --squash --stat --strategy=ort --strategy-option=diff-algorithm=myers --strategy-option=find-renames 1234ABCD",
+			"--autostash --commit --file=/path/to/file --ff --ff-only --into-name my-other-branch --log=2 --rerere-autoupdate --squash --stat --strategy=ort --strategy-option=diff-algorithm=myers --strategy-option=find-renames 1234ABCD",
 		},
 		"merge 2/2 opts": {
 			&MergeOpts{
