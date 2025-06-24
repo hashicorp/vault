@@ -24,384 +24,151 @@ local or cloud storage.
 
 
 
-## Automate snapshots for a single cluster
+## Step 1: Determine your snapshot settings 
 
-Configure automated snapshots for a single cluster.
+Vault can write snapshots to local storage and cloud storage. For longterm
+maintenance, we recommend saving your autosnapshot settings to a JSON file.
+
+### Local storage example 
+
+The following JSON file, `local-snapshot.json`, defines an automated snapshot
+configuration that uses local storage with custom file and path prefixs. The
+configuration also sets a 120 minute snapshot frequency, a retention window of 7
+snapshots before deleting, and limits the amount of local storage consumed by
+the snapshot files so Vault stops writing snapshot data if the combined file
+size exceed 250 MB (262144000 bytes).
+
+```json
+{
+  "storage_type": "local",
+  "file_prefix": "localsnappy",
+  "interval": "120m",
+  "retain": "7",
+  "local_max_space": "262144000",
+  "path_prefix": "/opt/vault/"
+}
+```
+
+
+### Cloud storage example 
+
+The following JSON file, `aws-snapshot.json`, defines an automated snapshot
+configuration that uses AWS S3 cloud storage, customizes AWS configuration
+options (bucket name, the region, and required credentials), and protects the
+snapshots with server side encryption.
+
+```json
+{
+  "storage_type": "aws-s3",
+  "file_prefix": "paris",
+  "interval": "8h",
+  "retain": 30,
+  "local_max_space": 2621440000,
+  "path_prefix": "primary",
+  "aws_s3_bucket": "vault-snapshots",
+  "aws_s3_region": "eu-west-3",
+  "aws_access_key_id": "ASI...COFFEE",
+  "aws_secret_access_key": "wJalr...COFFEEKEY",
+  "aws_session_token": "IQoJb3JpZ2luX2IQ...COFFEE",
+  "aws_s3_server_side_encryption": "true"
+}
+```
+
+
+
+## Step 2: Apply the snapshot configuration
+
+<Note>
+
+For disaster recovery and performance replication environments, you must
+configure automated snapshots separately for the primary and secondary clusters.
+
+</Note>
 
 <Tabs>
 
 <Tab heading="CLI" group="cli">
 
-Enable automated snapshots with the following example commands, based on the
-instructions in the [automated snapshots with integrated storage documentation](/vault/docs/enterprise/automated-integrated-storage-snapshots)
-with options specified in the [API
-documentation](/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config).
+Run `vault write` with the
+[`/sys/storage/raft/snapshot-auto`](/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config)
+path and your snapshot configuration to enable automated snapshots:
 
 ```shell-session
-$ vault write sys/storage/raft/snapshot-auto/config/[:name] [options]
+$ vault write                                                   \
+    sys/storage/raft/snapshot-auto/config/<configuration_name>  \
+    @<configuration_file>
 ```
 
-**Example:**
+For example, to configure automated snapshots with local storage in an
+unreplicated envionrment:
 
-The following command creates an automated snapshot configuration named,
-`testsnap` with a user defined location and interval.
+<CodeBlockConfig hideClipboard>
 
 ```shell-session
-$ vault write sys/storage/raft/snapshot-auto/config/testsnap \
-     storage_type=local \
-     file_prefix=testsnappy \
-     interval=120m \
-     retain=7 \
-     local_max_space=262144000 \
-     path_prefix=/opt/vault/
+$ vault write                                         \
+    sys/storage/raft/snapshot-auto/config/local-snaps \
+    @local-snapshot.json
 ```
 
-This example specifies local storage with both a filename and path prefix, a 120 minute snapshot interval, and retainins up to 7 snapshots before deleting earlier snapshots. The configuration also requires that the snapshots with the given `file_prefix` value and in the specified `path_prefix` value consume no more than 250 megabytes (262144000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
+</CodeBlockConfig>
 
-Learn more in the [API documentation](/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config).
+Or, to configure automated snapshots with AWS storage for a primary cluster
+located in Paris called `paris-primary`:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault write                                           \
+    sys/storage/raft/snapshot-auto/config/paris-primary \
+    @aws-snapshot.json
+```
+
+</CodeBlockConfig>
 
 </Tab>
 
 <Tab heading="API" group="api">
 
-Create a JSON payload to configure automated snapshot settings.
+Call the
+[`/sys/storage/raft/snapshot-auto`](/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config)
+endpoint with your configuration file to enable automated snapshots:
 
 ```shell-session
-$ cat > payload.json << EOF
-{
-    "storage_type": "local",
-    "file_prefix": "testsnappy",
-    "interval": "120m",
-    "retain": "7",
-    "local_max_space": "262144000",
-    "path_prefix": "/opt/vault/"
-}
-EOF
+$ curl                                          \
+    --request POST                              \
+    --header "X-Vault-Token: ${VAULT_TOKEN}"    \
+    --data @<configuration_file>                \
+    ${VAULT_ADDR}/v1/sys/storage/raft/snapshot-auto/config/<configuration_name>
 ```
 
-This example specifies local storage with both a filename and path prefix, a 120 minute snapshot interval, and retainins up to 7 snapshots before deleting earlier snapshots. The configuration also requires that the snapshots with the given `file_prefix` value and in the specified `path_prefix` value consume no more than 250 megabytes (262144000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
+For example, to configure automated snapshots with local storage in an
+unreplicated envionrment called `local-snaps`:
 
-Use cURL with the Vault API and JSON payload to configure automated snapshots.
+
+<CodeBlockConfig hideClipboard>
 
 ```shell-session
-$ curl \
-    --header "X-Vault-Token: ..." \
-    --request POST \
-    --data @payload.json \
-    https://127.0.0.1:8200/v1/sys/storage/raft/snapshot-auto/config/testsnap
+$ vault write                                         \
+    sys/storage/raft/snapshot-auto/config/local-snaps \
+    @local-snapshot.json
 ```
 
-Learn more in the [API documentation](/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config).
+</CodeBlockConfig>
 
-</Tab>
+Or, to configure automated snapshots with AWS storage for a primary cluster
+located in Paris called `paris-primary`:
 
-</Tabs>
-
-
-
-## Automate snapshots for a DR replication cluster
-
-These examples show how to configure automated snapshots for a cluster participating in DR Replication with the Vault CLI or API.
-
-<Tabs>
-
-<Tab heading="CLI" group="cli">
-
-Enable automated snapshots with the following example commands, based on the
-instructions in the [automated snapshots with integrated storage documentation](/vault/docs/enterprise/automated-integrated-storage-snapshots)
-with options specified in the [API
-documentation](/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config).
+<CodeBlockConfig hideClipboard>
 
 ```shell-session
-$ vault write sys/storage/raft/snapshot-auto/config/[:name] [options]
+$ curl                                       \
+    --request POST                           \
+    --header "X-Vault-Token: ${VAULT_TOKEN}" \
+    --data @aws-snapshot.json                \
+    ${VAULT_ADDR}/v1/sys/storage/raft/snapshot-auto/config/paris-primary
 ```
 
-#### Enable automated snapshots on primary cluster
-
-The following command creates an automated snapshot configuration named,
-`paris-primary` with a user defined location and interval.
-
-This example specifies AWS S3 storage with appropriate AWS configuration options for the bucket name, the region, and required credentials. Snapshots are further protected with server side encryption.
-
-```shell-session
-$ vault write sys/storage/raft/snapshot-auto/config/paris-primary \
-    storage_type="aws-s3" \
-    file_prefix="paris" \
-    interval="8h" \
-    retain=30 \
-    local_max_space=2621440000 \
-    path_prefix="primary" \
-    aws_s3_bucket="vault-snapshots" \
-    aws_s3_region="eu-west-3" \
-    aws_access_key_id="ASI...COFFEE" \
-    aws_secret_access_key="wJalr...COFFEEKEY" \
-    aws_session_token="IQoJb3JpZ2luX2IQ...COFFEE" \
-    aws_s3_server_side_encryption=true
-```
-
-The configuration also specifies local storage with both a filename and path prefix, a 120 minute snapshot interval, and retainins up to 7 snapshots before deleting earlier snapshots. The configuration also requires that the snapshots with the given `file_prefix` value and in the specified `path_prefix` value consume no more than 250 megabytes (262144000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
-
-#### Enable automated snapshots on secondary cluster
-
-The following command creates an automated snapshot configuration named,
-`zurich-secondary` with a user defined location and interval.
-
-This example specifies AWS S3 storage with appropriate AWS configuration options for the bucket name, the region, and required credentials. Snapshots are further protected with server side encryption.
-
-```shell-session
-$ vault write sys/storage/raft/snapshot-auto/config/zurich-secondary \
-    storage_type="aws-s3" \
-    file_prefix="zurich" \
-    interval="8h" \
-    retain=30 \
-    local_max_space=2621440000 \
-    path_prefix="secondary" \
-    aws_s3_bucket="vault-snapshots" \
-    aws_s3_region="eu-central-2" \
-    aws_access_key_id="ASI...COFFEE" \
-    aws_secret_access_key="wJalr...COFFEEKEY" \
-    aws_session_token="IQoJb3JpZ2luX2IQ...COFFEE" \
-    aws_s3_server_side_encryption=true
-```
-
-The configuration further defines local storage with both a filename and path prefix, a 12 hour snapshot interval, and retainins up to 14 snapshots before deleting earlier snapshots. The configuration also requires that the snapshots with the given `file_prefix` value and in the specified `path_prefix` value consume no more than 2.6 gigabytes (2621440000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
-
-Learn more in the [API documentation](/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config).
-
-</Tab>
-
-<Tab heading="API" group="api">
-
-#### Enable automated snapshots on primary cluster
-
-Create a JSON payload to configure automated snapshot settings for the **primary** DR cluster.
-
-This example specifies AWS S3 storage with appropriate AWS configuration options for the bucket name, the region, and required credentials. Snapshots are further protected with server side encryption.
-
-```shell-session
-$ cat > payload.json << EOF
-{
-    "storage_type": "aws-s3",
-    "aws_s3_bucket": "vault-snapshots",
-    "aws_s3_region": "eu-west-3",
-    "aws_access_key_id": "ASIAIOSFODNN7ECOFFEE",
-    "aws_secret_access_key ": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYECOFFEEKEY",
-    "aws_session_token": "IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZVERYLONGSTRINGECOFFEE",
-    "aws_s3_server_side_encryption": true,
-    "file_prefix": "paris",
-    "interval": "8h",
-    "retain": "30",
-    "local_max_space": "2621440000",
-    "path_prefix": "primary"
-}
-EOF
-```
-
-The configuration further defines both a filename and path prefix, an 8 hour snapshot interval, and retainins up to 30 snapshots before deleting earlier snapshots. Snapshots with the given `file_prefix` value and in the specified `path_prefix` value must not consume more than 2.6 gigabytes (2621440000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
-
-Use cURL with the Vault API to create an automated snapshot configuration named `paris-primary` for the DR primary cluster.
-
-```shell-session
-$ curl \
-    --header "X-Vault-Token: ..." \
-    --request POST \
-    --data @payload.json \
-    https://127.0.0.1:8200/v1/sys/storage/raft/snapshot-auto/config/paris-primary
-```
-
-#### Enable automated snapshots on secondary cluster
-
-Create a JSON payload to configure automated snapshot settings for the **secondary** DR cluster.
-
-This example specifies AWS S3 storage with appropriate AWS configuration options for the bucket name, the region, and required credentials. Snapshots are further protected with server side encryption.
-
-```shell-session
-$ cat > payload.json << EOF
-{
-    "storage_type": "aws-s3",
-    "aws_s3_bucket": "vault-snapshots",
-    "aws_s3_region": "eu-central-2",
-    "aws_access_key_id": "ASIAIOSFODNN7ECOFFEE",
-    "aws_secret_access_key ": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYECOFFEEKEY",
-    "aws_session_token": "IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZVERYLONGSTRINGECOFFEE",
-    "aws_s3_server_side_encryption": true,
-    "file_prefix": "zurich",
-    "interval": "8h",
-    "retain": "30",
-    "local_max_space": "2621440000",
-    "path_prefix": "secondary"
-}
-EOF
-```
-
-The configuration further defines both a filename and path prefix, an 8 hour snapshot interval, and retainins up to 30 snapshots before deleting earlier snapshots. Snapshots with the given `file_prefix` value and in the specified `path_prefix` value must not consume more than 2.6 gigabytes (2621440000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
-
-Use cURL with the Vault API to create an automated snapshot configuration named `zurich-secondary` for the DR secondary cluster.
-
-```shell-session
-$ curl \
-    --header "X-Vault-Token: ..." \
-    --request POST \
-    --data @payload.json \
-    https://127.0.0.1:8200/v1/sys/storage/raft/snapshot-auto/config/zurich-seconary
-```
-
-Learn more in the [API documentation](/vault/api-docs/system/storage/raftautosnapshots).
-
-</Tab>
-
-</Tabs>
-
-
-
-## Automate snapshots for a performance replication cluster
-
-These examples show how to configure automated snapshots for a cluster participating in performance replication with the Vault CLI or API.
-
-<Tabs>
-
-<Tab heading="CLI" group="cli">
-
-Enable automated snapshots with the following example commands, based on the
-instructions in the [automated snapshots with integrated storage documentation](/vault/docs/enterprise/automated-integrated-storage-snapshots)
-with options specified in the [API
-documentation](/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config).
-
-```shell-session
-$ vault write sys/storage/raft/snapshot-auto/config/[:name] [options]
-```
-
-#### Enable automated snapshots on primary cluster
-
-The following command creates an automated snapshot configuration named,
-`paris-primary` with a user defined location and interval.
-
-This example specifies AWS S3 storage with appropriate AWS configuration options for the bucket name, the region, and required credentials. Snapshots are further protected with server side encryption.
-
-```shell-session
-$ vault write sys/storage/raft/snapshot-auto/config/paris-primary \
-    storage_type="aws-s3" \
-    file_prefix="paris" \
-    interval="8h" \
-    retain=30 \
-    local_max_space=2621440000 \
-    path_prefix="primary" \
-    aws_s3_bucket="vault-snapshots" \
-    aws_s3_region="eu-west-3" \
-    aws_access_key_id="ASI...COFFEE" \
-    aws_secret_access_key="wJalr...COFFEEKEY" \
-    aws_session_token="IQoJb3JpZ2luX2IQ...COFFEE" \
-    aws_s3_server_side_encryption=true
-```
-
-The configuration also specifies local storage with both a filename and path prefix, a 120 minute snapshot interval, and retainins up to 7 snapshots before deleting earlier snapshots. The configuration also requires that the snapshots with the given `file_prefix` value and in the specified `path_prefix` value consume no more than 250 megabytes (262144000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
-
-#### Enable automated snapshots on secondary cluster
-
-The following command creates an automated snapshot configuration named,
-`zurich-secondary` with a user defined location and interval.
-
-This example specifies AWS S3 storage with appropriate AWS configuration options for the bucket name, the region, and required credentials. Snapshots are further protected with server side encryption.
-
-```shell-session
-$ vault write sys/storage/raft/snapshot-auto/config/zurich-secondary \
-    storage_type="aws-s3" \
-    file_prefix="zurich" \
-    interval="8h" \
-    retain=30 \
-    local_max_space=2621440000 \
-    path_prefix="secondary" \
-    aws_s3_bucket="vault-snapshots" \
-    aws_s3_region="eu-central-2" \
-    aws_access_key_id="ASI...COFFEE" \
-    aws_secret_access_key="wJalr...COFFEEKEY" \
-    aws_session_token="IQoJb3JpZ2luX2IQ...COFFEE" \
-    aws_s3_server_side_encryption=true
-```
-
-The configuration further defines local storage with both a filename and path prefix, a 12 hour snapshot interval, and retainins up to 14 snapshots before deleting earlier snapshots. The configuration also requires that the snapshots with the given `file_prefix` value and in the specified `path_prefix` value consume no more than 2.6 gigabytes (2621440000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
-
-Learn more in the [API documentation](/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config).
-
-</Tab>
-
-<Tab heading="API" group="api">
-
-#### Enable automated snapshots on primary cluster
-
-Create a JSON payload to configure automated snapshot settings for the **primary** DR cluster.
-
-This example specifies AWS S3 storage with appropriate AWS configuration options for the bucket name, the region, and required credentials. Snapshots are further protected with server side encryption.
-
-```shell-session
-$ cat > payload.json << EOF
-{
-    "storage_type": "aws-s3",
-    "aws_s3_bucket": "vault-snapshots",
-    "aws_s3_region": "eu-west-3",
-    "aws_access_key_id": "ASIAIOSFODNN7ECOFFEE",
-    "aws_secret_access_key ": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYECOFFEEKEY",
-    "aws_session_token": "IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZVERYLONGSTRINGECOFFEE",
-    "aws_s3_server_side_encryption": true,
-    "file_prefix": "paris",
-    "interval": "8h",
-    "retain": "30",
-    "local_max_space": "2621440000",
-    "path_prefix": "primary"
-}
-EOF
-```
-
-The configuration further defines both a filename and path prefix, an 8 hour snapshot interval, and retainins up to 30 snapshots before deleting earlier snapshots. Snapshots with the given `file_prefix` value and in the specified `path_prefix` value must not consume more than 2.6 gigabytes (2621440000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available. 
-
-Use cURL with the Vault API to create an automated snapshot configuration named `paris-primary` for the DR primary cluster.
-
-```shell-session
-$ curl \
-    --header "X-Vault-Token: ..." \
-    --request POST \
-    --data @payload.json \
-    https://127.0.0.1:8200/v1/sys/storage/raft/snapshot-auto/config/paris-primary
-```
-
-#### Enable automated snapshots on secondary cluster
-
-Create a JSON payload to configure automated snapshot settings for the **secondary** DR cluster.
-
-This example specifies AWS S3 storage with appropriate AWS configuration options for the bucket name, the region, and required credentials. Snapshots are further protected with server side encryption.
-
-```shell-session
-$ cat > payload.json << EOF
-{
-    "storage_type": "aws-s3",
-    "aws_s3_bucket": "vault-snapshots",
-    "aws_s3_region": "eu-central-2",
-    "aws_access_key_id": "ASIAIOSFODNN7ECOFFEE",
-    "aws_secret_access_key ": "wJalrXUtnFEMI/K7MDENG/bPxRfiCYECOFFEEKEY",
-    "aws_session_token": "IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZ2luX2IQoJb3JpZVERYLONGSTRINGECOFFEE",
-    "aws_s3_server_side_encryption": true,
-    "file_prefix": "zurich",
-    "interval": "8h",
-    "retain": "30",
-    "local_max_space": "2621440000",
-    "path_prefix": "secondary"
-}
-EOF
-```
-
-The configuration further defines both a filename and path prefix, an 8 hour snapshot interval, and retainins up to 30 snapshots before deleting earlier snapshots. Snapshots with the given `file_prefix` value and in the specified `path_prefix` value must not consume more than 2.6 gigabytes (2621440000 bytes) of storage. If snapshots reach this value, Vault cannot write a snapshot until enough space is available.
-
-Use cURL with the Vault API to create an automated snapshot configuration named `zurich-secondary` for the DR secondary cluster.
-
-```shell-session
-$ curl \
-    --header "X-Vault-Token: ..." \
-    --request POST \
-    --data @payload.json \
-    https://127.0.0.1:8200/v1/sys/storage/raft/snapshot-auto/config/zurich-seconary
-```
-
-Learn more in the [API documentation](/vault/api-docs/system/storage/raftautosnapshots).
+</CodeBlockConfig>
 
 </Tab>
 
