@@ -34,7 +34,7 @@ module('Unit | Service | auth', function (hooks) {
       const expireTime = null;
       const calculatedExpiry = this.service.calculateExpiration({ now, ttl, expireTime });
 
-      assert.strictEqual(calculatedExpiry.ttl, 0, 'returns the ttl');
+      assert.strictEqual(calculatedExpiry.ttl, null, 'returns `null` for the ttl');
       assert.strictEqual(calculatedExpiry.tokenExpirationEpoch, null, 'tokenExpirationEpoch is null');
     });
 
