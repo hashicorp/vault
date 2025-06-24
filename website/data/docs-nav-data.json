@@ -981,10 +981,6 @@
     "title": "System admin",
     "routes": [
       {
-        "title": "TBD",
-        "path": "sysadmin"
-      },
-      {
         "title": "Manage snapshots",
         "routes": [
         {
