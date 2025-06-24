@@ -36,7 +36,6 @@ func (s *forwardedRequestRPCServer) ForwardRequest(ctx context.Context, freq *fo
 	if err != nil {
 		return nil, err
 	}
-
 	// A very dummy response writer that doesn't follow normal semantics, just
 	// lets you write a status code (last written wins) and a body. But it
 	// meets the interface requirements.
