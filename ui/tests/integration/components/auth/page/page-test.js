@@ -77,12 +77,12 @@ module('Integration | Component | auth | page', function (hooks) {
   });
 
   test('it selects type in the dropdown if direct link just has type', async function (assert) {
-    this.directLinkData = { type: 'oidc' };
+    this.directLinkData = { type: 'userpass' };
     await this.renderComponent();
-    assert.dom(AUTH_FORM.tabBtn('oidc')).doesNotExist('tab does not render');
-    assert.dom(GENERAL.selectByAttr('auth type')).hasValue('oidc', 'dropdown has type selected');
-    assert.dom(AUTH_FORM.authForm('oidc')).exists();
-    assert.dom(GENERAL.inputByAttr('role')).exists();
+    assert.dom(AUTH_FORM.tabBtn('userpass')).doesNotExist('tab does not render');
+    assert.dom(GENERAL.selectByAttr('auth type')).hasValue('userpass', 'dropdown has type selected');
+    assert.dom(AUTH_FORM.authForm('userpass')).exists();
+    assert.dom(GENERAL.inputByAttr('password')).exists();
     await click(AUTH_FORM.advancedSettings);
     assert.dom(GENERAL.inputByAttr('path')).exists({ count: 1 });
     assert.dom(GENERAL.backButton).doesNotExist();
