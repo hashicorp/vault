@@ -48,11 +48,11 @@ resource "enos_remote_exec" "setup_openldap" {
   depends_on = [enos_remote_exec.setup_docker]
 
   environment = {
-    LDAP_DOMAIN   = local.ldap_server.domain
-    LDAP_ORG      = local.ldap_server.org
-    LDAP_ADMIN_PW = local.ldap_server.admin_pw
-    LDAP_VERSION  = local.ldap_server.version
-    LDAP_PORT     = local.ldap_server.port
+    LDAP_CONTAINER_VERSION  = local.ldap_server.version
+    LDAP_DOMAIN             = local.ldap_server.domain
+    LDAP_ORG                = local.ldap_server.org
+    LDAP_ADMIN_PW           = local.ldap_server.admin_pw
+    LDAP_PORT               = local.ldap_server.port
   }
 
   scripts = [abspath("${path.module}/scripts/set-up-openldap.sh")]
