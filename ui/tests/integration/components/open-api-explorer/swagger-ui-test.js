@@ -28,7 +28,7 @@ const SELECTORS = {
 // using native window fn to workaround
 const setNativeInputValue = (value) => {
   const input = document.querySelector(SELECTORS.searchInput);
-  let nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+  const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
     window.HTMLInputElement.prototype,
     'value'
   ).set;

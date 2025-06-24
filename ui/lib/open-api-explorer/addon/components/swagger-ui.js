@@ -7,7 +7,6 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
-import { willDestroy } from '@ember/destroyable';
 import parseURL from 'core/utils/parse-url';
 import config from 'vault/config/environment';
 import openApiExplorerConfig from 'open-api-explorer/config/environment';
