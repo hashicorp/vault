@@ -623,6 +623,10 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		return nil, err
 	}
 
+	if len(resp.Warnings) == 0 {
+		return nil, nil
+	}
+
 	return &resp, nil
 }
 
