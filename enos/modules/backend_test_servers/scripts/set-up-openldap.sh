@@ -12,12 +12,12 @@ fail() {
 [[ -z "$LDAP_DOMAIN" ]] && fail "LDAP_DOMAIN env variable has not been set"
 [[ -z "$LDAP_ORG" ]] && fail "LDAP_ORG env variable has not been set"
 [[ -z "$LDAP_ADMIN_PW" ]] && fail "LDAP_ADMIN_PW env variable has not been set"
-[[ -z "$LDAP_VERSION" ]] && fail "LDAP_VERSION env variable has not been set"
+[[ -z "$LDAP_CONTAINER_VERSION" ]] && fail "LDAP_CONTAINER_VERSION env variable has not been set"
 [[ -z "$LDAP_PORT" ]] && fail "LDAP_PORT env variable has not been set"
 
 # Pulling image
 CONTAINER_CMD="sudo docker"
-LDAP_DOCKER_NAME="docker.io/osixia/openldap:${LDAP_VERSION}"
+LDAP_DOCKER_NAME="docker.io/osixia/openldap:${LDAP_CONTAINER_VERSION}"
 echo "Pulling image: ${LDAP_DOCKER_NAME}"
 $CONTAINER_CMD pull "${LDAP_DOCKER_NAME}"
 
