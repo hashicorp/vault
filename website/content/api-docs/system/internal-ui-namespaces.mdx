@@ -40,10 +40,11 @@ $ curl \
     "lease_duration": 0,
     "data": {
         "keys": [
-            "parent/",
-            "parent/child/",
-            "parent/child/grandchild/",
-            "parent2/"
+            "software/",
+            "software/eng/",
+            "software/eng/dev/",
+            "software/eng/qc/",
+            "devops/"
         ]
     },
     "wrap_info": null,
@@ -56,9 +57,10 @@ $ curl \
 The `keys` array in the response lists all available namespaces, with each entry representing a namespace path.
 
 In the sample response above:
-- `parent/` is a namespace that contains a nested namespace `child/`.
-- `parent/child/` is a nested namespace under `parent/` and contains its own nested namespace `grandchild/`.
-- `parent/child/grandchild/` is a nested namespace under `parent/child/`.
-- `parent2/` is a namespace that does not have any nested namespaces.
+- `software/` is a namespace that contains a nested namespace `eng/`.
+- `software/eng/` is a nested namespace under `software/` and contains its own nested namespaces `dev/` and `qc/`.
+- `software/eng/dev/` is a nested namespace under `software/eng/`.
+- `software/eng/qc/` is a nested namespace under `software/eng/`.
+- `devops/` is a namespace that does not have any nested namespaces.
 
 > **Note:** The `root` namespace is never included in this list of namespaces.
