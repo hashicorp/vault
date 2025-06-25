@@ -246,13 +246,13 @@ module('Integration | Component | form field', function (hooks) {
     assert.ok(component.hasTTLPicker, 'renders the ttl-picker component');
     assert.dom('[data-test-ttl-form-subtext]').hasText('TTL is disabled');
     assert.dom('[data-test-ttl-toggle]').isNotChecked();
-    await component.fields.objectAt(0).toggleTtl();
+    await click(GENERAL.toggleInput('Foo'));
     await component.fields.objectAt(0).select('h').change();
     await component.fields.objectAt(0).ttlTime('3');
     const expectedSeconds = `${3 * 3600}s`;
     assert.strictEqual(model.get('foo'), expectedSeconds);
     assert.ok(spy.calledWith('foo', expectedSeconds), 'onChange called with correct args');
-    await component.fields.objectAt(0).toggleTtl();
+    await click(GENERAL.toggleInput('Foo'));
     assert.ok(spy.calledWith('foo', '0'), 'onChange called with 0 when toggle off');
   });
 
@@ -267,7 +267,7 @@ module('Integration | Component | form field', function (hooks) {
     );
     assert.ok(component.hasTTLPicker, 'renders the ttl-picker component');
     assert.dom('[data-test-ttl-toggle]').isChecked();
-    await component.fields.objectAt(0).toggleTtl();
+    await click(GENERAL.toggleInput('Foo'));
     assert.strictEqual(model.get('foo'), '');
     assert.ok(spy.calledWith('foo', ''), 'onChange called with correct args');
   });
