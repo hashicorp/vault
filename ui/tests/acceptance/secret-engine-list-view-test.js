@@ -33,6 +33,24 @@ module('Acceptance | secret-engine list view', function (hooks) {
     return login();
   });
 
+  // the new API service camelizes response keys, so this tests is to assert that does NOT happen when we re-implement it
+  test('it does not camelize the secret mount path', async function (assert) {
+    await visit('/vault/secrets');
+    await page.enableEngine();
+    await click(MOUNT_BACKEND_FORM.mountType('aws'));
+    await fillIn(GENERAL.inputByAttr('path'), 'aws_engine');
+    await click(GENERAL.submitButton);
+    await click(GENERAL.breadcrumbLink('Secrets'));
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backends',
+      'breadcrumb navigates to the list page'
+    );
+    assert.dom(SES.secretsBackendLink('aws_engine')).hasTextContaining('aws_engine/');
+    // cleanup
+    await runCmd(deleteEngineCmd('aws_engine'));
+  });
+
   test('after enabling an unsupported engine it takes you to list page', async function (assert) {
     await visit('/vault/secrets');
     await page.enableEngine();
