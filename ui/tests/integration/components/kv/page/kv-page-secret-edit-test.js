@@ -118,17 +118,17 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       { owner: this.engine }
     );
 
-    assert.dom(PAGE.edit.toggleDiff).isNotDisabled('Diff toggle is not disabled');
+    assert.dom(GENERAL.toggleInput('Show diff')).isNotDisabled('Diff toggle is not disabled');
     assert.dom(PAGE.edit.toggleDiffDescription).hasText('No changes to show. Update secret to view diff');
     assert.dom(PAGE.diff.visualDiff).doesNotExist('Does not show visual diff');
 
     await fillIn(FORM.keyInput(1), 'foo2');
     await fillIn(FORM.maskedValueInput(1), 'bar2');
 
-    assert.dom(PAGE.edit.toggleDiff).isNotDisabled('Diff toggle is not disabled');
+    assert.dom(GENERAL.toggleInput('Show diff')).isNotDisabled('Diff toggle is not disabled');
     assert.dom(PAGE.edit.toggleDiffDescription).hasText('Showing the diff will reveal secret values');
     assert.dom(PAGE.diff.visualDiff).doesNotExist('Does not show visual diff');
-    await click(PAGE.edit.toggleDiff);
+    await click(GENERAL.toggleInput('Show diff'));
     assert.dom(PAGE.diff.visualDiff).exists('Shows visual diff');
     assert.dom(PAGE.diff.added).hasText(`foo2"bar2"`);
 

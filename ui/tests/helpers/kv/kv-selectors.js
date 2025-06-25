@@ -53,7 +53,6 @@ export const PAGE = {
     syncAlert: (name) => (name ? `[data-test-sync-alert="${name}"]` : '[data-test-sync-alert]'),
   },
   edit: {
-    toggleDiff: '[data-test-toggle-input="Show diff"',
     toggleDiffDescription: '[data-test-diff-description]',
   },
   list: {
