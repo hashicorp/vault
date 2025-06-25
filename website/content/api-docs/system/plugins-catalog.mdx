@@ -169,9 +169,8 @@ supplied name.
 - `command` `(string: "")` - Specifies the command used to execute the
   plugin. This is relative to the plugin directory. e.g. `"myplugin"`, or if `oci_image`
   is also specified, it is relative to the image's working directory.
-  This is required to register with a plugin binary but should not be specified when
-  registering with a plugin artifact; if it is specified for an artifact, it will be
-  ignored as the run command is known.
+  You must provide `command` to register a plugin binary. Vault ignores `command`
+  when you register a plugin artifact as it already knows the associated run command.
 
 - `args` `(array: [])` – Specifies the arguments used to execute the plugin. If
   the arguments are provided here, the `command` parameter should only contain
