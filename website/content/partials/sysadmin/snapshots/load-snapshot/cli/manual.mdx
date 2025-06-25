@@ -1,0 +1,26 @@
+Before you can load a manual snapshot, you must transfer the snapshot file from
+secure storage to a local path Vault can access.
+
+Use `vault operator raft snapshot load` to load the snapshot data from a local
+file and assign a snapshot ID:
+
+```shell-session
+$ vault operator raft snapshot load <local_file_path>
+```
+
+For example:
+
+<CodeBlockConfig hideClipboard highlight="7">
+
+```shell-session
+$ vault operator raft snapshot load /tmp/snapshots/20250624-1.snap
+
+Key                                   Value
+---                                   -----
+cluster_id                            990195d2-9f10-4e5c-84c5-543b4c250dc6
+expires_at                            2025-06-14T09:00:00.675319+05:00
+snapshot_id                           e57cd0cf-c3fa-4e5e-96ea-4a68fa8f3269
+status                                loading
+```
+
+</CodeBlockConfig>
