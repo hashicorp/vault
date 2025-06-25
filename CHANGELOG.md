@@ -32,7 +32,6 @@ CHANGES:
 * auth/kubernetes: Update plugin to v0.22.1 [[GH-30910](https://github.com/hashicorp/vault/pull/30910)]
 * auth/oci: Update plugin to v0.19.0 [[GH-30841](https://github.com/hashicorp/vault/pull/30841)]
 * auth/saml: Update plugin to v0.6.0
-* core: Bump Go version to 1.23.8
 * core: Bump Go version to 1.24.4.
 * core: Verify that the client IP address extracted from an X-Forwarded-For header is a valid IPv4 or IPv6 address [[GH-29774](https://github.com/hashicorp/vault/pull/29774)]
 * database/couchbase: Update plugin to v0.14.0 [[GH-30836](https://github.com/hashicorp/vault/pull/30836)]
@@ -82,19 +81,19 @@ The field is configurable via HCL and indicates whether the cluster is being use
 * **Secret Recovery from Snapshot (Enterprise)**: Adds a framework to load an integrated storage 
 snapshot into Vault and read, list, and recover KV v1 and cubbyhole secrets from the snapshot. [[GH-30739](https://github.com/hashicorp/vault/pull/30739)]
 * **UI Secrets Engines**: TOTP secrets engine is now supported. [[GH-29751](https://github.com/hashicorp/vault/pull/29751)]
-* **UI Telemetry**: add Posthog for UI telemetry tracking on HVD managed clusters [[GH-30425](https://github.com/hashicorp/vault/pull/30425)]
+* **UI Telemetry**: Add Posthog for UI telemetry tracking on Vault Dedicated managed clusters [[GH-30425](https://github.com/hashicorp/vault/pull/30425)]
 * **Vault Namespace Picker**: Updating the Vault Namespace Picker to enable search functionality, allow direct navigation to nested namespaces and improve accessibility. [[GH-30490](https://github.com/hashicorp/vault/pull/30490)]
 * **Vault PKI SCEP Server (Enterprise)**: Support for the Simple Certificate Enrollment Protocol (SCEP) has been added to the Vault PKI Plugin. This allows standard SCEP clients to request certificates from a Vault server with no knowledge of Vault APIs.
 
 IMPROVEMENTS:
 
-* Namespaces (enterprise): allow a root token to relock a namespace
 * activity (enterprise): Added vault.client.billing_period.activity telemetry metric to emit information about the total number of distinct clients used in the current billing period.
 * activity: mount_type was added to the API response of sys/internal/counters/activity [[GH-30071](https://github.com/hashicorp/vault/pull/30071)]
 * activity: mount_type was added to the API response of sys/internal/counters/activity
 * api (enterprise): Added a new API, `/sys/utilization-report`, giving a snapshot overview of Vault's utilization at a high level.
 * api/client: Add Cert auth method support. This allows the client to authenticate using a client certificate. [[GH-29546](https://github.com/hashicorp/vault/pull/29546)]
 * core (enterprise): Updated code and documentation to support FIPS 140-3 compliant algorithms.
+* core (enterprise): allow a root token to relock a namespace locked by the Namespace API Lock feature.
 * core (enterprise): report errors from the underlying seal when getting entropy.
 * core (enterprise): update to FIPS 140-3 cryptographic module in the FIPS builds.
 * core/metrics: added a new telemetry metric, `vault.core.response_status_code`, with two labels, `code`, and `type`, detailing the status codes of all responses to requests that Vault handles. [[GH-30354](https://github.com/hashicorp/vault/pull/30354)]
