@@ -295,10 +295,7 @@ export default Service.extend({
     if (Ember.testing) this.set('allowExpiration', false);
 
     // Set token name and store data
-    const tokenName = this.generateTokenName(
-      { backend: authMethodType, clusterId: clusterId || this.activeClusterId },
-      policies
-    );
+    const tokenName = this.generateTokenName({ backend: authMethodType, clusterId }, policies);
     this.set('tokens', addToArray(this.tokens, tokenName));
     this.setTokenData(tokenName, persistedTokenData);
     return resolve({
@@ -340,22 +337,21 @@ export default Service.extend({
   },
 
   renew() {
-    const tokenName = this.currentTokenName;
     const currentlyRenewing = this.isRenewing;
-
     if (currentlyRenewing) return;
 
     this.isRenewing = true;
     return this.renewCurrentToken().then(
-      (resp) => {
+      async (resp) => {
         this.isRenewing = false;
-        const namespacePath = this.namespaceService.path;
-        const response = resp.data || resp.auth;
-        // renew-self does not return namespace_path, so manually add it if it exists
-        if (!response?.namespace_path && namespacePath) {
-          response.namespace_path = namespacePath;
-        }
-        return this.persistAuthData(tokenName, response);
+        // If we renewing, authData already exists so all we really need to update are the token and expiration details
+        const { authMethodType, authMountPath, displayName } = this.authData;
+        const normalizedAuthData = this.normalizeAuthData(resp, {
+          authMethodType,
+          authMountPath,
+          displayName,
+        });
+        return await this.persistAuthData(this.activeClusterId, normalizedAuthData);
       },
       (e) => {
         this.isRenewing = false;
@@ -452,19 +448,9 @@ export default Service.extend({
 
   async totpValidate({ clusterId, mfaRequirement, authMethodType, authMountPath }) {
     const resp = await this.clusterAdapter().mfaValidate(mfaRequirement);
-    // Different auth methods return different data, so normalize it here.
-    const data = resp?.data || resp?.auth;
-    const normalizedAuthData = {
-      authMethodType,
-      authMountPath,
-      entityId: data?.entity_id,
-      expireTime: data?.expire_time,
-      token: data?.client_token || data?.id,
-      renewable: data?.renewable,
-      ttl: data?.lease_duration || data?.ttl,
-      policies: data?.policies,
-      displayName: data?.display_name || data?.metadata?.username || data?.metadata?.org,
-    };
+    // Different auth methods return different data keys, this is handled by each component
+    // on standard logins, but since MFA is handled higher up in the auth flow we also have to normalize it here.
+    const normalizedAuthData = this.normalizeAuthData(resp, { authMethodType, authMountPath });
     return this.authSuccess(clusterId, normalizedAuthData);
   },
 
@@ -494,5 +480,22 @@ export default Service.extend({
     const tokenNames = this.tokens.without(tokenName);
     this.removeTokenData(tokenName);
     this.set('tokens', tokenNames);
+  },
+
+  // The API service returns camel cased keys and older responses return snake cased params
+  // For now, using this method to normalize the response
+  normalizeAuthData(resp, { authMethodType, authMountPath, displayName }) {
+    const data = resp?.data || resp?.auth;
+    return {
+      authMethodType,
+      authMountPath,
+      entityId: data?.entity_id,
+      expireTime: data?.expire_time,
+      token: data?.client_token || data?.id,
+      renewable: data?.renewable,
+      ttl: data?.lease_duration || data?.ttl,
+      policies: data?.policies,
+      displayName: displayName || data?.display_name || data?.metadata?.username || data?.metadata?.org,
+    };
   },
 });
