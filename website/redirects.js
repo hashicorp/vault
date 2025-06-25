@@ -314,5 +314,5 @@ module.exports = [
     source: '/vault/docs/concepts/client-count/usage-metrics',
     destination: '/vault/docs/concepts/client-count/client-usage',
     permanent: true,
-  },
+  }
 ]
