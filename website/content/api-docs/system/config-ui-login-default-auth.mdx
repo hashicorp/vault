@@ -29,7 +29,8 @@ or `backup_auth_types` is required during creation.
 
 ### Parameters
 
-- `name` `(string: <required>)` - The name of the configuration. Spaces are not supported. This parameter is specified as part of the URL.
+- `name` `(string: <required>)` - Path parameter indicating the name of the
+  configuration. Names can contain letters, numbers, underscores, and dashes.
 
 - `namespace_path` `(string: "")` - Target namespace for the login configuration.
   Leave `namespace_path` unset to apply the configuration to the `root` namespace.
