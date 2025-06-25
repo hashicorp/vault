@@ -148,7 +148,12 @@ Update the properties of a specific GUI default auth configuration.
 
 ### Parameters
 
-- `namespace_path` `(string: "")` - Namespace to apply this configuration to.
+- `name` `(string: <required>)` - Path parameter indicating the name of the
+  configuration. Names can contain letters, numbers, underscores, and dashes.
+
+- `namespace_path` `(string: "")` - Target namespace for the login configuration.
+  Leave `namespace_path` unset to update configurations under the `root`
+  namespace.
 
 - `default_auth_type` `(string: <required>)` - The type of auth method to be presented by default. Only UI supported auth types are allowed: `github`,`jwt`,`ldap`,`oidc`,`okta`,`radius`,`saml`,`token`,and `userpass`
 
