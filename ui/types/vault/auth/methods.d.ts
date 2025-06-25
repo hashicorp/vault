@@ -4,7 +4,7 @@
  */
 
 import type { ApiResponse, WrapInfo } from 'vault/auth/api';
-import type { POSSIBLE_FIELDS } from 'vault/utils/supported-login-methods';
+import type { POSSIBLE_FIELDS } from 'vault/utils/auth-form-helpers';
 import type { MfaRequirementApiResponse } from './mfa';
 
 // ApiResponse includes top-level fields like request_id, etc.

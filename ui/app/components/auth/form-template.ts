@@ -7,7 +7,7 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
-import { supportedTypes } from 'vault/utils/supported-login-methods';
+import { supportedTypes } from 'vault/utils/auth-form-helpers';
 
 import type VersionService from 'vault/services/version';
 import type ClusterModel from 'vault/models/cluster';

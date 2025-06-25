@@ -7,7 +7,7 @@ import AuthBase from './base';
 import Ember from 'ember';
 import { action } from '@ember/object';
 import { dasherize } from '@ember/string';
-import { DOMAIN_PROVIDER_MAP } from 'vault/utils/supported-login-methods';
+import { DOMAIN_PROVIDER_MAP } from 'vault/utils/auth-form-helpers';
 import { restartableTask, task, timeout, waitForEvent } from 'ember-concurrency';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';

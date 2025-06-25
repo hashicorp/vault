@@ -144,6 +144,12 @@ module('Integration | Component | auth | page | mfa', function (hooks) {
 
   hooks.beforeEach(async function () {
     setupTestContext(this);
+    // additional setup for oidc-jwt component
+    this.routerStub = sinon.stub(this.owner.lookup('service:router'), 'urlFor').returns('123-example.com');
+  });
+
+  hooks.afterEach(function () {
+    this.routerStub.restore();
   });
 
   module('github', function (hooks) {
@@ -164,7 +170,6 @@ module('Integration | Component | auth | page | mfa', function (hooks) {
       this.authType = 'jwt';
       this.loginData = { role: 'some-dev', jwt: 'jwttoken' };
       this.path = this.authType;
-      this.routerStub = sinon.stub(this.owner.lookup('service:router'), 'urlFor').returns('123-example.com');
 
       this.stubRequests = () => {
         this.server.post('/auth/:path/oidc/auth_url', () =>
@@ -172,10 +177,6 @@ module('Integration | Component | auth | page | mfa', function (hooks) {
         );
         this.server.post(`/auth/${this.path}/login`, () => setupTotpMfaResponse(this.path));
       };
-    });
-
-    hooks.afterEach(function () {
-      this.routerStub.restore();
     });
 
     mfaTests(test);
@@ -194,13 +195,10 @@ module('Integration | Component | auth | page | mfa', function (hooks) {
         this.server.get(`/auth/${this.path}/oidc/callback`, () => setupTotpMfaResponse(this.path));
       };
 
-      // additional OIDC setup
-      this.routerStub = sinon.stub(this.owner.lookup('service:router'), 'urlFor').returns('123-example.com');
       this.windowStub = windowStub();
     });
 
     hooks.afterEach(function () {
-      this.routerStub.restore();
       this.windowStub.restore();
     });
 
