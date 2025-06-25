@@ -177,7 +177,7 @@ module('Integration | Component | form field', function (hooks) {
         helperTextDisabled: 'Toggled off',
       })
     );
-    assert.ok(component.hasToggleButton, 'renders a toggle button');
+    assert.dom(GENERAL.toggleInput('toggle-foobar')).exists('Toggle button exists');
     assert.dom(GENERAL.toggleInput('toggle-foobar')).isNotChecked();
     assert.dom('[data-test-toggle-subtext]').hasText('Toggled off');
 
