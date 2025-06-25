@@ -8,7 +8,7 @@
 
 SECURITY:
 
-* core: require a nonce when cancelling a rekey operation that was initiated within the last 10 minutes. [[GH-30794](https://github.com/hashicorp/vault/pull/30794)]
+* core: require a nonce when cancelling a rekey operation that was initiated within the last 10 minutes. [[GH-30794](https://github.com/hashicorp/vault/pull/30794)],[[HCSEC-2025-11](https://discuss.hashicorp.com/t/hcsec-2025-11-vault-vulnerable-to-recovery-key-cancellation-denial-of-service/75570)]
 
 CHANGES:
 
