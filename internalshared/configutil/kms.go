@@ -267,10 +267,13 @@ func mergeKMSEnvConfig(configKMS *KMS) error {
 		}
 	} else {
 		for name, val := range envConfig {
-			var err error
-			configKMS.Config[name], err = normalizeKMSSealConfigAddrs(configKMS.Type, name, val)
-			if err != nil {
-				return err
+			// Only use environment variable if config file doesn't already have this value
+			if configKMS.Config[name] == "" {
+				var err error
+				configKMS.Config[name], err = normalizeKMSSealConfigAddrs(configKMS.Type, name, val)
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
