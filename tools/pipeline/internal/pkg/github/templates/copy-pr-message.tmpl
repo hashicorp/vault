@@ -4,15 +4,15 @@
 :rotating_light:
 >**Warning** Copying of a community contributed pull request failed. If the
 first commit failed, you will see a blank no-op commit below. If at least one
-commit succeeded, you will see the backported commits up to, _but not including_,
+commit succeeded, you will see the copied commits up to, _but not including_,
 the commit where the merge conflict occurred.
 
 The person who merged in the original PR is: @{{ .OriginPullRequest.GetMergedBy.GetLogin }}
 This person should resolve the merge-conflict(s) by either:
-* Manually completing the backports into this branch
-* Creating a new branch and manually backporting all commits
+* Manually completing the copy into this branch
+* Creating a new branch and manually copying all commits
 
-Error(s) encountered while attempting the backport:
+Error(s) encountered while attempting the copy:
 > {{ .Error }}
 
 To continue the copy process, please follow the instructions below:
@@ -21,7 +21,7 @@ To continue the copy process, please follow the instructions below:
 1. Manually cherry-pick the missing commits from the original PR into this branch:
   1. Cherry-pick the commits from the original PR into this branch `git cherry-pick <commit-hash>` (see Overview of unprocessed commits below for the list of commits to cherry-pick)
   1. Resolve any conflicts that arise
-  1. Remove any CE only files if the backport target branch is to ce
+  1. Remove any CE only files if the copy target branch is to ce
   1. Push the changes to this branch
 1. Update the PR description to reflect the new commit(s)
 

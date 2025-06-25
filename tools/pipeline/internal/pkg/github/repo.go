@@ -15,10 +15,10 @@ import (
 	slogctx "github.com/veqryn/slog-context"
 )
 
-// ensureGitRepoDir repoDir verifies that the RepoDir exists and is a directory.
-// If the RepoDir is unset a temporary directory will be created. A boolean
-// is returned which can be used to determine whether or not the RepoDir is
-// a temporary directory.
+// ensureGitRepoDir repoDir verifies that the `dir` exists and is a directory.
+// If the `dir` is unset, a temporary directory will be created. A boolean
+// is returned which can be used to determine whether or not the path returned
+// is a temporary directory.
 func ensureGitRepoDir(ctx context.Context, dir string) (string, error, bool) {
 	if dir == "" {
 		slog.Default().DebugContext(ctx, "creating repository directory")
@@ -114,7 +114,7 @@ func initializeExistingRepo(
 }
 
 // initializeNewRepo initializes a new repository by cloning the repo fetching
-// the base branch.
+// the `baseRef`.
 func initializeNewRepo(
 	ctx context.Context,
 	git *libgit.Client,

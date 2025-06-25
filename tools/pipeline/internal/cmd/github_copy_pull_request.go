@@ -18,7 +18,7 @@ var copyGithubPullRequestReq = github.CopyPullRequestReq{}
 
 func newCopyGithubPullRequestCmd() *cobra.Command {
 	copyPRCmd := &cobra.Command{
-		Use:   "pr 1234",
+		Use:   "pr [number]",
 		Short: "Copy a pull request",
 		Long:  "Copy a pull request from the Community repository to the Enterprise repository",
 		RunE:  runCopyGithubPullRequestCmd,

@@ -63,7 +63,7 @@ func (r *CopyPullRequestReq) Run(
 		slog.String("repo-dir", r.RepoDir),
 		slog.Uint64("pull-number", uint64(r.PullNumber)),
 		slog.String("ent-branch-suffix", r.EntBranchSuffix),
-	), "running create backport pr request")
+	), "copying pull request")
 
 	initialDir, err := os.Getwd()
 	if err != nil {
@@ -71,7 +71,7 @@ func (r *CopyPullRequestReq) Run(
 	}
 
 	// Whenever possible we try to update base pull request with a status update
-	// on how the backporting has gone.
+	// on how the copying has gone.
 	createComment := func() {
 		// Make sure we return a response even if we fail
 		if res == nil {
@@ -184,9 +184,10 @@ func (r *CopyPullRequestReq) Run(
 	}
 
 	// Generate a merge commit message. While git is able to generate a nice merge
-	// commit with a summary of all commmit headers we create our own includes
-	// 'Co-Authored-By:' trailers in the commit message. Since we always squash
-	// all commits into a single merge commit this helps to retain attribution.
+	// commit with a summary of all commit headers, we create our own that
+	// includes 'Co-Authored-By:' trailers in the commit message. As we always
+	// squash all commits into a single merge commit this helps to retain
+	// attribution for our source author.
 	commits, err := listPullRequestCommits(ctx, github, r.FromOwner, r.FromRepo, int(r.PullNumber))
 	if err != nil {
 		return res, err
@@ -231,9 +232,11 @@ func (r *CopyPullRequestReq) Run(
 		err := resetAndCreateNOOPCommit(ctx, git, baseBranch)
 		if err != nil {
 			err = errors.Join(mergeErr, err)
-		}
 
-		return res, err
+			// Something wen't wrong trying to create our no-op commit. There's
+			// nothing more we can do but return our error at this point.
+			return res, err
+		}
 	}
 
 	slog.Default().DebugContext(ctx, "pushing new branch to enterprise")
@@ -320,20 +323,28 @@ func (r *CopyPullRequestReq) Validate(ctx context.Context) error {
 		return errors.New("failed to initialize request")
 	}
 
+	if r.FromOrigin == "" {
+		return errors.New("no github from origin has been provided")
+	}
+
 	if r.FromOwner == "" {
-		return errors.New("no github organization has been provided")
+		return errors.New("no github from owner has been provided")
 	}
 
 	if r.FromRepo == "" {
 		return errors.New("no github repository has been provided")
 	}
 
+	if r.ToOrigin == "" {
+		return errors.New("no github to origin has been provided")
+	}
+
 	if r.ToOwner == "" {
-		return errors.New("no github organization has been provided")
+		return errors.New("no github to owner has been provided")
 	}
 
 	if r.ToRepo == "" {
-		return errors.New("no github repository has been provided")
+		return errors.New("no github to repository has been provided")
 	}
 
 	if r.PullNumber == 0 {
