@@ -115,11 +115,14 @@ module('Acceptance | secret-engine list view', function (hooks) {
 
   test('enterprise: cannot view list without permissions inside namespace', async function (assert) {
     this.version = 'enterprise';
-    const enginePath1 = `kv-${this.uid}`;
-    await runCmd(mountEngineCmd('kv', enginePath1));
     this.namespace = `ns-${this.uid}`;
+
+    const enginePath1 = `kv-${this.uid}`;
+    const userDefault = await runCmd(createTokenCmd()); // creates default user token
+    await runCmd(mountEngineCmd('kv', enginePath1));
+
     await runCmd([`write sys/namespaces/${this.namespace} -force`]);
-    await loginNs(this.namespace, createTokenCmd());
+    await loginNs(this.namespace, userDefault);
 
     await visit('/vault/secrets');
     assert.strictEqual(currentURL(), `/vault/secrets`, 'Should be on main secret engines list page.');
