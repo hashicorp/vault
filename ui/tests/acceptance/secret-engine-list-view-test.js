@@ -39,7 +39,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await page.enableEngine();
     await click(MOUNT_BACKEND_FORM.mountType('aws'));
     await fillIn(GENERAL.inputByAttr('path'), 'aws_engine');
-    await click(GENERAL.submitButton);
+    await click(GENERAL.saveButton);
     await click(GENERAL.breadcrumbLink('Secrets'));
     assert.strictEqual(
       currentRouteName(),
