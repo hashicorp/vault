@@ -32,7 +32,7 @@ module('Integration | Component | auth | tabs', function (hooks) {
       ],
       oidc: [
         {
-          path: 'my-oidc/',
+          path: 'my_oidc/',
           description: '',
           options: {},
           type: 'oidc',
@@ -98,7 +98,7 @@ module('Integration | Component | auth | tabs', function (hooks) {
     this.selectedAuthMethod = 'oidc';
     await this.renderComponent();
     assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
-    assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
+    assert.dom(GENERAL.inputByAttr('path')).hasValue('my_oidc/');
   });
 
   test('it calls handleTabClick with tab method type', async function (assert) {
