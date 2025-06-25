@@ -17,7 +17,7 @@ locals {
     admin_pw   = "password1"
     version    = var.ldap_version
     port       = "389"
-    ip_address = var.ip_version == "6" ? var.hosts[0].ipv6_addresses[0] : var.hosts[0].public_ip
+    ip_address = var.ip_version == "6" ? var.hosts[0].ipv6 : var.hosts[0].public_ip
   }
 }
 
