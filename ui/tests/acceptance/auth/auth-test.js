@@ -199,7 +199,7 @@ module('Acceptance | auth login form', function (hooks) {
         token: {
           url: '/v1/auth/token/lookup-self',
           payload: {
-            'X-Vault-Token': 'some-token',
+            'x-vault-token': 'some-token',
           },
         },
         userpass: {

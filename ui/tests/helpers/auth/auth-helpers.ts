@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, visit } from '@ember/test-helpers';
+import { click, currentRouteName, fillIn, visit, waitUntil } from '@ember/test-helpers';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -29,7 +29,8 @@ export const login = async (token = rootToken) => {
 
   await fillIn(AUTH_FORM.selectMethod, 'token');
   await fillIn(GENERAL.inputByAttr('token'), token);
-  return click(GENERAL.submitButton);
+  await click(GENERAL.submitButton);
+  return await waitUntil(() => currentRouteName() === 'vault.cluster.dashboard');
 };
 
 export const loginNs = async (ns: string, token = rootToken) => {
@@ -41,7 +42,8 @@ export const loginNs = async (ns: string, token = rootToken) => {
 
   await fillIn(AUTH_FORM.selectMethod, 'token');
   await fillIn(GENERAL.inputByAttr('token'), token);
-  return click(GENERAL.submitButton);
+  await click(GENERAL.submitButton);
+  return await waitUntil(() => currentRouteName() === 'vault.cluster.dashboard');
 };
 
 // LOGIN WITH NON-TOKEN METHODS
@@ -56,7 +58,8 @@ export const loginMethod = async (
   await fillIn(AUTH_FORM.selectMethod, type);
 
   await fillInLoginFields(loginFields, options);
-  return click(GENERAL.submitButton);
+  await click(GENERAL.submitButton);
+  return await waitUntil(() => currentRouteName() === 'vault.cluster.dashboard');
 };
 
 export const fillInLoginFields = async (loginFields: LoginFields, { toggleOptions = false } = {}) => {
