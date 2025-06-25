@@ -587,7 +587,7 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			IV:         item.DecodedIV,
 		}
 
-		ciphertext, err := p.EncryptWithFactory(opts, item.Plaintext, factories...)
+		ciphertext, err := p.EncryptWithOptions(opts, item.Plaintext, factories...)
 		if err != nil {
 			switch err.(type) {
 			case errutil.InternalError:

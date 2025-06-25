@@ -178,7 +178,7 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 		Nonce:      nonce,
 	}
 
-	ciphertext, err := p.EncryptWithFactory(opts, base64.StdEncoding.EncodeToString(newKey), factories...)
+	ciphertext, err := p.EncryptWithOptions(opts, base64.StdEncoding.EncodeToString(newKey), factories...)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:

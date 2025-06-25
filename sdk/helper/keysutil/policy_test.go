@@ -942,7 +942,7 @@ func autoVerifyDecrypt(depth int, t *testing.T, p *Policy, input []byte, ct stri
 	t.Log(tabs, "Automatically decrypting with options:", factories)
 
 	tabs = strings.Repeat("\t", depth+1)
-	ptb64, err := p.DecryptWithFactory(EncryptionOptions{}, ct, factories...)
+	ptb64, err := p.DecryptWithOptions(EncryptionOptions{}, ct, factories...)
 	if err != nil {
 		t.Fatal(tabs, "❌ Failed to automatically verify signature:", err)
 	}
@@ -1123,7 +1123,7 @@ func Test_RSA_PKCS1Encryption(t *testing.T) {
 	test_RSA_PKCS1 := func(t *testing.T, p *Policy, rsaKey *rsa.PrivateKey, padding PaddingScheme) {
 		// 1. Make a signature with the given key size and hash algorithm.
 		t.Log(tabs[3], "Make an automatic signature")
-		ct, err := p.EncryptWithFactory(EncryptionOptions{}, string(input), padding)
+		ct, err := p.EncryptWithOptions(EncryptionOptions{}, string(input), padding)
 		if err != nil {
 			t.Fatal(tabs[4], "❌ Failed to automatically encrypt:", err)
 		}

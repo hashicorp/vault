@@ -1029,15 +1029,22 @@ func (p *Policy) convergentVersion(ver int) int {
 	return convergentVersion
 }
 
-func (p *Policy) Encrypt(opts EncryptionOptions, value string) (string, error) {
-	return p.EncryptWithFactory(opts, value, nil)
+func (p *Policy) Encrypt(ver int, context, nonce []byte, value string) (string, error) {
+	return p.EncryptWithFactory(ver, context, nonce, value, nil)
 }
 
-func (p *Policy) Decrypt(opts EncryptionOptions, value string) (string, error) {
-	return p.DecryptWithFactory(opts, value, nil)
+func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
+	return p.DecryptWithFactory(context, nonce, value, nil)
 }
 
-func (p *Policy) DecryptWithFactory(opts EncryptionOptions, value string, factories ...any) (string, error) {
+func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factories ...any) (string, error) {
+	return p.DecryptWithOptions(EncryptionOptions{
+		Context: context,
+		Nonce:   nonce,
+	}, value, factories...)
+}
+
+func (p *Policy) DecryptWithOptions(opts EncryptionOptions, value string, factories ...any) (string, error) {
 	if !p.Type.DecryptionSupported() {
 		return "", errutil.UserError{Err: fmt.Sprintf("message decryption not supported for key type %v", p.Type)}
 	}
@@ -2154,7 +2161,15 @@ func (p *Policy) SymmetricDecryptRaw(encKey, ciphertext []byte, opts SymmetricOp
 	return plain, nil
 }
 
-func (p *Policy) EncryptWithFactory(opts EncryptionOptions, value string, factories ...any) (string, error) {
+func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value string, factories ...any) (string, error) {
+	return p.EncryptWithOptions(EncryptionOptions{
+		KeyVersion: ver,
+		Context:    context,
+		Nonce:      nonce,
+	}, value, factories)
+}
+
+func (p *Policy) EncryptWithOptions(opts EncryptionOptions, value string, factories ...any) (string, error) {
 	if !p.Type.EncryptionSupported() {
 		return "", errutil.UserError{Err: fmt.Sprintf("message encryption not supported for key type %v", p.Type)}
 	}
