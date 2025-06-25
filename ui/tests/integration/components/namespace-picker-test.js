@@ -96,10 +96,13 @@ module('Integration | Component | namespace-picker', function (hooks) {
     await fillIn(GENERAL.inputByAttr('Search namespaces'), '');
 
     // Verify all namespaces are displayed after clearing the search input
+    assert.dom(GENERAL.button('root')).exists('Namespace "root" is displayed');
+    assert.dom(GENERAL.button('parent1')).exists('Namespace "parent1" is displayed');
+    assert.dom(GENERAL.button('parent1/child1')).exists('Namespace "parent1/child1" is displayed');
     assert.strictEqual(
-      findAll(GENERAL.button()).length,
+      findAll(`ul ${GENERAL.button()}`).length,
       3,
-      'All namespaces are displayed after clearing the search input'
+      'Three namespaces are displayed after clearing the search input'
     );
   });
 
