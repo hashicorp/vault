@@ -35,7 +35,10 @@ or `backup_auth_types` is required during creation.
 - `namespace_path` `(string: "")` - Target namespace for the login configuration.
   Leave `namespace_path` unset to apply the configuration to the `root` namespace.
 
-- `default_auth_type` `(string: <required>)` - The type of auth method to be presented by default. Only UI supported auth types are allowed: `github`,`jwt`,`ldap`,`oidc`,`okta`,`radius`,`saml`,'token`,and `userpass`
+- `default_auth_type` `(string: <required>)` - The default authentication method.
+  You must provide a default method if `backup_auth_types` is unset. Supported
+  authentication methods include: `github`, `jwt`, `ldap`, `oidc`, `okta`,
+  `radius`, `saml`, `token`, and `userpass`.
 
 - `backup_auth_types` `(array: [])` - Backup auth types to be presented in the `Sign in with other methods` tab. Only UI supported auth types are allowed: `github`,`jwt`,`ldap`,`oidc`,`okta`,`radius`,`saml`, `token`,and `userpass`
 
