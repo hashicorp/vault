@@ -125,7 +125,7 @@ module('Integration | Component | auth | page | ent login settings', function (h
       await this.renderComponent();
       assert.dom(AUTH_FORM.tabBtn('oidc')).hasText('OIDC', 'it renders default method');
       assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
-      this.assertPathInput(assert, { isHidden: true, value: 'my-oidc/' });
+      this.assertPathInput(assert, { isHidden: true, value: 'my_oidc/' });
       await click(GENERAL.button('Sign in with other methods'));
       assert.dom(AUTH_FORM.tabs).exists({ count: 2 }, 'it renders 2 backup type tabs');
       assert
@@ -144,7 +144,7 @@ module('Integration | Component | auth | page | ent login settings', function (h
       assert.dom(AUTH_FORM.tabBtn('oidc')).hasText('OIDC', 'it renders default method');
       assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
       assert.dom(AUTH_FORM.authForm('oidc')).exists();
-      this.assertPathInput(assert, { isHidden: true, value: 'my-oidc/' });
+      this.assertPathInput(assert, { isHidden: true, value: 'my_oidc/' });
       assert.dom(GENERAL.backButton).doesNotExist();
       assert.dom(GENERAL.button('Sign in with other methods')).doesNotExist();
     });
@@ -172,9 +172,9 @@ module('Integration | Component | auth | page | ent login settings', function (h
     });
 
     test('(default+backups): it hides advanced settings for default with visible mount but it renders for backups', async function (assert) {
-      this.visibleAuthMounts = { ...this.mountData('my-oidc/') };
+      this.visibleAuthMounts = { ...this.mountData('my_oidc/') };
       await this.renderComponent();
-      this.assertPathInput(assert, { isHidden: true, value: 'my-oidc/' });
+      this.assertPathInput(assert, { isHidden: true, value: 'my_oidc/' });
       await click(GENERAL.button('Sign in with other methods'));
       assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
       await this.assertPathInput(assert);
@@ -185,7 +185,7 @@ module('Integration | Component | auth | page | ent login settings', function (h
     test('(default+backups): it only renders advanced settings for method without mounts', async function (assert) {
       // default and only one backup method have visible mounts
       this.visibleAuthMounts = {
-        ...this.mountData('my-oidc/'),
+        ...this.mountData('my_oidc/'),
         ...this.mountData('userpass/'),
         ...this.mountData('userpass2/'),
       };
