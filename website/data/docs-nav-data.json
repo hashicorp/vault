@@ -157,15 +157,6 @@
             "path": "concepts/integrated-storage/autopilot"
           },
           {
-            "title": "Item Recovery",
-            "path": "concepts/integrated-storage/snapshot-recover",
-            "badge": {
-              "text": "ENT",
-              "type": "filled",
-              "color": "neutral"
-            }
-          },
-          {
             "title": "Migration checklist",
             "path": "concepts/integrated-storage/migration-checklist"
           },
@@ -287,6 +278,31 @@
       }
     ]
   },
+  {
+    "title": "Recent updates",
+    "routes": [
+      {
+        "title": "Release notes",
+        "path": "updates/release-notes"
+      },
+      {
+        "title": "Important changes",
+        "path": "updates/important-changes"
+      },
+      {
+        "title": "Deprecation notices",
+        "path": "updates/deprecation"
+      },
+      {
+        "title": "Change tracker",
+        "path": "updates/change-tracker"
+      },
+      {
+        "title": "Full changelog",
+        "href": "https://raw.githubusercontent.com/hashicorp/vault/refs/heads/main/CHANGELOG.md"
+      }
+    ]
+  },
 
   { "divider": true },
   { "heading": "OPERATIONS" },
@@ -384,10 +400,6 @@
       {
         "title": "Manage resources programmatically",
         "path": "configuration/programmatic-management"
-      },
-      {
-        "title": "Manage snapshots",
-        "path": "configuration/manage-snapshots"
       },
       {
         "title": "Prevent lease explosions",
@@ -982,27 +994,64 @@
     ]
   },
   {
-    "title": "Recent updates",
+    "title": "System admin",
     "routes": [
       {
-        "title": "Release notes",
-        "path": "updates/release-notes"
-      },
-      {
-        "title": "Important changes",
-        "path": "updates/important-changes"
-      },
-      {
-        "title": "Deprecation notices",
-        "path": "updates/deprecation"
-      },
-      {
-        "title": "Change tracker",
-        "path": "updates/change-tracker"
-      },
-      {
-        "title": "Full changelog",
-        "href": "https://raw.githubusercontent.com/hashicorp/vault/refs/heads/main/CHANGELOG.md"
+        "title": "Manage snapshots",
+        "routes": [
+        {
+          "title": "Overview",
+          "path": "sysadmin/snapshots"
+        },
+        {
+          "title": "Automation and integrated storage",
+          "path": "sysadmin/snapshots/automation-overview",
+          "badge": {
+            "text": "ENT",
+            "type": "filled",
+            "color": "neutral"
+          }
+        },
+        {
+          "title": "Automate cluster snapshots",
+          "path": "sysadmin/snapshots/automate",
+          "badge": {
+            "text": "ENT",
+            "type": "filled",
+            "color": "neutral"
+          }
+        },
+        {
+          "title": "Save a cluster snapshot",
+          "path": "sysadmin/snapshots/save"
+        },
+        {
+          "title": "Restore a cluster snapshot",
+          "path": "sysadmin/snapshots/restore"
+        },
+        {
+          "title": "Recover a secret",
+          "badge": {
+            "text": "ENT",
+            "type": "filled",
+            "color": "neutral"
+          },
+          "routes": [
+            {
+              "title": "Overview",
+              "path": "sysadmin/snapshots/recover-a-secret"
+            },
+            {
+              "title": "Restore to a replicated cluster",
+              "path": "sysadmin/snapshots/recover-a-secret/replicated-cluster"
+            },
+            {
+              "title": "Restore to an unreplicated cluster",
+              "path": "sysadmin/snapshots/recover-a-secret/single-cluster"
+            }
+          ]
+        }
+        ]
       }
     ]
   },
@@ -2852,10 +2901,6 @@
             "path": "enterprise/pkcs11-provider/oracle-tde"
           }
         ]
-      },
-      {
-        "title": "Automatic snapshots with integrated storage",
-        "path": "enterprise/automated-integrated-storage-snapshots"
       },
       {
         "title": "Automatically upgrade Vault clusters",
