@@ -10,6 +10,12 @@ variable "hosts" {
   }))
 }
 
+variable "ip_version" {
+  type        = string
+  description = "IP Version (4 or 6)"
+  default     = "4"
+}
+
 variable "ldap_version" {
   type        = string
   description = "OpenLDAP Server Version to use"
