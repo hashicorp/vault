@@ -257,7 +257,7 @@ func (b *backend) pathRewrapWrite(ctx context.Context, req *logical.Request, d *
 			Nonce:      item.DecodedNonce,
 		}
 
-		ciphertext, err := p.EncryptWithFactory(opts, plaintext, factories...)
+		ciphertext, err := p.EncryptWithOptions(opts, plaintext, factories...)
 		if err != nil {
 			switch err.(type) {
 			case errutil.UserError:
