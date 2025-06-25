@@ -166,7 +166,9 @@ Update the properties of a specific GUI default auth configuration.
   authentication methods include: `github`, `jwt`, `ldap`, `oidc`, `okta`,
   `radius`, `saml`, `token`, and `userpass`.
 
-- `disable_inheritance` `(bool: false)` - Disable child namespaces from inheriting `default_auth_type` and `backup_auth_types` from this configuration.
+- `disable_inheritance` `(bool: false)` - Indicates whether child namespaces
+  should inherit `default_auth_type` and `backup_auth_types` settings from their
+  parent. Setting `disable_inheritance` to `true` disallows inheritence.
 
 ### Sample payload
 
