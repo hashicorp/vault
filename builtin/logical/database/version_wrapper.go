@@ -35,6 +35,7 @@ func newDatabaseWrapper(ctx context.Context, pluginName string, pluginVersion st
 	if versions.IsBuiltinVersion(pluginVersion) {
 		pluginVersion = ""
 	}
+
 	newDB, err := v5.PluginFactoryVersion(ctx, pluginName, pluginVersion, sys, logger)
 	if err == nil {
 		dbw = databaseVersionWrapper{

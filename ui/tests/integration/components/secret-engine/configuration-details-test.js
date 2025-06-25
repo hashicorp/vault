@@ -6,24 +6,45 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { allEngines } from 'vault/helpers/mountable-secret-engines';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { CONFIGURABLE_SECRET_ENGINES } from 'vault/helpers/mountable-secret-engines';
 import {
-  createConfig,
   expectedConfigKeys,
   expectedValueOfConfigKeys,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
-
-const allEnginesArray = allEngines(); // saving as const so we don't invoke the method multiple times via the for loop
+import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 module('Integration | Component | SecretEngine::ConfigurationDetails', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-    this.configModels = [];
+    this.configs = {
+      aws: {
+        region: 'us-west-2',
+        accessKey: '123-key',
+        iamEndpoint: 'iam-endpoint',
+        stsEndpoint: 'sts-endpoint',
+        maxRetries: 1,
+      },
+      azure: {
+        clientSecret: 'client-secret',
+        subscriptionId: 'subscription-id',
+        tenantId: 'tenant-id',
+        clientId: 'client-id',
+        rootPasswordTtl: '1800000s',
+        environment: 'AZUREPUBLICCLOUD',
+      },
+      gcp: {
+        credentials: '{"some-key":"some-value"}',
+        ttl: '100s',
+        maxTtl: '101s',
+      },
+      ssh: {
+        publicKey: 'public-key',
+        generateSigningKey: true,
+      },
+    };
   });
 
   test('it shows prompt message if no config models are passed in', async function (assert) {
@@ -37,14 +58,15 @@ module('Integration | Component | SecretEngine::ConfigurationDetails', function 
       .hasText(`Get started by configuring your Display Name secrets engine.`);
   });
 
-  for (const type of CONFIGURABLE_SECRET_ENGINES) {
+  for (const type of ALL_ENGINES.filter((engine) => engine.isConfigurable ?? false).map(
+    (engine) => engine.type
+  )) {
     test(`${type}: it shows config details if configModel(s) are passed in`, async function (assert) {
-      const backend = `test-${type}`;
-      this.configModels = createConfig(this.store, backend, type);
-      this.typeDisplay = allEnginesArray.find((engine) => engine.type === type).displayName;
+      this.config = this.configs[type];
+      this.typeDisplay = engineDisplayData(type).displayName;
 
       await render(
-        hbs`<SecretEngine::ConfigurationDetails @configModels={{array this.configModels}} @typeDisplay={{this.typeDisplay}}/>`
+        hbs`<SecretEngine::ConfigurationDetails @config={{this.config}} @typeDisplay={{this.typeDisplay}}/>`
       );
 
       for (const key of expectedConfigKeys(type)) {

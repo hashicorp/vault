@@ -90,14 +90,14 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
       await typeIn(PAGE.list.overviewInput, `${root}/no-access/`);
       assert
-        .dom(PAGE.list.overviewButton)
+        .dom(GENERAL.submitButton)
         .hasText('View list', 'shows list and not secret because search is a directory');
-      await click(PAGE.list.overviewButton);
+      await click(GENERAL.submitButton);
       assert.dom(PAGE.emptyStateTitle).hasText(`There are no secrets matching "${root}/no-access/".`);
 
       await visit(`/vault/secrets/${backend}/kv/list`);
       await typeIn(PAGE.list.overviewInput, `${root}/`); // add slash because this is a directory
-      await click(PAGE.list.overviewButton);
+      await click(GENERAL.submitButton);
 
       // URL correct
       assert.strictEqual(
@@ -182,7 +182,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
       await visit(`/vault/secrets/${backend}/kv/list`);
       await typeIn(PAGE.list.overviewInput, `${root}/${subdirectory}`); // intentionally leave out trailing slash
-      await click(PAGE.list.overviewButton);
+      await click(GENERAL.submitButton);
       assert.dom(PAGE.error.title).hasText('404 Not Found');
       assert
         .dom(PAGE.error.message)

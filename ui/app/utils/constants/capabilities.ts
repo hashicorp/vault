@@ -22,4 +22,5 @@ export const PATH_MAP = {
   syncDestination: apiPath`sys/sync/destinations/${'type'}/${'name'}`,
   syncSetAssociation: apiPath`sys/sync/destinations/${'type'}/${'name'}/associations/set`,
   syncRemoveAssociation: apiPath`sys/sync/destinations/${'type'}/${'name'}/associations/remove`,
+  kvConfig: apiPath`${'path'}/config`,
 };

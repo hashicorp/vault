@@ -1,0 +1,92 @@
+---
+layout: docs
+page_title: AWS secret import source
+description: Use the AWS Importer to read secrets from AWS into Vault.
+---
+
+# AWS secret import source
+
+Use the AWS importer to read secret data from AWS Secret Manager into your Vault
+instance.
+
+## Before you start
+- **You must know the relevant AWS credentials**. You can provide the credentials
+  as environment variables, as explicit arguments, or use dynamic credentials
+  from an existing [AWS secrets plugin](/vault/docs/secrets/aws) mount path.
+
+## Step 1: Set AWS Identity permissions
+To use AWS import, you must grant the associated AWS identity permission to read
+the relevant secrets:
+
+```shell-session
+"secretsmanager:DescribeSecret",
+"secretsmanager:GetSecretValue",
+"secretsmanager:BatchGetSecretValue",
+"secretsmanager:ListSecrets",
+```
+## Step 2: Define the AWS source
+
+<Tabs>
+<Tab heading="Static credentials">
+
+The following configuration example uses static credentials in a AWS profile to
+import secrets from AWS:
+
+```hcl  
+source_aws {
+  name = "my-aws-source-1"
+  credentials_profile = "my-cred-profile-name"
+}
+```
+
+If you provide a static credential profile you must leave `vault_mount_path`, 
+`vault_role_name`, `vault_namespace`, `vault_address`, and
+`vault_credentials_file` unset. If set one of the dynamic credential parameters,
+Vault returns an error.
+</Tab>
+<Tab heading="Dynamic credentials">
+
+Alternatively, source credentials can also be derived dynamically using the [AWS Secret Engine](/vault/docs/secrets/aws#sts-session-tokens)
+
+The following configuration example uses dynamic credentials stored in the
+AWS secrets engine configured at `vault_address` to import secrets from AWS.
+
+```hcl
+source_aws {
+  name = "my-aws-source-2"
+  vault_mount_path = "aws"
+  vault_role_name  = "temp_user"
+  vault_namespace  = "ns-1"
+  vault_address    = "${VAULT_ADDR}$"
+  vault_credentials_file = "/path/to/vault/token"
+}
+```
+You must provide values for `vault_mount_path`, `vault_role_name`,
+`vault_namespace`, `vault_address`, and `vault_credentials_file` to use dynamic
+credentials. If you leave one of the required arguments unset, or try to set
+`credentials_profile`, Vault returns an error.
+
+</Tab>
+</Tabs>
+
+## Argument reference
+
+Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common to all source types.
+
+- `vault_mount_path` `(string: "")` - The Vault mount path to a pre-configured AWS
+  secrets engine used to generate dynamic credentials for the importer.
+
+- `vault_role_name` `(string: "")` - AWS secrets plugin role used to generate
+  dynamic credentials for the importer. Only required for dynamic credentials.
+
+- `vault_namespace` `(string: "")` - Vault namespace for the mount path
+  specified in `vault_mount_path`. Only required for dynamic credentials.
+
+- `vault_address` `(string: "")` - Local path to a file containing a
+  valid token for the Vault server at `vault_address`. Only required for dynamic
+  credentials.
+
+- `vault_credentials_file` `(string: "")` - The path to a file containing a Vault token for the vault server configured above.
+
+- `credentials_profile` `(string: "")` - The name of the profile in your credentials file to authenticate with.
+  If not set, Vault uses the default credential provider mechanisms.

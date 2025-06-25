@@ -77,7 +77,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
         .hasText('default', 'index page lists default key');
 
       // navigate to default key details from pop-up menu
-      await click('[data-test-popup-menu-trigger]');
+      await click(GENERAL.menuTrigger);
       await click('[data-test-oidc-key-menu-link="details"]');
       assert.dom(SELECTORS.keyDeleteButton).doesNotExist('delete button is hidden for default key');
       await click(SELECTORS.keyEditButton);
@@ -124,7 +124,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       await visit(OIDC_BASE_URL + '/clients');
       await click('[data-test-oidc-client-create]');
       await fillIn('[data-test-input="name"]', 'client-with-test-key');
-      await click('[data-test-toggle-group="More options"]');
+      await click(GENERAL.button('More options'));
       await click('[data-test-component="search-select"] [data-test-icon="trash"]');
       await clickTrigger('#key');
       await selectChoose('[data-test-component="search-select"]#key', 'test-key');
@@ -232,7 +232,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       // rotate key
       await click(SELECTORS.keyDetailsTab);
       await click(SELECTORS.keyRotateButton);
-      await click(SELECTORS.confirmActionButton);
+      await click(GENERAL.confirmButton);
       assert.strictEqual(
         flashMessage.latestMessage,
         'Success: test-key connection was rotated.',
@@ -240,7 +240,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       );
       // delete
       await click(SELECTORS.keyDeleteButton);
-      await click(SELECTORS.confirmActionButton);
+      await click(GENERAL.confirmButton);
       assert.strictEqual(
         flashMessage.latestMessage,
         'Key deleted successfully',
@@ -383,7 +383,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
         'navigates to create form'
       );
       await fillIn('[data-test-input="name"]', 'test-app');
-      await click('[data-test-toggle-group="More options"]');
+      await click(GENERAL.button('More options'));
       // toggle ttls to false, testing it sets correct default duration
       await click('[data-test-input="idTokenTtl"]');
       await click('[data-test-input="accessTokenTtl"]');
@@ -405,10 +405,10 @@ module('Acceptance | oidc-config clients', function (hooks) {
         .dom(`${GENERAL.infoRowValue('Key')} a`)
         .hasText('default', 'client uses default key and renders a link');
       assert
-        .dom(`${GENERAL.infoRowValue('Client ID')} [data-test-copy-button]`)
+        .dom(`${GENERAL.infoRowValue('Client ID')} ${GENERAL.copyButton}`)
         .exists('client ID exists and has copy button');
       assert
-        .dom(`${GENERAL.infoRowValue('Client Secret')} [data-test-copy-button]`)
+        .dom(`${GENERAL.infoRowValue('Client Secret')} ${GENERAL.copyButton}`)
         .exists('client secret exists and has copy button');
       assert
         .dom(GENERAL.infoRowValue('ID Token TTL'))
@@ -474,7 +474,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
 
       // immediately delete client, test transition
       await click(SELECTORS.clientDeleteButton);
-      await click(SELECTORS.confirmActionButton);
+      await click(GENERAL.confirmButton);
       assert.strictEqual(
         flashMessage.latestMessage,
         'Application deleted successfully',
@@ -489,7 +489,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       await click('[data-test-oidc-client-linked-block]');
       assert.strictEqual(currentRouteName(), 'vault.cluster.access.oidc.clients.client.details');
       await click(SELECTORS.clientDeleteButton);
-      await click(SELECTORS.confirmActionButton);
+      await click(GENERAL.confirmButton);
 
       //TODO this part of the test has a race condition
       //because other tests could have created clients - there is no guarantee that this will be the last
@@ -561,7 +561,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
 
       // delete the assignment
       await click(SELECTORS.assignmentDeleteButton);
-      await click(SELECTORS.confirmActionButton);
+      await click(GENERAL.confirmButton);
       assert.strictEqual(
         flashMessage.latestMessage,
         'Assignment deleted successfully',
@@ -600,7 +600,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
         'create form navigates back to assignment index on cancel'
       );
 
-      await click('[data-test-popup-menu-trigger]');
+      await click(GENERAL.menuTrigger);
       await click('[data-test-oidc-assignment-menu-link="edit"]');
       assert.strictEqual(
         currentRouteName(),
@@ -615,7 +615,7 @@ module('Acceptance | oidc-config clients', function (hooks) {
       );
       // navigate to details from index page
       await visit('/vault/access/oidc/assignments');
-      await click('[data-test-popup-menu-trigger]');
+      await click(GENERAL.menuTrigger);
       await click('[data-test-oidc-assignment-menu-link="details"]');
       assert.strictEqual(
         currentRouteName(),

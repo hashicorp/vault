@@ -265,7 +265,7 @@ func (i *IdentityStore) handleGroupUpdateCommon(ctx context.Context, req *logica
 		group.Policies = strutil.RemoveDuplicatesStable(policiesRaw.([]string), true)
 	}
 
-	if strutil.StrListContains(group.Policies, "root") {
+	if strutil.StrListContainsCaseInsensitive(group.Policies, "root") {
 		return logical.ErrorResponse("policies cannot contain root"), nil
 	}
 

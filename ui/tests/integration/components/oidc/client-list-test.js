@@ -9,6 +9,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { allowAllCapabilitiesStub, capabilitiesStub } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | oidc/client-list', function (hooks) {
   setupRenderingTest(hooks);
@@ -46,7 +47,7 @@ module('Integration | Component | oidc/client-list', function (hooks) {
     await render(hbs`<Oidc::ClientList @model={{this.model}} />`);
 
     assert.dom('[data-test-popup-menu-trigger]').exists({ count: 1 }, 'Only one popup menu is rendered');
-    await click('[data-test-popup-menu-trigger]');
+    await click(GENERAL.menuTrigger);
     assert.dom('[data-test-oidc-client-menu-link="details"]').exists('Details link is rendered');
     assert.dom('[data-test-oidc-client-menu-link="edit"]').doesNotExist('Edit link is not rendered');
   });

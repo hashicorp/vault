@@ -12,9 +12,7 @@ import { Validations } from 'vault/vault/app-types';
 
 type CustomMessageFormData = Partial<CreateCustomMessageRequest>;
 
-export default class CustomMessageForm extends Form {
-  declare data: CustomMessageFormData;
-
+export default class CustomMessageForm extends Form<CustomMessageFormData> {
   formFields = [
     new FormField('authenticated', undefined, {
       label: 'Where should we display this message?',

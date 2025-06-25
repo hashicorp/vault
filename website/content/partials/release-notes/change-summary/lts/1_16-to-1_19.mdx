@@ -1,0 +1,39 @@
+## Breaking changes
+
+Introduced | Recommendations | Change
+---------- | --------------- | -------
+1.17.x     | **Yes**         | [Rekey cancellations use a nonce](/vault/docs/v1.17.x/updates/important-changes#rekey-cancel-nonce)
+1.19.x     | **Yes**         | [Security improvement for LDAP user DN search with upndomain](/vault/docs/v1.19.x/updates/important-changes#ldap)
+1.19.x     | **Yes**         | [Rekey cancellations use a nonce](/vault/docs/v1.20.x/updates/important-changes#rekey-cancel-nonce)
+
+
+## New behavior
+
+Introduced | Recommendations | Change
+---------- | --------------- | -------
+1.17.x     | No              | [Allowed audit headers now have unremovable defaults](/vault/docs/v1.17.x/updates/important-changes#audit-headers)
+1.17.x     | **Yes**         | [JWT auth login requires `bound_audiences` parameter on role](/vault/docs/v1.17.x/updates/important-changes#jwt-auth-login-requires-bound-audiences-on-the-role)
+1.17.x     | No              | [Strict validation for Azure auth login requests](/vault/docs/v1.17.x/updates/important-changes#strict-azure)
+1.17.x     | **Yes**         | [Secrets Sync SSRF Protection May Block Private Endpoints](/vault/docs/v1.17.x/updates/important-changes#secrets-sync-ssrf-protection-may-block-private-endpoints)
+1.17.x     | No              | [Default report months deprecated for `sys/internal/counters`](/vault/docs/v1.17.x/updates/important-changes#activity-log-changes)
+1.17.x     | **Yes**         | [Vault product usage metrics reporting](/vault/docs/v1.17.x/updates/important-changes#product-usage-reporting)
+1.18.x     | No              | [Activity log changes](/vault/docs/v1.18.x/updates/important-changes#default-activity-log-querying-period)
+1.18.x     | **Yes**         | [Docker image no longer contains curl](/vault/docs/v1.18.x/updates/important-changes#docker-image-no-longer-contains-curl)
+1.18.x     | **Yes**         | [Anonymous product usage metrics collection](/vault/docs/v1.18.x/updates/important-changes#product-usage-reporting)
+1.18.x     | No              | [Strict validation for Azure auth login requests](/vault/docs/v1.18.x/updates/important-changes#azure-auth-plugin-requires-resource_group_name-vm_name-and-vmss_name-to-match-the-jwt-claims-on-login)
+1.19.x     | No              | [Anonymized cluster data returned with license utilization](/vault/docs/v1.19.x/updates/important-changes#anon-data)
+1.19.x     | **Yes**         | [Identity system duplicate cleanup](/vault/docs/v1.19.x/updates/important-changes#dedupe)
+1.19.x     | No              | [RADIUS authentication is no longer case sensitive](/vault/docs/v1.19.x/updates/important-changes#case-sensitive)
+1.19.x     | No              | [Transit support for Ed25519ph and Ed25519ctx signatures](/vault/docs/v1.19.x/updates/important-changes#ed25519)
+1.19.x     | **Yes**         | [Strict validation for Azure auth login requests](/vault/docs/v1.19.x/updates/important-changes#strict-azure)
+
+
+## Known issues
+
+Workaround | Issue
+---------- | -----
+**Yes**    | [Duplicate unseal/seal wrap HSM keys](/vault/docs/v1.19.x/updates/important-changes#hsm-keys)
+**Yes**    | [Duplicate identity groups created when concurrent requests sent to the primary and PR secondary cluster](/vault/docs/v1.17.x/updates/important-changes#duplicate-identity-groups-created-when-concurrent-requests-sent-to-the-primary-and-pr-secondary-cluster)
+**Yes**    | [Manual entity merges sent to a PR secondary cluster are not persisted to storage](/vault/docs/v1.17.x/updates/important-changes#manual-entity-merges-sent-to-a-pr-secondary-cluster-are-not-persisted-to-storage)
+**Yes**    | [PKI OCSP GET requests can return HTTP redirect responses](/vault/docs/v1.17.x/updates/important-changes#pki-ocsp)
+No         | [Authorization failure with Azure federated identity credentials](/vault/docs/v1.17.x/updates/important-changes#authorization-failures-using-azure-federated-identity-credentials)

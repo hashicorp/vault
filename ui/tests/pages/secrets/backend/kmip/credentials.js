@@ -13,5 +13,4 @@ export default create({
   create: clickable('[data-test-role-create]'),
   generateCredentialsLink: clickable('[data-test-kmip-link-generate-credentials]'),
   backToRoleLink: clickable('[data-test-kmip-link-back-to-role]'),
-  submit: clickable('[data-test-edit-form-submit]'),
 });

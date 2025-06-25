@@ -1,0 +1,29 @@
+---
+layout: docs
+page_title: LTS Vault upgrades
+description: >-
+  General guidance for LTS upgrades
+---
+
+# Long-term support Vault upgrades
+
+[Long-term support](/vault/docs/enterprise/) offers extended maintenance through
+minor releases for select, major Vault Enterprise versions.
+
+Current LTS release | Extended maintenance release
+------------------- | ----------------------------
+1.19.x              | 1.16.x
+
+Before you perform a direct LTS upgrade from an extended maintenance release to
+the current LTS release, we recommend reviewing the following summary of
+functional changes and known issues to determine the likely impact on your Vault
+deployment.
+
+Functional changes affect how Vault works including new requirements, new
+defaults, new behavior, and breaking changes. In some cases, we recommend specific
+actions before or after upgrading to mitigate the impact of a functional change.
+
+Unresolved nown issues may have suggested workarounds or mitagation stratagies
+you should consider before upgrading.
+
+@include 'release-notes/change-summary/lts/1_16-to-1_19.mdx'

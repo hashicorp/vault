@@ -8,13 +8,16 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
 	"github.com/hashicorp/vault/vault/seal"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCore_Rekey_Lifecycle(t *testing.T) {
@@ -57,7 +60,7 @@ func testCore_Rekey_Lifecycle_Common(t *testing.T, c *Core, recovery bool) {
 	}
 
 	// Cancel should be idempotent
-	err = c.RekeyCancel(false)
+	err = c.RekeyCancel(false, "", 10*time.Minute)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -83,7 +86,7 @@ func testCore_Rekey_Lifecycle_Common(t *testing.T, c *Core, recovery bool) {
 	}
 
 	// Cancel should be clear
-	err = c.RekeyCancel(recovery)
+	err = c.RekeyCancel(recovery, conf.Nonce, 10*time.Minute)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -546,5 +549,197 @@ func TestSysRekey_Verification_Invalid(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "requiring verification not supported") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// TestCancelRekey_Nonce verifies that cancelling a rekey operation requires a
+// nonce
+func TestCancelRekey_Nonce(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		recovery bool
+		config   *SealConfig
+		core     func(t *testing.T) *Core
+	}{
+		{
+			recovery: true,
+			config: &SealConfig{
+				SecretShares:    1,
+				SecretThreshold: 1,
+				Type:            string(SealConfigTypeMultiseal),
+			},
+			core: func(t *testing.T) *Core {
+				c, _, _, _ := TestCoreUnsealedWithConfigSealOpts(t,
+					&SealConfig{StoredShares: 1, SecretShares: 1, SecretThreshold: 1},
+					&SealConfig{StoredShares: 1, SecretShares: 1, SecretThreshold: 1},
+					&seal.TestSealOpts{StoredKeys: seal.StoredKeysSupportedGeneric})
+				return c
+			},
+		},
+		{
+			recovery: false,
+			config: &SealConfig{
+				SecretShares:    1,
+				SecretThreshold: 1,
+				StoredShares:    1,
+				Type:            string(SealConfigTypeShamir),
+			},
+			core: func(t *testing.T) *Core {
+				c, _, _ := TestCoreUnsealed(t)
+				return c
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.config.Type, func(t *testing.T) {
+			c := tc.core(t)
+			// bail if recovery rekey is not supported
+			if tc.recovery && !c.seal.RecoveryKeySupported() {
+				t.Skip(t, "recovery rekey not supported")
+			}
+
+			err := c.RekeyInit(tc.config, tc.recovery)
+			require.NoError(t, err, "rekey init failed")
+
+			// try to cancel without the nonce
+			err = c.RekeyCancel(tc.recovery, "", 10*time.Minute)
+			require.Error(t, err, "cancel should have errored")
+
+			// retrieve the nonce
+			var nonce string
+			c.stateLock.RLock()
+			c.rekeyLock.RLock()
+			if tc.recovery {
+				nonce = c.recoveryRekeyConfig.Nonce
+			} else {
+				nonce = c.barrierRekeyConfig.Nonce
+			}
+			c.rekeyLock.RUnlock()
+			c.stateLock.RUnlock()
+
+			require.NotEmpty(t, nonce, "nonce missing")
+
+			// cancel successfully
+			err = c.RekeyCancel(tc.recovery, nonce, 10*time.Minute)
+			require.NoError(t, err, "error on rekey cancel")
+		})
+	}
+}
+
+// TestCancelRekey_Regression creates 50 cancel requests in parallel and then
+// starts a rekey operation. The test verifies that the spammed cancel requests
+// are not able to cancel the rekey, because they do not provide a nonce.
+func TestCancelRekey_Regression(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		recovery bool
+		config   *SealConfig
+		core     func(t *testing.T) *Core
+	}{
+		{
+			recovery: true,
+			config: &SealConfig{
+				SecretShares:    1,
+				SecretThreshold: 1,
+				Type:            string(SealConfigTypeMultiseal),
+			},
+			core: func(t *testing.T) *Core {
+				c, _, _, _ := TestCoreUnsealedWithConfigSealOpts(t,
+					&SealConfig{StoredShares: 1, SecretShares: 1, SecretThreshold: 1},
+					&SealConfig{StoredShares: 1, SecretShares: 1, SecretThreshold: 1},
+					&seal.TestSealOpts{StoredKeys: seal.StoredKeysSupportedGeneric})
+				return c
+			},
+		},
+		{
+			recovery: false,
+			config: &SealConfig{
+				SecretShares:    1,
+				SecretThreshold: 1,
+				StoredShares:    1,
+				Type:            string(SealConfigTypeShamir),
+			},
+			core: func(t *testing.T) *Core {
+				c, _, _ := TestCoreUnsealed(t)
+				return c
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.config.Type, func(t *testing.T) {
+			c := tc.core(t)
+			wg := sync.WaitGroup{}
+			for i := 0; i < 50; i++ {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					c.RekeyCancel(tc.recovery, "", 10*time.Minute)
+				}()
+			}
+			err := c.RekeyInit(tc.config, tc.recovery)
+			require.NoError(t, err)
+
+			wg.Wait()
+			happening, keys, err := c.RekeyProgress(tc.recovery, false)
+			require.NoError(t, err)
+			require.True(t, happening)
+			require.Equal(t, 0, keys)
+		})
+	}
+}
+
+// TestCancelRekey_AfterDeadline verifies that cancelling a rekey after the deadline
+// does not require a nonce.
+func TestCancelRekey_AfterDeadline(t *testing.T) {
+	testCases := []struct {
+		recovery bool
+		config   *SealConfig
+		core     func(t *testing.T) *Core
+	}{
+		{
+			recovery: true,
+			config: &SealConfig{
+				SecretShares:    1,
+				SecretThreshold: 1,
+				Type:            string(SealConfigTypeMultiseal),
+			},
+			core: func(t *testing.T) *Core {
+				c, _, _, _ := TestCoreUnsealedWithConfigSealOpts(t,
+					&SealConfig{StoredShares: 1, SecretShares: 1, SecretThreshold: 1},
+					&SealConfig{StoredShares: 1, SecretShares: 1, SecretThreshold: 1},
+					&seal.TestSealOpts{StoredKeys: seal.StoredKeysSupportedGeneric})
+				return c
+			},
+		},
+		{
+			recovery: false,
+			config: &SealConfig{
+				SecretShares:    1,
+				SecretThreshold: 1,
+				StoredShares:    1,
+				Type:            string(SealConfigTypeShamir),
+			},
+			core: func(t *testing.T) *Core {
+				c, _, _ := TestCoreUnsealed(t)
+				return c
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.config.Type, func(t *testing.T) {
+			c := tc.core(t)
+			err := c.RekeyInit(tc.config, tc.recovery)
+			require.NoError(t, err)
+
+			// ensure that that 10 ms have passed before we cancel
+			time.Sleep(10 * time.Millisecond)
+			// set the deadline to a microsecond, which means we won't need a
+			// nonce to cancel the rekey
+			err = c.RekeyCancel(tc.recovery, "", time.Microsecond)
+			require.NoError(t, err)
+		})
 	}
 }

@@ -15,7 +15,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"regexp"
 	"strings"
 	"time"
 
@@ -30,6 +29,7 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	iRegexp "github.com/hashicorp/go-secure-stdlib/regexp"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/pkcs7"
@@ -1678,8 +1678,10 @@ func validateVaultHeaderValue(method string, headers http.Header, parsedUrl *url
 	case http.MethodPost:
 		if authzHeaders, ok := headers["Authorization"]; ok {
 			// authzHeader looks like AWS4-HMAC-SHA256 Credential=AKI..., SignedHeaders=host;x-amz-date;x-vault-awsiam-id, Signature=...
-			// We need to extract out the SignedHeaders
-			re := regexp.MustCompile(".*SignedHeaders=([^,]+)")
+			// We need to extract out the SignedHeaders.
+			// We are using an interned regexp library here to avoid redundant objects and save memory.
+			re := iRegexp.MustCompileInterned(".*SignedHeaders=([^,]+)")
+
 			authzHeader := strings.Join(authzHeaders, ",")
 			matches := re.FindSubmatch([]byte(authzHeader))
 			if len(matches) < 1 {

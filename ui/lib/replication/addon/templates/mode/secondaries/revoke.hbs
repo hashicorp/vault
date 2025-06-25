@@ -14,7 +14,13 @@
     Secondary ID
   </label>
   <div class="control">
-    <Input class="input" name="activation-token-id" id="activation-token-id" @value={{this.id}} />
+    <Input
+      class="input"
+      name="activation-token-id"
+      id="activation-token-id"
+      @value={{this.id}}
+      data-test-input="Secondary ID"
+    />
   </div>
   <p class="help has-text-grey">
     The secondary id to revoke; given initially to generate a secondary token.

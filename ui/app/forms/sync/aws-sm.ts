@@ -10,11 +10,11 @@ import { commonFields, getPayload } from './shared';
 
 import type { SystemWriteSyncDestinationsAwsSmNameRequest } from '@hashicorp/vault-client-typescript';
 
-type AwsSmFormData = Partial<SystemWriteSyncDestinationsAwsSmNameRequest>;
+type AwsSmFormData = SystemWriteSyncDestinationsAwsSmNameRequest & {
+  name: string;
+};
 
-export default class AwsSmForm extends Form {
-  declare data: AwsSmFormData;
-
+export default class AwsSmForm extends Form<AwsSmFormData> {
   formFieldGroups = [
     new FormFieldGroup('default', [
       commonFields.name,
@@ -59,6 +59,7 @@ export default class AwsSmForm extends Form {
 
   toJSON() {
     const formState = super.toJSON();
-    return { ...formState, data: getPayload('aws-sm', this.data, this.isNew) };
+    const data = getPayload<AwsSmFormData>('aws-sm', this.data, this.isNew);
+    return { ...formState, data };
   }
 }

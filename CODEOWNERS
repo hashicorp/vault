@@ -76,6 +76,7 @@
 /builtin/logical/pki/                                @hashicorp/vault-crypto
 /builtin/logical/pkiext/                             @hashicorp/vault-crypto
 /website/content/docs/secrets/pki/                   @hashicorp/vault-crypto @hashicorp/vault-education-approvers
+/website/content/api-docs/secret/pki/                @hashicorp/vault-crypto @hashicorp/vault-education-approvers
 /website/content/api-docs/secret/pki.mdx             @hashicorp/vault-crypto @hashicorp/vault-education-approvers
 /builtin/credential/cert/                            @hashicorp/vault-crypto
 /website/content/docs/auth/cert.mdx                  @hashicorp/vault-crypto @hashicorp/vault-education-approvers

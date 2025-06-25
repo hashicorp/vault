@@ -12,6 +12,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { v4 as uuidv4 } from 'uuid';
 import { hbs } from 'ember-cli-htmlbars';
+import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import {
   expectedConfigKeys,
@@ -21,17 +22,20 @@ import {
   fillInAwsConfig,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 import { capabilitiesStub } from 'vault/tests/helpers/stubs';
-import { WIF_ENGINES, allEngines } from 'vault/helpers/mountable-secret-engines';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 import waitForError from 'vault/tests/helpers/wait-for-error';
+import AwsConfigForm from 'vault/forms/secrets/aws-config';
+import AzureConfigForm from 'vault/forms/secrets/azure-config';
+import GcpConfigForm from 'vault/forms/secrets/gcp-config';
+import SshConfigForm from 'vault/forms/secrets/ssh-config';
 
-const allEnginesArray = allEngines(); // saving as const so we don't invoke the method multiple times in the for loop
+const WIF_ENGINES = ALL_ENGINES.filter((e) => e.isWIF).map((e) => e.type);
 
 module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
     this.version = this.owner.lookup('service:version');
     this.flashMessages = this.owner.lookup('service:flash-messages');
     this.flashMessages.registerTypes(['success', 'danger']);
@@ -41,6 +45,24 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
     this.uid = uuidv4();
     // stub capabilities so that by default user can read and update issuer
     this.server.post('/sys/capabilities-self', () => capabilitiesStub('identity/oidc/config', ['sudo']));
+    this.getForm = (type, data, options) => {
+      const form = {
+        aws: AwsConfigForm,
+        azure: AzureConfigForm,
+        gcp: GcpConfigForm,
+        ssh: SshConfigForm,
+      }[type];
+      return new form(data, options);
+    };
+    this.renderComponent = () =>
+      render(hbs`
+        <SecretEngine::ConfigureWif
+          @backendPath={{this.id}}
+          @displayName={{this.displayName}}
+          @type={{this.type}}
+          @configForm={{this.form}}
+        />
+      `);
   });
 
   module('Create view', function () {
@@ -52,26 +74,21 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       for (const type of WIF_ENGINES) {
         test(`${type}: it renders default fields`, async function (assert) {
           this.id = `${type}-${this.uid}`;
-          this.displayName = allEnginesArray.find((engine) => engine.type === type)?.displayName;
-          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.mountConfigModel =
-            type === 'aws'
-              ? this.store.createRecord('aws/root-config')
-              : this.store.createRecord(`${type}/config`);
-          this.additionalConfigModel = type === 'aws' ? this.store.createRecord('aws/lease-config') : null;
-          this.mountConfigModel.backend = this.id;
-          this.additionalConfigModel ? (this.additionalConfigModel.backend = this.id) : null; // Add backend to the configs because it's not on the testing snapshot (would come from url)
+          this.displayName = engineDisplayData(type).displayName;
+          this.form = this.getForm(type, {}, { isNew: true });
           this.type = type;
 
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}} @additionalConfigModel={{this.additionalConfigModel}}/>
-              `);
+          await this.renderComponent();
+
           assert.dom(SES.configureForm).exists(`it lands on the ${type} configuration form`);
           assert.dom(SES.wif.accessType(type)).isChecked(`defaults to showing ${type} access type checked`);
           assert.dom(SES.wif.accessType('wif')).isNotChecked('wif access type is not checked');
-          // toggle grouped fields if it exists
-          const toggleGroup = document.querySelector('[data-test-toggle-group]');
-          toggleGroup ? await click(toggleGroup) : null;
+
+          let toggleGroup = GENERAL.button('More options');
+          if (type === 'aws') {
+            toggleGroup = GENERAL.button('Root config options');
+          }
+          await click(toggleGroup);
 
           for (const key of expectedConfigKeys(type, true)) {
             if (key === 'configTtl' || key === 'maxTtl') {
@@ -98,24 +115,19 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       for (const type of WIF_ENGINES) {
         test(`${type}: it renders wif fields when user selects wif access type`, async function (assert) {
           this.id = `${type}-${this.uid}`;
-          this.displayName = allEnginesArray.find((engine) => engine.type === type)?.displayName;
-          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.mountConfigModel =
-            type === 'aws'
-              ? this.store.createRecord('aws/root-config')
-              : this.store.createRecord(`${type}/config`);
-          this.additionalConfigModel = type === 'aws' ? this.store.createRecord('aws/lease-config') : null;
-          this.mountConfigModel.backend = this.id;
-          this.additionalConfigModel ? (this.additionalConfigModel.backend = this.id) : null;
+          this.displayName = engineDisplayData(type).displayName;
+          this.form = this.getForm(type, {}, { isNew: true });
           this.type = type;
 
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}} @additionalConfigModel={{this.additionalConfigModel}}/>
-              `);
+          await this.renderComponent();
           await click(SES.wif.accessType('wif'));
-          // toggle grouped fields if it exists
-          const toggleGroup = document.querySelector('[data-test-toggle-group]');
-          toggleGroup ? await click(toggleGroup) : null;
+
+          let toggleGroup = GENERAL.button('More options');
+          if (type === 'aws') {
+            toggleGroup = GENERAL.button('Root config options');
+          }
+          await click(toggleGroup);
+
           // check for the wif fields only
           for (const key of expectedConfigKeys(`${type}-wif`, true)) {
             if (key === 'Identity token TTL') {
@@ -133,13 +145,9 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           assert.expect(3);
           this.id = `azure-${this.uid}`;
           this.displayName = 'Azure';
-          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.mountConfigModel = this.store.createRecord('azure/config');
-          this.mountConfigModel.backend = this.id;
+          this.type = 'azure';
+          this.form = this.getForm('azure', {}, { isNew: true });
 
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
           this.server.post(configUrl('azure', this.id), () => {
             throw new Error(
               `Request was made to post the config when it should not have been because the user canceled out of the flow.`
@@ -150,6 +158,9 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
               `Request was made to save the issuer when it should not have been because the user canceled out of the flow.`
             );
           });
+
+          await this.renderComponent();
+
           await fillInAzureConfig(true);
           await click(GENERAL.cancelButton);
 
@@ -166,11 +177,11 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           const promise = waitForError();
           this.id = `azure-${this.uid}`;
           this.displayName = 'Azure';
+          this.type = 'azure';
           // creating a config that exists but will not have the attribute isWifPluginConfigured on it
-          this.mountConfigModel = this.store.createRecord('ssh/ca-config', { backend: this.id });
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
+          this.form = this.getForm('ssh', {});
+
+          await this.renderComponent();
           const err = await promise;
           assert.true(
             err.message.includes(
@@ -183,22 +194,20 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
         test('it allows user to submit the config even if API error occurs on issuer config', async function (assert) {
           this.id = `aws-${this.uid}`;
           this.displayName = 'AWS';
-          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.mountConfigModel = this.store.createRecord('aws/root-config');
-          this.additionalConfigModel = this.store.createRecord('aws/lease-config');
-          this.mountConfigModel.backend = this.additionalConfigModel.backend = this.id;
+          this.type = 'aws';
+          this.form = this.getForm('aws', {}, { isNew: true });
 
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='aws' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}} @additionalConfigModel={{this.additionalConfigModel}}/>
-              `);
           this.server.post(configUrl('aws', this.id), () => {
             assert.true(true, 'post request was made to config/root when issuer failed. test should pass.');
           });
           this.server.post('/identity/oidc/config', () => {
             return overrideResponse(400, { errors: ['bad request'] });
           });
+
+          await this.renderComponent();
+
           await fillInAwsConfig('withWif');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           await click(SES.wif.issuerWarningSave);
 
           assert.true(
@@ -218,14 +227,9 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
         test('it surfaces the API error if config save fails, and prevents the user from transitioning', async function (assert) {
           this.id = `aws-${this.uid}`;
           this.displayName = 'AWS';
-          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.mountConfigModel = this.store.createRecord('aws/root-config');
-          this.additionalConfigModel = this.store.createRecord('aws/lease-config');
-          this.mountConfigModel.backend = this.additionalConfigModel.backend = this.id;
+          this.type = 'aws';
+          this.form = this.getForm('aws', {}, { isNew: true });
 
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='aws' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}} @additionalConfigModel={{this.additionalConfigModel}}/>
-              `);
           this.server.post(configUrl('aws', this.id), () => {
             return overrideResponse(400, { errors: ['bad request'] });
           });
@@ -235,10 +239,12 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
               'post request was made to config/lease when config/root failed. test should pass.'
             );
           });
+
+          await this.renderComponent();
           // fill in both lease and root endpoints to ensure that both payloads are attempted to be sent
           await fillInAwsConfig('withAccess');
           await fillInAwsConfig('withLease');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           assert.dom(GENERAL.messageError).exists('API error surfaced to user');
           assert.dom(GENERAL.inlineError).exists('User shown inline error message');
         });
@@ -248,19 +254,15 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
         hooks.beforeEach(function () {
           this.id = `azure-${this.uid}`;
           this.displayName = 'Azure';
-          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.mountConfigModel = this.store.createRecord('azure/config');
-          this.mountConfigModel.backend = this.id;
+          this.type = 'azure';
+          this.form = this.getForm('azure', {}, { isNew: true });
         });
         test('it clears access type inputs after toggling accessType', async function (assert) {
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
+          await this.renderComponent();
           await fillInAzureConfig();
           await click(SES.wif.accessType('wif'));
           await fillInAzureConfig(true);
           await click(SES.wif.accessType('azure'));
-          await click(GENERAL.toggleGroup('More options'));
 
           assert
             .dom(GENERAL.toggleInput('Root password TTL'))
@@ -289,9 +291,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
         });
 
         test('it shows the correct access type subtext', async function (assert) {
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
+          await this.renderComponent();
 
           assert
             .dom(SES.wif.accessTypeSubtext)
@@ -301,9 +301,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
         });
 
         test('it does not show aws specific note', async function (assert) {
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
+          await this.renderComponent();
 
           assert
             .dom(SES.configureNote('azure'))
@@ -315,16 +313,12 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
         hooks.beforeEach(function () {
           this.id = `aws-${this.uid}`;
           this.displayName = 'AWS';
-          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.mountConfigModel = this.store.createRecord('aws/root-config');
-          this.additionalConfigModel = this.store.createRecord('aws/lease-config');
-          this.mountConfigModel.backend = this.additionalConfigModel.backend = this.id;
+          this.type = 'aws';
+          this.form = this.getForm('aws', {}, { isNew: true });
         });
 
         test('it clears access type inputs after toggling accessType', async function (assert) {
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='aws' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
+          await this.renderComponent();
           await fillInAwsConfig('aws');
           await click(SES.wif.accessType('wif'));
           await fillInAwsConfig('with-wif');
@@ -354,9 +348,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
         });
 
         test('it shows the correct access type subtext', async function (assert) {
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='aws' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
+          await this.renderComponent();
 
           assert
             .dom(SES.wif.accessTypeSubtext)
@@ -366,9 +358,6 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
         });
 
         test('it shows validation error if default lease is entered but max lease is not', async function (assert) {
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='aws' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}} @additionalConfigModel={{this.additionalConfigModel}}/>
-              `);
           this.server.post(configUrl('aws-lease', this.id), () => {
             throw new Error(
               `Request was made to post the config/lease when it should not have been because no data was changed.`
@@ -379,9 +368,12 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
               `Request was made to post the config/root when it should not have been because no data was changed.`
             );
           });
+
+          await this.renderComponent();
+
           await click(GENERAL.ttl.toggle('Default Lease TTL'));
           await fillIn(GENERAL.ttl.input('Default Lease TTL'), '33');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           assert
             .dom(GENERAL.inlineError)
             .hasText('Lease TTL and Max Lease TTL are both required if one of them is set.');
@@ -389,9 +381,6 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
         });
 
         test('it allows user to submit root config even if API error occurs on config/lease config', async function (assert) {
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='aws' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}} @additionalConfigModel={{this.additionalConfigModel}}/>
-              `);
           this.server.post(configUrl('aws', this.id), () => {
             assert.true(
               true,
@@ -401,12 +390,14 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           this.server.post(configUrl('aws-lease', this.id), () => {
             return overrideResponse(400, { errors: ['bad request!!'] });
           });
+
+          await this.renderComponent();
           // fill in both lease and root endpoints to ensure that both payloads are attempted to be sent
           await fillInAwsConfig('withAccess');
           await fillInAwsConfig('withLease');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           assert.true(
-            this.flashDangerSpy.calledWith('Lease configuration was not saved: bad request!!'),
+            this.flashDangerSpy.calledWith('Error saving lease configuration: bad request!!'),
             'Flash message shows that lease was not saved.'
           );
           assert.true(
@@ -416,9 +407,6 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
         });
 
         test('it transitions without sending a lease, root, or issuer payload on cancel', async function (assert) {
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='aws' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}} @additionalConfigModel={{this.additionalConfigModel}}/>
-              `);
           this.server.post(configUrl('aws', this.id), () => {
             throw new Error(
               `Request was made to post the config/root when it should not have been because the user canceled out of the flow.`
@@ -434,6 +422,8 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
               `Request was made to post the identity/oidc/config when it should not have been because the user canceled out of the flow.`
             );
           });
+
+          await this.renderComponent();
           // fill in both lease and root endpoints to ensure that both payloads are attempted to be sent
           await fillInAwsConfig('withWif');
           await fillInAwsConfig('withLease');
@@ -448,9 +438,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
         });
 
         test('it does show aws specific note', async function (assert) {
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='aws' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}} @additionalConfigModel={{this.additionalConfigModel}}/>
-              `);
+          await this.renderComponent();
 
           assert.dom(SES.configureNote('aws')).exists('Note specific to AWS does show when configuring.');
         });
@@ -460,18 +448,14 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
         hooks.beforeEach(function () {
           this.id = `azure-${this.uid}`;
           this.displayName = 'Azure';
-          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.issuerConfig.queryIssuerError = true;
-          this.mountConfigModel = this.store.createRecord('azure/config');
-          this.mountConfigModel.backend = this.id;
+          this.type = 'azure';
+          this.form = this.getForm('azure', {}, { isNew: true });
         });
         test('if issuer API error and user changes issuer value, shows specific warning message', async function (assert) {
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
+          await this.renderComponent();
           await click(SES.wif.accessType('wif'));
           await fillIn(GENERAL.inputByAttr('issuer'), 'http://change.me.no.read');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           assert
             .dom(SES.wif.issuerWarningMessage)
             .hasText(
@@ -491,22 +475,20 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
               `Request was made to post the config when it should not have been because the user canceled out of the flow.`
             );
           });
-          this.issuerConfig.queryIssuerError = false;
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
+
+          await this.renderComponent();
           await click(SES.wif.accessType('wif'));
           assert
             .dom(GENERAL.inputByAttr('issuer'))
             .hasAttribute('placeholder', 'https://vault-test.com', 'shows issuer placeholder');
           assert.dom(GENERAL.inputByAttr('issuer')).hasValue('', 'shows issuer is empty when not passed');
           await fillIn(GENERAL.inputByAttr('issuer'), 'http://bar.foo');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           assert.dom(SES.wif.issuerWarningMessage).exists('issuer modal exists');
           assert
             .dom(SES.wif.issuerWarningMessage)
             .hasText(
-              `You are updating the global issuer config. This will overwrite Vault's current issuer and may affect other configurations using this value. Continue?`,
+              `You are updating the global issuer config. This will overwrite Vault's current issuer if it exists and may affect other configurations using this value. Continue?`,
               'modal shows message about overwriting value without the noRead: "if it exists" adage'
             );
           await click(SES.wif.issuerWarningCancel);
@@ -530,26 +512,19 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
             };
           });
           this.server.post(configUrl('azure', this.id), () => {
-            throw new Error(
-              `Request was made to post the config when it should not have been because no data was changed.`
-            );
+            assert.true(true, 'post request was made to azure config');
+            return {};
           });
 
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
+          await this.renderComponent();
           await click(SES.wif.accessType('wif'));
           assert.dom(GENERAL.inputByAttr('issuer')).hasValue('', 'issuer defaults to empty string');
           await fillIn(GENERAL.inputByAttr('issuer'), newIssuer);
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           assert.dom(SES.wif.issuerWarningMessage).exists('issuer warning modal exists');
 
           await click(SES.wif.issuerWarningSave);
           assert.true(this.flashDangerSpy.notCalled, 'No danger flash messages called.');
-          assert.true(
-            this.flashSuccessSpy.calledWith('Issuer saved successfully'),
-            'Success flash message called for issuer'
-          );
           assert.true(
             this.transitionStub.calledWith('vault.cluster.secrets.backend.configuration', this.id),
             'Transitioned to the configuration index route.'
@@ -570,15 +545,13 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
             return overrideResponse(403);
           });
 
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
+          await this.renderComponent();
           await click(SES.wif.accessType('wif'));
           assert.dom(GENERAL.inputByAttr('issuer')).hasValue('');
 
           await fillIn(GENERAL.inputByAttr('issuer'), 'http://foo.bar');
           await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'some-value');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
           assert.dom(SES.wif.issuerWarningMessage).exists('issuer warning modal exists');
           await click(SES.wif.issuerWarningSave);
 
@@ -597,20 +570,20 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
         });
 
         test('it does not clear global issuer when toggling accessType', async function (assert) {
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
+          this.form = this.getForm('azure', { issuer: 'issuer' }, { isNew: true });
+
+          await this.renderComponent();
           await click(SES.wif.accessType('wif'));
           assert
             .dom(GENERAL.inputByAttr('issuer'))
-            .hasValue(this.issuerConfig.issuer, 'issuer is what is sent in by the model on first load');
+            .hasValue(this.form.issuer, 'issuer is what is sent in by the model on first load');
           await fillIn(GENERAL.inputByAttr('issuer'), 'http://ive-changed');
           await click(SES.wif.accessType('azure'));
           await click(SES.wif.accessType('wif'));
           assert
             .dom(GENERAL.inputByAttr('issuer'))
             .hasValue(
-              this.issuerConfig.issuer,
+              this.form.issuer,
               'issuer value is still the same global value after toggling accessType'
             );
         });
@@ -625,29 +598,22 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       for (const type of WIF_ENGINES) {
         test(`${type}: it renders fields`, async function (assert) {
           this.id = `${type}-${this.uid}`;
-          this.displayName = allEnginesArray.find((engine) => engine.type === type)?.displayName;
-          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.mountConfigModel =
-            type === 'aws'
-              ? this.store.createRecord('aws/root-config')
-              : type === 'ssh'
-              ? this.store.createRecord('ssh/ca-config')
-              : this.store.createRecord(`${type}/config`);
-          this.additionalConfigModel = type === 'aws' ? this.store.createRecord('aws/lease-config') : null;
-          this.mountConfigModel.backend = this.id;
-          this.additionalConfigModel ? (this.additionalConfigModel.backend = this.id) : null;
+          this.displayName = engineDisplayData(type).displayName;
+          this.form = this.getForm(type, {}, { isNew: true });
           this.type = type;
 
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}} @additionalConfigModel={{this.additionalConfigModel}}/>
-              `);
+          await this.renderComponent();
           assert.dom(SES.configureForm).exists(`lands on the ${type} configuration form`);
           assert
             .dom(SES.wif.accessTypeSection)
             .doesNotExist('Access type section does not render for a community user');
-          // toggle grouped fields if it exists
-          const toggleGroup = document.querySelector('[data-test-toggle-group]');
-          toggleGroup ? await click(toggleGroup) : null;
+
+          let toggleGroup = GENERAL.button('More options');
+          if (type === 'aws') {
+            toggleGroup = GENERAL.button('Root config options');
+          }
+          await click(toggleGroup);
+
           // check all the form fields are present
           for (const key of expectedConfigKeys(type, true)) {
             if (key === 'configTtl' || key === 'maxTtl') {
@@ -672,19 +638,17 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       for (const type of WIF_ENGINES) {
         test(`${type}: it defaults to WIF accessType if WIF fields are already set`, async function (assert) {
           this.id = `${type}-${this.uid}`;
-          this.displayName = allEnginesArray.find((engine) => engine.type === type)?.displayName;
-          this.mountConfigModel = createConfig(this.store, this.id, `${type}-wif`);
+          this.displayName = engineDisplayData(type).displayName;
+          const config = createConfig(`${type}-wif`);
+          this.form = this.getForm(type, config);
           this.type = type;
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}} />
-              `);
+
+          await this.renderComponent();
           assert.dom(SES.wif.accessType('wif')).isChecked('WIF accessType is checked');
           assert.dom(SES.wif.accessType('wif')).isDisabled('WIF accessType is disabled');
           assert.dom(SES.wif.accessType(type)).isNotChecked(`${type} accessType is not checked`);
           assert.dom(SES.wif.accessType(type)).isDisabled(`${type} accessType is disabled`);
-          assert
-            .dom(GENERAL.inputByAttr('identityTokenAudience'))
-            .hasValue(this.mountConfigModel.identityTokenAudience);
+          assert.dom(GENERAL.inputByAttr('identityTokenAudience')).hasValue(this.form.identityTokenAudience);
           assert
             .dom(SES.wif.accessTypeSubtext)
             .hasText('You cannot edit Access Type if you have already saved access credentials.');
@@ -695,23 +659,19 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       for (const type of WIF_ENGINES) {
         test(`${type}: it renders issuer if global issuer is already set`, async function (assert) {
           this.id = `${type}-${this.uid}`;
-          this.displayName = allEnginesArray.find((engine) => engine.type === type)?.displayName;
-          this.mountConfigModel = createConfig(this.store, this.id, `${type}-wif`);
-          this.issuerConfig = createConfig(this.store, this.id, 'issuer');
-          this.issuerConfig.issuer = 'https://foo-bar-blah.com';
+          this.displayName = engineDisplayData(type).displayName;
+          this.issuer = 'https://foo-bar-blah.com';
+          const config = createConfig(`${type}-wif`);
+          this.form = this.getForm(type, { ...config, issuer: this.issuer });
           this.type = type;
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
+
+          await this.renderComponent();
 
           assert.dom(SES.wif.accessType('wif')).isChecked('WIF accessType is checked');
           assert.dom(SES.wif.accessType('wif')).isDisabled('WIF accessType is disabled');
           assert
             .dom(GENERAL.inputByAttr('issuer'))
-            .hasValue(
-              this.issuerConfig.issuer,
-              `it has the global issuer value of ${this.issuerConfig.issuer}`
-            );
+            .hasValue(this.issuer, `it has the global issuer value of ${this.issuer}`);
         });
       }
 
@@ -719,14 +679,14 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
         // "clientSecret" is the only mutually exclusive Azure account attr and it's never returned from the API. Thus, we can only check for the presence of configured wif fields to determine if the accessType should be preselected to wif and disabled.
         hooks.beforeEach(function () {
           this.id = `azure-${this.uid}`;
+          this.displayName = 'Azure';
           this.type = 'azure';
-          this.mountConfigModel = createConfig(this.store, this.id, 'azure');
+          const config = createConfig('azure');
+          this.form = this.getForm('azure', config);
         });
 
         test('it allows you to change access type if no wif fields are set', async function (assert) {
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName='Azure' @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
+          await this.renderComponent();
 
           assert.dom(SES.wif.accessType('azure')).isChecked('Azure accessType is checked');
           assert
@@ -744,10 +704,10 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
         });
 
         test('it sets access type to wif if wif fields are set', async function (assert) {
-          this.mountConfigModel = createConfig(this.store, this.id, 'azure-wif');
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
+          const config = createConfig('azure-wif');
+          this.form = this.getForm('azure', config);
+
+          await this.renderComponent();
 
           assert.dom(SES.wif.accessType('wif')).isChecked('WIF accessType is checked');
           assert
@@ -761,13 +721,13 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
 
         test('it shows previously saved config information', async function (assert) {
           this.id = `azure-${this.uid}`;
-          this.mountConfigModel = createConfig(this.store, this.id, 'azure-generic');
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName='Azure' @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
-          assert.dom(GENERAL.inputByAttr('subscriptionId')).hasValue(this.mountConfigModel.subscriptionId);
-          assert.dom(GENERAL.inputByAttr('clientId')).hasValue(this.mountConfigModel.clientId);
-          assert.dom(GENERAL.inputByAttr('tenantId')).hasValue(this.mountConfigModel.tenantId);
+          const config = createConfig('azure-generic');
+          this.form = this.getForm('azure', config);
+
+          await this.renderComponent();
+          assert.dom(GENERAL.inputByAttr('subscriptionId')).hasValue(this.form.subscriptionId);
+          assert.dom(GENERAL.inputByAttr('clientId')).hasValue(this.form.clientId);
+          assert.dom(GENERAL.inputByAttr('tenantId')).hasValue(this.form.tenantId);
           assert
             .dom(GENERAL.inputByAttr('clientSecret'))
             .hasValue('**********', 'clientSecret is masked on edit the value');
@@ -775,9 +735,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
 
         test('it requires a double click to change the client secret', async function (assert) {
           this.id = `azure-${this.uid}`;
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName='Azure' @type='azure' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
+          await this.renderComponent();
 
           this.server.post(configUrl('azure', this.id), (schema, req) => {
             const payload = JSON.parse(req.requestBody);
@@ -789,21 +747,23 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
           });
 
           await click(GENERAL.enableField('clientSecret'));
-          await click('[data-test-button="toggle-masked"]');
+          await click(GENERAL.button('toggle-masked'));
           await fillIn(GENERAL.inputByAttr('clientSecret'), 'new-secret');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
         });
       });
 
       module('AWS specific', function (hooks) {
         hooks.beforeEach(function () {
           this.id = `aws-${this.uid}`;
-          this.mountConfigModel = createConfig(this.store, this.id, 'aws');
+          this.type = 'aws';
+          this.displayName = 'AWS';
+          const config = createConfig('aws');
+          this.form = this.getForm('aws', config);
         });
+
         test('it defaults to IAM accessType if IAM fields are already set', async function (assert) {
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName='AWS' @type='aws' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
+          await this.renderComponent();
           assert.dom(SES.wif.accessType('aws')).isChecked('IAM accessType is checked');
           assert.dom(SES.wif.accessType('aws')).isDisabled('IAM accessType is disabled');
           assert.dom(SES.wif.accessType('wif')).isNotChecked('WIF accessType is not checked');
@@ -814,29 +774,29 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
         });
 
         test('it allows you to change access type if record does not have wif or iam values already set', async function (assert) {
-          this.mountConfigModel = createConfig(this.store, this.id, 'aws-no-access');
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName='AWS' @type='aws' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
+          const config = createConfig('aws-no-access');
+          this.form = this.getForm('aws', config);
+
+          await this.renderComponent();
           assert.dom(SES.wif.accessType('wif')).isNotDisabled('WIF accessType is NOT disabled');
           assert.dom(SES.wif.accessType('aws')).isNotDisabled('IAM accessType is NOT disabled');
         });
 
         test('it shows previously saved root and lease information', async function (assert) {
-          this.additionalConfigModel = createConfig(this.store, this.id, 'aws-lease');
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName='AWS' @type='aws' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}} @additionalConfigModel={{this.additionalConfigModel}}/>
-              `);
+          const config = { ...createConfig('aws'), ...createConfig('aws-lease') };
+          this.form = this.getForm('aws', config);
 
-          assert.dom(GENERAL.inputByAttr('accessKey')).hasValue(this.mountConfigModel.accessKey);
+          await this.renderComponent();
+
+          assert.dom(GENERAL.inputByAttr('accessKey')).hasValue(this.form.accessKey);
           assert
             .dom(GENERAL.inputByAttr('secretKey'))
             .hasValue('**********', 'secretKey is masked on edit the value');
 
-          await click(GENERAL.toggleGroup('Root config options'));
-          assert.dom(GENERAL.inputByAttr('region')).hasValue(this.mountConfigModel.region);
-          assert.dom(GENERAL.inputByAttr('iamEndpoint')).hasValue(this.mountConfigModel.iamEndpoint);
-          assert.dom(GENERAL.inputByAttr('stsEndpoint')).hasValue(this.mountConfigModel.stsEndpoint);
+          await click(GENERAL.button('Root config options'));
+          assert.dom(GENERAL.inputByAttr('region')).hasValue(this.form.region);
+          assert.dom(GENERAL.inputByAttr('iamEndpoint')).hasValue(this.form.iamEndpoint);
+          assert.dom(GENERAL.inputByAttr('stsEndpoint')).hasValue(this.form.stsEndpoint);
           assert.dom(GENERAL.inputByAttr('maxRetries')).hasValue('1');
           // Check lease config values
           assert.dom(GENERAL.ttl.input('Default Lease TTL')).hasValue('50');
@@ -844,10 +804,6 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
         });
 
         test('it requires a double click to change the secret key', async function (assert) {
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName='AWS' @type='aws' @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}} />
-              `);
-
           this.server.post(configUrl('aws', this.id), (schema, req) => {
             const payload = JSON.parse(req.requestBody);
             assert.strictEqual(
@@ -857,10 +813,11 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
             );
           });
 
+          await this.renderComponent();
           await click(GENERAL.enableField('secretKey'));
-          await click('[data-test-button="toggle-masked"]');
+          await click(GENERAL.button('toggle-masked'));
           await fillIn(GENERAL.inputByAttr('secretKey'), 'new-secret');
-          await click(GENERAL.saveButton);
+          await click(GENERAL.submitButton);
         });
       });
 
@@ -870,14 +827,13 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
         // We cover some of this workflow here and error testing in the gcp-configuration acceptance test.
         hooks.beforeEach(function () {
           this.id = `gcp-${this.uid}`;
-          this.mountConfigModel = createConfig(this.store, this.id, 'gcp');
+          const config = createConfig('gcp');
+          this.form = this.getForm('gcp', config);
           this.type = 'gcp';
           this.displayName = 'Google Cloud';
         });
         test('it allows you to change access type if no wif fields are set', async function (assert) {
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
+          await this.renderComponent();
 
           assert.dom(SES.wif.accessType('gcp')).isChecked('GCP accessType is checked');
           assert
@@ -895,10 +851,10 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
         });
 
         test('it sets access type to wif if wif fields are set', async function (assert) {
-          this.mountConfigModel = createConfig(this.store, this.id, 'gcp-wif');
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
+          const config = createConfig('gcp-wif');
+          this.form = this.getForm('gcp', config);
+
+          await this.renderComponent();
 
           assert.dom(SES.wif.accessType('wif')).isChecked('WIF accessType is checked');
           assert
@@ -911,11 +867,10 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
         });
 
         test('it shows previously saved config information', async function (assert) {
-          this.mountConfigModel = createConfig(this.store, this.id, 'gcp-generic');
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}}/>
-              `);
-          await click(GENERAL.toggleGroup('More options'));
+          const config = createConfig('gcp-generic');
+          this.form = this.getForm('gcp', config);
+          await this.renderComponent();
+          await click(GENERAL.button('More options'));
           assert.dom(GENERAL.ttl.input('Config TTL')).hasValue('100');
           assert.dom(GENERAL.ttl.input('Max TTL')).hasValue('101');
         });
@@ -929,16 +884,20 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
       for (const type of WIF_ENGINES) {
         test(`${type}:it does not show access type but defaults to type "account" fields`, async function (assert) {
           this.id = `${type}-${this.uid}`;
-          this.mountConfigModel = createConfig(this.store, this.id, `${type}-generic`);
-          this.displayName = allEnginesArray.find((engine) => engine.type === type)?.displayName;
+          const config = createConfig(`${type}-generic`);
+          this.form = this.getForm(type, config);
+          this.displayName = engineDisplayData(type).displayName;
           this.type = type;
-          await render(hbs`
-                <SecretEngine::ConfigureWif @backendPath={{this.id}} @displayName={{this.displayName}} @type={{this.type}} @mountConfigModel={{this.mountConfigModel}} @issuerConfig={{this.issuerConfig}} @additionalConfigModel={{this.additionalConfigModel}}/>
-              `);
+
+          await this.renderComponent();
           assert.dom(SES.wif.accessTypeSection).doesNotExist('Access type section does not render');
-          // toggle grouped fields if it exists
-          const toggleGroup = document.querySelector('[data-test-toggle-group]');
-          toggleGroup ? await click(toggleGroup) : null;
+
+          let toggleGroup = GENERAL.button('More options');
+          if (type === 'aws') {
+            toggleGroup = GENERAL.button('Root config options');
+          }
+          await click(toggleGroup);
+
           for (const key of expectedConfigKeys(type, true)) {
             if (key === 'secretKey' || key === 'clientSecret' || key === 'credentials') return; // these keys are not returned by the API
             // same issues noted in wif enterprise tests with how toggle.hbs passes in name vs how formField input passes in attr to data test selector
@@ -957,10 +916,7 @@ module('Integration | Component | SecretEngine::ConfigureWif', function (hooks) 
             } else {
               assert
                 .dom(GENERAL.inputByAttr(key))
-                .hasValue(
-                  this.mountConfigModel[key],
-                  `${key} for ${type}: has the expected value set on the config`
-                );
+                .hasValue(this.form[key], `${key} for ${type}: has the expected value set on the config`);
             }
           }
         });

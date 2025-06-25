@@ -104,7 +104,7 @@
 
     <hr class="has-background-gray-100" />
     <Hds::ButtonSet>
-      <Hds::Button @text="Done" type="submit" data-test-save />
+      <Hds::Button @text="Done" type="submit" data-test-submit />
       <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-cancel />
     </Hds::ButtonSet>
     {{#if this.invalidFormAlert}}

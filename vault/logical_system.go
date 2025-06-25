@@ -203,7 +203,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	b.Backend.Paths = append(b.Backend.Paths, b.sealPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.statusPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogListPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogCRUDPath())
+	b.Backend.Paths = append(b.Backend.Paths, entWrappedPluginsCRUDPath(b)...)
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogPinsListPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogPinsCRUDPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsReloadPath())

@@ -5,15 +5,16 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render } from '@ember/test-helpers';
+import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import sinon from 'sinon';
 
 const SELECTORS = {
   label: '[data-test-certificate-label]',
   value: '[data-test-certificate-value]',
   icon: '[data-test-certificate-icon]',
-  copyButton: '[data-test-copy-button]',
   copyIcon: '[data-test-icon="clipboard-copy"]',
 };
 const { rootPem, rootDer } = CERTIFICATES;
@@ -31,29 +32,47 @@ module('Integration | Component | certificate-card', function (hooks) {
   });
 
   test('it renders with an example PEM Certificate', async function (assert) {
+    // Sinon spy for clipboard
+    const clipboardSpy = sinon.stub(navigator.clipboard, 'writeText').resolves();
+
     this.certificate = rootPem;
     await render(hbs`<CertificateCard @data={{this.certificate}} />`);
 
     assert.dom(SELECTORS.label).hasText('PEM Format', 'The label text is PEM Format');
     assert.dom(SELECTORS.value).hasText(this.certificate, 'The data rendered is correct');
     assert.dom(SELECTORS.icon).exists('The certificate icon exists');
-    assert.dom(SELECTORS.copyButton).exists('The copy button exists');
-    assert
-      .dom(SELECTORS.copyButton)
-      .hasAttribute('data-test-copy-button', this.certificate, 'copy value is the same as data');
+
+    await click(GENERAL.copyButton);
+    assert.true(clipboardSpy.calledOnce, 'Clipboard was called once');
+    assert.strictEqual(
+      clipboardSpy.firstCall.args[0],
+      this.certificate,
+      'copy certificate copied the correct text'
+    );
+    // Restore original clipboard
+    clipboardSpy.restore(); // cleanup
   });
 
   test('it renders with an example DER Certificate', async function (assert) {
+    // Sinon spy for clipboard
+    const clipboardSpy = sinon.stub(navigator.clipboard, 'writeText').resolves();
+
     this.certificate = rootDer;
     await render(hbs`<CertificateCard @data={{this.certificate}} />`);
 
     assert.dom(SELECTORS.label).hasText('DER Format', 'The label text is DER Format');
     assert.dom(SELECTORS.value).hasText(this.certificate, 'The data rendered is correct');
     assert.dom(SELECTORS.icon).exists('The certificate icon exists');
-    assert.dom(SELECTORS.copyButton).exists('The copy button exists');
-    assert
-      .dom(SELECTORS.copyButton)
-      .hasAttribute('data-test-copy-button', this.certificate, 'copy value is the same as data');
+
+    await click(GENERAL.copyButton);
+    assert.true(clipboardSpy.calledOnce, 'Clipboard was called once');
+    assert.strictEqual(
+      clipboardSpy.firstCall.args[0],
+      this.certificate,
+      'copy certificate copied the correct text'
+    );
+    // Restore original clipboard
+    clipboardSpy.restore(); // cleanup
   });
 
   test('it renders with the PEM Format label regardless of the value provided when @isPem is true', async function (assert) {
@@ -65,6 +84,9 @@ module('Integration | Component | certificate-card', function (hooks) {
   });
 
   test('it renders with an example CA Chain', async function (assert) {
+    // Sinon spy for clipboard
+    const clipboardSpy = sinon.stub(navigator.clipboard, 'writeText').resolves();
+
     this.caChain = [
       '-----BEGIN CERTIFICATE-----\nMIIDIDCCA...\n-----END CERTIFICATE-----\n',
       '-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBA...\n-----END RSA PRIVATE KEY-----\n',
@@ -75,13 +97,15 @@ module('Integration | Component | certificate-card', function (hooks) {
     assert.dom(SELECTORS.label).hasText('PEM Format', 'The label text is PEM Format');
     assert.dom(SELECTORS.value).hasText(this.caChain.join(','), 'The data rendered is correct');
     assert.dom(SELECTORS.icon).exists('The certificate icon exists');
-    assert.dom(SELECTORS.copyButton).exists('The copy button exists');
-    assert
-      .dom(SELECTORS.copyButton)
-      .hasAttribute(
-        'data-test-copy-button',
-        this.caChain.join('\n'),
-        'copy value is array converted to a string'
-      );
+
+    await click(GENERAL.copyButton);
+    assert.true(clipboardSpy.calledOnce, 'Clipboard was called once');
+    assert.strictEqual(
+      clipboardSpy.firstCall.args[0],
+      this.caChain.join('\n'),
+      'copy value is array converted to a string'
+    );
+    // Restore original clipboard
+    clipboardSpy.restore(); // cleanup
   });
 });

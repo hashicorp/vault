@@ -25,13 +25,7 @@
   <Toolbar>
     <ToolbarActions>
       {{#if @model.updatePath.canDelete}}
-        <Hds::Button
-          @text="Delete template"
-          @color="secondary"
-          class="toolbar-button"
-          {{on "click" this.onDelete}}
-          data-test-transformation-template-delete
-        />
+        <Hds::Button @text="Delete template" @color="secondary" class="toolbar-button" {{on "click" this.onDelete}} />
         <div class="toolbar-separator"></div>
       {{/if}}
       {{#if @model.updatePath.canUpdate}}
@@ -76,11 +70,7 @@
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
       <Hds::ButtonSet>
-        <Hds::Button
-          @text={{if (eq @mode "create") "Create template" "Save"}}
-          type="submit"
-          data-test-template-transform-create
-        />
+        <Hds::Button @text={{if (eq @mode "create") "Create template" "Save"}} type="submit" data-test-submit />
         {{#if (eq @mode "create")}}
           <Hds::Button
             @text="Cancel"

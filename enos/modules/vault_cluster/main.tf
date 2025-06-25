@@ -158,6 +158,7 @@ module "start_vault" {
   config_dir                = var.config_dir
   config_mode               = var.config_mode
   disable_mlock             = local.disable_mlock
+  enable_telemetry          = var.enable_telemetry
   external_storage_port     = var.external_storage_port
   hosts                     = var.hosts
   install_dir               = var.install_dir

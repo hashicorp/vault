@@ -17,6 +17,7 @@ variable "cluster_name" { default = null }
 variable "cluster_tag_key" { default = null }
 variable "common_tags" { default = null }
 variable "disable_selinux" { default = true }
+variable "ebs_optimized" { default = false }
 variable "instance_count" { default = 3 }
 variable "instance_cpu_max" { default = null }
 variable "instance_cpu_min" { default = null }
@@ -26,6 +27,9 @@ variable "instance_types" { default = null }
 variable "max_price" { default = null }
 variable "ports_ingress" { default = null }
 variable "project_name" { default = null }
+variable "root_volume_iops" { default = null }
+variable "root_volume_size" { default = null }
+variable "root_volume_type" { default = null }
 variable "seal_key_names" { default = null }
 variable "ssh_allow_ips" { default = null }
 variable "ssh_keypair" { default = null }
@@ -50,3 +54,5 @@ output "hosts" {
     ipv6       = "null-ipv6-${idx}"
   } }
 }
+
+output "security_group_id" { value = null }

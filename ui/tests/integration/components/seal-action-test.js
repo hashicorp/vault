@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SEAL_WHEN_STANDBY_MSG = 'vault cannot seal when in standby mode; please restart instead';
 
@@ -25,7 +26,7 @@ module('Integration | Component | seal-action', function (hooks) {
 
     // attempt seal
     await click('[data-test-seal]');
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
 
     assert.ok(this.sealSuccess.calledOnce, 'called onSeal action');
     assert.dom('[data-test-seal-error]').doesNotExist('Does not show error when successful');
@@ -37,7 +38,7 @@ module('Integration | Component | seal-action', function (hooks) {
 
     // attempt seal
     await click('[data-test-seal]');
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
 
     assert.ok(this.sealError.calledOnce, 'called onSeal action');
     assert.dom('[data-test-seal-error]').includesText(SEAL_WHEN_STANDBY_MSG, 'Shows error returned from API');

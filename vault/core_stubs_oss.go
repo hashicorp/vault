@@ -7,6 +7,7 @@ package vault
 
 import (
 	"context"
+	"fmt"
 )
 
 //go:generate go run github.com/hashicorp/vault/tools/stubmaker
@@ -120,3 +121,21 @@ func (c *Core) GetReplicationLagMillisIgnoreErrs() int64 { return 0 }
 func (c *Core) ReloadOverloadController() {}
 
 func (c *Core) EntSetupUIDefaultAuth(ctx context.Context) error { return nil }
+
+// entGetPluginCacheDir returns empty string and an error indicating that this is an
+// enterprise-only feature. This is used to prevent the use of the plugin cache
+func (c *Core) entGetPluginCacheDir() (string, error) {
+	return "", fmt.Errorf("enterprise only feature")
+}
+
+// entGetPluginRuntimeDir returns empty string and an error indicating that this is an
+// enterprise-only feature
+func (c *Core) entGetPluginRuntimeDir() (string, error) {
+	return "", fmt.Errorf("enterprise only feature")
+}
+
+// entJoinPluginDir returns empty string and an error indicating that this is an
+// enterprise-only feature
+func (c *Core) entJoinPluginDir(_ string) (string, error) {
+	return "", fmt.Errorf("enterprise only feature")
+}

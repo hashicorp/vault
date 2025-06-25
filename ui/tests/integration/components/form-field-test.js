@@ -6,7 +6,7 @@
 import EmberObject from '@ember/object';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, fillIn, findAll } from '@ember/test-helpers';
+import { render, click, fillIn, findAll, setupOnerror } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { create } from 'ember-cli-page-object';
 import sinon from 'sinon';
@@ -46,6 +46,61 @@ module('Integration | Component | form field', function (hooks) {
     await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} />`);
     assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
     assert.notOk(component.hasInput, 'renders only the label');
+  });
+
+  test('it throws an error when @attr does not include a "name" key', async function (assert) {
+    assert.expect(1);
+    this.model = EmberObject.create({});
+    this.attr = { options: { fieldValue: 'foo' } };
+    setupOnerror((error) => {
+      assert.strictEqual(
+        error.message,
+        'Assertion Failed: @name is required',
+        'throws assertion error when @attr does not include a "name" key'
+      );
+    });
+    await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} />`);
+  });
+
+  test('it throws an error when @model is not present', async function (assert) {
+    assert.expect(1);
+    this.attr = { name: 'foo' };
+    setupOnerror((error) => {
+      assert.strictEqual(
+        error.message,
+        'Assertion Failed: @model (or resource object being updated) is required',
+        'throws assertion error when @model arg does not exist'
+      );
+    });
+    await render(hbs`<FormField @attr={{this.attr}} />`);
+  });
+
+  test('it throws an error when "name" is "ID"', async function (assert) {
+    assert.expect(1);
+    this.model = EmberObject.create({});
+    this.attr = { name: 'id' };
+    setupOnerror((error) => {
+      assert.strictEqual(
+        error.message,
+        'Assertion Failed: Form is attempting to modify an ID. Ember-data does not allow this.',
+        'throws assertion error when component attempts to modify an ID'
+      );
+    });
+    await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} />`);
+  });
+
+  test('it throws an error when "fieldValue" is "ID"', async function (assert) {
+    assert.expect(1);
+    this.model = EmberObject.create({});
+    this.attr = { name: 'foo', options: { fieldValue: 'id' } };
+    setupOnerror((error) => {
+      assert.strictEqual(
+        error.message,
+        'Assertion Failed: Form is attempting to modify an ID. Ember-data does not allow this.',
+        'throws assertion error when component attempts to modify an ID'
+      );
+    });
+    await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} />`);
   });
 
   // ------------------
@@ -115,7 +170,7 @@ module('Integration | Component | form field', function (hooks) {
   test('it renders: toggleButton', async function (assert) {
     const [model, spy] = await setup.call(
       this,
-      createAttr('foobar', 'toggleButton', {
+      createAttr('foobar', 'boolean', {
         defaultValue: false,
         editType: 'toggleButton',
         helperTextEnabled: 'Toggled on',
@@ -123,13 +178,40 @@ module('Integration | Component | form field', function (hooks) {
       })
     );
     assert.ok(component.hasToggleButton, 'renders a toggle button');
-    assert.dom('[data-test-toggle-input]').isNotChecked();
+    assert.dom(GENERAL.toggleInput('toggle-foobar')).isNotChecked();
     assert.dom('[data-test-toggle-subtext]').hasText('Toggled off');
 
     await component.fields.objectAt(0).toggleButton();
 
     assert.true(model.get('foobar'));
     assert.ok(spy.calledWith('foobar', true), 'onChange called with correct args');
+  });
+
+  test('it sets nested attribute value for toggleButton', async function (assert) {
+    this.setProperties({
+      attr: createAttr('config.foo', 'boolean', {
+        editType: 'toggleButton',
+        defaultValue: false,
+      }),
+      model: { config: { foo: true } },
+      onChange: () => {},
+    });
+    await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} @onChange={{this.onChange}} />`);
+    assert.dom(GENERAL.toggleInput('toggle-config.foo')).isChecked();
+  });
+
+  test('it sets nested attribute value for optionalText', async function (assert) {
+    this.setProperties({
+      attr: createAttr('foo.bar', 'string', {
+        editType: 'optionalText',
+        defaultValue: 'lemon',
+      }),
+      model: { foo: { bar: 'apple' } },
+      onChange: () => {},
+    });
+    await render(hbs`<FormField @attr={{this.attr}} @model={{this.model}} @onChange={{this.onChange}} />`);
+    assert.dom(GENERAL.toggleInput('show-foo.bar')).isChecked();
+    assert.dom(GENERAL.inputByAttr('foo.bar')).hasValue('apple');
   });
 
   test('it renders: editType file', async function (assert) {

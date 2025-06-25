@@ -105,10 +105,7 @@ $ vault write auth/azure/login \
     vm_name="test-vm"
 ```
 
-The `role` and `jwt` parameters are required. When using
-`bound_service_principal_ids` and `bound_group_ids` in the token roles, all the
-information is required in the JWT (except for `vm_name`, `vmss_name`, `resource_id`). When
-using other `bound_*` parameters, calls to Azure APIs will be made and
+The `role` and `jwt` parameters are required. The JWT must contain all role binding information (except for `vm_name`, `vmss_name`, and `resource_id`). When using additional `bound_*` parameters beyond `bound_service_principal_ids` or `bound_group_ids`, Azure API calls will be made and
 `subscription_id`, `resource_group_name`, and `vm_name`/`vmss_name` are all required
 and can be obtained through instance metadata.
 
@@ -216,13 +213,25 @@ tool.
    $ vault write auth/azure/role/dev-role \
        policies="prod,dev" \
        bound_subscription_ids=6a1d5988-5917-4221-b224-904cd7e24a25 \
-       bound_resource_groups=vault
+       bound_resource_groups=vault \
+       bound_service_principal_ids=3cb88732-1356-4782-b671-4877166be01a
    ```
 
    Roles are associated with an authentication type/entity and a set of Vault
    policies. Roles are configured with constraints specific to the
    authentication type, as well as overall constraints and configuration for
    the generated auth tokens.
+
+   Note: Each role must specify either `bound_service_principal_ids` or `bound_group_ids` to restrict which Azure identities (service principals or group members) can authenticate to this role.
+   Here's an alternative example using `bound_group_ids`:
+
+   ```shell-session
+   $ vault write auth/azure/role/prod-role \
+       policies="prod" \
+       bound_subscription_ids=6a1d5988-5917-4221-b224-904cd7e24a25 \
+       bound_resource_groups=vault \
+       bound_group_ids=12345678-1234-1234-1234-123456789012
+   ```
 
    For the complete list of role options, please see the [API documentation](/vault/api-docs/auth/azure).
 

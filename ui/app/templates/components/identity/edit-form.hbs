@@ -12,7 +12,6 @@
         @buttonText="Delete {{this.model.identityType}}"
         @confirmTitle="Delete this {{this.model.identityType}}?"
         @onConfirmAction={{action "deleteItem" this.model}}
-        data-test-entity-item-delete="true"
       />
     </ToolbarActions>
   </Toolbar>
@@ -67,8 +66,8 @@
           @text={{if (eq this.mode "create") "Create" "Save"}}
           @icon={{if this.save.isRunning "loading"}}
           type="submit"
-          data-test-identity-submit
           disabled={{this.save.isRunning}}
+          data-test-submit
         />
         {{#if (or (eq this.mode "merge") (eq this.mode "create"))}}
           <Hds::Button @text="Cancel" @color="secondary" @route={{this.cancelLink}} data-test-cancel-link />

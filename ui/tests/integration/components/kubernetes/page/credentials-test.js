@@ -109,9 +109,8 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     await this.renderComponent();
     await fillIn('[data-test-kubernetes-namespace]', 'kubernetes-test');
     assert.dom('[data-test-kubernetes-namespace]').hasValue('kubernetes-test', 'kubernetes-test');
-
-    await click('[data-test-toggle-input]');
-    await click('[data-test-toggle-input="Time-to-Live (TTL)"]');
+    await click(GENERAL.toggleInput('kubernetes-clusterRoleBinding'));
+    await click(GENERAL.toggleInput('Time-to-Live (TTL)'));
     await fillIn('[data-test-ttl-value="Time-to-Live (TTL)"]', 2);
     await click('[data-test-generate-credentials-button]');
 

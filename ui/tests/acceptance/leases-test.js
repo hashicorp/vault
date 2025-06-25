@@ -16,6 +16,7 @@ import { v4 as uuidv4 } from 'uuid';
 import secretList from 'vault/tests/pages/secrets/backend/list';
 import secretEdit from 'vault/tests/pages/secrets/backend/kv/edit-secret';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 // import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 // import { login } from 'vault/tests/helpers/auth/auth-helpers';
@@ -79,7 +80,7 @@ module('Acceptance | leases', function (hooks) {
     createSecret(this);
     navToDetail(this);
     await click('[data-test-lease-revoke] button');
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.leases.list-root',
@@ -96,7 +97,7 @@ module('Acceptance | leases', function (hooks) {
     createSecret(this);
     await visit(`/vault/access/leases/list/${this.enginePath}`);
     await click('[data-test-lease-revoke-prefix] button');
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.leases.list-root',

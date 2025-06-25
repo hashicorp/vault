@@ -45,7 +45,7 @@ module('Integration | Component | pki-role-generate', function (hooks) {
     );
     assert.dom(PKI_ROLE_GENERATE.form).exists('shows the cert generate form');
     assert.dom(GENERAL.inputByAttr('commonName')).exists('shows the common name field');
-    assert.dom(PKI_ROLE_GENERATE.optionsToggle).exists('toggle exists');
+    assert.dom(GENERAL.button('Subject Alternative Name (SAN) Options')).exists('toggle exists');
     await fillIn(GENERAL.inputByAttr('commonName'), 'example.com');
     assert.strictEqual(this.model.commonName, 'example.com', 'Filling in the form updates the model');
   });

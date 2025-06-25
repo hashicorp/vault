@@ -41,18 +41,18 @@ module('Acceptance | sync | destination (singular)', function (hooks) {
   test('it should transition to correct routes when performing actions', async function (assert) {
     await click(ts.navLink('Secrets Sync'));
     await click(GENERAL.tab('Destinations'));
-    await click(ts.listItem);
+    await click(GENERAL.listItemLink);
     assert.dom(GENERAL.tab('Secrets')).hasClass('active', 'Secrets hdsTab is active');
 
     await click(GENERAL.tab('Details'));
     assert.dom(ts.infoRowLabel('Name')).exists('Destination details display');
 
     await click(ts.toolbar('Sync secrets'));
-    await click(ts.destinations.sync.cancel);
+    await click(GENERAL.cancelButton);
 
     await click(ts.toolbar('Edit destination'));
     assert.dom(ts.inputByAttr('name')).isDisabled('Edit view renders with disabled name field');
-    await click(ts.cancelButton);
+    await click(GENERAL.cancelButton);
     assert.dom(GENERAL.tab('Details')).hasClass('active', 'Details view is active');
   });
 
@@ -83,13 +83,13 @@ module('Acceptance | sync | destination (singular)', function (hooks) {
 
     await visit('vault/sync/secrets/destinations/vercel-project/destination-vercel/edit');
     await fillIn(GENERAL.inputByAttr('teamId'), 'team-id');
-    await click(ts.saveButton);
+    await click(GENERAL.submitButton);
     assert.false('accessToken' in apiStub.lastCall.args[1], 'access_token not sent in request');
 
     await click(ts.toolbar('Edit destination'));
     await click(ts.enableField('accessToken'));
     await fillIn(GENERAL.inputByAttr('accessToken'), 'foobar');
-    await click(ts.saveButton);
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       apiStub.lastCall.args[1].accessToken,
       'foobar',

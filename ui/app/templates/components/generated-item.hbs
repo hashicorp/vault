@@ -67,8 +67,8 @@
           @text="Save"
           @icon={{if this.saveModel.isRunning "loading"}}
           type="submit"
-          data-test-save-config="true"
           disabled={{this.saveModel.isRunning}}
+          data-test-submit
         />
         {{#if (eq this.mode "create")}}
           <Hds::Button

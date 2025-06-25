@@ -31,7 +31,6 @@ variable "vault_install_dir" {
   description = "The directory where the vault binary is installed"
 }
 
-
 resource "enos_remote_exec" "restart" {
   for_each = var.hosts
 

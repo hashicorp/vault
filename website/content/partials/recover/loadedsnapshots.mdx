@@ -1,0 +1,13 @@
+<Note title="Restrictions for loading snapshots">
+
+  * The snapshot must be from the same cluster and have the same unseal keys as
+the current cluster.
+  * You can only load one snapshot into a cluster at a time.
+  * Vault automatically unloads snapshots 72 hours after they are loaded.
+  * If your cluster's active node changes, the loaded snapshot's status updates
+to `error` and it cannot be used for any recover operations. You must unload and
+reload the snapshot to use it again.
+  * You cannot load a snapshot if your cluster has
+[mlock](/vault/docs/configuration#disable_mlock) enabled in its Vault configuration.
+
+</Note>

@@ -38,7 +38,7 @@
             class="radio"
             data-test-access-type={{@type}}
             @value="account"
-            @groupValue={{this.accessType}}
+            @groupValue={{@configForm.accessType}}
             @onChange={{this.onChangeAccessType}}
             @disabled={{this.disableAccessType}}
           />
@@ -49,7 +49,7 @@
             class="radio has-left-margin-m"
             data-test-access-type="wif"
             @value="wif"
-            @groupValue={{this.accessType}}
+            @groupValue={{@configForm.accessType}}
             @onChange={{this.onChangeAccessType}}
             @disabled={{this.disableAccessType}}
           />
@@ -57,34 +57,23 @@
         </div>
       </fieldset>
     {{/if}}
-    {{#if (eq this.accessType "wif")}}
-      {{! if access type is "wif" display Issuer and WIF fields }}
-      {{#each @issuerConfig.displayAttrs as |attr|}}
-        <FormField @attr={{attr}} @model={{@issuerConfig}} />
-      {{/each}}
-      <FormFieldGroups
-        @model={{@mountConfigModel}}
-        @mode={{if @mountConfigModel.isNew "create" "edit"}}
-        @groupName="fieldGroupsWif"
-      />
-    {{else}}
-      {{! otherwise display account credential fields }}
-      <FormFieldGroups
-        @model={{@mountConfigModel}}
-        @mode={{if @mountConfigModel.isNew "create" "edit"}}
-        @useEnableInput={{true}}
-        @groupName="fieldGroupsAccount"
-      />
-    {{/if}}
-    {{! additionalConfigModel fields show regardless of the vault version or what access type is selected }}
-    {{#if @additionalConfigModel}}
+
+    <FormFieldGroups
+      @model={{@configForm}}
+      @mode={{if @configForm.isNew "create" "edit"}}
+      @useEnableInput={{true}}
+      @groupName="formFieldGroups"
+    />
+    {{! additional config fields show regardless of the vault version or what access type is selected }}
+    {{! these need to be defined as formFields on the form class }}
+    {{#if @configForm.formFields}}
       <h2 class="title is-5 has-bottom-padding-s has-top-margin-l" data-test-additional-config-model-title>
         {{if (eq @type "aws") "Lease" "Additional"}}
         Configuration
       </h2>
       <div class="box is-fullwidth is-sideless is-bottomless">
-        {{#each @additionalConfigModel.formFields as |attr|}}
-          <FormField @attr={{attr}} @model={{@additionalConfigModel}} @modelValidations={{this.modelValidations}} />
+        {{#each @configForm.formFields as |field|}}
+          <FormField @attr={{field}} @model={{@configForm}} @modelValidations={{this.modelValidations}} />
         {{/each}}
       </div>
     {{/if}}
@@ -96,7 +85,7 @@
       @icon={{if this.save.isRunning "loading"}}
       type="submit"
       disabled={{this.save.isRunning}}
-      data-test-save
+      data-test-submit
     />
     <Hds::Button
       @text="Cancel"

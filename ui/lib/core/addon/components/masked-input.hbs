@@ -42,7 +42,7 @@
       @textToCopy={{this.copyValue}}
       @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
       class="transparent has-padding-xxs"
-      data-test-copy-button={{or this.copyValue true}}
+      data-test-copy-button
     />
   {{/if}}
   {{#if @allowDownload}}
@@ -52,7 +52,7 @@
       @isIconOnly={{true}}
       @color="tertiary"
       class="has-padding-xxs"
-      data-test-download-icon
+      data-test-button="Download secret value"
       {{on "click" (fn (mut this.modalOpen) true)}}
     />
   {{/if}}

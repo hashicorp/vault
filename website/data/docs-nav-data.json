@@ -157,6 +157,15 @@
             "path": "concepts/integrated-storage/autopilot"
           },
           {
+            "title": "Item Recovery",
+            "path": "concepts/integrated-storage/snapshot-recover",
+            "badge": {
+              "text": "ENT",
+              "type": "filled",
+              "color": "neutral"
+            }
+          },
+          {
             "title": "Migration checklist",
             "path": "concepts/integrated-storage/migration-checklist"
           },
@@ -194,8 +203,8 @@
             "path": "concepts/client-count/counting"
           },
           {
-            "title": "Usage metrics",
-            "path": "concepts/client-count/usage-metrics"
+            "title": "Client usage",
+            "path": "concepts/client-count/client-usage"
           },
           {
             "title": "FAQ",
@@ -279,10 +288,8 @@
     ]
   },
 
-  
   { "divider": true },
   { "heading": "OPERATIONS" },
-
 
   {
     "title": "Get Vault",
@@ -358,7 +365,7 @@
       }
     ]
   },
-  
+
   {
     "title": "Configure Vault",
     "routes": [
@@ -384,7 +391,25 @@
       },
       {
         "title": "Create a lease count quota",
+        "badge": {
+          "text": "ENT",
+          "type": "filled",
+          "color": "neutral"
+        },
         "path": "configuration/create-lease-count-quota"
+      },
+      {
+        "title": "Create a rate limit quota",
+        "path": "configuration/create-rate-limit-quota"
+      },
+      {
+        "title": "Rate limit quotas group_by modes",
+        "badge": {
+          "text": "ENT",
+          "type": "filled",
+          "color": "neutral"
+        },
+        "path": "configuration/identity-based-rate-limit"
       },
       {
         "title": "Configure completed request logging",
@@ -398,10 +423,10 @@
           "color": "neutral"
         },
         "path": "configuration/entropy-augmentation"
-      },  
-      
+      },
+
       { "heading": "Configuration stanzas" },
-    
+
       {
         "title": "<code>adaptive_overload_protection</code>",
         "badge": {
@@ -938,6 +963,10 @@
         "path": "upgrade/replicated-deployment"
       },
       {
+        "title": "LTS Vault upgrades",
+        "path": "upgrade/lts-upgrade"
+      },
+      {
         "title": "Rollback an upgrade",
         "path": "upgrade/rollback"
       },
@@ -966,6 +995,10 @@
       {
         "title": "Deprecation notices",
         "path": "updates/deprecation"
+      },
+      {
+        "title": "Change tracker",
+        "path": "updates/change-tracker"
       },
       {
         "title": "Full changelog",
@@ -1512,6 +1545,10 @@
         "path": "commands/read"
       },
       {
+        "title": "<code>recover</code>",
+        "path": "commands/recover"
+      },
+      {
         "title": "<code>secrets</code>",
         "routes": [
           {
@@ -1637,8 +1674,26 @@
         "path": "ui/browser-support"
       },
       {
-        "title": "Custom Messages",
+        "title": "Custom login",
+        "path": "ui/custom-login",
+        "badge": {
+          "text": "ENT",
+          "type": "filled",
+          "color": "neutral"
+        }
+      },
+      {
+        "title": "Custom messages",
         "path": "ui/custom-messages",
+        "badge": {
+          "text": "ENT",
+          "type": "filled",
+          "color": "neutral"
+        }
+      },
+      {
+        "title": "Namespaces",
+        "path": "ui/namespaces",
         "badge": {
           "text": "ENT",
           "type": "filled",
@@ -2203,6 +2258,15 @@
             "path": "secrets/pki/cmpv2"
           },
           {
+            "title": "Simple Certificate Enrollment Protocol (SCEP)",
+            "badge": {
+              "text": "ENT",
+              "type": "filled",
+              "color": "neutral"
+            },
+            "path": "secrets/pki/scep"
+          },
+          {
             "title": "Troubleshooting ACME",
             "path": "secrets/pki/troubleshooting-acme"
           }
@@ -2325,18 +2389,22 @@
         "title": "Overview",
         "path": "import",
         "badge": {
-          "text": "ALPHA",
+          "text": "BETA",
           "type": "outlined",
           "color": "highlight"
         }
       },
       {
-        "title": "GCP Secret Manager",
-        "path": "import/gcpsm"
+        "title": "AWS Secret Manager",
+        "path": "import/awssm"
       },
       {
-        "title": "Mappings",
-        "path": "import/mappings"
+        "title": "Azure KeyVault",
+        "path": "import/azurekv"
+      },
+      {
+        "title": "GCP Secret Manager",
+        "path": "import/gcpsm"
       }
     ]
   },
@@ -2527,6 +2595,15 @@
         ]
       },
       {
+        "title": "SCEP",
+        "path": "auth/scep",
+        "badge": {
+          "text": "ENT",
+          "type": "filled",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "TLS Certificates",
         "path": "auth/cert"
       },
@@ -2585,7 +2662,7 @@
       },
       {
         "title": "Rollback upgrades",
-        "path" : "plugins/rollback"
+        "path": "plugins/rollback"
       },
       {
         "title": "Plugin development",

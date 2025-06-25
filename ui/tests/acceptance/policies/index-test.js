@@ -25,11 +25,8 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 const SELECT = {
   policyByName: (name) => `[data-test-policy-link="${name}"]`,
   filterBar: '[data-test-component="navigate-input"]',
-  delete: '[data-test-confirm-action-trigger]',
-  confirmDelete: '[data-test-confirm-button]',
   createPolicy: '[data-test-policy-create-link]',
   nameInput: '[data-test-policy-input="name"]',
-  save: '[data-test-policy-save]',
   createError: '[data-test-message-error]',
   policyTitle: '[data-test-policy-name]',
   listBreadcrumb: '[data-test-policy-list-link] a',
@@ -73,8 +70,8 @@ module('Acceptance | policies/acl', function (hooks) {
     await waitFor(SELECT.policyByName(policyName));
     assert.dom(SELECT.policyByName(policyName)).exists('policy is shown in list');
     await click(`${SELECT.policyByName(policyName)} [data-test-popup-menu-trigger]`);
-    await click(SELECT.delete);
-    await click(SELECT.confirmDelete);
+    await click(GENERAL.confirmTrigger);
+    await click(GENERAL.confirmButton);
     assert.dom(SELECT.policyByName(policyName)).doesNotExist('policy is deleted successfully');
   });
 
@@ -89,7 +86,7 @@ module('Acceptance | policies/acl', function (hooks) {
 
     await fillIn(SELECT.nameInput, policyName);
     codemirror().setValue(policyString);
-    await click(SELECT.save);
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
       `/vault/policy/acl/${policyName}`,
@@ -108,12 +105,12 @@ module('Acceptance | policies/acl', function (hooks) {
     await click(SELECT.createPolicy);
 
     await fillIn(SELECT.nameInput, policyName);
-    await click(SELECT.save);
+    await click(GENERAL.submitButton);
     assert
       .dom(SELECT.createError)
       .hasText(`Error 'policy' parameter not supplied or empty`, 'renders error message on save');
     codemirror().setValue(policyString);
-    await click(SELECT.save);
+    await click(GENERAL.submitButton);
 
     await waitUntil(() => currentURL() === `/vault/policy/acl/${encodeURIComponent(policyLower)}`);
     assert.strictEqual(
@@ -134,12 +131,9 @@ module('Acceptance | policies/acl', function (hooks) {
 
     // policy deletion
     await click(SELECT.policyByName(policyLower));
-
     await click('[data-test-policy-edit-toggle]');
-
-    await click('[data-test-confirm-action-trigger]');
-
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmTrigger);
+    await click(GENERAL.confirmButton);
     await waitUntil(() => currentURL() === `/vault/policies/acl`);
     assert.strictEqual(
       currentURL(),

@@ -49,7 +49,7 @@ module('Integration | Component | clients/date-range', function (hooks) {
     assert.dom(DATE_RANGE.editDate('start')).hasValue('');
     await fillIn(DATE_RANGE.editDate('start'), '2018-01');
     await fillIn(DATE_RANGE.editDate('end'), '2018-03');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.deepEqual(this.onChange.args[0], [
       {
         end_time: 1522454400,
@@ -66,13 +66,13 @@ module('Integration | Component | clients/date-range', function (hooks) {
     await click(DATE_RANGE.edit);
     await fillIn(DATE_RANGE.editDate('end'), '');
     assert.dom(DATE_RANGE.validation).hasText('You must supply both start and end dates.');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.false(this.onChange.called);
 
     await fillIn(DATE_RANGE.editDate('start'), '2018-01');
     await fillIn(DATE_RANGE.editDate('end'), '2017-05');
     assert.dom(DATE_RANGE.validation).hasText('Start date must be before end date.');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.false(this.onChange.called);
 
     await click(GENERAL.cancelButton);
@@ -91,7 +91,7 @@ module('Integration | Component | clients/date-range', function (hooks) {
     await fillIn(DATE_RANGE.editDate('end'), currentMonth);
 
     assert.dom(DATE_RANGE.validation).hasText('You cannot select the current month or beyond.');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.false(this.onChange.called);
 
     //  This tests validation when the end date is the current month and start is valid.
@@ -99,7 +99,7 @@ module('Integration | Component | clients/date-range', function (hooks) {
     //  which is covered by prior tests.
     await fillIn(DATE_RANGE.editDate('start'), '2018-01');
     await fillIn(DATE_RANGE.editDate('end'), currentMonth);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.false(this.onChange.called);
   });
 });

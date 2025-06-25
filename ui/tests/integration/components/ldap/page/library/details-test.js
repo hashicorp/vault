@@ -10,6 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | ldap | Page::Library::Details', function (hooks) {
   setupRenderingTest(hooks);
@@ -70,7 +71,7 @@ module('Integration | Component | ldap | Page::Library::Details', function (hook
 
     const transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
     await click('[data-test-delete]');
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
     assert.ok(
       transitionStub.calledWith('vault.cluster.secrets.backend.ldap.libraries'),
       'Transitions to libraries route on delete success'

@@ -66,7 +66,7 @@ module('Integration | Component | page/pki-issuer-generate-root', function (hook
     assert.dom(GENERAL.title).hasText('Generate root');
     await fillIn(GENERAL.inputByAttr('type'), 'internal');
     await fillIn(GENERAL.inputByAttr('commonName'), 'foobar');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.dom(GENERAL.title).hasText('View generated root');
   });
 
@@ -84,7 +84,7 @@ module('Integration | Component | page/pki-issuer-generate-root', function (hook
     // Fill in
     await fillIn(GENERAL.inputByAttr('type'), 'internal');
     await fillIn(GENERAL.inputByAttr('commonName'), 'foobar');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.dom(GENERAL.title).hasText('Generate root', 'title does not change if response is unsuccessful');
   });
 });

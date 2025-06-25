@@ -1,0 +1,48 @@
+---
+layout: docs
+page_title: SCEP - Auth Methods
+description: The SCEP auth method is used to authenticate clients using the PKI SCEP integration, it isn't useful by itself.
+---
+
+# SCEP auth method
+
+
+@include 'alerts/enterprise-only.mdx'
+
+The SCEP authentication method controls static challenges and Intune
+authentication methods for clients using the SCEP protocol within given PKI
+mounts.
+
+## Authentication
+
+Do not use the SCEP plugin directly. SCEP mount paths only support 
+[delegated authentication](/vault/api-docs/system/mounts#delegated_auth_accessors)
+from a PKI mount.
+
+Multiple PKI mounts can use the same SCEP authN mount. If you configure a PKI
+mount without an associated SCEP role, Vault returns the first matching SCEP
+role that meets the other request criteria.
+
+PKI mounts configured for Intune only match SCEP auth roles with `intune` set as
+the authentication type. All other PKI mounts can match to SCEP auth roles with
+`static-challenge` set as the authentication type.
+
+## Configuration
+
+Configure the SCEP authentication method through roles. Within each SCEP role,
+specify the authentiation type with `auth_type` to indicate whether your SCEP
+mount uses static challenge authentication or Intune authentication.
+
+`auth_type`        | Authentication
+------------------ | --------------
+`static-challenge` | Method specified in `challenge` parameter
+`intune`           | Intune authentication
+
+When the authentication methods repeast across multiple roles, You must
+configure your PKI mounts with the prefered SCEP role name to match with the
+appropriate role. If you leave the role name unset, the SCEP mount returns the
+first matching role, which might not have the correct policy attached to it.
+
+## API
+
+The SCEP auth method has a full HTTP API. Refer to the [SCEP auth API documentation](/vault/api-docs/auth/scep) for more details.

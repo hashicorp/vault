@@ -56,7 +56,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       await fillIn(GENERAL.inputByAttr('type'), 'exported');
       await fillIn(GENERAL.inputByAttr('commonName'), 'issuer-common-0');
       await fillIn(GENERAL.inputByAttr('issuerName'), 'issuer-0');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       await click(PKI_CONFIGURE_CREATE.doneButton);
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/overview`);
       await settled();
@@ -68,7 +68,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       await waitFor(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal, { timeout: 5000 });
       assert.dom(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal).exists();
       await fillIn(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerInput, 'delete-all');
-      await click(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerButton);
+      await click(GENERAL.confirmButton);
       await settled();
       await waitUntil(() => !find(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal));
 
@@ -89,7 +89,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       await fillIn(GENERAL.inputByAttr('type'), 'exported');
       await fillIn(GENERAL.inputByAttr('commonName'), 'issuer-common-0');
       await fillIn(GENERAL.inputByAttr('issuerName'), 'issuer-0');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       await click(PKI_CONFIGURE_CREATE.doneButton);
       assert.strictEqual(
         currentURL(),
@@ -106,7 +106,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       await waitFor(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal);
       assert.dom(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal).exists();
       await fillIn(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerInput, 'delete-all');
-      await click(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerButton);
+      await click(GENERAL.confirmButton);
       await waitUntil(() => !find(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal));
       assert.dom(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal).doesNotExist('delete all issuers modal closes');
       assert.strictEqual(
@@ -165,7 +165,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       await fillIn(GENERAL.inputByAttr('type'), 'exported');
       await fillIn(GENERAL.inputByAttr('commonName'), 'issuer-common-0');
       await fillIn(GENERAL.inputByAttr('issuerName'), 'issuer-0');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       await click(PKI_CONFIGURE_CREATE.doneButton);
       // Create role and root CA"
       await runCmd([
@@ -183,7 +183,7 @@ module('Acceptance | pki configuration test', function (hooks) {
       await waitFor(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal);
       assert.dom(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal).exists();
       await fillIn(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerInput, 'delete-all');
-      await click(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerButton);
+      await click(GENERAL.confirmButton);
       await settled();
       await waitUntil(() => !find(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal));
       assert.dom(PKI_DELETE_ALL_ISSUERS.deleteAllIssuerModal).doesNotExist();
@@ -237,9 +237,9 @@ module('Acceptance | pki configuration test', function (hooks) {
       await click(PKI_ISSUER_LIST.generateIssuerRoot);
       await fillIn(GENERAL.inputByAttr('type'), 'internal');
       await fillIn(GENERAL.inputByAttr('commonName'), 'my-certificate');
-      await click(PKI_GENERATE_ROOT.keyParamsGroupToggle);
+      await click(GENERAL.button('Key parameters'));
       await fillIn(GENERAL.inputByAttr('keyType'), 'ed25519');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
 
       const issuerId = find(PKI_GENERATE_ROOT.saved.issuerLink).innerHTML;
       await visit(`/vault/secrets/${this.mountPath}/pki/issuers`);

@@ -4,7 +4,42 @@
  */
 
 import { click, fillIn, findAll, currentURL, visit, settled, waitUntil } from '@ember/test-helpers';
+import ss from 'vault/tests/pages/components/search-select';
+import { create } from 'ember-cli-page-object';
+import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+
+const searchSelect = create(ss);
+/**
+ * Enables replication mode.
+ * @param {string} type - The replication type ('performance' or 'dr').
+ * @param {string} mode - The cluster mode ('primary' or 'secondary').
+ */
+export async function enableReplication(type, mode) {
+  await visit('/vault/replication');
+  await click(`[data-test-replication-type-select="${type}"]`);
+  await fillIn('[data-test-replication-cluster-mode-select]', mode);
+  await click(GENERAL.submitButton);
+}
+
+/**
+ * Adds a secondary cluster.
+ * @param {string} secondaryName - The name of the secondary cluster.
+ * @param {string} mountFilterMode - The mount filter mode ('deny' or 'allow').
+ */
+export async function addSecondary(secondaryName, mountFilterMode = null) {
+  await click('[data-test-replication-link="secondaries"]');
+  await click('[data-test-secondary-add]');
+  await fillIn('[data-test-input="Secondary ID"]', secondaryName);
+
+  if (mountFilterMode) {
+    await click(`#${mountFilterMode}`);
+    await clickTrigger();
+    await searchSelect.options.objectAt(0).click();
+  }
+
+  await click('[data-test-secondary-add]');
+}
 
 export const disableReplication = async (type, assert) => {
   // disable performance replication
@@ -17,7 +52,7 @@ export const disableReplication = async (type, assert) => {
 
     const typeDisplay = type === 'dr' ? 'Disaster Recovery' : 'Performance';
     await fillIn('[data-test-confirmation-modal-input="Disable Replication?"]', typeDisplay);
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
     await settled(); // eslint-disable-line
 
     if (assert) {

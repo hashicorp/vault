@@ -1,0 +1,40 @@
+### General updates
+
+Change       | Found  | Fixed   | Recs    | Edition    | Issue
+------------ | ------ |-------- | ------- | ---------- | -----
+Beta removed | 1.18.0 | N/A     | No      | All        | [Request limiter removed](/vault/docs/v1.18.x/updates/important-changes#request-limiter-configuration-removal)
+
+### Breaking changes
+
+Found   | Recommendations | Edition    | Issue
+------- | --------------- | ---------- | -----
+1.18.11 | **Yes**         | All        | [Rekey cancellations use a nonce](/vault/docs/v1.20.x/updates/important-changes#rekey-cancel-nonce)
+
+### New behavior
+
+Found  | Recommendations | Edition    | Issue
+------ | --------------- | ---------- | -----
+1.18.0 | No              | All        | [Activity log changes](/vault/docs/v1.18.x/updates/important-changes#default-activity-log-querying-period)
+1.18.0 | **Yes**         | All        | [Docker image no longer contains curl](/vault/docs/v1.18.x/updates/important-changes#docker-image-no-longer-contains-curl)
+1.18.2 | **Yes**         | All        | [Anonymous product usage metrics collection](/vault/docs/v1.18.x/updates/important-changes#product-usage-reporting)
+1.18.7 | No              | All        | [Strict validation for Azure auth login requests](/vault/docs/v1.18.x/updates/important-changes#azure-auth-plugin-requires-resource_group_name-vm_name-and-vmss_name-to-match-the-jwt-claims-on-login)
+
+
+### Bugs
+
+ Found | Fixed   | Workaround | Edition    | Issue
+------ |-------- | ---------- | ---------- | -----
+1.18.0 | 1.18.7  | Upgrade    | All        | [Vault log file missing subsystem logs](/vault/docs/v1.18.x/updates/important-changes#vault-log-file-missing-subsystem-logs)
+1.18.6 | 1.18.10 | **Yes**    | Enterprise | [External Enterprise plugins cannot run on a standby node when it becomes active](/vault/docs/v1.18.x/updates/important-changes#external-ent-plugins)
+1.18.7 | 1.18.10 | **Yes**    | All        | [Azure authN fails to authenticate Uniform VMSS instances](/vault/docs/v1.18.x/updates/important-changes#azure-auth-fails-to-authenticate-uniform-vmss-instances)
+
+
+### Known issues
+
+Found  | Fixed   | Workaround | Edition    | Issue
+------ |-------- | ---------- | ---------- | -----
+1.18.0 | No      | **Yes**    | All        | [Duplicate unseal/seal wrap HSM keys](/vault/docs/v1.18.x/updates/important-changes#seal-seal-wrapped-duplicate-hsm-keys)
+1.18.0 | 1.18.9  | **Yes**    | All        | [Unwanted secret rotation for DB and LDAP roles on restart](/vault/docs/v1.18.x/updates/important-changes#database-and-ldap-secrets-engine-unwanted-secret-rotation-on-backend-restart)
+1.18.5 | No      | No         | All        | [Authorization failure with Azure federated identity credentials](/vault/docs/v1.18.x/updates/important-changes#authorization-failures-using-azure-federated-identity-credentials)
+1.18.5 | 1.18.9  | Upgrade    | All        | [Unexpected DB static role rotations on upgrade](/vault/docs/v1.18.x/updates/important-changes#database-static-role-rotations-on-upgrade)
+1.18.5 | 1.18.9  | Upgrade    | All        | [Unexpected LDAP static role rotations on upgrade](/vault/docs/v1.18.x/updates/important-changes#ldap-static-role-rotations-on-upgrade)

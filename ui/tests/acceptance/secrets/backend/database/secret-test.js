@@ -34,7 +34,7 @@ const newConnection = async (
   await connectionPage.name(name);
   await connectionPage.connectionUrl(connectionUrl);
   await connectionPage.toggleVerify();
-  await click(GENERAL.saveButton);
+  await click(GENERAL.submitButton);
   await connectionPage.enable();
   return name;
 };
@@ -78,7 +78,7 @@ const connectionTests = [
       assert.dom(GENERAL.inputByAttr('username')).exists(`Username field exists for ${name}`);
       assert.dom(GENERAL.inputByAttr('password')).exists(`Password field exists for ${name}`);
       assert.dom(GENERAL.inputByAttr('write_concern')).exists(`Write concern field exists for ${name}`);
-      assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
+      assert.dom(GENERAL.button('TLS options')).exists('TLS options toggle exists');
       assert
         .dom(GENERAL.inputByAttr('root_rotation_statements'))
         .exists(`Root rotation statements exists for ${name}`);
@@ -123,7 +123,7 @@ const connectionTests = [
       assert
         .dom(GENERAL.inputByAttr('max_connection_lifetime'))
         .exists(`Max connection lifetime exists for ${name}`);
-      assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
+      assert.dom(GENERAL.button('TLS options')).exists('TLS options toggle exists');
       assert
         .dom(GENERAL.inputByAttr('root_rotation_statements'))
         .exists(`Root rotation statements exists for ${name}`);
@@ -146,7 +146,7 @@ const connectionTests = [
       assert
         .dom(GENERAL.inputByAttr('max_connection_lifetime'))
         .exists(`Max connection lifetime exists for ${name}`);
-      assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
+      assert.dom(GENERAL.button('TLS options')).exists('TLS options toggle exists');
       assert
         .dom(GENERAL.inputByAttr('root_rotation_statements'))
         .exists(`Root rotation statements exists for ${name}`);
@@ -169,7 +169,7 @@ const connectionTests = [
       assert
         .dom(GENERAL.inputByAttr('max_connection_lifetime'))
         .exists(`Max connection lifetime exists for ${name}`);
-      assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
+      assert.dom(GENERAL.button('TLS options')).exists('TLS options toggle exists');
       assert
         .dom(GENERAL.inputByAttr('root_rotation_statements'))
         .exists(`Root rotation statements exists for ${name}`);
@@ -192,7 +192,7 @@ const connectionTests = [
       assert
         .dom(GENERAL.inputByAttr('max_connection_lifetime'))
         .exists(`Max connection lifetime exists for ${name}`);
-      assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
+      assert.dom(GENERAL.button('TLS options')).exists('TLS options toggle exists');
       assert
         .dom(GENERAL.inputByAttr('root_rotation_statements'))
         .exists(`Root rotation statements exists for ${name}`);
@@ -295,7 +295,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       assert
         .dom('[data-test-database-oracle-alert]')
         .doesNotExist('does not show oracle alert for non-oracle plugins');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert
         .dom('[data-test-db-connection-modal-title]')
         .hasText('Rotate your root credentials?', 'Modal appears asking to rotate root credentials');
@@ -320,7 +320,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       assert.dom('[data-test-toggle-input="show-password"]').exists('Update password toggle exists');
 
       assert.dom(GENERAL.inputByAttr('verify_connection')).isNotChecked('verify is still unchecked');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/show/${testCase.name}`);
       // click "Add Role"
       await connectionPage.addRole();
@@ -330,7 +330,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
         testCase.name,
         'Database connection is pre-selected on the form'
       );
-      await click('[data-test-database-role-cancel]');
+      await click(GENERAL.cancelButton);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/list?tab=role`,
@@ -464,7 +464,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     });
     // uncheck verify for the save step to work
     await connectionPage.toggleVerify();
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert
       .dom('[data-test-db-connection-modal-title]')
       .hasText('Rotate your root credentials?', 'Modal appears asking to ');
@@ -490,7 +490,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       .dom('[data-test-confirmation-modal-title]')
       .hasText('Delete connection?', 'Modal appears asking to confirm delete action');
     await fillIn('[data-test-confirmation-modal-input="Delete connection?"]', connectionDetails.id);
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
 
     assert.strictEqual(currentURL(), `/vault/secrets/${backend}/list`, 'Redirects to connection list page');
     assert
@@ -547,7 +547,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert.dom('.overview-card h2').hasText('1', 'Lists the correct number of connections');
     // confirm get credentials card is an option to select. Regression bug.
     await typeIn(GENERAL.inputSearch('search-input-role'), 'blah');
-    assert.dom('[data-test-get-credentials]').isEnabled();
+    assert.dom(GENERAL.button('Get credentials')).isEnabled();
     // [BANDAID] navigate away to fix test failing on capabilities-self check before teardown
     await visit('/vault/secrets');
   });

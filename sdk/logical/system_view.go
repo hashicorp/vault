@@ -111,6 +111,9 @@ type SystemView interface {
 	// credential from the Rotation Manager.
 	// NOTE: This method is intended for use only by HashiCorp Vault Enterprise plugins.
 	DeregisterRotationJob(ctx context.Context, req *rotation.RotationJobDeregisterRequest) error
+
+	// ExtractVerifyPlugin extracts and verifies the plugin artifact
+	DownloadExtractVerifyPlugin(ctx context.Context, plugin *pluginutil.PluginRunner) error
 }
 
 type PasswordPolicy interface {
@@ -304,4 +307,8 @@ func (d StaticSystemView) RegisterRotationJob(_ context.Context, _ *rotation.Rot
 
 func (d StaticSystemView) DeregisterRotationJob(_ context.Context, _ *rotation.RotationJobDeregisterRequest) (err error) {
 	return errors.New("DeregisterRotationJob is not implemented in StaticSystemView")
+}
+
+func (d StaticSystemView) DownloadExtractVerifyPlugin(_ context.Context, _ *pluginutil.PluginRunner) error {
+	return errors.New("DownloadExtractVerifyPlugin is not implemented in StaticSystemView")
 }

@@ -31,7 +31,6 @@ inheritable or limited to a specific role.
 ## Step 2: Apply the count quota
 
 <Tabs>
-
 <Tab heading="CLI" group="cli">
 
 Use `vault write` and the `sys/quotas/lease-count/{quota-name}` mount path to
@@ -59,8 +58,8 @@ $ vault write                            \
 
 Success! Data written to: sys/quotas/lease-count/webapp-tokens
 ```
-</Tab>
 
+</Tab>
 <Tab heading="API" group="api">
 
 1. Create a payload file with your quota settings.
@@ -103,14 +102,34 @@ Success! Data written to: sys/quotas/lease-count/webapp-tokens
 
 </Note>
 
-</Tab>
 
+</Tab>
+<Tab heading="Terraform" group="terraform">
+
+Use
+[`vault_quota_lease_count`](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/resources/quota_lease_count)
+resource type to define a lease count quota.
+
+For example, to create a targeted quota limit called **webapp-tokens** on the
+`webapp` role for the `approle` plugin at the default mount path:
+
+
+```hcl
+resource "vault_quota_lease_count" "webapp-tokens" {
+  name = "webapp-tokens"
+  path = "auth/approle"
+  role = "webapp"
+  max_leases = 100
+  depends_on = [ vault_approle_auth_backend_role.webapp ]
+}
+```
+
+</Tab>
 </Tabs>
 
 ## Step 3: Confirm the quota settings
 
 <Tabs>
-
 <Tab heading="CLI" group="cli">
 
 Use `vault read` and the `sys/quotas/lease-count/{quota-name}` mount path to
@@ -137,7 +156,6 @@ type           lease-count
 ```
 
 </Tab>
-
 <Tab heading="API" group="api">
 
 Call the `sys/quotas/lease-count/{quota-name}` endpoint to display the lease
@@ -171,7 +189,6 @@ $ curl                                      \
 ```
 
 </Tab>
-
 </Tabs>
 
 ## Next steps 
@@ -180,6 +197,6 @@ Proactive monitoring and periodic usage analysis can help you identify potential
 problems before they escalate.
 
 - Brush up on [general Vault resource quotas](/vault/docs/concepts/resource-quotas) in general.
-- Learn about [lease count quotas for Vault Enterprise](/vault/docs/enterprise/lease-count-quotas).
+- Learn about [rate limit quota](/vault/docs/configuration/create-rate-limit-quota) to control request vaolume.
 - Learn how to [query audit device logs](/vault/tutorials/monitoring/query-audit-device-logs).
 - Review [key Vault metrics for common health checks](/well-architected-framework/reliability/reliability-vault-monitoring-key-metrics).

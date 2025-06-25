@@ -38,7 +38,7 @@ func generatePluginArtifactContents(t *testing.T, pluginName, pluginVersion stri
 ) map[string][]byte {
 	t.Helper()
 
-	metadata := pluginMetadata{
+	metadata := PluginMetadata{
 		Version: "v0",
 		Plugin: Plugin{
 			Name:     pluginName,
