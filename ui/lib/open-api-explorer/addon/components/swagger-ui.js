@@ -130,12 +130,14 @@ export default class SwaggerUiComponent extends Component {
       this.observer = new MutationObserver(() => {
         this.updateCaretTabIndex();
         this.updateCopyToClipboard();
+        this.updateDisabledFields();
         this.updateTryItOutButtonDescription();
       });
       this.observer.observe(container, { childList: true, subtree: true });
       // Run once on initial load
       this.updateCaretTabIndex();
       this.updateCopyToClipboard();
+      this.updateDisabledFields();
       this.updateTryItOutButtonDescription();
     }
   }
@@ -159,6 +161,13 @@ export default class SwaggerUiComponent extends Component {
           e.preventDefault();
         }
       });
+    });
+  }
+
+  updateDisabledFields() {
+    document.querySelectorAll('.parameters :disabled').forEach((el) => {
+      el.removeAttribute('disabled');
+      el.setAttribute('readonly', true);
     });
   }
 
