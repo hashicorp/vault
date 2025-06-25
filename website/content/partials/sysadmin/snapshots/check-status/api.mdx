@@ -1,0 +1,33 @@
+Once you start a snapshot load, you can check the load status using
+the `/sys/storage/raft/snapshot-load` endpoint:
+
+```shell-session
+$ curl                                       \
+   --request GET                             \
+   --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+    ${VAULT_ADDR}/v1/sys/storage/raft/snapshot-load/<snapshot_id>
+```
+
+For example:
+
+<CodeBlockConfig hideClipboard highlight="13">
+
+```shell-session
+$ curl                                       \
+   --request GET                             \
+   --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+    ${VAULT_ADDR}/v1/sys/storage/raft/snapshot-load/9465df92-8236-4af9-8cc8-b7460d882e41
+
+{
+  "data": {
+    "auto_config_name": "paris-primary",
+    "cluster_id": "7430fa38-8fb6-4b35-b2a7-27ed4c831a44",
+    "expires_at": "2025-07-16T03:24:42.867531+05:00",
+    "snapshot_id": "9465df92-8236-4af9-8cc8-b7460d882e41",
+    "url": "https://bucket.example.com/vault-snapshots/primary/paris-backup.snap",
+    "status": "ready"
+  }
+}
+```
+
+</CodeBlockConfig>
