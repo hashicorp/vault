@@ -18,7 +18,6 @@ import {
 export default {
   hasStringList: isPresent('[data-test-component=string-list]'),
   hasTextFile: isPresent('[data-test-component=text-file]'),
-  hasTTLPicker: isPresent('[data-test-toggle-input="Foo"]'),
   hasJSONEditor: isPresent('[data-test-component="code-mirror-modifier"]'),
   hasJSONClearButton: isPresent('[data-test-json-clear-button]'),
   hasInput: isPresent('input'),

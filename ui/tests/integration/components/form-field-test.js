@@ -243,7 +243,7 @@ module('Integration | Component | form field', function (hooks) {
         helperTextEnabled: 'TTL is enabled',
       })
     );
-    assert.ok(component.hasTTLPicker, 'renders the ttl-picker component');
+    assert.dom(GENERAL.toggleInput('Foo')).exists('renders the ttl-picker component');
     assert.dom('[data-test-ttl-form-subtext]').hasText('TTL is disabled');
     assert.dom('[data-test-ttl-toggle]').isNotChecked();
     await click(GENERAL.toggleInput('Foo'));
@@ -265,7 +265,7 @@ module('Integration | Component | form field', function (hooks) {
         ttlOffValue: '',
       })
     );
-    assert.ok(component.hasTTLPicker, 'renders the ttl-picker component');
+    assert.dom(GENERAL.toggleInput('Foo')).exists('renders the ttl-picker component');
     assert.dom('[data-test-ttl-toggle]').isChecked();
     await click(GENERAL.toggleInput('Foo'));
     assert.strictEqual(model.get('foo'), '');
