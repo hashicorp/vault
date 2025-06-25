@@ -10,7 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { kvDataPath } from 'vault/utils/kv-path';
-import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { syncStatusResponse } from 'vault/mirage/handlers/sync';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { baseSetup } from 'vault/tests/helpers/kv/kv-run-commands';
