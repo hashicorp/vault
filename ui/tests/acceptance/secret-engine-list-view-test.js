@@ -11,8 +11,8 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
-import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
-import { login, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
+import { createTokenCmd, deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
+import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import { MOUNT_BACKEND_FORM } from '../helpers/components/mount-backend-form-selectors';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
 
@@ -115,26 +115,33 @@ module('Acceptance | secret-engine list view', function (hooks) {
 
   test('enterprise: cannot view list without permissions inside namespace', async function (assert) {
     this.version = 'enterprise';
-    this.backend = `bk-${this.uid}`;
+    const enginePath1 = `kv-${this.uid}`;
+    await runCmd(mountEngineCmd('kv', enginePath1));
     this.namespace = `ns-${this.uid}`;
     await runCmd([`write sys/namespaces/${this.namespace} -force`]);
-    await loginNs(this.namespace, ' ');
+    await loginNs(this.namespace, createTokenCmd());
 
     await visit('/vault/secrets');
-    assert.dom(SES.secretsBackendLink('cubbyhole')).doesNotExist();
+    assert.strictEqual(currentURL(), `/vault/secrets`, 'Should be on main secret engines list page.');
 
-    await logout();
+    assert.dom(SES.secretsBackendLink(enginePath1)).doesNotExist();
   });
 
   test('enterprise: can view list with permissions inside namespace', async function (assert) {
     this.version = 'enterprise';
-    this.backend = `bk-${this.uid}`;
+    const enginePath1 = `kv-v1-${this.uid}`;
+    await runCmd(mountEngineCmd('kv', enginePath1));
     this.namespace = `ns-${this.uid}`;
     await runCmd([`write sys/namespaces/${this.namespace} -force`]);
     await loginNs(this.namespace);
     await visit('/vault/secrets');
+    assert.strictEqual(currentURL(), `/vault/secrets`, 'Should be on main secret engines list page.');
 
-    assert.dom(SES.secretsBackendLink('cubbyhole')).exists();
+    // await this.pauseTest();
+
+    assert.dom(SES.secretsBackendLink(enginePath1)).exists();
+    // cleanup
+    await runCmd(deleteEngineCmd(enginePath1));
   });
 
   test('after disabling it stays on the list view', async function (assert) {
