@@ -18,10 +18,10 @@ list of authentication methods listed on the login form.
 
 ## Create GUI default login configuration
 
-This endpoint allows the creation of a new UI default login configuration. Only one UI login configuration is
-allowed per namespace. Namespaces can inherit from their parent if the parent's configuration has `disable_inheritance`
-set to `false`. If no namespace is provided, the rule will be applied to the root namespace. One of `default_auth_type`,
-or `backup_auth_types` is required during creation.
+Use the default configuration endpoint to create a default authentication method for
+the Vault GUI. You can only set one login configuration per namespace, but
+namespaces can inherit configurations from the parent namespace with
+inheritance enabled.
 
 | Method | Path                              |
 | :----- | :-------------------------------- |
