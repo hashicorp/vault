@@ -137,8 +137,6 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await visit('/vault/secrets');
     assert.strictEqual(currentURL(), `/vault/secrets`, 'Should be on main secret engines list page.');
 
-    // await this.pauseTest();
-
     assert.dom(SES.secretsBackendLink(enginePath1)).exists();
     // cleanup
     await runCmd(deleteEngineCmd(enginePath1));
