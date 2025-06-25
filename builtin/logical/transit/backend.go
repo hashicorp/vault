@@ -27,9 +27,7 @@ const (
 	minCacheSize = 10
 )
 
-var (
-	ErrEntOnly = "key type %s is only available in enterprise versions of Vault"
-)
+var ErrEntOnly = "key type %s is only available in enterprise versions of Vault"
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b, err := Backend(ctx, conf)
