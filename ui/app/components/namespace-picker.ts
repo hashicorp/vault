@@ -163,9 +163,12 @@ export default class NamespacePicker extends Component {
     element.style.display = 'none';
 
     let maxWidth = 240; // Default minimum width
-    const namespaceLinks = document.querySelectorAll('[data-test-namespace-link]');
-    namespaceLinks.forEach((checkmark: Element) => {
-      const width = (checkmark as HTMLElement).offsetWidth;
+    // Calculate the maximum width of the visible namespace options
+    // The namespace is displayed as an HDS::checkmark button, so we need to find the width of the checkmark element
+    this.visibleNamespaceOptions.forEach((namespace: NamespaceOption) => {
+      const checkmarkElement = document.querySelector(`[data-test-button="${namespace.label}"]`);
+
+      const width = (checkmarkElement as HTMLElement).offsetWidth;
       if (width > maxWidth) {
         maxWidth = width;
       }

@@ -12,6 +12,7 @@ import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import {
   createNS,
   createPolicyCmd,
+  deleteNS,
   mountAuthCmd,
   mountEngineCmd,
   runCmd,
@@ -380,7 +381,8 @@ module('Acceptance | auth login form', function (hooks) {
       await visit(`/vault/logout?namespace=${ns}`);
       await fillIn(GENERAL.inputByAttr('namespace'), ''); // clear login form namespace input
       await login();
-      await runCmd([`delete sys/namespaces/${ns}`], false);
+      // clean up namespace pollution
+      await runCmd(deleteNS(ns));
     });
 
     test('it sets namespace header for sys/internal/ui/mounts request when namespace is inputted', async function (assert) {

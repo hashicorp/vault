@@ -46,7 +46,7 @@ module('Integration | Component | filter-input-explicit', function (hooks) {
   test('it should call handleSearch on submit', async function (assert) {
     await this.renderComponent();
     await typeIn(GENERAL.filterInputExplicit, 'bar');
-    await click(GENERAL.filterInputExplicitSearch);
+    await click(GENERAL.button('Search'));
     assert.ok(this.handleSearch.calledOnce, 'handleSearch was called once');
   });
 
