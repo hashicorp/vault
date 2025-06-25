@@ -1,0 +1,24 @@
+Use the `recover_snapshot_id` query parameter and the snapshot ID to read from
+the secret path and write the recovered data to the corresponding mount path on
+the Vault server:
+
+```shell-session
+$ curl                                      \
+   --request GET                            \
+   --header "X-Vault-Token: ${VAULT_TOKEN}" \
+    ${VAULT_ADDR}/v1/<mount_path>/data/<secret_path>?recover_snapshot_id=<snapshot_id>
+```
+
+For example, to recover secrets at `telemetry-systems/api-key` from a key/value
+plugin mounted at the default path, call the `/kv/data/{secret_path}` endpoint:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ curl                                      \
+   --request GET                            \
+   --header "X-Vault-Token: ${VAULT_TOKEN}" \
+    ${VAULT_ADDR}/v1/kv/data/telemetry-systems/api-key?recover_snapshot_id=9465df92-8236-4af9-8cc8-b7460d882e41
+```
+
+</CodeBlockConfig>
