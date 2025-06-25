@@ -181,7 +181,7 @@ module('Integration | Component | form field', function (hooks) {
     assert.dom(GENERAL.toggleInput('toggle-foobar')).isNotChecked();
     assert.dom('[data-test-toggle-subtext]').hasText('Toggled off');
 
-    await component.fields.objectAt(0).toggleButton();
+    await click(GENERAL.toggleInput('toggle-foobar'));
 
     assert.true(model.get('foobar'));
     assert.ok(spy.calledWith('foobar', true), 'onChange called with correct args');
