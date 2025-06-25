@@ -46,7 +46,9 @@ or `backup_auth_types` is required during creation.
   authentication methods include: `github`, `jwt`, `ldap`, `oidc`, `okta`,
   `radius`, `saml`, `token`, and `userpass`.
 
-- `disable_inheritance` `(bool: false)` - Defaults to `false` which means child namespaces inherit `default_auth_type` and `backup_auth_types` from their parent. If set to `true`, the config will not be inherited.
+- `disable_inheritance` `(bool: false)` - Indicates whether child namespaces
+  should inherit `default_auth_type` and `backup_auth_types` settings from their
+  parent. Setting `disable_inheritance` to `true` disallows inheritence.
 
 ### Sample payload
 
