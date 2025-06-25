@@ -2166,7 +2166,7 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 		KeyVersion: ver,
 		Context:    context,
 		Nonce:      nonce,
-	}, value, factories)
+	}, value, factories...)
 }
 
 func (p *Policy) EncryptWithOptions(opts EncryptionOptions, value string, factories ...any) (string, error) {
