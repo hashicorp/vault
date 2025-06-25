@@ -114,33 +114,34 @@ module('Acceptance | secret-engine list view', function (hooks) {
   });
 
   test('enterprise: cannot view list without permissions inside namespace', async function (assert) {
-    this.version = 'enterprise';
     this.namespace = `ns-${this.uid}`;
 
-    const enginePath1 = `kv-${this.uid}`;
+    const enginePath1 = `kv-t1-${this.uid}`;
     const userDefault = await runCmd(createTokenCmd()); // creates default user token
-    await runCmd(mountEngineCmd('kv', enginePath1));
+    await runCmd(mountEngineCmd('kv', enginePath1)); // mounts a kv engine in root namespace
 
-    await runCmd([`write sys/namespaces/${this.namespace} -force`]);
-    await loginNs(this.namespace, userDefault);
+    await runCmd([`write sys/namespaces/${this.namespace} -force`]); // creates a default namespace
+    await loginNs(this.namespace, userDefault); // logs into default namespace with a default user token
 
     await visit('/vault/secrets');
     assert.strictEqual(currentURL(), `/vault/secrets`, 'Should be on main secret engines list page.');
+    assert.dom(SES.secretsBackendLink(enginePath1)).doesNotExist(); // without permissions, engine should not show for this user
 
-    assert.dom(SES.secretsBackendLink(enginePath1)).doesNotExist();
+    // cleanup
+    await runCmd(deleteEngineCmd(enginePath1));
   });
 
   test('enterprise: can view list with permissions inside namespace', async function (assert) {
-    this.version = 'enterprise';
-    const enginePath1 = `kv-v1-${this.uid}`;
-    await runCmd(mountEngineCmd('kv', enginePath1));
     this.namespace = `ns-${this.uid}`;
+    const enginePath1 = `kv-t2-${this.uid}`;
+    await runCmd(mountEngineCmd('kv', enginePath1));
     await runCmd([`write sys/namespaces/${this.namespace} -force`]);
-    await loginNs(this.namespace);
+    await loginNs(this.namespace); // logs into namespace with root token
     await visit('/vault/secrets');
     assert.strictEqual(currentURL(), `/vault/secrets`, 'Should be on main secret engines list page.');
 
-    assert.dom(SES.secretsBackendLink(enginePath1)).exists();
+    assert.dom(SES.secretsBackendLink(enginePath1)).exists(); // with root permissions, able to see the engine in list
+
     // cleanup
     await runCmd(deleteEngineCmd(enginePath1));
   });
