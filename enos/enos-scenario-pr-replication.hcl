@@ -225,6 +225,11 @@ scenario "pr_replication" {
       cluster_tag_key = global.vault_tag_key
       common_tags     = global.tags
       vpc_id          = step.create_vpc.id
+      ssh_allow_ips   = ["0.0.0.0"]
+      ports_ingress   = [
+        global.ports.ldap,
+        global.ports.ssh
+      ]
     }
   }
 
