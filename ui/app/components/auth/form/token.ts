@@ -24,7 +24,6 @@ export default class AuthFormToken extends AuthBase {
 
     // normalize auth data so stored token data has the same keys regardless of auth type
     return this.normalizeAuthResponse(data, {
-      displayName: data.displayName,
       path: '',
       tokenKey: 'id',
       ttlKey: 'ttl',

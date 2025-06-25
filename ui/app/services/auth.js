@@ -15,6 +15,7 @@ import { resolve, reject } from 'rsvp';
 import getStorage from 'vault/lib/token-storage';
 import ENV from 'vault/config/environment';
 import { addToArray } from 'vault/helpers/add-to-array';
+import { displayNameFromMetadata } from 'vault/utils/auth-form-helpers';
 
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
@@ -346,7 +347,7 @@ export default Service.extend({
         this.isRenewing = false;
         // If we renewing, authData already exists so all we really need to update are the token and expiration details
         const { authMethodType, authMountPath, displayName } = this.authData;
-        const normalizedAuthData = this.normalizeAuthData(resp, {
+        const normalizedAuthData = this.normalizeAuthData(resp.auth, {
           authMethodType,
           authMountPath,
           displayName,
@@ -447,10 +448,9 @@ export default Service.extend({
   },
 
   async totpValidate({ clusterId, mfaRequirement, authMethodType, authMountPath }) {
-    const resp = await this.clusterAdapter().mfaValidate(mfaRequirement);
-    // Different auth methods return different data keys, this is handled by each component
-    // on standard logins, but since MFA is handled higher up in the auth flow we also have to normalize it here.
-    const normalizedAuthData = this.normalizeAuthData(resp, { authMethodType, authMountPath });
+    // mfa/validate consistently returns data inside the "auth" key
+    const { auth } = await this.clusterAdapter().mfaValidate(mfaRequirement);
+    const normalizedAuthData = this.normalizeAuthData(auth, { authMethodType, authMountPath });
     return this.authSuccess(clusterId, normalizedAuthData);
   },
 
@@ -482,20 +482,21 @@ export default Service.extend({
     this.set('tokens', tokenNames);
   },
 
-  // The API service returns camel cased keys and older responses return snake cased params
-  // For now, using this method to normalize the response
-  normalizeAuthData(resp, { authMethodType, authMountPath, displayName }) {
-    const data = resp?.data || resp?.auth;
+  // Depending on where auth happens (mfa/validate, renew-self or the method's login) the auth data
+  // varies slightly (i.e. "ttl" vs "lease_duration"). Normalize it so stored authData contains consistent keys.
+  // (Also, the API service returns camel cased keys and raw ajax requests return snake cased params.)
+  normalizeAuthData(authData, { authMethodType, authMountPath, displayName }) {
     return {
       authMethodType,
       authMountPath,
-      entityId: data?.entity_id,
-      expireTime: data?.expire_time,
-      token: data?.client_token || data?.id,
-      renewable: data?.renewable,
-      ttl: data?.lease_duration || data?.ttl,
-      policies: data?.policies,
-      displayName: displayName || data?.display_name || data?.metadata?.username || data?.metadata?.org,
+      entityId: authData?.entity_id,
+      expireTime: authData?.expire_time,
+      token: authData?.client_token,
+      renewable: authData?.renewable,
+      ttl: authData?.lease_duration,
+      policies: authData?.policies,
+      // not all methods return a display name or metadata, if this is still empty it will be gleaned from lookup-self
+      displayName: displayName || displayNameFromMetadata(authData?.metadata),
     };
   },
 });

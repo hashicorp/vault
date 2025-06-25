@@ -31,3 +31,12 @@ export const DOMAIN_PROVIDER_MAP = {
   'auth0.com': 'Auth0',
   'login.microsoftonline.com': 'Azure',
 };
+
+export const displayNameFromMetadata = (metadata: Record<string, string> | undefined) => {
+  return metadata
+    ? ['org', 'username']
+        .map((key) => (key in metadata ? metadata[key] : null))
+        .filter(Boolean)
+        .join('/')
+    : '';
+};

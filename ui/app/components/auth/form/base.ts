@@ -9,7 +9,7 @@ import { service } from '@ember/service';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { sanitizePath } from 'core/utils/sanitize-path';
-import { POSSIBLE_FIELDS } from 'vault/utils/auth-form-helpers';
+import { displayNameFromMetadata, POSSIBLE_FIELDS } from 'vault/utils/auth-form-helpers';
 import { ResponseError } from '@hashicorp/vault-client-typescript';
 
 import type { HTMLElementEvent } from 'vault/forms';
@@ -128,10 +128,9 @@ export default abstract class AuthBase extends Component<Args> {
   }
 
   // normalize auth data so stored token data has the same keys regardless of auth type
-  normalizeAuthResponse = (
-    authResponse: any,
-    { path = '', tokenKey = '', ttlKey = '', displayName = '' }
-  ) => {
+  normalizeAuthResponse = (authResponse: any, { path = '', tokenKey = '', ttlKey = '' }) => {
+    // not all methods return displayName or metadata, if displayName is still empty it will be gleaned from lookup-self
+    const displayName = authResponse?.displayName || displayNameFromMetadata(authResponse?.metadata);
     return {
       // authResponse will include enforcement data in the `mfaRequirement` key - if MFA is configured.
       ...authResponse,

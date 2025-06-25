@@ -24,7 +24,6 @@ export default class AuthFormUserpass extends AuthBase {
 
     // normalize auth data so stored token data has the same keys regardless of auth type
     return this.normalizeAuthResponse(auth, {
-      displayName: auth.metadata?.username,
       path,
       tokenKey: 'clientToken',
       ttlKey: 'leaseDuration',

@@ -22,7 +22,7 @@ interface SharedAuthResponseData {
 interface AuthResponseAuthKey extends SharedAuthResponseData {
   clientToken: string;
   leaseDuration: number;
-  metadata: Record<string, unknown>;
+  metadata: Record<string, string>;
   mfaRequirement: MfaRequirementApiResponse | null;
   tokenType: 'service' | 'batch';
 }
@@ -32,7 +32,7 @@ interface AuthResponseDataKey extends SharedAuthResponseData {
   displayName: string;
   expireTime: string;
   id: string; // this is the Vault issued token (the equivalent of the clientToken for responses with the "auth" key)
-  meta: Record<string, unknown> | null;
+  meta: Record<string, string> | null;
   namespacePath?: string;
   ttl: number;
   type: 'service' | 'batch'; // token type

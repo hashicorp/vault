@@ -39,7 +39,6 @@ export default class AuthFormOkta extends AuthBase {
     );
 
     return this.normalizeAuthResponse(auth, {
-      displayName: auth.metadata?.username,
       path,
       tokenKey: 'clientToken',
       ttlKey: 'leaseDuration',

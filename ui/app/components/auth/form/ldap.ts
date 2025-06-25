@@ -23,7 +23,6 @@ export default class AuthFormLdap extends AuthBase {
     });
 
     return this.normalizeAuthResponse(auth, {
-      displayName: auth.metadata?.username,
       path,
       tokenKey: 'clientToken',
       ttlKey: 'leaseDuration',

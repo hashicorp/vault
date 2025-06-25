@@ -23,7 +23,6 @@ export default class AuthFormRadius extends AuthBase {
     });
 
     return this.normalizeAuthResponse(auth, {
-      displayName: auth.metadata?.username,
       path,
       tokenKey: 'clientToken',
       ttlKey: 'leaseDuration',
