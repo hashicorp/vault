@@ -186,7 +186,7 @@ scenario "agent" {
       common_tags     = global.tags
       vpc_id          = step.create_vpc.id
       ssh_allow_ips   = ["0.0.0.0"]
-      ports_ingress   = [
+      ports_ingress = [
         global.ports.ldap,
         global.ports.ssh
       ]
@@ -241,8 +241,8 @@ scenario "agent" {
     }
 
     variables {
-      hosts        = step.create_external_integration_target.hosts
-      distro       = matrix.distro
+      hosts  = step.create_external_integration_target.hosts
+      distro = matrix.distro
     }
   }
 
