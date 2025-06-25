@@ -280,8 +280,9 @@ scenario "seal_ha" {
     }
 
     variables {
-      hosts  = step.create_external_integration_target.hosts
-      distro = matrix.distro
+      hosts      = step.create_external_integration_target.hosts
+      distro     = matrix.distro
+      ip_version = matrix.ip_version
     }
   }
 
