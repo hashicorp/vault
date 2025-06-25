@@ -156,8 +156,9 @@ supplied name.
   See [/sys/plugins/runtimes/catalog](/vault/api-docs/system/plugins-runtimes-catalog) for additional information.
 
 - `version` `(string: "")` - Specifies the semantic version of the plugin. Used as the tag
-  when specifying `oci_image`, but with any leading 'v' trimmed. This is required to register
-  with a plugin artifact but optional when registering with a plugin binary.
+  when specifying `oci_image`, but with any leading 'v' trimmed. You can
+  omit version to register a plugin binary, but you must provide an
+  explicit version to register a plugin artifact.
 
 - `sha256` `(string: "")` – The SHA256 sum of a plugin binary or the OCI image.
   Before a plugin is run, its SHA will be checked against this value. If the actual SHA of the 
