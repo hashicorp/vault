@@ -31,7 +31,8 @@ or `backup_auth_types` is required during creation.
 
 - `name` `(string: <required>)` - The name of the configuration. Spaces are not supported. This parameter is specified as part of the URL.
 
-- `namespace_path` `(string: "")` - Namespace to apply this configuration to.
+- `namespace_path` `(string: "")` - Target namespace for the login configuration.
+  Leave `namespace_path` unset to apply the configuration to the `root` namespace.
 
 - `default_auth_type` `(string: <required>)` - The type of auth method to be presented by default. Only UI supported auth types are allowed: `github`,`jwt`,`ldap`,`oidc`,`okta`,`radius`,`saml`,'token`,and `userpass`
 
