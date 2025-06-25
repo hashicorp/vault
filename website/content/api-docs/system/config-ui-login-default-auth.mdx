@@ -40,7 +40,11 @@ or `backup_auth_types` is required during creation.
   authentication methods include: `github`, `jwt`, `ldap`, `oidc`, `okta`,
   `radius`, `saml`, `token`, and `userpass`.
 
-- `backup_auth_types` `(array: [])` - Backup auth types to be presented in the `Sign in with other methods` tab. Only UI supported auth types are allowed: `github`,`jwt`,`ldap`,`oidc`,`okta`,`radius`,`saml`, `token`,and `userpass`
+- `backup_auth_types` `(array: [])` - A list of backup auth types. Vault
+  presents the backup methods in the `Sign in with other methods` tab. You must
+  provide at least one backup method if `default_auth_types` is unset. Supported
+  authentication methods include: `github`, `jwt`, `ldap`, `oidc`, `okta`,
+  `radius`, `saml`, `token`, and `userpass`.
 
 - `disable_inheritance` `(bool: false)` - Defaults to `false` which means child namespaces inherit `default_auth_type` and `backup_auth_types` from their parent. If set to `true`, the config will not be inherited.
 
