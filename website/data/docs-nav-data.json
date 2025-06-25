@@ -979,6 +979,10 @@
         "path": "upgrade/replicated-deployment"
       },
       {
+        "title": "LTS Vault upgrades",
+        "path": "upgrade/lts-upgrade"
+      },
+      {
         "title": "Rollback an upgrade",
         "path": "upgrade/rollback"
       },
@@ -2438,18 +2442,22 @@
         "title": "Overview",
         "path": "import",
         "badge": {
-          "text": "ALPHA",
+          "text": "BETA",
           "type": "outlined",
           "color": "highlight"
         }
       },
       {
-        "title": "GCP Secret Manager",
-        "path": "import/gcpsm"
+        "title": "AWS Secret Manager",
+        "path": "import/awssm"
       },
       {
-        "title": "Mappings",
-        "path": "import/mappings"
+        "title": "Azure KeyVault",
+        "path": "import/azurekv"
+      },
+      {
+        "title": "GCP Secret Manager",
+        "path": "import/gcpsm"
       }
     ]
   },

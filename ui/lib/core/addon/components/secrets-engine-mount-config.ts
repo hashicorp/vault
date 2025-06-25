@@ -33,14 +33,14 @@ export default class SecretsEngineMountConfig extends Component<Args> {
   get fields(): Array<Field> {
     const { secretsEngine } = this.args;
     return [
-      { label: 'Secret Engine Type', value: secretsEngine.engineType },
+      { label: 'Secret engine type', value: secretsEngine.engineType },
       { label: 'Path', value: secretsEngine.path },
       { label: 'Accessor', value: secretsEngine.accessor },
       { label: 'Local', value: secretsEngine.local },
-      { label: 'Seal Wrap', value: secretsEngine.sealWrap },
+      { label: 'Seal wrap', value: secretsEngine.sealWrap },
       { label: 'Default Lease TTL', value: duration([secretsEngine.config.defaultLeaseTtl]) },
       { label: 'Max Lease TTL', value: duration([secretsEngine.config.maxLeaseTtl]) },
-      { label: 'Identity Token Key', value: secretsEngine.config.identityTokenKey },
+      { label: 'Identity token key', value: secretsEngine.config.identityTokenKey },
     ];
   }
 }
