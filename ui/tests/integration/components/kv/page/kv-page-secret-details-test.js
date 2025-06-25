@@ -126,7 +126,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     assert.dom(PAGE.infoRowValue('foo')).hasText('***********');
     await click(GENERAL.button('toggle-masked'));
     assert.dom(PAGE.infoRowValue('foo')).hasText('bar', 'renders secret value');
-    await click(FORM.toggleJson);
+    await click(GENERAL.toggleInput('json'));
     assert.dom(GENERAL.codeBlock('secret-data')).hasText(
       `Version data {
   "foo": "bar"
@@ -142,8 +142,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     assert.expect(4);
     await this.renderComponent(this.modelComplex);
     assert.dom(PAGE.infoRowValue('foo')).doesNotExist('does not render rows of secret data');
-    assert.dom(FORM.toggleJson).isChecked();
-    assert.dom(FORM.toggleJson).isNotDisabled();
+    assert.dom(GENERAL.toggleInput('json')).isChecked();
+    assert.dom(GENERAL.toggleInput('json')).isNotDisabled();
     assert.dom(GENERAL.codeBlock('secret-data')).exists('hds codeBlock exists');
   });
 

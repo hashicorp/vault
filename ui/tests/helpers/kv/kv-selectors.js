@@ -93,7 +93,6 @@ export const PAGE = {
 export const FORM = {
   inputByAttr: (attr) => `[data-test-input="${attr}"]`,
   fieldByAttr: (attr) => `[data=test=field="${attr}"]`, // formfield
-  toggleJson: '[data-test-toggle-input="json"]',
   toggleMetadata: '[data-test-metadata-toggle]',
   jsonEditor: '[data-test-component="code-mirror-modifier"]',
   ttlValue: (name) => `[data-test-ttl-value="${name}"]`,
