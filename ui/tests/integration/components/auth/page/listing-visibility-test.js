@@ -74,7 +74,7 @@ module('Integration | Component | auth | page | listing visibility', function (h
   module('with a direct link', function (hooks) {
     hooks.beforeEach(function () {
       // if path exists, the mount has listing_visibility="unauth"
-      this.directLinkIsVisibleMount = { path: 'my-oidc/', type: 'oidc' };
+      this.directLinkIsVisibleMount = { path: 'my_oidc/', type: 'oidc' };
       this.directLinkIsJustType = { type: 'okta' };
     });
 
@@ -106,7 +106,7 @@ module('Integration | Component | auth | page | listing visibility', function (h
       assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
       assert.dom(GENERAL.inputByAttr('role')).exists();
       assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
-      assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
+      assert.dom(GENERAL.inputByAttr('path')).hasValue('my_oidc/');
       assert.dom(GENERAL.button('Sign in with other methods')).exists('"Sign in with other methods" renders');
       assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist();
       assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
