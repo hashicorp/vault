@@ -112,7 +112,7 @@ module('Integration | Component | auth | form template', function (hooks) {
         ],
         oidc: [
           {
-            path: 'my-oidc/',
+            path: 'my_oidc/',
             description: '',
             options: {},
             type: 'oidc',
