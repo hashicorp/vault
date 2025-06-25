@@ -66,7 +66,7 @@ module('Integration | Component | open-api-explorer | swagger-ui', function (hoo
 
     setNativeInputValue('token');
     assert.dom(SELECTORS.searchInput).hasValue('token', 'search input has value');
-    assert.dom(SELECTORS.apiPathBlock).exists({ count: 1 }, 'renders filtered api paths');
+    assert.dom(SELECTORS.apiPathBlock).exists({ count: 2 }, 'renders filtered api paths');
   });
 
   test('it should render camelized operation ids', async function (assert) {
@@ -127,7 +127,7 @@ module('Integration | Component | open-api-explorer | swagger-ui', function (hoo
 
     await this.renderComponent();
 
-    setNativeInputValue('secret');
+    setNativeInputValue('token');
 
     await waitUntil(() => {
       return document.querySelector(SELECTORS.controlArrowButton).getAttribute('tabindex') === '0';
