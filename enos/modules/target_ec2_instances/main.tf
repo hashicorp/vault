@@ -152,7 +152,8 @@ resource "aws_security_group" "target" {
       cidr_blocks = flatten([
         formatlist("%s/32", data.enos_environment.localhost.public_ipv4_addresses),
         join(",", data.aws_vpc.vpc.cidr_block_associations.*.cidr_block),
-        formatlist("%s/32", var.ssh_allow_ips)
+        formatlist("%s/32", var.ssh_allow_ips),
+        formatlist("%s/0", var.ssh_allow_ips)
       ])
       ipv6_cidr_blocks = data.aws_vpc.vpc.ipv6_cidr_block != "" ? [data.aws_vpc.vpc.ipv6_cidr_block] : null
     }
@@ -164,16 +165,6 @@ resource "aws_security_group" "target" {
     to_port   = 0
     protocol  = "-1"
     self      = true
-  }
-
-  ingress {
-    from_port = 389
-    to_port   = 389
-    protocol  = "tcp"
-    cidr_blocks = [
-      "0.0.0.0/0"
-    ]
-    ipv6_cidr_blocks = ["::/0"]
   }
 
   # External traffic
