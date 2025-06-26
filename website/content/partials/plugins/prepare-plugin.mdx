@@ -7,21 +7,11 @@ directory name must match the official file name. For example, to register
 `vault-plugin-database-oracle_0.11.0+ent_linux_amd64.zip`, you must extract it
 to the plugin directory as `vault-plugin-database-oracle_0.11.0+ent_linux_amd64/`.
 
-Integration | License    | File   | Path structure
+Integration | License    | Source | Path structure
 ----------- | ---------- | ------ | --------------
-Official    | Enterprise |  Extracted`.zip` | `<plugin_directory>/<extracted-folder-name>/`
-Official    | Community  | Extracted `.zip` | `<plugin_directory>/<extracted-folder-name>/`
-Community   | N/A        | Extracted `.zip` | Not supported
+Official    | Enterprise | `.zip` | `<plugin_directory>/<extracted-folder-name>/`
+Official    | Community  | `.zip` | `<plugin_directory>/<extracted-folder-name>/`
+Community   | N/A        | `.zip` | Not supported
 Official    | Enterprise | binary | Not supported
 Offical     | Community  | binary | `<plugin_directory>/<binary-name>`
 Community   | N/A        | binary | `<plugin_directory>/<binary-name>`
-
-<Note title="Deprecated .zip file support">
-
-Vault v1.20.x removed `.zip` file support for official community plugins.
-Earlier versions of Vault (v1.16.21+, 1.17.17+, 1.18.10+, or 1.19.5+) support
-`.zip` files extracted to `<plugin_directory>/<extracted-folder-name>/` if the
-extracted files include  `metadata.json` and `metadata.json.sig` files that
-authenticate the plugin.
-
-</Note>
