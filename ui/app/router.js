@@ -161,8 +161,9 @@ Router.map(function () {
         });
       });
       this.route('secrets', function () {
-        this.route('backends', { path: '/' }); // this is the list view of all secret engines
+        this.route('backends', { path: '/' }); // this is the list view of all secret engines that ARE enabled
         this.route('mount', function () {
+          // mount.index has the list of mounts on the clients binary, retrieved from the plugin/catalog/secret endpoint (TODO)
           this.route('create', { path: '/:mount_type/create' });
           this.route('edit', { path: '/:mount_name/details' }); // bulk edit of the mount (e.g. pin and reload module)
           // Note: details and edit are handled in the same view
