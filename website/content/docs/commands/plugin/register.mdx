@@ -102,6 +102,6 @@ flags](/vault/docs/commands) included on all commands.
 
 - `-version` `(string: "")` - Semantic version of the plugin. Used as the tag
   when specifying `-oci_image`, but any leading 'v' will automatically be trimmed.
-  This is required to register with a plugin artifact but optional when registering
-  with a plugin binary.
+   You can omit version to register a plugin binary, but you must provide
+   an explicit version to register a plugin artifact.
 
