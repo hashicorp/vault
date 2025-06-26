@@ -204,10 +204,10 @@ func TestTransit_CreateKey(t *testing.T) {
 		shouldError    bool
 		entOnly        bool
 	}{
-		"AES-128": {
+		"AES-128 GCM": {
 			creationParams: map[string]interface{}{"type": "aes128-gcm96"},
 		},
-		"AES-256": {
+		"AES-256 GCM": {
 			creationParams: map[string]interface{}{"type": "aes256-gcm96"},
 		},
 		"CHACHA20": {
@@ -292,6 +292,14 @@ func TestTransit_CreateKey(t *testing.T) {
 		},
 		"Hybrid ML-DSA-87-ECDSA-P521": {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": "87", "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "ml-dsa"},
+			entOnly:        true,
+		},
+		"AES-128 CBC": {
+			creationParams: map[string]interface{}{"type": "aes128-cbc"},
+			entOnly:        true,
+		},
+		"AES-256 CBC": {
+			creationParams: map[string]interface{}{"type": "aes256-cbc"},
 			entOnly:        true,
 		},
 		"bad key type": {
