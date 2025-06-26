@@ -1,0 +1,211 @@
+---
+layout: api
+page_title: /sys/config/ui/login/default-auth - HTTP API
+description: The '/sys/config/ui/login/default-auth' endpoint configures default authentication types that will display on a UI page per namespace.
+---
+
+# `/sys/config/ui/login/default-auth`
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/restricted-admin.mdx'
+
+Use the `/sys/config/ui/login/default-auth` endpoint to list, create, read,
+update, or delete login configurations for the Vault GUI.
+
+Login configurations customize the Vault GUI login form by restricting the
+list of authentication methods listed on the login form.
+
+## Create GUI default login configuration
+
+Use the default configuration endpoint to create a default authentication method for
+the Vault GUI. You can only set one login configuration per namespace, but
+namespaces can inherit configurations from the parent namespace with
+inheritance enabled.
+
+| Method | Path                              |
+| :----- | :-------------------------------- |
+| `POST` | `/sys/config/ui/login/default-auth/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` - Path parameter indicating the name of the
+  configuration. Names can contain letters, numbers, underscores, and dashes.
+
+- `namespace_path` `(string: "")` - Target namespace for the login configuration.
+  Leave `namespace_path` unset to apply the configuration to the `root` namespace.
+
+- `default_auth_type` `(string: <required>)` - The default authentication method.
+  You must provide a default method if `backup_auth_types` is unset. Supported
+  authentication methods include: `github`, `jwt`, `ldap`, `oidc`, `okta`,
+  `radius`, `saml`, `token`, and `userpass`.
+
+- `backup_auth_types` `(array: [])` - A list of backup auth types. Vault
+  presents the backup methods in the `Sign in with other methods` tab. You must
+  provide at least one backup method if `default_auth_types` is unset. Supported
+  authentication methods include: `github`, `jwt`, `ldap`, `oidc`, `okta`,
+  `radius`, `saml`, `token`, and `userpass`.
+
+- `disable_inheritance` `(bool: false)` - Indicates whether child namespaces
+  should inherit `default_auth_type` and `backup_auth_types` settings from their
+  parent. Setting `disable_inheritance` to `true` disallows inheritence.
+
+### Sample payload
+
+```json
+{
+  "namespace_path": "it_admins",
+  "default_auth_type": "okta",
+  "backup_auth_types": ["userpass", "token"],
+  "disable_inheritance": "true"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json
+    http://127.0.0.1:8200/v1/sys/config/ui/login/default-auth/it-admin-rule
+```
+
+## List GUI default login configurations
+
+Return a list of all default configurations for the Vault GUI.
+
+| Method | Path                              |
+| :----- | :-------------------------------- |
+| `LIST` | `/sys/config/ui/login/default-auth` |
+
+### Sample request
+
+```shell-session
+$ curl --header "X-Vault-Token: ..." \
+    --request LIST \
+    http://127.0.0.1:8200/v1/sys/config/ui/login/default-auth
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "key_info": {
+      "default-ldap": {
+        "name":"default-ldap",
+        "namespace_path":"root",
+        "disable_inheritance":false
+      }
+    },
+    "keys":["default-ldap"]
+  }
+}
+```
+
+
+
+## Read GUI default auth configuration
+
+Returns the properties of a specific default authentication configuration.
+
+| Method |                                      |
+| :----- | :----------------------------------- |
+| `GET`  | `/sys/config/ui/login/default-auth/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` - Path parameter indicating the name of login
+  configuration to fetch.
+
+### Sample request
+
+```shell-session
+$ curl --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/config/ui/login/default-auth/it-admin-rule
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "backup_auth_types":["token","userpass"],
+    "default_auth_type":"okta",
+    "disable_inheritance":false,
+    "namespace_path":"it_admins"
+  }
+}
+```
+
+## Update GUI default auth configuration
+
+Update the properties of a specific GUI default auth configuration.
+
+| Method |                                      |
+| :----- | :----------------------------------- |
+| `POST` | `/sys/config/ui/login/default-auth/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` - Path parameter indicating the name of the
+  configuration. Names can contain letters, numbers, underscores, and dashes.
+
+- `namespace_path` `(string: "")` - Target namespace for the login configuration.
+  Leave `namespace_path` unset to update configurations under the `root`
+  namespace.
+
+- `default_auth_type` `(string: <required>)` - The default authentication method.
+  You must provide a default method if `backup_auth_types` is unset. Supported
+  authentication methods include: `github`, `jwt`, `ldap`, `oidc`, `okta`,
+  `radius`, `saml`, `token`, and `userpass`.
+
+- `backup_auth_types` `(array: [])` - A list of backup auth types. Vault
+  presents the backup methods in the `Sign in with other methods` tab. You must
+  provide at least one backup method if `default_auth_types` is unset. Supported
+  authentication methods include: `github`, `jwt`, `ldap`, `oidc`, `okta`,
+  `radius`, `saml`, `token`, and `userpass`.
+
+- `disable_inheritance` `(bool: false)` - Indicates whether child namespaces
+  should inherit `default_auth_type` and `backup_auth_types` settings from their
+  parent. Setting `disable_inheritance` to `true` disallows inheritence.
+
+### Sample payload
+
+```json
+{
+  "namespace_path": "it_admins",
+  "default_auth_type": "ldap",
+  "backup_auth_types": ["userpass", "github"],
+  "disable_inheritance": "true"
+}
+```
+
+### Sample request
+
+```shell-session
+$ curl --header "X-Vault-Token: ..." \
+    --request POST \
+    --data @payload.json
+    http://127.0.0.1:8200/v1/sys/config/ui/login/default-auth/it-admin-rule
+```
+
+## Delete GUI default auth configuration
+
+Delete the target GUI auth configuration.
+
+| Method   |                                      |
+| :------- | :----------------------------------- |
+| `DELETE` | `/sys/config/ui/login/default-auth/:name` |
+
+### Parameters
+
+- `name` `(string: <required>)` - Path parameter indicating the name of the
+  configuration. Names can contain letters, numbers, underscores, and dashes.
+
+### Sample request
+
+```shell-session
+$ curl --header "X-Vault-Token: ..." \
+    http://127.0.0.1:8200/v1/sys/config/ui/login/default-auth/it-admin-rule
+```
