@@ -29,7 +29,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
   });
 
   test('it focuses the search input field when user toggles namespace picker', async function (assert) {
-    await click(GENERAL.toggleInput('namespace-picker'));
+    await click(GENERAL.button('namespace-picker'));
 
     // Verify that the search input field is focused
     const searchInput = find(GENERAL.inputByAttr('Search namespaces'));
@@ -45,7 +45,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     const namespaces = ['beep/boop'];
     await createNSFromPaths(namespaces);
 
-    await click(GENERAL.toggleInput('namespace-picker'));
+    await click(GENERAL.button('namespace-picker'));
     await click(GENERAL.button('Refresh list'));
 
     // Simulate typing into the search input
@@ -79,7 +79,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await login(token);
 
     // Open the namespace picker
-    await click(GENERAL.toggleInput('namespace-picker'));
+    await click(GENERAL.button('namespace-picker'));
 
     // Verify that the root namespace is selected by default
     assert.dom(GENERAL.button('root')).hasAttribute('aria-selected', 'true', 'root is selected by default');
@@ -95,7 +95,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await login();
 
     // Open the namespace picker & verify that the foo namespace does exist
-    await click(GENERAL.toggleInput('namespace-picker'));
+    await click(GENERAL.button('namespace-picker'));
     assert.dom(GENERAL.button(namespace)).exists('foo should exist in the namespace picker');
 
     // Cleanup: Delete namespace(s) via the CLI
@@ -108,7 +108,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     const namespaces = ['beep/boop/bop'];
     await createNSFromPaths(namespaces);
 
-    await click(GENERAL.toggleInput('namespace-picker'));
+    await click(GENERAL.button('namespace-picker'));
     await click(GENERAL.button('Refresh list'));
 
     // Login with a namespace prefixed with /
@@ -116,11 +116,11 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await settled();
 
     assert
-      .dom(GENERAL.toggleInput('namespace-picker'))
+      .dom(GENERAL.button('namespace-picker'))
       .hasText('boop', `shows the namespace 'boop' in the toggle component`);
 
     // Open the namespace picker
-    await click(GENERAL.toggleInput('namespace-picker'));
+    await click(GENERAL.button('namespace-picker'));
 
     // Find the selected element with the check icon & ensure it exists
     assert
@@ -155,15 +155,14 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await visit('/vault/access/namespaces');
 
     // Verify that the namespace exists in the namespace picker
-    await click(GENERAL.toggleInput('namespace-picker'));
-    await waitFor(GENERAL.button('Refresh list'));
+    await click(GENERAL.button('namespace-picker'));
     await click(GENERAL.button('Refresh list'));
     await fillIn(GENERAL.inputByAttr('Search namespaces'), namespace);
 
     assert.dom(GENERAL.button(namespace)).exists('Namespace exists in the namespace picker');
 
     // Close the namespace picker
-    await click(GENERAL.toggleInput('namespace-picker'));
+    await click(GENERAL.button('namespace-picker'));
 
     // Verify that the namespace exists in the manage namespaces page
     await fillIn(GENERAL.filterInputExplicit, namespace);
@@ -183,7 +182,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     assert.dom(GENERAL.emptyStateTitle).hasText('No namespaces yet', 'Namespace deletion successful');
 
     // Verify that the namespace does not exist in the namespace picker
-    await click(GENERAL.toggleInput('namespace-picker'));
+    await click(GENERAL.button('namespace-picker'));
     await waitFor(GENERAL.button('Refresh list'));
     await click(GENERAL.button('Refresh list'));
     await fillIn(GENERAL.inputByAttr('Search namespaces'), namespace);

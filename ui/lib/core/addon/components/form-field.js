@@ -102,7 +102,7 @@ export default class FormFieldComponent extends Component {
       return true;
     } else {
       if (type === 'number' || type === 'string') {
-        if (options?.editType === 'password') {
+        if (options?.editType === 'password' || options?.editType === 'textarea') {
           return true;
         } else {
           return false;
