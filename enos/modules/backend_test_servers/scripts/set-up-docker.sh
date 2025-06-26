@@ -5,6 +5,26 @@
 set -e
 
 [[ -z "$DISTRO" ]] && fail "DISTRO env variable has not been set"
+[[ -z "$IP_VERSION" ]] && fail "IP_VERSION env variable has not been set"
+[[ -z "$LDAP_IP_ADDRESS" ]] && fail "LDAP_IP_ADDRESS env variable has not been set"
+
+# Write Docker IPv6 config
+configure_docker_ipv6() {
+  DOCKER_CONFIG="/etc/docker/daemon.json"
+  echo "Configuring Docker IPv6 in $DOCKER_CONFIG"
+
+  # Write the new config
+  sudo mkdir -p /etc/docker
+  sudo bash -c "cat > $DOCKER_CONFIG" <<EOF
+{
+  "ipv6": true,
+  "fixed-cidr-v6": "$LDAP_IP_ADDRESS"
+}
+EOF
+
+  echo "Restarting Docker..."
+  sudo systemctl restart docker || true
+}
 
 # Checking if docker is installed
 if command -v docker &> /dev/null; then
@@ -13,6 +33,9 @@ if command -v docker &> /dev/null; then
     echo "Detected distro: $DISTRO. Attempting to start and enable Docker..."
     sudo systemctl start docker || true
     sudo systemctl enable docker || true
+    if [[ "$IP_VERSION" == "6" ]]; then
+      configure_docker_ipv6
+    fi
   fi
   exit 0
 fi
@@ -46,3 +69,7 @@ esac
 
 echo "Docker installation complete."
 sudo docker info
+
+if [[ "$IP_VERSION" == "6" ]]; then
+  configure_docker_ipv6
+fi
