@@ -227,6 +227,20 @@ func (s *gRPCSystemViewClient) GenerateIdentityToken(ctx context.Context, req *p
 	}, nil
 }
 
+func (s *gRPCSystemViewClient) GetRotationInformation(ctx context.Context, req *rotation.RotationInfoRequest) (*rotation.RotationInfoResponse, error) {
+	resp, err := s.client.GetRotationInformation(ctx, &pb.RotationInfoRequest{
+		MountPath: req.ReqPath,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &rotation.RotationInfoResponse{
+		NextRotationTime: time.Unix(resp.ExpireTime, 0),
+		LastRotationTime: time.Unix(resp.IssueTime, 0),
+	}, nil
+}
+
 func (s *gRPCSystemViewClient) RegisterRotationJob(ctx context.Context, req *rotation.RotationJobConfigureRequest) (id string, retErr error) {
 	cfgReq := &pb.RegisterRotationJobRequest{
 		Job: &pb.RotationJobInput{
@@ -461,6 +475,26 @@ func (s *gRPCSystemViewServer) GenerateIdentityToken(ctx context.Context, req *p
 	return &pb.GenerateIdentityTokenResponse{
 		Token: res.Token.Token(),
 		TTL:   int64(res.TTL.Seconds()),
+	}, nil
+}
+
+func (s *gRPCSystemViewServer) GetRotationInformation(ctx context.Context, req *pb.RotationInfoRequest) (*pb.RotationInfoReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
+
+	cfgReq := &rotation.RotationInfoRequest{
+		ReqPath: req.MountPath,
+	}
+
+	resp, err := s.impl.GetRotationInformation(ctx, cfgReq)
+	if err != nil {
+		return &pb.RotationInfoReply{}, status.Error(codes.Internal, err.Error())
+	}
+
+	return &pb.RotationInfoReply{
+		IssueTime:  resp.LastRotationTime.Unix(),
+		ExpireTime: resp.NextRotationTime.Unix(),
 	}, nil
 }
 
