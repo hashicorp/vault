@@ -16,15 +16,9 @@ starting your rollback or downgrade.
 
 - **To register and downgrade enterprise plugins, you must have Vault v1.16.16+,
   1.17.12+, 1.18.5+, or 1.19.x+**.
-- **You must have admin permissions for Vault**. Specifically, you must be able
-  to run `plugin register` and the appropriate `enable` command.
-- **You must have [`plugin_directory`](/vault/docs/configuration#plugin_directory)
-  set in your Vault configuration file**.
-- **You must have [`api_addr`](/vault/docs/configuration#api_addr) set in your
-  Vault configuration file**.
-- **If you plan to use a `.zip` file, the plugin must be compatible with the
-  system running Vault**. Vault verifies plugin integrity and checks system
-  compatibility during the registration process for extracted artifacts.
+
+@include 'plugings/common-requirements.mdx'
+
 
 ## Step 1: Prepare the plugin
 

@@ -1,0 +1,12 @@
+- **To register enterprise plugins, you must have Vault v1.16.21+, 1.17.17+,
+  1.18.10+, 1.19.4+, or 1.20+**.
+- **You must have admin permissions for Vault**. Specifically, you must be able
+  to run `plugin register` and the appropriate `enable` command.
+- **You must have
+  [`plugin_directory`](/vault/docs/configuration#plugin_directory) set in your
+  Vault configuration file**.
+- **You must have [`api_addr`](/vault/docs/configuration#api_addr) set in your
+  Vault configuration file**.
+- **If you plan to use a `.zip` file, the plugin must be compatible with the
+  system running Vault**. Vault verifies plugin integrity and checks system
+  compatibility during the registration process for extracted artifacts.
