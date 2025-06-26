@@ -18,7 +18,7 @@ configure_docker_ipv6() {
   sudo bash -c "cat > $DOCKER_CONFIG" << EOF
 {
   "ipv6": true,
-  "fixed-cidr-v6": "$LDAP_IP_ADDRESS"
+  "fixed-cidr-v6": "$LDAP_IP_ADDRESS/64"
 }
 EOF
 
