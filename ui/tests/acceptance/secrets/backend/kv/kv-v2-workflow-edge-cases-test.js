@@ -294,7 +294,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await visit(`/vault/secrets/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'complex');
 
-    await click(FORM.toggleJson);
+    await click(GENERAL.toggleInput('json'));
 
     assert.strictEqual(
       codemirror().getValue(),
@@ -308,8 +308,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
     // Details view
     await click(PAGE.secretTab('Secret'));
-    assert.dom(FORM.toggleJson).isNotDisabled('JSON toggle is not disabled');
-    assert.dom(FORM.toggleJson).isChecked("JSON toggle is checked 'on'");
+    assert.dom(GENERAL.toggleInput('json')).isNotDisabled('JSON toggle is not disabled');
+    assert.dom(GENERAL.toggleInput('json')).isChecked("JSON toggle is checked 'on'");
 
     assert
       .dom(GENERAL.codeBlock('secret-data'))
@@ -317,8 +317,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
     // New version view
     await click(PAGE.detail.createNewVersion);
-    assert.dom(FORM.toggleJson).isNotDisabled();
-    assert.dom(FORM.toggleJson).isChecked();
+    assert.dom(GENERAL.toggleInput('json')).isNotDisabled();
+    assert.dom(GENERAL.toggleInput('json')).isChecked();
     assert.deepEqual(
       codemirror().getValue(),
       `{
@@ -336,7 +336,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await visit(`/vault/secrets/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'json jump');
 
-    await click(FORM.toggleJson);
+    await click(GENERAL.toggleInput('json'));
     codemirror().setCursor({ line: 2, ch: 1 });
     await triggerKeyEvent(GENERAL.codemirrorTextarea, 'keydown', 'Enter');
     const actualCursorPosition = JSON.stringify(codemirror().getCursor());
@@ -359,7 +359,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await visit(`/vault/secrets/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'complex_version_test');
 
-    await click(FORM.toggleJson);
+    await click(GENERAL.toggleInput('json'));
     codemirror().setValue('{ "foo1": { "name": "bar1" } }');
     await click(FORM.saveBtn);
 
@@ -392,8 +392,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await fillIn(FORM.maskedValueInput(), '{bar}');
     await click(FORM.saveBtn);
     await click(GENERAL.overviewCard.actionText('Create new'));
-    assert.dom(FORM.toggleJson).isNotDisabled();
-    assert.dom(FORM.toggleJson).isNotChecked();
+    assert.dom(GENERAL.toggleInput('json')).isNotDisabled();
+    assert.dom(GENERAL.toggleInput('json')).isNotChecked();
   });
 
   // patch is technically enterprise only but stubbing the version so these tests run on both CE and enterprise
