@@ -1,4 +1,6 @@
-### Register with binary
+<Tabs>
+
+<Tab heading="Binary file" group="binary">
 
 <Tabs>
 
@@ -133,22 +135,16 @@
 
 </Tabs>
 
-### Register with artifact
+</Tab>
 
-<Tip>
-When registering a HashiCorp official plugin with an extracted artifact directory, 
-the plugin must be compatible with the system that runs Vault and saved to the 
-plugin directory unzipped with the name provided on the HashiCorp releases page.
-Vault Enterprise verifies plugin integrity and checks system compatibility during
-the registration process.
-</Tip>
+<Tab heading=".zip file" group="zip">
 
 <Tabs>
 
 <Tab heading="CLI" group="cli">
 
-1. Use [`vault plugin register`](/vault/docs/commands/plugin/register) to add your
-   plugin to the catalog by specifying `-version` only without `-sha256`:
+1. Use [`vault plugin register`](/vault/docs/commands/plugin/register) to add
+   your plugin to the catalog using `-version`. Do not provide a SHA value:
 
     ```shell-session
     $ vault plugin register
@@ -157,7 +153,8 @@ the registration process.
         <plugin_name>
     ```
 
-    For example, to register the `vault-plugin-secrets-keymgmt` plugin with extracted artifact directory `vault-plugin-secrets-keymgmt_0.16.0+ent_linux_amd64/`:
+  For example, to register the `vault-plugin-secrets-keymgmt` plugin with the
+  extracted artifact directory `vault-plugin-secrets-keymgmt_0.16.0+ent_linux_amd64/`:
 
   <CodeBlockConfig hideClipboard="true">
 
@@ -176,7 +173,7 @@ the registration process.
 
 <Tab heading="API" group="api">
 
-1. Save the version for your plugin extracted artifact to a JSON file:
+1. Save the version information for your extracted plugin folder to a JSON file:
 
     ```shell-session
     $ cat <<-EOF > data.json
@@ -186,7 +183,9 @@ the registration process.
     EOF
     ```
 
-    For example, to create a data file for the `vault-plugin-secrets-keymgmt` plugin with extracted artifact directory `vault-plugin-secrets-keymgmt_0.16.0+ent_linux_amd64/`:
+    For example, to create a data file for the `vault-plugin-secrets-keymgmt`
+    plugin with the extracted artifact directory
+    `vault-plugin-secrets-keymgmt_0.16.0+ent_linux_amd64/`:
 
     <CodeBlockConfig hideClipboard="true">
 
@@ -196,8 +195,6 @@ the registration process.
       "version": "v0.16.0+ent"
     }
     EOF
-    $
-    
     ```
     </CodeBlockConfig>
 
@@ -212,7 +209,8 @@ the registration process.
       ${VAULT_ADDR}/v1/sys/plugins/catalog/<plugin_type>/<plugin_name>
     ```
 
-    For example, to register the `vault-plugin-secrets-keymgmt` plugin with extracted artifact directory `vault-plugin-secrets-keymgmt_0.16.0+ent_linux_amd64/`:
+    For example, to register the `vault-plugin-secrets-keymgmt` plugin with the
+    extracted artifact directory `vault-plugin-secrets-keymgmt_0.16.0+ent_linux_amd64/`:
 
     <CodeBlockConfig hideClipboard="true">
 
@@ -234,7 +232,7 @@ the registration process.
       --request GET                             \
       --header "X-Vault-Token: ${VAULT_TOKEN}"  \
       ${VAULT_ADDR}/v1/sys/plugins/catalog      \
-      | jq '.data.detailed | .[] | select(.name =="vault-plugin-secrets-keymgmt")'
+      | jq '.data.detailed | .[] | select(.name =="<plugin_name>")'
     ```
 
     For example:
@@ -263,3 +261,6 @@ the registration process.
 
 </Tabs>
 
+</Tab>
+
+</Tabs>
