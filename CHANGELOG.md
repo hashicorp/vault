@@ -183,7 +183,43 @@ intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/3
 * ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 * ui: Redirect users authenticating with Vault as an OIDC provider to log in again when token expires. [[GH-30838](https://github.com/hashicorp/vault/pull/30838)]
 
-## 1.19.5
+## 1.19.6 Enterprise
+### June 25, 2025
+
+**Enterprise LTS:** Vault Enterprise 1.19 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+SECURITY:
+
+* core: require a nonce when cancelling a rekey operation that was initiated within the last 10 minutes. [[GH-30794](https://github.com/hashicorp/vault/pull/30794)],[[HCSEC-2025-11](https://discuss.hashicorp.com/t/hcsec-2025-11-vault-vulnerable-to-recovery-key-cancellation-denial-of-service/75570)]
+
+CHANGES:
+
+* api: Update the default API client to check for the `Retry-After` header and, if it exists, wait for the specified duration before retrying the request. [[GH-30887](https://github.com/hashicorp/vault/pull/30887)]
+* auth/azure: Update plugin to v0.20.5
+* core: Bump Go version to 1.24.4.
+* quotas/rate-limit: Round up the `Retry-After` value to the nearest second when calculating the retry delay. [[GH-30887](https://github.com/hashicorp/vault/pull/30887)]
+* secrets/azure: Update plugin to v0.21.4 [[GH-30833](https://github.com/hashicorp/vault/pull/30833)]
+* secrets/database: Update vault-plugin-database-snowflake to v0.13.2 [[GH-30867](https://github.com/hashicorp/vault/pull/30867)]
+
+IMPROVEMENTS:
+
+* core: Improve memory use of path management for namespaces, auth methods, and secrets engines. Now Vault should handle larger numbers of namespaces and multiple instances of the same secrets engine or auth method more efficiently. [[GH-31022](https://github.com/hashicorp/vault/pull/31022)]
+
+DEPRECATIONS:
+
+* core: deprecate duplicate attributes in HCL configuration files and policy definitions [[GH-30386](https://github.com/hashicorp/vault/pull/30386)]
+
+BUG FIXES:
+
+* core: Fix string contains check in Identity APIs to be case-insensitive. [[GH-31045](https://github.com/hashicorp/vault/pull/31045)]
+* core: Omit automatic version control information of the main module from compiled Vault binaries [[GH-30926](https://github.com/hashicorp/vault/pull/30926)]
+* secrets/database: Treat all rotation_schedule values as UTC to ensure consistent behavior. [[GH-30606](https://github.com/hashicorp/vault/pull/30606)]
+* secrets/transit (enterprise): ensure verify endpoint always returns valid field in batch_results with CMAC
+* secrets/transit: ensure verify endpoint always returns valid field in batch_results with HMAC [[GH-30852](https://github.com/hashicorp/vault/pull/30852)]
+* ui/kmip: Fixes KMIP credentials view and displays `private_key` after generating [[GH-30778](https://github.com/hashicorp/vault/pull/30778)]
+* ui: Redirect users authenticating with Vault as an OIDC provider to log in again when token expires. [[GH-30838](https://github.com/hashicorp/vault/pull/30838)]
+
+## 1.19.5 Enterprise
 ### May 30, 2025
 
 **Enterprise LTS:** Vault Enterprise 1.19 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
@@ -549,7 +585,31 @@ Unblocks customers that were stuck in a failing loop when attempting to rotate s
 * ui: No longer running decodeURIComponent on KVv2 list view allowing percent encoded data-octets in path name. [[GH-28698](https://github.com/hashicorp/vault/pull/28698)]
 * vault/diagnose: Fix time to expiration reporting within the TLS verification to not be a month off. [[GH-29128](https://github.com/hashicorp/vault/pull/29128)]
 
-## 1.18.10
+## 1.18.11 Enterprise
+### June 25, 2025
+
+SECURITY:
+
+* core: require a nonce when cancelling a rekey operation that was initiated within the last 10 minutes. [[GH-30794](https://github.com/hashicorp/vault/pull/30794)],[[HCSEC-2025-11](https://discuss.hashicorp.com/t/hcsec-2025-11-vault-vulnerable-to-recovery-key-cancellation-denial-of-service/75570)]
+
+CHANGES:
+
+* api: Update the default API client to check for the `Retry-After` header and, if it exists, wait for the specified duration before retrying the request. [[GH-30887](https://github.com/hashicorp/vault/pull/30887)]
+* auth/azure: Update plugin to v0.19.5
+* core: Bump Go version to 1.23.10.
+* quotas/rate-limit: Round up the `Retry-After` value to the nearest second when calculating the retry delay. [[GH-30887](https://github.com/hashicorp/vault/pull/30887)]
+* secrets/azure: Update plugin to v0.20.3
+* secrets/database: Update vault-plugin-database-snowflake to v0.12.2
+
+BUG FIXES:
+
+* core: Fix string contains check in Identity APIs to be case-insensitive. [[GH-31045](https://github.com/hashicorp/vault/pull/31045)]
+* secrets/database: Treat all rotation_schedule values as UTC to ensure consistent behavior. [[GH-30606](https://github.com/hashicorp/vault/pull/30606)]
+* secrets/transit (enterprise): ensure verify endpoint always returns valid field in batch_results with CMAC
+* secrets/transit: ensure verify endpoint always returns valid field in batch_results with HMAC [[GH-30852](https://github.com/hashicorp/vault/pull/30852)]
+* ui: Redirect users authenticating with Vault as an OIDC provider to log in again when token expires. [[GH-30838](https://github.com/hashicorp/vault/pull/30838)]
+
+## 1.18.10 Enterprise
 ### May 30, 2025
 
 CHANGES:
@@ -1019,7 +1079,32 @@ use versioned plugins. [[GH-27881](https://github.com/hashicorp/vault/pull/27881
 * ui: fixes renew-self being called right after login for non-renewable tokens [[GH-28204](https://github.com/hashicorp/vault/pull/28204)]
 * ui: fixes toast (flash) alert message saying "created" when deleting a kv v2 secret [[GH-28093](https://github.com/hashicorp/vault/pull/28093)]
 
-## 1.17.17
+## 1.17.18 Enterprise
+### June 25, 2025
+
+SECURITY:
+
+* core: require a nonce when cancelling a rekey operation that was initiated within the last 10 minutes. [[GH-30794](https://github.com/hashicorp/vault/pull/30794)],[[HCSEC-2025-11](https://discuss.hashicorp.com/t/hcsec-2025-11-vault-vulnerable-to-recovery-key-cancellation-denial-of-service/75570)]
+
+CHANGES:
+
+* api: Update the default API client to check for the `Retry-After` header and, if it exists, wait for the specified duration before retrying the request. [[GH-30887](https://github.com/hashicorp/vault/pull/30887)]
+* auth/azure: Update plugin to v0.18.4
+* core: Bump Go version to 1.23.10
+* quotas/rate-limit: Round up the `Retry-After` value to the nearest second when calculating the retry delay. [[GH-30887](https://github.com/hashicorp/vault/pull/30887)]
+* secrets/azure: Update plugin to v0.19.4
+* secrets/database: Update vault-plugin-database-snowflake to v0.11.2
+
+BUG FIXES:
+
+* core: Fix string contains check in Identity APIs to be case-insensitive. [[GH-31045](https://github.com/hashicorp/vault/pull/31045)]
+* secrets/database: Treat all rotation_schedule values as UTC to ensure consistent behavior. [[GH-30606](https://github.com/hashicorp/vault/pull/30606)]
+* secrets/transit (enterprise): ensure verify endpoint always returns valid field in batch_results with CMAC
+* secrets/transit: ensure verify endpoint always returns valid field in batch_results with HMAC [[GH-30852](https://github.com/hashicorp/vault/pull/30852)]
+* ui: Redirect users authenticating with Vault as an OIDC provider to log in again when token expires. [[GH-30838](https://github.com/hashicorp/vault/pull/30838)]
+
+
+## 1.17.17 Enterprise
 ### May 30, 2025
 
 CHANGES:
@@ -1634,8 +1719,32 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 * ui: fixed a bug where the replication pages did not update display when navigating between DR and performance [[GH-26325](https://github.com/hashicorp/vault/pull/26325)]
 * ui: fixes undefined start time in filename for downloaded client count attribution csv [[GH-26485](https://github.com/hashicorp/vault/pull/26485)]
 
-## 1.16.21
+## 1.16.22 Enterprise
+### June 25, 2025
+
+**Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+SECURITY:
+
+* core: require a nonce when cancelling a rekey operation that was initiated within the last 10 minutes. [[GH-30794](https://github.com/hashicorp/vault/pull/30794)],[[HCSEC-2025-11](https://discuss.hashicorp.com/t/hcsec-2025-11-vault-vulnerable-to-recovery-key-cancellation-denial-of-service/75570)]
+
+CHANGES:
+
+* auth/azure: Update plugin to v0.17.5
+* core: Bump Go version to 1.23.10
+* secrets/azure: Update plugin to v0.17.5
+* secrets/database: Update vault-plugin-database-snowflake to v0.10.3
+
+BUG FIXES:
+
+* core: Fix string contains check in Identity APIs to be case-insensitive. [[GH-31045](https://github.com/hashicorp/vault/pull/31045)]
+* secrets/database: Treat all rotation_schedule values as UTC to ensure consistent behavior. [[GH-30606](https://github.com/hashicorp/vault/pull/30606)]
+
+## 1.16.21 Enterprise
 ### May 30, 2025
+
+**Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
 
 CHANGES:
 
