@@ -11,7 +11,13 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
-import { createTokenCmd, deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
+import {
+  createTokenCmd,
+  deleteEngineCmd,
+  mountEngineCmd,
+  runCmd,
+  tokenWithPolicyCmd,
+} from 'vault/tests/helpers/commands';
 import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import { MOUNT_BACKEND_FORM } from '../helpers/components/mount-backend-form-selectors';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
@@ -113,37 +119,52 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await runCmd(deleteEngineCmd('kv'));
   });
 
-  test('enterprise: cannot view list without permissions inside namespace', async function (assert) {
+  test('enterprise: cannot view list without permissions inside a namespace', async function (assert) {
     this.namespace = `ns-${this.uid}`;
-
     const enginePath1 = `kv-t1-${this.uid}`;
-    const userDefault = await runCmd(createTokenCmd()); // creates default user token
-    await runCmd(mountEngineCmd('kv', enginePath1)); // mounts a kv engine in root namespace
+    const userDefault = await runCmd(createTokenCmd()); // creates a default user token
 
-    await runCmd([`write sys/namespaces/${this.namespace} -force`]); // creates a default namespace
-    await loginNs(this.namespace, userDefault); // logs into default namespace with a default user token
+    await runCmd([`write sys/namespaces/${this.namespace} -force`]); // creates a namespace
+    await loginNs(this.namespace); //logs into namespace with root token
+    await runCmd(mountEngineCmd('kv', enginePath1)); // mounts a kv engine in namespace
 
-    await visit('/vault/secrets');
-    assert.strictEqual(currentURL(), `/vault/secrets`, 'Should be on main secret engines list page.');
+    await loginNs(this.namespace, userDefault); // logs into that same namespace with a default user token
+
+    await visit(`/vault/secrets?namespace=${this.namespace}`); // nav to specified namespace list
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets?namespace=${this.namespace}`,
+      'Should be on main secret engines list page within namespace.'
+    );
     assert.dom(SES.secretsBackendLink(enginePath1)).doesNotExist(); // without permissions, engine should not show for this user
-
-    // cleanup
-    await runCmd(deleteEngineCmd(enginePath1));
   });
 
-  test('enterprise: can view list with permissions inside namespace', async function (assert) {
+  test('enterprise: can view list with permissions inside a namespace', async function (assert) {
     this.namespace = `ns-${this.uid}`;
     const enginePath1 = `kv-t2-${this.uid}`;
-    await runCmd(mountEngineCmd('kv', enginePath1));
+    const userToken = await runCmd(
+      tokenWithPolicyCmd(
+        'policy',
+        `path "${this.namespace}/sys/*" {
+          capabilities = ["create", "read", "update", "delete", "list"]
+        }`
+      )
+    );
+
     await runCmd([`write sys/namespaces/${this.namespace} -force`]);
+    await loginNs(this.namespace, userToken); // logs into namespace with user token
+    await runCmd(mountEngineCmd('kv', enginePath1)); // mount kv engine as user
+
     await loginNs(this.namespace); // logs into namespace with root token
-    await visit('/vault/secrets');
-    assert.strictEqual(currentURL(), `/vault/secrets`, 'Should be on main secret engines list page.');
 
-    assert.dom(SES.secretsBackendLink(enginePath1)).exists(); // with root permissions, able to see the engine in list
+    await visit(`/vault/secrets?namespace=${this.namespace}`); // nav to specified namespace list
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets?namespace=${this.namespace}`,
+      'Should be on main secret engines list page within namespace.'
+    );
 
-    // cleanup
-    await runCmd(deleteEngineCmd(enginePath1));
+    assert.dom(SES.secretsBackendLink(enginePath1)).exists(); // with permissions, able to see the engine in list
   });
 
   test('after disabling it stays on the list view', async function (assert) {
