@@ -10,6 +10,7 @@ import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CSP_ERROR } from 'vault/components/auth/page';
 import setupTestContext from './setup-test-context';
+import sinon from 'sinon';
 
 /*
 The AuthPage parents much of the authentication workflow and so it can be used to test lots of auth functionality.
@@ -77,6 +78,8 @@ module('Integration | Component | auth | page', function (hooks) {
   });
 
   test('it selects type in the dropdown if direct link just has type', async function (assert) {
+    const stub = sinon.stub(this.owner.lookup('service:router'), 'urlFor').returns('123-example.com');
+
     this.directLinkData = { type: 'oidc' };
     await this.renderComponent();
     assert.dom(AUTH_FORM.tabBtn('oidc')).doesNotExist('tab does not render');
@@ -89,5 +92,6 @@ module('Integration | Component | auth | page', function (hooks) {
     assert
       .dom(GENERAL.button('Sign in with other methods'))
       .doesNotExist('"Sign in with other methods" does not render');
+    stub.restore();
   });
 });

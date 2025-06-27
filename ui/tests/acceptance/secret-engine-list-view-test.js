@@ -136,7 +136,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     this.backend = `bk-${this.uid}`;
     this.namespace = `ns-${this.uid}`;
     await runCmd([`write sys/namespaces/${this.namespace} -force`]);
-    await loginNs(this.namespace, ' ');
+    await loginNs(this.namespace);
 
     await visit('/vault/secrets');
     assert.dom(SES.secretsBackendLink('cubbyhole')).doesNotExist();

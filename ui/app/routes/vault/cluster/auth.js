@@ -7,7 +7,7 @@ import { service } from '@ember/service';
 import ClusterRouteBase from './cluster-route-base';
 import config from 'vault/config/environment';
 import { isEmptyValue } from 'core/helpers/is-empty-value';
-import { supportedTypes } from 'vault/utils/supported-login-methods';
+import { supportedTypes } from 'vault/utils/auth-form-helpers';
 import { sanitizePath } from 'core/utils/sanitize-path';
 
 export default class AuthRoute extends ClusterRouteBase {
@@ -80,12 +80,14 @@ export default class AuthRoute extends ClusterRouteBase {
   async unwrapToken(token, clusterId) {
     try {
       const { auth } = await this.api.sys.unwrap({}, this.api.buildHeaders({ token }));
-      return await this.auth.authenticate({
-        clusterId,
-        backend: 'token',
-        data: { token: auth.clientToken },
-        selectedAuth: 'token',
-      });
+      const authData = {
+        ...auth,
+        authMethodType: 'token',
+        authMountPath: '',
+        token: auth.clientToken,
+        ttl: auth.leaseDuration,
+      };
+      return await this.auth.authSuccess(clusterId, authData);
     } catch (e) {
       const { message } = await this.api.parseError(e);
       this.controllerFor('vault.cluster.auth').unwrapTokenError = message;

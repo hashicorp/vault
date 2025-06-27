@@ -10,6 +10,7 @@ import { tracked } from '@glimmer/tracking';
 import { action, set } from '@ember/object';
 import { task, timeout } from 'ember-concurrency';
 import { numberToWord } from 'vault/helpers/number-to-word';
+import errorMessage from 'vault/utils/error-message';
 /**
  * @module MfaForm
  * The MfaForm component is used to enter a passcode when mfa is required to login
@@ -19,7 +20,7 @@ import { numberToWord } from 'vault/helpers/number-to-word';
  * <Mfa::MfaForm @clusterId={this.model.id} @authData={this.authData} />
  * ```
  * @param {string} clusterId - id of selected cluster
- * @param {object} authData - data from initial auth request -- { mfa_requirement, backend, data }
+ * @param {object} authData - data from initial auth request -- { mfaRequirement, backend, data }
  * @param {function} onSuccess - fired when passcode passes validation
  * @param {function} onError - fired for multi-method or non-passcode method validation errors
  */
@@ -46,7 +47,7 @@ export default class MfaForm extends Component {
   }
 
   get constraints() {
-    return this.args.authData.mfa_requirement.mfa_constraints;
+    return this.args.authData.mfaRequirement.mfaConstraints;
   }
   get multiConstraint() {
     return this.constraints.length > 1;
@@ -98,8 +99,7 @@ export default class MfaForm extends Component {
       } else if (this.singlePasscode) {
         this.error = TOTP_VALIDATION_ERROR;
       } else {
-        const errorMessage = this.auth.handleError(error).join('. ');
-        this.args.onError(errorMessage);
+        this.args.onError(errorMessage(error));
       }
     }
   }

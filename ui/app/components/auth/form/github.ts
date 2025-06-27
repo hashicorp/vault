@@ -5,6 +5,8 @@
 
 import AuthBase from './base';
 
+import type { GithubLoginApiResponse } from 'vault/vault/auth/methods';
+
 /**
  * @module Auth::Form::Github
  * see Auth::Base
@@ -12,4 +14,18 @@ import AuthBase from './base';
 
 export default class AuthFormGithub extends AuthBase {
   loginFields = [{ name: 'token', label: 'Github token' }];
+
+  async loginRequest(formData: { path: string; token: string }) {
+    const { path, token } = formData;
+
+    const { auth } = <GithubLoginApiResponse>await this.api.auth.githubLogin(path, {
+      token,
+    });
+
+    return this.normalizeAuthResponse(auth, {
+      path,
+      tokenKey: 'clientToken',
+      ttlKey: 'leaseDuration',
+    });
+  }
 }

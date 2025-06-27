@@ -39,7 +39,7 @@ export default Controller.extend({
 
   updateNamespace: task(function* (value) {
     const ns = this.fullNamespaceFromInput(value);
-    this.namespaceService.setNamespace(ns, true);
+    this.namespaceService.setNamespace(ns);
     yield this.customMessages.fetchMessages();
     this.set('namespaceQueryParam', ns);
     // if user is inputting a namespace, maintain input focus as the param updates

@@ -24,9 +24,9 @@
     }
   }
 
-  .copy-to-clipboard 
-  {
-    &:focus, &:focus-visible {
+  .copy-to-clipboard {
+    &:focus,
+    &:focus-visible {
       width: size_variables.$size-4;
     }
   }
