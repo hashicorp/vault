@@ -54,6 +54,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await writeSecret(this.backend, this.fullSecretPath, 'foo', 'bar');
     await writeSecret(this.backend, 'edge/one', 'foo', 'bar');
     await writeSecret(this.backend, 'edge/two', 'foo', 'bar');
+    // create a secret with an underscore in the path name because this
+    await writeSecret(this.backend, 'my_secret', 'foo', 'bar');
     return;
   });
 
@@ -194,6 +196,20 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert.dom(PAGE.breadcrumbAtIdx(1)).hasText(backend);
       assert.dom(PAGE.secretTab('Secrets')).doesNotHaveClass('is-active');
       assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('is-active');
+    });
+
+    // the user in the setup only has list permissions and cannot access the subkeys endpoint
+    test('it navigates to secret without access to the subkeys endpoint', async function (assert) {
+      assert.expect(2);
+      await visit(`/vault/secrets/${this.backend}/kv/list`);
+      await typeIn(PAGE.list.overviewInput, 'my_secret');
+      await click(GENERAL.submitButton);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.backend}/kv/my_secret`,
+        'it navigates to secret overview'
+      );
+      assert.dom(GENERAL.overviewCard.container('Paths')).exists();
     });
   });
 

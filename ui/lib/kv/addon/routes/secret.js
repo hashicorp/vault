@@ -37,7 +37,7 @@ export default class KvSecretRoute extends Route {
     return null;
   }
 
-  isPatchAllowed({ capabilities, subkeysMeta }) {
+  isPatchAllowed({ capabilities, subkeysMeta = {} }) {
     if (!this.version.isEnterprise) return false;
     const canReadSubkeys = capabilities.subkeys.canRead;
     const canPatchData = capabilities.data.canPatch;
