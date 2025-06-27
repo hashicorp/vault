@@ -47,9 +47,6 @@ export const PKI_DELETE_ALL_ISSUERS = {
 export const PKI_GENERATE_ROOT = {
   mainSectionTitle: '[data-test-generate-root-title="Root parameters"]',
   urlSectionTitle: '[data-test-generate-root-title="Issuer URLs"]',
-  keyParamsGroupToggle: '[data-test-toggle-group="Key parameters"]',
-  sanGroupToggle: '[data-test-toggle-group="Subject Alternative Name (SAN) Options"]',
-  additionalGroupToggle: '[data-test-toggle-group="Additional subject fields"]',
   toggleGroupDescription: '[data-test-toggle-group-description]',
   groupFields: (group: string) => `[data-test-group="${group}"] [data-test-field]`,
   formInvalidError: '[data-test-pki-generate-root-validation-error]',
@@ -110,22 +107,15 @@ export const PKI_NOT_VALID_AFTER = {
 };
 
 export const PKI_ROLE_FORM = {
-  domainHandling: '[data-test-toggle-group="Domain handling"]',
-  keyParams: '[data-test-toggle-group="Key parameters"]',
-  keyUsage: '[data-test-toggle-group="Key usage"]',
   digitalSignature: '[data-test-checkbox="DigitalSignature"]',
   keyAgreement: '[data-test-checkbox="KeyAgreement"]',
   keyEncipherment: '[data-test-checkbox="KeyEncipherment"]',
   any: '[data-test-checkbox="Any"]',
   serverAuth: '[data-test-checkbox="ServerAuth"]',
-  policyIdentifiers: '[data-test-toggle-group="Policy identifiers"]',
-  san: '[data-test-toggle-group="Subject Alternative Name (SAN) Options"]',
-  additionalSubjectFields: '[data-test-toggle-group="Additional subject fields"]',
 };
 
 export const PKI_ROLE_GENERATE = {
   form: '[data-test-pki-generate-cert-form]',
-  optionsToggle: '[data-test-toggle-group="Subject Alternative Name (SAN) Options"]',
   downloadButton: '[data-test-pki-cert-download-button]',
   revokeButton: '[data-test-pki-cert-revoke-button]',
 };

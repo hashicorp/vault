@@ -1,0 +1,175 @@
+---
+layout: docs
+page_title: Automate cluster snapshots
+description: >-
+  Automatically back up the data in your Vault cluster.
+---
+
+## Automate Vault cluster snapshots
+
+@include 'alerts/enterprise-only.mdx'
+
+You can configure Vault Enterprise to regularly save automated snapshots to
+local or cloud storage.
+
+
+## Before you start
+
+- **You must a working knowledge of how Vault saves data**.
+- **You must have a valid Vault cluster configuration using integratd storage**.
+- **You must know, and be able to contact your unseal/recovery key holders**.
+- **You must have permission to access encrypted data in backed storage**.
+- **You should have a secure location, away from your Vault cluster
+  infrastructure, to save the snapshot file**.
+
+
+
+## Step 1: Determine your snapshot settings 
+
+Vault can write snapshots to local storage and cloud storage. For longterm
+maintenance, we recommend saving your autosnapshot settings to a JSON file.
+
+### Local storage example 
+
+The following JSON file, `local-snapshot.json`, defines an automated snapshot
+configuration that uses local storage with custom file and path prefixs. The
+configuration also sets a 120 minute snapshot frequency, a retention window of 7
+snapshots before deleting, and limits the amount of local storage consumed by
+the snapshot files so Vault stops writing snapshot data if the combined file
+size exceed 250 MB (262144000 bytes).
+
+```json
+{
+  "storage_type": "local",
+  "file_prefix": "localsnappy",
+  "interval": "120m",
+  "retain": "7",
+  "local_max_space": "262144000",
+  "path_prefix": "/opt/vault/"
+}
+```
+
+
+### Cloud storage example 
+
+The following JSON file, `aws-snapshot.json`, defines an automated snapshot
+configuration that uses AWS S3 cloud storage, customizes AWS configuration
+options (bucket name, the region, and required credentials), and protects the
+snapshots with server side encryption.
+
+```json
+{
+  "storage_type": "aws-s3",
+  "file_prefix": "paris",
+  "interval": "8h",
+  "retain": 30,
+  "local_max_space": 2621440000,
+  "path_prefix": "primary",
+  "aws_s3_bucket": "vault-snapshots",
+  "aws_s3_region": "eu-west-3",
+  "aws_access_key_id": "ASI...COFFEE",
+  "aws_secret_access_key": "wJalr...COFFEEKEY",
+  "aws_session_token": "IQoJb3JpZ2luX2IQ...COFFEE",
+  "aws_s3_server_side_encryption": "true"
+}
+```
+
+
+
+## Step 2: Apply the snapshot configuration
+
+<Note>
+
+For disaster recovery and performance replication environments, you must
+configure automated snapshots separately for the primary and secondary clusters.
+
+</Note>
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+Run `vault write` with the
+[`/sys/storage/raft/snapshot-auto`](/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config)
+path and your snapshot configuration to enable automated snapshots:
+
+```shell-session
+$ vault write                                                   \
+    sys/storage/raft/snapshot-auto/config/<configuration_name>  \
+    @<configuration_file>
+```
+
+For example, to configure automated snapshots with local storage in an
+unreplicated envionrment:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault write                                         \
+    sys/storage/raft/snapshot-auto/config/local-snaps \
+    @local-snapshot.json
+```
+
+</CodeBlockConfig>
+
+Or, to configure automated snapshots with AWS storage for a primary cluster
+located in Paris called `paris-primary`:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault write                                           \
+    sys/storage/raft/snapshot-auto/config/paris-primary \
+    @aws-snapshot.json
+```
+
+</CodeBlockConfig>
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+Call the
+[`/sys/storage/raft/snapshot-auto`](/vault/api-docs/system/storage/raftautosnapshots#create-update-an-automated-snapshots-config)
+endpoint with your configuration file to enable automated snapshots:
+
+```shell-session
+$ curl                                          \
+    --request POST                              \
+    --header "X-Vault-Token: ${VAULT_TOKEN}"    \
+    --data @<configuration_file>                \
+    ${VAULT_ADDR}/v1/sys/storage/raft/snapshot-auto/config/<configuration_name>
+```
+
+For example, to configure automated snapshots with local storage in an
+unreplicated envionrment called `local-snaps`:
+
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault write                                         \
+    sys/storage/raft/snapshot-auto/config/local-snaps \
+    @local-snapshot.json
+```
+
+</CodeBlockConfig>
+
+Or, to configure automated snapshots with AWS storage for a primary cluster
+located in Paris called `paris-primary`:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ curl                                       \
+    --request POST                           \
+    --header "X-Vault-Token: ${VAULT_TOKEN}" \
+    --data @aws-snapshot.json                \
+    ${VAULT_ADDR}/v1/sys/storage/raft/snapshot-auto/config/paris-primary
+```
+
+</CodeBlockConfig>
+
+</Tab>
+
+</Tabs>

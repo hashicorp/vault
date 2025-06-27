@@ -146,10 +146,10 @@ entities attempting to login.
   [LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#labelselector-v1-meta). Currently, label selectors with `matchExpressions` are not supported.
   To use label selectors, **Vault must have permission to read namespaces** on the Kubernetes
   cluster. If set with `bound_service_account_namespaces`, the conditions are `OR`ed.
-- `audience` `(string: "")` - Optional Audience claim to verify in the JWT.
+- `audience` `(string: "")` - Audience claim to verify in the JWT. Will be required in Vault 1.21+.
 - `alias_name_source` `(string: "serviceaccount_uid")` - Configures how identity aliases are generated.
   Valid choices are: `serviceaccount_uid` and `serviceaccount_name`.
-  
+
   When you specify `serviceaccount_uid`, Vault uses a machine generated UID from
   the service account as the identity alias name. Using a service account UID is
   both the default and the recommended method as it the more secure option.
