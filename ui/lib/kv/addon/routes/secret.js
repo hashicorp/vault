@@ -41,7 +41,7 @@ export default class KvSecretRoute extends Route {
     if (!this.version.isEnterprise) return false;
     const canReadSubkeys = capabilities.subkeys.canRead;
     const canPatchData = capabilities.data.canPatch;
-    if (canReadSubkeys && canPatchData) {
+    if (canReadSubkeys && canPatchData && subkeysMeta) {
       const { deletion_time, destroyed } = subkeysMeta;
       const isLatestActive = isDeleted(deletion_time) || destroyed ? false : true;
       // only the latest secret version can be patched and it must not be deleted or destroyed
