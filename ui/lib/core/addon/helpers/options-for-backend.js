@@ -69,6 +69,7 @@ const SECRET_BACKENDS = {
     displayName: 'Key Management',
     navigateTree: false,
     listItemPartial: 'secret-list/item',
+    newConfigurationPattern: true,
     tabs: [
       {
         name: 'key',

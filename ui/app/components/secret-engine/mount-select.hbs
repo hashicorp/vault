@@ -1,0 +1,23 @@
+<div class="flex row-wrap row-gap-8 column-gap-16 has-bottom-padding-m">
+  {{#each @mountsArray as |mount|}}
+    {{#let (engines-display-data mount) as |mountObject|}}
+      {{! TODO: replace with Hds::Card::Container }}
+      {{#if mountObject}}
+        <SelectableCard
+          id={{mountObject.type}}
+          class="has-top-padding-l has-text-centered small-card"
+          @onClick={{fn this.selectMount mountObject.type}}
+          {{!-- @disabled={{if type.requiredFeature (not (has-feature type.requiredFeature)) false}} --}}
+        >
+          <Icon @name={{mountObject.glyph}} @size="24" class="has-bottom-margin-xs" />
+          <Hds::Text::Body @tag="h3" @size="300">
+            {{mountObject.displayName}}
+          </Hds::Text::Body>
+          {{#if (and mountObject.requiredFeature (not (has-feature mountObject.requiredFeature)))}}
+            <Hds::Badge @text="Enterprise" @icon="enterprise" @size="small" />
+          {{/if}}
+        </SelectableCard>
+      {{/if}}
+    {{/let}}
+  {{/each}}
+</div>
