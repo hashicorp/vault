@@ -170,10 +170,27 @@ export default class ShowcaseController extends Controller {
         };
       }
     } else if (editType === 'dateTimeLocal') {
-      if (variant === 'with validation errors') {
+      if (variant === 'with validation errors and warnings') {
         modelValidations.dateTimeLocal = {
           isValid: false,
           errors: ['This is the validation error message #1', 'This is the validation error message #2'],
+          warnings: [
+            'This is the validation warning message #1',
+            'This is the validation warning message #2',
+          ],
+        };
+      } else if (variant === 'with validation errors') {
+        modelValidations.dateTimeLocal = {
+          isValid: false,
+          errors: ['This is the validation error message #1', 'This is the validation error message #2'],
+        };
+      } else if (variant === 'with validation warnings') {
+        modelValidations.dateTimeLocal = {
+          isValid: true,
+          warnings: [
+            'This is the validation warning message #1',
+            'This is the validation warning message #2',
+          ],
         };
       }
     } else if (editType === 'input') {
