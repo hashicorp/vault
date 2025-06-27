@@ -45,6 +45,7 @@ func testConfigRaftRetryJoin(t *testing.T) {
 		{"auto_join": "provider=packet address_type=public_v6 auth_token=token project=uuid url=https://[2001:db8::2:1]"},
 		{"auto_join": "provider=vsphere category_name=consul-role host=https://[2001:db8::2:1] insecure_ssl=false password=bar tag_name=consul-server user=foo"},
 		{"auto_join": "provider=k8s label_selector=\"app.kubernetes.io/name=vault, component=server\" namespace=vault"},
+		{"auto_join": "provider=k8s label_selector=\"app.kubernetes.io/name=vault1,component=server\" namespace=vault1"},
 	}
 	for _, cfg := range []string{
 		"attr",
@@ -606,6 +607,13 @@ func testUnknownFieldValidationHcl(t *testing.T) {
 	}
 }
 
+func testDuplicateKeyValidationHcl(t *testing.T) {
+	_, duplicate, err := LoadConfigFileCheckDuplicate("./test-fixtures/invalid_config_duplicate_key.hcl")
+	// TODO (HCL_DUP_KEYS_DEPRECATION): require error once deprecation is done
+	require.NoError(t, err)
+	require.True(t, duplicate)
+}
+
 // testConfigWithAdministrativeNamespaceJson tests that a config with a valid administrative namespace path is correctly validated and loaded.
 func testConfigWithAdministrativeNamespaceJson(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/config_with_valid_admin_ns.json")
@@ -807,7 +815,6 @@ func testConfig_Sanitized(t *testing.T) {
 		"raw_storage_endpoint":                true,
 		"introspection_endpoint":              false,
 		"disable_sentinel_trace":              true,
-		"observation_system_ledger_path":      "",
 		"detect_deadlocks":                    "",
 		"enable_ui":                           true,
 		"enable_response_header_hostname":     false,

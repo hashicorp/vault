@@ -10,11 +10,11 @@ import { commonFields, getPayload } from './shared';
 
 import type { SystemWriteSyncDestinationsGhNameRequest } from '@hashicorp/vault-client-typescript';
 
-type GhFormData = Partial<SystemWriteSyncDestinationsGhNameRequest>;
+type GhFormData = SystemWriteSyncDestinationsGhNameRequest & {
+  name: string;
+};
 
-export default class GcpSmForm extends Form {
-  declare data: GhFormData;
-
+export default class GcpSmForm extends Form<GhFormData> {
   formFieldGroups = [
     new FormFieldGroup('default', [
       commonFields.name,
@@ -42,6 +42,7 @@ export default class GcpSmForm extends Form {
 
   toJSON() {
     const formState = super.toJSON();
-    return { ...formState, data: getPayload('gh', this.data, this.isNew) };
+    const data = getPayload<GhFormData>('gh', this.data, this.isNew);
+    return { ...formState, data };
   }
 }

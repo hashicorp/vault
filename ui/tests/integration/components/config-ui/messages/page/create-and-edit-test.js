@@ -45,10 +45,12 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
     await this.renderComponent();
 
     assert.dom(GENERAL.title).hasText('Create message');
+    assert.dom(GENERAL.fieldLabelbyAttr('authenticated')).hasText('Where should we display this message?');
     assert.dom(CUSTOM_MESSAGES.radio('authenticated')).exists();
     assert.dom(CUSTOM_MESSAGES.radio('unauthenticated')).exists();
     assert.dom(CUSTOM_MESSAGES.radio('authenticated')).isChecked();
     assert.dom(CUSTOM_MESSAGES.radio('unauthenticated')).isNotChecked();
+    assert.dom(GENERAL.fieldLabelbyAttr('type')).hasText('Type');
     assert.dom(CUSTOM_MESSAGES.radio('banner')).exists();
     assert.dom(CUSTOM_MESSAGES.radio('modal')).exists();
     assert.dom(CUSTOM_MESSAGES.radio('banner')).isChecked();
@@ -69,21 +71,18 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
   });
 
   test('it should display validation errors for invalid form fields', async function (assert) {
-    assert.expect(8);
+    assert.expect(7);
 
     await this.renderComponent();
 
     await fillIn(CUSTOM_MESSAGES.input('startTime'), '2024-01-20T00:00');
     await fillIn(CUSTOM_MESSAGES.input('endTime'), '2024-01-01T00:00');
-    await click(CUSTOM_MESSAGES.button('create-message'));
+    await click(GENERAL.submitButton);
     assert.dom(CUSTOM_MESSAGES.input('title')).hasClass('has-error-border');
     assert
       .dom(`${CUSTOM_MESSAGES.fieldValidation('title')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
       .hasText('Title is required.');
-    assert.dom(CUSTOM_MESSAGES.input('message')).hasClass('has-error-border');
-    assert
-      .dom(`${CUSTOM_MESSAGES.fieldValidation('message')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
-      .hasText('Message is required.');
+    assert.dom(`${GENERAL.validationErrorByAttr('message')}`).hasText('Message is required.');
     assert.dom(CUSTOM_MESSAGES.input('startTime')).hasClass('has-error-border');
     assert
       .dom(`${CUSTOM_MESSAGES.fieldValidation('startTime')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
@@ -98,15 +97,15 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
     assert.expect(1);
 
     this.server.post('/sys/config/ui/custom-messages', () => {
-      assert.ok(true, 'POST request made to create message');
+      assert.true(true, 'POST request made to create message');
     });
 
     await this.renderComponent();
 
-    await fillIn(CUSTOM_MESSAGES.input('title'), 'Awesome custom message title');
+    await fillIn(CUSTOM_MESSAGES.input('title'), 'create new message title from component');
     await fillIn(
       CUSTOM_MESSAGES.input('message'),
-      'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pulvinar mattis nunc sed blandit libero volutpat sed cras ornare.'
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'
     );
     await fillIn(
       CUSTOM_MESSAGES.input('startTime'),
@@ -119,27 +118,20 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
     );
     await fillIn('[data-test-kv-key="0"]', 'Learn more');
     await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
-    await click(CUSTOM_MESSAGES.button('create-message'));
+    await click(GENERAL.submitButton);
   });
 
   test('it should have form vaildations', async function (assert) {
-    assert.expect(4);
-
     await this.renderComponent();
 
-    await click(CUSTOM_MESSAGES.button('create-message'));
+    await click(GENERAL.submitButton);
     assert
       .dom(CUSTOM_MESSAGES.input('title'))
       .hasClass('has-error-border', 'show error border for title field');
     assert
       .dom(`${CUSTOM_MESSAGES.fieldValidation('title')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
       .hasText('Title is required.');
-    assert
-      .dom(CUSTOM_MESSAGES.input('message'))
-      .hasClass('has-error-border', 'show error border for message field');
-    assert
-      .dom(`${CUSTOM_MESSAGES.fieldValidation('message')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
-      .hasText('Message is required.');
+    assert.dom(`${GENERAL.validationErrorByAttr('message')}`).hasText('Message is required.');
   });
 
   test('it should prepopulate form if form is in edit mode', async function (assert) {
@@ -179,42 +171,37 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
   });
 
   test('it should show a preview image modal when preview is clicked', async function (assert) {
-    assert.expect(6);
-
     await this.renderComponent();
 
-    await fillIn(CUSTOM_MESSAGES.input('title'), 'Awesome custom message title');
+    await fillIn(CUSTOM_MESSAGES.input('title'), 'preview modal component test');
     await fillIn(
       CUSTOM_MESSAGES.input('message'),
-      'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pulvinar mattis nunc sed blandit libero volutpat sed cras ornare.'
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'
     );
-    await click(CUSTOM_MESSAGES.button('preview'));
+    await click(GENERAL.button('preview'));
     assert.dom(CUSTOM_MESSAGES.modal('preview modal')).doesNotExist();
     assert.dom(CUSTOM_MESSAGES.modal('preview image')).exists();
     assert
-      .dom(CUSTOM_MESSAGES.alertTitle('Awesome custom message title'))
-      .hasText('Awesome custom message title');
+      .dom(CUSTOM_MESSAGES.alertTitle('preview modal component test'))
+      .hasText('preview modal component test');
     assert
-      .dom(CUSTOM_MESSAGES.alertDescription('Awesome custom message title'))
-      .hasText(
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pulvinar mattis nunc sed blandit libero volutpat sed cras ornare.'
-      );
+      .dom(CUSTOM_MESSAGES.alertDescription('preview modal component test'))
+      .hasText('Lorem ipsum dolor sit amet, consectetur adipiscing elit.');
     assert.dom('img').hasAttribute('src', '/ui/images/custom-messages-dashboard.png');
-    await click(CUSTOM_MESSAGES.modalButton('Close'));
+
+    await click(GENERAL.button('Close preview'));
     await click('#unauthenticated');
-    await click(CUSTOM_MESSAGES.button('preview'));
+    await click(GENERAL.button('preview'));
     assert.dom('img').hasAttribute('src', '/ui/images/custom-messages-login.png');
   });
 
   test('it should show a preview modal when preview is clicked', async function (assert) {
-    assert.expect(4);
-
     await this.renderComponent();
 
     await click(CUSTOM_MESSAGES.radio('modal'));
     await fillIn(CUSTOM_MESSAGES.input('title'), 'Preview modal title');
     await fillIn(CUSTOM_MESSAGES.input('message'), 'Some preview modal message thats super long.');
-    await click(CUSTOM_MESSAGES.button('preview'));
+    await click(GENERAL.button('preview'));
     assert.dom(CUSTOM_MESSAGES.modal('preview modal')).exists();
     assert.dom(CUSTOM_MESSAGES.modal('preview image')).doesNotExist();
     assert.dom(CUSTOM_MESSAGES.modalTitle('Preview modal title')).hasText('Preview modal title');
@@ -224,8 +211,6 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
   });
 
   test('it should show multiple modal message', async function (assert) {
-    assert.expect(2);
-
     this.messages = [
       {
         id: '01234567-89ab-cdef-0123-456789abcdef',
@@ -253,19 +238,20 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
 
     await this.renderComponent();
 
-    await fillIn(CUSTOM_MESSAGES.input('title'), 'Awesome custom message title');
+    await fillIn(CUSTOM_MESSAGES.input('title'), 'multiple modal message component test');
     await fillIn(
       CUSTOM_MESSAGES.input('message'),
-      'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Pulvinar mattis nunc sed blandit libero volutpat sed cras ornare.'
+      'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'
     );
     await click(CUSTOM_MESSAGES.radio('modal'));
-    await click(CUSTOM_MESSAGES.button('create-message'));
+    await click(GENERAL.submitButton);
     assert.dom(CUSTOM_MESSAGES.modalTitle('Warning: more than one modal')).exists();
     assert
       .dom(CUSTOM_MESSAGES.modalBody('Warning: more than one modal'))
       .hasText(
         'You have an active modal configured after the user logs in and are trying to create another one. It is recommended to avoid having more than one modal at once as it can be intrusive for users. Would you like to continue creating your message? Click “Confirm” to continue.'
       );
-    await click(CUSTOM_MESSAGES.modalButton('confirm'));
+
+    await click(GENERAL.button('confirm-multiple'));
   });
 });

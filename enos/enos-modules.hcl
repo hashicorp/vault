@@ -16,6 +16,14 @@ module "backend_raft" {
   source = "./modules/backend_raft"
 }
 
+module "benchmark_config" {
+  source = "./modules/benchmark/config"
+}
+
+module "benchmark_setup" {
+  source = "./modules/benchmark/setup"
+}
+
 // Find any artifact in Artifactory. Requires the version, revision, and edition.
 module "build_artifactory" {
   source = "./modules/build_artifactory_artifact"
@@ -305,7 +313,6 @@ module "vault_verify_removed_node_shim" {
   source            = "./modules/vault_verify_removed_node_shim"
   vault_install_dir = var.vault_install_dir
 }
-
 
 module "vault_verify_secrets_engines_create" {
   source = "./modules/verify_secrets_engines/modules/create"

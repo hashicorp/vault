@@ -22,10 +22,10 @@ scenario "upgrade" {
       - vault_build_date*
       - vault_product_version
       - vault_revision*
-    
+
     * If you don't already know what build date and revision you should be using, see
     https://eng-handbook.hashicorp.services/internal-tools/enos/troubleshooting/#execution-error-expected-vs-got-for-vault-versioneditionrevisionbuild-date.
-  
+
     Variables required for some scenario variants:
       - artifactory_username (if using `artifact_source:artifactory` in your filter)
       - artifactory_token (if using `artifact_source:artifactory` in your filter)
@@ -322,7 +322,10 @@ scenario "upgrade" {
       packages             = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       release = {
         edition = strcontains(matrix.edition, "fips1403") ? (
-          semverconstraint(var.vault_upgrade_initial_version, "<1.19.4-0,>=1.19.0-0 || <1.18.10-0,>=1.18.0-0 || <1.17.17-0,>=1.17.0-0 || <1.16.21-0")
+          // Our eventual constraint will need to factor in each release branch that is mixed, e.g.
+          // semverconstraint(var.vault_upgrade_initial_version, "<=1.19.4-0,>=1.19.0-0 || <=1.18.10-0,>=1.18.0-0 || <=1.17.17-0,>=1.17.0-0 || <=1.16.21-0")
+          // But for now we've only got to consider before and after 1.19.4
+          semverconstraint(var.vault_upgrade_initial_version, "<1.19.4-0")
           ? replace(matrix.edition, "fips1403", "fips1402")
           : matrix.edition
         ) : matrix.edition
@@ -420,6 +423,7 @@ scenario "upgrade" {
       quality.vault_mount_auth,
       quality.vault_mount_kv,
       quality.vault_secrets_kv_write,
+      quality.vault_secrets_ldap_write_config,
     ]
 
     variables {

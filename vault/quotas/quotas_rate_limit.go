@@ -350,7 +350,7 @@ func (rlq *RateLimitQuota) allow(ctx context.Context, req *Request) (Response, e
 		} else {
 			// deny the request and return early
 			resp.Allowed = false
-			retryAfter = strconv.Itoa(int(time.Until(blockedAt.Add(rlq.BlockInterval)).Seconds()))
+			retryAfter = rlq.retryAfterSeconds(time.Now(), blockedAt.Add(rlq.BlockInterval))
 			return resp, nil
 		}
 	}
@@ -363,18 +363,22 @@ func (rlq *RateLimitQuota) allow(ctx context.Context, req *Request) (Response, e
 	resp.Allowed = allow
 	resp.Headers[httplimit.HeaderRateLimitLimit] = strconv.FormatUint(limit, 10)
 	resp.Headers[httplimit.HeaderRateLimitRemaining] = strconv.FormatUint(remaining, 10)
-	resp.Headers[httplimit.HeaderRateLimitReset] = strconv.Itoa(int(time.Until(time.Unix(0, int64(reset))).Seconds()))
+	resp.Headers[httplimit.HeaderRateLimitReset] = rlq.retryAfterSeconds(time.Now(), time.Unix(0, int64(reset)))
 	retryAfter = resp.Headers[httplimit.HeaderRateLimitReset]
 
 	// If the request is not allowed (i.e. rate limit threshold reached) and blocking
 	// is enabled, we add the client to the set of blocked clients.
 	if !resp.Allowed && rlq.purgeBlocked {
 		blockedAt := time.Now()
-		retryAfter = strconv.Itoa(int(time.Until(blockedAt.Add(rlq.BlockInterval)).Seconds()))
+		retryAfter = rlq.retryAfterSeconds(time.Now(), blockedAt.Add(rlq.BlockInterval))
 		rlq.blockedClients.Store(key, blockedAt)
 	}
 
 	return resp, nil
+}
+
+func (rlq *RateLimitQuota) retryAfterSeconds(now, waitUntil time.Time) string {
+	return strconv.Itoa(int(math.Ceil(waitUntil.Sub(now).Seconds())))
 }
 
 // close stops the current running client purge loop.
@@ -385,7 +389,9 @@ func (rlq *RateLimitQuota) close(ctx context.Context) error {
 	}
 
 	if rlq.store != nil {
-		return rlq.store.Close(ctx)
+		if err := rlq.store.Close(ctx); err != nil {
+			return err
+		}
 	}
 
 	return rlq.closeEnt(ctx)

@@ -1,18 +1,34 @@
 import Component from '@glimmer/component';
 import { HdsDropdown } from '@hashicorp/design-system-components/components';
+import { on } from '@ember/modifier';
+import { fn } from '@ember/helper';
+import { service } from '@ember/service';
 import { precompileTemplate } from '@ember/template-compilation';
 import { setComponentTemplate } from '@ember/component';
+import { g, i } from 'decorator-transforms/runtime';
 
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
 class DashboardExport extends Component {
+  static {
+    g(this.prototype, "reportingAnalytics", [service]);
+  }
+  #reportingAnalytics = (i(this, "reportingAnalytics"), void 0);
   #getNestedRows(records, prefix = '') {
     return Object.entries(records).map(([key, value]) => {
       return [`${prefix} ${key}`, value];
     });
   }
+  handleTrackExportToggle = () => {
+    this.reportingAnalytics.trackEvent('export_toggle');
+  };
+  handleTrackExportOption = option => {
+    this.reportingAnalytics.trackEvent(`export_option`, {
+      option
+    });
+  };
   get dataAsDownloadableJSONString() {
     const {
       data
@@ -37,10 +53,12 @@ class DashboardExport extends Component {
     return URL.createObjectURL(blob);
   }
   static {
-    setComponentTemplate(precompileTemplate("\n    {{#if @data}}\n      <HdsDropdown @matchToggleWidth={{true}} as |D|>\n        <D.ToggleButton data-test-export-toggle @text=\"Export\" />\n        <D.Interactive data-test-export-json @href={{this.dataAsDownloadableJSONString}} download=\"vault-usage-dashboard.json\">JSON</D.Interactive>\n        <D.Interactive data-test-export-csv @href={{this.dataAsDownloadableCSVString}} download=\"vault-usage-dashboard.csv\">CSV</D.Interactive>\n      </HdsDropdown>\n    {{/if}}\n  ", {
+    setComponentTemplate(precompileTemplate("\n    {{#if @data}}\n      <HdsDropdown @matchToggleWidth={{true}} as |D|>\n        <D.ToggleButton data-test-vault-reporting-export-toggle @text=\"Export\" {{on \"click\" this.handleTrackExportToggle}} />\n        <D.Interactive data-test-vault-reporting-export-json @href={{this.dataAsDownloadableJSONString}} download=\"vault-usage-dashboard.json\" {{on \"click\" (fn this.handleTrackExportOption \"json\")}}>JSON</D.Interactive>\n        <D.Interactive data-test-vault-reporting-export-csv @href={{this.dataAsDownloadableCSVString}} download=\"vault-usage-dashboard.csv\" {{on \"click\" (fn this.handleTrackExportOption \"csv\")}}>CSV</D.Interactive>\n      </HdsDropdown>\n    {{/if}}\n  ", {
       strictMode: true,
       scope: () => ({
-        HdsDropdown
+        HdsDropdown,
+        on,
+        fn
       })
     }), this);
   }

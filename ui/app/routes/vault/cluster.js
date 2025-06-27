@@ -15,6 +15,8 @@ import ClusterRoute from 'vault/mixins/cluster-route';
 import ModelBoundaryRoute from 'vault/mixins/model-boundary-route';
 import { assert } from '@ember/debug';
 
+import { v4 as uuidv4 } from 'uuid';
+
 const POLL_INTERVAL_MS = 10000;
 
 export const getManagedNamespace = (nsParam, root) => {
@@ -29,6 +31,8 @@ export const getManagedNamespace = (nsParam, root) => {
 
 export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
   auth: service(),
+  api: service(),
+  analytics: service(),
   currentCluster: service(),
   customMessages: service(),
   flagsService: service('flags'),
@@ -124,8 +128,9 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     .cancelOn('deactivate')
     .keepLatest(),
 
-  afterModel(model, transition) {
+  async afterModel(model, transition) {
     this._super(...arguments);
+
     this.currentCluster.setCluster(model);
     if (model.needsInit && this.auth.currentToken) {
       // clear token to prevent infinite load state
@@ -137,6 +142,37 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     if (this.namespaceService.path && !this.version.hasNamespaces) {
       return this.router.transitionTo(this.routeName, { queryParams: { namespace: '' } });
     }
+
+    // identify user for analytics service
+    if (this.analytics.activated) {
+      let licenseId = '';
+
+      try {
+        const licenseStatus = await this.api.sys.systemReadLicenseStatus();
+        licenseId = licenseStatus?.data?.autoloaded?.licenseId;
+      } catch (e) {
+        // license is not retrievable
+        licenseId = '';
+      }
+
+      try {
+        const entity_id = this.auth.authData?.entity_id;
+        const entity = entity_id ? entity_id : `root_${uuidv4()}`;
+
+        this.analytics.identifyUser(entity, {
+          licenseId: licenseId,
+          licenseState: model.license?.state || 'community',
+          version: model.version.version,
+          storageType: model.storageType,
+          replicationMode: model.replicationMode,
+          isEnterprise: Boolean(model.license),
+        });
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.log('unable to start analytics', e);
+      }
+    }
+
     return this.transitionToTargetRoute(transition);
   },
 

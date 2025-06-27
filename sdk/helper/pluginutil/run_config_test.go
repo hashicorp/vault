@@ -447,6 +447,10 @@ func (m *mockRunnerUtil) ClusterID(ctx context.Context) (string, error) {
 	return "1234", nil
 }
 
+func (m *mockRunnerUtil) DownloadExtractVerifyPlugin(ctx context.Context, _ *PluginRunner) error {
+	return nil
+}
+
 func TestContainerConfig(t *testing.T) {
 	dummySHA, err := hex.DecodeString("abc123")
 	if err != nil {

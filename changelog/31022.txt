@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Improve memory use of path management for namespaces, auth methods, and secrets engines. Now Vault should handle larger numbers of namespaces and multiple instances of the same secrets engine or auth method more efficiently.
+```

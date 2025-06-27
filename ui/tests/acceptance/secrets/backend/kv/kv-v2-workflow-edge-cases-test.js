@@ -90,14 +90,14 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
       await typeIn(PAGE.list.overviewInput, `${root}/no-access/`);
       assert
-        .dom(PAGE.list.overviewButton)
+        .dom(GENERAL.submitButton)
         .hasText('View list', 'shows list and not secret because search is a directory');
-      await click(PAGE.list.overviewButton);
+      await click(GENERAL.submitButton);
       assert.dom(PAGE.emptyStateTitle).hasText(`There are no secrets matching "${root}/no-access/".`);
 
       await visit(`/vault/secrets/${backend}/kv/list`);
       await typeIn(PAGE.list.overviewInput, `${root}/`); // add slash because this is a directory
-      await click(PAGE.list.overviewButton);
+      await click(GENERAL.submitButton);
 
       // URL correct
       assert.strictEqual(
@@ -182,7 +182,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
       await visit(`/vault/secrets/${backend}/kv/list`);
       await typeIn(PAGE.list.overviewInput, `${root}/${subdirectory}`); // intentionally leave out trailing slash
-      await click(PAGE.list.overviewButton);
+      await click(GENERAL.submitButton);
       assert.dom(PAGE.error.title).hasText('404 Not Found');
       assert
         .dom(PAGE.error.message)
@@ -294,7 +294,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await visit(`/vault/secrets/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'complex');
 
-    await click(FORM.toggleJson);
+    await click(GENERAL.toggleInput('json'));
 
     assert.strictEqual(
       codemirror().getValue(),
@@ -308,8 +308,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
     // Details view
     await click(PAGE.secretTab('Secret'));
-    assert.dom(FORM.toggleJson).isNotDisabled('JSON toggle is not disabled');
-    assert.dom(FORM.toggleJson).isChecked("JSON toggle is checked 'on'");
+    assert.dom(GENERAL.toggleInput('json')).isNotDisabled('JSON toggle is not disabled');
+    assert.dom(GENERAL.toggleInput('json')).isChecked("JSON toggle is checked 'on'");
 
     assert
       .dom(GENERAL.codeBlock('secret-data'))
@@ -317,8 +317,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
     // New version view
     await click(PAGE.detail.createNewVersion);
-    assert.dom(FORM.toggleJson).isNotDisabled();
-    assert.dom(FORM.toggleJson).isChecked();
+    assert.dom(GENERAL.toggleInput('json')).isNotDisabled();
+    assert.dom(GENERAL.toggleInput('json')).isChecked();
     assert.deepEqual(
       codemirror().getValue(),
       `{
@@ -336,7 +336,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await visit(`/vault/secrets/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'json jump');
 
-    await click(FORM.toggleJson);
+    await click(GENERAL.toggleInput('json'));
     codemirror().setCursor({ line: 2, ch: 1 });
     await triggerKeyEvent(GENERAL.codemirrorTextarea, 'keydown', 'Enter');
     const actualCursorPosition = JSON.stringify(codemirror().getCursor());
@@ -359,7 +359,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await visit(`/vault/secrets/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'complex_version_test');
 
-    await click(FORM.toggleJson);
+    await click(GENERAL.toggleInput('json'));
     codemirror().setValue('{ "foo1": { "name": "bar1" } }');
     await click(FORM.saveBtn);
 
@@ -392,8 +392,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await fillIn(FORM.maskedValueInput(), '{bar}');
     await click(FORM.saveBtn);
     await click(GENERAL.overviewCard.actionText('Create new'));
-    assert.dom(FORM.toggleJson).isNotDisabled();
-    assert.dom(FORM.toggleJson).isNotChecked();
+    assert.dom(GENERAL.toggleInput('json')).isNotDisabled();
+    assert.dom(GENERAL.toggleInput('json')).isNotChecked();
   });
 
   // patch is technically enterprise only but stubbing the version so these tests run on both CE and enterprise

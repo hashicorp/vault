@@ -11,6 +11,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', function (hooks) {
   setupRenderingTest(hooks);
@@ -66,7 +67,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
         'To configure a Vault role, choose what should be generated in Kubernetes by Vault.',
         'Empty state message renders'
       );
-    assert.dom('[data-test-save]').isDisabled('Save button is disabled');
+    assert.dom('[data-test-submit]').isDisabled('Save button is disabled');
   });
 
   test('it should display different form fields based on generation preference selection', async function (assert) {
@@ -123,7 +124,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     );
 
     await click('[data-test-input-group="kubernetesRoleType"] input');
-    await click('[data-test-toggle-input="show-nameTemplate"]');
+    await click(GENERAL.toggleInput('show-nameTemplate'));
     await fillIn('[data-test-input="nameTemplate"]', 'bar');
     await fillIn('[data-test-select-template]', '6');
     await click('[data-test-radio-card="expanded"]');
@@ -161,11 +162,11 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       { owner: this.engine }
     );
     await click('[data-test-radio-card="basic"]');
-    await click('[data-test-save]');
+    await click('[data-test-submit]');
     assert.dom('[data-test-inline-error-message]').hasText('Name is required', 'Validation error renders');
     await fillIn('[data-test-input="name"]', 'role-1');
     await fillIn('[data-test-input="serviceAccountName"]', 'default');
-    await click('[data-test-save]');
+    await click('[data-test-submit]');
     assert.ok(
       this.transitionCalledWith('roles.role.details', this.newModel.name),
       'Transitions to details route on save'
@@ -200,7 +201,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
         },
       }[pref];
       assert.dom(selector.name)[selector.method](selector.value);
-      await click('[data-test-save]');
+      await click('[data-test-submit]');
       assert.ok(
         this.transitionCalledWith('roles.role.details', this.role.name),
         'Transitions to details route on save'
@@ -276,7 +277,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     await click('[data-test-radio-card="full"]');
     await fillIn('[data-test-input="name"]', 'role-1');
     await fillIn('[data-test-select-template]', '5');
-    await click('[data-test-save]');
+    await click('[data-test-submit]');
   });
 
   test('it should unset selectedTemplateId when switching from full generation preference', async function (assert) {
@@ -296,7 +297,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     await fillIn('[data-test-select-template]', '5');
     await click('[data-test-radio-card="basic"]');
     await fillIn('[data-test-input="serviceAccountName"]', 'default');
-    await click('[data-test-save]');
+    await click('[data-test-submit]');
   });
 
   test('it should go back to list route and clean up model', async function (assert) {
@@ -325,7 +326,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       { owner: this.engine }
     );
     await click('[data-test-radio-card="basic"]');
-    await click('[data-test-save]');
+    await click('[data-test-submit]');
     assert
       .dom('[data-test-input="name"]')
       .hasClass('has-error-border', 'shows border error on input with error');
@@ -358,6 +359,6 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     });
 
     await fillIn('[data-test-input="serviceAccountName"]', 'demo');
-    await click('[data-test-save]');
+    await click('[data-test-submit]');
   });
 });

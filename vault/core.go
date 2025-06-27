@@ -561,11 +561,13 @@ type Core struct {
 	introspectionEnabled     bool
 	introspectionEnabledLock sync.Mutex
 
-	// pluginDirectory is the location vault will look for plugin binaries
+	// pluginDirectory is the location vault will look for old style plugins, it is
+	// the root for all plugin artifacts.
 	pluginDirectory string
-	// pluginTmpdir is the location vault will use for containerized plugin
+
+	// containerPluginTmpdir is the location vault will use for containerized plugin
 	// temporary files
-	pluginTmpdir string
+	containerPluginTmpdir string
 
 	// pluginFileUid is the uid of the plugin files and directory
 	pluginFileUid int
@@ -925,8 +927,8 @@ type CoreConfig struct {
 	// only accessible in the root namespace, currently sys/audit-hash and sys/monitor.
 	AdministrativeNamespacePath string
 
-	// ObservationSystemLedgerPath is the path that the Observation System's ledger will be recorded at.
-	ObservationSystemLedgerPath string
+	// ObservationSystemConfig is the config for the Observation System
+	ObservationSystemConfig *observations.ObservationSystemConfig
 
 	NumRollbackWorkers int
 
@@ -1274,7 +1276,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		}
 	}
 	if conf.PluginTmpdir != "" {
-		c.pluginTmpdir, err = filepath.Abs(conf.PluginTmpdir)
+		c.containerPluginTmpdir, err = filepath.Abs(conf.PluginTmpdir)
 		if err != nil {
 			return nil, fmt.Errorf("core setup failed, could not verify plugin tmpdir: %w", err)
 		}
@@ -1365,7 +1367,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if err != nil {
 		return nil, err
 	}
-	events, err := eventbus.NewEventBus(nodeID, eventsLogger)
+	events, err := eventbus.NewEventBus(nodeID, eventsLogger, c)
 	if err != nil {
 		return nil, err
 	}
@@ -1377,14 +1379,16 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.createSnapshotManager()
 
 	observationsLogger := conf.Logger.Named("observations")
-	observationSystemLedgerPath := conf.ObservationSystemLedgerPath
-	if observationSystemLedgerPath != "" {
-		observations, err := observations.NewObservationSystem(nodeID, observationSystemLedgerPath, observationsLogger)
-		if err != nil {
-			return nil, err
+	observationSystemConfig := conf.ObservationSystemConfig
+	if observationSystemConfig != nil {
+		if observationSystemConfig.LedgerPath != "" {
+			observations, err := observations.NewObservationSystem(nodeID, observationSystemConfig.LedgerPath, observationsLogger)
+			if err != nil {
+				return nil, err
+			}
+			c.observations = observations
+			c.observations.Start()
 		}
-		c.observations = observations
-		c.observations.Start()
 	}
 
 	c.clusterAddrBridge = conf.ClusterAddrBridge
@@ -2614,7 +2618,7 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 		BuiltinRegistry:      c.builtinRegistry,
 		CatalogView:          NewBarrierView(c.barrier, pluginCatalogPath),
 		PluginDirectory:      c.pluginDirectory,
-		Tmpdir:               c.pluginTmpdir,
+		Tmpdir:               c.containerPluginTmpdir,
 		EnableMlock:          c.enableMlock,
 		PluginRuntimeCatalog: c.pluginRuntimeCatalog,
 	})

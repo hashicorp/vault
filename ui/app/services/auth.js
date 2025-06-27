@@ -348,9 +348,10 @@ export default Service.extend({
       displayName = (this.getTokenData(tokenName) || {}).displayName;
     }
 
-    // this is a workaround for OIDC/SAML methods WITH mfa configured. at this time mfa/validate endpoint does not
-    // return display_name (or metadata that includes it) for this auth combination.
-    // this if block can be removed if/when the API returns display_name on the mfa/validate response.
+    // this is a fallback for any methods that don't return a display name from the initial auth request (i.e. JWT)
+    // or for OIDC/SAML with mfa configured because the mfa/validate endpoint does not consistently
+    // return display_name (or metadata that includes something to be used as such).
+    // this if block can be removed if/when the API consistently returns a display_name.
     if (!displayName) {
       // if still nothing, request token data as a last resort
       try {

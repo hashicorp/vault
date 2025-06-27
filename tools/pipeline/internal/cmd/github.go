@@ -9,36 +9,28 @@ import (
 	"os"
 	"path/filepath"
 
-	gh "github.com/google/go-github/v68/github"
+	"github.com/google/go-github/v68/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
 	"github.com/spf13/cobra"
 )
 
 type githubCommandState struct {
-	Github *gh.Client
+	Github *github.Client
 	Git    *git.Client
 }
 
 var githubCmdState = &githubCommandState{
-	Github: gh.NewClient(nil),
+	Github: github.NewClient(nil),
 	Git:    git.NewClient(git.WithLoadTokenFromEnv()),
 }
 
 func newGithubCmd() *cobra.Command {
-	github := &cobra.Command{
+	githubCmd := &cobra.Command{
 		Use:   "github",
 		Short: "Github commands",
 		Long:  "Github commands",
 	}
-	github.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
-		if parent := cmd.Parent(); parent != nil {
-			if parent.PersistentPreRunE != nil {
-				err := parent.PersistentPreRunE(parent, args)
-				if err != nil {
-					return err
-				}
-			}
-		}
+	githubCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
 		if token, set := os.LookupEnv("GITHUB_TOKEN"); set {
 			githubCmdState.Github = githubCmdState.Github.WithAuthToken(token)
 		} else {
@@ -46,9 +38,11 @@ func newGithubCmd() *cobra.Command {
 		}
 		return nil
 	}
-	github.AddCommand(newGithubListCmd())
+	githubCmd.AddCommand(newGithubCopyCmd())
+	githubCmd.AddCommand(newGithubCreateCmd())
+	githubCmd.AddCommand(newGithubListCmd())
 
-	return github
+	return githubCmd
 }
 
 func writeToGithubOutput(key string, bytes []byte) error {
