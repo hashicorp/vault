@@ -137,6 +137,10 @@ module('Acceptance | secret-engine list view', function (hooks) {
       'Should be on main secret engines list page within namespace.'
     );
     assert.dom(SES.secretsBackendLink(enginePath1)).doesNotExist(); // without permissions, engine should not show for this user
+
+    // cleanup namespace
+    await login();
+    await runCmd(`delete sys/namespaces/${this.namespace}`);
   });
 
   test('enterprise: can view list with permissions inside a namespace', async function (assert) {
@@ -165,6 +169,10 @@ module('Acceptance | secret-engine list view', function (hooks) {
     );
 
     assert.dom(SES.secretsBackendLink(enginePath1)).exists(); // with permissions, able to see the engine in list
+
+    // cleanup namespace
+    await login();
+    await runCmd(`delete sys/namespaces/${this.namespace}`);
   });
 
   test('after disabling it stays on the list view', async function (assert) {
