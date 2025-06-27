@@ -101,6 +101,11 @@ export default class ShowcaseController extends Controller {
       if (variant === 'with value' || variant === 'with validation errors') {
         model.textarea = 'Lorem\nipsum\ndolor';
       }
+    } else if (editType === 'toggleButton') {
+      model.toggleButton = false;
+      if (variant === 'checked' || variant === 'checked with opposite value' || variant === 'disabled') {
+        model.toggleButton = true;
+      }
     } else if (editType === 'ttl') {
       if (variant === 'with value' || variant === 'with validation errors') {
         model.ttl = 123;
@@ -279,6 +284,30 @@ export default class ShowcaseController extends Controller {
           ],
         };
       }
+    } else if (editType === 'toggleButton') {
+      if (variant === 'with validation errors and warnings') {
+        modelValidations.toggleButton = {
+          isValid: false,
+          errors: ['This is the validation error message #1', 'This is the validation error message #2'],
+          warnings: [
+            'This is the validation warning message #1',
+            'This is the validation warning message #2',
+          ],
+        };
+      } else if (variant === 'with validation errors') {
+        modelValidations.toggleButton = {
+          isValid: false,
+          errors: ['This is the validation error message #1', 'This is the validation error message #2'],
+        };
+      } else if (variant === 'with validation warnings') {
+        modelValidations.toggleButton = {
+          isValid: true,
+          warnings: [
+            'This is the validation warning message #1',
+            'This is the validation warning message #2',
+          ],
+        };
+      }
     } else if (editType === 'ttl') {
       if (variant === 'with validation errors') {
         // NOTICE: there is a bug in the CSS for the class "ttl-picker-form-field-error" because the border color is applied to the `input` child, but such element is hidden so the red border is not visible!
@@ -346,8 +375,44 @@ export default class ShowcaseController extends Controller {
       fieldValue = 'radio';
     } else if (editType === 'regex') {
       fieldValue = 'regex';
+    } else if (editType === 'toggleButton') {
+      fieldValue = 'toggleButton';
     }
     return fieldValue;
+  }
+
+  @action
+  dynamicFormFieldHelperTextEnabledValue(editType, variant) {
+    let helperTextEnabled;
+    if (editType === 'ttl' && variant === 'with custom helper text') {
+      helperTextEnabled = 'Enabled state custom helper text';
+    } else if (
+      editType === 'toggleButton' &&
+      (variant === 'with custom helper text' ||
+        variant === 'checked' ||
+        variant === 'checked with opposite value' ||
+        variant === 'disabled')
+    ) {
+      helperTextEnabled = 'Enabled state custom helper text';
+    }
+    return helperTextEnabled;
+  }
+
+  @action
+  dynamicFormFieldHelperTextDisabledValue(editType, variant) {
+    let helperTextDisabled;
+    if (editType === 'ttl' && variant === 'with custom helper text') {
+      helperTextDisabled = 'Disabled state custom helper text';
+    } else if (
+      editType === 'toggleButton' &&
+      (variant === 'with custom helper text' ||
+        variant === 'checked' ||
+        variant === 'checked with opposite value' ||
+        variant === 'disabled')
+    ) {
+      helperTextDisabled = 'Disabled state custom helper text';
+    }
+    return helperTextDisabled;
   }
 
   // ###########################################

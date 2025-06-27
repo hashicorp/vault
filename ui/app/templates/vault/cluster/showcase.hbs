@@ -169,9 +169,25 @@
       (hash editType="stringArray" variants=(array "base" "with label" "with helpText + subText" "with value"))
       (hash editType="sensitive" variants=(array "base" "with label" "with value" "with copy"))
       (hash
+        isHds=true
         editType="textarea"
         attrType="string"
         variants=(array "base" "with label" "with helpText + subText + docLink" "with value" "with validation errors")
+      )
+      (hash
+        editType="toggleButton"
+        attrType="boolean"
+        variants=(array
+          "base"
+          "with label"
+          "with custom helper text"
+          "checked"
+          "checked with opposite value"
+          "disabled"
+          "with validation errors"
+          "with validation warnings"
+          "with validation errors and warnings"
+        )
       )
       (hash
         editType="ttl"
@@ -201,7 +217,9 @@
             (fn this.dynamicFormFieldOptionsModels editType)
             (fn this.dynamicFormFieldOptionsPossibleValues editType variant)
             (fn this.dynamicFormFieldOptionsFieldValue editType)
-            as |dynamicFormFieldOptionsModels dynamicFormFieldOptionsPossibleValues dynamicFormFieldOptionsFieldValue|
+            (fn this.dynamicFormFieldHelperTextEnabledValue editType variant)
+            (fn this.dynamicFormFieldHelperTextDisabledValue editType variant)
+            as |dynamicFormFieldOptionsModels dynamicFormFieldOptionsPossibleValues dynamicFormFieldOptionsFieldValue dynamicFormFieldHelperTextEnabledValue dynamicFormFieldHelperTextDisabledValue|
           }}
             <pre>{{capitalize variant}}</pre>
             <FormField
@@ -209,7 +227,13 @@
               data-test-field={{true}}
               @attr={{(hash
                 name=(if
-                  (or (eq editType "input") (eq editType "optionalText") (eq editType "radio") (eq editType "regex"))
+                  (or
+                    (eq editType "input")
+                    (eq editType "optionalText")
+                    (eq editType "radio")
+                    (eq editType "regex")
+                    (eq editType "toggleButton")
+                  )
                   (concat editType "-" variant)
                   editType
                 )
@@ -247,12 +271,8 @@
                   example=(if (and (eq editType "json") (eq variant "with value + restore")) this.jsonExample)
                   noCopy=(if (and (eq editType "sensitive") (eq variant "with copy")) false true)
                   hideToggle=(if (and (eq editType "ttl") (eq variant "with hidden toggle")) true false)
-                  helperTextDisabled=(if
-                    (and (eq editType "ttl") (eq variant "with custom helper text")) "Disabled state custom helper text"
-                  )
-                  helperTextEnabled=(if
-                    (and (eq editType "ttl") (eq variant "with custom helper text")) "Enabled state custom helper text"
-                  )
+                  helperTextEnabled=(dynamicFormFieldHelperTextEnabledValue)
+                  helperTextDisabled=(dynamicFormFieldHelperTextDisabledValue)
                   readOnly=(if (eq variant "readonly") true false)
                   editDisabled=(if (eq variant "disabled") "Enabled state custom helper text")
                   noDefault=(if (and (eq editType "select") (eq variant "with no default")) true false)
@@ -262,6 +282,9 @@
                     (and (eq editType "kv") (eq variant "with key/value placeholders")) "Value placeholder"
                   )
                   isSingleRow=(if (and (eq editType "kv") (eq variant "single row")) true false)
+                  isOppositeValue=(if
+                    (and (eq editType "toggleButton") (eq variant "checked with opposite value")) true false
+                  )
                   characterLimit=(if (and (eq editType "input") (eq variant "with character limit")) 10)
                   models=(dynamicFormFieldOptionsModels)
                   possibleValues=(dynamicFormFieldOptionsPossibleValues)
