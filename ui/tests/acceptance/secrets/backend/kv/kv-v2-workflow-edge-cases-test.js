@@ -212,7 +212,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
       await visit(`/vault/secrets/${this.backend}/kv/list`);
       await typeIn(PAGE.list.overviewInput, 'my_secret');
-      await click(GENERAL.submitButton);
+      await click(PAGE.list.overviewButton);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/kv/my_secret`,
