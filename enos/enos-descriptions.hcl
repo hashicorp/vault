@@ -25,6 +25,10 @@ globals {
       for Vault target nodes to access it the AWSKMS key are handled in the target modules.
     EOF
 
+    create_external_integration_target = <<-EOF
+      Creates the infrastructure necessary to host external services that we need to test some integrations.
+    EOF
+
     create_vault_cluster = <<-EOF
       Create the the Vault cluster. In this module we'll install, configure, start, initialize and
       unseal all the nodes in the Vault. After initialization it also enables various audit engines.
@@ -100,6 +104,10 @@ globals {
     start_vault_agent = <<-EOF
       Create an agent approle in the auth engine, generate a Vault Agent configuration file, and
       start the Vault agent.
+    EOF
+
+    set_up_external_integration_target = <<-EOF
+      Installs and configures software services on those target machines to test integrations.
     EOF
 
     stop_vault = <<-EOF

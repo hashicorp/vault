@@ -70,6 +70,11 @@ globals {
       port        = 22
       protocol    = "tcp"
     },
+    ldap : {
+      description = "LDAP"
+      port        = 389
+      protocol    = "tcp"
+    }
     vault_agent : {
       description = "Vault Agent"
       port        = 8100

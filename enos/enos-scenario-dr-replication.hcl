@@ -211,6 +211,28 @@ scenario "dr_replication" {
     }
   }
 
+  step "create_external_integration_target" {
+    description = global.description.create_external_integration_target
+    module      = module.target_ec2_instances
+    depends_on  = [step.create_vpc]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      ami_id          = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
+      cluster_tag_key = global.vault_tag_key
+      common_tags     = global.tags
+      vpc_id          = step.create_vpc.id
+      ssh_allow_ips   = ["0.0.0.0"]
+      ports_ingress = [
+        global.ports.ldap,
+        global.ports.ssh
+      ]
+    }
+  }
+
   // Create all of our instances for both primary and secondary clusters
   step "create_primary_cluster_targets" {
     description = global.description.create_vault_cluster_targets
@@ -288,6 +310,24 @@ scenario "dr_replication" {
     }
   }
 
+  step "set_up_external_integration_target" {
+    description = global.description.set_up_external_integration_target
+    module      = module.set_up_external_integration_target
+    depends_on = [
+      step.create_external_integration_target
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      hosts      = step.create_external_integration_target.hosts
+      distro     = matrix.distro
+      ip_version = matrix.ip_version
+    }
+  }
+
   step "create_primary_backend_cluster" {
     description = global.description.create_backend_cluster
     module      = "backend_${matrix.primary_backend}"
@@ -334,7 +374,8 @@ scenario "dr_replication" {
     depends_on = [
       step.create_primary_backend_cluster,
       step.build_vault,
-      step.create_primary_cluster_targets
+      step.create_primary_cluster_targets,
+      step.set_up_external_integration_target
     ]
 
     providers = {
@@ -679,7 +720,9 @@ scenario "dr_replication" {
   step "verify_secrets_engines_on_primary" {
     description = global.description.verify_secrets_engines_create
     module      = module.vault_verify_secrets_engines_create
-    depends_on  = [step.get_primary_cluster_ips]
+    depends_on = [
+      step.get_primary_cluster_ips
+    ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -707,6 +750,7 @@ scenario "dr_replication" {
 
     variables {
       hosts             = step.create_primary_cluster_targets.hosts
+      ldap_host         = step.set_up_external_integration_target.state.ldap.ip_address
       leader_host       = step.get_primary_cluster_ips.leader_host
       vault_addr        = step.create_primary_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
@@ -1262,6 +1306,11 @@ scenario "dr_replication" {
   output "audit_device_file_path" {
     description = "The file path for the file audit device, if enabled"
     value       = step.create_primary_cluster.audit_device_file_path
+  }
+
+  output "external_integration_server_ldap" {
+    description = "The LDAP test servers info"
+    value       = step.set_up_external_integration_target.state.ldap
   }
 
   output "primary_cluster_hosts" {

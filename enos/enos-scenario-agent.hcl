@@ -171,6 +171,28 @@ scenario "agent" {
     }
   }
 
+  step "create_external_integration_target" {
+    description = global.description.create_external_integration_target
+    module      = module.target_ec2_instances
+    depends_on  = [step.create_vpc]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      ami_id          = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
+      cluster_tag_key = global.vault_tag_key
+      common_tags     = global.tags
+      vpc_id          = step.create_vpc.id
+      ssh_allow_ips   = ["0.0.0.0"]
+      ports_ingress = [
+        global.ports.ldap,
+        global.ports.ssh
+      ]
+    }
+  }
+
   step "create_vault_cluster_targets" {
     description = global.description.create_vault_cluster_targets
     module      = module.target_ec2_instances
@@ -204,6 +226,24 @@ scenario "agent" {
       common_tags     = global.tags
       seal_key_names  = step.create_seal_key.resource_names
       vpc_id          = step.create_vpc.id
+    }
+  }
+
+  step "set_up_external_integration_target" {
+    description = global.description.set_up_external_integration_target
+    module      = module.set_up_external_integration_target
+    depends_on = [
+      step.create_external_integration_target
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    variables {
+      hosts      = step.create_external_integration_target.hosts
+      distro     = matrix.distro
+      ip_version = matrix.ip_version
     }
   }
 
@@ -253,7 +293,8 @@ scenario "agent" {
     depends_on = [
       step.create_backend_cluster,
       step.build_vault,
-      step.create_vault_cluster_targets
+      step.create_vault_cluster_targets,
+      step.set_up_external_integration_target
     ]
 
     providers = {
@@ -479,7 +520,9 @@ scenario "agent" {
   step "verify_secrets_engines_create" {
     description = global.description.verify_secrets_engines_create
     module      = module.vault_verify_secrets_engines_create
-    depends_on  = [step.verify_vault_unsealed]
+    depends_on = [
+      step.verify_vault_unsealed
+    ]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -507,6 +550,7 @@ scenario "agent" {
 
     variables {
       hosts             = step.create_vault_cluster_targets.hosts
+      ldap_host         = step.set_up_external_integration_target.state.ldap.ip_address
       leader_host       = step.get_vault_cluster_ips.leader_host
       vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
@@ -640,6 +684,11 @@ scenario "agent" {
   output "cluster_name" {
     description = "The Vault cluster name"
     value       = step.create_vault_cluster.cluster_name
+  }
+
+  output "external_integration_server_ldap" {
+    description = "The LDAP test servers info"
+    value       = step.set_up_external_integration_target.state.ldap
   }
 
   output "hosts" {
