@@ -8,7 +8,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, currentRouteName, currentURL, fillIn, settled, visit } from '@ember/test-helpers';
 import { login, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
-import { createTokenCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
+import { createTokenCmd, deleteNS, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import reducedDisclosureHandlers from 'vault/mirage/handlers/reduced-disclosure';
@@ -161,6 +161,11 @@ module('Acceptance | reduced disclosure test', function (hooks) {
           'shows Vault version for default policy in child namespace'
         );
       assert.dom(SELECTORS.dashboardTitle).includesText('Vault v1.');
+
+      // navigate to "root" before deleting
+      await visit('vault/dashboard');
+      // clean up namespace pollution
+      await runCmd(deleteNS(namespace));
     });
     test('login works when reduced disclosure enabled (ent)', async function (assert) {
       const namespace = 'reduced-disclosure';
@@ -191,6 +196,11 @@ module('Acceptance | reduced disclosure test', function (hooks) {
       assert
         .dom(SELECTORS.footerVersion)
         .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version for default policy in namespace');
+
+      // navigate to "root" before deleting
+      await visit('vault/dashboard');
+      // clean up namespace pollution
+      await runCmd(deleteNS(namespace));
     });
   });
 });

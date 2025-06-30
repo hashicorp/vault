@@ -147,6 +147,7 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     assert.strictEqual(currentRouteName(), 'vault.cluster.dashboard', 'navigates to the correct route');
 
     // Cleanup: Delete namespace(s) via the CLI
+    await visit('vault/dashboard'); // navigate to "root" before deleting
     await runCmd(deleteNS(testNS), false);
   });
 });

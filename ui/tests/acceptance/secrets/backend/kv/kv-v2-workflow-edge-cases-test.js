@@ -23,6 +23,7 @@ import {
   mountEngineCmd,
   runCmd,
   createTokenCmd,
+  deleteNS,
 } from 'vault/tests/helpers/commands';
 import {
   dataPolicy,
@@ -558,7 +559,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
 
   hooks.afterEach(async function () {
     await login();
-    await runCmd([`delete /sys/auth/${this.namespace}`]);
+    await runCmd(deleteNS(this.namespace));
     await runCmd(deleteEngineCmd(this.backend));
     return;
   });
