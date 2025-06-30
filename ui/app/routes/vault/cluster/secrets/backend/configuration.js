@@ -22,6 +22,7 @@ export default class SecretsBackendConfigurationRoute extends Route {
     const { type, id } = secretsEngine;
     return {
       secretsEngine,
+      // TODO all this config stuff is plugin-settings!! move to configuration/plugin-settings and don't fetch it here.
       config: await this.fetchConfig(type, id), // fetch config for configurable engines (aws, azure, gcp, ssh)
     };
   }

@@ -1,17 +1,39 @@
 steal dashboard stuff for cards
-<Hds::Card::Container @hasBorder={{true}} class="has-padding-l" data-test-card="configuration-details">
-  <h3 class="title is-4" data-test-dashboard-card-header="configuration">Configuration details</h3>
+<form {{on "submit" (perform this.submitForm)}}>
+  <Hds::Card::Container @hasBorder={{true}} class="has-padding-l" data-test-card="configuration-details">
+    <h3 class="title is-4" data-test-dashboard-card-header="configuration">Security</h3>
 
-  <Hds::Table @caption="Vault configuration details" class="is-border-spacing-revert">
-    <:body as |B|>
-      <B.Tr>
-        <B.Td>API_ADDR</B.Td>
-        <B.Td data-test-vault-config-details="api_addr">hi</B.Td>
-      </B.Tr>
-      <B.Tr>
-        <B.Td>Default lease TTL</B.Td>
-        <B.Td data-test-vault-config-details="default_lease_ttl">hi</B.Td>
-      </B.Tr>
-    </:body>
-  </Hds::Table>
-</Hds::Card::Container>
+    <Hds::Table @caption="Security" class="is-border-spacing-revert">
+      <:body as |B|>
+        {{#each this.fields as |field|}}
+          {{#if (eq field.label "Seal wrap")}}
+            <Hds::Form::Toggle::Field @value={{field.value}} name="seal-wrap" {{on "click" this.toggleSealWrap}} as |F|>
+              <F.Label>Seal Wrap</F.Label>
+            </Hds::Form::Toggle::Field>
+          {{/if}}
+        {{/each}}
+      </:body>
+    </Hds::Table>
+  </Hds::Card::Container>
+  {{! I DONT think you need fields or the backing js class to calculate }}
+  {{#each this.fields as |field|}}
+    <InfoTableRow @label={{field.label}} @value={{field.value}} data-test-mount-config-field={{field.label}} />
+  {{/each}}
+  <Hds::ButtonSet>
+    <Hds::Button
+      @text="Save"
+      @icon={{if this.submitForm.isRunning "loading"}}
+      type="submit"
+      disabled={{this.submitForm.isRunning}}
+      data-test-submit
+    />
+    <Hds::Button
+      @text="Cancel"
+      @color="secondary"
+      class="has-left-margin-s"
+      disabled={{this.submitForm.isRunning}}
+      {{!-- {{on "click" this.onCancel}} --}}
+      data-test-cancel
+    />
+  </Hds::ButtonSet>
+</form>
