@@ -15,7 +15,7 @@ valid_change_types: >-
 
 # Important changes
 
-**Last updated**: 2025-06-20
+**Last updated**: 2025-06-30
 
 Always review important or breaking changes and remediation recommendations
 before upgrading Vault.
@@ -146,6 +146,26 @@ None.
 
 
 ## Known issues
+
+### UI login fails for auth mounts with underscores and unauthenticated listing ((#ui-login-underscore))
+
+| Change       | Affected version | Fixed version
+| ------------ | ---------------- | --------------------
+| Known issue  | 1.20.0           | N/A
+
+If an auth mount is mounted at a path that includes an underscore (e.g. oidc_test)
+**and** the mount is tuned with `listing_visibility="unauth"` the login request will
+fail because the UI requests the wrong endpoint. Mounts with dashes, e.g. oidc-test
+still log in fine.
+
+#### Recommendation
+
+As a workaround, you can log in to the UI using the following steps:
+1. Navigate directly to the URL for that method’s type `${VAULT_ADDR}/ui/vault/auth?with=oidc`
+2. Click "Sign in with other methods ->"
+3. Select type from the dropdown
+4. Click "Advanced settings" and input the correct path, e.g. oidc_test
+
 
 ### Duplicate unseal/seal wrap HSM keys ((#hsm-keys)) <EnterpriseAlert inline="true" />
 
