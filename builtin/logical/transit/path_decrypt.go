@@ -99,12 +99,6 @@ parameter is set, if the parameters 'ciphertext', 'context' and 'nonce' are
 also set, they will be ignored. Any batch output will preserve the order
 of the batch input.`,
 			},
-			"iv": {
-				Type: framework.TypeString,
-				Description: `
-The IV used to encrypt the ciphertext with AES-CBC. The length of the IV must
-be 16 bytes (128 bits).'`,
-			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -141,7 +135,6 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 			Context:        d.Get("context").(string),
 			Nonce:          d.Get("nonce").(string),
 			AssociatedData: d.Get("associated_data").(string),
-			IV:             d.Get("iv").(string),
 		}
 		if ps, ok := d.GetOk("padding_scheme"); ok {
 			batchInputItems[0].PaddingScheme = ps.(string)
@@ -178,16 +171,6 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 		// Decode the nonce
 		if len(item.Nonce) != 0 {
 			batchInputItems[i].DecodedNonce, err = base64.StdEncoding.DecodeString(item.Nonce)
-			if err != nil {
-				userErrorInBatch = true
-				batchResponseItems[i].Error = err.Error()
-				continue
-			}
-		}
-
-		// Decode the IV
-		if len(item.IV) != 0 {
-			batchInputItems[i].DecodedIV, err = base64.StdEncoding.DecodeString(item.IV)
 			if err != nil {
 				userErrorInBatch = true
 				batchResponseItems[i].Error = err.Error()
@@ -254,7 +237,6 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 		opts := keysutil.EncryptionOptions{
 			Context: item.DecodedContext,
 			Nonce:   item.DecodedNonce,
-			IV:      item.DecodedIV,
 		}
 
 		plaintext, err := p.DecryptWithOptions(opts, item.Ciphertext, factories...)
