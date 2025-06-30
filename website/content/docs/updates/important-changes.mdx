@@ -153,7 +153,7 @@ None.
 | ------------ | ---------------- | --------------------
 | Known issue  | 1.20.0           | N/A
 
-If an auth mount is mounted at a path that includes an underscore (e.g. oidc_test)
+If an auth method is mounted at a path that includes an underscore (e.g. oidc_test)
 **and** the mount is tuned with `listing_visibility="unauth"` the login request will
 fail because the UI requests the wrong endpoint. Mounts with dashes, e.g. oidc-test
 still log in fine.
