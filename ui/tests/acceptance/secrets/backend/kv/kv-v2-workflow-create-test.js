@@ -29,7 +29,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     this.store = this.owner.lookup('service:store');
     await login();
     await runCmd(mountEngineCmd('kv-v2', this.backend), false);
-    await writeVersionedSecret(this.backend, 'app/first', 'foo', 'bar', 2);
+    await writeVersionedSecret(this.backend, 'app/first_secret', 'foo', 'bar', 2);
   });
 
   hooks.afterEach(async function () {
@@ -62,7 +62,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('cancel on new version rolls back model (a)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
+      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first_secret')}/details`);
       assert.dom(PAGE.infoRowValue('foo')).exists('key has expected value');
       await click(PAGE.detail.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
@@ -280,7 +280,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert
         .dom(FORM.versionAlert)
         .hasText(
-          'Warning You are creating a new version based on data from Version 1. The current version for app/first is Version 2.',
+          'Warning You are creating a new version based on data from Version 1. The current version for app/first_secret is Version 2.',
           'Shows version warning'
         );
       assert.dom(FORM.keyInput()).hasValue('key-1', 'Key input has old value');
@@ -365,7 +365,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('cancel on new version rolls back model (dr)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
+      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first_secret')}/details`);
       assert.dom(PAGE.infoRowValue('foo')).exists('key has expected value');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist();
     });
@@ -514,7 +514,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('cancel on new version rolls back model (dlr)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
+      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first_secret')}/details`);
       assert.dom(PAGE.infoRowValue('foo')).exists('key has expected value');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('cannot create new version');
     });
@@ -663,7 +663,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('cancel on new version rolls back model (mm)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
+      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first_secret')}/details`);
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
       assert
         .dom(PAGE.detail.createNewVersion)
@@ -725,7 +725,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         );
 
       assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
-      assert.dom(FORM.inputByAttr('path')).hasValue('app/first');
+      assert.dom(FORM.inputByAttr('path')).hasValue('app/first_secret');
       assert.dom(FORM.toggleMetadata).doesNotExist('Does not show metadata toggle when creating new version');
       assert.dom(FORM.keyInput()).hasValue('', 'first row has no key');
       assert.dom(FORM.maskedValueInput()).hasValue('', 'first row has no value');
@@ -820,7 +820,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         );
 
       assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
-      assert.dom(FORM.inputByAttr('path')).hasValue('app/first');
+      assert.dom(FORM.inputByAttr('path')).hasValue('app/first_secret');
       assert.dom(FORM.toggleMetadata).doesNotExist('Does not show metadata toggle when creating new version');
       assert.dom(FORM.keyInput()).hasValue('', 'first row has no key');
       assert.dom(FORM.maskedValueInput()).hasValue('', 'first row has no value');
@@ -857,7 +857,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('cancel on new version rolls back model (sc)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
+      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first_secret')}/details`);
       assert
         .dom(PAGE.emptyStateTitle)
         .hasText('You do not have permission to read this secret', 'no permissions state shows');
@@ -866,7 +866,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.cancelBtn);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}`,
+        `/vault/secrets/${backend}/kv/${encodeURIComponent('app/first_secret')}`,
         'cancel goes to overview'
       );
       await click(PAGE.secretTab('Secret'));
@@ -875,7 +875,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(PAGE.breadcrumbAtIdx(3));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}`,
+        `/vault/secrets/${backend}/kv/${encodeURIComponent('app/first_secret')}`,
         'breadcrumb goes to overview'
       );
     });
