@@ -68,9 +68,9 @@ func TestExternalPluginInContainer_MountAndUnmount(t *testing.T) {
 				// 	mountAndUnmountContainerPlugin_WithRuntime(t, c, plugin, "", false)
 				// })
 
-				// t.Run("runc", func(t *testing.T) {
-				// 	mountAndUnmountContainerPlugin_WithRuntime(t, c, plugin, "runc", false)
-				// })
+				t.Run("runc", func(t *testing.T) {
+					mountAndUnmountContainerPlugin_WithRuntime(t, c, plugin, "runc", false)
+				})
 
 				// t.Run("runsc", func(t *testing.T) {
 				// 	if _, err := exec.LookPath("runsc"); err != nil {
