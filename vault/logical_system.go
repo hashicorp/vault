@@ -564,6 +564,7 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 	}
 
 	pluginRuntime := d.Get("runtime").(string)
+	b.logger.Debug(">>> handlePluginCatalogUpdate", "plugin_name", pluginName, "plugin_type", pluginType, "plugin_version", pluginVersion, "sha256", sha256, "oci_image", ociImage, "plugin_runtime", pluginRuntime, "command", command)
 	if ociImage != "" {
 		if runtime.GOOS != "linux" {
 			return logical.ErrorResponse("specifying oci_image is currently only supported on Linux"), nil
