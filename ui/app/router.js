@@ -177,15 +177,9 @@ Router.map(function () {
           this.mount('pki');
           this.route('index', { path: '/' });
           this.route('configuration', function () {
-            // index here is the route that shows the tabs for "General settings" and "Aws settings"
-            this.route('mount', function () {
-              this.route('edit');
-            });
-            this.route('plugin-settings', function () {
-              this.route('edit');
-            });
-            // remove this route when ready because it will be replace by the plugin-settings edit route
-            this.route('edit');
+            // index here is the route that shows the tabs for "General settings" and you can "tune" the mount
+            this.route('plugin-settings');
+            this.route('edit'); // remove this route when ready because it will be replace by the plugin-settings
           });
           // because globs / params can't be empty,
           // we have to special-case ids of '' with their own routes
