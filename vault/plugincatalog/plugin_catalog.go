@@ -374,6 +374,7 @@ func (c *PluginCatalog) NewPluginClient(ctx context.Context, config pluginutil.P
 		return nil, fmt.Errorf("no plugin found")
 	}
 	c.logger.Debug(">>> calling newPluginClient 1")
+	panic("ellie")
 	pc, err := c.newPluginClient(ctx, pluginRunner, config)
 	return pc, err
 }
