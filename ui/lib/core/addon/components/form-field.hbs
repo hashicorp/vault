@@ -195,7 +195,7 @@
         <Hds::Form::Checkbox::Field
           name={{@attr.name}}
           @id={{@attr.name}}
-          checked={{get @model @attr.name}}
+          checked={{get @model this.valuePath}}
           disabled={{this.disabled}}
           {{on "change" this.onChangeWithEvent}}
           data-test-input={{@attr.name}}
