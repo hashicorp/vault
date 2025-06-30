@@ -1,0 +1,3 @@
+```release-note:improvement
+plugins: Clarify usage of sha256, command, and version for plugin registration of binary or artifact with API and CLI. Introduce new RegisterPluginDetailed and RegisterPluginWtihContextDetailed functions to API client to propagate response along with error, and mark RegisterPlugin and RegisterPluginWithContext as deprecated.
+```
