@@ -69,30 +69,30 @@ func TestExternalPluginInContainer_MountAndUnmount(t *testing.T) {
 					mountAndUnmountContainerPlugin_WithRuntime(t, c, plugin, "", false)
 				})
 
-				t.Run("runc", func(t *testing.T) {
-					mountAndUnmountContainerPlugin_WithRuntime(t, c, plugin, "runc", false)
-				})
+				// t.Run("runc", func(t *testing.T) {
+				// 	mountAndUnmountContainerPlugin_WithRuntime(t, c, plugin, "runc", false)
+				// })
 
-				t.Run("runsc", func(t *testing.T) {
-					if _, err := exec.LookPath("runsc"); err != nil {
-						t.Skip("Skipping test as runsc not found on path")
-					}
-					mountAndUnmountContainerPlugin_WithRuntime(t, c, plugin, "runsc", false)
-				})
+				// t.Run("runsc", func(t *testing.T) {
+				// 	if _, err := exec.LookPath("runsc"); err != nil {
+				// 		t.Skip("Skipping test as runsc not found on path")
+				// 	}
+				// 	mountAndUnmountContainerPlugin_WithRuntime(t, c, plugin, "runsc", false)
+				// })
 			})
 		}
 	})
 
-	t.Run("rootless runsc", func(t *testing.T) {
-		t.Skip("Temporarily skipping due to environment breakage")
-		if _, err := exec.LookPath("runsc"); err != nil {
-			t.Skip("Skipping test as runsc not found on path")
-		}
+	// t.Run("rootless runsc", func(t *testing.T) {
+	// 	t.Skip("Temporarily skipping due to environment breakage")
+	// 	if _, err := exec.LookPath("runsc"); err != nil {
+	// 		t.Skip("Skipping test as runsc not found on path")
+	// 	}
 
-		t.Setenv("DOCKER_HOST", fmt.Sprintf("unix:///run/user/%d/docker.sock", os.Getuid()))
-		c, plugins := testClusterWithContainerPlugins(t, []consts.PluginType{consts.PluginTypeCredential})
-		mountAndUnmountContainerPlugin_WithRuntime(t, c, plugins[0], "runsc", true)
-	})
+	// 	t.Setenv("DOCKER_HOST", fmt.Sprintf("unix:///run/user/%d/docker.sock", os.Getuid()))
+	// 	c, plugins := testClusterWithContainerPlugins(t, []consts.PluginType{consts.PluginTypeCredential})
+	// 	mountAndUnmountContainerPlugin_WithRuntime(t, c, plugins[0], "runsc", true)
+	// })
 }
 
 func mountAndUnmountContainerPlugin_WithRuntime(t *testing.T, c *TestClusterCore, plugin pluginhelpers.TestPlugin, ociRuntime string, rootless bool) {

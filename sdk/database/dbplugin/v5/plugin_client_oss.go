@@ -8,6 +8,7 @@ package dbplugin
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5/proto"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
@@ -17,6 +18,7 @@ import (
 // NewPluginClient returns a databaseRPCClient with a connection to a running
 // plugin.
 func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, config pluginutil.PluginClientConfig) (Database, error) {
+	fmt.Println(">>> NewPluginClient (sdk/database/dbplugin/v5)")
 	pluginClient, err := sys.NewPluginClient(ctx, config)
 	if err != nil {
 		return nil, err

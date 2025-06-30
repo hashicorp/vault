@@ -6,6 +6,7 @@ package dbplugin
 import (
 	"context"
 	"errors"
+	"fmt"
 	"sync"
 
 	log "github.com/hashicorp/go-hclog"
@@ -35,6 +36,7 @@ func (dc *DatabasePluginClient) Close() error {
 // plugin. The client is wrapped in a DatabasePluginClient object to ensure the
 // plugin is killed on call of Close().
 func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (Database, error) {
+	fmt.Println(">>> NewPluginClient (sdk/database)")
 	// pluginSets is the map of plugins we can dispense.
 	pluginSets := map[int]plugin.PluginSet{
 		// Version 3 used to supports both protocols. We want to keep it around

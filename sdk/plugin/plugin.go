@@ -78,6 +78,7 @@ func NewBackend(ctx context.Context, pluginName string, pluginType consts.Plugin
 }
 
 func NewPluginClient(ctx context.Context, sys pluginutil.RunnerUtil, pluginRunner *pluginutil.PluginRunner, logger log.Logger, isMetadataMode bool) (logical.Backend, error) {
+	fmt.Println(">>> NewPluginClient (sdk/plugin)")
 	// pluginMap is the map of plugins we can dispense.
 	pluginSet := map[int]plugin.PluginSet{
 		// Version 3 used to supports both protocols. We want to keep it around
