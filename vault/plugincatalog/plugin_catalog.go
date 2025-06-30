@@ -380,6 +380,7 @@ func (c *PluginCatalog) NewPluginClient(ctx context.Context, config pluginutil.P
 // newPluginClient returns a client for managing the lifecycle of a plugin
 // process. Callers should have the write lock held.
 func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (*pluginClient, error) {
+	panic("ellie")
 	if pluginRunner == nil {
 		return nil, fmt.Errorf("no plugin found")
 	}
