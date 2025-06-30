@@ -37,12 +37,15 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { personas } from 'vault/tests/helpers/kv/policy-generator';
+import { capabilitiesStub } from 'vault/tests/helpers/stubs';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
 /**
  * This test set is for testing edge cases, such as specific bug fixes or reported user workflows
  */
 module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(async function () {
     const uid = uuidv4();
@@ -195,6 +198,28 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert.dom(PAGE.secretTab('Secrets')).doesNotHaveClass('is-active');
       assert.dom(PAGE.secretTab('Configuration')).doesNotHaveClass('is-active');
     });
+
+    // it's rare for a policy check to fail, but if it does we default to "true" and let the API handle gating.
+    // there was an issue with the new capabilities service incorrectly mapping permissions for secrets with underscores which surfaced this bug.
+    // The user logged in here does NOT have access to the subkeys endpoint, but we're stubbing capabilities to return true
+    // to simulate the capabilities map failing and returning a false positive.
+    test('it navigates to secret if policy check fails for the subkeys endpoint', async function (assert) {
+      assert.expect(2);
+      this.server.post(
+        '/sys/capabilities-self',
+        capabilitiesStub(`${this.backend}/subkeys/my_secret`, ['read'])
+      );
+
+      await visit(`/vault/secrets/${this.backend}/kv/list`);
+      await typeIn(PAGE.list.overviewInput, 'my_secret');
+      await click(GENERAL.submitButton);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/secrets/${this.backend}/kv/my_secret`,
+        'it navigates to secret overview'
+      );
+      assert.dom(GENERAL.overviewCard.container('Paths')).exists();
+    });
   });
 
   module('destruction without read', function (hooks) {
@@ -294,7 +319,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await visit(`/vault/secrets/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'complex');
 
-    await click(FORM.toggleJson);
+    await click(GENERAL.toggleInput('json'));
 
     assert.strictEqual(
       codemirror().getValue(),
@@ -308,8 +333,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
     // Details view
     await click(PAGE.secretTab('Secret'));
-    assert.dom(FORM.toggleJson).isNotDisabled('JSON toggle is not disabled');
-    assert.dom(FORM.toggleJson).isChecked("JSON toggle is checked 'on'");
+    assert.dom(GENERAL.toggleInput('json')).isNotDisabled('JSON toggle is not disabled');
+    assert.dom(GENERAL.toggleInput('json')).isChecked("JSON toggle is checked 'on'");
 
     assert
       .dom(GENERAL.codeBlock('secret-data'))
@@ -317,8 +342,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
     // New version view
     await click(PAGE.detail.createNewVersion);
-    assert.dom(FORM.toggleJson).isNotDisabled();
-    assert.dom(FORM.toggleJson).isChecked();
+    assert.dom(GENERAL.toggleInput('json')).isNotDisabled();
+    assert.dom(GENERAL.toggleInput('json')).isChecked();
     assert.deepEqual(
       codemirror().getValue(),
       `{
@@ -336,7 +361,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await visit(`/vault/secrets/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'json jump');
 
-    await click(FORM.toggleJson);
+    await click(GENERAL.toggleInput('json'));
     codemirror().setCursor({ line: 2, ch: 1 });
     await triggerKeyEvent(GENERAL.codemirrorTextarea, 'keydown', 'Enter');
     const actualCursorPosition = JSON.stringify(codemirror().getCursor());
@@ -359,7 +384,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await visit(`/vault/secrets/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'complex_version_test');
 
-    await click(FORM.toggleJson);
+    await click(GENERAL.toggleInput('json'));
     codemirror().setValue('{ "foo1": { "name": "bar1" } }');
     await click(FORM.saveBtn);
 
@@ -392,8 +417,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await fillIn(FORM.maskedValueInput(), '{bar}');
     await click(FORM.saveBtn);
     await click(GENERAL.overviewCard.actionText('Create new'));
-    assert.dom(FORM.toggleJson).isNotDisabled();
-    assert.dom(FORM.toggleJson).isNotChecked();
+    assert.dom(GENERAL.toggleInput('json')).isNotDisabled();
+    assert.dom(GENERAL.toggleInput('json')).isNotChecked();
   });
 
   // patch is technically enterprise only but stubbing the version so these tests run on both CE and enterprise
