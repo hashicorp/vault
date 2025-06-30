@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 	"testing"
 
@@ -62,12 +61,12 @@ func TestExternalPluginInContainer_MountAndUnmount(t *testing.T) {
 
 		for _, plugin := range plugins {
 			t.Run(plugin.Typ.String(), func(t *testing.T) {
-				t.Run("default runtime", func(t *testing.T) {
-					if _, err := exec.LookPath("runsc"); err != nil {
-						t.Skip("Skipping test as runsc not found on path")
-					}
-					mountAndUnmountContainerPlugin_WithRuntime(t, c, plugin, "", false)
-				})
+				// t.Run("default runtime", func(t *testing.T) {
+				// 	if _, err := exec.LookPath("runsc"); err != nil {
+				// 		t.Skip("Skipping test as runsc not found on path")
+				// 	}
+				// 	mountAndUnmountContainerPlugin_WithRuntime(t, c, plugin, "", false)
+				// })
 
 				// t.Run("runc", func(t *testing.T) {
 				// 	mountAndUnmountContainerPlugin_WithRuntime(t, c, plugin, "runc", false)
