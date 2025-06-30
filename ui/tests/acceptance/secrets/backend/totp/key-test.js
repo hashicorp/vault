@@ -21,7 +21,7 @@ module('Acceptance | totp key backend', function (hooks) {
     await fillIn(GENERAL.inputByAttr('issuer'), issuer);
     await fillIn(GENERAL.inputByAttr('accountName'), accountName);
     if (!exported) {
-      await click(GENERAL.ttl.toggle('toggle-exported'));
+      await click(GENERAL.toggleInput('toggle-exported'));
     }
     if (qrSize !== 200) {
       await click(GENERAL.button('Provider Options'));

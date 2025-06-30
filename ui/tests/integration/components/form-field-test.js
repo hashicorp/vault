@@ -118,17 +118,6 @@ module('Integration | Component | form field', function (hooks) {
     assert.ok(spy.calledWith('foo', 'bar'), 'onChange called with correct args');
   });
 
-  test('it renders: boolean', async function (assert) {
-    const [model, spy] = await setup.call(this, createAttr('foo', 'boolean', { defaultValue: false }));
-    assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
-    assert.notOk(component.fields.objectAt(0).inputChecked, 'renders default value');
-    assert.ok(component.hasCheckbox, 'renders a checkbox for boolean');
-    await component.fields.objectAt(0).clickLabel();
-
-    assert.true(model.get('foo'));
-    assert.ok(spy.calledWith('foo', true), 'onChange called with correct args');
-  });
-
   test('it renders: number', async function (assert) {
     const [model, spy] = await setup.call(this, createAttr('foo', 'number', { defaultValue: 5 }));
     assert.strictEqual(component.fields.objectAt(0).labelValue, 'Foo', 'renders a label');
@@ -1027,6 +1016,108 @@ module('Integration | Component | form field', function (hooks) {
     this.setProperties({
       attr: createAttr('myfield', 'string', { editType: 'textarea' }),
       model: { myfield: 'bar' },
+      modelValidations: {
+        myfield: {
+          isValid: false,
+          errors: ['Error message #1', 'Error message #2'],
+          warnings: ['Warning message #1', 'Warning message #2'],
+        },
+      },
+      onChange: () => {},
+    });
+
+    await render(
+      hbs`<FormField @attr={{this.attr}} @model={{this.model}} @modelValidations={{this.modelValidations}} @onChange={{this.onChange}} />`
+    );
+    assert
+      .dom(GENERAL.validationErrorByAttr('myfield'))
+      .exists('Validation error renders')
+      .hasText('Error message #1 Error message #2', 'Validation errors are combined');
+    assert
+      .dom(GENERAL.validationWarningByAttr('myfield'))
+      .exists('Validation warning renders')
+      .hasText('Warning message #1 Warning message #2', 'Validation warnings are combined');
+  });
+
+  // ––––– type/editType === 'boolean' –––––
+
+  test('it renders: type=boolean - as Hds::Form::Checkbox', async function (assert) {
+    await setup.call(this, createAttr('myfield', 'boolean', { defaultValue: 'false' }));
+    assert
+      .dom('.field [class^="hds-form-field"] input[type="checkbox"].hds-form-checkbox')
+      .exists('renders as Hds::Form::Checkbox::Field');
+    assert
+      .dom(`input[type=checkbox]`)
+      .exists('renders input[type="checkbox"]')
+      .hasAttribute(
+        'data-test-input',
+        'myfield',
+        'input[type="checkbox"] has correct `data-test-input` attribute'
+      );
+    assert.dom(GENERAL.fieldLabel()).hasText('Myfield', 'renders the input[type="checkbox"] label');
+  });
+
+  test('it renders: editType=boolean - as Hds::Form::Checkbox', async function (assert) {
+    await setup.call(this, createAttr('myfield', '-', { editType: 'boolean', defaultValue: 'false' }));
+    assert
+      .dom('.field [class^="hds-form-field"] input[type="checkbox"].hds-form-checkbox')
+      .exists('renders as Hds::Form::Checkbox::Field');
+    assert
+      .dom(`input[type=checkbox]`)
+      .exists('renders input[type="checkbox"]')
+      .hasAttribute(
+        'data-test-input',
+        'myfield',
+        'input[type="checkbox"] has correct `data-test-input` attribute'
+      );
+    assert.dom(GENERAL.fieldLabel()).hasText('Myfield', 'renders the input[type="checkbox"] label');
+  });
+
+  test('it renders: editType=boolean - unselected by default', async function (assert) {
+    await setup.call(this, createAttr('myfield', '-', { editType: 'boolean' }));
+    assert.dom(GENERAL.inputByAttr('myfield')).isNotChecked('input[type="checkbox"] is not checked');
+  });
+
+  test('it renders: editType=boolean - selected and changes it', async function (assert) {
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('myfield', '-', { editType: 'boolean', defaultValue: 'true' })
+    );
+    assert.dom(GENERAL.inputByAttr('myfield')).isChecked('input[type="checkbox"] is checked');
+    await click(GENERAL.inputByAttr('myfield'));
+    assert.false(model.get('myfield'));
+    assert.true(spy.calledWith('myfield', false), 'onChange called with correct args');
+  });
+
+  test('it renders: editType=boolean - with passed label, subtext, helptext, doclink', async function (assert) {
+    await setup.call(
+      this,
+      createAttr('myfield', '-', {
+        editType: 'boolean',
+        label: 'Custom label',
+        subText: 'Some subtext',
+        helpText: 'Some helptext',
+        docLink: '/docs',
+      })
+    );
+    assert.dom(GENERAL.fieldLabel()).hasText('Custom label', 'renders the custom label from options');
+    assert
+      .dom(GENERAL.helpTextByAttr('Some subtext'))
+      .exists('renders `subText` option as HelperText')
+      .hasText('Some subtext Learn more here.', 'renders the right subtext string from options');
+    assert
+      .dom(`${GENERAL.helpTextByAttr('Some subtext')} ${GENERAL.docLinkByAttr('/docs')}`)
+      .exists('renders `docLink` option as as link inside the subtext');
+    assert
+      .dom(GENERAL.helpTextByAttr('Some helptext'))
+      .exists('renders `helptext` option as HelperText')
+      .hasText('Some helptext', 'renders the right help text string from options');
+  });
+
+  test('it renders: editType=boolean - with validation errors and warnings', async function (assert) {
+    this.setProperties({
+      attr: createAttr('myfield', '-', { editType: 'boolean' }),
+      model: { myfield: false },
       modelValidations: {
         myfield: {
           isValid: false,
