@@ -178,7 +178,7 @@ Router.map(function () {
           this.route('index', { path: '/' });
           this.route('configuration', function () {
             // index here is the route that shows the tabs for "General settings" and you can "tune" the mount
-            this.route('plugin-settings');
+            this.route('plugin-settings', { outlet: 'pluginSettings' });
             this.route('edit'); // remove this route when ready because it will be replace by the plugin-settings
           });
           // because globs / params can't be empty,
