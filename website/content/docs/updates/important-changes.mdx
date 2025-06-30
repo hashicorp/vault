@@ -147,6 +147,26 @@ None.
 
 ## Known issues
 
+### UI KV v2 overview for secret paths containing underscores ((#ui-kvv2-underscore-secrets))
+
+| Change       | Affected version | Fixed version
+| ------------ | ---------------- | --------------------
+| Known issue  | 1.20.0           | 1.20.1
+
+Navigating to a KV v2 secret with an underscore in the name (e.g. `my_secret`) errors if a user does not have
+policy permissions granting `read` access to the [`/subkeys` endpoint](/vault/api-docs/secret/kv/kv-v2#read-secret-subkeys).
+
+#### Recommendation
+
+As a workaround, the [GUI CLI emulator](/vault/docs/ui/web-cli) can be used to read secret data or metadata.
+
+The API Explorer can be used to make any HTTP request.
+1. Select **Tools** from the Vault UI sidebar and click **API Explorer**
+1. Input the KV v2 plugin mount path in the search bar with the placeholder "Filter by tag"
+1. Expand the endpoint for the action you wish to perform and click **Try it out**
+1. Fill in any additional parameters, if applicable. For example, to read a KV v2 secret the `path` must be provided.
+1. Click **Execute** to perform the HTTP request.
+
 ### Duplicate unseal/seal wrap HSM keys ((#hsm-keys)) <EnterpriseAlert inline="true" />
 
 | Change      | Status | Affected version                       | Fixed version
