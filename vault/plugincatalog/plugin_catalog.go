@@ -373,6 +373,7 @@ func (c *PluginCatalog) NewPluginClient(ctx context.Context, config pluginutil.P
 	if pluginRunner == nil {
 		return nil, fmt.Errorf("no plugin found")
 	}
+	c.logger.Debug(">>> calling newPluginClient 1")
 	pc, err := c.newPluginClient(ctx, pluginRunner, config)
 	return pc, err
 }
@@ -380,7 +381,7 @@ func (c *PluginCatalog) NewPluginClient(ctx context.Context, config pluginutil.P
 // newPluginClient returns a client for managing the lifecycle of a plugin
 // process. Callers should have the write lock held.
 func (c *PluginCatalog) newPluginClient(ctx context.Context, pluginRunner *pluginutil.PluginRunner, config pluginutil.PluginClientConfig) (*pluginClient, error) {
-	panic("ellie")
+	c.logger.Debug(">>> newPluginClient")
 	if pluginRunner == nil {
 		return nil, fmt.Errorf("no plugin found")
 	}
@@ -523,6 +524,7 @@ func (c *PluginCatalog) getBackendPluginType(ctx context.Context, pluginRunner *
 	var attemptV4 bool
 	// First, attempt to run as backend V5 plugin
 	c.logger.Debug("attempting to load backend plugin", "name", pluginRunner.Name)
+	c.logger.Debug(">>> calling newPluginClient 2")
 	pc, err := c.newPluginClient(ctx, pluginRunner, config)
 	if err == nil {
 		// we spawned a subprocess, so make sure to clean it up
@@ -612,6 +614,7 @@ func (c *PluginCatalog) getBackendRunningVersion(ctx context.Context, pluginRunn
 	var client logical.Backend
 	// First, attempt to run as backend V5 plugin
 	c.logger.Debug("attempting to load backend plugin", "name", pluginRunner.Name)
+	c.logger.Debug(">>> calling newPluginClient 3")
 	pc, err := c.newPluginClient(ctx, pluginRunner, config)
 	if err == nil {
 		// we spawned a subprocess, so make sure to clean it up
@@ -686,6 +689,7 @@ func (c *PluginCatalog) getDatabaseRunningVersion(ctx context.Context, pluginRun
 
 	// Attempt to run as database V5+ multiplexed plugin
 	c.logger.Debug("attempting to load database plugin as v5", "name", pluginRunner.Name)
+	c.logger.Debug(">>> calling newPluginClient 4")
 	v5Client, err := c.newPluginClient(ctx, pluginRunner, config)
 	if err == nil {
 		key, err := makeExternalPluginsKey(pluginRunner)
@@ -754,6 +758,7 @@ func (c *PluginCatalog) isDatabasePlugin(ctx context.Context, pluginRunner *plug
 
 	// Attempt to run as database V5+ multiplexed plugin
 	c.logger.Debug("attempting to load database plugin as v5", "name", pluginRunner.Name)
+	c.logger.Debug(">>> calling newPluginClient 5")
 	v5Client, err := c.newPluginClient(ctx, pluginRunner, config)
 	if err == nil {
 		// Close the client and cleanup the plugin process
