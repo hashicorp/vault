@@ -1,6 +1,5 @@
 name: Bench
 
-
 on:
   # This has been disabled due to excessive flakiness. The GHA is left here for easier re-implementation in case
   # we wanted to iterate on this in the future, or if we find benchmark tests that are more stable.
