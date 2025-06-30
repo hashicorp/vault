@@ -219,7 +219,7 @@ BUG FIXES:
 * ui/kmip: Fixes KMIP credentials view and displays `private_key` after generating [[GH-30778](https://github.com/hashicorp/vault/pull/30778)]
 * ui: Redirect users authenticating with Vault as an OIDC provider to log in again when token expires. [[GH-30838](https://github.com/hashicorp/vault/pull/30838)]
 
-## 1.19.5 Enterprise
+## 1.19.5
 ### May 30, 2025
 
 **Enterprise LTS:** Vault Enterprise 1.19 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
