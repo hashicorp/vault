@@ -165,7 +165,7 @@ Router.map(function () {
         this.route('mount', function () {
           // mount.index has the list of mounts on the clients binary, retrieved from the plugin/catalog/secret endpoint (TODO)
           this.route('create', { path: '/:mount_type/create' });
-          this.route('edit', { path: '/:mount_name/details' }); // bulk edit of the mount (e.g. pin and reload module)
+          this.route('edit', { path: '/:mount_type/details' }); // bulk edit of the type of mount mount (e.g. pin and reload module)
           // Note: details and edit are handled in the same view
         });
         this.route('backend', { path: '/:backend' }, function () {
