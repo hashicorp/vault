@@ -70,6 +70,7 @@ func NewBackendV5(ctx context.Context, pluginName string, pluginType consts.Plug
 
 	var backend logical.Backend
 	if pluginRunner.Builtin {
+		fmt.Println(">>> In NewBackendV5, plugin is builtin:", pluginName)
 		// Plugin is builtin so we can retrieve an instance of the interface
 		// from the pluginRunner. Then cast it to logical.Factory.
 		rawFactory, err := pluginRunner.BuiltinFactory()
@@ -85,6 +86,7 @@ func NewBackendV5(ctx context.Context, pluginName string, pluginType consts.Plug
 			}
 		}
 	} else {
+		fmt.Println(">>> In NewBackendV5, plugin is external:", pluginName)
 		// create a backendPluginClient instance
 		config := pluginutil.PluginClientConfig{
 			Name:            pluginName,
