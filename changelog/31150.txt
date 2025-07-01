@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixes UI login settings list page which was not rendering rules with an underscore in the name.
+```
