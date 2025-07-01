@@ -10,16 +10,16 @@ terraform {
 }
 
 locals {
-  distro = var.distro
+  distro              = var.distro
+  test_server_address = var.ip_version == "6" ? var.hosts[0].ipv6 : var.hosts[0].public_ip
   ldap_server = {
-    domain          = "enos.com"
-    org             = "hashicorp"
-    admin_pw        = "password1"
-    version         = var.ldap_version
-    port            = "389"
-    ip_version      = var.ip_version
-    ip_address      = var.hosts[0].public_ip
-    ldap_ip_address = var.ip_version == "6" ? var.hosts[0].ipv6 : var.hosts[0].public_ip
+    domain     = "enos.com"
+    org        = "hashicorp"
+    admin_pw   = "password1"
+    version    = var.ldap_version
+    port       = "389"
+    ip_version = var.ip_version
+    host       = var.hosts[0]
   }
 }
 
@@ -37,12 +37,12 @@ resource "enos_remote_exec" "setup_docker" {
   environment = {
     DISTRO          = local.distro
     IP_VERSION      = local.ldap_server.ip_version
-    LDAP_IP_ADDRESS = local.ldap_server.ldap_ip_address
+    LDAP_IP_ADDRESS = local.test_server_address
   }
 
   transport = {
     ssh = {
-      host = local.ldap_server.ip_address
+      host = local.ldap_server.host.public_ip
     }
   }
 }
@@ -56,7 +56,7 @@ resource "enos_remote_exec" "setup_openldap" {
     LDAP_DOMAIN            = local.ldap_server.domain
     LDAP_ORG               = local.ldap_server.org
     LDAP_ADMIN_PW          = local.ldap_server.admin_pw
-    LDAP_IP_ADDRESS        = local.ldap_server.ldap_ip_address
+    LDAP_IP_ADDRESS        = local.test_server_address
     LDAP_PORT              = local.ldap_server.port
   }
 
@@ -64,7 +64,7 @@ resource "enos_remote_exec" "setup_openldap" {
 
   transport = {
     ssh = {
-      host = local.ldap_server.ip_address
+      host = local.ldap_server.host.public_ip
     }
   }
 }
