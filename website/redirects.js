@@ -324,5 +324,10 @@ module.exports = [
     source: '/vault/docs/concepts/client-count/usage-metrics',
     destination: '/vault/docs/concepts/client-count/client-usage',
     permanent: true,
+  },
+  {
+    source: '/vault/docs/v:version(1\.*\.x)/v:ver(1\.*\.x)/:slug*',
+    destination: '/vault/docs/:version/:slug',
+    permanent: true,
   }
 ]
