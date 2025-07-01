@@ -51,7 +51,7 @@ locals {
   ca_key_type    = local.ca_key_types[random_integer.ca_key_type_idx.result]
   cert_key_types = ["rsa", "ed25519", "ec"]
   cert_key_type  = local.cert_key_types[random_integer.cert_key_idx.result]
-  ssh_test_ip    = "192.168.1.1"
+  ssh_test_ip    = "192.168.1.1/32"
   ssh_test_user  = "testuser"
   ssh_public_key = tls_private_key.test_ssh_key.public_key_openssh
 
