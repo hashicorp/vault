@@ -45,14 +45,18 @@ func testPluginCreateAndRegister(tb testing.TB, client *api.Client, dir, name st
 
 	pth, sha256Sum := testPluginCreate(tb, dir, name)
 
-	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
+	resp, err := client.Sys().RegisterPluginDetailed(&api.RegisterPluginInput{
 		Name:    name,
 		Type:    pluginType,
 		Command: name,
 		SHA256:  sha256Sum,
 		Version: version,
-	}); err != nil {
+	})
+	if err != nil {
 		tb.Fatal(err)
+	}
+	if len(resp.Warnings) > 0 {
+		tb.Errorf("expected no warnings, got: %v", resp.Warnings)
 	}
 
 	return pth, sha256Sum
@@ -64,14 +68,18 @@ func testPluginCreateAndRegisterVersioned(tb testing.TB, client *api.Client, dir
 
 	pth, sha256Sum := testPluginCreate(tb, dir, name)
 
-	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
+	resp, err := client.Sys().RegisterPluginDetailed(&api.RegisterPluginInput{
 		Name:    name,
 		Type:    pluginType,
 		Command: name,
 		SHA256:  sha256Sum,
 		Version: "v1.0.0",
-	}); err != nil {
+	})
+	if err != nil {
 		tb.Fatal(err)
+	}
+	if len(resp.Warnings) > 0 {
+		tb.Errorf("expected no warnings, got: %v", resp.Warnings)
 	}
 
 	return pth, sha256Sum, "v1.0.0"
