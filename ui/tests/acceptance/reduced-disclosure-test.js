@@ -162,8 +162,8 @@ module('Acceptance | reduced disclosure test', function (hooks) {
         );
       assert.dom(SELECTORS.dashboardTitle).includesText('Vault v1.');
 
-      // navigate to "root" before deleting
-      await visit('vault/dashboard');
+      // log in to "root" before deleting
+      await login();
       // clean up namespace pollution
       await runCmd(deleteNS(namespace));
     });
@@ -197,8 +197,8 @@ module('Acceptance | reduced disclosure test', function (hooks) {
         .dom(SELECTORS.footerVersion)
         .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version for default policy in namespace');
 
-      // navigate to "root" before deleting
-      await visit('vault/dashboard');
+      // log in to "root" before deleting
+      await login();
       // clean up namespace pollution
       await runCmd(deleteNS(namespace));
     });
