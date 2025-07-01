@@ -1987,6 +1987,18 @@
         "path": "plugins/plugin-architecture"
       },
       {
+        "title": "Register a plugin",
+        "path": "plugins/register"
+      },
+      {
+        "title": "Upgrade plugins",
+        "path": "plugins/upgrade"
+      },
+      {
+        "title": "Rollback upgrades",
+        "path": "plugins/rollback"
+      },
+      {
         "title": "Plugin Development",
         "path": "plugins/plugin-development"
       },
