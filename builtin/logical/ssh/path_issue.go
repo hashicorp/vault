@@ -86,7 +86,7 @@ be later than the role max TTL.`,
 func (b *backend) pathIssue(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	// Get the role
 	roleName := data.Get("role").(string)
-	role, err := b.getRole(ctx, req.Storage, roleName)
+	role, err := b.getRole(ctx, req.Storage, roleName, false)
 	if err != nil {
 		return nil, err
 	}
