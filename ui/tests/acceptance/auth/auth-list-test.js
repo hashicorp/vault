@@ -159,14 +159,19 @@ module('Acceptance | auth backend list', function (hooks) {
       await settled();
       await loginNs(ns);
       // go directly to token configure route
-      await visit('/vault/settings/auth/configure/token/options');
+      await visit(`/vault/settings/auth/configure/token/options?namespace=${ns}`);
       await fillIn(GENERAL.inputByAttr('description'), 'My custom description');
       await click(GENERAL.submitButton);
-      assert.strictEqual(currentURL(), '/vault/access', 'successfully saves and navigates away');
+      assert.strictEqual(
+        currentURL(),
+        `/vault/access?namespace=${ns}`,
+        'successfully saves and navigates away'
+      );
       await click(GENERAL.linkedBlock('token'));
       assert
         .dom('[data-test-row-value="Description"]')
         .hasText('My custom description', 'description was saved');
+      await login();
       await runCmd(`delete sys/namespaces/${ns}`);
     });
   });
