@@ -153,20 +153,20 @@ None.
 | ------------ | ---------------- | --------------------
 | Known issue  | 1.20.0           | 1.20.1
 
-If an auth method is mounted at a path that includes an underscore (e.g. oidc_test)
-**and** the mount is tuned with `listing_visibility="unauth"` the login request will
-fail because the UI requests the wrong endpoint. Mounts with dashes, e.g. oidc-test
-still log in fine.
+Requests to auth methods mounted at paths using underscores (e.g. `oidc_test`)
+with `listing_visibility="unauth"` fail because the GUI calls the wrong
+endpoint. Mounts with dashes (e.g. `oidc-test`) work correctly.
 
 #### Recommendation
 
-As a workaround, you can log in to the UI using the following steps:
-1. Navigate directly to the URL for that method’s type `${VAULT_ADDR}/ui/vault/auth?with=oidc`
-2. Click "Sign in with other methods ->"
-3. Select type from the dropdown
-4. Click "Advanced settings" and input the correct path, e.g. oidc_test
+As a workaround, you can log in to the GUI using the following steps:
 
-You can create a [UI custom message](/vault/docs/ui/custom-message) describing the workaround steps.
+1. Navigate directly to the URL for the desired method type: `${VAULT_ADDR}/ui/vault/auth?with=oidc`
+1. Click "Sign in with other methods ->"
+1. Select type from the dropdown
+1. Click **Advanced settings** and provide the correct path (e.g., `oidc_test`).
+
+We also recommend creating a [custom GUI message](/vault/docs/ui/custom-message) describing the workaround steps for users.
 
 ### Duplicate unseal/seal wrap HSM keys ((#hsm-keys)) <EnterpriseAlert inline="true" />
 
