@@ -30,7 +30,7 @@ install_ldap_tools() {
 }
 
 [[ -z "$MOUNT" ]] && fail "MOUNT env variable has not been set"
-[[ -z "$LDAP_HOST" ]] && fail "LDAP_HOST env variable has not been set"
+[[ -z "$LDAP_SERVER" ]] && fail "LDAP_SERVER env variable has not been set"
 [[ -z "$LDAP_PORT" ]] && fail "LDAP_PORT env variable has not been set"
 [[ -z "$LDAP_USERNAME" ]] && fail "LDAP_USERNAME env variable has not been set"
 [[ -z "$LDAP_ADMIN_PW" ]] && fail "LDAP_ADMIN_PW env variable has not been set"
@@ -46,8 +46,8 @@ export VAULT_FORMAT=json
 # Installing LDAP tools
 install_ldap_tools > /dev/null
 
-echo "OpenLDAP: Checking for OpenLDAP Server Connection: ${LDAP_HOST}:${LDAP_PORT}"
-ldapsearch -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" -b "dc=${LDAP_USERNAME},dc=com" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}"
+echo "OpenLDAP: Checking for OpenLDAP Server Connection: ${LDAP_SERVER}:${LDAP_PORT}"
+ldapsearch -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -b "dc=${LDAP_USERNAME},dc=com" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}"
 
 # Creating Users Org Unit LDIF file and adding users organizational unit
 echo "OpenLDAP: Creating Users Org Unit LDIF file and adding users organizational unit"
@@ -57,7 +57,7 @@ dn: ou=users,dc=$LDAP_USERNAME,dc=com
 objectClass: organizationalUnit
 ou: users
 EOF
-ldapadd -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}" -f ${GROUP_LDIF}
+ldapadd -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}" -f ${GROUP_LDIF}
 
 echo "OpenLDAP: Creating User LDIF file and adding user to LDAP"
 USER_LDIF="user.ldif"
@@ -69,12 +69,12 @@ cn: $LDAP_USERNAME user
 uid: $LDAP_USERNAME
 userPassword: $LDAP_ADMIN_PW
 EOF
-ldapadd -x -H "ldap://${LDAP_HOST}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}" -f ${USER_LDIF}
+ldapadd -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}" -f ${USER_LDIF}
 
 echo "Vault: Creating ldap auth and creating auth/ldap/config route"
 "$binpath" auth enable "${MOUNT}" > /dev/null 2>&1 || echo "Warning: Vault ldap auth already enabled"
 "$binpath" write "auth/${MOUNT}/config" \
-  url="ldap://test_${LDAP_HOST}:${LDAP_PORT}" \
+  url="ldap://test_${LDAP_SERVER}:${LDAP_PORT}" \
   binddn="cn=admin,dc=${LDAP_USERNAME},dc=com" \
   bindpass="${LDAP_ADMIN_PW}" \
   userdn="ou=users,dc=${LDAP_USERNAME},dc=com" \
@@ -87,7 +87,7 @@ echo "Vault: Creating ldap auth and creating auth/ldap/config route"
 echo "Vault: Updating ldap auth and creating auth/ldap/config route"
 "$binpath" auth enable "${MOUNT}" > /dev/null 2>&1 || echo "Warning: Vault ldap auth already enabled"
 "$binpath" write "auth/${MOUNT}/config" \
-  url="ldap://${LDAP_HOST}:${LDAP_PORT}" \
+  url="ldap://${LDAP_SERVER}:${LDAP_PORT}" \
   binddn="cn=admin,dc=${LDAP_USERNAME},dc=com" \
   bindpass="${LDAP_ADMIN_PW}" \
   userdn="ou=users,dc=${LDAP_USERNAME},dc=com" \

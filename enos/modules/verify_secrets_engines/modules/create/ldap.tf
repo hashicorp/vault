@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: BUSL-1.1
 
 locals {
-  // Output
   ldap_output = {
+    ip_version        = var.ip_version
     ldap_mount        = "ldap"
     host              = var.ldap_host
     port              = var.ldap_port
@@ -45,7 +45,7 @@ resource "enos_remote_exec" "ldap_configurations" {
 
   environment = {
     MOUNT             = local.ldap_output.ldap_mount
-    LDAP_HOST         = local.ldap_output.host
+    LDAP_SERVER       = var.ip_version == "6" ? var.ldap_host.ipv6 : var.ldap_host.public_ip
     LDAP_PORT         = local.ldap_output.port
     LDAP_USERNAME     = local.ldap_output.username
     LDAP_ADMIN_PW     = local.ldap_output.pw

@@ -57,7 +57,7 @@ module "create_vpc" {
 }
 
 module "set_up_external_integration_target" {
-  source = "./modules/backend_test_servers"
+  source = "./modules/target_set_up_external_integration"
 
   ldap_version = "1.5.0"
 }
