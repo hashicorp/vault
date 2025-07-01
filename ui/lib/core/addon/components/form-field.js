@@ -118,7 +118,13 @@ export default class FormFieldComponent extends Component {
       ) {
         return false;
       } else if (type === 'number' || type === 'string') {
-        if (options?.editType === 'textarea' || options?.editType === 'password') {
+        if (
+          options?.editType === undefined ||
+          options?.editType === 'textarea' ||
+          options?.editType === 'password' ||
+          options?.editType === 'string' ||
+          options?.editType === 'number'
+        ) {
           return true;
         } else {
           return false;
