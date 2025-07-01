@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, visit } from '@ember/test-helpers';
+import { click, fillIn, visit, waitFor } from '@ember/test-helpers';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -26,7 +26,7 @@ export const login = async (token = rootToken) => {
   // make sure we're always logged out and logged back in
   await logout();
   await visit('/vault/auth');
-
+  await waitFor(AUTH_FORM.selectMethod);
   await fillIn(AUTH_FORM.selectMethod, 'token');
   await fillIn(GENERAL.inputByAttr('token'), token);
   return click(GENERAL.submitButton);
