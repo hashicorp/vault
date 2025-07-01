@@ -999,6 +999,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 		if err != nil {
 			return nil, err
 		}
+		c.logger.Debug(">>> plugin found in catalogue", "type", t, "consts.PluginTypeCredential", "version", pluginVersion, "plugin", plug)
 		if plug == nil {
 			errContext := t
 			if pluginVersion != "" {
