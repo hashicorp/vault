@@ -88,12 +88,12 @@ locals {
     cert_key_type = local.cert_key_type
     test_ip       = local.ssh_test_ip
     test_user     = local.ssh_test_user
+    otp_role_params = local.otp_role_params
+    ca_role_params  = local.ca_role_params
     data = {
       sign_key        = local.ssh_sign_key_data
       generate_otp    = local.ssh_generate_otp_data
       generate_cert   = local.ssh_generate_cert_data
-      otp_role_params = local.otp_role_params
-      ca_role_params  = local.ca_role_params
     }
   }
 }

@@ -44,7 +44,7 @@ resource "enos_remote_exec" "ssh_verify_ca_role" {
     KEY_ID_FORMAT           = var.create_state.ssh.ca_role_params.key_id_format
     DEFAULT_EXTENSIONS      = jsonencode(var.create_state.ssh.ca_role_params.default_extensions)
     VAULT_ADDR              = var.vault_addr
-    VAULT_TOKEN             = local.user_login_data.auth.client_token
+    VAULT_TOKEN             = var.vault_root_token
     VAULT_INSTALL_DIR       = var.vault_install_dir
   }
 
@@ -73,7 +73,7 @@ resource "enos_remote_exec" "ssh_verify_otp_role" {
     TTL                    = var.create_state.ssh.otp_role_params.ttl
     MAX_TTL                = var.create_state.ssh.otp_role_params.max_ttl
     VAULT_ADDR             = var.vault_addr
-    VAULT_TOKEN            = local.user_login_data.auth.client_token
+    VAULT_TOKEN            = var.vault_root_token
     VAULT_INSTALL_DIR      = var.vault_install_dir
   }
 
@@ -93,7 +93,7 @@ resource "enos_remote_exec" "ssh_verify_ca" {
   environment = {
     CA_KEY_TYPE       = var.create_state.ssh.ca_key_type
     VAULT_ADDR        = var.vault_addr
-    VAULT_TOKEN       = local.user_login_data.auth.client_token
+    VAULT_TOKEN       = var.vault_root_token
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
@@ -114,7 +114,7 @@ resource "enos_remote_exec" "ssh_verify_signed_key" {
     SIGNED_KEY        = var.create_state.ssh.data.sign_key.signed_key
     CA_KEY_TYPE       = var.create_state.ssh.ca_key_type
     VAULT_ADDR        = var.vault_addr
-    VAULT_TOKEN       = local.user_login_data.auth.client_token
+    VAULT_TOKEN       = var.vault_root_token
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
@@ -136,7 +136,7 @@ resource "enos_remote_exec" "ssh_verify_otp" {
     IP                = var.create_state.ssh.test_ip
     USERNAME          = var.create_state.ssh.test_user
     VAULT_ADDR        = var.vault_addr
-    VAULT_TOKEN       = local.user_login_data.auth.client_token
+    VAULT_TOKEN       = var.vault_root_token
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
@@ -154,7 +154,7 @@ resource "enos_local_exec" "ssh_verify_cert" {
     SIGNED_KEY        = var.create_state.ssh.data.generate_cert.signed_key
     CA_KEY_TYPE       = var.create_state.ssh.ca_key_type
     VAULT_ADDR        = var.vault_addr
-    VAULT_TOKEN       = local.user_login_data.auth.client_token
+    VAULT_TOKEN       = var.vault_root_token
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
