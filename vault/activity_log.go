@@ -288,8 +288,8 @@ type ActivityLogExportRecord struct {
 	// MountPath is the path of the auth mount associated with the token used
 	MountPath string `json:"mount_path" mapstructure:"mount_path"`
 
-	// Timestamp denotes the time at which the activity occurred formatted using RFC3339
-	Timestamp string `json:"timestamp" mapstructure:"timestamp"`
+	// TokenCreationTime denotes the time at which the activity occurred formatted using RFC3339
+	TokenCreationTime string `json:"token_creation_time" mapstructure:"token_creation_time"`
 
 	// Policies are the list of policy names attached to the token used
 	Policies []string `json:"policies" mapstructure:"policies"`
@@ -3192,12 +3192,12 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 			ts := time.Unix(e.Timestamp, 0)
 
 			record := &ActivityLogExportRecord{
-				ClientID:      e.ClientID,
-				ClientType:    e.ClientType,
-				NamespaceID:   e.NamespaceID,
-				NamespacePath: nsDisplayPath,
-				Timestamp:     ts.UTC().Format(time.RFC3339),
-				MountAccessor: e.MountAccessor,
+				ClientID:          e.ClientID,
+				ClientType:        e.ClientType,
+				NamespaceID:       e.NamespaceID,
+				NamespacePath:     nsDisplayPath,
+				TokenCreationTime: ts.UTC().Format(time.RFC3339),
+				MountAccessor:     e.MountAccessor,
 
 				// Default following to empty versus nil, will be overwritten if necessary
 				Policies:                  []string{},
@@ -3481,7 +3481,7 @@ func baseActivityExportCSVHeader() []string {
 		"mount_accessor",
 		"mount_path",
 		"mount_type",
-		"timestamp",
+		"token_creation_time",
 	}
 }
 
