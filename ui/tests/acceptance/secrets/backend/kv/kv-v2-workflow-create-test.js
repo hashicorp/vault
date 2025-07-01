@@ -275,7 +275,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(PAGE.detail.createNewVersion);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Ffirst/details/edit?version=1`,
+        `/vault/secrets/${backend}/kv/app%2Ffirst_secret/details/edit?version=1`,
         'Goes to new version page'
       );
       assert
@@ -299,7 +299,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(PAGE.secretTab('Secret'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Ffirst/details?version=3`,
+        `/vault/secrets/${backend}/kv/app%2Ffirst_secret/details?version=3`,
         'goes to latest version 3'
       );
       await click(PAGE.infoRowToggleMasked('my-key'));
