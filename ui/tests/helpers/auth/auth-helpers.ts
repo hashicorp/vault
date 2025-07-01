@@ -4,6 +4,7 @@
  */
 
 import { click, fillIn, visit, waitFor } from '@ember/test-helpers';
+// This file is created by test-helper script and so it does not actually exist in the codebase.
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
