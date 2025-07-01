@@ -991,7 +991,9 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 
 	conf := make(map[string]string)
 	var runningSha string
+	c.logger.Debug(">>> newCredentialBackend", "type", t, "version", pluginVersion)
 	factory, ok := c.credentialBackends[t]
+	c.logger.Debug(">>> found factory?", "type", t, "ok", ok, "version", pluginVersion)
 	if !ok {
 		plug, err := c.pluginCatalog.Get(ctx, t, consts.PluginTypeCredential, pluginVersion)
 		if err != nil {
