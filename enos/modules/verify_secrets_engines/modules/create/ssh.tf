@@ -81,19 +81,19 @@ locals {
 
   // Output
   ssh_output = {
-    ca_role_name  = local.ca_role_name
-    otp_role_name = local.otp_role_name
-    mount         = local.ssh_mount
-    ca_key_type   = local.ca_key_type
-    cert_key_type = local.cert_key_type
-    test_ip       = local.ssh_test_ip
-    test_user     = local.ssh_test_user
+    ca_role_name    = local.ca_role_name
+    otp_role_name   = local.otp_role_name
+    mount           = local.ssh_mount
+    ca_key_type     = local.ca_key_type
+    cert_key_type   = local.cert_key_type
+    test_ip         = local.ssh_test_ip
+    test_user       = local.ssh_test_user
     otp_role_params = local.otp_role_params
     ca_role_params  = local.ca_role_params
     data = {
-      sign_key        = local.ssh_sign_key_data
-      generate_otp    = local.ssh_generate_otp_data
-      generate_cert   = local.ssh_generate_cert_data
+      sign_key      = local.ssh_sign_key_data
+      generate_otp  = local.ssh_generate_otp_data
+      generate_cert = local.ssh_generate_cert_data
     }
   }
 }
