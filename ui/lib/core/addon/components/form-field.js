@@ -102,8 +102,9 @@ export default class FormFieldComponent extends Component {
     if (options?.possibleValues?.length > 0) {
       return true;
     } else {
-      if (
-        options?.editType === 'dateTimeLocal' ||
+      if (options?.editType === 'dateTimeLocal') {
+        return true;
+      } else if (
         options?.editType === 'searchSelect' ||
         options?.editType === 'mountAccessor' ||
         options?.editType === 'kv' ||
