@@ -193,7 +193,7 @@ module('Acceptance | mfa-method', function (hooks) {
       await click('[data-test-mleh-radio="skip"]');
       await click('[data-test-mfa-create-save]');
       assert
-        .dom('[data-test-inline-error-message]')
+        .dom('[data-test-validation-error]')
         .exists({ count: required.length }, `Required field validations display for ${type}`);
 
       for (const field of required) {

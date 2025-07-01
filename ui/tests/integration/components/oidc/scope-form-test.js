@@ -5,11 +5,12 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, fillIn, click, findAll } from '@ember/test-helpers';
+import { render, fillIn, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { SELECTORS, OIDC_BASE_URL } from 'vault/tests/helpers/oidc-config';
 import { capabilitiesStub } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | oidc/scope-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -20,7 +21,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
   });
 
   test('it should save new scope', async function (assert) {
-    assert.expect(9);
+    assert.expect(8);
 
     this.server.post('/identity/oidc/scope/test', (schema, req) => {
       assert.ok(true, 'Request made to save scope');
@@ -45,13 +46,13 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
     // check validation errors
     await click(SELECTORS.scopeSaveButton);
 
-    const validationErrors = findAll(SELECTORS.inlineAlert);
-    assert.dom(validationErrors[0]).hasText('Name is required.', 'Validation messages are shown for name');
-    assert.dom(validationErrors[1]).hasText('There is an error with this form.', 'Renders form error count');
-
     assert
-      .dom('[data-test-inline-error-message]')
-      .hasText('Name is required.', 'Validation message is shown for name');
+      .dom(GENERAL.validationErrorByAttr('name'))
+      .hasText('Name is required.', 'Validation messages are shown for name');
+    assert
+      .dom(SELECTORS.inlineAlert)
+      .hasText('There is an error with this form.', 'Renders form error count');
+
     // json editor has test coverage so let's just confirm that it renders
     assert
       .dom('[data-test-input="template"] [data-test-component="json-editor-toolbar"]')

@@ -84,7 +84,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // Create secret form -- validations
       await click(FORM.saveBtn);
       assert.dom(FORM.invalidFormAlert).hasText('There is an error with this form.');
-      assert.dom(FORM.validation('path')).hasText("Path can't be blank.");
+      assert.dom(GENERAL.validationErrorByAttr('path')).hasText("Path can't be blank.");
       await typeIn(FORM.inputByAttr('path'), secretPath);
       assert
         .dom(FORM.validationWarning)
@@ -167,9 +167,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Create secret
       await typeIn(FORM.inputByAttr('path'), 'my/');
-      assert.dom(FORM.validation('path')).hasText("Path can't end in forward slash '/'.");
+      assert.dom(GENERAL.validationErrorByAttr('path')).hasText("Path can't end in forward slash '/'.");
       await typeIn(FORM.inputByAttr('path'), 'secret');
-      assert.dom(FORM.validation('path')).doesNotExist('form validation goes away');
+      assert.dom(GENERAL.validationErrorByAttr('path')).doesNotExist('form validation goes away');
       await fillIn(FORM.keyInput(), 'password');
       await fillIn(FORM.maskedValueInput(), 'kittens1234');
 
@@ -182,10 +182,10 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // MaxVersions validation
       await fillIn(FORM.inputByAttr('maxVersions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(FORM.validation('maxVersions')).hasText('Maximum versions must be a number.');
+      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('Maximum versions must be a number.');
       await fillIn(FORM.inputByAttr('maxVersions'), '99999999999999999');
       await click(FORM.saveBtn);
-      assert.dom(FORM.validation('maxVersions')).hasText('You cannot go over 16 characters.');
+      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('You cannot go over 16 characters.');
       await fillIn(FORM.inputByAttr('maxVersions'), '7');
 
       // Fill in other metadata
@@ -378,7 +378,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // Create secret form -- validations
       await click(FORM.saveBtn);
       assert.dom(FORM.invalidFormAlert).hasText('There is an error with this form.');
-      assert.dom(FORM.validation('path')).hasText("Path can't be blank.");
+      assert.dom(GENERAL.validationErrorByAttr('path')).hasText("Path can't be blank.");
       await typeIn(FORM.inputByAttr('path'), secretPath);
       assert
         .dom(FORM.validationWarning)
@@ -425,9 +425,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Create secret
       await typeIn(FORM.inputByAttr('path'), 'my/');
-      assert.dom(FORM.validation('path')).hasText("Path can't end in forward slash '/'.");
+      assert.dom(GENERAL.validationErrorByAttr('path')).hasText("Path can't end in forward slash '/'.");
       await typeIn(FORM.inputByAttr('path'), 'secret');
-      assert.dom(FORM.validation('path')).doesNotExist('form validation goes away');
+      assert.dom(GENERAL.validationErrorByAttr('path')).doesNotExist('form validation goes away');
       await fillIn(FORM.keyInput(), 'password');
       await fillIn(FORM.maskedValueInput(), 'kittens1234');
 
@@ -440,10 +440,10 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // MaxVersions validation
       await fillIn(FORM.inputByAttr('maxVersions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(FORM.validation('maxVersions')).hasText('Maximum versions must be a number.');
+      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('Maximum versions must be a number.');
       await fillIn(FORM.inputByAttr('maxVersions'), '99999999999999999');
       await click(FORM.saveBtn);
-      assert.dom(FORM.validation('maxVersions')).hasText('You cannot go over 16 characters.');
+      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('You cannot go over 16 characters.');
       await fillIn(FORM.inputByAttr('maxVersions'), '7');
 
       // Fill in other metadata
@@ -527,7 +527,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // Create secret form -- validations
       await click(FORM.saveBtn);
       assert.dom(FORM.invalidFormAlert).hasText('There is an error with this form.');
-      assert.dom(FORM.validation('path')).hasText("Path can't be blank.");
+      assert.dom(GENERAL.validationErrorByAttr('path')).hasText("Path can't be blank.");
       await typeIn(FORM.inputByAttr('path'), secretPath);
       assert
         .dom(FORM.validationWarning)
@@ -574,9 +574,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Create secret
       await typeIn(FORM.inputByAttr('path'), 'my/');
-      assert.dom(FORM.validation('path')).hasText("Path can't end in forward slash '/'.");
+      assert.dom(GENERAL.validationErrorByAttr('path')).hasText("Path can't end in forward slash '/'.");
       await typeIn(FORM.inputByAttr('path'), 'secret');
-      assert.dom(FORM.validation('path')).doesNotExist('form validation goes away');
+      assert.dom(GENERAL.validationErrorByAttr('path')).doesNotExist('form validation goes away');
       await fillIn(FORM.keyInput(), 'password');
       await fillIn(FORM.maskedValueInput(), 'kittens1234');
 
@@ -589,10 +589,10 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // MaxVersions validation
       await fillIn(FORM.inputByAttr('maxVersions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(FORM.validation('maxVersions')).hasText('Maximum versions must be a number.');
+      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('Maximum versions must be a number.');
       await fillIn(FORM.inputByAttr('maxVersions'), '99999999999999999');
       await click(FORM.saveBtn);
-      assert.dom(FORM.validation('maxVersions')).hasText('You cannot go over 16 characters.');
+      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('You cannot go over 16 characters.');
       await fillIn(FORM.inputByAttr('maxVersions'), '7');
 
       // Fill in other metadata
@@ -678,7 +678,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // Create secret form -- validations
       await click(FORM.saveBtn);
       assert.dom(FORM.invalidFormAlert).hasText('There is an error with this form.');
-      assert.dom(FORM.validation('path')).hasText("Path can't be blank.");
+      assert.dom(GENERAL.validationErrorByAttr('path')).hasText("Path can't be blank.");
       await typeIn(FORM.inputByAttr('path'), secretPath);
       assert
         .dom(FORM.validationWarning)
@@ -743,9 +743,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Create secret
       await typeIn(FORM.inputByAttr('path'), 'my/');
-      assert.dom(FORM.validation('path')).hasText("Path can't end in forward slash '/'.");
+      assert.dom(GENERAL.validationErrorByAttr('path')).hasText("Path can't end in forward slash '/'.");
       await typeIn(FORM.inputByAttr('path'), 'secret');
-      assert.dom(FORM.validation('path')).doesNotExist('form validation goes away');
+      assert.dom(GENERAL.validationErrorByAttr('path')).doesNotExist('form validation goes away');
       await fillIn(FORM.keyInput(), 'password');
       await fillIn(FORM.maskedValueInput(), 'kittens1234');
 
@@ -758,10 +758,10 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // MaxVersions validation
       await fillIn(FORM.inputByAttr('maxVersions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(FORM.validation('maxVersions')).hasText('Maximum versions must be a number.');
+      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('Maximum versions must be a number.');
       await fillIn(FORM.inputByAttr('maxVersions'), '99999999999999999');
       await click(FORM.saveBtn);
-      assert.dom(FORM.validation('maxVersions')).hasText('You cannot go over 16 characters.');
+      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('You cannot go over 16 characters.');
       await fillIn(FORM.inputByAttr('maxVersions'), '7');
 
       // Fill in other metadata
@@ -888,7 +888,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // Create secret form -- validations
       await click(FORM.saveBtn);
       assert.dom(FORM.invalidFormAlert).hasText('There is an error with this form.');
-      assert.dom(FORM.validation('path')).hasText("Path can't be blank.");
+      assert.dom(GENERAL.validationErrorByAttr('path')).hasText("Path can't be blank.");
       await typeIn(FORM.inputByAttr('path'), secretPath);
       assert
         .dom(FORM.validationWarning)
@@ -971,9 +971,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Create secret
       await typeIn(FORM.inputByAttr('path'), 'my/');
-      assert.dom(FORM.validation('path')).hasText("Path can't end in forward slash '/'.");
+      assert.dom(GENERAL.validationErrorByAttr('path')).hasText("Path can't end in forward slash '/'.");
       await typeIn(FORM.inputByAttr('path'), 'secret');
-      assert.dom(FORM.validation('path')).doesNotExist('form validation goes away');
+      assert.dom(GENERAL.validationErrorByAttr('path')).doesNotExist('form validation goes away');
       await fillIn(FORM.keyInput(), 'password');
       await fillIn(FORM.maskedValueInput(), 'kittens1234');
 
@@ -986,10 +986,10 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // MaxVersions validation
       await fillIn(FORM.inputByAttr('maxVersions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(FORM.validation('maxVersions')).hasText('Maximum versions must be a number.');
+      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('Maximum versions must be a number.');
       await fillIn(FORM.inputByAttr('maxVersions'), '99999999999999999');
       await click(FORM.saveBtn);
-      assert.dom(FORM.validation('maxVersions')).hasText('You cannot go over 16 characters.');
+      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('You cannot go over 16 characters.');
       await fillIn(FORM.inputByAttr('maxVersions'), '7');
 
       // Fill in other metadata
@@ -1104,7 +1104,7 @@ path "${this.backend}/metadata/*" {
       // Create secret form -- validations
       await click(FORM.saveBtn);
       assert.dom(FORM.invalidFormAlert).hasText('There is an error with this form.');
-      assert.dom(FORM.validation('path')).hasText("Path can't be blank.");
+      assert.dom(GENERAL.validationErrorByAttr('path')).hasText("Path can't be blank.");
       await typeIn(FORM.inputByAttr('path'), secretPath);
       assert.dom(PAGE.create.metadataSection).doesNotExist('Hides metadata section by default');
 
