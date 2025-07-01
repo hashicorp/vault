@@ -1,0 +1,17 @@
+You must have the plugin set up properly in your configured plugin directory.
+Vault expects specific path structures based on the integration, license, and
+file format.
+
+If you plan to register an extracted `.zip` file, the extracted artifact
+directory name must match the official file name. For example, to register
+`vault-plugin-database-oracle_0.11.0+ent_linux_amd64.zip`, you must extract it
+to the plugin directory as `vault-plugin-database-oracle_0.11.0+ent_linux_amd64/`.
+
+Integration | License    | Source | Path structure
+----------- | ---------- | ------ | --------------
+Official    | Enterprise | `.zip` | `<plugin_directory>/<extracted-folder-name>/`
+Official    | Community  | `.zip` | `<plugin_directory>/<extracted-folder-name>/`
+Community   | N/A        | `.zip` | Not supported
+Official    | Enterprise | binary | Not supported
+Offical     | Community  | binary | `<plugin_directory>/<binary-name>`
+Community   | N/A        | binary | `<plugin_directory>/<binary-name>`

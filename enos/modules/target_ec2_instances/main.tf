@@ -195,9 +195,13 @@ resource "aws_instance" "targets" {
   key_name                             = var.ssh_keypair
   subnet_id                            = data.aws_subnets.vpc.ids[tonumber(each.key) % length(data.aws_subnets.vpc.ids)]
   vpc_security_group_ids               = [aws_security_group.target.id]
+  ebs_optimized                        = var.ebs_optimized
 
   root_block_device {
-    encrypted = true
+    encrypted   = true
+    iops        = var.root_volume_iops
+    volume_size = var.root_volume_size
+    volume_type = var.root_volume_type
   }
 
   metadata_options {
