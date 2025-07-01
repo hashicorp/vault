@@ -10,7 +10,7 @@ locals {
     default_user_template  = false
     allowed_users          = local.ssh_test_user
     allowed_users_template = false
-    cidr_list              = local.ssh_test_ip
+    cidr_list              = "${local.ssh_test_ip}/32"
     exclude_cidr_list      = "10.0.0.0/8"
     port                   = 22
     ttl                    = "30m"
@@ -51,7 +51,7 @@ locals {
   ca_key_type    = local.ca_key_types[random_integer.ca_key_type_idx.result]
   cert_key_types = ["rsa", "ed25519", "ec"]
   cert_key_type  = local.cert_key_types[random_integer.cert_key_idx.result]
-  ssh_test_ip    = "192.168.1.1/32"
+  ssh_test_ip    = "192.168.1.1"
   ssh_test_user  = "testuser"
   ssh_public_key = tls_private_key.test_ssh_key.public_key_openssh
 
