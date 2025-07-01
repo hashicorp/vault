@@ -1078,7 +1078,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 		EventsSender:        pluginEventSender,
 		ObservationRecorder: pluginObservationRecorder,
 	}
-
+	c.logger.Debug(">>> calling factory", "type", t, "version", pluginVersion, "config", config)
 	backend, err := factory(ctx, config)
 	if err != nil {
 		return nil, err

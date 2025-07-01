@@ -27,6 +27,7 @@ var (
 
 // Factory returns a configured plugin logical.Backend.
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
+	fmt.Println(">>> In Factory")
 	merr := &multierror.Error{}
 	_, ok := conf.Config["plugin_name"]
 	if !ok {
