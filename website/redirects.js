@@ -309,5 +309,10 @@ module.exports = [
     source: '/vault/docs/enterprise/license/faq',
     destination: '/vault/docs/license',
     permanent: true,
+  },
+  {
+    source: '/vault/docs/v:version(1\.*\.x)/v:ver(1\.*\.x)/:slug*',
+    destination: '/vault/docs/:version/:slug',
+    permanent: true,
   }
 ]
