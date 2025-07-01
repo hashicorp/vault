@@ -31,9 +31,19 @@ variable "hosts" {
   description = "The Vault cluster instances that were created"
 }
 
-variable "ldap_host" {
+variable "ip_version" {
   type        = string
-  description = "The LDAP Server host"
+  description = "IP Version (4 or 6)"
+  default     = "4"
+}
+
+variable "ldap_host" {
+  type = object({
+    ipv6       = string
+    private_ip = string
+    public_ip  = string
+  })
+  description = "The external server instances that were created"
 }
 
 variable "ldap_port" {
