@@ -203,9 +203,7 @@ module('Acceptance | sync | overview', function (hooks) {
 
         // During the afterEach hook cleanup endpoint is hit again which increases the assertion count (above)
         // Re-stub here without the assertion to prep for namespace cleanup.
-        this.server.get('/sys/activation-flags', (_, req) => {
-          req.passthrough();
-        });
+        this.server.get('/sys/activation-flags', (_, req) => req.passthrough());
       });
 
       test('it should make activation-flag requests to correct namespace when managed', async function (assert) {
@@ -240,9 +238,7 @@ module('Acceptance | sync | overview', function (hooks) {
 
         // During the afterEach hook this endpoint is hit again which increases the assertion count (above)
         // Re-stub here without the assertion to prep for namespace cleanup.
-        this.server.get('/sys/activation-flags', (_, req) => {
-          req.passthrough();
-        });
+        this.server.get('/sys/activation-flags', (_, req) => req.passthrough());
       });
     });
   });
