@@ -168,11 +168,6 @@ module('Acceptance | sync | overview', function (hooks) {
         await loginNs('admin/foo');
       });
 
-      hooks.afterEach(async function () {
-        await visit('vault/dashboard');
-        await runCmd([`delete admin/sys/namespaces/foo -f`, deleteNS('admin')]);
-      });
-
       test('it should make activation-flag requests to correct namespace', async function (assert) {
         assert.expect(3);
 
@@ -201,9 +196,16 @@ module('Acceptance | sync | overview', function (hooks) {
         await click(ts.overview.activationModal.checkbox);
         await click(ts.overview.activationModal.confirm);
 
-        // During the afterEach hook cleanup endpoint is hit again which increases the assertion count (above)
-        // Re-stub here without the assertion to prep for namespace cleanup.
-        this.server.get('/sys/activation-flags', (_, req) => req.passthrough());
+        // During the namespace cleanup in the afterEach hook this endpoint is hit again which increases the assertion count (above)
+        // Re-stub here without the assertion to reduce unnecessary assertions.
+        this.server.get('/sys/activation-flags', () => {
+          return {
+            activated: ['secrets-sync'],
+            unactivated: [],
+          };
+        });
+        await visit('vault/dashboard');
+        await runCmd([`delete admin/sys/namespaces/foo -f`, deleteNS('admin')]);
       });
 
       test('it should make activation-flag requests to correct namespace when managed', async function (assert) {
@@ -236,9 +238,16 @@ module('Acceptance | sync | overview', function (hooks) {
         await click(ts.overview.activationModal.checkbox);
         await click(ts.overview.activationModal.confirm);
 
-        // During the afterEach hook this endpoint is hit again which increases the assertion count (above)
-        // Re-stub here without the assertion to prep for namespace cleanup.
-        this.server.get('/sys/activation-flags', (_, req) => req.passthrough());
+        // During the namespace cleanup in the afterEach hook this endpoint is hit again which increases the assertion count (above)
+        // Re-stub here without the assertion to reduce unnecessary assertions.
+        this.server.get('/sys/activation-flags', () => {
+          return {
+            activated: ['secrets-sync'],
+            unactivated: [],
+          };
+        });
+        await visit('vault/dashboard');
+        await runCmd([`delete admin/sys/namespaces/foo -f`, deleteNS('admin')]);
       });
     });
   });
