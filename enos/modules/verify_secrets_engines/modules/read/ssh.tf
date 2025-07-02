@@ -103,7 +103,7 @@ resource "enos_remote_exec" "ssh_verify_ca" {
 }
 
 // Read and Verify Signed SSH Key
-resource "enos_remote_exec" "ssh_verify_signed_key" {
+resource "enos_local_exec" "ssh_verify_signed_key" {
   for_each = var.hosts
 
   environment = {
@@ -115,12 +115,6 @@ resource "enos_remote_exec" "ssh_verify_signed_key" {
   }
 
   scripts = [abspath("${path.module}/../../scripts/ssh-verify-signed-key.sh")]
-
-  transport = {
-    ssh = {
-      host = each.value.public_ip
-    }
-  }
 }
 
 // Read and Verify OTP Credential

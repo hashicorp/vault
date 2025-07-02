@@ -27,5 +27,5 @@ fi
 # Extract key type
 cert_key_type=$(echo "$ssh_key_info" | grep "Type:" | awk '{print $2}')
 if [[ "$cert_key_type" != *"$CERT_KEY_TYPE"* ]]; then
-  fail "Key type mismatch: expected $CA_KEY_TYPE, got $ca_key_type"
+  fail "Key type mismatch: expected $CERT_KEY_TYPE, got $cert_key_type"
 fi
