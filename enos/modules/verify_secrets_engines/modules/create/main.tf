@@ -57,12 +57,18 @@ variable "vault_root_token" {
   default     = null
 }
 
+variable "vault_edition" {
+  description = "The Vault binary edition (e.g., 'fips', 'ent', etc.)"
+  type        = string
+}
+
 output "state" {
   value = {
     auth     = local.auth_output
     identity = local.identity_output
     kv       = local.kv_output
     pki      = local.pki_output
+    ssh      = local.ssh_output
     aws      = local.aws_state
   }
 }
