@@ -621,7 +621,7 @@ scenario "agent" {
     module      = module.vault_verify_secrets_engines_delete
     depends_on = [
       step.verify_secrets_engines_create,
-      step.verify_secrets_enginesread
+      step.verify_secrets_engines_read
     ]
 
     providers = {
