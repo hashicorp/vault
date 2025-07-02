@@ -194,11 +194,6 @@ scenario "upgrade" {
       cluster_tag_key = global.vault_tag_key
       common_tags     = global.tags
       vpc_id          = step.create_vpc.id
-      ssh_allow_ips   = ["0.0.0.0"]
-      ports_ingress = [
-        global.ports.ldap,
-        global.ports.ssh
-      ]
     }
   }
 
@@ -469,7 +464,8 @@ scenario "upgrade" {
 
     variables {
       hosts       = step.create_vault_cluster_targets.hosts
-      ldap_host   = step.set_up_external_integration_target.state.ldap.ip_address
+      ip_version  = matrix.ip_version
+      ldap_host   = step.set_up_external_integration_target.state.ldap.host
       leader_host = step.get_vault_cluster_ips.leader_host
       vault_addr  = step.create_vault_cluster.api_addr_localhost
       // Use the install dir for our initial version, which always comes from a zip bundle
