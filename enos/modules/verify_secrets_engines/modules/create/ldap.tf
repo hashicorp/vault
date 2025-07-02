@@ -45,7 +45,7 @@ resource "enos_remote_exec" "ldap_configurations" {
 
   environment = {
     MOUNT             = local.ldap_output.ldap_mount
-    LDAP_SERVER       = var.ip_version == "6" ? var.ldap_host.ipv6 : var.ldap_host.private_ip
+    LDAP_SERVER       = var.ldap_host.private_ip
     LDAP_PORT         = local.ldap_output.port
     LDAP_USERNAME     = local.ldap_output.username
     LDAP_ADMIN_PW     = local.ldap_output.pw
