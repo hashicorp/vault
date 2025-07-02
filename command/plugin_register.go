@@ -81,22 +81,27 @@ func (c *PluginRegisterCommand) Flags() *FlagSets {
 		Name:       "command",
 		Target:     &c.flagCommand,
 		Completion: complete.PredictAnything,
-		Usage: "Command to spawn the plugin. This defaults to the name of the " +
-			"plugin if both oci_image and command are unspecified.",
+		Usage: "Command to spawn the plugin. If -sha256 is provided to register with a plugin binary, " +
+			"this defaults to the name of the plugin if both oci_image and command are unspecified. " +
+			"Otherwise, if -sha256 is not provided, a plugin artifact is expected for registration, and " +
+			"this will be ignored because the run command is known.",
 	})
 
 	f.StringVar(&StringVar{
 		Name:       "sha256",
 		Target:     &c.flagSHA256,
 		Completion: complete.PredictAnything,
-		Usage:      "SHA256 of the plugin binary or the oci_image provided. This is required for all plugins.",
+		Usage: "SHA256 of the plugin binary or the OCI image provided. " +
+			"This is required to register with a plugin binary but should not be " +
+			"specified when registering with a plugin artifact.",
 	})
 
 	f.StringVar(&StringVar{
 		Name:       "version",
 		Target:     &c.flagVersion,
 		Completion: complete.PredictAnything,
-		Usage:      "Semantic version of the plugin. Used as the tag when specifying oci_image, but with any leading 'v' trimmed. Optional.",
+		Usage: "Semantic version of the plugin. Used as the tag when specifying oci_image, but with any leading 'v' trimmed. " +
+			"This is required to register with a plugin artifact but optional when registering with a plugin binary.",
 	})
 
 	f.StringVar(&StringVar{
@@ -151,7 +156,9 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 		c.UI.Error(fmt.Sprintf("Too many arguments (expected 1 or 2, got %d)", len(args)))
 		return 1
 	case c.flagSHA256 == "" && c.flagVersion == "":
-		c.UI.Error("One of -sha256 or -version is required. If registering with binary, please provide at least -sha256 (-version optional). If registering with extracted artifact directory, please provide -version only.")
+		c.UI.Error("One of -sha256 or -version is required. " +
+			"If registering with a binary, please provide at least -sha256 (-version optional)." +
+			"If registering with an artifact, please provide -version only.")
 		return 1
 
 	// These cases should come after invalid cases have been checked
@@ -177,11 +184,11 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 	pluginName := strings.TrimSpace(pluginNameRaw)
 
 	command := c.flagCommand
-	if command == "" && c.flagOCIImage == "" {
+	if c.flagSHA256 != "" && (command == "" && c.flagOCIImage == "") {
 		command = pluginName
 	}
 
-	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
+	resp, err := client.Sys().RegisterPluginDetailed(&api.RegisterPluginInput{
 		Name:     pluginName,
 		Type:     pluginType,
 		Args:     c.flagArgs,
@@ -191,9 +198,18 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 		OCIImage: c.flagOCIImage,
 		Runtime:  c.flagRuntime,
 		Env:      c.flagEnv,
-	}); err != nil {
+	})
+	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error registering plugin %s: %s", pluginName, err))
 		return 2
+	}
+
+	if resp != nil && len(resp.Warnings) > 0 {
+		c.UI.Warn(wrapAtLength(fmt.Sprintf(
+			"Warnings while registering plugin %s: %s",
+			pluginName,
+			strings.Join(resp.Warnings, "\n\n"),
+		)) + "\n")
 	}
 
 	c.UI.Output(fmt.Sprintf("Success! Registered plugin: %s", pluginName))

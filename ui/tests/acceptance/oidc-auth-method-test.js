@@ -36,7 +36,7 @@ module('Acceptance | oidc auth method', function (hooks) {
       if (assert) {
         this.server.get('/auth/token/lookup-self', (schema, req) => {
           assert.ok(true, 'request made to auth/token/lookup-self after oidc callback');
-          req.passthrough();
+          return req.passthrough();
         });
       }
     };

@@ -400,7 +400,7 @@ module('Acceptance | auth login', function (hooks) {
 
       this.server.get('/sys/internal/ui/mounts', (_, req) => {
         assert.strictEqual(req.requestHeaders['X-Vault-Namespace'], 'admin', 'header contains namespace');
-        req.passthrough();
+        return req.passthrough();
       });
       await typeIn(GENERAL.inputByAttr('namespace'), 'admin');
     });
