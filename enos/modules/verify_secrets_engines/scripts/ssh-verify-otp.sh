@@ -26,17 +26,15 @@ test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 export VAULT_FORMAT=json
 
 log "Generating OTP credential from Vault"
-if ! otp_cred=$("$binpath" write "ssh/creds/$ROLE_NAME" ip="$IP" username="$USERNAME" 2>&1); then
-  fail "Failed to generate OTP credential"
-fi
+otp_cred=$("$binpath" write -format=json "ssh/creds/$ROLE_NAME" ip="$IP" username="$USERNAME") \
+  || fail "Failed to generate OTP credential"
 
 OTP=$(echo "$otp_cred" | jq -r '.data.key')
 log "Generated OTP: $OTP"
 
 log "Verifying OTP"
-if ! otp_output=$("$binpath" write ssh/verify otp="$OTP" 2>&1); then
-  fail "Failed to verify OTP credential for key $OTP: $otp_output"
-fi
+otp_output=$("$binpath" write -format=json ssh/verify otp="$OTP") \
+  || fail "Failed to verify OTP credential for key $OTP"
 
 log "OTP Verification successful"
 ip=$(echo "$otp_output" | jq -r '.data.ip')
@@ -50,3 +48,5 @@ log "Username: $username"
 [[ "$ip" != "$IP" ]] && fail "IP mismatch: expected $ip, got $IP"
 [[ "$role_name" != "$ROLE_NAME" ]] && fail "Role name mismatch: expected $role_name, got $ROLE_NAME"
 [[ "$username" != "$USERNAME" ]] && fail "Username mismatch: expected $username, got $USERNAME"
+
+log "Completed with no mismatches"
