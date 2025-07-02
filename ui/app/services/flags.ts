@@ -57,7 +57,7 @@ export default class FlagsService extends Service {
   }
 
   get secretsSyncIsActivated(): boolean {
-    return this.activatedFlags.includes('secrets-sync');
+    return this.activatedFlags?.includes('secrets-sync');
   }
 
   getActivatedFlags = keepLatestTask(async () => {
