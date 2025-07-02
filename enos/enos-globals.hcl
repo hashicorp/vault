@@ -76,7 +76,7 @@ globals {
       protocol    = "tcp"
     },
     ldaps : {
-      description = "LDAP"
+      description = "LDAPS"
       port        = 636
       protocol    = "tcp"
     },

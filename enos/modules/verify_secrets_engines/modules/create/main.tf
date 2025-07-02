@@ -52,7 +52,7 @@ variable "ldap_port" {
   default     = "389"
 }
 
-variable "ldap_pw" {
+variable "ldap_password" {
   type        = string
   description = "The LDAP Server admin password"
   default     = "password1"
