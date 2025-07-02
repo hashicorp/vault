@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, currentRouteName, visit, currentURL } from '@ember/test-helpers';
+import { click, fillIn, currentRouteName, visit, currentURL, triggerEvent } from '@ember/test-helpers';
 import { selectChoose } from 'ember-power-select/test-support';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -11,8 +11,14 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
-import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
-import { login, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
+import {
+  createTokenCmd,
+  deleteEngineCmd,
+  mountEngineCmd,
+  runCmd,
+  tokenWithPolicyCmd,
+} from 'vault/tests/helpers/commands';
+import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import { MOUNT_BACKEND_FORM } from '../helpers/components/mount-backend-form-selectors';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
 
@@ -31,6 +37,24 @@ module('Acceptance | secret-engine list view', function (hooks) {
   hooks.beforeEach(function () {
     this.uid = uuidv4();
     return login();
+  });
+
+  // the new API service camelizes response keys, so this tests is to assert that does NOT happen when we re-implement it
+  test('it does not camelize the secret mount path', async function (assert) {
+    await visit('/vault/secrets');
+    await page.enableEngine();
+    await click(MOUNT_BACKEND_FORM.mountType('aws'));
+    await fillIn(GENERAL.inputByAttr('path'), 'aws_engine');
+    await click(GENERAL.submitButton);
+    await click(GENERAL.breadcrumbLink('Secrets'));
+    assert.strictEqual(
+      currentRouteName(),
+      'vault.cluster.secrets.backends',
+      'breadcrumb navigates to the list page'
+    );
+    assert.dom(SES.secretsBackendLink('aws_engine')).hasTextContaining('aws_engine/');
+    // cleanup
+    await runCmd(deleteEngineCmd('aws_engine'));
   });
 
   test('after enabling an unsupported engine it takes you to list page', async function (assert) {
@@ -62,28 +86,111 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await runCmd(deleteEngineCmd('aws'));
   });
 
-  test('enterprise: cannot view list without permissions inside namespace', async function (assert) {
-    this.version = 'enterprise';
-    this.backend = `bk-${this.uid}`;
-    this.namespace = `ns-${this.uid}`;
-    await runCmd([`write sys/namespaces/${this.namespace} -force`]);
-    await loginNs(this.namespace, ' ');
-
+  test('hovering over the icon of an unsupported engine shows unsupported tooltip', async function (assert) {
     await visit('/vault/secrets');
-    assert.dom(SES.secretsBackendLink('cubbyhole')).doesNotExist();
+    await page.enableEngine();
+    await click(MOUNT_BACKEND_FORM.mountType('nomad'));
+    await click(GENERAL.submitButton);
 
-    await logout();
+    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-type'), 'nomad');
+
+    await triggerEvent('.hds-tooltip-button', 'mouseenter');
+    assert
+      .dom('.hds-tooltip-container')
+      .hasText(
+        'The UI only supports configuration views for these secret engines. The CLI must be used to manage other engine resources.',
+        'shows tooltip text for unsupported engine'
+      );
+    // cleanup
+    await runCmd(deleteEngineCmd('nomad'));
   });
 
-  test('enterprise: can view list with permissions inside namespace', async function (assert) {
-    this.version = 'enterprise';
-    this.backend = `bk-${this.uid}`;
-    this.namespace = `ns-${this.uid}`;
-    await runCmd([`write sys/namespaces/${this.namespace} -force`]);
-    await loginNs(this.namespace);
+  test('hovering over the icon of a supported engine shows engine name', async function (assert) {
+    await visit('/vault/secrets');
+    await page.enableEngine();
+    await click(MOUNT_BACKEND_FORM.mountType('ssh'));
+    await click(GENERAL.submitButton);
+    await click(GENERAL.breadcrumbLink('Secrets'));
+
+    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-type'), 'ssh');
+    await triggerEvent('.hds-tooltip-button', 'mouseenter');
+    assert.dom('.hds-tooltip-container').hasText('SSH', 'shows tooltip for SSH without version');
+
+    // cleanup
+    await runCmd(deleteEngineCmd('ssh'));
+  });
+
+  test('hovering over the icon of a kv engine shows engine name and version', async function (assert) {
     await visit('/vault/secrets');
 
-    assert.dom(SES.secretsBackendLink('cubbyhole')).exists();
+    await page.enableEngine();
+    await click(MOUNT_BACKEND_FORM.mountType('kv'));
+    await fillIn(GENERAL.inputByAttr('path'), `kv-${this.uid}`);
+    await click(GENERAL.submitButton);
+    await click(GENERAL.breadcrumbLink('Secrets'));
+
+    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), `kv-${this.uid}`);
+    await triggerEvent('.hds-tooltip-button', 'mouseenter');
+    assert.dom('.hds-tooltip-container').hasText('KV version 2', 'shows tooltip for kv version 2');
+
+    // cleanup
+    await runCmd(deleteEngineCmd('kv'));
+  });
+
+  test('enterprise: cannot view list without permissions inside a namespace', async function (assert) {
+    this.namespace = `ns-${this.uid}`;
+    const enginePath1 = `kv-t1-${this.uid}`;
+    const userDefault = await runCmd(createTokenCmd()); // creates a default user token
+
+    await runCmd([`write sys/namespaces/${this.namespace} -force`]); // creates a namespace
+    await loginNs(this.namespace); //logs into namespace with root token
+    await runCmd(mountEngineCmd('kv', enginePath1)); // mounts a kv engine in namespace
+
+    await loginNs(this.namespace, userDefault); // logs into that same namespace with a default user token
+
+    await visit(`/vault/secrets?namespace=${this.namespace}`); // nav to specified namespace list
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets?namespace=${this.namespace}`,
+      'Should be on main secret engines list page within namespace.'
+    );
+    assert.dom(SES.secretsBackendLink(enginePath1)).doesNotExist(); // without permissions, engine should not show for this user
+
+    // cleanup namespace
+    await login();
+    await runCmd(`delete sys/namespaces/${this.namespace}`);
+  });
+
+  test('enterprise: can view list with permissions inside a namespace', async function (assert) {
+    this.namespace = `ns-${this.uid}`;
+    const enginePath1 = `kv-t2-${this.uid}`;
+    const userToken = await runCmd(
+      tokenWithPolicyCmd(
+        'policy',
+        `path "${this.namespace}/sys/*" {
+          capabilities = ["create", "read", "update", "delete", "list"]
+        }`
+      )
+    );
+
+    await runCmd([`write sys/namespaces/${this.namespace} -force`]);
+    await loginNs(this.namespace, userToken); // logs into namespace with user token
+    await runCmd(mountEngineCmd('kv', enginePath1)); // mount kv engine as user
+
+    await loginNs(this.namespace); // logs into namespace with root token
+
+    await visit(`/vault/secrets?namespace=${this.namespace}`); // nav to specified namespace list
+    assert.strictEqual(
+      currentURL(),
+      `/vault/secrets?namespace=${this.namespace}`,
+      'Should be on main secret engines list page within namespace.'
+    );
+
+    assert.dom(SES.secretsBackendLink(enginePath1)).exists(); // with permissions, able to see the engine in list
+
+    // cleanup namespace
+    await login();
+    await runCmd(`delete sys/namespaces/${this.namespace}`);
   });
 
   test('after disabling it stays on the list view', async function (assert) {

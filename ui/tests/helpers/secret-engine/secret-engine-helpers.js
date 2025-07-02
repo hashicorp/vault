@@ -173,7 +173,7 @@ export const fillInAwsConfig = async (situation = 'withAccess') => {
     await fillIn(GENERAL.inputByAttr('secretKey'), 'bar');
   }
   if (situation === 'withAccessOptions') {
-    await click(GENERAL.toggleGroup('Root config options'));
+    await click(GENERAL.button('Root config options'));
     await fillIn(GENERAL.inputByAttr('region'), 'ca-central-1');
     await fillIn(GENERAL.inputByAttr('iamEndpoint'), 'iam-endpoint');
     await fillIn(GENERAL.inputByAttr('stsEndpoint'), 'sts-endpoint');
@@ -201,7 +201,7 @@ export const fillInAzureConfig = async (withWif = false) => {
   await fillIn(GENERAL.inputByAttr('clientId'), 'client-id');
   // options may already be toggled so check before clicking
   if (!find(GENERAL.inputByAttr('environment'))) {
-    await click(GENERAL.toggleGroup('More options'));
+    await click(GENERAL.button('More options'));
   }
   await fillIn(GENERAL.inputByAttr('environment'), 'AZUREPUBLICCLOUD');
   // similarly, the root password TTL may already be toggled
@@ -228,7 +228,7 @@ export const fillInGcpConfig = async (withWif = false) => {
     await fillIn(GENERAL.ttl.input('Identity token TTL'), '7200');
     await fillIn(GENERAL.inputByAttr('serviceAccountEmail'), 'some@email.com');
   } else {
-    await click(GENERAL.toggleGroup('More options'));
+    await click(GENERAL.button('More options'));
     await click(GENERAL.ttl.toggle('Config TTL'));
     await fillIn(GENERAL.ttl.input('Config TTL'), '7200');
     await click(GENERAL.ttl.toggle('Max TTL'));

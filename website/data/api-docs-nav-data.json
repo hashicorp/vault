@@ -475,6 +475,15 @@
         "path": "system/config-ui-headers"
       },
       {
+        "title": "<code>/sys/config/ui/login/default-auth</code>",
+        "path": "system/config-ui-login-default-auth",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "<code>/sys/control-group</code>",
         "path": "system/control-group"
       },
@@ -534,6 +543,15 @@
       {
         "title": "<code>/sys/internal/ui/authenticated-messages</code>",
         "path": "system/internal-ui-authenticated-messages"
+      },
+      {
+        "title": "<code>/sys/internal/ui/default-auth-methods</code>",
+        "path": "system/internal-ui-default-auth-methods",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
       },
       {
         "title": "<code>/sys/internal/ui/feature-flags</code>",
