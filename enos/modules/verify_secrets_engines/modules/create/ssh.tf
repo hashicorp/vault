@@ -5,27 +5,23 @@ locals {
   // Variables
   otp_role_name = "ssh_role_otp"
   otp_role_params = {
-    key_type               = "otp"
-    default_user           = local.ssh_test_user
-    default_user_template  = false
-    allowed_users          = local.ssh_test_user
-    allowed_users_template = false
-    cidr_list              = "${local.ssh_test_ip}/32"
-    exclude_cidr_list      = "10.0.0.0/8"
-    port                   = 22
-    ttl                    = "30m"
-    max_ttl                = "1h"
+    key_type          = "otp"
+    default_user      = local.ssh_test_user
+    allowed_users     = local.ssh_test_user
+    cidr_list         = "${local.ssh_test_ip}/32"
+    exclude_cidr_list = "10.0.0.0/8"
+    port              = 22
+    ttl               = "1h"
+    max_ttl           = "2h"
   }
 
   ca_role_name = "ssh_role_ca"
   ca_role_params = {
     key_type                = "ca"
     default_user            = local.ssh_test_user
-    default_user_template   = false
     allow_user_certificates = true
     allow_host_certificates = true
     allowed_users           = local.ssh_test_user
-    allowed_users_template  = false
     port                    = 22
     ttl                     = "1h"
     max_ttl                 = "2h"

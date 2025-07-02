@@ -9,6 +9,15 @@ fail() {
   exit 1
 }
 
+normalize_ttl() {
+  case "$1" in
+    *h) echo $((${1%h} * 3600))   ;;
+    *m) echo $((${1%m} * 60))   ;;
+    *s) echo $((${1%s}))   ;;
+    *) echo "$1" ;; # assume already in seconds
+  esac
+}
+
 # Common required vars
 [[ -z "$ROLE_NAME" ]] && fail "ROLE_NAME env variable has not been set"
 [[ -z "$KEY_TYPE" ]] && fail "KEY_TYPE env variable has not been set"
@@ -18,9 +27,7 @@ fail() {
 
 # Always required for both types
 [[ -z "$DEFAULT_USER" ]] && fail "DEFAULT_USER env variable has not been set"
-[[ -z "$DEFAULT_USER_TEMPLATE" ]] && fail "DEFAULT_USER_TEMPLATE env variable has not been set"
 [[ -z "$ALLOWED_USERS" ]] && fail "ALLOWED_USERS env variable has not been set"
-[[ -z "$ALLOWED_USERS_TEMPLATE" ]] && fail "ALLOWED_USERS_TEMPLATE env variable has not been set"
 [[ -z "$TTL" ]] && fail "TTL env variable has not been set"
 [[ -z "$MAX_TTL" ]] && fail "MAX_TTL env variable has not been set"
 [[ -z "$PORT" ]] && fail "PORT env variable has not been set"
@@ -52,8 +59,6 @@ key_type=$(echo "$output" | jq -r '.data.key_type')
 default_user=$(echo "$output" | jq -r '.data.default_user')
 allowed_users=$(echo "$output" | jq -r '.data.allowed_users')
 port=$(echo "$output" | jq -r '.data.port')
-default_user_template=$(echo "$output" | jq -r '.data.default_user_template')
-allowed_users_template=$(echo "$output" | jq -r '.data.allowed_users_template')
 ttl=$(echo "$output" | jq -r '.data.ttl')
 max_ttl=$(echo "$output" | jq -r '.data.max_ttl')
 
@@ -74,11 +79,9 @@ fi
 # Verify
 [[ "$key_type" != "$KEY_TYPE" ]] && fail "Key type mismatch: expected $KEY_TYPE, got $key_type"
 [[ "$default_user" != "$DEFAULT_USER" ]] && fail "Default user mismatch: expected $DEFAULT_USER, got $default_user"
-[[ "$default_user_template" != "$DEFAULT_USER_TEMPLATE" ]] && fail "Default user template mismatch: expected $DEFAULT_USER_TEMPLATE, got $default_user_template"
 [[ "$allowed_users" != "$ALLOWED_USERS" ]] && fail "Allowed users mismatch: expected $ALLOWED_USERS, got $allowed_users"
-[[ "$allowed_users_template" != "$ALLOWED_USERS_TEMPLATE" ]] && fail "Allowed users template mismatch: expected $ALLOWED_USERS_TEMPLATE, got $allowed_users_template"
-[[ "$ttl" != "$TTL" ]] && fail "TTL mismatch: expected $TTL, got $ttl"
-[[ "$max_ttl" != "$MAX_TTL" ]] && fail "Max TTL mismatch: expected $MAX_TTL, got $max_ttl"
+[[ "$(normalize_ttl "$ttl")" != "$(normalize_ttl "$TTL")" ]] && fail "TTL mismatch: expected $TTL, got $ttl"
+[[ "$(normalize_ttl "$max_ttl")" != "$(normalize_ttl "$MAX_TTL")" ]] && fail "Max TTL mismatch: expected $MAX_TTL, got $max_ttl"
 [[ "$port" != "$PORT" ]] && fail "Port mismatch: expected $PORT, got $port"
 
 if [[ "$KEY_TYPE" == "otp" ]]; then
