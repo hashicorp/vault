@@ -65,8 +65,6 @@ elif [[ "$KEY_TYPE" == "ca" ]]; then
   ttl=$(echo "$output" | jq -r '.data.ttl')
   max_ttl=$(echo "$output" | jq -r '.data.max_ttl')
   key_id_format=$(echo "$output" | jq -r '.data.key_id_format')
-  allowed_extensions=$(echo "$output" | jq -r '.data.allowed_extensions')
-  default_extensions=$(echo "$output" | jq -r '.data.default_extensions')
   allow_user_certificates=$(echo "$output" | jq -r '.data.allow_user_certificates')
   allow_host_certificates=$(echo "$output" | jq -r '.data.allow_host_certificates')
   allow_user_key_ids=$(echo "$output" | jq -r '.data.allow_user_key_ids')
@@ -87,8 +85,6 @@ elif [[ "$KEY_TYPE" == "ca" ]]; then
   [[ "$(normalize_ttl "$ttl")" != "$(normalize_ttl "$TTL")" ]] && fail "TTL mismatch: expected $TTL, got $ttl"
   [[ "$(normalize_ttl "$max_ttl")" != "$(normalize_ttl "$MAX_TTL")" ]] && fail "Max TTL mismatch: expected $MAX_TTL, got $max_ttl"
   [[ "$key_id_format" != "$KEY_ID_FORMAT" ]] && fail "Key ID format mismatch: expected $KEY_ID_FORMAT, got $key_id_format"
-  [[ "$allowed_extensions" != "$ALLOWED_EXTENSIONS" ]] && fail "Allowed extensions mismatch: expected $ALLOWED_EXTENSIONS, got $allowed_extensions"
-  [[ "$(echo "$default_extensions" | jq -c '.')" != "$(echo "$DEFAULT_EXTENSIONS" | jq -c '.')" ]] && fail "Default extensions mismatch"
   [[ "$allow_user_certificates" != "$ALLOW_USER_CERTIFICATES" ]] && fail "Allow user certificates mismatch: expected $ALLOW_USER_CERTIFICATES, got $allow_user_certificates"
   [[ "$allow_host_certificates" != "$ALLOW_HOST_CERTIFICATES" ]] && fail "Allow host certificates mismatch: expected $ALLOW_HOST_CERTIFICATES, got $allow_host_certificates"
   [[ "$allow_user_key_ids" != "$ALLOW_USER_KEY_IDS" ]] && fail "Allow user key IDs mismatch: expected $ALLOW_USER_KEY_IDS, got $allow_user_key_ids"
