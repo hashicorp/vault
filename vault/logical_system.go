@@ -538,6 +538,10 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		return logical.ErrorResponse("version %q is not allowed because 'builtin' is a reserved metadata identifier", pluginVersion), nil
 	}
 
+	if download := d.Get("download").(bool); download {
+		return logical.ErrorResponse("download is an enterprise only feature"), nil
+	}
+
 	sha256 := d.Get("sha256").(string)
 	if sha256 == "" {
 		sha256 = d.Get("sha_256").(string)
@@ -6921,6 +6925,11 @@ Must already be present on the machine.`,
 	},
 	"plugin-catalog_runtime": {
 		`The Vault plugin runtime to use when running the plugin.`,
+		"",
+	},
+	"plugin-catalog_download": {
+		`Downloads automatically official HashiCorp plugins
+from releases.hashicorp.com (beta)`,
 		"",
 	},
 	"plugin-catalog-pins": {
