@@ -26,19 +26,26 @@ test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 export VAULT_FORMAT=json
 
 log "Generating OTP credential from Vault"
-otp_cred=$("$binpath" write "ssh/creds/$ROLE_NAME" ip="$IP" username="$USERNAME") \
-  || fail "Failed to generate OTP credential"
+if ! otp_cred=$("$binpath" write "ssh/creds/$ROLE_NAME" ip="$IP" username="$USERNAME" 2>&1); then
+  fail "Failed to generate OTP credential"
+fi
 
 OTP=$(echo "$otp_cred" | jq -r '.data.key')
 log "Generated OTP: $OTP"
 
 log "Verifying OTP"
-otp_output=$("$binpath" write ssh/verify otp="$OTP") \
-  || fail "Failed to verify OTP credential for key $OTP"
+if ! otp_output=$("$binpath" write ssh/verify otp="$OTP" 2>&1); then
+  fail "Failed to verify OTP credential for key $OTP: $otp_output"
+fi
 
+log "OTP Verification successful"
 ip=$(echo "$otp_output" | jq -r '.data.ip')
 role_name=$(echo "$otp_output" | jq -r '.data.role_name')
 username=$(echo "$otp_output" | jq -r '.data.username')
+
+log "IP: $ip"
+log "Role Name: $role_name"
+log "Username: $username"
 
 [[ "$ip" != "$IP" ]] && fail "IP mismatch: expected $ip, got $IP"
 [[ "$role_name" != "$ROLE_NAME" ]] && fail "Role name mismatch: expected $role_name, got $ROLE_NAME"
