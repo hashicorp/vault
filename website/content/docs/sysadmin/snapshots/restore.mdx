@@ -112,31 +112,6 @@ $ curl                                       \
 
 <Tabs>
 
-<Tab heading="CLI" group="cli">
-
-Run
-[`vault operator raft snapshot restore`](/vault/docs/commands/operator/raft#snapshot-restore)
-with the local snapshot file path and the `-force` flag:
-
-```shell-session
-$ vault operator raft snapshot restore -force <local_file_path>
-```
-
-For example:
-   
-<CodeBlockConfig hideClipboard>
-   
-```shell-session
-$ vault operator raft snapshot restore -force /tmp/snapshots/backup.snap
-```
-
-</CodeBlockConfig>
-   
-You must use the `-force` flag as the auto-unseal or Shamir keys are not
-consistent with the snapshot data, which came from a different cluster.
-
-</Tab>
-
 <Tab heading="API" group="api">
 
 Have each person with an unseal key share run
