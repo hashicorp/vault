@@ -124,7 +124,6 @@ resource "enos_remote_exec" "ssh_verify_otp" {
   for_each = var.hosts
 
   environment = {
-    OTP               = var.create_state.ssh.data.generate_otp.key
     IP                = var.create_state.ssh.test_ip
     ROLE_NAME         = var.create_state.ssh.otp_role_name
     USERNAME          = var.create_state.ssh.test_user

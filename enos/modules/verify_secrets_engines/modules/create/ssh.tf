@@ -72,7 +72,6 @@ locals {
 
   // Response data
   ssh_sign_key_data      = jsondecode(enos_remote_exec.ssh_sign_key.stdout).data
-  ssh_generate_otp_data  = jsondecode(enos_remote_exec.ssh_generate_otp.stdout).data
   ssh_generate_cert_data = jsondecode(enos_remote_exec.ssh_generate_cert.stdout).data
 
   // Output
@@ -88,7 +87,6 @@ locals {
     ca_role_params  = local.ca_role_params
     data = {
       sign_key      = local.ssh_sign_key_data
-      generate_otp  = local.ssh_generate_otp_data
       generate_cert = local.ssh_generate_cert_data
     }
   }
