@@ -323,7 +323,7 @@ module "vault_verify_secrets_engines_read" {
 module "vault_verify_secrets_engines_delete" {
   source = "./modules/verify_secrets_engines/modules/delete"
 
-  vault_install_dir         = var.vault_install_dir
+  vault_install_dir = var.vault_install_dir
 }
 
 module "vault_verify_default_lcq" {
