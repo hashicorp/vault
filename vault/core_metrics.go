@@ -1189,20 +1189,15 @@ func (c *Core) GetControlGroupCount() (int, error) {
 	return controlGroupCount, nil
 }
 
-func (c *Core) GetMFAConfigCountByMethod() map[string]int {
+func (c *Core) GetLoginMFAConfigCountByMethod() (map[string]int, error) {
 	mfaCounts := make(map[string]int)
 	mfaCounts["login-totp"] = 0
 	mfaCounts["login-okta"] = 0
 	mfaCounts["login-pingid"] = 0
 	mfaCounts["login-duo"] = 0
-	mfaCounts["stepup-totp"] = 0
-	mfaCounts["stepup-okta"] = 0
-	mfaCounts["stepup-pingid"] = 0
-	mfaCounts["stepup-duo"] = 0
 
 	namespaces := c.collectNamespaces()
 
-	// count login MFA configs
 	if c.loginMFABackend != nil {
 		c.loginMFABackend.mfaLock.RLock()
 		defer c.loginMFABackend.mfaLock.RUnlock()
@@ -1211,20 +1206,33 @@ func (c *Core) GetMFAConfigCountByMethod() map[string]int {
 			nsCtx := namespace.ContextWithNamespace(context.Background(), ns)
 			keys, configInfo, err := c.loginMFABackend.mfaMethodList(nsCtx, "")
 			if err != nil && !errors.Is(err, logical.ErrUnsupportedPath) {
-				c.logger.Error("failed to retreive MFA methods implemented during login from the identity store")
+				return nil, fmt.Errorf("failed to retreive MFA methods implemented during login from the identity store: %w", err)
 			}
 
 			for _, methodId := range keys {
 				currConfigMap := configInfo[methodId].(map[string]interface{})
+				mfaType, ok := currConfigMap["type"].(string)
+				if !ok {
+					return nil, fmt.Errorf("failed to parse MFA config for MFA type")
+				}
 				// add the config to the count only if the namespaces match
 				if ns.ID == currConfigMap["namespace_id"].(string) {
-					mfaCounts["login-"+currConfigMap["type"].(string)]++
+					mfaCounts["login-"+mfaType]++
 				}
 			}
 		}
 	}
 
-	// count step-up MFA configs
+	return mfaCounts, nil
+}
+
+func (c *Core) GetStepUpMFAConfigCountByMethod() (map[string]int, error) {
+	mfaCounts := make(map[string]int)
+	mfaCounts["stepup-totp"] = 0
+	mfaCounts["stepup-okta"] = 0
+	mfaCounts["stepup-pingid"] = 0
+	mfaCounts["stepup-duo"] = 0
+
 	if c.systemBackend != nil && c.systemBackend.mfaBackend != nil {
 		c.systemBackend.mfaBackend.mfaLock.RLock()
 		defer c.systemBackend.mfaBackend.mfaLock.RUnlock()
@@ -1232,19 +1240,18 @@ func (c *Core) GetMFAConfigCountByMethod() map[string]int {
 		// list only from root namespace since step-up MFA configs cannot be created in child namespaces
 		keys, err := c.systemBarrierView.List(c.activeContext, "mfa/method/")
 		if err != nil && !errors.Is(err, logical.ErrUnsupportedPath) {
-			c.logger.Error("failed to list MFA methods enforced as step-up authentication from the system store")
+			return nil, fmt.Errorf("failed to list MFA methods enforced as step-up authentication from the system view: %w", err)
 		}
 
 		for _, key := range keys {
 			config, err := c.systemBackend.mfaBackend.getMFAConfig(c.activeContext, "mfa/method/"+key, c.systemBarrierView)
 			if err != nil {
-				c.logger.Error("failed to retrieve MFA method config enforced as step-up authentication from the system store")
-				continue
+				return nil, fmt.Errorf("failed to retrieve MFA method config enforced as step-up authentication from the system view: %w", err)
 			}
 
 			mfaCounts["stepup-"+config.Type]++
 		}
 	}
 
-	return mfaCounts
+	return mfaCounts, nil
 }
