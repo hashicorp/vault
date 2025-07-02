@@ -10,7 +10,6 @@ terraform {
 }
 
 locals {
-  distro              = var.distro
   test_server_address = var.ip_version == "6" ? var.hosts[0].ipv6 : var.hosts[0].public_ip
   ldap_server = {
     domain     = "enos.com"
@@ -30,26 +29,18 @@ output "state" {
   }
 }
 
-# Creating OpenLDAP Server
-resource "enos_remote_exec" "setup_docker" {
-  scripts = [abspath("${path.module}/scripts/set-up-docker.sh")]
-
-  environment = {
-    DISTRO          = local.distro
-    IP_VERSION      = local.ldap_server.ip_version
-    LDAP_IP_ADDRESS = local.test_server_address
-  }
-
-  transport = {
-    ssh = {
-      host = local.ldap_server.host.public_ip
-    }
-  }
+# We run install_packages before we install Vault because for some combinations of
+# certain Linux distros and artifact types (e.g. SLES and RPM packages), there may
+# be packages that are required to perform Vault installation (e.g. openssl).
+module "install_packages" {
+  source = "../install_packages"
+  hosts    = var.hosts
+  packages = var.packages
 }
 
 # Creating OpenLDAP Server
 resource "enos_remote_exec" "setup_openldap" {
-  depends_on = [enos_remote_exec.setup_docker]
+  depends_on = [module.install_packages]
 
   environment = {
     LDAP_CONTAINER_VERSION = local.ldap_server.version

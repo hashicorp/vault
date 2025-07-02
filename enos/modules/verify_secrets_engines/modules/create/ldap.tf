@@ -8,7 +8,7 @@ locals {
     host              = var.ldap_host
     port              = var.ldap_port
     username          = "enos"
-    pw                = var.ldap_pw
+    pw                = var.ldap_password
     vault_policy_name = local.kv_output.writer_policy_name
   }
 }

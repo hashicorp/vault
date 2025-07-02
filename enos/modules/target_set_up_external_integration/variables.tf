@@ -22,8 +22,8 @@ variable "ldap_version" {
   default     = "1.5.0"
 }
 
-variable "distro" {
-  type        = string
-  description = "OS Distribution"
-  default     = "ubuntu"
+variable "packages" {
+  type        = list(string)
+  description = "A list of packages to install via the target host package manager"
+  default     = []
 }
