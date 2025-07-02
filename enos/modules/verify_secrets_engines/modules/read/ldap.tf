@@ -5,7 +5,7 @@ locals {
   ldap_login_data = jsondecode(enos_remote_exec.ldap_verify_configs.stdout)
 }
 
-# Verifying Vault LDAP Congiurations
+# Verifying Vault LDAP Configurations
 resource "enos_remote_exec" "ldap_verify_configs" {
 
   environment = {
