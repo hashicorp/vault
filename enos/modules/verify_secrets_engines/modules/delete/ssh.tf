@@ -3,7 +3,6 @@
 
 # Delete SSH CA role
 resource "enos_remote_exec" "ssh_delete_ca_role" {
-
   environment = {
     REQPATH           = "ssh/roles/${var.create_state.ssh.ca_role_name}"
     VAULT_ADDR        = var.vault_addr
@@ -15,15 +14,13 @@ resource "enos_remote_exec" "ssh_delete_ca_role" {
 
   transport = {
     ssh = {
-      host = each.value.public_ip
+      host = var.leader_host.public_ip
     }
   }
 }
 
 # Delete SSH OTP role
 resource "enos_remote_exec" "ssh_delete_otp_role" {
-  for_each = var.hosts
-
   environment = {
     REQPATH           = "ssh/roles/${var.create_state.ssh.otp_role_name}"
     VAULT_ADDR        = var.vault_addr
@@ -35,7 +32,7 @@ resource "enos_remote_exec" "ssh_delete_otp_role" {
 
   transport = {
     ssh = {
-      host = each.value.public_ip
+      host = var.leader_host.public_ip
     }
   }
 }

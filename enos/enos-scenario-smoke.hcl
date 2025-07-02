@@ -675,6 +675,33 @@ scenario "smoke" {
     }
   }
 
+  step "verify_secrets_engines_delete" {
+    description = global.description.verify_secrets_engines_delete
+    module      = module.vault_verify_secrets_engines_delete
+    depends_on = [
+      step.verify_secrets_engines_create,
+      step.verify_secrets_engines_read
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_api_auth_userpass_login_write,
+      quality.vault_secrets_kv_write
+    ]
+
+    variables {
+      create_state      = step.verify_secrets_engines_create.state
+      hosts             = step.get_vault_cluster_ips.follower_hosts
+      leader_host       = step.get_vault_cluster_ips.leader_host
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
   step "verify_ui" {
     description = global.description.verify_ui
     module      = module.vault_verify_ui

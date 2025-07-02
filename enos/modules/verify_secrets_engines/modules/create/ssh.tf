@@ -8,7 +8,7 @@ locals {
     key_type          = "otp"
     default_user      = local.ssh_test_user
     allowed_users     = local.ssh_test_user
-    cidr_list         = "${local.ssh_test_ip}/32"
+    cidr_list         = can(regex(":", local.ssh_test_ip)) ? "${local.ssh_test_ip}/64" : "${local.ssh_test_ip}/32"
     exclude_cidr_list = "10.0.0.0/8"
     port              = 22
     ttl               = "1h"
@@ -47,7 +47,8 @@ locals {
   ca_key_type    = local.ca_key_types[random_integer.ca_key_type_idx.result]
   cert_key_types = ["rsa", "ed25519", "ec"]
   cert_key_type  = local.cert_key_types[random_integer.cert_key_idx.result]
-  ssh_test_ip    = "192.168.1.1"
+  ssh_test_ips   = ["192.168.1.1", "2001:db8::1"]
+  ssh_test_ip    = local.ssh_test_ips[random_integer.test_ip_idx.result]
   ssh_test_user  = "testuser"
   ssh_public_key = tls_private_key.test_ssh_key.public_key_openssh
 
@@ -109,6 +110,11 @@ resource "random_integer" "ca_key_type_idx" {
 resource "random_integer" "cert_key_idx" {
   min = 0
   max = length(local.cert_key_types) - 1
+}
+
+resource "random_integer" "test_ip_idx" {
+  min = 0
+  max = length(local.ssh_test_ips) - 1
 }
 
 output "ssh" {

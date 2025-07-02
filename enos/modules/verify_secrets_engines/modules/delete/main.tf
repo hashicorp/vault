@@ -28,6 +28,10 @@ variable "leader_host" {
   description = "Vault cluster leader host"
 }
 
+variable "create_state" {
+  description = "The state of the secrets engines from the 'create' module"
+}
+
 variable "vault_addr" {
   type        = string
   description = "The local vault API listen address"
@@ -42,9 +46,4 @@ variable "vault_root_token" {
   type        = string
   description = "The Vault root token"
   default     = null
-}
-
-variable "vault_edition" {
-  description = "The Vault binary edition (e.g., 'fips', 'ent', etc.)"
-  type        = string
 }
