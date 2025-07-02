@@ -182,7 +182,6 @@ scenario "smoke" {
       cluster_tag_key = global.vault_tag_key
       common_tags     = global.tags
       vpc_id          = step.create_vpc.id
-      ports_ingress = values(global.ports)
     }
   }
 
