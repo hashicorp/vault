@@ -9,6 +9,10 @@ fail() {
   exit 1
 }
 
+log() {
+  echo "[DEBUG] $1" >&2
+}
+
 [[ -z "$OTP" ]] && fail "OTP env variable has not been set"
 [[ -z "$IP" ]] && fail "IP env variable has not been set"
 [[ -z "$USERNAME" ]] && fail "USERNAME env variable has not been set"
@@ -24,6 +28,11 @@ export VAULT_FORMAT=json
 # if ! otp_output=$("$binpath" write ssh/verify otp="$OTP" 2>&1); then
 #   fail "Failed to verify OTP credential for key $OTP: $otp_output"
 # fi
+
+log "OTP=$OTP"
+log "IP=$IP"
+log "USERNAME=$USERNAME"
+log "ROLE_NAME=$ROLE_NAME"
 
 otp_output=$(
              "$binpath" write ssh/verify - << EOF
