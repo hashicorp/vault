@@ -28,18 +28,16 @@ normalize_ttl() {
 # Always required for both types
 [[ -z "$DEFAULT_USER" ]] && fail "DEFAULT_USER env variable has not been set"
 [[ -z "$ALLOWED_USERS" ]] && fail "ALLOWED_USERS env variable has not been set"
-[[ -z "$TTL" ]] && fail "TTL env variable has not been set"
-[[ -z "$MAX_TTL" ]] && fail "MAX_TTL env variable has not been set"
-[[ -z "$PORT" ]] && fail "PORT env variable has not been set"
 
 # Type-specific required vars
 if [[ "$KEY_TYPE" == "otp" ]]; then
+  [[ -z "$PORT" ]] && fail "PORT env variable has not been set"
   [[ -z "$CIDR_LIST" ]] && fail "CIDR_LIST env variable has not been set"
   [[ -z "$EXCLUDE_CIDR_LIST" ]] && fail "EXCLUDE_CIDR_LIST env variable has not been set"
 elif [[ "$KEY_TYPE" == "ca" ]]; then
+  [[ -z "$TTL" ]] && fail "TTL env variable has not been set"
+  [[ -z "$MAX_TTL" ]] && fail "MAX_TTL env variable has not been set"
   [[ -z "$KEY_ID_FORMAT" ]] && fail "KEY_ID_FORMAT env variable has not been set"
-  [[ -z "$ALLOWED_EXTENSIONS" ]] && fail "ALLOWED_EXTENSIONS env variable has not been set"
-  [[ -z "$DEFAULT_EXTENSIONS" ]] && fail "DEFAULT_EXTENSIONS env variable has not been set"
   [[ -z "$ALLOW_USER_CERTIFICATES" ]] && fail "ALLOW_USER_CERTIFICATES env variable has not been set"
   [[ -z "$ALLOW_HOST_CERTIFICATES" ]] && fail "ALLOW_HOST_CERTIFICATES env variable has not been set"
   [[ -z "$ALLOW_USER_KEY_IDS" ]] && fail "ALLOW_USER_KEY_IDS env variable has not been set"
@@ -58,14 +56,14 @@ fi
 key_type=$(echo "$output" | jq -r '.data.key_type')
 default_user=$(echo "$output" | jq -r '.data.default_user')
 allowed_users=$(echo "$output" | jq -r '.data.allowed_users')
-port=$(echo "$output" | jq -r '.data.port')
-ttl=$(echo "$output" | jq -r '.data.ttl')
-max_ttl=$(echo "$output" | jq -r '.data.max_ttl')
 
 if [[ "$KEY_TYPE" == "otp" ]]; then
+  port=$(echo "$output" | jq -r '.data.port')
   cidr_list=$(echo "$output" | jq -r '.data.cidr_list')
   exclude_cidr_list=$(echo "$output" | jq -r '.data.exclude_cidr_list')
 elif [[ "$KEY_TYPE" == "ca" ]]; then
+  ttl=$(echo "$output" | jq -r '.data.ttl')
+  max_ttl=$(echo "$output" | jq -r '.data.max_ttl')
   key_id_format=$(echo "$output" | jq -r '.data.key_id_format')
   allowed_extensions=$(echo "$output" | jq -r '.data.allowed_extensions')
   default_extensions=$(echo "$output" | jq -r '.data.default_extensions')
@@ -80,14 +78,14 @@ fi
 [[ "$key_type" != "$KEY_TYPE" ]] && fail "Key type mismatch: expected $KEY_TYPE, got $key_type"
 [[ "$default_user" != "$DEFAULT_USER" ]] && fail "Default user mismatch: expected $DEFAULT_USER, got $default_user"
 [[ "$allowed_users" != "$ALLOWED_USERS" ]] && fail "Allowed users mismatch: expected $ALLOWED_USERS, got $allowed_users"
-[[ "$(normalize_ttl "$ttl")" != "$(normalize_ttl "$TTL")" ]] && fail "TTL mismatch: expected $TTL, got $ttl"
-[[ "$(normalize_ttl "$max_ttl")" != "$(normalize_ttl "$MAX_TTL")" ]] && fail "Max TTL mismatch: expected $MAX_TTL, got $max_ttl"
-[[ "$port" != "$PORT" ]] && fail "Port mismatch: expected $PORT, got $port"
 
 if [[ "$KEY_TYPE" == "otp" ]]; then
+  [[ "$port" != "$PORT" ]] && fail "Port mismatch: expected $PORT, got $port"
   [[ "$cidr_list" != "$CIDR_LIST" ]] && fail "CIDR list mismatch: expected $CIDR_LIST, got $cidr_list"
   [[ "$exclude_cidr_list" != "$EXCLUDE_CIDR_LIST" ]] && fail "Exclude CIDR list mismatch: expected $EXCLUDE_CIDR_LIST, got $exclude_cidr_list"
 elif [[ "$KEY_TYPE" == "ca" ]]; then
+  [[ "$(normalize_ttl "$ttl")" != "$(normalize_ttl "$TTL")" ]] && fail "TTL mismatch: expected $TTL, got $ttl"
+  [[ "$(normalize_ttl "$max_ttl")" != "$(normalize_ttl "$MAX_TTL")" ]] && fail "Max TTL mismatch: expected $MAX_TTL, got $max_ttl"
   [[ "$key_id_format" != "$KEY_ID_FORMAT" ]] && fail "Key ID format mismatch: expected $KEY_ID_FORMAT, got $key_id_format"
   [[ "$allowed_extensions" != "$ALLOWED_EXTENSIONS" ]] && fail "Allowed extensions mismatch: expected $ALLOWED_EXTENSIONS, got $allowed_extensions"
   [[ "$(echo "$default_extensions" | jq -c '.')" != "$(echo "$DEFAULT_EXTENSIONS" | jq -c '.')" ]] && fail "Default extensions mismatch"

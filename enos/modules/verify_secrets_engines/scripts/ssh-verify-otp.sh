@@ -21,8 +21,8 @@ binpath=${VAULT_INSTALL_DIR}/vault
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 export VAULT_FORMAT=json
-if ! otp_output=$("$binpath" write ssh/verify otp="$OTP" 2>&1); then
-  fail "failed to generate OTP credential for key $OTP: $otp_output"
+if ! otp_output=$("$binpath" write ssh/verify otp=$OTP 2>&1); then
+  fail "failed to verify OTP credential for key $OTP: $otp_output"
 fi
 
 ip=$(echo "$otp_output" | jq -r '.data.ip')
