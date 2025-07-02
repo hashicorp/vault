@@ -1213,7 +1213,7 @@ func (c *Core) GetLoginMFAConfigCountByMethod() (map[string]int, error) {
 				currConfigMap := configInfo[methodId].(map[string]interface{})
 				mfaType, ok := currConfigMap["type"].(string)
 				if !ok {
-					return nil, fmt.Errorf("failed to parse MFA config for MFA type")
+					return nil, fmt.Errorf("failed to parse Login MFA config for MFA type")
 				}
 				// add the config to the count only if the namespaces match
 				if ns.ID == currConfigMap["namespace_id"].(string) {
