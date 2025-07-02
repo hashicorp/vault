@@ -11,6 +11,7 @@ fail() {
 
 normalize_ttl() {
   case "$1" in
+    null | "") echo 0 ;;
     *h) echo $((${1%h} * 3600))   ;;
     *m) echo $((${1%m} * 60))   ;;
     *s) echo $((${1%s}))   ;;

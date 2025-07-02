@@ -10,7 +10,7 @@ fail() {
 }
 
 [[ -z "$SIGNED_KEY" ]] && fail "SIGNED_KEY env variable has not been set"
-[[ -z "$CERT_KEY_TYPE" ]] && fail "CA_KEY_TYPE env variable has not been set"
+[[ -z "$KEY_TYPE" ]] && fail "KEY_TYPE env variable has not been set"
 [[ -z "$VAULT_ADDR" ]] && fail "VAULT_ADDR env variable has not been set"
 [[ -z "$VAULT_TOKEN" ]] && fail "VAULT_TOKEN env variable has not been set"
 [[ -z "$VAULT_INSTALL_DIR" ]] && fail "VAULT_INSTALL_DIR env variable has not been set"
@@ -25,7 +25,7 @@ if ! ssh_key_info=$(ssh-keygen -Lf "$SIGNED_KEY_PATH"); then
 fi
 
 # Extract key type
-cert_key_type=$(echo "$ssh_key_info" | grep "Type:" | awk '{print $2}')
-if [[ "$cert_key_type" != *"$CERT_KEY_TYPE"* ]]; then
-  fail "Key type mismatch: expected $CERT_KEY_TYPE, got $cert_key_type"
+key_type=$(echo "$ssh_key_info" | grep "Type:" | awk '{print $2}')
+if [[ "$key_type" != *"$KEY_TYPE"* ]]; then
+  fail "Key type mismatch: expected $KEY_TYPE, got $key_type"
 fi

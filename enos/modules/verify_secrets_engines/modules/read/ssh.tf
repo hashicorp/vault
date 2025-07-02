@@ -104,7 +104,7 @@ resource "enos_remote_exec" "ssh_verify_signed_key" {
 
   environment = {
     SIGNED_KEY        = var.create_state.ssh.data.sign_key.signed_key
-    CA_KEY_TYPE       = var.create_state.ssh.ca_key_type
+    KEY_TYPE          = var.create_state.ssh.ca_key_type
     VAULT_ADDR        = var.vault_addr
     VAULT_TOKEN       = var.vault_root_token
     VAULT_INSTALL_DIR = var.vault_install_dir
@@ -145,7 +145,7 @@ resource "enos_remote_exec" "ssh_verify_otp" {
 resource "enos_local_exec" "ssh_verify_cert" {
   environment = {
     SIGNED_KEY        = var.create_state.ssh.data.generate_cert.signed_key
-    CERT_KEY_TYPE     = var.create_state.ssh.cert_key_type
+    KEY_TYPE          = var.create_state.ssh.cert_key_type
     VAULT_ADDR        = var.vault_addr
     VAULT_TOKEN       = var.vault_root_token
     VAULT_INSTALL_DIR = var.vault_install_dir
