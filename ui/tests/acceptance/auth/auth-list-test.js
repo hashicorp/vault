@@ -11,9 +11,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import { MANAGED_AUTH_BACKENDS } from 'vault/helpers/supported-managed-auth-backends';
 import { deleteAuthCmd, mountAuthCmd, runCmd, createNS } from 'vault/tests/helpers/commands';
-import { methods } from 'vault/helpers/mountable-auth-methods';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
+import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 
 const SELECTORS = {
   createUser: '[data-test-entity-create-link="user"]',
@@ -78,7 +78,7 @@ module('Acceptance | auth backend list', function (hooks) {
     });
 
     // Test all auth methods, not just those you can log in with
-    methods()
+    filterEnginesByMountCategory({ mountCategory: 'auth', isEnterprise: false })
       .map((backend) => backend.type)
       .forEach((type) => {
         test(`${type} auth method`, async function (assert) {
@@ -159,14 +159,19 @@ module('Acceptance | auth backend list', function (hooks) {
       await settled();
       await loginNs(ns);
       // go directly to token configure route
-      await visit('/vault/settings/auth/configure/token/options');
+      await visit(`/vault/settings/auth/configure/token/options?namespace=${ns}`);
       await fillIn(GENERAL.inputByAttr('description'), 'My custom description');
       await click(GENERAL.submitButton);
-      assert.strictEqual(currentURL(), '/vault/access', 'successfully saves and navigates away');
+      assert.strictEqual(
+        currentURL(),
+        `/vault/access?namespace=${ns}`,
+        'successfully saves and navigates away'
+      );
       await click(GENERAL.linkedBlock('token'));
       assert
         .dom('[data-test-row-value="Description"]')
         .hasText('My custom description', 'description was saved');
+      await login();
       await runCmd(`delete sys/namespaces/${ns}`);
     });
   });

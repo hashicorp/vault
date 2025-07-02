@@ -14,6 +14,7 @@ import codemirror from 'vault/tests/helpers/codemirror';
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) {
   setupRenderingTest(hooks);
@@ -87,14 +88,14 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
     assert.dom(FORM.keyInput()).hasValue('foo');
     assert.dom(FORM.maskedValueInput()).hasValue('bar');
     assert.dom(FORM.dataInputLabel({ isJson: false })).hasText('Version data');
-    await click(FORM.toggleJson);
+    await click(GENERAL.toggleInput('json'));
     assert.strictEqual(
       codemirror().getValue(' '),
       `{   \"foo": \"bar" }`, // eslint-disable-line no-useless-escape
       'json editor initializes with empty object'
     );
     assert.dom(FORM.dataInputLabel({ isJson: true })).hasText('Version data');
-    await click(FORM.toggleJson);
+    await click(GENERAL.toggleInput('json'));
     await fillIn(FORM.keyInput(1), 'foo2');
     await fillIn(FORM.maskedValueInput(1), 'bar2');
     await click(FORM.saveBtn);
@@ -117,21 +118,21 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       { owner: this.engine }
     );
 
-    assert.dom(PAGE.edit.toggleDiff).isNotDisabled('Diff toggle is not disabled');
+    assert.dom(GENERAL.toggleInput('Show diff')).isNotDisabled('Diff toggle is not disabled');
     assert.dom(PAGE.edit.toggleDiffDescription).hasText('No changes to show. Update secret to view diff');
     assert.dom(PAGE.diff.visualDiff).doesNotExist('Does not show visual diff');
 
     await fillIn(FORM.keyInput(1), 'foo2');
     await fillIn(FORM.maskedValueInput(1), 'bar2');
 
-    assert.dom(PAGE.edit.toggleDiff).isNotDisabled('Diff toggle is not disabled');
+    assert.dom(GENERAL.toggleInput('Show diff')).isNotDisabled('Diff toggle is not disabled');
     assert.dom(PAGE.edit.toggleDiffDescription).hasText('Showing the diff will reveal secret values');
     assert.dom(PAGE.diff.visualDiff).doesNotExist('Does not show visual diff');
-    await click(PAGE.edit.toggleDiff);
+    await click(GENERAL.toggleInput('Show diff'));
     assert.dom(PAGE.diff.visualDiff).exists('Shows visual diff');
     assert.dom(PAGE.diff.added).hasText(`foo2"bar2"`);
 
-    await click(FORM.toggleJson);
+    await click(GENERAL.toggleInput('json'));
     codemirror().setValue('{ "foo3": "bar3" }');
 
     assert.dom(PAGE.diff.visualDiff).exists('Visual diff updates');
@@ -217,7 +218,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       { owner: this.engine }
     );
 
-    await click(FORM.toggleJson);
+    await click(GENERAL.toggleInput('json'));
     codemirror().setValue('i am a string and not JSON');
     assert
       .dom(FORM.inlineAlert)
@@ -260,7 +261,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       { owner: this.engine }
     );
     assert.dom(FORM.dataInputLabel({ isJson: false })).hasText('Version data');
-    await click(FORM.toggleJson);
+    await click(GENERAL.toggleInput('json'));
     assert.dom(FORM.dataInputLabel({ isJson: true })).hasText('Version data');
 
     codemirror().setValue(`{ "hello": "there"}`);

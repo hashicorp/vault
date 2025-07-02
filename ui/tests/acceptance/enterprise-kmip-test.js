@@ -23,7 +23,7 @@ import credentialsPage from 'vault/tests/pages/secrets/backend/kmip/credentials'
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
-import { allEngines } from 'vault/helpers/mountable-secret-engines';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 import { mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -94,7 +94,7 @@ module('Acceptance | Enterprise | KMIP secrets', function (hooks) {
 
   test('it should enable KMIP & transitions to addon engine route after mount success', async function (assert) {
     // test supported backends that ARE ember engines (enterprise only engines are tested individually)
-    const engine = allEngines().find((e) => e.type === 'kmip');
+    const engine = engineDisplayData('kmip');
 
     await mountSecrets.visit();
     await mountBackend(engine.type, `${engine.type}-${uuidv4()}`);

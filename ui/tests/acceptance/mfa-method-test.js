@@ -122,6 +122,9 @@ module('Acceptance | mfa-method', function (hooks) {
         "This method cannot be deleted until its enforcements are deleted. This can be done from the 'Enforcements' tab."
       );
 
+    // we need to close the modal
+    await click(GENERAL.cancelButton);
+
     const fields = [
       ['Issuer', 'Period', 'Key size', 'QR size', 'Algorithm', 'Digits', 'Skew', 'Max validation attempts'],
       ['Duo API hostname', 'Passcode reminder'],
