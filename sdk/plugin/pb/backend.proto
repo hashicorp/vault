@@ -624,6 +624,7 @@ message RotationInfoRequest {
 message RotationInfoReply {
   int64 issue_time = 1;
   int64 expire_time = 2;
+  int64 ttl = 3;
 }
 
 message RegisterRotationJobRequest {
