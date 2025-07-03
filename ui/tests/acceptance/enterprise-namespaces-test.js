@@ -156,6 +156,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
 
     // Verify that the namespace exists in the namespace picker
     await click(GENERAL.button('namespace-picker'));
+    await waitFor(GENERAL.button('Refresh list'));
     await click(GENERAL.button('Refresh list'));
     await fillIn(GENERAL.inputByAttr('Search namespaces'), namespace);
 

@@ -4,25 +4,35 @@
 package observations
 
 const (
-	// lease
-	ObservationTypeLeaseCreationAuth    = "lease/create/auth"
+	// ObservationTypeLeaseCreationAuth is emitted when a lease connected to auth is created
+	ObservationTypeLeaseCreationAuth = "lease/create/auth"
+	// ObservationTypeLeaseCreationNonAuth is emitted when a lease NOT connected to auth is created
 	ObservationTypeLeaseCreationNonAuth = "lease/create/non-auth"
-	ObservationTypeLeaseRenewAuth       = "lease/renew/auth"
-	ObservationTypeLeaseRenewNonAuth    = "lease/renew/non-auth"
-	ObservationTypeLeaseLazyRevoke      = "lease/lazy-revoke"
-	ObservationTypeLeaseRevocation      = "lease/revoke"
+	// ObservationTypeLeaseRenewAuth is emitted when a lease connected to auth is renewed
+	ObservationTypeLeaseRenewAuth = "lease/renew/auth"
+	// ObservationTypeLeaseRenewNonAuth is emitted when a lease NOT connected to auth is renewed
+	ObservationTypeLeaseRenewNonAuth = "lease/renew/non-auth"
+	// ObservationTypeLeaseLazyRevoke is emitted when a lease is lazy-revoked
+	ObservationTypeLeaseLazyRevoke = "lease/lazy-revoke"
+	// ObservationTypeLeaseRevocation is emitted when a lease is revoked
+	ObservationTypeLeaseRevocation = "lease/revoke"
 
-	// policy
+	// ObservationTypePolicyACLEvaluation is emitted when an ACL policy is evaluated
 	ObservationTypePolicyACLEvaluation = "policy/acl/evaluation"
 
-	// mount
-	ObservationTypeMountAuthEnable     = "mount/auth/enable"
-	ObservationTypeMountAuthDisable    = "mount/auth/disable"
-	ObservationTypeMountSecretsEnable  = "mount/secrets/enable"
+	// ObservationTypeMountAuthEnable is emitted when an auth mount is enabled
+	ObservationTypeMountAuthEnable = "mount/auth/enable"
+	// ObservationTypeMountAuthDisable is emitted when an auth mount is disabled
+	ObservationTypeMountAuthDisable = "mount/auth/disable"
+	// ObservationTypeMountSecretsEnable is emitted when a secret mount is enabled
+	ObservationTypeMountSecretsEnable = "mount/secrets/enable"
+	// ObservationTypeMountSecretsDisable is emitted when a secret mount is disabled
 	ObservationTypeMountSecretsDisable = "mount/secrets/disable"
 
-	// namespace
+	// ObservationTypeNamespaceCreate is emitted when a namespace is created
 	ObservationTypeNamespaceCreate = "namespace/create"
-	ObservationTypeNamespacePatch  = "namespace/patch"
+	// ObservationTypeNamespacePatch is emitted when a namespace is patched
+	ObservationTypeNamespacePatch = "namespace/patch"
+	// ObservationTypeNamespaceDelete is emitted when a namespace is deleted
 	ObservationTypeNamespaceDelete = "namespace/delete"
 )
