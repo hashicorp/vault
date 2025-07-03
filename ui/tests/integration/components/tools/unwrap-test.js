@@ -73,6 +73,7 @@ module('Integration | Component | tools/unwrap', function (hooks) {
     await fillIn(TS.toolsInput('unwrap-token'), data.token);
     await click(GENERAL.submitButton);
     await waitFor('.hds-code-block');
+    assert.true(flashSpy.calledWith('Unwrap was successful.'), 'it renders success flash');
     assert.dom('.hds-code-block__title').hasText('Unwrapped Data');
     await settled();
     assertCodeBlockValue(assert, '.hds-code-block__code', '{   "foo": "bar" }');

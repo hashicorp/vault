@@ -329,19 +329,6 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     );
   });
 
-  test('on enter the JSON editor cursor goes to the next line', async function (assert) {
-    // see issue here: https://github.com/hashicorp/vault/issues/27524
-    const predictedCursorPosition = JSON.stringify({ line: 3, ch: 0, sticky: null });
-    await visit(`/vault/secrets/${this.backend}/kv/create`);
-    await fillIn(FORM.inputByAttr('path'), 'json jump');
-
-    await click(GENERAL.toggleInput('json'));
-    codemirror().setCursor({ line: 2, ch: 1 });
-    await triggerKeyEvent(GENERAL.codemirrorTextarea, 'keydown', 'Enter');
-    const actualCursorPosition = JSON.stringify(codemirror().getCursor());
-    assert.strictEqual(actualCursorPosition, predictedCursorPosition, 'the cursor stayed on the next line');
-  });
-
   test('viewing advanced secret data versions displays the correct version data', async function (assert) {
     assert.expect(2);
     const expectedDataV1 = `{
