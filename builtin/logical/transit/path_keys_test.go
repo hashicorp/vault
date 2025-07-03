@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/constants"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -294,14 +295,62 @@ func TestTransit_CreateKey(t *testing.T) {
 			creationParams: map[string]interface{}{"type": "hybrid", "parameter_set": "87", "hybrid_key_type_ec": "ecdsa-p521", "hybrid_key_type_pqc": "ml-dsa"},
 			entOnly:        true,
 		},
+		"SLH-DSA-SHA2-128s": {
+			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_128S},
+			entOnly:        true,
+		},
+		"SLH-DSA-SHAKE-128s": {
+			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_128S},
+			entOnly:        true,
+		},
+		"SLH-DSA-SHA2-128f": {
+			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_128F},
+			entOnly:        true,
+		},
+		"SLH-DSA-SHAKE-128f": {
+			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_128F},
+			entOnly:        true,
+		},
+		"SLH-DSA-SHA2-192s": {
+			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_192S},
+			entOnly:        true,
+		},
+		"SLH-DSA-SHAKE-192s": {
+			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_192S},
+			entOnly:        true,
+		},
+		"SLH-DSA-SHA2-192f": {
+			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_192F},
+			entOnly:        true,
+		},
+		"SLH-DSA-SHAKE-192f": {
+			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_192F},
+			entOnly:        true,
+		},
+		"SLH-DSA-SHA2-256s": {
+			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_256S},
+			entOnly:        true,
+		},
+		"SLH-DSA-SHAKE-256s": {
+			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_256S},
+			entOnly:        true,
+		},
+		"SLH-DSA-SHA2-256f": {
+			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHA2_256F},
+			entOnly:        true,
+		},
+		"SLH-DSA-SHAKE-256f": {
+			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_256F},
+			entOnly:        true,
+		},
 		"AES-128 CBC": {
 			creationParams: map[string]interface{}{"type": "aes128-cbc"},
 			entOnly:        true,
 		},
 		"AES-256 CBC": {
 			creationParams: map[string]interface{}{"type": "aes256-cbc"},
-			entOnly:        true,
-		},
+      entOnly:        true,
+    }
 		"bad key type": {
 			creationParams: map[string]interface{}{"type": "fake-key-type"},
 			shouldError:    true,

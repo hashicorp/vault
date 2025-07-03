@@ -176,26 +176,26 @@ module('Acceptance | auth login form', function (hooks) {
       this.assertReq = () => {};
       this.server.get('/auth/token/lookup-self', (schema, req) => {
         this.assertReq(req);
-        req.passthrough();
+        return req.passthrough();
       });
       this.server.post('/auth/:mount/login', (schema, req) => {
         // github only
         this.assertReq(req);
-        req.passthrough();
+        return req.passthrough();
       });
       this.server.post('/auth/:mount/oidc/auth_url', (schema, req) => {
         // For JWT and OIDC
         this.assertReq(req);
-        req.passthrough();
+        return req.passthrough();
       });
       this.server.post('/auth/:mount/login/:username', (schema, req) => {
         this.assertReq(req);
-        req.passthrough();
+        return req.passthrough();
       });
       this.server.put('/auth/:mount/sso_service_url', (schema, req) => {
         // SAML only (enterprise)
         this.assertReq(req);
-        req.passthrough();
+        return req.passthrough();
       });
       this.expected = {
         token: {
@@ -393,7 +393,7 @@ module('Acceptance | auth login form', function (hooks) {
 
       this.server.get('/sys/internal/ui/mounts', (_, req) => {
         assert.strictEqual(req.requestHeaders['X-Vault-Namespace'], 'admin', 'header contains namespace');
-        req.passthrough();
+        return req.passthrough();
       });
       await typeIn(GENERAL.inputByAttr('namespace'), 'admin');
     });

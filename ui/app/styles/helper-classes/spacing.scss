@@ -70,20 +70,16 @@
   padding-bottom: size_variables.$spacing-24;
 }
 
-.has-top-padding-xs {
-  padding-top: size_variables.$spacing-8;
-}
-
 .top-padding-4 {
   padding-top: size_variables.$spacing-4;
 }
 
-.top-padding-10 {
-  padding-top: size_variables.$spacing-10;
+.has-top-padding-xs {
+  padding-top: size_variables.$spacing-8;
 }
 
-.has-bottom-padding-4 {
-  padding-bottom: size_variables.$spacing-4;
+.top-padding-10 {
+  padding-top: size_variables.$spacing-10;
 }
 
 .has-top-padding-s {
