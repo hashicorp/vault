@@ -57,7 +57,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await click(PKI_CONFIGURE_CREATE.importSubmit);
       assert.dom(GENERAL.messageError).hasText('Error please upload your PEM bundle');
       // Fill in form data
-      await click('[data-test-text-toggle]');
+      await click(GENERAL.textToggle);
       await fillIn('[data-test-text-file-textarea]', this.pemBundle);
       await click(PKI_CONFIGURE_CREATE.importSubmit);
 
@@ -94,7 +94,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
       assert.dom(PKI_CONFIGURE_CREATE.importForm).exists('import form is shown save');
-      await click('[data-test-text-toggle]');
+      await click(GENERAL.textToggle);
       await fillIn('[data-test-text-file-textarea]', this.pemBundle);
       await click(PKI_CONFIGURE_CREATE.importSubmit);
 
@@ -135,7 +135,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
       assert.dom(PKI_CONFIGURE_CREATE.importForm).exists('import form is shown save');
-      await click('[data-test-text-toggle]');
+      await click(GENERAL.textToggle);
       await fillIn('[data-test-text-file-textarea]', this.pemBundle);
       await click(PKI_CONFIGURE_CREATE.importSubmit);
 
@@ -161,7 +161,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
       assert.dom(PKI_CONFIGURE_CREATE.importForm).exists('import form is shown save');
-      await click('[data-test-text-toggle]');
+      await click(GENERAL.textToggle);
       await fillIn('[data-test-text-file-textarea]', this.pemBundle);
       await click(PKI_CONFIGURE_CREATE.importSubmit);
 

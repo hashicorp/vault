@@ -48,7 +48,7 @@ module('Integration | Component | page/pki-issuer-import', function (hooks) {
       owner: this.engine,
     });
     assert.dom(GENERAL.title).hasText('Import a CA');
-    await click('[data-test-text-toggle]');
+    await click(GENERAL.textToggle);
     await fillIn('[data-test-text-file-textarea]', 'dummy-pem-bundle');
     await click(PKI_CONFIGURE_CREATE.importSubmit);
     assert.dom(GENERAL.title).hasText('View imported items');
@@ -63,7 +63,7 @@ module('Integration | Component | page/pki-issuer-import', function (hooks) {
     });
     assert.dom(GENERAL.title).hasText('Import a CA');
     // Fill in
-    await click('[data-test-text-toggle]');
+    await click(GENERAL.textToggle);
     await fillIn('[data-test-text-file-textarea]', 'dummy-pem-bundle');
     await click(PKI_CONFIGURE_CREATE.importSubmit);
     assert.dom(GENERAL.title).hasText('Import a CA', 'title does not change if response is unsuccessful');
