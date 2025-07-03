@@ -147,6 +147,19 @@ None.
 
 ## Known issues
 
+### UI Error in Vault 1.20 with secrets with underscores
+
+| Change       | Affected version | Fixed version
+| ------------ | ---------------- | --------------------
+| Known issue  | 1.20.0           | 1.20.1
+
+In 1.20.x kv v2 if a user does not have permissions to read subkeys (API docs) then attempting to view secrets with an underscore in the name, 
+i.e. my_secret returns the error: `Cannot destructure property 'deletion_time' of 't' as it is undefined`.
+
+#### Recommendation
+
+Accessing the key through CLI works as expected. As a workaround, you can use Vault CLI to retrive the secret
+
 ### UI login fails for auth mounts with underscores and unauthenticated listing ((#ui-login-underscore))
 
 | Change       | Affected version | Fixed version
