@@ -128,7 +128,36 @@
         </Hds::Form::Select::Field>
       {{/if}}
     {{else}}
-      {{#if (or (eq @attr.type "number") (eq @attr.type "string"))}}
+      {{#if (eq @attr.options.editType "dateTimeLocal")}}
+        <Hds::Form::TextInput::Field
+          @type="datetime-local"
+          name={{@attr.name}}
+          @id={{@attr.name}}
+          @value={{date-format (get @model this.valuePath) "yyyy-MM-dd'T'HH:mm"}}
+          @isInvalid={{this.validationError}}
+          {{on "focusout" this.onChangeWithEvent}}
+          data-test-input={{@attr.name}}
+          as |F|
+        >
+          <F.Label data-test-form-field-label>{{this.labelString}}</F.Label>
+          {{#if this.helpTextString}}
+            <F.HelperText data-test-help-text={{@attr.options.helpText}}>{{this.helpTextString}}</F.HelperText>
+          {{/if}}
+          {{#if @attr.options.subText}}
+            <F.HelperText data-test-help-text={{@attr.options.subText}}>
+              {{@attr.options.subText}}
+              {{#if @attr.options.docLink}}
+                <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>See our documentation</DocLink>
+                for help.
+              {{/if}}
+            </F.HelperText>
+          {{/if}}
+          {{#if this.validationError}}
+            <F.Error data-test-validation-error={{this.valuePath}}>{{this.validationError}}</F.Error>
+          {{/if}}
+        </Hds::Form::TextInput::Field>
+
+      {{else if (or (eq @attr.type "number") (eq @attr.type "string"))}}
         {{#if (eq @attr.options.editType "password")}}
           <Hds::Form::TextInput::Field
             @type="password"
@@ -239,18 +268,7 @@
         @docLink={{@attr.options.docLink}}
       />
     {{/unless}}
-    {{#if (eq @attr.options.editType "dateTimeLocal")}}
-      <Input
-        @type="datetime-local"
-        @value={{date-format (get @model this.valuePath) "yyyy-MM-dd'T'HH:mm"}}
-        name={{@attr.name}}
-        id={{@attr.name}}
-        data-test-input={{@attr.name}}
-        class="input has-top-margin-xs has-bottom-margin-xs is-auto-width is-block
-          {{if this.validationError 'has-error-border'}}"
-        {{on "focusout" this.onChangeWithEvent}}
-      />
-    {{else if (eq @attr.options.editType "searchSelect")}}
+    {{#if (eq @attr.options.editType "searchSelect")}}
       <div class="form-section">
         <SearchSelect
           @id={{@attr.name}}

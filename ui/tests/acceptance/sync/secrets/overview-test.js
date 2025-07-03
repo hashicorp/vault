@@ -12,7 +12,7 @@ import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import { click, waitFor, visit, currentURL } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { runCmd } from 'vault/tests/helpers/commands';
+import { deleteNS, runCmd } from 'vault/tests/helpers/commands';
 
 // sync is an enterprise feature but since mirage is used the enterprise label has been intentionally omitted from the module name
 module('Acceptance | sync | overview', function (hooks) {
@@ -195,11 +195,26 @@ module('Acceptance | sync | overview', function (hooks) {
         await click(ts.overview.optInBanner.enable);
         await click(ts.overview.activationModal.checkbox);
         await click(ts.overview.activationModal.confirm);
+
+        // During the namespace cleanup in the afterEach hook this endpoint is hit again which increases the assertion count (above)
+        // Re-stub here without the assertion to reduce unnecessary assertions.
+        this.server.get('/sys/activation-flags', () => {
+          return {
+            data: {
+              activated: ['secrets-sync'],
+              unactivated: [],
+            },
+          };
+        });
+        await visit('vault/dashboard');
+        await runCmd([`delete admin/sys/namespaces/foo -f`, deleteNS('admin')]);
       });
 
       test('it should make activation-flag requests to correct namespace when managed', async function (assert) {
         assert.expect(3);
-        this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+
+        const flagService = this.owner.lookup('service:flags');
+        flagService.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
 
         this.server.get('/sys/activation-flags', (_, req) => {
           assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
@@ -226,6 +241,26 @@ module('Acceptance | sync | overview', function (hooks) {
         await click(ts.overview.optInBanner.enable);
         await click(ts.overview.activationModal.checkbox);
         await click(ts.overview.activationModal.confirm);
+
+        // During the namespace cleanup in the afterEach hook this endpoint is hit again which increases the assertion count (above)
+        // Re-stub here without the assertion to reduce unnecessary assertions.
+        this.server.get('/sys/activation-flags', () => {
+          return {
+            data: {
+              activated: ['secrets-sync'],
+              unactivated: [],
+            },
+          };
+        });
+
+        // Delete the admin/foo namespace
+        await visit('vault/dashboard');
+        await runCmd([deleteNS('foo')]);
+
+        // Reset the HVD feature flag so that we can delete the admin namespace
+        flagService.featureFlags = [];
+        await login();
+        await runCmd([deleteNS('admin')]);
       });
     });
   });

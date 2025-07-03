@@ -259,23 +259,6 @@ module('Integration | Component | form field', function (hooks) {
     assert.ok(spy.calledWith('foo', expectedSeconds), 'onChange called with correct args');
   });
 
-  test('it renders: datetimelocal', async function (assert) {
-    const [model] = await setup.call(
-      this,
-      createAttr('bar', null, {
-        editType: 'dateTimeLocal',
-      })
-    );
-    assert.dom("[data-test-input='bar']").exists();
-    await fillIn(
-      "[data-test-input='bar']",
-      format(startOfDay(new Date('2023-12-17T03:24:00')), "yyyy-MM-dd'T'HH:mm")
-    );
-    // add a click label to focus out the date we filled in above
-    await click('.is-label');
-    assert.deepEqual(model.get('bar'), '2023-12-17T00:00', 'sets the value on the model');
-  });
-
   test('it renders: editType stringArray', async function (assert) {
     const [model, spy] = await setup.call(this, createAttr('foo', 'string', { editType: 'stringArray' }));
     assert.ok(component.hasStringList, 'renders the string-list component');
@@ -804,6 +787,90 @@ module('Integration | Component | form field', function (hooks) {
     this.setProperties({
       attr: createAttr('myfield', 'string', { editType: 'select', possibleValues: ['foo', 'bar', 'baz'] }),
       model: { myfield: 'bar' },
+      modelValidations: {
+        myfield: {
+          isValid: false,
+          errors: ['Error message #1', 'Error message #2'],
+          warnings: ['Warning message #1', 'Warning message #2'],
+        },
+      },
+      onChange: () => {},
+    });
+
+    await render(
+      hbs`<FormField @attr={{this.attr}} @model={{this.model}} @modelValidations={{this.modelValidations}} @onChange={{this.onChange}} />`
+    );
+    assert
+      .dom(GENERAL.validationErrorByAttr('myfield'))
+      .exists('Validation error renders')
+      .hasText('Error message #1 Error message #2', 'Validation errors are combined');
+    assert
+      .dom(GENERAL.validationWarningByAttr('myfield'))
+      .exists('Validation warning renders')
+      .hasText('Warning message #1 Warning message #2', 'Validation warnings are combined');
+  });
+
+  // ––––– editType === 'datetime-local' –––––
+
+  test('it renders: editType=dateTimeLocal - as Hds::Form::TextInput [@type=datetime-local]', async function (assert) {
+    const dateTimeValue1 = format(startOfDay(new Date('2023-12-17T03:24:00')), "yyyy-MM-dd'T'HH:mm");
+    const dateTimeValue2 = format(startOfDay(new Date('2025-05-28T16:12:00')), "yyyy-MM-dd'T'HH:mm");
+    const [model, spy] = await setup.call(
+      this,
+      createAttr('myfield', '-', { editType: 'dateTimeLocal', defaultValue: dateTimeValue1 })
+    );
+    assert
+      .dom('.field [class^="hds-form-field"] input[type="datetime-local"].hds-form-text-input')
+      .exists('renders as Hds::Form::TextInput["type=datetime-local"]');
+    assert
+      .dom(`input[type="datetime-local"]`)
+      .exists('renders input with type=datetime-local')
+      .hasAttribute(
+        'data-test-input',
+        'myfield',
+        'input[type="datetime-local"] has correct `data-test-input` attribute'
+      );
+    assert.dom(GENERAL.fieldLabel()).hasText('Myfield', 'renders the input label');
+    assert.dom(GENERAL.inputByAttr('myfield')).hasValue('2023-12-17T00:00', 'renders default value');
+    await fillIn(GENERAL.inputByAttr('myfield'), dateTimeValue2);
+    // add a click label to focus out the date we filled in above
+    await click(GENERAL.fieldLabel());
+    assert.strictEqual(model.get('myfield'), dateTimeValue2, 'sets the value on the model');
+    assert.true(spy.calledWith('myfield', dateTimeValue2), 'onChange called with correct args');
+  });
+
+  test('it renders: editType=dateTimeLocal - with passed label, subtext, helptext, doclink', async function (assert) {
+    await setup.call(
+      this,
+      createAttr('myfield', '-', {
+        editType: 'dateTimeLocal',
+        label: 'Custom label',
+        subText: 'Some subtext',
+        helpText: 'Some helptext',
+        docLink: '/docs',
+      })
+    );
+    assert.dom(GENERAL.fieldLabel()).hasText('Custom label', 'renders the custom label from options');
+    assert
+      .dom(GENERAL.helpTextByAttr('Some subtext'))
+      .exists('renders `subText` option as HelperText')
+      .hasText(
+        'Some subtext See our documentation for help.',
+        'renders the right subtext string from options'
+      );
+    assert
+      .dom(`${GENERAL.helpTextByAttr('Some subtext')} ${GENERAL.docLinkByAttr('/docs')}`)
+      .exists('renders `docLink` option as as link inside the subtext');
+    assert
+      .dom(GENERAL.helpTextByAttr('Some helptext'))
+      .exists('renders `helptext` option as HelperText')
+      .hasText('Some helptext', 'renders the right help text string from options');
+  });
+
+  test('it renders: editType=dateTimeLocal - with validation errors and warnings', async function (assert) {
+    this.setProperties({
+      attr: createAttr('myfield', '-', { editType: 'dateTimeLocal' }),
+      model: { myfield: '2023-12-17T00:00' },
       modelValidations: {
         myfield: {
           isValid: false,
