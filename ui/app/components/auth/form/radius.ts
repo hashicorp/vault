@@ -18,14 +18,15 @@ export default class AuthFormRadius extends AuthBase {
   async loginRequest(formData: { path: string; username: string; password: string }) {
     const { path, username, password } = formData;
 
-    const { auth } = <UsernameLoginResponse>await this.api.auth.radiusLoginWithUsername(username, path, {
+    const { auth } = (await this.api.auth.radiusLoginWithUsername(username, path, {
       password,
-    });
+    })) as UsernameLoginResponse;
 
     return this.normalizeAuthResponse(auth, {
-      path,
-      tokenKey: 'clientToken',
-      ttlKey: 'leaseDuration',
+      authMountPath: path,
+      displayName: auth?.metadata?.username,
+      token: auth.clientToken,
+      ttl: auth.leaseDuration,
     });
   }
 }

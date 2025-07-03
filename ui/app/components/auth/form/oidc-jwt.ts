@@ -156,7 +156,11 @@ export default class AuthFormOidcJwt extends AuthBase {
     const { path, jwt, role } = formData;
     const { auth } = <JwtOidcLoginApiResponse>await this.api.auth.jwtLogin(path, { jwt, role });
     // displayName is not returned by auth response and is set in persistAuthData
-    return this.normalizeAuthResponse(auth, { path, tokenKey: 'clientToken', ttlKey: 'leaseDuration' });
+    return this.normalizeAuthResponse(auth, {
+      authMountPath: path,
+      token: auth.clientToken,
+      ttl: auth.leaseDuration,
+    });
   }
 
   async loginOidc() {
@@ -169,7 +173,11 @@ export default class AuthFormOidcJwt extends AuthBase {
         const eventData = await this.prepareForOIDC();
         const { auth, path } = await this.exchangeOIDC(eventData);
         // displayName is not returned by auth response and is set in persistAuthData
-        return this.normalizeAuthResponse(auth, { path, tokenKey: 'clientToken', ttlKey: 'leaseDuration' });
+        return this.normalizeAuthResponse(auth, {
+          authMountPath: path,
+          token: auth.clientToken,
+          ttl: auth.leaseDuration,
+        });
       } finally {
         this.closeWindow(oidcWindow);
       }

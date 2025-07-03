@@ -18,14 +18,18 @@ export default class AuthFormGithub extends AuthBase {
   async loginRequest(formData: { path: string; token: string }) {
     const { path, token } = formData;
 
-    const { auth } = <GithubLoginApiResponse>await this.api.auth.githubLogin(path, {
+    const { auth } = (await this.api.auth.githubLogin(path, {
       token,
-    });
+    })) as GithubLoginApiResponse;
+
+    const { org, username } = auth?.metadata || {};
+    const displayName = org && username ? `${org}/${username}` : username || org || '';
 
     return this.normalizeAuthResponse(auth, {
-      path,
-      tokenKey: 'clientToken',
-      ttlKey: 'leaseDuration',
+      authMountPath: path,
+      displayName,
+      token: auth.clientToken,
+      ttl: auth.leaseDuration,
     });
   }
 }

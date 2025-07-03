@@ -18,14 +18,15 @@ export default class AuthFormLdap extends AuthBase {
   async loginRequest(formData: { path: string; username: string; password: string }) {
     const { path, username, password } = formData;
 
-    const { auth } = <UsernameLoginResponse>await this.api.auth.ldapLogin(username, path, {
+    const { auth } = (await this.api.auth.ldapLogin(username, path, {
       password,
-    });
+    })) as UsernameLoginResponse;
 
     return this.normalizeAuthResponse(auth, {
-      path,
-      tokenKey: 'clientToken',
-      ttlKey: 'leaseDuration',
+      authMountPath: path,
+      displayName: auth?.metadata?.username,
+      token: auth.clientToken,
+      ttl: auth.leaseDuration,
     });
   }
 }

@@ -34,14 +34,16 @@ export default class AuthFormOkta extends AuthBase {
 
     // If an Okta MFA challenge is configured for the end user this request resolves when it is completed.
     // If a user fails the MFA challenge (e.g. Okta number challenge) this POST login request fails.
-    const { auth } = <UsernameLoginResponse>(
-      await this.api.auth.oktaLogin(username, path, { nonce, password })
-    );
+    const { auth } = (await this.api.auth.oktaLogin(username, path, {
+      nonce,
+      password,
+    })) as UsernameLoginResponse;
 
     return this.normalizeAuthResponse(auth, {
-      path,
-      tokenKey: 'clientToken',
-      ttlKey: 'leaseDuration',
+      authMountPath: path,
+      displayName: auth?.metadata?.username,
+      token: auth.clientToken,
+      ttl: auth.leaseDuration,
     });
   }
 

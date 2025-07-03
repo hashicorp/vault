@@ -15,7 +15,6 @@ import { resolve, reject } from 'rsvp';
 import getStorage from 'vault/lib/token-storage';
 import ENV from 'vault/config/environment';
 import { addToArray } from 'vault/helpers/add-to-array';
-import { displayNameFromMetadata } from 'vault/utils/auth-form-helpers';
 
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
@@ -486,6 +485,14 @@ export default Service.extend({
   // varies slightly (i.e. "ttl" vs "lease_duration"). Normalize it so stored authData contains consistent keys.
   // (Also, the API service returns camel cased keys and raw ajax requests return snake cased params.)
   normalizeAuthData(authData, { authMethodType, authMountPath, displayName }) {
+    const displayNameFromMetadata = (metadata) =>
+      metadata
+        ? ['org', 'username']
+            .map((key) => (key in metadata ? metadata[key] : null))
+            .filter(Boolean)
+            .join('/')
+        : '';
+
     return {
       authMethodType,
       authMountPath,

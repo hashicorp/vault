@@ -64,9 +64,9 @@ export default class AuthFormSaml extends AuthBase {
 
       // displayName is not included in auth response - it is set in persistAuthData
       return this.normalizeAuthResponse(auth, {
-        path,
-        tokenKey: 'clientToken',
-        ttlKey: 'leaseDuration',
+        authMountPath: path,
+        token: auth.clientToken,
+        ttl: auth.leaseDuration,
       });
     } finally {
       this.closeWindow(samlWindow);
@@ -124,10 +124,10 @@ export default class AuthFormSaml extends AuthBase {
       try {
         const { clientVerifier, tokenPollId } = fetchedRole;
         // Exit loop if there's a response
-        return <SamlLoginApiResponse>await this.api.auth.samlWriteToken(path, {
+        return (await this.api.auth.samlWriteToken(path, {
           clientVerifier,
           tokenPollId,
-        });
+        })) as SamlLoginApiResponse;
       } catch (e) {
         const { message, status } = await this.api.parseError(e);
         if (status === 401) {
