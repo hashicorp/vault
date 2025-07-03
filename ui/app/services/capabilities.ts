@@ -92,6 +92,7 @@ export default class CapabilitiesService extends Service {
     }
 
     try {
+      //* API SERVICE MUTATION: Data returned is mutated by api service and will not match `paths`
       const { data } = await this.api.sys.queryTokenSelfCapabilities(payload);
       return this.mapCapabilities(paths, data as CapabilitiesData);
     } catch (e) {
