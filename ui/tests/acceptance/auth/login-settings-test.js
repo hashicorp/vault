@@ -38,8 +38,8 @@ module('Acceptance | Enterprise | auth form custom login settings', function (ho
       'delete sys/config/ui/login/default-auth/root-rule',
       'delete sys/config/ui/login/default-auth/ns-rule',
       'delete sys/auth/my_oidc',
-      'delete test-ns/sys/namespaces/child',
-      'delete sys/namespaces/test-ns',
+      'delete test-ns/sys/namespaces/child -f',
+      'delete sys/namespaces/test-ns -f',
     ]);
   });
 

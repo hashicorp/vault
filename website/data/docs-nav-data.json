@@ -998,7 +998,7 @@
     ]
   },
   {
-    "title": "System admin",
+    "title": "System administration",
     "routes": [
       {
         "title": "Manage snapshots",
