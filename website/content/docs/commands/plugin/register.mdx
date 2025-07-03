@@ -64,6 +64,18 @@ $ vault plugin register
     vault-plugin-secrets-keymgmt               # name must match the plugin name on the releases page
 ```
 
+Use the `-download` flag with the full version and plugin
+name to download and register an official plugin from
+[HashiCorp releases page](https://releases.hashicorp.com/):
+
+```shell-session
+$ vault plugin register
+    -download \
+    -version=0.16.0+ent \
+    secret \
+    vault-plugin-secrets-keymgmt
+```
+
 ## Usage
 
 The following flags are available in addition to the [standard set of
@@ -105,3 +117,10 @@ flags](/vault/docs/commands) included on all commands.
    You can omit version to register a plugin binary, but you must provide
    an explicit version to register a plugin artifact.
 
+- `-download` `(bool: false)` - <EnterpriseAlert inline="true" /> **( BETA )**
+  Tells Vault to download the specified plugin from the
+  [HashiCorp releases page](https://releases.hashicorp.com/). Automatic
+  downloads only support secret and auth plugins with artifacts containing
+  `metadata.json` and `metadata.json.sig`. To use automatic downloads, your
+  network must permit HTTPS and TCP port 443 between all
+  Vault cluster nodes and `releases.hashicorp.com`.
