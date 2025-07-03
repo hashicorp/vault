@@ -118,16 +118,12 @@ export default class FormFieldComponent extends Component {
       ) {
         return false;
       } else if (type === 'number' || type === 'string') {
-        if (
-          options?.editType === undefined ||
-          options?.editType === 'textarea' ||
-          options?.editType === 'password' ||
-          options?.editType === 'string' ||
-          options?.editType === 'number'
-        ) {
+        if (options?.editType === 'textarea' || options?.editType === 'password') {
           return true;
-        } else {
+        } else if (options?.editType === 'json') {
           return false;
+        } else {
+          return true;
         }
       } else if (type === 'boolean' || options?.editType === 'boolean') {
         return true;
