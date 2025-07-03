@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: add favorites feature for secret engines with star icons and localStorage persistence
+```
