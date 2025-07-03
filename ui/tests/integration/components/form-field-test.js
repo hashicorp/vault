@@ -1226,7 +1226,7 @@ module('Integration | Component | form field', function (hooks) {
       .hasAttribute('id', 'myfield', 'input[type="text"] has correct `id` attribute');
     assert.dom(GENERAL.fieldLabel()).hasText('Myfield', 'renders the input[type="text"] label');
     assert.dom(GENERAL.inputByAttr('myfield')).hasValue('123', 'renders default value');
-    await fillIn(GENERAL.inputByAttr('myfield'), '1234');
+    await fillIn(GENERAL.inputByAttr('myfield'), 1234);
     assert.strictEqual(model.get('myfield'), '1234');
     assert.true(spy.calledWith('myfield', '1234'), 'onChange called with correct args');
   });
