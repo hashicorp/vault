@@ -6928,7 +6928,7 @@ Must already be present on the machine.`,
 		"",
 	},
 	"plugin-catalog_download": {
-		`Downloads automatically official HashiCorp plugins
+		`Automatically downloads official HashiCorp plugins
 from releases.hashicorp.com (beta)`,
 		"",
 	},
