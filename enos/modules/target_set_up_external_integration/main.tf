@@ -34,7 +34,7 @@ output "state" {
 # certain Linux distros and artifact types (e.g. SLES and RPM packages), there may
 # be packages that are required to perform Vault installation (e.g. openssl).
 module "install_packages" {
-  source = "../install_packages"
+  source   = "../install_packages"
   hosts    = var.hosts
   packages = var.packages
 }
