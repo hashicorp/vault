@@ -148,11 +148,10 @@ const testConvergentEncryption = async function (assert, keyName) {
   ];
 
   for (const testCase of tests) {
-    let editor;
     await click('[data-test-transit-action-link="encrypt"]');
 
     await waitFor('.cm-editor');
-    editor = codemirror('#plaintext-control');
+    const editor = codemirror('#plaintext-control');
     setCodeEditorValue(editor, testCase.plaintext);
     await fillIn('[data-test-transit-input="context"]', testCase.context);
 

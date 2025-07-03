@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { isPresent, text } from 'ember-cli-page-object';
+import { isPresent, notHasClass, text } from 'ember-cli-page-object';
 
 export default {
   title: text('[data-test-component=json-editor-title]'),

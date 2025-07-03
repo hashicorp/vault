@@ -12,7 +12,6 @@ import page from '../../pages/components/json-editor';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { createLongJson } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import codemirror, { getCodeEditorValue, setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 
 const component = create(page);

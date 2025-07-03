@@ -167,7 +167,7 @@ module('Acceptance | tools', function (hooks) {
         obj[camelize(auth)] = AUTH_RESPONSE.auth[auth];
         return obj;
       }, {});
-      assertCodeBlockValue(assert, '.hds-code-block__code', AUTH_RESPONSE.auth);
+      assertCodeBlockValue(assert, '.hds-code-block__code', expected);
     });
   });
 

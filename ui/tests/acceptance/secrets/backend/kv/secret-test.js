@@ -340,7 +340,11 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await click(SS.createSecretLink);
       await fillIn(SS.secretPath('create'), secretPath);
       await click(GENERAL.toggleInput('json'));
-      codemirror().setValue(content);
+
+      await waitFor('.cm-editor');
+      const editor = codemirror();
+      setCodeEditorValue(editor, content);
+
       await click(GENERAL.submitButton);
 
       assert.strictEqual(
