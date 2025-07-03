@@ -320,6 +320,8 @@ scenario "dr_replication" {
       hosts      = step.create_external_integration_target.hosts
       distro     = matrix.distro
       ip_version = matrix.ip_version
+      ldap_port  = global.ports.ldap.port
+      ldaps_port = global.ports.ldaps.port
     }
   }
 
