@@ -17,8 +17,8 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-// TestSystemBackend_PluginCatalog_Update_Download_Fails tests the update failure
-// case when download is true
+// TestSystemBackend_PluginCatalog_Update_Download_Should_Fail tests the update failure
+// cases when download is true
 func TestSystemBackend_PluginCatalog_Update_Download_Should_Fail(t *testing.T) {
 	const expectedErrStr = "download is an enterprise only feature"
 	sym, err := filepath.EvalSymlinks(os.TempDir())
