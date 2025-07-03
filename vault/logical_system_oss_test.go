@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/vault/helper/namespace"
@@ -19,6 +20,7 @@ import (
 // TestSystemBackend_PluginCatalog_Update_Download_Fails tests the update failure
 // case when download is true
 func TestSystemBackend_PluginCatalog_Update_Download_Should_Fail(t *testing.T) {
+	const expectedErrStr = "download is an enterprise only feature"
 	sym, err := filepath.EvalSymlinks(os.TempDir())
 	if err != nil {
 		t.Fatalf("error: %v", err)
@@ -59,6 +61,8 @@ func TestSystemBackend_PluginCatalog_Update_Download_Should_Fail(t *testing.T) {
 			resp, err := b.HandleRequest(namespace.RootContext(nil), req)
 			if err != nil || resp.Error() == nil {
 				t.Fatalf("expected error when download is true, got resp: %v, err: %v", resp, err)
+			} else if !strings.Contains(resp.Error().Error(), expectedErrStr) {
+				t.Fatalf("expected error %q, got resp: %v", expectedErrStr, resp)
 			}
 		})
 	}
