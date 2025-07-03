@@ -12,13 +12,14 @@ terraform {
 locals {
   test_server_address = var.ip_version == "6" ? var.hosts[0].ipv6 : var.hosts[0].public_ip
   ldap_server = {
-    domain     = "enos.com"
-    org        = "hashicorp"
-    admin_pw   = "password1"
-    version    = var.ldap_version
-    port       = "389"
-    ip_version = var.ip_version
-    host       = var.hosts[0]
+    domain      = "enos.com"
+    org         = "hashicorp"
+    admin_pw    = "password1"
+    version     = var.ldap_version
+    port        = var.ldap_port
+    secure_port = var.ldaps_port
+    ip_version  = var.ip_version
+    host        = var.hosts[0]
   }
 }
 
@@ -49,6 +50,7 @@ resource "enos_remote_exec" "setup_openldap" {
     LDAP_ADMIN_PW          = local.ldap_server.admin_pw
     LDAP_IP_ADDRESS        = local.test_server_address
     LDAP_PORT              = local.ldap_server.port
+    LDAPS_PORT             = local.ldap_server.secure_port
   }
 
   scripts = [abspath("${path.module}/scripts/set-up-openldap.sh")]

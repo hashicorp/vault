@@ -14,6 +14,7 @@ fail() {
 [[ -z "$LDAP_ADMIN_PW" ]] && fail "LDAP_ADMIN_PW env variable has not been set"
 [[ -z "$LDAP_CONTAINER_VERSION" ]] && fail "LDAP_CONTAINER_VERSION env variable has not been set"
 [[ -z "$LDAP_PORT" ]] && fail "LDAP_PORT env variable has not been set"
+[[ -z "$LDAPS_PORT" ]] && fail "LDAPS_PORT env variable has not been set"
 
 # Pulling image
 CONTAINER_CMD="sudo docker"
@@ -26,7 +27,7 @@ echo "Starting OpenLDAP container..."
 $CONTAINER_CMD run -d \
   --name openldap \
   -p "${LDAP_PORT}:${LDAP_PORT}" \
-  -p 636:636 \
+  -p "${LDAPS_PORT}:${LDAPS_PORT}" \
   -e LDAP_ORGANISATION="${LDAP_ORG}" \
   -e LDAP_DOMAIN="${LDAP_DOMAIN}" \
   -e LDAP_ADMIN_PASSWORD="${LDAP_ADMIN_PW}" \
