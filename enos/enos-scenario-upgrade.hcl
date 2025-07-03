@@ -246,8 +246,8 @@ scenario "upgrade" {
 
     variables {
       hosts      = step.create_external_integration_target.hosts
-      distro     = matrix.distro
       ip_version = matrix.ip_version
+      packages   = concat(global.packages, global.distro_packages[matrix.distro][global.distro_version[matrix.distro]])
       ldap_port  = global.ports.ldap.port
       ldaps_port = global.ports.ldaps.port
     }
