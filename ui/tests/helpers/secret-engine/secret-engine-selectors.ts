@@ -47,4 +47,8 @@ export const SECRET_ENGINE_SELECTORS = {
     createRole: '[data-test-role-ssh-create]',
     deleteRole: '[data-test-ssh-role-delete]',
   },
+  // Favorite functionality selectors
+  favoriteButton: (engineId: string) => `[data-test-favorite-engine="${engineId}"]`,
+  favoriteIcon: (engineId: string) => `[data-test-favorite-engine="${engineId}"] .hds-icon-star-fill`,
+  nonFavoriteIcon: (engineId: string) => `[data-test-favorite-engine="${engineId}"] .hds-icon-star`,
 };

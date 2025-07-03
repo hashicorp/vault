@@ -38,6 +38,43 @@ export default class SecretEngineList extends Component<Args> {
   @tracked selectedEngineType = '';
   @tracked selectedEngineName = '';
   @tracked engineToDisable: SecretsEngineResource | undefined = undefined;
+  @tracked favoriteEngines: Array<string> = [];
+
+  constructor(owner: unknown, args: Args) {
+    super(owner, args);
+    this.loadFavorites();
+  }
+
+  loadFavorites() {
+    try {
+      const stored = localStorage.getItem('vault-favorite-engines');
+      if (stored) {
+        this.favoriteEngines = JSON.parse(stored);
+      }
+    } catch (e) {
+      this.favoriteEngines = [];
+    }
+  }
+
+  saveFavorites() {
+    try {
+      localStorage.setItem('vault-favorite-engines', JSON.stringify(this.favoriteEngines));
+    } catch (e) {
+      // Silently handle localStorage errors
+    }
+  }
+
+  @action
+  toggleFavorite(engineId: string) {
+    if (this.favoriteEngines.includes(engineId)) {
+      // remove from favorites
+      this.favoriteEngines = this.favoriteEngines.filter((id) => id !== engineId);
+    } else {
+      // add to favorites
+      this.favoriteEngines = [...this.favoriteEngines, engineId];
+    }
+    this.saveFavorites();
+  }
 
   get displayableBackends() {
     return this.args.secretEngines.filter((backend) => backend.shouldIncludeInList);
@@ -45,9 +82,17 @@ export default class SecretEngineList extends Component<Args> {
 
   get sortedDisplayableBackends() {
     // show supported secret engines first and then organize those by id.
-    const sortedBackends = this.displayableBackends.sort(
-      (a, b) => Number(b.isSupportedBackend) - Number(a.isSupportedBackend) || a.id.localeCompare(b.id)
-    );
+    const sortedBackends = this.displayableBackends.sort((a, b) => {
+      //filter by favorite
+      const aIsFavorite = this.favoriteEngines.includes(a.id);
+      const bIsFavorite = this.favoriteEngines.includes(b.id);
+
+      if (aIsFavorite && !bIsFavorite) return -1;
+      if (!aIsFavorite && bIsFavorite) return 1;
+
+      // then by support, then by id
+      return Number(b.isSupportedBackend) - Number(a.isSupportedBackend) || a.id.localeCompare(b.id);
+    });
 
     // return an options list to filter by engine type, ex: 'kv'
     if (this.selectedEngineType) {

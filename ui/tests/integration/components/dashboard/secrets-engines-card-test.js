@@ -147,4 +147,124 @@ module('Integration | Component | dashboard/secrets-engines-card', function (hoo
         .hasClass('has-text-grey', 'nomad is not a supported secret engine and has disabled class');
     });
   });
+
+  module('favorites functionality', function (hooks) {
+    hooks.beforeEach(function () {
+      // Clear localStorage before each test
+      window.localStorage.clear();
+
+      this.store.pushPayload('secret-engine', {
+        modelName: 'secret-engine',
+        data: {
+          accessor: 'kv_123',
+          path: 'secret/',
+          type: 'kv',
+          id: 'kv_123',
+        },
+      });
+
+      this.store.pushPayload('secret-engine', {
+        modelName: 'secret-engine',
+        data: {
+          accessor: 'pki_456',
+          path: 'pki/',
+          type: 'pki',
+          id: 'pki_456',
+        },
+      });
+
+      this.secretsEngines = this.store.peekAll('secret-engine', {});
+    });
+
+    hooks.afterEach(function () {
+      // Clean up localStorage after each test
+      window.localStorage.clear();
+    });
+
+    test('it shows star icon for favorite engines', async function (assert) {
+      // Pre-populate localStorage with favorites
+      localStorage.setItem('vault-favorite-engines', JSON.stringify(['kv_123']));
+
+      await render(hbs`<Dashboard::SecretsEnginesCard @secretsEngines={{this.secretsEngines}} />`);
+
+      // Check that favorite engine shows star icon
+      assert
+        .dom('[data-test-secrets-engines-row="kv_123"] .hds-icon-star-fill')
+        .exists('favorite engine shows star icon');
+
+      // Check that non-favorite engine does not show star icon
+      assert
+        .dom('[data-test-secrets-engines-row="pki_456"] .hds-icon-star-fill')
+        .doesNotExist('non-favorite engine does not show star icon');
+    });
+
+    test('it sorts favorite engines to the top', async function (assert) {
+      // Pre-populate localStorage with pki_456 as favorite
+      localStorage.setItem('vault-favorite-engines', JSON.stringify(['pki_456']));
+
+      await render(hbs`<Dashboard::SecretsEnginesCard @secretsEngines={{this.secretsEngines}} />`);
+
+      // Get all table rows
+      const rows = this.element.querySelectorAll('[data-test-dashboard-table="Secrets engines"] tbody tr');
+
+      // First row should be the favorite (pki_456)
+      assert
+        .dom(rows[0])
+        .hasAttribute('data-test-secrets-engines-row', 'pki_456', 'favorite engine appears first');
+
+      // Second row should be the non-favorite (kv_123)
+      assert
+        .dom(rows[1])
+        .hasAttribute('data-test-secrets-engines-row', 'kv_123', 'non-favorite engine appears second');
+    });
+
+    test('it applies favorite styling to favorite engines', async function (assert) {
+      // Pre-populate localStorage with favorites
+      localStorage.setItem('vault-favorite-engines', JSON.stringify(['kv_123']));
+
+      await render(hbs`<Dashboard::SecretsEnginesCard @secretsEngines={{this.secretsEngines}} />`);
+
+      // Check that favorite row has appropriate class
+      assert
+        .dom('[data-test-secrets-engines-row="kv_123"]')
+        .hasClass('is-favorite-row', 'favorite engine row has favorite class');
+
+      // Check that non-favorite row does not have the class
+      assert
+        .dom('[data-test-secrets-engines-row="pki_456"]')
+        .doesNotHaveClass('is-favorite-row', 'non-favorite engine row does not have favorite class');
+    });
+
+    test('it loads favorites from localStorage on component initialization', async function (assert) {
+      // Pre-populate localStorage
+      localStorage.setItem('vault-favorite-engines', JSON.stringify(['kv_123', 'pki_456']));
+
+      await render(hbs`<Dashboard::SecretsEnginesCard @secretsEngines={{this.secretsEngines}} />`);
+
+      // Both engines should show as favorites
+      assert
+        .dom('[data-test-secrets-engines-row="kv_123"] .hds-icon-star-fill')
+        .exists('first favorite engine shows star icon');
+      assert
+        .dom('[data-test-secrets-engines-row="pki_456"] .hds-icon-star-fill')
+        .exists('second favorite engine shows star icon');
+    });
+
+    test('it handles corrupted localStorage gracefully', async function (assert) {
+      // Set corrupted data in localStorage
+      localStorage.setItem('vault-favorite-engines', 'invalid-json');
+
+      await render(hbs`<Dashboard::SecretsEnginesCard @secretsEngines={{this.secretsEngines}} />`);
+
+      // Component should still render without errors
+      assert
+        .dom('[data-test-dashboard-card-header="Secrets engines"]')
+        .exists('component renders successfully with corrupted localStorage');
+
+      // No engines should show as favorites
+      assert
+        .dom('.hds-icon-star-fill')
+        .doesNotExist('no engines show as favorites with corrupted localStorage');
+    });
+  });
 });
