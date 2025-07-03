@@ -16,6 +16,18 @@ variable "ip_version" {
   default     = "4"
 }
 
+variable "ldap_port" {
+  type        = string
+  description = "OpenLDAP Server port"
+  default     = "389"
+}
+
+variable "ldaps_port" {
+  type        = string
+  description = "OpenLDAP Server secure port"
+  default     = "636"
+}
+
 variable "ldap_version" {
   type        = string
   description = "OpenLDAP Server Version to use"
