@@ -13,7 +13,8 @@ The plugin's type of "auth", "database", or "secret" must be included.
 
 <Note>
 
-To register an Enterprise plugin, you must register with the plugin artifact, not the binary.
+To register an enterprise plugin, you must register with the extracted
+`.zip` file, not the binary.
 Refer to the [Enterprise plugins](/vault/docs/plugins/plugin-management#enterprise-plugins) section
 of the plugin management page for Vault compatibility requirements.
 
@@ -30,7 +31,7 @@ $ vault plugin register \
 Success! Registered plugin: my-custom-plugin
 ```
 
-Register a plugin artifact:
+Register an extracted plugin `.zip` file:
 
 Before registering Key Management secrets engine v0.16.0+ent for the linux/amd64 system that runs Vault Enterprise,
 `vault-plugin-secrets-keymgmt_v0.16.0+ent_linux_amd64.zip` needs to be downloaded from
@@ -54,7 +55,7 @@ $ vault plugin register \
     auth my-custom-plugin
 ```
 
-Register a plugin artifact with custom args:
+Register an extracted plugin `.zip` file with custom args:
 
 ```shell-session
 $ vault plugin register
@@ -91,7 +92,7 @@ flags](/vault/docs/commands) included on all commands.
 
 - `sha256` `(string: "")` – The SHA256 sum of a plugin binary or the OCI image.
   You must provide `sha256` to register a plugin binary, but you must leave
-  `sha256` unset to register a plugin artifact.
+  `sha256` unset to register an extracted `.zip` file.
 
 - `-args` `([]string: [])` - Argument to pass to the plugin when starting. This
   flag can be specified multiple times to specify multiple args.
@@ -99,7 +100,7 @@ flags](/vault/docs/commands) included on all commands.
 - `-command` `(string: "")` - Specifies the command path used to execute the
   plugin relative to the plugin directory or OCI image directory. You must
   provide `command` to register a plugin binary. Vault ignores `command` when
-  you register a plugin artifact as it already knows the associated run command.
+  you register with an extracted `.zip` file as it already knows the associated run command.
 
 - `-env` `([]string: [])` - Environment variables to set for the plugin when
   starting. This flag can be specified multiple times to specify multiple
@@ -115,7 +116,7 @@ flags](/vault/docs/commands) included on all commands.
 - `-version` `(string: "")` - Semantic version of the plugin. Used as the tag
   when specifying `-oci_image`, but any leading 'v' will automatically be trimmed.
    You can omit version to register a plugin binary, but you must provide
-   an explicit version to register a plugin artifact.
+   an explicit version to register an extracted `.zip` file.
 
 - `-download` `(bool: false)` - <EnterpriseAlert inline="true" /> **( BETA )**
   Tells Vault to download the specified plugin from the
