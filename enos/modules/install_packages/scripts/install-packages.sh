@@ -35,9 +35,9 @@ install_packages() {
           echo "Installing ${package}"
           local output
           if [ "${package}" = "docker" ]; then
-            sudo apt install apt-transport-https ca-certificates curl software-properties-common -y
-            if ! output=(curl -fsSL https://get.docker.com | sudo sh 2>&1); then
-              echo "Failed to install: ${package}: ${output}" 1>&2
+            sudo apt install apt-transport-https ca-certificates curl software-properties-common -y;
+            if ! output=$(curl -fsSL https://get.docker.com | sudo sh 2>&1); then
+              echo "Failed to install ${package}: ${output}" >&2
               return 1
             fi
           elif ! output=$(sudo apt install -y "${package}" 2>&1); then
@@ -89,12 +89,10 @@ install_packages() {
             echo "Failed to install ${package}: ${output}" 1>&2
             return 1
           fi
-          if [ "${package}" = "docker" ]; then
-            sudo apt install apt-transport-https ca-certificates curl software-properties-common -y
-            if ! outout=$(sudo systemctl enable --now docker 2>&1); then
-              echo "Failed to enable: ${package}: ${output}" 1>&2
-              return 1
-            fi
+          if [ "$package" = "docker" ] && ! output=$(sudo systemctl enable --now docker 2>&1); then
+            echo "Failed to enable docker: ${package}: ${output}"
+            return 1
+          fi
         fi
       done
       ;;
