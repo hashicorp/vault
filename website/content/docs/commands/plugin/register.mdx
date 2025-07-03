@@ -64,16 +64,16 @@ $ vault plugin register
     vault-plugin-secrets-keymgmt               # name must match the plugin name on the releases page
 ```
 
-Use the `-download` flag with the full enterprise version and plugin
-name to download and register an official plugin from the HashiCorp
- releases page:
+Use the `-download` flag with the full version and plugin
+name to download and register an official plugin from
+[HashiCorp releases page](https://releases.hashicorp.com/):
 
 ```shell-session
 $ vault plugin register
-    -download \                                # download the plugin from the HashiCorp releases page
-    -version=0.16.0+ent \                      # version must match the plugin version on the releases page
+    -download \
+    -version=0.16.0+ent \
     secret \
-    vault-plugin-secrets-keymgmt               # name must match the plugin name on the releases page
+    vault-plugin-secrets-keymgmt
 ```
 
 ## Usage
