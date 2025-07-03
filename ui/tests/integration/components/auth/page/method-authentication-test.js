@@ -216,7 +216,7 @@ module('Integration | Component | auth | page | method authentication', function
       await fillIn(AUTH_FORM.selectMethod, this.authType);
       await fillInLoginFields({ token: 'mysupersecuretoken' });
       await click(GENERAL.submitButton);
-
+      await waitUntil(() => this.onAuthSuccess.calledOnce);
       const [actual] = this.onAuthSuccess.lastCall.args;
       const expected = { namespace: '', token: this.tokenName, isRoot: false };
       assert.propEqual(actual, expected, `onAuthSuccess called with: ${JSON.stringify(actual)}`);
