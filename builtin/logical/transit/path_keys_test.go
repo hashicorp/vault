@@ -349,8 +349,8 @@ func TestTransit_CreateKey(t *testing.T) {
 		},
 		"AES-256 CBC": {
 			creationParams: map[string]interface{}{"type": "aes256-cbc"},
-      entOnly:        true,
-    }
+			entOnly:        true,
+		},
 		"bad key type": {
 			creationParams: map[string]interface{}{"type": "fake-key-type"},
 			shouldError:    true,
