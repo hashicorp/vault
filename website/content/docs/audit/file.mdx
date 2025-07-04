@@ -9,12 +9,8 @@ description: The "file" audit device writes audit logs to a file.
 The `file` audit device writes audit logs to a file. This is a very simple audit
 device: it appends logs to a file.
 
-The device does not currently assist with any log rotation. There are very
-stable and feature-filled log rotation tools already, so we recommend using
-existing tools.
-
-Sending a `SIGHUP` to the Vault process will cause `file` audit devices to close
-and re-open their underlying file, which can assist with log rotation needs.
+By default, the log file is set to rotate every 24 hours, and all older log files
+are kept indefinitely.
 
 ## Examples
 
@@ -37,6 +33,25 @@ Enable logs on stdout. This is useful when running in a container:
 $ vault audit enable file file_path=stdout
 ```
 
+Enable log rotation every 24 hours, with a maximum of 5 older log file archives to keep:
+
+```shell-session
+$ vault audit enable file file_path=/var/log/vault_audit.log max_duration=24h max_files=5
+```
+
+Enable log rotation every 500 MB and never delete older log file archives:
+
+```shell-session
+$ vault audit enable file file_path=/var/log/vault_audit.log max_bytes=524288000 max_duration=0 max_files=0
+```
+
+Disable log rotation altogether:
+
+```shell-session
+$ vault audit enable file file_path=/var/log/vault_audit.log max_duration=0
+```
+
+
 ## Configuration
 
 Note the difference between `audit enable` command options and the `file` backend
@@ -58,6 +73,15 @@ these device-specific options:
   the bit pattern for the file mode, similar to `chmod`. Set to `"0000"` to
   prevent Vault from modifying the file mode.
 
-## Log file rotation
+- `max_files` `(int: 0)` - The maximum number of older audit log file archives to keep.
+  Defaults to `0` (no files are ever deleted). Set to `-1` to discard old audit log files
+  when a new one is created.
 
-To properly rotate Vault File Audit Device log files on BSD, Darwin, or Linux-based Vault servers, it is important that you configure your log rotation software to send the `vault` process a signal hang up / `SIGHUP` after each rotation of the log file.
+- `max_bytes` `(int: <unset>)` - The number of bytes that should be written to an audit log file
+  before it needs to be rotated. Unless specified, there is no limit to the number of bytes that
+  can be written to a log file.
+
+- `max_duration` `(string: "24h")` - The maximum duration an audit log file should be written to
+  before it needs to be rotated. Must be a duration value such as `"30s"`. Defaults to `"24h"`.
+  If no time unit is specified, the time duration number is assumed to be in seconds. Set to `0`
+  to disable time-based log file rotation.

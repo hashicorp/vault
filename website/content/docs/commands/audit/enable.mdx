@@ -48,7 +48,10 @@ Each audit device type also has a set of configuration arguments:
 ```shell-session
 $ vault audit enable [flags] file [options] \
     file_path=<path/to/log/file>            \
-    [mode=<file_permissions>]
+    [mode=<file_permissions>]               \
+    [max_files=<number>]                    \
+    [max_bytes=<number>]                    \
+    [max_duration=<duration>]
 ```
 
 </CodeBlockConfig>
@@ -60,6 +63,18 @@ $ vault audit enable [flags] file [options] \
 <br /><hr /><br />
 
 @include 'cli/audit/args/file/mode.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/audit/args/file/max_files.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/audit/args/file/max_bytes.mdx'
+
+<br /><hr /><br />
+
+@include 'cli/audit/args/file/max_duration.mdx'
 
 </Tab>
 
