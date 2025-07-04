@@ -120,8 +120,10 @@ export default class FormFieldComponent extends Component {
       } else if (type === 'number' || type === 'string') {
         if (options?.editType === 'textarea' || options?.editType === 'password') {
           return true;
-        } else {
+        } else if (options?.editType === 'json') {
           return false;
+        } else {
+          return true;
         }
       } else if (type === 'boolean' || options?.editType === 'boolean') {
         return true;

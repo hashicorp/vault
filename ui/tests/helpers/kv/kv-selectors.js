@@ -117,6 +117,7 @@ export const FORM = {
   inlineAlert: '[data-test-inline-alert]',
   validation: (attr) => `[data-test-field="${attr}"] [data-test-inline-alert]`,
   messageError: '[data-test-message-error]',
+  validationError: (attr) => `[data-test-validation-error="${attr}"]`,
   validationWarning: '[data-test-validation-warning]',
   invalidFormAlert: '[data-test-invalid-form-alert]',
   versionAlert: '[data-test-secret-version-alert]',

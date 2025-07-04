@@ -81,10 +81,10 @@ module('Integration | Component | ldap | Page::Configure', function (hooks) {
     await click(selectors.save);
 
     assert
-      .dom('[data-test-field="binddn"] [data-test-inline-error-message]')
+      .dom(GENERAL.validationErrorByAttr('binddn'))
       .hasText('Administrator distinguished name is required.', 'Validation message renders for binddn');
     assert
-      .dom('[data-test-field="bindpass"] [data-test-inline-error-message]')
+      .dom(GENERAL.validationErrorByAttr('bindpass'))
       .hasText('Administrator password is required.', 'Validation message renders for bindpass');
     assert
       .dom('[data-test-invalid-form-message]')
