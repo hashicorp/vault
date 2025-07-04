@@ -160,21 +160,19 @@ export default class SecretCreateOrUpdate extends Component {
     }
     this.checkRows();
   }
+
   @action
-  codemirrorUpdated(val, codemirror) {
-    this.error = null;
-    codemirror.performLint();
-    const noErrors = codemirror.state.lint.marked.length === 0;
-    if (noErrors) {
-      try {
-        this.args.secretData.fromJSONString(val);
-        set(this.args.modelForData, 'secretData', this.args.secretData.toJSON());
-      } catch (e) {
-        this.error = e.message;
-      }
+  codemirrorUpdated(val) {
+    try {
+      this.args.secretData.fromJSONString(val);
+      set(this.args.modelForData, 'secretData', this.args.secretData.toJSON());
+    } catch (e) {
+      this.error = e.message;
     }
+
     this.codemirrorString = val;
   }
+
   @action
   createOrUpdateKey(type, event) {
     event.preventDefault();

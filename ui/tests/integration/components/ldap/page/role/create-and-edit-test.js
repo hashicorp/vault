@@ -115,7 +115,7 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
     await this.renderComponent();
     checkFields(['name', 'username_template']);
     checkTtl(['default_ttl', 'max_ttl']);
-    checkFields(['creation_ldif', 'deletion_ldif', 'rollback_ldif'], '.CodeMirror-code');
+    checkFields(['creation_ldif', 'deletion_ldif', 'rollback_ldif'], '.cm-content');
   });
 
   test('it should go back to list route and clean up model on cancel', async function (assert) {

@@ -53,9 +53,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
       .dom('[data-test-inline-error-message]')
       .hasText('Name is required.', 'Validation message is shown for name');
     // json editor has test coverage so let's just confirm that it renders
-    assert
-      .dom('[data-test-input="template"] [data-test-component="json-editor-toolbar"]')
-      .exists('JsonEditor toolbar renders');
+    assert.dom('[data-test-input="template"] .hds-code-editor__header').exists('JsonEditor toolbar renders');
     assert
       .dom('[data-test-input="template"] [data-test-component="code-mirror-modifier"]')
       .exists('Code mirror renders');
@@ -97,9 +95,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
       .dom('[data-test-input="description"]')
       .hasValue('this is a test', 'Description input is populated with model value');
     // json editor has test coverage so let's just confirm that it renders
-    assert
-      .dom('[data-test-input="template"] [data-test-component="json-editor-toolbar"]')
-      .exists('JsonEditor toolbar renders');
+    assert.dom('[data-test-input="template"] .hds-code-editor__header').exists('JsonEditor toolbar renders');
     assert
       .dom('[data-test-input="template"] [data-test-component="code-mirror-modifier"]')
       .exists('Code mirror renders');
