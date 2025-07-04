@@ -5,6 +5,8 @@
 
 import AuthBase from './base';
 
+import type { UsernameLoginResponse } from 'vault/vault/auth/methods';
+
 /**
  * @module Auth::Form::Ldap
  * see Auth::Base
@@ -12,4 +14,19 @@ import AuthBase from './base';
 
 export default class AuthFormLdap extends AuthBase {
   loginFields = [{ name: 'username' }, { name: 'password' }];
+
+  async loginRequest(formData: { path: string; username: string; password: string }) {
+    const { path, username, password } = formData;
+
+    const { auth } = (await this.api.auth.ldapLogin(username, path, {
+      password,
+    })) as UsernameLoginResponse;
+
+    return this.normalizeAuthResponse(auth, {
+      authMountPath: path,
+      displayName: auth?.metadata?.username,
+      token: auth.clientToken,
+      ttl: auth.leaseDuration,
+    });
+  }
 }
