@@ -22,7 +22,7 @@ import (
 func TestAuditFile_fileModeNew(t *testing.T) {
 	t.Parallel()
 
-	modeStr := "0777"
+	modeStr := "0666"
 	mode, err := strconv.ParseUint(modeStr, 8, 32)
 	require.NoError(t, err)
 
@@ -55,7 +55,7 @@ func TestAuditFile_fileModeExisting(t *testing.T) {
 	f, err := os.CreateTemp(dir, "auditTest.log")
 	require.NoErrorf(t, err, "Failure to create test file.")
 
-	err = os.Chmod(f.Name(), 0o777)
+	err = os.Chmod(f.Name(), 0o666)
 	require.NoErrorf(t, err, "Failure to chmod temp file for testing.")
 
 	err = f.Close()
@@ -117,7 +117,7 @@ func TestAuditFile_fileMode0000(t *testing.T) {
 // correctly sets the file mode when the useEventLogger argument is set to
 // true.
 func TestAuditFile_EventLogger_fileModeNew(t *testing.T) {
-	modeStr := "0777"
+	modeStr := "0666"
 	mode, err := strconv.ParseUint(modeStr, 8, 32)
 	require.NoError(t, err)
 
@@ -140,6 +140,16 @@ func TestAuditFile_EventLogger_fileModeNew(t *testing.T) {
 	info, err := os.Stat(file)
 	require.NoError(t, err)
 	require.Equalf(t, os.FileMode(mode), info.Mode(), "File mode does not match.")
+
+	for _, modeStr := range []string{"0667", "0676", "0766", "0677", "0776", "0777"} {
+		mode, err = strconv.ParseUint(modeStr, 8, 32)
+		require.NoError(t, err)
+
+		// Test that executable audit files are disallowed
+		backendConfig.Config["mode"] = modeStr
+		_, err = newFileBackend(backendConfig, &noopHeaderFormatter{})
+		require.Error(t, err)
+	}
 }
 
 // TestFileBackend_newFileBackend ensures that we can correctly configure the sink

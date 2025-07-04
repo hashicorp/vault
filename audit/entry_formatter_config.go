@@ -94,7 +94,7 @@ func newFormatterConfig(headerFormatter HeaderFormatter, config map[string]strin
 		opt = append(opt, withElision(v))
 	}
 
-	if prefix, ok := config[optionPrefix]; ok {
+	if prefix, ok := config[OptionPrefix]; ok {
 		opt = append(opt, withPrefix(prefix))
 	}
 

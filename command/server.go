@@ -2945,6 +2945,7 @@ func createCoreConfig(c *ServerCommand, config *server.Config, backend physical.
 		DisableSealWrap:                config.DisableSealWrap,
 		DisablePerformanceStandby:      config.DisablePerformanceStandby,
 		DisableIndexing:                config.DisableIndexing,
+		AllowAuditLogPrefixing:         config.AllowAuditLogPrefixing,
 		AllLoggers:                     c.allLoggers,
 		BuiltinRegistry:                builtinplugins.Registry,
 		DisableKeyEncodingChecks:       config.DisablePrintableCheck,
