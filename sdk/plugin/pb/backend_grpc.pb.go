@@ -688,6 +688,7 @@ const (
 	SystemView_GeneratePasswordFromPolicy_FullMethodName = "/pb.SystemView/GeneratePasswordFromPolicy"
 	SystemView_ClusterInfo_FullMethodName                = "/pb.SystemView/ClusterInfo"
 	SystemView_GenerateIdentityToken_FullMethodName      = "/pb.SystemView/GenerateIdentityToken"
+	SystemView_GetRotationInformation_FullMethodName     = "/pb.SystemView/GetRotationInformation"
 	SystemView_RegisterRotationJob_FullMethodName        = "/pb.SystemView/RegisterRotationJob"
 	SystemView_DeregisterRotationJob_FullMethodName      = "/pb.SystemView/DeregisterRotationJob"
 )
@@ -741,6 +742,8 @@ type SystemViewClient interface {
 	ClusterInfo(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ClusterInfoReply, error)
 	// GenerateIdentityToken returns an identity token for the requesting plugin.
 	GenerateIdentityToken(ctx context.Context, in *GenerateIdentityTokenRequest, opts ...grpc.CallOption) (*GenerateIdentityTokenResponse, error)
+	// GetRotationInformation returns the time remaining in a rotation job for the requested credential.
+	GetRotationInformation(ctx context.Context, in *RotationInfoRequest, opts ...grpc.CallOption) (*RotationInfoReply, error)
 	// RegisterRotationJob returns a rotation ID for the requested plugin credential.
 	RegisterRotationJob(ctx context.Context, in *RegisterRotationJobRequest, opts ...grpc.CallOption) (*RegisterRotationJobResponse, error)
 	// DeregisterRotationJob returns any errors in de-registering a credential from the Rotation Manager.
@@ -895,6 +898,16 @@ func (c *systemViewClient) GenerateIdentityToken(ctx context.Context, in *Genera
 	return out, nil
 }
 
+func (c *systemViewClient) GetRotationInformation(ctx context.Context, in *RotationInfoRequest, opts ...grpc.CallOption) (*RotationInfoReply, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RotationInfoReply)
+	err := c.cc.Invoke(ctx, SystemView_GetRotationInformation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *systemViewClient) RegisterRotationJob(ctx context.Context, in *RegisterRotationJobRequest, opts ...grpc.CallOption) (*RegisterRotationJobResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RegisterRotationJobResponse)
@@ -964,6 +977,8 @@ type SystemViewServer interface {
 	ClusterInfo(context.Context, *Empty) (*ClusterInfoReply, error)
 	// GenerateIdentityToken returns an identity token for the requesting plugin.
 	GenerateIdentityToken(context.Context, *GenerateIdentityTokenRequest) (*GenerateIdentityTokenResponse, error)
+	// GetRotationInformation returns the time remaining in a rotation job for the requested credential.
+	GetRotationInformation(context.Context, *RotationInfoRequest) (*RotationInfoReply, error)
 	// RegisterRotationJob returns a rotation ID for the requested plugin credential.
 	RegisterRotationJob(context.Context, *RegisterRotationJobRequest) (*RegisterRotationJobResponse, error)
 	// DeregisterRotationJob returns any errors in de-registering a credential from the Rotation Manager.
@@ -1019,6 +1034,9 @@ func (UnimplementedSystemViewServer) ClusterInfo(context.Context, *Empty) (*Clus
 }
 func (UnimplementedSystemViewServer) GenerateIdentityToken(context.Context, *GenerateIdentityTokenRequest) (*GenerateIdentityTokenResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GenerateIdentityToken not implemented")
+}
+func (UnimplementedSystemViewServer) GetRotationInformation(context.Context, *RotationInfoRequest) (*RotationInfoReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRotationInformation not implemented")
 }
 func (UnimplementedSystemViewServer) RegisterRotationJob(context.Context, *RegisterRotationJobRequest) (*RegisterRotationJobResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterRotationJob not implemented")
@@ -1299,6 +1317,24 @@ func _SystemView_GenerateIdentityToken_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SystemView_GetRotationInformation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RotationInfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemViewServer).GetRotationInformation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemView_GetRotationInformation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemViewServer).GetRotationInformation(ctx, req.(*RotationInfoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _SystemView_RegisterRotationJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RegisterRotationJobRequest)
 	if err := dec(in); err != nil {
@@ -1397,6 +1433,10 @@ var SystemView_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GenerateIdentityToken",
 			Handler:    _SystemView_GenerateIdentityToken_Handler,
+		},
+		{
+			MethodName: "GetRotationInformation",
+			Handler:    _SystemView_GetRotationInformation_Handler,
 		},
 		{
 			MethodName: "RegisterRotationJob",
