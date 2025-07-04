@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/hcl/hcl/token"
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/stretchr/testify/require"
 )
@@ -607,11 +608,25 @@ func testUnknownFieldValidationHcl(t *testing.T) {
 	}
 }
 
+// TODO (HCL_DUP_KEYS_DEPRECATION): remove warning test once deprecation is completed
 func testDuplicateKeyValidationHcl(t *testing.T) {
-	_, duplicate, err := LoadConfigFileCheckDuplicate("./test-fixtures/invalid_config_duplicate_key.hcl")
-	// TODO (HCL_DUP_KEYS_DEPRECATION): require error once deprecation is done
-	require.NoError(t, err)
-	require.True(t, duplicate)
+	t.Run("env unset", func(t *testing.T) {
+		_, _, err := LoadConfigFileCheckDuplicate("./test-fixtures/invalid_config_duplicate_key.hcl")
+		require.Error(t, err)
+	})
+
+	t.Run("env set to false", func(t *testing.T) {
+		t.Setenv(random.AllowHclDuplicatesEnvVar, "false")
+		_, _, err := LoadConfigFileCheckDuplicate("./test-fixtures/invalid_config_duplicate_key.hcl")
+		require.Error(t, err)
+	})
+
+	t.Run("env set to true", func(t *testing.T) {
+		t.Setenv(random.AllowHclDuplicatesEnvVar, "true")
+		_, duplicate, err := LoadConfigFileCheckDuplicate("./test-fixtures/invalid_config_duplicate_key.hcl")
+		require.NoError(t, err)
+		require.True(t, duplicate)
+	})
 }
 
 // testConfigWithAdministrativeNamespaceJson tests that a config with a valid administrative namespace path is correctly validated and loaded.
