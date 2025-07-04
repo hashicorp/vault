@@ -1,0 +1,3 @@
+```release-note:bug
+core (enterprise): Fix a bug resolving paths when reading `sys/internal/ui/mounts` for mounts in nested namespaces.
+```
