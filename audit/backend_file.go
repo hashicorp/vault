@@ -16,8 +16,11 @@ const (
 	stdout  = "stdout"
 	discard = "discard"
 
-	optionFilePath = "file_path"
-	optionMode     = "mode"
+	optionFilePath    = "file_path"
+	optionMode        = "mode"
+	optionMaxFiles    = "max_files"
+	optionMaxBytes    = "max_bytes"
+	optionMaxDuration = "max_duration"
 )
 
 var _ Backend = (*fileBackend)(nil)
@@ -79,6 +82,15 @@ func newFileBackend(conf *BackendConfig, headersConfig HeaderFormatter) (*fileBa
 	sinkOpts := []event.Option{event.WithLogger(conf.Logger)}
 	if mode, ok := conf.Config[optionMode]; ok {
 		sinkOpts = append(sinkOpts, event.WithFileMode(mode))
+	}
+	if maxFiles, ok := conf.Config[optionMaxFiles]; ok {
+		sinkOpts = append(sinkOpts, event.WithMaxFiles(maxFiles))
+	}
+	if maxBytes, ok := conf.Config[optionMaxBytes]; ok {
+		sinkOpts = append(sinkOpts, event.WithMaxBytes(maxBytes))
+	}
+	if maxDuration, ok := conf.Config[optionMaxDuration]; ok {
+		sinkOpts = append(sinkOpts, event.WithMaxDurationFile(maxDuration))
 	}
 
 	err = b.configureSinkNode(conf.MountPath, filePath, cfg.requiredFormat, sinkOpts...)
