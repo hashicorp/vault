@@ -12,6 +12,7 @@ import (
 
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
 )
@@ -462,6 +463,7 @@ path "foo" {
 	capabilities = ["deny"]
 }
 `
+	t.Setenv(random.AllowHclDuplicatesEnvVar, "true")
 	policy, err := ParseACLPolicy(namespace.RootNamespace, dupAttrPolicy)
 	policy.Templated = true
 	require.NoError(t, err)
@@ -480,4 +482,13 @@ path "foo" {
 	require.NotNil(t, p)
 	require.NoError(t, err)
 	require.Contains(t, logOut.String(), "HCL policy contains duplicate attributes, which will no longer be supported in a future version")
+
+	t.Setenv(random.AllowHclDuplicatesEnvVar, "false")
+	_, err = ps.ACL(ctx, nil, map[string][]string{namespace.RootNamespace.ID: {"dev", "ops"}})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "error parsing templated policy \"dev\": failed to parse policy: The argument \"capabilities\" at 61:2 was already set. Each argument can only be defined once")
+	ps.tokenPoliciesLRU.Purge()
+	_, err = ps.GetPolicy(ctx, "dev", PolicyTypeACL)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "failed to parse policy: failed to parse policy: The argument \"capabilities\" at 61:2 was already set. Each argument can only be defined once")
 }

@@ -1,0 +1,5 @@
+```release-note:deprecation
+core: disallow usage of duplicate attributes in HCL configuration files and policy definitions, which were already
+deprecated. For now those errors can be suppressed back to warnings by setting the environment variable
+VAULT_ALLOW_PENDING_REMOVAL_DUPLICATE_HCL_ATTRIBUTES.
+```

@@ -22,6 +22,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -219,6 +220,7 @@ storage_destination "raft" {
 				},
 			},
 		}
+		t.Setenv(random.AllowHclDuplicatesEnvVar, "true")
 		cfg, err := cmd.loadMigratorConfig(cfgName)
 		if err != nil {
 			t.Fatal(cfg)
@@ -226,9 +228,9 @@ storage_destination "raft" {
 		if diff := deep.Equal(cfg, expCfg); diff != nil {
 			t.Fatal(diff)
 		}
-		// TODO (HCL_DUP_KEYS_DEPRECATION): Remove warning and instead add one of these "verifyBad" tests down below
-		// to ensure that duplicate attributes fail to parse.
+		// TODO (HCL_DUP_KEYS_DEPRECATION): Remove warning and leave only this "verifyBad" test down below
 		strings.Contains(ui.ErrorWriter.String(), "WARNING: Duplicate keys found in migration configuration file, duplicate keys in HCL files are deprecated and will be forbidden in a future release.")
+		t.Setenv(random.AllowHclDuplicatesEnvVar, "false")
 
 		verifyBad := func(cfg string) {
 			os.WriteFile(cfgName, []byte(cfg), 0o644)
@@ -275,6 +277,16 @@ storage_destination "raft" {
 }
 
 storage_destination "consul" {
+  path = "dest_path"
+}`)
+		// duplicate hcl attribute
+		verifyBad(`
+storage_source "consul" {
+  path = "src_path"
+}
+
+storage_destination "raft" {
+  path = "dest_path"
   path = "dest_path"
 }`)
 	})
