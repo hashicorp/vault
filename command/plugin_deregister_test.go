@@ -91,13 +91,17 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		ui, cmd := testPluginDeregisterCommand(t)
 		cmd.client = client
 
-		if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
+		registerResp, err := client.Sys().RegisterPluginDetailed(&api.RegisterPluginInput{
 			Name:    pluginName,
 			Type:    api.PluginTypeCredential,
 			Command: pluginName,
 			SHA256:  sha256Sum,
-		}); err != nil {
+		})
+		if err != nil {
 			t.Fatal(err)
+		}
+		if len(registerResp.Warnings) > 0 {
+			t.Errorf("expected no warnings, got %q", registerResp.Warnings)
 		}
 
 		code := cmd.Run([]string{
@@ -114,7 +118,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 			t.Errorf("expected %q to contain %q", combined, expected)
 		}
 
-		resp, err := client.Sys().ListPlugins(&api.ListPluginsInput{
+		listResp, err := client.Sys().ListPlugins(&api.ListPluginsInput{
 			Type: api.PluginTypeCredential,
 		})
 		if err != nil {
@@ -122,7 +126,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 		}
 
 		found := false
-		for _, plugins := range resp.PluginsByType {
+		for _, plugins := range listResp.PluginsByType {
 			for _, p := range plugins {
 				if p == pluginName {
 					found = true
@@ -130,7 +134,7 @@ func TestPluginDeregisterCommand_Run(t *testing.T) {
 			}
 		}
 		if found {
-			t.Errorf("expected %q to not be in %q", pluginName, resp.PluginsByType)
+			t.Errorf("expected %q to not be in %q", pluginName, listResp.PluginsByType)
 		}
 	})
 

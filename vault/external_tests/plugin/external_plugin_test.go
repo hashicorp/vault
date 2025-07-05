@@ -106,14 +106,18 @@ func TestExternalPlugin_RollbackAndReload(t *testing.T) {
 
 func testRegisterVersion(t *testing.T, client *api.Client, plugin pluginhelpers.TestPlugin, version string) {
 	t.Helper()
-	if err := client.Sys().RegisterPlugin(&api.RegisterPluginInput{
+	resp, err := client.Sys().RegisterPluginDetailed(&api.RegisterPluginInput{
 		Name:    plugin.Name,
 		Type:    api.PluginType(plugin.Typ),
 		Command: plugin.Name,
 		SHA256:  plugin.Sha256,
 		Version: version,
-	}); err != nil {
+	})
+	if err != nil {
 		t.Fatal(err)
+	}
+	if len(resp.Warnings) > 0 {
+		t.Errorf("expected no warnings, got: %v", resp.Warnings)
 	}
 }
 

@@ -11,6 +11,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', function (hooks) {
   setupRenderingTest(hooks);
@@ -123,7 +124,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     );
 
     await click('[data-test-input-group="kubernetesRoleType"] input');
-    await click('[data-test-toggle-input="show-nameTemplate"]');
+    await click(GENERAL.toggleInput('show-nameTemplate'));
     await fillIn('[data-test-input="nameTemplate"]', 'bar');
     await fillIn('[data-test-select-template]', '6');
     await click('[data-test-radio-card="expanded"]');

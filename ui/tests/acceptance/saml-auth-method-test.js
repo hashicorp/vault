@@ -42,7 +42,7 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
 
     this.server.get('/auth/token/lookup-self', (schema, req) => {
       assert.true(true, 'request made to auth/token/lookup-self after saml callback');
-      req.passthrough();
+      return req.passthrough();
     });
     // select from dropdown or click auth path tab
     await waitUntil(() => find(AUTH_FORM.selectMethod), { timeout: DELAY_IN_MS });
@@ -81,7 +81,7 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
         { 'X-Vault-Token': 'root' },
         'calls lookup-self with returned client token after login'
       );
-      req.passthrough();
+      return req.passthrough();
     });
 
     await logout(); // clear local storage and refresh route so sys/internal/ui/mounts is reliably called

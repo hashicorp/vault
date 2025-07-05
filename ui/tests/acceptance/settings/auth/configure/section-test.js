@@ -38,7 +38,7 @@ module('Acceptance | settings/auth/configure/section', function (hooks) {
       assert.true(keys.includes('default_lease_ttl'), 'passes default_lease_ttl on tune');
       assert.true(keys.includes('max_lease_ttl'), 'passes max_lease_ttl on tune');
       assert.true(keys.includes('description'), 'passes updated description on tune');
-      request.passthrough();
+      return request.passthrough();
     });
     const path = `approle-save-${this.uid}`;
     const type = 'approle';

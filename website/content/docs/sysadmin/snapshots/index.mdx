@@ -1,0 +1,62 @@
+---
+layout: docs
+page_title: Manage snapshots
+description: >-
+  Save and restore data from cluster snapshots.
+---
+
+# Manage snapshots
+
+All Vault editions support data backup and restoration with manual snapshots of
+the cluster state. Vault Enterprise adds support for configurable automated
+snapshots to local and cloud storage.
+
+When you save and securely retain Vault cluster snapshots, you help defend
+against data corruption or sabotage. You can further support data availability
+in the event of catastrophic failure by retaining cluster snapshots outside
+cluster storage or physical datacenters where clusters operate.
+
+<Tabs>
+
+<Tab heading="Overviews" group="overview">
+
+- [Snapshots with integrated storage](/vault/docs/sysadmin/snapshots/automation-overview)
+  overview <EnterpriseAlert inline="true" />
+
+</Tab>
+
+<Tab heading="How-to guides" group="how-to">
+
+Step-by-step instructions:
+
+- [Save a snapshot](/vault/docs/sysadmin/snapshots/save)
+- [Restore a snapshot](/vault/docs/sysadmin/snapshots/restore)
+- [Recover discrete secrets in a replicated evironment](/vault/docs/sysadmin/snapshots/reocver-a-secret/replicated-cluster) <EnterpriseAlert inline="true" />
+- [Recover discrete secrets in a non-replicated evironment](/vault/docs/sysadmin/snapshots/reocver-a-secret/single-cluster) <EnterpriseAlert inline="true" />
+- [Automate snapshots](/vault/docs/sysadmin/snapshots/recover-a-secret) <EnterpriseAlert inline="true" />
+- [Recover discrete secrets](/vault/docs/sysadmin/snapshots/recover-a-secret) <EnterpriseAlert inline="true" />
+
+</Tab>
+
+<Tab heading="Reference" group="ref">
+
+Technical references:
+
+- [`vault operator raft snapshot` CLI commands](/vault/docs/commands/operator/raft#snapshot)
+- [Raft storage API docs](/vault/api-docs/system/storage/raft)
+
+</Tab>
+
+<Tab heading="Tutorials" group="tutorial">
+
+Detailed tutorials:
+
+- [Vault with integrated storage reference architecture](/vault/tutorials/day-one-raft/raft-reference-architecture) -
+  Learn about architectural and operational best practices for deploying Vault
+  with integraged storage backends in a production environment.
+- [Configure Vault cluster with integrated storage](/vault/tutorials/raft/raft-storage#automated-snapshots) -
+  Follow a detailed walkthrough for configuring and using automated snapshots.
+
+</Tab>
+
+</Tabs>

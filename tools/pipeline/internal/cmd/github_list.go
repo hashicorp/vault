@@ -8,14 +8,14 @@ import (
 )
 
 func newGithubListCmd() *cobra.Command {
-	github := &cobra.Command{
+	listCmd := &cobra.Command{
 		Use:   "list",
 		Short: "Github list commands",
 		Long:  "Github list commands",
 	}
 
-	github.AddCommand(newGithubListRunCmd())
-	github.AddCommand(newGithubListChangedFilesCmd())
+	listCmd.AddCommand(newGithubListRunCmd())
+	listCmd.AddCommand(newGithubListChangedFilesCmd())
 
-	return github
+	return listCmd
 }

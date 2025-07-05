@@ -142,11 +142,12 @@ module('Acceptance | Enterprise | /access/namespaces', function (hooks) {
     await click(GENERAL.menuItem('switch'));
 
     // Verify that we switched namespaces
-    await click(GENERAL.toggleInput('namespace-picker'));
+    await click(GENERAL.button('namespace-picker'));
     assert.dom('[data-test-badge-namespace]').hasText(testNS, 'Namespace badge shows the correct namespace');
     assert.strictEqual(currentRouteName(), 'vault.cluster.dashboard', 'navigates to the correct route');
 
     // Cleanup: Delete namespace(s) via the CLI
+    await visit('vault/dashboard'); // navigate to "root" before deleting
     await runCmd(deleteNS(testNS), false);
   });
 });

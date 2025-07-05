@@ -114,11 +114,11 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await this.renderComponent();
     await codemirror().setValue(this.wrapData);
     assert.dom('[data-test-component="json-editor-title"]').hasText('Data to wrap (json-formatted)');
-    await click('[data-test-toggle-input="json"]');
+    await click(GENERAL.toggleInput('json'));
     assert.dom('[data-test-component="json-editor-title"]').doesNotExist();
     assert.dom('[data-test-kv-key="0"]').hasValue('foo');
     assert.dom('[data-test-kv-value="0"]').hasValue('bar');
-    await click('[data-test-toggle-input="json"]');
+    await click(GENERAL.toggleInput('json'));
     assert.dom('[data-test-component="json-editor-title"]').exists();
     assert.strictEqual(
       codemirror().getValue(' '),
@@ -156,7 +156,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
     });
 
     await this.renderComponent();
-    await click('[data-test-toggle-input="json"]');
+    await click(GENERAL.toggleInput('json'));
     await fillIn('[data-test-kv-key="0"]', 'foo');
     await fillIn('[data-test-kv-value="0"]', 'bar');
     await click('[data-test-kv-add-row="0"]');

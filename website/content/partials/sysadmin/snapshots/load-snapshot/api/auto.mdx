@@ -1,0 +1,36 @@
+Use the `/sys/storage/raft/snapshot-load` endpoint with the snapshot
+configuration name and cloud storage URL to load a snapshot file and assign a
+snapshot ID:
+
+```shell-session
+$ curl                                      \
+   --request POST                           \
+   --header "X-Vault-Token: ${VAULT_TOKEN}" \
+   --data '{"url": "<snapshot_url>"}'       \
+    ${VAULT_ADDR}/v1/sys/storage/raft/snapshot-load/<snapshot_config_name>
+```
+
+For example:
+
+<CodeBlockConfig hideClipboard highlight="12">
+
+```json
+$ curl                                      \
+   --request POST                           \
+   --header "X-Vault-Token: ${VAULT_TOKEN}" \
+    --data '{"url": "https://bucket.example.com/vault-snapshots/primary/paris-backup.snap"}' \
+    ${VAULT_ADDR}/v1/sys/storage/raft/snapshot-load/paris-primary | jq
+
+{
+  "data": {
+    "auto_config_name": "paris-primary",
+    "cluster_id": "7430fa38-8fb6-4b35-b2a7-27ed4c831a44",
+    "expires_at": "2025-07-16T03:24:42.867531+05:00",
+    "snapshot_id": "9465df92-8236-4af9-8cc8-b7460d882e41",
+    "url": "https://bucket.example.com/vault-snapshots/primary/paris-backup.snap",
+    "status": "loading"
+  }
+}
+```
+
+</CodeBlockConfig>

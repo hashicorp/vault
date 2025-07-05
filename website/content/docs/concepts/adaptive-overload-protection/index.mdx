@@ -75,8 +75,8 @@ to avoid replication lag.
 
 Write overload protection was added in Vault Enterprise 1.17 as a beta feature
 and was disabled by default. Since Vault 1.18.0 it is enabled by default only
-when using Raft Integrated Storage. Adaptive overload protection is disabled by
-default for Consul and other storage backends.
+when using integrated storage. Adaptive overload protection is not
+available for Consul and other storage backends.
 
 To disable the feature use the [`adaptive_overload_protection` configuration
 stanza](/vault/docs/configuration/adaptive-overload-protection).

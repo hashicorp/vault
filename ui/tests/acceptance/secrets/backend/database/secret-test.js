@@ -65,7 +65,7 @@ const connectionTests = [
       assert.dom(GENERAL.inputByAttr('tls_server_name')).exists(`TLS server name field exists for ${name}`);
       assert.dom(GENERAL.inputByAttr('insecure')).exists(`Insecure checkbox exists for ${name}`);
       assert
-        .dom('[data-test-toggle-input="show-username_template"]')
+        .dom(GENERAL.toggleInput('show-username_template'))
         .exists(`Username template toggle exists for ${name}`);
     },
   },
@@ -221,7 +221,7 @@ const connectionTests = [
         .dom(GENERAL.inputByAttr('root_rotation_statements'))
         .exists(`Root rotation statements exists for ${name}`);
       assert
-        .dom('[data-test-toggle-input="show-username_template"]')
+        .dom(GENERAL.toggleInput('show-username_template'))
         .exists(`Username template toggle exists for ${name}`);
     },
   },
@@ -317,7 +317,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       assert.dom(`[data-test-input="name"]`).hasAttribute('readonly');
       assert.dom(`[data-test-input="plugin_name"]`).hasAttribute('readonly');
       assert.dom(GENERAL.inputByAttr('password')).doesNotExist('Password is not displayed on edit form');
-      assert.dom('[data-test-toggle-input="show-password"]').exists('Update password toggle exists');
+      assert.dom(GENERAL.toggleInput('show-password')).exists('Update password toggle exists');
 
       assert.dom(GENERAL.inputByAttr('verify_connection')).isNotChecked('verify is still unchecked');
       await click(GENERAL.submitButton);
@@ -584,14 +584,14 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert.dom('[data-test-component="empty-state"]').doesNotExist('Empty states go away');
     assert.dom(GENERAL.inputByAttr('username')).exists('Username field appears for static role');
     assert
-      .dom('[data-test-toggle-input="Rotation period"]')
+      .dom(GENERAL.toggleInput('Rotation period'))
       .exists('Rotation period field appears for static role');
     await rolePage.roleType('dynamic');
     assert
-      .dom('[data-test-toggle-input="Generated credentials’s Time-to-Live (TTL)"]')
+      .dom(GENERAL.toggleInput('Generated credentials’s Time-to-Live (TTL)'))
       .exists('TTL field exists for dynamic');
     assert
-      .dom('[data-test-toggle-input="Generated credentials’s maximum Time-to-Live (Max TTL)"]')
+      .dom(GENERAL.toggleInput('Generated credentials’s maximum Time-to-Live (Max TTL)'))
       .exists('Max TTL field exists for dynamic');
     // Real connection (actual running db) required to save role, so we aren't testing that flow yet
   });

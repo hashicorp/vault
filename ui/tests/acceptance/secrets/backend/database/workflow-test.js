@@ -349,7 +349,7 @@ module('Acceptance | database workflow', function (hooks) {
         await visit(`/vault/secrets/${this.backend}/create`);
         await fillOutConnection(this.connection);
         if (toggleRotateOff) {
-          await click('[data-test-toggle-input="toggle-skip_static_role_rotation_import"]');
+          await click(GENERAL.toggleInput('toggle-skip_static_role_rotation_import'));
         }
         await click(GENERAL.submitButton);
         await visit(`/vault/secrets/${this.backend}/show/${this.connection}`);

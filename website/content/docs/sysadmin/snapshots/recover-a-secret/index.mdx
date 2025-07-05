@@ -1,0 +1,90 @@
+---
+layout: docs
+page_title: Manage snapshots
+description: >-
+  Recover and restore individual secrets from a saved storage snapshot.
+---
+
+# Recover discrete data from a snapshot
+
+@include 'alerts/enterprise-only.mdx'
+
+Vault Enterprise features a flexible, robust, and delegatable recovery mechanism
+for restoring deleted or mistakenly changed secrets from an integrated storage
+snapshot without resetting the entire cluster to the state in the snapshot.
+
+To recover a secret, you must load the associated snapshot into Vault so Vault
+can access the data and assign a snapshot ID. Then you can use the snapshot ID
+to read, list, and recover individual paths from the snapshot.
+
+To recover the data, Vault reads the secret at the path from the snapshot to
+retrieve that version of the data and sends it to the assocaited plugin backend
+to perform the necessary recover operations. The plugin backend uses the
+provided data and its own information to create or update data at the specified
+path in live storage.
+
+Vault automatically unloads snapshots 72 hours after they are loaded.
+
+
+
+## Supported Paths
+
+Not all secret paths support snapshot operations. Refer to the table below for
+supported plugins and paths.
+
+@include 'sysadmin/snapshots/restore-secret-support.mdx'
+
+
+## Restoring secrets with replication
+
+Secret restoration has limitations in replicated environments:
+
+- If the active node changes, the loaded snapshot status changes to`error` and
+  Vault cannot use it for recover operations. You must unload and reload the
+  snapshot to use it again.
+- Disaster recovery secondaries cannot load snapshots.
+- Any performance replication cluster can load snapshots, but performance
+  secondaries cannot perform snapshot operations on shared paths.
+
+
+
+## Snapshot operations
+
+You can read and list snapshot data using standard CLI and API calls, but you
+must provide the relevant snapshot ID as an additional CLI parameter or API
+query parameter. Vault performs the requested operation on the backend using the
+loaded snapshot data instead of the live data.
+
+For example, to list the secrets at a specific path from the snapshot:
+```shell
+$ vault list -snapshot-id <snapshot_id> <mount_path>/<secret_path>
+```
+
+
+
+## Policy requirements
+
+Reading and listing from a snapshot are guarded by the same `read` and `list`
+capabilities as the normal read and list operations. Users with `read` or `list`
+permission on the targeted path can also read or list from a snapshot on that
+path by default. However, to recover data from a snapshot, users must have
+`recover` permission on the associated secret path. For example:
+
+```hcl
+path "secrets/*" {
+  capabilities = ["recover"]
+}
+```
+
+To disallow reading or listing from a snapshot, you can create a policy that
+denies the `read_snapshot_id` parameter. For example, to disallow reading and
+listing from a snapshot on the `secrets/*` path, you can create the policy:
+
+```hcl
+path "secrets/*" {
+  capabilities = ["read", "list"]
+  denied_parameters = {
+    read_snapshot_id = []
+  }
+}
+```

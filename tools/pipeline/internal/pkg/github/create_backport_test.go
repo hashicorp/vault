@@ -605,57 +605,6 @@ func TestCreateBackportReq_shouldSkipRef(t *testing.T) {
 	}
 }
 
-func TestCreateBackportReq_pullRequestBody(t *testing.T) {
-	t.Parallel()
-
-	for name, test := range map[string]struct {
-		expectContains    []string
-		expectNotContains []string
-		origin            *libgithub.PullRequest
-		attempt           *CreateBackportAttempt
-	}{
-		"no error": {
-			expectContains:    []string{"original body"},
-			expectNotContains: []string{"error body"},
-			origin: &libgithub.PullRequest{
-				Body:     libgithub.Ptr("original body"),
-				Number:   libgithub.Ptr(1234),
-				HTMLURL:  libgithub.Ptr("https://github.com/hashicorp/vault-enterprise/pull/1234"),
-				MergedBy: &libgithub.User{Login: libgithub.Ptr("my-login")},
-			},
-			attempt: &CreateBackportAttempt{
-				TargetRef: "release/1.19.x",
-			},
-		},
-		"error": {
-			expectContains: []string{"original body", "error body"},
-			origin: &libgithub.PullRequest{
-				Body:     libgithub.Ptr("original body"),
-				Number:   libgithub.Ptr(1234),
-				HTMLURL:  libgithub.Ptr("https://github.com/hashicorp/vault-enterprise/pull/1234"),
-				MergedBy: &libgithub.User{Login: libgithub.Ptr("my-login")},
-			},
-			attempt: &CreateBackportAttempt{
-				TargetRef: "release/1.19.x",
-				Error:     errors.New("error body"),
-			},
-		},
-	} {
-		t.Run(name, func(t *testing.T) {
-			t.Parallel()
-			req := NewCreateBackportReq()
-			got, err := req.pullRequestBody(test.origin, test.attempt)
-			require.NoError(t, err)
-			for _, c := range test.expectContains {
-				require.Containsf(t, got, c, got)
-			}
-			for _, nc := range test.expectNotContains {
-				require.NotContainsf(t, got, nc, got)
-			}
-		})
-	}
-}
-
 func TestCreateBackportRes_Err(t *testing.T) {
 	t.Parallel()
 

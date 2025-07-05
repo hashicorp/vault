@@ -14,19 +14,20 @@ starting your rollback or downgrade.
 
 ## Before you start
 
-- **To register and downgrade enterprise plugins, you must have Vault v1.16.16+,
-  1.17.12+, 1.18.5+, or 1.19.x+**.
-- **You must have admin permissions for Vault**. Specifically, you must be able
-  to run `plugin register` and the appropriate `enable` command.
-- **You must have [`plugin_directory`](/vault/docs/configuration#plugin_directory)
-  set in your Vault configuration file**.
-- **You must have the new plugin binary or zip file saved to the location set in
-  `plugin_directory`**. 
-- **You must have [`api_addr`](/vault/docs/configuration#api_addr) set in your
-  Vault configuration file**.
+- **To register and downgrade official enterprise plugins, you must have Vault v1.16.21+,
+  1.17.17+, 1.18.10+, 1.19.4+, or 1.20.x+**.
+- **To register and downgrade official community plugins with an extracted `.zip` file, you must have
+  Vault v1.16.21+, 1.17.17+, 1.18.10+, 1.19.5+, or 1.20.x+**.
+
+@include 'plugins/common-requirements.mdx'
 
 
-## Step 1: Update the catalog entry
+## Step 1: Prepare the plugin
+
+@include 'plugins/prepare-plugin.mdx'
+
+
+## Step 2: Update the plugin catalog
 
 Register the replacement plugin binary or zip file with the old version number
 under the same plugin type and name as the existing plugin version.
@@ -34,7 +35,7 @@ under the same plugin type and name as the existing plugin version.
 @include 'plugins/register.mdx'
 
 
-## Step 2: Pin and reload the plugin
+## Step 3: Pin and reload the plugin
 
 Until you reload the plugin, Vault continues running the current plugin version
 on the mount path. When you trigger a reload, Vault kills the active plugin
@@ -43,6 +44,6 @@ process and start a new plugin process with the pinned version of that plugin.
 @include 'plugins/pin-and-reload.mdx'
 
 
-## Step 3: Verify the plugin status
+## Step 4: Verify the plugin status
 
 @include 'plugins/verify-status.mdx'

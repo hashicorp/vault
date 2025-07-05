@@ -1,0 +1,157 @@
+---
+layout: docs
+page_title: Restore a snapshot
+description: >-
+  Restore a Vault snapshot.
+---
+
+# Restore a Vault snapshot
+
+Manually restore data for a Vault cluster leader node with a saved snapshot.
+
+## Before you start
+
+- **You must a working knowledge of how Vault saves data**.
+- **You must have a valid Vault cluster configuration using integratd storage**.
+- **You must know, and be able to contact your unseal/recovery key holders**. In
+  addition to the new root token generated during reinitalization, you need the
+  original cluster unseal keys to unseal Vault after restoring the snapshot.
+- **You must have permission to access encrypted data in backed storage**.
+
+
+## Step 1: Bring your Vault cluster back online
+
+Your Vault cluster must be online to restore a snapshot.
+
+Resolve the circumstances that required you to restore from backup, reinitialize
+your Vault cluster with new storage, and authenticate with the new initial root
+token generated during re-initialization. The new root token is temporary as you
+will overwrite the cluster state with the snapshot data.
+
+
+
+## Step 2: Copy the snapshot file to the cluster
+
+You must save your snapshot file as a local file on the cluster to restore the
+data.
+
+To restore a snapshot to a disaster recovery replication cluster, you must copy
+your Vault snapshot files for the primary and DR replica clusters onto restored
+members of the respective clusters.
+
+To restore a snapshot to a performance replication cluster, you must copy
+your Vault snapshot files for the primary and secondary performance replica
+clusters onto restored members of the respective clusters.
+
+
+
+## Step 3: Force a snapshot restore
+
+You must use force the snapshot restore since the auto-unseal or Shamir keys are
+not consistent with the snapshot data, which came from a different cluster.
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+Run
+[`vault operator raft snapshot restore`](/vault/docs/commands/operator/raft#snapshot-restore)
+with the local snapshot file path and the `-force` flag:
+
+```shell-session
+$ vault operator raft snapshot restore -force <local_file_path>
+```
+
+For example:
+   
+<CodeBlockConfig hideClipboard>
+   
+```shell-session
+$ vault operator raft snapshot restore -force /tmp/snapshots/backup.snap
+```
+   
+</CodeBlockConfig>
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+Call the
+[`/v1/sys/storage/raft/snapshot-force`](/vault/api-docs/system/storage/raft#force-restore-raft-using-a-snapshot)
+endpoint with the local snapshot file path:
+
+```shell-session
+$ curl                                       \
+    --request POST                           \
+    --header "X-Vault-Token: ${VAULT_TOKEN}" \
+    --data-binary @<local_file_path>         \
+    ${VAULT_ADDR}/v1/sys/storage/raft/snapshot-force
+```
+
+For example:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ curl                                       \
+    --request POST                           \
+    --header "X-Vault-Token: ${VAULT_TOKEN}" \
+    --data-binary /tmp/snapshots/backup.snap \
+    ${VAULT_ADDR}/v1/sys/storage/raft/snapshot-force
+```
+
+</CodeBlockConfig>
+
+</Tab>
+
+</Tabs>
+
+
+
+## Step 4: Unseal Vault
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+Run
+[`vault operator raft snapshot restore`](/vault/docs/commands/operator/raft#snapshot-restore)
+with the local snapshot file path and the `-force` flag:
+
+```shell-session
+$ vault operator raft snapshot restore -force <local_file_path>
+```
+
+For example:
+   
+<CodeBlockConfig hideClipboard>
+   
+```shell-session
+$ vault operator raft snapshot restore -force /tmp/snapshots/backup.snap
+```
+
+</CodeBlockConfig>
+   
+You must use the `-force` flag as the auto-unseal or Shamir keys are not
+consistent with the snapshot data, which came from a different cluster.
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+Have each person with an unseal key share run
+[`v1/sys/unseal`](/vault/api-docs/system/unseal) with their original unseal
+key until reaching the number of key shares required by your origial quroum
+configuration to unseal your Vault cluster:
+   
+```shell-session
+$ curl                                       \
+   --request POST                            \
+   --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+   --data '{"key": "<unseal_key>"}'          \
+   ${VAULT_ADDR}/v1/sys/unseal
+```
+
+</Tab>
+
+</Tabs>

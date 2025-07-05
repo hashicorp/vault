@@ -1,0 +1,36 @@
+Before you can load a manual snapshot, you must transfer the snapshot file from
+secure storage to a local path Vault can access.
+
+Use the `/sys/storage/raft/snapshot-load/` endpoint to load the snapshot data
+from a local file and assign a snapshot ID:
+
+```shell-session
+$ curl                                       \
+   --request POST                            \
+   --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+    --data-binary @<local_file_path>         \
+    ${VAULT_ADDR}/v1/sys/storage/raft/snapshot-load
+```
+
+For example:
+
+<CodeBlockConfig hideClipboard highlight="11">
+
+```shell-session
+$ curl                                            \
+   --request POST                                 \
+   --header "X-Vault-Token: ${VAULT_TOKEN}"       \
+    --data-binary @/tmp/snapshots/20250624-1.snap \
+    ${VAULT_ADDR}/v1/sys/storage/raft/snapshot-load | jq
+
+{
+  "data": {
+    "cluster_id": "990195d2-9f10-4e5c-84c5-543b4c250dc6",
+    "expires_at": "2025-06-14T09:00:00.675319+05:00",
+    "snapshot_id": "e57cd0cf-c3fa-4e5e-96ea-4a68fa8f3269",
+    "status": "loading"
+  }
+}
+```
+
+</CodeBlockConfig>

@@ -23,29 +23,23 @@ to have Vault fetch the plugin binary from the
 [`/sys/plugins/catalog` API reference](/vault/api-docs/system/plugins-catalog#download)
 for more details.
 
+
 ## Before you start
 
-- **To register enterprise plugins, you have Vault v1.16.21+, 1.17.17+, 1.18.10+,
-  or 1.19.4+**.
-- **You must have admin permissions for Vault**. Specifically, you must be able
-  to run `plugin register` and the appropriate `enable` command.
-- **You must have
-  [`plugin_directory`](/vault/docs/configuration#plugin_directory) set in your
-  Vault configuration file**.
-- **For enterprise plugins, you must have the plugin `.zip` file extracted to
-  the expected location inside `plugin_directory`**.
-  For example, `vault-plugin-database-oracle_0.11.0+ent_linux_amd64.zip` must be
-  extracted to `<plugin_directory>/vault-plugin-database-oracle_0.11.0+ent_linux_amd64/`.
-- **For other plugins, you must have the plugin binary saved to the
-  location set in `plugin_directory`**.
-- **You must have [`api_addr`](/vault/docs/configuration#api_addr) set in your
-  Vault configuration file**.
+- **To register official enterprise plugins, you must have Vault v1.16.21+, 1.17.17+,
+  1.18.10+, 1.19.4+, or 1.20.x+**. 
+- **To register official community plugins with an extracted `.zip` file, you must have
+  Vault v1.16.21+, 1.17.17+, 1.18.10+, 1.19.5+, or 1.20.x+**.
 
-See [Recommendation](/vault/docs/updates/important-changes#external-enterprise-plugins)
-to register enterprise plugins on Vault v1.16.17 - v1.16.20, v1.17.13 - v1.17.16,
-v1.18.6 - v1.18.9, or v1.19.0 - v1.19.3.
+@include 'plugins/common-requirements.mdx'
 
-## Step 1: Update the plugin catalog
+
+## Step 1: Prepare the plugin
+
+@include 'plugins/prepare-plugin.mdx'
+
+
+## Step 2: Update the plugin catalog
 
 You must register your external plugin with the Vault catalog before enabling
 it. Registering plugins ensures the plugin invoked by Vault is authentic and
@@ -54,14 +48,14 @@ maintains integrity.
 @include 'plugins/register.mdx'
 
 
-## Step 2: Enable the plugin
+## Step 3: Enable the plugin
 
 Enable the plugin to make it available to clients.
 
 @include 'plugins/enable.mdx'
 
 
-## Step 3: Verify the plugin status
+## Step 4: Verify the plugin status
 
 Verify the plugin is ready for use and running the correct version.
 

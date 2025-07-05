@@ -1,9 +1,6 @@
-<EnterpriseAlert>
-Enterprise plugins must be compatible with the system that runs Vault and saved
-to the plugin directory unzipped with the name provided on the HashiCorp
-releases page. Vault Enterprise verifies plugin integrity, checks system
-compatibility, and unzips the plugin artifact during the registration process.
-</EnterpriseAlert>
+<Tabs>
+
+<Tab heading="Binary file" group="binary">
 
 <Tabs>
 
@@ -138,3 +135,132 @@ compatibility, and unzips the plugin artifact during the registration process.
 
 </Tabs>
 
+</Tab>
+
+<Tab heading=".zip file" group="zip">
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+1. Use [`vault plugin register`](/vault/docs/commands/plugin/register) to add
+   your plugin to the catalog using `-version`. Do not provide a SHA value:
+
+    ```shell-session
+    $ vault plugin register
+        -version "<semantic_version>"
+        <plugin_type>
+        <plugin_name>
+    ```
+
+  For example, to register the `vault-plugin-secrets-keymgmt` plugin with the
+  extracted artifact directory `vault-plugin-secrets-keymgmt_0.16.0+ent_linux_amd64/`:
+
+  <CodeBlockConfig hideClipboard="true">
+
+    ```shell-session
+    $ vault plugin register     \
+        -version "v0.16.0+ent"  \
+        secret                  \
+        vault-plugin-secrets-keymgmt
+
+    Success! Registered plugin: vault-plugin-secrets-keymgmt
+    ```
+
+  </CodeBlockConfig>
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+1. Save the version information for your extracted plugin folder to a JSON file:
+
+    ```shell-session
+    $ cat <<-EOF > data.json
+    {
+      "version": "<semantic_version>"
+    }
+    EOF
+    ```
+
+    For example, to create a data file for the `vault-plugin-secrets-keymgmt`
+    plugin with the extracted artifact directory
+    `vault-plugin-secrets-keymgmt_0.16.0+ent_linux_amd64/`:
+
+    <CodeBlockConfig hideClipboard="true">
+
+    ```shell-session
+    $ cat <<-EOF > data.json
+    {
+      "version": "v0.16.0+ent"
+    }
+    EOF
+    ```
+    </CodeBlockConfig>
+
+2. Call the [RegisterPlugin](/vault/api-docs/system/plugins-catalog#register-plugin)
+   endpoint to add your plugin to the catalog:
+
+    ```shell-session
+    $ curl                                      \
+      --request POST                            \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+      --data @data.json                         \
+      ${VAULT_ADDR}/v1/sys/plugins/catalog/<plugin_type>/<plugin_name>
+    ```
+
+    For example, to register the `vault-plugin-secrets-keymgmt` plugin with the
+    extracted artifact directory `vault-plugin-secrets-keymgmt_0.16.0+ent_linux_amd64/`:
+
+    <CodeBlockConfig hideClipboard="true">
+
+    ```shell-session
+    $ curl                                      \
+      --request POST                            \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+      --data @data.json                         \
+      ${VAULT_ADDR}/v1/sys/plugins/catalog/secret/vault-plugin-secrets-keymgmt
+    ```
+
+    </CodeBlockConfig>
+
+3. Call the [ListPlugins](/vault/api-docs/system/plugins-catalog#list-plugins)
+   endpoint to verify registration:
+    
+    ```shell-session
+    $ curl                                      \
+      --request GET                             \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+      ${VAULT_ADDR}/v1/sys/plugins/catalog      \
+      | jq '.data.detailed | .[] | select(.name =="<plugin_name>")'
+    ```
+
+    For example:
+
+    <CodeBlockConfig hideClipboard="true">
+
+    ```shell-session
+    $ curl                                      \
+      --request GET                             \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+      ${VAULT_ADDR}/v1/sys/plugins/catalog      \
+      | jq '.data.detailed | .[] | select(.name =="vault-plugin-secrets-keymgmt")'
+
+    {
+      "builtin": false,
+      "name": "vault-plugin-secrets-keymgmt",
+      "sha256": "95f051152c4b69c720afef2fef26469f83a2e084842bdfad0f795850047fc84f",
+      "type": "secret",
+      "version": "v0.16.0+ent"
+    }
+    ```
+
+    </CodeBlockConfig>
+
+</Tab>
+
+</Tabs>
+
+</Tab>
+
+</Tabs>

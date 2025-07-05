@@ -130,13 +130,15 @@ module('Acceptance | auth login form', function (hooks) {
     });
 
     test('it renders preferred mount view if "with" query param is a mount path with listing_visibility="unauth"', async function (assert) {
-      await visit('/vault/auth?with=my-oidc%2F');
+      await visit('/vault/auth?with=my_oidc%2F');
       await waitFor(AUTH_FORM.tabBtn('oidc'));
       assert.dom(AUTH_FORM.authForm('oidc')).exists();
       assert.dom(AUTH_FORM.tabBtn('oidc')).exists();
       assert.dom(GENERAL.inputByAttr('role')).exists();
       assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
-      assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
+      assert
+        .dom(GENERAL.inputByAttr('path'))
+        .hasValue('my_oidc/', 'mount path matches server value and is not camelized');
       assert.dom(GENERAL.button('Sign in with other methods')).exists('"Sign in with other methods" renders');
 
       assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist('dropdown does not render');
@@ -151,7 +153,7 @@ module('Acceptance | auth login form', function (hooks) {
         .dom(AUTH_FORM.tabBtn('oidc'))
         .hasAttribute('aria-selected', 'true', 'it selects tab matching query param');
       assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
-      assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
+      assert.dom(GENERAL.inputByAttr('path')).hasValue('my_oidc/');
       assert.dom(GENERAL.button('Sign in with other methods')).exists('"Sign in with other methods" renders');
       assert.dom(GENERAL.backButton).doesNotExist();
     });
@@ -174,26 +176,26 @@ module('Acceptance | auth login form', function (hooks) {
       this.assertReq = () => {};
       this.server.get('/auth/token/lookup-self', (schema, req) => {
         this.assertReq(req);
-        req.passthrough();
+        return req.passthrough();
       });
       this.server.post('/auth/:mount/login', (schema, req) => {
         // github only
         this.assertReq(req);
-        req.passthrough();
+        return req.passthrough();
       });
       this.server.post('/auth/:mount/oidc/auth_url', (schema, req) => {
         // For JWT and OIDC
         this.assertReq(req);
-        req.passthrough();
+        return req.passthrough();
       });
       this.server.post('/auth/:mount/login/:username', (schema, req) => {
         this.assertReq(req);
-        req.passthrough();
+        return req.passthrough();
       });
       this.server.put('/auth/:mount/sso_service_url', (schema, req) => {
         // SAML only (enterprise)
         this.assertReq(req);
-        req.passthrough();
+        return req.passthrough();
       });
       this.expected = {
         token: {
@@ -390,8 +392,8 @@ module('Acceptance | auth login form', function (hooks) {
       await visit('/vault/auth');
 
       this.server.get('/sys/internal/ui/mounts', (_, req) => {
-        assert.strictEqual(req.requestHeaders['x-vault-namespace'], 'admin', 'header contains namespace');
-        req.passthrough();
+        assert.strictEqual(req.requestHeaders['X-Vault-Namespace'], 'admin', 'header contains namespace');
+        return req.passthrough();
       });
       await typeIn(GENERAL.inputByAttr('namespace'), 'admin');
     });

@@ -1,0 +1,3 @@
+```release-note:change
+activity: Renamed `timestamp` in export API response to `token_creation_time`.
+```

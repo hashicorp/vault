@@ -1,0 +1,10 @@
+- **You must have an integrated storage snapshot**. You can only restore data
+  from [automatically](/vault/docs/sysadmin/snapshots/automat) or
+  [manually](/vault/docs/sysadmin/snapshots/save) saved snapshots for integrated
+  storage.
+- **You must have a snapshot from the cluster targeted for restoration**.
+- **You must have access to the unseal keys, or the people with unseal keys, for
+  the target cluster**
+- **The cluster must have [mlock](/vault/docs/configuration#disable_mlock)
+  disabled**.
+- **The cluster cannot have anoter snapshot loaded**.

@@ -5010,12 +5010,12 @@ func TestActivityLog_partialMonthClientCountUsingWriteExport(t *testing.T) {
 	expectedCurrentMonthClients := expectedClients[1:]
 
 	type record struct {
-		ClientID      string `json:"client_id"`
-		NamespaceID   string `json:"namespace_id"`
-		Timestamp     string `json:"timestamp"`
-		NonEntity     bool   `json:"non_entity"`
-		MountAccessor string `json:"mount_accessor"`
-		ClientType    string `json:"client_type"`
+		ClientID          string `json:"client_id"`
+		NamespaceID       string `json:"namespace_id"`
+		TokenCreationTime string `json:"token_creation_time"`
+		NonEntity         bool   `json:"non_entity"`
+		MountAccessor     string `json:"mount_accessor"`
+		ClientType        string `json:"client_type"`
 	}
 
 	startOfMonth := timeutil.StartOfMonth(now)
@@ -5069,7 +5069,7 @@ func TestActivityLog_partialMonthClientCountUsingWriteExport(t *testing.T) {
 
 			// Compare expectedClients with actualClients
 			for i := range expectedCurrentMonthClients {
-				resultTimeStamp, err := time.Parse(time.RFC3339, results[i].Timestamp)
+				resultTimeStamp, err := time.Parse(time.RFC3339, results[i].TokenCreationTime)
 				require.NoError(t, err)
 				require.Equal(t, expectedCurrentMonthClients[i].ClientID, results[i].ClientID)
 				require.Equal(t, expectedCurrentMonthClients[i].NamespaceID, results[i].NamespaceID)

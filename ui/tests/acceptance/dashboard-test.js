@@ -227,6 +227,9 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await runCmd(createNS('world'), false);
       await visit('/vault/dashboard?namespace=world');
       assert.dom(DASHBOARD.cardName('configuration-details')).doesNotExist();
+
+      // navigate to "root" before deleting
+      await visit('vault/dashboard');
       // clean up namespace pollution
       await runCmd(deleteNS('world'));
     });
@@ -452,6 +455,9 @@ module('Acceptance | landing page dashboard', function (hooks) {
       await runCmd(createNS('blah'), false);
       await visit('/vault/dashboard?namespace=blah');
       assert.dom(DASHBOARD.cardName('replication')).doesNotExist();
+
+      // navigate to "root" before deleting
+      await visit('vault/dashboard');
       // clean up namespace pollution
       await runCmd(deleteNS('blah'));
     });

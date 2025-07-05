@@ -8,7 +8,6 @@ package observations
 import (
 	"context"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -32,6 +31,6 @@ func (observations *ObservationSystem) RecordObservationToLedger(_ context.Conte
 	return nil
 }
 
-func NewObservationSystem(_ string, _ string, _ hclog.Logger) (*ObservationSystem, error) {
+func NewObservationSystem(_ *NewObservationSystemConfig) (*ObservationSystem, error) {
 	return &ObservationSystem{}, nil
 }

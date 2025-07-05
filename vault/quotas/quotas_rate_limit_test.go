@@ -14,10 +14,8 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
-	"go.uber.org/goleak"
 )
 
 type clientResult struct {
@@ -215,24 +213,6 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 			}
 		}
 	}()
-}
-
-func TestRateLimitQuota_Update(t *testing.T) {
-	t.Skipf("See: https://hashicorp.atlassian.net/browse/VAULT-36611?focusedCommentId=746927")
-	defer goleak.VerifyNone(t)
-	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink(), true)
-	require.NoError(t, err)
-
-	view := &logical.InmemStorage{}
-	require.NoError(t, qm.Setup(context.Background(), view, nil))
-
-	quota := NewRateLimitQuota("quota1", "", "", "", "", GroupByIp, false, time.Second, 0, 10, 0)
-	quotaUpdate := quota.Clone()
-	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, true))
-	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quotaUpdate, true))
-
-	require.Nil(t, quota.close(context.Background()))
-	require.Nil(t, quotaUpdate.close(context.Background()))
 }
 
 // TestRateLimitQuota_retryAfterSeconds tests the that retryAfterSeconds rounds

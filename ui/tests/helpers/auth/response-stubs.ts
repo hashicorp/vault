@@ -158,7 +158,7 @@ export const RESPONSE_STUBS = {
         },
         num_uses: 0,
         orphan: true,
-        path: 'auth/my-oidc/oidc/callback',
+        path: 'auth/my_oidc/oidc/callback',
         policies: ['default'],
         renewable: true,
         ttl: 2764799,

@@ -1,0 +1,54 @@
+---
+layout: api
+page_title: /sys/internal/ui/default-auth-methods - HTTP API
+description: The '/sys/internal/ui/default-auth-methods' endpoint returns any configured or inherited default and backup auth methods for a given namespace.
+---
+
+# `/sys/internal/ui/default-auth-methods`
+
+@include 'alerts/enterprise-only.mdx'
+
+`/sys/internal/ui/default-auth-methods` is a Vault-internal endpoint used to
+return the explicit, or inherited, default and backup auth method types for a
+given namespace.
+
+The namespace is derived from the request itself in the `X-Vault-Namespace` header.
+
+This should only be used internally by the UI. Due to the nature of its
+intended usage, there is no guarantee on backwards compatibility for this endpoint.
+
+## Get UI default login configuration
+
+@include 'alerts/unrestricted.mdx'
+
+Return any configured, or inherited, default and backup authentication methods
+for a given namespace.
+
+
+| Method | Path                                        |
+| :----- | :------------------------------------------ |
+| `GET`  | `/sys/internal/ui/default-auth-methods` |
+
+### Sample request
+
+```shell-session
+$ curl
+    -- header "X-Vault-Namespace: it-admins" \
+    --request LIST \
+    http://127.0.0.1:8200/v1/sys/internal/ui/default-auth-methods
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "backup_auth_types": [
+      "token",
+      "userpass"
+    ],
+    "default_auth_type": "ldap",
+    "disable_inheritance": false
+  },
+}
+```

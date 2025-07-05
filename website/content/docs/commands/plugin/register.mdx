@@ -11,9 +11,18 @@ description: |-
 The `plugin register` command registers a new plugin in Vault's plugin catalog.
 The plugin's type of "auth", "database", or "secret" must be included.
 
+<Note>
+
+To register an enterprise plugin, you must register with the extracted
+`.zip` file, not the binary.
+Refer to the [Enterprise plugins](/vault/docs/plugins/plugin-management#enterprise-plugins) section
+of the plugin management page for Vault compatibility requirements.
+
+</Note>
+
 ## Examples
 
-Register a Community or custom plugin:
+Register a plugin binary:
 
 ```shell-session
 $ vault plugin register \
@@ -22,14 +31,7 @@ $ vault plugin register \
 Success! Registered plugin: my-custom-plugin
 ```
 
-Register an Enterprise plugin:
-
-<Note>
-
-Refer to the [Enterprise plugins](/vault/docs/plugins/plugin-management#enterprise-plugins) section
-of the Plugin management page for Vault compatibility requirements.
-
-</Note>
+Register an extracted plugin `.zip` file:
 
 Before registering Key Management secrets engine v0.16.0+ent for the linux/amd64 system that runs Vault Enterprise,
 `vault-plugin-secrets-keymgmt_v0.16.0+ent_linux_amd64.zip` needs to be downloaded from
@@ -44,7 +46,7 @@ $ vault plugin register
 Success! Registered plugin: vault-plugin-secrets-keymgmt
 ```
 
-Register a Community or custom plugin with custom args:
+Register a plugin binary with custom args:
 
 ```shell-session
 $ vault plugin register \
@@ -53,7 +55,7 @@ $ vault plugin register \
     auth my-custom-plugin
 ```
 
-Register an Enterprise plugin with custom args:
+Register an extracted plugin `.zip` file with custom args:
 
 ```shell-session
 $ vault plugin register
@@ -61,6 +63,18 @@ $ vault plugin register
     -args=--with-glibc,--with-curl-bindings \
     secret \
     vault-plugin-secrets-keymgmt               # name must match the plugin name on the releases page
+```
+
+Use the `-download` flag with the full version and plugin
+name to download and register an official plugin from
+[HashiCorp releases page](https://releases.hashicorp.com/):
+
+```shell-session
+$ vault plugin register
+    -download \
+    -version=0.16.0+ent \
+    secret \
+    vault-plugin-secrets-keymgmt
 ```
 
 ## Usage
@@ -76,15 +90,17 @@ flags](/vault/docs/commands) included on all commands.
 
 ### Command options
 
-- `-sha256` `(string: <required>)` - SHA256 of the plugin binary or the OCI image
-  provided. This is required for all Community plugins.
-  If the plugin is Enterprise, the value is not required.
+- `sha256` `(string: "")` – The SHA256 sum of a plugin binary or the OCI image.
+  You must provide `sha256` to register a plugin binary, but you must leave
+  `sha256` unset to register an extracted `.zip` file.
 
 - `-args` `([]string: [])` - Argument to pass to the plugin when starting. This
   flag can be specified multiple times to specify multiple args.
 
-- `-command` `(string: "")` - Command to spawn the plugin. This defaults to the
-  name of the plugin if both `-oci_image` and `-command` are unspecified.
+- `-command` `(string: "")` - Specifies the command path used to execute the
+  plugin relative to the plugin directory or OCI image directory. You must
+  provide `command` to register a plugin binary. Vault ignores `command` when
+  you register with an extracted `.zip` file as it already knows the associated run command.
 
 - `-env` `([]string: [])` - Environment variables to set for the plugin when
   starting. This flag can be specified multiple times to specify multiple
@@ -99,4 +115,13 @@ flags](/vault/docs/commands) included on all commands.
 
 - `-version` `(string: "")` - Semantic version of the plugin. Used as the tag
   when specifying `-oci_image`, but any leading 'v' will automatically be trimmed.
+   You can omit version to register a plugin binary, but you must provide
+   an explicit version to register an extracted `.zip` file.
 
+- `-download` `(bool: false)` - <EnterpriseAlert inline="true" /> **( BETA )**
+  Tells Vault to download the specified plugin from the
+  [HashiCorp releases page](https://releases.hashicorp.com/). Automatic
+  downloads only support secret and auth plugins with artifacts containing
+  `metadata.json` and `metadata.json.sig`. To use automatic downloads, your
+  network must permit HTTPS and TCP port 443 between all
+  Vault cluster nodes and `releases.hashicorp.com`.

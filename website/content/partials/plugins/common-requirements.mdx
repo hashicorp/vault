@@ -1,0 +1,11 @@
+- **You must have admin permissions for Vault**. Specifically, you must be able
+  to run `plugin register` and the appropriate `enable` command.
+- **You must have
+  [`plugin_directory`](/vault/docs/configuration#plugin_directory) set in your
+  Vault configuration file**.
+- **You must have [`api_addr`](/vault/docs/configuration#api_addr) set in your
+  Vault configuration file**.
+- **If you plan to use an extracted `.zip` file, the plugin artifacts must be
+  compatible with the system running Vault**. Vault verifies plugin integrity
+  and checks system compatibility during the registration process for extracted
+  artifacts.

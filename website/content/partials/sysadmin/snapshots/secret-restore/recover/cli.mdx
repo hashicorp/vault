@@ -1,0 +1,20 @@
+Use `vault read` with the snapshot ID to read from the secret path and write
+the recovered data to the corresponding mount path on the Vault server:
+
+```shell-session
+$ vault read                    \
+    -snapshot-id <snapshot_id>  \
+    <mount_path>/<secret_path>
+```
+
+For example:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault read                                            \
+    -snapshot-id 9465df92-8236-4af9-8cc8-b7460d882e41s  \
+    kv/data/telemetry-systems/api-key
+```
+
+</CodeBlockConfig>

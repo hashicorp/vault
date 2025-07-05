@@ -21,8 +21,8 @@ var createGithubBackportState struct {
 	ceAllowInactive []string
 }
 
-func newGithubCreateBackportCmd() *cobra.Command {
-	listRuns := &cobra.Command{
+func newCreateGithubBackportCmd() *cobra.Command {
+	backportCmd := &cobra.Command{
 		Use:   "backport 1234",
 		Short: "Create a backport pull request from another pull request",
 		Long:  "Create a backport pull request from another pull request",
@@ -48,32 +48,32 @@ func newGithubCreateBackportCmd() *cobra.Command {
 		},
 	}
 
-	listRuns.PersistentFlags().StringSliceVarP(&createGithubBackportState.ceAllowInactive, "ce-allow-inactive-groups", "a", []string{"docs", "changelog", "pipeline"}, "Change file groups that should be allowed to backport to inactive CE branches")
-	listRuns.PersistentFlags().StringVar(&createGithubBackportState.req.CEBranchPrefix, "ce-branch-prefix", "ce", "The branch name prefix")
-	listRuns.PersistentFlags().StringSliceVarP(&createGithubBackportState.ceExclude, "ce-exclude-groups", "e", []string{"enterprise"}, "Change file groups that should be excluded from the backporting to CE branches")
-	listRuns.PersistentFlags().StringVar(&createGithubBackportState.req.BaseOrigin, "base-origin", "origin", "The name to use for the base remote origin")
-	listRuns.PersistentFlags().StringVarP(&createGithubBackportState.req.Owner, "owner", "o", "hashicorp", "The Github organization")
-	listRuns.PersistentFlags().StringVarP(&createGithubBackportState.req.Repo, "repo", "r", "vault-enterprise", "The Github repository. Private repositories require auth via a GITHUB_TOKEN env var")
-	listRuns.PersistentFlags().StringVarP(&createGithubBackportState.req.RepoDir, "repo-dir", "d", "", "The path to the vault repository dir. If not set a temporary directory will be used")
-	listRuns.PersistentFlags().StringVarP(&createGithubBackportState.req.ReleaseVersionConfigPath, "releases-version-path", "m", "", "The path to .release/versions.hcl")
-	listRuns.PersistentFlags().UintVar(&createGithubBackportState.req.ReleaseRecurseDepth, "recurse", 3, "If no path to a config file is given, recursively search backwards for it and stop at root or until we've his the configured depth.")
+	backportCmd.PersistentFlags().StringSliceVarP(&createGithubBackportState.ceAllowInactive, "ce-allow-inactive-groups", "a", []string{"docs", "changelog", "pipeline"}, "Change file groups that should be allowed to backport to inactive CE branches")
+	backportCmd.PersistentFlags().StringVar(&createGithubBackportState.req.CEBranchPrefix, "ce-branch-prefix", "ce", "The branch name prefix")
+	backportCmd.PersistentFlags().StringSliceVarP(&createGithubBackportState.ceExclude, "ce-exclude-groups", "e", []string{"enterprise"}, "Change file groups that should be excluded from the backporting to CE branches")
+	backportCmd.PersistentFlags().StringVar(&createGithubBackportState.req.BaseOrigin, "base-origin", "origin", "The name to use for the base remote origin")
+	backportCmd.PersistentFlags().StringVarP(&createGithubBackportState.req.Owner, "owner", "o", "hashicorp", "The Github organization")
+	backportCmd.PersistentFlags().StringVarP(&createGithubBackportState.req.Repo, "repo", "r", "vault-enterprise", "The Github repository. Private repositories require auth via a GITHUB_TOKEN env var")
+	backportCmd.PersistentFlags().StringVarP(&createGithubBackportState.req.RepoDir, "repo-dir", "d", "", "The path to the vault repository dir. If not set a temporary directory will be used")
+	backportCmd.PersistentFlags().StringVarP(&createGithubBackportState.req.ReleaseVersionConfigPath, "releases-version-path", "m", "", "The path to .release/versions.hcl")
+	backportCmd.PersistentFlags().UintVar(&createGithubBackportState.req.ReleaseRecurseDepth, "recurse", 3, "If no path to a config file is given, recursively search backwards for it and stop at root or until we've his the configured depth.")
 
 	// NOTE: The following are technically flags but they only for testing testing
 	// the command before we cut over to new utility.
-	listRuns.PersistentFlags().StringVar(&createGithubBackportState.req.EntBranchPrefix, "ent-branch-prefix", "", "The ent branch name prefix. Only used for testing before migration to the new workflow")
-	listRuns.PersistentFlags().StringVar(&createGithubBackportState.req.BackportLabelPrefix, "backport-label-prefix", "backport", "The name to use for the base remote origin")
+	backportCmd.PersistentFlags().StringVar(&createGithubBackportState.req.EntBranchPrefix, "ent-branch-prefix", "", "The ent branch name prefix. Only used for testing before migration to the new workflow")
+	backportCmd.PersistentFlags().StringVar(&createGithubBackportState.req.BackportLabelPrefix, "backport-label-prefix", "backport", "The name to use for the base remote origin")
 
-	err := listRuns.PersistentFlags().MarkHidden("ent-branch-prefix")
+	err := backportCmd.PersistentFlags().MarkHidden("ent-branch-prefix")
 	if err != nil {
 		panic(err)
 	}
 
-	err = listRuns.PersistentFlags().MarkHidden("backport-label-prefix")
+	err = backportCmd.PersistentFlags().MarkHidden("backport-label-prefix")
 	if err != nil {
 		panic(err)
 	}
 
-	return listRuns
+	return backportCmd
 }
 
 func runCreateGithubBackportCmd(cmd *cobra.Command, args []string) error {

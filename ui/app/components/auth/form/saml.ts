@@ -127,7 +127,7 @@ export default class AuthFormSaml extends AuthBase {
   async pollForToken(samlWindow: Window, { path = '' }) {
     // Poll every one second for the token to become available
     const WAIT_TIME = Ember.testing ? 50 : 1000;
-    const MAX_TIME = 180; // 3 minutes in seconds
+    const MAX_TIME = Ember.testing ? 3 : 180; // 180 is 3 minutes in seconds
 
     const adapter = this.store.adapterFor('auth-method') as AuthMethodAdapter;
     // Wait up to 3 minutes for a token to become available

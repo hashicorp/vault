@@ -1,0 +1,50 @@
+name: copy-external-contributor-pull-request-ce
+
+# NOTE: Don't ever set up concurrency groups. We never want this workflow to
+# be cancelled.
+
+on:
+  #  TODO: VAULT-34830: Enable the external contributor job for community pull requests
+  #  pull_request:
+  #    types:
+  #      # We only need to trigger this on opened as it will have a manual
+  #      # deployment approval that is good for 30 days. If we exhaust that there
+  #      # are two courses of action:
+  #      #   * Close and re-open the PR and it will trigger it again.
+  #      #   * Manually run this workflow from the actions UI and provide the
+  #      #     pull request number
+  #      - opened
+  #      - reopened
+  workflow_dispatch:
+    inputs:
+      number:
+        type: string
+        description: The pull request number to copy to enterprise
+        required: true
+
+jobs:
+  copy:
+    name: Copy community contributed pull request to Vault Enterprise
+    # Only run this on pull requests that originate from a fork (community
+    # contributed) or has intentionally been dispatched.
+    if: |
+      github.repository == 'hashicorp/vault' &&
+      github.event_name == 'workflow_dispatch' ||
+      github.event.pull_request.head.repo.fork
+    # Use the community-pull-request environment so that we invoke the deployment
+    # protection rules. In this case those rules require someone in
+    # @hashicorp/github-secure-vault-core to approve the workflow.
+    # When approved we'll initiate the copy job in vault-enterprise.
+    environment: community-pull-request
+    runs-on: ubuntu-latest
+    steps:
+      - id: payload
+        run: |
+          echo 'payload={"number":"${{ github.event.number || inputs.number }}"}' | tee -a "$GITHUB_OUTPUT"
+      - name: Trigger backport for Enterprise
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3.0.0
+        with:
+          token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          repository: hashicorp/vault-enterprise
+          event-type: copy-community-pull-request
+          client-payload: ${{ steps.payload.outputs.payload }}

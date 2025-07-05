@@ -49,7 +49,7 @@ type PullOpts struct {
 	Stat                    bool                  // --stat
 	Squash                  bool                  // --squash
 	Strategy                MergeStrategy         // --stategy=
-	StragegyOptions         []MergeStrategyOption // --strategy-option=
+	StrategyOptions         []MergeStrategyOption // --strategy-option=
 	Rebase                  RebaseStrategy        // --rebase=
 	Verify                  bool                  // --verify
 
@@ -148,7 +148,7 @@ func (o *PullOpts) Strings() []string {
 		opts = append(opts, "--stat")
 	}
 
-	for _, opt := range o.StragegyOptions {
+	for _, opt := range o.StrategyOptions {
 		opts = append(opts, "-X", string(opt))
 	}
 

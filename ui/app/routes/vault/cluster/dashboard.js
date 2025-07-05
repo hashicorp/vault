@@ -30,6 +30,7 @@ export default class VaultClusterDashboardRoute extends Route.extend(ClusterRout
 
   async model() {
     const clusterModel = this.modelFor('vault.cluster');
+    const adapter = this.store.adapterFor('application');
     const hasChroot = clusterModel?.hasChrootNamespace;
     const replication =
       hasChroot || clusterModel.replicationRedacted
@@ -40,9 +41,10 @@ export default class VaultClusterDashboardRoute extends Route.extend(ClusterRout
           };
     const requests = [
       this.getVaultConfiguration(hasChroot),
-      this.api.sys.internalUiListEnabledVisibleMounts().catch(() => ({})),
+      adapter.ajax('/v1/sys/internal/ui/mounts', 'GET').catch(() => ({})),
     ];
-    const [vaultConfiguration, { secret }] = await Promise.all(requests);
+    const [vaultConfiguration, { data }] = await Promise.all(requests);
+    const secret = data.secret;
     const secretsEngines = this.api
       .responseObjectToArray(secret, 'path')
       .map((engine) => new SecretsEngineResource(engine));

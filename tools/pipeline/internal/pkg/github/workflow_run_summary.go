@@ -20,73 +20,7 @@ var workflowRunTemplate = template.Must(template.New("workflow_run").Funcs(templ
 	"intensify_annotation": intensifyAnnotationLevel,
 	"redify":               redify,
 	"splitlines":           splitLines,
-}).Parse(workflowRunTextTemplate))
-
-// workflowRunTextTemplate is the actual template text of our human readable
-// workflow run output.
-const workflowRunTextTemplate = `
-{{ .Run.Name }} (ID: {{ .Run.ID }})
-  Title: {{ boldify .Run.DisplayTitle }}
-  URL: {{ .Run.HTMLURL }}
-  HEAD Branch: {{ .Run.HeadBranch }}
-  HEAD SHA: {{ .Run.HeadSHA }}
-  Author: {{ .Run.HeadCommit.Author.Name }}
-  Actor: {{ .Run.Actor.Login }}
-  Attempt: {{ .Run.RunAttempt }}
-  {{- if .CheckRuns }}
-  {{ boldify "Annotations" }}
-    {{- range $cr := .CheckRuns }}
-    {{- range $a := $cr.Annotations }}
-    {{ intensify_annotation $a.AnnotationLevel }}{{- if $a.Title }} {{ boldify $a.Title }}{{- end -}}
-    {{- if $a.Message }}
-    {{- range $am := splitlines $a.Message }}
-      {{ boldify $am }}
-    {{- end -}}
-    {{- end -}}
-    {{- if $a.RawDetails }}
-    {{- range $ad := splitlines $a.RawDetails }}
-      {{ boldify $ad }}
-    {{- end -}}
-    {{- end -}}
-    {{- end -}}
-    {{- end -}}
-  {{- end }}
-  Status: {{ intensify_status .Run.Status }}
-  Conclusion: {{ intensify_status .Run.Conclusion }}
-  {{- if .Jobs -}}
-  {{- range $j := .Jobs }}
-    Job: {{ boldify $j.Job.Name }}
-      URL: {{ $j.Job.HTMLURL }}
-      Status: {{ $j.Job.Status }}
-      Conclusion: {{ $j.Job.Conclusion }}
-      CreatedAt: {{ $j.Job.CreatedAt }}
-      StartedAt: {{ $j.Job.StartedAt }}
-      CompletedAt: {{ $j.Job.CompletedAt }}
-      {{- if .UnsuccessfulSteps }}
-      {{ boldify "Unsuccessful Steps:" }}
-      {{- range $s := .UnsuccessfulSteps }}
-        Step: {{ boldify $s.Name }}
-          Status: {{ intensify_status $s.Status }}
-          Conclusion: {{ intensify_status $s.Conclusion }}
-      {{- end -}}
-      {{- end -}}
-      {{- if .LogEntries }}
-      {{ boldify "Unsuccessful Step Log Summaries:" }}
-      {{- range $l := .LogEntries }}
-        Step: {{ boldify $l.StepName }}
-        {{- range $sl := format_log_lines $l.SetupLog }}
-          {{ $sl }}
-        {{- end -}}
-        {{- range $bl := format_log_lines $l.BodyLog }}
-          {{ $bl }}
-        {{- end -}}
-        {{- range $el := format_log_lines $l.ErrorLog }}
-          {{ redify $el }}
-        {{- end -}}
-      {{- end -}}
-      {{- end -}}
-  {{- end -}}
-  {{- end -}}`
+}).ParseFS(templates, "templates/workflow-run-text.tmpl"))
 
 func summarizeWorkflowRun(r *WorkflowRun) (string, error) {
 	if r == nil {

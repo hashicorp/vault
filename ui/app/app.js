@@ -24,6 +24,7 @@ export default class App extends Application {
           'version',
           'custom-messages',
           'api',
+          'store',
           'capabilities',
         ],
       },
