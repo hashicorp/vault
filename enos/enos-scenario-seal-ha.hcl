@@ -1053,7 +1053,7 @@ scenario "seal_ha" {
     module      = module.vault_verify_secrets_engines_delete
     depends_on = [
       step.verify_secrets_engines_create,
-      step.verify_secrets_engines_read
+      step.verify_secrets_engines_read_after_migration
     ]
 
     providers = {

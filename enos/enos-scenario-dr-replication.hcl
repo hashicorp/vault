@@ -1262,8 +1262,8 @@ scenario "dr_replication" {
     description = global.description.verify_secrets_engines_delete
     module      = module.vault_verify_secrets_engines_delete
     depends_on = [
-      step.verify_secrets_engines_create,
-      step.verify_secrets_engines_read
+      step.verify_secrets_engines_on_primary,
+      step.verify_failover_replicated_data
     ]
 
     providers = {
@@ -1275,7 +1275,7 @@ scenario "dr_replication" {
     ]
 
     variables {
-      create_state      = step.verify_secrets_engines_create.state
+      create_state      = step.verify_secrets_engines_on_primary.state
       hosts             = step.get_vault_cluster_ips.follower_hosts
       leader_host       = step.get_vault_cluster_ips.leader_host
       vault_addr        = step.create_vault_cluster.api_addr_localhost

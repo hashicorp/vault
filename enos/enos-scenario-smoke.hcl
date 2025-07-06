@@ -687,9 +687,7 @@ scenario "smoke" {
       enos = local.enos_provider[matrix.distro]
     }
 
-    verifies = [
-      quality.vault_api_ssh_role_delete
-    ]
+    verifies = quality.vault_api_ssh_role_delete
 
     variables {
       create_state      = step.verify_secrets_engines_create.state
