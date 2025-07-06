@@ -58,7 +58,7 @@ variable "vault_root_token" {
 }
 
 variable "vault_edition" {
-  description = "The Vault binary edition (e.g., 'fips', 'ent', etc.)"
+  description = "The Vault binary edition (e.g., 'ce', 'ent', 'ent.fips1403', etc.)"
   type        = string
 }
 

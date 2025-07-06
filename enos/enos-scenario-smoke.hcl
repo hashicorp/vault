@@ -688,8 +688,7 @@ scenario "smoke" {
     }
 
     verifies = [
-      quality.vault_api_auth_userpass_login_write,
-      quality.vault_secrets_kv_write
+      quality.vault_api_ssh_role_delete
     ]
 
     variables {

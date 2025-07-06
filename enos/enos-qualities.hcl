@@ -147,6 +147,10 @@ quality "vault_api_sys_auth_userpass_user_write" {
   description = "The v1/sys/auth/userpass/users/<user> Vault API associates a superuser policy with a user"
 }
 
+quality "vault_api_ssh_role_delete" {
+  description = "The v1/ssh/role Vault API deletes an SSH role associated with a key and clients"
+}
+
 quality "vault_api_sys_config_read" {
   description = <<-EOF
     The v1/sys/config/sanitized Vault API returns sanitized configuration which matches our given

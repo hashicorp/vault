@@ -35,9 +35,9 @@ locals {
     algorithm_signer       = "default"
   }
 
-  is_fips = can(regex("fips", lower(var.vault_edition)))
+  is_fips_1402 = strcontains(lower(var.vault_edition), "fips1402")
 
-  ca_key_types = local.is_fips ? [
+  ca_key_types = local.is_fips_1402 ? [
     "ssh-rsa", "ecdsa-sha2-nistp256", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp521"
     ] : [
     "ssh-rsa", "ecdsa-sha2-nistp256", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp521", "ssh-ed25519"
