@@ -9,10 +9,6 @@ fail() {
   exit 1
 }
 
-log() {
-  echo "[DEBUG] $1" >&2
-}
-
 [[ -z "$IP" ]] && fail "IP env variable has not been set"
 [[ -z "$USERNAME" ]] && fail "USERNAME env variable has not been set"
 [[ -z "$ROLE_NAME" ]] && fail "ROLE_NAME env variable has not been set"
@@ -25,28 +21,18 @@ test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
 export VAULT_FORMAT=json
 
-log "Generating OTP credential from Vault"
 otp_cred=$("$binpath" write -format=json "ssh/creds/$ROLE_NAME" ip="$IP" username="$USERNAME") \
   || fail "Failed to generate OTP credential"
 
 OTP=$(echo "$otp_cred" | jq -r '.data.key')
-log "Generated OTP: $OTP"
 
-log "Verifying OTP"
 otp_output=$("$binpath" write -format=json ssh/verify otp="$OTP") \
   || fail "Failed to verify OTP credential for key $OTP"
 
-log "OTP Verification successful"
 ip=$(echo "$otp_output" | jq -r '.data.ip')
 role_name=$(echo "$otp_output" | jq -r '.data.role_name')
 username=$(echo "$otp_output" | jq -r '.data.username')
 
-log "IP: $ip"
-log "Role Name: $role_name"
-log "Username: $username"
-
 [[ "$ip" != "$IP" ]] && fail "IP mismatch: expected $ip, got $IP"
 [[ "$role_name" != "$ROLE_NAME" ]] && fail "Role name mismatch: expected $role_name, got $ROLE_NAME"
 [[ "$username" != "$USERNAME" ]] && fail "Username mismatch: expected $username, got $USERNAME"
-
-log "Completed with no mismatches"

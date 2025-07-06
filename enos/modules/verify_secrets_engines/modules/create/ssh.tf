@@ -36,7 +36,7 @@ locals {
   }
 
   is_fips_1402 = strcontains(lower(var.vault_edition), "fips1402")
-  ssh_mount      = "ssh"
+  ssh_mount    = "ssh"
   ca_key_types = local.is_fips_1402 ? [
     "ssh-rsa", "ecdsa-sha2-nistp256", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp521"
     ] : [
@@ -100,7 +100,7 @@ resource "tls_private_key" "test_ssh_key" {
   # Conditionally set ecdsa_curve only for ECDSA keys
   ecdsa_curve = local.key_algorithm == "ECDSA" ? local.ecdsa_curve : null
 
-  rsa_bits    = local.key_algorithm == "RSA" ? local.rsa_bits : null
+  rsa_bits = local.key_algorithm == "RSA" ? local.rsa_bits : null
 }
 
 resource "random_integer" "rsa_bits_idx" {

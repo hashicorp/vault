@@ -19,12 +19,6 @@ normalize_ttl() {
   esac
 }
 
-log() {
-  echo "[DEBUG] $1" >&2
-}
-
-log "Starting env var checks"
-
 # Common required vars
 [[ -z "$ROLE_NAME" ]] && fail "ROLE_NAME env variable has not been set"
 [[ -z "$KEY_TYPE" ]] && fail "KEY_TYPE env variable has not been set"
@@ -52,8 +46,6 @@ elif [[ "$KEY_TYPE" == "ca" ]]; then
   [[ -z "$ALGORITHM_SIGNER" ]] && fail "ALGORITHM_SIGNER env variable has not been set"
 fi
 
-log "finished env var checks"
-
 binpath=${VAULT_INSTALL_DIR}/vault
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"
 
@@ -62,19 +54,14 @@ if ! output=$("$binpath" read "ssh/roles/$ROLE_NAME" 2>&1); then
   fail "failed to read ssh/roles/$ROLE_NAME: $output"
 fi
 
-log "Successfully read role $ROLE_NAME"
-
 key_type=$(echo "$output" | jq -r '.data.key_type')
 default_user=$(echo "$output" | jq -r '.data.default_user')
 allowed_users=$(echo "$output" | jq -r '.data.allowed_users')
-
-log "extracted common data"
 
 if [[ "$KEY_TYPE" == "otp" ]]; then
   port=$(echo "$output" | jq -r '.data.port')
   cidr_list=$(echo "$output" | jq -r '.data.cidr_list')
   exclude_cidr_list=$(echo "$output" | jq -r '.data.exclude_cidr_list')
-  log "extracted otp specific data"
 elif [[ "$KEY_TYPE" == "ca" ]]; then
   ttl=$(echo "$output" | jq -r '.data.ttl')
   max_ttl=$(echo "$output" | jq -r '.data.max_ttl')
@@ -84,7 +71,6 @@ elif [[ "$KEY_TYPE" == "ca" ]]; then
   allow_user_key_ids=$(echo "$output" | jq -r '.data.allow_user_key_ids')
   allow_empty_principals=$(echo "$output" | jq -r '.data.allow_empty_principals')
   algorithm_signer=$(echo "$output" | jq -r '.data.algorithm_signer')
-  log "extracted ca specific data"
 fi
 
 # Verify
@@ -92,13 +78,10 @@ fi
 [[ "$default_user" != "$DEFAULT_USER" ]] && fail "Default user mismatch: expected $DEFAULT_USER, got $default_user"
 [[ "$allowed_users" != "$ALLOWED_USERS" ]] && fail "Allowed users mismatch: expected $ALLOWED_USERS, got $allowed_users"
 
-log "verified common data"
-
 if [[ "$KEY_TYPE" == "otp" ]]; then
   [[ "$port" != "$PORT" ]] && fail "Port mismatch: expected $PORT, got $port"
   [[ "$cidr_list" != "$CIDR_LIST" ]] && fail "CIDR list mismatch: expected $CIDR_LIST, got $cidr_list"
   [[ "$exclude_cidr_list" != "$EXCLUDE_CIDR_LIST" ]] && fail "Exclude CIDR list mismatch: expected $EXCLUDE_CIDR_LIST, got $exclude_cidr_list"
-  log "verified otp specific data"
 elif [[ "$KEY_TYPE" == "ca" ]]; then
   [[ "$(normalize_ttl "$ttl")" != "$(normalize_ttl "$TTL")" ]] && fail "TTL mismatch: expected $TTL, got $ttl"
   [[ "$(normalize_ttl "$max_ttl")" != "$(normalize_ttl "$MAX_TTL")" ]] && fail "Max TTL mismatch: expected $MAX_TTL, got $max_ttl"
@@ -108,5 +91,4 @@ elif [[ "$KEY_TYPE" == "ca" ]]; then
   [[ "$allow_user_key_ids" != "$ALLOW_USER_KEY_IDS" ]] && fail "Allow user key IDs mismatch: expected $ALLOW_USER_KEY_IDS, got $allow_user_key_ids"
   [[ "$allow_empty_principals" != "$ALLOW_EMPTY_PRINCIPALS" ]] && fail "Allow empty principals mismatch: expected $ALLOW_EMPTY_PRINCIPALS, got $allow_empty_principals"
   [[ "$algorithm_signer" != "$ALGORITHM_SIGNER" ]] && fail "Algorithm signer mismatch: expected $ALGORITHM_SIGNER, got $algorithm_signer"
-  log "verified ca specific data"
 fi
