@@ -36,14 +36,12 @@ locals {
   }
 
   is_fips_1402 = strcontains(lower(var.vault_edition), "fips1402")
-
+  ssh_mount      = "ssh"
   ca_key_types = local.is_fips_1402 ? [
     "ssh-rsa", "ecdsa-sha2-nistp256", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp521"
     ] : [
     "ssh-rsa", "ecdsa-sha2-nistp256", "ecdsa-sha2-nistp384", "ecdsa-sha2-nistp521", "ssh-ed25519"
   ]
-
-  ssh_mount      = "ssh"
   ca_key_type    = local.ca_key_types[random_integer.ca_key_type_idx.result]
   cert_key_types = ["rsa", "ed25519", "ec"]
   cert_key_type  = local.cert_key_types[random_integer.cert_key_idx.result]
@@ -66,6 +64,9 @@ locals {
     "ecdsa-sha2-nistp384" = "P384"
     "ecdsa-sha2-nistp521" = "P521"
   }
+
+  rsa_bit_options = [2048, 3072, 4096, 7680, 15360]
+  rsa_bits        = local.rsa_bit_options[random_integer.rsa_bits_idx.result]
 
   # Extract the corresponding algorithm and curve
   key_algorithm = lookup(local.key_algorithm_map, local.ca_key_type, "RSA")
@@ -99,7 +100,12 @@ resource "tls_private_key" "test_ssh_key" {
   # Conditionally set ecdsa_curve only for ECDSA keys
   ecdsa_curve = local.key_algorithm == "ECDSA" ? local.ecdsa_curve : null
 
-  rsa_bits = local.key_algorithm == "RSA" ? 2048 : null
+  rsa_bits    = local.key_algorithm == "RSA" ? local.rsa_bits : null
+}
+
+resource "random_integer" "rsa_bits_idx" {
+  min = 0
+  max = length(local.rsa_bit_options) - 1
 }
 
 resource "random_integer" "ca_key_type_idx" {
