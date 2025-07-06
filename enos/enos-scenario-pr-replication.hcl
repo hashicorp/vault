@@ -956,7 +956,7 @@ scenario "pr_replication" {
     module      = module.vault_verify_secrets_engines_delete
     depends_on = [
       step.verify_secrets_engines_on_primary,
-      step.verify_failover_replicated_data
+      step.verify_replicated_data
     ]
 
     providers = {
@@ -969,11 +969,11 @@ scenario "pr_replication" {
 
     variables {
       create_state      = step.verify_secrets_engines_on_primary.state
-      hosts             = step.get_vault_cluster_ips.follower_hosts
-      leader_host       = step.get_vault_cluster_ips.leader_host
-      vault_addr        = step.create_vault_cluster.api_addr_localhost
+      hosts             = step.get_secondary_cluster_ips.follower_hosts
+      leader_host       = step.get_secondary_cluster_ips.leader_host
+      vault_addr        = step.create_secondary_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_root_token  = step.create_vault_cluster.root_token
+      vault_root_token  = step.create_secondary_cluster.root_token
     }
   }
 
