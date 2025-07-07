@@ -1,7 +1,7 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
-# Current Coverage
+# Current SSH Secrets Engine API Coverage
 # | Method | Route                       | Covered | Notes                                 |
 # |--------|-----------------------------|---------|---------------------------------------|
 # | POST   | /ssh/roles/:name            | ✅      |                                       |
