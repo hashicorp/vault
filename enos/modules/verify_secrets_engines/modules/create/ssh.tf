@@ -8,8 +8,8 @@ locals {
     key_type          = "otp"
     default_user      = local.ssh_test_user
     allowed_users     = local.ssh_test_user
-    cidr_list         = strcontains(local.ssh_test_ip, ":") ? cidrsubnet("${local.ssh_test_ip}/64", 0, 0) : cidrsubnet("${local.ssh_test_ip}/32", 0, 0)
-    exclude_cidr_list = strcontains(local.ssh_test_ip, ":") ? cidrsubnet(var.ipv6_cidr, 32, 0) : cidrsubnet(var.ipv4_cidr, 8, 1)
+    cidr_list         = strcontains(local.ssh_test_ip.address, ":") ? cidrsubnet("${local.ssh_test_ip.base}/64", 0, 0) : cidrsubnet("${local.ssh_test_ip.base}/32", 0, 0)
+    exclude_cidr_list = strcontains(local.ssh_test_ip.address, ":") ? cidrsubnet(var.ipv6_cidr, 32, 0) : cidrsubnet(var.ipv4_cidr, 8, 1)
     port              = var.ports.ssh.port
     ttl               = "1h"
     max_ttl           = "2h"
@@ -45,7 +45,7 @@ locals {
   ca_key_type    = local.ca_key_types[random_integer.ca_key_type_idx.result]
   cert_key_types = ["rsa", "ed25519", "ec"]
   cert_key_type  = local.cert_key_types[random_integer.cert_key_idx.result]
-  ssh_test_ips   = ["192.168.1.1", "2001:db8::1"]
+  ssh_test_ips   = [{ address : "192.168.1.1", base : "192.168.1.1" }, { address : "2001:db8::1", base : "2001:db8::" }]
   ssh_test_ip    = local.ssh_test_ips[random_integer.test_ip_idx.result]
   ssh_test_user  = "testuser"
   ssh_public_key = tls_private_key.test_ssh_key.public_key_openssh
@@ -83,7 +83,7 @@ locals {
     mount           = local.ssh_mount
     ca_key_type     = local.ca_key_type
     cert_key_type   = local.cert_key_type
-    test_ip         = local.ssh_test_ip
+    test_ip         = local.ssh_test_ip.address
     test_user       = local.ssh_test_user
     otp_role_params = local.otp_role_params
     ca_role_params  = local.ca_role_params
@@ -230,7 +230,7 @@ resource "enos_remote_exec" "ssh_generate_otp" {
   depends_on = [enos_remote_exec.ssh_create_otp_role]
   environment = {
     REQPATH           = "ssh/creds/ssh_role_otp"
-    PAYLOAD           = jsonencode({ ip = local.ssh_test_ip, username = local.ssh_test_user })
+    PAYLOAD           = jsonencode({ ip = local.ssh_test_ip.address, username = local.ssh_test_user })
     VAULT_ADDR        = var.vault_addr
     VAULT_TOKEN       = var.vault_root_token
     VAULT_INSTALL_DIR = var.vault_install_dir
