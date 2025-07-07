@@ -280,9 +280,6 @@ can have a negative effect on performance due to the tracking of each lock attem
   [os.TempDir()](https://pkg.go.dev/os#TempDir) (usually `/tmp` on Unix systems). This can be updated on a running Vault process
   with a SIGHUP signal.
 
-- `allow_audit_log_prefixing` `(bool: "false")` - By default, prefixing is not allowed on file audit sinks.  Setting this to 
-  true allows this for newly configured audit sinks.
-
 ### High availability parameters
 
 The following parameters are used on backends that support [high availability][high-availability].
