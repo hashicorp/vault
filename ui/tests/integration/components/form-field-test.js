@@ -200,7 +200,7 @@ module('Integration | Component | form field', function (hooks) {
         'renders subtext'
       );
     assert.dom('.hds-form-helper-text a').exists('renders doc link');
-    await click('[data-test-text-toggle]');
+    await click(GENERAL.textToggle);
     // assert again after toggling because subtext is rendered differently for each input
     assert
       .dom('.hds-form-helper-text')
