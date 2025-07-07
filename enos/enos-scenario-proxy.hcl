@@ -483,6 +483,7 @@ scenario "proxy" {
     ]
 
     variables {
+      ports             = global.ports
       hosts             = step.create_vault_cluster_targets.hosts
       leader_host       = step.get_vault_cluster_ips.leader_host
       vault_addr        = step.create_vault_cluster.api_addr_localhost

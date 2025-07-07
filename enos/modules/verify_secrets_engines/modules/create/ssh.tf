@@ -8,9 +8,9 @@ locals {
     key_type          = "otp"
     default_user      = local.ssh_test_user
     allowed_users     = local.ssh_test_user
-    cidr_list         = can(regex(":", local.ssh_test_ip)) ? "${local.ssh_test_ip}/64" : "${local.ssh_test_ip}/32"
-    exclude_cidr_list = "10.0.0.0/8"
-    port              = 22
+    cidr_list         = strcontains(local.ssh_test_ip, ":") ? "${local.ssh_test_ip}/64" : "${local.ssh_test_ip}/32"
+    exclude_cidr_list = strcontains(local.ssh_test_ip, ":") ? [cidrsubnet(var.ipv6_cidr, 32, 0)] : [cidrsubnet(var.ipv4_cidr, 8, 1)]
+    port              = var.ports.ssh.port
     ttl               = "1h"
     max_ttl           = "2h"
   }
@@ -22,7 +22,7 @@ locals {
     allow_user_certificates = true
     allow_host_certificates = true
     allowed_users           = local.ssh_test_user
-    port                    = 22
+    port                    = var.ports.ssh.port
     ttl                     = "1h"
     max_ttl                 = "2h"
     key_id_format           = "custom-keyid-{{token_display_name}}"

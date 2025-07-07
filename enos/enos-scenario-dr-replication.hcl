@@ -706,6 +706,7 @@ scenario "dr_replication" {
     ]
 
     variables {
+      ports             = global.ports
       hosts             = step.create_primary_cluster_targets.hosts
       leader_host       = step.get_primary_cluster_ips.leader_host
       vault_addr        = step.create_primary_cluster.api_addr_localhost

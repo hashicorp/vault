@@ -22,6 +22,27 @@ variable "create_aws_secrets_engine" {
   default     = false
 }
 
+variable "ipv4_cidr" {
+  type        = string
+  default     = "10.13.0.0/16"
+  description = "The CIDR block for the VPC when using IPV4 mode"
+}
+
+variable "ipv6_cidr" {
+  type        = string
+  default     = "2001:db8::/64"
+  description = "The CIDR block for the VPC when using IPV4 mode"
+}
+
+variable "ports" {
+  type = map(object({
+    description = string
+    port        = number
+    protocol    = string
+  }))
+  description = "The ports to use for the Vault cluster instances"
+}
+
 variable "hosts" {
   type = map(object({
     ipv6       = string
