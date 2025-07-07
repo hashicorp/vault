@@ -27,7 +27,7 @@ const (
 	minCacheSize = 10
 )
 
-var ErrEntOnly = "key type %s is only available in enterprise versions of Vault"
+var ErrKeyTypeEntOnly = "key type %s is only available in enterprise versions of Vault"
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b, err := Backend(ctx, conf)
@@ -179,7 +179,7 @@ func (b *backend) GetPolicy(ctx context.Context, polReq keysutil.PolicyRequest, 
 	}
 
 	if p != nil && p.Type.IsEnterpriseOnly() && !constants.IsEnterprise {
-		return nil, false, fmt.Errorf(ErrEntOnly, p.Type)
+		return nil, false, fmt.Errorf(ErrKeyTypeEntOnly, p.Type)
 	}
 
 	return p, true, nil

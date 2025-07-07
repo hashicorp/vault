@@ -231,7 +231,7 @@ func (b *backend) pathImportWrite(ctx context.Context, req *logical.Request, d *
 	}
 
 	if polReq.KeyType.IsEnterpriseOnly() && !constants.IsEnterprise {
-		return logical.ErrorResponse(ErrEntOnly, polReq.KeyType), logical.ErrInvalidRequest
+		return logical.ErrorResponse(ErrKeyTypeEntOnly, polReq.KeyType), logical.ErrInvalidRequest
 	}
 
 	p, _, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())

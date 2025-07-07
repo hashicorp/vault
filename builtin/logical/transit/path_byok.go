@@ -99,7 +99,7 @@ func (b *backend) pathPolicyBYOKExportRead(ctx context.Context, req *logical.Req
 	}
 
 	if srcP.Type.IsEnterpriseOnly() && !constants.IsEnterprise {
-		return logical.ErrorResponse(fmt.Sprintf(ErrEntOnly, srcP.Type)), logical.ErrInvalidRequest
+		return logical.ErrorResponse(fmt.Sprintf(ErrKeyTypeEntOnly, srcP.Type)), logical.ErrInvalidRequest
 	}
 
 	retKeys := map[string]string{}

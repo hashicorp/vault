@@ -14,5 +14,5 @@ import (
 )
 
 func (b *backend) pathCMACVerify(_ context.Context, _ *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
-	return logical.ErrorResponse(fmt.Sprintf(ErrEntOnly, "cmac")), nil
+	return logical.ErrorResponse(fmt.Sprintf(ErrKeyTypeEntOnly, "cmac")), nil
 }

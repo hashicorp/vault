@@ -78,7 +78,7 @@ func (b *backend) pathPolicyExportRead(ctx context.Context, req *logical.Request
 	case exportTypeCertificateChain:
 	case exportTypeCMACKey:
 		if !constants.IsEnterprise {
-			return logical.ErrorResponse(fmt.Sprintf(ErrEntOnly, exportTypeCMACKey)), logical.ErrInvalidRequest
+			return logical.ErrorResponse(fmt.Sprintf(ErrKeyTypeEntOnly, exportTypeCMACKey)), logical.ErrInvalidRequest
 		}
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("invalid export type: %s", exportType)), logical.ErrInvalidRequest

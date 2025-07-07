@@ -326,7 +326,7 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 	}
 
 	if polReq.KeyType.IsEnterpriseOnly() && !constants.IsEnterprise {
-		return logical.ErrorResponse(fmt.Sprintf(ErrEntOnly, polReq.KeyType)), logical.ErrInvalidRequest
+		return logical.ErrorResponse(fmt.Sprintf(ErrKeyTypeEntOnly, polReq.KeyType)), logical.ErrInvalidRequest
 	}
 
 	p, upserted, err := b.GetPolicy(ctx, polReq, b.GetRandomReader())
