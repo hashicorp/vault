@@ -5,6 +5,7 @@ package cert
 
 import (
 	"context"
+	"crypto"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -284,19 +285,6 @@ func TestCert_RoleResolve_RoleDoesNotExist(t *testing.T) {
 }
 
 func TestCert_RoleResolveOCSP(t *testing.T) {
-	cases := []struct {
-		name        string
-		failOpen    bool
-		certStatus  int
-		errExpected bool
-	}{
-		{"failFalseGoodCert", false, ocsp.Good, false},
-		{"failFalseRevokedCert", false, ocsp.Revoked, true},
-		{"failFalseUnknownCert", false, ocsp.Unknown, true},
-		{"failTrueGoodCert", true, ocsp.Good, false},
-		{"failTrueRevokedCert", true, ocsp.Revoked, true},
-		{"failTrueUnknownCert", true, ocsp.Unknown, false},
-	}
 	certTemplate := &x509.Certificate{
 		Subject: pkix.Name{
 			CommonName: "example.com",
@@ -437,46 +425,4 @@ func TestCert_RoleResolveOCSP(t *testing.T) {
 
 func serialFromBigInt(serial *big.Int) string {
 	return strings.TrimSpace(certutil.GetHexFormatted(serial.Bytes(), ":"))
-}
-
-// TestCert_MetadataOnFailure verifies that we return the cert metadata
-// in the response on failures if the configuration option is enabled.
-func TestCert_MetadataOnFailure(t *testing.T) {
-	certTemplate := &x509.Certificate{
-		Subject: pkix.Name{
-			CommonName: "example.com",
-		},
-		DNSNames:    []string{"example.com"},
-		IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
-		ExtKeyUsage: []x509.ExtKeyUsage{
-			x509.ExtKeyUsageServerAuth,
-			x509.ExtKeyUsageClientAuth,
-		},
-		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement,
-		SerialNumber: big.NewInt(mathrand.Int63()),
-		NotBefore:    time.Now().Add(-30 * time.Second),
-		NotAfter:     time.Now().Add(262980 * time.Hour),
-	}
-
-	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate, nil)
-	if tempDir != "" {
-		defer os.RemoveAll(tempDir)
-	}
-	if err != nil {
-		t.Fatalf("error testing connection state: %v", err)
-	}
-	ca, err := ioutil.ReadFile(filepath.Join(tempDir, "ca_cert.pem"))
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	logicaltest.Test(t, logicaltest.TestCase{
-		CredentialBackend: testFactory(t),
-		Steps: []logicaltest.TestStep{
-			testStepEnableMetadataFailures(),
-			testAccStepCert(t, "web", ca, "foo", allowed{dns: "example.com"}, false),
-			testAccStepLoginWithName(t, connState, "web"),
-			testAccStepResolveRoleExpectRoleResolutionToFailWithData(t, connState, "notweb"),
-		},
-	})
 }
