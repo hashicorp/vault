@@ -89,12 +89,12 @@ install_packages() {
             echo "Failed to install ${package}: ${output}" 1>&2
             return 1
           fi
-          if [ "$package" = "docker" ] && ! output=$(sudo systemctl enable --now docker 2>&1); then
-            echo "Failed to enable docker: ${package}: ${output}"
-            return 1
-          fi
         fi
       done
+      if [ "$package" = "docker" ] && ! output=$(sudo systemctl enable --now docker 2>&1); then
+        echo "Failed to enable docker: ${package}: ${output}"
+        return 1
+      fi
       ;;
     *)
       fail "No matching package manager provided."
