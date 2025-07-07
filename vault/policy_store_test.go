@@ -459,12 +459,15 @@ func TestPolicyStore_DuplicateAttributes(t *testing.T) {
 	ps := core.policyStore
 	dupAttrPolicy := aclPolicy + `
 path "foo" {
-	capabilities = ["deny"]
-	capabilities = ["deny"]
+	capabilities = ["list"]
+	capabilities = ["read"]
 }
 `
 	t.Setenv(random.AllowHclDuplicatesEnvVar, "true")
 	policy, err := ParseACLPolicy(namespace.RootNamespace, dupAttrPolicy)
+	require.NoError(t, err)
+	// check that "list" and "read" get concatenated
+	require.Len(t, policy.Paths[len(policy.Paths)-1].Capabilities, 2)
 	policy.Templated = true
 	require.NoError(t, err)
 	ctx := namespace.RootContext(context.Background())
