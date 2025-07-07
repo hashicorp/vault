@@ -9,7 +9,7 @@ locals {
     default_user      = local.ssh_test_user
     allowed_users     = local.ssh_test_user
     cidr_list         = strcontains(local.ssh_test_ip, ":") ? "${local.ssh_test_ip}/64" : "${local.ssh_test_ip}/32"
-    exclude_cidr_list = strcontains(local.ssh_test_ip, ":") ? [cidrsubnet(var.ipv6_cidr, 32, 0)] : [cidrsubnet(var.ipv4_cidr, 8, 1)]
+    exclude_cidr_list = strcontains(local.ssh_test_ip, ":") ? cidrsubnet(var.ipv6_cidr, 32, 0) : cidrsubnet(var.ipv4_cidr, 8, 1)
     port              = var.ports.ssh.port
     ttl               = "1h"
     max_ttl           = "2h"
