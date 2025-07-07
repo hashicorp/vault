@@ -23,7 +23,7 @@ abstract class BaseResource<T> {
 
 // factory that allows for the BaseResource class to be cast to the specific type provided
 // without this the compiler is not aware of the properties set on the class via Object.assign
-// example usage -> export default class SecretsEngineResource extends baseResourceFactory<SecretsEngine>() { ... }
+// example usage -> export default class SecretsEngineResource extends baseResourceFactory<Mount>() { ... }
 export function baseResourceFactory<T>() {
   return BaseResource as new (data: T, context?: unknown) => T;
 }

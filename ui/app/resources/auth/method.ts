@@ -8,19 +8,19 @@ import { service } from '@ember/service';
 import { supportedTypes } from 'vault/utils/supported-login-methods';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 
-import type { SecretsEngine } from 'vault/secrets/engine';
+import type { Mount } from 'vault/mount';
 import type VersionService from 'vault/services/version';
 import type NamespaceService from 'vault/services/namespace';
 import type { PathInfo } from 'vault/utils/openapi-helpers';
 
-export default class AuthMethodResource extends baseResourceFactory<SecretsEngine>() {
+export default class AuthMethodResource extends baseResourceFactory<Mount>() {
   @service declare readonly version: VersionService;
   @service declare readonly namespace: NamespaceService;
 
   id: string;
   declare paths: PathInfo;
 
-  constructor(data: SecretsEngine, context: unknown) {
+  constructor(data: Mount, context: unknown) {
     super(data, context);
     // strip trailing slash from path for id since it is used in routing
     this.id = data.path.replace(/\/$/, '');
