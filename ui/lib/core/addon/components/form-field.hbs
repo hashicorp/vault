@@ -250,6 +250,9 @@
                 {{/if}}
               </F.HelperText>
             {{/if}}
+            {{#if @attr.options.characterLimit}}
+              <F.CharacterCount @maxLength={{@attr.options.characterLimit}} />
+            {{/if}}
             {{#if this.validationError}}
               <F.Error data-test-validation-error={{this.valuePath}}>{{this.validationError}}</F.Error>
             {{/if}}

@@ -1246,6 +1246,9 @@ module('Integration | Component | form field', function (hooks) {
     );
     assert.dom(GENERAL.fieldLabel()).hasText('Custom label', 'renders the custom label from options');
     assert
+      .dom('.hds-form-field__character-count')
+      .containsText('10', 'renders the characterLimit helper text from options');
+    assert
       .dom(GENERAL.inputByAttr('myfield'))
       .hasAttribute('placeholder', 'Custom placeholder', 'renders the placeholder from options')
       .hasAttribute('disabled', '', 'renders the disabled attribute from options')
