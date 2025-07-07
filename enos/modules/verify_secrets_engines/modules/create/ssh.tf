@@ -1,6 +1,26 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
+# Current Coverage
+# | Method | Route                       | Covered | Notes                                 |
+# |--------|-----------------------------|---------|---------------------------------------|
+# | POST   | /ssh/roles/:name            | ✅      |                                       |
+# | GET    | /ssh/roles/:name            | ✅      |                                       |
+# | LIST   | /ssh/roles                  | ✅      |                                       |
+# | DELETE | /ssh/roles/:name            | ✅      |                                       |
+# | POST   | /ssh/config/zeroaddress     | ❌      |                                       |
+# | GET    | /ssh/config/zeroaddress     | ❌      |                                       |
+# | DELETE | /ssh/config/zeroaddress     | ❌      |                                       |
+# | POST   | /ssh/creds/:name            | ✅      |                                       |
+# | POST   | /ssh/lookup                 | ❌      |                                       |
+# | POST   | /ssh/verify                 | ✅      |                                       |
+# | POST   | /ssh/config/ca              | ✅      |                                       |
+# | DELETE | /ssh/config/ca              | ❌      |                                       |
+# | GET    | /ssh/config/ca              | ✅      |                                       |
+# | GET    | /ssh/public_key             | ❌      |                                       |
+# | POST   | /ssh/sign                   | 🟡      | Missing parameters                    |
+# | POST   | /ssh/issue                  | ✅      |                                       |
+
 locals {
   // Variables
   otp_role_name = "ssh_role_otp"
