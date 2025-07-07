@@ -236,7 +236,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) 
       .dom(FORM.inlineAlert)
       .hasText('JSON is unparsable. Fix linting errors to avoid data discrepancies.');
 
-    setCodeEditorValue(editor, '');
+    setCodeEditorValue(editor, '""');
     await settled();
     await click(FORM.saveBtn);
     assert.dom(FORM.inlineAlert).hasText('Vault expects data to be formatted as an JSON object.');

@@ -181,7 +181,8 @@ const testConvergentEncryption = async function (assert, keyName) {
       testCase.assertBeforeDecrypt(keyName);
     }
 
-    codemirror('#ciphertext-control').setValue(copiedCiphertext);
+    setCodeEditorValue(editor, copiedCiphertext);
+
     await click(GENERAL.submitButton);
 
     if (testCase.assertAfterDecrypt) {
