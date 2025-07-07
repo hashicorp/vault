@@ -8,7 +8,7 @@ locals {
     key_type          = "otp"
     default_user      = local.ssh_test_user
     allowed_users     = local.ssh_test_user
-    cidr_list         = strcontains(local.ssh_test_ip, ":") ? "${local.ssh_test_ip}/64" : "${local.ssh_test_ip}/32"
+    cidr_list         = strcontains(local.ssh_test_ip, ":") ? cidrsubnet("${local.ssh_test_ip}/64", 0, 0) : cidrsubnet("${local.ssh_test_ip}/32", 0, 0)
     exclude_cidr_list = strcontains(local.ssh_test_ip, ":") ? cidrsubnet(var.ipv6_cidr, 32, 0) : cidrsubnet(var.ipv4_cidr, 8, 1)
     port              = var.ports.ssh.port
     ttl               = "1h"
