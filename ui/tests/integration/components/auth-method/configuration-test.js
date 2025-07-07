@@ -16,7 +16,7 @@ module('Integration | Component | auth-method/configuration', function (hooks) {
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
     this.createMethod = (path, type) => {
-      this.method = new AuthMethodResource({ path, type, config: { listingVisibility: false } }, this);
+      this.method = new AuthMethodResource({ path, type, config: { listingVisibility: 'hidden' } }, this);
     };
     this.renderComponent = () => render(hbs`<AuthMethod::Configuration @method={{this.method}} />`);
   });
