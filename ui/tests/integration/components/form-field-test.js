@@ -206,7 +206,7 @@ module('Integration | Component | form field', function (hooks) {
       .dom('.hds-form-helper-text')
       .hasText(`Enter the value as text. ${subText} See our documentation for help.`, 'renders subtext');
     assert.dom('.hds-form-helper-text a').exists('renders doc link');
-    await fillIn('[data-test-text-file-textarea]', 'hello world');
+    await fillIn(GENERAL.textToggleTextarea, 'hello world');
   });
 
   test('it renders: editType ttl', async function (assert) {

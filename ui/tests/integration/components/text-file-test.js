@@ -14,7 +14,6 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECTORS = {
   label: '[data-test-text-file-label]',
-  textarea: '[data-test-text-file-textarea]',
   fileUpload: '[data-test-text-file-input]',
 };
 const { componentPemBundle } = CERTIFICATES;
@@ -55,9 +54,9 @@ module('Integration | Component | text-file', function (hooks) {
     await render(hbs`<TextFile @onChange={{this.onChange}} />`);
 
     assert.dom(SELECTORS.fileUpload).exists({ count: 1 }, 'File input shown');
-    assert.dom(SELECTORS.textarea).doesNotExist('Texarea hidden');
+    assert.dom(GENERAL.textToggleTextarea).doesNotExist('Texarea hidden');
     await click(GENERAL.textToggle);
-    assert.dom(SELECTORS.textarea).exists({ count: 1 }, 'Textarea shown');
+    assert.dom(GENERAL.textToggleTextarea).exists({ count: 1 }, 'Textarea shown');
     assert.dom(SELECTORS.fileUpload).doesNotExist('File upload hidden');
   });
 
@@ -81,7 +80,7 @@ module('Integration | Component | text-file', function (hooks) {
 
     await render(hbs`<TextFile @onChange={{this.onChange}} />`);
     await click(GENERAL.textToggle);
-    await fillIn(SELECTORS.textarea, PEM_BUNDLE);
+    await fillIn(GENERAL.textToggleTextarea, PEM_BUNDLE);
     assert.propEqual(
       this.onChange.lastCall.args[0],
       {
