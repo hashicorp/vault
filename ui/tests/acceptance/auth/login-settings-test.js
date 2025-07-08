@@ -23,8 +23,8 @@ module('Acceptance | Enterprise | auth form custom login settings', function (ho
       `write test-ns/sys/namespaces/child -force`,
       `write sys/config/ui/login/default-auth/root-rule backup_auth_types=token default_auth_type=okta disable_inheritance=false namespace_path=""`,
       `write sys/config/ui/login/default-auth/ns-rule default_auth_type=ldap disable_inheritance=true namespace_path=test-ns`,
-      `write sys/auth/my-oidc type=oidc`,
-      `write sys/auth/my-oidc/tune listing_visibility="unauth"`,
+      `write sys/auth/my_oidc type=oidc`,
+      `write sys/auth/my_oidc/tune listing_visibility="unauth"`,
     ]);
     return await logout();
   });
@@ -33,13 +33,13 @@ module('Acceptance | Enterprise | auth form custom login settings', function (ho
     // cleanup login rules
     await visit('/vault/auth?with=token');
     await fillIn(GENERAL.inputByAttr('token'), rootToken);
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
     await runCmd([
       'delete sys/config/ui/login/default-auth/root-rule',
       'delete sys/config/ui/login/default-auth/ns-rule',
-      'delete sys/auth/my-oidc',
-      'delete test-ns/sys/namespaces/child',
-      'delete sys/namespaces/test-ns',
+      'delete sys/auth/my_oidc',
+      'delete test-ns/sys/namespaces/child -f',
+      'delete sys/namespaces/test-ns -f',
     ]);
   });
 
@@ -50,7 +50,7 @@ module('Acceptance | Enterprise | auth form custom login settings', function (ho
     assert.dom(AUTH_FORM.authForm('okta')).exists('it renders default method');
     assert.dom(AUTH_FORM.advancedSettings).exists();
 
-    await click(AUTH_FORM.otherMethodsBtn);
+    await click(GENERAL.button('Sign in with other methods'));
     assert.dom(AUTH_FORM.authForm('token')).exists('it renders backup method');
   });
 
@@ -60,7 +60,9 @@ module('Acceptance | Enterprise | auth form custom login settings', function (ho
     await waitFor(AUTH_FORM.authForm('ldap'));
     assert.dom(AUTH_FORM.authForm('ldap')).exists('it renders default method');
     assert.dom(AUTH_FORM.advancedSettings).exists();
-    assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('it does not render alternate view');
+    assert
+      .dom(GENERAL.button('Sign in with other methods'))
+      .doesNotExist('it does not render alternate view');
 
     // type in so that the namespace is "test-ns/child"
     await typeIn(GENERAL.inputByAttr('namespace'), '/child');
@@ -71,14 +73,14 @@ module('Acceptance | Enterprise | auth form custom login settings', function (ho
   });
 
   test('it ignores login settings if query param references a visible mount path', async function (assert) {
-    await visit('/vault/auth?with=my-oidc%2F');
+    await visit('/vault/auth?with=my_oidc%2F');
     await waitFor(AUTH_FORM.tabBtn('oidc'));
     assert
       .dom(AUTH_FORM.tabBtn('oidc'))
       .hasAttribute('aria-selected', 'true', 'it selects tab matching query param');
     assert.dom(AUTH_FORM.authForm('oidc')).exists();
     assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
-    await click(AUTH_FORM.otherMethodsBtn);
+    await click(GENERAL.button('Sign in with other methods'));
     assert.dom(GENERAL.selectByAttr('auth type')).exists('dropdown renders as fallback view');
   });
 

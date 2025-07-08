@@ -9,6 +9,21 @@ import { visit, currentURL, waitFor, click } from '@ember/test-helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { mockedResponseWithData, mockedEmptyResponse } from 'vault/tests/helpers/vault-usage/mocks';
+import { createPolicyCmd, createTokenCmd, runCmd } from 'vault/tests/helpers/commands';
+
+const loginWithReportingToken = async (capability = 'read') => {
+  const policyName = 'show-vault-reporting';
+  const policy = `
+      path "sys/utilization-report" {
+        capabilities = ["${capability}"]
+      }
+    `;
+
+  const commands = [createPolicyCmd(policyName, policy), createTokenCmd(policyName)];
+  // Use lower privileged token
+  const token = await runCmd(commands);
+  await login(token);
+};
 
 module('Acceptance | enterprise vault-reporting', function (hooks) {
   setupApplicationTest(hooks);
@@ -19,10 +34,18 @@ module('Acceptance | enterprise vault-reporting', function (hooks) {
   });
 
   test('it visits the usage reporting dashboard and renders the header', async function (assert) {
+    // Log in with lower privileged token
+    await loginWithReportingToken('read');
     await visit('/vault/dashboard');
     await click('[data-test-sidebar-nav-link="Vault Usage"]');
     assert.strictEqual(currentURL(), '/vault/usage-reporting', 'navigates to usage reporting dashboard');
     assert.dom('.hds-page-header').includesText('Vault Usage', 'renders the "Vault Usage" header');
+  });
+
+  test('it hides the nav item if policy does not allow access to sys/utilization-report', async function (assert) {
+    await loginWithReportingToken('deny');
+    await visit('/vault/dashboard');
+    assert.dom('[data-test-sidebar-nav-link="Vault Usage"]').doesNotExist('sidebar nav link is hidden');
   });
 
   test('it renders the counters dashboard block with all expected counters', async function (assert) {

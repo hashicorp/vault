@@ -21,13 +21,13 @@ module('Acceptance | totp key backend', function (hooks) {
     await fillIn(GENERAL.inputByAttr('issuer'), issuer);
     await fillIn(GENERAL.inputByAttr('accountName'), accountName);
     if (!exported) {
-      await click(GENERAL.ttl.toggle('toggle-exported'));
+      await click(GENERAL.toggleInput('toggle-exported'));
     }
     if (qrSize !== 200) {
-      await click(GENERAL.toggleGroup('Provider Options'));
+      await click(GENERAL.button('Provider Options'));
       await fillIn(GENERAL.inputByAttr('qrSize'), qrSize);
     }
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
   };
 
   const createNonVaultKey = async (keyName, issuer, accountName, url, key) => {
@@ -37,7 +37,7 @@ module('Acceptance | totp key backend', function (hooks) {
     await fillIn(GENERAL.inputByAttr('accountName'), accountName);
     if (url) await fillIn(GENERAL.inputByAttr('url'), url);
     if (key) await fillIn(GENERAL.inputByAttr('key'), key);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
   };
 
   hooks.beforeEach(async function () {

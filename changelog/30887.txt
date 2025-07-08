@@ -1,0 +1,6 @@
+```release-note:change
+api: Update the default API client to check for the `Retry-After` header and, if it exists, wait for the specified duration before retrying the request.
+```
+```release-note:change
+quotas/rate-limit: Round up the `Retry-After` value to the nearest second when calculating the retry delay.
+```

@@ -57,7 +57,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await click(PKI_CONFIGURE_CREATE.importSubmit);
       assert.dom(GENERAL.messageError).hasText('Error please upload your PEM bundle');
       // Fill in form data
-      await click('[data-test-text-toggle]');
+      await click(GENERAL.textToggle);
       await fillIn('[data-test-text-file-textarea]', this.pemBundle);
       await click(PKI_CONFIGURE_CREATE.importSubmit);
 
@@ -94,7 +94,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
       assert.dom(PKI_CONFIGURE_CREATE.importForm).exists('import form is shown save');
-      await click('[data-test-text-toggle]');
+      await click(GENERAL.textToggle);
       await fillIn('[data-test-text-file-textarea]', this.pemBundle);
       await click(PKI_CONFIGURE_CREATE.importSubmit);
 
@@ -135,7 +135,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
       assert.dom(PKI_CONFIGURE_CREATE.importForm).exists('import form is shown save');
-      await click('[data-test-text-toggle]');
+      await click(GENERAL.textToggle);
       await fillIn('[data-test-text-file-textarea]', this.pemBundle);
       await click(PKI_CONFIGURE_CREATE.importSubmit);
 
@@ -161,7 +161,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
       assert.dom(PKI_CONFIGURE_CREATE.importForm).exists('import form is shown save');
-      await click('[data-test-text-toggle]');
+      await click(GENERAL.textToggle);
       await fillIn('[data-test-text-file-textarea]', this.pemBundle);
       await click(PKI_CONFIGURE_CREATE.importSubmit);
 
@@ -193,9 +193,9 @@ module('Acceptance | pki action forms test', function (hooks) {
       await fillIn(GENERAL.inputByAttr('type'), 'internal');
       await typeIn(GENERAL.inputByAttr('commonName'), commonName);
       await typeIn(GENERAL.inputByAttr('issuerName'), issuerName);
-      await click(PKI_GENERATE_ROOT.keyParamsGroupToggle);
+      await click(GENERAL.button('Key parameters'));
       await typeIn(GENERAL.inputByAttr('keyName'), keyName);
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
 
       assert.strictEqual(
         currentURL(),
@@ -223,7 +223,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       // Fill in form
       await fillIn(GENERAL.inputByAttr('type'), 'exported');
       await typeIn(GENERAL.inputByAttr('commonName'), commonName);
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
 
       assert.strictEqual(
         currentURL(),
@@ -259,7 +259,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await click(PKI_CONFIGURE_CREATE.optionByKey('generate-csr'));
       await fillIn(GENERAL.inputByAttr('type'), 'internal');
       await fillIn(GENERAL.inputByAttr('commonName'), 'my-common-name');
-      await click('[data-test-save]');
+      await click('[data-test-submit]');
       assert.dom(GENERAL.title).hasText('View Generated CSR');
       await assert.dom(PKI_CONFIGURE_CREATE.csrDetails).exists('renders CSR details after save');
       await click('[data-test-done]');
@@ -276,7 +276,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await click(PKI_CONFIGURE_CREATE.optionByKey('generate-csr'));
       await fillIn(GENERAL.inputByAttr('type'), 'exported');
       await fillIn(GENERAL.inputByAttr('commonName'), 'my-common-name');
-      await click('[data-test-save]');
+      await click('[data-test-submit]');
       await assert.dom(PKI_CONFIGURE_CREATE.csrDetails).exists('renders CSR details after save');
       assert.dom(GENERAL.title).hasText('View Generated CSR');
       assert

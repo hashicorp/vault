@@ -4,18 +4,19 @@
  */
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, fillIn, find, visit, waitFor, waitUntil } from '@ember/test-helpers';
+import { click, fillIn, visit, waitFor } from '@ember/test-helpers';
 import { logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { callbackData, windowStub } from 'vault/tests/helpers/oidc-window-stub';
-import sinon from 'sinon';
+import {
+  callbackData,
+  DELAY_IN_MS,
+  triggerMessageEvent,
+  windowStub,
+} from 'vault/tests/helpers/oidc-window-stub';
 import { Response } from 'miragejs';
-import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { ERROR_MISSING_PARAMS, ERROR_WINDOW_CLOSED } from 'vault/components/auth/form/oidc-jwt';
-
-const DELAY_IN_MS = 500;
 
 module('Acceptance | oidc auth method', function (hooks) {
   setupApplicationTest(hooks);
@@ -33,7 +34,7 @@ module('Acceptance | oidc auth method', function (hooks) {
       if (assert) {
         this.server.get('/auth/token/lookup-self', (schema, req) => {
           assert.ok(true, 'request made to auth/token/lookup-self after oidc callback');
-          req.passthrough();
+          return req.passthrough();
         });
       }
     };
@@ -66,11 +67,9 @@ module('Acceptance | oidc auth method', function (hooks) {
     await logout();
     await this.selectMethod('oidc');
 
-    setTimeout(() => {
-      window.postMessage(callbackData({ path: 'oidc' }), window.origin);
-    }, DELAY_IN_MS);
+    triggerMessageEvent('oidc');
 
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
   });
 
   test('it should login with oidc from listed auth mount tab', async function (assert) {
@@ -91,10 +90,8 @@ module('Acceptance | oidc auth method', function (hooks) {
       return { data: { auth_url: 'http://example.com' } };
     });
     await visit('/vault/auth');
-    setTimeout(() => {
-      window.postMessage(callbackData({ path: 'oidc' }), window.origin);
-    }, DELAY_IN_MS);
-    await click(AUTH_FORM.login);
+    triggerMessageEvent('oidc');
+    await click(GENERAL.submitButton);
   });
 
   // coverage for bug where token was selected as auth method for oidc and jwt
@@ -103,11 +100,9 @@ module('Acceptance | oidc auth method', function (hooks) {
     await logout();
     await this.selectMethod('oidc');
 
-    setTimeout(() => {
-      window.postMessage(callbackData({ path: 'oidc' }), window.origin);
-    }, 500);
+    triggerMessageEvent('oidc');
 
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
     await waitFor('[data-test-dashboard-card-header="Vault version"]');
     assert
       .dom('[data-test-dashboard-card-header="Vault version"]')
@@ -145,62 +140,16 @@ module('Acceptance | oidc auth method', function (hooks) {
     });
     await logout();
     await this.selectMethod('oidc');
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
     assert
       .dom('[data-test-message-error-description]')
       .hasText('Authentication failed: Invalid role. Please try again.');
 
     await fillIn(GENERAL.inputByAttr('role'), 'test');
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
     assert
       .dom('[data-test-message-error-description]')
       .hasText('Authentication failed: Error fetching role: permission denied');
-  });
-
-  test('it prompts mfa if configured', async function (assert) {
-    assert.expect(1);
-
-    this.setupMocks(assert);
-    this.server.get('/auth/oidc/oidc/callback', () => setupTotpMfaResponse('foo'));
-    await logout();
-    await this.selectMethod('oidc');
-    setTimeout(() => {
-      window.postMessage(callbackData({ path: 'oidc' }), window.origin);
-    }, DELAY_IN_MS);
-
-    await click(AUTH_FORM.login);
-    await waitUntil(() => find('[data-test-mfa-form]'));
-    assert.dom('[data-test-mfa-form]').exists('it renders TOTP MFA form');
-  });
-
-  test('auth service is called with client_token and cluster data', async function (assert) {
-    const authSpy = sinon.spy(this.owner.lookup('service:auth'), 'authenticate');
-    this.setupMocks();
-    await logout();
-    await this.selectMethod('oidc');
-    setTimeout(() => {
-      window.postMessage(callbackData({ path: 'oidc' }), window.origin);
-    }, DELAY_IN_MS);
-    await click(AUTH_FORM.login);
-    const [actual] = authSpy.lastCall.args;
-    const expected = {
-      // even though this is the oidc auth method,
-      // the callback has returned a token at this point of the login flow
-      // and so the backend is 'token'
-      backend: 'token',
-      clusterId: '1',
-      data: {
-        // data from oidc/callback url
-        token: 'root',
-      },
-      selectedAuth: 'oidc',
-    };
-
-    assert.propEqual(
-      actual,
-      expected,
-      `authenticate method called with correct args, ${JSON.stringify({ actual, expected })}`
-    );
   });
 
   // test case for https://github.com/hashicorp/vault/issues/12436
@@ -231,7 +180,7 @@ module('Acceptance | oidc auth method', function (hooks) {
       window.postMessage(callbackData({ source: 'oidc-callback' }), window.origin);
     }, DELAY_IN_MS);
 
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
     // cleanup
     window.removeEventListener('message', assertEvent);
   });
@@ -244,7 +193,7 @@ module('Acceptance | oidc auth method', function (hooks) {
       // callback params are missing "code"
       window.postMessage({ source: 'oidc-callback', state: 'state', foo: 'bar' }, window.origin);
     }, DELAY_IN_MS);
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.messageError)
       .hasText(`Error Authentication failed: ${ERROR_MISSING_PARAMS}`, 'displays error when missing params');
@@ -256,7 +205,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     this.setupMocks();
     await logout();
     await this.selectMethod('oidc');
-    await click(AUTH_FORM.login);
+    await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.messageError)
       .hasText(`Error Authentication failed: ${ERROR_WINDOW_CLOSED}`, 'displays error when missing params');

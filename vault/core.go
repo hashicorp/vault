@@ -561,11 +561,13 @@ type Core struct {
 	introspectionEnabled     bool
 	introspectionEnabledLock sync.Mutex
 
-	// pluginDirectory is the location vault will look for plugin binaries
+	// pluginDirectory is the location vault will look for old style plugins, it is
+	// the root for all plugin artifacts.
 	pluginDirectory string
-	// pluginTmpdir is the location vault will use for containerized plugin
+
+	// containerPluginTmpdir is the location vault will use for containerized plugin
 	// temporary files
-	pluginTmpdir string
+	containerPluginTmpdir string
 
 	// pluginFileUid is the uid of the plugin files and directory
 	pluginFileUid int
@@ -1274,7 +1276,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		}
 	}
 	if conf.PluginTmpdir != "" {
-		c.pluginTmpdir, err = filepath.Abs(conf.PluginTmpdir)
+		c.containerPluginTmpdir, err = filepath.Abs(conf.PluginTmpdir)
 		if err != nil {
 			return nil, fmt.Errorf("core setup failed, could not verify plugin tmpdir: %w", err)
 		}
@@ -1380,7 +1382,12 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	observationSystemConfig := conf.ObservationSystemConfig
 	if observationSystemConfig != nil {
 		if observationSystemConfig.LedgerPath != "" {
-			observations, err := observations.NewObservationSystem(nodeID, observationSystemConfig.LedgerPath, observationsLogger)
+			config := &observations.NewObservationSystemConfig{
+				ObservationSystemConfig: observationSystemConfig,
+				LocalNodeId:             nodeID,
+				Logger:                  observationsLogger,
+			}
+			observations, err := observations.NewObservationSystem(config)
 			if err != nil {
 				return nil, err
 			}
@@ -2616,7 +2623,7 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 		BuiltinRegistry:      c.builtinRegistry,
 		CatalogView:          NewBarrierView(c.barrier, pluginCatalogPath),
 		PluginDirectory:      c.pluginDirectory,
-		Tmpdir:               c.pluginTmpdir,
+		Tmpdir:               c.containerPluginTmpdir,
 		EnableMlock:          c.enableMlock,
 		PluginRuntimeCatalog: c.pluginRuntimeCatalog,
 	})

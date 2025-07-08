@@ -477,14 +477,18 @@ func (d *autoSeal) StartHealthCheck() {
 	healthCheck := time.NewTicker(seal.HealthTestIntervalNominal)
 	d.healthCheckStop = make(chan struct{})
 	healthCheckStop := d.healthCheckStop
-	ctx := d.core.activeContext
 
 	go func() {
 		lastTestOk := true
 		lastSeenOk := time.Now()
 
 		check := func(now time.Time) {
-			ctx, cancel := context.WithTimeout(ctx, seal.HealthTestTimeout)
+			if d.core.activeContext == nil {
+				// This probably only happens during the execution of some unit tests.
+				d.logger.Warn("no active context, skipping this health check")
+				return
+			}
+			ctx, cancel := context.WithTimeout(d.core.activeContext, seal.HealthTestTimeout)
 			defer cancel()
 
 			d.logger.Trace("performing a seal health check")
@@ -541,6 +545,7 @@ error and restart Vault.`)
 			d.allSealsHealthy = allHealthy
 		}
 
+		check(time.Now())
 		for {
 			select {
 			case <-healthCheckStop:

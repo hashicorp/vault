@@ -56,7 +56,7 @@ const API_PATHS = {
     github: 'sys/sync/github-apps',
   },
   monitoring: {
-    'utilization-report': 'sys/v1/utilization-report',
+    'utilization-report': 'sys/utilization-report',
   },
 };
 

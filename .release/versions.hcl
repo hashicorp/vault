@@ -14,15 +14,11 @@ active_versions {
   }
 
   version "1.19.x" {
-    ce_active = true
+    ce_active = false
     lts       = true
   }
 
   version "1.18.x" {
-    ce_active = false
-  }
-
-  version "1.17.x" {
     ce_active = false
   }
 
