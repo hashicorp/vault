@@ -79,14 +79,12 @@ export default abstract class AuthBase extends Component<Args> {
     }
 
     let errorMessage = '';
-    if (error instanceof ResponseError) {
-      // If error has not been parsed already then parse and render error message
-      const { message } = await this.api.parseError(error);
-      errorMessage = message;
-    } else if (typeof error === 'string') {
+    if (typeof error === 'string') {
       errorMessage = error;
     } else {
-      errorMessage = 'An error occurred, check the Vault logs.';
+      // If error has not been parsed already then parse and render error message
+      const { message } = await this.api.parseError(error, 'An error occurred, check the Vault logs.');
+      errorMessage = message;
     }
 
     this.args.onError(`Authentication failed: ${errorMessage}`);

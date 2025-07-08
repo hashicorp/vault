@@ -55,6 +55,10 @@ export interface OidcApiResponse extends ApiResponse {
   };
 }
 
+export interface JwtOidcAuthUrlResponse extends ApiResponse {
+  data: { authUrl: string };
+}
+
 export interface OktaVerifyApiResponse extends ApiResponse {
   data: { correctAnswer: number };
 }

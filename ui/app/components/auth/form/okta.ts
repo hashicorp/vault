@@ -66,7 +66,7 @@ export default class AuthFormOkta extends AuthBase {
   @action
   async requestOktaVerify(nonce: string, mountPath: string) {
     try {
-      const { data } = <OktaVerifyApiResponse>await this.api.auth.oktaVerify(nonce, mountPath);
+      const { data } = (await this.api.auth.oktaVerify(nonce, mountPath)) as OktaVerifyApiResponse;
       return data.correctAnswer;
     } catch (e) {
       const { status, message } = await this.api.parseError(e);

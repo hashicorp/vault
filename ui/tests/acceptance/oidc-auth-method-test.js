@@ -16,7 +16,7 @@ import {
 import { Response } from 'miragejs';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { ERROR_MISSING_PARAMS, ERROR_WINDOW_CLOSED } from 'vault/components/auth/form/oidc-jwt';
+import { ERROR_MISSING_PARAMS, ERROR_POPUP_FAILED, ERROR_WINDOW_CLOSED } from 'vault/utils/auth-form-helpers';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 import sinon from 'sinon';
 
@@ -190,16 +190,25 @@ module('Acceptance | oidc auth method', function (hooks) {
       .hasText(`Error Authentication failed: ${ERROR_MISSING_PARAMS}`, 'displays error when missing params');
   });
 
-  test('it shows error when popup is closed', async function (assert) {
+  test('it shows error when popup is prematurely closed ', async function (assert) {
     windowStub({ stub: this.openStub, popup: { closed: true, close: () => {} } });
 
     this.setupMocks();
     await logout();
     await fillIn(AUTH_FORM.selectMethod, 'oidc');
     await click(GENERAL.submitButton);
+    assert.dom(GENERAL.messageError).hasText(`Error Authentication failed: ${ERROR_WINDOW_CLOSED}`);
+  });
+
+  test('it renders error when window fails to open', async function (assert) {
+    this.openStub.returns(null);
+    this.setupMocks();
+    await logout();
+    await fillIn(AUTH_FORM.selectMethod, 'oidc');
+    await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.messageError)
-      .hasText(`Error Authentication failed: ${ERROR_WINDOW_CLOSED}`, 'displays error when missing params');
+      .hasText(`Error Authentication failed: Failed to open OIDC popup window. ${ERROR_POPUP_FAILED}`);
   });
 
   test('it renders api errors if oidc callback request fails', async function (assert) {

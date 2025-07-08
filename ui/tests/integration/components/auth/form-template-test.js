@@ -12,9 +12,8 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { AUTH_METHOD_LOGIN_DATA } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { ENTERPRISE_LOGIN_METHODS, supportedTypes } from 'vault/utils/auth-form-helpers';
+import { ENTERPRISE_LOGIN_METHODS, ERROR_JWT_LOGIN, supportedTypes } from 'vault/utils/auth-form-helpers';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
-import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 
 module('Integration | Component | auth | form template', function (hooks) {

@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { constraintId, setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
 import setupTestContext from './setup-test-context';
-import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
+import { ERROR_JWT_LOGIN } from 'vault/utils/auth-form-helpers';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import sinon from 'sinon';
 import { triggerMessageEvent, windowStub } from 'vault/tests/helpers/oidc-window-stub';

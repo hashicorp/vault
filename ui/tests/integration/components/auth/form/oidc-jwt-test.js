@@ -9,7 +9,6 @@ import hbs from 'htmlbars-inline-precompile';
 import { click, fillIn, find, render, settled, waitUntil } from '@ember/test-helpers';
 import { _cancelTimers as cancelTimers } from '@ember/runloop';
 import { callbackData } from 'vault/tests/helpers/oidc-window-stub';
-import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -17,7 +16,7 @@ import * as parseURL from 'core/utils/parse-url';
 import sinon from 'sinon';
 import authFormTestHelper from './auth-form-test-helper';
 import { RESPONSE_STUBS } from 'vault/tests/helpers/auth/response-stubs';
-import { DOMAIN_PROVIDER_MAP } from 'vault/utils/auth-form-helpers';
+import { DOMAIN_PROVIDER_MAP, ERROR_JWT_LOGIN } from 'vault/utils/auth-form-helpers';
 import { dasherize } from '@ember/string';
 
 /* 

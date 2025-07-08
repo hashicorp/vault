@@ -7,14 +7,20 @@ import AuthBase from './base';
 import Ember from 'ember';
 import { action } from '@ember/object';
 import { dasherize } from '@ember/string';
-import { DOMAIN_PROVIDER_MAP } from 'vault/utils/auth-form-helpers';
+import {
+  DOMAIN_PROVIDER_MAP,
+  ERROR_JWT_LOGIN,
+  ERROR_MISSING_PARAMS,
+  ERROR_POPUP_FAILED,
+  ERROR_WINDOW_CLOSED,
+} from 'vault/utils/auth-form-helpers';
 import { restartableTask, task, timeout, waitForEvent } from 'ember-concurrency';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import parseURL from 'core/utils/parse-url';
 
 import type { HTMLElementEvent } from 'vault/forms';
-import type { JwtOidcLoginApiResponse } from 'vault/vault/auth/methods';
+import type { JwtOidcAuthUrlResponse, JwtOidcLoginApiResponse } from 'vault/vault/auth/methods';
 import type RouterService from '@ember/routing/router-service';
 
 /**
@@ -36,13 +42,6 @@ interface JwtLoginData {
 interface UrlParseData {
   hostname: string;
 }
-
-const ERROR_WINDOW_CLOSED =
-  'The provider window was closed before authentication was complete. Your web browser may have blocked or closed a pop-up window. Please check your settings and click "Sign in" to try again.';
-const ERROR_MISSING_PARAMS =
-  'The callback from the provider did not supply all of the required parameters.  Please click Sign In to try again. If the problem persists, you may want to contact your administrator.';
-const ERROR_JWT_LOGIN = 'OIDC login is not configured for this mount';
-export { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS, ERROR_JWT_LOGIN };
 
 export default class AuthFormOidcJwt extends AuthBase {
   @service declare readonly router: RouterService;
@@ -115,9 +114,10 @@ export default class AuthFormOidcJwt extends AuthBase {
     this.errorMessage = '';
 
     try {
-      const { data } = <{ data: { authUrl: string } }>(
-        await this.api.auth.jwtOidcRequestAuthorizationUrl(path, { role, redirectUri })
-      );
+      const { data } = (await this.api.auth.jwtOidcRequestAuthorizationUrl(path, {
+        role,
+        redirectUri,
+      })) as JwtOidcAuthUrlResponse;
       this.authUrl = data.authUrl;
       this.isOIDC = true;
     } catch (e) {
@@ -154,7 +154,7 @@ export default class AuthFormOidcJwt extends AuthBase {
 
   async loginJwt(formData: JwtLoginData) {
     const { path, jwt, role } = formData;
-    const { auth } = <JwtOidcLoginApiResponse>await this.api.auth.jwtLogin(path, { jwt, role });
+    const { auth } = (await this.api.auth.jwtLogin(path, { jwt, role })) as JwtOidcLoginApiResponse;
     // displayName is not returned by auth response and is set in persistAuthData
     return this.normalizeAuthResponse(auth, {
       authMountPath: path,
@@ -182,7 +182,7 @@ export default class AuthFormOidcJwt extends AuthBase {
         this.closeWindow(oidcWindow);
       }
     } else {
-      throw 'Failed to open OIDC authentication window. Please check your popup blocker settings.';
+      throw `Failed to open OIDC popup window. ${ERROR_POPUP_FAILED}`;
     }
   }
 
@@ -247,9 +247,12 @@ export default class AuthFormOidcJwt extends AuthBase {
     }
 
     // do the OIDC exchange, set the token and continue login flow
-    const { auth } = <JwtOidcLoginApiResponse>(
-      await this.api.auth.jwtOidcCallback(path, undefined, code, state)
-    );
+    const { auth } = (await this.api.auth.jwtOidcCallback(
+      path,
+      undefined,
+      code,
+      state
+    )) as JwtOidcLoginApiResponse;
     return { auth, path };
   }
   //* END LOGIN METHODS

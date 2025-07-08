@@ -10,6 +10,7 @@ import { SamlWriteSsoServiceUrlRequestClientTypeEnum } from '@hashicorp/vault-cl
 import { sanitizePath } from 'core/utils/sanitize-path';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
 import uuid from 'core/utils/uuid';
+import { ERROR_POPUP_FAILED, ERROR_TIMEOUT, ERROR_WINDOW_CLOSED } from 'vault/utils/auth-form-helpers';
 
 import type { SamlLoginApiResponse, SamlSsoServiceUrlApiResponse } from 'vault/vault/auth/methods';
 
@@ -23,13 +24,6 @@ interface SamlRole {
   tokenPollId: string;
   clientVerifier: string;
 }
-
-const ERROR_WINDOW_CLOSED =
-  'The provider window was closed before authentication was complete. Your web browser may have blocked or closed a pop-up window. Please check your settings and click "Sign in" to try again.';
-const ERROR_TIMEOUT = 'The authentication request has timed out. Please click "Sign in" to try again.';
-
-export { ERROR_WINDOW_CLOSED };
-
 export default class AuthFormSaml extends AuthBase {
   loginFields = [
     {
@@ -54,22 +48,26 @@ export default class AuthFormSaml extends AuthBase {
     // either the default of auth type, or the custom inputted path
     const { namespace, path, role } = formData;
     const fetchedRole = await this.fetchSamlRole({ namespace, path, role });
-    const samlWindow = <Window>await this.startSAMLAuth(fetchedRole.ssoServiceUrl);
-    try {
-      // start watching the popup window and the current one
-      this.watchPopup.perform(samlWindow);
-      this.watchCurrent.perform(samlWindow);
+    const samlWindow = await this.startSAMLAuth(fetchedRole.ssoServiceUrl);
+    if (samlWindow) {
+      try {
+        // start watching the popup window and the current one
+        this.watchPopup.perform(samlWindow);
+        this.watchCurrent.perform(samlWindow);
 
-      const { auth } = await this.exchangeSAMLTokenPollID(fetchedRole, { path });
+        const { auth } = await this.exchangeSAMLTokenPollID(fetchedRole, { path });
 
-      // displayName is not included in auth response - it is set in persistAuthData
-      return this.normalizeAuthResponse(auth, {
-        authMountPath: path,
-        token: auth.clientToken,
-        ttl: auth.leaseDuration,
-      });
-    } finally {
-      this.closeWindow(samlWindow);
+        // displayName is not included in auth response - it is set in persistAuthData
+        return this.normalizeAuthResponse(auth, {
+          authMountPath: path,
+          token: auth.clientToken,
+          ttl: auth.leaseDuration,
+        });
+      } finally {
+        this.closeWindow(samlWindow);
+      }
+    } else {
+      throw `Failed to open SAML popup window. ${ERROR_POPUP_FAILED}`;
     }
   }
 
@@ -88,16 +86,19 @@ export default class AuthFormSaml extends AuthBase {
     // It requires the client challenge generated from the verifier. We'll
     // later provide the verifier to match up with the challenge on the server
     // when we poll for the Vault token by its returned token poll ID.
-    const { data } = <SamlSsoServiceUrlApiResponse>(
-      await this.api.auth.samlWriteSsoServiceUrl(path, { acsUrl, clientChallenge, clientType, role })
-    );
+    const { data } = (await this.api.auth.samlWriteSsoServiceUrl(path, {
+      acsUrl,
+      clientChallenge,
+      clientType,
+      role,
+    })) as SamlSsoServiceUrlApiResponse;
     return {
       ...data,
       clientVerifier: verifier,
     };
   }
 
-  async startSAMLAuth(ssoServiceUrl: string) {
+  async startSAMLAuth(ssoServiceUrl: string): Promise<Window | null> {
     const win = window;
     const POPUP_WIDTH = 500;
     const POPUP_HEIGHT = 600;

@@ -5,7 +5,7 @@
 
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { click, fillIn, waitUntil } from '@ember/test-helpers';
-import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
+import { ERROR_JWT_LOGIN } from 'vault/utils/auth-form-helpers';
 import { fillInLoginFields } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { module, test } from 'qunit';

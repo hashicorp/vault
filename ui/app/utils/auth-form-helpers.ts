@@ -31,3 +31,15 @@ export const DOMAIN_PROVIDER_MAP = {
   'auth0.com': 'Auth0',
   'login.microsoftonline.com': 'Azure',
 };
+
+export const ERROR_POPUP_FAILED =
+  'Your web browser may have blocked or closed a pop-up window. Please check your settings and click "Sign in" to try again.';
+
+export const ERROR_WINDOW_CLOSED = `The provider window was closed before authentication was complete. ${ERROR_POPUP_FAILED}`;
+
+export const ERROR_JWT_LOGIN = 'OIDC login is not configured for this mount';
+
+export const ERROR_MISSING_PARAMS =
+  'The callback from the provider did not supply all of the required parameters.  Please click Sign In to try again. If the problem persists, you may want to contact your administrator.';
+
+export const ERROR_TIMEOUT = 'The authentication request has timed out. Please click "Sign in" to try again.';

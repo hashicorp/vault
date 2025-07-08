@@ -15,6 +15,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 import sinon from 'sinon';
+import { ERROR_POPUP_FAILED, ERROR_TIMEOUT, ERROR_WINDOW_CLOSED } from 'vault/utils/auth-form-helpers';
 
 module('Acceptance | enterprise saml auth method', function (hooks) {
   setupApplicationTest(hooks);
@@ -124,11 +125,27 @@ module('Acceptance | enterprise saml auth method', function (hooks) {
     await click(GENERAL.submitButton);
     // Polling timeout is 1 second for testing environments
     await waitFor(GENERAL.messageError, { timeout: 1000 });
+    assert.dom(GENERAL.messageError).hasText(`Error Authentication failed: ${ERROR_TIMEOUT}`);
+  });
+
+  test('it renders error when popup is prematurely closed', async function (assert) {
+    windowStub({ stub: this.openStub, popup: { closed: true, close: () => {} } });
+
+    await logout();
+    await fillIn(AUTH_FORM.selectMethod, 'saml');
+    await click(GENERAL.submitButton);
+    assert.dom(GENERAL.messageError).hasText(`Error Authentication failed: ${ERROR_WINDOW_CLOSED}`);
+  });
+
+  test('it renders error when window fails to open', async function (assert) {
+    this.openStub.returns(null);
+
+    await logout();
+    await fillIn(AUTH_FORM.selectMethod, 'saml');
+    await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.messageError)
-      .hasText(
-        `Error Authentication failed: The authentication request has timed out. Please click "Sign in" to try again.`
-      );
+      .hasText(`Error Authentication failed: Failed to open SAML popup window. ${ERROR_POPUP_FAILED}`);
   });
 
   test('it should render API errors from saml token polling url', async function (assert) {
