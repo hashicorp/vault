@@ -94,6 +94,9 @@ type Config struct {
 	DisableClustering    bool        `hcl:"-"`
 	DisableClusteringRaw interface{} `hcl:"disable_clustering,alias:DisableClustering"`
 
+	AllowAuditLogPrefixing    bool        `hcl:"-"`
+	AllowAuditLogPrefixingRaw interface{} `hcl:"allow_audit_log_prefixing,alias:AllowAuditLogPrefixing"`
+
 	DisablePerformanceStandby    bool        `hcl:"-"`
 	DisablePerformanceStandbyRaw interface{} `hcl:"disable_performance_standby,alias:DisablePerformanceStandby"`
 
@@ -400,6 +403,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.DisablePerformanceStandby = c.DisablePerformanceStandby
 	if c2.DisablePerformanceStandby {
 		result.DisablePerformanceStandby = c2.DisablePerformanceStandby
+	}
+
+	result.AllowAuditLogPrefixing = c.AllowAuditLogPrefixing
+	if c2.AllowAuditLogPrefixing {
+		result.AllowAuditLogPrefixing = c2.AllowAuditLogPrefixing
 	}
 
 	result.DisableSealWrap = c.DisableSealWrap
@@ -743,6 +751,12 @@ func ParseConfigCheckDuplicate(d, source string) (cfg *Config, duplicate bool, e
 
 	if result.DisablePerformanceStandbyRaw != nil {
 		if result.DisablePerformanceStandby, err = parseutil.ParseBool(result.DisablePerformanceStandbyRaw); err != nil {
+			return nil, duplicate, err
+		}
+	}
+
+	if result.AllowAuditLogPrefixingRaw != nil {
+		if result.AllowAuditLogPrefixing, err = parseutil.ParseBool(result.AllowAuditLogPrefixingRaw); err != nil {
 			return nil, duplicate, err
 		}
 	}
@@ -1372,8 +1386,8 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 		"disable_sealwrap": c.DisableSealWrap,
 
-		"disable_indexing": c.DisableIndexing,
-
+		"disable_indexing":                c.DisableIndexing,
+		"allow_audit_log_prefixing":       c.AllowAuditLogPrefixing,
 		"enable_response_header_hostname": c.EnableResponseHeaderHostname,
 
 		"enable_response_header_raft_node_id": c.EnableResponseHeaderRaftNodeID,
