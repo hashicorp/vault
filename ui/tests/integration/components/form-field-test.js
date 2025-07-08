@@ -200,13 +200,13 @@ module('Integration | Component | form field', function (hooks) {
         'renders subtext'
       );
     assert.dom('.hds-form-helper-text a').exists('renders doc link');
-    await click('[data-test-text-toggle]');
+    await click(GENERAL.textToggle);
     // assert again after toggling because subtext is rendered differently for each input
     assert
       .dom('.hds-form-helper-text')
       .hasText(`Enter the value as text. ${subText} See our documentation for help.`, 'renders subtext');
     assert.dom('.hds-form-helper-text a').exists('renders doc link');
-    await fillIn('[data-test-text-file-textarea]', 'hello world');
+    await fillIn(GENERAL.maskedInput, 'hello world');
   });
 
   test('it renders: editType ttl', async function (assert) {

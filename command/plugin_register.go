@@ -33,6 +33,7 @@ type PluginRegisterCommand struct {
 	flagOCIImage string
 	flagRuntime  string
 	flagEnv      []string
+	flagDownload bool
 }
 
 func (c *PluginRegisterCommand) Synopsis() string {
@@ -59,6 +60,12 @@ Usage: vault plugin register [options] TYPE NAME
           -args=--with-glibc,--with-cgo \
           auth my-custom-plugin
 
+  Register a plugin with -download (enterprise only):
+
+      $ vault plugin register \
+          -version=v0.17.0+ent \
+          -download=true \
+          secret vault-plugin-secrets-keymgmt
 ` + c.Flags().Help()
 
 	return strings.TrimSpace(helpText)
@@ -125,6 +132,14 @@ func (c *PluginRegisterCommand) Flags() *FlagSets {
 		Completion: complete.PredictAnything,
 		Usage: "Environment variables to set for the plugin when starting. This " +
 			"flag can be specified multiple times to specify multiple environment variables.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:       "download",
+		Target:     &c.flagDownload,
+		Completion: complete.PredictAnything,
+		Usage: "Enterprise only. If set, Vault will automatically download plugins from" +
+			"releases.hashicorp.com",
 	})
 
 	return set
@@ -198,6 +213,7 @@ func (c *PluginRegisterCommand) Run(args []string) int {
 		OCIImage: c.flagOCIImage,
 		Runtime:  c.flagRuntime,
 		Env:      c.flagEnv,
+		Download: c.flagDownload,
 	})
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Error registering plugin %s: %s", pluginName, err))
