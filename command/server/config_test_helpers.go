@@ -895,6 +895,7 @@ func testConfig_Sanitized(t *testing.T) {
 		"enable_post_unseal_trace":       true,
 		"post_unseal_trace_directory":    "/tmp",
 		"remove_irrevocable_lease_after": (30 * 24 * time.Hour) / time.Second,
+		"allow_audit_log_prefixing":      false,
 	}
 
 	addExpectedEntSanitizedConfig(expected, []string{"http"})

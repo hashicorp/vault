@@ -153,7 +153,7 @@ None.
 | ------------ | ---------------- | --------------------
 | Known issue  | 1.20.0           | 1.20.1
 
-Users receive an error when navigating to a KV v2 secret with an underscore in the name (e.g. `my_secret`) 
+Users receive an error when navigating to a KV v2 secret with an underscore in the name (e.g. `my_secret`)
 if the user does not have policy permissions granting `read` access to the [`/subkeys` endpoint](/vault/api-docs/secret/kv/kv-v2#read-secret-subkeys).
 
 #### Recommendation
@@ -236,7 +236,7 @@ rotations on the LDAP server.
 
 | Change       | Affected version | Fixed version
 | ------------ |------------------| --------------------
-| Known issue  | 1.20.0           | N/A
+| Known issue  | 1.20.0           | 1.20.1
 
 If the Vault process receives a `SIGHUP` and reloads a secondary performance
 replication cluster, the cluster reverts to the locally configured

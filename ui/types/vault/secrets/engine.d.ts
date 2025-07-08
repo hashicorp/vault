@@ -10,39 +10,7 @@ import type {
   AzureConfigureRequest,
   GoogleCloudConfigureRequest,
 } from '@hashicorp/vault-client-typescript';
-
-export type EngineConfig = {
-  forceNoCache?: boolean;
-  listingVisibility?: string | boolean;
-  defaultLeaseTtl?: number;
-  maxLeaseTtl?: number;
-  allowedManagedKeys?: string[];
-  auditNonHmacRequestKeys?: string[];
-  auditNonHmacResponseKeys?: string[];
-  passthroughRequestHeaders?: string[];
-  allowedResponseHeaders?: string[];
-  identityTokenKey?: string;
-};
-
-export type EngineOptions = {
-  version: number;
-};
-
-export type SecretsEngine = {
-  path: string;
-  accessor: string;
-  config: EngineConfig;
-  description: string;
-  externalEntropyAccess: boolean;
-  local: boolean;
-  options?: EngineOptions;
-  pluginVersion: string;
-  runningPluginVersion: string;
-  runningSha256: string;
-  sealWrap: boolean;
-  type: string;
-  uuid: string;
-};
+import type { MountConfig, MountOptions } from 'vault/mount';
 
 type CommonConfigParams = {
   rotationPeriod: number;
