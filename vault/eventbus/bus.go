@@ -57,13 +57,14 @@ type EventBus struct {
 	timeout                    time.Duration
 	filters                    *Filters
 	cloudEventsFormatterFilter *cloudevents.FormatterFilter
-	walGetter                  StorageWALGetter
+	walGetter                  StorageInfoGetter
 }
 
-// StorageWALGetter is an interface used to fetch the current storage index
+// StorageInfoGetter is an interface used to fetch the current storage index
 // from core without importing core
-type StorageWALGetter interface {
+type StorageInfoGetter interface {
 	GetCurrentWALHeader() string
+	IsReplicated(secondaryID, namespace, storagePath string) bool
 }
 
 type pluginEventBus struct {
@@ -205,7 +206,7 @@ func (bus *pluginEventBus) SendEvent(ctx context.Context, eventType logical.Even
 	return bus.bus.SendEventInternal(ctx, bus.namespace, bus.pluginInfo, eventType, false, data)
 }
 
-func NewEventBus(localNodeID string, logger hclog.Logger, c StorageWALGetter) (*EventBus, error) {
+func NewEventBus(localNodeID string, logger hclog.Logger, c StorageInfoGetter) (*EventBus, error) {
 	broker, err := eventlogger.NewBroker()
 	if err != nil {
 		return nil, err
@@ -278,7 +279,7 @@ func (bus *EventBus) subscribeInternal(ctx context.Context, namespacePathPattern
 
 	var filterNode *eventlogger.Filter
 	if clusterNode != nil {
-		filterNode, err = newClusterNodeFilterNode(bus.filters, clusterNodeID(*clusterNode), bexprFilter)
+		filterNode, err = newClusterNodeFilterNode(bus.filters, clusterNodeID(*clusterNode), bexprFilter, bus.walGetter)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -403,7 +404,7 @@ func (bus *EventBus) NewClusterNodeSubscriptionNonLocal(ctx context.Context, clu
 }
 
 // creates a new filter node that is tied to the filter for a given cluster node
-func newClusterNodeFilterNode(filters *Filters, c clusterNodeID, bexprFilter string) (*eventlogger.Filter, error) {
+func newClusterNodeFilterNode(filters *Filters, c clusterNodeID, bexprFilter string, coreInfo StorageInfoGetter) (*eventlogger.Filter, error) {
 	var evaluator *bexpr.Evaluator
 	if bexprFilter != "" {
 		var err error
@@ -420,6 +421,11 @@ func newClusterNodeFilterNode(filters *Filters, c clusterNodeID, bexprFilter str
 				Path: eventNs,
 			}, logical.EventType(eventRecv.EventType)) {
 				return false, nil
+			}
+			if pluginInfo := eventRecv.GetPluginInfo(); pluginInfo != nil {
+				if !coreInfo.IsReplicated(string(c), eventRecv.Namespace, pluginInfo.MountPath) {
+					return false, nil
+				}
 			}
 
 			// apply go-bexpr filter
