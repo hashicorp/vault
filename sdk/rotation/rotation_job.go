@@ -54,9 +54,9 @@ type RotationInfoRequest struct {
 }
 
 type RotationInfoResponse struct {
-	NextRotationTime time.Time
-	LastRotationTime time.Time
-	TTL              time.Duration
+	NextRotationTime     time.Time
+	PreviousRotationTime time.Time
+	TTL                  time.Duration
 }
 
 func (s *RotationJob) Validate() error {
