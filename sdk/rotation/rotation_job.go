@@ -56,7 +56,7 @@ type RotationInfoRequest struct {
 type RotationInfoResponse struct {
 	NextRotationTime     time.Time
 	PreviousRotationTime time.Time
-	TTL                  time.Duration
+	TTL                  int64 // TTL is integer seconds until next rotation, clamped to zero (i.e., cannot be negative)
 }
 
 func (s *RotationJob) Validate() error {

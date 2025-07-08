@@ -238,7 +238,7 @@ func (s *gRPCSystemViewClient) GetRotationInformation(ctx context.Context, req *
 	return &rotation.RotationInfoResponse{
 		NextRotationTime:     time.Unix(resp.ExpireTime, 0),
 		PreviousRotationTime: time.Unix(resp.IssueTime, 0),
-		TTL:                  time.Duration(resp.TTL) * time.Second,
+		TTL:                  resp.TTL,
 	}, nil
 }
 
@@ -496,7 +496,7 @@ func (s *gRPCSystemViewServer) GetRotationInformation(ctx context.Context, req *
 	return &pb.RotationInfoReply{
 		IssueTime:  resp.PreviousRotationTime.Unix(),
 		ExpireTime: resp.NextRotationTime.Unix(),
-		TTL:        int64(resp.TTL.Seconds()),
+		TTL:        resp.TTL,
 	}, nil
 }
 
