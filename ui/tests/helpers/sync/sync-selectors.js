@@ -92,7 +92,7 @@ export const PAGE = {
           return await click(`${GENERAL.radioByAttr('secret-key')}`);
         case 'credentials':
           await click(GENERAL.textToggle);
-          return fillIn('[data-test-text-file-textarea]', value);
+          return fillIn(GENERAL.maskedInput, value);
         case 'customTags':
           await fillIn('[data-test-kv-key="0"]', 'foo');
           return fillIn('[data-test-kv-value="0"]', value);
