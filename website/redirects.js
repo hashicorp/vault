@@ -276,11 +276,6 @@ module.exports = [
     permanent: true,
   },
   {
-    source: '/vault/docs/upgrading/vault-ha-upgrade',
-    destination: '/vault/docs/v1.10.x/upgrading/vault-ha-upgrade',
-    permanent: true,
-  },
-  {
     source: '/vault/docs/enterprise/license',
     destination: '/vault/docs/license',
     permanent: true,
