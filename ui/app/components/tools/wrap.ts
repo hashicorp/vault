@@ -67,7 +67,7 @@ export default class ToolsWrap extends Component {
   }
 
   @action
-  codemirrorUpdated(val: string) {
+  editorUpdated(val: string) {
     this.hasLintingErrors = false;
 
     try {

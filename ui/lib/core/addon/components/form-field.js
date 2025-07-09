@@ -225,7 +225,7 @@ export default class FormFieldComponent extends Component {
     this.setAndBroadcast(`${valueToSet}`);
   }
   @action
-  codemirrorUpdated(isString, value) {
+  editorUpdated(isString, value) {
     try {
       const valToSet = isString ? value : JSON.parse(value);
 

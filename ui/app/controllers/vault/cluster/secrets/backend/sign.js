@@ -19,7 +19,7 @@ export default Controller.extend({
       });
     },
 
-    codemirrorUpdated(attr, val) {
+    editorUpdated(attr, val) {
       // wont set invalid JSON to the model
       try {
         set(this.model, attr, JSON.parse(val));

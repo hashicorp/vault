@@ -143,7 +143,7 @@ export default class GenerateCredentials extends Component {
   }
 
   @action
-  codemirrorUpdated(attr, val) {
+  editorUpdated(attr, val) {
     // wont set invalid JSON to the model
     try {
       this.model[attr] = JSON.parse(val);

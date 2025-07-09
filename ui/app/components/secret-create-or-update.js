@@ -162,7 +162,7 @@ export default class SecretCreateOrUpdate extends Component {
   }
 
   @action
-  codemirrorUpdated(val) {
+  editorUpdated(val) {
     try {
       this.args.secretData.fromJSONString(val);
       set(this.args.modelForData, 'secretData', this.args.secretData.toJSON());
