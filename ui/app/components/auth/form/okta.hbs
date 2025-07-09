@@ -7,7 +7,7 @@
   <OktaNumberChallenge
     @correctAnswer={{this.challengeAnswer}}
     @hasError={{this.oktaVerifyError}}
-    @onReturnToLogin={{this.reset}}
+    @onReturnToLogin={{this.cancelLogin}}
   />
 {{else}}
   <form {{on "submit" this.onSubmit}} data-test-auth-form={{@authType}}>
