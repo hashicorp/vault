@@ -74,7 +74,7 @@ func (b *backend) pathSign(ctx context.Context, req *logical.Request, data *fram
 	roleName := data.Get("role").(string)
 
 	// Get the role
-	role, err := b.getRole(ctx, req.Storage, roleName)
+	role, err := b.getRole(ctx, req.Storage, roleName, false)
 	if err != nil {
 		return nil, err
 	}
