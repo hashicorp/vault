@@ -65,7 +65,10 @@ export default class NamespacePicker extends Component {
   }
 
   get selectedNamespace(): NamespaceOption | null {
-    return this.getSelected(this.allNamespaces, this.namespace?.path) ?? null;
+    return (
+      this.getSelected(this.allNamespaces, this.namespace?.path === 'root' ? '' : this.namespace?.path) ??
+      null
+    );
   }
 
   private matchesPath(option: NamespaceOption, currentPath: string): boolean {
