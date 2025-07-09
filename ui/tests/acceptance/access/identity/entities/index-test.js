@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { fillIn, click, currentRouteName, currentURL, visit } from '@ember/test-helpers';
+import { click, currentRouteName, currentURL, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/access/identity/index';
@@ -11,6 +11,7 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { v4 as uuidv4 } from 'uuid';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
 const SELECTORS = {
   listItem: (name) => `[data-test-identity-row="${name}"]`,
@@ -18,6 +19,7 @@ const SELECTORS = {
 
 module('Acceptance | /access/identity/entities', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     return login();
@@ -70,22 +72,32 @@ module('Acceptance | /access/identity/entities', function (hooks) {
   });
 
   test('it renders popup menu for external groups with alias', async function (assert) {
-    const uuid = uuidv4();
-    const name = `external-hasalias-${uuid}`;
-    await runCmd(`vault write identity/group name="${name}" policies="default" type="external"`);
-    await visit('/vault/access/identity/groups');
-    await click(`${SELECTORS.listItem(name)} ${GENERAL.menuTrigger}`);
-    await click(GENERAL.menuItem('create alias'));
-    await fillIn(GENERAL.inputByAttr('name'), `alias-test-${uuid}`);
-    await click(GENERAL.submitButton);
+    const groupId = '44b2f1d1-699a-4a79-3a7b-37e53e17e7b2';
+    const groupName = 'external-hasalias';
+    // only relevant response keys are stubbed to simplify testing (more data is actually returned by both endpoints)
+    this.server.get('/identity/group/id', () => {
+      return {
+        data: {
+          key_info: { [groupId]: { name: groupName } },
+          keys: [groupId],
+        },
+      };
+    });
+
+    this.server.get(`/identity/group/id/${groupId}`, () => {
+      return {
+        data: {
+          alias: { id: '15bac764-d690-b72a-9cbc-b1fdeac1af9e', name: 'alias-test' },
+          type: 'external',
+        },
+      };
+    });
 
     await visit('/vault/access/identity/groups');
-    await click(`${SELECTORS.listItem(name)} ${GENERAL.menuTrigger}`);
+    await click(`${SELECTORS.listItem(groupName)} ${GENERAL.menuTrigger}`);
     assert
       .dom('.hds-dropdown ul')
       .hasText('Details Edit Delete', 'no "Create alias" option for external groups with an alias');
-    await click(`${SELECTORS.listItem(name)} ${GENERAL.menuItem('delete')}`);
-    await click(GENERAL.confirmButton);
   });
 
   test('it renders popup menu for internal groups', async function (assert) {
