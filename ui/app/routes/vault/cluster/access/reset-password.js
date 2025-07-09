@@ -16,17 +16,17 @@ export default class VaultClusterAccessResetPasswordRoute extends Route {
 
   async model() {
     // Password reset is only available on userpass type auth mounts
-    if (this.auth.authData?.backend?.type !== 'userpass') {
+    if (this.auth.authData?.authMethodType !== 'userpass') {
       throw new Error(ERROR_UNAVAILABLE);
     }
-    const { backend, displayName } = this.auth.authData;
-    if (!backend.mountPath || !displayName) {
+    const { authMountPath, displayName } = this.auth.authData;
+    if (!authMountPath || !displayName) {
       throw new Error(ERROR_UNAVAILABLE);
     }
     try {
       const capabilities = await this.store.findRecord(
         'capabilities',
-        `auth/${encodePath(backend.mountPath)}/users/${encodePath(displayName)}/password`
+        `auth/${encodePath(authMountPath)}/users/${encodePath(displayName)}/password`
       );
       // Check that the user has ability to update password
       if (!capabilities.canUpdate) {
@@ -36,7 +36,7 @@ export default class VaultClusterAccessResetPasswordRoute extends Route {
       // If capabilities can't be queried, default to letting the API decide
     }
     return {
-      backend: backend.mountPath,
+      backend: authMountPath,
       username: displayName,
     };
   }

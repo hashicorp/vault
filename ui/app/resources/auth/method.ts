@@ -5,7 +5,7 @@
 
 import { baseResourceFactory } from 'vault/resources/base-factory';
 import { service } from '@ember/service';
-import { supportedTypes } from 'vault/utils/supported-login-methods';
+import { supportedTypes } from 'vault/utils/auth-form-helpers';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 
 import type { Mount } from 'vault/mount';

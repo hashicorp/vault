@@ -16,7 +16,9 @@ import {
 import { Response } from 'miragejs';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { ERROR_MISSING_PARAMS, ERROR_WINDOW_CLOSED } from 'vault/components/auth/form/oidc-jwt';
+import { ERROR_MISSING_PARAMS, ERROR_POPUP_FAILED, ERROR_WINDOW_CLOSED } from 'vault/utils/auth-form-helpers';
+import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
+import sinon from 'sinon';
 
 module('Acceptance | oidc auth method', function (hooks) {
   setupApplicationTest(hooks);
@@ -43,18 +45,9 @@ module('Acceptance | oidc auth method', function (hooks) {
       auth: { client_token: 'root' },
     }));
 
-    // select method from dropdown or click auth path tab
-    this.selectMethod = async (method, useLink) => {
-      if (useLink) {
-        await click(AUTH_FORM.tabBtn(method));
-      } else {
-        await fillIn(AUTH_FORM.selectMethod, method);
-      }
-    };
-
     // ensure clean state
-    localStorage.removeItem('selectedAuth');
-    // Cannot log out here because it will cause the internal mount request to be hit before the mocks can interrupt it
+    // Cannot use logout() here because it will hit the internal mount request before the mocks can interrupt it
+    window.localStorage.clear();
   });
 
   hooks.afterEach(async function () {
@@ -64,8 +57,8 @@ module('Acceptance | oidc auth method', function (hooks) {
   test('it should login with oidc when selected from auth methods dropdown', async function (assert) {
     assert.expect(1);
     this.setupMocks(assert);
-    await logout();
-    await this.selectMethod('oidc');
+    await visit('/vault/auth');
+    await fillIn(AUTH_FORM.selectMethod, 'oidc');
 
     triggerMessageEvent('oidc');
 
@@ -98,7 +91,7 @@ module('Acceptance | oidc auth method', function (hooks) {
   test('it should populate oidc auth method on logout', async function (assert) {
     this.setupMocks();
     await logout();
-    await this.selectMethod('oidc');
+    await fillIn(AUTH_FORM.selectMethod, 'oidc');
 
     triggerMessageEvent('oidc');
 
@@ -122,9 +115,9 @@ module('Acceptance | oidc auth method', function (hooks) {
       return new Response(400, {}, { errors });
     });
 
-    await this.selectMethod('oidc');
+    await fillIn(AUTH_FORM.selectMethod, 'oidc');
     assert.dom(GENERAL.inputByAttr('jwt')).doesNotExist('JWT Token input hidden for OIDC');
-    await this.selectMethod('jwt');
+    await fillIn(AUTH_FORM.selectMethod, 'jwt');
     assert.dom(GENERAL.inputByAttr('jwt')).exists('JWT Token input renders for JWT configured method');
     await click(AUTH_FORM.advancedSettings);
     await fillIn(GENERAL.inputByAttr('path'), 'foo');
@@ -139,17 +132,15 @@ module('Acceptance | oidc auth method', function (hooks) {
       return new Response(status, {}, { errors });
     });
     await logout();
-    await this.selectMethod('oidc');
+    await fillIn(AUTH_FORM.selectMethod, 'oidc');
     await click(GENERAL.submitButton);
-    assert
-      .dom('[data-test-message-error-description]')
-      .hasText('Authentication failed: Invalid role. Please try again.');
+    assert.dom(GENERAL.messageError).hasText('Error Authentication failed: Invalid role. Please try again.');
 
     await fillIn(GENERAL.inputByAttr('role'), 'test');
     await click(GENERAL.submitButton);
     assert
-      .dom('[data-test-message-error-description]')
-      .hasText('Authentication failed: Error fetching role: permission denied');
+      .dom(GENERAL.messageError)
+      .hasText('Error Authentication failed: Error fetching role: permission denied');
   });
 
   // test case for https://github.com/hashicorp/vault/issues/12436
@@ -171,7 +162,7 @@ module('Acceptance | oidc auth method', function (hooks) {
     };
     window.addEventListener('message', assertEvent);
     await logout();
-    await this.selectMethod('oidc');
+    await fillIn(AUTH_FORM.selectMethod, 'oidc');
 
     setTimeout(() => {
       // first assertion
@@ -188,7 +179,7 @@ module('Acceptance | oidc auth method', function (hooks) {
   test('it shows error when message posted with state key, wrong params', async function (assert) {
     this.setupMocks();
     await logout();
-    await this.selectMethod('oidc');
+    await fillIn(AUTH_FORM.selectMethod, 'oidc');
     setTimeout(() => {
       // callback params are missing "code"
       window.postMessage({ source: 'oidc-callback', state: 'state', foo: 'bar' }, window.origin);
@@ -199,15 +190,39 @@ module('Acceptance | oidc auth method', function (hooks) {
       .hasText(`Error Authentication failed: ${ERROR_MISSING_PARAMS}`, 'displays error when missing params');
   });
 
-  test('it shows error when popup is closed', async function (assert) {
+  test('it shows error when popup is prematurely closed ', async function (assert) {
     windowStub({ stub: this.openStub, popup: { closed: true, close: () => {} } });
 
     this.setupMocks();
     await logout();
-    await this.selectMethod('oidc');
+    await fillIn(AUTH_FORM.selectMethod, 'oidc');
+    await click(GENERAL.submitButton);
+    assert.dom(GENERAL.messageError).hasText(`Error Authentication failed: ${ERROR_WINDOW_CLOSED}`);
+  });
+
+  test('it renders error when window fails to open', async function (assert) {
+    this.openStub.returns(null);
+    this.setupMocks();
+    await logout();
+    await fillIn(AUTH_FORM.selectMethod, 'oidc');
     await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.messageError)
-      .hasText(`Error Authentication failed: ${ERROR_WINDOW_CLOSED}`, 'displays error when missing params');
+      .hasText(`Error Authentication failed: Failed to open OIDC popup window. ${ERROR_POPUP_FAILED}`);
+  });
+
+  test('it renders api errors if oidc callback request fails', async function (assert) {
+    await logout();
+    this.server.post('/auth/oidc/oidc/auth_url', () => ({
+      data: { auth_url: 'http://example.com' },
+    }));
+    const api = this.owner.lookup('service:api');
+    const oidcCallbackStub = sinon.stub(api.auth, 'jwtOidcCallback');
+    oidcCallbackStub.rejects(getErrorResponse({ errors: ['something went terribly wrong!'] }, 500));
+    await fillIn(AUTH_FORM.selectMethod, 'oidc');
+    triggerMessageEvent('oidc');
+    await click(GENERAL.submitButton);
+    assert.dom(GENERAL.messageError).hasText('Error Authentication failed: something went terribly wrong!');
+    oidcCallbackStub.restore();
   });
 });
