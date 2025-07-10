@@ -5,6 +5,9 @@ description: >-
   Guide to migration of Consul storage to Raft. 
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Migrate Consul to Raft storage
 
 This procedure assumes you have a Vault cluster deployed in a Kubernetes environment configured with Consul storage.  The storage migration can occur while leaving the Consul cluster intact.  A single change to the Consul cluster is a lock file written by Vault during the migration.
