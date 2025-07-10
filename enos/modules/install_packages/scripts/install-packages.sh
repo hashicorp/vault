@@ -35,7 +35,7 @@ install_packages() {
           echo "Installing ${package}"
           local output
           if [ "${package}" = "docker" ]; then
-            sudo apt install apt-transport-https ca-certificates curl software-properties-common -y
+            sudo apt update -y
             if ! output=$(curl -fsSL https://get.docker.com | sudo sh 2>&1); then
               echo "Failed to install ${package}: ${output}" >&2
               return 1
