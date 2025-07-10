@@ -42,8 +42,8 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
   hooks.beforeEach(async function () {
     this.store = this.owner.lookup('service:store');
     this.backend = `kv-delete-${uuidv4()}`;
-    this.secretPath = 'bad-secret';
-    this.nestedSecretPath = 'app/nested/bad-secret';
+    this.secretPath = 'bad_secret';
+    this.nestedSecretPath = 'app/nested/bad_secret';
     await login();
     await runCmd(mountEngineCmd('kv-v2', this.backend), false);
     await writeVersionedSecret(this.backend, this.secretPath, 'foo', 'bar', 4);
@@ -171,8 +171,8 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     });
 
     test('can permanently delete all secret versions (a)', async function (assert) {
-      await writeVersionedSecret(this.backend, 'nuke', 'foo', 'bar', 2);
-      await visit(`/vault/secrets/${this.backend}/kv/nuke/metadata`);
+      await writeVersionedSecret(this.backend, 'nu_ke', 'foo', 'bar', 2);
+      await visit(`/vault/secrets/${this.backend}/kv/nu_ke/metadata`);
       assert.dom(PAGE.metadata.deleteMetadata).hasText('Permanently delete', 'shows delete metadata button');
       // delete flow
       await click(PAGE.metadata.deleteMetadata);
@@ -190,8 +190,8 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     hooks.beforeEach(async function () {
       // create and delete a secret as root user
       await login();
-      await writeVersionedSecret(this.backend, 'nuke', 'foo', 'bar', 2);
-      await runCmd(deleteLatestCmd(this.backend, 'nuke'));
+      await writeVersionedSecret(this.backend, 'nu_ke', 'foo', 'bar', 2);
+      await runCmd(deleteLatestCmd(this.backend, 'nu_ke'));
       // login as data-reader persona
       const token = await runCmd(makeToken('data-reader', this.backend, personas.dataReader));
       await login(token);
@@ -207,7 +207,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assert.dom(PAGE.infoRow).exists('shows secret data');
 
       // data-reader can't delete, so check undelete with already-deleted version
-      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
+      await visit(`/vault/secrets/${this.backend}/kv/nu_ke/details`);
       assertDeleteActions(assert, []);
       assert
         .dom(PAGE.emptyStateTitle)
@@ -231,7 +231,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     });
     test('cannot permanently delete all secret versions (dr)', async function (assert) {
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
+      await visit(`/vault/secrets/${this.backend}/kv/nu_ke/details`);
       // Check metadata toolbar
       await click(PAGE.secretTab('Metadata'));
       assert.dom(PAGE.metadata.deleteMetadata).doesNotExist('does not show delete metadata button');
@@ -242,8 +242,8 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     hooks.beforeEach(async function () {
       // create and delete a secret as root user
       await login();
-      await writeVersionedSecret(this.backend, 'nuke', 'foo', 'bar', 2);
-      await runCmd(deleteLatestCmd(this.backend, 'nuke'));
+      await writeVersionedSecret(this.backend, 'nu_ke', 'foo', 'bar', 2);
+      await runCmd(deleteLatestCmd(this.backend, 'nu_ke'));
       // login as data-list-reader persona
       const token = await runCmd(makeToken('data-list-reader', this.backend, personas.dataListReader));
       await login(token);
@@ -295,7 +295,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     });
     test('cannot permanently delete all secret versions (dlr)', async function (assert) {
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
+      await visit(`/vault/secrets/${this.backend}/kv/nu_ke/details`);
       // Check metadata toolbar
       await click(PAGE.secretTab('Metadata'));
       assert.dom(PAGE.metadata.deleteMetadata).doesNotExist('does not show delete metadata button');
@@ -306,8 +306,8 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     hooks.beforeEach(async function () {
       // create and delete a secret as root user
       await login();
-      await writeVersionedSecret(this.backend, 'nuke', 'foo', 'bar', 2);
-      await runCmd(deleteLatestCmd(this.backend, 'nuke'));
+      await writeVersionedSecret(this.backend, 'nu_ke', 'foo', 'bar', 2);
+      await runCmd(deleteLatestCmd(this.backend, 'nu_ke'));
       // login as metadata-maintainer persona
       const token = await runCmd(makeToken('metadata-maintainer', this.backend, personas.metadataMaintainer));
       await login(token);
@@ -328,7 +328,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assert.dom(PAGE.detail.deleteOptionLatest).isDisabled('delete latest option is disabled');
 
       // Can't delete latest, try with pre-deleted secret
-      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
+      await visit(`/vault/secrets/${this.backend}/kv/nu_ke/details`);
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version 2 timestamp not rendered');
       // updated toolbar options
@@ -397,7 +397,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
     });
     test('cannot permanently delete all secret versions (mm)', async function (assert) {
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
+      await visit(`/vault/secrets/${this.backend}/kv/nu_ke/details`);
       // Check metadata toolbar
       await click(PAGE.secretTab('Metadata'));
       assert.dom(PAGE.metadata.deleteMetadata).doesNotExist('does not show delete metadata button');
@@ -418,7 +418,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       // go to nested secret directory list view
       await visit(`/vault/secrets/${this.backend}/kv/list/app/nested`);
       // correct popup menu items appear on list view
-      const popupSelector = `${PAGE.list.item('bad-secret')} ${PAGE.popup}`;
+      const popupSelector = `${PAGE.list.item('bad_secret')} ${PAGE.popup}`;
       await click(popupSelector);
       assert.dom(PAGE.list.listMenuDelete).exists('shows the option to permanently delete');
     });
@@ -447,7 +447,7 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
 
       // test with already deleted method
-      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
+      await visit(`/vault/secrets/${this.backend}/kv/nu_ke/details`);
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('version timestamp not rendered');
       // updated toolbar options
@@ -469,9 +469,9 @@ module('Acceptance | kv-v2 workflow | delete, undelete, destroy', function (hook
       assertDeleteActions(assert, []);
     });
     test('can permanently delete all secret versions (sc)', async function (assert) {
-      await writeVersionedSecret(this.backend, 'nuke', 'foo', 'bar', 2);
+      await writeVersionedSecret(this.backend, 'nu_ke', 'foo', 'bar', 2);
       // go to secret details
-      await visit(`/vault/secrets/${this.backend}/kv/nuke/details`);
+      await visit(`/vault/secrets/${this.backend}/kv/nu_ke/details`);
       // Check metadata toolbar
       await click(PAGE.secretTab('Metadata'));
       assert.dom(PAGE.metadata.deleteMetadata).hasText('Permanently delete', 'shows delete metadata button');

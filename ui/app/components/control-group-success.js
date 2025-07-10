@@ -23,6 +23,7 @@ export default Component.extend({
   unwrap: task(function* (token) {
     this.set('error', null);
     try {
+      //* API SERVICE MUTATION: Unwrap data is mutated by api service
       const response = yield this.api.sys.unwrap({}, this.api.buildHeaders({ token }));
       this.set('unwrapData', response.auth || response.data);
       this.controlGroup.deleteControlGroupToken(this.model.id);
