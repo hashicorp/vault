@@ -358,7 +358,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     await loginNs('root');
 
     assert
-      .dom(GENERAL.button('namespace-picker'))
+      .dom(NAMESPACE_PICKER_SELECTORS.toggle)
       .hasText('root', `shows the namespace 'root' in the toggle component`);
 
     // Verify user is in root namespace
