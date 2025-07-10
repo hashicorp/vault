@@ -4,6 +4,7 @@
 package command
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -193,6 +194,7 @@ func (r *recordingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 	r.body = body
 	return &http.Response{
 		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewReader([]byte(`{"warnings": []}`))),
 	}, nil
 }
 

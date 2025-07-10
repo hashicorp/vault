@@ -10,6 +10,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { SYS_INTERNAL_UI_MOUNTS } from 'vault/tests/helpers/auth/auth-helpers';
 import setupTestContext from './setup-test-context';
+import sinon from 'sinon';
 
 /* 
   Login settings are an enterprise only feature but the component is version agnostic (and subsequently so are these tests) 
@@ -28,6 +29,8 @@ module('Integration | Component | auth | page | ent login settings', function (h
       defaultType: 'oidc',
       backupTypes: ['userpass', 'ldap'],
     };
+    // extra setup for when the "oidc" is selected and the oidc-jwt component renders
+    this.routerStub = sinon.stub(this.owner.lookup('service:router'), 'urlFor').returns('123-example.com');
 
     this.assertPathInput = async (assert, { isHidden = false, value = '' } = {}) => {
       // the path input can render behind the "Advanced settings" toggle or as a hidden input.
@@ -43,6 +46,10 @@ module('Integration | Component | auth | page | ent login settings', function (h
       }
       assert.dom(GENERAL.inputByAttr('path')).exists({ count: 1 });
     };
+  });
+
+  hooks.afterEach(function () {
+    this.routerStub.restore();
   });
 
   test('(default+backups): it initially renders default type and toggles to view backup methods', async function (assert) {
@@ -118,7 +125,7 @@ module('Integration | Component | auth | page | ent login settings', function (h
       await this.renderComponent();
       assert.dom(AUTH_FORM.tabBtn('oidc')).hasText('OIDC', 'it renders default method');
       assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
-      this.assertPathInput(assert, { isHidden: true, value: 'my-oidc/' });
+      this.assertPathInput(assert, { isHidden: true, value: 'my_oidc/' });
       await click(GENERAL.button('Sign in with other methods'));
       assert.dom(AUTH_FORM.tabs).exists({ count: 2 }, 'it renders 2 backup type tabs');
       assert
@@ -137,7 +144,7 @@ module('Integration | Component | auth | page | ent login settings', function (h
       assert.dom(AUTH_FORM.tabBtn('oidc')).hasText('OIDC', 'it renders default method');
       assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
       assert.dom(AUTH_FORM.authForm('oidc')).exists();
-      this.assertPathInput(assert, { isHidden: true, value: 'my-oidc/' });
+      this.assertPathInput(assert, { isHidden: true, value: 'my_oidc/' });
       assert.dom(GENERAL.backButton).doesNotExist();
       assert.dom(GENERAL.button('Sign in with other methods')).doesNotExist();
     });
@@ -165,9 +172,9 @@ module('Integration | Component | auth | page | ent login settings', function (h
     });
 
     test('(default+backups): it hides advanced settings for default with visible mount but it renders for backups', async function (assert) {
-      this.visibleAuthMounts = { ...this.mountData('my-oidc/') };
+      this.visibleAuthMounts = { ...this.mountData('my_oidc/') };
       await this.renderComponent();
-      this.assertPathInput(assert, { isHidden: true, value: 'my-oidc/' });
+      this.assertPathInput(assert, { isHidden: true, value: 'my_oidc/' });
       await click(GENERAL.button('Sign in with other methods'));
       assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
       await this.assertPathInput(assert);
@@ -178,7 +185,7 @@ module('Integration | Component | auth | page | ent login settings', function (h
     test('(default+backups): it only renders advanced settings for method without mounts', async function (assert) {
       // default and only one backup method have visible mounts
       this.visibleAuthMounts = {
-        ...this.mountData('my-oidc/'),
+        ...this.mountData('my_oidc/'),
         ...this.mountData('userpass/'),
         ...this.mountData('userpass2/'),
       };

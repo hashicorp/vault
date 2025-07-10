@@ -12,6 +12,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupTotpMfaResponse } from 'vault/tests/helpers/mfa/mfa-helpers';
 import setupTestContext from './setup-test-context';
+import sinon from 'sinon';
 
 module('Integration | Component | auth | page | listing visibility', function (hooks) {
   setupRenderingTest(hooks);
@@ -20,6 +21,12 @@ module('Integration | Component | auth | page | listing visibility', function (h
   hooks.beforeEach(function () {
     setupTestContext(this);
     this.visibleAuthMounts = SYS_INTERNAL_UI_MOUNTS;
+    // extra setup for when the "oidc" is selected and the oidc-jwt component renders
+    this.routerStub = sinon.stub(this.owner.lookup('service:router'), 'urlFor').returns('123-example.com');
+  });
+
+  hooks.afterEach(function () {
+    this.routerStub.restore();
   });
 
   test('it formats and renders tabs if visible auth mounts exist', async function (assert) {
@@ -74,7 +81,7 @@ module('Integration | Component | auth | page | listing visibility', function (h
   module('with a direct link', function (hooks) {
     hooks.beforeEach(function () {
       // if path exists, the mount has listing_visibility="unauth"
-      this.directLinkIsVisibleMount = { path: 'my-oidc/', type: 'oidc' };
+      this.directLinkIsVisibleMount = { path: 'my_oidc/', type: 'oidc' };
       this.directLinkIsJustType = { type: 'okta' };
     });
 
@@ -106,7 +113,7 @@ module('Integration | Component | auth | page | listing visibility', function (h
       assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
       assert.dom(GENERAL.inputByAttr('role')).exists();
       assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
-      assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
+      assert.dom(GENERAL.inputByAttr('path')).hasValue('my_oidc/');
       assert.dom(GENERAL.button('Sign in with other methods')).exists('"Sign in with other methods" renders');
       assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist();
       assert.dom(AUTH_FORM.advancedSettings).doesNotExist();

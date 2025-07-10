@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, findAll } from '@ember/test-helpers';
+import { click, findAll } from '@ember/test-helpers';
+import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
-import { AUTH_METHOD_LOGIN_DATA, fillInLoginFields } from 'vault/tests/helpers/auth/auth-helpers';
+import { fillInLoginFields } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 /*
@@ -13,72 +14,60 @@ NOTE: In the app these components are actually rendered dynamically by Auth::For
 and so the components rendered in these tests does not represent "real world" situations.
 This is intentional to test component logic specific to auth/form/base or auth/form/<type> 
 separately from auth/form-template.
+
+See beforeEach hooks in auth/form/base-test to see setup for each method.
 */
 
-export default (test, { standardSubmit = true } = {}) => {
+export default (test) => {
   test('it renders fields', async function (assert) {
+    const expectedFields = Object.keys(this.loginData);
     await this.renderComponent();
     assert.dom(AUTH_FORM.authForm(this.authType)).exists(`${this.authType}: it renders form component`);
     const fields = findAll('input');
     for (const field of fields) {
-      assert.true(this.expectedFields.includes(field.name), `it renders field: ${field.name}`);
+      assert.true(expectedFields.includes(field.name), `it renders field: ${field.name}`);
     }
   });
 
   test('it fires onError callback', async function (assert) {
-    this.authenticateStub.throws('permission denied');
+    this.authenticateStub.rejects(getErrorResponse({ errors: ['uh oh!'] }, 500));
     await this.renderComponent();
     await click(GENERAL.submitButton);
 
     const [actual] = this.onError.lastCall.args;
-    assert.strictEqual(
-      actual,
-      'Authentication failed: permission denied: Sinon-provided permission denied',
-      'it calls onError'
-    );
+    assert.strictEqual(actual, 'Authentication failed: uh oh!', 'it calls onError');
   });
 
   test('it fires onSuccess callback', async function (assert) {
-    this.authenticateStub.returns('success!');
+    this.authenticateStub.resolves(this.authResponse);
     await this.renderComponent();
     await click(GENERAL.submitButton);
 
-    const [actual] = this.onSuccess.lastCall.args;
-    assert.strictEqual(actual, 'success!', 'it calls onSuccess');
+    // Only checking for authMethodType because this test just asserts the onSuccess callback fires.
+    const [{ authMethodType }] = this.onSuccess.lastCall.args;
+    assert.strictEqual(authMethodType, this.authType, 'it calls onSuccess');
   });
 
-  // some methods are tested separately because they have more complex submit logic
-  if (standardSubmit) {
-    test('it submits form data with defaults', async function (assert) {
-      await this.renderComponent();
-      const loginData = AUTH_METHOD_LOGIN_DATA[this.authType];
+  test('it submits form data with defaults', async function (assert) {
+    await this.renderComponent();
+    await fillInLoginFields(this.loginData);
+    await click(GENERAL.submitButton);
 
-      await fillInLoginFields(loginData);
-      await click(GENERAL.submitButton);
-      const [actual] = this.authenticateStub.lastCall.args;
-      assert.propEqual(
-        actual.data,
-        this.expectedSubmit.default,
-        'auth service "authenticate" method is called with form data'
-      );
-    });
+    // Since each login method accepts different args
+    // the submit assertion is setup in each method's beforeEach hook
+    this.assertSubmit(assert, this.authenticateStub.lastCall.args, this.loginData);
+  });
 
-    // not for testing real-world submit, that happens in acceptance tests.
-    // component here just yields <:advancedSettings> to test form submits data from yielded inputs
-    test('it submits form data from yielded inputs', async function (assert) {
-      await this.renderComponent({ yieldBlock: true });
-      const loginData = AUTH_METHOD_LOGIN_DATA[this.authType];
-
-      await fillInLoginFields(loginData);
-      await fillIn(GENERAL.inputByAttr('path'), `custom-${this.authType}`);
-
-      await click(GENERAL.submitButton);
-      const [actual] = this.authenticateStub.lastCall.args;
-      assert.propEqual(
-        actual.data,
-        this.expectedSubmit.custom,
-        'auth service "authenticate" method is called with yielded form data'
-      );
-    });
-  }
+  // not for testing real-world submit, that happens in acceptance tests.
+  // component here just yields <:advancedSettings> to test form submits data from yielded inputs
+  test('it submits form data from yielded inputs', async function (assert) {
+    const customPath = `custom-${this.authType}`;
+    const loginData = { ...this.loginData, path: customPath };
+    await this.renderComponent({ yieldBlock: true });
+    await fillInLoginFields(loginData);
+    await click(GENERAL.submitButton);
+    // Since each login method accepts different args
+    // the submit assertion is setup in each method's beforeEach hook
+    this.assertSubmit(assert, this.authenticateStub.lastCall.args, loginData);
+  });
 };

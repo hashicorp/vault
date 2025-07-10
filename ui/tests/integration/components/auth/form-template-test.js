@@ -12,9 +12,9 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { AUTH_METHOD_LOGIN_DATA } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { ENTERPRISE_LOGIN_METHODS, supportedTypes } from 'vault/utils/supported-login-methods';
+import { ENTERPRISE_LOGIN_METHODS, ERROR_JWT_LOGIN, supportedTypes } from 'vault/utils/auth-form-helpers';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
-import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
+import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 
 module('Integration | Component | auth | form template', function (hooks) {
   setupRenderingTest(hooks);
@@ -23,6 +23,7 @@ module('Integration | Component | auth | form template', function (hooks) {
   hooks.beforeEach(function () {
     window.localStorage.clear();
     this.version = this.owner.lookup('service:version');
+    this.router = this.owner.lookup('service:router');
     this.cluster = { id: '1' };
 
     this.alternateView = null;
@@ -65,14 +66,14 @@ module('Integration | Component | auth | form template', function (hooks) {
   });
 
   test('it displays errors', async function (assert) {
-    const authenticateStub = sinon.stub(this.owner.lookup('service:auth'), 'authenticate');
-    authenticateStub.throws('permission denied');
+    const api = this.owner.lookup('service:api');
+    // stub auth request for "token" method because it's selected by default
+    const tokenLookUpSelfStub = sinon.stub(api.auth, 'tokenLookUpSelf');
+    tokenLookUpSelfStub.rejects(getErrorResponse({ errors: ['uh oh!'] }, 400));
     await this.renderComponent();
     await click(GENERAL.submitButton);
-    assert
-      .dom(GENERAL.messageError)
-      .hasText('Error Authentication failed: permission denied: Sinon-provided permission denied');
-    authenticateStub.restore();
+    assert.dom(GENERAL.messageError).hasText('Error Authentication failed: uh oh!');
+    tokenLookUpSelfStub.restore();
   });
 
   test('dropdown does not include enterprise methods on community versions', async function (assert) {
@@ -108,12 +109,12 @@ module('Integration | Component | auth | form template', function (hooks) {
             type: 'userpass',
           },
         ],
-        oidc: [
+        ldap: [
           {
-            path: 'my-oidc/',
+            path: 'my-ldap/',
             description: '',
             options: {},
-            type: 'oidc',
+            type: 'ldap',
           },
         ],
         token: [
@@ -146,19 +147,19 @@ module('Integration | Component | auth | form template', function (hooks) {
       // click through each tab
       await click(AUTH_FORM.tabBtn('userpass'));
       assertSelected('userpass');
-      assertUnselected('oidc');
+      assertUnselected('ldap');
       assertUnselected('token');
       assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
 
-      await click(AUTH_FORM.tabBtn('oidc'));
-      assertSelected('oidc');
+      await click(AUTH_FORM.tabBtn('ldap'));
+      assertSelected('ldap');
       assertUnselected('token');
       assertUnselected('userpass');
       assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
 
       await click(AUTH_FORM.tabBtn('token'));
       assertSelected('token');
-      assertUnselected('oidc');
+      assertUnselected('ldap');
       assertUnselected('userpass');
       assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
     });
@@ -185,33 +186,33 @@ module('Integration | Component | auth | form template', function (hooks) {
     test('it resets selected tab after clicking "Sign in with other methods" and then "Back"', async function (assert) {
       await this.renderComponent();
       assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
-      assert.dom(AUTH_FORM.tabBtn('oidc')).hasAttribute('aria-selected', 'false');
+      assert.dom(AUTH_FORM.tabBtn('ldap')).hasAttribute('aria-selected', 'false');
       assert.dom(AUTH_FORM.tabBtn('token')).hasAttribute('aria-selected', 'false');
 
       // select a different tab before clicking "Sign in with other methods"
-      await click(AUTH_FORM.tabBtn('oidc'));
-      assert.dom(AUTH_FORM.tabBtn('oidc')).hasAttribute('aria-selected', 'true');
+      await click(AUTH_FORM.tabBtn('ldap'));
+      assert.dom(AUTH_FORM.tabBtn('ldap')).hasAttribute('aria-selected', 'true');
       assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'false');
       await click(GENERAL.button('Sign in with other methods'));
       assert.dom(GENERAL.selectByAttr('auth type')).exists('it renders dropdown instead of tabs');
       await click(GENERAL.backButton);
       // assert tab selection is reset
       assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
-      assert.dom(AUTH_FORM.tabBtn('oidc')).hasAttribute('aria-selected', 'false');
+      assert.dom(AUTH_FORM.tabBtn('ldap')).hasAttribute('aria-selected', 'false');
       assert.dom(AUTH_FORM.tabBtn('token')).hasAttribute('aria-selected', 'false');
     });
 
     test('it preselects tab from initialFormState', async function (assert) {
-      this.initialFormState = { initialAuthType: 'oidc', showAlternate: false };
+      this.initialFormState = { initialAuthType: 'ldap', showAlternate: false };
       await this.renderComponent();
-      assert.dom(AUTH_FORM.authForm('oidc')).exists('oidc form renders');
-      assert.dom(AUTH_FORM.tabBtn('oidc')).hasAttribute('aria-selected', 'true');
+      assert.dom(AUTH_FORM.authForm('ldap')).exists('ldap form renders');
+      assert.dom(AUTH_FORM.tabBtn('ldap')).hasAttribute('aria-selected', 'true');
     });
 
     test('it renders dropdown and preselects type if initialFormState is not a tab', async function (assert) {
-      this.initialFormState = { initialAuthType: 'ldap', showAlternate: true };
+      this.initialFormState = { initialAuthType: 'okta', showAlternate: true };
       await this.renderComponent();
-      assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap');
+      assert.dom(GENERAL.selectByAttr('auth type')).hasValue('okta');
       assert.dom(GENERAL.inputByAttr('username')).exists();
       assert.dom(GENERAL.inputByAttr('password')).exists();
 
@@ -244,6 +245,10 @@ module('Integration | Component | auth | form template', function (hooks) {
 
       await this.renderComponent();
       for (const authType of authMethodTypes) {
+        let stub;
+        if (['oidc', 'jwt'].includes(authType)) {
+          stub = sinon.stub(this.router, 'urlFor').returns('123-example.com');
+        }
         const loginData = AUTH_METHOD_LOGIN_DATA[authType];
 
         const fields = Object.keys(loginData);
@@ -267,6 +272,10 @@ module('Integration | Component | auth | form template', function (hooks) {
         fields.forEach((field) => {
           assert.dom(GENERAL.inputByAttr(field)).exists(`${authType}: ${field} input renders`);
         });
+
+        if (stub) {
+          stub.restore();
+        }
       }
     });
 
@@ -287,9 +296,7 @@ module('Integration | Component | auth | form template', function (hooks) {
   // in the corresponding the Auth::Form::<Type> integration tests
   module('oidc-jwt', function (hooks) {
     hooks.beforeEach(async function () {
-      this.store = this.owner.lookup('service:store');
-      this.routerStub = (path) =>
-        sinon.stub(this.owner.lookup('service:router'), 'urlFor').returns(`/auth/${path}/oidc/callback`);
+      this.routerStub = (path) => sinon.stub(this.router, 'urlFor').returns(`/auth/${path}/oidc/callback`);
     });
 
     test('it re-requests the auth_url when authType changes', async function (assert) {

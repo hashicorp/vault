@@ -487,8 +487,8 @@ module('Acceptance | pki workflow', function (hooks) {
       await login();
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
-      await click('[data-test-text-toggle]');
-      await fillIn('[data-test-text-file-textarea]', unsupportedPem);
+      await click(GENERAL.textToggle);
+      await fillIn(GENERAL.maskedInput, unsupportedPem);
       await click(PKI_CONFIGURE_CREATE.importSubmit);
       const issuerId = find(PKI_CONFIGURE_CREATE.importedIssuer).innerText;
       await click(`${PKI_CONFIGURE_CREATE.importedIssuer} a`);

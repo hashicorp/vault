@@ -14,6 +14,7 @@ import codemirror from 'vault/tests/helpers/codemirror';
 import { FORM } from 'vault/tests/helpers/kv/kv-selectors';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hooks) {
   setupRenderingTest(hooks);
@@ -248,7 +249,7 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
       .dom(FORM.validation('path'))
       .doesNotExist('it removes validation on key up when secret contains slash but does not end in one');
 
-    await click(FORM.toggleJson);
+    await click(GENERAL.toggleInput('json'));
     codemirror().setValue('i am a string and not JSON');
     assert
       .dom(FORM.inlineAlert)
@@ -293,7 +294,7 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
     );
 
     assert.dom(FORM.dataInputLabel({ isJson: false })).hasText('Secret data');
-    await click(FORM.toggleJson);
+    await click(GENERAL.toggleInput('json'));
     assert.dom(FORM.dataInputLabel({ isJson: true })).hasText('Secret data');
 
     codemirror().setValue(`{ "hello": "there"}`);
