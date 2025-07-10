@@ -54,7 +54,7 @@ export default class NamespaceService extends Service {
   setNamespace(path) {
     // If a user explicitly logs in to the 'root' namespace, the path is set to 'root'.
     // The root namespace doesn't have a set path, so when verifying the selected namespace, it returns null.
-    // Adding a check here, so if the namespace is 'root', it'll be set it to an empty string to match the root namespace.
+    // Adding a check here, so if the namespace is 'root', it'll be set to an empty string to match the root namespace.
     if (!path || sanitizePath(path) === 'root') {
       this.path = '';
       return;
