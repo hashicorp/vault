@@ -206,7 +206,7 @@ module.exports = [
     permanent: true,
   },
   {
-    source: '/vault/docs/release-notes/:version(1\.(?:4|5|6|7|8|9|10|11|12|13|14|15|17|18)).0',
+    source: '/vault/docs/release-notes/v:version(1\.(?:4|5|6|7|8|9|10|11|12|13|14|15|17|18)).0',
     destination: '/vault/docs/v:version.x/release-notes/:version.0',
     permanent: true,
   },
@@ -232,7 +232,7 @@ module.exports = [
   },
   {
     source: '/vault/docs/v:version(1\.(?:4|5|6|7|8|9|10|11|12|13|14|15|16|17|18)\.x)/partners',
-    destination: '/vault/docs/:version/interoperability-matrix',
+    destination: '/vault/docs/v:version/interoperability-matrix',
     permanent: true,
   },
   {
@@ -276,11 +276,6 @@ module.exports = [
     permanent: true,
   },
   {
-    source: '/vault/docs/upgrading/vault-ha-upgrade',
-    destination: '/vault/docs/v1.10.x/upgrading/vault-ha-upgrade',
-    permanent: true,
-  },
-  {
     source: '/vault/docs/enterprise/license',
     destination: '/vault/docs/license',
     permanent: true,
@@ -317,12 +312,17 @@ module.exports = [
   },
   {
     source: '/vault/docs/v:version(1\.(?:7|8|9|10|11|12|13|14|15|16|17|18|19)\.x)/sysadmin/snapshots/automation-overview',
-    destination: '/vault/docs/:version/enterprise/automated-integrated-storage-snapshots',
+    destination: '/vault/docs/v:version/enterprise/automated-integrated-storage-snapshots',
     permanent: true,
   },
   {
     source: '/vault/docs/concepts/client-count/usage-metrics',
     destination: '/vault/docs/concepts/client-count/client-usage',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/:version(v1\.*\.x)/v:ver(1\.*\.x)/:slug*',
+    destination: '/vault/docs/:version/:slug',
     permanent: true,
   }
 ]

@@ -91,8 +91,8 @@ export const PAGE = {
         case 'granularity':
           return await click(`${GENERAL.radioByAttr('secret-key')}`);
         case 'credentials':
-          await click('[data-test-text-toggle]');
-          return fillIn('[data-test-text-file-textarea]', value);
+          await click(GENERAL.textToggle);
+          return fillIn(GENERAL.maskedInput, value);
         case 'customTags':
           await fillIn('[data-test-kv-key="0"]', 'foo');
           return fillIn('[data-test-kv-value="0"]', value);

@@ -65,11 +65,11 @@ $ vault operator raft snapshot restore -force <local_file_path>
 For example:
    
 <CodeBlockConfig hideClipboard>
-   
+
 ```shell-session
 $ vault operator raft snapshot restore -force /tmp/snapshots/backup.snap
 ```
-   
+
 </CodeBlockConfig>
 
 </Tab>
@@ -106,34 +106,31 @@ $ curl                                       \
 
 </Tabs>
 
-
-
 ## Step 4: Unseal Vault
 
 <Tabs>
 
 <Tab heading="CLI" group="cli">
 
-Run
-[`vault operator raft snapshot restore`](/vault/docs/commands/operator/raft#snapshot-restore)
-with the local snapshot file path and the `-force` flag:
+Have each person with an unseal key share run
+`vault operator unseal` with their original unseal
+key until reaching the number of key shares required by your origial quroum
+configuration to unseal your Vault cluster:
+
 
 ```shell-session
-$ vault operator raft snapshot restore -force <local_file_path>
+$ vault operator unseal
 ```
 
-For example:
-   
+Enter the unseal key when prompted:
+
 <CodeBlockConfig hideClipboard>
-   
-```shell-session
-$ vault operator raft snapshot restore -force /tmp/snapshots/backup.snap
+
+```plaintext
+Unseal Key (will be hidden):
 ```
 
 </CodeBlockConfig>
-   
-You must use the `-force` flag as the auto-unseal or Shamir keys are not
-consistent with the snapshot data, which came from a different cluster.
 
 </Tab>
 

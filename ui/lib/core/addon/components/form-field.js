@@ -56,7 +56,6 @@ import { get } from '@ember/object';
 export default class FormFieldComponent extends Component {
   emptyData = '{\n}';
   shouldHideLabel = [
-    'boolean',
     'file',
     'json',
     'kv',
@@ -97,18 +96,39 @@ export default class FormFieldComponent extends Component {
   get isHdsFormField() {
     const { type, options } = this.args.attr;
 
-    // here we replicate the logic in the template, to make sure we don't change the order in which the "ifs" are evaluated
+    // here we replicate the logic in the `form-field.hbs` template, as it was at the beginning of the migation to HDS
+    // to make sure we don't change the order in which the "ifs" are evaluated
+    // see: https://github.com/hashicorp/vault/blob/e99c06a0249f1ecde02c5b48990cb0e91e4ec575/ui/lib/core/addon/components/form-field.hbs
     if (options?.possibleValues?.length > 0) {
       return true;
     } else {
-      if (type === 'number' || type === 'string') {
-        if (options?.editType === 'password' || options?.editType === 'textarea') {
+      if (options?.editType === 'dateTimeLocal') {
+        return true;
+      } else if (
+        options?.editType === 'searchSelect' ||
+        options?.editType === 'mountAccessor' ||
+        options?.editType === 'kv' ||
+        options?.editType === 'file' ||
+        options?.editType === 'ttl' ||
+        options?.editType === 'regex' ||
+        options?.editType === 'toggleButton' ||
+        options?.editType === 'optionalText' ||
+        options?.editType === 'stringArray' ||
+        options?.sensitive === true
+      ) {
+        return false;
+      } else if (type === 'number' || type === 'string') {
+        if (options?.editType === 'textarea' || options?.editType === 'password') {
           return true;
         } else {
           return false;
         }
+      } else if (type === 'boolean' || options?.editType === 'boolean') {
+        return true;
+      } else if (type === 'object' || options?.editType === 'yield') {
+        return false;
       } else {
-        // we leave these fields as they are (for now)
+        // fallback, just in case
         return false;
       }
     }
@@ -126,7 +146,7 @@ export default class FormFieldComponent extends Component {
 
   get hideLabel() {
     const { type, options } = this.args.attr;
-    if (type === 'boolean' || type === 'object' || options?.isSectionHeader) {
+    if (type === 'object' || options?.isSectionHeader) {
       return true;
     }
     // falsey values render a <FormFieldLabel>
