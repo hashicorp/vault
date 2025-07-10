@@ -39,3 +39,9 @@ variable "packages" {
   description = "A list of packages to install via the target host package manager"
   default     = []
 }
+
+variable "timeout" {
+  type        = number
+  description = "The max number of seconds to wait before timing out. This is applied to each step so total timeout will be longer."
+  default     = 180
+}

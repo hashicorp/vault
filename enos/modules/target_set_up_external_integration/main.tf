@@ -37,6 +37,7 @@ module "install_packages" {
   source   = "../install_packages"
   hosts    = var.hosts
   packages = var.packages
+  timeout  = var.timeout
 }
 
 # Creating OpenLDAP Server
