@@ -27,7 +27,6 @@ const SELECT = {
   filterBar: '[data-test-component="navigate-input"]',
   createPolicy: '[data-test-policy-create-link]',
   nameInput: '[data-test-policy-input="name"]',
-  createError: '[data-test-message-error]',
   policyTitle: '[data-test-policy-name]',
   listBreadcrumb: '[data-test-policy-list-link] a',
 };
@@ -111,7 +110,7 @@ module('Acceptance | policies/acl', function (hooks) {
     await fillIn(SELECT.nameInput, policyName);
     await click(GENERAL.submitButton);
     assert
-      .dom(SELECT.createError)
+      .dom(GENERAL.messageError)
       .hasText(`Error 'policy' parameter not supplied or empty`, 'renders error message on save');
 
     await waitFor('.cm-editor');
