@@ -24,6 +24,8 @@ func newReleasesListActiveVersionsCmd() *cobra.Command {
 
 	activeVersionsCmd.PersistentFlags().UintVarP(&listReleaseActiveVersionsReq.Recurse, "recurse", "r", 0, "If no path to a config file is given, recursively search backwards for it and stop at root or until we've his the configured depth.")
 
+	activeVersionsCmd.PersistentFlags().BoolVar(&listReleaseActiveVersionsReq.WriteToGithubOutput, "github-output", false, "Whether or not to write 'active-versions' to $GITHUB_OUTPUT")
+
 	return activeVersionsCmd
 }
 
@@ -48,6 +50,15 @@ func runListActiveVersionsReq(cmd *cobra.Command, args []string) error {
 		fmt.Println(string(b))
 	default:
 		fmt.Println(res.ToTable())
+	}
+
+	if listReleaseActiveVersionsReq.WriteToGithubOutput {
+		output, err := res.ToGithubOutput()
+		if err != nil {
+			return err
+		}
+
+		return writeToGithubOutput("active-versions", output)
 	}
 
 	return err

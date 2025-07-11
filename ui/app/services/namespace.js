@@ -5,7 +5,7 @@
 
 import Service, { service } from '@ember/service';
 import { task } from 'ember-concurrency';
-import { getRelativePath } from 'core/utils/sanitize-path';
+import { getRelativePath, sanitizePath } from 'core/utils/sanitize-path';
 import { tracked } from '@glimmer/tracking';
 import { buildWaiter } from '@ember/test-waiters';
 
@@ -52,7 +52,10 @@ export default class NamespaceService extends Service {
   }
 
   setNamespace(path) {
-    if (!path) {
+    // If a user explicitly logs in to the 'root' namespace, the path is set to 'root'.
+    // The root namespace doesn't have a set path, so when verifying the selected namespace, it returns null.
+    // Adding a check here, so if the namespace is 'root', it'll be set to an empty string to match the root namespace.
+    if (!path || sanitizePath(path) === 'root') {
       this.path = '';
       return;
     }
