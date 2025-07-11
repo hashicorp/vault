@@ -102,8 +102,9 @@ export default class FormFieldComponent extends Component {
     if (options?.possibleValues?.length > 0) {
       return true;
     } else {
-      if (
-        options?.editType === 'dateTimeLocal' ||
+      if (options?.editType === 'dateTimeLocal') {
+        return true;
+      } else if (
         options?.editType === 'searchSelect' ||
         options?.editType === 'mountAccessor' ||
         options?.editType === 'kv' ||
@@ -119,8 +120,10 @@ export default class FormFieldComponent extends Component {
       } else if (type === 'number' || type === 'string') {
         if (options?.editType === 'textarea' || options?.editType === 'password') {
           return true;
-        } else {
+        } else if (options?.editType === 'json') {
           return false;
+        } else {
+          return true;
         }
       } else if (type === 'boolean' || options?.editType === 'boolean') {
         return true;

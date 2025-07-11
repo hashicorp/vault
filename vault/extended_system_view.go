@@ -142,7 +142,3 @@ func (e extendedSystemViewImpl) DeregisterWellKnownRedirect(ctx context.Context,
 func (e extendedSystemViewImpl) GetPinnedPluginVersion(ctx context.Context, pluginType consts.PluginType, pluginName string) (*pluginutil.PinnedVersion, error) {
 	return e.core.pluginCatalog.GetPinnedVersion(ctx, pluginType, pluginName)
 }
-
-func (e extendedSystemViewImpl) DownloadExtractVerifyPlugin(_ context.Context, _ *pluginutil.PluginRunner) error {
-	return fmt.Errorf("cannot call DownloadExtractVerifyPlugin from a plugin backend")
-}
