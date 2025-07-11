@@ -40,6 +40,7 @@ func newGithubCmd() *cobra.Command {
 	githubCmd.AddCommand(newGithubCopyCmd())
 	githubCmd.AddCommand(newGithubCreateCmd())
 	githubCmd.AddCommand(newGithubListCmd())
+	githubCmd.AddCommand(newGithubSyncCmd())
 
 	return githubCmd
 }
