@@ -161,11 +161,13 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       { owner: this.engine }
     );
     await click('[data-test-radio-card="basic"]');
+
     await click(GENERAL.submitButton);
-    assert.dom(GENERAL.inlineError).hasText('Name is required', 'Validation error renders');
+    assert.dom(GENERAL.validationErrorByAttr('name')).hasText('Name is required', 'Validation error renders');
     await fillIn(GENERAL.inputByAttr('name'), 'role-1');
     await fillIn(GENERAL.inputByAttr('serviceAccountName'), 'default');
     await click(GENERAL.submitButton);
+
     assert.ok(
       this.transitionCalledWith('roles.role.details', this.newModel.name),
       'Transitions to details route on save'
@@ -328,11 +330,10 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       { owner: this.engine }
     );
     await click('[data-test-radio-card="basic"]');
+
     await click(GENERAL.submitButton);
-    assert
-      .dom(GENERAL.inputByAttr('name'))
-      .hasClass('has-error-border', 'shows border error on input with error');
-    assert.dom(GENERAL.inlineError).hasText('Name is required');
+    assert.dom(GENERAL.validationErrorByAttr('name')).hasText('Name is required');
+
     assert
       .dom(`[data-test-invalid-form-alert] ${GENERAL.inlineError}`)
       .hasText('There is an error with this form.');

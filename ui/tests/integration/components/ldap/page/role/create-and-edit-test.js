@@ -134,9 +134,9 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
       await click(GENERAL.submitButton);
 
       fields.forEach((field) => {
-        assert
-          .dom(`${GENERAL.fieldByAttr(field)} ${GENERAL.inlineError}`)
-          .exists('Validation message renders');
+
+        assert.dom(GENERAL.validationErrorByAttr(field)).exists('Validation message renders');
+
       });
 
       assert
