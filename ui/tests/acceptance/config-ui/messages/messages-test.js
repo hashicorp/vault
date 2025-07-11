@@ -107,13 +107,13 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
         'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'
       );
       await fillIn(
-        CUSTOM_MESSAGES.input('startTime'),
+        CUSTOM_MESSAGES.input('start_time'),
         format(addDays(startOfDay(new Date('2023-12-12')), 1), datetimeLocalStringFormat)
       );
       if (end_time) {
         await click('#specificDate');
         await fillIn(
-          CUSTOM_MESSAGES.input('endTime'),
+          CUSTOM_MESSAGES.input('end_time'),
           format(addDays(startOfDay(new Date('2023-12-12')), 10), datetimeLocalStringFormat)
         );
       }
