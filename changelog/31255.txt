@@ -1,0 +1,3 @@
+```release-note:change
+secrets/artifactory: Use Artifactory identity token for auth, instead of username with API key
+```
