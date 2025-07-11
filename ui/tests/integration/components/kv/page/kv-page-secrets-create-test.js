@@ -96,8 +96,8 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
     await fillIn(FORM.maskedValueInput(), 'bar');
 
     await click(FORM.toggleMetadata);
-    await fillIn(`[data-test-field="customMetadata"] ${FORM.keyInput()}`, 'my-custom');
-    await fillIn(`[data-test-field="customMetadata"] ${FORM.valueInput()}`, 'metadata');
+    await fillIn(`${GENERAL.fieldByAttr('customMetadata')} ${FORM.keyInput()}`, 'my-custom');
+    await fillIn(`${GENERAL.fieldByAttr('customMetadata')} ${FORM.valueInput()}`, 'metadata');
     await fillIn(FORM.inputByAttr('maxVersions'), this.maxVersions);
 
     await click(FORM.saveBtn);

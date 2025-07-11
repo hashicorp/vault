@@ -238,7 +238,7 @@ module('Acceptance | transit', function (hooks) {
     await click(SELECTORS.form('exportable'));
     await click(SELECTORS.form('derived'));
     await click(SELECTORS.form('convergent-encryption'));
-    await click('[data-test-toggle-label="Auto-rotation period"]');
+    await click(GENERAL.ttl.toggle('Auto-rotation period'));
     await click(SELECTORS.form('create'));
 
     assert.strictEqual(
@@ -466,7 +466,7 @@ module('Acceptance | transit', function (hooks) {
 
       const expectedRotateValue = key.autoRotate ? '30 days' : 'Key will not be automatically rotated';
       assert
-        .dom('[data-test-row-value="Auto-rotation period"]')
+        .dom(GENERAL.infoRowValue('Auto-rotation period'))
         .hasText(expectedRotateValue, 'Has expected auto rotate value');
 
       await click(SELECTORS.versionsTab);

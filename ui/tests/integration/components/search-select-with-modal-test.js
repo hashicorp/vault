@@ -158,7 +158,7 @@ module('Integration | Component | search select with modal', function (hooks) {
     await component.selectOption();
 
     assert.dom('#search-select-modal').exists('modal is active');
-    assert.dom('[data-test-empty-state-title]').hasText('No policy type selected');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No policy type selected');
     assert.ok(this.onChange.notCalled, 'onChange is not called');
   });
 
@@ -195,8 +195,8 @@ module('Integration | Component | search select with modal', function (hooks) {
       'dropdown gives option to create new option'
     );
     await component.selectOption();
-    assert.dom('[data-test-empty-state-title]').hasText('No policy type selected');
-    await fillIn('[data-test-select="policyType"]', 'acl');
+    assert.dom(GENERAL.emptyStateTitle).hasText('No policy type selected');
+    await fillIn(GENERAL.selectByAttr('policyType'), 'acl');
     assert.dom('[data-test-policy-form]').exists('policy form renders after type is selected');
     await click('[data-test-tab-example-policy] button');
     assert.dom('[data-test-tab-example-policy] button').hasAttribute('aria-selected', 'true');
@@ -209,7 +209,7 @@ module('Integration | Component | search select with modal', function (hooks) {
     await click(GENERAL.submitButton);
     assert.dom('[data-test-modal-div]').doesNotExist('modal closes after save');
     assert
-      .dom('[data-test-selected-option="0"]')
+      .dom(GENERAL.searchSelect.selectedOption(0))
       .hasText('acl-test-new', 'adds newly created policy to selected options');
     assert.ok(
       this.onChange.calledWithExactly(['acl-test-new']),

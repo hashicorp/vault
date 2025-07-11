@@ -50,11 +50,11 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await mountSecrets.visit();
       await click(MOUNT_BACKEND_FORM.mountType('kv'));
       await fillIn(GENERAL.inputByAttr('path'), enginePath);
-      await fillIn('[data-test-input="kvConfig.maxVersions"]', maxVersion);
-      await click('[data-test-input="kvConfig.casRequired"]');
-      await click('[data-test-toggle-label="Automate secret deletion"]');
-      await fillIn('[data-test-select="ttl-unit"]', 's');
-      await fillIn('[data-test-ttl-value="Automate secret deletion"]', '1');
+      await fillIn(GENERAL.inputByAttr('kvConfig.maxVersions'), maxVersion);
+      await click(GENERAL.inputByAttr('kvConfig.casRequired'));
+      await click(GENERAL.ttl.toggle('Automate secret deletion'));
+      await fillIn(GENERAL.selectByAttr('ttl-unit'), 's');
+      await fillIn(GENERAL.ttl.input('Automate secret deletion'), '1');
       await click(GENERAL.submitButton);
 
       await click(PAGE.secretTab('Configuration'));
@@ -170,24 +170,24 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       // navigate to farthest leaf
       await visit(`/vault/secrets/${enginePath}/list`);
       assert.dom('[data-test-component="navigate-input"]').hasNoValue();
-      assert.dom('[data-test-secret-link]').exists({ count: 1 });
-      await click('[data-test-secret-link="1/"]');
+      assert.dom(SS.secretLink()).exists({ count: 1 });
+      await click(SS.secretLink('1/'));
       assert.dom('[data-test-component="navigate-input"]').hasValue('1/');
-      assert.dom('[data-test-secret-link]').exists({ count: 2 });
-      await click('[data-test-secret-link="1/2/"]');
+      assert.dom(SS.secretLink()).exists({ count: 2 });
+      await click(SS.secretLink('1/2/'));
       assert.dom('[data-test-component="navigate-input"]').hasValue('1/2/');
-      assert.dom('[data-test-secret-link]').exists({ count: 1 });
-      await click('[data-test-secret-link="1/2/3/"]');
+      assert.dom(SS.secretLink()).exists({ count: 1 });
+      await click(SS.secretLink('1/2/3/'));
       assert.dom('[data-test-component="navigate-input"]').hasValue('1/2/3/');
-      assert.dom('[data-test-secret-link]').exists({ count: 2 });
+      assert.dom(SS.secretLink()).exists({ count: 2 });
 
       // delete the items
       await click(SS.secretLinkMenu('1/2/3/4'));
-      await click(`[data-test-secret-link="1/2/3/4"] ${GENERAL.confirmTrigger}`);
+      await click(`${SS.secretLink('1/2/3/4')} ${GENERAL.confirmTrigger}`);
       await click(GENERAL.confirmButton);
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.list');
       assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/list/1/2/3/`, 'remains on the page');
-      assert.dom('[data-test-secret-link]').exists({ count: 1 });
+      assert.dom(SS.secretLink()).exists({ count: 1 });
 
       await listPage.secrets.objectAt(0).menuToggle();
       await click(GENERAL.confirmTrigger);
@@ -200,7 +200,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
       await click('[data-test-list-root-link]');
       assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/list`);
-      assert.dom('[data-test-secret-link]').exists({ count: 1 });
+      assert.dom(SS.secretLink()).exists({ count: 1 });
     });
 
     test('first level secrets redirect properly upon deletion', async function (assert) {
@@ -267,16 +267,16 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await listPage.visitRoot({ backend: enginePath });
       await settled();
 
-      assert.dom(`[data-test-secret-link="${firstPath}/"]`).exists('First section item exists');
-      await click(`[data-test-secret-link="${firstPath}/"]`);
+      assert.dom(SS.secretLink(`${firstPath}/`)).exists('First section item exists');
+      await click(SS.secretLink(`${firstPath}/`));
 
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${enginePath}/list/${encodeURIComponent(firstPath)}/`,
         'First part of path is encoded in URL'
       );
-      assert.dom(`[data-test-secret-link="${secretPath}"]`).exists('Link to secret exists');
-      await click(`[data-test-secret-link="${secretPath}"]`);
+      assert.dom(SS.secretLink(secretPath)).exists('Link to secret exists');
+      await click(SS.secretLink(secretPath));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${enginePath}/show/${encodeURIComponent(firstPath)}/${encodeURIComponent(
@@ -285,7 +285,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         'secret path is encoded in URL'
       );
       assert.dom('h1').hasText(secretPath, 'Path renders correctly on show page');
-      await click(`[data-test-secret-breadcrumb="${firstPath}"] a`);
+      await click(SS.crumb(firstPath));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${enginePath}/list/${encodeURIComponent(firstPath)}/`,
@@ -328,7 +328,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await listPage.filterInput('filter/foo1');
       assert.strictEqual(listPage.secrets.length, 1, 'renders only one secret');
       await listPage.secrets.objectAt(0).click();
-      await click('[data-test-secret-breadcrumb="filter"] a');
+      await click(SS.crumb('filter'));
       assert.strictEqual(listPage.secrets.length, 3, 'renders three secrets');
       assert.strictEqual(listPage.filterInputValue, 'filter/', 'pageFilter has been reset');
     });

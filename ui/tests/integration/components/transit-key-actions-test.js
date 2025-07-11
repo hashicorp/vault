@@ -13,6 +13,7 @@ import hbs from 'htmlbars-inline-precompile';
 import { encodeString } from 'vault/utils/b64';
 import waitForError from 'vault/tests/helpers/wait-for-error';
 import codemirror, { getCodeEditorValue, setCodeEditorValue } from 'vault/tests/helpers/codemirror';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const storeStub = Service.extend({
   callArgs: null,
@@ -296,7 +297,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     this.set('storeService.keyActionReturnVal', response);
     await setupExport.call(this);
     await click('[data-test-toggle-label="Wrap response"]');
-    await click('button[type="submit"]');
+    await click(GENERAL.submitButton);
     assert.dom('#transit-export-modal').exists('Modal opens after export');
     assert.deepEqual(
       JSON.parse(find('[data-test-encrypted-value="export"]').innerText),
@@ -312,7 +313,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     await click('[data-test-toggle-label="Wrap response"]');
     await click('#exportVersion');
     await triggerEvent('#exportVersion', 'change');
-    await click('button[type="submit"]');
+    await click(GENERAL.submitButton);
     assert.dom('#transit-export-modal').exists('Modal opens after export');
     assert.deepEqual(
       JSON.parse(find('[data-test-encrypted-value="export"]').innerText),
@@ -350,7 +351,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     const editor = codemirror();
     setCodeEditorValue(editor, 'plaintext');
     await click('input[data-test-transit-input="encodedBase64"]');
-    await click('button[type="submit"]');
+    await click(GENERAL.submitButton);
     assert.deepEqual(
       this.storeService.callArgs,
       {

@@ -73,9 +73,7 @@ module('Integration | Component | secret edit', function (hooks) {
     const editor = codemirror();
     setCodeEditorValue(editor, JSON.stringify([{ foo: 'bar' }]));
     await settled();
-    assert
-      .dom('[data-test-message-error]')
-      .includesText('Vault expects data to be formatted as an JSON object');
+    assert.dom(GENERAL.messageError).includesText('Vault expects data to be formatted as an JSON object');
   });
 
   test('it allows saving when the model isError', async function (assert) {
@@ -114,8 +112,6 @@ module('Integration | Component | secret edit', function (hooks) {
     const editor = codemirror();
     setCodeEditorValue(editor, JSON.stringify([{ foo: 'bar' }]));
     await settled();
-    assert
-      .dom('[data-test-message-error]')
-      .includesText('Vault expects data to be formatted as an JSON object');
+    assert.dom(GENERAL.messageError).includesText('Vault expects data to be formatted as an JSON object');
   });
 });

@@ -134,8 +134,8 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await click(GENERAL.toggleInput('json'));
 
     assert.dom('[data-test-component="json-editor-title"]').doesNotExist();
-    assert.dom('[data-test-kv-key="0"]').hasValue('foo');
-    assert.dom('[data-test-kv-value="0"]').hasValue('bar');
+    assert.dom(GENERAL.kvObjectEditor.key('0')).hasValue('foo');
+    assert.dom(GENERAL.kvObjectEditor.value('0')).hasValue('bar');
     await click(GENERAL.toggleInput('json'));
     assert.dom('[data-test-component="json-editor-title"]').exists();
 
@@ -181,11 +181,11 @@ module('Integration | Component | tools/wrap', function (hooks) {
 
     await this.renderComponent();
     await click(GENERAL.toggleInput('json'));
-    await fillIn('[data-test-kv-key="0"]', 'foo');
-    await fillIn('[data-test-kv-value="0"]', 'bar');
+    await fillIn(GENERAL.kvObjectEditor.key('0'), 'foo');
+    await fillIn(GENERAL.kvObjectEditor.value('0'), 'bar');
     await click('[data-test-kv-add-row="0"]');
-    await fillIn('[data-test-kv-key="1"]', 'foo2');
-    await fillIn('[data-test-kv-value="1"]', multilineData);
+    await fillIn(GENERAL.kvObjectEditor.key('1'), 'foo2');
+    await fillIn(GENERAL.kvObjectEditor.value('1'), multilineData);
     await click(GENERAL.submitButton);
     await waitUntil(() => find(TS.toolsInput('wrapping-token')));
     assert.true(flashSpy.calledWith('Wrap was successful.'), 'it renders success flash');
@@ -242,20 +242,20 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await this.renderComponent();
     await setEditorValue(`{bad json}`);
     assert
-      .dom('[data-test-inline-alert]')
+      .dom(GENERAL.inlineAlert)
       .hasText(
         'JSON is unparsable. Fix linting errors to avoid data discrepancies.',
         'Linting error message is shown for json view'
       );
     await setEditorValue(this.wrapData);
-    assert.dom('[data-test-inline-alert]').doesNotExist();
+    assert.dom(GENERAL.inlineAlert).doesNotExist();
   });
 
   test('it hides json warning on back and on done', async function (assert) {
     await this.renderComponent();
     await setEditorValue(`{bad json}`);
     assert
-      .dom('[data-test-inline-alert]')
+      .dom(GENERAL.inlineAlert)
       .hasText(
         'JSON is unparsable. Fix linting errors to avoid data discrepancies.',
         'Linting error message is shown for json view'
@@ -263,11 +263,11 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await click(GENERAL.submitButton);
     await waitUntil(() => find(GENERAL.button('Done')));
     await click(GENERAL.button('Done'));
-    assert.dom('[data-test-inline-alert]').doesNotExist();
+    assert.dom(GENERAL.inlineAlert).doesNotExist();
 
     await setEditorValue(`{bad json}`);
     assert
-      .dom('[data-test-inline-alert]')
+      .dom(GENERAL.inlineAlert)
       .hasText(
         'JSON is unparsable. Fix linting errors to avoid data discrepancies.',
         'Linting error message is shown for json view'
@@ -275,6 +275,6 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await click(GENERAL.submitButton);
     await waitUntil(() => find(GENERAL.button('Back')));
     await click(GENERAL.button('Back'));
-    assert.dom('[data-test-inline-alert]').doesNotExist();
+    assert.dom(GENERAL.inlineAlert).doesNotExist();
   });
 });
