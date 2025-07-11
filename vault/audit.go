@@ -655,17 +655,23 @@ type basicAuditor struct {
 }
 
 func (b *basicAuditor) AuditRequest(ctx context.Context, input *logical.LogInput) error {
-	if b.c.auditBroker == nil {
+	b.c.auditLock.RLock()
+	auditBroker := b.c.auditBroker
+	b.c.auditBroker.RUnlock()
+	if auditBroker == nil {
 		return consts.ErrSealed
 	}
-	return b.c.auditBroker.LogRequest(ctx, input)
+	return auditBroker.LogRequest(ctx, input)
 }
 
 func (b *basicAuditor) AuditResponse(ctx context.Context, input *logical.LogInput) error {
-	if b.c.auditBroker == nil {
+	b.c.auditLock.RLock()
+	auditBroker := b.c.auditBroker
+	b.c.auditBroker.RUnlock()
+	if auditBroker == nil {
 		return consts.ErrSealed
 	}
-	return b.c.auditBroker.LogResponse(ctx, input)
+	return auditBroker.LogResponse(ctx, input)
 }
 
 type genericAuditor struct {
@@ -678,12 +684,24 @@ func (g genericAuditor) AuditRequest(ctx context.Context, input *logical.LogInpu
 	ctx = namespace.ContextWithNamespace(ctx, g.namespace)
 	logInput := *input
 	logInput.Type = g.mountType + "-request"
-	return g.c.auditBroker.LogRequest(ctx, &logInput)
+	g.c.auditLock.RLock()
+	auditBroker := g.c.auditBroker
+	g.c.auditLock.RUnlock()
+	if auditBroker == nil {
+		return consts.ErrSealed
+	}
+	return auditBroker.LogRequest(ctx, &logInput)
 }
 
 func (g genericAuditor) AuditResponse(ctx context.Context, input *logical.LogInput) error {
 	ctx = namespace.ContextWithNamespace(ctx, g.namespace)
 	logInput := *input
 	logInput.Type = g.mountType + "-response"
-	return g.c.auditBroker.LogResponse(ctx, &logInput)
+	g.c.auditLock.RLock()
+	auditBroker := g.c.auditBroker
+	g.c.auditLock.RUnlock()
+	if auditBroker == nil {
+		return consts.ErrSealed
+	}
+	return auditBroker.LogResponse(ctx, &logInput)
 }
