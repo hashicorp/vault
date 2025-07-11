@@ -184,7 +184,6 @@ unzipped Vault binary at the `vault_local_binary_path`.
 
 ## `artifact_source:artifactory`
 This variant is for running the Enos scenario to test an artifact from Artifactory. It requires following Enos variables to be set:
-* `artifactory_username`
 * `artifactory_token`
 * `aws_ssh_keypair_name`
 * `aws_ssh_private_key_path`
