@@ -5,34 +5,26 @@
 
 import AuthBase from './base';
 import Ember from 'ember';
-import { service } from '@ember/service';
+import { encodePath } from 'vault/utils/path-encoding-helpers';
+import { SamlWriteSsoServiceUrlRequestClientTypeEnum } from '@hashicorp/vault-client-typescript';
+import { sanitizePath } from 'core/utils/sanitize-path';
 import { task, timeout, waitForEvent } from 'ember-concurrency';
-import { tracked } from '@glimmer/tracking';
-import errorMessage from 'vault/utils/error-message';
+import uuid from 'core/utils/uuid';
+import { ERROR_POPUP_FAILED, ERROR_TIMEOUT, ERROR_WINDOW_CLOSED } from 'vault/utils/auth-form-helpers';
 
-import type AdapterError from 'vault/@ember-data/adapter/error';
-import type AuthMethodAdapter from 'vault/vault/adapters/auth-method';
-import type AuthService from 'vault/vault/services/auth';
-import type RoleSamlModel from 'vault/models/role-saml';
-import type Store from '@ember-data/store';
+import type { SamlLoginApiResponse, SamlSsoServiceUrlApiResponse } from 'vault/vault/auth/methods';
 
 /**
  * @module Auth::Form::Saml
  * see Auth::Base
  */
 
-const ERROR_WINDOW_CLOSED =
-  'The provider window was closed before authentication was complete. Your web browser may have blocked or closed a pop-up window. Please check your settings and click "Sign in" to try again.';
-const ERROR_TIMEOUT = 'The authentication request has timed out. Please click "Sign in" to try again.';
-
-export { ERROR_WINDOW_CLOSED };
-
+interface SamlRole {
+  ssoServiceUrl: string;
+  tokenPollId: string;
+  clientVerifier: string;
+}
 export default class AuthFormSaml extends AuthBase {
-  @service declare readonly auth: AuthService;
-  @service declare readonly store: Store;
-
-  @tracked fetchedRole: RoleSamlModel | null = null;
-
   loginFields = [
     {
       name: 'role',
@@ -44,10 +36,6 @@ export default class AuthFormSaml extends AuthBase {
     return window.isSecureContext;
   }
 
-  get tasksAreRunning() {
-    return this.login.isRunning || this.exchangeSAMLTokenPollID.isRunning;
-  }
-
   /* Saml auth flow on login button click:
    * 1. find role-saml record which returns role info
    * 2. open popup at url defined returned from role
@@ -55,125 +43,104 @@ export default class AuthFormSaml extends AuthBase {
    * 4. poll vault for 200 token response
    * 5. close popup, stop polling, and trigger onSubmit with token data
    */
-  login = task(async (formData) => {
+  async loginRequest(formData: { namespace: string; path: string; role: string }) {
     // submit data is parsed by base.ts and a path will always have a value.
     // either the default of auth type, or the custom inputted path
-    const { role, path, namespace } = formData;
+    const { namespace, path, role } = formData;
+    const fetchedRole = await this.fetchSamlRole({ namespace, path, role });
+    const samlWindow = await this.startSAMLAuth(fetchedRole.ssoServiceUrl);
+    if (samlWindow) {
+      try {
+        // start watching the popup window and the current one
+        this.watchPopup.perform(samlWindow);
+        this.watchCurrent.perform(samlWindow);
 
-    await this.startSAMLAuth({ role, path, namespace });
-  });
+        const { auth } = await this.exchangeSAMLTokenPollID(fetchedRole, { path });
 
-  // Fetch role to get sso_service_url and open popup
-  async startSAMLAuth({ role = '', path = '', namespace = '' }) {
-    try {
-      const id = JSON.stringify([path, role]);
-      this.fetchedRole = await this.store.findRecord('role-saml', id, {
-        adapterOptions: { namespace },
-      });
-    } catch (error) {
-      this.onError(errorMessage(error));
-      return;
-    }
-
-    if (this.fetchedRole) {
-      const win = window;
-      const POPUP_WIDTH = 500;
-      const POPUP_HEIGHT = 600;
-      const left = win.screen.width / 2 - POPUP_WIDTH / 2;
-      const top = win.screen.height / 2 - POPUP_HEIGHT / 2;
-      const samlWindow = win.open(
-        this.fetchedRole.ssoServiceURL,
-        'vaultSAMLWindow',
-        `width=${POPUP_WIDTH},height=${POPUP_HEIGHT},resizable,scrollbars=yes,top=${top},left=${left}`
-      );
-
-      await this.exchangeSAMLTokenPollID.perform(samlWindow, { path });
+        // displayName is not included in auth response - it is set in persistAuthData
+        return this.normalizeAuthResponse(auth, {
+          authMountPath: path,
+          token: auth.clientToken,
+          ttl: auth.leaseDuration,
+        });
+      } finally {
+        this.closeWindow(samlWindow);
+      }
+    } else {
+      throw `Failed to open SAML popup window. ${ERROR_POPUP_FAILED}`;
     }
   }
 
-  exchangeSAMLTokenPollID = task(async (samlWindow, { path }) => {
-    // start watching the popup window and the current one
-    this.watchPopup.perform(samlWindow);
-    this.watchCurrent.perform(samlWindow);
+  cancelLogin() {
+    this.login.cancelAll();
+  }
 
-    let resp;
-    try {
-      resp = await this.pollForToken(samlWindow, { path });
-      this.closeWindow(samlWindow);
-    } catch (error) {
-      this.cancelLogin(samlWindow, errorMessage(error));
-      return;
-    }
+  // Fetch role to get sso_service_url which is where popup is opened
+  async fetchSamlRole({ namespace = '', path = '', role = '' }): Promise<SamlRole> {
+    // Create the client verifier and challenge
+    const verifier = uuid();
+    const clientChallenge = await this.generateClientChallenge(verifier);
+    const acsUrl = this.generateAcsUrl(path, namespace);
+    const clientType = SamlWriteSsoServiceUrlRequestClientTypeEnum.BROWSER; // 'browser'
+    // Kick off the authentication flow by generating the SSO service URL
+    // It requires the client challenge generated from the verifier. We'll
+    // later provide the verifier to match up with the challenge on the server
+    // when we poll for the Vault token by its returned token poll ID.
+    const { data } = (await this.api.auth.samlWriteSsoServiceUrl(path, {
+      acsUrl,
+      clientChallenge,
+      clientType,
+      role,
+    })) as SamlSsoServiceUrlApiResponse;
+    return {
+      ...data,
+      clientVerifier: verifier,
+    };
+  }
 
-    // We've got a response from the polling request
-    // pass MFA data or use the Vault token (client_token) to continue the auth
-    const mfa_requirement = resp?.mfa_requirement;
-    const client_token = resp?.client_token;
-    if (mfa_requirement) {
-      this.handleMfa(mfa_requirement, path);
-      return;
-    }
-    if (client_token) {
-      this.continueLogin({ token: client_token });
-      return;
-    }
+  async startSAMLAuth(ssoServiceUrl: string): Promise<Window | null> {
+    const win = window;
+    const POPUP_WIDTH = 500;
+    const POPUP_HEIGHT = 600;
+    const left = win.screen.width / 2 - POPUP_WIDTH / 2;
+    const top = win.screen.height / 2 - POPUP_HEIGHT / 2;
+    const samlWindow = win.open(
+      ssoServiceUrl,
+      'vaultSAMLWindow',
+      `width=${POPUP_WIDTH},height=${POPUP_HEIGHT},resizable,scrollbars=yes,top=${top},left=${left}`
+    );
 
-    // If there's a problem with the SAML exchange the auth workflow should fail earlier.
-    // Including this catch just in case, though it's unlikely this will be hit.
-    this.handleSAMLError('Missing token. Please try again.');
-    return;
-  });
+    return samlWindow;
+  }
 
-  async pollForToken(samlWindow: Window, { path = '' }) {
-    // Poll every one second for the token to become available
+  async exchangeSAMLTokenPollID(fetchedRole: SamlRole, { path = '' }) {
     const WAIT_TIME = Ember.testing ? 50 : 1000;
-    const MAX_TIME = Ember.testing ? 3 : 180; // 180 is 3 minutes in seconds
+    const MAX_TRIES = Ember.testing ? 3 : 180; // 180 is 3 minutes in seconds
 
-    const adapter = this.store.adapterFor('auth-method') as AuthMethodAdapter;
     // Wait up to 3 minutes for a token to become available
-    for (let attempt = 0; attempt < MAX_TIME; attempt++) {
+    for (let attempt = 0; attempt < MAX_TRIES; attempt++) {
+      // Poll every one second for the token to become available
       await timeout(WAIT_TIME);
 
       try {
-        const resp = await adapter.pollSAMLToken(
-          path,
-          this.fetchedRole?.tokenPollID,
-          this.fetchedRole?.clientVerifier
-        );
-
-        if (resp?.auth) {
-          // Exit loop if response
-          return resp.auth;
-        }
+        const { clientVerifier, tokenPollId } = fetchedRole;
+        // Exit loop if there's a response
+        return (await this.api.auth.samlWriteToken(path, {
+          clientVerifier,
+          tokenPollId,
+        })) as SamlLoginApiResponse;
       } catch (e) {
-        const error = e as AdapterError;
-        if (error.httpStatus === 401) {
+        const { message, status } = await this.api.parseError(e);
+        if (status === 401) {
           // Continue to retry on 401 Unauthorized
           continue;
         }
-        throw error;
+        // Just throw the message string because parent onError method will fail if it attempts to re-parse an error.
+        throw message;
       }
     }
 
-    this.cancelLogin(samlWindow, ERROR_TIMEOUT);
-    return;
-  }
-
-  async continueLogin(data: { token: string }) {
-    try {
-      const authResponse = await this.auth.authenticate({
-        clusterId: this.args.cluster.id,
-        backend: 'token',
-        data,
-        selectedAuth: this.args.authType,
-      });
-
-      // responsible for redirect after auth data is persisted
-      this.handleAuthResponse(authResponse);
-    } catch (e) {
-      const error = e as AdapterError;
-      this.onError(errorMessage(error));
-    }
+    throw ERROR_TIMEOUT;
   }
 
   // MANAGE POPUPS
@@ -184,7 +151,10 @@ export default class AuthFormSaml extends AuthBase {
       await timeout(WAIT_TIME);
 
       if (!samlWindow || samlWindow.closed) {
-        return this.handleSAMLError(ERROR_WINDOW_CLOSED);
+        // Since watchPopup isn't awaited, errors thrown here won't bubble up
+        // and so we must call onError directly instead.
+        this.onError(ERROR_WINDOW_CLOSED);
+        return;
       }
     }
   });
@@ -195,19 +165,29 @@ export default class AuthFormSaml extends AuthBase {
     samlWindow?.close();
   });
 
-  cancelLogin(samlWindow: Window, errorMessage: string) {
-    this.closeWindow(samlWindow);
-    this.handleSAMLError(errorMessage);
-  }
-
   closeWindow(samlWindow: Window) {
     this.watchPopup.cancelAll();
     this.watchCurrent.cancelAll();
     samlWindow.close();
   }
 
-  handleSAMLError(errorMessage: string) {
-    this.exchangeSAMLTokenPollID.cancelAll();
-    this.onError(errorMessage);
+  // generates a client challenge from a verifier for PKCE (Proof Key for Code Exchange).
+  // The client challenge is the base64(sha256(verifier)). The verifier is
+  // later presented to the server to obtain the resulting Vault token.
+  async generateClientChallenge(verifier: string) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(verifier);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = new Uint8Array(hashBuffer);
+    return btoa(String.fromCharCode(...hashArray));
+  }
+
+  generateAcsUrl(path: string, namespace: string) {
+    const baseUrl = `${window.location.origin}/v1`;
+    const ns = namespace ? `${encodePath(sanitizePath(namespace))}/` : '';
+    const mountPath = encodePath(sanitizePath(path));
+    // example with "admin" namespace: '${VAULT_ADDR}/v1/admin/auth/saml/callback';
+    // example with "root" namespace: '${VAULT_ADDR}/v1/auth/saml/callback';
+    return `${baseUrl}/${ns}auth/${mountPath}/callback`;
   }
 }

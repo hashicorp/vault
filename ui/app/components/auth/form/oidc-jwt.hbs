@@ -32,7 +32,7 @@
     {{yield to="advancedSettings"}}
 
     <Auth::SignInButton
-      @icon={{if this.tasksAreRunning "loading" this.icon}}
+      @icon={{if this.login.isRunning "loading" this.icon}}
       @text="Sign in {{if this.isOIDC this.providerName}}"
     />
 

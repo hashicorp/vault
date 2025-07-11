@@ -26,21 +26,15 @@ module('Acceptance | auth backend list', function (hooks) {
 
   hooks.beforeEach(async function () {
     await login();
+  });
+
+  test('userpass secret backend', async function (assert) {
     this.path1 = `userpass-${uuidv4()}`;
     this.path2 = `userpass-${uuidv4()}`;
     this.user1 = 'user1';
     this.user2 = 'user2';
 
     await runCmd([mountAuthCmd('userpass', this.path1), mountAuthCmd('userpass', this.path2)], false);
-  });
-
-  hooks.afterEach(async function () {
-    await login();
-    await runCmd([deleteAuthCmd(this.path1), deleteAuthCmd(this.path2)], false);
-    return;
-  });
-
-  test('userpass secret backend', async function (assert) {
     // helper function to create a user in the specified backend
     async function createUser(backendPath, username) {
       await click(GENERAL.linkedBlock(backendPath));
@@ -69,6 +63,9 @@ module('Acceptance | auth backend list', function (hooks) {
     await click(SELECTORS.methods);
     await click(GENERAL.linkedBlock(this.path1));
     assert.dom(SELECTORS.listItem).hasText(this.user1, 'user1 exists in the list');
+
+    await login();
+    await runCmd([deleteAuthCmd(this.path1), deleteAuthCmd(this.path2)], false);
   });
 
   module('auth methods are linkable and link to correct view', function (hooks) {
