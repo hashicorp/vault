@@ -61,17 +61,43 @@ nope = "true"
 	}
 }
 
+// TestParseConfig_HclDuplicateKey tests the parsing of HCL files with duplicate keys.
+// TODO (HCL_DUP_KEYS_DEPRECATION): on full removal change this test to ensure that duplicate attributes cannot be parsed
+// under any circumstances.
 func TestParseConfig_HclDuplicateKey(t *testing.T) {
-	_, duplicate, err := parseConfig(`
+	t.Run("fail parsing without env var", func(t *testing.T) {
+		_, _, err := parseConfig(`
 token_helper = "/token"
 token_helper = "/token"
 `)
-	// TODO (HCL_DUP_KEYS_DEPRECATION): change this to expect an error once support for duplicate keys is fully removed
-	if err != nil {
-		t.Fatal("expected no error")
-	}
+		if err == nil {
+			t.Fatal("expected error")
+		}
+	})
 
-	if !duplicate {
-		t.Fatal("expected duplicate")
-	}
+	t.Run("fail parsing with env var set to false", func(t *testing.T) {
+		t.Setenv(allowHclDuplicatesEnvVar, "false")
+		_, _, err := parseConfig(`
+token_helper = "/token"
+token_helper = "/token"
+`)
+		if err == nil {
+			t.Fatal("expected error")
+		}
+	})
+
+	t.Run("succeed parsing with env var set to true", func(t *testing.T) {
+		t.Setenv(allowHclDuplicatesEnvVar, "true")
+		_, duplicate, err := parseConfig(`
+token_helper = "/token"
+token_helper = "/token"
+`)
+		if err != nil {
+			t.Fatal("expected no error")
+		}
+
+		if !duplicate {
+			t.Fatal("expected duplicate")
+		}
+	})
 }
