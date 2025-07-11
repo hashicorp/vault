@@ -219,6 +219,44 @@
               <F.Error data-test-validation-error={{this.valuePath}}>{{this.validationError}}</F.Error>
             {{/if}}
           </Hds::Form::Textarea::Field>
+        {{else}}
+          <Hds::Form::TextInput::Field
+            name={{@attr.name}}
+            @id={{@attr.name}}
+            @value={{get @model this.valuePath}}
+            @isInvalid={{this.validationError}}
+            readonly={{this.isReadOnly}}
+            disabled={{and @attr.options.editDisabled (not @model.isNew)}}
+            autocomplete="off"
+            spellcheck="false"
+            placeholder={{@attr.options.placeholder}}
+            maxLength={{@attr.options.characterLimit}}
+            {{on "change" this.onChangeWithEvent}}
+            {{on "input" this.onChangeWithEvent}}
+            {{on "keyup" this.handleKeyUp}}
+            data-test-input={{@attr.name}}
+            as |F|
+          >
+            <F.Label data-test-form-field-label>{{this.labelString}}</F.Label>
+            {{#if this.helpTextString}}
+              <F.HelperText data-test-help-text={{@attr.options.helpText}}>{{this.helpTextString}}</F.HelperText>
+            {{/if}}
+            {{#if @attr.options.subText}}
+              <F.HelperText data-test-help-text={{@attr.options.subText}}>
+                {{@attr.options.subText}}
+                {{#if @attr.options.docLink}}
+                  <DocLink @path={{@attr.options.docLink}} data-test-doc-link={{@attr.options.docLink}}>See our documentation</DocLink>
+                  for help.
+                {{/if}}
+              </F.HelperText>
+            {{/if}}
+            {{#if @attr.options.characterLimit}}
+              <F.CharacterCount @maxLength={{@attr.options.characterLimit}} />
+            {{/if}}
+            {{#if this.validationError}}
+              <F.Error data-test-validation-error={{this.valuePath}}>{{this.validationError}}</F.Error>
+            {{/if}}
+          </Hds::Form::TextInput::Field>
         {{/if}}
       {{else if (or (eq @attr.type "boolean") (eq @attr.options.editType "boolean"))}}
         <Hds::Form::Checkbox::Field
@@ -475,23 +513,6 @@
               {{/if}}
             </p>
           {{/if}}
-        {{else}}
-          {{! Regular Text Input }}
-          <input
-            data-test-input={{@attr.name}}
-            id={{@attr.name}}
-            readonly={{this.isReadOnly}}
-            disabled={{and @attr.options.editDisabled (not @model.isNew)}}
-            autocomplete="off"
-            spellcheck="false"
-            placeholder={{@attr.options.placeholder}}
-            value={{get @model this.valuePath}}
-            {{on "change" this.onChangeWithEvent}}
-            {{on "input" this.onChangeWithEvent}}
-            {{on "keyup" this.handleKeyUp}}
-            class="input {{if this.validationError 'has-error-border'}}"
-            maxLength={{@attr.options.characterLimit}}
-          />
         {{/if}}
       </div>
     {{else if (eq @attr.type "object")}}
