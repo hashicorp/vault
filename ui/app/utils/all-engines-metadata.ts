@@ -34,6 +34,7 @@ export interface EngineDisplayData {
   isOnlyMountable?: boolean; // The UI only supports configuration views for these secrets engines. The CLI must be used to manage other engine resources (i.e. roles, credentials).
   type: string;
   value?: string;
+  newConfigurationPattern?: boolean; // todo
 }
 
 /**
@@ -182,6 +183,7 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     mountCategory: ['secret'],
     requiredFeature: 'Key Management Secrets Engine',
     requiresEnterprise: true,
+    newConfigurationPattern: true, // not amazing because it duplicates in options-for-backend
     type: 'keymgmt',
   },
   {
