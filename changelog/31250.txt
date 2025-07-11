@@ -1,0 +1,3 @@
+```release-note:improvement
+docs: Added azure_auth_mode = environment for Auto Snapshots to Azure Storage   
+```
