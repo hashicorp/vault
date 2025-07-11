@@ -86,7 +86,7 @@ func (b *backend) pathReadCode(ctx context.Context, req *logical.Request, data *
 }
 
 func (b *backend) pathValidateCode(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	name := strings.TrimSpace(data.Get("name").(string))
+	name := data.Get("name").(string)
 	code := strings.TrimSpace(data.Get("code").(string))
 
 	// Enforce input value requirements
