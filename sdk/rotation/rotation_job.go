@@ -49,6 +49,16 @@ type RotationJobDeregisterRequest struct {
 	ReqPath    string
 }
 
+type RotationInfoRequest struct {
+	ReqPath string
+}
+
+type RotationInfoResponse struct {
+	NextVaultRotation time.Time // The scheduled time of the next rotation
+	LastVaultRotation time.Time // The time of the prior rotation
+	TTL               int64     // TTL is integer seconds until next rotation, conventionally clamped to 0 (i.e., will not be negative)
+}
+
 func (s *RotationJob) Validate() error {
 	if s.MountPoint == "" {
 		return fmt.Errorf("MountPoint is required")
