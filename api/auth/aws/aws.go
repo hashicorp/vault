@@ -7,14 +7,12 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"os"
+	"io"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/api"
 )
@@ -32,7 +30,7 @@ type AWSAuth struct {
 	signatureType          string
 	region                 string
 	iamServerIDHeaderValue string
-	creds                  *credentials.Credentials
+	creds                  aws.CredentialsProvider
 	nonce                  string
 }
 
@@ -95,43 +93,60 @@ func (a *AWSAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, e
 	loginData := make(map[string]interface{})
 	switch a.authType {
 	case ec2Type:
-		sess, err := session.NewSession()
+		cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(a.region))
 		if err != nil {
-			return nil, fmt.Errorf("error creating session to probe EC2 metadata: %w", err)
+			return nil, fmt.Errorf("error loading AWS config: %w", err)
 		}
-		metadataSvc := ec2metadata.New(sess)
-		if !metadataSvc.Available() {
-			return nil, fmt.Errorf("metadata service not available")
-		}
+		metadataSvc := imds.NewFromConfig(cfg)
 
 		if a.signatureType == pkcs7Type {
 			// fetch PKCS #7 signature
-			resp, err := metadataSvc.GetDynamicData("/instance-identity/pkcs7")
+			resp, err := metadataSvc.GetDynamicData(ctx, &imds.GetDynamicDataInput{Path: "/instance-identity/pkcs7"})
 			if err != nil {
 				return nil, fmt.Errorf("unable to get PKCS 7 data from metadata service: %w", err)
 			}
-			pkcs7 := strings.TrimSpace(resp)
+			defer resp.Content.Close()
+			body, err := io.ReadAll(resp.Content)
+			if err != nil {
+				return nil, fmt.Errorf("error reading PKCS 7 response: %w", err)
+			}
+			pkcs7 := strings.TrimSpace(string(body))
 			loginData["pkcs7"] = pkcs7
 		} else if a.signatureType == identityType {
 			// fetch signature from identity document
-			doc, err := metadataSvc.GetDynamicData("/instance-identity/document")
+			doc, err := metadataSvc.GetDynamicData(ctx, &imds.GetDynamicDataInput{Path: "/instance-identity/document"})
 			if err != nil {
 				return nil, fmt.Errorf("error requesting instance identity doc: %w", err)
 			}
-			loginData["identity"] = base64.StdEncoding.EncodeToString([]byte(doc))
+			defer doc.Content.Close()
+			docBody, err := io.ReadAll(doc.Content)
+			if err != nil {
+				return nil, fmt.Errorf("error reading instance identity doc: %w", err)
+			}
+			loginData["identity"] = base64.StdEncoding.EncodeToString(docBody)
 
-			signature, err := metadataSvc.GetDynamicData("/instance-identity/signature")
+			signature, err := metadataSvc.GetDynamicData(ctx, &imds.GetDynamicDataInput{Path: "/instance-identity/signature"})
 			if err != nil {
 				return nil, fmt.Errorf("error requesting signature: %w", err)
 			}
-			loginData["signature"] = signature
+			defer signature.Content.Close()
+			sigBody, err := io.ReadAll(signature.Content)
+			if err != nil {
+				return nil, fmt.Errorf("error reading signature: %w", err)
+			}
+			loginData["signature"] = string(sigBody)
 		} else if a.signatureType == rsa2048Type {
 			// fetch RSA 2048 signature, which is also a PKCS#7 signature
-			resp, err := metadataSvc.GetDynamicData("/instance-identity/rsa2048")
+			resp, err := metadataSvc.GetDynamicData(ctx, &imds.GetDynamicDataInput{Path: "/instance-identity/rsa2048"})
 			if err != nil {
 				return nil, fmt.Errorf("unable to get PKCS 7 data from metadata service: %w", err)
 			}
-			pkcs7 := strings.TrimSpace(resp)
+			defer resp.Content.Close()
+			body, err := io.ReadAll(resp.Content)
+			if err != nil {
+				return nil, fmt.Errorf("error reading RSA2048 response: %w", err)
+			}
+			pkcs7 := strings.TrimSpace(string(body))
 			loginData["pkcs7"] = pkcs7
 		} else {
 			return nil, fmt.Errorf("unknown signature type: %s", a.signatureType)
@@ -147,45 +162,29 @@ func (a *AWSAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, e
 		}
 		loginData["nonce"] = a.nonce
 	case iamType:
-		logger := hclog.Default()
 		if a.creds == nil {
-			credsConfig := awsutil.CredentialsConfig{
-				AccessKey:    os.Getenv("AWS_ACCESS_KEY_ID"),
-				SecretKey:    os.Getenv("AWS_SECRET_ACCESS_KEY"),
-				SessionToken: os.Getenv("AWS_SESSION_TOKEN"),
-				Logger:       logger,
-			}
-
-			// the env vars above will take precedence if they are set, as
-			// they will be added to the ChainProvider stack first
-			var hasCredsFile bool
-			credsFilePath := os.Getenv("AWS_SHARED_CREDENTIALS_FILE")
-			if credsFilePath != "" {
-				hasCredsFile = true
-				credsConfig.Filename = credsFilePath
-			}
-
-			creds, err := credsConfig.GenerateCredentialChain(awsutil.WithSharedCredentials(hasCredsFile))
+			cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(a.region))
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("unable to load AWS config: %w", err)
 			}
-			if creds == nil {
-				return nil, fmt.Errorf("could not compile valid credential providers from static config, environment, shared, or instance metadata")
-			}
-
-			_, err = creds.Get()
-			if err != nil {
-				return nil, fmt.Errorf("failed to retrieve credentials from credential chain: %w", err)
-			}
-
-			a.creds = creds
+			a.creds = cfg.Credentials
 		}
 
-		data, err := awsutil.GenerateLoginData(a.creds, a.iamServerIDHeaderValue, a.region, logger)
+		credsVal, err := a.creds.Retrieve(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("unable to generate login data for AWS auth endpoint: %w", err)
+			return nil, fmt.Errorf("failed to retrieve credentials from AWS SDK: %w", err)
 		}
-		loginData = data
+
+		loginData["access_key"] = credsVal.AccessKeyID
+		loginData["secret_key"] = credsVal.SecretAccessKey
+		if credsVal.SessionToken != "" {
+			loginData["security_token"] = credsVal.SessionToken
+		}
+		loginData["region"] = a.region
+		if a.iamServerIDHeaderValue != "" {
+			loginData["iam_http_request_method"] = "POST"
+			loginData["iam_request_url"] = a.iamServerIDHeaderValue
+		}
 	}
 
 	// Add role if we have one. If not, Vault will infer the role name based
