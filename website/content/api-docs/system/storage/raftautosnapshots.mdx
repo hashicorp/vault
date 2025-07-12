@@ -140,7 +140,7 @@ parameters in the context of AWS EKS & S3 configuration.
 
 - `azure_account_name` `(string)` - Azure account name.
 
-- `azure_auth_mode` `(string)` - One of `shared` or `managed`.
+- `azure_auth_mode` `(string)` - One of `shared`, `managed`, or `environment`. If `environment` is set, Azure authentication details are retrieved from the environment variables: `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`. 
 
 - `azure_account_key` `(string)` - Azure account key. Used for `shared` authentication.
 
