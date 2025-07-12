@@ -54,7 +54,8 @@ type SQLConnectionProducer struct {
 	MaxIdleConnections       int         `json:"max_idle_connections" mapstructure:"max_idle_connections" structs:"max_idle_connections"`
 	MaxConnectionLifetimeRaw interface{} `json:"max_connection_lifetime" mapstructure:"max_connection_lifetime" structs:"max_connection_lifetime"`
 	DisableEscaping          bool        `json:"disable_escaping" mapstructure:"disable_escaping" structs:"disable_escaping"`
-	usePrivateIP             bool        `json:"use_private_ip" mapstructure:"use_private_ip" structs:"use_private_ip"`
+	UsePrivateIP             bool        `json:"use_private_ip" mapstructure:"use_private_ip" structs:"use_private_ip"`
+	UsePSC                   bool        `json:"use_psc" mapstructure:"use_psc" structs:"use_psc"`
 	SelfManaged              bool        `json:"self_managed" mapstructure:"self_managed" structs:"self_managed"`
 
 	// Username/Password is the default auth type when AuthType is not set
@@ -204,7 +205,7 @@ func (c *SQLConnectionProducer) Init(ctx context.Context, conf map[string]interf
 		// however, the driver might store a credentials file, in which case the state stored by the driver is in
 		// fact critical to the proper function of the connection. So it needs to be registered here inside the
 		// ConnectionProducer init.
-		dialerCleanup, err := c.registerDrivers(c.cloudDriverName, c.ServiceAccountJSON, c.usePrivateIP)
+		dialerCleanup, err := c.registerDrivers(c.cloudDriverName, c.ServiceAccountJSON, c.UsePrivateIP, c.UsePSC)
 		if err != nil {
 			return nil, err
 		}
