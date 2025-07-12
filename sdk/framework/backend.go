@@ -259,6 +259,8 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 	if req.MountType == "database" && strings.HasPrefix(req.Path, "config") {
 		sqlFields = connutil.SQLConnectionProducerFieldNames()
 	}
+
+	fmt.Printf("-- HOO BOY parsing path %s with operation %s. data = %#v\n", req.Path, req.Operation, req.Data)
 	// Build up the data for the route, with the URL taking priority
 	// for the fields over the PUT data.
 	raw := make(map[string]interface{}, len(path.Fields))

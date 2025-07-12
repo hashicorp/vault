@@ -317,7 +317,9 @@ func (c *AuthEnableCommand) Run(args []string) int {
 		}
 
 		if fl.Name == flagNameAllowedResponseHeaders {
-			authOpts.Config.AllowedResponseHeaders = c.flagAllowedResponseHeaders
+			if len(c.flagAllowedResponseHeaders) > 0 {
+				authOpts.Config.AllowedResponseHeaders = &c.flagAllowedResponseHeaders
+			}
 		}
 
 		if fl.Name == flagNameTokenType {

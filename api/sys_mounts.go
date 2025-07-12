@@ -5,6 +5,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -230,6 +231,13 @@ func (c *Sys) TuneMountWithContext(ctx context.Context, path string, config Moun
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
+	fmt.Printf("-- YISS. config we're passing to mount tune: %#v\n", config)
+	val, err := json.Marshal(config)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("-- YISS. config as json: %#v\n", string(val))
+
 	r := c.c.NewRequest(http.MethodPost, fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
 	if err := r.SetJSONBody(config); err != nil {
 		return err
@@ -299,7 +307,7 @@ type MountConfigInput struct {
 	AuditNonHMACResponseKeys   []string                `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility          string                  `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
 	PassthroughRequestHeaders  []string                `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
-	AllowedResponseHeaders     []string                `json:"allowed_response_headers,omitempty" mapstructure:"allowed_response_headers"`
+	AllowedResponseHeaders     *[]string               `json:"allowed_response_headers,omitempty" mapstructure:"allowed_response_headers"`
 	TokenType                  string                  `json:"token_type,omitempty" mapstructure:"token_type"`
 	AllowedManagedKeys         []string                `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
 	PluginVersion              string                  `json:"plugin_version,omitempty"`

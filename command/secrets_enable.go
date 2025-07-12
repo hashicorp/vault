@@ -348,7 +348,9 @@ func (c *SecretsEnableCommand) Run(args []string) int {
 		}
 
 		if fl.Name == flagNameAllowedResponseHeaders {
-			mountInput.Config.AllowedResponseHeaders = c.flagAllowedResponseHeaders
+			if len(c.flagAllowedResponseHeaders) > 0 {
+				mountInput.Config.AllowedResponseHeaders = &c.flagAllowedResponseHeaders
+			}
 		}
 
 		if fl.Name == flagNameAllowedManagedKeys {
