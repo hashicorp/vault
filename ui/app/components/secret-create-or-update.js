@@ -42,7 +42,7 @@ const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
 
 export default class SecretCreateOrUpdate extends Component {
-  @tracked codemirrorString = null;
+  @tracked editorString = null;
   @tracked error = null;
   @tracked secretPaths = null;
   @tracked pathWhiteSpaceWarning = false;
@@ -58,7 +58,7 @@ export default class SecretCreateOrUpdate extends Component {
 
   @action
   setup(elem, [secretData, mode]) {
-    this.codemirrorString = secretData.toJSONString();
+    this.editorString = secretData.toJSONString();
     this.validationMessages = {
       path: '',
     };
@@ -160,21 +160,19 @@ export default class SecretCreateOrUpdate extends Component {
     }
     this.checkRows();
   }
+
   @action
-  codemirrorUpdated(val, codemirror) {
-    this.error = null;
-    codemirror.performLint();
-    const noErrors = codemirror.state.lint.marked.length === 0;
-    if (noErrors) {
-      try {
-        this.args.secretData.fromJSONString(val);
-        set(this.args.modelForData, 'secretData', this.args.secretData.toJSON());
-      } catch (e) {
-        this.error = e.message;
-      }
+  editorUpdated(val) {
+    try {
+      this.args.secretData.fromJSONString(val);
+      set(this.args.modelForData, 'secretData', this.args.secretData.toJSON());
+    } catch (e) {
+      this.error = e.message;
     }
-    this.codemirrorString = val;
+
+    this.editorString = val;
   }
+
   @action
   createOrUpdateKey(type, event) {
     event.preventDefault();
@@ -204,21 +202,25 @@ export default class SecretCreateOrUpdate extends Component {
     this.checkRows();
     this.handleChange();
   }
+
   @action
   formatJSON() {
-    this.codemirrorString = this.args.secretData.toJSONString(true);
+    this.editorString = this.args.secretData.toJSONString(true);
   }
+
   @action
   handleMaskedInputChange(secret, index, value) {
     const row = { ...secret, value };
     set(this.args.secretData, index, row);
     this.handleChange();
   }
+
   @action
   handleChange() {
-    this.codemirrorString = this.args.secretData.toJSONString(true);
+    this.editorString = this.args.secretData.toJSONString(true);
     set(this.args.modelForData, 'secretData', this.args.secretData.toJSON());
   }
+
   @action
   updateValidationErrorCount(errorCount) {
     this.validationErrorCount = errorCount;

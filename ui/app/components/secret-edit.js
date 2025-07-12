@@ -35,13 +35,13 @@ export default class SecretEdit extends Component {
   @service store;
 
   @tracked secretData = null;
-  @tracked codemirrorString = null;
+  @tracked editorString = null;
 
   // fired on did-insert from render modifier
   @action
   createKvData(elem, [model]) {
     this.secretData = KVObject.create({ content: [] }).fromJSON(model.secretData);
-    this.codemirrorString = this.secretData.toJSONString();
+    this.editorString = this.secretData.toJSONString();
   }
   // TODO move this to the secret model
   @maybeQueryRecord(

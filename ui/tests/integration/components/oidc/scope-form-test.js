@@ -55,14 +55,12 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
 
     // json editor has test coverage so let's just confirm that it renders
     assert
-      .dom('[data-test-input="template"] [data-test-component="json-editor-toolbar"]')
+      .dom(`${GENERAL.inputByAttr('template')} .hds-code-editor__header`)
       .exists('JsonEditor toolbar renders');
-    assert
-      .dom('[data-test-input="template"] [data-test-component="code-mirror-modifier"]')
-      .exists('Code mirror renders');
+    assert.dom(`${GENERAL.inputByAttr('template')} ${GENERAL.codemirror}`).exists('Code mirror renders');
 
-    await fillIn('[data-test-input="name"]', 'test');
-    await fillIn('[data-test-input="description"]', 'this is a test');
+    await fillIn(GENERAL.inputByAttr('name'), 'test');
+    await fillIn(GENERAL.inputByAttr('description'), 'this is a test');
     await click(SELECTORS.scopeSaveButton);
   });
 
@@ -92,20 +90,20 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
 
     assert.dom('[data-test-oidc-scope-title]').hasText('Edit Scope', 'Form title renders');
     assert.dom(SELECTORS.scopeSaveButton).hasText('Update', 'Save button has correct label');
-    assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
-    assert.dom('[data-test-input="name"]').hasValue('test', 'Name input is populated with model value');
+    assert.dom(GENERAL.inputByAttr('name')).isDisabled('Name input is disabled when editing');
+    assert.dom(GENERAL.inputByAttr('name')).hasValue('test', 'Name input is populated with model value');
     assert
-      .dom('[data-test-input="description"]')
+      .dom(GENERAL.inputByAttr('description'))
       .hasValue('this is a test', 'Description input is populated with model value');
     // json editor has test coverage so let's just confirm that it renders
     assert
-      .dom('[data-test-input="template"] [data-test-component="json-editor-toolbar"]')
+      .dom(`${GENERAL.inputByAttr('template')} .hds-code-editor__header`)
       .exists('JsonEditor toolbar renders');
     assert
-      .dom('[data-test-input="template"] [data-test-component="code-mirror-modifier"]')
+      .dom(`${GENERAL.inputByAttr('template')} [data-test-component="code-mirror-modifier"]`)
       .exists('Code mirror renders');
 
-    await fillIn('[data-test-input="description"]', 'this is an edit test');
+    await fillIn(GENERAL.inputByAttr('description'), 'this is an edit test');
     await click(SELECTORS.scopeSaveButton);
   });
 
@@ -142,7 +140,7 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
     />
       `);
 
-    await fillIn('[data-test-input="description"]', 'changed description attribute');
+    await fillIn(GENERAL.inputByAttr('description'), 'changed description attribute');
     await click(SELECTORS.scopeCancelButton);
     assert.strictEqual(
       this.model.description,
@@ -184,11 +182,11 @@ module('Integration | Component | oidc/scope-form', function (hooks) {
         @onSave={{this.onSave}}
       />
     `);
-    await fillIn('[data-test-input="name"]', 'test-scope');
+    await fillIn(GENERAL.inputByAttr('name'), 'test-scope');
     await click(SELECTORS.scopeSaveButton);
     assert
-      .dom(SELECTORS.inlineAlert)
+      .dom(GENERAL.inlineAlert)
       .hasText('There was an error submitting this form.', 'form error alert renders ');
-    assert.dom('[data-test-message-error]').exists('alert banner renders');
+    assert.dom(GENERAL.messageError).exists('alert banner renders');
   });
 });
