@@ -46,6 +46,7 @@ func TestMySQL_Initialize(t *testing.T) {
 	}
 }
 
+// TestMySQL_Initialize_CloudGCP_Normal - test initialize in GCP with a normal connection.
 // For the CloudGCP Normal, PrivateIP, and PSC tests, follow the instructions within the
 // README at https://github.com/shinji62/vault-tf-psc-test for environment setup.
 // The Terraform takes care of most steps.
@@ -121,6 +122,7 @@ func TestMySQL_Initialize_CloudGCP_Normal(t *testing.T) {
 	}
 }
 
+// TestMySQL_Initialize_CloudGCP_PrivateIP - test initialize in GCP with a private IP.
 // For the CloudGCP Normal, PrivateIP, and PSC tests, follow the instructions within the
 // README at https://github.com/shinji62/vault-tf-psc-test for environment setup.
 // The Terraform takes care of most steps.
@@ -196,6 +198,7 @@ func TestMySQL_Initialize_CloudGCP_PrivateIP(t *testing.T) {
 	}
 }
 
+// TestMySQL_Initialize_CloudGCP_Normal - test initialize in GCP with private service connect.
 // For the CloudGCP Normal, PrivateIP, and PSC tests, follow the instructions within the
 // README at https://github.com/shinji62/vault-tf-psc-test for environment setup.
 // The Terraform takes care of most steps.
