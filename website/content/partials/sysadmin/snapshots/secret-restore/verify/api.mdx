@@ -1,0 +1,24 @@
+To verify secret recovery, read the secret from the expected path. For example,
+if you recovered secrets at `telemetry-systems/api-key` from a key/value plugin
+mounted at the default path, call the `/kv/data/{secret_path}` endpoint:
+
+```shell-session
+$ curl                                      \
+   --request GET                            \
+   --header "X-Vault-Token: ${VAULT_TOKEN}" \
+    ${VAULT_ADDR}/v1/kv/data/telemetry-systems/api-key | jq
+
+{
+    "request_id": "689b2708-fe46-4ee6-0f1a-830f4d3acce0",
+    "lease_id": "",
+    "renewable": false,
+    "lease_duration": 2764800,
+    "data": {
+        "key": "9C016BB3-F574-4A24-B8A7-8CE1F1CE2128"
+    },
+    "wrap_info": null,
+    "warnings": null,
+    "auth": null,
+    "mount_type": "kv"
+}
+```

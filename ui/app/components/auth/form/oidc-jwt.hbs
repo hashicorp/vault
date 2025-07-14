@@ -31,13 +31,9 @@
 
     {{yield to="advancedSettings"}}
 
-    <Hds::Button
-      @icon={{if this.tasksAreRunning "loading" this.icon}}
-      @isFullWidth={{true}}
+    <Auth::SignInButton
+      @icon={{if this.login.isRunning "loading" this.icon}}
       @text="Sign in {{if this.isOIDC this.providerName}}"
-      class="has-top-margin-xl has-bottom-margin-xl"
-      type="submit"
-      data-test-auth-submit
     />
 
     {{yield to="footer"}}

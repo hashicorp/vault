@@ -48,7 +48,21 @@
     <div>
       <div class="has-text-grey is-grid align-items-center linked-block-title">
         {{#if backend.icon}}
-          <Hds::TooltipButton @text={{or backend.engineType backend.path}} aria-label="Type of backend">
+          <Hds::TooltipButton
+            @text={{if
+              backend.isSupportedBackend
+              (concat
+                (get (engines-display-data backend.type) "displayName")
+                (if
+                  (eq backend.version 2)
+                  " version 2"
+                  (if (and (eq backend.version 1) (eq backend.type "kv")) " version 1" "")
+                )
+              )
+              "The UI only supports configuration views for these secret engines. The CLI must be used to manage other engine resources."
+            }}
+            aria-label="Type of backend"
+          >
             <Icon @name={{backend.icon}} class="has-text-grey-light" />
           </Hds::TooltipButton>
         {{/if}}
@@ -67,11 +81,10 @@
           {{/if}}
         {{/if}}
       </div>
-      {{#if backend.accessor}}
-        <code class="has-text-grey is-size-8">
-          {{if (eq backend.version 2) (concat "v2 " backend.accessor) backend.accessor}}
-        </code>
-      {{/if}}
+      <code class="has-text-grey is-size-8" data-test-engine-accessor>
+        {{backend.accessor}}
+        {{backend.runningPluginVersion}}
+      </code>
       {{#if backend.description}}
         <ReadMore>
           {{backend.description}}

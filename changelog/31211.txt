@@ -1,0 +1,3 @@
+```release-note:improvement
+audit: Add additional verifications to the target of file audit sinks.
+```

@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { create } from 'ember-cli-page-object';
-import { fillIn, settled, findAll } from '@ember/test-helpers';
+import { fillIn, settled, findAll, click } from '@ember/test-helpers';
 import { v4 as uuidv4 } from 'uuid';
 
 import enablePage from 'vault/tests/pages/settings/auth/enable';
@@ -38,7 +38,7 @@ module('Acceptance | settings/auth/configure/section', function (hooks) {
       assert.true(keys.includes('default_lease_ttl'), 'passes default_lease_ttl on tune');
       assert.true(keys.includes('max_lease_ttl'), 'passes max_lease_ttl on tune');
       assert.true(keys.includes('description'), 'passes updated description on tune');
-      request.passthrough();
+      return request.passthrough();
     });
     const path = `approle-save-${this.uid}`;
     const type = 'approle';
@@ -50,7 +50,7 @@ module('Acceptance | settings/auth/configure/section', function (hooks) {
       .dom(GENERAL.inputByAttr('config.tokenType'))
       .hasValue('default-service', 'as default the token type selected is default-service.');
     await fillIn(GENERAL.inputByAttr('config.tokenType'), 'batch');
-    await page.save();
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       page.flash.latestMessage,
       `The configuration was saved successfully.`,

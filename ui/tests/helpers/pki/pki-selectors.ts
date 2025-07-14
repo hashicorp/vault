@@ -42,15 +42,11 @@ export const PKI_DELETE_ALL_ISSUERS = {
   issuerLink: '[data-test-delete-all-issuers-link]',
   deleteAllIssuerModal: '#confirmation-modal',
   deleteAllIssuerInput: '[data-test-confirmation-modal-input="Delete all issuers?"]',
-  deleteAllIssuerButton: '[data-test-confirm-button="Delete all issuers?"]',
 };
 
 export const PKI_GENERATE_ROOT = {
   mainSectionTitle: '[data-test-generate-root-title="Root parameters"]',
   urlSectionTitle: '[data-test-generate-root-title="Issuer URLs"]',
-  keyParamsGroupToggle: '[data-test-toggle-group="Key parameters"]',
-  sanGroupToggle: '[data-test-toggle-group="Subject Alternative Name (SAN) Options"]',
-  additionalGroupToggle: '[data-test-toggle-group="Additional subject fields"]',
   toggleGroupDescription: '[data-test-toggle-group-description]',
   groupFields: (group: string) => `[data-test-group="${group}"] [data-test-field]`,
   formInvalidError: '[data-test-pki-generate-root-validation-error]',
@@ -76,12 +72,12 @@ export const PKI_CROSS_SIGN = {
   signedIssuerRow: (row = 0) => `[data-test-info-table-row="${row}"]`,
   signedIssuerCol: (attr: string) => `[data-test-info-table-column="${attr}"]`,
   rowValue: (attr: string) => `[data-test-row-value="${attr}"]`, // TODO replace with the GENERAL.infoRowValue
-  copyButton: (attr: string) => `[data-test-row-value="${attr}"] [data-test-copy-button]`,
+  copyButton: (attr: string) => `[data-test-row-value="${attr}"] ${GENERAL.copyButton}`,
 };
 
 export const PKI_ISSUER_DETAILS = {
   configure: '[data-test-pki-issuer-configure]',
-  copyButtonByName: (name: string) => `[data-test-row-value="${name}"] [data-test-copy-button]`,
+  copyButtonByName: (name: string) => `[data-test-row-value="${name}"] ${GENERAL.copyButton}`,
   crossSign: '[data-test-pki-issuer-cross-sign]',
   defaultGroup: '[data-test-details-group="default"]',
   download: '[data-test-issuer-download]',
@@ -111,22 +107,15 @@ export const PKI_NOT_VALID_AFTER = {
 };
 
 export const PKI_ROLE_FORM = {
-  domainHandling: '[data-test-toggle-group="Domain handling"]',
-  keyParams: '[data-test-toggle-group="Key parameters"]',
-  keyUsage: '[data-test-toggle-group="Key usage"]',
   digitalSignature: '[data-test-checkbox="DigitalSignature"]',
   keyAgreement: '[data-test-checkbox="KeyAgreement"]',
   keyEncipherment: '[data-test-checkbox="KeyEncipherment"]',
   any: '[data-test-checkbox="Any"]',
   serverAuth: '[data-test-checkbox="ServerAuth"]',
-  policyIdentifiers: '[data-test-toggle-group="Policy identifiers"]',
-  san: '[data-test-toggle-group="Subject Alternative Name (SAN) Options"]',
-  additionalSubjectFields: '[data-test-toggle-group="Additional subject fields"]',
 };
 
 export const PKI_ROLE_GENERATE = {
   form: '[data-test-pki-generate-cert-form]',
-  optionsToggle: '[data-test-toggle-group="Subject Alternative Name (SAN) Options"]',
   downloadButton: '[data-test-pki-cert-download-button]',
   revokeButton: '[data-test-pki-cert-revoke-button]',
 };
@@ -173,7 +162,6 @@ export const PKI_KEYS = {
   popupMenuEdit: '[data-test-key-menu-link="edit"]',
   // key details
   keyDeleteButton: '[data-test-pki-key-delete]',
-  downloadButton: '[data-test-download-button]',
   keyEditLink: '[data-test-pki-key-edit]',
   nextStepsAlert: '[data-test-pki-key-next-steps]',
 };

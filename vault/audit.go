@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -123,6 +124,36 @@ func (c *Core) enableAudit(ctx context.Context, entry *MountEntry, updateStorage
 	}
 	entry.NamespaceID = ns.ID
 	entry.namespace = ns
+
+	if entry.Type == "file" {
+		if prefix, ok := entry.Options[audit.OptionPrefix]; ok && prefix != "" && !c.allowAuditLogPrefixing {
+			return errors.New("audit prefixing is not enabled in configuration, audit prefixing may not be configured for file sinks")
+		}
+
+		if c.pluginDirectory != "" {
+			// Validate that the audit log file is not in the plugin directory
+			auditDir := filepath.Dir(entry.Options["file_path"])
+			auditDir, err = filepath.Abs(auditDir)
+			if err != nil {
+				return fmt.Errorf("error getting absolute path of audit dir for audit validation: %w", err)
+			}
+			pluginDir, err := filepath.Abs(c.pluginDirectory)
+			if err != nil {
+				return fmt.Errorf("error getting absolute path of plugin dir for audit validation: %w", err)
+			}
+			// Walk the audit path up checking that none of them are the plugin dir
+			for len(auditDir) > 1 || auditDir[0] != filepath.Separator {
+				rp, err := filepath.Rel(pluginDir, auditDir)
+				if err != nil {
+					return fmt.Errorf("error checking relative path for audit validation: %w", err)
+				}
+				if rp == "." {
+					return errors.New("audit file target may not be in the plugin directory")
+				}
+				auditDir = filepath.Dir(auditDir)
+			}
+		}
+	}
 
 	c.auditLock.Lock()
 	defer c.auditLock.Unlock()

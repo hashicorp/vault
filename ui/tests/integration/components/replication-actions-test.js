@@ -9,6 +9,7 @@ import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, fillIn, render } from '@ember/test-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
@@ -128,9 +129,9 @@ module('Integration | Component | replication actions', function (hooks) {
   ];
 
   for (const [replicationMode, clusterMode, action, headerText, fillInFn, expectedOnSubmit] of testCases) {
-    test(`replication mode ${replicationMode}, cluster mode: ${clusterMode}, action: ${action}`, async function (assert) {
+    const testCaseKey = `${replicationMode}-${clusterMode}-${action}`;
+    test(`replication and cluster mode action behavior: testCaseKey = ${testCaseKey}`, async function (assert) {
       assert.expect(1);
-      const testKey = `${replicationMode}-${clusterMode}-${action}`;
       this.set('model', {
         replicationAttrs: {
           modeForUrl: clusterMode,
@@ -151,7 +152,7 @@ module('Integration | Component | replication actions', function (hooks) {
         assert.deepEqual(
           JSON.stringify(actual),
           JSON.stringify(expectedOnSubmit),
-          `${testKey}: submitted values match expected`
+          `Submitted values match what is expected for the testCaseKey: ${testCaseKey}`
         );
         return resolve();
       });
@@ -168,13 +169,12 @@ module('Integration | Component | replication actions', function (hooks) {
       );
       assert
         .dom(`[data-test-${action}-replication] h3`)
-        .hasText(headerText, `${testKey}: renders the ${action} component header`);
-
-      await click(`[data-test-replication-action-trigger="${action}"]`);
+        .hasText(headerText, `Renders the component header for: ${testCaseKey}`);
+      await click(GENERAL.button(action));
       if (typeof fillInFn === 'function') {
         await fillInFn.call(this);
       }
-      await click('[data-test-confirm-button]');
+      await click(GENERAL.confirmButton);
     });
   }
 });

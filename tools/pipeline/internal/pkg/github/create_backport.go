@@ -4,7 +4,6 @@
 package github
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -15,9 +14,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"text/template"
 
-	"github.com/google/go-github/v68/github"
 	libgithub "github.com/google/go-github/v68/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
 	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
@@ -297,19 +294,13 @@ func (r *CreateBackportReq) Run(
 			res = &CreateBackportRes{}
 		}
 
-		// Figure out the comment body. Worst case it ought to be whatever error
-		// we've returned.
-		var body string
-		if res.Error != nil {
-			body = res.Error.Error()
-		}
-
 		// Set any known errors on the response before we create a comment, as the
 		// error will be used in the comment body if present.
 		res.Error = errors.Join(res.Error, os.Chdir(initialDir))
-		body = res.CommentBody()
 		var err1 error
-		res.Comment, err1 = r.createPullRequestComment(ctx, github, body)
+		res.Comment, err1 = createPullRequestComment(
+			ctx, github, r.Owner, r.Repo, int(r.PullNumber), res.CommentBody(),
+		)
 
 		// Set our finalized error on our response and also update our returned error
 		res.Error = errors.Join(res.Error, err1)
@@ -324,7 +315,7 @@ func (r *CreateBackportReq) Run(
 	// Make sure we've been given a valid location for a repo and/or create a
 	// temporary one
 	var tmpDir bool
-	res.Error, tmpDir = r.ensureRepoDir(ctx)
+	r.RepoDir, res.Error, tmpDir = ensureGitRepoDir(ctx, r.RepoDir)
 	if res.Error != nil {
 		return res
 	}
@@ -333,7 +324,9 @@ func (r *CreateBackportReq) Run(
 	}
 
 	// Get our pull request details
-	res.OriginPullRequest, res.Error = r.getPR(ctx, github)
+	res.OriginPullRequest, res.Error = getPullRequest(
+		ctx, github, r.Owner, r.Repo, int(r.PullNumber),
+	)
 	if res.Error != nil {
 		return res
 	}
@@ -363,9 +356,13 @@ func (r *CreateBackportReq) Run(
 	baseRef := res.OriginPullRequest.GetBase().GetRef()
 	_, err = os.Stat(filepath.Join(r.RepoDir, ".git"))
 	if err == nil {
-		res.Error = r.initializeExistingRepo(ctx, git, baseRef)
+		res.Error = initializeExistingRepo(
+			ctx, git, r.RepoDir, r.BaseOrigin, baseRef,
+		)
 	} else {
-		res.Error = r.initializeNewRepo(ctx, git, baseRef)
+		res.Error = initializeNewRepo(
+			ctx, git, r.RepoDir, r.Owner, r.Repo, r.BaseOrigin, baseRef,
+		)
 	}
 	if res.Error != nil {
 		return res
@@ -564,50 +561,6 @@ func (r *CreateBackportRes) ToTable() table.Writer {
 	return t
 }
 
-// createPullRequestComment creates a status comment on the pull request.
-func (r *CreateBackportReq) createPullRequestComment(
-	ctx context.Context,
-	github *libgithub.Client,
-	body string,
-) (*libgithub.IssueComment, error) {
-	// Always try and write a comment on the pull request
-	comment, _, err := github.Issues.CreateComment(
-		ctx, r.Owner, r.Repo, int(r.PullNumber), &libgithub.IssueComment{
-			Body: &body,
-		},
-	)
-	if err != nil {
-		err = fmt.Errorf("creating backport pull request comment: %w", err)
-	}
-
-	return comment, err
-}
-
-// ensureRepoDir repoDir verifies that the RepoDir exists and is a directory.
-// If the RepoDir is unset a temporary directory will be created. A boolean
-// is returned which can be used to determine whether or not the RepoDir is
-// a temporary directory.
-func (r *CreateBackportReq) ensureRepoDir(ctx context.Context) (error, bool) {
-	slog.Default().DebugContext(ctx, "verifying or creating repository directory")
-
-	if r.RepoDir == "" {
-		var err error
-		r.RepoDir, err = os.MkdirTemp("", "pipeline-create-pr")
-		return err, true
-	}
-
-	info, err := os.Stat(r.RepoDir)
-	if err != nil {
-		return fmt.Errorf("checking repository directory: %w", err), false
-	}
-
-	if !info.IsDir() {
-		return errors.New("repo dir must be a directory"), false
-	}
-
-	return nil, false
-}
-
 // backportBranchNameForRef returns then branch name to use for our backport,
 // e.g. ce/backport/1.19.x/my-feature-branch
 func (r CreateBackportReq) backportBranchNameForRef(
@@ -627,7 +580,7 @@ func (r *CreateBackportReq) backportRef(
 	ctx context.Context,
 	git *libgit.Client,
 	github *libgithub.Client,
-	pr *github.PullRequest,
+	pr *libgithub.PullRequest,
 	activeVersions map[string]*releases.Version,
 	changedFiles *ListChangedFilesRes,
 	ref string, // the full base ref of the branch we're backporting to
@@ -719,21 +672,9 @@ func (r *CreateBackportReq) backportRef(
 	// the open pull requests for a branch. Until that changes we'll need to do
 	// this.
 	if res.Error != nil {
-		resetRes, err := git.Reset(ctx, &libgit.ResetOpts{
-			Mode:    libgit.ResetModeHard,
-			Treeish: ref,
-		})
+		err = resetAndCreateNOOPCommit(ctx, git, ref)
 		if err != nil {
-			res.Error = errors.Join(res.Error, fmt.Errorf("resetting back to base reference: %s: %w", resetRes.String(), err))
-		}
-		commitRes, err := git.Commit(ctx, &libgit.CommitOpts{
-			AllowEmpty: true,
-			Message:    "no-op commit due to failed backport",
-			NoVerify:   true,
-			NoEdit:     true,
-		})
-		if err != nil {
-			res.Error = errors.Join(res.Error, fmt.Errorf("committing no-op commit: %s: %w", commitRes.String(), err))
+			res.Error = errors.Join(res.Error, err)
 		}
 	}
 
@@ -750,7 +691,10 @@ func (r *CreateBackportReq) backportRef(
 	}
 
 	prTitle := fmt.Sprintf("Backport %s into %s", pr.GetTitle(), ref)
-	prBody, err := r.pullRequestBody(pr, res)
+	prBody, err := renderEmbeddedTemplate("backport-pr-message.tmpl", struct {
+		OriginPullRequest *libgithub.PullRequest
+		Attempt           *CreateBackportAttempt
+	}{pr, res})
 	if err != nil {
 		res.Error = fmt.Errorf("creating backport pull request body %w", err)
 		return res
@@ -771,11 +715,13 @@ func (r *CreateBackportReq) backportRef(
 
 	// Assign the pull request to the actor that merged the pull request and/or the
 	// person(s) that it was assigned to.
-	assignees := []string{pr.GetAssignee().GetLogin(), pr.GetMergedBy().GetLogin()}
-	_, _, err = github.Issues.AddAssignees(
-		ctx, r.Owner, r.Repo, int(res.PullRequest.GetNumber()), slices.Compact(slices.DeleteFunc(assignees, func(a string) bool {
-			return a == ""
-		})),
+	err = addAssignees(
+		ctx,
+		github,
+		r.Owner,
+		r.Repo,
+		int(res.PullRequest.GetNumber()),
+		[]string{pr.GetAssignee().GetLogin(), pr.GetMergedBy().GetLogin()},
 	)
 	if err != nil {
 		res.Error = fmt.Errorf("assigning ownership to backport pull request %w", err)
@@ -793,7 +739,7 @@ func (r *CreateBackportReq) backportRef(
 func (r *CreateBackportReq) backportCECommitWithPatch(
 	ctx context.Context,
 	git *libgit.Client,
-	pr *github.PullRequest,
+	pr *libgithub.PullRequest,
 	changedFiles *ListChangedFilesRes,
 	commitSHA string,
 ) error {
@@ -1004,23 +950,9 @@ func (r *CreateBackportReq) getChangedFiles(
 	return res, nil
 }
 
-// getPR does GET for the pull request details
-func (r *CreateBackportReq) getPR(
-	ctx context.Context,
-	github *libgithub.Client,
-) (*libgithub.PullRequest, error) {
-	slog.Default().DebugContext(ctx, "getting PR details")
-	pr, _, err := github.PullRequests.Get(ctx, r.Owner, r.Repo, int(r.PullNumber))
-	if err != nil {
-		return nil, err
-	}
-
-	return pr, nil
-}
-
 // Names returns the label names as slice of strings
 func (l Labels) Names() []string {
-	if l == nil || len(l) < 1 {
+	if len(l) < 1 {
 		return nil
 	}
 
@@ -1050,143 +982,10 @@ func (r *CreateBackportReq) hasEntPrefix(ref string) bool {
 	return strings.HasPrefix(ref, r.EntBranchPrefix+"/")
 }
 
-// initializeExistingRepo initializes an existing repository. It assumes that
-// at least one remote origin exists and that some branch is checked out. If
-// the current branch is our baseRef we'll pull in the latest changes, otherwise
-// we'll fetch baseRef.
-func (r *CreateBackportReq) initializeExistingRepo(
-	ctx context.Context,
-	git *libgit.Client,
-	baseRef string,
-) error {
-	// We've been given an already initialized git directory. We'll have to
-	// assume it's the correct repo that has been cloned.
-	slog.Default().WarnContext(ctx, "using an already initialized git repository")
-
-	slog.Default().DebugContext(ctx, "changing working directory to repo-dir")
-	err := os.Chdir(r.RepoDir)
-	if err != nil {
-		return fmt.Errorf("changing directory to the repository dir: %w", err)
-	}
-
-	// Determine if we're on the correct branch. If we are, pull it, otherwise
-	// fetch it.
-	slog.Default().DebugContext(ctx, "getting existing repo current branch")
-	res, err := git.Branch(ctx, &libgit.BranchOpts{
-		NoColor:     true,
-		ShowCurrent: true,
-	})
-	if err != nil {
-		return fmt.Errorf("getting existing repo current branch: %w", err)
-	}
-
-	if strings.TrimSpace(string(res.Stdout)) == baseRef {
-		// Our existing repo is already checked out to correct branch.
-		// Fetch the base ref to make sure our existing repository has the necessary
-		// objects and references we'll need to cherry-pick the commits to our
-		// branch.
-		slog.Default().DebugContext(ctx, "pulling in latest changes")
-		res, err := git.Pull(ctx, &libgit.PullOpts{
-			Refspec:     []string{r.BaseOrigin, baseRef},
-			Autostash:   true,
-			SetUpstream: true,
-			Rebase:      libgit.RebaseStrategyTrue,
-		})
-		if err != nil {
-			return fmt.Errorf("pulling repo current branch: %s: %w", res.String(), err)
-		}
-
-		return nil
-	}
-
-	// Fetch the base ref to make sure our existing repository has the necessary
-	// objects and references we'll need to cherry-pick the commits to our
-	// branch.
-	slog.Default().DebugContext(ctx, "fetching repository base ref")
-	res, err = git.Fetch(ctx, &libgit.FetchOpts{
-		// Fetch the ref but also provide a local tracking branch of the same name
-		// e.g. "git fetch origin main:main"
-		Refspec:     []string{r.BaseOrigin, fmt.Sprintf("%s:%s", baseRef, baseRef)},
-		SetUpstream: true,
-		Porcelain:   true,
-	})
-	if err != nil {
-		return fmt.Errorf("fetching base ref: %s: %w", res.String(), err)
-	}
-
-	return nil
-}
-
-// initializeNewRepo initializes a new repository by cloning the repo fetching
-// the base branch we'll cherry pick from.
-func (r *CreateBackportReq) initializeNewRepo(
-	ctx context.Context,
-	git *libgit.Client,
-	baseRef string,
-) error {
-	cloneURL := fmt.Sprintf("https://github.com/%s/%s.git", r.Owner, r.Repo)
-	slog.Default().DebugContext(slogctx.Append(ctx,
-		slog.String("repo-dir", r.RepoDir),
-		slog.String("repo-url", cloneURL),
-	), "initializing new clone of repository")
-
-	res, err := git.Clone(ctx, &libgit.CloneOpts{
-		Repository:   cloneURL,
-		Directory:    r.RepoDir,
-		Origin:       r.BaseOrigin,
-		Branch:       baseRef,
-		SingleBranch: true,
-		NoCheckout:   true,
-	})
-	if err != nil {
-		return fmt.Errorf("cloning repository: %s: %w", res.String(), err)
-	}
-
-	slog.Default().DebugContext(ctx, "changing working directory to repo-dir")
-	err = os.Chdir(r.RepoDir)
-	if err != nil {
-		return fmt.Errorf("changing directory to the repository dir: %w", err)
-	}
-
-	return nil
-}
-
 // isEnt takes a branch reference and determines whether or not it refers to
 // an enterprise branch.
 func (r *CreateBackportReq) isEnt(ref string) bool {
-	if r.hasCEPrefix(ref) {
-		return false
-	}
-
-	return true
-}
-
-// pullRequestBody uses the PullRequest and backport reference to render the
-// embedded backport-pr.tmpl template that we can use for the pull request body.
-func (r *CreateBackportReq) pullRequestBody(
-	origin *libgithub.PullRequest,
-	attempt *CreateBackportAttempt,
-) (string, error) {
-	tmpl, err := embeds.ReadFile("embeds/backport-pr.tmpl")
-	if err != nil {
-		return "", err
-	}
-
-	t, err := template.New("backport-pr.tmpl").Parse(string(tmpl))
-	if err != nil {
-		return "", err
-	}
-
-	buf := bytes.Buffer{}
-	err = t.Execute(&buf, struct {
-		OriginPullRequest *libgithub.PullRequest
-		Attempt           *CreateBackportAttempt
-	}{origin, attempt})
-	if err != nil {
-		return "", err
-	}
-
-	return buf.String(), nil
+	return !r.hasCEPrefix(ref)
 }
 
 // shouldSkipRef determines whether or we ought to backport to a given branch
