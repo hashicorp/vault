@@ -657,7 +657,7 @@ type basicAuditor struct {
 func (b *basicAuditor) AuditRequest(ctx context.Context, input *logical.LogInput) error {
 	b.c.auditLock.RLock()
 	auditBroker := b.c.auditBroker
-	b.c.auditBroker.RUnlock()
+	b.c.auditLock.RUnlock()
 	if auditBroker == nil {
 		return consts.ErrSealed
 	}
@@ -667,7 +667,7 @@ func (b *basicAuditor) AuditRequest(ctx context.Context, input *logical.LogInput
 func (b *basicAuditor) AuditResponse(ctx context.Context, input *logical.LogInput) error {
 	b.c.auditLock.RLock()
 	auditBroker := b.c.auditBroker
-	b.c.auditBroker.RUnlock()
+	b.c.auditLock.RUnlock()
 	if auditBroker == nil {
 		return consts.ErrSealed
 	}
