@@ -156,7 +156,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       }
 
       try {
-        const entity_id = this.auth.authData?.entity_id;
+        const entity_id = this.auth.authData?.entityId;
         const entity = entity_id ? entity_id : `root_${uuidv4()}`;
 
         this.analytics.identifyUser(entity, {

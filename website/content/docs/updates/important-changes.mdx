@@ -15,16 +15,34 @@ valid_change_types: >-
 
 # Important changes
 
-**Last updated**: 2025-06-05
+**Last updated**: 2025-06-30
 
 Always review important or breaking changes and remediation recommendations
 before upgrading Vault.
 
-## New behavior 
+## New behavior
 
-None.
+### Key pair authentication for Snowflake DB secrets engine
 
-## Breaking changes 
+| Change       | Affected version | Affected deployments
+| ------------ | ---------------- | --------------------
+| New behavior | 1.20.0           | any
+
+As of version 1.20.0, Vault supports
+[Snowflake database authentication using key pairs](/vault/api-docs/secret/databases#configure-connection)
+as an alternative to password authentication, which Snowflake plans to disable
+in November 2025. Vault support for password authentication with Snowflake is
+now deprecated and will be removed in a future release.
+
+Vault currently does not support rotate root for key pairs. To manually rotate key pairs, users can:
+
+  - update the root configuration in Vault with the new private key
+  - update the public key associated with the user in Snowflake
+
+For more information on rotating key pairs, please refer
+to the official [Snowflake documentation](https://docs.snowflake.com/en/user-guide/key-pair-auth#configuring-key-pair-rotation).
+
+## Breaking changes
 
 ### Breaking configuration change for disable_mlock ((#disable_mlock-config))
 
@@ -59,6 +77,36 @@ For clusters that already set a value for `disable_mlock`, no change is required
 | Performance Secondary      | Yes                      | value depends on cluster specifics. [See docs](/vault/docs/configuration#disable_mlock)
 | DR Secondary               | Yes                      | value depends on cluster specifics. [See docs](/vault/docs/configuration#disable_mlock)
 
+
+### One of bound_group_ids or bound_service_principal_ids Must Be Specified in the Role Definition for Azure Authentication Roles
+
+Azure authentication roles must specify either `bound_group_ids` or `bound_service_principal_ids` in the role definition to prevent
+excessively permissive access. This ensures that the role is tailored to the specific needs of the application or service. More information about Azure
+authentication roles can be found [here](/vault/docs/auth/azure). Here's an updated example for reference:
+
+```shell-session
+$ vault write auth/azure/role/dev-role \
+    policies="prod,dev" \
+    bound_subscription_ids=6a1d5988-5917-4221-b224-904cd7e24a25 \
+    bound_resource_groups=vault \
+    bound_service_principal_ids=3cb88732-1356-4782-b671-4877166be01a
+```
+
+### Audiences Will Be Required for Kubernetes Authentication Roles in Vault 1.21+
+
+Starting in Vault 1.21+, specifying an **audience** will be **mandatory** for all Kubernetes authentication roles. This ensures that the JWT token's aud (audience) claim is explicitly validated, confirming that the token is intended for Vault and not another service.
+
+Currently, creating or updating a Kubernetes auth role without an audience will result in a warning. However, once Vault 1.21 is released, **any role that does not specify an audience will fail authentication.**
+
+To prepare for this change, make sure to include the audience parameter when defining Kubernetes auth roles. More information about Kubernetes authentication roles can be found [here](/vault/docs/auth/kubernetes). Here's an updated example:
+
+```shell-session
+vault write auth/kubernetes/role/demo \
+    bound_service_account_names=myapp \
+    bound_service_account_namespaces=default \
+    policies=default \
+    ttl=1h
+```
 
 #### Additional Considerations
 
@@ -99,6 +147,50 @@ None.
 
 ## Known issues
 
+### UI KV v2 overview for secret paths containing underscores ((#ui-kvv2-underscore-secrets))
+
+| Change       | Affected version | Fixed version
+| ------------ | ---------------- | --------------------
+| Known issue  | 1.20.0           | 1.20.1
+
+Users receive an error when navigating to a KV v2 secret with an underscore in the name (e.g. `my_secret`)
+if the user does not have policy permissions granting `read` access to the [`/subkeys` endpoint](/vault/api-docs/secret/kv/kv-v2#read-secret-subkeys).
+
+#### Recommendation
+
+As a workaround, you can use the [GUI CLI emulator](/vault/docs/ui/web-cli) to read secret data or metadata.
+
+You can also use the API explorer to make any HTTP request:
+
+1. Select **Tools** from the Vault GUI sidebar.
+1. Click **API Explorer**.
+1. Enter the KV v2 plugin mount path in the "Filter by tag" search bar.
+1. Expand the endpoint for the action you wish to perform and click **Try it out**.
+1. Provide the required parameters. For example, to read a KV v2 secret the `path` must be provided.
+1. Provide any optional parameters desired.
+1. Click **Execute** to perform the HTTP request.
+
+### UI login fails for auth mounts with underscores and unauthenticated listing ((#ui-login-underscore))
+
+| Change       | Affected version | Fixed version
+| ------------ | ---------------- | --------------------
+| Known issue  | 1.20.0           | 1.20.1
+
+Login requests to auth methods mounted at paths using underscores (e.g. `oidc_test`)
+with `listing_visibility="unauth"` fail because the GUI calls the wrong
+endpoint. Mounts with dashes (e.g. `oidc-test`) work correctly.
+
+#### Recommendation
+
+As a workaround, you can log in to the GUI using the following steps:
+
+1. Navigate directly to the URL for the desired method type (e.g. `${VAULT_ADDR}/ui/vault/auth?with=oidc`)
+1. Click "Sign in with other methods ->"
+1. Select the method type from the dropdown
+1. Click **Advanced settings** and provide the correct path (e.g., `oidc_test`).
+
+We also recommend creating a [custom GUI message](/vault/docs/ui/custom-message) describing the workaround steps for users.
+
 ### Duplicate unseal/seal wrap HSM keys ((#hsm-keys)) <EnterpriseAlert inline="true" />
 
 | Change      | Status | Affected version                       | Fixed version
@@ -121,3 +213,37 @@ Duplicate HSM keys can cause the following errors:
 
 Always run Vault with `generate_key = false` and manually create all required
 keys within the HSM during the setup process.
+
+### Duplicate LDAP Password Rotations on Standby Node Check-In ((#ldap-checkin))
+
+| Change       | Affected version                          | Fixed version
+| ------------ | ----------------------------------------- | --------------------
+| Known issue  | 1.12.0+                                   | N/A
+
+Vault check-ins for LDAP service accounts performed on a performance standby node or a node in a
+performance replication secondary cluster can trigger duplicate password changes on the LDAP server.
+Duplication occurs because the LDAP client on the local node successfully modifies the password before Vault
+forwards the check-in request to the active node, which then performs a second password update.
+While users still receive the latest password, it may lead to unexpected LDAP activity and cause
+confusion interpreting audit logs.
+
+### Recommendation:
+
+Send check-in requests directly to the active node of the primary cluster to prevent duplicate password
+rotations on the LDAP server.
+
+### Development cluster setting overwritten on secondary cluster reload ((#development-cluster-reload))
+
+| Change       | Affected version | Fixed version
+| ------------ |------------------| --------------------
+| Known issue  | 1.20.0           | 1.20.1
+
+If the Vault process receives a `SIGHUP` and reloads a secondary performance
+replication cluster, the cluster reverts to the locally configured
+`development_cluster` value instead of following the value configured on the
+primary cluster.
+
+#### Recommendation:
+
+Ensure all clusters in a performance replication group have the same `development_cluster` value configured in HCL to
+prevent unexpected changes to the reported value.

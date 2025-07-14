@@ -8,12 +8,12 @@ import (
 )
 
 func newGithubCreateCmd() *cobra.Command {
-	create := &cobra.Command{
+	createCmd := &cobra.Command{
 		Use:   "create",
 		Short: "Github create commands",
 		Long:  "Github create commands",
 	}
-	create.AddCommand(newGithubCreateBackportCmd())
+	createCmd.AddCommand(newCreateGithubBackportCmd())
 
-	return create
+	return createCmd
 }

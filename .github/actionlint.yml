@@ -1,0 +1,16 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+self-hosted-runner:
+  # Labels of self-hosted runner in array of string
+  labels:
+    - small
+    - medium
+    - ondemand
+    - disk_gb=64
+    - os=linux
+    - type=m5.2xlarge
+    - type=c6a.xlarge
+    - type=c6a.4xlarge
+    - ubuntu-latest-x64
+    - custom-linux-xl-vault-latest

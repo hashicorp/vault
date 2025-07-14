@@ -834,7 +834,7 @@ func (c *PluginCatalog) upgradePlugins(ctx context.Context, logger log.Logger) e
 		}
 
 		// Upgrade the storage. At this point we don't know what type of plugin this is so pass in the unknown type.
-		runner, err := c.setInternal(ctx, pluginutil.SetPluginInput{
+		runner, err := c.set(ctx, pluginutil.SetPluginInput{
 			Name:    pluginName,
 			Type:    consts.PluginTypeUnknown,
 			Version: plugin.Version,
@@ -871,15 +871,27 @@ func (c *PluginCatalog) verifyOfficialPlugins(ctx context.Context) error {
 		return err
 	}
 
+	// // TODO: In the future, add retries.
+	for _, plugin := range plugins {
+		if plugin.Download {
+			// TODO: In the future, we may want to have some sort of deadline here so we don't block Vault from starting or impose any extended delays.
+			if err := c.entDownloadExtractVerifyPlugin(ctx, plugin); err != nil {
+				c.logger.Warn("failed to download, extract, and verify plugin",
+					"plugin", plugin.Name, "version", plugin.Version, "error", err)
+			}
+		}
+	}
+
+	// The below verification block only applies to official plugins that were manually downloaded and extracted to the plugin directory.
 	var hasOfficialPlugins bool
 	for _, plugin := range plugins {
-		if plugin.Tier != consts.PluginTierOfficial {
+		if plugin.Tier != consts.PluginTierOfficial || plugin.Download {
 			continue
 		}
 
 		hasOfficialPlugins = true
 		pluginDir := path.Join(c.directory, path.Dir(plugin.Command))
-		if _, err = verifyPlugin(pluginDir, plugin.Name, hashiCorpPGPPubKey); err != nil {
+		if _, err = VerifyPlugin(pluginDir, plugin.Name, verifyPGPSignatureDetached); err != nil {
 			return fmt.Errorf("failed to verify plugin %q version %q: %w", plugin.Name, plugin.Version, err)
 		}
 	}
@@ -989,54 +1001,73 @@ func (c *PluginCatalog) Set(ctx context.Context, plugin pluginutil.SetPluginInpu
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	_, err := c.setInternal(ctx, plugin)
+	_, err := c.set(ctx, plugin)
 	return err
 }
 
-// setInternal sets a plugin entry in the catalog. In addition to its CE functionality,
-// it will attempt to verify the plugin in its extracted artifact directory
-// if the sha256 is not specified.
-func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPluginInput) (*pluginutil.PluginRunner, error) {
-	command := plugin.Command
+// set sets a plugin entry in the catalog.
+// For manually extracted plugin artifacts when sha256 is unset, it additionally attempts to verify the plugin.
+func (c *PluginCatalog) set(ctx context.Context, plugin pluginutil.SetPluginInput) (*pluginutil.PluginRunner, error) {
+	absCommand := plugin.Command
 	var pluginTier consts.PluginTier
 
 	if plugin.OCIImage == "" {
 		// When OCIImage is empty, then we want to register with the binary either directly (if Sha256 is set) or via the extracted artifact directory (if Sha256 is unset).
 
+		// Validate name and command are set as we rely on these to be specified to populate the plugin runner.
+		if plugin.Name == "" {
+			return nil, fmt.Errorf("must specify name to register plugin")
+		}
+		if plugin.Download || len(plugin.Sha256) > 0 {
+			// For downloaded plugins and plugin binaries, we require command to be set from the caller to populate the plugin runner.
+			// Extracted artifacts don't require command to be set as we derive it from the plugin name.
+			if plugin.Command == "" {
+				return nil, fmt.Errorf("must specify command to register plugin")
+			}
+		}
+
 		var expectedPluginDir string
-		if len(plugin.Sha256) > 0 {
-			// When Sha256 is set, we can assume the binary is already available.
+		var err error
+		if plugin.Download {
+			expectedPluginDir, plugin.Command, pluginTier, err = c.entPrepareDownloadedPlugin(ctx, plugin)
+		} else if len(plugin.Sha256) > 0 {
+			// When Download is false and Sha256 is set, we can assume the binary is already available.
 			expectedPluginDir = c.directory
-			command = filepath.Join(c.directory, plugin.Command)
 		} else {
-			// When Sha256 is unset, ensure Version is set then attempt to verify the plugin
-			// in its extracted artifact directory.
+			// When Download is false and Sha256 is unset, ensure Version is set then attempt to verify
+			// the plugin in its extracted artifact directory.
+			//
+			// TODO: We should move this verification of manually extracted artifacts into handlePluginCatalogUpdate
+			// and pass tier and sha256 from the pluginutil.SetPluginInput instead of setting them here.
 
 			if len(plugin.Version) == 0 {
 				return nil, fmt.Errorf("must specify sha256 to register plugin with binary or version to register plugin with extracted artifact directory")
 			}
 
 			var err error
-			extractedArtifactDir := getExtractedArtifactDir(plugin.Name, plugin.Version)
+			extractedArtifactDir := GetExtractedArtifactDir(plugin.Name, plugin.Version)
 			expectedPluginDir = path.Join(c.directory, extractedArtifactDir)
+
+			// plugin.Command is the command relative to the plugin directory,
+			// e.g., plugins/vault-plugin-secrets-kv_0.24.0_linux_amd64/vault-plugin-secrets-kv
 			plugin.Command = path.Join(extractedArtifactDir, plugin.Name)
 
-			metadata, err := verifyPlugin(expectedPluginDir, plugin.Name, defaultPGPPubKey)
+			metadata, err := VerifyPlugin(expectedPluginDir, plugin.Name, verifyPGPSignatureDetached)
 			if err != nil {
 				return nil, fmt.Errorf("failed to verify plugin plugin %q version %q: %w",
 					plugin.Name, plugin.Version, err)
 			}
 			pluginTier = metadata.Plugin.Tier
 
-			plugin.Sha256, err = pluginSHA256Sum(path.Join(c.directory, plugin.Command))
+			plugin.Sha256, err = hex.DecodeString(metadata.Plugin.Sha256)
 			if err != nil {
-				return nil, fmt.Errorf("failed to calculate SHA256 of plugin: %w", err)
+				return nil, fmt.Errorf("failed to decode plugin metadata sha256: %w", err)
 			}
-
-			command = filepath.Join(c.directory, plugin.Command)
 		}
 
-		sym, err := filepath.EvalSymlinks(command)
+		absCommand = filepath.Join(c.directory, plugin.Command)
+
+		sym, err := filepath.EvalSymlinks(absCommand)
 		if err != nil {
 			return nil, fmt.Errorf("error while validating the command path: %w", err)
 		}
@@ -1059,7 +1090,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 	// the plugin directory to the command, but we can't use get() here.
 	entryTmp := &pluginutil.PluginRunner{
 		Name:     plugin.Name,
-		Command:  command,
+		Command:  absCommand,
 		OCIImage: plugin.OCIImage,
 		Runtime:  plugin.Runtime,
 		Args:     plugin.Args,
@@ -1068,6 +1099,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 		Builtin:  false,
 		Tmpdir:   c.tmpdir,
 		Tier:     pluginTier,
+		Download: plugin.Download,
 	}
 
 	if entryTmp.OCIImage != "" && entryTmp.Runtime != "" {
@@ -1131,6 +1163,7 @@ func (c *PluginCatalog) setInternal(ctx context.Context, plugin pluginutil.SetPl
 		Builtin:  false,
 		Tmpdir:   c.tmpdir,
 		Tier:     pluginTier,
+		Download: plugin.Download,
 	}
 
 	buf, err := json.Marshal(entry)

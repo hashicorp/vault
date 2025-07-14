@@ -37,9 +37,10 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     );
     await click(MOUNT_BACKEND_FORM.mountType(type));
     await fillIn(GENERAL.inputByAttr('path'), path);
-    await click(GENERAL.toggleGroup('Method Options'));
-    await mountSecrets.enableDefaultTtl().defaultTTLUnit('s').defaultTTLVal(100);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.button('Method Options'));
+    await click(GENERAL.toggleInput('Default Lease TTL'));
+    await mountSecrets.defaultTTLUnit('s').defaultTTLVal(100);
+    await click(GENERAL.submitButton);
 
     assert
       .dom(`${GENERAL.flashMessage}.is-success`)
