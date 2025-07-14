@@ -979,6 +979,10 @@
         "path": "upgrade/replicated-deployment"
       },
       {
+        "title": "Manual upgrade for HA deployments",
+        "path": "upgrade/vault-ha-upgrade"
+      },
+      {
         "title": "LTS Vault upgrades",
         "path": "upgrade/lts-upgrade"
       },
@@ -998,7 +1002,7 @@
     ]
   },
   {
-    "title": "System admin",
+    "title": "System administration",
     "routes": [
       {
         "title": "Manage snapshots",

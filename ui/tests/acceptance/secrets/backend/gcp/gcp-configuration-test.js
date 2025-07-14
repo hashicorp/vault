@@ -161,7 +161,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
         });
 
         await click(GENERAL.textToggle);
-        await fillIn(GENERAL.textToggleTextarea, credentials);
+        await fillIn(GENERAL.maskedInput, credentials);
         await click(GENERAL.submitButton);
         // cleanup
         await runCmd(`delete sys/mounts/${this.path}`);
