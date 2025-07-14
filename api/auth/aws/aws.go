@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -166,15 +167,12 @@ func (a *AWSAuth) Login(ctx context.Context, client *api.Client) (*api.Secret, e
 			return nil, fmt.Errorf("failed to sign STS request: %w", err)
 		}
 
-		headers := make(map[string]string)
-		for k, v := range req.Header {
-			headers[k] = base64.StdEncoding.EncodeToString([]byte(strings.Join(v, ",")))
-		}
+		headersData, _ := json.Marshal(req.Header)
 
 		loginData["iam_http_request_method"] = "POST"
 		loginData["iam_request_url"] = base64.StdEncoding.EncodeToString([]byte(req.URL.String()))
 		loginData["iam_request_body"] = base64.StdEncoding.EncodeToString([]byte(iamBody))
-		loginData["iam_request_headers"] = headers
+		loginData["iam_request_headers"] = base64.StdEncoding.EncodeToString(headersData)
 	}
 
 	if a.roleName != "" {
