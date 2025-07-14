@@ -203,7 +203,7 @@ type PluginVersioner interface {
 	PluginVersion() PluginVersion
 }
 
-// MetricsReporter is an optional interface that returns
+// MetricsReporter is an optional interface that returns a
 // metric. Currently only implemented by the database backend.
 type MetricsReporter interface {
 	GetConnectionMetrics() (map[string]int, error)

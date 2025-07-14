@@ -507,6 +507,9 @@ func (b *databaseBackend) getDatabaseConfigNameFromRotationID(path string) (stri
 	return res[1], nil
 }
 
+// GetConnectionMetrics returns a count of the active Database connections.
+// The returned count depends on the database connections map which is not
+// gauranteed to be an exhaustive list of all configured connections.
 func (b *databaseBackend) GetConnectionMetrics() (map[string]int, error) {
 	// Access the private b.connections field here
 	counts := make(map[string]int)

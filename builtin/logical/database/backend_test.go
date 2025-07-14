@@ -95,6 +95,7 @@ func TestBackend_PluginMain_PostgresMultiplexed(t *testing.T) {
 	v5.ServeMultiplex(postgresql.New)
 }
 
+// TestBackend_PluginMain_CassandraMultiplexed tests the Cassandra database plugin
 func TestBackend_PluginMain_CassandraMultiplexed(t *testing.T) {
 	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
 		return
@@ -1604,6 +1605,9 @@ func TestBackend_ConnectionURL_redacted(t *testing.T) {
 	}
 }
 
+// TestBackend_GetConnectionMetrics tests the GetConnectionMetrics method
+// of the database backend to ensure it correctly counts the number of connections
+// for each plugin type.
 func TestBackend_GetConnectionMetrics(t *testing.T) {
 	cluster, sys := getCluster(t)
 	defer cluster.Cleanup()
