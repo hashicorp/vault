@@ -42,8 +42,8 @@ func TestMountTuneRemoveHeaders(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, mount)
 	require.NotNil(t, mount.Config.AllowedResponseHeaders)
-	require.Equal(t, len(*mount.Config.AllowedResponseHeaders), 3)
-	headers := *mount.Config.AllowedResponseHeaders
+	require.Equal(t, len(mount.Config.AllowedResponseHeaders), 3)
+	headers := mount.Config.AllowedResponseHeaders
 	require.Equal(t, headers[0], "Content-Transfer-Encoding")
 	require.Equal(t, headers[1], "Content-Length")
 	require.Equal(t, headers[2], "WWW-Authenticate")
@@ -60,6 +60,5 @@ func TestMountTuneRemoveHeaders(t *testing.T) {
 	mount, err = c.Sys().GetMount("lol")
 	require.NoError(t, err)
 	require.NotNil(t, mount)
-	require.NotNil(t, mount.Config)
-	require.Nil(t, mount.Config.AllowedResponseHeaders)
+	require.Equal(t, len(mount.Config.AllowedResponseHeaders), 0)
 }

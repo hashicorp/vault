@@ -343,7 +343,7 @@ type MountConfigOutput struct {
 	AuditNonHMACResponseKeys   []string                 `json:"audit_non_hmac_response_keys,omitempty" mapstructure:"audit_non_hmac_response_keys"`
 	ListingVisibility          string                   `json:"listing_visibility,omitempty" mapstructure:"listing_visibility"`
 	PassthroughRequestHeaders  []string                 `json:"passthrough_request_headers,omitempty" mapstructure:"passthrough_request_headers"`
-	AllowedResponseHeaders     *[]string                `json:"allowed_response_headers,omitempty" mapstructure:"allowed_response_headers"`
+	AllowedResponseHeaders     []string                 `json:"allowed_response_headers,omitempty" mapstructure:"allowed_response_headers"`
 	TokenType                  string                   `json:"token_type,omitempty" mapstructure:"token_type"`
 	AllowedManagedKeys         []string                 `json:"allowed_managed_keys,omitempty" mapstructure:"allowed_managed_keys"`
 	UserLockoutConfig          *UserLockoutConfigOutput `json:"user_lockout_config,omitempty"`
