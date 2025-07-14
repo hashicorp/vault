@@ -147,6 +147,21 @@ None.
 
 ## Known issues
 
+### Snowflake DB secrets engine key pair authentication not refreshing credentials successfully ((#snowflake-keypair-refresh))
+
+| Change      | Status | Affected version                       | Fixed version
+| ----------- | ------ | -------------------------------------- | --------------------
+| Known issue | Open   | 1.20.x, 1.19.x, 1.18.x+ent, 1.17.x+ent, 1.16.x+ent | None
+
+Due to improper refreshes of credentials when using keypair authentication with Snowflake DB,
+users can receive errors due to stale connections in the connection pool. The issue appears when
+there are two or more concurrent operations, at which point an idle connection from the connection
+pool is reused and fails due to Snowflake's session timeout.
+
+#### Recommendation
+
+As a workaround, you can set the `max_connection_lifetime` to a value below `SESSION_IDLE_TIMEOUT_MINS`.
+
 ### UI KV v2 overview for secret paths containing underscores ((#ui-kvv2-underscore-secrets))
 
 | Change       | Affected version | Fixed version
