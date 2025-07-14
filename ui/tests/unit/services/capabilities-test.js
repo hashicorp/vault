@@ -344,5 +344,68 @@ module('Unit | Service | capabilities', function (hooks) {
       };
       assert.propEqual(actual, expected, 'method returns expected response');
     });
+
+    test(`it fetches capabilities if the user's root namespace is "root"`, async function (assert) {
+      /* 
+    The setup in this test simulates a user whose auth method is mounted in the "root" namespace 
+    but their policy only grants access to paths in the context of the "ns1" namespace.
+
+    * ~Example policy paths~ *
+    # explicitly grants access to read "my-secret" in the kv engine mounted in the "ns1" namespace
+    path "ns1/kv/data/my-secret" {
+      capabilities = ["read", "delete"]
+    }
+    
+    # alternatively, their policy could grant access to read everything within the "ns1" namespace
+    path "ns1/*" {
+      capabilities = ["read"]
+    }
+    */
+      assert.expect(2);
+      const ns = this.nsSvc.path;
+      const paths = ['my/api/path', '/another/api/path'];
+      const expectedPayload = [`${ns}/my/api/path`, `${ns}/another/api/path`];
+
+      this.server.post('/sys/capabilities-self', (schema, req) => {
+        const nsHeader = req.requestHeaders['x-vault-namespace'];
+        const payload = JSON.parse(req.requestBody);
+        assert.strictEqual(nsHeader, '', 'request is made in the context of the "root" namespace');
+        assert.propEqual(
+          payload.paths,
+          expectedPayload,
+          `the namespace path is prepended as the relative namespace`
+        );
+        return req.passthrough();
+      });
+      await this.capabilities.fetch(paths);
+    });
+
+    test(`it fetches capabilities if the user's root namespace is an immediate child of "root"`, async function (assert) {
+      assert.expect(2);
+      /* 
+      The setup in this test simulates a user whose auth method is mounted in the "ns1" namespace and so cannot log in directly to "root" at all.
+      Since this user's context (along with their policy) is exclusively "ns1" the paths do not include the namespace.
+
+      * ~Example policy paths~ *
+      path "kv/data/my-secret" {
+        capabilities = ["read", "delete"]
+      }
+      */
+
+      const authService = this.owner.lookup('service:auth');
+      const ns = this.nsSvc.path;
+      sinon.stub(authService, 'authData').value({ userRootNamespace: ns });
+
+      const paths = ['my/api/path', '/another/api/path'];
+
+      this.server.post('/sys/capabilities-self', (schema, req) => {
+        const nsHeader = req.requestHeaders['x-vault-namespace'];
+        const payload = JSON.parse(req.requestBody);
+        assert.strictEqual(nsHeader, 'ns1', 'request is made in the context of the "ns1" namespace');
+        assert.propEqual(payload.paths, paths, `paths do not include the namespace`);
+        return req.passthrough();
+      });
+      await this.capabilities.fetch(paths);
+    });
   });
 });
