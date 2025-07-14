@@ -1,4 +1,0 @@
-
-```release-note:improvement
-website/docs: Inform contributors that docs will now be located in UDR going forward
-```
