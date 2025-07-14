@@ -141,11 +141,11 @@ scenario "dev_single_cluster" {
       // Required when using a RPM or Deb package
       // Some of these variables don't have default values so we'll only set them if they are
       // required.
-      artifactory_host     = local.use_artifactory ? var.artifactory_host : null
-      artifactory_repo     = local.use_artifactory ? var.artifactory_repo : null
-      artifactory_token    = local.use_artifactory ? var.artifactory_token : null
-      distro               = matrix.distro
-      distro_version       = global.distro_version[matrix.distro]
+      artifactory_host  = local.use_artifactory ? var.artifactory_host : null
+      artifactory_repo  = local.use_artifactory ? var.artifactory_repo : null
+      artifactory_token = local.use_artifactory ? var.artifactory_token : null
+      distro            = matrix.distro
+      distro_version    = global.distro_version[matrix.distro]
     }
   }
 
