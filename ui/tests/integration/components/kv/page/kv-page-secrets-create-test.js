@@ -10,7 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import { hbs } from 'ember-cli-htmlbars';
 
-import { click, fillIn, findAll, render, typeIn, waitFor, settled } from '@ember/test-helpers';
+import { click, fillIn, render, typeIn, waitFor, settled } from '@ember/test-helpers';
 import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 
 import { FORM } from 'vault/tests/helpers/kv/kv-selectors';
