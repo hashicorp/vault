@@ -25,17 +25,19 @@ export const GENERAL = {
   backButton: '[data-test-back-button]',
   cancelButton: '[data-test-cancel]',
   confirmButton: '[data-test-confirm-button]', // used most often on modal or confirm popups
+  confirmTrigger: '[data-test-confirm-action-trigger]',
   copyButton: '[data-test-copy-button]',
   // there should only be one save button per view (e.g. one per form) so this does not need to be dynamic
   // this button should be used for any kind of "submit" on a form or "save" action.
   submitButton: '[data-test-submit]',
-  confirmTrigger: '[data-test-confirm-action-trigger]',
-  button: (label: string) => `[data-test-button="${label}"]`,
+  button: (label: string) => (label ? `[data-test-button="${label}"]` : '[data-test-button]'),
 
   /* ────── Menus & Lists ────── */
   menuTrigger: '[data-test-popup-menu-trigger]',
   menuItem: (name: string) => `[data-test-popup-menu="${name}"]`,
-  listItem: '[data-test-list-item-link]',
+  listItem: (label: string) => `[data-test-list-item="${label}"]`,
+  listItemLink: '[data-test-list-item-link]',
+  linkedBlock: (item: string) => `[data-test-linked-block="${item}"]`,
 
   /* ────── Inputs / Form Fields ────── */
   checkboxByAttr: (attr: string) => `[data-test-checkbox="${attr}"]`,
@@ -56,15 +58,13 @@ export const GENERAL = {
   inputSearch: (attr: string) => `[data-test-input-search="${attr}"]`,
   filterInput: '[data-test-filter-input]',
   filterInputExplicit: '[data-test-filter-input-explicit]',
-  filterInputExplicitSearch: '[data-test-filter-input-explicit-search]',
   labelById: (id: string) => `label[id="${id}"]`,
   labelByGroupControlIndex: (index: number) => `.hds-form-group__control-field:nth-of-type(${index}) label`,
+  maskedInput: '[data-test-masked-input]',
   radioByAttr: (attr: string) => `[data-test-radio="${attr}"]`,
   selectByAttr: (attr: string) => `[data-test-select="${attr}"]`,
   toggleInput: (attr: string) => `[data-test-toggle-input="${attr}"]`,
-  toggleGroup: (attr: string) => `[data-test-toggle-group="${attr}"]`,
   textToggle: '[data-test-text-toggle]',
-  textToggleTextarea: '[data-test-text-file-textarea]',
   filter: (name: string) => `[data-test-filter="${name}"]`,
 
   /* ────── Code Blocks / Editor ────── */

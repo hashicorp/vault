@@ -12,6 +12,7 @@ import {
   waitUntil,
   currentRouteName,
   waitFor,
+  visit,
 } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -20,7 +21,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import listPage from 'vault/tests/pages/secrets/backend/list';
-import editPage from 'vault/tests/pages/secrets/backend/ssh/edit-role';
 import showPage from 'vault/tests/pages/secrets/backend/ssh/show';
 import generatePage from 'vault/tests/pages/secrets/backend/ssh/generate-otp';
 import { runCmd } from 'vault/tests/helpers/commands';
@@ -47,7 +47,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       credsRoute: 'vault.cluster.secrets.backend.sign',
       async fillInCreate() {
         await click(GENERAL.inputByAttr('allowUserCertificates'));
-        await click(GENERAL.toggleGroup('Options'));
+        await click(GENERAL.button('Options'));
         // it's recommended to keep allow_empty_principals false, check for testing so we don't have to input an extra field when signing a key
         await click(GENERAL.inputByAttr('allowEmptyPrincipals'));
       },
@@ -84,7 +84,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       credsRoute: 'vault.cluster.secrets.backend.credentials',
       async fillInCreate() {
         await fillIn(GENERAL.inputByAttr('defaultUser'), 'admin');
-        await click(GENERAL.toggleGroup('Options'));
+        await click(GENERAL.button('Options'));
         await fillIn(GENERAL.inputByAttr('cidrList'), '1.2.3.4/32');
       },
       async fillInGenerate() {
@@ -176,7 +176,7 @@ module('Acceptance | ssh | roles', function (hooks) {
     const createOTPRole = async (name) => {
       await fillIn(GENERAL.inputByAttr('name'), name);
       await fillIn(GENERAL.inputByAttr('keyType'), name);
-      await click(GENERAL.toggleGroup('Options'));
+      await click(GENERAL.button('Options'));
       await fillIn(GENERAL.inputByAttr('keyType'), 'otp');
       await fillIn(GENERAL.inputByAttr('defaultUser'), 'admin');
       await fillIn(GENERAL.inputByAttr('cidrList'), '0.0.0.0/0');
@@ -187,13 +187,14 @@ module('Acceptance | ssh | roles', function (hooks) {
       const path = `ssh-${this.uid}`;
       await enablePage.enable('ssh', path);
       await settled();
-      await editPage.visitRoot({ backend: path });
+      await visit(`/vault/secrets/${path}/create`);
       await createOTPRole('role');
       await settled();
       await showPage.visit({ backend: path, id: 'role' });
       await settled();
-      await showPage.deleteRole();
-      await settled();
+      await click(GENERAL.confirmTrigger);
+      await click(GENERAL.confirmButton);
+
       assert.strictEqual(
         currentRouteName(),
         'vault.cluster.secrets.backend.list-root',
@@ -208,8 +209,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       assert.expect(6);
       const path = `ssh-${this.uid}`;
       await enablePage.enable('ssh', path);
-      await settled();
-      await editPage.visitRoot({ backend: path });
+      await visit(`/vault/secrets/${path}/create`);
       await createOTPRole('role');
       await settled();
       assert.strictEqual(

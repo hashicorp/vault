@@ -26,6 +26,9 @@ storage "raft" {
   retry_join = [
     { "auto_join" = "provider=k8s namespace=vault label_selector=\"app.kubernetes.io/name=vault, component=server\"" }
   ]
+  retry_join = [
+    { "auto_join" = "provider=k8s namespace=vault1 label_selector=\"app.kubernetes.io/name=vault1,component=server\"" }
+  ]
 }
 
 listener "tcp" {

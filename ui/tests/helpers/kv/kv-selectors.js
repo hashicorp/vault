@@ -53,7 +53,6 @@ export const PAGE = {
     syncAlert: (name) => (name ? `[data-test-sync-alert="${name}"]` : '[data-test-sync-alert]'),
   },
   edit: {
-    toggleDiff: '[data-test-toggle-input="Show diff"',
     toggleDiffDescription: '[data-test-diff-description]',
   },
   list: {
@@ -93,8 +92,6 @@ export const PAGE = {
 export const FORM = {
   inputByAttr: (attr) => `[data-test-input="${attr}"]`,
   fieldByAttr: (attr) => `[data=test=field="${attr}"]`, // formfield
-  toggleJson: '[data-test-toggle-input="json"]',
-  toggleMasked: '[data-test-button="toggle-masked"]',
   toggleMetadata: '[data-test-metadata-toggle]',
   jsonEditor: '[data-test-component="code-mirror-modifier"]',
   ttlValue: (name) => `[data-test-ttl-value="${name}"]`,
@@ -120,6 +117,7 @@ export const FORM = {
   inlineAlert: '[data-test-inline-alert]',
   validation: (attr) => `[data-test-field="${attr}"] [data-test-inline-alert]`,
   messageError: '[data-test-message-error]',
+  validationError: (attr) => `[data-test-validation-error="${attr}"]`,
   validationWarning: '[data-test-validation-warning]',
   invalidFormAlert: '[data-test-invalid-form-alert]',
   versionAlert: '[data-test-secret-version-alert]',

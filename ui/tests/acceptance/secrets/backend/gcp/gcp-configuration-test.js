@@ -161,7 +161,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
         });
 
         await click(GENERAL.textToggle);
-        await fillIn(GENERAL.textToggleTextarea, credentials);
+        await fillIn(GENERAL.maskedInput, credentials);
         await click(GENERAL.submitButton);
         // cleanup
         await runCmd(`delete sys/mounts/${this.path}`);
@@ -187,7 +187,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
           );
         });
 
-        await click(GENERAL.toggleGroup('More options'));
+        await click(GENERAL.button('More options'));
         await click(GENERAL.ttl.toggle('Config TTL'));
         await fillIn(GENERAL.ttl.input('Config TTL'), '10800');
         await click(GENERAL.submitButton);

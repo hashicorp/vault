@@ -78,7 +78,7 @@ module('Integration | Component | client count config', function (hooks) {
     await fillIn('[data-test-input="retentionMonths"]', 20);
     await click(GENERAL.submitButton);
     assert
-      .dom('[data-test-inline-error-message]')
+      .dom(GENERAL.validationErrorByAttr('retentionMonths'))
       .hasText(
         'Retention period must be greater than or equal to 48.',
         'Validation error shows for min retention period'
@@ -86,7 +86,7 @@ module('Integration | Component | client count config', function (hooks) {
     await fillIn('[data-test-input="retentionMonths"]', 90);
     await click(GENERAL.submitButton);
     assert
-      .dom('[data-test-inline-error-message]')
+      .dom(GENERAL.validationErrorByAttr('retentionMonths'))
       .hasText(
         'Retention period must be less than or equal to 60.',
         'Validation error shows for max retention period'
@@ -104,6 +104,9 @@ module('Integration | Component | client count config', function (hooks) {
       this.transitionStub.calledWith('vault.cluster.clients.config'),
       'Route transitions correctly on save success'
     );
+
+    // we need to close the modal
+    await click('[data-test-clients-config-modal="cancel"]');
 
     await click('[data-test-input="enabled"]');
     await click(GENERAL.submitButton);
@@ -139,7 +142,7 @@ module('Integration | Component | client count config', function (hooks) {
     await fillIn('[data-test-input="retentionMonths"]', 5);
     await click(GENERAL.submitButton);
     assert
-      .dom('[data-test-inline-error-message]')
+      .dom(GENERAL.validationErrorByAttr('retentionMonths'))
       .hasText(
         'Retention period must be greater than or equal to 24.',
         'Validation error shows for incorrect retention period'

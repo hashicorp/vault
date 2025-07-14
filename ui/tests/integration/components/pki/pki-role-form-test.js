@@ -9,7 +9,6 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { PKI_ROLE_FORM } from 'vault/tests/helpers/pki/pki-selectors';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
@@ -58,13 +57,13 @@ module('Integration | Component | pki-role-form', function (hooks) {
       .dom(GENERAL.fieldByAttr('noStoreMetadata'))
       .doesNotExist('noStoreMetadata is not shown b/c not enterprise');
     assert.dom(GENERAL.inputByAttr('addBasicConstraints')).exists();
-    assert.dom(PKI_ROLE_FORM.domainHandling).exists('shows form-field group add domain handling');
-    assert.dom(PKI_ROLE_FORM.keyParams).exists('shows form-field group key params');
-    assert.dom(PKI_ROLE_FORM.keyUsage).exists('shows form-field group key usage');
-    assert.dom(PKI_ROLE_FORM.policyIdentifiers).exists('shows form-field group policy identifiers');
-    assert.dom(PKI_ROLE_FORM.san).exists('shows form-field group SAN');
+    assert.dom(GENERAL.button('Domain handling')).exists('shows form-field group add domain handling');
+    assert.dom(GENERAL.button('Key parameters')).exists('shows form-field group key params');
+    assert.dom(GENERAL.button('Key usage')).exists('shows form-field group key usage');
+    assert.dom(GENERAL.button('Policy identifiers')).exists('shows form-field group policy identifiers');
+    assert.dom(GENERAL.button('Subject Alternative Name (SAN) Options')).exists('shows form-field group SAN');
     assert
-      .dom(PKI_ROLE_FORM.additionalSubjectFields)
+      .dom(GENERAL.button('Additional subject fields'))
       .exists('shows form-field group additional subject fields');
   });
 
@@ -87,7 +86,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
 
   test('it should save a new pki role with various options selected', async function (assert) {
     // Key usage, Key params and Not valid after options are tested in their respective component tests
-    assert.expect(8);
+    assert.expect(7);
     this.server.post(`/${this.role.backend}/roles/test-role`, (schema, req) => {
       assert.ok(true, 'Request made to save role');
       const request = JSON.parse(req.requestBody);
@@ -124,21 +123,18 @@ module('Integration | Component | pki-role-form', function (hooks) {
     await click(GENERAL.submitButton);
 
     assert
-      .dom(GENERAL.inputByAttr('name'))
-      .hasClass('has-error-border', 'shows border error on role name field when no role name is submitted');
-    assert
-      .dom('[data-test-inline-error-message]')
+      .dom(GENERAL.validationErrorByAttr('name'))
       .includesText('Name is required.', 'show correct error message');
 
     await fillIn(GENERAL.inputByAttr('name'), 'test-role');
     await click('[data-test-input="addBasicConstraints"]');
-    await click(PKI_ROLE_FORM.domainHandling);
+    await click(GENERAL.button('Domain handling'));
     await click('[data-test-input="allowedDomainsTemplate"]');
-    await click(PKI_ROLE_FORM.policyIdentifiers);
+    await click(GENERAL.button('Policy identifiers'));
     await fillIn('[data-test-input="policyIdentifiers"] [data-test-string-list-input="0"]', 'some-oid');
-    await click(PKI_ROLE_FORM.san);
+    await click(GENERAL.button('Subject Alternative Name (SAN) Options'));
     await click('[data-test-input="allowUriSansTemplate"]');
-    await click(PKI_ROLE_FORM.additionalSubjectFields);
+    await click(GENERAL.button('Additional subject fields'));
     await fillIn(
       '[data-test-input="allowedSerialNumbers"] [data-test-string-list-input="0"]',
       'some-serial-number'
@@ -228,7 +224,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
     await click(GENERAL.ttl.toggle('issuerRef-toggle'));
     await fillIn(GENERAL.selectByAttr('issuerRef'), 'issuer-1');
 
-    await click(PKI_ROLE_FORM.keyParams);
+    await click(GENERAL.button('Key parameters'));
     assert.dom(GENERAL.inputByAttr('keyType')).hasValue('rsa');
     assert
       .dom(GENERAL.inputByAttr('keyBits'))

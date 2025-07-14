@@ -6,15 +6,16 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import hbs from 'htmlbars-inline-precompile';
-import { click, fillIn, render } from '@ember/test-helpers';
+import { click, render } from '@ember/test-helpers';
 import sinon from 'sinon';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import testHelper from './test-helper';
-import { LOGIN_DATA } from 'vault/tests/helpers/auth/auth-helpers';
+import { AUTH_METHOD_LOGIN_DATA, fillInLoginFields } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import * as uuid from 'core/utils/uuid';
 import { Response } from 'miragejs';
+import authFormTestHelper from './auth-form-test-helper';
+import { RESPONSE_STUBS } from 'vault/tests/helpers/auth/response-stubs';
 
 module('Integration | Component | auth | form | okta', function (hooks) {
   setupRenderingTest(hooks);
@@ -22,27 +23,32 @@ module('Integration | Component | auth | form | okta', function (hooks) {
 
   hooks.beforeEach(function () {
     this.authType = 'okta';
-    this.expectedFields = ['username', 'password'];
-    this.authenticateStub = sinon.stub(this.owner.lookup('service:auth'), 'authenticate');
     this.cluster = { id: 1 };
     this.onError = sinon.spy();
     this.onSuccess = sinon.spy();
+
     // stub uuid so auth/okta/verify request can be stubbed using mirage
     this.nonce = '12345';
-    sinon.stub(uuid, 'default').returns(this.nonce);
-    this.response = { data: { correct_answer: 68 } };
-    this.server.get(`/auth/:path/verify/${this.nonce}`, () => this.response);
+    this.nonceStub = sinon.stub(uuid, 'default').returns(this.nonce);
+    this.verifyResponse = { data: { correct_answer: 68 } };
+    this.server.get(`/auth/:path/verify/${this.nonce}`, () => this.verifyResponse);
 
-    this.expectedSubmit = {
-      default: { path: 'okta', username: 'matilda', password: 'password', nonce: this.nonce },
-      custom: { path: 'custom-okta', username: 'matilda', password: 'password', nonce: this.nonce },
-    };
+    // Auth request stub
+    const api = this.owner.lookup('service:api');
+    this.authenticateStub = sinon.stub(api.auth, 'oktaLogin');
+    this.authResponse = RESPONSE_STUBS.okta;
+    this.loginData = AUTH_METHOD_LOGIN_DATA.okta;
+    // Resolve response by default, specific tests override this as needed
+    this.authenticateStub.resolves(this.authResponse);
 
-    this.fillInForm = async () => {
-      const { loginData } = LOGIN_DATA.username;
-      for (const [field, value] of Object.entries(loginData)) {
-        await fillIn(GENERAL.inputByAttr(field), value);
-      }
+    this.assertSubmit = (assert, loginRequestArgs, loginData) => {
+      const [username, path, { nonce, password }] = loginRequestArgs;
+      // if path is included in loginData, a custom path was submitted
+      const expectedPath = loginData?.path || this.authType;
+      assert.strictEqual(path, expectedPath, 'it calls oktaLogin with expected path');
+      assert.strictEqual(username, loginData.username, 'it calls oktaLogin with username');
+      assert.strictEqual(password, loginData.password, 'it calls oktaLogin with password');
+      assert.strictEqual(nonce, this.nonce, 'it calls oktaLogin with nonce');
     };
 
     this.renderComponent = ({ yieldBlock = false } = {}) => {
@@ -72,54 +78,14 @@ module('Integration | Component | auth | form | okta', function (hooks) {
 
   hooks.afterEach(function () {
     this.authenticateStub.restore();
+    this.nonceStub.restore();
   });
 
-  testHelper(test, { standardSubmit: false });
-
-  test('it submits form data with defaults', async function (assert) {
-    assert.expect(2);
-    this.server.get(`/auth/okta/verify/${this.nonce}`, () => {
-      // since the yielded input is name="path" we can also assert the okta/verify response is hit as expected
-      assert.true(true, 'it requests okta verify with default mount path');
-      return this.response;
-    });
-
-    await this.renderComponent();
-    await this.fillInForm();
-    await click(GENERAL.submitButton);
-    const [actual] = this.authenticateStub.lastCall.args;
-    assert.propEqual(
-      actual.data,
-      this.expectedSubmit.default,
-      'auth service "authenticate" method is called with form data'
-    );
-  });
-
-  // not representative of real-world submit, that happens in acceptance tests.
-  // component here just yields <:advancedSettings> to test form submits data yielded data
-  test('it submits form data from yielded inputs', async function (assert) {
-    assert.expect(2);
-    this.server.get(`/auth/custom-okta/verify/${this.nonce}`, () => {
-      // since the yielded input is name="path" we can also assert the okta/verify response is hit as expected
-      assert.true(true, 'it requests okta verify with custom mount path');
-      return this.response;
-    });
-
-    await this.renderComponent({ yieldBlock: true });
-    await this.fillInForm();
-    await fillIn(GENERAL.inputByAttr('path'), `custom-${this.authType}`);
-    await click(GENERAL.submitButton);
-    const [actual] = this.authenticateStub.lastCall.args;
-    assert.propEqual(
-      actual.data,
-      this.expectedSubmit.custom,
-      'auth service "authenticate" method is called with yielded form data'
-    );
-  });
+  authFormTestHelper(test);
 
   test('it displays okta number challenge answer', async function (assert) {
     await this.renderComponent();
-    await this.fillInForm();
+    await fillInLoginFields(this.loginData);
     await click(GENERAL.submitButton);
     assert
       .dom('[data-test-okta-number-challenge]')
@@ -130,7 +96,7 @@ module('Integration | Component | auth | form | okta', function (hooks) {
 
   test('it returns to login when "Back to login" is clicked', async function (assert) {
     await this.renderComponent();
-    await this.fillInForm();
+    await fillInLoginFields(this.loginData);
     await click(GENERAL.submitButton);
     assert.dom('[data-test-okta-number-challenge]').exists();
     await click(GENERAL.backButton);
@@ -155,20 +121,20 @@ module('Integration | Component | auth | form | okta', function (hooks) {
       );
       // okta/verify returns a 404 until the user interacts with okta via their configured MFA app.
       // to simulate this interaction we return data on the third request - which ends the polling.
-      const response = count < 2 ? new Response(404, {}, { errors: [] }) : this.response;
+      const response = count < 2 ? new Response(404) : this.verifyResponse;
       return response;
     });
 
     await this.renderComponent();
-    await this.fillInForm();
+    await fillInLoginFields(this.loginData);
     await click(GENERAL.submitButton);
   });
 
   test('it renders error message when okta verify request errors', async function (assert) {
-    this.server.get(`/auth/okta/verify/${this.nonce}`, () => new Response(500));
+    this.server.get(`/auth/okta/verify/${this.nonce}`, () => new Response(500, {}, { errors: ['oh no!!'] }));
     await this.renderComponent();
-    await this.fillInForm();
+    await fillInLoginFields(this.loginData);
     await click(GENERAL.submitButton);
-    assert.dom(GENERAL.messageError).hasText('Error An error occurred, please try again');
+    assert.dom(GENERAL.messageError).hasText('Error oh no!!');
   });
 });

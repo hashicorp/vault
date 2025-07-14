@@ -11,6 +11,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', function (hooks) {
   setupRenderingTest(hooks);
@@ -123,7 +124,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     );
 
     await click('[data-test-input-group="kubernetesRoleType"] input');
-    await click('[data-test-toggle-input="show-nameTemplate"]');
+    await click(GENERAL.toggleInput('show-nameTemplate'));
     await fillIn('[data-test-input="nameTemplate"]', 'bar');
     await fillIn('[data-test-select-template]', '6');
     await click('[data-test-radio-card="expanded"]');
@@ -162,7 +163,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     );
     await click('[data-test-radio-card="basic"]');
     await click('[data-test-submit]');
-    assert.dom('[data-test-inline-error-message]').hasText('Name is required', 'Validation error renders');
+    assert.dom(GENERAL.validationErrorByAttr('name')).hasText('Name is required', 'Validation error renders');
     await fillIn('[data-test-input="name"]', 'role-1');
     await fillIn('[data-test-input="serviceAccountName"]', 'default');
     await click('[data-test-submit]');
@@ -326,10 +327,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     );
     await click('[data-test-radio-card="basic"]');
     await click('[data-test-submit]');
-    assert
-      .dom('[data-test-input="name"]')
-      .hasClass('has-error-border', 'shows border error on input with error');
-    assert.dom('[data-test-inline-error-message]').hasText('Name is required');
+    assert.dom(GENERAL.validationErrorByAttr('name')).hasText('Name is required');
     assert
       .dom('[data-test-invalid-form-alert] [data-test-inline-error-message]')
       .hasText('There is an error with this form.');

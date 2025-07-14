@@ -18,6 +18,16 @@ telemetry {
 }
 ```
 
+<Tip title="Metrics from Leader vs Standby nodes">
+
+  Metrics from the telemetry end point are node specific.
+  In most cases the active leader node telemetry is most useful, particularly
+  after initial startup. Some metrics are **only** reported by the leader node,
+  for example
+  [active `vault.identity.*` metrics](/vault/docs/internals/telemetry/metrics/all#vault-identity-entity-active-monthly).
+
+</Tip>
+
 ## `telemetry` parameters
 
 Due to the number of configurable parameters to the `telemetry` stanza,
@@ -187,11 +197,11 @@ These `telemetry` parameters apply to
 The `/v1/sys/metrics` endpoint is only accessible on active nodes
 and automatically disabled on standby nodes. You can enable the `/v1/sys/metrics`
 endpoint on standby nodes by [enabling unauthenticated metrics access][telemetry-tcp].
-Standby nodes will never forward a request to `/v1/sys/metrics` to the active
+Standby nodes will never forward a request to `/v1/sys/metrics` to the leader
 node. If unauthenticated metrics access is enabled, the standby node will
 respond with its own metrics. If unauthenticated metrics access is not enabled,
-then a standby node will attempt to service the request but fail and then
-redirect the request to the active node.
+then a standby node will attempt to service the request (with Vault enterprise)
+or otherwise redirect the request to the leader node (in Vault community edition).
 
 Querying `/v1/sys/metrics` with one of the following headers:
 

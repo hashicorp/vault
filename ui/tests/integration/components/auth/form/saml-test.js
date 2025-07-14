@@ -12,6 +12,11 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { windowStub } from 'vault/tests/helpers/oidc-window-stub';
+import * as uuid from 'core/utils/uuid';
+import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
+import { RESPONSE_STUBS } from 'vault/tests/helpers/auth/response-stubs';
+import { AUTH_METHOD_LOGIN_DATA } from 'vault/tests/helpers/auth/auth-helpers';
+import authFormTestHelper from './auth-form-test-helper';
 
 module('Integration | Component | auth | form | saml', function (hooks) {
   setupRenderingTest(hooks);
@@ -21,27 +26,39 @@ module('Integration | Component | auth | form | saml', function (hooks) {
     this.authType = 'saml';
     this.expectedFields = ['role'];
 
-    this.authenticateStub = sinon.stub(this.owner.lookup('service:auth'), 'authenticate');
-    this.store = this.owner.lookup('service:store');
+    this.tokenPollId = '4fe2ec01-1f56-b665-0ba2-09c7bca10ae8';
     this.cluster = { id: 1 };
     this.onError = sinon.spy();
     this.onSuccess = sinon.spy();
+    // Window stub
     this.windowStub = windowStub();
     sinon.replaceGetter(window, 'screen', () => ({ height: 600, width: 500 }));
-
+    // Auth request stub
+    const api = this.owner.lookup('service:api');
+    this.authenticateStub = sinon.stub(api.auth, 'samlWriteToken');
+    this.authResponse = RESPONSE_STUBS.saml['saml/token'];
+    this.loginData = AUTH_METHOD_LOGIN_DATA.saml;
+    // stub uuid so verifier can be asserted
+    this.verifier = uuid.default();
+    sinon.stub(uuid, 'default').returns(this.verifier);
     // role request
-    this.server.put('/auth/saml/sso_service_url', () => {
+    this.server.post('/auth/:path/sso_service_url', () => {
       return {
         data: {
           sso_service_url: 'https://my-single-sign-on-url.com',
-          token_poll_id: '4fe2ec01-1f56-b665-0ba2-09c7bca10ae8',
+          token_poll_id: this.tokenPollId,
         },
       };
     });
-    // polling request
-    this.server.put('/auth/saml/token', () => {
-      return { auth: { client_token: 'my_token' } };
-    });
+
+    this.assertSubmit = (assert, loginRequestArgs, loginData) => {
+      const [path, { clientVerifier, tokenPollId }] = loginRequestArgs;
+      // if path is included in loginData, a custom path was submitted
+      const expectedPath = loginData?.path || this.authType;
+      assert.strictEqual(path, expectedPath, 'it calls samlWriteToken with expected path');
+      assert.strictEqual(clientVerifier, this.verifier, 'it calls samlWriteToken with verifier');
+      assert.strictEqual(tokenPollId, this.tokenPollId, 'it calls samlWriteToken with tokenPollId');
+    };
 
     this.renderComponent = ({ yieldBlock = false } = {}) => {
       if (yieldBlock) {
@@ -70,8 +87,10 @@ module('Integration | Component | auth | form | saml', function (hooks) {
 
   hooks.afterEach(function () {
     this.windowStub.restore();
-    sinon.restore();
+    this.authenticateStub.restore();
   });
+
+  authFormTestHelper(test);
 
   test('it renders helper text', async function (assert) {
     await this.renderComponent();
@@ -94,14 +113,14 @@ module('Integration | Component | auth | form | saml', function (hooks) {
 
   test('it requests sso_service_url and opens popup on submit if role is empty', async function (assert) {
     assert.expect(6);
-    this.server.put('/auth/saml/sso_service_url', (_, req) => {
+    this.server.post('/auth/saml/sso_service_url', (_, req) => {
       const { acs_url, role } = JSON.parse(req.requestBody);
       assert.strictEqual(acs_url, `${window.origin}/v1/auth/saml/callback`, 'it builds acs_url for payload');
       assert.strictEqual(role, '', 'role has no value');
       return {
         data: {
           sso_service_url: 'https://my-single-sign-on-url.com',
-          token_poll_id: '4fe2ec01-1f56-b665-0ba2-09c7bca10ae8',
+          token_poll_id: this.tokenPollId,
         },
       };
     });
@@ -126,14 +145,14 @@ module('Integration | Component | auth | form | saml', function (hooks) {
 
   test('it requests sso_service_url with inputted role and default path', async function (assert) {
     assert.expect(6);
-    this.server.put('/auth/saml/sso_service_url', (_, req) => {
+    this.server.post('/auth/saml/sso_service_url', (_, req) => {
       const { acs_url, role } = JSON.parse(req.requestBody);
       assert.strictEqual(acs_url, `${window.origin}/v1/auth/saml/callback`, 'it builds acs_url for payload');
       assert.strictEqual(role, 'some-dev', 'payload contains role');
       return {
         data: {
           sso_service_url: 'https://my-single-sign-on-url.com',
-          token_poll_id: '4fe2ec01-1f56-b665-0ba2-09c7bca10ae8',
+          token_poll_id: this.tokenPollId,
         },
       };
     });
@@ -157,113 +176,20 @@ module('Integration | Component | auth | form | saml', function (hooks) {
     );
   });
 
-  test('it requests sso_service_url with custom path', async function (assert) {
-    assert.expect(6);
-    const path = 'custom-path';
-    this.server.put(`/auth/${path}/sso_service_url`, (_, req) => {
-      const { acs_url, role } = JSON.parse(req.requestBody);
-      assert.strictEqual(
-        acs_url,
-        `${window.origin}/v1/auth/${path}/callback`,
-        'it builds acs_url for payload'
-      );
-      assert.strictEqual(role, 'some-dev', 'payload contains role');
-      return {
-        data: {
-          sso_service_url: 'https://my-single-sign-on-url.com',
-          token_poll_id: '4fe2ec01-1f56-b665-0ba2-09c7bca10ae8',
-        },
-      };
-    });
-
-    await this.renderComponent({ yieldBlock: true });
-    await fillIn(GENERAL.inputByAttr('role'), 'some-dev');
-    await fillIn(GENERAL.inputByAttr('path'), path);
-    await click(GENERAL.submitButton);
-
-    const [sso_service_url, name, dimensions] = this.windowStub.lastCall.args;
-    assert.strictEqual(
-      sso_service_url,
-      'https://my-single-sign-on-url.com',
-      'it calls window opener with sso_service_url returned by role request'
-    );
-    assert.strictEqual(sso_service_url, 'https://my-single-sign-on-url.com');
-    assert.strictEqual(name, 'vaultSAMLWindow', 'it calls window opener with expected name');
-    assert.strictEqual(
-      dimensions,
-      'width=500,height=600,resizable,scrollbars=yes,top=0,left=0',
-      'it calls window opener with expected dimensions'
-    );
-  });
-
-  test('it polls token request', async function (assert) {
-    assert.expect(2); // auth/saml/token url should be requested twice
-
-    let count = 0;
-    this.server.put('/auth/saml/token', () => {
-      count++;
-      const msg =
-        count === 1
-          ? 'it makes initial request to token url'
-          : 'it re-requests token url if httpStatus was 401';
-      assert.true(true, msg);
-
-      if (count === 1) {
-        return overrideResponse(401);
-      } else {
-        return { auth: { client_token: 'my_token' } };
-      }
-    });
+  test('it re-requests samlWriteToken if 401 is returned', async function (assert) {
+    assert.expect(1);
+    this.authenticateStub.onFirstCall().rejects(getErrorResponse({}, 401));
+    this.authenticateStub.onSecondCall().rejects(getErrorResponse({}, 401));
+    // MAX_TRIES in the component is set to 3 for tests
+    this.authenticateStub.onThirdCall().resolves(this.authResponse);
     await this.renderComponent();
     await click(GENERAL.submitButton);
-  });
-
-  test('it calls auth service with token request callback data', async function (assert) {
-    await this.renderComponent();
-    await click(GENERAL.submitButton);
-
-    const [actual] = this.authenticateStub.lastCall.args;
-    assert.propEqual(
-      actual.data,
-      {
-        token: 'my_token',
-      },
-      'auth service "authenticate" method is called token callback data'
-    );
-  });
-
-  test('it calls onSuccess if auth service authentication is successful', async function (assert) {
-    const expectedResponse = {
-      namespace: '',
-      token: 'my_token',
-      isRoot: false,
-    };
-    // stub happy response
-    this.authenticateStub.returns(expectedResponse);
-
-    await this.renderComponent();
-    await click(GENERAL.submitButton);
-    const [actualResponse, methodData] = this.onSuccess.lastCall.args;
-    assert.propEqual(actualResponse, expectedResponse, 'onSuccess is called with auth response');
-    assert.strictEqual(methodData.path, undefined, 'onSuccess is called without path value');
-    assert.strictEqual(methodData.selectedAuth, 'saml', 'onSuccess is called with selected auth type');
-  });
-
-  test('it calls onError if auth service authentication fails', async function (assert) {
-    this.authenticateStub.throws('permission denied!!');
-    await this.renderComponent();
-    await click(GENERAL.submitButton);
-    const [actual] = this.onError.lastCall.args;
-    assert.strictEqual(
-      actual,
-      'Authentication failed: Sinon-provided permission denied!!',
-      'onError called with auth service failure'
-    );
+    assert.strictEqual(this.authenticateStub.callCount, 3, 'it polls token request until request resolves');
   });
 
   test('it calls onError if sso_service_url request fails', async function (assert) {
     // role request
-    this.server.put('/auth/saml/sso_service_url', () => overrideResponse(403));
+    this.server.post('/auth/saml/sso_service_url', () => overrideResponse(403));
     await this.renderComponent();
     await click(GENERAL.submitButton);
     const [actual] = this.onError.lastCall.args;
@@ -275,14 +201,10 @@ module('Integration | Component | auth | form | saml', function (hooks) {
   });
 
   test('it calls onError if polling token errors in status code that is NOT 401', async function (assert) {
-    this.server.put('/auth/saml/token', () => overrideResponse(500));
+    this.authenticateStub.rejects(getErrorResponse({ errors: ['uh oh!'] }), 500);
     await this.renderComponent();
     await click(GENERAL.submitButton);
     const [actual] = this.onError.lastCall.args;
-    assert.strictEqual(
-      actual,
-      'Authentication failed: Ember Data Request PUT /v1/auth/saml/token returned a 500\nPayload (application/json)\n{}',
-      'onError called with auth failure'
-    );
+    assert.strictEqual(actual, 'Authentication failed: uh oh!', 'onError called with expected failure');
   });
 });

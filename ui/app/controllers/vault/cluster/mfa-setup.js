@@ -16,7 +16,7 @@ export default class VaultClusterMfaSetupController extends Controller {
   @tracked qrCode = '';
 
   get entityId() {
-    return this.auth.authData.entity_id;
+    return this.auth.authData.entityId;
   }
 
   @action isUUIDVerified(verified) {

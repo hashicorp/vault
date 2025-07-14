@@ -1018,8 +1018,12 @@ func (c *PluginCatalog) set(ctx context.Context, plugin pluginutil.SetPluginInpu
 		if plugin.Name == "" {
 			return nil, fmt.Errorf("must specify name to register plugin")
 		}
-		if plugin.Command == "" {
-			return nil, fmt.Errorf("must specify command to register plugin")
+		if plugin.Download || len(plugin.Sha256) > 0 {
+			// For downloaded plugins and plugin binaries, we require command to be set from the caller to populate the plugin runner.
+			// Extracted artifacts don't require command to be set as we derive it from the plugin name.
+			if plugin.Command == "" {
+				return nil, fmt.Errorf("must specify command to register plugin")
+			}
 		}
 
 		var expectedPluginDir string

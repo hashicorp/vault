@@ -12,7 +12,6 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	oexec "os/exec"
 	"strings"
 	"sync"
 
@@ -99,7 +98,7 @@ func (c *Client) Exec(ctx context.Context, subCmd string, opts OptStringer) (*Ex
 		env = append(env, res.Env...)
 	}
 
-	cmd := oexec.Command("git", append([]string{subCmd}, opts.Strings()...)...)
+	cmd := exec.Command("git", append([]string{subCmd}, opts.Strings()...)...)
 	cmd.Env = env
 	res.Cmd = cmd.String()
 	ctx = slogctx.Append(ctx, slog.String("cmd", cmd.String()))

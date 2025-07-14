@@ -349,7 +349,7 @@ func (i *IdentityStore) handleEntityUpdateCommon() framework.OperationFunc {
 			entity.Policies = strutil.RemoveDuplicates(entityPoliciesRaw.([]string), false)
 		}
 
-		if strutil.StrListContains(entity.Policies, "root") {
+		if strutil.StrListContainsCaseInsensitive(entity.Policies, "root") {
 			return logical.ErrorResponse("policies cannot contain root"), nil
 		}
 

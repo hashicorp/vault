@@ -152,7 +152,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/roles/some-role/details`);
       assert.dom(PKI_ROLE_DETAILS.deleteRoleButton).exists('Delete role button is shown');
       await click(PKI_ROLE_DETAILS.deleteRoleButton);
-      await click('[data-test-confirm-button]');
+      await click(GENERAL.confirmButton);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.mountPath}/pki/roles`,
@@ -276,7 +276,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await click('.linked-block');
       // details page
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`);
-      assert.dom(PKI_KEYS.downloadButton).doesNotExist('does not download button for private key');
+      assert.dom(GENERAL.button('Download')).doesNotExist('does not download button for private key');
 
       // edit page
       await click(PKI_KEYS.keyEditLink);
@@ -317,7 +317,7 @@ module('Acceptance | pki workflow', function (hooks) {
           'Next steps This private key material will only be available once. Copy or download it now.',
           'renders banner to save private key'
         );
-      assert.dom(PKI_KEYS.downloadButton).exists('renders download button');
+      assert.dom(GENERAL.button('Download')).exists('renders download button');
       await click(PKI_KEYS.keyDeleteButton);
       await click(GENERAL.confirmButton);
       assert.strictEqual(
@@ -487,8 +487,8 @@ module('Acceptance | pki workflow', function (hooks) {
       await login();
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
-      await click('[data-test-text-toggle]');
-      await fillIn('[data-test-text-file-textarea]', unsupportedPem);
+      await click(GENERAL.textToggle);
+      await fillIn(GENERAL.maskedInput, unsupportedPem);
       await click(PKI_CONFIGURE_CREATE.importSubmit);
       const issuerId = find(PKI_CONFIGURE_CREATE.importedIssuer).innerText;
       await click(`${PKI_CONFIGURE_CREATE.importedIssuer} a`);

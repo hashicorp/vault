@@ -28,7 +28,7 @@ module('Integration | Component | oidc-consent-block', function (hooks) {
         'In order to complete the login process, you must consent to Vault sharing your profile, email, address, and phone with the client.',
         'shows the correct copy for consent form'
       );
-    assert.dom('[data-test-edit-form-submit]').hasText('Yes', 'form button has correct submit text');
+    assert.dom(GENERAL.submitButton).hasText('Yes', 'form button has correct submit text');
     assert.dom(GENERAL.cancelButton).hasText('No', 'form button has correct cancel text');
   });
 
@@ -49,7 +49,7 @@ module('Integration | Component | oidc-consent-block', function (hooks) {
         'In order to complete the login process, you must consent to Vault sharing your profile, email, address, and phone with the client.',
         'shows the correct copy for consent form'
       );
-    await click('[data-test-edit-form-submit]');
+    await click(GENERAL.submitButton);
     assert.ok(spy.calledWith(`${redirectBase}/?code=1234`), 'Redirects to correct route');
   });
 
@@ -101,7 +101,7 @@ module('Integration | Component | oidc-consent-block', function (hooks) {
         'In order to complete the login process, you must consent to Vault sharing your profile, email, address, and phone with the client.',
         'shows the correct copy for consent form'
       );
-    await click('[data-test-edit-form-submit]');
+    await click(GENERAL.submitButton);
     assert.ok(
       spy.calledWith(`${redirectBase}/?code=unescaped%3Cstring&state=foo`),
       'Redirects to correct route, with escaped values and without superflous params'

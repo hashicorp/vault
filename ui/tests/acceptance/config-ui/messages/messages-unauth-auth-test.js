@@ -5,15 +5,15 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, visit, fillIn, currentRouteName } from '@ember/test-helpers';
+import { click, visit, fillIn, currentRouteName, currentURL, waitFor } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CUSTOM_MESSAGES } from 'vault/tests/helpers/config-ui/message-selectors';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 
-import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import { login, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { datetimeLocalStringFormat } from 'core/utils/date-formatters';
 import { format, addDays, startOfDay } from 'date-fns';
-import { createNS, runCmd } from '../../../helpers/commands';
+import { createNS, deleteNS, runCmd } from '../../../helpers/commands';
 
 const unauthenticatedMessageResponse = {
   request_id: '664fbad0-fcd8-9023-4c5b-81a7962e9f4b',
@@ -144,15 +144,29 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
     await fillIn('[data-test-kv-key="0"]', 'Learn more');
     await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
     await click(GENERAL.submitButton);
-    assert.dom(GENERAL.title).hasText('active authenticated message title', 'title is correct');
-    assert.dom('.hds-alert').exists('active custom message displays on authenticated.');
+    // message id is generated on create and only available via the URL -> /vault/config-ui/messages/:id/details
+    const id = currentURL().split('/').slice(-2, -1);
+    assert
+      .dom(CUSTOM_MESSAGES.alertTitle(id))
+      .hasText('active authenticated message title', 'title is correct');
+    assert.dom('.hds-alert').exists('active custom message displays in root when authenticated.');
+
     //  confirm message shows within a namespace
     await runCmd(createNS('world'), false);
-    await visit('vault/config-ui/messages');
+    await logout();
+    assert.dom(CUSTOM_MESSAGES.alertTitle(id)).doesNotExist('message does not display when logged out');
+
+    // log in to namespace
+    await loginNs('world');
+    await waitFor(CUSTOM_MESSAGES.alertTitle(id));
     assert
-      .dom('.hds-alert')
-      .exists('active custom message displays on namespace authenticated from within a namespace');
-    await click(CUSTOM_MESSAGES.listItem('active authenticated message title'));
+      .dom(CUSTOM_MESSAGES.alertTitle(id))
+      .hasText('active authenticated message title', 'title is correct')
+      .exists('active custom message displays after logging in to namespace');
+
+    // navigate back to root namespace to delete message
+    await visit('vault/config-ui/messages');
+    await click(GENERAL.listItem('active authenticated message title'));
     await click(GENERAL.confirmTrigger);
     await click(GENERAL.confirmButton);
     assert.strictEqual(
@@ -160,5 +174,7 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
       'vault.cluster.config-ui.messages.index',
       'redirects to messages page after delete'
     );
+    // clean up namespace pollution
+    await runCmd(deleteNS('world'));
   });
 });

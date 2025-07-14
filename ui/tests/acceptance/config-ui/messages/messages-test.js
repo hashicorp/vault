@@ -6,7 +6,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { click, visit, fillIn, findAll } from '@ember/test-helpers';
+import { click, visit, fillIn, findAll, waitFor } from '@ember/test-helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { format, addDays, startOfDay } from 'date-fns';
@@ -77,7 +77,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
       // The result will contain the message ID in the response, but the response is a giant string not an object.
       const match = result.match(/id\s+([a-f0-9-]+)/i);
       const messageId = match ? match[1] : null;
-      messageIdObject.title = messageId;
+      messageIdObject[title] = messageId;
       // visit the details page to ensure the message is created
       await visit(`/vault/config-ui/messages/${messageId}/details`);
     };
@@ -87,8 +87,9 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
       for (const id of Object.values(messageIdObject)) {
         await runCmd(`vault delete sys/config/ui/custom-messages/${id}`);
       }
-      await visit(`/vault/config-ui/messages/index`); // redirect to messages index after delete to ensure the state is refreshed
+      await visit(`/vault/config-ui/messages`); // redirect to messages index after delete to ensure the state is refreshed
     };
+
     this.createMessageBrowser = async ({
       title,
       type = 'banner',
@@ -124,15 +125,6 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
 
   hooks.afterEach(async function () {
     await visit('/vault/logout');
-  });
-
-  test('it should show an empty state when no messages are created', async function (assert) {
-    await click(CUSTOM_MESSAGES.navLink);
-    assert.dom(GENERAL.emptyStateTitle).exists();
-    assert.dom(GENERAL.emptyStateTitle).hasText('No messages yet');
-    await click(CUSTOM_MESSAGES.tab('On login page'));
-    assert.dom(GENERAL.emptyStateTitle).exists();
-    assert.dom(GENERAL.emptyStateTitle).hasText('No messages yet');
   });
 
   test('authenticated it should create, edit, view, and delete a message', async function (assert) {
@@ -253,7 +245,7 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     assert
       .dom(CUSTOM_MESSAGES.modal('preview image'))
       .doesNotExist('preview image does not show because you have a missing title');
-    assert.dom(CUSTOM_MESSAGES.input('title')).hasClass('has-error-border', 'error around title shows');
+    assert.dom(GENERAL.validationErrorByAttr('title')).exists();
   });
 
   // unauthenticated messages
@@ -348,6 +340,31 @@ module('Acceptance | Enterprise | config-ui/message', function (hooks) {
     await fillIn('[data-test-kv-value="0"]', 'www.learn.com');
     await click(GENERAL.button('preview'));
     assert.dom(CUSTOM_MESSAGES.modal('preview image')).doesNotExist('preview image does not show');
-    assert.dom(CUSTOM_MESSAGES.input('title')).hasClass('has-error-border', 'error around title shows');
+    assert.dom(GENERAL.validationErrorByAttr('title')).exists();
+  });
+
+  test('cleanup message pollution', async function (assert) {
+    // Visit the messages page and delete any remaining messages.
+    await visit('/vault/config-ui/messages');
+    const rows = findAll('.list-item-row');
+    for (const row of rows) {
+      const trigger = row.querySelector('[data-test-popup-menu-trigger]');
+      if (trigger) {
+        await click(GENERAL.menuTrigger);
+        await click(GENERAL.menuItem('delete'));
+        await click(GENERAL.confirmButton);
+      }
+    }
+
+    // Redirect to the dashboard and revisit the messages page to refresh the state.
+    await visit('/vault/dashboard');
+    await visit('/vault/config-ui/messages');
+
+    // Wait for the empty state to render and assert that no messages exist.
+    await waitFor(GENERAL.emptyStateTitle, {
+      timeout: 2000,
+      timeoutMessage: 'Timed out waiting for empty state title to render',
+    });
+    assert.dom(GENERAL.emptyStateTitle).hasText('No messages yet', 'No messages exist after cleanup');
   });
 });

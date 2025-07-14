@@ -1,0 +1,848 @@
+---
+layout: docs
+page_title: Create a rate limit quota
+description: >-
+  Step-by-step instructions for creating rate limit quotas to tune the incoming workloads for your Vault mounts.
+---
+
+# Create a rate limit quota
+
+Vault's rate limit quotas allow Vault admins to control how traffic
+enters the Vault cluster by setting a limit on the target namespace, mount,
+path, or role. It is a part of Vault's core feature set available in both
+Community and Enterprise Editions.
+
+<Tip title="Community vs. Enterprise">
+
+The default behavior of rate limit quota is to group incoming requests based on
+its source IP address to apply the rate limit. That is the only available mode
+for Vault Community Edition.
+
+Vault Enterprise offers additional modes. To learn more, read the [Rate limit
+quotas - collective, by IP, by
+entity](/vault/docs/configuration/identity-based-rate-limit) page for additional
+capability.
+
+</Tip>
+
+## Before you start 
+
+- **Confirm you have access to the root or administration namespace for your
+  Vault instance**. Modifying rate limit quotas is a restricted activity.
+
+
+## Step 1: Determine the appropriate granularity
+
+The granularity of your rate limits can affect the performance of your Vault
+cluster. In particular, if your rate limits cause the number of rejected
+requests to increase dramatically, the increased audit logging may impact Vault
+performance.
+
+## Step 2: Enable audit log
+
+By default, the requests rejected due to rate limit quota violations are not
+written to the audit log. Therefore, if you wish to log the rejected requests
+for traceability, you must set the `enable_rate_limit_audit_logging` to `true`
+against the `sys/quotas/config` endpoint. The requests rejected due to reaching
+the lease count quotas are always logged that you do not need to set any
+parameter.
+
+<Note title="Performance consideration">
+
+Enabling the rate limit audit logging may have an impact on the Vault
+performance if the volume of rejected requests is large.
+
+</Note>
+
+<Tabs>
+<Tab heading="CLI command" group="cli">
+
+1. Enable a file audit device which outputs to `/var/log/vault-audit.log` (or
+   your desired file location).
+
+   ```shell-session
+   $ vault audit enable file file_path="/var/log/vault-audit.log"
+   ```
+
+1. To enable the audit logging for rate limit quotas, execute the following
+   command.
+
+   ```shell-session
+   $ vault write sys/quotas/config enable_rate_limit_audit_logging=true
+   ```
+
+1. Read the quota configuration to verify.
+
+   ```shell-session
+   $ vault read sys/quotas/config
+
+   Key                                   Value
+   ---                                   -----
+   absolute_rate_limit_exempt_paths      []
+   enable_rate_limit_audit_logging       true
+   enable_rate_limit_response_headers    false
+   rate_limit_exempt_paths               []
+   ```
+
+</Tab>
+<Tab heading="API call using cURL" group="api">
+
+1. Enable file audit device.
+
+   First, create the HTTP request payload specifying the audit log path to be
+   `/var/log/vault-audit.log` (or your desired file location).
+
+   ```shell-session
+   $ tee audit-payload.json <<EOF
+   {
+     "type": "file",
+     "options": {
+         "file_path": "/var/log/vault-audit.log"
+     }
+   }
+   EOF
+   ```
+
+   Use the `sys/audit` endpoint to enable file audit log.
+
+   ```shell-session
+   $ curl --header "X-Vault-Token: $VAULT_TOKEN" \
+       --request POST \
+       --data @audit-payload.json \
+       $VAULT_ADDR/v1/sys/audit/file
+   ```
+
+   Set the target `file_path` to your desired location.
+
+1. Create the HTTP request payload to enable the rate limit quota audit logging.
+
+   ```shell-session
+   $ tee payload.json <<EOF
+   {
+      "enable_rate_limit_audit_logging": true
+   }
+   EOF
+   ```
+
+1. Invoke the `sys/quotas/config` endpoint.
+
+   ```shell-session
+   $ curl --header "X-Vault-Token: $VAULT_TOKEN" \
+       --request POST \
+       --data @payload.json \
+       $VAULT_ADDR/v1/sys/quotas/config
+   ```
+
+1. Read the quota configuration to verify.
+
+   ```shell-session
+   $ curl -s --header "X-Vault-Token: $VAULT_TOKEN" \
+       $VAULT_ADDR/v1/sys/quotas/config | jq -r ".data"
+   ```
+
+   **Example output:**
+
+   <CodeBlockConfig hideClipboard>
+
+   ```json
+   {
+      "absolute_rate_limit_exempt_paths": [],
+      "enable_rate_limit_audit_logging": true,
+      "enable_rate_limit_response_headers": false,
+      "rate_limit_exempt_paths": []
+   }
+   ```
+
+   </CodeBlockConfig>
+
+</Tab>
+</Tabs>
+
+
+## Step 3: Create a rate limit quota
+
+Create a rate limit quota using the following parameters:
+
+- `name` `(string: "")` - Name of the quota rule
+- `path` `(string: "")` - Target namespace, mount, or path to apply the quota
+  rule. It can end with `*` (e.g., `auth/token/create*`). A blank path
+  configures a global rate limit quota. 
+- `rate` `float` - Rate for the number of allowed _requests per second_ (RPS)  
+- `role` `(string: "")` - Login role to apply this quota to. When you set this
+  parameter, you must configure the path to a valid auth method with a concept
+  of roles.  
+- `interval` `(int: 0)` - The duration to enforce rate limiting for (default is
+  1 second)
+- `block_interval` `(string: "")` - If set, when a client reaches a rate limit
+  threshold, Vault prohibits the client from any further requests until after
+  the `block_interval` has elapsed. 
+- `inheritable` `(boolean: false)` - <EnterpriseAlert product="vault" inline /> Determine whether to
+  apply the quota rule to child namespaces.   
+- `group_by` `(string: "")` - <EnterpriseAlert product="vault" inline /> Define how to group incoming
+  requests. Refer to the [identity-based rate limit quotas](/vault/docs/configuration/identity-based-rate-limit) for more details.
+- `secondary_rate` `(float: 0.0)` – <EnterpriseAlert product="vault" inline /> Can only be set
+  for the `group_by` modes `entity_then_ip` or `entity_then_none`. This is the rate limit applied
+  to the requests that fall under the "ip" or "none" groupings, while the authenticated requests
+  that contain an entity ID are subject to the `rate` field instead. Defaults to the same value
+  as `rate`.
+
+
+<Tabs>
+<Tab heading="CLI command" group="cli">
+
+Use `vault write` and the `sys/quotas/rate-limit/{quota-name}` path to create a
+new rate limit quota.
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault write sys/quotas/rate-limit/<QUOTA_NAME> \
+    name="<QUOTA_RULE_NAME>" \
+    path="<TARGET_PATH>" \
+    rate=<ALLOWED_REQUEST_RATE> \
+    role="<ROLE_NAME>" \
+    interval=<DURATION_OF_RATE_LIMIT> \
+    block_interval=<DURATION_TO_BLOCK_REQUESTS> \
+    inheritable=<BOOLEAN> \
+``` 
+
+</CodeBlockConfig>
+
+
+**Example:** Create a rate limit quota applies on the Vault cluster.
+
+1. Create a rate limit quota named, "global-rate" which limits inbound workload
+   to 100 requests per second.
+
+   ```shell-session
+   $ vault write sys/quotas/rate-limit/global-rate rate=100
+   Success! Data written to: sys/quotas/rate-limit/global-rate
+   ```
+
+1. Read the `global-rate` rule to verify its configuration.
+
+   ```shell-session
+   $ vault read sys/quotas/rate-limit/global-rate
+
+   Key               Value
+   ---               -----
+   block_interval    0
+   group_by          ip
+   inheritable       true
+   interval          1
+   name              global-rate
+   path              n/a
+   rate              100
+   role              n/a
+   type              rate-limit
+   ```
+
+   <Note>
+
+   In absence of `path`, this quota rule applies to the global level instead of
+   a specific mount or namespace.
+
+   </Note>
+
+**Example:** Create a rate limit quota named, "transit-limit" which limits the
+access to the Transit secrets engine to be 1,000 requests per minute (60
+seconds). It groups requests by their source IP address.
+
+1. Enable Transit secrets engine at `transit`.
+
+   ```shell-session
+   $ vault secrets enable transit
+   Success! Enabled the transit secrets engine at: transit/
+   ```
+
+1. Create a rate limit quota.
+
+   ```shell-session
+   $ vault write sys/quotas/rate-limit/transit-limit \
+      path="transit" \
+      rate=1000 \
+      interval=60
+   ```
+
+   **Output:**
+
+   <CodeBlockConfig hideClipboard>
+
+   ```plaintext
+   Success! Data written to: sys/quotas/rate-limit/transit-limit
+   ```
+
+   </CodeBlockConfig>
+
+1. Read the `transit-limit` rule to verify its configuration.
+
+   ```shell-session
+   $ vault read sys/quotas/rate-limit/transit-limit
+   ```
+
+   **Output:**
+
+   <CodeBlockConfig hideClipboard highlight="5,7-8,10">
+
+   ```plaintext
+   Key               Value
+   ---               -----
+   block_interval    0
+   group_by          ip
+   inheritable       true
+   interval          60
+   name              transit-limit
+   path              transit/
+   rate              1000
+   role              n/a
+   type              rate-limit
+   ```
+
+   </CodeBlockConfig>
+
+
+### Path granularity
+
+You can set the `path` to be deeper than the mount point (in this example,
+`transit/`).
+
+**Example:** Create a rate limit quota named, "transit-order" to limit the data
+encryption requests using `orders` key to be 500 per second.
+
+1. Create an encryption key named, "orders".
+
+   ```shell-session
+   $ vault write -f transit/keys/orders
+
+   Key                       Value
+   ---                       -----
+   allow_plaintext_backup    false
+   auto_rotate_period        0s
+   deletion_allowed          false
+   derived                   false
+   exportable                false
+   imported_key              false
+   keys                      map[1:1695147293]
+   latest_version            1
+   min_available_version     0
+   min_decryption_version    1
+   min_encryption_version    0
+   name                      orders
+   supports_decryption       true
+   supports_derivation       true
+   supports_encryption       true
+   supports_signing          false
+   type                      aes256-gcm96
+   ```
+
+1. Create the "transit-order" rate limit quota.
+
+   ```shell-session
+   $ vault write sys/quotas/rate-limit/transit-order \
+      path="transit/encrypt/orders" \
+      rate=500
+   ```
+
+   **Output:**
+
+   <CodeBlockConfig hideClipboard>
+
+   ```plaintext
+   Success! Data written to: sys/quotas/rate-limit/transit-order
+   ```
+
+   </CodeBlockConfig>
+
+1. Verify the rate limit quota configuration.
+
+   ```shell-session
+   $ vault read sys/quotas/rate-limit/transit-order
+   ```
+
+   **Output:**
+
+   <CodeBlockConfig hideClipboard highlight="6-8,10">
+
+   ```plaintext
+   Key               Value
+   ---               -----
+   block_interval    0
+   group_by          ip
+   inheritable       true
+   interval          1
+   name              transit-order
+   path              transit/encrypt/orders
+   rate              500
+   role              n/a
+   type              rate-limit
+   ```
+
+   </CodeBlockConfig>
+
+
+### Vault Enterprise namespaces
+
+For Vault Enterprise clusters, you can use the `inheritable` parameter to apply
+the resource quota set on a namespace to its subsequent child namespaces.
+
+Think of the following namespace hierarchy:
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+root
+   └── parent
+      └── child
+         └── grand-child
+```
+
+</CodeBlockConfig>
+
+Under the `root` namespace, you have a `parent` namespace, and then
+`parent/child` and `parent/child/grand-child` namespaces.
+
+You can set the resource quota on the `parent` namespace which gets applied to
+its child namespaces inheritably by setting the `inheritable` parameter to
+`true`. By default, it is set to `false`.
+
+1. Create a quota rule on the `us-west` namespace which its child namespaces
+   will inherit. The rate limit is 500 requests per minute.
+
+   ```shell-session
+   $ vault write sys/quotas/rate-limit/us-west \
+      path="us-west" \
+      rate=500 \
+      interval=1m \
+      inheritable=true
+   ```
+
+   **Output:**
+
+   <CodeBlockConfig hideClipboard>
+
+   ```plaintext
+   Success! Data written to: sys/quotas/rate-limit/us-west
+   ```
+
+   </CodeBlockConfig>
+
+1. Verify the quota rule.
+
+   ```shell-session
+   $ vault read sys/quotas/rate-limit/us-west
+
+   Key               Value
+   ---               -----
+   block_interval    0
+   group_by          ip
+   inheritable       true
+   interval          60
+   name              us-west
+   path              us-west/
+   rate              500
+   role              n/a
+   type              rate-limit
+   ```
+
+</Tab>
+<Tab heading="API call using cURL" group="api">
+
+Create a payload file with your quota settings, and then invoke the
+`sys/quotas/rate-limit/{quota-name}` endpoint.
+
+<CodeBlockConfig hideClipboard>
+
+```json
+{
+  "name": "<QUOTA_RULE_NAME>",
+  "path": "<TARGET_PATH>",
+  "rate": <ALLOWED_REQUEST_RATE>,
+  "role": "<ROLE_NAME>",
+  "interval": <DURATION_OF_RATE_LIMIT>,
+  "block_interval": <DURATION_TO_BLOCK_REQUESTS>,
+  "inheritable": <BOOLEAN>
+}
+```
+
+</CodeBlockConfig>
+
+**Example:** Create a rate limit quota named, "global-rate" which limits inbound
+workload to 100 requests per second.
+
+1. Invoke the `sys/quotas/rate-limit` endpoint.
+
+   ```shell-session
+   $ curl --header "X-Vault-Token: $VAULT_TOKEN" \
+       --request POST \
+       --data '{ "rate": 100 }' \
+       $VAULT_ADDR/v1/sys/quotas/rate-limit/global-rate
+   ```
+
+1. Read the newly created `global-rate` quota rule.
+
+   ```shell-session
+   $ curl -s --header "X-Vault-Token: $VAULT_TOKEN" \
+       $VAULT_ADDR/v1/sys/quotas/rate-limit/global-rate | jq -r ".data"
+   ```
+
+   **Output:**
+
+   <CodeBlockConfig hideClipboard>
+
+   ```json
+   {
+      "block_interval": 0,
+      "group_by": "ip",
+      "inheritable": true,
+      "interval": 1,
+      "name": "global-rate",
+      "path": "",
+      "rate": 100,
+      "role": "",
+      "type": "rate-limit"
+   }
+   ```
+
+   </CodeBlockConfig>
+
+   <Note>
+
+   In absence of `path`, this quota rule applies to the `root` namespace instead
+   of a specific mount or namespace.
+
+   </Note>
+
+**Example:** Create a rate limit quota named, "transit-limit" which limits the
+access to the Transit secrets engine to be 1000 requests per minute (60
+seconds).
+
+1. Enable Transit secrets engine at `transit`.
+
+   ```shell-session
+   $ curl --header "X-Vault-Token: $VAULT_TOKEN" \
+       --request POST \
+       --data '{"type":"transit"}' \
+       $VAULT_ADDR/v1/sys/mounts/transit
+   ```
+
+1. Create a "transit-limit" rate limit quota.
+
+   ```shell-session
+   $ curl --header "X-Vault-Token: $VAULT_TOKEN" \
+      --request POST \
+      --data '{"path": "transit", "rate": 1000, "interval": 60 }' \
+      $VAULT_ADDR/v1/sys/quotas/rate-limit/transit-limit
+   ```
+
+1. Read the `transit-limit` rule to verify its configuration.
+
+   ```shell-session
+   $ curl -s --header "X-Vault-Token: $VAULT_TOKEN" \
+      $VAULT_ADDR/v1/sys/quotas/rate-limit/transit-limit | jq -r ".data"
+   ```
+   **Output:**
+
+   <CodeBlockConfig hideClipboard highlight="4,6-7,9">
+
+   ```json
+   {
+      "block_interval": 0,
+      "group_by": "ip",
+      "inheritable": true,
+      "interval": 60,
+      "name": "transit-limit",
+      "path": "transit/",
+      "rate": 1000,
+      "role": "",
+      "type": "rate-limit"
+   }
+   ```
+
+   </CodeBlockConfig>
+
+
+### Path granularity
+
+You can set the `path` to be deeper than the mount point (in this example,
+`transit/`).
+
+**Example:** Create a rate limit quota named, "transit-order" to limit the data
+encryption requests using `orders` key to be 500 per second.
+
+1. Create an encryption key named, "orders".
+
+   ```shell-session
+   $ curl --header "X-Vault-Token: $VAULT_TOKEN" \
+       --request POST \
+       $VAULT_ADDR/v1/transit/keys/orders
+   ```
+
+1. Create the "transit-order" rate limit quota.
+
+   ```shell-session
+   $ curl --header "X-Vault-Token: $VAULT_TOKEN" \
+      --request POST \
+      --data '{ "path": "transit/encrypt/orders", "rate": 500 }' \
+      $VAULT_ADDR/v1/sys/quotas/rate-limit/transit-order
+   ```
+
+1. Verify the rate limit quota configuration.
+
+   ```shell-session
+   $ curl -s --header "X-Vault-Token: $VAULT_TOKEN" \
+      $VAULT_ADDR/v1/sys/quotas/rate-limit/transit-order | jq -r ".data"
+   ```
+   **Output:**
+
+   <CodeBlockConfig hideClipboard highlight="4,6-7,9">
+
+   ```json
+   {
+      "block_interval": 0,
+      "group_by": "ip",
+      "inheritable": true,
+      "interval": 1,
+      "name": "transit-order",
+      "path": "transit/encrypt/orders",
+      "rate": 500,
+      "role": "",
+      "type": "rate-limit"
+   }
+   ```
+
+   </CodeBlockConfig>
+
+
+### Vault Enterprise namespaces
+
+For Vault Enterprise clusters, you can use the `inheritable` parameter to apply
+the resource quota set on a namespace to its subsequent child namespaces.
+
+Think of the following namespace hierarchy:
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+root
+   └── parent
+      └── child
+         └── grand-child
+```
+
+</CodeBlockConfig>
+
+Under the `root` namespace, you have a `parent` namespace, and then
+`parent/child` and `parent/child/grand-child` namespaces.
+
+You can set the resource quota on the `parent` namespace which gets applied to
+its child namespaces inheritably by setting the `inheritable` parameter to
+`true`. By default, it is set to `false`.
+
+
+1. Create a quota rule on the `us-west` namespace which its child namespace
+   inherits. The rate limit is 500 requests per minute.
+
+   ```shell-session
+   $ curl --header "X-Vault-Token: $VAULT_TOKEN" \
+      --request POST \
+      --data '{"path": "us-west", "rate": 500, "interval": 60, "inheritable": true }' \
+      $VAULT_ADDR/v1/sys/quotas/rate-limit/us-west
+   ```
+
+1. Verify the quota rule.
+
+   ```shell-session
+   $ curl -s --header "X-Vault-Token: $VAULT_TOKEN" \
+      $VAULT_ADDR/v1/sys/quotas/rate-limit/us-west | jq -r ".data"
+   ```
+
+   **Output:**
+
+   <CodeBlockConfig hideClipboard>
+
+   ```json
+   {
+      "block_interval": 0,
+      "group_by": "ip",
+      "inheritable": true,
+      "interval": 60,
+      "name": "us-west",
+      "path": "us-west/",
+      "rate": 500,
+      "role": "",
+      "type": "rate-limit"
+   }
+   ```
+
+   </CodeBlockConfig>
+
+</Tab>
+<Tab heading="Terraform" group="terraform">
+
+You can use [HashiCorp Terraform](/terraform/docs) to set the rate limit quotas.
+
+**Example:**
+
+1. Create a file named, `main.tf` with the following content.
+
+   <CodeBlockConfig lineNumbers>
+
+   ```hcl
+   # Use Vault provider
+   provider vault {}
+
+   # Create "global-rate" which limits inbound workload to 100 requests per second
+   resource "vault_quota_rate_limit" "global" {
+      name = "global-rate"
+      path = ""
+      rate = 100
+   }
+
+   # Create "transit-limit" which limits the access to the Transit secrets engine to be 1000 requests per minute (60 seconds)
+   resource "vault_quota_rate_limit" "transit-limit" {
+      name = "transit-limit"
+      path = "transit/"
+      rate = 1000
+      interval = 60
+
+      depends_on = [ vault_mount.transit ]
+   }
+
+   # Path granularity: Create a rate limit quota, "transit-order" to limit the data encryption requests using orders key to be 500 per second
+   resource "vault_quota_rate_limit" "transit-order" {
+      name = "transit-order"
+      path = "transit/encrypt/orders"
+      rate = 500
+
+   depends_on = [ vault_mount.transit, vault_transit_secret_backend_key.key ]
+   }
+
+   # Enable transit secrets engine & create a test key
+   resource "vault_mount" "transit" {
+      path                      = "transit"
+      type                      = "transit"
+      description               = "Test resource quota"
+   }
+
+   resource "vault_transit_secret_backend_key" "key" {
+      backend = vault_mount.transit.path
+      name    = "orders"
+   }
+   ```
+
+   </CodeBlockConfig>
+
+   The `main.tf` performs the following operations:
+
+   - Create a rate limit quota named, "global-rate" which limits inbound workload
+   to 100 requests per second (line 5 - 9)
+
+   - Create a rate limit quota named, "transit-limit" which limits the access to
+   the Transit secrets engine to be 1000 requests per minute (line 12 - 19)
+
+   - Create a rate limit quota named, "transit-order" to limit the data encryption
+   requests using orders key to be 500 per second (line 22 - 28)
+
+   - Enable transit secrets engine for testing (line 31 - 35)
+
+   - Create an encryption key named, `orders` for testing (line 37 - 40)
+
+1. Initialize Terraform.
+
+   ```shell-session
+   $ terraform init
+
+   Initializing the backend...
+
+   Initializing provider plugins...
+   ...snip...
+
+   Terraform has been successfully initialized!
+   ```
+
+1. After you run `terraform init`, you can verify that it will create the
+resources with `terraform plan`.
+
+   ```shell-session
+   $ terraform plan
+
+   An execution plan has been generated and is shown below.
+   Resource actions are indicated with the following symbols:
+   ...snip...
+
+   Plan: 5 to add, 0 to change, 0 to destroy.
+   ```
+
+   You should note resources listed in the output.
+
+1. Deploy the resources with `terraform apply`.
+
+   ```shell-session
+   $ terraform apply -auto-approve
+
+   Terraform used the selected providers to generate the following execution plan.
+   ...snip...
+   Apply complete! Resources: 5 added, 0 changed, 0 destroyed.
+   ```
+
+To learn more about Terraform, visit the [Terraform tutorials site](/terraform/tutorials).
+
+### Vault Enterprise namespaces
+
+For Vault Enterprise clusters, you can use the `inheritable` parameter to apply
+the resource quota set on a namespace to its subsequent child namespaces.
+
+Think of the following namespace hierarchy:
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+root
+   └── parent
+      └── child
+         └── grand-child
+```
+
+</CodeBlockConfig>
+
+Under the `root` namespace, you have a `parent` namespace, and then
+`parent/child` and `parent/child/grand-child` namespaces.
+
+You can set the resource quota on the `parent` namespace which gets applied to
+its child namespaces inheritably by setting the `inheritable` parameter to
+`true`. By default, it is set to `false`.
+
+You can use Terraform to create a quota rule on the us-west namespace which its
+child namespaces will inherit. The following Terraform configuration sets the
+rate limit to 500 requests per minute.
+
+```hcl
+provider vault {}
+
+# Create a "us-west" namespace
+resource "vault_namespace" "us-west" {
+   path = "us-west"
+}
+
+# Create a "us-west" rate limit quota 
+resource "vault_quota_rate_limit" "us-west" {
+  name = "us-west"
+  path = "us-west"
+  rate = 500
+  interval = 60
+  inheritable = true
+}
+```
+
+</Tab>
+</Tabs>
+
+
+## Next steps 
+
+Proactive monitoring and periodic usage analysis can help you identify potential
+problems before they escalate.
+
+- Brush up on [general Vault resource quotas](/vault/docs/concepts/resource-quotas) in general.
+- Learn about [lease count quotas for Vault Enterprise](/vault/docs/enterprise/lease-count-quotas).
+- Review [Rate limit quotas - collective, by IP, by entity](/vault/docs/configuration/identity-based-rate-limit) if you are running Vault Enterprise clusters.
