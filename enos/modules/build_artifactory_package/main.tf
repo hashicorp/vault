@@ -68,11 +68,11 @@ module "artifact_metadata" {
 }
 
 data "enos_artifactory_item" "vault" {
-  token    = var.artifactory_token
-  name     = module.artifact_metadata.artifact_name
-  host     = var.artifactory_host
-  repo     = module.artifact_metadata.release_repo
-  path     = module.artifact_metadata.release_paths[var.distro_version]
+  token = var.artifactory_token
+  name  = module.artifact_metadata.artifact_name
+  host  = var.artifactory_host
+  repo  = module.artifact_metadata.release_repo
+  path  = module.artifact_metadata.release_paths[var.distro_version]
 }
 
 output "results" {
@@ -101,8 +101,8 @@ output "name" {
 
 output "release" {
   value = {
-    url      = data.enos_artifactory_item.vault.results[0].url
-    sha256   = data.enos_artifactory_item.vault.results[0].sha256
-    token    = var.artifactory_token
+    url    = data.enos_artifactory_item.vault.results[0].url
+    sha256 = data.enos_artifactory_item.vault.results[0].sha256
+    token  = var.artifactory_token
   }
 }
