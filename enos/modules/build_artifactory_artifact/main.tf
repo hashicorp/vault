@@ -52,11 +52,11 @@ module "artifact_metadata" {
 }
 
 data "enos_artifactory_item" "vault" {
-  token    = var.artifactory_token
-  name     = module.artifact_metadata.artifact_name
-  host     = var.artifactory_host
-  repo     = var.artifactory_repo
-  path     = "${module.artifact_metadata.product_name}/*"
+  token = var.artifactory_token
+  name  = module.artifact_metadata.artifact_name
+  host  = var.artifactory_host
+  repo  = var.artifactory_repo
+  path  = "${module.artifact_metadata.product_name}/*"
   properties = tomap({
     "commit"          = var.revision,
     "product-name"    = module.artifact_metadata.product_name,
@@ -86,8 +86,8 @@ output "name" {
 
 output "vault_artifactory_release" {
   value = {
-    url      = data.enos_artifactory_item.vault.results[0].url
-    sha256   = data.enos_artifactory_item.vault.results[0].sha256
-    token    = var.artifactory_token
+    url    = data.enos_artifactory_item.vault.results[0].url
+    sha256 = data.enos_artifactory_item.vault.results[0].sha256
+    token  = var.artifactory_token
   }
 }
