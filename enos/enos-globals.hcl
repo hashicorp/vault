@@ -26,22 +26,22 @@ globals {
       "2023" = ["nc", "openldap-clients"]
     }
     leap = {
-      "15.6" = ["netcat", "openssl", "openldap2-client", "docker"]
+      "15.6" = ["netcat", "openssl", "openldap2-client", "podman"]
     }
     rhel = {
-      "8.10" = ["nc", "openldap-clients", "docker"]
-      "9.5"  = ["nc", "openldap-clients", "docker"]
+      "8.10" = ["nc", "openldap-clients", "podman"]
+      "9.5"  = ["nc", "openldap-clients", "podman"]
     }
     sles = {
       // When installing Vault RPM packages on a SLES AMI, the openssl package provided
       // isn't named "openssl, which rpm doesn't know how to handle. Therefore we add the
       // "correctly" named one in our package installation before installing Vault.
-      "15.6" = ["netcat-openbsd", "openssl", "openldap2-client", "docker"]
+      "15.6" = ["netcat-openbsd", "openssl", "openldap2-client", "podman"]
     }
     ubuntu = {
-      "20.04" = ["netcat", "ldap-utils", "docker"]
-      "22.04" = ["netcat", "ldap-utils", "docker"]
-      "24.04" = ["netcat-openbsd", "ldap-utils", "docker"]
+      "20.04" = ["netcat", "ldap-utils", "podman"]
+      "22.04" = ["netcat", "ldap-utils", "podman"]
+      "24.04" = ["netcat-openbsd", "ldap-utils", "podman"]
     }
   }
   distro_version = {
