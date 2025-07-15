@@ -9,7 +9,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import { hbs } from 'ember-cli-htmlbars';
-import { click, fillIn, findAll, render, typeIn } from '@ember/test-helpers';
+import { click, fillIn, render, typeIn } from '@ember/test-helpers';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { FORM } from 'vault/tests/helpers/kv/kv-selectors';
 import sinon from 'sinon';
@@ -242,11 +242,11 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
 
     await fillIn(FORM.inputByAttr('path'), ''); // clear input
     await typeIn(FORM.inputByAttr('path'), 'slash/');
-    assert.dom(FORM.validation('path')).hasText(`Path can't end in forward slash '/'.`);
+    assert.dom(FORM.validationError('path')).hasText(`Path can't end in forward slash '/'.`);
 
     await typeIn(FORM.inputByAttr('path'), 'secret');
     assert
-      .dom(FORM.validation('path'))
+      .dom(FORM.validationError('path'))
       .doesNotExist('it removes validation on key up when secret contains slash but does not end in one');
 
     await click(GENERAL.toggleInput('json'));
@@ -258,9 +258,8 @@ module('Integration | Component | kv-v2 | Page::Secrets::Create', function (hook
     codemirror().setValue('{}'); // clear linting error
     await fillIn(FORM.inputByAttr('path'), '');
     await click(FORM.saveBtn);
-    const [pathValidation, formAlert] = findAll(FORM.inlineAlert);
-    assert.dom(pathValidation).hasText(`Path can't be blank.`);
-    assert.dom(formAlert).hasText('There is an error with this form.');
+    assert.dom(FORM.validationError('path')).hasText(`Path can't be blank.`);
+    assert.dom(FORM.inlineAlert).hasText('There is an error with this form.');
   });
 
   test('it toggles JSON view and saves modified data', async function (assert) {
