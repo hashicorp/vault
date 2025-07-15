@@ -34,10 +34,6 @@ install_packages() {
         else
           echo "Installing ${package}"
           local output
-          VERSION=$(grep '^VERSION_ID=' /etc/os-release | cut -d '"' -f2)
-          echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION}/ /" | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
-          curl -L "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION}/Release.key" | sudo apt-key add -
-          sudo apt update
           if ! output=$(sudo apt install -y "${package}" 2>&1); then
             echo "Failed to install ${package}: ${output}" 1>&2
             return 1
@@ -68,8 +64,6 @@ install_packages() {
         else
           echo "Installing ${package}"
           local output
-          sudo amazon-linux-extras enable epel
-          sudo yum install -y epel-release
           if ! output=$(sudo yum -y install "${package}" 2>&1); then
             echo "Failed to install ${package}: ${output}" 1>&2
             return 1
