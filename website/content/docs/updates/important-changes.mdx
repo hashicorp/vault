@@ -153,10 +153,11 @@ None.
 | ----------- | ------ | -------------------------------------- | --------------------
 | Known issue | Open   | 1.20.x, 1.19.x, 1.18.x+ent, 1.17.x+ent, 1.16.x+ent | None
 
-Due to improper refreshes of credentials when using keypair authentication with Snowflake DB,
-users can receive errors due to stale connections in the connection pool. The issue appears when
-there are two or more concurrent operations, at which point an idle connection from the connection
-pool is reused and fails due to Snowflake's session timeout.
+Users using keypair authentication with Snowflake databases may receive errors
+due to improper credential refreshes and stale connections in the connection pool.
+When two or more concurrent operations occur, Vault tries to reuse an idle
+connection from the pool and the request fails due to session timeout in the
+Snowflake database.
 
 #### Recommendation
 
