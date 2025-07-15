@@ -22,8 +22,8 @@ globals {
   // Different distros may require different packages, or use different aliases for the same package
   distro_packages = {
     amzn = {
-      "2"    = ["nc", "openldap-clients"]
-      "2023" = ["nc", "openldap-clients"]
+      "2"    = ["nc", "openldap-clients", "podman"]
+      "2023" = ["nc", "openldap-clients", "podman"]
     }
     leap = {
       "15.6" = ["netcat", "openssl", "openldap2-client", "podman"]
