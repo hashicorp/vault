@@ -64,8 +64,6 @@ install_packages() {
         else
           echo "Installing ${package}"
           local output
-          sudo amazon-linux-extras enable epel
-          sudo yum clean metadata
           if ! output=$(sudo yum -y install "${package}" 2>&1); then
             echo "Failed to install ${package}: ${output}" 1>&2
             return 1
