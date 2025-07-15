@@ -38,9 +38,9 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { setupControlGroup, grantAccess } from 'vault/tests/helpers/control-groups';
 
-const secretPath = `my-#:$=?-secret`;
+const secretPath = `my-#:$=?_secret`;
 // This doesn't encode in a normal way, so hardcoding it here until we sort that out
-const secretPathUrlEncoded = `my-%23:$=%3F-secret`;
+const secretPathUrlEncoded = `my-%23:$=%3F_secret`;
 // these are rendered individually by each page component, assigning a const here for consistency
 const ALL_TABS = ['Overview', 'Secret', 'Metadata', 'Paths', 'Version History'];
 const navToBackend = async (backend) => {
