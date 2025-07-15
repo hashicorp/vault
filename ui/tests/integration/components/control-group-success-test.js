@@ -10,6 +10,7 @@ import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
 const SELECTORS = {
   jsonViewer: '[data-test-json-viewer]',
@@ -21,6 +22,7 @@ const SELECTORS = {
 
 module('Integration | Component | control group success', function (hooks) {
   setupRenderingTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(function () {
     this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
@@ -71,9 +73,13 @@ module('Integration | Component | control group success', function (hooks) {
   });
 
   test('it unwraps data on submit', async function (assert) {
-    assert.expect(2);
+    assert.expect(3);
+    const data = { foo_test: 'bar' };
 
-    sinon.stub(this.owner.lookup('service:api').sys, 'unwrap').resolves({ data: { foo: 'bar' } });
+    this.server.post('sys/wrapping/unwrap', (schema, req) => {
+      assert.strictEqual(req.requestHeaders['x-vault-token'], 'token', 'header contains token');
+      return { data };
+    });
 
     await render(hbs`<ControlGroupSuccess @model={{this.model}} />`);
     assert.dom(GENERAL.inputByAttr('token')).hasValue('');
@@ -82,7 +88,7 @@ module('Integration | Component | control group success', function (hooks) {
     await click(SELECTORS.unwrap);
 
     const actual = find(SELECTORS.jsonViewer).innerText;
-    const expected = JSON.stringify({ foo: 'bar' }, null, 2);
+    const expected = JSON.stringify({ foo_test: 'bar' }, null, 2);
     assert.strictEqual(actual, expected, `it renders unwrapped data: ${actual}`);
   });
 });

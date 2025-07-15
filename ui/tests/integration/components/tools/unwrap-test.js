@@ -47,7 +47,7 @@ module('Integration | Component | tools/unwrap', function (hooks) {
 
   test('it submits and renders falsy values', async function (assert) {
     const flashSpy = sinon.spy(this.owner.lookup('service:flash-messages'), 'success');
-    const unwrapData = { foo: 'bar' };
+    const unwrapData = { foo_test: 'bar' };
     const data = { token: 'token.OMZFbUurY0ppT2RTMGpRa0JOSUFqUzJUaGNqdWUQ6ooG' };
     const expectedDetails = {
       'Request ID': '291290a6-5602-e49a-389b-5870e6c02976',
