@@ -602,6 +602,11 @@ quality "vault_secrets_kv_write" {
   description = "Vault kv secrets engine data is writable"
 }
 
+
+quality "vault_secrets_ldap_write_config" {
+  description = "The Vault LDAP secrets engine is configured with the correct settings"
+}
+
 quality "vault_service_restart" {
   description = "Vault restarts with existing configuration"
 }

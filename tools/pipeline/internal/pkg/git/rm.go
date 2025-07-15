@@ -9,6 +9,7 @@ import (
 )
 
 // RmOpts are the git rm flags and arguments
+// See: https://git-scm.com/docs/git-rm
 type RmOpts struct {
 	Cached          bool // --cached
 	DryRun          bool // --dry-run

@@ -3,7 +3,15 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<div class="box is-fullwidth is-sideless">
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      API Explorer
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<div class="box is-fullwidth is-sideless is-marginless">
   <NamespaceReminder as |R|>
     Requests use the header
     <code>X-Vault-Namespace: {{R.namespace.path}}</code>. You can also use
@@ -12,5 +20,6 @@
     <DocLink @path="/vault/api-docs#namespaces">docs</DocLink>
     for examples.
   </NamespaceReminder>
+
   <div id={{this.inputId}} class="swagger-ember" {{did-insert this.swaggerInit}} data-test-swagger-ui></div>
 </div>

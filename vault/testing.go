@@ -1550,7 +1550,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		coreConfig.ExpirationRevokeRetryBase = base.ExpirationRevokeRetryBase
 		coreConfig.PeriodicLeaderRefreshInterval = base.PeriodicLeaderRefreshInterval
 		coreConfig.ClusterAddrBridge = base.ClusterAddrBridge
-		coreConfig.ObservationSystemLedgerPath = base.ObservationSystemLedgerPath
+		coreConfig.ObservationSystemConfig = base.ObservationSystemConfig
 
 		testApplyEntBaseConfig(coreConfig, base)
 	}

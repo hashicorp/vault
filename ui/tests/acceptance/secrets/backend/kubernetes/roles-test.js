@@ -32,7 +32,7 @@ module('Acceptance | kubernetes | roles', function (hooks) {
     await this.visitRoles();
     assert.dom('[data-test-list-item-link]').exists({ count: 3 }, 'Roles list renders');
     await fillIn(GENERAL.filterInputExplicit, '1');
-    await click(GENERAL.filterInputExplicitSearch);
+    await click(GENERAL.button('Search'));
     assert.dom('[data-test-list-item-link]').exists({ count: 1 }, 'Filtered roles list renders');
     assert.ok(currentURL().includes('pageFilter=1'), 'pageFilter query param value is set');
   });
@@ -62,7 +62,7 @@ module('Acceptance | kubernetes | roles', function (hooks) {
       await click('[data-test-list-item-popup] button');
       await click(`[data-test-${action}]`);
       if (action === 'delete') {
-        await click('[data-test-confirm-button]');
+        await click(GENERAL.confirmButton);
         assert.dom('[data-test-list-item-link]').exists({ count: 2 }, 'Deleted role removed from list');
       } else {
         this.validateRoute(
@@ -85,7 +85,7 @@ module('Acceptance | kubernetes | roles', function (hooks) {
     await fillIn('[data-test-input="name"]', 'new-test-role');
     await fillIn('[data-test-input="serviceAccountName"]', 'default');
     await fillIn('[data-test-input="allowedKubernetesNamespaces"]', '*');
-    await click('[data-test-save]');
+    await click('[data-test-submit]');
     this.validateRoute(assert, 'roles.role.details', 'Transitions to details route on save success');
     await click('[data-test-breadcrumbs] li:nth-child(2) a');
     assert.dom('[data-test-role="new-test-role"]').exists('New role renders in list');
@@ -103,7 +103,7 @@ module('Acceptance | kubernetes | roles', function (hooks) {
     await click('[data-test-cancel]');
     await click('[data-test-list-item-link]');
     await click('[data-test-delete]');
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
     assert
       .dom('[data-test-list-item-link]')
       .exists({ count: 2 }, 'Transitions to roles route and deleted role removed from list');

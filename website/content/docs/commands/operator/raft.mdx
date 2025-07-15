@@ -158,34 +158,79 @@ Usage: vault operator raft remove-peer <server_id>
 ## snapshot
 
 This command groups subcommands for operators interacting with the snapshot
-functionality of the integrated Raft storage backend. There are 2 subcommands
-supported: `save` and `restore`.
+functionality of the integrated Raft storage backend.
+
+@include 'tips/manage-snapshots.mdx'
 
 ```text
 Usage: vault operator raft snapshot <subcommand> [options] [args]
 
   This command groups subcommands for operators interacting with the snapshot
-  functionality of the integrated Raft storage backend.
+  functionality of the integrated Raft storage backend. Here are a few examples of
+  the Raft snapshot operator commands:
+
+  Installs the provided snapshot, returning the cluster to the state defined in it:
+
+      $ vault operator raft snapshot restore raft.snap
+
+  Saves a snapshot of the current state of the Raft cluster into a file:
+
+      $ vault operator raft snapshot save raft.snap
+
+  Inspects a snapshot based on a file:
+
+      $ vault operator raft snapshot inspect raft.snap
+
+  Please see the individual subcommand help for detailed usage information.
 
 Subcommands:
+    inspect    Inspects raft snapshot
+    load       Loads the provided local or cloud storage snapshot
     restore    Installs the provided snapshot, returning the cluster to the state defined in it
     save       Saves a snapshot of the current state of the Raft cluster into a file
+    unload     Unloads the snapshot with provided ID```
 ```
 
-### snapshot save
+### snapshot inspect
 
-Takes a snapshot of the Vault data. The snapshot can be used to restore Vault to
-the point in time when a snapshot was taken.
+Inspects a snapshot file taken from a Vault raft cluster and prints a table showing the number of keys and the amount of space used.
 
 ```text
-Usage: vault operator raft snapshot save <snapshot_file>
-
-  Saves a snapshot of the current state of the Raft cluster into a file.
-
-	  $ vault operator raft snapshot save raft.snap
+Usage: vault operator raft snapshot inspect <snapshot_file>
 ```
 
-~> **Note:** Snapshot is not supported when Raft is used only for `ha_storage`.
+For example:
+
+```shell-session
+$ vault operator raft snapshot inspect raft.snap
+```
+
+### snapshot load
+
+@include 'alerts/enterprise-only.mdx'
+
+Load a new snapshot into the Vault cluster without overwriting the cluster with
+the snapshot's data.
+
+@include 'recover/loadedsnapshots.mdx'
+
+```text
+Usage: vault operator raft snapshot load < SNAPSHOT_FILE | auto_snapshot_config=CONFIG_NAME url=URL >
+
+  Loads the provided snapshot for reading or recovering data on supported paths.
+
+  This command supports two modes of operation:
+
+  1. Loading a local snapshot file from the filesystem.
+     In this mode, the file path must be provided as the only positional argument.
+
+         $ vault operator raft snapshot load raft.snap
+
+  2. Loading a snapshot that was created by Vault's automated snapshot utility from cloud storage.
+     In this case, the command accepts two K=V arguments: auto_snapshot_config and url.
+
+         $ vault operator raft snapshot load auto_snapshot_config=foo url=https://foo.com/blob/snapshot
+```
 
 ### snapshot restore
 
@@ -199,18 +244,34 @@ Usage: vault operator raft snapshot restore <snapshot_file>
 	  $ vault operator raft snapshot restore raft.snap
 ```
 
-### snapshot inspect
+### snapshot save
 
-Inspects a snapshot file taken from a Vault Raft cluster and prints a table showing the number of keys and the amount of space used.
+Takes a snapshot of your Vault data. You can use the snapshot to restore Vault
+to the point in time when you took the snapshot if you use integrated storage.
+Vault does not support snapshots for deployments that only use raft for
+high-availability storage.
 
 ```text
-Usage: vault operator raft snapshot inspect <snapshot_file>
+Usage: vault operator raft snapshot save <snapshot_file>
+
+  Saves a snapshot of the current state of the Raft cluster into a file.
+
+	  $ vault operator raft snapshot save raft.snap
 ```
 
-For example:
 
-```shell-session
-$ vault operator raft snapshot inspect raft.snap
+### snapshot unload
+
+@include 'alerts/enterprise-only.mdx'
+
+Unload a snapshot previously loaded with `vault operator raft snapshot load`.
+
+```text
+Usage: vault operator raft snapshot unload <SNAPSHOT_ID>
+
+  Unloads the snapshot with the provided ID.
+
+      $ vault operator raft snapshot unload 8a4f31cc-7bb2-227a-aa18-8f140fb40f10
 ```
 
 ## autopilot

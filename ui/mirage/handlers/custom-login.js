@@ -45,16 +45,24 @@ export default function (server) {
   });
 
   // UNAUTHENTICATED READ ONLY for login form display logic
-  server.get('sys/internal/ui/default-login-methods', (schema, req) => {
+  server.get('sys/internal/ui/default-auth-methods', (schema, req) => {
     const nsHeader = req.requestHeaders['X-Vault-Namespace'];
     // if no namespace is passed, assume root
-    const namespace = !nsHeader ? '' : nsHeader;
-    const nsRule = schema.db['loginRules'].findBy({ namespace });
-    if (nsRule) {
-      // only data relevant to login form is returned
-      const { default_auth_type, backup_auth_types } = nsRule;
-      return { data: { default_auth_type, backup_auth_types } };
+    const findRule = (ns = '') => schema.db['loginRules'].findBy({ namespace_path: ns });
+
+    let rule = findRule(nsHeader || '');
+
+    if (!rule && nsHeader?.includes('/')) {
+      // for simplicity, tests only nest namespaces one level, e.g. "test-ns/child"
+      const [parent] = nsHeader.split('/');
+      const parentRule = findRule(parent);
+      rule = parentRule?.disable_inheritance ? null : parentRule;
     }
-    return new Response(404, {}, { errors: [] });
+
+    // Fallback to root namespace settings to simulate inheritance if no rule exists or parent has disabled inheritance
+    rule = rule || findRule();
+
+    const { default_auth_type, backup_auth_types, disable_inheritance } = rule || {};
+    return { data: { default_auth_type, backup_auth_types, disable_inheritance } };
   });
 }

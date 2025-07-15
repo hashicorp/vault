@@ -45,10 +45,10 @@ module('Integration | Component | tools/wrap', function (hooks) {
       'json editor initializes with empty object that includes whitespace'
     );
     assert.dom(TTL.toggleByLabel('Wrap TTL')).isNotChecked('Wrap TTL defaults to unchecked');
-    assert.dom(TS.submit).isEnabled();
+    assert.dom(GENERAL.submitButton).isEnabled();
     assert.dom(TS.toolsInput('wrapping-token')).doesNotExist();
-    assert.dom(TS.button('Back')).doesNotExist();
-    assert.dom(TS.button('Done')).doesNotExist();
+    assert.dom(GENERAL.button('Back')).doesNotExist();
+    assert.dom(GENERAL.button('Done')).doesNotExist();
 
     await click(TTL.toggleByLabel('Wrap TTL'));
     assert.dom(TTL.valueInputByLabel('Wrap TTL')).hasValue('30', 'ttl defaults to 30 when toggled');
@@ -58,7 +58,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
   test('it renders errors', async function (assert) {
     this.server.post('sys/wrapping/wrap', () => new Response(500, {}, { errors: ['Something is wrong'] }));
     await this.renderComponent();
-    await click(TS.submit);
+    await click(GENERAL.submitButton);
     await waitUntil(() => find(GENERAL.messageError));
     assert.dom(GENERAL.messageError).hasText('Error Something is wrong', 'Error renders');
   });
@@ -84,7 +84,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
 
     await this.renderComponent();
     await codemirror().setValue(this.wrapData);
-    await click(TS.submit);
+    await click(GENERAL.submitButton);
     await waitUntil(() => find(TS.toolsInput('wrapping-token')));
     assert.true(flashSpy.calledWith('Wrap was successful.'), 'it renders success flash');
     assert.dom(TS.toolsInput('wrapping-token')).hasText(this.token);
@@ -106,7 +106,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await codemirror().setValue(this.wrapData);
     await click(TTL.toggleByLabel('Wrap TTL'));
     await fillIn(TTL.valueInputByLabel('Wrap TTL'), '20');
-    await click(TS.submit);
+    await click(GENERAL.submitButton);
   });
 
   test('it toggles between views and preserves input data', async function (assert) {
@@ -114,11 +114,11 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await this.renderComponent();
     await codemirror().setValue(this.wrapData);
     assert.dom('[data-test-component="json-editor-title"]').hasText('Data to wrap (json-formatted)');
-    await click('[data-test-toggle-input="json"]');
+    await click(GENERAL.toggleInput('json'));
     assert.dom('[data-test-component="json-editor-title"]').doesNotExist();
     assert.dom('[data-test-kv-key="0"]').hasValue('foo');
     assert.dom('[data-test-kv-value="0"]').hasValue('bar');
-    await click('[data-test-toggle-input="json"]');
+    await click(GENERAL.toggleInput('json'));
     assert.dom('[data-test-component="json-editor-title"]').exists();
     assert.strictEqual(
       codemirror().getValue(' '),
@@ -156,13 +156,13 @@ module('Integration | Component | tools/wrap', function (hooks) {
     });
 
     await this.renderComponent();
-    await click('[data-test-toggle-input="json"]');
+    await click(GENERAL.toggleInput('json'));
     await fillIn('[data-test-kv-key="0"]', 'foo');
     await fillIn('[data-test-kv-value="0"]', 'bar');
     await click('[data-test-kv-add-row="0"]');
     await fillIn('[data-test-kv-key="1"]', 'foo2');
     await fillIn('[data-test-kv-value="1"]', multilineData);
-    await click(TS.submit);
+    await click(GENERAL.submitButton);
     await waitUntil(() => find(TS.toolsInput('wrapping-token')));
     assert.true(flashSpy.calledWith('Wrap was successful.'), 'it renders success flash');
     assert.dom(TS.toolsInput('wrapping-token')).hasText(this.token);
@@ -175,10 +175,10 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await codemirror().setValue(this.wrapData);
     await click(TTL.toggleByLabel('Wrap TTL'));
     await fillIn(TTL.valueInputByLabel('Wrap TTL'), '20');
-    await click(TS.submit);
+    await click(GENERAL.submitButton);
 
-    await waitUntil(() => find(TS.button('Done')));
-    await click(TS.button('Done'));
+    await waitUntil(() => find(GENERAL.button('Done')));
+    await click(GENERAL.button('Done'));
     assert.strictEqual(
       codemirror().getValue(' '),
       `{   \"\": \"\" }`, // eslint-disable-line no-useless-escape
@@ -192,10 +192,10 @@ module('Integration | Component | tools/wrap', function (hooks) {
   test('it preserves input data on back', async function (assert) {
     await this.renderComponent();
     await codemirror().setValue(this.wrapData);
-    await click(TS.submit);
+    await click(GENERAL.submitButton);
 
-    await waitUntil(() => find(TS.button('Back')));
-    await click(TS.button('Back'));
+    await waitUntil(() => find(GENERAL.button('Back')));
+    await click(GENERAL.button('Back'));
     assert.strictEqual(
       codemirror().getValue(' '),
       `{   \"foo": \"bar" }`, // eslint-disable-line no-useless-escape
@@ -226,9 +226,9 @@ module('Integration | Component | tools/wrap', function (hooks) {
         'JSON is unparsable. Fix linting errors to avoid data discrepancies.',
         'Linting error message is shown for json view'
       );
-    await click(TS.submit);
-    await waitUntil(() => find(TS.button('Done')));
-    await click(TS.button('Done'));
+    await click(GENERAL.submitButton);
+    await waitUntil(() => find(GENERAL.button('Done')));
+    await click(GENERAL.button('Done'));
     assert.dom('[data-test-inline-alert]').doesNotExist();
 
     await codemirror().setValue(`{bad json}`);
@@ -238,9 +238,9 @@ module('Integration | Component | tools/wrap', function (hooks) {
         'JSON is unparsable. Fix linting errors to avoid data discrepancies.',
         'Linting error message is shown for json view'
       );
-    await click(TS.submit);
-    await waitUntil(() => find(TS.button('Back')));
-    await click(TS.button('Back'));
+    await click(GENERAL.submitButton);
+    await waitUntil(() => find(GENERAL.button('Back')));
+    await click(GENERAL.button('Back'));
     assert.dom('[data-test-inline-alert]').doesNotExist();
   });
 });

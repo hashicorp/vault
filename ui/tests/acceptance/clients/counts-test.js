@@ -49,7 +49,7 @@ module('Acceptance | clients | counts', function (hooks) {
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2023-03');
     await fillIn(CLIENT_COUNT.dateRange.editDate('end'), '2023-10');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
       '/vault/clients/counts/overview?end_time=1698710400&start_time=1677628800',
@@ -130,7 +130,7 @@ module('Acceptance | clients | counts', function (hooks) {
                   counts: getCounts(),
                   mounts: [
                     {
-                      mount_path: 'auth/authid/0',
+                      mount_path: 'auth/userpass-0',
                       counts: getCounts(),
                     },
                   ],
@@ -145,7 +145,7 @@ module('Acceptance | clients | counts', function (hooks) {
                     counts: getCounts(),
                     mounts: [
                       {
-                        mount_path: 'auth/authid/0',
+                        mount_path: 'auth/userpass-0',
                         counts: getCounts(),
                       },
                     ],

@@ -64,7 +64,7 @@
               @closedLabel={{group}}
               @onClick={{fn (mut (get @role prop))}}
               class="is-block"
-              data-test-toggle-group={{group}}
+              data-test-button={{group}}
             />
             {{#if (get @role prop)}}
               <div class="box is-tall is-marginless" data-test-toggle-div={{group}}>
@@ -124,7 +124,7 @@
       @icon={{if this.save.isRunning "loading"}}
       type="submit"
       disabled={{this.save.isRunning}}
-      data-test-save
+      data-test-submit
     />
     <Hds::Button
       @text="Cancel"

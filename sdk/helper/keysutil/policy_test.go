@@ -37,7 +37,7 @@ var allTestKeyTypes = []KeyType{
 	KeyType_AES256_GCM96, KeyType_ECDSA_P256, KeyType_ED25519, KeyType_RSA2048,
 	KeyType_RSA4096, KeyType_ChaCha20_Poly1305, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_AES128_GCM96,
 	KeyType_RSA3072, KeyType_MANAGED_KEY, KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES256_CMAC, KeyType_ML_DSA,
-	KeyType_HYBRID,
+	KeyType_HYBRID, KeyType_AES192_CMAC, KeyType_SLH_DSA,
 }
 
 func TestPolicy_KeyTypes(t *testing.T) {
@@ -67,7 +67,7 @@ func TestPolicy_HmacCmacSupported(t *testing.T) {
 			if keyType.CMACSupported() {
 				t.Fatalf("cmac should not have been be supported for keytype %s", keyType.String())
 			}
-		case KeyType_AES128_CMAC, KeyType_AES256_CMAC:
+		case KeyType_AES128_CMAC, KeyType_AES256_CMAC, KeyType_AES192_CMAC:
 			if keyType.HMACSupported() {
 				t.Fatalf("hmac should have been not be supported for keytype %s", keyType.String())
 			}

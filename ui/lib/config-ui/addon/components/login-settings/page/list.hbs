@@ -1,0 +1,86 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3">
+      UI Login Settings
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<Toolbar />
+
+{{#if @loginRules}}
+  {{#each @loginRules as |rule|}}
+    <LinkedBlock
+      class="list-item-row"
+      @params={{array "login-settings.rule.details" rule.name}}
+      @linkPrefix="vault.cluster.config-ui"
+      data-test-rule={{rule.name}}
+    >
+      <div class="level is-mobile">
+        <div class="level-left">
+          <div>
+            <Hds::Text::Display @tag="h3">
+              <Hds::Icon @name="user-check" @size="24" @isInline={{true}} />
+              {{rule.name}}
+            </Hds::Text::Display>
+            <div class="has-top-margin-m">
+              {{rule.namespace_path}}
+              <Hds::Badge
+                @text="Inheritance {{if rule.disable_inheritance 'disabled' 'enabled'}}"
+                class="has-left-margin-xxs"
+              />
+            </div>
+          </div>
+        </div>
+        <div class="level-right is-flex is-paddingless is-marginless">
+          <div class="level-item">
+            <Hds::Dropdown @isInline={{true}} as |dd|>
+              <dd.ToggleIcon
+                @icon="more-horizontal"
+                @hasChevron={{false}}
+                @text="login rules menu"
+                data-test-popup-menu-trigger
+              />
+              <dd.Interactive @route="login-settings.rule.details" @model={{rule.name}} data-test-popup-menu="view-rule">
+                View
+              </dd.Interactive>
+              {{#if (has-capability this.capabilities "delete" pathKey="customLogin" params=rule)}}
+                <dd.Interactive
+                  @color="critical"
+                  data-test-popup-menu="delete-rule"
+                  {{on "click" (fn (mut this.ruleToDelete) rule)}}
+                >Delete</dd.Interactive>
+              {{/if}}
+            </Hds::Dropdown>
+          </div>
+        </div>
+      </div>
+    </LinkedBlock>
+  {{/each}}
+{{else}}
+  <EmptyState
+    @title="No UI login settings yet"
+    @message="Login settings can be used to customize which methods display in the web UI login form by setting a default and back up login methods. Available to be created via the CLI or HTTP API."
+  >
+    <Hds::Link::Standalone
+      @icon="docs-link"
+      @iconPosition="trailing"
+      @text="UI login settings documentation"
+      @href={{doc-link "/vault/docs/ui/custom-login"}}
+    />
+  </EmptyState>
+{{/if}}
+
+{{#if this.ruleToDelete}}
+  <ConfirmModal
+    @color="critical"
+    @onClose={{fn (mut this.ruleToDelete) null}}
+    @confirmMessage="This will permanently delete this rule."
+    @onConfirm={{this.onDelete}}
+  />
+{{/if}}

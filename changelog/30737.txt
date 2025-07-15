@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Automatically refresh namespace list inside the namespace picker after creating or deleting a namespace in the UI.
+```

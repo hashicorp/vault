@@ -5,8 +5,14 @@
 
 {{#if (has-feature "Namespaces")}}
   <PageHeader as |p|>
+    <p.top>
+      <Hds::Breadcrumb data-test-breadcrumbs>
+        <Hds::Breadcrumb::Item @text="Namespaces" @current={{true}} />
+      </Hds::Breadcrumb>
+    </p.top>
+
     <p.levelLeft>
-      <h1 class="title is-3">
+      <h1 class="title is-3" data-test-page-title>
         Namespaces
       </h1>
     </p.levelLeft>
@@ -23,7 +29,16 @@
       />
     </ToolbarFilters>
     <ToolbarActions>
-      <ToolbarLink @route="vault.cluster.access.namespaces.create" @type="add">
+      <Hds::Button
+        class="has-right-margin-4"
+        @color="secondary"
+        @icon="reload"
+        @iconPosition="trailing"
+        @text="Refresh list"
+        {{on "click" this.refreshNamespaceList}}
+        data-test-button="refresh-namespace-list"
+      />
+      <ToolbarLink @route="vault.cluster.access.namespaces.create" @type="add" data-test-link-to="create-namespace">
         Create namespace
       </ToolbarLink>
     </ToolbarActions>
@@ -36,7 +51,6 @@
     as |list|
   >
     {{#if this.model.namespaces.length}}
-
       <ListItem as |Item|>
         <Item.content>
           {{list.item.id}}
@@ -49,14 +63,15 @@
               as |targetNamespace|
             }}
               {{#if (includes targetNamespace this.namespaceService.accessibleNamespaces)}}
-                <dd.Generic>
-                  <NamespaceLink @targetNamespace={{targetNamespace}} @unparsed={{true}} @class="ns-dropdown-item">
-                    Switch to namespace
-                  </NamespaceLink>
-                </dd.Generic>
+                <dd.Interactive {{on "click" (fn this.switchNamespace targetNamespace)}} data-test-popup-menu="switch">Switch
+                  to namespace</dd.Interactive>
               {{/if}}
             {{/let}}
-            <dd.Interactive @color="critical" {{on "click" (fn (mut this.nsToDelete) list.item)}}>Delete</dd.Interactive>
+            <dd.Interactive
+              @color="critical"
+              {{on "click" (fn (mut this.nsToDelete) list.item)}}
+              data-test-popup-menu="delete"
+            >Delete</dd.Interactive>
           </Hds::Dropdown>
           {{#if (eq this.nsToDelete list.item)}}
             <ConfirmModal

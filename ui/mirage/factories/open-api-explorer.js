@@ -36,6 +36,30 @@ export default Factory.extend({
           },
         },
       },
+      'auth/token/roles/{role_name}': {
+        description: '',
+        get: {
+          summary: '',
+          tags: ['auth'],
+          operationId: 'token-read-role',
+          parameters: [
+            {
+              name: 'role_name',
+              required: true,
+              in: 'path',
+              schema: {
+                type: 'string',
+              },
+              description: 'Name of the role',
+            },
+          ],
+          responses: {
+            200: {
+              description: 'OK',
+            },
+          },
+        },
+      },
       '/secret/data/{path}': {
         description: 'Location of a secret.',
         post: {

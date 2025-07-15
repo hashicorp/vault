@@ -6,14 +6,14 @@ package cmd
 import "github.com/spf13/cobra"
 
 func newReleasesListCmd() *cobra.Command {
-	releases := &cobra.Command{
+	listCmd := &cobra.Command{
 		Use:   "list",
 		Short: "Releases list commands",
 		Long:  "Releases list commands",
 	}
 
-	releases.AddCommand(newReleasesVersionsBetweenCmd())
-	releases.AddCommand(newReleasesListActiveVersionsCmd())
+	listCmd.AddCommand(newReleasesVersionsBetweenCmd())
+	listCmd.AddCommand(newReleasesListActiveVersionsCmd())
 
-	return releases
+	return listCmd
 }

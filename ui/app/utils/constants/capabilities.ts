@@ -16,9 +16,14 @@ export const SUDO_PATHS = [
 export const SUDO_PATH_PREFIXES = ['sys/leases/revoke-prefix', 'sys/leases/revoke-force'];
 
 export const PATH_MAP = {
+  customLogin: apiPath`sys/config/ui/login/default-auth/${'id'}`,
   customMessages: apiPath`sys/config/ui/custom-messages/${'id'}`,
   syncActivate: apiPath`sys/activation-flags/secrets-sync/activate`,
   syncDestination: apiPath`sys/sync/destinations/${'type'}/${'name'}`,
   syncSetAssociation: apiPath`sys/sync/destinations/${'type'}/${'name'}/associations/set`,
   syncRemoveAssociation: apiPath`sys/sync/destinations/${'type'}/${'name'}/associations/remove`,
+  kvConfig: apiPath`${'path'}/config`,
+  authMethodConfig: apiPath`auth/${'path'}/config`,
+  authMethodConfigAws: apiPath`auth/${'path'}/config/client`,
+  authMethodDelete: apiPath`sys/auth/${'path'}`,
 };

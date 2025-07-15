@@ -10,7 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import modifyPassthroughResponse from 'vault/mirage/helpers/modify-passthrough-response';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
-import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const link = (label) => `[data-test-sidebar-nav-link="${label}"]`;
 const panel = (label) => `[data-test-sidebar-nav-panel="${label}"]`;
@@ -128,13 +128,13 @@ module('Acceptance | sidebar navigation', function (hooks) {
     await click(link('Client Count'));
     assert.dom(panel('Client Count')).exists('Client counts nav panel renders');
     assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'Top level nav link renders overview');
-    assert.dom(link('Vault Usage Metrics')).hasClass('active');
+    assert.dom(link('Client Usage')).hasClass('active');
     await click(link('Configuration'));
     assert.strictEqual(currentURL(), '/vault/clients/config', 'Clients configuration renders');
     assert.dom(link('Configuration')).hasClass('active');
-    await click(link('Vault Usage Metrics'));
+    await click(link('Client Usage'));
     assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'Sub nav link navigates to overview');
-    assert.dom(link('Vault Usage Metrics')).hasClass('active');
+    assert.dom(link('Client Usage')).hasClass('active');
   });
 
   test('it should display access nav when mounting and configuring auth methods', async function (assert) {
@@ -142,7 +142,7 @@ module('Acceptance | sidebar navigation', function (hooks) {
     await click('[data-test-auth-enable]');
     assert.dom('[data-test-sidebar-nav-panel="Access"]').exists('Access nav panel renders');
     await click(link('Authentication Methods'));
-    await click(AUTH_FORM.linkedBlockAuth('token'));
+    await click(GENERAL.linkedBlock('token'));
     await click('[data-test-configure-link]');
     assert.dom('[data-test-sidebar-nav-panel="Access"]').exists('Access nav panel renders');
   });

@@ -5,14 +5,15 @@
 
 export interface UnauthMountsByType {
   // key is the auth method type
-  [key: string]: AuthTabMountData[];
+  // if the value is "null" there is no mount data for that type
+  [key: string]: AuthTabMountData[] | null;
 }
 export interface UnauthMountsResponse {
   // key is the mount path
   [key: string]: { type: string; description?: string; config?: object | null };
 }
 
-export interface AuthTabMountData {
+interface AuthTabMountData {
   path: string;
   type: string;
   description?: string;
@@ -31,4 +32,22 @@ export interface VisibleAuthMounts {
     type: string;
     options: null | {};
   };
+}
+
+// Auth data returned from each method's login response is
+// normalized so each method's information maps to the same key names
+export interface NormalizedAuthData extends NormalizeAuthResponseKeys {
+  authMethodType: string;
+  expireTime?: string;
+  namespacePath?: string;
+  mfaRequirement?: MfaRequirementApiResponse | null;
+}
+
+// This info is not returned within a consistent key name so each auth method is responsible for
+// normalizing it
+export interface NormalizeAuthResponseKeys {
+  authMountPath: string; // manually added because not a part of the auth response
+  displayName?: string; // if not from the "display_name" key, then this may be set from either "meta" or "metadata"
+  token: string; // was "client_token" or "id" key for some methods
+  ttl: number; // was "lease_duration" key for some methods
 }
