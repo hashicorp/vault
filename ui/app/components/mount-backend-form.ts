@@ -89,7 +89,7 @@ export default class MountBackendForm extends Component<Args> {
   typeChangeSideEffect(type: string) {
     if (this.args.mountCategory !== 'secret') return;
     // If type PKI, set max lease to ~10years
-    this.args.mountModel.config.maxLeaseTtl = type === 'pki' ? '3650d' : 0;
+    this.args.mountModel.config.max_lease_ttl = type === 'pki' ? '3650d' : 0;
   }
 
   checkModelValidity(model: MountModel) {
@@ -114,16 +114,16 @@ export default class MountBackendForm extends Component<Args> {
   }
 
   async saveKvConfig(path: string, formData: SecretsEngineForm['data']) {
-    const { options, kvConfig = {} } = formData;
-    const { maxVersions, casRequired, deleteVersionAfter } = kvConfig;
+    const { options, kv_config = {} } = formData;
+    const { max_versions, cas_required, delete_version_after } = kv_config;
     const isKvV2 = options?.version === 2 && ['kv', 'generic'].includes(this.args.mountModel.engineType);
-    const hasConfig = maxVersions || casRequired || deleteVersionAfter;
+    const hasConfig = max_versions || cas_required || delete_version_after;
 
     if (isKvV2 && hasConfig) {
       try {
         const { canUpdate } = await this.capabilities.for('kvConfig', { path });
         if (canUpdate) {
-          await this.api.secrets.kvV2Configure(path, kvConfig);
+          await this.api.secrets.kvV2Configure(path, kv_config);
         } else {
           this.flashMessages.warning(
             'You do not have access to the config endpoint. The secret engine was mounted, but the configuration settings were not saved.'
@@ -209,6 +209,6 @@ export default class MountBackendForm extends Component<Args> {
   @action
   handleIdentityTokenKeyChange(value: string[] | string): void {
     // if array, it's coming from the search-select component, otherwise it hit the fallback component and will come in as a string.
-    this.args.mountModel.config.identityTokenKey = Array.isArray(value) ? value[0] : value;
+    this.args.mountModel.config.identity_token_key = Array.isArray(value) ? value[0] : value;
   }
 }

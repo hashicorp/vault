@@ -101,23 +101,23 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await page.visit();
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await click(MOUNT_BACKEND_FORM.mountType('pki'));
-    assert.dom('[data-test-input="config.maxLeaseTtl"]').exists();
+    assert.dom('[data-test-input="config.max_lease_ttl"]').exists();
     assert
-      .dom('[data-test-input="config.maxLeaseTtl"] [data-test-ttl-toggle]')
+      .dom('[data-test-input="config.max_lease_ttl"] [data-test-ttl-toggle]')
       .isChecked('Toggle is checked by default');
-    assert.dom('[data-test-input="config.maxLeaseTtl"] [data-test-ttl-value]').hasValue('3650');
-    assert.dom('[data-test-input="config.maxLeaseTtl"] [data-test-select="ttl-unit"]').hasValue('d');
+    assert.dom('[data-test-input="config.max_lease_ttl"] [data-test-ttl-value]').hasValue('3650');
+    assert.dom('[data-test-input="config.max_lease_ttl"] [data-test-select="ttl-unit"]').hasValue('d');
 
     // Go back and choose a different type
     await click(GENERAL.backButton);
     await click(MOUNT_BACKEND_FORM.mountType('database'));
-    assert.dom('[data-test-input="config.maxLeaseTtl"]').exists('3650');
+    assert.dom('[data-test-input="config.max_lease_ttl"]').exists('3650');
     assert
-      .dom('[data-test-input="config.maxLeaseTtl"] [data-test-ttl-toggle]')
+      .dom('[data-test-input="config.max_lease_ttl"] [data-test-ttl-toggle]')
       .isNotChecked('Toggle is unchecked by default');
     await click(GENERAL.toggleInput('Max Lease TTL'));
-    assert.dom('[data-test-input="config.maxLeaseTtl"] [data-test-ttl-value]').hasValue('');
-    assert.dom('[data-test-input="config.maxLeaseTtl"] [data-test-select="ttl-unit"]').hasValue('s');
+    assert.dom('[data-test-input="config.max_lease_ttl"] [data-test-ttl-value]').hasValue('');
+    assert.dom('[data-test-input="config.max_lease_ttl"] [data-test-select="ttl-unit"]').hasValue('s');
   });
 
   test('it throws error if setting duplicate path name', async function (assert) {

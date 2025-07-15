@@ -37,10 +37,10 @@ export default class SecretsEngineMountConfig extends Component<Args> {
       { label: 'Path', value: secretsEngine.path },
       { label: 'Accessor', value: secretsEngine.accessor },
       { label: 'Local', value: secretsEngine.local },
-      { label: 'Seal wrap', value: secretsEngine.sealWrap },
-      { label: 'Default Lease TTL', value: duration([secretsEngine.config.defaultLeaseTtl]) },
-      { label: 'Max Lease TTL', value: duration([secretsEngine.config.maxLeaseTtl]) },
-      { label: 'Identity token key', value: secretsEngine.config.identityTokenKey },
+      { label: 'Seal wrap', value: secretsEngine.seal_wrap },
+      { label: 'Default Lease TTL', value: duration([secretsEngine.config.default_lease_ttl]) },
+      { label: 'Max Lease TTL', value: duration([secretsEngine.config.max_lease_ttl]) },
+      { label: 'Identity token key', value: secretsEngine.config.identity_token_key },
     ];
   }
 }

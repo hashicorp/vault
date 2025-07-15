@@ -6,7 +6,6 @@
 import { click, fillIn, find } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
-import { stringArrayToCamelCase } from 'vault/helpers/string-array-to-camel';
 import { v4 as uuidv4 } from 'uuid';
 import SecretsEngineResource from 'vault/resources/secrets/engine';
 
@@ -58,9 +57,9 @@ export function configUrl(type, backend) {
 const createAwsRootConfig = (accessType = 'iam') => {
   if (accessType === 'wif') {
     return {
-      roleArn: '123-role',
-      identityTokenAudience: '123-audience',
-      identityTokenTtl: 7200,
+      role_arn: '123-role',
+      identity_token_audience: '123-audience',
+      identity_token_ttl: 7200,
     };
   } else if (accessType === 'no-access') {
     // set root config options that are not associated with accessType 'wif' or 'iam'
@@ -70,10 +69,10 @@ const createAwsRootConfig = (accessType = 'iam') => {
   } else {
     return {
       region: 'us-west-2',
-      accessKey: '123-key',
-      iamEndpoint: 'iam-endpoint',
-      stsEndpoint: 'sts-endpoint',
-      maxRetries: 1,
+      access_key: '123-key',
+      iam_endpoint: 'iam-endpoint',
+      sts_endpoint: 'sts-endpoint',
+      max_retries: 1,
     };
   }
 };
@@ -81,14 +80,14 @@ const createAwsRootConfig = (accessType = 'iam') => {
 const createAwsLeaseConfig = () => {
   return {
     lease: '50s',
-    leaseMax: '55s',
+    lease_max: '55s',
   };
 };
 
 const createSshCaConfig = () => {
   return {
-    publicKey: 'public-key',
-    generateSigningKey: true,
+    public_key: 'public-key',
+    generate_signing_key: true,
   };
 };
 
@@ -96,30 +95,30 @@ const createAzureConfig = (accessType = 'generic') => {
   // note: allowed "environment" params for testing https://github.com/hashicorp/vault-plugin-secrets-azure/blob/main/client.go#L35-L37
   if (accessType === 'azure') {
     return {
-      clientSecret: 'client-secret',
-      subscriptionId: 'subscription-id',
-      tenantId: 'tenant-id',
-      clientId: 'client-id',
-      rootPasswordTtl: '1800000s',
+      client_secret: 'client-secret',
+      subscription_id: 'subscription-id',
+      tenant_id: 'tenant-id',
+      client_id: 'client-id',
+      root_password_ttl: '1800000s',
       environment: 'AZUREPUBLICCLOUD',
     };
   } else if (accessType === 'wif') {
     return {
-      subscriptionId: 'subscription-id',
-      tenantId: 'tenant-id',
-      clientId: 'client-id',
-      identityTokenAudience: 'audience',
-      identityTokenTtl: 7200,
-      rootPasswordTtl: '1800000s',
+      subscription_id: 'subscription-id',
+      tenant_id: 'tenant-id',
+      client_id: 'client-id',
+      identity_token_audience: 'audience',
+      identity_token_ttl: 7200,
+      root_password_ttl: '1800000s',
       environment: 'AZUREPUBLICCLOUD',
     };
   } else {
     return {
-      subscriptionId: 'subscription-id-2',
-      tenantId: 'tenant-id-2',
-      clientId: 'client-id-2',
+      subscription_id: 'subscription-id-2',
+      tenant_id: 'tenant-id-2',
+      client_id: 'client-id-2',
       environment: 'AZUREPUBLICCLOUD',
-      rootPasswordTtl: '1800000s',
+      root_password_ttl: '1800000s',
     };
   }
 };
@@ -127,15 +126,15 @@ const createAzureConfig = (accessType = 'generic') => {
 const createGcpConfig = (accessType = 'gcp') => {
   if (accessType === 'wif') {
     return {
-      serviceAccountEmail: 'service-email',
-      identityTokenAudience: 'audience',
-      identityTokenTtl: 7200,
+      service_account_email: 'service-email',
+      identity_token_audience: 'audience',
+      identity_token_ttl: 7200,
     };
   } else {
     return {
       credentials: '{"some-key":"some-value"}',
       ttl: '100s',
-      maxTtl: '101s',
+      max_ttl: '101s',
     };
   }
 };
@@ -169,15 +168,15 @@ export const createConfig = (type) => {
 /* Manually create the configuration by filling in the configuration form */
 export const fillInAwsConfig = async (situation = 'withAccess') => {
   if (situation === 'withAccess') {
-    await fillIn(GENERAL.inputByAttr('accessKey'), 'foo');
-    await fillIn(GENERAL.inputByAttr('secretKey'), 'bar');
+    await fillIn(GENERAL.inputByAttr('access_key'), 'foo');
+    await fillIn(GENERAL.inputByAttr('secret_key'), 'bar');
   }
   if (situation === 'withAccessOptions') {
     await click(GENERAL.button('Root config options'));
     await fillIn(GENERAL.inputByAttr('region'), 'ca-central-1');
-    await fillIn(GENERAL.inputByAttr('iamEndpoint'), 'iam-endpoint');
-    await fillIn(GENERAL.inputByAttr('stsEndpoint'), 'sts-endpoint');
-    await fillIn(GENERAL.inputByAttr('maxRetries'), '3');
+    await fillIn(GENERAL.inputByAttr('iam_endpoint'), 'iam-endpoint');
+    await fillIn(GENERAL.inputByAttr('sts_endpoint'), 'sts-endpoint');
+    await fillIn(GENERAL.inputByAttr('max_retries'), '3');
   }
   if (situation === 'withLease') {
     await click(GENERAL.ttl.toggle('Default Lease TTL'));
@@ -188,17 +187,17 @@ export const fillInAwsConfig = async (situation = 'withAccess') => {
   if (situation === 'withWif') {
     await click(SES.wif.accessType('wif')); // toggle to wif
     await fillIn(GENERAL.inputByAttr('issuer'), `http://bar.${uuidv4()}`); // make random because global setting
-    await fillIn(GENERAL.inputByAttr('roleArn'), 'foo-role');
-    await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'foo-audience');
+    await fillIn(GENERAL.inputByAttr('role_arn'), 'foo-role');
+    await fillIn(GENERAL.inputByAttr('identity_token_audience'), 'foo-audience');
     await click(GENERAL.ttl.toggle('Identity token TTL'));
     await fillIn(GENERAL.ttl.input('Identity token TTL'), '7200');
   }
 };
 
 export const fillInAzureConfig = async (withWif = false) => {
-  await fillIn(GENERAL.inputByAttr('subscriptionId'), 'subscription-id');
-  await fillIn(GENERAL.inputByAttr('tenantId'), 'tenant-id');
-  await fillIn(GENERAL.inputByAttr('clientId'), 'client-id');
+  await fillIn(GENERAL.inputByAttr('subscription_id'), 'subscription-id');
+  await fillIn(GENERAL.inputByAttr('tenant_id'), 'tenant-id');
+  await fillIn(GENERAL.inputByAttr('client_id'), 'client-id');
   // options may already be toggled so check before clicking
   if (!find(GENERAL.inputByAttr('environment'))) {
     await click(GENERAL.button('More options'));
@@ -212,21 +211,21 @@ export const fillInAzureConfig = async (withWif = false) => {
 
   if (withWif) {
     await click(SES.wif.accessType('wif')); // toggle to wif
-    await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'azure-audience');
+    await fillIn(GENERAL.inputByAttr('identity_token_audience'), 'azure-audience');
     await click(GENERAL.ttl.toggle('Identity token TTL'));
     await fillIn(GENERAL.ttl.input('Identity token TTL'), '7200');
   } else {
-    await fillIn(GENERAL.inputByAttr('clientSecret'), 'client-secret');
+    await fillIn(GENERAL.inputByAttr('client_secret'), 'client-secret');
   }
 };
 
 export const fillInGcpConfig = async (withWif = false) => {
   if (withWif) {
     await click(SES.wif.accessType('wif')); // toggle to wif
-    await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'azure-audience');
+    await fillIn(GENERAL.inputByAttr('identity_token_audience'), 'azure-audience');
     await click(GENERAL.ttl.toggle('Identity token TTL'));
     await fillIn(GENERAL.ttl.input('Identity token TTL'), '7200');
-    await fillIn(GENERAL.inputByAttr('serviceAccountEmail'), 'some@email.com');
+    await fillIn(GENERAL.inputByAttr('service_account_email'), 'some@email.com');
   } else {
     await click(GENERAL.button('More options'));
     await click(GENERAL.ttl.toggle('Config TTL'));
@@ -259,24 +258,26 @@ const gcpWifKeys = [...genericWifKeys, 'Service account email'];
 // SSH specific keys
 const sshKeys = ['Private key', 'Public key', 'Generate signing key'];
 
-export const expectedConfigKeys = (type, camelCase = false) => {
+export const expectedConfigKeys = (type, snake_case = false) => {
+  const getKeys = (keys) => (snake_case ? keys.map((str) => str.replace(/\s+/g, '_').toLowerCase()) : keys);
+
   switch (type) {
     case 'aws':
-      return camelCase ? stringArrayToCamelCase(awsKeys) : awsKeys;
+      return getKeys(awsKeys);
     case 'aws-wif':
-      return camelCase ? stringArrayToCamelCase(awsWifKeys) : awsWifKeys;
+      return getKeys(awsWifKeys);
     case 'aws-lease':
-      return camelCase ? stringArrayToCamelCase(awsLeaseKeys) : awsLeaseKeys;
+      return getKeys(awsLeaseKeys);
     case 'azure':
-      return camelCase ? stringArrayToCamelCase(azureKeys) : azureKeys;
+      return getKeys(azureKeys);
     case 'azure-wif':
-      return camelCase ? stringArrayToCamelCase(azureWifKeys) : azureWifKeys;
+      return getKeys(azureWifKeys);
     case 'gcp':
-      return camelCase ? stringArrayToCamelCase(gcpKeys) : gcpKeys;
+      return getKeys(gcpKeys);
     case 'gcp-wif':
-      return camelCase ? stringArrayToCamelCase(gcpWifKeys) : gcpWifKeys;
+      return getKeys(gcpWifKeys);
     case 'ssh':
-      return camelCase ? stringArrayToCamelCase(sshKeys) : sshKeys;
+      return getKeys(sshKeys);
   }
 };
 

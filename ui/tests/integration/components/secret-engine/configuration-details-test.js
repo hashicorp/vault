@@ -22,27 +22,27 @@ module('Integration | Component | SecretEngine::ConfigurationDetails', function 
     this.configs = {
       aws: {
         region: 'us-west-2',
-        accessKey: '123-key',
-        iamEndpoint: 'iam-endpoint',
-        stsEndpoint: 'sts-endpoint',
-        maxRetries: 1,
+        access_key: '123-key',
+        iam_endpoint: 'iam-endpoint',
+        sts_endpoint: 'sts-endpoint',
+        max_retries: 1,
       },
       azure: {
-        clientSecret: 'client-secret',
-        subscriptionId: 'subscription-id',
-        tenantId: 'tenant-id',
-        clientId: 'client-id',
-        rootPasswordTtl: '1800000s',
+        client_secret: 'client-secret',
+        subscription_id: 'subscription-id',
+        tenant_id: 'tenant-id',
+        client_id: 'client-id',
+        root_password_ttl: '1800000s',
         environment: 'AZUREPUBLICCLOUD',
       },
       gcp: {
         credentials: '{"some-key":"some-value"}',
         ttl: '100s',
-        maxTtl: '101s',
+        max_ttl: '101s',
       },
       ssh: {
-        publicKey: 'public-key',
-        generateSigningKey: true,
+        public_key: 'public-key',
+        generate_signing_key: true,
       },
     };
   });
