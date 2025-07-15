@@ -34,7 +34,7 @@ export default class CapabilitiesService extends Service {
   Users don't always have access to the capabilities-self endpoint in the current namespace.
   This can happen when logging in to a namespace and then navigating to a child namespace.
   The "relativeNamespace" refers to the namespace the user is currently in and attempting to access capabilities for.
-  Prepending "relativeNamespace" to the path while making the request to the "userRootNamespace"
+  Prepending "relativeNamespace" to the path while making the request in the "userRootNamespace" context (meaning, "userRootNamespace" is the namespace header)
   ensures we are querying capabilities-self where the user is most likely to have their policy/permissions.
   */
   relativeNamespacePath(path: string) {
@@ -83,16 +83,13 @@ export default class CapabilitiesService extends Service {
   }
 
   async fetch(paths: string[]): Promise<CapabilitiesMap> {
-    const payload = {
-      paths: paths.map((path) => this.relativeNamespacePath(path)),
-      namespace: sanitizePath(this.namespace.userRootNamespace),
-    };
-    if (!payload.namespace) {
-      delete payload.namespace;
-    }
+    const payload = { paths: paths.map((path) => this.relativeNamespacePath(path)) };
 
     try {
-      const { data } = await this.api.sys.queryTokenSelfCapabilities(payload);
+      const { data } = await this.api.sys.queryTokenSelfCapabilities(
+        payload,
+        this.api.buildHeaders({ namespace: sanitizePath(this.namespace.userRootNamespace) })
+      );
       return this.mapCapabilities(paths, data as CapabilitiesData);
     } catch (e) {
       // default to true if there is a problem fetching the model
