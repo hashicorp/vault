@@ -17,7 +17,7 @@ fail() {
 [[ -z "$LDAPS_PORT" ]] && fail "LDAPS_PORT env variable has not been set"
 
 # Pulling image
-CONTAINER_CMD="sudo docker"
+CONTAINER_CMD="sudo podman"
 LDAP_DOCKER_NAME="docker.io/osixia/openldap:${LDAP_CONTAINER_VERSION}"
 echo "Pulling image: ${LDAP_DOCKER_NAME}"
 $CONTAINER_CMD pull "${LDAP_DOCKER_NAME}"
