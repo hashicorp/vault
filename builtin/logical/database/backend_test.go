@@ -1665,8 +1665,8 @@ func TestBackend_GetConnectionMetrics(t *testing.T) {
 				cassandraConfig,
 			},
 			expectedCounts: map[string]int{
-				pluginconsts.DbPostgresqlPlugin: 1,
-				pluginconsts.DbCassandraPlugin:  1,
+				pluginconsts.DbPostgresqlPluginType: 1,
+				pluginconsts.DbCassandraPluginType:  1,
 			},
 		},
 		{
@@ -1675,7 +1675,7 @@ func TestBackend_GetConnectionMetrics(t *testing.T) {
 				postgresConfig,
 			},
 			expectedCounts: map[string]int{
-				pluginconsts.DbPostgresqlPlugin: 1,
+				pluginconsts.DbPostgresqlPluginType: 1,
 			},
 		},
 		{
@@ -1692,8 +1692,8 @@ func TestBackend_GetConnectionMetrics(t *testing.T) {
 				cassandraConfigV2,
 			},
 			expectedCounts: map[string]int{
-				pluginconsts.DbPostgresqlPlugin: 2,
-				pluginconsts.DbCassandraPlugin:  2,
+				pluginconsts.DbPostgresqlPluginType: 2,
+				pluginconsts.DbCassandraPluginType:  2,
 			},
 		},
 	}
