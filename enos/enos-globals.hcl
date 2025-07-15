@@ -22,7 +22,7 @@ globals {
   // Different distros may require different packages, or use different aliases for the same package
   distro_packages = {
     amzn = {
-      "2"    = ["nc", "openldap-clients", "podman"]
+      "2"    = ["nc", "openldap-clients", "epel-release", "podman"]
       "2023" = ["nc", "openldap-clients", "podman"]
     }
     leap = {
@@ -39,7 +39,6 @@ globals {
       "15.6" = ["netcat-openbsd", "openssl", "openldap2-client", "podman"]
     }
     ubuntu = {
-      "20.04" = ["netcat", "ldap-utils", "podman"]
       "22.04" = ["netcat", "ldap-utils", "podman"]
       "24.04" = ["netcat-openbsd", "ldap-utils", "podman"]
     }
