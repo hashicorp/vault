@@ -1,0 +1,63 @@
+---
+layout: docs
+page_title: Verified protocols
+description: >-
+  Reference list of verified communication protocols
+---
+
+# Verified protocols
+
+To support a variety of use cases, Vault verifies protocol implementation and
+integrations with partner products, appliances, and applications that support
+advanced data protection features.
+
+## IPv6 validation and compliance ((#ipv6))
+
+[Vault Enterprise supports IPv6](https://www.hashicorp.com/trust/compliance/vault-enterprise)
+in compliance with OMB Mandate M-21-07 and Federal IPv6 policy requirements
+for the following operating systems and storage backends.
+
+**Self-attested testing covers functionality related to HSM, FIPS 140-3, and
+HSM/FIPS 140-3.**
+
+## OS validation
+
+Operating system | OS version                     | Validation   | Vault version
+---------------- | ------------------------------ | ------------ | -----------------------
+FreeBSD          | N/A                            | N/A           | Untested
+Linux            | Amazon Linux (versions 2023)   | Self-attested | ent-1.18+
+Linux            | openSUSE Leap (version 15.6)   | Self-attested | ent-1.18+
+Linux            | RHEL (versions 8.10, 9.4)      | Self-attested | ent-1.18+
+Linux            | SUSE SLES (version 15.6)       | Self-attested | ent-1.18+
+Linux            | Ubuntu (versions 20.04, 24.04) | Self-attested | ent-1.18+
+MacOS            | N/A                            | N/A           | Untested
+NetBSD           | N/A                            | N/A           | Untested
+OpenBSD          | N/A                            | N/A           | Untested
+Windows          | N/A                            | N/A           | Untested
+<span style={{display:'block', textAlign:'right', fontSize:'12px'}}>
+  <em>
+    <b>Last Updated</b>:
+    October 14, 2024
+  </em>
+</span>
+
+<Note title="IPv6 limitations for Windows">
+
+  IPv6 does not work with external plugins (plugins not built into Vault) when
+  running on Windows in server mode because they default to IPv4 and Vault
+  cannot override that behavior.
+
+</Note>
+
+## Backend storage validation
+
+Backend storage system  | Validation    | Vault version
+----------------------- | ------------- | -----------------------
+Consul                  | N/A           | Untested
+Integrated Raft storage | Self-attested | ent-1.18+
+<span style={{display:'block', textAlign:'right', fontSize:'12px'}}>
+  <em>
+    <b>Last Updated</b>:
+    October 14, 2024
+  </em>
+</span>

@@ -42,7 +42,7 @@ module('Integration | Component | edit form', function (hooks) {
     const flash = this.owner.lookup('service:flash-messages');
     this.flashSuccessSpy = sinon.spy(flash, 'success');
     await this.renderComponent();
-    await click('[data-test-edit-form-submit]');
+    await click(GENERAL.submitButton);
     const { saveType, model } = this.onSave.lastCall.args[0];
     const [flashMessage] = this.flashSuccessSpy.lastCall.args;
     assert.strictEqual(flashMessage, 'Saved!');

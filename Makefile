@@ -46,6 +46,12 @@ dev-dynamic: BUILD_TAGS+=testonly
 dev-dynamic: prep
 	@CGO_ENABLED=1 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 
+# quickdev creates binaries for testing Vault locally like dev, but skips
+# the prep step.
+quickdev: BUILD_TAGS+=testonly
+quickdev:
+	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
+
 # *-mem variants will enable memory profiling which will write snapshots of heap usage
 # to $TMP/vaultprof every 5 minutes. These can be analyzed using `$ go tool pprof <profile_file>`.
 # Note that any build can have profiling added via: `$ BUILD_TAGS=memprofiler make ...`
@@ -221,8 +227,8 @@ proto: check-tools-external
 	buf generate
 
 	# No additional sed expressions should be added to this list. Going forward
-	# we should just use the variable names choosen by protobuf. These are left
-	# here for backwards compatability, namely for SDK compilation.
+	# we should just use the variable names chosen by protobuf. These are left
+	# here for backwards compatibility, namely for SDK compilation.
 	$(SED) -i -e 's/Id/ID/' -e 's/SPDX-License-IDentifier/SPDX-License-Identifier/' vault/request_forwarding_service.pb.go
 	$(SED) -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' -e 's/SPDX-License-IDentifier/SPDX-License-Identifier/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go vault/activity/activity_log.pb.go
 
@@ -297,6 +303,10 @@ check-tools-external:
 check-tools-internal:
 	@$(CURDIR)/tools/tools.sh check-internal
 
+.PHONY: check-tools-pipeline
+check-tools-pipeline:
+	@$(CURDIR)/tools/tools.sh check-pipeline
+
 check-vault-in-path:
 	@VAULT_BIN=$$(command -v vault) || { echo "vault command not found"; exit 1; }; \
 		[ -x "$$VAULT_BIN" ] || { echo "$$VAULT_BIN not executable"; exit 1; }; \
@@ -313,6 +323,10 @@ tools-external:
 .PHONY: tools-internal
 tools-internal:
 	@$(CURDIR)/tools/tools.sh install-internal
+
+.PHONY: tools-pipeline
+tools-pipeline:
+	@$(CURDIR)/tools/tools.sh install-pipeline
 
 mysql-database-plugin:
 	@CGO_ENABLED=0 $(GO_CMD) build -o bin/mysql-database-plugin ./plugins/database/mysql/mysql-database-plugin
@@ -368,10 +382,6 @@ ci-get-revision:
 ci-get-version-package:
 	@$(CURDIR)/scripts/ci-helper.sh version-package
 
-.PHONY: ci-install-external-tools
-ci-install-external-tools:
-	@$(CURDIR)/scripts/ci-helper.sh install-external-tools
-
 .PHONY: ci-prepare-ent-legal
 ci-prepare-ent-legal:
 	@$(CURDIR)/scripts/ci-helper.sh prepare-ent-legal
@@ -379,10 +389,6 @@ ci-prepare-ent-legal:
 .PHONY: ci-prepare-ce-legal
 ci-prepare-ce-legal:
 	@$(CURDIR)/scripts/ci-helper.sh prepare-ce-legal
-
-.PHONY: ci-update-external-tool-modules
-ci-update-external-tool-modules:
-	@$(CURDIR)/scripts/ci-helper.sh update-external-tool-modules
 
 .PHONY: ci-copywriteheaders
 ci-copywriteheaders:

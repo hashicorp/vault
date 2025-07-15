@@ -23,20 +23,21 @@ var (
 type SecretsTuneCommand struct {
 	*BaseCommand
 
-	flagAuditNonHMACRequestKeys   []string
-	flagAuditNonHMACResponseKeys  []string
-	flagDefaultLeaseTTL           time.Duration
-	flagDescription               string
-	flagListingVisibility         string
-	flagMaxLeaseTTL               time.Duration
-	flagPassthroughRequestHeaders []string
-	flagAllowedResponseHeaders    []string
-	flagOptions                   map[string]string
-	flagVersion                   int
-	flagPluginVersion             string
-	flagAllowedManagedKeys        []string
-	flagDelegatedAuthAccessors    []string
-	flagIdentityTokenKey          string
+	flagAuditNonHMACRequestKeys    []string
+	flagAuditNonHMACResponseKeys   []string
+	flagDefaultLeaseTTL            time.Duration
+	flagDescription                string
+	flagListingVisibility          string
+	flagMaxLeaseTTL                time.Duration
+	flagPassthroughRequestHeaders  []string
+	flagAllowedResponseHeaders     []string
+	flagOptions                    map[string]string
+	flagVersion                    int
+	flagPluginVersion              string
+	flagAllowedManagedKeys         []string
+	flagDelegatedAuthAccessors     []string
+	flagIdentityTokenKey           string
+	flagTrimRequestTrailingSlashes BoolPtr
 }
 
 func (c *SecretsTuneCommand) Synopsis() string {
@@ -175,6 +176,12 @@ func (c *SecretsTuneCommand) Flags() *FlagSets {
 		Usage:   "Select the key used to sign plugin identity tokens.",
 	})
 
+	f.BoolPtrVar(&BoolPtrVar{
+		Name:   flagNameTrimRequestTrailingSlashes,
+		Target: &c.flagTrimRequestTrailingSlashes,
+		Usage:  "Whether to trim trailing slashes for incoming requests to this mount",
+	})
+
 	return set
 }
 
@@ -266,6 +273,10 @@ func (c *SecretsTuneCommand) Run(args []string) int {
 
 		if fl.Name == flagNameIdentityTokenKey {
 			mountConfigInput.IdentityTokenKey = c.flagIdentityTokenKey
+		}
+		if fl.Name == flagNameTrimRequestTrailingSlashes && c.flagTrimRequestTrailingSlashes.IsSet() {
+			val := c.flagTrimRequestTrailingSlashes.Get()
+			mountConfigInput.TrimRequestTrailingSlashes = &val
 		}
 	})
 

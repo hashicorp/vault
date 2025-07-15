@@ -1,0 +1,86 @@
+---
+layout: docs
+page_title: "Troubleshoot ADFS and SAML: invalid BoundSubjects"
+description: >-
+  Fix connection problems in Vault due to an invalid BoundSubject entry when
+  using Active Directory Federation Services (ADFS) as an SAML provider.
+---
+
+# Clients cannot connect to Vault: invalid `BoundSubjects`
+
+Troubleshoot problems where the debugging data suggests a problem with bound
+subjects.
+
+
+
+## Example debugging data
+
+<CodeBlockConfig hideClipboard highlight="12">
+
+```json
+[DEBUG] auth.saml.auth_saml_b1886dfe: validating user context for role: api=callback role_name=default-saml
+role="{
+  "token_bound_cidrs":null,
+  "token_explicit_max_ttl":0,
+  "token_max_ttl":0,
+  "token_no_default_policy":false,
+  "token_num_uses":0,
+  "token_period":0,
+  "token_policies":["default"],
+  "token_type":0,
+  "token_ttl":0,
+  "BoundSubjects":["*@example.com *@ext.example.com"],
+  "BoundSubjectsType":"glob",
+  "BoundAttributes":{"groups":["VaultAdmin","VaultUser"]},
+  "BoundAttributesType":"string",
+  "GroupsAttribute":"groups"
+}"
+user context="{
+  "attributes":
+  {
+    "groups":["Domain Users","VaultAdmin"],
+    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress":["rs@example.com"]
+  },
+  "subject":"rs@example.com"
+}"
+```
+
+</CodeBlockConfig>
+
+
+
+## Analysis
+
+The SAML role expects a single string with a comma separated list of relevant
+domains for `BoundSubjects`, but the provided string is malformed.
+
+
+## Solution
+
+To resolve the problem, update your SAML role and correct the `BoundSubjects`
+string:
+
+```shell-session
+$ vault write auth/<SAML_PLUGIN_PATH>/role/<ADFS_ROLE> \
+bound_subjects="<CORRECTED_DOMAIN_LIST>"
+```
+
+For example:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault write auth/saml/role/adfs-default \
+bound_subjects="*@example.com, *@ext.example.com"
+```
+
+</CodeBlockConfig>
+
+
+
+
+## Additional resources
+
+- [SAML auth method Documentation](/vault/docs/auth/saml)
+- [SAML API Documentation](/vault/api-docs/auth/saml)
+- [Set up an AD FS lab environment](https://learn.microsoft.com/en-us/windows-server/identity/ad-fs/operations/set-up-an-ad-fs-lab-environment)

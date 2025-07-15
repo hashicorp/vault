@@ -6,9 +6,11 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
-import { render } from '@ember/test-helpers';
+import { render, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import sinon from 'sinon';
 /* eslint-disable no-useless-escape */
 
 module('Integration | Component | kv-v2 | KvPathsCard', function (hooks) {
@@ -19,9 +21,19 @@ module('Integration | Component | kv-v2 | KvPathsCard', function (hooks) {
     this.backend = 'kv-engine';
     this.path = 'my-secret';
     this.isCondensed = false;
+    this.clipboardSpy = sinon.stub(navigator.clipboard, 'writeText').resolves();
 
-    this.assertClipboard = (assert, element, expected) => {
-      assert.dom(element).hasAttribute('data-test-copy-button', expected);
+    this.assertClipboard = async (assert, expected, index) => {
+      const buttons = findAll(GENERAL.copyButton);
+      await click(buttons[index]);
+      assert.true(this.clipboardSpy.called, 'clipboard.writeText was called');
+
+      const call = this.clipboardSpy.getCall(index);
+      assert.strictEqual(
+        call.args[0],
+        expected,
+        `Expected clipboard text to match: ${expected} (at index ${index})`
+      );
     };
 
     this.renderComponent = async () => {
@@ -34,14 +46,18 @@ module('Integration | Component | kv-v2 | KvPathsCard', function (hooks) {
     };
   });
 
+  hooks.afterEach(function () {
+    this.clipboardSpy.restore(); // Restore original clipboard
+  });
+
   test('it renders condensed version', async function (assert) {
     this.isCondensed = true;
 
     await this.renderComponent();
 
     assert.dom('[data-test-component="info-table-row"] .helper-text').doesNotExist('subtext does not render');
-    assert.dom('[data-test-label-div]').hasClass('is-one-quarter');
-    assert.dom(PAGE.infoRowValue('API path for metadata')).doesNotExist();
+
+    assert.dom('[data-test-component="info-table-row"] div').hasClass('is-one-quarter');
     assert.dom(PAGE.paths.codeSnippet('cli')).doesNotExist();
     assert.dom(PAGE.paths.codeSnippet('api')).doesNotExist();
 
@@ -49,9 +65,9 @@ module('Integration | Component | kv-v2 | KvPathsCard', function (hooks) {
       { label: 'API path', expected: `/v1/${this.backend}/data/${this.path}` },
       { label: 'CLI path', expected: `-mount="${this.backend}" "${this.path}"` },
     ];
-    for (const path of paths) {
+    for (const [index, path] of paths.entries()) {
       assert.dom(PAGE.infoRowValue(path.label)).hasText(path.expected);
-      this.assertClipboard(assert, PAGE.paths.copyButton(path.label), path.expected);
+      await this.assertClipboard(assert, path.expected, index);
     }
   });
 
@@ -59,7 +75,7 @@ module('Integration | Component | kv-v2 | KvPathsCard', function (hooks) {
     await this.renderComponent();
 
     assert.dom('[data-test-component="info-table-row"] .helper-text').exists('subtext renders');
-    assert.dom('[data-test-label-div]').hasClass('is-one-third');
+    assert.dom('[data-test-component="info-table-row"] div').hasClass('is-one-third');
     assert.dom(PAGE.infoRowValue('API path for metadata')).exists();
     assert.dom(PAGE.paths.codeSnippet('cli')).exists();
     assert.dom(PAGE.paths.codeSnippet('api')).exists();
@@ -74,9 +90,9 @@ module('Integration | Component | kv-v2 | KvPathsCard', function (hooks) {
 
     await this.renderComponent();
 
-    for (const path of paths) {
+    for (const [index, path] of paths.entries()) {
       assert.dom(PAGE.infoRowValue(path.label)).hasText(path.expected);
-      this.assertClipboard(assert, PAGE.paths.copyButton(path.label), path.expected);
+      await this.assertClipboard(assert, path.expected, index);
     }
   });
 
@@ -99,9 +115,9 @@ module('Integration | Component | kv-v2 | KvPathsCard', function (hooks) {
 
     await this.renderComponent();
 
-    for (const path of paths) {
+    for (const [index, path] of paths.entries()) {
       assert.dom(PAGE.infoRowValue(path.label)).hasText(path.expected);
-      this.assertClipboard(assert, PAGE.paths.copyButton(path.label), path.expected);
+      await this.assertClipboard(assert, path.expected, index);
     }
   });
 

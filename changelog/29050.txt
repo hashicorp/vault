@@ -1,0 +1,4 @@
+```release-note:bug
+core: fix bug in seal unwrapper that caused high storage latency in Vault CE. For every storage read request, the
+seal unwrapper was performing the read twice, and would also issue an unnecessary storage write.
+```

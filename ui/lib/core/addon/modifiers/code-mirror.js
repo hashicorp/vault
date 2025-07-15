@@ -76,7 +76,7 @@ export default class CodeMirrorModifier extends Modifier {
       readOnly: namedArgs.readOnly || false,
       theme: namedArgs.theme || 'hashi',
       value: namedArgs.content || '',
-      viewportMargin: namedArgs.viewportMargin || '',
+      viewportMargin: namedArgs.viewportMargin || 10,
       autoRefresh: namedArgs.autoRefresh,
     });
 

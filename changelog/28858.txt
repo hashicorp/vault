@@ -1,0 +1,3 @@
+```release-note:feature
+**Product Usage Reporting**: Added product usage reporting, which collects anonymous, numerical, non-sensitive data about Vault feature usage, and adds it to the existing utilization reports.
+```

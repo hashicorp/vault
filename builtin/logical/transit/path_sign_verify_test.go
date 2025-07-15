@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 	"testing"
@@ -15,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/mitchellh/mapstructure"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -365,6 +367,103 @@ func validatePublicKey(t *testing.T, in string, sig string, pubKeyRaw []byte, ex
 	}
 	if ak.PublicKey != base64.StdEncoding.EncodeToString(pubKeyRaw) {
 		t.Fatalf("got incorrect public key; got %q, expected %q\nasymKey struct is\n%#v", ak.PublicKey, pubKeyRaw, ak)
+	}
+}
+
+// TestTransit_SignVerify_Ed25519Behavior makes sure the options on ENT for a
+// Ed25519ph/ctx signature fail on CE and ENT if invalid
+func TestTransit_SignVerify_Ed25519Behavior(t *testing.T) {
+	b, storage := createBackendWithSysView(t)
+
+	// First create a key
+	req := &logical.Request{
+		Storage:   storage,
+		Operation: logical.UpdateOperation,
+		Path:      "keys/foo",
+		Data: map[string]interface{}{
+			"type": "ed25519",
+		},
+	}
+	_, err := b.HandleRequest(context.Background(), req)
+	require.NoError(t, err, "failed creating ed25519 key")
+
+	tests := []struct {
+		name       string
+		args       map[string]interface{}
+		worksOnEnt bool
+	}{
+		{"sha2-512 only", map[string]interface{}{"hash_algorithm": "sha2-512"}, false},
+		{"prehashed only", map[string]interface{}{"prehashed": "true"}, false},
+		{"incorrect input for ph args", map[string]interface{}{"prehashed": "true", "hash_algorithm": "sha2-512"}, false},
+		{"context too long", map[string]interface{}{"signature_context": strings.Repeat("x", 1024)}, false},
+		{
+			name: "ctx-signature",
+			args: map[string]interface{}{
+				"signature_context": "dGVzdGluZyBjb250ZXh0Cg==",
+			},
+			worksOnEnt: true,
+		},
+		{
+			name: "ph-signature",
+			args: map[string]interface{}{
+				"input":             "3a81oZNherrMQXNJriBBMRLm+k6JqX6iCp7u5ktV05ohkpkqJ0/BqDa6PCOj/uu9RU1EI2Q86A4qmslPpUyknw==",
+				"prehashed":         "true",
+				"hash_algorithm":    "sha2-512",
+				"signature_context": "dGVzdGluZyBjb250ZXh0Cg==",
+			},
+			worksOnEnt: true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			signData := map[string]interface{}{"input": "dGhlIHF1aWNrIGJyb3duIGZveA=="}
+
+			// if tc.args specifies input, this should overwrite our static value above.
+			maps.Copy(signData, tc.args)
+
+			req = &logical.Request{
+				Storage:   storage,
+				Operation: logical.UpdateOperation,
+				Path:      "sign/foo",
+				Data:      signData,
+			}
+
+			signSignature := "YmFkIHNpZ25hdHVyZQo=" // "bad signature" but is overwritten if sign works
+			resp, err := b.HandleRequest(context.Background(), req)
+			if constants.IsEnterprise && tc.worksOnEnt {
+				require.NoError(t, err, "expected sign to work on ENT but failed: resp: %v", resp)
+				require.NotNil(t, resp, "sign should have had non-nil response on ENT")
+				require.False(t, resp.IsError(), "sign expected to work on ENT but failed")
+				signSignature = resp.Data["signature"].(string)
+				require.NotEmpty(t, signSignature, "sign expected to work on ENT but was empty")
+			} else {
+				require.ErrorContains(t, err, "invalid request", "expected sign request to fail with invalid request")
+			}
+
+			verifyData := map[string]interface{}{
+				"input":     signData["input"],
+				"signature": signSignature,
+			}
+
+			// if tc.args specifies input, this should overwrite our static value above.
+			maps.Copy(verifyData, tc.args)
+
+			req = &logical.Request{
+				Storage:   storage,
+				Operation: logical.UpdateOperation,
+				Path:      "verify/foo",
+				Data:      verifyData,
+			}
+			resp, err = b.HandleRequest(context.Background(), req)
+			if constants.IsEnterprise && tc.worksOnEnt {
+				require.NoError(t, err, "verify expected to work on ENT but failed: resp: %v", resp)
+				require.NotNil(t, resp, "verify should have had non-nil response on ENT")
+				require.False(t, resp.IsError(), "expected verify to work on ENT but failed")
+				require.True(t, resp.Data["valid"].(bool), "signature verification should have worked")
+			} else {
+				require.ErrorContains(t, err, "invalid request", "expected verify request to fail with invalid request")
+			}
+		})
 	}
 }
 

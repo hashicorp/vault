@@ -1,0 +1,129 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Toolbar>
+  <ToolbarFilters>
+    <SearchSelect
+      @id="filter-by-engine-type"
+      @options={{this.secretEngineArrayByType}}
+      @selectLimit="1"
+      @disallowNewItems={{true}}
+      @fallbackComponent="input-search"
+      @onChange={{this.filterEngineType}}
+      @placeholder="Filter by engine type"
+      @displayInherit={{true}}
+      @inputValue={{if this.selectedEngineType (array this.selectedEngineType)}}
+      @disabled={{if this.selectedEngineName true false}}
+      class="is-marginless"
+    />
+    <SearchSelect
+      @id="filter-by-engine-name"
+      @options={{this.secretEngineArrayByName}}
+      @selectLimit="1"
+      @disallowNewItems={{true}}
+      @fallbackComponent="input-search"
+      @onChange={{this.filterEngineName}}
+      @placeholder="Filter by engine name"
+      @displayInherit={{true}}
+      @inputValue={{if this.selectedEngineName (array this.selectedEngineName)}}
+      class="is-marginless has-left-padding-s"
+    />
+  </ToolbarFilters>
+  <ToolbarActions>
+    <ToolbarLink @route="vault.cluster.settings.mount-secret-backend" @type="add" data-test-enable-engine>
+      Enable new engine
+    </ToolbarLink>
+  </ToolbarActions>
+</Toolbar>
+
+{{#each this.sortedDisplayableBackends as |backend|}}
+  <LinkedBlock
+    @params={{array backend.backendLink backend.id}}
+    class="list-item-row linked-block-item is-no-underline"
+    data-test-secrets-backend-link={{backend.id}}
+    @disabled={{not backend.isSupportedBackend}}
+  >
+    <div>
+      <div class="has-text-grey is-grid align-items-center linked-block-title">
+        {{#if backend.icon}}
+          <Hds::TooltipButton
+            @text={{if
+              backend.isSupportedBackend
+              (concat
+                (get (engines-display-data backend.type) "displayName")
+                (if
+                  (eq backend.version 2)
+                  " version 2"
+                  (if (and (eq backend.version 1) (eq backend.type "kv")) " version 1" "")
+                )
+              )
+              "The UI only supports configuration views for these secret engines. The CLI must be used to manage other engine resources."
+            }}
+            aria-label="Type of backend"
+          >
+            <Icon @name={{backend.icon}} class="has-text-grey-light" />
+          </Hds::TooltipButton>
+        {{/if}}
+        {{#if backend.path}}
+          {{#if backend.isSupportedBackend}}
+            <LinkTo
+              @route={{backend.backendLink}}
+              @model={{backend.id}}
+              class="has-text-black has-text-weight-semibold overflow-wrap"
+              data-test-secret-path={{backend.path}}
+            >
+              {{backend.path}}
+            </LinkTo>
+          {{else}}
+            <span data-test-secret-path={{backend.path}}>{{backend.path}}</span>
+          {{/if}}
+        {{/if}}
+      </div>
+      <code class="has-text-grey is-size-8" data-test-engine-accessor>
+        {{backend.accessor}}
+        {{backend.runningPluginVersion}}
+      </code>
+      {{#if backend.description}}
+        <ReadMore>
+          {{backend.description}}
+        </ReadMore>
+      {{/if}}
+    </div>
+    <div class="linked-block-popup-menu">
+      <Hds::Dropdown @isInline={{true}} as |dd|>
+        <dd.ToggleIcon
+          @icon="more-horizontal"
+          @text="{{if backend.isSupportedBackend 'supported' 'unsupported'}} secrets engine menu"
+          @hasChevron={{false}}
+          data-test-popup-menu-trigger
+        />
+        <dd.Interactive
+          @route={{backend.backendConfigurationLink}}
+          @model={{backend.id}}
+          data-test-popup-menu="view-configuration"
+        >
+          View configuration
+        </dd.Interactive>
+        {{#if (not-eq backend.type "cubbyhole")}}
+          <dd.Interactive
+            @color="critical"
+            {{on "click" (fn (mut this.engineToDisable) backend)}}
+            data-test-popup-menu="disable-engine"
+          >Disable</dd.Interactive>
+        {{/if}}
+      </Hds::Dropdown>
+    </div>
+  </LinkedBlock>
+{{/each}}
+
+{{#if this.engineToDisable}}
+  <ConfirmModal
+    @color="critical"
+    @confirmMessage="Any data in this engine will be permanently deleted."
+    @confirmTitle="Disable engine?"
+    @onClose={{fn (mut this.engineToDisable) null}}
+    @onConfirm={{perform this.disableEngine this.engineToDisable}}
+  />
+{{/if}}

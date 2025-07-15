@@ -4,12 +4,12 @@
  */
 
 import Component from '@glimmer/component';
-import type { ByMonthClients, TotalClients } from 'core/utils/client-count-utils';
-import ClientsVersionHistoryModel from 'vault/vault/models/clients/version-history';
+import type { ByMonthNewClients, TotalClients } from 'core/utils/client-count-utils';
+import type ClientsVersionHistoryModel from 'vault/vault/models/clients/version-history';
 
 interface Args {
   isSecretsSyncActivated: boolean;
-  byMonthActivityData: ByMonthClients[];
+  byMonthNewClients: ByMonthNewClients[];
   isHistoricalMonth: boolean;
   isCurrentMonth: boolean;
   runningTotals: TotalClients;
@@ -27,16 +27,13 @@ export default class RunningTotal extends Component<Args> {
   }
 
   get runningTotalData() {
-    return this.args.byMonthActivityData.map((monthly) => ({
+    return this.args.byMonthNewClients.map((monthly) => ({
       ...monthly,
-      new_clients: monthly.new_clients?.clients,
+      new_clients: monthly.clients,
     }));
   }
 
   get chartLegend() {
-    return [
-      { key: 'clients', label: 'total clients' },
-      { key: 'new_clients', label: 'new clients' },
-    ];
+    return [{ key: 'new_clients', label: 'new clients' }];
   }
 }

@@ -51,7 +51,7 @@ interface Args {
  */
 export default class PkiGenerateRootComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
-  @service declare readonly router: RouterService;
+  @service('app-router') declare readonly router: RouterService;
 
   @tracked modelValidations: ValidationMap | null = null;
   @tracked errorBanner = '';

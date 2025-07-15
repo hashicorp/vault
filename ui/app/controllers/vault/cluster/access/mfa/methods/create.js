@@ -19,9 +19,9 @@ export default class MfaMethodCreateController extends Controller {
   queryParams = ['type'];
   methods = [
     { name: 'TOTP', icon: 'history' },
-    { name: 'Duo', icon: 'duo' },
+    { name: 'Duo', icon: 'duo-color' },
     { name: 'Okta', icon: 'okta-color' },
-    { name: 'PingID', icon: 'pingid' },
+    { name: 'PingID', icon: 'ping-identity-color' },
   ];
 
   @tracked type = null;
@@ -96,8 +96,9 @@ export default class MfaMethodCreateController extends Controller {
         // first save method
         yield this.method.save();
         if (this.enforcement) {
-          // mfa_methods is type PromiseManyArray so slice in necessary to convert it to an Array
-          this.enforcement.mfa_methods = addToArray(this.enforcement.mfa_methods.slice(), this.method);
+          // mfa_methods is type PromiseManyArray. Array methods like slice are no longer allowed on PromiseManyArray. We must yield the promise first, then call the method.
+          const mfaMethods = yield this.enforcement.mfa_methods;
+          this.enforcement.mfa_methods = addToArray(mfaMethods.slice(), this.method);
           try {
             // now save enforcement and catch error separately
             yield this.enforcement.save();

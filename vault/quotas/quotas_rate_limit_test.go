@@ -14,10 +14,8 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/sdk/helper/logging"
-	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/atomic"
-	"go.uber.org/goleak"
 )
 
 type clientResult struct {
@@ -31,7 +29,7 @@ func TestNewRateLimitQuota(t *testing.T) {
 		rlq       *RateLimitQuota
 		expectErr bool
 	}{
-		{"valid rate", NewRateLimitQuota("test-rate-limiter", "qa", "/foo/bar", "", "", false, time.Second, 0, 16.7), false},
+		{"valid rate", NewRateLimitQuota("test-rate-limiter", "qa", "/foo/bar", "", "", GroupByIp, false, time.Second, 0, 16.7, 0), false},
 	}
 
 	for _, tc := range testCases {
@@ -48,7 +46,7 @@ func TestNewRateLimitQuota(t *testing.T) {
 }
 
 func TestRateLimitQuota_Close(t *testing.T) {
-	rlq := NewRateLimitQuota("test-rate-limiter", "qa", "/foo/bar", "", "", false, time.Second, time.Minute, 16.7)
+	rlq := NewRateLimitQuota("test-rate-limiter", "qa", "/foo/bar", "", "", GroupByIp, false, time.Second, 0, 16.7, 0)
 	require.NoError(t, rlq.initialize(logging.NewVaultLogger(log.Trace), metricsutil.BlackholeSink()))
 	require.NoError(t, rlq.close(context.Background()))
 
@@ -217,17 +215,20 @@ func TestRateLimitQuota_Allow_WithBlock(t *testing.T) {
 	}()
 }
 
-func TestRateLimitQuota_Update(t *testing.T) {
-	defer goleak.VerifyNone(t)
-	qm, err := NewManager(logging.NewVaultLogger(log.Trace), nil, metricsutil.BlackholeSink(), true)
-	require.NoError(t, err)
+// TestRateLimitQuota_retryAfterSeconds tests the that retryAfterSeconds rounds
+// up the number of seconds until the block ends
+func TestRateLimitQuota_retryAfterSeconds(t *testing.T) {
+	quota := NewRateLimitQuota("quota1", "", "", "", "", GroupByIp, false, time.Second, 0, 10, 0)
+	now := time.Now()
+	t.Run("less than 1", func(t *testing.T) {
+		blockedUntil := time.Now().Add(200 * time.Millisecond)
+		retryAfter := quota.retryAfterSeconds(now, blockedUntil)
+		require.Equal(t, "1", retryAfter)
+	})
 
-	view := &logical.InmemStorage{}
-	require.NoError(t, qm.Setup(context.Background(), view, nil))
-
-	quota := NewRateLimitQuota("quota1", "", "", "", "", false, time.Second, 0, 10)
-	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, true))
-	require.NoError(t, qm.SetQuota(context.Background(), TypeRateLimit.String(), quota, true))
-
-	require.Nil(t, quota.close(context.Background()))
+	t.Run("more than 1", func(t *testing.T) {
+		blockedUntil := time.Now().Add(1300 * time.Millisecond)
+		retryAfter := quota.retryAfterSeconds(now, blockedUntil)
+		require.Equal(t, "2", retryAfter)
+	})
 }

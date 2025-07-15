@@ -1,0 +1,47 @@
+---
+layout: docs
+page_title: Reporting - Configuration
+description: >-
+  Configure the reporting stanza to customize the reporting behavior for tuning
+  and licensing in Vault.
+---
+
+# `reporting` stanza
+
+@include 'alerts/enterprise-only.mdx'
+
+The `reporting` stanza specifies various parameters for tuning replication related values.
+
+Please see the pages relating to
+[license utilization reporting](/vault/docs/enterprise/license/utilization-reporting)
+and [product usage reporting](/vault/docs/enterprise/license/product-usage-reporting)
+for more information regarding the license reporting.
+
+```hcl
+reporting {
+  snapshot_retention_time = 9600
+  disable_product_usage_reporting = false
+  license {
+    enabled = true
+  }
+}
+```
+
+## `reporting` parameters
+
+- `snapshot_retention_time` `(duration: 9600h)` - The retention time for manual reporting snapshots in hours. Defaults to 9600 (400 days).
+Uses [duration format strings](/vault/docs/concepts/duration-format).
+- `disable_product_usage_reporting` `(boolean: false)` - Determines whether [product usage reporting](/vault/docs/enterprise/license/product-usage-reporting)
+is enabled.
+
+## `license` parameters
+
+- `enabled` `(boolean: true)` - Toggles automatic reporting of license utilization. See the
+[license utilization reporting](/vault/docs/enterprise/license/utilization-reporting)
+page for more details.
+- `billing_start_timestamp` `(timestamp)` - The start timestamp for billing for license reporting (manual and automated).
+Defaults to the license start timestamp.
+- `development_cluster` `(boolean: false)` - Indicates whether the cluster is a development (non-production) cluster for
+license reporting (manual and automated). Defaults to false. Please see the development cluster
+  [section](/vault/docs/enterprise/license/utilization-reporting#development-cluster-configuration) of the
+utilization reporting documentation for more details.

@@ -1,10 +1,10 @@
 # Client-side pagination
 
-Our custom extended `store` service allows us to paginate LIST responses while maintaining good performance, particularly when the LIST response includes tens of thousands of keys in the data response. It does this by caching the entire response, and then filtering the full response into the datastore for the client.
+Our custom `pagination` service allows us to paginate LIST responses while maintaining good performance, particularly when the LIST response includes tens of thousands of keys in the data response. It does this by caching the entire response, and then filtering the full response into the datastore for the client. It was originally a custom method in our `store` service that extended the ember-data `store` but now is it's own `pagination` service.
 
 ## Using pagination
 
-Rather than use `store.query`, use `store.lazyPaginatedQuery`. It generally uses the same inputs, but accepts additional keys in the query object `size`, `page`, `responsePath`, `pageFilter`
+Rather than use `store.query`, use `pagination.lazyPaginatedQuery`. It generally uses the same inputs, but accepts additional keys in the query object `size`, `page`, `responsePath`, `pageFilter`
 
 ### Before
 
@@ -23,12 +23,12 @@ export default class ExampleRoute extends Route {
 
 ```js
 export default class ExampleRoute extends Route {
-  @service store;
+  @service pagination;
 
   model(params) {
     const { page, pageFilter, secret } = params;
     const { backend } = this.paramsFor('vault.cluster.secrets.backend');
-    return this.store.lazyPaginatedQuery('secret', {
+    return this.pagination.lazyPaginatedQuery('secret', {
       backend,
       id: secret,
       size,
@@ -47,11 +47,11 @@ In order to interrupt the regular serialization when using `lazyPaginatedData`, 
 
 ## Gotchas
 
-The data is cached from whenever the original API call is made, which means that if a user views a list and then creates or deletes an item, viewing the list page again will show outdated information unless the cache for the item is cleared first. For this reason, it is best practice to clear the dataset with `store.clearDataset(modelName)` after successfully deleting or creating an item.
+The data is cached from whenever the original API call is made, which means that if a user views a list and then creates or deletes an item, viewing the list page again will show outdated information unless the cache for the item is cleared first. For this reason, it is best practice to clear the dataset with `pagination.clearDataset(modelName)` after successfully deleting or creating an item.
 
 ## How it works
 
-When using the `lazyPaginatedQuery` method, the full response is cached in a [tracked Map](https://github.com/tracked-tools/tracked-built-ins/tree/master) within the service. `store.lazyCaches` is actually a Map of [Maps](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map), keyed first on the normalized modelType and then on a stringified version of the base query (all keys except ones related to pagination). So, at the top level `store.lazyCaches` looks like this:
+When using the `lazyPaginatedQuery` method, the full response is cached in a [tracked Map](https://github.com/tracked-tools/tracked-built-ins/tree/master) within the service. `pagination.lazyCaches` is actually a Map of [Maps](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map), keyed first on the normalized modelType and then on a stringified version of the base query (all keys except ones related to pagination). So, at the top level `pagination.lazyCaches` looks like this:
 
 ```
 lazyCaches = new Map({
@@ -61,7 +61,7 @@ lazyCaches = new Map({
 })
 ```
 
-Within each top-level modelType, we need to separate cached responses based on the details of the query. Typically (but not always) this includes the backend name. In list items that can be nested (see KV V2 secrets or namespaces for example) `id` is also provided, so that the keys nested under the given ID is returned. The store.lazyCaches may look something like the following after a user navigates to a couple different KV v2 lists, and clicks into the `app/` item:
+Within each top-level modelType, we need to separate cached responses based on the details of the query. Typically (but not always) this includes the backend name. In list items that can be nested (see KV V2 secrets or namespaces for example) `id` is also provided, so that the keys nested under the given ID is returned. The pagination.lazyCaches may look something like the following after a user navigates to a couple different KV v2 lists, and clicks into the `app/` item:
 
 ```
 lazyCaches = new Map({

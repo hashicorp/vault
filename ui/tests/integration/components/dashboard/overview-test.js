@@ -15,8 +15,10 @@ module('Integration | Component | dashboard/overview', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
+    this.flags = this.owner.lookup('service:flags');
+    this.namespace = this.owner.lookup('service:namespace');
     this.permissions = this.owner.lookup('service:permissions');
+    this.store = this.owner.lookup('service:store');
     this.version = this.owner.lookup('service:version');
     this.version.version = '1.13.1+ent';
     this.version.type = 'enterprise';
@@ -151,6 +153,66 @@ module('Integration | Component | dashboard/overview', function (hooks) {
       assert.dom(DASHBOARD.cardName('replication')).exists();
     });
 
+    test('it should show client count on enterprise in admin namespace when running a managed mode', async function (assert) {
+      this.permissions.exactPaths = {
+        'admin/sys/internal/counters/activity': {
+          capabilities: ['read'],
+        },
+        'admin/sys/replication/status': {
+          capabilities: ['read'],
+        },
+      };
+
+      this.version.type = 'enterprise';
+      this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+      this.namespace.path = 'admin';
+      this.isRootNamespace = false;
+
+      await this.renderComponent();
+
+      assert.dom(DASHBOARD.cardName('client-count')).exists();
+    });
+
+    test('it should show not show client count on enterprise in child namespaces called "admin" when running a managed mode', async function (assert) {
+      this.permissions.exactPaths = {
+        'admin/sys/internal/counters/activity': {
+          capabilities: ['read'],
+        },
+        'admin/sys/replication/status': {
+          capabilities: ['read'],
+        },
+      };
+
+      this.version.type = 'enterprise';
+      this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+      this.namespace.path = 'ns1/admin';
+      this.isRootNamespace = false;
+
+      await this.renderComponent();
+
+      assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
+    });
+
+    test('it should hide client count on enterprise in any other namespace when running a managed mode', async function (assert) {
+      this.permissions.exactPaths = {
+        'sys/internal/counters/activity': {
+          capabilities: ['read'],
+        },
+        'sys/replication/status': {
+          capabilities: ['read'],
+        },
+      };
+
+      this.version.type = 'enterprise';
+      this.flags.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+      this.namespace.path = 'groceries';
+      this.isRootNamespace = false;
+
+      await this.renderComponent();
+
+      assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
+    });
+
     test('it should hide cards on enterprise in root namespace but no permission', async function (assert) {
       await this.renderComponent();
       assert.dom(DASHBOARD.cardName('client-count')).doesNotExist();
@@ -223,9 +285,6 @@ module('Integration | Component | dashboard/overview', function (hooks) {
           'Explore the features of Vault and learn advance practices with the following tutorials and documentation.'
         );
       assert.dom('[data-test-learn-more-links] a').exists({ count: 3 });
-      assert
-        .dom('[data-test-feedback-form]')
-        .hasText("Don't see what you're looking for on this page? Let us know via our feedback form .");
     });
     test('shows the learn more card on enterprise', async function (assert) {
       this.version.features = [
@@ -242,9 +301,6 @@ module('Integration | Component | dashboard/overview', function (hooks) {
           'Explore the features of Vault and learn advance practices with the following tutorials and documentation.'
         );
       assert.dom('[data-test-learn-more-links] a').exists({ count: 4 });
-      assert
-        .dom('[data-test-feedback-form]')
-        .hasText("Don't see what you're looking for on this page? Let us know via our feedback form .");
     });
   });
 });

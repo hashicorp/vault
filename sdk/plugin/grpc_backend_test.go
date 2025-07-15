@@ -5,6 +5,7 @@ package plugin
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -14,6 +15,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGRPCBackendPlugin_impl(t *testing.T) {
@@ -40,6 +42,8 @@ func TestGRPCBackendPlugin_HandleRequest(t *testing.T) {
 	}
 }
 
+// TestGRPCBackendPlugin_SpecialPaths verifies that the special paths returned
+// by the plugin are not nil and that the AllowSnapshotRead path is not empty.
 func TestGRPCBackendPlugin_SpecialPaths(t *testing.T) {
 	b, cleanup := testGRPCBackend(t)
 	defer cleanup()
@@ -48,6 +52,92 @@ func TestGRPCBackendPlugin_SpecialPaths(t *testing.T) {
 	if paths == nil {
 		t.Fatal("SpecialPaths() returned nil")
 	}
+	if len(paths.AllowSnapshotRead) == 0 {
+		t.Fatalf("SpecialPaths() returned empty AllowSnapshotRead")
+	}
+}
+
+type requireSnapshotCtxStorage struct {
+	logical.Storage
+	snapshotID string
+}
+
+func (r *requireSnapshotCtxStorage) errorIfNoSnapshotID(ctx context.Context) error {
+	if snapshotID, _ := logical.ContextSnapshotIDValue(ctx); snapshotID != r.snapshotID {
+		return fmt.Errorf("missing snapshot ID")
+	}
+	return nil
+}
+
+func (r *requireSnapshotCtxStorage) Get(ctx context.Context, key string) (*logical.StorageEntry, error) {
+	if err := r.errorIfNoSnapshotID(ctx); err != nil {
+		return nil, err
+	}
+	return r.Storage.Get(ctx, key)
+}
+
+func (r *requireSnapshotCtxStorage) List(ctx context.Context, prefix string) ([]string, error) {
+	if err := r.errorIfNoSnapshotID(ctx); err != nil {
+		return nil, err
+	}
+	return r.Storage.List(ctx, prefix)
+}
+
+func (r *requireSnapshotCtxStorage) Delete(ctx context.Context, key string) error {
+	if err := r.errorIfNoSnapshotID(ctx); err != nil {
+		return err
+	}
+	return r.Storage.Delete(ctx, key)
+}
+
+func (r *requireSnapshotCtxStorage) Put(ctx context.Context, entry *logical.StorageEntry) error {
+	if err := r.errorIfNoSnapshotID(ctx); err != nil {
+		return err
+	}
+	return r.Storage.Put(ctx, entry)
+}
+
+// TestGRPCBackendPlugin_SnapshotCtx verifies that the backend plugin correctly
+// parses the snapshot ID context key and passes it to the storage methods.
+func TestGRPCBackendPlugin_SnapshotCtx(t *testing.T) {
+	storage := &requireSnapshotCtxStorage{Storage: &logical.InmemStorage{}, snapshotID: "abcd"}
+	b, cleanup := testGRPCBackendWithStorage(t, storage)
+	defer cleanup()
+	ctx := logical.CreateContextWithSnapshotID(context.Background(), "abcd")
+	// check put storage method
+	resp, err := b.HandleRequest(ctx, &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "kv/foo",
+		Data: map[string]interface{}{
+			"value": "bar",
+		},
+	})
+	require.NoError(t, err)
+	require.NoError(t, resp.Error())
+
+	// check get storage method
+	resp, err = b.HandleRequest(ctx, &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "kv/foo",
+	})
+	require.NoError(t, err)
+	require.NoError(t, resp.Error())
+
+	// check list storage method
+	resp, err = b.HandleRequest(ctx, &logical.Request{
+		Operation: logical.ListOperation,
+		Path:      "kv",
+	})
+	require.NoError(t, err)
+	require.NoError(t, resp.Error())
+
+	// check delete storage method
+	resp, err = b.HandleRequest(ctx, &logical.Request{
+		Operation: logical.DeleteOperation,
+		Path:      "kv/foo",
+	})
+	require.NoError(t, err)
+	require.NoError(t, resp.Error())
 }
 
 func TestGRPCBackendPlugin_System(t *testing.T) {
@@ -166,6 +256,10 @@ func TestGRPCBackendPlugin_Version(t *testing.T) {
 }
 
 func testGRPCBackend(t *testing.T) (logical.Backend, func()) {
+	return testGRPCBackendWithStorage(t, &logical.InmemStorage{})
+}
+
+func testGRPCBackendWithStorage(t *testing.T, storage logical.Storage) (logical.Backend, func()) {
 	// Create a mock provider
 	pluginMap := map[string]gplugin.Plugin{
 		"backend": &GRPCBackendPlugin{
@@ -195,7 +289,7 @@ func testGRPCBackend(t *testing.T) (logical.Backend, func()) {
 			DefaultLeaseTTLVal: 300 * time.Second,
 			MaxLeaseTTLVal:     1800 * time.Second,
 		},
-		StorageView: &logical.InmemStorage{},
+		StorageView: storage,
 	})
 	if err != nil {
 		t.Fatal(err)

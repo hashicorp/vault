@@ -49,7 +49,7 @@ func TestMountTableMetrics(t *testing.T) {
 
 	nonlocalLogicalMountsize, err := gaugeSearchHelper(data, 3)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 
 	// Mount new kv
@@ -69,11 +69,11 @@ func TestMountTableMetrics(t *testing.T) {
 
 	nonlocalLogicalMountsizeAfterMount, err := gaugeSearchHelper(data, 4)
 	if err != nil {
-		t.Errorf(err.Error())
+		t.Error(err.Error())
 	}
 
 	if nonlocalLogicalMountsizeAfterMount <= nonlocalLogicalMountsize {
-		t.Errorf("Mount size does not change after new mount is mounted")
+		t.Error("Mount size does not change after new mount is mounted")
 	}
 }
 

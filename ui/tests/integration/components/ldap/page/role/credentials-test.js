@@ -12,6 +12,7 @@ import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { duration } from 'core/helpers/format-duration';
 import { dateFormat } from 'core/helpers/date-format';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | ldap | Page::Role::Credentials', function (hooks) {
   setupRenderingTest(hooks);
@@ -21,9 +22,9 @@ module('Integration | Component | ldap | Page::Role::Credentials', function (hoo
   hooks.beforeEach(function () {
     this.breadcrumbs = [
       { label: 'ldap-test', route: 'overview' },
-      { label: 'roles', route: 'roles' },
+      { label: 'Roles', route: 'roles' },
       { label: 'test-role', route: 'roles.role' },
-      { label: 'credentials' },
+      { label: 'Credentials' },
     ];
     this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
   });
@@ -39,13 +40,13 @@ module('Integration | Component | ldap | Page::Role::Credentials', function (hoo
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(1)')
       .containsText('ldap-test', 'Overview breadcrumb renders');
-    assert.dom('[data-test-breadcrumbs] li:nth-child(2) a').containsText('roles', 'Roles breadcrumb renders');
+    assert.dom('[data-test-breadcrumbs] li:nth-child(2) a').containsText('Roles', 'Roles breadcrumb renders');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(3)')
       .containsText('test-role', 'Role breadcrumb renders');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(4)')
-      .containsText('credentials', 'Credentials breadcrumb renders');
+      .containsText('Credentials', 'Credentials breadcrumb renders');
   });
 
   test('it should render error', async function (assert) {
@@ -77,16 +78,14 @@ module('Integration | Component | ldap | Page::Role::Credentials', function (hoo
     );
 
     for (const field of fields) {
-      assert
-        .dom(`[data-test-row-label="${field.label}"]`)
-        .hasText(field.label, `${field.label} label renders`);
+      assert.dom(GENERAL.infoRowLabel(field.label)).hasText(field.label, `${field.label} label renders`);
 
       if (field.isMasked) {
-        await click(`[data-test-value-div="${field.label}"] [data-test-button="toggle-masked"]`);
+        await click(`${GENERAL.infoRowValue(field.label)} ${GENERAL.button('toggle-masked')}`);
       }
 
       const value = field.value ? field.value() : this.creds[field.key];
-      assert.dom(`[data-test-value-div="${field.label}"]`).hasText(value, `${field.label} value renders`);
+      assert.dom(GENERAL.infoRowValue(field.label)).hasText(value, `${field.label} value renders`);
     }
 
     await click('[data-test-done]');
@@ -120,16 +119,14 @@ module('Integration | Component | ldap | Page::Role::Credentials', function (hoo
       );
 
     for (const field of fields) {
-      assert
-        .dom(`[data-test-row-label="${field.label}"]`)
-        .hasText(field.label, `${field.label} label renders`);
+      assert.dom(GENERAL.infoRowLabel(field.label)).hasText(field.label, `${field.label} label renders`);
 
       if (field.isMasked) {
-        await click(`[data-test-value-div="${field.label}"] [data-test-button="toggle-masked"]`);
+        await click(`${GENERAL.infoRowValue(field.label)} ${GENERAL.button('toggle-masked')}`);
       }
 
       const value = field.value ? field.value() : this.creds[field.key];
-      assert.dom(`[data-test-value-div="${field.label}"]`).hasText(value, `${field.label} value renders`);
+      assert.dom(GENERAL.infoRowValue(field.label)).hasText(value, `${field.label} value renders`);
     }
 
     await click('[data-test-done]');

@@ -4,13 +4,17 @@
 package quotas
 
 import (
+	"encoding/json"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/builtin/logical/pki"
+	"github.com/hashicorp/vault/helper/constants"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -540,4 +544,225 @@ func TestQuotas_RateLimitQuota(t *testing.T) {
 	if numFail > 0 {
 		t.Fatalf("unexpected number of failed requests: %d", numFail)
 	}
+}
+
+// TestQuotas_RateLimitQuota_GroupByConfig tests the validations imposed on the group_by and secondary_rate fields
+func TestQuotas_RateLimitQuota_GroupByConfig(t *testing.T) {
+	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
+	opts.NoDefaultQuotas = true
+	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster.Start()
+	t.Cleanup(cluster.Cleanup)
+
+	core := cluster.Cores[0].Core
+	client := cluster.Cores[0].Client
+
+	vault.TestWaitActive(t, core)
+
+	testCases := map[string]struct {
+		reqData              map[string]interface{}
+		expectedErr          string
+		expectedReadContains map[string]interface{}
+		enterpriseOnly       bool
+		CeOnly               bool
+	}{
+		"group_by_defaults_to_ip": {
+			reqData: map[string]interface{}{
+				"rate": 100,
+			},
+			expectedReadContains: map[string]interface{}{
+				"group_by":       "ip",
+				"secondary_rate": json.Number("0"),
+			},
+		},
+		"explicitly_empty_group_by_defaults_to_ip": {
+			reqData: map[string]interface{}{
+				"rate":     100,
+				"group_by": "",
+			},
+			expectedReadContains: map[string]interface{}{
+				"group_by":       "ip",
+				"secondary_rate": json.Number("0"),
+			},
+		},
+		"explicit_group_by_ip_allowed_in_ce": {
+			reqData: map[string]interface{}{
+				"rate":     100,
+				"group_by": "ip",
+			},
+			expectedReadContains: map[string]interface{}{
+				"group_by":       "ip",
+				"secondary_rate": json.Number("0"),
+			},
+		},
+		"invalid_group_by": {
+			reqData: map[string]interface{}{
+				"rate":     100,
+				"group_by": "invalid",
+			},
+			expectedErr: `invalid grouping mode "invalid"`,
+		},
+		"group_by_none_not_allowed_in_ce": {
+			CeOnly: true,
+			reqData: map[string]interface{}{
+				"rate":     100,
+				"group_by": "none",
+			},
+			expectedErr: `grouping mode "none" is only available in Vault Enterprise`,
+		},
+		"group_by_entity_then_none_not_allowed_in_ce": {
+			CeOnly: true,
+			reqData: map[string]interface{}{
+				"rate":     100,
+				"group_by": "entity_then_none",
+			},
+			expectedErr: `grouping mode "entity_then_none" is only available in Vault Enterprise`,
+		},
+		"group_by_entity_then_ip_not_allowed_in_ce": {
+			CeOnly: true,
+			reqData: map[string]interface{}{
+				"rate":     100,
+				"group_by": "entity_then_ip",
+			},
+			expectedErr: `grouping mode "entity_then_ip" is only available in Vault Enterprise`,
+		},
+		"secondary_rate_invalid_with_group_by_none": {
+			enterpriseOnly: true,
+			reqData: map[string]interface{}{
+				"rate":           100,
+				"secondary_rate": 1,
+				"group_by":       "none",
+			},
+			expectedErr: "secondary rate is only valid when using entity-based grouping",
+		},
+		"secondary_rate_invalid_with_group_by_ip": {
+			enterpriseOnly: true,
+			reqData: map[string]interface{}{
+				"rate":           100,
+				"secondary_rate": 1,
+				"group_by":       "ip",
+			},
+			expectedErr: "secondary rate is only valid when using entity-based grouping",
+		},
+		"secondary_rate_defaults_to_rate_with_entity_then_ip": {
+			enterpriseOnly: true,
+			reqData: map[string]interface{}{
+				"rate":           100,
+				"group_by":       "entity_then_ip",
+				"secondary_rate": 0,
+			},
+			expectedReadContains: map[string]interface{}{
+				"group_by":       "entity_then_ip",
+				"secondary_rate": json.Number("100"),
+			},
+		},
+		"secondary_rate_defaults_to_rate_with_entity_then_none": {
+			enterpriseOnly: true,
+			reqData: map[string]interface{}{
+				"rate":     100,
+				"group_by": "entity_then_none",
+			},
+			expectedReadContains: map[string]interface{}{
+				"group_by":       "entity_then_none",
+				"secondary_rate": json.Number("100"),
+			},
+		},
+		"secondary_rate_defaults_to_zero_on_group_by_none": {
+			enterpriseOnly: true,
+			reqData: map[string]interface{}{
+				"rate":     100,
+				"group_by": "none",
+			},
+			expectedReadContains: map[string]interface{}{
+				"group_by":       "none",
+				"secondary_rate": json.Number("0"),
+			},
+		},
+		"secondary_rate_defaults_to_zero_on_group_by_ip": {
+			reqData: map[string]interface{}{
+				"rate":     100,
+				"group_by": "ip",
+			},
+			expectedReadContains: map[string]interface{}{
+				"group_by":       "ip",
+				"secondary_rate": json.Number("0"),
+			},
+		},
+		"secondary_rate_defaults_cannot_be_negative": {
+			enterpriseOnly: true,
+			reqData: map[string]interface{}{
+				"rate":           100,
+				"group_by":       "entity_then_ip",
+				"secondary_rate": -1,
+			},
+			expectedErr: "secondary rate must be greater than or equal to 0",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			if tc.enterpriseOnly && !constants.IsEnterprise {
+				t.Skip("skipping test because it is only valid in enterprise")
+			} else if tc.CeOnly && constants.IsEnterprise {
+				t.Skip("skipping test because it is only valid in community edition")
+			}
+
+			_, err := client.Logical().Write("sys/quotas/rate-limit/"+name, tc.reqData)
+
+			if tc.expectedErr != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.expectedErr)
+			} else {
+				require.NoError(t, err)
+
+				resp, err := client.Logical().Read("sys/quotas/rate-limit/" + name)
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+				require.NotEmpty(t, resp.Data)
+				for k, v := range tc.expectedReadContains {
+					require.Contains(t, resp.Data, k)
+					require.Equal(t, v, resp.Data[k])
+				}
+			}
+
+			_, err = client.Logical().Delete("sys/quotas/rate-limit/" + name)
+			require.NoError(t, err)
+		})
+	}
+}
+
+// TestQuotas_RateLimit_ZeroRetryRegression verifies that the rate limit response
+// headers do not return a Retry-After value of 0.
+func TestQuotas_RateLimit_ZeroRetryRegression(t *testing.T) {
+	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
+	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	testhelpers.WaitForActiveNode(t, cluster)
+	client := cluster.Cores[0].Client
+	_, err := client.Logical().Write("sys/quotas/config", map[string]interface{}{
+		"enable_rate_limit_response_headers": true,
+	})
+	require.NoError(t, err)
+	_, err = client.Logical().Write("sys/quotas/rate-limit/root-rlq", map[string]interface{}{
+		"name": "root-rlq",
+		"rate": 1,
+	})
+	require.NoError(t, err)
+	failed := atomic.NewBool(false)
+	wg := sync.WaitGroup{}
+	client = client.WithResponseCallbacks(func(response *api.Response) {
+		if response.Header.Get("Retry-After") == "0" {
+			failed.Store(true)
+		}
+	})
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			client.Logical().Read("sys/mounts")
+		}()
+	}
+	wg.Wait()
+	require.False(t, failed.Load())
 }

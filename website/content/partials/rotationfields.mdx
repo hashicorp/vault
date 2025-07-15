@@ -1,0 +1,21 @@
+- `rotation_period` `(string/integer: 0)` – <EnterpriseAlert product="vault" inline />
+  The amount of time, in seconds,
+  Vault should wait before rotating the root credential. A zero value tells Vault
+  not to rotate the root credential. The minimum rotation period is 10 seconds. **You must
+  set one of `rotation_period` or `rotation_schedule`, but cannot set both**.
+- `rotation_schedule` `(string: "")` – <EnterpriseAlert product="vault" inline />
+  The schedule, in [cron-style time format](https://en.wikipedia.org/wiki/Cron),
+  defining the schedule on which Vault should rotate the root token. Standard
+  cron-style time format uses five fields to define the minute, hour, day of
+  month, month, and day of week respectively. For example, `0 0 * * SAT` tells
+  Vault to rotate the root token every Saturday at 00:00. **You must set one of
+  `rotation_schedule` or `rotation_period`, but cannot set both**.
+- `rotation_window` `(string/integer: 0)` – <EnterpriseAlert product="vault" inline />
+  The maximum amount of time, in seconds, allowed to complete
+  a rotation when a scheduled token rotation occurs. If Vault cannot rotate the
+  token within the window (for example, due to a failure), Vault must wait to
+  try again until the next scheduled rotation. The default rotation window is
+  unbound and the minimum allowable window is 1 hour. **You cannot set a rotation
+  window when using `rotation_period`**.
+- `disable_automated_rotation` `(bool: false)` - <EnterpriseAlert product="vault" inline />
+  Cancels all upcoming rotations of the root credential until unset.

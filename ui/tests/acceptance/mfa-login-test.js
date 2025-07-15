@@ -8,7 +8,8 @@ import { setupApplicationTest } from 'ember-qunit';
 import { click, currentRouteName, fillIn, visit, waitUntil, find, waitFor } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import mfaLoginHandler, { validationHandler } from '../../mirage/handlers/mfa-login';
-import { GENERAL } from '../helpers/general-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
 module('Acceptance | mfa-login', function (hooks) {
   setupApplicationTest(hooks);
@@ -30,11 +31,11 @@ module('Acceptance | mfa-login', function (hooks) {
   });
 
   const login = async (user) => {
-    await visit('/vault/auth?with=token');
-    await fillIn('[data-test-select="auth-method"]', 'userpass');
-    await fillIn('[data-test-username]', user);
-    await fillIn('[data-test-password]', 'test');
-    await click('[data-test-auth-submit]');
+    await visit('/vault/auth');
+    await fillIn(AUTH_FORM.selectMethod, 'userpass');
+    await fillIn(GENERAL.inputByAttr('username'), user);
+    await fillIn(GENERAL.inputByAttr('password'), 'test');
+    await click(GENERAL.submitButton);
   };
   const didLogin = async (assert) => {
     await waitFor('[data-test-dashboard-card-header]', {
@@ -178,19 +179,15 @@ module('Acceptance | mfa-login', function (hooks) {
 
   test('it should render unauthorized message for push failure', async function (assert) {
     await login('mfa-j');
-    await waitFor('[data-test-empty-state-title]');
-    assert.dom('[data-test-auth-form]').doesNotExist('Auth form hidden when mfa fails');
-    assert.dom('[data-test-empty-state-title]').hasText('Unauthorized', 'Error title renders');
+    await waitFor('[data-test-error]');
+    assert.dom('[data-test-mfa-form]').doesNotExist('MFA form does not render');
+    assert.dom('[data-test-auth-form]').doesNotExist('Auth form does not render');
     assert
-      .dom(GENERAL.emptyStateSubtitle)
-      .hasText('PingId MFA validation failed', 'Error message from server renders');
-    assert
-      .dom('[data-test-empty-state-message]')
+      .dom('[data-test-error]')
       .hasText(
-        'Multi-factor authentication is required, but failed. Go back and try again, or contact your administrator.',
-        'Error description renders'
+        'Authentication error Multi-factor authentication is required, but failed. Go back and try again, or contact your administrator. Error: PingId MFA validation failed Go back'
       );
-    await click('[data-test-mfa-error] button');
+    await click('[data-test-error] button');
     assert.dom('[data-test-auth-form]').exists('Auth form renders after mfa error dismissal');
   });
 });

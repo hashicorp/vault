@@ -1,10 +1,11 @@
 ---
 layout: docs
-page_title: Google Cloud Platform Secret Manager - Secrets Sync Destination
-description: The Google Cloud Platform Secret Manager destination syncs secrets from Vault to GCP.
+page_title: Sync secrets from Vault to GCP Secret Manager
+description: >-
+  Automatically sync and unsync the secrets from Vault to GCP Secret Manager to centralize visibility and control of secrets lifecycle management.
 ---
 
-# Google Cloud Platform Secret Manager
+# Sync secrets from Vault to GCP Secret Manager
 
 The Google Cloud Platform (GCP) Secret Manager sync destination allows Vault to safely synchronize secrets to your GCP projects.
 This is a low footprint option that enables your applications to benefit from Vault-managed secrets without requiring them
@@ -28,6 +29,7 @@ Prerequisites:
   ```shell-session
   $ vault write sys/sync/destinations/gcp-sm/my-dest \
       credentials='@path/to/credentials.json'
+      replication_locations='us-east1,us-west1'
   ```
 
   **Output:**
@@ -37,7 +39,7 @@ Prerequisites:
   ```plaintext
   Key                   Value
   ---                   -----
-  connection_details    map[credentials:*****]
+  connection_details    map[credentials:***** replication_locations:us-east1,us-west1]
   name                  my-dest
   type                  gcp-sm
   ```
@@ -117,9 +119,33 @@ Moving forward, any modification on the Vault secret will be propagated in near 
 counterpart. Creating a new secret version in Vault will create a new version in GCP Secret Manager. Deleting the secret
 or the association in Vault will delete the secret in your GCP project as well.
 
+## Replication policy
+
+GCP can target specific geographic regions to provide strict control on where
+your applications store data and sync secrets. You can target specific GCP 
+regions for each sync destinations during creation which will limit where Vault writes 
+secrets. 
+
+Regardless of the region limits on writes, synced secrets are always readable 
+globally when the client has the required permissions.
+
+### Encryption keys
+
+Vault can leverage customer-managed encryption keys (CMEK) instead of Google-managed keys to encrypt secrets in GCP Secret Manager 
+as part of the replication policy. To use CMEK, you must first create key ring(s) and key(s) as desired, ensuring that the key quantity
+corresponds with the planned replication policy. The key rings and keys must be created before configuring the sync destination.
+
+When using a global KMS key, it must be the only key set on the destination and the replication locations must remain unset, meaning
+it can only be used with using GCP's automatic replication. When specifying regional keys, a key must be set for each region in the
+replication location list. GCP key names are expected in the format of the entire resource ID, e.g. `projects/<project_id>/locations/<location_name>/keyRings/<key_ring_name>/cryptoKeys/<key_name>`. See the [API](#api) section for more details.
+
 ## Permissions
 
-The credentials given to Vault must have the following permissions to synchronize secrets:
+Enabling the Secret Manager API and the Cloud Resource Manager API's are prerequisites to using secrets sync with
+GCP Secret Manager. Once both APIs are enabled, it may take several minutes for the changes to take effect within
+the GCP project. 
+
+After the necessary APIs are active, the credentials given to Vault must have the following permissions to synchronize secrets:
 
 ```shell-session
 secretmanager.secrets.create
@@ -282,20 +308,16 @@ beginning of secret names. To prevent Vault from modifying secrets that were not
 created by a sync operation, you can use a role binding against the resource
 name with the `startsWith` condition:
 
-  <CodeBlockConfig hideClipboard>
-
+  ```
     resource.name.startsWith("projects/<project_number>/secrets/vault")
-
-  </CodeBlockConfig>
+  ```
 
 To prevent out-of-band overwrites, simply add a negative condition with `!` on any
 write-access role bindings not being used by Vault that contain Secret Manager permissions:
 
-  <CodeBlockConfig hideClipboard>
-
+  ```
     !(resource.name.startsWith("projects/<project_number>/secrets/vault"))
-
-  </CodeBlockConfig>
+  ```
 
 To add conditions to IAM principles in GCP, click "+ADD IAM CONDITION" on the **Assign Roles** screen.
 

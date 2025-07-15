@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 {{! Replaces ConfirmAction in dropdowns, instead use dd.Interactive + this modal }}
 {{! Destructive action confirmation modal that asks "Are you sure?" or similar @confirmTitle }}
@@ -25,7 +25,7 @@
       {{@disabledMessage}}
     </M.Body>
     <M.Footer as |F|>
-      <Hds::Button data-test-confirm-cancel-button @text="Close" {{on "click" F.close}} />
+      <Hds::Button data-test-cancel @text="Close" {{on "click" F.close}} />
     </M.Footer>
   {{else}}
     <M.Header data-test-confirm-action-title @icon="alert-circle">
@@ -44,7 +44,7 @@
           @text="Confirm"
           {{on "click" @onConfirm}}
         />
-        <Hds::Button data-test-confirm-cancel-button @color="secondary" @text="Cancel" {{on "click" F.close}} />
+        <Hds::Button data-test-cancel @color="secondary" @text="Cancel" {{on "click" F.close}} />
       </Hds::ButtonSet>
     </M.Footer>
   {{/if}}

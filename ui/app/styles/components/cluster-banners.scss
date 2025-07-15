@@ -1,3 +1,5 @@
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -10,9 +12,9 @@
   padding: 0 1.5rem;
 
   > div {
-    margin-top: $spacing-24;
+    margin-top: size_variables.$spacing-24;
     &:last-of-type {
-      margin-bottom: $spacing-24;
+      margin-bottom: size_variables.$spacing-24;
     }
   }
 }

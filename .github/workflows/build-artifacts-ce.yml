@@ -23,10 +23,6 @@ on:
         type: string # JSON encoded to support passing arrays
         description: A JSON encoded "runs-on" for build worfkflows
         required: true
-      compute-build-compat:
-        type: string # JSON encoded to support passing arrays
-        description: A JSON encoded "runs-on" for build workflows that need older glibc
-        required: true
       compute-small:
         type: string # JSON encoded to support passing arrays
         description: A JSON encoded "runs-on" for non-resource-intensive workflows
@@ -61,10 +57,6 @@ on:
       compute-build:
         type: string # JSON encoded to support passing arrays
         description: A JSON encoded "runs-on" for build worfkflows
-        required: true
-      compute-build-compat:
-        type: string # JSON encoded to support passing arrays
-        description: A JSON encoded "runs-on" for build workflows that need older glibc
         required: true
       compute-small:
         type: string # JSON encoded to support passing arrays
@@ -105,7 +97,7 @@ jobs:
     runs-on: ${{ fromJSON(inputs.compute-build) }}
     name: (${{ matrix.goos }}, ${{ matrix.goarch }})
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/build-vault
@@ -226,7 +218,7 @@ jobs:
     name: (${{ matrix.goos }}, ${{ matrix.goarch }}${{ matrix.goarm && ' ' || '' }}${{ matrix.goarm }})
     runs-on: ${{ fromJSON(inputs.compute-build) }}
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ inputs.checkout-ref }}
       - uses: ./.github/actions/build-vault
@@ -254,7 +246,7 @@ jobs:
       - core
       - extended
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ inputs.checkout-ref }}
       - name: Determine status

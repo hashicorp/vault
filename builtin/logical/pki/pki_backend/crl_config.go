@@ -19,6 +19,7 @@ type CrlConfig struct {
 	UseGlobalQueue            bool   `json:"cross_cluster_revocation"`
 	UnifiedCRL                bool   `json:"unified_crl"`
 	UnifiedCRLOnExistingPaths bool   `json:"unified_crl_on_existing_paths"`
+	MaxCRLEntries             int    `json:"max_crl_entries"`
 }
 
 // Implicit default values for the config if it does not exist.
@@ -35,4 +36,5 @@ var DefaultCrlConfig = CrlConfig{
 	UseGlobalQueue:            false,
 	UnifiedCRL:                false,
 	UnifiedCRLOnExistingPaths: false,
+	MaxCRLEntries:             100000,
 }

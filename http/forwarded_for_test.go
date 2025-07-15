@@ -14,6 +14,7 @@ import (
 	sockaddr "github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 func getListenerConfigForMarshalerTest(addr sockaddr.IPAddr) *configutil.Listener {
@@ -332,5 +333,61 @@ func TestHandler_XForwardedFor(t *testing.T) {
 		if !strings.Contains(buf.String(), strings.ReplaceAll(testcertificate, "\n", "")) {
 			t.Fatalf("bad body: %v vs %v", buf.String(), testcertificate)
 		}
+	})
+	t.Run("reject invalid IP", func(t *testing.T) {
+		t.Parallel()
+		testHandler := func(props *vault.HandlerProperties) http.Handler {
+			origHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(r.RemoteAddr))
+			})
+			listenerConfig := getListenerConfigForMarshalerTest(goodAddr)
+			listenerConfig.XForwardedForRejectNotPresent = true
+			listenerConfig.XForwardedForRejectNotAuthorized = true
+			return WrapForwardedForHandler(origHandler, listenerConfig)
+		}
+
+		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+			HandlerFunc: HandlerFunc(testHandler),
+		})
+		cluster.Start()
+		defer cluster.Cleanup()
+		client := cluster.Cores[0].Client
+
+		req := client.NewRequest("GET", "/")
+		req.Headers = make(http.Header)
+		req.Headers.Set("x-forwarded-for", "5.6.7.8, 4.5.6.7, 8.8.8.8")
+		req.Headers.Set("x-forwarded-for", "10.9.8.7, 1.2.3.4, 256.1.1.1")
+		_, err := client.RawRequest(req)
+		require.ErrorContains(t, err, "malformed x-forwarded-for IP address")
+	})
+
+	t.Run("ignore invalid proxy IP", func(t *testing.T) {
+		t.Parallel()
+		testHandler := func(props *vault.HandlerProperties) http.Handler {
+			origHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(r.RemoteAddr))
+			})
+			listenerConfig := getListenerConfigForMarshalerTest(goodAddr)
+			listenerConfig.XForwardedForRejectNotPresent = true
+			listenerConfig.XForwardedForRejectNotAuthorized = true
+			return WrapForwardedForHandler(origHandler, listenerConfig)
+		}
+
+		cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
+			HandlerFunc: HandlerFunc(testHandler),
+		})
+		cluster.Start()
+		defer cluster.Cleanup()
+		client := cluster.Cores[0].Client
+
+		req := client.NewRequest("GET", "/")
+		req.Headers = make(http.Header)
+		req.Headers.Set("x-forwarded-for", "5.6.7.8, 4.5.6.7, 8.8.8.8")
+		req.Headers.Set("x-forwarded-for", "10.9.8.7, 256.1.1.1, 1.2.3.4")
+		resp, err := client.RawRequest(req)
+		require.NoError(t, err)
+		resp.Body.Close()
 	})
 }

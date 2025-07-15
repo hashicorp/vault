@@ -16,6 +16,7 @@ import (
 
 	"github.com/armon/go-radix"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/vault/sdk/physical"
 	uberAtomic "go.uber.org/atomic"
 )
@@ -46,7 +47,7 @@ var (
 type InmemBackend struct {
 	sync.RWMutex
 	root         *radix.Tree
-	permitPool   *physical.PermitPool
+	permitPool   *permitpool.Pool
 	logger       log.Logger
 	failGet      *uint32
 	failPut      *uint32
@@ -90,7 +91,7 @@ func NewInmem(conf map[string]string, logger log.Logger) (physical.Backend, erro
 
 	return &InmemBackend{
 		root:         radix.New(),
-		permitPool:   physical.NewPermitPool(physical.DefaultParallelOperations),
+		permitPool:   permitpool.New(physical.DefaultParallelOperations),
 		logger:       logger,
 		failGet:      new(uint32),
 		failPut:      new(uint32),
@@ -118,7 +119,7 @@ func NewTransactionalInmem(conf map[string]string, logger log.Logger) (physical.
 	return &TransactionalInmemBackend{
 		InmemBackend: InmemBackend{
 			root:         radix.New(),
-			permitPool:   physical.NewPermitPool(1),
+			permitPool:   permitpool.New(1),
 			logger:       logger,
 			failGet:      new(uint32),
 			failPut:      new(uint32),
@@ -149,7 +150,9 @@ func (i *InmemBackend) SetWriteLatency(latency time.Duration) {
 
 // Put is used to insert or update an entry
 func (i *InmemBackend) Put(ctx context.Context, entry *physical.Entry) error {
-	i.permitPool.Acquire()
+	if err := i.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer i.permitPool.Release()
 
 	i.Lock()
@@ -193,7 +196,9 @@ func (i *InmemBackend) FailPut(fail bool) {
 
 // Get is used to fetch an entry
 func (i *InmemBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
-	i.permitPool.Acquire()
+	if err := i.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer i.permitPool.Release()
 
 	i.RLock()
@@ -243,7 +248,9 @@ func (i *InmemBackend) FailGetInTxn(fail bool) {
 
 // Delete is used to permanently delete an entry
 func (i *InmemBackend) Delete(ctx context.Context, key string) error {
-	i.permitPool.Acquire()
+	if err := i.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer i.permitPool.Release()
 
 	i.Lock()
@@ -283,7 +290,9 @@ func (i *InmemBackend) FailDelete(fail bool) {
 // List is used to list all the keys under a given
 // prefix, up to the next prefix.
 func (i *InmemBackend) List(ctx context.Context, prefix string) ([]string, error) {
-	i.permitPool.Acquire()
+	if err := i.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer i.permitPool.Release()
 
 	i.RLock()
@@ -355,7 +364,9 @@ func (i *InmemBackend) GetMountTablePaths() []string {
 
 // Transaction implements the transaction interface
 func (t *TransactionalInmemBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
-	t.permitPool.Acquire()
+	if err := t.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer t.permitPool.Release()
 
 	t.Lock()

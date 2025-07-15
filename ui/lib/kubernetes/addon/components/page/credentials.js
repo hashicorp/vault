@@ -23,7 +23,7 @@ import timestamp from 'vault/utils/timestamp';
  */
 export default class CredentialsPageComponent extends Component {
   @service store;
-  @service router;
+  @service('app-router') router;
 
   @tracked ttl = '';
   @tracked clusterRoleBinding = false;

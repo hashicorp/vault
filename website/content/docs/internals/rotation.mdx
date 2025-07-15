@@ -6,78 +6,95 @@ description: Learn about the details of key rotation within Vault.
 
 # Key rotation
 
-Vault has multiple encryption keys that are used for various purposes. These keys support
-rotation so that they can be periodically changed or in response to a potential leak or
-compromise. It is useful to first understand the
-[high-level architecture](/vault/docs/internals/architecture) before learning about key rotation.
+Vault stores different encryption keys for different purposes. Vault uses key
+rotation to periodically change the keys according to a configured limit or in
+response to a potential leak or compromised service.
 
-As a review, Vault starts in a _sealed_ state. Vault is unsealed by providing the unseal keys.
-By default, Vault uses a technique known as [Shamir's secret sharing algorithm](https://en.wikipedia.org/wiki/Shamir's_Secret_Sharing)
-to split the root key into 5 shares, any 3 of which are required to reconstruct the master
-key. The root key is used to protect the encryption key, which is ultimately used to protect
-data written to the storage backend.
+## Relevant key definitions
+
+There are four keys involved in key rotation:
+
+- **internal encryption key** - Encrypts and protects data written to the
+  storage backend.
+- **root key** - "Master" key that seals Vault and protects the internal
+  encryption key.
+- **unseal key** - A portion (share) of the root key used to reconstruct the
+  root key. By default, Vault uses the
+  [Shamir's secret sharing algorithm](https://en.wikipedia.org/wiki/Shamir's_Secret_Sharing)
+  to split the root key into 5 shares.
+- **upgrade key** - A short-lived copy of the internal encryption key created
+  during key rotation in high-availability deployments. Vault encrypts upgrade
+  keys using the previous internal encryption key.
+
+## How key rotation works
+
+Vault supports online **rekey** and **rotate** operations to update the root
+key, unseal keys, and backend encryption key even for high-availability
+deployments. In replicated deployments, the active node performs the operations
+and standby nodes use an upgrade key to update their keys without requiring a
+manual unseal operation.
+
+1. Rekeying begins with a configured split and threshold for unseal keys:
+    1. Vault receives the configured threshold of unseal keys.
+    1. Vault generates and splits the new root key.
+    1. Vault re-encrypts the internal encryption key with the new root key.
+    1. Vault returns the new unseal keys.
+1. Rotation begins:
+    1. Vault generates a new internal encryption key.
+    1. Vault adds the new encryption key to an internal keyring.
+    1. Vault creates a temporary **upgrade key** (if needed).
 
 ![Key Rotate](/img/vault-key-rotate.png)
 
-To support key rotation, we need to support changing the unseal keys, root key, and the
-backend encryption key. We split this into two separate operations, `rekey` and `rotate`.
+Once the rotation completes, Vault can encrypt new writes to the storage backend
+using the new key, but still decrypt entries written under the previous key.
 
-The `rekey` operation is used to generate a new root key. When this is being done,
-it is possible to change the parameters of the key splitting, so that the number of shares
-and the threshold required to unseal can be changed. To perform a rekey a threshold of the
-current unseal keys must be provided. This is to prevent a single malicious operator from
-performing a rekey and invalidating the existing root key.
+<Tip title="Related API endpoints">
 
-Performing a rekey is fairly straightforward. The rekey operation must be initialized with
-the new parameters for the split and threshold. Once initialized, the current unseal keys
-must be provided until the threshold is met. Once met, Vault will generate the new master
-key, perform the splitting, and re-encrypt the encryption key with the new root key.
-The new unseal keys are then provided to the operator, and the old unseal keys are no
-longer usable.
+  ConfigureKeyRotation - [`POST:/sys/rotate/config`](/vault/api-docs/system/rotate-config)
 
-The `rotate` operation is used to change the encryption key used to protect data written
-to the storage backend. This key is never provided or visible to operators, who only
-have unseal keys. This simplifies the rotation, as it does not require the current key
-holders unlike the `rekey` operation. When `rotate` is triggered, a new encryption key
-is generated and added to a keyring. All new values written to the storage backend are
-encrypted with the new key. Old values written with previous encryption keys can still
-be decrypted since older keys are saved in the keyring. This allows key rotation to be
-done online, without an expensive re-encryption process.
+</Tip>
 
-Both the `rekey` and `rotate` operations can be done online and in a highly available
-configuration. Only the active Vault instance can perform either of the operations
-but standby instances can still assume an active role after either operation. This is
-done by providing an online upgrade path for standby instances. If the current encryption
-key is `N` and a rotation installs `N+1`, Vault creates a special "upgrade" key, which
-provides the `N+1` encryption key protected by the `N` key. This upgrade key is only available
-for a few minutes enabling standby instances to do a periodic check for upgrades.
-This allows standby instances to update their keys and stay in-sync with the active Vault
-without requiring operators to perform another unseal.
-
-The `rotate/config` endpoint is used to configure the number of operations or time interval
-between automatic rotations of the backend encryption key.
 
 ## NIST rotation guidance
 
-Periodic rotation of the encryption keys is recommended, even in the absence of
-compromise. Due to the nature of the AES-256-GCM encryption used, keys should be
-rotated before approximately 2<sup>32</sup> encryptions have been performed, following
-the guidelines of NIST publication 800-38D.
+The National Institute of Standards and Technology (NIST) recommends
+periodically rotating encryption keys, even without a leak or compromise event.
 
-As of Vault 1.7, Vault will automatically rotate the backend encryption key
-prior to reaching 2<sup>32</sup> encryption operations by default.
+Due to the nature of AES-256-GCM encryption,
+[NIST publication 800-38D](https://csrc.nist.gov/pubs/sp/800/38/d/final)
+recommends rotating keys **before** performing ~2<sup>32</sup> encryptions. By
+default, Vault monitors the `vault.barrier.estimated_encryptions` metric and
+automatically rotates the backend encryption key before reaching 2<sup>32</sup>
+encryption operations.
 
-Operators can estimate the number of encryptions by summing the following:
+You can approximate the `vault.barrier.estimated_encryptions` metric with the
+following sum:
 
-- The `vault.barrier.put` telemetry metric.
-- The `vault.token.creation` metric where the `token_type` label is `batch`.
-- The `merkle.flushDirty.num_pages` metric.
-- The WAL index.
+<CodeBlockConfig hideClipboard>
 
-Vault periodically persists the number of encryptions to support rotation. 
-This save operation has a 1 second timeout to prevent impact to performance
-if Vault is under heavy load.  Because persisting encryptions involves the
-seal backend (if seal wrap is enabled), some seals (such as HSMs) may take
-regularly longer than 1 second to respond.  If this is the case, operators
-may override that timeout by setting the environment variable 
-`VAULT_ENCRYPTION_COUNT_PERSIST_TIMEOUT` to a larger value, such as "5s".
+```text
+ESTIMATED_OPS = PUT_EVENTS + CREATE_EVENTS + MERKLE_FLUSH_EVENTS + WAL_INDEX
+```
+
+</CodeBlockConfig>
+
+where:
+
+- **`PUT_EVENTS`** is the `vault.barrier.put` telemetry metric.
+- **`CREATION_EVENTS`** is the `vault.token.creation` metric where `token_type`
+  is `batch`.
+- **`MERKLE_FLUSH_EVENTS`** is the `merkle.flushDirty.num_pages` telemetry metric.
+- **`WAL_INDEX`** is the current write-ahead-log index.
+
+<Tip>
+
+  Vault periodically persists the number of encryptions to support rotation. The
+  save operation has a 1 second timeout to limit performance impact when Vault is
+  under heavy load. If you use seal wrap, persisting encryptions involves the seal
+  backend, which means that some seals, like HSMs, may routinely take longer than
+  1 second to respond. You can override the save timeout by setting the 
+  `VAULT_ENCRYPTION_COUNT_PERSIST_TIMEOUT` environment variable on your Vault
+  server to a larger value, such as "5s".
+
+</Tip>

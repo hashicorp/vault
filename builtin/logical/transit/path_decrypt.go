@@ -50,6 +50,12 @@ func (b *backend) pathDecrypt() *framework.Path {
 The ciphertext to decrypt, provided as returned by encrypt.`,
 			},
 
+			"padding_scheme": {
+				Type: framework.TypeString,
+				Description: `The padding scheme to use for decrypt. Currently only applies to RSA key types.
+Options are 'oaep' or 'pkcs1v15'. Defaults to 'oaep'`,
+			},
+
 			"context": {
 				Type: framework.TypeString,
 				Description: `
@@ -130,6 +136,9 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 			Nonce:          d.Get("nonce").(string),
 			AssociatedData: d.Get("associated_data").(string),
 		}
+		if ps, ok := d.GetOk("padding_scheme"); ok {
+			batchInputItems[0].PaddingScheme = ps.(string)
+		}
 	}
 
 	batchResponseItems := make([]DecryptBatchResponseItem, len(batchInputItems))
@@ -192,33 +201,40 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 			continue
 		}
 
-		var factory interface{}
+		var factories []any
+		if item.PaddingScheme != "" {
+			paddingScheme, err := parsePaddingSchemeArg(p.Type, item.PaddingScheme)
+			if err != nil {
+				batchResponseItems[i].Error = fmt.Sprintf("'[%d].padding_scheme' invalid: %s", i, err.Error())
+				continue
+			}
+			factories = append(factories, paddingScheme)
+		}
 		if item.AssociatedData != "" {
 			if !p.Type.AssociatedDataSupported() {
 				batchResponseItems[i].Error = fmt.Sprintf("'[%d].associated_data' provided for non-AEAD cipher suite %v", i, p.Type.String())
 				continue
 			}
 
-			factory = AssocDataFactory{item.AssociatedData}
+			factories = append(factories, AssocDataFactory{item.AssociatedData})
 		}
 
-		var managedKeyFactory ManagedKeyFactory
 		if p.Type == keysutil.KeyType_MANAGED_KEY {
 			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
 			if !ok {
 				batchResponseItems[i].Error = errors.New("unsupported system view").Error()
 			}
 
-			managedKeyFactory = ManagedKeyFactory{
+			factories = append(factories, ManagedKeyFactory{
 				managedKeyParams: keysutil.ManagedKeyParameters{
 					ManagedKeySystemView: managedKeySystemView,
 					BackendUUID:          b.backendUUID,
 					Context:              ctx,
 				},
-			}
+			})
 		}
 
-		plaintext, err := p.DecryptWithFactory(item.DecodedContext, item.DecodedNonce, item.Ciphertext, factory, managedKeyFactory)
+		plaintext, err := p.DecryptWithFactory(item.DecodedContext, item.DecodedNonce, item.Ciphertext, factories...)
 		if err != nil {
 			switch err.(type) {
 			case errutil.InternalError:

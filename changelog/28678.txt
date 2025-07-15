@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Add ACME error types to errors encountered during challenge validation.
+```

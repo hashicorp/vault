@@ -110,7 +110,7 @@ type ErrorResponse struct {
 	StatusCode  int              `json:"-"`
 	Type        string           `json:"type"`
 	Detail      string           `json:"detail"`
-	Subproblems []*ErrorResponse `json:"subproblems"`
+	Subproblems []*ErrorResponse `json:"subproblems,omitempty"`
 }
 
 func (e *ErrorResponse) MarshalForStorage() map[string]interface{} {
@@ -142,8 +142,7 @@ func (e *ErrorResponse) Marshal() (*logical.Response, error) {
 	return &resp, nil
 }
 
-func FindType(given error) (err error, id string, code int, found bool) {
-	matchedError := false
+func FindType(given error) (err error, id string, code int, matchedError bool) {
 	for err, id = range errIdMappings {
 		if errors.Is(given, err) {
 			matchedError = true

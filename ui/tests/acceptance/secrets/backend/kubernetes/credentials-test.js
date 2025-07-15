@@ -8,8 +8,9 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import kubernetesScenario from 'vault/mirage/scenarios/kubernetes';
 import kubernetesHandlers from 'vault/mirage/handlers/kubernetes';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { fillIn, visit, click, currentRouteName } from '@ember/test-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | kubernetes | credentials', function (hooks) {
   setupApplicationTest(hooks);
@@ -24,7 +25,7 @@ module('Acceptance | kubernetes | credentials', function (hooks) {
     this.validateRoute = (assert, route, message) => {
       assert.strictEqual(currentRouteName(), `vault.cluster.secrets.backend.kubernetes.${route}`, message);
     };
-    return authPage.login();
+    return login();
   });
 
   test('it should have correct breadcrumb links in credentials view', async function (assert) {
@@ -66,8 +67,8 @@ module('Acceptance | kubernetes | credentials', function (hooks) {
       };
     });
     await fillIn('[data-test-kubernetes-namespace]', 'kubernetes-test');
-    await click('[data-test-toggle-input]');
-    await click('[data-test-toggle-input="Time-to-Live (TTL)"]');
+    await click(GENERAL.toggleInput('kubernetes-clusterRoleBinding'));
+    await click(GENERAL.toggleInput('Time-to-Live (TTL)'));
     await fillIn('[data-test-ttl-value="Time-to-Live (TTL)"]', 2);
     await click('[data-test-generate-credentials-button]');
     await click('[data-test-generate-credentials-done]');

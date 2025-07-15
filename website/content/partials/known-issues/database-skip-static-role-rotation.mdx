@@ -1,0 +1,18 @@
+### Database and LDAP Secrets Engine - Unwanted secret rotation on backend restart
+
+#### Affected Versions
+- All versions that support skipping automatic import rotation of static roles.
+
+#### Issue
+The Database secrets engine and the LDAP secrets engine both support skipping
+automatic import rotation of static roles with the config-level field
+`skip_static_role_import_rotation` and the static role-level field
+`skip_import_rotation`.
+
+Any static roles configured with either of these fields set to true will have
+their passwords rotated when Vault is restarted. The password rotation will not
+occur on restart if the static role has already had its password rotated.
+
+#### Workaround
+Upgrade to 1.18.9+, 1.19.3+. For previous versions, the only
+workaround is to avoid restarting the backend.

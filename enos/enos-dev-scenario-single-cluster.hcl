@@ -8,79 +8,24 @@ scenario "dev_single_cluster" {
     to improve end-to-end speed. If you wish to perform such verification you'll need to use a
     non-dev scenario instead.
 
-    The scenario supports finding and installing any released 'linux/amd64' or 'linux/arm64' Vault
-    artifact as long as its version is >= 1.8. You can also use the 'artifact:local' variant to
-    build and deploy the current branch!
-
-    In order to execute this scenario you'll need to install the enos CLI:
-      brew tap hashicorp/tap && brew update && brew install hashicorp/tap/enos
-
-    You'll also need access to an AWS account with an SSH keypair.
-    Perform the steps here to get AWS access with Doormat https://eng-handbook.hashicorp.services/internal-tools/enos/common-setup-steps/#authenticate-with-doormat
-    Perform the steps here to get an AWS keypair set up: https://eng-handbook.hashicorp.services/internal-tools/enos/common-setup-steps/#set-your-aws-key-pair-name-and-private-key
-
-    Please note that this scenario requires several inputs variables to be set in order to function
-    properly. While not all variants will require all variables, it's suggested that you look over
-    the scenario outline to determine which variables affect which steps and which have inputs that
-    you should set. You can use the following command to get a textual outline of the entire
-    scenario:
-      enos scenario outline dev_single_cluster
-
-    You can also create an HTML version that is suitable for viewing in web browsers:
-      enos scenario outline dev_single_cluster --format html > index.html
-      open index.html
-
-    To configure the required variables you have a couple of choices. You can create an
-    'enos-local.vars' file in the same 'enos' directory where this scenario is defined. In it you
-    declare your desired variable values. For example, you could copy the following content and
-    then set the values as necessary:
-
-    artifactory_username      = "username@hashicorp.com"
-    artifactory_token         = "<ARTIFACTORY TOKEN VALUE>
-    aws_region                = "us-west-2"
-    aws_ssh_keypair_name      = "<YOUR REGION SPECIFIC KEYPAIR NAME>"
-    aws_ssh_keypair_key_path  = "/path/to/your/private/key.pem"
-    dev_build_local_ui        = false
-    dev_consul_version        = "1.18.1"
-    vault_license_path        = "./support/vault.hclic"
-    vault_product_version     = "1.16.2"
-
-    Alternatively, you can set them in your environment:
-    export ENOS_VAR_aws_region="us-west-2"
-    export ENOS_VAR_vault_license_path="./support/vault.hclic"
-
-    After you've configured your inputs you can list and filter the available scenarios and then
-    subsequently launch and destroy them.
-      enos scenario list --help
-      enos scenario launch --help
-      enos scenario list dev_single_cluster
-      enos scenario launch dev_single_cluster arch:arm64 artifact:local backend:raft distro:ubuntu edition:ce seal:awskms
-
-    When the scenario is finished launching you refer to the scenario outputs to see information
-    related to your cluster. You can use this information to SSH into nodes and/or to interact
-    with vault.
-      enos scenario output dev_single_cluster arch:arm64 artifact:local backend:raft distro:ubuntu edition:ce seal:awskms
-      ssh -i /path/to/your/private/key.pem <PUBLIC_IP>
-      vault status
-
-    After you've finished you can tear down the cluster
-      enos scenario destroy dev_single_cluster arch:arm64 artifact:local backend:raft distro:ubuntu edition:ce seal:awskms
+    For a full tutorial for this scenario, see here:
+    https://eng-handbook.hashicorp.services/internal-tools/enos/tutorial-vault-dev-scenario-single-cluster/
   EOF
 
   // The matrix is where we define all the baseline combinations that enos can utilize to customize
-  // your scenario. By default enos attempts to perform your command on the entire product of these
-  // possible comginations! Most of the time you'll want to reduce that by passing in a filter.
+  // your scenario. By default, Enos attempts to perform your command on the entire product of these
+  // possible combinations! Most of the time you'll want to reduce that by passing in a filter.
   // Run 'enos scenario list --help' to see more about how filtering scenarios works in enos.
   matrix {
     arch     = ["amd64", "arm64"]
     artifact = ["local", "deb", "rpm", "zip"]
     backend  = ["consul", "raft"]
     distro   = ["amzn", "leap", "rhel", "sles", "ubuntu"]
-    edition  = ["ce", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+    edition  = ["ce", "ent", "ent.fips1403", "ent.hsm", "ent.hsm.fips1403"]
     seal     = ["awskms", "pkcs11", "shamir"]
 
     exclude {
-      edition = ["ent.hsm", "ent.fips1402", "ent.hsm.fips1402"]
+      edition = ["ent.hsm", "ent.fips1403", "ent.hsm.fips1403"]
       arch    = ["arm64"]
     }
 
@@ -91,12 +36,17 @@ scenario "dev_single_cluster" {
 
     exclude {
       artifact = ["deb"]
-      distro   = ["rhel"]
+      distro   = ["rhel", "amzn"]
+    }
+
+    exclude {
+      artifact = ["deb", "rpm"]
+      distro   = ["sles", "leap"]
     }
 
     exclude {
       seal    = ["pkcs11"]
-      edition = ["ce", "ent", "ent.fips1402"]
+      edition = ["ce", "ent", "ent.fips1403"]
     }
   }
 
@@ -154,15 +104,18 @@ scenario "dev_single_cluster" {
         artifactory_host:
           The artifactory host to search. It's very unlikely that you'll want to change this. The
           default value is the HashiCorp Artifactory instance.
-        artifactory_repo
+        artifactory_repo:
           The artifactory host to search. It's very unlikely that you'll want to change this. The
           default value is where CRT will publish packages.
-        artifactory_username
+        artifactory_username:
           The artifactory username associated with your token. You'll need this if you wish to use
           deb or rpm artifacts! You can request access via Okta.
-        artifactory_token
+        artifactory_token:
           The artifactory token associated with your username. You'll need this if you wish to use
           deb or rpm artifacts! You can create a token by logging into Artifactory via Okta.
+        dev_build_local_ui:
+          If you are not testing any changes in the UI, set to false. This will save time by not
+          building the entire UI. If you need to test the UI, set to true.
         vault_product_version:
           When using the artifact:rpm or artifact:deb variants we'll use this variable to determine
           which version of the Vault pacakge we should fetch from Artifactory.
@@ -195,6 +148,7 @@ scenario "dev_single_cluster" {
       artifactory_username = local.use_artifactory ? var.artifactory_username : null
       artifactory_token    = local.use_artifactory ? var.artifactory_token : null
       distro               = matrix.distro
+      distro_version       = global.distro_version[matrix.distro]
     }
   }
 

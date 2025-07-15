@@ -1,7 +1,7 @@
 ---
 layout: docs
-page_title: Plugin Development
-description: Learn about Vault plugin development.
+page_title: Plugin development
+description: Learn about building a Vault plugin.
 ---
 
 # Plugin development
@@ -34,6 +34,12 @@ from Vault.
 ## Serving a plugin
 
 ### Serving a plugin with multiplexing
+
+Multiplexing plugins must use the `ServeMultiplex` function call from the
+official Vault `plugin` or `dbplugin` SDK packages. At
+this time, there is no opt-out capability for plugins that implement
+multiplexing. To use a non-multiplexed plugin, run an older version of the
+plugin, i.e., the plugin calls the `Serve` function.
 
 ~> Plugin multiplexing requires `github.com/hashicorp/vault/sdk v0.5.4` or above.
 

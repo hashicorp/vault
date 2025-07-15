@@ -17,6 +17,7 @@ import (
 
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
@@ -40,7 +41,7 @@ type FileBackend struct {
 	sync.RWMutex
 	path       string
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 }
 
 type TransactionalFileBackend struct {
@@ -61,7 +62,7 @@ func NewFileBackend(conf map[string]string, logger log.Logger) (physical.Backend
 	return &FileBackend{
 		path:       path,
 		logger:     logger,
-		permitPool: physical.NewPermitPool(physical.DefaultParallelOperations),
+		permitPool: permitpool.New(physical.DefaultParallelOperations),
 	}, nil
 }
 
@@ -76,13 +77,15 @@ func NewTransactionalFileBackend(conf map[string]string, logger log.Logger) (phy
 		FileBackend: FileBackend{
 			path:       path,
 			logger:     logger,
-			permitPool: physical.NewPermitPool(1),
+			permitPool: permitpool.New(1),
 		},
 	}, nil
 }
 
 func (b *FileBackend) Delete(ctx context.Context, path string) error {
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer b.permitPool.Release()
 
 	b.Lock()
@@ -157,7 +160,9 @@ func (b *FileBackend) cleanupLogicalPath(path string) error {
 }
 
 func (b *FileBackend) Get(ctx context.Context, k string) (*physical.Entry, error) {
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer b.permitPool.Release()
 
 	b.RLock()
@@ -216,7 +221,9 @@ func (b *FileBackend) GetInternal(ctx context.Context, k string) (*physical.Entr
 }
 
 func (b *FileBackend) Put(ctx context.Context, entry *physical.Entry) error {
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer b.permitPool.Release()
 
 	b.Lock()
@@ -295,7 +302,9 @@ func (b *FileBackend) PutInternal(ctx context.Context, entry *physical.Entry) er
 }
 
 func (b *FileBackend) List(ctx context.Context, prefix string) ([]string, error) {
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer b.permitPool.Release()
 
 	b.RLock()
@@ -376,7 +385,9 @@ func (b *FileBackend) validatePath(path string) error {
 }
 
 func (b *TransactionalFileBackend) Transaction(ctx context.Context, txns []*physical.TxnEntry) error {
-	b.permitPool.Acquire()
+	if err := b.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer b.permitPool.Release()
 
 	b.Lock()

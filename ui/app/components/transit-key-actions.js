@@ -31,6 +31,9 @@ const STARTING_TRANSIT_PROPS = {
   hash_algorithm: 'sha2-256',
   algorithm: 'sha2-256',
   signature_algorithm: 'pss',
+  padding_scheme: 'oaep',
+  decrypt_padding_scheme: 'oaep',
+  encrypt_padding_scheme: 'oaep',
   bits: 256,
   bytes: 32,
   ciphertext: null,
@@ -59,12 +62,19 @@ const STARTING_TRANSIT_PROPS = {
 };
 
 const PROPS_TO_KEEP = {
-  encrypt: ['plaintext', 'context', 'nonce', 'key_version'],
-  decrypt: ['ciphertext', 'context', 'nonce'],
+  encrypt: ['plaintext', 'context', 'padding_scheme', 'nonce', 'key_version'],
+  decrypt: ['ciphertext', 'context', 'padding_scheme', 'nonce'],
   sign: ['input', 'hash_algorithm', 'key_version', 'prehashed', 'signature_algorithm'],
   verify: ['input', 'hmac', 'signature', 'hash_algorithm', 'prehashed'],
   hmac: ['input', 'algorithm', 'key_version'],
-  rewrap: ['ciphertext', 'context', 'nonce', 'key_version'],
+  rewrap: [
+    'ciphertext',
+    'context',
+    'decrypt_padding_scheme',
+    'encrypt_padding_scheme',
+    'nonce',
+    'key_version',
+  ],
   datakey: [],
 };
 
@@ -181,6 +191,12 @@ export default class TransitKeyActions extends Component {
       if ((action === 'hmac' || action === 'verify' || action === 'sign') && !!formData.input) {
         formData.input = encodeString(formData.input);
       }
+    }
+    if (!this.keyIsRSA) {
+      // Remove various rsa specific padding_scheme arguments if we aren't an RSA key
+      delete formData.encrypt_padding_scheme;
+      delete formData.decrypt_padding_scheme;
+      delete formData.padding_scheme;
     }
     const payload = formData ? this.compactData(formData) : null;
 

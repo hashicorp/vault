@@ -281,6 +281,11 @@ func (c *Core) reloadBackendCommon(ctx context.Context, entry *MountEntry, isAut
 				return err
 			}
 			re.binaryPaths.Store(binaryPathsEntry)
+			allowSnapshotReadPathsEntry, err := parseUnauthenticatedPaths(paths.AllowSnapshotRead)
+			if err != nil {
+				return err
+			}
+			re.allowSnapshotReadPaths.Store(allowSnapshotReadPathsEntry)
 		}
 	}
 

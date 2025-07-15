@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'vault/tests/helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { deleteAuthCmd, deleteEngineCmd, mountAuthCmd, mountEngineCmd, runCmd } from '../helpers/commands';
 import expectedSecretAttrs from 'vault/tests/helpers/openapi/expected-secret-attrs';
 import expectedAuthAttrs from 'vault/tests/helpers/openapi/expected-auth-attrs';
@@ -27,7 +27,7 @@ module(
     hooks.beforeEach(function () {
       this.pathHelp = this.owner.lookup('service:pathHelp');
       this.store = this.owner.lookup('service:store');
-      return authPage.login();
+      return login();
     });
 
     // Secret engines that use OpenAPI
@@ -80,7 +80,7 @@ function secretEngineHelper(test, secretEngine) {
       assert.deepEqual(
         Object.keys(result).sort(),
         Object.keys(expected).sort(),
-        `getProps returns expected attributes for ${modelName}`
+        `getProps returns expected attributes for ${modelName} (help url: "${helpUrl}")`
       );
       Object.keys(expected).forEach((attrName) => {
         assert.deepEqual(result[attrName], expected[attrName], `${attrName} attribute details match`);

@@ -1,0 +1,253 @@
+---
+layout: docs
+page_title: AWS auth support for Vault Secrets Operator
+description: >-
+  Learn how AWS authentication works for Vault Secrets Operator.
+---
+
+# AWS auth support for Vault Secrets Operator
+
+The Vault Secrets Operator (VSO) supports
+ [AWS authentication](/vault/docs/auth/aws) when accessing Vault. VSO
+ can retrieve AWS credentials:
+
+- from an [IRSA-enabled Kubernetes service account][aws-irsa].
+- by inferring credentials from the underlying EKS node role.
+- by inferring credentials from the EC2 instance profile of the instance
+   where the operator pod is running.
+- from an explicitly provided static access key id and secret key.
+
+The following examples illustrate how to configure a Vault role and the corresponding VaultAuth profile in VSO for different AWS authentication scenarios.
+
+## IRSA
+
+1. Follow the Amazon documentation for [IAM roles for service accounts][aws-irsa]
+   to add an OIDC provider so your Kubernetes service account can assume an IAM
+   role.
+
+1. Create an appropriate authentication role in your Vault instance:
+
+  <CodeTabs>
+  <CodeBlockConfig>
+
+  ```shell-session
+  $ vault write auth/aws/role/<VAULT_AWS_IRSA_ROLE> \
+      auth_type="iam" \
+      policies="default" \
+      bound_iam_principal_arn="arn:aws:iam::<ACCOUNT_ID>:role/<IAM_IRSA_ROLE>"
+  ```
+
+  </CodeBlockConfig>
+  <CodeBlockConfig>
+
+  ```hcl
+  resource "vault_aws_auth_backend_role" "aws_irsa_role" {
+    backend                  = "auth/aws"
+    role                     = <VAULT_AWS_IRSA_ROLE>
+    auth_type                = "iam"
+    token_policies           = ["default"]
+    bound_iam_principal_arns = [
+      "arn:aws:iam::<ACCOUNT_ID>:role/<IAM_IRSA_ROLE>",
+    ]
+  }
+  ```
+
+  </CodeBlockConfig>
+  </CodeTabs>
+
+1. Create the corresponding authentication entry in VSO:
+
+  ```yaml
+  apiVersion: secrets.hashicorp.com/v1beta1
+  kind: VaultAuth
+  metadata:
+    name: vaultauth-aws-irsa-example
+    namespace: <K8S_NAMESPACE>
+  spec:
+    vaultConnectionRef: <VAULT_CONNECTION_NAME>
+    mount: aws
+    method: aws
+    aws:
+      role: <VAULT_AWS_IRSA_ROLE>
+      region: <AWS_REGION>
+      irsaServiceAccount: <SERVICE_ACCOUNT>
+  ```
+
+<Tip title="Terraform has IRSA support">
+
+  If you use Terraform to manage your Elastic Kubernetes (EKS) cluster, the
+  [AWS EKS module](https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest)
+  includes IRSA support through the
+  [IRSA submodule](https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest/submodules/iam-role-for-service-accounts-eks).
+
+</Tip>
+
+## Node role
+
+1. Create an appropriate authentication role in your Vault instance:
+
+  <CodeTabs>
+  <CodeBlockConfig>
+
+  ```shell-session
+  $ vault write auth/aws/role/<VAULT_AWS_NODE_ROLE> \
+      auth_type="iam" \
+      policies="default" \
+      bound_iam_principal_arn="arn:aws:iam::<ACCOUNT_ID>:role/eks-nodes-<EKS_CLUSTER_NAME>"
+  ```
+
+  </CodeBlockConfig>
+  <CodeBlockConfig>
+
+  ```hcl
+  resource "vault_aws_auth_backend_role" "aws_node_role" {
+    backend                  = "auth/aws"
+    role                     = <VAULT_AWS_NODE_ROLE>
+    auth_type                = "iam"
+    token_policies           = ["default"]
+    bound_iam_principal_arns = [
+      "arn:aws:iam::<ACCOUNT_ID>:role/eks-nodes-<EKS_CLUSTER_NAME>",
+    ]
+  }
+  ```
+
+  </CodeBlockConfig>
+  </CodeTabs>
+
+1. Create the corresponding authentication entry in VSO:
+
+  ```yaml
+  apiVersion: secrets.hashicorp.com/v1beta1
+  kind: VaultAuth
+  metadata:
+    name: vaultauth-aws-node-example
+    namespace: <K8S_NAMESPACE>
+  spec:
+    vaultConnectionRef: <VAULT_CONNECTION_NAME>
+    mount: aws
+    method: aws
+    aws:
+      role: <VAULT_AWS_NODE_ROLE>
+      region: <AWS_REGION>
+  ```
+
+## Instance profile
+
+1. Create an appropriate authentication role in your Vault instance:
+
+  <CodeTabs>
+  <CodeBlockConfig>
+
+  ```shell-session
+  $ vault write auth/aws/role/<VAULT_AWS_INSTANCE_ROLE> \
+      auth_type="iam" \
+      policies="default" \
+      inferred_entity_type="ec2_instance" \
+      inferred_aws_region=-"<AWS_REGION>" \
+      bound_account_id="<ACCOUNT_ID>" \
+      bound_iam_principal_arn="arn:aws:iam::<ACCOUNT_ID>:instance-profile/eks-<INSTANCE_PROFILE_UUID>"
+  ```
+
+  </CodeBlockConfig>
+  <CodeBlockConfig>
+
+  ```hcl
+  resource "vault_aws_auth_backend_role" "aws_node_role" {
+    backend                  = "auth/aws"
+    role                     = <VAULT_AWS_INSTANCE_ROLE>
+    auth_type                = "iam"
+    token_policies           = ["default"]
+    inferred_entity_type     = "ec2_instance"
+    inferred_aws_region      = "<AWS_REGION>"
+    bound_account_ids        = ["<ACCOUNT_ID>"]
+    bound_iam_principal_arns = [
+      "arn:aws:iam::<ACCOUNT_ID>:role/eks-nodes-<EKS_CLUSTER_NAME>",
+    ]
+  }
+  ```
+
+  </CodeBlockConfig>
+  </CodeTabs>
+
+1. Create the corresponding authentication entry in VSO:
+
+  ```yaml
+  apiVersion: secrets.hashicorp.com/v1beta1
+  kind: VaultAuth
+  metadata:
+    name: vaultauth-aws-instance-example
+    namespace: <K8S_NAMESPACE>
+  spec:
+    vaultConnectionRef: <VAULT_CONNECTION_NAME>
+    mount: aws
+    method: aws
+    aws:
+      role: <VAULT_AWS_INSTANCE_ROLE>
+      region: <AWS_REGION>
+  ```
+
+## Static credentials
+
+1. Create an appropriate authentication role in your Vault instance:
+
+  <CodeTabs>
+  <CodeBlockConfig>
+
+  ```shell-session
+  $ vault write auth/aws/role/<VAULT_AWS_STATIC_ROLE> \
+      auth_type="iam" \
+      policies="default" \
+      bound_iam_principal_arn="arn:aws:iam::<ACCOUNT_ID>:role/<IAM_ROLE>"
+  ```
+
+  </CodeBlockConfig>
+  <CodeBlockConfig>
+
+  ```hcl
+  resource "vault_aws_auth_backend_role" "aws_static_role" {
+    backend                  = "auth/aws"
+    role                     = <VAULT_AWS_STATIC_ROLE>
+    auth_type                = "iam"
+    token_policies           = ["default"]
+    bound_iam_principal_arns = [
+      "arn:aws:iam::<ACCOUNT_ID>:role/<IAM_ROLE>",
+    ]
+  }
+  ```
+
+  </CodeBlockConfig>
+  </CodeTabs>
+
+1. Create the corresponding authentication entry in VSO:
+
+  ```yaml
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    name: aws-static-creds
+    namespace: <K8S_NAMESPACE>
+  data:
+    access_key_id: <AWS_ACCESS_KEY_ID>
+    secret_access_key: <AWS_SECRET_ACCESS_KEY>
+    session_token: <AWS_SESSION_TOKEN>  # session_token is optional
+  ---
+  apiVersion: secrets.hashicorp.com/v1beta1
+  kind: VaultAuth
+  metadata:
+    name: vaultauth-aws-static-example
+    namespace: <K8S_NAMESPACE>
+  spec:
+    vaultConnectionRef: <VAULT_CONNECTION_NAME>
+    mount: aws
+    method: aws
+    aws:
+      role: <VAULT_AWS_STATIC_ROLE>
+      region: <AWS_REGION>
+      secretRef: aws-static-creds
+  ```
+
+# API
+
+See the full list of AWS VaultAuth options on the [VSO API page](/vault/docs/platform/k8s/vso/api-reference#vaultauthconfigaws).
+
+[aws-irsa]: https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html

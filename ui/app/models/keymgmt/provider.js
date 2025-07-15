@@ -44,7 +44,7 @@ const validations = {
 
 @withModelValidations(validations)
 export default class KeymgmtProviderModel extends Model {
-  @service store;
+  @service pagination;
   @attr('string') backend;
   @attr('string', {
     label: 'Provider name',
@@ -128,7 +128,7 @@ export default class KeymgmtProviderModel extends Model {
     } else {
       // try unless capabilities returns false
       try {
-        this.keys = await this.store.lazyPaginatedQuery('keymgmt/key', {
+        this.keys = await this.pagination.lazyPaginatedQuery('keymgmt/key', {
           backend: this.backend,
           provider: this.name,
           responsePath: 'data.keys',

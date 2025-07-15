@@ -1,0 +1,10 @@
+<a id="audit-arg-socket-write_timeout" />
+
+**`write_timeout (string : "2s")`**
+
+Duration in seconds that Vault will wait for a write to complete over the
+socket. Setting `write_timeout` to `0` disables time outs and forces Vault to
+always wait until the write completes.
+
+**Example**: `write_timeout=0`
+

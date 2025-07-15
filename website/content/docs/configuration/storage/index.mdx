@@ -1,12 +1,9 @@
 ---
 layout: docs
-page_title: Storage Backends - Configuration
-description: |-
-  The storage stanza configures the storage backend, which represents the
-  location for the durable storage of Vault's information. Each backend has
-  pros, cons, advantages, and trade-offs. For example, some backends support
-  high availability while others provide a more robust backup and restoration
-  process.
+page_title: storage - Configuration
+description: >-
+  Configure the storage stanza to customize persistent, backend storage for
+  Vault.
 ---
 
 # `storage` stanza
@@ -41,7 +38,7 @@ For configuration options which also read an environment variable, the
 environment variable will take precedence over values in the configuration
 file.
 
-## Integrated storage vs. external storage
+## Integrated storage vs. external storage ((#integrated-vs-external))
 
 HashiCorp recommends using Vault's [integrated
 storage](/vault/docs/configuration/storage/raft) for most use cases rather than

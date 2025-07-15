@@ -1,0 +1,3 @@
+```release-note:change
+login (enterprise): Return a 500 error during logins when performance standby nodes make failed gRPC requests to the active node. 
+```

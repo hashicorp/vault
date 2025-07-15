@@ -85,6 +85,9 @@ $ curl \
 - `allow_generate_key` `(string: "false")` - If no existing key can be found in the referenced backend, instructs
   Vault to generate a key within the backend.
 
+  ~> **NOTE**: Once the initial key creation has occurred, it is advisable to disable this flag to prevent any
+  unintended key creation in the future.
+
 - `allow_replace_key` `(string: "false")` - Controls the ability for Vault to replace through generation or importing
   a key into the configured backend even if a key is present, if set to false those operations are forbidden
   if a key exists.

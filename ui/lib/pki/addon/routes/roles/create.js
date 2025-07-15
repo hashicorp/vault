@@ -32,8 +32,14 @@ export default class PkiRolesCreateRoute extends Route {
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
-      { label: 'roles', route: 'roles.index', model: this.secretMountPath.currentPath },
-      { label: 'create' },
+      { label: 'Roles', route: 'roles.index', model: this.secretMountPath.currentPath },
+      { label: 'Create' },
     ];
+  }
+
+  willTransition() {
+    // after upgrading to Ember Data 5.3.2 we saw duplicate records in the store after creating and saving a new role
+    // it's unclear why this ghost record is persisting, manually unloading refreshes the store
+    this.store.unloadAll('pki/role');
   }
 }

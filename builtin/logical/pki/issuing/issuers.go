@@ -137,6 +137,7 @@ type IssuerEntry struct {
 	AIAURIs              *AiaConfigEntry           `json:"aia_uris,omitempty"`
 	LastModified         time.Time                 `json:"last_modified"`
 	Version              uint                      `json:"version"`
+	entIssuerEntry
 }
 
 // GetCertificate returns a x509.Certificate of the CA certificate

@@ -22,6 +22,8 @@ import (
 	"github.com/hashicorp/vault/builtin/logical/ssh"
 	"github.com/hashicorp/vault/builtin/logical/transit"
 	"github.com/hashicorp/vault/helper/builtinplugins"
+	"github.com/hashicorp/vault/helper/testhelpers"
+	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical/inmem"
@@ -159,6 +161,23 @@ func testVaultServerUnsealWithKVVersionWithSeal(tb testing.TB, kvVersion string,
 		NumCores:    1,
 		KVVersion:   kvVersion,
 	})
+}
+
+func testVaultRaftCluster(tb testing.TB) *vault.TestCluster {
+	conf := &vault.CoreConfig{
+		CredentialBackends: defaultVaultCredentialBackends,
+		AuditBackends:      defaultVaultAuditBackends,
+		LogicalBackends:    defaultVaultLogicalBackends,
+		BuiltinRegistry:    builtinplugins.Registry,
+	}
+	opts := &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+		NumCores:    3,
+	}
+	teststorage.RaftBackendSetup(conf, opts)
+	cluster := vault.NewTestCluster(tb, conf, opts)
+	testhelpers.WaitForActiveNodeAndStandbys(tb, cluster)
+	return cluster
 }
 
 // testVaultServerUnseal creates a test vault cluster and returns a configured

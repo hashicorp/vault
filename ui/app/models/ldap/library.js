@@ -18,6 +18,7 @@ const formFields = ['name', 'service_account_names', 'ttl', 'max_ttl', 'disable_
 @withFormFields(formFields)
 export default class LdapLibraryModel extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord
+  @attr('string') path_to_library; // ancestral path to the library added in the adapter (only exists for nested libraries)
 
   @attr('string', {
     label: 'Library name',
@@ -63,6 +64,12 @@ export default class LdapLibraryModel extends Model {
     defaultValue: 'Enabled',
   })
   disable_check_in_enforcement;
+
+  get completeLibraryName() {
+    // if there is a path_to_library then the name is hierarchical
+    // and we must concat the ancestors with the leaf name to get the full library path
+    return this.path_to_library ? this.path_to_library + this.name : this.name;
+  }
 
   get displayFields() {
     return this.formFields.filter((field) => field.name !== 'service_account_names');

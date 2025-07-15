@@ -1,0 +1,59 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+---
+name: Create dynamic pipeline configuration
+description: Create dynamic test configuration by restoring existing valid config or creating new config
+
+inputs:
+  github-token:
+    description: An elevated Github token to access private HashiCorp modules.
+  vault-edition:
+    description: The vault edition to use when generating the dynamic config
+  vault-version:
+    description: The vault version to use when generating the dynamic config
+
+runs:
+  using: composite
+  steps:
+    - name: dyn-cfg-metadata
+      id: dyn-cfg-metadata
+      shell: bash
+      run: |
+        # Since the dynamic config is created by a specific version of the
+        # pipeline tool, we always need to factor it into our cache key.
+        # If the pipeline changes we always want to make sure we are using
+        # dynamic config from the latest version.
+        #
+        # We use a weekly date in the cache key so that we regenerate the
+        # configuration on at least a weekly basis
+        #
+        # If/when Github decides to purge our tiny config file cache we'll also
+        # recreate it as necessary.
+        #
+        # Uses GITHUB_ENV instead of GITHUB_OUTPUT because composite actions are broken,
+        # see: https://github.com/actions/cache/issues/803#issuecomment-1793565071
+        {
+          echo "DYNAMIC_CONFIG_KEY=${{ inputs.vault-version }}-$(date +%Y-%m-%U)-$(git ls-tree HEAD tools/pipeline --object-only --abbrev=8)"
+          echo "DYNAMIC_CONFIG_PATH=enos/enos-dynamic-config.hcl"
+        } | tee -a "$GITHUB_ENV"
+    - name: Try to restore dynamic config from cache
+      id: dyn-cfg-cache
+      uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
+      with:
+        path: ${{ env.DYNAMIC_CONFIG_PATH }}
+        key: dyn-cfg-${{ env.DYNAMIC_CONFIG_KEY }}
+    - if: steps.dyn-cfg-cache.outputs.cache-hit != 'true'
+      id: dyn-cfg-set-up-pipeline
+      # If we can't restore it from config then set up pipeline and generate it
+      name: Set up the pipeline tool
+      uses: ./.github/actions/set-up-pipeline
+      with:
+        github-token: ${{ inputs.github-token }}
+    - if: steps.dyn-cfg-cache.outputs.cache-hit != 'true'
+      id: dyn-cfg-generate
+      name: Create dynamic configuration
+      shell: bash
+      run: |
+        # Make sure that any branch specific dynamic config has been generated
+        pipeline generate enos-dynamic-config -d ./enos --file enos-dynamic-config.hcl -v ${{ inputs.vault-version }} -e ${{ inputs.vault-edition }} -n 3 --log debug

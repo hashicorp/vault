@@ -9,6 +9,7 @@ import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | sidebar-frame', function (hooks) {
   setupRenderingTest(hooks);
@@ -88,6 +89,6 @@ module('Integration | Component | sidebar-frame', function (hooks) {
       <Sidebar::Frame @showSidebar={{true}} />
     `);
 
-    assert.dom('.namespace-picker').exists('Namespace picker renders in sidebar footer');
+    assert.dom(GENERAL.button('namespace-picker')).exists('Namespace picker renders in sidebar footer');
   });
 });

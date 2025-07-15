@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDynamoDBBackend(t *testing.T) {
@@ -174,6 +175,221 @@ func TestDynamoDBHABackend(t *testing.T) {
 	physical.ExerciseHABackend(t, b.(physical.HABackend), b2.(physical.HABackend))
 	testDynamoDBLockTTL(t, b.(physical.HABackend))
 	testDynamoDBLockRenewal(t, b.(physical.HABackend))
+}
+
+// TestDynamoDBBackendPayPerRequest tests the DynamoDB backend
+// with the PAY_PER_REQUEST billing mode
+func TestDynamoDBBackendPayPerRequest(t *testing.T) {
+	cleanup, svccfg := prepareDynamoDBTestContainer(t)
+	defer cleanup()
+
+	creds, err := svccfg.Credentials.Get()
+	require.NoError(t, err)
+
+	region := os.Getenv("AWS_DEFAULT_REGION")
+	if region == "" {
+		region = "us-east-1"
+	}
+
+	awsSession, err := session.NewSession(&aws.Config{
+		Credentials: svccfg.Credentials,
+		Endpoint:    aws.String(svccfg.URL().String()),
+		Region:      aws.String(region),
+	})
+	require.NoError(t, err)
+
+	conn := dynamodb.New(awsSession)
+
+	randInt := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
+	table := fmt.Sprintf("vault-dynamodb-testacc-%d", randInt)
+
+	defer func() {
+		conn.DeleteTable(&dynamodb.DeleteTableInput{
+			TableName: aws.String(table),
+		})
+	}()
+
+	logger := logging.NewVaultLogger(log.Debug)
+
+	b, err := NewDynamoDBBackend(map[string]string{
+		"access_key":    creds.AccessKeyID,
+		"secret_key":    creds.SecretAccessKey,
+		"session_token": creds.SessionToken,
+		"table":         table,
+		"region":        region,
+		"endpoint":      svccfg.URL().String(),
+		"billing_mode":  "PAY_PER_REQUEST",
+	}, logger)
+	require.NoError(t, err)
+
+	dynamoTable, err := conn.DescribeTable(&dynamodb.DescribeTableInput{
+		TableName: aws.String(table),
+	})
+	require.NoError(t, err)
+	billingMode := *(dynamoTable.Table.BillingModeSummary.BillingMode)
+	require.Equal(t, "PAY_PER_REQUEST", billingMode)
+
+	physical.ExerciseBackend(t, b)
+	physical.ExerciseBackend_ListPrefix(t, b)
+}
+
+// TestDynamoDBBackendUpdateBillingMode tests the DynamoDB backend
+// and updating the billing mode
+func TestDynamoDBBackendUpdateBillingMode(t *testing.T) {
+	cleanup, svccfg := prepareDynamoDBTestContainer(t)
+	defer cleanup()
+
+	creds, err := svccfg.Credentials.Get()
+	require.NoError(t, err)
+
+	region := os.Getenv("AWS_DEFAULT_REGION")
+	if region == "" {
+		region = "us-east-1"
+	}
+
+	awsSession, err := session.NewSession(&aws.Config{
+		Credentials: svccfg.Credentials,
+		Endpoint:    aws.String(svccfg.URL().String()),
+		Region:      aws.String(region),
+	})
+	require.NoError(t, err)
+
+	conn := dynamodb.New(awsSession)
+
+	randInt := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
+	table := fmt.Sprintf("vault-dynamodb-testacc-%d", randInt)
+
+	defer func() {
+		conn.DeleteTable(&dynamodb.DeleteTableInput{
+			TableName: aws.String(table),
+		})
+	}()
+
+	logger := logging.NewVaultLogger(log.Debug)
+
+	b, err := NewDynamoDBBackend(map[string]string{
+		"access_key":    creds.AccessKeyID,
+		"secret_key":    creds.SecretAccessKey,
+		"session_token": creds.SessionToken,
+		"table":         table,
+		"region":        region,
+		"endpoint":      svccfg.URL().String(),
+	}, logger)
+	require.NoError(t, err)
+
+	dynamoTable, err := conn.DescribeTable(&dynamodb.DescribeTableInput{
+		TableName: aws.String(table),
+	})
+	require.NoError(t, err)
+	billingMode := dynamoTable.Table.BillingModeSummary
+	require.Nil(t, billingMode)
+
+	// now run again, with the same table name but a different billing mode
+	// and setting allow_update
+	b, err = NewDynamoDBBackend(map[string]string{
+		"access_key":             creds.AccessKeyID,
+		"secret_key":             creds.SecretAccessKey,
+		"session_token":          creds.SessionToken,
+		"table":                  table,
+		"region":                 region,
+		"endpoint":               svccfg.URL().String(),
+		"billing_mode":           "PAY_PER_REQUEST",
+		"dynamodb_allow_updates": "true",
+	}, logger)
+	require.NoError(t, err)
+
+	dynamoTable, err = conn.DescribeTable(&dynamodb.DescribeTableInput{
+		TableName: aws.String(table),
+	})
+	require.NoError(t, err)
+	newBillingMode := *(dynamoTable.Table.BillingModeSummary.BillingMode)
+	require.Equal(t, "PAY_PER_REQUEST", newBillingMode)
+
+	physical.ExerciseBackend(t, b)
+	physical.ExerciseBackend_ListPrefix(t, b)
+}
+
+// TestDynamoDBBackendUpdateReadWriteCapacity tests the DynamoDB backend
+// and updating the provisioned read and write capacity
+func TestDynamoDBBackendUpdateReadWriteCapacity(t *testing.T) {
+	cleanup, svccfg := prepareDynamoDBTestContainer(t)
+	defer cleanup()
+
+	creds, err := svccfg.Credentials.Get()
+	require.NoError(t, err)
+
+	region := os.Getenv("AWS_DEFAULT_REGION")
+	if region == "" {
+		region = "us-east-1"
+	}
+
+	awsSession, err := session.NewSession(&aws.Config{
+		Credentials: svccfg.Credentials,
+		Endpoint:    aws.String(svccfg.URL().String()),
+		Region:      aws.String(region),
+	})
+	require.NoError(t, err)
+
+	conn := dynamodb.New(awsSession)
+
+	randInt := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
+	table := fmt.Sprintf("vault-dynamodb-testacc-%d", randInt)
+
+	defer func() {
+		conn.DeleteTable(&dynamodb.DeleteTableInput{
+			TableName: aws.String(table),
+		})
+	}()
+
+	logger := logging.NewVaultLogger(log.Debug)
+
+	b, err := NewDynamoDBBackend(map[string]string{
+		"access_key":    creds.AccessKeyID,
+		"secret_key":    creds.SecretAccessKey,
+		"session_token": creds.SessionToken,
+		"table":         table,
+		"region":        region,
+		"endpoint":      svccfg.URL().String(),
+	}, logger)
+	require.NoError(t, err)
+
+	dynamoTable, err := conn.DescribeTable(&dynamodb.DescribeTableInput{
+		TableName: aws.String(table),
+	})
+	require.NoError(t, err)
+
+	provisionedThroughput := dynamoTable.Table.ProvisionedThroughput
+	require.NotNil(t, provisionedThroughput)
+	require.Equal(t, int64(5), *(provisionedThroughput.ReadCapacityUnits))
+	require.Equal(t, int64(5), *(provisionedThroughput.WriteCapacityUnits))
+
+	// now run again, with the same table name but a capacity of 20
+	// and setting allow_update
+	b, err = NewDynamoDBBackend(map[string]string{
+		"access_key":             creds.AccessKeyID,
+		"secret_key":             creds.SecretAccessKey,
+		"session_token":          creds.SessionToken,
+		"table":                  table,
+		"region":                 region,
+		"endpoint":               svccfg.URL().String(),
+		"read_capacity":          "20",
+		"write_capacity":         "20",
+		"dynamodb_allow_updates": "true",
+	}, logger)
+	require.NoError(t, err)
+
+	dynamoTable, err = conn.DescribeTable(&dynamodb.DescribeTableInput{
+		TableName: aws.String(table),
+	})
+	require.NoError(t, err)
+
+	provisionedThroughput = dynamoTable.Table.ProvisionedThroughput
+	require.NotNil(t, provisionedThroughput)
+	require.Equal(t, int64(20), *(provisionedThroughput.ReadCapacityUnits))
+	require.Equal(t, int64(20), *(provisionedThroughput.WriteCapacityUnits))
+
+	physical.ExerciseBackend(t, b)
+	physical.ExerciseBackend_ListPrefix(t, b)
 }
 
 // Similar to testHABackend, but using internal implementation details to

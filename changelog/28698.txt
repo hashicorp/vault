@@ -1,0 +1,3 @@
+```release-note:bug
+ui: No longer running decodeURIComponent on KVv2 list view allowing percent encoded data-octets in path name.
+```

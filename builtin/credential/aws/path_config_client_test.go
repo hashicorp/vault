@@ -7,9 +7,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginidentityutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/rotation"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,6 +19,7 @@ func TestBackend_pathConfigClient(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
+	config.System = &testSystemView{}
 
 	b, err := Backend(config)
 	if err != nil {
@@ -175,4 +178,12 @@ type testSystemView struct {
 
 func (d testSystemView) GenerateIdentityToken(_ context.Context, _ *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error) {
 	return nil, pluginidentityutil.ErrPluginWorkloadIdentityUnsupported
+}
+
+func (d testSystemView) RegisterRotationJob(_ context.Context, _ *rotation.RotationJobConfigureRequest) (string, error) {
+	return "", automatedrotationutil.ErrRotationManagerUnsupported
+}
+
+func (d testSystemView) DeregisterRotationJob(_ context.Context, _ *rotation.RotationJobDeregisterRequest) error {
+	return nil
 }

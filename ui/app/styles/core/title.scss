@@ -1,3 +1,7 @@
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -14,51 +18,51 @@
 .title {
   color: hsl(0, 0%, 21%);
   font-size: 2rem;
-  font-weight: $font-weight-bold;
+  font-weight: font_variables.$font-weight-bold;
   line-height: 1.125;
   word-break: break-word;
 
   > a {
-    color: $black;
+    color: color_variables.$black;
     text-decoration: none;
   }
 
   // title sizes
   &.is-2 {
-    font-size: $size-2;
+    font-size: size_variables.$size-2;
   }
 
   &.is-3 {
-    font-size: $size-3;
+    font-size: size_variables.$size-3;
   }
 
   &.is-4 {
-    font-size: $size-4;
+    font-size: size_variables.$size-4;
   }
 
   &.is-5 {
-    font-size: $size-5;
+    font-size: size_variables.$size-5;
   }
 
   &.is-6 {
-    font-size: $size-6;
+    font-size: size_variables.$size-6;
   }
 
   &.is-7 {
-    font-size: $size-7;
+    font-size: size_variables.$size-7;
   }
 
   &.is-8 {
-    font-size: $size-8;
+    font-size: size_variables.$size-8;
   }
 }
 
 .form-section .title {
-  margin-bottom: $spacing-12;
+  margin-bottom: size_variables.$spacing-12;
 }
 
 .is-subtitle-gray {
   text-transform: uppercase;
-  font-size: $size-7;
-  color: $ui-gray-500;
+  font-size: size_variables.$size-7;
+  color: color_variables.$ui-gray-500;
 }

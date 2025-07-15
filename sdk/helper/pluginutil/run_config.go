@@ -40,6 +40,7 @@ type PluginClientConfig struct {
 	AutoMTLS        bool
 	MLock           bool
 	Wrapper         RunnerUtil
+	Tier            consts.PluginTier
 }
 
 type runConfig struct {

@@ -5,10 +5,12 @@
 
 import Mixin from '@ember/object/mixin';
 import removeRecord from 'vault/utils/remove-record';
+import { service } from '@ember/service';
 
 // removes Ember Data records from the cache when the model
 // changes or you move away from the current route
 export default Mixin.create({
+  store: service(),
   modelPath: 'model',
   unloadModel() {
     const { modelPath } = this;

@@ -97,6 +97,8 @@ const (
 	flagNamePluginVersion = "plugin-version"
 	// flagNameIdentityTokenKey selects the key used to sign plugin identity tokens
 	flagNameIdentityTokenKey = "identity-token-key"
+	// flagNameTrimRequestTrailingSlashes selects the key used to determine whether to trim trailing slashes
+	flagNameTrimRequestTrailingSlashes = "trim-request-trailing-slashes"
 	// flagNameUserLockoutThreshold is the flag name used for tuning the auth mount lockout threshold parameter
 	flagNameUserLockoutThreshold = "user-lockout-threshold"
 	// flagNameUserLockoutDuration is the flag name used for tuning the auth mount lockout duration parameter
@@ -549,9 +551,7 @@ func initCommands(ui, serverCmdUi cli.Ui, runOpts *RunOptions) map[string]cli.Co
 			}, nil
 		},
 		"plugin register": func() (cli.Command, error) {
-			return &PluginRegisterCommand{
-				BaseCommand: getBaseCommand(),
-			}, nil
+			return NewPluginRegisterCommand(getBaseCommand()), nil
 		},
 		"plugin reload": func() (cli.Command, error) {
 			return &PluginReloadCommand{

@@ -1,0 +1,15 @@
+```release-note:bug
+secrets/aws: fix a panic when a performance standby node attempts to write/update config.
+```
+
+```release-note:bug
+auth/aws: fix a panic when a performance standby node attempts to write/update config.
+```
+
+```release-note:bug
+auth/ldap: fix a panic when a performance standby node attempts to write/update config.
+```
+
+```release-note:bug
+secrets/db: fix a panic when a performance standby node attempts to write/update config.
+```

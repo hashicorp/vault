@@ -2,19 +2,40 @@
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
-
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import { waitFor } from '@ember/test-waiters';
+import { task } from 'ember-concurrency';
+import errorMessage from 'vault/utils/error-message';
 
+/**
+ * @module DatabaseRoleEdit component is used to configure a database role.
+ * See secret-edit-layout which uses options for backend to determine which component to render.
+ * @example
+ * <DatabaseRoleEdit
+    @model={{this.model.database.role}}
+    @tab="edit"
+    @model="edit"
+    @initialKey=this.initialKey
+    />
+ *
+ * @param {object} model - The database role model.
+ * @param {string} tab - The tab to render.
+ * @param {string} mode - The mode to render. Either 'create' or 'edit'.
+ * @param {string} [initialKey] - The initial key to set for the database role.
+ */
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
-
 export default class DatabaseRoleEdit extends Component {
   @service router;
   @service flashMessages;
   @service store;
+  @tracked modelValidations;
+  @tracked invalidFormAlert;
+  @tracked errorMessage = '';
+  @tracked saveIssuerWarning = '';
 
   constructor() {
     super(...arguments);
@@ -23,20 +44,32 @@ export default class DatabaseRoleEdit extends Component {
     }
   }
 
-  @tracked loading = false;
+  isValid() {
+    const { isValid, state } = this.args.model.validate();
+    this.modelValidations = isValid ? null : state;
+    this.invalidFormAlert = isValid ? '' : 'There was an error submitting this form.';
+    return isValid;
+  }
+
+  resetErrors() {
+    this.flashMessages.clearMessages();
+    this.errorMessage = this.invalidFormAlert = '';
+    this.modelValidations = null;
+  }
 
   get warningMessages() {
     const warnings = {};
+    const { canCreateDynamic, canCreateStatic, type } = this.args.model;
     if (
-      (this.args.model.type === 'dynamic' && this.args.model.canCreateDynamic === false) ||
-      (this.args.model.type === 'static' && this.args.model.canCreateStatic === false)
+      (type === 'dynamic' && canCreateDynamic === false) ||
+      (type === 'static' && canCreateStatic === false)
     ) {
       warnings.type = `You don't have permissions to create this type of role.`;
     }
     return warnings;
   }
 
-  get databaseType() {
+  get databaseParams() {
     const backend = this.args.model?.backend;
     const dbs = this.args.model?.database || [];
     if (!backend || dbs.length === 0) {
@@ -44,8 +77,16 @@ export default class DatabaseRoleEdit extends Component {
     }
     return this.store
       .queryRecord('database/connection', { id: dbs[0], backend })
-      .then((record) => record.plugin_name)
+      .then(({ plugin_name, skip_static_role_rotation_import }) => ({
+        plugin_name,
+        skip_static_role_rotation_import,
+      }))
       .catch(() => null);
+  }
+
+  @action continueSubmitForm() {
+    this.saveIssuerWarning = '';
+    this.saveRole.perform();
   }
 
   @action
@@ -74,35 +115,42 @@ export default class DatabaseRoleEdit extends Component {
   }
 
   @action
-  handleCreateEditRole(evt) {
+  async handleCreateEditRole(evt) {
     evt.preventDefault();
-    this.loading = true;
+    this.resetErrors();
+    const { mode, model } = this.args;
+    if (!this.isValid()) return;
 
-    const mode = this.args.mode;
-    const roleSecret = this.args.model;
-    const secretId = roleSecret.name;
-    if (mode === 'create') {
-      roleSecret.set('id', secretId);
-      const path = roleSecret.type === 'static' ? 'static-roles' : 'roles';
-      roleSecret.set('path', path);
+    // if we're creating and rotating a static role immediately, warn user
+    if (!model.skip_import_rotation && model.type === 'static' && mode === 'create') {
+      this.saveIssuerWarning =
+        "You have enabled 'Rotate immediately' for this static role. Vault will update the password immediately after you save. NOTE: This will disrupt any active use of this role outside of Vault.";
+      return;
     }
-    return roleSecret
-      .save()
-      .then(() => {
-        try {
-          this.router.transitionTo(SHOW_ROUTE, `role/${secretId}`);
-        } catch (e) {
-          console.debug(e); // eslint-disable-line
-        }
-      })
-      .catch((e) => {
-        const errorMessage = e.errors?.join('. ') || e.message;
-        this.flashMessages.danger(
-          errorMessage || 'Could not save the role. Please check Vault logs for more information.'
-        );
-        this.loading = false;
-      });
+    await this.saveRole.perform();
   }
+
+  saveRole = task(
+    waitFor(async () => {
+      const { mode, model } = this.args;
+
+      if (mode === 'create') {
+        model.id = model.name;
+        const path = model.type === 'static' ? 'static-roles' : 'roles';
+        model.path = path;
+      }
+      try {
+        await model.save();
+        this.router.transitionTo(SHOW_ROUTE, `role/${model.name}`);
+      } catch (e) {
+        this.errorMessage = errorMessage(e);
+        this.flashMessages.danger(
+          this.errorMessage || 'Could not save the role. Please check Vault logs for more information.'
+        );
+      }
+    })
+  );
+
   @action
   rotateRoleCred(id) {
     const backend = this.args.model?.backend;

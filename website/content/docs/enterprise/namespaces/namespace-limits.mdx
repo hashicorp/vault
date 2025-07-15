@@ -1,11 +1,13 @@
 ---
 layout: docs
-page_title: Run Vault Enterprise with many namespaces
+page_title: Run Vault with many namespaces
 description: >-
-  Guidance for using thousands of namespaces with Vault Enterprise
+  Guidance for using thousands of namespaces with Vault
 ---
 
-# Run Vault Enterprise with many namespaces
+# Run Vault with many namespaces
+
+@include 'alerts/enterprise-and-hcp.mdx'
 
 Use namespaces to create isolated environments within Vault Enterprise.
 By default, Vault limits the number and depth of namespaces based on your
@@ -114,24 +116,3 @@ the following metrics:
 |----------------|--------------------------------------------------------------------------------------------------|
 | 0 – 256        | [`vault.rollback.queued`](/vault/docs/internals/telemetry/metrics/core-system#rollback-metrics)  |
 | 0 – 60000      | [`vault.rollback.waiting`](/vault/docs/internals/telemetry/metrics/core-system#rollback-metrics) |
-
-## Identity secret engine warnings
-
-When using OIDC with many namespaces, you may see warnings in your Vault logs
-from the `identity` secret mount under the `root` namespace. For example:
-
-```text
-2023-10-24T15:47:56.594Z [WARN]  secrets.identity.identity_51eb2411: error expiring OIDC public keys: err="context deadline exceeded"
-2023-10-24T15:47:56.594Z [WARN]  secrets.identity.identity_51eb2411: error rotating OIDC keys: err="context deadline exceeded"
-```
-
-The `secrets.identity` warnings occur because the root namespace is responsible
-for rotating the [OIDC keys](/vault/docs/secrets/identity/oidc-provider) of all
-other namespaces.
-
-<Warning title="Avoid OIDC with many namespaces">
-
-  Using Vault as an [OIDC provider](/vault/docs/concepts/oidc-provider) with
-  many namespaces can severely delay the rotation and invalidation of OIDC keys.
-
-</Warning>

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
 	triton "github.com/joyent/triton-go"
@@ -57,7 +58,7 @@ func TestMantaBackend(t *testing.T) {
 		client:     client,
 		directory:  testHarnessBucket,
 		logger:     logger.Named("storage.mantabackend"),
-		permitPool: physical.NewPermitPool(128),
+		permitPool: permitpool.New(128),
 	}
 
 	err = mb.client.Dir().Put(context.Background(), &storage.PutDirectoryInput{

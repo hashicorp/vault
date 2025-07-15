@@ -1,0 +1,200 @@
+---
+layout: docs
+page_title: Set up SAML authN
+description: >-
+  Use SAML authentication with Vault to authenticate Vault users with public
+  keys or certificates and a SAML identity provider.
+---
+
+# Set up SAML authentication
+
+@include 'alerts/enterprise-and-hcp.mdx'
+
+@include 'tips/custom-authn.mdx'
+
+The `saml` auth method allows users to authentication with Vault using their identity
+within a [SAML V2.0](https://saml.xml.org/saml-specifications) identity provider.
+Authentication is suited for human users by requiring interaction with a web browser.
+
+## Authentication
+
+<Tabs>
+
+<Tab heading="Vault CLI">
+
+The CLI login defaults to the `/saml` path. If this auth method was enabled at a
+different path, specify `-path=/my-path` in the CLI.
+
+```shell-session
+$ vault login -method=saml role=admin
+
+Complete the login via your SAML provider. Launching browser to:
+
+    https://company.okta.com/app/vault/abc123eb9xnIfzlaf697/sso/saml?SAMLRequest=fJI9b9swEIZ3%2FwqBu0SJ%2FpBDRAZce4iBtDViN0MX40Sda...
+```
+
+The CLI opens the default browser to the generated URL where users must authenticate
+with the configured SAML identity provider. The URL may be manually entered into the
+browser if it cannot be automatically opened.
+
+The CLI login behavior may be customized with the following optional parameters:
+
+- `skip_browser` (default: `false`): If set to `true`, automatic launching of the default
+  browser will be skipped. The SAML identity provider URL must be manually entered in a
+  browser to complete the authentication flow.
+- `abort_on_error` (default: `false`): If set to `true`, the CLI returns an error and
+  exits with a non-zero value if it cannot launch the default browser.
+
+</Tab>
+
+<Tab heading="Vault UI">
+
+1. Select "SAML" from the "Method" select box.
+1. Enter a role name for the "Role" field or leave blank to use
+   the [default role](/vault/api-docs/auth/saml#default_role).
+1. Press **Sign in with SAML Provider** and complete the authentication with the
+   configured SAML identity provider.
+
+</Tab>
+
+</Tabs>
+
+## Configuration
+
+Auth methods must be configured in advance before users or machines can
+authenticate. These steps are usually completed by an operator or configuration
+management tool.
+
+1. Enable the SAML authentication method with the `auth enable` CLI command:
+
+   ```shell-session
+   $ vault auth enable saml
+   ```
+
+1. Use the `/config` endpoint to save the configuration of your SAML identity provider and
+   set the default role. You can configure the trust relationship with the SAML Identity
+   Provider by either providing a URL for its Metadata document:
+
+   ```shell-session
+   $ vault write auth/saml/config \
+      default_role="admin" \
+      idp_metadata_url="https://company.okta.com/app/abc123eb9xnIfzlaf697/sso/saml/metadata" \
+      entity_id="https://my.vault/v1/auth/saml" \
+      acs_urls="https://my.vault/v1/auth/saml/callback"
+   ```
+
+   or by setting the configuration Metadata manually:
+
+   ```shell-session
+   $ vault write auth/saml/config \
+      default_role="admin" \
+      idp_sso_url="https://company.okta.com/app/abc123eb9xnIfzlaf697/sso/saml" \
+      idp_entity_id="https://www.okta.com/abc123eb9xnIfzlaf697" \
+      idp_cert="@path/to/cert.pem" \
+      entity_id="https://my.vault/v1/auth/saml" \
+      acs_urls="https://my.vault/v1/auth/saml/callback"
+   ```
+<Note>
+  The config has boolean options to validate the SAML response signature, as `validate_response_signature` and
+  `validate_assertion_signature`. By default, it's validated that at least one out of response or assertion is signed.
+  If your IDP allows signing both then the recommended secure approach is to enable both the options.
+</Note>
+
+1. Create a named role:
+
+   ```shell-session
+   $ vault write auth/saml/role/admin \
+       bound_subjects="*@hashicorp.com" \
+       bound_subjects_type="glob" \
+       token_policies="writer" \
+       bound_attributes=group="admin" \
+       ttl="1h"
+   ```
+
+   This role authorizes users that have a subject with an `@hashicorp.com` suffix and
+   are in the `admin` group to authenticate. It also gives the resulting Vault token a
+   time-to-live of 1 hour and the `writer` policy.
+
+Refer to the SAML [API documentation](/vault/api-docs/auth/saml) for a
+complete list of configuration options.
+
+### Assertion consumer service URLs
+
+The [`acs_urls`](/vault/api-docs/auth/saml#acs_urls) configuration parameter determines
+where the SAML response will be sent after users authenticate with the configured SAML
+identity provider in their browser.
+
+The values provided to Vault must:
+
+- Match or be a subset of the configured values for the SAML application within the
+  configured identity provider.
+- Be directed to the auth method's [assertion consumer service
+  callback](/vault/api-docs/auth/saml#assertion-consumer-service-callback) API.
+
+<Note>
+  It is highly recommended and enforced by some identity providers to TLS-protect the
+  assertion consumer service URLs. A warning will be returned from Vault if any of the
+  configured assertion consumer service URLs are not protected by TLS.
+</Note>
+
+#### Configuration for replication
+
+To support a single auth method mount being used across Vault [replication](/vault/docs/enterprise/replication)
+clusters, `acs_urls` supports configuration of multiple values. For example, to support
+SAML authentication on a primary and secondary Vault cluster, the following `acs_urls`
+configuration could be given:
+
+   ```shell-session
+   $ vault write auth/saml/config \
+      acs_urls="https://primary.vault/v1/auth/saml/callback,https://secondary.vault/v1/auth/saml/callback"
+   ```
+
+The Vault UI and CLI will automatically request the proper assertion consumer service URL
+for the cluster they're configured to communicate with. This means that the entirety of the
+authentication flow will stay within the targeted cluster.
+
+#### Configuration for namespaces
+
+The SAML auth method can be used within Vault [namespaces](/vault/docs/enterprise/namespaces).
+The assertion consumer service URLs configured in both Vault and the identity provider must
+include the namespace path segment.
+
+The following table provides assertion consumer service URLs given different namespace paths:
+
+| Namespace path  | Assertion consumer service URL                        |
+|-----------------|-------------------------------------------------------|
+| `admin/`        | `https://my.vault/v1/admin/auth/saml/callback`        |
+| `org/security/` | `https://my.vault/v1/org/security/auth/saml/callback` |
+
+### Bound attributes
+
+Once the user has been authenticated the authorization flow will validate
+that both the [`bound_subjects`](/vault/api-docs/auth/saml#bound_subjects) and
+[`bound_attributes`](/vault/api-docs/auth/saml#bound_attributes) match expected
+values configured for the role. This can be used to restrict access to Vault for
+a subset of users in the SAML identity provider.
+
+For example, a role with `bound_subjects=*@hashicorp.com` and
+`bound_attributes=groups=support,engineering` will only authorize users whose subject has
+an `@hashicorp.com` suffix and that are in either the `support` or `engineering` group.
+
+Whether it should be an exact match or interpret `*` as a wildcard can be
+controlled by the [`bound_subjects_type`](/vault/api-docs/auth/saml#bound_subjects_type) and
+[`bound_attributes_type`](/vault/api-docs/auth/saml#bound_attributes_type) parameters.
+
+### Bound attributes for the Microsoft identity platform
+
+The bound attributes for the Microsoft identity platform requires
+`http://schemas.microsoft.com/ws/2008/06/identity/claims/groups` as the
+attribute name along with your group membership values. For example, a role with
+`bound_attributes=http://schemas.microsoft.com/ws/2008/06/identity/claims/groups="GROUP1_OBJECT_ID,GROUP2_OBJECT_ID"`
+will only authorize users that are in either the `GROUP1_OBJECT_ID` or
+`GROUP2_OBJECT_ID` group.
+
+You can read more at the Microsoft identity platform's
+[SAML token claims reference](https://learn.microsoft.com/en-us/entra/identity-platform/reference-saml-tokens).
+
+## API
+
+The SAML authentication plugin has a full HTTP API. Refer to the
+[SAML API documentation](/vault/api-docs/auth/saml) for more details.

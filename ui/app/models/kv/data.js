@@ -8,7 +8,7 @@ import lazyCapabilities, { apiPath } from 'vault/macros/lazy-capabilities';
 import { withModelValidations } from 'vault/decorators/model-validations';
 import { withFormFields } from 'vault/decorators/model-form-fields';
 import { isDeleted } from 'kv/utils/kv-deleted';
-import { WHITESPACE_WARNING } from 'vault/utils/model-helpers/validators';
+import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
 
 /* sample response
 {
@@ -52,7 +52,11 @@ const validations = {
 @withFormFields()
 export default class KvSecretDataModel extends Model {
   @attr('string') backend; // dynamic path of secret -- set on response from value passed to queryRecord.
-  @attr('string', { label: 'Path for this secret' }) path;
+  @attr('string', {
+    label: 'Path for this secret',
+    subText: 'Names with forward slashes define hierarchical path structures.',
+  })
+  path;
   @attr('object') secretData; // { key: value } data of the secret version
 
   // Params returned on the GET response.

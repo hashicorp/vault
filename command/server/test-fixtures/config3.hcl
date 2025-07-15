@@ -58,3 +58,6 @@ raw_storage_endpoint = true
 disable_sealwrap = true
 disable_sentinel_trace = true
 administrative_namespace_path = "admin/"
+enable_post_unseal_trace = true
+post_unseal_trace_directory = "/tmp"
+remove_irrevocable_lease_after = "30d"

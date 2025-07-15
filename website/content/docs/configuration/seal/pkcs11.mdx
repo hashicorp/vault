@@ -1,12 +1,11 @@
 ---
 layout: docs
-page_title: PKCS11 - Seals - Configuration
-description: |-
-  The PKCS11 seal configures Vault to use an HSM with PKCS11 as the seal
-  wrapping mechanism.
+page_title: HSM PKCS11 seal configuration
+description: >-
+  Configure Vault sealing to use PKCS11.
 ---
 
-# `pkcs11` seal
+# HSM PKCS11 seal configuration
 
 
 <Note title="Auto-unseal and seal wrapping requires Vault Enterprise">
@@ -156,6 +155,10 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   circumstances, such as if proprietary vendor extensions are required to
   create keys of a suitable type.
 
+  ~> **NOTE**: Once the initial key creation has occurred post cluster
+  initialization, it is advisable to disable this flag to prevent any
+  unintended key creation in the future.
+
 - `force_rw_session` `(string: "false")`: Force all operations to open up
   a read-write session to the HSM. This is a boolean expressed as a string (e.g.
   `"true"`). May also be specified by the `VAULT_HSM_FORCE_RW_SESSION` environment
@@ -166,6 +169,8 @@ These parameters apply to the `seal` stanza in the Vault configuration file:
   in flight to the HSM at any given time.
 
 - `disabled` `(string: "")`: Set this to `true` if Vault is migrating from an auto seal configuration. Otherwise, set to `false`.
+
+`pin` can be an [indirect value reference](/vault/docs/configuration/seal#indirect-value-references).
 
 Refer to the [Seal Migration](/vault/docs/concepts/seal#seal-migration) documentation for more information about the seal migration process.
   

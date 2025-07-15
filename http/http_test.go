@@ -32,6 +32,10 @@ func testHttpDelete(t *testing.T, token string, addr string) *http.Response {
 	return testHttpData(t, "DELETE", token, addr, "", nil, false, 0, false)
 }
 
+func testHttpDeleteData(t *testing.T, token string, addr string, body interface{}) *http.Response {
+	return testHttpData(t, "DELETE", token, addr, "", body, false, 0, false)
+}
+
 // Go 1.8+ clients redirect automatically which breaks our 307 standby testing
 func testHttpDeleteDisableRedirect(t *testing.T, token string, addr string) *http.Response {
 	return testHttpData(t, "DELETE", token, addr, "", nil, true, 0, false)

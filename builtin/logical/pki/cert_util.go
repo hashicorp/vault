@@ -62,59 +62,10 @@ var (
 	endWildRegex       = labelRegex + `\*`
 	middleWildRegex    = labelRegex + `\*` + labelRegex
 	leftWildLabelRegex = regexp.MustCompile(`^(` + allWildRegex + `|` + startWildRegex + `|` + endWildRegex + `|` + middleWildRegex + `)$`)
-
-	// Cloned from https://github.com/golang/go/blob/82c713feb05da594567631972082af2fcba0ee4f/src/crypto/x509/x509.go#L327-L379
-	oidSignatureMD2WithRSA      = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 2}
-	oidSignatureMD5WithRSA      = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 4}
-	oidSignatureSHA1WithRSA     = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 5}
-	oidSignatureSHA256WithRSA   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 11}
-	oidSignatureSHA384WithRSA   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 12}
-	oidSignatureSHA512WithRSA   = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 13}
-	oidSignatureRSAPSS          = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 10}
-	oidSignatureDSAWithSHA1     = asn1.ObjectIdentifier{1, 2, 840, 10040, 4, 3}
-	oidSignatureDSAWithSHA256   = asn1.ObjectIdentifier{2, 16, 840, 1, 101, 3, 4, 3, 2}
-	oidSignatureECDSAWithSHA1   = asn1.ObjectIdentifier{1, 2, 840, 10045, 4, 1}
-	oidSignatureECDSAWithSHA256 = asn1.ObjectIdentifier{1, 2, 840, 10045, 4, 3, 2}
-	oidSignatureECDSAWithSHA384 = asn1.ObjectIdentifier{1, 2, 840, 10045, 4, 3, 3}
-	oidSignatureECDSAWithSHA512 = asn1.ObjectIdentifier{1, 2, 840, 10045, 4, 3, 4}
-	oidSignatureEd25519         = asn1.ObjectIdentifier{1, 3, 101, 112}
-	oidISOSignatureSHA1WithRSA  = asn1.ObjectIdentifier{1, 3, 14, 3, 2, 29}
-
-	signatureAlgorithmDetails = []struct {
-		algo       x509.SignatureAlgorithm
-		name       string
-		oid        asn1.ObjectIdentifier
-		pubKeyAlgo x509.PublicKeyAlgorithm
-		hash       crypto.Hash
-	}{
-		{x509.MD2WithRSA, "MD2-RSA", oidSignatureMD2WithRSA, x509.RSA, crypto.Hash(0) /* no value for MD2 */},
-		{x509.MD5WithRSA, "MD5-RSA", oidSignatureMD5WithRSA, x509.RSA, crypto.MD5},
-		{x509.SHA1WithRSA, "SHA1-RSA", oidSignatureSHA1WithRSA, x509.RSA, crypto.SHA1},
-		{x509.SHA1WithRSA, "SHA1-RSA", oidISOSignatureSHA1WithRSA, x509.RSA, crypto.SHA1},
-		{x509.SHA256WithRSA, "SHA256-RSA", oidSignatureSHA256WithRSA, x509.RSA, crypto.SHA256},
-		{x509.SHA384WithRSA, "SHA384-RSA", oidSignatureSHA384WithRSA, x509.RSA, crypto.SHA384},
-		{x509.SHA512WithRSA, "SHA512-RSA", oidSignatureSHA512WithRSA, x509.RSA, crypto.SHA512},
-		{x509.SHA256WithRSAPSS, "SHA256-RSAPSS", oidSignatureRSAPSS, x509.RSA, crypto.SHA256},
-		{x509.SHA384WithRSAPSS, "SHA384-RSAPSS", oidSignatureRSAPSS, x509.RSA, crypto.SHA384},
-		{x509.SHA512WithRSAPSS, "SHA512-RSAPSS", oidSignatureRSAPSS, x509.RSA, crypto.SHA512},
-		{x509.DSAWithSHA1, "DSA-SHA1", oidSignatureDSAWithSHA1, x509.DSA, crypto.SHA1},
-		{x509.DSAWithSHA256, "DSA-SHA256", oidSignatureDSAWithSHA256, x509.DSA, crypto.SHA256},
-		{x509.ECDSAWithSHA1, "ECDSA-SHA1", oidSignatureECDSAWithSHA1, x509.ECDSA, crypto.SHA1},
-		{x509.ECDSAWithSHA256, "ECDSA-SHA256", oidSignatureECDSAWithSHA256, x509.ECDSA, crypto.SHA256},
-		{x509.ECDSAWithSHA384, "ECDSA-SHA384", oidSignatureECDSAWithSHA384, x509.ECDSA, crypto.SHA384},
-		{x509.ECDSAWithSHA512, "ECDSA-SHA512", oidSignatureECDSAWithSHA512, x509.ECDSA, crypto.SHA512},
-		{x509.PureEd25519, "Ed25519", oidSignatureEd25519, x509.Ed25519, crypto.Hash(0) /* no pre-hashing */},
-	}
 )
 
 func doesPublicKeyAlgoMatchSignatureAlgo(pubKey x509.PublicKeyAlgorithm, algo x509.SignatureAlgorithm) bool {
-	for _, detail := range signatureAlgorithmDetails {
-		if detail.algo == algo {
-			return pubKey == detail.pubKeyAlgo
-		}
-	}
-
-	return false
+	return issuing.DoesPublicKeyAlgoMatchSignatureAlgo(pubKey, algo)
 }
 
 func getFormat(data *framework.FieldData) string {
@@ -264,7 +215,7 @@ func fetchCertBySerial(sc pki_backend.StorageContext, prefix, serial string) (*l
 		default:
 			certCounter.IncrementTotalCertificatesCount(certsCounted, path)
 		}
-		return nil, errutil.InternalError{Err: fmt.Sprintf("error deleting certificate with serial %s from old location", serial)}
+		return nil, errutil.InternalError{Err: fmt.Sprintf("error deleting certificate with serial %s from old location: %s", serial, err)}
 	}
 
 	return certEntry, nil
@@ -348,6 +299,19 @@ func generateCert(sc *storageContext,
 	if isCA {
 		data.Params.IsCA = isCA
 		data.Params.PermittedDNSDomains = input.apiData.Get("permitted_dns_domains").([]string)
+		data.Params.ExcludedDNSDomains = input.apiData.Get("excluded_dns_domains").([]string)
+		data.Params.PermittedIPRanges, err = convertIpRanges(input.apiData.Get("permitted_ip_ranges").([]string))
+		if err != nil {
+			return nil, nil, errutil.UserError{Err: fmt.Sprintf("invalid permitted_ip_ranges value: %s", err)}
+		}
+		data.Params.ExcludedIPRanges, err = convertIpRanges(input.apiData.Get("excluded_ip_ranges").([]string))
+		if err != nil {
+			return nil, nil, errutil.UserError{Err: fmt.Sprintf("invalid excluded_ip_ranges value: %s", err)}
+		}
+		data.Params.PermittedEmailAddresses = input.apiData.Get("permitted_email_addresses").([]string)
+		data.Params.ExcludedEmailAddresses = input.apiData.Get("excluded_email_addresses").([]string)
+		data.Params.PermittedURIDomains = input.apiData.Get("permitted_uri_domains").([]string)
+		data.Params.ExcludedURIDomains = input.apiData.Get("excluded_uri_domains").([]string)
 
 		if data.SigningBundle == nil {
 			// Generating a self-signed root certificate. Since we have no
@@ -397,6 +361,21 @@ func generateCert(sc *storageContext,
 	}
 
 	return parsedBundle, warnings, nil
+}
+
+// convertIpRanges parses each string in the input slice as an IP network. Input
+// strings are expected to be in the CIDR notation of IP address and prefix length
+// like "192.0.2.0/24" or "2001:db8::/32", as defined in RFC 4632 and RFC 4291.
+func convertIpRanges(ipRanges []string) ([]*net.IPNet, error) {
+	var ret []*net.IPNet
+	for _, ipRange := range ipRanges {
+		_, ipnet, err := net.ParseCIDR(ipRange)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing IP range %q: %w", ipRange, err)
+		}
+		ret = append(ret, ipnet)
+	}
+	return ret, nil
 }
 
 // N.B.: This is only meant to be used for generating intermediate CAs.
@@ -470,6 +449,34 @@ func (i SignCertInputFromDataFields) UseCSRValues() bool {
 
 func (i SignCertInputFromDataFields) GetPermittedDomains() []string {
 	return i.data.Get("permitted_dns_domains").([]string)
+}
+
+func (i SignCertInputFromDataFields) GetExcludedDomains() []string {
+	return i.data.Get("excluded_dns_domains").([]string)
+}
+
+func (i SignCertInputFromDataFields) GetPermittedIpRanges() ([]*net.IPNet, error) {
+	return convertIpRanges(i.data.Get("permitted_ip_ranges").([]string))
+}
+
+func (i SignCertInputFromDataFields) GetExcludedIpRanges() ([]*net.IPNet, error) {
+	return convertIpRanges(i.data.Get("excluded_ip_ranges").([]string))
+}
+
+func (i SignCertInputFromDataFields) GetPermittedEmailAddresses() []string {
+	return i.data.Get("permitted_email_addresses").([]string)
+}
+
+func (i SignCertInputFromDataFields) GetExcludedEmailAddresses() []string {
+	return i.data.Get("excluded_email_addresses").([]string)
+}
+
+func (i SignCertInputFromDataFields) GetPermittedUriDomains() []string {
+	return i.data.Get("permitted_uri_domains").([]string)
+}
+
+func (i SignCertInputFromDataFields) GetExcludedUriDomains() []string {
+	return i.data.Get("excluded_uri_domains").([]string)
 }
 
 func (i SignCertInputFromDataFields) IgnoreCSRSignature() bool {

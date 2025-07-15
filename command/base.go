@@ -22,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/api/tokenhelper"
 	"github.com/hashicorp/vault/command/config"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/mattn/go-isatty"
 	"github.com/mitchellh/go-homedir"
 	"github.com/pkg/errors"
@@ -76,7 +77,14 @@ type BaseCommand struct {
 	tokenHelper    tokenhelper.TokenHelper
 	hcpTokenHelper hcpvlib.HCPTokenHelper
 
+	flagSnapshotID string
+
 	client *api.Client
+
+	// hclDuplicateKeysWarningPrinted tracks if a command execution has already printed the warning, to avoid printing
+	// it multiple times on a single execution.
+	// TODO (HCL_DUP_KEYS_DEPRECATION): remove this once we don't use the warning anymore
+	hclDuplicateKeysWarningPrinted bool
 }
 
 // Client returns the HTTP API client. The client is cached on the command to
@@ -268,10 +276,14 @@ func (c *BaseCommand) TokenHelper() (tokenhelper.TokenHelper, error) {
 	if c.tokenHelper != nil {
 		return c.tokenHelper, nil
 	}
-
-	helper, err := cliconfig.DefaultTokenHelper()
+	// TODO (HCL_DUP_KEYS_DEPRECATION): Return to DefaultTokenHelper once duplicates are forbidden
+	helper, duplicates, err := cliconfig.DefaultTokenHelperCheckDuplicates()
 	if err != nil {
 		return nil, err
+	}
+	if duplicates && !c.hclDuplicateKeysWarningPrinted {
+		c.hclDuplicateKeysWarningPrinted = true
+		c.UI.Warn("WARNING: Duplicate keys found in the Vault token helper configuration file, duplicate keys in HCL files are deprecated and will be forbidden in a future release.")
 	}
 	return helper, nil
 }
@@ -370,6 +382,7 @@ const (
 	FlagSetOutputField
 	FlagSetOutputFormat
 	FlagSetOutputDetailed
+	FlagSetSnapshot
 )
 
 // flagSet creates the flags for this command. The result is cached on the
@@ -387,11 +400,12 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			f := set.NewFlagSet("HTTP Options")
 
 			addrStringVar := &StringVar{
-				Name:       flagNameAddress,
-				Target:     &c.flagAddress,
-				EnvVar:     api.EnvVaultAddress,
-				Completion: complete.PredictAnything,
-				Usage:      "Address of the Vault server.",
+				Name:        flagNameAddress,
+				Target:      &c.flagAddress,
+				EnvVar:      api.EnvVaultAddress,
+				Completion:  complete.PredictAnything,
+				Normalizers: []func(string) string{configutil.NormalizeAddr},
+				Usage:       "Address of the Vault server.",
 			}
 
 			if c.flagAddress != "" {
@@ -403,11 +417,12 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 			f.StringVar(addrStringVar)
 
 			agentAddrStringVar := &StringVar{
-				Name:       "agent-address",
-				Target:     &c.flagAgentProxyAddress,
-				EnvVar:     api.EnvVaultAgentAddr,
-				Completion: complete.PredictAnything,
-				Usage:      "Address of the Agent.",
+				Name:        "agent-address",
+				Target:      &c.flagAgentProxyAddress,
+				EnvVar:      api.EnvVaultAgentAddr,
+				Completion:  complete.PredictAnything,
+				Normalizers: []func(string) string{configutil.NormalizeAddr},
+				Usage:       "Address of the Agent.",
 			}
 			f.StringVar(agentAddrStringVar)
 
@@ -609,6 +624,16 @@ func (c *BaseCommand) flagSet(bit FlagSetBit) *FlagSets {
 					Default: false,
 					EnvVar:  EnvVaultDetailed,
 					Usage:   "Enables additional metadata during some operations",
+				})
+			}
+
+			if bit&FlagSetSnapshot != 0 {
+				outputSet.StringVar(&StringVar{
+					Name:       "snapshot-id",
+					Target:     &c.flagSnapshotID,
+					Default:    "",
+					Completion: complete.PredictAnything,
+					Usage:      "ID of the loaded snapshot that this command will use",
 				})
 			}
 		}

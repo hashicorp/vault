@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <form {{on "submit" (perform this.save)}}>
   <div class="box is-sideless is-fullwidth is-marginless">
@@ -39,8 +39,13 @@
               >
                 {{#each field.options.valueOptions as |value|}}
                   <option selected={{eq @model.leafNotAfterBehavior value}} value={{value}}>
-                    {{capitalize (if (eq value "err") "error" value)}}
-                    if the computed NotAfter exceeds that of this issuer
+                    {{#if (eq value "always_enforce_err")}}
+                      Error if the computed NotAfter exceeds that of this issuer in all circumstances (leaf, CA issuance and
+                      ACME)
+                    {{else}}
+                      {{capitalize (if (eq value "err") "error" value)}}
+                      if the computed NotAfter exceeds that of this issuer
+                    {{/if}}
                   </option>
                 {{/each}}
               </select>
@@ -56,7 +61,7 @@
       @icon={{if this.save.isRunning "loading"}}
       type="submit"
       disabled={{this.save.isRunning}}
-      data-test-save
+      data-test-submit
     />
     <Hds::Button
       @text="Cancel"

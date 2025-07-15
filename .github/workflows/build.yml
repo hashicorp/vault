@@ -83,20 +83,18 @@ jobs:
       github.event_name == 'schedule' ||
       (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
     runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
+    permissions: write-all # vault-auth
     outputs:
-      app-changed: ${{ steps.changed-files.outputs.app-changed }}
       build-date: ${{ steps.metadata.outputs.vault-build-date }}
+      changed-files: ${{ steps.changed-files.outputs.changed-files }}
       checkout-ref: ${{ steps.checkout.outputs.ref }}
       compute-build: ${{ steps.metadata.outputs.compute-build }}
-      compute-build-compat: ${{ steps.metadata.outputs.compute-build-compat }}
       compute-build-ui: ${{ steps.metadata.outputs.compute-build-ui }}
       compute-small: ${{ steps.metadata.outputs.compute-small }}
-      docs-changed: ${{ steps.changed-files.outputs.docs-changed }}
       is-draft: ${{ steps.metadata.outputs.is-draft }}
       is-enterprise: ${{ steps.metadata.outputs.is-enterprise }}
       is-fork: ${{ steps.metadata.outputs.is-fork }}
       labels: ${{ steps.metadata.outputs.labels }}
-      ui-changed: ${{ steps.changed-files.outputs.ui-changed }}
       vault-binary-name: ${{ steps.metadata.outputs.vault-binary-name }}
       vault-revision: ${{ steps.metadata.outputs.vault-revision }}
       vault-version: ${{ steps.metadata.outputs.vault-version }}
@@ -104,12 +102,10 @@ jobs:
       vault-version-package: ${{ steps.metadata.outputs.vault-version-package }}
       workflow-trigger: ${{ steps.metadata.outputs.workflow-trigger }}
     steps:
-      # Run the changed-files action to determine what Git reference we should check out
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
-      - uses: ./.github/actions/changed-files
-        id: changed-files
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      # Make sure we check out correct ref based on PR labels and such
       - uses: ./.github/actions/checkout
-        id: checkout # Make sure we check out correct ref after checking changed files
+        id: checkout
       # Get the vault version metadata
       - uses: hashicorp/actions-set-product-version@v2
         id: set-product-version
@@ -120,9 +116,45 @@ jobs:
         id: metadata
         with:
           vault-version: ${{ steps.set-product-version.outputs.product-version }}
+      # Get the elevated github token
+      - if: steps.metadata.outputs.is-enterprise == 'true'
+        id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - if: steps.metadata.outputs.is-enterprise == 'true'
+        id: vault-secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
+      # Determine the changed files
+      - uses: ./.github/actions/changed-files
+        id: changed-files
+        with:
+          github-token: ${{ steps.metadata.outputs.is-enterprise != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+      # Ensure that we have not changed any enterprise files on pull requests against ce/* branches.
+      # We do this here because we have the information, there's absolutely no reason to go
+      # further until we've resolved the issue, and we want to fail a required workflow if this
+      # issue is present.
+      - if: |
+          steps.metadata.outputs.is-enterprise == 'true' &&
+          steps.metadata.outputs.workflow-trigger == 'pull_request' &&
+          startsWith(github.event.pull_request.base.ref, 'ce/') &&
+          contains(fromJSON(steps.changed-files.outputs.changed-files).groups, 'enterprise')
+        name: Ensure that we have not changed any enterprise files on pull requests against ce/* branches.
+        run: |
+          echo "The pull request has changed files that are in enterprise groups!"
+          echo "If you believe this to be in error you will want to update the changed files checks in tools/pipeline/internal/pkg/changed"
+          echo "on our enterprise branches and backport them to ce/* before continuing with this pull request."
+          echo "See the 'changed-files' step above for a list of changed files and their associated metadata groups."
+          exit 1
+      # Make sure all required Go modules are cached at this point. We don't want all of the Go
+      # tests and build jobs to download modules and race to upload them to the cache.
       - uses: ./.github/actions/set-up-go
-        # Make sure all required Go modules are cached at this point. We don't want all of the Go
-        # tests and build jobs to download modules and race to upload them to the cache.
         name: Ensure Go modules are cached
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
@@ -142,6 +174,7 @@ jobs:
     #     a merge
     #   * The workflow was triggered by a pull request, the pull request is not a draft, and the UI
     #     or app changed.
+    #   * Our pipeline or test scenarios changed.
     if: |
       needs.setup.outputs.workflow-trigger == 'push' ||
       needs.setup.outputs.workflow-trigger == 'schedule' ||
@@ -150,8 +183,10 @@ jobs:
         needs.setup.outputs.workflow-trigger == 'pull_request' &&
         needs.setup.outputs.is-draft == 'false' &&
         (
-          needs.setup.outputs.ui-changed == 'true' ||
-          needs.setup.outputs.app-changed == 'true'
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'ui') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'enos') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app')
         )
       )
     needs: setup
@@ -159,7 +194,7 @@ jobs:
     outputs:
       cache-key: ui-${{ steps.ui-hash.outputs.ui-hash }}
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ needs.setup.outputs.checkout-ref }}
       - name: Get UI hash
@@ -167,7 +202,7 @@ jobs:
         run: echo "ui-hash=$(git ls-tree HEAD ui --object-only)" | tee -a "$GITHUB_OUTPUT"
       - name: Set up UI asset cache
         id: cache-ui-assets
-        uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57 # v4.2.0
         with:
           enableCrossOsArchive: true
           lookup-only: true
@@ -177,7 +212,7 @@ jobs:
           key: ui-${{ steps.ui-hash.outputs.ui-hash }}
       - if: steps.cache-ui-assets.outputs.cache-hit != 'true'
         name: Set up node and yarn
-        uses: actions/setup-node@1e60f620b9541d16bece96c5465dc8ee9832be0b # v4.0.3
+        uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
         with:
           node-version-file: ui/package.json
           cache: yarn
@@ -197,10 +232,13 @@ jobs:
     #
     #   * The workflow was triggered by on schedule to test building all artifacts.
     #   * The Go app was changed.
+    #   * Our pipeline or test scenarios changed.
     #   * The build/all label is present on a pull request or push.
     if: |
       needs.setup.outputs.workflow-trigger == 'schedule' ||
-      needs.setup.outputs.app-changed == 'true' ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'enos') ||
       contains(fromJSON(needs.setup.outputs.labels), 'build/all')
     needs:
       - setup
@@ -210,11 +248,10 @@ jobs:
     with:
       # The inputs defined here must be supported in both the build-artifacts-ce and
       # build-artifacts-ent workflows. The implementations should seek to keep a compatible interface.
-      build-all: ${{ contains(fromJSON(needs.setup.outputs.labels), 'build/all') || needs.setup.outputs.workflow-trigger == 'schedule' }}
+      build-all: ${{contains(fromJSON(needs.setup.outputs.labels), 'build/all') || needs.setup.outputs.workflow-trigger == 'schedule' || contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain')}}
       build-date: ${{ needs.setup.outputs.build-date }}
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
       compute-build: ${{ needs.setup.outputs.compute-build }}
-      compute-build-compat: ${{ needs.setup.outputs.compute-build-compat }}
       compute-small: ${{ needs.setup.outputs.compute-small }}
       vault-revision: ${{ needs.setup.outputs.vault-revision }}
       vault-version: ${{ needs.setup.outputs.vault-version }}
@@ -238,6 +275,7 @@ jobs:
         include: ${{ fromJSON(needs.artifacts.outputs.testable-packages) }}
     with:
       build-artifact-name: ${{ matrix.artifact }}
+      runs-on: ${{ github.repository == 'hashicorp/vault' && '"ubuntu-latest"' || '["self-hosted","linux","small"]' }}
       sample-max: 1
       sample-name: ${{ matrix.sample }}
       ssh-key-name: ${{ github.event.repository.name }}-ci-ssh-key
@@ -293,7 +331,7 @@ jobs:
       - test
       - test-containers
     steps:
-      - uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - id: status
         name: Determine status
         run: |
@@ -344,7 +382,7 @@ jobs:
           always() &&
           steps.status.outputs.result != 'success' &&
           (github.ref_name == 'main' || startsWith(github.ref_name, 'release/'))
-        uses: slackapi/slack-github-action@70cd7be8e40a46e8b0eced40b0de447bdb42f68e # v1.26.0
+        uses: slackapi/slack-github-action@37ebaef184d7626c5f204ab8d3baff4262dd30f0 # v1.27.0
         env:
           SLACK_BOT_TOKEN: ${{ steps.slackbot-token.outputs.slackbot-token }}
         with:
@@ -389,7 +427,7 @@ jobs:
         with:
           version: ${{ needs.setup.outputs.vault-version-metadata }}
           product: ${{ needs.setup.outputs.vault-binary-name }}
-      - uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4.3.6
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: steps.generate-metadata-file.outcome == 'success' # upload our metadata if we created it
         with:
           name: metadata.json

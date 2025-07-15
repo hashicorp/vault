@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 {{#each (if @model.alias.id (array @model.alias) @model.aliases) as |item|}}
   <LinkedBlock @params={{array "vault.cluster.access.identity.aliases.show" item.id "details"}} class="list-item-row">
@@ -18,7 +18,7 @@
         <div class="has-text-grey">
           {{item.id}}
         </div>
-        <span class="tag">{{item.mountType}}</span>
+        <Hds::Badge @text={{item.mountType}} />
         <span class="has-text-grey is-size-8">
           {{item.mountAccessor}}
         </span>

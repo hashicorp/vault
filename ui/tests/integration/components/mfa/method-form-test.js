@@ -33,7 +33,9 @@ module('Integration | Component | mfa-method-form', function (hooks) {
     assert.dom('[data-test-input="period"]').exists('Period field ttl renders');
     assert.dom('[data-test-input="key_size"]').exists('Key size field input renders');
     assert.dom('[data-test-input="qr_size"]').exists('QR size field input renders');
-    assert.dom('[data-test-input="algorithm"]').exists(`Algorithm field radio input renders`);
+    assert
+      .dom('[data-test-input-group="algorithm"]')
+      .hasText('Algorithm The hashing algorithm used to generate the TOTP code. SHA1 SHA256 SHA512');
     assert
       .dom('[data-test-input="max_validation_attempts"]')
       .exists(`Max validation attempts field input renders`);

@@ -1891,6 +1891,10 @@ func (b *SystemBackend) pluginsCatalogCRUDPath() *framework.Path {
 				Type:        framework.TypeString,
 				Description: strings.TrimSpace(sysHelp["plugin-catalog_version"][0]),
 			},
+			"download": {
+				Type:        framework.TypeBool,
+				Description: strings.TrimSpace(sysHelp["plugin-catalog_download"][0]),
+			},
 		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
@@ -2918,33 +2922,6 @@ func (b *SystemBackend) internalPaths() []*framework.Path {
 			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-requests"][1]),
 		},
 		{
-			Pattern: "internal/counters/tokens",
-			DisplayAttrs: &framework.DisplayAttributes{
-				OperationPrefix: "internal",
-				OperationVerb:   "count",
-				OperationSuffix: "tokens",
-			},
-			Operations: map[logical.Operation]framework.OperationHandler{
-				logical.ReadOperation: &framework.PathOperation{
-					Callback: b.pathInternalCountersTokens,
-					Summary:  "Backwards compatibility is not guaranteed for this API",
-					Responses: map[int][]framework.Response{
-						http.StatusOK: {{
-							Description: "OK",
-							Fields: map[string]*framework.FieldSchema{
-								"counters": {
-									Type:     framework.TypeMap,
-									Required: true,
-								},
-							},
-						}},
-					},
-				},
-			},
-			HelpSynopsis:    strings.TrimSpace(sysHelp["internal-counters-tokens"][0]),
-			HelpDescription: strings.TrimSpace(sysHelp["internal-counters-tokens"][1]),
-		},
-		{
 			Pattern: "internal/counters/entities",
 			DisplayAttrs: &framework.DisplayAttributes{
 				OperationPrefix: "internal",
@@ -3106,6 +3083,10 @@ func (b *SystemBackend) capabilitiesPaths() []*framework.Path {
 				"paths": {
 					Type:        framework.TypeCommaStringSlice,
 					Description: "Paths on which capabilities are being queried.",
+				},
+				"namespace": {
+					Type:        framework.TypeString,
+					Description: "Namespace for which capabilities are being queried.",
 				},
 			},
 
@@ -3826,6 +3807,10 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 					Description: strings.TrimSpace(sysHelp["identity_token_key"][0]),
 					Required:    false,
 				},
+				"trim_request_trailing_slashes": {
+					Type:     framework.TypeBool,
+					Required: false,
+				},
 			},
 			Operations: map[logical.Operation]framework.OperationHandler{
 				logical.ReadOperation: &framework.PathOperation{
@@ -3914,6 +3899,10 @@ func (b *SystemBackend) authPaths() []*framework.Path {
 								},
 								"identity_token_key": {
 									Type:     framework.TypeString,
+									Required: false,
+								},
+								"trim_request_trailing_slashes": {
+									Type:     framework.TypeBool,
 									Required: false,
 								},
 							},
@@ -4686,6 +4675,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 					Type:        framework.TypeString,
 					Description: strings.TrimSpace(sysHelp["identity_token_key"][0]),
 				},
+				"trim_request_trailing_slashes": {
+					Type:        framework.TypeBool,
+					Description: strings.TrimSpace(sysHelp["trim_request_trailing_slashes"][0]),
+				},
 			},
 
 			Operations: map[logical.Operation]framework.OperationHandler{
@@ -4786,6 +4779,10 @@ func (b *SystemBackend) mountPaths() []*framework.Path {
 								},
 								"identity_token_key": {
 									Type:     framework.TypeString,
+									Required: false,
+								},
+								"trim_request_trailing_slashes": {
+									Type:     framework.TypeBool,
 									Required: false,
 								},
 							},
