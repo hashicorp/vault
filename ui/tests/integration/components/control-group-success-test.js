@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { click, fillIn, find, render } from '@ember/test-helpers';
+import { click, fillIn, find, render, waitFor } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
@@ -74,10 +74,11 @@ module('Integration | Component | control group success', function (hooks) {
 
   test('it unwraps data on submit', async function (assert) {
     assert.expect(3);
+    // key has an underscore to cover a bug where the api service was returning camel-cased keys
     const data = { foo_test: 'bar' };
 
     this.server.post('sys/wrapping/unwrap', (schema, req) => {
-      assert.strictEqual(req.requestHeaders['x-vault-token'], 'token', 'header contains token');
+      assert.strictEqual(req.requestHeaders['X-Vault-Token'], 'token', 'header contains token');
       return { data };
     });
 
@@ -86,7 +87,7 @@ module('Integration | Component | control group success', function (hooks) {
 
     await fillIn(GENERAL.inputByAttr('token'), 'token');
     await click(SELECTORS.unwrap);
-
+    await waitFor(SELECTORS.jsonViewer);
     const actual = find(SELECTORS.jsonViewer).innerText;
     const expected = JSON.stringify({ foo_test: 'bar' }, null, 2);
     assert.strictEqual(actual, expected, `it renders unwrapped data: ${actual}`);
