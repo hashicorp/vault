@@ -300,10 +300,6 @@ func (d StaticSystemView) GenerateIdentityToken(_ context.Context, _ *pluginutil
 	return nil, errors.New("GenerateIdentityToken is not implemented in StaticSystemView")
 }
 
-func (d StaticSystemView) GetRotationInformation(ctx context.Context, req *rotation.RotationInfoRequest) (*rotation.RotationInfoResponse, error) {
-	return nil, errors.New("GetRotationInformation is not implemented in StaticSystemView")
-}
-
 func (d StaticSystemView) APILockShouldBlockRequest() (bool, error) {
 	return d.APILockShouldBlockRequestVal, nil
 }
