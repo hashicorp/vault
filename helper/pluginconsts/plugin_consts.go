@@ -66,12 +66,18 @@ const (
 
 // These DB consts match the type returned from database plugin's Type() method.
 const (
-	DbCassandraPluginType  = "cassandra"
-	DbHanaPluginType       = "hdb"
-	DbInfluxDBPluginType   = "influxdb"
-	DbMongoDBPluginType    = "mongodb"
-	DbMsSQLPluginType      = "mssql"
-	DbMySQLPluginType      = "mysql"
-	DbRedshiftPluginType   = "redshift"
-	DbPostgresqlPluginType = "pgx"
+	DbCassandraPluginType        = "cassandra"
+	DbCouchbasePluginType        = "couchbase"
+	DbElasticPluginType          = "elasticsearch"
+	DbHanaPluginType             = "hdb"
+	DbInfluxDBPluginType         = "influxdb"
+	DbMongoDBPluginType          = "mongodb"
+	DbMongoAtlasPluginType       = "mongodbatlas"
+	DbMsSQLPluginType            = "mssql"
+	DbMySQLPluginType            = "mysql"
+	DbPostgresqlPluginType       = "pgx"
+	DbRedshiftPluginType         = "redshift"
+	DbRedisPluginType            = "redis"
+	DbRedisElasticachePluginType = "redisElastiCache"
+	DbSnowflakePluginType        = "snowflake"
 )
