@@ -94,6 +94,19 @@ func pathStaticRoles(b *backend) *framework.Path {
 	}
 }
 
+func pathListStaticRoles(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: fmt.Sprintf("%s/?$", pathStaticRole),
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathStaticRolesList,
+			},
+		},
+		HelpSynopsis:    pathStaticRolesHelpSyn,
+		HelpDescription: pathStaticRolesHelpDesc,
+	}
+}
+
 func (b *backend) pathStaticRolesRead(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	roleName, ok := data.GetOk(paramRoleName)
 	if !ok {
@@ -287,6 +300,21 @@ func (b *backend) pathStaticRolesDelete(ctx context.Context, req *logical.Reques
 	}
 
 	return nil, req.Storage.Delete(ctx, formatRoleStoragePath(roleName.(string)))
+}
+
+func (b *backend) pathStaticRolesList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.roleMutex.RLock()
+	defer b.roleMutex.RUnlock()
+
+	roles, err := req.Storage.List(ctx, pathStaticRole+"/")
+	if err != nil {
+		return nil, fmt.Errorf("error listing static roles at %s: %w", pathStaticRole, err)
+	}
+	if len(roles) == 0 {
+		return &logical.Response{Data: map[string]interface{}{}}, nil
+	}
+
+	return logical.ListResponse(roles), nil
 }
 
 func (b *backend) validateRoleName(name string) error {

@@ -3,13 +3,11 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import PkiCertificateBaseModel from './base';
-import { FormField, FormFieldGroups, ModelValidations } from 'vault/app-types';
-export default class PkiCertificateSignIntermediateModel extends PkiCertificateBaseModel {
+import type PkiCertificateBaseModel from './base';
+
+type PkiCertificateSignIntermediateModel = PkiCertificateBaseModel & {
   role: string;
   csr: string;
-  formFields: FormField[];
-  formFieldGroups: FormFieldGroups;
   issuerRef: string;
   maxPathLength: string;
   notBeforeDuration: string;
@@ -18,5 +16,6 @@ export default class PkiCertificateSignIntermediateModel extends PkiCertificateB
   usePss: boolean;
   skid: string;
   signatureBits: string;
-  validate(): ModelValidations;
-}
+};
+
+export default PkiCertificateSignIntermediateModel;

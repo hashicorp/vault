@@ -6,6 +6,8 @@ description: The GitHub auth method allows authentication with Vault using GitHu
 
 # GitHub auth method
 
+@include 'tips/custom-authn.mdx'
+
 The `github` auth method can be used to authenticate with Vault using a GitHub
 personal access token. This method of authentication is most useful for humans:
 operators or developers using Vault directly via the CLI.
@@ -35,6 +37,13 @@ path, specify `-path=/my-path` in the CLI.
 
 ```shell-session
 $ vault login -method=github token="MY_TOKEN"
+```
+
+You can also use the `VAULT_AUTH_GITHUB_TOKEN` environment variable to authenticate to GitHub. For example:
+
+```shell-session
+$ export VAULT_AUTH_GITHUB_TOKEN="MY_TOKEN"
+$ vault login -method=github
 ```
 
 ### Via the API

@@ -116,7 +116,7 @@ func (tc *tidyConfig) IsAnyTidyEnabled() bool {
 }
 
 func (tc *tidyConfig) AnyTidyConfig() string {
-	return "tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations / tidy_expired_issuers / tidy_move_legacy_ca_bundle / tidy_revocation_queue / tidy_cross_cluster_revoked_certs / tidy_acme"
+	return "tidy_cert_store / tidy_revoked_certs / tidy_revoked_cert_issuer_associations / tidy_expired_issuers / tidy_move_legacy_ca_bundle / tidy_acme / tidy_cross_cluster_revoked_certs / tidy_revocation_queue / tidy_cert_metadata / tidy_cmpv2_nonce_store"
 }
 
 func (tc *tidyConfig) CalculateStartupBackoff(mountStartup time.Time) time.Time {
@@ -1779,6 +1779,13 @@ func (b *backend) pathConfigAutoTidyWrite(ctx context.Context, req *logical.Requ
 		}
 	}
 
+	if tidyCmpv2NonceStoreRaw, ok := d.GetOk("tidy_cmpv2_nonce_store"); ok {
+		config.CMPV2NonceStore = tidyCmpv2NonceStoreRaw.(bool)
+		if config.CMPV2NonceStore && !constants.IsEnterprise {
+			return logical.ErrorResponse("CMPv2 is only supported on Vault Enterprise"), nil
+		}
+	}
+
 	if config.Enabled && !config.IsAnyTidyEnabled() {
 		return logical.ErrorResponse("Auto-tidy enabled but no tidy operations were requested. Enable at least one tidy operation to be run (" + config.AnyTidyConfig() + ")."), nil
 	}
@@ -1829,6 +1836,7 @@ func (b *backend) tidyStatusStart(config *tidyConfig) {
 		tidyCrossRevokedCerts:   config.CrossRevokedCerts,
 		tidyAcme:                config.TidyAcme,
 		tidyCertMetadata:        config.CertMetadata,
+		tidyCMPV2NonceStore:     config.CMPV2NonceStore,
 		pauseDuration:           config.PauseDuration.String(),
 
 		state:       tidyStatusStarted,

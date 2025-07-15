@@ -45,7 +45,7 @@ module('Integration | Component | page/pki-configure-create', function (hooks) {
     assert.dom(GENERAL.title).hasText('Configure PKI');
     assert.dom(PKI_CONFIGURE_CREATE.option).exists({ count: 3 });
     assert.dom(GENERAL.cancelButton).exists('Cancel link is shown');
-    assert.dom(GENERAL.saveButton).isDisabled('Done button is disabled');
+    assert.dom(GENERAL.submitButton).isDisabled('Done button is disabled');
 
     await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
     assert.dom(PKI_CONFIGURE_CREATE.optionByKey('import')).isChecked();

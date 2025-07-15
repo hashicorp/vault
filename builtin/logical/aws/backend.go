@@ -57,6 +57,7 @@ func Backend(_ *logical.BackendConfig) *backend {
 			pathRoles(&b),
 			pathListRoles(&b),
 			pathStaticRoles(&b),
+			pathListStaticRoles(&b),
 			pathStaticCredentials(&b),
 			pathUser(&b),
 		},

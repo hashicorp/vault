@@ -3,10 +3,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Model from '@ember-data/model';
-import { FormField } from 'vault/app-types';
+import type { WithFormFieldsModel } from 'vault/app-types';
 
-export default class PkiConfigCrlModel extends Model {
+type PkiConfigCrlModel = WithFormFieldsModel & {
   autoRebuild: boolean;
   autoRebuildGracePeriod: string;
   enableDelta: boolean;
@@ -16,6 +15,7 @@ export default class PkiConfigCrlModel extends Model {
   ocspExpiry: string;
   ocspDisable: boolean;
   crlPath: string;
-  formFields: FormField[];
   get canSet(): boolean;
-}
+};
+
+export default PkiConfigCrlModel;

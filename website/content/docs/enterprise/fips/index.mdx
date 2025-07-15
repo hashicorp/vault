@@ -14,16 +14,16 @@ is a cryptography-focused certification standard for U.S. Government usage.
 
 Hashicorp's Vault Enterprise supports the modes of FIPS compliance documented below.
 
-## FIPS 140-2 inside
+## FIPS 140-3 inside
 
-Vault Enterprise now includes release flavors with FIPS 140-2 compliant
+Vault Enterprise now includes release flavors with FIPS 140-3 compliant
 cryptography built into the Vault binary. More information on these releases
-can be found on the [FIPS 140-2 Inside](/vault/docs/enterprise/fips/fips1402) page.
+can be found on the [FIPS 140-3 Inside](/vault/docs/enterprise/fips/fips1403) page.
 
 ## Seal wrap
 
 Before our FIPS Inside effort, Vault [depended on](https://www.hashicorp.com/vault-compliance)
-an external HSM for FIPS 140-2 compliance. This uses the [Seal Wrap](/vault/docs/enterprise/fips/sealwrap)
+an external HSM for FIPS 140-2/3 compliance. This uses the [Seal Wrap](/vault/docs/enterprise/fips/sealwrap)
 functionality to wrap security relevant keys in an extra layer of encryption.
 
 ## Comparison of versions

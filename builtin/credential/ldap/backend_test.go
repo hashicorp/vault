@@ -11,9 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
-	"github.com/hashicorp/vault/sdk/rotation"
-
 	goldap "github.com/go-ldap/ldap/v3"
 	"github.com/go-test/deep"
 	hclog "github.com/hashicorp/go-hclog"
@@ -21,10 +18,12 @@ import (
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/testhelpers/ldap"
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
+	"github.com/hashicorp/vault/sdk/helper/automatedrotationutil"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/helper/tokenutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/rotation"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -156,28 +155,6 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 	ctx := context.Background()
 
 	testVals := func(caseSensitive bool) {
-		// Clear storage
-		userList, err := storage.List(ctx, "user/")
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, user := range userList {
-			err = storage.Delete(ctx, "user/"+user)
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-		groupList, err := storage.List(ctx, "group/")
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, group := range groupList {
-			err = storage.Delete(ctx, "group/"+group)
-			if err != nil {
-				t.Fatal(err)
-			}
-		}
-
 		configReq := &logical.Request{
 			Path:      "config",
 			Operation: logical.ReadOperation,
@@ -285,9 +262,74 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 		if !reflect.DeepEqual(expected, resp.Auth.Policies) {
 			t.Fatalf("bad: policies: expected: %q, actual: %q", expected, resp.Auth.Policies)
 		}
+
+		// Test proper deletion of users
+		userReqDel := &logical.Request{
+			Operation: logical.DeleteOperation,
+			Data: map[string]interface{}{
+				"groups":   "EngineerS",
+				"policies": "userpolicy",
+			},
+			Path:    "users/hermeS conRad",
+			Storage: storage,
+		}
+		resp, err = b.HandleRequest(ctx, userReqDel)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%#v", err, resp)
+		}
+		if caseSensitive {
+			// The online test server is actually case sensitive so we need to
+			// delete again so it works
+			userReq = &logical.Request{
+				Operation: logical.DeleteOperation,
+				Data: map[string]interface{}{
+					"groups":   "EngineerS",
+					"policies": "userpolicy",
+				},
+				Path:       "users/Hermes Conrad",
+				Storage:    storage,
+				Connection: &logical.Connection{},
+			}
+			resp, err = b.HandleRequest(ctx, userReq)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err:%v resp:%#v", err, resp)
+			}
+		}
+
+		// Expect storage for user path to be cleared
+		userList, err := storage.List(ctx, "user/")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if userList != nil {
+			t.Fatalf("deletion of users failed")
+		}
+
+		// Test proper deletion of groups
+		groupReqDel := &logical.Request{
+			Operation: logical.DeleteOperation,
+			Data: map[string]interface{}{
+				"policies": "grouppolicy",
+			},
+			Path:    "groups/EngineerS",
+			Storage: storage,
+		}
+		resp, err = b.HandleRequest(ctx, groupReqDel)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%v resp:%#v", err, resp)
+		}
+
+		// Expect storage for group path to be cleared
+		groupList, err := storage.List(ctx, "group/")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if groupList != nil {
+			t.Fatalf("deletion of groups failed")
+		}
 	}
 
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -333,7 +375,7 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -444,7 +486,7 @@ func factory(t *testing.T) logical.Backend {
 // https://github.com/hashicorp/vault/issues/26183.
 func TestBackend_LoginRegression_AnonBind(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	cfg.AnonymousGroupSearch = true
 	defer cleanup()
 
@@ -479,7 +521,7 @@ func TestBackend_LoginRegression_AnonBind(t *testing.T) {
 // attributes to entity alias metadata.
 func TestBackend_LoginRegression_UserAttr(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	cfg.UserAttr = "givenName"
 	defer cleanup()
 
@@ -510,7 +552,7 @@ func TestBackend_LoginRegression_UserAttr(t *testing.T) {
 
 func TestBackend_basic(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -540,7 +582,7 @@ func TestBackend_basic(t *testing.T) {
 
 func TestBackend_basic_noPolicies(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -558,7 +600,7 @@ func TestBackend_basic_noPolicies(t *testing.T) {
 
 func TestBackend_basic_group_noPolicies(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -579,7 +621,7 @@ func TestBackend_basic_group_noPolicies(t *testing.T) {
 
 func TestBackend_basic_authbind(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -596,7 +638,7 @@ func TestBackend_basic_authbind(t *testing.T) {
 
 func TestBackend_basic_authbind_userfilter(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 
 	// userattr not used in the userfilter should result in a warning in the response
@@ -739,7 +781,7 @@ func TestBackend_basic_authbind_userfilter(t *testing.T) {
 
 func TestBackend_basic_authbind_metadata_name(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 
 	cfg.UserAttr = "cn"
@@ -804,7 +846,7 @@ func addUPNAttributeToLDAPSchemaAndUser(t *testing.T, cfg *ldaputil.ConfigEntry,
 
 func TestBackend_basic_discover(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -821,7 +863,7 @@ func TestBackend_basic_discover(t *testing.T) {
 
 func TestBackend_basic_nogroupdn(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -1271,7 +1313,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 
 	ctx := context.Background()
 
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,

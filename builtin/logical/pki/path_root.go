@@ -197,6 +197,13 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		},
 	}
 
+	if keyUsages, ok := data.GetOk("key_usage"); ok {
+		err = validateCaKeyUsages(keyUsages.([]string))
+		if err != nil {
+			resp.AddWarning(fmt.Sprintf("Invalid key usage will be ignored: %v", err.Error()))
+		}
+	}
+
 	if len(parsedBundle.Certificate.RawSubject) <= 2 {
 		// Strictly a subject is a SEQUENCE of SETs of SEQUENCES.
 		//
@@ -210,11 +217,18 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		resp.AddWarning("This issuer certificate was generated without a Subject; this makes it likely that issuing leaf certs with this certificate will cause TLS validation libraries to reject this certificate.")
 	}
 
-	if len(parsedBundle.Certificate.OCSPServer) == 0 && len(parsedBundle.Certificate.IssuingCertificateURL) == 0 && len(parsedBundle.Certificate.CRLDistributionPoints) == 0 {
+	deltaCrlDistributionPoints, err := certutil.ParseDeltaCRLExtension(parsedBundle.Certificate)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("error: invalid delta crl extension: %v", err.Error())), nil
+	}
+	if len(parsedBundle.Certificate.OCSPServer) == 0 && len(parsedBundle.Certificate.IssuingCertificateURL) == 0 && len(parsedBundle.Certificate.CRLDistributionPoints) == 0 && len(deltaCrlDistributionPoints) == 0 {
 		// If the operator hasn't configured any of the URLs prior to
 		// generating this issuer, we should add a warning to the response,
 		// informing them they might want to do so prior to issuing leaves.
 		resp.AddWarning("This mount hasn't configured any authority information access (AIA) fields; this may make it harder for systems to find missing certificates in the chain or to validate revocation status of certificates. Consider updating /config/urls or the newly generated issuer with this information.")
+	}
+	if len(deltaCrlDistributionPoints) > 0 && len(parsedBundle.Certificate.CRLDistributionPoints) == 0 {
+		resp.AddWarning("This mount has configured Delta CRL distribution points are set but no CRL Distribution Points.")
 	}
 
 	switch format {
@@ -432,6 +446,13 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		resp.AddWarning(intCaTruncatationWarning)
 	}
 
+	if keyUsages, ok := data.GetOk("key_usage"); ok {
+		err = validateCaKeyUsages(keyUsages.([]string))
+		if err != nil {
+			resp.AddWarning(fmt.Sprintf("Invalid key usage: %v", err.Error()))
+		}
+	}
+
 	return resp, nil
 }
 
@@ -470,11 +491,18 @@ func signIntermediateResponse(signingBundle *certutil.CAInfoBundle, parsedBundle
 		resp.AddWarning("This issuer certificate was generated without a Subject; this makes it likely that issuing leaf certs with this certificate will cause TLS validation libraries to reject this certificate.")
 	}
 
-	if len(parsedBundle.Certificate.OCSPServer) == 0 && len(parsedBundle.Certificate.IssuingCertificateURL) == 0 && len(parsedBundle.Certificate.CRLDistributionPoints) == 0 {
+	deltaCrlDistributionPoints, err := certutil.ParseDeltaCRLExtension(parsedBundle.Certificate)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid delta crl extension on generated certificate: %v", err.Error())), nil
+	}
+	if len(parsedBundle.Certificate.OCSPServer) == 0 && len(parsedBundle.Certificate.IssuingCertificateURL) == 0 && len(parsedBundle.Certificate.CRLDistributionPoints) == 0 && len(deltaCrlDistributionPoints) == 0 {
 		// If the operator hasn't configured any of the URLs prior to
 		// generating this issuer, we should add a warning to the response,
 		// informing them they might want to do so prior to issuing leaves.
 		resp.AddWarning("This mount hasn't configured any authority information access (AIA) fields; this may make it harder for systems to find missing certificates in the chain or to validate revocation status of certificates. Consider updating /config/urls or the newly generated issuer with this information.")
+	}
+	if len(deltaCrlDistributionPoints) > 0 && len(parsedBundle.Certificate.CRLDistributionPoints) == 0 {
+		resp.AddWarning("This mount has configured delta CRL distribution points, but not CRL distribution points.")
 	}
 
 	caChain := append([]string{cb.Certificate}, cb.CAChain...)
@@ -560,6 +588,15 @@ func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Req
 	cert.IssuingCertificateURL = urls.IssuingCertificates
 	cert.CRLDistributionPoints = urls.CRLDistributionPoints
 	cert.OCSPServer = urls.OCSPServers
+	bundleData := &certutil.CreationBundle{
+		Params:        &certutil.CreationParameters{URLs: urls},
+		SigningBundle: nil,
+		CSR:           nil,
+	}
+	err = certutil.AddDeltaCRLExtension(bundleData, cert)
+	if err != nil {
+		return nil, err
+	}
 
 	// If the requested signature algorithm isn't the same as the signing certificate, and
 	// the user has requested a cross-algorithm signature, reset the template's signing algorithm
@@ -629,6 +666,24 @@ func publicKeyType(pub crypto.PublicKey) (pubType x509.PublicKeyAlgorithm, sigAl
 		err = errors.New("x509: only RSA, ECDSA and Ed25519 keys supported")
 	}
 	return
+}
+
+func validateCaKeyUsages(keyUsages []string) error {
+	invalidKeyUsages := []string{}
+	for _, usage := range keyUsages {
+		cleanUsage := strings.ToLower(strings.TrimSpace(usage))
+		switch cleanUsage {
+		case "crlsign", "certsign", "digitalsignature":
+		case "contentcommitment", "keyencipherment", "dataencipherment", "keyagreement", "encipheronly", "decipheronly":
+			invalidKeyUsages = append(invalidKeyUsages, fmt.Sprintf("key usage %s is only valid for non-Ca certs", usage))
+		default:
+			invalidKeyUsages = append(invalidKeyUsages, fmt.Sprintf("unrecognized key usage %s", usage))
+		}
+	}
+	if invalidKeyUsages != nil {
+		return errors.New(strings.Join(invalidKeyUsages, "; "))
+	}
+	return nil
 }
 
 const pathGenerateRootHelpSyn = `

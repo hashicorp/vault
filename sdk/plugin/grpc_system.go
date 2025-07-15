@@ -234,8 +234,10 @@ func (s *gRPCSystemViewClient) RegisterRotationJob(ctx context.Context, req *rot
 			MountPoint:       req.MountPoint,
 			Path:             req.ReqPath,
 			RotationSchedule: req.RotationSchedule,
-			RotationWindow:   int64(req.RotationWindow),
-			RotationPeriod:   int64(req.RotationPeriod),
+
+			// on the side outbound from the plugin, we convert duration to seconds, so seconds get sent over the wire
+			RotationWindow: int64(req.RotationWindow.Seconds()),
+			RotationPeriod: int64(req.RotationPeriod.Seconds()),
 		},
 	}
 	resp, err := s.client.RegisterRotationJob(ctx, cfgReq)
@@ -472,14 +474,16 @@ func (s *gRPCSystemViewServer) RegisterRotationJob(ctx context.Context, req *pb.
 		MountPoint:       req.Job.MountPoint,
 		ReqPath:          req.Job.Path,
 		RotationSchedule: req.Job.RotationSchedule,
-		RotationWindow:   int(req.Job.RotationWindow),
-		RotationPeriod:   int(req.Job.RotationPeriod),
+		// on the side inbound to vault, we convert seconds back to time.Duration
+		// Note: this value is seconds (as per the outbound client call, despite being int64)
+		// The field is int64 because of gRPC reasons, not time.Duration reasons
+		RotationWindow: time.Duration(req.Job.RotationWindow) * time.Second,
+		RotationPeriod: time.Duration(req.Job.RotationPeriod) * time.Second,
 	}
 
 	rotationID, err := s.impl.RegisterRotationJob(ctx, cfgReq)
 	if err != nil {
-		return &pb.RegisterRotationJobResponse{}, status.Errorf(codes.Internal,
-			err.Error())
+		return &pb.RegisterRotationJobResponse{}, status.Error(codes.Internal, err.Error())
 	}
 
 	return &pb.RegisterRotationJobResponse{
@@ -499,9 +503,12 @@ func (s *gRPCSystemViewServer) DeregisterRotationJob(ctx context.Context, req *p
 
 	err := s.impl.DeregisterRotationJob(ctx, cfgReq)
 	if err != nil {
-		return &pb.Empty{}, status.Errorf(codes.Internal,
-			err.Error())
+		return &pb.Empty{}, status.Error(codes.Internal, err.Error())
 	}
 
 	return &pb.Empty{}, nil
+}
+
+func (s *gRPCSystemViewClient) DownloadExtractVerifyPlugin(_ context.Context, _ *pluginutil.PluginRunner) error {
+	return fmt.Errorf("cannot call DownloadExtractVerifyPlugin from a plugin backend")
 }

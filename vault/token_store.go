@@ -1060,8 +1060,13 @@ func (ts *TokenStore) create(ctx context.Context, entry *logical.TokenEntry) err
 
 	// Validate the inline policy if it's set
 	if entry.InlinePolicy != "" {
-		if _, err := ParseACLPolicy(tokenNS, entry.InlinePolicy); err != nil {
+		// TODO (HCL_DUP_KEYS_DEPRECATION): return to ParseACLPolicy once the deprecation is done
+		_, duplicate, err := ParseACLPolicyCheckDuplicates(tokenNS, entry.InlinePolicy)
+		if err != nil {
 			return fmt.Errorf("failed to parse inline policy for token entry: %v", err)
+		}
+		if duplicate {
+			ts.logger.Warn("HCL inline policy contains duplicate attributes, which will no longer be supported in a future version", "namespace", tokenNS.Path)
 		}
 	}
 
@@ -2988,10 +2993,10 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 		}
 	}
 
-	if strutil.StrListContains(te.Policies, "root") {
+	if strutil.StrListContainsCaseInsensitive(te.Policies, "root") {
 		// Prevent attempts to create a root token without an actual root token as parent.
 		// This is to thwart privilege escalation by tokens having 'sudo' privileges.
-		if !strutil.StrListContains(parent.Policies, "root") {
+		if !strutil.StrListContainsCaseInsensitive(parent.Policies, "root") {
 			return logical.ErrorResponse("root tokens may not be created without parent token being root"), logical.ErrInvalidRequest
 		}
 
@@ -3146,7 +3151,7 @@ func (ts *TokenStore) handleCreateCommon(ctx context.Context, req *logical.Reque
 	}
 
 	// Only calculate a TTL if you are A) periodic, B) have a TTL, C) do not have a TTL and are not a root token
-	if periodToUse > 0 || te.TTL > 0 || (te.TTL == 0 && !strutil.StrListContains(te.Policies, "root")) {
+	if periodToUse > 0 || te.TTL > 0 || (te.TTL == 0 && !strutil.StrListContainsCaseInsensitive(te.Policies, "root")) {
 		ttl, warnings, err := framework.CalculateTTL(sysView, 0, te.TTL, periodToUse, backendMaxTTL, explicitMaxTTLToUse, time.Unix(te.CreationTime, 0))
 		if err != nil {
 			return nil, err

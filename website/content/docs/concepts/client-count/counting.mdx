@@ -60,7 +60,11 @@ The deduplication process has two additional consequences:
 1. Billing period reports that include the current month must use an
    approximation for the number of new clients in the current month.
 
-## How Vault approximates current-month client count
+@include 'counters-api-new-clients-behavior-change.mdx'
+
+## How Vault approximates current-month client count prior to Vault versions 1.20 and 1.20+ent
+
+@include 'counters-api-new-clients-behavior-change.mdx'
 
 Vault approximates client count for the current month using a
 [hyperloglog algorithm](https://en.wikipedia.org/wiki/HyperLogLog) that looks
@@ -77,7 +81,10 @@ accuracy estimate for the approximation decreases as the difference between the
 number of clients in the current month and the number of clients in the billing
 period increases.
 
-### Testing verification for client count approximations
+
+### Testing verification for client count approximations prior to Vault versions 1.20 and 1.20+ent
+
+@include 'counters-api-new-clients-behavior-change.mdx'
 
 Given `CM` as the number of clients for the current month and `BP` as the number
 of clients in the billing period, we found that the approximation becomes
@@ -137,8 +144,6 @@ records to 656,000 per month, but typical storage costs are much less.
 On average, 1000 monthly active entities requires 3.0 MiB of storage capacity
 over the default 48-month retention period.
 
-@include "content-footer-title.mdx"
-
 <Tabs>
 
 <Tab heading="Related concepts">
@@ -166,12 +171,12 @@ over the default 48-month retention period.
 <Tab heading="Related tutorials">
 <ul>
   <li>
-    <a href="/vault/tutorials/monitoring/usage-metrics">
-      Vault Usage Metrics in Vault UI
+    <a href="/vault/docs/concepts/client-count/client-usage">
+      Client Usage in Vault GUI
     </a>
   </li>
   <li>
-    <a href="/vault/tutorials/monitoring/usage-metrics">KMIP Client metrics</a>
+    <a href="/vault/docs/concepts/client-count/client-usage">KMIP Client metrics</a>
   </li>
 </ul>
 </Tab>

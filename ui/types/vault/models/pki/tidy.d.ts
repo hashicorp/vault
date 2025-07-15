@@ -3,10 +3,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import Model from '@ember-data/model';
-import { FormField, FormFieldGroups } from 'vault/vault/app-types';
+import type { FormField, FormFieldGroups, WithFormFieldsModel } from 'vault/app-types';
 
-export default class PkiTidyModel extends Model {
+type PkiTidyModel = WithFormFieldsModel & {
   version: string;
   acmeAccountSafetyBuffer: string;
   tidyAcme: boolean;
@@ -29,7 +28,7 @@ export default class PkiTidyModel extends Model {
   allByKey: {
     intervalDuration: FormField[];
   };
-  get allGroups(): FormFieldGroups[];
   get sharedFields(): FormFieldGroups[];
-  get formFieldGroups(): FormFieldGroups[];
-}
+};
+
+export default PkiTidyModel;

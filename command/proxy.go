@@ -865,10 +865,11 @@ func (c *ProxyCommand) applyConfigOverrides(f *FlagSets, config *proxyConfig.Con
 	})
 
 	c.setStringFlag(f, config.Vault.Address, &StringVar{
-		Name:    flagNameAddress,
-		Target:  &c.flagAddress,
-		Default: "https://127.0.0.1:8200",
-		EnvVar:  api.EnvVaultAddress,
+		Name:        flagNameAddress,
+		Target:      &c.flagAddress,
+		Default:     "https://127.0.0.1:8200",
+		EnvVar:      api.EnvVaultAddress,
+		Normalizers: []func(string) string{configutil.NormalizeAddr},
 	})
 	config.Vault.Address = c.flagAddress
 	c.setStringFlag(f, config.Vault.CACert, &StringVar{
@@ -942,13 +943,13 @@ func (c *ProxyCommand) setStringFlag(f *FlagSets, configVal string, fVar *String
 		// Don't do anything as the flag is already set from the command line
 	case flagEnvSet:
 		// Use value from env var
-		*fVar.Target = flagEnvValue
+		fVar.SetTarget(flagEnvValue)
 	case configVal != "":
 		// Use value from config
-		*fVar.Target = configVal
+		fVar.SetTarget(configVal)
 	default:
 		// Use the default value
-		*fVar.Target = fVar.Default
+		fVar.SetTarget(fVar.Default)
 	}
 }
 
@@ -1121,11 +1122,16 @@ func (c *ProxyCommand) loadConfig(paths []string) (*proxyConfig.Config, error) {
 	cfg := proxyConfig.NewConfig()
 
 	for _, configPath := range paths {
-		configFromPath, err := proxyConfig.LoadConfig(configPath)
+		// TODO (HCL_DUP_KEYS_DEPRECATION): go back to proxyConfig.LoadConfig and remove duplicate when deprecation is done
+		configFromPath, duplicate, err := proxyConfig.LoadConfigCheckDuplicate(configPath)
 		if err != nil {
 			errors = multierror.Append(errors, fmt.Errorf("error loading configuration from %s: %w", configPath, err))
 		} else {
 			cfg = cfg.Merge(configFromPath)
+		}
+		if duplicate {
+			c.UI.Warn(fmt.Sprintf(
+				"WARNING: Duplicate keys found in the Vault proxy configuration file %q, duplicate keys in HCL files are deprecated and will be forbidden in a future release.", configPath))
 		}
 	}
 

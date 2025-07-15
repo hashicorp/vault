@@ -19,7 +19,7 @@ import (
 )
 
 func tcpListenerFactory(l *configutil.Listener, _ io.Writer, ui cli.Ui) (net.Listener, map[string]string, reloadutil.ReloadFunc, error) {
-	addr := l.Address
+	addr := configutil.NormalizeAddr(l.Address)
 	if addr == "" {
 		addr = "127.0.0.1:8200"
 	}

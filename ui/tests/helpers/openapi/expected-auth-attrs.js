@@ -150,11 +150,10 @@ const azure = {
         'The TTL of the root password in Azure. This can be either a number of seconds or a time formatted duration (ex: 24h, 48ds)',
     },
     rotationPeriod: {
-      editType: 'number',
+      editType: 'ttl',
       fieldGroup: 'default',
       helpText:
         'TTL for automatic credential rotation of the given username. Mutually exclusive with rotation_schedule',
-      type: 'number',
     },
     rotationSchedule: {
       editType: 'string',
@@ -164,11 +163,10 @@ const azure = {
       type: 'string',
     },
     rotationWindow: {
-      editType: 'number',
+      editType: 'ttl',
       fieldGroup: 'default',
       helpText:
         'Specifies the amount of time in which the rotation is allowed to occur starting from a given rotation_schedule',
-      type: 'number',
     },
     tenantId: {
       editType: 'string',
@@ -453,11 +451,10 @@ const gcp = {
       helpText: 'Time-to-live of plugin identity tokens',
     },
     rotationPeriod: {
-      editType: 'number',
+      editType: 'ttl',
       fieldGroup: 'default',
       helpText:
         'TTL for automatic credential rotation of the given username. Mutually exclusive with rotation_schedule',
-      type: 'number',
     },
     rotationSchedule: {
       editType: 'string',
@@ -467,11 +464,10 @@ const gcp = {
       type: 'string',
     },
     rotationWindow: {
-      editType: 'number',
+      editType: 'ttl',
       fieldGroup: 'default',
       helpText:
         'Specifies the amount of time in which the rotation is allowed to occur starting from a given rotation_schedule',
-      type: 'number',
     },
     serviceAccountEmail: {
       editType: 'string',
@@ -970,11 +966,10 @@ const ldap = {
       fieldGroup: 'default',
     },
     rotationPeriod: {
-      editType: 'number',
+      editType: 'ttl',
       fieldGroup: 'default',
       helpText:
         'TTL for automatic credential rotation of the given username. Mutually exclusive with rotation_schedule',
-      type: 'number',
     },
     rotationSchedule: {
       editType: 'string',
@@ -984,11 +979,10 @@ const ldap = {
       type: 'string',
     },
     rotationWindow: {
-      editType: 'number',
+      editType: 'ttl',
       fieldGroup: 'default',
       helpText:
         'Specifies the amount of time in which the rotation is allowed to occur starting from a given rotation_schedule',
-      type: 'number',
     },
     starttls: {
       editType: 'boolean',

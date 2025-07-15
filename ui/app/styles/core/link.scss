@@ -1,3 +1,6 @@
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -6,14 +9,14 @@
 .link {
   background: transparent;
   border: 0;
-  color: $blue;
+  color: color_variables.$blue;
   cursor: pointer;
   display: inline;
   font: inherit;
   line-height: normal;
   margin: 0;
   padding: 0;
-  font-weight: $font-weight-semibold;
+  font-weight: font_variables.$font-weight-semibold;
   user-select: text;
 
   &[disabled] {

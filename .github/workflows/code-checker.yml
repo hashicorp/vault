@@ -37,6 +37,7 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - uses: ./.github/actions/install-external-tools # for staticcheck
+      - run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - run: make ci-deprecations
         name: Check deprecations
 
@@ -53,6 +54,7 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - uses: ./.github/actions/install-external-tools # for buf
+      - run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
         # Note: if there is a function we want to ignore the nilnil check for,
         # You can add 'ignore-nil-nil-function-check' somewhere in the
         # godoc for the function.
@@ -71,6 +73,7 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - uses: ./.github/actions/install-external-tools # for buf and protoc-*
+      - run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - name: Check generate delta
         run: make prep check-proto-delta
 
@@ -84,6 +87,7 @@ jobs:
         with:
           github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
       - uses: ./.github/actions/install-external-tools # for buf and gofumpt
+      - run: git config --global url."https://${{ secrets.ELEVATED_GITHUB_TOKEN}}@github.com".insteadOf https://github.com
       - name: Go format
         run: make prep check-go-fmt
       - name: Protobuf format

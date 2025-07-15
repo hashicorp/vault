@@ -5,6 +5,7 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import SecretsEngineForm from 'vault/forms/secrets/engine';
 
 import type { ModelFrom } from 'vault/vault/route';
 import type Store from '@ember-data/store';
@@ -15,8 +16,15 @@ export default class VaultClusterSettingsMountSecretBackendRoute extends Route {
   @service declare readonly store: Store;
 
   model() {
-    const secretEngine = this.store.createRecord('secret-engine');
-    secretEngine.set('config', this.store.createRecord('mount-config'));
-    return secretEngine;
+    const defaults = {
+      config: { listingVisibility: false },
+      kvConfig: {
+        maxVersions: 0,
+        casRequired: false,
+        deleteVersionAfter: undefined,
+      },
+      options: { version: 2 },
+    };
+    return new SecretsEngineForm(defaults, { isNew: true });
   }
 }

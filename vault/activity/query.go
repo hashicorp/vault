@@ -59,6 +59,7 @@ type MonthlyNamespaceRecord struct {
 
 type MountRecord struct {
 	MountPath string        `json:"mount_path"`
+	MountType string        `json:"mount_type"`
 	Counts    *CountsRecord `json:"counts"`
 }
 

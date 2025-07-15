@@ -21,7 +21,7 @@ var genEnosDynamicConfigReq = &generate.EnosDynamicConfigReq{
 }
 
 func newGenerateEnosDynamicConfigCmd() *cobra.Command {
-	genCfg := &cobra.Command{
+	enosDynCfgCmd := &cobra.Command{
 		Use:   "enos-dynamic-config",
 		Short: "Generate dynamic Enos configuration files",
 		Long: `Create branch specific Enos configuration dynamically. We do this to set the various
@@ -29,23 +29,23 @@ sample attribute variables on per-branch basis.`,
 		RunE: runGenerateEnosDynamicConfig,
 	}
 
-	genCfg.PersistentFlags().StringVarP(&genEnosDynamicConfigReq.VaultVersion, "version", "v", "", "The version of Vault")
-	genCfg.PersistentFlags().StringVarP(&genEnosDynamicConfigReq.VaultEdition, "edition", "e", "", "The edition of Vault. Can either be 'ce' or 'enterprise'")
-	genCfg.PersistentFlags().StringVarP(&genEnosDynamicConfigReq.EnosDir, "dir", "d", ".", "The enos directory to create the configuration in")
-	genCfg.PersistentFlags().UintVarP(&genEnosDynamicConfigReq.NMinus, "nminus", "n", 3, "Instead of setting a dedicated lower bound, calculate N-X from the upper")
-	genCfg.PersistentFlags().StringSliceVarP(&genEnosDynamicConfigReq.Skip, "skip", "s", skipVersionsDefault, "Skip these versions. Can be provided none-to-many times")
-	genCfg.PersistentFlags().StringVarP(&genEnosDynamicConfigReq.FileName, "file", "f", "enos-dynamic-config.hcl", "The name of the file to write the configuration into")
+	enosDynCfgCmd.PersistentFlags().StringVarP(&genEnosDynamicConfigReq.VaultVersion, "version", "v", "", "The version of Vault")
+	enosDynCfgCmd.PersistentFlags().StringVarP(&genEnosDynamicConfigReq.VaultEdition, "edition", "e", "", "The edition of Vault. Can either be 'ce' or 'enterprise'")
+	enosDynCfgCmd.PersistentFlags().StringVarP(&genEnosDynamicConfigReq.EnosDir, "dir", "d", ".", "The enos directory to create the configuration in")
+	enosDynCfgCmd.PersistentFlags().UintVarP(&genEnosDynamicConfigReq.NMinus, "nminus", "n", 3, "Instead of setting a dedicated lower bound, calculate N-X from the upper")
+	enosDynCfgCmd.PersistentFlags().StringSliceVarP(&genEnosDynamicConfigReq.Skip, "skip", "s", skipVersionsDefault, "Skip these versions. Can be provided none-to-many times")
+	enosDynCfgCmd.PersistentFlags().StringVar(&genEnosDynamicConfigReq.FileName, "file", "enos-dynamic-config.hcl", "The name of the file to write the configuration into")
 
-	err := genCfg.MarkPersistentFlagRequired("edition")
+	err := enosDynCfgCmd.MarkPersistentFlagRequired("edition")
 	if err != nil {
 		panic(err)
 	}
-	err = genCfg.MarkPersistentFlagRequired("version")
+	err = enosDynCfgCmd.MarkPersistentFlagRequired("version")
 	if err != nil {
 		panic(err)
 	}
 
-	return genCfg
+	return enosDynCfgCmd
 }
 
 func runGenerateEnosDynamicConfig(cmd *cobra.Command, args []string) error {

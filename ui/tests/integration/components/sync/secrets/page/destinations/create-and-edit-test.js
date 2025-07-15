@@ -7,49 +7,62 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { setupDataStubs } from 'vault/tests/helpers/sync/setup-hooks';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { Response } from 'miragejs';
 import { click, fillIn, render, typeIn } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
-import { syncDestinations } from 'vault/helpers/sync-destinations';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { syncDestinations, findDestination } from 'vault/helpers/sync-destinations';
 import { decamelize, underscore } from '@ember/string';
+import formResolver from 'vault/forms/sync/resolver';
 
 const SYNC_DESTINATIONS = syncDestinations();
 module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndEdit', function (hooks) {
   setupRenderingTest(hooks);
   setupEngine(hooks, 'sync');
   setupMirage(hooks);
+  setupDataStubs(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
     this.transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
-    this.clearDatasetStub = sinon.stub(this.owner.lookup('service:pagination'), 'clearDataset');
+    this.apiPath = 'sys/sync/destinations/:type/:name';
 
-    this.renderFormComponent = () => {
-      return render(hbs` <Secrets::Page::Destinations::CreateAndEdit @destination={{this.model}} />`, {
+    this.generateForm = (isNew = false, type = 'aws-sm') => {
+      const { defaultValues } = findDestination(type);
+      let data = defaultValues;
+
+      if (!isNew) {
+        if (type !== 'aws-sm') {
+          this.setupStubsForType(type);
+        }
+        const { name, connectionDetails, options } = this.destination;
+        options.granularity = options.granularityLevel;
+        delete options.granularityLevel;
+
+        data = { name, ...connectionDetails, ...options };
+      }
+
+      this.form = formResolver(type, data, { isNew });
+      this.formFields = this.form.formFieldGroups.reduce((arr, group) => {
+        const values = Object.values(group)[0] || [];
+        return [...arr, ...values];
+      }, []);
+      this.type = type;
+    };
+
+    this.renderComponent = () =>
+      render(hbs` <Secrets::Page::Destinations::CreateAndEdit @form={{this.form}} @type={{this.type}} />`, {
         owner: this.engine,
       });
-    };
-
-    this.generateModel = (type = 'aws-sm') => {
-      const data = this.server.create('sync-destination', type);
-      const id = `${type}/${data.name}`;
-      data.id = id;
-      this.store.pushPayload(`sync/destinations/${type}`, {
-        modelName: `sync/destinations/${type}`,
-        ...data,
-      });
-      return this.store.peekRecord(`sync/destinations/${type}`, id);
-    };
   });
 
   test('create: it renders breadcrumbs and navigates back to create on cancel', async function (assert) {
+    this.generateForm(true);
     assert.expect(2);
-    const { type } = SYNC_DESTINATIONS[0];
-    this.model = this.store.createRecord(`sync/destinations/${type}`, { type });
 
-    await this.renderFormComponent();
+    await this.renderComponent();
     assert.dom(PAGE.breadcrumbs).hasText('Secrets Sync Select Destination Create Destination');
     await click(PAGE.cancelButton);
     const transition = this.transitionStub.calledWith('vault.cluster.sync.secrets.destinations.create');
@@ -57,11 +70,10 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
   });
 
   test('create: it renders headers and fieldGroups subtext', async function (assert) {
+    this.generateForm(true);
     assert.expect(4);
-    const { type } = SYNC_DESTINATIONS[0];
-    this.model = this.store.createRecord(`sync/destinations/${type}`, { type });
 
-    await this.renderFormComponent();
+    await this.renderComponent();
     assert
       .dom(PAGE.form.fieldGroupHeader('Credentials'))
       .hasText('Credentials', 'renders credentials section on create');
@@ -77,10 +89,10 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
   });
 
   test('edit: it renders breadcrumbs and navigates back to details on cancel', async function (assert) {
+    this.generateForm();
     assert.expect(2);
-    this.model = this.generateModel();
 
-    await this.renderFormComponent();
+    await this.renderComponent();
     assert.dom(PAGE.breadcrumbs).hasText('Secrets Sync Destinations Destination Edit Destination');
 
     await click(PAGE.cancelButton);
@@ -89,10 +101,10 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
   });
 
   test('edit: it renders headers and fieldGroup subtext', async function (assert) {
+    this.generateForm();
     assert.expect(4);
-    this.model = this.generateModel();
 
-    await this.renderFormComponent();
+    await this.renderComponent();
     assert
       .dom(PAGE.form.fieldGroupHeader('Credentials'))
       .hasText('Credentials', 'renders credentials section on edit');
@@ -110,90 +122,95 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
   });
 
   test('edit: it PATCH updates custom_tags', async function (assert) {
-    assert.expect(1);
-    this.model = this.generateModel();
+    this.generateForm();
+    assert.expect(2);
 
-    this.server.patch(`sys/sync/destinations/${this.model.type}/${this.model.name}`, (schema, req) => {
+    this.server.patch(this.apiPath, (schema, req) => {
       const payload = JSON.parse(req.requestBody);
-      const expected = {
-        tags_to_remove: ['foo'],
-        custom_tags: { updated: 'bar', added: 'key' },
-      };
-      assert.propEqual(payload, expected, 'payload removes old tags and includes updated object');
-      return { payload };
+      assert.propEqual(
+        payload.custom_tags,
+        { updated: 'bar', added: 'key' },
+        'payload contains updated custom tags'
+      );
+      assert.propEqual(payload.tags_to_remove, ['foo'], 'payload contains tags to remove with expected keys');
+      return payload;
     });
 
-    // bypass form and manually set model attributes
-    this.model.set('customTags', {
-      updated: 'bar',
-      added: 'key',
-    });
-    await this.renderFormComponent();
-    await click(PAGE.saveButton);
+    await this.renderComponent();
+    await click(GENERAL.kvObjectEditor.deleteRow());
+    await fillIn(GENERAL.kvObjectEditor.key(), 'updated');
+    await fillIn(GENERAL.kvObjectEditor.value(), 'bar');
+    await click(GENERAL.kvObjectEditor.addRow);
+    await fillIn(GENERAL.kvObjectEditor.key(1), 'added');
+    await fillIn(GENERAL.kvObjectEditor.value(1), 'key');
+    await click(GENERAL.submitButton);
   });
 
   test('edit: it adds custom_tags when previously there are none', async function (assert) {
+    this.generateForm();
     assert.expect(1);
-    this.model = this.generateModel();
 
-    this.server.patch(`sys/sync/destinations/${this.model.type}/${this.model.name}`, (schema, req) => {
+    this.server.patch(this.apiPath, (schema, req) => {
       const payload = JSON.parse(req.requestBody);
-      const expected = { custom_tags: { foo: 'blah' } };
-      assert.propEqual(payload, expected, 'payload contains new custom tags');
-      return { payload };
+      assert.propEqual(payload.custom_tags, { foo: 'blah' }, 'payload contains new custom tags');
+      return payload;
     });
 
-    // bypass form and manually set model attributes
-    this.model.set('customTags', {});
+    this.destination.options.customTags = {};
 
-    await this.renderFormComponent();
+    await this.renderComponent();
     await PAGE.form.fillInByAttr('customTags', 'blah');
-    await click(PAGE.saveButton);
+    await click(GENERAL.submitButton);
   });
 
   test('edit: payload does not contain any custom_tags when removed in form', async function (assert) {
-    assert.expect(1);
-    this.model = this.generateModel();
+    this.generateForm();
+    assert.expect(2);
 
-    this.server.patch(`sys/sync/destinations/${this.model.type}/${this.model.name}`, (schema, req) => {
+    this.server.patch(this.apiPath, (schema, req) => {
       const payload = JSON.parse(req.requestBody);
-      const expected = { tags_to_remove: ['foo'], custom_tags: {} };
-      assert.propEqual(payload, expected, 'payload removes old keys');
-      return { payload };
+      assert.propEqual(payload.tags_to_remove, ['foo'], 'payload removes old keys');
+      assert.propEqual(payload.custom_tags, {}, 'payload does not contain custom_tags');
+      return payload;
     });
 
-    await this.renderFormComponent();
+    await this.renderComponent();
     await click(PAGE.kvObjectEditor.deleteRow());
-    await click(PAGE.saveButton);
+    await click(GENERAL.submitButton);
   });
 
   test('edit: payload only contains masked inputs when they have changed', async function (assert) {
-    assert.expect(1);
-    this.model = this.generateModel();
+    this.generateForm();
+    assert.expect(2);
 
-    this.server.patch(`sys/sync/destinations/${this.model.type}/${this.model.name}`, (schema, req) => {
+    this.server.patch(this.apiPath, (schema, req) => {
       const payload = JSON.parse(req.requestBody);
-      assert.propEqual(
-        payload,
-        { secret_access_key: 'new-secret' },
+      assert.strictEqual(
+        payload.access_key_id,
+        undefined,
+        'payload does not contain the unchanged obfuscated field'
+      );
+      assert.strictEqual(
+        payload.secret_access_key,
+        'new-secret',
         'payload contains the changed obfuscated field'
       );
-      return { payload };
+      return payload;
     });
 
-    await this.renderFormComponent();
+    await this.renderComponent();
     await click(PAGE.enableField('accessKeyId'));
     await click(PAGE.inputByAttr('accessKeyId')); // click on input but do not change value
     await click(PAGE.enableField('secretAccessKey'));
     await fillIn(PAGE.inputByAttr('secretAccessKey'), 'new-secret');
-    await click(PAGE.saveButton);
+    await click(GENERAL.submitButton);
   });
 
   test('it renders API errors', async function (assert) {
+    this.generateForm();
     assert.expect(1);
-    const name = 'my-failed-dest';
-    const type = SYNC_DESTINATIONS[0].type;
-    this.server.post(`sys/sync/destinations/${type}/${name}`, () => {
+
+    this.server.patch(this.apiPath, () => {
       return new Response(
         500,
         {},
@@ -205,10 +222,9 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
       );
     });
 
-    this.model = this.store.createRecord(`sync/destinations/${type}`, { name, type });
-    await this.renderFormComponent();
+    await this.renderComponent();
 
-    await click(PAGE.saveButton);
+    await click(GENERAL.submitButton);
     assert
       .dom(PAGE.messageError)
       .hasText(
@@ -217,30 +233,23 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
   });
 
   test('it renders warning validation only when editing vercel-project team_id', async function (assert) {
-    assert.expect(2);
     const type = 'vercel-project';
-    // new model
-    this.model = this.store.createRecord(`sync/destinations/${type}`, { type });
-    await this.renderFormComponent();
+    this.generateForm(true, type); // new destination
+
+    assert.expect(2);
+
+    await this.renderComponent();
     await typeIn(PAGE.inputByAttr('teamId'), 'id');
     assert
-      .dom(PAGE.validationWarning('teamId'))
+      .dom(PAGE.validationWarningByAttr('teamId'))
       .doesNotExist('does not render warning validation for new vercel-project destination');
 
-    // existing model
-    const data = this.server.create('sync-destination', type);
-    const id = `${type}/${data.name}`;
-    data.id = id;
-    this.store.pushPayload(`sync/destinations/${type}`, {
-      modelName: `sync/destinations/${type}`,
-      ...data,
-    });
-    this.model = this.store.peekRecord(`sync/destinations/${type}`, id);
-    await this.renderFormComponent();
+    this.generateForm(false, type); // existing destination
+    await this.renderComponent();
     await PAGE.form.fillInByAttr('teamId', '');
     await typeIn(PAGE.inputByAttr('teamId'), 'edit');
     assert
-      .dom(PAGE.validationWarning('teamId'))
+      .dom(PAGE.validationWarningByAttr('teamId'))
       .hasText(
         'Team ID should only be updated if the project was transferred to another account.',
         'it renders validation warning'
@@ -252,28 +261,28 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     const { name, type } = destination;
     const obfuscatedFields = ['accessToken', 'clientSecret', 'secretAccessKey', 'accessKeyId'];
 
-    module(`create destination: ${type}`, function (hooks) {
-      hooks.beforeEach(function () {
-        this.model = this.store.createRecord(`sync/destinations/${type}`, { type });
-      });
-
+    module(`create destination: ${type}`, function () {
       test('it renders destination form', async function (assert) {
-        assert.expect(this.model.formFields.length + 1);
+        this.generateForm(true, type);
+        assert.expect(this.formFields.length + 1);
 
-        await this.renderFormComponent();
+        await this.renderComponent();
 
         assert.dom(PAGE.title).hasTextContaining(`Create Destination for ${name}`);
-        for (const attr of this.model.formFields) {
-          assert.dom(PAGE.fieldByAttr(attr.name)).exists();
+
+        for (const field of this.formFields) {
+          assert.dom(PAGE.fieldByAttr(field.name)).exists();
         }
       });
 
       test('it masks obfuscated fields', async function (assert) {
-        const filteredObfuscatedFields = this.model.formFields.filter((field) =>
+        this.generateForm(true, type);
+        const filteredObfuscatedFields = this.formFields.filter((field) =>
           obfuscatedFields.includes(field.name)
         );
         assert.expect(filteredObfuscatedFields.length * 2);
-        await this.renderFormComponent();
+
+        await this.renderComponent();
         // iterate over the form fields and filter for those that are obfuscated
         // fill those in and assert that they are masked
         filteredObfuscatedFields.forEach(async (field) => {
@@ -289,15 +298,19 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
       });
 
       test('it saves destination and transitions to details', async function (assert) {
-        assert.expect(5);
-        const name = 'my-name';
-        this.server.post(`sys/sync/destinations/${type}/${name}`, (schema, req) => {
-          const payload = JSON.parse(req.requestBody);
-          assert.ok(true, `makes request: POST sys/sync/destinations/${type}/${name}`);
-          assert.notPropContains(payload, { name: 'my-name', type }, 'name and type do not exist in payload');
+        this.generateForm(true, type);
+        assert.expect(4);
 
+        const name = 'my-name';
+        const path = `sys/sync/destinations/${type}/my-name`;
+
+        this.server.post(path, (schema, req) => {
+          const payload = JSON.parse(req.requestBody);
+
+          assert.ok(true, `makes request: POST ${path}`);
+          assert.notPropContains(payload, { name, type }, 'name and type do not exist in payload');
           // instead of looping through all attrs, just grab the second one (first is 'name')
-          const testAttr = this.model.formFields[1].name;
+          const testAttr = this.formFields[1].name;
           assert.propContains(
             payload,
             { [underscore(testAttr)]: `my-${testAttr}` },
@@ -306,69 +319,43 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
           return payload;
         });
 
-        await this.renderFormComponent();
+        await this.renderComponent();
 
-        for (const attr of this.model.formFields) {
-          await PAGE.form.fillInByAttr(attr.name, `my-${attr.name}`);
+        for (const field of this.formFields) {
+          await PAGE.form.fillInByAttr(field.name, `my-${field.name}`);
         }
-        await click(PAGE.saveButton);
+        await click(GENERAL.submitButton);
         const actualArgs = this.transitionStub.lastCall.args;
         const expectedArgs = ['vault.cluster.sync.secrets.destinations.destination.details', type, name];
         assert.propEqual(actualArgs, expectedArgs, 'transitionTo called with expected args');
-        assert.propEqual(
-          this.clearDatasetStub.lastCall.args,
-          ['sync/destination'],
-          'Store dataset is cleared on create success'
-        );
       });
 
       test('it validates inputs', async function (assert) {
+        this.generateForm(true, type);
+
         const warningValidations = ['teamId'];
-        const validationAssertions = this.model._validations;
-        // remove warning validations to
+        const validationAssertions = { ...this.form.validations };
+        // remove warning validations
         warningValidations.forEach((warning) => {
           delete validationAssertions[warning];
         });
         assert.expect(Object.keys(validationAssertions).length);
 
-        await this.renderFormComponent();
-
-        await click(PAGE.saveButton);
+        await this.renderComponent();
+        await click(GENERAL.submitButton);
 
         // only asserts validations for presence, refactor if validations change
         for (const attr in validationAssertions) {
           const { message } = validationAssertions[attr].find((v) => v.type === 'presence');
-          assert.dom(PAGE.validation(attr)).hasText(message, `renders validation: ${message}`);
+          assert.dom(PAGE.validationErrorByAttr(attr)).hasText(message, `renders validation: ${message}`);
         }
       });
     });
   }
 
   // EDIT FORM ASSERTIONS FOR EACH DESTINATION TYPE
-  // * test updates: if editable, add param here
-  //  if it is not a string type, add case to EXPECTED_VALUE and update
-  //  fillInByAttr() (in sync-selectors) to interact with the form
-  const EDITABLE_FIELDS = {
-    'aws-sm': [
-      'accessKeyId',
-      'secretAccessKey',
-      'roleArn',
-      'externalId',
-      'granularity',
-      'secretNameTemplate',
-      'customTags',
-    ],
-    'azure-kv': ['clientId', 'clientSecret', 'granularity', 'secretNameTemplate', 'customTags'],
-    'gcp-sm': ['projectId', 'credentials', 'granularity', 'secretNameTemplate', 'customTags'],
-    gh: ['accessToken', 'granularity', 'secretNameTemplate'],
-    'vercel-project': [
-      'accessToken',
-      'teamId',
-      'deploymentEnvironments',
-      'granularity',
-      'secretNameTemplate',
-    ],
-  };
+  // if field is not string type, add case to EXPECTED_VALUE and update
+  // fillInByAttr() (in sync-selectors) to interact with the form
   const EXPECTED_VALUE = (key) => {
     switch (key) {
       case 'custom_tags':
@@ -384,56 +371,63 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
   };
 
   for (const destination of SYNC_DESTINATIONS) {
-    const { type, maskedParams } = destination;
-    module(`edit destination: ${type}`, function (hooks) {
-      hooks.beforeEach(function () {
-        this.model = this.generateModel(type);
-      });
-
+    const { type, maskedParams, readonlyParams } = destination;
+    module(`edit destination: ${type}`, function () {
       test('it renders destination form and PATCH updates a destination', async function (assert) {
-        const disabledAssertions = this.model.formFields.filter((f) => f.options.editDisabled).length;
-        const editable = EDITABLE_FIELDS[this.model.type];
-        assert.expect(5 + disabledAssertions + editable.length);
-        this.server.patch(`sys/sync/destinations/${type}/${this.model.name}`, (schema, req) => {
-          assert.ok(true, `makes request: PATCH sys/sync/destinations/${type}/${this.model.name}`);
+        this.generateForm(false, type);
+
+        const [disabledAssertions, editable] = this.formFields.reduce(
+          (arr, field) => {
+            if (field.options.editDisabled) {
+              arr[0]++;
+            }
+            if (!readonlyParams.includes(field.name)) {
+              arr[1].push(field.name);
+            }
+            return arr;
+          },
+          [0, []]
+        );
+
+        assert.expect(4 + disabledAssertions + editable.length);
+
+        const path = `sys/sync/destinations/${type}/${this.form.name}`;
+        this.server.patch(path, (schema, req) => {
+          assert.ok(true, `makes request: PATCH ${path}`);
           const payload = JSON.parse(req.requestBody);
           const payloadKeys = Object.keys(payload);
-          const expectedKeys = editable.map((k) => decamelize(k));
+          const expectedKeys = editable.map((key) => decamelize(key)).sort();
           assert.propEqual(payloadKeys, expectedKeys, `${type} payload only contains editable attrs`);
           expectedKeys.forEach((key) => {
-            assert.deepEqual(payload[key], EXPECTED_VALUE(key), `destination: ${type} updates key: ${key}`);
+            assert.propEqual(payload[key], EXPECTED_VALUE(key), `destination: ${type} updates key: ${key}`);
           });
           return { payload };
         });
 
-        await this.renderFormComponent();
-        assert.dom(PAGE.title).hasTextContaining(`Edit ${this.model.name}`);
+        await this.renderComponent(false, type);
 
-        for (const attr of this.model.formFields) {
-          if (editable.includes(attr.name)) {
-            if (maskedParams.includes(attr.name)) {
+        assert.dom(PAGE.title).hasTextContaining(`Edit ${this.form.name}`);
+
+        for (const field of this.formFields) {
+          if (editable.includes(field.name)) {
+            if (maskedParams.includes(field.name)) {
               // Enable inputs with sensitive values
-              await click(PAGE.form.enableInput(attr.name));
+              await click(PAGE.form.enableInput(field.name));
             }
-            await PAGE.form.fillInByAttr(attr.name, `new-${decamelize(attr.name)}-value`);
+            await PAGE.form.fillInByAttr(field.name, `new-${decamelize(field.name)}-value`);
           } else {
-            assert.dom(PAGE.inputByAttr(attr.name)).isDisabled(`${attr.name} is disabled`);
+            assert.dom(PAGE.inputByAttr(field.name)).isDisabled(`${field.name} is disabled`);
           }
         }
 
-        await click(PAGE.saveButton);
+        await click(GENERAL.submitButton);
         const actualArgs = this.transitionStub.lastCall.args;
         const expectedArgs = [
           'vault.cluster.sync.secrets.destinations.destination.details',
           type,
-          this.model.name,
+          this.form.name,
         ];
         assert.propEqual(actualArgs, expectedArgs, 'transitionTo called with expected args');
-        assert.propEqual(
-          this.clearDatasetStub.lastCall.args,
-          ['sync/destination'],
-          'Store dataset is cleared on create success'
-        );
       });
     });
   }

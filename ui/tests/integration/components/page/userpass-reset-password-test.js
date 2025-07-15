@@ -9,10 +9,10 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import { click, fillIn, render, settled } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const S = {
   infoBanner: '[data-test-current-user-banner]',
-  save: '[data-test-reset-password-save]',
   error: '[data-test-reset-password-error]',
   input: '[data-test-input="reset-password"]',
 };
@@ -43,7 +43,7 @@ module('Integration | Component | page/userpass-reset-password', function (hooks
       );
 
     await fillIn(S.input, 'new');
-    await click(S.save);
+    await click(GENERAL.submitButton);
     // eslint-disable-next-line ember/no-settled-after-test-helper
     await settled();
 
@@ -60,11 +60,11 @@ module('Integration | Component | page/userpass-reset-password', function (hooks
       .dom(S.infoBanner)
       .hasText(`You are updating the password for ${this.username} on the ${this.backend} auth mount.`);
 
-    await click(S.save);
+    await click(GENERAL.submitButton);
     assert.dom(S.error).hasText('Error Please provide a new password.');
 
     await fillIn(S.input, 'invalid-pw');
-    await click(S.save);
+    await click(GENERAL.submitButton);
 
     // eslint-disable-next-line ember/no-settled-after-test-helper
     await settled();

@@ -12,6 +12,7 @@ import jsonEditor from '../../pages/components/json-editor';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { createLongJson } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const component = create(jsonEditor);
 
@@ -54,7 +55,7 @@ module('Integration | Component | json-editor', function (hooks) {
 
     assert.strictEqual(component.title, 'Test title', 'renders the provided title');
     assert.true(component.hasToolbar, 'renders the toolbar');
-    assert.true(component.hasCopyButton, 'renders the copy button');
+    assert.dom(GENERAL.copyButton).exists('renders the copy button');
     assert.true(component.hasJSONEditor, 'renders the code mirror modifier');
     assert.ok(component.canEdit, 'json editor can be edited');
   });
@@ -86,8 +87,12 @@ module('Integration | Component | json-editor', function (hooks) {
       @theme={{this.hashi-read-only-theme}}
       @readOnly={{true}}
     />`);
+    // computed style differs between browsers so we only check for the color
+    // TODO: this component will be replaced with a hds codeEditor and this test can be removed
+    // getComputedStyle for Chrome: rgb(247, 248, 250) none repeat scroll 0% 0% / auto padding-box border-box
+    // getComputedStyle for Firefox: rgb(247, 248, 250);
     assert.dom('.cm-s-hashi-read-only').hasStyle({
-      background: 'rgb(247, 248, 250) none repeat scroll 0% 0% / auto padding-box border-box',
+      backgroundColor: 'rgb(247, 248, 250)',
     });
     assert.dom('.CodeMirror-linenumber').doesNotExist('on readOnly does not show line numbers');
   });

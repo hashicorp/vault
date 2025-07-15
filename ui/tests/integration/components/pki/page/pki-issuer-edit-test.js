@@ -10,6 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
 
 const selectors = {
@@ -27,7 +28,6 @@ const selectors = {
   certUrlRemove: '[data-test-string-list-button="delete"]',
   crlDist: '[data-test-input="crlDistributionPoints"] [data-test-string-list-input="0"]',
   ocspServers: '[data-test-input="ocspServers"]  [data-test-string-list-input="0"]',
-  save: '[data-test-save]',
   cancel: '[data-test-cancel]',
   error: '[data-test-message-error]',
   alert: '[data-test-inline-error-message]',
@@ -132,7 +132,7 @@ module('Integration | Component | pki | Page::PkiIssuerEditPage::PkiIssuerEdit',
     await render(hbs`<Page::PkiIssuerEdit @model={{this.model}} />`, { owner: this.engine });
 
     await this.update();
-    await click(selectors.save);
+    await click(GENERAL.submitButton);
     assert.ok(this.transitionCalled(), 'Transitions to details route on save success');
   });
 
@@ -140,7 +140,7 @@ module('Integration | Component | pki | Page::PkiIssuerEditPage::PkiIssuerEdit',
     this.server.post('/pki/issuer/test', () => new Response(404, {}, { errors: ['Some error occurred'] }));
 
     await render(hbs`<Page::PkiIssuerEdit @model={{this.model}} />`, { owner: this.engine });
-    await click(selectors.save);
+    await click(GENERAL.submitButton);
 
     assert
       .dom(selectors.alert)

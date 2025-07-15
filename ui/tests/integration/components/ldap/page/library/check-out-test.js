@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click } from '@ember/test-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
@@ -69,28 +70,28 @@ module('Integration | Component | ldap | Page::Library::CheckOut', function (hoo
         'Warning alert renders'
       );
     assert.dom('[data-test-row-value="Account name"]').hasText('foo.bar', 'Account name renders');
-    await click('[data-test-button="toggle-masked"]');
-    assert.dom('[data-test-value-div="Password"] .masked-value').hasText('password', 'Password renders');
+    await click(GENERAL.button('toggle-masked'));
+    assert.dom(`${GENERAL.infoRowValue('Password')} .masked-value`).hasText('password', 'Password renders');
     assert
       .dom('[data-test-row-value="Lease ID"]')
       .hasText('ldap/library/test/check-out/123', 'Lease ID renders');
     assert
-      .dom('[data-test-value-div="Lease renewable"] svg')
+      .dom(`${GENERAL.infoRowValue('Lease renewable')} svg`)
       .hasClass('hds-icon-check-circle', 'Lease renewable true icon renders');
     assert
-      .dom('[data-test-value-div="Lease renewable"] svg')
+      .dom(`${GENERAL.infoRowValue('Lease renewable')} svg`)
       .hasClass('has-text-success', 'Lease renewable true icon color renders');
-    assert.dom('[data-test-value-div="Lease renewable"] span').hasText('True', 'Lease renewable renders');
+    assert.dom(`${GENERAL.infoRowValue('Lease renewable')} span`).hasText('True', 'Lease renewable renders');
 
     this.creds.renewable = false;
     await this.renderComponent();
     assert
-      .dom('[data-test-value-div="Lease renewable"] svg')
+      .dom(`${GENERAL.infoRowValue('Lease renewable')} svg`)
       .hasClass('hds-icon-x-circle', 'Lease renewable false icon renders');
     assert
-      .dom('[data-test-value-div="Lease renewable"] svg')
+      .dom(`${GENERAL.infoRowValue('Lease renewable')} svg`)
       .hasClass('has-text-danger', 'Lease renewable false icon color renders');
-    assert.dom('[data-test-value-div="Lease renewable"] span').hasText('False', 'Lease renewable renders');
+    assert.dom(`${GENERAL.infoRowValue('Lease renewable')} span`).hasText('False', 'Lease renewable renders');
 
     await click('[data-test-done]');
     const didTransition = transitionStub.calledWith(

@@ -1,0 +1,116 @@
+{
+  "name": "@hashicorp/vault-reporting",
+  "version": "0.0.0",
+  "description": "Reporting tools for vault products.",
+  "keywords": [
+    "ember-addon"
+  ],
+  "repository": "",
+  "author": "",
+  "exports": {
+    ".": {
+      "types": "./declarations/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./declarations/*.d.ts",
+      "default": "./dist/*.js"
+    },
+    "./addon-main.js": "./addon-main.cjs"
+  },
+  "typesVersions": {
+    "*": {
+      "*": [
+        "declarations/*"
+      ]
+    }
+  },
+  "files": [
+    "addon-main.cjs",
+    "declarations",
+    "dist"
+  ],
+  "scripts": {
+    "build": "rollup --config",
+    "format": "prettier . --cache --write",
+    "lint": "concurrently \"pnpm:lint:*(!fix)\" --names \"lint:\" --prefixColors auto",
+    "lint:fix": "concurrently \"pnpm:lint:*:fix\" --names \"fix:\" --prefixColors auto &&  run format",
+    "lint:format": "prettier . --cache --check",
+    "lint:hbs": "ember-template-lint . --no-error-on-unmatched-pattern",
+    "lint:hbs:fix": "ember-template-lint . --fix --no-error-on-unmatched-pattern",
+    "lint:js": "eslint . --cache",
+    "lint:js:fix": "eslint . --fix",
+    "lint:types": "glint",
+    "prepack": "pnpm build",
+    "start": "rollup --config --watch",
+    "test": "echo 'A v2 addon does not have tests, run tests in test-app'",
+    "sync-to-vault": "node scripts/sync-to-vault.mjs"
+  },
+  "dependencies": {
+    "@hashicorp/design-system-components": "~4.18.0",
+    "@lineal-viz/lineal": "^0.5.1",
+    "ember-modifier": "^4.1.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.2",
+    "@babel/eslint-parser": "^7.25.1",
+    "@babel/plugin-transform-typescript": "^7.25.2",
+    "@babel/runtime": "^7.25.6",
+    "@embroider/addon-dev": "^7.1.0",
+    "@embroider/addon-shim": "^1.8.9",
+    "@eslint/js": "^9.17.0",
+    "@glimmer/component": "^1.1.2",
+    "@glimmer/tracking": "^1.1.2",
+    "@glint/core": "^1.4.0",
+    "@glint/environment-ember-loose": "^1.4.0",
+    "@glint/environment-ember-template-imports": "^1.4.0",
+    "@glint/template": "^1.4.0",
+    "@hashicorp/flight-icons": "^3.10.0",
+    "@rollup/plugin-babel": "^6.0.4",
+    "@tsconfig/ember": "^3.0.8",
+    "babel-plugin-ember-template-compilation": "^2.2.5",
+    "concurrently": "^9.0.1",
+    "decorator-transforms": "^2.2.2",
+    "ember-source": "^5.4.0",
+    "ember-template-lint": "^6.0.0",
+    "ember-template-lint-plugin-prettier": "^5.0.0",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-ember": "^12.3.3",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-n": "^17.15.1",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "prettier-plugin-ember-template-tag": "^2.0.4",
+    "rollup": "^4.22.5",
+    "rollup-plugin-copy": "^3.5.0",
+    "rollup-plugin-scss": "^4.0.1",
+    "stylelint-config-standard-scss": "^14.0.0",
+    "typescript": "~5.6.0",
+    "typescript-eslint": "^8.19.1"
+  },
+  "peerDependencies": {
+    "ember-source": ">= 4.12.0"
+  },
+  "ember": {
+    "edition": "octane"
+  },
+  "ember-addon": {
+    "version": 2,
+    "type": "addon",
+    "main": "addon-main.cjs",
+    "app-js": {
+      "./components/vault-reporting/base/title-row.js": "./dist/_app_/components/vault-reporting/base/title-row.js",
+      "./components/vault-reporting/cluster-replication.js": "./dist/_app_/components/vault-reporting/cluster-replication.js",
+      "./components/vault-reporting/counter.js": "./dist/_app_/components/vault-reporting/counter.js",
+      "./components/vault-reporting/dashboard/export.js": "./dist/_app_/components/vault-reporting/dashboard/export.js",
+      "./components/vault-reporting/donut-chart.js": "./dist/_app_/components/vault-reporting/donut-chart.js",
+      "./components/vault-reporting/global-lease.js": "./dist/_app_/components/vault-reporting/global-lease.js",
+      "./components/vault-reporting/horizontal-bar-chart.js": "./dist/_app_/components/vault-reporting/horizontal-bar-chart.js",
+      "./components/vault-reporting/views/dashboard.js": "./dist/_app_/components/vault-reporting/views/dashboard.js",
+      "./modifiers/axis-offset.js": "./dist/_app_/modifiers/axis-offset.js",
+      "./modifiers/css-custom-property.js": "./dist/_app_/modifiers/css-custom-property.js",
+      "./services/reporting-analytics.js": "./dist/_app_/services/reporting-analytics.js"
+    }
+  }
+}

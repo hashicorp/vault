@@ -128,9 +128,11 @@ a particular auth mount point.
 when a token is being issued, with the exception of token store. This is applicable
 for both mounts that are shared between clusters and cluster local auth mounts (using `local=true`)
 when Vault replication is in use.
-If the goal of marking an auth method as `local` was to comply to GDPR guidelines,
-then care must be taken to not set the data pertaining to local auth mount or local auth
-mount aliases in the metadata of the associated entity.
+
+Entites created by local auth mounts are still replicated to other clusters,
+however it is possible to prevent data pertaining to the local auth mount,
+including related aliases, from being replicated by omitting them from the
+entity metadata.
 
 ## Implicit entities
 
