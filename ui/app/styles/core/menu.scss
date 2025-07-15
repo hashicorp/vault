@@ -1,15 +1,19 @@
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 .menu {
-  font-size: $size-6;
+  font-size: size_variables.$size-6;
 }
 
 .menu a {
   display: block;
-  padding: $spacing-8 $spacing-10;
+  padding: size_variables.$spacing-8 size_variables.$spacing-10;
   text-decoration: none;
 }
 
@@ -25,10 +29,10 @@
 .column .menu-list a {
   border-radius: 0;
   border-right: 0 solid transparent;
-  font-weight: $font-weight-semibold;
+  font-weight: font_variables.$font-weight-semibold;
 
   &:hover,
   &.is-active {
-    color: $blue;
+    color: color_variables.$blue;
   }
 }

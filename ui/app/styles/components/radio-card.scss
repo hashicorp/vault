@@ -1,3 +1,8 @@
+@use '../utils/box-shadow_variables';
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -5,17 +10,17 @@
 
 .radio-card-selector {
   display: flex;
-  margin-bottom: $spacing-8;
+  margin-bottom: size_variables.$spacing-8;
 }
 .radio-card {
-  box-shadow: $box-shadow-low;
+  box-shadow: box-shadow_variables.$box-shadow-low;
   flex: 1 1 25%;
   flex-direction: column;
   justify-content: space-between;
-  margin: $spacing-8 $spacing-16;
-  border: $base-border;
-  border-radius: $radius;
-  transition: all ease-in-out $speed;
+  margin: size_variables.$spacing-8 size_variables.$spacing-16;
+  border: box-shadow_variables.$base-border;
+  border-radius: size_variables.$radius;
+  transition: all ease-in-out size_variables.$speed;
   max-width: 60%;
   input[type='radio'] {
     position: absolute;
@@ -24,7 +29,7 @@
   }
 
   input[type='radio'] + span.dot {
-    border: 1px solid $grey-light;
+    border: 1px solid color_variables.$grey-light;
     border-radius: 50%;
     cursor: pointer;
     display: block;
@@ -35,12 +40,14 @@
   }
 
   input[type='radio']:checked + span.dot {
-    background: $blue;
-    border: 1px solid $blue;
-    box-shadow: inset 0 0 0 0.15rem $white;
+    background: color_variables.$blue;
+    border: 1px solid color_variables.$blue;
+    box-shadow: inset 0 0 0 0.15rem color_variables.$white;
   }
   input[type='radio']:focus + span.dot {
-    box-shadow: 0 0 10px 1px rgba($blue, 0.4), inset 0 0 0 0.15rem $white;
+    box-shadow:
+      0 0 10px 1px rgba(color_variables.$blue, 0.4),
+      inset 0 0 0 0.15rem color_variables.$white;
   }
 
   &.is-disabled {
@@ -67,43 +74,43 @@
 .radio-card-row {
   display: flex;
   flex: 1;
-  padding: $spacing-16;
+  padding: size_variables.$spacing-16;
 }
 .radio-card-icon {
-  color: $ui-gray-300;
+  color: color_variables.$ui-gray-300;
 }
 .radio-card-message {
-  margin: $spacing-4;
+  margin: size_variables.$spacing-4;
 }
 
 .radio-card-message-title {
-  font-weight: $font-weight-semibold;
-  font-size: $size-7;
-  margin-bottom: $spacing-4;
+  font-weight: font_variables.$font-weight-semibold;
+  font-size: size_variables.$size-7;
+  margin-bottom: size_variables.$spacing-4;
 }
 .radio-card-message-body {
   line-height: 1.2;
   color: var(--token-color-foreground-faint);
-  font-size: $size-8;
+  font-size: size_variables.$size-8;
 }
 
 .radio-card-radio-row {
   display: flex;
   justify-content: center;
-  background: $ui-gray-050;
-  padding: $spacing-8;
+  background: color_variables.$ui-gray-050;
+  padding: size_variables.$spacing-8;
 }
 
 .is-selected {
   &.radio-card {
-    border-color: $blue-500;
-    background: $ui-gray-010;
-    box-shadow: $box-shadow-middle;
+    border-color: color_variables.$blue-500;
+    background: color_variables.$ui-gray-010;
+    box-shadow: box-shadow_variables.$box-shadow-middle;
   }
   .radio-card-icon {
-    color: $black;
+    color: color_variables.$black;
   }
   .radio-card-radio-row {
-    background: $blue-050;
+    background: color_variables.$blue-050;
   }
 }

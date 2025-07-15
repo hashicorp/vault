@@ -97,9 +97,12 @@ to specify where the configuration is.
   the read cache used by the physical storage subsystem. This will very
   significantly impact performance.
 
-- `disable_mlock` `(bool: false)` – Disables the server from executing the
-  `mlock` syscall. `mlock` prevents memory from being swapped to disk. Disabling
-  `mlock` is not recommended unless using [integrated storage](/vault/docs/internals/integrated-storage).
+- `disable_mlock` `(bool: <required>)` – Stops Vault from executing the `mlock`
+  syscall. `mlock` prevents data swaps from memory to disk. You must set an
+  explicit value for `disable_mlock` if you use
+  [integrated storage](/vault/docs/internals/integrated-storage). We do not
+  recommend disabling `mlock` for deployments that do not use integrated storage.
+
   Follow the additional security precautions outlined below when disabling `mlock`.
   This can also be provided via the environment variable `VAULT_DISABLE_MLOCK`.
 
@@ -120,6 +123,11 @@ to specify where the configuration is.
   even though the data within BoltDB remains encrypted at rest, swap should be
   disabled to prevent Vault's other in-memory sensitive data from being dumped
   into disk.
+
+  If you enable `mlock`, the Vault executable and each plugin executable in your
+  [plugins directory](/vault/docs/plugins/plugin-architecture#plugin-directory)
+  must have the ability to use the `mlock` syscall.
+
 
   On Linux, to give the Vault executable the ability to use the `mlock`
   syscall without running the process as root, run:
@@ -264,7 +272,7 @@ can have a negative effect on performance due to the tracking of each lock attem
 - `enable_post_unseal_trace` `(bool: false)` - Enables the server to generate a Go trace during the execution of the
   `core.postUnseal` function for debug purposes. The resulting trace can be viewed with the `go tool trace` command. The output
   directory can be specified with the `post_unseal_trace_directory` parameter. This should only be enabled temporarily for
-  debugging purposes as it can have a significant performance impact. This can be updated on a running Vault process with a 
+  debugging purposes as it can have a significant performance impact. This can be updated on a running Vault process with a
   SIGHUP signal.
 
 - `post_unseal_trace_directory` `(string: "")` - Specifies the directory where the trace file will be written, which must exist
@@ -318,6 +326,12 @@ The following parameters are only used with Vault Enterprise
 
 - `administrative_namespace_path` `(string: "")` - Specifies the absolute path
   to the Vault namespace to be used as an [Administrative namespace](/vault/docs/enterprise/namespaces/create-admin-namespace).
+
+- `remove_irrevocable_lease_after` `(string: "")` - Enables the automatic deletion
+of irrevocable leases. When the configured duration exceeds the expiry time of an irrevocable lease,
+Vault deletes the lease. The minimum value for `remove_irrevocable_lease_after` is 2 days (`2d`).
+If you set the removal window to a value less than the minimum, Vault overwrites the value to `2d`.
+Deleting a lease may cause Vault to orphan external resources.
 
 [storage-backend]: /vault/docs/configuration/storage
 [listener]: /vault/docs/configuration/listener

@@ -11,7 +11,7 @@ import { spy } from 'sinon';
 
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
@@ -66,7 +66,7 @@ module('Acceptance | aws secret backend', function (hooks) {
     this.flashDangerSpy = spy(flash, 'danger');
 
     this.uid = uuidv4();
-    return authPage.login();
+    return login();
   });
 
   test('it creates role and deletes role', async function (assert) {
@@ -79,11 +79,11 @@ module('Acceptance | aws secret backend', function (hooks) {
       'After enabling aws secrets engine it navigates to roles list'
     );
 
-    await click(SES.createSecret);
+    await click(SES.createSecretLink);
     assert.dom(SES.secretHeader).hasText('Create an AWS Role', 'It renders the create role page');
 
     await fillIn(GENERAL.inputByAttr('name'), roleName);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     await waitUntil(() => currentURL() === `/vault/secrets/${path}/show/${roleName}`); // flaky without this
     assert.strictEqual(
       currentURL(),
@@ -135,7 +135,7 @@ module('Acceptance | aws secret backend', function (hooks) {
       assert.dom('h1').hasText('Create an AWS Role');
       await fillIn(GENERAL.inputByAttr('name'), roleName);
       await fillIn(GENERAL.inputByAttr('credentialType'), scenario.credentialType);
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       await waitUntil(() => currentURL() === `/vault/secrets/${path}/show/${roleName}`); // flaky without this
       assert.strictEqual(currentURL(), `/vault/secrets/${path}/show/${roleName}`);
       await click(SES.generateLink);
@@ -146,7 +146,7 @@ module('Acceptance | aws secret backend', function (hooks) {
       // based on credentialType, fill out form
       await scenario.fillOutForm(assert);
 
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert.dom(SES.warning).exists('Shows access warning after generation');
       assert.dom(GENERAL.infoRowValue('Access key')).exists();
       assert.dom(GENERAL.infoRowValue('Secret key')).exists();
@@ -185,7 +185,7 @@ module('Acceptance | aws secret backend', function (hooks) {
 
     await fillIn(GENERAL.inputByAttr('credentialType'), 'assumed_role');
 
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.dom(SES.warning).exists('Shows access warning after generation');
     assert.dom(GENERAL.infoRowValue('Access key')).exists();
     assert.dom(GENERAL.infoRowValue('Secret key')).exists();

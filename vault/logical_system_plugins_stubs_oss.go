@@ -9,9 +9,6 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
-func validateSHA256(sha256 string) *logical.Response {
-	if sha256 == "" {
-		return logical.ErrorResponse("missing SHA-256 value")
-	}
+func validateSha256IsEmptyForEntPluginVersion(pluginVersion string, sha256 string) *logical.Response {
 	return nil
 }

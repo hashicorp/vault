@@ -75,7 +75,7 @@ func TestCert_RoleResolve(t *testing.T) {
 		NotAfter:     time.Now().Add(262980 * time.Hour),
 	}
 
-	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate)
+	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate, nil)
 	if tempDir != "" {
 		defer os.RemoveAll(tempDir)
 	}
@@ -136,7 +136,7 @@ func TestCert_RoleResolveWithoutProvidingCertName(t *testing.T) {
 		NotAfter:     time.Now().Add(262980 * time.Hour),
 	}
 
-	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate)
+	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate, nil)
 	if tempDir != "" {
 		defer os.RemoveAll(tempDir)
 	}
@@ -305,7 +305,7 @@ func TestCert_RoleResolve_RoleDoesNotExist(t *testing.T) {
 		NotAfter:     time.Now().Add(262980 * time.Hour),
 	}
 
-	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate)
+	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate, nil)
 	if tempDir != "" {
 		defer os.RemoveAll(tempDir)
 	}
@@ -344,7 +344,7 @@ func TestCert_RoleResolveOCSP(t *testing.T) {
 		NotAfter:     time.Now().Add(262980 * time.Hour),
 		OCSPServer:   []string{fmt.Sprintf("http://localhost:%d", ocspPort)},
 	}
-	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate)
+	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate, nil)
 	if tempDir != "" {
 		defer os.RemoveAll(tempDir)
 	}
@@ -366,7 +366,7 @@ func TestCert_RoleResolveOCSP(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	tempDir, connState2, err := generateTestCertAndConnState(t, certTemplate)
+	tempDir, connState2, err := generateTestCertAndConnState(t, certTemplate, nil)
 	if err != nil {
 		t.Fatalf("error testing connection state: %v", err)
 	}
@@ -485,7 +485,7 @@ func TestCert_MetadataOnFailure(t *testing.T) {
 		NotAfter:     time.Now().Add(262980 * time.Hour),
 	}
 
-	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate)
+	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate, nil)
 	if tempDir != "" {
 		defer os.RemoveAll(tempDir)
 	}

@@ -18,6 +18,13 @@ import (
 	"google.golang.org/grpc"
 )
 
+const (
+	// ConfigPluginTier is the key for the plugin tier for Config of logical.BackendConfig
+	ConfigPluginTier = "plugin_tier"
+	// ConfigPluginVersion is the key for the plugin version for Config of logical.BackendConfig
+	ConfigPluginVersion = "plugin_version"
+)
+
 // ErrPluginNotFound is returned when a plugin does not have a pinned version.
 var ErrPinnedVersionNotFound = errors.New("pinned version not found")
 
@@ -38,6 +45,7 @@ type RunnerUtil interface {
 	MlockEnabled() bool
 	VaultVersion(ctx context.Context) (string, error)
 	ClusterID(ctx context.Context) (string, error)
+	DownloadExtractVerifyPlugin(ctx context.Context, pr *PluginRunner) error
 }
 
 // LookRunnerUtil defines the functions for both Looker and Wrapper
@@ -57,8 +65,6 @@ const MultiplexingCtxKey string = "multiplex_id"
 // PluginRunner defines the metadata needed to run a plugin securely with
 // go-plugin.
 type PluginRunner struct {
-	EntPluginRunner
-
 	Name           string                      `json:"name" structs:"name"`
 	Type           consts.PluginType           `json:"type" structs:"type"`
 	Version        string                      `json:"version" structs:"version"`
@@ -69,6 +75,8 @@ type PluginRunner struct {
 	Env            []string                    `json:"env" structs:"env"`
 	Sha256         []byte                      `json:"sha256" structs:"sha256"`
 	Builtin        bool                        `json:"builtin" structs:"builtin"`
+	Tier           consts.PluginTier           `json:"tier" structs:"tier"`
+	Download       bool                        `json:"download" structs:"download"`
 	BuiltinFactory func() (interface{}, error) `json:"-" structs:"-"`
 	RuntimeConfig  *prutil.PluginRuntimeConfig `json:"-" structs:"-"`
 	Tmpdir         string                      `json:"-" structs:"-"`
@@ -105,6 +113,8 @@ type SetPluginInput struct {
 	Args     []string
 	Env      []string
 	Sha256   []byte
+	Tier     consts.PluginTier
+	Download bool
 }
 
 // Run takes a wrapper RunnerUtil instance along with the go-plugin parameters and

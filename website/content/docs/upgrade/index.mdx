@@ -1,0 +1,120 @@
+---
+layout: docs
+page_title: Upgrade Vault
+description: >-
+  General guidance for upgrading a single Vault instance.
+---
+
+# Upgrade Vault
+
+Vault supports in-place upgrades and automatically handles most tasks when you
+unseal Vault after the upgrade.
+
+<Tip title="Upgrading from Community to Enterprise edition">
+
+  If you plan to move from Vault Community to Vault Enterprise during your
+  upgrade, make sure to download an enterprise binary and apply your
+  [license file](/vault/api-docs/system/license#install-license) during the
+  upgrade.
+
+</Tip>
+
+## Before you start
+
+- **You must have `sudo` permissions on the Vault server**. Make sure you have
+  can install binaries on the Vault server.
+- **You must have admin permissions for Vault**. Make sure you can stop and 
+  start the Vault process.
+- **Identify unseal candidates**. Identify and notify enough people with unseal
+  shards to meet the unseal threshold after restart.
+
+## Basic upgrade process
+
+To perform an in-place upgrade of a single Vault instance:
+
+1. Back up your Vault data. Vault does not make backward-compatibility
+   guarantees for the Vault data store and the upgrade process may make changes
+   to the data store.
+
+   @include 'tips/manage-snapshots.mdx'
+
+1. Back up your current Vault configuration.
+
+1. Review recent [deprecation notices](/vault/docs/updates/deprecation). If you
+   use deprecated or ended functionality, make a plan to move away from those
+   features before upgrading.
+
+1. Use the doc version selector to review the
+   [important changes](/vault/docs/updates/important-changes) for each major
+   version between your current version and the upgrade target.
+
+1. Perform any prerequisites noted in the important changes documentation.
+
+1. Use `SIGINT` or `SIGTERM` to shut down Vault.
+
+    <Tabs>
+    
+    <Tab heading="Bash">
+
+    ```shell-session
+    $ kill <vault_pid>
+    ```
+    
+    </Tab>
+    
+    <Tab heading="Powershell">
+    
+    ```powershell
+    Stop-Process <vault_pid>
+    ```
+
+    </Tab>
+    
+    </Tabs>
+
+1. [Install the latest version of Vault](/vault/docs/get-vault) over your
+   existing instance.
+
+1. Start Vault.
+
+1. Verify the current version:
+
+    ```shell-session
+    $ vault status | grep Version
+    ```
+
+1. Unseal Vault.
+
+1. Test the upgrade. The best way to test an upgrade is to take a snapshot of
+   the Vault data store after upgrading and load the backup into a test instance.
+   
+<Warning title="Isolate your test instance">
+
+If you use Vault to coordinate secrets with third party resources (cloud
+credentials, database credentials, etc.) make sure you isolate the test
+instance from external network connectivity during testing. Isolating the test
+instance prevents it from trying to revoke 3rd party resources. Otherwise, the
+third party resource credentials may expire and prevent access from the
+production cluster.
+
+</Warning>
+
+
+## Additional resources
+
+<Tabs>
+
+<Tab heading="Guides">
+
+- [Upgrade Vault plugins](/vault/docs/plugins/upgrade/)
+- [Upgrade Vault Agent](/vault/docs/agent-and-proxy/upgrade)
+
+</Tab>
+
+<Tab heading="Tutorials">
+
+- [Automate upgrades with Vault Enterprise](/vault/tutorials/raft/raft-upgrade-automation)
+
+</Tab>
+
+</Tabs>

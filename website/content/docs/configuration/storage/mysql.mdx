@@ -43,7 +43,7 @@ storage "mysql" {
 - `tls_ca_file` `(string: "")` – Specifies the path to the CA certificate to
   connect using TLS.
 
-- `plaintext_credentials_transmission` `(string: "")` - Provides authorization
+- `plaintext_connection_allowed` `(string: "")` - Provides authorization
   to send credentials over plaintext. Failure to provide a value AND a failure
   to provide a TLS CA certificate will warn that the credentials are being sent
   over plain text. In the future, failure to do acknowledge or use TLS will
@@ -64,10 +64,10 @@ storage "mysql" {
 Additionally, Vault requires the following authentication information.
 
 - `username` `(string: <required>)` – Specifies the MySQL username to connect to
-  the database.
+  the database. This value can also be set using the `VAULT_MYSQL_USERNAME` environment variable.
 
 - `password` `(string: <required>)` – Specifies the MySQL password to connect to
-  the database.
+  the database. This value can also be set using the `VAULT_MYSQL_PASSWORD` environment variable.
 
 ### High availability parameters
 

@@ -9,6 +9,7 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click, fillIn, settled } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | regex-validator', function (hooks) {
   setupRenderingTest(hooks);
@@ -32,10 +33,10 @@ module('Integration | Component | regex-validator', function (hooks) {
       />`
     );
     assert.dom('.regex-label label').hasText('Regex Example', 'Label is correct');
-    assert.dom('[data-test-toggle-input="example-validation-toggle"]').exists('Validation toggle exists');
+    assert.dom(GENERAL.toggleInput('example-validation-toggle')).exists('Validation toggle exists');
     assert.dom('[data-test-regex-validator-test-string]').doesNotExist('Test string input does not show');
 
-    await click('[data-test-toggle-input="example-validation-toggle"]');
+    await click(GENERAL.toggleInput('example-validation-toggle'));
     assert.dom('[data-test-regex-validator-test-string]').exists('Test string input shows after toggle');
     assert
       .dom('[data-test-regex-validator-test-string] label')

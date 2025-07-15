@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentURL, visit } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 
 const link = (label) => `[data-test-sidebar-nav-link="${label}"]`;
 const panel = (label) => `[data-test-sidebar-nav-panel="${label}"]`;
@@ -17,7 +17,7 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    return authPage.login();
+    return login();
   });
 
   // common links are tested in the sidebar-nav test and will not be covered here
@@ -50,7 +50,7 @@ module('Acceptance | Enterprise | sidebar navigation', function (hooks) {
 
     await click(link('Client Count'));
     assert.dom(panel('Client Count')).exists('Client Count nav panel renders');
-    assert.dom(link('Vault Usage Metrics')).hasClass('active', 'Vault Usage Metrics link is active');
+    assert.dom(link('Client Usage')).hasClass('active', 'Client Usage link is active');
     assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'Client counts route renders');
     await click(link('Back to main navigation'));
 

@@ -8,13 +8,11 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
-import editPage from 'vault/tests/pages/secrets/backend/kv/edit-secret';
 import showPage from 'vault/tests/pages/secrets/backend/kv/show';
 import listPage from 'vault/tests/pages/secrets/backend/list';
 
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
-import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
@@ -22,10 +20,10 @@ import codemirror from 'vault/tests/helpers/codemirror';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SS } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
+import { createSecret } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
 const deleteEngine = async function (enginePath, assert) {
-  await logout.visit();
-  await authPage.login();
+  await login();
 
   const response = await runCmd([`delete sys/mounts/${enginePath}`]);
   assert.strictEqual(
@@ -40,7 +38,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
   hooks.beforeEach(async function () {
     this.uid = uuidv4();
-    await authPage.login();
+    await login();
   });
 
   module('mount and configure', function () {
@@ -52,12 +50,12 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await mountSecrets.visit();
       await click(MOUNT_BACKEND_FORM.mountType('kv'));
       await fillIn(GENERAL.inputByAttr('path'), enginePath);
-      await fillIn('[data-test-input="maxVersions"]', maxVersion);
-      await click('[data-test-input="casRequired"]');
+      await fillIn('[data-test-input="kvConfig.maxVersions"]', maxVersion);
+      await click('[data-test-input="kvConfig.casRequired"]');
       await click('[data-test-toggle-label="Automate secret deletion"]');
       await fillIn('[data-test-select="ttl-unit"]', 's');
       await fillIn('[data-test-ttl-value="Automate secret deletion"]', '1');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
 
       await click(PAGE.secretTab('Configuration'));
 
@@ -140,9 +138,9 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await mountSecrets.visit();
       await click(MOUNT_BACKEND_FORM.mountType('kv'));
       await fillIn(GENERAL.inputByAttr('path'), this.backend);
-      await click(GENERAL.toggleGroup('Method Options'));
+      await click(GENERAL.button('Method Options'));
       await mountSecrets.version(1);
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
     });
     hooks.afterEach(async function () {
       await runCmd([`delete sys/mounts/${this.backend}`]);
@@ -150,8 +148,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
     test('version 1 performs the correct capabilities lookup', async function (assert) {
       // TODO: while this should pass it doesn't really do anything anymore for us as v1 and v2 are completely separate.
       const secretPath = 'foo/bar';
-      await listPage.create();
-      await editPage.createSecret(secretPath, 'foo', 'bar');
+      await click(SS.createSecretLink);
+      await createSecret(secretPath, 'foo', 'bar');
       assert.strictEqual(
         currentRouteName(),
         'vault.cluster.secrets.backend.show',
@@ -185,21 +183,21 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
       // delete the items
       await click(SS.secretLinkMenu('1/2/3/4'));
-      await click(SS.secretLinkMenuDelete('1/2/3/4'));
-      await listPage.confirmDelete();
-      await settled();
+      await click(`[data-test-secret-link="1/2/3/4"] ${GENERAL.confirmTrigger}`);
+      await click(GENERAL.confirmButton);
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.list');
       assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/list/1/2/3/`, 'remains on the page');
-
       assert.dom('[data-test-secret-link]').exists({ count: 1 });
+
       await listPage.secrets.objectAt(0).menuToggle();
-      await listPage.delete();
-      await listPage.confirmDelete();
-      await settled();
+      await click(GENERAL.confirmTrigger);
+      await click(GENERAL.confirmButton);
       assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/list/1/2/3/`, 'remains on the page');
       assert.dom(GENERAL.emptyStateTitle).hasText('No secrets under "1/2/3/".');
+
       await fillIn('[data-test-component="navigate-input"]', '1/2/');
       assert.dom(GENERAL.emptyStateTitle).hasText('No secrets under "1/2/".');
+
       await click('[data-test-list-root-link]');
       assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/list`);
       assert.dom('[data-test-secret-link]').exists({ count: 1 });
@@ -207,9 +205,10 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
 
     test('first level secrets redirect properly upon deletion', async function (assert) {
       const secretPath = 'test';
-      await listPage.create();
-      await editPage.createSecret(secretPath, 'foo', 'bar');
-      await showPage.deleteSecretV1();
+      await click(SS.createSecretLink);
+      await createSecret(secretPath, 'foo', 'bar');
+      await click(GENERAL.confirmTrigger);
+      await click(GENERAL.confirmButton);
       assert.strictEqual(
         currentRouteName(),
         'vault.cluster.secrets.backend.list-root',
@@ -301,8 +300,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       const paths = ["'some", '"some'];
       for (const path of paths) {
         await listPage.visitRoot({ backend });
-        await listPage.create();
-        await editPage.createSecret(`${path}/2`, 'foo', 'bar');
+        await click(SS.createSecretLink);
+        await createSecret(`${path}/2`, 'foo', 'bar');
         await listPage.visit({ backend, id: path });
         assert.dom(SS.secretLinkATag()).hasText('2', `${path}: secret is displayed properly`);
         await click(SS.secretLink());
@@ -338,10 +337,11 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       const content = JSON.stringify({ foo: 'fa', bar: 'boo' });
       const secretPath = `kv-json-${this.uid}`;
       await listPage.visitRoot({ backend: this.backend });
-      await listPage.create();
-      await editPage.path(secretPath).toggleJSON();
+      await click(SS.createSecretLink);
+      await fillIn(SS.secretPath('create'), secretPath);
+      await click(GENERAL.toggleInput('json'));
       codemirror().setValue(content);
-      await editPage.save();
+      await click(GENERAL.submitButton);
 
       assert.strictEqual(
         currentRouteName(),

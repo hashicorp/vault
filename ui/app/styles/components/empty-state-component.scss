@@ -1,3 +1,7 @@
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -9,8 +13,8 @@
   background: var(--token-color-surface-faint);
   display: flex;
   justify-content: center;
-  padding: $spacing-48 $spacing-12;
-  box-shadow: 0 -2px 0 -1px $ui-gray-300;
+  padding: size_variables.$spacing-48 size_variables.$spacing-12;
+  box-shadow: 0 -2px 0 -1px color_variables.$ui-gray-300;
 }
 
 .empty-state-transparent {
@@ -19,7 +23,7 @@
   background: transparent;
   display: flex;
   justify-content: center;
-  padding: $spacing-48 0;
+  padding: size_variables.$spacing-48 0;
   box-shadow: none;
 }
 
@@ -28,36 +32,36 @@
 }
 
 .empty-state-title {
-  color: $grey;
-  font-size: $size-4;
-  font-weight: $font-weight-semibold;
+  color: color_variables.$grey;
+  font-size: size_variables.$size-4;
+  font-weight: font_variables.$font-weight-semibold;
   line-height: 1.2;
-  margin-bottom: $spacing-8;
+  margin-bottom: size_variables.$spacing-8;
 }
 
 .empty-state-subTitle {
-  font-size: $size-7;
+  font-size: size_variables.$size-7;
   margin-top: -10px;
-  padding-bottom: $spacing-12;
+  padding-bottom: size_variables.$spacing-12;
 }
 
 .empty-state-message.has-border-bottom-light {
-  padding-bottom: $spacing-12;
+  padding-bottom: size_variables.$spacing-12;
 }
 
 .empty-state-actions {
-  margin-top: $spacing-8;
+  margin-top: size_variables.$spacing-8;
   display: flex;
   justify-content: space-between;
 
   > * + * {
-    margin-left: $spacing-12;
-    margin-right: $spacing-12;
+    margin-left: size_variables.$spacing-12;
+    margin-right: size_variables.$spacing-12;
   }
 }
 
 .empty-state-icon > .hs-icon,
 .empty-state-icon > .hds-icon {
   float: left;
-  margin-right: $spacing-8;
+  margin-right: size_variables.$spacing-8;
 }

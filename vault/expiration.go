@@ -33,6 +33,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault/observations"
 	"github.com/hashicorp/vault/vault/quotas"
 	uberAtomic "go.uber.org/atomic"
 )
@@ -126,6 +127,8 @@ type ExpirationManager struct {
 	// Track count for metrics reporting
 	// This value is protected by pendingLock
 	irrevocableLeaseCount int
+
+	irrevocableLeaseRemovalEnabled bool
 
 	// The uniquePolicies map holds policy sets, so they can
 	// be deduplicated. It is periodically emptied to prevent
@@ -418,6 +421,10 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 	}
 	go c.expiration.Restore(errorFunc)
 
+	if mgr.removeIrrevocableLeasesEnabled(c) {
+		mgr.irrevocableLeaseRemovalEnabled = true
+	}
+
 	quit := c.expiration.quitCh
 	go func() {
 		t := time.NewTimer(24 * time.Hour)
@@ -426,7 +433,7 @@ func (c *Core) setupExpiration(e ExpireLeaseStrategy) error {
 			case <-quit:
 				return
 			case <-t.C:
-				c.expiration.attemptIrrevocableLeasesRevoke()
+				c.expiration.attemptIrrevocableLeasesRevoke(c.removeIrrevocableLeaseAfter)
 				t.Reset(24 * time.Hour)
 			}
 		}
@@ -948,15 +955,26 @@ func (m *ExpirationManager) lazyRevokeInternal(ctx context.Context, leaseID stri
 	}
 	m.updatePending(le)
 
+	err = m.core.observations.RecordObservationToLedger(ctx, observations.ObservationTypeLeaseLazyRevoke, le.namespace, map[string]interface{}{
+		"lease_id":    leaseID,
+		"path":        le.Path,
+		"issue_time":  le.IssueTime,
+		"expire_time": le.ExpireTime,
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // should be run on a schedule. something like once a day, maybe once a week
-func (m *ExpirationManager) attemptIrrevocableLeasesRevoke() {
+func (m *ExpirationManager) attemptIrrevocableLeasesRevoke(removeIrrevocableLeaseAfter time.Duration) {
 	m.irrevocable.Range(func(k, v interface{}) bool {
 		leaseID := k.(string)
 		le := v.(*leaseEntry)
 
+		// remove irrevocable leases after configured duration
 		if le.ExpireTime.Add(time.Hour).Before(time.Now()) {
 			// if we get an error (or no namespace) note it, but continue attempting
 			// to revoke other leases
@@ -972,12 +990,27 @@ func (m *ExpirationManager) attemptIrrevocableLeasesRevoke() {
 
 			ctxWithNS := namespace.ContextWithNamespace(m.core.activeContext, leaseNS)
 			ctxWithNSAndTimeout, _ := context.WithTimeout(ctxWithNS, time.Minute)
-			if err := m.revokeCommon(ctxWithNSAndTimeout, leaseID, false, false); err != nil {
-				// on failure, force some delay to mitigate resource spike while
-				// this is running. if revocations succeed, we are okay with
-				// the higher resource consumption.
-				time.Sleep(10 * time.Millisecond)
+
+			// remove irrevocable lease if 'remove irrevocable leases' feature is enabled
+			var forceRevoke bool
+			if m.irrevocableLeaseRemovalEnabled && le.ExpireTime.Add(removeIrrevocableLeaseAfter).Before(time.Now()) {
+				forceRevoke = true
 			}
+
+			err = m.revokeCommon(ctxWithNSAndTimeout, leaseID, forceRevoke, false)
+
+			// Log the appropriate message on errors or force revocation
+			if forceRevoke {
+				if err != nil {
+					m.logger.Debug("failed to delete irrevocable lease", "lease_id", le.LeaseID, "err", err)
+				} else {
+					m.logger.Debug("deleted irrevocable lease", "lease_id", le.LeaseID, "lease_expire_time", le.ExpireTime)
+				}
+			}
+
+			// Force some delay to mitigate resource spike while
+			// this is running.
+			time.Sleep(10 * time.Millisecond)
 		}
 
 		return true
@@ -986,9 +1019,8 @@ func (m *ExpirationManager) attemptIrrevocableLeasesRevoke() {
 
 // revokeCommon does the heavy lifting. If force is true, we ignore a problem
 // during revocation and still remove entries/index/lease timers
-func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, force, skipToken bool) error {
+func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, force, skipToken bool) (err error) {
 	defer metrics.MeasureSince([]string{"expire", "revoke-common"}, time.Now())
-
 	if !skipToken {
 		// Acquire lock for this lease
 		// If skipToken is true, then we're either being (1) called via RevokeByToken, so
@@ -1018,7 +1050,7 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 			}
 
 			if m.logger.IsWarn() {
-				m.logger.Warn("revocation from the backend failed, but in force mode so ignoring", "error", err)
+				m.logger.Warn("revocation from the backend failed, but in force mode so ignoring. external resources may be orphaned.", "lease_id", leaseID, "error", err)
 			}
 		}
 	}
@@ -1068,6 +1100,20 @@ func (m *ExpirationManager) revokeCommon(ctx context.Context, leaseID string, fo
 		m.irrevocableLeaseCount--
 	}
 	m.pendingLock.Unlock()
+
+	if !skipToken {
+		err = m.core.observations.RecordObservationToLedger(ctx, observations.ObservationTypeLeaseRevocation, le.namespace, map[string]interface{}{
+			"lease_id":    leaseID,
+			"path":        le.Path,
+			"issue_time":  le.IssueTime,
+			"expire_time": le.ExpireTime,
+		})
+		if err != nil {
+			if !force {
+				return err
+			}
+		}
+	}
 
 	if m.logger.IsInfo() && !skipToken && m.logLeaseExpirations {
 		m.logger.Info("revoked lease", "lease_id", leaseID)
@@ -1318,6 +1364,16 @@ func (m *ExpirationManager) Renew(ctx context.Context, leaseID string, increment
 		return nil, err
 	}
 
+	err = m.core.observations.RecordObservationToLedger(ctx, observations.ObservationTypeLeaseRenewNonAuth, le.namespace, map[string]interface{}{
+		"lease_id":    leaseID,
+		"path":        le.Path,
+		"issue_time":  le.IssueTime,
+		"expire_time": le.ExpireTime,
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	// Update the expiration time
 	m.updatePending(le)
 
@@ -1437,7 +1493,18 @@ func (m *ExpirationManager) RenewToken(ctx context.Context, req *logical.Request
 	if err := m.persistEntry(ctx, le); err != nil {
 		return nil, err
 	}
+
 	m.updatePending(le)
+
+	err = m.core.observations.RecordObservationToLedger(ctx, observations.ObservationTypeLeaseRenewAuth, le.namespace, map[string]interface{}{
+		"lease_id":    leaseID,
+		"path":        le.Path,
+		"issue_time":  le.IssueTime,
+		"expire_time": le.ExpireTime,
+	})
+	if err != nil {
+		return nil, err
+	}
 
 	retResp.Auth = resp.Auth
 	return retResp, nil
@@ -1560,6 +1627,16 @@ func (m *ExpirationManager) Register(ctx context.Context, req *logical.Request, 
 		return "", err
 	}
 
+	err = m.core.observations.RecordObservationToLedger(ctx, observations.ObservationTypeLeaseCreationNonAuth, le.namespace, map[string]interface{}{
+		"lease_id":    leaseID,
+		"path":        te.Path,
+		"issue_time":  le.IssueTime,
+		"expire_time": le.ExpireTime,
+	})
+	if err != nil {
+		return "", err
+	}
+
 	if indexToken != "" {
 		if err := m.createIndexByToken(ctx, le, indexToken); err != nil {
 			return "", err
@@ -1629,13 +1706,14 @@ func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenE
 	}
 
 	// Create a lease entry
+	issueTime := time.Now()
 	le := leaseEntry{
 		LeaseID:     leaseID,
 		ClientToken: auth.ClientToken,
 		Auth:        auth,
 		Path:        te.Path,
 		LoginRole:   loginRole,
-		IssueTime:   time.Now(),
+		IssueTime:   issueTime,
 		ExpireTime:  authExpirationTime,
 		namespace:   tokenNS,
 		Version:     1,
@@ -1647,6 +1725,16 @@ func (m *ExpirationManager) RegisterAuth(ctx context.Context, te *logical.TokenE
 
 	// Encode the entry
 	if err := m.persistEntry(ctx, &le); err != nil {
+		return err
+	}
+
+	err = m.core.observations.RecordObservationToLedger(ctx, observations.ObservationTypeLeaseCreationAuth, tokenNS, map[string]interface{}{
+		"lease_id":    leaseID,
+		"path":        te.Path,
+		"issue_time":  issueTime,
+		"expire_time": authExpirationTime,
+	})
+	if err != nil {
 		return err
 	}
 
@@ -2314,6 +2402,16 @@ func (m *ExpirationManager) CreateOrFetchRevocationLeaseByToken(ctx context.Cont
 		// Encode the entry
 		if err := m.persistEntry(ctx, le); err != nil {
 			m.deleteLockForLease(leaseID)
+			return "", err
+		}
+
+		err = m.core.observations.RecordObservationToLedger(ctx, observations.ObservationTypeLeaseCreationAuth, tokenNS, map[string]interface{}{
+			"lease_id":    leaseID,
+			"path":        te.Path,
+			"issue_time":  le.IssueTime,
+			"expire_time": le.ExpireTime,
+		})
+		if err != nil {
 			return "", err
 		}
 	}

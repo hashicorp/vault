@@ -14,8 +14,7 @@ export default create({
     name: text('[data-test-identity-link]'),
   }),
 
-  delete: clickable('[data-test-popup-menu="delete"]', {
+  delete: clickable('[data-test-button="popup-delete"]', {
     testContainer: '#ember-testing',
   }),
-  confirmDelete: clickable('[data-test-confirm-button]'),
 });

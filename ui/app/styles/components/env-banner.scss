@@ -1,3 +1,6 @@
+@use '../utils/color_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -8,11 +11,11 @@
   border-radius: 3rem;
   background: linear-gradient(
     135deg,
-    $blue,
+    color_variables.$blue,
     hsl(271, 100%, 71%)
   ); // only use case for purple in the app. define here instead of utils/color_var
   animation: env-banner-color-rotate 8s infinite linear alternate;
-  color: $white;
+  color: color_variables.$white;
 
   .hs-icon {
     margin: 0;
@@ -21,7 +24,7 @@
   .notification {
     background-color: transparent;
     line-height: 2;
-    padding: 0 $spacing-12;
+    padding: 0 size_variables.$spacing-12;
   }
 }
 

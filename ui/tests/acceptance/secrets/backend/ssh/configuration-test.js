@@ -8,7 +8,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { runCmd } from 'vault/tests/helpers/commands';
@@ -23,9 +23,8 @@ module('Acceptance | ssh | configuration', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
     this.uid = uuidv4();
-    return authPage.login();
+    return login();
   });
 
   test('it should prompt configuration after mounting ssh engine', async function (assert) {
@@ -62,7 +61,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
       'transitions to the configuration page'
     );
     // default has generate CA checked so we just submit the form
-    await click(SES.ssh.save);
+    await click(GENERAL.submitButton);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${sshPath}/configuration`,
@@ -77,7 +76,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
       .dom(SES.ssh.editConfigSection)
       .exists('renders the edit configuration section of the form and not the create part');
     // delete Public key
-    await click(SES.ssh.delete);
+    await click(GENERAL.button('delete-public-key'));
     assert.dom(GENERAL.confirmMessage).hasText('Confirming will remove the CA certificate information.');
     await click(GENERAL.confirmButton);
     assert.strictEqual(
@@ -104,9 +103,9 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await click(SES.configure);
     assert.dom(GENERAL.inputByAttr('generateSigningKey')).isChecked('generate_signing_key defaults to true');
     await click(GENERAL.inputByAttr('generateSigningKey'));
-    await click(SES.ssh.save);
+    await click(GENERAL.submitButton);
     assert
-      .dom(GENERAL.inlineError)
+      .dom(GENERAL.validationErrorByAttr('generateSigningKey'))
       .hasText('Provide a Public and Private key or set "Generate Signing Key" to true.');
     // visit the details page and confirm the public key is not shown
     await visit(`/vault/secrets/${path}/configuration`);

@@ -12,15 +12,15 @@ import {
   waitUntil,
   currentRouteName,
   waitFor,
+  visit,
 } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import listPage from 'vault/tests/pages/secrets/backend/list';
-import editPage from 'vault/tests/pages/secrets/backend/ssh/edit-role';
 import showPage from 'vault/tests/pages/secrets/backend/ssh/show';
 import generatePage from 'vault/tests/pages/secrets/backend/ssh/generate-otp';
 import { runCmd } from 'vault/tests/helpers/commands';
@@ -35,7 +35,7 @@ module('Acceptance | ssh | roles', function (hooks) {
 
   hooks.beforeEach(function () {
     this.uid = uuidv4();
-    return authPage.login();
+    return login();
   });
 
   const PUB_KEY = `ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCn9p5dHNr4aU4R2W7ln+efzO5N2Cdv/SXk6zbCcvhWcblWMjkXf802B0PbKvf6cJIzM/Xalb3qz1cK+UUjCSEAQWefk6YmfzbOikfc5EHaSKUqDdE+HlsGPvl42rjCr28qYfuYh031YfwEQGEAIEypo7OyAj+38NLbHAQxDxuaReee1YCOV5rqWGtEgl2VtP5kG+QEBza4ZfeglS85f/GGTvZC4Jq1GX+wgmFxIPnd6/mUXa4ecoR0QMfOAzzvPm4ajcNCQORfHLQKAcmiBYMiyQJoU+fYpi9CJGT1jWTmR99yBkrSg6yitI2qqXyrpwAbhNGrM0Fw0WpWxh66N9Xp meirish@Macintosh-3.local`;
@@ -47,7 +47,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       credsRoute: 'vault.cluster.secrets.backend.sign',
       async fillInCreate() {
         await click(GENERAL.inputByAttr('allowUserCertificates'));
-        await click(GENERAL.toggleGroup('Options'));
+        await click(GENERAL.button('Options'));
         // it's recommended to keep allow_empty_principals false, check for testing so we don't have to input an extra field when signing a key
         await click(GENERAL.inputByAttr('allowEmptyPrincipals'));
       },
@@ -72,12 +72,10 @@ module('Acceptance | ssh | roles', function (hooks) {
           `/vault/secrets/${sshPath}/sign/${this.name}`,
           'ca sign url is correct'
         );
-        assert.dom('[data-test-row-label="Signed key"]').exists({ count: 1 }, 'renders the signed key');
-        assert
-          .dom('[data-test-row-value="Signed key"]')
-          .exists({ count: 1 }, "renders the signed key's value");
-        assert.dom('[data-test-row-label="Serial number"]').exists({ count: 1 }, 'renders the serial');
-        assert.dom('[data-test-row-value="Serial number"]').exists({ count: 1 }, 'renders the serial value');
+        assert.dom(GENERAL.infoRowLabel('Signed key')).exists({ count: 1 }, 'renders the signed key');
+        assert.dom(GENERAL.infoRowValue('Signed key')).exists("renders the signed key's value");
+        assert.dom(GENERAL.infoRowLabel('Serial number')).exists({ count: 1 }, 'renders the serial');
+        assert.dom(GENERAL.infoRowValue('Serial number')).exists('renders the serial value');
       },
     },
     {
@@ -86,7 +84,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       credsRoute: 'vault.cluster.secrets.backend.credentials',
       async fillInCreate() {
         await fillIn(GENERAL.inputByAttr('defaultUser'), 'admin');
-        await click(GENERAL.toggleGroup('Options'));
+        await click(GENERAL.button('Options'));
         await fillIn(GENERAL.inputByAttr('cidrList'), '1.2.3.4/32');
       },
       async fillInGenerate() {
@@ -102,7 +100,7 @@ module('Acceptance | ssh | roles', function (hooks) {
         assert.dom(GENERAL.infoRowLabel('Key')).exists({ count: 1 }, 'renders the key');
         assert.dom('[data-test-masked-input]').exists({ count: 1 }, 'renders mask for key value');
         assert.dom(GENERAL.infoRowLabel('Port')).exists({ count: 1 }, 'renders the port');
-        assert.dom('[data-test-row-value="Port"]').exists({ count: 1 }, "renders the port's value");
+        assert.dom(GENERAL.infoRowValue('Port')).exists("renders the port's value");
       },
     },
   ];
@@ -114,13 +112,13 @@ module('Acceptance | ssh | roles', function (hooks) {
     await click(SES.configTab);
     await click(SES.configure);
     // default has generate CA checked so we just submit the form
-    await click(SES.ssh.save);
+    await click(GENERAL.submitButton);
     // There is a delay in the backend for the public key to be generated, wait for it to complete by checking that the public key is displayed
     await waitFor(GENERAL.infoRowLabel('Public key'));
     await click(GENERAL.tab(sshPath));
     for (const role of ROLES) {
       // create a role
-      await click(SES.createSecret);
+      await click(SES.createSecretLink);
       assert.dom(SES.secretHeader).includesText('SSH Role', `${role.type}: renders the create page`);
 
       await fillIn(GENERAL.inputByAttr('name'), role.name);
@@ -147,7 +145,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       }
 
       // generate creds
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       await settled(); // eslint-disable-line
       role.assertAfterGenerate(assert, sshPath);
 
@@ -178,7 +176,7 @@ module('Acceptance | ssh | roles', function (hooks) {
     const createOTPRole = async (name) => {
       await fillIn(GENERAL.inputByAttr('name'), name);
       await fillIn(GENERAL.inputByAttr('keyType'), name);
-      await click(GENERAL.toggleGroup('Options'));
+      await click(GENERAL.button('Options'));
       await fillIn(GENERAL.inputByAttr('keyType'), 'otp');
       await fillIn(GENERAL.inputByAttr('defaultUser'), 'admin');
       await fillIn(GENERAL.inputByAttr('cidrList'), '0.0.0.0/0');
@@ -189,13 +187,14 @@ module('Acceptance | ssh | roles', function (hooks) {
       const path = `ssh-${this.uid}`;
       await enablePage.enable('ssh', path);
       await settled();
-      await editPage.visitRoot({ backend: path });
+      await visit(`/vault/secrets/${path}/create`);
       await createOTPRole('role');
       await settled();
       await showPage.visit({ backend: path, id: 'role' });
       await settled();
-      await showPage.deleteRole();
-      await settled();
+      await click(GENERAL.confirmTrigger);
+      await click(GENERAL.confirmButton);
+
       assert.strictEqual(
         currentRouteName(),
         'vault.cluster.secrets.backend.list-root',
@@ -210,8 +209,7 @@ module('Acceptance | ssh | roles', function (hooks) {
       assert.expect(6);
       const path = `ssh-${this.uid}`;
       await enablePage.enable('ssh', path);
-      await settled();
-      await editPage.visitRoot({ backend: path });
+      await visit(`/vault/secrets/${path}/create`);
       await createOTPRole('role');
       await settled();
       assert.strictEqual(
@@ -233,7 +231,7 @@ module('Acceptance | ssh | roles', function (hooks) {
 
       await fillIn(GENERAL.inputByAttr('username'), 'admin');
       await fillIn(GENERAL.inputByAttr('ip'), '192.168.1.1');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert.ok(generatePage.warningIsPresent, 'shows warning');
       await click(GENERAL.backButton);
       assert.ok(generatePage.userIsPresent, 'clears generate, shows user input');

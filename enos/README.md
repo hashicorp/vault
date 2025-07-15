@@ -227,15 +227,15 @@ Here are the steps to configure the GitHub Actions service user:
   - Access can be requested by clicking: `Cloud Access` --> `AWS` --> `Request Account Access`.
 
 1. **Create the Terraform Cloud Workspace** - The name of the workspace to be created depends on the 
-   repository for which it is being created, but the pattern is: `<repository>-ci-service-user-iam`,
-   e.g. `vault-ci-service-user-iam`. It is important that the execution mode for the workspace be set 
+   repository for which it is being created, but the pattern is: `<repository>-ci-enos-service-user-iam`,
+   e.g. `vault-ci-enos-service-user-iam`. It is important that the execution mode for the workspace be set 
    to `local`. For help on setting up the workspace, contact the QT team on Slack (#team-quality)
 
 
 2. **Execute the Terraform module**
 ```shell
 > cd ./enos/ci/service-user-iam
-> export TF_WORKSPACE=<repo name>-ci-service-user-iam
+> export TF_WORKSPACE=<repo name>-ci-enos-service-user-iam
 > export TF_TOKEN_app_terraform_io=<Terraform Cloud Token>
 > export TF_VAR_repository=<repository name>
 > terraform init

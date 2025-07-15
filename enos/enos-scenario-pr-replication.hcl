@@ -27,10 +27,10 @@ scenario "pr_replication" {
       - vault_build_date*
       - vault_product_version
       - vault_revision*
-    
+
     * If you don't already know what build date and revision you should be using, see
     https://eng-handbook.hashicorp.services/internal-tools/enos/troubleshooting/#execution-error-expected-vs-got-for-vault-versioneditionrevisionbuild-date.
-  
+
     Variables required for some scenario variants:
       - artifactory_username (if using `artifact_source:artifactory` in your filter)
       - artifactory_token (if using `artifact_source:artifactory` in your filter)
@@ -65,7 +65,7 @@ scenario "pr_replication" {
       artifact_type   = ["package"]
     }
 
-    // PKCS#11 can only be used on ent.hsm and ent.hsm.fips1402.
+    // PKCS#11 can only be used on ent.hsm and ent.hsm.fips1403.
     exclude {
       primary_seal = ["pkcs11"]
       edition      = [for e in matrix.edition : e if !strcontains(e, "hsm")]
@@ -724,6 +724,7 @@ scenario "pr_replication" {
       quality.vault_mount_auth,
       quality.vault_mount_kv,
       quality.vault_secrets_kv_write,
+      quality.vault_secrets_ldap_write_config,
     ]
 
     variables {
@@ -939,12 +940,13 @@ scenario "pr_replication" {
     ]
 
     variables {
-      create_state      = step.verify_secrets_engines_on_primary.state
-      hosts             = step.get_secondary_cluster_ips.follower_hosts
-      vault_addr        = step.create_secondary_cluster.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_root_token  = step.create_secondary_cluster.root_token
-      verify_pki_certs  = false
+      create_state            = step.verify_secrets_engines_on_primary.state
+      hosts                   = step.get_secondary_cluster_ips.follower_hosts
+      vault_addr              = step.create_secondary_cluster.api_addr_localhost
+      vault_install_dir       = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token        = step.create_secondary_cluster.root_token
+      verify_pki_certs        = false
+      verify_aws_engine_creds = false
     }
   }
 
@@ -1288,6 +1290,7 @@ scenario "pr_replication" {
 
   output "secrets_engines_state" {
     description = "The state of configured secrets engines"
+    sensitive   = true
     value       = step.verify_secrets_engines_on_primary.state
   }
 

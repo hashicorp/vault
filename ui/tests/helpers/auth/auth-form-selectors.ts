@@ -4,14 +4,14 @@
  */
 
 export const AUTH_FORM = {
-  method: '[data-test-select=auth-method]',
-  form: '[data-test-auth-form]',
-  login: '[data-test-auth-submit]',
-  tabs: (method: string) => (method ? `[data-test-auth-method="${method}"]` : '[data-test-auth-method]'),
   description: '[data-test-description]',
-  roleInput: '[data-test-role]',
-  input: (item: string) => `[data-test-${item}]`, // i.e. jwt, role, token, password or username
-  mountPathInput: '[data-test-auth-form-mount-path]',
-  moreOptions: '[data-test-auth-form-options-toggle]',
-  namespaceInput: '[data-test-auth-form-ns-input]',
+  form: '[data-test-auth-form]',
+  selectMethod: '[data-test-select="auth type"]',
+  tabBtn: (method: string) => `[data-test-auth-tab="${method}"] button`, // method is all lowercased
+  tabs: '[data-test-auth-tab]',
+  advancedSettings: '[data-test-auth-form-options-toggle] button',
+  authForm: (type: string) => `[data-test-auth-form="${type}"]`,
+  helpText: '[data-test-auth-helptext]',
+  logo: '[data-test-auth-logo]',
+  managedNsRoot: '[data-test-managed-namespace-root]',
 };

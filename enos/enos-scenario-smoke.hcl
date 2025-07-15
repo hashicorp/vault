@@ -21,10 +21,10 @@ scenario "smoke" {
       - vault_build_date*
       - vault_product_version
       - vault_revision*
-    
+
     * If you don't already know what build date and revision you should be using, see
     https://eng-handbook.hashicorp.services/internal-tools/enos/troubleshooting/#execution-error-expected-vs-got-for-vault-versioneditionrevisionbuild-date.
-  
+
     Variables required for some scenario variants:
       - artifactory_username (if using `artifact_source:artifactory` in your filter)
       - artifactory_token (if using `artifact_source:artifactory` in your filter)
@@ -57,7 +57,7 @@ scenario "smoke" {
       artifact_type   = ["package"]
     }
 
-    // PKCS#11 can only be used on ent.hsm and ent.hsm.fips1402.
+    // PKCS#11 can only be used on ent.hsm and ent.hsm.fips1403.
     exclude {
       seal    = ["pkcs11"]
       edition = [for e in matrix.edition : e if !strcontains(e, "hsm")]
@@ -495,42 +495,6 @@ scenario "smoke" {
     }
   }
 
-  step "verify_secrets_engines_create" {
-    description = global.description.verify_secrets_engines_create
-    module      = module.vault_verify_secrets_engines_create
-    depends_on  = [step.verify_vault_unsealed]
-
-    providers = {
-      enos = local.enos_provider[matrix.distro]
-    }
-
-    verifies = [
-      quality.vault_api_auth_userpass_login_write,
-      quality.vault_api_auth_userpass_user_write,
-      quality.vault_api_identity_entity_write,
-      quality.vault_api_identity_entity_alias_write,
-      quality.vault_api_identity_group_write,
-      quality.vault_api_identity_oidc_config_write,
-      quality.vault_api_identity_oidc_introspect_write,
-      quality.vault_api_identity_oidc_key_write,
-      quality.vault_api_identity_oidc_key_rotate_write,
-      quality.vault_api_identity_oidc_role_write,
-      quality.vault_api_identity_oidc_token_read,
-      quality.vault_api_sys_auth_userpass_user_write,
-      quality.vault_api_sys_policy_write,
-      quality.vault_mount_auth,
-      quality.vault_mount_kv,
-      quality.vault_secrets_kv_write,
-    ]
-
-    variables {
-      hosts             = step.create_vault_cluster_targets.hosts
-      leader_host       = step.get_vault_cluster_ips.leader_host
-      vault_addr        = step.create_vault_cluster.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_root_token  = step.create_vault_cluster.root_token
-    }
-  }
 
   step "verify_raft_auto_join_voter" {
     description = global.description.verify_raft_cluster_all_nodes_are_voters
@@ -553,10 +517,87 @@ scenario "smoke" {
     }
   }
 
+  step "vault_remove_node_and_verify" {
+    description = <<-EOF
+      Remove a follower and ensure that it's marked as removed and can be added back once its data has been deleted
+    EOF
+    module      = semverconstraint(var.vault_product_version, ">=1.19.0-0") && matrix.backend == "raft" ? "vault_raft_remove_node_and_verify" : "vault_verify_removed_node_shim"
+    depends_on = [
+      step.create_vault_cluster,
+      step.get_vault_cluster_ips,
+      step.verify_vault_unsealed,
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_api_sys_storage_raft_remove_peer_write_removes_peer,
+      quality.vault_cli_operator_raft_remove_peer,
+      quality.vault_raft_removed_after_restart,
+      quality.vault_raft_removed_statuses,
+      quality.vault_raft_removed_cant_rejoin,
+      quality.vault_raft_removed_rejoin_after_deletion,
+    ]
+
+    variables {
+      add_back_nodes    = true
+      cluster_port      = step.create_vault_cluster.cluster_port
+      hosts             = step.get_vault_cluster_ips.follower_hosts
+      ip_version        = matrix.ip_version
+      listener_port     = step.create_vault_cluster.listener_port
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_leader_host = step.get_vault_cluster_ips.leader_host
+      vault_root_token  = step.create_vault_cluster.root_token
+      vault_seal_type   = matrix.seal
+      vault_unseal_keys = matrix.seal == "shamir" ? step.create_vault_cluster.unseal_keys_hex : null
+    }
+  }
+
+  step "verify_secrets_engines_create" {
+    description = global.description.verify_secrets_engines_create
+    module      = module.vault_verify_secrets_engines_create
+    depends_on  = [step.vault_remove_node_and_verify]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_api_auth_userpass_login_write,
+      quality.vault_api_auth_userpass_user_write,
+      quality.vault_api_identity_entity_write,
+      quality.vault_api_identity_entity_alias_write,
+      quality.vault_api_identity_group_write,
+      quality.vault_api_identity_oidc_config_write,
+      quality.vault_api_identity_oidc_introspect_write,
+      quality.vault_api_identity_oidc_key_write,
+      quality.vault_api_identity_oidc_key_rotate_write,
+      quality.vault_api_identity_oidc_role_write,
+      quality.vault_api_identity_oidc_token_read,
+      quality.vault_api_sys_auth_userpass_user_write,
+      quality.vault_api_sys_policy_write,
+      quality.vault_mount_auth,
+      quality.vault_mount_kv,
+      quality.vault_secrets_kv_write,
+      quality.vault_secrets_ldap_write_config,
+    ]
+
+    variables {
+      hosts             = step.create_vault_cluster_targets.hosts
+      leader_host       = step.get_vault_cluster_ips.leader_host
+      vault_addr        = step.create_vault_cluster.api_addr_localhost
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token  = step.create_vault_cluster.root_token
+    }
+  }
+
   step "verify_replication" {
     description = global.description.verify_replication_status
     module      = module.vault_verify_replication
-    depends_on  = [step.verify_vault_unsealed]
+    depends_on  = [step.vault_remove_node_and_verify]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -636,7 +677,7 @@ scenario "smoke" {
   step "verify_ui" {
     description = global.description.verify_ui
     module      = module.vault_verify_ui
-    depends_on  = [step.verify_vault_unsealed]
+    depends_on  = [step.vault_remove_node_and_verify]
 
     providers = {
       enos = local.enos_provider[matrix.distro]
@@ -697,6 +738,7 @@ scenario "smoke" {
 
   output "secrets_engines_state" {
     description = "The state of configured secrets engines"
+    sensitive   = true
     value       = step.verify_secrets_engines_create.state
   }
 

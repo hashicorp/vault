@@ -63,19 +63,19 @@ runs:
             redhat_container_tags='quay.io/redhat-isv-containers/5f89bb9242e382c85087dce2:${{ inputs.vault-version }}-${{ inputs.vault-edition }}-ubi'
             redhat_container_target='ubi-hsm'
           ;;
-          "ent.hsm.fips1402")
+          "ent.hsm.fips1403")
             container_version='${{ inputs.vault-version }}+${{ inputs.vault-edition }}'
             docker_container_tags='docker.io/hashicorp/vault-enterprise:${{ inputs.vault-version }}-${{ inputs.vault-edition}} public.ecr.aws/hashicorp/vault-enterprise:${{ inputs.vault-version }}-${{ inputs.vault-edition }}'
             docker_container_target='ubi-hsm-fips'
             redhat_container_tags='quay.io/redhat-isv-containers/5f89bb9242e382c85087dce2:${{ inputs.vault-version }}-${{ inputs.vault-edition }}-ubi'
             redhat_container_target='ubi-hsm-fips'
           ;;
-          "ent.fips1402")
-            # NOTE: For compatibility we still publish the ent.fips1402 containers to different
-            # namespaces. All ent, ent.hsm, and ent.hsm.fips1402 containers are released in the
+          "ent.fips1403")
+            # NOTE: For compatibility we still publish the ent.fips1403 containers to different
+            # namespaces. All ent, ent.hsm, and ent.hsm.fips1403 containers are released in the
             # enterprise namespaces. After we've updated the upstream docker action to support
             # multiple tags we can start to tag images with both namespaces, publish to both, and
-            # eventually sunset the fips1402 specific namespaces.
+            # eventually sunset the fips1403 specific namespaces.
             container_version='${{ inputs.vault-version }}+${{ inputs.vault-edition }}'
             docker_container_tags='docker.io/hashicorp/vault-enterprise-fips:${{ inputs.vault-version }}-${{ inputs.vault-edition }} public.ecr.aws/hashicorp/vault-enterprise-fips:${{ inputs.vault-version }}-${{ inputs.vault-edition }}'
             docker_container_target='ubi-fips'
@@ -104,7 +104,7 @@ runs:
         [[ ! -d "$dest_dir" ]] && mkdir -p "$dest_dir"
         [[ ! -f "$dest_path" ]] && cp ${{ inputs.vault-binary-path }} "${dest_path}"
     - if: inputs.docker == 'true'
-      uses: hashicorp/actions-docker-build@f22d5ac7d36868afaa4be1cc1203ec1b5865cadd
+      uses: hashicorp/actions-docker-build@v2.1.0
       with:
         arch: ${{ inputs.goarch }}
         do_zip_extract_step: 'false' # Don't download and extract an already present binary
@@ -113,7 +113,7 @@ runs:
         revision: ${{ steps.vars.outputs.revision }}
         version: ${{ steps.vars.outputs.container-version }}
     - if: inputs.redhat == 'true'
-      uses: hashicorp/actions-docker-build@f22d5ac7d36868afaa4be1cc1203ec1b5865cadd
+      uses: hashicorp/actions-docker-build@v2.1.0
       with:
         arch: ${{ inputs.goarch }}
         do_zip_extract_step: 'false' # Don't download and extract an already present binary

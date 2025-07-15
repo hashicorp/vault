@@ -8,10 +8,11 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { click, visit, fillIn, currentURL, currentRouteName } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 import { syncDestinations } from 'vault/helpers/sync-destinations';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SYNC_DESTINATIONS = syncDestinations();
 
@@ -25,7 +26,7 @@ module('Acceptance | sync | destinations (plural)', function (hooks) {
     this.version.features = ['Secrets Sync'];
     syncScenario(this.server);
     syncHandlers(this.server);
-    return authPage.login();
+    return login();
   });
 
   test('it should create new destination', async function (assert) {
@@ -44,7 +45,7 @@ module('Acceptance | sync | destinations (plural)', function (hooks) {
     await click(ts.cta.button);
     await click(ts.selectType('aws-sm'));
     await fillIn(ts.inputByAttr('name'), 'foo');
-    await click(ts.saveButton);
+    await click(GENERAL.submitButton);
     assert.dom(ts.infoRowValue('Name')).hasText('foo', 'Destination details render after create success');
 
     await click(ts.breadcrumbLink('Destinations'));
@@ -77,33 +78,33 @@ module('Acceptance | sync | destinations (plural)', function (hooks) {
       // check default values
       const attr = 'granularity';
       assert
-        .dom(`${ts.inputByAttr(attr)} input#${defaultValues[attr]}`)
+        .dom(`${ts.inputGroupByAttr(attr)} input#${defaultValues[attr]}`)
         .isChecked(`${defaultValues[attr]} is checked`);
     });
   }
 
   test('it should filter destinations list', async function (assert) {
     await visit('vault/sync/secrets/destinations');
-    assert.dom(ts.listItem).exists({ count: 6 }, 'All destinations render');
+    assert.dom(GENERAL.listItemLink).exists({ count: 6 }, 'All destinations render');
     await click(`${ts.filter('type')} .ember-basic-dropdown-trigger`);
     await click(ts.searchSelect.option());
-    assert.dom(ts.listItem).exists({ count: 2 }, 'Destinations are filtered by type');
+    assert.dom(GENERAL.listItemLink).exists({ count: 2 }, 'Destinations are filtered by type');
     await fillIn(ts.filter('name'), 'new');
-    assert.dom(ts.listItem).exists({ count: 1 }, 'Destinations are filtered by type and name');
+    assert.dom(GENERAL.listItemLink).exists({ count: 1 }, 'Destinations are filtered by type and name');
     await click(ts.searchSelect.removeSelected);
     await fillIn(ts.filter('name'), 'gcp');
-    assert.dom(ts.listItem).exists({ count: 1 }, 'Destinations are filtered by name');
+    assert.dom(GENERAL.listItemLink).exists({ count: 1 }, 'Destinations are filtered by name');
   });
 
   test('it should transition to correct routes when performing actions', async function (assert) {
     const routeName = (route) => `vault.cluster.sync.secrets.destinations.destination.${route}`;
     await visit('vault/sync/secrets/destinations');
-    await click(ts.menuTrigger);
-    await click(ts.destinations.list.menu.details);
+    await click(GENERAL.menuTrigger);
+    await click(GENERAL.menuItem('details'));
     assert.strictEqual(currentRouteName(), routeName('details'), 'Navigates to details route');
     await click(ts.breadcrumbLink('Destinations'));
-    await click(ts.menuTrigger);
-    await click(ts.destinations.list.menu.edit);
+    await click(GENERAL.menuTrigger);
+    await click(GENERAL.menuItem('edit'));
     assert.strictEqual(currentRouteName(), routeName('edit'), 'Navigates to edit route');
   });
 });

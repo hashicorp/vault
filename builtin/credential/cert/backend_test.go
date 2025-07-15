@@ -64,7 +64,7 @@ const (
 	testRootCertCRL     = "test-fixtures/cacert2crl"
 )
 
-func generateTestCertAndConnState(t *testing.T, template *x509.Certificate) (string, tls.ConnectionState, error) {
+func generateTestCertAndConnState(t *testing.T, template *x509.Certificate, caKey *ecdsa.PrivateKey) (string, tls.ConnectionState, error) {
 	t.Helper()
 	tempDir, err := ioutil.TempDir("", "vault-cert-auth-test-")
 	if err != nil {
@@ -84,7 +84,10 @@ func generateTestCertAndConnState(t *testing.T, template *x509.Certificate) (str
 		BasicConstraintsValid: true,
 		IsCA:                  true,
 	}
-	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+
+	if caKey == nil {
+		caKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1341,7 +1344,7 @@ func TestBackend_dns_singleCert(t *testing.T) {
 		NotAfter:     time.Now().Add(262980 * time.Hour),
 	}
 
-	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate)
+	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate, nil)
 	if tempDir != "" {
 		defer os.RemoveAll(tempDir)
 	}
@@ -1388,7 +1391,7 @@ func TestBackend_email_singleCert(t *testing.T) {
 		NotAfter:     time.Now().Add(262980 * time.Hour),
 	}
 
-	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate)
+	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate, nil)
 	if tempDir != "" {
 		defer os.RemoveAll(tempDir)
 	}
@@ -1469,7 +1472,7 @@ func TestBackend_uri_singleCert(t *testing.T) {
 		NotAfter:     time.Now().Add(262980 * time.Hour),
 	}
 
-	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate)
+	tempDir, connState, err := generateTestCertAndConnState(t, certTemplate, nil)
 	if tempDir != "" {
 		defer os.RemoveAll(tempDir)
 	}
@@ -1493,6 +1496,58 @@ func TestBackend_uri_singleCert(t *testing.T) {
 			testAccStepLoginInvalid(t, connState),
 			testAccStepCert(t, "web", ca, "foo", allowed{uris: "http://www.google.com"}, false),
 			testAccStepLoginInvalid(t, connState),
+		},
+	})
+}
+
+// Test a self-signed client with URI alt names (root CA) that is trusted
+func TestBackend_sameKey_differentCN(t *testing.T) {
+	certTemplate := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName: "example.com",
+		},
+		DNSNames: []string{"example.com"},
+		ExtKeyUsage: []x509.ExtKeyUsage{
+			x509.ExtKeyUsageServerAuth,
+			x509.ExtKeyUsageClientAuth,
+		},
+		IPAddresses:  []net.IP{net.ParseIP("127.0.0.1")},
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageKeyAgreement,
+		SerialNumber: big.NewInt(mathrand.Int63()),
+		NotBefore:    time.Now().Add(-30 * time.Second),
+		NotAfter:     time.Now().Add(262980 * time.Hour),
+	}
+	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal("error generating cert keypair")
+	}
+	tempDir1, connState1, err := generateTestCertAndConnState(t, certTemplate, caKey)
+	if tempDir1 != "" {
+		defer os.RemoveAll(tempDir1)
+	}
+	cert1, err := ioutil.ReadFile(filepath.Join(tempDir1, "cert.pem"))
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	certTemplate.Subject.CommonName = "notfake.com"
+	tempDir2, connState2, err := generateTestCertAndConnState(t, certTemplate, caKey)
+	if tempDir2 != "" {
+		defer os.RemoveAll(tempDir2)
+	}
+	if err != nil {
+		t.Fatalf("error testing connection state: %v", err)
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: testFactory(t),
+		Steps: []logicaltest.TestStep{
+			testAccStepCert(t, "web", cert1, "foo", allowed{common_names: "example.com"}, false),
+			testAccStepLogin(t, connState1),
+			testAccStepLoginInvalid(t, connState2),
+			testAccStepCert(t, "web", cert1, "foo", allowed{}, false),
+			testAccStepLogin(t, connState1),
+			testAccStepLoginInvalid(t, connState2),
 		},
 	})
 }
@@ -1535,6 +1590,88 @@ func TestBackend_untrusted(t *testing.T) {
 			testAccStepLoginInvalid(t, connState),
 		},
 	})
+}
+
+// Test a forged CN
+func TestBackend_different_cn(t *testing.T) {
+	config := logical.TestBackendConfig()
+	storage := &logical.InmemStorage{}
+	config.StorageView = storage
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	connState, err := testConnState("test-fixtures/keys/cert.pem",
+		"test-fixtures/keys/key.pem", "test-fixtures/root/rootcacert.pem")
+	if err != nil {
+		t.Fatalf("error testing connection state: %v", err)
+	}
+	connState2, err := testConnState("test-fixtures/keys/cert-alt-cn.pem",
+		"test-fixtures/keys/key.pem", "test-fixtures/root/rootcacert.pem")
+	if err != nil {
+		t.Fatalf("error testing connection state: %v", err)
+	}
+	ca, err := ioutil.ReadFile("test-fixtures/keys/cert.pem")
+	if err != nil {
+		t.Fatalf("err: %v", err)
+	}
+
+	name := "web"
+
+	addCertReq := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "certs/" + name,
+		Data: map[string]interface{}{
+			"certificate":  string(ca),
+			"policies":     "foo",
+			"display_name": name,
+			"lease":        1000,
+		},
+		Storage:    storage,
+		Connection: &logical.Connection{ConnState: &connState},
+	}
+
+	_, err = b.HandleRequest(context.Background(), addCertReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	loginReq := &logical.Request{
+		Operation:       logical.UpdateOperation,
+		Path:            "login",
+		Unauthenticated: true,
+		Data: map[string]interface{}{
+			"name": name,
+		},
+		Storage:    storage,
+		Connection: &logical.Connection{ConnState: &connState},
+	}
+
+	resp, err := b.HandleRequest(context.Background(), loginReq)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	if resp.IsError() {
+		t.Fatal(resp.Error())
+	}
+
+	loginReq = &logical.Request{
+		Operation:       logical.UpdateOperation,
+		Path:            "login",
+		Unauthenticated: true,
+		Data: map[string]interface{}{
+			"name": name,
+		},
+		Storage:    storage,
+		Connection: &logical.Connection{ConnState: &connState2},
+	}
+
+	resp, err = b.HandleRequest(context.Background(), loginReq)
+	if err == nil && !resp.IsError() {
+		t.Fatal("expected error")
+	}
 }
 
 func TestBackend_validCIDR(t *testing.T) {
@@ -1939,7 +2076,7 @@ func testAccStepListCerts(
 }
 
 type allowed struct {
-	names                string // allowed names in the certificate, looks at common, name, dns, email [depricated]
+	names                string // allowed names in the certificate, looks at common, name, dns, email [deprecated]
 	common_names         string // allowed common names in the certificate
 	dns                  string // allowed dns names in the SAN extension of the certificate
 	emails               string // allowed email names in SAN extension of the certificate

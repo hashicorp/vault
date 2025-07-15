@@ -1,0 +1,71 @@
+---
+layout: docs
+page_title: HSM partners
+description: >-
+  Reference list of verified HSM Vault integration partners
+---
+
+# Verified HSM partners
+
+To support a variety of use cases, Vault verifies protocol implementation and
+integrations with partner products, appliances, and applications that support
+advanced data protection features.
+
+@include 'alerts/partner-program.mdx'
+
+## Auto unsealing and HSM support
+
+Hardware Security Module (HSM) support reduces the operational complexity of
+securing unseal keys by delegating the responsibility of securing unseal keys to
+trusted devices or services (instead of humans). At startup, Vault connects to
+the delegate device or service and provides an encrypted root key for
+decryption.
+
+Vault implements HSM support with the following features:
+
+Feature                                                              | Introduced
+-------------------------------------------------------------------- | ----------
+[Auto unsealing](/vault/docs/concepts/seal#auto-unseal)              | Vault 0.9
+[Entropy augmentation](/vault/docs/enterprise/entropy-augmentation)  | Vault 1.3
+[Seal wrapping](/vault/docs/enterprise/sealwrap)                     | Vault 0.9
+
+
+## Verified integrations
+
+The following table outlines the implementation status of HSM-related features
+for partner products and the minimum Vault version required for verified
+functionality.
+
+| Partner           | Product                                | Auto unseal | Entropy augment | Seal wrap | Managed keys | Vault verified
+| ----------------- | -------------------------------------- | ----------- | --------------- | --------- |------------- | -------------
+| AliCloud          | AliCloud KMS                           | Yes         | **No**          | Yes       | **No**       | 0.11.2+
+| Atos              | Trustway Proteccio HSM                 | Yes         | Yes             | Yes       | **No**       | 1.9+
+| AWS               | AWS KMS                                | Yes         | Yes             | Yes       | Yes          | 0.9+
+| Blockdaemon       | Blockdaemon Builder Vault              | Yes         | **No**          | Yes       | **No**       | 1.17.5+          
+| Crypto4a          | QxEDGE&tm; HSP                         | Yes         | Yes             | Yes       | Yes          | 1.9+
+| Entrust           | nShield HSM                            | Yes         | Yes             | Yes       | Yes          | 1.3+
+| Fortanix          | FX2200 Series                          | Yes         | Yes             | Yes       | **No**       | 0.10+
+| FutureX           | Vectera Plus, KMES Series 3            | Yes         | Yes             | Yes       | Yes          | 1.5+
+| FutureX           | VirtuCrypt cloud HSM                   | Yes         | Yes             | Yes       | Yes          | 1.5+
+| IBM		    | IBM Z				     | Yes	   | Yes	     | Yes	 | **No**	| 1.19+
+| IBM		    | LinuxONE				     | Yes	   | Yes	     | Yes	 | **No**	| 1.19+
+| Google            | GCP Cloud KMS                          | Yes         | **No**          | Yes       | Yes          | 0.9+
+| Marvell           | Cavium HSM                             | Yes         | Yes             | Yes       | Yes          | 1.11+
+| Microsoft         | Azure Key Vault                        | Yes         | **No**          | Yes       | Yes          | 0.10.2+
+| Oracle            | OCI KMS                                | Yes         | **No**          | Yes       | **No**       | 1.2.3+
+| PrimeKey          | SignServer Hardware Appliance          | Yes         | Yes             | Yes       | **No**       | 1.6+
+| Private Machines  | ENFORCER Blade                         | Yes         | **No**          | Yes       | **No**       | 1.17.3+
+| Qrypt             | Quantum Entropy Service                | **No**      | Yes             | **No**    | **No**       | 1.11+
+| Quintessence Labs | TSF  400                               | Yes         | Yes             | Yes       | **No**       | 1.4+
+| Securosys SA      | Primus HSM                             | Yes         | Yes             | Yes       | Yes          | 1.7+
+| Thales            | Luna HSM                               | Yes         | Yes             | Yes       | Yes          | 1.4+
+| Thales            | Luna TCT HSM                           | Yes         | Yes             | Yes       | Yes          | 1.4+
+| Thales            | CipherTrust Manager                    | Yes         | Yes             | Yes       | **No**       | 1.7+
+| Utimaco           | HSM                                    | Yes         | Yes             | Yes       | Yes          | 1.4+
+| Yubico            | YubiHSM 2                              | Yes         | Yes             | Yes       | Yes          | 1.17.2+
+<span style={{display:'block', textAlign:'right', fontSize:'12px'}}>
+  <em>
+    <b>Last Updated</b>:
+    May 03, 2023
+  </em>
+</span>

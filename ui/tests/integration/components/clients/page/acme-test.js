@@ -14,8 +14,6 @@ import { getUnixTime } from 'date-fns';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT, CHARTS } from 'vault/tests/helpers/clients/client-count-selectors';
 import { formatNumber } from 'core/helpers/format-number';
-import { calculateAverage } from 'vault/utils/chart-helpers';
-import { dateFormat } from 'core/helpers/date-format';
 import { assertBarChart } from 'vault/tests/helpers/clients/client-count-helpers';
 
 const START_TIME = getUnixTime(LICENSE_START);
@@ -59,14 +57,10 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
 
   test('it should render with full month activity data charts', async function (assert) {
     const monthCount = this.activity.byMonth.length;
-    assert.expect(7 + monthCount * 2);
+    assert.expect(3 + monthCount);
+
     const expectedTotal = formatNumber([this.activity.total.acme_clients]);
-    const expectedNewAvg = formatNumber([
-      calculateAverage(
-        this.activity.byMonth.map((m) => m?.new_clients),
-        'acme_clients'
-      ),
-    ]);
+
     await this.renderComponent();
     assert
       .dom(statText('Total ACME clients'))
@@ -74,31 +68,23 @@ module('Integration | Component | clients | Clients::Page::Acme', function (hook
         `Total ACME clients The total number of ACME requests made to Vault during this time period. ${expectedTotal}`,
         `renders correct total acme stat ${expectedTotal}`
       );
-    assert.dom(statText('Average new ACME clients per month')).hasTextContaining(`${expectedNewAvg}`);
-
-    const formattedTimestamp = dateFormat([this.activity.responseTimestamp, 'MMM d yyyy, h:mm:ss aaa'], {
-      withTimeZone: true,
-    });
-    assert.dom(CHARTS.timestamp).hasText(`Updated ${formattedTimestamp}`, 'renders response timestamp');
 
     assertBarChart(assert, 'ACME usage', this.activity.byMonth);
-    assertBarChart(assert, 'Monthly new', this.activity.byMonth);
   });
 
   test('it should render stats without chart for a single month', async function (assert) {
-    assert.expect(4);
+    assert.expect(2);
     const activityQuery = { start_time: { timestamp: END_TIME }, end_time: { timestamp: END_TIME } };
     this.activity = await this.store.queryRecord('clients/activity', activityQuery);
-    const expectedTotal = formatNumber([this.activity.total.acme_clients]);
-    await this.renderComponent();
 
+    const expectedTotal = formatNumber([this.activity.total.acme_clients]);
+
+    await this.renderComponent();
     assert.dom(CHARTS.chart('ACME usage')).doesNotExist('total usage chart does not render');
-    assert.dom(CHARTS.container('Monthly new')).doesNotExist('monthly new chart does not render');
-    assert.dom(statText('Average new ACME clients per month')).doesNotExist();
     assert
       .dom(usageStats('ACME usage'))
       .hasText(
-        `ACME usage Usage metrics tutorial This data can be used to understand how many ACME clients have been used for the queried month. Each ACME request is counted as one client. Total ACME clients ${expectedTotal}`,
+        `ACME usage Client usage tutorial ACME clients which interacted with Vault for the first time each month. Each bar represents the total new ACME clients for that month. Total ACME clients ${expectedTotal}`,
         'it renders usage stats with single month copy'
       );
   });

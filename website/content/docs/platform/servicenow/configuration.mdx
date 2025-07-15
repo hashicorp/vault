@@ -32,7 +32,6 @@ To consume Vault credentials from your MID server, you will need to:
 
 The credential resolver supports reading credentials from the following secret engines:
 
-* [Active Directory](/vault/docs/secrets/ad)
 * [AD/OpenLDAP](/vault/docs/secrets/ldap)
 * [AWS](/vault/docs/secrets/aws)
 * [KV v1](/vault/docs/secrets/kv/kv-v1)
@@ -100,6 +99,10 @@ In the ServiceNow UI:
 1. Choose a type from the list.
 1. Select "External credential store".
 1. Provide a fully qualified collection name (FQCN):
+    - **Yokohama or newer**: in the **Credentials** section of the ServiceNow
+      webpage, select your credentials and click **ⓘ** for the "Credential
+      Storage Vault" mid server. Click **Open Record** to add the vault resolver
+      FQCN: `com.snc.discovery.CredentialResolver`
     - **Xanadu (Q4-2024) or newer**:  use `com.snc.discovery.CredentialResolver`
     - **Versions prior to Xanadu (Q4-2024)**: leave blank or use "None"
 1. Provide a meaningful name for the resolver.

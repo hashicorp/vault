@@ -64,3 +64,4 @@ cluster_name         = "testcluster"
 pid_file             = "./pidfile"
 raw_storage_endpoint = true
 disable_sealwrap     = true
+remove_irrevocable_lease_after = "10d"

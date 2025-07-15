@@ -1,3 +1,8 @@
+@use '../utils/box-shadow_variables';
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -9,15 +14,15 @@
   grid-template-rows: 1fr;
   align-content: start;
   grid-gap: 2rem;
-  margin-top: $spacing-24;
+  margin-top: size_variables.$spacing-24;
 }
 
 .transit-card {
-  border-radius: $radius;
-  box-shadow: 0 0 0 1px rgba($grey-light, 0.4);
+  border-radius: size_variables.$radius;
+  box-shadow: 0 0 0 1px rgba(color_variables.$grey-light, 0.4);
   display: grid;
   grid-template-columns: 0.45fr 2fr;
-  padding: $spacing-16;
+  padding: size_variables.$spacing-16;
   border: none;
 
   .transit-icon {
@@ -25,20 +30,22 @@
   }
 
   .transit-action-description {
-    font-family: $family-sans;
-    font-size: $size-8;
-    color: $grey;
+    font-family: font_variables.$family-sans;
+    font-size: size_variables.$size-8;
+    color: color_variables.$grey;
   }
 
   .title {
-    color: $grey;
-    font-size: $size-7;
-    margin-bottom: $spacing-4;
+    color: color_variables.$grey;
+    font-size: size_variables.$size-7;
+    margin-bottom: size_variables.$spacing-4;
   }
 
   &:hover {
-    box-shadow: 0 0 0 1px $blue-500, $box-shadow-middle;
-    background: $blue-010;
+    box-shadow:
+      0 0 0 1px color_variables.$blue-500,
+      box-shadow_variables.$box-shadow-middle;
+    background: color_variables.$blue-010;
 
     .title {
       color: initial;

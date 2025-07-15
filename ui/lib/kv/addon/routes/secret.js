@@ -37,11 +37,11 @@ export default class KvSecretRoute extends Route {
     return null;
   }
 
-  isPatchAllowed({ capabilities, subkeysMeta }) {
+  isPatchAllowed({ capabilities, subkeysMeta = {} }) {
     if (!this.version.isEnterprise) return false;
     const canReadSubkeys = capabilities.subkeys.canRead;
     const canPatchData = capabilities.data.canPatch;
-    if (canReadSubkeys && canPatchData) {
+    if (canReadSubkeys && canPatchData && subkeysMeta) {
       const { deletion_time, destroyed } = subkeysMeta;
       const isLatestActive = isDeleted(deletion_time) || destroyed ? false : true;
       // only the latest secret version can be patched and it must not be deleted or destroyed
@@ -54,7 +54,7 @@ export default class KvSecretRoute extends Route {
     const metadataPath = `${backend}/metadata/${path}`;
     const dataPath = `${backend}/data/${path}`;
     const subkeysPath = `${backend}/subkeys/${path}`;
-    const perms = await this.capabilities.fetchMultiplePaths([metadataPath, dataPath, subkeysPath]);
+    const perms = await this.capabilities.fetch([metadataPath, dataPath, subkeysPath]);
     return {
       metadata: perms[metadataPath],
       data: perms[dataPath],

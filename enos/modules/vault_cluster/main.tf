@@ -20,6 +20,7 @@ locals {
   bin_path               = "${var.install_dir}/vault"
   consul_bin_path        = "${var.consul_install_dir}/consul"
   enable_audit_devices   = var.enable_audit_devices && var.initialize_cluster
+  disable_mlock          = false
   // In order to get Terraform to plan we have to use collections with keys
   // that are known at plan time. In order for our module to work our var.hosts
   // must be a map with known keys at plan time. Here we're creating locals
@@ -156,6 +157,8 @@ module "start_vault" {
   cluster_tag_key           = var.cluster_tag_key
   config_dir                = var.config_dir
   config_mode               = var.config_mode
+  disable_mlock             = local.disable_mlock
+  enable_telemetry          = var.enable_telemetry
   external_storage_port     = var.external_storage_port
   hosts                     = var.hosts
   install_dir               = var.install_dir

@@ -1,0 +1,292 @@
+---
+layout: docs
+page_title: Vault client usage
+description: |-
+  Learn how to discover the number of Vault clients for each namespace in Vault.
+---
+
+# Monitor client usage in Vault
+
+Client calculation and sizing can be complex to compute when you have multiple
+namespaces and auth mounts. The **Vault Client Usage** dashboard in the Vault GUI
+provides the information where you can filter the data by namespace and/or auth
+mounts. You can also use Vault CLI or API to query the usage metrics.
+
+## Enable client usage metrics
+
+Client usage metrics are a feature that is enabled by default for Vault Enterprise and
+HCP Vault Dedicated. However, if you are running Vault Community Edition, you
+need to enable usage data collection since it is disabled by default.
+
+<Tabs>
+<Tab heading="Web UI" group="ui">
+
+1. Open a web browser to access the Vault UI, and sign in.
+
+1. Select **Client Count** from the left navigation menu.
+
+1. Select **Configuration**.
+
+1. Select **Edit configuration**.
+
+   ![Edit configuration button location emphasized](/img/ui-client-usage-config.png)
+
+1. Select the toggle for **Usage data collection** so that the text reads **Data
+   collection is on**.
+
+   <Tip title="Retention period">
+
+   The retention period sets the number of months for which Vault will maintain
+   activity logs to track active clients. (Default: 48 months)
+
+    </Tip>
+
+1. Click **Save** to apply the changes.
+
+1. Click **Continue** in the confirmation dialog to enable usage metrics tracking.
+
+</Tab>
+<Tab heading="CLI command" group="cli">
+
+```shell-session
+$ vault write sys/internal/counters/config enabled=enable
+```
+
+Valid values for `enabled` parameter are: `default`, `enable`, and `disable`.
+
+<Tip title="Retention period">
+
+By default, Vault maintains activity logs to track
+active clients for 24 months. If you wish to change the retention period, use
+the `retention_months` parameter.
+
+</Tip>
+
+**Example:**
+
+```shell-session
+$ vault write sys/internal/counters/config \
+    enabled=enable \
+    retention_months=12
+```
+
+</Tab>
+<Tab heading="API call using cURL" group="api">
+
+```shell-session
+$ curl --header "X-Vault-Token: <TOKEN>" \
+    --request POST \
+    --data '{"enabled": "enable"}' \
+    $VAULT_ADDR/v1/sys/internal/counters/config
+```
+
+Valid values for `enabled` parameter are: `default`, `enable`, and `disable`.
+
+<Tip title="Retention period">
+
+By default, Vault maintains activity logs to track
+active clients for 24 months. If you wish to change the retention period, use
+the `retention_months` parameter.
+
+</Tip>
+
+**Example:**
+
+```shell-session
+$ curl --header "X-Vault-Token: <TOKEN>" \
+    --request POST \
+    --data '{"enabled": "enable", "retention_months": 12}' \
+    $VAULT_ADDR/v1/sys/internal/counters/config
+```
+
+</Tab>
+</Tabs>
+
+## Client usage dashboard
+
+1. Sign into Vault UI. The **Client count** section displays the total number of
+   clients for the current billing period.
+
+1. Select **Details**.
+   ![Vault UI default dashboard example](/img/ui-client-count.png)
+
+1. Examine the **Vault Client Usage** dashboard to learn your Vault usage.
+   ![Example Vault Client Usage dashboard view](/img/ui-client-usage-1.png)
+
+#### Client usage data categories
+
+- **Running client total** are the primary metric on which pricing is based.
+  It is the sum of entity clients (or distinct entities) and non-entity clients.
+
+- **Entity clients** (distinct entities) are representations of a particular
+  user, client, or application that belongs to a defined Vault entity. If you
+  are unfamiliar with Vault entities, refer to the [Identity: Entities and
+  Groups](/vault/tutorials/auth-methods/identity) tutorial.
+
+- **Non-entity clients** are clients without an entity attached.
+  This is because some customers or workflows might avoid using entity-creating
+  authentication methods and instead depend on token creation through the Vault
+  API. Refer to [understanding non-entity
+  tokens](/vault/docs/concepts/client-count#understanding-non-entity-tokens)
+  to learn more.
+
+  <Note>
+
+  The non-entity client count excludes `root` tokens.
+
+  </Note>
+
+- **Secrets sync clients** are the number of external destinations Vault
+  connects to sync the secrets. Refer to the
+  [documentation](/vault/docs/concepts/client-count#secret-sync-clients) for
+  more details.
+
+- **ACME clients** are the ACME connections that authenticate under the same
+  certificate identifier (domain) as the same certificate entity for client
+  count calculations. Refer to the
+  [documentation](/vault/docs/concepts/client-count#entity-assignment-with-acme)
+  for more details.
+
+  ![view with ACME clients tab view selected](/img/ui-client-usage-acme.png)
+
+## Select a data range
+
+For Vault Enterprise, under the **Change billing period**, select **Billing start date** to query the data for
+a different billing period.
+
+![Example of Enterprise date picker dropdown options](/img/ui-client-usage-period-enterprise.png)
+
+For Vault Community, under the **Client counting period**, select **Edit** to query the data for
+a different billing period.
+![Example of Community date picker modal](/img/ui-client-usage-period-ce.png)
+
+Keep in mind that Vault begins collecting data when the feature is enabled. For
+example, if you enabled the usage metrics in March of 2023, you cannot query
+data in January of 2023.
+
+Vault will return metrics from March of 2023 through most recent full month.
+
+## Filter by namespaces
+
+Use the **Filters** to view the metrics data of a specific namespace.
+
+![Filter by namespace input field emphasized](/img/ui-client-usage-filter.png)
+
+## Filter by month
+
+Use the **Client attribution table** to view the metrics data of a specific month.
+![Month filter and table view for client attribution](/img/ui-client-usage-table.png)
+
+## Query usage metrics via CLI
+
+Retrieve the usage metrics for the current billing period.
+
+```shell-session
+$ vault operator usage
+```
+
+**Example output:**
+
+<CodeBlockConfig hideClipboard>
+
+```plaintxt
+Period start: 2024-03-01T00:00:00Z
+Period end: 2024-10-31T23:59:59Z
+
+Namespace path                                        Entity Clients   Non-Entity clients   Secret syncs   ACME clients   Active clients
+--------------                                        --------------   ------------------   ------------   ------------   --------------
+[root]                                                86               114                  0              0              200
+education/                                            31               31                   0              0              62
+education/certification/                              18               25                   0              0              43
+education/training/                                   192              197                  0              0              389
+finance/                                              18               26                   0              0              44
+marketing/                                            28               17                   0              0              45
+test-ns-1-with-namespace-length-over-18-characters/   84               75                   0              0              159
+test-ns-1/                                            59               66                   0              0              125
+test-ns-2-with-namespace-length-over-18-characters/   58               46                   0              0              104
+test-ns-2/                                            56               47                   0              0              103
+
+Total                                                 630              644                  0              0              1274
+```
+
+</CodeBlockConfig>
+
+The output shows client usage metrics for each namespace.
+
+### Filter by namespace
+
+You can narrow the scope for `education` namespace and its child namespaces.
+
+```shell-session
+$ vault operator usage -namespace education
+
+Period start: 2024-03-01T00:00:00Z
+Period end: 2024-10-31T23:59:59Z
+
+Namespace path             Entity Clients   Non-Entity clients   Secret syncs   ACME clients   Active clients
+--------------             --------------   ------------------   ------------   ------------   --------------
+education/                 31               31                   0              0              62
+education/certification/   18               25                   0              0              43
+education/training/        192              197                  0              0              389
+
+Total                      241              253                  0              0              494
+```
+
+### Query with a time frame
+
+To query the client usage metrics for the month of June, 2024. The start
+time is June 1, 2024 (`2024-06-01T00:00:00Z`) and the end time is June
+30, 2024 (`2024-06-30T23:59:59Z`).
+
+The `start_time` and `end_time` should be an RFC3339 timestamp or Unix epoch
+time.
+
+```shell-session
+$ vault operator usage \
+     -start-time=2024-06-01T00:00:00Z \
+     -end-time=2024-06-30T23:59:59Z
+```
+
+**Example output:**
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+Period start: 2024-06-01T00:00:00Z
+Period end: 2024-06-30T23:59:59Z
+
+Namespace path                                        Entity Clients   Non-Entity clients   Secret syncs   ACME clients   Active clients
+--------------                                        --------------   ------------------   ------------   ------------   --------------
+[root]                                                10               16                   0              0              26
+education/                                            7                1                    0              0              8
+education/certification/                              2                4                    0              0              6
+education/training/                                   37               30                   0              0              67
+finance/                                              3                6                    0              0              9
+marketing/                                            2                2                    0              0              4
+test-ns-1-with-namespace-length-over-18-characters/   6                9                    0              0              15
+test-ns-1/                                            9                12                   0              0              21
+test-ns-2-with-namespace-length-over-18-characters/   5                5                    0              0              10
+test-ns-2/                                            9                7                    0              0              16
+
+Total                                                 90               92                   0              0              182
+```
+
+</CodeBlockConfig>
+
+## Export the metrics data
+
+You can export the metrics data by clicking on the **Export attribution data**
+button.
+
+![Export button popup modal emphasized](/img/ui-client-usage-export.png)
+
+This downloads the usage metrics data on your local drive in comma separated
+values format (`.csv`) or JSON.
+
+## API
+
+- Refer to the
+  [`sys/internal/counters`](/vault/api-docs/system/internal-counters#client-count)
+  page to retrieve client count using API.
+- [Activity export API](/vault/api-docs/system/internal-counters#activity-export) to
+  export activity log.
