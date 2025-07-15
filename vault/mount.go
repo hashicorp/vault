@@ -83,6 +83,7 @@ const (
 	mountTypeNSCubbyhole = "ns_cubbyhole"
 	mountTypeToken       = "token"
 	mountTypeNSToken     = "ns_token"
+	mountTypeDatabase    = "database"
 
 	MountTableUpdateStorage   = true
 	MountTableNoUpdateStorage = false
