@@ -68,7 +68,7 @@ const (
 const (
 	DbCassandraPluginType        = "cassandra"
 	DbCouchbasePluginType        = "couchbase"
-	DbElasticPluginType          = "elasticsearch"
+	DbElasticSearchPluginType    = "elasticsearch"
 	DbHanaPluginType             = "hdb"
 	DbInfluxDBPluginType         = "influxdb"
 	DbMongoDBPluginType          = "mongodb"
