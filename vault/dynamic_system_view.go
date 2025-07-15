@@ -356,6 +356,7 @@ func (d dynamicSystemView) GenerateIdentityToken(ctx context.Context, req *plugi
 }
 
 func (d dynamicSystemView) GetRotationInformation(ctx context.Context, req *rotation.RotationInfoRequest) (*rotation.RotationInfoResponse, error) {
+	// sanity check
 	mountEntry := d.mountEntry
 	if mountEntry == nil {
 		return nil, fmt.Errorf("no mount entry")
