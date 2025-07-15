@@ -34,13 +34,6 @@ install_packages() {
         else
           echo "Installing ${package}"
           local output
-          if [ "${package}" = "podman" ]; then
-            # Add the Podman repo and Add the GPG key
-            . /etc/os-release
-            echo "deb https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/ /" | sudo tee /etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list
-            curl -L https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/xUbuntu_${VERSION_ID}/Release.key | sudo apt-key add -
-            sudo apt update
-          fi
           if ! output=$(sudo apt install -y "${package}" 2>&1); then
             echo "Failed to install ${package}: ${output}" 1>&2
             return 1
@@ -71,10 +64,6 @@ install_packages() {
         else
           echo "Installing ${package}"
           local output
-          if [ "${package}" = "podman" ]; then
-            sudo amazon-linux-extras enable epel
-            sudo yum install -y epel-release
-          fi
           if ! output=$(sudo yum -y install "${package}" 2>&1); then
             echo "Failed to install ${package}: ${output}" 1>&2
             return 1
