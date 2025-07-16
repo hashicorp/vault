@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package awsauth
 
 import (
@@ -10,12 +13,18 @@ import (
 
 // awsStsEntry is used to store details of an STS role for assumption
 type awsStsEntry struct {
-	StsRole string `json:"sts_role"`
+	StsRole    string `json:"sts_role"`
+	ExternalID string `json:"external_id,omitempty"` // optional, but recommended
 }
 
 func (b *backend) pathListSts() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/sts/?",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "sts-role-relationships",
+		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ListOperation: &framework.PathOperation{
@@ -31,6 +40,12 @@ func (b *backend) pathListSts() *framework.Path {
 func (b *backend) pathConfigSts() *framework.Path {
 	return &framework.Path{
 		Pattern: "config/sts/" + framework.GenericNameRegex("account_id"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixAWS,
+			OperationSuffix: "sts-role",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"account_id": {
 				Type: framework.TypeString,
@@ -42,6 +57,11 @@ instances in this account.`,
 				Type: framework.TypeString,
 				Description: `AWS ARN for STS role to be assumed when interacting with the account specified.
 The Vault server must have permissions to assume this role.`,
+			},
+			"external_id": {
+				Type:        framework.TypeString,
+				Description: `AWS external ID to be used when assuming the STS role.`,
+				Required:    false,
 			},
 		},
 
@@ -178,10 +198,15 @@ func (b *backend) pathConfigStsRead(ctx context.Context, req *logical.Request, d
 		return nil, nil
 	}
 
+	dt := map[string]interface{}{
+		"sts_role": stsEntry.StsRole,
+	}
+	if stsEntry.ExternalID != "" {
+		dt["external_id"] = stsEntry.ExternalID
+	}
+
 	return &logical.Response{
-		Data: map[string]interface{}{
-			"sts_role": stsEntry.StsRole,
-		},
+		Data: dt,
 	}, nil
 }
 
@@ -215,6 +240,13 @@ func (b *backend) pathConfigStsCreateUpdate(ctx context.Context, req *logical.Re
 	if stsEntry.StsRole == "" {
 		return logical.ErrorResponse("sts role cannot be empty"), nil
 	}
+
+	stsExternalID, ok := data.GetOk("external_id")
+	if ok {
+		stsEntry.ExternalID = stsExternalID.(string)
+	}
+
+	b.Logger().Info("setting sts", "account_id", accountID, "sts_role", stsEntry.StsRole, "external_id", stsEntry.ExternalID)
 
 	// save the provided STS role
 	if err := b.nonLockedSetAwsStsEntry(ctx, req.Storage, accountID, stsEntry); err != nil {

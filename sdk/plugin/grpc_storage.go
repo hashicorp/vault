@@ -1,14 +1,18 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
 	"context"
 	"errors"
 
-	"google.golang.org/grpc"
-
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
+	"google.golang.org/grpc"
 )
+
+var errMissingStorage = errors.New("missing storage implementation: this method should not be called during plugin Setup, but only during and after Initialize")
 
 func newGRPCStorageClient(conn *grpc.ClientConn) *GRPCStorageClient {
 	return &GRPCStorageClient{
@@ -23,6 +27,7 @@ type GRPCStorageClient struct {
 }
 
 func (s *GRPCStorageClient) List(ctx context.Context, prefix string) ([]string, error) {
+	ctx = logicalCtxToPBMetadataCtx(ctx)
 	reply, err := s.client.List(ctx, &pb.StorageListArgs{
 		Prefix: prefix,
 	}, largeMsgGRPCCallOpts...)
@@ -36,6 +41,7 @@ func (s *GRPCStorageClient) List(ctx context.Context, prefix string) ([]string, 
 }
 
 func (s *GRPCStorageClient) Get(ctx context.Context, key string) (*logical.StorageEntry, error) {
+	ctx = logicalCtxToPBMetadataCtx(ctx)
 	reply, err := s.client.Get(ctx, &pb.StorageGetArgs{
 		Key: key,
 	}, largeMsgGRPCCallOpts...)
@@ -49,6 +55,7 @@ func (s *GRPCStorageClient) Get(ctx context.Context, key string) (*logical.Stora
 }
 
 func (s *GRPCStorageClient) Put(ctx context.Context, entry *logical.StorageEntry) error {
+	ctx = logicalCtxToPBMetadataCtx(ctx)
 	reply, err := s.client.Put(ctx, &pb.StoragePutArgs{
 		Entry: pb.LogicalStorageEntryToProtoStorageEntry(entry),
 	}, largeMsgGRPCCallOpts...)
@@ -62,6 +69,7 @@ func (s *GRPCStorageClient) Put(ctx context.Context, entry *logical.StorageEntry
 }
 
 func (s *GRPCStorageClient) Delete(ctx context.Context, key string) error {
+	ctx = logicalCtxToPBMetadataCtx(ctx)
 	reply, err := s.client.Delete(ctx, &pb.StorageDeleteArgs{
 		Key: key,
 	})
@@ -74,13 +82,17 @@ func (s *GRPCStorageClient) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-// StorageServer is a net/rpc compatible structure for serving
+// GRPCStorageServer is a net/rpc compatible structure for serving
 type GRPCStorageServer struct {
 	pb.UnimplementedStorageServer
 	impl logical.Storage
 }
 
 func (s *GRPCStorageServer) List(ctx context.Context, args *pb.StorageListArgs) (*pb.StorageListReply, error) {
+	if s.impl == nil {
+		return nil, errMissingStorage
+	}
+	ctx = pbMetadataCtxToLogicalCtx(ctx)
 	keys, err := s.impl.List(ctx, args.Prefix)
 	return &pb.StorageListReply{
 		Keys: keys,
@@ -89,6 +101,10 @@ func (s *GRPCStorageServer) List(ctx context.Context, args *pb.StorageListArgs) 
 }
 
 func (s *GRPCStorageServer) Get(ctx context.Context, args *pb.StorageGetArgs) (*pb.StorageGetReply, error) {
+	if s.impl == nil {
+		return nil, errMissingStorage
+	}
+	ctx = pbMetadataCtxToLogicalCtx(ctx)
 	storageEntry, err := s.impl.Get(ctx, args.Key)
 	if storageEntry == nil {
 		return &pb.StorageGetReply{
@@ -103,6 +119,10 @@ func (s *GRPCStorageServer) Get(ctx context.Context, args *pb.StorageGetArgs) (*
 }
 
 func (s *GRPCStorageServer) Put(ctx context.Context, args *pb.StoragePutArgs) (*pb.StoragePutReply, error) {
+	if s.impl == nil {
+		return nil, errMissingStorage
+	}
+	ctx = pbMetadataCtxToLogicalCtx(ctx)
 	err := s.impl.Put(ctx, pb.ProtoStorageEntryToLogicalStorageEntry(args.Entry))
 	return &pb.StoragePutReply{
 		Err: pb.ErrToString(err),
@@ -110,6 +130,10 @@ func (s *GRPCStorageServer) Put(ctx context.Context, args *pb.StoragePutArgs) (*
 }
 
 func (s *GRPCStorageServer) Delete(ctx context.Context, args *pb.StorageDeleteArgs) (*pb.StorageDeleteReply, error) {
+	if s.impl == nil {
+		return nil, errMissingStorage
+	}
+	ctx = pbMetadataCtxToLogicalCtx(ctx)
 	err := s.impl.Delete(ctx, args.Key)
 	return &pb.StorageDeleteReply{
 		Err: pb.ErrToString(err),

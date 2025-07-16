@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package totp
 
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
@@ -14,6 +18,12 @@ import (
 func pathCode(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "code/" + framework.GenericNameWithAtRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTOTP,
+			OperationSuffix: "code",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -25,9 +35,19 @@ func pathCode(b *backend) *framework.Path {
 			},
 		},
 
-		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.ReadOperation:   b.pathReadCode,
-			logical.UpdateOperation: b.pathValidateCode,
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ReadOperation: &framework.PathOperation{
+				Callback: b.pathReadCode,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "generate",
+				},
+			},
+			logical.UpdateOperation: &framework.PathOperation{
+				Callback: b.pathValidateCode,
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb: "validate",
+				},
+			},
 		},
 
 		HelpSynopsis:    pathCodeHelpSyn,
@@ -67,7 +87,7 @@ func (b *backend) pathReadCode(ctx context.Context, req *logical.Request, data *
 
 func (b *backend) pathValidateCode(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	name := data.Get("name").(string)
-	code := data.Get("code").(string)
+	code := strings.TrimSpace(data.Get("code").(string))
 
 	// Enforce input value requirements
 	if code == "" {

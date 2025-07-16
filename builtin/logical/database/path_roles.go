@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package database
 
 import (
@@ -14,12 +17,24 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
+	"github.com/robfig/cron/v3"
+)
+
+var (
+	errNoUpdateAfterRotation            = "updating password not allowed after rotation"
+	errNoPasswordAndSelfManagedPassword = "cannot set both `password` and `self_managed_password`"
 )
 
 func pathListRoles(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "roles/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationVerb:   "list",
+				OperationSuffix: "roles",
+			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: b.pathRoleList,
@@ -30,6 +45,12 @@ func pathListRoles(b *databaseBackend) []*framework.Path {
 		},
 		{
 			Pattern: "static-roles/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationVerb:   "list",
+				OperationSuffix: "static-roles",
+			},
 
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: b.pathRoleList,
@@ -44,7 +65,11 @@ func pathListRoles(b *databaseBackend) []*framework.Path {
 func pathRoles(b *databaseBackend) []*framework.Path {
 	return []*framework.Path{
 		{
-			Pattern:        "roles/" + framework.GenericNameRegex("name"),
+			Pattern: "roles/" + framework.GenericNameRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationSuffix: "role",
+			},
 			Fields:         fieldsForType(databaseRolePath),
 			ExistenceCheck: b.pathRoleExistenceCheck,
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -59,7 +84,11 @@ func pathRoles(b *databaseBackend) []*framework.Path {
 		},
 
 		{
-			Pattern:        "static-roles/" + framework.GenericNameRegex("name"),
+			Pattern: "static-roles/" + framework.GenericNameRegex("name"),
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: operationPrefixDatabase,
+				OperationSuffix: "static-role",
+			},
 			Fields:         fieldsForType(databaseStaticRolePath),
 			ExistenceCheck: b.pathStaticRoleExistenceCheck,
 			Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -173,7 +202,18 @@ func staticFields() map[string]*framework.FieldSchema {
 			Type: framework.TypeDurationSecond,
 			Description: `Period for automatic
 	credential rotation of the given username. Not valid unless used with
-	"username".`,
+	"username". Mutually exclusive with "rotation_schedule."`,
+		},
+		"rotation_schedule": {
+			Type: framework.TypeString,
+			Description: `Schedule for automatic credential rotation of the
+	given username. Mutually exclusive with "rotation_period."`,
+		},
+		"rotation_window": {
+			Type: framework.TypeDurationSecond,
+			Description: `The window of time in which rotations are allowed to
+	occur starting from a given "rotation_schedule". Requires "rotation_schedule"
+	to be specified`,
 		},
 		"rotation_statements": {
 			Type: framework.TypeStringSlice,
@@ -182,7 +222,15 @@ func staticFields() map[string]*framework.FieldSchema {
 	this functionality. See the plugin's API page for more information on
 	support and formatting for this parameter.`,
 		},
+		// Deprecated: use 'password' instead
+		"self_managed_password": {
+			Type: framework.TypeString,
+			Description: `Used to connect to a self-managed static account. Must
+	be provided by the user when root credentials are not provided.`,
+			Deprecated: true,
+		},
 	}
+	AddStaticFieldsEnt(fields)
 	return fields
 }
 
@@ -203,11 +251,12 @@ func (b *databaseBackend) pathStaticRoleExistenceCheck(ctx context.Context, req 
 }
 
 func (b *databaseBackend) pathRoleDelete(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete(ctx, databaseRolePath+data.Get("name").(string))
+	name := data.Get("name").(string)
+	err := req.Storage.Delete(ctx, databaseRolePath+name)
 	if err != nil {
 		return nil, err
 	}
-
+	b.dbEvent(ctx, "role-delete", req.Path, name, true)
 	return nil, nil
 }
 
@@ -248,6 +297,7 @@ func (b *databaseBackend) pathStaticRoleDelete(ctx context.Context, req *logical
 		}
 	}
 
+	b.dbEvent(ctx, "static-role-delete", req.Path, name, true)
 	return nil, merr.ErrorOrNil()
 }
 
@@ -261,18 +311,29 @@ func (b *databaseBackend) pathStaticRoleRead(ctx context.Context, req *logical.R
 	}
 
 	data := map[string]interface{}{
-		"db_name":             role.DBName,
-		"rotation_statements": role.Statements.Rotation,
-		"credential_type":     role.CredentialType.String(),
+		"db_name":              role.DBName,
+		"rotation_statements":  role.Statements.Rotation,
+		"credential_type":      role.CredentialType.String(),
+		"skip_import_rotation": role.SkipImportRotation,
 	}
 
 	// guard against nil StaticAccount; shouldn't happen but we'll be safe
 	if role.StaticAccount != nil {
 		data["username"] = role.StaticAccount.Username
 		data["rotation_statements"] = role.Statements.Rotation
-		data["rotation_period"] = role.StaticAccount.RotationPeriod.Seconds()
 		if !role.StaticAccount.LastVaultRotation.IsZero() {
 			data["last_vault_rotation"] = role.StaticAccount.LastVaultRotation
+		}
+
+		// only return one of the mutually exclusive fields in the response
+		if role.StaticAccount.UsesRotationPeriod() {
+			data["rotation_period"] = role.StaticAccount.RotationPeriod.Seconds()
+		} else if role.StaticAccount.UsesRotationSchedule() {
+			data["rotation_schedule"] = role.StaticAccount.RotationSchedule
+			// rotation_window is only valid with rotation_schedule
+			if role.StaticAccount.RotationWindow != 0 {
+				data["rotation_window"] = role.StaticAccount.RotationWindow.Seconds()
+			}
 		}
 	}
 
@@ -453,10 +514,12 @@ func (b *databaseBackend) pathRoleCreateUpdate(ctx context.Context, req *logical
 		return nil, err
 	}
 
+	b.dbEvent(ctx, fmt.Sprintf("role-%s", req.Operation), req.Path, name, true)
 	return nil, nil
 }
 
 func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	response := &logical.Response{}
 	name := data.Get("name").(string)
 	if name == "" {
 		return logical.ErrorResponse("empty role name attribute given"), nil
@@ -476,7 +539,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		return logical.ErrorResponse("Role and Static Role names must be unique"), nil
 	}
 
-	role, err := b.StaticRole(ctx, req.Storage, data.Get("name").(string))
+	role, err := b.StaticRole(ctx, req.Storage, name)
 	if err != nil {
 		return nil, err
 	}
@@ -487,6 +550,7 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	createRole := (req.Operation == logical.CreateOperation)
 	if role == nil {
 		role = &roleEntry{
+			Name:          name,
 			StaticAccount: &staticAccount{},
 		}
 		createRole = true
@@ -513,12 +577,17 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 	}
 	role.StaticAccount.Username = username
 
-	// If it's a Create operation, both username and rotation_period must be included
-	rotationPeriodSecondsRaw, ok := data.GetOk("rotation_period")
-	if !ok && createRole {
-		return logical.ErrorResponse("rotation_period is required to create static accounts"), nil
+	rotationPeriodSecondsRaw, rotationPeriodOk := data.GetOk("rotation_period")
+	rotationScheduleRaw, rotationScheduleOk := data.GetOk("rotation_schedule")
+	rotationWindowSecondsRaw, rotationWindowOk := data.GetOk("rotation_window")
+
+	if rotationScheduleOk && rotationPeriodOk {
+		return logical.ErrorResponse("mutually exclusive fields rotation_period and rotation_schedule were both specified; only one of them can be provided"), nil
+	} else if createRole && (!rotationScheduleOk && !rotationPeriodOk) {
+		return logical.ErrorResponse("one of rotation_schedule or rotation_period must be provided to create a static account"), nil
 	}
-	if ok {
+
+	if rotationPeriodOk {
 		rotationPeriodSeconds := rotationPeriodSecondsRaw.(int)
 		if rotationPeriodSeconds < defaultQueueTickSeconds {
 			// If rotation frequency is specified, and this is an update, the value
@@ -527,6 +596,38 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 			return logical.ErrorResponse(fmt.Sprintf("rotation_period must be %d seconds or more", defaultQueueTickSeconds)), nil
 		}
 		role.StaticAccount.RotationPeriod = time.Duration(rotationPeriodSeconds) * time.Second
+
+		if rotationWindowOk {
+			return logical.ErrorResponse("rotation_window is invalid with use of rotation_period"), nil
+		}
+
+		// Unset rotation schedule and window if rotation period is set since
+		// these are mutually exclusive
+		role.StaticAccount.RotationSchedule = ""
+		role.StaticAccount.RotationWindow = 0
+	}
+
+	if rotationScheduleOk {
+		rotationSchedule := rotationScheduleRaw.(string)
+		parsedSchedule, err := b.schedule.Parse(rotationSchedule)
+		if err != nil {
+			return logical.ErrorResponse("could not parse rotation_schedule", "error", err), nil
+		}
+		role.StaticAccount.RotationSchedule = rotationSchedule
+		role.StaticAccount.Schedule = *parsedSchedule
+
+		if rotationWindowOk {
+			rotationWindowSeconds := rotationWindowSecondsRaw.(int)
+			err := b.schedule.ValidateRotationWindow(rotationWindowSeconds)
+			if err != nil {
+				return logical.ErrorResponse("rotation_window is invalid", "error", err), nil
+			}
+			role.StaticAccount.RotationWindow = time.Duration(rotationWindowSeconds) * time.Second
+		}
+
+		// Unset rotation period if rotation schedule is set since these are
+		// mutually exclusive
+		role.StaticAccount.RotationPeriod = 0
 	}
 
 	if rotationStmtsRaw, ok := data.GetOk("rotation_statements"); ok {
@@ -542,6 +643,61 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		}
 	}
 
+	dbConfig, err := b.DatabaseConfig(ctx, req.Storage, role.DBName)
+	if err != nil {
+		return nil, err
+	}
+
+	lastVaultRotation := role.StaticAccount.LastVaultRotation
+	updateAllowed := lastVaultRotation.IsZero()
+
+	if passwordRaw, ok := data.GetOk("password"); ok {
+		// We will allow users to update the password until the point where
+		// Vault assumes management of the account so that we don't break the
+		// promise of Vault being the source of truth.
+		if updateAllowed {
+			role.StaticAccount.Password = passwordRaw.(string)
+
+			connDetails, err := b.ConnectionDetails(ctx, dbConfig)
+			if err != nil {
+				return nil, err
+			}
+
+			if connDetails != nil && connDetails.SelfManaged {
+				// SelfManagedPassword was deprecated in favor of Password, so they
+				// should map to the same value
+				role.StaticAccount.SelfManagedPassword = passwordRaw.(string)
+			}
+		} else {
+			return logical.ErrorResponse("%s: role=%s, lastVaultRotation=%s", errNoUpdateAfterRotation, name, lastVaultRotation), nil
+		}
+	}
+
+	if smPasswordRaw, ok := data.GetOk("self_managed_password"); ok {
+		if _, ok := data.GetOk("password"); ok {
+			return logical.ErrorResponse(errNoPasswordAndSelfManagedPassword), nil
+		}
+		if updateAllowed {
+			// SelfManagedPassword was deprecated in favor of Password, so they
+			// should map to the same value
+			role.StaticAccount.SelfManagedPassword = smPasswordRaw.(string)
+			role.StaticAccount.Password = smPasswordRaw.(string)
+		} else {
+			return logical.ErrorResponse("%s: role=%s, lastVaultRotation=%s", errNoUpdateAfterRotation, name, lastVaultRotation), nil
+		}
+	}
+
+	if skipImportRotationRaw, ok := data.GetOk("skip_import_rotation"); ok {
+		if !createRole {
+			response.AddWarning("skip_import_rotation has no effect on updates")
+		} else {
+			role.SkipImportRotation = skipImportRotationRaw.(bool)
+		}
+	} else if createRole {
+		// default to the config-level setting
+		role.SkipImportRotation = dbConfig.SkipStaticRoleImportRotation
+	}
+
 	var credentialConfig map[string]string
 	if raw, ok := data.GetOk("credential_config"); ok {
 		credentialConfig = raw.(map[string]string)
@@ -552,65 +708,105 @@ func (b *databaseBackend) pathStaticRoleCreateUpdate(ctx context.Context, req *l
 		return logical.ErrorResponse("credential_config validation failed: %s", err), nil
 	}
 
-	// lvr represents the roles' LastVaultRotation
-	lvr := role.StaticAccount.LastVaultRotation
-
-	// Only call setStaticAccount if we're creating the role for the
-	// first time
+	// Only call setStaticAccount if we're creating the role for the first time
 	var item *queue.Item
 	switch req.Operation {
 	case logical.CreateOperation:
-		// setStaticAccount calls Storage.Put and saves the role to storage
-		resp, err := b.setStaticAccount(ctx, req.Storage, &setStaticAccountInput{
-			RoleName: name,
-			Role:     role,
-		})
-		if err != nil {
-			if resp != nil && resp.WALID != "" {
-				b.Logger().Debug("deleting WAL for failed role creation", "WAL ID", resp.WALID, "role", name)
-				walDeleteErr := framework.DeleteWAL(ctx, req.Storage, resp.WALID)
-				if walDeleteErr != nil {
-					b.Logger().Debug("failed to delete WAL for failed role creation", "WAL ID", resp.WALID, "error", walDeleteErr)
-					var merr *multierror.Error
-					merr = multierror.Append(merr, err)
-					merr = multierror.Append(merr, fmt.Errorf("failed to clean up WAL from failed role creation: %w", walDeleteErr))
-					err = merr.ErrorOrNil()
-				}
-			}
+		if role.SkipImportRotation {
+			b.Logger().Debug("skipping static role import rotation", "role", name)
 
-			return nil, err
+			// Synthetically set lastVaultRotation to now, so that it gets
+			// queued correctly.
+			// NOTE: We intentionally do not set role.StaticAccount.LastVaultRotation
+			// because the zero value indicates Vault has not rotated the
+			// password yet
+			lastVaultRotation = time.Now()
+
+			// NextVaultRotation allows calculating the TTL on GET /static-creds
+			// requests and to calculate the queue priority in populateQueue()
+			// across restarts. We can't rely on LastVaultRotation in these
+			// cases bacause, when import rotation is skipped, LastVaultRotation
+			// is set to a zero value in storage.
+			role.StaticAccount.SetNextVaultRotation(lastVaultRotation)
+
+			// we were told to not rotate, just add the entry
+			err := b.StoreStaticRole(ctx, req.Storage, role)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			// setStaticAccount calls Storage.Put and saves the role to storage
+			resp, err := b.setStaticAccount(ctx, req.Storage, &setStaticAccountInput{
+				RoleName: name,
+				Role:     role,
+			})
+			if err != nil {
+				if resp != nil && resp.WALID != "" {
+					b.Logger().Debug("deleting WAL for failed role creation", "WAL ID", resp.WALID, "role", name)
+					walDeleteErr := framework.DeleteWAL(ctx, req.Storage, resp.WALID)
+					if walDeleteErr != nil {
+						b.Logger().Debug("failed to delete WAL for failed role creation", "WAL ID", resp.WALID, "error", walDeleteErr)
+						var merr *multierror.Error
+						merr = multierror.Append(merr, err)
+						merr = multierror.Append(merr, fmt.Errorf("failed to clean up WAL from failed role creation: %w", walDeleteErr))
+						err = merr.ErrorOrNil()
+					}
+				}
+
+				return nil, err
+			}
+			// guard against RotationTime not being set or zero-value
+			lastVaultRotation = resp.RotationTime
 		}
-		// guard against RotationTime not being set or zero-value
-		lvr = resp.RotationTime
+
 		item = &queue.Item{
 			Key: name,
 		}
 	case logical.UpdateOperation:
+		// if lastVaultRotation is zero, the role had `skip_import_rotation` set
+		if lastVaultRotation.IsZero() {
+			lastVaultRotation = time.Now()
+		}
+
+		// Ensure that NextVaultRotation is recalculated in case the rotation period changed
+		role.StaticAccount.SetNextVaultRotation(lastVaultRotation)
+
 		// store updated Role
-		entry, err := logical.StorageEntryJSON(databaseStaticRolePath+name, role)
+		err := b.StoreStaticRole(ctx, req.Storage, role)
 		if err != nil {
 			return nil, err
 		}
-		if err := req.Storage.Put(ctx, entry); err != nil {
-			return nil, err
-		}
+
 		item, err = b.popFromRotationQueueByKey(name)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	item.Priority = lvr.Add(role.StaticAccount.RotationPeriod).Unix()
+	var next time.Time
+	if rotationPeriodOk {
+		next = lastVaultRotation.Add(role.StaticAccount.RotationPeriod)
+		item.Priority = next.Unix()
+	} else if rotationScheduleOk {
+		next = role.StaticAccount.Schedule.Next(lastVaultRotation)
+		item.Priority = next.Unix()
+	}
+	b.logger.Trace("initialized priority", "role", name, "lastVaultRotation", lastVaultRotation, "next", next)
 
 	// Add their rotation to the queue
 	if err := b.pushItem(item); err != nil {
 		return nil, err
 	}
+	b.dbEvent(ctx, fmt.Sprintf("static-role-%s", req.Operation), req.Path, name, true)
 
-	return nil, nil
+	if len(response.Warnings) == 0 {
+		return nil, nil
+	}
+	return response, nil
 }
 
 type roleEntry struct {
+	Name             string                 `json:"name"`
 	DBName           string                 `json:"db_name"`
 	Statements       v4.Statements          `json:"statements"`
 	DefaultTTL       time.Duration          `json:"default_ttl"`
@@ -618,6 +814,12 @@ type roleEntry struct {
 	CredentialType   v5.CredentialType      `json:"credential_type"`
 	CredentialConfig map[string]interface{} `json:"credential_config"`
 	StaticAccount    *staticAccount         `json:"static_account" mapstructure:"static_account"`
+
+	// SkipImportRotation is a flag to toggle wether or not the static
+	// account's password should be rotated on creation of the static role.
+	// This overrides the config-level field skip_static_role_import_rotation.
+	// The default is false. Enterprise only.
+	SkipImportRotation bool `json:"skip_import_rotation"`
 }
 
 // setCredentialType sets the credential type for the role given its string form.
@@ -628,6 +830,8 @@ func (r *roleEntry) setCredentialType(credentialType string) error {
 		r.CredentialType = v5.CredentialTypePassword
 	case v5.CredentialTypeRSAPrivateKey.String():
 		r.CredentialType = v5.CredentialTypeRSAPrivateKey
+	case v5.CredentialTypeClientCertificate.String():
+		r.CredentialType = v5.CredentialTypeClientCertificate
 	default:
 		return fmt.Errorf("invalid credential_type %q", credentialType)
 	}
@@ -669,6 +873,18 @@ func (r *roleEntry) setCredentialConfig(config map[string]string) error {
 		if len(cm) > 0 {
 			r.CredentialConfig = cm
 		}
+	case v5.CredentialTypeClientCertificate:
+		generator, err := newClientCertificateGenerator(c)
+		if err != nil {
+			return err
+		}
+		cm, err := generator.configMap()
+		if err != nil {
+			return err
+		}
+		if len(cm) > 0 {
+			r.CredentialConfig = cm
+		}
 	}
 
 	return nil
@@ -677,6 +893,12 @@ func (r *roleEntry) setCredentialConfig(config map[string]string) error {
 type staticAccount struct {
 	// Username to create or assume management for static accounts
 	Username string `json:"username"`
+
+	// SelfManagedPassword is used to make a dedicated connection to the DB
+	// user specified by Username. The credentials will leverage the existing
+	// static role mechanisms to handle password rotations. Required when root
+	// credentials are not provided.
+	SelfManagedPassword string `json:"self_managed_password"`
 
 	// Password is the current password credential for static accounts. As an input,
 	// this is used/required when trying to assume management of an existing static
@@ -690,27 +912,107 @@ type staticAccount struct {
 	// CredentialTypeRSAPrivateKey.
 	PrivateKey []byte `json:"private_key"`
 
-	// LastVaultRotation represents the last time Vault rotated the password
+	// LastVaultRotation represents the last time Vault rotated the password.
+	// A zero value indicates that Vault has not rotated this password yet.
 	LastVaultRotation time.Time `json:"last_vault_rotation"`
+
+	// NextVaultRotation represents the next time Vault is expected to rotate
+	// the password
+	NextVaultRotation time.Time `json:"next_vault_rotation"`
 
 	// RotationPeriod is number in seconds between each rotation, effectively a
 	// "time to live". This value is compared to the LastVaultRotation to
 	// determine if a password needs to be rotated
 	RotationPeriod time.Duration `json:"rotation_period"`
 
+	// RotationSchedule is a "chron style" string representing the allowed
+	// schedule for each rotation.
+	// e.g. "1 0 * * *" would rotate at one minute past midnight (00:01) every
+	// day.
+	RotationSchedule string `json:"rotation_schedule"`
+
+	// RotationWindow is number in seconds in which rotations are allowed to
+	// occur starting from a given rotation_schedule.
+	RotationWindow time.Duration `json:"rotation_window"`
+
+	// Schedule holds the parsed "chron style" string representing the allowed
+	// schedule for each rotation.
+	Schedule cron.SpecSchedule `json:"schedule"`
+
 	// RevokeUser is a boolean flag to indicate if Vault should revoke the
 	// database user when the role is deleted
 	RevokeUserOnDelete bool `json:"revoke_user_on_delete"`
 }
 
-// NextRotationTime calculates the next rotation by adding the Rotation Period
-// to the last known vault rotation
+// NextRotationTime calculates the next rotation for period and schedule-based
+// rotations.
+//
+// Period-based expiries are calculated by adding the Rotation Period to the
+// last known vault rotation. Schedule-based expiries are calculated by
+// querying for the next schedule expiry since the last known vault rotation.
 func (s *staticAccount) NextRotationTime() time.Time {
-	return s.LastVaultRotation.Add(s.RotationPeriod)
+	if s.UsesRotationPeriod() {
+		return s.NextVaultRotation
+	}
+	return s.Schedule.Next(time.Now())
+}
+
+// NextRotationTimeFromInput calculates the next rotation time for period and
+// schedule-based roles based on the input.
+func (s *staticAccount) NextRotationTimeFromInput(input time.Time) time.Time {
+	if s.UsesRotationPeriod() {
+		return input.Add(s.RotationPeriod)
+	}
+	return s.Schedule.Next(input)
+}
+
+// UsesRotationSchedule returns true if the given static account has been
+// configured to rotate credentials on a schedule (i.e. NOT on a rotation period).
+func (s *staticAccount) UsesRotationSchedule() bool {
+	return s.RotationSchedule != "" && s.RotationPeriod == 0
+}
+
+// UsesRotationPeriod returns true if the given static account has been
+// configured to rotate credentials on a period (i.e. NOT on a rotation schedule).
+func (s *staticAccount) UsesRotationPeriod() bool {
+	return s.RotationPeriod != 0 && s.RotationSchedule == ""
+}
+
+// IsInsideRotationWindow returns true if the current time t is within a given
+// static account's rotation window.
+//
+// Returns true if the rotation window is not set. In this case, the rotation
+// window is effectively the span of time between two consecutive rotation
+// schedules and we should not prevent rotation.
+func (s *staticAccount) IsInsideRotationWindow(t time.Time) bool {
+	if s.UsesRotationSchedule() && s.RotationWindow != 0 {
+		return t.Before(s.NextVaultRotation.Add(s.RotationWindow))
+	}
+	return true
+}
+
+// ShouldRotate returns true if a given static account should have its
+// credentials rotated.
+//
+// This will return true when the priority <= the current Unix time. If this
+// static account is schedule-based with a rotation window, this method will
+// return false if t is outside the rotation window.
+func (s *staticAccount) ShouldRotate(priority int64, t time.Time) bool {
+	return priority <= t.Unix() && s.IsInsideRotationWindow(t)
+}
+
+// SetNextVaultRotation sets the next vault rotation to time t plus the role's
+// rotation period or to the next schedule.
+func (s *staticAccount) SetNextVaultRotation(t time.Time) {
+	if s.UsesRotationPeriod() {
+		s.NextVaultRotation = t.Add(s.RotationPeriod)
+	} else {
+		s.NextVaultRotation = s.Schedule.Next(t)
+	}
 }
 
 // CredentialTTL calculates the approximate time remaining until the credential is
-// no longer valid. This is approximate because the periodic rotation is only
+// no longer valid. This is approximate because the rotation expiry is only
 // checked approximately every 5 seconds, and each rotation can take a small
 // amount of time to process. This can result in a negative TTL time while the
 // rotation function processes the Static Role and performs the rotation. If the

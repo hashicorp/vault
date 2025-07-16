@@ -1,0 +1,3 @@
+```release-note:change
+auth/alicloud: Update plugin to v0.16.0
+```

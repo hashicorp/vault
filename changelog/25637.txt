@@ -1,0 +1,3 @@
+```release-note:deprecation
+secrets/azure: Deprecate field "password_policy" as we are not able to set it anymore with the new MS Graph API.
+```

@@ -1,0 +1,520 @@
+name: CI
+on:
+  pull_request:
+    # The default types for pull_request are [opened, synchronize, reopened]. This is insufficient
+    # for our needs, since we're skipping stuff on PRs in draft mode.By adding the ready_for_review
+    # type, when a draft pr is marked ready, we run everything, including the stuff we'd have
+    # skipped up until now.
+    types: [ opened, synchronize, reopened, ready_for_review ]
+  push:
+    branches:
+      - main
+      - release/**
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.head_ref || github.run_id }}-ci
+  cancel-in-progress: true
+
+jobs:
+  setup:
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
+    permissions: write-all # vault-auth
+    outputs:
+      changed-files: ${{ steps.changed-files.outputs.changed-files }}
+      checkout-ref: ${{ steps.checkout.outputs.ref }}
+      compute-small: ${{ steps.metadata.outputs.compute-small }}
+      compute-test-go: ${{ steps.metadata.outputs.compute-test-go }}
+      compute-test-ui: ${{ steps.metadata.outputs.compute-test-ui }}
+      go-tags: ${{ steps.metadata.outputs.go-tags }}
+      is-draft: ${{ steps.metadata.outputs.is-draft }}
+      is-enterprise: ${{ steps.metadata.outputs.is-enterprise }}
+      is-fork: ${{ steps.metadata.outputs.is-fork }}
+      labels: ${{ steps.metadata.outputs.labels }}
+      workflow-trigger: ${{ steps.metadata.outputs.workflow-trigger }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      # Make sure we check out correct ref based on PR labels and such
+      - uses: ./.github/actions/checkout
+        id: checkout
+      - uses: ./.github/actions/metadata
+        id: metadata
+      # Get the elevated github token
+      - if: steps.metadata.outputs.is-enterprise == 'true'
+        id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - if: steps.metadata.outputs.is-enterprise == 'true'
+        id: vault-secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/github-token token | ELEVATED_GITHUB_TOKEN;
+      # Determine the changed files
+      - uses: ./.github/actions/changed-files
+        id: changed-files
+        with:
+          github-token: ${{ steps.metadata.outputs.is-enterprise != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+      - name: Ensure Go modules are cached
+        uses: ./.github/actions/set-up-go
+        with:
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          no-restore: true # don't download them on a cache hit
+
+  test-autopilot-upgrade:
+    name: Run Autopilot upgrade tool
+    # Run the Autopilot upgrade tests if:
+    # - The Autopilot code has changed.
+    # - We're in the context of the vault enterprise repository.
+    # - The workflow was triggered by a push to main or a PR targeting main.
+    #
+    # The reason for the main branch restriction, is that the logic for automatically determining the source versions
+    # to test depends on the .release/versions.hcl file, which might not be up-to-date nor exist outside of main.
+    # If you'd like to run the autopilot tests for a specific git checkout or set of source versions,
+    # you can manually trigger the workflow, see the .github/workflows/run-apupgrade-tests-ent.yml file in the ENT repo.
+    if: |
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'autopilot') &&
+      needs.setup.outputs.is-enterprise == 'true' &&
+      (github.base_ref == 'main' || github.ref == 'refs/heads/main')
+    needs: setup
+    permissions:
+      id-token: write
+      contents: read
+    runs-on: ${{ fromJSON(needs.setup.outputs.compute-small) }}
+    steps:
+      - name: Check out the .release/versions.hcl file from Vault Enterprise repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ needs.setup.outputs.checkout-ref }}
+          sparse-checkout: |
+            .release/versions.hcl
+            .github
+      - name: Get Vault versions to test
+        id: get-versions
+        env:
+          GH_TOKEN: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+        run: |
+          # Change to the Vault Enterprise repository directory or exit if it fails
+          cd "${GITHUB_WORKSPACE}" || exit 1
+
+          # Extract active major versions from the versions.hcl file, which is used for managing active release branches
+          active_major_versions=$(grep -Eo 'version\s+"[0-9]+\.[0-9]+\.x"' .release/versions.hcl | sed -E 's/version\s+"([0-9]+\.[0-9]+)\.x"/\1/')
+          active_major_versions=$(sort <<< "${active_major_versions}")
+
+          # List releases from the GitHub repository, process them with sed, and sort them in reverse order
+          releases=$(gh -R hashicorp/vault-enterprise release list --exclude-drafts --exclude-pre-releases --json=name --jq '.[].name' | \
+            sed -E 's/^v([0-9]+\.[0-9]+\.[0-9]+(\-rc[0-9]+)?)\+ent$/\1/' | \
+            sort -r)
+
+          # Initialize a variable to collect matched versions
+          matched_versions=""
+
+          # Read each version from the active major versions and match it against the newest release available
+          while IFS= read -r version; do
+            match=$(grep -m 1 "^${version}" <<< "${releases}" || true)
+            if [ -n "${match}" ]; then
+              if [ -n "${matched_versions}" ]; then
+                matched_versions+=","
+              fi
+              # Append the matched version to the variable, adding the +ent suffix, which is used for Vault Enterprise releases
+              matched_versions+="${match}+ent"
+            fi
+          done <<< "${active_major_versions}"
+
+          # Export the matched versions as a comma-separated string to an environment variable
+          echo "VAULT_SOURCE_VERSIONS=${matched_versions}" >> "${GITHUB_ENV}"
+      - name: Run Autopilot upgrade tests
+        uses: ./.github/actions/run-apupgrade-tests
+        env:
+          GOPATH: /home/runner/go
+          GOPRIVATE: github.com/hashicorp/*
+        with:
+          checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          source-versions: ${{ env.VAULT_SOURCE_VERSIONS }}
+
+  test-go:
+    # Run Go tests if the vault app changed
+    if: |
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline')
+    name: Run Go tests
+    needs: setup
+    uses: ./.github/workflows/test-go.yml
+    with:
+      # The regular Go tests use an extra runner to execute the binary-dependent tests. We isolate
+      # them there so that the other tests aren't slowed down waiting for a binary build.
+      binary-tests: true
+      checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
+      go-arch: amd64
+      go-tags: '${{ needs.setup.outputs.go-tags }},deadlock'
+      name: standard
+      runs-on: ${{ needs.setup.outputs.compute-test-go }}
+      runs-on-small: ${{ needs.setup.outputs.compute-small }}
+      test-timing-cache-key: go-test-timing-standard
+      total-runners: 16
+    secrets: inherit
+
+  test-go-testonly:
+    # Run Go tests tagged with "testonly" if the vault app changed
+    if: |
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain')
+    name: Run Go tests tagged with testonly
+    needs: setup
+    uses: ./.github/workflows/test-go.yml
+    with:
+      checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
+      go-arch: amd64
+      go-tags: '${{ needs.setup.outputs.go-tags }},deadlock,testonly'
+      name: testonly
+      runs-on: ${{ needs.setup.outputs.compute-test-go }}
+      runs-on-small: ${{ needs.setup.outputs.compute-small }}
+      testonly: true
+      test-timing-cache-enabled: false
+      total-runners: 2 # test runners cannot be less than 2
+    secrets: inherit
+
+  test-go-race:
+    # Run Go test with the data race detector enabled if the vault app changed and we're out of
+    # drafts mode.
+    if: |
+      needs.setup.outputs.is-draft == 'false' &&
+        (
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
+          contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain')
+        )
+    name: Run Go tests with data race detection
+    needs: setup
+    uses: ./.github/workflows/test-go.yml
+    with:
+      checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
+      env-vars: |
+        {
+          "VAULT_CI_GO_TEST_RACE": 1
+        }
+      extra-flags: '-race'
+      name: race
+      go-arch: amd64
+      go-tags: ${{ needs.setup.outputs.go-tags }}
+      runs-on: ${{ needs.setup.outputs.compute-test-go }}
+      runs-on-small: ${{ needs.setup.outputs.compute-small }}
+      test-timing-cache-key: go-test-timing-race
+      total-runners: 16
+    secrets: inherit
+
+  test-go-fips:
+    name: Run Go tests with FIPS configuration
+    # Run the Go tests with fips if the vault app changed, we're in the context vault enterprise
+    # and our trigger is a merge to main or releases/* or if the 'fips' label is present on a PR.
+    if: |
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') &&
+      needs.setup.outputs.is-enterprise == 'true' &&
+        (
+          needs.setup.outputs.workflow-trigger == 'push' || contains(needs.setup.outputs.labels, 'fips')
+        )
+    needs: setup
+    uses: ./.github/workflows/test-go.yml
+    with:
+      checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
+      env-vars: |
+        {
+          "GOEXPERIMENT": "boringcrypto"
+        }
+      name: fips
+      go-arch: amd64
+      go-tags: '${{ needs.setup.outputs.go-tags }},deadlock,cgo,fips,fips_140_3'
+      runs-on: ${{ needs.setup.outputs.compute-test-go }}
+      runs-on-small: ${{ needs.setup.outputs.compute-small }}
+      test-timing-cache-key: go-test-timing-fips
+      total-runners: 16
+    secrets: inherit
+
+  test-ui:
+    name: Test UI
+    # Run the UI tests if our UI has changed, or a 'ui' label is present, or our workflow trigger
+    # was triggered by a merge to main or releases/*.
+    if: |
+      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'ui') ||
+      needs.setup.outputs.workflow-trigger == 'push' ||
+      contains(github.event.pull_request.labels.*.name, 'ui')
+    needs: setup
+    permissions:
+      id-token: write
+      contents: read
+    runs-on: ${{ fromJSON(needs.setup.outputs.compute-test-ui) }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        name: status
+        with:
+          ref: ${{ needs.setup.outputs.checkout-ref }}
+      - uses: ./.github/actions/set-up-go
+        with:
+          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+      # Setup node.js without caching to allow running npm install -g yarn (next step)
+      - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
+        with:
+          node-version-file: './ui/package.json'
+      - run: npm install -g yarn
+      # Setup node.js with caching using the yarn.lock file
+      - uses: actions/setup-node@cdca7365b2dadb8aad0a33bc7601856ffabcc48e # v4.3.0
+        with:
+          node-version-file: './ui/package.json'
+          cache: yarn
+          cache-dependency-path: ui/yarn.lock
+      - uses: browser-actions/setup-chrome@facf10a55b9caf92e0cc749b4f82bf8220989148 # v1.7.2
+        with:
+          # Temporarily pin our Chrome version while we sort out a broken test on latest
+          chrome-version: 1314712
+      - name: ui-dependencies
+        working-directory: ./ui
+        run: |
+          yarn install --frozen-lockfile
+          npm rebuild node-sass
+      - if: needs.setup.outputs.is-enterprise != 'true'
+        name: Rebuild font cache on Github hosted runner
+        # Fix `Fontconfig error: No writable cache directories` error on Github hosted runners
+        # This seems to have been introduced with this runner image: https://github.com/actions/runner-images/releases/tag/ubuntu22%2F20240818.1
+        # Hopefully this will resolve itself at some point with a newer image and we can remove it
+        run: fc-cache -f -v
+      - if: needs.setup.outputs.is-enterprise == 'true'
+        id: vault-auth
+        name: Authenticate to Vault
+        run: vault-auth
+      - if: needs.setup.outputs.is-enterprise == 'true'
+        id: secrets
+        name: Fetch secrets
+        uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/hashicorp/vault-enterprise/github-token username-and-token | PRIVATE_REPO_GITHUB_TOKEN;
+            kv/data/github/hashicorp/vault-enterprise/license license_1 | VAULT_LICENSE;
+            kv/data/github/${{ github.repository }}/datadog-ci DATADOG_API_KEY;
+      - if: needs.setup.outputs.is-enterprise == 'true'
+        name: Set up Git
+        run: git config --global url."https://${{ steps.secrets.outputs.PRIVATE_REPO_GITHUB_TOKEN }}@github.com".insteadOf https://github.com
+      - uses: ./.github/actions/install-external-tools
+      - name: build-go-dev
+        run: |
+          rm -rf ./pkg
+          mkdir ./pkg
+          make prep dev
+      - name: test-ui
+        env:
+          VAULT_LICENSE: ${{ steps.secrets.outputs.VAULT_LICENSE }}
+        run: |
+          export PATH="${PWD}/bin:${PATH}"
+          # Run Ember tests
+          cd ui
+          mkdir -p test-results/qunit
+          yarn ${{ needs.setup.outputs.is-enterprise == 'true' && 'test' || 'test:oss' }}
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: test-results-ui
+          path: ui/test-results
+      - name: Prepare datadog-ci
+        if: (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise') && (success() || failure())
+        continue-on-error: true
+        run: |
+          if type datadog-ci > /dev/null 2>&1; then
+            exit 0
+          fi
+          # Curl does not always exit 1 if things go wrong. To determine if this is successful
+          # we'll silence all non-error output and check the results to determine success.
+          if ! out="$(curl -sSL --fail https://github.com/DataDog/datadog-ci/releases/latest/download/datadog-ci_linux-x64 --output /usr/local/bin/datadog-ci 2>&1)"; then
+            printf "failed to download datadog-ci: %s" "$out"
+          fi
+          if [[ -n "$out" ]]; then
+            printf "failed to download datadog-ci: %s" "$out"
+          fi
+          chmod +x /usr/local/bin/datadog-ci
+      - name: Upload test results to DataDog
+        if: success() || failure()
+        continue-on-error: true
+        env:
+          DD_ENV: ci
+        run: |
+          if [[ ${{ github.repository }} == 'hashicorp/vault' ]]; then
+            export DATADOG_API_KEY=${{ secrets.DATADOG_API_KEY }}
+          fi
+          datadog-ci junit upload --service "$GITHUB_REPOSITORY" 'ui/test-results/qunit/results.xml'
+      - if: always()
+        uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86 # v2.4
+        with:
+          paths: "ui/test-results/qunit/results.xml"
+          show: "fail"
+
+  tests-completed:
+    needs:
+      - setup
+      - test-autopilot-upgrade
+      - test-go
+      - test-go-testonly
+      - test-go-race
+      - test-go-fips
+      - test-ui
+    if: always()
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
+    permissions: write-all # Ensure we have id-token:write access for vault-auth.
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      # Determine the overall status of our required test jobs.
+      - name: Determine status
+        id: status
+        run: |
+          # Determine the overall status of the job. We allow fips and race tests to fail so we
+          # don't consider their result here.
+          #
+          # Encode the needs context into JSON, filter out unrequired workflows, shape the result
+          # into a more useful schema. Determine the overall status by comparing the total number of
+          # successful results with the number of required jobs.
+          if results=$(jq -rec 'del(.["test-go-fips"], .["test-go-race"]) as $required
+              | $required | keys as $jobs
+              | reduce $jobs[] as $job ([]; . + [{job: $job}+$required[$job]])' <<< '${{ toJSON(needs) }}'
+          ); then
+            # Determine if all of our required jobs have succeeded.
+            if jq -rec 'length as $expected
+              | [.[] | select((.result == "success") or (.result == "skipped"))] | length as $got
+              | $expected == $got' <<< "$results"; then
+              msg="All required test jobs succeeded!"
+              result="success"
+            else
+              msg="One or more required test jobs failed!"
+              result="failed"
+            fi
+          else
+            msg="Failed to decode and filter test results"
+            result="failed"
+            results="''"
+          fi
+          {
+            echo "msg=${msg}"
+            echo "result=${result}"
+            echo "results<<EOFRESULTS"$'\n'"${results}"$'\n'EOFRESULTS
+          } | tee -a "$GITHUB_OUTPUT"
+      - if: needs.setup.outputs.is-enterprise == 'true'
+        id: vault-auth
+        name: Vault Authenticate
+        run: vault-auth
+      - if: needs.setup.outputs.is-enterprise == 'true'
+        id: secrets
+        name: Fetch Vault Secrets
+        uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
+        with:
+          url: ${{ steps.vault-auth.outputs.addr }}
+          caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
+          token: ${{ steps.vault-auth.outputs.token }}
+          secrets: |
+            kv/data/github/${{ github.repository }}/github_actions_notifications_bot token | SLACK_BOT_TOKEN;
+      - id: slackbot-token
+        run:
+          echo "slackbot-token=${{ needs.setup.outputs.is-enterprise != 'true' && secrets.SLACK_BOT_TOKEN || steps.secrets.outputs.SLACK_BOT_TOKEN }}" >> "$GITHUB_OUTPUT"
+      - if: |
+          always() &&
+          needs.setup.outputs.workflow-trigger == 'push' &&
+          (
+            needs.test-go.result == 'failure' ||
+            needs.test-go-race.result == 'failure' ||
+            needs.test-go-race.outputs.data-race-result == 'failure' ||
+            needs.test-go-testonly.result == 'failure' ||
+            needs.test-ui.result == 'failure'
+          )
+        name: Notify build failures in Slack
+        uses: slackapi/slack-github-action@37ebaef184d7626c5f204ab8d3baff4262dd30f0 # v1.27.0
+        env:
+          SLACK_BOT_TOKEN: ${{ steps.slackbot-token.outputs.slackbot-token }}
+        with:
+          channel-id: "C05AABYEA9Y" # sent to #feed-vault-ci-official, use "C05Q4D5V89W"/test-vault-ci-slack-integration for testing
+          payload: |
+            {
+              "text": "CE test failures on ${{ github.ref_name }}",
+              "text": "${{ github.repository }} build failures on ${{ github.ref_name }}",
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": ":rotating_light: ${{ github.repository }} test failures on ${{ github.ref_name }} :rotating_light:",
+                    "emoji": true
+                  }
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "${{ needs.test-go.result != 'failure' && ':white_check_mark:' || ':x:' }} Go tests\n${{ needs.test-go-race.result != 'failure' && ':white_check_mark:' || ':x:' }} Go race tests\n\t\t${{ needs.test-go-race.outputs.data-race-result != 'success' && ':x: Data race detected' || ':white_check_mark: No race detected' }}\n${{ needs.test-go-testonly.result != 'failure' && ':white_check_mark:' || ':x:' }} Go testonly tests\n${{ needs.test-ui.result != 'failure' && ':white_check_mark:' || ':x:' }} UI tests"
+                  },
+                  "accessory": {
+                    "type": "button",
+                    "text": {
+                      "type": "plain_text",
+                      "text": "View Failing Workflow",
+                      "emoji": true
+                    },
+                    "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                  }
+                }
+              ]
+            }
+      # Only create the PR summary if it's a pull request and it is not a fork as we need access
+      # to secrets.
+      - if: ${{ needs.setup.outputs.is-fork == 'false' }}
+        name: Download failure summaries
+        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        with:
+          pattern: failure-summary-*.md
+          path: failure-summaries
+          merge-multiple: true
+      - if: ${{ needs.setup.outputs.is-fork == 'false' }}
+        id: prepare-failure-summary
+        name: Prepare failure summary
+        run: |
+          # Sort all of the summary table rows and push them to a temp file.
+          temp_file_name=temp-$(date +%s)
+          cat failure-summaries/*.md | sort >> "$temp_file_name"
+
+          # If there are test failures, present them in a format of a GitHub Markdown table.
+          if [ -s "$temp_file_name" ]; then
+            # Here we create the headings for the summary table
+            {
+              echo "| Test Type | Package | Test | Elapsed | Runner Index | Logs |"
+              echo "| --------- | ------- | ---- | ------- | ------------ | ---- |"
+              cat "$temp_file_name"
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            if [ "${{ steps.status.outputs.result }}" == 'success' ]; then
+              echo "### All required Go tests passed! :white_check_mark:" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          {
+            echo 'table-test-results<<EOFTABLE'
+            cat "$temp_file_name"
+            echo EOFTABLE
+          } | tee -a "$GITHUB_OUTPUT"
+      - name: Create comment
+        if: github.head_ref != '' && needs.setup.outputs.is-fork == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          RUN_ID: ${{ github.run_id }}
+          REPO: ${{ github.event.repository.name }}
+          RESULT: ${{ steps.status.outputs.result }}
+          TABLE_DATA: ${{ steps.prepare-failure-summary.outputs.table-test-results }}
+        run: ./.github/scripts/report-ci-status.sh
+      - if: always() && steps.status.outputs.result != 'success'
+        name: Check for failed status
+        run: |
+          echo "${{ steps.status.outputs.msg }}: ${{ steps.status.outputs.results }}"
+          exit 1

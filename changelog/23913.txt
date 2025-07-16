@@ -1,0 +1,5 @@
+```release-note:change
+sdk: Upgrade dependent packages by sdk.
+This includes github.com/docker/docker to v24.0.7+incompatible,
+google.golang.org/grpc to  v1.57.2 and golang.org/x/net to v0.17.0.
+```

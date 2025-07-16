@@ -1,0 +1,3 @@
+```release-note:improvement
+sdk/decompression: DecompressWithCanary will now chunk the decompression in memory to prevent loading it all at once.
+```

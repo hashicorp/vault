@@ -1,0 +1,120 @@
+---
+layout: docs
+page_title: Why use Agent or Proxy?
+description: >-
+  Use Vault tools like Agent and Proxy to simplify secret fetching and add Vault
+  to your development environment with minimal client code updates.
+---
+
+# Why use Agent or Proxy?
+
+A valid client token must accompany most requests to Vault. This
+includes all API requests, as well as via the Vault CLI and other libraries.
+Therefore, Vault clients must first authenticate with Vault to acquire a token.
+Vault provides several authentication methods to assist in
+delivering this initial token.
+
+![Client authentication](/img/diagram-vault-agent.png)
+
+If the client can securely acquire the token, all subsequent requests (e.g., request
+database credentials, read key/value secrets) are processed based on the
+trust established by a successful authentication.
+
+This means that client application must invoke the Vault API to authenticate
+with Vault and manage the acquired token, in addition to invoking the API to
+request secrets from Vault. This implies code changes to client applications
+along with additional testing and maintenance of the application.
+
+The following code example implements Vault API to authenticate with Vault
+through [AppRole auth method](/vault/docs/auth/approle#code-example), and then uses
+the returned client token to read secrets at `kv-v2/data/creds`.
+
+```go
+package main
+
+import (
+    ...snip...
+    vault "github.com/hashicorp/vault/api"
+)
+
+// Fetches a key-value secret (kv-v2) after authenticating via AppRole
+func getSecretWithAppRole() (string, error) {
+    config := vault.DefaultConfig()
+
+    client := vault.NewClient(config)
+    wrappingToken := ioutil.ReadFile("path/to/wrapping-token")
+    unwrappedToken := client.Logical().Unwrap(strings.TrimSuffix(string(wrappingToken), "\n"))
+
+    secretID := unwrappedToken.Data["secret_id"]
+    roleID := os.Getenv("APPROLE_ROLE_ID")
+
+    params := map[string]interface{}{
+        "role_id":   roleID,
+        "secret_id": secretID,
+    }
+    resp := client.Logical().Write("auth/approle/login", params)
+    client.SetToken(resp.Auth.ClientToken)
+
+    secret, err := client.Logical().Read("kv-v2/data/creds")
+    if err != nil {
+        return "", fmt.Errorf("unable to read secret: %w", err)
+    }
+
+    data := secret.Data["data"].(map[string]interface{})
+
+    ...snip...
+}
+```
+
+For some Vault deployments, making (and maintaining) these changes to
+applications may not be a problem, and may actually be preferred. This may be
+applied to scenarios where you have a small number of applications, or you want
+to keep strict, customized control over how each application interacts with
+Vault. However, in other situations where you have a large number of
+applications, as in large enterprises, you may not have the resources or expertise
+to update and maintain the Vault integration code for every application. When
+third party applications are being deployed by the application, it is prohibited
+to add the Vault integration code.
+
+### Introduce Vault Agent and Vault Proxy to the workflow
+
+[Vault Agent][vaultagent] and [Vault Proxy][vaultproxy] aim to remove this initial hurdle to adopt Vault by providing a
+more scalable and simpler way for applications to integrate with Vault. Vault Agent can
+obtain secrets and provide them to applications, and Vault Proxy can act as
+a proxy between Vault and the application, optionally simplifying the authentication process
+and caching requests.
+
+As with most other CLI commands for the Vault binary, neither Vault Agent nor Vault Proxy
+require a Vault Enterprise license, and are available in all Vault binaries and images. Note
+however that some features, such as [static secret caching][static-secret-caching], are only
+available when connected to a Vault Enterprise server.
+
+| Capability                                                                               | Vault Agent | Vault Proxy |
+| ---------------------------------------------------------------------------------------- | :---------: | :---------: |
+| [Auto-auth][autoauth] to authenticate with Vault                                         |   &#9989;   |   &#9989;   |
+| Run as a [Windows Service][winsvc]                                                       |   &#9989;   |   &#9989;   |
+| [Caching][caching] the newly created tokens and leases                                   |   &#9989;   |   &#9989;   |
+| [Templating][template] to render user-supplied templates                                 |   &#9989;   |  &#10060;   |
+| [Process supervisor][exec] for injecting secrets as environment variables into a process |   &#9989;   |  &#10060;   |
+| [API proxy][apiproxy] to act as a proxy for Vault API                                    | Deprecated  |   &#9989;   |
+| [Static secret caching][static-secret-caching] for KV secrets                            |  &#10060;   |   &#9989;   |
+
+To learn more, refer to the [Vault Agent][vaultagent] or [Vault
+Proxy][vaultproxy] documentation page.
+
+## Tutorial
+
+Refer to the [Vault Agent](/vault/tutorials/vault-agent) tutorials for end-to-end examples.
+
+
+
+[autoauth]: /vault/docs/agent-and-proxy/autoauth
+[caching]: /vault/docs/agent-and-proxy/proxy/caching
+[static-secret-caching]: /vault/docs/agent-and-proxy/proxy/caching/static-secret-caching
+[apiproxy]: /vault/docs/agent-and-proxy/proxy/apiproxy
+[template]: /vault/docs/agent-and-proxy/agent/template
+[exec]: /vault/docs/agent-and-proxy/agent/process-supervisor
+[template-config]: /vault/docs/agent-and-proxy/agent/template#template-configurations
+[vaultagent]: /vault/docs/agent-and-proxy/agent
+[vaultproxy]: /vault/docs/agent-and-proxy/proxy
+[winsvc]: /vault/docs/agent-and-proxy/agent/winsvc

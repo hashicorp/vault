@@ -1,0 +1,3 @@
+```release-note:bug 
+ui: Adds missing values to details view after generating PKI certificate
+```

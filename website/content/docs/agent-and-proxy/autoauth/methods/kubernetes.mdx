@@ -1,0 +1,25 @@
+---
+layout: docs
+page_title: Auto-auth with Kubernetes
+description: >-
+  Use Kubernetes for auto-authentication with Vault Agent or Vault Proxy.
+---
+
+# Auto-auth method: Kubernetes
+
+The `kubernetes` method reads in a Kubernetes service account token from the
+running pod (via `/var/run/secrets/kubernetes.io/serviceaccount/token`) and
+sends it to the [Kubernetes Auth
+method](/vault/docs/auth/kubernetes/).
+
+## Configuration
+
+- `role` `(string: required)` - The role to authenticate against on Vault
+- `token_path` `(string: optional)` - The file path to a custom JWT token to use
+  for authentication. If omitted, the default service account token path is used.
+
+## Tutorial
+
+Refer to the [Vault Agent with
+Kubernetes](/vault/tutorials/kubernetes/agent-kubernetes)
+tutorial to learn how to authenticate the clients using a Kubernetes Service Account Token and manage the tokens lifecycle.

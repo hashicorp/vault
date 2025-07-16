@@ -1,0 +1,3 @@
+```release-note:change
+database/elasticsearch: Update plugin to v0.13.3
+```

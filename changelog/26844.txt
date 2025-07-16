@@ -1,0 +1,3 @@
+```release-note:bug
+auto-auth: Addressed issue where having no permissions to renew a renewable token caused auto-auth to attempt to renew constantly with no backoff
+```

@@ -1,0 +1,3 @@
+```release-note:change
+secrets/openldap: Update plugin to v0.13.0
+```

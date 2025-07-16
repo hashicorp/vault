@@ -1,0 +1,3 @@
+```release-note:improvement
+build: Prefer GOBIN when set over GOPATH/bin when building the binary
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package api
 
 import (
@@ -140,7 +143,7 @@ func testSysRekey_Verification(t *testing.T, recovery bool, legacyShamir bool) {
 	// Sealing should clear state, so after this we should be able to perform
 	// the above again
 	cluster.EnsureCoresSealed(t)
-	if err := cluster.UnsealCoresWithError(recovery); err != nil {
+	if err := cluster.UnsealCoresWithError(t, recovery); err != nil {
 		t.Fatal(err)
 	}
 	doRekeyInitialSteps()
@@ -256,7 +259,7 @@ func testSysRekey_Verification(t *testing.T, recovery bool, legacyShamir bool) {
 		cluster.Start()
 		defer cluster.Cleanup()
 
-		if err := cluster.UnsealCoresWithError(false); err == nil {
+		if err := cluster.UnsealCoresWithError(t, false); err == nil {
 			t.Fatal("expected error")
 		}
 
@@ -270,7 +273,7 @@ func testSysRekey_Verification(t *testing.T, recovery bool, legacyShamir bool) {
 			newKeyBytes = append(newKeyBytes, val)
 		}
 		cluster.BarrierKeys = newKeyBytes
-		if err := cluster.UnsealCoresWithError(false); err != nil {
+		if err := cluster.UnsealCoresWithError(t, false); err != nil {
 			t.Fatal(err)
 		}
 	} else {

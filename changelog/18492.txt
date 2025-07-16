@@ -1,0 +1,3 @@
+```release-note:improvement
+framework: Make it an error for `CreateOperation` to be defined without an `ExistenceCheck`, thereby fixing misleading `x-vault-createSupported` in OpenAPI
+```

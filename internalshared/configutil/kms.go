@@ -1,14 +1,22 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package configutil
 
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"io"
+	"os"
+	"regexp"
+	"slices"
 	"strings"
 
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/go-kms-wrapping/wrappers/alicloudkms/v2"
@@ -21,24 +29,37 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/helper/random"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 var (
 	ConfigureWrapper             = configureWrapper
 	CreateSecureRandomReaderFunc = createSecureRandomReader
+	GetEnvConfigFunc             = getEnvConfig
 )
 
-// Entropy contains Entropy configuration for the server
+//go:generate enumer -type=EntropyMode -trimprefix=Entropy
+
+// EntropyMode contains Entropy configuration for the server
 type EntropyMode int
 
 const (
 	EntropyUnknown EntropyMode = iota
 	EntropyAugmentation
+
+	KmsRenameDisabledSuffix = "-disabled"
 )
 
 type Entropy struct {
-	Mode EntropyMode
+	Mode     EntropyMode
+	SealName string
+}
+
+type EntropySourcerInfo struct {
+	Sourcer entropy.Sourcer
+	Name    string
 }
 
 // KMS contains KMS configuration for the server
@@ -52,6 +73,9 @@ type KMS struct {
 
 	Disabled bool
 	Config   map[string]string
+
+	Priority int    `hcl:"priority"`
+	Name     string `hcl:"name"`
 }
 
 func (k *KMS) GoString() string {
@@ -60,7 +84,7 @@ func (k *KMS) GoString() string {
 
 func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int) error {
 	if len(list.Items) > maxKMS {
-		return fmt.Errorf("only two or less %q blocks are permitted", blockName)
+		return fmt.Errorf("only %d or less %q blocks are permitted", maxKMS, blockName)
 	}
 
 	seals := make([]*KMS, 0, len(list.Items))
@@ -99,19 +123,54 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 			delete(m, "disabled")
 		}
 
+		var priority int
+		if v, ok := m["priority"]; ok {
+			priority, err = parseutil.SafeParseInt(v)
+			if err != nil {
+				return multierror.Prefix(fmt.Errorf("unable to parse 'priority' in kms type %q: %w", key, err), fmt.Sprintf("%s.%s", blockName, key))
+			}
+			delete(m, "priority")
+
+			if priority < 1 {
+				return multierror.Prefix(fmt.Errorf("invalid priority in kms type %q: %d", key, priority), fmt.Sprintf("%s.%s", blockName, key))
+			}
+		}
+
+		name := strings.ToLower(key)
+		// ensure that seals of the same type will have unique names for seal migration
+		if disabled {
+			name += KmsRenameDisabledSuffix
+		}
+		if v, ok := m["name"]; ok {
+			name, ok = v.(string)
+			if !ok {
+				return multierror.Prefix(fmt.Errorf("unable to parse 'name' in kms type %q: unexpected type %T", key, v), fmt.Sprintf("%s.%s", blockName, key))
+			}
+			delete(m, "name")
+
+			if !regexp.MustCompile("^[a-zA-Z0-9-_]+$").MatchString(name) {
+				return multierror.Prefix(errors.New("'name' field can only include alphanumeric characters, hyphens, and underscores"), fmt.Sprintf("%s.%s", blockName, key))
+			}
+		}
+
 		strMap := make(map[string]string, len(m))
 		for k, v := range m {
 			s, err := parseutil.ParseString(v)
 			if err != nil {
 				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
 			}
-			strMap[k] = s
+			strMap[k], err = normalizeKMSSealConfigAddrs(key, k, s)
+			if err != nil {
+				return multierror.Prefix(err, fmt.Sprintf("%s.%s:", blockName, key))
+			}
 		}
 
 		seal := &KMS{
 			Type:     strings.ToLower(key),
 			Purpose:  purpose,
 			Disabled: disabled,
+			Priority: priority,
+			Name:     name,
 		}
 		if len(strMap) > 0 {
 			seal.Config = strMap
@@ -126,7 +185,9 @@ func parseKMS(result *[]*KMS, list *ast.ObjectList, blockName string, maxKMS int
 
 func ParseKMSes(d string) ([]*KMS, error) {
 	// Parse!
-	obj, err := hcl.Parse(d)
+	// TODO (HCL_DUP_KEYS_DEPRECATION): return to hcl.Parse once deprecation is done. For now just ignore duplicates on
+	// this unused function
+	obj, _, err := random.ParseAndCheckForDuplicateHclAttributes(d)
 	if err != nil {
 		return nil, err
 	}
@@ -160,14 +221,76 @@ func ParseKMSes(d string) ([]*KMS, error) {
 	return result.Seals, nil
 }
 
+// kmsSealAddressKeys maps seal key types to corresponding config keys whose
+// values might contain URLs, IP addresses, or host:port addresses. All seal
+// types must contain an entry here, otherwise our normalization check will fail
+// when parsing the seal config. Seal types which do not contain such
+// configurations ought to have an empty array as the value in the map.
+var kmsSealAddressKeys = map[string][]string{
+	wrapping.WrapperTypeAliCloudKms.String():   {"domain"},
+	wrapping.WrapperTypeAwsKms.String():        {"endpoint"},
+	wrapping.WrapperTypeAzureKeyVault.String(): {"resource"},
+	wrapping.WrapperTypeGcpCkms.String():       {},
+	wrapping.WrapperTypeOciKms.String():        {"key_id", "crypto_endpoint", "management_endpoint"},
+	wrapping.WrapperTypePkcs11.String():        {},
+	wrapping.WrapperTypeTransit.String():       {"address"},
+}
+
+// normalizeKMSSealConfigAddrs takes a kms seal type, a config key, and its
+// associated value and will normalize any URLs, IP addresses, or host:port
+// addresses contained in the value if the config key is known in the
+// kmsSealAddressKeys.
+func normalizeKMSSealConfigAddrs(seal string, key string, value string) (string, error) {
+	keys, ok := kmsSealAddressKeys[seal]
+	if !ok {
+		return "", fmt.Errorf("unknown seal type %s", seal)
+	}
+
+	if slices.Contains(keys, key) {
+		return NormalizeAddr(value), nil
+	}
+
+	return value, nil
+}
+
+// mergeKMSEnvConfig takes a KMS and merges any normalized values set via
+// environment variables.
+func mergeKMSEnvConfig(configKMS *KMS) error {
+	envConfig := GetEnvConfigFunc(configKMS)
+	if len(envConfig) > 0 && configKMS.Config == nil {
+		configKMS.Config = make(map[string]string)
+	}
+	// transit is a special case, because some config values take precedence over env vars
+	if configKMS.Type == wrapping.WrapperTypeTransit.String() {
+		if err := mergeTransitConfig(configKMS.Config, envConfig); err != nil {
+			return err
+		}
+	} else {
+		for name, val := range envConfig {
+			var err error
+			configKMS.Config[name], err = normalizeKMSSealConfigAddrs(configKMS.Type, name, val)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]string, logger hclog.Logger, opts ...wrapping.Option) (wrapping.Wrapper, error) {
 	var wrapper wrapping.Wrapper
 	var kmsInfo map[string]string
 	var err error
 
+	// Get any seal config set as env variables and merge it into the KMS.
+	if err = mergeKMSEnvConfig(configKMS); err != nil {
+		return nil, err
+	}
+
 	switch wrapping.WrapperType(configKMS.Type) {
 	case wrapping.WrapperTypeShamir:
-		return nil, nil
+		return wrapper, nil
 
 	case wrapping.WrapperTypeAead:
 		wrapper, kmsInfo, err = GetAEADKMSFunc(configKMS, opts...)
@@ -185,8 +308,10 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 		wrapper, kmsInfo, err = GetGCPCKMSKMSFunc(configKMS, opts...)
 
 	case wrapping.WrapperTypeOciKms:
+		if keyId, ok := configKMS.Config["key_id"]; ok {
+			opts = append(opts, wrapping.WithKeyId(keyId))
+		}
 		wrapper, kmsInfo, err = GetOCIKMSKMSFunc(configKMS, opts...)
-
 	case wrapping.WrapperTypeTransit:
 		wrapper, kmsInfo, err = GetTransitKMSFunc(configKMS, opts...)
 
@@ -213,7 +338,7 @@ func configureWrapper(configKMS *KMS, infoKeys *[]string, info *map[string]strin
 
 func GetAEADKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := aeadwrapper.NewWrapper()
-	wrapperInfo, err := wrapper.SetConfig(context.Background(), opts...)
+	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, wrapping.WithConfigMap(kms.Config))...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -230,7 +355,7 @@ func GetAEADKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[st
 
 func GetAliCloudKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := alicloudkms.NewWrapper()
-	wrapperInfo, err := wrapper.SetConfig(context.Background(), wrapping.WithConfigMap(kms.Config))
+	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, wrapping.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
 	if err != nil {
 		// If the error is any other than logical.KeyNotFoundError, return the error
 		if !errwrap.ContainsType(err, new(logical.KeyNotFoundError)) {
@@ -250,7 +375,7 @@ func GetAliCloudKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, ma
 
 var GetAWSKMSFunc = func(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := awskms.NewWrapper()
-	wrapperInfo, err := wrapper.SetConfig(context.Background(), wrapping.WithConfigMap(kms.Config))
+	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, awskms.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
 	if err != nil {
 		// If the error is any other than logical.KeyNotFoundError, return the error
 		if !errwrap.ContainsType(err, new(logical.KeyNotFoundError)) {
@@ -270,7 +395,7 @@ var GetAWSKMSFunc = func(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, m
 
 func GetAzureKeyVaultKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := azurekeyvault.NewWrapper()
-	wrapperInfo, err := wrapper.SetConfig(context.Background(), wrapping.WithConfigMap(kms.Config))
+	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, azurekeyvault.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
 	if err != nil {
 		// If the error is any other than logical.KeyNotFoundError, return the error
 		if !errwrap.ContainsType(err, new(logical.KeyNotFoundError)) {
@@ -288,7 +413,7 @@ func GetAzureKeyVaultKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrappe
 
 func GetGCPCKMSKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := gcpckms.NewWrapper()
-	wrapperInfo, err := wrapper.SetConfig(context.Background(), wrapping.WithConfigMap(kms.Config))
+	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, wrapping.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
 	if err != nil {
 		// If the error is any other than logical.KeyNotFoundError, return the error
 		if !errwrap.ContainsType(err, new(logical.KeyNotFoundError)) {
@@ -307,7 +432,7 @@ func GetGCPCKMSKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map
 
 func GetOCIKMSKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := ocikms.NewWrapper()
-	wrapperInfo, err := wrapper.SetConfig(context.Background(), wrapping.WithConfigMap(kms.Config))
+	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, wrapping.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config))...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -323,7 +448,17 @@ func GetOCIKMSKMSFunc(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[
 
 var GetTransitKMSFunc = func(kms *KMS, opts ...wrapping.Option) (wrapping.Wrapper, map[string]string, error) {
 	wrapper := transit.NewWrapper()
-	wrapperInfo, err := wrapper.SetConfig(context.Background(), wrapping.WithConfigMap(kms.Config))
+	var prefix string
+	if p, ok := kms.Config["key_id_prefix"]; ok {
+		prefix = p
+	} else {
+		prefix = kms.Name
+	}
+	if !strings.HasSuffix(prefix, "/") {
+		prefix = prefix + "/"
+	}
+	wrapperInfo, err := wrapper.SetConfig(context.Background(), append(opts, wrapping.WithDisallowEnvVars(true), wrapping.WithConfigMap(kms.Config),
+		transit.WithKeyIdPrefix(prefix))...)
 	if err != nil {
 		// If the error is any other than logical.KeyNotFoundError, return the error
 		if !errwrap.ContainsType(err, new(logical.KeyNotFoundError)) {
@@ -342,6 +477,81 @@ var GetTransitKMSFunc = func(kms *KMS, opts ...wrapping.Option) (wrapping.Wrappe
 	return wrapper, info, nil
 }
 
-func createSecureRandomReader(conf *SharedConfig, wrapper wrapping.Wrapper) (io.Reader, error) {
+func createSecureRandomReader(_ *SharedConfig, _ []*EntropySourcerInfo, _ hclog.Logger) (io.Reader, error) {
 	return rand.Reader, nil
+}
+
+func getEnvConfig(kms *KMS) map[string]string {
+	envValues := make(map[string]string)
+
+	var wrapperEnvVars map[string]string
+	switch wrapping.WrapperType(kms.Type) {
+	case wrapping.WrapperTypeAliCloudKms:
+		wrapperEnvVars = AliCloudKMSEnvVars
+	case wrapping.WrapperTypeAwsKms:
+		wrapperEnvVars = AWSKMSEnvVars
+	case wrapping.WrapperTypeAzureKeyVault:
+		wrapperEnvVars = AzureEnvVars
+	case wrapping.WrapperTypeGcpCkms:
+		wrapperEnvVars = GCPCKMSEnvVars
+	case wrapping.WrapperTypeOciKms:
+		wrapperEnvVars = OCIKMSEnvVars
+	case wrapping.WrapperTypeTransit:
+		wrapperEnvVars = TransitEnvVars
+	default:
+		return nil
+	}
+
+	for envVar, configName := range wrapperEnvVars {
+		val := os.Getenv(envVar)
+		if val != "" {
+			envValues[configName] = val
+		}
+	}
+
+	return envValues
+}
+
+func mergeTransitConfig(config map[string]string, envConfig map[string]string) error {
+	useFileTlsConfig := false
+	for _, varName := range TransitTLSConfigVars {
+		if _, ok := config[varName]; ok {
+			useFileTlsConfig = true
+			break
+		}
+	}
+
+	if useFileTlsConfig {
+		for _, varName := range TransitTLSConfigVars {
+			delete(envConfig, varName)
+		}
+	}
+
+	var err error
+	for varName, val := range envConfig {
+		// for some values, file config takes precedence
+		if strutil.StrListContains(TransitPrioritizeConfigValues, varName) && config[varName] != "" {
+			continue
+		}
+
+		config[varName], err = normalizeKMSSealConfigAddrs(wrapping.WrapperTypeTransit.String(), varName, val)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (k *KMS) Clone() *KMS {
+	ret := &KMS{
+		UnusedKeys: k.UnusedKeys,
+		Type:       k.Type,
+		Purpose:    k.Purpose,
+		Config:     k.Config,
+		Name:       k.Name,
+		Disabled:   k.Disabled,
+		Priority:   k.Priority,
+	}
+	return ret
 }

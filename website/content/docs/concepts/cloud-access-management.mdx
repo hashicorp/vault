@@ -1,0 +1,153 @@
+---
+layout: docs
+page_title: Cloud access management
+sidebar_title: Cloud access management
+description: >-
+  Vault and Boundary can be used together to provide a modern solution to remote access management in the cloud.
+---
+
+# Cloud access management
+
+Modern access management must be as dynamic as the infrastructure, people, and systems it serves. Traditionally, you use an IP address as the unit of security control; you use the IP as a unit of identity and manage around that, including traditional privileged access management (PAM). As you think about identity remaining a static target while the infrastructure underneath continues to be dynamic, this paradigm shift applies to simplified network topology and modern access management. As the new perimeter, [identity](https://www.hashicorp.com/resources/why-should-we-use-identity-based-security-as-we-ado) is the fundamental change agent in access management to infrastructure and resources.
+This document outlines the security threats and challenges organizations encounter using traditional PAM solutions in the cloud era. It also explains why the consumption of [secrets](https://www.vaultproject.io/use-cases/secrets-management) should be independent of privileged access/session management, and why programmatic access to systems must also interact with secret management outside the traditional PAM process.
+
+HashiCorp Vault and Boundary are security platform building blocks that can address these challenges for large, global enterprises — especially in regulated industries — creating a viable path to address modern privileged access challenges at scale.
+
+## The traditional PAM framework
+
+The traditional PAM framework was conceived for an era of mainframes and monolithic, on-premises infrastructure, believing that any traffic allowed inside an organization's datacenter network was safe and should be allowed broad access to resources in that network. Traditional PAM's main goal was to control elevated ("privileged") access and permissions for users, accounts, processes, and systems across an IT environment.
+
+Traditionally, a few highly technical administrators manage PAM by accessing privileged accounts inside the datacenter. It typically takes administrators multiple days to manually onboard credentials mapping back to compute and systems across an IT environment.
+
+<ImageConfig hideBorder caption="The traditional PAM framework.">
+
+![Diagram describing traditional PAM framework](/img/diagram-cloud-access-traditional.png)
+
+</ImageConfig>
+
+The incumbent PAM process is often ticket-based (ITIL), requiring multi-person approval. After that, there is typically a manual follow-up process to rotate the credentials exposed to humans since long-lived credentials are a security and regulatory compliance risk. 
+In the world of multi- and hybrid-cloud, this traditional PAM framework is ineffective, leading to an exponential increase of human toil and increased risks.
+
+## Where traditional PAM fails
+
+Traditional PAM falls short of modern software delivery needs and security threats in two key areas.
+
+### Dynamic and ephemeral workloads
+
+In the era of dynamic and ephemeral workloads, a PAM process requiring significant manual intervention introduces risk and does not scale. Infrastructure as code (IaC) has become the standard for automating repeatable IT administrative tasks by building a [platform](https://www.hashicorp.com/resources/what-is-a-platform-team-and-why-do-we-need-them) where developers can go for self-service provisioning, security, networking, and deployment tasks with guardrails. Automating these processes drives cost savings through tool consolidation, time savings, and legacy system deprecation. 
+
+Traditional PAM solutions built in the era before the cloud do not fit into this new standard [cloud operating model](https://www.hashicorp.com/cloud-operating-model). The manual processes need to be faster, the frequency of human intervention invites too many potential errors, and the controls need to be granular and modular enough to meet modern security needs. They can negatively impact developer processes and workflows. 
+
+### Identity-based access management and zero trust
+
+The need for organizations to quickly move away from the perimeter-defense-only approach (sometimes called the "castle-and-moat" defense) is becoming more urgent. The direction for many leading IT departments is to adopt an identity-based security model, where human and application access is gated using identity through trusted identity providers rather than outmoded identifiers like IP addresses (the traditional approach). The National Institute for Standards and Technology (NIST) recommends shifting to identity-based segmentation instead of network segmentation, as workloads, users, data, and credentials change often.
+
+Similarly, modern best practices encourage the adoption of a [zero-trust architecture](https://www.hashicorp.com/solutions/zero-trust-security). According to NIST:
+
+> "Zero trust architecture is an end-to-end approach to enterprise resource and data security encompassing **identity** (person and **nonperson entities**), credentials, access management, operations, endpoints, hosting environments, and the interconnecting infrastructure." - [NIST 800-207](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-207.pdf).
+
+NIST's position on how non-human entities authenticate themselves in an enterprise implementing a zero-trust architecture is an open issue.
+
+> "The associated risk is that an attacker will be able to **induce** or coerce an NPE (non-person entities) to perform some task that the attacker is not privileged to perform. There is also a risk that an attacker could access a software agent's **credentials** and **impersonate the agent** when performing tasks." - [NIST 800-207](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-207.pdf).
+
+NIST's concerns are likely based on poor implementation of non-human authentication. At organizations trying to move away from traditional PAM, a common challenge is automating their credential rotation process and making it less cumbersome to rotate frequently. 
+
+Solving this issue is essential because long-lived secrets in any environment can lead to [credential stuffing](https://owasp.org/www-community/attacks/Credential_stuffing); the automated injection of stolen credentials to fraudulently gain access to user accounts costs large organizations more than [$2 million](https://money.cnn.com/2018/03/18/technology/biometrics-workplace/index.html) annually in remediating actions. It can take 10.5 months to detect and identify credential-stuffing activities.
+
+## Solutions to the traditional PAM challenges
+
+Based on the challenges and security risks of traditional PAM, a modern replacement must meet several requirements:
+
+- Automation and versioned "as code" configuration for access and secrets management controls
+- Multi-cloud compatibility
+- Identity-based access controls facilitated by an identity broker with secrets or workload identity
+- Automated secrets rotation, or in some cases, single-use, just-in-time-generated credentials
+
+Let's explore the last two requirements in more detail.
+
+### Workload identity for identity-based access
+
+A [workload identity](https://learn.microsoft.com/en-us/entra/workload-id/workload-identities-overview) is an identity you assign to a software workload to authenticate and access other services and resources; it's something you need for your software entity to authenticate with some system.
+
+According to a [Microsoft blog post](https://blog.identitydigest.com/azuread-federate-k8s/): "workload identity is a new capability that allows you to get rid of secrets in several scenarios." 
+
+While using secrets for workload and machine identity is fine as organizations modernize their PAM, they can be compromised in credential stuffing attacks, as mentioned by NIST. It is why more solutions are using major cloud providers and their platforms as identity providers to generate workload identities (sometimes called "machine identities") as an alternative to using secrets for identity.
+
+Workload identity sits on a framework where you configure trust relationships between two platforms, establishing a hardened, verifiable identity per workload. Workload and machine identity attestation at the platform removes the risk of impersonation for non-person entities.
+Many enterprises leverage an identity broker such as HashiCorp Vault to authenticate applications against a trusted source of identity and then leverage that identity to control access to data, systems, shared services, and secrets. An identity broker creates an opportunity to aggregate multiple sources of identity and present them as a single entity to target platforms; applying policy to that entity is vastly simplified.
+
+### Just-in-time credentials
+
+One of the basic principles of data security is the principle of least privilege, which reduces risk by allowing only specific privileges for specific purposes. However, standing privileges easily violate this principle — account privileges are always available, even when not needed — providing a perpetually available attack surface. Standing accounts increase the threat of data exposure, and managing privileged access with many accounts, many of which belong to machines rather than human users, becomes more challenging.
+
+Zero standing privilege means no long-lived credentials are statically stored anywhere.  Temporary credentials are provided in flight (ideally in memory) and just in time; this is a crucial strength of dynamic secrets because it generates ephemeral, extremely short-lived credentials in flight when invoking a request for a  secret.
+
+Short-lived credentials created just in time avoid credential reuse and potential leaks. Boundary integrates with Vault to leverage its dynamic secrets support to enable that pattern, where short-lived credentials are created upon access, and destroyed after the session is complete.  Applying fine-grained role-based access control with this technique enables a least privileged approach. Dynamic generation lets organizations attribute each credential to a single interactive and non-interactive session, making auditing more straightforward and robust.
+
+When managing machine access to secrets, the dynamic nature of HashiCorp Vault comes to the forefront. Vault gives each service access to secrets based on its identity and associated policy. 
+HashiCorp Vault natively supports several secret engines, including
+
+- Google Cloud secrets engine
+- Azure secrets engine
+- AWS secrets engine
+- Kubernetes secrets engine
+- SSH secrets engine
+- Databases secrets engine (MySQL, Postgres, SQL-Server, MongoDB, etc.)
+- PKI secrets engine
+
+Combining multiple authentication sources and secret engines can provide controlled access within various implementations.
+
+With HashiCorp Vault, whether a user is looking to create and distribute organizational secrets and access or applications are looking to retrieve new database credentials every 15 minutes, centrally managing this access based on trusted identities is critical.
+
+HashiCorp Vault has successfully altered the market's perception of managing secrets across multiple platforms and identity providers. Security in a dynamic world requires a dramatic shift from the approaches common in the static world. Instead of wrapping security around static servers and applications, it must be dynamically woven among the different components and tightly coupled with trusted identities and policies. With Vault, organizations can leverage any trusted source of identity to enforce access to systems and secrets.
+
+<ImageConfig hideBorder caption="HashiCorp Boundary leveraging Vault authentication and secrets.">
+
+![Diagram showing HashiCorp Boundary leveraging Vault authentication and secrets](/img/diagram-cloud-access-boundary-vault.png)
+
+</ImageConfig>
+
+## Modern PAM for the cloud
+
+[AWS recommends](https://aws.amazon.com/blogs/security/temporary-elevated-access-management-with-iam-identity-center/) using automation where possible to keep people away from systems — yet not every action can be automated in practice, and some operations might require access by human users. So, the need for a PAM (or just access management) process continues to be justified. In addition, governance mandates session recording of all privileged interactions. Today, most privileged interactive sessions can be programmatically conducted, limiting privileged interactive sessions to emergency P1 incidents.
+
+Adopting a modern access management solution purpose-built for the cloud is essential in today's cloud-centric landscape. Automated onboarding of services is a critical component in a modern PAM solution, especially in highly dynamic and multi-cloud environments.  Such a solution empowers organizations to streamline access management, enhance operational efficiency, ensure higher identity assurance, and strengthen security and compliance measures.
+
+[HashiCorp Boundary](https://www.hashicorp.com/products/boundary) is part of the HashiCorp suite of tools for managing identity-based access for modern, dynamic infrastructure. Boundary allows a single workflow to facilitate interactive human sessions for privileged and non-privileged accounts while providing a local development experience. It leverages Vault's identity brokering and dynamic credentials capability to underpin the modern PAM paradigm.
+
+HashiCorp's approach focuses on five core principles to enable modern PAM, centered on identity-based controls in cloud-driven environments:
+
+1. Authentication and authorization
+1. Time-bound, least-privileged access
+1. Automation and flexible deployment
+1. Streamlined DevOps workflow
+1. Auditing and logging
+
+HashiCorp Boundary allows a single workflow to facilitate interactive human sessions for privileged and non-privileged accounts while providing a local development experience. Boundary's workflow layers security controls and integrations on multiple levels, monitoring and managing user access through activities aligned with the five core principles:
+
+- Tightly scoped identity-based permissions
+- "Just-in-time" network and credential access for sessions via HashiCorp Vault
+- Single sign-on to target services and applications via external identity providers
+- Automated discovery of target systems
+- Session monitoring and management 
+- SSH session recording
+
+The above activities align with the five core principles articulated earlier.
+
+<ImageConfig hideBorder caption="HashiCorp Boundary going full circle, leveraging the ecosystem, including Vault.">
+
+![Diagram showing HashiCorp Boundary going full circle, leveraging the ecosystem, including Vault](/img/diagram-cloud-access-full-circle.png)
+
+</ImageConfig>
+
+HashiCorp Boundary includes automated controls to facilitate the onboarding of services via HashiCorp Terraform for preconfigured security policies or dynamic host catalogs, which automatically discover and onboard new or changed infrastructure resources and their connection information, such as Amazon EC2 hosts and Microsoft Azure virtual machines. This workflow automates onboarding new or altered infrastructure resources and their connection information. Automated onboarding of applications and infrastructure leveraging IaC significantly reduces administrative management and operational toil, accelerating the integration of secure access to infrastructure and services.
+
+HashiCorp has been [named](https://www.hashicorp.com/blog/hashicorp-enters-gartner-pam-mq) for the first time in the 2023 Gartner® Magic Quadrant™ for Privileged Access Management (PAM). We feel that HashiCorp's approach has influenced our inclusion in the Magic Quadrant based on what we see as the five essential principles for modern PAM.
+
+Gartner noted HashiCorp's solution combining HashiCorp Boundary and HashiCorp Vault. These two products can be used to solve new challenges around PAM utilizing the cloud; this was born from developing world-class capabilities around a specific set of modern core use cases focused on **[workflows, not technologies](https://www.hashicorp.com/tao-of-hashicorp)**.
+
+## Conclusion
+
+The cloud-native era demands a revolutionary shift to a dynamic PAM solution, unencumbered by legacy tooling. HashiCorp Vault and Boundary Enterprise are well-situated to address this paradigm shift for large, global enterprises in regulated industries. This creates a viable path to manage an organization's privileged access challenges at scale.
+
+Given the pace of change in the industry, now is the time for enterprises to begin evaluating by experimentation, steered by the goal of streamlining dynamic access management. It is an opportunity to collaborate across the organization and discover consumption patterns conducive to streamlined developer workflows and a modern shared responsibility security model.

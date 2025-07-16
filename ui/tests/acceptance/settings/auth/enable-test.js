@@ -1,37 +1,87 @@
-import { currentRouteName, settled } from '@ember/test-helpers';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { click, currentRouteName, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import page from 'vault/tests/pages/settings/auth/enable';
-import listPage from 'vault/tests/pages/access/methods';
-import authPage from 'vault/tests/pages/auth';
+import { v4 as uuidv4 } from 'uuid';
+import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import { deleteAuthCmd, runCmd } from 'vault/tests/helpers/commands';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | settings/auth/enable', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
-    return authPage.login();
+    this.uid = uuidv4();
+    return login();
   });
 
   test('it mounts and redirects', async function (assert) {
     // always force the new mount to the top of the list
-    const path = `approle-${new Date().getTime()}`;
+    const path = `aaa-approle-${this.uid}`;
     const type = 'approle';
-    await page.visit();
-    assert.equal(currentRouteName(), 'vault.cluster.settings.auth.enable');
-    await page.enable(type, path);
-    await settled();
-    await assert.equal(
-      page.flash.latestMessage,
-      `Successfully mounted the ${type} auth method at ${path}.`,
-      'success flash shows'
-    );
-    assert.equal(
+    await visit('/vault/settings/auth/enable');
+    assert.strictEqual(currentRouteName(), 'vault.cluster.settings.auth.enable');
+    await mountBackend(type, path);
+    assert
+      .dom(GENERAL.latestFlashContent)
+      .hasText(`Successfully mounted the ${type} auth method at ${path}.`);
+    assert.strictEqual(
       currentRouteName(),
       'vault.cluster.settings.auth.configure.section',
       'redirects to the auth config page'
     );
 
-    await listPage.visit();
-    assert.ok(listPage.findLinkById(path), 'mount is present in the list');
+    await visit('/vault/access/');
+    assert.dom(GENERAL.linkedBlock(path)).exists('mount is present in the list');
+
+    // cleanup
+    await runCmd(deleteAuthCmd(path));
+  });
+
+  test('it renders default config details', async function (assert) {
+    const path = `approle-config-${this.uid}`;
+    const type = 'approle';
+    await visit('/vault/settings/auth/enable');
+    await mountBackend(type, path);
+    // the config details is updated to query mount details from sys/internal/ui/mounts
+    // but we still want these forms to continue using sys/auth which returns 0 for default ttl values
+    // check tune form (right after enabling)
+    assert.dom(GENERAL.toggleInput('Default Lease TTL')).isNotChecked('default lease ttl is unset');
+    assert.dom(GENERAL.toggleInput('Max Lease TTL')).isNotChecked('max lease ttl is unset');
+    await click(GENERAL.breadcrumbAtIdx(1));
+    assert
+      .dom(GENERAL.infoRowValue('Default Lease TTL'))
+      .hasText('1 month 1 day', 'shows system default TTL');
+    assert.dom(GENERAL.infoRowValue('Max Lease TTL')).hasText('1 month 1 day', 'shows the proper max TTL');
+    assert
+      .dom(GENERAL.infoRowValue('UI login link'))
+      .doesNotExist('Login link does not render for unsupported methods');
+
+    // check edit form TTL values
+    await click('[data-test-configure-link]');
+    assert.dom(GENERAL.toggleInput('Default Lease TTL')).isNotChecked('default lease ttl is still unset');
+    assert.dom(GENERAL.toggleInput('Max Lease TTL')).isNotChecked('max lease ttl is still unset');
+
+    // cleanup
+    await runCmd(deleteAuthCmd(path));
+  });
+
+  test('it renders direct login link for supported method', async function (assert) {
+    const path = `oidc-config-${this.uid}`;
+    const type = 'oidc';
+    await visit('/vault/settings/auth/enable');
+    await mountBackend(type, path);
+    await click(GENERAL.breadcrumbAtIdx(1));
+    assert
+      .dom(GENERAL.infoRowValue('UI login link'))
+      .hasText(`${window.origin}/ui/vault/auth?with=${path}%2F`);
+
+    // cleanup
+    await runCmd(deleteAuthCmd(path));
   });
 });

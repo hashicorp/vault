@@ -1,17 +1,15 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
-import apiStub from 'vault/tests/helpers/noop-all-api-requests';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 
 module('Unit | Adapter | secret engine', function (hooks) {
   setupTest(hooks);
-
-  hooks.beforeEach(function () {
-    this.server = apiStub();
-  });
-
-  hooks.afterEach(function () {
-    this.server.shutdown();
-  });
+  setupMirage(hooks);
 
   const storeStub = {
     serializerFor() {
@@ -24,42 +22,120 @@ module('Unit | Adapter | secret engine', function (hooks) {
     modelName: 'secret-engine',
   };
 
-  const cases = [
-    {
-      description: 'Empty query',
-      adapterMethod: 'query',
-      args: [storeStub, type, {}],
-      url: '/v1/sys/internal/ui/mounts',
-      method: 'GET',
-    },
-    {
-      description: 'Query with a path',
-      adapterMethod: 'query',
-      args: [storeStub, type, { path: 'foo' }],
-      url: '/v1/sys/internal/ui/mounts/foo',
-      method: 'GET',
-    },
+  test('Empty query', function (assert) {
+    assert.expect(1);
+    this.server.get('/sys/internal/ui/mounts', () => {
+      assert.ok('query calls the correct url');
+      return {};
+    });
+    const adapter = this.owner.lookup('adapter:secret-engine');
+    adapter['query'](storeStub, type, {});
+  });
+  test('Query with a path', function (assert) {
+    assert.expect(1);
+    this.server.get('/sys/internal/ui/mounts/foo', () => {
+      assert.ok('query calls the correct url');
+      return {};
+    });
+    const adapter = this.owner.lookup('adapter:secret-engine');
+    adapter['query'](storeStub, type, { path: 'foo' });
+  });
 
-    {
-      description: 'Query with nested path',
-      adapterMethod: 'query',
-      args: [storeStub, type, { path: 'foo/bar/baz' }],
-      url: '/v1/sys/internal/ui/mounts/foo/bar/baz',
-      method: 'GET',
-    },
-  ];
-  cases.forEach((testCase) => {
-    test(`secret-engine: ${testCase.description}`, function (assert) {
-      assert.expect(2);
-      let adapter = this.owner.lookup('adapter:secret-engine');
-      adapter[testCase.adapterMethod](...testCase.args);
-      let { url, method } = this.server.handledRequests[0];
-      assert.equal(url, testCase.url, `${testCase.adapterMethod} calls the correct url: ${testCase.url}`);
-      assert.equal(
-        method,
-        testCase.method,
-        `${testCase.adapterMethod} uses the correct http verb: ${testCase.method}`
-      );
+  test('Query with nested path', function (assert) {
+    assert.expect(1);
+    this.server.get('/sys/internal/ui/mounts/foo/bar/baz', () => {
+      assert.ok('query calls the correct url');
+      return {};
+    });
+    const adapter = this.owner.lookup('adapter:secret-engine');
+    adapter['query'](storeStub, type, { path: 'foo/bar/baz' });
+  });
+
+  module('WIF secret engines', function (hooks) {
+    hooks.beforeEach(function () {
+      this.store = this.owner.lookup('service:store');
+    });
+
+    test('it should make request to correct endpoint when creating new record', async function (assert) {
+      assert.expect(1);
+      this.server.post('/sys/mounts/aws-wif', (schema, req) => {
+        assert.deepEqual(
+          JSON.parse(req.requestBody),
+          {
+            path: 'aws-wif',
+            type: 'aws',
+            config: { id: 'aws-wif', identity_token_key: 'test-key', listing_visibility: 'hidden' },
+          },
+          'Correct payload is sent when adding aws secret engine with identity_token_key set'
+        );
+        return {};
+      });
+      const mountData = {
+        id: 'aws-wif',
+        path: 'aws-wif',
+        type: 'aws',
+        config: this.store.createRecord('mount-config', {
+          identityTokenKey: 'test-key',
+        }),
+        uuid: 'f1739f9d-dfc0-83c8-011f-ec17103a06c2',
+      };
+      const record = this.store.createRecord('secret-engine', mountData);
+      await record.save();
+    });
+
+    test('it should not send identity_token_key if not set', async function (assert) {
+      assert.expect(1);
+      this.server.post('/sys/mounts/aws-wif', (schema, req) => {
+        assert.deepEqual(
+          JSON.parse(req.requestBody),
+          {
+            path: 'aws-wif',
+            type: 'aws',
+            config: { id: 'aws-wif', max_lease_ttl: '125h', listing_visibility: 'hidden' },
+          },
+          'Correct payload is sent when adding aws secret engine with no identity_token_key set'
+        );
+        return {};
+      });
+      const mountData = {
+        id: 'aws-wif',
+        path: 'aws-wif',
+        type: 'aws',
+        config: this.store.createRecord('mount-config', {
+          maxLeaseTtl: '125h',
+        }),
+        uuid: 'f1739f9d-dfc0-83c8-011f-ec17103a06c2',
+      };
+      const record = this.store.createRecord('secret-engine', mountData);
+      await record.save();
+    });
+
+    test('it should not send identity_token_key if set on a non-WIF secret engine', async function (assert) {
+      assert.expect(1);
+      this.server.post('/sys/mounts/cubbyhole-test', (schema, req) => {
+        assert.deepEqual(
+          JSON.parse(req.requestBody),
+          {
+            path: 'cubbyhole-test',
+            type: 'cubbyhole',
+            config: { id: 'cubbyhole-test', max_lease_ttl: '125h', listing_visibility: 'hidden' },
+          },
+          'Correct payload is sent when sending a non-wif secret engine with identity_token_key accidentally set'
+        );
+        return {};
+      });
+      const mountData = {
+        id: 'cubbyhole-test',
+        path: 'cubbyhole-test',
+        type: 'cubbyhole',
+        config: this.store.createRecord('mount-config', {
+          maxLeaseTtl: '125h',
+          identity_token_key: 'test-key',
+        }),
+        uuid: 'f1739f9d-dfc0-83c8-011f-ec17103a06c4',
+      };
+      const record = this.store.createRecord('secret-engine', mountData);
+      await record.save();
     });
   });
 });

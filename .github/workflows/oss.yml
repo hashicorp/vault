@@ -19,9 +19,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - if: github.event.pull_request != null
-        uses: actions/checkout@v3
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - if: github.event.pull_request != null
-        uses: dorny/paths-filter@v2
+        uses: dorny/paths-filter@de90cc6fb38fc0963ad72b210f1f284cd68cea36 # v3.0.2
         id: changes
         with:
           # derived from CODEOWNERS
@@ -58,17 +58,17 @@ jobs:
               - 'ui/**'
 
       - name: "Default to core board"
-        run: echo "PROJECT=170" >> $GITHUB_ENV
+        run: echo "PROJECT=170" >> "$GITHUB_ENV"
       - if: github.event.pull_request != null && steps.changes.outputs.cryptosec == 'true'
-        run: echo "PROJECT=172" >> $GITHUB_ENV
+        run: echo "PROJECT=172" >> "$GITHUB_ENV"
       - if: github.event.pull_request != null && steps.changes.outputs.ecosystem == 'true'
-        run: echo "PROJECT=169" >> $GITHUB_ENV
+        run: echo "PROJECT=169" >> "$GITHUB_ENV"
       - if: github.event.pull_request != null && steps.changes.outputs.devex == 'true'
-        run: echo "PROJECT=176" >> $GITHUB_ENV
+        run: echo "PROJECT=176" >> "$GITHUB_ENV"
       - if: github.event.pull_request != null && steps.changes.outputs.ui == 'true'
-        run: echo "PROJECT=171" >> $GITHUB_ENV
+        run: echo "PROJECT=171" >> "$GITHUB_ENV"
 
-      - uses: actions/add-to-project@v0.3.0
+      - uses: actions/add-to-project@244f685bbc3b7adfa8466e08b698b5577571133e # v1.0.2
         with:
           project-url: https://github.com/orgs/hashicorp/projects/${{ env.PROJECT }}
           github-token: ${{ secrets.TRIAGE_GITHUB_TOKEN }}

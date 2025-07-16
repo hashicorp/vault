@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package inmem
 
 import (
@@ -78,6 +81,13 @@ func (i *InmemHABackend) LockMapSize() int {
 // Currently always returns true.
 func (i *InmemHABackend) HAEnabled() bool {
 	return true
+}
+
+func (i *InmemHABackend) Underlying() *InmemBackend {
+	if txBackend, ok := i.Backend.(*TransactionalInmemBackend); ok {
+		return &txBackend.InmemBackend
+	}
+	return i.Backend.(*InmemBackend)
 }
 
 // InmemLock is an in-memory Lock implementation for the HABackend

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -5,189 +8,56 @@ import (
 	"context"
 	"crypto"
 	"crypto/x509"
+	"errors"
 	"fmt"
-	"sort"
 	"strings"
+	"sync"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/managed_key"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+var ErrStorageItemNotFound = errors.New("storage item not found")
+
 const (
-	storageKeyConfig      = "config/keys"
-	storageIssuerConfig   = "config/issuers"
-	keyPrefix             = "config/key/"
-	issuerPrefix          = "config/issuer/"
-	storageLocalCRLConfig = "crls/config"
+	storageKeyConfig        = issuing.StorageKeyConfig
+	storageIssuerConfig     = issuing.StorageIssuerConfig
+	keyPrefix               = issuing.KeyPrefix
+	issuerPrefix            = issuing.IssuerPrefix
+	storageLocalCRLConfig   = issuing.StorageLocalCRLConfig
+	storageUnifiedCRLConfig = issuing.StorageUnifiedCRLConfig
 
 	legacyMigrationBundleLogKey = "config/legacyMigrationBundleLog"
-	legacyCertBundlePath        = "config/ca_bundle"
-	legacyCRLPath               = "crl"
-	deltaCRLPath                = "delta-crl"
-	deltaCRLPathSuffix          = "-delta"
+	legacyCertBundlePath        = issuing.LegacyCertBundlePath
+	legacyCertBundleBackupPath  = "config/ca_bundle.bak"
+
+	legacyCRLPath        = issuing.LegacyCRLPath
+	deltaCRLPath         = issuing.DeltaCRLPath
+	deltaCRLPathSuffix   = issuing.DeltaCRLPathSuffix
+	unifiedCRLPath       = issuing.UnifiedCRLPath
+	unifiedDeltaCRLPath  = issuing.UnifiedDeltaCRLPath
+	unifiedCRLPathPrefix = issuing.UnifiedCRLPathPrefix
 
 	autoTidyConfigPath = "config/auto-tidy"
+	clusterConfigPath  = "config/cluster"
 
-	// Used as a quick sanity check for a reference id lookups...
-	uuidLength = 36
+	autoTidyLastRunPath = "config/auto-tidy-last-run"
 
 	maxRolesToScanOnIssuerChange = 100
 	maxRolesToFindOnIssuerChange = 10
-
-	latestIssuerVersion = 1
 )
 
-type keyID string
-
-func (p keyID) String() string {
-	return string(p)
-}
-
-type issuerID string
-
-func (p issuerID) String() string {
-	return string(p)
-}
-
-type crlID string
-
-func (p crlID) String() string {
-	return string(p)
-}
-
-const (
-	IssuerRefNotFound = issuerID("not-found")
-	KeyRefNotFound    = keyID("not-found")
-)
-
-type keyEntry struct {
-	ID             keyID                   `json:"id"`
-	Name           string                  `json:"name"`
-	PrivateKeyType certutil.PrivateKeyType `json:"private_key_type"`
-	PrivateKey     string                  `json:"private_key"`
-}
-
-func (e keyEntry) getManagedKeyUUID() (UUIDKey, error) {
-	if !e.isManagedPrivateKey() {
-		return "", errutil.InternalError{Err: "getManagedKeyId called on a key id %s (%s) "}
-	}
-	return extractManagedKeyId([]byte(e.PrivateKey))
-}
-
-func (e keyEntry) isManagedPrivateKey() bool {
-	return e.PrivateKeyType == certutil.ManagedPrivateKey
-}
-
-type issuerUsage uint
-
-const (
-	ReadOnlyUsage    issuerUsage = iota
-	IssuanceUsage    issuerUsage = 1 << iota
-	CRLSigningUsage  issuerUsage = 1 << iota
-	OCSPSigningUsage issuerUsage = 1 << iota
-
-	// When adding a new usage in the future, we'll need to create a usage
-	// mask field on the IssuerEntry and handle migrations to a newer mask,
-	// inferring a value for the new bits.
-	AllIssuerUsages = ReadOnlyUsage | IssuanceUsage | CRLSigningUsage | OCSPSigningUsage
-)
-
-var namedIssuerUsages = map[string]issuerUsage{
-	"read-only":            ReadOnlyUsage,
-	"issuing-certificates": IssuanceUsage,
-	"crl-signing":          CRLSigningUsage,
-	"ocsp-signing":         OCSPSigningUsage,
-}
-
-func (i *issuerUsage) ToggleUsage(usages ...issuerUsage) {
-	for _, usage := range usages {
-		*i ^= usage
-	}
-}
-
-func (i issuerUsage) HasUsage(usage issuerUsage) bool {
-	return (i & usage) == usage
-}
-
-func (i issuerUsage) Names() string {
-	var names []string
-	var builtUsage issuerUsage
-
-	// Return the known set of usages in a sorted order to not have Terraform state files flipping
-	// saying values are different when it's the same list in a different order.
-	keys := make([]string, 0, len(namedIssuerUsages))
-	for k := range namedIssuerUsages {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	for _, name := range keys {
-		usage := namedIssuerUsages[name]
-		if i.HasUsage(usage) {
-			names = append(names, name)
-			builtUsage.ToggleUsage(usage)
-		}
-	}
-
-	if i != builtUsage {
-		// Found some unknown usage, we should indicate this in the names.
-		names = append(names, fmt.Sprintf("unknown:%v", i^builtUsage))
-	}
-
-	return strings.Join(names, ",")
-}
-
-func NewIssuerUsageFromNames(names []string) (issuerUsage, error) {
-	var result issuerUsage
-	for index, name := range names {
-		usage, ok := namedIssuerUsages[name]
-		if !ok {
-			return ReadOnlyUsage, fmt.Errorf("unknown name for usage at index %v: %v", index, name)
-		}
-
-		result.ToggleUsage(usage)
-	}
-
-	return result, nil
-}
-
-type issuerEntry struct {
-	ID                   issuerID                  `json:"id"`
-	Name                 string                    `json:"name"`
-	KeyID                keyID                     `json:"key_id"`
-	Certificate          string                    `json:"certificate"`
-	CAChain              []string                  `json:"ca_chain"`
-	ManualChain          []issuerID                `json:"manual_chain"`
-	SerialNumber         string                    `json:"serial_number"`
-	LeafNotAfterBehavior certutil.NotAfterBehavior `json:"not_after_behavior"`
-	Usage                issuerUsage               `json:"usage"`
-	RevocationSigAlg     x509.SignatureAlgorithm   `json:"revocation_signature_algorithm"`
-	Revoked              bool                      `json:"revoked"`
-	RevocationTime       int64                     `json:"revocation_time"`
-	RevocationTimeUTC    time.Time                 `json:"revocation_time_utc"`
-	AIAURIs              *certutil.URLEntries      `json:"aia_uris,omitempty"`
-	LastModified         time.Time                 `json:"last_modified"`
-	Version              uint                      `json:"version"`
-}
-
-type localCRLConfigEntry struct {
-	IssuerIDCRLMap        map[issuerID]crlID  `json:"issuer_id_crl_map"`
-	CRLNumberMap          map[crlID]int64     `json:"crl_number_map"`
-	LastCompleteNumberMap map[crlID]int64     `json:"last_complete_number_map"`
-	CRLExpirationMap      map[crlID]time.Time `json:"crl_expiration_map"`
-	LastModified          time.Time           `json:"last_modified"`
-	DeltaLastModified     time.Time           `json:"delta_last_modified"`
-}
-
-type keyConfigEntry struct {
-	DefaultKeyId keyID `json:"default"`
-}
-
-type issuerConfigEntry struct {
-	DefaultIssuerId issuerID `json:"default"`
+func ToURLEntries(sc *storageContext, issuer issuing.IssuerID, c *issuing.AiaConfigEntry) (*certutil.URLEntries, error) {
+	return issuing.ToURLEntries(sc.Context, sc.Storage, issuer, c)
 }
 
 type storageContext struct {
@@ -195,6 +65,8 @@ type storageContext struct {
 	Storage logical.Storage
 	Backend *backend
 }
+
+var _ pki_backend.StorageContext = (*storageContext)(nil)
 
 func (b *backend) makeStorageContext(ctx context.Context, s logical.Storage) *storageContext {
 	return &storageContext{
@@ -204,71 +76,76 @@ func (b *backend) makeStorageContext(ctx context.Context, s logical.Storage) *st
 	}
 }
 
-func (sc *storageContext) listKeys() ([]keyID, error) {
-	strList, err := sc.Storage.List(sc.Context, keyPrefix)
-	if err != nil {
-		return nil, err
-	}
-
-	keyIds := make([]keyID, 0, len(strList))
-	for _, entry := range strList {
-		keyIds = append(keyIds, keyID(entry))
-	}
-
-	return keyIds, nil
+func (sc *storageContext) WithFreshTimeout(timeout time.Duration) (*storageContext, context.CancelFunc) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	return &storageContext{
+		Context: ctx,
+		Storage: sc.Storage,
+		Backend: sc.Backend,
+	}, cancel
 }
 
-func (sc *storageContext) fetchKeyById(keyId keyID) (*keyEntry, error) {
-	if len(keyId) == 0 {
-		return nil, errutil.InternalError{Err: "unable to fetch pki key: empty key identifier"}
-	}
-
-	entry, err := sc.Storage.Get(sc.Context, keyPrefix+keyId.String())
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki key: %v", err)}
-	}
-	if entry == nil {
-		return nil, errutil.UserError{Err: fmt.Sprintf("pki key id %s does not exist", keyId.String())}
-	}
-
-	var key keyEntry
-	if err := entry.DecodeJSON(&key); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode pki key with id %s: %v", keyId.String(), err)}
-	}
-
-	return &key, nil
+func (sc *storageContext) GetContext() context.Context {
+	return sc.Context
 }
 
-func (sc *storageContext) writeKey(key keyEntry) error {
-	keyId := key.ID
-
-	json, err := logical.StorageEntryJSON(keyPrefix+keyId.String(), key)
-	if err != nil {
-		return err
-	}
-
-	return sc.Storage.Put(sc.Context, json)
+func (sc *storageContext) GetStorage() logical.Storage {
+	return sc.Storage
 }
 
-func (sc *storageContext) deleteKey(id keyID) (bool, error) {
-	config, err := sc.getKeysConfig()
-	if err != nil {
-		return false, err
-	}
-
-	wasDefault := false
-	if config.DefaultKeyId == id {
-		wasDefault = true
-		config.DefaultKeyId = keyID("")
-		if err := sc.setKeysConfig(config); err != nil {
-			return wasDefault, err
-		}
-	}
-
-	return wasDefault, sc.Storage.Delete(sc.Context, keyPrefix+id.String())
+func (sc *storageContext) Logger() hclog.Logger {
+	return sc.Backend.Logger()
 }
 
-func (sc *storageContext) importKey(keyValue string, keyName string, keyType certutil.PrivateKeyType) (*keyEntry, bool, error) {
+func (sc *storageContext) System() logical.SystemView {
+	return sc.Backend.System()
+}
+
+func (sc *storageContext) CrlBuilder() pki_backend.CrlBuilderType {
+	return sc.Backend.CrlBuilder()
+}
+
+func (sc *storageContext) GetUnifiedTransferStatus() *UnifiedTransferStatus {
+	return sc.Backend.GetUnifiedTransferStatus()
+}
+
+func (sc *storageContext) GetPkiManagedView() managed_key.PkiManagedKeyView {
+	return sc.Backend
+}
+
+func (sc *storageContext) GetCertificateCounter() issuing.CertificateCounter {
+	return sc.Backend.GetCertificateCounter()
+}
+
+func (sc *storageContext) UseLegacyBundleCaStorage() bool {
+	return sc.Backend.UseLegacyBundleCaStorage()
+}
+
+func (sc *storageContext) GetRevokeStorageLock() *sync.RWMutex {
+	return sc.Backend.GetRevokeStorageLock()
+}
+
+func (sc *storageContext) GetRole(name string) (*issuing.RoleEntry, error) {
+	return sc.Backend.GetRole(sc.Context, sc.Storage, name)
+}
+
+func (sc *storageContext) listKeys() ([]issuing.KeyID, error) {
+	return issuing.ListKeys(sc.Context, sc.Storage)
+}
+
+func (sc *storageContext) fetchKeyById(keyId issuing.KeyID) (*issuing.KeyEntry, error) {
+	return issuing.FetchKeyById(sc.Context, sc.Storage, keyId)
+}
+
+func (sc *storageContext) writeKey(key issuing.KeyEntry) error {
+	return issuing.WriteKey(sc.Context, sc.Storage, key)
+}
+
+func (sc *storageContext) deleteKey(id issuing.KeyID) (bool, error) {
+	return issuing.DeleteKey(sc.Context, sc.Storage, id)
+}
+
+func (sc *storageContext) importKey(keyValue string, keyName string, keyType certutil.PrivateKeyType) (*issuing.KeyEntry, bool, error) {
 	// importKey imports the specified PEM-format key (from keyValue) into
 	// the new PKI storage format. The first return field is a reference to
 	// the new key; the second is whether or not the key already existed
@@ -291,11 +168,7 @@ func (sc *storageContext) importKey(keyValue string, keyName string, keyType cer
 	// Get our public key from the current inbound key, to compare against all the other keys.
 	var pkForImportingKey crypto.PublicKey
 	if keyType == certutil.ManagedPrivateKey {
-		managedKeyUUID, err := extractManagedKeyId([]byte(keyValue))
-		if err != nil {
-			return nil, false, errutil.InternalError{Err: fmt.Sprintf("failed extracting managed key uuid from key: %v", err)}
-		}
-		pkForImportingKey, err = getManagedKeyPublicKey(sc.Context, sc.Backend, managedKeyUUID)
+		pkForImportingKey, err = managed_key.GetPublicKeyFromKeyBytes(sc.Context, sc.Backend, []byte(keyValue))
 		if err != nil {
 			return nil, false, err
 		}
@@ -336,7 +209,7 @@ func (sc *storageContext) importKey(keyValue string, keyName string, keyType cer
 	}
 
 	// Haven't found a key, so we've gotta create it and write it into storage.
-	var result keyEntry
+	var result issuing.KeyEntry
 	result.ID = genKeyId()
 	result.Name = keyName
 	result.PrivateKey = keyValue
@@ -423,251 +296,32 @@ func (sc *storageContext) importKey(keyValue string, keyName string, keyType cer
 	return &result, false, nil
 }
 
-func (i issuerEntry) GetCertificate() (*x509.Certificate, error) {
-	cert, err := parseCertificateFromBytes([]byte(i.Certificate))
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to parse certificate from issuer: %s: %v", err.Error(), i.ID)}
-	}
-
-	return cert, nil
+func GetAIAURLs(sc *storageContext, i *issuing.IssuerEntry) (*certutil.URLEntries, error) {
+	return issuing.GetAIAURLs(sc.Context, sc.Storage, i)
 }
 
-func (i issuerEntry) EnsureUsage(usage issuerUsage) error {
-	// We want to spit out a nice error message about missing usages.
-	if i.Usage.HasUsage(usage) {
-		return nil
-	}
-
-	issuerRef := fmt.Sprintf("id:%v", i.ID)
-	if len(i.Name) > 0 {
-		issuerRef = fmt.Sprintf("%v / name:%v", issuerRef, i.Name)
-	}
-
-	// These usages differ at some point in time. We've gotta find the first
-	// usage that differs and return a logical-sounding error message around
-	// that difference.
-	for name, candidate := range namedIssuerUsages {
-		if usage.HasUsage(candidate) && !i.Usage.HasUsage(candidate) {
-			return fmt.Errorf("requested usage %v for issuer [%v] but only had usage %v", name, issuerRef, i.Usage.Names())
-		}
-	}
-
-	// Maybe we have an unnamed usage that's requested.
-	return fmt.Errorf("unknown delta between usages: %v -> %v / for issuer [%v]", usage.Names(), i.Usage.Names(), issuerRef)
+func (sc *storageContext) listIssuers() ([]issuing.IssuerID, error) {
+	return issuing.ListIssuers(sc.Context, sc.Storage)
 }
 
-func (i issuerEntry) CanMaybeSignWithAlgo(algo x509.SignatureAlgorithm) error {
-	// Hack: Go isn't kind enough expose its lovely signatureAlgorithmDetails
-	// informational struct for our usage. However, we don't want to actually
-	// fetch the private key and attempt a signature with this algo (as we'll
-	// mint new, previously unsigned material in the process that could maybe
-	// be potentially abused if it leaks).
-	//
-	// So...
-	//
-	// ...we maintain our own mapping of cert.PKI<->sigAlgos. Notably, we
-	// exclude DSA support as the PKI engine has never supported DSA keys.
-	if algo == x509.UnknownSignatureAlgorithm {
-		// Special cased to indicate upgrade and letting Go automatically
-		// chose the correct value.
-		return nil
-	}
-
-	cert, err := i.GetCertificate()
-	if err != nil {
-		return fmt.Errorf("unable to parse issuer's potential signature algorithm types: %v", err)
-	}
-
-	switch cert.PublicKeyAlgorithm {
-	case x509.RSA:
-		switch algo {
-		case x509.SHA256WithRSA, x509.SHA384WithRSA, x509.SHA512WithRSA,
-			x509.SHA256WithRSAPSS, x509.SHA384WithRSAPSS,
-			x509.SHA512WithRSAPSS:
-			return nil
-		}
-	case x509.ECDSA:
-		switch algo {
-		case x509.ECDSAWithSHA256, x509.ECDSAWithSHA384, x509.ECDSAWithSHA512:
-			return nil
-		}
-	case x509.Ed25519:
-		switch algo {
-		case x509.PureEd25519:
-			return nil
-		}
-	}
-
-	return fmt.Errorf("unable to use issuer of type %v to sign with %v key type", cert.PublicKeyAlgorithm.String(), algo.String())
+func (sc *storageContext) resolveKeyReference(reference string) (issuing.KeyID, error) {
+	return issuing.ResolveKeyReference(sc.Context, sc.Storage, reference)
 }
 
-func (i issuerEntry) GetAIAURLs(sc *storageContext) (urls *certutil.URLEntries, err error) {
-	// Default to the per-issuer AIA URLs.
-	urls = i.AIAURIs
-
-	// If none are set (either due to a nil entry or because no URLs have
-	// been provided), fall back to the global AIA URL config.
-	if urls == nil || (len(urls.IssuingCertificates) == 0 && len(urls.CRLDistributionPoints) == 0 && len(urls.OCSPServers) == 0) {
-		urls, err = getGlobalAIAURLs(sc.Context, sc.Storage)
-	}
-
-	return urls, err
+// fetchIssuerById returns an IssuerEntry based on issuerId, if none found an error is returned.
+func (sc *storageContext) fetchIssuerById(issuerId issuing.IssuerID) (*issuing.IssuerEntry, error) {
+	return issuing.FetchIssuerById(sc.Context, sc.Storage, issuerId)
 }
 
-func (sc *storageContext) listIssuers() ([]issuerID, error) {
-	strList, err := sc.Storage.List(sc.Context, issuerPrefix)
-	if err != nil {
-		return nil, err
-	}
-
-	issuerIds := make([]issuerID, 0, len(strList))
-	for _, entry := range strList {
-		issuerIds = append(issuerIds, issuerID(entry))
-	}
-
-	return issuerIds, nil
+func (sc *storageContext) writeIssuer(issuer *issuing.IssuerEntry) error {
+	return issuing.WriteIssuer(sc.Context, sc.Storage, issuer)
 }
 
-func (sc *storageContext) resolveKeyReference(reference string) (keyID, error) {
-	if reference == defaultRef {
-		// Handle fetching the default key.
-		config, err := sc.getKeysConfig()
-		if err != nil {
-			return keyID("config-error"), err
-		}
-		if len(config.DefaultKeyId) == 0 {
-			return KeyRefNotFound, fmt.Errorf("no default key currently configured")
-		}
-
-		return config.DefaultKeyId, nil
-	}
-
-	// Lookup by a direct get first to see if our reference is an ID, this is quick and cached.
-	if len(reference) == uuidLength {
-		entry, err := sc.Storage.Get(sc.Context, keyPrefix+reference)
-		if err != nil {
-			return keyID("key-read"), err
-		}
-		if entry != nil {
-			return keyID(reference), nil
-		}
-	}
-
-	// ... than to pull all keys from storage.
-	keys, err := sc.listKeys()
-	if err != nil {
-		return keyID("list-error"), err
-	}
-	for _, keyId := range keys {
-		key, err := sc.fetchKeyById(keyId)
-		if err != nil {
-			return keyID("key-read"), err
-		}
-
-		if key.Name == reference {
-			return key.ID, nil
-		}
-	}
-
-	// Otherwise, we must not have found the key.
-	return KeyRefNotFound, errutil.UserError{Err: fmt.Sprintf("unable to find PKI key for reference: %v", reference)}
+func (sc *storageContext) deleteIssuer(id issuing.IssuerID) (bool, error) {
+	return issuing.DeleteIssuer(sc.Context, sc.Storage, id)
 }
 
-// fetchIssuerById returns an issuerEntry based on issuerId, if none found an error is returned.
-func (sc *storageContext) fetchIssuerById(issuerId issuerID) (*issuerEntry, error) {
-	if len(issuerId) == 0 {
-		return nil, errutil.InternalError{Err: "unable to fetch pki issuer: empty issuer identifier"}
-	}
-
-	entry, err := sc.Storage.Get(sc.Context, issuerPrefix+issuerId.String())
-	if err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to fetch pki issuer: %v", err)}
-	}
-	if entry == nil {
-		return nil, errutil.UserError{Err: fmt.Sprintf("pki issuer id %s does not exist", issuerId.String())}
-	}
-
-	var issuer issuerEntry
-	if err := entry.DecodeJSON(&issuer); err != nil {
-		return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode pki issuer with id %s: %v", issuerId.String(), err)}
-	}
-
-	return sc.upgradeIssuerIfRequired(&issuer), nil
-}
-
-func (sc *storageContext) upgradeIssuerIfRequired(issuer *issuerEntry) *issuerEntry {
-	// *NOTE*: Don't attempt to write out the issuer here as it may cause ErrReadOnly that will direct the
-	// request all the way up to the primary cluster which would be horrible for local cluster operations such
-	// as generating a leaf cert or a revoke.
-	// Also even though we could tell if we are the primary cluster's active node, we can't tell if we have the
-	// a full rw issuer lock, so it might not be safe to write.
-	if issuer.Version == latestIssuerVersion {
-		return issuer
-	}
-
-	if issuer.Version == 0 {
-		// Upgrade at this step requires interrogating the certificate itself;
-		// if this decode fails, it indicates internal problems and the
-		// request will subsequently fail elsewhere. However, decoding this
-		// certificate is mildly expensive, so we only do it in the event of
-		// a Version 0 certificate.
-		cert, err := issuer.GetCertificate()
-		if err != nil {
-			return issuer
-		}
-
-		hadCRL := issuer.Usage.HasUsage(CRLSigningUsage)
-		// Remove CRL signing usage if it exists on the issuer but doesn't
-		// exist in the KU of the x509 certificate.
-		if hadCRL && (cert.KeyUsage&x509.KeyUsageCRLSign) == 0 {
-			issuer.Usage.ToggleUsage(OCSPSigningUsage)
-		}
-
-		// Handle our new OCSPSigning usage flag for earlier versions. If we
-		// had it (prior to removing it in this upgrade), we'll add the OCSP
-		// flag since EKUs don't matter.
-		if hadCRL && !issuer.Usage.HasUsage(OCSPSigningUsage) {
-			issuer.Usage.ToggleUsage(OCSPSigningUsage)
-		}
-	}
-
-	issuer.Version = latestIssuerVersion
-	return issuer
-}
-
-func (sc *storageContext) writeIssuer(issuer *issuerEntry) error {
-	issuerId := issuer.ID
-	if issuer.LastModified.IsZero() {
-		issuer.LastModified = time.Now().UTC()
-	}
-
-	json, err := logical.StorageEntryJSON(issuerPrefix+issuerId.String(), issuer)
-	if err != nil {
-		return err
-	}
-
-	return sc.Storage.Put(sc.Context, json)
-}
-
-func (sc *storageContext) deleteIssuer(id issuerID) (bool, error) {
-	config, err := sc.getIssuersConfig()
-	if err != nil {
-		return false, err
-	}
-
-	wasDefault := false
-	if config.DefaultIssuerId == id {
-		wasDefault = true
-		config.DefaultIssuerId = issuerID("")
-		if err := sc.setIssuersConfig(config); err != nil {
-			return wasDefault, err
-		}
-	}
-
-	return wasDefault, sc.Storage.Delete(sc.Context, issuerPrefix+id.String())
-}
-
-func (sc *storageContext) importIssuer(certValue string, issuerName string) (*issuerEntry, bool, error) {
+func (sc *storageContext) importIssuer(certValue string, issuerName string) (*issuing.IssuerEntry, bool, error) {
 	// importIssuers imports the specified PEM-format certificate (from
 	// certValue) into the new PKI storage format. The first return field is a
 	// reference to the new issuer; the second is whether or not the issuer
@@ -745,18 +399,18 @@ func (sc *storageContext) importIssuer(certValue string, issuerName string) (*is
 
 	// Haven't found an issuer, so we've gotta create it and write it into
 	// storage.
-	var result issuerEntry
+	var result issuing.IssuerEntry
 	result.ID = genIssuerId()
 	result.Name = issuerName
 	result.Certificate = certValue
 	result.LeafNotAfterBehavior = certutil.ErrNotAfterBehavior
-	result.Usage.ToggleUsage(AllIssuerUsages)
-	result.Version = latestIssuerVersion
+	result.Usage.ToggleUsage(issuing.AllIssuerUsages)
+	result.Version = issuing.LatestIssuerVersion
 
 	// If we lack relevant bits for CRL, prohibit it from being set
 	// on the usage side.
-	if (issuerCert.KeyUsage&x509.KeyUsageCRLSign) == 0 && result.Usage.HasUsage(CRLSigningUsage) {
-		result.Usage.ToggleUsage(CRLSigningUsage)
+	if (issuerCert.KeyUsage&x509.KeyUsageCRLSign) == 0 && result.Usage.HasUsage(issuing.CRLSigningUsage) {
+		result.Usage.ToggleUsage(issuing.CRLSigningUsage)
 	}
 
 	// We shouldn't add CSRs or multiple certificates in this
@@ -826,226 +480,54 @@ func areCertificatesEqual(cert1 *x509.Certificate, cert2 *x509.Certificate) bool
 	return bytes.Equal(cert1.Raw, cert2.Raw)
 }
 
-func (sc *storageContext) setLocalCRLConfig(mapping *localCRLConfigEntry) error {
-	json, err := logical.StorageEntryJSON(storageLocalCRLConfig, mapping)
-	if err != nil {
-		return err
-	}
-
-	return sc.Storage.Put(sc.Context, json)
+func (sc *storageContext) setLocalCRLConfig(mapping *issuing.InternalCRLConfigEntry) error {
+	return issuing.SetLocalCRLConfig(sc.Context, sc.Storage, mapping)
 }
 
-func (sc *storageContext) getLocalCRLConfig() (*localCRLConfigEntry, error) {
-	entry, err := sc.Storage.Get(sc.Context, storageLocalCRLConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	mapping := &localCRLConfigEntry{}
-	if entry != nil {
-		if err := entry.DecodeJSON(mapping); err != nil {
-			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode cluster-local CRL configuration: %v", err)}
-		}
-	}
-
-	if len(mapping.IssuerIDCRLMap) == 0 {
-		mapping.IssuerIDCRLMap = make(map[issuerID]crlID)
-	}
-
-	if len(mapping.CRLNumberMap) == 0 {
-		mapping.CRLNumberMap = make(map[crlID]int64)
-	}
-
-	if len(mapping.LastCompleteNumberMap) == 0 {
-		mapping.LastCompleteNumberMap = make(map[crlID]int64)
-
-		// Since this might not exist on migration, we want to guess as
-		// to the last full CRL number was. This was likely the last
-		// value from CRLNumberMap if it existed, since we're just adding
-		// the mapping here in this block.
-		//
-		// After the next full CRL build, we will have set this value
-		// correctly, so it doesn't really matter in the long term if
-		// we're off here.
-		for id, number := range mapping.CRLNumberMap {
-			// Decrement by one, since CRLNumberMap is the future number,
-			// not the last built number.
-			mapping.LastCompleteNumberMap[id] = number - 1
-		}
-	}
-
-	if len(mapping.CRLExpirationMap) == 0 {
-		mapping.CRLExpirationMap = make(map[crlID]time.Time)
-	}
-
-	return mapping, nil
+func (sc *storageContext) setUnifiedCRLConfig(mapping *issuing.InternalCRLConfigEntry) error {
+	return issuing.SetUnifiedCRLConfig(sc.Context, sc.Storage, mapping)
 }
 
-func (sc *storageContext) setKeysConfig(config *keyConfigEntry) error {
-	json, err := logical.StorageEntryJSON(storageKeyConfig, config)
-	if err != nil {
-		return err
-	}
-
-	return sc.Storage.Put(sc.Context, json)
+func (sc *storageContext) getLocalCRLConfig() (*issuing.InternalCRLConfigEntry, error) {
+	return issuing.GetLocalCRLConfig(sc.Context, sc.Storage)
 }
 
-func (sc *storageContext) getKeysConfig() (*keyConfigEntry, error) {
-	entry, err := sc.Storage.Get(sc.Context, storageKeyConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	keyConfig := &keyConfigEntry{}
-	if entry != nil {
-		if err := entry.DecodeJSON(keyConfig); err != nil {
-			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode key configuration: %v", err)}
-		}
-	}
-
-	return keyConfig, nil
+func (sc *storageContext) getUnifiedCRLConfig() (*issuing.InternalCRLConfigEntry, error) {
+	return issuing.GetUnifiedCRLConfig(sc.Context, sc.Storage)
 }
 
-func (sc *storageContext) setIssuersConfig(config *issuerConfigEntry) error {
-	json, err := logical.StorageEntryJSON(storageIssuerConfig, config)
-	if err != nil {
-		return err
-	}
-
-	return sc.Storage.Put(sc.Context, json)
+func (sc *storageContext) setKeysConfig(config *issuing.KeyConfigEntry) error {
+	return issuing.SetKeysConfig(sc.Context, sc.Storage, config)
 }
 
-func (sc *storageContext) getIssuersConfig() (*issuerConfigEntry, error) {
-	entry, err := sc.Storage.Get(sc.Context, storageIssuerConfig)
-	if err != nil {
-		return nil, err
-	}
+func (sc *storageContext) getKeysConfig() (*issuing.KeyConfigEntry, error) {
+	return issuing.GetKeysConfig(sc.Context, sc.Storage)
+}
 
-	issuerConfig := &issuerConfigEntry{}
-	if entry != nil {
-		if err := entry.DecodeJSON(issuerConfig); err != nil {
-			return nil, errutil.InternalError{Err: fmt.Sprintf("unable to decode issuer configuration: %v", err)}
-		}
-	}
+func (sc *storageContext) setIssuersConfig(config *issuing.IssuerConfigEntry) error {
+	return issuing.SetIssuersConfig(sc.Context, sc.Storage, config)
+}
 
-	return issuerConfig, nil
+func (sc *storageContext) getIssuersConfig() (*issuing.IssuerConfigEntry, error) {
+	return issuing.GetIssuersConfig(sc.Context, sc.Storage)
 }
 
 // Lookup within storage the value of reference, assuming the string is a reference to an issuer entry,
-// returning the converted issuerID or an error if not found. This method will not properly resolve the
+// returning the converted IssuerID or an error if not found. This method will not properly resolve the
 // special legacyBundleShimID value as we do not want to confuse our special value and a user-provided name of the
 // same value.
-func (sc *storageContext) resolveIssuerReference(reference string) (issuerID, error) {
-	if reference == defaultRef {
-		// Handle fetching the default issuer.
-		config, err := sc.getIssuersConfig()
-		if err != nil {
-			return issuerID("config-error"), err
-		}
-		if len(config.DefaultIssuerId) == 0 {
-			return IssuerRefNotFound, fmt.Errorf("no default issuer currently configured")
-		}
-
-		return config.DefaultIssuerId, nil
-	}
-
-	// Lookup by a direct get first to see if our reference is an ID, this is quick and cached.
-	if len(reference) == uuidLength {
-		entry, err := sc.Storage.Get(sc.Context, issuerPrefix+reference)
-		if err != nil {
-			return issuerID("issuer-read"), err
-		}
-		if entry != nil {
-			return issuerID(reference), nil
-		}
-	}
-
-	// ... than to pull all issuers from storage.
-	issuers, err := sc.listIssuers()
-	if err != nil {
-		return issuerID("list-error"), err
-	}
-
-	for _, issuerId := range issuers {
-		issuer, err := sc.fetchIssuerById(issuerId)
-		if err != nil {
-			return issuerID("issuer-read"), err
-		}
-
-		if issuer.Name == reference {
-			return issuer.ID, nil
-		}
-	}
-
-	// Otherwise, we must not have found the issuer.
-	return IssuerRefNotFound, errutil.UserError{Err: fmt.Sprintf("unable to find PKI issuer for reference: %v", reference)}
-}
-
-func (sc *storageContext) resolveIssuerCRLPath(reference string) (string, error) {
-	if sc.Backend.useLegacyBundleCaStorage() {
-		return legacyCRLPath, nil
-	}
-
-	issuer, err := sc.resolveIssuerReference(reference)
-	if err != nil {
-		return legacyCRLPath, err
-	}
-
-	crlConfig, err := sc.getLocalCRLConfig()
-	if err != nil {
-		return legacyCRLPath, err
-	}
-
-	if crlId, ok := crlConfig.IssuerIDCRLMap[issuer]; ok && len(crlId) > 0 {
-		return fmt.Sprintf("crls/%v", crlId), nil
-	}
-
-	return legacyCRLPath, fmt.Errorf("unable to find CRL for issuer: id:%v/ref:%v", issuer, reference)
+func (sc *storageContext) resolveIssuerReference(reference string) (issuing.IssuerID, error) {
+	return issuing.ResolveIssuerReference(sc.Context, sc.Storage, reference)
 }
 
 // Builds a certutil.CertBundle from the specified issuer identifier,
 // optionally loading the key or not. This method supports loading legacy
 // bundles using the legacyBundleShimID issuerId, and if no entry is found will return an error.
-func (sc *storageContext) fetchCertBundleByIssuerId(id issuerID, loadKey bool) (*issuerEntry, *certutil.CertBundle, error) {
-	if id == legacyBundleShimID {
-		// We have not completed the migration, or started a request in legacy mode, so
-		// attempt to load the bundle from the legacy location
-		issuer, bundle, err := getLegacyCertBundle(sc.Context, sc.Storage)
-		if err != nil {
-			return nil, nil, err
-		}
-		if issuer == nil || bundle == nil {
-			return nil, nil, errutil.UserError{Err: "no legacy cert bundle exists"}
-		}
-
-		return issuer, bundle, err
-	}
-
-	issuer, err := sc.fetchIssuerById(id)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	var bundle certutil.CertBundle
-	bundle.Certificate = issuer.Certificate
-	bundle.CAChain = issuer.CAChain
-	bundle.SerialNumber = issuer.SerialNumber
-
-	// Fetch the key if it exists. Sometimes we don't need the key immediately.
-	if loadKey && issuer.KeyID != keyID("") {
-		key, err := sc.fetchKeyById(issuer.KeyID)
-		if err != nil {
-			return nil, nil, err
-		}
-
-		bundle.PrivateKeyType = key.PrivateKeyType
-		bundle.PrivateKey = key.PrivateKey
-	}
-
-	return issuer, &bundle, nil
+func (sc *storageContext) fetchCertBundleByIssuerId(id issuing.IssuerID, loadKey bool) (*issuing.IssuerEntry, *certutil.CertBundle, error) {
+	return issuing.FetchCertBundleByIssuerId(sc.Context, sc.Storage, id, loadKey)
 }
 
-func (sc *storageContext) writeCaBundle(caBundle *certutil.CertBundle, issuerName string, keyName string) (*issuerEntry, *keyEntry, error) {
+func (sc *storageContext) writeCaBundle(caBundle *certutil.CertBundle, issuerName string, keyName string) (*issuing.IssuerEntry, *issuing.KeyEntry, error) {
 	myKey, _, err := sc.importKey(caBundle.PrivateKey, keyName, caBundle.PrivateKeyType)
 	if err != nil {
 		return nil, nil, err
@@ -1054,7 +536,7 @@ func (sc *storageContext) writeCaBundle(caBundle *certutil.CertBundle, issuerNam
 	// We may have existing mounts that only contained a key with no certificate yet as a signed CSR
 	// was never setup within the mount.
 	if caBundle.Certificate == "" {
-		return &issuerEntry{}, myKey, nil
+		return &issuing.IssuerEntry{}, myKey, nil
 	}
 
 	myIssuer, _, err := sc.importIssuer(caBundle.Certificate, issuerName)
@@ -1071,16 +553,16 @@ func (sc *storageContext) writeCaBundle(caBundle *certutil.CertBundle, issuerNam
 	return myIssuer, myKey, nil
 }
 
-func genIssuerId() issuerID {
-	return issuerID(genUuid())
+func genIssuerId() issuing.IssuerID {
+	return issuing.IssuerID(genUuid())
 }
 
-func genKeyId() keyID {
-	return keyID(genUuid())
+func genKeyId() issuing.KeyID {
+	return issuing.KeyID(genUuid())
 }
 
-func genCRLId() crlID {
-	return crlID(genUuid())
+func genCRLId() issuing.CrlID {
+	return issuing.CrlID(genUuid())
 }
 
 func genUuid() string {
@@ -1128,7 +610,7 @@ func (sc *storageContext) checkForRolesReferencing(issuerId string) (timeout boo
 			return false, 0, err
 		}
 		if entry != nil { // If nil, someone deleted an entry since we haven't taken a lock here so just continue
-			var role roleEntry
+			var role issuing.RoleEntry
 			err = entry.DecodeJSON(&role)
 			if err != nil {
 				return false, inUseBy, err
@@ -1149,15 +631,15 @@ func (sc *storageContext) checkForRolesReferencing(issuerId string) (timeout boo
 	return false, inUseBy, nil
 }
 
-func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
+func (sc *storageContext) getRevocationConfig() (*pki_backend.CrlConfig, error) {
 	entry, err := sc.Storage.Get(sc.Context, "config/crl")
 	if err != nil {
 		return nil, err
 	}
 
-	var result crlConfig
+	var result pki_backend.CrlConfig
 	if entry == nil {
-		result = defaultCrlConfig
+		result = pki_backend.DefaultCrlConfig
 		return &result, nil
 	}
 
@@ -1167,14 +649,50 @@ func (sc *storageContext) getRevocationConfig() (*crlConfig, error) {
 
 	if result.Version == 0 {
 		// Automatically update existing configurations.
-		result.OcspDisable = defaultCrlConfig.OcspDisable
-		result.OcspExpiry = defaultCrlConfig.OcspExpiry
-		result.AutoRebuild = defaultCrlConfig.AutoRebuild
-		result.AutoRebuildGracePeriod = defaultCrlConfig.AutoRebuildGracePeriod
+		result.OcspDisable = pki_backend.DefaultCrlConfig.OcspDisable
+		result.OcspExpiry = pki_backend.DefaultCrlConfig.OcspExpiry
+		result.AutoRebuild = pki_backend.DefaultCrlConfig.AutoRebuild
+		result.AutoRebuildGracePeriod = pki_backend.DefaultCrlConfig.AutoRebuildGracePeriod
 		result.Version = 1
+	}
+	if result.Version == 1 {
+		if result.DeltaRebuildInterval == "" {
+			result.DeltaRebuildInterval = pki_backend.DefaultCrlConfig.DeltaRebuildInterval
+		}
+		result.Version = 2
+	}
+
+	// Depending on client version, it's possible that the expiry is unset.
+	// This sets the default value to prevent issues in downstream code.
+	if result.Expiry == "" {
+		result.Expiry = pki_backend.DefaultCrlConfig.Expiry
+	}
+
+	isLocalMount := sc.System().LocalMount()
+	if (!constants.IsEnterprise || isLocalMount) && (result.UnifiedCRLOnExistingPaths || result.UnifiedCRL || result.UseGlobalQueue) {
+		// An end user must have had Enterprise, enabled the unified config args and then downgraded to OSS.
+		sc.Logger().Warn("Not running Vault Enterprise or using a local mount, " +
+			"disabling unified_crl, unified_crl_on_existing_paths and cross_cluster_revocation config flags.")
+		result.UnifiedCRLOnExistingPaths = false
+		result.UnifiedCRL = false
+		result.UseGlobalQueue = false
 	}
 
 	return &result, nil
+}
+
+func (sc *storageContext) setRevocationConfig(config *pki_backend.CrlConfig) error {
+	entry, err := logical.StorageEntryJSON("config/crl", config)
+	if err != nil {
+		return fmt.Errorf("failed building storage entry JSON: %w", err)
+	}
+
+	err = sc.Storage.Put(sc.Context, entry)
+	if err != nil {
+		return fmt.Errorf("failed writing storage entry: %w", err)
+	}
+
+	return nil
 }
 
 func (sc *storageContext) getAutoTidyConfig() (*tidyConfig, error) {
@@ -1193,6 +711,18 @@ func (sc *storageContext) getAutoTidyConfig() (*tidyConfig, error) {
 		return nil, err
 	}
 
+	if result.IssuerSafetyBuffer == 0 {
+		result.IssuerSafetyBuffer = defaultTidyConfig.IssuerSafetyBuffer
+	}
+
+	if result.MinStartupBackoff == 0 {
+		result.MinStartupBackoff = defaultTidyConfig.MinStartupBackoff
+	}
+
+	if result.MaxStartupBackoff == 0 {
+		result.MaxStartupBackoff = defaultTidyConfig.MaxStartupBackoff
+	}
+
 	return &result, nil
 }
 
@@ -1202,5 +732,112 @@ func (sc *storageContext) writeAutoTidyConfig(config *tidyConfig) error {
 		return err
 	}
 
+	err = sc.Storage.Put(sc.Context, entry)
+	if err != nil {
+		return err
+	}
+
+	certCounter := sc.Backend.GetCertificateCounter()
+	certCounter.ReconfigureWithTidyConfig(config)
+
+	return nil
+}
+
+func (sc *storageContext) listRevokedCerts() ([]string, error) {
+	list, err := sc.Storage.List(sc.Context, revokedPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed listing revoked certs: %w", err)
+	}
+
+	return list, err
+}
+
+func (sc *storageContext) getClusterConfig() (*issuing.ClusterConfigEntry, error) {
+	entry, err := sc.Storage.Get(sc.Context, clusterConfigPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var result issuing.ClusterConfigEntry
+	if entry == nil {
+		return &result, nil
+	}
+
+	if err = entry.DecodeJSON(&result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
+func (sc *storageContext) writeClusterConfig(config *issuing.ClusterConfigEntry) error {
+	entry, err := logical.StorageEntryJSON(clusterConfigPath, config)
+	if err != nil {
+		return err
+	}
+
 	return sc.Storage.Put(sc.Context, entry)
+}
+
+// tidyLastRun Track the various pieces of information around tidy on a specific cluster
+type tidyLastRun struct {
+	LastRunTime time.Time
+}
+
+func (sc *storageContext) getAutoTidyLastRun() (time.Time, error) {
+	entry, err := sc.Storage.Get(sc.Context, autoTidyLastRunPath)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed getting auto tidy last run: %w", err)
+	}
+	if entry == nil {
+		return time.Time{}, nil
+	}
+
+	var result tidyLastRun
+	if err = entry.DecodeJSON(&result); err != nil {
+		return time.Time{}, fmt.Errorf("failed parsing auto tidy last run: %w", err)
+	}
+	return result.LastRunTime, nil
+}
+
+func (sc *storageContext) writeAutoTidyLastRun(lastRunTime time.Time) error {
+	lastRun := tidyLastRun{LastRunTime: lastRunTime}
+	entry, err := logical.StorageEntryJSON(autoTidyLastRunPath, lastRun)
+	if err != nil {
+		return fmt.Errorf("failed generating json for auto tidy last run: %w", err)
+	}
+
+	if err := sc.Storage.Put(sc.Context, entry); err != nil {
+		return fmt.Errorf("failed writing auto tidy last run: %w", err)
+	}
+
+	return nil
+}
+
+func fetchRevocationInfo(sc pki_backend.StorageContext, serial string) (*revocation.RevocationInfo, error) {
+	var revInfo *revocation.RevocationInfo
+	revEntry, err := fetchCertBySerial(sc, revocation.RevokedPath, serial)
+	if err != nil {
+		return nil, err
+	}
+	if revEntry != nil {
+		err = revEntry.DecodeJSON(&revInfo)
+		if err != nil {
+			return nil, fmt.Errorf("error decoding existing revocation info: %w", err)
+		}
+	}
+
+	return revInfo, nil
+}
+
+// filterDirEntries filters out directory entries from a list of entries normally from a List operation.
+func filterDirEntries(entries []string) []string {
+	ids := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if strings.HasSuffix(entry, "/") {
+			continue
+		}
+		ids = append(ids, entry)
+	}
+	return ids
 }

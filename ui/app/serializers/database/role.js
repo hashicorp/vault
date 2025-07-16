@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import RESTSerializer from '@ember-data/serializer/rest';
 
 export default RESTSerializer.extend({
@@ -61,16 +66,13 @@ export default RESTSerializer.extend({
 
   serializeAttribute(snapshot, json, key, attributes) {
     // Don't send values that are undefined
-    if (
-      undefined !== snapshot.attr(key) &&
-      (snapshot.record.get('isNew') || snapshot.changedAttributes()[key])
-    ) {
+    if (snapshot.attr(key) !== undefined && (snapshot.record.isNew || snapshot.changedAttributes()[key])) {
       this._super(snapshot, json, key, attributes);
     }
   },
 
   serialize(snapshot, requestType) {
-    let data = this._super(snapshot, requestType);
+    const data = this._super(snapshot, requestType);
     if (data.database) {
       const db = data.database[0];
       data.db_name = db;

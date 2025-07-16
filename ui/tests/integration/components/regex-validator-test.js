@@ -1,18 +1,24 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import EmberObject from '@ember/object';
 import sinon from 'sinon';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click, fillIn, settled } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | regex-validator', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it renders input and validation messages', async function (assert) {
-    let attr = EmberObject.create({
+    const attr = EmberObject.create({
       name: 'example',
     });
-    let spy = sinon.spy();
+    const spy = sinon.spy();
     this.set('onChange', spy);
     this.set('attr', attr);
     this.set('value', '(\\d{4})');
@@ -20,17 +26,17 @@ module('Integration | Component | regex-validator', function (hooks) {
 
     await render(
       hbs`<RegexValidator
-        @onChange={{onChange}}
-        @attr={{attr}}
-        @value={{value}}
-        @labelString={{labelString}}
+        @onChange={{this.onChange}}
+        @attr={{this.attr}}
+        @value={{this.value}}
+        @labelString={{this.labelString}}
       />`
     );
     assert.dom('.regex-label label').hasText('Regex Example', 'Label is correct');
-    assert.dom('[data-test-toggle-input="example-validation-toggle"]').exists('Validation toggle exists');
+    assert.dom(GENERAL.toggleInput('example-validation-toggle')).exists('Validation toggle exists');
     assert.dom('[data-test-regex-validator-test-string]').doesNotExist('Test string input does not show');
 
-    await click('[data-test-toggle-input="example-validation-toggle"]');
+    await click(GENERAL.toggleInput('example-validation-toggle'));
     assert.dom('[data-test-regex-validator-test-string]').exists('Test string input shows after toggle');
     assert
       .dom('[data-test-regex-validator-test-string] label')

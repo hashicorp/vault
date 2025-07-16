@@ -1,0 +1,188 @@
+---
+layout: docs
+page_title: Configure cross namespace access
+description: >-
+  Set up cross namespace access in Vault without using hierarchical relationships.
+---
+
+# Configure cross namespace access in Vault
+
+Using the `sys/config/group_policy_application` endpoint, you can enable secrets sharing
+across multiple independent namespaces.
+
+Historically, any policies attached to an [identity group](/vault/docs/concepts/identity#identity-groups) would only apply when the
+Vault token authorizing a request was created in the same namespace as that
+group, or a descendent namespace.
+
+This endpoint reduces the operational overhead by relaxing this restriction.
+When the mode is set to the default, `within_namespace_hierarchy`, the
+historical behaviour is maintained. When set to `any`, group policies apply to
+all members of a group, regardless of what namespace the request token came
+from.
+
+## Prerequisites
+
+- Vault Enterprise 1.13 or later
+- Authentication method configured
+
+## Enable secrets sharing
+
+1. Verify the current setting.
+
+   ```shell-session
+   $ vault read sys/config/group-policy-application
+   Key                              Value
+   ---                              -----
+   group_policy_application_mode    within_namespace_hierarchy
+   ```
+
+   `within_namespace_hierarchy` is the default setting.
+
+1. Change the `group_policy_application_mode` setting to `any`.
+
+   ```shell-session
+   $ vault write sys/config/group-policy-application \
+        group_policy_application_mode="any"
+   ```
+
+   <CodeBlockConfig hideClipboard>
+
+   ```plaintext
+   Success! Data written to: sys/config/group-policy-application
+   ```
+
+   </CodeBlockConfig>
+
+   Policies can now be applied, and secrets shared, across namespaces without a
+   hierarchical relationship.
+
+## Example auth method configuration
+
+Cross namespace access can be used with all auth methods for both machine and
+human based authentication. Examples of each are provided for reference.
+
+<Tabs>
+<Tab heading="Kubernetes" group="kubernetes">
+
+1. Create and run a script to configure the Kubernetes auth method, and two
+   namespaces.
+
+   ```plaintext
+   # Create new namespaces - they are peers
+   vault namespace create us-west-org
+   vault namespace create us-east-org
+
+   #--------------------------
+   # us-west-org namespace
+   #--------------------------
+   VAULT_NAMESPACE=us-west-org vault auth enable kubernetes
+   VAULT_NAMESPACE=us-west-org vault write auth/kubernetes/config out_of=scope
+   VAULT_NAMESPACE=us-west-org vault write auth/kubernetes/role/cross-namespace-demo bound_service_account_names="mega-app" bound_service_account_namespaces="client-nicecorp" alias_name_source="serviceaccount_name"
+
+   # Create an entity
+   VAULT_NAMESPACE=us-west-org vault auth list -format=json | jq -r '.["kubernetes/"].accessor' > accessor.txt
+   VAULT_NAMESPACE=us-west-org vault write -format=json identity/entity name="entity-for-mega-app" | jq -r ".data.id" > entity_id.txt
+   VAULT_NAMESPACE=us-west-org vault write identity/entity-alias name="client-nicecorp/mega-app" canonical_id=$(cat entity_id.txt) mount_accessor=$(cat accessor.txt)
+
+   #--------------------------
+   # us-east-org namespace
+   #--------------------------
+   VAULT_NAMESPACE=us-east-org vault secrets enable -path="kv-marketing" kv-v2
+   VAULT_NAMESPACE=us-east-org vault kv put kv-marketing/campaign start_date="March 1, 2023" end_date="March 31, 2023" prise="Certification voucher" quantity="100"
+
+   # Create a policy to allow read access to kv-marketing
+   VAULT_NAMESPACE=us-east-org vault policy write marketing-read-only -<<EOF
+   path "kv-marketing/data/campaign" {
+      capabilities = ["read"]
+   }
+   EOF
+
+   # Create a group
+   VAULT_NAMESPACE=us-east-org vault write -format=json identity/group name="campaign-admin" policies="marketing-read-only" member_entity_ids=$(cat entity_id.txt)
+   ```
+
+1. Authenticate to the `us-west-org` Vault namespace with a valid JWT.
+
+   ```shell-session
+   $ VAULT_NAMESPACE=us-west-org vault write -format=json auth/kubernetes/login role=cross-namespace-demo jwt=$(cat jwt.txt) | jq -r .auth.client_token > token.txt
+   ```
+
+1. Read a secret in the `us-east-org` namespace using the Vault token from
+   `us-west-org`.
+
+   ```shell-session
+   $ VAULT_NAMESPACE=us-east-org VAULT_TOKEN=$(cat token.txt) vault kv get kv-marketing/campaign
+   ```
+
+</Tab>
+<Tab heading="Userpass" group="userpass">
+
+1. Create and run a script to configure the userpass auth method, and two
+   Vault namespaces.
+
+   ```plaintext
+   # Create new namespaces - they are peer
+   vault namespace create us-west-org
+   vault namespace create us-east-org
+
+   #--------------------------
+   # us-west-org namespace
+   #--------------------------
+   VAULT_NAMESPACE=us-west-org vault secrets enable -path="kv-customer-info" kv-v2
+   VAULT_NAMESPACE=us-west-org vault kv put kv-customer-info/customer-001 name="Example LLC" contact_email="admin@example.com"
+   # Create a policy to allow read access to kv-marketing
+   VAULT_NAMESPACE=us-west-org vault policy write customer-info-read-only -<<EOF
+   path "kv-customer-info/data/*" {
+      capabilities = ["read"]
+   }
+   EOF
+   VAULT_NAMESPACE=us-west-org vault auth enable userpass
+   VAULT_NAMESPACE=us-west-org vault write auth/userpass/users/tam-user password="my-long-password" policies=customer-info-read-only
+
+   # Create an entity
+   VAULT_NAMESPACE=us-west-org vault auth list -format=json | jq -r '.["userpass/"].accessor' > accessor.txt
+   VAULT_NAMESPACE=us-west-org vault write -format=json identity/entity name="TAM" | jq -r ".data.id" > entity_id.txt
+   VAULT_NAMESPACE=us-west-org vault write identity/entity-alias name="tam-user" canonical_id=$(cat entity_id.txt) mount_accessor=$(cat accessor.txt)
+
+   #--------------------------
+   # us-east-org namespace
+   #--------------------------
+   VAULT_NAMESPACE=us-east-org vault secrets enable -path="kv-marketing" kv-v2
+   VAULT_NAMESPACE=us-east-org vault kv put kv-marketing/campaign start_date="March 1, 2023" end_date="March 31, 2023" prise="Certification voucher" quantity="100"
+
+   # Create a policy to allow read access to kv-marketing
+   VAULT_NAMESPACE=us-east-org vault policy write marketing-read-only -<<EOF
+   path "kv-marketing/data/campaign" {
+      capabilities = ["read"]
+   }
+   EOF
+
+   # Create a group
+   VAULT_NAMESPACE=us-east-org vault write -format=json identity/group name="campaign-admin" policies="marketing-read-only" member_entity_ids=$(cat entity_id.txt)
+   ```
+
+1. Authenticate to the `us-west-org` Vault namespace with a valid user.
+
+   ```shell-session
+   $ VAULT_NAMESPACE=us-west-org vault login -field=token -method=userpass \
+   username=tam-user password="my-long-password" > token.txt
+   ```
+
+1. Read a secret in the `us-east-org` namespace using the Vault token from
+   `us-west-org`.
+
+   ```shell-session
+   $ VAULT_NAMESPACE=us-east-org VAULT_TOKEN=$(cat token.txt) \
+   vault kv get kv-marketing/campaign
+   ```
+
+</Tab>
+</Tabs>
+
+## API
+
+- [/sys/config/group-policy-application](/vault/api-docs/system/config-group-policy-application)
+
+## Tutorial
+
+- [Secrets management across namespaces without hierarchical relationship](/vault/tutorials/enterprise/namespaces-secrets-sharing)

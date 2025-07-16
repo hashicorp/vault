@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -492,5 +495,50 @@ path "foo/+*" {
 
 	if !strings.Contains(err.Error(), `path "foo/+*": invalid use of wildcards ('+*' is forbidden)`) {
 		t.Errorf("bad error: %s", err)
+	}
+}
+
+func TestPolicy_Subscribe(t *testing.T) {
+	policy, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
+	path "secret/*" {
+		capabilities = ["subscribe", "create", "read"]
+	}
+	`))
+	if err != nil {
+		t.Fatalf("Policies should be able to use 'subscribe' capability")
+	}
+	if policy.Paths[0].Permissions.CapabilitiesBitmap&SubscribeCapabilityInt == 0 {
+		t.Fatalf("Subscribe capability should be present in capabilities bitmap")
+	}
+}
+
+func TestPolicy_Subscribe_EventTypes(t *testing.T) {
+	policy, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
+	path "secret/*" {
+		capabilities = ["subscribe"]
+		subscribe_event_types = ["kv-v2/data-write", "kv-v1/*"]
+	}
+	`))
+	if err != nil {
+		t.Fatalf("Should be able to subscribe to a list of event types: %v", err)
+	}
+	if strings.Join(policy.Paths[0].Permissions.SubscribeEventTypes, ",") != "kv-v2/data-write,kv-v1/*" {
+		t.Fatalf("ACLPermission should reflect subscribe event types, but got %v", policy.Paths[0].Permissions.SubscribeEventTypes)
+	}
+}
+
+// TestPolicy_Recover verifies that the recover capability can be used in a
+// policy, and that the capability is set in the capabilities bitmap.
+func TestPolicy_Recover(t *testing.T) {
+	policy, err := ParseACLPolicy(namespace.RootNamespace, strings.TrimSpace(`
+	path "secret/*" {
+		capabilities = ["recover"]
+	}
+	`))
+	if err != nil {
+		t.Fatalf("Policies should be able to use 'recover' capability")
+	}
+	if policy.Paths[0].Permissions.CapabilitiesBitmap&RecoverCapabilityInt == 0 {
+		t.Fatalf("Recover capability should be present in capabilities bitmap")
 	}
 }

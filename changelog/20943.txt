@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Support TLS-ALPN-01 challenge type in ACME for DNS certificate identifiers.
+```

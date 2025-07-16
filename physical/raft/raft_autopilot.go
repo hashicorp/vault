@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package raft
 
 import (
@@ -84,6 +87,27 @@ type AutopilotConfig struct {
 	// (Enterprise-only) UpgradeVersionTag is the node tag to use for version info when
 	// performing upgrade migrations. If left blank, the Consul version will be used.
 	UpgradeVersionTag string `mapstructure:"upgrade_version_tag"`
+}
+
+func (ac *AutopilotConfig) String() string {
+	s := "CleanupDeadServers:%t " +
+		"LastContactThreshold:%s " +
+		"DeadServerLastContactThreshold:%s " +
+		"MaxTrailingLogs:%d " +
+		"MinQuorum:%d " +
+		"ServerStabilizationTime:%s " +
+		"DisableUpgradeMigration:%t " +
+		"RedundancyZoneTag:%s " +
+		"UpgradeVersionTag:%s"
+	return fmt.Sprintf(s, ac.CleanupDeadServers,
+		ac.LastContactThreshold,
+		ac.DeadServerLastContactThreshold,
+		ac.MaxTrailingLogs,
+		ac.MinQuorum,
+		ac.ServerStabilizationTime,
+		ac.DisableUpgradeMigration,
+		ac.RedundancyZoneTag,
+		ac.UpgradeVersionTag)
 }
 
 // Merge combines the supplied config with the receiver. Supplied ones take
@@ -187,6 +211,86 @@ type FollowerState struct {
 	RedundancyZone  string
 }
 
+// partialCopy returns a partial copy of the follower state.
+// This copy uses the same pointer to the IsDead
+// atomic field. We need to do this to ensure that
+// an update of the IsDead boolean will still be
+// accessible in a copied state.
+func (f *FollowerState) partialCopy() *FollowerState {
+	return &FollowerState{
+		AppliedIndex:    f.AppliedIndex,
+		LastHeartbeat:   f.LastHeartbeat,
+		LastTerm:        f.LastTerm,
+		IsDead:          f.IsDead,
+		DesiredSuffrage: f.DesiredSuffrage,
+		Version:         f.Version,
+		UpgradeVersion:  f.UpgradeVersion,
+		RedundancyZone:  f.RedundancyZone,
+	}
+}
+
+// PersistedFollowerState holds the information that gets persisted to storage
+type PersistedFollowerState struct {
+	Version        string `json:"version"`
+	UpgradeVersion string `json:"upgrade_version"`
+}
+
+type PersistedFollowerStates struct {
+	l      sync.RWMutex
+	States map[string]PersistedFollowerState
+}
+
+// shouldUpdate checks if the persisted state contains the same servers as the
+// current autopilot state. If grabLock is true, a read lock is acquired before
+// accessing the map
+func (p *PersistedFollowerStates) shouldUpdate(state *autopilot.State, grabLock bool) bool {
+	if grabLock {
+		p.l.RLock()
+		defer p.l.RUnlock()
+	}
+	if len(state.Servers) != len(p.States) {
+		return true
+	}
+	for id, server := range state.Servers {
+		persistedServer, found := p.States[string(id)]
+		if !found {
+			return true
+		}
+		if server.Server.Version != persistedServer.Version ||
+			server.Server.Meta[AutopilotUpgradeVersionTag] != persistedServer.UpgradeVersion {
+			return true
+		}
+	}
+	return false
+}
+
+// updatePersistedState checks if the persisted state matches the current
+// autopilot state. If not, the state is replaced and persisted
+func (d *Delegate) updatePersistedState(state *autopilot.State) error {
+	if !d.persistedState.shouldUpdate(state, true) {
+		return nil
+	}
+	newStates := make(map[string]PersistedFollowerState)
+	for id, server := range state.Servers {
+		newStates[string(id)] = PersistedFollowerState{
+			Version:        server.Server.Version,
+			UpgradeVersion: server.Server.Meta[AutopilotUpgradeVersionTag],
+		}
+	}
+	d.persistedState.l.Lock()
+	defer d.persistedState.l.Unlock()
+	if !d.persistedState.shouldUpdate(state, false) {
+		return nil
+	}
+	d.logger.Debug("updating autopilot persisted state")
+	err := d.saveStateFn(newStates)
+	if err != nil {
+		return err
+	}
+	d.persistedState.States = newStates
+	return nil
+}
+
 // EchoRequestUpdate is here to avoid 1) the list of arguments to Update() getting huge 2) an import cycle on the vault package
 type EchoRequestUpdate struct {
 	NodeID          string
@@ -212,13 +316,15 @@ func NewFollowerStates() *FollowerStates {
 	}
 }
 
-// Update the peer information in the follower states. Note that this function runs on the active node.
-func (s *FollowerStates) Update(req *EchoRequestUpdate) {
+// Update the peer information in the follower states. Note that this function
+// runs on the active node. Returns true if a new entry was added, as opposed
+// to modifying one already present.
+func (s *FollowerStates) Update(req *EchoRequestUpdate) bool {
 	s.l.Lock()
 	defer s.l.Unlock()
 
-	state, ok := s.followers[req.NodeID]
-	if !ok {
+	state, present := s.followers[req.NodeID]
+	if !present {
 		state = &FollowerState{
 			IsDead: atomic.NewBool(false),
 		}
@@ -233,6 +339,8 @@ func (s *FollowerStates) Update(req *EchoRequestUpdate) {
 	state.Version = req.SDKVersion
 	state.UpgradeVersion = req.UpgradeVersion
 	state.RedundancyZone = req.RedundancyZone
+
+	return !present
 }
 
 // Clear wipes all the information regarding peers in the follower states.
@@ -287,13 +395,17 @@ type Delegate struct {
 	dl               sync.RWMutex
 	inflightRemovals map[raft.ServerID]bool
 	emptyVersionLogs map[raft.ServerID]struct{}
+	persistedState   *PersistedFollowerStates
+	saveStateFn      func(p map[string]PersistedFollowerState) error
 }
 
-func newDelegate(b *RaftBackend) *Delegate {
+func NewDelegate(b *RaftBackend, persistedStates map[string]PersistedFollowerState, savePersistedStates func(p map[string]PersistedFollowerState) error) *Delegate {
 	return &Delegate{
 		RaftBackend:      b,
 		inflightRemovals: make(map[raft.ServerID]bool),
 		emptyVersionLogs: make(map[raft.ServerID]struct{}),
+		persistedState:   &PersistedFollowerStates{States: persistedStates},
+		saveStateFn:      savePersistedStates,
 	}
 }
 
@@ -336,6 +448,13 @@ func (d *Delegate) NotifyState(state *autopilot.State) {
 			} else {
 				metrics.SetGaugeWithLabels([]string{"autopilot", "node", "healthy"}, 0, labels)
 			}
+		}
+
+		// if there is a change in versions or membership, we should update
+		// our persisted state
+		err := d.updatePersistedState(state)
+		if err != nil {
+			d.logger.Error("failed to persist autopilot state", "error", err)
 		}
 	}
 }
@@ -382,6 +501,7 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		return nil
 	}
 
+	apServerStates := d.autopilot.GetState().Servers
 	servers := future.Configuration().Servers
 	serverIDs := make([]string, 0, len(servers))
 	for _, server := range servers {
@@ -391,6 +511,9 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 	d.followerStates.l.RLock()
 	defer d.followerStates.l.RUnlock()
 
+	d.persistedState.l.RLock()
+	defer d.persistedState.l.RUnlock()
+
 	ret := make(map[raft.ServerID]*autopilot.Server)
 	for id, state := range d.followerStates.followers {
 		// If the server is not in raft configuration, even if we received a follower
@@ -399,22 +522,14 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 			continue
 		}
 
-		// If version isn't found in the state, fake it using the version from the leader so that autopilot
-		// doesn't demote the node to a non-voter, just because of a missed heartbeat.
 		currentServerID := raft.ServerID(id)
-		followerVersion := state.Version
-		leaderVersion := d.effectiveSDKVersion
-		d.dl.Lock()
-		if followerVersion == "" {
-			if _, ok := d.emptyVersionLogs[currentServerID]; !ok {
-				d.logger.Trace("received empty Vault version in heartbeat state. faking it with the leader version for now", "id", id, "leader version", leaderVersion)
-				d.emptyVersionLogs[currentServerID] = struct{}{}
-			}
-			followerVersion = leaderVersion
-		} else {
-			delete(d.emptyVersionLogs, currentServerID)
+		followerVersion, upgradeVersion := d.determineFollowerVersions(id, state)
+		if state.UpgradeVersion != upgradeVersion {
+			// we only have a read lock on state, so we can't modify it
+			// safely. Instead, copy it to override the upgrade version
+			state = state.partialCopy()
+			state.UpgradeVersion = upgradeVersion
 		}
-		d.dl.Unlock()
 
 		server := &autopilot.Server{
 			ID:          currentServerID,
@@ -423,6 +538,19 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 			Meta:        d.meta(state),
 			Version:     followerVersion,
 			Ext:         d.autopilotServerExt(state),
+		}
+
+		// As KnownServers is a delegate called by autopilot let's check if we already
+		// had this data in the correct format and use it. If we don't (which sounds a
+		// bit sad, unless this ISN'T a voter) then as a fail-safe, let's try what we've
+		// done elsewhere in code to check the desired suffrage and manually set NodeType
+		// based on whether that's a voter or not. If we don't  do either of these
+		// things, NodeType isn't set which means technically it's not a voter.
+		// It shouldn't be a voter and end up in this state.
+		if apServerState, found := apServerStates[raft.ServerID(id)]; found && apServerState.Server.NodeType != "" {
+			server.NodeType = apServerState.Server.NodeType
+		} else if state.DesiredSuffrage == "voter" {
+			server.NodeType = autopilot.NodeVoter
 		}
 
 		switch state.IsDead.Load() {
@@ -442,8 +570,9 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 		Name:        d.localID,
 		RaftVersion: raft.ProtocolVersionMax,
 		NodeStatus:  autopilot.NodeAlive,
+		NodeType:    autopilot.NodeVoter, // The leader must be a voter
 		Meta: d.meta(&FollowerState{
-			UpgradeVersion: d.EffectiveVersion(),
+			UpgradeVersion: d.UpgradeVersion(),
 			RedundancyZone: d.RedundancyZone(),
 		}),
 		Version:  d.effectiveSDKVersion,
@@ -452,6 +581,54 @@ func (d *Delegate) KnownServers() map[raft.ServerID]*autopilot.Server {
 	}
 
 	return ret
+}
+
+// determineFollowerVersions uses the following logic:
+//   - if the version and upgrade version are present in the follower state,
+//     return those.
+//   - if the persisted states map is empty, it means that persisted states
+//     don't exist. This happens on an upgrade to 1.18. Use the leader node's
+//     versions.
+//   - use the versions in the persisted states map
+//
+// This function must be called with a lock on d.followerStates
+// and d.persistedStates.
+func (d *Delegate) determineFollowerVersions(id string, state *FollowerState) (version string, upgradeVersion string) {
+	// if we have both versions in follower states, use those
+	if state.Version != "" && state.UpgradeVersion != "" {
+		return state.Version, state.UpgradeVersion
+	}
+
+	version = state.Version
+	upgradeVersion = state.UpgradeVersion
+
+	// the persistedState map should only be empty on upgrades
+	// to 1.18.x. This is the only case where we'll stub with
+	// the leader's versions
+	if len(d.persistedState.States) == 0 {
+		if version == "" {
+			version = d.effectiveSDKVersion
+			d.logger.Debug("no persisted state, using leader version", "id", id, "version", version)
+		}
+		if upgradeVersion == "" {
+			upgradeVersion = d.upgradeVersion
+			d.logger.Debug("no persisted state, using leader upgrade version version", "id", id, "upgrade_version", upgradeVersion)
+		}
+		return version, upgradeVersion
+	}
+
+	// Use the persistedStates map to fill in the sdk
+	// and upgrade versions
+	pState := d.persistedState.States[id]
+	if version == "" {
+		version = pState.Version
+		d.logger.Debug("using follower version from persisted states", "id", id, "version", version)
+	}
+	if upgradeVersion == "" {
+		upgradeVersion = pState.UpgradeVersion
+		d.logger.Debug("using upgrade version from persisted states", "id", id, "upgrade_version", upgradeVersion)
+	}
+	return version, upgradeVersion
 }
 
 // RemoveFailedServer is called by the autopilot library when it desires a node
@@ -489,6 +666,10 @@ func (d *Delegate) RemoveFailedServer(server *autopilot.Server) {
 		}
 
 		d.followerStates.Delete(string(server.ID))
+		_, err := d.RemovedServerCleanup(context.Background(), string(server.ID))
+		if err != nil {
+			d.logger.Error("failed to run cleanup", "error", err)
+		}
 	}()
 }
 
@@ -540,11 +721,32 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 	tickerCh := b.followerHeartbeatTicker.C
 	b.l.RUnlock()
 
+	followerGauge := func(peerID string, suffix string, value float32) {
+		labels := []metrics.Label{
+			{
+				Name:  "peer_id",
+				Value: peerID,
+			},
+		}
+		metrics.SetGaugeWithLabels([]string{"raft_storage", "follower", suffix}, value, labels)
+	}
 	for range tickerCh {
 		b.l.RLock()
-		if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.DeadServerLastContactThreshold != 0 {
-			b.followerStates.l.RLock()
-			for _, state := range b.followerStates.followers {
+		if b.raft == nil {
+			// We could be racing with teardown, which will stop the ticker
+			// but that doesn't guarantee that we won't reach this line with a nil
+			// b.raft.
+			b.l.RUnlock()
+			return
+		}
+		b.followerStates.l.RLock()
+		myAppliedIndex := b.raft.AppliedIndex()
+		for peerID, state := range b.followerStates.followers {
+			timeSinceLastHeartbeat := time.Now().Sub(state.LastHeartbeat) / time.Millisecond
+			followerGauge(peerID, "last_heartbeat_ms", float32(timeSinceLastHeartbeat))
+			followerGauge(peerID, "applied_index_delta", float32(myAppliedIndex-state.AppliedIndex))
+
+			if b.autopilotConfig.CleanupDeadServers && b.autopilotConfig.DeadServerLastContactThreshold != 0 {
 				if state.LastHeartbeat.IsZero() || state.IsDead.Load() {
 					continue
 				}
@@ -553,8 +755,8 @@ func (b *RaftBackend) startFollowerHeartbeatTracker() {
 					state.IsDead.Store(true)
 				}
 			}
-			b.followerStates.l.RUnlock()
 		}
+		b.followerStates.l.RUnlock()
 		b.l.RUnlock()
 	}
 }
@@ -568,7 +770,8 @@ func (b *RaftBackend) StopAutopilot() {
 	if b.autopilot == nil {
 		return
 	}
-	b.autopilot.Stop()
+	stopCh := b.autopilot.Stop()
+	<-stopCh
 	b.autopilot = nil
 	b.followerHeartbeatTicker.Stop()
 }
@@ -663,7 +866,7 @@ func (d *ReadableDuration) UnmarshalJSON(raw []byte) (err error) {
 	str := string(raw)
 	if len(str) >= 2 && str[0] == '"' && str[len(str)-1] == '"' {
 		// quoted string
-		dur, err = time.ParseDuration(str[1 : len(str)-1])
+		dur, err = parseutil.ParseDurationSecond(str[1 : len(str)-1])
 		if err != nil {
 			return err
 		}
@@ -765,11 +968,19 @@ func (b *RaftBackend) DisableAutopilot() {
 	b.l.Unlock()
 }
 
+type AutopilotSetupOptions struct {
+	StorageConfig       *AutopilotConfig
+	FollowerStates      *FollowerStates
+	Disable             bool
+	PersistedStates     map[string]PersistedFollowerState
+	SavePersistedStates func(p map[string]PersistedFollowerState) error
+}
+
 // SetupAutopilot gathers information required to configure autopilot and starts
 // it. If autopilot is disabled, this function does nothing.
-func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *AutopilotConfig, followerStates *FollowerStates, disable bool) {
+func (b *RaftBackend) SetupAutopilot(ctx context.Context, opts *AutopilotSetupOptions) {
 	b.l.Lock()
-	if disable || os.Getenv("VAULT_RAFT_AUTOPILOT_DISABLE") != "" {
+	if opts.Disable || os.Getenv("VAULT_RAFT_AUTOPILOT_DISABLE") != "" {
 		b.disableAutopilot = true
 	}
 
@@ -783,7 +994,9 @@ func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *Autopil
 	b.autopilotConfig = b.defaultAutopilotConfig()
 
 	// Merge the setting provided over the API
-	b.autopilotConfig.Merge(storageConfig)
+	b.autopilotConfig.Merge(opts.StorageConfig)
+
+	infoArgs := []interface{}{"config", b.autopilotConfig}
 
 	// Create the autopilot instance
 	options := []autopilot.Option{
@@ -792,17 +1005,19 @@ func (b *RaftBackend) SetupAutopilot(ctx context.Context, storageConfig *Autopil
 	}
 	if b.autopilotReconcileInterval != 0 {
 		options = append(options, autopilot.WithReconcileInterval(b.autopilotReconcileInterval))
+		infoArgs = append(infoArgs, []interface{}{"reconcile_interval", b.autopilotReconcileInterval}...)
 	}
 	if b.autopilotUpdateInterval != 0 {
 		options = append(options, autopilot.WithUpdateInterval(b.autopilotUpdateInterval))
+		infoArgs = append(infoArgs, []interface{}{"update_interval", b.autopilotUpdateInterval}...)
 	}
-	b.autopilot = autopilot.New(b.raft, newDelegate(b), options...)
-	b.followerStates = followerStates
+	delegate := NewDelegate(b, opts.PersistedStates, opts.SavePersistedStates)
+	b.autopilot = autopilot.New(b.raft, delegate, options...)
+	b.followerStates = opts.FollowerStates
 	b.followerHeartbeatTicker = time.NewTicker(1 * time.Second)
-
 	b.l.Unlock()
 
-	b.logger.Info("starting autopilot", "config", b.autopilotConfig, "reconcile_interval", b.autopilotReconcileInterval)
+	b.logger.Info("starting autopilot", infoArgs...)
 	b.autopilot.Start(ctx)
 
 	go b.startFollowerHeartbeatTracker()

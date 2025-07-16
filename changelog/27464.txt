@@ -1,0 +1,3 @@
+```release-note:improvement
+storage/raft: Improve autopilot logging on startup to show config values clearly and avoid spurious logs
+```

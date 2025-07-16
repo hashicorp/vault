@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -5,17 +8,24 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func groupAliasPaths(i *IdentityStore) []*framework.Path {
 	return []*framework.Path{
 		{
 			Pattern: "group-alias$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "group",
+				OperationVerb:   "create",
+				OperationSuffix: "alias",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"id": {
 					Type:        framework.TypeString,
@@ -34,8 +44,13 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 					Description: "ID of the group to which this is an alias.",
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathGroupAliasRegister(),
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback:                    i.pathGroupAliasRegister(),
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(groupAliasHelp["group-alias"][0]),
@@ -43,6 +58,12 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "group-alias/id/" + framework.GenericNameRegex("id"),
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "group",
+				OperationSuffix: "alias-by-id",
+			},
+
 			Fields: map[string]*framework.FieldSchema{
 				"id": {
 					Type:        framework.TypeString,
@@ -61,10 +82,30 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 					Description: "ID of the group to which this is an alias.",
 				},
 			},
-			Callbacks: map[logical.Operation]framework.OperationFunc{
-				logical.UpdateOperation: i.pathGroupAliasIDUpdate(),
-				logical.ReadOperation:   i.pathGroupAliasIDRead(),
-				logical.DeleteOperation: i.pathGroupAliasIDDelete(),
+
+			Operations: map[logical.Operation]framework.OperationHandler{
+				logical.UpdateOperation: &framework.PathOperation{
+					Callback: i.pathGroupAliasIDUpdate(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "update",
+					},
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
+				},
+				logical.ReadOperation: &framework.PathOperation{
+					Callback: i.pathGroupAliasIDRead(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "read",
+					},
+				},
+				logical.DeleteOperation: &framework.PathOperation{
+					Callback: i.pathGroupAliasIDDelete(),
+					DisplayAttrs: &framework.DisplayAttributes{
+						OperationVerb: "delete",
+					},
+					ForwardPerformanceStandby:   true,
+					ForwardPerformanceSecondary: true,
+				},
 			},
 
 			HelpSynopsis:    strings.TrimSpace(groupAliasHelp["group-alias-by-id"][0]),
@@ -72,6 +113,12 @@ func groupAliasPaths(i *IdentityStore) []*framework.Path {
 		},
 		{
 			Pattern: "group-alias/id/?$",
+
+			DisplayAttrs: &framework.DisplayAttributes{
+				OperationPrefix: "group",
+				OperationSuffix: "aliases-by-id",
+			},
+
 			Callbacks: map[logical.Operation]framework.OperationFunc{
 				logical.ListOperation: i.pathGroupAliasIDList(),
 			},
@@ -131,7 +178,7 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(ctx context.Context, req *l
 
 	if groupAlias == nil {
 		groupAlias = &identity.Alias{
-			CreationTime: ptypes.TimestampNow(),
+			CreationTime: timestamppb.Now(),
 			NamespaceID:  ns.ID,
 		}
 		groupAlias.LastUpdateTime = groupAlias.CreationTime
@@ -139,7 +186,7 @@ func (i *IdentityStore) handleGroupAliasUpdateCommon(ctx context.Context, req *l
 		if ns.ID != groupAlias.NamespaceID {
 			return logical.ErrorResponse("existing alias not in the same namespace as request"), logical.ErrPermissionDenied
 		}
-		groupAlias.LastUpdateTime = ptypes.TimestampNow()
+		groupAlias.LastUpdateTime = timestamppb.Now()
 		if groupAlias.CreationTime == nil {
 			groupAlias.CreationTime = groupAlias.LastUpdateTime
 		}

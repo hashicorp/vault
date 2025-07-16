@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package etcd
 
 import (
@@ -11,9 +14,10 @@ import (
 	"sync"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"go.etcd.io/etcd/client/pkg/v3/transport"
@@ -31,7 +35,7 @@ type EtcdBackend struct {
 	lockTimeout    time.Duration
 	requestTimeout time.Duration
 
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 
 	etcd *clientv3.Client
 }
@@ -119,6 +123,15 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 		cfg.MaxCallRecvMsgSize = int(val)
 	}
 
+	if maxSend, ok := conf["max_send_size"]; ok {
+		// grpc converts this to uint32 internally, so parse as that to avoid passing invalid values
+		val, err := strconv.ParseUint(maxSend, 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("value of 'max_send_size' (%v) could not be understood: %w", maxSend, err)
+		}
+		cfg.MaxCallSendMsgSize = int(val)
+	}
+
 	etcd, err := clientv3.New(cfg)
 	if err != nil {
 		return nil, err
@@ -166,7 +179,7 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 	return &EtcdBackend{
 		path:           path,
 		etcd:           etcd,
-		permitPool:     physical.NewPermitPool(physical.DefaultParallelOperations),
+		permitPool:     permitpool.New(physical.DefaultParallelOperations),
 		logger:         logger,
 		haEnabled:      haEnabledBool,
 		lockTimeout:    lock,
@@ -177,7 +190,9 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 func (c *EtcdBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"etcd", "put"}, time.Now())
 
-	c.permitPool.Acquire()
+	if err := c.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer c.permitPool.Release()
 
 	ctx, cancel := context.WithTimeout(context.Background(), c.requestTimeout)
@@ -189,7 +204,9 @@ func (c *EtcdBackend) Put(ctx context.Context, entry *physical.Entry) error {
 func (c *EtcdBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"etcd", "get"}, time.Now())
 
-	c.permitPool.Acquire()
+	if err := c.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer c.permitPool.Release()
 
 	ctx, cancel := context.WithTimeout(context.Background(), c.requestTimeout)
@@ -214,7 +231,9 @@ func (c *EtcdBackend) Get(ctx context.Context, key string) (*physical.Entry, err
 func (c *EtcdBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"etcd", "delete"}, time.Now())
 
-	c.permitPool.Acquire()
+	if err := c.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer c.permitPool.Release()
 
 	ctx, cancel := context.WithTimeout(context.Background(), c.requestTimeout)
@@ -229,13 +248,15 @@ func (c *EtcdBackend) Delete(ctx context.Context, key string) error {
 func (c *EtcdBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"etcd", "list"}, time.Now())
 
-	c.permitPool.Acquire()
+	if err := c.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer c.permitPool.Release()
 
 	ctx, cancel := context.WithTimeout(context.Background(), c.requestTimeout)
 	defer cancel()
 	prefix = path.Join(c.path, prefix) + "/"
-	resp, err := c.etcd.Get(ctx, prefix, clientv3.WithPrefix())
+	resp, err := c.etcd.Get(ctx, prefix, clientv3.WithPrefix(), clientv3.WithKeysOnly())
 	if err != nil {
 		return nil, err
 	}

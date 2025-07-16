@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package aws
 
 import (
@@ -53,7 +56,7 @@ const (
 // passed as a parameter to the client.Auth().Login method.
 //
 // Supported options: WithRole, WithMountPath, WithIAMAuth, WithEC2Auth,
-// WithPKCS7Signature, WithIdentitySignature, WithIAMServerIDHeader, WithNonce, WithRegion
+// WithPKCS7Signature, WithIdentitySignature, WithRSA2048Signature, WithIAMServerIDHeader, WithNonce, WithRegion
 func NewAWSAuth(opts ...LoginOption) (*AWSAuth, error) {
 	a := &AWSAuth{
 		mountPath:     defaultMountPath,
@@ -238,7 +241,7 @@ func WithIAMAuth() LoginOption {
 // If this option is not provided, will default to using the PKCS #7 signature.
 // The signature type used should match the type of the public AWS cert Vault
 // has been configured with to verify EC2 instance identity.
-// https://www.vaultproject.io/api/auth/aws#create-certificate-configuration
+// https://developer.hashicorp.com/vault/api-docs/auth/aws#create-certificate-configuration
 func WithIdentitySignature() LoginOption {
 	return func(a *AWSAuth) error {
 		a.signatureType = identityType
@@ -251,10 +254,23 @@ func WithIdentitySignature() LoginOption {
 // PKCS #7 is the default, but this method is provided for additional clarity.
 // The signature type used should match the type of the public AWS cert Vault
 // has been configured with to verify EC2 instance identity.
-// https://www.vaultproject.io/api/auth/aws#create-certificate-configuration
+// https://developer.hashicorp.com/vault/api-docs/auth/aws#create-certificate-configuration
 func WithPKCS7Signature() LoginOption {
 	return func(a *AWSAuth) error {
 		a.signatureType = pkcs7Type
+		return nil
+	}
+}
+
+// WithRSA2048Signature will explicitly tell the client to send the RSA2048
+// signature to verify EC2 auth logins. Only used by EC2 auth type.
+// If this option is not provided, will default to using the PKCS #7 signature.
+// The signature type used should match the type of the public AWS cert Vault
+// has been configured with to verify EC2 instance identity.
+// https://www.vaultproject.io/api/auth/aws#create-certificate-configuration
+func WithRSA2048Signature() LoginOption {
+	return func(a *AWSAuth) error {
+		a.signatureType = rsa2048Type
 		return nil
 	}
 }

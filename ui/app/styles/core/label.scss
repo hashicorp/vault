@@ -1,0 +1,34 @@
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+// This file defines the style for .is-label
+
+.is-label {
+  color: color_variables.$grey-darkest;
+  font-size: 14px;
+  font-weight: font_variables.$font-weight-bold;
+  display: flex;
+  align-items: center;
+  gap: size_variables.$spacing-4;
+  width: min-content;
+  min-width: 100%;
+
+  &:not(:last-child) {
+    margin-bottom: 0.25rem;
+  }
+
+  &::before,
+  &::after {
+    transform: translateY(0.2em);
+  }
+
+  &::before {
+    border-color: color_variables.$grey-light;
+  }
+}

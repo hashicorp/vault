@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package raft
 
 import (
@@ -15,11 +18,14 @@ import (
 	"testing"
 	"time"
 
-	hclog "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
+	iradix "github.com/hashicorp/go-immutable-radix"
 	"github.com/hashicorp/raft"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
+	"github.com/stretchr/testify/require"
 )
 
 type idAddr struct {
@@ -55,7 +61,7 @@ func addPeer(t *testing.T, leader, follower *RaftBackend) {
 }
 
 func TestRaft_Snapshot_Loading(t *testing.T) {
-	raft, dir := getRaft(t, true, false)
+	raft, dir := GetRaft(t, true, false)
 	defer os.RemoveAll(dir)
 
 	// Write some data
@@ -139,7 +145,7 @@ func TestRaft_Snapshot_Loading(t *testing.T) {
 }
 
 func TestRaft_Snapshot_Index(t *testing.T) {
-	raft, dir := getRaft(t, true, false)
+	raft, dir := GetRaft(t, true, false)
 	defer os.RemoveAll(dir)
 
 	err := raft.Put(context.Background(), &physical.Entry{
@@ -226,9 +232,9 @@ func TestRaft_Snapshot_Index(t *testing.T) {
 }
 
 func TestRaft_Snapshot_Peers(t *testing.T) {
-	raft1, dir := getRaft(t, true, false)
-	raft2, dir2 := getRaft(t, false, false)
-	raft3, dir3 := getRaft(t, false, false)
+	raft1, dir := GetRaft(t, true, false)
+	raft2, dir2 := GetRaft(t, false, false)
+	raft3, dir3 := GetRaft(t, false, false)
 	defer os.RemoveAll(dir)
 	defer os.RemoveAll(dir2)
 	defer os.RemoveAll(dir3)
@@ -309,9 +315,9 @@ func ensureCommitApplied(t *testing.T, leaderCommitIdx uint64, backend *RaftBack
 }
 
 func TestRaft_Snapshot_Restart(t *testing.T) {
-	raft1, dir := getRaft(t, true, false)
+	raft1, dir := GetRaft(t, true, false)
 	defer os.RemoveAll(dir)
-	raft2, dir2 := getRaft(t, false, false)
+	raft2, dir2 := GetRaft(t, false, false)
 	defer os.RemoveAll(dir2)
 
 	// Write some data
@@ -373,9 +379,9 @@ func TestRaft_Snapshot_Restart(t *testing.T) {
 
 /*
 func TestRaft_Snapshot_ErrorRecovery(t *testing.T) {
-	raft1, dir := getRaft(t, true, false)
-	raft2, dir2 := getRaft(t, false, false)
-	raft3, dir3 := getRaft(t, false, false)
+	raft1, dir := GetRaft(t, true, false)
+	raft2, dir2 := GetRaft(t, false, false)
+	raft3, dir3 := GetRaft(t, false, false)
 	defer os.RemoveAll(dir)
 	defer os.RemoveAll(dir2)
 	defer os.RemoveAll(dir3)
@@ -455,9 +461,9 @@ func TestRaft_Snapshot_ErrorRecovery(t *testing.T) {
 }*/
 
 func TestRaft_Snapshot_Take_Restore(t *testing.T) {
-	raft1, dir := getRaft(t, true, false)
+	raft1, dir := GetRaft(t, true, false)
 	defer os.RemoveAll(dir)
-	raft2, dir2 := getRaft(t, false, false)
+	raft2, dir2 := GetRaft(t, false, false)
 	defer os.RemoveAll(dir2)
 
 	addPeer(t, raft1, raft2)
@@ -492,7 +498,7 @@ func TestRaft_Snapshot_Take_Restore(t *testing.T) {
 		}
 	}
 
-	snapFile, cleanup, metadata, err := raft1.WriteSnapshotToTemp(ioutil.NopCloser(recorder.Body), nil)
+	snapFile, cleanup, metadata, err := raft1.WriteSnapshotToTemp(io.NopCloser(recorder.Body), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -954,4 +960,53 @@ func TestBoltSnapshotStore_CloseFailure(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected write to fail")
 	}
+}
+
+// TestLoadReadOnlySnapshot loads a test snapshot file and verifies that there are no
+// errors, and that the expected paths are excluded from the FSM.
+func TestLoadReadOnlySnapshot(t *testing.T) {
+	t.Parallel()
+	// Load a test snapshot file from the testdata directory.
+	// The snapshot contains the following paths:
+	//   * /different/path/to/exclude
+	//   * /path/to/exclude/1
+	//   * /path/to/exclude/2
+	//   * /path/to/keep
+	testSnapshotFilePath := "testdata/TestLoadReadOnlySnapshot.bin"
+	dir := t.TempDir()
+	logger := corehelpers.NewTestLogger(t)
+	snapshotFile, err := os.Open(testSnapshotFilePath)
+	require.NoError(t, err)
+	defer snapshotFile.Close()
+
+	// Create a radix tree containing paths to exclude.
+	pathsToExclude := iradix.New()
+	txn := pathsToExclude.Txn()
+	_, _ = txn.Insert([]byte("/path/to/exclude"), []byte("value"))
+	_, _ = txn.Insert([]byte("/path/to/exclude/1"), []byte("value"))
+	_, _ = txn.Insert([]byte("/different/path/to/exclude"), []byte("value"))
+	pathsToExclude = txn.Commit()
+	toExclude := func(key string) bool {
+		_, _, ok := pathsToExclude.Root().LongestPrefix([]byte(key))
+		return ok
+	}
+
+	// Create an FSM to load the snapshot data into.
+	fsm, err := NewFSM(dir, "test-fsm", logger)
+
+	err = LoadReadOnlySnapshot(fsm, snapshotFile, toExclude, logger)
+	require.NoError(t, err)
+	value, err := fsm.Get(context.Background(), "/path/to/exclude/1")
+	require.NoError(t, err)
+	require.Nil(t, value)
+	value, err = fsm.Get(context.Background(), "/path/to/exclude/2")
+	require.NoError(t, err)
+	require.Nil(t, value)
+	value, err = fsm.Get(context.Background(), "/different/path/to/exclude")
+	require.NoError(t, err)
+	require.Nil(t, value)
+
+	value, err = fsm.Get(context.Background(), "/path/to/keep")
+	require.NoError(t, err)
+	require.NotNil(t, value)
 }

@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Allow tidying of the legacy ca_bundle, improving startup on post-migrated, seal-wrapped PKI mounts.
+```

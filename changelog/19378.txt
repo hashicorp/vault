@@ -1,0 +1,3 @@
+```release-note:bug
+cli/kv: add -mount flag to kv list
+```

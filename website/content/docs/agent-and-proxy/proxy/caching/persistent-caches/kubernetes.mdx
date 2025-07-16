@@ -1,0 +1,23 @@
+---
+layout: docs
+page_title: Use Kubernetes persistent cache - Vault Proxy
+description: >-
+  Configure Vault Proxy to use Kubernetes for persistent cache.
+---
+
+# Use Kubernetes persistent cache
+
+When `kubernetes` is configured for the persistent cache type, Vault Proxy will optimize the
+persistent cache specifically for Kubernetes. This type of persistent cache requires a Kubernetes
+service account token. The service account token is used during encryption and decryption of the
+persistent cache as an additional integrity check.
+
+The Vault Proxy persistent cache file in Kubernetes should only be used for handing off Vault tokens
+and leases between initialization and sidecar Vault Proxy containers. This cache file should be shared
+using a memory volume between the Vault Proxy containers.
+
+## Configuration
+
+- `service_account_token_file` `(string: optional)` - When type is set to `kubernetes`,
+  this configures the path on disk where the Kubernetes service account token can be found.
+  Defaults to `/var/run/secrets/kubernetes.io/serviceaccount/token`.

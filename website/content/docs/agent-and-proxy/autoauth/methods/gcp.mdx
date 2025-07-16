@@ -1,0 +1,36 @@
+---
+layout: docs
+page_title: Auto-auth with GCP
+description: >-
+  Use Google Cloud Platform (GCP) for auto-authentication with Vault Agent or
+  Vault Proxy.
+---
+
+# Auto-auth method: Google Cloud Platform (GCP)
+
+The `gcp` method performs authentication against the [GCP Auth
+method](/vault/docs/auth/gcp). Both `gce` and `iam`
+authentication types are supported.
+
+## Credentials
+
+Vault will use the GCP SDK's normal credential chain behavior. You can set a
+static `credentials` value, but it is usually not needed. If running on GCE
+using Application Default Credentials, you may need to specify the service
+account and project since ADC does not provide metadata used to automatically
+determine these.
+
+## Configuration
+
+- `type` `(string: required)` - The type of authentication; must be `gce` or `iam`
+
+- `role` `(string: required)` - The role to authenticate against on Vault
+
+- `credentials` `(string: optional)` - When using static credentials, the
+  contents of the JSON credentials file
+
+- `service_account` `(string: optional)` - The service account to use, if it
+  cannot be automatically determined
+
+- `jwt_exp` `(string or int: optional)` - The number of minutes a generated JWT
+  should be valid for when using the `iam` method; defaults to 15 minutes

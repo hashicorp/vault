@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package cockroachdb
 
 // sqlKeywords is a reference of all of the keywords that we do not allow for use as the table name

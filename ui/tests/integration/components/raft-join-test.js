@@ -1,6 +1,12 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, render } from '@ember/test-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
@@ -21,14 +27,14 @@ module('Integration | Component | raft-join', function (hooks) {
     await render(hbs`<RaftJoin />`);
     await click('[data-test-next]');
     assert.dom('[data-test-join-header]').exists();
-    await click('[data-test-cancel-button]');
+    await click(GENERAL.cancelButton);
     assert.dom('[data-test-join-choice]').exists();
   });
 
   test('it calls onDismiss when a user chooses to init', async function (assert) {
-    let spy = sinon.spy();
+    const spy = sinon.spy();
     this.set('onDismiss', spy);
-    await render(hbs`<RaftJoin @onDismiss={{onDismiss}} />`);
+    await render(hbs`<RaftJoin @onDismiss={{this.onDismiss}} />`);
 
     await click('[data-test-join-init]');
     await click('[data-test-next]');

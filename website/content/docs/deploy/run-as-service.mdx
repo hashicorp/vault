@@ -1,0 +1,235 @@
+---
+layout: docs
+page_title: Run Vault as a service
+description: >-
+  Configure and deploy Vault as a service for Linux or Windows.
+---
+
+# Run Vault as a service
+
+Instead of starting your Vault server manually from the command line, you can
+configure a service to start Vault automatically.
+
+## Before you start 
+
+- **You must install Vault**. You can [use a package manager](/vault/install)
+  or [install a binary manually](/vault/docs/install/install-binary).
+
+
+## Step 1: Create a new service
+
+<Tabs>
+
+<Tab heading="Linux shell" group="nix">
+
+<Highlight title="Example tested on Ubuntu 22.04">
+
+   The following service definition is a simpler version of the `vault.service`
+   example in the Vault GitHub repo: [vault/.release/linux/package/usr/lib/systemd/system/vault.service](https://github.com/hashicorp/vault/blob/main/.release/linux/package/usr/lib/systemd/system/vault.service)
+   
+</Highlight>
+
+1. Set the `VAULT_CONFIG` environment variable to your Vault configuration
+   directory. The default configuration directory is `/etc/vault.d`:
+
+   ```shell-session
+   $ VAULT_CONFIG=/etc/vault.d
+   ```
+
+1. Confirm the path to your Vault binary:
+   ```
+   $ VAULT_BINARY=$(which vault)
+   ```
+   
+1. Create a `systemd` service called `vault.service` that uses the Vault
+   binary:
+
+   ```shell-session
+   $ sudo tee /lib/systemd/system/vault.service <<EOF
+   [Unit]
+   Description="HashiCorp Vault"
+   Documentation="https://developer.hashicorp.com/vault/docs"
+   ConditionFileNotEmpty="${VAULT_CONFIG}/vault.hcl"
+
+   [Service]
+   User=vault
+   Group=vault
+   SecureBits=keep-caps
+   AmbientCapabilities=CAP_IPC_LOCK
+   CapabilityBoundingSet=CAP_SYSLOG CAP_IPC_LOCK
+   NoNewPrivileges=yes
+   ExecStart=${VAULT_BINARY} server -config=${VAULT_CONFIG}/vault.hcl
+   ExecReload=/bin/kill --signal HUP
+   KillMode=process
+   KillSignal=SIGINT
+
+   [Install]
+   WantedBy=multi-user.target
+   EOF
+   ```
+
+1. Change the permissions on `/lib/systemd/system/vault.service` to `644`:
+
+   ```shell-session
+   $ sudo chmod 644 /lib/systemd/system/vault.service
+   ```
+
+</Tab>
+
+<Tab heading="Powershell" group="ps">
+
+The Windows binary for Vault does not support the Windows Service Application
+API. To run Vault as a service, you must use a Windows service wrapper. You can
+use whatever wrapper is appropriate for your environment, but the easiest we
+have found is `nssm`.
+
+1. Download and install [`nssm`](https://nssm.cc/) manually or install the
+   package with [Chocolatey](https://chocolatey.org/):
+
+   ```powershell
+   choco install nssm
+   ```
+
+1. Set a `VAULT_HOME` environment variable to your preferred Vault home
+   directory. For example, `c:\Program Files\Vault`:
+
+   ```powershell
+   $env:VAULT_HOME = "${env:ProgramFiles}\Vault"
+   ```
+
+1. Use `nssm` to create a new Windows service:
+   ```powershell
+   nssm install MS_VAULT "${env:VAULT_HOME}\vault.exe"
+   ```
+
+1. Set the working directory for your Vault installation:
+   ```powershell
+   nssm set MS_VAULT AppDirectory "${env:VAULT_HOME}" ; `
+   nssm set MS_VAULT AppParameters "server -config Config\vault.hcl"
+   ```
+
+1. Define the runtime parameters for Vault, including the
+   `-config` flag with the relative path to your Vault configuration file, for
+   example `Config\vault.hcl`:
+   ```powershell
+   nssm set MS_VAULT AppDirectory "${env:VAULT_HOME}" ; `
+   nssm set MS_VAULT AppParameters "server -config Config\vault.hcl"
+   ```
+
+1. Set the display name and description for the "Services"
+   management console:
+   ```powershell
+   nssm set MS_VAULT DisplayName "Vault Service" ; `
+   nssm set MS_VAULT Description "Vault server running as a service"
+   ```
+
+1. Set the startup type for your service. We recommend setting startup to
+   "Manual" until you confirm the service is working as expected:
+   ```powershell
+   nssm set MS_VAULT Start SERVICE_DEMAND_START
+   ```
+
+1. Configure the service to pipe information from `stdout` and `stderr` to files
+   under your logging directory, for example `${env:VAULT_HOME}\Logs`:
+   ```powershell
+   nssm set MS_VAULT AppStdout "${env:VAULT_HOME}\Logs\vault-stdout.log" ; `
+   nssm set MS_VAULT AppStderr "${env:VAULT_HOME}\Logs\vault-error.log"
+   ```
+
+1. Optionally, you can use the `AppEnvironmentExtra` parameter to set relevant
+   variables for the service environment. For example, to set the `VAULT_ADDR`
+   environment variable:
+
+   ```powershell
+   nssm set MS_VAULT AppEnvironmentExtra `$env:VAULT_ADDR=https://localhost:8200
+   ```
+
+1. Confirm your Vault service settings with `nssm`:
+
+   ```powershell
+   nssm dump MS_VAULT | Foreach {$_ -replace '.+nssm\.exe ',''}
+   ```
+
+</Tab>
+
+</Tabs>
+
+## Step 2: Start the new service
+
+<Tabs>
+
+<Tab heading="Linux shell" group="nix">
+
+1. Reload the `systemd` configuration:
+
+   ```shell-session
+   $ sudo systemctl daemon-reload
+   ```
+
+1. Start the Vault service:
+
+   ```shell-session
+   $ sudo systemctl start vault.service
+   ```
+
+1. Verify the service status:
+
+   ```shell-session
+      $ systemctl status vault.service
+
+      vault.service - "HashiCorp Vault"
+         Loaded: loaded (/lib/systemd/system/vault.service; disabled; vendor preset: enabled)
+         Active: active (running) since Thu 2024-09-05 13:58:45 UTC; 4s ago
+            Docs: https://developer.hashicorp.com/vault/docs
+         Main PID: 3145 (vault)
+            Tasks: 8 (limit: 2241)
+         Memory: 23.6M
+            CPU: 200ms
+         CGroup: /system.slice/vault.service
+                  └─3145 /usr/bin/vault server -config=/etc/vault.d/vault.hcl
+   ```
+
+</Tab>
+
+<Tab heading="Powershell" group="ps">
+
+<Highlight title="Use Powershell commands or wrapper commands to manage your service">
+
+   Once you create the service, you can control it using standard `*-Service`
+   cmdlets **or** the relevant commands for the associated wrapper. For example,
+   to control the service with `nssm` use `nssm start MS_VAULT`.
+
+</Highlight>
+
+1. Start the Vault service::
+   ```powershell
+   Start-Service -Name MS_VAULT
+   ```
+
+1. Confirm service status:
+
+   ```powershell
+   Get-Service -Name MS_VAULT
+
+   Status   Name               DisplayName
+   ------   ----               -----------
+   Running  MS_VAULT           Vault Service
+   ```
+
+</Tab>
+
+</Tabs>
+
+## Step 3: Verify the service is running
+
+To confirm the service is running and your Vault service is available, open the
+Vault GUI in a browser at the default address:
+[http://localhost:8200](http://localhost:8200)
+
+## Related tutorials
+
+The following tutorials provide additional guidance for installing Vault and
+production cluster deployment:
+
+- [Day One Preparation](/vault/tutorials/day-one-raft)
+- [Recommended Patterns](/vault/tutorials/recommended-patterns)

@@ -1,0 +1,312 @@
+---
+layout: docs
+page_title: Check for Merkle tree corruption
+description: >-
+  Learn how to check Vault cluster data for corruption in the Merkle trees used
+  for replication.
+---
+
+# Check for Merkle tree corruption
+
+@include 'alerts/enterprise-only.mdx'
+
+Vault Enterprise replication uses Merkle trees to keep the cluster state, and rolls cluster state into a Merkle root hash. When data is updated or removed in a cluster, the Merkle tree is also updated. In certain circumstances detailed later in this document, the Merkle tree can become corrupted.
+
+## Types of corruption
+
+Merkle tree corruption can occur at different points in the tree:
+
+- Composite root corruption
+- Subtree root corruption
+- Page and subpage corruption
+
+## Diagnose Merkle tree corruption
+
+If you run Vault Enterprise versions 1.15.0+, 1.14.3+ or 1.13.7+, you can use the [/sys/replication/merkle-check API](/vault/api-docs/system/replication#sys-replication-merkle-check) endpoint to help determine if your cluster is encountering Merkle tree corruption. In the following sections, you'll learn about some of the details of symptoms and corruption causes which the merkle-check endpoint can detect. 
+
+<Note>
+
+Keep in mind that the merkle-check endpoint cannot detect every way in which a Merkle tree could be corrupted.
+
+</Note>
+
+You'll also learn how to query the merkle-check endpoint and interpret its output. Finally, you'll learn about some Vault CLI commands which can help you diagnose corruption.
+
+## Consecutive Merkle difference and synchronization loop
+
+One indication of potential Merkle tree corruption occurs when Vault logs display consecutive Merkle difference and synchronization (merkle-diff and merkle-sync) operations without lasting resolution to streaming write-ahead logs (WALs). 
+
+A known cause for this symptom is the occurrence of a split brain situation within a High Availability (HA) Vault cluster. In this case, the leader loses leadership during which it writes data to the storage. Meanwhile, a new leader is elected and reads or writes data that the old leader is mutating. During leadership transfer, an old leader can write data which becomes lost and results in an inconsistent Merkle tree state.
+
+The two most common symptoms which can potentially indicate a split brain issue are detailed in the following sections.
+
+## Merkle difference results in no delta 
+
+A merkle-diff operation resulting in no delta indicates conflicting Merkle tree pages. Despite the two clusters holding exactly the same data in both trees, their root hashes do not match.
+
+The following example log shows entries from a performance replication secondary indicating the issue resulting from a corrupted tree, and no writes on the primary since the previous merkle-sync operation.
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+vault [INFO]  .perf-sec.core0.core: non-matching guard, exiting
+vault [TRACE] .perf-sec.core0.core: finished client WAL streaming
+vault [INFO]  .perf-sec.core0.replication: no matching WALs available
+vault [DEBUG] .perf-sec.core0.replication: starting merkle diff
+vault [TRACE] .perf-sec.core0.core: wal context done
+vault [TRACE] .perf-sec.core0.core: checking conflicting pages
+vault [TRACE] .perf-pri.core0.core: serving conflicting pages
+vault [DEBUG] .perf-pri.core0.replication.index.perf: creating merkle state snapshot: generation=4
+vault [DEBUG] .perf-pri.core0.replication.index.perf: removing state snapshot from cache: generation=4
+vault [INFO]  .perf-sec.core0.replication: requesting WAL stream: guard=8acf94ac
+vault [TRACE] .perf-sec.core0.core: starting client WAL streaming
+vault [TRACE] .perf-sec.core0.core: receiving WALs
+vault [TRACE] .perf-pri.core0.core: starting serving WALs: clientID=e16930a6-7d24-6924-41fe-aa8beb90b1b2
+vault [TRACE] .perf-pri.core0.core: streaming from log shipper done: clientID=e16930a6-7d24-6924-41fe-aa8beb90b1b2
+vault [TRACE] .perf-pri.core0.core: internal wal stream stop channel fired: clientID=e16930a6-7d24-6924-41fe-aa8beb90b1b2
+vault [TRACE] .perf-pri.core0.core: stopping serving WALs: clientID=e16930a6-7d24-6924-41fe-aa8beb90b1b2
+vault [INFO]  .perf-sec.core0.core: non-matching guard, exiting
+vault [TRACE] .perf-sec.core0.core: finished client WAL streaming
+vault [INFO]  .perf-sec.core0.replication: no matching WALs available
+vault [TRACE] .perf-sec.core0.core: wal context done
+vault [DEBUG] .perf-sec.core0.replication: starting merkle diff
+vault [TRACE] .perf-sec.core0.core: checking conflicting pages
+vault [TRACE] .perf-pri.core0.core: serving conflicting pages
+```
+
+</CodeBlockConfig>
+
+In the example log output, the performance secondary cluster's finite state machine (FSM) is entering merkle-diff mode, in which it tries to fetch conflicting pages from the primary cluster. The diff result is empty, indicated by an immediate switch to the stream-wals mode and **skipping the merkle-sync operation**. 
+
+Further into the log, the performance secondary cluster immediately goes into the merkle-diff mode again trying to reconcile the discrepancies of its Merkle tree with the primary cluster. This loop goes on without resolution due to the Merkle tree corruption.
+
+### Non resolving merkle-sync
+
+When a diff operation reveals conflicting data and the sync operation fetches them, but Vault still cannot enter lasting streaming WALs mode afterwards, this indicates a non-matching Merkle roots condition.
+
+In the following server log snippet, merkle-diff returns a non-empty list of page conflicts and merkle-sync fetches those keys. The FSM then transitions to the stream-wals state. Immediately after this transition, the FSM transitions to the merkle-diff again, and returns a **non-matching guard** error.
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+vault [INFO]  perf-sec.core0.core: non-matching guard, exiting
+vault [TRACE] perf-sec.core0.core: finished client WAL streaming
+vault [INFO]  perf-sec.core0.replication: no matching WALs available
+vault [TRACE] perf-sec.core0.core: wal context done
+vault [DEBUG] perf-sec.core0.replication: transitioning state: state=merkle-diff
+vault [DEBUG] perf-sec.core0.replication: starting merkle diff
+vault [TRACE] perf-sec.core0.core: checking conflicting pages
+vault [TRACE] perf-pri.core0.core: serving conflicting pages
+vault [DEBUG] perf-pri.core0.replication.index.perf: creating merkle state snapshot: generation=3
+vault [TRACE] perf-sec.core0.core: fetching subpage hashes
+vault [TRACE] perf-pri.core0.core: serving subpage hashes
+vault [DEBUG] perf-pri.core0.replication.index.perf: removing state snapshot from cache: generation=3
+vault [DEBUG] perf-sec.core0.replication: transitioning state: state=merkle-sync
+vault [DEBUG] perf-sec.core0.replication: waiting for operations to complete before merkle sync
+vault [DEBUG] perf-sec.core0.replication: starting merkle sync: num_conflict_keys=4
+vault [DEBUG] perf-sec.core0.replication: merkle sync debug info: local_keys=[] remote_keys=[] conflicting_keys=["logical/67bf7b33-734e-f909-86e5-a7e69af0979f/junk9", "logical/67bf7b33-734e-f909-86e5-a7e69af0979f/junk7", "logical/67bf7b33-734e-f909-86e5-a7e69af0979f/junk8", "logical/67bf7b33-734e-f909-86e5-a7e69af0979f/junk6"]
+vault [DEBUG] perf-sec.core0.replication: transitioning state: state=stream-wals
+vault [INFO]  perf-sec.core0.replication: requesting WAL stream: guard=0c556858
+vault [TRACE] perf-sec.core0.core: starting client WAL streaming
+vault [TRACE] perf-sec.core0.core: receiving WALs
+vault [TRACE] perf-pri.core0.core: starting serving WALs: clientID=6afbce30-67c5-bb15-6eda-001140d33275
+vault [TRACE] perf-pri.core0.core: streaming from log shipper done: clientID=6afbce30-67c5-bb15-6eda-001140d33275
+vault [TRACE] perf-pri.core0.core: internal wal stream stop channel fired: clientID=6afbce30-67c5-bb15-6eda-001140d33275
+vault [TRACE] perf-pri.core0.core: stopping serving WALs: clientID=6afbce30-67c5-bb15-6eda-001140d33275
+vault [INFO]  perf-sec.core0.core: non-matching guard, exiting
+vault [TRACE] perf-sec.core0.core: finished client WAL streaming
+vault [INFO]  perf-sec.core0.replication: no matching WALs available
+vault [DEBUG] perf-sec.core0.replication: transitioning state: state=merkle-diff
+vault [DEBUG] perf-sec.core0.replication: starting merkle diff
+vault [TRACE] perf-sec.core0.core: wal context done
+vault [TRACE] perf-sec.core0.core: checking conflicting pages
+vault [TRACE] perf-pri.core0.core: serving conflicting pages
+```
+
+</CodeBlockConfig>
+
+## Use the merkle-check endpoint
+
+The following examples show how you can use curl to query the merkle-check endpoint.
+
+<Note>
+
+The merkle-check endpoint is authenticated. You need a Vault token with the capabilities detailed in the [endpoint documentation](/vault/api-docs/system/replication#sys-replication-merkle-check) to query the endpoint.
+
+</Note>
+
+### Check the primary cluster
+
+```shell-session
+$ curl $VAULT_ADDR/v1/sys/replication/merkle-check
+```
+
+Example output:
+
+<CodeBlockConfig hideClipboard>
+
+```json
+{
+  "request_id": "d4b2ad1a-6e5f-7f9e-edfe-558eb89a40e6",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "merkle_corruption_report": {
+      "corrupted_root": false,
+      "corrupted_tree_map": {
+        "1": {
+          "corrupted_index_tuples_map": {
+            "5": {
+              "corrupted": false,
+              "subpages": [
+                28
+              ]
+            }
+          },
+          "corrupted_subtree_root": false,
+          "root_hash": "DyGc6rQTV9XgyNSff3zimhi3FJM=",
+          "tree_type": "replicated"
+        },
+        "2": {
+          "corrupted_index_tuples_map": null,
+          "corrupted_subtree_root": false,
+          "root_hash": "EXmRTdfYCZTm5i9wLef9RQqyLCw=",
+          "tree_type": "local"
+        }
+      },
+      "last_corruption_check_epoch": "2023-09-11T11:25:59.44956-07:00"
+    }
+  }
+}
+
+```
+
+</CodeBlockConfig>
+
+The `merkle_corruption_report` stanza provides information about Merkle tree corruption.
+
+When the composite tree or subtree root hashes are corrupted, Vault sets the `corrupted_root` and `corrupted_subtree_root` field values to **true**. Vault sets the field values to true when it detects corruption in the both root hashes of the composite tree, and the subtree.
+
+The `corrupted_tree_map` field identifies any corruption in the subtrees, including replicated and local subtrees. The replicated tree is indexed by number 1 in the map and the local tree is indexed by number `2`. The `tree_type` sub-field also shows which tree contains a corrupted page. The replicated subtree stores the information that is replicated to either a disaster recovery or a performance replication secondary cluster. 
+
+It contains replicated items like vault configuration, secrets engine and auth method configuration, and KV secrets. The local subtree stores information relevant to the local cluster such as local mounts, leases, and tokens. 
+
+In the event of corruption within a page or a subpage of a tree, the `corrupted_index_tuples_map` includes the page number along with a list of corrupted subpage numbers. If the page hash is corrupted, the `corrupted` field is set to true, otherwise, it sets to false.
+
+<CodeBlockConfig hideClipboard>
+
+```json
+{
+  "request_id": "d4b2ad1a-6e5f-7f9e-edfe-558eb89a40e6",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "merkle_corruption_report": {
+      "corrupted_root": false,
+      "corrupted_tree_map": {
+        "1": {
+          "corrupted_index_tuples_map": {
+            "5": {
+              "corrupted": false,
+              "subpages": [
+                28
+              ]
+            }
+          },
+          "corrupted_subtree_root": false,
+          "root_hash": "DyGc6rQTV9XgyNSff3zimhi3FJM=",
+          "tree_type": "replicated"
+        },
+        "2": {
+          "corrupted_index_tuples_map": null,
+          "corrupted_subtree_root": false,
+          "root_hash": "EXmRTdfYCZTm5i9wLef9RQqyLCw=",
+          "tree_type": "local"
+        }
+      },
+      "last_corruption_check_epoch": "2023-09-11T11:25:59.44956-07:00"
+    }
+  }
+}
+```
+
+</CodeBlockConfig>
+
+In the example output, the replicated tree is corrupted on subpage 28 of page 5 only. This means that the page hash, the replicated tree hash, and the composite tree hash are all correct.
+
+### Check a secondary cluster
+
+The Merkle check endpoint prints information about the corruption status of the Merkle tree on a disaster recovery (DR) secondary cluster. You need a [DR operation token](/vault/tutorials/enterprise/disaster-recovery#dr-operation-token-strategy) to access this endpoint. Here is an example `curl` command that demonstrates querying the endpoint.
+
+```shell-session
+$ curl $VAULT_ADDR/v1/sys/replication/dr/secondary/merkle-check
+```
+
+## CLI commands for diagnosing corruption
+
+You need to check four layers for potential Merkle tree corruption: composite root, subtree roots, page hash, and subpage hash. You can use the following example Vault CLI commands in combination with the [jq](https://jqlang.github.io/jq/) tool to diagnose corruption.
+
+### Composite root corruption
+
+Use a Vault command like the following to check if the composite tree root is corrupted:
+
+```shell-session
+$ vault write sys/replication/merkle-check \
+    -format=json | jq -r '.data.merkle_corruption_report.corrupted_root'
+```
+
+If the response is true, the Merkle tree is corrupted at the composite root.
+
+### Subtree root corruption
+
+Use a Vault command like the following to check if the subtree root is corrupted:
+
+```shell-session
+$ vault write sys/replication/merkle-check -format=json \
+    | jq -r '.data.merkle_corruption_report.corrupted_tree_map[] | select(.corrupted_subtree_root==true)'
+```
+
+If the response is true, the sub-tree is corrupted.
+
+### Page or subpage corruption
+
+Use a Vault command like the following to check if page or subpage is corrupted:
+
+```shell-session
+$ vault write sys/replication/merkle-check -format=json \
+    | jq -r '.data.merkle_corruption_report.corrupted_tree_map[] | select(.corrupted_index_tuples_map!=null)'
+```
+
+If the response is a non-empty map, then at least one page or subpage is corrupted.
+
+The following is an example of a non-empty map in the command output:
+
+<CodeBlockConfig hideClipboard>
+
+```json
+{
+  "corrupted_index_tuples_map": {
+    "23": {
+      "corrupted": false,
+      "subpages": [
+        234
+      ]
+    }
+  },
+  "corrupted_subtree_root": false,
+  "root_hash": "A5uW54VXDM4jUryDkxN8Vauk8kE=",
+  "tree_type": "replicated"
+}
+```
+
+</CodeBlockConfig>
+
+In this example, page number 23 is returned, however, as the `corrupted` field is false, which means that the page is not corrupted; however, subpage 234 is listed as a corrupted subpage. 
+
+To locate a corrupted subpage, Vault needs to also note its parent page, as each page contains 256 subpages and these indexes are repeated for every page. It's possible that only the full page is corrupted without having any corrupted subpages. In that case, the `corrupted` field in the page map is true, and no subpages are listed.
+
+## Caveats and considerations
+
+We generally recommend that you consult the merkle-check endpoint before reindexing to ensure the process will be useful as reindexing can be time-consuming and lead to downtime.

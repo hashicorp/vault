@@ -1,0 +1,4 @@
+```release-note:improvement
+secrets/consul: Improve error message when ACL bootstrapping fails.
+```
+

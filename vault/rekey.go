@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -8,8 +11,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/pgpkeys"
@@ -168,8 +171,8 @@ func (c *Core) RekeyInit(config *SealConfig, recovery bool) logical.HTTPCodedErr
 
 // BarrierRekeyInit is used to initialize the rekey settings for the barrier key
 func (c *Core) BarrierRekeyInit(config *SealConfig) logical.HTTPCodedError {
-	switch c.seal.BarrierType() {
-	case wrapping.WrapperTypeShamir:
+	switch c.seal.BarrierSealConfigType() {
+	case SealConfigTypeShamir:
 		// As of Vault 1.3 all seals use StoredShares==1.  The one exception is
 		// legacy shamir seals, which we can read but not write (by design).
 		// So if someone does a rekey, regardless of their intention, we're going
@@ -234,6 +237,7 @@ func (c *Core) BarrierRekeyInit(config *SealConfig) logical.HTTPCodedError {
 		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("error generating nonce for procedure: %w", err).Error())
 	}
 	c.barrierRekeyConfig.Nonce = nonce
+	c.barrierRekeyConfig.Created = time.Now().UTC()
 
 	if c.logger.IsInfo() {
 		c.logger.Info("rekey initialized", "nonce", c.barrierRekeyConfig.Nonce, "shares", c.barrierRekeyConfig.SecretShares, "threshold", c.barrierRekeyConfig.SecretThreshold, "validation_required", c.barrierRekeyConfig.VerificationRequired)
@@ -284,6 +288,7 @@ func (c *Core) RecoveryRekeyInit(config *SealConfig) logical.HTTPCodedError {
 		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("error generating nonce for procedure: %w", err).Error())
 	}
 	c.recoveryRekeyConfig.Nonce = nonce
+	c.recoveryRekeyConfig.Created = time.Now().UTC()
 
 	if c.logger.IsInfo() {
 		c.logger.Info("rekey initialized", "nonce", c.recoveryRekeyConfig.Nonce, "shares", c.recoveryRekeyConfig.SecretShares, "threshold", c.recoveryRekeyConfig.SecretThreshold, "validation_required", c.recoveryRekeyConfig.VerificationRequired)
@@ -396,13 +401,17 @@ func (c *Core) BarrierRekeyUpdate(ctx context.Context, key []byte, nonce string)
 			c.logger.Error("rekey recovery key verification failed", "error", err)
 			return nil, logical.CodedError(http.StatusBadRequest, fmt.Errorf("recovery key verification failed: %w", err).Error())
 		}
-	case c.seal.BarrierType() == wrapping.WrapperTypeShamir:
+	case c.seal.BarrierSealConfigType() == SealConfigTypeShamir:
 		if c.seal.StoredKeysSupported() == seal.StoredKeysSupportedShamirRoot {
-			testseal := NewDefaultSeal(&seal.Access{
-				Wrapper: aeadwrapper.NewShamirWrapper(),
-			})
+			access, err := seal.NewAccessFromWrapper(c.logger, aeadwrapper.NewShamirWrapper(), SealConfigTypeShamir.String())
+			if err != nil {
+				return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to setup test seal: %w", err).Error())
+			}
+			access.GetConfiguredSealWrappersByPriority()[0].Name = existingConfig.Name
+
+			testseal := NewDefaultSeal(access)
 			testseal.SetCore(c)
-			err = testseal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(recoveredKey)
+			err = testseal.GetAccess().SetShamirSealKey(recoveredKey)
 			if err != nil {
 				return nil, logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to setup unseal key: %w", err).Error())
 			}
@@ -530,7 +539,7 @@ func (c *Core) performBarrierRekey(ctx context.Context, newSealKey []byte) logic
 	}
 
 	if c.seal.StoredKeysSupported() != seal.StoredKeysSupportedGeneric {
-		err := c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(newSealKey)
+		err := c.seal.GetAccess().SetShamirSealKey(newSealKey)
 		if err != nil {
 			return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("failed to update barrier seal key: %w", err).Error())
 		}
@@ -904,7 +913,7 @@ func (c *Core) RekeyVerify(ctx context.Context, key []byte, nonce string, recove
 }
 
 // RekeyCancel is used to cancel an in-progress rekey
-func (c *Core) RekeyCancel(recovery bool) logical.HTTPCodedError {
+func (c *Core) RekeyCancel(recovery bool, nonce string, requiresNonceDeadline time.Duration) logical.HTTPCodedError {
 	c.stateLock.RLock()
 	defer c.stateLock.RUnlock()
 	if c.Sealed() {
@@ -917,10 +926,26 @@ func (c *Core) RekeyCancel(recovery bool) logical.HTTPCodedError {
 	c.rekeyLock.Lock()
 	defer c.rekeyLock.Unlock()
 
+	validBarrierReq := func() bool {
+		return c.barrierRekeyConfig.Nonce == nonce ||
+			rekeyCancelDeadlineIsMet(c.barrierRekeyConfig.Created, requiresNonceDeadline)
+	}
+
+	validRecoveryReq := func() bool {
+		return c.recoveryRekeyConfig.Nonce == nonce ||
+			rekeyCancelDeadlineIsMet(c.recoveryRekeyConfig.Created, requiresNonceDeadline)
+	}
+
 	// Clear any progress or config
 	if recovery {
+		if c.recoveryRekeyConfig != nil && !validRecoveryReq() {
+			return logical.CodedError(http.StatusBadRequest, "invalid request")
+		}
 		c.recoveryRekeyConfig = nil
 	} else {
+		if c.barrierRekeyConfig != nil && !validBarrierReq() {
+			return logical.CodedError(http.StatusBadRequest, "invalid request")
+		}
 		c.barrierRekeyConfig = nil
 	}
 	return nil
@@ -1024,4 +1049,12 @@ func (c *Core) RekeyDeleteBackup(ctx context.Context, recovery bool) logical.HTT
 		return logical.CodedError(http.StatusInternalServerError, fmt.Errorf("error deleting backup keys: %w", err).Error())
 	}
 	return nil
+}
+
+func rekeyCancelDeadlineIsMet(created time.Time, deadline time.Duration) bool {
+	if created.IsZero() {
+		return false
+	}
+	passed := time.Now().UTC().Sub(created) >= deadline
+	return passed
 }

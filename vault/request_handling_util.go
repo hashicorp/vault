@@ -1,10 +1,15 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 //go:build !enterprise
 
 package vault
 
 import (
 	"context"
+	"errors"
 	"sync"
+	"time"
 
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -50,18 +55,22 @@ func getAuthRegisterFunc(c *Core) (RegisterAuthFunc, error) {
 	return c.RegisterAuth, nil
 }
 
+func getUserFailedLoginInfo(ctx context.Context, c *Core, userInfo FailedLoginUser) (*FailedLoginInfo, error) {
+	return c.LocalGetUserFailedLoginInfo(ctx, userInfo), nil
+}
+
+func updateUserFailedLoginInfo(ctx context.Context, c *Core, userInfo FailedLoginUser, failedLoginInfo *FailedLoginInfo, deleteEntry bool) error {
+	return c.LocalUpdateUserFailedLoginInfo(ctx, userInfo, failedLoginInfo, deleteEntry)
+}
+
 func possiblyForwardAliasCreation(ctx context.Context, c *Core, inErr error, auth *logical.Auth, entity *identity.Entity) (*identity.Entity, bool, error) {
 	return entity, false, inErr
 }
 
 var errCreateEntityUnimplemented = "create entity unimplemented in the server"
 
-func possiblyForwardEntityCreation(ctx context.Context, c *Core, inErr error, auth *logical.Auth, entity *identity.Entity) (*identity.Entity, error) {
-	return entity, inErr
-}
-
-func updateLocalAlias(ctx context.Context, c *Core, auth *logical.Auth, entity *identity.Entity) error {
-	return nil
+func registerLocalAlias(_ context.Context, _ *Core, _ *logical.Alias) (*identity.Entity, error) {
+	return nil, logical.ErrReadOnly
 }
 
 func possiblyForwardSaveCachedAuthResponse(ctx context.Context, c *Core, respAuth *MFACachedAuthResponse) error {
@@ -71,4 +80,12 @@ func possiblyForwardSaveCachedAuthResponse(ctx context.Context, c *Core, respAut
 	}
 
 	return nil
+}
+
+func forwardCreateTokenRegisterAuth(ctx context.Context, c *Core, te *logical.TokenEntry, roleName string, renewable bool, periodToUse, explicitMaxTTLToUse time.Duration) (*logical.TokenEntry, error) {
+	return nil, nil
+}
+
+func (c *Core) lockSnapshotForRequest(ctx context.Context, req *logical.Request, entry *MountEntry) (func(), error) {
+	return nil, errors.New("loaded snapshots not supported")
 }

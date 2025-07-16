@@ -1,0 +1,4 @@
+```release-note:change
+core: Vault version has been moved out of sdk and into main vault module.
+Plugins using sdk/useragent.String must instead use sdk/useragent.PluginString.
+```

@@ -1,0 +1,85 @@
+### Can I compute KMIP clients for Vault? ((#kmip))
+
+**No**.
+
+Currently, KMIP clients are not available via the usage metrics UI or client
+count API.
+
+### Can I get monthly changes for Vault versions older than v1.10? ((#month-to-month))
+
+**Yes, for Vault v1.8 &ndash; v1.10.**
+
+To calculate client counts for a given month, you must perform a series of
+billing period updates in the UI and manual calculations:
+
+Month     | Billing period in UI     | Result       | Computation
+--------- | ------------------------ | ------------ | -----------
+January   | January                  | `JAN`        | None
+February  | January &nbsp; February  | `JAN_FEB`    | `FEB = JAN_FEB - JAN` 
+March     | January &nbsp; February  | `JAN_MAR`    | `MAR = JAN_MAR - JAN_FEB` 
+April     | January &nbsp; February  | `JAN_APR`    | `APR = JAN_APR - JAN_MAR` 
+May       | January &nbsp; February  | `JAN_MAY`    | `MAY = JAN_MAY - JAN_APR` 
+June      | January &nbsp; February  | `JAN_JUN`    | `JUN = JAN_JUN - JAN_MAY` 
+July      | January &nbsp; February  | `JAN_JUL`    | `JUL = JAN_JUL - JAN_JUN` 
+August    | January &nbsp; February  | `JAN_AUG`    | `AUG = JAN_AUG - JAN_JUL` 
+September | January &nbsp; September | `JAN_SEP`    | `SEP = JAN_SEP - JAN_AUG` 
+October   | January &nbsp; February  | `JAN_OCT`    | `OCT = JAN_OCT - JAN_SEP` 
+November  | January &nbsp; February  | `JAN_NOV`    | `NOV = JAN_NOV - JAN_OCT` 
+December  | January &nbsp; February  | `JAN_DEV`    | `DEC = JAN_DEC - JAN_NOV` 
+
+### Do child namespaces create duplication in the client count? ((#namespace-dupes))
+
+**Maybe**.
+
+Tokens created in a parent namespace are recognized as the same client when used
+in a child namespace. But, tokens created **across** a parent/child namespace
+boundary may be counted as multiple clients. See the
+[clients and entities](/vault/docs/concepts/client-count) overview for more
+details.
+
+### Does the Nomad-Vault integration affect client counts? ((#nomad))
+
+**Yes**.
+
+The [Nomad Vault integration](/nomad/docs/integrations/vault-integration)
+uses either Workload Identity (JWT) or token roles for client count:
+
+    - Vault bases Workload Identity client counts on the
+      [`user_claim`](/vault/api-docs/auth/jwt#user_claim) field. The
+      recommended default is `nomad_job`, which results in 1 client per
+      Nomad job.
+    - Nomad deprecated token roles and will remove the feature in v1.10. Client
+      counts for legacy token roles treat each unique policy combination as 1
+    	non-entity client.
+
+### Are batch tokens counted differently than service tokens? ((#batch-tokens))
+
+**No**.
+
+Batch token clients are counted like service token clients. The batch token is
+mapped to either to the associated active entity or an artificial entity that
+Vault creates by combining the assigned namespace and policy. See the
+[clients and entities](/vault/docs/concepts/client-count) overview for more
+details.
+
+### Do custom user filters affect client counts? ((#custom-filters))
+
+**Yes**.
+
+Custom [user filters](/vault/api-docs/auth/ldap#userfilter) can change the way
+that entity aliases are mapped, which can affect the client count computation.
+
+Consult the [clients and entities](/vault/docs/concepts/client-count) overview
+for more information about how Vault determines entity assignments.
+
+### Does mount migration affect client counts? ((#mount-migration))
+
+**Maybe**.
+
+If you are using Vault 1.10+:
+
+- Migrating mounts **across** namespace will create duplication in the client count.
+- Migrating mounts **within** a namespace will not affect client count.
+
+If you are using an older version of Vault, migrating mounts will always create
+duplication in the client count.

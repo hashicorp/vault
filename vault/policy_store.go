@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -8,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	metrics "github.com/armon/go-metrics"
+	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	lru "github.com/hashicorp/golang-lru"
@@ -153,7 +156,7 @@ path "sys/control-group/request" {
 
 # Allow a token to make requests to the Authorization Endpoint for OIDC providers.
 path "identity/oidc/provider/+/authorize" {
-	capabilities = ["read", "update"]
+    capabilities = ["read", "update"]
 }
 `
 )
@@ -261,6 +264,11 @@ func (c *Core) setupPolicyStore(ctx context.Context) error {
 
 	if c.ReplicationState().HasState(consts.ReplicationPerformanceSecondary | consts.ReplicationDRSecondary) {
 		// Policies will sync from the primary
+		return nil
+	}
+
+	if c.perfStandby {
+		// Policies will sync from the active
 		return nil
 	}
 
@@ -444,6 +452,32 @@ func (ps *PolicyStore) setPolicyInternal(ctx context.Context, p *Policy) error {
 	return nil
 }
 
+// GetNonEGPPolicyType returns a policy's type.
+// It will return an error if the policy doesn't exist in the store or isn't
+// an ACL or a Sentinel Role Governing Policy (RGP).
+//
+// Note: Sentinel Endpoint Governing Policies (EGPs) are not stored within the
+// policyTypeMap. We sometimes need to distinguish between ACLs and RGPs due to
+// them both being token policies, but the logic related to EGPs is separate
+// enough that it is never necessary to look up their type.
+func (ps *PolicyStore) GetNonEGPPolicyType(nsID string, name string) (*PolicyType, error) {
+	sanitizedName := ps.sanitizeName(name)
+	index := path.Join(nsID, sanitizedName)
+
+	pt, ok := ps.policyTypeMap.Load(index)
+	if !ok {
+		// Doesn't exist
+		return nil, ErrPolicyNotExistInTypeMap
+	}
+
+	policyType, ok := pt.(PolicyType)
+	if !ok {
+		return nil, fmt.Errorf("unknown policy type for: %v", index)
+	}
+
+	return &policyType, nil
+}
+
 // GetPolicy is used to fetch the named policy
 func (ps *PolicyStore) GetPolicy(ctx context.Context, name string, policyType PolicyType) (*Policy, error) {
 	return ps.switchedGetPolicy(ctx, name, policyType, true)
@@ -554,9 +588,12 @@ func (ps *PolicyStore) switchedGetPolicy(ctx context.Context, name string, polic
 	switch policyEntry.Type {
 	case PolicyTypeACL:
 		// Parse normally
-		p, err := ParseACLPolicy(ns, policyEntry.Raw)
+		p, duplicate, err := ParseACLPolicyCheckDuplicates(ns, policyEntry.Raw)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse policy: %w", err)
+		}
+		if duplicate {
+			ps.logger.Warn("HCL policy contains duplicate attributes, which will no longer be supported in a future version", "policy", policy.Name, "namespace", policy.namespace.Path)
 		}
 		policy.Paths = p.Paths
 
@@ -636,6 +673,60 @@ func (ps *PolicyStore) ListPolicies(ctx context.Context, policyType PolicyType) 
 		if deleteIndex != -1 {
 			keys = append(keys[:deleteIndex], keys[deleteIndex+1:]...)
 		}
+	}
+
+	return keys, err
+}
+
+// policiesByNamespace is used to list the available policies for the given namespace
+func (ps *PolicyStore) policiesByNamespace(ctx context.Context, policyType PolicyType, ns *namespace.Namespace) ([]string, error) {
+	var err error
+	var keys []string
+	var view *BarrierView
+
+	// Scan the view, since the policy names are the same as the
+	// key names.
+	switch policyType {
+	case PolicyTypeACL:
+		view = ps.getACLView(ns)
+	case PolicyTypeRGP:
+		view = ps.getRGPView(ns)
+	case PolicyTypeEGP:
+		view = ps.getEGPView(ns)
+	default:
+		return nil, fmt.Errorf("unknown policy type %q", policyType)
+	}
+
+	if view == nil {
+		return nil, fmt.Errorf("unable to get the barrier subview for policy type %q", policyType)
+	}
+
+	// Get the appropriate view based on policy type and namespace
+	ctx = namespace.ContextWithNamespace(ctx, ns)
+	keys, err = logical.CollectKeys(ctx, view)
+	if err != nil {
+		return nil, err
+	}
+
+	if policyType == PolicyTypeACL {
+		// We only have non-assignable ACL policies at the moment
+		keys = strutil.Difference(keys, nonAssignablePolicies, false)
+	}
+
+	return keys, err
+}
+
+// policiesByNamespaces is used to list the available policies for the given namespaces
+func (ps *PolicyStore) policiesByNamespaces(ctx context.Context, policyType PolicyType, ns []*namespace.Namespace) ([]string, error) {
+	var err error
+	var keys []string
+
+	for _, nspace := range ns {
+		ks, err := ps.policiesByNamespace(ctx, policyType, nspace)
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, ks...)
 	}
 
 	return keys, err
@@ -740,18 +831,6 @@ func (ps *PolicyStore) switchedDeletePolicy(ctx context.Context, name string, po
 	return nil
 }
 
-type TemplateError struct {
-	Err error
-}
-
-func (t *TemplateError) WrappedErrors() []error {
-	return []error{t.Err}
-}
-
-func (t *TemplateError) Error() string {
-	return t.Err.Error()
-}
-
 // ACL is used to return an ACL which is built using the
 // named policies and pre-fetched policies if given.
 func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, policyNames map[string][]string, additionalPolicies ...*Policy) (*ACL, error) {
@@ -795,9 +874,12 @@ func (ps *PolicyStore) ACL(ctx context.Context, entity *identity.Entity, policyN
 					groups = append(directGroups, inheritedGroups...)
 				}
 			}
-			p, err := parseACLPolicyWithTemplating(policy.namespace, policy.Raw, true, entity, groups)
+			p, duplicate, err := parseACLPolicyWithTemplating(policy.namespace, policy.Raw, true, entity, groups)
 			if err != nil {
 				return nil, fmt.Errorf("error parsing templated policy %q: %w", policy.Name, err)
+			}
+			if duplicate {
+				ps.logger.Warn("HCL policy contains duplicate attributes, which will no longer be supported in a future version", "policy", policy.Name, "namespace", policy.namespace.Path)
 			}
 			p.Name = policy.Name
 			allPolicies[i] = p

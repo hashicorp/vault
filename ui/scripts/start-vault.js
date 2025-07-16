@@ -1,7 +1,12 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 /* eslint-env node */
 /* eslint-disable no-console */
 /* eslint-disable no-process-exit */
-/* eslint-disable node/no-extraneous-require */
+/* eslint-disable n/no-extraneous-require */
 
 var readline = require('readline');
 const testHelper = require('./test-helper');
@@ -21,7 +26,7 @@ async function processLines(input, eachLine = () => {}) {
 
 (async function () {
   try {
-    let vault = testHelper.run(
+    const vault = testHelper.run(
       'vault',
       [
         'server',
@@ -64,7 +69,15 @@ async function processLines(input, eachLine = () => {}) {
       }
     });
     try {
-      await testHelper.run('ember', ['test', ...process.argv.slice(2)]);
+      // ignore first 2 args (node and path) and extract flags to pass to test/exam command
+      const args = process.argv.slice(2);
+      const withServer = args.includes('--server') || args.includes('-s');
+      // current issue with headless Chrome where an event listener in Hds::Modal is not triggered resulting in a pending test waiter and timeout
+      // the workaround for now is to run the tests in headless firefox for local runs
+      if (!withServer && !process.env.CI) {
+        args.push('--launch=Firefox');
+      }
+      await testHelper.run('ember', ['exam', ...args]);
     } catch (error) {
       console.log(error);
       process.exit(1);

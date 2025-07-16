@@ -1,0 +1,85 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3 title-with-icon" data-test-page-title>
+      {{#if this.showEnable}}
+        {{#let (find-by "type" @mountModel.type @mountTypes) as |typeInfo|}}
+          <Icon @name={{typeInfo.glyph}} @size="24" class="has-text-grey-light" />
+          {{#if (eq @mountCategory "secret")}}
+            {{concat "Enable " typeInfo.displayName " Secrets Engine"}}
+          {{else}}
+            {{concat "Enable " typeInfo.displayName " Authentication Method"}}
+          {{/if}}
+        {{/let}}
+      {{else if (eq @mountCategory "secret")}}
+        Enable a Secrets Engine
+      {{else}}
+        Enable an Authentication Method
+      {{/if}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<div class="box is-sideless is-bottomless is-fullwidth is-marginless">
+  <NamespaceReminder @mode="enable" @noun={{if (eq @mountCategory "secret") "Secret Engine" "Auth Method"}} />
+  <MessageError @errorMessage={{this.errorMessage}} />
+  {{#if @mountModel.type}}
+    <form {{on "submit" (perform this.mountBackend)}}>
+      <FormFieldGroups
+        @model={{@mountModel}}
+        @groupName={{if (eq @mountCategory "secret") "formFieldGroups"}}
+        @renderGroup="default"
+        @modelValidations={{this.modelValidations}}
+        @onKeyUp={{this.onKeyUp}}
+      />
+
+      <FormFieldGroups
+        @model={{@mountModel}}
+        @renderGroup="Method Options"
+        @groupName={{if (eq @mountCategory "secret") "formFieldGroups"}}
+      >
+        <:identityTokenKey>
+          <SearchSelectWithModal
+            @id="key"
+            @fallbackComponent="input-search"
+            @inputValue={{@mountModel.config.identityTokenKey}}
+            @onChange={{this.handleIdentityTokenKeyChange}}
+            @models={{array "oidc/key"}}
+            @selectLimit="1"
+            @modalFormTemplate="modal-form/oidc-key-template"
+            @placeholder="Search for an existing OIDC key, or type a new key name to create it."
+            @fallbackComponentPlaceholder="Input a key name"
+            @modalSubtext="This key will be created in the OIDC key path."
+          />
+        </:identityTokenKey>
+      </FormFieldGroups>
+
+      <div class="field is-grouped box is-fullwidth is-bottomless">
+        <div class="control">
+          <Hds::Button
+            @text={{if (eq @mountCategory "secret") "Enable engine" "Enable method"}}
+            @icon={{if this.mountBackend.isRunning "loading"}}
+            type="submit"
+            data-test-submit
+            disabled={{this.mountBackend.isRunning}}
+          />
+        </div>
+        <div class="control">
+          <Hds::Button @text="Back" @color="secondary" data-test-back-button {{on "click" (fn this.setMountType "")}} />
+        </div>
+        {{#if this.invalidFormAlert}}
+          <div class="control">
+            <AlertInline @type="danger" class="has-top-padding-s" @message={{this.invalidFormAlert}} />
+          </div>
+        {{/if}}
+      </div>
+    </form>
+  {{else}}
+    {{!  Type not yet set, show type options }}
+    <MountBackend::TypeForm @setMountType={{this.setMountType}} @mountCategory={{@mountCategory}} />
+  {{/if}}
+</div>

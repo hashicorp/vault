@@ -1,0 +1,45 @@
+---
+layout: docs
+page_title: Auto-auth with TLS certificates
+description: >-
+  Use TLS certificates for auto-authentication with Vault Agent or Vault Proxy.
+---
+
+# Auto-auth method: TLS certificates
+
+The `cert` method uses the configured TLS certificates from the `vault` stanza of
+the agent configuration and takes an optional `name` parameter. There is no option
+to use certificates which differ from those used in the `vault` stanza.
+
+It is strongly advised to provide TLS settings in the configuration stanza
+within the auth method to avoid agent cache, if also enabled, from using the
+same TLS settings when proxying requests. If TLS settings are not present in the
+config stanza, Agent and Proxy will fall back to using TLS settings from their respective
+[`vault` Stanzas](/vault/docs/agent-and-proxy/agent#vault-stanza).
+
+## Configuration
+
+- `name` `(string: optional)` - The trusted certificate role which should be used
+  when authenticating with TLS. If a `name` is not specified, the auth method will
+  try to authenticate against [all trusted certificates](/vault/docs/auth/cert#authentication).
+
+- `ca_cert` `(string: optional)` - Path on the local disk to a single
+  PEM-encoded CA certificate to verify the Vault server's SSL certificate.
+
+- `client_cert` `(string: optional)` - Path on the local disk to a single
+  PEM-encoded client certificate to use for cert auth method authentication.
+
+- `client_key` `(string: optional)` - Path on the local disk to a single
+  PEM-encoded private key matching the client certificate from client_cert.
+
+- `reload` `(bool: optional, default: false)` - If true, causes the local x509
+  key-pair to be reloaded from disk on each authentication attempt. This is useful
+  in situations where client certificates are short-lived and automatically renewed.
+  Note that `enable_reauth_on_new_credentials` for auto-auth will need to be additionally
+  enabled for immediate re-auth on a new certificate.
+  Refer to the [auto-auth configuration](/vault/docs/agent-and-proxy/autoauth#configuration) documentation.
+
+- `reload_period` `(duration: "1m", optional)` - The duration after which auto-auth
+  will check if there are any changes for the files that are configured through
+  `ca_cert`/`client_cert`/`client_key`. Defaults to `1m`.
+  Uses [duration format strings](/vault/docs/concepts/duration-format).

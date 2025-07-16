@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package mssql
 
 import (
@@ -11,7 +14,6 @@ import (
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
-
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
@@ -283,7 +285,7 @@ func (m *MSSQL) revokeUserDefault(ctx context.Context, username string) error {
 
 	rows, err := stmt.QueryContext(ctx, username)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to query users: %w", err)
 	}
 	defer rows.Close()
 
@@ -343,8 +345,11 @@ func (m *MSSQL) UpdateUser(ctx context.Context, req dbplugin.UpdateUserRequest) 
 
 func (m *MSSQL) updateUserPass(ctx context.Context, username string, changePass *dbplugin.ChangePassword) error {
 	stmts := changePass.Statements.Commands
-	if len(stmts) == 0 && !m.containedDB {
+	if len(stmts) == 0 {
 		stmts = []string{alterLoginSQL}
+		if m.containedDB {
+			stmts = []string{alterUserContainedSQL}
+		}
 	}
 
 	password := changePass.NewPassword
@@ -381,6 +386,11 @@ func (m *MSSQL) updateUserPass(ctx context.Context, username string, changePass 
 	defer func() {
 		_ = tx.Rollback()
 	}()
+
+	if len(stmts) == 0 {
+		// should not happen, but guard against it anyway
+		return errors.New("no statement provided")
+	}
 
 	for _, stmt := range stmts {
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
@@ -428,4 +438,8 @@ EXEC (@stmt)`
 
 const alterLoginSQL = `
 ALTER LOGIN [{{username}}] WITH PASSWORD = '{{password}}'
+`
+
+const alterUserContainedSQL = `
+ALTER USER [{{username}}] WITH PASSWORD = '{{password}}'
 `

@@ -1,0 +1,3 @@
+```release-note:improvement
+core: parallelize backend initialization to improve startup time for large numbers of mounts.
+```

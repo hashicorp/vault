@@ -1,0 +1,3 @@
+```release-note:bug
+api: Remove timeout logic from ReadRaw functions and add ReadRawWithContext
+```

@@ -1,0 +1,382 @@
+---
+layout: docs
+page_title: What is Auto-authentication?
+description: >-
+  Use auto-authentication with Vault Agent or Vault Proxy to simplify client
+  authentication to Vault in a variety of environments.
+---
+
+# What is Auto-authentication?
+
+Auto-authentication simplifies client authentication in a wide variety of
+environments. The following Vault tools come with auto-authentication built in:
+
+- Vault Agent
+- Vault Proxy
+
+## Methods and sinks
+
+Auto-auth consists of two parts:
+
+- a **method** - the desired authentication method for the current environment
+- a **sink** - the location where tools save tokens when the token value changes
+
+When a supported tool starts with auto-auth enabled, the tool requests a Vault
+token using the configured method. If the request fails, the tool retries the
+request with an exponential back off.
+
+Once the request succeeds, the auth-auth renews unwrapped authentication tokens
+automatically until Vault denies the renewal. If the authentication method wraps
+tokens, auto-authentication cannot renew the token automatically.
+
+Vault typically denies renewal if the token:
+
+- the token was revoked.
+- the token has exceeded the maximum number of uses.
+- the token is otherwise invalid.
+
+Every time authentication succeeds, auto-auth writes the token to any
+appropriately configured sink.
+
+## Advanced functionality
+
+Sinks support some advanced features, including the ability for the written
+values to be encrypted or
+[response-wrapped](/vault/docs/concepts/response-wrapping).
+
+Both mechanisms can be used concurrently; in this case, the value will be
+response-wrapped, then encrypted.
+
+### Response-Wrapping tokens
+
+There are two ways that tokens can be response-wrapped:
+
+1. By the auth method. This allows the end client to introspect the
+   `creation_path` of the token, helping prevent Man-In-The-Middle (MITM)
+   attacks. However, because auto-auth cannot then unwrap the token and rewrap
+   it without modifying the `creation_path`, we are not able to renew the
+   token; it is up to the end client to renew the token. Agent and Proxy both
+   stay daemonized in this mode since some auth methods allow for reauthentication
+   on certain events.
+
+2. By any of the token sinks. Because more than one sink can be configured, the
+   token must be wrapped after it is fetched, rather than wrapped by Vault as
+   it's being returned. As a result, the `creation_path` will always be
+   `sys/wrapping/wrap`, and validation of this field cannot be used as
+   protection against MITM attacks. However, this mode allows auto-auth to keep
+   the token renewed for the end client and automatically reauthenticate when
+   it expires.
+
+### Encrypting tokens
+
+<Note>
+
+Support for encrypted tokens is experimental; if input/output formats
+change, we will make every effort to provide backwards compatibility.
+
+</Note>
+
+Tokens can be encrypted, using a Diffie-Hellman exchange to generate an
+ephemeral key. In this mechanism, the client receiving the token writes a
+generated public key to a file. The sink responsible for writing the token to
+that client looks for this public key and uses it to compute a shared secret
+key, which is then used to encrypt the token via AES-GCM. The nonce, encrypted
+payload, and the sink's public key are then written to the output file, where
+the client can compute the shared secret and decrypt the token value.
+
+<Note>
+
+Token encryption is not a protection against MITM attacks! The purpose
+of this feature is for forward-secrecy and coverage against bare token values
+being persisted. A MITM that can write to the sink's output and/or client
+public-key input files could attack this exchange. Using TLS to protect the
+transit of tokens is highly recommended.
+
+</Note>
+
+To help mitigate MITM attacks, additional authenticated data (AAD) can be
+provided to Agent and Proxy. This data is written as part of the AES-GCM tag and must
+match on both Agent and Proxy and the client. This of course means that protecting
+this AAD becomes important, but it provides another layer for an attacker to
+have to overcome. For instance, if the attacker has access to the file system
+where the token is being written, but not to read configuration or read
+environment variables, this AAD can be generated and passed to Agent or Proxy and
+the client in ways that would be difficult for the attacker to find.
+
+When using AAD, it is always a good idea for this to be as fresh as possible;
+generate a value and pass it to your client and Agent or Proxy on startup. Additionally,
+Agent and Proxy a Trust On First Use model; after it finds a generated public key,
+it will reuse that public key instead of looking for new values that have been
+written.
+
+If writing a client that uses this feature, it will likely be helpful to look
+at the
+[dhutil](https://github.com/hashicorp/vault/blob/main/helper/dhutil/dhutil.go)
+library. This shows the expected format of the public key input and envelope
+output formats.
+
+## Configuration
+
+The top level `auto_auth` block has two configuration entries:
+
+- `method` `(object: required)` - Configuration for the method
+
+- `sinks` `(array of objects: optional)` - Configuration for the sinks
+
+- `enable_reauth_on_new_credentials` `(bool: false)` - If enabled, Auto-auth will
+  handle new credential events from supported auth methods (AliCloud/AWS/Cert/JWT/LDAP/OCI)
+  and re-authenticate with the new credential.
+
+### Configuration (Method)
+
+<Note>
+
+Auto-auth does not support using tokens with a limited number of uses. Auto-auth
+does not track the number of uses remaining, and may allow the token to
+expire before attempting to renew it. For example, if using AppRole auto-auth,
+you must use 0 (meaning unlimited) as the value for
+[`token_num_uses`](/vault/api-docs/auth/approle#token_num_uses).
+
+</Note>
+
+These are common configuration values that live within the `method` block:
+
+- `type` `(string: required)` - The type of the method to use, e.g. `aws`,
+  `gcp`, `azure`, etc. _Note_: when using HCL this can be used as the key for
+  the block, e.g. `method "aws" {...}`.
+
+- `mount_path` `(string: optional)` - The mount path of the method. If not
+  specified, defaults to a value of `auth/<method type>`.
+
+- `namespace` `(string: optional)` - Namespace in which the mount lives.
+  The order of precedence is: this setting lowest, followed by the
+  environment variable `VAULT_NAMESPACE`, and then the highest precedence
+  command-line option `-namespace`.
+  If none of these are specified, defaults to the root namespace.
+  Note that because sink response wrapping and templating are also based
+  on the client created by auto-auth, they use the same namespace.
+  If specified alongside the `namespace` option in the Vault Stanza of
+  [Vault Agent](/vault/docs/agent-and-proxy/agent#vault-stanza) or
+  [Vault Proxy](/vault/docs/agent-and-proxy/proxy#vault-stanza), that
+  configuration will take precedence on everything except auto-auth.
+
+- `wrap_ttl` `(string or integer: optional)` - If specified, the written token
+  will be response-wrapped by auto-auth. This is more secure than wrapping by
+  sinks, but does not allow the auto-auth to keep the token renewed or
+  automatically reauthenticate when it expires. Rather than a simple string,
+  the written value will be a JSON-encoded
+  [SecretWrapInfo](https://godoc.org/github.com/hashicorp/vault/api#SecretWrapInfo)
+  structure. Uses [duration format strings](/vault/docs/concepts/duration-format).
+
+- `min_backoff` `(string or integer: "1s")` - The minimum backoff time auto-auth
+  will delay before retrying after a failed auth attempt. The backoff will start
+  at the configured value and double (with some randomness) after successive
+  failures, capped by `max_backoff.` If Agent templating is being used, this
+  value is also used as the min backoff time for the templating server.
+  Uses [duration format strings](/vault/docs/concepts/duration-format).
+
+- `max_backoff` `(string or integer: "5m")` - The maximum time Agent will delay
+  before retrying after a failed auth attempt. The backoff will start at
+  `min_backoff` and double (with some randomness) after successive failures,
+  capped by `max_backoff.` If Agent templating is being used, this value is also
+  used as the max backoff time for the templating server. `max_backoff` is the
+  duration between retries, and **not** the duration that retries will be
+  performed before giving up. Uses [duration format strings](/vault/docs/concepts/duration-format).
+
+- `exit_on_err` `(bool: false)` - When set to true, Vault Agent and Vault Proxy
+  will exit if any errors occur during authentication. This configurable only affects login
+  attempts for new tokens (either initial or expired tokens) and will not exit for errors on
+  valid token renewals.
+
+- `config` `(object: required)` - Configuration of the method itself. See the
+  sidebar for information about each method.
+
+### Configuration (Sinks)
+
+These configuration values are common to all Sinks:
+
+- `type` `(string: required)` - The type of the method to use, e.g. `file`.
+  _Note_: when using HCL this can be used as the key for the block, e.g. `sink "file" {...}`.
+
+- `wrap_ttl` `(string or integer: optional)` - If specified, the written token
+  will be response-wrapped by the sink. This is less secure than wrapping by
+  the method, but allows auto-auth to keep the token renewed and automatically
+  reauthenticate when it expires. Rather than a simple string, the written
+  value will be a JSON-encoded
+  [SecretWrapInfo](https://godoc.org/github.com/hashicorp/vault/api#SecretWrapInfo)
+  structure. Uses [duration format strings](/vault/docs/concepts/duration-format).
+
+- `dh_type` `(string: optional)` - If specified, the type of Diffie-Hellman exchange to
+  perform, meaning, which ciphers and/or curves. Currently only `curve25519` is
+  supported.
+
+- `dh_path` `(string: required if dh_type is set)` - The path from which the
+  auto-auth should read the client's initial parameters (e.g. curve25519 public
+  key).
+
+- `derive_key` `(bool: false)` - If specified, the final encryption key is
+  calculated by using HKDF-SHA256 to derive a key from the calculated shared
+  secret and the two public keys for enhanced security. This is recommended
+  if backward compatibility isn't a concern.
+
+- `aad` `(string: optional)` - If specified, additional authenticated data to
+  use with the AES-GCM encryption of the token. Can be any string, including
+  serialized data.
+
+- `aad_env_var` `(string: optional)` - If specified, AAD will be read from the
+  given environment variable rather than a value in the configuration file.
+
+- `config` `(object: required)` - Configuration of the sink itself. See the
+  sidebar for information about each sink.
+
+### Auto auth examples
+
+Auto-auth configuration objects take two separate forms when specified in HCL
+and JSON. The following examples are meant to clarify the differences between
+the two formats.
+
+#### Sinks (HCL format)
+
+The HCL format may define any number of sink objects with an optional wrapping
+`sinks {...}` object.
+
+<Note>
+
+The [corresponding JSON format](#sinks-json-format) _must_ specify a
+`"sinks" : [...]` array to encapsulate all `sink` JSON objects.
+
+</Note>
+
+```hcl
+// Other Vault Agent or Vault Proxy configuration blocks
+// ...
+
+auto_auth {
+  method {
+    type = "approle"
+
+    config = {
+      role_id_file_path = "/etc/vault/roleid"
+      secret_id_file_path = "/etc/vault/secretid"
+    }
+  }
+
+  sinks {
+    sink {
+      type = "file"
+
+      config = {
+        path = "/tmp/file-foo"
+      }
+    }
+  }
+}
+```
+
+The following valid HCL omits the wrapping `sinks` object while specifying
+multiple sinks.
+
+```hcl
+// Other Vault Agent or Vault Proxy configuration blocks
+// ...
+
+auto_auth {
+  method {
+    type = "approle"
+
+    config = {
+      role_id_file_path = "/etc/vault/roleid"
+      secret_id_file_path = "/etc/vault/secretid"
+    }
+  }
+
+  sink {
+    type = "file"
+
+    config = {
+      path = "/tmp/file-foo"
+    }
+  }
+
+  sink {
+    type = "file"
+
+    config = {
+      path = "/tmp/file-bar"
+    }
+  }
+}
+```
+
+#### Sinks (JSON format)
+
+The following JSON configuration illustrates the need for a `sinks: [...]` array
+wrapping any number of `sink` objects.
+
+```hcl
+{
+  "auto_auth" : {
+    "method" : [
+      {
+        type = "approle"
+
+        config = {
+          role_id_file_path = "/etc/vault/roleid"
+          secret_id_file_path = "/etc/vault/secretid"
+        }
+      }
+    ],
+    "sinks" : [
+      {
+        "sink" : {
+          type = "file"
+
+          config = {
+            path = "/tmp/file-foo"
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+Multiple sinks are defined by appending more `sink` objects within the `sinks`
+array:
+
+```hcl
+{
+  "auto_auth" : {
+    "method" : [
+      {
+        type = "approle"
+
+        config = {
+          role_id_file_path = "/etc/vault/roleid"
+          secret_id_file_path = "/etc/vault/secretid"
+        }
+      }
+    ],
+    "sinks" : [
+      {
+        "sink" : {
+          type = "file"
+
+          config = {
+            path = "/tmp/file-foo"
+          }
+        }
+      },
+      {
+        "sink" : {
+          type = "file"
+
+          config = {
+            path = "/tmp/file-bar"
+          }
+        }
+      }
+    ]
+  }
+}
+```

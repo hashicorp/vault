@@ -1,14 +1,22 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/hashicorp/vault/api"
+	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/keysutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTransit_HMAC(t *testing.T) {
@@ -91,17 +99,40 @@ func TestTransit_HMAC(t *testing.T) {
 			}
 
 			// Now verify
+			verify := func() {
+				t.Helper()
+
+				resp, err = b.HandleRequest(context.Background(), req)
+				if err != nil {
+					t.Fatalf("%v: %v", err, resp)
+				}
+				if resp == nil {
+					t.Fatal("expected non-nil response")
+				}
+				if errStr, ok := resp.Data["error"]; ok {
+					t.Fatalf("error validating hmac: %s", errStr)
+				}
+				if resp.Data["valid"].(bool) == false {
+					t.Fatalf("error validating hmac;\nreq:\n%#v\nresp:\n%#v", *req, *resp)
+				}
+			}
 			req.Path = strings.ReplaceAll(req.Path, "hmac", "verify")
 			req.Data["hmac"] = value.(string)
-			resp, err = b.HandleRequest(context.Background(), req)
-			if err != nil {
-				t.Fatalf("%v: %v", err, resp)
-			}
-			if resp == nil {
-				t.Fatal("expected non-nil response")
-			}
-			if resp.Data["valid"].(bool) == false {
-				panic(fmt.Sprintf("error validating hmac;\nreq:\n%#v\nresp:\n%#v", *req, *resp))
+			verify()
+
+			// If `algorithm` parameter is used, try with `hash_algorithm` as well
+			if algorithm, ok := req.Data["algorithm"]; ok {
+				// Note that `hash_algorithm` takes precedence over `algorithm`, since the
+				// latter is deprecated.
+				req.Data["hash_algorithm"] = algorithm
+				req.Data["algorithm"] = "xxx"
+				defer func() {
+					// Restore the req fields, since it is re-used by the tests below
+					delete(req.Data, "hash_algorithm")
+					req.Data["algorithm"] = algorithm
+				}()
+
+				verify()
 			}
 		}
 
@@ -248,18 +279,18 @@ func TestTransit_batchHMAC(t *testing.T) {
 
 	req.Path = "hmac/foo"
 	batchInput := []batchRequestHMACItem{
-		{"input": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
-		{"input": "dGhlIHF1aWNrIGJyb3duIGZveA=="},
-		{"input": ""},
-		{"input": ":;.?"},
+		{"input": "dGhlIHF1aWNrIGJyb3duIGZveA==", "reference": "one"},
+		{"input": "dGhlIHF1aWNrIGJyb3duIGZveA==", "reference": "two"},
+		{"input": "", "reference": "three"},
+		{"input": ":;.?", "reference": "four"},
 		{},
 	}
 
 	expected := []batchResponseHMACItem{
-		{HMAC: "vault:v1:UcBvm5VskkukzZHlPgm3p5P/Yr/PV6xpuOGZISya3A4="},
-		{HMAC: "vault:v1:UcBvm5VskkukzZHlPgm3p5P/Yr/PV6xpuOGZISya3A4="},
-		{HMAC: "vault:v1:BCfVv6rlnRsIKpjCZCxWvh5iYwSSabRXpX9XJniuNgc="},
-		{Error: "unable to decode input as base64: illegal base64 data at input byte 0"},
+		{HMAC: "vault:v1:UcBvm5VskkukzZHlPgm3p5P/Yr/PV6xpuOGZISya3A4=", Reference: "one"},
+		{HMAC: "vault:v1:UcBvm5VskkukzZHlPgm3p5P/Yr/PV6xpuOGZISya3A4=", Reference: "two"},
+		{HMAC: "vault:v1:BCfVv6rlnRsIKpjCZCxWvh5iYwSSabRXpX9XJniuNgc=", Reference: "three"},
+		{Error: "unable to decode input as base64: illegal base64 data at input byte 0", Reference: "four"},
 		{Error: "missing input for HMAC"},
 	}
 
@@ -285,6 +316,9 @@ func TestTransit_batchHMAC(t *testing.T) {
 		}
 		if expected[i].Error != "" && expected[i].Error != m.Error {
 			t.Fatalf("Expected Error %q got %q in result %d", expected[i].Error, m.Error, i)
+		}
+		if expected[i].Reference != m.Reference {
+			t.Fatalf("Expected references to match, Got %s, Expected %s", m.Reference, expected[i].Reference)
 		}
 	}
 
@@ -364,5 +398,93 @@ func TestTransit_batchHMAC(t *testing.T) {
 
 	if batchHMACVerifyResponseItems[0].Valid {
 		t.Fatalf("expected error validating hmac\nreq\n%#v\nresp\n%#v", *req, *resp)
+	}
+}
+
+// TestHMACBatchResultsFields checks that responses to HMAC verify requests using batch_input
+// contain all expected fields
+func TestHMACBatchResultsFields(t *testing.T) {
+	coreConfig := &vault.CoreConfig{
+		LogicalBackends: map[string]logical.Factory{
+			"transit": Factory,
+		},
+	}
+
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
+		HandlerFunc: vaulthttp.Handler,
+	})
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	cores := cluster.Cores
+
+	vault.TestWaitActive(t, cores[0].Core)
+
+	client := cores[0].Client
+
+	err := client.Sys().Mount("transit", &api.MountInput{
+		Type: "transit",
+	})
+	require.NoError(t, err)
+
+	keyName := "hmac-test-key"
+	_, err = client.Logical().Write("transit/keys/"+keyName, map[string]interface{}{"type": "hmac", "key_size": 32})
+	require.NoError(t, err)
+
+	batchInput := make([]map[string]interface{}, 0, 2)
+	for i := range []int{1, 2} {
+		index := strconv.Itoa(i)
+		item := map[string]interface{}{
+			"input":     base64.StdEncoding.EncodeToString([]byte("the quick brown fox " + index)),
+			"reference": index,
+		}
+
+		batchInput = append(batchInput, item)
+	}
+
+	cmacPath := fmt.Sprintf("transit/hmac/%s", keyName)
+	resp, err := client.Logical().Write(cmacPath, map[string]interface{}{"batch_input": batchInput})
+	require.NoError(t, err)
+
+	batchResp, ok := resp.Data["batch_results"].([]interface{})
+	require.True(t, ok, fmt.Sprintf("unexpected type for batch_results: expected list, got %T", resp.Data["batch_results"]))
+
+	hmacByRef := make(map[string]string)
+	for _, entry := range batchResp {
+		result, ok := entry.(map[string]interface{})
+		require.True(t, ok, fmt.Sprintf("unexpected type for batch_results: expected map[string]interface{}, got %T", entry))
+		ref := result["reference"].(string)
+		hmac := result["hmac"].(string)
+
+		require.NotContains(t, hmacByRef, ref, "duplicated reference value %v in batch: %v", ref, batchResp)
+		hmacByRef[ref] = hmac
+	}
+
+	batchVerifyInput := make([]map[string]interface{}, 0, 2)
+	batchVerifyInput = append(batchVerifyInput, map[string]interface{}{
+		"input":     base64.StdEncoding.EncodeToString([]byte("the quick brown fox 1")),
+		"hmac":      hmacByRef["1"],
+		"reference": 1,
+	})
+	// use wrong HMAC to get valid=false
+	batchVerifyInput = append(batchVerifyInput, map[string]interface{}{
+		"input":     base64.StdEncoding.EncodeToString([]byte("the quick brown fox 2")),
+		"hmac":      hmacByRef["1"],
+		"reference": 2,
+	})
+
+	verifyPath := fmt.Sprintf("transit/verify/%s", keyName)
+	resp, err = client.Logical().Write(verifyPath, map[string]interface{}{"batch_input": batchVerifyInput})
+	require.NoError(t, err)
+
+	batchResp, ok = resp.Data["batch_results"].([]interface{})
+	require.True(t, ok, fmt.Sprintf("unexpected type for batch_results: expected list, got %T", resp.Data["batch_results"]))
+
+	for _, entry := range batchResp {
+		result, ok := entry.(map[string]interface{})
+		require.True(t, ok, fmt.Sprintf("unexpected type for batch_results: expected map[string]interface{}, got %T", entry))
+
+		require.Contains(t, result, "reference")
+		require.Contains(t, result, "valid")
 	}
 }

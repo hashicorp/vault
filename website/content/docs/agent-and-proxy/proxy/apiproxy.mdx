@@ -1,0 +1,105 @@
+---
+layout: docs
+page_title: Use Vault Proxy as an API proxy
+description: >-
+  Use auto-authentication and configure Vault Proxy as a proxy for the Vault API.
+---
+
+# Use Vault Proxy as an API proxy
+
+Vault Proxy's API proxy functionality allows you to use Vault Proxy's API as a proxy
+for Vault's API.
+
+## Functionality
+
+The [`listener` stanza](/vault/docs/agent-and-proxy/proxy#listener-stanza) for Vault Proxy configures a listener for Vault Proxy. If
+its `role` is not set to `metrics_only`, it will act as a proxy for the Vault server that
+has been configured in the [`vault` stanza](/vault/docs/agent-and-proxy/proxy#vault-stanza) of Proxy. This enables access to the Vault
+API from the Proxy API, and can be configured to optionally allow or force the automatic use of
+the auto-auth token for these requests, as described below.
+
+If a `listener` has been configured alongside a `cache` stanza, the API proxy will
+first attempt to utilize the cache subsystem for qualifying requests, before forwarding the
+request to Vault. See the [caching docs](/vault/docs/agent-and-proxy/proxy/caching) for more information on caching.
+
+## Using auto-auth token
+
+Vault Proxy allows for easy authentication to Vault in a wide variety of
+environments using [auto-auth](/vault/docs/agent-and-proxy/autoauth). By setting the
+`use_auto_auth_token` (see below) configuration, clients will not be required
+to provide a Vault token to the requests made to the Proxy. When this
+configuration is set, if the request doesn't already bear a token, then the
+auto-auth token will be used to forward the request to the Vault server. This
+configuration will be overridden if the request already has a token attached,
+in which case, the token present in the request will be used to forward the
+request to the Vault server.
+
+## Forcing auto-auth token
+
+Vault Proxy can be configured to force the use of the auto-auth token by using
+the value `force` for the `use_auto_auth_token` option. This configuration
+overrides the default behavior described above in [Using auto-auth
+token](/vault/docs/agent-and-proxy/proxy/apiproxy#using-auto-auth-token), and instead ignores any
+existing Vault token in the request and instead uses the auto-auth token.
+
+
+## Configuration (`api_proxy`)
+
+The top level `api_proxy` block has the following configuration entries:
+
+- `use_auto_auth_token` `(bool/string: false)` - If set, the requests made to Proxy
+without a Vault token will be forwarded to the Vault server with the
+auto-auth token attached. If the requests already bear a token, this
+configuration will be overridden and the token in the request will be used to
+forward the request to the Vault server. If set to `"force"` Proxy will use the
+auto-auth token, overwriting the attached Vault token if set.
+
+  <Highlight>
+
+  When using the proxy's auto-auth token with the `use_auto_auth_token`
+  configuration, one proxy per application is very strongly recommended, as Vault will
+  unable to distinguish requests coming from multiple applications through a single proxy.
+  In situations where a single proxy is shared by multiple applications, setting `use_auto_auth_token`
+  to `false` (the default) is recommended.
+
+  </Highlight>
+
+- `prepend_configured_namespace` `(bool: false)` - If set, when Proxy has a
+  namespace configured, such as through the
+  [Vault stanza](/vault/docs/agent-and-proxy/proxy#vault-stanza), all requests
+  proxied to Vault will have the configured namespace prepended to the namespace
+  header. If Proxy's namespace is set to `ns1` and Proxy is sent a request with the
+  namespace `ns2`, the request will go to the `ns1/ns2` namespace. Likewise, if Proxy
+  is sent a request without a namespace, the request will go to the `ns1` namespace.
+  In essence, what this means is that all proxied requests must go to the configured
+  namespace or to its child namespaces.
+
+The following two `api_proxy` options are only useful when making requests to a Vault
+Enterprise cluster, and are documented as part of its
+[Eventual Consistency](/vault/docs/enterprise/consistency#vault-proxy-and-consistency-headers)
+page.
+
+- `enforce_consistency` `(string: "never")` - Set to one of `"always"`
+or `"never"`.
+
+- `when_inconsistent` `(string: optional)` - Set to one of `"fail"`, `"retry"`,
+or `"forward"`.
+
+### Example configuration
+
+Here is an example of a `listener` configuration alongside `api_proxy` configuration to force the use of the auto_auth token
+and enforce consistency for a proxy dedicated to a single application.
+
+```hcl
+# Other Vault Proxy configuration blocks
+# ...
+
+api_proxy {
+  use_auto_auth_token = "force"
+  enforce_consistency = "always"
+}
+
+listener "unix" {
+    address = "/var/run/vault-proxy.sock
+}
+```

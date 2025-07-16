@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/kv: make upgrade synchronous when no keys to upgrade
+```

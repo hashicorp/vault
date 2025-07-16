@@ -1,5 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { getOwner } from '@ember/owner';
 import { action } from '@ember/object';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 
@@ -8,16 +13,10 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
  * LinkedBlock components are linkable divs that yield any content nested within them. They are often used in list views such as when listing the secret engines.
  *
  * @example
- * ```js
- * <LinkedBlock
- *  @params={{array 'vault.cluster.secrets.backend.show 'my-secret-path'}}
- *  @queryParams={{hash version=1}}
- *  @class="list-item-row"
- *  data-test-list-item-link
- *  >
- * // Use any wrapped content here
+ * <LinkedBlock @params={{array "vault.cluster.secrets.backend.show" "my-secret-path"}} class="list-item-row" >
+ * My wrapped content
  * </LinkedBlock>
- * ```
+ *
  *
  * @param {Array} params=null - These are values sent to the router's transitionTo method.  First item is route, second is the optional path.
  * @param {Object} [queryParams=null] - queryParams can be passed via this property. It needs to be an object.
@@ -27,7 +26,14 @@ import { encodePath } from 'vault/utils/path-encoding-helpers';
  */
 
 export default class LinkedBlockComponent extends Component {
-  @service router;
+  // We don't import the router service here because Ember Engine's use the alias 'app-router'
+  // Since this component is shared across engines, we look up the router dynamically using getOwner instead.
+  // This way we avoid throwing an error by looking up a service that doesn't exist.
+  // https://guides.emberjs.com/release/services/#toc_accessing-services
+  get router() {
+    const owner = getOwner(this);
+    return owner.lookup('service:router') || owner.lookup('service:app-router');
+  }
 
   @action
   onClick(event) {

@@ -1,4 +1,9 @@
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { service } from '@ember/service';
 import { alias, or } from '@ember/object/computed';
 import Component from '@ember/component';
 import { computed } from '@ember/object';
@@ -14,12 +19,12 @@ export default Component.extend({
 
   didReceiveAttrs() {
     this._super(...arguments);
-    let accessor = this.model.id;
-    let data = this.controlGroup.wrapInfoForAccessor(accessor);
+    const accessor = this.model.id;
+    const data = this.controlGroup.wrapInfoForAccessor(accessor);
     this.set('controlGroupResponse', data);
   },
 
-  currentUserEntityId: alias('auth.authData.entity_id'),
+  currentUserEntityId: alias('auth.authData.entityId'),
 
   currentUserIsRequesting: computed('currentUserEntityId', 'model.requestEntity.id', function () {
     if (!this.model.requestEntity) return false;
@@ -27,13 +32,13 @@ export default Component.extend({
   }),
 
   currentUserHasAuthorized: computed('currentUserEntityId', 'model.authorizations.@each.id', function () {
-    let authorizations = this.model.authorizations || [];
-    return Boolean(authorizations.findBy('id', this.currentUserEntityId));
+    const authorizations = this.model.authorizations || [];
+    return Boolean(authorizations.find((authz) => authz.id === this.currentUserEntityId));
   }),
 
   isSuccess: or('currentUserHasAuthorized', 'model.approved'),
   requestorName: computed('currentUserIsRequesting', 'model.requestEntity', function () {
-    let entity = this.model.requestEntity;
+    const entity = this.model.requestEntity;
 
     if (this.currentUserIsRequesting) {
       return 'You';
@@ -55,8 +60,8 @@ export default Component.extend({
   }),
 
   bannerText: computed('model.approved', 'currentUserIsRequesting', 'currentUserHasAuthorized', function () {
-    let isApproved = this.model.approved;
-    let { currentUserHasAuthorized, currentUserIsRequesting } = this;
+    const isApproved = this.model.approved;
+    const { currentUserHasAuthorized, currentUserIsRequesting } = this;
     if (currentUserHasAuthorized) {
       return 'You have given authorization';
     }

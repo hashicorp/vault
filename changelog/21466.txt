@@ -1,0 +1,3 @@
+```release-note:bug
+agent: Fix "generate-config" command documentation URL
+```

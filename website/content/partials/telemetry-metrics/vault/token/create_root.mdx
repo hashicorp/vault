@@ -1,0 +1,10 @@
+### vault.token.create_root ((#vault-token-create_root))
+
+Metric type | Value   | Description
+----------- | ------- | -----------
+counter     | number  | Number of root tokens created
+
+The `vault.token.create_root` counts the total number of root tokens created
+over time, not the number of root tokens currently in use. As a result, the
+value of `vault.token.create_root` does not decrease when a root token is
+revoked.

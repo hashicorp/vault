@@ -1,0 +1,22 @@
+# This workflow fails if a 'do-not-merge' label is applied to the PR.
+name: Check do-not-merge
+
+on:
+  pull_request:
+    types: [reopened, labeled, unlabeled]
+    # Runs on PRs to main and release branches
+    branches:
+      - main
+      - release/**
+
+jobs:
+  # checks that a do-not-merge label is not present for a PR
+  do-not-merge-check:
+    # If there is a `do-not-merge` label we ignore this check
+    if: ${{ contains(github.event.pull_request.labels.*.name, 'do-not-merge') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if do-not-merge label is applied
+        run: |
+          echo "Cannot merge with do-not-merge label applied."
+          exit 1

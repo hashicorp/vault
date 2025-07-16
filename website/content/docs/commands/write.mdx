@@ -57,6 +57,15 @@ Configure access to Consul by providing an access token:
 $ echo $MY_TOKEN | vault write consul/config/access token=-
 ```
 
+Set role-level TTL values for a user named "alice" so the generated lease has a
+default TTL of 8 hours (28800 seconds) and maximum TTL of 12 hours
+(43200 seconds):
+
+```shell-session
+$ VAULT_TOKEN=$VAULT_TOKEN vault write /auth/userpass/users/alice \
+    token_ttl="8h" token_max_ttl="12h"
+```
+
 ### API versus CLI
 
 Create a token with TTL set to 8 hours, limited to 3 uses, and attach `admin`
@@ -86,8 +95,8 @@ $ curl --header "X-Vault-Token: $VAULT_TOKEN" \
 The `vault write` command simplifies the API call.
 
 Since token management is a common task, Vault CLI provides a
-[`token`](/docs/commands/token) command with
-[`create`](/docs/commands/token/create) subcommand. The CLI command simplifies
+[`token`](/vault/docs/commands/token) command with
+[`create`](/vault/docs/commands/token/create) subcommand. The CLI command simplifies
 the token creation. Use the `vault create` command with options to set the token
 TTL, policies, and use limit.
 
@@ -102,19 +111,19 @@ you are invoking.
 ## Usage
 
 The following flags are available in addition to the [standard set of
-flags](/docs/commands) included on all commands.
+flags](/vault/docs/commands) included on all commands.
 
-### Output Options
+### Output options
 
-- `-field` `(string: "")` - Print only the field with the given name. Specifying
-  this option will take precedence over other formatting directives. The result
-  will not have a trailing newline making it ideal for piping to other processes.
+- `-field` `(string: "")` - Print only the field with the given name, in the format
+  specified in the `-format` directive. The result will not have a trailing
+  newline making it ideal for piping to other processes.
 
 - `-format` `(string: "table")` - Print the output in the given format. Valid
   formats are "table", "json", or "yaml". This can also be specified via the
   `VAULT_FORMAT` environment variable.
 
-### Command Options
+### Command options
 
 - `-force` `(bool: false)` - Allow the operation to continue with no key=value
   pairs. This allows writing to keys that do not need or expect data. This is

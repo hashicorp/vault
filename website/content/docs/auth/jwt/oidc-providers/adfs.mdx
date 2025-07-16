@@ -1,0 +1,341 @@
+---
+layout: docs
+page_title: Use with ADFS for OIDC
+description: >-
+  Configure Vault to use Active Directory Federation Services (ADFS)
+  as an OIDC provider.
+---
+
+# Use ADFS for OIDC authentication
+
+Configure your Vault instance to work with Active Directory Federation Services
+(ADFS) and use ADFS accounts with OIDC for Vault login.
+
+## Before you start
+
+1. **You must have Vault v1.15.0+**.
+1. **You must be running ADFS on Windows Server**.
+1. **You must have an OIDC client secret from your ADFS instance**.
+1. **You must know your Vault admin token**. If you do not have a valid admin
+   token, you can generate a new token in the Vault UI or with the
+   [Vault CLI](/vault/docs/commands/token/create).
+
+## Step 1: Enable the OIDC authN method for Vault
+
+<Tabs>
+
+<Tab heading="Vault CLI">
+
+1. Save your Vault instance URL to the `VAULT_ADDR` environment variable:
+   ```shell-session
+   $ export VAULT_ADDR="<URL_FOR_YOUR_VAULT_INSTALLATION>"
+   ```
+   For example:
+
+   <CodeBlockConfig hideClipboard>
+
+   ```shell-session
+   $ export VAULT_ADDR="https://myvault.example.com:8200"
+   ```
+
+   </CodeBlockConfig>
+
+1. Save your Vault instance URL to the `VAULT_TOKEN` environment variable:
+   ```shell-session
+   $ export VAULT_TOKEN="<YOUR_VAULT_ACCESS_TOKEN>"
+   ```
+   For example:
+
+   <CodeBlockConfig hideClipboard>
+
+   ```shell-session
+   $ export VAULT_TOKEN="XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+   ```
+
+   </CodeBlockConfig>
+ 
+1. **If you use Vault Enterprise or Vault HCP**, set the namespace where you
+   have the OIDC plugin mounted to the `VAULT_NAMESPACE` environment variable:
+   ```shell-session
+   $ export VAULT_NAMESPACE="<OIDC_NAMESPACE>"
+   ```
+   For example:
+
+   <CodeBlockConfig hideClipboard>
+
+   ```shell-session
+   $ export VAULT_NAMESPACE="oidc-ns"
+   ```
+
+   </CodeBlockConfig>
+
+1. Enable the OIDC authentication plugin:
+  ```shell-session
+  $ vault auth enable -path=<YOUR_OIDC_MOUNT_PATH> oidc
+  ```
+  For example:
+
+  <CodeBlockConfig hideClipboard>
+
+  ```shell-session
+  $ vault auth enable -path=/adfs oidc
+  ```
+
+  </CodeBlockConfig>
+
+</Tab>
+
+<Tab heading="Vault UI">
+
+1. Open the web UI for your Vault instance.
+1. Select **Access** from the left-hand menu.
+1. Right click **Enable new method** on the Access page. 
+1. Select **OIDC**.
+1. Click **Next**.
+1. Set the mount path for the OIDC plugin. For example, `adfs`.
+1. Click **Enable Method**.
+1. Click **Save** to enable the plugin.
+
+</Tab>
+
+</Tabs>
+
+## Step 2: Create a new application group in ADFS
+
+<Note title="Save the client ID">
+
+  Make note of the 32-character **client identifier** provided by ADFS for your
+  new application group (for example, `d879d6fb-d2de-4596-b39c-191b2f83c03f`).
+  You will need the client ID to configure your OIDC plugin for Vault.
+
+</Note>
+
+1. Open your Windows Server UI.
+1. Go to the Server Manager screen and click **Tools**.
+1. Select **AD FS Management**.
+1. Right-click on **Application Groups** and select **Add Application Group...**.
+1. Follow the prompts to create a new application group with the following
+   information: 
+    - **Name**: Vault
+    - **Description**: a short description explaining the purpose of the application
+      group. For example, "Enable access to Vault".
+    - **Application type**: Server application
+    - **Redirect URI**: add the callback URL of your OIDC plugin for web
+      redirects and the local OIDC callback URL for Vault CLI redirects. For
+      example, `https://myvault.example.com:8200/ui/vault/auth/<YOUR_OIDC_MOUNT_PATH>/oidc/callback`
+      and `http://localhost:8250/oidc/callback`.
+1. Check the **Generate a shared secret** box and save the secret string.
+1. Confirm the application group details and correct information before closing.
+
+## Step 3: Configure the webhook in ADFS
+
+1. Open the Vault application group in from the ADFS management screen.
+1. Click **Add application...**
+1. Select **Web API**.
+1. Follow the prompts to configure a new webhook with the following information:
+   - Identifier: the client ID of your application group
+   - Access control policy: select an existing policy or `Permit everyone`
+   - Enable `allatclaims`, `email`, `openid`, and `profile`
+1. Select the new webhook (Vault - Web API) from the properties screen of the
+   Vault application group.
+1. Open the **Issuance Transform Rules** tab.
+1. Click **Add Rule...** and follow the prompts to create a new authentication
+   rule with the following information:
+   - Select **Send LDAP Attributes as Claims**
+   - Rule name: `LDAP Group`
+   - Attribute store: `Active Directory`
+   - LDAP attribute: `Token-Groups - Unqualified Names`
+   - Outgoing claim type: `Group`
+      
+[![Screenshot of the Transform Claim Rule Configuration](/img/adfs-oidc-ldapgroupoption.png)](/img/adfs-oidc-ldapgroupoption.png)
+
+## Step 4: Create a default ADFS role in Vault
+
+Use the `vault write` CLI command to create a default role for users
+authenticating with ADFS where:
+
+- `ADFS_APPLICATION_GROUP_CLIENT_ID` is the client ID provided by ADFS.
+- `YOUR_OIDC_MOUNT_PATH` is the mount path for the OIDC plugin.. For example,
+  `adfs`.
+- `ADFS_ROLE` is the name of your role. For example, `adfs-default`.
+
+```shell-session
+$ vault write auth/<YOUR_OIDC_MOUNT_PATH>/role/<ADFS_ROLE> \
+  bound_audiences="<ADFS_APPLICATION_GROUP_CLIENT_ID>" \
+  allowed_redirect_uris="${VAULT_ADDR}/ui/vault/auth/<YOUR_OIDC_MOUNT_PATH>/oidc/callback" \
+  allowed_redirect_uris="http://localhost:8250/oidc/callback" \
+  user_claim="upn" groups_claim="group" token_policies="default"
+```
+
+<Tip>
+
+Using `upn` value for `user_claim` tells Vault to consider the user email
+associated with the ADFS authentication token as an entity alias.
+
+</Tip>
+
+## Step 5: Configure the OIDC plugin
+
+Use the client ID and shared secret for your ADFS application group to finish
+configuring the OIDC plugin. 
+
+<Tabs>
+
+<Tab heading="Vault CLI">
+
+Use the `vault write` CLI command to save the configuration details for the OIDC
+plugin where:
+
+- `ADFS_URL` is the discovery URL for your ADFS instance. For example,
+  `https://adfs.example.com/adfs`
+- `ADFS_APPLICATION_GROUP_CLIENT_ID` is the client ID provided by ADFS.
+- `YOUR_OIDC_MOUNT_PATH` is the mount path for the OIDC plugin.. For example,
+  `adfs`.
+- `ADFS_APPLICATION_GROUP_SECRET` is the shared secret for your ADFS application
+  group.
+- `ADFS_ROLE` is the name of your role. For example, `adfs-default`.
+
+
+```shell-session
+$ vault write auth/<YOUR_OIDC_MOUNT_PATH>/config \
+  oidc_discovery_url="<ADFS_URL>" \
+  oidc_client_id="<ADFS_APPLICATION_GROUP_CLIENT_ID>" \
+  oidc_client_secret="<ADFS_APPLICATION_GROUP_SECRET>" \
+  default_role="<ADFS_ROLE>" 
+```
+
+</Tab>
+
+<Tab heading="Vault UI">
+
+1. Open the Vault UI.
+1. Select the OIDC plugin from the **Access** screen.
+1. Click **Enable Method** and follow the prompts to configure the OIDC plugin
+   with the following information:
+   - OIDC discovery URL: the discovery URL for your ADFS instance. For example,
+     `https://adfs.example.com/adfs`.
+   - Default role: the name of your new ADFS role. For example, `adfs-default`.
+1. Click **OIDC Options** and set your OIDC information:
+    - OIDC client ID: the application group client ID provided by ADFS.
+    - OIDC client secret: the shared secret for your ADFS application group.
+1. Save your changes.
+
+</Tab>
+
+</Tabs>
+
+
+## OPTIONAL: Link Active Directory groups to Vault
+
+1. Enable the KV secret engine in Vault for ADFS:
+   ```shell-session
+   $ vault secrets enable -path=<ADFS_KV_PLUGIN_PATH> kv-v2
+   ```
+   For example:
+
+  <CodeBlockConfig hideClipboard>
+
+  ```shell-session
+   $ vault secrets enable -path=adfs-kv kv-v2
+  ```
+
+  </CodeBlockConfig>
+
+1. Create a read-only policy against the KV plugin for ADFS:
+   ```shell-session
+   $ vault policy write <RO_ADFS_POLICY_NAME> - << EOF
+   # Read and list policy for the ADFS KV mount
+   path "<ADFS_KV_PLUGIN_PATH>/*" {
+     capabilities = ["read", "list"]
+   }
+   EOF
+   ```
+   For example:
+
+  <CodeBlockConfig hideClipboard>
+
+  ```shell-session
+   $ vault policy write read-adfs-test - << EOF
+   # Read and list policy for the ADFS KV mount
+   path "adfs-kv/*" {
+     capabilities = ["read", "list"]
+   }
+   EOF
+  ```
+
+  </CodeBlockConfig>
+
+1. Write a test value to the KV plugin:
+  ```shell-session
+  $ vault kv put <ADFS_KV_PLUGIN_PATH>/test test_key="test value"
+   ```
+   For example:
+
+  <CodeBlockConfig hideClipboard>
+
+  ```shell-session
+  $ vault kv put adfs-kv/test test_key="test value"
+  ```
+
+  </CodeBlockConfig>
+
+Now you can create a Vault group and link to an AD group:
+
+<Tabs>
+
+<Tab heading="Vault CLI">
+
+1. Create an external group in Vault and save the group ID to a file named
+   `group_id.txt`:
+  ```shell-session
+  $ vault write \
+    -format=json \
+    identity/group name="<YOUR_NEW_VAULT_GROUP_NAME>" \
+    policies="<RO_ADFS_POLICY_NAME>" \
+    type="external" | jq -r ".data.id" > group_id.txt
+  ```
+1. Retrieve the mount accessor for the ADFS authentication method and save it to
+   a file named `accessor_adfs.txt`:
+   ```shell-session
+   $ vault auth list -format=json | \
+     jq -r '.["<YOUR_OIDC_MOUNT_PATH>/"].accessor' > \
+     accessor_adfs.txt
+   ```
+1. Create a group alias:
+   ```shell-session
+   $ vault write identity/group-alias \
+     name="<YOUR_EXISTING_AD_GROUP>"  \
+     mount_accessor=$(cat accessor_adfs.txt) \
+     canonical_id="$(cat group_id.txt)"
+   ```
+1. Login to Vault as an AD user who is a member of YOUR_EXISTING_AD_GROUP.
+1. Read your test value from the KV plugin:
+  ```shell-session
+  $ vault kv list -mount=secret <ADFS_KV_PLUGIN_PATH>/test
+  ```
+
+</Tab>
+
+<Tab heading="Vault UI">
+
+1. Open the Vault UI.
+1. Select **Access**. 
+1. Select **Groups**.
+1. Click **Create group**.
+1. Follow the prompts to create an external group with the following
+   information:
+     - Name: your new Vault group name
+     - Type: `external`
+     - Policies: the read-only ADFS policy you created. For example,
+       `read-adfs-test`.
+1. Click on **Add alias** and follow the prompts to map the Vault group name
+   to an existing group on your AD:
+   - Name: the name of an existing AD group (**must match exactly**).
+   - Auth Backend: `<YOUR_OIDC_MOUNT_PATH>/ (oidc)`
+1. Login to Vault as an AD user who is a member of the aliased AD group.
+1. Read your test value from the KV plugin.
+
+</Tab>
+
+</Tabs>
+

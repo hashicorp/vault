@@ -1,0 +1,123 @@
+---
+layout: docs
+page_title: operator import - Command
+description: >-
+  The "operator import" command imports secrets from external systems
+  in to Vault.
+---
+
+# operator import
+
+@include 'alerts/enterprise-only.mdx'
+
+@include 'alerts/alpha.mdx'
+
+The `operator import` command imports secrets from external systems in to Vault.
+Secrets with the same name at the same storage path will be overwritten upon import.
+
+<Note title="Imports can be long-running processes">
+
+You can write import plans that read from as many sources as you want. The
+amount of data migrated from each source depends on the filters applied and the
+dataset available. Be mindful of the time needed to read from each source,
+apply any filters, and store the data in Vault.
+
+</Note>
+
+## Examples
+
+Read the config file `import.hcl` to generate a new import plan:
+
+```shell-session
+$ vault operator import -config import.hcl plan
+```
+
+Output:
+
+<CodeBlockConfig hideClipboard>
+
+	-----------
+	Import plan
+	-----------
+	The following namespaces are missing:
+	* ns-1/
+
+	The following mounts are missing:
+	* ns-1/mount-1
+
+	Secrets to be imported to the destination "my-dest-1":
+	* secret-1
+	* secret-2
+
+</CodeBlockConfig>
+
+## Configuration
+
+The `operator import` command uses a dedicated configuration file to specify the source,
+destination, and mapping rules. To learn more about these types and secrets importing in
+general, refer to the [Secrets Import documentation](/vault/docs/import).
+
+```hcl
+source_gcp {
+  name             = "my-src-1"
+  credentials_file = "/path/to/service-account-key.json"
+}
+
+source_aws {
+  name                = "my-src-2"
+  credentials_profile = "my-profile-name"
+}
+
+source_azure {
+  name                = "my-src-3"
+  # Use default credentials from doing an az login
+}
+
+destination_vault {
+  name      = "my-dest-1"
+  address   = "http://127.0.0.1:8200/"
+  namespace = "ns-1"
+  mount     = "mount-1"
+}
+
+mapping {
+  name        = "my-map-1"
+  source      = "my-src-1"
+  destination = "my-dest-1"
+}
+
+mapping {
+  name        = "my-map-2"
+  source      = "my-src-2"
+  destination = "my-dest-1"
+}
+
+mapping {
+  name        = "my-map-3"
+  source      = "my-src-3"
+  destination = "my-dest-1"
+}
+```
+
+## Usage
+
+### Arguments
+
+- `plan` - Executes a read-only operation to let operators preview the secrets to import based on the configuration file.
+
+- `apply` - Executes the import operations to read the specified secrets from the source and write them into Vault.
+  Apply first executes a plan, then asks the user to approve the results before performing the actual import.
+
+### Flags
+
+The `operator import` command accepts the following flags:
+
+- `-config` `(string: "import.hcl")` - Path to the import configuration HCL file. The default path is `import.hcl`.
+
+- `-auto-approve` `(bool: <false>)` - Automatically responds "yes" to all user-input prompts for the `apply` command.
+
+- `-auto-create` `(bool: <false>)` - Automatically creates any missing namespaces and KVv2 mounts when
+  running the `apply` command.
+
+- `-log-level` ((#\_log_level)) `(string: "info")` - Log verbosity level. Supported values (in
+  order of descending detail) are `trace`, `debug`, `info`, `warn`, and `error`. You can also set log-level with the `VAULT_LOG_LEVEL` environment variable.

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package database
 
 import (
@@ -15,6 +18,7 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBackend_Roles_CredentialTypes(t *testing.T) {
@@ -202,7 +206,7 @@ func TestBackend_Roles_CredentialTypes(t *testing.T) {
 }
 
 func TestBackend_StaticRole_Config(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -219,7 +223,7 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	// create the database user
@@ -251,6 +255,8 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 		path     string
 		expected map[string]interface{}
 		err      error
+		// use this field to check partial error strings, otherwise use err
+		errContains string
 	}{
 		"basic": {
 			account: map[string]interface{}{
@@ -263,12 +269,71 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 				"rotation_period": float64(5400),
 			},
 		},
-		"missing rotation period": {
+		"missing required fields": {
 			account: map[string]interface{}{
 				"username": dbUser,
 			},
 			path: "plugin-role-test",
-			err:  errors.New("rotation_period is required to create static accounts"),
+			err:  errors.New("one of rotation_schedule or rotation_period must be provided to create a static account"),
+		},
+		"rotation_period with rotation_schedule": {
+			account: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_period":   "5400s",
+				"rotation_schedule": "* * * * *",
+			},
+			path: "plugin-role-test",
+			err:  errors.New("mutually exclusive fields rotation_period and rotation_schedule were both specified; only one of them can be provided"),
+		},
+		"rotation window invalid with rotation_period": {
+			account: map[string]interface{}{
+				"username":        dbUser,
+				"rotation_period": "5400s",
+				"rotation_window": "3600s",
+			},
+			path: "disallowed-role",
+			err:  errors.New("rotation_window is invalid with use of rotation_period"),
+		},
+		"happy path for rotation_schedule": {
+			account: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "* * * * *",
+			},
+			path: "plugin-role-test",
+			expected: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "* * * * *",
+			},
+		},
+		"happy path for rotation_schedule and rotation_window": {
+			account: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "* * * * *",
+				"rotation_window":   "3600s",
+			},
+			path: "plugin-role-test",
+			expected: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "* * * * *",
+				"rotation_window":   float64(3600),
+			},
+		},
+		"error parsing rotation_schedule": {
+			account: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "foo",
+			},
+			path:        "plugin-role-test",
+			errContains: "could not parse rotation_schedule",
+		},
+		"rotation_window invalid": {
+			account: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "* * * * *",
+				"rotation_window":   "59s",
+			},
+			path:        "plugin-role-test",
+			errContains: "rotation_window is invalid",
 		},
 		"disallowed role config": {
 			account: map[string]interface{}{
@@ -277,6 +342,14 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 			},
 			path: "disallowed-role",
 			err:  errors.New("\"disallowed-role\" is not an allowed role"),
+		},
+		"fails to parse cronSpec with seconds": {
+			account: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "*/10 * * * * *",
+			},
+			path:        "plugin-role-test-1",
+			errContains: "could not parse rotation_schedule",
 		},
 	}
 
@@ -302,7 +375,12 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 			}
 
 			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
-			if err != nil || (resp != nil && resp.IsError()) {
+			if tc.errContains != "" {
+				if !strings.Contains(resp.Error().Error(), tc.errContains) {
+					t.Fatalf("expected err message: (%s), got (%s), response error: (%s)", tc.err, err, resp.Error())
+				}
+				return
+			} else if err != nil || (resp != nil && resp.IsError()) {
 				if tc.err == nil {
 					t.Fatalf("err:%s resp:%#v\n", err, resp)
 				}
@@ -338,7 +416,14 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 
 			expected := tc.expected
 			actual := make(map[string]interface{})
-			dataKeys := []string{"username", "password", "last_vault_rotation", "rotation_period"}
+			dataKeys := []string{
+				"username",
+				"password",
+				"last_vault_rotation",
+				"rotation_period",
+				"rotation_schedule",
+				"rotation_window",
+			}
 			for _, key := range dataKeys {
 				if v, ok := resp.Data[key]; ok {
 					actual[key] = v
@@ -385,8 +470,8 @@ func TestBackend_StaticRole_Config(t *testing.T) {
 	}
 }
 
-func TestBackend_StaticRole_Updates(t *testing.T) {
-	cluster, sys := getCluster(t)
+func TestBackend_StaticRole_ReadCreds(t *testing.T) {
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -403,7 +488,187 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
+	defer cleanup()
+
+	// create the database user
+	createTestPGUser(t, connURL, dbUser, dbUserDefaultPassword, testRoleStaticCreate)
+
+	verifyPgConn(t, dbUser, dbUserDefaultPassword, connURL)
+
+	// Configure a connection
+	data := map[string]interface{}{
+		"connection_url":    connURL,
+		"plugin_name":       "postgresql-database-plugin",
+		"verify_connection": false,
+		"allowed_roles":     []string{"*"},
+		"name":              "plugin-test",
+	}
+
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/plugin-test",
+		Storage:   config.StorageView,
+		Data:      data,
+	}
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	testCases := map[string]struct {
+		account  map[string]interface{}
+		path     string
+		expected map[string]interface{}
+	}{
+		"happy path for rotation_period": {
+			account: map[string]interface{}{
+				"username":        dbUser,
+				"rotation_period": "5400s",
+			},
+			path: "plugin-role-test",
+			expected: map[string]interface{}{
+				"username":        dbUser,
+				"rotation_period": float64(5400),
+			},
+		},
+		"happy path for rotation_schedule": {
+			account: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "* * * * *",
+			},
+			path: "plugin-role-test",
+			expected: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "* * * * *",
+			},
+		},
+		"happy path for rotation_schedule and rotation_window": {
+			account: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "* * * * *",
+				"rotation_window":   "3600s",
+			},
+			path: "plugin-role-test",
+			expected: map[string]interface{}{
+				"username":          dbUser,
+				"rotation_schedule": "* * * * *",
+				"rotation_window":   float64(3600),
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			data = map[string]interface{}{
+				"name":                "plugin-role-test",
+				"db_name":             "plugin-test",
+				"rotation_statements": testRoleStaticUpdate,
+				"username":            dbUser,
+			}
+
+			for k, v := range tc.account {
+				data[k] = v
+			}
+
+			req = &logical.Request{
+				Operation: logical.CreateOperation,
+				Path:      "static-roles/plugin-role-test",
+				Storage:   config.StorageView,
+				Data:      data,
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err:%s resp:%#v\n", err, resp)
+			}
+
+			// Read the creds
+			data = map[string]interface{}{}
+			req = &logical.Request{
+				Operation: logical.ReadOperation,
+				Path:      "static-creds/plugin-role-test",
+				Storage:   config.StorageView,
+				Data:      data,
+			}
+
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err:%s resp:%#v\n", err, resp)
+			}
+
+			expected := tc.expected
+			actual := make(map[string]interface{})
+			dataKeys := []string{
+				"username",
+				"password",
+				"last_vault_rotation",
+				"rotation_period",
+				"rotation_schedule",
+				"rotation_window",
+				"ttl",
+			}
+			for _, key := range dataKeys {
+				if v, ok := resp.Data[key]; ok {
+					actual[key] = v
+				}
+			}
+
+			if len(tc.expected) > 0 {
+				// verify a password is returned, but we don't care what it's value is
+				if actual["password"] == "" {
+					t.Fatalf("expected result to contain password, but none found")
+				}
+				if actual["ttl"] == "" {
+					t.Fatalf("expected result to contain ttl, but none found")
+				}
+				if v, ok := actual["last_vault_rotation"].(time.Time); !ok {
+					t.Fatalf("expected last_vault_rotation to be set to time.Time type, got: %#v", v)
+				}
+
+				// delete these values before the comparison, since we can't know them in
+				// advance
+				delete(actual, "password")
+				delete(actual, "ttl")
+				delete(actual, "last_vault_rotation")
+				if diff := deep.Equal(expected, actual); diff != nil {
+					t.Fatal(diff)
+				}
+			}
+
+			// Delete role for next run
+			req = &logical.Request{
+				Operation: logical.DeleteOperation,
+				Path:      "static-roles/plugin-role-test",
+				Storage:   config.StorageView,
+			}
+			resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+			if err != nil || (resp != nil && resp.IsError()) {
+				t.Fatalf("err:%s resp:%#v\n", err, resp)
+			}
+		})
+	}
+}
+
+func TestBackend_StaticRole_Updates(t *testing.T) {
+	cluster, sys := getClusterPostgresDB(t)
+	defer cluster.Cleanup()
+
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	config.System = sys
+
+	lb, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, ok := lb.(*databaseBackend)
+	if !ok {
+		t.Fatal("could not convert to db backend")
+	}
+	defer b.Cleanup(context.Background())
+
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	// create the database user
@@ -578,8 +843,114 @@ func TestBackend_StaticRole_Updates(t *testing.T) {
 	}
 }
 
+func TestBackend_StaticRole_Updates_RotationSchedule(t *testing.T) {
+	ctx := context.Background()
+	b, storage, mockDB := getBackend(t)
+	defer b.Cleanup(ctx)
+	configureDBMount(t, storage)
+
+	data := map[string]interface{}{
+		"name":                "plugin-role-test-updates",
+		"db_name":             "mockv5",
+		"rotation_statements": testRoleStaticUpdate,
+		"username":            dbUser,
+		"rotation_schedule":   "0 0 */2 * * *",
+		"rotation_window":     "1h",
+	}
+
+	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+		Return(v5.UpdateUserResponse{}, nil).
+		Once()
+	req := &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "static-roles/plugin-role-test-updates",
+		Storage:   storage,
+		Data:      data,
+	}
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// Read the role
+	data = map[string]interface{}{}
+	req = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "static-roles/plugin-role-test-updates",
+		Storage:   storage,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	rotation := resp.Data["rotation_schedule"].(string)
+	window := resp.Data["rotation_window"].(float64)
+
+	// update rotation_schedule and window
+	updateData := map[string]interface{}{
+		"name":              "plugin-role-test-updates",
+		"db_name":           "mockv5",
+		"username":          dbUser,
+		"rotation_schedule": "0 0 */1 * * *",
+		"rotation_window":   "2h",
+	}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "static-roles/plugin-role-test-updates",
+		Storage:   storage,
+		Data:      updateData,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	// re-read the role
+	data = map[string]interface{}{}
+	req = &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "static-roles/plugin-role-test-updates",
+		Storage:   storage,
+		Data:      data,
+	}
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+
+	newRotation := resp.Data["rotation_schedule"].(string)
+	if newRotation == rotation {
+		t.Fatalf("expected change in rotation, but got old value:  %#v", newRotation)
+	}
+	newWindow := resp.Data["rotation_window"].(float64)
+	if newWindow == window {
+		t.Fatalf("expected change in rotation_window, but got old value:  %#v", newWindow)
+	}
+
+	// verify that rotation_schedule is only required when creating
+	updateData = map[string]interface{}{
+		"name":                "plugin-role-test-updates",
+		"db_name":             "mockv5",
+		"username":            dbUser,
+		"rotation_statements": testRoleStaticUpdateRotation,
+	}
+	req = &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "static-roles/plugin-role-test-updates",
+		Storage:   storage,
+		Data:      updateData,
+	}
+
+	resp, err = b.HandleRequest(namespace.RootContext(nil), req)
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatalf("err:%s resp:%#v\n", err, resp)
+	}
+}
+
 func TestBackend_StaticRole_Role_name_check(t *testing.T) {
-	cluster, sys := getCluster(t)
+	cluster, sys := getClusterPostgresDB(t)
 	defer cluster.Cleanup()
 
 	config := logical.TestBackendConfig()
@@ -596,7 +967,7 @@ func TestBackend_StaticRole_Role_name_check(t *testing.T) {
 	}
 	defer b.Cleanup(context.Background())
 
-	cleanup, connURL := postgreshelper.PrepareTestContainer(t, "")
+	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
 	defer cleanup()
 
 	// create the database user
@@ -717,6 +1088,76 @@ func TestBackend_StaticRole_Role_name_check(t *testing.T) {
 	}
 }
 
+// TestStaticRole_NewCredentialGeneration verifies that new
+// credentials are generated if a retried credential continues
+// to fail
+func TestStaticRole_NewCredentialGeneration(t *testing.T) {
+	ctx := context.Background()
+	b, storage, mockDB := getBackend(t)
+	defer b.Cleanup(ctx)
+	configureDBMount(t, storage)
+
+	roleName := "hashicorp"
+	createRole(t, b, storage, mockDB, "hashicorp")
+
+	t.Run("rotation failures should generate new password on retry", func(t *testing.T) {
+		// Fail to rotate the role
+		generateWALFromFailedRotation(t, b, storage, mockDB, roleName)
+
+		// Get WAL
+		walIDs := requireWALs(t, storage, 1)
+		wal, err := b.findStaticWAL(ctx, storage, walIDs[0])
+		if err != nil || wal == nil {
+			t.Fatal(err)
+		}
+
+		// Store password
+		initialPassword := wal.NewPassword
+
+		// Rotate role manually and fail again #1 with same password
+		generateWALFromFailedRotation(t, b, storage, mockDB, roleName)
+
+		// Ensure WAL is deleted since retrying password failed
+		requireWALs(t, storage, 0)
+
+		// Successfully rotate the role
+		mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+			Return(v5.UpdateUserResponse{}, nil).
+			Once()
+		_, err = b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.UpdateOperation,
+			Path:      "rotate-role/" + roleName,
+			Storage:   storage,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		// Ensure WAL is flushed since request was successful
+		requireWALs(t, storage, 0)
+
+		// Read the credential
+		data := map[string]interface{}{}
+		req := &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      "static-creds/" + roleName,
+			Storage:   storage,
+			Data:      data,
+		}
+
+		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+		if err != nil || (resp != nil && resp.IsError()) {
+			t.Fatalf("err:%s resp:%#v\n", err, resp)
+		}
+
+		// Confirm successful rotation used new credential
+		// Assert previous failing credential is not being used
+		if resp.Data["password"] == initialPassword {
+			t.Fatalf("expected password to be different after second retry")
+		}
+	})
+}
+
 func TestWALsStillTrackedAfterUpdate(t *testing.T) {
 	ctx := context.Background()
 	b, storage, mockDB := getBackend(t)
@@ -825,6 +1266,144 @@ func TestWALsDeletedOnRoleDeletion(t *testing.T) {
 	requireWALs(t, storage, 1)
 }
 
+func TestIsInsideRotationWindow(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		expected     bool
+		data         map[string]interface{}
+		now          time.Time
+		timeModifier func(t time.Time) time.Time
+	}{
+		{
+			"always returns true for rotation_period type",
+			true,
+			map[string]interface{}{
+				"rotation_period": "86400s",
+			},
+			time.Now(),
+			nil,
+		},
+		{
+			"always returns true for rotation_schedule when no rotation_window set",
+			true,
+			map[string]interface{}{
+				"rotation_schedule": "0 0 */2 * * *",
+			},
+			time.Now(),
+			nil,
+		},
+		{
+			"returns true for rotation_schedule when inside rotation_window",
+			true,
+			map[string]interface{}{
+				"rotation_schedule": "0 0 */2 * * *",
+				"rotation_window":   "3600s",
+			},
+			time.Now(),
+			func(t time.Time) time.Time {
+				// set current time just inside window
+				return t.Add(-3640 * time.Second)
+			},
+		},
+		{
+			"returns false for rotation_schedule when outside rotation_window",
+			false,
+			map[string]interface{}{
+				"rotation_schedule": "0 0 */2 * * *",
+				"rotation_window":   "3600s",
+			},
+			time.Now(),
+			func(t time.Time) time.Time {
+				// set current time just outside window
+				return t.Add(-3560 * time.Second)
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			b, s, mockDB := getBackend(t)
+			defer b.Cleanup(ctx)
+			configureDBMount(t, s)
+
+			testTime := tc.now
+			if tc.data["rotation_schedule"] != nil && tc.timeModifier != nil {
+				rotationSchedule := tc.data["rotation_schedule"].(string)
+				schedule, err := b.schedule.Parse(rotationSchedule)
+				if err != nil {
+					t.Fatalf("could not parse rotation_schedule: %s", err)
+				}
+				next1 := schedule.Next(tc.now) // the next rotation time we expect
+				next2 := schedule.Next(next1)  // the next rotation time after that
+				testTime = tc.timeModifier(next2)
+			}
+
+			tc.data["username"] = "hashicorp"
+			tc.data["db_name"] = "mockv5"
+			createRoleWithData(t, b, s, mockDB, "test-role", tc.data)
+			role, err := b.StaticRole(ctx, s, "test-role")
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			isInsideWindow := role.StaticAccount.IsInsideRotationWindow(testTime)
+			if tc.expected != isInsideWindow {
+				t.Fatalf("expected %t, got %t", tc.expected, isInsideWindow)
+			}
+		})
+	}
+}
+
+// TestStaticRoleTTLAfterUpdate tests that a static roles
+// TTL is properly updated after updating rotation period
+// This addresses a bug in which NextVaultRotation was not
+// set on update
+func TestStaticRoleTTLAfterUpdate(t *testing.T) {
+	ctx := context.Background()
+	b, storage, mockDB := getBackend(t)
+	defer b.Cleanup(ctx)
+	configureDBMount(t, storage)
+
+	roleName := "hashicorp"
+	data := map[string]interface{}{
+		"username":        "hashicorp",
+		"db_name":         "mockv5",
+		"rotation_period": "10m",
+	}
+
+	createRoleWithData(t, b, storage, mockDB, roleName, data)
+	// read credential
+	resp := readStaticCred(t, b, storage, mockDB, roleName)
+	var initialTTL float64
+	if v, ok := resp.Data["ttl"]; !ok || v == nil {
+		require.FailNow(t, "initial ttl should be set")
+	} else {
+		initialTTL, ok = v.(float64)
+		if !ok {
+			require.FailNow(t, "expected ttl to be an integer")
+		}
+	}
+
+	updateStaticRoleWithData(t, b, storage, mockDB, roleName, map[string]interface{}{
+		"username":        "hashicorp",
+		"db_name":         "mockv5",
+		"rotation_period": "20m",
+	})
+
+	resp = readStaticCred(t, b, storage, mockDB, roleName)
+	var updatedTTL float64
+	if v, ok := resp.Data["ttl"]; !ok || v == nil {
+		require.FailNow(t, "expected ttl to be set after update")
+	} else {
+		updatedTTL, ok = v.(float64)
+		if !ok {
+			require.FailNow(t, "expected ttl to be a float64 after update")
+		}
+	}
+
+	require.Greaterf(t, updatedTTL, initialTTL, "expected ttl to be greater than %f, actual value: %f",
+		initialTTL, updatedTTL)
+}
+
 func createRole(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string) {
 	t.Helper()
 	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
@@ -842,6 +1421,63 @@ func createRole(t *testing.T, b *databaseBackend, storage logical.Storage, mockD
 	})
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatal(resp, err)
+	}
+}
+
+func createRoleWithData(t *testing.T, b *databaseBackend, s logical.Storage, mockDB *mockNewDatabase, roleName string, data map[string]interface{}) {
+	t.Helper()
+	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+		Return(v5.UpdateUserResponse{}, nil).
+		Once()
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.CreateOperation,
+		Path:      "static-roles/" + roleName,
+		Storage:   s,
+		Data:      data,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatal(resp, err)
+	}
+}
+
+func readStaticCred(t *testing.T, b *databaseBackend, s logical.Storage, mockDB *mockNewDatabase, roleName string) *logical.Response {
+	t.Helper()
+	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+		Return(v5.UpdateUserResponse{}, nil).
+		Once()
+	resp, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "static-creds/" + roleName,
+		Storage:   s,
+	})
+	if err != nil || (resp != nil && resp.IsError()) {
+		t.Fatal(resp, err)
+	}
+	return resp
+}
+
+func updateStaticRoleWithData(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string, d map[string]interface{}) {
+	t.Helper()
+
+	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
+		Return(v5.UpdateUserResponse{}, nil).
+		Once()
+
+	req := &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "static-roles/" + roleName,
+		Storage:   storage,
+		Data:      d,
+	}
+
+	resp, err := b.HandleRequest(context.Background(), req)
+	assert.NoError(t, err, "unexpected error")
+	if resp != nil {
+		assert.NoError(t, resp.Error(), "unexpected error in response")
+	}
+
+	if t.Failed() {
+		require.FailNow(t, "failed to update static role: %s", roleName)
 	}
 }
 

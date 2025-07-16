@@ -1,12 +1,11 @@
 ---
 layout: docs
-page_title: MySQL - Storage Backends - Configuration
-description: |-
-  The MySQL storage backend is used to persist Vault's data in a MySQL server or
-  cluster.
+page_title: MySQL configuration
+description: >-
+  Configure Vault backend storage to use a MySQL server or cluster.
 ---
 
-# MySQL Storage Backend
+# MySQL configuration for Vault backend storage
 
 The MySQL storage backend is used to persist Vault's data in a [MySQL][mysql]
 server or cluster.
@@ -30,7 +29,7 @@ storage "mysql" {
 }
 ```
 
-## `mysql` Parameters
+## `mysql` parameters
 
 - `address` `(string: "127.0.0.1:3306")` – Specifies the address of the MySQL
   host.
@@ -44,7 +43,7 @@ storage "mysql" {
 - `tls_ca_file` `(string: "")` – Specifies the path to the CA certificate to
   connect using TLS.
 
-- `plaintext_credentials_transmission` `(string: "")` - Provides authorization
+- `plaintext_connection_allowed` `(string: "")` - Provides authorization
   to send credentials over plaintext. Failure to provide a value AND a failure
   to provide a TLS CA certificate will warn that the credentials are being sent
   over plain text. In the future, failure to do acknowledge or use TLS will
@@ -65,14 +64,14 @@ storage "mysql" {
 Additionally, Vault requires the following authentication information.
 
 - `username` `(string: <required>)` – Specifies the MySQL username to connect to
-  the database.
+  the database. This value can also be set using the `VAULT_MYSQL_USERNAME` environment variable.
 
 - `password` `(string: <required>)` – Specifies the MySQL password to connect to
-  the database.
+  the database. This value can also be set using the `VAULT_MYSQL_PASSWORD` environment variable.
 
-### High Availability Parameters
+### High availability parameters
 
-- `ha_enabled` `(string: "true")` - Specifies if high availability mode is
+- `ha_enabled` `(string: "false")` - Specifies if high availability mode is
   enabled. This is a boolean value, but it is specified as a string like "true"
   or "false".
 
@@ -81,9 +80,9 @@ Additionally, Vault requires the following authentication information.
   of the `table` suffixed with `_lock`. If the table does not exist, Vault will
   attempt to create it.
 
-## `mysql` Examples
+## `mysql` examples
 
-### Custom Database and Table
+### Custom database and table
 
 This example shows configuring the MySQL backend to use a custom database and
 table name.

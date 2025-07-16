@@ -1,0 +1,3 @@
+```release-note:improvement
+command/server: Environment variable keys are now logged at startup.
+```

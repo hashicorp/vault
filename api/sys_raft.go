@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
@@ -6,9 +9,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
@@ -97,6 +102,23 @@ type AutopilotState struct {
 	OptimisticFailureTolerance int                         `mapstructure:"optimistic_failure_tolerance,omitempty"`
 }
 
+func (a *AutopilotState) String() string {
+	var result string
+	result += fmt.Sprintf("Healthy: %t. FailureTolerance: %d. Leader: %s. OptimisticFailureTolerance: %d\n", a.Healthy, a.FailureTolerance, a.Leader, a.OptimisticFailureTolerance)
+	for _, s := range a.Servers {
+		result += fmt.Sprintf("Server: %s\n", s)
+	}
+	result += fmt.Sprintf("Voters: %v\n", a.Voters)
+	result += fmt.Sprintf("NonVoters: %v\n", a.NonVoters)
+
+	for name, zone := range a.RedundancyZones {
+		result += fmt.Sprintf("RedundancyZone %s: %s\n", name, &zone)
+	}
+
+	result += fmt.Sprintf("Upgrade: %s", a.Upgrade)
+	return result
+}
+
 // AutopilotServer represents the server blocks in the response of the raft
 // autopilot state API.
 type AutopilotServer struct {
@@ -116,10 +138,19 @@ type AutopilotServer struct {
 	NodeType       string `mapstructure:"node_type,omitempty"`
 }
 
+func (a *AutopilotServer) String() string {
+	return fmt.Sprintf("ID: %s. Name: %s. Address: %s. NodeStatus: %s. LastContact: %s. LastTerm: %d. LastIndex: %d. Healthy: %t. StableSince: %s. Status: %s. Version: %s. UpgradeVersion: %s. RedundancyZone: %s. NodeType: %s",
+		a.ID, a.Name, a.Address, a.NodeStatus, a.LastContact, a.LastTerm, a.LastIndex, a.Healthy, a.StableSince, a.Status, a.Version, a.UpgradeVersion, a.RedundancyZone, a.NodeType)
+}
+
 type AutopilotZone struct {
 	Servers          []string `mapstructure:"servers,omitempty"`
 	Voters           []string `mapstructure:"voters,omitempty"`
 	FailureTolerance int      `mapstructure:"failure_tolerance,omitempty"`
+}
+
+func (a *AutopilotZone) String() string {
+	return fmt.Sprintf("Servers: %v. Voters: %v. FailureTolerance: %d", a.Servers, a.Voters, a.FailureTolerance)
 }
 
 type AutopilotUpgrade struct {
@@ -134,11 +165,27 @@ type AutopilotUpgrade struct {
 	RedundancyZones           map[string]AutopilotZoneUpgradeVersions `mapstructure:"redundancy_zones,omitempty"`
 }
 
+func (a *AutopilotUpgrade) String() string {
+	result := fmt.Sprintf("Status: %s. TargetVersion: %s. TargetVersionVoters: %v. TargetVersionNonVoters: %v. TargetVersionReadReplicas: %v. OtherVersionVoters: %v. OtherVersionNonVoters: %v. OtherVersionReadReplicas: %v",
+		a.Status, a.TargetVersion, a.TargetVersionVoters, a.TargetVersionNonVoters, a.TargetVersionReadReplicas, a.OtherVersionVoters, a.OtherVersionNonVoters, a.OtherVersionReadReplicas)
+
+	for name, zone := range a.RedundancyZones {
+		result += fmt.Sprintf("Redundancy Zone %s: %s", name, zone)
+	}
+
+	return result
+}
+
 type AutopilotZoneUpgradeVersions struct {
 	TargetVersionVoters    []string `mapstructure:"target_version_voters,omitempty"`
 	TargetVersionNonVoters []string `mapstructure:"target_version_non_voters,omitempty"`
 	OtherVersionVoters     []string `mapstructure:"other_version_voters,omitempty"`
 	OtherVersionNonVoters  []string `mapstructure:"other_version_non_voters,omitempty"`
+}
+
+func (a *AutopilotZoneUpgradeVersions) String() string {
+	return fmt.Sprintf("TargetVersionVoters: %v. TargetVersionNonVoters: %v. OtherVersionVoters: %v. OtherVersionNonVoters: %v",
+		a.TargetVersionVoters, a.TargetVersionNonVoters, a.OtherVersionVoters, a.OtherVersionNonVoters)
 }
 
 // RaftJoin wraps RaftJoinWithContext using context.Background.
@@ -218,7 +265,7 @@ func (c *Sys) RaftSnapshotWithContext(ctx context.Context, snapWriter io.Writer)
 				continue
 			}
 			var b []byte
-			b, err = ioutil.ReadAll(t)
+			b, err = io.ReadAll(t)
 			if err != nil || len(b) == 0 {
 				return
 			}
@@ -273,11 +320,19 @@ func (c *Sys) RaftAutopilotState() (*AutopilotState, error) {
 	return c.RaftAutopilotStateWithContext(context.Background())
 }
 
+// RaftAutopilotStateWithToken wraps RaftAutopilotStateWithContext using the given token.
+func (c *Sys) RaftAutopilotStateWithDRToken(drToken string) (*AutopilotState, error) {
+	return c.RaftAutopilotStateWithContext(context.WithValue(context.Background(), "dr-token", drToken))
+}
+
 // RaftAutopilotStateWithContext returns the state of the raft cluster as seen by autopilot.
 func (c *Sys) RaftAutopilotStateWithContext(ctx context.Context) (*AutopilotState, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
+	if ctx.Value("dr-token") != nil {
+		c.c.SetToken(ctx.Value("dr-token").(string))
+	}
 	r := c.c.NewRequest(http.MethodGet, "/v1/sys/storage/raft/autopilot/state")
 
 	resp, err := c.c.rawRequestWithContext(ctx, r)
@@ -313,10 +368,19 @@ func (c *Sys) RaftAutopilotConfiguration() (*AutopilotConfig, error) {
 	return c.RaftAutopilotConfigurationWithContext(context.Background())
 }
 
+// RaftAutopilotConfigurationWithDRToken wraps RaftAutopilotConfigurationWithContext using the given token.
+func (c *Sys) RaftAutopilotConfigurationWithDRToken(drToken string) (*AutopilotConfig, error) {
+	return c.RaftAutopilotConfigurationWithContext(context.WithValue(context.Background(), "dr-token", drToken))
+}
+
 // RaftAutopilotConfigurationWithContext fetches the autopilot config.
 func (c *Sys) RaftAutopilotConfigurationWithContext(ctx context.Context) (*AutopilotConfig, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
+
+	if ctx.Value("dr-token") != nil {
+		c.c.SetToken(ctx.Value("dr-token").(string))
+	}
 
 	r := c.c.NewRequest(http.MethodGet, "/v1/sys/storage/raft/autopilot/configuration")
 
@@ -379,4 +443,76 @@ func (c *Sys) PutRaftAutopilotConfigurationWithContext(ctx context.Context, opts
 	defer resp.Body.Close()
 
 	return nil
+}
+
+// RaftLoadLocalSnapshot wraps RaftLoadLocalSnapshotWithContext using context.Background.
+func (c *Sys) RaftLoadLocalSnapshot(snapReader io.Reader) (*Secret, error) {
+	return c.RaftLoadLocalSnapshotWithContext(context.Background(), snapReader)
+}
+
+// RaftLoadLocalSnapshotWithContext loads a snapshot into the raft cluster.
+// It accepts a reader that reads the snapshot file data.
+func (c *Sys) RaftLoadLocalSnapshotWithContext(ctx context.Context, snapReader io.Reader) (*Secret, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	r := c.c.NewRequest(http.MethodPost, "/v1/sys/storage/raft/snapshot-load")
+	r.Body = snapReader
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ParseSecret(resp.Body)
+}
+
+// RaftLoadCloudSnapshot wraps RaftLoadCloudSnapshotWithContext using context.Background.
+func (c *Sys) RaftLoadCloudSnapshot(name string, url *url.URL) (*Secret, error) {
+	return c.RaftLoadCloudSnapshotWithContext(context.Background(), name, url)
+}
+
+// RaftLoadCloudSnapshotWithContext loads a snapshot from cloud storage into the raft cluster.
+// It accepts a name for the cloud auto snapshot configuration and a URL to the snapshot location in cloud storage.
+func (c *Sys) RaftLoadCloudSnapshotWithContext(ctx context.Context, name string, url *url.URL) (*Secret, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	r := c.c.NewRequest(http.MethodPost, "/v1/sys/storage/raft/snapshot-auto/snapshot-load/"+name)
+	if err := r.SetJSONBody(map[string]interface{}{
+		"url": url.String(),
+	}); err != nil {
+		return nil, err
+	}
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ParseSecret(resp.Body)
+}
+
+// RaftUnloadSnapshot wraps RaftUnloadSnapshotWithContext using context.Background.
+func (c *Sys) RaftUnloadSnapshot(snapID string) (*Secret, error) {
+	return c.RaftUnloadSnapshotWithContext(context.Background(), snapID)
+}
+
+// RaftUnloadSnapshotWithContext unloads a snapshot from the raft cluster.
+// It accepts a snapshot ID to identify the snapshot to be unloaded.
+func (c *Sys) RaftUnloadSnapshotWithContext(ctx context.Context, snapID string) (*Secret, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	r := c.c.NewRequest(http.MethodDelete, "/v1/sys/storage/raft/snapshot-load/"+snapID)
+
+	resp, err := c.c.rawRequestWithContext(ctx, r)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	return ParseSecret(resp.Body)
 }

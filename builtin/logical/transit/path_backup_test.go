@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
@@ -36,6 +39,7 @@ func TestTransit_BackupRestore(t *testing.T) {
 	testBackupRestore(t, "rsa-2048", "hmac-verify")
 	testBackupRestore(t, "rsa-3072", "hmac-verify")
 	testBackupRestore(t, "rsa-4096", "hmac-verify")
+	testBackupRestore(t, "hmac", "hmac-verify")
 }
 
 func testBackupRestore(t *testing.T, keyType, feature string) {
@@ -53,6 +57,9 @@ func testBackupRestore(t *testing.T, keyType, feature string) {
 			"type":       keyType,
 			"exportable": true,
 		},
+	}
+	if keyType == "hmac" {
+		keyReq.Data["key_size"] = 32
 	}
 	resp, err = b.HandleRequest(context.Background(), keyReq)
 	if err != nil || (resp != nil && resp.IsError()) {

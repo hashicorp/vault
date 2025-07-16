@@ -1,23 +1,49 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
-export default class PkiIssuersIndexRoute extends Route {
-  @service store;
+export default class PkiIssuersListRoute extends Route {
+  @service pagination;
   @service secretMountPath;
-  @service pathHelp;
 
-  model() {
-    // the pathHelp service is needed for adding openAPI to the model
-    this.pathHelp.getNewModel('pki/pki-issuer-engine', 'pki');
-
-    return this.store
-      .query('pki/pki-issuer-engine', { backend: this.secretMountPath.currentPath })
+  model(params) {
+    const page = Number(params.page) || 1;
+    return this.pagination
+      .lazyPaginatedQuery('pki/issuer', {
+        backend: this.secretMountPath.currentPath,
+        responsePath: 'data.keys',
+        page,
+        skipCache: page === 1,
+        isListView: true,
+      })
+      .then((issuersModel) => {
+        return { issuersModel, parentModel: this.modelFor('issuers') };
+      })
       .catch((err) => {
         if (err.httpStatus === 404) {
-          return [];
+          return { parentModel: this.modelFor('issuers') };
         } else {
           throw err;
         }
       });
+  }
+
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+    controller.breadcrumbs = [
+      { label: 'Secrets', route: 'secrets', linkExternal: true },
+      { label: this.secretMountPath.currentPath, route: 'overview', model: this.secretMountPath.currentPath },
+      { label: 'Issuers', route: 'issuers.index', model: this.secretMountPath.currentPath },
+    ];
+  }
+
+  resetController(controller, isExiting) {
+    if (isExiting) {
+      controller.set('page', undefined);
+    }
   }
 }

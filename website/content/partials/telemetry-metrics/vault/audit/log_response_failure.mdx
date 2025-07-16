@@ -1,0 +1,24 @@
+### vault.audit.log_response_failure ((#vault-audit-log_response_failure))
+
+| Metric type | Value  | Description                                                                               |
+|-------------|--------|-------------------------------------------------------------------------------------------|
+| counter     | number | The number of audit log response failures across all devices                              |
+
+The number of response failures is a **crucial metric**.
+
+When using Prometheus sink use `rate` or `irate` to convert this into the number
+of failures over a specific time period.
+
+When using Vault's built-in `/metrics` output format, counters are reported
+aggregated over the metrics interval which defaults to 10 seconds. Due to
+historical reasons, this counter is recorded in a way that makes the `count`
+field misleading - it counts every request whether it failed or not. The `mean`
+value however will correctly record the normalized per-second rate at which
+audit errors have occurred over the interval.
+
+Any increase in this counter indicates that all the configured audit devices
+failed to log a request (or response). If Vault cannot properly audit a request,
+or the response to a request, the original request will fail.
+
+Refer to the Vault logs and any device-specific metrics to troubleshoot the
+failing audit log device.

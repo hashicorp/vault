@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -12,10 +15,11 @@ import (
 	"text/tabwriter"
 
 	"github.com/fatih/color"
+	"github.com/hashicorp/cli"
+	hcpvlib "github.com/hashicorp/vault-hcp-lib"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/command/token"
-	colorable "github.com/mattn/go-colorable"
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/vault/api/tokenhelper"
+	"github.com/mattn/go-colorable"
 )
 
 type VaultUI struct {
@@ -131,11 +135,12 @@ func getGlobalFlagValue(arg string) string {
 }
 
 type RunOptions struct {
-	TokenHelper token.TokenHelper
-	Stdout      io.Writer
-	Stderr      io.Writer
-	Address     string
-	Client      *api.Client
+	TokenHelper    tokenhelper.TokenHelper
+	HCPTokenHelper hcpvlib.HCPTokenHelper
+	Stdout         io.Writer
+	Stderr         io.Writer
+	Address        string
+	Client         *api.Client
 }
 
 func Run(args []string) int {
@@ -181,6 +186,8 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 		runOpts.Stderr = colorable.NewNonColorable(runOpts.Stderr)
 	}
 
+	// This bytes.Buffer override of the uiErrWriter is why we don't see errors printed to the screen
+	// when running commands with e.g. -output-curl-string
 	uiErrWriter := runOpts.Stderr
 	if outputCurlString || outputPolicy {
 		uiErrWriter = &bytes.Buffer{}
@@ -217,14 +224,14 @@ func RunCustom(args []string, runOpts *RunOptions) int {
 		return 1
 	}
 
-	initCommands(ui, serverCmdUi, runOpts)
+	commands := initCommands(ui, serverCmdUi, runOpts)
 
 	hiddenCommands := []string{"version"}
 
 	cli := &cli.CLI{
 		Name:     "vault",
 		Args:     args,
-		Commands: Commands,
+		Commands: commands,
 		HelpFunc: groupedHelpFunc(
 			cli.BasicHelpFunc("vault"),
 		),
@@ -313,6 +320,9 @@ func generateCurlString(exitCode int, runOpts *RunOptions, preParsingErrBuf *byt
 		return 1
 	}
 
+	// When we actually return from client.rawRequestWithContext(), this value should be set to the OutputStringError
+	// that contains the data/context required to output the actual string, so it's doubtful this chunk of code will
+	// ever run, but I'm guessing it's a defense in depth thing.
 	if api.LastOutputStringError == nil {
 		if exitCode == 127 {
 			// Usage, just pass it through

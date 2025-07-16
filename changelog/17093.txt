@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/cert: Add configurable support for validating client certs with OCSP.
+```

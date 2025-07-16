@@ -1,24 +1,31 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package cert
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 
+	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/cidrutil"
+	"github.com/hashicorp/vault/sdk/helper/locksutil"
+	"github.com/hashicorp/vault/sdk/helper/ocsp"
 	"github.com/hashicorp/vault/sdk/helper/policyutil"
 	"github.com/hashicorp/vault/sdk/logical"
-
-	"github.com/hashicorp/vault/sdk/helper/cidrutil"
-	glob "github.com/ryanuber/go-glob"
+	"github.com/ryanuber/go-glob"
 )
 
 // ParsedCert is a certificate that has been configured as trusted
@@ -27,9 +34,15 @@ type ParsedCert struct {
 	Certificates []*x509.Certificate
 }
 
+const certAuthFailMsg = "failed to match all constraints for this login certificate"
+
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login",
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixCert,
+			OperationVerb:   "login",
+		},
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -37,19 +50,39 @@ func pathLogin(b *backend) *framework.Path {
 			},
 		},
 		Callbacks: map[logical.Operation]framework.OperationFunc{
-			logical.UpdateOperation:         b.pathLogin,
+			logical.UpdateOperation:         b.loginPathWrapper(b.pathLogin),
 			logical.AliasLookaheadOperation: b.pathLoginAliasLookahead,
-			logical.ResolveRoleOperation:    b.pathLoginResolveRole,
+			logical.ResolveRoleOperation:    b.loginPathWrapper(b.pathLoginResolveRole),
 		},
 	}
 }
 
+func (b *backend) loginPathWrapper(wrappedOp func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error)) framework.OperationFunc {
+	return func(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+		// Make sure that the CRLs have been loaded before processing a login request,
+		// they might have been nil'd by an invalidate func call.
+		if err := b.populateCrlsIfNil(ctx, req.Storage); err != nil {
+			return nil, err
+		}
+		return wrappedOp(ctx, req, data)
+	}
+}
+
 func (b *backend) pathLoginResolveRole(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	config, err := b.Config(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	if b.configUpdated.Load() {
+		b.updatedConfig(config)
+	}
+
 	var matched *ParsedCert
+
 	if verifyResp, resp, err := b.verifyCredentials(ctx, req, data); err != nil {
 		return nil, err
 	} else if resp != nil {
-		return resp, nil
+		return certAuthLoginFailureResponse(config, resp, req), nil
 	} else {
 		matched = verifyResp
 	}
@@ -62,6 +95,9 @@ func (b *backend) pathLoginResolveRole(ctx context.Context, req *logical.Request
 }
 
 func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	if req.Connection == nil || req.Connection.ConnState == nil {
+		return nil, fmt.Errorf("tls connection not found")
+	}
 	clientCerts := req.Connection.ConnState.PeerCertificates
 	if len(clientCerts) == 0 {
 		return nil, fmt.Errorf("no client certificate found")
@@ -81,19 +117,15 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 	if err != nil {
 		return nil, err
 	}
-
-	if b.crls == nil {
-		// Probably invalidated due to replication, but we need these to proceed
-		if err := b.populateCRLs(ctx, req.Storage); err != nil {
-			return nil, err
-		}
+	if b.configUpdated.Load() {
+		b.updatedConfig(config)
 	}
 
 	var matched *ParsedCert
 	if verifyResp, resp, err := b.verifyCredentials(ctx, req, data); err != nil {
 		return nil, err
 	} else if resp != nil {
-		return resp, nil
+		return certAuthLoginFailureResponse(config, resp, req), nil
 	} else {
 		matched = verifyResp
 	}
@@ -156,16 +188,63 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, data *fra
 	}, nil
 }
 
+func certAuthLoginFailureResponse(config *config, resp *logical.Response, req *logical.Request) *logical.Response {
+	if !config.EnableMetadataOnFailures || !resp.IsError() {
+		return resp
+	}
+	var initialErrMsg string
+	if err := resp.Error(); err != nil {
+		initialErrMsg = err.Error()
+	}
+
+	clientCert, exists := getClientCert(req)
+	if !exists {
+		return logical.ErrorResponse("no client certificate found\n" + initialErrMsg)
+	}
+
+	// Trim these values as they can be anything from any sort of failed certificate
+	// and we don't want to expose audit entries to randomly large strings.
+	const maxChars = 100
+	metadata := map[string]string{
+		"common_name":      trimToMaxChars(clientCert.Subject.CommonName, maxChars),
+		"serial_number":    trimToMaxChars(clientCert.SerialNumber.String(), maxChars),
+		"subject_key_id":   trimToMaxChars(certutil.GetHexFormatted(clientCert.SubjectKeyId, ":"), maxChars),
+		"authority_key_id": trimToMaxChars(certutil.GetHexFormatted(clientCert.AuthorityKeyId, ":"), maxChars),
+	}
+
+	return logical.ErrorResponseWithData(metadata, initialErrMsg)
+}
+
+func getClientCert(req *logical.Request) (*x509.Certificate, bool) {
+	if req == nil || req.Connection == nil || req.Connection.ConnState == nil || req.Connection.ConnState.PeerCertificates == nil {
+		return nil, false
+	}
+	clientCerts := req.Connection.ConnState.PeerCertificates
+	if len(clientCerts) == 0 {
+		return nil, false
+	}
+	clientCert := clientCerts[0]
+	if clientCert == nil || clientCert.IsCA {
+		return nil, false
+	}
+	return clientCert, true
+}
+
+func trimToMaxChars(formatted string, maxSize int) string {
+	if len(formatted) > maxSize {
+		return formatted[:maxSize-3] + "..."
+	}
+
+	return formatted
+}
+
 func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	config, err := b.Config(ctx, req.Storage)
 	if err != nil {
 		return nil, err
 	}
-
-	if b.crls == nil {
-		if err := b.populateCRLs(ctx, req.Storage); err != nil {
-			return nil, err
-		}
+	if b.configUpdated.Load() {
+		b.updatedConfig(config)
 	}
 
 	if !config.DisableBinding {
@@ -173,7 +252,7 @@ func (b *backend) pathLoginRenew(ctx context.Context, req *logical.Request, d *f
 		if verifyResp, resp, err := b.verifyCredentials(ctx, req, d); err != nil {
 			return nil, err
 		} else if resp != nil {
-			return resp, nil
+			return certAuthLoginFailureResponse(config, resp, req), nil
 		} else {
 			matched = verifyResp
 		}
@@ -233,12 +312,12 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 	var certName string
 	if req.Auth != nil { // It's a renewal, use the saved certName
 		certName = req.Auth.Metadata["cert_name"]
-	} else {
+	} else if d != nil { // d is nil if handleAuthRenew call the authRenew
 		certName = d.Get("name").(string)
 	}
 
-	// Load the trusted certificates
-	roots, trusted, trustedNonCAs := b.loadTrustedCerts(ctx, req.Storage, certName)
+	// Load the trusted certificates and other details
+	roots, trusted, trustedNonCAs, verifyConf := b.getTrustedCerts(ctx, req.Storage, certName)
 
 	// Get the list of full chains matching the connection and validates the
 	// certificate itself
@@ -247,16 +326,43 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 		return nil, nil, err
 	}
 
+	var extraCas []*x509.Certificate
+	for _, t := range trusted {
+		extraCas = append(extraCas, t.Certificates...)
+	}
+
 	// If trustedNonCAs is not empty it means that client had registered a non-CA cert
 	// with the backend.
+	var retErr error
 	if len(trustedNonCAs) != 0 {
 		for _, trustedNonCA := range trustedNonCAs {
 			tCert := trustedNonCA.Certificates[0]
 			// Check for client cert being explicitly listed in the config (and matching other constraints)
-			if tCert.SerialNumber.Cmp(clientCert.SerialNumber) == 0 &&
-				bytes.Equal(tCert.AuthorityKeyId, clientCert.AuthorityKeyId) &&
-				b.matchesConstraints(clientCert, trustedNonCA.Certificates, trustedNonCA) {
-				return trustedNonCA, nil, nil
+			if tCert.SerialNumber.Cmp(clientCert.SerialNumber) == 0 {
+				matches, err := b.matchesConstraints(ctx, clientCert, trustedNonCA.Certificates, trustedNonCA, verifyConf)
+
+				if matches {
+					if !tCert.Equal(clientCert) {
+						// Someone may be trying to pass off a forged certificate as the trusted non-CA cert.  Reject early.
+						return nil, logical.ErrorResponse("certificate mismatch of a trusted leaf certificate"), nil
+					}
+				}
+
+				// matchesConstraints returns an error when OCSP verification fails,
+				// but some other path might still give us success. Add to the
+				// retErr multierror, but avoid duplicates. This way, if we reach a
+				// failure later, we can give additional context.
+				//
+				// XXX: If matchesConstraints is updated to generate additional,
+				// immediately fatal errors, we likely need to extend it to return
+				// another boolean (fatality) or other detection scheme.
+				if err != nil && (retErr == nil || !errwrap.Contains(retErr, err.Error())) {
+					retErr = multierror.Append(retErr, err)
+				}
+
+				if matches {
+					return trustedNonCA, nil, nil
+				}
 			}
 		}
 	}
@@ -264,36 +370,55 @@ func (b *backend) verifyCredentials(ctx context.Context, req *logical.Request, d
 	// If no trusted chain was found, client is not authenticated
 	// This check happens after checking for a matching configured non-CA certs
 	if len(trustedChains) == 0 {
-		return nil, logical.ErrorResponse("invalid certificate or no client certificate supplied"), nil
+		if retErr != nil {
+			return nil, logical.ErrorResponse(fmt.Sprintf("%s; additionally got errors during verification: %v", certAuthFailMsg, retErr)), nil
+		}
+
+		return nil, logical.ErrorResponse(certAuthFailMsg), nil
 	}
 
 	// Search for a ParsedCert that intersects with the validated chains and any additional constraints
-	matches := make([]*ParsedCert, 0)
 	for _, trust := range trusted { // For each ParsedCert in the config
 		for _, tCert := range trust.Certificates { // For each certificate in the entry
 			for _, chain := range trustedChains { // For each root chain that we matched
 				for _, cCert := range chain { // For each cert in the matched chain
-					if tCert.Equal(cCert) && // ParsedCert intersects with matched chain
-						b.matchesConstraints(clientCert, chain, trust) { // validate client cert + matched chain against the config
-						// Add the match to the list
-						matches = append(matches, trust)
+					if tCert.Equal(cCert) { // ParsedCert intersects with matched chain
+						match, err := b.matchesConstraints(ctx, clientCert, chain, trust, verifyConf) // validate client cert + matched chain against the config
+
+						// See note above.
+						if err != nil && (retErr == nil || !errwrap.Contains(retErr, err.Error())) {
+							retErr = multierror.Append(retErr, err)
+						}
+
+						// Return the first matching entry (for backwards
+						// compatibility, we continue to just pick the first
+						// one if we have multiple matches).
+						//
+						// Here, we return directly: this means that any
+						// future OCSP errors would be ignored; in the future,
+						// if these become fatal, we could revisit this
+						// choice and choose the first match after evaluating
+						// all possible candidates.
+						if match && err == nil {
+							return trust, nil, nil
+						}
 					}
 				}
 			}
 		}
 	}
 
-	// Fail on no matches
-	if len(matches) == 0 {
-		return nil, logical.ErrorResponse("no chain matching all constraints could be found for this login certificate"), nil
+	if retErr != nil {
+		return nil, logical.ErrorResponse(fmt.Sprintf("%s; additionally got errors during verification: %v", certAuthFailMsg, retErr)), nil
 	}
 
-	// Return the first matching entry (for backwards compatibility, we continue to just pick one if multiple match)
-	return matches[0], nil, nil
+	return nil, logical.ErrorResponse(certAuthFailMsg), nil
 }
 
-func (b *backend) matchesConstraints(clientCert *x509.Certificate, trustedChain []*x509.Certificate, config *ParsedCert) bool {
-	return !b.checkForChainInCRLs(trustedChain) &&
+func (b *backend) matchesConstraints(ctx context.Context, clientCert *x509.Certificate, trustedChain []*x509.Certificate,
+	config *ParsedCert, conf *ocsp.VerifyConfig,
+) (bool, error) {
+	soFar := !b.checkForChainInCRLs(trustedChain) &&
 		b.matchesNames(clientCert, config) &&
 		b.matchesCommonName(clientCert, config) &&
 		b.matchesDNSSANs(clientCert, config) &&
@@ -301,6 +426,14 @@ func (b *backend) matchesConstraints(clientCert *x509.Certificate, trustedChain 
 		b.matchesURISANs(clientCert, config) &&
 		b.matchesOrganizationalUnits(clientCert, config) &&
 		b.matchesCertificateExtensions(clientCert, config)
+	if config.Entry.OcspEnabled {
+		ocspGood, err := b.checkForCertInOCSP(ctx, clientCert, trustedChain, conf)
+		if err != nil {
+			return false, err
+		}
+		soFar = soFar && ocspGood
+	}
+	return soFar, nil
 }
 
 // matchesNames verifies that the certificate matches at least one configured
@@ -442,17 +575,42 @@ func (b *backend) matchesCertificateExtensions(clientCert *x509.Certificate, con
 	// including its ASN.1 type tag bytes. For the sake of simplicity, assume string type
 	// and drop the tag bytes. And get the number of bytes from the tag.
 	clientExtMap := make(map[string]string, len(clientCert.Extensions))
+	hexExtMap := make(map[string]string, len(clientCert.Extensions))
+
 	for _, ext := range clientCert.Extensions {
 		var parsedValue string
-		asn1.Unmarshal(ext.Value, &parsedValue)
-		clientExtMap[ext.Id.String()] = parsedValue
+		_, err := asn1.Unmarshal(ext.Value, &parsedValue)
+		if err != nil {
+			clientExtMap[ext.Id.String()] = ""
+		} else {
+			clientExtMap[ext.Id.String()] = parsedValue
+		}
+
+		hexExtMap[ext.Id.String()] = hex.EncodeToString(ext.Value)
 	}
+
 	// If any of the required extensions don't match the constraint fails
 	for _, requiredExt := range config.Entry.RequiredExtensions {
 		reqExt := strings.SplitN(requiredExt, ":", 2)
-		clientExtValue, clientExtValueOk := clientExtMap[reqExt[0]]
-		if !clientExtValueOk || !glob.Glob(reqExt[1], clientExtValue) {
+		if len(reqExt) != 2 {
 			return false
+		}
+
+		if reqExt[0] == "hex" {
+			reqHexExt := strings.SplitN(reqExt[1], ":", 2)
+			if len(reqHexExt) != 2 {
+				return false
+			}
+
+			clientExtValue, clientExtValueOk := hexExtMap[reqHexExt[0]]
+			if !clientExtValueOk || !glob.Glob(strings.ToLower(reqHexExt[1]), clientExtValue) {
+				return false
+			}
+		} else {
+			clientExtValue, clientExtValueOk := clientExtMap[reqExt[0]]
+			if !clientExtValueOk || !glob.Glob(reqExt[1], clientExtValue) {
+				return false
+			}
 		}
 	}
 	return true
@@ -490,10 +648,45 @@ func (b *backend) certificateExtensionsMetadata(clientCert *x509.Certificate, co
 	return metadata
 }
 
+// getTrustedCerts is used to load all the trusted certificates from the backend, cached
+
+func (b *backend) getTrustedCerts(ctx context.Context, storage logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert, conf *ocsp.VerifyConfig) {
+	if !b.trustedCacheDisabled.Load() {
+		trusted, found := b.getTrustedCertsFromCache(certName)
+		if found {
+			return trusted.pool, trusted.trusted, trusted.trustedNonCAs, trusted.ocspConf
+		}
+	}
+	return b.loadTrustedCerts(ctx, storage, certName)
+}
+
+func (b *backend) getTrustedCertsFromCache(certName string) (*trusted, bool) {
+	if certName == "" {
+		trusted := b.trustedCacheFull.Load()
+		if trusted != nil {
+			return trusted, true
+		}
+	} else if trusted, found := b.trustedCache.Get(certName); found {
+		return trusted, true
+	}
+	return nil, false
+}
+
 // loadTrustedCerts is used to load all the trusted certificates from the backend
-func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage, certName string) (pool *x509.CertPool, trusted []*ParsedCert, trustedNonCAs []*ParsedCert) {
+func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage, certName string) (pool *x509.CertPool, trustedCerts []*ParsedCert, trustedNonCAs []*ParsedCert, conf *ocsp.VerifyConfig) {
+	lock := locksutil.LockForKey(b.trustedCacheLocks, certName)
+	lock.Lock()
+	defer lock.Unlock()
+
+	if !b.trustedCacheDisabled.Load() {
+		trusted, found := b.getTrustedCertsFromCache(certName)
+		if found {
+			return trusted.pool, trusted.trusted, trusted.trustedNonCAs, trusted.ocspConf
+		}
+	}
+
 	pool = x509.NewCertPool()
-	trusted = make([]*ParsedCert, 0)
+	trustedCerts = make([]*ParsedCert, 0)
 	trustedNonCAs = make([]*ParsedCert, 0)
 
 	var names []string
@@ -501,21 +694,22 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 		names = append(names, certName)
 	} else {
 		var err error
-		names, err = storage.List(ctx, "cert/")
+		names, err = storage.List(ctx, trustedCertPath)
 		if err != nil {
 			b.Logger().Error("failed to list trusted certs", "error", err)
 			return
 		}
 	}
 
+	conf = &ocsp.VerifyConfig{}
 	for _, name := range names {
-		entry, err := b.Cert(ctx, storage, strings.TrimPrefix(name, "cert/"))
+		entry, err := b.Cert(ctx, storage, strings.TrimPrefix(name, trustedCertPath))
 		if err != nil {
 			b.Logger().Error("failed to load trusted cert", "name", name, "error", err)
 			continue
 		}
 		if entry == nil {
-			// This could happen when the certName was provided and the cert doesn't exist,
+			// This could happen when the certName was provided and the cert doesn'log exist,
 			// or just if between the LIST and the GET the cert was deleted.
 			continue
 		}
@@ -525,6 +719,8 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 			b.Logger().Error("failed to parse certificate", "name", name)
 			continue
 		}
+		parsed = append(parsed, parsePEM([]byte(entry.OcspCaCertificates))...)
+
 		if !parsed[0].IsCA {
 			trustedNonCAs = append(trustedNonCAs, &ParsedCert{
 				Entry:        entry,
@@ -536,13 +732,99 @@ func (b *backend) loadTrustedCerts(ctx context.Context, storage logical.Storage,
 			}
 
 			// Create a ParsedCert entry
-			trusted = append(trusted, &ParsedCert{
+			trustedCerts = append(trustedCerts, &ParsedCert{
 				Entry:        entry,
 				Certificates: parsed,
 			})
 		}
+		if entry.OcspEnabled {
+			conf.OcspEnabled = true
+			conf.OcspServersOverride = append(conf.OcspServersOverride, entry.OcspServersOverride...)
+			if entry.OcspFailOpen {
+				conf.OcspFailureMode = ocsp.FailOpenTrue
+			} else {
+				conf.OcspFailureMode = ocsp.FailOpenFalse
+			}
+			conf.QueryAllServers = conf.QueryAllServers || entry.OcspQueryAllServers
+			conf.OcspThisUpdateMaxAge = entry.OcspThisUpdateMaxAge
+			conf.OcspMaxRetries = entry.OcspMaxRetries
+
+			if len(entry.OcspCaCertificates) > 0 {
+				certs, err := certutil.ParseCertsPEM([]byte(entry.OcspCaCertificates))
+				if err != nil {
+					b.Logger().Error("failed to parse ocsp_ca_certificates", "name", name, "error", err)
+					continue
+				}
+				conf.ExtraCas = certs
+			}
+		}
+	}
+
+	if !b.trustedCacheDisabled.Load() {
+		entry := &trusted{
+			pool:          pool,
+			trusted:       trustedCerts,
+			trustedNonCAs: trustedNonCAs,
+			ocspConf:      conf,
+		}
+		if certName == "" {
+			b.trustedCacheFull.Store(entry)
+		} else {
+			b.trustedCache.Add(certName, entry)
+		}
 	}
 	return
+}
+
+func (b *backend) checkForCertInOCSP(ctx context.Context, clientCert *x509.Certificate, chain []*x509.Certificate, conf *ocsp.VerifyConfig) (bool, error) {
+	if !conf.OcspEnabled || len(chain) < 2 {
+		return true, nil
+	}
+	b.ocspClientMutex.RLock()
+	defer b.ocspClientMutex.RUnlock()
+	err := b.ocspClient.VerifyLeafCertificate(ctx, clientCert, chain[1], conf)
+	if err != nil {
+		if ocsp.IsOcspVerificationError(err) {
+			// We don't want anything to override an OCSP verification error
+			return false, err
+		}
+		if conf.OcspFailureMode == ocsp.FailOpenTrue {
+			onlyNetworkErrors := b.handleOcspErrorInFailOpen(err)
+			if onlyNetworkErrors {
+				return true, nil
+			}
+		}
+		// We want to preserve error messages when they have additional,
+		// potentially useful information. Just having a revoked cert
+		// isn't additionally useful.
+		if !strings.Contains(err.Error(), "has been revoked") {
+			return false, err
+		}
+		return false, nil
+	}
+	return true, nil
+}
+
+func (b *backend) handleOcspErrorInFailOpen(err error) bool {
+	urlError := &url.Error{}
+	allNetworkErrors := true
+	if multiError, ok := err.(*multierror.Error); ok {
+		for _, myErr := range multiError.Errors {
+			if !errors.As(myErr, &urlError) {
+				allNetworkErrors = false
+			}
+		}
+	} else if !errors.As(err, &urlError) {
+		allNetworkErrors = false
+	}
+
+	if allNetworkErrors {
+		b.Logger().Warn("OCSP is set to fail-open, and could not retrieve "+
+			"OCSP based revocation but proceeding.", "detail", err)
+		return true
+	}
+
+	return false
 }
 
 func (b *backend) checkForChainInCRLs(chain []*x509.Certificate) bool {

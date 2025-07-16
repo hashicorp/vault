@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Engine from '@ember/engine';
 
 import loadInitializers from 'ember-load-initializers';
@@ -13,16 +18,17 @@ export default class PkiEngine extends Engine {
   dependencies = {
     services: [
       'auth',
+      'download',
       'flash-messages',
       'namespace',
       'path-help',
-      'router',
-      'store',
-      'version',
-      'wizard',
+      'app-router',
       'secret-mount-path',
+      'store',
+      'pagination',
+      'version',
     ],
-    externalRoutes: ['secrets'],
+    externalRoutes: ['secrets', 'secretsListRootConfiguration', 'externalMountIssuer'],
   };
 }
 

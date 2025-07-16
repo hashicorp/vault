@@ -13,7 +13,7 @@ the token associated with the given accessor. The capabilities returned will be
 derived from the policies that are on the token, and from the policies to which
 the token is entitled to through the entity and entity's group memberships.
 
-## Query Token Accessor Capabilities
+## Query token accessor capabilities
 
 This endpoint returns the capabilities of the token associated with the given
 accessor, for the given path. Multiple paths are taken in at once and the
@@ -33,7 +33,7 @@ returned. For backwards compatibility, if a single path is supplied, a
 - `paths` `(list: <required>)` – Paths on which capabilities are being
   queried.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -42,7 +42,7 @@ returned. For backwards compatibility, if a single path is supplied, a
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -52,7 +52,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/capabilities-accessor
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

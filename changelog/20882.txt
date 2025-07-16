@@ -1,0 +1,6 @@
+```release-note:change
+secrets/database/mongodbatlas: Updated plugin from v0.9.0 to v0.10.0
+```
+```release-note:feature
+**MongoDB Atlas Database Secrets**: Adds support for generating X.509 certificates on dynamic roles for user authentication
+```

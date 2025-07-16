@@ -1,12 +1,11 @@
 ---
 layout: docs
-page_title: FoundationDB - Storage Backends - Configuration
-description: |-
-  The FoundationDB storage backend is used to persist Vault's data in the
-  FoundationDB KV store.
+page_title: FoundationDB configuration
+description: >-
+  Configure Vault backend storage to use the FoundationDB KV store.
 ---
 
-# FoundationDB Storage Backend
+# FoundationDB configuration for Vault backend storage
 
 The FoundationDB storage backend is used to persist Vault's data in
 [FoundationDB][foundationdb].
@@ -41,7 +40,7 @@ storage "foundationdb" {
 }
 ```
 
-## `foundationdb` Parameters
+## `foundationdb` parameters
 
 - `api_version` `(int)` - The FoundationDB API version to use; this is a
   required parameter and doesn't have a default value. The minimum required API

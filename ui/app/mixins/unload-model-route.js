@@ -1,20 +1,26 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Mixin from '@ember/object/mixin';
 import removeRecord from 'vault/utils/remove-record';
+import { service } from '@ember/service';
 
 // removes Ember Data records from the cache when the model
 // changes or you move away from the current route
 export default Mixin.create({
+  store: service(),
   modelPath: 'model',
   unloadModel() {
-    let { modelPath } = this;
+    const { modelPath } = this;
     /* eslint-disable-next-line ember/no-controller-access-in-routes */
-    let model = this.controller.get(modelPath);
+    const model = this.controller.get(modelPath);
     // error is thrown when you attempt to unload a record that is inFlight (isSaving)
     if (!model || !model.unloadRecord || model.isSaving) {
       return;
     }
     removeRecord(this.store, model);
-    model.destroy();
     // it's important to unset the model on the controller since controllers are singletons
     this.controller.set(modelPath, null);
   },

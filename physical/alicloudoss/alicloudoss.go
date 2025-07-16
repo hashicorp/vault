@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package alicloudoss
 
 import (
@@ -15,6 +18,7 @@ import (
 	"github.com/aliyun/aliyun-oss-go-sdk/oss"
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
@@ -36,7 +40,7 @@ type AliCloudOSSBackend struct {
 	bucket     string
 	client     *oss.Client
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 }
 
 // NewAliCloudOSSBackend constructs an OSS backend using a pre-existing
@@ -110,7 +114,7 @@ func NewAliCloudOSSBackend(conf map[string]string, logger log.Logger) (physical.
 		client:     client,
 		bucket:     bucket,
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permitpool.New(maxParInt),
 	}
 	return a, nil
 }
@@ -119,7 +123,9 @@ func NewAliCloudOSSBackend(conf map[string]string, logger log.Logger) (physical.
 func (a *AliCloudOSSBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{AlibabaMetricKey, "put"}, time.Now())
 
-	a.permitPool.Acquire()
+	if err := a.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer a.permitPool.Release()
 
 	bucket, err := a.client.Bucket(a.bucket)
@@ -134,7 +140,9 @@ func (a *AliCloudOSSBackend) Put(ctx context.Context, entry *physical.Entry) err
 func (a *AliCloudOSSBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{AlibabaMetricKey, "get"}, time.Now())
 
-	a.permitPool.Acquire()
+	if err := a.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer a.permitPool.Release()
 
 	bucket, err := a.client.Bucket(a.bucket)
@@ -171,7 +179,9 @@ func (a *AliCloudOSSBackend) Get(ctx context.Context, key string) (*physical.Ent
 func (a *AliCloudOSSBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{AlibabaMetricKey, "delete"}, time.Now())
 
-	a.permitPool.Acquire()
+	if err := a.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer a.permitPool.Release()
 
 	bucket, err := a.client.Bucket(a.bucket)
@@ -187,7 +197,9 @@ func (a *AliCloudOSSBackend) Delete(ctx context.Context, key string) error {
 func (a *AliCloudOSSBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{AlibabaMetricKey, "list"}, time.Now())
 
-	a.permitPool.Acquire()
+	if err := a.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer a.permitPool.Release()
 
 	keys := []string{}

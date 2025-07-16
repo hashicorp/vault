@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path"
 	"reflect"
@@ -21,7 +25,6 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-sockaddr"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -50,8 +53,22 @@ func TestTokenStore_CreateOrphanResponse(t *testing.T) {
 	}
 }
 
+// TestTokenStore_CubbyholeDeletion tests that a token's cubbyhole
+// can be used and that the cubbyhole is removed after the token is revoked.
 func TestTokenStore_CubbyholeDeletion(t *testing.T) {
 	c, _, root := TestCoreUnsealed(t)
+	testTokenStore_CubbyholeDeletion(t, c, root)
+}
+
+// TestTokenStore_CubbyholeDeletionSSCTokensDisabled tests that a legacy token's
+// cubbyhole can be used, and that the cubbyhole is removed after the token is revoked.
+func TestTokenStore_CubbyholeDeletionSSCTokensDisabled(t *testing.T) {
+	c, _, root := TestCoreUnsealed(t)
+	c.disableSSCTokens = true
+	testTokenStore_CubbyholeDeletion(t, c, root)
+}
+
+func testTokenStore_CubbyholeDeletion(t *testing.T, c *Core, root string) {
 	ts := c.tokenStore
 
 	for i := 0; i < 10; i++ {
@@ -118,8 +135,8 @@ func TestTokenStore_CubbyholeTidy(t *testing.T) {
 func testTokenStore_CubbyholeTidy(t *testing.T, c *Core, root string, nsCtx context.Context) {
 	ts := c.tokenStore
 
-	backend := c.router.MatchingBackend(nsCtx, cubbyholeMountPath)
-	view := c.router.MatchingStorageByAPIPath(nsCtx, cubbyholeMountPath)
+	backend := c.router.MatchingBackend(nsCtx, mountPathCubbyhole)
+	view := c.router.MatchingStorageByAPIPath(nsCtx, mountPathCubbyhole)
 
 	for i := 1; i <= 20; i++ {
 		// Create 20 tokens
@@ -526,7 +543,7 @@ func testMakeServiceTokenViaBackend(t testing.TB, ts *TokenStore, root, client, 
 
 func testMakeTokenViaBackend(t testing.TB, ts *TokenStore, root, client, ttl string, policy []string, batch bool) {
 	t.Helper()
-	req := logical.TestRequest(benchhelpers.TBtoT(t), logical.UpdateOperation, "create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "create")
 	req.ClientToken = root
 	if batch {
 		req.Data["type"] = "batch"
@@ -636,7 +653,7 @@ func testMakeServiceTokenViaCore(t testing.TB, c *Core, root, client, ttl string
 }
 
 func testMakeTokenViaCore(t testing.TB, c *Core, root, client, ttl, period string, policy []string, batch bool, outAuth *logical.Auth) {
-	req := logical.TestRequest(benchhelpers.TBtoT(t), logical.UpdateOperation, "auth/token/create")
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/create")
 	req.ClientToken = root
 	if batch {
 		req.Data["type"] = "batch"
@@ -1153,10 +1170,7 @@ func TestTokenStore_CreateLookup_ExpirationInRestoreMode(t *testing.T) {
 		t.Fatalf("err: %v", err)
 	}
 
-	err = c.stopExpiration()
-	if err != nil {
-		t.Fatal(err)
-	}
+	stopExpiration(t, c)
 
 	// Reset expiration manager to restore mode
 	ts.expiration.restoreModeLock.Lock()
@@ -1395,7 +1409,7 @@ func TestTokenStore_RevokeTree(t *testing.T) {
 // Revokes a given Token Store tree non recursively.
 // The second parameter refers to the depth of the tree.
 func testTokenStore_RevokeTree_NonRecursive(t testing.TB, depth uint64, injectCycles bool) {
-	c, _, _ := TestCoreUnsealed(benchhelpers.TBtoT(t))
+	c, _, _ := TestCoreUnsealed(t)
 	ts := c.tokenStore
 	root, children := buildTokenTree(t, ts, depth)
 
@@ -2308,12 +2322,12 @@ func TestTokenStore_HandleRequest_RevokeOrphan(t *testing.T) {
 	testMakeServiceTokenViaBackend(t, ts, root, "child", "60s", []string{"root", "foo"})
 	testMakeServiceTokenViaBackend(t, ts, "child", "sub-child", "50s", []string{"foo"})
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-orphan")
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/revoke-orphan")
 	req.Data = map[string]interface{}{
 		"token": "child",
 	}
 	req.ClientToken = root
-	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
+	resp, err := c.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("err: %v\nresp: %#v", err, resp)
 	}
@@ -2367,14 +2381,14 @@ func TestTokenStore_HandleRequest_RevokeOrphan_NonRoot(t *testing.T) {
 		t.Fatalf("bad: %v", out)
 	}
 
-	req := logical.TestRequest(t, logical.UpdateOperation, "revoke-orphan")
+	req := logical.TestRequest(t, logical.UpdateOperation, "auth/token/revoke-orphan")
 	req.Data = map[string]interface{}{
 		"token": "child",
 	}
 	req.ClientToken = "child"
-	resp, err := ts.HandleRequest(namespace.RootContext(nil), req)
-	if err != logical.ErrInvalidRequest {
-		t.Fatalf("did not get error when non-root revoking itself with orphan flag; resp is %#v", resp)
+	resp, err := c.HandleRequest(namespace.RootContext(nil), req)
+	if !errors.Is(err, logical.ErrPermissionDenied) {
+		t.Fatalf("did not get expected error when non-root revoking itself with orphan flag; resp is %#v; err is %#v", resp, err)
 	}
 
 	time.Sleep(200 * time.Millisecond)
@@ -4112,7 +4126,7 @@ func TestTokenStore_RolePeriod(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf("response auth was nil, resp is %#v", *resp)
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)
@@ -4269,7 +4283,7 @@ func TestTokenStore_RoleExplicitMaxTTL(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf("response auth was nil, resp is %#v", *resp)
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)
@@ -4661,7 +4675,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf("response auth was nil, resp is %#v", *resp)
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)
@@ -4722,7 +4736,7 @@ func TestTokenStore_Periodic(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf("response auth was nil, resp is %#v", *resp)
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)
@@ -4774,7 +4788,7 @@ func testTokenStore_NumUses_ErrorCheckHelper(t *testing.T, resp *logical.Respons
 		t.Fatal("response was nil")
 	}
 	if resp.Auth == nil {
-		t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+		t.Fatalf("response auth was nil, resp is %#v", *resp)
 	}
 	if resp.Auth.ClientToken == "" {
 		t.Fatalf("bad: %#v", resp)
@@ -4921,7 +4935,7 @@ func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf("response auth was nil, resp is %#v", *resp)
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)
@@ -4995,7 +5009,7 @@ func TestTokenStore_Periodic_ExplicitMax(t *testing.T) {
 			t.Fatal("response was nil")
 		}
 		if resp.Auth == nil {
-			t.Fatalf(fmt.Sprintf("response auth was nil, resp is %#v", *resp))
+			t.Fatalf("response auth was nil, resp is %#v", *resp)
 		}
 		if resp.Auth.ClientToken == "" {
 			t.Fatalf("bad: %#v", resp)

@@ -1,0 +1,3 @@
+```release-note:improvement
+identity: alias metadata is now returned when listing entity aliases
+```

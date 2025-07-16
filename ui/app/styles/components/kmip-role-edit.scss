@@ -1,14 +1,20 @@
-.kmip-allowed-operations-header {
-  @extend .title;
-  @extend .is-6;
-  padding-left: $spacing-s;
+@use '../utils/size_variables';
+@use '../core/box.scss';
+
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+.kmip-role-operations {
+  column-count: 2;
 }
 .kmip-role-allowed-operations {
   @extend .box;
   flex: 1 1 auto;
   box-shadow: none;
-  padding: 0;
+  padding: size_variables.$spacing-4 0;
 }
 .kmip-role-allowed-operations .field {
-  margin-bottom: $spacing-xxs;
+  margin-bottom: size_variables.$spacing-4;
 }

@@ -1,4 +1,9 @@
-import { isPresent, fillable, clickable } from 'ember-cli-page-object';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { isPresent, clickable } from 'ember-cli-page-object';
 
 export default {
   showsJsonViewer: isPresent('[data-test-json-viewer]'),
@@ -6,5 +11,4 @@ export default {
   showsUnwrapForm: isPresent('[data-test-unwrap-form]'),
   navigate: clickable('[data-test-navigate-button]'),
   unwrap: clickable('[data-test-unwrap-button]'),
-  token: fillable('[data-test-token-input]'),
 };

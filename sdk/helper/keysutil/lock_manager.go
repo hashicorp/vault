@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package keysutil
 
 import (
@@ -59,6 +62,23 @@ type PolicyRequest struct {
 
 	// AllowImportedKeyRotation indicates whether an imported key may be rotated by Vault
 	AllowImportedKeyRotation bool
+
+	// Indicates whether a private or public key is imported/upserted
+	IsPrivateKey bool
+
+	// The UUID of the managed key, if using one
+	ManagedKeyUUID string
+
+	// ParameterSet indicates the parameter set to use with ML-DSA and SLH-DSA keys
+	ParameterSet string
+
+	// HybridConfig contains the key types and parameters for hybrid keys
+	HybridConfig HybridKeyConfig
+}
+
+type HybridKeyConfig struct {
+	PQCKeyType KeyType
+	ECKeyType  KeyType
 }
 
 type LockManager struct {
@@ -257,12 +277,12 @@ func (lm *LockManager) BackupPolicy(ctx context.Context, storage logical.Storage
 			return "", err
 		}
 		if p == nil {
-			return "", fmt.Errorf(fmt.Sprintf("key %q not found", name))
+			return "", fmt.Errorf("key %q not found", name)
 		}
 	}
 
 	if atomic.LoadUint32(&p.deleted) == 1 {
-		return "", fmt.Errorf(fmt.Sprintf("key %q not found", name))
+		return "", fmt.Errorf("key %q not found", name)
 	}
 
 	backup, err := p.Backup(ctx, storage)
@@ -382,6 +402,36 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 				return nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %v", req.KeyType)
 			}
 
+		case KeyType_MANAGED_KEY:
+			if req.Derived || req.Convergent {
+				cleanup()
+				return nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %v", req.KeyType)
+			}
+
+		case KeyType_AES128_CMAC, KeyType_AES256_CMAC, KeyType_AES192_CMAC:
+			if req.Derived || req.Convergent {
+				cleanup()
+				return nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %v", req.KeyType)
+			}
+
+		case KeyType_ML_DSA:
+			if req.Derived || req.Convergent {
+				cleanup()
+				return nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %v", req.KeyType)
+			}
+
+		case KeyType_HYBRID:
+			if req.Derived || req.Convergent {
+				cleanup()
+				return nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %v", req.KeyType)
+			}
+
+		case KeyType_SLH_DSA:
+			if req.Derived || req.Convergent {
+				cleanup()
+				return nil, false, fmt.Errorf("key derivation and convergent encryption not supported for keys of type %v", req.KeyType)
+			}
+
 		default:
 			cleanup()
 			return nil, false, fmt.Errorf("unsupported key type %v", req.KeyType)
@@ -396,6 +446,8 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 			AllowPlaintextBackup: req.AllowPlaintextBackup,
 			AutoRotatePeriod:     req.AutoRotatePeriod,
 			KeySize:              req.KeySize,
+			ParameterSet:         req.ParameterSet,
+			HybridConfig:         req.HybridConfig,
 		}
 
 		if req.Derived {
@@ -412,7 +464,11 @@ func (lm *LockManager) GetPolicy(ctx context.Context, req PolicyRequest, rand io
 		}
 
 		// Performs the actual persist and does setup
-		err = p.Rotate(ctx, req.Storage, rand)
+		if p.Type == KeyType_MANAGED_KEY {
+			err = p.RotateManagedKey(ctx, req.Storage, req.ManagedKeyUUID)
+		} else {
+			err = p.Rotate(ctx, req.Storage, rand)
+		}
 		if err != nil {
 			cleanup()
 			return nil, false, err
@@ -495,7 +551,7 @@ func (lm *LockManager) ImportPolicy(ctx context.Context, req PolicyRequest, key 
 		}
 	}
 
-	err = p.Import(ctx, req.Storage, key, rand)
+	err = p.ImportPublicOrPrivate(ctx, req.Storage, key, req.IsPrivateKey, rand)
 	if err != nil {
 		return fmt.Errorf("error importing key: %s", err)
 	}

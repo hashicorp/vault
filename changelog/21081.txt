@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/transit: Add support to create CSRs from keys in transit engine and import/export x509 certificates
+```

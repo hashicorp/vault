@@ -1,0 +1,6 @@
+```release-note:bug
+plugins: Fix instance where broken/unresponsive plugins could cause Vault to hang.
+```
+```release-note:bug
+plugins: Fix instance where Vault could fail to kill broken/unresponsive plugins.
+```

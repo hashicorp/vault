@@ -1,3 +1,6 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 disable_cache = true
 disable_mlock = true
 
@@ -43,8 +46,12 @@ default_lease_ttl = "10h"
 cluster_name = "testcluster"
 pid_file = "./pidfile"
 raw_storage_endpoint = true
+introspection_endpoint = true
 disable_sealwrap = true
 disable_printable_check = true
 enable_response_header_hostname = true
 enable_response_header_raft_node_id = true
 license_path = "/path/to/license"
+plugin_directory = "/path/to/plugins"
+plugin_tmpdir = "/tmp/plugins"
+remove_irrevocable_lease_after = "10d"

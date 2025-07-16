@@ -1,49 +1,52 @@
-syntax = "proto3";
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
 
-option go_package = "github.com/hashicorp/vault/helper/forwarding";
+syntax = "proto3";
 
 package forwarding;
 
+option go_package = "github.com/hashicorp/vault/helper/forwarding";
+
 message Request {
-	// Not used right now but reserving in case it turns out that streaming
-	// makes things more economical on the gRPC side
-	//uint64 id = 1;
-	string method = 2;
-	URL url = 3;
-	map<string, HeaderEntry> header_entries = 4;
-	bytes body = 5;
-	string host = 6;
-	string remote_addr = 7;
-	repeated bytes peer_certificates = 8;
+  // Not used right now but reserving in case it turns out that streaming
+  // makes things more economical on the gRPC side
+  //uint64 id = 1;
+  string method = 2;
+  URL url = 3;
+  map<string, HeaderEntry> header_entries = 4;
+  bytes body = 5;
+  string host = 6;
+  string remote_addr = 7;
+  repeated bytes peer_certificates = 8;
 }
 
 message URL {
-	string scheme = 1;
-	string opaque = 2;
-	// This isn't needed now but might be in the future, so we'll skip the
-	// number to keep the ordering in net/url
-	//UserInfo user = 3;
-	string host = 4;
-	string path = 5;
-	string raw_path = 6;
-	// This also isn't needed right now, but we'll reserve the number
-	//bool force_query = 7;
-	string raw_query = 8;
-	string fragment = 9;
+  string scheme = 1;
+  string opaque = 2;
+  // This isn't needed now but might be in the future, so we'll skip the
+  // number to keep the ordering in net/url
+  //UserInfo user = 3;
+  string host = 4;
+  string path = 5;
+  string raw_path = 6;
+  // This also isn't needed right now, but we'll reserve the number
+  //bool force_query = 7;
+  string raw_query = 8;
+  string fragment = 9;
 }
 
 message HeaderEntry {
-	repeated string values = 1;
+  repeated string values = 1;
 }
 
 message Response {
-	// Not used right now but reserving in case it turns out that streaming
-	// makes things more economical on the gRPC side
-	//uint64 id = 1;
-	uint32 status_code = 2;
-	bytes body = 3;
-	// Added in 0.6.2 to ensure that the content-type is set appropriately, as
-	// well as any other information
-	map<string, HeaderEntry> header_entries = 4;
-	uint64 last_remote_wal = 5;
+  // Not used right now but reserving in case it turns out that streaming
+  // makes things more economical on the gRPC side
+  //uint64 id = 1;
+  uint32 status_code = 2;
+  bytes body = 3;
+  // Added in 0.6.2 to ensure that the content-type is set appropriately, as
+  // well as any other information
+  map<string, HeaderEntry> header_entries = 4;
+  uint64 last_remote_wal = 5;
 }

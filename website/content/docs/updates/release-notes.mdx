@@ -1,0 +1,382 @@
+---
+layout: docs
+page_title: "Vault release notes"
+description: >-
+  Key updates for the latest major Vault release
+---
+
+# Vault release notes
+
+- **Version**: 1.20.x
+- **GA date**: 2025-06-25
+
+@include 'release-notes/intro.mdx'
+
+## Executive summary
+
+Vault Enterprise 1.20.0 streamlines the user experience, and improves visibility
+and transparency around billing, auditing, and Vault usage. The latest version
+of Vault also introduces new capabilities related to cryptography, secret
+recovery, and provides enhanced ecosystem integrations for centralizing secrets.
+
+
+
+
+### Highlights
+
+- Improves support for chargeback and showback with enhanced visibility into the
+  underlying source of costs.
+
+- Simplifies and enhances the user experience by improving namespace navigation,
+  providing a customizable login function, and releasing a new secret recovery
+  function.
+
+- Enhances and expands secure integrations by reducing friction on plugin
+  distribution and supporting key-value-compatible secret import from AWS, Azure,
+  and GCP.
+
+- Adds SCEP protocol support in Vault PKI for certificate automation and reduces
+  IT footprint by eliminating the need for alternate PKI solutions explictly for
+  SCEP integration.
+
+- Verified Vault PKI SCEP integrations with Azure Intune and JAMF for
+  certificate automation reduce operational burdens such as outages or security
+  breachs due to certificate expiry.
+
+- Enhances resilience by providing reliability improvements, control over
+  traffic flows, and the ability to ensure fairness of Vault consumption across
+  users and applications.   
+
+- Better auditability and visibility into audit logs, certificates, Vault
+  feature usage, and opinionated suggestions for improving Vault usage, including
+  benchmarking that supports migrating from Consul to integrated storage.
+
+
+
+## Feature deprecations and EOL
+
+Deprecated in 1.20.x | Retired in 1.20.x
+-------------------- | ---------------
+[Duplicate HCL attributes](/vault/docs/updates/deprecation#duplicate-hcl-attributes)                         | None
+[Snowflake DB password authentication](/vault/docs/updates/deprecation#snowflake-db-password-authentication) | &nbsp;
+
+@include 'release-notes/deprecation-note.mdx'
+
+
+## Important changes
+
+@include 'release-notes/change-summary/1_20.mdx'
+
+
+
+## System administration and operational updates
+
+<table>
+  <thead>
+    <tr>
+      <th style={{verticalAlign: 'middle'}}>Update</th>
+      <th style={{verticalAlign: 'middle'}}>Type</th>
+      <th style={{verticalAlign: 'middle'}}>License</th>
+      <th style={{verticalAlign: 'middle'}}>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Product usage data updates
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Enhanced</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Enterprise</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Vault collects and reports additional data points to Hashicorp for
+      improved product usage tracking.
+      <br /><br />
+      Learn more: <a href="/vault/docs/license/product-usage-reporting#usage-metrics-list">Anonymous product usage reporting</a>
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Production vs. non-production cluster assignment
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Enterprise</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Designate individual clusters as production or non-production. Vault
+      reports individual cluster status to Hashicorp.
+      <br /><br />
+      Learn more: <a href="/vault/docs/license/utilization/auto-reporting#development-cluster-configuration">Development cluster configuration</a>
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Default login methods
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Enterprise</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Configure default and back up login methods for Vault GUI to reduce
+      complexity and confusion.
+      <br /><br />
+      Learn more: <a href="/vault/docs/ui/custom-login">Manage custom login settings</a>
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Client count dashboard updates
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Enhanced</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Enterprise</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Provides improved visibility into client count attribution, increases
+      accuracy by removing estimates, and sets the current billing period in
+      Vault GUI based on the current Vault configuration.      
+      <br /><br />
+      Learn more: <a href="/vault/docs/concepts/client-count/client-usage">Client usage</a> overview
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Client count current month accuracy
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Enhanced</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Enterprise</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Removed partial month estimates from client count to improve client count 
+      accuracy for the current month.
+      <br /><br />
+      Learn more: <a href="/vault/api-docs/system/internal-counters#partial-month-client-count">Partial month client count endpoint</a>
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      GUI Namespace picker updates
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Enhanced</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Enterprise</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Search, filter, and navigate to namespaces in the GUI without having to
+      reauthenticate while enjoying reduced performance load and enhanced
+      accessibility.
+      <br /><br />
+      Learn more: <a href="/vault/docs/ui/namespaces">Manage namespaces in the Vault GUI</a>
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      HTTP status telemetry
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Enterprise</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Use Vault telemetry to track running total count by HTTP status codes.
+      <br /><br />
+      Learn more: <a href="/vault/docs/internals/telemetry/metrics/core-system#vault-core-response_status_code">vault.core.response_status_code</a>
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Cluster wide client telemetry
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Enterprise</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Capture Vault telemetry to track the total count of distinct clients in a
+      cluster. The metric updates every 10 minutes to support live reporting and
+      alerting.
+      <br /><br />
+      Learn more: <a href="/vault/docs/internals/telemetry/metrics/all#vault-client-billing_period-activity">vault.client.billing_period.activity</a>
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Identity-based rate limit quotas 
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Enterprise</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Apply rate limit quotas by entity ID instead of IP for more granular and
+      flexible control over traffic flow and easier management of misbehaving
+      applications and users. 
+      <br /><br />
+      Learn more: <a href="/vault/docs/concepts/resource-quotas">Resource quotas</a> overview
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Collective rate limit quotas 
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Enterprise</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Apply collective rate limit quotas to all traffic globally or by targeting
+      a namespace, path, or mount to enforce collective limits without having to
+      account for individual IP addresses.
+      <br /><br />
+      Learn more: <a href="/vault/docs/concepts/resource-quotas">Resource quotas</a> overview
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Secret recovery  
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Enterprise</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Recover an accidentally changed or deleted secret without performing a
+      full cluster snapshot restoration, degrading the cluster, or impacting
+      other items in the cluster.
+      <br /><br />
+      Learn more: <a href="/vault/docs/sysadmin/snapshots/recover-a-secret">Item recovery from a snapshot</a>
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      GUI for TOTP
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Community</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Users with TOTP access can use the Vault GUI to view their accounts, add a
+      new account, see their hidden-by-default TOTP codes, and view timers for
+      when their TOTPs expire.
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Utilization reporting
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Enterprise</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Review and identify the features used in a given cluster to determine
+      where you might want to leverage additional Vault functionality.
+      <br /><br />
+      Learn more: <a href="/vault/api-docs/system/utilization-report">/sys/utilization-report</a> reference
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Secrets import 
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Beta</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Enterprise</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Migrate existing secrets to Vault to centralize secrets management and
+      realize the value of Vault faster.
+      <br /><br />
+      Learn more: <a href="/vault/docs/import">Secrets import</a> overview
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Event notifications data consistency
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Enterprise</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Event notifications include metadata to prevent stale data reads from
+      secondary nodes during periods of high Vault load.
+      <br /><br />
+      Learn more: <a href="/vault/docs/concepts/events#vault_index">Event notifications</a> overview
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Plugin downloads
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Beta</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Enterprise</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Use new endpoints to simplify downloading official HashiCorp secret and
+      auth plugins from <a href="https://releases.hashicorp.com">releases.hashicorp.com</a>.
+      <br /><br />
+      Learn more: <a href="/vault/docs/plugins/register">Register external plugins</a>
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Ephemeral resources support
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Enterprise</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Use the Vault provider for Terraform with ephemeral resources and write-only
+      attributes in key-value and database secret engines. 
+      <br /><br />
+      Learn more: <a href="https://registry.terraform.io/providers/hashicorp/vault">Vault provider for Terraform</a>
+    </td>
+  </tr>
+  </tbody>
+</table>
+
+## Manage 3rd-party secrets
+
+@include 'release-notes/section-notes/3rd-party.mdx'
+
+<table>
+  <thead>
+    <tr>
+      <th style={{verticalAlign: 'middle'}}>Update</th>
+      <th style={{verticalAlign: 'middle'}}>Type</th>
+      <th style={{verticalAlign: 'middle'}}>License</th>
+      <th style={{verticalAlign: 'middle'}}>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Snowflake authentication support for key pairs
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Community</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Implement enhanced authentication security with key pair authentication in
+      the Snowflake database secrets engine.
+      <br /><br />
+      Learn more: <a href="/vault/docs/secrets/databases/snowflake">Snowflake</a> overview
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      Terraform support for dynamic team tokens
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Community</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Implement dynamic team token generation in the Terraform Cloud secrets engine.
+      <br /><br />
+      Learn more: <a href="/vault/docs/secrets/terraform">Terraform Cloud</a> overview
+    </td>
+  </tr>
+  </tbody>
+</table>
+
+
+## Manage certificates
+
+@include 'release-notes/section-notes/certs.mdx'
+
+<table>
+  <thead>
+    <tr>
+      <th style={{verticalAlign: 'middle'}}>Update</th>
+      <th style={{verticalAlign: 'middle'}}>Type</th>
+      <th style={{verticalAlign: 'middle'}}>License</th>
+      <th style={{verticalAlign: 'middle'}}>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      PKI support for SCEP certificate enrollment
+    </td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>GA</td>
+    <td style={{verticalAlign: 'middle', textAlign: 'center'}}>Community</td>
+    <td style={{verticalAlign: 'middle'}}>
+      Automate certificate enrollment of end-user and network devices that
+      support SCEP protocol. End-user device integration validations include
+      Azure In-Tune and Jamf MDM platforms.
+    </td>
+  </tr>
+  </tbody>
+</table>

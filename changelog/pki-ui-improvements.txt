@@ -1,0 +1,3 @@
+```release-note:feature
+**NEW PKI Workflow in UI**: Completes generally available rollout of new PKI UI that provides smoother mount configuration and a more guided user experience
+```

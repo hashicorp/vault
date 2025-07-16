@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package dbplugin
 
 import (
@@ -135,6 +138,10 @@ type mockRunnerUtil struct {
 	mock.Mock
 }
 
+func (m *mockRunnerUtil) VaultVersion(ctx context.Context) (string, error) {
+	return "dummyversion", nil
+}
+
 func (m *mockRunnerUtil) NewPluginClient(ctx context.Context, config pluginutil.PluginClientConfig) (pluginutil.PluginClient, error) {
 	args := m.Called(ctx, config)
 	return args.Get(0).(pluginutil.PluginClient), args.Error(1)
@@ -148,4 +155,12 @@ func (m *mockRunnerUtil) ResponseWrapData(ctx context.Context, data map[string]i
 func (m *mockRunnerUtil) MlockEnabled() bool {
 	args := m.Called()
 	return args.Bool(0)
+}
+
+func (m *mockRunnerUtil) ClusterID(ctx context.Context) (string, error) {
+	return "clusterid", nil
+}
+
+func (m *mockRunnerUtil) DownloadExtractVerifyPlugin(_ context.Context, _ *pluginutil.PluginRunner) error {
+	return nil
 }

@@ -1,12 +1,11 @@
 ---
 layout: docs
-page_title: CouchDB - Storage Backends - Configuration
-description: |-
-  The CouchDB storage backend is used to persist Vault's data in a CouchDB
-  database.
+page_title: CouchDB configuration
+description: >-
+  Configure Vault backend storage to use CouchDB.
 ---
 
-# CouchDB Storage Backend
+# CouchDB configuration for Vault backend storage
 
 The CouchDB storage backend is used to persist Vault's data in
 [CouchDB][couchdb] table.
@@ -27,7 +26,7 @@ storage "couchdb" {
 }
 ```
 
-## `couchdb` Parameters
+## `couchdb` parameters
 
 - `endpoint` `(string: "")` – Specifies your CouchDB endpoint. This can also be
   provided via the environment variable `COUCHDB_ENDPOINT`.

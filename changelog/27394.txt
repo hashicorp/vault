@@ -1,0 +1,4 @@
+```release-note:feature
+**Vault Minimal Version**: Add the ability to build a minimal version of Vault
+with only core features using the BUILD_MINIMAL environment variable.
+```

@@ -1,11 +1,20 @@
-@import 'ember-basic-dropdown';
-@import 'ember-power-select';
-@import './core';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+@use 'reset';
+@use 'ember-basic-dropdown';
+@use 'ember-power-select';
+@use 'core';
+@use 'docs';
 
 @mixin font-face($name) {
   @font-face {
     font-family: $name;
-    src: url('/ui/fonts/#{$name}.woff2') format('woff2'), url('/ui/fonts/#{$name}.woff') format('woff');
+    src:
+      url('/ui/fonts/#{$name}.woff2') format('woff2'),
+      url('/ui/fonts/#{$name}.woff') format('woff');
   }
 }
 

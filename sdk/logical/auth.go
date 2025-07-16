@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package logical
 
 import (
@@ -111,6 +114,10 @@ type Auth struct {
 
 	// EntityCreated is set to true if an entity is created as part of a login request
 	EntityCreated bool `json:"entity_created"`
+
+	// HTTPRequestPriority contains potential information about the request
+	// priority based on required path capabilities
+	HTTPRequestPriority *uint8 `json:"http_request_priority"`
 }
 
 func (a *Auth) GoString() string {
@@ -123,7 +130,8 @@ type PolicyResults struct {
 }
 
 type PolicyInfo struct {
-	Name        string `json:"name"`
-	NamespaceId string `json:"namespace_id"`
-	Type        string `json:"type"`
+	Name          string `json:"name"`
+	NamespaceId   string `json:"namespace_id"`
+	NamespacePath string `json:"namespace_path"`
+	Type          string `json:"type"`
 }

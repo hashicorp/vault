@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { text, isPresent, collection, clickable } from 'ember-cli-page-object';
 
 export default {
@@ -12,12 +17,6 @@ export default {
     menuToggle: clickable('[data-test-popup-menu-trigger]'),
   }),
   menuItems: collection('.ember-basic-dropdown-content li', {
-    testContainer: '#ember-testing',
-  }),
-  delete: clickable('[data-test-confirm-action-trigger]', {
-    testContainer: '#ember-testing',
-  }),
-  confirmDelete: clickable('[data-test-confirm-button]', {
     testContainer: '#ember-testing',
   }),
 };

@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -398,7 +398,7 @@ func (l *Lock) get(ctx context.Context) (*LockRecord, string, error) {
 
 	defer response.RawResponse.Body.Close()
 
-	body, err := ioutil.ReadAll(response.Content)
+	body, err := io.ReadAll(response.Content)
 	if err != nil {
 		metrics.IncrCounter(metricGetFailed, 1)
 		l.backend.logger.Error("Error reading content", "err", err)
@@ -487,7 +487,7 @@ func (l *Lock) writeLock() (bool, error) {
 		BucketName:         &l.backend.lockBucketName,
 		ObjectName:         &l.key,
 		ContentLength:      &size,
-		PutObjectBody:      ioutil.NopCloser(bytes.NewReader(newLockRecordJson)),
+		PutObjectBody:      io.NopCloser(bytes.NewReader(newLockRecordJson)),
 		OpcMeta:            nil,
 		OpcClientRequestId: &opcClientRequestId,
 	}

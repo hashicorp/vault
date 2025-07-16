@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix secret render when path includes %. Resolves #11616.
+```

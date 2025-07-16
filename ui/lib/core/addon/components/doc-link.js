@@ -1,33 +1,28 @@
-import Component from '@ember/component';
-import { computed } from '@ember/object';
-import hbs from 'htmlbars-inline-precompile';
-
 /**
- * @module DocLink
- * `DocLink` components are used to render anchor links to relevant Vault documentation.
- *
- * @example
- * ```js
-    <DocLink @path="/docs/secrets/kv/kv-v2.html">Learn about KV v2</DocLink>
- * ```
- *
- * @param path="/"{String} - The path to documentation on vaultproject.io that the component should link to.
- *
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
  */
 
-export default Component.extend({
-  tagName: 'a',
-  classNames: ['doc-link'],
-  attributeBindings: ['target', 'rel', 'href'],
+import ExternalLink from './external-link';
 
-  layout: hbs`{{yield}}`,
+/**
+ * @deprecated
+ * @module DocLink
+ * DocLink components are used to render anchor links to relevant Vault documentation at developer.hashicorp.com.
+ *
+ * @example
+ * <DocLink @path="/vault/docs/secrets/kv/kv-v2.html">Learn about KV v2</DocLink>
+ *
+ *  * Use HDS link components instead with "doc-link" helper for path prefix
+ * <Hds::Link::Standalone @text="Docs" @href={{doc-link "/vault/tutorials"}} @icon="learn-link" @iconPosition="trailing" />
+ *
+ * @param {string} path=/ - The path to documentation on developer.hashicorp.com that the component should link to.
+ *
+ */
+export default class DocLinkComponent extends ExternalLink {
+  host = 'https://developer.hashicorp.com';
 
-  target: '_blank',
-  rel: 'noreferrer noopener',
-  host: 'https://www.vaultproject.io',
-
-  path: '/',
-  href: computed('host', 'path', function () {
-    return `${this.host}${this.path}`;
-  }),
-});
+  get href() {
+    return `${this.host}${this.args.path}`;
+  }
+}

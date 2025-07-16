@@ -1,0 +1,99 @@
+---
+layout: docs
+page_title: "Telemetry reference: Authentication metrics"
+description: >-
+  Technical reference for authentication related telemetry values.
+---
+
+# Authentication telemetry
+
+Authentication telemetry provides information on authentication-related
+objects and operations.
+
+## Identity metrics
+
+@include 'telemetry-metrics/vault/identity/entity/active/monthly.mdx'
+
+@include 'telemetry-metrics/vault/identity/entity/active/partial_month.mdx'
+
+@include 'telemetry-metrics/vault/identity/entity/active/reporting_period.mdx'
+
+@include 'telemetry-metrics/vault/identity/nonentity/active/monthly.mdx'
+
+@include 'telemetry-metrics/vault/identity/nonentity/active/reporting_period.mdx'
+
+@include 'telemetry-metrics/vault/identity/entity/alias/count.mdx'
+
+@include 'telemetry-metrics/vault/identity/entity/count.mdx'
+
+@include 'telemetry-metrics/vault/identity/entity/creation.mdx'
+
+@include 'telemetry-metrics/vault/identity/num_entities.mdx'
+
+@include 'telemetry-metrics/vault/identity/upsert_entity_txn.mdx'
+
+@include 'telemetry-metrics/vault/identity/upsert_group_txn.mdx'
+
+## Lease metrics
+
+@include 'telemetry-metrics/vault/expire/fetch_lease_times_by_token.mdx'
+
+@include 'telemetry-metrics/vault/expire/fetch_lease_times.mdx'
+
+@include 'telemetry-metrics/vault/expire/job_manager/queue_length.mdx'
+
+@include 'telemetry-metrics/vault/expire/job_manager/total_jobs.mdx'
+
+@include 'telemetry-metrics/vault/expire/lease_expiration.mdx'
+
+@include 'telemetry-metrics/vault/expire/lease_expiration/error.mdx'
+
+@include 'telemetry-metrics/vault/expire/lease_expiration/time_in_queue.mdx'
+
+@include 'telemetry-metrics/vault/expire/leases/by_expiration.mdx'
+
+@include 'telemetry-metrics/vault/expire/num_irrevocable_leases.mdx'
+
+@include 'telemetry-metrics/vault/expire/num_leases.mdx'
+
+@include 'telemetry-metrics/vault/expire/register_auth.mdx'
+
+@include 'telemetry-metrics/vault/expire/register.mdx'
+
+@include 'telemetry-metrics/vault/expire/renew_token.mdx'
+
+@include 'telemetry-metrics/vault/expire/renew.mdx'
+
+@include 'telemetry-metrics/vault/expire/revoke_by_token.mdx'
+
+@include 'telemetry-metrics/vault/expire/revoke_force.mdx'
+
+@include 'telemetry-metrics/vault/expire/revoke_prefix.mdx'
+
+@include 'telemetry-metrics/vault/expire/revoke.mdx'
+
+## Token metrics
+
+@include 'telemetry-metrics/vault/token/count.mdx'
+
+@include 'telemetry-metrics/vault/token/count/by_auth.mdx'
+
+@include 'telemetry-metrics/vault/token/count/by_policy.mdx'
+
+@include 'telemetry-metrics/vault/token/count/by_ttl.mdx'
+
+@include 'telemetry-metrics/vault/token/create_root.mdx'
+
+@include 'telemetry-metrics/vault/token/create.mdx'
+
+@include 'telemetry-metrics/vault/token/createaccessor.mdx'
+
+@include 'telemetry-metrics/vault/token/creation.mdx'
+
+@include 'telemetry-metrics/vault/token/lookup.mdx'
+
+@include 'telemetry-metrics/vault/token/revoke_tree.mdx'
+
+@include 'telemetry-metrics/vault/token/revoke.mdx'
+
+@include 'telemetry-metrics/vault/token/store.mdx'

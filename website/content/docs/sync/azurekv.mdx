@@ -1,0 +1,189 @@
+---
+layout: docs
+page_title: Sync secrets from Vault to Azure Key Vault
+description: >-
+  Automatically sync and unsync the secrets from Vault to Azure Key Vault to centralize visibility and control of secrets lifecycle management.
+---
+
+# Sync secrets from Vault to Azure Key Vault
+
+The Azure Key Vault destination enables Vault to sync and unsync secrets of your choosing into
+an external Azure account. When configured, Vault will actively maintain the state of each externally-synced
+secret in realtime. This includes sending new secrets, updating existing secret values, and removing
+secrets when they either get dissociated from the destination or deleted from Vault.
+
+Prerequisites:
+* Ability to read or create KVv2 secrets
+* Ability to create Azure AD user credentials with access to an Azure Key Vault
+* Ability to create sync destinations and associations on your Vault server
+
+## Setup
+
+1. If you do not already have an Azure Key Vault instance, navigate to the Azure Portal to create a new
+  [Key Vault](https://learn.microsoft.com/en-us/azure/key-vault/general/quick-create-portal).
+
+1. A service principal with a client ID and client secret will be needed to configure Azure Key Vault as a
+  sync destination. This [guide](https://learn.microsoft.com/en-us/azure/active-directory/develop/howto-create-service-principal-portal)
+  will walk you through creating the service principal.
+
+1. Once the service principal is created, the next step is to
+  [grant the service principal](https://learn.microsoft.com/en-us/azure/key-vault/general/rbac-guide?tabs=azure-cli)
+  access to Azure Key Vault. To quickly get started, we recommend using the "Key Vault Secrets Officer" built-in role,
+  which gives sufficient access to manage secrets. For more information, see the [Permissions](#permissions) section.
+
+
+1. Configure a sync destination with the service principal credentials and Key Vault URI created in the previous steps.
+
+  ```shell-session
+  $ vault write sys/sync/destinations/azure-kv/my-azure-1 \
+      key_vault_uri="$KEY_VAULT_URI" \
+      client_id="$CLIENT_ID" \
+      client_secret="$CLIENT_SECRET" \
+      tenant_id="$TENANT_ID"
+  ```
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```plaintext
+  Key                   Value
+  ---                   -----
+  connection_details    map[client_id:123 client_secret:***** key_vault_uri:***** tenant_id:123]
+  name                  my-azure-1
+  type                  azure-kv
+  ```
+
+  </CodeBlockConfig>
+
+## Usage
+
+1. If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine.
+
+  ```shell-session
+  $ vault secrets enable -path='my-kv' kv-v2
+  ```
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```plaintext
+  Success! Enabled the kv-v2 secrets engine at: my-kv/
+  ```
+
+  </CodeBlockConfig>
+
+1. Create secrets you wish to sync with a target Azure Key Vault.
+
+  ```shell-session
+  $ vault kv put -mount='my-kv' my-secret foo='bar'
+  ```
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```plaintext
+  ==== Secret Path ====
+  my-kv/data/my-secret
+
+  ======= Metadata =======
+  Key                Value
+  ---                -----
+  created_time       2023-09-19T13:17:23.395109Z
+  custom_metadata    <nil>
+  deletion_time      n/a
+  destroyed          false
+  version            1
+  ```
+
+  </CodeBlockConfig>
+
+1. Create an association between the destination and a secret to synchronize.
+
+  ```shell-session
+  $ vault write sys/sync/destinations/azure-kv/my-azure-1/associations/set \
+      mount='my-kv' \
+      secret_name='my-secret'
+  ```
+
+  **Output:**
+
+  <CodeBlockConfig hideClipboard>
+
+  ```plaintext
+  Key                   Value
+  ---                   -----
+  associated_secrets    map[kv_7532a8b4/my-secret:map[accessor:kv_7532a8b4 secret_name:my-secret sync_status:SYNCED updated_at:2023-09-21T13:53:24.839885-07:00]]
+  store_name            my-azure-1
+  store_type            azure-kv
+  ```
+
+  </CodeBlockConfig>
+
+1. Navigate to [Azure Key Vault](https://portal.azure.com/#view/HubsExtension/BrowseResource/resourceType/Microsoft.KeyVault%2Fvaults)
+  in the Azure portal to confirm your secret was successfully created.
+
+Moving forward, any modification on the Vault secret will be propagated in near real time to its Azure Key Vault
+counterpart. Creating a new secret version in Vault will create a new version in Azure Key Vault. Deleting the secret
+or the association in Vault will delete the secret in your Azure Key Vault as well.
+
+
+## Permissions
+
+For a more minimal set of permissions, you can create a
+[custom role](https://learn.microsoft.com/en-us/azure/role-based-access-control/custom-roles#steps-to-create-a-custom-role)
+using the following JSON role definition. Be sure to replace the subscription ID placeholder.
+
+```json
+{
+  "properties": {
+    "roleName": "Key Vault Secrets Reader Writer",
+    "description": "Custom role for reading and updating Azure Key Vault secrets.",
+    "permissions": [
+      {
+        "actions": [
+          "Microsoft.KeyVault/vaults/secrets/read",
+          "Microsoft.KeyVault/vaults/secrets/write"
+        ],
+        "notActions": [],
+        "dataActions": [
+          "Microsoft.KeyVault/vaults/secrets/delete",
+          "Microsoft.KeyVault/vaults/secrets/backup/action",
+          "Microsoft.KeyVault/vaults/secrets/purge/action",
+          "Microsoft.KeyVault/vaults/secrets/recover/action",
+          "Microsoft.KeyVault/vaults/secrets/restore/action",
+          "Microsoft.KeyVault/vaults/secrets/readMetadata/action",
+          "Microsoft.KeyVault/vaults/secrets/getSecret/action",
+          "Microsoft.KeyVault/vaults/secrets/setSecret/action"
+        ],
+        "notDataActions": []
+      }
+    ],
+    "assignableScopes": [
+      "/subscriptions/{subscriptionId}/"
+    ]
+  }
+}
+```
+
+## Access management
+
+You can allow or restrict access to secrets by using a separate Azure Key Vault instance for Vault sync destinations.
+This corresponds with Microsoft's currently-recommended 
+[best practices](https://learn.microsoft.com/en-us/azure/key-vault/general/best-practices)
+for managing secrets in Key Vault. Maintaining a boundary between Vault-managed secrets and other secrets through
+separate Key Vaults provides increased security and access control.
+
+Azure roles can be created to grant the necessary permissions for the service principal to access the Key Vault
+with [role-based access control](https://learn.microsoft.com/en-us/azure/role-based-access-control/overview).
+A role assignment can be set for the Vault user principal to provide it the role's permissions within the Key Vault
+instance, its resource group, or subscription. Additionally,
+[Azure policies](https://learn.microsoft.com/en-us/azure/key-vault/general/azure-policy) may further refine access control
+limitations, such as denying the Vault user principal access to non-Vault related Key Vaults. The inverse, denying other
+users any write-access to the Vault-related Key Vault, may be another choice.
+
+## API
+
+Please see the [secrets sync API](/vault/api-docs/system/secrets-sync) for more details.

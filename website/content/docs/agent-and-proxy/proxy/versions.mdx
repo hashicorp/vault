@@ -1,0 +1,55 @@
+---
+layout: docs
+page_title: Risks of using inconsistent versions of Proxy and Vault
+description: >-
+  Using different versions of Vault Proxy and Vault is possible but limits the
+  available functionality.
+---
+
+
+# Understand the risks of using inconsistent versions of Proxy and Vault
+
+There is no requirement to run identical versions of Vault Proxy and Vault server.
+It is safe to run different versions. However, you may not be able to take
+advantage of all the newest features in Vault if you do not upgrade to
+the most recent versions of Proxy and Vault server.
+
+Proxy writes a note to the logs when it detects a mismatch between
+Proxy and Vault server versions. The note is purely informative to assist
+with debugging when the problem may be related to a version mismatch.
+For example, when a newer Proxy version expects functionality that is
+not available in an older version of Vault.
+
+This document describes the common cases.  There may be occasional exceptions, which if intentional will be called out in the CHANGELOG in a `CHANGES` section.  If unintentional/undocumented these should be treated as bugs and reported.
+
+## Older version of Proxy than Vault server
+
+In most cases, Vault server upgrades are backwards compatible with
+older versions of Vault Proxy. In the rare case where a Vault upgrade is
+**not** backwards compatible, we document the relevant information in
+the Vault upgrade guide.
+
+Auto-auth:
+- new auth methods that have been introduced since Proxy was built will be unavailable
+- existing auth methods should continue to function normally
+
+Proxy:
+- since Proxy simply mirrors the incoming requests, even if an incoming request uses an endpoint that didn't exist when that version of Proxy was compiled, that won't impede Proxy's ability to proxy the request
+
+## Newer version of Proxy than Vault server
+
+Newer Vault Agent versions will not work with older versions of Vault if
+the Proxy depends on features that do not exist in older Vault server
+versions. Whenever possible, we release newer functionality as opt-in
+and provide graceful degradation when connecting to an older Vault
+server instance. But the new functionality may be required in cases
+where the change relates  unless there's a very good reason (such as a
+serious security flaw being patched)
+
+Auto-auth:
+- Proxy may support authentication methods that are unavailable in older versions of Vault.
+- Proxy may make use of newer functionality for existing authentication methods.
+
+Proxy:
+- since Proxy simply mirrors the incoming requests, it is unlikely that incompatibilities would surface in proxying, but new functionality may not be available
+- example: When client-controlled consistency support was added to Proxy, it started looking for X-Vault-Index headers in responses, and started providing X-Vault-Index headers in proxied requests.  Older Vault Enterprise servers that don't make use of these headers would ignore the new request header and not emit them either.  Proxy proxying behaviour continued unchanged, unable to take advantage of the new functionality, but also not impeded in its previously existing behavior.

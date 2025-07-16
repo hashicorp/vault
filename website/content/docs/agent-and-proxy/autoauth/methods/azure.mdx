@@ -1,0 +1,68 @@
+---
+layout: docs
+page_title: Auto-auth with Azure
+description: >-
+  Use Azure for auto-authentication with Vault Agent or Vault Proxy.
+---
+
+# Auto-auth method: Azure
+
+The `azure` method reads in Azure instance credentials and uses them to
+authenticate with the [Azure Auth
+method](/vault/docs/auth/azure). It reads most
+parameters needed for authentication directly from instance information based
+on the value of the `resource` parameter.
+
+## Configuration
+
+- `role` `(string: required)` - The role to authenticate against on Vault
+
+- `authenticate_from_environment` `(boolean: false)` - If set to true, will attempt to make an Azure
+  identity object through Azure specific environment variables, in priority order and as specified [in
+  Azure documentation][environment-variables]. Will work seamlessly with Azure
+  [Workload Identity][workload-identity] and others.
+
+  <Note>
+
+  If `authenticate_from_environment` is set to true, `object_id`, and `client_id` will be ignored
+  in favour of that authentication approach.
+
+  </Note>
+
+- `scope` `(string: optional)` - The scope to use when obtaining a token. If not supplied, will default to
+  the value used for `resource` appended with "`/.default`" appended as a suffix. For more information on
+  scopes in Azure, see [this document][scopes].
+
+- `resource` `(string: required)` - The resource name to use when getting identity information.
+
+- `object_id` `(string: optional)` - The object ID of the user-assigned managed identity to use
+  when acquiring an [access token][azure-access-token]. Only one of `object_id` or `client_id`
+  may be provided.
+
+- `client_id` `(string: optional)` - The client ID of the user-assigned managed identity to use
+  when acquiring an [access token][azure-access-token]. Only one of `object_id` or `client_id`
+  may be provided.
+
+
+## Example configuration
+
+Example client auto-auth configuration block for an [Azure Workload Identity][workload-identity]:
+
+```hcl
+auto_auth {
+  method {
+    type = "azure"
+    config = {
+      authenticate_from_environment = true
+      role = "dev-role"
+      resource = "https://management.azure.com/"
+    }
+  }
+}
+```
+
+
+[azure-access-token]: https://docs.microsoft.com/en-us/azure/active-directory/managed-identities-azure-resources/how-to-use-vm-token#get-a-token-using-http
+[environment-variables]: https://pkg.go.dev/github.com/Azure/azure-sdk-for-go/sdk/azidentity#readme-environment-variables
+[workload-identity]: https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview
+[scopes]: https://learn.microsoft.com/en-us/azure/active-directory/develop/scopes-oidc

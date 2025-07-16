@@ -1,0 +1,13 @@
+<Warning title="Experimental">
+
+### vault.raft.wal.log-entry-bytes-read ((#vault-raft-wal-log-entry-bytes-read))
+
+</Warning>
+
+Metric type | Value   | Description
+----------- | ------- | -----------
+counter     | number  | Number of bytes of log entries read from segments before decoding.
+
+The `log-entry-bytes-read` counter is technically an overestimate because it
+includes bytes from headers, index entries, and secondary reads for entries
+too large to fit in buffers.

@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package mysql
 
 import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -11,8 +15,9 @@ import (
 	stdmysql "github.com/go-sql-driver/mysql"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	mysqlhelper "github.com/hashicorp/vault/helper/testhelpers/mysql"
-	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
+	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	dbtesting "github.com/hashicorp/vault/sdk/database/dbplugin/v5/testing"
+	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/database/helper/credsutil"
 	"github.com/hashicorp/vault/sdk/database/helper/dbutil"
 	"github.com/stretchr/testify/require"
@@ -37,6 +42,235 @@ func TestMySQL_Initialize(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			testInitialize(t, test.rootPassword)
+		})
+	}
+}
+
+// TestMySQL_Initialize_CloudGCP_Normal - test initialize in GCP with a normal connection.
+// For the CloudGCP Normal, PrivateIP, and PSC tests, follow the instructions within the
+// README at https://github.com/shinji62/vault-tf-psc-test for environment setup.
+// The Terraform takes care of most steps.
+func TestMySQL_Initialize_CloudGCP_Normal(t *testing.T) {
+	envNormalConnURL := "CLOUDGCP_NORMAL_CONNECTION_URL"
+	normalConnURL := os.Getenv(envNormalConnURL)
+
+	if normalConnURL == "" {
+		t.Skipf("env var %s not set, skipping test", envNormalConnURL)
+	}
+
+	credStr := dbtesting.GetGCPTestCredentials(t)
+
+	tests := map[string]struct {
+		req           dbplugin.InitializeRequest
+		wantErr       bool
+		expectedError string
+	}{
+		"empty auth type": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": normalConnURL,
+					"auth_type":      "",
+				},
+			},
+		},
+		"invalid auth type": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": normalConnURL,
+					"auth_type":      "invalid",
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid auth_type",
+		},
+		"JSON credentials": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url":       normalConnURL,
+					"auth_type":            connutil.AuthTypeGCPIAM,
+					"service_account_json": credStr,
+				},
+				VerifyConnection: true,
+			},
+		},
+	}
+
+	for n, tc := range tests {
+		t.Run(n, func(t *testing.T) {
+			db := newMySQL(DefaultUserNameTemplate)
+			defer dbtesting.AssertClose(t, db)
+			_, err := db.Initialize(context.Background(), tc.req)
+
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("expected error but received nil")
+				}
+
+				if !strings.Contains(err.Error(), tc.expectedError) {
+					t.Fatalf("expected error %s, got %s", tc.expectedError, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("expected no error, received %s", err)
+				}
+
+				if !db.Initialized {
+					t.Fatal("Database should be initialized")
+				}
+			}
+		})
+	}
+}
+
+// TestMySQL_Initialize_CloudGCP_PrivateIP - test initialize in GCP with a private IP.
+// For the CloudGCP Normal, PrivateIP, and PSC tests, follow the instructions within the
+// README at https://github.com/shinji62/vault-tf-psc-test for environment setup.
+// The Terraform takes care of most steps.
+func TestMySQL_Initialize_CloudGCP_PrivateIP(t *testing.T) {
+	envPrivateIPConnURL := "CLOUDGCP_PRIVATEIP_CONNECTION_URL"
+	privateIPConnURL := os.Getenv(envPrivateIPConnURL)
+
+	if privateIPConnURL == "" {
+		t.Skipf("env var %s not set, skipping test", envPrivateIPConnURL)
+	}
+	credStr := dbtesting.GetGCPTestCredentials(t)
+
+	tests := map[string]struct {
+		req           dbplugin.InitializeRequest
+		wantErr       bool
+		expectedError string
+	}{
+		"empty auth type": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": privateIPConnURL,
+					"auth_type":      "",
+				},
+			},
+		},
+		"invalid auth type": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": privateIPConnURL,
+					"auth_type":      "invalid",
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid auth_type",
+		},
+		"JSON credentials Private IP connection": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url":       privateIPConnURL,
+					"auth_type":            connutil.AuthTypeGCPIAM,
+					"service_account_json": credStr,
+					"use_private_ip":       true,
+				},
+				VerifyConnection: true,
+			},
+		},
+	}
+
+	for n, tc := range tests {
+		t.Run(n, func(t *testing.T) {
+			db := newMySQL(DefaultUserNameTemplate)
+			defer dbtesting.AssertClose(t, db)
+			_, err := db.Initialize(context.Background(), tc.req)
+
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("expected error but received nil")
+				}
+
+				if !strings.Contains(err.Error(), tc.expectedError) {
+					t.Fatalf("expected error %s, got %s", tc.expectedError, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("expected no error, received %s", err)
+				}
+
+				if !db.Initialized {
+					t.Fatal("Database should be initialized")
+				}
+			}
+		})
+	}
+}
+
+// TestMySQL_Initialize_CloudGCP_PSC - test initialize in GCP with private service connect.
+// For the CloudGCP Normal, PrivateIP, and PSC tests, follow the instructions within the
+// README at https://github.com/shinji62/vault-tf-psc-test for environment setup.
+// The Terraform takes care of most steps.
+func TestMySQL_Initialize_CloudGCP_PSC(t *testing.T) {
+	envPSCConnURL := "CLOUDGCP_PSC_CONNECTION_URL"
+	pscConnURL := os.Getenv(envPSCConnURL)
+
+	if pscConnURL == "" {
+		t.Skipf("env var %s not set, skipping test", pscConnURL)
+	}
+
+	credStr := dbtesting.GetGCPTestCredentials(t)
+
+	tests := map[string]struct {
+		req           dbplugin.InitializeRequest
+		wantErr       bool
+		expectedError string
+	}{
+		"empty auth type": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": pscConnURL,
+					"auth_type":      "",
+				},
+			},
+		},
+		"invalid auth type": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url": pscConnURL,
+					"auth_type":      "invalid",
+				},
+			},
+			wantErr:       true,
+			expectedError: "invalid auth_type",
+		},
+		"JSON credentials Private Service Connect connection": {
+			req: dbplugin.InitializeRequest{
+				Config: map[string]interface{}{
+					"connection_url":       pscConnURL,
+					"auth_type":            connutil.AuthTypeGCPIAM,
+					"service_account_json": credStr,
+					"use_psc":              true,
+				},
+				VerifyConnection: true,
+			},
+		},
+	}
+
+	for n, tc := range tests {
+		t.Run(n, func(t *testing.T) {
+			db := newMySQL(DefaultUserNameTemplate)
+			defer dbtesting.AssertClose(t, db)
+			_, err := db.Initialize(context.Background(), tc.req)
+
+			if tc.wantErr {
+				if err == nil {
+					t.Fatalf("expected error but received nil")
+				}
+
+				if !strings.Contains(err.Error(), tc.expectedError) {
+					t.Fatalf("expected error %s, got %s", tc.expectedError, err.Error())
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("expected no error, received %s", err)
+				}
+
+				if !db.Initialized {
+					t.Fatal("Database should be initialized")
+				}
+			}
 		})
 	}
 }

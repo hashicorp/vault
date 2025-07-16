@@ -1,14 +1,17 @@
 ---
 layout: docs
-page_title: Listeners - Configuration
-description: |-
-  The listener stanza configures the addresses and ports on which Vault will
-  respond to requests.
+page_title: listener - Configuration
+description: >-
+  Configure the listener stanza to customize the addresses and ports where Vault
+  listens for, and responds to, requests.
 ---
 
-# `listener` Stanza
+# `listener` stanza
 
 The `listener` stanza configures the addresses and ports on which Vault will
-respond to requests. At this time, there is only one listener - [TCP][tcp].
+respond to requests. At this time, there are two types of listeners:
+- [TCP][tcp]
+- [Unix Domain Socket][unix]
 
-[tcp]: /docs/configuration/listener/tcp
+[tcp]: /vault/docs/configuration/listener/tcp
+[unix]: /vault/docs/configuration/listener/unix

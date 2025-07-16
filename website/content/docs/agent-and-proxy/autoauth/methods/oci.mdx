@@ -1,0 +1,45 @@
+---
+layout: docs
+page_title: Auto-auth with OCI
+description: >-
+  Use Oracle Cloud Infrastructure (OCI) for auto-authentication with Vault Agent
+  or Vault Proxy.
+---
+
+# Auto-auth method: Oracle Cloud Infrastructure (OCI)
+
+The `oci` method performs authentication against the [OCI Auth
+method](/vault/docs/auth/oci).
+
+## Credentials
+
+The method use to authenticate is set using the `type` parameter. Valid values are `apikey` to authenticate using
+API Key credentials and `instance` for Instance Principal credentials.
+
+If `apikey` is used, the Vault agent will use the first credential it can successfully obtain in the following order:
+
+1. Environment variables:
+  - `OCI_tenancy_ocid`
+  - `OCI_user_ocid`
+  - `OCI_fingerprint`
+  - `OCI_private_key_path`
+2. Configuration file in `$HOME/.oci/config`
+3. Path to configuration file defined in the `OCI_CONFIG_FILE` environment variable
+4. Configuration file in `$HOME/.obmcs/config`
+
+Wherever possible, we recommend using instance principal for credentials. These are rotated automatically by OCI
+and require no effort on your part to provision, making instance principal the most secure of the three methods. If
+using instance principal _and_ a custom `credential_poll_interval`, be sure the frequency is set to a value that is less
+than OCI's rotation frequency. This is currently documented as
+[multiple times a day](https://docs.oracle.com/en-us/iaas/Content/Identity/Tasks/callingservicesfrominstances.htm#faq),
+but from experience, credentials are rotated every 10 to 15 minutes.
+
+## Configuration
+
+### General
+
+- `type` `(string: required)` - The type of authentication to use. Valid values are `apikey` and `instance`.
+
+- `role` `(string: required)` - The role to authenticate against on Vault.
+
+- `credential_poll_interval` `(duration: "60s", optional)` - In seconds, how frequently the Vault auto-auth method should check for new credentials.

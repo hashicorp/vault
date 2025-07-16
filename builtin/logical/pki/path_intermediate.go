@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
@@ -11,12 +15,26 @@ import (
 )
 
 func pathGenerateIntermediate(b *backend) *framework.Path {
-	return buildPathGenerateIntermediate(b, "intermediate/generate/"+framework.GenericNameRegex("exported"))
+	pattern := "intermediate/generate/" + framework.GenericNameRegex("exported")
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "generate",
+		OperationSuffix: "intermediate",
+	}
+
+	return buildPathGenerateIntermediate(b, pattern, displayAttrs)
 }
 
 func pathSetSignedIntermediate(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "intermediate/set-signed",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "set-signed",
+			OperationSuffix: "intermediate",
+		},
 
 		Fields: map[string]*framework.FieldSchema{
 			"certificate": {
@@ -31,6 +49,38 @@ appended to the bundle.`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathImportIssuers,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"mapping": {
+								Type:        framework.TypeMap,
+								Description: "A mapping of issuer_id to key_id for all issuers included in this request",
+								Required:    true,
+							},
+							"imported_keys": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Net-new keys imported as a part of this request",
+								Required:    true,
+							},
+							"imported_issuers": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Net-new issuers imported as a part of this request",
+								Required:    true,
+							},
+							"existing_keys": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Existing keys specified as part of the import bundle of this request",
+								Required:    true,
+							},
+							"existing_issuers": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Existing issuers specified as part of the import bundle of this request",
+								Required:    true,
+							},
+						},
+					}},
+				},
 				// Read more about why these flags are set in backend.go
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
@@ -52,7 +102,7 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 
 	var err error
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not create intermediate until migration has completed"), nil
 	}
 
@@ -107,11 +157,16 @@ func (b *backend) pathGenerateIntermediate(ctx context.Context, req *logical.Req
 	}
 
 	entries, err := getGlobalAIAURLs(ctx, req.Storage)
-	if err == nil && len(entries.OCSPServers) == 0 && len(entries.IssuingCertificates) == 0 && len(entries.CRLDistributionPoints) == 0 {
+	if err == nil && len(entries.OCSPServers) == 0 && len(entries.IssuingCertificates) == 0 &&
+		len(entries.CRLDistributionPoints) == 0 && len(entries.DeltaCRLDistributionPoints) == 0 {
 		// If the operator hasn't configured any of the URLs prior to
 		// generating this issuer, we should add a warning to the response,
 		// informing them they might want to do so and re-generate the issuer.
 		resp.AddWarning("This mount hasn't configured any authority information access (AIA) fields; this may make it harder for systems to find missing certificates in the chain or to validate revocation status of certificates. Consider updating /config/urls or the newly generated issuer with this information. Since this certificate is an intermediate, it might be useful to regenerate this certificate after fixing this problem for the root mount.")
+	}
+	if (entries.DeltaCRLDistributionPoints != nil && len(entries.DeltaCRLDistributionPoints) > 0) &&
+		(entries.CRLDistributionPoints == nil || len(entries.CRLDistributionPoints) == 0) {
+		resp.AddWarning("This mount has configured delta crl distribution points but no base crl distribution points were set.")
 	}
 
 	switch format {

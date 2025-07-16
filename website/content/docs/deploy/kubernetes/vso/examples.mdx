@@ -1,0 +1,65 @@
+---
+layout: docs
+page_title: Vault Secrets Operator examples
+description: >-
+  Vault Secrets Operator usage examples to consume Vault secrets natively from Kubernetes Secrets.
+---
+
+# Vault Secrets Operator examples
+
+The Operator project provides the following examples:
+- Sample use-cases are documented [here](https://github.com/hashicorp/vault-secrets-operator#samples)
+- A Terraform based demo can be found [here](https://github.com/hashicorp/vault-secrets-operator/tree/main/demo)
+
+## JWT auth for Kubernetes clusters in private networks
+
+Vault Secrets Operator supports using the [JWT auth method](/vault/docs/platform/k8s/vso/api-reference#vaultauthconfigjwt).
+JWT auth [verifies tokens](/vault/docs/auth/jwt#jwt-verification) using the issuer's public signing key.
+Vault supports fetching this public key from the Kubernetes API, but if users can't expose the Kubernetes API to Vault, the public key can be provided directly using [`jwt_validation_pubkeys`](/vault/api-docs/auth/jwt#jwt_validation_pubkeys).
+To configure this please follow the steps outlined for [Using JWT validation public keys](/vault/docs/auth/jwt/oidc-providers/kubernetes#using-jwt-validation-public-keys)
+
+## Using VaultStaticSecrets for imagePullSecrets
+
+Vault Secret Operator supports Kubernetes' templating of Secrets based on their
+Secret [Type](https://kubernetes.io/docs/concepts/configuration/secret/#secret-types) by setting the
+`Destination.Type` field of the VaultStaticSecret. Users who have configured private container registries
+can use the `kubernetes.io/dockerconfigjson` or `kubernetes.io/dockerconfig` types to appropriately format
+a Kubernetes secret with the contents of their Vault KV Secret.
+
+```shell
+# Write the secret to Vault:
+$ vault kv put kvv2/docker/config .dockerconfigjson=`cat ~/.docker/config.json`
+```
+
+```yaml
+# Apply a VaultStaticSecret which populates the k8s secret named 'myregistryKey' in the applications namespace
+# Note: this Secret uses the `default` VaultAuthMethod.
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultStaticSecret
+metadata:
+  namespace: awesomeapps
+  name: vault-kv-app
+spec:
+  type: kv-v2
+  mount: kvv2
+  path: docker/config
+  # dest k8s secret
+  destination:
+    name: myregistryKey
+    create: true
+    type: "kubernetes.io/dockerconfigjson"
+---
+# Example pod from
+# https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
+apiVersion: v1
+kind: Pod
+metadata:
+  name: foo
+  namespace: awesomeapps
+spec:
+  containers:
+    - name: foo
+      image: janedoe/awesomeapp:v1
+  imagePullSecrets:
+   - name: myregistrykey
+```

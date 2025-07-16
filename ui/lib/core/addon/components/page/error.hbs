@@ -1,0 +1,33 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<div
+  class="box is-sideless has-background-white-bis has-text-grey-light has-text-centered has-tall-padding"
+  data-test-page-error
+>
+  {{#if (eq this.error.httpStatus 404)}}
+    <h1 class="title is-3 has-text-grey-light" data-test-page-error-title={{this.error.httpStatus}}>
+      404 Not Found
+    </h1>
+    <p data-test-page-error-subtitle>Sorry, we were unable to find any content at <code>{{this.error.path}}</code>.</p>
+  {{else if (eq this.error.httpStatus 403)}}
+    <h1 class="title is-3 has-text-grey-light" data-test-page-error-title={{this.error.httpStatus}}>
+      Not authorized
+    </h1>
+    <p data-test-page-error-subtitle>You are not authorized to access content at <code>{{this.error.path}}</code>.</p>
+  {{else}}
+    <h1 class="title is-3 has-text-grey-light" data-test-page-error-title={{this.error.httpStatus}}>
+      Error
+    </h1>
+    <div>
+      {{#if this.error.message}}
+        <p data-test-page-error-message>{{this.error.message}}</p>
+      {{/if}}
+      {{#each this.error.errors as |error index|}}
+        <p data-test-page-error-details={{index}}>{{error}}</p>
+      {{/each}}
+    </div>
+  {{/if}}
+</div>

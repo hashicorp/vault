@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package dbplugin
 
 import (
@@ -46,6 +49,13 @@ func PluginFactoryVersion(ctx context.Context, pluginName string, pluginVersion 
 		transport = "builtin"
 
 	} else {
+		if pluginRunner.Download {
+			if err = sys.DownloadExtractVerifyPlugin(ctx, pluginRunner); err != nil {
+				return nil, fmt.Errorf("failed to extract and verify plugin=%q version=%q: %w",
+					pluginRunner.Name, pluginRunner.Version, err)
+			}
+		}
+
 		config := pluginutil.PluginClientConfig{
 			Name:            pluginName,
 			PluginType:      consts.PluginTypeDatabase,
@@ -55,7 +65,10 @@ func PluginFactoryVersion(ctx context.Context, pluginName string, pluginVersion 
 			Logger:          namedLogger,
 			IsMetadataMode:  false,
 			AutoMTLS:        true,
+			Wrapper:         sys,
+			Tier:            pluginRunner.Tier,
 		}
+
 		// create a DatabasePluginClient instance
 		db, err = NewPluginClient(ctx, sys, config)
 		if err != nil {

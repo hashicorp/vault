@@ -1,0 +1,25 @@
+# This workflow checks that there is either a 'pr/no-milestone' label applied to a PR
+# or there is a milestone associated with a PR
+
+name: Check Milestone
+
+on:
+  pull_request:
+    # milestoned and demilestoned work (https://github.com/github/docs/issues/23909) but they aren't listed in the github documentation 
+    types: [opened, synchronize, labeled, unlabeled, milestoned, demilestoned]
+    # Runs on PRs to main and release branches
+    branches:
+      - main
+      - release/**
+
+jobs:
+  # checks that a milestone entry is present for a PR
+  milestone-check:
+    # If there is a `pr/no-milestone` label, or this comes from a fork (community contributor) we ignore this check
+    if: ${{ ((github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise')
+      && (github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name))
+      && (!contains(github.event.pull_request.labels.*.name, 'pr/no-milestone')) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check milestone
+        run: ${{ github.event.pull_request.milestone != null }}

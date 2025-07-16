@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package plugin
 
 import (
@@ -77,7 +80,6 @@ func (b *backend) reloadBackend(ctx context.Context, storage logical.Storage) er
 	err = b.Backend.Initialize(ctx, &logical.InitializationRequest{
 		Storage: storage,
 	})
-
 	if err != nil {
 		return err
 	}

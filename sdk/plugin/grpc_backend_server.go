@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
@@ -91,14 +94,17 @@ func (b *backendGRPCPluginServer) Setup(ctx context.Context, args *pb.SetupArgs)
 	}
 
 	storage := newGRPCStorageClient(brokeredClient)
-	sysView := newGRPCSystemView(brokeredClient)
+	events := newGRPCEventsClient(brokeredClient)
+	observations := newGRPCObservationsClient(brokeredClient)
 
 	config := &logical.BackendConfig{
-		StorageView: storage,
-		Logger:      b.logger,
-		System:      sysView,
-		Config:      args.Config,
-		BackendUUID: args.BackendUUID,
+		StorageView:         storage,
+		Logger:              b.logger,
+		System:              newGRPCSystemViewFromSetupArgs(brokeredClient, args),
+		Config:              args.Config,
+		BackendUUID:         args.BackendUUID,
+		EventsSender:        events,
+		ObservationRecorder: observations,
 	}
 
 	// Call the underlying backend factory after shims have been created
@@ -137,7 +143,8 @@ func (b *backendGRPCPluginServer) HandleRequest(ctx context.Context, args *pb.Ha
 
 	logicalReq.Storage = newGRPCStorageClient(brokeredClient)
 
-	resp, respErr := backend.HandleRequest(ctx, logicalReq)
+	reqCtx := pbMetadataCtxToLogicalCtx(ctx)
+	resp, respErr := backend.HandleRequest(reqCtx, logicalReq)
 
 	pbResp, err := pb.LogicalResponseToProtoResponse(resp)
 	if err != nil {
@@ -186,10 +193,14 @@ func (b *backendGRPCPluginServer) SpecialPaths(ctx context.Context, args *pb.Emp
 
 	return &pb.SpecialPathsReply{
 		Paths: &pb.Paths{
-			Root:            paths.Root,
-			Unauthenticated: paths.Unauthenticated,
-			LocalStorage:    paths.LocalStorage,
-			SealWrapStorage: paths.SealWrapStorage,
+			Root:                  paths.Root,
+			Unauthenticated:       paths.Unauthenticated,
+			LocalStorage:          paths.LocalStorage,
+			SealWrapStorage:       paths.SealWrapStorage,
+			WriteForwardedStorage: paths.WriteForwardedStorage,
+			Binary:                paths.Binary,
+			Limited:               paths.Limited,
+			AllowSnapshotRead:     paths.AllowSnapshotRead,
 		},
 	}, nil
 }

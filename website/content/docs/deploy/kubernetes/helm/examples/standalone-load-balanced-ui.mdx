@@ -1,0 +1,43 @@
+---
+layout: 'docs'
+page_title: 'Standalone server with load balanced UI'
+sidebar_current: 'docs-platform-k8s-examples-standalone-load-balanced-ui'
+description: >-
+  Learn how to set up a standalone Vault server with a load balanced UI.
+---
+
+# Standalone server with load balanced UI
+
+@include 'helm/version.mdx'
+
+The below `values.yaml` can be used to set up a single server Vault cluster with a LoadBalancer to allow external access to the UI and API.
+
+```yaml
+server:
+  standalone:
+    enabled: true
+    config: |
+      ui = true
+
+      listener "tcp" {
+        tls_disable = 1
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+      storage "file" {
+        path = "/vault/data"
+      }
+
+  service:
+    enabled: true
+
+  dataStorage:
+    enabled: true
+    size: 10Gi
+    storageClass: null
+    accessMode: ReadWriteOnce
+
+ui:
+  enabled: true
+  serviceType: LoadBalancer
+```

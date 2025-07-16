@@ -1,0 +1,3 @@
+```release-note:bug
+ui: pass encodeBase64 param to HMAC transit-key-actions.
+```

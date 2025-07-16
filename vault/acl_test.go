@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -264,6 +267,7 @@ func testACLSingle(t *testing.T, ns *namespace.Namespace) {
 		{logical.UpdateOperation, "1/2/3", false, false},
 		{logical.UpdateOperation, "1/2/3/4", true, false},
 		{logical.CreateOperation, "1/2/3/4/5", true, false},
+		{logical.RecoverOperation, "1/2/3/4", true, false},
 	}
 
 	for _, tc := range tcases {
@@ -871,14 +875,16 @@ func TestACLGrantingPolicies(t *testing.T) {
 	}
 
 	policyInfo := logical.PolicyInfo{
-		Name:        "granting_policy",
-		NamespaceId: "root",
-		Type:        "acl",
+		Name:          "granting_policy",
+		NamespaceId:   "root",
+		NamespacePath: "",
+		Type:          "acl",
 	}
 	mergedInfo := logical.PolicyInfo{
-		Name:        "granting_policy_merged",
-		NamespaceId: "root",
-		Type:        "acl",
+		Name:          "granting_policy_merged",
+		NamespaceId:   "root",
+		NamespacePath: "",
+		Type:          "acl",
 	}
 
 	tcases := []tcase{
@@ -894,6 +900,7 @@ func TestACLGrantingPolicies(t *testing.T) {
 		{"kv/deny", logical.ReadOperation, []*Policy{policy, merged}, nil, false},
 		{"kv/path/longer", logical.UpdateOperation, []*Policy{policy, merged}, []logical.PolicyInfo{policyInfo}, true},
 		{"kv/path/foo", logical.ReadOperation, []*Policy{policy, merged}, []logical.PolicyInfo{policyInfo, mergedInfo}, true},
+		{"ns1/kv/foo", logical.RecoverOperation, []*Policy{policy, merged}, []logical.PolicyInfo{policyInfo}, true},
 	}
 
 	for _, tc := range tcases {
@@ -940,7 +947,7 @@ path "kv/deny" {
 }
 
 path "ns1/kv/foo" {
-	capabilities = ["update", "read"]
+	capabilities = ["update", "read", "recover"]
 }
 `
 
@@ -1033,7 +1040,7 @@ path "1/2/+" {
 	capabilities = ["read"]
 }
 path "1/2/+/+" {
-	capabilities = ["update"]
+	capabilities = ["update", "recover"]
 }
 `
 

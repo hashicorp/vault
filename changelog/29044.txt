@@ -1,0 +1,3 @@
+```release-note:improvement
+auth/cert: Add new configuration option `enable_metadata_on_failures` to add client cert metadata on login failures to audit log and response
+```

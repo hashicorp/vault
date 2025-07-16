@@ -1,0 +1,4 @@
+```release-note:bug
+agent: Environment variable VAULT_CACERT_BYTES now works for Vault Agent templates.
+```
+

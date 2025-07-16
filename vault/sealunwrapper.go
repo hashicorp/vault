@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 //go:build !enterprise
 
 package vault
@@ -7,9 +10,7 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	proto "github.com/golang/protobuf/proto"
 	log "github.com/hashicorp/go-hclog"
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -17,10 +18,9 @@ import (
 // NewSealUnwrapper creates a new seal unwrapper
 func NewSealUnwrapper(underlying physical.Backend, logger log.Logger) physical.Backend {
 	ret := &sealUnwrapper{
-		underlying:   underlying,
-		logger:       logger,
-		locks:        locksutil.CreateLocks(),
-		allowUnwraps: new(uint32),
+		underlying: underlying,
+		logger:     logger,
+		locks:      locksutil.CreateLocks(),
 	}
 
 	if underTxn, ok := underlying.(physical.Transactional); ok {
@@ -42,7 +42,7 @@ type sealUnwrapper struct {
 	underlying   physical.Backend
 	logger       log.Logger
 	locks        []*locksutil.LockEntry
-	allowUnwraps *uint32
+	allowUnwraps atomic.Bool
 }
 
 // transactionalSealUnwrapper is a seal unwrapper that wraps a physical that is transactional
@@ -62,80 +62,69 @@ func (d *sealUnwrapper) Put(ctx context.Context, entry *physical.Entry) error {
 	return d.underlying.Put(ctx, entry)
 }
 
-func (d *sealUnwrapper) Get(ctx context.Context, key string) (*physical.Entry, error) {
+// unwrap gets an entry from underlying storage and tries to unwrap it.
+// - If the entry is not wrapped: the entry will be returned unchanged and wasWrapped will be false
+// - If the entry is wrapped and encrypted: an error is returned.
+// - If the entry is wrapped but not encrypted: the entry will be unwrapped and returned. wasWrapped will be true.
+func (d *sealUnwrapper) unwrap(ctx context.Context, key string) (unwrappedEntry *physical.Entry, wasWrapped bool, err error) {
 	entry, err := d.underlying.Get(ctx, key)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if entry == nil {
-		return nil, nil
+		return nil, false, nil
 	}
 
-	var performUnwrap bool
-	se := &wrapping.BlobInfo{}
-	// If the value ends in our canary value, try to decode the bytes.
-	eLen := len(entry.Value)
-	if eLen > 0 && entry.Value[eLen-1] == 's' {
-		if err := proto.Unmarshal(entry.Value[:eLen-1], se); err == nil {
-			// We unmarshaled successfully which means we need to store it as a
-			// non-proto message
-			performUnwrap = true
+	wrappedEntryValue, unmarshaled := UnmarshalSealWrappedValueWithCanary(entry.Value)
+	switch {
+	case !unmarshaled:
+		// Entry is not wrapped
+		return entry, false, nil
+	case wrappedEntryValue.isEncrypted():
+		// Entry is wrapped and encrypted
+		return nil, true, fmt.Errorf("cannot decode sealwrapped storage entry %q", entry.Key)
+	default:
+		// Entry is wrapped and not encrypted
+		pt, err := wrappedEntryValue.getPlaintextValue()
+		if err != nil {
+			return nil, true, err
 		}
-	}
-	if !performUnwrap {
-		return entry, nil
-	}
-	// It's actually encrypted and we can't read it
-	if se.Wrapped {
-		return nil, fmt.Errorf("cannot decode sealwrapped storage entry %q", entry.Key)
-	}
-	if atomic.LoadUint32(d.allowUnwraps) != 1 {
 		return &physical.Entry{
 			Key:   entry.Key,
-			Value: se.Ciphertext,
-		}, nil
+			Value: pt,
+		}, true, nil
+	}
+}
+
+func (d *sealUnwrapper) Get(ctx context.Context, key string) (*physical.Entry, error) {
+	entry, wasWrapped, err := d.unwrap(ctx, key)
+	switch {
+	case err != nil: // Failed to get entry
+		return nil, err
+	case entry == nil: // Entry doesn't exist
+		return nil, nil
+	case !wasWrapped || !d.allowUnwraps.Load(): // Entry was not wrapped or unwrapping not allowed
+		return entry, nil
 	}
 
+	// Entry was wrapped, we need to replace it with the unwrapped value
+
+	// Grab locks because we are performing a write
 	locksutil.LockForKey(d.locks, key).Lock()
 	defer locksutil.LockForKey(d.locks, key).Unlock()
 
-	// At this point we need to re-read and re-check
-	entry, err = d.underlying.Get(ctx, key)
-	if err != nil {
+	// Read entry again in case it was changed while we were waiting for the lock
+	entry, wasWrapped, err = d.unwrap(ctx, key)
+	switch {
+	case err != nil: // Failed to get entry
 		return nil, err
-	}
-	if entry == nil {
+	case entry == nil: // Entry doesn't exist
 		return nil, nil
-	}
-
-	performUnwrap = false
-	se = &wrapping.BlobInfo{}
-	// If the value ends in our canary value, try to decode the bytes.
-	eLen = len(entry.Value)
-	if eLen > 0 && entry.Value[eLen-1] == 's' {
-		// We ignore an error because the canary is not a guarantee; if it
-		// doesn't decode, proceed normally
-		if err := proto.Unmarshal(entry.Value[:eLen-1], se); err == nil {
-			// We unmarshaled successfully which means we need to store it as a
-			// non-proto message
-			performUnwrap = true
-		}
-	}
-	if !performUnwrap {
+	case !wasWrapped || !d.allowUnwraps.Load(): // Entry was not wrapped or unwrapping not allowed
 		return entry, nil
 	}
-	if se.Wrapped {
-		return nil, fmt.Errorf("cannot decode sealwrapped storage entry %q", entry.Key)
-	}
 
-	entry = &physical.Entry{
-		Key:   entry.Key,
-		Value: se.Ciphertext,
-	}
-
-	if atomic.LoadUint32(d.allowUnwraps) != 1 {
-		return entry, nil
-	}
+	// Write out the unwrapped value
 	return entry, d.underlying.Put(ctx, entry)
 }
 
@@ -172,12 +161,12 @@ func (d *transactionalSealUnwrapper) Transaction(ctx context.Context, txns []*ph
 // This should only run during preSeal which ensures that it can't be run
 // concurrently and that it will be run only by the active node
 func (d *sealUnwrapper) stopUnwraps() {
-	atomic.StoreUint32(d.allowUnwraps, 0)
+	d.allowUnwraps.Store(false)
 }
 
 func (d *sealUnwrapper) runUnwraps() {
 	// Allow key unwraps on key gets. This gets set only when running on the
 	// active node to prevent standbys from changing data underneath the
 	// primary
-	atomic.StoreUint32(d.allowUnwraps, 1)
+	d.allowUnwraps.Store(true)
 }

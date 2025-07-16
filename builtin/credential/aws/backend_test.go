@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package awsauth
 
 import (
@@ -5,7 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -31,6 +34,7 @@ func TestBackend_CreateParseVerifyRoleTag(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
+	config.System = &testSystemView{}
 
 	b, err := Backend(config)
 	if err != nil {
@@ -257,6 +261,7 @@ func TestBackend_ConfigTidyIdentities(t *testing.T) {
 		config := logical.TestBackendConfig()
 		storage := &logical.InmemStorage{}
 		config.StorageView = storage
+		config.System = &testSystemView{}
 
 		b, err := Backend(config)
 		if err != nil {
@@ -314,6 +319,7 @@ func TestBackend_ConfigTidyRoleTags(t *testing.T) {
 		config := logical.TestBackendConfig()
 		storage := &logical.InmemStorage{}
 		config.StorageView = storage
+		config.System = &testSystemView{}
 
 		b, err := Backend(config)
 		if err != nil {
@@ -371,6 +377,7 @@ func TestBackend_TidyIdentities(t *testing.T) {
 		config := logical.TestBackendConfig()
 		storage := &logical.InmemStorage{}
 		config.StorageView = storage
+		config.System = &testSystemView{}
 
 		b, err := Backend(config)
 		if err != nil {
@@ -421,6 +428,7 @@ func TestBackend_TidyRoleTags(t *testing.T) {
 		config := logical.TestBackendConfig()
 		storage := &logical.InmemStorage{}
 		config.StorageView = storage
+		config.System = &testSystemView{}
 
 		b, err := Backend(config)
 		if err != nil {
@@ -470,6 +478,7 @@ func TestBackend_ConfigClient(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
+	config.System = &testSystemView{}
 
 	b, err := Backend(config)
 	if err != nil {
@@ -611,6 +620,7 @@ func TestBackend_pathConfigCertificate(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
+	config.System = &testSystemView{}
 
 	b, err := Backend(config)
 	if err != nil {
@@ -768,6 +778,8 @@ func TestBackend_parseAndVerifyRoleTagValue(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
+	config.System = &testSystemView{}
+
 	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
@@ -850,6 +862,8 @@ func TestBackend_PathRoleTag(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
+	config.System = &testSystemView{}
+
 	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
@@ -917,6 +931,8 @@ func TestBackend_PathBlacklistRoleTag(t *testing.T) {
 		storage := &logical.InmemStorage{}
 		config := logical.TestBackendConfig()
 		config.StorageView = storage
+		config.System = &testSystemView{}
+
 		b, err := Backend(config)
 		if err != nil {
 			t.Fatal(err)
@@ -1042,6 +1058,7 @@ This is an acceptance test.
 	export TEST_AWS_EC2_AMI_ID=$(curl -s http://169.254.169.254/latest/meta-data/ami-id)
 	export TEST_AWS_EC2_IAM_ROLE_ARN=$(aws iam get-role --role-name $(curl -q http://169.254.169.254/latest/meta-data/iam/security-credentials/ -S -s) --query Role.Arn --output text)
 	export TEST_AWS_EC2_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+
 
 	If the test is not being run on an EC2 instance that has access to
 	credentials using EC2RoleProvider, on top of the above vars, following
@@ -1375,6 +1392,8 @@ func TestBackend_pathStsConfig(t *testing.T) {
 	config := logical.TestBackendConfig()
 	storage := &logical.InmemStorage{}
 	config.StorageView = storage
+	config.System = &testSystemView{}
+
 	b, err := Backend(config)
 	if err != nil {
 		t.Fatal(err)
@@ -1402,6 +1421,11 @@ func TestBackend_pathStsConfig(t *testing.T) {
 
 	data := map[string]interface{}{
 		"sts_role": "arn:aws:iam:account1:role/myRole",
+	}
+
+	data2 := map[string]interface{}{
+		"sts_role":    "arn:aws:iam:account2:role/myRole2",
+		"external_id": "fake_id",
 	}
 
 	stsReq.Data = data
@@ -1437,11 +1461,26 @@ func TestBackend_pathStsConfig(t *testing.T) {
 
 	stsReq.Operation = logical.CreateOperation
 	stsReq.Path = "config/sts/account2"
-	stsReq.Data = data
-	// create another entry to test the list operation
+	stsReq.Data = data2
+	// create another entry with alternate data to test ExternalID and LIST
 	resp, err = b.HandleRequest(context.Background(), stsReq)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatal(err)
+	}
+
+	// test second read
+	stsReq.Operation = logical.ReadOperation
+	resp, err = b.HandleRequest(context.Background(), stsReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expectedStsRole = "arn:aws:iam:account2:role/myRole2"
+	expectedExternalID := "fake_id"
+	if resp.Data["sts_role"].(string) != expectedStsRole {
+		t.Fatalf("bad: expected:%s\n got:%s\n", expectedStsRole, resp.Data["sts_role"].(string))
+	}
+	if resp.Data["external_id"].(string) != expectedExternalID {
+		t.Fatalf("bad: expected:%s\n got:%s\n", expectedExternalID, resp.Data["external_id"].(string))
 	}
 
 	stsReq.Operation = logical.ListOperation
@@ -1492,7 +1531,7 @@ func buildCallerIdentityLoginData(request *http.Request, roleName string) (map[s
 	if err != nil {
 		return nil, err
 	}
-	requestBody, err := ioutil.ReadAll(request.Body)
+	requestBody, err := io.ReadAll(request.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -1501,7 +1540,7 @@ func buildCallerIdentityLoginData(request *http.Request, roleName string) (map[s
 		"iam_request_url":         base64.StdEncoding.EncodeToString([]byte(request.URL.String())),
 		"iam_request_headers":     base64.StdEncoding.EncodeToString(headersJson),
 		"iam_request_body":        base64.StdEncoding.EncodeToString(requestBody),
-		"request_role":            roleName,
+		"role":                    roleName,
 	}, nil
 }
 
@@ -1521,6 +1560,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		return
 	}
 
+	ctx := context.Background()
 	storage := &logical.InmemStorage{}
 	config := logical.TestBackendConfig()
 	config.StorageView = storage
@@ -1599,7 +1639,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      clientConfigData,
 	}
-	_, err = b.HandleRequest(context.Background(), clientRequest)
+	_, err = b.HandleRequest(ctx, clientRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1613,7 +1653,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      configIdentityData,
 	}
-	resp, err := b.HandleRequest(context.Background(), configIdentityRequest)
+	resp, err := b.HandleRequest(ctx, configIdentityRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1633,7 +1673,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      roleData,
 	}
-	resp, err = b.HandleRequest(context.Background(), roleRequest)
+	resp, err = b.HandleRequest(ctx, roleRequest)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role: resp:%#v\nerr:%v", resp, err)
 	}
@@ -1650,7 +1690,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      roleDataEc2,
 	}
-	resp, err = b.HandleRequest(context.Background(), roleRequestEc2)
+	resp, err = b.HandleRequest(ctx, roleRequestEc2)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create role; resp:%#v\nerr:%v", resp, err)
 	}
@@ -1688,7 +1728,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      loginData,
 	}
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	resp, err = b.HandleRequest(ctx, loginRequest)
 	if err != nil || resp == nil || !resp.IsError() {
 		t.Errorf("bad: expected failed login due to missing header: resp:%#v\nerr:%v", resp, err)
 	}
@@ -1711,7 +1751,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      loginData,
 	}
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	resp, err = b.HandleRequest(ctx, loginRequest)
 	if err != nil || resp == nil || !resp.IsError() {
 		t.Errorf("bad: expected failed login due to invalid header: resp:%#v\nerr:%v", resp, err)
 	}
@@ -1730,13 +1770,13 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Storage:   storage,
 		Data:      loginData,
 	}
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	resp, err = b.HandleRequest(ctx, loginRequest)
 	if err != nil || resp == nil || !resp.IsError() {
 		t.Errorf("bad: expected failed login due to invalid role: resp:%#v\nerr:%v", resp, err)
 	}
 
 	loginData["role"] = "ec2only"
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	resp, err = b.HandleRequest(ctx, loginRequest)
 	if err != nil || resp == nil || !resp.IsError() {
 		t.Errorf("bad: expected failed login due to bad auth type: resp:%#v\nerr:%v", resp, err)
 	}
@@ -1744,7 +1784,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	// finally, the happy path test :)
 
 	loginData["role"] = testValidRoleName
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	resp, err = b.HandleRequest(ctx, loginRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1767,7 +1807,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		Schema: b.pathLogin().Fields,
 	}
 	// ensure we can renew
-	resp, err = b.pathLoginRenew(context.Background(), renewReq, emptyLoginFd)
+	resp, err = b.pathLoginRenew(ctx, renewReq, emptyLoginFd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1785,17 +1825,17 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	// pick up the fake user ID
 	roleData["bound_iam_principal_arn"] = entity.canonicalArn()
 	roleRequest.Path = "role/" + testValidRoleName
-	resp, err = b.HandleRequest(context.Background(), roleRequest)
+	resp, err = b.HandleRequest(ctx, roleRequest)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to recreate role: resp:%#v\nerr:%v", resp, err)
 	}
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	resp, err = b.HandleRequest(ctx, loginRequest)
 	if err != nil || resp == nil || !resp.IsError() {
 		t.Errorf("bad: expected failed login due to changed AWS role ID: resp: %#v\nerr:%v", resp, err)
 	}
 
 	// and ensure a renew no longer works
-	resp, err = b.pathLoginRenew(context.Background(), renewReq, emptyLoginFd)
+	resp, err = b.pathLoginRenew(ctx, renewReq, emptyLoginFd)
 	if err == nil || (resp != nil && !resp.IsError()) {
 		t.Errorf("bad: expected failed renew due to changed AWS role ID: resp: %#v", resp)
 	}
@@ -1808,13 +1848,13 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	wildcardEntity.FriendlyName = "*"
 	roleData["bound_iam_principal_arn"] = []string{wildcardEntity.canonicalArn(), "arn:aws:iam::123456789012:role/DoesNotExist/Vault_Fake_Role*"}
 	roleRequest.Path = "role/" + wildcardRoleName
-	resp, err = b.HandleRequest(context.Background(), roleRequest)
+	resp, err = b.HandleRequest(ctx, roleRequest)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create wildcard roles: resp:%#v\nerr:%v", resp, err)
 	}
 
 	loginData["role"] = wildcardRoleName
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	resp, err = b.HandleRequest(ctx, loginRequest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1823,7 +1863,7 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	}
 	// and ensure we can renew
 	renewReq = generateRenewRequest(storage, resp.Auth)
-	resp, err = b.pathLoginRenew(context.Background(), renewReq, emptyLoginFd)
+	resp, err = b.pathLoginRenew(ctx, renewReq, emptyLoginFd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1834,7 +1874,17 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 		t.Fatalf("got error when renewing: %#v", *resp)
 	}
 	// ensure the cache is populated
-	cachedArn := b.getCachedUserId(resp.Auth.Metadata["client_user_id"])
+
+	clientUserIDRaw, ok := resp.Auth.InternalData["client_user_id"]
+	if !ok {
+		t.Errorf("client_user_id not found in response")
+	}
+	clientUserID, ok := clientUserIDRaw.(string)
+	if !ok {
+		t.Errorf("client_user_id is not a string: %#v", clientUserIDRaw)
+	}
+
+	cachedArn := b.getCachedUserId(clientUserID)
 	if cachedArn == "" {
 		t.Errorf("got empty ARN back from user ID cache; expected full arn")
 	}
@@ -1843,13 +1893,13 @@ func TestBackendAcc_LoginWithCallerIdentity(t *testing.T) {
 	period := 600 * time.Second
 	roleData["period"] = period.String()
 	roleRequest.Path = "role/" + testValidRoleName
-	resp, err = b.HandleRequest(context.Background(), roleRequest)
+	resp, err = b.HandleRequest(ctx, roleRequest)
 	if err != nil || (resp != nil && resp.IsError()) {
 		t.Fatalf("bad: failed to create wildcard role: resp:%#v\nerr:%v", resp, err)
 	}
 
 	loginData["role"] = testValidRoleName
-	resp, err = b.HandleRequest(context.Background(), loginRequest)
+	resp, err = b.HandleRequest(ctx, loginRequest)
 	if err != nil {
 		t.Fatal(err)
 	}

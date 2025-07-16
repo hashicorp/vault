@@ -1,0 +1,3 @@
+```release-note:improvement
+agent/config: Allow config directories to be specified with -config, and allow multiple -configs to be supplied.
+```

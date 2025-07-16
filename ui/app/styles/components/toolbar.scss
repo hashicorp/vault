@@ -1,56 +1,70 @@
+@use '../utils/box-shadow_variables';
+@use '../utils/color_variables';
+@use '../utils/mixins';
+@use '../utils/size_variables';
+@use '../core/buttons.scss';
+
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .tabs-container + .toolbar {
   border-top: 0;
 }
 
 .toolbar {
-  background-color: $ui-gray-010;
-  border: 1px solid $ui-gray-100;
-  border-bottom-color: $ui-gray-300;
-  border-top-color: $ui-gray-300;
+  background-color: color_variables.$ui-gray-010;
+  border: 1px solid color_variables.$ui-gray-100;
+  border-bottom-color: color_variables.$ui-gray-300;
+  border-top-color: color_variables.$ui-gray-300;
   position: relative;
 
   &::after {
-    background: linear-gradient(to right, $ui-gray-010, rgba($ui-gray-010, 0));
+    background: linear-gradient(
+      to right,
+      color_variables.$ui-gray-010,
+      rgba(color_variables.$ui-gray-010, 0)
+    );
     bottom: 0;
     content: '';
     position: absolute;
     right: 0;
     top: 0;
-    width: $spacing-xxs;
+    width: size_variables.$spacing-4;
     z-index: 2;
   }
 
   .input,
   .select {
-    min-width: 190px;
+    min-width: max-content;
   }
 }
 
 .toolbar-label {
-  padding: $spacing-xs;
-  color: $grey;
+  padding: size_variables.$spacing-8;
+  color: color_variables.$grey;
 }
 
 .toolbar-scroller {
   align-items: center;
   display: flex;
-  height: 44px;
+  height: 3rem;
   justify-content: space-between;
-  overflow-x: auto;
   width: 100%;
 
-  @include from($mobile) {
-    padding: 0 $spacing-xxs;
+  @include mixins.from(size_variables.$mobile) {
+    padding: 0 size_variables.$spacing-4;
   }
 
   &::-webkit-scrollbar {
-    border-bottom: $base-border;
-    height: $spacing-xxs;
+    border-bottom: box-shadow_variables.$base-border;
+    height: size_variables.$spacing-4;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: $ui-gray-300;
-    border-radius: $spacing-xxs;
+    background: color_variables.$ui-gray-300;
+    border-radius: size_variables.$spacing-4;
   }
 }
 
@@ -60,18 +74,22 @@
   display: flex;
   flex: 1;
   white-space: nowrap;
+  &:has(.hds-modal) {
+    // toolbar buttons that open/close a modal pass attrs to the modal content
+    white-space: wrap;
+  }
 }
 
 .toolbar-filters + .toolbar-actions {
-  @include until($mobile) {
-    border-left: $base-border;
-    margin-left: $spacing-xs;
-    padding-left: $spacing-xs;
+  @include mixins.until(size_variables.$mobile) {
+    border-left: box-shadow_variables.$base-border;
+    margin-left: size_variables.$spacing-8;
+    padding-left: size_variables.$spacing-8;
   }
 }
 
 .toolbar-actions {
-  @include from($mobile) {
+  @include mixins.from(size_variables.$mobile) {
     justify-content: flex-end;
   }
 }
@@ -81,13 +99,13 @@
   @extend .is-ghost;
   @extend .has-icon-right;
   border: 0;
-  color: $black;
-  transition: background-color $speed;
+  color: color_variables.$black;
+  transition: background-color size_variables.$speed;
 
   &:hover:not(.disabled) {
-    background-color: $ui-gray-100;
+    background-color: color_variables.$ui-gray-100;
     border: 0;
-    color: $blue;
+    color: color_variables.$blue;
   }
 
   &:active {
@@ -96,7 +114,7 @@
 
   &.popup-menu-trigger {
     height: 2.5rem;
-    padding: $size-10 $size-8;
+    padding: size_variables.$spacing-8 size_variables.$spacing-12;
   }
 
   &.disabled {
@@ -112,30 +130,22 @@
   }
 }
 a.disabled.toolbar-link {
-  color: $black;
-  background-color: $white;
+  color: color_variables.$black;
+  background-color: color_variables.$white;
   cursor: not-allowed;
   &:hover {
-    background-color: $ui-gray-100;
-    color: $blue;
+    background-color: color_variables.$ui-gray-100;
+    color: color_variables.$blue;
   }
 }
 
 .toolbar-separator {
-  border-right: $light-border;
+  border-right: box-shadow_variables.$light-border;
   height: 32px;
-  margin: 0 $spacing-xs;
+  margin: 0 size_variables.$spacing-8;
   width: 0;
 }
 
-.version-diff-toolbar {
-  display: flex;
-  align-items: baseline;
-  gap: $spacing-s;
-
-  .diff-status {
-    display: flex;
-    direction: rtl;
-    align-items: center;
-  }
+.segment-filter {
+  width: min-content;
 }

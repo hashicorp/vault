@@ -1,10 +1,15 @@
-import { Factory } from 'ember-cli-mirage';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { Factory } from 'miragejs';
 
 export default Factory.extend({
   base_url: 'okta.com',
   mount_accessor: '',
   name: '', // returned but cannot be set at this time
-  namespace_id: 'root',
+  namespace_path: 'admin/',
   org_name: 'dev-foobar',
   type: 'okta',
   username_template: '', // returned but cannot be set at this time

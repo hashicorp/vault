@@ -1,0 +1,5 @@
+```release-note:feature
+**Identity De-duplication**: Vault can now automatically resolve duplicate
+Entities and Groups by renaming them. This feature is disabled by default and
+can be enabled through the `force_identity_deduplication` activation flag.
+```

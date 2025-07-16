@@ -1,11 +1,16 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ApplicationSerializer from './application';
 
 export default class KeymgmtKeySerializer extends ApplicationSerializer {
   normalizeItems(payload) {
     if (!payload?.data) return payload;
     if (payload.data.keys && Array.isArray(payload.data.keys)) {
-      let data = payload.data.keys.map((key) => {
-        let model = payload.data.key_info[key];
+      const data = payload.data.keys.map((key) => {
+        const model = payload.data.key_info[key];
         model.id = key;
         return model;
       });

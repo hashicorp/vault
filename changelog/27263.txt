@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Do not show resultant-ACL banner when ancestor namespace grants wildcard access.
+```

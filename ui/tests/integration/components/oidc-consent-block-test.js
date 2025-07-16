@@ -1,8 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const redirectBase = 'https://hashicorp.com';
 
@@ -12,7 +18,7 @@ module('Integration | Component | oidc-consent-block', function (hooks) {
   test('it renders', async function (assert) {
     this.set('redirect', redirectBase);
     await render(hbs`
-      <OidcConsentBlock @redirect={{redirect}} @code="1234" />
+      <OidcConsentBlock @redirect={{this.redirect}} @code="1234" />
     `);
 
     assert.dom('[data-test-consent-title]').hasText('Consent', 'Title is correct on initial render');
@@ -22,8 +28,8 @@ module('Integration | Component | oidc-consent-block', function (hooks) {
         'In order to complete the login process, you must consent to Vault sharing your profile, email, address, and phone with the client.',
         'shows the correct copy for consent form'
       );
-    assert.dom('[data-test-edit-form-submit]').hasText('Yes', 'form button has correct submit text');
-    assert.dom('[data-test-cancel-button]').hasText('No', 'form button has correct cancel text');
+    assert.dom(GENERAL.submitButton).hasText('Yes', 'form button has correct submit text');
+    assert.dom(GENERAL.cancelButton).hasText('No', 'form button has correct cancel text');
   });
 
   test('it calls the success callback when user clicks "Yes"', async function (assert) {
@@ -32,7 +38,7 @@ module('Integration | Component | oidc-consent-block', function (hooks) {
     this.set('redirect', redirectBase);
 
     await render(hbs`
-      <OidcConsentBlock @redirect={{redirect}} @code="1234" @testRedirect={{successSpy}} @foo="make sure this doesn't get passed" />
+      <OidcConsentBlock @redirect={{this.redirect}} @code="1234" @testRedirect={{this.successSpy}} @foo="make sure this doesn't get passed" />
     `);
 
     assert.dom('[data-test-consent-title]').hasText('Consent', 'Title is correct on initial render');
@@ -43,7 +49,7 @@ module('Integration | Component | oidc-consent-block', function (hooks) {
         'In order to complete the login process, you must consent to Vault sharing your profile, email, address, and phone with the client.',
         'shows the correct copy for consent form'
       );
-    await click('[data-test-edit-form-submit]');
+    await click(GENERAL.submitButton);
     assert.ok(spy.calledWith(`${redirectBase}/?code=1234`), 'Redirects to correct route');
   });
 
@@ -53,7 +59,7 @@ module('Integration | Component | oidc-consent-block', function (hooks) {
     this.set('redirect', redirectBase);
 
     await render(hbs`
-      <OidcConsentBlock @redirect={{redirectBase}} @code="1234" @testRedirect={{successSpy}} />
+      <OidcConsentBlock @redirect={{this.redirectBase}} @code="1234" @testRedirect={{this.successSpy}} />
     `);
 
     assert.dom('[data-test-consent-title]').hasText('Consent', 'Title is correct on initial render');
@@ -64,7 +70,7 @@ module('Integration | Component | oidc-consent-block', function (hooks) {
         'In order to complete the login process, you must consent to Vault sharing your profile, email, address, and phone with the client.',
         'shows the correct copy for consent form'
       );
-    await click('[data-test-cancel-button]');
+    await click(GENERAL.cancelButton);
     assert.dom('[data-test-consent-title]').hasText('Consent Not Given', 'Title changes to not given');
     assert.dom('[data-test-consent-form]').doesNotExist('Consent form is hidden');
 
@@ -79,11 +85,11 @@ module('Integration | Component | oidc-consent-block', function (hooks) {
 
     await render(hbs`
       <OidcConsentBlock
-        @redirect={{redirect}}
-        @code={{code}}
+        @redirect={{this.redirect}}
+        @code={{this.code}}
         @state="foo"
         @foo="make sure this doesn't get passed"
-        @testRedirect={{successSpy}}
+        @testRedirect={{this.successSpy}}
       />
     `);
 
@@ -95,7 +101,7 @@ module('Integration | Component | oidc-consent-block', function (hooks) {
         'In order to complete the login process, you must consent to Vault sharing your profile, email, address, and phone with the client.',
         'shows the correct copy for consent form'
       );
-    await click('[data-test-edit-form-submit]');
+    await click(GENERAL.submitButton);
     assert.ok(
       spy.calledWith(`${redirectBase}/?code=unescaped%3Cstring&state=foo`),
       'Redirects to correct route, with escaped values and without superflous params'

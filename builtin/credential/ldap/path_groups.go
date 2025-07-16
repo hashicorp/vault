@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package ldap
 
 import (
@@ -13,22 +16,33 @@ func pathGroupsList(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "groups/?$",
 
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixLDAP,
+			OperationSuffix: "groups",
+			Navigation:      true,
+			ItemType:        "Group",
+		},
+
 		Callbacks: map[logical.Operation]framework.OperationFunc{
 			logical.ListOperation: b.pathGroupList,
 		},
 
 		HelpSynopsis:    pathGroupHelpSyn,
 		HelpDescription: pathGroupHelpDesc,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Navigation: true,
-			ItemType:   "Group",
-		},
 	}
 }
 
 func pathGroups(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: `groups/(?P<name>.+)`,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixLDAP,
+			OperationSuffix: "group",
+			Action:          "Create",
+			ItemType:        "Group",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -38,6 +52,9 @@ func pathGroups(b *backend) *framework.Path {
 			"policies": {
 				Type:        framework.TypeCommaStringSlice,
 				Description: "Comma-separated list of policies associated to the group.",
+				DisplayAttrs: &framework.DisplayAttributes{
+					Description: "A list of policies associated to the group.",
+				},
 			},
 		},
 
@@ -49,10 +66,6 @@ func pathGroups(b *backend) *framework.Path {
 
 		HelpSynopsis:    pathGroupHelpSyn,
 		HelpDescription: pathGroupHelpDesc,
-		DisplayAttrs: &framework.DisplayAttributes{
-			Action:   "Create",
-			ItemType: "Group",
-		},
 	}
 }
 
@@ -74,7 +87,20 @@ func (b *backend) Group(ctx context.Context, s logical.Storage, n string) (*Grou
 }
 
 func (b *backend) pathGroupDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete(ctx, "group/"+d.Get("name").(string))
+	groupname := d.Get("name").(string)
+
+	cfg, err := b.Config(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return logical.ErrorResponse("ldap backend not configured"), nil
+	}
+	if !*cfg.CaseSensitiveNames {
+		groupname = strings.ToLower(groupname)
+	}
+
+	err = req.Storage.Delete(ctx, "group/"+groupname)
 	if err != nil {
 		return nil, err
 	}

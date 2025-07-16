@@ -1,0 +1,162 @@
+---
+layout: docs
+page_title: Configure HA for Vault seals
+description: >-
+  Customize the seal stanza to support multiple seals in high availability
+  deployments.
+---
+
+# Configure high availability for Vault seals
+
+@include 'alerts/enterprise-only.mdx'
+
+[Seal High Availability](/vault/docs/concepts/seal#seal-high-availability-enterprise)
+provides the means to configure at least two auto-seals (and no more than three)
+in order to have resilience against outage of a seal service or mechanism. 
+Shamir seals cannot be used in a Seal HA setup.
+
+Using Seal HA involves configuring extra seals in Vault's server configuration file
+and restarting Vault or triggering a reload of it's configuration via sending
+it the SIGHUP signal.
+
+Before using Seal HA, one must have upgraded to Vault 1.16 or higher.  Seal HA is enabled
+by adding the following line to Vault's configuration:
+
+```
+enable_multiseal = true
+```
+
+## Adding and Removing Seals
+
+In order to use Seal HA, there must be more than one defined [`seal` stanza](/vault/docs/configuration/seal)
+in Vault's configuration.
+
+Seal HA adds two fields to these stanzas, `name`, and `priority`:
+
+```hcl
+seal [TYPE] {
+  name = "seal_name"
+  priority = "1"
+  # ...
+}
+```
+
+Name is optional, and if not specified is set to the type of the seal.  Names
+must be unique.  If using two seals of the same type name must be specified.
+Internally, name is used to disambiguate seal wrapped values in some cases,
+so renaming seals should be avoided if possible.  Many seal types can use
+environment variables instead of configuration lines to provide sensitive
+values.  Because there may be two seals of the same type, one must
+disambiguate the environment variables used.  To do this, in HA setups,
+append an underscore followed by the seal's configured name (matching its
+case) to any environment variable names.  For example, in the sample
+configuration below, the AWS access key could be provided as `ACCESS_KEY_aws_east`.
+Keep in mind that the seal name must be valid in an environment variable name to use it.
+
+Priority is mandatory if more than one seal is specified.  Priority tells Vault
+the order in which to try seals during unseal (least priority first),
+in the case more than one seal can unwrap a seal wrapped value, the order
+in which to attempt decryption, and which order to attempt to source entropy
+for entropy augmentation.  This can be useful if your seals have different
+performance or cost characteristics.
+
+Here is a hypothetical configuration for an [AWS seal](/vault/docs/configuration/seal/awskms)
+compatible with Seal HA:
+
+```hcl
+seal "awskms" {
+  name       = "aws_east"
+  priority   = "1"
+
+  region     = "us-east-1"
+  access_key = "AKIAIOSFODNN7EXAMPLE"
+  secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+  kms_key_id = "19ec80b0-dfdd-4d97-8164-c6examplekey"
+}
+```
+
+All configured, healthy seals are used to seal wrap values.  This means that
+for every write of a seal wrapped value or CSP, an encryption is requested
+from every configured seal, and the results are stored in the storage entry.
+When seals are unhealthy, Vault keeps track of values that could not be fully
+wrapped and will re-wrap them once seals become healthy again. Note, however,
+that it is not possible to rotate the data encryption key nor the recovery keys
+while seals are unavailable. Disabled seals can still be used for decryption
+of wrapped values, but will be avoided when encrypting values.
+
+When reading a CSP or seal wrapped value, Vault will try to decrypt with the
+highest priority available seal, and then try other seals on failure.
+
+To add an additional seal, simply add another seal stanza, specifying priority
+and optionally name, and restart Vault.
+
+To remove a seal, remove the corresponding seal stanza and restart.  There must
+be at least one seal remaining.
+
+It is highly recommended to take a snapshot of your Vault storage before applying
+any seal configuration change.
+
+Once Vault unseals with the new seal configuration, it will be available to process
+traffic even as re-wrapping proceeds.
+
+Here is a partial snippet of a two seal HA setup, using an AWS KMS seal as
+the primary (highest priority) seal, and a Azure KMS seal as well:
+
+```
+seal "awskms" {
+  name = "AWS"
+  priority = "1"
+  # ...
+}
+
+seal "azurekeyvault" {
+  name = "Azure"
+  priority = "2"
+  # ...
+}
+```
+
+### Safety checks
+
+Vault will reject seal configuration changes in the following circumstances,
+as a safety mechanism:
+
+* The old seal configuration and new seal configuration do not share one seal
+in common.  This is necessary as there would be no seal capable of decrypting
+CSPs or seal wrapped values previously written.
+
+* Seal re-wrapping is in progress.  Vault must be in a clean, fully wrapped state
+on the previous configuration before attempting a configuration change.
+
+* More than one seal is being added or removed at a time.
+
+In rare circumstances it may become impossible to update seal configuration
+without triggering the safety checks. If this happens, it is possible to bypass
+the checks by setting the environment variable `VAULT_SEAL_REWRAP_SAFETY` to
+`disable`.
+
+~> **Warning**: The use of environment variable `VAULT_SEAL_REWRAP_SAFETY`
+should be considered as a last resort.
+
+
+### Interaction with Shamir Seals
+
+Seal HA is only supported with auto seal mechanisms.  To use Seal HA when
+running a Shamir seal, first use the traditional
+[seal migration](/vault/docs/concepts/seal#seal-migration) mechanism to migrate to
+an auto seal of your choice.  Afterwards you may follow the above
+instructions to add a second auto seal.
+
+Correspondingly, to migrate back to a shamir seal, first use the above
+instructions to move to a single auto seal, and use the traditional
+migration method to migrate back to a Shamir seal.
+
+### Removing Seal HA
+
+Migrating back to a single seal may result in data loss if an operator does not 
+use the HA seal feature. To migrate back to a single seal:
+
+1. Perform a [seal migration](/vault/docs/concepts/seal#seal-migration) as described.
+2. Monitor [`sys/sealwrap/rewrap`](/vault/api-docs/system/sealwrap-rewrap) until the API returns `fully_wrapped=true`.
+3. Remove `enable_multiseal` from all Vault configuration files in the cluster.
+4. Restart Vault.

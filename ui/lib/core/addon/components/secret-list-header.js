@@ -1,29 +1,34 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
+import engineDisplayData from 'vault/helpers/engines-display-data';
+import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 
 /**
  * @module SecretListHeader
  * SecretListHeader component is breadcrumb, title with icon and menu with tabs component.
  *
+ * Example is wrapped in back ticks because this component relies on routing and cannot render an isolated sample, so just rendering template sample
  * @example
- * ```js
- * <SecretListHeader
-   @model={{this.model}}
-   @backendCrumb={{hash
-    label=this.model.id
-    text=this.model.id
-    path="vault.cluster.secrets.backend.list-root"
-    model=this.model.id
-   }}
-  />
  * ```
+ * <SecretListHeader @model={{this.model}} />
+ * ```
+ *
  * @param {object} model - Model used to pull information about icon and title and backend type for navigation.
- * @param {string} [baseKey] - Provided for navigation on the breadcrumbs.
- * @param {object} [backendCrumb] - Includes label, text, path and model ID.
- * @param {boolean} [isEngine=false] - Changes link type if the component is being used inside an Ember engine.
+ * @param {boolean} [isConfigure=false] - Boolean to determine if the configure tab should be shown.
  */
 
 export default class SecretListHeader extends Component {
   get isKV() {
     return ['kv', 'generic'].includes(this.args.model.engineType);
+  }
+
+  get showListTab() {
+    // only show the list tab if the engine is not a configuration only engine and the UI supports it
+    const { engineType } = this.args.model;
+    return supportedSecretBackends().includes(engineType) && !engineDisplayData(engineType)?.isOnlyMountable;
   }
 }

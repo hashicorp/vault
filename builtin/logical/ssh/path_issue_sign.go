@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package ssh
 
 import (
@@ -17,6 +20,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/builtin/logical/ssh/managed_key"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -98,17 +102,9 @@ func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logic
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	privateKeyEntry, err := caKey(ctx, req.Storage, caPrivateKey)
+	signer, err := b.getCASigner(ctx, req.Storage)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read CA private key: %w", err)
-	}
-	if privateKeyEntry == nil || privateKeyEntry.Key == "" {
-		return nil, errors.New("failed to read CA private key")
-	}
-
-	signer, err := ssh.ParsePrivateKey([]byte(privateKeyEntry.Key))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse stored CA private key: %w", err)
+		return nil, fmt.Errorf("error creating signer: %w", err)
 	}
 
 	cBundle := creationBundle{
@@ -176,24 +172,29 @@ func (b *backend) calculateValidPrincipals(data *framework.FieldData, req *logic
 	parsedPrincipals := strutil.RemoveDuplicates(strutil.ParseStringSlice(validPrincipals, ","), false)
 	// Build list of allowed Principals from template and static principalsAllowedByRole
 	var allowedPrincipals []string
-	for _, principal := range strutil.RemoveDuplicates(strutil.ParseStringSlice(principalsAllowedByRole, ","), false) {
-		if enableTemplating {
-			rendered, err := b.renderPrincipal(principal, req)
-			if err != nil {
-				return nil, err
-			}
-			// Template returned a principal
-			allowedPrincipals = append(allowedPrincipals, rendered)
-		} else {
-			// Static principal
-			allowedPrincipals = append(allowedPrincipals, principal)
+	if enableTemplating {
+		rendered, err := b.renderPrincipal(principalsAllowedByRole, req)
+		if err != nil {
+			return nil, err
 		}
+		allowedPrincipals = strutil.RemoveDuplicates(strutil.ParseStringSlice(rendered, ","), false)
+	} else {
+		allowedPrincipals = strutil.RemoveDuplicates(strutil.ParseStringSlice(principalsAllowedByRole, ","), false)
+	}
+
+	if len(parsedPrincipals) == 0 && defaultPrincipal != "" {
+		// defaultPrincipal will either be the defaultUser or a rendered defaultUserTemplate
+		parsedPrincipals = []string{defaultPrincipal}
 	}
 
 	switch {
 	case len(parsedPrincipals) == 0:
-		// There is nothing to process
-		return nil, nil
+		if role.AllowEmptyPrincipals {
+			// There is nothing to process
+			return nil, nil
+		} else {
+			return nil, fmt.Errorf("empty valid principals not allowed by role")
+		}
 	case len(allowedPrincipals) == 0:
 		// User has requested principals to be set, but role is not configured
 		// with any principals
@@ -502,7 +503,7 @@ func (b *creationBundle) sign() (retCert *ssh.Certificate, retErr error) {
 	// prepare certificate for signing
 	nonce := make([]byte, 32)
 	if _, err := io.ReadFull(rand.Reader, nonce); err != nil {
-		return nil, fmt.Errorf("failed to generate signed SSH key: error generating random nonce")
+		return nil, fmt.Errorf("failed to generate signed SSH key: error generating random nonce: %w", err)
 	}
 	certificate := &ssh.Certificate{
 		Serial:          serialNumber.Uint64(),
@@ -559,4 +560,40 @@ func createKeyTypeToMapKey(keyType string, keyBits int) map[string][]string {
 	}
 
 	return keyTypeToMapKey
+}
+
+func (b *backend) getCASigner(ctx context.Context, s logical.Storage) (ssh.Signer, error) {
+	var signer ssh.Signer
+
+	storedKey, err := readStoredKey(ctx, s, caPrivateKey)
+	if err != nil {
+		return nil, fmt.Errorf("error reading stored key: %w", err)
+	}
+
+	if storedKey != nil {
+		if storedKey.Key == "" {
+			return nil, errors.New("stored private key was empty")
+		}
+
+		signer, err = ssh.ParsePrivateKey([]byte(storedKey.Key))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse stored CA private key: %w", err)
+		}
+	} else {
+		managedKey, err := readManagedKey(ctx, s)
+		if err != nil {
+			return nil, fmt.Errorf("error reading managed key: %w", err)
+		}
+
+		if managedKey == nil {
+			return nil, errors.New("no keys configured")
+		}
+
+		signer, err = managed_key.GetManagedKeyInfo(ctx, b, managedKey.KeyId)
+		if err != nil {
+			return nil, fmt.Errorf("error getting managed key info: %w", err)
+		}
+	}
+
+	return signer, nil
 }

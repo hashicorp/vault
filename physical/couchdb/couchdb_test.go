@@ -1,18 +1,22 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package couchdb
 
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
 
 	log "github.com/hashicorp/go-hclog"
-	"github.com/hashicorp/vault/helper/testhelpers/docker"
+	"github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/hashicorp/vault/sdk/helper/logging"
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -75,6 +79,13 @@ func (c couchDB) URL() *url.URL {
 var _ docker.ServiceConfig = &couchDB{}
 
 func prepareCouchdbDBTestContainer(t *testing.T) (func(), *couchDB) {
+	// ARM64 is only supported on CouchDB 2 and above. If we update
+	// our image and support to 2 and above, we can unskip these:
+	// https://hub.docker.com/r/arm64v8/couchdb/
+	if strings.Contains(runtime.GOARCH, "arm") {
+		t.Skip("Skipping, as CouchDB 1.6 is not supported on ARM architectures")
+	}
+
 	// If environment variable is set, assume caller wants to target a real
 	// DynamoDB.
 	if os.Getenv("COUCHDB_ENDPOINT") != "" {
@@ -86,7 +97,8 @@ func prepareCouchdbDBTestContainer(t *testing.T) (func(), *couchDB) {
 	}
 
 	runner, err := docker.NewServiceRunner(docker.RunOptions{
-		ImageRepo:       "couchdb",
+		ContainerName:   "couchdb",
+		ImageRepo:       "docker.mirror.hashicorp.services/library/couchdb",
 		ImageTag:        "1.6",
 		Ports:           []string{"5984/tcp"},
 		DoNotAutoRemove: true,
@@ -133,7 +145,7 @@ func setupCouchDB(ctx context.Context, host string, port int) (docker.ServiceCon
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusCreated {
-			bs, _ := ioutil.ReadAll(resp.Body)
+			bs, _ := io.ReadAll(resp.Body)
 			return nil, fmt.Errorf("failed to create database: %s %s\n", resp.Status, string(bs))
 		}
 	}
@@ -152,7 +164,7 @@ func setupCouchDB(ctx context.Context, host string, port int) (docker.ServiceCon
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
-			bs, _ := ioutil.ReadAll(resp.Body)
+			bs, _ := io.ReadAll(resp.Body)
 			return nil, fmt.Errorf("Failed to create admin user: %s %s\n", resp.Status, string(bs))
 		}
 	}

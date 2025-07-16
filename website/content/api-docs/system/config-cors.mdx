@@ -8,20 +8,22 @@ description: >-
 
 # `/sys/config/cors`
 
+@include 'alerts/restricted-root.mdx'
+
 The `/sys/config/cors` endpoint is used to configure CORS settings.
 
 - **`sudo` required** – All CORS endpoints require `sudo` capability in
   addition to any path-specific capabilities.
 
-## Read CORS Settings
+## Read CORS settings
 
-This endpoint returns the current CORS configuration.
+This endpoint returns the current CORS configuration. 
 
 | Method | Path               |
 | :----- | :----------------- |
 | `GET`  | `/sys/config/cors` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -29,7 +31,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/config/cors
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {
@@ -48,10 +50,19 @@ $ curl \
 }
 ```
 
-## Configure CORS Settings
+## Configure CORS settings
 
 This endpoint allows configuring the origins that are permitted to make
 cross-origin requests, as well as headers that are allowed on cross-origin requests.
+
+<EnterpriseAlert>
+
+The CORS configuration endpoint does not apply changes across clusters. If you
+use performance replication, you must invoke the configuration endpoint on each
+secondary cluster independently to mirror the primary cluster CORS
+configuration.
+
+</EnterpriseAlert>
 
 | Method | Path               |
 | :----- | :----------------- |
@@ -63,7 +74,7 @@ cross-origin requests, as well as headers that are allowed on cross-origin reque
 
 - `allowed_headers` `(string or string array: "" or [])` – A comma-delimited string or array of strings specifying headers that are permitted to be on cross-origin requests. Headers set via this parameter will be appended to the list of headers that Vault allows by default.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -72,7 +83,7 @@ cross-origin requests, as well as headers that are allowed on cross-origin reque
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -82,7 +93,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/config/cors
 ```
 
-## Delete CORS Settings
+## Delete CORS settings
 
 This endpoint removes any CORS configuration.
 
@@ -90,7 +101,7 @@ This endpoint removes any CORS configuration.
 | :------- | :----------------- |
 | `DELETE` | `/sys/config/cors` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \

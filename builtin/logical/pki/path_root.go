@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -12,29 +15,51 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 	"time"
 
-	"golang.org/x/crypto/ed25519"
-
-	"github.com/hashicorp/vault/sdk/helper/certutil"
-
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/parsing"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/crypto/ed25519"
 )
 
+const intCaTruncatationWarning = "the signed intermediary CA certificate's notAfter was truncated to the issuer's notAfter"
+
 func pathGenerateRoot(b *backend) *framework.Path {
-	return buildPathGenerateRoot(b, "root/generate/"+framework.GenericNameRegex("exported"))
+	pattern := "root/generate/" + framework.GenericNameRegex("exported")
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "generate",
+		OperationSuffix: "root",
+	}
+
+	return buildPathGenerateRoot(b, pattern, displayAttrs)
 }
 
 func pathDeleteRoot(b *backend) *framework.Path {
 	ret := &framework.Path{
 		Pattern: "root",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationSuffix: "root",
+		},
+
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.DeleteOperation: &framework.PathOperation{
 				Callback: b.pathCADeleteRoot,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+					}},
+				},
 				// Read more about why these flags are set in backend.go
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
@@ -55,7 +80,7 @@ func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, _ 
 	defer b.issuersLock.Unlock()
 
 	sc := b.makeStorageContext(ctx, req.Storage)
-	if !b.useLegacyBundleCaStorage() {
+	if !b.UseLegacyBundleCaStorage() {
 		issuers, err := sc.listIssuers()
 		if err != nil {
 			return nil, err
@@ -80,8 +105,12 @@ func (b *backend) pathCADeleteRoot(ctx context.Context, req *logical.Request, _ 
 		}
 	}
 
-	// Delete legacy CA bundle.
+	// Delete legacy CA bundle and its backup, if any.
 	if err := req.Storage.Delete(ctx, legacyCertBundlePath); err != nil {
+		return nil, err
+	}
+
+	if err := req.Storage.Delete(ctx, legacyCertBundleBackupPath); err != nil {
 		return nil, err
 	}
 
@@ -105,7 +134,7 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 
 	var err error
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not create root CA until migration has completed"), nil
 	}
 
@@ -168,6 +197,13 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		},
 	}
 
+	if keyUsages, ok := data.GetOk("key_usage"); ok {
+		err = validateCaKeyUsages(keyUsages.([]string))
+		if err != nil {
+			resp.AddWarning(fmt.Sprintf("Invalid key usage will be ignored: %v", err.Error()))
+		}
+	}
+
 	if len(parsedBundle.Certificate.RawSubject) <= 2 {
 		// Strictly a subject is a SEQUENCE of SETs of SEQUENCES.
 		//
@@ -181,11 +217,18 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 		resp.AddWarning("This issuer certificate was generated without a Subject; this makes it likely that issuing leaf certs with this certificate will cause TLS validation libraries to reject this certificate.")
 	}
 
-	if len(parsedBundle.Certificate.OCSPServer) == 0 && len(parsedBundle.Certificate.IssuingCertificateURL) == 0 && len(parsedBundle.Certificate.CRLDistributionPoints) == 0 {
+	deltaCrlDistributionPoints, err := certutil.ParseDeltaCRLExtension(parsedBundle.Certificate)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("error: invalid delta crl extension: %v", err.Error())), nil
+	}
+	if len(parsedBundle.Certificate.OCSPServer) == 0 && len(parsedBundle.Certificate.IssuingCertificateURL) == 0 && len(parsedBundle.Certificate.CRLDistributionPoints) == 0 && len(deltaCrlDistributionPoints) == 0 {
 		// If the operator hasn't configured any of the URLs prior to
 		// generating this issuer, we should add a warning to the response,
 		// informing them they might want to do so prior to issuing leaves.
 		resp.AddWarning("This mount hasn't configured any authority information access (AIA) fields; this may make it harder for systems to find missing certificates in the chain or to validate revocation status of certificates. Consider updating /config/urls or the newly generated issuer with this information.")
+	}
+	if len(deltaCrlDistributionPoints) > 0 && len(parsedBundle.Certificate.CRLDistributionPoints) == 0 {
+		resp.AddWarning("This mount has configured Delta CRL distribution points are set but no CRL Distribution Points.")
 	}
 
 	switch format {
@@ -253,30 +296,37 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 	// RevocationSigAlg unconditionally on roots now.
 	myIssuer.RevocationSigAlg = parsedBundle.Certificate.SignatureAlgorithm
 	if err := sc.writeIssuer(myIssuer); err != nil {
-		return nil, fmt.Errorf("unable to store PSS-updated issuer: %v", err)
+		return nil, fmt.Errorf("unable to store PSS-updated issuer: %w", err)
 	}
 
 	// Also store it as just the certificate identified by serial number, so it
 	// can be revoked
-	key := "certs/" + normalizeSerial(cb.SerialNumber)
-	certsCounted := b.certsCounted.Load()
-	err = req.Storage.Put(ctx, &logical.StorageEntry{
-		Key:   key,
-		Value: parsedBundle.CertificateBytes,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("unable to store certificate locally: %w", err)
-	}
-	b.incrementTotalCertificatesCount(certsCounted, key)
-
-	// Build a fresh CRL
-	err = b.crlBuilder.rebuild(ctx, b, req, true)
+	err = issuing.StoreCertificate(ctx, req.Storage, b.GetCertificateCounter(), parsedBundle)
 	if err != nil {
 		return nil, err
 	}
 
+	// Build a fresh CRL
+	warnings, err = b.CrlBuilder().Rebuild(sc, true)
+	if err != nil {
+		return nil, err
+	}
+	for index, warning := range warnings {
+		resp.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
+	}
+
 	if parsedBundle.Certificate.MaxPathLen == 0 {
 		resp.AddWarning("Max path length of the generated certificate is zero. This certificate cannot be used to issue intermediate CA certificates.")
+	}
+
+	// Check whether we need to update our default issuer configuration.
+	config, err := sc.getIssuersConfig()
+	if err != nil {
+		resp.AddWarning("Unable to fetch default issuers configuration to update default issuer if necessary: " + err.Error())
+	} else if config.DefaultFollowsLatestIssuer {
+		if err := sc.updateDefaultIssuerId(myIssuer.ID); err != nil {
+			resp.AddWarning("Unable to update this new root as the default issuer: " + err.Error())
+		}
 	}
 
 	resp = addWarnings(resp, warnings)
@@ -287,19 +337,17 @@ func (b *backend) pathCAGenerateRoot(ctx context.Context, req *logical.Request, 
 func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
 	var err error
 
-	issuerName := getIssuerRef(data)
+	issuerName := GetIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
 
 	format := getFormat(data)
 	if format == "" {
-		return logical.ErrorResponse(
-			`The "format" path parameter must be "pem" or "der"`,
-		), nil
+		return logical.ErrorResponse(`The "format" path parameter must be "pem", "der" or "pem_bundle"`), nil
 	}
 
-	role := &roleEntry{
+	role := &issuing.RoleEntry{
 		OU:                        data.Get("ou").([]string),
 		Organization:              data.Get("organization").([]string),
 		Country:                   data.Get("country").([]string),
@@ -322,6 +370,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		NotAfter:                  data.Get("not_after").(string),
 		NotBeforeDuration:         time.Duration(data.Get("not_before_duration").(int)) * time.Second,
 		CNValidations:             []string{"disabled"},
+		KeyUsage:                  data.Get("key_usage").([]string),
 	}
 	*role.AllowWildcardCertificates = true
 
@@ -331,7 +380,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 
 	var caErr error
 	sc := b.makeStorageContext(ctx, req.Storage)
-	signingBundle, caErr := sc.fetchCAInfo(issuerName, IssuanceUsage)
+	signingBundle, issuerId, caErr := sc.fetchCAInfoWithIssuer(issuerName, issuing.IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -343,10 +392,16 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		}
 	}
 
-	// Since we are signing an intermediate, we explicitly want to override
-	// the leaf NotAfterBehavior to permit issuing intermediates longer than
-	// the life of this issuer.
-	signingBundle.LeafNotAfterBehavior = certutil.PermitNotAfterBehavior
+	warnAboutTruncate := false
+	if enforceLeafNotAfter := data.Get("enforce_leaf_not_after_behavior").(bool); !enforceLeafNotAfter {
+		// Since we are signing an intermediate, we will by default truncate the
+		// signed intermediary in order to generate a valid intermediary chain. This
+		// was changed in 1.17.x as the default prior was PermitNotAfterBehavior
+		if signingBundle.LeafNotAfterBehavior != certutil.AlwaysEnforceErr {
+			warnAboutTruncate = true
+			signingBundle.LeafNotAfterBehavior = certutil.TruncateNotAfterBehavior
+		}
+	}
 
 	useCSRValues := data.Get("use_csr_values").(bool)
 
@@ -361,7 +416,7 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		apiData: data,
 		role:    role,
 	}
-	parsedBundle, warnings, err := signCert(b, input, signingBundle, true, useCSRValues)
+	parsedBundle, warnings, err := signCert(b.System(), input, signingBundle, true, useCSRValues)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -372,10 +427,36 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		}
 	}
 
-	if err := parsedBundle.Verify(); err != nil {
+	if err := issuing.VerifyCertificate(sc.GetContext(), sc.GetStorage(), issuerId, parsedBundle); err != nil {
 		return nil, fmt.Errorf("verification of parsed bundle failed: %w", err)
 	}
 
+	resp, err := signIntermediateResponse(signingBundle, parsedBundle, format, warnings)
+	if err != nil {
+		return nil, err
+	}
+
+	err = issuing.StoreCertificate(ctx, req.Storage, b.GetCertificateCounter(), parsedBundle)
+	if err != nil {
+		return nil, err
+	}
+
+	if warnAboutTruncate &&
+		signingBundle.Certificate.NotAfter.Equal(parsedBundle.Certificate.NotAfter) {
+		resp.AddWarning(intCaTruncatationWarning)
+	}
+
+	if keyUsages, ok := data.GetOk("key_usage"); ok {
+		err = validateCaKeyUsages(keyUsages.([]string))
+		if err != nil {
+			resp.AddWarning(fmt.Sprintf("Invalid key usage: %v", err.Error()))
+		}
+	}
+
+	return resp, nil
+}
+
+func signIntermediateResponse(signingBundle *certutil.CAInfoBundle, parsedBundle *certutil.ParsedCertBundle, format string, warnings []string) (*logical.Response, error) {
 	signingCB, err := signingBundle.ToCertBundle()
 	if err != nil {
 		return nil, fmt.Errorf("error converting raw signing bundle to cert bundle: %w", err)
@@ -410,11 +491,18 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		resp.AddWarning("This issuer certificate was generated without a Subject; this makes it likely that issuing leaf certs with this certificate will cause TLS validation libraries to reject this certificate.")
 	}
 
-	if len(parsedBundle.Certificate.OCSPServer) == 0 && len(parsedBundle.Certificate.IssuingCertificateURL) == 0 && len(parsedBundle.Certificate.CRLDistributionPoints) == 0 {
+	deltaCrlDistributionPoints, err := certutil.ParseDeltaCRLExtension(parsedBundle.Certificate)
+	if err != nil {
+		return logical.ErrorResponse(fmt.Sprintf("invalid delta crl extension on generated certificate: %v", err.Error())), nil
+	}
+	if len(parsedBundle.Certificate.OCSPServer) == 0 && len(parsedBundle.Certificate.IssuingCertificateURL) == 0 && len(parsedBundle.Certificate.CRLDistributionPoints) == 0 && len(deltaCrlDistributionPoints) == 0 {
 		// If the operator hasn't configured any of the URLs prior to
 		// generating this issuer, we should add a warning to the response,
 		// informing them they might want to do so prior to issuing leaves.
 		resp.AddWarning("This mount hasn't configured any authority information access (AIA) fields; this may make it harder for systems to find missing certificates in the chain or to validate revocation status of certificates. Consider updating /config/urls or the newly generated issuer with this information.")
+	}
+	if len(deltaCrlDistributionPoints) > 0 && len(parsedBundle.Certificate.CRLDistributionPoints) == 0 {
+		resp.AddWarning("This mount has configured delta CRL distribution points, but not CRL distribution points.")
 	}
 
 	caChain := append([]string{cb.Certificate}, cb.CAChain...)
@@ -445,40 +533,22 @@ func (b *backend) pathIssuerSignIntermediate(ctx context.Context, req *logical.R
 		return nil, fmt.Errorf("unsupported format argument: %s", format)
 	}
 
-	key := "certs/" + normalizeSerial(cb.SerialNumber)
-	certsCounted := b.certsCounted.Load()
-	err = req.Storage.Put(ctx, &logical.StorageEntry{
-		Key:   key,
-		Value: parsedBundle.CertificateBytes,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("unable to store certificate locally: %w", err)
-	}
-	b.incrementTotalCertificatesCount(certsCounted, key)
-
 	if parsedBundle.Certificate.MaxPathLen == 0 {
 		resp.AddWarning("Max path length of the signed certificate is zero. This certificate cannot be used to issue intermediate CA certificates.")
 	}
 
 	resp = addWarnings(resp, warnings)
-
 	return resp, nil
 }
 
 func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	var err error
-
-	issuerName := getIssuerRef(data)
+	issuerName := GetIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
 
 	certPem := data.Get("certificate").(string)
-	block, _ := pem.Decode([]byte(certPem))
-	if block == nil || len(block.Bytes) == 0 {
-		return logical.ErrorResponse("certificate could not be PEM-decoded"), nil
-	}
-	certs, err := x509.ParseCertificates(block.Bytes)
+	certs, err := parsing.ParseCertificatesFromString(certPem)
 	if err != nil {
 		return logical.ErrorResponse(fmt.Sprintf("error parsing certificate: %s", err)), nil
 	}
@@ -494,9 +564,8 @@ func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Req
 		return logical.ErrorResponse("given certificate is not self-issued"), nil
 	}
 
-	var caErr error
 	sc := b.makeStorageContext(ctx, req.Storage)
-	signingBundle, caErr := sc.fetchCAInfo(issuerName, IssuanceUsage)
+	signingBundle, caErr := sc.fetchCAInfo(issuerName, issuing.IssuanceUsage)
 	if caErr != nil {
 		switch caErr.(type) {
 		case errutil.UserError:
@@ -519,6 +588,15 @@ func (b *backend) pathIssuerSignSelfIssued(ctx context.Context, req *logical.Req
 	cert.IssuingCertificateURL = urls.IssuingCertificates
 	cert.CRLDistributionPoints = urls.CRLDistributionPoints
 	cert.OCSPServer = urls.OCSPServers
+	bundleData := &certutil.CreationBundle{
+		Params:        &certutil.CreationParameters{URLs: urls},
+		SigningBundle: nil,
+		CSR:           nil,
+	}
+	err = certutil.AddDeltaCRLExtension(bundleData, cert)
+	if err != nil {
+		return nil, err
+	}
 
 	// If the requested signature algorithm isn't the same as the signing certificate, and
 	// the user has requested a cross-algorithm signature, reset the template's signing algorithm
@@ -588,6 +666,24 @@ func publicKeyType(pub crypto.PublicKey) (pubType x509.PublicKeyAlgorithm, sigAl
 		err = errors.New("x509: only RSA, ECDSA and Ed25519 keys supported")
 	}
 	return
+}
+
+func validateCaKeyUsages(keyUsages []string) error {
+	invalidKeyUsages := []string{}
+	for _, usage := range keyUsages {
+		cleanUsage := strings.ToLower(strings.TrimSpace(usage))
+		switch cleanUsage {
+		case "crlsign", "certsign", "digitalsignature":
+		case "contentcommitment", "keyencipherment", "dataencipherment", "keyagreement", "encipheronly", "decipheronly":
+			invalidKeyUsages = append(invalidKeyUsages, fmt.Sprintf("key usage %s is only valid for non-Ca certs", usage))
+		default:
+			invalidKeyUsages = append(invalidKeyUsages, fmt.Sprintf("unrecognized key usage %s", usage))
+		}
+	}
+	if invalidKeyUsages != nil {
+		return errors.New(strings.Join(invalidKeyUsages, "; "))
+	}
+	return nil
 }
 
 const pathGenerateRootHelpSyn = `

@@ -1,0 +1,40 @@
+---
+layout: docs
+page_title: Use built-in persistent caching - Vault Proxy
+description: >-
+  Use built-in persistent caching with Vault Proxy
+---
+
+# Use Vault Proxy built-in persistent caching
+
+Vault Proxy can restore tokens and leases from a persistent cache file created
+by a previous Vault Proxy process. The persistent cache is a BoltDB file that
+includes tuples encrypted by a generated encryption key. The encrypted tuples
+include the Vault token used to retrieve secrets, leases for tokens/secrets, and
+secret values.
+
+In order to use Vault Proxy persistent cache, auto-auth must be used. If the
+auto-auth token has expired by the time the cache is restored, the cache will
+be invalidated and secrets will need to be re-fetched from Vault.
+
+-> **Note** Vault Proxy persistent cache is currently supported only in a
+Kubernetes environment.
+
+## Vault Proxy persistent cache types
+
+Please see the sidebar for available types and their usage/configuration.
+
+## Persistent cache example configuration
+
+Here is an example of a persistent cache configuration.
+
+```hcl
+# Other Vault Proxy configuration blocks
+# ...
+
+cache {
+  persist "kubernetes" {
+    path = "/vault/proxy-cache"
+  }
+}
+```

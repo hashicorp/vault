@@ -13,7 +13,7 @@ on the given paths. The capabilities returned will be derived from the policies
 that are on the token, and from the policies to which the token is entitled to
 through the entity and entity's group memberships.
 
-## Query Token Capabilities
+## Query token capabilities
 
 This endpoint returns the list of capabilities of a given token on the given
 paths. Multiple paths are taken in at once and the capabilities of the token
@@ -31,7 +31,7 @@ supplied, a `capabilities` field will also be returned.
 - `token` `(string: <required>)` – Token for which capabilities are being
   queried.
 
-### Sample Payload
+### Sample payload
 
 ```json
 {
@@ -40,7 +40,7 @@ supplied, a `capabilities` field will also be returned.
 }
 ```
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -50,7 +50,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/capabilities
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

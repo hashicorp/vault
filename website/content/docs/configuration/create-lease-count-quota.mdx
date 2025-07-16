@@ -1,0 +1,202 @@
+---
+layout: docs
+page_title: Create a lease count quota
+description: >-
+  Step-by-step instructions for creating lease count quotas for an
+  authentication plugin
+---
+
+# Create a lease count quota
+
+Use lease count quotas to limit the number of leases generated on a per-mount
+basis and control resource consumption for your Vault instance  where hard
+limits makes sense.
+
+## Before you start 
+
+- **Confirm you have access to the root or administration namespace for your
+  Vault instance**. Modifying lease count quotas is a restricted activity.
+
+
+## Step 1: Determine the appropriate granularity
+
+The granularity of your lease limits can affect the performance of your Vault
+cluster. In particular, if your lease limits cause the number of rejected
+requests to increase dramatically, the increased audit logging may impact Vault
+performance.
+
+Review past system behavior to identify whether the quota limits should be
+inheritable or limited to a specific role.
+
+## Step 2: Apply the count quota
+
+<Tabs>
+<Tab heading="CLI" group="cli">
+
+Use `vault write` and the `sys/quotas/lease-count/{quota-name}` mount path to
+create a new lease count quota:
+
+```shell-session
+$ vault write                           \
+    sys/quotas/lease-count/<QUOTA_NAME> \
+    name="<QUOTA_NAME>"                 \
+    path="<PLUGIN_MOUNT_PATH>"          \
+    role="<OPTIONAL_AUTHN_ROLE>"        \
+    max_leases=<LEASE_LIMIT>
+```
+
+For example, to create a targeted quota limit called **webapp-tokens** on the
+`webapp` role for the `approle` plugin at the default mount path:
+
+```shell-session
+$ vault write                            \
+    sys/quotas/lease-count/webapp-tokens \
+    name="webapp-tokens"                 \
+    path="auth/approle"                  \
+    role="webapp"                        \
+    max_leases=100
+
+Success! Data written to: sys/quotas/lease-count/webapp-tokens
+```
+
+</Tab>
+<Tab heading="API" group="api">
+
+1. Create a payload file with your quota settings.
+
+  ```json
+  {
+    "name": "<QUOTA_NAME>",
+    "path": "<PLUGIN_MOUNT_PATH>",
+    "role": "<OPTIONAL_AUTHN_ROLE>",
+    "max_leases": <LEASE_LIMIT>,
+  }
+  ```
+
+  For example, to create a targeted quota limit called **webapp-tokens** on the
+  `webapp` role for the `approle` plugin at the default mount path:
+
+  ```json
+  {
+    "name": "webapp-tokens",
+    "path": "auth/approle",
+    "role": "webapp",
+    "max_leases": 100,
+  }
+  ```
+
+1. Call the `/sys/quotas/lease-count/{quota-name}` endpoint to apply the lease
+   count quota. For example, to apply the `webapp-tokens` quota:
+
+   ```shell-session
+   $ curl \
+    --request POST \
+    --header "X-Vault-Token: ${VAULT_TOKEN}" \
+    --data @payload.json \
+    ${VAULT_ADDR}/v1/sys/quotas/lease-count/webapp-tokens
+   ```
+
+<Note title="Silent endpoint">
+
+  The `/sys/quotas/lease-count/{quota-name}` endpoint succeeds silently.
+
+</Note>
+
+
+</Tab>
+<Tab heading="Terraform" group="terraform">
+
+Use
+[`vault_quota_lease_count`](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/resources/quota_lease_count)
+resource type to define a lease count quota.
+
+For example, to create a targeted quota limit called **webapp-tokens** on the
+`webapp` role for the `approle` plugin at the default mount path:
+
+
+```hcl
+resource "vault_quota_lease_count" "webapp-tokens" {
+  name = "webapp-tokens"
+  path = "auth/approle"
+  role = "webapp"
+  max_leases = 100
+  depends_on = [ vault_approle_auth_backend_role.webapp ]
+}
+```
+
+</Tab>
+</Tabs>
+
+## Step 3: Confirm the quota settings
+
+<Tabs>
+<Tab heading="CLI" group="cli">
+
+Use `vault read` and the `sys/quotas/lease-count/{quota-name}` mount path to
+display the lease count quota details:
+
+```shell-session
+$ vault read sys/quotas/lease-count/<QUOTA_NAME>
+```
+
+For example, to read the **webapp-tokens** quota details:
+
+```shell-session
+$ vault read sys/quotas/lease-count/webapp-tokens
+
+Key            Value
+---            -----
+counter        0
+inheritable    true
+max_leases     100
+name           webapp-tokens
+path           auth/approle/
+role           webapp
+type           lease-count
+```
+
+</Tab>
+<Tab heading="API" group="api">
+
+Call the `sys/quotas/lease-count/{quota-name}` endpoint to display the lease
+count quota details. For example, to read the **webapp-tokens** quota details:
+
+```shell-session
+$ curl                                      \
+  --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+  --request GET                             \
+  --silent                                  \
+  ${VAULT_ADDR}/v1/sys/quotas/lease-count/webapp-tokens | jq
+
+{
+  "request_id": "188e22f1-dc1a-251a-a0a1-005e256fe70f",
+  "lease_id": "",
+  "renewable": false,
+  "lease_duration": 0,
+  "data": {
+    "counter": 0,
+    "inheritable": false,
+    "max_leases": 100,
+    "name": "webapp-tokens",
+    "path": "auth/approle/",
+    "role": "webapp",
+    "type": "lease-count"
+  },
+  "wrap_info": null,
+  "warnings": null,
+  "auth": null
+}
+```
+
+</Tab>
+</Tabs>
+
+## Next steps 
+
+Proactive monitoring and periodic usage analysis can help you identify potential
+problems before they escalate.
+
+- Brush up on [general Vault resource quotas](/vault/docs/concepts/resource-quotas) in general.
+- Learn about [rate limit quota](/vault/docs/configuration/create-rate-limit-quota) to control request vaolume.
+- Learn how to [query audit device logs](/vault/tutorials/monitoring/query-audit-device-logs).
+- Review [key Vault metrics for common health checks](/well-architected-framework/reliability/reliability-vault-monitoring-key-metrics).

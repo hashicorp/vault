@@ -1,28 +1,62 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
-
-export default class RolesIndexRoute extends Route {
-  @service store;
+import { service } from '@ember/service';
+import { withConfig } from 'pki/decorators/check-issuers';
+import { hash } from 'rsvp';
+import { getCliMessage } from 'pki/routes/overview';
+@withConfig()
+export default class PkiRolesIndexRoute extends Route {
+  @service store; // used by @withConfig decorator
   @service secretMountPath;
-  @service pathHelp;
+  @service pagination;
 
-  beforeModel() {
-    // Must call this promise before the model hook otherwise it doesn't add OpenApi to record.
-    return this.pathHelp.getNewModel('pki/pki-role-engine', 'pki');
+  queryParams = {
+    page: {
+      refreshModel: true,
+    },
+  };
+
+  async fetchRoles(params) {
+    try {
+      const page = Number(params.page) || 1;
+      return await this.pagination.lazyPaginatedQuery('pki/role', {
+        backend: this.secretMountPath.currentPath,
+        responsePath: 'data.keys',
+        page,
+        skipCache: page === 1,
+      });
+    } catch (e) {
+      if (e.httpStatus === 404) {
+        return { parentModel: this.modelFor('roles') };
+      }
+      throw e;
+    }
   }
 
-  model() {
-    return this.store
-      .query('pki/pki-role-engine', { backend: this.secretMountPath.currentPath })
-      .then((roleModel) => {
-        return { roleModel, parentModel: this.modelFor('roles') };
-      })
-      .catch((err) => {
-        if (err.httpStatus === 404) {
-          return [];
-        } else {
-          throw err;
-        }
-      });
+  model(params) {
+    return hash({
+      hasConfig: this.pkiMountHasConfig,
+      roles: this.fetchRoles(params),
+      parentModel: this.modelFor('roles'),
+      pageFilter: params.pageFilter,
+    });
+  }
+
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+    const roles = resolvedModel.roles;
+
+    if (roles?.length) controller.notConfiguredMessage = getCliMessage('roles');
+    else controller.notConfiguredMessage = getCliMessage();
+  }
+
+  resetController(controller, isExiting) {
+    if (isExiting) {
+      controller.set('page', undefined);
+    }
   }
 }

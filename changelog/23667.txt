@@ -1,0 +1,3 @@
+```release-note:feature
+**Secrets Sync UI (enterprise)**: Adds secret syncing for KV v2 secrets to external destinations using the UI.
+```

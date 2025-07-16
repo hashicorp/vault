@@ -1,0 +1,124 @@
+---
+layout: docs
+page_title: Generate a development configuration file
+description: >-
+  Use the Vault CLI to create a basic development configuration file to run
+  Vault Agent in process supervisor mode.
+---
+
+# Generate a Vault Agent development configuration file
+
+Use the Vault CLI to create a basic development configuration file to run Vault
+Agent in process supervisor mode.
+
+Development configuration files include an `auto_auth` section that reference a
+token file based on the Vault token used to authenticate the CLI command. Token
+files are convenient for local testing but **are not** appropriate for in
+production. **Always use a robust
+[auto-authentication method](/vault/docs/agent-and-proxy/autoauth/methods) in
+production**.
+
+<Tip title="Assumptions">
+
+- You have [set up a `kv` v2 plugin](/vault/docs/secrets/kv/kv-v2/setup).
+- Your authentication token has `read` permissions for the `kv` v2 plugin.
+
+</Tip>
+
+Use [`vault agent generate-config`](/vault/docs/commands/agent/generate-config)
+to create a development configuration file with environment variable templates:
+
+```shell-session
+$ vault agent generate-config
+    -type "env-template"                                \
+    -exec "<path_to_child_process> <list_of_arguments>" \
+    -namespace "<plugin_namespace>"                     \
+    -path "<mount_path_to_kv_plugin_1>"                 \
+    -path "<mount_path_to_kv_plugin_2>"                 \
+    ...
+    -path "<mount_path_to_kv_plugin_N>"                 \
+    <config_file_name>
+```
+
+For example:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault agent generate-config             \
+         -type="env-template"             \
+         -exec="./payment-app 'wf-test'"  \
+         -namespace="testing"             \
+         -path="shared/dev/*"             \
+         -path="private/ci/integration"   \
+         agent-config.hcl
+
+Successfully generated "agent-config.hcl" configuration file!
+Warning: the generated file uses 'token_file' authentication method, which is not suitable for production environments.
+```
+
+</CodeBlockConfig>
+
+The configuration file includes `env_template` entries for each key stored at
+the explicit paths and any key encountered while recursing through paths ending
+with `/*`. Template keys have the form `<final_path_segment>_<key_name>`.
+
+For example:
+
+<CodeBlockConfig highlight="7,22,26,30,34,38,42">
+
+```hcl
+auto_auth {
+
+  method {
+    type = "token_file"
+
+    config {
+      token_file_path = "/home/<username>/.vault-token"
+    }
+  }
+}
+
+template_config {
+  static_secret_render_interval = "5m"
+  exit_on_retry_failure         = true
+  max_connections_per_host      = 10
+}
+
+vault {
+  address = "http://192.168.0.1:8200"
+}
+
+env_template "SQUARE_API_PROD" {
+  contents             = "{{ with secret \"shared/data/dev/square-api\" }}{{ .Data.data.prod }}{{ end }}"
+  error_on_missing_key = true
+}
+env_template "SQUARE_API_SANDBOX" {
+  contents             = "{{ with secret \"shared/data/dev/square-api\" }}{{ .Data.data.sandbox }}{{ end }}"
+  error_on_missing_key = true
+}
+env_template "SQUARE_API_SMOKE" {
+  contents             = "{{ with secret \"shared/data/dev/square-api\" }}{{ .Data.data.smoke }}{{ end }}"
+  error_on_missing_key = true
+}
+env_template "SEEDS_SEED1" {
+  contents             = "{{ with secret \"shared/data/dev/seeds\" }}{{ .Data.data.seed1 }}{{ end }}"
+  error_on_missing_key = true
+}
+env_template "SEEDS_SEED2" {
+  contents             = "{{ with secret \"shared/data/dev/seeds\" }}{{ .Data.data.seed2 }}{{ end }}"
+  error_on_missing_key = true
+}
+env_template "DEV_POSTMAN" {
+  contents             = "{{ with secret \"private/data/ci/integration\" }}{{ .Data.data.postman }}{{ end }}"
+  error_on_missing_key = true
+}
+
+exec {
+  command                   = ["./payment-app", "'wf-test'"]
+  restart_on_secret_changes = "always"
+  restart_stop_signal       = "SIGTERM"
+}
+```
+
+</CodeBlockConfig>

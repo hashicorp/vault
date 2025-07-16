@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package expiration
 
 import (
@@ -6,18 +9,13 @@ import (
 	"testing"
 
 	"github.com/hashicorp/vault/helper/namespace"
-	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/vault"
 )
 
 func TestExpiration_irrevocableLeaseCountsAPI(t *testing.T) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		NumCores:    1,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	core := cluster.Cores[0].Core
 
@@ -117,13 +115,8 @@ func TestExpiration_irrevocableLeaseCountsAPI(t *testing.T) {
 }
 
 func TestExpiration_irrevocableLeaseListAPI(t *testing.T) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		NumCores:    1,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	core := cluster.Cores[0].Core
 
@@ -219,13 +212,8 @@ func TestExpiration_irrevocableLeaseListAPI(t *testing.T) {
 }
 
 func TestExpiration_irrevocableLeaseListAPI_includeAll(t *testing.T) {
-	cluster := vault.NewTestCluster(t, nil, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-		NumCores:    1,
-	})
-	cluster.Start()
-	defer cluster.Cleanup()
-
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
 	client := cluster.Cores[0].Client
 	core := cluster.Cores[0].Core
 

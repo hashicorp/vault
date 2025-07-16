@@ -1,0 +1,100 @@
+---
+layout: docs
+page_title: Auto-auth with AppRole
+description: >-
+  Use application roles for auto-authentication with Vault Agent or
+  Vault Proxy.
+---
+
+# Auto-auth method: application roles (AppRole)
+
+The `approle` method reads in a role ID and a secret ID from files and sends
+the values to the [AppRole Auth
+method](/vault/docs/auth/approle).
+
+The method caches values and it is safe to delete the role ID/secret ID files
+after they have been read. In fact, by default, after reading the secret ID,
+the agent will delete the file. New files or values written at the expected
+locations will be used on next authentication and the new values will be
+cached.
+
+## Configuration
+
+- `role_id_file_path` `(string: required)` - The path to the file with role ID
+
+- `secret_id_file_path` `(string: optional)` - The path to the file with secret
+  ID.
+  If not set, only the `role-id` will be used.
+  In that case, the AppRole should have `bind_secret_id` set to `false` otherwise
+  Vault Agent wouldn't be able to login.
+
+- `remove_secret_id_file_after_reading` `(bool: optional, defaults to true)` -
+  This can be set to `false` to disable the default behavior of removing the
+  secret ID file after it's been read.
+
+- `secret_id_response_wrapping_path` `(string: optional)` - If set, the value
+  at `secret_id_file_path` will be expected to be a [Response-Wrapping
+  Token](/vault/docs/concepts/response-wrapping)
+  containing the output of the secret ID retrieval endpoint for the role (e.g.
+  `auth/approle/role/webservers/secret-id`) and the creation path for the
+  response-wrapping token must match the value set here.
+
+## Example configuration
+
+An example configuration, using approle to enable [auto-auth](/vault/docs/agent-and-proxy/autoauth)
+and creating both a plaintext token sink and a [response-wrapped token sink file](/vault/docs/agent-and-proxy/autoauth#wrap_ttl), follows:
+
+```hcl
+pid_file = "./pidfile"
+
+vault {
+  address = "https://127.0.0.1:8200"
+}
+
+auto_auth {
+  method {
+    type      = "approle"
+
+    config = {
+      role_id_file_path = "roleid"
+      secret_id_file_path = "secretid"
+      remove_secret_id_file_after_reading = false
+    }
+  }
+
+  sink {
+    type = "file"
+    wrap_ttl = "30m"
+    config = {
+      path = "sink_file_wrapped_1.txt"
+    }
+  }
+
+  sink {
+    type = "file"
+    config = {
+      path = "sink_file_unwrapped_2.txt"
+    }
+  }
+}
+
+
+api_proxy {
+  use_auto_auth_token = true
+}
+
+listener "tcp" {
+  address = "127.0.0.1:8100"
+  tls_disable = true
+}
+
+template {
+  source      = "/etc/vault/server.key.ctmpl"
+  destination = "/etc/vault/server.key"
+}
+
+template {
+  source      = "/etc/vault/server.crt.ctmpl"
+  destination = "/etc/vault/server.crt"
+}
+```

@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fixes model defaults overwriting input value when user tries to clear form input
+```

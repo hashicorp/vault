@@ -1,6 +1,14 @@
+@use '../utils/size_variables';
+@use '../core/buttons.scss';
+
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .b64-toggle {
   padding: 0.75rem;
-  font-size: $size-9;
+  font-size: size_variables.$size-9;
 }
 .b64-toggle.is-input {
   box-shadow: none;

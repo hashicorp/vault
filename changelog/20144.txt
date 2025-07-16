@@ -1,0 +1,4 @@
+```release-note:improvement
+sdk/ldaputil: added `connection_timeout` to tune connection timeout duration 
+for all LDAP plugins.
+```

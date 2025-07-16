@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Mixin from '@ember/object/mixin';
 
 export default Mixin.create({
@@ -11,7 +16,7 @@ export default Mixin.create({
   },
 
   setupController(controller, resolvedModel) {
-    let { pageFilter } = this.paramsFor(this.routeName);
+    const { pageFilter } = this.paramsFor(this.routeName);
     this._super(...arguments);
     controller.setProperties({
       filter: pageFilter || '',
@@ -30,12 +35,12 @@ export default Mixin.create({
     willTransition(transition) {
       window.scrollTo(0, 0);
       if (transition.targetName !== this.routeName) {
-        this.store.clearAllDatasets();
+        this.pagination.clearDataset();
       }
       return true;
     },
     reload() {
-      this.store.clearAllDatasets();
+      this.pagination.clearDataset();
       this.refresh();
     },
   },

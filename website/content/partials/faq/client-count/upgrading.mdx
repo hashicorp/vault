@@ -1,0 +1,87 @@
+### How has client count changed across different Vault versions? ((#logic-improvements))
+
+Client counts have been available via the usage metrics UI since Vault 1.6. We
+have made continual improvements to the Vault client count computation logic
+provided in the Vault UI and API.
+
+| Version | Edition    | Interface | Accuracy improvement
+| :-----: | ---------- | --------- |--------------------
+| 1.6     | Both       | N/A       | Introduced client counts as a metric
+| 1.8     | Both       | All       | Omit wrapping tokens and control groups from client counts
+| 1.9     | Both       | All       | Improved non-entity token tracking and local auth mount computation logic
+| 1.10    | Both       | API       | Supported data export for unique clients contributing to the client count aggregate for a selected billing period
+| 1.10    | Enterprise | UI        | Displayed clients per auth mount within a namespace
+| 1.11    | Both       | API       | Supported unique client export for selected billing periods
+| 1.11    | Both       | UI        | Displayed month over month calculations for client count
+| 1.13    | Both       | UI        | Combined current month and previous history into one dashboard
+| 1.16    | Both       | All       | Added synced secrets as a new category in client counting
+| 1.17    | Both       | All       | Separated PKI ACME certificates as their own category in client counting
+| 1.20    | CE         | All       | Get client count endpoint response excludes the current month and any future date
+| 1.20    | Enterprise | All       | Actual values are returned for `new_clients` counts for the current month and they are no longer an estimate
+
+The latest GA version of the Vault binary always contains the most updated
+version of the client count computation logic.
+
+### How has the usage metric UI changed across different Vault versions? ((#ui-improvements))
+
+| Version | UI improvement
+| :-----: | -----------------------------
+| 1.9     | The dashboard added the ability to export client count data for all namespaces and tabs for **Current month** and **Monthly history** that list the top ten namespaces by client count
+| 1.10    | Added attribution of clients per authN mount to the **Current month** and **Monthly history** tabs
+| 1.11    | Added the ability to view changes in client counts month over month, the running client total, and new monthly clients.
+
+### Are there any known client count issues in the UI/API? ((#uiapi-ki))
+
+**Yes**.
+
+| Version | Client count issue
+| :-----: | -----------------------------
+| 1.9     | Billing period cannot be computed for start and end dates that fall in the middle of a month
+| 1.10    | KMIP clients are not provided.
+| 1.10    | Data on the **Current month** tab does not take the billing period into account.
+
+### What happens to client count when I upgrade? ((#what-happens-at-upgrade))
+
+We recommend upgrading **before** your next billing period begins so that the
+usage metrics UI correctly reflects all clients for the current billing period.
+
+<Warning heading="Time your upgrade appropriately">
+  If your billing period falls on either side of a Vault upgrade, the compute
+  logic may be different across the billing period, which will change client
+  count results and create noisy data.
+</Warning>
+
+<Tabs>
+  <Tab heading="Upgrading from Vault 1.8">
+    Vault 1.9 introduced changes to non-entity token and local auth mount logic
+    for client counting that affects anyone upgrading from v1.8 to a newer
+    version:
+    <ul>
+      <li>
+        Any <b>non-entity tokens</b> created before the upgrade will receive an
+        artificial client ID the next time the token authenticates to Vault. As
+        result, the token will be counted as a new client, but will not be
+        recounted on subsequent connections.
+      </li>
+      <li>
+        Any <b>local auth mounts</b> created before the upgrade will continue to
+        count as a unique client, but new mounts created after the upgrade will
+        receive an artificial client ID to avoid duplication in the client count.
+      </li>
+    </ul>
+  </Tab>
+
+  <Tab heading="Upgrading from Vault 1.6">
+    Vault will only reflect the number of active unique clients since the upgrade.
+    As of v1.7, Vault forbids users from creating two aliases from the same authN
+    mount under a single entity. Additionally, Vault 1.9 forbids mapping multiple
+    service accounts under different namespaces to a single entity.
+
+    Each unique combination of authN mount, namespace, and alias, will be counted
+    as a distinct client.
+  </Tab>
+
+  <Tab heading="Upgrading from Vault 1.19+ent">
+    Actual values are returned for <b>new_clients</b> counts for the current month and they are no longer an estimate.
+  </Tab>
+</Tabs>

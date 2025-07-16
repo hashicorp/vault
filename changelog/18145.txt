@@ -1,0 +1,3 @@
+```release-note:bug
+auth/approle: Fix `token_bound_cidrs` validation when using /32 blocks for role and secret ID
+```

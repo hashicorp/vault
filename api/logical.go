@@ -1,8 +1,12 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package api
 
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,7 +15,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/errwrap"
-	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 )
 
 const (
@@ -61,27 +64,68 @@ func (c *Logical) ReadWithData(path string, data map[string][]string) (*Secret, 
 	return c.ReadWithDataWithContext(context.Background(), path, data)
 }
 
+// ReadFromSnapshot reads the data at the given Vault path from a previously
+// loaded snapshot. The snapshotID parameter is the ID of the loaded snapshot
+func (c *Logical) ReadFromSnapshot(path string, snapshotID string) (*Secret, error) {
+	return c.ReadWithData(path, map[string][]string{"read_snapshot_id": {snapshotID}})
+}
+
 func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Secret, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest(http.MethodGet, "/v1/"+path)
+	resp, err := c.readRawWithDataWithContext(ctx, path, data)
+	return c.ParseRawResponseAndCloseBody(resp, err)
+}
 
-	var values url.Values
-	for k, v := range data {
-		if values == nil {
-			values = make(url.Values)
-		}
-		for _, val := range v {
-			values.Add(k, val)
-		}
-	}
+// ReadRaw attempts to read the value stored at the given Vault path
+// (without '/v1/' prefix) and returns a raw *http.Response.
+//
+// Note: the raw-response functions do not respect the client-configured
+// request timeout; if a timeout is desired, please use ReadRawWithContext
+// instead and set the timeout through context.WithTimeout or context.WithDeadline.
+func (c *Logical) ReadRaw(path string) (*Response, error) {
+	return c.ReadRawWithDataWithContext(context.Background(), path, nil)
+}
 
-	if values != nil {
-		r.Params = values
-	}
+// ReadRawWithContext attempts to read the value stored at the give Vault path
+// (without '/v1/' prefix) and returns a raw *http.Response.
+//
+// Note: the raw-response functions do not respect the client-configured
+// request timeout; if a timeout is desired, please set it through
+// context.WithTimeout or context.WithDeadline.
+func (c *Logical) ReadRawWithContext(ctx context.Context, path string) (*Response, error) {
+	return c.ReadRawWithDataWithContext(ctx, path, nil)
+}
 
-	resp, err := c.c.rawRequestWithContext(ctx, r)
+// ReadRawWithData attempts to read the value stored at the given Vault
+// path (without '/v1/' prefix) and returns a raw *http.Response. The 'data' map
+// is added as query parameters to the request.
+//
+// Note: the raw-response functions do not respect the client-configured
+// request timeout; if a timeout is desired, please use
+// ReadRawWithDataWithContext instead and set the timeout through
+// context.WithTimeout or context.WithDeadline.
+func (c *Logical) ReadRawWithData(path string, data map[string][]string) (*Response, error) {
+	return c.ReadRawWithDataWithContext(context.Background(), path, data)
+}
+
+func (c *Logical) ReadRawFromSnapshot(path string, snapshotID string) (*Response, error) {
+	return c.ReadRawWithDataWithContext(context.Background(), path, map[string][]string{"read_snapshot_id": {snapshotID}})
+}
+
+// ReadRawWithDataWithContext attempts to read the value stored at the given
+// Vault path (without '/v1/' prefix) and returns a raw *http.Response. The 'data'
+// map is added as query parameters to the request.
+//
+// Note: the raw-response functions do not respect the client-configured
+// request timeout; if a timeout is desired, please set it through
+// context.WithTimeout or context.WithDeadline.
+func (c *Logical) ReadRawWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Response, error) {
+	return c.readRawWithDataWithContext(ctx, path, data)
+}
+
+func (c *Logical) ParseRawResponseAndCloseBody(resp *Response, err error) (*Secret, error) {
 	if resp != nil {
 		defer resp.Body.Close()
 	}
@@ -106,15 +150,46 @@ func (c *Logical) ReadWithDataWithContext(ctx context.Context, path string, data
 	return ParseSecret(resp.Body)
 }
 
+func (c *Logical) readRawWithDataWithContext(ctx context.Context, path string, data map[string][]string) (*Response, error) {
+	r := c.c.NewRequest(http.MethodGet, "/v1/"+path)
+
+	var values url.Values
+	for k, v := range data {
+		if values == nil {
+			values = make(url.Values)
+		}
+		for _, val := range v {
+			values.Add(k, val)
+		}
+	}
+
+	if values != nil {
+		r.Params = values
+	}
+
+	return c.c.RawRequestWithContext(ctx, r)
+}
+
+// ListFromSnapshot lists from the Vault path using a previously loaded
+// snapshot. The snapshotID parameter is the ID of the loaded snapshot
+func (c *Logical) ListFromSnapshot(path string, snapshotID string) (*Secret, error) {
+	r := c.c.NewRequest("LIST", "/v1/"+path)
+	r.Params.Set("read_snapshot_id", snapshotID)
+	return c.list(context.Background(), r)
+}
+
 func (c *Logical) List(path string) (*Secret, error) {
 	return c.ListWithContext(context.Background(), path)
 }
 
 func (c *Logical) ListWithContext(ctx context.Context, path string) (*Secret, error) {
+	return c.list(ctx, c.c.NewRequest("LIST", "/v1/"+path))
+}
+
+func (c *Logical) list(ctx context.Context, r *Request) (*Secret, error) {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
 
-	r := c.c.NewRequest("LIST", "/v1/"+path)
 	// Set this for broader compatibility, but we use LIST above to be able to
 	// handle the wrapping lookup function
 	r.Method = http.MethodGet
@@ -155,6 +230,25 @@ func (c *Logical) WriteWithContext(ctx context.Context, path string, data map[st
 		return nil, err
 	}
 
+	return c.write(ctx, path, r)
+}
+
+func (c *Logical) WriteRaw(path string, data []byte) (*Response, error) {
+	return c.WriteRawWithContext(context.Background(), path, data)
+}
+
+func (c *Logical) WriteRawWithContext(ctx context.Context, path string, data []byte) (*Response, error) {
+	r := c.c.NewRequest(http.MethodPut, "/v1/"+path)
+	r.BodyBytes = data
+
+	return c.writeRaw(ctx, r)
+}
+
+// Recover recovers the data at the given Vault path from a loaded snapshot.
+// The snapshotID parameter is the ID of the loaded snapshot
+func (c *Logical) Recover(ctx context.Context, path string, snapshotID string) (*Secret, error) {
+	r := c.c.NewRequest(http.MethodPut, "/v1/"+path)
+	r.Params.Set("recover_snapshot_id", snapshotID)
 	return c.write(ctx, path, r)
 }
 
@@ -205,6 +299,14 @@ func (c *Logical) write(ctx context.Context, path string, request *Request) (*Se
 	}
 
 	return ParseSecret(resp.Body)
+}
+
+func (c *Logical) writeRaw(ctx context.Context, request *Request) (*Response, error) {
+	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
+	defer cancelFunc()
+
+	resp, err := c.c.rawRequestWithContext(ctx, request)
+	return resp, err
 }
 
 func (c *Logical) Delete(path string) (*Secret, error) {
@@ -339,7 +441,9 @@ func (c *Logical) UnwrapWithContext(ctx context.Context, wrappingToken string) (
 
 	wrappedSecret := new(Secret)
 	buf := bytes.NewBufferString(secret.Data["response"].(string))
-	if err := jsonutil.DecodeJSONFromReader(buf, wrappedSecret); err != nil {
+	dec := json.NewDecoder(buf)
+	dec.UseNumber()
+	if err := dec.Decode(wrappedSecret); err != nil {
 		return nil, errwrap.Wrapf("error unmarshalling wrapped secret: {{err}}", err)
 	}
 

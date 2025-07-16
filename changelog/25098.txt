@@ -1,0 +1,4 @@
+```release-note:improvement
+limits: Add a listener configuration option `disable_request_limiter` to allow
+disabling the request limiter per-listener.
+```

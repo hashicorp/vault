@@ -1,3 +1,8 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
 <PageHeader as |p|>
   <p.top>
     <KeyValueHeader
@@ -25,20 +30,18 @@
 {{#if (eq this.mode "show")}}
   <Toolbar>
     <ToolbarActions>
-      {{#if this.capabilities.canDelete}}
+      {{#if this.model.updatePath.canDelete}}
         <ConfirmAction
-          @buttonClasses="toolbar-link"
+          @buttonText="Delete role"
+          class="toolbar-button"
+          @buttonColor="secondary"
           @onConfirmAction={{action "delete"}}
-          @confirmTitle="Are you sure?"
           @confirmMessage="Deleting this role means that you’ll need to recreate it and reassign any existing transformations to use it again."
-          @confirmButtonText="Delete"
           data-test-transformation-role-delete
-        >
-          Delete role
-        </ConfirmAction>
+        />
         <div class="toolbar-separator"></div>
       {{/if}}
-      {{#if this.capabilities.canUpdate}}
+      {{#if this.model.updatePath.canUpdate}}
         <ToolbarSecretLink
           @secret={{concat this.model.idPrefix this.model.id}}
           @mode="edit"
@@ -58,31 +61,34 @@
       <MessageError @model={{this.model}} />
       <NamespaceReminder @mode={{this.mode}} @noun="Transform role" />
       {{#each this.model.attrs as |attr|}}
-        <FormField data-test-field @attr={{attr}} @model={{this.model}} />
+        {{#if (and (eq this.mode "edit") attr.options.readOnly)}}
+          <ReadonlyFormField @attr={{attr}} @value={{get this.model attr.name}} />
+        {{else}}
+          <FormField data-test-field @attr={{attr}} @model={{this.model}} />
+        {{/if}}
       {{/each}}
     </div>
     <div class="field is-grouped-split box is-fullwidth is-bottomless">
-      <div class="control">
-        <button
-          type="submit"
-          disabled={{this.buttonDisabled}}
-          class="button is-primary"
-          data-test-role-transform-create={{true}}
-        >
-          {{#if (eq this.mode "create")}}
-            Create role
-          {{else if (eq this.mode "edit")}}
-            Save
-          {{/if}}
-        </button>
-        <SecretLink
-          @mode={{if (eq this.mode "create") "list" "show"}}
-          class="button"
-          @secret={{concat "role/" this.model.id}}
-        >
-          Cancel
-        </SecretLink>
-      </div>
+      <Hds::ButtonSet>
+        <Hds::Button @text={{if (eq this.mode "create") "Create role" "Save"}} type="submit" data-test-submit />
+        {{#if (eq this.mode "create")}}
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.secrets.backend.list-root"
+            @model={{this.model.backend}}
+            @query={{hash tab="role"}}
+          />
+        {{else}}
+          <Hds::Button
+            @text="Cancel"
+            @color="secondary"
+            @route="vault.cluster.secrets.backend.show"
+            @models={{array this.model.backend (concat "role/" this.model.id)}}
+            @query={{hash tab="role"}}
+          />
+        {{/if}}
+      </Hds::ButtonSet>
     </div>
   </form>
 {{else}}

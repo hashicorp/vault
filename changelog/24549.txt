@@ -1,0 +1,3 @@
+```release-note:bug
+api: sys/leader ActiveTime field no longer gets reset when we do an internal state change that doesn't change our active status.
+```

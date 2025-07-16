@@ -1,0 +1,21 @@
+### What is the Vault auditor? ((##vault-auditor))
+
+@include 'alerts/auditor-deprecated.mdx'
+
+The Vault auditor tool
+lets customers running Vault v1.3 &ndash; v1.5 compute and display client
+count data using the client compute logic available in Vault 1.7. Auditor use
+with Vault versions older than 1.3 is untested.
+
+The auditor may report that your audit logs are unreadable of the logs are too
+large or you are running an older version than Vault 1.6.
+
+
+### Are there any known client count issues in the auditor tool? ((#auditor-ki))
+
+**Yes**.
+
+The Vault auditor only includes the computation logic improvements from Vault
+v1.6 &ndash; v1.7. Running the auditor on Vault v1.8+ will result in
+discrepancies when comparing the result to data available through the 
+Vault UI or API.

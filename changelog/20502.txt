@@ -1,0 +1,3 @@
+```release-note:bug
+cli: disable printing flags warnings messages for the ssh command
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -249,14 +252,14 @@ func (i *intValue) Set(s string) error {
 		return err
 	}
 	if v >= math.MinInt && v <= math.MaxInt {
-		*i.target = int(v)
+		*i.target = v
 		return nil
 	}
 	return fmt.Errorf("Incorrect conversion of a 64-bit integer to a lower bit size. Value %d is not within bounds for int32", v)
 }
 
-func (i *intValue) Get() interface{} { return int(*i.target) }
-func (i *intValue) String() string   { return strconv.Itoa(int(*i.target)) }
+func (i *intValue) Get() interface{} { return *i.target }
+func (i *intValue) String() string   { return strconv.Itoa(*i.target) }
 func (i *intValue) Example() string  { return "int" }
 func (i *intValue) Hidden() bool     { return i.hidden }
 
@@ -457,54 +460,87 @@ func (i *uint64Value) Hidden() bool     { return i.hidden }
 
 // -- StringVar and stringValue
 type StringVar struct {
-	Name       string
-	Aliases    []string
-	Usage      string
-	Default    string
-	Hidden     bool
-	EnvVar     string
-	Target     *string
-	Completion complete.Predictor
+	Name        string
+	Aliases     []string
+	Usage       string
+	Default     string
+	Hidden      bool
+	EnvVar      string
+	Target      *string
+	Normalizers []func(string) string
+	Completion  complete.Predictor
+}
+
+func (s *StringVar) SetTarget(val string) {
+	if s == nil {
+		return
+	}
+
+	for _, f := range s.Normalizers {
+		val = f(val)
+	}
+
+	*s.Target = val
 }
 
 func (f *FlagSet) StringVar(i *StringVar) {
-	initial := i.Default
-	if v, exist := os.LookupEnv(i.EnvVar); exist {
-		initial = v
+	if i == nil {
+		return
 	}
 
-	def := ""
-	if i.Default != "" {
-		def = i.Default
+	val := i.Default
+	envVar, ok := os.LookupEnv(i.EnvVar)
+	if ok {
+		val = envVar
 	}
 
 	f.VarFlag(&VarFlag{
 		Name:       i.Name,
 		Aliases:    i.Aliases,
 		Usage:      i.Usage,
-		Default:    def,
+		Default:    i.Default,
 		EnvVar:     i.EnvVar,
-		Value:      newStringValue(initial, i.Target, i.Hidden),
+		Value:      newStringValue(val, i.Target, i.Hidden, i.Normalizers),
 		Completion: i.Completion,
 	})
 }
 
 type stringValue struct {
-	hidden bool
-	target *string
+	hidden      bool
+	target      *string
+	normalizers []func(string) string
 }
 
-func newStringValue(def string, target *string, hidden bool) *stringValue {
-	*target = def
-	return &stringValue{
-		hidden: hidden,
-		target: target,
+func newStringValue(val string, target *string, hidden bool, normalizers []func(string) string) *stringValue {
+	sv := &stringValue{
+		hidden:      hidden,
+		target:      target,
+		normalizers: append(normalizers, strings.TrimSpace),
 	}
+	sv.set(val)
+
+	return sv
 }
 
 func (s *stringValue) Set(val string) error {
-	*s.target = val
+	s.set(val)
 	return nil
+}
+
+func (s *stringValue) set(val string) {
+	*s.target = s.normalize(val)
+}
+
+func (s *stringValue) normalize(in string) string {
+	if s == nil || len(s.normalizers) < 1 {
+		return in
+	}
+
+	for _, f := range s.normalizers {
+		in = f(in)
+	}
+
+	return in
 }
 
 func (s *stringValue) Get() interface{} { return *s.target }
@@ -591,7 +627,7 @@ type DurationVar struct {
 func (f *FlagSet) DurationVar(i *DurationVar) {
 	initial := i.Default
 	if v, exist := os.LookupEnv(i.EnvVar); exist {
-		if d, err := time.ParseDuration(appendDurationSuffix(v)); err == nil {
+		if d, err := parseutil.ParseDurationSecond(v); err == nil {
 			initial = d
 		}
 	}
@@ -631,7 +667,7 @@ func (d *durationValue) Set(s string) error {
 		s = "-1"
 	}
 
-	v, err := time.ParseDuration(appendDurationSuffix(s))
+	v, err := parseutil.ParseDurationSecond(s)
 	if err != nil {
 		return err
 	}
@@ -986,33 +1022,3 @@ func (d *timeValue) Get() interface{} { return *d.target }
 func (d *timeValue) String() string   { return (*d.target).String() }
 func (d *timeValue) Example() string  { return "time" }
 func (d *timeValue) Hidden() bool     { return d.hidden }
-
-// -- helpers
-func envDefault(key, def string) string {
-	if v, exist := os.LookupEnv(key); exist {
-		return v
-	}
-	return def
-}
-
-func envBoolDefault(key string, def bool) bool {
-	if v, exist := os.LookupEnv(key); exist {
-		b, err := strconv.ParseBool(v)
-		if err != nil {
-			panic(err)
-		}
-		return b
-	}
-	return def
-}
-
-func envDurationDefault(key string, def time.Duration) time.Duration {
-	if v, exist := os.LookupEnv(key); exist {
-		d, err := time.ParseDuration(v)
-		if err != nil {
-			panic(err)
-		}
-		return d
-	}
-	return def
-}

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package cert
 
 import (
@@ -16,9 +19,41 @@ import (
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+func pathListCRLs(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: "crls/?$",
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixCert,
+			OperationSuffix: "crls",
+		},
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathCRLsList,
+			},
+		},
+		HelpSynopsis:    pathCRLsHelpSyn,
+		HelpDescription: pathCRLsHelpDesc,
+	}
+}
+
+func (b *backend) pathCRLsList(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	entries, err := req.Storage.List(ctx, "crls/")
+	if err != nil {
+		return nil, fmt.Errorf("failed to list CRLs: %w", err)
+	}
+
+	return logical.ListResponse(entries), nil
+}
+
 func pathCRLs(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "crls/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixCert,
+			OperationSuffix: "crl",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -47,6 +82,16 @@ using the same name as specified here.`,
 		HelpSynopsis:    pathCRLsHelpSyn,
 		HelpDescription: pathCRLsHelpDesc,
 	}
+}
+
+func (b *backend) populateCrlsIfNil(ctx context.Context, storage logical.Storage) error {
+	b.crlUpdateMutex.RLock()
+	if b.crls == nil {
+		b.crlUpdateMutex.RUnlock()
+		return b.lockThenpopulateCRLs(ctx, storage)
+	}
+	b.crlUpdateMutex.RUnlock()
+	return nil
 }
 
 func (b *backend) lockThenpopulateCRLs(ctx context.Context, storage logical.Storage) error {
@@ -145,6 +190,7 @@ func (b *backend) pathCRLDelete(ctx context.Context, req *logical.Request, d *fr
 
 	b.crlUpdateMutex.Lock()
 	defer b.crlUpdateMutex.Unlock()
+	defer b.flushTrustedCache()
 
 	_, ok := b.crls[name]
 	if !ok {
@@ -268,6 +314,8 @@ func (b *backend) setCRL(ctx context.Context, storage logical.Storage, certList 
 	}
 
 	b.crls[name] = crlInfo
+	b.flushTrustedCache()
+
 	return err
 }
 
@@ -288,7 +336,7 @@ Manage Certificate Revocation Lists checked during authentication.
 `
 
 const pathCRLsHelpDesc = `
-This endpoint allows you to create, read, update, and delete the Certificate
+This endpoint allows you to list, create, read, update, and delete the Certificate
 Revocation Lists checked during authentication, and/or CRL Distribution Point 
 URLs.
 

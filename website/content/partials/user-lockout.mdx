@@ -1,0 +1,22 @@
+If a user provides bad credentials several times in quick succession,
+Vault will stop trying to validate their credentials for a while, instead returning immediately
+with a permission denied error. We call this behavior "user lockout". The time for which
+a user will be locked out is called “lockout duration”. The user will be able to login after the lockout
+duration has passed. The number of failed login attempts after which the user is locked out is called
+“lockout threshold”. The lockout threshold counter is reset to zero after a few minutes without login attempts,
+or upon a successful login attempt. The duration after which the counter will be reset to zero
+after no login attempts is called "lockout counter reset". This can defeat both automated and targeted requests
+i.e, user-based password guessing attacks as well as automated attacks.
+
+The user lockout feature is enabled by default. The default values for "lockout threshold" is 5 attempts,
+"lockout duration" is 15 minutes, "lockout counter reset" is 15 minutes.
+
+The user lockout feature can be disabled as follows:
+- It can be disabled globally using environment variable `VAULT_DISABLE_USER_LOCKOUT`.
+- It can be disabled for all supported auth methods (ldap, userpass and approle) or a specific supported auth method using the `disable_lockout`
+  parameter within `user_lockout` stanza in configuration file.
+  Please see [user lockout configuration](/vault/docs/configuration/user-lockout#user_lockout-stanza) for more details.
+- It can be disabled for a specific auth mount using "auth tune". Please see [auth tune command](/vault/docs/commands/auth/tune)
+  or [auth tune api](/vault/api-docs/system/auth#tune-auth-method) for more details.
+
+~> **NOTE**: This feature is available from Vault version 1.13 and is only supported by the userpass, ldap, and approle auth methods.

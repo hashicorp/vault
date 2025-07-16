@@ -1,24 +1,34 @@
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { service } from '@ember/service';
 import { alias, or } from '@ember/object/computed';
 import Component from '@ember/component';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
 import { schedule } from '@ember/runloop';
+import { camelize } from '@ember/string';
 import { task } from 'ember-concurrency';
+import { buildWaiter } from '@ember/test-waiters';
 import ControlGroupError from 'vault/lib/control-group-error';
 import {
   parseCommand,
-  extractDataAndFlags,
   logFromResponse,
   logFromError,
-  logErrorFromInput,
+  formattedErrorFromInput,
   executeUICommand,
+  extractFlagsFromStrings,
+  extractDataFromStrings,
 } from 'vault/lib/console-helpers';
+
+const waiter = buildWaiter('web-repl');
 
 export default Component.extend({
   console: service(),
   router: service(),
   controlGroup: service(),
-  store: service(),
+  pagination: service(),
   'data-test-component': 'console/ui-panel',
   attributeBindings: ['data-test-component'],
 
@@ -42,7 +52,8 @@ export default Component.extend({
 
   executeCommand: task(function* (command, shouldThrow = false) {
     this.set('inputValue', '');
-    let service = this.console;
+    const waiterToken = waiter.beginAsync();
+    const service = this.console;
     let serviceArgs;
 
     if (
@@ -54,49 +65,50 @@ export default Component.extend({
         refresh: () => this.refreshRoute.perform(),
       })
     ) {
+      waiter.endAsync(waiterToken);
       return;
     }
 
     // parse to verify it's valid
     try {
-      serviceArgs = parseCommand(command, shouldThrow);
+      serviceArgs = parseCommand(command);
     } catch (e) {
-      this.logAndOutput(command, { type: 'help' });
+      if (shouldThrow) {
+        this.logAndOutput(command, { type: 'help' });
+      }
+      waiter.endAsync(waiterToken);
       return;
     }
-    // we have a invalid command but don't want to throw
-    if (serviceArgs === false) {
-      return;
-    }
 
-    let [method, flagArray, path, dataArray] = serviceArgs;
+    const { method, flagArray, path, dataArray } = serviceArgs;
+    const flags = extractFlagsFromStrings(flagArray, method);
+    const data = extractDataFromStrings(dataArray);
 
-    if (dataArray || flagArray) {
-      var { data, flags } = extractDataAndFlags(method, dataArray, flagArray);
-    }
-
-    let inputError = logErrorFromInput(path, method, flags, dataArray);
+    const inputError = formattedErrorFromInput(path, method, flags, dataArray);
     if (inputError) {
       this.logAndOutput(command, inputError);
+      waiter.endAsync(waiterToken);
       return;
     }
     try {
-      let resp = yield service[method].call(service, path, data, flags.wrapTTL);
+      const resp = yield service[camelize(method)].call(service, path, data, flags);
       this.logAndOutput(command, logFromResponse(resp, path, method, flags));
     } catch (error) {
       if (error instanceof ControlGroupError) {
+        waiter.endAsync(waiterToken);
         return this.logAndOutput(command, this.controlGroup.logFromError(error));
       }
       this.logAndOutput(command, logFromError(error, path, method));
     }
+    waiter.endAsync(waiterToken);
   }),
 
   refreshRoute: task(function* () {
-    let owner = getOwner(this);
-    let currentRoute = owner.lookup(`router:main`).get('currentRouteName');
+    const owner = getOwner(this);
+    const currentRoute = owner.lookup(`router:main`).currentRouteName;
 
     try {
-      this.store.clearAllDatasets();
+      this.pagination.clearDataset();
       yield this.router.transitionTo(currentRoute);
       this.logAndOutput(null, { type: 'success', content: 'The current screen has been refreshed!' });
     } catch (error) {
@@ -105,14 +117,14 @@ export default Component.extend({
   }),
 
   routeToExplore: task(function* (command) {
-    let filter = command.replace('api', '').trim();
+    const filter = command.replace('api', '').trim();
     let content =
       'Welcome to the Vault API explorer! \nYou can search for endpoints, see what parameters they accept, and even execute requests with your current token.';
     if (filter) {
       content = `Welcome to the Vault API explorer! \nWe've filtered the list of endpoints for '${filter}'.`;
     }
     try {
-      yield this.router.transitionTo('vault.cluster.open-api-explorer.index', {
+      yield this.router.transitionTo('vault.cluster.tools.open-api-explorer', {
         queryParams: { filter },
       });
       this.logAndOutput(null, {
@@ -134,8 +146,8 @@ export default Component.extend({
     }
   }),
 
-  shiftCommandIndex(keyCode) {
-    this.console.shiftCommandIndex(keyCode, (val) => {
+  shiftCommandIndex(key) {
+    this.console.shiftCommandIndex(key, (val) => {
       this.set('inputValue', val);
     });
   },

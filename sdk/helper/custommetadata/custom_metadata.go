@@ -1,12 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package custommetadata
 
 import (
 	"fmt"
 
-	"github.com/mitchellh/mapstructure"
-
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
+	"github.com/mitchellh/mapstructure"
 )
 
 // The following constants are used by Validate and are meant to be imposed

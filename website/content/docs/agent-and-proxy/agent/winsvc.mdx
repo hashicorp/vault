@@ -1,0 +1,127 @@
+---
+layout: docs
+page_title: Run Vault Agent as a Windows service
+description: >-
+  Register Vault Agent with sc.exe and run Agent as a Windows service.
+---
+
+# Run Vault Agent as a Windows service
+
+Vault Agent can be run as a Windows service. In order to do this, you need to register Vault Agent with the Windows
+Service Control Manager. After Vault Agent is registered, it can be started like any other Windows
+service.
+
+While this guide focuses on an example for Vault Agent, this example can be easily adapted to work for
+[Vault Proxy](/vault/docs/agent-and-proxy/proxy) by changing the config and subcommand
+given to `vault.exe` as appropriate.
+
+<Note>
+
+- Run the commands on this page in a PowerShell session with Administrator capabilities.
+
+- When specifying Windows file paths in config files, they should be formatted like this: `C:/foo/bar/file.txt`
+instead of using backslashes.
+
+</Note>
+
+## Register Vault Agent as a Windows service
+
+There are multiple ways to register Vault Agent as a Windows service. One way is to use
+[`sc.exe`](https://docs.microsoft.com/en-us/windows-server/administration/windows-commands/sc-create). `sc.exe` works
+best if the path to your Vault binary and its associated agent config file do not contain spaces. `sc.exe` can be
+pretty tricky to get working correctly if your path contains spaces, as paths containing spaces must be quoted,
+and escaping quotes correctly in a way that makes `sc.exe` happy is non-trivial. If your path contains spaces, or you prefer not to use `sc.exe`, another
+alternative is to use the
+[`New-Service`](https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.management/new-service?view=powershell-5.1)
+cmdlet. `New-Service` is less picky about the method used to escape quotes, and can sometimes be easier. Examples of
+both will be shown below.
+
+### Using sc.exe
+
+<Note title="Important">
+
+Ensure the executable path of the service is quoted, especially when it contains spaces, to avoid
+potential privilege escalation risks.
+
+</Note>
+
+If you use `sc.exe`, make sure you specify `sc.exe` explicitly, and not just `sc`. The command below shows the creation
+of Vault Agent as a service, using "Vault Agent" as the display name, and starting automatically when Windows starts.
+The `binPath` argument should include the fully qualified path to the Vault executable, as well as any arguments required.
+
+```shell-session
+PS C:\Windows\system32> sc.exe create VaultAgent binPath="C:\vault\vault.exe agent -config=C:\vault\agent-config.hcl" displayName="Vault Agent" start=auto
+[SC] CreateService SUCCESS
+```
+
+Note that the spacing after the `=` in all of the arguments is intentional and required.
+
+If you receive a success message, your service is registered with the service manager.
+
+If you get an error, please verify the path to the binary and check the arguments, by running the contents of
+`binPath=` directly in a PowerShell session and observing the results.
+
+### Using New-Service
+
+The syntax is slightly different for `New-Service`, but the gist is the same. The invocation below is equivalent to the
+`sc.exe` one above.
+
+```shell-session
+PS C:\Windows\system32> New-Service -Name "VaultAgent" -BinaryPathName "C:\vault\vault.exe agent -config=C:\vault\agent-config.hcl" -DisplayName "Vault Agent" -StartupType "Automatic"
+
+Status   Name               DisplayName
+------   ----               -----------
+Stopped  VaultAgent         Vault Agent
+```
+
+As mentioned previously, `New-Service` is easier to use if the path to your Vault executable and/or agent config contains spaces.
+Below is an example of how to configure Vault Agent as a service using a path with spaces.
+
+```shell-session
+PS C:\Windows\system32> New-Service -Name "VaultAgent" -BinaryPathName '"C:\my dir\vault.exe" agent -config="C:\my dir\agent-config.hcl"' -DisplayName "Vault Agent" -StartupType "Automatic"
+
+Status   Name               DisplayName
+------   ----               -----------
+Stopped  VaultAgent         Vault Agent
+```
+
+Note that only the paths themselves are double quoted, and the entire `BinaryPathName` is wrapped in single quotes, in order
+to escape the double quotes used for the paths.
+
+If anything goes wrong during this process, and you need to manually edit the path later, use the Registry Editor to find
+the following key: `HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\VaultAgent`. You can edit the `ImagePath` value
+at that key to the correct path.
+
+## Start the Vault Agent service
+
+There are multiple ways to start the service.
+
+- Using the `sc.exe` command.
+- Using the `Start-Service` cmdlet.
+- Go to the Windows Service Manager, and look for **VaultAgent** in the service name column. Click the
+`Start` button to start the service.
+
+### Example starting Vault Agent using `sc.exe`
+
+```shell-session
+PS C:\Windows\system32> sc.exe start VaultAgent
+
+SERVICE_NAME: VaultAgent
+     TYPE               : 10  WIN32_OWN_PROCESS
+     STATE              : 4  RUNNING
+                             (STOPPABLE, NOT_PAUSABLE, ACCEPTS_SHUTDOWN)
+     WIN32_EXIT_CODE    : 0  (0x0)
+     SERVICE_EXIT_CODE  : 0  (0x0)
+     CHECKPOINT         : 0x0
+     WAIT_HINT          : 0x0
+     PID                : 6548
+     FLAGS              :
+```
+
+### Example starting Vault Agent using `Start-Service`
+
+```shell-session
+PS C:\Windows\system32> Start-Service -Name "VaultAgent"
+```
+
+Note that in the case where the service was started successfully, `New-Service` does not return any output.

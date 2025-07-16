@@ -1,0 +1,3 @@
+```release-note:change
+api: Upgrade from github.com/go-jose/go-jose/v3 v3.0.3 to github.com/go-jose/go-jose/v4 v4.0.1.
+```

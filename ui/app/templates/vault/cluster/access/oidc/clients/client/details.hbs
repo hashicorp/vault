@@ -1,22 +1,27 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
 <Toolbar data-test-oidc-client-toolbar>
   <ToolbarActions>
     {{#if this.model.canDelete}}
       <ConfirmAction
         data-test-oidc-client-delete
-        @buttonClasses="toolbar-link"
+        @buttonText="Delete application"
+        class="toolbar-button"
+        @buttonColor="secondary"
         @onConfirmAction={{this.delete}}
         @confirmTitle="Delete application?"
         @confirmMessage="This application will be permanently deleted. You will need to re-create it to use it again."
-        @confirmButtonText="Delete"
-      >
-        Delete application
-      </ConfirmAction>
+      />
       <div class="toolbar-separator"></div>
     {{/if}}
     {{#if this.model.canEdit}}
       <ToolbarLink
+        @route="vault.cluster.access.oidc.clients.client.edit"
+        @model={{this.model.name}}
         data-test-oidc-client-edit
-        @params={{array "vault.cluster.access.oidc.clients.client.edit" this.model.name}}
       >
         Edit application
       </ToolbarLink>

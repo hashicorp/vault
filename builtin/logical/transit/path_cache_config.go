@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
@@ -11,6 +14,11 @@ import (
 func (b *backend) pathCacheConfig() *framework.Path {
 	return &framework.Path{
 		Pattern: "cache-config",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"size": {
 				Type:        framework.TypeInt,
@@ -24,16 +32,18 @@ func (b *backend) pathCacheConfig() *framework.Path {
 			logical.ReadOperation: &framework.PathOperation{
 				Callback: b.pathCacheConfigRead,
 				Summary:  "Returns the size of the active cache",
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationSuffix: "cache-configuration",
+				},
 			},
 
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathCacheConfigWrite,
 				Summary:  "Configures a new cache of the specified size",
-			},
-
-			logical.CreateOperation: &framework.PathOperation{
-				Callback: b.pathCacheConfigWrite,
-				Summary:  "Configures a new cache of the specified size",
+				DisplayAttrs: &framework.DisplayAttributes{
+					OperationVerb:   "configure",
+					OperationSuffix: "cache",
+				},
 			},
 		},
 
@@ -65,7 +75,11 @@ func (b *backend) pathCacheConfigWrite(ctx context.Context, req *logical.Request
 		return nil, err
 	}
 
-	return nil, nil
+	return &logical.Response{
+		Data: map[string]interface{}{
+			"size": cacheSize,
+		},
+	}, nil
 }
 
 type configCache struct {

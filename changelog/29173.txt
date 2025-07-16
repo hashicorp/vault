@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/pki: Add a new set of APIs that allow listing ACME account key ids, retrieving ACME account information along with the associated order and certificate information and updating an ACME account's status
+```

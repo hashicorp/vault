@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { create, clickable, fillable, visitable, selectable } from 'ember-cli-page-object';
 import ListView from 'vault/tests/pages/components/list-view';
 
@@ -9,6 +14,5 @@ export default create({
   createLink: clickable('[data-test-secret-create]'),
   name: fillable('[data-test-input="name"]'),
   roleType: selectable('[data-test-input="type"'),
-  save: clickable('[data-test-secret-save]'),
   edit: clickable('[data-test-edit-link]'),
 });

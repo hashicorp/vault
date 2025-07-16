@@ -1,6 +1,11 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 
@@ -17,6 +22,7 @@ import { task } from 'ember-concurrency';
  * @param {Object} model - oidc client model
  * @param {onCancel} onCancel - callback triggered when cancel button is clicked
  * @param {onSave} onSave - callback triggered on save success
+ * @param {boolean} [isModalForm=false] - if true, hides inputs related to selecting an application which is only relevant to the OIDC provider workflow.
  */
 
 export default class OidcKeyForm extends Component {
@@ -26,7 +32,7 @@ export default class OidcKeyForm extends Component {
   @tracked invalidFormAlert;
   @tracked modelValidations;
   @tracked radioCardGroupValue =
-    // If "*" is provided, all clients are allowed: https://www.vaultproject.io/api-docs/secret/identity/oidc-provider#parameters
+    // If "*" is provided, all clients are allowed: https://developer.hashicorp.com/vault/api-docs/secret/identity/oidc-provider#parameters
     !this.args.model.allowedClientIds || this.args.model.allowedClientIds.includes('*')
       ? 'allow_all'
       : 'limited';
@@ -78,7 +84,9 @@ export default class OidcKeyForm extends Component {
           `Successfully ${isNew ? 'created' : 'updated'} the key
           ${name}.`
         );
-        this.args.onSave();
+        // this form is sometimes used in a modal, passing the model notifies
+        // the parent if the save was successful
+        this.args.onSave(this.args.model);
       }
     } catch (error) {
       const message = error.errors ? error.errors.join('. ') : error.message;

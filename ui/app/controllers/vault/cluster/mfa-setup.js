@@ -1,5 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Controller from '@ember/controller';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
@@ -11,7 +16,7 @@ export default class VaultClusterMfaSetupController extends Controller {
   @tracked qrCode = '';
 
   get entityId() {
-    return this.auth.authData.entity_id;
+    return this.auth.authData.entityId;
   }
 
   @action isUUIDVerified(verified) {

@@ -1,0 +1,3 @@
+```release-note:deprecation
+auth/centrify: Centrify plugin is deprecated as of 1.15, slated for removal in 1.17
+```

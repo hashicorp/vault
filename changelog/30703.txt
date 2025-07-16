@@ -1,0 +1,3 @@
+```release-note:feature
+**Auto Irrevocable Lease Removal (enterprise)**: Add the Vault Enterprise configuration param, `remove_irrevocable_lease_after`. When set to a non-zero value, this will automatically delete irrevocable leases after the configured duration exceeds the lease's expire time. The minimum duration allowed for this field is two days.
+```

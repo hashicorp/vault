@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
 import { computed } from '@ember/object';
 import { expandAttributeMeta } from 'vault/utils/field-to-attrs';
@@ -25,7 +30,10 @@ export default Model.extend({
     label: 'TTL',
     editType: 'ttl',
   }),
-  validPrincipals: attr('string'),
+  validPrincipals: attr('string', {
+    helpText:
+      'Specifies valid principals, either usernames or hostnames, that the certificate should be signed for. Required unless the role has specified allow_empty_principals.',
+  }),
   certType: attr('string', {
     defaultValue: 'user',
     label: 'Certificate Type',
@@ -46,7 +54,7 @@ export default Model.extend({
   signedKey: attr('string'),
 
   attrs: computed('signedKey', function () {
-    let keys = this.signedKey ? DISPLAY_FIELDS.slice(0) : CREATE_FIELDS.slice(0);
+    const keys = this.signedKey ? DISPLAY_FIELDS.slice(0) : CREATE_FIELDS.slice(0);
     return expandAttributeMeta(this, keys);
   }),
 });

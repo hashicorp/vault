@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: adds allowed_user_ids field to create role form and user_ids to generate certificates form in pki
+```

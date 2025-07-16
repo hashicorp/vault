@@ -1,6 +1,11 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { task } from 'ember-concurrency';
 import parseURL from 'core/utils/parse-url';
@@ -26,22 +31,22 @@ export default class OidcProviderForm extends Component {
   @tracked errorBanner;
   @tracked invalidFormAlert;
   @tracked radioCardGroupValue =
-    // If "*" is provided, all clients are allowed: https://www.vaultproject.io/api-docs/secret/identity/oidc-provider#parameters
+    // If "*" is provided, all clients are allowed: https://developer.hashicorp.com/vault/api-docs/secret/identity/oidc-provider#parameters
     !this.args.model.allowedClientIds || this.args.model.allowedClientIds.includes('*')
       ? 'allow_all'
       : 'limited';
 
-  constructor() {
-    super(...arguments);
-    const { model } = this.args;
-    model.issuer = model.isNew ? '' : parseURL(model.issuer).origin;
-  }
-
   // function passed to search select
   renderInfoTooltip(selection, dropdownOptions) {
     // if a client has been deleted it will not exist in dropdownOptions (response from search select's query)
-    let clientExists = !!dropdownOptions.findBy('clientId', selection);
+    const clientExists = !!dropdownOptions.find((opt) => opt.clientId === selection);
     return !clientExists ? 'The application associated with this client_id no longer exists' : false;
+  }
+
+  // fired on did-insert from render modifier
+  @action
+  setIssuer(elem, [model]) {
+    model.issuer = model.isNew ? '' : parseURL(model.issuer).origin;
   }
 
   @action
@@ -78,7 +83,7 @@ export default class OidcProviderForm extends Component {
         }
         yield this.args.model.save();
         this.flashMessages.success(
-          `Successfully ${isNew ? 'created' : 'updated'} the OIDC provider 
+          `Successfully ${isNew ? 'created' : 'updated'} the OIDC provider
           ${name}.`
         );
         this.args.onSave();

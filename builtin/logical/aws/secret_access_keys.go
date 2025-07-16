@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package aws
 
 import (
@@ -6,15 +9,14 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/hashicorp/go-secure-stdlib/awsutil"
-	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/template"
-	"github.com/hashicorp/vault/sdk/logical"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/hashicorp/errwrap"
+	"github.com/hashicorp/go-secure-stdlib/awsutil"
+	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/template"
+	"github.com/hashicorp/vault/sdk/logical"
 )
 
 const (
@@ -35,9 +37,14 @@ func secretAccessKeys(b *backend) *framework.Secret {
 				Type:        framework.TypeString,
 				Description: "Secret Key",
 			},
+			"session_token": {
+				Type:        framework.TypeString,
+				Description: "Session Token",
+			},
 			"security_token": {
 				Type:        framework.TypeString,
 				Description: "Security Token",
+				Deprecated:  true,
 			},
 		},
 
@@ -150,15 +157,21 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 		return logical.ErrorResponse("must specify at least one of policy_arns or policy_document with %s credential_type", federationTokenCred), nil
 	}
 
-	tokenResp, err := stsClient.GetFederationToken(getTokenInput)
+	tokenResp, err := stsClient.GetFederationTokenWithContext(ctx, getTokenInput)
 	if err != nil {
 		return logical.ErrorResponse("Error generating STS keys: %s", err), awsutil.CheckAWSError(err)
 	}
 
+	// While STS credentials cannot be revoked/renewed, we will still create a lease since users are
+	// relying on a non-zero `lease_duration` in order to manage their lease lifecycles manually.
+	//
+	ttl := time.Until(*tokenResp.Credentials.Expiration)
 	resp := b.Secret(secretAccessKeyType).Response(map[string]interface{}{
 		"access_key":     *tokenResp.Credentials.AccessKeyId,
 		"secret_key":     *tokenResp.Credentials.SecretAccessKey,
 		"security_token": *tokenResp.Credentials.SessionToken,
+		"session_token":  *tokenResp.Credentials.SessionToken,
+		"ttl":            uint64(ttl.Seconds()),
 	}, map[string]interface{}{
 		"username": username,
 		"policy":   policy,
@@ -166,7 +179,56 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 	})
 
 	// Set the secret TTL to appropriately match the expiration of the token
-	resp.Secret.TTL = tokenResp.Credentials.Expiration.Sub(time.Now())
+	resp.Secret.TTL = ttl
+
+	// STS are purposefully short-lived and aren't renewable
+	resp.Secret.Renewable = false
+
+	return resp, nil
+}
+
+// NOTE: Getting session tokens with or without MFA/TOTP has behavior that can cause confusion.
+// When an AWS IAM user has a policy attached requiring an MFA code by use of "aws:MultiFactorAuthPresent": "true",
+// then credentials may still be returned without an MFA code provided.
+// If a Vault role associated with the IAM user is configured without both an mfa_serial_number and
+// the mfa_code is not given, the API call is successful and returns credentials. These credentials
+// are scoped to any resources in the policy that do NOT have "aws:MultiFactorAuthPresent": "true" set and
+// accessing resources with it set will be denied.
+// This is expected behavior, as the policy may have a mix of permissions, some requiring MFA and others not.
+// If an mfa_serial_number is set on the Vault role, then a valid mfa_code MUST be provided to succeed.
+func (b *backend) getSessionToken(ctx context.Context, s logical.Storage, serialNumber, mfaCode string, lifeTimeInSeconds int64) (*logical.Response, error) {
+	stsClient, err := b.clientSTS(ctx, s)
+	if err != nil {
+		return logical.ErrorResponse(err.Error()), nil
+	}
+
+	getTokenInput := &sts.GetSessionTokenInput{
+		DurationSeconds: &lifeTimeInSeconds,
+	}
+	if serialNumber != "" {
+		getTokenInput.SerialNumber = &serialNumber
+	}
+	if mfaCode != "" {
+		getTokenInput.TokenCode = &mfaCode
+	}
+
+	tokenResp, err := stsClient.GetSessionToken(getTokenInput)
+	if err != nil {
+		return logical.ErrorResponse("Error generating STS keys: %s", err), awsutil.CheckAWSError(err)
+	}
+
+	ttl := time.Until(*tokenResp.Credentials.Expiration)
+	resp := b.Secret(secretAccessKeyType).Response(map[string]interface{}{
+		"access_key":    *tokenResp.Credentials.AccessKeyId,
+		"secret_key":    *tokenResp.Credentials.SecretAccessKey,
+		"session_token": *tokenResp.Credentials.SessionToken,
+		"ttl":           uint64(ttl.Seconds()),
+	}, map[string]interface{}{
+		"is_sts": true,
+	})
+
+	// Set the secret TTL to appropriately match the expiration of the token
+	resp.Secret.TTL = time.Until(*tokenResp.Credentials.Expiration)
 
 	// STS are purposefully short-lived and aren't renewable
 	resp.Secret.Renewable = false
@@ -176,7 +238,7 @@ func (b *backend) getFederationToken(ctx context.Context, s logical.Storage,
 
 func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	displayName, roleName, roleArn, policy string, policyARNs []string,
-	iamGroups []string, lifeTimeInSeconds int64, roleSessionName string) (*logical.Response, error,
+	iamGroups []string, lifeTimeInSeconds int64, roleSessionName string, sessionTags map[string]string, externalID string) (*logical.Response, error,
 ) {
 	// grab any IAM group policies associated with the vault role, both inline
 	// and managed
@@ -233,16 +295,35 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	if len(policyARNs) > 0 {
 		assumeRoleInput.SetPolicyArns(convertPolicyARNs(policyARNs))
 	}
-	tokenResp, err := stsClient.AssumeRole(assumeRoleInput)
+	if externalID != "" {
+		assumeRoleInput.SetExternalId(externalID)
+	}
+	var tags []*sts.Tag
+	for k, v := range sessionTags {
+		tags = append(tags,
+			&sts.Tag{
+				Key:   aws.String(k),
+				Value: aws.String(v),
+			},
+		)
+	}
+	assumeRoleInput.SetTags(tags)
+	tokenResp, err := stsClient.AssumeRoleWithContext(ctx, assumeRoleInput)
 	if err != nil {
 		return logical.ErrorResponse("Error assuming role: %s", err), awsutil.CheckAWSError(err)
 	}
 
+	// While STS credentials cannot be revoked/renewed, we will still create a lease since users are
+	// relying on a non-zero `lease_duration` in order to manage their lease lifecycles manually.
+	//
+	ttl := time.Until(*tokenResp.Credentials.Expiration)
 	resp := b.Secret(secretAccessKeyType).Response(map[string]interface{}{
 		"access_key":     *tokenResp.Credentials.AccessKeyId,
 		"secret_key":     *tokenResp.Credentials.SecretAccessKey,
 		"security_token": *tokenResp.Credentials.SessionToken,
+		"session_token":  *tokenResp.Credentials.SessionToken,
 		"arn":            *tokenResp.AssumedRoleUser.Arn,
+		"ttl":            uint64(ttl.Seconds()),
 	}, map[string]interface{}{
 		"username": roleSessionName,
 		"policy":   roleArn,
@@ -250,7 +331,7 @@ func (b *backend) assumeRole(ctx context.Context, s logical.Storage,
 	})
 
 	// Set the secret TTL to appropriately match the expiration of the token
-	resp.Secret.TTL = tokenResp.Credentials.Expiration.Sub(time.Now())
+	resp.Secret.TTL = ttl
 
 	// STS are purposefully short-lived and aren't renewable
 	resp.Secret.Renewable = false
@@ -280,7 +361,7 @@ func (b *backend) secretAccessKeysCreate(
 	displayName, policyName string,
 	role *awsRoleEntry,
 ) (*logical.Response, error) {
-	iamClient, err := b.clientIAM(ctx, s)
+	iamClient, err := b.clientIAM(ctx, s, nil)
 	if err != nil {
 		return logical.ErrorResponse(err.Error()), nil
 	}
@@ -327,7 +408,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	// Create the user
-	_, err = iamClient.CreateUser(createUserRequest)
+	_, err = iamClient.CreateUserWithContext(ctx, createUserRequest)
 	if err != nil {
 		if walErr := framework.DeleteWAL(ctx, s, walID); walErr != nil {
 			iamErr := fmt.Errorf("error creating IAM user: %w", err)
@@ -338,7 +419,7 @@ func (b *backend) secretAccessKeysCreate(
 
 	for _, arn := range role.PolicyArns {
 		// Attach existing policy against user
-		_, err = iamClient.AttachUserPolicy(&iam.AttachUserPolicyInput{
+		_, err = iamClient.AttachUserPolicyWithContext(ctx, &iam.AttachUserPolicyInput{
 			UserName:  aws.String(username),
 			PolicyArn: aws.String(arn),
 		})
@@ -349,7 +430,7 @@ func (b *backend) secretAccessKeysCreate(
 	}
 	if role.PolicyDocument != "" {
 		// Add new inline user policy against user
-		_, err = iamClient.PutUserPolicy(&iam.PutUserPolicyInput{
+		_, err = iamClient.PutUserPolicyWithContext(ctx, &iam.PutUserPolicyInput{
 			UserName:       aws.String(username),
 			PolicyName:     aws.String(policyName),
 			PolicyDocument: aws.String(role.PolicyDocument),
@@ -361,7 +442,7 @@ func (b *backend) secretAccessKeysCreate(
 
 	for _, group := range role.IAMGroups {
 		// Add user to IAM groups
-		_, err = iamClient.AddUserToGroup(&iam.AddUserToGroupInput{
+		_, err = iamClient.AddUserToGroupWithContext(ctx, &iam.AddUserToGroupInput{
 			UserName:  aws.String(username),
 			GroupName: aws.String(group),
 		})
@@ -380,18 +461,17 @@ func (b *backend) secretAccessKeysCreate(
 	}
 
 	if len(tags) > 0 {
-		_, err = iamClient.TagUser(&iam.TagUserInput{
+		_, err = iamClient.TagUserWithContext(ctx, &iam.TagUserInput{
 			Tags:     tags,
 			UserName: &username,
 		})
-
 		if err != nil {
 			return logical.ErrorResponse("Error adding tags to user: %s", err), awsutil.CheckAWSError(err)
 		}
 	}
 
 	// Create the keys
-	keyResp, err := iamClient.CreateAccessKey(&iam.CreateAccessKeyInput{
+	keyResp, err := iamClient.CreateAccessKeyWithContext(ctx, &iam.CreateAccessKeyInput{
 		UserName: aws.String(username),
 	})
 	if err != nil {
@@ -407,9 +487,9 @@ func (b *backend) secretAccessKeysCreate(
 
 	// Return the info!
 	resp := b.Secret(secretAccessKeyType).Response(map[string]interface{}{
-		"access_key":     *keyResp.AccessKey.AccessKeyId,
-		"secret_key":     *keyResp.AccessKey.SecretAccessKey,
-		"security_token": nil,
+		"access_key":    *keyResp.AccessKey.AccessKeyId,
+		"secret_key":    *keyResp.AccessKey.SecretAccessKey,
+		"session_token": nil,
 	}, map[string]interface{}{
 		"username": username,
 		"policy":   role,

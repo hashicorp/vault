@@ -1,7 +1,9 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package server
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/go-test/deep"
@@ -62,7 +64,7 @@ func TestCustomResponseHeadersConfigs(t *testing.T) {
 		t.Fatalf("Error encountered when loading config %+v", err)
 	}
 	if diff := deep.Equal(expectedCustomResponseHeader, config.Listeners[0].CustomResponseHeaders); diff != nil {
-		t.Fatalf(fmt.Sprintf("parsed custom headers do not match the expected ones, difference: %v", diff))
+		t.Fatalf("parsed custom headers do not match the expected ones, difference: %v", diff)
 	}
 }
 
@@ -81,29 +83,29 @@ func TestCustomResponseHeadersConfigsMultipleListeners(t *testing.T) {
 		t.Fatalf("Error encountered when loading config %+v", err)
 	}
 	if diff := deep.Equal(expectedCustomResponseHeader, config.Listeners[0].CustomResponseHeaders); diff != nil {
-		t.Fatalf(fmt.Sprintf("parsed custom headers do not match the expected ones, difference: %v", diff))
+		t.Fatalf("parsed custom headers do not match the expected ones, difference: %v", diff)
 	}
 
 	if diff := deep.Equal(expectedCustomResponseHeader, config.Listeners[1].CustomResponseHeaders); diff == nil {
-		t.Fatalf(fmt.Sprintf("parsed custom headers do not match the expected ones, difference: %v", diff))
+		t.Fatalf("parsed custom headers do not match the expected ones, difference: %v", diff)
 	}
 	if diff := deep.Equal(expectedCustomResponseHeader["default"], config.Listeners[1].CustomResponseHeaders["default"]); diff != nil {
-		t.Fatalf(fmt.Sprintf("parsed custom headers do not match the expected ones, difference: %v", diff))
+		t.Fatalf("parsed custom headers do not match the expected ones, difference: %v", diff)
 	}
 
 	if diff := deep.Equal(expectedCustomResponseHeader, config.Listeners[2].CustomResponseHeaders); diff == nil {
-		t.Fatalf(fmt.Sprintf("parsed custom headers do not match the expected ones, difference: %v", diff))
+		t.Fatalf("parsed custom headers do not match the expected ones, difference: %v", diff)
 	}
 
 	if diff := deep.Equal(defaultSTS, config.Listeners[2].CustomResponseHeaders["default"]); diff != nil {
-		t.Fatalf(fmt.Sprintf("parsed custom headers do not match the expected ones, difference: %v", diff))
+		t.Fatalf("parsed custom headers do not match the expected ones, difference: %v", diff)
 	}
 
 	if diff := deep.Equal(expectedCustomResponseHeader, config.Listeners[3].CustomResponseHeaders); diff == nil {
-		t.Fatalf(fmt.Sprintf("parsed custom headers do not match the expected ones, difference: %v", diff))
+		t.Fatalf("parsed custom headers do not match the expected ones, difference: %v", diff)
 	}
 
 	if diff := deep.Equal(defaultSTS, config.Listeners[3].CustomResponseHeaders["default"]); diff != nil {
-		t.Fatalf(fmt.Sprintf("parsed custom headers do not match the expected ones, difference: %v", diff))
+		t.Fatalf("parsed custom headers do not match the expected ones, difference: %v", diff)
 	}
 }

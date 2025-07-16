@@ -1,0 +1,3 @@
+```release-note:improvement
+core/activity: Include ACME client metrics to precomputed queries
+```

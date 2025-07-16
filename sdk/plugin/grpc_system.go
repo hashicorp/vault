@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package plugin
 
 import (
@@ -13,16 +16,21 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/wrapping"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
+	"github.com/hashicorp/vault/sdk/rotation"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+var errMissingSystemView = errors.New("missing system view implementation: this method should not be called during plugin Setup, but only during and after Initialize")
 
 func newGRPCSystemView(conn *grpc.ClientConn) *gRPCSystemViewClient {
 	return &gRPCSystemViewClient{
 		client: pb.NewSystemViewClient(conn),
 	}
 }
+
+var _ logical.SystemView = &gRPCSystemViewClient{}
 
 type gRPCSystemViewClient struct {
 	client pb.SystemViewClient
@@ -175,6 +183,15 @@ func (s *gRPCSystemViewClient) PluginEnv(ctx context.Context) (*logical.PluginEn
 	return reply.PluginEnvironment, nil
 }
 
+func (s *gRPCSystemViewClient) VaultVersion(ctx context.Context) (string, error) {
+	reply, err := s.client.PluginEnv(ctx, &pb.Empty{})
+	if err != nil {
+		return "", err
+	}
+
+	return reply.PluginEnvironment.VaultVersion, nil
+}
+
 func (s *gRPCSystemViewClient) GeneratePasswordFromPolicy(ctx context.Context, policyName string) (password string, err error) {
 	req := &pb.GeneratePasswordFromPolicyRequest{
 		PolicyName: policyName,
@@ -186,6 +203,79 @@ func (s *gRPCSystemViewClient) GeneratePasswordFromPolicy(ctx context.Context, p
 	return resp.Password, nil
 }
 
+func (s gRPCSystemViewClient) ClusterID(ctx context.Context) (string, error) {
+	reply, err := s.client.ClusterInfo(ctx, &pb.Empty{})
+	if err != nil {
+		return "", err
+	}
+
+	return reply.ClusterID, nil
+}
+
+func (s *gRPCSystemViewClient) GenerateIdentityToken(ctx context.Context, req *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error) {
+	resp, err := s.client.GenerateIdentityToken(ctx, &pb.GenerateIdentityTokenRequest{
+		Audience: req.Audience,
+		TTL:      int64(req.TTL.Seconds()),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &pluginutil.IdentityTokenResponse{
+		Token: pluginutil.IdentityToken(resp.Token),
+		TTL:   time.Duration(resp.TTL) * time.Second,
+	}, nil
+}
+
+func (s *gRPCSystemViewClient) GetRotationInformation(ctx context.Context, req *rotation.RotationInfoRequest) (*rotation.RotationInfoResponse, error) {
+	resp, err := s.client.GetRotationInformation(ctx, &pb.RotationInfoRequest{
+		MountPath: req.ReqPath,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &rotation.RotationInfoResponse{
+		NextVaultRotation: time.Unix(resp.ExpireTime, 0),
+		LastVaultRotation: time.Unix(resp.IssueTime, 0),
+		TTL:               resp.TTL,
+	}, nil
+}
+
+func (s *gRPCSystemViewClient) RegisterRotationJob(ctx context.Context, req *rotation.RotationJobConfigureRequest) (id string, retErr error) {
+	cfgReq := &pb.RegisterRotationJobRequest{
+		Job: &pb.RotationJobInput{
+			Name:             req.Name,
+			MountPoint:       req.MountPoint,
+			Path:             req.ReqPath,
+			RotationSchedule: req.RotationSchedule,
+
+			// on the side outbound from the plugin, we convert duration to seconds, so seconds get sent over the wire
+			RotationWindow: int64(req.RotationWindow.Seconds()),
+			RotationPeriod: int64(req.RotationPeriod.Seconds()),
+		},
+	}
+	resp, err := s.client.RegisterRotationJob(ctx, cfgReq)
+	if err != nil {
+		return "", err
+	}
+	return resp.RotationID, nil
+}
+
+func (s *gRPCSystemViewClient) DeregisterRotationJob(ctx context.Context, req *rotation.RotationJobDeregisterRequest) error {
+	_, err := s.client.DeregisterRotationJob(ctx, &pb.DeregisterRotationJobRequest{
+		Req: &pb.DeregisterRotationRequestInput{
+			MountPoint: req.MountPoint,
+			ReqPath:    req.ReqPath,
+		},
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 type gRPCSystemViewServer struct {
 	pb.UnimplementedSystemViewServer
 
@@ -193,6 +283,9 @@ type gRPCSystemViewServer struct {
 }
 
 func (s *gRPCSystemViewServer) DefaultLeaseTTL(ctx context.Context, _ *pb.Empty) (*pb.TTLReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	ttl := s.impl.DefaultLeaseTTL()
 	return &pb.TTLReply{
 		TTL: int64(ttl),
@@ -200,6 +293,9 @@ func (s *gRPCSystemViewServer) DefaultLeaseTTL(ctx context.Context, _ *pb.Empty)
 }
 
 func (s *gRPCSystemViewServer) MaxLeaseTTL(ctx context.Context, _ *pb.Empty) (*pb.TTLReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	ttl := s.impl.MaxLeaseTTL()
 	return &pb.TTLReply{
 		TTL: int64(ttl),
@@ -207,6 +303,9 @@ func (s *gRPCSystemViewServer) MaxLeaseTTL(ctx context.Context, _ *pb.Empty) (*p
 }
 
 func (s *gRPCSystemViewServer) Tainted(ctx context.Context, _ *pb.Empty) (*pb.TaintedReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	tainted := s.impl.Tainted()
 	return &pb.TaintedReply{
 		Tainted: tainted,
@@ -214,6 +313,9 @@ func (s *gRPCSystemViewServer) Tainted(ctx context.Context, _ *pb.Empty) (*pb.Ta
 }
 
 func (s *gRPCSystemViewServer) CachingDisabled(ctx context.Context, _ *pb.Empty) (*pb.CachingDisabledReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	cachingDisabled := s.impl.CachingDisabled()
 	return &pb.CachingDisabledReply{
 		Disabled: cachingDisabled,
@@ -221,6 +323,9 @@ func (s *gRPCSystemViewServer) CachingDisabled(ctx context.Context, _ *pb.Empty)
 }
 
 func (s *gRPCSystemViewServer) ReplicationState(ctx context.Context, _ *pb.Empty) (*pb.ReplicationStateReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	replicationState := s.impl.ReplicationState()
 	return &pb.ReplicationStateReply{
 		State: int32(replicationState),
@@ -228,6 +333,9 @@ func (s *gRPCSystemViewServer) ReplicationState(ctx context.Context, _ *pb.Empty
 }
 
 func (s *gRPCSystemViewServer) ResponseWrapData(ctx context.Context, args *pb.ResponseWrapDataArgs) (*pb.ResponseWrapDataReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	data := map[string]interface{}{}
 	err := json.Unmarshal([]byte(args.Data), &data)
 	if err != nil {
@@ -253,6 +361,9 @@ func (s *gRPCSystemViewServer) ResponseWrapData(ctx context.Context, args *pb.Re
 }
 
 func (s *gRPCSystemViewServer) MlockEnabled(ctx context.Context, _ *pb.Empty) (*pb.MlockEnabledReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	enabled := s.impl.MlockEnabled()
 	return &pb.MlockEnabledReply{
 		Enabled: enabled,
@@ -260,6 +371,9 @@ func (s *gRPCSystemViewServer) MlockEnabled(ctx context.Context, _ *pb.Empty) (*
 }
 
 func (s *gRPCSystemViewServer) LocalMount(ctx context.Context, _ *pb.Empty) (*pb.LocalMountReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	local := s.impl.LocalMount()
 	return &pb.LocalMountReply{
 		Local: local,
@@ -267,6 +381,9 @@ func (s *gRPCSystemViewServer) LocalMount(ctx context.Context, _ *pb.Empty) (*pb
 }
 
 func (s *gRPCSystemViewServer) EntityInfo(ctx context.Context, args *pb.EntityInfoArgs) (*pb.EntityInfoReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	entity, err := s.impl.EntityInfo(args.EntityID)
 	if err != nil {
 		return &pb.EntityInfoReply{
@@ -279,6 +396,9 @@ func (s *gRPCSystemViewServer) EntityInfo(ctx context.Context, args *pb.EntityIn
 }
 
 func (s *gRPCSystemViewServer) GroupsForEntity(ctx context.Context, args *pb.EntityInfoArgs) (*pb.GroupsForEntityReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	groups, err := s.impl.GroupsForEntity(args.EntityID)
 	if err != nil {
 		return &pb.GroupsForEntityReply{
@@ -291,6 +411,9 @@ func (s *gRPCSystemViewServer) GroupsForEntity(ctx context.Context, args *pb.Ent
 }
 
 func (s *gRPCSystemViewServer) PluginEnv(ctx context.Context, _ *pb.Empty) (*pb.PluginEnvReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	pluginEnv, err := s.impl.PluginEnv(ctx)
 	if err != nil {
 		return &pb.PluginEnvReply{
@@ -303,6 +426,9 @@ func (s *gRPCSystemViewServer) PluginEnv(ctx context.Context, _ *pb.Empty) (*pb.
 }
 
 func (s *gRPCSystemViewServer) GeneratePasswordFromPolicy(ctx context.Context, req *pb.GeneratePasswordFromPolicyRequest) (*pb.GeneratePasswordFromPolicyReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
 	policyName := req.PolicyName
 	if policyName == "" {
 		return &pb.GeneratePasswordFromPolicyReply{}, status.Errorf(codes.InvalidArgument, "no password policy specified")
@@ -317,4 +443,108 @@ func (s *gRPCSystemViewServer) GeneratePasswordFromPolicy(ctx context.Context, r
 		Password: password,
 	}
 	return resp, nil
+}
+
+func (s *gRPCSystemViewServer) ClusterInfo(ctx context.Context, _ *pb.Empty) (*pb.ClusterInfoReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
+
+	clusterId, err := s.impl.ClusterID(ctx)
+	if err != nil {
+		return &pb.ClusterInfoReply{}, status.Errorf(codes.Internal, "failed to fetch cluster id")
+	}
+
+	return &pb.ClusterInfoReply{
+		ClusterID: clusterId,
+	}, nil
+}
+
+func (s *gRPCSystemViewServer) GenerateIdentityToken(ctx context.Context, req *pb.GenerateIdentityTokenRequest) (*pb.GenerateIdentityTokenResponse, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
+
+	res, err := s.impl.GenerateIdentityToken(ctx, &pluginutil.IdentityTokenRequest{
+		Audience: req.GetAudience(),
+		TTL:      time.Duration(req.GetTTL()) * time.Second,
+	})
+	if err != nil {
+		return &pb.GenerateIdentityTokenResponse{}, status.Error(codes.Internal, err.Error())
+	}
+
+	return &pb.GenerateIdentityTokenResponse{
+		Token: res.Token.Token(),
+		TTL:   int64(res.TTL.Seconds()),
+	}, nil
+}
+
+func (s *gRPCSystemViewServer) GetRotationInformation(ctx context.Context, req *pb.RotationInfoRequest) (*pb.RotationInfoReply, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
+
+	cfgReq := &rotation.RotationInfoRequest{
+		ReqPath: req.MountPath,
+	}
+
+	resp, err := s.impl.GetRotationInformation(ctx, cfgReq)
+	if err != nil {
+		return &pb.RotationInfoReply{}, status.Error(codes.Internal, err.Error())
+	}
+
+	return &pb.RotationInfoReply{
+		IssueTime:  resp.LastVaultRotation.Unix(),
+		ExpireTime: resp.NextVaultRotation.Unix(),
+		TTL:        resp.TTL,
+	}, nil
+}
+
+func (s *gRPCSystemViewServer) RegisterRotationJob(ctx context.Context, req *pb.RegisterRotationJobRequest) (*pb.RegisterRotationJobResponse, error) {
+	if s.impl == nil {
+		return nil, errMissingSystemView
+	}
+
+	cfgReq := &rotation.RotationJobConfigureRequest{
+		Name:             req.Job.Name,
+		MountPoint:       req.Job.MountPoint,
+		ReqPath:          req.Job.Path,
+		RotationSchedule: req.Job.RotationSchedule,
+		// on the side inbound to vault, we convert seconds back to time.Duration
+		// Note: this value is seconds (as per the outbound client call, despite being int64)
+		// The field is int64 because of gRPC reasons, not time.Duration reasons
+		RotationWindow: time.Duration(req.Job.RotationWindow) * time.Second,
+		RotationPeriod: time.Duration(req.Job.RotationPeriod) * time.Second,
+	}
+
+	rotationID, err := s.impl.RegisterRotationJob(ctx, cfgReq)
+	if err != nil {
+		return &pb.RegisterRotationJobResponse{}, status.Error(codes.Internal, err.Error())
+	}
+
+	return &pb.RegisterRotationJobResponse{
+		RotationID: rotationID,
+	}, nil
+}
+
+func (s *gRPCSystemViewServer) DeregisterRotationJob(ctx context.Context, req *pb.DeregisterRotationJobRequest) (*pb.Empty, error) {
+	if s.impl == nil {
+		return &pb.Empty{}, errMissingSystemView
+	}
+
+	cfgReq := &rotation.RotationJobDeregisterRequest{
+		MountPoint: req.Req.MountPoint,
+		ReqPath:    req.Req.ReqPath,
+	}
+
+	err := s.impl.DeregisterRotationJob(ctx, cfgReq)
+	if err != nil {
+		return &pb.Empty{}, status.Error(codes.Internal, err.Error())
+	}
+
+	return &pb.Empty{}, nil
+}
+
+func (s *gRPCSystemViewClient) DownloadExtractVerifyPlugin(_ context.Context, _ *pluginutil.PluginRunner) error {
+	return fmt.Errorf("cannot call DownloadExtractVerifyPlugin from a plugin backend")
 }

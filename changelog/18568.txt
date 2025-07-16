@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fix spurious `permission denied` for all HelpOperations on sudo-protected paths
+```

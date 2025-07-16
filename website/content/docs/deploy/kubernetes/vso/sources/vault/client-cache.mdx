@@ -1,0 +1,320 @@
+---
+layout: docs
+page_title: Persist and encrypt the Vault client cache
+description: >-
+  Enable and encrypt the Vault client cache for dynamic secrets with Vault
+  Secrets Operator.
+---
+
+# Persist and encrypt the Vault client cache
+
+By default, the [Vault client cache](/vault/docs/platform/k8s/vso/sources/vault#vault-client-cache) does not persist. You can use the
+[transit secrets engine](/vault/docs/secrets/transit) with Vault Secrets Operator (VSO)
+to store and encrypt the client cache in your Vault server.
+
+<Highlight title="Dynamic secrets best practice">
+
+  We strongly recommend persisting and encrypting the client cache if you use
+  [Vault dynamic secrets](/vault/docs/platform/k8s/vso/api-reference#vaultdynamicsecret),
+  so that dynamic secret leases are maintained through restarts and upgrades.
+
+</Highlight>
+
+## Before you start
+
+- **You must have [Vault Secrets Operator](/vault/docs/platform/k8s/vso/sources/vault) installed**.
+- **You must have the [`transit` secrets engine](/vault/docs/secrets/transit) enabled**.
+- **You must have the [`kubernetes` authentication engine](/vault/docs/auth/kubernetes) enabled**.
+
+## Step 1: Configure a key and policy for VSO
+
+Use the Vault CLI or Terraform to add a key to `transit` and define policies
+for encrypting and decrypting cache information:
+
+<CodeTabs>
+<CodeBlockConfig>
+
+```shell-session
+export VAULT_NAMESPACE=<VAULT_NAMESPACE>
+export VAULT_TRANSIT_PATH=<VAULT_TRANSIT_PATH>
+
+vault write -f ${VAULT_TRANSIT_PATH}/keys/vso-client-cache
+
+vault policy write operator - <<EOH
+path "${VAULT_TRANSIT_PATH}/encrypt/vso-client-cache" {
+  capabilities = ["create", "update"]
+}
+path "${VAULT_TRANSIT_PATH}/decrypt/vso-client-cache" {
+  capabilities = ["create", "update"]
+}
+EOH
+```
+
+</CodeBlockConfig>
+<CodeBlockConfig>
+
+```hcl
+locals {
+  transit_path      = "<VAULT_TRANSIT_PATH>"
+  transit_namespace = "<VAULT_NAMESPACE>"
+}
+
+resource "vault_transit_secret_cache_config" "cache" {
+  namespace = local.transit_namespace
+  backend   = local.transit_path
+  size      = 500
+}
+
+resource "vault_transit_secret_backend_key" "cache" {
+  namespace        = local.transit_namespace
+  backend          = local.transit_path
+  name             = "vso-client-cache"
+  deletion_allowed = true
+}
+
+data "vault_policy_document" "operator_transit" {
+  rule {
+    path         = "${local.transit_path}/encrypt/${vault_transit_secret_backend_key.cache.name}"
+    capabilities = ["create", "update"]
+    description  = "encrypt"
+  }
+  rule {
+    path         = "${local.transit_path}/decrypt/${vault_transit_secret_backend_key.cache.name}"
+    capabilities = ["create", "update"]
+    description  = "decrypt"
+  }
+}
+
+resource "vault_policy" "operator" {
+  namespace = vault_transit_secret_backend_key.cache.namespace
+  name      = "operator"
+  policy    = data.vault_policy_document.operator_transit.hcl
+}
+```
+
+</CodeBlockConfig>
+</CodeTabs>
+
+## Step 2: Create a kubernetes authentication role
+
+Use the Vault CLI or Terraform to create a Kubernetes authentication role for
+Vault Secrets Operator.
+
+<CodeTabs>
+<CodeBlockConfig>
+
+```shell-session
+export VAULT_NAMESPACE=<VAULT_NAMESPACE>
+
+vault write auth/<VAULT_KUBERNETES_PATH>/role/operator \
+  bound_service_account_names=vault-secrets-operator-controller-manager \
+  bound_service_account_namespaces=vault-secrets-operator \
+  token_period="24h" \
+  token_policies=operator \
+  audience="vault"
+```
+
+</CodeBlockConfig>
+<CodeBlockConfig>
+
+```hcl
+data "vault_auth_backend" "kubernetes" {
+  namespace = "<VAULT_NAMESPACE>"
+  path      = "<VAULT_KUBERNETES_PATH>"
+}
+
+resource "vault_kubernetes_auth_backend_config" "local" {
+  namespace       = data.vault_auth_backend.kubernetes.namespace
+  backend         = data.vault_auth_backend.kubernetes.path
+  kubernetes_host = "https://kubernetes.default.svc"
+}
+
+resource "vault_kubernetes_auth_backend_role" "operator" {
+  namespace                        = data.vault_auth_backend.kubernetes.namespace
+  backend                          = vault_kubernetes_auth_backend_config.local.backend
+  role_name                        = "operator"
+  bound_service_account_names      = ["vault-secrets-operator-controller-manager"]
+  bound_service_account_namespaces = ["vault-secrets-operator"]
+  token_period                     = 120
+  token_policies = [
+    vault_policy.operator.name,
+  ]
+  audience = "vault"
+}
+```
+
+</CodeBlockConfig>
+</CodeTabs>
+
+## Step 3: Configure a Vault connection for VSO
+
+Use the Vault Secrets Operator API to add a
+[VaultConnection](/vault/docs/platform/k8s/vso/api-reference#vaultconnection)
+between VSO and your Vault server.
+
+<Note>If you already have a connection for VSO, continue to the next step</Note>
+
+```yaml
+apiVersion: secrets.hashicorp.com/v1beta1
+kind: VaultConnection
+metadata:
+  name: local-vault-server
+  namespace: vault-secrets-operator
+spec:
+  address: 'https://vault.vault.svc.cluster.local:8200'
+```
+
+## Step 4: Enable encrypted client cache storage
+
+<Tabs>
+
+<Tab heading="Helm">
+
+For [Helm installs](/vault/docs/platform/k8s/vso/installation#installation-using-helm),
+install (or upgrade) your [`server.clientCache`](/vault/docs/platform/k8s/vso/helm#v-controller-manager-clientcache)
+configuration:
+
+```yaml
+controller:
+  manager:
+    clientCache:
+      persistenceModel: direct-encrypted
+      storageEncryption:
+        enabled: true
+        vaultConnectionRef: local-vault-server
+        keyName: vso-client-cache
+        transitMount: <VAULT_TRANSIT_PATH>
+        namespace: <VAULT_NAMESPACE>
+        method: kubernetes
+        mount: <VAULT_KUBERNETES_PATH>
+        kubernetes:
+          role: operator
+          serviceAccount: vault-secrets-operator-controller-manager
+          tokenAudiences: ["vault"]
+```
+
+</Tab>
+
+<Tab heading="OLM/OperatorHub">
+
+For [OpenShift OperatorHub](/vault/docs/platform/k8s/vso/openshift#operatorhub)
+installs:
+
+1. Add a [VaultAuth](/vault/docs/platform/k8s/vso/api-reference#vaultauth) to
+   entry to your cluster for storage:
+    - set `cacheStorageEncryption` to `true`
+    - add a [spec.storageEncryption](/vault/docs/platform/k8s/vso/api-reference#vaultauthspec)
+      configuration.
+
+    ```yaml
+    apiVersion: secrets.hashicorp.com/v1beta1
+    kind: VaultAuth
+    metadata:
+      name: operator
+      namespace: vault-secrets-operator
+      labels:
+        cacheStorageEncryption: 'true'
+    spec:
+      kubernetes:
+        role: operator
+        serviceAccount: vault-secrets-operator-controller-manager
+        tokenExpirationSeconds: 600
+        audiences: ["vault"]
+      method: kubernetes
+      mount: <VAULT_KUBERNETES_PATH>
+      namespace: <VAULT_NAMESPACE>
+      storageEncryption:
+        keyName: vso-client-cache
+        mount: <VAULT_TRANSIT_PATH>
+      vaultConnectionRef: local-vault-server
+    ```
+
+1. Set the `VSO_CLIENT_CACHE_PERSISTENCE_MODEL` environment variable in VSO's
+   subscription:
+
+    <CodeBlockConfig highlight="6-7">
+
+    ```yaml
+    spec:
+      name: vault-secrets-operator
+      channel: stable
+      config:
+        env:
+          - name: VSO_CLIENT_CACHE_PERSISTENCE_MODEL
+            value: direct-encrypted
+    ```
+
+    </CodeBlockConfig>
+
+   With the operator installed through OperatorHub, edit your subscription and
+   set the `VSO_CLIENT_CACHE_PERSISTENCE_MODEL` environment variable.
+
+<Tabs>
+<Tab heading="Web Console">
+
+  <ol>
+    <li>Navigate to the <b>Operators</b> menu</li>
+    <li>Select <b>Installed Operators</b></li>
+    <li>Select "Vault Secrets Operator"</li>
+    <li>Click "Edit Subscription" in the top right action menu</li>
+  </ol>
+
+</Tab>
+<Tab heading="CLI">
+
+  ```shell-session
+  oc edit subscription      \
+    vault-secrets-operator  \
+    -n vault-secrets-operator
+  ```
+
+</Tab>
+</Tabs>
+
+The pod in the operator deployment restarts once the
+`VSO_CLIENT_CACHE_PERSISTENCE_MODEL` environment variable persists.
+
+</Tab>
+
+</Tabs>
+
+## Optional: Verify client cache storage and encryption
+
+1. Confirm the Vault Secrets Operator logs the following information on startup:
+
+    <CodeBlockConfig hideClipboard>
+
+    ```json
+    Starting manager    {"clientCachePersistenceModel": "direct-encrypted",
+        "clientCacheSize": 10000}
+    ```
+
+    </CodeBlockConfig>
+
+1. Confirm the Vault Secrets Operator logs a "Setting up Vault Client for
+   storage encryption" message when authenticating to Vault on behalf of a user:
+
+    <CodeBlockConfig hideClipboard>
+
+    ```json
+    {"level":"info","ts":"2024-02-22T00:41:46Z","logger":"clientCacheFactory",
+    "msg":"Setting up Vault Client for storage encryption","persist":true,
+    "enforceEncryption":true,"cacheKey":"kubernetes-59ebf88ccb963a22226bad"}
+    ```
+
+    </CodeBlockConfig>
+
+1. Verify the encrypted cache is stored as Kubernetes secrets under the correct
+   namespace with the prefix `vso-cc-<auth method>`. For example:
+
+    <CodeBlockConfig hideClipboard>
+
+    ```shell-session
+    $ kubectl get secrets -n vault-secrets-operator
+    ...
+    NAME                                       TYPE     DATA   AGE
+    vso-cc-kubernetes-0147431c618992b6adfed1   Opaque   2      73s
+    ...
+    ```
+
+    </CodeBlockConfig>

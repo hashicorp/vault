@@ -1,0 +1,3 @@
+```release-note:bug
+secret/database: Fixed race condition where database mounts may leak connections
+```

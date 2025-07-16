@@ -1,53 +1,43 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Model, { attr } from '@ember-data/model';
-import { computed } from '@ember/object';
-import fieldToAttrs, { expandAttributeMeta } from 'vault/utils/field-to-attrs';
 import apiPath from 'vault/utils/api-path';
-import attachCapabilities from 'vault/lib/attach-capabilities';
+import lazyCapabilities from 'vault/macros/lazy-capabilities';
+import { withExpandedAttributes } from 'vault/decorators/model-expanded-attributes';
+import {
+  operationFields,
+  operationFieldsWithoutSpecial,
+  tlsFields,
+} from 'vault/utils/model-helpers/kmip-role-fields';
+import { removeManyFromArray } from 'vault/helpers/remove-from-array';
 
-export const COMPUTEDS = {
-  operationFields: computed('newFields', function () {
-    return this.newFields.filter((key) => key.startsWith('operation'));
-  }),
+@withExpandedAttributes()
+export default class KmipRoleModel extends Model {
+  @attr({ readOnly: true }) backend;
+  @attr({ readOnly: true }) scope;
 
-  operationFieldsWithoutSpecial: computed('operationFields', function () {
-    return this.operationFields.slice().removeObjects(['operationAll', 'operationNone']);
-  }),
+  get editableFields() {
+    return Object.keys(this.allByKey).filter((k) => !['backend', 'scope', 'role'].includes(k));
+  }
 
-  tlsFields: computed(function () {
-    return ['tlsClientKeyBits', 'tlsClientKeyType', 'tlsClientTtl'];
-  }),
-
-  // For rendering on the create/edit pages
-  defaultFields: computed('newFields', 'operationFields', 'tlsFields', function () {
-    let excludeFields = ['role'].concat(this.operationFields, this.tlsFields);
-    return this.newFields.slice().removeObjects(excludeFields);
-  }),
-
-  // For adapter/serializer
-  nonOperationFields: computed('newFields', 'operationFields', function () {
-    return this.newFields.slice().removeObjects(this.operationFields);
-  }),
-};
-
-const ModelExport = Model.extend(COMPUTEDS, {
-  useOpenAPI: true,
-  backend: attr({ readOnly: true }),
-  scope: attr({ readOnly: true }),
-  name: attr({ readOnly: true }),
-  getHelpUrl(path) {
-    return `/v1/${path}/scope/example/role/example?help=1`;
-  },
-  fieldGroups: computed('fields', 'defaultFields.length', 'tlsFields', function () {
-    const groups = [{ TLS: this.tlsFields }];
-    if (this.defaultFields.length) {
-      groups.unshift({ default: this.defaultFields });
+  get fieldGroups() {
+    const tls = tlsFields();
+    const groups = [{ TLS: tls }];
+    // op fields are shown in OperationFieldDisplay
+    const opFields = operationFields(this.editableFields);
+    // not op fields, tls fields, or role/backend/scope
+    const defaultFields = this.editableFields.filter((f) => ![...opFields, ...tls].includes(f));
+    if (defaultFields.length) {
+      groups.unshift({ default: defaultFields });
     }
-    let ret = fieldToAttrs(this, groups);
-    return ret;
-  }),
+    return this._expandGroups(groups);
+  }
 
-  operationFormFields: computed('operationFieldsWithoutSpecial', function () {
-    let objects = [
+  get operationFormFields() {
+    const objects = [
       'operationCreate',
       'operationActivate',
       'operationGet',
@@ -57,9 +47,13 @@ const ModelExport = Model.extend(COMPUTEDS, {
       'operationDestroy',
     ];
 
-    let attributes = ['operationAddAttribute', 'operationGetAttributes'];
-    let server = ['operationDiscoverVersion'];
-    let others = this.operationFieldsWithoutSpecial.slice().removeObjects(objects.concat(attributes, server));
+    const attributes = ['operationAddAttribute', 'operationGetAttributes'];
+    const server = ['operationDiscoverVersions'];
+    const others = removeManyFromArray(operationFieldsWithoutSpecial(this.editableFields), [
+      ...objects,
+      ...attributes,
+      ...server,
+    ]);
     const groups = [
       { 'Managed Cryptographic Objects': objects },
       { 'Object Attributes': attributes },
@@ -70,16 +64,8 @@ const ModelExport = Model.extend(COMPUTEDS, {
         Other: others,
       });
     }
-    return fieldToAttrs(this, groups);
-  }),
-  tlsFormFields: computed('tlsFields', function () {
-    return expandAttributeMeta(this, this.tlsFields);
-  }),
-  fields: computed('defaultFields', function () {
-    return expandAttributeMeta(this, this.defaultFields);
-  }),
-});
+    return this._expandGroups(groups);
+  }
 
-export default attachCapabilities(ModelExport, {
-  updatePath: apiPath`${'backend'}/scope/${'scope'}/role/${'id'}`,
-});
+  @lazyCapabilities(apiPath`${'backend'}/scope/${'scope'}/role/${'id'}`, 'backend', 'scope', 'id') updatePath;
+}

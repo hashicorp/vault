@@ -1,0 +1,34 @@
+---
+layout: docs
+page_title: Auto-auth with Kerberos
+description: >-
+  Use Kerberos for auto-authentication with Vault Agent or Vault Proxy.
+---
+
+# Auto-auth method: Kerberos
+
+The `kerberos` auto-auth method provides an automated mechanism to retrieve
+a Vault token for Kerberos entities. It reads in configuration and
+identification information from the surrounding environment, and uses
+it to authenticate to Vault.
+
+For more on this auth method, see the [Kerberos auth method](/vault/docs/auth/kerberos).
+
+## Configuration
+
+- `krb5conf_path` `(string: required)` is the path to a valid `krb5.conf` file describing how to
+  communicate with the Kerberos environment.
+- `keytab_path` `(string: required)` is the path to the `keytab` in which the entry lives for the
+  entity authenticating to Vault. Keytab files should be protected from other
+  users on a shared server using appropriate file permissions.
+- `username` `(string: required)` is the username for the entry _within_ the `keytab` to use for
+  logging into Kerberos. This username must match a service account in LDAP.
+- `service` `(string: required)` is the service principal name to use in obtaining a service ticket for
+  gaining a SPNEGO token. This service must exist in LDAP.
+- `realm` `(string: required)` is the name of the Kerberos realm. This realm must match the UPNDomain
+  configured on the LDAP connection. This check is case-sensitive.
+- `disable_fast_negotiation` `(bool: optional)` is for disabling the Kerberos auth method's default
+  of using FAST negotiation. FAST is a pre-authentication framework for Kerberos.
+  It includes a mechanism for tunneling pre-authentication exchanges using armoured
+  KDC messages. FAST provides increased resistance to passive password guessing attacks.
+  Some common Kerberos implementations do not support FAST negotiation. The default is false.

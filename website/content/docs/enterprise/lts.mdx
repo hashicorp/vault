@@ -1,0 +1,182 @@
+---
+layout: docs
+page_title: Long-term support for Vault
+description: >-
+  Learn the details about long-term support for Vault Enterprise.
+---
+
+# Long-term support for Vault
+
+@include 'alerts/enterprise-only.mdx'
+
+Long-term support (LTS) eases upgrade requirements for installations that cannot
+upgrade frequently, quickly, or easily.
+
+## LTS summary
+
+<table>
+
+  <thead>
+    <tr>
+      <th style={{width:'30%', verticalAlign:'middle'}}>Question</th>
+      <th style={{verticalAlign: 'middle'}}>Answer</th>
+    </tr>
+  </thead>
+  <tbody>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      <a href="#who">Who should consider long-term support?</a>
+    </td>
+    <td style={{verticalAlign: 'middle'}}>
+      Enterprise customers using Vault for sensitive or critical workflows.
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      <a href="#what">What is long-term support?</a>
+    </td>
+    <td style={{verticalAlign: 'middle'}}>
+      Extended maintenance for select, major Vault Enterprise versions.
+      By default, HashiCorp maintains Vault Enterprise versions for one year,
+      which includes feature updates and critical patches. LTS extends
+      maintenance for an additional year with critical patches.
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      <a href="#where">Where do I enable long-term support?</a>
+    </td>
+    <td style={{verticalAlign: 'middle'}}>
+      You do not need to download a separate binary or set a flag for long-term
+      support. As long as you select an LTS Vault Enterprise version when
+      you <a href="/vault/install">install</a> or <a href="/vault/docs/upgrading">upgrade</a> your
+      Vault instance, LTS is included.
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      <a href="#when">When are LTS versions released?</a>
+    </td>
+    <td style={{verticalAlign: 'middle'}}>
+      As of Vault Enterprise 1.16, the first major release of a calendar year includes
+      long-term support.
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      <a href="#why">Why is there a risk to updating to a non-LTS Vault Enterprise version?</a>
+    </td>
+    <td style={{verticalAlign: 'middle'}}>
+      If you upgrade to a non-LTS Vault Enterprise version, your Vault instance
+      will stop receiving critical updates when that version leaves the default
+      maintenance window.
+    </td>
+  </tr>
+  <tr>
+    <td style={{verticalAlign: 'middle'}}>
+      <a href="#how">How do I update my LTS Vault Enterprise installation?</a>
+    </td>
+    <td style={{verticalAlign: 'middle'}}>
+      Follow your existing Vault upgrade process, but allow extra time for the
+      possibility of transitional upgrades across multiple Vault versions.
+    </td>
+  </tr>
+</tbody>
+</table>
+
+<a id="who" />
+
+## Who should consider long-term support?
+
+Vault upgrades are challenging, especially for sensitive or critical workflows,
+extensive integrations, and large-scale deployments. Strict upgrade policies
+also require significant planning, testing, and employee hours to execute
+successfully.
+
+Customers who need assurances that their current installation will receive
+critical bug fixes and security patches with minimal service disruptions should
+consider moving to a Vault Enterprise version with long-term support.
+
+<a id="what" />
+
+## What is long-term support?
+
+Long-term support offers extended maintenance through minor releases for select,
+major Vault Enterprise versions.
+
+The standard [support period and end of life policy](https://go.hashi.co/vault-support-policy)
+covers "N&minus;2" versions, which means, at any given time, HashiCorp maintains
+the current version ("N") and the two previous versions ("N&minus;2").
+
+Vault versions typically update 3 times per calendar year (CY), which means that
+**standard maintenance** for a given Vault version lasts approximately 1 year.
+After the first year, LTS Vault versions move from standard maintenance to
+**extended maintenance** for three additional major version releases (approximately one additional year)
+with patches for bugs that may cause outages and critical vulnerabilities and exposures (CVEs).
+
+Maintenance updates               | Standard maintenance | Extended maintenance
+--------------------------------- | -------------------- | --------------------
+Performance improvements          | YES                  | NO
+Bug fixes                         | YES                  | OUTAGE-RISK ONLY
+Security patches                  | YES                  | HIGH-RISK ONLY
+CVE patches                       | YES                  | YES
+
+<a id="where" />
+
+## Where do I enable long-term support?
+
+You do not need to download a separate binary or set a flag for long-term
+support. As long as you select an LTS Vault Enterprise version
+(e.g., 1.16, 1.19) when you [install](/vault/install) or [upgrade](/vault/docs/upgrading) your
+Vault instance, LTS is included.
+
+<a id="when" />
+
+## When are LTS versions released?
+
+As of Vault Enterprise 1.16, the first release of a calendar year includes
+long-term support.
+
+LTS versions overlap by one year with the previous LTS version entering its
+extended maintenance window when the new LTS version begins its standard
+maintenance window.
+
+<a id="why" />
+
+## Why is there a risk to updating to a non-LTS Vault Enterprise version?
+
+Long-term support is intended for Enterprise customers who cannot upgrade
+frequently enough to stay within the standard maintenance timeline of one year.
+The goal is to establish a predictable upgrade path with a longer timeline
+rather than extending the lifetime for every Vault version.
+
+Long-term support ensures your Vault Enterprise version continues to receive
+critical patches for an additional three major version releases (approximately one additional year).
+If you upgrade to a non-LTS version,you are moving your Vault instance to a version
+that lacks extended support. Non-LTS versions stop receiving updates once they leave
+the standard maintenance window.
+
+@include 'ld-images/lts/lts-upgrade-path.mdx'
+
+Version | Expected release | Standard maintenance ends  | Extended maintenance ends
+------- | ---------------- | -------------------------- | ---------------------
+1.19    | CY25 Q1          | CY26 Q1 (1.22 release)     | CY27 Q1 (1.25 release)
+1.18    | CY24 Q3          | CY25 Q3 (1.21 release)     | Not provided
+1.17    | CY24 Q2          | CY25 Q2 (1.20 release)     | Not provided
+1.16    | CY24 Q1          | CY25 Q1 (1.19 release)     | CY26 Q1 (1.22 release)
+
+If a newer version of Vault Enterprise includes features you want to take
+advantage of, you have two options:
+
+1. Wait for the next available LTS release to maintain long-term support.
+1. Upgrade immediately, then upgrade to an LTS release before the standard
+   maintenance window expires.
+
+<a id="how" />
+
+## How do I upgrade my Vault Enterprise LTS installation?
+
+You should follow your existing upgrade process for major version upgrades but
+allow additional time. Upgrading from version LTS to LTS+1 translates to jumping
+3 major Vault Enterprise versions, which **may** require transitional upgrades
+to move through the intermediate Vault versions.

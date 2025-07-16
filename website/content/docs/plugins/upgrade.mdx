@@ -1,0 +1,56 @@
+---
+layout: docs
+page_title: Upgrade Vault plugins
+description: >-
+    Upgrade plugins running in Vault.
+---
+
+# Upgrade plugins
+
+Upgrading a plugin in the catalog affects all uses of that plugin version. For
+example, if you have 5 different `customkv` mounts using v1.0.0 and you upgrade
+to v1.1.0, all the existing mounts will use the new binary if you overwrite it.
+We recommend treating plugin versions in the catalog as immutable, like version
+control tags, rather than overwriting them explicitly.
+
+Always check the plugin release notes for unsupported transitions before
+upgrading your plugins. Core systems within Vault manage the token and lease
+lifecycle so plugins only renew or revoke tokens and leases when the core
+systems requests it. As a result, existing tokens and leases are generally
+unaffected by plugin upgrades.
+
+
+## Before you start
+
+- **To register and upgrade official enterprise plugins, you must have Vault v1.16.21+,
+  1.17.17+, 1.18.10+, 1.19.4+, or 1.20.x+**.
+- **To register and upgrade official community plugins with an extracted `.zip` file, you must have
+  Vault v1.16.21+, 1.17.17+, 1.18.10+, 1.19.5+, or 1.20.x+**.
+
+@include 'plugins/common-requirements.mdx'
+
+## Step 1: Prepare the plugin
+
+@include 'plugins/prepare-plugin.mdx'
+
+
+## Step 2: Update the plugin catalog
+
+Register the new plugin binary or zip file with an updated version number under
+the same plugin type and name as the existing plugin version.
+
+@include 'plugins/register.mdx'
+
+
+## Step 3: Reload the plugin
+
+Until you reload the plugin, Vault continues running the old plugin version on
+the mount path. When you trigger a reload, Vault kills the active plugin process
+and start a new plugin process with the pinned version of that plugin.
+
+@include 'plugins/pin-and-reload.mdx'
+
+
+## Step 4: Verify the plugin status
+
+@include 'plugins/verify-status.mdx'

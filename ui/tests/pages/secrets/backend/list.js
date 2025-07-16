@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import {
   create,
   collection,
@@ -13,8 +18,6 @@ import { getter } from 'ember-cli-page-object/macros';
 export default create({
   visit: visitable('/vault/secrets/:backend/list/:id'),
   visitRoot: visitable('/vault/secrets/:backend/list'),
-  create: clickable('[data-test-secret-create]'),
-  createIsPresent: isPresent('[data-test-secret-create]'),
   configure: clickable('[data-test-secret-backend-configure]'),
   configureIsPresent: isPresent('[data-test-secret-backend-configure]'),
   tabs: collection('[data-test-secret-list-tab]'),
@@ -26,12 +29,6 @@ export default create({
     click: clickable(),
   }),
   menuItems: collection('.ember-basic-dropdown-content li', {
-    testContainer: '#ember-testing',
-  }),
-  delete: clickable('[data-test-confirm-action-trigger]', {
-    testContainer: '#ember-testing',
-  }),
-  confirmDelete: clickable('[data-test-confirm-button]', {
     testContainer: '#ember-testing',
   }),
   backendIsEmpty: getter(function () {

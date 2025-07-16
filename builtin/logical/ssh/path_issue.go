@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package ssh
 
 import (
@@ -18,6 +21,12 @@ type keySpecs struct {
 func pathIssue(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "issue/" + framework.GenericNameWithAtRegex("role"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixSSH,
+			OperationVerb:   "issue",
+			OperationSuffix: "certificate",
+		},
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
@@ -49,7 +58,7 @@ be later than the role max TTL.`,
 			},
 			"valid_principals": {
 				Type:        framework.TypeString,
-				Description: `Valid principals, either usernames or hostnames, that the certificate should be signed for.`,
+				Description: `Valid principals, either usernames or hostnames, that the certificate should be signed for.  Must be non-empty unless allow_empty_principals=true (not recommended) or a value for DefaultUser has been set in the role`,
 			},
 			"cert_type": {
 				Type:        framework.TypeString,

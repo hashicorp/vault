@@ -1,17 +1,19 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn, click, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import ENV from 'vault/config/environment';
-import {
-  SELECTORS,
-  OIDC_BASE_URL,
-  CLIENT_LIST_RESPONSE,
-  overrideMirageResponse,
-  overrideCapabilities,
-} from 'vault/tests/helpers/oidc-config';
+import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
+import { SELECTORS, OIDC_BASE_URL, CLIENT_LIST_RESPONSE } from 'vault/tests/helpers/oidc-config';
 import parseURL from 'core/utils/parse-url';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const ISSUER_URL = 'http://127.0.0.1:8200/v1/identity/oidc/provider/test-provider';
 
@@ -19,15 +21,8 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
   setupRenderingTest(hooks);
   setupMirage(hooks);
 
-  hooks.before(function () {
-    ENV['ember-cli-mirage'].handler = 'oidcConfig';
-  });
-
-  hooks.after(function () {
-    ENV['ember-cli-mirage'].handler = null;
-  });
-
   hooks.beforeEach(function () {
+    oidcConfigHandlers(this.server);
     this.store = this.owner.lookup('service:store');
     this.server.get('/identity/oidc/scope', () => {
       return {
@@ -43,7 +38,17 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
         auth: null,
       };
     });
-    this.server.get('/identity/oidc/client', () => overrideMirageResponse(null, CLIENT_LIST_RESPONSE));
+    this.server.get('/identity/oidc/client', () => overrideResponse(null, { data: CLIENT_LIST_RESPONSE }));
+    setRunOptions({
+      rules: {
+        // TODO: Fix SearchSelect component
+        'aria-required-attr': { enabled: false },
+        label: { enabled: false },
+        // TODO: fix RadioCard component (replace with HDS)
+        'aria-valid-attr-value': { enabled: false },
+        'nested-interactive': { enabled: false },
+      },
+    });
   });
 
   test('it should save new provider', async function (assert) {
@@ -64,12 +69,12 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
 
     assert
       .dom('[data-test-oidc-provider-title]')
-      .hasText('Create provider', 'Form title renders correct text');
+      .hasText('Create Provider', 'Form title renders correct text');
     assert.dom(SELECTORS.providerSaveButton).hasText('Create', 'Save button has correct text');
     assert
       .dom('[data-test-input="issuer"]')
       .hasAttribute('placeholder', 'e.g. https://example.com:8200', 'issuer placeholder text is correct');
-    assert.equal(findAll('[data-test-field]').length, 3, 'renders all input fields');
+    assert.strictEqual(findAll('[data-test-field]').length, 3, 'renders all input fields');
     await click('[data-test-component="search-select"]#scopesSupported .ember-basic-dropdown-trigger');
     assert.dom('li.ember-power-select-option').hasText('test-scope', 'dropdown renders scopes');
 
@@ -77,13 +82,14 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
     await fillIn('[data-test-input="name"]', ' ');
     await click(SELECTORS.providerSaveButton);
 
-    let validationErrors = findAll(SELECTORS.inlineAlert);
     assert
-      .dom(validationErrors[0])
+      .dom(GENERAL.validationErrorByAttr('name'))
       .hasText('Name is required. Name cannot contain whitespace.', 'Validation messages are shown for name');
-    assert.dom(validationErrors[1]).hasText('There are 2 errors with this form.', 'Renders form error count');
+    assert
+      .dom(SELECTORS.inlineAlert)
+      .hasText('There are 2 errors with this form.', 'Renders form error count');
 
-    await click('label[for=limited]');
+    await click('[data-test-oidc-radio="limited"]');
     assert
       .dom('[data-test-component="search-select"]#allowedClientIds')
       .exists('Limited radio button shows clients search select');
@@ -91,7 +97,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
     assert.dom('li.ember-power-select-option').hasTextContaining('test-app', 'dropdown renders client name');
     assert.dom('[data-test-smaller-id]').exists('renders smaller client id in dropdown');
 
-    await click('label[for=allow-all]');
+    await click('[data-test-oidc-radio="allow-all"]');
     assert
       .dom('[data-test-component="search-select"]#allowedClientIds')
       .doesNotExist('Allow all radio button hides search select');
@@ -127,7 +133,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       />
     `);
 
-    assert.dom('[data-test-oidc-provider-title]').hasText('Edit provider', 'Title renders correct text');
+    assert.dom('[data-test-oidc-provider-title]').hasText('Edit Provider', 'Title renders correct text');
     assert.dom(SELECTORS.providerSaveButton).hasText('Update', 'Save button has correct text');
     assert.dom('[data-test-input="name"]').isDisabled('Name input is disabled when editing');
     assert
@@ -138,7 +144,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       .hasValue(parseURL(ISSUER_URL).origin, 'issuer value is just scheme://host:port portion of full URL');
 
     assert.dom('[data-test-selected-option]').hasText('test-scope', 'model scope is selected');
-    assert.dom('input#allow-all').isChecked('Allow all radio button is selected');
+    assert.dom('[data-test-oidc-radio="allow-all"] input').isChecked('Allow all radio button is selected');
     await click(SELECTORS.providerSaveButton);
   });
 
@@ -176,16 +182,16 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
       />
     `);
 
-    await click('label[for=limited]');
+    await click('[data-test-oidc-radio="limited"]');
     await click(SELECTORS.providerCancelButton);
-    assert.equal(this.model.allowed_client_ids, undefined, 'Model attributes rolled back on cancel');
+    assert.strictEqual(this.model.allowed_client_ids, undefined, 'Model attributes rolled back on cancel');
   });
 
   test('it should render fallback for search select', async function (assert) {
     assert.expect(2);
     this.model = this.store.createRecord('oidc/provider');
-    this.server.get('/identity/oidc/scope', () => overrideMirageResponse(403));
-    this.server.get('/identity/oidc/client', () => overrideMirageResponse(403));
+    this.server.get('/identity/oidc/scope', () => overrideResponse(403));
+    this.server.get('/identity/oidc/client', () => overrideResponse(403));
     await render(hbs`
       <Oidc::ProviderForm
         @model={{this.model}}
@@ -197,7 +203,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
     assert
       .dom('[data-test-component="search-select"]#scopesSupported [data-test-component="string-list"]')
       .exists('renders fall back for scopes search select');
-    await click('label[for=limited]');
+    await click('[data-test-oidc-radio="limited"]');
     assert
       .dom('[data-test-component="search-select"]#allowedClientIds [data-test-component="string-list"]')
       .exists('Radio toggle shows assignments string-list input');
@@ -206,7 +212,7 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
   test('it should render error alerts when API returns an error', async function (assert) {
     assert.expect(2);
     this.model = this.store.createRecord('oidc/provider');
-    this.server.post('/sys/capabilities-self', () => overrideCapabilities(OIDC_BASE_URL + '/providers'));
+    this.server.post('/sys/capabilities-self', () => capabilitiesStub(OIDC_BASE_URL + '/providers'));
     await render(hbs`
       <Oidc::ProviderForm
         @model={{this.model}}
@@ -219,6 +225,6 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
     assert
       .dom(SELECTORS.inlineAlert)
       .hasText('There was an error submitting this form.', 'form error alert renders ');
-    assert.dom('[data-test-alert-banner="alert"]').exists('alert banner renders');
+    assert.dom('[data-test-message-error]').exists('alert banner renders');
   });
 });

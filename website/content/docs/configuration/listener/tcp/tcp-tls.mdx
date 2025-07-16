@@ -1,0 +1,208 @@
+---
+layout: docs
+page_title: Configure TLS for your Vault TCP listener
+description: >-
+  Example TCP listener configuration with TLS encryption.
+---
+
+# Configure TLS for your Vault TCP listener
+
+You can configure your TCP listener to use specific versions of TLS and specific
+ciphersuites.
+
+## Assumptions
+
+- **Your Vault instance is not currently running**. If your Vault cluster is
+  running, you must
+  [restart the cluster gracefully](https://support.hashicorp.com/hc/en-us/articles/17169701076371-A-Step-by-Step-Guide-to-Restarting-a-Vault-Cluster)
+  to apply changes to your TCP listener. SIGHUP will not reload your TLS
+  configuration.
+- **You have a valid TLS certificate file**.
+- **You have a valid TLS key file**.
+- **You have a valid CA file (if required)**.
+
+## Example TLS 1.3 configuration
+
+If a reasonably modern set of clients are connecting to a Vault instance, you
+can configure the `tcp` listener stanza to only accept TLS 1.3 with the
+`tls_min_version` parameter:
+
+<CodeBlockConfig hideClipboard highlight="5">
+
+```plaintext
+listener "tcp" {
+  address = "127.0.0.1:8200"
+  tls_cert_file = "cert.pem"
+  tls_key_file  = "key.pem"
+  tls_min_version = "tls13"
+}
+```
+
+</CodeBlockConfig>
+
+Vault does not accept explicit ciphersuite configuration for TLS 1.3 because the
+Go team has already designated a select set of ciphers that align with the
+broadly-accepted Mozilla Security/Server Side TLS guidance for [modern TLS
+configuration](https://wiki.mozilla.org/Security/Server_Side_TLS#Modern_compatibility).
+
+## Example TLS 1.2 configuration
+
+To use TLS 1.2 with a non-default set of ciphersuites, you can set 1.2 as the
+minimum and maximum allowed TLS version and explicitly define your preferred
+ciphersuites with `tls_ciper_suites` and one or more of the ciphersuite
+constants from the ciphersuite configuration parser. For example:
+
+<CodeBlockConfig hideClipboard highlight="5-7">
+
+```plaintext
+listener "tcp" {
+  address = "127.0.0.1:8200"
+  tls_cert_file = "cert.pem"
+  tls_key_file  = "key.pem"
+  tls_min_version = "tls12"
+  tls_max_version = "tls12"
+  tls_cipher_suites = "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
+}
+```
+
+</CodeBlockConfig>
+
+You must set the minimum and maximum TLS version to disable TLS 1.3, which does
+not support explicit cipher selection. The priority order of the ciphersuites
+in `tls_cipher_suites` is determined by the `tls` Go package.
+
+<Note>
+
+  The TLS 1.2 configuration example excludes any 3DES ciphers to avoid potential
+  exposure to the Sweet32 attack (CVE-2016-2183). You should customize the
+  ciphersuite list as needed to meet your environment-specific security
+  requirements.
+
+</Note>
+
+## Verify your TLS configuration
+
+You can verify your TLS configuration using an SSL scanner such as
+[`sslscan`](https://github.com/rbsec/sslscan). 
+
+<Tabs>
+<Tab heading="Example scan with ECDSA certificate">
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ sslscan 127.0.0.1:8200
+Version: 2.1.3
+OpenSSL 3.2.1 30 Jan 2024
+
+Connected to 127.0.0.1
+
+Testing SSL server 127.0.0.1 on port 8200 using SNI name 127.0.0.1
+
+  SSL/TLS Protocols:
+SSLv2     disabled
+SSLv3     disabled
+TLSv1.0   disabled
+TLSv1.1   disabled
+TLSv1.2   enabled
+TLSv1.3   enabled
+
+  TLS Fallback SCSV:
+Server supports TLS Fallback SCSV
+
+  TLS renegotiation:
+Session renegotiation not supported
+
+  TLS Compression:
+Compression disabled
+
+  Heartbleed:
+TLSv1.3 not vulnerable to heartbleed
+TLSv1.2 not vulnerable to heartbleed
+
+  Supported Server Cipher(s):
+Preferred TLSv1.3  128 bits  TLS_AES_128_GCM_SHA256        Curve 25519 DHE 253
+Accepted  TLSv1.3  256 bits  TLS_AES_256_GCM_SHA384        Curve 25519 DHE 253
+Accepted  TLSv1.3  256 bits  TLS_CHACHA20_POLY1305_SHA256  Curve 25519 DHE 253
+Preferred TLSv1.2  128 bits  ECDHE-ECDSA-AES128-GCM-SHA256 Curve 25519 DHE 253
+Accepted  TLSv1.2  256 bits  ECDHE-ECDSA-AES256-GCM-SHA384 Curve 25519 DHE 253
+Accepted  TLSv1.2  256 bits  ECDHE-ECDSA-CHACHA20-POLY1305 Curve 25519 DHE 253
+Accepted  TLSv1.2  128 bits  ECDHE-ECDSA-AES128-SHA        Curve 25519 DHE 253
+Accepted  TLSv1.2  256 bits  ECDHE-ECDSA-AES256-SHA        Curve 25519 DHE 253
+
+  Server Key Exchange Group(s):
+TLSv1.3  128 bits  secp256r1 (NIST P-256)
+TLSv1.3  192 bits  secp384r1 (NIST P-384)
+TLSv1.3  260 bits  secp521r1 (NIST P-521)
+TLSv1.3  128 bits  x25519
+TLSv1.2  128 bits  secp256r1 (NIST P-256)
+TLSv1.2  192 bits  secp384r1 (NIST P-384)
+TLSv1.2  260 bits  secp521r1 (NIST P-521)
+TLSv1.2  128 bits  x25519
+
+  SSL Certificate:
+Signature Algorithm: ecdsa-with-SHA256
+ECC Curve Name:      prime256v1
+ECC Key Strength:    128
+
+Subject:  localhost
+Issuer:   localhost
+
+Not valid before: May 17 17:27:29 2024 GMT
+Not valid after:  Jun 16 17:27:29 2024 GMT
+```
+
+</CodeBlockConfig>
+
+</Tab>
+<Tab heading="Example scan with RSA certificate">
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+sslscan 127.0.0.1:8200
+Testing SSL server 127.0.0.1 on port 8200 using SNI name 127.0.0.1
+
+  SSL/TLS Protocols:
+SSLv2     disabled
+SSLv3     disabled
+TLSv1.0   disabled
+TLSv1.1   disabled
+TLSv1.2   enabled
+TLSv1.3   enabled
+
+  Supported Server Cipher(s):
+Preferred TLSv1.3  128 bits  TLS_AES_128_GCM_SHA256        Curve 25519 DHE 253
+Accepted  TLSv1.3  256 bits  TLS_AES_256_GCM_SHA384        Curve 25519 DHE 253
+Accepted  TLSv1.3  256 bits  TLS_CHACHA20_POLY1305_SHA256  Curve 25519 DHE 253
+Preferred TLSv1.2  128 bits  ECDHE-RSA-AES128-GCM-SHA256   Curve 25519 DHE 253
+Accepted  TLSv1.2  256 bits  ECDHE-RSA-AES256-GCM-SHA384   Curve 25519 DHE 253
+Accepted  TLSv1.2  256 bits  ECDHE-RSA-CHACHA20-POLY1305   Curve 25519 DHE 253
+Accepted  TLSv1.2  128 bits  ECDHE-RSA-AES128-SHA          Curve 25519 DHE 253
+Accepted  TLSv1.2  256 bits  ECDHE-RSA-AES256-SHA          Curve 25519 DHE 253
+Accepted  TLSv1.2  128 bits  AES128-GCM-SHA256
+Accepted  TLSv1.2  256 bits  AES256-GCM-SHA384
+Accepted  TLSv1.2  128 bits  AES128-SHA
+Accepted  TLSv1.2  256 bits  AES256-SHA
+Accepted  TLSv1.2  112 bits  TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA
+Accepted  TLSv1.2  112 bits  TLS_RSA_WITH_3DES_EDE_CBC_SHA
+
+  Server Key Exchange Group(s):
+TLSv1.3  128 bits  secp256r1 (NIST P-256)
+TLSv1.3  192 bits  secp384r1 (NIST P-384)
+TLSv1.3  260 bits  secp521r1 (NIST P-521)
+TLSv1.3  128 bits  x25519
+TLSv1.2  128 bits  secp256r1 (NIST P-256)
+TLSv1.2  192 bits  secp384r1 (NIST P-384)
+TLSv1.2  260 bits  secp521r1 (NIST P-521)
+TLSv1.2  128 bits  x25519
+
+  SSL Certificate:
+Signature Algorithm: sha256WithRSAEncryption
+RSA Key Strength:    4096
+```
+
+</CodeBlockConfig>
+
+</Tab>
+</Tabs>

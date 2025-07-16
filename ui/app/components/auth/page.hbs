@@ -1,0 +1,86 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#if this.cspError}}
+  <Hds::Alert @type="page" @color="critical" data-test-page-error as |A|>
+    <A.Description>{{this.cspError}}</A.Description>
+  </Hds::Alert>
+{{/if}}
+
+{{#if this.mfaErrors}}
+  <Hds::ApplicationState class="has-top-margin-xxl" data-test-error as |A|>
+    <A.Header @title="Authentication error" />
+    <A.Body
+      @text="Multi-factor authentication is required, but failed. Go back and try again, or contact your administrator."
+    />
+    <A.Body @text="Error: {{this.mfaErrors}}" />
+    <A.Footer as |F|>
+      <F.Button @icon="arrow-left" @color="tertiary" @text="Go back" {{on "click" this.onMfaErrorDismiss}} />
+    </A.Footer>
+  </Hds::ApplicationState>
+{{else}}
+  <SplashPage>
+    <:header>
+      {{#if @oidcProviderQueryParam}}
+        <div class="box is-shadowless is-flex-v-centered" data-test-auth-logo>
+          <LogoEdition aria-label="Sign in with Hashicorp Vault" role="img" />
+        </div>
+      {{else}}
+        <div class="is-flex-v-centered has-bottom-margin-xxl">
+          <div class="brand-icon-large">
+            <Icon @name="vault" @size="24" @stretched={{true}} />
+          </div>
+        </div>
+        <h1 class="title is-3">
+          Sign in to Vault
+        </h1>
+      {{/if}}
+    </:header>
+
+    <:content>
+      {{#if this.mfaAuthData}}
+        <Mfa::MfaForm
+          @clusterId={{@cluster.id}}
+          @authData={{this.mfaAuthData}}
+          @onSuccess={{this.onMfaSuccess}}
+          @onCancel={{this.onCancelMfa}}
+          @onError={{fn (mut this.mfaErrors)}}
+        />
+      {{else}}
+        <Auth::FormTemplate
+          @alternateView={{this.formViews.alternateView}}
+          @cluster={{@cluster}}
+          @defaultView={{this.formViews.defaultView}}
+          @initialFormState={{this.initialFormState}}
+          @onSuccess={{this.onAuthResponse}}
+          @visibleMountTypes={{this.visibleMountTypes}}
+        >
+          {{! yielded for accessibility so namespace submits as an input of the <form> element }}
+          {{#if (has-feature "Namespaces")}}
+            <Auth::NamespaceInput
+              @disabled={{if @oidcProviderQueryParam true false}}
+              @handleNamespaceUpdate={{@onNamespaceUpdate}}
+              @namespaceQueryParam={{@namespaceQueryParam}}
+              @shouldRefocusNamespaceInput={{@shouldRefocusNamespaceInput}}
+            />
+          {{/if}}
+        </Auth::FormTemplate>
+      {{/if}}
+    </:content>
+
+    <:footer>
+      <div class="has-short-padding">
+        <p class="help has-text-grey-dark" data-test-auth-helptext>
+          {{#if @oidcProviderQueryParam}}
+            Once you log in, you will be redirected back to your application. If you require login credentials, contact your
+            administrator.
+          {{else}}
+            Contact your administrator for login credentials.
+          {{/if}}
+        </p>
+      </div>
+    </:footer>
+  </SplashPage>
+{{/if}}

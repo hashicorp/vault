@@ -1,11 +1,14 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/vault/sdk/version"
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
+	"github.com/hashicorp/vault/version"
 )
 
 func testVersionCommand(tb testing.TB) (*cli.MockUi, *VersionCommand) {

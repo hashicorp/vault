@@ -1,7 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Component from '@glimmer/component';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
+import { waitFor } from '@ember/test-waiters';
+import { task } from 'ember-concurrency';
 
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
@@ -19,7 +26,6 @@ export default class DatabaseConnectionEdit extends Component {
   @service store;
   @service router;
   @service flashMessages;
-  @service wizard;
 
   @tracked
   showPasswordField = false; // used for edit mode
@@ -27,15 +33,8 @@ export default class DatabaseConnectionEdit extends Component {
   @tracked
   showSaveModal = false; // used for create mode
 
-  constructor() {
-    super(...arguments);
-    if (this.wizard.featureState === 'details' || this.wizard.featureState === 'connection') {
-      this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', 'database');
-    }
-  }
-
   rotateCredentials(backend, name) {
-    let adapter = this.store.adapterFor('database/connection');
+    const adapter = this.store.adapterFor('database/connection');
     return adapter.rotateRootCredentials(backend, name);
   }
 
@@ -58,50 +57,49 @@ export default class DatabaseConnectionEdit extends Component {
     this.args.model[attr] = value;
   }
 
-  @action
-  async handleCreateConnection(evt) {
-    evt.preventDefault();
-    let secret = this.args.model;
-    let secretId = secret.name;
-    secret.set('id', secretId);
-    secret
-      .save()
-      .then(() => {
+  handleCreateConnection = task(
+    waitFor(async (evt) => {
+      evt.preventDefault();
+      try {
+        const secret = this.args.model;
+        await secret.save();
         this.showSaveModal = true;
-      })
-      .catch((e) => {
+      } catch (e) {
         const errorMessage = getErrorMessage(e.errors);
         this.flashMessages.danger(errorMessage);
-      });
-  }
+      }
+    })
+  );
 
   @action
-  continueWithoutRotate(evt) {
-    evt.preventDefault();
+  continueWithoutRotate() {
+    if (this.continueWithRotate.isRunning) return;
+    this.showSaveModal = false;
     const { name } = this.args.model;
     this.transitionToRoute(SHOW_ROUTE, name);
   }
 
-  @action
-  continueWithRotate(evt) {
-    evt.preventDefault();
-    const { backend, name } = this.args.model;
-    this.rotateCredentials(backend, name)
-      .then(() => {
+  continueWithRotate = task(
+    waitFor(async () => {
+      const { backend, name } = this.args.model;
+      try {
+        await this.rotateCredentials(backend, name);
         this.flashMessages.success(`Successfully rotated root credentials for connection "${name}"`);
         this.transitionToRoute(SHOW_ROUTE, name);
-      })
-      .catch((e) => {
+      } catch (e) {
         this.flashMessages.danger(`Error rotating root credentials: ${e.errors}`);
         this.transitionToRoute(SHOW_ROUTE, name);
-      });
-  }
+      } finally {
+        this.showSaveModal = false;
+      }
+    })
+  );
 
   @action
   handleUpdateConnection(evt) {
     evt.preventDefault();
-    let secret = this.args.model;
-    let secretId = secret.name;
+    const secret = this.args.model;
+    const secretId = secret.name;
     secret
       .save()
       .then(() => {
@@ -126,7 +124,7 @@ export default class DatabaseConnectionEdit extends Component {
   @action
   reset() {
     const { name, backend } = this.args.model;
-    let adapter = this.store.adapterFor('database/connection');
+    const adapter = this.store.adapterFor('database/connection');
     adapter
       .resetConnection(backend, name)
       .then(() => {

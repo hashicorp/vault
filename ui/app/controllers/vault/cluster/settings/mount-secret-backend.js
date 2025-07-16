@@ -1,30 +1,37 @@
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { service } from '@ember/service';
 import Controller from '@ember/controller';
+import { action } from '@ember/object';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 const SUPPORTED_BACKENDS = supportedSecretBackends();
 
-export default Controller.extend({
-  wizard: service(),
-  actions: {
-    onMountSuccess: function (type, path) {
-      let transition;
-      if (SUPPORTED_BACKENDS.includes(type)) {
-        if (type === 'kmip') {
-          transition = this.transitionToRoute('vault.cluster.secrets.backend.kmip.scopes', path);
-        } else if (type === 'keymgmt') {
-          transition = this.transitionToRoute('vault.cluster.secrets.backend.index', path, {
-            queryParams: { tab: 'provider' },
-          });
-        } else {
-          transition = this.transitionToRoute('vault.cluster.secrets.backend.index', path);
-        }
+export default class MountSecretBackendController extends Controller {
+  @service router;
+
+  @action
+  onMountSuccess(type, path, useEngineRoute = false) {
+    let transition;
+    if (SUPPORTED_BACKENDS.includes(type)) {
+      const engineInfo = engineDisplayData(type);
+      if (useEngineRoute) {
+        transition = this.router.transitionTo(
+          `vault.cluster.secrets.backend.${engineInfo.engineRoute}`,
+          path
+        );
       } else {
-        transition = this.transitionToRoute('vault.cluster.secrets.backends');
+        // For keymgmt, we need to land on provider tab by default using query params
+        const queryParams = engineInfo.type === 'keymgmt' ? { tab: 'provider' } : {};
+        transition = this.router.transitionTo('vault.cluster.secrets.backend.index', path, { queryParams });
       }
-      return transition.followRedirects().then(() => {
-        this.wizard.transitionFeatureMachine(this.wizard.featureState, 'CONTINUE', type);
-      });
-    },
-  },
-});
+    } else {
+      transition = this.router.transitionTo('vault.cluster.secrets.backends');
+    }
+    return transition.followRedirects();
+  }
+}

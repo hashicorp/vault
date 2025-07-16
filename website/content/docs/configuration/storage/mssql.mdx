@@ -1,12 +1,11 @@
 ---
 layout: docs
-page_title: MSSQL - Storage Backends - Configuration
-description: >-
-  The MSSQL storage backend is used to persist Vault's data in a Microsoft SQL
-  Server.
+page_title: MSSQL configuration
+description:  >-
+  Configure Vault backend storage to use Microsoft SQL Server.
 ---
 
-# MSSQL Storage Backend
+# Microsoft SQL Server configuration for Vault backend storage
 
 The MSSQL storage backend is used to persist Vault's data in a Microsoft SQL Server.
 
@@ -33,7 +32,7 @@ storage "mssql" {
 }
 ```
 
-## `mssql` Parameters
+## `mssql` parameters
 
 - `server` `(string: <required>)` – host or host\instance.
 
@@ -64,9 +63,9 @@ storage "mssql" {
 - `max_parallel` `(string: "128")` – Specifies the maximum number of concurrent
   requests to MSSQL.
 
-## `mssql` Examples
+## `mssql` examples
 
-### Custom Database, Table and Schema
+### Custom database, table and schema
 
 This example shows configuring the MSSQL backend to use a custom database and
 table name.

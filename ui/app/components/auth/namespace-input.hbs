@@ -1,0 +1,49 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<div class="background-neutral-50 has-padding-l">
+  {{#if this.flags.hvdManagedNamespaceRoot}}
+    <Hds::Form::Field @layout="vertical" disabled={{@disabled}} as |F|>
+      <F.Label>Namespace</F.Label>
+      <F.Control>
+        <Hds::SegmentedGroup class="is-fullwidth" as |SG|>
+          <SG.TextInput
+            @type="text"
+            @value="/{{this.flags.hvdManagedNamespaceRoot}}"
+            aria-label="Root namespace for H-C-P managed cluster"
+            class="one-fourth-width"
+            name="hvd-root-namespace"
+            readonly
+            data-test-managed-namespace-root
+          />
+          <SG.TextInput
+            {{on "input" this.handleInput}}
+            {{did-insert this.maybeRefocus}}
+            @value={{this.namespaceInput}}
+            autocomplete="off"
+            disabled={{@disabled}}
+            name="namespace"
+            placeholder="/ (default)"
+            data-test-input="namespace"
+          />
+        </Hds::SegmentedGroup>
+      </F.Control>
+    </Hds::Form::Field>
+  {{else}}
+    <Hds::Form::TextInput::Field
+      {{on "input" this.handleInput}}
+      {{did-insert this.maybeRefocus}}
+      @value={{this.namespaceInput}}
+      autocomplete="off"
+      disabled={{@disabled}}
+      name="namespace"
+      placeholder="/ (root)"
+      data-test-input="namespace"
+      as |F|
+    >
+      <F.Label>Namespace</F.Label>
+    </Hds::Form::TextInput::Field>
+  {{/if}}
+</div>

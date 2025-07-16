@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package ssh
 
 import (
@@ -6,15 +9,19 @@ import (
 	"sync"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/salt"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
+const operationPrefixSSH = "ssh"
+
 type backend struct {
 	*framework.Backend
-	view      logical.Storage
-	salt      *salt.Salt
-	saltMutex sync.RWMutex
+	view        logical.Storage
+	salt        *salt.Salt
+	saltMutex   sync.RWMutex
+	backendUUID string
 }
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
@@ -47,13 +54,12 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			SealWrapStorage: []string{
 				caPrivateKey,
 				caPrivateKeyStoragePath,
-				"keys/",
+				keysStoragePrefix,
 			},
 		},
 
 		Paths: []*framework.Path{
 			pathConfigZeroAddress(&b),
-			pathKeys(&b),
 			pathListRoles(&b),
 			pathRoles(&b),
 			pathCredsCreate(&b),
@@ -63,16 +69,18 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			pathSign(&b),
 			pathIssue(&b),
 			pathFetchPublicKey(&b),
+			pathCleanupKeys(&b),
 		},
 
 		Secrets: []*framework.Secret{
-			secretDynamicKey(&b),
 			secretOTP(&b),
 		},
 
 		Invalidate:  b.invalidate,
 		BackendType: logical.TypeLogical,
 	}
+
+	b.backendUUID = conf.BackendUUID
 	return &b, nil
 }
 
@@ -108,12 +116,24 @@ func (b *backend) invalidate(_ context.Context, key string) {
 	}
 }
 
+func (b *backend) GetManagedKeyView() (logical.ManagedKeySystemView, error) {
+	managedKeyView, ok := b.System().(logical.ManagedKeySystemView)
+	if !ok {
+		return nil, errutil.InternalError{Err: "unsupported system view"}
+	}
+	return managedKeyView, nil
+}
+
+func (b *backend) BackendUUID() string {
+	return b.backendUUID
+}
+
 const backendHelp = `
 The SSH backend generates credentials allowing clients to establish SSH
 connections to remote hosts.
 
-There are three variants of the backend, which generate different types of
-credentials: dynamic keys, One-Time Passwords (OTPs) and certificate authority. The desired behavior
+There are two variants of the backend, which generate different types of
+credentials: One-Time Passwords (OTPs) and certificate authority. The desired behavior
 is role-specific and chosen at role creation time with the 'key_type'
 parameter.
 

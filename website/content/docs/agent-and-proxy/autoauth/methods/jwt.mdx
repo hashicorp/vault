@@ -1,0 +1,32 @@
+---
+layout: docs
+page_title: Auto-auth with JSW
+description: >-
+  Use JSON web tokens (JSW) for auto-authentication with Vault Agent or Vault
+  Proxy.
+---
+
+# Auto-auth method: JSON web tokens (JSW)
+
+The `jwt` method reads in a JWT from a file and sends it to the [JWT Auth
+method](/vault/docs/auth/jwt).
+
+## Configuration
+
+- `path` `(string: required)` - The path to the JWT file
+
+- `role` `(string: required)` - The role to authenticate against on Vault
+
+- `remove_jwt_after_reading` `(bool: optional, defaults to true)` -
+  This can be set to `false` to disable the default behavior of removing the
+  JWT after it's been read.
+
+- `remove_jwt_follows_symlinks` `(bool: optional, defaults to false)` -
+This can be set to `true` to follow symlinks when removing the JWT after it has been read
+when executing the `remove_jwt_after_reading` behaviour. If set to false, it will delete
+the symlink, not the JWT. Does nothing if `remove_jwt_after_reading` is false.
+
+- `jwt_read_period` `(duration: "0.5s", optional)` - The duration after which
+Agent will attempt to read the JWT stored at `path`. Defaults to `1m` if
+`remove_jwt_after_reading` is set to `true`, or `0.5s` otherwise.
+Uses [duration format strings](/vault/docs/concepts/duration-format).

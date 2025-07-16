@@ -1,0 +1,33 @@
+---
+layout: docs
+page_title: Auto-auth with LDAP
+description: >-
+  Use LDAP for auto-authentication with Vault Agent or Vault Proxy.
+---
+
+# Auto-auth method: LDAP
+
+The `ldap` method reads in a password from a file and sends it to the [LDAP Auth
+method](/vault/docs/auth/ldap).
+
+## Configuration
+
+- `password_file_path` `(string: required)` - The path to the password file
+
+- `username` `(string: required)` - The username to authenticate against on Vault
+
+- `remove_password_after_reading` `(bool: optional, defaults to true)` -
+  This can be set to `false` to disable the default behavior of removing the
+  password after it's been read.
+
+- `remove_password_follows_symlinks` `(bool: optional, defaults to false)` -
+This can be set to `true` to follow symlinks when removing the password after
+it has been read when executing the `remove_password_after_reading` behaviour.
+If set to false, it will delete the symlink, not the password file. Does
+nothing if `remove_password_after_reading` is false.
+
+- `password_read_period` `(duration: "0.5s", optional)` - The duration after which 
+auto-auth will attempt to read the password stored at `password_file_path`.
+Defaults to `1m` if `remove_password_after_reading` is set to `true`, or `0.5s`
+otherwise. Uses [duration format
+strings](/vault/docs/concepts/duration-format).

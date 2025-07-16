@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Revert fix for PR [18938](https://github.com/hashicorp/vault/pull/18938)
+```

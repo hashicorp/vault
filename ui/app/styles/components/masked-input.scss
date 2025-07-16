@@ -1,5 +1,15 @@
-.masked-font {
-  color: $ui-gray-300;
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+.masked-font,
+pre.masked-font {
+  color: var(--token-color-foreground-faint);
 }
 
 .masked-input {
@@ -8,18 +18,18 @@
 }
 
 .has-label .masked-input {
-  padding-top: $spacing-s;
+  padding-top: size_variables.$spacing-12;
 }
 
 .has-padding {
-  padding: $size-10 $size-8;
+  padding: size_variables.$spacing-8 size_variables.$spacing-12;
 }
 
 // we want to style the boxes the same everywhere so they
 // need to be the same font and small
 .masked-input.masked .masked-value {
   font-size: 9px;
-  font-family: $family-primary;
+  font-family: font_variables.$family-sans;
   line-height: 2.5;
 }
 
@@ -30,7 +40,7 @@
 // aligns the boxes on the input page
 .masked-input.masked:not(.display-only) .masked-value {
   line-height: 3;
-  border-radius: $radius 0 0 $radius;
+  border-radius: size_variables.$radius 0 0 size_variables.$radius;
 }
 
 //override bulma's pre styling
@@ -39,46 +49,39 @@
   font-size: 1rem;
   padding-top: 0;
   padding-bottom: 0;
-  padding-left: $spacing-s;
+  padding-left: size_variables.$spacing-12;
   background-color: transparent;
 }
 
-.button.masked-input-toggle,
-.button.copy-button {
-  min-width: $spacing-xl;
+.button.masked-input-toggle {
+  min-width: size_variables.$spacing-36;
   border-left: 0;
-  color: $grey;
+  color: color_variables.$grey;
   box-shadow: 0 3px 1px 0px rgba(10, 10, 10, 0.12);
 }
 
-.button.copy-button {
-  border-radius: 0;
-}
-
 .button.masked-input-toggle {
-  border-radius: 0 $radius $radius 0;
+  border-radius: 0 size_variables.$radius size_variables.$radius 0;
 }
 
 .display-only {
-  .button.masked-input-toggle,
-  .button.copy-button {
+  .button.masked-input-toggle {
     background: transparent;
     height: auto;
     line-height: 1rem;
-    min-width: $spacing-l;
+    min-width: size_variables.$spacing-24;
     border: 0;
     box-shadow: none;
-    color: $grey-light;
+    color: color_variables.$grey-light;
     padding-left: 0;
     padding-right: 0;
 
     &:active,
     &.is-active,
     &:focus,
-    &.is-focused,
     &:hover,
     &:focus:not(:active) {
-      color: $blue;
+      color: color_variables.$blue;
       border: 0;
       box-shadow: none;
     }
@@ -86,9 +89,9 @@
 }
 
 .masked-input.masked .masked-value {
-  color: $grey-light;
+  color: var(--token-color-foreground-faint);
 }
 
 .masked-input .input:focus + .masked-input-toggle {
-  background: rgba($white, 0.95);
+  background: rgba(color_variables.$white, 0.95);
 }

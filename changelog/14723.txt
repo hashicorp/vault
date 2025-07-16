@@ -1,0 +1,4 @@
+```release-note:improvement
+core/identity: allow identity backend to be tuned using standard secrets backend tuning parameters.
+```
+

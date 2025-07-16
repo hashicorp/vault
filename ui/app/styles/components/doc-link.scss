@@ -1,17 +1,15 @@
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 .doc-link {
-  color: $link;
-  text-decoration: none;
-  font-weight: $font-weight-semibold;
+  color: color_variables.$blue;
+  font-weight: font_variables.$font-weight-semibold;
   &:hover {
     text-decoration: underline !important;
-  }
-}
-
-.doc-link-subtle {
-  color: inherit;
-  text-decoration: underline;
-  font-weight: inherit;
-  &:hover {
-    color: inherit;
   }
 }

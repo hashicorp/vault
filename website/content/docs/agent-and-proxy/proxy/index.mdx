@@ -1,0 +1,365 @@
+---
+layout: docs
+page_title: What is Vault Proxy?
+description: >-
+  Vault Proxy is a server-side daemon with caching and auto-authentication that
+  acts as load-balancer and API proxy for Vault.
+---
+
+# What is Vault Proxy?
+
+Vault Proxy aims to remove the initial hurdle to adopt Vault by providing a
+more scalable and simpler way for applications to integrate with Vault.
+Vault Proxy acts as an [API proxy][apiproxy] for Vault, and can optionally allow
+or force interacting clients to use its [automatically authenticated token][autoauth].
+
+Vault Proxy is a client daemon that provides the following features:
+
+- [Auto-auth][autoauth] - Automatically authenticate to Vault and manage the
+token renewal process for locally-retrieved dynamic secrets.
+- [API proxy][apiproxy] - Acts as a proxy for Vault's API,
+optionally using (or forcing the use of) the auto-auth token.
+- [Caching][caching] - Allows client-side caching of responses containing newly
+created tokens and responses containing leased secrets generated off of these
+newly created tokens. The agent also manages the renewals of the cached tokens and leases.
+
+## Auto-auth
+
+Vault Proxy allows easy authentication to Vault in a wide variety of
+environments. Please see the [Auto-auth docs][autoauth]
+for information.
+
+Auto-auth functionality takes place within an `auto_auth` configuration stanza.
+
+## API proxy
+
+Vault Proxy's primary purpose is to act as an API proxy for Vault, allowing you to talk to Vault's
+API via a listener. It can be configured to optionally allow or force the automatic use of
+the auto-auth token for these requests. Please see  the [Use Vault Proxy as an API proxy][apiproxy] page
+for more information.
+
+API proxy functionality takes place within a defined `listener`, and its behaviour can be configured with an
+[`api_proxy` stanza](/vault/docs/agent-and-proxy/proxy/apiproxy#configuration-api_proxy).
+
+## Caching
+
+Vault Proxy allows client-side caching of responses containing newly created tokens
+and responses containing leased secrets generated off of these newly created tokens.
+Please see the [Caching docs][caching] for information.
+
+## API
+
+### Quit
+
+This endpoint triggers shutdown of the proxy. By default, it is disabled, and can
+be enabled per listener using the [`proxy_api`][proxy-api] stanza. It is recommended
+to only enable this on trusted interfaces, as it does not require any authorization to use.
+
+| Method | Path             |
+| :----- | :--------------- |
+| `POST` | `/proxy/v1/quit` |
+
+### Cache
+
+See the [caching](/vault/docs/agent-and-proxy/proxy/caching#api) page for details on the cache API.
+
+## Configuration
+
+### Command options
+
+- `-log-level` ((#\_log_level)) `(string: "info")` - Log verbosity level. Supported values (in
+order of descending detail) are `trace`, `debug`, `info`, `warn`, and `error`. This can
+also be specified via the `VAULT_LOG_LEVEL` environment variable.
+
+- `-log-format` ((#\_log_format)) `(string: "standard")` - Log format. Supported values
+are `standard` and `json`. This can also be specified via the
+`VAULT_LOG_FORMAT` environment variable.
+
+- `-log-file` ((#\_log_file)) - the absolute path where Vault Proxy should save
+  log messages. Paths that end with a path separator use the default file name,
+  `proxy.log`. Paths that do not end with a file extension use the default
+  `.log` extension. If the log file rotates, Vault Proxy appends the current
+  timestamp to the file name at the time of rotation. For example:
+
+  `log-file` | Full log file | Rotated log file
+  ---------- | ------------- | ----------------
+  `/var/log` | `/var/log/proxy.log` | `/var/log/proxy-{timestamp}.log`
+  `/var/log/my-diary` | `/var/log/my-diary.log` | `/var/log/my-diary-{timestamp}.log`
+  `/var/log/my-diary.txt` | `/var/log/my-diary.txt` | `/var/log/my-diary-{timestamp}.txt`
+
+- `-log-rotate-bytes` ((#\_log_rotate_bytes)) - to specify the number of
+bytes that should be written to a log before it needs to be rotated. Unless specified,
+there is no limit to the number of bytes that can be written to a log file.
+
+- `-log-rotate-duration` ((#\_log_rotate_duration)) - to specify the maximum
+duration a log should be written to before it needs to be rotated. Must be a duration
+value such as 30s. Defaults to 24h.
+
+- `-log-rotate-max-files` ((#\_log_rotate_max_files)) - to specify the maximum
+number of older log file archives to keep. Defaults to `0` (no files are ever deleted).
+Set to `-1` to discard old log files when a new one is created.
+
+### Configuration file options
+
+These are the currently-available general configuration options:
+
+- `vault` <code>([vault][vault]: <optional\>)</code> - Specifies the remote Vault server the Proxy connects to.
+
+- `auto_auth` <code>([auto_auth][autoauth]: <optional\>)</code> - Specifies the method and other options used for auto-auth functionality.
+
+- `api_proxy` <code>([api_proxy][apiproxy]: <optional\>)</code> - Specifies options used for API proxy functionality.
+
+- `cache` <code>([cache][caching]: <optional\>)</code> - Specifies options used for Caching functionality.
+
+- `listener` <code>([listener][listener]: <optional\>)</code> - Specifies the addresses and ports on which the Proxy will respond to requests.
+
+  <Highlight>
+
+  On `SIGHUP` (`kill -SIGHUP $(pidof vault)`), Vault Proxy will attempt to reload listener TLS configuration.
+  This method can be used to refresh certificates used by Vault Proxy without having to restart its process.
+
+  </Highlight>
+
+- `pid_file` `(string: "")` - Path to the file in which the Proxy's Process ID
+(PID) should be stored
+
+- `exit_after_auth` `(bool: false)` - If set to `true`, the proxy will exit
+with code `0` after a single successful auth, where success means that a
+token was retrieved and all sinks successfully wrote it
+
+- `disable_idle_connections` `(string array: [])` - A list of strings that disables idle connections for various features in Vault Proxy.
+Valid values include: `auto-auth`, and `proxying`. Can also be configured by setting the `VAULT_PROXY_DISABLE_IDLE_CONNECTIONS`
+environment variable as a comma separated string. This environment variable will override any values found in a configuration file.
+
+- `disable_keep_alives` `(string array: [])` - A list of strings that disables keep alives for various features in Vault Agent.
+Valid values include: `auto-auth`, and `proxying`. Can also be configured by setting the `VAULT_PROXY_DISABLE_KEEP_ALIVES`
+environment variable as a comma separated string. This environment variable will override any values found in a configuration file.
+
+- `telemetry` <code>([telemetry][telemetry]: <optional\>)</code> – Specifies the telemetry
+reporting system. See the [telemetry Stanza](/vault/docs/agent-and-proxy/proxy#telemetry-stanza) section below
+for a list of metrics specific to Proxy.
+
+- `log_level` - Equivalent to the [`-log-level` command-line flag](#_log_level).
+
+  <Highlight>
+
+  On `SIGHUP` (`kill -SIGHUP $(pidof vault)`), Vault Proxy will update the log level to the value
+  specified by configuration file (including overriding values set using CLI or environment variable parameters).
+
+  </Highlight>
+
+- `log_format` - Equivalent to the [`-log-format` command-line flag](#_log_format).
+
+- `log_file` - Equivalent to the [`-log-file` command-line flag](#_log_file).
+
+- `log_rotate_duration` - Equivalent to the [`-log-rotate-duration` command-line flag](#_log_rotate_duration).
+
+- `log_rotate_bytes` - Equivalent to the [`-log-rotate-bytes` command-line flag](#_log_rotate_bytes).
+
+- `log_rotate_max_files` - Equivalent to the [`-log-rotate-max-files` command-line flag](#_log_rotate_max_files).
+
+### vault stanza
+
+There can at most be one top level `vault` block, and it has the following
+configuration entries:
+
+- `address` `(string: <optional>)` - The address of the Vault server to
+connect to. This should be a Fully Qualified Domain Name (FQDN) or IP
+such as `https://vault-fqdn:8200` or `https://172.16.9.8:8200`.
+This value can be overridden by setting the `VAULT_ADDR` environment variable.
+
+- `ca_cert` `(string: <optional>)` - Path on the local disk to a single PEM-encoded
+CA certificate to verify the Vault server's SSL certificate. This value can
+be overridden by setting the `VAULT_CACERT` environment variable.
+
+- `ca_path` `(string: <optional>)` - Path on the local disk to a directory of
+PEM-encoded CA certificates to verify the Vault server's SSL certificate.
+This value can be overridden by setting the `VAULT_CAPATH` environment
+variable.
+
+- `client_cert` `(string: <optional>)` - Path on the local disk to a single
+PEM-encoded CA certificate to use for TLS authentication to the Vault server.
+This value can be overridden by setting the `VAULT_CLIENT_CERT` environment
+variable.
+
+- `client_key` `(string: <optional>)` - Path on the local disk to a single
+PEM-encoded private key matching the client certificate from `client_cert`.
+This value can be overridden by setting the `VAULT_CLIENT_KEY` environment
+variable.
+
+- `tls_skip_verify` `(string: <optional>)` - Disable verification of TLS
+certificates. Using this option is highly discouraged as it decreases the
+security of data transmissions to and from the Vault server. This value can
+be overridden by setting the `VAULT_SKIP_VERIFY` environment variable.
+
+- `tls_server_name` `(string: <optional>)` - Name to use as the SNI host when
+connecting via TLS. This value can be overridden by setting the
+`VAULT_TLS_SERVER_NAME` environment variable.
+
+- `namespace` `(string: <optional>)` - Namespace to use for all of Vault Proxy's
+requests to Vault. This can also be specified by command line or environment variable.
+The order of precedence is: this setting lowest, followed by the environment variable
+`VAULT_NAMESPACE`, and then the highest precedence command-line option `-namespace`.
+If none of these are specified, defaults to the root namespace.
+
+#### retry stanza
+
+The `vault` stanza may contain a `retry` stanza that controls how failing Vault
+requests are handled. Auto-auth, however, has its own notion of retrying and is not
+affected by this section.
+
+Here are the options for the `retry` stanza:
+
+- `num_retries` `(int: 12)` - Specify how many times a failing request will
+be retried. A value of `0` translates to the default, i.e. 12 retries.
+A value of `-1` disables retries. The environment variable `VAULT_MAX_RETRIES`
+overrides this setting.
+
+Requests originating
+from the proxy cache will only be retried if they resulted in specific HTTP
+result codes: any 50x code except 501 ("not implemented"), as well as 412
+("precondition failed"); 412 is used in Vault Enterprise 1.7+ to indicate a
+stale read due to eventual consistency. Requests coming from the template
+subsystem are retried regardless of the failure.
+
+### listener stanza
+
+Vault Proxy supports one or more [listener][listener_main] stanzas. Listeners
+can be configured with or without [caching][caching], but will use the cache if it
+has been configured, and will enable the [API proxy][apiproxy]. In addition to the standard
+listener configuration, a Proxy's listener configuration also supports the following:
+
+- `require_request_header` `(bool: false)` - Require that all incoming HTTP
+requests on this listener must have an `X-Vault-Request: true` header entry.
+Using this option offers an additional layer of protection from Server Side
+Request Forgery attacks. Requests on the listener that do not have the proper
+`X-Vault-Request` header will fail, with a HTTP response status code of `412: Precondition Failed`.
+
+- `role` `(string: default)` - `role` determines which APIs the listener serves.
+It can be configured to `metrics_only` to serve only metrics, or the default role, `default`,
+which serves everything (including metrics). The `require_request_header` does not apply
+to `metrics_only` listeners.
+
+- `proxy_api` <code>([proxy_api][proxy-api]: <optional\>)</code> - Manages optional Proxy API endpoints.
+
+#### proxy_api stanza
+
+- `enable_quit` `(bool: false)` - If set to `true`, the Proxy will enable the [quit](/vault/docs/agent-and-proxy/proxy#quit) API.
+
+### telemetry stanza
+
+Vault Proxy supports the [telemetry][telemetry] stanza and collects various
+runtime metrics about its performance, the auto-auth and the cache status:
+
+| Metric                           | Description                                          | Type    |
+| -------------------------------- | ---------------------------------------------------- | ------- |
+| `vault.proxy.auth.failure`       | Number of authentication failures                    | counter |
+| `vault.proxy.auth.success`       | Number of authentication successes                   | counter |
+| `vault.proxy.proxy.success`      | Number of requests successfully proxied              | counter |
+| `vault.proxy.proxy.client_error` | Number of requests for which Vault returned an error | counter |
+| `vault.proxy.proxy.error`        | Number of requests the proxy failed to proxy         | counter |
+| `vault.proxy.cache.hit`          | Number of cache hits                                 | counter |
+| `vault.proxy.cache.miss`         | Number of cache misses                               | counter |
+
+## Start Vault Proxy
+
+To run Vault Proxy:
+
+1. [Download](/vault/downloads) the Vault binary where the client application runs
+(virtual machine, Kubernetes pod, etc.)
+
+1. Create a Vault Proxy configuration file. (See the [Example
+Configuration](#example-configuration) section for an example configuration.)
+
+1. Start a Vault Proxy with the configuration file.
+
+  **Example:**
+
+  ```shell-session
+  $ vault proxy -config=/etc/vault/proxy-config.hcl
+  ```
+
+  To get the command help, run:
+
+  ```shell-session
+  $ vault proxy -h
+  ```
+
+As with Vault, the `-config` flag can be used in three different ways:
+
+- Use the flag once to name the path to a single specific configuration file.
+- Use the flag multiple times to name multiple configuration files, which will be composed at runtime.
+- Use the flag to name a directory of configuration files, the contents of which will be composed at runtime.
+
+## Example configuration
+
+An example configuration, with very contrived values, follows:
+
+```hcl
+pid_file = "./pidfile"
+
+vault {
+  address = "https://vault-fqdn:8200"
+  retry {
+    num_retries = 5
+  }
+}
+
+auto_auth {
+  method "aws" {
+    mount_path = "auth/aws-subaccount"
+    config = {
+      type = "iam"
+      role = "foobar"
+    }
+  }
+
+  sink "file" {
+    config = {
+      path = "/tmp/file-foo"
+    }
+  }
+
+  sink "file" {
+    wrap_ttl = "5m"
+    aad_env_var = "TEST_AAD_ENV"
+    dh_type = "curve25519"
+    dh_path = "/tmp/file-foo-dhpath2"
+    config = {
+      path = "/tmp/file-bar"
+    }
+  }
+}
+
+cache {
+  // An empty cache stanza still enables caching
+}
+
+api_proxy {
+  use_auto_auth_token = true
+}
+
+listener "unix" {
+  address = "/path/to/socket"
+  tls_disable = true
+
+  agent_api {
+    enable_quit = true
+  }
+}
+
+listener "tcp" {
+  address = "127.0.0.1:8100"
+  tls_disable = true
+}
+```
+
+[vault]: /vault/docs/agent-and-proxy/proxy#vault-stanza
+[autoauth]: /vault/docs/agent-and-proxy/autoauth
+[caching]: /vault/docs/agent-and-proxy/proxy/caching
+[apiproxy]: /vault/docs/agent-and-proxy/proxy/apiproxy
+[persistent-cache]: /vault/docs/agent-and-proxy/proxy/caching/persistent-caches
+[proxy-api]: /vault/docs/agent-and-proxy/proxy/#proxy_api-stanza
+[listener]: /vault/docs/agent-and-proxy/proxy#listener-stanza
+[listener_main]: /vault/docs/configuration/listener/tcp
+[telemetry]: /vault/docs/configuration/telemetry

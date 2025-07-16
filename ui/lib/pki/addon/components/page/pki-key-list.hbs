@@ -1,0 +1,93 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<PkiPaginatedList @backend={{@backend}} @listRoute="keys.index" @list={{@keyModels}} @hasConfig={{@hasConfig}}>
+  <:actions>
+    {{#if @canImportKey}}
+      <ToolbarLink @route="keys.import" @model={{@backend}} @type="upload" data-test-pki-key-import>
+        Import
+      </ToolbarLink>
+    {{/if}}
+    {{#if @canGenerateKey}}
+      <ToolbarLink @route="keys.create" @model={{@backend}} @type="add" data-test-pki-key-generate>
+        Generate
+      </ToolbarLink>
+    {{/if}}
+  </:actions>
+  <:description>
+    <p class="has-padding">Below is information about the private keys used by the issuers to sign certificates. While
+      certificates represent a public assertion of an identity, private keys represent the private part of that identity, a
+      secret used to prove who they are and who they trust.</p>
+  </:description>
+  <:list as |keys|>
+    {{#each keys as |pkiKey|}}
+      <LinkedBlock
+        class="list-item-row"
+        @params={{array "keys.key.details" @backend pkiKey.keyId}}
+        @linkPrefix={{@mountPoint}}
+      >
+        <div class="level is-mobile">
+          <div class="level-left">
+            <div>
+              <Icon @name="certificate" class="has-text-grey-light" />
+              <span class="has-text-weight-semibold is-underline" data-test-key={{if pkiKey.keyName "name" "id"}}>
+                {{or pkiKey.keyName pkiKey.id}}
+              </span>
+              <div class="is-flex-row has-left-margin-l has-top-margin-xs">
+                {{#if pkiKey.keyName}}
+                  <Hds::Badge @text={{pkiKey.id}} data-test-key="id" />
+                {{/if}}
+              </div>
+            </div>
+          </div>
+          <div class="level-right is-flex is-paddingless is-marginless">
+            <div class="level-item">
+              {{#if (or @canRead @canEdit)}}
+                <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+                  <dd.ToggleIcon
+                    @icon="more-horizontal"
+                    @text="Manage key"
+                    @hasChevron={{false}}
+                    data-test-popup-menu-trigger
+                  />
+                  {{#if @canRead}}
+                    <dd.Interactive
+                      @route="keys.key.details"
+                      @models={{array @backend pkiKey.keyId}}
+                      data-test-key-menu-link="details"
+                    >Details</dd.Interactive>
+                  {{/if}}
+                  {{#if @canEdit}}
+                    <dd.Interactive
+                      @route="keys.key.edit"
+                      @models={{array @backend pkiKey.keyId}}
+                      data-test-key-menu-link="edit"
+                    >Edit</dd.Interactive>
+                  {{/if}}
+                </Hds::Dropdown>
+              {{/if}}
+            </div>
+          </div>
+        </div>
+      </LinkedBlock>
+    {{/each}}
+  </:list>
+
+  <:empty>
+    <EmptyState @title="No keys yet" @message="There are no keys in this PKI mount. You can generate or create one." />
+  </:empty>
+
+  <:configure>
+    <EmptyState @title="PKI not configured" @message={{this.notConfiguredMessage}}>
+      <Hds::Link::Standalone
+        @icon="chevron-right"
+        @iconPosition="trailing"
+        @text="Configure PKI"
+        @route="configuration.create"
+        @model={{@backend}}
+      />
+    </EmptyState>
+  </:configure>
+</PkiPaginatedList>

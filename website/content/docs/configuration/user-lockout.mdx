@@ -1,0 +1,68 @@
+---
+layout: docs
+page_title: User lockout - Configuration
+description: >-
+  Configure the user_lockout stanza to customize lockout behavior for failed
+  logins in vault. 
+---
+
+# User lockout
+
+@include 'user-lockout.mdx'
+
+## `user_lockout` stanza
+
+The `user_lockout` stanza specifies various configurations for user lockout 
+behaviour for failed logins in vault. They can be configured for all supported auth methods
+(userpass, ldap and approle) using "all" user_lockout stanza name or for a specific auth method 
+using the auth method name in stanza. 
+
+Supported user_lockout stanza names are all, userpass, ldap and approle.
+
+The configurations for a specific auth method takes precedence over the configurations specified 
+for all auth methods using "all" user_lockout stanza name in the config file.
+
+## Configuration
+
+User lockouts configuration is done through the Vault configuration file using
+the `user_lockout` stanza:
+
+```hcl
+user_lockout [NAME] {
+  [PARAMETERS...]
+}
+```
+
+For example:
+
+```hcl
+user_lockout "all" {
+  lockout_duration = "10m"
+  lockout_counter_reset = "10m"
+}
+
+user_lockout "userpass" {
+  lockout_threshold = "25"
+  lockout_duration = "5m"
+}
+
+user_lockout "ldap" {
+ disable_lockout = "true"
+}
+```
+
+Here, user lockout feature will be disabled for ldap auth methods. Userpass auth methods will have lockout threshold of 25, 
+lockout duration of 5 minutes, lockout counter reset of 10 minutes. Approle auth methods will have a lockout threshold of 
+5 (considers default as this value is not configured), lockout duration of 10 minutes and lockout counter reset of 10 minutes.
+
+The user lockout configuration for the auth method at a given path can be tuned using auth tune. Please see [auth tune command](/vault/docs/commands/auth/tune)
+or [auth tune api](/vault/api-docs/system/auth#tune-auth-method) for more details. 
+
+## `user_lockout` parameters
+
+The following options are available on all user_lockout configurations.
+
+- `lockout_threshold` `(string: "")` - Specifies the number of failed login attempts after which the user is locked out.
+- `lockout_duration` `(string: "")` - Specifies the duration for which an user will be locked out.
+- `lockout_counter_reset` `(string: "")` - Specifies the duration after which the lockout counter is reset with no failed login attempts.
+- `disable_lockout` `(bool: false)` - Disables the user lockout feature if set to true.

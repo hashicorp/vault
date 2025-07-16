@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/transit: Do not allow auto rotation on managed_key key types
+```

@@ -16,6 +16,11 @@ func TestOCIHABackend(t *testing.T) {
 	if os.Getenv("VAULT_ACC") == "" {
 		t.SkipNow()
 	}
+
+	if !hasOCICredentials() {
+		t.Skip("Skipping because OCI credentials could not be resolved. See https://pkg.go.dev/github.com/oracle/oci-go-sdk/common#DefaultConfigProvider for information on how to set up OCI credentials.")
+	}
+
 	bucketName, _ := uuid.GenerateUUID()
 	configProvider := common.DefaultConfigProvider()
 	objectStorageClient, _ := objectstorage.NewObjectStorageClientWithConfigurationProvider(configProvider)

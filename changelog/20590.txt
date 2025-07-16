@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Update Web CLI with examples and a new `kv-get` command for reading kv v2 data and metadata
+```

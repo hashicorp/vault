@@ -1,0 +1,337 @@
+---
+layout: docs
+page_title: Add a containerized secrets plugin to Vault
+description: >-
+  Add a containerized secrets plugin to your Vault instance.
+---
+
+# Add a containerized secrets plugin to Vault
+
+Run your external secrets plugins in containers to increases the isolation
+between the plugin and Vault.
+
+## Before you start
+
+- **Your Vault instance must be running on Linux**.
+- **Your Vault instance must have local access to the Docker Engine API**.
+  Vault uses the [Docker SDK](https://pkg.go.dev/github.com/docker/docker) to
+  manage containerized plugins.
+- **You must have [gVisor](https://gvisor.dev/docs/user_guide/install/)
+  installed**. Vault uses `runsc` as the entrypoint to your container runtime.
+- **If you are using a container runtime other than gVisor, you must have a
+  `runsc`-compatible container runtime installed**.
+
+## Step 1: Install your container engine
+
+Install one of the supported container engines:
+
+  - [Docker](https://docs.docker.com/engine/install/)
+  - [Rootless Docker](https://docs.docker.com/engine/security/rootless/)
+
+## Step 2: Configure your container runtime 
+
+Update your container engine to use `runsc` for Unix sockets between the host
+and plugin binary.
+
+<Tabs>
+
+<Tab heading="Docker">
+
+  1. Add `runsc` to your
+     [Docker daemon configuration](https://docs.docker.com/config/daemon):
+
+      ```shell-session
+      $ sudo tee PATH_TO_DOCKER_DAEMON_CONFIG_FILE <<EOF
+      {
+        "runtimes": {
+          "runsc": {
+            "path": "PATH_TO_RUNSC_INSTALLATION",
+            "runtimeArgs": [
+              "--host-uds=all"
+            ]
+          }
+        }
+      }
+      EOF
+      ```
+
+  1. Restart Docker:
+
+      ```shell-session
+      $ sudo systemctl reload docker
+      ```
+
+</Tab>
+
+<Tab heading="Rootless Docker">
+
+  1. Create a configuration directory if it does not exist already:
+
+    ```shell-session
+    $ mkdir -p ~/.config/docker
+    ```
+
+  1. Add `runsc` to your Docker configuration:
+
+    ```shell-session
+    $ tee ~/.config/docker/daemon.json  <<EOF
+    {
+      "runtimes": {
+        "runsc": {
+          "path": "PATH_TO_RUNSC_INSTALLATION",
+          "runtimeArgs": [
+            "--host-uds=all"
+            "--ignore-cgroups"
+          ]
+        }
+      }
+    }
+    EOF
+    ```
+
+  1. Restart Docker:
+
+    ```shell-session
+    $ systemctl --user restart docker
+    ```
+
+</Tab>
+
+</Tabs>
+
+## Step 3: Update the HashiCorp `go-plugin` library
+
+You must build your plugin locally with v1.5.0+ of the HashiCorp
+[`go-plugin`](https://github.com/hashicorp/go-plugin) library to ensure the
+finished binary is compatible with containerization.
+
+Use `go install` to pull the latest version of the plugin library from the
+`hashicorp/go-plugin` repo on GitHub:
+
+```shell-session
+$ go install github.com/hashicorp/go-plugin@latest
+```
+
+<Tip title="The Vault SDK includes go-plugin">
+
+  If you build with the Vault SDK, you can update `go-plugin` with `go install`
+  by pulling the latest SDK version from the `hashicorp/vault` repo:
+
+  `go install github.com/hashicorp/vault/sdk@latest`
+
+</Tip>
+
+
+## Step 4: Build the plugin container
+
+Containerized plugins must run as a binary in the finished container and
+behave the same whether run in a container or as a standalone application:
+
+1. Build your plugin binary so it runs on Linux.
+1. Create a container file for your plugin with the compiled binary as the
+   entry-point.
+1. Build the image with a unique tag.
+
+For example, to build a containerized version of the built-in key-value (KV)
+secrets plugin for Docker:
+
+1. Clone the latest version of the KV secrets plugin from
+   `hashicorp/vault-plugin-secrets-kv`.
+    ```shell-session
+    $ git clone https://github.com/hashicorp/vault-plugin-secrets-kv.git
+    ```
+1. Build the Go binary for Linux.
+    ```shell-session
+    $ cd vault-plugin-secrets-kv ; CGO_ENABLED=0 GOOS=linux \
+    go build -o kv cmd/vault-plugin-secrets-kv/main.go
+    ```
+1. Create an empty Dockerfile.
+    ```shell-session
+    $ touch Dockerfile
+    ```
+1. Update the empty `Dockerfile` with your infrastructure build details and the
+   compiled binary as the entry-point.
+   ```Dockerfile
+   FROM gcr.io/distroless/static-debian12
+   COPY kv /bin/kv
+   ENTRYPOINT [ "/bin/kv" ]
+   ```
+1. Build the container image and assign an identifiable tag.
+   ```shell-session
+   $ docker build -t hashicorp/vault-plugin-secrets-kv:1.0.0 .
+   ```
+
+## Step 5: Register the plugin
+
+Registering a containerized plugin with Vault is similar to registering any
+other external plugin that is available locally to Vault.
+
+1. Store the SHA256 of the plugin image:
+   ```shell-session
+   $ export SHA256=$(docker images \
+       --no-trunc \
+       --format="{{ .ID }}" \
+       YOUR_PLUGIN_IMAGE_TAG | cut -d: -f2)
+   ```
+   For example:
+   
+   <CodeBlockConfig hideClipboard>
+
+   ```shell-session
+   $ export SHA256=$(docker images \
+       --no-trunc \
+       --format="{{ .ID }}" \
+       hashicorp/vault-plugin-secrets-kv:1.0.0 | cut -d: -f2)
+   ```
+   
+   </CodeBlockConfig>
+
+1. Register the plugin with `vault plugin register` and specify your plugin
+   image with the `oci_image` flag:
+   ```shell-session
+   $ vault plugin register \
+       -sha256="${SHA256}" \
+       -oci_image=YOUR_PLUGIN_IMAGE_TAG \
+       NEW_PLUGIN_TYPE NEW_PLUGIN_ID
+   ```
+   For example:
+   
+   <CodeBlockConfig hideClipboard>
+   
+   ```shell-session
+   $ vault plugin register \
+       -sha256="${SHA256}" \
+       -oci_image=hashicorp/vault-plugin-secrets-kv:1.0.0 \
+       secret my-kv-container
+   ```
+   
+   </CodeBlockConfig>
+
+1. Enable the new plugin for your Vault instance with `vault secrets enable` and
+   the new plugin ID:
+   ```shell-session
+   $ vault secrets enable NEW_PLUGIN_ID
+   ```
+   For example:
+   
+   <CodeBlockConfig hideClipboard>
+   
+   ```shell-session
+   $ vault secrets enable my-kv-container
+   ```
+        
+   </CodeBlockConfig>
+
+
+<Tip title="Customize container behavior with registration flags">
+
+  You can provide additional information about the image entrypoint, command,
+  and environment with the `-command`, `-args`, and `-env` flags for
+  `vault plugin register`.
+
+</Tip>
+
+## Step 6: Test your plugin
+
+Now that the container is registered with Vault, you should be able to interact
+with it like any other plugin. Try writing then fetching a new secret with your
+new plugin.
+
+
+1. Use `vault write` to store a secret with your containerized plugin:
+   ```shell-session
+   $ vault write NEW_PLUGIN_ID/SECRET_PATH SECRET_KEY=SECRET_VALUE
+   ```
+   For example:
+   
+   <CodeBlockConfig hideClipboard>
+   
+   ```shell-session
+   $ vault write my-kv-container/testing subject=containers
+   Success! Data written to: my-kv-container/testing
+   ```
+    
+   </CodeBlockConfig>
+
+1. Fetch the secret you just wrote:
+   ```shell-session
+   $ vault read NEW_PLUGIN_ID/SECRET_PATH
+   ```
+   For example:
+   
+   <CodeBlockConfig hideClipboard>
+   
+   ```shell-session
+   $ vault read my-kv-container/testing
+   ===== Data =====
+   Key        Value
+   ---        -----
+   subject    containers
+   ```
+   
+   </CodeBlockConfig>
+
+## Use alternative runtimes ((#alt-runtimes))
+
+You can force Vault to use alternative runtimes provided the runtime is
+installed locally.
+
+To use an alternative runtime:
+
+1. Register and name the runtime with `vault plugin runtime register`. For
+   example, to register the default Docker runtime (`runc`) as `docker-rt`:
+   ```shell-session
+   $ vault plugin runtime register  \
+      -oci_runtime=runc             \
+      -type=container docker-rt
+   ```
+
+1. Use the `--runtime` flag during plugin registration to tell Vault what
+   runtime to use:
+   ```shell-session
+   $ vault plugin register  \
+      -runtime=RUNTIME_NAME \
+      -sha256="${SHA256}"   \
+      -oci_image=YOUR_PLUGIN_IMAGE_TAG \
+      NEW_PLUGIN_TYPE NEW_PLUGIN_ID
+   ```
+   For example:
+   
+   <CodeBlockConfig hideClipboard>
+   
+   ```shell-session
+   $ vault plugin register \
+      -runtime=docker-rt   \
+      -sha256="${SHA256}"  \
+      -oci_image=hashicorp/vault-plugin-secrets-kv:1.0.0 \
+      secret my-kv-container
+   ```
+
+   </CodeBlockConfig>
+
+## Troubleshooting
+
+### Invalid backend version error
+
+If you run into the following error while registering your plugin:
+
+<CodeBlockConfig hideClipboard>
+
+```plaintext
+invalid backend version error: 2 errors occurred:
+        * error creating container: Error response from daemon: error while looking up the specified runtime path: exec: " /usr/bin/runsc": stat  /usr/bin/runsc: no such file or directory
+        * error creating container: Error response from daemon: error while looking up the specified runtime path: exec: " /usr/bin/runsc": stat  /usr/bin/runsc: no such file or directory
+```
+
+</CodeBlockConfig>
+
+it means that Vault cannot find the executable for `runsc`. Confirm the
+following is true before trying again:
+
+1. You have gVisor installed locally to Vault.
+1. The path to `runsc` is correct in you your Docker configuration.
+1. Vault has permission to run the `runsc` executable.
+
+If you still get errors when registering a plugin, the recommended workaround is
+to use the default Docker runtime (`runc`) as an
+[alternative runtime](#alt-runtimes).

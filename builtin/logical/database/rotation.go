@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package database
 
 import (
@@ -10,7 +13,6 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/framework"
-	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/locksutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/queue"
@@ -62,6 +64,25 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 			continue
 		}
 
+		// If an account's NextVaultRotation period is zero time (time.Time{}), it means that the
+		// role was created before we added the `NextVaultRotation` field. In this
+		// case, we need to calculate the next rotation time based on the
+		// LastVaultRotation and the RotationPeriod. However, if the role was
+		// created with skip_import_rotation set, we need to use the current time
+		// instead of LastVaultRotation because LastVaultRotation is 0
+		if role.StaticAccount.NextVaultRotation.IsZero() {
+			log.Debug("NextVaultRotation unset (zero time). Role may predate field", roleName)
+			if role.StaticAccount.LastVaultRotation.IsZero() {
+				log.Debug("Setting NextVaultRotation based on current time", roleName)
+				role.StaticAccount.SetNextVaultRotation(time.Now())
+			} else {
+				log.Debug("Setting NextVaultRotation based on LastVaultRotation", roleName)
+				role.StaticAccount.SetNextVaultRotation(role.StaticAccount.LastVaultRotation)
+			}
+
+			b.StoreStaticRole(ctx, s, role)
+		}
+
 		item := queue.Item{
 			Key:      roleName,
 			Priority: role.StaticAccount.NextRotationTime().Unix(),
@@ -89,9 +110,9 @@ func (b *databaseBackend) populateQueue(ctx context.Context, s logical.Storage) 
 					log.Warn("unable to delete WAL", "error", err, "WAL ID", walEntry.walID)
 				}
 			} else {
-				log.Info("found WAL for role",
-					"role", item.Key,
-					"WAL ID", walEntry.walID)
+				// previous rotation attempt was interrupted, so we set the
+				// Priority as highest to be processed immediately
+				log.Info("found WAL for role", "role", item.Key, "WAL ID", walEntry.walID)
 				item.Value = walEntry.walID
 				item.Priority = time.Now().Unix()
 			}
@@ -188,41 +209,72 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 		return false
 	}
 
+	roleName := item.Key
+	logger := b.Logger().With("role", roleName)
+
 	// Grab the exclusive lock for this Role, to make sure we don't incur and
 	// writes during the rotation process
-	lock := locksutil.LockForKey(b.roleLocks, item.Key)
+	lock := locksutil.LockForKey(b.roleLocks, roleName)
 	lock.Lock()
 	defer lock.Unlock()
 
 	// Validate the role still exists
-	role, err := b.StaticRole(ctx, s, item.Key)
+	role, err := b.StaticRole(ctx, s, roleName)
 	if err != nil {
-		b.logger.Error("unable to load role", "role", item.Key, "error", err)
+		logger.Error("unable to load role", "error", err)
+
 		item.Priority = time.Now().Add(10 * time.Second).Unix()
 		if err := b.pushItem(item); err != nil {
-			b.logger.Error("unable to push item on to queue", "error", err)
+			logger.Error("unable to push item on to queue", "error", err)
 		}
 		return true
 	}
 	if role == nil {
-		b.logger.Warn("role not found", "role", item.Key, "error", err)
+		logger.Warn("role not found", "error", err)
 		return true
 	}
 
-	// If "now" is less than the Item priority, then this item does not need to
-	// be rotated
-	if time.Now().Unix() < item.Priority {
+	logger = logger.With("database", role.DBName)
+
+	input := &setStaticAccountInput{
+		RoleName: roleName,
+		Role:     role,
+	}
+
+	now := time.Now()
+	if !role.StaticAccount.ShouldRotate(item.Priority, now) {
+		if !role.StaticAccount.IsInsideRotationWindow(now) {
+			// We are a schedule-based rotation and we are outside a rotation
+			// window so we update priority and NextVaultRotation
+			item.Priority = role.StaticAccount.NextRotationTimeFromInput(now).Unix()
+			role.StaticAccount.SetNextVaultRotation(now)
+			b.logger.Trace("outside schedule-based rotation window, update priority", "next", role.StaticAccount.NextRotationTime())
+
+			// write to storage after updating NextVaultRotation so the next
+			// time this item is checked for rotation our role that we retrieve
+			// from storage reflects that change
+			err := b.StoreStaticRole(ctx, s, input.Role)
+			if err != nil {
+				return false
+			}
+		}
+		// do not rotate now, push item back onto queue to be rotated later
 		if err := b.pushItem(item); err != nil {
-			b.logger.Error("unable to push item on to queue", "error", err)
+			logger.Error("unable to push item on to queue", "error", err)
 		}
 		// Break out of the for loop
 		return false
 	}
 
-	input := &setStaticAccountInput{
-		RoleName: item.Key,
-		Role:     role,
-	}
+	// send an event indicating if the rotation was a success or failure
+	rotated := false
+	defer func() {
+		if rotated {
+			b.dbEvent(ctx, "rotate", "", roleName, true)
+		} else {
+			b.dbEvent(ctx, "rotate-fail", "", roleName, false)
+		}
+	}()
 
 	// If there is a WAL entry related to this Role, the corresponding WAL ID
 	// should be stored in the Item's Value field.
@@ -232,7 +284,8 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 
 	resp, err := b.setStaticAccount(ctx, s, input)
 	if err != nil {
-		b.logger.Error("unable to rotate credentials in periodic function", "error", err)
+		logger.Error("unable to rotate credentials in periodic function", "error", err)
+
 		// Increment the priority enough so that the next call to this method
 		// likely will not attempt to rotate it, as a back-off of sorts
 		item.Priority = time.Now().Add(10 * time.Second).Unix()
@@ -243,7 +296,7 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 		}
 
 		if err := b.pushItem(item); err != nil {
-			b.logger.Error("unable to push item on to queue", "error", err)
+			logger.Error("unable to push item on to queue", "error", err)
 		}
 		// Go to next item
 		return true
@@ -257,11 +310,12 @@ func (b *databaseBackend) rotateCredential(ctx context.Context, s logical.Storag
 	}
 
 	// Update priority and push updated Item to the queue
-	nextRotation := lvr.Add(role.StaticAccount.RotationPeriod)
-	item.Priority = nextRotation.Unix()
+	item.Priority = role.StaticAccount.NextRotationTimeFromInput(lvr).Unix()
+
 	if err := b.pushItem(item); err != nil {
-		b.logger.Warn("unable to push item on to queue", "error", err)
+		logger.Warn("unable to push item on to queue", "error", err)
 	}
+	rotated = true
 	return true
 }
 
@@ -309,9 +363,9 @@ type setStaticAccountOutput struct {
 
 // setStaticAccount sets the credential for a static account associated with a
 // Role. This method does many things:
-// - verifies role exists and is in the allowed roles list
-// - loads an existing WAL entry if WALID input is given, otherwise creates a
-// new WAL entry
+//   - verifies role exists and is in the allowed roles list
+//   - loads an existing WAL entry if WALID input is given, otherwise creates a
+//     new WAL entry
 //   - gets a database connection
 //   - accepts an input credential, otherwise generates a new one for
 //     the role's credential type
@@ -321,10 +375,19 @@ type setStaticAccountOutput struct {
 //
 // This method does not perform any operations on the priority queue. Those
 // tasks must be handled outside of this method.
-func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storage, input *setStaticAccountInput) (*setStaticAccountOutput, error) {
+func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storage, input *setStaticAccountInput) (_ *setStaticAccountOutput, err error) {
 	if input == nil || input.Role == nil || input.RoleName == "" {
 		return nil, errors.New("input was empty when attempting to set credentials for static account")
 	}
+	modified := false
+	defer func() {
+		if err == nil {
+			b.dbEvent(ctx, "static-creds-create", "", input.RoleName, modified)
+		} else {
+			b.dbEvent(ctx, "static-creds-create-fail", "", input.RoleName, modified)
+		}
+	}()
+
 	// Re-use WAL ID if present, otherwise PUT a new WAL
 	output := &setStaticAccountOutput{WALID: input.WALID}
 
@@ -364,9 +427,15 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 		Commands: input.Role.Statements.Rotation,
 	}
 
+	// Add external password to request so we can use static account connection
+	if input.Role.StaticAccount.SelfManagedPassword != "" {
+		updateReq.SelfManagedPassword = input.Role.StaticAccount.SelfManagedPassword
+	}
+
 	// Use credential from input if available. This happens if we're restoring from
 	// a WAL item or processing the rotation queue with an item that has a WAL
 	// associated with it
+	var usedCredentialFromPreviousRotation bool
 	if output.WALID != "" {
 		wal, err := b.findStaticWAL(ctx, s, output.WALID)
 		if err != nil {
@@ -394,6 +463,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 				Statements:  statements,
 			}
 			input.Role.StaticAccount.Password = wal.NewPassword
+			usedCredentialFromPreviousRotation = true
 		case wal.CredentialType == v5.CredentialTypeRSAPrivateKey:
 			// Roll forward by using the credential in the existing WAL entry
 			updateReq.CredentialType = v5.CredentialTypeRSAPrivateKey
@@ -402,6 +472,7 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 				Statements:   statements,
 			}
 			input.Role.StaticAccount.PrivateKey = wal.NewPrivateKey
+			usedCredentialFromPreviousRotation = true
 		}
 	}
 
@@ -476,20 +547,33 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 	_, err = dbi.database.UpdateUser(ctx, updateReq, false)
 	if err != nil {
 		b.CloseIfShutdown(dbi, err)
+		if usedCredentialFromPreviousRotation {
+			b.Logger().Debug("credential stored in WAL failed, deleting WAL", "role", input.RoleName, "WAL ID", output.WALID)
+			if err := framework.DeleteWAL(ctx, s, output.WALID); err != nil {
+				b.Logger().Warn("failed to delete WAL", "error", err, "WAL ID", output.WALID)
+			}
+
+			// Generate a new WAL entry and credential for next attempt
+			output.WALID = ""
+		}
 		return output, fmt.Errorf("error setting credentials: %w", err)
+	}
+	modified = true
+
+	// static user password successfully updated in external system
+	// update self-managed password if available for future connections
+	if input.Role.StaticAccount.SelfManagedPassword != "" {
+		input.Role.StaticAccount.SelfManagedPassword = input.Role.StaticAccount.Password
 	}
 
 	// Store updated role information
 	// lvr is the known LastVaultRotation
 	lvr := time.Now()
 	input.Role.StaticAccount.LastVaultRotation = lvr
+	input.Role.StaticAccount.SetNextVaultRotation(lvr)
 	output.RotationTime = lvr
 
-	entry, err := logical.StorageEntryJSON(databaseStaticRolePath+input.RoleName, input.Role)
-	if err != nil {
-		return output, err
-	}
-	if err := s.Put(ctx, entry); err != nil {
+	if err := b.StoreStaticRole(ctx, s, input.Role); err != nil {
 		return output, err
 	}
 
@@ -514,14 +598,12 @@ func (b *databaseBackend) setStaticAccount(ctx context.Context, s logical.Storag
 // not wait for success or failure of it's tasks before continuing. This is to
 // avoid blocking the mount process while loading and evaluating existing roles,
 // etc.
-func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendConfig, replicationState consts.ReplicationState) {
+func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendConfig) {
 	// Verify this mount is on the primary server, or is a local mount. If not, do
 	// not create a queue or launch a ticker. Both processing the WAL list and
 	// populating the queue are done sequentially and before launching a
 	// go-routine to run the periodic ticker.
-	if (conf.System.LocalMount() || !replicationState.HasState(consts.ReplicationPerformanceSecondary)) &&
-		!replicationState.HasState(consts.ReplicationDRSecondary) &&
-		!replicationState.HasState(consts.ReplicationPerformanceStandby) {
+	if b.WriteSafeReplicationState() {
 		b.Logger().Info("initializing database rotation queue")
 
 		// Poll for a PutWAL call that does not return a "read-only storage" error.
@@ -558,10 +640,10 @@ func (b *databaseBackend) initQueue(ctx context.Context, conf *logical.BackendCo
 		queueTickerInterval := defaultQueueTickSeconds * time.Second
 		if strVal, ok := conf.Config[queueTickIntervalKey]; ok {
 			newVal, err := strconv.Atoi(strVal)
-			if err == nil {
+			if err == nil && newVal > 0 {
 				queueTickerInterval = time.Duration(newVal) * time.Second
 			} else {
-				b.Logger().Error("bad value for %q option: %q", queueTickIntervalKey, strVal)
+				b.Logger().Error("bad value for %q option: %q, default value of %d being used instead", queueTickIntervalKey, strVal, defaultQueueTickSeconds)
 			}
 		}
 		go b.runTicker(ctx, queueTickerInterval, conf.StorageView)

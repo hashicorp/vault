@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render } from '@ember/test-helpers';
@@ -16,12 +21,9 @@ module('Integration | Component | empty-state', function (hooks) {
 
     // Template block usage:
     await render(hbs`
-      {{#empty-state
-        title="Empty State Title"
-        message="This is the empty state message"
-      }}
+      <EmptyState @title="Empty State Title" @message="This is the empty state message">
         Actions Link
-      {{/empty-state}}
+      </EmptyState>
     `);
 
     assert.dom('.empty-state-title').hasText('Empty State Title', 'renders empty state title');

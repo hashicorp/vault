@@ -1,0 +1,3 @@
+```release-note:bug
+ui: fixes renew-self being called right after login for non-renewable tokens
+```

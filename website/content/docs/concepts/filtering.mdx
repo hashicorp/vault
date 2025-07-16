@@ -1,0 +1,181 @@
+---
+layout: docs
+page_title: Filtering
+description: >-
+  An introduction to the filtering syntax used in Vault.
+---
+
+# Filter expressions in Vault
+
+@include 'alerts/enterprise-only.mdx'
+
+Filter expressions use matching operators and selector values to parse
+out important or relevant information. In some situations, you can use filter
+expressions to control how Vault processes results.
+
+## Filter expression syntax
+
+Basic filter expressions are always written in plain text with a
+**matching operator**, a **selector**, and a **selector value**.
+
+- the **matching operator** tells Vault how to compare the selector and selector
+  value.
+- the **selector** is a [JSON pointer](https://tools.ietf.org/html/rfc6901) that
+  indicates which field or parameter in a JSON object to consider.
+- the **selector value** is a JSON pointer, number, or string that defines a
+  pattern Vault can filter against.
+
+For example, in the filter expression:
+
+```text
+product/name == "Vault"
+```
+
+- Equality (`==`) is the matching operator.
+- The JSON pointer `product/name` is the selector.
+- The string "Vault" is the selector value.
+
+Complex filter expressions also allow Boolean logic and parenthesis. For example:
+
+```text
+(product/name == "Vault") and (timestamp < "2024-02-01")
+```
+
+When parsing filter expressions, Vault ignores whitespace unless the whitespace
+is part of a literal string.
+
+Filter expression
+`product/name=="Vault"` and `product/name == "Vault"` generate the same results
+while `product/name == " Vault "` and `product/name == "Vault"` generate
+different results.
+
+<Note title="Selectors are not universal">
+
+  Filtering-enabled endpoints can support different selectors. Make sure to
+  consult the API documentation for a given endpoint when constructing your
+  filter expressions.
+
+</Note>
+<Tabs>
+
+<Tab heading="Matching operators">
+
+
+
+```text
+// Equality & Inequality checks
+<Selector> == "<Value>"
+<Selector> != "<Value>"
+
+// Emptiness checks
+<Selector> is empty
+<Selector> is not empty
+
+// Contains checks or Substring Matching
+"<Value>" in <Selector>
+"<Value>" not in <Selector>
+<Selector> contains "<Value>"
+<Selector> not contains "<Value>"
+
+// Regular Expression Matching
+<Selector> matches "<Value>"
+<Selector> not matches "<Value>"
+```
+
+</Tab>
+
+<Tab heading="Selectors">
+
+
+Selectors must be valid JSON pointers enclosed in quotes with a leading slash (`/`).
+
+
+JSON pointers use forward slashes to define paths through a JSON block. For
+example, to target the product name in:
+
+```json
+{ "product":
+  {
+    "name": "Vault",
+    "version": "1.16.0"
+  },
+  {
+    "name": "Boundary",
+    "version": "0.15.0"
+  }
+}
+
+```
+
+The selector would be `/product/name`.
+
+
+</Tab>
+
+<Tab heading="Selector values">
+
+
+Selector values can be any valid selector, integer, floating point number, or
+string. Numbers and strings should be quoted in double quotes or backticks.
+
+Strings quoted in backticks are treated as literal values and escape sequences
+like `\n` are not expanded.
+
+| Value             | Type    | Expanded value    |
+|-------------------|---------|-------------------|
+| "Vault\tBoundary" | string  | "Vault	Boundary" |
+| `Vault\tBoundary` | string  | "Vault\tBoundary" |
+| "10"              | integer | "10"              |
+| `10`              | integer | "10"              |
+| "0.75"            | float   | "0.75"            |
+
+
+</Tab>
+
+</Tabs>
+
+## Complex expressions
+
+Complex expressions combine basic expressions with logical operators, grouping, and matching expressions.
+
+```text
+// Logical Or - evaluates to true if either sub-expression does
+<Expression 1> or <Expression 2>
+
+// Logical And - evaluates to true if both sub-expressions do
+<Expression 1 > and <Expression 2>
+
+// Logical Not - evaluates to true if the sub-expression does not
+not <Expression 1>
+
+// Grouping - Overrides normal precedence rules
+( <Expression 1> )
+
+// Inspects data to check for a match
+<Matching Expression 1>
+```
+
+Vault uses standard operator precedence when resolving complex
+expressions. For example, the expression
+`<Expression 1> and not <Expression 2> or <Expression 3>` resolves
+the same as
+`( <Expression 1> and (not <Expression 2> )) or <Expression 3>`.
+
+
+## Performance
+
+Filters consume a portion of CPU time on the Vault node where they run.
+
+<Note title="Regular expressions">
+  Using multiple/complex expressions including regular expressions
+  (regex) will have a larger impact on performance than fewer/simpler filters.
+</Note>
+
+Always test your filters in pre-production environments to ensure correctness.
+
+Ideally you should [codify your management of Vault](/vault/tutorials/operations/codify-mgmt-vault-terraform)
+using tools such as [Terraform](https://www.terraform.io/), to prevent accidentally enabling an audit device
+in a production environment with untested/incorrect settings.
+
+Finally, always ensure you profile production-like workloads within your pre-production
+environments in order to accurately assess the performance of Vault.

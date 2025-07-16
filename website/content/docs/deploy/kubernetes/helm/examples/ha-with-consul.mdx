@@ -1,0 +1,75 @@
+---
+layout: 'docs'
+page_title: 'Highly available Vault cluster with Consul'
+sidebar_current: 'docs-platform-k8s-examples-ha-with-consul'
+description: >-
+  Learn how to set up a highly available Vault cluster with Consul as the storage backend.
+---
+
+# Highly available Vault cluster with Consul
+
+@include 'helm/version.mdx'
+
+@include 'consul-dataplane-compat.mdx'
+
+The below `values.yaml` can be used to set up a five server Vault cluster using
+Consul as a highly available storage backend, Google Cloud KMS for Auto Unseal.
+
+```yaml
+server:
+  extraEnvironmentVars:
+    GOOGLE_REGION: global
+    GOOGLE_PROJECT: myproject
+    GOOGLE_APPLICATION_CREDENTIALS: /vault/userconfig/my-gcp-iam/myproject-creds.json
+
+  volumes:
+    - name: userconfig-my-gcp-iam
+      secret:
+        defaultMode: 420
+        secretName: my-gcp-iam
+
+  volumeMounts:
+    - mountPath: /vault/userconfig/my-gcp-iam
+      name: userconfig-my-gcp-iam
+      readOnly: true
+
+  affinity: |
+    podAntiAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        - labelSelector:
+            matchLabels:
+              app: {{ template "vault.name" . }}
+              release: "{{ .Release.Name }}"
+              component: server
+          topologyKey: kubernetes.io/hostname
+
+  service:
+    enabled: true
+
+  ha:
+    enabled: true
+    replicas: 5
+
+    config: |
+      ui = true
+
+      listener "tcp" {
+        tls_disable = 1
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+
+      storage "consul" {
+        path = "vault"
+        address = "HOST_IP:8500"
+      }
+
+      seal "gcpckms" {
+         project     = "myproject"
+         region      = "global"
+         key_ring    = "vault-unseal-kr"
+         crypto_key  = "vault-unseal-key"
+      }
+
+      service_registration "kubernetes" {}
+```

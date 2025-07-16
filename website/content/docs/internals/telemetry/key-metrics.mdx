@@ -1,0 +1,326 @@
+---
+layout: docs
+page_title: Key metrics for common health checks
+description: >-
+  Learn about the key Vault metrics you should monitor with health checks.
+---
+
+# Key metrics for common health checks
+
+This document covers common Vault monitoring patterns. It is important to have operational and usage insight into a running Vault cluster to understand performance, assist with proactive incident response, and understand business workloads and use cases.
+
+This document consists of five metrics sections: core, usage, storage backend, audit, and resource. Core metrics are fundamental internal metrics which you should monitor to ensure the health of your Vault cluster. The usage metrics section covers metrics which help count active and historical clients Vault. The storage backend section highlights the metrics to monitor so that you understand the storage infrastructure that your Vault cluster uses, allowing you to ensure your storage is functioning as intended. Audit metrics allow you to set up monitoring that helps you meet your compliance requirements. Resource metrics allow you to monitor metrics such as CPU, networking, and other resources Vault uses on its host. Replication covers metrics you can use to help ensure that Vault is replicating data as intended.
+
+## Core metrics
+
+### Servers assume the leader role
+
+#### Metrics:
+
+`Vault.core.leadership_lost`
+
+`vault.core.leadership_setup_failed`
+
+#### Background:
+
+![Recommended architecture](/img/vault-integrated-storage-reference-architecture.svg)
+
+The diagram illustrates a highly available Vault cluster with five nodes distributed between three availability zones. Vault's Integrated Storage uses a consensus protocol to provide consistency across the cluster nodes. The leader (active) node is responsible for ingesting new log entries, replicating them to the follower (standby) nodes, and managing when to commit an entry. Integrated Storage uses consensus protocol to provide consistency; therefore, if the leader is lost, the voting nodes will elect a new leader. Refer to the [Integrated storage](/vault/docs/internals/integrated-storage) documentation for more details.
+
+<Tip>
+
+When you operate Vault with Integrated Storage, it automatically provides [additional metrics for Raft leadership changes](/vault/docs/internals/integrated-storage#consensus-protocol).
+
+</Tip>
+
+#### Alerting:
+
+The metric `vault.core.leadership_lost` measures the duration a server held the leader position before losing it. A consistently low value for this metric suggests a high leadership turnover, indicating potential instability within the cluster.
+
+On the other hand, spikes in the `vault.core.leadership_setup_failed` metric indicate failures that standby servers cannot successfully assume the leader role when required. Investigate these failures promptly, and check for any issues related to acquiring the leader election lock. These metrics are important alerts and can signify security and reliability risks. For example, there might be a communication problem between Vault and its storage backend or a broader outage causing multiple Vault servers to fail. Monitoring and analyzing these metrics can help identify and address any underlying issues, ensuring the stability and security of your Vault cluster.
+
+### Higher latency in your application
+
+#### Metrics:
+
+`vault.core.handle_login_request`
+
+`vault.core.handle_request`
+
+#### Background:
+
+Vault can use trusted sources like Kubernetes, Active Directory, and Okta to verify the identity of clients (users or services) before granting them access to secrets. Clients must authenticate themselves by making a login request through the `vault login` command or the API. When the authentication is successful, Vault provides the client with a token, which is stored locally on the client's machine and is used to authorize future requests. As long as the client presents a valid token that has not expired, Vault recognizes the client as authenticated.
+
+#### Alerting:
+
+The metric `vault.core.handle_login_request`, when averaged, measures how fast Vault responds to client login requests. If you notice a significant increase in this metric but no significant increase in the number of tokens issued (`vault.token.creation`) it's crucial to investigate the cause of this issue immediately.
+
+When a client sends a request to Vault, it typically needs to go through an authentication process to verify its identity and obtain the necessary permissions. This authentication process involves validating the client's credentials, such as username and password or API token, and ensuring the client has the appropriate access rights.
+
+If the authentication process in Vault is slow, it takes longer for Vault to verify the client's credentials and authorize the request. This delay in authentication directly impacts the response time of Vault to the client's request.
+
+You should also monitor the `vault.core.handle_request` metric, which measures server workload. This metric helps determine whether you need to scale up your cluster to accommodate increased traffic. On the other hand, a sudden drop in throughput may indicate connectivity problems between Vault and its clients, which you should investigate further.
+
+### Difficulties with setting up auditing or problems with mounting a custom plugin backend
+
+#### Metrics:
+
+`vault.core.post_unseal`
+
+#### Background:
+
+Vault servers can be in one of two states: sealed or unsealed. To ensure security, Vault does not trust the storage backends and stores data in an encrypted form. After Vault is started, it must undergo an unsealing process to obtain the plaintext root key necessary to read the decryption key to decrypt the data. After unsealing, Vault performs various post-unseal operations to set up the server correctly before it can start responding to requests.
+
+#### Alerting:
+
+If you notice sudden increases in the `vault.core.post_unseal` metric, issues might affect your server's availability during the post-unseal process, such as errors with auditing or mounting a custom plugin backend. To diagnose the issues, refer to your Vault server's logs.
+
+## Usage metrics
+
+### Excessive token creations affecting Vault performance
+
+#### Metrics:
+
+`vault.token.creation`
+
+##### Background:
+
+All authenticated Vault requests require a valid client token. Tokens are linked to policies determining which capabilities  a client (user or system) has for a given path. Vault issues three types of tokens: service tokens, batch tokens, and recovery tokens.
+
+Service tokens are what users will generally think of as "normal" Vault tokens. They support all features, such as renewal, revocation, creating child tokens, and more. They are correspondingly heavyweight to create and track.
+
+Batch tokens are encrypted binary large objects (blobs) with just enough information about the client. While Vault does not persist the batch tokens, it persists the service tokens. The amount of space required to store the service token depends on the authentication method. Therefore, a large number of service tokens could contribute to an out-of-memory issue.
+
+Recovery tokens are used exclusively for operating Vault in [recovery mode](/vault/docs/concepts/recovery-mode).
+
+#### Alerting
+
+By monitoring the number of tokens created (`vault.token.creation`) and the frequency of login requests (`vault.core.handle_login_request` counted as a total), you can gain insights into the overall workload of your system. If your scenario involves running numerous short-lived processes, such as serverless workloads, you may experience simultaneous creation and request of secrets from hundreds or thousands of functions. In such cases, you will observe correlated spikes in both metrics.
+
+When dealing with transient workloads, you should utilize batch tokens to enhance the performance of your cluster. Vault creates a batch token, which encrypts all the client's information and provides it to the client. When the client employs this token, Vault decrypts the stored metadata and fulfills the request. Unlike service tokens, batch tokens do not retain client information or get replicated across clusters. This characteristic alleviates the burden on the storage backend and leads to improved cluster performance.
+
+To learn more about batch tokens, refer to the [batch tokens](/vault/tutorials/tokens/batch-tokens) tutorial.
+
+### Lease lifecycle introducing unexpected traffic spikes in Vault
+
+#### Metrics:
+
+`vault.expire.num_leases`
+
+#### Background:
+
+Vault creates a lease when it generates a dynamic secret or service token. This lease contains essential information like the secret or token’s time to live (TTL) value, and whether it can be extended or renewed. Vault stores the lease in the storage backend. If Vault doesn't renew the lease before reaching its TTL, it will expire and be invalidated, causing the associated secret or token to be revoked.
+
+#### Alerting
+
+Monitoring the number of active leases in your Vault server (`vault.expire.num_leases`) can provide valuable insights into the server's activity level. An increase in leases suggests a higher volume of traffic to your application. At the same time, a sudden decrease could indicate issues with accessing dynamic secrets quickly enough to serve incoming traffic.
+
+We recommend setting the shortest possible TTL for leases to improve security and performance. There are two main reasons for this. Firstly, a shorter TTL reduces the impact of potential attacks. Secondly, it prevents leases from accumulating indefinitely and consuming excessive space in the storage backend. If you don't specify a TTL explicitly, leases default to 32 days. However, if there is a sudden surge in load and numerous leases are generated with this long default TTL, the storage backend can quickly reach its maximum capacity and crash, resulting in unavailability.
+
+Depending on your specific use case, you may only require a token or secret for a few minutes or hours, rather than the full 32 days. By setting an appropriate TTL, you can free up storage space for storing new secrets and tokens. In the case of Vault Enterprise, you can set a [lease count quota](/vault/docs/enterprise/lease-count-quotas) to limit the number of leases generated below a certain threshold. When the threshold is reached, Vault will restrict the creation of new leases until an existing lease expires or is revoked. This helps manage the overall number of leases and prevents excessive resource usage.
+
+Read the [Protecting Vault with resource quotas](/vault/tutorials/operations/resource-quotas) tutorial to learn how to set the lease count quotas.
+
+Alternatively, you can leverage the [Vault agent caching](/vault/docs/agent-and-proxy/agent/caching) to delegate the lease lifecycle management to Vault Agent.
+
+<Note>
+
+The lifecycle of the leases are managed by the expiration manager, which handles the revocation of a lease when the time to live value associated with the lease is reached. Refer to the [Troubleshoot irrevocable leases](/vault/tutorials/monitoring/troubleshoot-irrevocable-leases) tutorial when you encounter irrevocable leases monitored by the `vault.expire.num_irrevocable_leases` metric.
+
+</Note>
+
+### Know the average time it takes to renew or revoke client tokens
+
+#### Metrics:
+
+`vault.expire.renew-token`
+
+`vault.expire.revoke`
+
+#### Background:
+
+Vault automatically revokes access to secrets granted by a token when its time to live (TTL) expires. You can manually revoke a token if there are signs of a possible security breach. When a token is no longer valid (either expired or revoked), the client will lose access to the secrets managed by Vault. Therefore, the client must either renew the token before it expires, or request a new one.
+
+#### Alerting
+
+Monitoring the timely completion of revocation (`vault.expire.revoke`) and renewal (`vault.expire.renew-token`) operations is crucial for ensuring the validity and accessibility of secrets. Some long-running applications may require a token to be renewed instead of getting a new one. In such a case, the time it takes to renew a token can potentially affect the application from accessing secrets. Also, it is important to track the time it takes to complete the revoke operation helps to detect unauthorized access to secrets, as attackers who gain access can potentially infiltrate your system and cause harm. If you notice significant delays in the revocation process, you should investigate your server logs for any backend issues that might have hindered the revocation process.
+
+## Storage backend metrics
+
+### Detect any performance issues with your Vault's storage backend
+
+#### Metrics:
+
+`vault.<STORAGE>.get`
+
+`vault.<STORAGE>.put`
+
+`vault.<STORAGE>.list`
+
+`vault.<STORAGE>.delete`
+
+#### Background:
+
+The performance of the storage backend affects the overall performance of the Vault; therefore, it is critical to  monitor the performance of your storage backend so that you can detect and react to any anomaly. Backend monitoring allows you to ensure that your storage infrastructure is functioning optimally. Tracking performance lets you gather detailed information and insights about the backend's operations and identify areas requiring improvement or optimization.
+
+#### Alerting
+
+If Vault takes longer to access the backend for operations like retrieving (`vault.<STORAGE>.get`), storing (`vault.<STORAGE>.put`), listing (`vault.<STORAGE>.list`), or deleting (`vault.<STORAGE>.delete`) items, the Vault clients may be experiencing delays caused by storage limitations. To address this issue, you can set up alerts that will notify your team automatically when Vault's access to the storage backend slows down. This will allow you to take action, such as upgrading to disks with better input/output (I/O) performance, before the increased latency negatively impacts your application users' experience.
+
+If you are using Integrated Storage, the following resources provide additional guidance:
+- [Inspect Data in Integrated Storage](/vault/tutorials/monitoring/inspect-data-integrated-storage)
+- [Inspect Data in BoltDB](/vault/tutorials/monitoring/inspect-data-boltdb)
+
+## Audit metrics
+
+###  Blocked audit devices
+
+#### Metrics:
+
+`vault.audit.log_request_failure`
+
+`vault.audit.log_response_failure`
+
+#### Background:
+
+Audit devices play a crucial role in meeting compliance requirements by recording a comprehensive audit log of requests and responses from Vault. For a production deployment, your Vault cluster should have at least one audit device enabled so that you can trace all incoming requests and outgoing responses associated with your cluster. If you rely on only one audit device and encounter problems (e.g., network connection loss or permission issues), Vault can become unresponsive and cease to handle requests. Enabling at least one  additional audit device is essential to ensure uninterrupted functionality and responsiveness from Vault.
+
+#### Alerting
+
+To ensure smooth operation, monitoring any unusual increases in audit log request failures (`vault.audit.log_request_failure`) and response failures (`vault.audit.log_response_failure`) is important. These failures could indicate a device blockage. If such issues arise, examining the audit logs can help identify the problematic device and provide additional clues about the underlying problem.
+
+If Vault is unable to write audit logs to the syslog, the server will generate error logs similar to the following example:
+
+```plaintext
+2020-10-20T12:34:56.290Z [ERROR] audit: backend failed to log response: backend=syslog/ error="write unixgram @->/test/log: write: message too long"
+2020-10-20T12:34:56.291Z [ERROR] core: failed to audit response: request_path=sys/mounts
+ error="1 error occurred:
+        * no audit backend succeeded in logging the response
+```
+
+
+You should expect to encounter a pair of errors from the audit and core modules for each failed log response. If you receive an error message containing "write: message too long," it suggests that the entries that Vault is trying to write to the syslog audit device exceed the size of the syslog host's socket send buffer. In such cases, it's necessary to investigate what is causing the generation of large log entries, such as an extensive list of Active Directory or LDAP groups.
+
+Refer to the [Blocked audit devices](/vault/tutorials/monitoring/blocked-audit-devices) tutorial for additional guidance.
+
+## Resource metrics
+
+### Runtime metrics
+
+#### Metrics:
+
+`vault.runtime.num_goroutines`
+
+`vault.runtime.heap_objects`
+
+#### Background:
+
+A fundamental part of the Vault runtime are
+[`goroutines`](https://go.dev/tour/concurrency/1). `goroutines` are lightweight
+threads managed by the Go runtime that many functions within Vault create as
+part of the runtime.
+
+We recommend monitoring key metrics of the runtime to establish an accurate
+baseline and alerting thresholds for the health of your Vault installation. 
+
+#### Alerting:
+
+Two key alerting metrics to track are `vault.runtime.num_goroutines` and
+`vault.runtime.heap_objects`:
+
+- Sudden increases to `vault.runtime.num_goroutines` can indicate there is
+  something affecting system load warrant investigation.
+
+- Changes to `vault.runtime.heap_objects` can indicate memory pressure.
+
+Having accurate baselines and alert thresholds for `vault.runtime.heap_objects`
+and  `vault.runtime.heap_objects` can help you identify potential performance
+issues before they become a problem.
+
+### Vault memory issues indicated by garbage collection
+
+#### Metrics:
+
+`vault.runtime.sys_bytes`
+
+`vault.runtime.gc_pause_ns`
+
+#### Background:
+
+Garbage collection in the Go runtime temporarily pauses all operations. These pauses are usually brief, but garbage collection happens more often if memory usage is high. This increased frequency of garbage collection can cause delays in Vault's performance.
+
+#### Alerting
+
+Analyzing the relationship between Vault's memory usage (represented as a percentage of total available memory on the host) and garbage collection pause time (measured by `vault.runtime.gc_pause_ns`) can provide valuable insights into resource limitations and assist in effectively allocating compute resources.
+
+To illustrate, when the `vault.runtime.sys_bytes` exceeds 90 percent of the available memory on the host, it is advisable to add more memory to prevent performance degradation. Additionally, you should set  up an alert that triggers if the GC pause time exceeds 5 seconds per minute. This alert will promptly notify you, enabling swift action to address the issue.
+
+### CPU I/O wait time
+
+#### Background:
+
+Vault scales horizontally by adding more instances or nodes, but there are still practical limits to scalability. Excessive CPU wait time for I/O operations can indicate that the system is reaching its scalability limits or overusing specific resources. By tracking these metrics, administrators can assess the system's scalability and take appropriate actions, such as optimizing I/O operations or adding additional resources, to maintain performance as the system grows.
+
+#### Alerting
+
+We recommend keeping the I/O wait time below 10 percent to ensure optimal performance. If you notice excessively long wait times, it indicates that clients are experiencing delays while waiting for Vault to respond to their requests. This delay can negatively impact the performance of applications that rely on Vault. In such situations, evaluating if your resources are properly configured to handle your workload and if the requests are evenly distributed across all CPUs is necessary. These steps will help address potential performance issues and ensure the smooth operation of Vault and its dependent applications.
+
+###  Keep your network throughput within the threshold
+
+#### Background:
+
+Monitoring the network throughput of your Vault clusters allows you to gauge their workload. A sudden decrease in traffic going in or out might indicate communication problems between Vault and its clients or dependencies. Conversely, if you observe an unexpected surge in network activity, it could be a sign of a denial of service (DoS) attack. Knowing these network patterns can provide valuable insights and help you identify potential issues or security threats.
+
+#### Alerting
+
+Starting from Vault 1.5, you can set rate limit quotas to ensure Vault's overall stability and health. When a server reaches this threshold, Vault will reject any new client requests and respond with an HTTP 429 error, specifically "Too Many Requests." These rejected requests will be recorded in your audit logs and display a message like this example: "error: request path kv/app/test: rate limit quota exceeded." Choosing an appropriate limit for the rate quota is important so that it doesn't block legitimate requests and cause slowdowns in your applications. To monitor the frequency of these breaches and adjust your limit accordingly, you can keep an eye on the metric called quota.rate_limit.violation, which increments with each violation of the rate limit quota.
+
+Refer to the [Protecting Vault with resource quotas](/vault/tutorials/operations/resource-quotas) tutorial to learn how to set the rate limit quotas for your Vault.
+
+## Replication metrics
+
+### Free memory in the storage backend by monitoring Write-Ahead logs
+
+#### Metrics:
+
+`vault.wal_flushready`
+
+`vault.wal.persistWALs`
+
+#### Background:
+
+To maintain high performance, Vault utilizes a garbage collector that periodically removes old Write-Ahead Logs (WALs) to free up memory on the storage backend. However, when there are unexpected surges in traffic, the accumulation of WALs can occur rapidly, leading to increased strain on the storage backend. These surges can negatively affect other processes in Vault that rely on the same storage backend. Therefore, it is important to assess the impact of replication on the performance of your storage backend. By doing so, you can better understand how the replication process influences your system's overall performance.
+
+#### Alerting
+
+We recommend you keep track of two metrics: `vault.wal_flushready` and `vault.wal.persistWALs`. The first metric measures the time it takes to flush a ready Write-Ahead Log (WAL) to the persist queue, while the second metric measures the time it takes to persist a WAL to the storage backend.
+
+To ensure efficient performance, we advise you to set up alerts that will notify you when the `vault.wal_flushready` metric exceeds 500 milliseconds or when the `vault.wal.persistWALs` metric surpasses 1,000 milliseconds. These alerts serve as indicators that backpressure is slowing down your storage backend.
+
+If either of these alerts is triggered, consider scaling your storage backend to accommodate the increased workload. Scaling can help alleviate the strain and maintain optimal performance.
+
+###  Vault Enterprise Replication health check
+
+#### Metrics:
+
+`vault.replication.wal.last_wal`
+
+#### Background:
+
+Vault's Write-Ahead Log (WAL) is a durable data storage and recovery mechanism. WAL is a log file that records all changes made to the Vault data store before Vault persists them to the underlying storage backend. The WAL provides an extra layer of reliability and ensures data integrity in case of system failures or crashes.
+
+#### Alerting
+
+When you have Vault Enterprise deployments with Performance Replication and/or Disaster Recovery Replication configured, you want to monitor that the data gets replicated from the primary to the secondary clusters. To detect if your primary and secondary clusters are losing synchronization, you can compare the last Write-Ahead Log (WAL) index on both clusters. It's important to detect discrepancies between them because if the secondary clusters are significantly behind the primary and the primary cluster becomes unavailable, any requests made to Vault will yield outdated data. Therefore, if you notice missing values in the WAL, it's essential to investigate potential causes, which may include:
+Network issues between the primary and secondary clusters: Problems with the network connection can hinder the proper replication of data between the clusters.
+Resource limitations on the primary or secondary systems: If the primary or secondary clusters are experiencing resource constraints, it can affect their ability to replicate data effectively.
+
+Issues with specific keys: Sometimes, the problem may relate to specific keys within the Vault. To identify such issues, examine the Vault's operational and storage logs, which will provide detailed information about the problematic keys causing the synchronization gaps.
+
+Refer to the [Monitoring Vault replication](/vault/tutorials/monitoring/monitor-replication) tutorial to learn more.
+
+## Additional references
+
+- [Monitor telemetry with Prometheus & Grafana](/vault/tutorials/monitoring/monitor-telemetry-grafana-prometheus)
+- [Monitor telemetry & Audit Device Log Data](/vault/tutorials/monitoring/monitor-telemetry-audit-splunk)
+- [Vault client usage](/vault/docs/concepts/client-count/client-usage)

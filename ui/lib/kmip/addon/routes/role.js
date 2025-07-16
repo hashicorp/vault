@@ -1,5 +1,10 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Route from '@ember/routing/route';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 
 export default class KmipRoleRoute extends Route {
   @service store;
@@ -7,7 +12,7 @@ export default class KmipRoleRoute extends Route {
   @service pathHelp;
 
   beforeModel() {
-    return this.pathHelp.getNewModel('kmip/role', this.secretMountPath.currentPath);
+    return this.pathHelp.hydrateModel('kmip/role', this.secretMountPath.currentPath);
   }
 
   model(params) {
@@ -20,7 +25,7 @@ export default class KmipRoleRoute extends Route {
 
   setupController(controller) {
     super.setupController(...arguments);
-    let { scope_name: scope, role_name: role } = this.paramsFor('role');
+    const { scope_name: scope, role_name: role } = this.paramsFor('role');
     controller.setProperties({ role, scope });
   }
 }

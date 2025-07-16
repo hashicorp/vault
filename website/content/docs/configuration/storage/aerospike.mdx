@@ -1,12 +1,11 @@
 ---
 layout: docs
-page_title: Aerospike - Storage Backends - Configuration
-description: |-
-  The Aerospike storage backend is used to persist Vault's data in an Aerospike
-  cluster.
+page_title: Aerospike configuration
+description: >-
+  Configure Vault backend storage to use Aerospike clusters.
 ---
 
-# Aerospike Storage Backend
+# Aerospike configuration for Vault backend storage
 
 The Aerospike storage backend is used to persist Vault's data in an
 [Aerospike][aerospike] cluster.
@@ -19,6 +18,9 @@ The Aerospike storage backend is used to persist Vault's data in an
   be as knowledgeable about the technology. If you encounter problems with them,
   you may be referred to the original author.
 
+- **64-bit only** - the Aerospike storage backend is not supported when Vault runs
+  on a 32-bit architecture, because the Aerospike Go client doesn't support 32-bits.
+
 ```hcl
 storage "aerospike" {
   hostname = "localhost"
@@ -30,7 +32,7 @@ storage "aerospike" {
 }
 ```
 
-## `aerospike` Parameters
+## `aerospike` parameters
 
 - `hostname` `(string: "127.0.0.1")` – Specifies the Aerospike seed hostname.
 

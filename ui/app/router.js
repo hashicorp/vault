@@ -1,6 +1,11 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import EmberRouter from '@ember/routing/router';
 import config from 'vault/config/environment';
-
+import { addDocfyRoutes } from '@docfy/ember';
 export default class Router extends EmberRouter {
   location = config.locationType;
   rootURL = config.rootURL;
@@ -9,6 +14,9 @@ export default class Router extends EmberRouter {
 Router.map(function () {
   this.route('vault', { path: '/' }, function () {
     this.route('cluster', { path: '/:cluster_name' }, function () {
+      this.route('dashboard');
+      this.mount('config-ui');
+      this.mount('sync');
       this.route('oidc-provider-ns', { path: '/*namespace/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-provider', { path: '/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-callback', { path: '/auth/*auth_path/oidc/callback' });
@@ -16,15 +24,19 @@ Router.map(function () {
       this.route('redirect');
       this.route('init');
       this.route('logout');
-      this.mount('open-api-explorer', { path: '/api-explorer' });
       this.route('license');
       this.route('mfa-setup');
       this.route('clients', function () {
-        this.route('current');
-        this.route('history');
+        this.route('counts', function () {
+          this.route('overview');
+          this.route('token');
+          this.route('sync');
+          this.route('acme');
+        });
         this.route('config');
         this.route('edit');
       });
+      this.route('usage-reporting');
       this.route('storage', { path: '/storage/raft' });
       this.route('storage-restore', { path: '/storage/raft/restore' });
       this.route('settings', function () {
@@ -39,16 +51,14 @@ Router.map(function () {
           });
         });
         this.route('mount-secret-backend');
-        this.route('configure-secret-backend', { path: '/secrets/configure/:backend' }, function () {
-          this.route('index', { path: '/' });
-          this.route('section', { path: '/:section_name' });
-        });
       });
       this.route('unseal');
       this.route('tools', function () {
         this.route('tool', { path: '/:selected_action' });
+        this.mount('open-api-explorer', { path: '/api-explorer' });
       });
       this.route('access', function () {
+        this.route('reset-password');
         this.route('methods', { path: '/' });
         this.route('method', { path: '/:path' }, function () {
           this.route('index', { path: '/' });
@@ -154,11 +164,15 @@ Router.map(function () {
         this.route('backends', { path: '/' });
         this.route('backend', { path: '/:backend' }, function () {
           this.mount('kmip');
-          if (config.environment !== 'production') {
-            this.mount('pki');
-          }
+          this.mount('kubernetes');
+          this.mount('kv');
+          this.mount('ldap');
+          this.mount('pki');
           this.route('index', { path: '/' });
-          this.route('configuration');
+          this.route('configuration', function () {
+            // only CONFIGURABLE_SECRET_ENGINES can be configured and access the edit route
+            this.route('edit');
+          });
           // because globs / params can't be empty,
           // we have to special-case ids of '' with their own routes
           this.route('list-root', { path: '/list/' });
@@ -168,18 +182,11 @@ Router.map(function () {
 
           this.route('list', { path: '/list/*secret' });
           this.route('show', { path: '/show/*secret' });
-          this.route('diff', { path: '/diff/*id' });
-          this.route('metadata', { path: '/metadata/*secret' });
-          this.route('edit-metadata', { path: '/edit-metadata/*secret' });
           this.route('create', { path: '/create/*secret' });
           this.route('edit', { path: '/edit/*secret' });
 
           this.route('credentials-root', { path: '/credentials/' });
           this.route('credentials', { path: '/credentials/*secret' });
-
-          // kv v2 versions
-          this.route('versions-root', { path: '/versions/' });
-          this.route('versions', { path: '/versions/*secret' });
 
           // ssh sign
           this.route('sign-root', { path: '/sign/' });
@@ -210,4 +217,7 @@ Router.map(function () {
     });
     this.route('not-found', { path: '/*path' });
   });
+  if (config.environment !== 'production') {
+    addDocfyRoutes(this);
+  }
 });

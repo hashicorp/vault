@@ -1,24 +1,52 @@
-import { assign } from '@ember/polyfills';
-import ApplicationSerializer from './application';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
-export default ApplicationSerializer.extend({
+import ApplicationSerializer from './application';
+import { EmbeddedRecordsMixin } from '@ember-data/serializer/rest';
+import engineDisplayData from 'vault/helpers/engines-display-data';
+
+export default ApplicationSerializer.extend(EmbeddedRecordsMixin, {
+  attrs: {
+    config: { embedded: 'always' },
+  },
+
+  normalize(modelClass, data) {
+    // embedded records need a unique value to be stored
+    // set id for config to uuid of secret engine
+    if (data.config && !data.config.id) {
+      data.config.id = data.uuid;
+    }
+    // move version out of options so it can be defined on secret-engine model
+    data.version = data.options ? data.options.version : null;
+    return this._super(modelClass, data);
+  },
+
   normalizeBackend(path, backend) {
     let struct = {};
-    for (let attribute in backend) {
+    for (const attribute in backend) {
       struct[attribute] = backend[attribute];
     }
-    //queryRecord adds path to the response
+    // queryRecord adds path to the response
     if (path !== null && !struct.path) {
       struct.path = path;
     }
 
     if (struct.data) {
-      struct = assign({}, struct, struct.data);
+      struct = { ...struct, ...struct.data };
       delete struct.data;
     }
     // strip the trailing slash off of the path so we
     // can navigate to it without getting `//` in the url
     struct.id = struct.path.slice(0, -1);
+
+    if (backend?.type === 'kv' && !backend?.options?.version) {
+      // enabling kv in the CLI without a version flag mounts a v1 engine
+      // however, when no version is specified the options key is null
+      // we explicitly set v1 here, otherwise v2 is pulled from the ember model default
+      struct.options = { version: '1', ...struct.options };
+    }
     return struct;
   },
 
@@ -51,8 +79,19 @@ export default ApplicationSerializer.extend({
   },
 
   serialize(snapshot) {
-    let type = snapshot.record.get('engineType');
-    let data = this._super(...arguments);
+    const type = snapshot.record.engineType;
+    const data = this._super(...arguments);
+    // move version back to options
+    data.options = data.version ? { version: data.version } : {};
+    delete data.version;
+
+    if (!engineDisplayData(type)?.isWIF) {
+      // only send identity_token_key if it's set on a WIF secret engine.
+      // because of issues with the model unloading with a belongsTo relationships
+      // identity_token_key can accidentally carry over if a user backs out of the form and changes the type from WIF to non-WIF.
+      delete data.config.identity_token_key;
+    }
+
     if (type !== 'kv' || data.options.version === 1) {
       // These items are on the model, but used by the kv-v2 config endpoint only
       delete data.max_versions;

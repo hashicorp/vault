@@ -1,0 +1,4 @@
+```release-note:improvement
+command/server: Add support for dumping pprof files to the filesystem via SIGUSR2 when 
+`VAULT_PPROF_WRITE_TO_FILE=true` is set on the server.
+```

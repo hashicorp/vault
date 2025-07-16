@@ -1,0 +1,15 @@
+<a id="shared-flag-log-rotate-max-files" />
+
+**`-log-rotate-max-files (int : 0)`**
+
+The number of log file archives to preserve over time:
+
+- *`n`* - Preserve up to `n` archived logs.
+- *`0`* - Never delete log archives.
+- *`-1`* - Always delete log archives.
+
+The archived name of rotated logs includes a timestamp indicating when the log
+rotated. For example, the file `/var/log/agent.log` archives to
+`/var/log/agent-{timestamp}.log` before resetting.
+
+**Example**: `-log-rotate-max-files 5`

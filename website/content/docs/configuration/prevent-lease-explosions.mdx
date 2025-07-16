@@ -1,0 +1,105 @@
+---
+layout: docs
+page_title: Prevent lease explosions
+description: >-
+  Best practices for avoiding, and dealing with, lease explosions in Vault.
+---
+
+# Prevent lease explosions
+
+As your Vault environment scales to meet deployment needs, you run the risk of
+lease explosions. Lease explosions can occur when a Vault cluster is
+over-subscribed and clients overwhelm system resources with consistent,
+high-volume API requests
+
+Unchecked lease explosions create a memory drain on the active node, which can
+cascade to other nodes and result in denial-of-service issues for the entire
+cluster.
+
+## Look for early warning signs
+
+Cleaning up after a lease explosion is time consuming and resource intensive, so
+we strongly recommend monitoring your Vault instance for signals that your
+Vault deployment has matured and requires tuning:
+
+Issue                                                                            | Possible cause
+-------------------------------------------------------------------------------- | --------------
+Unused leases consume storage space for extended periods while waiting to expire | The TTL values for dynamic secret leases or authentication tokens may be too high
+Lease revocation fails frequently                                                | Failures in an external service (e.g., for dynamic secrets)
+Build up of leases associated with unused credentials                            | Clients are not reusing valid, existing leases
+Lease revocation is slow                                                         | Insufficient IOPS for the storage backend
+Rapid lease count growth disproportionate to the number of clients               | Misconfiguration or anti-patterns in client usage
+
+
+## Enforce client best practices
+
+High lease counts can degrade system performance:
+
+- Use the smallest default time-to-live (TTL) possible for tokens and leases to
+  avoid excessive unexpired lease backlogs and high-volume, simultaneous
+  expirations.
+- Review telemetry for aberrant client behavior that might lead to rapid
+  over-subscription.
+- Limit the number of simultaneous dynamic secret requests and service token
+  authentication requests.
+- Ensure that machine clients adhere to [recommended AppRole patterns](/vault/tutorials/recommended-patterns/pattern-approle).
+- Review [AppRole best practices](https://www.hashicorp.com/blog/how-and-why-to-use-approle-correctly-in-hashicorp-vault).
+
+## Set reasonable TTL guardrails
+
+Choose appropriate defaults for your situation and use resource quotas as
+guardrails against lease explosion. You can set default and maximum TTLs
+globally, in the mount configuration for a specific authN or secrets plugin, and
+at the role-level (e.g., database credential roles).
+
+Vault prioritizes TTL values by granularity:
+
+- Global values act as the default.
+- Plugin TTL values override global values.
+- Role, group, and user level TTL values override plugin and global values.
+
+<Note title="TTL changes are not retroactive">
+
+  Leases and tokens keep the TTL value in affect during their creation. When you
+  adjust TTL values, the new limits only apply to leases and tokens issued after
+  you deploy the changes.
+
+</Note>
+
+## Monitor key metrics and logs
+
+Proactive monitoring is key to finding problematic behavior and usage patterns
+before they escalate:
+
+- Review [key Vault metrics](/well-architected-framework/reliability/reliability-vault-monitoring-key-metrics)
+- Understand [metric anti-patterns](/well-architected-framework/operational-excellence/security-vault-anti-patterns#poor-metrics-or-no-telemetry-data)
+- Monitor [Vault audit device logs](/vault/tutorials/monitoring/monitor-telemetry-audit-splunk) for quota-related failures.
+
+## Control resource usage with quotas
+
+Use API rate limiting quotas and
+[lease count quotas](/vault/tutorials/operations/resource-quotas#lease-count-quotas)
+to limit the number of leases generated on a per-mount basis and control
+resource consumption for your Vault instance  where hard limits makes sense.
+
+## Consider batch tokens
+
+If your environment inherently leads to a large number of lease requests,
+consider using batch tokens over service tokens.
+
+The following resources can help you decide if batch tokens are reasonable for
+your situation:
+
+- [Vault service tokens vs batch tokens](/vault/tutorials/tokens/batch-tokens#service-tokens-vs-batch-tokens)
+- [Service vs batch token lease handling](/vault/docs/concepts/tokens#service-vs-batch-token-lease-handling)
+
+## Next steps 
+
+Proactive monitoring and periodic usage analysis can help you identify potential
+problems before they escalate.
+
+- Brush up on [general Vault resource quotas](/vault/docs/concepts/resource-quotas) in general.
+- Learn about [lease count quotas for Vault Enterprise](/vault/docs/enterprise/lease-count-quotas).
+- Learn how to [query audit device logs](/vault/tutorials/monitoring/query-audit-device-logs).
+- Review [recommended Vault lease limits](/vault/docs/internals/limits#lease-limits).
+- Review [lease anti-patterns](/well-architected-framework/operational-excellence/security-vault-anti-patterns#not-adjusting-the-default-lease-time) for a clear explanation of the issue and solution.

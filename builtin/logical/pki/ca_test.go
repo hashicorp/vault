@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -6,7 +9,6 @@ import (
 	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/json"
@@ -21,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -95,7 +98,7 @@ func TestBackend_CA_Steps(t *testing.T) {
 		}
 		ecCACert = strings.TrimSpace(string(pem.EncodeToMemory(caCertPEMBlock)))
 
-		rak, err := rsa.GenerateKey(rand.Reader, 2048)
+		rak, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 		if err != nil {
 			panic(err)
 		}
@@ -304,6 +307,14 @@ func runSteps(t *testing.T, rootB, intB *backend, client *api.Client, rootName, 
 			if path == "issuer/default/json" {
 				// Preserves the new line.
 				expected += "\n"
+				_, present := resp.Data["issuer_id"]
+				if !present {
+					t.Fatalf("expected issuer/default/json to include issuer_id")
+				}
+				_, present = resp.Data["issuer_name"]
+				if !present {
+					t.Fatalf("expected issuer/default/json to include issuer_name")
+				}
 			}
 			if diff := deep.Equal(resp.Data["certificate"].(string), expected); diff != nil {
 				t.Fatal(diff)

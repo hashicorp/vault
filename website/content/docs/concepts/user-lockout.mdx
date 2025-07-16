@@ -1,0 +1,37 @@
+---
+layout: docs
+page_title: User Lockout
+description: >-
+  If a user provides bad credentials several times in quick succession, 
+  Vault will stop trying to validate their credentials for a while, instead 
+  returning immediately with a permission denied error.
+---
+
+# User lockout
+
+@include 'user-lockout.mdx'
+
+## Precedence
+
+The precedence for user lockout configuration is as follows: 
+
+Configuration for an auth mount using tune >> Configuration for an auth method in config file >> 
+Configuration for "all" auth methods in config file >> Default values.
+
+The precedence for user lockout disable is as follows: 
+
+Disable using environment variable VAULT_DISABLE_USER_LOCKOUT >> 
+Configuration for an auth mount using tune >> Configuration for an auth method in config file >> 
+Configuration for "all" auth methods in config file >> Default values.
+
+## Configuration
+
+User lockout parameters can be configured using config file for "all" auth methods or a specific auth method (userpass, ldap, or approle).
+Please see [user lockout configuration](/vault/docs/configuration/user-lockout#user_lockout-stanza) for more details. 
+
+The user lockout configuration for the auth method at a given path can be tuned using auth tune. Please see [auth tune command](/vault/docs/commands/auth/tune)
+or [auth tune api](/vault/api-docs/system/auth#tune-auth-method) for more details. 
+
+## API 
+
+Please see [sys/locked-users API](/vault/api-docs/system/user-lockout) for more details. 

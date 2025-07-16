@@ -1,0 +1,89 @@
+---
+layout: docs
+page_title: Programmatic best practices
+description: >-
+  Best practices for managing Vault programmatically.
+---
+
+# Best practices for programmatic Vault management
+
+It can be a challenge to enforce appropriate governance policies on resources
+created directly from the Vault CLI or API. The best way to manage Vault at
+scale is to
+[codify resource management](/vault/tutorials/operations/codify-mgmt-vault-terraform)
+with [Terraform](/terraform) and the
+[Terraform Vault provider](https://registry.terraform.io/providers/hashicorp/vault/latest).
+
+Terraform applies policy and governance using infrastructure as code (IaC) so
+you can programmatically manage Vault resources such as authentication methods,
+plugins, namespaces, and policies. For example, if you have have specific ACL or
+Sentinel policies that must apply to every Vault namespace, you can rely on
+Terraform to apply the correct governance policies every time you create a new
+namespace.
+
+## Terraform recommendations
+
+- **Avoid reading or writing long-lived static secrets to Vault from Terraform**.
+  Data read to, or written from, Terraform persists in the Terraform state file
+  and any generated plan files.
+
+- **Encrypt the Terraform state file**. Protect the state file with a secure,
+  encrypted backend.
+
+- **Follow the principle of least privilege**. Limit who has read/write access
+  to your Terraform state file.
+
+- **Limit direct management of Vault resources**. Use
+  [Sentinel policies](https://go.hashi.co/support-block-ns-manipulation-with-sentinel)
+  to limit resource management permissions for resources that should be managed
+  through Terraform.
+
+- **Use short-lived credentials**. Credentials persist in the Terraform state
+  file. Short-lived credentials reduce the risk of exposure in the event of a
+  compromised state file.
+
+## Vault recommendations
+
+- **Use Vault-backed dynamic credentials for different cloud providers**.
+  [Vault-backed dynamic credentials](/terraform/cloud-docs/workspaces/dynamic-provider-credentials/vault-backed)
+  limits the need for unique dynamic provider credentials across different cloud
+  providers so you can centralize sensitive data management with Vault while
+  generating short-lived credentials with multiple cloud providers.
+
+- **Use the namespace attribute in resources and data sources**. Using the
+  namespace attribute of a resource, instead of a provider alias, simplifies
+  your configuration and avoids the need for multiple provider blocks.
+
+- **Use distinct token capabilities**. Use the minimal required Vault token
+  capabilities to manage your Vault resources. For example, reading data from a
+  KV data source and drift detection functionality only require the `read`
+  capability. But managing the KV resource requires the `create` or `update`
+  capability depending on whether the resource already exists. And removing the
+  KV resource from the Terraform configuration requires the `delete` capability.
+
+- **Migrate existing resources to Terraform**. If you created Vault resources
+  outside of your Terraform provisioning workflow,
+  [migrate the un-managed resources](/vault/docs/configuration/programmatic-management#migrate).
+
+- **Use dynamic provider credentials for Vault when possible**.
+  [Dynamic provider credentials](/terraform/cloud-docs/workspaces/dynamic-provider-credentials/vault-configuration)
+  generate short-lived credentials as needed, which limits the need for static
+  credentials and improves the security posture of your integration.
+
+- **Do not pass `address`, `token`, or `namespace` to the provider configuration block**.
+  When you use dynamic provider credentials, Terraform populates the environment
+  variable, `TFC_VAULT_ADDR` with `address` and the workspace environment
+  variable, `TFC_VAULT_NAMESPACE`, with `namespace`. Terraform then uses the
+  environment variables to retrieve a value for `token`.
+
+- **Do not hardcode Vault credentials**. If you cannot use dynamic provider
+  credentials configure the Vault provider with environment variables.
+
+<Note title="Dynamic credentials affect child token behavior">
+
+  If you use dynamic credentials with the Terraform Vault provider, it means that
+  Terraform manages the Vault token lifecycle. As a result, Vault **does not**
+  create a child token and you cannot use provider arguments for managing the
+  Vault child token (e.g., `token_name` argument).
+
+</Note>

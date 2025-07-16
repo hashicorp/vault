@@ -1,15 +1,20 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"io/ioutil"
-	"os"
+	"sort"
 	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
 func testAuthEnableCommand(tb testing.TB) (*cli.MockUi, *AuthEnableCommand) {
@@ -50,18 +55,6 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 			"",
 			2,
 		},
-		{
-			"deprecated builtin with standard mount",
-			[]string{"app-id"},
-			"",
-			2,
-		},
-		{
-			"deprecated builtin with different mount",
-			[]string{"-path=/tmp", "app-id"},
-			"",
-			2,
-		},
 	}
 
 	for _, tc := range cases {
@@ -78,12 +71,12 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 
 			code := cmd.Run(tc.args)
 			if code != tc.code {
-				t.Errorf("expected %d to be %d", code, tc.code)
+				t.Errorf("expected command return code to be %d, got %d", tc.code, code)
 			}
 
 			combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
 			if !strings.Contains(combined, tc.out) {
-				t.Errorf("expected %q to contain %q", combined, tc.out)
+				t.Errorf("expected %q in response\n got: %+v", tc.out, combined)
 			}
 		})
 	}
@@ -106,6 +99,8 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 			"-passthrough-request-headers", "www-authentication",
 			"-allowed-response-headers", "authorization",
 			"-listing-visibility", "unauth",
+			"-identity-token-key", "default",
+			"-trim-request-trailing-slashes=true",
 			"userpass",
 		})
 		if exp := 0; code != exp {
@@ -133,6 +128,9 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 		if exp := "The best kind of test"; authInfo.Description != exp {
 			t.Errorf("expected %q to be %q", authInfo.Description, exp)
 		}
+		if !authInfo.Config.TrimRequestTrailingSlashes {
+			t.Errorf("expected trim_request_trailing_slashes to be enabled")
+		}
 		if diff := deep.Equal([]string{"authorization,authentication", "www-authentication"}, authInfo.Config.PassthroughRequestHeaders); len(diff) > 0 {
 			t.Errorf("Failed to find expected values in PassthroughRequestHeaders. Difference is: %v", diff)
 		}
@@ -144,6 +142,9 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 		}
 		if diff := deep.Equal([]string{"foo,bar"}, authInfo.Config.AuditNonHMACResponseKeys); len(diff) > 0 {
 			t.Errorf("Failed to find expected values in AuditNonHMACResponseKeys. Difference is: %v", diff)
+		}
+		if diff := deep.Equal("default", authInfo.Config.IdentityTokenKey); len(diff) > 0 {
+			t.Errorf("Failed to find expected values in IdentityTokenKey. Difference is: %v", diff)
 		}
 	})
 
@@ -190,7 +191,7 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 
 		var backends []string
 		for _, f := range files {
-			if f.IsDir() {
+			if f.IsDir() && f.Name() != "token" {
 				backends = append(backends, f.Name())
 			}
 		}
@@ -215,23 +216,15 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 		// of credential backends.
 		backends = append(backends, "pcf")
 
-		// Add 1 to account for the "token" backend, which is visible when you walk the filesystem but
-		// is treated as special and excluded from the registry.
-		// Subtract 1 to account for "oidc" which is an alias of "jwt" and not a separate plugin.
-		expected := len(builtinplugins.Registry.Keys(consts.PluginTypeCredential))
-		if len(backends) != expected {
-			t.Fatalf("expected %d credential backends, got %d", expected, len(backends))
+		regkeys := strutil.StrListDelete(builtinplugins.Registry.Keys(consts.PluginTypeCredential), "oidc")
+		sort.Strings(regkeys)
+		sort.Strings(backends)
+		if d := cmp.Diff(regkeys, backends); len(d) > 0 {
+			t.Fatalf("found credential registry mismatch: %v", d)
 		}
 
 		for _, b := range backends {
 			var expectedResult int = 0
-			status, _ := builtinplugins.Registry.DeprecationStatus(b, consts.PluginTypeCredential)
-			allowDeprecated := os.Getenv(consts.VaultAllowPendingRemovalMountsEnv)
-
-			// Need to handle deprecated builtins specially
-			if (status == consts.PendingRemoval && allowDeprecated == "") || status == consts.Removed {
-				expectedResult = 2
-			}
 
 			// Not a builtin
 			if b == "token" {
@@ -244,6 +237,13 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 			actualResult := cmd.Run([]string{
 				b,
 			})
+
+			// Need to handle deprecated builtins specially
+			status, _ := builtinplugins.Registry.DeprecationStatus(b, consts.PluginTypeCredential)
+			if status == consts.PendingRemoval || status == consts.Removed {
+				expectedResult = 2
+			}
+
 			if actualResult != expectedResult {
 				t.Errorf("type: %s - got: %d, expected: %d - %s", b, actualResult, expectedResult, ui.OutputWriter.String()+ui.ErrorWriter.String())
 			}

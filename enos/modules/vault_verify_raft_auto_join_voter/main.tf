@@ -1,33 +1,46 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 terraform {
   required_providers {
     enos = {
-      source = "app.terraform.io/hashicorp-qti/enos"
+      source = "registry.terraform.io/hashicorp-forge/enos"
     }
   }
+}
+
+variable "hosts" {
+  type = map(object({
+    ipv6       = string
+    private_ip = string
+    public_ip  = string
+  }))
+  description = "The vault cluster instances that were created"
+}
+
+variable "ip_version" {
+  type        = number
+  description = "The IP version to use for the Vault TCP listeners"
+
+  validation {
+    condition     = contains([4, 6], var.ip_version)
+    error_message = "The ip_version must be either 4 or 6"
+  }
+}
+
+variable "vault_addr" {
+  type        = string
+  description = "The local vault API listen address"
 }
 
 variable "vault_cluster_addr_port" {
   description = "The Raft cluster address port"
   type        = string
-  default     = "8201"
 }
 
 variable "vault_install_dir" {
   type        = string
   description = "The directory where the Vault binary will be installed"
-}
-
-variable "vault_instance_count" {
-  type        = number
-  description = "How many vault instances are in the cluster"
-}
-
-variable "vault_instances" {
-  type = map(object({
-    private_ip = string
-    public_ip  = string
-  }))
-  description = "The vault cluster instances that were created"
 }
 
 variable "vault_root_token" {
@@ -36,23 +49,24 @@ variable "vault_root_token" {
 }
 
 locals {
-  instances = {
-    for idx in range(var.vault_instance_count) : idx => {
-      public_ip  = values(var.vault_instances)[idx].public_ip
-      private_ip = values(var.vault_instances)[idx].private_ip
-    }
+  cluster_addrs = {
+    4 : { for k, v in var.hosts : k => "${v.private_ip}:${var.vault_cluster_addr_port}" },
+    6 : { for k, v in var.hosts : k => "[${v.ipv6}]:${var.vault_cluster_addr_port}" },
   }
 }
 
 resource "enos_remote_exec" "verify_raft_auto_join_voter" {
-  for_each = local.instances
+  for_each = var.hosts
 
-  content = templatefile("${path.module}/templates/verify-raft-auto-join-voter.sh", {
-    vault_cluster_addr      = "${each.value.private_ip}:${var.vault_cluster_addr_port}"
-    vault_install_dir       = var.vault_install_dir
-    vault_local_binary_path = "${var.vault_install_dir}/vault"
-    vault_token             = var.vault_root_token
-  })
+  environment = {
+    VAULT_ADDR              = var.vault_addr
+    VAULT_CLUSTER_ADDR      = local.cluster_addrs[var.ip_version][each.key]
+    VAULT_INSTALL_DIR       = var.vault_install_dir
+    VAULT_LOCAL_BINARY_PATH = "${var.vault_install_dir}/vault"
+    VAULT_TOKEN             = var.vault_root_token
+  }
+
+  scripts = [abspath("${path.module}/scripts/verify-raft-auto-join-voter.sh")]
 
   transport = {
     ssh = {

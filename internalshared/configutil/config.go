@@ -1,14 +1,17 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package configutil
 
 import (
 	"fmt"
-	"io/ioutil"
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/hcl/hcl/token"
+	"github.com/hashicorp/vault/helper/random"
 )
 
 // SharedConfig contains some shared values
@@ -21,15 +24,17 @@ type SharedConfig struct {
 
 	Listeners []*Listener `hcl:"-"`
 
+	UserLockouts []*UserLockout `hcl:"-"`
+
 	Seals   []*KMS   `hcl:"-"`
 	Entropy *Entropy `hcl:"-"`
 
 	DisableMlock    bool        `hcl:"-"`
 	DisableMlockRaw interface{} `hcl:"disable_mlock"`
 
-	Telemetry *Telemetry `hcl:"telemetry"`
+	Telemetry *Telemetry `hcl:"-"`
 
-	HCPLinkConf *HCPLinkConfig `hcl:"cloud"`
+	HCPLinkConf *HCPLinkConfig `hcl:"-"`
 
 	DefaultMaxRequestDuration    time.Duration `hcl:"-"`
 	DefaultMaxRequestDurationRaw interface{}   `hcl:"default_max_request_duration"`
@@ -37,50 +42,45 @@ type SharedConfig struct {
 	// LogFormat specifies the log format. Valid values are "standard" and
 	// "json". The values are case-insenstive. If no log format is specified,
 	// then standard format will be used.
-	LogFormat string `hcl:"log_format"`
-	LogLevel  string `hcl:"log_level"`
+	LogFile              string      `hcl:"log_file"`
+	LogFormat            string      `hcl:"log_format"`
+	LogLevel             string      `hcl:"log_level"`
+	LogRotateBytes       int         `hcl:"log_rotate_bytes"`
+	LogRotateBytesRaw    interface{} `hcl:"log_rotate_bytes"`
+	LogRotateDuration    string      `hcl:"log_rotate_duration"`
+	LogRotateMaxFiles    int         `hcl:"log_rotate_max_files"`
+	LogRotateMaxFilesRaw interface{} `hcl:"log_rotate_max_files"`
 
 	PidFile string `hcl:"pid_file"`
 
 	ClusterName string `hcl:"cluster_name"`
+
+	AdministrativeNamespacePath string `hcl:"administrative_namespace_path"`
 }
 
-// LoadConfigFile loads the configuration from the given file.
-func LoadConfigFile(path string) (*SharedConfig, error) {
-	// Read the file
-	d, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return ParseConfig(string(d))
+func ParseConfig(d string) (cfg *SharedConfig, err error) {
+	cfg, _, err = ParseConfigCheckDuplicate(d)
+	return cfg, err
 }
 
-func LoadConfigKMSes(path string) ([]*KMS, error) {
-	// Read the file
-	d, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	return ParseKMSes(string(d))
-}
-
-func ParseConfig(d string) (*SharedConfig, error) {
+// TODO (HCL_DUP_KEYS_DEPRECATION): keep only ParseConfig once deprecation is complete
+func ParseConfigCheckDuplicate(d string) (cfg *SharedConfig, duplicate bool, err error) {
 	// Parse!
-	obj, err := hcl.Parse(d)
+	obj, duplicate, err := random.ParseAndCheckForDuplicateHclAttributes(d)
 	if err != nil {
-		return nil, err
+		return nil, duplicate, err
 	}
 
 	// Start building the result
 	var result SharedConfig
 
 	if err := hcl.DecodeObject(&result, obj); err != nil {
-		return nil, err
+		return nil, duplicate, err
 	}
 
 	if result.DefaultMaxRequestDurationRaw != nil {
 		if result.DefaultMaxRequestDuration, err = parseutil.ParseDurationSecond(result.DefaultMaxRequestDurationRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 		result.FoundKeys = append(result.FoundKeys, "DefaultMaxRequestDuration")
 		result.DefaultMaxRequestDurationRaw = nil
@@ -88,7 +88,7 @@ func ParseConfig(d string) (*SharedConfig, error) {
 
 	if result.DisableMlockRaw != nil {
 		if result.DisableMlock, err = parseutil.ParseBool(result.DisableMlockRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 		result.FoundKeys = append(result.FoundKeys, "DisableMlock")
 		result.DisableMlockRaw = nil
@@ -96,64 +96,79 @@ func ParseConfig(d string) (*SharedConfig, error) {
 
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
-		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
+		return nil, duplicate, fmt.Errorf("error parsing: file doesn't contain a root object")
 	}
 
 	if o := list.Filter("hsm"); len(o.Items) > 0 {
 		result.found("hsm", "hsm")
 		if err := parseKMS(&result.Seals, o, "hsm", 2); err != nil {
-			return nil, fmt.Errorf("error parsing 'hsm': %w", err)
+			return nil, duplicate, fmt.Errorf("error parsing 'hsm': %w", err)
 		}
 	}
 
 	if o := list.Filter("seal"); len(o.Items) > 0 {
 		result.found("seal", "Seal")
-		if err := parseKMS(&result.Seals, o, "seal", 3); err != nil {
-			return nil, fmt.Errorf("error parsing 'seal': %w", err)
+		if err := parseKMS(&result.Seals, o, "seal", 5); err != nil {
+			return nil, duplicate, fmt.Errorf("error parsing 'seal': %w", err)
 		}
 	}
 
 	if o := list.Filter("kms"); len(o.Items) > 0 {
 		result.found("kms", "Seal")
 		if err := parseKMS(&result.Seals, o, "kms", 3); err != nil {
-			return nil, fmt.Errorf("error parsing 'kms': %w", err)
+			return nil, duplicate, fmt.Errorf("error parsing 'kms': %w", err)
 		}
 	}
 
 	if o := list.Filter("entropy"); len(o.Items) > 0 {
 		result.found("entropy", "Entropy")
 		if err := ParseEntropy(&result, o, "entropy"); err != nil {
-			return nil, fmt.Errorf("error parsing 'entropy': %w", err)
+			return nil, duplicate, fmt.Errorf("error parsing 'entropy': %w", err)
 		}
 	}
 
 	if o := list.Filter("listener"); len(o.Items) > 0 {
 		result.found("listener", "Listener")
-		if err := ParseListeners(&result, o); err != nil {
-			return nil, fmt.Errorf("error parsing 'listener': %w", err)
+		listeners, err := ParseListeners(o)
+		if err != nil {
+			return nil, duplicate, fmt.Errorf("error parsing 'listener': %w", err)
+		}
+		// Update the shared config
+		result.Listeners = listeners
+
+		// Track which types of listener were found.
+		for _, l := range result.Listeners {
+			result.found(l.Type.String(), l.Type.String())
+		}
+	}
+
+	if o := list.Filter("user_lockout"); len(o.Items) > 0 {
+		result.found("user_lockout", "UserLockout")
+		if err := ParseUserLockouts(&result, o); err != nil {
+			return nil, duplicate, fmt.Errorf("error parsing 'user_lockout': %w", err)
 		}
 	}
 
 	if o := list.Filter("telemetry"); len(o.Items) > 0 {
 		result.found("telemetry", "Telemetry")
 		if err := parseTelemetry(&result, o); err != nil {
-			return nil, fmt.Errorf("error parsing 'telemetry': %w", err)
+			return nil, duplicate, fmt.Errorf("error parsing 'telemetry': %w", err)
 		}
 	}
 
 	if o := list.Filter("cloud"); len(o.Items) > 0 {
 		result.found("cloud", "Cloud")
 		if err := parseCloud(&result, o); err != nil {
-			return nil, fmt.Errorf("error parsing 'cloud': %w", err)
+			return nil, duplicate, fmt.Errorf("error parsing 'cloud': %w", err)
 		}
 	}
 
 	entConfig := &(result.EntSharedConfig)
 	if err := entConfig.ParseConfig(list); err != nil {
-		return nil, fmt.Errorf("error parsing enterprise config: %w", err)
+		return nil, duplicate, fmt.Errorf("error parsing enterprise config: %w", err)
 	}
 
-	return &result, nil
+	return &result, duplicate, nil
 }
 
 // Sanitized returns a copy of the config with all values that are considered
@@ -169,16 +184,27 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 	}
 
 	result := map[string]interface{}{
-		"disable_mlock": c.DisableMlock,
+		"default_max_request_duration":  c.DefaultMaxRequestDuration,
+		"disable_mlock":                 c.DisableMlock,
+		"log_level":                     c.LogLevel,
+		"log_format":                    c.LogFormat,
+		"pid_file":                      c.PidFile,
+		"cluster_name":                  c.ClusterName,
+		"administrative_namespace_path": c.AdministrativeNamespacePath,
+	}
 
-		"default_max_request_duration": c.DefaultMaxRequestDuration,
-
-		"log_level":  c.LogLevel,
-		"log_format": c.LogFormat,
-
-		"pid_file": c.PidFile,
-
-		"cluster_name": c.ClusterName,
+	// Optional log related settings
+	if c.LogFile != "" {
+		result["log_file"] = c.LogFile
+	}
+	if c.LogRotateBytes != 0 {
+		result["log_rotate_bytes"] = c.LogRotateBytes
+	}
+	if c.LogRotateDuration != "" {
+		result["log_rotate_duration"] = c.LogRotateDuration
+	}
+	if c.LogRotateMaxFiles != 0 {
+		result["log_rotate_max_files"] = c.LogRotateMaxFiles
 	}
 
 	// Sanitize listeners
@@ -194,6 +220,22 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 		result["listeners"] = sanitizedListeners
 	}
 
+	// Sanitize user lockout stanza
+	if len(c.UserLockouts) != 0 {
+		var sanitizedUserLockouts []interface{}
+		for _, userlockout := range c.UserLockouts {
+			cleanUserLockout := map[string]interface{}{
+				"type":                  userlockout.Type,
+				"lockout_threshold":     userlockout.LockoutThreshold,
+				"lockout_duration":      userlockout.LockoutDuration,
+				"lockout_counter_reset": userlockout.LockoutCounterReset,
+				"disable_lockout":       userlockout.DisableLockout,
+			}
+			sanitizedUserLockouts = append(sanitizedUserLockouts, cleanUserLockout)
+		}
+		result["user_lockout_configs"] = sanitizedUserLockouts
+	}
+
 	// Sanitize seals stanza
 	if len(c.Seals) != 0 {
 		var sanitizedSeals []interface{}
@@ -201,7 +243,12 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 			cleanSeal := map[string]interface{}{
 				"type":     s.Type,
 				"disabled": s.Disabled,
+				"name":     s.Name,
 			}
+			if s.Priority > 0 {
+				cleanSeal["priority"] = s.Priority
+			}
+
 			sanitizedSeals = append(sanitizedSeals, cleanSeal)
 		}
 		result["seals"] = sanitizedSeals
@@ -239,6 +286,7 @@ func (c *SharedConfig) Sanitized() map[string]interface{} {
 			"lease_metrics_epsilon":                  c.Telemetry.LeaseMetricsEpsilon,
 			"num_lease_metrics_buckets":              c.Telemetry.NumLeaseMetricsTimeBuckets,
 			"add_lease_metrics_namespace_labels":     c.Telemetry.LeaseMetricsNameSpaceLabels,
+			"add_mount_point_rollback_metrics":       c.Telemetry.RollbackMetricsIncludeMountPoint,
 		}
 		result["telemetry"] = sanitizedTelemetry
 	}

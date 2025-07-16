@@ -1,28 +1,27 @@
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import ClusterRoute from 'vault/mixins/cluster-route';
 import ListRoute from 'core/mixins/list-route';
 
 export default Route.extend(ClusterRoute, ListRoute, {
+  pagination: service(),
   version: service(),
-  wizard: service(),
-
-  activate() {
-    if (this.wizard.featureState === 'details') {
-      this.wizard.transitionFeatureMachine('details', 'CONTINUE', this.policyType());
-    }
-  },
 
   shouldReturnEmptyModel(policyType, version) {
-    return policyType !== 'acl' && (version.get('isOSS') || !version.get('hasSentinel'));
+    return policyType !== 'acl' && (version.isCommunity || !version.hasSentinel);
   },
 
   model(params) {
-    let policyType = this.policyType();
+    const policyType = this.policyType();
     if (this.shouldReturnEmptyModel(policyType, this.version)) {
       return;
     }
-    return this.store
+    return this.pagination
       .lazyPaginatedQuery(`policy/${policyType}`, {
         page: params.page,
         pageFilter: params.pageFilter,
@@ -50,7 +49,7 @@ export default Route.extend(ClusterRoute, ListRoute, {
     controller.setProperties({
       model,
       filter: params.pageFilter || '',
-      page: model.get('meta.currentPage') || 1,
+      page: model.meta?.currentPage || 1,
       policyType: this.policyType(),
     });
   },
@@ -61,16 +60,17 @@ export default Route.extend(ClusterRoute, ListRoute, {
       controller.set('filter', '');
     }
   },
+
   actions: {
     willTransition(transition) {
       window.scrollTo(0, 0);
       if (!transition || transition.targetName !== this.routeName) {
-        this.store.clearAllDatasets();
+        this.pagination.clearDataset();
       }
       return true;
     },
     reload() {
-      this.store.clearAllDatasets();
+      this.pagination.clearDataset();
       this.refresh();
     },
   },

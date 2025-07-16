@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
 	"context"
 	"crypto/hmac"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -24,7 +28,7 @@ type batchResponseHMACItem struct {
 	HMAC string `json:"hmac,omitempty" mapstructure:"hmac"`
 
 	// Valid indicates whether signature matches the signature derived from the input string
-	Valid bool `json:"valid,omitempty" mapstructure:"valid"`
+	Valid bool `json:"valid" mapstructure:"valid"`
 
 	// Error, if set represents a failure encountered while encrypting a
 	// corresponding batch request item
@@ -35,11 +39,22 @@ type batchResponseHMACItem struct {
 	// For batch processing to successfully mimic previous handling for simple 'input',
 	// both output values are needed - though 'err' should never be serialized.
 	err error
+
+	// Reference is an arbitrary caller supplied string value that will be placed on the
+	// batch response to ease correlation between inputs and outputs
+	Reference string `json:"reference" mapstructure:"reference"`
 }
 
 func (b *backend) pathHMAC() *framework.Path {
 	return &framework.Path{
 		Pattern: "hmac/" + framework.GenericNameRegex("name") + framework.OptionalParamRegex("urlalgorithm"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "generate",
+			OperationSuffix: "hmac|hmac-with-algorithm",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -79,6 +94,14 @@ Defaults to "sha2-256".`,
 Must be 0 (for latest) or a value greater than or equal
 to the min_encryption_version configured on the key.`,
 			},
+
+			"batch_input": {
+				Type: framework.TypeSlice,
+				Description: `
+Specifies a list of items to be processed in a single batch. When this parameter
+is set, if the parameter 'input' is also set, it will be ignored.
+Any batch output will preserve the order of the batch input.`,
+			},
 		},
 
 		Callbacks: map[logical.Operation]framework.OperationFunc{
@@ -113,6 +136,7 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
 	}
+	defer p.Unlock()
 
 	switch {
 	case ver == 0:
@@ -122,23 +146,19 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 	case ver == p.LatestVersion:
 		// Allowed
 	case p.MinEncryptionVersion > 0 && ver < p.MinEncryptionVersion:
-		p.Unlock()
 		return logical.ErrorResponse("cannot generate HMAC: version is too old (disallowed by policy)"), logical.ErrInvalidRequest
 	}
 
 	key, err := p.HMACKey(ver)
 	if err != nil {
-		p.Unlock()
 		return logical.ErrorResponse(err.Error()), logical.ErrInvalidRequest
 	}
-	if key == nil {
-		p.Unlock()
+	if key == nil && p.Type != keysutil.KeyType_MANAGED_KEY {
 		return nil, fmt.Errorf("HMAC key value could not be computed")
 	}
 
 	hashAlgorithm, ok := keysutil.HashTypeMap[algorithm]
 	if !ok {
-		p.Unlock()
 		return logical.ErrorResponse("unsupported algorithm %q", hashAlgorithm), nil
 	}
 
@@ -149,18 +169,15 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 	if batchInputRaw != nil {
 		err = mapstructure.Decode(batchInputRaw, &batchInputItems)
 		if err != nil {
-			p.Unlock()
 			return nil, fmt.Errorf("failed to parse batch input: %w", err)
 		}
 
 		if len(batchInputItems) == 0 {
-			p.Unlock()
 			return logical.ErrorResponse("missing batch input to process"), logical.ErrInvalidRequest
 		}
 	} else {
 		valueRaw, ok := d.GetOk("input")
 		if !ok {
-			p.Unlock()
 			return logical.ErrorResponse("missing input for HMAC"), logical.ErrInvalidRequest
 		}
 
@@ -187,20 +204,36 @@ func (b *backend) pathHMACWrite(ctx context.Context, req *logical.Request, d *fr
 			continue
 		}
 
-		hf := hmac.New(hashAlg, key)
-		hf.Write(input)
-		retBytes := hf.Sum(nil)
+		var retBytes []byte
+
+		if p.Type == keysutil.KeyType_MANAGED_KEY {
+			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
+			if !ok {
+				response[i].err = errors.New("unsupported system view")
+			}
+
+			retBytes, err = p.HMACWithManagedKey(ctx, ver, managedKeySystemView, b.backendUUID, algorithm, input)
+			if err != nil {
+				response[i].err = err
+			}
+		} else {
+			hf := hmac.New(hashAlg, key)
+			hf.Write(input)
+			retBytes = hf.Sum(nil)
+		}
 
 		retStr := base64.StdEncoding.EncodeToString(retBytes)
 		retStr = fmt.Sprintf("vault:v%s:%s", strconv.Itoa(ver), retStr)
 		response[i].HMAC = retStr
 	}
 
-	p.Unlock()
-
 	// Generate the response
 	resp := &logical.Response{}
 	if batchInputRaw != nil {
+		// Copy the references
+		for i := range batchInputItems {
+			response[i].Reference = batchInputItems[i]["reference"]
+		}
 		resp.Data = map[string]interface{}{
 			"batch_results": response,
 		}
@@ -224,7 +257,19 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 	name := d.Get("name").(string)
 	algorithm := d.Get("urlalgorithm").(string)
 	if algorithm == "" {
-		algorithm = d.Get("algorithm").(string)
+		hashAlgorithmRaw, hasHashAlgorithm := d.GetOk("hash_algorithm")
+		algorithmRaw, hasAlgorithm := d.GetOk("algorithm")
+
+		// As `algorithm` is deprecated, make sure we only read it if
+		// `hash_algorithm` is not present.
+		switch {
+		case hasHashAlgorithm:
+			algorithm = hashAlgorithmRaw.(string)
+		case hasAlgorithm:
+			algorithm = algorithmRaw.(string)
+		default:
+			algorithm = d.Get("hash_algorithm").(string)
+		}
 	}
 
 	// Get the policy
@@ -241,10 +286,10 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 	if !b.System().CachingDisabled() {
 		p.Lock(false)
 	}
+	defer p.Unlock()
 
 	hashAlgorithm, ok := keysutil.HashTypeMap[algorithm]
 	if !ok {
-		p.Unlock()
 		return logical.ErrorResponse("unsupported algorithm %q", hashAlgorithm), nil
 	}
 
@@ -255,12 +300,10 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 	if batchInputRaw != nil {
 		err := mapstructure.Decode(batchInputRaw, &batchInputItems)
 		if err != nil {
-			p.Unlock()
 			return nil, fmt.Errorf("failed to parse batch input: %w", err)
 		}
 
 		if len(batchInputItems) == 0 {
-			p.Unlock()
 			return logical.ErrorResponse("missing batch input to process"), logical.ErrInvalidRequest
 		}
 	} else {
@@ -357,11 +400,13 @@ func (b *backend) pathHMACVerify(ctx context.Context, req *logical.Request, d *f
 		response[i].Valid = hmac.Equal(retBytes, verBytes)
 	}
 
-	p.Unlock()
-
 	// Generate the response
 	resp := &logical.Response{}
 	if batchInputRaw != nil {
+		// Copy the references
+		for i := range batchInputItems {
+			response[i].Reference = batchInputItems[i]["reference"]
+		}
 		resp.Data = map[string]interface{}{
 			"batch_results": response,
 		}

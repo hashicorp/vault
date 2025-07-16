@@ -1,0 +1,3 @@
+```release-note:improvement
+openapi: Add logic to generate openapi response structures
+```

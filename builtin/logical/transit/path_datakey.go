@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 
 	"github.com/hashicorp/vault/helper/constants"
@@ -16,6 +20,13 @@ import (
 func (b *backend) pathDatakey() *framework.Path {
 	return &framework.Path{
 		Pattern: "datakey/" + framework.GenericNameRegex("plaintext") + "/" + framework.GenericNameRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "generate",
+			OperationSuffix: "data-key",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"name": {
 				Type:        framework.TypeString,
@@ -26,6 +37,12 @@ func (b *backend) pathDatakey() *framework.Path {
 				Type: framework.TypeString,
 				Description: `"plaintext" will return the key in both plaintext and
 ciphertext; "wrapped" will return the ciphertext only.`,
+			},
+
+			"padding_scheme": {
+				Type: framework.TypeString,
+				Description: `The padding scheme to use for decrypt. Currently only applies to RSA key types.
+Options are 'oaep' or 'pkcs1v15'. Defaults to 'oaep'`,
 			},
 
 			"context": {
@@ -131,7 +148,31 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 		return nil, err
 	}
 
-	ciphertext, err := p.Encrypt(ver, context, nonce, base64.StdEncoding.EncodeToString(newKey))
+	factories := make([]any, 0)
+	if ps, ok := d.GetOk("padding_scheme"); ok {
+		paddingScheme, err := parsePaddingSchemeArg(p.Type, ps)
+		if err != nil {
+			return logical.ErrorResponse(fmt.Sprintf("padding_scheme argument invalid: %s", err.Error())), logical.ErrInvalidRequest
+		}
+		factories = append(factories, paddingScheme)
+
+	}
+	if p.Type == keysutil.KeyType_MANAGED_KEY {
+		managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
+		if !ok {
+			return nil, errors.New("unsupported system view")
+		}
+
+		factories = append(factories, ManagedKeyFactory{
+			managedKeyParams: keysutil.ManagedKeyParameters{
+				ManagedKeySystemView: managedKeySystemView,
+				BackendUUID:          b.backendUUID,
+				Context:              ctx,
+			},
+		})
+	}
+
+	ciphertext, err := p.EncryptWithFactory(ver, context, nonce, base64.StdEncoding.EncodeToString(newKey), factories...)
 	if err != nil {
 		switch err.(type) {
 		case errutil.UserError:
@@ -158,6 +199,10 @@ func (b *backend) pathDatakeyWrite(ctx context.Context, req *logical.Request, d 
 			"ciphertext":  ciphertext,
 			"key_version": keyVersion,
 		},
+	}
+
+	if len(nonce) > 0 && !nonceAllowed(p) {
+		return nil, ErrNonceNotAllowed
 	}
 
 	if constants.IsFIPS() && shouldWarnAboutNonceUsage(p, nonce) {

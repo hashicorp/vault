@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -9,11 +12,12 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/hashicorp/go-hclog"
 	ldapcred "github.com/hashicorp/vault/builtin/credential/ldap"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/version"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 var (
@@ -35,11 +39,7 @@ rule "charset" {
 )
 
 func TestIdentity_BackendTemplating(t *testing.T) {
-	var err error
 	coreConfig := &CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{
 			"ldap": ldapcred.Factory,
 		},
@@ -175,11 +175,7 @@ func TestIdentity_BackendTemplating(t *testing.T) {
 }
 
 func TestDynamicSystemView_GeneratePasswordFromPolicy_successful(t *testing.T) {
-	var err error
 	coreConfig := &CoreConfig{
-		DisableMlock:       true,
-		DisableCache:       true,
-		Logger:             log.NewNullLogger(),
 		CredentialBackends: map[string]logical.Factory{},
 	}
 
@@ -198,7 +194,7 @@ func TestDynamicSystemView_GeneratePasswordFromPolicy_successful(t *testing.T) {
 	req.ClientToken = cluster.RootToken
 	req.Data["policy"] = b64Policy
 
-	_, err = core.HandleRequest(namespace.RootContext(nil), req)
+	_, err := core.HandleRequest(namespace.RootContext(nil), req)
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -289,6 +285,50 @@ func TestDynamicSystemView_GeneratePasswordFromPolicy_failed(t *testing.T) {
 				t.Fatalf("no password expected, got %s", actualPassword)
 			}
 		})
+	}
+}
+
+// TestDynamicSystemView_PluginEnv_successful checks that the PluginEnv method returns the expected values in a successful case.
+func TestDynamicSystemView_PluginEnv_successful(t *testing.T) {
+	coreConfig := &CoreConfig{
+		CredentialBackends: map[string]logical.Factory{},
+	}
+
+	cluster := NewTestCluster(t, coreConfig, &TestClusterOptions{})
+
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	core := cluster.Cores[0].Core
+	TestWaitActive(t, core)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	ctx = namespace.RootContext(ctx)
+	dsv := TestDynamicSystemView(cluster.Cores[0].Core, nil)
+
+	pluginEnv, err := dsv.PluginEnv(ctx)
+	if err != nil {
+		t.Fatalf("no error expected, but got: %s", err)
+	}
+
+	expectedVersionInfo := version.GetVersion()
+
+	expectedBuildDate, err := version.GetVaultBuildDate()
+	if err != nil {
+		t.Fatalf("failed to set up expectedBuildDate: %v", err)
+	}
+
+	expectedPluginEnv := &logical.PluginEnvironment{
+		VaultVersion:           expectedVersionInfo.Version,
+		VaultVersionPrerelease: expectedVersionInfo.VersionPrerelease,
+		VaultVersionMetadata:   expectedVersionInfo.VersionMetadata,
+		VaultBuildDate:         timestamppb.New(expectedBuildDate),
+	}
+
+	if !reflect.DeepEqual(pluginEnv, expectedPluginEnv) {
+		t.Fatalf("got %q, expected %q", pluginEnv, expectedPluginEnv)
 	}
 }
 

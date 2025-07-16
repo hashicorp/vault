@@ -1,16 +1,25 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import AdapterError from '@ember-data/adapter/error';
 import { next } from '@ember/runloop';
 import { hash } from 'rsvp';
 import { set } from '@ember/object';
 import Route from '@ember/routing/route';
 import { TABS } from 'vault/helpers/tabs-for-identity-show';
+import { service } from '@ember/service';
 
 export default Route.extend({
+  router: service(),
+  store: service(),
+
   model(params) {
-    let { section } = params;
-    let itemType = this.modelFor('vault.cluster.access.identity');
-    let tabs = TABS[itemType];
-    let modelType = `identity/${itemType}`;
+    const { section } = params;
+    const itemType = this.modelFor('vault.cluster.access.identity');
+    const tabs = TABS[itemType];
+    const modelType = `identity/${itemType}`;
     if (!tabs.includes(section)) {
       const error = new AdapterError();
       set(error, 'httpStatus', 404);
@@ -21,7 +30,7 @@ export default Route.extend({
     let model = this.store.peekRecord(modelType, params.item_id);
 
     // if we don't have creationTime, we only have a partial model so reload
-    if (model && !model.get('creationTime')) {
+    if (model && !model?.creationTime) {
       model = model.reload();
     }
 
@@ -42,20 +51,20 @@ export default Route.extend({
     if (this.currentModel) {
       next(() => {
         /* eslint-disable-next-line ember/no-controller-access-in-routes */
-        this.controller.get('model').reload();
+        this.controller.model.reload();
       });
     }
   },
 
   afterModel(resolvedModel) {
-    let { section, model } = resolvedModel;
-    if (model.get('identityType') === 'group' && model.get('type') === 'internal' && section === 'aliases') {
-      return this.transitionTo('vault.cluster.access.identity.show', model.id, 'details');
+    const { section, model } = resolvedModel;
+    if (model?.identityType === 'group' && model?.type === 'internal' && section === 'aliases') {
+      return this.router.transitionTo('vault.cluster.access.identity.show', model.id, 'details');
     }
   },
 
   setupController(controller, resolvedModel) {
-    let { model, section } = resolvedModel;
+    const { model, section } = resolvedModel;
     controller.setProperties({
       model,
       section,

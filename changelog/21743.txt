@@ -1,0 +1,3 @@
+```release-note:improvement
+sdk/framework: Adds replication state helper for backends to check for read-only storage
+```

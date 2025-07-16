@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -7,8 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hashicorp/cli"
 	"github.com/hashicorp/vault/api"
-	"github.com/mitchellh/cli"
 	"github.com/posener/complete"
 )
 
@@ -20,18 +23,24 @@ var (
 type AuthTuneCommand struct {
 	*BaseCommand
 
-	flagAuditNonHMACRequestKeys   []string
-	flagAuditNonHMACResponseKeys  []string
-	flagDefaultLeaseTTL           time.Duration
-	flagDescription               string
-	flagListingVisibility         string
-	flagMaxLeaseTTL               time.Duration
-	flagPassthroughRequestHeaders []string
-	flagAllowedResponseHeaders    []string
-	flagOptions                   map[string]string
-	flagTokenType                 string
-	flagVersion                   int
-	flagPluginVersion             string
+	flagAuditNonHMACRequestKeys         []string
+	flagAuditNonHMACResponseKeys        []string
+	flagDefaultLeaseTTL                 time.Duration
+	flagDescription                     string
+	flagListingVisibility               string
+	flagMaxLeaseTTL                     time.Duration
+	flagPassthroughRequestHeaders       []string
+	flagAllowedResponseHeaders          []string
+	flagOptions                         map[string]string
+	flagTokenType                       string
+	flagVersion                         int
+	flagPluginVersion                   string
+	flagUserLockoutThreshold            uint
+	flagUserLockoutDuration             time.Duration
+	flagUserLockoutCounterResetDuration time.Duration
+	flagUserLockoutDisable              bool
+	flagIdentityTokenKey                string
+	flagTrimRequestTrailingSlashes      BoolPtr
 }
 
 func (c *AuthTuneCommand) Synopsis() string {
@@ -145,12 +154,59 @@ func (c *AuthTuneCommand) Flags() *FlagSets {
 		Usage:   "Select the version of the auth method to run. Not supported by all auth methods.",
 	})
 
+	f.UintVar(&UintVar{
+		Name:   flagNameUserLockoutThreshold,
+		Target: &c.flagUserLockoutThreshold,
+		Usage: "The threshold for user lockout for this auth method. If unspecified, this " +
+			"defaults to the Vault server's globally configured user lockout threshold, " +
+			"or a previously configured value for the auth method.",
+	})
+
+	f.DurationVar(&DurationVar{
+		Name:       flagNameUserLockoutDuration,
+		Target:     &c.flagUserLockoutDuration,
+		Completion: complete.PredictAnything,
+		Usage: "The user lockout duration for this auth method. If unspecified, this " +
+			"defaults to the Vault server's globally configured user lockout duration, " +
+			"or a previously configured value for the auth method.",
+	})
+
+	f.DurationVar(&DurationVar{
+		Name:       flagNameUserLockoutCounterResetDuration,
+		Target:     &c.flagUserLockoutCounterResetDuration,
+		Completion: complete.PredictAnything,
+		Usage: "The user lockout counter reset duration for this auth method. If unspecified, this " +
+			"defaults to the Vault server's globally configured user lockout counter reset duration, " +
+			"or a previously configured value for the auth method.",
+	})
+
+	f.BoolVar(&BoolVar{
+		Name:    flagNameUserLockoutDisable,
+		Target:  &c.flagUserLockoutDisable,
+		Default: false,
+		Usage: "Disable user lockout for this auth method. If unspecified, this " +
+			"defaults to the Vault server's globally configured user lockout disable, " +
+			"or a previously configured value for the auth method.",
+	})
+
 	f.StringVar(&StringVar{
 		Name:    flagNamePluginVersion,
 		Target:  &c.flagPluginVersion,
 		Default: "",
 		Usage: "Select the semantic version of the plugin to run. The new version must be registered in " +
 			"the plugin catalog, and will not start running until the plugin is reloaded.",
+	})
+	f.BoolPtrVar(&BoolPtrVar{
+		Name:   flagNameTrimRequestTrailingSlashes,
+		Target: &c.flagTrimRequestTrailingSlashes,
+		Usage:  "Whether to trim trailing slashes for incoming requests to this mount",
+	})
+
+	f.StringVar(&StringVar{
+		Name:    flagNameIdentityTokenKey,
+		Target:  &c.flagIdentityTokenKey,
+		Default: "default",
+		Usage:   "Select the key used to sign plugin identity tokens.",
 	})
 
 	return set
@@ -230,9 +286,36 @@ func (c *AuthTuneCommand) Run(args []string) int {
 		if fl.Name == flagNameTokenType {
 			mountConfigInput.TokenType = c.flagTokenType
 		}
+		switch fl.Name {
+		case flagNameUserLockoutThreshold, flagNameUserLockoutDuration, flagNameUserLockoutCounterResetDuration, flagNameUserLockoutDisable:
+			if mountConfigInput.UserLockoutConfig == nil {
+				mountConfigInput.UserLockoutConfig = &api.UserLockoutConfigInput{}
+			}
+		}
+		if fl.Name == flagNameUserLockoutThreshold {
+			mountConfigInput.UserLockoutConfig.LockoutThreshold = strconv.FormatUint(uint64(c.flagUserLockoutThreshold), 10)
+		}
+		if fl.Name == flagNameUserLockoutDuration {
+			mountConfigInput.UserLockoutConfig.LockoutDuration = ttlToAPI(c.flagUserLockoutDuration)
+		}
+		if fl.Name == flagNameUserLockoutCounterResetDuration {
+			mountConfigInput.UserLockoutConfig.LockoutCounterResetDuration = ttlToAPI(c.flagUserLockoutCounterResetDuration)
+		}
+		if fl.Name == flagNameUserLockoutDisable {
+			mountConfigInput.UserLockoutConfig.DisableLockout = &c.flagUserLockoutDisable
+		}
 
 		if fl.Name == flagNamePluginVersion {
 			mountConfigInput.PluginVersion = c.flagPluginVersion
+		}
+
+		if fl.Name == flagNameIdentityTokenKey {
+			mountConfigInput.IdentityTokenKey = c.flagIdentityTokenKey
+		}
+
+		if fl.Name == flagNameTrimRequestTrailingSlashes && c.flagTrimRequestTrailingSlashes.IsSet() {
+			val := c.flagTrimRequestTrailingSlashes.Get()
+			mountConfigInput.TrimRequestTrailingSlashes = &val
 		}
 	})
 

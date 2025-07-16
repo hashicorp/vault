@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -6,29 +9,101 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/logical"
 )
 
 func pathIssuerGenerateRoot(b *backend) *framework.Path {
-	return buildPathGenerateRoot(b, "issuers/generate/root/"+framework.GenericNameRegex("exported"))
+	pattern := "issuers/generate/root/" + framework.GenericNameRegex("exported")
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuers,
+		OperationVerb:   "generate",
+		OperationSuffix: "root",
+	}
+
+	return buildPathGenerateRoot(b, pattern, displayAttrs)
 }
 
 func pathRotateRoot(b *backend) *framework.Path {
-	return buildPathGenerateRoot(b, "root/rotate/"+framework.GenericNameRegex("exported"))
+	pattern := "root/rotate/" + framework.GenericNameRegex("exported")
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "rotate",
+		OperationSuffix: "root",
+	}
+
+	return buildPathGenerateRoot(b, pattern, displayAttrs)
 }
 
-func buildPathGenerateRoot(b *backend, pattern string) *framework.Path {
+func buildPathGenerateRoot(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	ret := &framework.Path{
-		Pattern: pattern,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathCAGenerateRoot,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"expiration": {
+								Type:        framework.TypeInt64,
+								Description: `The expiration of the given issuer.`,
+								Required:    true,
+							},
+							"serial_number": {
+								Type:        framework.TypeString,
+								Description: `The requested Subject's named serial number.`,
+								Required:    true,
+							},
+							"certificate": {
+								Type:        framework.TypeString,
+								Description: `The generated self-signed CA certificate.`,
+								Required:    true,
+							},
+							"issuing_ca": {
+								Type:        framework.TypeString,
+								Description: `The issuing certificate authority.`,
+								Required:    true,
+							},
+							"issuer_id": {
+								Type:        framework.TypeString,
+								Description: `The ID of the issuer`,
+								Required:    true,
+							},
+							"issuer_name": {
+								Type:        framework.TypeString,
+								Description: `The name of the issuer.`,
+								Required:    true,
+							},
+							"key_id": {
+								Type:        framework.TypeString,
+								Description: `The ID of the key.`,
+								Required:    true,
+							},
+							"key_name": {
+								Type:        framework.TypeString,
+								Description: `The key name if given.`,
+								Required:    true,
+							},
+							"private_key": {
+								Type:        framework.TypeString,
+								Description: `The private key if exported was specified.`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 				// Read more about why these flags are set in backend.go
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
@@ -42,24 +117,68 @@ func buildPathGenerateRoot(b *backend, pattern string) *framework.Path {
 	ret.Fields = addCACommonFields(map[string]*framework.FieldSchema{})
 	ret.Fields = addCAKeyGenerationFields(ret.Fields)
 	ret.Fields = addCAIssueFields(ret.Fields)
+	ret.Fields = addCACertKeyUsage(ret.Fields)
 	return ret
 }
 
 func pathIssuerGenerateIntermediate(b *backend) *framework.Path {
-	return buildPathGenerateIntermediate(b,
-		"issuers/generate/intermediate/"+framework.GenericNameRegex("exported"))
+	pattern := "issuers/generate/intermediate/" + framework.GenericNameRegex("exported")
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKIIssuers,
+		OperationVerb:   "generate",
+		OperationSuffix: "intermediate",
+	}
+
+	return buildPathGenerateIntermediate(b, pattern, displayAttrs)
 }
 
 func pathCrossSignIntermediate(b *backend) *framework.Path {
-	return buildPathGenerateIntermediate(b, "intermediate/cross-sign")
+	pattern := "intermediate/cross-sign"
+
+	displayAttrs := &framework.DisplayAttributes{
+		OperationPrefix: operationPrefixPKI,
+		OperationVerb:   "cross-sign",
+		OperationSuffix: "intermediate",
+	}
+
+	return buildPathGenerateIntermediate(b, pattern, displayAttrs)
 }
 
-func buildPathGenerateIntermediate(b *backend, pattern string) *framework.Path {
+func buildPathGenerateIntermediate(b *backend, pattern string, displayAttrs *framework.DisplayAttributes) *framework.Path {
 	ret := &framework.Path{
-		Pattern: pattern,
+		Pattern:      pattern,
+		DisplayAttrs: displayAttrs,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathGenerateIntermediate,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"csr": {
+								Type:        framework.TypeString,
+								Description: `Certificate signing request.`,
+								Required:    true,
+							},
+							"key_id": {
+								Type:        framework.TypeString,
+								Description: `Id of the key.`,
+								Required:    true,
+							},
+							"private_key": {
+								Type:        framework.TypeString,
+								Description: `Generated private key.`,
+								Required:    false,
+							},
+							"private_key_type": {
+								Type:        framework.TypeString,
+								Description: `Specifies the format used for marshaling the private key.`,
+								Required:    false,
+							},
+						},
+					}},
+				},
 				// Read more about why these flags are set in backend.go
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
@@ -79,6 +198,7 @@ extension with CA: true. Only needed as a
 workaround in some compatibility scenarios
 with Active Directory Certificate Services.`,
 	}
+	ret.Fields = addCaCsrKeyUsage(ret.Fields)
 
 	// At this time Go does not support signing CSRs using PSS signatures, see
 	// https://github.com/golang/go/issues/45990
@@ -90,6 +210,13 @@ with Active Directory Certificate Services.`,
 func pathImportIssuer(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "issuers/import/(cert|bundle)",
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKIIssuers,
+			OperationVerb:   "import",
+			OperationSuffix: "cert|bundle",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"pem_bundle": {
 				Type: framework.TypeString,
@@ -101,6 +228,38 @@ secret-key (optional) and certificates.`,
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathImportIssuers,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields: map[string]*framework.FieldSchema{
+							"mapping": {
+								Type:        framework.TypeMap,
+								Description: "A mapping of issuer_id to key_id for all issuers included in this request",
+								Required:    true,
+							},
+							"imported_keys": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Net-new keys imported as a part of this request",
+								Required:    true,
+							},
+							"imported_issuers": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Net-new issuers imported as a part of this request",
+								Required:    true,
+							},
+							"existing_keys": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Existing keys specified as part of the import bundle of this request",
+								Required:    true,
+							},
+							"existing_issuers": {
+								Type:        framework.TypeCommaStringSlice,
+								Description: "Existing issuers specified as part of the import bundle of this request",
+								Required:    true,
+							},
+						},
+					}},
+				},
 				// Read more about why these flags are set in backend.go
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
@@ -120,7 +279,7 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 
 	keysAllowed := strings.HasSuffix(req.Path, "bundle") || req.Path == "config/ca"
 
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("Can not import issuers until migration has completed"), nil
 	}
 
@@ -163,6 +322,8 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 
 	var createdKeys []string
 	var createdIssuers []string
+	var existingKeys []string
+	var existingIssuers []string
 	issuerKeyMap := make(map[string]string)
 
 	// Rather than using certutil.ParsePEMBundle (which restricts the
@@ -219,6 +380,8 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 
 		if !existing {
 			createdKeys = append(createdKeys, key.ID.String())
+		} else {
+			existingKeys = append(existingKeys, key.ID.String())
 		}
 	}
 
@@ -231,6 +394,8 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 		issuerKeyMap[cert.ID.String()] = cert.KeyID.String()
 		if !existing {
 			createdIssuers = append(createdIssuers, cert.ID.String())
+		} else {
+			existingIssuers = append(existingIssuers, cert.ID.String())
 		}
 	}
 
@@ -239,24 +404,50 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 			"mapping":          issuerKeyMap,
 			"imported_keys":    createdKeys,
 			"imported_issuers": createdIssuers,
+			"existing_keys":    existingKeys,
+			"existing_issuers": existingIssuers,
 		},
 	}
 
 	if len(createdIssuers) > 0 {
-		err := b.crlBuilder.rebuild(ctx, b, req, true)
+		warnings, err := b.CrlBuilder().Rebuild(sc, true)
 		if err != nil {
 			// Before returning, check if the error message includes the
 			// string "PSS". If so, it indicates we might've wanted to modify
 			// this issuer, so convert the error to a warning.
 			if strings.Contains(err.Error(), "PSS") || strings.Contains(err.Error(), "pss") {
-				err = fmt.Errorf("Rebuilding the CRL failed with a message relating to the PSS signature algorithm. This likely means the revocation_signature_algorithm needs to be set on the newly imported issuer(s) because a managed key supports only the PSS algorithm; by default PKCS#1v1.5 was used to build the CRLs. CRLs will not be generated until this has been addressed, however the import was successful. The original error is reproduced below:\n\n\t%v", err)
+				err = fmt.Errorf("Rebuilding the CRL failed with a message relating to the PSS signature algorithm. This likely means the revocation_signature_algorithm needs to be set on the newly imported issuer(s) because a managed key supports only the PSS algorithm; by default PKCS#1v1.5 was used to build the CRLs. CRLs will not be generated until this has been addressed, however the import was successful. The original error is reproduced below:\n\n\t%w", err)
 			} else {
 				// Note to the caller that while this is an error, we did
 				// successfully import the issuers.
-				err = fmt.Errorf("Rebuilding the CRL failed. While this is indicative of a problem with the imported issuers (perhaps because of their revocation_signature_algorithm), they did import successfully and are now usable. It is strongly suggested to fix the CRL building errors before continuing. The original error is reproduced below:\n\n\t%v", err)
+				err = fmt.Errorf("Rebuilding the CRL failed. While this is indicative of a problem with the imported issuers (perhaps because of their revocation_signature_algorithm), they did import successfully and are now usable. It is strongly suggested to fix the CRL building errors before continuing. The original error is reproduced below:\n\n\t%w", err)
 			}
 
 			return nil, err
+		}
+		for index, warning := range warnings {
+			response.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
+		}
+
+		var issuersWithKeys []string
+		for _, issuer := range createdIssuers {
+			if issuerKeyMap[issuer] != "" {
+				issuersWithKeys = append(issuersWithKeys, issuer)
+			}
+		}
+
+		// Check whether we need to update our default issuer configuration.
+		config, err := sc.getIssuersConfig()
+		if err != nil {
+			response.AddWarning("Unable to fetch default issuers configuration to update default issuer if necessary: " + err.Error())
+		} else if config.DefaultFollowsLatestIssuer {
+			if len(issuersWithKeys) == 1 {
+				if err := sc.updateDefaultIssuerId(issuing.IssuerID(issuersWithKeys[0])); err != nil {
+					response.AddWarning("Unable to update this new root as the default issuer: " + err.Error())
+				}
+			} else if len(issuersWithKeys) > 1 {
+				response.AddWarning("Default issuer left unchanged: could not select new issuer automatically as multiple imported issuers had key material in Vault.")
+			}
 		}
 	}
 
@@ -301,8 +492,17 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	// Also while we're here, we should let the user know the next steps.
 	// In particular, if there's no default AIA URLs configuration, we should
 	// tell the user that's probably next.
-	if entries, err := getGlobalAIAURLs(ctx, req.Storage); err == nil && len(entries.IssuingCertificates) == 0 && len(entries.CRLDistributionPoints) == 0 && len(entries.OCSPServers) == 0 {
-		response.AddWarning("This mount hasn't configured any authority information access (AIA) fields; this may make it harder for systems to find missing certificates in the chain or to validate revocation status of certificates. Consider updating /config/urls or the newly generated issuer with this information.")
+	entries, err := getGlobalAIAURLs(ctx, req.Storage)
+	if err != nil {
+		response.AddWarning(fmt.Sprintf("error reading authority information access (AIA) fields: %v", err.Error()))
+	}
+	if err == nil {
+		if len(entries.IssuingCertificates) == 0 && len(entries.CRLDistributionPoints) == 0 && len(entries.DeltaCRLDistributionPoints) == 0 && len(entries.OCSPServers) == 0 {
+			response.AddWarning("This mount hasn't configured any authority information access (AIA) fields; this may make it harder for systems to find missing certificates in the chain or to validate revocation status of certificates. Consider updating /config/urls or the newly generated issuer with this information.")
+		}
+		if len(entries.CRLDistributionPoints) == 0 && len(entries.DeltaCRLDistributionPoints) != 0 {
+			response.AddWarning("delta crl distribution points were set, but no base crl distribution points were set.")
+		}
 	}
 
 	return response, nil
@@ -325,14 +525,28 @@ secret-keys.
 
 func pathRevokeIssuer(b *backend) *framework.Path {
 	fields := addIssuerRefField(map[string]*framework.FieldSchema{})
+	responseFields := issuerResponseFields(true)
 
 	return &framework.Path{
 		Pattern: "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/revoke",
-		Fields:  fields,
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixPKI,
+			OperationVerb:   "revoke",
+			OperationSuffix: "issuer",
+		},
+
+		Fields: fields,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.UpdateOperation: &framework.PathOperation{
 				Callback: b.pathRevokeIssuer,
+				Responses: map[int][]framework.Response{
+					http.StatusOK: {{
+						Description: "OK",
+						Fields:      responseFields,
+					}},
+				},
 				// Read more about why these flags are set in backend.go
 				ForwardPerformanceStandby:   true,
 				ForwardPerformanceSecondary: true,
@@ -351,11 +565,11 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 	defer b.issuersLock.Unlock()
 
 	// Issuer revocation can't work on the legacy cert bundle.
-	if b.useLegacyBundleCaStorage() {
+	if b.UseLegacyBundleCaStorage() {
 		return logical.ErrorResponse("cannot revoke issuer until migration has completed"), nil
 	}
 
-	issuerName := getIssuerRef(data)
+	issuerName := GetIssuerRef(data)
 	if len(issuerName) == 0 {
 		return logical.ErrorResponse("missing issuer reference"), nil
 	}
@@ -385,8 +599,8 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 	// new revocations of leaves issued by this issuer to trigger a CRL
 	// rebuild still.
 	issuer.Revoked = true
-	if issuer.Usage.HasUsage(IssuanceUsage) {
-		issuer.Usage.ToggleUsage(IssuanceUsage)
+	if issuer.Usage.HasUsage(issuing.IssuanceUsage) {
+		issuer.Usage.ToggleUsage(issuing.IssuanceUsage)
 	}
 
 	currTime := time.Now()
@@ -400,7 +614,7 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 
 	// Now, if the parent issuer exists within this mount, we'd have written
 	// a storage entry for this certificate, making it appear as any other
-	// leaf. We need to add a revocationInfo entry for this into storage,
+	// leaf. We need to add a RevocationInfo entry for this into storage,
 	// so that it appears as if it was revoked.
 	//
 	// This is a _necessary_ but not necessarily _sufficient_ step to
@@ -411,18 +625,18 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 	// include both in two separate CRLs. Hence, the former is the condition
 	// we check in CRL building, but this step satisfies other guarantees
 	// within Vault.
-	certEntry, err := fetchCertBySerial(ctx, b, req, "certs/", issuer.SerialNumber)
+	certEntry, err := fetchCertBySerial(sc, issuing.PathCerts, issuer.SerialNumber)
 	if err == nil && certEntry != nil {
 		// We've inverted this error check as it doesn't matter; we already
 		// consider this certificate revoked.
 		storageCert, err := x509.ParseCertificate(certEntry.Value)
 		if err != nil {
-			return nil, fmt.Errorf("error parsing stored certificate value: %v", err)
+			return nil, fmt.Errorf("error parsing stored certificate value: %w", err)
 		}
 
 		issuerCert, err := issuer.GetCertificate()
 		if err != nil {
-			return nil, fmt.Errorf("error parsing issuer certificate value: %v", err)
+			return nil, fmt.Errorf("error parsing issuer certificate value: %w", err)
 		}
 
 		if bytes.Equal(issuerCert.Raw, storageCert.Raw) {
@@ -435,7 +649,7 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 			//
 			// We'll let a cleanup pass or CRL build identify the issuer for
 			// us.
-			revInfo := revocationInfo{
+			revInfo := revocation.RevocationInfo{
 				CertificateBytes:  issuerCert.Raw,
 				RevocationTime:    issuer.RevocationTime,
 				RevocationTimeUTC: issuer.RevocationTimeUTC,
@@ -443,18 +657,18 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 
 			revEntry, err := logical.StorageEntryJSON(revokedPath+normalizeSerial(issuer.SerialNumber), revInfo)
 			if err != nil {
-				return nil, fmt.Errorf("error creating revocation entry for issuer: %v", err)
+				return nil, fmt.Errorf("error creating revocation entry for issuer: %w", err)
 			}
 
 			err = req.Storage.Put(ctx, revEntry)
 			if err != nil {
-				return nil, fmt.Errorf("error saving revoked issuer to new location: %v", err)
+				return nil, fmt.Errorf("error saving revoked issuer to new location: %w", err)
 			}
 		}
 	}
 
 	// Rebuild the CRL to include the newly revoked issuer.
-	crlErr := b.crlBuilder.rebuild(ctx, b, req, false)
+	warnings, crlErr := b.CrlBuilder().Rebuild(sc, false)
 	if crlErr != nil {
 		switch crlErr.(type) {
 		case errutil.UserError:
@@ -469,6 +683,9 @@ func (b *backend) pathRevokeIssuer(ctx context.Context, req *logical.Request, da
 	if err != nil {
 		// Impossible.
 		return nil, err
+	}
+	for index, warning := range warnings {
+		response.AddWarning(fmt.Sprintf("Warning %d during CRL rebuild: %v", index+1, warning))
 	}
 
 	// For sanity, we'll add a warning message here if there's no other

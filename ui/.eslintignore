@@ -1,25 +1,30 @@
 # unconventional js
 /blueprints/*/files/
-/vendor/
 
 # compiled output
 /dist/
 /tmp/
+/vault-reporting/
 
 # dependencies
 /bower_components/
 /node_modules/
 /.yarn/
+/api-client/
 
 # misc
 /coverage/
 !.*
 .*/
-.eslintcache
 
 # ember-try
 /.node_modules.ember-try/
 /bower.json.ember-try
+/npm-shrinkwrap.json.ember-try
 /package.json.ember-try
-
+/package-lock.json.ember-try
+/yarn.lock.ember-try
 /tests/helpers/vault-keys.js
+
+# typescript declaration files
+*.d.ts

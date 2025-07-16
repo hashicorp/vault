@@ -1,0 +1,3 @@
+```release-note:bug
+core (enterprise): Fix 500 errors that occurred querying `sys/internal/ui/mounts` for a mount prefixed by a namespace path when path filters are configured.
+```

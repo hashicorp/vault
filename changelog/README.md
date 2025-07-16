@@ -24,7 +24,7 @@ Release notes are text files with three lines:
        might be warranted.
      - `deprecation` - Announcement of a planned future removal of a
        feature. Only use this if a deprecation notice also exists [in the
-       docs](https://www.vaultproject.io/docs/deprecation).
+       docs](https://developer.hashicorp.com/vault/docs/deprecation).
      - `feature` - Large topical additions for a major release. These are
        rarely in minor releases. Formatting for `feature` entries differs
        from normal changelog formatting - see the [new features
@@ -35,6 +35,8 @@ Release notes are text files with three lines:
  2. A component (for example, `secret/pki` or `sdk/framework` or), a colon and a space, and then a one-line description of the change.
 
  3. An ending code block.
+
+If more than one area is impacted, use separate code blocks for each entry.
 
 This should be in a file named after the pull request number (e.g., `12345.txt`).
 

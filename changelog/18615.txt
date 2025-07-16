@@ -1,0 +1,3 @@
+```release-note:bug
+core: fix issue when attempting to re-bootstrap HA when using Raft as HA but not storage
+```

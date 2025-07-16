@@ -1,10 +1,17 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
-	"github.com/mitchellh/cli"
+	"github.com/hashicorp/cli"
+	"github.com/hashicorp/vault/api"
+	"github.com/stretchr/testify/require"
 )
 
 func testReadCommand(tb testing.TB) (*cli.MockUi, *ReadCommand) {
@@ -128,10 +135,73 @@ func TestReadCommand_Run(t *testing.T) {
 		}
 	})
 
+	t.Run("no_data_object_from_api_response", func(t *testing.T) {
+		t.Parallel()
+
+		client, closer := testVaultServer(t)
+		defer closer()
+
+		ui, cmd := testReadCommand(t)
+		cmd.client = client
+
+		code := cmd.Run([]string{
+			"sys/health",
+		})
+		if exp := 0; code != exp {
+			t.Errorf("expected %d to be %d", code, exp)
+		}
+		combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+		expected := []string{
+			"cluster_id", "cluster_name", "initialized", "performance_standby", "replication_dr_mode", "replication_performance_mode", "sealed",
+			"server_time_utc", "standby", "version",
+		}
+		for _, expectedField := range expected {
+			if !strings.Contains(combined, expectedField) {
+				t.Errorf("expected %q to contain %q", combined, expected)
+			}
+		}
+	})
+
 	t.Run("no_tabs", func(t *testing.T) {
 		t.Parallel()
 
 		_, cmd := testReadCommand(t)
 		assertNoTabs(t, cmd)
 	})
+}
+
+// TestRead_Snapshot tests that the read_snapshot_id query parameter is added
+// to the request when the -snapshot-id flag is used.
+func TestRead_Snapshot(t *testing.T) {
+	t.Parallel()
+	mockVaultServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		snapID := r.URL.Query().Get("read_snapshot_id")
+		if snapID != "abcd" {
+			w.WriteHeader(http.StatusBadRequest)
+		}
+		w.Write([]byte(`{"secret":{"data":{"foo":"bar"}}}`))
+	}))
+	defer mockVaultServer.Close()
+
+	cfg := api.DefaultConfig()
+	cfg.Address = mockVaultServer.URL
+	client, err := api.NewClient(cfg)
+	require.NoError(t, err)
+
+	ui, cmd := testReadCommand(t)
+	cmd.client = client
+
+	// a read command with a snapshot id shouldn't error
+	code := cmd.Run([]string{
+		"-snapshot-id", "abcd", "path/to/item",
+	})
+	combined := ui.OutputWriter.String() + ui.ErrorWriter.String()
+	require.Equal(t, 0, code, combined)
+
+	// check that the raw flag also works with a snapshot id
+	code = cmd.Run([]string{
+		"-format", "raw", "-snapshot-id", "abcd", "path/to/item",
+	})
+	combined = ui.OutputWriter.String() + ui.ErrorWriter.String()
+	require.Equal(t, 0, code, combined)
 }

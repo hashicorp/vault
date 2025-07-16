@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Correctly handle redirects from pre 1.15.0 Kv v2 edit, create, and show urls.
+```

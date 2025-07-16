@@ -1,9 +1,14 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import IdentityAdapter from './base';
 
 export default IdentityAdapter.extend({
   buildURL() {
     // first arg is modelName which we're hardcoding in the call to _super.
-    let [, ...args] = arguments;
+    const [, ...args] = arguments;
     return this._super('identity/entity/merge', ...args);
   },
 

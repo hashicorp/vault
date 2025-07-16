@@ -1,0 +1,3 @@
+```release-note:change
+auth/gcp: Updated plugin from v0.15.0 to v0.16.0
+```

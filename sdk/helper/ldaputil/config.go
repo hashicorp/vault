@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package ldaputil
 
 import (
@@ -9,11 +12,19 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/go-ldap/ldap/v3"
+	capldap "github.com/hashicorp/cap/ldap"
+	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/go-secure-stdlib/tlsutil"
 	"github.com/hashicorp/vault/sdk/framework"
-
-	"github.com/hashicorp/errwrap"
 )
+
+var ldapDerefAliasMap = map[string]int{
+	"never":     ldap.NeverDerefAliases,
+	"finding":   ldap.DerefFindingBaseObj,
+	"searching": ldap.DerefInSearching,
+	"always":    ldap.DerefAlways,
+}
 
 // ConfigFields returns all the config fields that can potentially be used by the LDAP client.
 // Not all fields will be used by every integration.
@@ -226,6 +237,30 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			Description: "Timeout, in seconds, for the connection when making requests against the server before returning back an error.",
 			Default:     "90s",
 		},
+
+		"connection_timeout": {
+			Type:        framework.TypeDurationSecond,
+			Description: "Timeout, in seconds, when attempting to connect to the LDAP server before trying the next URL in the configuration.",
+			Default:     "30s",
+		},
+
+		"dereference_aliases": {
+			Type:          framework.TypeString,
+			Description:   "When aliases should be dereferenced on search operations. Accepted values are 'never', 'finding', 'searching', 'always'. Defaults to 'never'.",
+			Default:       "never",
+			AllowedValues: []interface{}{"never", "finding", "searching", "always"},
+		},
+
+		"max_page_size": {
+			Type:        framework.TypeInt,
+			Description: "If set to a value greater than 0, the LDAP backend will use the LDAP server's paged search control to request pages of up to the given size. This can be used to avoid hitting the LDAP server's maximum result size limit. Otherwise, the LDAP backend will not use the paged search control.",
+			Default:     0,
+		},
+		"enable_samaccountname_login": {
+			Type:        framework.TypeBool,
+			Description: "If true, matching sAMAccountName attribute values will be allowed to login when upndomain is defined.",
+			Default:     false,
+		},
 	}
 }
 
@@ -392,6 +427,22 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 		cfg.RequestTimeout = d.Get("request_timeout").(int)
 	}
 
+	if _, ok := d.Raw["connection_timeout"]; ok || !hadExisting {
+		cfg.ConnectionTimeout = d.Get("connection_timeout").(int)
+	}
+
+	if _, ok := d.Raw["dereference_aliases"]; ok || !hadExisting {
+		cfg.DerefAliases = d.Get("dereference_aliases").(string)
+	}
+
+	if _, ok := d.Raw["max_page_size"]; ok || !hadExisting {
+		cfg.MaximumPageSize = d.Get("max_page_size").(int)
+	}
+
+	if _, ok := d.Raw["enable_samaccountname_login"]; ok || !hadExisting {
+		cfg.EnableSamaccountnameLogin = d.Get("enable_samaccountname_login").(bool)
+	}
+
 	return cfg, nil
 }
 
@@ -418,14 +469,18 @@ type ConfigEntry struct {
 	UseTokenGroups           bool   `json:"use_token_groups"`
 	UsePre111GroupCNBehavior *bool  `json:"use_pre111_group_cn_behavior"`
 	RequestTimeout           int    `json:"request_timeout"`
+	ConnectionTimeout        int    `json:"connection_timeout"` // deprecated: use RequestTimeout
+	DerefAliases             string `json:"dereference_aliases"`
+	MaximumPageSize          int    `json:"max_page_size"`
 
 	// These json tags deviate from snake case because there was a past issue
 	// where the tag was being ignored, causing it to be jsonified as "CaseSensitiveNames", etc.
 	// To continue reading in users' previously stored values,
 	// we chose to carry that forward.
-	CaseSensitiveNames *bool  `json:"CaseSensitiveNames,omitempty"`
-	ClientTLSCert      string `json:"ClientTLSCert"`
-	ClientTLSKey       string `json:"ClientTLSKey"`
+	CaseSensitiveNames        *bool  `json:"CaseSensitiveNames,omitempty"`
+	ClientTLSCert             string `json:"ClientTLSCert"`
+	ClientTLSKey              string `json:"ClientTLSKey"`
+	EnableSamaccountnameLogin bool   `json:"EnableSamaccountnameLogin"`
 }
 
 func (c *ConfigEntry) Map() map[string]interface{} {
@@ -436,26 +491,30 @@ func (c *ConfigEntry) Map() map[string]interface{} {
 
 func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 	m := map[string]interface{}{
-		"url":                    c.Url,
-		"userdn":                 c.UserDN,
-		"groupdn":                c.GroupDN,
-		"groupfilter":            c.GroupFilter,
-		"groupattr":              c.GroupAttr,
-		"userfilter":             c.UserFilter,
-		"upndomain":              c.UPNDomain,
-		"userattr":               c.UserAttr,
-		"certificate":            c.Certificate,
-		"insecure_tls":           c.InsecureTLS,
-		"starttls":               c.StartTLS,
-		"binddn":                 c.BindDN,
-		"deny_null_bind":         c.DenyNullBind,
-		"discoverdn":             c.DiscoverDN,
-		"tls_min_version":        c.TLSMinVersion,
-		"tls_max_version":        c.TLSMaxVersion,
-		"use_token_groups":       c.UseTokenGroups,
-		"anonymous_group_search": c.AnonymousGroupSearch,
-		"request_timeout":        c.RequestTimeout,
-		"username_as_alias":      c.UsernameAsAlias,
+		"url":                         c.Url,
+		"userdn":                      c.UserDN,
+		"groupdn":                     c.GroupDN,
+		"groupfilter":                 c.GroupFilter,
+		"groupattr":                   c.GroupAttr,
+		"userfilter":                  c.UserFilter,
+		"upndomain":                   c.UPNDomain,
+		"userattr":                    c.UserAttr,
+		"certificate":                 c.Certificate,
+		"insecure_tls":                c.InsecureTLS,
+		"starttls":                    c.StartTLS,
+		"binddn":                      c.BindDN,
+		"deny_null_bind":              c.DenyNullBind,
+		"discoverdn":                  c.DiscoverDN,
+		"tls_min_version":             c.TLSMinVersion,
+		"tls_max_version":             c.TLSMaxVersion,
+		"use_token_groups":            c.UseTokenGroups,
+		"anonymous_group_search":      c.AnonymousGroupSearch,
+		"request_timeout":             c.RequestTimeout,
+		"connection_timeout":          c.ConnectionTimeout,
+		"username_as_alias":           c.UsernameAsAlias,
+		"dereference_aliases":         c.DerefAliases,
+		"max_page_size":               c.MaximumPageSize,
+		"enable_samaccountname_login": c.EnableSamaccountnameLogin,
 	}
 	if c.CaseSensitiveNames != nil {
 		m["case_sensitive_names"] = *c.CaseSensitiveNames
@@ -509,4 +568,57 @@ func (c *ConfigEntry) Validate() error {
 		}
 	}
 	return nil
+}
+
+func ConvertConfig(cfg *ConfigEntry) *capldap.ClientConfig {
+	// cap/ldap doesn't have a notion of connection_timeout, and uses a single timeout value for
+	// both the net.Dialer and ldap connection timeout.
+	// So take the smaller of the two values and use that as the timeout value.
+	minTimeout := min(cfg.ConnectionTimeout, cfg.RequestTimeout)
+	urls := strings.Split(cfg.Url, ",")
+	config := &capldap.ClientConfig{
+		URLs:                                 urls,
+		UserDN:                               cfg.UserDN,
+		AnonymousGroupSearch:                 cfg.AnonymousGroupSearch,
+		GroupDN:                              cfg.GroupDN,
+		GroupFilter:                          cfg.GroupFilter,
+		GroupAttr:                            cfg.GroupAttr,
+		UPNDomain:                            cfg.UPNDomain,
+		UserFilter:                           cfg.UserFilter,
+		UserAttr:                             cfg.UserAttr,
+		ClientTLSCert:                        cfg.ClientTLSCert,
+		ClientTLSKey:                         cfg.ClientTLSKey,
+		InsecureTLS:                          cfg.InsecureTLS,
+		StartTLS:                             cfg.StartTLS,
+		BindDN:                               cfg.BindDN,
+		BindPassword:                         cfg.BindPassword,
+		AllowEmptyPasswordBinds:              !cfg.DenyNullBind,
+		DiscoverDN:                           cfg.DiscoverDN,
+		TLSMinVersion:                        cfg.TLSMinVersion,
+		TLSMaxVersion:                        cfg.TLSMaxVersion,
+		UseTokenGroups:                       cfg.UseTokenGroups,
+		RequestTimeout:                       minTimeout,
+		IncludeUserAttributes:                true,
+		ExcludedUserAttributes:               nil,
+		IncludeUserGroups:                    true,
+		LowerUserAttributeKeys:               true,
+		AllowEmptyAnonymousGroupSearch:       true,
+		MaximumPageSize:                      cfg.MaximumPageSize,
+		DerefAliases:                         cfg.DerefAliases,
+		DeprecatedVaultPre111GroupCNBehavior: cfg.UsePre111GroupCNBehavior,
+		EnableSamaccountnameLogin:            cfg.EnableSamaccountnameLogin,
+	}
+
+	if cfg.Certificate != "" {
+		config.Certificates = []string{cfg.Certificate}
+	}
+
+	return config
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

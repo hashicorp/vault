@@ -1,4 +1,8 @@
-import { assign } from '@ember/polyfills';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { assert } from '@ember/debug';
 import ControlGroupError from 'vault/lib/control-group-error';
 import ApplicationAdapter from '../application';
@@ -53,7 +57,7 @@ export default ApplicationAdapter.extend({
   },
 
   optionsForQuery(id) {
-    let data = {};
+    const data = {};
     if (!id) {
       data['list'] = true;
     }
@@ -83,16 +87,16 @@ export default ApplicationAdapter.extend({
         }
         // Names are distinct across both types of role,
         // so only one request should ever come back with value
-        let type = staticResp.value ? 'static' : 'dynamic';
-        let successful = staticResp.value || dynamicResp.value;
-        let resp = {
+        const type = staticResp.value ? 'static' : 'dynamic';
+        const successful = staticResp.value || dynamicResp.value;
+        const resp = {
           data: {},
           backend,
           id,
           type,
         };
 
-        resp.data = assign({}, successful.data);
+        resp.data = { ...successful.data };
 
         return resp;
       }
@@ -105,7 +109,7 @@ export default ApplicationAdapter.extend({
     const dynamicReq = this.dynamicRoles(backend);
 
     return allSettled([staticReq, dynamicReq]).then(([staticResp, dynamicResp]) => {
-      let resp = {
+      const resp = {
         backend,
         data: { keys: [] },
       };
@@ -125,13 +129,13 @@ export default ApplicationAdapter.extend({
         dynamicRoles = dynamicResp.value.data.keys;
       }
 
-      resp.data = assign(
-        {},
-        resp.data,
-        { keys: [...staticRoles, ...dynamicRoles] },
-        { backend },
-        { staticRoles, dynamicRoles }
-      );
+      resp.data = {
+        ...resp.data,
+        keys: [...staticRoles, ...dynamicRoles],
+        backend,
+        staticRoles,
+        dynamicRoles,
+      };
 
       return resp;
     });
@@ -139,8 +143,8 @@ export default ApplicationAdapter.extend({
 
   async _updateAllowedRoles(store, { role, backend, db, type = 'add' }) {
     const connection = await store.queryRecord('database/connection', { backend, id: db });
-    let roles = [...connection.allowed_roles];
-    const allowedRoles = type === 'add' ? addToArray([roles, role]) : removeFromArray([roles, role]);
+    const roles = [...(connection.allowed_roles || [])];
+    const allowedRoles = type === 'add' ? addToArray(roles, role) : removeFromArray(roles, role);
     connection.allowed_roles = allowedRoles;
     return connection.save();
   },
@@ -159,13 +163,13 @@ export default ApplicationAdapter.extend({
         db: db[0],
       });
     } catch (e) {
-      throw new Error('Could not update allowed roles for selected database. Check Vault logs for details');
+      this.checkError(e);
     }
 
     return this.ajax(this.urlFor(backend, id, roleType), 'POST', { data }).then(() => {
       // ember data doesn't like 204s if it's not a DELETE
       return {
-        data: assign({}, data, { id }),
+        data: { ...data, ...id },
       };
     });
   },
@@ -175,23 +179,46 @@ export default ApplicationAdapter.extend({
     const backend = snapshot.attr('backend');
     const id = snapshot.attr('name');
     const db = snapshot.attr('database');
-    await this._updateAllowedRoles(store, {
-      role: id,
-      backend,
-      db: db[0],
-      type: 'remove',
-    });
+    try {
+      await this._updateAllowedRoles(store, {
+        role: id,
+        backend,
+        db: db[0],
+        type: 'remove',
+      });
+    } catch (e) {
+      this.checkError(e);
+    }
 
     return this.ajax(this.urlFor(backend, id, roleType), 'DELETE');
   },
 
   async updateRecord(store, type, snapshot) {
     const serializer = store.serializerFor(type.modelName);
-    const data = serializer.serialize(snapshot);
+    const serializedData = serializer.serialize(snapshot);
     const roleType = snapshot.attr('type');
     const backend = snapshot.attr('backend');
     const id = snapshot.attr('name');
+    let data = {};
+    if (roleType === 'static') {
+      data = {
+        ...serializedData,
+        username: snapshot.attr('username'), // username is required for updating a static role
+      };
+    } else {
+      data = serializedData;
+    }
 
     return this.ajax(this.urlFor(backend, id, roleType), 'POST', { data }).then(() => data);
+  },
+
+  checkError(e) {
+    if (e.httpStatus === 403) {
+      // The user does not have the permission to update the connection. This
+      // can happen if their permissions are limited to the role. In that case
+      // we ignore the error and continue updating the role.
+      return;
+    }
+    throw new Error(`Could not update allowed roles for selected database: ${e.errors.join(', ')}`);
   },
 });

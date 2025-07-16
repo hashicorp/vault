@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
@@ -77,7 +80,7 @@ func ensureNoLeadingSlash(s string) string {
 	return s
 }
 
-// columnOuput prints the list of items as a table with no headers.
+// columnOutput prints the list of items as a table with no headers.
 func columnOutput(list []string, c *columnize.Config) string {
 	if len(list) == 0 {
 		return ""
@@ -321,4 +324,21 @@ func generateFlagWarnings(args []string) string {
 	} else {
 		return ""
 	}
+}
+
+func generateFlagErrors(f *FlagSets, opts ...ParseOptions) error {
+	if Format(f.ui) == "raw" {
+		canUseRaw := false
+		for _, opt := range opts {
+			if value, ok := opt.(ParseOptionAllowRawFormat); ok {
+				canUseRaw = bool(value)
+			}
+		}
+
+		if !canUseRaw {
+			return fmt.Errorf("This command does not support the -format=raw option.")
+		}
+	}
+
+	return nil
 }

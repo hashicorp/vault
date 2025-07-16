@@ -1,0 +1,7 @@
+```release-note:improvement
+cli: `vault operator usage` will now include a warning if the specified usage period contains estimated client counts.
+```
+
+```release-note:improvement
+activity: `/sys/internal/counters/activity` will now include a warning if the specified usage period contains estimated client counts.
+```

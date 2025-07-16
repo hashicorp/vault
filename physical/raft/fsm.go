@@ -1,14 +1,19 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package raft
 
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -22,6 +27,7 @@ import (
 	"github.com/hashicorp/go-raftchunking"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/raft"
+	"github.com/hashicorp/raft-wal/verifier"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
@@ -33,6 +39,7 @@ const (
 	putOp
 	restoreCallbackOp
 	getOp
+	verifierCheckpointOp
 
 	chunkingPrefix   = "raftchunking/"
 	databaseFilename = "vault.db"
@@ -55,6 +62,12 @@ var (
 	_ raft.BatchingFSM       = (*FSM)(nil)
 )
 
+var logVerifierMagicBytes [8]byte
+
+func init() {
+	binary.LittleEndian.PutUint64(logVerifierMagicBytes[:], verifier.ExtensionMagicPrefix)
+}
+
 type restoreCallback func(context.Context) error
 
 type FSMEntry struct {
@@ -71,6 +84,69 @@ func (f *FSMEntry) String() string {
 type FSMApplyResponse struct {
 	Success    bool
 	EntrySlice []*FSMEntry
+}
+
+type logVerificationChunkingShim struct {
+	chunker *raftchunking.ChunkingBatchingFSM
+}
+
+// Apply implements raft.BatchingFSM.
+func (s *logVerificationChunkingShim) Apply(l *raft.Log) interface{} {
+	return s.ApplyBatch([]*raft.Log{l})[0]
+}
+
+// ApplyBatch implements raft.BatchingFSM
+func (s *logVerificationChunkingShim) ApplyBatch(logs []*raft.Log) []interface{} {
+	// This is a hack because raftchunking doesn't play nicely with lower-level
+	// usage of Extensions field like we need for LogStore verification.
+
+	// When we write a verifier log, we write a single byte that consists of the verifierCheckpointOp,
+	// and then we encode the verifier.ExtensionMagicPrefix into the raft log
+	// Extensions field. Both of those together should ensure that verifier
+	// raft logs can never be mistaken for chunked protobufs. See the docs on
+	// verifier.ExtensionMagicPrefix for the reasoning behind the specific value
+	// that was chosen, and how it ensures this property.
+
+	// So here, we need to check for the exact conditions that we encoded when we wrote the
+	// verifier log out. If they match, we're going to insert a dummy raft log. We do this because 1) we
+	// don't want the chunking FSM to blow up on our verifier op that it won't understand and
+	// 2) we need to preserve the length of the incoming slice of raft logs because raft expects
+	// the length of the return value to match 1:1 to the length of the input operations.
+	newBatch := make([]*raft.Log, 0, len(logs))
+
+	for _, l := range logs {
+		if s.isVerifierLog(l) {
+			// Replace checkpoint with an empty op, but keep the index and term so
+			// downstream FSMs don't get confused about having a 0 index suddenly.
+			newBatch = append(newBatch, &raft.Log{
+				Index:      l.Index,
+				Term:       l.Term,
+				AppendedAt: l.AppendedAt,
+			})
+		} else {
+			newBatch = append(newBatch, l)
+		}
+	}
+
+	return s.chunker.ApplyBatch(newBatch)
+}
+
+// Snapshot implements raft.BatchingFSM
+func (s *logVerificationChunkingShim) Snapshot() (raft.FSMSnapshot, error) {
+	return s.chunker.Snapshot()
+}
+
+// Restore implements raft.BatchingFSM
+func (s *logVerificationChunkingShim) Restore(snapshot io.ReadCloser) error {
+	return s.chunker.Restore(snapshot)
+}
+
+func (s *logVerificationChunkingShim) RestoreState(state *raftchunking.State) error {
+	return s.chunker.RestoreState(state)
+}
+
+func (s *logVerificationChunkingShim) isVerifierLog(l *raft.Log) bool {
+	return isRaftLogVerifyCheckpoint(l)
 }
 
 // FSM is Vault's primary state storage. It writes updates to a bolt db file
@@ -100,14 +176,24 @@ type FSM struct {
 	// retoreCb is called after we've restored a snapshot
 	restoreCb restoreCallback
 
-	chunker *raftchunking.ChunkingBatchingFSM
+	chunker *logVerificationChunkingShim
 
 	localID         string
 	desiredSuffrage string
+	// metricSuffix should contain a dash, since it will be appended directly to the end of the key string.
+	metricSuffix string
+}
+
+func NewReadOnlyFSM(path string, localID string, logger log.Logger) (*FSM, error) {
+	return newFSM(path, localID, logger, "-readonly")
 }
 
 // NewFSM constructs a FSM using the given directory
 func NewFSM(path string, localID string, logger log.Logger) (*FSM, error) {
+	return newFSM(path, localID, logger, "")
+}
+
+func newFSM(path string, localID string, logger log.Logger, metricSuffix string) (*FSM, error) {
 	// Initialize the latest term, index, and config values
 	latestTerm := new(uint64)
 	latestIndex := new(uint64)
@@ -128,14 +214,19 @@ func NewFSM(path string, localID string, logger log.Logger) (*FSM, error) {
 		// setup if this is already part of a cluster with a desired suffrage.
 		desiredSuffrage: "voter",
 		localID:         localID,
+		metricSuffix:    metricSuffix,
 	}
 
-	f.chunker = raftchunking.NewChunkingBatchingFSM(f, &FSMChunkStorage{
-		f:   f,
-		ctx: context.Background(),
-	})
+	f.chunker = &logVerificationChunkingShim{
+		chunker: raftchunking.NewChunkingBatchingFSM(f, &FSMChunkStorage{
+			f:   f,
+			ctx: context.Background(),
+		}),
+	}
 
 	dbPath := filepath.Join(path, databaseFilename)
+	f.l.Lock()
+	defer f.l.Unlock()
 	if err := f.openDBFile(dbPath); err != nil {
 		return nil, fmt.Errorf("failed to open bolt file: %w", err)
 	}
@@ -167,9 +258,11 @@ func (f *FSM) openDBFile(dbPath string) error {
 		return errors.New("can not open empty filename")
 	}
 
+	vaultDbExists := true
 	st, err := os.Stat(dbPath)
 	switch {
 	case err != nil && os.IsNotExist(err):
+		vaultDbExists = false
 	case err != nil:
 		return fmt.Errorf("error checking raft FSM db file %q: %v", dbPath, err)
 	default:
@@ -181,11 +274,16 @@ func (f *FSM) openDBFile(dbPath string) error {
 	}
 
 	opts := boltOptions(dbPath)
+	if runtime.GOOS == "linux" && vaultDbExists && !usingMapPopulate(opts.MmapFlags) {
+		f.logger.Warn("the MAP_POPULATE mmap flag has not been set before opening the FSM database. This may be due to the database file being larger than the available memory on the system, or due to the VAULT_RAFT_DISABLE_MAP_POPULATE environment variable being set. As a result, Vault may be slower to start up.")
+	}
+
 	start := time.Now()
 	boltDB, err := bolt.Open(dbPath, 0o600, opts)
 	if err != nil {
 		return err
 	}
+
 	elapsed := time.Now().Sub(start)
 	f.logger.Debug("time to open database", "elapsed", elapsed, "path", dbPath)
 	metrics.MeasureSince([]string{"raft_storage", "fsm", "open_db_file"}, start)
@@ -233,6 +331,13 @@ func (f *FSM) openDBFile(dbPath string) error {
 
 	f.db = boltDB
 	return nil
+}
+
+func (f *FSM) Stats() bolt.Stats {
+	f.l.RLock()
+	defer f.l.RUnlock()
+
+	return f.db.Stats()
 }
 
 func (f *FSM) Close() error {
@@ -465,8 +570,8 @@ func (f *FSM) DeletePrefix(ctx context.Context, prefix string) error {
 // Get retrieves the value at the given path from the bolt file.
 func (f *FSM) Get(ctx context.Context, path string) (*physical.Entry, error) {
 	// TODO: Remove this outdated metric name in an older release
-	defer metrics.MeasureSince([]string{"raft", "get"}, time.Now())
-	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "get"}, time.Now())
+	defer metrics.MeasureSince([]string{"raft", fmt.Sprintf("get%s", f.metricSuffix)}, time.Now())
+	defer metrics.MeasureSince([]string{"raft_storage", "fsm", fmt.Sprintf("get%s", f.metricSuffix)}, time.Now())
 
 	f.l.RLock()
 	defer f.l.RUnlock()
@@ -513,8 +618,8 @@ func (f *FSM) Put(ctx context.Context, entry *physical.Entry) error {
 // List retrieves the set of keys with the given prefix from the bolt file.
 func (f *FSM) List(ctx context.Context, prefix string) ([]string, error) {
 	// TODO: Remove this outdated metric name in a future release
-	defer metrics.MeasureSince([]string{"raft", "list"}, time.Now())
-	defer metrics.MeasureSince([]string{"raft_storage", "fsm", "list"}, time.Now())
+	defer metrics.MeasureSince([]string{"raft", fmt.Sprintf("list%s", f.metricSuffix)}, time.Now())
+	defer metrics.MeasureSince([]string{"raft_storage", "fsm", fmt.Sprintf("list%s", f.metricSuffix)}, time.Now())
 
 	f.l.RLock()
 	defer f.l.RUnlock()
@@ -591,19 +696,24 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 	// Do the unmarshalling first so we don't hold locks
 	var latestConfiguration *ConfigurationValue
 	commands := make([]interface{}, 0, numLogs)
-	for _, log := range logs {
-		switch log.Type {
+	for _, l := range logs {
+		switch l.Type {
 		case raft.LogCommand:
 			command := &LogData{}
-			err := proto.Unmarshal(log.Data, command)
-			if err != nil {
-				f.logger.Error("error proto unmarshaling log data", "error", err)
-				panic("error proto unmarshaling log data")
+
+			// explicitly check for zero length Data, which will be the case for verifier no-ops
+			if len(l.Data) > 0 {
+				err := proto.Unmarshal(l.Data, command)
+				if err != nil {
+					f.logger.Error("error proto unmarshaling log data", "error", err, "data", l.Data)
+					panic("error proto unmarshaling log data")
+				}
 			}
+
 			commands = append(commands, command)
 		case raft.LogConfiguration:
-			configuration := raft.DecodeConfiguration(log.Data)
-			config := raftConfigurationToProtoConfiguration(log.Index, configuration)
+			configuration := raft.DecodeConfiguration(l.Data)
+			config := raftConfigurationToProtoConfiguration(l.Index, configuration)
 
 			commands = append(commands, config)
 
@@ -612,7 +722,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 			latestConfiguration = config
 
 		default:
-			panic(fmt.Sprintf("got unexpected log type: %d", log.Type))
+			panic(fmt.Sprintf("got unexpected log type: %d", l.Type))
 		}
 	}
 
@@ -646,6 +756,7 @@ func (f *FSM) ApplyBatch(logs []*raft.Log) []interface{} {
 			entrySlice := make([]*FSMEntry, 0)
 			switch command := commandRaw.(type) {
 			case *LogData:
+				// empty logs will have a zero length slice of Operations, so this loop will be a no-op
 				for _, op := range command.Operations {
 					var err error
 					switch op.OpType {

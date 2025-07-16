@@ -1,0 +1,71 @@
+---
+layout: docs
+page_title: Auto-auth with token files
+description: >-
+  Use token files for auto-authentication with Vault Agent or Vault Proxy.
+---
+
+# Auto-auth method: token file
+
+<Note>
+
+This authentication method is tailored for the development experience,
+and to facilitate getting started with Vault Agent and Vault Proxy. Vault Agent and
+Vault Proxy should never be configured to use this auto-auth method in a production environment.
+
+</Note>
+
+The `token_file` method reads in an existing, valid Vault token from a file, and uses that
+token in lieu of authenticating itself. While it's a first class auto-auth method for all intents
+and purposes, it naturally doesn't authenticate itself, as it requires a token from elsewhere. Like
+other auto-auth methods, this method will attempt to renew the token, as appropriate.
+
+This auto-auth method is especially useful when testing Vault Agent or Vault Proxy without needing to set up
+any authentication methods in Vault. For long-running Agent or Proxy processes, we strongly recommend another
+auto-auth method, such that Agent and Proxy are issuing their own own authentication requests to Vault.
+
+## Configuration
+
+- `token_file_path` `(string: required)` - The path to the file with the token inside. This token cannot be a wrapping token.
+
+## Example configuration
+
+An example configuration for Vault Agent, using the `token_file` method to enable [auto-auth](/vault/docs/agent-and-proxy/autoauth), follows:
+
+```hcl
+pid_file = "./pidfile"
+
+vault {
+  address = "https://127.0.0.1:8200"
+}
+
+auto_auth {
+  method {
+    type = "token_file"
+
+    config = {
+      token_file_path = "/home/username/.vault-token"
+    }
+  }
+}
+
+
+api_proxy {
+  use_auto_auth_token = true
+}
+
+listener "tcp" {
+  address = "127.0.0.1:8100"
+  tls_disable = true
+}
+
+template {
+  source      = "/etc/vault/server.key.ctmpl"
+  destination = "/etc/vault/server.key"
+}
+
+template {
+  source      = "/etc/vault/server.crt.ctmpl"
+  destination = "/etc/vault/server.crt"
+}
+```

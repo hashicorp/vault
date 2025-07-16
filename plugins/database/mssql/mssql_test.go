@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package mssql
 
 import (
@@ -17,7 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestInitialize(t *testing.T) {
+func TestMSSQLInitialize(t *testing.T) {
 	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 	defer cleanup()
 
@@ -76,7 +79,7 @@ func TestInitialize(t *testing.T) {
 	}
 }
 
-func TestNewUser(t *testing.T) {
+func TestMSSQLNewUser(t *testing.T) {
 	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 	defer cleanup()
 
@@ -182,20 +185,20 @@ func TestNewUser(t *testing.T) {
 	}
 }
 
-func TestUpdateUser_password(t *testing.T) {
+func TestMSSQLUpdateUser_password(t *testing.T) {
 	type testCase struct {
 		req              dbplugin.UpdateUserRequest
 		expectErr        bool
 		expectedPassword string
 	}
 
-	dbUser := "vaultuser"
+	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
+	defer cleanup()
 	initPassword := "p4$sw0rd"
 
 	tests := map[string]testCase{
 		"missing password": {
 			req: dbplugin.UpdateUserRequest{
-				Username: dbUser,
 				Password: &dbplugin.ChangePassword{
 					NewPassword: "",
 					Statements:  dbplugin.Statements{},
@@ -206,7 +209,6 @@ func TestUpdateUser_password(t *testing.T) {
 		},
 		"empty rotation statements": {
 			req: dbplugin.UpdateUserRequest{
-				Username: dbUser,
 				Password: &dbplugin.ChangePassword{
 					NewPassword: "N90gkKLy8$angf",
 					Statements:  dbplugin.Statements{},
@@ -217,7 +219,6 @@ func TestUpdateUser_password(t *testing.T) {
 		},
 		"username rotation": {
 			req: dbplugin.UpdateUserRequest{
-				Username: dbUser,
 				Password: &dbplugin.ChangePassword{
 					NewPassword: "N90gkKLy8$angf",
 					Statements: dbplugin.Statements{
@@ -232,7 +233,6 @@ func TestUpdateUser_password(t *testing.T) {
 		},
 		"bad statements": {
 			req: dbplugin.UpdateUserRequest{
-				Username: dbUser,
 				Password: &dbplugin.ChangePassword{
 					NewPassword: "N90gkKLy8$angf",
 					Statements: dbplugin.Statements{
@@ -247,11 +247,9 @@ func TestUpdateUser_password(t *testing.T) {
 		},
 	}
 
+	i := 0
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
-			defer cleanup()
-
 			initReq := dbplugin.InitializeRequest{
 				Config: map[string]interface{}{
 					"connection_url": connURL,
@@ -263,6 +261,9 @@ func TestUpdateUser_password(t *testing.T) {
 			dbtesting.AssertInitializeCircleCiTest(t, db, initReq)
 			defer dbtesting.AssertClose(t, db)
 
+			dbUser := fmt.Sprintf("vaultuser%d", i)
+			test.req.Username = dbUser
+			i++
 			err := createTestMSSQLUser(connURL, dbUser, initPassword, testMSSQLLogin)
 			if err != nil {
 				t.Fatalf("Failed to create user: %s", err)
@@ -293,7 +294,7 @@ func TestUpdateUser_password(t *testing.T) {
 				Username: dbUser,
 			}
 
-			ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel = context.WithTimeout(context.Background(), 20*time.Second)
 			defer cancel()
 			deleteResp, err := db.DeleteUser(ctx, deleteReq)
 			if err != nil {
@@ -311,7 +312,7 @@ func TestUpdateUser_password(t *testing.T) {
 	}
 }
 
-func TestDeleteUser(t *testing.T) {
+func TestMSSQLDeleteUser(t *testing.T) {
 	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 	defer cleanup()
 
@@ -341,7 +342,7 @@ func TestDeleteUser(t *testing.T) {
 		Username: dbUser,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	deleteResp, err := db.DeleteUser(ctx, deleteReq)
 	if err != nil {
@@ -357,7 +358,7 @@ func TestDeleteUser(t *testing.T) {
 	assertCredsDoNotExist(t, connURL, dbUser, initPassword)
 }
 
-func TestDeleteUserContainedDB(t *testing.T) {
+func TestMSSQLDeleteUserContainedDB(t *testing.T) {
 	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 	defer cleanup()
 
@@ -404,7 +405,7 @@ func TestDeleteUserContainedDB(t *testing.T) {
 	assertContainedDBCredsDoNotExist(t, connURL, dbUser)
 }
 
-func TestContainedDBSQLSanitization(t *testing.T) {
+func TestMSSQLContainedDBSQLSanitization(t *testing.T) {
 	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 	defer cleanup()
 
@@ -442,7 +443,7 @@ func TestContainedDBSQLSanitization(t *testing.T) {
 	assert.EqualError(t, err, "mssql: Cannot alter the login 'vaultuser]', because it does not exist or you do not have permission.")
 }
 
-func TestSQLSanitization(t *testing.T) {
+func TestMSSQLSanitization(t *testing.T) {
 	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 	defer cleanup()
 
@@ -574,4 +575,12 @@ CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}';
 const testMSSQLContainedLogin = `
 CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}';
 CREATE USER [{{name}}] FOR LOGIN [{{name}}];
+`
+
+const testMSSQLContainedLoginAdmin = `
+CREATE USER [{{name}}] WITH PASSWORD = '{{password}}';
+
+ALTER ROLE db_datareader ADD MEMBER [{{name}}];
+ALTER ROLE db_datawriter ADD MEMBER [{{name}}];
+ALTER ROLE db_owner ADD MEMBER [{{name}}];
 `

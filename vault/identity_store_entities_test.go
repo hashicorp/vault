@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -688,7 +691,7 @@ func TestIdentityStore_LoadingEntities(t *testing.T) {
 	ghSysview := c.mountEntrySysView(meGH)
 
 	// Create new github auth credential backend
-	ghAuth, _, err := c.newCredentialBackend(context.Background(), meGH, ghSysview, ghView)
+	ghAuth, err := c.newCredentialBackend(context.Background(), meGH, ghSysview, ghView)
 	if err != nil {
 		t.Fatal(err)
 	}

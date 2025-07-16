@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0 # by default the checkout action doesn't checkout all branches
@@ -48,17 +48,17 @@ jobs:
               echo "Not found."
               echo ""
               echo "Did not find a changelog entry named ${expected_changelog_file}"
-              echo "If your changelog file is correct, skip this check with the 'pr/no-changelog' label"
-              echo "Reference - https://github.com/hashicorp/vault/pull/10363 and https://github.com/hashicorp/vault/pull/11894"
+              echo "If your changelog file is correct, or this change does not need a changelog, skip this check with the 'pr/no-changelog' label"
+              echo "Reference - https://github.com/hashicorp/vault/blob/main/CONTRIBUTING.md#changelog-entries"
               exit 1
             fi
 
             # Else, we found some toolchain files. Let's make sure the contents are correct.
             if ! grep -q 'release-note:change' "$toolchain_files" || ! grep -q '^core: Bump Go version to' "$toolchain_files"; then
               echo "Invalid format for changelog. Expected format:"
-              echo "```release-note:change"
+              echo '```release-note:change'
               echo "core: Bump Go version to x.y.z."
-              echo "```"
+              echo '```'
               exit 1
             else
               echo "Found Go toolchain changelog entry in PR!"
@@ -76,6 +76,12 @@ jobs:
           elif grep -q ':fix$' "$changelog_files"; then
             echo "Found invalid type (fix) in changelog - did you mean bug?"
             exit 1
+          elif grep -q ':feature$' "$changelog_files"; then
+            if ! grep -q '^\*\*' "$changelog_files"; then
+              echo "Feature changelogs must be formatted like the following:"
+              echo "**Feature Name**: Feature description"
+              exit 1
+            fi
           elif ! grep -q '```release-note:' "$changelog_files"; then
             # People often make changelog files like ```changelog:, which is incorrect.
             echo "Changelog file did not contain 'release-note' heading - check formatting."

@@ -1,17 +1,52 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 terraform {
   required_providers {
     aws = {
       source = "hashicorp/aws"
     }
     enos = {
-      source = "app.terraform.io/hashicorp-qti/enos"
+      source  = "registry.terraform.io/hashicorp-forge/enos"
+      version = ">= 0.5.4"
     }
   }
 }
 
-variable "vault_api_addr" {
+variable "hosts" {
+  type = map(object({
+    ipv6       = string
+    private_ip = string
+    public_ip  = string
+  }))
+  description = "The vault cluster instances that were created"
+}
+
+
+variable "ip_version" {
+  type        = number
+  description = "The IP version used for the Vault TCP listener"
+
+  validation {
+    condition     = contains([4, 6], var.ip_version)
+    error_message = "The ip_version must be either 4 or 6"
+  }
+}
+
+variable "vault_addr" {
   type        = string
-  description = "The API address of the Vault cluster"
+  description = "The local vault API listen address"
+}
+
+variable "vault_artifactory_release" {
+  type = object({
+    username = string
+    token    = string
+    url      = string
+    sha256   = string
+  })
+  description = "Vault release version and edition to install from artifactory.hashicorp.engineering"
+  default     = null
 }
 
 variable "vault_install_dir" {
@@ -19,22 +54,15 @@ variable "vault_install_dir" {
   description = "The directory where the Vault binary will be installed"
 }
 
-variable "vault_instance_count" {
-  type        = number
-  description = "How many vault instances are in the cluster"
-}
-
-variable "vault_instances" {
-  type = map(object({
-    private_ip = string
-    public_ip  = string
-  }))
-  description = "The vault cluster instances that were created"
-}
-
-variable "vault_local_bundle_path" {
+variable "vault_local_artifact_path" {
   type        = string
-  description = "The path to the local Vault (vault.zip) bundle"
+  description = "The path to a locally built vault artifact to install"
+  default     = null
+}
+
+variable "vault_root_token" {
+  type        = string
+  description = "The vault root token"
 }
 
 variable "vault_seal_type" {
@@ -49,22 +77,19 @@ variable "vault_unseal_keys" {
 }
 
 locals {
-  instances = {
-    for idx in range(var.vault_instance_count) : idx => {
-      public_ip  = values(var.vault_instances)[idx].public_ip
-      private_ip = values(var.vault_instances)[idx].private_ip
-    }
-  }
-  followers      = toset([for idx in range(var.vault_instance_count - 1) : tostring(idx)])
-  follower_ips   = compact(split(" ", enos_remote_exec.get_follower_public_ips.stdout))
   vault_bin_path = "${var.vault_install_dir}/vault"
 }
 
+// Upgrade the Vault artifact in-place. With zip bundles we must use the same path of the original
+// installation so that we can re-use the systemd unit that enos_vault_start created at
+// /etc/systemd/system/vault.service. The path does not matter for package types as the systemd
+// unit for the bianry is included and will be installed.
 resource "enos_bundle_install" "upgrade_vault_binary" {
-  for_each = local.instances
+  for_each = var.hosts
 
   destination = var.vault_install_dir
-  path        = var.vault_local_bundle_path
+  artifactory = var.vault_artifactory_release
+  path        = var.vault_local_artifact_path
 
   transport = {
     ssh = {
@@ -73,91 +98,98 @@ resource "enos_bundle_install" "upgrade_vault_binary" {
   }
 }
 
-resource "enos_remote_exec" "get_leader_public_ip" {
+// We assume that our original Vault cluster used a zip bundle from releases.hashicorp.com and as
+// such enos_vault_start will have created a systemd unit for it at /etc/systemd/systemd/vault.service.
+// If we're upgrading to a package that contains its own systemd unit we'll need to remove the
+// old unit file so that when we restart vault we pick up the new unit that points to the updated
+// binary.
+resource "enos_remote_exec" "maybe_remove_old_unit_file" {
+  for_each   = var.hosts
   depends_on = [enos_bundle_install.upgrade_vault_binary]
 
-  content = templatefile("${path.module}/templates/get-leader-public-ip.sh", {
-    vault_install_dir = var.vault_install_dir,
-    vault_instances   = jsonencode(local.instances)
-  })
+  environment = {
+    ARTIFACT_NAME = enos_bundle_install.upgrade_vault_binary[each.key].name
+  }
+
+  scripts = [abspath("${path.module}/scripts/maybe-remove-old-unit-file.sh")]
 
   transport = {
     ssh = {
-      host = local.instances[0].public_ip
+      host = each.value.public_ip
     }
   }
 }
 
-resource "enos_remote_exec" "get_follower_public_ips" {
-  depends_on = [enos_bundle_install.upgrade_vault_binary]
+module "get_ip_addresses" {
+  source = "../vault_get_cluster_ips"
 
-  content = templatefile("${path.module}/templates/get-follower-public-ips.sh", {
-    vault_install_dir = var.vault_install_dir,
-    vault_instances   = jsonencode(local.instances)
-  })
+  depends_on = [enos_remote_exec.maybe_remove_old_unit_file]
 
-  transport = {
-    ssh = {
-      host = local.instances[0].public_ip
-    }
-  }
+  hosts             = var.hosts
+  ip_version        = var.ip_version
+  vault_addr        = var.vault_addr
+  vault_install_dir = var.vault_install_dir
+  vault_root_token  = var.vault_root_token
 }
 
-resource "enos_remote_exec" "restart_followers" {
-  for_each   = local.followers
-  depends_on = [enos_remote_exec.get_follower_public_ips]
-
-  content = file("${path.module}/templates/restart-vault.sh")
-
-  transport = {
-    ssh = {
-      host = trimspace(local.follower_ips[tonumber(each.key)])
-    }
-  }
+module "restart_followers" {
+  source            = "../restart_vault"
+  hosts             = module.get_ip_addresses.follower_hosts
+  vault_addr        = var.vault_addr
+  vault_install_dir = var.vault_install_dir
 }
 
 resource "enos_vault_unseal" "followers" {
-  depends_on = [enos_remote_exec.restart_followers]
   for_each = {
-    for idx, follower in local.followers : idx => follower
+    for idx, host in module.get_ip_addresses.follower_hosts : idx => host
     if var.vault_seal_type == "shamir"
   }
+  depends_on = [module.restart_followers]
+
   bin_path    = local.vault_bin_path
-  vault_addr  = var.vault_api_addr
+  vault_addr  = var.vault_addr
   seal_type   = var.vault_seal_type
   unseal_keys = var.vault_unseal_keys
 
   transport = {
     ssh = {
-      host = trimspace(local.follower_ips[each.key])
+      host = each.value.public_ip
     }
   }
 }
 
-resource "enos_remote_exec" "restart_leader" {
-  depends_on = [enos_vault_unseal.followers]
+module "wait_for_followers_unsealed" {
+  source = "../vault_wait_for_cluster_unsealed"
+  depends_on = [
+    module.restart_followers,
+    enos_vault_unseal.followers,
+  ]
 
-  content = file("${path.module}/templates/restart-vault.sh")
+  hosts             = module.get_ip_addresses.follower_hosts
+  vault_addr        = var.vault_addr
+  vault_install_dir = var.vault_install_dir
+}
 
-  transport = {
-    ssh = {
-      host = trimspace(enos_remote_exec.get_leader_public_ip.stdout)
-    }
-  }
+module "restart_leader" {
+  depends_on        = [module.wait_for_followers_unsealed]
+  source            = "../restart_vault"
+  hosts             = module.get_ip_addresses.leader_hosts
+  vault_addr        = var.vault_addr
+  vault_install_dir = var.vault_install_dir
 }
 
 resource "enos_vault_unseal" "leader" {
   count      = var.vault_seal_type == "shamir" ? 1 : 0
-  depends_on = [enos_remote_exec.restart_leader]
+  depends_on = [module.restart_leader]
 
   bin_path    = local.vault_bin_path
-  vault_addr  = var.vault_api_addr
+  vault_addr  = var.vault_addr
   seal_type   = var.vault_seal_type
   unseal_keys = var.vault_unseal_keys
 
   transport = {
     ssh = {
-      host = trimspace(enos_remote_exec.get_leader_public_ip.stdout)
+      host = module.get_ip_addresses.leader_public_ip
     }
   }
 }

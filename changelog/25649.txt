@@ -1,0 +1,5 @@
+```release-note:security
+auth/cert: compare public keys of trusted non-CA certificates with incoming
+client certificates to prevent trusting certs with the same serial number
+but not the same public/private key.
+```

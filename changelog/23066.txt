@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix the issue where confirm delete dropdown is being cut off
+```

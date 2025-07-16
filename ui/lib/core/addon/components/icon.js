@@ -1,39 +1,34 @@
-import Component from '@ember/component';
-import { computed } from '@ember/object';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import Component from '@glimmer/component';
 import { assert } from '@ember/debug';
-import layout from '../templates/components/icon';
-import flightIconMap from '@hashicorp/flight-icons/catalog.json';
-const flightIconNames = flightIconMap.assets.mapBy('iconName').uniq();
+
 /**
  * @module Icon
- * `Icon` components are glyphs used to indicate important information.
+ * `Icon` components are used to display an icon.
  *
- * Flight icon documentation at https://flight-hashicorp.vercel.app/
+ * Flight icon documentation at https://helios.hashicorp.design/icons/usage-guidelines?tab=code#how-to-use-icons
+ * Flight icon library at https://helios.hashicorp.design/icons/library
  *
  * @example
- * ```js
- * <Icon @name="cancel-square-outline" @size="24" />
- * ```
- * @param {string} name=null - The name of the SVG to render inline.
+ * <Icon @name="heart" @size="24" />
+ *
+ * @param {string} name - The name of the SVG to render inline. Required.
  * @param {string} [size=16] - size for flight icon, can be 16 or 24
  *
  */
-export default Component.extend({
-  tagName: '',
-  layout,
-  name: null,
-  size: '16',
 
-  init() {
-    this._super(...arguments);
-    assert('Icon component size argument must be either "16" or "24"', ['16', '24'].includes(this.size));
-  },
+// TODO - deprecate and remove this after migrating all `<Icon />` instances to `<Hds::Icon />`
+export default class IconComponent extends Component {
+  constructor(owner, args) {
+    super(owner, args);
 
-  // favor flight icon set and fall back to structure icons if not found
-  isFlightIcon: computed('name', function () {
-    return this.name ? flightIconNames.includes(this.name) : false;
-  }),
-  hsIconClass: computed('size', function () {
-    return this.size === '24' ? 'hs-icon-xl' : 'hs-icon-l';
-  }),
-});
+    const { name, size = '16' } = args;
+
+    assert('Icon component size argument must be either "16" or "24"', ['16', '24'].includes(size));
+    assert('Icon name argument must be provided', name);
+  }
+}

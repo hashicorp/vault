@@ -1,0 +1,3 @@
+```release-note:bug
+audit/socket: Provide socket based audit backends with 'prefix' configuration option when supplied.
+```

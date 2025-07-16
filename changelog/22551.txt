@@ -1,0 +1,3 @@
+```release-note:feature
+**Copyable KV v2 paths in UI**: KV v2 secret paths are copyable for use in CLI commands or API calls
+```

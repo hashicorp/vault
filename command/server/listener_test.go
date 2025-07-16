@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package server
 
 import (
@@ -6,6 +9,7 @@ import (
 	"io"
 	"net"
 	"testing"
+	"time"
 )
 
 type testListenerConnFn func(net.Listener) (net.Conn, error)
@@ -26,6 +30,9 @@ func testListenerImpl(t *testing.T, ln net.Listener, connFn testListenerConnFn, 
 			tlsConn.Handshake()
 		}
 		serverCh <- server
+		if expectedAddr == "" {
+			return
+		}
 		addr, _, err := net.SplitHostPort(server.RemoteAddr().String())
 		if err != nil {
 			t.Error(err)
@@ -54,7 +61,11 @@ func testListenerImpl(t *testing.T, ln net.Listener, connFn testListenerConnFn, 
 		}
 	}
 
-	server := <-serverCh
+	var server net.Conn
+	select {
+	case <-time.After(3 * time.Second):
+	case server = <-serverCh:
+	}
 
 	if server == nil {
 		if !expectError {

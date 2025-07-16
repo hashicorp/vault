@@ -1,0 +1,3 @@
+```release-note:bug
+api: Addressed a couple of issues that arose as edge cases for the -output-policy flag. Specifically around properly handling list commands, distinguishing kv V1/V2, and correctly recognizing protected paths.
+```

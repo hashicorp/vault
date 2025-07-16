@@ -1,0 +1,5 @@
+```release-note:bug
+secrets/openldap: Prevent static role rotation on upgrade when `NextVaultRotation` is nil.
+Fixes an issue where static roles were unexpectedly rotated after upgrade due to a missing `NextVaultRotation` value. 
+Now sets it to either `LastVaultRotation + RotationPeriod` or `now + RotationPeriod`.
+```

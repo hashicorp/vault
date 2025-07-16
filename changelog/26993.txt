@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Update PGP display and show error for Generate Operation Token flow with PGP
+```

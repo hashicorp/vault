@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -6,12 +9,13 @@ import (
 	"strings"
 	"time"
 
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/sdk/helper/hclutil"
 	"github.com/hashicorp/vault/sdk/helper/identitytpl"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -19,15 +23,17 @@ import (
 )
 
 const (
-	DenyCapability   = "deny"
-	CreateCapability = "create"
-	ReadCapability   = "read"
-	UpdateCapability = "update"
-	DeleteCapability = "delete"
-	ListCapability   = "list"
-	SudoCapability   = "sudo"
-	RootCapability   = "root"
-	PatchCapability  = "patch"
+	DenyCapability      = "deny"
+	CreateCapability    = "create"
+	ReadCapability      = "read"
+	UpdateCapability    = "update"
+	DeleteCapability    = "delete"
+	ListCapability      = "list"
+	SudoCapability      = "sudo"
+	RootCapability      = "root"
+	PatchCapability     = "patch"
+	SubscribeCapability = "subscribe"
+	RecoverCapability   = "recover"
 
 	// Backwards compatibility
 	OldDenyPathPolicy  = "deny"
@@ -45,6 +51,8 @@ const (
 	ListCapabilityInt
 	SudoCapabilityInt
 	PatchCapabilityInt
+	SubscribeCapabilityInt
+	RecoverCapabilityInt
 )
 
 // Error constants for testing
@@ -79,14 +87,16 @@ func (p PolicyType) String() string {
 }
 
 var cap2Int = map[string]uint32{
-	DenyCapability:   DenyCapabilityInt,
-	CreateCapability: CreateCapabilityInt,
-	ReadCapability:   ReadCapabilityInt,
-	UpdateCapability: UpdateCapabilityInt,
-	DeleteCapability: DeleteCapabilityInt,
-	ListCapability:   ListCapabilityInt,
-	SudoCapability:   SudoCapabilityInt,
-	PatchCapability:  PatchCapabilityInt,
+	DenyCapability:      DenyCapabilityInt,
+	CreateCapability:    CreateCapabilityInt,
+	ReadCapability:      ReadCapabilityInt,
+	UpdateCapability:    UpdateCapabilityInt,
+	DeleteCapability:    DeleteCapabilityInt,
+	ListCapability:      ListCapabilityInt,
+	SudoCapability:      SudoCapabilityInt,
+	PatchCapability:     PatchCapabilityInt,
+	SubscribeCapability: SubscribeCapabilityInt,
+	RecoverCapability:   RecoverCapabilityInt,
 }
 
 type egpPath struct {
@@ -130,13 +140,14 @@ type PathRules struct {
 
 	// These keys are used at the top level to make the HCL nicer; we store in
 	// the ACLPermissions object though
-	MinWrappingTTLHCL     interface{}              `hcl:"min_wrapping_ttl"`
-	MaxWrappingTTLHCL     interface{}              `hcl:"max_wrapping_ttl"`
-	AllowedParametersHCL  map[string][]interface{} `hcl:"allowed_parameters"`
-	DeniedParametersHCL   map[string][]interface{} `hcl:"denied_parameters"`
-	RequiredParametersHCL []string                 `hcl:"required_parameters"`
-	MFAMethodsHCL         []string                 `hcl:"mfa_methods"`
-	ControlGroupHCL       *ControlGroupHCL         `hcl:"control_group"`
+	MinWrappingTTLHCL      interface{}              `hcl:"min_wrapping_ttl"`
+	MaxWrappingTTLHCL      interface{}              `hcl:"max_wrapping_ttl"`
+	AllowedParametersHCL   map[string][]interface{} `hcl:"allowed_parameters"`
+	DeniedParametersHCL    map[string][]interface{} `hcl:"denied_parameters"`
+	RequiredParametersHCL  []string                 `hcl:"required_parameters"`
+	MFAMethodsHCL          []string                 `hcl:"mfa_methods"`
+	ControlGroupHCL        *ControlGroupHCL         `hcl:"control_group"`
+	SubscribeEventTypesHCL []string                 `hcl:"subscribe_event_types"`
 }
 
 type ControlGroupHCL struct {
@@ -147,6 +158,17 @@ type ControlGroupHCL struct {
 type ControlGroup struct {
 	TTL     time.Duration
 	Factors []*ControlGroupFactor
+}
+
+func (c *ControlGroup) Clone() (*ControlGroup, error) {
+	clonedControlGroup, err := copystructure.Copy(c)
+	if err != nil {
+		return nil, err
+	}
+
+	cg := clonedControlGroup.(*ControlGroup)
+
+	return cg, nil
 }
 
 type ControlGroupFactor struct {
@@ -171,14 +193,16 @@ type ACLPermissions struct {
 	MFAMethods          []string
 	ControlGroup        *ControlGroup
 	GrantingPoliciesMap map[uint32][]logical.PolicyInfo
+	SubscribeEventTypes []string
 }
 
 func (p *ACLPermissions) Clone() (*ACLPermissions, error) {
 	ret := &ACLPermissions{
-		CapabilitiesBitmap: p.CapabilitiesBitmap,
-		MinWrappingTTL:     p.MinWrappingTTL,
-		MaxWrappingTTL:     p.MaxWrappingTTL,
-		RequiredParameters: p.RequiredParameters[:],
+		CapabilitiesBitmap:  p.CapabilitiesBitmap,
+		MinWrappingTTL:      p.MinWrappingTTL,
+		MaxWrappingTTL:      p.MaxWrappingTTL,
+		RequiredParameters:  p.RequiredParameters[:],
+		SubscribeEventTypes: p.SubscribeEventTypes[:],
 	}
 
 	switch {
@@ -255,9 +279,10 @@ func addGrantingPoliciesToMap(m map[uint32][]logical.PolicyInfo, policy *Policy,
 		}
 
 		m[capability] = append(m[capability], logical.PolicyInfo{
-			Name:        policy.Name,
-			NamespaceId: policy.namespace.ID,
-			Type:        "acl",
+			Name:          policy.Name,
+			NamespaceId:   policy.namespace.ID,
+			NamespacePath: policy.namespace.Path,
+			Type:          "acl",
 		})
 	}
 
@@ -268,6 +293,13 @@ func addGrantingPoliciesToMap(m map[uint32][]logical.PolicyInfo, policy *Policy,
 // intermediary set of policies, before being compiled into
 // the ACL
 func ParseACLPolicy(ns *namespace.Namespace, rules string) (*Policy, error) {
+	p, _, err := parseACLPolicyWithTemplating(ns, rules, false, nil, nil)
+	return p, err
+}
+
+// ParseACLPolicyCheckDuplicates is the same as the above but checks for duplicate attributes in the HCL policy
+// TODO (HCL_DUP_KEYS_DEPRECATION): remove this function once deprecation is done
+func ParseACLPolicyCheckDuplicates(ns *namespace.Namespace, rules string) (p *Policy, duplicate bool, err error) {
 	return parseACLPolicyWithTemplating(ns, rules, false, nil, nil)
 }
 
@@ -275,17 +307,18 @@ func ParseACLPolicy(ns *namespace.Namespace, rules string) (*Policy, error) {
 // should perform substitutions. If performTemplating is true we know that it
 // is templated so we don't check again, otherwise we check to see if it's a
 // templated policy.
-func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, performTemplating bool, entity *identity.Entity, groups []*identity.Group) (*Policy, error) {
+func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, performTemplating bool, entity *identity.Entity, groups []*identity.Group) (p *Policy, duplicate bool, err error) {
 	// Parse the rules
-	root, err := hcl.Parse(rules)
+	// TODO (HCL_DUP_KEYS_DEPRECATION): go back to a simple hcl.Parse and remove duplicate return value once deprecation is done
+	root, duplicate, err := random.ParseAndCheckForDuplicateHclAttributes(rules)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse policy: %w", err)
+		return nil, duplicate, fmt.Errorf("failed to parse policy: %w", err)
 	}
 
 	// Top-level item should be the object list
 	list, ok := root.Node.(*ast.ObjectList)
 	if !ok {
-		return nil, fmt.Errorf("failed to parse policy: does not contain a root object")
+		return nil, duplicate, fmt.Errorf("failed to parse policy: does not contain a root object")
 	}
 
 	// Check for invalid top-level keys
@@ -294,26 +327,26 @@ func parseACLPolicyWithTemplating(ns *namespace.Namespace, rules string, perform
 		"path",
 	}
 	if err := hclutil.CheckHCLKeys(list, valid); err != nil {
-		return nil, fmt.Errorf("failed to parse policy: %w", err)
+		return nil, duplicate, fmt.Errorf("failed to parse policy: %w", err)
 	}
 
 	// Create the initial policy and store the raw text of the rules
-	p := Policy{
+	p = &Policy{
 		Raw:       rules,
 		Type:      PolicyTypeACL,
 		namespace: ns,
 	}
 	if err := hcl.DecodeObject(&p, list); err != nil {
-		return nil, fmt.Errorf("failed to parse policy: %w", err)
+		return nil, duplicate, fmt.Errorf("failed to parse policy: %w", err)
 	}
 
 	if o := list.Filter("path"); len(o.Items) > 0 {
-		if err := parsePaths(&p, o, performTemplating, entity, groups); err != nil {
-			return nil, fmt.Errorf("failed to parse policy: %w", err)
+		if err := parsePaths(p, o, performTemplating, entity, groups); err != nil {
+			return nil, duplicate, fmt.Errorf("failed to parse policy: %w", err)
 		}
 	}
 
-	return &p, nil
+	return p, duplicate, nil
 }
 
 func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, entity *identity.Entity, groups []*identity.Group) error {
@@ -362,6 +395,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 			"max_wrapping_ttl",
 			"mfa_methods",
 			"control_group",
+			"subscribe_event_types",
 		}
 		if err := hclutil.CheckHCLKeys(item.Val, valid); err != nil {
 			return multierror.Prefix(err, fmt.Sprintf("path %q:", key))
@@ -429,7 +463,7 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 				pc.Capabilities = []string{DenyCapability}
 				pc.Permissions.CapabilitiesBitmap = DenyCapabilityInt
 				goto PathFinished
-			case CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability, PatchCapability:
+			case CreateCapability, ReadCapability, UpdateCapability, DeleteCapability, ListCapability, SudoCapability, PatchCapability, SubscribeCapability, RecoverCapability:
 				pc.Permissions.CapabilitiesBitmap |= cap2Int[cap]
 			default:
 				return fmt.Errorf("path %q: invalid capability %q", key, cap)
@@ -526,6 +560,9 @@ func parsePaths(result *Policy, list *ast.ObjectList, performTemplating bool, en
 		}
 		if len(pc.RequiredParametersHCL) > 0 {
 			pc.Permissions.RequiredParameters = pc.RequiredParametersHCL[:]
+		}
+		if len(pc.SubscribeEventTypesHCL) > 0 {
+			pc.Permissions.SubscribeEventTypes = pc.SubscribeEventTypesHCL[:]
 		}
 
 	PathFinished:

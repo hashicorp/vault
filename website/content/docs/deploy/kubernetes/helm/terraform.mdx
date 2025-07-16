@@ -1,0 +1,275 @@
+---
+layout: 'docs'
+page_title: 'Configure Vault Helm using Terraform'
+sidebar_current: 'docs-platform-k8s-terraform'
+description: >-
+  Describes how to configure the Vault Helm chart using Terraform.
+---
+
+# Configure Vault Helm using Terraform
+
+Terraform may also be used to configure and deploy the Vault Helm chart, by using the [Helm provider](https://registry.terraform.io/providers/hashicorp/helm/latest/docs).
+
+For example, to configure the chart to deploy [HA Vault with integrated storage (raft)](/vault/docs/platform/k8s/helm/examples/ha-with-raft), the values overrides can be set on the command-line, in a values yaml file, or with a Terraform configuration:
+
+<CodeTabs>
+<CodeBlockConfig>
+
+```shell-session
+$ helm install vault hashicorp/vault \
+  --set='server.ha.enabled=true' \
+  --set='server.ha.raft.enabled=true'
+```
+
+</CodeBlockConfig>
+
+<CodeBlockConfig>
+
+```yaml
+server:
+  ha:
+    enabled: true
+    raft:
+      enabled: true
+```
+
+</CodeBlockConfig>
+
+<CodeBlockConfig>
+
+```hcl
+provider "helm" {
+  kubernetes {
+    config_path = "~/.kube/config"
+  }
+}
+
+resource "helm_release" "vault" {
+  name       = "vault"
+  repository = "https://helm.releases.hashicorp.com"
+  chart      = "vault"
+
+  set {
+    name  = "server.ha.enabled"
+    value = "true"
+  }
+  set {
+    name  = "server.ha.raft.enabled"
+    value = "true"
+  }
+}
+```
+
+</CodeBlockConfig>
+</CodeTabs>
+
+The values file can also be used directly in the Terraform configuration with the [`values` directive](https://registry.terraform.io/providers/hashicorp/helm/latest/docs/resources/release#values#values).
+
+## Further examples
+
+### Vault config as a multi-line string
+
+<CodeTabs>
+<CodeBlockConfig>
+
+```yaml
+server:
+  ha:
+    enabled: true
+    raft:
+      enabled: true
+      setNodeId: true
+      config: |
+        ui = false
+
+        listener "tcp" {
+          tls_disable = 1
+          address = "[::]:8200"
+          cluster_address = "[::]:8201"
+        }
+
+        storage "raft" {
+          path    = "/vault/data"
+        }
+
+        service_registration "kubernetes" {}
+
+        seal "awskms" {
+          region     = "us-west-2"
+          kms_key_id = "alias/my-kms-key"
+        }
+```
+
+</CodeBlockConfig>
+<CodeBlockConfig>
+
+```hcl
+resource "helm_release" "vault" {
+  name       = "vault"
+  repository = "https://helm.releases.hashicorp.com"
+  chart      = "vault"
+
+  set {
+    name  = "server.ha.enabled"
+    value = "true"
+  }
+  set {
+    name  = "server.ha.raft.enabled"
+    value = "true"
+  }
+  set {
+    name  = "server.ha.raft.setNodeId"
+    value = "true"
+  }
+  set {
+    name  = "server.ha.raft.config"
+    value = <<EOT
+ui = false
+
+listener "tcp" {
+  tls_disable = 1
+  address = "[::]:8200"
+  cluster_address = "[::]:8201"
+}
+
+storage "raft" {
+  path    = "/vault/data"
+}
+
+service_registration "kubernetes" {}
+
+seal "awskms" {
+  region     = "us-west-2"
+  kms_key_id = "alias/my-kms-key"
+}
+EOT
+  }
+}
+```
+
+</CodeBlockConfig>
+</CodeTabs>
+
+### Lists of volumes and volumeMounts
+
+<CodeTabs>
+<CodeBlockConfig>
+
+```yaml
+server:
+  volumes:
+    - name: userconfig-my-gcp-iam
+      secret:
+        defaultMode: 420
+        secretName: my-gcp-iam
+
+  volumeMounts:
+    - mountPath: /vault/userconfig/my-gcp-iam
+      name: userconfig-my-gcp-iam
+      readOnly: true
+```
+
+</CodeBlockConfig>
+
+<CodeBlockConfig>
+
+```hcl
+resource "helm_release" "vault" {
+  name       = "vault"
+  repository = "https://helm.releases.hashicorp.com"
+  chart      = "vault"
+
+  set {
+    name  = "server.volumes[0].name"
+    value = "userconfig-my-gcp-iam"
+  }
+  set {
+    name  = "server.volumes[0].secret.defaultMode"
+    value = "420"
+  }
+  set {
+    name  = "server.volumes[0].secret.secretName"
+    value = "my-gcp-iam"
+  }
+
+  set {
+    name  = "server.volumeMounts[0].mountPath"
+    value = "/vault/userconfig/my-gcp-iam"
+  }
+  set {
+    name  = "server.volumeMounts[0].name"
+    value = "userconfig-my-gcp-iam"
+  }
+  set {
+    name  = "server.volumeMounts[0].readOnly"
+    value = "true"
+  }
+}
+```
+
+</CodeBlockConfig>
+</CodeTabs>
+
+### Annotations
+
+Annotations can be set as a YAML map:
+
+<CodeTabs>
+
+<CodeBlockConfig>
+
+```yaml
+server:
+  ingress:
+    annotations:
+      service.beta.kubernetes.io/azure-load-balancer-internal: true
+      service.beta.kubernetes.io/azure-load-balancer-internal-subnet: apps-subnet
+```
+</CodeBlockConfig>
+
+<CodeBlockConfig>
+
+```hcl
+  set {
+    name = "server.ingress.annotations.service\\.beta\\.kubernetes\\.io/azure-load-balancer-internal"
+    value = "true"
+  }
+
+  set {
+    name = "server.ingress.annotations.service\\.beta\\.kubernetes\\.io/azure-load-balancer-internal-subnet"
+    value = "apps-subnet"
+  }
+```
+
+</CodeBlockConfig>
+</CodeTabs>
+
+or as a multi-line string:
+
+<CodeTabs>
+<CodeBlockConfig>
+
+```yaml
+server:
+  ingress:
+    annotations: |
+      service.beta.kubernetes.io/azure-load-balancer-internal: true
+      service.beta.kubernetes.io/azure-load-balancer-internal-subnet: apps-subnet
+```
+
+</CodeBlockConfig>
+<CodeBlockConfig>
+
+```hcl
+  set {
+    name = "server.ingress.annotations"
+    value = yamlencode({
+      "service.beta.kubernetes.io/azure-load-balancer-internal": "true"
+      "service.beta.kubernetes.io/azure-load-balancer-internal-subnet": "apps-subnet"
+    })
+    type = "auto"
+  }
+```
+
+</CodeBlockConfig>
+</CodeTabs>

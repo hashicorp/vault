@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
@@ -12,6 +15,13 @@ import (
 func (b *backend) pathRestore() *framework.Path {
 	return &framework.Path{
 		Pattern: "restore" + framework.OptionalParamRegex("name"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "restore",
+			OperationSuffix: "key|and-rename-key",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"backup": {
 				Type:        framework.TypeString,

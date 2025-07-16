@@ -1,4 +1,9 @@
-import { Factory } from 'ember-cli-mirage';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { Factory } from 'miragejs';
 
 export default Factory.extend({
   algorithm: 'SHA1',
@@ -7,7 +12,7 @@ export default Factory.extend({
   key_size: 20,
   max_validation_attempts: 5,
   name: '', // returned but cannot be set at this time
-  namespace_id: 'root',
+  namespace_path: 'admin/',
   period: 30,
   qr_size: 200,
   skew: 1,

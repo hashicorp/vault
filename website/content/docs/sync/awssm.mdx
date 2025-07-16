@@ -1,0 +1,209 @@
+---
+layout: docs
+page_title: Sync secrets from Vault to AWS Secrets Manager
+description: >-
+  Automatically sync and unsync the secrets from Vault to AWS Secrets Manager to centralize visibility and control of secrets lifecycle management.
+---
+
+# Sync secrets from Vault to AWS Secrets Manager
+
+The AWS Secrets Manager destination enables Vault to sync and unsync secrets of your choosing into
+an external AWS account. When configured, Vault will actively maintain the state of each externally-synced
+secret in near-realtime. This includes sending new secrets, updating existing secret values, and removing
+secrets when they either get dissociated from the destination or deleted from Vault. This enables the
+ability to keep control of all your secrets localized while leveraging the benefits of the AWS Secrets Manager.
+
+Prerequisites:
+* Ability to read or create KVv2 secrets
+* Ability to create AWS IAM user and access keys with access to the Secrets Manager
+* Ability to create sync destinations and associations on your Vault server
+
+## Setup
+
+1. Navigate to the [AWS Identity and Access Management (IAM) console](https://us-east-1.console.aws.amazon.com/iamv2/home#/home)
+  to configure a IAM user with access to the Secrets Manager. The following is an example policy outlining the required
+  permissions to use secrets syncing.
+
+  ```json
+  {
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "secretsmanager:Create*",
+            "secretsmanager:Update*",
+            "secretsmanager:Delete*",
+            "secretsmanager:TagResource"
+          ],
+          "Resource": "arn:aws:secretsmanager:*:*:secret:vault*"
+        }
+    ]
+  }
+  ```
+
+1.	Configure a sync destination with the IAM user credentials created in the previous step.
+
+	```shell-session
+	$ vault write sys/sync/destinations/aws-sm/my-awssm-1 \
+		  access_key_id="$ACCESS_KEY_ID" \
+		  secret_access_key="$SECRET_ACCESS_KEY" \
+		  region='us-east-1'
+	```
+
+	**Output:**
+
+	<CodeBlockConfig hideClipboard>
+
+	```plaintext
+	Key                   Value
+	---                   -----
+	connection_details    map[access_key_id:***** region:us-east-1 secret_access_key:*****]
+	name                  my-awssm-1
+	type                  aws-sm
+	```
+
+	</CodeBlockConfig>
+
+## Usage
+
+1.	If you do not already have a KVv2 secret to sync, mount a new KVv2 secrets engine.
+
+	```shell-session
+	$ vault secrets enable -path=my-kv kv-v2
+	```
+
+	**Output:**
+
+	<CodeBlockConfig hideClipboard>
+
+	```plaintext
+	Success! Enabled the kv-v2 secrets engine at: my-kv/
+	```
+
+	</CodeBlockConfig>
+
+1. Create secrets you wish to sync with a target AWS Secrets Manager.
+
+	```shell-session
+	$ vault kv put -mount=my-kv my-secret foo='bar'
+	```
+
+	**Output:**
+
+	<CodeBlockConfig hideClipboard>
+
+	```plaintext
+	==== Secret Path ====
+	my-kv/data/my-secret
+
+	======= Metadata =======
+	Key                Value
+	---                -----
+	created_time       2023-09-19T13:17:23.395109Z
+	custom_metadata    <nil>
+	deletion_time      n/a
+	destroyed          false
+	version            1
+	```
+
+	</CodeBlockConfig>
+
+1.	Create an association between the destination and a secret to synchronize.
+
+	```shell-session
+	$ vault write sys/sync/destinations/aws-sm/my-awssm-1/associations/set \
+		mount='my-kv' \
+		secret_name='my-secret'
+	```
+
+	**Output:**
+
+	<CodeBlockConfig hideClipboard>
+
+	```plaintext
+	Key                   Value
+	---                   -----
+	associated_secrets    map[kv_37993f8a/my-secret:map[accessor:kv_37993f8a secret_name:my-secret sync_status:SYNCED updated_at:2023-09-19T13:17:35.085581-05:00]]
+	store_name            aws1
+	store_type            aws-sm
+	```
+
+	</CodeBlockConfig>
+
+1. Navigate to the [Secrets Manager](https://console.aws.amazon.com/secretsmanager/) in the AWS console
+	to confirm your secret was successfully synced.
+
+Moving forward, any modification on the Vault secret will be propagated to its AWS Secrets Manager
+counterpart. Creating a new secret version in Vault will update the one in AWS to the new version. Deleting either
+the secret or the association in Vault will delete the secret in your AWS account as well.
+
+## Access management
+
+You can allow or restrict access to secrets by attaching AWS Resource Tags
+to secrets. For example, the following AWS IAM policy prevents Vault from
+modifying secrets that were not created by a sync operation:
+
+  <CodeBlockConfig hideClipboard>
+
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Allow",
+          "Action": [
+            "secretsmanager:*",
+          ],
+          "Resource": "*",
+          "Condition": {
+            "StringEquals": {
+              "secretsmanager:ResourceTag/hashicorp:vault": "" # This tag is automatically added by Vault on every synced secrets
+            }
+          }
+        }
+      ]
+    }
+
+  </CodeBlockConfig>
+
+To prevent out-of-band overwrites, we recommend adding a negative condition on
+all write-access policies not used by Vault:
+
+  <CodeBlockConfig hideClipboard>
+
+    {
+      "Version": "2012-10-17",
+      "Statement": [
+        {
+          "Effect": "Deny",
+          "Action": [
+            "secretsmanager:*"
+          ],
+          "Resource": "*",
+          "Condition": {
+            "StringNotEquals": {
+              "secretsmanager:ResourceTag/hashicorp:vault": "" # This tag is automatically added by Vault on every synced secrets
+            }
+          }
+        }
+      ]
+    }
+
+  </CodeBlockConfig>
+
+<Warning title="Use wildcards with extreme caution">
+
+  The previous examples use wildcards for the sake of brevity. We strongly
+  recommend you use the principle of least privilege to restrict actions and
+  resources for each use case to the minimum necessary requirements.
+  
+</Warning>
+
+## Tutorial
+
+Refer to the [Vault Enterprise Secrets Sync tutorial](/vault/tutorials/enterprise/secrets-sync)
+to learn how to configure the secrets sync between Vault and AWS Secrets Manager.
+
+## API
+
+Please see the [secrets sync API](/vault/api-docs/system/secrets-sync) for more details.

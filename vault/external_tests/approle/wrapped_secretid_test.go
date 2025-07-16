@@ -1,43 +1,22 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package approle
 
 import (
 	"testing"
 
-	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/api"
-	credAppRole "github.com/hashicorp/vault/builtin/credential/approle"
-	vaulthttp "github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/stretchr/testify/require"
 )
 
 func TestApproleSecretId_Wrapped(t *testing.T) {
-	var err error
-	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       log.NewNullLogger(),
-		CredentialBackends: map[string]logical.Factory{
-			"approle": credAppRole.Factory,
-		},
-	}
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
 
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	cores := cluster.Cores
-
-	vault.TestWaitActive(t, cores[0].Core)
-
-	client := cores[0].Client
-	client.SetToken(cluster.RootToken)
-
-	err = client.Sys().EnableAuthWithOptions("approle", &api.EnableAuthOptions{
+	err := client.Sys().EnableAuthWithOptions("approle", &api.EnableAuthOptions{
 		Type: "approle",
 	})
 	if err != nil {
@@ -73,31 +52,11 @@ func TestApproleSecretId_Wrapped(t *testing.T) {
 }
 
 func TestApproleSecretId_NotWrapped(t *testing.T) {
-	var err error
-	coreConfig := &vault.CoreConfig{
-		DisableMlock: true,
-		DisableCache: true,
-		Logger:       log.NewNullLogger(),
-		CredentialBackends: map[string]logical.Factory{
-			"approle": credAppRole.Factory,
-		},
-	}
+	t.Parallel()
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
 
-	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
-		HandlerFunc: vaulthttp.Handler,
-	})
-
-	cluster.Start()
-	defer cluster.Cleanup()
-
-	cores := cluster.Cores
-
-	vault.TestWaitActive(t, cores[0].Core)
-
-	client := cores[0].Client
-	client.SetToken(cluster.RootToken)
-
-	err = client.Sys().EnableAuthWithOptions("approle", &api.EnableAuthOptions{
+	err := client.Sys().EnableAuthWithOptions("approle", &api.EnableAuthOptions{
 		Type: "approle",
 	})
 	if err != nil {

@@ -1,4 +1,7 @@
 #!/bin/bash -eu
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
 #
 # fdb-go-install.sh
 #

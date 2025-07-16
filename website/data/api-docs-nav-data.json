@@ -18,10 +18,6 @@
         "path": "secret"
       },
       {
-        "title": "Active Directory",
-        "path": "secret/ad"
-      },
-      {
         "title": "AliCloud",
         "path": "secret/alicloud"
       },
@@ -216,18 +212,18 @@
         ]
       },
       {
-        "title": "Key/Value",
+        "title": "Key Value",
         "routes": [
           {
             "title": "Overview",
             "path": "secret/kv"
           },
           {
-            "title": "K/V Version 1",
+            "title": "KV version 1",
             "path": "secret/kv/kv-v1"
           },
           {
-            "title": "K/V Version 2",
+            "title": "KV version 2",
             "path": "secret/kv/kv-v2"
           }
         ]
@@ -259,7 +255,16 @@
       },
       {
         "title": "PKI",
-        "path": "secret/pki"
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "secret/pki"
+          },
+          {
+            "title": "Issuance Protocols",
+            "path": "secret/pki/issuance"
+          }
+        ]
       },
       {
         "title": "RabbitMQ",
@@ -356,6 +361,24 @@
         "path": "auth/radius"
       },
       {
+        "title": "SAML",
+        "path": "auth/saml",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
+        "title": "SCEP",
+        "path": "auth/scep",
+        "badge": {
+          "text": "ENTERPRISE",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "TLS Certificates",
         "path": "auth/cert"
       },
@@ -366,15 +389,6 @@
       {
         "title": "Username & Password",
         "path": "auth/userpass"
-      },
-      {
-        "title": "App ID",
-        "badge": {
-          "text": "DEPRECATED",
-          "type": "outlined",
-          "color": "neutral"
-        },
-        "path": "auth/app-id"
       }
     ]
   },
@@ -384,6 +398,15 @@
       {
         "title": "Overview",
         "path": "system"
+      },
+      {
+        "title": "<code>/sys/activation-flags</code>",
+        "path": "system/activation-flags",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
       },
       {
         "title": "<code>/sys/audit</code>",
@@ -422,6 +445,15 @@
         "path": "system/config-cors"
       },
       {
+        "title": "<code>/sys/config/group-policy-application</code>",
+        "path": "system/config-group-policy-application",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "<code>/sys/config/reload</code>",
         "path": "system/config-reload"
       },
@@ -430,12 +462,38 @@
         "path": "system/config-state"
       },
       {
-        "title": "<code>/sys/config/ui</code>",
-        "path": "system/config-ui"
+        "title": "<code>/sys/config/ui/custom-messages</code>",
+        "path": "system/config-ui-custom-messages",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
+      },
+      {
+        "title": "<code>/sys/config/ui/headers</code>",
+        "path": "system/config-ui-headers"
+      },
+      {
+        "title": "<code>/sys/config/ui/login/default-auth</code>",
+        "path": "system/config-ui-login-default-auth",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
       },
       {
         "title": "<code>/sys/control-group</code>",
         "path": "system/control-group"
+      },
+      {
+        "title": "<code>/sys/decode-token</code>",
+        "path": "system/decode-token"
+      },
+      {
+        "title": "<code>/sys/experiments</code>",
+        "path": "system/experiments"
       },
       {
         "title": "<code>/sys/generate-recovery-token</code>",
@@ -466,8 +524,34 @@
         "path": "system/internal-counters"
       },
       {
+        "title": "<code>/sys/internal/inspect</code>",
+        "routes": [
+          {
+            "title": "Overview",
+            "path": "system/inspect"
+          },
+          {
+            "title": "<code>/sys/internal/inspect/router</code>",
+            "path": "system/inspect/router"
+          }
+        ]
+      },
+      {
         "title": "<code>/sys/internal/specs/openapi</code>",
         "path": "system/internal-specs-openapi"
+      },
+      {
+        "title": "<code>/sys/internal/ui/authenticated-messages</code>",
+        "path": "system/internal-ui-authenticated-messages"
+      },
+      {
+        "title": "<code>/sys/internal/ui/default-auth-methods</code>",
+        "path": "system/internal-ui-default-auth-methods",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
       },
       {
         "title": "<code>/sys/internal/ui/feature-flags</code>",
@@ -484,6 +568,10 @@
       {
         "title": "<code>/sys/internal/ui/resultant-acl</code>",
         "path": "system/internal-ui-resultant-acl"
+      },
+      {
+        "title": "<code>/sys/internal/ui/unauthenticated-messages</code>",
+        "path": "system/internal-ui-unauthenticated-messages"
       },
       {
         "title": "<code>/sys/key-status</code>",
@@ -504,6 +592,14 @@
       {
         "title": "<code>/sys/license/status</code>",
         "path": "system/license"
+      },
+      {
+        "title": "<code>/sys/locked-users</code>",
+        "path": "system/user-lockout"
+      },
+      {
+        "title": "<code>/sys/utilization-report</code>",
+        "path": "system/utilization-report"
       },
       {
         "title": "<code>/sys/loggers</code>",
@@ -564,12 +660,20 @@
         "path": "system/namespaces"
       },
       {
-        "title": "<code>/sys/plugins/reload/backend</code>",
-        "path": "system/plugins-reload-backend"
-      },
-      {
         "title": "<code>/sys/plugins/catalog</code>",
         "path": "system/plugins-catalog"
+      },
+      {
+        "title": "<code>/sys/plugins/pins</code>",
+        "path": "system/plugins-pins"
+      },
+      {
+        "title": "<code>/sys/plugins/reload</code>",
+        "path": "system/plugins-reload"
+      },
+      {
+        "title": "<code>/sys/plugins/runtimes/catalog</code>",
+        "path": "system/plugins-runtimes-catalog"
       },
       {
         "title": "<code>/sys/policy</code>",
@@ -649,6 +753,10 @@
         "path": "system/seal-status"
       },
       {
+        "title": "<code>/sys/seal-backend-status</code>",
+        "path": "system/seal-backend-status"
+      },
+      {
         "title": "<code>/sys/sealwrap/rewrap</code>",
         "path": "system/sealwrap-rewrap"
       },
@@ -674,8 +782,21 @@
           {
             "title": "<code>/sys/storage/raft/snapshot-auto</code>",
             "path": "system/storage/raftautosnapshots"
+          },
+          {
+            "title": "<code>/sys/storage/raft/snapshot-load</code>",
+            "path": "system/storage/raftsnapshotload"
           }
         ]
+      },
+      {
+        "title": "<code>/sys/sync</code>",
+        "path": "system/secrets-sync",
+        "badge": {
+          "text": "ENT",
+          "type": "outlined",
+          "color": "neutral"
+        }
       },
       {
         "title": "<code>/sys/tools</code>",
@@ -688,6 +809,10 @@
       {
         "title": "<code>/sys/version-history</code>",
         "path": "system/version-history"
+      },
+      {
+        "title": "<code>/sys/well-known</code>",
+        "path": "system/well-known"
       },
       {
         "title": "<code>/sys/wrapping/lookup</code>",

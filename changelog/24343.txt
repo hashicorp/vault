@@ -1,0 +1,5 @@
+```release-note:improvement
+api: sys/health and sys/ha-status now expose information about how long
+the last heartbeat took, and the estimated clock skew between standby and
+active node based on that heartbeat duration.
+```

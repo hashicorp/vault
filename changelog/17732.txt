@@ -1,0 +1,3 @@
+```release-note:bug
+storage/raft: Don't panic on unknown raft ops
+```

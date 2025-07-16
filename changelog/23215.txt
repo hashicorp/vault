@@ -1,0 +1,6 @@
+```release-note:bug
+plugins: Containerized plugins can be run with mlock enabled.
+```
+```release-note:improvement
+plugins: Containerized plugins can be configured to still work when running with systemd's PrivateTmp=true setting.
+```

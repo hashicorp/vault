@@ -1,6 +1,10 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package cockroachdb
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"sync"
@@ -103,7 +107,9 @@ func (l *CockroachDBLock) Lock(stopCh <-chan struct{}) (<-chan struct{}, error) 
 // CockroachDB table.
 func (l *CockroachDBLock) Unlock() error {
 	c := l.backend
-	c.permitPool.Acquire()
+	if err := c.permitPool.Acquire(context.Background()); err != nil {
+		return err
+	}
 	defer c.permitPool.Release()
 
 	if l.renewTicker != nil {
@@ -118,7 +124,9 @@ func (l *CockroachDBLock) Unlock() error {
 // including this one, and returns the current value.
 func (l *CockroachDBLock) Value() (bool, string, error) {
 	c := l.backend
-	c.permitPool.Acquire()
+	if err := c.permitPool.Acquire(context.Background()); err != nil {
+		return false, "", err
+	}
 	defer c.permitPool.Release()
 	var result string
 	err := c.haStatements["get"].QueryRow(l.key).Scan(&result)
@@ -182,7 +190,9 @@ func (l *CockroachDBLock) periodicallyRenewLock(done chan struct{}) {
 // else has the lock, whereas non-nil means that something unexpected happened.
 func (l *CockroachDBLock) writeItem() (bool, error) {
 	c := l.backend
-	c.permitPool.Acquire()
+	if err := c.permitPool.Acquire(context.Background()); err != nil {
+		return false, err
+	}
 	defer c.permitPool.Release()
 
 	sqlResult, err := c.haStatements["upsert"].Exec(l.identity, l.key, l.value, fmt.Sprintf("%d seconds", l.ttlSeconds))

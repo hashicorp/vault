@@ -1,0 +1,84 @@
+### Can I view the list of unique client IDs that contributed to my client count aggregate? ((#view-data))
+
+**Yes, if you are using Vault 1.11 or later**.
+
+As of Vault 1.11, you can export the list of unique
+clients that contributed to your client count for a given billing period with
+the
+[activity export API endpoint](/vault/api-docs/system/internal-counters#activity-export).
+
+### Is clientID viewable in the audit logs for non-entity tokens? ((#clientid-in-logs))
+
+**Yes, for Vault v1.9+**.
+
+As of Vault v1.9, audit logs include a field called `clientID` that records the
+active or computed entity ID of the associated token.
+
+### Can I skip client computation for a period of time during the billing period? ((#skip-computation))
+
+**Yes, but the data may be inaccurate**.
+
+Breaking up the data will likely result in client duplication. For example,
+assume your billing period runs from January 1st to December 31st, and you break
+the computation into two periods to exclude the month of April:
+
+- Period<sub>1</sub> runs from January 1st to March 31st
+- Period<sub>2</sub> runs from June 1st to December 31st
+
+Vault treats the two requests independently so January 1st and June 1st are both
+used as a fresh start to re-count unique clients. Any client that was active
+during both periods will appear in both result sets, even though Vault will only
+counted that client **once** for the actual billing period.
+
+### Are there conditions that will cause me to lose client data? ((#lost-data))
+
+**Yes**.
+
+The Vault activity log handles client computation. The standby nodes track and
+accumulate activity log data then transmit updates to the active node over gRPC
+whenever the log grows by 8KB or 10 minutes has elapsed, whichever happens
+first.
+
+If a node goes down during the accumulation phase you will lose the
+untransmitted data in addition to any client count data that would have been
+collected during the outage.
+
+### What happens if a portion of the data is missing for my billing period? ((#missing-data))
+
+**Vault only returns the most recent contiguous set of data**.
+
+For example, assume your billing period runs from January 1st to December 31st
+but you disabled tracking for the month of April. Vault will look for the
+largest, contiguous window of time where data is available, May through December,
+and compute results for that period of time. May 2021 through December 2021.
+
+### Can I disable client counting? ((#disable-client-count))
+
+**Yes**.
+
+You can use the Vault API to
+[update the client count configuration](/vault/api-docs/system/internal-counters#update-the-client-count-configuration)
+and disable the tracking parameter. If you disable client counting in the middle
+of a month, Vault will discard any data currently recorded for the month. Data
+for previous months is preserved.
+
+<Note>
+
+  <EnterpriseAlert product="vault" inline /> 
+
+  License utilization cannot be reported if client counting is disabled. 
+  
+  As of 1.16.0, 1.15.6 and 1.14.10, client counting cannot be disabled as manual license utilization reporting is always enabled.
+
+  As of 1.14.0, 1.13.4, 1.12.8 and 1.11.12, client counting cannot be disabled when automated license utilization reporting is enabled. 
+
+</Note>
+
+
+### Can I configure Vault to log the client count data? ((#log-client-count))
+
+**Yes**.
+
+You can use the Vault API to
+[update the client count configuration](/vault/api-docs/system/internal-counters#update-the-client-count-configuration)
+and specify your preferred retention period. 

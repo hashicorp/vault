@@ -1,0 +1,118 @@
+---
+layout: docs
+page_title: Run Vault with many namespaces
+description: >-
+  Guidance for using thousands of namespaces with Vault
+---
+
+# Run Vault with many namespaces
+
+@include 'alerts/enterprise-and-hcp.mdx'
+
+Use namespaces to create isolated environments within Vault Enterprise.
+By default, Vault limits the number and depth of namespaces based on your
+storage configuration. The information below provides guidance on how to modify
+your namespace limits and what expect when operating a Vault cluster with 7000+
+namespaces.
+
+## Default namespace limits
+
+@include 'namespace-limits.mdx'
+
+## How to modify your namespace limit
+
+@include 'storage-entry-size.mdx'
+
+## Performance considerations
+
+Running Vault with thousands of namespaces can have operational impacts on a
+cluster. Below are some performance considerations to take into account before
+using thousands of namespaces.
+
+It is **not** recommended to use thousands of namespaces with any version of Vault
+lower than 1.13.9, 1.14.5, or 1.15.0. Improvements were released in those
+versions which can improve the reliability of Raft heartbeats when using many
+namespaces.
+
+<Note title="Testing parameters">
+
+  The aggregated performance data below assumes a 3-node Vault cluster running
+  on N2 standard VMs with Google Kubernetes Engine, default mounts, and
+  integrated storage. The results average metrics from multiple `n2-standard-16`
+  and `n2-standard-32` VMs with a varying number of namespaces.
+
+</Note>
+
+### Unseal times
+
+Vault sets up and initializes every mount after an unseal event. At minimum,
+the initialization process includes the default mounts for all active namespaces
+(`sys`, `identity`, `cubbyhole`, and `token`).
+
+The more namespaces and custom mounts in the deployment, the longer the
+post-unseal initialization takes. As a result, **even with auto-unseal**, Vault
+will be unresponsive during initialization for deployments with many namespaces.
+
+Post-unseal times observed during testing:
+
+| Number of namespaces | Unseal initialization time  |
+|----------------------|-------------------|
+| 10                   | ~5 seconds        |
+| 10000                | ~2-3 minutes      |
+| 20000                | ~12-14 minutes    |
+| 30000                | ~33-36 minutes    |
+
+
+### Cluster leadership transfer times
+
+Vault high availability clusters have a leader (also known as an active node)
+which is the server that accepts writes to the cluster and replicates the
+written data to the follower nodes. If the leader crashes or needs to be removed
+from the cluster, one of the follower nodes must take over leadership. This is
+known as a leadership transfer.
+
+Whenever a leadership transfer happens, the new active node must go through all
+of the mounts in the cluster and set them up before the node can be ready to be
+the leader. Because every namespace has at least 4 mounts (`sys`, `identity`,
+`cubbyhole`, and `token`), the time for a leadership transfer to complete will
+increase with the number of namespaces.
+
+Leadership transfer times observed for the [`vault operator step-down`](/vault/docs/commands/operator/step-down)
+command:
+
+| Number of namespaces | Time until a node is elected as leader |
+|----------------------|----------------------------------------|
+| 10                   | ~2 seconds                             |
+| 10000                | ~33-45 seconds                         |
+| 20000                | ~1-2 minutes                           |
+| 30000                | ~4 minutes                             |
+
+## System requirements
+
+### Minimum memory requirements
+
+Each namespace requires at least 435 KB of memory to store information
+about the paths available within the namespace. Given `N` namespaces, your
+Vault deployment must include at least (435 x N) KB memory for namespace support
+to avoid degraded performance.
+
+### Rollback and rotation worker requirements
+
+Sometimes, Vault secret and auth engines need to clean up data after a request
+is canceled or a request fails halfway through. Vault issues rollback operations
+every minute to each mount in order to periodically trigger the clean up
+process.
+
+By default, Vault uses 256 workers to perform rollback operations. Mounts with a
+large number of namespaces can become bottlenecks that slow down the overall
+rollback process. The effects of the slowdown vary based on the particular
+mounts. At minimum, your Vault deployment will take longer to fully purge stale
+data and periodic rotations may happen less frequently than intended.
+
+You can tell whether the number of rollback workers is sufficient by monitoring
+the following metrics:
+
+| Expected range | Metric                                                                                           |
+|----------------|--------------------------------------------------------------------------------------------------|
+| 0 – 256        | [`vault.rollback.queued`](/vault/docs/internals/telemetry/metrics/core-system#rollback-metrics)  |
+| 0 – 60000      | [`vault.rollback.waiting`](/vault/docs/internals/telemetry/metrics/core-system#rollback-metrics) |

@@ -1,0 +1,3 @@
+```release-note:change
+secrets/pki: sign-intermediate API will truncate notAfter if calculated to go beyond the signing issuer's notAfter. Previously the notAfter was permitted to go beyond leading to invalid chains.
+```

@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package server
 
 import (
@@ -5,21 +8,28 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/hashicorp/go-discover"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
+	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/osutil"
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
+	"github.com/hashicorp/vault/sdk/helper/testcluster"
+	"github.com/hashicorp/vault/vault/observations"
+	"github.com/mitchellh/mapstructure"
 )
 
 const (
@@ -28,9 +38,8 @@ const (
 	VaultDevKeyFilename  = "vault-key.pem"
 )
 
-var entConfigValidate = func(_ *Config, _ string) []configutil.ConfigError {
-	return nil
-}
+// Modified internally for testing.
+var validExperiments = experiments.ValidExperiments()
 
 // Config is the configuration for the vault server.
 type Config struct {
@@ -44,6 +53,8 @@ type Config struct {
 	HAStorage *Storage `hcl:"-"`
 
 	ServiceRegistration *ServiceRegistration `hcl:"-"`
+
+	Experiments []string `hcl:"experiments"`
 
 	CacheSize                int         `hcl:"cache_size"`
 	DisableCache             bool        `hcl:"-"`
@@ -59,14 +70,21 @@ type Config struct {
 	DefaultLeaseTTL    time.Duration `hcl:"-"`
 	DefaultLeaseTTLRaw interface{}   `hcl:"default_lease_ttl,alias:DefaultLeaseTTL"`
 
+	RemoveIrrevocableLeaseAfter    time.Duration `hcl:"-"`
+	RemoveIrrevocableLeaseAfterRaw interface{}   `hcl:"remove_irrevocable_lease_after,alias:RemoveIrrevocableLeaseAfter"`
+
 	ClusterCipherSuites string `hcl:"cluster_cipher_suites"`
 
 	PluginDirectory string `hcl:"plugin_directory"`
+	PluginTmpdir    string `hcl:"plugin_tmpdir"`
 
 	PluginFileUid int `hcl:"plugin_file_uid"`
 
 	PluginFilePermissions    int         `hcl:"-"`
 	PluginFilePermissionsRaw interface{} `hcl:"plugin_file_permissions,alias:PluginFilePermissions"`
+
+	EnableIntrospectionEndpoint    bool        `hcl:"-"`
+	EnableIntrospectionEndpointRaw interface{} `hcl:"introspection_endpoint,alias:EnableIntrospectionEndpoint"`
 
 	EnableRawEndpoint    bool        `hcl:"-"`
 	EnableRawEndpointRaw interface{} `hcl:"raw_storage_endpoint,alias:EnableRawEndpoint"`
@@ -75,6 +93,9 @@ type Config struct {
 	ClusterAddr          string      `hcl:"cluster_addr"`
 	DisableClustering    bool        `hcl:"-"`
 	DisableClusteringRaw interface{} `hcl:"disable_clustering,alias:DisableClustering"`
+
+	AllowAuditLogPrefixing    bool        `hcl:"-"`
+	AllowAuditLogPrefixingRaw interface{} `hcl:"allow_audit_log_prefixing,alias:AllowAuditLogPrefixing"`
 
 	DisablePerformanceStandby    bool        `hcl:"-"`
 	DisablePerformanceStandbyRaw interface{} `hcl:"disable_performance_standby,alias:DisablePerformanceStandby"`
@@ -94,12 +115,21 @@ type Config struct {
 	LogRequestsLevel    string      `hcl:"-"`
 	LogRequestsLevelRaw interface{} `hcl:"log_requests_level"`
 
+	DetectDeadlocks string `hcl:"detect_deadlocks"`
+
+	Observations *observations.ObservationSystemConfig `hcl:"observations"`
+
+	ImpreciseLeaseRoleTracking bool `hcl:"imprecise_lease_role_tracking"`
+
 	EnableResponseHeaderRaftNodeID    bool        `hcl:"-"`
 	EnableResponseHeaderRaftNodeIDRaw interface{} `hcl:"enable_response_header_raft_node_id"`
 
 	License          string `hcl:"-"`
 	LicensePath      string `hcl:"license_path"`
 	DisableSSCTokens bool   `hcl:"-"`
+
+	EnablePostUnsealTrace bool   `hcl:"enable_post_unseal_trace"`
+	PostUnsealTraceDir    string `hcl:"post_unseal_trace_directory"`
 }
 
 const (
@@ -117,12 +147,8 @@ func (c *Config) Validate(sourceFilePath string) []configutil.ConfigError {
 	for _, l := range c.Listeners {
 		results = append(results, l.Validate(sourceFilePath)...)
 	}
-	results = append(results, c.validateEnt(sourceFilePath)...)
+	results = append(results, entValidateConfig(c, sourceFilePath)...)
 	return results
-}
-
-func (c *Config) validateEnt(sourceFilePath string) []configutil.ConfigError {
-	return entConfigValidate(c, sourceFilePath)
 }
 
 // DevConfig is a Config that is used for dev mode of Vault.
@@ -158,13 +184,13 @@ ui = true
 }
 
 // DevTLSConfig is a Config that is used for dev tls mode of Vault.
-func DevTLSConfig(storageType, certDir string) (*Config, error) {
+func DevTLSConfig(storageType, certDir string, extraSANs []string) (*Config, error) {
 	ca, err := GenerateCA()
 	if err != nil {
 		return nil, err
 	}
 
-	cert, key, err := GenerateCert(ca.Template, ca.Signer)
+	cert, key, err := generateCert(ca.Template, ca.Signer, extraSANs)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +206,10 @@ func DevTLSConfig(storageType, certDir string) (*Config, error) {
 	if err := os.WriteFile(fmt.Sprintf("%s/%s", certDir, VaultDevKeyFilename), []byte(key), 0o400); err != nil {
 		return nil, err
 	}
+	return parseDevTLSConfig(storageType, certDir)
+}
 
+func parseDevTLSConfig(storageType, certDir string) (*Config, error) {
 	hclStr := `
 disable_mlock = true
 
@@ -203,8 +232,8 @@ storage "%s" {
 
 ui = true
 `
-
-	hclStr = fmt.Sprintf(hclStr, certDir, certDir, storageType)
+	certDirEscaped := strings.Replace(certDir, "\\", "\\\\", -1)
+	hclStr = fmt.Sprintf(hclStr, certDirEscaped, certDirEscaped, storageType)
 	parsed, err := ParseConfig(hclStr, "")
 	if err != nil {
 		return nil, err
@@ -307,6 +336,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DefaultLeaseTTL = c2.DefaultLeaseTTL
 	}
 
+	result.RemoveIrrevocableLeaseAfter = c.RemoveIrrevocableLeaseAfter
+	if c2.RemoveIrrevocableLeaseAfter > result.RemoveIrrevocableLeaseAfter {
+		result.RemoveIrrevocableLeaseAfter = c2.RemoveIrrevocableLeaseAfter
+	}
+
 	result.ClusterCipherSuites = c.ClusterCipherSuites
 	if c2.ClusterCipherSuites != "" {
 		result.ClusterCipherSuites = c2.ClusterCipherSuites
@@ -320,6 +354,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.EnableRawEndpoint = c.EnableRawEndpoint
 	if c2.EnableRawEndpoint {
 		result.EnableRawEndpoint = c2.EnableRawEndpoint
+	}
+
+	result.EnableIntrospectionEndpoint = c.EnableIntrospectionEndpoint
+	if c2.EnableIntrospectionEndpoint {
+		result.EnableIntrospectionEndpoint = c2.EnableIntrospectionEndpoint
 	}
 
 	result.APIAddr = c.APIAddr
@@ -345,6 +384,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.PluginDirectory = c2.PluginDirectory
 	}
 
+	result.PluginTmpdir = c.PluginTmpdir
+	if c2.PluginTmpdir != "" {
+		result.PluginTmpdir = c2.PluginTmpdir
+	}
+
 	result.PluginFileUid = c.PluginFileUid
 	if c2.PluginFileUid != 0 {
 		result.PluginFileUid = c2.PluginFileUid
@@ -359,6 +403,11 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.DisablePerformanceStandby = c.DisablePerformanceStandby
 	if c2.DisablePerformanceStandby {
 		result.DisablePerformanceStandby = c2.DisablePerformanceStandby
+	}
+
+	result.AllowAuditLogPrefixing = c.AllowAuditLogPrefixing
+	if c2.AllowAuditLogPrefixing {
+		result.AllowAuditLogPrefixing = c2.AllowAuditLogPrefixing
 	}
 
 	result.DisableSealWrap = c.DisableSealWrap
@@ -381,6 +430,35 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.LogRequestsLevel = c2.LogRequestsLevel
 	}
 
+	result.DetectDeadlocks = c.DetectDeadlocks
+	if c2.DetectDeadlocks != "" {
+		result.DetectDeadlocks = c2.DetectDeadlocks
+	}
+
+	result.DisablePrintableCheck = c.DisablePrintableCheck
+	if c2.DisablePrintableCheckRaw != nil {
+		result.DisablePrintableCheck = c2.DisablePrintableCheck
+	}
+	result.Observations = c.Observations
+	if c2.Observations != nil {
+		if result.Observations == nil {
+			result.Observations = &observations.ObservationSystemConfig{}
+		}
+		if c2.Observations.LedgerPath != "" {
+			result.Observations.LedgerPath = c2.Observations.LedgerPath
+		}
+		result.Observations.TypePrefixDenylist = append(result.Observations.TypePrefixDenylist, c2.Observations.TypePrefixDenylist...)
+		result.Observations.TypePrefixAllowlist = append(result.Observations.TypePrefixAllowlist, c2.Observations.TypePrefixAllowlist...)
+		if c2.Observations.FileMode != "" {
+			result.Observations.FileMode = c2.Observations.FileMode
+		}
+	}
+
+	result.ImpreciseLeaseRoleTracking = c.ImpreciseLeaseRoleTracking
+	if c2.ImpreciseLeaseRoleTracking {
+		result.ImpreciseLeaseRoleTracking = c2.ImpreciseLeaseRoleTracking
+	}
+
 	result.EnableResponseHeaderRaftNodeID = c.EnableResponseHeaderRaftNodeID
 	if c2.EnableResponseHeaderRaftNodeID {
 		result.EnableResponseHeaderRaftNodeID = c2.EnableResponseHeaderRaftNodeID
@@ -389,6 +467,16 @@ func (c *Config) Merge(c2 *Config) *Config {
 	result.LicensePath = c.LicensePath
 	if c2.LicensePath != "" {
 		result.LicensePath = c2.LicensePath
+	}
+
+	result.EnablePostUnsealTrace = c.EnablePostUnsealTrace
+	if c2.EnablePostUnsealTrace {
+		result.EnablePostUnsealTrace = c2.EnablePostUnsealTrace
+	}
+
+	result.PostUnsealTraceDir = c.PostUnsealTraceDir
+	if c2.PostUnsealTraceDir != "" {
+		result.PostUnsealTraceDir = c2.PostUnsealTraceDir
 	}
 
 	// Use values from top-level configuration for storage if set
@@ -416,17 +504,31 @@ func (c *Config) Merge(c2 *Config) *Config {
 		}
 	}
 
+	result.AdministrativeNamespacePath = c.AdministrativeNamespacePath
+	if c2.AdministrativeNamespacePath != "" {
+		result.AdministrativeNamespacePath = c2.AdministrativeNamespacePath
+	}
+
 	result.entConfig = c.entConfig.Merge(c2.entConfig)
+
+	result.Experiments = mergeExperiments(c.Experiments, c2.Experiments)
 
 	return result
 }
 
 // LoadConfig loads the configuration at the given path, regardless if
-// its a file or directory.
+// it's a file or directory.
 func LoadConfig(path string) (*Config, error) {
+	cfg, _, err := LoadConfigCheckDuplicate(path)
+	return cfg, err
+}
+
+// LoadConfigCheckDuplicate is the same as the above function but also checks for duplicate attributes
+// TODO (HCL_DUP_KEYS_DEPRECATION): keep only LoadConfig once deprecation is complete
+func LoadConfigCheckDuplicate(path string) (cfg *Config, duplicate bool, err error) {
 	fi, err := os.Stat(path)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	if fi.IsDir() {
@@ -436,33 +538,53 @@ func LoadConfig(path string) (*Config, error) {
 			var err error
 			enableFilePermissionsCheck, err = strconv.ParseBool(enableFilePermissionsCheckEnv)
 			if err != nil {
-				return nil, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
+				return nil, false, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
 			}
 		}
+		f, err := os.Open(path)
+		if err != nil {
+			return nil, false, err
+		}
+		defer f.Close()
 
 		if enableFilePermissionsCheck {
-			err = osutil.OwnerPermissionsMatch(path, 0, 0)
+			err = osutil.OwnerPermissionsMatchFile(f, 0, 0)
 			if err != nil {
-				return nil, err
+				return nil, false, err
 			}
 		}
-		return CheckConfig(LoadConfigDir(path))
+
+		cfg, duplicate, err = LoadConfigDirCheckDuplicate(path)
+		if err != nil {
+			return nil, duplicate, err
+		}
+	} else {
+		cfg, duplicate, err = LoadConfigFileCheckDuplicate(path)
+		if err != nil {
+			return nil, duplicate, err
+		}
 	}
-	return CheckConfig(LoadConfigFile(path))
+
+	cfg, err = CheckConfig(cfg)
+	return cfg, duplicate, err
 }
 
-func CheckConfig(c *Config, e error) (*Config, error) {
-	if e != nil {
-		return c, e
+func CheckConfig(c *Config) (*Config, error) {
+	if err := c.checkSealConfig(); err != nil {
+		return nil, err
 	}
 
-	if len(c.Seals) == 2 {
-		switch {
-		case c.Seals[0].Disabled && c.Seals[1].Disabled:
-			return nil, errors.New("seals: two seals provided but both are disabled")
-		case !c.Seals[0].Disabled && !c.Seals[1].Disabled:
-			return nil, errors.New("seals: two seals provided but neither is disabled")
+	sealMap := make(map[string]*configutil.KMS)
+	for _, seal := range c.Seals {
+		if seal.Name == "" {
+			return nil, errors.New("seals: seal name is empty")
 		}
+
+		if _, ok := sealMap[seal.Name]; ok {
+			return nil, errors.New("seals: seal names must be unique")
+		}
+
+		sealMap[seal.Name] = seal
 	}
 
 	return c, nil
@@ -470,15 +592,28 @@ func CheckConfig(c *Config, e error) (*Config, error) {
 
 // LoadConfigFile loads the configuration from the given file.
 func LoadConfigFile(path string) (*Config, error) {
-	// Read the file
-	d, err := ioutil.ReadFile(path)
+	cfg, _, err := LoadConfigFileCheckDuplicate(path)
+	return cfg, err
+}
+
+// LoadConfigFileCheckDuplicate is the same as the above function but also checks for duplicate attributes
+// TODO (HCL_DUP_KEYS_DEPRECATION): keep only ParseConfig once deprecation is complete
+func LoadConfigFileCheckDuplicate(path string) (cfg *Config, duplicate bool, err error) {
+	// Open the file
+	f, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return nil, false, err
+	}
+	defer f.Close()
+	// Read the file
+	d, err := io.ReadAll(f)
+	if err != nil {
+		return nil, false, err
 	}
 
-	conf, err := ParseConfig(string(d), path)
+	conf, duplicate, err := ParseConfigCheckDuplicate(string(d), path)
 	if err != nil {
-		return nil, err
+		return nil, duplicate, err
 	}
 
 	var enableFilePermissionsCheck bool
@@ -486,141 +621,166 @@ func LoadConfigFile(path string) (*Config, error) {
 		var err error
 		enableFilePermissionsCheck, err = strconv.ParseBool(enableFilePermissionsCheckEnv)
 		if err != nil {
-			return nil, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
+			return nil, duplicate, errors.New("Error parsing the environment variable VAULT_ENABLE_FILE_PERMISSIONS_CHECK")
 		}
 	}
 
 	if enableFilePermissionsCheck {
 		// check permissions of the config file
-		err = osutil.OwnerPermissionsMatch(path, 0, 0)
+		err = osutil.OwnerPermissionsMatchFile(f, 0, 0)
 		if err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 		// check permissions of the plugin directory
 		if conf.PluginDirectory != "" {
 
 			err = osutil.OwnerPermissionsMatch(conf.PluginDirectory, conf.PluginFileUid, conf.PluginFilePermissions)
 			if err != nil {
-				return nil, err
+				return nil, duplicate, err
 			}
 		}
 	}
-	return conf, nil
+	return conf, duplicate, nil
 }
 
 func ParseConfig(d, source string) (*Config, error) {
+	cfg, _, err := ParseConfigCheckDuplicate(d, source)
+	return cfg, err
+}
+
+// TODO (HCL_DUP_KEYS_DEPRECATION): keep only ParseConfig once deprecation is complete
+func ParseConfigCheckDuplicate(d, source string) (cfg *Config, duplicate bool, err error) {
 	// Parse!
-	obj, err := hcl.Parse(d)
+	obj, duplicate, err := random.ParseAndCheckForDuplicateHclAttributes(d)
 	if err != nil {
-		return nil, err
+		return nil, duplicate, err
 	}
 
 	// Start building the result
 	result := NewConfig()
 	if err := hcl.DecodeObject(result, obj); err != nil {
-		return nil, err
+		return nil, duplicate, err
 	}
 
 	if rendered, err := configutil.ParseSingleIPTemplate(result.APIAddr); err != nil {
-		return nil, err
+		return nil, duplicate, err
 	} else {
 		result.APIAddr = rendered
 	}
 	if rendered, err := configutil.ParseSingleIPTemplate(result.ClusterAddr); err != nil {
-		return nil, err
+		return nil, duplicate, err
 	} else {
 		result.ClusterAddr = rendered
 	}
 
-	sharedConfig, err := configutil.ParseConfig(d)
+	sharedConfig, dup, err := configutil.ParseConfigCheckDuplicate(d)
 	if err != nil {
-		return nil, err
+		return nil, duplicate, err
 	}
+	duplicate = duplicate || dup
 	result.SharedConfig = sharedConfig
 
 	if result.MaxLeaseTTLRaw != nil {
 		if result.MaxLeaseTTL, err = parseutil.ParseDurationSecond(result.MaxLeaseTTLRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 	if result.DefaultLeaseTTLRaw != nil {
 		if result.DefaultLeaseTTL, err = parseutil.ParseDurationSecond(result.DefaultLeaseTTLRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
+		}
+	}
+
+	if result.RemoveIrrevocableLeaseAfterRaw != nil {
+		if result.RemoveIrrevocableLeaseAfter, err = parseutil.ParseDurationSecond(result.RemoveIrrevocableLeaseAfterRaw); err != nil {
+			return nil, duplicate, err
 		}
 	}
 
 	if result.EnableUIRaw != nil {
 		if result.EnableUI, err = parseutil.ParseBool(result.EnableUIRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 
 	if result.DisableCacheRaw != nil {
 		if result.DisableCache, err = parseutil.ParseBool(result.DisableCacheRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 
 	if result.DisablePrintableCheckRaw != nil {
 		if result.DisablePrintableCheck, err = parseutil.ParseBool(result.DisablePrintableCheckRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 
 	if result.EnableRawEndpointRaw != nil {
 		if result.EnableRawEndpoint, err = parseutil.ParseBool(result.EnableRawEndpointRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
+		}
+	}
+
+	if result.EnableIntrospectionEndpointRaw != nil {
+		if result.EnableIntrospectionEndpoint, err = parseutil.ParseBool(result.EnableIntrospectionEndpointRaw); err != nil {
+			return nil, duplicate, err
 		}
 	}
 
 	if result.DisableClusteringRaw != nil {
 		if result.DisableClustering, err = parseutil.ParseBool(result.DisableClusteringRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 
 	if result.PluginFilePermissionsRaw != nil {
 		octalPermissionsString, err := parseutil.ParseString(result.PluginFilePermissionsRaw)
 		if err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 		pluginFilePermissions, err := strconv.ParseInt(octalPermissionsString, 8, 64)
 		if err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 		if pluginFilePermissions < math.MinInt || pluginFilePermissions > math.MaxInt {
-			return nil, fmt.Errorf("file permission value %v cannot be safely cast to int: exceeds bounds (%v, %v)", pluginFilePermissions, math.MinInt, math.MaxInt)
+			return nil, duplicate, fmt.Errorf("file permission value %v cannot be safely cast to int: exceeds bounds (%v, %v)", pluginFilePermissions, math.MinInt, math.MaxInt)
 		}
 		result.PluginFilePermissions = int(pluginFilePermissions)
 	}
 
 	if result.DisableSentinelTraceRaw != nil {
 		if result.DisableSentinelTrace, err = parseutil.ParseBool(result.DisableSentinelTraceRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 
 	if result.DisablePerformanceStandbyRaw != nil {
 		if result.DisablePerformanceStandby, err = parseutil.ParseBool(result.DisablePerformanceStandbyRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
+		}
+	}
+
+	if result.AllowAuditLogPrefixingRaw != nil {
+		if result.AllowAuditLogPrefixing, err = parseutil.ParseBool(result.AllowAuditLogPrefixingRaw); err != nil {
+			return nil, duplicate, err
 		}
 	}
 
 	if result.DisableSealWrapRaw != nil {
 		if result.DisableSealWrap, err = parseutil.ParseBool(result.DisableSealWrapRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 
 	if result.DisableIndexingRaw != nil {
 		if result.DisableIndexing, err = parseutil.ParseBool(result.DisableIndexingRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 
 	if result.EnableResponseHeaderHostnameRaw != nil {
 		if result.EnableResponseHeaderHostname, err = parseutil.ParseBool(result.EnableResponseHeaderHostnameRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 
@@ -631,27 +791,27 @@ func ParseConfig(d, source string) (*Config, error) {
 
 	if result.EnableResponseHeaderRaftNodeIDRaw != nil {
 		if result.EnableResponseHeaderRaftNodeID, err = parseutil.ParseBool(result.EnableResponseHeaderRaftNodeIDRaw); err != nil {
-			return nil, err
+			return nil, duplicate, err
 		}
 	}
 
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
-		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
+		return nil, duplicate, fmt.Errorf("error parsing: file doesn't contain a root object")
 	}
 
 	// Look for storage but still support old backend
 	if o := list.Filter("storage"); len(o.Items) > 0 {
 		delete(result.UnusedKeys, "storage")
 		if err := ParseStorage(result, o, "storage"); err != nil {
-			return nil, fmt.Errorf("error parsing 'storage': %w", err)
+			return nil, duplicate, fmt.Errorf("error parsing 'storage': %w", err)
 		}
 		result.found(result.Storage.Type, result.Storage.Type)
 	} else {
 		delete(result.UnusedKeys, "backend")
 		if o := list.Filter("backend"); len(o.Items) > 0 {
 			if err := ParseStorage(result, o, "backend"); err != nil {
-				return nil, fmt.Errorf("error parsing 'backend': %w", err)
+				return nil, duplicate, fmt.Errorf("error parsing 'backend': %w", err)
 			}
 		}
 	}
@@ -659,13 +819,13 @@ func ParseConfig(d, source string) (*Config, error) {
 	if o := list.Filter("ha_storage"); len(o.Items) > 0 {
 		delete(result.UnusedKeys, "ha_storage")
 		if err := parseHAStorage(result, o, "ha_storage"); err != nil {
-			return nil, fmt.Errorf("error parsing 'ha_storage': %w", err)
+			return nil, duplicate, fmt.Errorf("error parsing 'ha_storage': %w", err)
 		}
 	} else {
 		if o := list.Filter("ha_backend"); len(o.Items) > 0 {
 			delete(result.UnusedKeys, "ha_backend")
 			if err := parseHAStorage(result, o, "ha_backend"); err != nil {
-				return nil, fmt.Errorf("error parsing 'ha_backend': %w", err)
+				return nil, duplicate, fmt.Errorf("error parsing 'ha_backend': %w", err)
 			}
 		}
 	}
@@ -674,12 +834,16 @@ func ParseConfig(d, source string) (*Config, error) {
 	if o := list.Filter("service_registration"); len(o.Items) > 0 {
 		delete(result.UnusedKeys, "service_registration")
 		if err := parseServiceRegistration(result, o, "service_registration"); err != nil {
-			return nil, fmt.Errorf("error parsing 'service_registration': %w", err)
+			return nil, duplicate, fmt.Errorf("error parsing 'service_registration': %w", err)
 		}
 	}
 
-	if err := result.parseConfig(list); err != nil {
-		return nil, fmt.Errorf("error parsing enterprise config: %w", err)
+	if err := validateExperiments(result.Experiments); err != nil {
+		return nil, duplicate, fmt.Errorf("error validating experiment(s) from config: %w", err)
+	}
+
+	if err := result.parseConfig(list, source); err != nil {
+		return nil, duplicate, fmt.Errorf("error parsing enterprise config: %w", err)
 	}
 
 	// Remove all unused keys from Config that were satisfied by SharedConfig.
@@ -691,24 +855,94 @@ func ParseConfig(d, source string) (*Config, error) {
 		}
 	}
 
-	return result, nil
+	return result, duplicate, nil
+}
+
+func ExperimentsFromEnvAndCLI(config *Config, envKey string, flagExperiments []string) error {
+	if envExperimentsRaw := os.Getenv(envKey); envExperimentsRaw != "" {
+		envExperiments := strings.Split(envExperimentsRaw, ",")
+		err := validateExperiments(envExperiments)
+		if err != nil {
+			return fmt.Errorf("error validating experiment(s) from environment variable %q: %w", envKey, err)
+		}
+
+		config.Experiments = mergeExperiments(config.Experiments, envExperiments)
+	}
+
+	if len(flagExperiments) != 0 {
+		err := validateExperiments(flagExperiments)
+		if err != nil {
+			return fmt.Errorf("error validating experiment(s) from command line flag: %w", err)
+		}
+
+		config.Experiments = mergeExperiments(config.Experiments, flagExperiments)
+	}
+
+	return nil
+}
+
+// validateExperiments checks each experiment is a known experiment.
+func validateExperiments(experiments []string) error {
+	var invalid []string
+
+	for _, experiment := range experiments {
+		if !strutil.StrListContains(validExperiments, experiment) {
+			invalid = append(invalid, experiment)
+		}
+	}
+
+	if len(invalid) != 0 {
+		return fmt.Errorf("valid experiment(s) are %s, but received the following invalid experiment(s): %s",
+			strings.Join(validExperiments, ", "),
+			strings.Join(invalid, ", "))
+	}
+
+	return nil
+}
+
+// mergeExperiments returns the logical OR of the two sets.
+func mergeExperiments(left, right []string) []string {
+	processed := map[string]struct{}{}
+	var result []string
+	for _, l := range left {
+		if _, seen := processed[l]; !seen {
+			result = append(result, l)
+		}
+		processed[l] = struct{}{}
+	}
+
+	for _, r := range right {
+		if _, seen := processed[r]; !seen {
+			result = append(result, r)
+			processed[r] = struct{}{}
+		}
+	}
+
+	return result
 }
 
 // LoadConfigDir loads all the configurations in the given directory
 // in alphabetical order.
 func LoadConfigDir(dir string) (*Config, error) {
+	cfg, _, err := LoadConfigDirCheckDuplicate(dir)
+	return cfg, err
+}
+
+// LoadConfigDirCheckDuplicate is the same as the above but checks for duplciate HCL attributes
+// TODO (HCL_DUP_KEYS_DEPRECATION): keep only LoadConfigDir once deprecation is complete
+func LoadConfigDirCheckDuplicate(dir string) (cfg *Config, duplicate bool, err error) {
 	f, err := os.Open(dir)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	defer f.Close()
 
 	fi, err := f.Stat()
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if !fi.IsDir() {
-		return nil, fmt.Errorf("configuration path must be a directory: %q", dir)
+		return nil, false, fmt.Errorf("configuration path must be a directory: %q", dir)
 	}
 
 	var files []string
@@ -717,7 +951,7 @@ func LoadConfigDir(dir string) (*Config, error) {
 		var fis []os.FileInfo
 		fis, err = f.Readdir(128)
 		if err != nil && err != io.EOF {
-			return nil, err
+			return nil, false, err
 		}
 
 		for _, fi := range fis {
@@ -745,10 +979,11 @@ func LoadConfigDir(dir string) (*Config, error) {
 
 	result := NewConfig()
 	for _, f := range files {
-		config, err := LoadConfigFile(f)
+		config, dup, err := LoadConfigFileCheckDuplicate(f)
 		if err != nil {
-			return nil, fmt.Errorf("error loading %q: %w", f, err)
+			return nil, duplicate, fmt.Errorf("error loading %q: %w", f, err)
 		}
+		duplicate = duplicate || dup
 
 		if result == nil {
 			result = config
@@ -757,7 +992,7 @@ func LoadConfigDir(dir string) (*Config, error) {
 		}
 	}
 
-	return result, nil
+	return result, duplicate, nil
 }
 
 // isTemporaryFile returns true or false depending on whether the
@@ -788,33 +1023,49 @@ func ParseStorage(result *Config, list *ast.ObjectList, name string) error {
 	}
 
 	m := make(map[string]string)
-	for key, val := range config {
-		valStr, ok := val.(string)
+	for k, v := range config {
+		vStr, ok := v.(string)
 		if ok {
-			m[key] = valStr
+			var err error
+			m[k], err = normalizeStorageConfigAddresses(key, k, vStr)
+			if err != nil {
+				return err
+			}
 			continue
 		}
-		valBytes, err := json.Marshal(val)
-		if err != nil {
-			return err
+
+		var err error
+		var vBytes []byte
+		// Raft's retry_join requires special normalization due to its complexity
+		if key == "raft" && k == "retry_join" {
+			vBytes, err = normalizeRaftRetryJoin(v)
+			if err != nil {
+				return err
+			}
+		} else {
+			vBytes, err = json.Marshal(v)
+			if err != nil {
+				return err
+			}
 		}
-		m[key] = string(valBytes)
+
+		m[k] = string(vBytes)
 	}
 
 	// Pull out the redirect address since it's common to all backends
 	var redirectAddr string
 	if v, ok := m["redirect_addr"]; ok {
-		redirectAddr = v
+		redirectAddr = configutil.NormalizeAddr(v)
 		delete(m, "redirect_addr")
 	} else if v, ok := m["advertise_addr"]; ok {
-		redirectAddr = v
+		redirectAddr = configutil.NormalizeAddr(v)
 		delete(m, "advertise_addr")
 	}
 
 	// Pull out the cluster address since it's common to all backends
 	var clusterAddr string
 	if v, ok := m["cluster_addr"]; ok {
-		clusterAddr = v
+		clusterAddr = configutil.NormalizeAddr(v)
 		delete(m, "cluster_addr")
 	}
 
@@ -830,11 +1081,11 @@ func ParseStorage(result *Config, list *ast.ObjectList, name string) error {
 
 	// Override with top-level values if they are set
 	if result.APIAddr != "" {
-		redirectAddr = result.APIAddr
+		redirectAddr = configutil.NormalizeAddr(result.APIAddr)
 	}
 
 	if result.ClusterAddr != "" {
-		clusterAddr = result.ClusterAddr
+		clusterAddr = configutil.NormalizeAddr(result.ClusterAddr)
 	}
 
 	if result.DisableClusteringRaw != nil {
@@ -849,6 +1100,117 @@ func ParseStorage(result *Config, list *ast.ObjectList, name string) error {
 		Config:            m,
 	}
 	return nil
+}
+
+// storageAddressKeys maps a storage backend type to its associated
+// configuration whose values are URLs, IP addresses, or host:port style
+// addresses. All physical storage types must have an entry in this map,
+// otherwise our normalization check will fail when parsing the storage entry
+// config. Physical storage types which don't contain such keys should include
+// an empty array.
+var storageAddressKeys = map[string][]string{
+	"aerospike":              {"hostname"},
+	"alicloudoss":            {"endpoint"},
+	"azure":                  {"arm_endpoint"},
+	"cassandra":              {"hosts"},
+	"cockroachdb":            {"connection_url"},
+	"consul":                 {"address", "service_address"},
+	"couchdb":                {"endpoint"},
+	"dynamodb":               {"endpoint"},
+	"etcd":                   {"address", "discovery_srv"},
+	"file":                   {},
+	"filesystem":             {},
+	"foundationdb":           {},
+	"gcs":                    {},
+	"inmem":                  {},
+	"inmem_ha":               {},
+	"inmem_transactional":    {},
+	"inmem_transactional_ha": {},
+	"manta":                  {"url"},
+	"mssql":                  {"server"},
+	"mysql":                  {"address"},
+	"oci":                    {},
+	"postgresql":             {"connection_url"},
+	"raft":                   {}, // retry_join is handled separately in normalizeRaftRetryJoin()
+	"s3":                     {"endpoint"},
+	"spanner":                {},
+	"swift":                  {"auth_url", "storage_url"},
+	"zookeeper":              {"address"},
+}
+
+// normalizeStorageConfigAddresses takes a storage name, a configuration key
+// and it's associated value and will normalize any URLs, IP addresses, or
+// host:port style addresses.
+func normalizeStorageConfigAddresses(storage string, key string, value string) (string, error) {
+	keys, ok := storageAddressKeys[storage]
+	if !ok {
+		return "", fmt.Errorf("unknown storage type %s", storage)
+	}
+
+	if slices.Contains(keys, key) {
+		return configutil.NormalizeAddr(value), nil
+	}
+
+	return value, nil
+}
+
+// normalizeRaftRetryJoin takes the hcl decoded value representation of a
+// retry_join stanza and normalizes any URLs, IP addresses, or host:port style
+// addresses, and returns the value encoded as JSON.
+func normalizeRaftRetryJoin(val any) ([]byte, error) {
+	res := []map[string]any{}
+
+	// Depending on whether the retry_join stanzas were configured as an attribute,
+	// a block, or a mixture of both, we'll get different values from which we
+	// need to extract our individual retry joins stanzas.
+	stanzas := []map[string]any{}
+	if retryJoin, ok := val.([]map[string]any); ok {
+		// retry_join stanzas are defined as blocks
+		stanzas = retryJoin
+	} else {
+		// retry_join stanzas are defined as attributes or attributes and blocks
+		retryJoin, ok := val.([]any)
+		if !ok {
+			// retry_join stanzas have not been configured correctly
+			return nil, fmt.Errorf("malformed retry_join stanza: %v", val)
+		}
+
+		for _, stanza := range retryJoin {
+			stanzaVal, ok := stanza.(map[string]any)
+			if !ok {
+				return nil, fmt.Errorf("malformed retry_join stanza: %v", stanza)
+			}
+			stanzas = append(stanzas, stanzaVal)
+		}
+	}
+
+	for _, stanza := range stanzas {
+		normalizedStanza := map[string]any{}
+		for k, v := range stanza {
+			switch k {
+			case "auto_join":
+				cfg, err := discover.Parse(v.(string))
+				if err != nil {
+					return nil, err
+				}
+				for k, v := range cfg {
+					// These are auto_join keys that are valid for the provider in go-discover
+					if slices.Contains([]string{"domain", "auth_url", "url", "host"}, k) {
+						cfg[k] = configutil.NormalizeAddr(v)
+					}
+				}
+				normalizedStanza[k] = cfg.String()
+			case "leader_api_addr":
+				normalizedStanza[k] = configutil.NormalizeAddr(v.(string))
+			default:
+				normalizedStanza[k] = v
+			}
+		}
+
+		res = append(res, normalizedStanza)
+	}
+
+	return json.Marshal(res)
 }
 
 func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
@@ -870,33 +1232,49 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 	}
 
 	m := make(map[string]string)
-	for key, val := range config {
-		valStr, ok := val.(string)
+	for k, v := range config {
+		vStr, ok := v.(string)
 		if ok {
-			m[key] = valStr
+			var err error
+			m[k], err = normalizeStorageConfigAddresses(key, k, vStr)
+			if err != nil {
+				return err
+			}
 			continue
 		}
-		valBytes, err := json.Marshal(val)
-		if err != nil {
-			return err
+
+		var err error
+		var vBytes []byte
+		// Raft's retry_join requires special normalization due to its complexity
+		if key == "raft" && k == "retry_join" {
+			vBytes, err = normalizeRaftRetryJoin(v)
+			if err != nil {
+				return err
+			}
+		} else {
+			vBytes, err = json.Marshal(v)
+			if err != nil {
+				return err
+			}
 		}
-		m[key] = string(valBytes)
+
+		m[k] = string(vBytes)
 	}
 
 	// Pull out the redirect address since it's common to all backends
 	var redirectAddr string
 	if v, ok := m["redirect_addr"]; ok {
-		redirectAddr = v
+		redirectAddr = configutil.NormalizeAddr(v)
 		delete(m, "redirect_addr")
 	} else if v, ok := m["advertise_addr"]; ok {
-		redirectAddr = v
+		redirectAddr = configutil.NormalizeAddr(v)
 		delete(m, "advertise_addr")
 	}
 
 	// Pull out the cluster address since it's common to all backends
 	var clusterAddr string
 	if v, ok := m["cluster_addr"]; ok {
-		clusterAddr = v
+		clusterAddr = configutil.NormalizeAddr(v)
 		delete(m, "cluster_addr")
 	}
 
@@ -912,11 +1290,11 @@ func parseHAStorage(result *Config, list *ast.ObjectList, name string) error {
 
 	// Override with top-level values if they are set
 	if result.APIAddr != "" {
-		redirectAddr = result.APIAddr
+		redirectAddr = configutil.NormalizeAddr(result.APIAddr)
 	}
 
 	if result.ClusterAddr != "" {
-		clusterAddr = result.ClusterAddr
+		clusterAddr = configutil.NormalizeAddr(result.ClusterAddr)
 	}
 
 	if result.DisableClusteringRaw != nil {
@@ -948,6 +1326,12 @@ func parseServiceRegistration(result *Config, list *ast.ObjectList, name string)
 	var m map[string]string
 	if err := hcl.DecodeObject(&m, item.Val); err != nil {
 		return multierror.Prefix(err, fmt.Sprintf("%s.%s:", name, key))
+	}
+
+	if key == "consul" {
+		if addr, ok := m["address"]; ok {
+			m["address"] = configutil.NormalizeAddr(addr)
+		}
 	}
 
 	result.ServiceRegistration = &ServiceRegistration{
@@ -984,15 +1368,20 @@ func (c *Config) Sanitized() map[string]interface{} {
 		"max_lease_ttl":     c.MaxLeaseTTL / time.Second,
 		"default_lease_ttl": c.DefaultLeaseTTL / time.Second,
 
+		"remove_irrevocable_lease_after": c.RemoveIrrevocableLeaseAfter / time.Second,
+
 		"cluster_cipher_suites": c.ClusterCipherSuites,
 
 		"plugin_directory": c.PluginDirectory,
+		"plugin_tmpdir":    c.PluginTmpdir,
 
 		"plugin_file_uid": c.PluginFileUid,
 
 		"plugin_file_permissions": c.PluginFilePermissions,
 
 		"raw_storage_endpoint": c.EnableRawEndpoint,
+
+		"introspection_endpoint": c.EnableIntrospectionEndpoint,
 
 		"api_addr":           c.APIAddr,
 		"cluster_addr":       c.ClusterAddr,
@@ -1002,13 +1391,21 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 		"disable_sealwrap": c.DisableSealWrap,
 
-		"disable_indexing": c.DisableIndexing,
-
+		"disable_indexing":                c.DisableIndexing,
+		"allow_audit_log_prefixing":       c.AllowAuditLogPrefixing,
 		"enable_response_header_hostname": c.EnableResponseHeaderHostname,
 
 		"enable_response_header_raft_node_id": c.EnableResponseHeaderRaftNodeID,
 
 		"log_requests_level": c.LogRequestsLevel,
+		"experiments":        c.Experiments,
+
+		"detect_deadlocks": c.DetectDeadlocks,
+
+		"imprecise_lease_role_tracking": c.ImpreciseLeaseRoleTracking,
+
+		"enable_post_unseal_trace":    c.EnablePostUnsealTrace,
+		"post_unseal_trace_directory": c.PostUnsealTraceDir,
 	}
 	for k, v := range sharedResult {
 		result[k] = v
@@ -1016,23 +1413,50 @@ func (c *Config) Sanitized() map[string]interface{} {
 
 	// Sanitize storage stanza
 	if c.Storage != nil {
+		storageType := c.Storage.Type
 		sanitizedStorage := map[string]interface{}{
-			"type":               c.Storage.Type,
+			"type":               storageType,
 			"redirect_addr":      c.Storage.RedirectAddr,
 			"cluster_addr":       c.Storage.ClusterAddr,
 			"disable_clustering": c.Storage.DisableClustering,
 		}
+
+		if storageType == "raft" {
+			sanitizedStorage["raft"] = map[string]interface{}{
+				"max_entry_size": c.Storage.Config["max_entry_size"],
+			}
+			for k, v := range c.Storage.Config {
+				sanitizedStorage["raft"].(map[string]interface{})[k] = v
+			}
+		}
+
 		result["storage"] = sanitizedStorage
+	}
+
+	// Sanitize observations stanza
+	if c.Observations != nil {
+		sanitizedObservations := map[string]interface{}{
+			"ledger_path": c.Observations.LedgerPath,
+		}
+		result["observations"] = sanitizedObservations
 	}
 
 	// Sanitize HA storage stanza
 	if c.HAStorage != nil {
+		haStorageType := c.HAStorage.Type
 		sanitizedHAStorage := map[string]interface{}{
-			"type":               c.HAStorage.Type,
+			"type":               haStorageType,
 			"redirect_addr":      c.HAStorage.RedirectAddr,
 			"cluster_addr":       c.HAStorage.ClusterAddr,
 			"disable_clustering": c.HAStorage.DisableClustering,
 		}
+
+		if haStorageType == "raft" {
+			sanitizedHAStorage["raft"] = map[string]interface{}{
+				"max_entry_size": c.HAStorage.Config["max_entry_size"],
+			}
+		}
+
 		result["ha_storage"] = sanitizedHAStorage
 	}
 
@@ -1070,4 +1494,13 @@ func (c *Config) Prune() {
 func (c *Config) found(s, k string) {
 	delete(c.UnusedKeys, s)
 	c.FoundKeys = append(c.FoundKeys, k)
+}
+
+func (c *Config) ToVaultNodeConfig() (*testcluster.VaultNodeConfig, error) {
+	var vnc testcluster.VaultNodeConfig
+	err := mapstructure.Decode(c, &vnc)
+	if err != nil {
+		return nil, err
+	}
+	return &vnc, nil
 }

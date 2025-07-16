@@ -1,24 +1,27 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package command
 
 import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/cli"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/vault/command/server"
-	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -30,13 +33,14 @@ func init() {
 }
 
 func TestMigration(t *testing.T) {
+	handlers := newVaultHandlers()
 	t.Run("Default", func(t *testing.T) {
 		data := generateData()
 
-		fromFactory := physicalBackends["file"]
+		fromFactory := handlers.physicalBackends["file"]
 
-		folder := filepath.Join(os.TempDir(), testhelpers.RandomWithPrefix("migrator"))
-		defer os.RemoveAll(folder)
+		folder := t.TempDir()
+
 		confFrom := map[string]string{
 			"path": folder,
 		}
@@ -49,7 +53,44 @@ func TestMigration(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		toFactory := physicalBackends["inmem"]
+		toFactory := handlers.physicalBackends["inmem"]
+		confTo := map[string]string{}
+		to, err := toFactory(confTo, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		cmd := OperatorMigrateCommand{
+			logger: log.NewNullLogger(),
+		}
+		if err := cmd.migrateAll(context.Background(), from, to, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := compareStoredData(to, data, ""); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("Concurrent migration", func(t *testing.T) {
+		data := generateData()
+
+		fromFactory := handlers.physicalBackends["file"]
+
+		folder := t.TempDir()
+
+		confFrom := map[string]string{
+			"path": folder,
+		}
+
+		from, err := fromFactory(confFrom, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := storeData(from, data); err != nil {
+			t.Fatal(err)
+		}
+
+		toFactory := handlers.physicalBackends["inmem"]
 		confTo := map[string]string{}
 		to, err := toFactory(confTo, nil)
 		if err != nil {
@@ -59,10 +100,10 @@ func TestMigration(t *testing.T) {
 		cmd := OperatorMigrateCommand{
 			logger: log.NewNullLogger(),
 		}
-		if err := cmd.migrateAll(context.Background(), from, to); err != nil {
+
+		if err := cmd.migrateAll(context.Background(), from, to, 10); err != nil {
 			t.Fatal(err)
 		}
-
 		if err := compareStoredData(to, data, ""); err != nil {
 			t.Fatal(err)
 		}
@@ -71,7 +112,7 @@ func TestMigration(t *testing.T) {
 	t.Run("Start option", func(t *testing.T) {
 		data := generateData()
 
-		fromFactory := physicalBackends["inmem"]
+		fromFactory := handlers.physicalBackends["inmem"]
 		confFrom := map[string]string{}
 		from, err := fromFactory(confFrom, nil)
 		if err != nil {
@@ -81,9 +122,8 @@ func TestMigration(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		toFactory := physicalBackends["file"]
-		folder := filepath.Join(os.TempDir(), testhelpers.RandomWithPrefix("migrator"))
-		defer os.RemoveAll(folder)
+		toFactory := handlers.physicalBackends["file"]
+		folder := t.TempDir()
 		confTo := map[string]string{
 			"path": folder,
 		}
@@ -99,7 +139,46 @@ func TestMigration(t *testing.T) {
 			logger:    log.NewNullLogger(),
 			flagStart: start,
 		}
-		if err := cmd.migrateAll(context.Background(), from, to); err != nil {
+		if err := cmd.migrateAll(context.Background(), from, to, 1); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := compareStoredData(to, data, start); err != nil {
+			t.Fatal(err)
+		}
+	})
+
+	t.Run("Start option (parallel)", func(t *testing.T) {
+		data := generateData()
+
+		fromFactory := handlers.physicalBackends["inmem"]
+		confFrom := map[string]string{}
+		from, err := fromFactory(confFrom, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := storeData(from, data); err != nil {
+			t.Fatal(err)
+		}
+
+		toFactory := handlers.physicalBackends["file"]
+		folder := t.TempDir()
+		confTo := map[string]string{
+			"path": folder,
+		}
+
+		to, err := toFactory(confTo, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		const start = "m"
+
+		cmd := OperatorMigrateCommand{
+			logger:    log.NewNullLogger(),
+			flagStart: start,
+		}
+		if err := cmd.migrateAll(context.Background(), from, to, 10); err != nil {
 			t.Fatal(err)
 		}
 
@@ -109,28 +188,32 @@ func TestMigration(t *testing.T) {
 	})
 
 	t.Run("Config parsing", func(t *testing.T) {
-		cmd := new(OperatorMigrateCommand)
-
-		cfgName := filepath.Join(os.TempDir(), testhelpers.RandomWithPrefix("migrator"))
-		ioutil.WriteFile(cfgName, []byte(`
-storage_source "src_type" {
+		ui := cli.NewMockUi()
+		cmd := &OperatorMigrateCommand{
+			BaseCommand: &BaseCommand{
+				UI: ui,
+			},
+		}
+		cfgName := filepath.Join(t.TempDir(), "migrator")
+		os.WriteFile(cfgName, []byte(`
+storage_source "consul" {
   path = "src_path"
 }
 
-storage_destination "dest_type" {
+storage_destination "raft" {
+  path = "dest_path"
   path = "dest_path"
 }`), 0o644)
-		defer os.Remove(cfgName)
 
 		expCfg := &migratorConfig{
 			StorageSource: &server.Storage{
-				Type: "src_type",
+				Type: "consul",
 				Config: map[string]string{
 					"path": "src_path",
 				},
 			},
 			StorageDestination: &server.Storage{
-				Type: "dest_type",
+				Type: "raft",
 				Config: map[string]string{
 					"path": "dest_path",
 				},
@@ -143,9 +226,12 @@ storage_destination "dest_type" {
 		if diff := deep.Equal(cfg, expCfg); diff != nil {
 			t.Fatal(diff)
 		}
+		// TODO (HCL_DUP_KEYS_DEPRECATION): Remove warning and instead add one of these "verifyBad" tests down below
+		// to ensure that duplicate attributes fail to parse.
+		strings.Contains(ui.ErrorWriter.String(), "WARNING: Duplicate keys found in migration configuration file, duplicate keys in HCL files are deprecated and will be forbidden in a future release.")
 
 		verifyBad := func(cfg string) {
-			ioutil.WriteFile(cfgName, []byte(cfg), 0o644)
+			os.WriteFile(cfgName, []byte(cfg), 0o644)
 			_, err := cmd.loadMigratorConfig(cfgName)
 			if err == nil {
 				t.Fatalf("expected error but none received from: %v", cfg)
@@ -154,46 +240,47 @@ storage_destination "dest_type" {
 
 		// missing source
 		verifyBad(`
-storage_destination "dest_type" {
+storage_destination "raft" {
   path = "dest_path"
 }`)
 
 		// missing destination
 		verifyBad(`
-storage_source "src_type" {
+storage_source "consul" {
   path = "src_path"
 }`)
 
 		// duplicate source
 		verifyBad(`
-storage_source "src_type" {
+storage_source "consul" {
   path = "src_path"
 }
 
-storage_source "src_type2" {
+storage_source "raft" {
   path = "src_path"
 }
 
-storage_destination "dest_type" {
+storage_destination "raft" {
   path = "dest_path"
 }`)
 
 		// duplicate destination
 		verifyBad(`
-storage_source "src_type" {
+storage_source "consul" {
   path = "src_path"
 }
 
-storage_destination "dest_type" {
+storage_destination "raft" {
   path = "dest_path"
 }
 
-storage_destination "dest_type2" {
+storage_destination "consul" {
   path = "dest_path"
 }`)
 	})
+
 	t.Run("DFS Scan", func(t *testing.T) {
-		s, _ := physicalBackends["inmem"](map[string]string{}, nil)
+		s, _ := handlers.physicalBackends["inmem"](map[string]string{}, nil)
 
 		data := generateData()
 		data["cc"] = []byte{}
@@ -204,9 +291,16 @@ storage_destination "dest_type2" {
 
 		l := randomLister{s}
 
-		var out []string
-		dfsScan(context.Background(), l, func(ctx context.Context, path string) error {
-			out = append(out, path)
+		type SafeAppend struct {
+			out  []string
+			lock sync.Mutex
+		}
+		outKeys := SafeAppend{}
+		dfsScan(context.Background(), l, 10, func(ctx context.Context, path string) error {
+			outKeys.lock.Lock()
+			defer outKeys.lock.Unlock()
+
+			outKeys.out = append(outKeys.out, path)
 			return nil
 		})
 
@@ -218,8 +312,11 @@ storage_destination "dest_type2" {
 			keys = append(keys, key)
 		}
 		sort.Strings(keys)
-		if !reflect.DeepEqual(keys, out) {
-			t.Fatalf("expected equal: %v, %v", keys, out)
+		outKeys.lock.Lock()
+		sort.Strings(outKeys.out)
+		outKeys.lock.Unlock()
+		if !reflect.DeepEqual(keys, outKeys.out) {
+			t.Fatalf("expected equal: %v, %v", keys, outKeys.out)
 		}
 	})
 }

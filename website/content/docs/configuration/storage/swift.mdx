@@ -1,12 +1,11 @@
 ---
 layout: docs
-page_title: Swift - Storage Backends - Configuration
-description: |-
-  The Swift storage backend is used to persist Vault's data in an OpenStack
-  Swift Container.
+page_title: Swift configuration
+description: >-
+  Configure Vault backend storage to use OpenStack Swift containers.
 ---
 
-# Swift Storage Backend
+# Swift configuration for Vault backend storage
 
 The Swift storage backend is used to persist Vault's data in an
 [OpenStack Swift Container][swift].
@@ -28,7 +27,7 @@ storage "swift" {
 }
 ```
 
-## `swift` Parameters
+## `swift` parameters
 
 - `auth_url` `(string: <required>)` – Specifies the OpenStack authentication
   endpoint. This can also be provided via the environment variable `OS_AUTH_URL`.
@@ -63,9 +62,9 @@ storage "swift" {
 
 - `auth_token` `(string: "")` - Specifies auth token from alternate authentication. This can also be provided via the environment variable `OS_AUTH_TOKEN`.
 
-## `swift` Examples
+## `swift` examples
 
-### Default Example
+### Default example
 
 This example shows a default configuration for Swift.
 

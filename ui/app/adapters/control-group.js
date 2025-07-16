@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import ApplicationAdapter from './application';
 
 export default ApplicationAdapter.extend({
@@ -5,8 +10,8 @@ export default ApplicationAdapter.extend({
     return 'control-group';
   },
 
-  findRecord(store, type, id) {
-    let baseUrl = this.buildURL(type.modelName);
+  async findRecord(store, type, id) {
+    const baseUrl = this.buildURL(type.modelName);
     return this.ajax(`${baseUrl}/request`, 'POST', {
       data: {
         accessor: id,
@@ -18,7 +23,7 @@ export default ApplicationAdapter.extend({
   },
 
   urlForUpdateRecord(id, modelName) {
-    let base = this.buildURL(modelName);
+    const base = this.buildURL(modelName);
     return `${base}/authorize`;
   },
 });

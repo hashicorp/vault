@@ -1,0 +1,64 @@
+<a id="privileged-endpoints" />
+
+<Note>
+  The CLI commands associated with restricted API paths are also restricted.
+</Note>
+
+API path                                    | Root | Admin
+------------------------------------------- | ---- | -----
+`sys/activation-flags/secrets-sync/activate`| YES  | NO
+`sys/audit`                                 | YES  | NO
+`sys/audit-hash`                            | YES  | YES
+`sys/config/auditing/*`                     | YES  | NO
+`sys/config/cors`                           | YES  | NO
+`sys/config/group-policy-application`       | YES  | YES
+`sys/config/reload`                         | YES  | NO
+`sys/config/state`                          | YES  | NO
+`sys/config/ui`                             | YES  | NO
+`sys/decode-token`                          | YES  | NO
+`sys/experiments`                           | YES  | NO
+`sys/generate-recovery-token`               | YES  | NO
+`sys/generate-root`                         | YES  | NO
+`sys/health`                                | YES  | NO
+`sys/host-info`                             | YES  | NO
+`sys/in-flight-req`                         | YES  | NO
+`sys/init`                                  | YES  | NO
+`sys/internal/counters/activity`            | YES  | NO
+`sys/internal/counters/activity/monthly`    | YES  | NO
+`sys/internal/counters/config`              | YES  | NO
+`sys/internal/inspect/router/*`             | YES  | NO
+`sys/key-status`                            | YES  | NO
+`sys/loggers`                               | YES  | NO
+`sys/managed-keys/*`                        | YES  | NO
+`sys/metrics`                               | YES  | NO
+`sys/mfa/method/*`                          | YES  | NO
+`sys/monitor`                               | YES  | YES
+`sys/pprof/*`                               | YES  | NO
+`sys/quotas/config`                         | YES  | YES
+`sys/quotas/lease-count`                    | YES  | YES
+`sys/quotas/rate-limit`                     | YES  | YES
+`sys/raw`                                   | YES  | NO
+`sys/rekey/*`                               | YES  | NO
+`sys/rekey-recovery-key`                    | YES  | NO
+`/sys/replication/dr/primary/*`             | YES  | NO
+`/sys/replication/dr/secondary/*`           | YES  | NO
+`/sys/replication/performance/primary/*`    | YES  | NO
+`/sys/replication/performance/secondary/*`  | YES  | NO
+`sys/replication/recover`                   | YES  | NO
+`sys/replication/reindex`                   | YES  | NO
+`sys/replication/status`                    | YES  | NO
+`sys/replication/merkle-check`              | YES  | NO
+`sys/rotate/config`                         | YES  | NO
+`sys/rotate`                                | YES  | NO
+`sys/seal`                                  | YES  | NO
+`sys/sealwrap/rewrap`                       | YES  | NO
+`sys/step-down`                             | YES  | NO
+`sys/storage`                               | YES  | NO
+`sys/sync/config                            | YES  | YES
+`sys/unseal`                                | YES  | NO
+
+Privileged CLI commands without public API endpoints:
+
+CLI command             | Root | Admin
+----------------------- | ---- | -----
+`vault plugin runtime`  | YES  | NO

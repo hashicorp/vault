@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package mssql
 
 import (
 	"context"
 	"database/sql"
 	"fmt"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -12,19 +16,30 @@ import (
 	metrics "github.com/armon/go-metrics"
 	_ "github.com/denisenkom/go-mssqldb"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
 
 // Verify MSSQLBackend satisfies the correct interfaces
-var _ physical.Backend = (*MSSQLBackend)(nil)
+var (
+	_               physical.Backend = (*MSSQLBackend)(nil)
+	identifierRegex                  = regexp.MustCompile(`^[\p{L}_][\p{L}\p{Nd}@#$_]*$`)
+)
 
 type MSSQLBackend struct {
 	dbTable    string
 	client     *sql.DB
 	statements map[string]*sql.Stmt
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
+}
+
+func isInvalidIdentifier(name string) bool {
+	if !identifierRegex.MatchString(name) {
+		return true
+	}
+	return false
 }
 
 func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backend, error) {
@@ -68,9 +83,17 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		database = "Vault"
 	}
 
+	if isInvalidIdentifier(database) {
+		return nil, fmt.Errorf("invalid database name")
+	}
+
 	table, ok := conf["table"]
 	if !ok {
 		table = "Vault"
+	}
+
+	if isInvalidIdentifier(table) {
+		return nil, fmt.Errorf("invalid table name")
 	}
 
 	appname, ok := conf["appname"]
@@ -93,6 +116,10 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		schema = "dbo"
 	}
 
+	if isInvalidIdentifier(schema) {
+		return nil, fmt.Errorf("invalid schema name")
+	}
+
 	connectionString := fmt.Sprintf("server=%s;app name=%s;connection timeout=%s;log=%s", server, appname, connectionTimeout, logLevel)
 	if username != "" {
 		connectionString += ";user id=" + username
@@ -113,18 +140,17 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 
 	db.SetMaxOpenConns(maxParInt)
 
-	if _, err := db.Exec("IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = '" + database + "') CREATE DATABASE " + database); err != nil {
+	if _, err := db.Exec("IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = ?) CREATE DATABASE "+database, database); err != nil {
 		return nil, fmt.Errorf("failed to create mssql database: %w", err)
 	}
 
 	dbTable := database + "." + schema + "." + table
-	createQuery := "IF NOT EXISTS(SELECT 1 FROM " + database + ".INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME='" + table + "' AND TABLE_SCHEMA='" + schema +
-		"') CREATE TABLE " + dbTable + " (Path VARCHAR(512) PRIMARY KEY, Value VARBINARY(MAX))"
+	createQuery := "IF NOT EXISTS(SELECT 1 FROM " + database + ".INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' AND TABLE_NAME=? AND TABLE_SCHEMA=?) CREATE TABLE " + dbTable + " (Path VARCHAR(512) PRIMARY KEY, Value VARBINARY(MAX))"
 
 	if schema != "dbo" {
 
 		var num int
-		err = db.QueryRow("SELECT 1 FROM " + database + ".sys.schemas WHERE name = '" + schema + "'").Scan(&num)
+		err = db.QueryRow("SELECT 1 FROM "+database+".sys.schemas WHERE name = ?", schema).Scan(&num)
 
 		switch {
 		case err == sql.ErrNoRows:
@@ -137,7 +163,7 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		}
 	}
 
-	if _, err := db.Exec(createQuery); err != nil {
+	if _, err := db.Exec(createQuery, table, schema); err != nil {
 		return nil, fmt.Errorf("failed to create mssql table: %w", err)
 	}
 
@@ -146,7 +172,7 @@ func NewMSSQLBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		client:     db,
 		statements: make(map[string]*sql.Stmt),
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permitpool.New(maxParInt),
 	}
 
 	statements := map[string]string{
@@ -180,7 +206,9 @@ func (m *MSSQLBackend) prepare(name, query string) error {
 func (m *MSSQLBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"mssql", "put"}, time.Now())
 
-	m.permitPool.Acquire()
+	if err := m.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer m.permitPool.Release()
 
 	_, err := m.statements["put"].Exec(entry.Key, entry.Value, entry.Key, entry.Key, entry.Value)
@@ -194,7 +222,9 @@ func (m *MSSQLBackend) Put(ctx context.Context, entry *physical.Entry) error {
 func (m *MSSQLBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"mssql", "get"}, time.Now())
 
-	m.permitPool.Acquire()
+	if err := m.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer m.permitPool.Release()
 
 	var result []byte
@@ -218,7 +248,9 @@ func (m *MSSQLBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 func (m *MSSQLBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"mssql", "delete"}, time.Now())
 
-	m.permitPool.Acquire()
+	if err := m.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer m.permitPool.Release()
 
 	_, err := m.statements["delete"].Exec(key)
@@ -232,7 +264,9 @@ func (m *MSSQLBackend) Delete(ctx context.Context, key string) error {
 func (m *MSSQLBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"mssql", "list"}, time.Now())
 
-	m.permitPool.Acquire()
+	if err := m.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer m.permitPool.Release()
 
 	likePrefix := prefix + "%"

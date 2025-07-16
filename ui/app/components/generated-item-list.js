@@ -1,7 +1,13 @@
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { service } from '@ember/service';
 import Component from '@glimmer/component';
 import { action } from '@ember/object';
-import { getOwner } from '@ember/application';
+import { getOwner } from '@ember/owner';
+import { tracked } from '@glimmer/tracking';
 
 /**
  * @module GeneratedItemList
@@ -20,19 +26,13 @@ import { getOwner } from '@ember/application';
 
 export default class GeneratedItemList extends Component {
   @service router;
-  @service store;
-
-  get model() {
-    return this.args.model || null;
-  }
-  get itemType() {
-    return this.args.itemType || null;
-  }
+  @service pagination;
+  @tracked itemToDelete = null;
 
   @action
   refreshItemList() {
-    let route = getOwner(this).lookup(`route:${this.router.currentRouteName}`);
-    this.store.clearAllDatasets();
+    const route = getOwner(this).lookup(`route:${this.router.currentRouteName}`);
+    this.pagination.clearDataset();
     route.refresh();
   }
 }

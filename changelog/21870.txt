@@ -1,0 +1,6 @@
+```release-note:bug
+secrets/pki: Fix bug with ACME tidy, 'unable to determine acme base folder path'.
+```
+```release-note:bug
+secrets/pki: Fix preserving acme_account_safety_buffer on config/auto-tidy.
+```

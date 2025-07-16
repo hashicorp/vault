@@ -1,10 +1,17 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 
 module('Unit | Adapter | kmip/role', function (hooks) {
   setupTest(hooks);
 
-  let serializeTests = [
+  // these are only some of the actual editable fields
+  const editableFields = ['tlsTtl', 'operationAll', 'operationNone', 'operationGet', 'operationCreate'];
+  const serializeTests = [
     [
       'operation_all is the only operation item present after serialization',
       {
@@ -12,7 +19,7 @@ module('Unit | Adapter | kmip/role', function (hooks) {
           return { operation_all: true, operation_get: true, operation_create: true, tls_ttl: '10s' };
         },
         record: {
-          nonOperationFields: ['tlsTtl'],
+          editableFields,
         },
       },
       {
@@ -27,7 +34,7 @@ module('Unit | Adapter | kmip/role', function (hooks) {
           return { operation_all: true, operation_get: true, operation_create: true };
         },
         record: {
-          nonOperationFields: ['tlsTtl'],
+          editableFields,
         },
       },
       {
@@ -41,7 +48,7 @@ module('Unit | Adapter | kmip/role', function (hooks) {
           return { operation_none: true, operation_get: true, operation_add_attribute: true, tls_ttl: '10s' };
         },
         record: {
-          nonOperationFields: ['tlsTtl'],
+          editableFields,
         },
       },
       {
@@ -62,7 +69,7 @@ module('Unit | Adapter | kmip/role', function (hooks) {
           };
         },
         record: {
-          nonOperationFields: ['tlsTtl'],
+          editableFields,
         },
       },
       {
@@ -72,11 +79,11 @@ module('Unit | Adapter | kmip/role', function (hooks) {
       },
     ],
   ];
-  for (let testCase of serializeTests) {
-    let [name, snapshotStub, expected] = testCase;
+  for (const testCase of serializeTests) {
+    const [name, snapshotStub, expected] = testCase;
     test(`adapter serialize: ${name}`, function (assert) {
-      let adapter = this.owner.lookup('adapter:kmip/role');
-      let result = adapter.serialize(snapshotStub);
+      const adapter = this.owner.lookup('adapter:kmip/role');
+      const result = adapter.serialize(snapshotStub);
       assert.deepEqual(result, expected, 'output matches expected');
     });
   }

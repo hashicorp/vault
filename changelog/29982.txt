@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/aws: fix a bug where environment and shared credential providers were overriding the WIF configuration
+```

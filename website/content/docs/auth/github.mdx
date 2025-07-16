@@ -4,7 +4,9 @@ page_title: GitHub - Auth Methods
 description: The GitHub auth method allows authentication with Vault using GitHub.
 ---
 
-# GitHub Auth Method
+# GitHub auth method
+
+@include 'tips/custom-authn.mdx'
 
 The `github` auth method can be used to authenticate with Vault using a GitHub
 personal access token. This method of authentication is most useful for humans:
@@ -21,6 +23,11 @@ token is stolen from a third party service, and the attacker is able to make
 network calls to Vault, they will be able to log in as the user that generated
 the access token.
 
+~> If the GitHub team is part of an organization with SSO enabled, the user will 
+need to authorize the personal access token. Failing to do so for SSO users will 
+result in the personal access token not providing identity information. The token 
+issued by the auth method will only be assigned the default policy.
+
 ## Authentication
 
 ### Via the CLI
@@ -30,6 +37,13 @@ path, specify `-path=/my-path` in the CLI.
 
 ```shell-session
 $ vault login -method=github token="MY_TOKEN"
+```
+
+You can also use the `VAULT_AUTH_GITHUB_TOKEN` environment variable to authenticate to GitHub. For example:
+
+```shell-session
+$ export VAULT_AUTH_GITHUB_TOKEN="MY_TOKEN"
+$ vault login -method=github
 ```
 
 ### Via the API
@@ -109,5 +123,5 @@ management tool.
 ## API
 
 The GitHub auth method has a full HTTP API. Please see the
-[GitHub Auth API](/api-docs/auth/github) for more
+[GitHub Auth API](/vault/api-docs/auth/github) for more
 details.

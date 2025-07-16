@@ -1,16 +1,28 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Controller from '@ember/controller';
-import { inject as service } from '@ember/service';
+import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 import { capitalize } from '@ember/string';
 import { task } from 'ember-concurrency';
+import { addToArray } from 'vault/helpers/add-to-array';
 
 export default class MfaMethodCreateController extends Controller {
+  @service store;
   @service flashMessages;
   @service router;
 
   queryParams = ['type'];
-  methodNames = ['TOTP', 'Duo', 'Okta', 'PingID'];
+  methods = [
+    { name: 'TOTP', icon: 'history' },
+    { name: 'Duo', icon: 'duo-color' },
+    { name: 'Okta', icon: 'okta-color' },
+    { name: 'PingID', icon: 'ping-identity-color' },
+  ];
 
   @tracked type = null;
   @tracked method = null;
@@ -84,7 +96,9 @@ export default class MfaMethodCreateController extends Controller {
         // first save method
         yield this.method.save();
         if (this.enforcement) {
-          this.enforcement.mfa_methods.addObject(this.method);
+          // mfa_methods is type PromiseManyArray. Array methods like slice are no longer allowed on PromiseManyArray. We must yield the promise first, then call the method.
+          const mfaMethods = yield this.enforcement.mfa_methods;
+          this.enforcement.mfa_methods = addToArray(mfaMethods.slice(), this.method);
           try {
             // now save enforcement and catch error separately
             yield this.enforcement.save();

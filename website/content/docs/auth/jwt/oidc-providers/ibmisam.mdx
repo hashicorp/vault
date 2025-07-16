@@ -1,0 +1,36 @@
+---
+layout: docs
+page_title: Use IBM Verify for OIDC authentication
+description: >-
+  Configure Vault to use IBM Verify as an OIDC provider.
+---
+
+# Use IBM Verify for OIDC authentication
+
+The [IBM Verify](https://www.ibm.com/de-de/products/verify-access) identity
+provider (previously IBM Security Access Manager) returns group membership
+claims as a space-separated list of strings (e.g. `groups: "group-1 group-2"`)
+instead of a list of strings.
+
+To properly obtain group membership when using IBMISAM as the identity provider for
+Vault's OIDC Auth Method, the `ibmisam` provider must be explicitly configured as
+shown below.
+
+```shell
+vault write auth/oidc/config -<<"EOH"
+{
+   "oidc_client_id": "your_client_id",
+   "oidc_client_secret": "your_client_secret",
+   "default_role": "your_default_role",
+   "oidc_discovery_url": "https://your.idp.host",
+   "provider_config": {
+      "provider": "ibmisam"
+   }
+}
+EOH
+```
+
+This will instruct the OIDC Auth Method to parse the space-separated groups claims string
+into individual groups. Note that the role's [`groups_claim`](/vault/api-docs/auth/jwt#groups_claim)
+value must be properly configured to target the groups claim for your IBM ISAM identity
+provider.

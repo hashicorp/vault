@@ -1,0 +1,3 @@
+```release-note:improvement
+secrets/postgresql: Add configuration to scram-sha-256 encrypt passwords on Vault before sending them to PostgreSQL
+```

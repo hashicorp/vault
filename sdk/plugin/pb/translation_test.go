@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package pb
 
 import (
@@ -88,6 +91,7 @@ func TestTranslation_Request(t *testing.T) {
 					PeerCertificates:  certs,
 				},
 			},
+			RequiresSnapshotID: "abcd",
 		},
 		{
 			ID:                 "ID",
@@ -167,6 +171,7 @@ func TestTranslation_Request(t *testing.T) {
 			EntityID:                 "tester",
 			PolicyOverride:           true,
 			Unauthenticated:          true,
+			RequiresSnapshotID:       "abcd",
 		},
 	}
 
@@ -262,6 +267,7 @@ func TestTranslation_Response(t *testing.T) {
 				CreationPath:    "test/foo",
 				SealWrap:        true,
 			},
+			MountType: "mountType",
 		},
 	}
 

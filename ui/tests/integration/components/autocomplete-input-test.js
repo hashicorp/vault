@@ -1,12 +1,24 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, fillIn, triggerEvent, typeIn, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 
 module('Integration | Component | autocomplete-input', function (hooks) {
   setupRenderingTest(hooks);
 
   test('it should render label', async function (assert) {
+    // TODO: make the input accessible when no label provided
+    setRunOptions({
+      rules: {
+        label: { enabled: false },
+      },
+    });
     await render(
       hbs`
       <AutocompleteInput
@@ -29,7 +41,7 @@ module('Integration | Component | autocomplete-input', function (hooks) {
     const changeValue = 'foo bar';
     this.value = 'test';
     this.placeholder = 'text goes here';
-    this.onChange = (value) => assert.equal(value, changeValue, 'Value sent in onChange callback');
+    this.onChange = (value) => assert.strictEqual(value, changeValue, 'Value sent in onChange callback');
 
     await render(
       hbs`
@@ -46,6 +58,12 @@ module('Integration | Component | autocomplete-input', function (hooks) {
   });
 
   test('it should trigger dropdown', async function (assert) {
+    setRunOptions({
+      rules: {
+        // TODO fix this component
+        label: { enabled: false },
+      },
+    });
     await render(
       hbs`
       <AutocompleteInput
@@ -82,6 +100,6 @@ module('Integration | Component | autocomplete-input', function (hooks) {
     assert
       .dom('input')
       .hasValue('$foo-$bar', 'Value is updated correctly. Trigger character is prepended to option.');
-    assert.equal(this.value, '$foo-$bar', 'Value prop is updated correctly onChange');
+    assert.strictEqual(this.value, '$foo-$bar', 'Value prop is updated correctly onChange');
   });
 });

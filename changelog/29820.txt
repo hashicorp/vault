@@ -1,0 +1,3 @@
+```release-note:improvement
+ui/database: Adding input field for setting skip static role password rotation for database connection config, updating static role skip field to use toggle button 
+```

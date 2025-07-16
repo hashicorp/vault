@@ -1,0 +1,158 @@
+---
+layout: docs
+page_title: Run Vault Agent in process supervisor mode
+description: >-
+  Run Vault Agent in process supervisor mode to write Vault secrets to
+  environment variables for use in external processes.
+
+---
+
+# Run Vault Agent in process supervisor mode
+
+Vault Agent's Process Supervisor Mode allows Vault secrets to be injected into
+a process via environment variables using
+[Consul Template markup][consul-templating-language].
+
+-> If you are running your applications in a Kubernetes cluster, we recommend
+  evaluating the [Vault Secrets Operator](/vault/docs/platform/k8s/vso) and
+  the [Vault Agent Sidecar Injector](/vault/docs/platform/k8s/injector)
+  instead.
+
+## Functionality
+
+Vault Agent will inject secrets referenced in the `env_template` configuration
+blocks as environment variables into the child process specified in the `exec` block.
+
+When you start Vault Agent in process supervisor mode, it will wait until each
+environment variable template has rendered at least once before starting the
+process. If `restart_on_secret_changes` is set to `always` (default), Agent
+will restart the process whenever an update to an injected secret is detected.
+This could be either a static secret update (done on
+[`static_secret_render_interval`](/vault/docs/agent-and-proxy/agent/template#static_secret_render_interval))
+or dynamic secret being close to its expiration.
+
+In many ways, Vault Agent will mirror the child process. Standard intput and
+output streams (`stdin` / `stdout` / `stderr`) are all forwarded to the child
+process. Additionally, Vault Agent will exit when the child process exits on
+its own with the same exit code.
+
+## Configuration
+
+-> Agent's [generate-config](/vault/docs/agent-and-proxy/agent/generate-config)
+   tool will help you get started by generating a valid agent configuration
+   file from the given inputs.
+
+The process supervisor mode requires at least one `env_template` block and
+exactly one top level `exec` block. It is incompatible with regular file
+`template` entries.
+
+### `env_template`
+
+`env_template` stanza maps the template specified in the `contents` field or
+referenced in the `source` field to the environment variable name in the title
+of the stanza. It uses the same
+[templating language](/vault/docs/agent-and-proxy/agent/template#templating-language)
+as file templates but permits only a subset of
+[its configuration parameters](/vault/docs/agent-and-proxy/agent/template#template_configurations):
+
+- environment variable name `(string: <required>)` - the name of the
+  environment variable to which the contents of the template should map.
+
+- `contents` `(string: "")` - This option allows embedding the contents of
+  a template in the configuration file rather then supplying the `source` path to
+  the template file. This is useful for short templates. This option is mutually
+  exclusive with the `source` option.
+
+- `source` `(string: "")` - Path on disk to use as the input template. This
+  option is required if not using the `contents` option.
+
+- `error_on_missing_key` `(bool: false)` - Exit with an error when accessing
+  a struct or map field/key that does notexist. The default behavior will print `<no value>`
+  when accessing a field that does not exist. It is highly recommended you set this
+  to "true". Also see
+  [`exit_on_retry_failure` in global Vault Agent Template Config](/vault/docs/agent-and-proxy/agent/template#interaction-between-exit_on_retry_failure-and-error_on_missing_key).
+
+- `left_delimiter` `(string: "{{")` - Delimiter to use in the template. The
+  default is "{{" but for some templates, it may be easier to use a different
+  delimiter that does not conflict with the output file itself.
+
+- `right_delimiter` `(string: "}}")` - Delimiter to use in the template. The
+  default is "}}" but for some templates, it may be easier to use a different
+  delimiter that does not conflict with the output file itself.
+
+### `exec`
+
+The top level `exec` block has the following configuration entries.
+
+- `command` `(string array: required)` - Specify the command for the child
+  process with optional arguments. The executable's path must be either
+  absolute or relative to the current working directory.
+
+- `restart_on_secret_changes` `(string: "always")` - Controls whether agent
+  will restart the child process on secret changes. There are two types of
+  secret changes relevant to this configuration: a static secret update (on
+  [static_secret_render_interval`](/vault/docs/agent-and-proxy/agent/template#static_secret_render_interval))
+  and dynamic secret being close to its expiration. The configuration supports
+  two options: `always` and `never`.
+
+- `restart_stop_signal` `(string: "SIGTERM")` - Signal to send to the child
+  process when a secret has been updated and the process needs to be restarted.
+  The process has 30 seconds after this signal is sent until `SIGKILL` is sent
+  to force the child process to stop.
+
+
+## Configuration example
+
+The following example was generated using
+[`vault agent generate-config`](/vault/docs/agent-and-proxy/agent/generate-config),
+a configuration helper tool. Given this configuration, Vault Agent will run
+the child process (`./my-app arg1 arg2`) with two additional environment
+variables (`FOO_USER` and `FOO_PASSWORD`) populated with secrets from Vault.
+
+```hcl
+auto_auth {
+
+  method {
+    type = "token_file"
+
+    config {
+      token_file_path = "/Users/avean/.vault-token"
+    }
+  }
+}
+
+template_config {
+  static_secret_render_interval = "5m"
+  exit_on_retry_failure         = true
+  max_connections_per_host      = 10
+}
+
+vault {
+  address = "http://localhost:8200"
+}
+
+env_template "FOO_PASSWORD" {
+  contents             = "{{ with secret \"secret/data/foo\" }}{{ .Data.data.password }}{{ end }}"
+  error_on_missing_key = true
+}
+env_template "FOO_USER" {
+  contents             = "{{ with secret \"secret/data/foo\" }}{{ .Data.data.user }}{{ end }}"
+  error_on_missing_key = true
+}
+
+exec {
+  command                   = ["./my-app", "arg1", "arg2"]
+  restart_on_secret_changes = "always"
+  restart_stop_signal       = "SIGTERM"
+}
+```
+
+[consul-templating-language]: https://github.com/hashicorp/consul-template/blob/v0.28.1/docs/templating-language.md
+[template-config]: /vault/docs/agent-and-proxy/agent/template#template-configurations
+
+
+## Tutorial
+
+Refer to the [Vault Agent - secrets as environment
+variables](/vault/tutorials/vault-agent/agent-env-vars) tutorial for an
+end-to-end example.

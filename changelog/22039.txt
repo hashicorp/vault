@@ -1,0 +1,3 @@
+```release-note:improvement
+ui: Display minus icon for empty MaskedInput value. Show MaskedInput for KV secrets without values
+```

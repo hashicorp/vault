@@ -1,0 +1,3 @@
+```release-note:improvement
+auto-auth/azure: Added Azure Workload Identity Federation support to auto-auth (for Vault Agent and Vault Proxy).
+```

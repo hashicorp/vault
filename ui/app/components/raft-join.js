@@ -1,4 +1,9 @@
-import { inject as service } from '@ember/service';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { service } from '@ember/service';
 
 /**
  * @module RaftJoin
@@ -24,7 +29,8 @@ export default Component.extend({
   preference: 'join',
   showJoinForm: false,
   actions: {
-    advanceFirstScreen() {
+    advanceFirstScreen(event) {
+      event.preventDefault();
       if (this.preference !== 'join') {
         this.onDismiss();
         return;

@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fixes input for jwks_ca_pem when configuring a JWT auth method
+```

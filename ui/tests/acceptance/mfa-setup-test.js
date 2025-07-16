@@ -1,12 +1,18 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { module, test } from 'qunit';
 import { create } from 'ember-cli-page-object';
+import { v4 as uuidv4 } from 'uuid';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, fillIn } from '@ember/test-helpers';
-import authPage from 'vault/tests/pages/auth';
-import enablePage from 'vault/tests/pages/settings/auth/enable';
-import logout from 'vault/tests/pages/logout';
+import { click, fillIn, visit, waitFor } from '@ember/test-helpers';
+import { login, loginMethod } from 'vault/tests/helpers/auth/auth-helpers';
+import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const consoleComponent = create(consoleClass);
 const USER = 'end-user';
@@ -14,7 +20,8 @@ const PASSWORD = 'mypassword';
 const POLICY_NAME = 'identity_policy';
 
 const writePolicy = async function (path) {
-  await enablePage.enable('userpass', path);
+  await visit('/vault/settings/auth/enable');
+  await mountBackend('userpass', path);
   const identityPolicy = `path "identity/*" {
     capabilities = ["create", "read", "update", "delete", "list"]
   }`;
@@ -29,11 +36,10 @@ const writeUserWithPolicy = async function (path) {
   ]);
 };
 
-const setupUser = async function () {
-  let path = `userpass-${new Date().getTime()}`;
+const setupUser = async function (path) {
   await writePolicy(path);
   await writeUserWithPolicy(path);
-  await click('[data-test-save-config="true"]');
+  await click(GENERAL.submitButton);
 };
 
 module('Acceptance | mfa-setup', function (hooks) {
@@ -41,21 +47,23 @@ module('Acceptance | mfa-setup', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    await logout.visit();
-    await authPage.login('root');
-    await setupUser();
-    await logout.visit();
-    await authPage.loginUsername(USER, PASSWORD);
-    await click('.nav-user-button button');
-    await click('[data-test-status-link="mfa"]');
+    const path = `userpass-${uuidv4()}`;
+    await login();
+    await setupUser(path);
+    await loginMethod(
+      { username: USER, password: PASSWORD, path },
+      { authType: 'userpass', toggleOptions: true }
+    );
+    await click(GENERAL.button('user-menu-trigger'));
+    await click('[data-test-user-menu-item="mfa"]');
   });
 
-  test('it should login through MFA and post to admin-generate and be able to restart the setup', async function (assert) {
+  test('it should login through MFA and post to generate and be able to restart the setup', async function (assert) {
     assert.expect(5);
     // the network requests required in this test
-    this.server.post('/identity/mfa/method/totp/admin-generate', (scheme, req) => {
+    this.server.post('/identity/mfa/method/totp/generate', (scheme, req) => {
       const json = JSON.parse(req.requestBody);
-      assert.equal(json.method_id, '123', 'sends the UUID value');
+      assert.strictEqual(json.method_id, '123', 'sends the UUID value');
       return {
         data: {
           barcode:
@@ -67,22 +75,24 @@ module('Acceptance | mfa-setup', function (hooks) {
     });
     this.server.post('/identity/mfa/method/totp/admin-destroy', (scheme, req) => {
       const json = JSON.parse(req.requestBody);
-      assert.equal(json.method_id, '123', 'sends the UUID value');
+      assert.strictEqual(json.method_id, '123', 'sends the UUID value');
       // returns nothing
       return {};
     });
     await fillIn('[data-test-input="uuid"]', 123);
     await click('[data-test-verify]');
+    await waitFor('[data-test-qrcode]', { timeout: 5000 });
     assert.dom('[data-test-qrcode]').exists('the qrCode is shown.');
     assert.dom('[data-test-mfa-enabled-warning]').doesNotExist('warning does not show.');
     await click('[data-test-restart]');
+    await waitFor('[data-test-step-one]', { timeout: 5000 });
     assert.dom('[data-test-step-one]').exists('back to step one.');
   });
 
   test('it should show a warning if you enter in the same UUID without restarting the setup', async function (assert) {
     assert.expect(2);
     // the network requests required in this test
-    this.server.post('/identity/mfa/method/totp/admin-generate', () => {
+    this.server.post('/identity/mfa/method/totp/generate', () => {
       return {
         data: null,
         warnings: ['Entity already has a secret for MFA method “”'],
@@ -91,6 +101,7 @@ module('Acceptance | mfa-setup', function (hooks) {
 
     await fillIn('[data-test-input="uuid"]', 123);
     await click('[data-test-verify]');
+    await waitFor('[data-test-mfa-enabled-warning]', { timeout: 5000 });
     assert.dom('[data-test-qrcode]').doesNotExist('the qrCode is not shown.');
     assert.dom('[data-test-mfa-enabled-warning]').exists('the mfa-enabled warning shows.');
   });

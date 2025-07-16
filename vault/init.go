@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -9,14 +12,11 @@ import (
 	"net/url"
 	"sync/atomic"
 
-	wrapping "github.com/hashicorp/go-kms-wrapping/v2"
-	"github.com/hashicorp/vault/physical/raft"
-	"github.com/hashicorp/vault/vault/seal"
-
-	aeadwrapper "github.com/hashicorp/go-kms-wrapping/wrappers/aead/v2"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/pgpkeys"
+	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/shamir"
+	"github.com/hashicorp/vault/vault/seal"
 )
 
 // InitParams keeps the init function from being littered with too many
@@ -39,7 +39,6 @@ type InitResult struct {
 }
 
 var (
-	initPTFunc                = func(c *Core) func() { return nil }
 	initInProgress            uint32
 	ErrInitWithoutAutoloading = errors.New("cannot initialize storage without an autoloaded license")
 )
@@ -63,7 +62,7 @@ func (c *Core) InitializeRecovery(ctx context.Context) error {
 		return raftStorage.StartRecoveryCluster(context.Background(), raft.Peer{
 			ID:      raftStorage.NodeID(),
 			Address: parsedClusterAddr.Host,
-		})
+		}, c.shutdownRemovedNode)
 	})
 
 	return nil
@@ -160,7 +159,7 @@ func (c *Core) generateShares(sc *SealConfig) ([]byte, [][]byte, error) {
 // Initialize is used to initialize the Vault with the given
 // configurations.
 func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitResult, error) {
-	if err := LicenseInitCheck(c); err != nil {
+	if err := c.entCheckLicenseInit(); err != nil {
 		return nil, err
 	}
 
@@ -263,7 +262,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		return nil, fmt.Errorf("error initializing seal: %w", err)
 	}
 
-	initPTCleanup := initPTFunc(c)
+	initPTCleanup := c.entInitWALPassThrough()
 	if initPTCleanup != nil {
 		defer initPTCleanup()
 	}
@@ -277,7 +276,7 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 	var sealKey []byte
 	var sealKeyShares [][]byte
 
-	if barrierConfig.StoredShares == 1 && c.seal.BarrierType() == wrapping.WrapperTypeShamir {
+	if barrierConfig.StoredShares == 1 && c.seal.BarrierSealConfigType() == SealConfigTypeShamir {
 		sealKey, sealKeyShares, err = c.generateShares(barrierConfig)
 		if err != nil {
 			c.logger.Error("error generating shares", "error", err)
@@ -320,12 +319,20 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		SecretShares: [][]byte{},
 	}
 
+	// Write an entry to storage to indicate that initialization is in progress.
+	// It is used to prevent that nodes use stored keys to unseal while initialization
+	// is still in progress. This can happen when using the Consul backend (maybe others?).
+	if err := c.seal.SetInitializationFlag(ctx); err != nil {
+		c.logger.Error("failed to write initialization flag to storage", "error", err)
+		return nil, fmt.Errorf("failed to write initialization flag to storage: %w", err)
+	}
+
 	// If we are storing shares, pop them out of the returned results and push
 	// them through the seal
 	switch c.seal.StoredKeysSupported() {
 	case seal.StoredKeysSupportedShamirRoot:
 		keysToStore := [][]byte{barrierKey}
-		if err := c.seal.GetAccess().Wrapper.(*aeadwrapper.ShamirWrapper).SetAesGcmKeyBytes(sealKey); err != nil {
+		if err := c.seal.GetAccess().SetShamirSealKey(sealKey); err != nil {
 			c.logger.Error("failed to set seal key", "error", err)
 			return nil, fmt.Errorf("failed to set seal key: %w", err)
 		}
@@ -414,6 +421,11 @@ func (c *Core) Initialize(ctx context.Context, initParams *InitParams) (*InitRes
 		}
 	}
 
+	if err := c.seal.ClearInitializationFlag(ctx); err != nil {
+		c.logger.Error("Error clearing initialization flag", "error", err)
+		return nil, fmt.Errorf("error clearing initialization flag: %w", err)
+	}
+
 	// Prepare to re-seal
 	if err := c.preSeal(); err != nil {
 		c.logger.Error("pre-seal teardown failed", "error", err)
@@ -440,12 +452,12 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	c.unsealWithStoredKeysLock.Lock()
 	defer c.unsealWithStoredKeysLock.Unlock()
 
-	if c.seal.BarrierType() == wrapping.WrapperTypeShamir {
+	if c.seal.BarrierSealConfigType() == SealConfigTypeShamir {
 		return nil
 	}
 
 	// Disallow auto-unsealing when migrating
-	if c.IsInSealMigrationMode() && !c.IsSealMigrated() {
+	if c.IsInSealMigrationMode(true) && !c.IsSealMigrated(true) {
 		return NewNonFatalError(errors.New("cannot auto-unseal during seal migration"))
 	}
 
@@ -462,6 +474,16 @@ func (c *Core) UnsealWithStoredKeys(ctx context.Context) error {
 	keys, err := c.seal.GetStoredKeys(ctx)
 	if err != nil {
 		return NewNonFatalError(fmt.Errorf("fetching stored unseal keys failed: %w", err))
+	}
+
+	// Check whether Vault initialization is still in progress. If it is is, then
+	// bail out to give it a chance to complete.
+	isInitializing, err := c.seal.IsInitializationFlagSet(ctx)
+	if err != nil {
+		return NewNonFatalError(fmt.Errorf("fetching seal initialization flag failed: %w", err))
+	}
+	if isInitializing {
+		return NewNonFatalError(errors.New("stored unseal keys found, but flag indicates Vault initialization is still in progress"))
 	}
 
 	// This usually happens when auto-unseal is configured, but the servers have

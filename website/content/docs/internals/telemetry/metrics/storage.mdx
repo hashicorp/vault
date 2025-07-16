@@ -1,0 +1,198 @@
+---
+layout: docs
+page_title: "Telemetry reference: Storage plugin metrics"
+description: >-
+  Technical reference for individual storage plugin telemetry values.
+---
+
+# Storage plugin telemetry
+
+Storage telemetry provides information on the health of Vault storage and your
+configured storage backends. For integrated storage metrics, refer to the
+[Raft telemetry](/vault/docs/internals/metrics/raft) metric list.
+
+## Barrier metrics
+
+@include 'telemetry-metrics/vault/barrier/delete.mdx'
+
+@include 'telemetry-metrics/vault/barrier/estimated_encryptions.mdx'
+
+@include 'telemetry-metrics/vault/barrier/get.mdx'
+
+@include 'telemetry-metrics/vault/barrier/list.mdx'
+
+@include 'telemetry-metrics/vault/barrier/put.mdx'
+
+## Caching metrics
+
+@include 'telemetry-metrics/vault/cache/delete.mdx'
+
+@include 'telemetry-metrics/vault/cache/hit.mdx'
+
+@include 'telemetry-metrics/vault/cache/miss.mdx'
+
+@include 'telemetry-metrics/vault/cache/write.mdx'
+
+## Amazon S3 metrics
+
+@include 'telemetry-metrics/vault/s3/delete.mdx'
+
+@include 'telemetry-metrics/vault/s3/get.mdx'
+
+@include 'telemetry-metrics/vault/s3/list.mdx'
+
+@include 'telemetry-metrics/vault/s3/put.mdx'
+
+## Azure metrics
+
+@include 'telemetry-metrics/vault/azure/delete.mdx'
+
+@include 'telemetry-metrics/vault/azure/get.mdx'
+
+@include 'telemetry-metrics/vault/azure/list.mdx'
+
+@include 'telemetry-metrics/vault/azure/put.mdx'
+
+## Cassandra metrics
+
+@include 'telemetry-metrics/vault/cassandra/delete.mdx'
+
+@include 'telemetry-metrics/vault/cassandra/get.mdx'
+
+@include 'telemetry-metrics/vault/cassandra/list.mdx'
+
+@include 'telemetry-metrics/vault/cassandra/put.mdx'
+
+## Cockroach database metrics
+
+@include 'telemetry-metrics/vault/cockroachdb/delete.mdx'
+
+@include 'telemetry-metrics/vault/cockroachdb/get.mdx'
+
+@include 'telemetry-metrics/vault/cockroachdb/list.mdx'
+
+@include 'telemetry-metrics/vault/cockroachdb/put.mdx'
+
+## Consul metrics
+
+@include 'telemetry-metrics/vault/consul/delete.mdx'
+
+@include 'telemetry-metrics/vault/consul/get.mdx'
+
+@include 'telemetry-metrics/vault/consul/list.mdx'
+
+@include 'telemetry-metrics/vault/consul/put.mdx'
+
+@include 'telemetry-metrics/vault/consul/transaction.mdx'
+
+## Couch database metrics
+
+@include 'telemetry-metrics/vault/couchdb/delete.mdx'
+
+@include 'telemetry-metrics/vault/couchdb/get.mdx'
+
+@include 'telemetry-metrics/vault/couchdb/list.mdx'
+
+@include 'telemetry-metrics/vault/couchdb/put.mdx'
+
+## Dynamo database metrics
+
+@include 'telemetry-metrics/vault/dynamodb/delete.mdx'
+
+@include 'telemetry-metrics/vault/dynamodb/get.mdx'
+
+@include 'telemetry-metrics/vault/dynamodb/list.mdx'
+
+@include 'telemetry-metrics/vault/dynamodb/put.mdx'
+
+## Etcd metrics
+
+@include 'telemetry-metrics/vault/etcd/delete.mdx'
+
+@include 'telemetry-metrics/vault/etcd/get.mdx'
+
+@include 'telemetry-metrics/vault/etcd/list.mdx'
+
+@include 'telemetry-metrics/vault/etcd/put.mdx'
+
+## Google Cloud metrics
+
+@include 'telemetry-metrics/vault/gcs/delete.mdx'
+
+@include 'telemetry-metrics/vault/gcs/get.mdx'
+
+@include 'telemetry-metrics/vault/gcs/list.mdx'
+
+@include 'telemetry-metrics/vault/gcs/lock/lock.mdx'
+
+@include 'telemetry-metrics/vault/gcs/lock/unlock.mdx'
+
+@include 'telemetry-metrics/vault/gcs/lock/value.mdx'
+
+@include 'telemetry-metrics/vault/gcs/put.mdx'
+
+## Google Cloud - Spanner metrics
+
+@include 'telemetry-metrics/vault/spanner/delete.mdx'
+
+@include 'telemetry-metrics/vault/spanner/get.mdx'
+
+@include 'telemetry-metrics/vault/spanner/list.mdx'
+
+@include 'telemetry-metrics/vault/spanner/lock/lock.mdx'
+
+@include 'telemetry-metrics/vault/spanner/lock/unlock.mdx'
+
+@include 'telemetry-metrics/vault/spanner/lock/value.mdx'
+
+@include 'telemetry-metrics/vault/spanner/put.mdx'
+
+## Microsoft SQL Server (MSSQL) metrics
+
+@include 'telemetry-metrics/vault/mssql/delete.mdx'
+
+@include 'telemetry-metrics/vault/mssql/get.mdx'
+
+@include 'telemetry-metrics/vault/mssql/list.mdx'
+
+@include 'telemetry-metrics/vault/mssql/put.mdx'
+
+## MySQL metrics
+
+@include 'telemetry-metrics/vault/mysql/delete.mdx'
+
+@include 'telemetry-metrics/vault/mysql/get.mdx'
+
+@include 'telemetry-metrics/vault/mysql/list.mdx'
+
+@include 'telemetry-metrics/vault/mysql/put.mdx'
+
+## PostgreSQL metrics
+
+@include 'telemetry-metrics/vault/postgres/delete.mdx'
+
+@include 'telemetry-metrics/vault/postgres/get.mdx'
+
+@include 'telemetry-metrics/vault/postgres/list.mdx'
+
+@include 'telemetry-metrics/vault/postgres/put.mdx'
+
+## Swift metrics
+
+@include 'telemetry-metrics/vault/swift/delete.mdx'
+
+@include 'telemetry-metrics/vault/swift/get.mdx'
+
+@include 'telemetry-metrics/vault/swift/list.mdx'
+
+@include 'telemetry-metrics/vault/swift/put.mdx'
+
+## ZooKeeper metrics
+
+@include 'telemetry-metrics/vault/zookeeper/delete.mdx'
+
+@include 'telemetry-metrics/vault/zookeeper/get.mdx'
+
+@include 'telemetry-metrics/vault/zookeeper/list.mdx'
+
+@include 'telemetry-metrics/vault/zookeeper/put.mdx'

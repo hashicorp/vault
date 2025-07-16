@@ -1,0 +1,67 @@
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+.empty-state {
+  align-items: center;
+  color: var(--token-color-foreground-faint);
+  background: var(--token-color-surface-faint);
+  display: flex;
+  justify-content: center;
+  padding: size_variables.$spacing-48 size_variables.$spacing-12;
+  box-shadow: 0 -2px 0 -1px color_variables.$ui-gray-300;
+}
+
+.empty-state-transparent {
+  align-items: center;
+  color: var(--token-color-foreground-faint);
+  background: transparent;
+  display: flex;
+  justify-content: center;
+  padding: size_variables.$spacing-48 0;
+  box-shadow: none;
+}
+
+.empty-state-content {
+  max-width: 320px;
+}
+
+.empty-state-title {
+  color: color_variables.$grey;
+  font-size: size_variables.$size-4;
+  font-weight: font_variables.$font-weight-semibold;
+  line-height: 1.2;
+  margin-bottom: size_variables.$spacing-8;
+}
+
+.empty-state-subTitle {
+  font-size: size_variables.$size-7;
+  margin-top: -10px;
+  padding-bottom: size_variables.$spacing-12;
+}
+
+.empty-state-message.has-border-bottom-light {
+  padding-bottom: size_variables.$spacing-12;
+}
+
+.empty-state-actions {
+  margin-top: size_variables.$spacing-8;
+  display: flex;
+  justify-content: space-between;
+
+  > * + * {
+    margin-left: size_variables.$spacing-12;
+    margin-right: size_variables.$spacing-12;
+  }
+}
+
+.empty-state-icon > .hs-icon,
+.empty-state-icon > .hds-icon {
+  float: left;
+  margin-right: size_variables.$spacing-8;
+}

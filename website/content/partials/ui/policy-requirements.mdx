@@ -1,0 +1,27 @@
+<Warning title="Set UI policies before enabling the UI"> 
+	
+  You cannot make policy adjustments or overwrites to the <code>ui/mounts</code>&nbsp;
+  and <code>ui/resultant-acl</code> endpoints once you enable the Vault UI. Vault
+  ignores policy updates that target these paths
+  with <a href="/vault/docs/concepts/policies#deny">explicit <code>deny</code></a> capabilities.
+
+</Warning>
+
+Depending on your Vault configuration, you may need to define UI policies
+with different ACL capabilities from the permissions provided by your Vault CLI
+policies.
+
+The `default` UI policy includes two paths, **which cannot be modified with
+additional policies** once you
+[enable](/vault/docs/configuration/ui#activating-the-vault-ui) the UI:
+
+- [/sys/internal/ui/mounts](/vault/api-docs/system/internal-ui-mounts) -
+  provides a list of currently visible mounts based on the
+  [`listing_visibility`](/vault/api-docs/system/mounts#listing_visibility)
+  parameter. `sys/internal/ui/mounts` is an unauthenticated, internal endpoint
+  used for UI and CLI preflight checks. Requests that include an `X-Vault-Token`
+  will return all mounts the token has path capabilities on.
+- [/sys/internal/ui/resultant-acl](/vault/api-docs/system/internal-ui-resultant-acl) -
+  repackages authentication information used by the UI. **If you do not have have
+  permission to call the `ui/resultant-acl` endpoint, you may receive warnings or
+  errors in the UI**.

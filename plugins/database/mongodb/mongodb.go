@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package mongodb
 
 import (
@@ -173,7 +176,7 @@ func (m *MongoDB) changeUserPassword(ctx context.Context, username, password str
 	}
 
 	database := cs.Database
-	if username == m.Username || database == "" {
+	if database == "" {
 		database = "admin"
 	}
 
@@ -210,9 +213,19 @@ func (m *MongoDB) DeleteUser(ctx context.Context, req dbplugin.DeleteUserRequest
 		db = "admin"
 	}
 
+	// Set the write concern. The default is majority.
+	writeConcern := writeconcern.New(writeconcern.WMajority())
+	opts, err := m.getWriteConcern()
+	if err != nil {
+		return dbplugin.DeleteUserResponse{}, err
+	}
+	if opts != nil {
+		writeConcern = opts.WriteConcern
+	}
+
 	dropUserCmd := &dropUserCommand{
 		Username:     req.Username,
-		WriteConcern: writeconcern.New(writeconcern.WMajority()),
+		WriteConcern: writeConcern,
 	}
 
 	err = m.runCommandWithRetry(ctx, db, dropUserCmd)

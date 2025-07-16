@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import Engine from 'ember-engines/engine';
 import loadInitializers from 'ember-load-initializers';
 import Resolver from './resolver';
@@ -11,15 +16,16 @@ const Eng = Engine.extend({
   dependencies: {
     services: [
       'auth',
+      'capabilities',
       'flash-messages',
       'namespace',
       'replication-mode',
-      'router',
+      'app-router',
       'store',
       'version',
-      'wizard',
+      '-portal',
     ],
-    externalRoutes: ['replication'],
+    externalRoutes: ['replication', 'vault'],
   },
 });
 

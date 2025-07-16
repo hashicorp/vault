@@ -1,0 +1,465 @@
+---
+layout: docs
+page_title: Manage Vault programmatically with Terraform
+description: >-
+  Step-by-step instructions for managing Vault resources programmatically with
+  Terraform
+---
+
+# Manage Vault resources programmatically with Terraform
+
+Use Terraform to manage policies, namespaces, and plugins in Vault.
+
+## Before you start
+
+- **You must have [Terraform installed](/terraform/install)**.
+- **You must have the [Terraform Vault provider](https://registry.terraform.io/providers/hashicorp/vault/latest) configured**.
+- **You must have sufficient access to run Terraform**. 
+- **You must have a [Vault server running](/vault/tutorials/getting-started/getting-started-dev-server)**.
+
+## Step 1: Create a resource file for namespaces
+
+Terraform Vault provider supports a `vault_namespace` resource type for
+managing Vault namespaces:
+
+```hcl
+resource "vault_namespace" "<TERRAFORM_RESOURCE_NAME>" {
+  path = "<VAULT_NAMESPACE>"
+}
+```
+
+To manage your Vault namespaces in Terraform:
+
+1. Use the `vault namespace list` command to identify any unmanaged namespaces
+   that you need to migrate. For example:
+
+    ```shell-session
+    $ vault namespace list
+
+    Keys
+    ----
+    admin/
+    ```
+
+1. Create a new Terraform Vault Provider resource file called
+   `vault_namespaces.tf` that defines `vault_namespace` resources for each of
+   the new or existing namespaces resources you want to manage.
+   
+   For example, to migrate the `admin` namespace in the example and create a new
+   `dev` namespace:
+
+    ```hcl
+    resource "vault_namespace" "admin_ns" {
+      path = "admin"
+    }
+
+    resource "vault_namespace" "dev_ns" {
+      path = "dev"
+    }
+    ```
+
+## Step 2: Create a resource file for secret engines
+
+Terraform Vault provider supports discrete types for the different 
+[auth](https://registry.terraform.io/providers/hashicorp/vault/latest/docs#vault-authentication-configuration-options),
+[secret](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/resources/mount),
+and [database](https://registry.terraform.io/providers/hashicorp/vault/latest/docs/resources/database_secrets_mount)
+plugin types in Vault.
+
+To migrate a secret engine, use the `vault_mount` resource type:
+
+```hcl
+resource "vault_mount" "<TERRAFORM_RESOURCE_NAME>" {
+  path = "<VAULT_NAMESPACE>"
+  type = "<VAULT_PLUGIN_TYPE>"
+}
+```
+
+To manage your Vault secret engines in Terraform:
+
+1. Use the `vault secret list` command to identify any unmanaged secret engines
+   that you need to migrate. For example:
+
+    ```shell-session
+    $ vault secrets list | grep -vEw '(cubbyhole|identity|sys)'
+
+    Path          Type         Accessor              Description
+    ----          ----         --------              -----------
+    transit/      transit      transit_8291b949      n/a
+    ```
+
+1. Use the `-namespace` flag to check for unmanaged secret engines under any
+   namespaces you identified in the previous step. For example, to check for
+   secret engines under the `admin` namespace:
+
+    ```shell-session
+    $ vault secrets list -namespace=admin | grep -vEw '(cubbyhole|identity|sys)'
+
+    Path           Type            Accessor                 Description
+    ----           ----            --------                 -----------
+    admin_keys/    kv              kv_87edfc65              n/a
+    ```
+
+1. Create a new Terraform Vault Provider resource file called `vault_secrets.tf`
+   that defines `vault_mount` resources for each of the new or existing secret
+   engines you want to manage.
+   
+   For example, to  migrate the `transit` and `admin_keys` secret engines in the
+   example and enable a new `kv` engine under the new `dev` namespace called
+   `dev_keys`:
+
+    ```hcl
+    resource "vault_mount" "transit_plugin" {
+      path = "transit"
+      type = "transit"
+    }
+
+    resource "vault_mount" "admin_keys_plugin" {
+      namespace = vault_namespace.admin_ns.path
+      path = "admin_keys"
+      type = "kv"
+      options = {
+        version = "2"
+      }
+    }
+
+    resource "vault_mount" "dev_keys_plugin" {
+      namespace = vault_namespace.dev_ns.path
+      path = "dev_keys"
+      type = "kv"
+      options = {
+        version = "2"
+      }
+    }
+    ```
+
+## Step 3: Create a resource file for policies
+
+Terraform Vault provider supports a `vault_policy` resource type for
+managing Vault policies:
+
+```hcl
+resource "vault_policy" "<TERRAFORM_RESOURCE_NAME>" {
+  name = "<VAULT_POLICY_NAME>"
+  policy = <<EOT
+    <VAULT_POLICY_DEFINITION>
+  EOT
+}
+```
+
+To manage your Vault policies in Terraform:
+
+1. Use the `vault policy list` command to identify any unmanaged policies that
+   you need to migrate. For example:
+
+    ```shell-session
+    $ vault policy list | grep -vEw 'root'
+
+    default
+    ```
+
+1. Create a Terraform Vault Provider resource file called `vault_policies.tf`
+   that defines `vault_mount` resources for each policy resource you want to
+   manage in Terraform. You can use the following `bash` code to write all
+   your existing, non-root policies to the file:
+
+  ```shell-session
+  for vpolicy in $(vault policy list | grep -vw root) ; do
+    echo "resource \"vault_policy\" \"vault_$vpolicy\" {"
+    echo "  name = \"$vpolicy\""
+    echo "  policy = <<EOT"
+    vault policy read $vpolicy
+    echo "EOT"
+    echo "}"
+    echo ""
+  done > vault_policies.tf
+  ```
+
+1. Update the `vault_policies.tf` file with any new policies you want to add.
+   For example, to create a policy for the example `dev_keys` secret engine:
+
+   ```hcl
+   resource "vault_policy" "dev_team_policy" {
+   name = "dev_team"
+
+   policy = <<EOT
+    path vault_mount.dev_keys_plugin.path {
+      capabilities = ["create", "update"]
+    }
+    EOT
+   }
+   ``` 
+
+## Step 4: Update your Terraform configuration
+
+1. Create a `vault` directory wherever you keep your deployment configuration
+   files for Terraform.
+
+1. Save your new resource files to your new Vault configuration directory.
+
+1. Use `terraform fmt` to adjust the formatting (if needed) of your new
+   configuration files:
+  ```shell-session
+  $ terraform fmt
+
+  vault_namespaces.tf
+  vault_secrets.tf
+  vault_policies.tf
+  ```
+
+1. Use `terraform validate` to confirm the new configuration is valid:
+  ```shell-session
+  $ terraform validate
+  
+  Success! The configuration is valid.
+  ```
+
+## Step 5: Import preexisting root-level resources
+
+Use the `terraform import` command to import the preexisting root-level resources.
+
+For example, continue from the previous steps, and import the `admin` namespace:
+
+```shell-session
+$ terraform import vault_namespace.admin_ns admin
+
+vault_namespace.admin_ns: Importing from ID "admin"...
+vault_namespace.admin_ns: Import prepared!
+  Prepared vault_namespace for import
+vault_namespace.admin_ns: Refreshing state... [id=admin]
+
+Import successful!
+
+The resources that were imported are shown above. These resources are now in
+your Terraform state and will henceforth be managed by Terraform.
+```
+
+Import the `default` policy:
+
+```shell-session
+$ terraform import vault_policy.default_policy default
+
+vault_policy.default_policy: Importing from ID "default"...
+vault_policy.default_policy: Import prepared!
+  Prepared vault_policy for import
+vault_policy.default_policy: Refreshing state... [id=default]
+
+Import successful!
+
+The resources that were imported are shown above. These resources are now in
+your Terraform state and will henceforth be managed by Terraform.
+```
+
+Import the `transit` plugin:
+
+```shell-session
+$ terraform import vault_mount.transit_plugin transit
+
+vault_mount.transit_plugin: Importing from ID "transit"...
+vault_mount.transit_plugin: Import prepared!
+  Prepared vault_mount for import
+vault_mount.transit_plugin: Refreshing state... [id=transit]
+
+Import successful!
+
+The resources that were imported are shown above. These resources are now in
+your Terraform state and will henceforth be managed by Terraform.
+```
+
+## Step 6: Import preexisting nested resources
+
+To import resources that belong to a previously unmanaged namespace, you must
+set the `TERRAFORM_VAULT_NAMESPACE_IMPORT` environment variable before importing.
+
+For example, to import the `admin_keys` secret engine from the `admin` namespace:
+
+1. Set `TERRAFORM_VAULT_NAMESPACE_IMPORT` to the `admin` Vault namespace:
+
+  ```shell-session
+  $ export TERRAFORM_VAULT_NAMESPACE_IMPORT="admin"
+  ```
+
+1. Import the `vault_mount` resource `admin_keys`:
+
+  ```shell-session
+  $ terraform import vault_mount.admin_keys_plugin admin_keys
+
+  vault_mount.admin_keys_plugin: Importing from ID "admin_keys"...
+  vault_mount.admin_keys_plugin: Import prepared!
+    Prepared vault_mount for import
+  vault_mount.admin_keys_plugin: Refreshing state... [id=admin_keys]
+
+  Import successful!
+
+  The resources that were imported are shown above. These resources are now in
+  your Terraform state and will henceforth be managed by Terraform.
+  ```
+
+1. Unset the `TERRAFORM_VAULT_NAMESPACE_IMPORT` variable when you finish
+   importing child resources:
+
+  ```shell-session
+  $ unset TERRAFORM_VAULT_NAMESPACE_IMPORT
+  ```
+
+## Step 6: Verify the import
+
+1. Use the `terraform state show` command to check your Terraform state file and
+   verify the resources imported successfully. For example, to check the
+   `admin_keys` resource:
+
+  ```shell-session
+  $ terraform state show vault_mount.admin_keys_plugin
+
+  # vault_mount.admin_keys_plugin:
+  resource "vault_mount" "admin_keys" {
+      accessor                     = "kv_87edfc65"
+      allowed_managed_keys         = []
+      audit_non_hmac_request_keys  = []
+      audit_non_hmac_response_keys = []
+      default_lease_ttl_seconds    = 0
+      description                  = null
+      external_entropy_access      = false
+      id                           = "admin_keys"
+      local                        = false
+      max_lease_ttl_seconds        = 0
+      namespace                    = "admin"
+      options                      = {
+          "version" = "2"
+      }
+      path                         = "admin_keys"
+      seal_wrap                    = false
+      type                         = "kv"
+  ```
+
+1. For each of the migrated resources, compare the `accessor` value from your
+   Terraform state to the accessor value in Vault. For example, to confirm the
+   accessor for `admin_keys`:
+
+  ```shell-session
+  $ vault secrets list -namespace="admin" | grep -vEw '(cubbyhole|identity|sys)'
+
+  Path           Type            Accessor                 Description
+  ----           ----            --------                 -----------
+  admin_keys/    kv              kv_87edfc65              n/a
+  ``` 
+
+## Step 7: Add new Vault resources
+
+1. Run `terraform plan` to confirm the new resources that Terraform will manage:
+
+    ```shell-session
+    $ terraform plan
+
+    vault_policy.default_policy: Refreshing state... [id=default]
+    vault_namespace.admin_ns: Refreshing state... [id=admin/]
+    vault_mount.transit_plugin: Refreshing state... [id=transit]
+    vault_mount.admin_keys_plugin: Refreshing state... [id=admin_keys]
+
+    Terraform used the selected providers to generate the following execution plan.
+    Resource actions are indicated with the following symbols:
+      + create
+
+    Terraform will perform the following actions:
+
+      # vault_mount.dev_keys_plugin will be created
+      + resource "vault_mount" "dev_keys" {
+          + accessor                     = (known after apply)
+          + audit_non_hmac_request_keys  = (known after apply)
+          + audit_non_hmac_response_keys = (known after apply)
+          + default_lease_ttl_seconds    = (known after apply)
+          + external_entropy_access      = false
+          + id                           = (known after apply)
+          + max_lease_ttl_seconds        = (known after apply)
+          + namespace                    = "dev"
+          + options                      = {
+              + "version" = "2"
+            }
+          + path                         = "dev_keys"
+          + seal_wrap                    = (known after apply)
+          + type                         = "kv"
+        }
+
+      # vault_namespace.dev_ns will be created
+      + resource "vault_namespace" "dev" {
+          + custom_metadata = (known after apply)
+          + id              = (known after apply)
+          + namespace_id    = (known after apply)
+          + path            = "dev"
+          + path_fq         = (known after apply)
+        }
+
+      # vault_policy.dev_team will be created
+      + resource "vault_policy" "dev_team" {
+          + id     = (known after apply)
+          + name   = "dev_team"
+          + policy = <<-EOT
+                path vault_mount.dev_keys_plugin.path {
+                      capabilities = ["create", "update"]
+                    }
+            EOT
+        }
+
+    Plan: 3 to add, 0 to change, 0 to destroy.
+    ```
+
+1. Run `terraform apply` to create the new resources:
+
+  ```shell-session
+  $ terraform apply
+
+  vault_namespace.dev_ns: Creating...
+  vault_namespace.dev_ns: Creation complete after 0s [id=dev/]
+  vault_mount.dev_keys_plugin: Creating...
+  vault_mount.dev_keys_plugin: Creation complete after 0s [id=dev_keys]
+  vault_policy.dev_team: Creating...
+  vault_policy.dev_team: Creation complete after 0s [id=dev_team]
+
+  Apply complete! Resources: 3 added, 0 changed, 0 destroyed.
+  ```
+
+1. Use the `terraform state show` command to check your Terraform state file and
+   verify the new resources created successfully. For example, to check the
+   `dev_keys` resource:
+
+  ```shell-session
+  $ terraform state show vault_mount.dev_keys_plugin
+
+  # vault_mount.dev_keys_plugin:
+  resource "vault_mount" "dev_keys" {
+      accessor                     = "kv_b3d2dd6f"
+      allowed_managed_keys         = []
+      audit_non_hmac_request_keys  = []
+      audit_non_hmac_response_keys = []
+      default_lease_ttl_seconds    = 0
+      description                  = null
+      external_entropy_access      = false
+      id                           = "dev_keys"
+      local                        = false
+      max_lease_ttl_seconds        = 0
+      namespace                    = "dev"
+      options                      = {
+          "version" = "2"
+      }
+      path                         = "dev_keys"
+      seal_wrap                    = false
+      type                         = "kv"
+  }
+  ```
+
+1. Confirm that your Vault instance can use the new resources. For example, to
+   confirm the `dev_keys` resources:
+
+  ```shell-session
+  $ vault secrets list -namespace="dev" | grep -vEw '(cubbyhole|identity|sys)'
+
+  Path          Type            Accessor                 Description
+  ----          ----            --------                 -----------
+  dev_keys/     kv              kv_b3d2dd6f              n/a
+  ``` 
+
+<Tip title="Additional guide">
+
+Review the [best practices for programmatic Vault management](/vault/docs/configuration/programmatic-best-practices) for additional guidance.
+
+</Tip>

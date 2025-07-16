@@ -1,76 +1,53 @@
-import { later, run, _cancelTimers as cancelTimers } from '@ember/runloop';
-import { resolve } from 'rsvp';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import EmberObject from '@ember/object';
-import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, settled } from '@ember/test-helpers';
+import { click, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
-import { create } from 'ember-cli-page-object';
-import editForm from 'vault/tests/pages/components/edit-form';
-
-const component = create(editForm);
-
-const flash = Service.extend({
-  success: sinon.stub(),
-});
-
-const createModel = (canDelete = true) => {
-  return EmberObject.create({
-    fields: [
-      { name: 'one', type: 'string' },
-      { name: 'two', type: 'boolean' },
-    ],
-    canDelete,
-    destroyRecord() {
-      return resolve();
-    },
-    save() {
-      return resolve();
-    },
-    rollbackAttributes() {},
-  });
-};
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | edit form', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    run(() => {
-      this.owner.unregister('service:flash-messages');
-      this.owner.register('service:flash-messages', flash);
+    this.model = EmberObject.create({
+      fields: [
+        { name: 'one', type: 'string' },
+        { name: 'two', type: 'boolean' },
+      ],
+      destroyRecord() {},
+      save() {},
+      rollbackAttributes() {},
     });
+    this.onSave = sinon.spy();
+    this.renderComponent = () =>
+      render(hbs`
+      <EditForm @model={{this.model}} @onSave={{this.onSave}} />
+    `);
   });
 
   test('it renders', async function (assert) {
-    let model = createModel();
-    this.set('model', model);
-    await render(hbs`{{edit-form model=model}}`);
-
-    assert.ok(component.fields.length, 2);
+    await this.renderComponent();
+    assert.dom(GENERAL.fieldByAttr('one')).exists();
+    assert.dom(GENERAL.fieldByAttr('two')).exists();
   });
 
   test('it calls flash message fns on save', async function (assert) {
     assert.expect(4);
-    let model = createModel();
-    let onSave = () => {
-      return resolve();
-    };
-    this.set('model', model);
-    this.set('onSave', onSave);
-    let saveSpy = sinon.spy(this, 'onSave');
-
-    await render(hbs`{{edit-form model=model onSave=onSave}}`);
-
-    component.submit();
-    later(() => cancelTimers(), 50);
-    return settled().then(() => {
-      assert.ok(saveSpy.calledOnce, 'calls passed onSave');
-      assert.equal(saveSpy.getCall(0).args[0].saveType, 'save');
-      assert.deepEqual(saveSpy.getCall(0).args[0].model, model, 'passes model to onSave');
-      let flash = this.owner.lookup('service:flash-messages');
-      assert.equal(flash.success.callCount, 1, 'calls flash message success');
-    });
+    const flash = this.owner.lookup('service:flash-messages');
+    this.flashSuccessSpy = sinon.spy(flash, 'success');
+    await this.renderComponent();
+    await click(GENERAL.submitButton);
+    const { saveType, model } = this.onSave.lastCall.args[0];
+    const [flashMessage] = this.flashSuccessSpy.lastCall.args;
+    assert.strictEqual(flashMessage, 'Saved!');
+    assert.strictEqual(saveType, 'save');
+    assert.strictEqual(saveType, 'save');
+    assert.deepEqual(model, this.model, 'passes model to onSave');
   });
 });

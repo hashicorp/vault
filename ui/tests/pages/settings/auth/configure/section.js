@@ -1,11 +1,15 @@
-import { create, clickable, visitable, collection } from 'ember-cli-page-object';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { create, clickable, visitable } from 'ember-cli-page-object';
 import fields from '../../../components/form-field';
 import flashMessage from '../../../components/flash-message';
 
 export default create({
   ...fields,
-  tabs: collection('[data-test-auth-section-tab]'),
   visit: visitable('/vault/settings/auth/configure/:path/:section'),
   flash: flashMessage,
-  save: clickable('[data-test-save-config]'),
+  save: clickable('[data-test-submit-config]'),
 });

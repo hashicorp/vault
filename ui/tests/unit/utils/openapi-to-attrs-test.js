@@ -1,164 +1,17 @@
-import { attr } from '@ember-data/model';
-import { expandOpenApiProps, combineAttributes, combineFieldGroups } from 'vault/utils/openapi-to-attrs';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
+import { combineFieldGroups } from 'vault/utils/openapi-to-attrs';
 import { module, test } from 'qunit';
 
-module('Unit | Util | OpenAPI Data Utilities', function () {
-  const OPENAPI_RESPONSE_PROPS = {
-    ttl: {
-      type: 'string',
-      format: 'seconds',
-      description: 'this is a TTL!',
-      'x-vault-displayAttrs': {
-        name: 'TTL',
-      },
-    },
-    'awesome-people': {
-      type: 'array',
-      items: {
-        type: 'string',
-      },
-      'x-vault-displayAttrs': {
-        value: 'Grace Hopper,Lady Ada',
-      },
-    },
-    'favorite-ice-cream': {
-      type: 'string',
-      enum: ['vanilla', 'chocolate', 'strawberry'],
-    },
-    'default-value': {
-      default: 30,
-      'x-vault-displayAttrs': {
-        value: 300,
-      },
-      type: 'integer',
-    },
-    default: {
-      'x-vault-displayAttrs': {
-        value: 30,
-      },
-      type: 'integer',
-    },
-    'super-secret': {
-      type: 'string',
-      'x-vault-displayAttrs': {
-        sensitive: true,
-      },
-      description: 'A really secret thing',
-    },
-  };
-  const EXPANDED_PROPS = {
-    ttl: {
-      helpText: 'this is a TTL!',
-      editType: 'ttl',
-      label: 'TTL',
-      fieldGroup: 'default',
-    },
-    awesomePeople: {
-      editType: 'stringArray',
-      defaultValue: 'Grace Hopper,Lady Ada',
-      fieldGroup: 'default',
-    },
-    favoriteIceCream: {
-      editType: 'string',
-      type: 'string',
-      possibleValues: ['vanilla', 'chocolate', 'strawberry'],
-      fieldGroup: 'default',
-    },
-    defaultValue: {
-      editType: 'number',
-      type: 'number',
-      defaultValue: 300,
-      fieldGroup: 'default',
-    },
-    default: {
-      editType: 'number',
-      type: 'number',
-      defaultValue: 30,
-      fieldGroup: 'default',
-    },
-    superSecret: {
-      type: 'string',
-      editType: 'string',
-      sensitive: true,
-      helpText: 'A really secret thing',
-      fieldGroup: 'default',
-    },
-  };
-
-  const EXISTING_MODEL_ATTRS = [
-    {
-      key: 'name',
-      value: {
-        isAttribute: true,
-        name: 'name',
-        options: {
-          editType: 'string',
-          label: 'Role name',
-        },
-      },
-    },
-    {
-      key: 'awesomePeople',
-      value: {
-        isAttribute: true,
-        name: 'awesomePeople',
-        options: {
-          label: 'People Who Are Awesome',
-        },
-      },
-    },
-  ];
-
-  const COMBINED_ATTRS = {
-    name: attr('string', {
-      editType: 'string',
-      type: 'string',
-      label: 'Role name',
-    }),
-    ttl: attr('string', {
-      editType: 'ttl',
-      label: 'TTL',
-      helpText: 'this is a TTL!',
-    }),
-    awesomePeople: attr({
-      label: 'People Who Are Awesome',
-      editType: 'stringArray',
-      defaultValue: 'Grace Hopper,Lady Ada',
-    }),
-    favoriteIceCream: attr('string', {
-      type: 'string',
-      editType: 'string',
-      possibleValues: ['vanilla', 'chocolate', 'strawberry'],
-    }),
-    superSecret: attr('string', {
-      type: 'string',
-      editType: 'string',
-      sensitive: true,
-      description: 'A really secret thing',
-    }),
-  };
-
+module('Unit | Util | combineFieldGroups', function () {
   const NEW_FIELDS = ['one', 'two', 'three'];
-
-  test('it creates objects from OpenAPI schema props', function (assert) {
-    assert.expect(6);
-    const generatedProps = expandOpenApiProps(OPENAPI_RESPONSE_PROPS);
-    for (let propName in EXPANDED_PROPS) {
-      assert.deepEqual(EXPANDED_PROPS[propName], generatedProps[propName], `correctly expands ${propName}`);
-    }
-  });
-
-  test('it combines OpenAPI props with existing model attrs', function (assert) {
-    assert.expect(3);
-    const combined = combineAttributes(EXISTING_MODEL_ATTRS, EXPANDED_PROPS);
-    for (let propName in EXISTING_MODEL_ATTRS) {
-      assert.deepEqual(COMBINED_ATTRS[propName], combined[propName]);
-    }
-  });
 
   test('it adds new fields from OpenAPI to fieldGroups except for exclusions', function (assert) {
     assert.expect(3);
-    let modelFieldGroups = [
+    const modelFieldGroups = [
       { default: ['name', 'awesomePeople'] },
       {
         Options: ['ttl'],
@@ -172,7 +25,7 @@ module('Unit | Util | OpenAPI Data Utilities', function () {
       },
     ];
     const newFieldGroups = combineFieldGroups(modelFieldGroups, NEW_FIELDS, excludedFields);
-    for (let groupName in modelFieldGroups) {
+    for (const groupName in modelFieldGroups) {
       assert.deepEqual(
         newFieldGroups[groupName],
         expectedGroups[groupName],
@@ -182,7 +35,7 @@ module('Unit | Util | OpenAPI Data Utilities', function () {
   });
   test('it adds all new fields from OpenAPI to fieldGroups when excludedFields is empty', function (assert) {
     assert.expect(3);
-    let modelFieldGroups = [
+    const modelFieldGroups = [
       { default: ['name', 'awesomePeople'] },
       {
         Options: ['ttl'],
@@ -196,7 +49,7 @@ module('Unit | Util | OpenAPI Data Utilities', function () {
       },
     ];
     const nonExcludedFieldGroups = combineFieldGroups(modelFieldGroups, NEW_FIELDS, excludedFields);
-    for (let groupName in modelFieldGroups) {
+    for (const groupName in modelFieldGroups) {
       assert.deepEqual(
         nonExcludedFieldGroups[groupName],
         expectedGroups[groupName],
@@ -206,7 +59,7 @@ module('Unit | Util | OpenAPI Data Utilities', function () {
   });
   test('it keeps fields the same when there are no brand new fields from OpenAPI', function (assert) {
     assert.expect(3);
-    let modelFieldGroups = [
+    const modelFieldGroups = [
       { default: ['name', 'awesomePeople', 'two', 'one', 'three'] },
       {
         Options: ['ttl'],
@@ -220,7 +73,7 @@ module('Unit | Util | OpenAPI Data Utilities', function () {
       },
     ];
     const fieldGroups = combineFieldGroups(modelFieldGroups, NEW_FIELDS, excludedFields);
-    for (let groupName in modelFieldGroups) {
+    for (const groupName in modelFieldGroups) {
       assert.deepEqual(fieldGroups[groupName], expectedGroups[groupName], 'it incorporates all new fields');
     }
   });

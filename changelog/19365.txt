@@ -1,0 +1,7 @@
+```release-note: enhancement
+auth/aws: Support request cancellation with AWS requests
+```
+
+```release-note: enhancement
+secrets/aws: Support request cancellation with AWS requests
+```

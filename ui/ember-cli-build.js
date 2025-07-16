@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 /* eslint-env node */
 'use strict';
 
@@ -14,12 +19,8 @@ const appConfig = {
     serviceWorkerScope: config.serviceWorkerScope,
     skipWaitingOnMessage: true,
   },
-  svgJar: {
-    //optimize: false,
-    //paths: [],
-    optimizer: {},
-    sourceDirs: ['node_modules/@hashicorp/structure-icons/dist', 'public'],
-    rootURL: '/ui/',
+  babel: {
+    plugins: [require.resolve('ember-concurrency/async-arrow-task-transform')],
   },
   fingerprint: {
     exclude: ['images/'],
@@ -29,8 +30,9 @@ const appConfig = {
       return `${config.rootURL.replace(/\/$/, '')}${filePath}`;
     },
   },
-  babel: {
-    plugins: [['inline-json-import', {}]],
+  'ember-cli-babel': {
+    enableTypeScriptTransform: true,
+    throwUnlessParallelizable: true,
   },
   hinting: isTest,
   tests: isTest,
@@ -40,6 +42,20 @@ const appConfig = {
   sassOptions: {
     sourceMap: false,
     onlyIncluded: true,
+    quietDeps: true, // silences deprecation warnings from dependencies
+    precision: 4,
+    includePaths: [
+      './node_modules/@hashicorp/design-system-components/dist/styles',
+      './node_modules/@hashicorp/design-system-tokens/dist/products/css',
+      './node_modules/ember-basic-dropdown/',
+      './node_modules/ember-power-select/',
+      './node_modules/@hashicorp/vault-reporting/dist/styles',
+    ],
+  },
+  minifyCSS: {
+    options: {
+      advanced: false,
+    },
   },
   autoprefixer: {
     enabled: isTest || isProd,
@@ -61,11 +77,7 @@ const appConfig = {
 };
 
 module.exports = function (defaults) {
-  let app = new EmberApp(defaults, appConfig);
-
-  app.import('vendor/string-includes.js');
-  app.import('node_modules/string.prototype.endswith/endswith.js');
-  app.import('node_modules/string.prototype.startswith/startswith.js');
+  const app = new EmberApp(defaults, appConfig);
 
   app.import('node_modules/jsonlint/lib/jsonlint.js');
   app.import('node_modules/codemirror/addon/lint/lint.css');
@@ -75,22 +87,9 @@ module.exports = function (defaults) {
   app.import('node_modules/jsondiffpatch/dist/formatters-styles/html.css');
 
   app.import('app/styles/bulma/bulma-radio-checkbox.css');
-
-  app.import('node_modules/@hashicorp/structure-icons/dist/loading.css');
-  app.import('node_modules/@hashicorp/structure-icons/dist/run.css');
-
-  // Use `app.import` to add additional libraries to the generated
-  // output files.
-  //
-  // If you need to use different assets in different
-  // environments, specify an object as the first parameter. That
-  // object's keys should be the environment name and the values
-  // should be the asset to use in that environment.
-  //
-  // If the library that you are including contains AMD or ES6
-  // modules that you would like to import into your application
-  // please specify an object with the list of modules as keys
-  // along with the exports of each module as its value.
+  app.import(
+    'node_modules/@hashicorp/design-system-components/dist/styles/@hashicorp/design-system-components.css'
+  );
 
   return app.toTree();
 };

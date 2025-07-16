@@ -1,18 +1,31 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
+	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/go-test/deep"
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
+	"github.com/hashicorp/vault/internalshared/configutil"
+	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/sdk/version"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/vault/seal"
+	"github.com/hashicorp/vault/version"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSysSealStatus(t *testing.T) {
@@ -155,16 +168,173 @@ func TestSysUnseal(t *testing.T) {
 	}
 }
 
-func TestSysUnseal_badKey(t *testing.T) {
-	core := vault.TestCore(t)
-	vault.TestCoreInit(t, core)
+func subtestBadSingleKey(t *testing.T, seal vault.Seal) {
+	core := vault.TestCoreWithSeal(t, seal, false)
+	_, err := core.Initialize(context.Background(), &vault.InitParams{
+		BarrierConfig: &vault.SealConfig{
+			SecretShares:    1,
+			SecretThreshold: 1,
+		},
+		RecoveryConfig: &vault.SealConfig{
+			SecretShares:    1,
+			SecretThreshold: 1,
+		},
+	})
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+
 	ln, addr := TestServer(t, core)
 	defer ln.Close()
 
-	resp := testHttpPut(t, "", addr+"/v1/sys/unseal", map[string]interface{}{
-		"key": "0123",
+	testCases := []struct {
+		description string
+		key         string
+	}{
+		// hex key tests
+		// hexadecimal strings have 2 symbols per byte; size(0xAA) == 1 byte
+		{
+			"short hex key",
+			strings.Repeat("AA", 8),
+		},
+		{
+			"long hex key",
+			strings.Repeat("AA", 34),
+		},
+		{
+			"uneven hex key byte length",
+			strings.Repeat("AA", 33),
+		},
+		{
+			"valid hex key but wrong cluster",
+			"4482691dd3a710723c4f77c4920ee21b96c226bf4829fa6eb8e8262c180ae933",
+		},
+
+		// base64 key tests
+		// base64 strings have min. 1 character per byte; size("m") == 1 byte
+		{
+			"short b64 key",
+			base64.StdEncoding.EncodeToString([]byte(strings.Repeat("m", 8))),
+		},
+		{
+			"long b64 key",
+			base64.StdEncoding.EncodeToString([]byte(strings.Repeat("m", 34))),
+		},
+		{
+			"uneven b64 key byte length",
+			base64.StdEncoding.EncodeToString([]byte(strings.Repeat("m", 33))),
+		},
+		{
+			"valid b64 key but wrong cluster",
+			"RIJpHdOnEHI8T3fEkg7iG5bCJr9IKfpuuOgmLBgK6TM=",
+		},
+
+		// other key tests
+		{
+			"empty key",
+			"",
+		},
+		{
+			"key with bad format",
+			"ThisKeyIsNeitherB64NorHex",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			resp := testHttpPut(t, "", addr+"/v1/sys/unseal", map[string]interface{}{
+				"key": tc.key,
+			})
+
+			testResponseStatus(t, resp, 400)
+		})
+	}
+}
+
+func subtestBadMultiKey(t *testing.T, seal vault.Seal) {
+	numKeys := 3
+
+	core := vault.TestCoreWithSeal(t, seal, false)
+	_, err := core.Initialize(context.Background(), &vault.InitParams{
+		BarrierConfig: &vault.SealConfig{
+			SecretShares:    numKeys,
+			SecretThreshold: numKeys,
+		},
+		RecoveryConfig: &vault.SealConfig{
+			SecretShares:    numKeys,
+			SecretThreshold: numKeys,
+		},
 	})
-	testResponseStatus(t, resp, 400)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	testCases := []struct {
+		description string
+		keys        []string
+	}{
+		{
+			"all unseal keys from another cluster",
+			[]string{
+				"b189d98fdec3a15bed9b1cce5088f82b92896696b788c07bdf03c73da08279a5e8",
+				"0fa98232f034177d8d9c2824899a2ac1e55dc6799348533e10510b856aef99f61a",
+				"5344f5caa852f9ba1967d9623ed286a45ea7c4a529522d25f05d29ff44f17930ac",
+			},
+		},
+		{
+			"mixing unseal keys from different cluster, different share config",
+			[]string{
+				"b189d98fdec3a15bed9b1cce5088f82b92896696b788c07bdf03c73da08279a5e8",
+				"0fa98232f034177d8d9c2824899a2ac1e55dc6799348533e10510b856aef99f61a",
+				"e04ea3020838c2050c4a169d7ba4d30e034eec8e83e8bed9461bf2646ee412c0",
+			},
+		},
+		{
+			"mixing unseal keys from different clusters, similar share config",
+			[]string{
+				"b189d98fdec3a15bed9b1cce5088f82b92896696b788c07bdf03c73da08279a5e8",
+				"0fa98232f034177d8d9c2824899a2ac1e55dc6799348533e10510b856aef99f61a",
+				"413f80521b393aa6c4e42e9a3a3ab7f00c2002b2c3bf1e273fc6f363f35f2a378b",
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.description, func(t *testing.T) {
+			for i, key := range tc.keys {
+				resp := testHttpPut(t, "", addr+"/v1/sys/unseal", map[string]interface{}{
+					"key": key,
+				})
+
+				if i == numKeys-1 {
+					// last key
+					testResponseStatus(t, resp, 400)
+				} else {
+					// unseal in progress
+					testResponseStatus(t, resp, 200)
+				}
+
+			}
+		})
+	}
+}
+
+func TestSysUnseal_BadKeyNewShamir(t *testing.T) {
+	seal := vault.NewTestSeal(t,
+		&seal.TestSealOpts{StoredKeys: seal.StoredKeysSupportedShamirRoot})
+
+	subtestBadSingleKey(t, seal)
+	subtestBadMultiKey(t, seal)
+}
+
+func TestSysUnseal_BadKeyAutoUnseal(t *testing.T) {
+	seal := vault.NewTestSeal(t,
+		&seal.TestSealOpts{StoredKeys: seal.StoredKeysSupportedGeneric})
+
+	subtestBadSingleKey(t, seal)
+	subtestBadMultiKey(t, seal)
 }
 
 func TestSysUnseal_Reset(t *testing.T) {
@@ -266,6 +436,35 @@ func TestSysUnseal_Reset(t *testing.T) {
 	}
 	if diff := deep.Equal(actual, expected); diff != nil {
 		t.Fatal(diff)
+	}
+}
+
+// TestSysUnseal_NodeRemovedFromCluster verifies that a call to /sys/unseal fails
+// with an appropriate error when the node has been removed from a cluster.
+func TestSysUnseal_NodeRemovedFromCluster(t *testing.T) {
+	core, err := vault.TestCoreWithMockRemovableNodeHABackend(t, true)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	ln, addr := TestServer(t, core)
+	defer ln.Close()
+
+	// The value of key doesn't matter here, we just need to make a request.
+	resp := testHttpPut(t, "", addr+"/v1/sys/unseal", map[string]interface{}{
+		"key": "foo",
+	})
+
+	testResponseStatus(t, resp, 500)
+	var actual map[string]interface{}
+	testResponseBody(t, resp, &actual)
+
+	errors, ok := actual["errors"].([]interface{})
+	if !ok {
+		t.Fatalf("no errors in the response, request should be invalid")
+	}
+	expectedErrorMsg := "node was removed from a HA cluster"
+	if !strings.Contains(errors[0].(string), expectedErrorMsg) {
+		t.Fatalf("error message should contain %q", expectedErrorMsg)
 	}
 }
 
@@ -391,4 +590,65 @@ func TestSysStepDown(t *testing.T) {
 
 	resp := testHttpPut(t, token, addr+"/v1/sys/step-down", nil)
 	testResponseStatus(t, resp, 204)
+}
+
+// TestSysSealStatusRedaction tests that the response from a
+// a request to sys/seal-status are redacted only if no valid token
+// is provided with the request
+func TestSysSealStatusRedaction(t *testing.T) {
+	conf := &vault.CoreConfig{
+		EnableUI:        false,
+		EnableRaw:       true,
+		BuiltinRegistry: corehelpers.NewMockBuiltinRegistry(),
+		AuditBackends: map[string]audit.Factory{
+			"file": audit.NewFileBackend,
+		},
+	}
+	core, _, token := vault.TestCoreUnsealedWithConfig(t, conf)
+
+	// Setup new custom listener
+	ln, addr := TestListener(t)
+	props := &vault.HandlerProperties{
+		Core: core,
+		ListenerConfig: &configutil.Listener{
+			RedactVersion: true,
+		},
+	}
+	TestServerWithListenerAndProperties(t, ln, addr, core, props)
+	defer ln.Close()
+	TestServerAuth(t, addr, token)
+
+	client := cleanhttp.DefaultClient()
+
+	// Check seal-status
+	req, err := http.NewRequest("GET", addr+"/v1/sys/seal-status", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	req.Header.Set(consts.AuthHeaderName, token)
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	testResponseStatus(t, resp, 200)
+
+	// Verify that version exists when provided a valid token
+	var actual map[string]interface{}
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &actual)
+	assert.NotEmpty(t, actual["version"])
+
+	// Verify that version is redacted when no token is provided
+	req, err = http.NewRequest("GET", addr+"/v1/sys/seal-status", nil)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	req.Header.Set(consts.AuthHeaderName, "")
+	resp, err = client.Do(req)
+	if err != nil {
+		t.Fatalf("err: %s", err)
+	}
+	testResponseStatus(t, resp, 200)
+	testResponseBody(t, resp, &actual)
+	assert.Empty(t, actual["version"])
 }

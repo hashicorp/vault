@@ -1,0 +1,3 @@
+```release-note:bug
+activity: The sys/internal/counters/activity endpoint will return current month data when the end_date parameter is set to a future date.
+```

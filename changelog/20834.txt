@@ -1,0 +1,3 @@
+```release-note:change
+core: Remove feature toggle for SSCTs, i.e. the env var VAULT_DISABLE_SERVER_SIDE_CONSISTENT_TOKENS.
+```

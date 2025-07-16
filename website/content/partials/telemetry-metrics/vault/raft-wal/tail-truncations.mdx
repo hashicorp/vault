@@ -1,0 +1,14 @@
+<Warning title="Experimental">
+
+### vault.raft.wal.tail-truncations ((#vault-raft-wal-tail-truncations))
+
+</Warning>
+
+Metric type | Value   | Description
+----------- | ------- | -----------
+counter     | number  | Number of log entries that have been truncated from the tail
+
+Counts the number of log entries truncated from the tail (i.e. the newest entries).
+
+If you track the rate of change in tail truncations over time, individual
+truncate calls appear as spikes.

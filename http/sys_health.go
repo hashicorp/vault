@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package http
 
 import (
@@ -9,16 +12,18 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/helper/consts"
-	"github.com/hashicorp/vault/sdk/version"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/hashicorp/vault/version"
 )
 
-func handleSysHealth(core *vault.Core) http.Handler {
+func handleSysHealth(core *vault.Core, opt ...ListenerConfigOption) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case "GET":
-			handleSysHealthGet(core, w, r)
+			handleSysHealthGet(core, w, r, opt...)
 		case "HEAD":
 			handleSysHealthHead(core, w, r)
 		default:
@@ -40,7 +45,7 @@ func fetchStatusCode(r *http.Request, field string) (int, bool, bool) {
 	return statusCode, false, true
 }
 
-func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request) {
+func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request, opt ...ListenerConfigOption) {
 	code, body, err := getSysHealth(core, r)
 	if err != nil {
 		core.Logger().Error("error checking health", "error", err)
@@ -53,7 +58,31 @@ func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	var tokenPresent bool
+	token := r.Header.Get(consts.AuthHeaderName)
+
+	if token != "" {
+		// We don't care about the error, we just want to know if the token exists
+		lock := core.HALock()
+		lock.Lock()
+		tokenEntry, err := core.LookupToken(r.Context(), token)
+		lock.Unlock()
+		tokenPresent = err == nil && tokenEntry != nil
+	}
+	opts, _ := getOpts(opt...)
+
+	if !tokenPresent {
+		if opts.withRedactVersion {
+			body.Version = opts.withRedactionValue
+		}
+
+		if opts.withRedactClusterName {
+			body.ClusterName = opts.withRedactionValue
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
+	defer logical.IncrementResponseStatusCodeMetric(code)
 	w.WriteHeader(code)
 
 	// Generate the response
@@ -67,6 +96,7 @@ func handleSysHealthHead(core *vault.Core, w http.ResponseWriter, r *http.Reques
 	if body != nil {
 		w.Header().Set("Content-Type", "application/json")
 	}
+	defer logical.IncrementResponseStatusCodeMetric(code)
 	w.WriteHeader(code)
 }
 
@@ -131,6 +161,20 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		perfStandbyCode = code
 	}
 
+	haUnhealthyCode := 474
+	if code, found, ok := fetchStatusCode(r, "haunhealthycode"); !ok {
+		return http.StatusBadRequest, nil, nil
+	} else if found {
+		haUnhealthyCode = code
+	}
+
+	removedCode := 530
+	if code, found, ok := fetchStatusCode(r, "removedcode"); !ok {
+		return http.StatusBadRequest, nil, nil
+	} else if found {
+		removedCode = code
+	}
+
 	ctx := context.Background()
 
 	// Check system status
@@ -148,13 +192,21 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		return http.StatusInternalServerError, nil, err
 	}
 
+	removed, shouldIncludeRemoved := core.IsRemovedFromCluster()
+
+	haHealthy, lastHeartbeat := core.GetHAHeartbeatHealth()
+
 	// Determine the status code
 	code := activeCode
 	switch {
 	case !init:
 		code = uninitCode
+	case removed:
+		code = removedCode
 	case sealed:
 		code = sealedCode
+	case !haHealthy && lastHeartbeat != nil:
+		code = haUnhealthyCode
 	case replicationState.HasState(consts.ReplicationDRSecondary):
 		code = drSecondaryCode
 	case perfStandby:
@@ -191,13 +243,28 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 		ReplicationDRMode:          replicationState.GetDRString(),
 		ServerTimeUTC:              time.Now().UTC().Unix(),
 		Version:                    version.GetVersion().VersionNumber(),
+		Enterprise:                 constants.IsEnterprise,
 		ClusterName:                clusterName,
 		ClusterID:                  clusterID,
+		ClockSkewMillis:            core.ActiveNodeClockSkewMillis(),
+		EchoDurationMillis:         core.EchoDuration().Milliseconds(),
+	}
+	if standby {
+		body.ReplicationPrimaryCanaryAgeMillis = core.GetReplicationLagMillisIgnoreErrs()
 	}
 
-	licenseState, err := vault.LicenseSummary(core)
+	licenseState, err := core.EntGetLicenseState()
 	if err != nil {
 		return http.StatusInternalServerError, nil, err
+	}
+
+	if shouldIncludeRemoved {
+		body.RemovedFromCluster = &removed
+	}
+
+	if lastHeartbeat != nil {
+		body.LastRequestForwardingHeartbeatMillis = lastHeartbeat.Milliseconds()
+		body.HAConnectionHealthy = &haHealthy
 	}
 
 	if licenseState != nil {
@@ -211,7 +278,7 @@ func getSysHealth(core *vault.Core, r *http.Request) (int, *HealthResponse, erro
 	}
 
 	if init && !sealed && !standby {
-		body.LastWAL = vault.LastWAL(core)
+		body.LastWAL = core.EntLastWAL()
 	}
 
 	return code, body, nil
@@ -224,16 +291,23 @@ type HealthResponseLicense struct {
 }
 
 type HealthResponse struct {
-	Initialized                bool                   `json:"initialized"`
-	Sealed                     bool                   `json:"sealed"`
-	Standby                    bool                   `json:"standby"`
-	PerformanceStandby         bool                   `json:"performance_standby"`
-	ReplicationPerformanceMode string                 `json:"replication_performance_mode"`
-	ReplicationDRMode          string                 `json:"replication_dr_mode"`
-	ServerTimeUTC              int64                  `json:"server_time_utc"`
-	Version                    string                 `json:"version"`
-	ClusterName                string                 `json:"cluster_name,omitempty"`
-	ClusterID                  string                 `json:"cluster_id,omitempty"`
-	LastWAL                    uint64                 `json:"last_wal,omitempty"`
-	License                    *HealthResponseLicense `json:"license,omitempty"`
+	Initialized                          bool                   `json:"initialized"`
+	Sealed                               bool                   `json:"sealed"`
+	Standby                              bool                   `json:"standby"`
+	PerformanceStandby                   bool                   `json:"performance_standby"`
+	ReplicationPerformanceMode           string                 `json:"replication_performance_mode"`
+	ReplicationDRMode                    string                 `json:"replication_dr_mode"`
+	ServerTimeUTC                        int64                  `json:"server_time_utc"`
+	Version                              string                 `json:"version"`
+	Enterprise                           bool                   `json:"enterprise"`
+	ClusterName                          string                 `json:"cluster_name,omitempty"`
+	ClusterID                            string                 `json:"cluster_id,omitempty"`
+	LastWAL                              uint64                 `json:"last_wal,omitempty"`
+	License                              *HealthResponseLicense `json:"license,omitempty"`
+	EchoDurationMillis                   int64                  `json:"echo_duration_ms"`
+	ClockSkewMillis                      int64                  `json:"clock_skew_ms"`
+	ReplicationPrimaryCanaryAgeMillis    int64                  `json:"replication_primary_canary_age_ms"`
+	RemovedFromCluster                   *bool                  `json:"removed_from_cluster,omitempty"`
+	HAConnectionHealthy                  *bool                  `json:"ha_connection_healthy,omitempty"`
+	LastRequestForwardingHeartbeatMillis int64                  `json:"last_request_forwarding_heartbeat_ms,omitempty"`
 }

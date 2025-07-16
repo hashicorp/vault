@@ -1,0 +1,65 @@
+---
+layout: docs
+page_title: Risks of using inconsistent versions of Agent and Vault
+description: >-
+  Using different versions of Vault Agent and Vault is possible but limits the
+  available functionality.
+---
+
+# Understand the risks of using inconsistent versions of Agent and Vault
+
+There is no requirement to run identical versions of Vault Agent and Vault server.
+It is safe to run different versions. However, you may not be able to take
+advantage of all the newest features in Vault if you do not upgrade to
+the most recent versions of Agent and Vault server.
+
+The Agent writes a note to the logs when it detects a mismatch between
+Agent and Vault server versions. The note is purely informative to assist
+with debugging when the problem may be related to a version mismatch.
+For example, when a newer Agent version expects functionality that is
+not available in an older version of Vault.
+
+This document describes the common cases.  There may be occasional exceptions, which if intentional will be called out in the CHANGELOG in a `CHANGES` section.  If unintentional/undocumented these should be treated as bugs and reported.
+
+## When Vault Agent is older
+
+In most cases, Vault server upgrades are backwards compatible with
+older versions of Vault Agent. In the rare case where a Vault upgrade is
+**not** backwards compatible, we document the relevant information in
+the Vault upgrade guide.
+
+Auto-auth:
+- new auth methods that have been introduced since Agent was built will be unavailable
+- existing auth methods should continue to function normally
+
+Proxy:
+- since Agent simply mirrors the incoming requests, even if an incoming request uses an endpoint that didn't exist when that version of Agent was compiled, that won't impede Agent's ability to proxy the request
+
+Templating:
+- the templating language features that interact with the Vault server use stable Vault APIs to retrieve and renew secrets
+- even if new secret engine types are introduced in newer Vault releases, these should not require an Agent upgrade to access via templates
+
+##  When Vault Agent is newer
+
+Newer Vault Agent versions will not work with older versions of Vault if
+the Agent depends on features that do not exist in older Vault server
+versions. Whenever possible, we release newer functionality as opt-in
+and provide graceful degradation when connecting to an older Vault
+server instance. But the new functionality may be required in cases
+where the change relates  unless there's a very good reason (such as a
+serious security flaw being patched)
+
+Auto-auth:
+- Agent may support authentication methods that are unavailable in older versions of Vault.
+- Agent may make use of newer functionality for existing authentication methods.
+
+Proxy:
+- since Agent simply mirrors the incoming requests, it is unlikely that incompatibilities would surface in proxying, but new functionality may not be available
+- example: When client-controlled consistency support was added to Agent, it started looking for X-Vault-Index headers in responses, and started providing X-Vault-Index headers in proxied requests.  Older Vault Enterprise servers that don't make use of these headers would ignore the new request header and not emit them either.  Agent proxying behaviour continued unchanged, unable to take advantage of the new functionality, but also not impeded in its previously existing behavior.
+
+Templating:
+- We do not anticipate incompatibility between Agent templating and
+older Vault servers. However, it is possible to write templates that
+makes request for functionality not available in the upstream Vault
+server. For example, `{{ with secret "secret/my-secret?some-new-option" }}`
+- we would not deliberately make a change to templating that breaks existing deployments

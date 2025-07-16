@@ -1,0 +1,121 @@
+---
+layout: docs
+page_title: Configure an administrative namespace
+description: >-
+  Step-by-step guide for setting up an administrative namespace in Vault
+---
+
+# Create an administrative namespace
+
+@include 'alerts/enterprise-only.mdx'
+
+Grant access to a predefined subset of privileged system backend endpoints in
+the Vault API with an administrative namespace.
+
+<Tip title="HCP Vault Dedicated has a built-in administrative namespace">
+
+  HCP Vault Dedicated clusters include an administrative namespace (`admin`) by default.
+  For more information on managing namespaces with HCP Vault Dedicated, refer to the
+  [HCP Vault Dedicated namespace considerations](/vault/tutorials/cloud-ops/hcp-vault-namespace-considerations)
+  guide.
+
+</Tip>
+
+## Before you start
+
+- **You must have Vault Enterprise 1.15+ installed and running**.
+- **You must have access to your Vault configuration file**.
+- **You must have permission to create and manage namespaces for your Vault instance**.
+
+## Step 1: Create your namespace
+
+Use the `namespace create` CLI command to create a new namespace: 
+
+```shell-session
+$ vault namespace create YOUR_NAMESPACE_NAME
+```
+
+For example, to create a namespace called "ns_admin" under the root namespace:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault namespace create ns_admin
+```
+
+</CodeBlockConfig>
+
+## Step 2: Give the namespace admin permission
+
+To create an administrative namespace, set the `administrative_namespace_path`
+parameter in your Vault configuration with the absolute path of your new
+namespace. We recommend setting the namespace path with the other string
+assignments in your configuration file. For example: 
+
+<CodeBlockConfig highlight="3">
+
+```hcl 
+ui = true
+api_addr = "https://127.0.0.1:8200"
+administrative_namespace_path = "ns_admin/"
+```
+
+</CodeBlockConfig>
+
+## Step 3: Verify the new permissions
+
+To verify permissions for the administrative namespace, compare API responses
+from a restricted endpoint from your new namespace and another namespace without
+elevated permissions.
+
+1. If you do not already have a namespace you can use for testing, create a test
+   namespace called "ns_test" with the `namespace create` CLI command:
+    ```shell-session
+    $ vault namespace create ns_test
+    ```
+1. Use the `monitor` CLI command to call the `/sys/monitor` endpoint from your
+   test namespace:
+    ```shell-session
+    $ env VAULT_NAMESPACE="ns_test" vault monitor –log-level=debug
+    ```
+   You should see an unsupported path error:
+
+    <CodeBlockConfig hideClipboard>
+
+    ```shell-session
+    $ env VAULT_NAMESPACE="ns_test" vault monitor –log-level=debug
+
+    Error starting monitor: Error making API request.
+    Namespace: ns_test/
+    URL: GET http://127.0.0.1:8400/v1/sys/monitor?log_format=standard&log_level=debug
+    Code: 404. Errors:
+    * 1 error occurred:
+      * unsupported path
+    ```
+
+    </CodeBlockConfig>
+
+1. Now use the `monitor` command to call the `sys/monitor` endpoint from your
+   administrative namespace:
+    ```shell-session
+    $ env VAULT_NAMESPACE="ns_admin" vault monitor –log-level=debug
+    ```
+   You should see log data from your Vault instance streaming to the terminal:
+
+    <CodeBlockConfig hideClipboard>
+
+    ```shell-session
+    $ env VAULT_NAMESPACE="ns_admin" vault monitor –log-level=debug
+
+    2023-08-31T11:54:41.846+0200 [DEBUG] replication.index.perf: saved checkpoint: num_dirty=0
+    2023-08-31T11:54:41.961+0200 [DEBUG] replication.index.local: saved checkpoint: num_dirty=0
+    ```
+
+    </CodeBlockConfig>
+
+## Next steps
+
+- Follow the [Secure multi-tenancy with namespaces](/vault/tutorials/enterprise/namespaces)
+  tutorial to provide additional security and ensure teams can self-manage their
+  own environments.
+- Read more about [managing namespaces in Vault Enterprise](/vault/docs/enterprise/namespaces).

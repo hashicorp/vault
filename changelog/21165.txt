@@ -1,0 +1,3 @@
+```release-note:bug
+raft/autopilot: Add dr-token flag for raft autopilot cli commands
+```

@@ -1,0 +1,4 @@
+```release-note:improvement
+core: Allow overriding gRPC connect timeout via VAULT_GRPC_MIN_CONNECT_TIMEOUT. This is an env var rather than a config setting because we don't expect this to ever be needed.  It's being added as a last-ditch
+option in case all else fails for some replication issues we may not have fully reproduced.
+```

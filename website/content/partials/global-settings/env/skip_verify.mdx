@@ -1,0 +1,17 @@
+<a id="global-vault_skip_verify" />
+
+**`VAULT_SKIP_VERIFY (bool : false)`**
+
+Allow communication between the CLI and Vault server before verifying the
+authentication certificate presented by Vault.
+
+**Example**: `export VAULT_SKIP_VERIFY=1`
+
+<Warning title="Not appropriate for production">
+
+  Do not use `VAULT_SKIP_VERIFY` in production. Skipping certificate
+  verification violates the Vault security model and voids any associated
+  security guarantees.
+
+</Warning>
+

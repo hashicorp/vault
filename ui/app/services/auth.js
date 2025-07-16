@@ -1,40 +1,47 @@
-import Ember from 'ember';
-import { resolve, reject } from 'rsvp';
-import { assign } from '@ember/polyfills';
-import { isArray } from '@ember/array';
-import { computed, get } from '@ember/object';
-import { capitalize } from '@ember/string';
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
 
-import fetch from 'fetch';
-import { getOwner } from '@ember/application';
-import Service, { inject as service } from '@ember/service';
-import getStorage from '../lib/token-storage';
-import ENV from 'vault/config/environment';
-import { supportedAuthBackends } from 'vault/helpers/supported-auth-backends';
+import Ember from 'ember';
 import { task, timeout } from 'ember-concurrency';
+import { getOwner } from '@ember/owner';
+import { computed } from '@ember/object';
+import { alias } from '@ember/object/computed';
+import Service, { inject as service } from '@ember/service';
+import { capitalize } from '@ember/string';
+import { resolve, reject } from 'rsvp';
+
+import getStorage from 'vault/lib/token-storage';
+import ENV from 'vault/config/environment';
+import { addToArray } from 'vault/helpers/add-to-array';
+
 const TOKEN_SEPARATOR = '☃';
 const TOKEN_PREFIX = 'vault-';
 const ROOT_PREFIX = '_root_';
-const BACKENDS = supportedAuthBackends();
 
 export { TOKEN_SEPARATOR, TOKEN_PREFIX, ROOT_PREFIX };
 
 export default Service.extend({
   permissions: service(),
+  currentCluster: service(),
+  router: service(),
+  store: service(),
   namespaceService: service('namespace'),
+
   IDLE_TIMEOUT: 3 * 60e3,
   expirationCalcTS: null,
   isRenewing: false,
   mfaErrors: null,
+  isRootToken: false,
 
-  init() {
-    this._super(...arguments);
-    this.checkForRootToken();
+  get tokenExpired() {
+    const expiration = this.tokenExpirationDate;
+    return expiration ? this.now() >= expiration : null;
   },
 
-  clusterAdapter() {
-    return getOwner(this).lookup('adapter:cluster');
-  },
+  activeCluster: alias('currentCluster.cluster'),
+
   // eslint-disable-next-line
   tokens: computed({
     get() {
@@ -44,6 +51,82 @@ export default Service.extend({
       return (this._tokens = value);
     },
   }),
+
+  isActiveSession: computed(
+    'router.currentRouteName',
+    'currentToken',
+    'activeCluster.{dr.isSecondary,needsInit,sealed,name}',
+    function () {
+      if (this.activeCluster) {
+        if (this.activeCluster.dr?.isSecondary || this.activeCluster.needsInit || this.activeCluster.sealed) {
+          return false;
+        }
+        if (
+          this.activeCluster.name &&
+          this.currentToken &&
+          this.router.currentRouteName !== 'vault.cluster.auth'
+        ) {
+          return true;
+        }
+      }
+      return false;
+    }
+  ),
+
+  tokenExpirationDate: computed('currentTokenName', 'expirationCalcTS', function () {
+    const tokenName = this.currentTokenName;
+    if (!tokenName) {
+      return;
+    }
+    const tokenData = this.getTokenData(tokenName);
+    const tokenExpirationEpoch = tokenData ? tokenData?.tokenExpirationEpoch : undefined;
+    const expirationDate = new Date(0); // Creates a "zeroed" date object
+
+    return tokenExpirationEpoch ? expirationDate.setUTCMilliseconds(tokenExpirationEpoch) : null;
+  }),
+
+  renewAfterEpoch: computed('currentTokenName', 'expirationCalcTS', function () {
+    const tokenName = this.currentTokenName;
+    const { expirationCalcTS } = this;
+    const data = this.getTokenData(tokenName);
+    if (!tokenName || !data || !expirationCalcTS) {
+      return null;
+    }
+    const { ttl, renewable } = data;
+    // renew after last expirationCalc time + half of the ttl (in ms)
+    return renewable ? Math.floor((ttl * 1e3) / 2) + expirationCalcTS : null;
+  }),
+
+  // returns the key for the token to use
+  currentTokenName: computed('activeClusterId', 'tokens', 'tokens.[]', function () {
+    const regex = new RegExp(this.activeClusterId);
+    return this.tokens.find((key) => regex.test(key));
+  }),
+
+  currentToken: computed('currentTokenName', function () {
+    const name = this.currentTokenName;
+    const data = name && this.getTokenData(name);
+    // data.token is undefined so that's why it returns current token undefined
+    return name && data ? data.token : null;
+  }),
+
+  authData: computed('currentTokenName', function () {
+    const token = this.currentTokenName;
+    if (!token) {
+      return;
+    }
+    const stored = this.getTokenData(token);
+    return Object.assign(stored);
+  }),
+
+  init() {
+    this._super(...arguments);
+    this.checkForRootToken();
+  },
+
+  clusterAdapter() {
+    return getOwner(this).lookup('adapter:cluster');
+  },
 
   generateTokenName({ backend, clusterId }, policies) {
     return (policies || []).includes('root')
@@ -78,7 +161,7 @@ export default Service.extend({
   },
 
   setCluster(clusterId) {
-    this.set('activeCluster', clusterId);
+    this.set('activeClusterId', clusterId);
   },
 
   ajax(url, method, options) {
@@ -91,11 +174,12 @@ export default Service.extend({
       },
     };
 
-    let namespace = typeof options.namespace === 'undefined' ? this.namespaceService.path : options.namespace;
+    const namespace =
+      typeof options.namespace === 'undefined' ? this.namespaceService.path : options.namespace;
     if (namespace) {
       defaults.headers['X-Vault-Namespace'] = namespace;
     }
-    let opts = assign(defaults, options);
+    const opts = Object.assign(defaults, options);
 
     return fetch(url, {
       method: opts.method || 'GET',
@@ -112,105 +196,132 @@ export default Service.extend({
   },
 
   renewCurrentToken() {
-    let namespace = this.authData.userRootNamespace;
+    const namespace = this.authData.userRootNamespace;
     const url = '/v1/auth/token/renew-self';
     return this.ajax(url, 'POST', { namespace });
   },
 
+  async lookupSelf(token) {
+    return this.store
+      .adapterFor('application')
+      .ajax('/v1/auth/token/lookup-self', 'GET', { headers: { 'X-Vault-Token': token } });
+  },
+
   revokeCurrentToken() {
-    let namespace = this.authData.userRootNamespace;
+    const namespace = this.authData.userRootNamespace;
     const url = '/v1/auth/token/revoke-self';
     return this.ajax(url, 'POST', { namespace });
   },
 
-  calculateExpiration(resp) {
-    let now = this.now();
-    const ttl = resp.ttl || resp.lease_duration;
-    const tokenExpirationEpoch = now + ttl * 1e3;
-    this.set('expirationCalcTS', now);
-    return {
-      ttl,
-      tokenExpirationEpoch,
-    };
+  // ttl is originally either the "ttl" or "lease_duration" returned by the auth data response
+  calculateExpiration({ now, ttl, expireTime }) {
+    // First check if the ttl is falsy, including 0, before converting to milliseconds.
+    // Obviously a ttl of zero seconds is not recommended, but root tokens have a `0` ttl because they never expire.
+    // Note - this is different from mount configurations where a `ttl: 0` actually means the value is "unset" and to use system defaults.
+    const convertToMilliseconds = () => (ttl ? now + ttl * 1e3 : null);
+    const tokenExpirationEpoch = expireTime ? new Date(expireTime).getTime() : convertToMilliseconds();
+    // To avoid confusion, if a TTL is `0` return null
+    return { ttl: ttl || null, tokenExpirationEpoch };
   },
 
-  persistAuthData() {
-    let [firstArg, resp] = arguments;
-    let tokens = this.tokens;
-    let currentNamespace = this.namespaceService.path || '';
-    let tokenName;
-    let options;
-    let backend;
-    if (typeof firstArg === 'string') {
-      tokenName = firstArg;
-      backend = this.backendFromTokenName(tokenName);
+  setExpirationSettings(renewable, now) {
+    if (renewable) {
+      this.set('expirationCalcTS', now);
+      this.set('allowExpiration', false);
     } else {
-      options = firstArg;
-      backend = options.backend;
+      this.set('allowExpiration', true);
     }
+  },
 
-    let currentBackend = BACKENDS.findBy('type', backend);
-    let displayName;
-    if (isArray(currentBackend.displayNamePath)) {
-      displayName = currentBackend.displayNamePath.map((name) => get(resp, name)).join('/');
-    } else {
-      displayName = get(resp, currentBackend.displayNamePath);
-    }
-
-    let { entity_id, policies, renewable, namespace_path } = resp;
+  calculateRootNamespace(currentNamespace, namespacePath, backend) {
+    // namespace_path is only returned for methods that use a token exchange to authenticate (i.e. token, oidc)
     // here we prefer namespace_path if its defined,
     // else we look and see if there's already a namespace saved
     // and then finally we'll use the current query param if the others
     // haven't set a value yet
     // all of the typeof checks are necessary because the root namespace is ''
-    let userRootNamespace = namespace_path && namespace_path.replace(/\/$/, '');
-    // if we're logging in with token and there's no namespace_path, we can assume
+    let userRootNamespace = namespacePath && namespacePath.replace(/\/$/, '');
+    // renew-self does not return namespace_path, so we manually setting in renew().
+    // so if we're logging in with token and there's no namespace_path, we can assume
     // that the token belongs to the root namespace
     if (backend === 'token' && !userRootNamespace) {
       userRootNamespace = '';
     }
-    if (typeof userRootNamespace === 'undefined') {
-      if (this.authData) {
-        userRootNamespace = this.authData.userRootNamespace;
-      }
+    if (typeof userRootNamespace === 'undefined' && this.authData) {
+      userRootNamespace = this.authData.userRootNamespace;
     }
     if (typeof userRootNamespace === 'undefined') {
       userRootNamespace = currentNamespace;
     }
-    let data = {
-      userRootNamespace,
-      displayName,
-      backend: currentBackend,
-      token: resp.client_token || get(resp, currentBackend.tokenPath),
+    return userRootNamespace;
+  },
+
+  async persistAuthData(clusterId, authResponseData) {
+    // An empty string denotes the "root" namespace
+    const currentNamespace = this.namespaceService.path || '';
+    // Only pull out the necessary data
+    const { authMethodType, authMountPath, entityId, policies, renewable, token, ttl } = authResponseData;
+
+    // Lookup token for additional data that may be missing from the method's login response
+    const { displayName, expireTime, namespacePath } = await this.lookupTokenData(token, !!currentNamespace, {
+      displayName: authResponseData?.displayName,
+      expireTime: authResponseData?.expireTime,
+      namespacePath: authResponseData?.namespacePath,
+    });
+
+    const userRootNamespace = this.calculateRootNamespace(currentNamespace, namespacePath, authMethodType);
+
+    const persistedTokenData = {
+      authMethodType,
+      authMountPath,
+      displayName: displayName || authMethodType,
+      entityId,
       policies,
       renewable,
-      entity_id,
+      token,
+      userRootNamespace,
+      // Only include namespacePath if it exists
+      ...(namespacePath && { namespacePath }),
     };
 
-    tokenName = this.generateTokenName(
-      {
-        backend,
-        clusterId: (options && options.clusterId) || this.activeCluster,
-      },
-      resp.policies
-    );
+    // Set stored ttl and tokenExpirationEpoch
+    const now = this.now();
+    const { ttl: calculatedTtl, tokenExpirationEpoch } = this.calculateExpiration({ now, ttl, expireTime });
+    persistedTokenData.ttl = calculatedTtl;
+    persistedTokenData.tokenExpirationEpoch = tokenExpirationEpoch;
+    this.setExpirationSettings(renewable, now);
+    // ensure we don't call renew-self within tests
+    // this is intentionally not included in setExpirationSettings so we can unit test that method
+    if (Ember.testing) this.set('allowExpiration', false);
 
-    if (resp.renewable) {
-      assign(data, this.calculateExpiration(resp));
-    }
-
-    if (!data.displayName) {
-      data.displayName = (this.getTokenData(tokenName) || {}).displayName;
-    }
-    tokens.addObject(tokenName);
-    this.set('tokens', tokens);
-    this.set('allowExpiration', false);
-    this.setTokenData(tokenName, data);
+    // Set token name and store data
+    const tokenName = this.generateTokenName({ backend: authMethodType, clusterId }, policies);
+    this.set('tokens', addToArray(this.tokens, tokenName));
+    this.setTokenData(tokenName, persistedTokenData);
     return resolve({
-      namespace: currentNamespace || data.userRootNamespace,
+      namespace: currentNamespace || persistedTokenData.userRootNamespace,
       token: tokenName,
-      isRoot: policies.includes('root'),
+      isRoot: (policies || []).includes('root'),
     });
+  },
+
+  async lookupTokenData(token, hasNamespace, { displayName, expireTime, namespacePath }) {
+    // Only lookup if we're missing displayName or namespacePath in a non-root namespace
+    if (!displayName || (!namespacePath && hasNamespace)) {
+      try {
+        const { data } = await this.lookupSelf(token);
+        return {
+          displayName: displayName || data?.display_name,
+          namespacePath: namespacePath || data?.namespace_path,
+          expireTime: expireTime || data?.expire_time,
+        };
+      } catch {
+        // It would be unusual for this request to fail, but swallowing it because we're
+        // essentially setting "nice to have" data here.
+      }
+    }
+    // Return original values as fallback
+    return { displayName, namespacePath, expireTime };
   },
 
   setTokenData(token, data) {
@@ -225,44 +336,22 @@ export default Service.extend({
     return this.storage(token).removeItem(token);
   },
 
-  tokenExpirationDate: computed('currentTokenName', 'expirationCalcTS', function () {
-    const tokenName = this.currentTokenName;
-    if (!tokenName) {
-      return;
-    }
-    const { tokenExpirationEpoch } = this.getTokenData(tokenName);
-    const expirationDate = new Date(0);
-    return tokenExpirationEpoch ? expirationDate.setUTCMilliseconds(tokenExpirationEpoch) : null;
-  }),
-
-  get tokenExpired() {
-    const expiration = this.tokenExpirationDate;
-    return expiration ? this.now() >= expiration : null;
-  },
-
-  renewAfterEpoch: computed('currentTokenName', 'expirationCalcTS', function () {
-    const tokenName = this.currentTokenName;
-    let { expirationCalcTS } = this;
-    const data = this.getTokenData(tokenName);
-    if (!tokenName || !data || !expirationCalcTS) {
-      return null;
-    }
-    const { ttl, renewable } = data;
-    // renew after last expirationCalc time + half of the ttl (in ms)
-    return renewable ? Math.floor((ttl * 1e3) / 2) + expirationCalcTS : null;
-  }),
-
   renew() {
-    const tokenName = this.currentTokenName;
     const currentlyRenewing = this.isRenewing;
-    if (currentlyRenewing) {
-      return;
-    }
+    if (currentlyRenewing) return;
+
     this.isRenewing = true;
     return this.renewCurrentToken().then(
-      (resp) => {
+      async (resp) => {
         this.isRenewing = false;
-        return this.persistAuthData(tokenName, resp.data || resp.auth);
+        // If we renewing, authData already exists so all we really need to update are the token and expiration details
+        const { authMethodType, authMountPath, displayName } = this.authData;
+        const normalizedAuthData = this.normalizeAuthData(resp.auth, {
+          authMethodType,
+          authMountPath,
+          displayName,
+        });
+        return await this.persistAuthData(this.activeClusterId, normalizedAuthData);
       },
       (e) => {
         this.isRenewing = false;
@@ -285,6 +374,7 @@ export default Service.extend({
   shouldRenew() {
     const now = this.now();
     const lastFetch = this.lastFetch;
+    // renewAfterEpoch is a unix timestamp of login time + half of ttl
     const renewTime = this.renewAfterEpoch;
     if (!this.currentTokenName || this.tokenExpired || this.allowExpiration || !renewTime) {
       return false;
@@ -303,7 +393,7 @@ export default Service.extend({
     const now = this.now();
     this.set('lastFetch', timestamp);
     // if expiration was allowed and we're over half the ttl we want to go ahead and renew here
-    if (this.allowExpiration && now >= this.renewAfterEpoch) {
+    if (this.allowExpiration && this.renewAfterEpoch && now >= this.renewAfterEpoch) {
       this.renew();
     }
     this.set('allowExpiration', false);
@@ -330,14 +420,14 @@ export default Service.extend({
     });
   },
 
-  _parseMfaResponse(mfa_requirement) {
-    // mfa_requirement response comes back in a shape that is not easy to work with
+  parseMfaResponse(mfaRequirement) {
+    // mfaRequirement response comes back in a shape that is not easy to work with
     // convert to array of objects and add necessary properties to satisfy the view
-    if (mfa_requirement) {
-      const { mfa_request_id, mfa_constraints } = mfa_requirement;
+    if (mfaRequirement) {
+      const { mfaRequestId, mfaConstraints } = mfaRequirement;
       const constraints = [];
-      for (let key in mfa_constraints) {
-        const methods = mfa_constraints[key].any;
+      for (const key in mfaConstraints) {
+        const methods = mfaConstraints[key].any;
         const isMulti = methods.length > 1;
 
         // friendly label for display in MfaForm
@@ -351,49 +441,24 @@ export default Service.extend({
           selectedMethod: isMulti ? null : methods[0],
         });
       }
-
-      return {
-        mfa_requirement: { mfa_request_id, mfa_constraints: constraints },
-      };
+      return { mfaRequestId, mfaConstraints: constraints };
     }
     return {};
   },
 
-  async authenticate(/*{clusterId, backend, data, selectedAuth}*/) {
-    const [options] = arguments;
-    const adapter = this.clusterAdapter();
-    const resp = await adapter.authenticate(options);
-
-    if (resp.auth?.mfa_requirement) {
-      return this._parseMfaResponse(resp.auth?.mfa_requirement);
-    }
-
-    return this.authSuccess(options, resp.auth || resp.data);
+  async totpValidate({ clusterId, mfaRequirement, authMethodType, authMountPath }) {
+    // mfa/validate consistently returns data inside the "auth" key
+    const { auth } = await this.clusterAdapter().mfaValidate(mfaRequirement);
+    const normalizedAuthData = this.normalizeAuthData(auth, { authMethodType, authMountPath });
+    return this.authSuccess(clusterId, normalizedAuthData);
   },
 
-  async totpValidate({ mfa_requirement, ...options }) {
-    const resp = await this.clusterAdapter().mfaValidate(mfa_requirement);
-    return this.authSuccess(options, resp.auth || resp.data);
-  },
-
-  async authSuccess(options, response) {
+  async authSuccess(clusterId, authResponse) {
     // persist selectedAuth to localStorage to rehydrate auth form on logout
-    localStorage.setItem('selectedAuth', options.selectedAuth);
-    const authData = await this.persistAuthData(options, response, this.namespaceService.path);
-    await this.permissions.getPaths.perform();
+    localStorage.setItem('selectedAuth', authResponse.authMethodType);
+    const authData = await this.persistAuthData(clusterId, authResponse);
+    this.permissions.getPaths.perform();
     return authData;
-  },
-
-  handleError(e) {
-    if (e.errors) {
-      return e.errors.map((error) => {
-        if (error.detail) {
-          return error.detail;
-        }
-        return error;
-      });
-    }
-    return [e];
   },
 
   getAuthType() {
@@ -401,7 +466,7 @@ export default Service.extend({
     const selectedAuth = localStorage.getItem('selectedAuth');
     if (selectedAuth) return selectedAuth;
     // fallback to authData which discerns backend type from token
-    return this.authData ? this.authData.backend.type : null;
+    return this.authData ? this.authData.authMethodType : null;
   },
 
   deleteCurrentToken() {
@@ -416,46 +481,29 @@ export default Service.extend({
     this.set('tokens', tokenNames);
   },
 
-  // returns the key for the token to use
-  currentTokenName: computed('activeCluster', 'tokens', 'tokens.[]', function () {
-    const regex = new RegExp(this.activeCluster);
-    return this.tokens.find((key) => regex.test(key));
-  }),
+  // Depending on where auth happens (mfa/validate, renew-self or the method's login) the auth data
+  // varies slightly (i.e. "ttl" vs "lease_duration"). Normalize it so stored authData contains consistent keys.
+  // (Also, the API service returns camel cased keys and raw ajax requests return snake cased params.)
+  normalizeAuthData(authData, { authMethodType, authMountPath, displayName }) {
+    const displayNameFromMetadata = (metadata) =>
+      metadata
+        ? ['org', 'username']
+            .map((key) => (key in metadata ? metadata[key] : null))
+            .filter(Boolean)
+            .join('/')
+        : '';
 
-  currentToken: computed('currentTokenName', function () {
-    const name = this.currentTokenName;
-    const data = name && this.getTokenData(name);
-    // data.token is undefined so that's why it returns current token undefined
-    return name && data ? data.token : null;
-  }),
-
-  authData: computed('currentTokenName', function () {
-    const token = this.currentTokenName;
-    if (!token) {
-      return;
-    }
-    const backend = this.backendFromTokenName(token);
-    const stored = this.getTokenData(token);
-
-    return assign(stored, {
-      backend: BACKENDS.findBy('type', backend),
-    });
-  }),
-
-  getOktaNumberChallengeAnswer(nonce, mount) {
-    const url = `/v1/auth/${mount}/verify/${nonce}`;
-    return this.ajax(url, 'GET', {}).then(
-      (resp) => {
-        return resp.data.correct_answer;
-      },
-      (e) => {
-        // if error status is 404, return and keep polling for a response
-        if (e.status === 404) {
-          return null;
-        } else {
-          throw e;
-        }
-      }
-    );
+    return {
+      authMethodType,
+      authMountPath,
+      entityId: authData?.entity_id,
+      expireTime: authData?.expire_time,
+      token: authData?.client_token,
+      renewable: authData?.renewable,
+      ttl: authData?.lease_duration,
+      policies: authData?.policies,
+      // not all methods return a display name or metadata, if this is still empty it will be gleaned from lookup-self
+      displayName: displayName || displayNameFromMetadata(authData?.metadata),
+    };
   },
 });

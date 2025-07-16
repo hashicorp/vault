@@ -1,0 +1,12 @@
+### Vault log file missing subsystem logs ((#log-file))
+
+#### Fixed Versions
+- 1.16.18, 1.17.14, 1.18.7, 1.19.1
+
+#### Issue
+Vault configured with log_file is not capturing all logs. Some entries, 
+including plugin logs, are missing from the output file; however, 
+they appear as expected in standard error and standard output.
+
+#### Workaround
+Upgrade to fixed versions.

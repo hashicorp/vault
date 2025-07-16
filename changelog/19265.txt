@@ -1,0 +1,3 @@
+```release-note:bug
+cli/pki: Decode integer values properly in health-check configuration file
+```

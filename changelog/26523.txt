@@ -1,0 +1,3 @@
+```release-note:bug
+core (enterprise): fix bug where raft followers disagree with the seal type after returning to one seal from two.
+```

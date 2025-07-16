@@ -1,0 +1,87 @@
+---
+layout: docs
+page_title: GCP secret import source
+description: The Google Cloud Platform Secret Manager source imports secrets from GCP to Vault.
+---
+
+# GCP secret import source
+
+Use the GCP Importer to read secret data from GCP Secrets Manager into your Vault
+instance.
+
+## Before you start
+- **You must know the relevant GCP credentials**. You can provide the credentials
+  as environment variables, as explicit arguments, or use dynamic credentials
+  from an existing [GCP secrets plugin](/vault/docs/secrets/gcp) mount path.
+
+## Step 1: Set GCP Identity permissions
+
+To use GCP import, you must grant the associated GCP identity permission to read secrets:
+
+```shell-session
+"secretmanager.secrets.list",
+"secretmanager.versions.access",
+```
+
+## Step 2: Define the Azure source
+
+<Tabs>
+<Tab heading="Static credentials">
+
+The following configuration example uses Azure static credentials to
+import secrets from Azure Key Vault:
+
+
+```hcl
+source_gcp {
+  name             = "my-gcp-source-1"
+  credentials_file = "/path/to/credentials-file"
+}
+```
+
+If `credentials_file` is set, then `vault_mount_path`, `vault_role_name`,`vault_namespace`,`vault_address` and `vault_credentials_file` must be unset.
+
+</Tab>
+<Tab heading="Dynamic credentials">
+
+Alternatively, source credentials can also be derived dynamically using the [GCP Secret Engine](/vault/docs/secrets/gcp)
+
+This uses the GCP secrets engine configured at the given `vault_address` to generate dynamic secrets in order to scan secrets in GCP Secret Manager.
+
+```hcl
+source_gcp {
+  name             = "my-gcp-source-2"
+  vault_mount_path = "gcp"
+  vault_role_name  = "my-gcp-role-1"
+  vault_namespace  = "ns-1"
+  vault_address    = "https://vault.example.com:8200"
+  vault_credentials_file = "/path/to/vault/token"
+}
+```
+
+If one of `vault_mount_path`,`vault_role_name`, `vault_namespace`,`vault_address` or `vault_credentials_file`  are set, then `credentials_file` must be unset.
+
+</Tab>
+</Tabs>
+
+## Argument reference
+
+Refer to the [HCL syntax](/vault/docs/import#hcl-syntax-1) for arguments common to all source types.
+
+- `vault_mount_path` `(string: "")` - The Vault mount path to a pre-configured GCP
+  secrets engine used to generate dynamic credentials for the importer.
+
+- `vault_role_name` `(string: "")` - GCP secrets plugin role used to generate
+  dynamic credentials for the importer. Only required for dynamic credentials.
+
+- `vault_namespace` `(string: "")` - Vault namespace for the mount path
+  specified in `vault_mount_path`. Only required for dynamic credentials.
+
+- `vault_address` `(string: "")` - The address of your Vault server. Only
+  required for dynamic credentials. 
+
+- `vault_credentials_file` `(string: "")` - Local path to a file containing a
+  valid token for the Vault server at `vault_address`. Only required for dynamic
+  credentials.
+
+- `credentials_file` `(string: "")` - The path to the service account key credentials file to authenticate with.

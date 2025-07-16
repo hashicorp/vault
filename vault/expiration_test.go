@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package vault
 
 import (
@@ -17,7 +20,6 @@ import (
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-uuid"
-	"github.com/hashicorp/vault/helper/benchhelpers"
 	"github.com/hashicorp/vault/helper/fairshare"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
@@ -32,7 +34,7 @@ var testImagePull sync.Once
 
 // mockExpiration returns a mock expiration manager
 func mockExpiration(t testing.TB) *ExpirationManager {
-	c, _, _ := TestCoreUnsealed(benchhelpers.TBtoT(t))
+	c, _, _ := TestCoreUnsealed(t)
 
 	// Wait until the expiration manager is out of restore mode.
 	// This was added to prevent sporadic failures of TestExpiration_unrecoverableErrorMakesIrrevocable.
@@ -48,7 +50,7 @@ func mockExpiration(t testing.TB) *ExpirationManager {
 }
 
 func mockBackendExpiration(t testing.TB, backend physical.Backend) (*Core, *ExpirationManager) {
-	c, _, _ := TestCoreUnsealedBackend(benchhelpers.TBtoT(t), backend)
+	c, _, _ := TestCoreUnsealedBackend(t, backend)
 	return c, c.expiration
 }
 
@@ -696,7 +698,7 @@ func BenchmarkExpiration_Restore_InMem(b *testing.B) {
 }
 
 func benchmarkExpirationBackend(b *testing.B, physicalBackend physical.Backend, numLeases int) {
-	c, _, _ := TestCoreUnsealedBackend(benchhelpers.TBtoT(b), physicalBackend)
+	c, _, _ := TestCoreUnsealedBackend(b, physicalBackend)
 	exp := c.expiration
 	noop := &NoopBackend{}
 	view := NewBarrierView(c.barrier, "logical/")
@@ -765,7 +767,7 @@ func BenchmarkExpiration_Create_Leases(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	c, _, _ := TestCoreUnsealedBackend(benchhelpers.TBtoT(b), inm)
+	c, _, _ := TestCoreUnsealedBackend(b, inm)
 	exp := c.expiration
 	noop := &NoopBackend{}
 	view := NewBarrierView(c.barrier, "logical/")
@@ -853,10 +855,7 @@ func TestExpiration_Restore(t *testing.T) {
 	}
 
 	// Stop everything
-	err = c.stopExpiration()
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
+	stopExpiration(t, c)
 
 	if exp.leaseCount != 0 {
 		t.Fatalf("expected %v leases, got %v", 0, exp.leaseCount)
@@ -3006,6 +3005,23 @@ func registerOneLease(t *testing.T, ctx context.Context, exp *ExpirationManager)
 	return leaseID
 }
 
+// stopExpiration is a test helper which allows us to safely teardown the
+// expiration manager.  This preserves the shutdown order of Core for these few
+// outlier tests that (previously) directly called [Core].stopExpiration().
+func stopExpiration(t *testing.T, core *Core) {
+	t.Helper()
+	core.stopActivityLog()
+	err := core.teardownCensusManager()
+	if err != nil {
+		t.Fatalf("error stopping census manager: %v", err)
+	}
+
+	err = core.stopExpiration()
+	if err != nil {
+		t.Fatalf("error stopping expiration manager: %v", err)
+	}
+}
+
 func TestExpiration_MarkIrrevocable(t *testing.T) {
 	c, _, _ := TestCoreUnsealed(t)
 	exp := c.expiration
@@ -3058,10 +3074,7 @@ func TestExpiration_MarkIrrevocable(t *testing.T) {
 	}
 
 	// stop and restore to verify that irrevocable leases are properly loaded from storage
-	err = c.stopExpiration()
-	if err != nil {
-		t.Fatalf("error stopping expiration manager: %v", err)
-	}
+	stopExpiration(t, c)
 
 	err = exp.Restore(nil)
 	if err != nil {
@@ -3151,10 +3164,7 @@ func TestExpiration_StopClearsIrrevocableCache(t *testing.T) {
 	exp.markLeaseIrrevocable(ctx, le, fmt.Errorf("test irrevocable error"))
 	exp.pendingLock.Unlock()
 
-	err = c.stopExpiration()
-	if err != nil {
-		t.Fatalf("error stopping expiration manager: %v", err)
-	}
+	stopExpiration(t, c)
 
 	if _, ok := exp.irrevocable.Load(leaseID); ok {
 		t.Error("expiration manager irrevocable cache should be cleared on stop")

@@ -1,0 +1,3 @@
+```release-note:improvement
+storage/raft: Cap the minimum dead_server_last_contact_threshold to 1m.
+```

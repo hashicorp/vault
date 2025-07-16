@@ -1,0 +1,157 @@
+---
+layout: 'docs'
+page_title: 'Highly available Vault Enterprise disaster recovery clusters with integrated storage (Raft)'
+sidebar_current: 'docs-platform-k8s-examples-enterprise-dr-with-raft'
+description: >-
+  Learn how to set up diaster recovery (DR) clusters with integrated storage (Raft) as the storage backend.
+---
+
+# Highly available Vault Enterprise disaster recovery clusters with integrated storage (Raft)
+
+@include 'helm/version.mdx'
+
+The following is an example of creating a disaster recovery cluster using Vault Helm.
+
+For more information on Disaster Recovery, [see the official documentation](/vault/docs/enterprise/replication/).
+
+-> For license configuration refer to [Running Vault Enterprise](/vault/docs/platform/k8s/helm/enterprise).
+
+## Primary cluster
+
+First, create the primary cluster:
+
+```shell
+helm install vault-primary hashicorp/vault \
+  --set='server.image.repository=hashicorp/vault-enterprise' \
+  --set='server.image.tag=1.19.0-ent' \
+  --set='server.ha.enabled=true' \
+  --set='server.ha.raft.enabled=true'
+```
+
+Next, initialize and unseal `vault-primary-0` pod:
+
+```shell
+kubectl exec -ti vault-primary-0 -- vault operator init
+kubectl exec -ti vault-primary-0 -- vault operator unseal
+```
+
+Finally, join the remaining pods to the Raft cluster and unseal them. The pods
+will need to communicate directly so we'll configure the pods to use the internal
+service provided by the Helm chart:
+
+```shell
+kubectl exec -ti vault-primary-1 -- vault operator raft join http://vault-primary-0.vault-primary-internal:8200
+kubectl exec -ti vault-primary-1 -- vault operator unseal
+
+kubectl exec -ti vault-primary-2 -- vault operator raft join http://vault-primary-0.vault-primary-internal:8200
+kubectl exec -ti vault-primary-2 -- vault operator unseal
+```
+
+To verify if the Raft cluster has successfully been initialized, run the following.
+
+First, login using the `root` token on the `vault-primary-0` pod:
+
+```shell
+kubectl exec -ti vault-primary-0 -- vault login
+```
+
+Next, list all the raft peers:
+
+```shell
+$ kubectl exec -ti vault-primary-0 -- vault operator raft list-peers
+
+Node                                    Address                        State       Voter
+----                                    -------                        -----       -----
+a1799962-8711-7f28-23f0-cea05c8a527d    vault-primary-0.vault-primary-internal:8201    leader      true
+e6876c97-aaaa-a92e-b99a-0aafab105745    vault-primary-1.vault-primary-internal:8201    follower    true
+4b5d7383-ff31-44df-e008-6a606828823b    vault-primary-2.vault-primary-internal:8201    follower    true
+```
+
+## Secondary cluster
+
+With the primary cluster created, next create a secondary cluster and enable
+disaster recovery replication.
+
+```shell
+helm install vault-secondary hashicorp/vault \
+  --set='server.image.repository=hashicorp/vault-enterprise' \
+  --set='server.image.tag=1.19.0-ent' \
+  --set='server.ha.enabled=true' \
+  --set='server.ha.raft.enabled=true'
+```
+
+Next, initialize and unseal `vault-secondary-0` pod:
+
+```shell
+kubectl exec -ti vault-secondary-0 -- vault operator init
+kubectl exec -ti vault-secondary-0 -- vault operator unseal
+```
+
+Finally, join the remaining pods to the Raft cluster and unseal them. The pods
+will need to communicate directly so we'll configure the pods to use the internal
+service provided by the Helm chart:
+
+```shell
+kubectl exec -ti vault-secondary-1 -- vault operator raft join http://vault-secondary-0.vault-secondary-internal:8200
+kubectl exec -ti vault-secondary-1 -- vault operator unseal
+
+kubectl exec -ti vault-secondary-2 -- vault operator raft join http://vault-secondary-0.vault-secondary-internal:8200
+kubectl exec -ti vault-secondary-2 -- vault operator unseal
+```
+
+To verify if the Raft cluster has successfully been initialized, run the following.
+
+First, login using the `root` token on the `vault-secondary-0` pod:
+
+```shell
+kubectl exec -ti vault-secondary-0 -- vault login
+```
+
+Next, list all the raft peers:
+
+```shell
+$ kubectl exec -ti vault-secondary-0 -- vault operator raft list-peers
+
+Node                                    Address                        State       Voter
+----                                    -------                        -----       -----
+a1799962-8711-7f28-23f0-cea05c8a527d    vault-secondary-0.vault-secondary-internal:8201    leader      true
+e6876c97-aaaa-a92e-b99a-0aafab105745    vault-secondary-1.vault-secondary-internal:8201    follower    true
+4b5d7383-ff31-44df-e008-6a606828823b    vault-secondary-2.vault-secondary-internal:8201    follower    true
+```
+
+## Enable disaster recovery replication on primary
+
+With the initial clusters setup, we can now configure them for disaster recovery replication.
+
+First, on the primary cluster, enable replication:
+
+```shell
+kubectl exec -ti vault-primary-0 -- vault write -f sys/replication/dr/primary/enable primary_cluster_addr=https://vault-primary-active:8201
+```
+
+Next, create a token the secondary cluster will use to configure replication:
+
+```shell
+kubectl exec -ti vault-primary-0 -- vault write sys/replication/dr/primary/secondary-token id=secondary
+```
+
+The token in the output will be used when configuring the secondary cluster.
+
+## Enable disaster recovery replication on secondary
+
+Using the token created in the last step, enable disaster recovery replication on the secondary:
+
+```shell
+kubectl exec -ti vault-secondary-0 -- vault write sys/replication/dr/secondary/enable token=<TOKEN FROM PRIMARY>
+```
+
+Last, delete the remainder secondary pods and unseal them using the primary unseal token
+after Kubernetes reschedules them:
+
+```shell
+kubectl delete pod vault-secondary-1
+kubectl exec -ti vault-secondary-1 -- vault operator unseal <PRIMARY UNSEAL TOKEN>
+
+kubectl delete pod vault-secondary-2
+kubectl exec -ti vault-secondary-2 -- vault operator unseal <PRIMARY UNSEAL TOKEN>
+```

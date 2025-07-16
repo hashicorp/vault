@@ -1,9 +1,13 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package framework
 
 import (
 	"context"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,13 +18,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
-
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/hashicorp/errwrap"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	iRegexp "github.com/hashicorp/go-secure-stdlib/regexp"
+	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/license"
@@ -56,6 +61,11 @@ type Backend struct {
 
 	// InitializeFunc is the callback, which if set, will be invoked via
 	// Initialize() just after a plugin has been mounted.
+	//
+	// Note that storage writes should only occur on the active instance within a
+	// primary cluster or local mount on a performance secondary. If your InitializeFunc
+	// writes to storage, you can use the backend's WriteSafeReplicationState() method
+	// to prevent it from attempting to write on a Vault instance with read-only storage.
 	InitializeFunc InitializeFunc
 
 	// PeriodicFunc is the callback, which if set, will be invoked when the
@@ -66,6 +76,11 @@ type Backend struct {
 	// entries in backend's storage, while the backend is still being used.
 	// (Note the difference between this action and `Clean`, which is
 	// invoked just before the backend is unmounted).
+	//
+	// Note that storage writes should only occur on the active instance within a
+	// primary cluster or local mount on a performance secondary. If your PeriodicFunc
+	// writes to storage, you can use the backend's WriteSafeReplicationState() method
+	// to prevent it from attempting to write on a Vault instance with read-only storage.
 	PeriodicFunc periodicFunc
 
 	// WALRollback is called when a WAL entry (see wal.go) has to be rolled
@@ -95,10 +110,20 @@ type Backend struct {
 	// RunningVersion is the optional version that will be self-reported
 	RunningVersion string
 
-	logger  log.Logger
-	system  logical.SystemView
-	once    sync.Once
-	pathsRe []*regexp.Regexp
+	// RotateCredential is the callback function used by the RotationManager
+	// to communicate with a plugin on when to rotate a credential
+	RotateCredential func(context.Context, *logical.Request) error
+
+	// ActivationFunc is the callback function used by ActivationFlags to
+	// communicate with a plugin to activate a feature.
+	ActivationFunc func(context.Context, *logical.Request) error
+
+	logger       log.Logger
+	system       logical.SystemView
+	events       logical.EventSender
+	observations logical.ObservationRecorder
+	once         sync.Once
+	pathsRe      []*regexp.Regexp
 }
 
 // periodicFunc is the callback called when the RollbackManager's timer ticks.
@@ -127,6 +152,14 @@ type InitializeFunc func(context.Context, *logical.InitializationRequest) error
 // PatchPreprocessorFunc is used by HandlePatchOperation in order to shape
 // the input as defined by request handler prior to JSON marshaling
 type PatchPreprocessorFunc func(map[string]interface{}) (map[string]interface{}, error)
+
+// ErrNoEvents is returned when attempting to send an event, but when the event
+// sender was not passed in during `backend.Setup()`.
+var ErrNoEvents = errors.New("no event sender configured")
+
+// ErrNoObservations is returned when attempting to record an observation, but when
+// the observation system was not passed in during `backend.Setup()`.
+var ErrNoObservations = errors.New("no observation system configured")
 
 // Initialize is the logical.Backend implementation.
 func (b *Backend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
@@ -198,11 +231,13 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		return b.handleRevokeRenew(ctx, req)
 	case logical.RollbackOperation:
 		return b.handleRollback(ctx, req)
+	case logical.RotationOperation:
+		return b.handleRotation(ctx, req)
 	}
 
 	// If the path is empty and it is a help operation, handle that.
 	if req.Path == "" && req.Operation == logical.HelpOperation {
-		return b.handleRootHelp(req)
+		return b.handleRootHelp(ctx, req)
 	}
 
 	// Find the matching route
@@ -219,13 +254,18 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		}
 	}
 
+	// We need to check SQLConnectionProducer fields separately since they are not top-level Path fields.
+	var sqlFields map[string]any
+	if req.MountType == "database" && strings.HasPrefix(req.Path, "config") {
+		sqlFields = connutil.SQLConnectionProducerFieldNames()
+	}
 	// Build up the data for the route, with the URL taking priority
 	// for the fields over the PUT data.
 	raw := make(map[string]interface{}, len(path.Fields))
 	var ignored []string
 	for k, v := range req.Data {
 		raw[k] = v
-		if !path.TakesArbitraryInput && path.Fields[k] == nil {
+		if !path.TakesArbitraryInput && path.Fields[k] == nil && sqlFields[k] == nil {
 			ignored = append(ignored, k)
 		}
 	}
@@ -398,6 +438,8 @@ func (b *Backend) InvalidateKey(ctx context.Context, key string) {
 func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) error {
 	b.logger = config.Logger
 	b.system = config.System
+	b.events = config.EventsSender
+	b.observations = config.ObservationRecorder
 	return nil
 }
 
@@ -456,12 +498,38 @@ func (b *Backend) Secret(k string) *Secret {
 	return nil
 }
 
+// WriteSafeReplicationState returns true if this backend instance is capable of writing
+// to storage without receiving an ErrReadOnly error. The active instance in a primary
+// cluster or a local mount on a performance secondary is capable of writing to storage.
+func (b *Backend) WriteSafeReplicationState() bool {
+	replicationState := b.System().ReplicationState()
+	return (b.System().LocalMount() || !replicationState.HasState(consts.ReplicationPerformanceSecondary)) &&
+		!replicationState.HasState(consts.ReplicationDRSecondary) &&
+		!replicationState.HasState(consts.ReplicationPerformanceStandby)
+}
+
+// init runs as a sync.Once function from any plugin entry point which needs to route requests by paths.
+// It may panic if a coding error in the plugin is detected.
+// For builtin plugins, this is unit tested in helper/builtinplugins/builtinplugins_test.go.
+// For other plugins, any unit test that attempts to perform any request to the plugin will exercise these checks.
 func (b *Backend) init() {
 	b.pathsRe = make([]*regexp.Regexp, len(b.Paths))
 	for i, p := range b.Paths {
+		// Detect the coding error of failing to initialise Pattern
 		if len(p.Pattern) == 0 {
 			panic(fmt.Sprintf("Routing pattern cannot be blank"))
 		}
+
+		// Detect the coding error of attempting to define a CreateOperation without defining an ExistenceCheck
+		if p.ExistenceCheck == nil {
+			if _, ok := p.Operations[logical.CreateOperation]; ok {
+				panic(fmt.Sprintf("Pattern %v defines a CreateOperation but no ExistenceCheck", p.Pattern))
+			}
+			if _, ok := p.Callbacks[logical.CreateOperation]; ok {
+				panic(fmt.Sprintf("Pattern %v defines a CreateOperation but no ExistenceCheck", p.Pattern))
+			}
+		}
+
 		// Automatically anchor the pattern
 		if p.Pattern[0] != '^' {
 			p.Pattern = "^" + p.Pattern
@@ -469,7 +537,11 @@ func (b *Backend) init() {
 		if p.Pattern[len(p.Pattern)-1] != '$' {
 			p.Pattern = p.Pattern + "$"
 		}
-		b.pathsRe[i] = regexp.MustCompile(p.Pattern)
+
+		// Detect the coding error of an invalid Pattern. We are using an interned
+		// regexps library here to save memory, since we can have many instances of the
+		// same backend.
+		b.pathsRe[i] = iRegexp.MustCompileInterned(p.Pattern)
 	}
 }
 
@@ -501,7 +573,7 @@ func (b *Backend) route(path string) (*Path, map[string]string) {
 	return nil, nil
 }
 
-func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error) {
+func (b *Backend) handleRootHelp(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	// Build a mapping of the paths and get the paths alphabetized to
 	// make the output prettier.
 	pathsMap := make(map[string]*Path)
@@ -539,16 +611,22 @@ func (b *Backend) handleRootHelp(req *logical.Request) (*logical.Response, error
 	// names in the OAS document.
 	requestResponsePrefix := req.GetString("requestResponsePrefix")
 
-	// Generic mount paths will primarily be used for code generation purposes.
-	// This will result in dynamic mount paths being placed instead of
-	// hardcoded default paths. For example /auth/approle/login would be replaced
-	// with /auth/{mountPath}/login. This will be replaced for all secrets
-	// engines and auth methods that are enabled.
-	genericMountPaths, _ := req.Get("genericMountPaths").(bool)
-
 	// Build OpenAPI response for the entire backend
-	doc := NewOASDocument()
-	if err := documentPaths(b, requestResponsePrefix, genericMountPaths, doc); err != nil {
+	vaultVersion := "unknown"
+	if b.System() != nil {
+		env, err := b.System().PluginEnv(context.Background())
+		if err != nil {
+			return nil, err
+		}
+		vaultVersion = env.VaultVersion
+	}
+
+	redactVersion, _, _, _ := logical.CtxRedactionSettingsValue(ctx)
+	if redactVersion {
+		vaultVersion = ""
+	}
+	doc := NewOASDocument(vaultVersion)
+	if err := documentPaths(b, requestResponsePrefix, doc); err != nil {
 		b.Logger().Warn("error generating OpenAPI", "error", err)
 	}
 
@@ -610,6 +688,19 @@ func (b *Backend) handleRollback(ctx context.Context, req *logical.Request) (*lo
 		}
 	}
 	return resp, merr.ErrorOrNil()
+}
+
+// handleRotation invokes the RotateCredential func set on the backend.
+func (b *Backend) handleRotation(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+	if b.RotateCredential == nil {
+		return nil, logical.ErrUnsupportedOperation
+	}
+
+	err := b.RotateCredential(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return &logical.Response{}, nil
 }
 
 func (b *Backend) handleAuthRenew(ctx context.Context, req *logical.Request) (*logical.Response, error) {
@@ -680,6 +771,24 @@ func (b *Backend) handleWALRollback(ctx context.Context, req *logical.Request) (
 	return logical.ErrorResponse(merr.Error()), nil
 }
 
+// SendEvent is used to send events through the underlying EventSender.
+// It returns ErrNoEvents if the events system has not been configured or enabled.
+func (b *Backend) SendEvent(ctx context.Context, eventType logical.EventType, event *logical.EventData) error {
+	if b.events == nil {
+		return ErrNoEvents
+	}
+	return b.events.SendEvent(ctx, eventType, event)
+}
+
+// RecordObservation is used to record observations through the plugin's observation system.
+// It returns ErrNoObservations if the observation system has not been configured or enabled.
+func (b *Backend) RecordObservation(ctx context.Context, observationType string, data map[string]interface{}) error {
+	if b.observations == nil {
+		return ErrNoObservations
+	}
+	return b.observations.RecordObservationFromPlugin(ctx, observationType, data)
+}
+
 // FieldSchema is a basic schema to describe the format of a path field.
 type FieldSchema struct {
 	Type        FieldType
@@ -691,16 +800,35 @@ type FieldSchema struct {
 	Required   bool
 	Deprecated bool
 
-	// Query indicates this field will be sent as a query parameter:
+	// Query indicates this field will be expected as a query parameter as part
+	// of ReadOperation, ListOperation or DeleteOperation requests:
 	//
 	//   /v1/foo/bar?some_param=some_value
 	//
-	// It doesn't affect handling of the value, but may be used for documentation.
+	// The field will still be expected as a request body parameter for
+	// CreateOperation or UpdateOperation requests!
+	//
+	// To put that another way, you should set Query for any non-path parameter
+	// you want to use in a read/list/delete operation.  While setting the Query
+	// field to `true` is not required in such cases (Vault will expose the
+	// query parameters to you via req.Data regardless), it is highly
+	// recommended to do so in order to improve the quality of the generated
+	// OpenAPI documentation (as well as any code generation based on it), which
+	// will otherwise incorrectly omit the parameter.
+	//
+	// The reason for this design is historical: back at the start of 2018,
+	// query parameters were not mapped to fields at all, and it was implicit
+	// that all non-path fields were exclusively for the use of create/update
+	// operations.  Since then, support for query parameters has gradually been
+	// extended to read, delete and list operations - and now this declarative
+	// metadata is needed, so that the OpenAPI generator can know which
+	// parameters are actually referred to, from within the code of
+	// read/delete/list operation handler functions.
 	Query bool
 
 	// AllowedValues is an optional list of permitted values for this field.
 	// This constraint is not (yet) enforced by the framework, but the list is
-	// output as part of OpenAPI generation and may effect documentation and
+	// output as part of OpenAPI generation and may affect documentation and
 	// dynamic UI generation.
 	AllowedValues []interface{}
 
@@ -736,6 +864,8 @@ func (t FieldType) Zero() interface{} {
 		return ""
 	case TypeInt:
 		return 0
+	case TypeInt64:
+		return int64(0)
 	case TypeBool:
 		return false
 	case TypeMap:

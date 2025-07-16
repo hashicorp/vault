@@ -1,0 +1,5 @@
+```release-note:change
+activity: The startTime will be set to the start of the current billing period by default.
+The endTime will be set to the end of the current month. This applies to /sys/internal/counters/activity,
+/sys/internal/counters/activity/export, and the vault operator usage command that utilizes /sys/internal/counters/activity.
+```

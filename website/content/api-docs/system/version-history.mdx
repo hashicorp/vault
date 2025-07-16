@@ -11,7 +11,7 @@ This API was added in 1.10.0.
 
 The `/sys/version-history` endpoint is used to retrieve the version history of a Vault.
 
-## Read Version History
+## Read version history
 
 This endpoint returns the version history of the Vault. The response will contain the following keys:
 
@@ -23,9 +23,9 @@ This endpoint returns the version history of the Vault. The response will contai
 
 | Method | Path                   |
 | :----- | :--------------------- |
-| `GET`  | `/sys/version-history` |
+| `LIST`  | `/sys/version-history` |
 
-### Sample Request
+### Sample request
 
 ```shell-session
 $ curl \
@@ -33,7 +33,7 @@ $ curl \
     http://127.0.0.1:8200/v1/sys/version-history
 ```
 
-### Sample Response
+### Sample response
 
 ```json
 {

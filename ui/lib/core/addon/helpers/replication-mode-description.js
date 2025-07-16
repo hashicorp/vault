@@ -1,3 +1,8 @@
+/**
+ * Copyright (c) HashiCorp, Inc.
+ * SPDX-License-Identifier: BUSL-1.1
+ */
+
 import { helper as buildHelper } from '@ember/component/helper';
 
 const REPLICATION_MODE_DESCRIPTIONS = {
@@ -6,7 +11,7 @@ const REPLICATION_MODE_DESCRIPTIONS = {
     'Performance Replication scales workloads horizontally across clusters to make requests faster. Local secondaries handle read requests but forward writes to the primary to be handled.',
 };
 
-export function replicationModeDescription([mode]) {
+function replicationModeDescription([mode]) {
   return REPLICATION_MODE_DESCRIPTIONS[mode];
 }
 

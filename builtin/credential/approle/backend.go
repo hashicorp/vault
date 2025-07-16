@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package approle
 
 import (
@@ -12,6 +15,7 @@ import (
 )
 
 const (
+	operationPrefixAppRole      = "app-role"
 	secretIDPrefix              = "secret_id/"
 	secretIDLocalPrefix         = "secret_id_local/"
 	secretIDAccessorPrefix      = "accessor/"
@@ -105,6 +109,10 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 			LocalStorage: []string{
 				secretIDLocalPrefix,
 				secretIDAccessorLocalPrefix,
+			},
+			SealWrapStorage: []string{
+				secretIDPrefix,
+				secretIDLocalPrefix,
 			},
 		},
 		Paths: framework.PathAppend(

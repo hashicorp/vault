@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package userpass
 
 import (
@@ -16,6 +19,12 @@ import (
 func pathLogin(b *backend) *framework.Path {
 	return &framework.Path{
 		Pattern: "login/" + framework.GenericNameRegex("username"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixUserpass,
+			OperationVerb:   "login",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"username": {
 				Type:        framework.TypeString,
@@ -39,7 +48,7 @@ func pathLogin(b *backend) *framework.Path {
 }
 
 func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	username := strings.ToLower(d.Get("username").(string))
+	username := d.Get("username").(string)
 	if username == "" {
 		return nil, fmt.Errorf("missing username")
 	}
@@ -58,7 +67,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 
 	password := d.Get("password").(string)
 	if password == "" {
-		return nil, fmt.Errorf("missing password")
+		return nil, logical.ErrInvalidCredentials
 	}
 
 	// Get the user and validate auth
@@ -80,7 +89,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	} else {
 		// This is still acceptable as bcrypt will still make sure it takes
 		// a long time, it's just nicer to be random if possible
-		userPassword = []byte("dummy")
+		userPassword = []byte(strings.Repeat("dummy", 12))
 	}
 
 	// Check for a password match. Check for a hash collision for Vault 0.2+,

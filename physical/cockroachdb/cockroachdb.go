@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package cockroachdb
 
 import (
@@ -11,13 +14,12 @@ import (
 	"unicode"
 
 	metrics "github.com/armon/go-metrics"
-	"github.com/cockroachdb/cockroach-go/crdb"
+	"github.com/cockroachdb/cockroach-go/v2/crdb"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
-
-	// CockroachDB uses the Postgres SQL driver
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
 
@@ -43,7 +45,7 @@ type CockroachDBBackend struct {
 	rawHAStatements map[string]string
 	haStatements    map[string]*sql.Stmt
 	logger          log.Logger
-	permitPool      *physical.PermitPool
+	permitPool      *permitpool.Pool
 	haEnabled       bool
 }
 
@@ -141,7 +143,7 @@ func NewCockroachDBBackend(conf map[string]string, logger log.Logger) (physical.
 		},
 		haStatements: make(map[string]*sql.Stmt),
 		logger:       logger,
-		permitPool:   physical.NewPermitPool(maxParInt),
+		permitPool:   permitpool.New(maxParInt),
 		haEnabled:    haEnabled,
 	}
 
@@ -175,7 +177,9 @@ func (c *CockroachDBBackend) prepare(statementMap map[string]*sql.Stmt, name, qu
 func (c *CockroachDBBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"cockroachdb", "put"}, time.Now())
 
-	c.permitPool.Acquire()
+	if err := c.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer c.permitPool.Release()
 
 	_, err := c.statements["put"].Exec(entry.Key, entry.Value)
@@ -189,7 +193,9 @@ func (c *CockroachDBBackend) Put(ctx context.Context, entry *physical.Entry) err
 func (c *CockroachDBBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"cockroachdb", "get"}, time.Now())
 
-	c.permitPool.Acquire()
+	if err := c.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer c.permitPool.Release()
 
 	var result []byte
@@ -212,7 +218,9 @@ func (c *CockroachDBBackend) Get(ctx context.Context, key string) (*physical.Ent
 func (c *CockroachDBBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"cockroachdb", "delete"}, time.Now())
 
-	c.permitPool.Acquire()
+	if err := c.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer c.permitPool.Release()
 
 	_, err := c.statements["delete"].Exec(key)
@@ -227,7 +235,9 @@ func (c *CockroachDBBackend) Delete(ctx context.Context, key string) error {
 func (c *CockroachDBBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"cockroachdb", "list"}, time.Now())
 
-	c.permitPool.Acquire()
+	if err := c.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer c.permitPool.Release()
 
 	likePrefix := prefix + "%"
@@ -266,7 +276,9 @@ func (c *CockroachDBBackend) Transaction(ctx context.Context, txns []*physical.T
 		return nil
 	}
 
-	c.permitPool.Acquire()
+	if err := c.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer c.permitPool.Release()
 
 	return crdb.ExecuteTx(context.Background(), c.client, nil, func(tx *sql.Tx) error {

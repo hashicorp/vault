@@ -1,12 +1,11 @@
 ---
 layout: docs
-page_title: Cassandra - Storage Backends - Configuration
-description: |-
-  The Cassandra storage backend is used to persist Vault's data in an Apache
-  Cassandra cluster.
+page_title: Cassandra configuration
+description: >-
+  Configure Vault backend storage to use an Apache Cassandra cluster.
 ---
 
-# Cassandra Storage Backend
+# Cassandra configuration for Vault backend storage
 
 The Cassandra storage backend is used to persist Vault's data in an [Apache
 Cassandra][cassandra] cluster.
@@ -46,7 +45,7 @@ CREATE TABLE "vault"."entries" (
 ) WITH CLUSTERING ORDER BY (key ASC);
 ```
 
-## `cassandra` Parameters
+## `cassandra` parameters
 
 - `hosts` `(string: "127.0.0.1")` – Comma-separated list of Cassandra hosts to
   connect to.
@@ -68,6 +67,12 @@ CREATE TABLE "vault"."entries" (
 
 - `password` `(string: "")` – Password to use when authenticating with the
   Cassandra hosts.
+
+- `disable_initial_host_lookup` `(bool: false)` - If set to true, Vault will not attempt
+  to get host info from the `system.peers` table. It will instead connect to
+  hosts supplied and will not attempt to look up the host information. This will
+  mean that `data_centre`, `rack` and `token` information will not be available and as
+  such host filtering and token aware query routing will not be available.
 
 - `initial_connection_timeout` `(int: 0)` - A timeout in seconds to wait until an initial connection is established
   with the Cassandra hosts. If not set, default value from Cassandra driver(gocql) will be used - 600ms

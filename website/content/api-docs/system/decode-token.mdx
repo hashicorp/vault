@@ -1,0 +1,32 @@
+---
+layout: api
+page_title: /sys/decode-token - HTTP API
+description: The `/sys/decode-token` endpoint is used to decode the encoded token which is the result of /sys/generate-root.
+---
+
+# `/sys/decode-token`
+
+@include 'alerts/restricted-root.mdx'
+
+The `/sys/decode-token` endpoint is used to decode the encoded token which is the result of the [/sys/generate-root](/vault/api-docs/system/generate-root) API.
+
+## Parameters
+
+- `encoded_token` `(string: <required>)` – Specifies the encoded token (result from /sys/generate-root).
+
+- `otp` `(string: <required>)` - Specifies the otp code for decode.
+
+## Sample response
+
+```json
+{
+  "request_id": "9bc0fab8-d65c-3961-afe6-d05f50c5fd22",
+  "lease_id": "",
+  "lease_duration": 0,
+  "renewable": false,
+  "data": {
+    "token": "4RUmoevJ3lsLni9sTXcNnRE1"
+  },
+  "warnings": null
+}
+```

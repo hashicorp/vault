@@ -1,6 +1,10 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package testing
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -18,14 +22,26 @@ import (
 const (
 	ExpectedNamespace = "default"
 	ExpectedPodName   = "shell-demo"
-
-	// File names of samples pulled from real life.
-	caCrtFile     = "ca.crt"
-	respGetPod    = "resp-get-pod.json"
-	respNotFound  = "resp-not-found.json"
-	respUpdatePod = "resp-update-pod.json"
-	tokenFile     = "token"
 )
+
+// Pull real-life-based testing data in from files at compile time.
+// We decided to embed them in the test binary because of past issues
+// with reading files that we encountered on CI workers.
+
+//go:embed ca.crt
+var caCrt string
+
+//go:embed resp-get-pod.json
+var getPodResponse string
+
+//go:embed resp-not-found.json
+var notFoundResponse string
+
+//go:embed resp-update-pod.json
+var updatePodTagsResponse string
+
+//go:embed token
+var token string
 
 var (
 	// ReturnGatewayTimeouts toggles whether the test server should return,
@@ -76,28 +92,6 @@ func Server(t *testing.T) (testState *State, testConf *Conf, closeFunc func()) {
 		for _, closer := range closers {
 			closer()
 		}
-	}
-
-	// Read in our sample files.
-	token, err := readFile(tokenFile)
-	if err != nil {
-		t.Fatal(err)
-	}
-	caCrt, err := readFile(caCrtFile)
-	if err != nil {
-		t.Fatal(err)
-	}
-	notFoundResponse, err := readFile(respNotFound)
-	if err != nil {
-		t.Fatal(err)
-	}
-	getPodResponse, err := readFile(respGetPod)
-	if err != nil {
-		t.Fatal(err)
-	}
-	updatePodTagsResponse, err := readFile(respUpdatePod)
-	if err != nil {
-		t.Fatal(err)
 	}
 
 	// Plant our token in a place where it can be read for the config.

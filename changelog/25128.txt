@@ -1,0 +1,6 @@
+```release-note:change
+plugins: By default, environment variables provided during plugin registration will now take precedence over system environment variables.
+Use the environment variable `VAULT_PLUGIN_USE_LEGACY_ENV_LAYERING=true` to opt out and keep higher preference for system environment
+variables. When this flag is set, Vault will check during unseal for conflicts and print warnings for any plugins with environment
+variables that conflict with system environment variables.
+```

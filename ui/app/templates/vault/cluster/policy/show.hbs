@@ -1,51 +1,63 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
 <PageHeader as |p|>
   <p.top>
-    <nav class="breadcrumb">
-      <li>
-        <LinkTo @route="vault.cluster.policies" @model={{this.policyType}} data-test-policy-list-link={{true}}>
-          <span class="sep">&#x0002f;</span>
-          {{uppercase this.policyType}}
-          policies
-        </LinkTo>
-      </li>
-    </nav>
+    <Hds::Breadcrumb>
+      <Hds::Breadcrumb::Item
+        @text="{{uppercase this.policyType}} policies"
+        @route="vault.cluster.policies"
+        @model={{this.policyType}}
+        data-test-policy-list-link
+      />
+      <Hds::Breadcrumb::Item @text={{this.model.id}} @current={{true}} />
+    </Hds::Breadcrumb>
   </p.top>
   <p.levelLeft>
     <h1 class="title is-3" data-test-policy-name="true">
       {{this.model.id}}
       {{#if this.model.enforcementLevel}}
-        <span class="tag" aria-label="Enforcement level: {{this.model.enforcementLevel}}">
-          {{this.model.enforcementLevel}}
-        </span>
+        <Hds::Badge @text={{this.model.enforcementLevel}} aria-label="Enforcement level: {{this.model.enforcementLevel}}" />
       {{/if}}
     </h1>
   </p.levelLeft>
 </PageHeader>
 <Toolbar>
   <ToolbarActions>
-    <ToolbarDownloadButton
-      @actionText="Download policy"
-      @extension={{if (eq this.policyType "acl") this.model.format "sentinel"}}
+    <DownloadButton
+      class="toolbar-button"
+      @color="secondary"
       @filename={{this.model.name}}
       @data={{this.model.policy}}
+      @extension={{if (eq this.policyType "acl") this.model.format "sentinel"}}
+      @text="Download policy"
     />
-    {{#if (and (not-eq this.model.id "root") (or this.capabilities.canUpdate this.capabilities.canDelete))}}
-      <ToolbarLink @params={{array "vault.cluster.policy.edit" this.model.id}} data-test-policy-edit-toggle={{true}}>
+    {{#if (and (not-eq this.model.id "root") (or this.model.canUpdate this.model.canDelete))}}
+      <ToolbarLink
+        @route="vault.cluster.policy.edit"
+        @models={{array this.policyType this.model.id}}
+        data-test-policy-edit-toggle
+      >
         Edit policy
       </ToolbarLink>
     {{/if}}
   </ToolbarActions>
 </Toolbar>
 <div class="box is-bottomless is-fullwidth is-marginless">
-  <div class="field">
-    <JsonEditor
-      @title="Policy"
-      @subTitle={{if (eq this.policyType "acl") (concat this.uppercase this.model.format " format")}}
-      @value={{this.model.policy}}
-      @readOnly={{true}}
-      @mode="ruby"
-    />
-  </div>
+  {{#if this.model.policy}}
+    <div class="field">
+      <Hds::CodeBlock @value={{this.model.policy}} @hasCopyButton={{true}} @maxHeight="300px" @language="ruby" as |CB|>
+        <CB.Title @tag="h3">
+          Policy
+        </CB.Title>
+        <CB.Description>
+          ({{if (eq this.policyType "acl") (concat this.uppercase this.model.format " format")}})
+        </CB.Description>
+      </Hds::CodeBlock>
+    </div>
+  {{/if}}
   {{#if this.model.paths}}
     <div class="field box is-shadowless no-bottom-padding is-marginless">
       <h2 class="title is-6">Paths</h2>

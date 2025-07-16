@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package transit
 
 import (
@@ -9,15 +12,21 @@ import (
 	"fmt"
 	"hash"
 
-	"golang.org/x/crypto/sha3"
-
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/logical"
+	"golang.org/x/crypto/sha3"
 )
 
 func (b *backend) pathHash() *framework.Path {
 	return &framework.Path{
 		Pattern: "hash" + framework.OptionalParamRegex("urlalgorithm"),
+
+		DisplayAttrs: &framework.DisplayAttributes{
+			OperationPrefix: operationPrefixTransit,
+			OperationVerb:   "hash",
+			OperationSuffix: "|with-algorithm",
+		},
+
 		Fields: map[string]*framework.FieldSchema{
 			"input": {
 				Type:        framework.TypeString,

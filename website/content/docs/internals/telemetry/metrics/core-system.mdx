@@ -1,0 +1,187 @@
+---
+layout: docs
+page_title: "Telemetry reference: Core system metrics"
+description: >-
+  Technical reference for core system telemetry values.
+---
+
+# Core system telemetry
+
+Core system telemetry provides information about the operational health of your
+Vault instance.
+
+## Default metrics
+
+@include 'telemetry-metrics/vault/core/active.mdx'
+
+@include 'telemetry-metrics/vault/core/activity/fragment_size.mdx'
+
+@include 'telemetry-metrics/vault/core/activity/segment_write.mdx'
+
+@include 'telemetry-metrics/vault/core/check_token.mdx'
+
+@include 'telemetry-metrics/vault/core/fetch_acl_and_token.mdx'
+
+@include 'telemetry-metrics/vault/core/handle_login_request.mdx'
+
+@include 'telemetry-metrics/vault/core/handle_request.mdx'
+
+@include 'telemetry-metrics/vault/core/in_flight_requests.mdx'
+
+@include 'telemetry-metrics/vault/core/response_status_code.mdx'
+
+@include 'telemetry-metrics/vault/core/leadership_lost.mdx'
+
+@include 'telemetry-metrics/vault/core/leadership_setup_failed.mdx'
+
+@include 'telemetry-metrics/vault/core/license/expiration_time_epoch.mdx'
+
+@include 'telemetry-metrics/vault/core/locked_users.mdx'
+
+@include 'telemetry-metrics/vault/core/mount_table/num_entries.mdx'
+
+@include 'telemetry-metrics/vault/core/mount_table/size.mdx'
+
+@include 'telemetry-metrics/vault/core/performance_standby.mdx'
+
+@include 'telemetry-metrics/vault/core/replication/dr/primary.mdx'
+
+@include 'telemetry-metrics/vault/core/replication/dr/secondary.mdx'
+
+@include 'telemetry-metrics/vault/core/replication/performance/primary.mdx'
+
+@include 'telemetry-metrics/vault/core/replication/performance/secondary.mdx'
+
+@include 'telemetry-metrics/vault/core/replication/write_undo_logs.mdx'
+
+@include 'telemetry-metrics/vault/core/step_down.mdx'
+
+## Barrier metrics
+
+@include 'telemetry-metrics/vault/barrier/delete.mdx'
+
+@include 'telemetry-metrics/vault/barrier/estimated_encryptions.mdx'
+
+@include 'telemetry-metrics/vault/barrier/get.mdx'
+
+@include 'telemetry-metrics/vault/barrier/list.mdx'
+
+@include 'telemetry-metrics/vault/barrier/put.mdx'
+
+## Caching metrics
+
+@include 'telemetry-metrics/vault/cache/delete.mdx'
+
+@include 'telemetry-metrics/vault/cache/hit.mdx'
+
+@include 'telemetry-metrics/vault/cache/miss.mdx'
+
+@include 'telemetry-metrics/vault/cache/write.mdx'
+
+## Metric collection metrics
+
+@include 'telemetry-metrics/vault/metrics/collection.mdx'
+
+@include 'telemetry-metrics/vault/metrics/collection/error.mdx'
+
+@include 'telemetry-metrics/vault/metrics/collection/interval.mdx'
+
+## Quota metrics
+
+@include 'telemetry-metrics/quota-intro.mdx'
+
+@include 'telemetry-metrics/vault/quota/lease_count/counter.mdx'
+
+@include 'telemetry-metrics/vault/quota/lease_count/max.mdx'
+
+@include 'telemetry-metrics/vault/quota/lease_count/violation.mdx'
+
+@include 'telemetry-metrics/vault/quota/rate_limit/violation.mdx'
+
+## Request limiter metrics
+
+@include 'telemetry-metrics/request-limiter-intro.mdx'
+
+@include 'telemetry-metrics/vault/core/request-limiter/write.mdx'
+
+@include 'telemetry-metrics/vault/core/request-limiter/special_path.mdx'
+
+@include 'telemetry-metrics/vault/core/request-limiter/service_unavailable.mdx'
+
+@include 'telemetry-metrics/vault/core/request-limiter/success.mdx'
+
+@include 'telemetry-metrics/vault/core/request-limiter/dropped.mdx'
+
+@include 'telemetry-metrics/vault/core/request-limiter/ignored.mdx'
+
+## Rollback metrics
+
+@include 'telemetry-metrics/rollback-intro.mdx'
+
+@include 'telemetry-metrics/vault/rollback/attempt/mountpoint.mdx'
+
+@include 'telemetry-metrics/vault/rollback/attempt.mdx'
+
+@include 'telemetry-metrics/vault/rollback/inflight.mdx'
+
+@include 'telemetry-metrics/vault/rollback/queued.mdx'
+
+@include 'telemetry-metrics/vault/rollback/waiting.mdx'
+
+## Route metrics
+
+@include 'telemetry-metrics/route-intro.mdx'
+
+@include 'telemetry-metrics/vault/route/create/mountpoint.mdx'
+
+@include 'telemetry-metrics/vault/route/delete/mountpoint.mdx'
+
+@include 'telemetry-metrics/vault/route/list/mountpoint.mdx'
+
+@include 'telemetry-metrics/vault/route/read/mountpoint.mdx'
+
+@include 'telemetry-metrics/vault/route/rollback/mountpoint.mdx'
+
+@include 'telemetry-metrics/vault/route/rollback.mdx'
+
+## Runtime metrics
+
+@include 'telemetry-metrics/runtime-note.mdx'
+
+@include 'telemetry-metrics/vault/runtime/alloc_bytes.mdx'
+
+@include 'telemetry-metrics/vault/runtime/free_count.mdx'
+
+@include 'telemetry-metrics/vault/runtime/gc_pause_ns.mdx'
+
+@include 'telemetry-metrics/vault/runtime/heap_objects.mdx'
+
+@include 'telemetry-metrics/vault/runtime/malloc_count.mdx'
+
+@include 'telemetry-metrics/vault/runtime/num_goroutines.mdx'
+
+@include 'telemetry-metrics/vault/runtime/sys_bytes.mdx'
+
+@include 'telemetry-metrics/vault/runtime/total_gc_pause_ns.mdx'
+
+@include 'telemetry-metrics/vault/runtime/total_gc_runs.mdx'
+
+## Seal metrics
+
+@include 'telemetry-metrics/vault/core/post_unseal.mdx'
+
+@include 'telemetry-metrics/vault/core/pre_seal.mdx'
+
+@include 'telemetry-metrics/vault/core/seal_encrypt.mdx'
+
+@include 'telemetry-metrics/vault/core/seal_decrypt.mdx'
+
+@include 'telemetry-metrics/vault/core/seal_internal.mdx'
+
+@include 'telemetry-metrics/vault/core/seal_unreachable.mdx'
+
+@include 'telemetry-metrics/vault/core/seal_with_request.mdx'
+
+@include 'telemetry-metrics/vault/core/unseal.mdx'
+
+@include 'telemetry-metrics/vault/core/unsealed.mdx'

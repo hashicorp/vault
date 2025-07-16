@@ -1,0 +1,3 @@
+```release-note:bug
+auth/cert: Use subject's serial number, not issuer's within error message text in OCSP request errors
+```

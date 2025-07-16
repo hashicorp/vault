@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: BUSL-1.1
+
 package pki
 
 import (
@@ -9,17 +12,22 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/builtin/logical/pki/issuing"
+	"github.com/hashicorp/vault/builtin/logical/pki/pki_backend"
+	"github.com/hashicorp/vault/builtin/logical/pki/revocation"
+	"github.com/hashicorp/vault/helper/constants"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
-
 	"github.com/stretchr/testify/require"
 )
 
 func TestBackend_CRL_EnableDisableRoot(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
@@ -35,7 +43,7 @@ func TestBackend_CRL_EnableDisableRoot(t *testing.T) {
 
 func TestBackend_CRLConfigUpdate(t *testing.T) {
 	t.Parallel()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Write a legacy config to storage.
 	type legacyConfig struct {
@@ -55,10 +63,10 @@ func TestBackend_CRLConfigUpdate(t *testing.T) {
 
 	require.Equal(t, "24h", resp.Data["expiry"])
 	require.Equal(t, false, resp.Data["disable"])
-	require.Equal(t, defaultCrlConfig.OcspDisable, resp.Data["ocsp_disable"])
-	require.Equal(t, defaultCrlConfig.OcspExpiry, resp.Data["ocsp_expiry"])
-	require.Equal(t, defaultCrlConfig.AutoRebuild, resp.Data["auto_rebuild"])
-	require.Equal(t, defaultCrlConfig.AutoRebuildGracePeriod, resp.Data["auto_rebuild_grace_period"])
+	require.Equal(t, pki_backend.DefaultCrlConfig.OcspDisable, resp.Data["ocsp_disable"])
+	require.Equal(t, pki_backend.DefaultCrlConfig.OcspExpiry, resp.Data["ocsp_expiry"])
+	require.Equal(t, pki_backend.DefaultCrlConfig.AutoRebuild, resp.Data["auto_rebuild"])
+	require.Equal(t, pki_backend.DefaultCrlConfig.AutoRebuildGracePeriod, resp.Data["auto_rebuild_grace_period"])
 }
 
 func TestBackend_CRLConfig(t *testing.T) {
@@ -79,7 +87,7 @@ func TestBackend_CRLConfig(t *testing.T) {
 	for _, tc := range tests {
 		name := fmt.Sprintf("%s-%t-%t", tc.expiry, tc.disable, tc.ocspDisable)
 		t.Run(name, func(t *testing.T) {
-			b, s := createBackendWithStorage(t)
+			b, s := CreateBackendWithStorage(t)
 
 			resp, err := CBWrite(b, s, "config/crl", map[string]interface{}{
 				"expiry":                    tc.expiry,
@@ -89,9 +97,12 @@ func TestBackend_CRLConfig(t *testing.T) {
 				"auto_rebuild":              tc.autoRebuild,
 				"auto_rebuild_grace_period": tc.autoRebuildGracePeriod,
 			})
-			requireSuccessNilResponse(t, resp, err)
+			requireSuccessNonNilResponse(t, resp, err)
+			schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/crl"), logical.UpdateOperation), resp, true)
 
 			resp, err = CBRead(b, s, "config/crl")
+			schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("config/crl"), logical.ReadOperation), resp, true)
+
 			requireSuccessNonNilResponse(t, resp, err)
 			requireFieldsSetInResp(t, resp, "disable", "expiry", "ocsp_disable", "auto_rebuild", "auto_rebuild_grace_period")
 
@@ -123,7 +134,7 @@ func TestBackend_CRLConfig(t *testing.T) {
 	for _, tc := range badValueTests {
 		name := fmt.Sprintf("bad-%s-%s-%s", tc.expiry, tc.disable, tc.ocspDisable)
 		t.Run(name, func(t *testing.T) {
-			b, s := createBackendWithStorage(t)
+			b, s := CreateBackendWithStorage(t)
 
 			_, err := CBWrite(b, s, "config/crl", map[string]interface{}{
 				"expiry":                    tc.expiry,
@@ -164,7 +175,7 @@ func TestBackend_CRL_AllKeyTypeSigAlgos(t *testing.T) {
 
 	for index, tc := range testCases {
 		t.Logf("tv %v", index)
-		b, s := createBackendWithStorage(t)
+		b, s := CreateBackendWithStorage(t)
 
 		resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
 			"ttl":            "40h",
@@ -207,7 +218,7 @@ func TestBackend_CRL_EnableDisableIntermediateWithoutRoot(t *testing.T) {
 }
 
 func crlEnableDisableIntermediateTestForBackend(t *testing.T, withRoot bool) {
-	b_root, s_root := createBackendWithStorage(t)
+	b_root, s_root := CreateBackendWithStorage(t)
 
 	resp, err := CBWrite(b_root, s_root, "root/generate/internal", map[string]interface{}{
 		"ttl":         "40h",
@@ -218,7 +229,7 @@ func crlEnableDisableIntermediateTestForBackend(t *testing.T, withRoot bool) {
 	}
 	rootSerial := resp.Data["serial_number"].(string)
 
-	b_int, s_int := createBackendWithStorage(t)
+	b_int, s_int := CreateBackendWithStorage(t)
 
 	resp, err = CBWrite(b_int, s_int, "intermediate/generate/internal", map[string]interface{}{
 		"common_name": "intermediate myvault.com",
@@ -274,7 +285,7 @@ func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage,
 	}
 
 	serials := make(map[int]string)
-	for i := 0; i < 6; i++ {
+	for i := 0; i < 7; i++ {
 		resp, err := CBWrite(b, s, "issue/test", map[string]interface{}{
 			"common_name": "test.foobar.com",
 		})
@@ -312,11 +323,15 @@ func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage,
 		}
 	}
 
-	revoke := func(serialIndex int) {
+	revoke := func(serialIndex int, errorText ...string) {
 		_, err = CBWrite(b, s, "revoke", map[string]interface{}{
 			"serial_number": serials[serialIndex],
 		})
-		if err != nil {
+		if err != nil && len(errorText) == 1 {
+			if strings.Contains(err.Error(), errorText[0]) {
+				err = nil
+				return
+			}
 			t.Fatal(err)
 		}
 
@@ -366,12 +381,30 @@ func crlEnableDisableTestForBackend(t *testing.T, b *backend, s logical.Storage,
 
 	crlCreationTime2 := getParsedCrlFromBackend(t, b, s, "crl").TBSCertList.ThisUpdate
 	require.NotEqual(t, crlCreationTime1, crlCreationTime2)
+
+	// Set a limit, and test that it blocks building an over-large CRL
+	CBWrite(b, s, "config/crl", map[string]interface{}{
+		"max_crl_entries": 6,
+	})
+	revoke(6, "revocation list size (7) exceeds configured maximum (6)")
+	test(6)
+
+	_, err = CBRead(b, s, "crl/rotate")
+	require.Error(t, err)
+	require.True(t, strings.Contains(err.Error(), "revocation list size (7) exceeds configured maximum (6)"))
+
+	// Set unlimited, and try again
+	CBWrite(b, s, "config/crl", map[string]interface{}{
+		"max_crl_entries": -1,
+	})
+	_, err = CBRead(b, s, "crl/rotate")
+	require.NoError(t, err)
 }
 
 func TestBackend_Secondary_CRL_Rebuilding(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
 	// Write out the issuer/key to storage without going through the api call as replication would.
@@ -396,7 +429,7 @@ func TestBackend_Secondary_CRL_Rebuilding(t *testing.T) {
 func TestCrlRebuilder(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 	sc := b.makeStorageContext(ctx, s)
 
 	// Write out the issuer/key to storage without going through the api call as replication would.
@@ -404,19 +437,21 @@ func TestCrlRebuilder(t *testing.T) {
 	_, _, err := sc.writeCaBundle(bundle, "", "")
 	require.NoError(t, err)
 
-	req := &logical.Request{Storage: s}
 	cb := newCRLBuilder(true /* can rebuild and write CRLs */)
 
 	// Force an initial build
-	err = cb.rebuild(ctx, b, req, true)
+	warnings, err := cb.Rebuild(sc, true)
 	require.NoError(t, err, "Failed to rebuild CRL")
+	require.Empty(t, warnings, "unexpectedly got warnings rebuilding CRL")
 
 	resp := requestCrlFromBackend(t, s, b)
 	crl1 := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))
 
 	// We shouldn't rebuild within this call.
-	err = cb.rebuildIfForced(ctx, b, req)
+	warnings, err = cb.RebuildIfForced(sc)
 	require.NoError(t, err, "Failed to rebuild if forced CRL")
+	require.Empty(t, warnings, "unexpectedly got warnings rebuilding CRL")
+
 	resp = requestCrlFromBackend(t, s, b)
 	crl2 := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))
 	require.Equal(t, crl1.ThisUpdate, crl2.ThisUpdate, "According to the update field, we rebuilt the CRL")
@@ -432,9 +467,12 @@ func TestCrlRebuilder(t *testing.T) {
 
 	// This should rebuild the CRL
 	cb.requestRebuildIfActiveNode(b)
-	err = cb.rebuildIfForced(ctx, b, req)
+	warnings, err = cb.RebuildIfForced(sc)
 	require.NoError(t, err, "Failed to rebuild if forced CRL")
+	require.Empty(t, warnings, "unexpectedly got warnings rebuilding CRL")
 	resp = requestCrlFromBackend(t, s, b)
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("crl/pem"), logical.ReadOperation), resp, true)
+
 	crl3 := parseCrlPemBytes(t, resp.Data["http_raw_body"].([]byte))
 	require.True(t, crl1.ThisUpdate.Before(crl3.ThisUpdate),
 		"initial crl time: %#v not before next crl rebuild time: %#v", crl1.ThisUpdate, crl3.ThisUpdate)
@@ -443,7 +481,7 @@ func TestCrlRebuilder(t *testing.T) {
 func TestBYOC(t *testing.T) {
 	t.Parallel()
 
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Create a root CA.
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -562,7 +600,7 @@ func TestBYOC(t *testing.T) {
 func TestPoP(t *testing.T) {
 	t.Parallel()
 
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Create a root CA.
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -594,10 +632,11 @@ func TestPoP(t *testing.T) {
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data["certificate"])
 
-	_, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
+	resp, err = CBWrite(b, s, "revoke-with-key", map[string]interface{}{
 		"certificate": resp.Data["certificate"],
 		"private_key": resp.Data["private_key"],
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("revoke-with-key"), logical.UpdateOperation), resp, true)
 	require.NoError(t, err)
 
 	// Issue a second leaf, but hold onto it for now.
@@ -722,7 +761,15 @@ func TestPoP(t *testing.T) {
 func TestIssuerRevocation(t *testing.T) {
 	t.Parallel()
 
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
+
+	// Write a config with auto-rebuilding so that we can verify stuff doesn't
+	// appear on the delta CRL.
+	_, err := CBWrite(b, s, "config/crl", map[string]interface{}{
+		"auto_rebuild": true,
+		"enable_delta": true,
+	})
+	require.NoError(t, err)
 
 	// Create a root CA.
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -759,12 +806,16 @@ func TestIssuerRevocation(t *testing.T) {
 
 	// Revoke it.
 	resp, err = CBWrite(b, s, "issuer/root2/revoke", map[string]interface{}{})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("issuer/root2/revoke"), logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotZero(t, resp.Data["revocation_time"])
 
 	// Regenerate the CRLs
-	_, err = CBRead(b, s, "crl/rotate")
+	resp, err = CBRead(b, s, "crl/rotate")
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("crl/rotate"), logical.ReadOperation), resp, true)
+
 	require.NoError(t, err)
 
 	// Ensure the old cert isn't on its own CRL.
@@ -789,7 +840,7 @@ func TestIssuerRevocation(t *testing.T) {
 	require.NoError(t, err)
 
 	// Issue a leaf cert and ensure it fails (because the issuer is revoked).
-	_, err = CBWrite(b, s, "issuer/root2/issue/local-testing", map[string]interface{}{
+	resp, err = CBWrite(b, s, "issuer/root2/issue/local-testing", map[string]interface{}{
 		"common_name": "testing",
 	})
 	require.Error(t, err)
@@ -815,6 +866,8 @@ func TestIssuerRevocation(t *testing.T) {
 	resp, err = CBWrite(b, s, "intermediate/set-signed", map[string]interface{}{
 		"certificate": intCert,
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("intermediate/set-signed"), logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data["imported_issuers"])
@@ -830,6 +883,8 @@ func TestIssuerRevocation(t *testing.T) {
 	resp, err = CBWrite(b, s, "issuer/int1/issue/local-testing", map[string]interface{}{
 		"common_name": "testing",
 	})
+	schema.ValidateResponse(t, schema.GetResponseSchema(t, b.Route("issuer/int1/issue/local-testing"), logical.UpdateOperation), resp, true)
+
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data["certificate"])
@@ -847,6 +902,10 @@ func TestIssuerRevocation(t *testing.T) {
 	require.NoError(t, err)
 	crl = getParsedCrlFromBackend(t, b, s, "issuer/root/crl/der")
 	requireSerialNumberInCRL(t, crl.TBSCertList, intCertSerial)
+	crl = getParsedCrlFromBackend(t, b, s, "issuer/root/crl/delta/der")
+	if requireSerialNumberInCRL(nil, crl.TBSCertList, intCertSerial) {
+		t.Fatalf("expected intermediate serial NOT to appear on root's delta CRL, but did")
+	}
 
 	// Ensure we can still revoke the issued leaf.
 	resp, err = CBWrite(b, s, "revoke", map[string]interface{}{
@@ -893,11 +952,13 @@ func TestAutoRebuild(t *testing.T) {
 		},
 		// See notes below about usage of /sys/raw for reading cluster
 		// storage without barrier encryption.
-		EnableRaw: true,
+		EnableRaw:      true,
+		RollbackPeriod: newPeriod,
 	}
-	cluster := vault.CreateTestClusterWithRollbackPeriod(t, newPeriod, coreConfig, &vault.TestClusterOptions{
+	cluster := vault.NewTestCluster(t, coreConfig, &vault.TestClusterOptions{
 		HandlerFunc: vaulthttp.Handler,
 	})
+	cluster.Start()
 	defer cluster.Cleanup()
 	client := cluster.Cores[0].Client
 
@@ -937,13 +998,13 @@ func TestAutoRebuild(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotNil(t, resp.Data)
-	require.Equal(t, resp.Data["expiry"], defaultCrlConfig.Expiry)
-	require.Equal(t, resp.Data["disable"], defaultCrlConfig.Disable)
-	require.Equal(t, resp.Data["ocsp_disable"], defaultCrlConfig.OcspDisable)
-	require.Equal(t, resp.Data["auto_rebuild"], defaultCrlConfig.AutoRebuild)
-	require.Equal(t, resp.Data["auto_rebuild_grace_period"], defaultCrlConfig.AutoRebuildGracePeriod)
-	require.Equal(t, resp.Data["enable_delta"], defaultCrlConfig.EnableDelta)
-	require.Equal(t, resp.Data["delta_rebuild_interval"], defaultCrlConfig.DeltaRebuildInterval)
+	require.Equal(t, resp.Data["expiry"], pki_backend.DefaultCrlConfig.Expiry)
+	require.Equal(t, resp.Data["disable"], pki_backend.DefaultCrlConfig.Disable)
+	require.Equal(t, resp.Data["ocsp_disable"], pki_backend.DefaultCrlConfig.OcspDisable)
+	require.Equal(t, resp.Data["auto_rebuild"], pki_backend.DefaultCrlConfig.AutoRebuild)
+	require.Equal(t, resp.Data["auto_rebuild_grace_period"], pki_backend.DefaultCrlConfig.AutoRebuildGracePeriod)
+	require.Equal(t, resp.Data["enable_delta"], pki_backend.DefaultCrlConfig.EnableDelta)
+	require.Equal(t, resp.Data["delta_rebuild_interval"], pki_backend.DefaultCrlConfig.DeltaRebuildInterval)
 
 	// Safety guard: we play with rebuild timing below.
 	_, err = client.Logical().Write("pki/config/crl", map[string]interface{}{
@@ -966,8 +1027,9 @@ func TestAutoRebuild(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	crl := getCrlCertificateList(t, client, "pki")
-	lastCRLNumber := crl.Version
+	defaultCrlPath := "/v1/pki/crl"
+	crl := getParsedCrlAtPath(t, client, defaultCrlPath).TBSCertList
+	lastCRLNumber := getCRLNumber(t, crl)
 	lastCRLExpiry := crl.NextUpdate
 	requireSerialNumberInCRL(t, crl, leafSerial)
 
@@ -980,6 +1042,12 @@ func TestAutoRebuild(t *testing.T) {
 		"delta_rebuild_interval":    deltaPeriod,
 	})
 	require.NoError(t, err)
+
+	// Wait for the CRL to update based on the configuration change we just did
+	// so that it doesn't grab the revocation we are going to do afterwards.
+	crl = waitForUpdatedCrl(t, client, defaultCrlPath, lastCRLNumber, lastCRLExpiry.Sub(time.Now()))
+	lastCRLNumber = getCRLNumber(t, crl)
+	lastCRLExpiry = crl.NextUpdate
 
 	// Issue a cert and revoke it.
 	resp, err = client.Logical().Write("pki/issue/local-testing", map[string]interface{}{
@@ -1001,13 +1069,7 @@ func TestAutoRebuild(t *testing.T) {
 	// each revocation. Pull the storage from the cluster (via the sys/raw
 	// endpoint which requires the mount UUID) and verify the revInfo contains
 	// a matching issuer.
-	resp, err = client.Logical().Read("sys/mounts/pki")
-	require.NoError(t, err)
-	require.NotNil(t, resp)
-	require.NotNil(t, resp.Data)
-	require.NotEmpty(t, resp.Data["uuid"])
-	pkiMount := resp.Data["uuid"].(string)
-	require.NotEmpty(t, pkiMount)
+	pkiMount := findStorageMountUuid(t, client, "pki")
 	revEntryPath := "logical/" + pkiMount + "/" + revokedPath + normalizeSerial(newLeafSerial)
 
 	// storage from cluster.Core[0] is a physical storage copy, not a logical
@@ -1021,17 +1083,17 @@ func TestAutoRebuild(t *testing.T) {
 	require.NotNil(t, resp.Data)
 	require.NotEmpty(t, resp.Data["value"])
 	revEntryValue := resp.Data["value"].(string)
-	var revInfo revocationInfo
+	var revInfo revocation.RevocationInfo
 	err = json.Unmarshal([]byte(revEntryValue), &revInfo)
 	require.NoError(t, err)
-	require.Equal(t, revInfo.CertificateIssuer, issuerID(rootIssuer))
+	require.Equal(t, revInfo.CertificateIssuer, issuing.IssuerID(rootIssuer))
 
 	// New serial should not appear on CRL.
 	crl = getCrlCertificateList(t, client, "pki")
-	thisCRLNumber := crl.Version
+	thisCRLNumber := getCRLNumber(t, crl)
 	requireSerialNumberInCRL(t, crl, leafSerial) // But the old one should.
 	now := time.Now()
-	graceInterval, _ := time.ParseDuration(gracePeriod)
+	graceInterval, _ := parseutil.ParseDurationSecond(gracePeriod)
 	expectedUpdate := lastCRLExpiry.Add(-1 * graceInterval)
 	if requireSerialNumberInCRL(nil, crl, newLeafSerial) {
 		// If we somehow lagged and we ended up needing to rebuild
@@ -1049,7 +1111,7 @@ func TestAutoRebuild(t *testing.T) {
 	}
 
 	// This serial should exist in the delta WAL section for the mount...
-	resp, err = client.Logical().List("sys/raw/logical/" + pkiMount + "/" + deltaWALPath)
+	resp, err = client.Logical().List("sys/raw/logical/" + pkiMount + "/" + localDeltaWALPath)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
 	require.NotEmpty(t, resp.Data)
@@ -1069,7 +1131,7 @@ func TestAutoRebuild(t *testing.T) {
 		default:
 			// Check and see if there's a storage entry for the last rebuild
 			// serial. If so, validate the delta CRL contains this entry.
-			resp, err = client.Logical().List("sys/raw/logical/" + pkiMount + "/" + deltaWALPath)
+			resp, err = client.Logical().List("sys/raw/logical/" + pkiMount + "/" + localDeltaWALPath)
 			require.NoError(t, err)
 			require.NotNil(t, resp)
 			require.NotEmpty(t, resp.Data)
@@ -1090,7 +1152,7 @@ func TestAutoRebuild(t *testing.T) {
 			}
 
 			// Read the marker and see if its correct.
-			resp, err = client.Logical().Read("sys/raw/logical/" + pkiMount + "/" + deltaWALLastBuildSerial)
+			resp, err = client.Logical().Read("sys/raw/logical/" + pkiMount + "/" + localDeltaWALLastBuildSerial)
 			require.NoError(t, err)
 			if resp == nil {
 				time.Sleep(1 * time.Second)
@@ -1113,8 +1175,13 @@ func TestAutoRebuild(t *testing.T) {
 			deltaCrl := getParsedCrlAtPath(t, client, "/v1/pki/crl/delta").TBSCertList
 			if !requireSerialNumberInCRL(nil, deltaCrl, newLeafSerial) {
 				// Check if it is on the main CRL because its already regenerated.
-				mainCRL := getParsedCrlAtPath(t, client, "/v1/pki/crl").TBSCertList
+				mainCRL := getParsedCrlAtPath(t, client, defaultCrlPath).TBSCertList
 				requireSerialNumberInCRL(t, mainCRL, newLeafSerial)
+			} else {
+				referenceCrlNum := getCrlReferenceFromDelta(t, deltaCrl)
+				if lastCRLNumber < referenceCrlNum {
+					lastCRLNumber = referenceCrlNum
+				}
 			}
 		}
 	}
@@ -1125,38 +1192,26 @@ func TestAutoRebuild(t *testing.T) {
 		time.Sleep(expectedUpdate.Sub(now))
 	}
 
-	// Otherwise, the absolute latest we're willing to wait is some delta
-	// after CRL expiry (to let stuff regenerate &c).
-	interruptChan = time.After(lastCRLExpiry.Sub(now) + delta)
-	for {
-		select {
-		case <-interruptChan:
-			t.Fatalf("expected CRL to regenerate prior to CRL expiry (plus %v grace period)", delta)
-		default:
-			crl = getCrlCertificateList(t, client, "pki")
-			if crl.NextUpdate.Equal(lastCRLExpiry) {
-				// Hack to ensure we got a net-new CRL. If we didn't, we can
-				// exit this default conditional and wait for the next
-				// go-round. When the timer fires, it'll populate the channel
-				// and we'll exit correctly.
-				time.Sleep(1 * time.Second)
-				break
-			}
+	crl = waitForUpdatedCrl(t, client, defaultCrlPath, lastCRLNumber, lastCRLExpiry.Sub(now)+delta)
+	requireSerialNumberInCRL(t, crl, leafSerial)
+	requireSerialNumberInCRL(t, crl, newLeafSerial)
+}
 
-			now := time.Now()
-			require.True(t, crl.ThisUpdate.Before(now))
-			require.True(t, crl.NextUpdate.After(now))
-			requireSerialNumberInCRL(t, crl, leafSerial)
-			requireSerialNumberInCRL(t, crl, newLeafSerial)
-			return
-		}
-	}
+func findStorageMountUuid(t *testing.T, client *api.Client, mount string) string {
+	resp, err := client.Logical().Read("sys/mounts/" + mount)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotEmpty(t, resp.Data["uuid"])
+	pkiMount := resp.Data["uuid"].(string)
+	require.NotEmpty(t, pkiMount)
+	return pkiMount
 }
 
 func TestTidyIssuerAssociation(t *testing.T) {
 	t.Parallel()
 
-	b, s := createBackendWithStorage(t)
+	b, s := CreateBackendWithStorage(t)
 
 	// Create a root CA.
 	resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
@@ -1169,7 +1224,7 @@ func TestTidyIssuerAssociation(t *testing.T) {
 	require.NotEmpty(t, resp.Data["certificate"])
 	require.NotEmpty(t, resp.Data["issuer_id"])
 	rootCert := resp.Data["certificate"].(string)
-	rootID := resp.Data["issuer_id"].(issuerID)
+	rootID := resp.Data["issuer_id"].(issuing.IssuerID)
 
 	// Create a role for issuance.
 	_, err = CBWrite(b, s, "roles/local-testing", map[string]interface{}{
@@ -1201,7 +1256,7 @@ func TestTidyIssuerAssociation(t *testing.T) {
 	require.NotNil(t, entry)
 	require.NotNil(t, entry.Value)
 
-	var leafInfo revocationInfo
+	var leafInfo revocation.RevocationInfo
 	err = entry.DecodeJSON(&leafInfo)
 	require.NoError(t, err)
 	require.Equal(t, rootID, leafInfo.CertificateIssuer)
@@ -1303,4 +1358,194 @@ func requestCrlFromBackend(t *testing.T, s logical.Storage, b *backend) *logical
 	require.NotNil(t, resp, "crl response was nil with no error")
 	require.False(t, resp.IsError(), "crl error response: %v", resp)
 	return resp
+}
+
+func TestCRLWarningsEmptyKeyUsage(t *testing.T) {
+	t.Parallel()
+
+	b, s := CreateBackendWithStorage(t)
+
+	// Generated using OpenSSL with a configuration lacking KeyUsage on
+	// the CA certificate.
+	cert := `-----BEGIN CERTIFICATE-----
+MIIDBjCCAe6gAwIBAgIBATANBgkqhkiG9w0BAQsFADATMREwDwYDVQQDDAhyb290
+LW9sZDAeFw0yMDAxMDEwMTAxMDFaFw0yMTAxMDEwMTAxMDFaMBMxETAPBgNVBAMM
+CHJvb3Qtb2xkMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzqhSZxAL
+PwFhCIPL1jFPq6jxp1wFgo6YNSfVI13gfaGIjfErxsQUbosmlEuTeOc50zXXN3kb
+SDufy5Yi1OeSkFZRdJ78zdKzsEDIVR1ukUngVsSrt05gdNMJlh8XOPbcrJo78jYG
+lRgtkkFSc/wCu+ue6JqkfKrbUY/G9WK0UM8ppHm1Ux67ZGoypyEgaqqxKHBRC4Yl
+D+lAs1vP4C6cavqdUMKgAPTKmMBzlbpCuYPLHSzWh9Com3WQSqCbrlo3uH5RT3V9
+5Gjuk3mMUhY1l6fRL7wG3f+4x+DS+ICQNT0o4lnMxpIsiTh0cEHUFgY7G0iHWYPj
+CIN8UDhpZIpoCQIDAQABo2UwYzAdBgNVHQ4EFgQUJlHk3PN7pfC22FGxAb0rWgQt
+L4cwHwYDVR0jBBgwFoAUJlHk3PN7pfC22FGxAb0rWgQtL4cwDAYDVR0TBAUwAwEB
+/zATBgNVHSUEDDAKBggrBgEFBQcDATANBgkqhkiG9w0BAQsFAAOCAQEAcaU0FbXb
+FfXluBrjKfOzVKz+kvQ1CVv3xe3MBkS6wvqybBjJCFChnqCPxEe57BdSbBXNU5LZ
+zCR/OqYas4Csv9+msSn9BI2FSMAmfMDTsp5/6iIQJqlJx9L8a7bjzVMGX6QJm/3x
+S/EgGsMETAgewQXeu4jhI6StgJ2V/4Ofe498hYw4LAiBapJmkU/nHezWodNBZJ7h
+LcLOzVj0Hu5MZplGBgJFgRqBCVVkqXA0q7tORuhNzYtNdJFpv3pZIhvVFFu3HUPf
+wYQPhLye5WNtosz5xKe8X0Q9qp8g6azMTk+5Qe7u1d8MYAA2AIlGuKUvPHRruOmN
+NC+gQnS7AK1lCw==
+-----END CERTIFICATE-----`
+	privKey := `-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDOqFJnEAs/AWEI
+g8vWMU+rqPGnXAWCjpg1J9UjXeB9oYiN8SvGxBRuiyaUS5N45znTNdc3eRtIO5/L
+liLU55KQVlF0nvzN0rOwQMhVHW6RSeBWxKu3TmB00wmWHxc49tysmjvyNgaVGC2S
+QVJz/AK7657omqR8qttRj8b1YrRQzymkebVTHrtkajKnISBqqrEocFELhiUP6UCz
+W8/gLpxq+p1QwqAA9MqYwHOVukK5g8sdLNaH0KibdZBKoJuuWje4flFPdX3kaO6T
+eYxSFjWXp9EvvAbd/7jH4NL4gJA1PSjiWczGkiyJOHRwQdQWBjsbSIdZg+MIg3xQ
+OGlkimgJAgMBAAECggEABKmCdmXDwy+eR0ll41aoc/hzPzHRxADAiU51Pf+DrYHj
+6UPcF3db+KR2Adl0ocEhqlSoHs3CIk6KC9c+wOvagBwaaVWe4WvT9vF3M4he8rMm
+dv6n2xJPFcOfDz5zUSssjk5KdOvoGRv7BzYnDIvOafvmUVwPwuo92Wizddy8saf4
+Xuea0Cupz1PELPKkbXcAqb+TzbAZrwdPj1Y7vTe/KGE4+aoDqCW/sFB1E0UsMGlt
+/yfGwFP48b7kdkqSpcEQW5H8+WL3TfqRcolCD9To4vo2J+1Po0S/8qPNRvkNQDDX
+AypHtrXFBOWHpJgXT4rKyH+ZGJchrCRDblt9s/sNQwKBgQD7NytvYET3pWemYiX+
+MB9uc6cPuMFONvlzjA9T6dbOSi/HLaeDoW027aMUZqb7QeaQCoWcUwh13dI2SZq0
+5+l9hei4JkWjoDhbWmPe7zDuQr3UMl0CSk3egz3BSHkjAhRAuUxK0QLKGB23zWxz
+k8mUWYZaZRA39C6aqMt/jbJjDwKBgQDSl+eO+DjpwPzrjPSphpF4xYo4XDje9ovK
+9q4KTHye7Flc3cMCX3WZBmzdt0zbqu6gWZjJH0XbWX/+SkJBGh77XWD0FeQnU7Vk
+ipoeb8zTsCVxD9EytQuXti3cqBgClcCMvLKgLOJIcNYTnygojwg3t+jboQqbtV7p
+VpQfAC6jZwKBgQCxJ46x1CnOmg4l/0DbqAQCV/yP0bI//fSbz0Ff459fimF3DHL9
+GHF0MtC2Kk3HEgoNud3PB58Hv43mSrGWsZSuuCgM9LBXWz1i7rNPG05eNyK26W09
+mDihmduK2hjS3zx5CDMM76gP7EHIxEyelLGqtBdS18JAMypKVo5rPPl3cQKBgQCG
+ueXLImQOr4dfDntLpSqV0BLAQcekZKhEPZJURmCHr37wGXNzpixurJyjL2w9MFqf
+PRKwwJAJZ3Wp8kn2qkZd23x2Szb+LeBjJQS6Kh4o44zgixTz0r1K3qLygptxs+pO
+Xz4LmQte+skKHo0rfW3tb3vKXnmR6fOBZgE23//2SwKBgHck44hoE1Ex2gDEfIq1
+04OBoS1cpuc9ge4uHEmv+8uANjzwlsYf8hY1qae513MGixRBOkxcI5xX/fYPQV9F
+t3Jfh8QX85JjnGntuXuraYZJMUjpwXr3QHPx0jpvAM3Au5j6qD3biC9Vrwq9Chkg
+hbiiPARizZA/Tsna/9ox1qDT
+-----END PRIVATE KEY-----`
+	resp, err := CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+		"pem_bundle": cert + "\n" + privKey,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Warnings)
+	originalWarnings := resp.Warnings
+
+	resp, err = CBRead(b, s, "crl/rotate")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotEmpty(t, resp.Warnings)
+
+	// All CRL-specific warnings should've already occurred earlier on the
+	// import's CRL rebuild.
+	for _, warning := range resp.Warnings {
+		require.Contains(t, originalWarnings, warning)
+	}
+
+	// Deleting the issuer and key should remove the warning.
+	_, err = CBDelete(b, s, "root")
+	require.NoError(t, err)
+
+	resp, err = CBRead(b, s, "crl/rotate")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Empty(t, resp.Warnings)
+
+	// Adding back just the cert shouldn't cause CRL rebuild warnings.
+	resp, err = CBWrite(b, s, "issuers/import/bundle", map[string]interface{}{
+		"pem_bundle": cert,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Data)
+	require.NotNil(t, resp.Data["mapping"])
+	require.NotEmpty(t, resp.Data["mapping"])
+	require.Equal(t, len(resp.Data["mapping"].(map[string]string)), 1)
+	for key, value := range resp.Data["mapping"].(map[string]string) {
+		require.NotEmpty(t, key)
+		require.Empty(t, value)
+	}
+
+	resp, err = CBRead(b, s, "crl/rotate")
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.Empty(t, resp.Warnings)
+}
+
+func TestCRLIssuerRemoval(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	b, s := CreateBackendWithStorage(t)
+
+	if constants.IsEnterprise {
+		// We don't really care about the whole cross cluster replication
+		// stuff, but we do want to enable unified CRLs if we can, so that
+		// unified CRLs get built.
+		_, err := CBWrite(b, s, "config/crl", map[string]interface{}{
+			"cross_cluster_revocation": true,
+			"auto_rebuild":             true,
+		})
+		require.NoError(t, err, "failed enabling unified CRLs on enterprise")
+	}
+
+	// Create a single root, configure delta CRLs, and rotate CRLs to prep a
+	// starting state.
+	_, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+		"common_name": "Root R1",
+		"key_type":    "ec",
+	})
+	require.NoError(t, err)
+	_, err = CBWrite(b, s, "config/crl", map[string]interface{}{
+		"enable_delta": true,
+		"auto_rebuild": true,
+	})
+	require.NoError(t, err)
+	_, err = CBRead(b, s, "crl/rotate")
+	require.NoError(t, err)
+
+	// List items in storage under both CRL paths so we know what is there in
+	// the "good" state.
+	crlList, err := s.List(ctx, issuing.PathCrls)
+	require.NoError(t, err)
+	require.Contains(t, crlList, "config")
+	require.Greater(t, len(crlList), 1)
+
+	unifiedCRLList, err := s.List(ctx, "unified-crls/")
+	require.NoError(t, err)
+	require.Contains(t, unifiedCRLList, "config")
+	require.Greater(t, len(unifiedCRLList), 1)
+
+	// Now, create a bunch of issuers, generate CRLs, and remove them.
+	var keyIDs []string
+	var issuerIDs []string
+	for i := 1; i <= 25; i++ {
+		resp, err := CBWrite(b, s, "root/generate/internal", map[string]interface{}{
+			"common_name": fmt.Sprintf("Root X%v", i),
+			"key_type":    "ec",
+		})
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+
+		key := string(resp.Data["key_id"].(issuing.KeyID))
+		keyIDs = append(keyIDs, key)
+		issuer := string(resp.Data["issuer_id"].(issuing.IssuerID))
+		issuerIDs = append(issuerIDs, issuer)
+	}
+	_, err = CBRead(b, s, "crl/rotate")
+	require.NoError(t, err)
+	for _, issuer := range issuerIDs {
+		_, err := CBDelete(b, s, "issuer/"+issuer)
+		require.NoError(t, err)
+	}
+	for _, key := range keyIDs {
+		_, err := CBDelete(b, s, "key/"+key)
+		require.NoError(t, err)
+	}
+
+	// Finally list storage entries again to ensure they are cleaned up.
+	afterCRLList, err := s.List(ctx, issuing.PathCrls)
+	require.NoError(t, err)
+	for _, entry := range crlList {
+		require.Contains(t, afterCRLList, entry)
+	}
+	require.Equal(t, len(afterCRLList), len(crlList))
+
+	afterUnifiedCRLList, err := s.List(ctx, "unified-crls/")
+	require.NoError(t, err)
+	for _, entry := range unifiedCRLList {
+		require.Contains(t, afterUnifiedCRLList, entry)
+	}
+	require.Equal(t, len(afterUnifiedCRLList), len(unifiedCRLList))
 }

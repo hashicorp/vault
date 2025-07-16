@@ -1,0 +1,3 @@
+```release-note:bug
+storage/consul: Consul service registration tags are now case-sensitive.
+```

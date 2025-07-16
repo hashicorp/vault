@@ -1,0 +1,3 @@
+```release-note:bug
+helper/random: Fix race condition in string generator helper
+```

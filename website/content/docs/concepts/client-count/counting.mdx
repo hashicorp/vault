@@ -1,0 +1,197 @@
+---
+layout: docs
+page_title: Client count calculation
+description: |-
+  Technical overview of client count calculations in Vault
+---
+
+# Client count calculation
+
+Vault provides usage telemetry for the number of clients based on the number of
+unique entity assignments within a Vault cluster over a given billing period:
+
+- Standard entity assignments based on authentication method for active entities.
+- Constructed entity assignments for active non-entity tokens, including batch
+  tokens created by performance standby nodes.
+- Certificate entity assignments for ACME connections.
+- Secrets being synced to at least one sync destination.
+
+```markdown
+CLIENT_COUNT_PER_CLUSTER = UNIQUE_STANDARD_ENTITIES +
+                           UNIQUE_CONSTRUCTED_ENTITIES +
+                           UNIQUE_CERTIFICATE_ENTITIES +
+                           UNIQUE_SYNCED_SECRETS
+```
+
+Vault does not aggregate or de-duplicate clients across clusters, but all logs
+and precomputed reports are included in DR replication.
+
+## How Vault tracks clients
+
+Each time a client authenticates, Vault checks whether the corresponding entity
+ID has already been recorded in the client log as active for the current month:
+
+- **If no record exists**, Vault adds an entry for the entity ID.
+- If a record exists but the entity was last active **prior to the current month**,
+  Vault adds a new entry to the client record for the entity ID.
+- If a record exists and the entity was last active **within the current month**,
+  Vault does not add a new entry to the client record for the entity ID.
+
+For example:
+
+- Two non-entity tokens under the same namespace, with the same alias name and
+  policy assignment receive the same entity assignment and are only counted
+  **once**.
+- Two authentication requests from a single ACME client for the same certificate
+  identifiers from different mounts receive the same entity assignments and
+  are counted **once**.
+- An application authenticating with AppRole receive the same entity assignment
+  every time and only counted **once**.
+
+At the **end of each month**, Vault pre-computes reports for each cluster on the
+number of active entities, per namespace, for each time period within the
+configured retention period. By de-duplicating records from the current month
+against records for the previous month, Vault ensures entities that remain
+active within every calendar month are only counted once for the year.
+
+The deduplication process has two additional consequences:
+
+1. Detailed reporting lags by 1 month at the start of the billing period.
+1. Billing period reports that include the current month must use an
+   approximation for the number of new clients in the current month.
+
+@include 'counters-api-new-clients-behavior-change.mdx'
+
+## How Vault approximates current-month client count prior to Vault versions 1.20 and 1.20+ent
+
+@include 'counters-api-new-clients-behavior-change.mdx'
+
+Vault approximates client count for the current month using a
+[hyperloglog algorithm](https://en.wikipedia.org/wiki/HyperLogLog) that looks
+at the difference between the cardinalities of:
+
+- the number of clients across the **entire** billing period, and
+- the number of clients across the billing period **excluding** clients from the current month.
+
+The approximation algorithm uses the
+[axiomhq](https://github.com/axiomhq/hyperloglog) library with fourteen
+registers and sparse representations (when applicable). The multiset for the
+calculation is the total number of clients within a billing period, and the
+accuracy estimate for the approximation decreases as the difference between the
+number of clients in the current month and the number of clients in the billing
+period increases.
+
+
+### Testing verification for client count approximations prior to Vault versions 1.20 and 1.20+ent
+
+@include 'counters-api-new-clients-behavior-change.mdx'
+
+Given `CM` as the number of clients for the current month and `BP` as the number
+of clients in the billing period, we found that the approximation becomes
+increasingly imprecise as:
+
+- the difference between `BP` and `CM` increases
+- the value of `CM` approaches zero.
+- the number of months in the billing period increase.
+
+The maximum observed error rate
+(`ER = (FOUND_NEW_CLIENTS / EXPECTED_NEW_CLIENTS)`) was 30% for 10,000 clients
+or less, with an error rate of 5 &ndash; 10% in the average case.
+
+For the purposes of predictive analysis, the following tables list a random
+sample the values we found during testing for `CM`, `BP`, and `ER`.
+
+<Tabs>
+
+<Tab heading="Single-month tests">
+
+| Current month (`CM`) | Billing period (`BP`) | Error rate (`ER`) |
+| :-----------------: | :------------------: | :---------------: |
+| 7                   | 10                   | 0%                |
+| 20                  | 600                  | 0%                |
+| 20                  | 1000                 | 0%                |
+| 20                  | 6000                 | 10%               |
+| 20                  | 10000                | 10%               |
+| 200                 | 600                  | 0%                |
+| 200                 | 10000                | 7%                |
+| 400                 | 6000                 | 5%                |
+| 2000                | 10000                | 4%                |
+
+</Tab>
+
+<Tab heading="Multi-month / multi-segment tests">
+
+| Current month (`CM`) | Billing period (`BP`) | Error rate (`ER`) |
+| :-----------------: | :------------------: | :---------------: |
+| 20                  | 15                   |      0%           |
+| 20                  | 100                  |      0%           |
+| 20                  | 1000                 |      0%           |
+| 20                  | 10000                |      30%          |
+| 200                 | 10000                |      6%           |
+| 2000                | 10000                |      2%           |
+
+</Tab>
+
+</Tabs>
+
+## Resource costs for client computation
+
+In addition to the storage used for storing the pre-computed reports, each
+active entity in the client log consumes a few bytes of storage. As a safety
+measure against runaway storage growth, Vault limits the number of entity
+records to 656,000 per month, but typical storage costs are much less.
+
+On average, 1000 monthly active entities requires 3.0 MiB of storage capacity
+over the default 48-month retention period.
+
+<Tabs>
+
+<Tab heading="Related concepts">
+<ul>
+  <li>
+    <a href="/vault/docs/concepts/client-count/">Clients and entities</a>
+  </li>
+  <li>
+    <a href="/vault/docs/concepts/client-count/faq">Client count FAQ</a>
+  </li>
+</ul>
+</Tab>
+
+<Tab heading="Related API docs">
+<ul>
+  <li>
+    <a href="/vault/api-docs/system/internal-counters#client-count">Client Count API</a>
+  </li>
+  <li>
+    <a href="/vault/api-docs/system/internal-counters">Internal counters API</a>
+  </li>
+</ul>
+</Tab>
+
+<Tab heading="Related tutorials">
+<ul>
+  <li>
+    <a href="/vault/docs/concepts/client-count/client-usage">
+      Client Usage in Vault GUI
+    </a>
+  </li>
+  <li>
+    <a href="/vault/docs/concepts/client-count/client-usage">KMIP Client metrics</a>
+  </li>
+</ul>
+</Tab>
+
+<Tab heading="Other resources">
+<ul>
+  <li>
+    <a href="https://github.com/axiomhq/hyperloglog#readme">Accuracy estimates for the axiomhq hyperloglog library</a>
+  </li>
+  <li>
+    Blog post: <a href="https://www.hashicorp.com/blog/onboarding-applications-to-vault-using-terraform-a-practical-guide">
+      Onboarding Applications to Vault Using Terraform: A Practical Guide
+    </a>
+  </li>
+</ul>
+</Tab>
+
+</Tabs>
