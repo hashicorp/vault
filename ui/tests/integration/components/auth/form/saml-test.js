@@ -52,12 +52,12 @@ module('Integration | Component | auth | form | saml', function (hooks) {
     });
 
     this.assertSubmit = (assert, loginRequestArgs, loginData) => {
-      const [path, { clientVerifier, tokenPollId }] = loginRequestArgs;
+      const [path, { client_verifier, token_poll_id }] = loginRequestArgs;
       // if path is included in loginData, a custom path was submitted
       const expectedPath = loginData?.path || this.authType;
       assert.strictEqual(path, expectedPath, 'it calls samlWriteToken with expected path');
-      assert.strictEqual(clientVerifier, this.verifier, 'it calls samlWriteToken with verifier');
-      assert.strictEqual(tokenPollId, this.tokenPollId, 'it calls samlWriteToken with tokenPollId');
+      assert.strictEqual(client_verifier, this.verifier, 'it calls samlWriteToken with verifier');
+      assert.strictEqual(token_poll_id, this.tokenPollId, 'it calls samlWriteToken with tokenPollId');
     };
 
     this.renderComponent = ({ yieldBlock = false } = {}) => {

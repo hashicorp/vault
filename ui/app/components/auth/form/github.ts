@@ -28,8 +28,8 @@ export default class AuthFormGithub extends AuthBase {
     return this.normalizeAuthResponse(auth, {
       authMountPath: path,
       displayName,
-      token: auth.clientToken,
-      ttl: auth.leaseDuration,
+      token: auth.client_token,
+      ttl: auth.lease_duration,
     });
   }
 }
