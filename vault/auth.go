@@ -1053,7 +1053,7 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 	}
 
 	pluginRunningVersion := pluginVersion
-	if entry.RunningVersion == "" && entry.RunningSha256 == "" {
+	if pluginRunningVersion == "" && entry.RunningSha256 == "" {
 		pluginRunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
 	}
 
