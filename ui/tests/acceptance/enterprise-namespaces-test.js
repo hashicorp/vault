@@ -156,6 +156,7 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
 
     // Verify that the namespace exists in the namespace picker
     await click(GENERAL.button('namespace-picker'));
+    await waitFor(GENERAL.button('Refresh list'));
     await click(GENERAL.button('Refresh list'));
     await fillIn(GENERAL.inputByAttr('Search namespaces'), namespace);
 
@@ -189,5 +190,20 @@ module('Acceptance | Enterprise | namespaces', function (hooks) {
     assert
       .dom(GENERAL.button(namespace))
       .doesNotExist('Deleted namespace does not exist in the namespace picker');
+  });
+
+  test('it should show root in namespace picker when the user explicitly logs into root namespace', async function (assert) {
+    // Explicitly set root as the namespace to login to
+    await loginNs('root');
+
+    assert
+      .dom(GENERAL.button('namespace-picker'))
+      .hasText('root', `shows the namespace 'root' in the toggle component`);
+
+    // Verify user is in root namespace
+    assert.true(
+      this.owner.lookup('service:namespace').inRootNamespace,
+      'Verifies that the user is in the root namespace'
+    );
   });
 });

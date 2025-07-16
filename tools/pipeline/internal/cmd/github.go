@@ -4,7 +4,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -41,6 +40,7 @@ func newGithubCmd() *cobra.Command {
 	githubCmd.AddCommand(newGithubCopyCmd())
 	githubCmd.AddCommand(newGithubCreateCmd())
 	githubCmd.AddCommand(newGithubListCmd())
+	githubCmd.AddCommand(newGithubSyncCmd())
 
 	return githubCmd
 }
@@ -48,7 +48,7 @@ func newGithubCmd() *cobra.Command {
 func writeToGithubOutput(key string, bytes []byte) error {
 	devPath, ok := os.LookupEnv("GITHUB_OUTPUT")
 	if !ok {
-		return errors.New("$GITHUB_OUTPUT has not been set. Cannot write changed files to it")
+		return fmt.Errorf("$GITHUB_OUTPUT has not been set. Cannot write %s to it", key)
 	}
 
 	expanded, err := filepath.Abs(devPath)
@@ -62,7 +62,7 @@ func writeToGithubOutput(key string, bytes []byte) error {
 	}
 	defer func() { _ = dev.Close() }()
 
-	_, err = dev.Write(append([]byte(key+"="), bytes...))
+	_, err = dev.Write(append(append([]byte(key+"="), bytes...), []byte("\n")...))
 	if err != nil {
 		return fmt.Errorf("failed to write key %s to $GITHUB_OUTPUT: %w", key, err)
 	}

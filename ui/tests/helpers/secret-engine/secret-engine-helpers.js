@@ -234,7 +234,7 @@ export const fillInGcpConfig = async (withWif = false) => {
     await click(GENERAL.ttl.toggle('Max TTL'));
     await fillIn(GENERAL.ttl.input('Max TTL'), '8200');
     await click(GENERAL.textToggle);
-    await fillIn(GENERAL.textToggleTextarea, '{"some-key":"some-value"}');
+    await fillIn(GENERAL.maskedInput, '{"some-key":"some-value"}');
   }
 };
 

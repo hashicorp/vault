@@ -71,25 +71,28 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
   });
 
   test('it should display validation errors for invalid form fields', async function (assert) {
-    assert.expect(7);
+    assert.expect(8);
 
     await this.renderComponent();
 
     await fillIn(CUSTOM_MESSAGES.input('startTime'), '2024-01-20T00:00');
     await fillIn(CUSTOM_MESSAGES.input('endTime'), '2024-01-01T00:00');
     await click(GENERAL.submitButton);
-    assert.dom(CUSTOM_MESSAGES.input('title')).hasClass('has-error-border');
     assert
-      .dom(`${CUSTOM_MESSAGES.fieldValidation('title')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
+      .dom(GENERAL.validationErrorByAttr('title'))
+      .exists('Validation error for field `title` renders')
       .hasText('Title is required.');
-    assert.dom(`${GENERAL.validationErrorByAttr('message')}`).hasText('Message is required.');
-    assert.dom(CUSTOM_MESSAGES.input('startTime')).hasClass('has-error-border');
     assert
-      .dom(`${CUSTOM_MESSAGES.fieldValidation('startTime')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
+      .dom(GENERAL.validationErrorByAttr('message'))
+      .exists('Validation error for field `message` renders')
+      .hasText('Message is required.');
+    assert
+      .dom(GENERAL.validationErrorByAttr('startTime'))
+      .exists('Validation error for field `startTime` renders')
       .hasText('Start time is after end time.');
-    assert.dom(CUSTOM_MESSAGES.input('endTime')).hasClass('has-error-border');
     assert
-      .dom(`${CUSTOM_MESSAGES.fieldValidation('endTime')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
+      .dom(GENERAL.validationErrorByAttr('endTime'))
+      .exists('Validation error for field `endTime` renders')
       .hasText('End time is before start time.');
   });
 
@@ -122,15 +125,12 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
   });
 
   test('it should have form vaildations', async function (assert) {
+    assert.expect(2);
+
     await this.renderComponent();
 
     await click(GENERAL.submitButton);
-    assert
-      .dom(CUSTOM_MESSAGES.input('title'))
-      .hasClass('has-error-border', 'show error border for title field');
-    assert
-      .dom(`${CUSTOM_MESSAGES.fieldValidation('title')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
-      .hasText('Title is required.');
+    assert.dom(`${GENERAL.validationErrorByAttr('title')}`).hasText('Title is required.');
     assert.dom(`${GENERAL.validationErrorByAttr('message')}`).hasText('Message is required.');
   });
 

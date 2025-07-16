@@ -136,6 +136,22 @@ jobs:
         id: changed-files
         with:
           github-token: ${{ steps.metadata.outputs.is-enterprise != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+      # Ensure that we have not changed any enterprise files on pull requests against ce/* branches.
+      # We do this here because we have the information, there's absolutely no reason to go
+      # further until we've resolved the issue, and we want to fail a required workflow if this
+      # issue is present.
+      - if: |
+          steps.metadata.outputs.is-enterprise == 'true' &&
+          steps.metadata.outputs.workflow-trigger == 'pull_request' &&
+          startsWith(github.event.pull_request.base.ref, 'ce/') &&
+          contains(fromJSON(steps.changed-files.outputs.changed-files).groups, 'enterprise')
+        name: Ensure that we have not changed any enterprise files on pull requests against ce/* branches.
+        run: |
+          echo "The pull request has changed files that are in enterprise groups!"
+          echo "If you believe this to be in error you will want to update the changed files checks in tools/pipeline/internal/pkg/changed"
+          echo "on our enterprise branches and backport them to ce/* before continuing with this pull request."
+          echo "See the 'changed-files' step above for a list of changed files and their associated metadata groups."
+          exit 1
       # Make sure all required Go modules are cached at this point. We don't want all of the Go
       # tests and build jobs to download modules and race to upload them to the cache.
       - uses: ./.github/actions/set-up-go

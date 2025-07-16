@@ -122,13 +122,13 @@ management tool.
    [federated access token](https://cloud.google.com/docs/authentication/token-types#access).
 
    To configure a trusted relationship between Vault and GCP:
-       - You must configure the [identity token issuer backend](/vault/api-docs/secret/identity/tokens#configure-the-identity-tokens-backend)
-         for Vault.
-       - GCP must have a
-         [workload identity pool and provider](https://cloud.google.com/iam/docs/manage-workload-identity-pools-providers)
-         configured with information about the fully qualified and network-reachable
-         issuer URL for the Vault plugin's
-         [identity token provider](/vault/api-docs/secret/identity/tokens#read-plugin-identity-well-known-configurations).
+   - You must configure the [identity token issuer backend](/vault/api-docs/secret/identity/tokens#configure-the-identity-tokens-backend)
+   for Vault.
+   - GCP must have a
+   [workload identity pool and provider](https://cloud.google.com/iam/docs/manage-workload-identity-pools-providers)
+   configured with information about the fully qualified and network-reachable
+   issuer URL for the Vault plugin's
+   [identity token provider](/vault/api-docs/secret/identity/tokens#read-plugin-identity-well-known-configurations).
 
    Establishing a trusted relationship between Vault and GCP ensures that GCP
    can fetch JWKS
