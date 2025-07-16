@@ -94,6 +94,14 @@ management tool.
    $ vault write auth/github/config organization=hashicorp
    ```
 
+<Note>
+
+If you use GitHub Enterprise, you must set the `organization_id`
+parameter with your GitHub organization ID. Vault cannot retrieve your
+organization details without authentication.
+
+</Note>
+
    For the complete list of configuration options, please see the API
    documentation.
 

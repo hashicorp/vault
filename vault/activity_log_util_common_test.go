@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/vault/vault/activity"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 )
 
 // equalActivityMonthRecords is a helper to sort the namespaces and mounts
@@ -1211,4 +1212,71 @@ func TestSegmentFileReader(t *testing.T) {
 		require.True(t, proto.Equal(gotEntities[i], entities[i]))
 		require.True(t, proto.Equal(gotTokens[i], tokens[i]))
 	}
+}
+
+// Test_ActivityLog_ComputeMaxSegmentsAndCapacity verifies the computed max values for
+// ActivitySegmentClientCapacity which determines the maximum number of client records per segment and
+// activityLogMaxSegmentPerMonth which determines the maximum number of segments per month
+func Test_ActivityLog_ComputeMaxSegmentsAndCapacity(t *testing.T) {
+	entityRecordInstance := &activity.EntityRecord{}
+
+	// Get the message's descriptor
+	descriptor := entityRecordInstance.ProtoReflect().Descriptor()
+
+	// Get the number of fields from the descriptor
+	expectedFieldCount := descriptor.Fields().Len()
+
+	// sample record with max values for each field in entity record
+	maxSampleRecord := &activity.EntityRecord{
+		ClientID:      "11111111-1111-1111-1111-111111111111",
+		NamespaceID:   "root",
+		Timestamp:     time.Now().Unix(),
+		NonEntity:     true,
+		MountAccessor: "auth_userpass_00000005",
+		ClientType:    "non-entity-token",
+		UsageTime:     time.Now().Unix(),
+	}
+	fieldCountMaxSampleRecord := getNumberofPopulatedFieldsInRecord(maxSampleRecord.ProtoReflect())
+
+	// verify if the maxSampleRecord has populated values for every field in entityRecord
+	// this will be used to compute the max client record size to store in storage
+	// if this fails, please update the maxSampleRecord with updated entity Record field values
+	require.Equal(t, expectedFieldCount, fieldCountMaxSampleRecord)
+
+	// sample record size in bytes
+	sampleRecordSize := proto.Size(maxSampleRecord)
+
+	// adding 20 extra bytes to the sample record to account for any extra unknown size increases
+	sampleRecordSize = sampleRecordSize + 20
+
+	// records undergo JSON marshalling which increases the size by approx 4/3 times
+	sampleRecordSizeStorage := int(float64(sampleRecordSize*4) / float64(3))
+
+	// storage limit per storage entry 512KB
+	storageLimitPerEntry := 512 * 1000
+
+	// number of client records that can be stored in a segment
+	clientRecordsPerSegment := storageLimitPerEntry / sampleRecordSizeStorage
+
+	require.Condition(t, func() bool {
+		return clientRecordsPerSegment <= ActivitySegmentClientCapacity
+	}, "client records in segment is greater than expected ActivitySegmentClientCapacity. Please recompute and update ActivitySegmentClientCapacity")
+
+	// max entity records per month
+	expectedClientRecordsPerMonth := 700 * 1000
+
+	maxSegmentsPerMonth := expectedClientRecordsPerMonth / clientRecordsPerSegment
+
+	require.Condition(t, func() bool {
+		return maxSegmentsPerMonth <= activityLogMaxSegmentPerMonth
+	}, "segments per month is greater than expected activityLogMaxSegmentPerMonth. Please recompute and update activityLogMaxSegmentPerMonth")
+}
+
+func getNumberofPopulatedFieldsInRecord(msg protoreflect.Message) int {
+	count := 0
+	msg.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
+		count++
+		return true
+	})
+	return count
 }
