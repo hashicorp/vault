@@ -41,6 +41,19 @@ reporting in favor of manual reporting.
 Data bundles include collections of JSON snapshots that contain license
 utilization information.
 
+<Note title="Vault policy requirement">
+
+To run the reporting command, you must have a Vault policy that grants
+`update` permission on the `sys/utilization` endpoint:
+
+```
+path "sys/utilization" {
+  capabilities = ["update"]
+}
+```
+
+</Note>
+
 1. Login into your [cluster node](/vault/tutorials/cloud/vault-access-cluster).
 1. Run this CLI command to generate a data bundle:
 
