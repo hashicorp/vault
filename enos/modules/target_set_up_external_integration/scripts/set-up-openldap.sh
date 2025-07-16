@@ -34,4 +34,3 @@ $CONTAINER_CMD run -d \
   "${LDAP_DOCKER_NAME}"
 
 echo "OpenLDAP server is now running in Docker!"
-
