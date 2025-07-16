@@ -1,0 +1,67 @@
+---
+layout: docs
+page_title: Snapshots with integrated storage
+description: >-
+  Configure Vault to take and store automated snapshots of backend storage when
+  using integrated storage.
+---
+
+# Snapshots with integrated storage
+
+@include 'alerts/enterprise-only.mdx'
+
+Any production system should include a provision for taking regular backups.
+Vault Enterprise can be configured to take and store snapshots at a specific
+interval.
+
+# Configuration
+
+There can be multiple named snapshot configurations, each with their own schedule
+and storage type. Storage type can either be `local` (meaning the snapshots will
+be stored in the same filesystem that the Vault servers see) or a cloud object
+storage service such as AWS S3.
+
+Local is not usually a good production option. Only the active node will be
+taking snapshots, but you can't predict which node is going to be active at
+any point in time, so unless you're using a distributed filesystem you'll
+be stuck checking each node's filesystem to find the snapshot you want. Moreover
+backups ought to be stored somewhere with redundancy, and ideally not on the
+same system they're meant to protect.
+
+Cloud storage types can usually be managed in two ways. The mode supported by
+all is providing explicit credentials during configuration. In addition, AWS
+and GCP can be used without specifying credentials, by ensuring that the VMs on
+which Vault is running have been granted permission to access the specified
+object store.
+
+<Note>
+
+Vault cannot use AWS IAM roles with EKS service accounts for authentication to
+save automated integrated storage snapshots to Amazon S3 buckets. You must set
+the [`aws_access_key_id`](/vault/api-docs/system/storage/raftautosnapshots#aws_access_key_id)
+and  [`aws_secret_access_key`](/vault/api-docs/system/storage/raftautosnapshots#aws_secret_access_key)
+parameters in the context of AWS EKS & S3 configuration.
+
+</Note>
+
+# vs snapshot agents
+
+Nomad and Consul Enterprise offer the same functionality in a slightly different way.
+They provide a `snapshot agent`, which is a standalone program that runs
+"outside" the cluster but otherwise behaves much the same as Vault's built-in
+automated snapshot mechanism.
+
+There are various trade-offs to this approach. The main reason Vault doesn't
+do things this way is that the snapshot agents need something to manage HA.
+One doesn't want a single point of failure for something as important
+as backups, which means running multiple snapshot agents, but that requires some
+way to coordinate among them to ensure that only one is actually taking snapshots
+at any given time. Consul already has an API for distributed locks, which is
+one way of doing this. Another option is to use an orchestrator like Kubernetes
+or Nomad to run the snapshot agent as a batch job. It seemed best not to assume
+that all Vault Enterprise users would be running Consul or an orchestrator.
+
+# See also
+
+Refer to the [API docs](/vault/api-docs/system/storage/raftautosnapshots) for the specifics
+of how to configure automated snapshots and query their status.

@@ -48,7 +48,7 @@ export default class PkiKeysIndexRoute extends Route {
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview', model: resolvedModel.parentModel.id },
-      { label: 'keys', route: 'keys.index', model: resolvedModel.parentModel.id },
+      { label: 'Keys', route: 'keys.index', model: resolvedModel.parentModel.id },
     ];
     controller.notConfiguredMessage = PKI_DEFAULT_EMPTY_STATE_MSG;
   }

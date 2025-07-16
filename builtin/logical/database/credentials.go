@@ -6,7 +6,6 @@ package database
 import (
 	"context"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -18,6 +17,7 @@ import (
 	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/sdk/database/dbplugin/v5"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/template"
 	"github.com/mitchellh/mapstructure"
 )
@@ -133,7 +133,7 @@ func (kg *rsaKeyGenerator) generate(r io.Reader) ([]byte, []byte, error) {
 		return nil, nil, fmt.Errorf("invalid key_bits: %v", kg.KeyBits)
 	}
 
-	key, err := rsa.GenerateKey(reader, keyBits)
+	key, err := cryptoutil.GenerateRSAKey(reader, keyBits)
 	if err != nil {
 		return nil, nil, err
 	}

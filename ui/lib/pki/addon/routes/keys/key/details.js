@@ -17,7 +17,7 @@ export default class PkiKeyDetailsRoute extends Route {
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview', model: resolvedModel.backend },
-      { label: 'keys', route: 'keys.index', model: resolvedModel.backend },
+      { label: 'Keys', route: 'keys.index', model: resolvedModel.backend },
       { label: resolvedModel.id },
     ];
   }

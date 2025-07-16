@@ -1,3 +1,7 @@
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -12,98 +16,98 @@
   &.l,
   &.m {
     .stat-label {
-      font-size: $size-5;
-      font-weight: $font-weight-semibold;
-      margin-bottom: $spacing-4;
+      font-size: size_variables.$size-5;
+      font-weight: font_variables.$font-weight-semibold;
+      margin-bottom: size_variables.$spacing-4;
       line-height: inherit;
     }
     .stat-text {
-      font-size: $size-8;
-      font-weight: $font-weight-normal;
-      color: $ui-gray-700;
+      font-size: size_variables.$size-8;
+      font-weight: font_variables.$font-weight-normal;
+      color: color_variables.$ui-gray-700;
       line-height: inherit;
     }
     .stat-value {
-      font-size: $size-3;
-      font-weight: $font-weight-normal;
-      margin-top: $spacing-12;
+      font-size: size_variables.$size-3;
+      font-weight: font_variables.$font-weight-normal;
+      margin-top: size_variables.$spacing-12;
     }
   }
 
   &.s {
     .stat-label {
-      font-size: $size-5;
-      font-weight: $font-weight-semibold;
+      font-size: size_variables.$size-5;
+      font-weight: font_variables.$font-weight-semibold;
       line-height: inherit;
     }
     .stat-text {
-      font-size: $size-8;
-      font-weight: $font-weight-normal;
-      color: $ui-gray-700;
+      font-size: size_variables.$size-8;
+      font-weight: font_variables.$font-weight-normal;
+      color: color_variables.$ui-gray-700;
       line-height: inherit;
     }
     .stat-value {
-      font-size: $size-5;
-      font-weight: $font-weight-normal;
-      margin-top: $spacing-12;
+      font-size: size_variables.$size-5;
+      font-weight: font_variables.$font-weight-normal;
+      margin-top: size_variables.$spacing-12;
     }
   }
 
   &.l-no-subText {
     .stat-label {
-      font-size: $size-5;
-      font-weight: $font-weight-semibold;
+      font-size: size_variables.$size-5;
+      font-weight: font_variables.$font-weight-semibold;
       line-height: inherit;
     }
     .stat-text {
-      font-size: $size-8;
-      font-weight: $font-weight-normal;
-      color: $ui-gray-700;
+      font-size: size_variables.$size-8;
+      font-weight: font_variables.$font-weight-normal;
+      color: color_variables.$ui-gray-700;
       line-height: inherit;
     }
     .stat-value {
-      font-size: $size-3;
-      font-weight: $font-weight-normal;
-      margin-top: $spacing-4;
+      font-size: size_variables.$size-3;
+      font-weight: font_variables.$font-weight-normal;
+      margin-top: size_variables.$spacing-4;
     }
   }
 
   &.m-no-subText {
     .stat-label {
-      font-size: $size-8;
-      font-weight: $font-weight-bold;
+      font-size: size_variables.$size-8;
+      font-weight: font_variables.$font-weight-bold;
       line-height: inherit;
     }
     .stat-text {
-      font-size: $size-8;
-      font-weight: $font-weight-normal;
-      color: $ui-gray-700;
+      font-size: size_variables.$size-8;
+      font-weight: font_variables.$font-weight-normal;
+      color: color_variables.$ui-gray-700;
       line-height: inherit;
     }
     .stat-value {
-      font-size: $size-5;
-      font-weight: $font-weight-normal;
-      margin-top: $spacing-4;
+      font-size: size_variables.$size-5;
+      font-weight: font_variables.$font-weight-normal;
+      margin-top: size_variables.$spacing-4;
     }
   }
 
   &.s-no-subText {
     .stat-label {
-      font-size: $size-8;
-      font-weight: $font-weight-normal;
-      color: $ui-gray-500;
+      font-size: size_variables.$size-8;
+      font-weight: font_variables.$font-weight-normal;
+      color: color_variables.$ui-gray-500;
       line-height: inherit;
     }
     .stat-text {
-      font-size: $size-8;
-      font-weight: $font-weight-normal;
-      color: $ui-gray-700;
+      font-size: size_variables.$size-8;
+      font-weight: font_variables.$font-weight-normal;
+      color: color_variables.$ui-gray-700;
       line-height: inherit;
     }
     .stat-value {
-      font-size: $size-8;
-      font-weight: $font-weight-normal;
-      color: $ui-gray-800;
+      font-size: size_variables.$size-8;
+      font-weight: font_variables.$font-weight-normal;
+      color: color_variables.$ui-gray-800;
       line-height: inherit;
     }
   }

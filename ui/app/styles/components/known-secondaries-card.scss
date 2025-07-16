@@ -1,3 +1,6 @@
+@use '../utils/mixins';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -7,17 +10,17 @@
   grid-column: 2/3;
   grid-row: 1/3;
 
-  @include until($mobile) {
+  @include mixins.until(size_variables.$mobile) {
     grid-column: 1/1;
     grid-row: 1/1;
   }
 
   .secondaries-table {
-    margin-bottom: $spacing-12;
+    margin-bottom: size_variables.$spacing-12;
   }
 
   .link {
-    font-size: $size-7;
+    font-size: size_variables.$size-7;
     text-decoration: none;
   }
 }

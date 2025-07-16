@@ -9,11 +9,10 @@ import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECTORS = {
-  rowLabel: (attr) => `[data-test-row-label="${attr}"]`,
-  rowValue: (attr) => `[data-test-value-div="${attr}"]`,
-  rowIcon: (attr, icon) => `[data-test-row-value="${attr}"] [data-test-icon="${icon}"]`,
+  rowIcon: (attr, icon) => `${GENERAL.infoRowValue(attr)} ${GENERAL.icon(icon)}`,
 };
 
 module('Integration | Component | Page::PkiConfigurationDetails', function (hooks) {
@@ -60,9 +59,9 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
       owner: this.engine,
     });
     assert
-      .dom(SELECTORS.rowValue("Mount's API path"))
+      .dom(GENERAL.infoRowValue("Mount's API path"))
       .hasText('https://pr-a.vault.example.com/v1/ns1/pki-root', 'mount API path row renders');
-    assert.dom(SELECTORS.rowValue('AIA path')).hasText('None', "renders 'None' when no data");
+    assert.dom(GENERAL.infoRowValue('AIA path')).hasText('None', "renders 'None' when no data");
   });
 
   test('shows the correct information on global urls section', async function (assert) {
@@ -72,10 +71,10 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
     );
 
     assert
-      .dom(SELECTORS.rowLabel('Issuing certificates'))
+      .dom(GENERAL.infoRowLabel('Issuing certificates'))
       .hasText('Issuing certificates', 'issuing certificate row label renders');
     assert
-      .dom(SELECTORS.rowValue('Issuing certificates'))
+      .dom(GENERAL.infoRowValue('Issuing certificates'))
       .hasText('example.com', 'issuing certificate value renders');
     this.urls.issuingCertificates = null;
     await render(
@@ -83,13 +82,13 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
       { owner: this.engine }
     );
     assert
-      .dom(SELECTORS.rowValue('Issuing certificates'))
+      .dom(GENERAL.infoRowValue('Issuing certificates'))
       .hasText('None', 'issuing certificate value renders None if none is configured');
     assert
-      .dom(SELECTORS.rowLabel('CRL distribution points'))
+      .dom(GENERAL.infoRowLabel('CRL distribution points'))
       .hasText('CRL distribution points', 'crl distribution points row label renders');
     assert
-      .dom(SELECTORS.rowValue('CRL distribution points'))
+      .dom(GENERAL.infoRowValue('CRL distribution points'))
       .hasText('None', 'crl distribution points value renders None if none is configured');
   });
 
@@ -99,24 +98,24 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
       { owner: this.engine }
     );
 
-    assert.dom(SELECTORS.rowLabel('CRL building')).hasText('CRL building', 'crl expiry row label renders');
-    assert.dom(SELECTORS.rowValue('CRL building')).hasText('Enabled', 'enabled renders');
-    assert.dom(SELECTORS.rowValue('Expiry')).hasText('20h', 'expiry value renders');
-    assert.dom(SELECTORS.rowLabel('Auto-rebuild')).hasText('Auto-rebuild', 'auto rebuild label renders');
-    assert.dom(SELECTORS.rowValue('Auto-rebuild')).hasText('On', 'it renders truthy auto build');
+    assert.dom(GENERAL.infoRowLabel('CRL building')).hasText('CRL building', 'crl expiry row label renders');
+    assert.dom(GENERAL.infoRowValue('CRL building')).hasText('Enabled', 'enabled renders');
+    assert.dom(GENERAL.infoRowValue('Expiry')).hasText('20h', 'expiry value renders');
+    assert.dom(GENERAL.infoRowLabel('Auto-rebuild')).hasText('Auto-rebuild', 'auto rebuild label renders');
+    assert.dom(GENERAL.infoRowValue('Auto-rebuild')).hasText('On', 'it renders truthy auto build');
     assert.dom(SELECTORS.rowIcon('Auto-rebuild', 'check-circle'));
     assert
-      .dom(SELECTORS.rowValue('Auto-rebuild grace period'))
+      .dom(GENERAL.infoRowValue('Auto-rebuild grace period'))
       .hasText('13h', 'it renders auto build grace period');
-    assert.dom(SELECTORS.rowValue('Delta CRL building')).hasText('On', 'it renders truthy delta crl build');
+    assert.dom(GENERAL.infoRowValue('Delta CRL building')).hasText('On', 'it renders truthy delta crl build');
     assert.dom(SELECTORS.rowIcon('Delta CRL building', 'check-circle'));
     assert
-      .dom(SELECTORS.rowValue('Delta rebuild interval'))
+      .dom(GENERAL.infoRowValue('Delta rebuild interval'))
       .hasText('15m', 'it renders delta build duration');
     assert
-      .dom(SELECTORS.rowValue('Responder APIs'))
+      .dom(GENERAL.infoRowValue('Responder APIs'))
       .hasText('Enabled', 'responder apis value renders Enabled if ocsp_disable=false');
-    assert.dom(SELECTORS.rowValue('Interval')).hasText('77h', 'interval value renders');
+    assert.dom(GENERAL.infoRowValue('Interval')).hasText('77h', 'interval value renders');
     // check falsy aut_rebuild and _enable_delta hides duration values
     this.crl.autoRebuild = false;
     this.crl.enableDelta = false;
@@ -124,15 +123,15 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
       hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @hasConfig={{true}} />,`,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.rowValue('Auto-rebuild')).hasText('Off', 'it renders falsy auto build');
+    assert.dom(GENERAL.infoRowValue('Auto-rebuild')).hasText('Off', 'it renders falsy auto build');
     assert.dom(SELECTORS.rowIcon('Auto-rebuild', 'x-square'));
     assert
-      .dom(SELECTORS.rowValue('Auto-rebuild grace period'))
+      .dom(GENERAL.infoRowValue('Auto-rebuild grace period'))
       .doesNotExist('does not render auto-rebuild grace period');
-    assert.dom(SELECTORS.rowValue('Delta CRL building')).hasText('Off', 'it renders falsy delta cr build');
+    assert.dom(GENERAL.infoRowValue('Delta CRL building')).hasText('Off', 'it renders falsy delta cr build');
     assert.dom(SELECTORS.rowIcon('Delta CRL building', 'x-square'));
     assert
-      .dom(SELECTORS.rowValue('Delta rebuild interval'))
+      .dom(GENERAL.infoRowValue('Delta rebuild interval'))
       .doesNotExist('does not render delta rebuild duration');
 
     // check falsy disable and ocsp_disable hides duration values and other params
@@ -144,16 +143,16 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
       hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @hasConfig={{true}} />,`,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.rowValue('CRL building')).hasText('Disabled', 'disabled renders');
-    assert.dom(SELECTORS.rowValue('Expiry')).doesNotExist();
+    assert.dom(GENERAL.infoRowValue('CRL building')).hasText('Disabled', 'disabled renders');
+    assert.dom(GENERAL.infoRowValue('Expiry')).doesNotExist();
     assert
-      .dom(SELECTORS.rowValue('Responder APIs'))
+      .dom(GENERAL.infoRowValue('Responder APIs'))
       .hasText('Disabled', 'responder apis value renders Disabled');
-    assert.dom(SELECTORS.rowValue('Interval')).doesNotExist();
-    assert.dom(SELECTORS.rowValue('Auto-rebuild')).doesNotExist();
-    assert.dom(SELECTORS.rowValue('Auto-rebuild grace period')).doesNotExist();
-    assert.dom(SELECTORS.rowValue('Delta CRL building')).doesNotExist();
-    assert.dom(SELECTORS.rowValue('Delta rebuild interval')).doesNotExist();
+    assert.dom(GENERAL.infoRowValue('Interval')).doesNotExist();
+    assert.dom(GENERAL.infoRowValue('Auto-rebuild')).doesNotExist();
+    assert.dom(GENERAL.infoRowValue('Auto-rebuild grace period')).doesNotExist();
+    assert.dom(GENERAL.infoRowValue('Delta CRL building')).doesNotExist();
+    assert.dom(GENERAL.infoRowValue('Delta rebuild interval')).doesNotExist();
   });
 
   test('it renders enterprise params in crl section', async function (assert) {
@@ -163,11 +162,11 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
       hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @hasConfig={{true}} />,`,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.rowValue('Cross-cluster revocation')).hasText('Yes');
+    assert.dom(GENERAL.infoRowValue('Cross-cluster revocation')).hasText('Yes');
     assert.dom(SELECTORS.rowIcon('Cross-cluster revocation', 'check-circle'));
-    assert.dom(SELECTORS.rowValue('Unified CRL')).hasText('Yes');
+    assert.dom(GENERAL.infoRowValue('Unified CRL')).hasText('Yes');
     assert.dom(SELECTORS.rowIcon('Unified CRL', 'check-circle'));
-    assert.dom(SELECTORS.rowValue('Unified CRL on existing paths')).hasText('Yes');
+    assert.dom(GENERAL.infoRowValue('Unified CRL on existing paths')).hasText('Yes');
     assert.dom(SELECTORS.rowIcon('Unified CRL on existing paths', 'check-circle'));
   });
 
@@ -178,8 +177,8 @@ module('Integration | Component | Page::PkiConfigurationDetails', function (hook
       hbs`<Page::PkiConfigurationDetails @urls={{this.urls}} @crl={{this.crl}} @hasConfig={{true}} />,`,
       { owner: this.engine }
     );
-    assert.dom(SELECTORS.rowValue('Cross-cluster revocation')).doesNotExist();
-    assert.dom(SELECTORS.rowValue('Unified CRL')).doesNotExist();
-    assert.dom(SELECTORS.rowValue('Unified CRL on existing paths')).doesNotExist();
+    assert.dom(GENERAL.infoRowValue('Cross-cluster revocation')).doesNotExist();
+    assert.dom(GENERAL.infoRowValue('Unified CRL')).doesNotExist();
+    assert.dom(GENERAL.infoRowValue('Unified CRL on existing paths')).doesNotExist();
   });
 });

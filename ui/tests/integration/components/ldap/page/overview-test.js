@@ -70,7 +70,7 @@ module('Integration | Component | ldap | Page::Overview', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom('.title svg').hasClass('flight-icon-folder-users', 'LDAP icon renders in title');
+    assert.dom('.title svg').hasClass('hds-icon-folder-users', 'LDAP icon renders in title');
     assert.dom('.title').hasText('ldap-test', 'Mount path renders in title');
     assert.dom('[data-test-toolbar-action="config"]').hasText('Configure LDAP', 'Toolbar action renders');
     assert.dom('[data-test-config-cta]').exists('Config cta renders');

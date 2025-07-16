@@ -13,8 +13,6 @@
     "ember-cli-typescript": "*",
     "ember-auto-import": "*",
     "@types/ember": "latest",
-    "@types/ember-data": "latest",
-    "@types/ember-data__store": "latest",
     "@types/ember__array": "latest",
     "@types/ember__component": "latest",
     "@types/ember__controller": "latest",

@@ -31,6 +31,7 @@ import (
 	"strings"
 	"time"
 
+	ctx509 "github.com/google/certificate-transparency-go/x509"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 )
@@ -372,33 +373,8 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 // key of the certificate to the private key and checks the certificate trust
 // chain for path issues.
 func (p *ParsedCertBundle) Verify() error {
-	// If private key exists, check if it matches the public key of cert
-	if p.PrivateKey != nil && p.Certificate != nil {
-		equal, err := ComparePublicKeys(p.Certificate.PublicKey, p.PrivateKey.Public())
-		if err != nil {
-			return errwrap.Wrapf("could not compare public and private keys: {{err}}", err)
-		}
-		if !equal {
-			return fmt.Errorf("public key of certificate does not match private key")
-		}
-	}
-
-	certPath := p.GetCertificatePath()
-	if len(certPath) > 1 {
-		for i, caCert := range certPath[1:] {
-			if !caCert.Certificate.IsCA {
-				return fmt.Errorf("certificate %d of certificate chain is not a certificate authority", i+1)
-			}
-			if !bytes.Equal(certPath[i].Certificate.AuthorityKeyId, caCert.Certificate.SubjectKeyId) {
-				return fmt.Errorf("certificate %d of certificate chain ca trust path is incorrect (%q/%q) (%X/%X)",
-					i+1,
-					certPath[i].Certificate.Subject.CommonName, caCert.Certificate.Subject.CommonName,
-					certPath[i].Certificate.AuthorityKeyId, caCert.Certificate.SubjectKeyId)
-			}
-		}
-	}
-
-	return nil
+	options := ctx509.VerifyOptions{}
+	return VerifyCertificate(p, options)
 }
 
 // GetCertificatePath returns a slice of certificates making up a path, pulled
@@ -697,9 +673,10 @@ type IssueData struct {
 }
 
 type URLEntries struct {
-	IssuingCertificates   []string `json:"issuing_certificates" structs:"issuing_certificates" mapstructure:"issuing_certificates"`
-	CRLDistributionPoints []string `json:"crl_distribution_points" structs:"crl_distribution_points" mapstructure:"crl_distribution_points"`
-	OCSPServers           []string `json:"ocsp_servers" structs:"ocsp_servers" mapstructure:"ocsp_servers"`
+	IssuingCertificates        []string `json:"issuing_certificates" structs:"issuing_certificates" mapstructure:"issuing_certificates"`
+	CRLDistributionPoints      []string `json:"crl_distribution_points" structs:"crl_distribution_points" mapstructure:"crl_distribution_points"`
+	DeltaCRLDistributionPoints []string `json:"delta_crl_distribution_points" structs:"delta_crl_distribution_points" mapstructure:"delta_crl_distribution_points"`
+	OCSPServers                []string `json:"ocsp_servers" structs:"ocsp_servers" mapstructure:"ocsp_servers"`
 }
 
 type NotAfterBehavior int
@@ -708,9 +685,11 @@ const (
 	ErrNotAfterBehavior NotAfterBehavior = iota
 	TruncateNotAfterBehavior
 	PermitNotAfterBehavior
+	AlwaysEnforceErr
 )
 
 var notAfterBehaviorNames = map[NotAfterBehavior]string{
+	AlwaysEnforceErr:         "always_enforce_err",
 	ErrNotAfterBehavior:      "err",
 	TruncateNotAfterBehavior: "truncate",
 	PermitNotAfterBehavior:   "permit",
@@ -805,8 +784,15 @@ type CreationParameters struct {
 	ForceAppendCaChain            bool
 
 	// Only used when signing a CA cert
-	UseCSRValues        bool
-	PermittedDNSDomains []string
+	UseCSRValues            bool
+	PermittedDNSDomains     []string
+	ExcludedDNSDomains      []string
+	PermittedIPRanges       []*net.IPNet
+	ExcludedIPRanges        []*net.IPNet
+	PermittedEmailAddresses []string
+	ExcludedEmailAddresses  []string
+	PermittedURIDomains     []string
+	ExcludedURIDomains      []string
 
 	// URLs to encode into the certificate
 	URLs *URLEntries
@@ -836,7 +822,14 @@ type CreationBundle struct {
 // information
 func AddKeyUsages(data *CreationBundle, certTemplate *x509.Certificate) {
 	if data.Params.IsCA {
-		certTemplate.KeyUsage = x509.KeyUsage(x509.KeyUsageCertSign | x509.KeyUsageCRLSign)
+		// https://cabforum.org/working-groups/server/baseline-requirements/documents/CA-Browser-Forum-TLS-BR-2.1.4.pdf
+		// Per Section 7.1.2.10.7, the only acceptable additional key usage is Digital Signature
+		if data.Params.KeyUsage&x509.KeyUsageDigitalSignature == x509.KeyUsageDigitalSignature {
+			certTemplate.KeyUsage = x509.KeyUsageDigitalSignature
+		} else {
+			certTemplate.KeyUsage = x509.KeyUsage(0)
+		}
+		certTemplate.KeyUsage |= x509.KeyUsageCertSign | x509.KeyUsageCRLSign
 		return
 	}
 

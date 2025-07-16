@@ -1,12 +1,12 @@
 ---
 layout: docs
-page_title: Vault Agent and Vault Proxy
-description: |-
-  Vault Agent and Vault Proxy are daemons that can be used to perform some Vault
-  functionality automatically.
+page_title: Why use Agent or Proxy?
+description: >-
+  Use Vault tools like Agent and Proxy to simplify secret fetching and add Vault
+  to your development environment with minimal client code updates.
 ---
 
-# Vault Agent and Vault Proxy
+# Why use Agent or Proxy?
 
 A valid client token must accompany most requests to Vault. This
 includes all API requests, as well as via the Vault CLI and other libraries.
@@ -89,18 +89,23 @@ require a Vault Enterprise license, and are available in all Vault binaries and 
 however that some features, such as [static secret caching][static-secret-caching], are only
 available when connected to a Vault Enterprise server.
 
-| Capability                                                                               |    Vault Agent     | Vault Proxy |
-|------------------------------------------------------------------------------------------|:------------------:|:-----------:|
-| [Auto-Auth][autoauth] to authenticate with Vault                                         |         x          |      x      |
-| Run as a [Windows Service][winsvc]                                                       |         x          |      x      |
-| [Caching][caching] the newly created tokens and leases                                   |         x          |      x      |
-| [Templating][template] to render user-supplied templates                                 |         x          |             |
-| [Process Supervisor][exec] for injecting secrets as environment variables into a process |         x          |             |
-| [API Proxy][apiproxy] to act as a proxy for Vault API                                    | Will be deprecated |      x      |
-| [Static secret caching][static-secret-caching] for KV secrets                            |                    |      x      |
+| Capability                                                                               | Vault Agent | Vault Proxy |
+| ---------------------------------------------------------------------------------------- | :---------: | :---------: |
+| [Auto-auth][autoauth] to authenticate with Vault                                         |   &#9989;   |   &#9989;   |
+| Run as a [Windows Service][winsvc]                                                       |   &#9989;   |   &#9989;   |
+| [Caching][caching] the newly created tokens and leases                                   |   &#9989;   |   &#9989;   |
+| [Templating][template] to render user-supplied templates                                 |   &#9989;   |  &#10060;   |
+| [Process supervisor][exec] for injecting secrets as environment variables into a process |   &#9989;   |  &#10060;   |
+| [API proxy][apiproxy] to act as a proxy for Vault API                                    | Deprecated  |   &#9989;   |
+| [Static secret caching][static-secret-caching] for KV secrets                            |  &#10060;   |   &#9989;   |
 
 To learn more, refer to the [Vault Agent][vaultagent] or [Vault
 Proxy][vaultproxy] documentation page.
+
+## Tutorial
+
+Refer to the [Vault Agent](/vault/tutorials/vault-agent) tutorials for end-to-end examples.
+
 
 
 [autoauth]: /vault/docs/agent-and-proxy/autoauth

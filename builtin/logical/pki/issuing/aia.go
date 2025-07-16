@@ -17,10 +17,11 @@ import (
 const ClusterConfigPath = "config/cluster"
 
 type AiaConfigEntry struct {
-	IssuingCertificates   []string `json:"issuing_certificates"`
-	CRLDistributionPoints []string `json:"crl_distribution_points"`
-	OCSPServers           []string `json:"ocsp_servers"`
-	EnableTemplating      bool     `json:"enable_templating"`
+	IssuingCertificates        []string `json:"issuing_certificates"`
+	CRLDistributionPoints      []string `json:"crl_distribution_points"`
+	DeltaCRLDistributionPoints []string `json:"delta_crl_distribution_points"`
+	OCSPServers                []string `json:"ocsp_servers"`
+	EnableTemplating           bool     `json:"enable_templating"`
 }
 
 type ClusterConfigEntry struct {
@@ -34,7 +35,8 @@ func GetAIAURLs(ctx context.Context, s logical.Storage, i *IssuerEntry) (*certut
 
 	// If none are set (either due to a nil entry or because no URLs have
 	// been provided), fall back to the global AIA URL config.
-	if entries == nil || (len(entries.IssuingCertificates) == 0 && len(entries.CRLDistributionPoints) == 0 && len(entries.OCSPServers) == 0) {
+	if entries == nil || (len(entries.IssuingCertificates) == 0 && len(entries.CRLDistributionPoints) == 0 &&
+		len(entries.OCSPServers) == 0) && len(entries.DeltaCRLDistributionPoints) == 0 {
 		var err error
 
 		entries, err = GetGlobalAIAURLs(ctx, s)
@@ -57,10 +59,11 @@ func GetGlobalAIAURLs(ctx context.Context, storage logical.Storage) (*AiaConfigE
 	}
 
 	entries := &AiaConfigEntry{
-		IssuingCertificates:   []string{},
-		CRLDistributionPoints: []string{},
-		OCSPServers:           []string{},
-		EnableTemplating:      false,
+		IssuingCertificates:        []string{},
+		CRLDistributionPoints:      []string{},
+		DeltaCRLDistributionPoints: []string{},
+		OCSPServers:                []string{},
+		EnableTemplating:           false,
 	}
 
 	if entry == nil {
@@ -75,14 +78,15 @@ func GetGlobalAIAURLs(ctx context.Context, storage logical.Storage) (*AiaConfigE
 }
 
 func ToURLEntries(ctx context.Context, s logical.Storage, issuer IssuerID, c *AiaConfigEntry) (*certutil.URLEntries, error) {
-	if len(c.IssuingCertificates) == 0 && len(c.CRLDistributionPoints) == 0 && len(c.OCSPServers) == 0 {
+	if len(c.IssuingCertificates) == 0 && len(c.CRLDistributionPoints) == 0 && len(c.OCSPServers) == 0 && len(c.DeltaCRLDistributionPoints) == 0 {
 		return &certutil.URLEntries{}, nil
 	}
 
 	result := certutil.URLEntries{
-		IssuingCertificates:   c.IssuingCertificates[:],
-		CRLDistributionPoints: c.CRLDistributionPoints[:],
-		OCSPServers:           c.OCSPServers[:],
+		IssuingCertificates:        c.IssuingCertificates[:],
+		CRLDistributionPoints:      c.CRLDistributionPoints[:],
+		DeltaCRLDistributionPoints: c.DeltaCRLDistributionPoints[:],
+		OCSPServers:                c.OCSPServers[:],
 	}
 
 	if c.EnableTemplating {
@@ -92,9 +96,10 @@ func ToURLEntries(ctx context.Context, s logical.Storage, issuer IssuerID, c *Ai
 		}
 
 		for name, source := range map[string]*[]string{
-			"issuing_certificates":    &result.IssuingCertificates,
-			"crl_distribution_points": &result.CRLDistributionPoints,
-			"ocsp_servers":            &result.OCSPServers,
+			"issuing_certificates":          &result.IssuingCertificates,
+			"crl_distribution_points":       &result.CRLDistributionPoints,
+			"delta_crl_distribution_points": &result.DeltaCRLDistributionPoints,
+			"ocsp_servers":                  &result.OCSPServers,
 		} {
 			templated := make([]string, len(*source))
 			for index, uri := range *source {

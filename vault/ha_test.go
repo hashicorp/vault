@@ -10,6 +10,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 // TestGrabLockOrStop is a non-deterministic test to detect deadlocks in the
@@ -84,4 +86,77 @@ func TestGrabLockOrStop(t *testing.T) {
 		}()
 	}
 	workerWg.Wait()
+}
+
+// TestGetHAHeartbeatHealth checks that heartbeat health is correctly determined
+// for a variety of scenarios
+func TestGetHAHeartbeatHealth(t *testing.T) {
+	now := time.Now().UTC()
+	oldLastHeartbeat := now.Add(-1 * time.Hour)
+	futureHeartbeat := now.Add(10 * time.Second)
+	zeroHeartbeat := time.Time{}
+	testCases := []struct {
+		name              string
+		lastHeartbeat     *time.Time
+		heartbeatInterval time.Duration
+		wantHealthy       bool
+	}{
+		{
+			name:              "old heartbeat",
+			lastHeartbeat:     &oldLastHeartbeat,
+			heartbeatInterval: 5 * time.Second,
+			wantHealthy:       false,
+		},
+		{
+			name:              "no heartbeat",
+			lastHeartbeat:     nil,
+			heartbeatInterval: 5 * time.Second,
+			wantHealthy:       false,
+		},
+		{
+			name:              "recent heartbeat",
+			lastHeartbeat:     &now,
+			heartbeatInterval: 20 * time.Second,
+			wantHealthy:       true,
+		},
+		{
+			name:              "recent heartbeat, empty interval",
+			lastHeartbeat:     &futureHeartbeat,
+			heartbeatInterval: 0,
+			wantHealthy:       true,
+		},
+		{
+			name:              "old heartbeat, empty interval",
+			lastHeartbeat:     &oldLastHeartbeat,
+			heartbeatInterval: 0,
+			wantHealthy:       false,
+		},
+		{
+			name:              "zero value heartbeat",
+			lastHeartbeat:     &zeroHeartbeat,
+			heartbeatInterval: 5 * time.Second,
+			wantHealthy:       false,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			v := new(atomic.Value)
+			if tc.lastHeartbeat != nil {
+				v.Store(*tc.lastHeartbeat)
+			}
+			c := &Core{
+				rpcLastSuccessfulHeartbeat: v,
+				clusterHeartbeatInterval:   tc.heartbeatInterval,
+			}
+
+			now := time.Now()
+			gotHealthy, gotLastHeartbeat := c.GetHAHeartbeatHealth()
+			require.Equal(t, tc.wantHealthy, gotHealthy)
+			if tc.lastHeartbeat != nil && !tc.lastHeartbeat.IsZero() {
+				require.InDelta(t, now.Sub(*tc.lastHeartbeat).Milliseconds(), gotLastHeartbeat.Milliseconds(), float64(3*time.Second.Milliseconds()))
+			} else {
+				require.Nil(t, gotLastHeartbeat)
+			}
+		})
+	}
 }

@@ -1,0 +1,25 @@
+---
+layout: 'docs'
+page_title: 'Development'
+sidebar_current: 'docs-platform-k8s-examples-development'
+description: >-
+  Learn how to set up a development Vault server.
+---
+
+# Development
+
+@include 'helm/version.mdx'
+
+The below `values.yaml` can be used to set up a single development Vault server.
+
+```yaml
+server:
+  dev:
+    enabled: true
+```
+
+## Tutorial
+
+Refer to the [Injecting Secrets into Kubernetes Pods via Vault Helm
+Sidecar](/vault/tutorials/kubernetes/kubernetes-sidecar) tutorial
+to learn how to set up Vault and the Vault Agent Injector service with the Vault Helm chart.

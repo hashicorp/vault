@@ -1,0 +1,132 @@
+---
+layout: 'docs'
+page_title: 'Vault Agent Injector TLS configuration'
+sidebar_current: 'docs-platform-k8s-examples-injector-tls'
+description: >-
+  Learn how to set up the Vault Agent Injector with manually generated certificates and keys.
+---
+
+# Vault Agent Injector TLS configuration
+
+@include 'helm/version.mdx'
+
+The following instructions demonstrate how to manually configure the Vault Agent Injector
+with self-signed certificates.
+
+## Create a certificate authority (CA)
+
+First, create a private key to be used by our custom Certificate Authority (CA):
+
+```shell
+$ openssl genrsa -out injector-ca.key 2048
+```
+
+Next, create a certificate authority certificate:
+
+~> **Important Note:** Values such as days (how long the certificate is valid for) should be configured for your environment.
+
+```shell
+$ openssl req \
+   -x509 \
+   -new \
+   -nodes \
+   -key injector-ca.key \
+   -sha256 \
+   -days 1825 \
+   -out injector-ca.crt \
+   -subj "/C=US/ST=CA/L=San Francisco/O=HashiCorp/CN=vault-agent-injector-svc"
+```
+
+## Create Vault agent injector certificate
+
+Next we can create a certificate and key signed by the certificate authority generated above. This
+certificate and key will be used by the Vault Agent Injector for TLS communications with the Kubernetes
+API.
+
+First, create a private key for the certificate:
+
+```shell
+$ openssl genrsa -out tls.key 2048
+```
+
+Next, create a certificate signing request (CSR) to be used when signing the certificate:
+
+```shell
+$ openssl req \
+   -new \
+   -key tls.key \
+   -out tls.csr \
+   -subj "/C=US/ST=CA/L=San Francisco/O=HashiCorp/CN=vault-agent-injector-svc"
+```
+
+After creating the CSR, create an extension file to configure additional parameters for signing
+the certificate.
+
+~> **Important Note:** The alternative names for the certificate must be configured to use the name
+of the Vault Agent Injector Kubernetes service and namespace where its created.
+
+In this example the Vault Agent Injector service name is `vault-agent-injector-svc` in the `vault` namespace.
+This uses the pattern `<k8s service name>.<k8s namespace>.svc.cluster.local`.
+
+```shell
+$ cat <<EOF >csr.conf
+authorityKeyIdentifier=keyid,issuer
+basicConstraints=CA:FALSE
+keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
+subjectAltName = @alt_names
+
+[alt_names]
+DNS.1 = vault-agent-injector-svc
+DNS.2 = vault-agent-injector-svc.vault
+DNS.3 = vault-agent-injector-svc.vault.svc
+DNS.4 = vault-agent-injector-svc.vault.svc.cluster.local
+EOF
+```
+
+Finally, sign the certificate:
+
+~> **Important Note:** Values such as days (how long the certificate is valid for) should be configured for your environment.
+
+```shell
+$ openssl x509 \
+  -req \
+  -in tls.csr \
+  -CA injector-ca.crt \
+  -CAkey injector-ca.key \
+  -CAcreateserial \
+  -out tls.crt \
+  -days 1825 \
+  -sha256 \
+  -extfile csr.conf
+```
+
+## Configuration
+
+Now that a certificate authority and a signed certificate have been created, we can now configure
+Helm and the Vault Agent Injector to use them.
+
+First, create a Kubernetes secret containing the certificate and key created above:
+
+~> **Important Note:** This example assumes the Vault Agent Injector is running in the `vault` namespace.
+
+```shell
+$ kubectl create secret generic injector-tls \
+    --from-file tls.crt \
+    --from-file tls.key \
+    --namespace=vault
+```
+
+Next, base64 encode the certificate authority so Kubernetes can verify the authenticity of the certificate:
+
+```shell
+$ export CA_BUNDLE=$(cat injector-ca.crt | base64)
+```
+
+Finally, install the Vault Agent Injector with the following custom values:
+
+```shell
+$ helm install vault hashicorp/vault \
+  --namespace=vault \
+  --set="injector.certs.secretName=injector-tls" \
+  --set="injector.certs.caBundle=${CA_BUNDLE?}"
+```

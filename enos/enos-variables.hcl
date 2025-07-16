@@ -90,7 +90,7 @@ variable "distro_version_leap" {
 variable "distro_version_rhel" {
   description = "The version of RHEL to use"
   type        = string
-  default     = "9.4" // or "8.10"
+  default     = "9.5" // or "8.10"
 }
 
 variable "distro_version_sles" {
@@ -188,6 +188,12 @@ variable "vault_product_version" {
   default     = null
 }
 
+variable "vault_radar_license_path" {
+  description = "The license for vault-radar which is used to verify the audit log"
+  type        = string
+  default     = null
+}
+
 variable "vault_revision" {
   description = "The git sha of Vault artifact we are testing"
   type        = string
@@ -198,4 +204,16 @@ variable "vault_upgrade_initial_version" {
   description = "The Vault release to deploy before upgrading"
   type        = string
   default     = "1.13.13"
+}
+
+variable "verify_aws_secrets_engine" {
+  description = "If true we'll verify AWS secrets engines behavior. Because of user creation restrictions in Doormat AWS accounts, only turn this on for CI, as it depends on resources that exist only in those accounts"
+  type        = bool
+  default     = false
+}
+
+variable "verify_log_secrets" {
+  description = "If true and var.vault_enable_audit_devices is true we'll verify that the audit log does not contain unencrypted secrets. Requires var.vault_radar_license_path to be set to a valid license file."
+  type        = bool
+  default     = false
 }

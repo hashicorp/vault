@@ -26,7 +26,7 @@ toward users while others are targeted toward machines. Most authentication
 backends must be enabled before use. To enable an auth method:
 
 ```shell-session
-$ vault auth enable userpass -path=my-auth
+$ vault auth enable -path=my-auth userpass 
 ```
 
 This enables the "userpass" auth method at the path "my-auth". This

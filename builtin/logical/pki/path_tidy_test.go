@@ -8,7 +8,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
@@ -23,6 +22,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/helper/testhelpers"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -39,9 +39,13 @@ func TestTidyConfigs(t *testing.T) {
 	require.Greater(t, len(operations), 1, "expected more than one operation")
 	t.Logf("Got tidy operations: %v", operations)
 
-	lastOp := operations[len(operations)-1]
+	lastOp := "tidy_acme"
 
 	for _, operation := range operations {
+		if operation == "tidy_cmpv2_nonce_store" || operation == "tidy_cert_metadata" {
+			// Skip, since these require ENT
+			continue
+		}
 		b, s := CreateBackendWithStorage(t)
 
 		resp, err := CBWrite(b, s, "config/auto-tidy", map[string]interface{}{
@@ -916,7 +920,7 @@ func TestTidyAcmeWithBackdate(t *testing.T) {
 
 	// Register an Account, do nothing with it
 	baseAcmeURL := "/v1/pki/acme/"
-	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
 
 	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)
@@ -1073,7 +1077,7 @@ func TestTidyAcmeWithSafetyBuffer(t *testing.T) {
 
 	// Register an Account, do nothing with it
 	baseAcmeURL := "/v1/pki/acme/"
-	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa key")
 
 	acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)

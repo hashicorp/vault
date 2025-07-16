@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Add `removed_from_cluster` field to sys/seal-status and vault status output to indicate whether the node has been removed from the HA cluster. 
+```

@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <div ...attributes>
   {{#if this.getShowToolbar}}
@@ -35,7 +35,7 @@
               (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
             )}}
             class="transparent"
-            data-test-copy-button={{@value}}
+            data-test-copy-button
           />
         </ToolbarActions>
       </Toolbar>
@@ -51,7 +51,7 @@
       mode=@mode
       readOnly=@readOnly
       theme=@theme
-      viewportMarg=@viewportMargin
+      viewportMargin=@viewportMargin
       onSetup=this.onSetup
       onUpdate=this.onUpdate
       onFocus=this.onFocus

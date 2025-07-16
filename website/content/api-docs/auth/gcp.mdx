@@ -53,6 +53,8 @@ as environment variables on the Vault server.
   If this value is empty, Vault will try to use [Application Default Credentials][gcp-adc]
   from the machine on which the Vault server is running. Mutually exclusive with `identity_token_audience`.
 
+@include 'rotationfields.mdx'
+
 - `service_account_email` `(string: "")` – <EnterpriseAlert product="vault" inline /> Service Account
   to impersonate for plugin workload identity federation. Required with `identity_token_audience`.
 
@@ -126,6 +128,60 @@ $ curl \
     --request POST \
     --data @payload.json \
     http://127.0.0.1:8200/v1/auth/gcp/config
+```
+
+## Rotate root credentials
+
+Request to rotate the GCP service account credentials used by Vault
+for this mount. A new key will be generated for the service account,
+replacing the internal value, and then a deletion of the old service
+account key is scheduled. Note that this does not create a new service
+account, only a new version of the service account key.
+
+This path is only valid if Vault has been configured to use GCP credentials via
+the `config/` endpoint where "credentials" were specified. Additionally, the
+provided service account must have permissions to create and delete service
+account keys.
+
+| Method | Path                           |
+| :----- | :----------------------------- |
+| `POST` | `/auth/gcp/config/rotate-root` |
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request POST \
+    https://127.0.0.1:8200/v1/auth/gcp/config/rotate-root
+```
+
+## Read config
+
+| Method | Path               |
+| :----- | :----------------- |
+| `GET`  | `/auth/gcp/config` |
+
+Credentials will be omitted from returned data.
+
+### Sample request
+
+```shell-session
+$ curl \
+    --header "X-Vault-Token: ..." \
+    --request GET \
+    https://127.0.0.1:8200/v1/auth/gcp/config
+```
+
+### Sample response
+
+```json
+{
+  "data": {
+    "ttl": "1h",
+    "max_ttl": "4h"
+  }
+}
 ```
 
 ## Read config

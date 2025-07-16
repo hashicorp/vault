@@ -12,6 +12,8 @@ import hbs from 'htmlbars-inline-precompile';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
 import sinon from 'sinon';
+import { LDAP_SELECTORS } from 'vault/tests/helpers/ldap/ldap-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | ldap | Page::Roles', function (hooks) {
   setupRenderingTest(hooks);
@@ -62,7 +64,7 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom('.title svg').hasClass('flight-icon-folder-users', 'LDAP icon renders in title');
+    assert.dom('.title svg').hasClass('hds-icon-folder-users', 'LDAP icon renders in title');
     assert.dom('.title').hasText('ldap-test', 'Mount path renders in title');
     assert
       .dom('[data-test-toolbar-action="config"]')
@@ -78,7 +80,7 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
     assert.dom('[data-test-toolbar-action="role"]').hasText('Create role', 'Toolbar action has correct text');
     assert
       .dom('[data-test-toolbar-action="role"] svg')
-      .hasClass('flight-icon-plus', 'Toolbar action has correct icon');
+      .hasClass('hds-icon-plus', 'Toolbar action has correct icon');
     assert
       .dom('[data-test-filter-input]')
       .doesNotExist('Roles filter input is hidden when roles have not been created');
@@ -94,13 +96,15 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
   test('it should render roles list', async function (assert) {
     await this.renderComponent();
 
-    assert.dom('[data-test-list-item-content] svg').hasClass('flight-icon-user', 'List item icon renders');
-    assert.dom('[data-test-role="static-test"]').hasText(this.roles[0].name, 'List item name renders');
+    assert.dom('[data-test-list-item-content] svg').hasClass('hds-icon-user', 'List item icon renders');
+    assert
+      .dom(LDAP_SELECTORS.roleItem('static', 'static-test'))
+      .hasText(this.roles[0].name, 'List item name renders');
     assert
       .dom('[data-test-role-type-badge="static-test"]')
       .hasText(this.roles[0].type, 'List item type badge renders');
 
-    await click('[data-test-popup-menu-trigger]');
+    await click(GENERAL.menuTrigger);
     assert.dom('[data-test-edit]').hasText('Edit', 'Edit link renders in menu');
     assert.dom('[data-test-get-creds]').hasText('Get credentials', 'Get credentials link renders in menu');
     assert
@@ -116,8 +120,14 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
   });
 
   test('it should filter roles', async function (assert) {
-    const transitionStub = sinon.stub(this.owner.lookup('service:router'), 'transitionTo');
-
+    const currentRouteName = 'vault.cluster.secrets.backend.ldap.roles';
+    this.router = this.owner.lookup('service:router');
+    const transitionStub = sinon.stub(this.router, 'transitionTo');
+    // stub because the component calls either "roles.subdirectory" or "roles.index"
+    // depending on where it renders
+    sinon.stub(this.router, 'currentRoute').value({
+      name: currentRouteName,
+    });
     this.roles.meta.filteredTotal = 0;
     this.pageFilter = 'foo';
 
@@ -129,10 +139,13 @@ module('Integration | Component | ldap | Page::Roles', function (hooks) {
 
     await fillIn('[data-test-filter-input]', 'bar');
 
-    assert.true(
-      transitionStub.calledWith('vault.cluster.secrets.backend.ldap.roles', {
+    const [calledRoute, calledParams] = transitionStub.lastCall.args;
+    assert.strictEqual(calledRoute, currentRouteName);
+    assert.propEqual(
+      calledParams,
+      {
         queryParams: { pageFilter: 'bar' },
-      }),
+      },
       'Transition called with correct query params on filter change'
     );
   });

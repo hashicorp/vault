@@ -1,0 +1,6 @@
+```release-note:improvement
+ui: Replace KVv2 json secret details view with Hds::CodeBlock component allowing users to search the full secret height.
+```
+```release-note:bug
+ui: Allow users to search the full json object within the json code-editor edit/create view.
+```

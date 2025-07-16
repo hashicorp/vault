@@ -1,3 +1,7 @@
+@use '../utils/color_variables';
+@use '../utils/mixins';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -8,11 +12,11 @@ select {
 }
 
 .select select {
-  background-color: $ui-gray-050;
-  box-shadow: 0 3px 1px rgba($black, 0.12);
-  border: 1px solid $grey-light;
-  border-radius: $radius;
-  color: $grey-dark;
+  background-color: color_variables.$ui-gray-050;
+  box-shadow: 0 3px 1px rgba(color_variables.$black, 0.12);
+  border: 1px solid color_variables.$grey-light;
+  border-radius: size_variables.$radius;
+  color: color_variables.$grey-dark;
   cursor: pointer;
   display: block;
   font-size: 1em;
@@ -20,12 +24,12 @@ select {
   max-width: 100%;
   outline: none;
   padding-bottom: calc(0.375em - 1px);
-  padding-left: $spacing-10;
-  padding-right: $spacing-10;
+  padding-left: size_variables.$spacing-10;
+  padding-right: size_variables.$spacing-10;
   padding-top: calc(0.375em - 1px);
   text-rendering: auto !important;
 
-  @include until($desktop) {
+  @include mixins.until(size_variables.$desktop) {
     font-size: 1rem;
   }
 
@@ -37,23 +41,23 @@ select {
   &:focus,
   &:focus-visible,
   &.is-active {
-    border-color: $blue-500;
+    border-color: color_variables.$blue-500;
     box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25);
   }
 }
 
 .select select:not([multiple]) {
-  padding-right: $spacing-36;
+  padding-right: size_variables.$spacing-36;
 }
 
 .select select[disabled] {
-  border-color: $grey-light;
-  background-color: $ui-gray-100;
-  color: $ui-gray-500;
+  border-color: color_variables.$grey-light;
+  background-color: color_variables.$ui-gray-100;
+  color: color_variables.$ui-gray-500;
   cursor: not-allowed;
   user-select: none;
   &:hover {
-    border-color: $grey-light;
+    border-color: color_variables.$grey-light;
   }
 }
 
@@ -75,7 +79,7 @@ select {
   margin: 0;
   pointer-events: none;
   position: absolute;
-  right: $spacing-8;
+  right: size_variables.$spacing-8;
   top: 50%;
   transform: translateY(-50%);
   width: 24px;

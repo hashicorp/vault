@@ -1,0 +1,62 @@
+---
+layout: docs
+page_title: Register external plugins
+description: >-
+  Register and enable an external plugin with Vault
+---
+
+# Register and enable external plugins
+
+An external plugin is any authentication or secrets plugin build from external
+code. Vault pre-registers commonly used external plugins (like `kv`), but you
+must manually add other external plugins to the Vault plugin catalog before you
+can use them with your Vault installation.
+
+If you register an external plugin with the same name as a pre-registered plugin,
+Vault defaults to the manually registered plugin when you enable a new mount
+with that name.
+
+Vault Enterprise v1.20.0 supports the `download` **(BETA)** parameter in the
+plugin register API. You can set `download` to `true` when registering a plugin
+to have Vault fetch the plugin binary from the
+[HashiCorp release page](https://releases.hashicorp.com). Refer to the
+[`/sys/plugins/catalog` API reference](/vault/api-docs/system/plugins-catalog#download)
+for more details.
+
+
+## Before you start
+
+- **To register official enterprise plugins, you must have Vault v1.16.21+, 1.17.17+,
+  1.18.10+, 1.19.4+, or 1.20.x+**. 
+- **To register official community plugins with an extracted `.zip` file, you must have
+  Vault v1.16.21+, 1.17.17+, 1.18.10+, 1.19.5+, or 1.20.x+**.
+
+@include 'plugins/common-requirements.mdx'
+
+
+## Step 1: Prepare the plugin
+
+@include 'plugins/prepare-plugin.mdx'
+
+
+## Step 2: Update the plugin catalog
+
+You must register your external plugin with the Vault catalog before enabling
+it. Registering plugins ensures the plugin invoked by Vault is authentic and
+maintains integrity.
+
+@include 'plugins/register.mdx'
+
+
+## Step 3: Enable the plugin
+
+Enable the plugin to make it available to clients.
+
+@include 'plugins/enable.mdx'
+
+
+## Step 4: Verify the plugin status
+
+Verify the plugin is ready for use and running the correct version.
+
+@include 'plugins/verify-status.mdx'

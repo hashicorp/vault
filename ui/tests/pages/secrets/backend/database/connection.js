@@ -11,7 +11,6 @@ export default create({
   visit: visitable('/vault/secrets/:backend/list'),
   visitShow: visitable('/vault/secrets/:backend/show/:id'),
   visitCreate: visitable('/vault/secrets/:backend/create'),
-  createLink: clickable('[data-test-secret-create]'),
   dbPlugin: selectable('[data-test-input="plugin_name"]'),
   name: fillable('[data-test-input="name"]'),
   toggleVerify: clickable('[data-test-input="verify_connection"]'),
@@ -20,7 +19,7 @@ export default create({
   username: fillable('[data-test-input="username"]'),
   password: fillable('[data-test-input="password"]'),
   save: clickable('[data-test-secret-save]'),
-  addRole: clickable('[data-test-secret-create]'), // only from connection show
+  addRole: clickable('[data-test-add-role]'),
   enable: clickable('[data-test-enable-connection]'),
   edit: clickable('[data-test-edit-link]'),
   delete: clickable('[data-test-database-connection-delete]'),

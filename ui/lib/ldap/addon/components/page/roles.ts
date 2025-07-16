@@ -8,6 +8,7 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { getOwner } from '@ember/owner';
 import errorMessage from 'vault/utils/error-message';
+import { tracked } from '@glimmer/tracking';
 
 import type LdapRoleModel from 'vault/models/ldap/role';
 import type SecretEngineModel from 'vault/models/secret-engine';
@@ -15,7 +16,6 @@ import type FlashMessageService from 'vault/services/flash-messages';
 import type { Breadcrumb, EngineOwner } from 'vault/vault/app-types';
 import type RouterService from '@ember/routing/router-service';
 import type PaginationService from 'vault/services/pagination';
-import { tracked } from '@glimmer/tracking';
 
 interface Args {
   roles: Array<LdapRoleModel>;
@@ -29,8 +29,16 @@ export default class LdapRolesPageComponent extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
   @service('app-router') declare readonly router: RouterService;
   @service declare readonly pagination: PaginationService;
+
   @tracked credsToRotate: LdapRoleModel | null = null;
   @tracked roleToDelete: LdapRoleModel | null = null;
+
+  isHierarchical = (name: string) => name.endsWith('/');
+
+  linkParams = (role: LdapRoleModel) => {
+    const route = this.isHierarchical(role.name) ? 'roles.subdirectory' : 'roles.role.details';
+    return [route, role.type, role.completeRoleName];
+  };
 
   get mountPoint(): string {
     const owner = getOwner(this) as EngineOwner;
@@ -43,13 +51,14 @@ export default class LdapRolesPageComponent extends Component<Args> {
 
   @action
   onFilterChange(pageFilter: string) {
-    this.router.transitionTo('vault.cluster.secrets.backend.ldap.roles', { queryParams: { pageFilter } });
+    // refresh route, which fires off lazyPaginatedQuery to re-request and filter response
+    this.router.transitionTo(this.router?.currentRoute?.name, { queryParams: { pageFilter } });
   }
 
   @action
   async onRotate(model: LdapRoleModel) {
     try {
-      const message = `Successfully rotated credentials for ${model.name}.`;
+      const message = `Successfully rotated credentials for ${model.completeRoleName}.`;
       await model.rotateStaticPassword();
       this.flashMessages.success(message);
     } catch (error) {
@@ -62,7 +71,7 @@ export default class LdapRolesPageComponent extends Component<Args> {
   @action
   async onDelete(model: LdapRoleModel) {
     try {
-      const message = `Successfully deleted role ${model.name}.`;
+      const message = `Successfully deleted role ${model.completeRoleName}.`;
       await model.destroyRecord();
       this.pagination.clearDataset('ldap/role');
       this.router.transitionTo('vault.cluster.secrets.backend.ldap.roles');

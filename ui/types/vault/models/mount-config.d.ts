@@ -15,4 +15,5 @@ export default class MountConfigModel extends Model {
   allowedResponseHeaders: string;
   tokenType: string;
   allowedManagedKeys: string;
+  identityTokenKey: string;
 }

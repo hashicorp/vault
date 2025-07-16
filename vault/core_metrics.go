@@ -6,6 +6,7 @@ package vault
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -13,10 +14,15 @@ import (
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/pluginconsts"
 	"github.com/hashicorp/vault/limits"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
+)
+
+const (
+	KVv2MetadataPath = "metadata"
 )
 
 func (c *Core) metricsLoop(stopCh chan struct{}) {
@@ -280,70 +286,88 @@ func (c *Core) emitMetricsActiveNode(stopCh chan struct{}) {
 	// because there's more than one TokenManager created during startup,
 	// but we only want one set of gauges.
 	metricsInit := []struct {
-		MetricName    []string
-		MetadataLabel []metrics.Label
-		CollectorFunc metricsutil.GaugeCollector
-		DisableEnvVar string
+		MetricName       []string
+		MetadataLabel    []metrics.Label
+		CollectorFunc    metricsutil.GaugeCollector
+		DisableEnvVar    string
+		IsEnterpriseOnly bool
 	}{
 		{
 			[]string{"token", "count"},
 			[]metrics.Label{{"gauge", "token_by_namespace"}},
 			c.tokenGaugeCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"token", "count", "by_policy"},
 			[]metrics.Label{{"gauge", "token_by_policy"}},
 			c.tokenGaugePolicyCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"expire", "leases", "by_expiration"},
 			[]metrics.Label{{"gauge", "leases_by_expiration"}},
 			c.leaseExpiryGaugeCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"token", "count", "by_auth"},
 			[]metrics.Label{{"gauge", "token_by_auth"}},
 			c.tokenGaugeMethodCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"token", "count", "by_ttl"},
 			[]metrics.Label{{"gauge", "token_by_ttl"}},
 			c.tokenGaugeTtlCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"secret", "kv", "count"},
 			[]metrics.Label{{"gauge", "kv_secrets_by_mountpoint"}},
 			c.kvSecretGaugeCollector,
 			"VAULT_DISABLE_KV_GAUGE",
+			false,
 		},
 		{
 			[]string{"identity", "entity", "count"},
 			[]metrics.Label{{"gauge", "identity_by_namespace"}},
 			c.entityGaugeCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"identity", "entity", "alias", "count"},
 			[]metrics.Label{{"gauge", "identity_by_mountpoint"}},
 			c.entityGaugeCollectorByMount,
 			"",
+			false,
 		},
 		{
 			[]string{"identity", "entity", "active", "partial_month"},
 			[]metrics.Label{{"gauge", "identity_active_month"}},
 			c.activeEntityGaugeCollector,
 			"",
+			false,
 		},
 		{
 			[]string{"policy", "configured", "count"},
 			[]metrics.Label{{"gauge", "number_policies_by_type"}},
 			c.configuredPoliciesGaugeCollector,
 			"",
+			false,
+		},
+		{
+			[]string{"client", "billing_period", "activity"},
+			[]metrics.Label{{"gauge", "clients_current_billing_period"}},
+			c.clientsGaugeCollectorCurrentBillingPeriod,
+			"",
+			true,
 		},
 	}
 
@@ -359,6 +383,11 @@ func (c *Core) emitMetricsActiveNode(stopCh chan struct{}) {
 						"metric", init.MetricName)
 					continue
 				}
+			}
+
+			// Billing start date is always 0 on CE
+			if init.IsEnterpriseOnly && c.BillingStart().IsZero() {
+				continue
 			}
 
 			proc, err := c.MetricSink().NewGaugeCollectionProcess(
@@ -401,9 +430,9 @@ func (c *Core) findKvMounts() []*kvMount {
 	}
 
 	for _, entry := range c.mounts.Entries {
-		if entry.Type == "kv" || entry.Type == "generic" {
+		if entry.Type == pluginconsts.SecretEngineKV || entry.Type == pluginconsts.SecretEngineGeneric {
 			version, ok := entry.Options["version"]
-			if !ok {
+			if !ok || version == "" {
 				version = "1"
 			}
 			mounts = append(mounts, &kvMount{
@@ -425,19 +454,19 @@ func (c *Core) kvCollectionErrorCount() {
 	)
 }
 
-func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
-	var subdirectories []string
-	if m.Version == "1" {
-		subdirectories = []string{m.Namespace.Path + m.MountPoint}
-	} else {
-		subdirectories = []string{m.Namespace.Path + m.MountPoint + "metadata/"}
-	}
+func (c *Core) walkKvSecrets(
+	ctx context.Context,
+	rootDirs []string,
+	m *kvMount,
+	onSecret func(ctx context.Context, fullPath string) error,
+) error {
+	subdirectories := rootDirs
 
 	for len(subdirectories) > 0 {
-		// Check for cancellation
+		// Context cancellation check
 		select {
 		case <-ctx.Done():
-			return
+			return nil
 		default:
 			break
 		}
@@ -449,21 +478,27 @@ func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
 			Operation: logical.ListOperation,
 			Path:      currentDirectory,
 		}
+
 		resp, err := c.router.Route(ctx, listRequest)
 		if err != nil {
 			c.kvCollectionErrorCount()
-			// ErrUnsupportedPath probably means that the mount is not there any more,
+			// ErrUnsupportedPath probably means that the mount is not there anymore,
 			// don't log those cases.
-			if !strings.Contains(err.Error(), logical.ErrUnsupportedPath.Error()) {
+			if !strings.Contains(err.Error(), logical.ErrUnsupportedPath.Error()) &&
+				// ErrSetupReadOnly means the mount's currently being set up.
+				// Nothing is wrong and there's no cause for alarm, just that we can't get data from it
+				// yet. We also shouldn't log these cases
+				!strings.Contains(err.Error(), logical.ErrSetupReadOnly.Error()) {
 				c.logger.Error("failed to perform internal KV list", "mount_point", m.MountPoint, "error", err)
 				break
 			}
 			// Quit handling this mount point (but it'll still appear in the list)
-			return
+			return err
 		}
 		if resp == nil {
 			continue
 		}
+
 		rawKeys, ok := resp.Data["keys"]
 		if !ok {
 			continue
@@ -473,14 +508,90 @@ func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
 			c.kvCollectionErrorCount()
 			c.logger.Error("KV list keys are not a []string", "mount_point", m.MountPoint, "rawKeys", rawKeys)
 			// Quit handling this mount point (but it'll still appear in the list)
-			return
+			return fmt.Errorf("KV list keys are not a []string")
 		}
+
 		for _, path := range keys {
-			if len(path) > 0 && path[len(path)-1] == '/' {
-				subdirectories = append(subdirectories, currentDirectory+path)
+			fullPath := currentDirectory + path
+			if strings.HasSuffix(path, "/") {
+				subdirectories = append(subdirectories, fullPath)
 			} else {
-				m.NumSecrets += 1
+				if callBackErr := onSecret(ctx, fullPath); callBackErr != nil {
+					c.logger.Error("failed to get metadata for KVv2 secret", "path", fullPath, "error", err)
+					return callBackErr
+				}
 			}
+		}
+	}
+	return nil
+}
+
+// getMinNamespaceSecrets is expected to be called on the output
+// of GetKvUsageMetrics to get the min number of secrets in a single namespace.
+func getMinNamespaceSecrets(mapOfNamespacesToSecrets map[string]int) int {
+	currentMin := 0
+	for _, n := range mapOfNamespacesToSecrets {
+		if n < currentMin || currentMin == 0 {
+			currentMin = n
+		}
+	}
+	return currentMin
+}
+
+// getMaxNamespaceSecrets is expected to be called on the output
+// of GetKvUsageMetrics to get the max number of secrets in a single namespace.
+func getMaxNamespaceSecrets(mapOfNamespacesToSecrets map[string]int) int {
+	currentMax := 0
+	for _, n := range mapOfNamespacesToSecrets {
+		if n > currentMax {
+			currentMax = n
+		}
+	}
+	return currentMax
+}
+
+// getTotalSecretsAcrossAllNamespaces is expected to be called on the output
+// of GetKvUsageMetrics to get the total number of secrets across namespaces.
+func getTotalSecretsAcrossAllNamespaces(mapOfNamespacesToSecrets map[string]int) int {
+	total := 0
+	for _, n := range mapOfNamespacesToSecrets {
+		total += n
+	}
+	return total
+}
+
+// getMeanNamespaceSecrets is expected to be called on the output
+// of GetKvUsageMetrics to get the mean number of secrets across namespaces.
+func getMeanNamespaceSecrets(mapOfNamespacesToSecrets map[string]int) int {
+	length := len(mapOfNamespacesToSecrets)
+	// Avoid divide by zero:
+	if length == 0 {
+		return length
+	}
+	return getTotalSecretsAcrossAllNamespaces(mapOfNamespacesToSecrets) / length
+}
+
+func (c *Core) walkKvMountSecrets(ctx context.Context, m *kvMount) {
+	var startDirs []string
+	if m.Version == "1" {
+		startDirs = []string{m.Namespace.Path + m.MountPoint}
+	} else {
+		startDirs = []string{m.Namespace.Path + m.MountPoint + KVv2MetadataPath + "/"}
+	}
+
+	err := c.walkKvSecrets(ctx, startDirs, m, func(ctx context.Context, fullPath string) error {
+		m.NumSecrets++
+		return nil
+	})
+	if err != nil {
+		// ErrUnsupportedPath probably means that the mount is not there anymore,
+		// don't log those cases.
+		if !strings.Contains(err.Error(), logical.ErrUnsupportedPath.Error()) &&
+			// ErrSetupReadOnly means the mount's currently being set up.
+			// Nothing is wrong and there's no cause for alarm, just that we can't get data from it
+			// yet. We also shouldn't log these cases
+			!strings.Contains(err.Error(), logical.ErrSetupReadOnly.Error()) {
+			c.logger.Error("failed to walk KV mount", "mount_point", m.MountPoint, "error", err)
 		}
 	}
 }

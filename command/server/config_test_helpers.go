@@ -4,6 +4,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"sort"
@@ -29,36 +30,57 @@ func boolPointer(x bool) *bool {
 	return &x
 }
 
+// testConfigRaftRetryJoin decodes and normalizes retry_join stanzas.
 func testConfigRaftRetryJoin(t *testing.T) {
-	config, err := LoadConfigFile("./test-fixtures/raft_retry_join.hcl")
-	if err != nil {
-		t.Fatal(err)
+	t.Parallel()
+
+	retryJoinExpected := []map[string]string{
+		// NOTE: Normalization handles IPv6 addresses and returns auto_join with
+		// sorted stable keys.
+		{"leader_api_addr": "http://127.0.0.1:8200"},
+		{"leader_api_addr": "http://[2001:db8::2:1]:8200"},
+		{"auto_join": "provider=mdns domain=2001:db8::2:1 service=consul"},
+		{"auto_join": "provider=os auth_url=https://[2001:db8::2:1]/auth password=bar tag_key=consul tag_value=server username=foo"},
+		{"auto_join": "provider=triton account=testaccount key_id=1234 tag_key=consul-role tag_value=server url=https://[2001:db8::2:1]"},
+		{"auto_join": "provider=packet address_type=public_v6 auth_token=token project=uuid url=https://[2001:db8::2:1]"},
+		{"auto_join": "provider=vsphere category_name=consul-role host=https://[2001:db8::2:1] insecure_ssl=false password=bar tag_name=consul-server user=foo"},
+		{"auto_join": "provider=k8s label_selector=\"app.kubernetes.io/name=vault, component=server\" namespace=vault"},
+		{"auto_join": "provider=k8s label_selector=\"app.kubernetes.io/name=vault1,component=server\" namespace=vault1"},
 	}
-	retryJoinConfig := `[{"leader_api_addr":"http://127.0.0.1:8200"},{"leader_api_addr":"http://127.0.0.2:8200"},{"leader_api_addr":"http://127.0.0.3:8200"}]`
-	expected := &Config{
-		SharedConfig: &configutil.SharedConfig{
-			Listeners: []*configutil.Listener{
+	for _, cfg := range []string{
+		"attr",
+		"block",
+		"mixed",
+	} {
+		t.Run(cfg, func(t *testing.T) {
+			t.Parallel()
+
+			config, err := LoadConfigFile(fmt.Sprintf("./test-fixtures/raft_retry_join_%s.hcl", cfg))
+			require.NoError(t, err)
+			retryJoinJSON, err := json.Marshal(retryJoinExpected)
+			require.NoError(t, err)
+
+			expected := NewConfig()
+			expected.SharedConfig.Listeners = []*configutil.Listener{
 				{
 					Type:                  "tcp",
 					Address:               "127.0.0.1:8200",
 					CustomResponseHeaders: DefaultCustomHeaders,
 				},
-			},
-			DisableMlock: true,
-		},
-
-		Storage: &Storage{
-			Type: "raft",
-			Config: map[string]string{
-				"path":       "/storage/path/raft",
-				"node_id":    "raft1",
-				"retry_join": retryJoinConfig,
-			},
-		},
-	}
-	config.Prune()
-	if diff := deep.Equal(config, expected); diff != nil {
-		t.Fatal(diff)
+			}
+			expected.SharedConfig.DisableMlock = true
+			expected.Storage = &Storage{
+				Type: "raft",
+				Config: map[string]string{
+					"path":       "/storage/path/raft",
+					"node_id":    "raft1",
+					"retry_join": string(retryJoinJSON),
+				},
+			}
+			config.Prune()
+			require.EqualValues(t, expected.SharedConfig, config.SharedConfig)
+			require.EqualValues(t, expected.Storage, config.Storage)
+		})
 	}
 }
 
@@ -143,7 +165,8 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 		ServiceRegistration: &ServiceRegistration{
 			Type: "consul",
 			Config: map[string]string{
-				"foo": "bar",
+				"foo":     "bar",
+				"address": "https://[2001:db8::1]:8500",
 			},
 		},
 
@@ -162,6 +185,9 @@ func testLoadConfigFile_topLevel(t *testing.T, entropy *configutil.Entropy) {
 		MaxLeaseTTLRaw:     "10h",
 		DefaultLeaseTTL:    10 * time.Hour,
 		DefaultLeaseTTLRaw: "10h",
+
+		RemoveIrrevocableLeaseAfter:    10 * 24 * time.Hour,
+		RemoveIrrevocableLeaseAfterRaw: "10d",
 
 		APIAddr:     "top_level_api_addr",
 		ClusterAddr: "top_level_cluster_addr",
@@ -469,6 +495,9 @@ func testLoadConfigFile(t *testing.T) {
 		DefaultLeaseTTL:    10 * time.Hour,
 		DefaultLeaseTTLRaw: "10h",
 
+		RemoveIrrevocableLeaseAfter:    10 * 24 * time.Hour,
+		RemoveIrrevocableLeaseAfterRaw: "10d",
+
 		EnableResponseHeaderHostname:      true,
 		EnableResponseHeaderHostnameRaw:   true,
 		EnableResponseHeaderRaftNodeID:    true,
@@ -578,6 +607,13 @@ func testUnknownFieldValidationHcl(t *testing.T) {
 	}
 }
 
+func testDuplicateKeyValidationHcl(t *testing.T) {
+	_, duplicate, err := LoadConfigFileCheckDuplicate("./test-fixtures/invalid_config_duplicate_key.hcl")
+	// TODO (HCL_DUP_KEYS_DEPRECATION): require error once deprecation is done
+	require.NoError(t, err)
+	require.True(t, duplicate)
+}
+
 // testConfigWithAdministrativeNamespaceJson tests that a config with a valid administrative namespace path is correctly validated and loaded.
 func testConfigWithAdministrativeNamespaceJson(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/config_with_valid_admin_ns.json")
@@ -663,17 +699,19 @@ func testLoadConfigFile_json(t *testing.T) {
 
 		ClusterCipherSuites: "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA",
 
-		MaxLeaseTTL:          10 * time.Hour,
-		MaxLeaseTTLRaw:       "10h",
-		DefaultLeaseTTL:      10 * time.Hour,
-		DefaultLeaseTTLRaw:   "10h",
-		DisableCacheRaw:      interface{}(nil),
-		EnableUI:             true,
-		EnableUIRaw:          true,
-		EnableRawEndpoint:    true,
-		EnableRawEndpointRaw: true,
-		DisableSealWrap:      true,
-		DisableSealWrapRaw:   true,
+		MaxLeaseTTL:                    10 * time.Hour,
+		MaxLeaseTTLRaw:                 "10h",
+		DefaultLeaseTTL:                10 * time.Hour,
+		DefaultLeaseTTLRaw:             "10h",
+		RemoveIrrevocableLeaseAfter:    10 * 24 * time.Hour,
+		RemoveIrrevocableLeaseAfterRaw: "10d",
+		DisableCacheRaw:                interface{}(nil),
+		EnableUI:                       true,
+		EnableUIRaw:                    true,
+		EnableRawEndpoint:              true,
+		EnableRawEndpointRaw:           true,
+		DisableSealWrap:                true,
+		DisableSealWrapRaw:             true,
 	}
 
 	addExpectedEntConfig(expected, []string{})
@@ -852,8 +890,12 @@ func testConfig_Sanitized(t *testing.T) {
 			"add_lease_metrics_namespace_labels":     false,
 			"add_mount_point_rollback_metrics":       false,
 		},
-		"administrative_namespace_path": "admin/",
-		"imprecise_lease_role_tracking": false,
+		"administrative_namespace_path":  "admin/",
+		"imprecise_lease_role_tracking":  false,
+		"enable_post_unseal_trace":       true,
+		"post_unseal_trace_directory":    "/tmp",
+		"remove_irrevocable_lease_after": (30 * 24 * time.Hour) / time.Second,
+		"allow_audit_log_prefixing":      false,
 	}
 
 	addExpectedEntSanitizedConfig(expected, []string{"http"})
@@ -1122,6 +1164,313 @@ ha_storage "consul" {
 	}
 }
 
+// testParseStorageURLConformance verifies that any storage configuration that
+// takes a URL, IP Address, or host:port address conforms to RFC-5942 §4 when
+// configured with an IPv6 address. See: https://rfc-editor.org/rfc/rfc5952.html
+func testParseStorageURLConformance(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		config     string
+		expected   *Storage
+		shouldFail bool
+	}{
+		"aerospike": {
+			config: `
+storage "aerospike" {
+	hostname  = "2001:db8:0:0:0:0:2:1"
+  port      = "3000"
+  namespace = "test"
+  set       = "vault"
+  username  = "admin"
+  password  = "admin"
+}`,
+			expected: &Storage{
+				Type: "aerospike",
+				Config: map[string]string{
+					"hostname":  "2001:db8::2:1",
+					"port":      "3000",
+					"namespace": "test",
+					"set":       "vault",
+					"username":  "admin",
+					"password":  "admin",
+				},
+			},
+		},
+		"alicloudoss": {
+			config: `
+storage "alicloudoss" {
+  access_key = "abcd1234"
+  secret_key = "defg5678"
+	endpoint   = "2001:db8:0:0:0:0:2:1"
+  bucket     = "my-bucket"
+}`,
+			expected: &Storage{
+				Type: "alicloudoss",
+				Config: map[string]string{
+					"access_key": "abcd1234",
+					"secret_key": "defg5678",
+					"endpoint":   "2001:db8::2:1",
+					"bucket":     "my-bucket",
+				},
+			},
+		},
+		"azure": {
+			config: `
+storage "azure" {
+  accountName  = "my-storage-account"
+  accountKey   = "abcd1234"
+	arm_endpoint = "2001:db8:0:0:0:0:2:1"
+  container    = "container-efgh5678"
+  environment  = "AzurePublicCloud"
+}`,
+			expected: &Storage{
+				Type: "azure",
+				Config: map[string]string{
+					"accountName":  "my-storage-account",
+					"accountKey":   "abcd1234",
+					"arm_endpoint": "2001:db8::2:1",
+					"container":    "container-efgh5678",
+					"environment":  "AzurePublicCloud",
+				},
+			},
+		},
+		"cassandra": {
+			config: `
+storage "cassandra" {
+	hosts            = "2001:db8:0:0:0:0:2:1"
+  consistency      = "LOCAL_QUORUM"
+  protocol_version = 3
+}`,
+			expected: &Storage{
+				Type: "cassandra",
+				Config: map[string]string{
+					"hosts":            "2001:db8::2:1",
+					"consistency":      "LOCAL_QUORUM",
+					"protocol_version": "3",
+				},
+			},
+		},
+		"cockroachdb": {
+			config: `
+storage "cockroachdb" {
+  connection_url = "postgres://user123:secret123!@2001:db8:0:0:0:0:2:1:5432/vault"
+  table          = "vault_kv_store"
+}`,
+			expected: &Storage{
+				Type: "cockroachdb",
+				Config: map[string]string{
+					"connection_url": "postgres://user123:secret123%21@[2001:db8::2:1]:5432/vault",
+					"table":          "vault_kv_store",
+				},
+			},
+		},
+		"consul": {
+			config: `
+storage "consul" {
+  address = "[2001:db8:0:0:0:0:2:1]:8500"
+  path    = "vault/"
+}`,
+			expected: &Storage{
+				Type: "consul",
+				Config: map[string]string{
+					"address": "[2001:db8::2:1]:8500",
+					"path":    "vault/",
+				},
+			},
+		},
+		"couchdb": {
+			config: `
+storage "couchdb" {
+  endpoint = "https://[2001:db8:0:0:0:0:2:1]:5984/my-database"
+  username = "admin"
+  password = "admin"
+}`,
+			expected: &Storage{
+				Type: "couchdb",
+				Config: map[string]string{
+					"endpoint": "https://[2001:db8::2:1]:5984/my-database",
+					"username": "admin",
+					"password": "admin",
+				},
+			},
+		},
+		"dynamodb": {
+			config: `
+storage "dynamodb" {
+  endpoint   = "https://[2001:db8:0:0:0:0:2:1]:5984/my-aws-endpoint"
+  ha_enabled = "true"
+  region     = "us-west-2"
+  table      = "vault-data"
+}`,
+			expected: &Storage{
+				Type: "dynamodb",
+				Config: map[string]string{
+					"endpoint":   "https://[2001:db8::2:1]:5984/my-aws-endpoint",
+					"ha_enabled": "true",
+					"region":     "us-west-2",
+					"table":      "vault-data",
+				},
+			},
+		},
+		"etcd": {
+			config: `
+storage "etcd" {
+  address       = "https://[2001:db8:0:0:0:0:2:1]:2379"
+  discovery_srv = "https://[2001:db8:0:0:1:0:0:1]"
+  etcd_api      = "v3"
+}`,
+			expected: &Storage{
+				Type: "etcd",
+				Config: map[string]string{
+					"address":       "https://[2001:db8::2:1]:2379",
+					"discovery_srv": "https://[2001:db8::1:0:0:1]",
+					"etcd_api":      "v3",
+				},
+			},
+		},
+		"manta": {
+			config: `
+storage "manta" {
+  directory = "manta-directory"
+  user      = "myuser"
+  key_id    = "40:9d:d3:f9:0b:86:62:48:f4:2e:a5:8e:43:00:2a:9b"
+  url       = "https://[2001:db8:0:0:0:0:2:1]"
+}`,
+			expected: &Storage{
+				Type: "manta",
+				Config: map[string]string{
+					"directory": "manta-directory",
+					"user":      "myuser",
+					"key_id":    "40:9d:d3:f9:0b:86:62:48:f4:2e:a5:8e:43:00:2a:9b",
+					"url":       "https://[2001:db8::2:1]",
+				},
+			},
+		},
+		"mssql": {
+			config: `
+storage "mssql" {
+  server            = "2001:db8:0:0:0:0:2:1"
+  port              = 1433
+  username          = "user1234"
+  password          = "secret123!"
+  database          = "vault"
+  table             = "vault"
+  appname           = "vault"
+  schema            = "dbo"
+  connectionTimeout = 30
+  logLevel = 0
+}`,
+			expected: &Storage{
+				Type: "mssql",
+				Config: map[string]string{
+					"server":            "2001:db8::2:1",
+					"port":              "1433",
+					"username":          "user1234",
+					"password":          "secret123!",
+					"database":          "vault",
+					"table":             "vault",
+					"appname":           "vault",
+					"schema":            "dbo",
+					"connectionTimeout": "30",
+					"logLevel":          "0",
+				},
+			},
+		},
+		"mysql": {
+			config: `
+storage "mysql" {
+	address  = "[2001:db8:0:0:0:0:2:1]:3306"
+  username = "user1234"
+  password = "secret123!"
+  database = "vault"
+}`,
+			expected: &Storage{
+				Type: "mysql",
+				Config: map[string]string{
+					"address":  "[2001:db8::2:1]:3306",
+					"username": "user1234",
+					"password": "secret123!",
+					"database": "vault",
+				},
+			},
+		},
+		"postgresql": {
+			config: `
+storage "postgresql" {
+  connection_url = "postgres://user123:secret123!@2001:db8:0:0:0:0:2:1:5432/vault"
+  table          = "vault_kv_store"
+}`,
+			expected: &Storage{
+				Type: "postgresql",
+				Config: map[string]string{
+					"connection_url": "postgres://user123:secret123%21@[2001:db8::2:1]:5432/vault",
+					"table":          "vault_kv_store",
+				},
+			},
+		},
+		"s3": {
+			config: `
+storage "s3" {
+  endpoint   = "https://[2001:db8:0:0:0:0:2:1]:5984/my-aws-endpoint"
+  access_key = "abcd1234"
+  secret_key = "defg5678"
+	bucket     = "my-bucket"
+}`,
+			expected: &Storage{
+				Type: "s3",
+				Config: map[string]string{
+					"endpoint":   "https://[2001:db8::2:1]:5984/my-aws-endpoint",
+					"access_key": "abcd1234",
+					"secret_key": "defg5678",
+					"bucket":     "my-bucket",
+				},
+			},
+		},
+		"swift": {
+			config: `
+storage "swift" {
+	auth_url    = "https://[2001:db8:0:0:0:0:2:1]/auth"
+	storage_url = "https://[2001:db8:0:0:0:0:2:1]/storage"
+  username    = "admin"
+  password    = "secret123!"
+  container   = "my-storage-container"
+}`,
+			expected: &Storage{
+				Type: "swift",
+				Config: map[string]string{
+					"auth_url":    "https://[2001:db8::2:1]/auth",
+					"storage_url": "https://[2001:db8::2:1]/storage",
+					"username":    "admin",
+					"password":    "secret123!",
+					"container":   "my-storage-container",
+				},
+			},
+		},
+		"zookeeper": {
+			config: `
+storage "zookeeper" {
+	address = "[2001:db8:0:0:0:0:2:1]:2181"
+  path    = "vault/"
+}`,
+			expected: &Storage{
+				Type: "zookeeper",
+				Config: map[string]string{
+					"address": "[2001:db8::2:1]:2181",
+					"path":    "vault/",
+				},
+			},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			config, err := ParseConfig(tc.config, "")
+			require.NoError(t, err)
+			require.EqualValues(t, tc.expected, config.Storage)
+		})
+	}
+}
+
 func testParseSeals(t *testing.T) {
 	config, err := LoadConfigFile("./test-fixtures/config_seals.hcl")
 	if err != nil {
@@ -1266,6 +1615,9 @@ func testLoadConfigFileLeaseMetrics(t *testing.T) {
 		MaxLeaseTTLRaw:     "10h",
 		DefaultLeaseTTL:    10 * time.Hour,
 		DefaultLeaseTTLRaw: "10h",
+
+		RemoveIrrevocableLeaseAfter:    10 * 24 * time.Hour,
+		RemoveIrrevocableLeaseAfterRaw: "10d",
 	}
 
 	addExpectedEntConfig(expected, []string{})

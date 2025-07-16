@@ -256,6 +256,11 @@ Default: ({{.UserAttr}}={{.Username}})`,
 			Description: "If set to a value greater than 0, the LDAP backend will use the LDAP server's paged search control to request pages of up to the given size. This can be used to avoid hitting the LDAP server's maximum result size limit. Otherwise, the LDAP backend will not use the paged search control.",
 			Default:     0,
 		},
+		"enable_samaccountname_login": {
+			Type:        framework.TypeBool,
+			Description: "If true, matching sAMAccountName attribute values will be allowed to login when upndomain is defined.",
+			Default:     false,
+		},
 	}
 }
 
@@ -434,6 +439,10 @@ func NewConfigEntry(existing *ConfigEntry, d *framework.FieldData) (*ConfigEntry
 		cfg.MaximumPageSize = d.Get("max_page_size").(int)
 	}
 
+	if _, ok := d.Raw["enable_samaccountname_login"]; ok || !hadExisting {
+		cfg.EnableSamaccountnameLogin = d.Get("enable_samaccountname_login").(bool)
+	}
+
 	return cfg, nil
 }
 
@@ -468,9 +477,10 @@ type ConfigEntry struct {
 	// where the tag was being ignored, causing it to be jsonified as "CaseSensitiveNames", etc.
 	// To continue reading in users' previously stored values,
 	// we chose to carry that forward.
-	CaseSensitiveNames *bool  `json:"CaseSensitiveNames,omitempty"`
-	ClientTLSCert      string `json:"ClientTLSCert"`
-	ClientTLSKey       string `json:"ClientTLSKey"`
+	CaseSensitiveNames        *bool  `json:"CaseSensitiveNames,omitempty"`
+	ClientTLSCert             string `json:"ClientTLSCert"`
+	ClientTLSKey              string `json:"ClientTLSKey"`
+	EnableSamaccountnameLogin bool   `json:"EnableSamaccountnameLogin"`
 }
 
 func (c *ConfigEntry) Map() map[string]interface{} {
@@ -481,29 +491,30 @@ func (c *ConfigEntry) Map() map[string]interface{} {
 
 func (c *ConfigEntry) PasswordlessMap() map[string]interface{} {
 	m := map[string]interface{}{
-		"url":                    c.Url,
-		"userdn":                 c.UserDN,
-		"groupdn":                c.GroupDN,
-		"groupfilter":            c.GroupFilter,
-		"groupattr":              c.GroupAttr,
-		"userfilter":             c.UserFilter,
-		"upndomain":              c.UPNDomain,
-		"userattr":               c.UserAttr,
-		"certificate":            c.Certificate,
-		"insecure_tls":           c.InsecureTLS,
-		"starttls":               c.StartTLS,
-		"binddn":                 c.BindDN,
-		"deny_null_bind":         c.DenyNullBind,
-		"discoverdn":             c.DiscoverDN,
-		"tls_min_version":        c.TLSMinVersion,
-		"tls_max_version":        c.TLSMaxVersion,
-		"use_token_groups":       c.UseTokenGroups,
-		"anonymous_group_search": c.AnonymousGroupSearch,
-		"request_timeout":        c.RequestTimeout,
-		"connection_timeout":     c.ConnectionTimeout,
-		"username_as_alias":      c.UsernameAsAlias,
-		"dereference_aliases":    c.DerefAliases,
-		"max_page_size":          c.MaximumPageSize,
+		"url":                         c.Url,
+		"userdn":                      c.UserDN,
+		"groupdn":                     c.GroupDN,
+		"groupfilter":                 c.GroupFilter,
+		"groupattr":                   c.GroupAttr,
+		"userfilter":                  c.UserFilter,
+		"upndomain":                   c.UPNDomain,
+		"userattr":                    c.UserAttr,
+		"certificate":                 c.Certificate,
+		"insecure_tls":                c.InsecureTLS,
+		"starttls":                    c.StartTLS,
+		"binddn":                      c.BindDN,
+		"deny_null_bind":              c.DenyNullBind,
+		"discoverdn":                  c.DiscoverDN,
+		"tls_min_version":             c.TLSMinVersion,
+		"tls_max_version":             c.TLSMaxVersion,
+		"use_token_groups":            c.UseTokenGroups,
+		"anonymous_group_search":      c.AnonymousGroupSearch,
+		"request_timeout":             c.RequestTimeout,
+		"connection_timeout":          c.ConnectionTimeout,
+		"username_as_alias":           c.UsernameAsAlias,
+		"dereference_aliases":         c.DerefAliases,
+		"max_page_size":               c.MaximumPageSize,
+		"enable_samaccountname_login": c.EnableSamaccountnameLogin,
 	}
 	if c.CaseSensitiveNames != nil {
 		m["case_sensitive_names"] = *c.CaseSensitiveNames
@@ -595,6 +606,7 @@ func ConvertConfig(cfg *ConfigEntry) *capldap.ClientConfig {
 		MaximumPageSize:                      cfg.MaximumPageSize,
 		DerefAliases:                         cfg.DerefAliases,
 		DeprecatedVaultPre111GroupCNBehavior: cfg.UsePre111GroupCNBehavior,
+		EnableSamaccountnameLogin:            cfg.EnableSamaccountnameLogin,
 	}
 
 	if cfg.Certificate != "" {

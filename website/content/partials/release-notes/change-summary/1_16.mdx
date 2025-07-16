@@ -1,0 +1,56 @@
+### Breaking changes
+
+Found   | Recommendations | Edition    | Issue
+------- | --------------- | ---------- | -----
+1.16.0  | **Yes**         | All        | [Docker image no longer contains curl](/vault/docs/v1.16.x/updates/important-changes#docker-image-no-longer-contains-curl)
+1.16.21 | **Yes**         | All        | [Rekey cancellations use a nonce](/vault/docs/v1.20.x/updates/important-changes#rekey-cancel-nonce)
+
+### New behavior
+
+Found   | Recommendations | Edition    | Issue
+------- | --------------- | ---------- | -----
+1.16.0  | No             | Enterprise | [Activity log changes](/vault/docs/v1.16.x/updates/important-changes#activity-log-changes)
+1.16.0  | No             | All        | [Auto-rolled billing start date](/vault/docs/v1.16.x/updates/important-changes#auto-rolled-billing-start-date)
+1.16.0  | **Yes**        | All        | [Default lease count quota enabled when upgrading from Vault versions before 1.9](/vault/docs/v1.16.x/updates/important-changes#default-lease-count-quota-enabled-when-upgrading-from-vault-versions-before-1-9)
+1.16.0  | **Yes**        | All        | [External plugin variables take precedence over system variables](/vault/docs/v1.16.x/updates/important-changes#external-plugin-variables-take-precedence-over-system-variables)
+1.16.0  | **Yes**        | All        | [LDAP auth login changes](/vault/docs/v1.16.x/updates/important-changes#ldap-auth-entity-alias-names-no-longer-include-upndomain)
+1.16.0  | **Yes**        | All        | [Product usage reporting](/vault/docs/v1.16.x/updates/important-changes#product-usage-reporting)
+1.16.0  | **Yes**        | All        | [Secrets Sync cannot be activated from chroot namespace](/vault/docs/v1.16.x/updates/important-changes#secrets-sync-cannot-be-activated-from-chroot-namespace)
+1.16.0  | No             | Enterprise | [Secrets Sync now requires setting a one-time flag before use](/vault/docs/v1.16.x/updates/important-changes#secrets-sync-now-requires-setting-a-one-time-flag-before-use)
+1.16.18 | No             | All        | [Strict validation for Azure auth login requests](/vault/docs/v1.16.x/updates/important-changes#strict-azure)
+
+
+### Bugs
+
+Found  | Fixed   | Workaround    | Edition    | Issue
+------ |-------- | ------- | ---------- | -----
+1.16.0  | 1.16.18 | Upgrade | All        | [Vault log file missing subsystem logs](/vault/docs/v1.16.x/updates/important-changes#vault-log-file-missing-subsystem-logs)
+1.16.17 | 1.16.21 | **Yes** | Enterprise | [External Enterprise plugins cannot run on a standby node when it becomes active](/vault/docs/v1.16.x/updates/important-changes#external-ent-plugins)
+1.16.18 | 1.16.21 | Upgrade | All        | [Azure authN fails to authenticate Uniform VMSS instances](/vault/docs/v1.16.x/updates/important-changes#azure-auth-fails-to-authenticate-uniform-vmss-instances)
+
+
+### Known issues
+
+Found  | Fixed   | Workaround    | Edition    | Issue
+------ |-------- | ------- | ---------- | -----
+1.16.0  | 1.16.3  | **Yes** | All        | [Azure secrets engine role creation failing](/vault/docs/v1.16.x/updates/important-changes#azure-secrets-engine-role-creation-failing)
+1.16.0  | 1.16.3  | **Yes** | All        | [Cached activation flags for secrets sync on follower nodes are not updated](/vault/docs/v1.16.x/updates/important-changes#secret-sync-flag)
+1.16.0  | No      | **Yes** | Enterprise | [Duplicate identity groups created when concurrent requests sent to the primary and PR secondary cluster](/vault/docs/v1.16.x/updates/important-changes#duplicate-identity-groups-created-when-concurrent-requests-sent-to-the-primary-and-pr-secondary-cluster)
+1.16.0  | No      | **Yes** | All        | [Duplicate unseal/seal wrap HSM keys](/vault/docs/v1.16.x/updates/important-changes#hsm-keys)
+1.16.0  | 1.16.1  | Upgrade | All        | [Error logging in with LDAP auth method](/vault/docs/v1.16.x/updates/important-changes#error-logging-in-with-ldap-auth-method)
+1.16.0  | 1.16.1  | Upgrade | All        | [Error logging in with LDAP auth method when anonymous group search is enabled](/vault/docs/v1.16.x/updates/important-changes#error-logging-in-with-ldap-auth-method-when-anonymous-group-search-is-enabled)
+1.16.0  | No      | **Yes** | All        | [Existing clusters do not show the current Vault version in UI by default](/vault/docs/v1.16.x/updates/important-changes#existing-clusters-do-not-show-the-current-vault-version-in-ui-by-default)
+1.16.0  | No      | **Yes** | Enterprise | [Manual entity merges sent to a PR secondary cluster are not persisted to storage](/vault/docs/v1.16.x/updates/important-changes#manual-entity-merges-sent-to-a-pr-secondary-cluster-are-not-persisted-to-storage)
+1.16.0  | 1.16.4  | **Yes** | All        | [New nodes added by autopilot upgrades provisioned with the wrong version](/vault/docs/v1.16.x/updates/important-changes#new-nodes-added-by-autopilot-upgrades-provisioned-with-the-wrong-version)
+1.16.0  | 1.16.3  | **Yes** | Enterprise | [Performance Standbys revert to Standby mode on unseal](/vault/docs/v1.16.x/updates/important-changes#performance-standbys-revert-to-standby-mode-on-unseal)
+1.16.0  | No      | **Yes** | All        | [PKI OCSP GET requests can return HTTP redirect responses](/vault/docs/v1.16.x/updates/important-changes#pki-ocsp-get-requests-can-return-http-redirect-responses)
+1.16.0  | 1.16.6  | **Yes** | Enterprise | [Potential DoS when using the deny_unauthorized proxy protocol behavior for a TCP listener](/vault/docs/v1.16.x/updates/important-changes#potential-dos-when-using-the-deny_unauthorized-proxy-protocol-behavior-for-a-tcp-listener)
+1.16.0  | No      | **Yes** | All        | [Sending SIGHUP to vault standby node causes panic](/vault/docs/v1.16.x/updates/important-changes#sending-sighup-to-vault-standby-node-causes-panic)
+1.16.0  | No      | Upgrade | All        | [Unwanted secret rotation for DB and LDAP roles on restart](/vault/docs/v1.16.x/updates/important-changes#database-and-ldap-secrets-engine-unwanted-secret-rotation-on-backend-restart)
+1.16.1  | 1.16.2  | **Yes** | All        | [Error configuring the JWT auth method](/vault/docs/v1.16.x/updates/important-changes#error-configuring-the-jwt-auth-method)
+1.16.16 | No      | No      | All        | [Authorization failure with Azure federated identity credentials](/vault/docs/v1.16.x/updates/important-changes#authorization-failures-using-azure-federated-identity-credentials)
+1.16.16 | 1.16.20 | Upgrade | All        | [Unexpected DB static role rotations on upgrade](/vault/docs/v1.16.x/updates/important-changes#database-static-role-rotations-on-upgrade)
+1.16.16 | 1.16.20 | Upgrade | All        | [Unexpected LDAP static role rotations on upgrade](/vault/docs/v1.16.x/updates/important-changes#ldap-static-role-rotations-on-upgrade)
+1.16.3  | 1.16.6  | **Yes** | All        | [JWT auth login requires bound audiences on the role](/vault/docs/v1.16.x/updates/important-changes#jwt-auth-login-requires-bound-audiences-on-the-role)
+1.16.3  | 1.16.7  | Upgrade | Enterprise | [Vault standby nodes not deleting removed entity-aliases from in-memory database](/vault/docs/v1.16.x/updates/important-changes#deleting-an-entity-aliases-does-not-remove-it-from-the-in-memory-database-on-standby-nodes)
+1.16.7  | 1.16.9  | Upgrade | All        | [Client tokens and token accessors audited in plaintext](/vault/docs/v1.16.x/updates/important-changes#client-tokens-and-token-accessors-audited-in-plaintext)

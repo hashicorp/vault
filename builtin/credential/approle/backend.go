@@ -110,6 +110,10 @@ func Backend(conf *logical.BackendConfig) (*backend, error) {
 				secretIDLocalPrefix,
 				secretIDAccessorLocalPrefix,
 			},
+			SealWrapStorage: []string{
+				secretIDPrefix,
+				secretIDLocalPrefix,
+			},
 		},
 		Paths: framework.PathAppend(
 			rolePaths(b),

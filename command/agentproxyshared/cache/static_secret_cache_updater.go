@@ -17,6 +17,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/coder/websocket"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/api"
@@ -26,7 +27,6 @@ import (
 	"github.com/hashicorp/vault/helper/useragent"
 	"github.com/hashicorp/vault/sdk/logical"
 	"golang.org/x/exp/maps"
-	"nhooyr.io/websocket"
 )
 
 // Example write event (this does not contain all possible fields):

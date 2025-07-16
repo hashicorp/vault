@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/vault/builtin/logical/ssh/managed_key"
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/strutil"
@@ -101,17 +102,9 @@ func (b *backend) pathSignIssueCertificateHelper(ctx context.Context, req *logic
 		return logical.ErrorResponse(err.Error()), nil
 	}
 
-	privateKeyEntry, err := caKey(ctx, req.Storage, caPrivateKey)
+	signer, err := b.getCASigner(ctx, req.Storage)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read CA private key: %w", err)
-	}
-	if privateKeyEntry == nil || privateKeyEntry.Key == "" {
-		return nil, errors.New("failed to read CA private key")
-	}
-
-	signer, err := ssh.ParsePrivateKey([]byte(privateKeyEntry.Key))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse stored CA private key: %w", err)
+		return nil, fmt.Errorf("error creating signer: %w", err)
 	}
 
 	cBundle := creationBundle{
@@ -567,4 +560,40 @@ func createKeyTypeToMapKey(keyType string, keyBits int) map[string][]string {
 	}
 
 	return keyTypeToMapKey
+}
+
+func (b *backend) getCASigner(ctx context.Context, s logical.Storage) (ssh.Signer, error) {
+	var signer ssh.Signer
+
+	storedKey, err := readStoredKey(ctx, s, caPrivateKey)
+	if err != nil {
+		return nil, fmt.Errorf("error reading stored key: %w", err)
+	}
+
+	if storedKey != nil {
+		if storedKey.Key == "" {
+			return nil, errors.New("stored private key was empty")
+		}
+
+		signer, err = ssh.ParsePrivateKey([]byte(storedKey.Key))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse stored CA private key: %w", err)
+		}
+	} else {
+		managedKey, err := readManagedKey(ctx, s)
+		if err != nil {
+			return nil, fmt.Errorf("error reading managed key: %w", err)
+		}
+
+		if managedKey == nil {
+			return nil, errors.New("no keys configured")
+		}
+
+		signer, err = managed_key.GetManagedKeyInfo(ctx, b, managedKey.KeyId)
+		if err != nil {
+			return nil, fmt.Errorf("error getting managed key info: %w", err)
+		}
+	}
+
+	return signer, nil
 }

@@ -31,7 +31,6 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/golang/protobuf/ptypes"
 	"github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/reloadutil"
@@ -60,6 +59,7 @@ import (
 	"github.com/mitchellh/copystructure"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/net/http2"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
@@ -262,6 +262,11 @@ func TestCoreWithSealAndUINoCleanup(t testing.TB, opts *CoreConfig) *Core {
 	}
 	if opts.NumRollbackWorkers != 0 {
 		conf.NumRollbackWorkers = opts.NumRollbackWorkers
+	}
+	if conf.RawConfig != nil {
+		if conf.RawConfig.Storage != nil {
+			conf.StorageType = conf.RawConfig.Storage.Type
+		}
 	}
 
 	conf.ActivityLogConfig = opts.ActivityLogConfig
@@ -977,6 +982,14 @@ func (c *TestClusterCore) ClusterListener() *cluster.Listener {
 	return c.getClusterListener()
 }
 
+// NetworkLayer returns the network layer for the cluster core. This can be used
+// in conjunction with the cluster.InmemLayer to disconnect specific nodes from
+// the cluster when we need to simulate abrupt node failure or a network
+// partition in NewTestCluster tests.
+func (c *TestClusterCore) NetworkLayer() cluster.NetworkLayer {
+	return c.Core.clusterNetworkLayer
+}
+
 func (c *TestCluster) Cleanup() {
 	c.Logger.Info("cleaning up vault cluster")
 	if tl, ok := c.Logger.(*corehelpers.TestLogger); ok {
@@ -1451,6 +1464,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 	}
 
 	if base != nil {
+		coreConfig.ClusterHeartbeatInterval = base.ClusterHeartbeatInterval
 		coreConfig.DetectDeadlocks = TestDeadlockDetection
 		coreConfig.RawConfig = base.RawConfig
 		coreConfig.DisableCache = base.DisableCache
@@ -1536,6 +1550,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		coreConfig.ExpirationRevokeRetryBase = base.ExpirationRevokeRetryBase
 		coreConfig.PeriodicLeaderRefreshInterval = base.PeriodicLeaderRefreshInterval
 		coreConfig.ClusterAddrBridge = base.ClusterAddrBridge
+		coreConfig.ObservationSystemConfig = base.ObservationSystemConfig
 
 		testApplyEntBaseConfig(coreConfig, base)
 	}
@@ -2215,17 +2230,35 @@ var (
 	_ testcluster.VaultClusterNode = &TestClusterCore{}
 )
 
+func TestUserpassMount(c *Core, local bool) (*MountEntry, error) {
+	return TestUserpassMountContext(namespace.RootContext(nil), c, local)
+}
+
+func TestUserpassMountContext(ctx context.Context, c *Core, local bool) (*MountEntry, error) {
+	name := "userpass"
+	if local {
+		name += "-local"
+	}
+	userpassMe := &MountEntry{
+		Table:       credentialTableType,
+		Path:        name + "/",
+		Type:        "userpass",
+		Description: name,
+		// Don't specify an accessor so we use a random one otherwise we will cause
+		// horrible issues when we try to create a new mount on a different
+		// namespace but they have the same accessor!
+		Local: local,
+	}
+	if err := c.enableCredential(ctx, userpassMe); err != nil {
+		return nil, err
+	}
+	return userpassMe, nil
+}
+
 // TestCreateDuplicateEntityAliasesInStorage creates n entities with a duplicate alias in storage
 // This should only be used in testing
 func TestCreateDuplicateEntityAliasesInStorage(ctx context.Context, c *Core, n int) ([]string, error) {
-	userpassMe := &MountEntry{
-		Table:       credentialTableType,
-		Path:        "userpass/",
-		Type:        "userpass",
-		Description: "userpass",
-		Accessor:    "userpass1",
-	}
-	err := c.enableCredential(namespace.RootContext(nil), userpassMe)
+	userpassMe, err := TestUserpassMount(c, false)
 	if err != nil {
 		return nil, err
 	}
@@ -2250,21 +2283,28 @@ func TestCreateDuplicateEntityAliasesInStorage(ctx context.Context, c *Core, n i
 			NamespaceID: namespace.RootNamespaceID,
 			BucketKey:   c.identityStore.entityPacker.BucketKey(entityID),
 		}
-
-		entity, err := ptypes.MarshalAny(e)
-		if err != nil {
-			return nil, err
-		}
-		item := &storagepacker.Item{
-			ID:      e.ID,
-			Message: entity,
-		}
-		if err = c.identityStore.entityPacker.PutItem(ctx, item); err != nil {
+		if err := TestHelperWriteToStoragePacker(ctx, c.identityStore.entityPacker, e.ID, e); err != nil {
 			return nil, err
 		}
 	}
 
 	return entityIDs, nil
+}
+
+// TestHelperWriteToStoragePacker takes care of boiler place to insert into a
+// storage packer. Just provide the raw protobuf object e.g. &identity.Entity{}
+// and it is wrapped and inserted for you. You still need to populate BucketKey
+// in the object if applicable before passing it.
+func TestHelperWriteToStoragePacker(ctx context.Context, p *storagepacker.StoragePacker, id string, m protoreflect.ProtoMessage) error {
+	a, err := anypb.New(m)
+	if err != nil {
+		return err
+	}
+	i := &storagepacker.Item{
+		ID:      id,
+		Message: a,
+	}
+	return p.PutItem(context.Background(), i)
 }
 
 // TestCreateStorageGroup creates a group in storage only to bypass checks that the entities exist in memdb
@@ -2295,4 +2335,45 @@ func TestCreateStorageGroup(ctx context.Context, c *Core, entityIDs []string) er
 		return err
 	}
 	return nil
+}
+
+// Mock HABackend is a non-functional HABackend for testing purposes
+type MockHABackend struct {
+	physical.HABackend
+	physical.Backend
+}
+
+func (m *MockHABackend) HAEnabled() bool {
+	return true
+}
+
+// MockRemovableNodeHABackend is a barely functional RemovableNodeHABackend for testing purposes.
+// It has a functional IsRemoved method and an exported Removed field so that the desired state can be easily set.
+type MockRemovableNodeHABackend struct {
+	physical.RemovableNodeHABackend
+	physical.Backend
+	Removed bool
+}
+
+func (m *MockRemovableNodeHABackend) HAEnabled() bool {
+	return true
+}
+
+func (m *MockRemovableNodeHABackend) IsRemoved() bool {
+	return m.Removed
+}
+
+func TestCoreWithMockRemovableNodeHABackend(t *testing.T, removed bool) (*Core, error) {
+	t.Helper()
+	logger := corehelpers.NewTestLogger(t)
+	inmha, err := physInmem.NewInmemHA(nil, logger)
+	if err != nil {
+		t.Fatal(err)
+	}
+	conf := testCoreConfig(t, inmha, logger)
+	mockHABackend := &MockRemovableNodeHABackend{Removed: removed}
+	conf.HAPhysical = mockHABackend
+	conf.RedirectAddr = "http://127.0.0.1:8200"
+
+	return NewCore(conf)
 }

@@ -21,6 +21,7 @@ import (
 	"github.com/Azure/go-autorest/autorest/azure"
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -37,7 +38,7 @@ const (
 type AzureBackend struct {
 	container  *azblob.ContainerURL
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 }
 
 // Verify AzureBackend satisfies the correct interfaces
@@ -191,7 +192,7 @@ func NewAzureBackend(conf map[string]string, logger log.Logger) (physical.Backen
 	a := &AzureBackend{
 		container:  &containerURL,
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permitpool.New(maxParInt),
 	}
 	return a, nil
 }
@@ -233,7 +234,9 @@ func (a *AzureBackend) Put(ctx context.Context, entry *physical.Entry) error {
 		return fmt.Errorf("value is bigger than the current supported limit of 4MBytes")
 	}
 
-	a.permitPool.Acquire()
+	if err := a.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer a.permitPool.Release()
 
 	blobURL := a.container.NewBlockBlobURL(entry.Key)
@@ -248,7 +251,9 @@ func (a *AzureBackend) Put(ctx context.Context, entry *physical.Entry) error {
 func (a *AzureBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"azure", "get"}, time.Now())
 
-	a.permitPool.Acquire()
+	if err := a.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer a.permitPool.Release()
 
 	blobURL := a.container.NewBlockBlobURL(key)
@@ -285,7 +290,9 @@ func (a *AzureBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 func (a *AzureBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"azure", "delete"}, time.Now())
 
-	a.permitPool.Acquire()
+	if err := a.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer a.permitPool.Release()
 
 	blobURL := a.container.NewBlockBlobURL(key)
@@ -310,7 +317,9 @@ func (a *AzureBackend) Delete(ctx context.Context, key string) error {
 func (a *AzureBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"azure", "list"}, time.Now())
 
-	a.permitPool.Acquire()
+	if err := a.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer a.permitPool.Release()
 
 	var keys []string

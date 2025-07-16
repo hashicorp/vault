@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/aws: Fix issue with static credentials not rotating after restart or leadership change.  
+```

@@ -11,11 +11,10 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver"
-	slogctx "github.com/veqryn/slog-context"
-
 	"github.com/hashicorp/releases-api/pkg/api"
 	"github.com/hashicorp/releases-api/pkg/client"
 	"github.com/hashicorp/releases-api/pkg/models"
+	slogctx "github.com/veqryn/slog-context"
 )
 
 // Client is an api.releases.hashicorp.com API client.

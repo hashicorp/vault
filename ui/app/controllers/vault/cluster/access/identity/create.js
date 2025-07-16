@@ -6,6 +6,9 @@
 import Controller from '@ember/controller';
 import { service } from '@ember/service';
 
+/**
+ * @type Class
+ */
 export default Controller.extend({
   router: service(),
   showRoute: 'vault.cluster.access.identity.show',

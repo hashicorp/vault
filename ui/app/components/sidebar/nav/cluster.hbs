@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <Hds::SideNav::Portal @ariaLabel="Cluster Navigation Links" data-test-sidebar-nav-panel="Cluster" as |Nav|>
   <Nav.Title data-test-sidebar-nav-heading="Vault">Vault</Nav.Title>
@@ -13,7 +13,7 @@
     @text="Secrets Engines"
     data-test-sidebar-nav-link="Secrets Engines"
   />
-  {{#if this.flags.showSecretsSync}}
+  {{#if this.showSecretsSync}}
     <Nav.Link
       @route="vault.cluster.sync"
       @text="Secrets Sync"
@@ -91,6 +91,9 @@
       data-test-sidebar-nav-link="Client Count"
     />
   {{/if}}
+  {{#if this.canAccessVaultUsageDashboard}}
+    <Nav.Link @route="vault.cluster.usage-reporting" @text="Vault Usage" data-test-sidebar-nav-link="Vault Usage" />
+  {{/if}}
   {{#if
     (and
       this.version.features
@@ -122,5 +125,12 @@
       @text="Custom Messages"
       data-test-sidebar-nav-link="Custom Messages"
     />
+    {{#if (or this.isRootNamespace this.namespace.isHvdAdminNamespace)}}
+      <Nav.Link
+        @route="vault.cluster.config-ui.login-settings"
+        @text="UI Login Settings"
+        data-test-sidebar-nav-link="UI Login Settings"
+      />
+    {{/if}}
   {{/if}}
 </Hds::SideNav::Portal>

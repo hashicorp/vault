@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 {{#if (or (eq this.policyType "acl") (has-feature "Sentinel"))}}
   <PageHeader as |p|>
@@ -10,9 +10,7 @@
         {{uppercase this.policyType}}
         Policies
         {{#if (not-eq this.policyType "acl")}}
-          <span class="tag" aria-label="Enforcement level: {{this.model.enforcementLevel}}">
-            Sentinel
-          </span>
+          <Hds::Badge @text="Sentinel" />
         {{/if}}
       </h1>
     </p.levelLeft>
@@ -155,7 +153,7 @@
           @iconPosition="trailing"
           @icon="learn-link"
           @text="Getting started with policies"
-          @href={{doc-link "/vault/tutorials/getting-started/getting-started-policies"}}
+          @href={{doc-link "/vault/tutorials/get-started/introduction-policies"}}
         />
       {{else}}
         <Hds::Link::Standalone

@@ -720,7 +720,7 @@ path "bar/baz" {
 	capabilities = ["read", "update"]
 }
 path "bar/baz" {
-	capabilities = ["delete"]
+	capabilities = ["delete", "recover"]
 }
 `
 
@@ -828,7 +828,7 @@ func TestSystemBackend_PathCapabilities(t *testing.T) {
 		expected1 := []string{"create", "sudo", "update"}
 		expected2 := expected1
 		expected3 := []string{"update"}
-		expected4 := []string{"delete", "read", "update"}
+		expected4 := []string{"delete", "read", "recover", "update"}
 
 		if !reflect.DeepEqual(resp.Data[path1], expected1) ||
 			!reflect.DeepEqual(resp.Data[path2], expected2) ||
@@ -2488,7 +2488,7 @@ func TestSystemBackend_tuneAuth(t *testing.T) {
 			Command: "foo",
 			Args:    []string{},
 			Env:     []string{},
-			Sha256:  []byte{},
+			Sha256:  []byte("sha256"),
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -2625,7 +2625,7 @@ func TestSystemBackend_tune_updatePreV1MountEntryType(t *testing.T) {
 				Command: tc.pluginName,
 				Args:    []string{},
 				Env:     []string{},
-				Sha256:  []byte{},
+				Sha256:  []byte("sha256"),
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -2702,6 +2702,8 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
 		t.Fatalf("bad: %#v", resp)
 	}
+	// TODO (HCL_DUP_KEYS_DEPRECATION): remove this expectation once deprecation is done
+	require.NotContains(t, resp.Warnings, "policy contains duplicate attributes, which will no longer be supported in a future version")
 
 	// validate the response structure for policy named Update
 	schema.ValidateResponse(
@@ -2806,6 +2808,26 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 	if !reflect.DeepEqual(resp.Data, exp) {
 		t.Fatalf("got: %#v expect: %#v", resp.Data, exp)
 	}
+}
+
+// TestSystemBackend_writeHCLDuplicateAttributes checks that trying to create a policy with duplicate HCL attributes
+// results in a warning being returned by the API
+func TestSystemBackend_writeHCLDuplicateAttributes(t *testing.T) {
+	b := testSystemBackend(t)
+
+	// policy with duplicate attribute
+	rules := `path "foo/" { policy = "read" policy = "read" }`
+	req := logical.TestRequest(t, logical.UpdateOperation, "policy/foo")
+	req.Data["policy"] = rules
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	// TODO (HCL_DUP_KEYS_DEPRECATION): change this test to expect an error when creating a policy with duplicate attributes
+	if err != nil {
+		t.Fatalf("err: %v %#v", err, resp)
+	}
+	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
+		t.Fatalf("bad: %#v", resp)
+	}
+	require.Contains(t, resp.Warnings, "policy contains duplicate attributes, which will no longer be supported in a future version")
 }
 
 func TestSystemBackend_enableAudit(t *testing.T) {
@@ -6451,7 +6473,7 @@ func TestValidateVersion_HelpfulErrorWhenBuiltinOverridden(t *testing.T) {
 		Command: command,
 		Args:    nil,
 		Env:     nil,
-		Sha256:  nil,
+		Sha256:  []byte("sha256"),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -7258,6 +7280,22 @@ func Test_sanitizePath(t *testing.T) {
 			want: "mount/path/",
 		},
 		{
+			path: "//mount/path/",
+			want: "mount/path/",
+		},
+		{
+			path: "/\\mount/path/",
+			want: "mount/path/",
+		},
+		{
+			path: "\\mount/path/",
+			want: "\\mount/path/",
+		},
+		{
+			path: "\\//mount/path/",
+			want: "\\//mount/path/",
+		},
+		{
 			path: "",
 			want: "",
 		},
@@ -7267,6 +7305,18 @@ func Test_sanitizePath(t *testing.T) {
 		},
 		{
 			path: "///",
+			want: "",
+		},
+		{
+			path: "\\",
+			want: "\\/",
+		},
+		{
+			path: "\\/",
+			want: "\\/",
+		},
+		{
+			path: "/\\",
 			want: "",
 		},
 	}
@@ -7319,5 +7369,50 @@ func TestFuzz_sanitizePath(t *testing.T) {
 		require.NoError(t, err)
 		newPath := sanitizePath(path)
 		require.True(t, valid(path, newPath), `"%s" not sanitized correctly, got "%s"`, path, newPath)
+	}
+}
+
+// TestSealStatus_Removed checks if the seal-status endpoint returns the
+// correct value for RemovedFromCluster when provided with different backends
+func TestSealStatus_Removed(t *testing.T) {
+	removedCore, err := TestCoreWithMockRemovableNodeHABackend(t, true)
+	require.NoError(t, err)
+	notRemovedCore, err := TestCoreWithMockRemovableNodeHABackend(t, false)
+	require.NoError(t, err)
+	testCases := []struct {
+		name      string
+		core      *Core
+		wantField bool
+		wantTrue  bool
+	}{
+		{
+			name:      "removed",
+			core:      removedCore,
+			wantField: true,
+			wantTrue:  true,
+		},
+		{
+			name:      "not removed",
+			core:      notRemovedCore,
+			wantField: true,
+			wantTrue:  false,
+		},
+		{
+			name:      "different backend",
+			core:      TestCore(t),
+			wantField: false,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			status, err := tc.core.GetSealStatus(context.Background(), true)
+			require.NoError(t, err)
+			if tc.wantField {
+				require.NotNil(t, status.RemovedFromCluster)
+				require.Equal(t, tc.wantTrue, *status.RemovedFromCluster)
+			} else {
+				require.Nil(t, status.RemovedFromCluster)
+			}
+		})
 	}
 }

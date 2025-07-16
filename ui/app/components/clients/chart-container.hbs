@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 {{! HBS display template for rendering title, description and stat boxes with a chart on the right }}
 
@@ -46,13 +46,6 @@
   {{else}}
     <div class="chart-empty-state chart-container-wide">
       {{yield to="emptyState"}}
-    </div>
-  {{/if}}
-
-  {{#if @timestamp}}
-    <div class="timestamp" data-test-chart-container-timestamp>
-      Updated
-      {{date-format @timestamp "MMM d yyyy, h:mm:ss aaa" withTimeZone=true}}
     </div>
   {{/if}}
 </div>

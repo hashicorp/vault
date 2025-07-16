@@ -1,3 +1,9 @@
+@use 'sass:color';
+@use '../utils/box-shadow_variables';
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -5,22 +11,26 @@
 
 .button {
   align-items: center;
-  background-color: $grey-lightest;
-  border: 1px solid $grey-light;
-  border-radius: $radius;
-  box-shadow: $box-shadow-low;
+  background-color: color_variables.$grey-lightest;
+  border: 1px solid color_variables.$grey-light;
+  border-radius: size_variables.$radius;
+  box-shadow: box-shadow_variables.$box-shadow-low;
   cursor: pointer;
-  color: $ui-gray-800;
+  color: color_variables.$ui-gray-800;
   display: inline-block;
-  font-size: $size-8;
-  font-weight: $font-weight-semibold;
+  font-size: size_variables.$size-8;
+  font-weight: font_variables.$font-weight-semibold;
   min-height: 2.25rem;
   min-width: 6rem;
   padding: 0.5625rem 0.9375rem;
   position: relative;
   text-align: center;
   text-decoration: none;
-  transition: background-color $speed, border-color $speed, box-shadow $speed, color $speed;
+  transition:
+    background-color size_variables.$speed,
+    border-color size_variables.$speed,
+    box-shadow size_variables.$speed,
+    color size_variables.$speed;
   user-select: none;
   vertical-align: middle;
   white-space: nowrap;
@@ -37,9 +47,9 @@
   &:active,
   &.is-active,
   &:focus {
-    border-color: darken($grey-light, 10%);
-    box-shadow: $button-box-shadow-standard;
-    color: darken($grey-dark, 10%);
+    border-color: color.adjust(color_variables.$grey-light, $lightness: -10%);
+    box-shadow: box-shadow_variables.$button-box-shadow-standard;
+    color: color.adjust(color_variables.$grey-dark, $lightness: -10%);
   }
 
   &:focus:not(:active) {
@@ -47,8 +57,8 @@
   }
 
   &:disabled {
-    background-color: $white;
-    border-color: $ui-gray-050;
+    background-color: color_variables.$white;
+    border-color: color_variables.$ui-gray-050;
     box-shadow: none;
     cursor: not-allowed;
     opacity: 0.5;
@@ -58,37 +68,37 @@
 
   &.is-compact {
     height: 2rem;
-    padding: $spacing-4 $spacing-12;
+    padding: size_variables.$spacing-4 size_variables.$spacing-12;
   }
 
   &.is-danger {
-    background-color: $red-500;
-    border-color: darken($red-500, 2%);
-    color: $white;
-    text-shadow: 0 1px 1px rgba($black, 0.25);
+    background-color: color_variables.$red-500;
+    border-color: color.adjust(color_variables.$red-500, $lightness: -2%);
+    color: color_variables.$white;
+    text-shadow: 0 1px 1px rgba(color_variables.$black, 0.25);
 
     &:hover:not([disabled]) {
-      background-color: darken($red-500, 5%);
-      border-color: darken($red-500, 5%);
-      box-shadow: $box-shadow-middle;
+      background-color: color.adjust(color_variables.$red-500, $lightness: -5%);
+      border-color: color.adjust(color_variables.$red-500, $lightness: -5%);
+      box-shadow: box-shadow_variables.$box-shadow-middle;
     }
 
     &:active,
     &.is-active {
-      background-color: darken($red-500, 10%);
-      border-color: darken($red-500, 10%);
-      box-shadow: $box-shadow-middle;
+      background-color: color.adjust(color_variables.$red-500, $lightness: -10%);
+      border-color: color.adjust(color_variables.$red-500, $lightness: -10%);
+      box-shadow: box-shadow_variables.$box-shadow-middle;
     }
 
     &:focus {
-      border-color: darken($red-500, 10%);
-      box-shadow: $button-box-shadow-standard;
+      border-color: color.adjust(color_variables.$red-500, $lightness: -10%);
+      box-shadow: box-shadow_variables.$button-box-shadow-standard;
     }
   }
 
   &.is-danger-outlined {
-    border: 1px solid $red-500;
-    color: $red-500;
+    border: 1px solid color_variables.$red-500;
+    color: color_variables.$red-500;
   }
 
   &.is-flat {
@@ -101,17 +111,17 @@
     background-color: transparent;
     border-color: transparent;
     box-shadow: none;
-    color: $blue;
+    color: color_variables.$blue;
     text-decoration: none;
 
     &:hover {
-      color: $blue-500;
-      background-color: $grey-lightest;
+      color: color_variables.$blue-500;
+      background-color: color_variables.$grey-lightest;
     }
   }
 
   &.is-icon {
-    padding: 0.25rem $spacing-24;
+    padding: 0.25rem size_variables.$spacing-24;
   }
 
   &.is-loading {
@@ -119,7 +129,7 @@
     pointer-events: none;
     &::after {
       animation: spinAround 500ms infinite linear;
-      border: 2px solid $ui-gray-300;
+      border: 2px solid color_variables.$ui-gray-300;
       border-radius: 290486px;
       border-right-color: transparent;
       border-top-color: transparent;
@@ -136,83 +146,83 @@
   &.is-link {
     background-color: transparent;
     border-color: transparent;
-    color: $blue;
+    color: color_variables.$blue;
     text-decoration: none;
-    font-weight: $font-weight-semibold;
+    font-weight: font_variables.$font-weight-semibold;
     box-shadow: none;
     min-width: 4rem;
   }
 
   &.is-primary {
-    background-color: $blue;
-    border-color: darken($blue, 2%);
-    color: $white;
-    font-weight: $font-weight-bold;
-    text-shadow: 0 1px 1px rgba($black, 0.25);
+    background-color: color_variables.$blue;
+    border-color: color.adjust(color_variables.$blue, $lightness: -2%);
+    color: color_variables.$white;
+    font-weight: font_variables.$font-weight-bold;
+    text-shadow: 0 1px 1px rgba(color_variables.$black, 0.25);
 
     &:disabled {
-      background-color: $ui-gray-700;
+      background-color: color_variables.$ui-gray-700;
       border-color: transparent;
       box-shadow: none;
     }
 
     &:hover:not([disabled]) {
-      background-color: darken($blue, 5%);
-      border-color: darken($blue, 5%);
-      box-shadow: $box-shadow-middle;
+      background-color: color.adjust(color_variables.$blue, $lightness: -5%);
+      border-color: color.adjust(color_variables.$blue, $lightness: -5%);
+      box-shadow: box-shadow_variables.$box-shadow-middle;
     }
 
     &:active,
     &.is-active {
-      background-color: darken($blue, 10%);
-      border-color: darken($blue, 10%);
-      box-shadow: $box-shadow-middle;
+      background-color: color.adjust(color_variables.$blue, $lightness: -10%);
+      border-color: color.adjust(color_variables.$blue, $lightness: -10%);
+      box-shadow: box-shadow_variables.$box-shadow-middle;
     }
 
     &:focus {
-      border-color: darken($blue, 10%);
-      box-shadow: $button-box-shadow-standard;
+      border-color: color.adjust(color_variables.$blue, $lightness: -10%);
+      box-shadow: box-shadow_variables.$button-box-shadow-standard;
     }
 
     &.is-loading::after {
-      border-color: transparent transparent $white $white;
+      border-color: transparent transparent color_variables.$white color_variables.$white;
     }
 
     &.is-underlined {
       &:active,
       &.is-active {
         background-color: transparent;
-        border-bottom: 2px solid darken($blue, 10%);
+        border-bottom: 2px solid color.adjust(color_variables.$blue, $lightness: -10%);
         border-radius: unset;
-        color: darken($blue, 10%);
+        color: color.adjust(color_variables.$blue, $lightness: -10%);
       }
     }
     // is-primary.is-outlined the only is-outlined buttons are primary.
     &.is-outlined {
       background-color: transparent;
-      border-color: $blue;
-      color: $blue;
+      border-color: color_variables.$blue;
+      color: color_variables.$blue;
 
       &:hover,
       &:focus {
         background-color: transparent;
-        border-color: darken($blue, 10%);
-        color: $blue;
+        border-color: color.adjust(color_variables.$blue, $lightness: -10%);
+        color: color_variables.$blue;
       }
 
       &:active,
       &.is-active {
         background-color: transparent;
-        border-color: darken($blue, 10%);
-        color: darken($blue, 10%);
+        border-color: color.adjust(color_variables.$blue, $lightness: -10%);
+        color: color.adjust(color_variables.$blue, $lightness: -10%);
       }
     }
 
     &.is-outlined [disabled] {
       background-color: transparent;
-      border-color: $ui-gray-700;
+      border-color: color_variables.$ui-gray-700;
       box-shadow: none;
-      color: $ui-gray-700;
+      color: color_variables.$ui-gray-700;
     }
   }
 
@@ -227,7 +237,7 @@
   // End of button types
 
   &.tool-tip-trigger {
-    color: $grey-dark;
+    color: color_variables.$grey-dark;
     min-width: auto;
     padding: 0;
   }
@@ -246,7 +256,7 @@
       &,
       &:first-child:last-child {
         position: relative;
-        left: -$size-10;
+        left: -(size_variables.$size-10);
       }
     }
   }
@@ -255,8 +265,8 @@
     .hs-icon {
       &,
       &:first-child:last-child {
-        margin-left: $spacing-4;
-        margin-right: -$spacing-4;
+        margin-left: size_variables.$spacing-4;
+        margin-right: -(size_variables.$spacing-4);
       }
     }
   }
@@ -264,7 +274,7 @@
 
 .button.icon {
   box-sizing: border-box;
-  padding: 0 $spacing-4;
+  padding: 0 size_variables.$spacing-4;
   height: 24px;
   width: 24px;
   &,
@@ -281,8 +291,8 @@
 }
 
 a.button.disabled {
-  color: $white;
-  background-color: $grey-dark;
+  color: color_variables.$white;
+  background-color: color_variables.$grey-dark;
   opacity: 0.5;
   border-color: transparent;
   box-shadow: none;
@@ -305,7 +315,7 @@ a.button.disabled {
   cursor: pointer;
 
   &:disabled {
-    color: $grey-light;
+    color: color_variables.$grey-light;
     cursor: not-allowed;
   }
 }
@@ -313,19 +323,19 @@ a.button.disabled {
 // TODO HDS adoption cleanup: audit styles with design and see what to keep/remove once buttons are fully HDS
 // Existing class on <Hds::Copy::Button> component, modifying to match existing UI Structure buttons
 .hds-copy-button {
-  font-weight: $font-weight-semibold; // TODO delete
-  box-shadow: $box-shadow-low; // TODO delete
+  font-weight: font_variables.$font-weight-semibold; // TODO delete
+  box-shadow: box-shadow_variables.$box-shadow-low; // TODO delete
 
   &.white-icon svg {
-    color: $white;
+    color: color_variables.$white;
   }
 
   &.icon-grey-300 svg {
-    color: $ui-gray-300;
+    color: color_variables.$ui-gray-300;
   }
 
   &.icon-grey-500 svg {
-    color: $ui-gray-500;
+    color: color_variables.$ui-gray-500;
   }
 
   &.transparent {
@@ -333,30 +343,30 @@ a.button.disabled {
     box-shadow: none;
     border: 1px solid transparent;
     &:hover {
-      border: 1px solid $grey-light;
+      border: 1px solid color_variables.$grey-light;
       border-color: var(--token-color-border-strong);
     }
   }
 
   &.primary {
-    background-color: $blue;
-    border-color: darken($blue, 2%);
-    color: $white;
-    font-weight: $font-weight-bold;
-    text-shadow: 0 1px 1px rgba($black, 0.25);
+    background-color: color_variables.$blue;
+    border-color: color.adjust(color_variables.$blue, $lightness: -2%);
+    color: color_variables.$white;
+    font-weight: font_variables.$font-weight-bold;
+    text-shadow: 0 1px 1px rgba(color_variables.$black, 0.25);
     svg {
-      color: $white;
+      color: color_variables.$white;
     }
   }
 
   &.secondary {
-    background-color: $grey-lightest;
-    border: 1px solid $grey-light;
+    background-color: color_variables.$grey-lightest;
+    border: 1px solid color_variables.$grey-light;
   }
 
   &.in-dropdown {
     div {
-      font-size: $size-7;
+      font-size: size_variables.$size-7;
     }
     svg {
       color: transparent;
@@ -366,17 +376,17 @@ a.button.disabled {
 
 // Existing class on <Hds::Button> component, modifying to match existing UI Structure buttons
 .hds-button {
-  font-weight: $font-weight-semibold; // TODO consult design on font weight after button class audit
+  font-weight: font_variables.$font-weight-semibold; // TODO consult design on font weight after button class audit
   display: inline-flex; // temporarily fixes existing button alignment until we adopt Hds::ButtonSet
   // for toolbar-button must pass arg @color="secondary"
   &.toolbar-button {
-    color: $black;
+    color: color_variables.$black;
     background: none;
     border: none;
     box-shadow: none;
     &:hover:not(.disabled) {
-      background-color: $ui-gray-100;
-      color: $blue;
+      background-color: color_variables.$ui-gray-100;
+      color: color_variables.$blue;
     }
   }
 }

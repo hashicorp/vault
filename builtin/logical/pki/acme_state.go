@@ -11,7 +11,6 @@ import (
 	"io"
 	"net"
 	"path"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -311,7 +310,22 @@ func (a *acmeState) UpdateAccount(sc *storageContext, acct *acmeAccount) error {
 // LoadAccount will load the account object based on the passed in keyId field value
 // otherwise will return an error if the account does not exist.
 func (a *acmeState) LoadAccount(ac *acmeContext, keyId string) (*acmeAccount, error) {
-	entry, err := ac.sc.Storage.Get(ac.sc.Context, acmeAccountPrefix+keyId)
+	acct, err := a.LoadAccountWithoutDirEnforcement(ac.sc, keyId)
+	if err != nil {
+		return acct, err
+	}
+
+	if acct.AcmeDirectory != ac.acmeDirectory {
+		return nil, fmt.Errorf("%w: account part of different ACME directory path", ErrMalformed)
+	}
+
+	return acct, nil
+}
+
+// LoadAccountWithoutDirEnforcement will load the account object based on the passed in keyId field value,
+// but does not enforce the ACME directory path, normally this is used by non ACME specific APIs.
+func (a *acmeState) LoadAccountWithoutDirEnforcement(sc *storageContext, keyId string) (*acmeAccount, error) {
+	entry, err := sc.Storage.Get(sc.Context, acmeAccountPrefix+keyId)
 	if err != nil {
 		return nil, fmt.Errorf("error loading account: %w", err)
 	}
@@ -324,13 +338,7 @@ func (a *acmeState) LoadAccount(ac *acmeContext, keyId string) (*acmeAccount, er
 	if err != nil {
 		return nil, fmt.Errorf("error decoding account: %w", err)
 	}
-
-	if acct.AcmeDirectory != ac.acmeDirectory {
-		return nil, fmt.Errorf("%w: account part of different ACME directory path", ErrMalformed)
-	}
-
 	acct.KeyId = keyId
-
 	return &acct, nil
 }
 
@@ -536,6 +544,27 @@ func (a *acmeState) LoadOrder(ac *acmeContext, userCtx *jwsCtx, orderId string) 
 	return &order, nil
 }
 
+// LoadAccountOrders will load all orders for a given account ID, this should be used by the
+// management interface only, not through any of the ACME APIs.
+func (a *acmeState) LoadAccountOrders(sc *storageContext, accountId string) ([]*acmeOrder, error) {
+	orderIds, err := a.ListOrderIds(sc, accountId)
+	if err != nil {
+		return nil, fmt.Errorf("failed listing order ids for account id %s: %w", accountId, err)
+	}
+
+	var orders []*acmeOrder
+	for _, orderId := range orderIds {
+		order, err := a.LoadOrder(&acmeContext{sc: sc}, &jwsCtx{Kid: accountId}, orderId)
+		if err != nil {
+			return nil, err
+		}
+
+		orders = append(orders, order)
+	}
+
+	return orders, nil
+}
+
 func (a *acmeState) SaveOrder(ac *acmeContext, order *acmeOrder) error {
 	if order.OrderId == "" {
 		return fmt.Errorf("invalid order, missing order id")
@@ -565,15 +594,7 @@ func (a *acmeState) ListOrderIds(sc *storageContext, accountId string) ([]string
 		return nil, fmt.Errorf("failed listing order ids for account %s: %w", accountId, err)
 	}
 
-	orderIds := []string{}
-	for _, order := range rawOrderIds {
-		if strings.HasSuffix(order, "/") {
-			// skip any folders we might have for some reason
-			continue
-		}
-		orderIds = append(orderIds, order)
-	}
-	return orderIds, nil
+	return filterDirEntries(rawOrderIds), nil
 }
 
 type acmeCertEntry struct {
@@ -672,15 +693,18 @@ func (a *acmeState) ListEabIds(sc *storageContext) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	var ids []string
-	for _, entry := range entries {
-		if strings.HasSuffix(entry, "/") {
-			continue
-		}
-		ids = append(ids, entry)
-	}
+	ids := filterDirEntries(entries)
 
 	return ids, nil
+}
+
+func (a *acmeState) ListAccountIds(sc *storageContext) ([]string, error) {
+	entries, err := sc.Storage.List(sc.Context, acmeAccountPrefix)
+	if err != nil {
+		return nil, fmt.Errorf("failed listing ACME account prefix directory %s: %w", acmeAccountPrefix, err)
+	}
+
+	return filterDirEntries(entries), nil
 }
 
 func getAcmeSerialToAccountTrackerPath(accountId string, serial string) string {
