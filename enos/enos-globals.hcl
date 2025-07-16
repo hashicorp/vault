@@ -39,8 +39,8 @@ globals {
       "15.6" = ["netcat-openbsd", "openssl", "openldap2-client"]
     }
     ubuntu = {
-      "20.04" = ["netcat-openbsd", "ldap-utils"]
-      "22.04" = ["netcat-openbsd", "ldap-utils"]
+      "20.04" = ["netcat", "ldap-utils"]
+      "22.04" = ["netcat", "ldap-utils"]
       "24.04" = ["netcat-openbsd", "ldap-utils"]
     }
   }
