@@ -1,0 +1,60 @@
+---
+layout: 'docs'
+page_title: 'Highly available Vault cluster with integrated storage (Raft)'
+sidebar_current: 'docs-platform-k8s-examples-ha-with-raft'
+description: >-
+  Learn how to set up a highly available Vault cluster with integrated storage (Raft) as the storage backend.
+---
+
+# Highly available Vault cluster with integrated storage (Raft)
+
+@include 'helm/version.mdx'
+
+Integrated storage (raft) can be enabled using the `server.ha.raft.enabled` value:
+
+```shell
+helm install vault hashicorp/vault \
+  --set='server.ha.enabled=true' \
+  --set='server.ha.raft.enabled=true'
+```
+
+Next, initialize and unseal `vault-0` pod:
+
+```shell
+kubectl exec -ti vault-0 -- vault operator init
+kubectl exec -ti vault-0 -- vault operator unseal
+```
+
+Finally, join the remaining pods to the Raft cluster and unseal them. The pods
+will need to communicate directly so we'll configure the pods to use the internal
+service provided by the Helm chart:
+
+```shell
+kubectl exec -ti vault-1 -- vault operator raft join http://vault-0.vault-internal:8200
+kubectl exec -ti vault-1 -- vault operator unseal
+
+kubectl exec -ti vault-2 -- vault operator raft join http://vault-0.vault-internal:8200
+kubectl exec -ti vault-2 -- vault operator unseal
+```
+
+To verify if the Raft cluster has successfully been initialized, run the following.
+
+First, login using the `root` token on the `vault-0` pod:
+
+```shell
+kubectl exec -ti vault-0 -- vault login
+```
+
+Next, list all the raft peers:
+
+```shell
+$ kubectl exec -ti vault-0 -- vault operator raft list-peers
+
+Node                                    Address                        State       Voter
+----                                    -------                        -----       -----
+a1799962-8711-7f28-23f0-cea05c8a527d    vault-0.vault-internal:8201    leader      true
+e6876c97-aaaa-a92e-b99a-0aafab105745    vault-1.vault-internal:8201    follower    true
+4b5d7383-ff31-44df-e008-6a606828823b    vault-2.vault-internal:8201    follower    true
+```
+
+Vault with Integrated Storage (Raft) is now ready to use!

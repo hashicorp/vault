@@ -880,6 +880,11 @@ func TestPki_RolePatch(t *testing.T) {
 			Patched: true,
 		},
 		{
+			Field:   "serial_number_source",
+			Before:  "json-csr",
+			Patched: "json",
+		},
+		{
 			Field:   "ou",
 			Before:  []string{"crypto"},
 			Patched: []string{"cryptosec"},
@@ -1140,8 +1145,8 @@ func getPolicyIdentifiersOffCertificate(resp logical.Response) ([]string, error)
 	if err != nil {
 		return nil, err
 	}
-	policyIdentifierStrings := make([]string, len(certificate.PolicyIdentifiers))
-	for index, asnOid := range certificate.PolicyIdentifiers {
+	policyIdentifierStrings := make([]string, len(certificate.Policies))
+	for index, asnOid := range certificate.Policies {
 		policyIdentifierStrings[index] = asnOid.String()
 	}
 	return policyIdentifierStrings, nil

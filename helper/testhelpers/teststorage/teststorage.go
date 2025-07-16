@@ -297,6 +297,10 @@ func ClusterSetup(conf *vault.CoreConfig, opts *vault.TestClusterOptions, setup 
 	if opts != nil {
 		localOpts = *opts
 	}
+	if localOpts.HandlerFunc == nil {
+		localOpts.HandlerFunc = vaulthttp.Handler
+	}
+
 	if setup == nil {
 		setup = InmemBackendSetup
 	}

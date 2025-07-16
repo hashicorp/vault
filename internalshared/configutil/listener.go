@@ -177,7 +177,7 @@ func (l *Listener) Validate(path string) []ConfigError {
 func ParseSingleIPTemplate(ipTmpl string) (string, error) {
 	r := regexp.MustCompile("{{.*?}}")
 	if !r.MatchString(ipTmpl) {
-		return ipTmpl, nil
+		return NormalizeAddr(ipTmpl), nil
 	}
 
 	out, err := template.Parse(ipTmpl)

@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 {{#let (find-by "name" "path" @secret.allFields) as |attr|}}
   {{#if (eq @type "edit")}}
@@ -13,12 +13,27 @@
 
 <hr class="is-marginless has-background-gray-200" />
 {{#if @showJson}}
-  <JsonEditor
-    @title="{{if (eq @type 'create') 'Secret' 'Version'}} data"
-    @value={{this.stringifiedSecretData}}
-    @valueUpdated={{this.handleJson}}
-    @readOnly={{eq @type "details"}}
-  />
+  {{#if (eq @type "details")}}
+    <Hds::CodeBlock
+      data-test-code-block="secret-data"
+      @value={{this.stringifiedSecretData}}
+      @language="json"
+      @hasCopyButton={{true}}
+      @maxHeight="300px"
+      as |CB|
+    >
+      <CB.Title @tag="h3">
+        Version data
+      </CB.Title>
+    </Hds::CodeBlock>
+  {{else}}
+    <JsonEditor
+      @title="{{if (eq @type 'create') 'Secret' 'Version'}} data"
+      @value={{this.stringifiedSecretData}}
+      @valueUpdated={{this.handleJson}}
+      @viewportMargin={{this.viewportMargin}}
+    />
+  {{/if}}
   {{#if (or @modelValidations.secretData.errors this.lintingErrors)}}
     <AlertInline
       @color={{if this.lintingErrors "warning" "critical"}}
@@ -33,7 +48,7 @@
 {{else if (eq @type "details")}}
   {{#each-in @secret.secretData as |key value|}}
     <InfoTableRow @label={{key}} @value={{value}} @alwaysRender={{true}}>
-      <MaskedInput @name={{key}} @value={{value}} @displayOnly={{true}} @allowCopy={{true}} @allowDownload={{true}} />
+      <MaskedInput @name={{key}} @value={{value}} @displayOnly={{true}} @allowCopy={{true}} />
     </InfoTableRow>
   {{else}}
     <InfoTableRow @label="" @value="" @alwaysRender={{true}} />

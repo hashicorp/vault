@@ -62,127 +62,136 @@ func TestTransit_Export_Unknown_ExportType(t *testing.T) {
 func TestTransit_Export_KeyVersion_ExportsCorrectVersion(t *testing.T) {
 	t.Parallel()
 
-	verifyExportsCorrectVersion(t, "encryption-key", "aes128-gcm96")
-	verifyExportsCorrectVersion(t, "encryption-key", "aes256-gcm96")
-	verifyExportsCorrectVersion(t, "encryption-key", "chacha20-poly1305")
-	verifyExportsCorrectVersion(t, "encryption-key", "rsa-2048")
-	verifyExportsCorrectVersion(t, "encryption-key", "rsa-3072")
-	verifyExportsCorrectVersion(t, "encryption-key", "rsa-4096")
-	verifyExportsCorrectVersion(t, "signing-key", "ecdsa-p256")
-	verifyExportsCorrectVersion(t, "signing-key", "ecdsa-p384")
-	verifyExportsCorrectVersion(t, "signing-key", "ecdsa-p521")
-	verifyExportsCorrectVersion(t, "signing-key", "ed25519")
-	verifyExportsCorrectVersion(t, "signing-key", "rsa-2048")
-	verifyExportsCorrectVersion(t, "signing-key", "rsa-3072")
-	verifyExportsCorrectVersion(t, "signing-key", "rsa-4096")
-	verifyExportsCorrectVersion(t, "hmac-key", "aes128-gcm96")
-	verifyExportsCorrectVersion(t, "hmac-key", "aes256-gcm96")
-	verifyExportsCorrectVersion(t, "hmac-key", "chacha20-poly1305")
-	verifyExportsCorrectVersion(t, "hmac-key", "ecdsa-p256")
-	verifyExportsCorrectVersion(t, "hmac-key", "ecdsa-p384")
-	verifyExportsCorrectVersion(t, "hmac-key", "ecdsa-p521")
-	verifyExportsCorrectVersion(t, "hmac-key", "ed25519")
-	verifyExportsCorrectVersion(t, "hmac-key", "hmac")
-	verifyExportsCorrectVersion(t, "public-key", "rsa-2048")
-	verifyExportsCorrectVersion(t, "public-key", "rsa-3072")
-	verifyExportsCorrectVersion(t, "public-key", "rsa-4096")
-	verifyExportsCorrectVersion(t, "public-key", "ecdsa-p256")
-	verifyExportsCorrectVersion(t, "public-key", "ecdsa-p384")
-	verifyExportsCorrectVersion(t, "public-key", "ecdsa-p521")
-	verifyExportsCorrectVersion(t, "public-key", "ed25519")
+	verifyExportsCorrectVersion(t, "encryption-key", "aes128-gcm96", "", "")
+	verifyExportsCorrectVersion(t, "encryption-key", "aes256-gcm96", "", "")
+	verifyExportsCorrectVersion(t, "encryption-key", "chacha20-poly1305", "", "")
+	verifyExportsCorrectVersion(t, "encryption-key", "rsa-2048", "", "")
+	verifyExportsCorrectVersion(t, "encryption-key", "rsa-3072", "", "")
+	verifyExportsCorrectVersion(t, "encryption-key", "rsa-4096", "", "")
+	verifyExportsCorrectVersion(t, "signing-key", "ecdsa-p256", "", "")
+	verifyExportsCorrectVersion(t, "signing-key", "ecdsa-p384", "", "")
+	verifyExportsCorrectVersion(t, "signing-key", "ecdsa-p521", "", "")
+	verifyExportsCorrectVersion(t, "signing-key", "ed25519", "", "")
+	verifyExportsCorrectVersion(t, "signing-key", "rsa-2048", "", "")
+	verifyExportsCorrectVersion(t, "signing-key", "rsa-3072", "", "")
+	verifyExportsCorrectVersion(t, "signing-key", "rsa-4096", "", "")
+	verifyExportsCorrectVersion(t, "hmac-key", "aes128-gcm96", "", "")
+	verifyExportsCorrectVersion(t, "hmac-key", "aes256-gcm96", "", "")
+	verifyExportsCorrectVersion(t, "hmac-key", "chacha20-poly1305", "", "")
+	verifyExportsCorrectVersion(t, "hmac-key", "ecdsa-p256", "", "")
+	verifyExportsCorrectVersion(t, "hmac-key", "ecdsa-p384", "", "")
+	verifyExportsCorrectVersion(t, "hmac-key", "ecdsa-p521", "", "")
+	verifyExportsCorrectVersion(t, "hmac-key", "ed25519", "", "")
+	verifyExportsCorrectVersion(t, "hmac-key", "hmac", "", "")
+	verifyExportsCorrectVersion(t, "public-key", "rsa-2048", "", "")
+	verifyExportsCorrectVersion(t, "public-key", "rsa-3072", "", "")
+	verifyExportsCorrectVersion(t, "public-key", "rsa-4096", "", "")
+	verifyExportsCorrectVersion(t, "public-key", "ecdsa-p256", "", "")
+	verifyExportsCorrectVersion(t, "public-key", "ecdsa-p384", "", "")
+	verifyExportsCorrectVersion(t, "public-key", "ecdsa-p521", "", "")
+	verifyExportsCorrectVersion(t, "public-key", "ed25519", "", "")
 }
 
-func verifyExportsCorrectVersion(t *testing.T, exportType, keyType string) {
-	b, storage := createBackendWithSysView(t)
+func verifyExportsCorrectVersion(t *testing.T, exportType, keyType, parameterSet, ecKeyType string) {
+	t.Run(keyType+":"+ecKeyType, func(t *testing.T) {
+		b, storage := createBackendWithSysView(t)
 
-	// First create a key, v1
-	req := &logical.Request{
-		Storage:   storage,
-		Operation: logical.UpdateOperation,
-		Path:      "keys/foo",
-	}
-	req.Data = map[string]interface{}{
-		"exportable": true,
-		"type":       keyType,
-	}
-	if keyType == "hmac" {
-		req.Data["key_size"] = 32
-	}
-	_, err := b.HandleRequest(context.Background(), req)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	verifyVersion := func(versionRequest string, expectedVersion int) {
+		// First create a key, v1
 		req := &logical.Request{
 			Storage:   storage,
-			Operation: logical.ReadOperation,
-			Path:      fmt.Sprintf("export/%s/foo/%s", exportType, versionRequest),
+			Operation: logical.UpdateOperation,
+			Path:      "keys/foo",
 		}
-		rsp, err := b.HandleRequest(context.Background(), req)
+		req.Data = map[string]interface{}{
+			"exportable": true,
+			"type":       keyType,
+		}
+		if parameterSet != "" {
+			req.Data["parameter_set"] = parameterSet
+		}
+		if ecKeyType != "" {
+			req.Data["hybrid_key_type_pqc"] = "ml-dsa"
+			req.Data["hybrid_key_type_ec"] = ecKeyType
+		}
+		if keyType == "hmac" {
+			req.Data["key_size"] = 32
+		}
+		_, err := b.HandleRequest(context.Background(), req)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		typRaw, ok := rsp.Data["type"]
-		if !ok {
-			t.Fatal("no type returned from export")
-		}
-		typ, ok := typRaw.(string)
-		if !ok {
-			t.Fatalf("could not find key type, resp data is %#v", rsp.Data)
-		}
-		if typ != keyType {
-			t.Fatalf("key type mismatch; %q vs %q", typ, keyType)
-		}
+		verifyVersion := func(versionRequest string, expectedVersion int) {
+			req := &logical.Request{
+				Storage:   storage,
+				Operation: logical.ReadOperation,
+				Path:      fmt.Sprintf("export/%s/foo/%s", exportType, versionRequest),
+			}
+			rsp, err := b.HandleRequest(context.Background(), req)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-		keysRaw, ok := rsp.Data["keys"]
-		if !ok {
-			t.Fatal("could not find keys value")
-		}
-		keys, ok := keysRaw.(map[string]string)
-		if !ok {
-			t.Fatal("could not cast to keys map")
-		}
-		if len(keys) != 1 {
-			t.Fatal("unexpected number of keys found")
-		}
+			typRaw, ok := rsp.Data["type"]
+			if !ok {
+				t.Fatal("no type returned from export")
+			}
+			typ, ok := typRaw.(string)
+			if !ok {
+				t.Fatalf("could not find key type, resp data is %#v", rsp.Data)
+			}
+			if typ != keyType {
+				t.Fatalf("key type mismatch; %q vs %q", typ, keyType)
+			}
 
-		for k := range keys {
-			if k != strconv.Itoa(expectedVersion) {
-				t.Fatalf("expected version %q, received version %q", strconv.Itoa(expectedVersion), k)
+			keysRaw, ok := rsp.Data["keys"]
+			if !ok {
+				t.Fatal("could not find keys value")
+			}
+			keys, ok := keysRaw.(map[string]string)
+			if !ok {
+				t.Fatal("could not cast to keys map")
+			}
+			if len(keys) != 1 {
+				t.Fatal("unexpected number of keys found")
+			}
+
+			for k := range keys {
+				if k != strconv.Itoa(expectedVersion) {
+					t.Fatalf("expected version %q, received version %q", strconv.Itoa(expectedVersion), k)
+				}
 			}
 		}
-	}
 
-	verifyVersion("v1", 1)
-	verifyVersion("1", 1)
-	verifyVersion("latest", 1)
+		verifyVersion("v1", 1)
+		verifyVersion("1", 1)
+		verifyVersion("latest", 1)
 
-	req.Path = "keys/foo/rotate"
-	// v2
-	_, err = b.HandleRequest(context.Background(), req)
-	if err != nil {
-		t.Fatal(err)
-	}
+		req.Path = "keys/foo/rotate"
+		// v2
+		_, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	verifyVersion("v1", 1)
-	verifyVersion("1", 1)
-	verifyVersion("v2", 2)
-	verifyVersion("2", 2)
-	verifyVersion("latest", 2)
+		verifyVersion("v1", 1)
+		verifyVersion("1", 1)
+		verifyVersion("v2", 2)
+		verifyVersion("2", 2)
+		verifyVersion("latest", 2)
 
-	// v3
-	_, err = b.HandleRequest(context.Background(), req)
-	if err != nil {
-		t.Fatal(err)
-	}
+		// v3
+		_, err = b.HandleRequest(context.Background(), req)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	verifyVersion("v1", 1)
-	verifyVersion("1", 1)
-	verifyVersion("v3", 3)
-	verifyVersion("3", 3)
-	verifyVersion("latest", 3)
+		verifyVersion("v1", 1)
+		verifyVersion("1", 1)
+		verifyVersion("v3", 3)
+		verifyVersion("3", 3)
+		verifyVersion("latest", 3)
+	})
 }
 
 func TestTransit_Export_ValidVersionsOnly(t *testing.T) {

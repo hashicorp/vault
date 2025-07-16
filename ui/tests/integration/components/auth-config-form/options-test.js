@@ -9,10 +9,10 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, fillIn, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { methods } from 'vault/helpers/mountable-auth-methods';
+import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 
 const userLockoutSupported = ['approle', 'ldap', 'userpass'];
-const userLockoutUnsupported = methods()
+const userLockoutUnsupported = filterEnginesByMountCategory({ mountCategory: 'auth', isEnterprise: false })
   .map((m) => m.type)
   .filter((m) => !userLockoutSupported.includes(m));
 
@@ -66,7 +66,7 @@ module('Integration | Component | auth-config-form options', function (hooks) {
 
       assert.dom('[data-test-user-lockout-section]').hasText('User lockout configuration');
 
-      await click(GENERAL.inputByAttr('config.listingVisibility'));
+      await click(GENERAL.toggleInput('toggle-config.listingVisibility'));
       await fillIn(GENERAL.inputByAttr('config.tokenType'), 'default-batch');
 
       await click(GENERAL.ttl.toggle('Default Lease TTL'));
@@ -85,7 +85,7 @@ module('Integration | Component | auth-config-form options', function (hooks) {
 
       await click(GENERAL.inputByAttr('config.lockoutDisable'));
 
-      await click('[data-test-save-config]');
+      await click(GENERAL.submitButton);
     });
   }
 
@@ -124,7 +124,7 @@ module('Integration | Component | auth-config-form options', function (hooks) {
         .dom('[data-test-user-lockout-section]')
         .doesNotExist(`${type} method does not render user lockout section`);
 
-      await click(GENERAL.inputByAttr('config.listingVisibility'));
+      await click(GENERAL.toggleInput('toggle-config.listingVisibility'));
       await fillIn(GENERAL.inputByAttr('config.tokenType'), 'default-batch');
 
       await click(GENERAL.ttl.toggle('Default Lease TTL'));
@@ -143,7 +143,7 @@ module('Integration | Component | auth-config-form options', function (hooks) {
         .dom(GENERAL.inputByAttr('config.lockoutDisable'))
         .doesNotExist(`${type} method does not render lockout disable`);
 
-      await click('[data-test-save-config]');
+      await click(GENERAL.submitButton);
     });
   }
 
@@ -178,7 +178,7 @@ module('Integration | Component | auth-config-form options', function (hooks) {
       .dom(GENERAL.inputByAttr('config.tokenType'))
       .doesNotExist('does not render tokenType for token auth method');
 
-    await click(GENERAL.inputByAttr('config.listingVisibility'));
+    await click(GENERAL.toggleInput('toggle-config.listingVisibility'));
     await click(GENERAL.ttl.toggle('Default Lease TTL'));
     await fillIn(GENERAL.ttl.input('Default Lease TTL'), '30');
 
@@ -196,6 +196,6 @@ module('Integration | Component | auth-config-form options', function (hooks) {
       .dom(GENERAL.inputByAttr('config.lockoutDisable'))
       .doesNotExist('token method does not render lockout disable');
 
-    await click('[data-test-save-config]');
+    await click(GENERAL.submitButton);
   });
 });

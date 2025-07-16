@@ -85,7 +85,7 @@ func NewBroker(logger hclog.Logger) (*Broker, error) {
 
 	ent, err := newBrokerEnt()
 	if err != nil {
-		return nil, fmt.Errorf("error creating audit broker extentions: %w", err)
+		return nil, fmt.Errorf("error creating audit broker extensions: %w", err)
 	}
 
 	return &Broker{

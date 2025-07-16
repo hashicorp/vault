@@ -21,7 +21,31 @@ This documentation assumes the Azure method is mounted at the `/auth/azure`
 path in Vault. Since it is possible to enable auth methods at any location,
 please update your API calls accordingly.
 
-## Prerequisites:
+## Token validation ((#token-validation))
+
+Vault validates the resource group (`resource_group_name`), VM name (`vm_name`)
+and VM scale set name (`vmss_name`) parameters against token claims. Depending
+on the identities attached to the machine generating the MSI token, the
+associated claims must include at least one of the following claims
+to pass validation: "xms_mirid" or "xms_az_rid".
+
+System-assigned management identity | "xms_mirid"                                                                                                                                | "xms_az_rid"
+----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------| ---------------
+Enabled                             | `/subscriptions/{subscription-id}/resourcegroups/{resource-group-name}/providers/Microsoft.Compute/virtualMachines/{virtual-machine-name}` | Does not exist
+Not enabled                         | `/subscriptions/{subscription-id}/resourcegroups/{resource-group-name}/providers/Microsoft.ManagedIdentity/userAssignedIdentities/{user-assigned-managed-identity}` |`/subscriptions/{subscription-id}/resourcegroups/{resource-group-name}/providers/Microsoft.Compute/virtualMachines/{virtual-machine-name}`
+
+See [Azure managed identity REST endpoint reference](https://learn.microsoft.com/en-us/azure/app-service/overview-managed-identity?tabs=portal%2Chttp#rest-endpoint-reference) and
+[Managed identities for Azure resources frequently asked questions](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/managed-identities-faq#what-identity-will-imds-default-to-if-i-dont-specify-the-identity-in-the-request) for more details on how to request MSI tokens.
+
+When Vault evaluates the token claims, it checks the validation parameter values
+against the claim parameters:
+
+- `{resource-group-name}` must match `resource_group_name`.
+- `{virtual-machine-name}` must match `vm_name` or `{vmss_name}_{instance-id}` if `vmss_name` is provided.
+
+If either check fails, the login also fails.
+
+## Prerequisites
 
 The Azure auth method requires client credentials to access Azure APIs. The following
 are required to configure the auth method:
@@ -81,10 +105,7 @@ $ vault write auth/azure/login \
     vm_name="test-vm"
 ```
 
-The `role` and `jwt` parameters are required. When using
-`bound_service_principal_ids` and `bound_group_ids` in the token roles, all the
-information is required in the JWT (except for `vm_name`, `vmss_name`, `resource_id`). When
-using other `bound_*` parameters, calls to Azure APIs will be made and
+The `role` and `jwt` parameters are required. The JWT must contain all role binding information (except for `vm_name`, `vmss_name`, and `resource_id`). When using additional `bound_*` parameters beyond `bound_service_principal_ids` or `bound_group_ids`, Azure API calls will be made and
 `subscription_id`, `resource_group_name`, and `vm_name`/`vmss_name` are all required
 and can be obtained through instance metadata.
 
@@ -192,13 +213,25 @@ tool.
    $ vault write auth/azure/role/dev-role \
        policies="prod,dev" \
        bound_subscription_ids=6a1d5988-5917-4221-b224-904cd7e24a25 \
-       bound_resource_groups=vault
+       bound_resource_groups=vault \
+       bound_service_principal_ids=3cb88732-1356-4782-b671-4877166be01a
    ```
 
    Roles are associated with an authentication type/entity and a set of Vault
    policies. Roles are configured with constraints specific to the
    authentication type, as well as overall constraints and configuration for
    the generated auth tokens.
+
+   Note: Each role must specify either `bound_service_principal_ids` or `bound_group_ids` to restrict which Azure identities (service principals or group members) can authenticate to this role.
+   Here's an alternative example using `bound_group_ids`:
+
+   ```shell-session
+   $ vault write auth/azure/role/prod-role \
+       policies="prod" \
+       bound_subscription_ids=6a1d5988-5917-4221-b224-904cd7e24a25 \
+       bound_resource_groups=vault \
+       bound_group_ids=12345678-1234-1234-1234-123456789012
+   ```
 
    For the complete list of role options, please see the [API documentation](/vault/api-docs/auth/azure).
 
@@ -233,6 +266,60 @@ tool.
        --data '{"policies": ["dev", "prod"], ...}' \
        https://127.0.0.1:8200/v1/auth/azure/role/dev-role
    ```
+
+## Root credential rotation
+
+Mounts can rotate root credential keys configured directly within the mount.
+Rotating to a Vault-generated key makes the key value inaccessible to the
+operator and ensures only Vault can operate as a root user to manipulate dynamic
+and static credentials.
+
+```shell-session
+vault write -f auth/azure/rotate-root
+```
+
+### Schedule-based root credential rotation
+
+@include 'alerts/enterprise-only.mdx'
+
+Use the [`rotation_schedule`](/vault/api-docs/auth/azure#rotation_schedule) field
+to configure schedule-based, automatic credential rotation for root credentials in
+the Azure auth engine. For example, the following command set the rotation to
+occur every Saturday at midnight (00:00):
+
+```shell-session
+$ vault write auth/azure/config \
+    ...
+    rotation_schedule="0 * * * SAT"
+    ...
+```
+
+Scheduled root credential rotation can also set a
+[rotation_window](/vault/api-docs/auth/azure#rotation_window) during which the
+scheduled rotation is allowed to occur. Vault will stop trying to rotate the
+credential once the window expires. For example, the following command tells
+Vault to rotate the credential on Saturday at midnight, but only within the span
+of an hour. If Vault cannot rotate the credential by 1:00, due to a failure
+or otherwise, Vault will stop trying to rotate the credential until the next
+scheduled rotation.
+
+```shell-session
+$ vault write auth/azure/config \
+    ...
+    rotation_window="1h" \
+    rotation_schedule="0 * * * SAT"
+    ...
+```
+
+You can temporarily disable root rotation by setting
+[`disable_automated_rotation`](/vault/api-docs/auth/azure#disable_automated_rotation)
+to `true`. Setting the `disable_automated_rotation` field prevent any rotation
+of the root credential until the field is reset to `false`. If you use
+`rotation_period`, setting `disable_automated_rotation` also resets the credential
+TTL.
+
+For more details on rotating root credentials in the Azure plugin, refer to the
+[Root credential rotation](/vault/api-docs/auth/azure#rotate-root) API docs.
 
 ## Azure managed identities
 

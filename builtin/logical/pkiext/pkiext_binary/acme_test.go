@@ -8,7 +8,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -30,6 +29,7 @@ import (
 	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	hDocker "github.com/hashicorp/vault/sdk/helper/docker"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/acme"
@@ -704,7 +704,7 @@ func doAcmeValidationWithGoLibrary(t *testing.T, directoryUrl string, acmeOrderI
 	}
 	httpClient := &http.Client{Transport: tr}
 
-	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa account key")
 	logger.Trace("Using the following url for the ACME directory", "url", directoryUrl)
 	acmeClient := &acme.Client{
@@ -957,7 +957,7 @@ func SubtestACMEStepDownNode(t *testing.T, cluster *VaultPkiCluster) {
 		DNSNames: []string{hostname, hostname},
 	}
 
-	accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	require.NoError(t, err, "failed creating rsa account key")
 
 	acmeClient := &acme.Client{

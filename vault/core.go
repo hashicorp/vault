@@ -45,11 +45,13 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/hashicorp/vault/audit"
 	"github.com/hashicorp/vault/command/server"
+	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/identity/mfa"
 	"github.com/hashicorp/vault/helper/locking"
 	"github.com/hashicorp/vault/helper/metricsutil"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/helper/osutil"
+	"github.com/hashicorp/vault/helper/trace"
 	"github.com/hashicorp/vault/physical/raft"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
@@ -62,6 +64,7 @@ import (
 	"github.com/hashicorp/vault/shamir"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/eventbus"
+	"github.com/hashicorp/vault/vault/observations"
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/hashicorp/vault/vault/quotas"
 	vaultseal "github.com/hashicorp/vault/vault/seal"
@@ -233,7 +236,8 @@ type unlockInformation struct {
 }
 
 type raftInformation struct {
-	challenge           *wrapping.BlobInfo
+	// challenge is in ciphertext
+	challenge           []byte
 	leaderClient        *api.Client
 	leaderBarrierConfig *SealConfig
 	nonVoter            bool
@@ -420,6 +424,9 @@ type Core struct {
 	// renewal, expiration and revocation
 	expiration *ExpirationManager
 
+	// the rotation manager handles periodic rotation of credentials
+	rotationManager *RotationManager
+
 	// rollback manager is used to run rollbacks periodically
 	rollback *RollbackManager
 
@@ -457,6 +464,8 @@ type Core struct {
 
 	defaultLeaseTTL time.Duration
 	maxLeaseTTL     time.Duration
+
+	removeIrrevocableLeaseAfter time.Duration
 
 	// baseLogger is used to avoid ResetNamed as it strips useful prefixes in
 	// e.g. testing
@@ -528,6 +537,8 @@ type Core struct {
 	rpcClientConn *grpc.ClientConn
 	// The grpc forwarding client
 	rpcForwardingClient *forwardingClient
+	// The time of the last successful request forwarding heartbeat
+	rpcLastSuccessfulHeartbeat *atomic.Value
 	// The UUID used to hold the leader lock. Only set on active node
 	leaderUUID string
 
@@ -550,11 +561,13 @@ type Core struct {
 	introspectionEnabled     bool
 	introspectionEnabledLock sync.Mutex
 
-	// pluginDirectory is the location vault will look for plugin binaries
+	// pluginDirectory is the location vault will look for old style plugins, it is
+	// the root for all plugin artifacts.
 	pluginDirectory string
-	// pluginTmpdir is the location vault will use for containerized plugin
+
+	// containerPluginTmpdir is the location vault will use for containerized plugin
 	// temporary files
-	pluginTmpdir string
+	containerPluginTmpdir string
 
 	// pluginFileUid is the uid of the plugin files and directory
 	pluginFileUid int
@@ -679,6 +692,9 @@ type Core struct {
 	// disableAutopilot is used to disable the autopilot subsystem in raft storage
 	disableAutopilot bool
 
+	// allowAuditLogPrefixing must be enabled for audit devices to use a prefix (more secure without)
+	allowAuditLogPrefixing bool
+
 	// enable/disable identifying response headers
 	enableResponseHeaderHostname   bool
 	enableResponseHeaderRaftNodeID bool
@@ -708,6 +724,8 @@ type Core struct {
 
 	events *eventbus.EventBus
 
+	observations *observations.ObservationSystem
+
 	// writeForwardedPaths are a set of storage paths which are GRPC forwarded
 	// to the active node of the primary cluster, when present. This PathManager
 	// contains absolute paths that we intend to forward (and template) when
@@ -732,6 +750,9 @@ type Core struct {
 	clusterAddrBridge *raft.ClusterAddrBridge
 
 	censusManager *CensusManager
+
+	// Activation flags for enterprise features that require a one-time activation
+	FeatureActivationFlags *activationflags.FeatureActivationFlags
 }
 
 func (c *Core) ActiveNodeClockSkewMillis() int64 {
@@ -830,6 +851,8 @@ type CoreConfig struct {
 
 	MaxLeaseTTL time.Duration
 
+	RemoveIrrevocableLeaseAfter time.Duration
+
 	ClusterName string
 
 	ClusterCipherSuites string
@@ -886,6 +909,9 @@ type CoreConfig struct {
 	// DisableAutopilot is used to disable autopilot subsystem in raft storage
 	DisableAutopilot bool
 
+	// AllowAuditLogPrefixing must be enabled for audit devices to use a prefix (more secure without)
+	AllowAuditLogPrefixing bool
+
 	// Whether to send headers in the HTTP response showing hostname or raft node ID
 	EnableResponseHeaderHostname   bool
 	EnableResponseHeaderRaftNodeID bool
@@ -906,6 +932,9 @@ type CoreConfig struct {
 	// AdministrativeNamespacePath is used to configure the administrative namespace, which has access to some sys endpoints that are
 	// only accessible in the root namespace, currently sys/audit-hash and sys/monitor.
 	AdministrativeNamespacePath string
+
+	// ObservationSystemConfig is the config for the Observation System
+	ObservationSystemConfig *observations.ObservationSystemConfig
 
 	NumRollbackWorkers int
 
@@ -1038,6 +1067,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 		defaultLeaseTTL:                conf.DefaultLeaseTTL,
 		maxLeaseTTL:                    conf.MaxLeaseTTL,
+		removeIrrevocableLeaseAfter:    conf.RemoveIrrevocableLeaseAfter,
 		sentinelTraceDisabled:          conf.DisableSentinelTrace,
 		cachingDisabled:                conf.DisableCache,
 		clusterName:                    conf.ClusterName,
@@ -1074,6 +1104,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		numExpirationWorkers:           conf.NumExpirationWorkers,
 		raftFollowerStates:             raft.NewFollowerStates(),
 		disableAutopilot:               conf.DisableAutopilot,
+		allowAuditLogPrefixing:         conf.AllowAuditLogPrefixing,
 		enableResponseHeaderHostname:   conf.EnableResponseHeaderHostname,
 		enableResponseHeaderRaftNodeID: conf.EnableResponseHeaderRaftNodeID,
 		mountMigrationTracker:          &sync.Map{},
@@ -1091,6 +1122,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		echoDuration:                   uberAtomic.NewDuration(0),
 		activeNodeClockSkewMillis:      uberAtomic.NewInt64(0),
 		periodicLeaderRefreshInterval:  conf.PeriodicLeaderRefreshInterval,
+		rpcLastSuccessfulHeartbeat:     new(atomic.Value),
 	}
 
 	c.standbyStopCh.Store(make(chan struct{}))
@@ -1251,7 +1283,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		}
 	}
 	if conf.PluginTmpdir != "" {
-		c.pluginTmpdir, err = filepath.Abs(conf.PluginTmpdir)
+		c.containerPluginTmpdir, err = filepath.Abs(conf.PluginTmpdir)
 		if err != nil {
 			return nil, fmt.Errorf("core setup failed, could not verify plugin tmpdir: %w", err)
 		}
@@ -1342,15 +1374,36 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if err != nil {
 		return nil, err
 	}
-	events, err := eventbus.NewEventBus(nodeID, eventsLogger)
+	events, err := eventbus.NewEventBus(nodeID, eventsLogger, c)
 	if err != nil {
 		return nil, err
 	}
 	c.events = events
 	c.events.Start()
 
-	c.clusterAddrBridge = conf.ClusterAddrBridge
+	// Create the snapshot manager if we're on enterprise and running raft
+	// storage backend.
+	c.createSnapshotManager()
 
+	observationsLogger := conf.Logger.Named("observations")
+	observationSystemConfig := conf.ObservationSystemConfig
+	if observationSystemConfig != nil {
+		if observationSystemConfig.LedgerPath != "" {
+			config := &observations.NewObservationSystemConfig{
+				ObservationSystemConfig: observationSystemConfig,
+				LocalNodeId:             nodeID,
+				Logger:                  observationsLogger,
+			}
+			observations, err := observations.NewObservationSystem(config)
+			if err != nil {
+				return nil, err
+			}
+			c.observations = observations
+			c.observations.Start()
+		}
+	}
+
+	c.clusterAddrBridge = conf.ClusterAddrBridge
 	return c, nil
 }
 
@@ -1440,11 +1493,14 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 	// System
 	logicalBackends[mountTypeSystem] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 		sysBackendLogger := logger.Named("system")
+
 		c.AddLogger(sysBackendLogger)
 		b := NewSystemBackend(c, sysBackendLogger, config)
+
 		if err := b.Setup(ctx, config); err != nil {
 			return nil, err
 		}
+
 		return b, nil
 	}
 
@@ -1452,7 +1508,18 @@ func (c *Core) configureLogicalBackends(backends map[string]logical.Factory, log
 	logicalBackends[mountTypeIdentity] = func(ctx context.Context, config *logical.BackendConfig) (logical.Backend, error) {
 		identityLogger := logger.Named("identity")
 		c.AddLogger(identityLogger)
-		return NewIdentityStore(ctx, c, config, identityLogger)
+
+		idStore, err := NewIdentityStore(ctx, c, config, identityLogger)
+		if err != nil {
+			return nil, fmt.Errorf("error creating identity store: %w", err)
+		}
+
+		// Wire up the idStoreBackend to support the activation flag
+		if c.systemBackend != nil {
+			c.systemBackend.idStoreBackend = idStore.Backend
+		}
+
+		return idStore, nil
 	}
 
 	c.logicalBackends = logicalBackends
@@ -2456,8 +2523,30 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 	}
 
 	// Run setup-like functions
-	if err := runUnsealSetupFunctions(ctx, buildUnsealSetupFunctionSlice(c)); err != nil {
+	if err := runUnsealSetupFunctions(ctx, buildUnsealSetupFunctionSlice(c, true)); err != nil {
 		return err
+	}
+
+	if c.isPrimary() {
+		// Reload the development cluster setting from config in case the cluster is newly promoted and the setting
+		// in Census Manager is a holdover from the old primary.
+		if err := c.reloadDevelopmentClusterSetting(); err != nil {
+			return err
+		}
+		// Store the primary's development cluster setting to propagate it to any secondaries
+		if err := c.persistDevelopmentClusterSetting(ctx); err != nil {
+			return err
+		}
+	} else {
+		// If we can find a stored development cluster setting, and it is different from what was set in our config,
+		// then we need to log an error warning that the value is changing and update the census manager with the new setting.
+		developmentCluster, err := c.getDevelopmentClusterSetting(ctx)
+		if err == nil && developmentCluster != c.DevelopmentCluster() {
+			c.logger.Error("development cluster setting in config does not match that of the primary, updating to follow the primary config setting")
+			c.SetDevelopmentCluster(developmentCluster)
+		} else if err != nil {
+			return err
+		}
 	}
 
 	if !c.IsDRSecondary() {
@@ -2541,7 +2630,7 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 		BuiltinRegistry:      c.builtinRegistry,
 		CatalogView:          NewBarrierView(c.barrier, pluginCatalogPath),
 		PluginDirectory:      c.pluginDirectory,
-		Tmpdir:               c.pluginTmpdir,
+		Tmpdir:               c.containerPluginTmpdir,
 		EnableMlock:          c.enableMlock,
 		PluginRuntimeCatalog: c.pluginRuntimeCatalog,
 	})
@@ -2557,7 +2646,7 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 // buildUnsealSetupFunctionSlice returns a slice of functions, tailored for this
 // Core's replication state, that can be passed to the runUnsealSetupFunctions
 // function.
-func buildUnsealSetupFunctionSlice(c *Core) []func(context.Context) error {
+func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Context) error {
 	// setupFunctions is a slice of functions that need to be called in order,
 	// that if any return an error, processing should immediately cease.
 	setupFunctions := []func(context.Context) error{
@@ -2585,6 +2674,9 @@ func buildUnsealSetupFunctionSlice(c *Core) []func(context.Context) error {
 		func(ctx context.Context) error {
 			return c.setupHeaderHMACKey(ctx, false)
 		},
+		func(ctx context.Context) error {
+			return c.EntSetupUIDefaultAuth(ctx)
+		},
 	}
 
 	// If this server is not part of a Disaster Recovery secondary cluster,
@@ -2607,10 +2699,18 @@ func buildUnsealSetupFunctionSlice(c *Core) []func(context.Context) error {
 		setupFunctions = append(setupFunctions, func(_ context.Context) error {
 			return c.setupExpiration(expireLeaseStrategyFairsharing)
 		})
+		setupFunctions = append(setupFunctions, func(_ context.Context) error {
+			return c.startRotation()
+		})
 		setupFunctions = append(setupFunctions, c.loadAudits)
 		setupFunctions = append(setupFunctions, c.setupAuditedHeadersConfig)
 		setupFunctions = append(setupFunctions, c.setupAudits)
-		setupFunctions = append(setupFunctions, c.loadIdentityStoreArtifacts)
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			if c.identityStore == nil {
+				return nil
+			}
+			return c.identityStore.loadArtifacts(ctx, isActive)
+		})
 		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
 			return loadPolicyMFAConfigs(ctx, c)
 		})
@@ -2619,6 +2719,10 @@ func buildUnsealSetupFunctionSlice(c *Core) []func(context.Context) error {
 			return nil
 		})
 		setupFunctions = append(setupFunctions, c.loadLoginMFAConfigs)
+
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			return c.EntSetupUIDefaultAuth(ctx)
+		})
 	}
 
 	return setupFunctions
@@ -2704,6 +2808,10 @@ func (c *Core) runUnsealSetupForPrimary(ctx context.Context, logger log.Logger) 
 // requires the Vault to be unsealed such as mount tables, logical backends,
 // credential stores, etc.
 func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc, unsealer UnsealStrategy) (retErr error) {
+	if stopTrace := c.tracePostUnsealIfEnabled(); stopTrace != nil {
+		defer stopTrace()
+	}
+
 	defer metrics.MeasureSince([]string{"core", "post_unseal"}, time.Now())
 
 	// Clear any out
@@ -2819,6 +2927,41 @@ func (c *Core) postUnseal(ctx context.Context, ctxCancelFunc context.CancelFunc,
 	return nil
 }
 
+// tracePostUnsealIfEnabled checks if post-unseal tracing is enabled in the server
+// config and starts a go trace if it is, returning a stop function to be called once
+// the post-unseal process is complete.
+func (c *Core) tracePostUnsealIfEnabled() (stop func()) {
+	// use rawConfig to allow config hot-reload of EnablePostUnsealTrace via SIGHUP
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		c.logger.Warn("failed to get raw config to check enable_post_unseal_trace")
+		return nil
+	}
+
+	if !conf.(*server.Config).EnablePostUnsealTrace {
+		return nil
+	}
+
+	dir := conf.(*server.Config).PostUnsealTraceDir
+
+	traceFile, stopTrace, err := trace.StartDebugTrace(dir, "post-unseal")
+	if err != nil {
+		c.logger.Warn("failed to start post-unseal trace", "error", err)
+		return nil
+	}
+
+	c.logger.Info("post-unseal trace started", "file", traceFile)
+
+	return func() {
+		err := stopTrace()
+		if err != nil {
+			c.logger.Warn("failure when stopping post-unseal trace", "error", err)
+			return
+		}
+		c.logger.Info("post-unseal trace completed", "file", traceFile)
+	}
+}
+
 // preSeal is invoked before the barrier is sealed, allowing
 // for any state teardown required.
 func (c *Core) preSeal() error {
@@ -2855,13 +2998,19 @@ func (c *Core) preSeal() error {
 	if err := c.teardownAudits(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down audits: %w", err))
 	}
+	// Ensure that the ActivityLog and CensusManager are both completely torn
+	// down before stopping the ExpirationManager. This ordering is critical,
+	// due to a tight coupling between the ActivityLog, CensusManager, and
+	// ExpirationManager for product usage reporting.
+	c.stopActivityLog()
+	if err := c.teardownCensusManager(); err != nil {
+		result = multierror.Append(result, fmt.Errorf("error tearing down reporting agent: %w", err))
+	}
 	if err := c.stopExpiration(); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error stopping expiration: %w", err))
 	}
-	c.stopActivityLog()
-	// Clean up census on seal
-	if err := c.teardownCensusManager(); err != nil {
-		result = multierror.Append(result, fmt.Errorf("error tearing down reporting agent: %w", err))
+	if err := c.stopRotation(); err != nil {
+		result = multierror.Append(result, fmt.Errorf("error stopping rotation: %w", err))
 	}
 	if err := c.teardownCredentials(context.Background()); err != nil {
 		result = multierror.Append(result, fmt.Errorf("error tearing down credentials: %w", err))
@@ -3564,6 +3713,15 @@ func (c *Core) SanitizedConfig() map[string]interface{} {
 func (c *Core) LogFormat() string {
 	conf := c.rawConfig.Load()
 	return conf.(*server.Config).LogFormat
+}
+
+// administrativeNamespacePath returns the configured administrative namespace path.
+func (c *Core) administrativeNamespacePath() string {
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return ""
+	}
+	return conf.(*server.Config).AdministrativeNamespacePath
 }
 
 // LogLevel returns the log level provided by level provided by config, CLI flag, or env
@@ -4473,6 +4631,11 @@ func (c *Core) Events() *eventbus.EventBus {
 	return c.events
 }
 
+// Observations returns a reference to the observations system for recording observations.
+func (c *Core) Observations() *observations.ObservationSystem {
+	return c.observations
+}
+
 func (c *Core) SetSeals(ctx context.Context, grabLock bool, barrierSeal Seal, secureRandomReader io.Reader, shouldRewrap bool) error {
 	return c.setSeals(ctx, grabLock, barrierSeal, secureRandomReader, shouldRewrap, true)
 }
@@ -4573,3 +4736,24 @@ func (c *Core) setupAuditedHeadersConfig(ctx context.Context) error {
 
 	return nil
 }
+
+// IsRemovedFromCluster checks whether this node has been removed from the
+// cluster. This is only applicable to physical HA backends that satisfy the
+// RemovableNodeHABackend interface. The value of the `ok` result will be false
+// if the HA and underlyingPhysical backends are nil or do not support this operation.
+func (c *Core) IsRemovedFromCluster() (removed, ok bool) {
+	removableNodeHA := c.getRemovableHABackend()
+	if removableNodeHA == nil {
+		return false, false
+	}
+
+	return removableNodeHA.IsRemoved(), true
+}
+
+func (c *Core) shutdownRemovedNode() {
+	go func() {
+		c.ShutdownCoreError(errRemovedHANode)
+	}()
+}
+
+var errRemovedHANode = errors.New("node has been removed from the HA cluster")

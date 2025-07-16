@@ -492,8 +492,17 @@ func (b *backend) pathImportIssuers(ctx context.Context, req *logical.Request, d
 	// Also while we're here, we should let the user know the next steps.
 	// In particular, if there's no default AIA URLs configuration, we should
 	// tell the user that's probably next.
-	if entries, err := getGlobalAIAURLs(ctx, req.Storage); err == nil && len(entries.IssuingCertificates) == 0 && len(entries.CRLDistributionPoints) == 0 && len(entries.OCSPServers) == 0 {
-		response.AddWarning("This mount hasn't configured any authority information access (AIA) fields; this may make it harder for systems to find missing certificates in the chain or to validate revocation status of certificates. Consider updating /config/urls or the newly generated issuer with this information.")
+	entries, err := getGlobalAIAURLs(ctx, req.Storage)
+	if err != nil {
+		response.AddWarning(fmt.Sprintf("error reading authority information access (AIA) fields: %v", err.Error()))
+	}
+	if err == nil {
+		if len(entries.IssuingCertificates) == 0 && len(entries.CRLDistributionPoints) == 0 && len(entries.DeltaCRLDistributionPoints) == 0 && len(entries.OCSPServers) == 0 {
+			response.AddWarning("This mount hasn't configured any authority information access (AIA) fields; this may make it harder for systems to find missing certificates in the chain or to validate revocation status of certificates. Consider updating /config/urls or the newly generated issuer with this information.")
+		}
+		if len(entries.CRLDistributionPoints) == 0 && len(entries.DeltaCRLDistributionPoints) != 0 {
+			response.AddWarning("delta crl distribution points were set, but no base crl distribution points were set.")
+		}
 	}
 
 	return response, nil
@@ -516,6 +525,7 @@ secret-keys.
 
 func pathRevokeIssuer(b *backend) *framework.Path {
 	fields := addIssuerRefField(map[string]*framework.FieldSchema{})
+	responseFields := issuerResponseFields(true)
 
 	return &framework.Path{
 		Pattern: "issuer/" + framework.GenericNameRegex(issuerRefParam) + "/revoke",
@@ -534,83 +544,7 @@ func pathRevokeIssuer(b *backend) *framework.Path {
 				Responses: map[int][]framework.Response{
 					http.StatusOK: {{
 						Description: "OK",
-						Fields: map[string]*framework.FieldSchema{
-							"issuer_id": {
-								Type:        framework.TypeString,
-								Description: `ID of the issuer`,
-								Required:    true,
-							},
-							"issuer_name": {
-								Type:        framework.TypeString,
-								Description: `Name of the issuer`,
-								Required:    true,
-							},
-							"key_id": {
-								Type:        framework.TypeString,
-								Description: `ID of the Key`,
-								Required:    true,
-							},
-							"certificate": {
-								Type:        framework.TypeString,
-								Description: `Certificate`,
-								Required:    true,
-							},
-							"manual_chain": {
-								Type:        framework.TypeCommaStringSlice,
-								Description: `Manual Chain`,
-								Required:    true,
-							},
-							"ca_chain": {
-								Type:        framework.TypeCommaStringSlice,
-								Description: `Certificate Authority Chain`,
-								Required:    true,
-							},
-							"leaf_not_after_behavior": {
-								Type:        framework.TypeString,
-								Description: ``,
-								Required:    true,
-							},
-							"usage": {
-								Type:        framework.TypeString,
-								Description: `Allowed usage`,
-								Required:    true,
-							},
-							"revocation_signature_algorithm": {
-								Type:        framework.TypeString,
-								Description: `Which signature algorithm to use when building CRLs`,
-								Required:    true,
-							},
-							"revoked": {
-								Type:        framework.TypeBool,
-								Description: `Whether the issuer was revoked`,
-								Required:    true,
-							},
-							"issuing_certificates": {
-								Type:        framework.TypeCommaStringSlice,
-								Description: `Specifies the URL values for the Issuing Certificate field`,
-								Required:    true,
-							},
-							"crl_distribution_points": {
-								Type:        framework.TypeStringSlice,
-								Description: `Specifies the URL values for the CRL Distribution Points field`,
-								Required:    true,
-							},
-							"ocsp_servers": {
-								Type:        framework.TypeStringSlice,
-								Description: `Specifies the URL values for the OCSP Servers field`,
-								Required:    true,
-							},
-							"revocation_time": {
-								Type:        framework.TypeInt64,
-								Description: `Time of revocation`,
-								Required:    false,
-							},
-							"revocation_time_rfc3339": {
-								Type:        framework.TypeTime,
-								Description: `RFC formatted time of revocation`,
-								Required:    false,
-							},
-						},
+						Fields:      responseFields,
 					}},
 				},
 				// Read more about why these flags are set in backend.go

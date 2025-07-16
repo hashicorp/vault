@@ -46,4 +46,31 @@ module('Unit | Service | version', function (hooks) {
     service.features = ['DR Replication'];
     assert.true(service.hasDRReplication);
   });
+
+  // SHOW SECRETS SYNC TESTS
+  test('hasSecretsSync: it returns false when version is community', function (assert) {
+    const service = this.owner.lookup('service:version');
+    service.type = 'community';
+    assert.false(service.hasSecretsSync);
+  });
+
+  test('hasSecretsSync: it returns true when HVD managed', function (assert) {
+    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+    const service = this.owner.lookup('service:version');
+    service.type = 'enterprise';
+    assert.true(service.hasSecretsSync);
+  });
+
+  test('hasSecretsSync: it returns false when not on enterprise license', function (assert) {
+    const service = this.owner.lookup('service:version');
+    service.type = 'enterprise';
+    service.features = ['replication'];
+    assert.false(service.hasSecretsSync);
+  });
+  test('hasSecretsSync: it returns true when  on enterprise license', function (assert) {
+    const service = this.owner.lookup('service:version');
+    service.type = 'enterprise';
+    service.features = ['secrets-sync'];
+    assert.false(service.hasSecretsSync);
+  });
 });

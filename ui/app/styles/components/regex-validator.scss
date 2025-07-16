@@ -1,3 +1,7 @@
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -14,12 +18,12 @@
   flex: 0 1 auto;
 }
 .regex-group {
-  font-family: $family-monospace;
-  font-size: $size-8;
-  color: $ui-gray-600;
+  font-family: font_variables.$family-monospace;
+  font-size: size_variables.$size-8;
+  color: color_variables.$ui-gray-600;
 }
 .regex-group-position {
-  background-color: $ui-gray-200;
+  background-color: color_variables.$ui-gray-200;
   border-radius: 3px;
   padding-top: 5px;
   padding-bottom: 4px;
@@ -29,5 +33,5 @@
   }
 }
 .regex-group-value {
-  margin-right: $spacing-16;
+  margin-right: size_variables.$spacing-16;
 }

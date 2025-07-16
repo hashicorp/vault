@@ -11,10 +11,12 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/helper/identity"
 	"github.com/hashicorp/vault/helper/namespace"
 	ldaphelper "github.com/hashicorp/vault/helper/testhelpers/ldap"
 	"github.com/hashicorp/vault/helper/testhelpers/minimal"
 	"github.com/hashicorp/vault/sdk/helper/ldaputil"
+	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,10 +32,10 @@ func TestIdentityStore_ExternalGroupMemberships_DifferentMounts(t *testing.T) {
 	require.NoError(t, err)
 	entityID := secret.Data["id"].(string)
 
-	cleanup, config1 := ldaphelper.PrepareTestContainer(t, "master")
+	cleanup, config1 := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
 	defer cleanup()
 
-	cleanup2, config2 := ldaphelper.PrepareTestContainer(t, "master")
+	cleanup2, config2 := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
 	defer cleanup2()
 
 	setupFunc := func(path string, cfg *ldaputil.ConfigEntry) string {
@@ -222,7 +224,7 @@ func TestIdentityStore_Integ_GroupAliases(t *testing.T) {
 		t.Fatalf("bad: group alias: %#v\n", aliasMap)
 	}
 
-	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
 	defer cleanup()
 
 	// Configure LDAP auth
@@ -457,7 +459,7 @@ func TestIdentityStore_Integ_RemoveFromExternalGroup(t *testing.T) {
 		t.Fatalf("bad: group alias: %#v\n", aliasMap)
 	}
 
-	cleanup, cfg := ldaphelper.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldaphelper.PrepareTestContainer(t, ldaphelper.DefaultVersion)
 	defer cleanup()
 
 	// Configure LDAP auth
@@ -641,4 +643,25 @@ func addRemoveLdapGroupMember(t *testing.T, cfg *ldaputil.ConfigEntry, userCN st
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func findEntityFromDuplicateSet(t *testing.T, c *vault.TestClusterCore, entityIDs []string) *identity.Entity {
+	t.Helper()
+
+	var entity *identity.Entity
+
+	// Try fetch each ID and ensure exactly one is present
+	found := 0
+	for _, entityID := range entityIDs {
+		e, err := c.IdentityStore().MemDBEntityByID(entityID, true)
+		require.NoError(t, err)
+		if e != nil {
+			found++
+			entity = e
+		}
+	}
+	// More than one means they didn't merge as expected!
+	require.Equal(t, found, 1,
+		"node %s does not have exactly one duplicate from the set", c.NodeID)
+	return entity
 }

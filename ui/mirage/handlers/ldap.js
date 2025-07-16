@@ -30,9 +30,32 @@ export default function (server) {
   };
   const listRecords = (schema, dbKey, query = {}) => {
     const records = schema.db[dbKey].where(query);
+    const keys = records.map(({ name }) => {
+      if (name.includes('/')) {
+        const [parent, child] = name.split('/');
+        // query.name is only passed by listOrGetRecord and means we want to list children of admin/
+        // otherwise this is the request for all roles in an engine so we return the top-level paths
+        return query?.name ? child : `${parent}/`;
+      }
+      return name;
+    });
+
     return {
-      data: { keys: records.map((record) => record.name) },
+      data: { keys },
     };
+  };
+
+  const listOrGetRecord = (schema, req, type) => {
+    const dbKey = type ? 'ldapRoles' : 'ldapLibraries';
+    const query = type ? { type, name: `admin/child-${type}-role` } : { name: 'admin/test-library' };
+    if (req.queryParams.list) {
+      // the mirage database has setup all hierarchical names to be prefixed with "admin/"
+      // while passing a query with specific name is not flexible, for simplicity
+      // we only seeded the mirage db with one hierarchical resource for each role and a library
+      return listRecords(schema, dbKey, query);
+    }
+    // otherwise we want to view details for a specific resource
+    return getRecord(schema, req, dbKey);
   };
 
   // config
@@ -41,8 +64,10 @@ export default function (server) {
   // roles
   server.post('/:backend/static-role/:name', (schema, req) => createOrUpdateRecord(schema, req, 'ldapRoles'));
   server.post('/:backend/role/:name', (schema, req) => createOrUpdateRecord(schema, req, 'ldapRoles'));
-  server.get('/:backend/static-role/:name', (schema, req) => getRecord(schema, req, 'ldapRoles', 'static'));
-  server.get('/:backend/role/:name', (schema, req) => getRecord(schema, req, 'ldapRoles', 'dynamic'));
+  // if the role is hierarchical the name ends in a forward slash so we make a list request
+  server.get('/:backend/static-role/*name', (schema, req) => listOrGetRecord(schema, req, 'static'));
+  server.get('/:backend/role/*name', (schema, req) => listOrGetRecord(schema, req, 'dynamic'));
+
   server.get('/:backend/static-role', (schema) => listRecords(schema, 'ldapRoles', { type: 'static' }));
   server.get('/:backend/role', (schema) => listRecords(schema, 'ldapRoles', { type: 'dynamic' }));
   // role credentials
@@ -54,9 +79,9 @@ export default function (server) {
   }));
   // libraries
   server.post('/:backend/library/:name', (schema, req) => createOrUpdateRecord(schema, req, 'ldapLibraries'));
-  server.get('/:backend/library/:name', (schema, req) => getRecord(schema, req, 'ldapLibraries'));
+  server.get('/:backend/library/*name', (schema, req) => listOrGetRecord(schema, req));
   server.get('/:backend/library', (schema) => listRecords(schema, 'ldapLibraries'));
-  server.get('/:backend/library/:name/status', (schema) => {
+  server.get('/:backend/library/*name/status', (schema) => {
     const data = schema.db['ldapAccountStatuses'].reduce((prev, curr) => {
       prev[curr.account] = {
         available: curr.available,

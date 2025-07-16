@@ -89,7 +89,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	} else {
 		// This is still acceptable as bcrypt will still make sure it takes
 		// a long time, it's just nicer to be random if possible
-		userPassword = []byte("dummy")
+		userPassword = []byte(strings.Repeat("dummy", 12))
 	}
 
 	// Check for a password match. Check for a hash collision for Vault 0.2+,

@@ -1,0 +1,74 @@
+---
+layout: docs
+page_title: Transit auto-unseal best practices
+description: >-
+  Best practices for using the Transit plugin for auto-unsealing production
+  Vault clusters.
+---
+
+# Auto-unseal best practices for the Transit plugin
+
+This document provides a framework for creating a usable solution for auto-unseal using Vault when HSM or cloud-based KMS auto-unseal mechanism is not available for your environment, such as in an internal data center deployment.
+
+## Glossary
+
+- **Region**: A networking environment that is private, low latency, and high bandwidth. This excludes communication that would traverse the public internet and typically would be a single physical data center or a cloud region. A region typically comprises one or more availability zones.
+- **Cluster**: A complete deployment unit for operating Vault in a highly-available manner. Consists of **one** active Vault node and any number of standby and/or performance standby Vault nodes. All nodes in a single cluster share the same storage backend for persisting data.
+- **Primary cluster**: Vault Enterprise replication modes use a leader-follower pattern. The leader cluster is referred as a primary cluster. In a Vault replication relationship, the primary cluster is responsible for writing all shared data to the configured storage backend.
+- **Secondary cluster**: Vault Enterprise replication modes use a leader-follower pattern. The follower cluster is referred as the secondary cluster. Data is streamed from the primary cluster to all configured secondary clusters.
+
+## Transit secrets engine
+
+The transit secrets engine handles cryptographic functions on data in transit. Vault doesn't store the data sent to the secrets engine. It is also referred to as "cryptography as a service" or "encryption as a service." The transit secrets engine can also sign and verify data, generate hashes and HMACs of data, and act as a random bytes source.
+
+The primary use case for the transit secrets engine is to encrypt data from applications while still storing that encrypted data in some primary data store. This relieves the burden of proper encryption/decryption from application developers and pushes the responsibility onto Vault's operators.
+
+Key derivation is supported, which allows you to use the same key for multiple purposes by deriving a new key based on a user-supplied context value. In this mode, transit secrets engine can support convergent encryption, allowing the same input values to produce the same ciphertext.
+
+Datakey generation allows processes to request a high-entropy key of a given bit length be returned to them, encrypted with the named key. Usually, this also returns the key in plaintext to allow for immediate use, but you can disable this for auditing requirements.
+
+Vault can use an external Vault cluster’s mounted transit secrets engine to be the trusted system for decrypting unseal material, allowing for the automation of unseal operations. This operation assumes the sealed Vault server knows the location of its unsealing Vault, as well as a valid token with appropriate permissions to encrypt and decrypt against a known transit key.
+
+## Recommended configuration
+
+Provide unsealing facilities to your Vault clusters by standing up a minimally configured Vault cluster solely to hold the transit key for the unseal operation. This Vault cluster is not meant to serve general client requests and has lower resilience requirements. The desire is often for a small “Unseal as a Service” Vault with minimal overhead and complexity.
+
+However, keep in mind that this unsealing Vault cluster will become an entity in the chain of protection for your primary Vault cluster’s secret data. Therefore, it still contains sensitive material.
+
+You can deploy the unsealing Vault cluster on a small virtual machine or container. To minimize the resource, it can run as a single-node cluster. For simplicity, using a non-HA supporting backend, such as a [filesystem storage backend](/vault/docs/configuration/storage/filesystem),  is a common practice.
+
+## Policy requirement
+
+The primary Vault cluster will require a Vault token valid on the unsealing Vault cluster to unseal itself. Leverage Vault Agent or a scripted process to authenticate with Vault to get a token. The recommendation is to store the Vault token in an environment variable instead of written to the Vault configuration file.
+
+The Vault token must have a Vault policy that grants permissions to the encrypt and decrypt endpoints of the transit key in use. Below is an example policy.
+
+```hcl
+path "<mount path>/encrypt/<key_name>" {
+  capabilities = ["update"]
+}
+
+path "<mount path>/decrypt/<key_name>" {
+  capabilities = ["update"]
+}
+```
+
+## Deployment considerations
+
+There are a few challenges with more complex Vault topologies. Some of these concerns are universally applicable to the pattern of using an unsealing Vault, and some are more specific to Vault topologies that leverage replication between multiple data centers.
+
+### Unseal the unsealing Vault
+
+The unsealing Vault cluster itself requires unsealing when being started. Effectively, this pattern merely moves the burden of non-automated unseal from your production-serving Vault cluster to the supporting service unsealing Vault. Managing the manual effort on a service will subject that service to a less strenuous load.
+
+### Unseal Vault address
+
+As the unseal operation requires a target Vault server address as an environment variable or value in the configuration, a reliable reference to the unsealing Vault’s network location is needed. You can solve this issue most elegantly by the use of a service discovery system, such as Consul. If such a tool is not available, use an abstracted reference to the services location, such as a managed DNS entry, load balancer VIP, or Anycast IP address, based on your capabilities and leveraged patterns in your environment.
+
+### Replication concerns
+
+When working in a multi-site deployment, with Vault replication configured between primary Vault clusters, additional concerns may arise for unsealing behavior. Each cluster in the replication configuration requires a known unsealing Vault. While it is possible to use a single unsealing Vault for all replicated clusters, network connectivity between all clusters and a single site would require network connectivity. The recommendation is to provide an unsealing Vault in each data center.
+
+### Key rotation
+
+When rotating the unsealing key on the unsealing Vault cluster, run the [rotation operation](/vault/api-docs/secret/transit#rotate-key) on each of the Vault primaries in each data center. You can use the same configuration on all unsealing Vaults in some scenarios, with its storage backend point-in-time replicated out to each data center. If you choose this option, the recommendation is to use a unique key for each primary cluster so that rotation operations are consistent, and run each rotation against the same unsealing Vault. Otherwise, you must carry out replication actions between each rotation.

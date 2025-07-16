@@ -6,6 +6,7 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { currentURL, settled, click, visit, fillIn, typeIn, waitFor } from '@ember/test-helpers';
+import { setupMirage } from 'ember-cli-mirage/test-support';
 import { create } from 'ember-cli-page-object';
 import { selectChoose } from 'ember-power-select/test-support';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
@@ -13,10 +14,12 @@ import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import connectionPage from 'vault/tests/pages/secrets/backend/database/connection';
 import rolePage from 'vault/tests/pages/secrets/backend/database/role';
-import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import searchSelect from 'vault/tests/pages/components/search-select';
 import { deleteEngineCmd, mountEngineCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
+
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
 const searchSelectComponent = create(searchSelect);
 
@@ -31,16 +34,16 @@ const newConnection = async (
   await connectionPage.name(name);
   await connectionPage.connectionUrl(connectionUrl);
   await connectionPage.toggleVerify();
-  await connectionPage.save();
+  await click(GENERAL.submitButton);
   await connectionPage.enable();
   return name;
 };
 
 const navToConnection = async (backend, connection) => {
   await visit('/vault/secrets');
-  await click(`[data-test-secrets-backend-link="${backend}"]`);
-  await click('[data-test-secret-list-tab="Connections"]');
-  await click(`[data-test-secret-link="${connection}"]`);
+  await click(SES.secretsBackendLink(backend));
+  await click(GENERAL.secretTab('Connections'));
+  await click(SES.secretLink(connection));
   return;
 };
 
@@ -53,16 +56,16 @@ const connectionTests = [
     url: 'http://127.0.0.1:9200',
     assertCount: 9,
     requiredFields: async (assert, name) => {
-      assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
-      assert.dom('[data-test-input="password"]').exists(`Password field exists for ${name}`);
-      assert.dom('[data-test-input="ca_cert"]').exists(`CA certificate field exists for ${name}`);
-      assert.dom('[data-test-input="ca_path"]').exists(`CA path field exists for ${name}`);
-      assert.dom('[data-test-input="client_cert"]').exists(`Client certificate field exists for ${name}`);
-      assert.dom('[data-test-input="client_key"]').exists(`Client key field exists for ${name}`);
-      assert.dom('[data-test-input="tls_server_name"]').exists(`TLS server name field exists for ${name}`);
-      assert.dom('[data-test-input="insecure"]').exists(`Insecure checkbox exists for ${name}`);
+      assert.dom(GENERAL.inputByAttr('username')).exists(`Username field exists for ${name}`);
+      assert.dom(GENERAL.inputByAttr('password')).exists(`Password field exists for ${name}`);
+      assert.dom(GENERAL.inputByAttr('ca_cert')).exists(`CA certificate field exists for ${name}`);
+      assert.dom(GENERAL.inputByAttr('ca_path')).exists(`CA path field exists for ${name}`);
+      assert.dom(GENERAL.inputByAttr('client_cert')).exists(`Client certificate field exists for ${name}`);
+      assert.dom(GENERAL.inputByAttr('client_key')).exists(`Client key field exists for ${name}`);
+      assert.dom(GENERAL.inputByAttr('tls_server_name')).exists(`TLS server name field exists for ${name}`);
+      assert.dom(GENERAL.inputByAttr('insecure')).exists(`Insecure checkbox exists for ${name}`);
       assert
-        .dom('[data-test-toggle-input="show-username_template"]')
+        .dom(GENERAL.toggleInput('show-username_template'))
         .exists(`Username template toggle exists for ${name}`);
     },
   },
@@ -72,12 +75,12 @@ const connectionTests = [
     url: `mongodb://127.0.0.1:4321/test`,
     assertCount: 5,
     requiredFields: async (assert, name) => {
-      assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
-      assert.dom('[data-test-input="password"]').exists(`Password field exists for ${name}`);
-      assert.dom('[data-test-input="write_concern"]').exists(`Write concern field exists for ${name}`);
-      assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
+      assert.dom(GENERAL.inputByAttr('username')).exists(`Username field exists for ${name}`);
+      assert.dom(GENERAL.inputByAttr('password')).exists(`Password field exists for ${name}`);
+      assert.dom(GENERAL.inputByAttr('write_concern')).exists(`Write concern field exists for ${name}`);
+      assert.dom(GENERAL.button('TLS options')).exists('TLS options toggle exists');
       assert
-        .dom('[data-test-input="root_rotation_statements"]')
+        .dom(GENERAL.inputByAttr('root_rotation_statements'))
         .exists(`Root rotation statements exists for ${name}`);
     },
   },
@@ -87,19 +90,19 @@ const connectionTests = [
     url: `mssql://127.0.0.1:4321/test`,
     assertCount: 6,
     requiredFields: async (assert, name) => {
-      assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
-      assert.dom('[data-test-input="password"]').exists(`Password field exists for ${name}`);
+      assert.dom(GENERAL.inputByAttr('username')).exists(`Username field exists for ${name}`);
+      assert.dom(GENERAL.inputByAttr('password')).exists(`Password field exists for ${name}`);
       assert
-        .dom('[data-test-input="max_open_connections"]')
+        .dom(GENERAL.inputByAttr('max_open_connections'))
         .exists(`Max open connections exists for ${name}`);
       assert
-        .dom('[data-test-input="max_idle_connections"]')
+        .dom(GENERAL.inputByAttr('max_idle_connections'))
         .exists(`Max idle connections exists for ${name}`);
       assert
-        .dom('[data-test-input="max_connection_lifetime"]')
+        .dom(GENERAL.inputByAttr('max_connection_lifetime'))
         .exists(`Max connection lifetime exists for ${name}`);
       assert
-        .dom('[data-test-input="root_rotation_statements"]')
+        .dom(GENERAL.inputByAttr('root_rotation_statements'))
         .exists(`Root rotation statements exists for ${name}`);
     },
   },
@@ -109,20 +112,20 @@ const connectionTests = [
     url: `{{username}}:{{password}}@tcp(127.0.0.1:3306)/test`,
     assertCount: 7,
     requiredFields: async (assert, name) => {
-      assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
-      assert.dom('[data-test-input="password"]').exists(`Password field exists for ${name}`);
+      assert.dom(GENERAL.inputByAttr('username')).exists(`Username field exists for ${name}`);
+      assert.dom(GENERAL.inputByAttr('password')).exists(`Password field exists for ${name}`);
       assert
-        .dom('[data-test-input="max_open_connections"]')
+        .dom(GENERAL.inputByAttr('max_open_connections'))
         .exists(`Max open connections exists for ${name}`);
       assert
-        .dom('[data-test-input="max_idle_connections"]')
+        .dom(GENERAL.inputByAttr('max_idle_connections'))
         .exists(`Max idle connections exists for ${name}`);
       assert
-        .dom('[data-test-input="max_connection_lifetime"]')
+        .dom(GENERAL.inputByAttr('max_connection_lifetime'))
         .exists(`Max connection lifetime exists for ${name}`);
-      assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
+      assert.dom(GENERAL.button('TLS options')).exists('TLS options toggle exists');
       assert
-        .dom('[data-test-input="root_rotation_statements"]')
+        .dom(GENERAL.inputByAttr('root_rotation_statements'))
         .exists(`Root rotation statements exists for ${name}`);
     },
   },
@@ -132,20 +135,20 @@ const connectionTests = [
     url: `{{username}}:{{password}}@tcp(127.0.0.1:3306)/test`,
     assertCount: 7,
     requiredFields: async (assert, name) => {
-      assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
-      assert.dom('[data-test-input="password"]').exists(`Password field exists for ${name}`);
+      assert.dom(GENERAL.inputByAttr('username')).exists(`Username field exists for ${name}`);
+      assert.dom(GENERAL.inputByAttr('password')).exists(`Password field exists for ${name}`);
       assert
-        .dom('[data-test-input="max_open_connections"]')
+        .dom(GENERAL.inputByAttr('max_open_connections'))
         .exists(`Max open connections exists for ${name}`);
       assert
-        .dom('[data-test-input="max_idle_connections"]')
+        .dom(GENERAL.inputByAttr('max_idle_connections'))
         .exists(`Max idle connections exists for ${name}`);
       assert
-        .dom('[data-test-input="max_connection_lifetime"]')
+        .dom(GENERAL.inputByAttr('max_connection_lifetime'))
         .exists(`Max connection lifetime exists for ${name}`);
-      assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
+      assert.dom(GENERAL.button('TLS options')).exists('TLS options toggle exists');
       assert
-        .dom('[data-test-input="root_rotation_statements"]')
+        .dom(GENERAL.inputByAttr('root_rotation_statements'))
         .exists(`Root rotation statements exists for ${name}`);
     },
   },
@@ -155,20 +158,20 @@ const connectionTests = [
     url: `{{username}}:{{password}}@tcp(127.0.0.1:3306)/test`,
     assertCount: 7,
     requiredFields: async (assert, name) => {
-      assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
-      assert.dom('[data-test-input="password"]').exists(`Password field exists for ${name}`);
+      assert.dom(GENERAL.inputByAttr('username')).exists(`Username field exists for ${name}`);
+      assert.dom(GENERAL.inputByAttr('password')).exists(`Password field exists for ${name}`);
       assert
-        .dom('[data-test-input="max_open_connections"]')
+        .dom(GENERAL.inputByAttr('max_open_connections'))
         .exists(`Max open connections exists for ${name}`);
       assert
-        .dom('[data-test-input="max_idle_connections"]')
+        .dom(GENERAL.inputByAttr('max_idle_connections'))
         .exists(`Max idle connections exists for ${name}`);
       assert
-        .dom('[data-test-input="max_connection_lifetime"]')
+        .dom(GENERAL.inputByAttr('max_connection_lifetime'))
         .exists(`Max connection lifetime exists for ${name}`);
-      assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
+      assert.dom(GENERAL.button('TLS options')).exists('TLS options toggle exists');
       assert
-        .dom('[data-test-input="root_rotation_statements"]')
+        .dom(GENERAL.inputByAttr('root_rotation_statements'))
         .exists(`Root rotation statements exists for ${name}`);
     },
   },
@@ -178,20 +181,20 @@ const connectionTests = [
     url: `{{username}}:{{password}}@tcp(127.0.0.1:3306)/test`,
     assertCount: 7,
     requiredFields: async (assert, name) => {
-      assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
-      assert.dom('[data-test-input="password"]').exists(`Password field exists for ${name}`);
+      assert.dom(GENERAL.inputByAttr('username')).exists(`Username field exists for ${name}`);
+      assert.dom(GENERAL.inputByAttr('password')).exists(`Password field exists for ${name}`);
       assert
-        .dom('[data-test-input="max_open_connections"]')
+        .dom(GENERAL.inputByAttr('max_open_connections'))
         .exists(`Max open connections exists for ${name}`);
       assert
-        .dom('[data-test-input="max_idle_connections"]')
+        .dom(GENERAL.inputByAttr('max_idle_connections'))
         .exists(`Max idle connections exists for ${name}`);
       assert
-        .dom('[data-test-input="max_connection_lifetime"]')
+        .dom(GENERAL.inputByAttr('max_connection_lifetime'))
         .exists(`Max connection lifetime exists for ${name}`);
-      assert.dom('[data-test-toggle-group="TLS options"]').exists('TLS options toggle exists');
+      assert.dom(GENERAL.button('TLS options')).exists('TLS options toggle exists');
       assert
-        .dom('[data-test-input="root_rotation_statements"]')
+        .dom(GENERAL.inputByAttr('root_rotation_statements'))
         .exists(`Root rotation statements exists for ${name}`);
     },
   },
@@ -203,22 +206,22 @@ const connectionTests = [
     password: 'password',
     assertCount: 7,
     requiredFields: async (assert, name) => {
-      assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
-      assert.dom('[data-test-input="password"]').exists(`Password field exists for ${name}`);
+      assert.dom(GENERAL.inputByAttr('username')).exists(`Username field exists for ${name}`);
+      assert.dom(GENERAL.inputByAttr('password')).exists(`Password field exists for ${name}`);
       assert
-        .dom('[data-test-input="max_open_connections"]')
+        .dom(GENERAL.inputByAttr('max_open_connections'))
         .exists(`Max open connections exists for ${name}`);
       assert
-        .dom('[data-test-input="max_idle_connections"]')
+        .dom(GENERAL.inputByAttr('max_idle_connections'))
         .exists(`Max idle connections exists for ${name}`);
       assert
-        .dom('[data-test-input="max_connection_lifetime"]')
+        .dom(GENERAL.inputByAttr('max_connection_lifetime'))
         .exists(`Max connection lifetime exists for ${name}`);
       assert
-        .dom('[data-test-input="root_rotation_statements"]')
+        .dom(GENERAL.inputByAttr('root_rotation_statements'))
         .exists(`Root rotation statements exists for ${name}`);
       assert
-        .dom('[data-test-toggle-input="show-username_template"]')
+        .dom(GENERAL.toggleInput('show-username_template'))
         .exists(`Username template toggle exists for ${name}`);
     },
   },
@@ -226,14 +229,15 @@ const connectionTests = [
 
 module('Acceptance | secrets/database/*', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
 
   hooks.beforeEach(async function () {
     this.backend = `database-testing`;
-    await authPage.login();
+    await login();
     return runCmd(mountEngineCmd('database', this.backend), false);
   });
   hooks.afterEach(async function () {
-    await authPage.login();
+    await login();
     return runCmd(deleteEngineCmd(this.backend), false);
   });
 
@@ -285,14 +289,13 @@ module('Acceptance | secrets/database/*', function (hooks) {
         await connectionPage.password(testCase.password);
       }
       testCase.requiredFields(assert, testCase.plugin);
-      assert.dom('[data-test-input="verify_connection"]').isChecked('verify is checked');
+      assert.dom(GENERAL.inputByAttr('verify_connection')).isChecked('verify is checked');
       await connectionPage.toggleVerify();
-      assert.dom('[data-test-input="verify_connection"]').isNotChecked('verify is unchecked');
+      assert.dom(GENERAL.inputByAttr('verify_connection')).isNotChecked('verify is unchecked');
       assert
         .dom('[data-test-database-oracle-alert]')
         .doesNotExist('does not show oracle alert for non-oracle plugins');
-      await connectionPage.save();
-      await settled();
+      await click(GENERAL.submitButton);
       assert
         .dom('[data-test-db-connection-modal-title]')
         .hasText('Rotate your root credentials?', 'Modal appears asking to rotate root credentials');
@@ -313,11 +316,11 @@ module('Acceptance | secrets/database/*', function (hooks) {
       );
       assert.dom(`[data-test-input="name"]`).hasAttribute('readonly');
       assert.dom(`[data-test-input="plugin_name"]`).hasAttribute('readonly');
-      assert.dom('[data-test-input="password"]').doesNotExist('Password is not displayed on edit form');
-      assert.dom('[data-test-toggle-input="show-password"]').exists('Update password toggle exists');
+      assert.dom(GENERAL.inputByAttr('password')).doesNotExist('Password is not displayed on edit form');
+      assert.dom(GENERAL.toggleInput('show-password')).exists('Update password toggle exists');
 
-      assert.dom('[data-test-input="verify_connection"]').isNotChecked('verify is still unchecked');
-      await connectionPage.save();
+      assert.dom(GENERAL.inputByAttr('verify_connection')).isNotChecked('verify is still unchecked');
+      await click(GENERAL.submitButton);
       assert.strictEqual(currentURL(), `/vault/secrets/${backend}/show/${testCase.name}`);
       // click "Add Role"
       await connectionPage.addRole();
@@ -327,7 +330,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
         testCase.name,
         'Database connection is pre-selected on the form'
       );
-      await click('[data-test-database-role-cancel]');
+      await click(GENERAL.cancelButton);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/list?tab=role`,
@@ -337,27 +340,29 @@ module('Acceptance | secrets/database/*', function (hooks) {
       await visit('/vault/secrets');
     });
   }
-  test('database connection create and edit: vault-plugin-database-oracle', async function (assert) {
+
+  // keep oracle as separate test because it relies on an external plugin that isn't rolled into the vault binary
+  // https://github.com/hashicorp/vault-plugin-database-oracle
+  test('database connection create: vault-plugin-database-oracle', async function (assert) {
     assert.expect(11);
-    // keep oracle as separate test because it behaves differently than the others
     const testCase = {
       name: 'oracle-connection',
       plugin: 'vault-plugin-database-oracle',
       url: `{{username}}/{{password}}@localhost:1521/OraDoc.localhost`,
       requiredFields: async (assert, name) => {
-        assert.dom('[data-test-input="username"]').exists(`Username field exists for ${name}`);
-        assert.dom('[data-test-input="password"]').exists(`Password field exists for ${name}`);
+        assert.dom(GENERAL.inputByAttr('username')).exists(`Username field exists for ${name}`);
+        assert.dom(GENERAL.inputByAttr('password')).exists(`Password field exists for ${name}`);
         assert
-          .dom('[data-test-input="max_open_connections"]')
+          .dom(GENERAL.inputByAttr('max_open_connections'))
           .exists(`Max open connections exists for ${name}`);
         assert
-          .dom('[data-test-input="max_idle_connections"]')
+          .dom(GENERAL.inputByAttr('max_idle_connections'))
           .exists(`Max idle connections exists for ${name}`);
         assert
-          .dom('[data-test-input="max_connection_lifetime"]')
+          .dom(GENERAL.inputByAttr('max_connection_lifetime'))
           .exists(`Max connection lifetime exists for ${name}`);
         assert
-          .dom('[data-test-input="root_rotation_statements"]')
+          .dom(GENERAL.inputByAttr('root_rotation_statements'))
           .exists(`Root rotation statements exists for ${name}`);
         assert
           .dom('[data-test-database-oracle-alert]')
@@ -380,7 +385,52 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await connectionPage.connectionUrl(testCase.url);
     testCase.requiredFields(assert, testCase.plugin);
     // Cannot save without plugin mounted
-    // TODO: add fake server response for fuller test coverage
+    // Edit tested separately with mocked server response
+  });
+
+  test('database connection edit: vault-plugin-database-oracle', async function (assert) {
+    assert.expect(2);
+    const connectionName = 'oracle-connection';
+    // mock API so we can test edit (without mounting external oracle plugin)
+    this.server.get(`/${this.backend}/config/${connectionName}`, () => {
+      return {
+        request_id: 'f869f23e-15c0-389b-82ac-84035a2b6079',
+        lease_id: '',
+        renewable: false,
+        lease_duration: 0,
+        data: {
+          allowed_roles: ['*'],
+          connection_details: {
+            backend: 'database',
+            connection_url: '%7B%7Busername%7D%7D/%7B%7Bpassword%7D%7D@//localhost:1521/ORCLPDB1',
+            max_connection_lifetime: '0s',
+            max_idle_connections: 0,
+            max_open_connections: 3,
+            username: 'VAULTADMIN',
+          },
+          password_policy: '',
+          plugin_name: 'vault-plugin-database-oracle',
+          plugin_version: '',
+          root_credentials_rotate_statements: [],
+          verify_connection: true,
+        },
+        wrap_info: null,
+        warnings: null,
+        auth: null,
+        mount_type: 'database',
+      };
+    });
+
+    await visit(`/vault/secrets/${this.backend}/show/${connectionName}`);
+    const decoded = '{{username}}/{{password}}@//localhost:1521/ORCLPDB1';
+    assert
+      .dom('[data-test-row-value="Connection URL"]')
+      .hasText(decoded, 'connection_url is decoded in display');
+
+    await connectionPage.edit();
+    assert
+      .dom(GENERAL.inputByAttr('connection_url'))
+      .hasValue(decoded, 'connection_url is decoded when editing');
   });
 
   test('Can create and delete a connection', async function (assert) {
@@ -397,7 +447,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       ],
     };
     await visit(`/vault/secrets/${backend}/list`);
-    await connectionPage.createLink();
+    await click(SES.createSecretLink);
     assert.strictEqual(currentURL(), `/vault/secrets/${backend}/create`, 'Create link goes to create page');
     assert
       .dom('[data-test-empty-state-title]')
@@ -414,8 +464,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     });
     // uncheck verify for the save step to work
     await connectionPage.toggleVerify();
-    await connectionPage.save();
-    await settled();
+    await click(GENERAL.submitButton);
     assert
       .dom('[data-test-db-connection-modal-title]')
       .hasText('Rotate your root credentials?', 'Modal appears asking to ');
@@ -441,7 +490,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
       .dom('[data-test-confirmation-modal-title]')
       .hasText('Delete connection?', 'Modal appears asking to confirm delete action');
     await fillIn('[data-test-confirmation-modal-input="Delete connection?"]', connectionDetails.id);
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
 
     assert.strictEqual(currentURL(), `/vault/secrets/${backend}/list`, 'Redirects to connection list page');
     assert
@@ -470,13 +519,12 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert
       .dom('[data-test-database-connection-reset]')
       .hasText('Reset connection', 'Reset button exists with correct text');
-    assert.dom('[data-test-secret-create]').hasText('Add role', 'Add role button exists with correct text');
+    assert.dom('[data-test-add-role]').hasText('Add role', 'Add role button exists with correct text');
     assert.dom('[data-test-edit-link]').hasText('Edit configuration', 'Edit button exists with correct text');
-    await authPage.logout();
     // Check with restricted permissions
-    await authPage.login(token);
+    await login(token);
     await click('[data-test-sidebar-nav-link="Secrets Engines"]');
-    assert.dom(`[data-test-secrets-backend-link="${backend}"]`).exists('Shows backend on secret list page');
+    assert.dom(SES.secretsBackendLink(backend)).exists('Shows backend on secret list page');
     await navToConnection(backend, connection);
     assert.strictEqual(
       currentURL(),
@@ -489,7 +537,7 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert
       .dom('[data-test-database-connection-reset]')
       .doesNotExist('Reset button does not show due to permissions');
-    assert.dom('[data-test-secret-create]').doesNotExist('Add role button does not show due to permissions');
+    assert.dom('[data-test-add-role]').doesNotExist('Add role button does not show due to permissions');
     assert.dom('[data-test-edit-link]').doesNotExist('Edit button does not show due to permissions');
     await visit(`/vault/secrets/${backend}/overview`);
     assert.dom('[data-test-overview-card="Connections"]').exists('Connections card exists on overview');
@@ -498,23 +546,23 @@ module('Acceptance | secrets/database/*', function (hooks) {
       .doesNotExist('Roles card does not exist on overview w/ policy');
     assert.dom('.overview-card h2').hasText('1', 'Lists the correct number of connections');
     // confirm get credentials card is an option to select. Regression bug.
-    await typeIn('.ember-text-field', 'blah');
-    assert.dom('[data-test-get-credentials]').isEnabled();
+    await typeIn(GENERAL.inputSearch('search-input-role'), 'blah');
+    assert.dom(GENERAL.button('Get credentials')).isEnabled();
     // [BANDAID] navigate away to fix test failing on capabilities-self check before teardown
     await visit('/vault/secrets');
   });
 
-  test('connection_url must be decoded', async function (assert) {
+  test('connection_url is decoded', async function (assert) {
     const backend = this.backend;
     const connection = await newConnection(
       backend,
       'mongodb-database-plugin',
-      '{{username}}/{{password}}@oracle-xe:1521/XEPDB1'
+      '{{username}}/{{password}}@mongo:1521/XEPDB1'
     );
     await navToConnection(backend, connection);
     assert
       .dom('[data-test-row-value="Connection URL"]')
-      .hasText('{{username}}/{{password}}@oracle-xe:1521/XEPDB1');
+      .hasText('{{username}}/{{password}}@mongo:1521/XEPDB1');
   });
 
   test('Role create form', async function (assert) {
@@ -525,25 +573,25 @@ module('Acceptance | secrets/database/*', function (hooks) {
     await rolePage.name('bar');
     assert
       .dom('[data-test-component="empty-state"]')
-      .exists({ count: 2 }, 'Two empty states exist before selections made');
+      .exists({ count: 1 }, 'One empty state exists before database selection is made');
     await clickTrigger('#database');
     assert.strictEqual(searchSelectComponent.options.length, 1, 'list shows existing connections so far');
     await selectChoose('#database', '.ember-power-select-option', 0);
     assert
       .dom('[data-test-component="empty-state"]')
-      .exists({ count: 2 }, 'Two empty states exist before selections made');
+      .exists({ count: 2 }, 'Two empty states exist after a database is selected');
     await rolePage.roleType('static');
     assert.dom('[data-test-component="empty-state"]').doesNotExist('Empty states go away');
-    assert.dom('[data-test-input="username"]').exists('Username field appears for static role');
+    assert.dom(GENERAL.inputByAttr('username')).exists('Username field appears for static role');
     assert
-      .dom('[data-test-toggle-input="Rotation period"]')
+      .dom(GENERAL.toggleInput('Rotation period'))
       .exists('Rotation period field appears for static role');
     await rolePage.roleType('dynamic');
     assert
-      .dom('[data-test-toggle-input="Generated credentials’s Time-to-Live (TTL)"]')
+      .dom(GENERAL.toggleInput('Generated credentials’s Time-to-Live (TTL)'))
       .exists('TTL field exists for dynamic');
     assert
-      .dom('[data-test-toggle-input="Generated credentials’s maximum Time-to-Live (Max TTL)"]')
+      .dom(GENERAL.toggleInput('Generated credentials’s maximum Time-to-Live (Max TTL)'))
       .exists('Max TTL field exists for dynamic');
     // Real connection (actual running db) required to save role, so we aren't testing that flow yet
   });
@@ -573,12 +621,11 @@ module('Acceptance | secrets/database/*', function (hooks) {
     assert.dom('[data-test-secret-list-tab="Connections"]').exists('renders connections tab');
     assert.dom('[data-test-secret-list-tab="Roles"]').exists('renders connections tab');
 
-    await click('[data-test-secret-create="connections"]');
+    await click(SES.createSecretLink);
     assert.strictEqual(currentURL(), `/vault/secrets/${backend}/create?itemType=connection`);
 
     // Login with restricted policy
-    await logout.visit();
-    await authPage.login(token);
+    await login(token);
     await visit(`/vault/secrets/${backend}/overview`);
     assert.dom('[data-test-tab="overview"]').exists('renders overview tab');
     assert.dom('[data-test-secret-list-tab="Connections"]').exists('renders connections tab');

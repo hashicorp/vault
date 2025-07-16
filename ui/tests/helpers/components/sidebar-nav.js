@@ -14,10 +14,16 @@ import sinon from 'sinon';
  * @param {string[]} features if not passed, defaults to all features
  * @returns {hasNavPermission: sinon.SinonStub, features: string[]}
  */
-export const stubFeaturesAndPermissions = (owner, isEnterprise = false, setCluster = false, features) => {
+export const stubFeaturesAndPermissions = (
+  owner,
+  isEnterprise = false,
+  setCluster = false,
+  features,
+  hasPermission = true
+) => {
   const permissions = owner.lookup('service:permissions');
   const hasNavPermission = sinon.stub(permissions, 'hasNavPermission');
-  hasNavPermission.returns(true);
+  hasNavPermission.returns(hasPermission);
   sinon.stub(permissions, 'navPathParams');
 
   const version = owner.lookup('service:version');

@@ -1,0 +1,45 @@
+---
+layout: docs
+page_title: "Telemetry reference: Activity metrics"
+description: >-
+  Technical reference for activity related telemetry values.
+---
+
+# Activity telemetry
+
+Activity telemetry provides metric data about Vault behavior related to client
+usage, request volume and trends over a billing period.
+
+## Default metrics
+
+@include 'telemetry-metrics/vault/client/billing_period/activity.mdx'
+
+@include 'telemetry-metrics/vault/identity/entity/active/monthly.mdx'
+
+@include 'telemetry-metrics/vault/identity/nonentity/active/monthly.mdx'
+
+@include 'telemetry-metrics/vault/identity/entity/active/partial_month.mdx'
+
+@include 'telemetry-metrics/vault/identity/entity/active/reporting_period.mdx'
+
+@include 'telemetry-metrics/vault/identity/nonentity/active/reporting_period.mdx'
+
+@include 'telemetry-metrics/vault/identity/entity/alias/count.mdx'
+
+@include 'telemetry-metrics/vault/identity/entity/count.mdx'
+
+@include 'telemetry-metrics/vault/identity/entity/creation.mdx'
+
+@include 'telemetry-metrics/vault/identity/num_entities.mdx'
+
+@include 'telemetry-metrics/vault/identity/pki_acme/monthly.mdx'
+
+@include 'telemetry-metrics/vault/identity/pki_acme/reporting_period.mdx'
+
+@include 'telemetry-metrics/vault/identity/secret_sync/monthly.mdx'
+
+@include 'telemetry-metrics/vault/identity/secret_sync/reporting_period.mdx'
+
+@include 'telemetry-metrics/vault/core/activity/fragment_size.mdx'
+
+@include 'telemetry-metrics/vault/core/activity/segment_write.mdx'

@@ -7,8 +7,9 @@
 // individual lookup done in mirage config
 import base from './base';
 import chrootNamespace from './chroot-namespace';
-import customMessages from './custom-messages';
 import clients from './clients';
+import customMessages from './custom-messages';
+import customLogin from './custom-login';
 import database from './database';
 import hcpLink from './hcp-link';
 import kms from './kms';
@@ -18,13 +19,15 @@ import mfaConfig from './mfa-config';
 import mfaLogin from './mfa-login';
 import oidcConfig from './oidc-config';
 import reducedDisclosure from './reduced-disclosure';
-import sync from './sync';
 import replication from './replication';
+import sync from './sync';
 
 export {
   base,
   chrootNamespace,
   clients,
+  customLogin,
+  customMessages,
   database,
   hcpLink,
   kms,
@@ -34,7 +37,6 @@ export {
   mfaLogin,
   oidcConfig,
   reducedDisclosure,
-  customMessages,
-  sync,
   replication,
+  sync,
 };

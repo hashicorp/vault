@@ -45,7 +45,8 @@ export const ACTIVITY_RESPONSE_STUB = {
       },
       mounts: [
         {
-          mount_path: 'auth/authid/0',
+          mount_path: 'auth/userpass-0',
+          mount_type: 'userpass',
           counts: {
             acme_clients: 0,
             clients: 8394,
@@ -56,6 +57,7 @@ export const ACTIVITY_RESPONSE_STUB = {
         },
         {
           mount_path: 'kvv2-engine-0',
+          mount_type: 'kv',
           counts: {
             acme_clients: 0,
             clients: 4810,
@@ -66,6 +68,7 @@ export const ACTIVITY_RESPONSE_STUB = {
         },
         {
           mount_path: 'pki-engine-0',
+          mount_type: 'pki',
           counts: {
             acme_clients: 5699,
             clients: 5699,
@@ -88,7 +91,8 @@ export const ACTIVITY_RESPONSE_STUB = {
       },
       mounts: [
         {
-          mount_path: 'auth/authid/0',
+          mount_path: 'auth/userpass-0',
+          mount_type: 'userpass',
           counts: {
             acme_clients: 0,
             clients: 8091,
@@ -99,6 +103,7 @@ export const ACTIVITY_RESPONSE_STUB = {
         },
         {
           mount_path: 'kvv2-engine-0',
+          mount_type: 'kv',
           counts: {
             acme_clients: 0,
             clients: 4290,
@@ -109,6 +114,7 @@ export const ACTIVITY_RESPONSE_STUB = {
         },
         {
           mount_path: 'pki-engine-0',
+          mount_type: 'pki',
           counts: {
             acme_clients: 4003,
             clients: 4003,
@@ -150,6 +156,7 @@ export const ACTIVITY_RESPONSE_STUB = {
           mounts: [
             {
               mount_path: 'pki-engine-0',
+              mount_type: 'pki',
               counts: {
                 acme_clients: 100,
                 clients: 100,
@@ -159,7 +166,8 @@ export const ACTIVITY_RESPONSE_STUB = {
               },
             },
             {
-              mount_path: 'auth/authid/0',
+              mount_path: 'auth/userpass-0',
+              mount_type: 'userpass',
               counts: {
                 acme_clients: 0,
                 clients: 200,
@@ -170,6 +178,7 @@ export const ACTIVITY_RESPONSE_STUB = {
             },
             {
               mount_path: 'kvv2-engine-0',
+              mount_type: 'kv',
               counts: {
                 acme_clients: 0,
                 clients: 100,
@@ -203,6 +212,7 @@ export const ACTIVITY_RESPONSE_STUB = {
             mounts: [
               {
                 mount_path: 'pki-engine-0',
+                mount_type: 'pki',
                 counts: {
                   acme_clients: 100,
                   clients: 100,
@@ -212,7 +222,8 @@ export const ACTIVITY_RESPONSE_STUB = {
                 },
               },
               {
-                mount_path: 'auth/authid/0',
+                mount_path: 'auth/userpass-0',
+                mount_type: 'userpass',
                 counts: {
                   acme_clients: 0,
                   clients: 200,
@@ -223,6 +234,7 @@ export const ACTIVITY_RESPONSE_STUB = {
               },
               {
                 mount_path: 'kvv2-engine-0',
+                mount_type: 'kv',
                 counts: {
                   acme_clients: 0,
                   clients: 100,
@@ -259,6 +271,7 @@ export const ACTIVITY_RESPONSE_STUB = {
           mounts: [
             {
               mount_path: 'pki-engine-0',
+              mount_type: 'pki',
               counts: {
                 acme_clients: 100,
                 clients: 100,
@@ -268,7 +281,8 @@ export const ACTIVITY_RESPONSE_STUB = {
               },
             },
             {
-              mount_path: 'auth/authid/0',
+              mount_path: 'auth/userpass-0',
+              mount_type: 'userpass',
               counts: {
                 acme_clients: 0,
                 clients: 200,
@@ -279,6 +293,7 @@ export const ACTIVITY_RESPONSE_STUB = {
             },
             {
               mount_path: 'kvv2-engine-0',
+              mount_type: 'kv',
               counts: {
                 acme_clients: 0,
                 clients: 100,
@@ -327,7 +342,7 @@ export const ACTIVITY_RESPONSE_STUB = {
               },
             },
             {
-              mount_path: 'auth/authid/0',
+              mount_path: 'auth/userpass-0',
               counts: {
                 acme_clients: 0,
                 clients: 890,
@@ -370,7 +385,7 @@ export const ACTIVITY_RESPONSE_STUB = {
               },
             },
             {
-              mount_path: 'auth/authid/0',
+              mount_path: 'auth/userpass-0',
               counts: {
                 acme_clients: 0,
                 clients: 872,
@@ -423,7 +438,7 @@ export const ACTIVITY_RESPONSE_STUB = {
                 },
               },
               {
-                mount_path: 'auth/authid/0',
+                mount_path: 'auth/userpass-0',
                 counts: {
                   acme_clients: 0,
                   clients: 75,
@@ -456,7 +471,7 @@ export const ACTIVITY_RESPONSE_STUB = {
             },
             mounts: [
               {
-                mount_path: 'auth/authid/0',
+                mount_path: 'auth/userpass-0',
                 counts: {
                   acme_clients: 0,
                   clients: 96,
@@ -530,6 +545,7 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
             secret_syncs: 0,
           },
           mount_path: 'no mount accessor (pre-1.10 upgrade?)',
+          mount_type: 'no mount path (pre-1.10 upgrade?)',
         },
         {
           counts: {
@@ -539,7 +555,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
             non_entity_clients: 0,
             secret_syncs: 0,
           },
-          mount_path: 'auth/u/',
+          mount_path: 'auth/userpass-0',
+          mount_type: 'userpass',
         },
       ],
       namespace_id: 'root',
@@ -580,6 +597,7 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
                 secret_syncs: 0,
               },
               mount_path: 'no mount accessor (pre-1.10 upgrade?)',
+              mount_type: 'no mount path (pre-1.10 upgrade?)',
             },
             {
               counts: {
@@ -589,7 +607,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
                 non_entity_clients: 0,
                 secret_syncs: 0,
               },
-              mount_path: 'auth/u/',
+              mount_path: 'auth/userpass-0',
+              mount_type: 'userpass',
             },
           ],
           namespace_id: 'root',
@@ -623,6 +642,7 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
                   secret_syncs: 0,
                 },
                 mount_path: 'no mount accessor (pre-1.10 upgrade?)',
+                mount_type: 'no mount path (pre-1.10 upgrade?)',
               },
               {
                 counts: {
@@ -632,7 +652,8 @@ export const MIXED_ACTIVITY_RESPONSE_STUB = {
                   non_entity_clients: 0,
                   secret_syncs: 0,
                 },
-                mount_path: 'auth/u/',
+                mount_path: 'auth/userpass-0',
+                mount_type: 'userpass',
               },
             ],
             namespace_id: 'root',
@@ -664,7 +685,8 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
       secret_syncs: 4810,
       mounts: [
         {
-          label: 'auth/authid/0',
+          label: 'auth/userpass-0',
+          mount_type: 'userpass',
           acme_clients: 0,
           clients: 8394,
           entity_clients: 4256,
@@ -673,6 +695,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
         },
         {
           label: 'kvv2-engine-0',
+          mount_type: 'kv',
           acme_clients: 0,
           clients: 4810,
           entity_clients: 0,
@@ -681,6 +704,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
         },
         {
           label: 'pki-engine-0',
+          mount_type: 'pki',
           acme_clients: 5699,
           clients: 5699,
           entity_clients: 0,
@@ -698,7 +722,8 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
       secret_syncs: 4290,
       mounts: [
         {
-          label: 'auth/authid/0',
+          label: 'auth/userpass-0',
+          mount_type: 'userpass',
           acme_clients: 0,
           clients: 8091,
           entity_clients: 4002,
@@ -707,6 +732,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
         },
         {
           label: 'kvv2-engine-0',
+          mount_type: 'kv',
           acme_clients: 0,
           clients: 4290,
           entity_clients: 0,
@@ -715,6 +741,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
         },
         {
           label: 'pki-engine-0',
+          mount_type: 'pki',
           acme_clients: 4003,
           clients: 4003,
           entity_clients: 0,
@@ -754,6 +781,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
           mounts: [
             {
               label: 'pki-engine-0',
+              mount_type: 'pki',
               acme_clients: 100,
               clients: 100,
               entity_clients: 0,
@@ -761,7 +789,8 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               secret_syncs: 0,
             },
             {
-              label: 'auth/authid/0',
+              label: 'auth/userpass-0',
+              mount_type: 'userpass',
               acme_clients: 0,
               clients: 200,
               entity_clients: 100,
@@ -770,6 +799,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
             },
             {
               label: 'kvv2-engine-0',
+              mount_type: 'kv',
               acme_clients: 0,
               clients: 100,
               entity_clients: 0,
@@ -798,6 +828,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
             mounts: [
               {
                 label: 'pki-engine-0',
+                mount_type: 'pki',
                 acme_clients: 100,
                 clients: 100,
                 entity_clients: 0,
@@ -805,7 +836,8 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
                 secret_syncs: 0,
               },
               {
-                label: 'auth/authid/0',
+                label: 'auth/userpass-0',
+                mount_type: 'userpass',
                 acme_clients: 0,
                 clients: 200,
                 entity_clients: 100,
@@ -814,6 +846,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               },
               {
                 label: 'kvv2-engine-0',
+                mount_type: 'kv',
                 acme_clients: 0,
                 clients: 100,
                 entity_clients: 0,
@@ -844,6 +877,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
           mounts: [
             {
               label: 'pki-engine-0',
+              mount_type: 'pki',
               acme_clients: 100,
               clients: 100,
               entity_clients: 0,
@@ -851,7 +885,8 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               secret_syncs: 0,
             },
             {
-              label: 'auth/authid/0',
+              label: 'auth/userpass-0',
+              mount_type: 'userpass',
               acme_clients: 0,
               clients: 200,
               entity_clients: 100,
@@ -860,6 +895,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
             },
             {
               label: 'kvv2-engine-0',
+              mount_type: 'kv',
               acme_clients: 0,
               clients: 100,
               entity_clients: 0,
@@ -901,7 +937,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               secret_syncs: 0,
             },
             {
-              label: 'auth/authid/0',
+              label: 'auth/userpass-0',
               acme_clients: 0,
               clients: 890,
               entity_clients: 708,
@@ -935,7 +971,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               secret_syncs: 0,
             },
             {
-              label: 'auth/authid/0',
+              label: 'auth/userpass-0',
               acme_clients: 0,
               clients: 872,
               entity_clients: 124,
@@ -972,6 +1008,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
             mounts: [
               {
                 label: 'pki-engine-0',
+                mount_type: 'pki',
                 acme_clients: 91,
                 clients: 91,
                 entity_clients: 0,
@@ -979,7 +1016,8 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
                 secret_syncs: 0,
               },
               {
-                label: 'auth/authid/0',
+                label: 'auth/userpass-0',
+                mount_type: 'userpass',
                 acme_clients: 0,
                 clients: 75,
                 entity_clients: 25,
@@ -988,6 +1026,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               },
               {
                 label: 'kvv2-engine-0',
+                mount_type: 'kv',
                 acme_clients: 0,
                 clients: 25,
                 entity_clients: 0,
@@ -1005,7 +1044,8 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
             secret_syncs: 24,
             mounts: [
               {
-                label: 'auth/authid/0',
+                label: 'auth/userpass-0',
+                mount_type: 'userpass',
                 acme_clients: 0,
                 clients: 96,
                 entity_clients: 34,
@@ -1014,6 +1054,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               },
               {
                 label: 'pki-engine-0',
+                mount_type: 'pki',
                 acme_clients: 53,
                 clients: 53,
                 entity_clients: 0,
@@ -1022,6 +1063,7 @@ export const SERIALIZED_ACTIVITY_RESPONSE = {
               },
               {
                 label: 'kvv2-engine-0',
+                mount_type: 'kv',
                 acme_clients: 0,
                 clients: 24,
                 entity_clients: 0,

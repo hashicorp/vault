@@ -51,6 +51,14 @@ Configures the auth method with a SAML identity provider.
   according to the current logging level. When `verbose_logging` is `true`,
   debug-level logs provide user attributes and trace-level logs provide the full
   SAML response.
+- `validate_response_signature` `(bool, false)` - Enables validation of signature
+  for at least response in the SAML response. If your IDP allows signing both response
+  and assertion, then recommendation is to opt in for validating signatures of both
+  by enabling both options.
+- `validate_assertion_signature` `(bool, false)` - Enables validation of signature
+  for at least assertion in the SAML response. If your IDP allows signing both response
+  and assertion, then recommendation is to opt in for validating signatures of both
+  by enabling both options.
 
 ### Sample payload
 
@@ -106,6 +114,8 @@ $ curl \
     "default_role": "admin",
     "entity_id": "https://my.vault/v1/auth/saml",
     "idp_metadata_url": "https://company.okta.com/app/abc123eb9xnIfzlaf697/sso/saml/metadata"
+    "validate_assertion_signature" : false,
+    "validate_response_signature" : false
   },
   "warnings": null
 }

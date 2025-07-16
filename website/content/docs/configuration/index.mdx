@@ -1,10 +1,11 @@
 ---
 layout: docs
-page_title: Server Configuration
-description: Vault server configuration reference.
+page_title: Vault configuration parameters
+description: >-
+  Example Vault configuration file and high-level parameter reference.
 ---
 
-# Vault configuration
+# Vault configuration parameters
 
 Outside of development mode, Vault servers are configured using a file.
 The format of this file is [HCL](https://github.com/hashicorp/hcl) or JSON.
@@ -80,6 +81,9 @@ to specify where the configuration is.
   auto-unsealing, as well as for
   [seal wrapping][sealwrap] as an additional layer of data protection.
 
+- `reporting` `([Reporting][reporting]: nil)` -
+  Configures options relating to license reporting in Vault.
+
 - `cluster_name` `(string: <generated>)` – Specifies a human-readable
   identifier for the Vault cluster. If omitted, Vault will generate a value.
   The cluster name is included as a label in some [telemetry metrics](/vault/docs/internals/telemetry/metrics/).
@@ -93,9 +97,12 @@ to specify where the configuration is.
   the read cache used by the physical storage subsystem. This will very
   significantly impact performance.
 
-- `disable_mlock` `(bool: false)` – Disables the server from executing the
-  `mlock` syscall. `mlock` prevents memory from being swapped to disk. Disabling
-  `mlock` is not recommended unless using [integrated storage](/vault/docs/internals/integrated-storage).
+- `disable_mlock` `(bool: <required>)` – Stops Vault from executing the `mlock`
+  syscall. `mlock` prevents data swaps from memory to disk. You must set an
+  explicit value for `disable_mlock` if you use
+  [integrated storage](/vault/docs/internals/integrated-storage). We do not
+  recommend disabling `mlock` for deployments that do not use integrated storage.
+
   Follow the additional security precautions outlined below when disabling `mlock`.
   This can also be provided via the environment variable `VAULT_DISABLE_MLOCK`.
 
@@ -116,6 +123,11 @@ to specify where the configuration is.
   even though the data within BoltDB remains encrypted at rest, swap should be
   disabled to prevent Vault's other in-memory sensitive data from being dumped
   into disk.
+
+  If you enable `mlock`, the Vault executable and each plugin executable in your
+  [plugins directory](/vault/docs/plugins/plugin-architecture#plugin-directory)
+  must have the ability to use the `mlock` syscall.
+
 
   On Linux, to give the Vault executable the ability to use the `mlock`
   syscall without running the process as root, run:
@@ -257,6 +269,17 @@ can have a negative effect on performance due to the tracking of each lock attem
   When `imprecise_lease_role_tracking` is set to true and a new role-based quota is enabled, subsequent lease counts start from 0.
   `imprecise_lease_role_tracking` affects role-based lease count quotas, but reduces latencies when not using role based quotas.
 
+- `enable_post_unseal_trace` `(bool: false)` - Enables the server to generate a Go trace during the execution of the
+  `core.postUnseal` function for debug purposes. The resulting trace can be viewed with the `go tool trace` command. The output
+  directory can be specified with the `post_unseal_trace_directory` parameter. This should only be enabled temporarily for
+  debugging purposes as it can have a significant performance impact. This can be updated on a running Vault process with a
+  SIGHUP signal.
+
+- `post_unseal_trace_directory` `(string: "")` - Specifies the directory where the trace file will be written, which must exist
+  and be writable by the Vault process. If not specified it will create a subdirectory `vault-traces` under the result from
+  [os.TempDir()](https://pkg.go.dev/os#TempDir) (usually `/tmp` on Unix systems). This can be updated on a running Vault process
+  with a SIGHUP signal.
+
 ### High availability parameters
 
 The following parameters are used on backends that support [high availability][high-availability].
@@ -304,8 +327,15 @@ The following parameters are only used with Vault Enterprise
 - `administrative_namespace_path` `(string: "")` - Specifies the absolute path
   to the Vault namespace to be used as an [Administrative namespace](/vault/docs/enterprise/namespaces/create-admin-namespace).
 
+- `remove_irrevocable_lease_after` `(string: "")` - Enables the automatic deletion
+of irrevocable leases. When the configured duration exceeds the expiry time of an irrevocable lease,
+Vault deletes the lease. The minimum value for `remove_irrevocable_lease_after` is 2 days (`2d`).
+If you set the removal window to a value less than the minimum, Vault overwrites the value to `2d`.
+Deleting a lease may cause Vault to orphan external resources.
+
 [storage-backend]: /vault/docs/configuration/storage
 [listener]: /vault/docs/configuration/listener
+[reporting]: /vault/docs/configuration/reporting
 [seal]: /vault/docs/configuration/seal
 [sealwrap]: /vault/docs/enterprise/sealwrap
 [telemetry]: /vault/docs/configuration/telemetry

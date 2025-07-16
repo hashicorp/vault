@@ -16,12 +16,14 @@ import (
 	"fmt"
 	mathrand "math/rand"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -34,7 +36,8 @@ import (
 var allTestKeyTypes = []KeyType{
 	KeyType_AES256_GCM96, KeyType_ECDSA_P256, KeyType_ED25519, KeyType_RSA2048,
 	KeyType_RSA4096, KeyType_ChaCha20_Poly1305, KeyType_ECDSA_P384, KeyType_ECDSA_P521, KeyType_AES128_GCM96,
-	KeyType_RSA3072, KeyType_MANAGED_KEY, KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES256_CMAC,
+	KeyType_RSA3072, KeyType_MANAGED_KEY, KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES256_CMAC, KeyType_ML_DSA,
+	KeyType_HYBRID, KeyType_AES192_CMAC, KeyType_SLH_DSA,
 }
 
 func TestPolicy_KeyTypes(t *testing.T) {
@@ -53,7 +56,7 @@ func TestPolicy_KeyTypes(t *testing.T) {
 	}
 }
 
-func TestPolicy_HmacCmacSuported(t *testing.T) {
+func TestPolicy_HmacCmacSupported(t *testing.T) {
 	// Test HMAC supported feature
 	for _, keyType := range allTestKeyTypes {
 		switch keyType {
@@ -64,7 +67,7 @@ func TestPolicy_HmacCmacSuported(t *testing.T) {
 			if keyType.CMACSupported() {
 				t.Fatalf("cmac should not have been be supported for keytype %s", keyType.String())
 			}
-		case KeyType_AES128_CMAC, KeyType_AES256_CMAC:
+		case KeyType_AES128_CMAC, KeyType_AES256_CMAC, KeyType_AES192_CMAC:
 			if keyType.HMACSupported() {
 				t.Fatalf("hmac should have been not be supported for keytype %s", keyType.String())
 			}
@@ -810,7 +813,7 @@ func Test_Import(t *testing.T) {
 func generateTestKeys() (map[KeyType][]byte, error) {
 	keyMap := make(map[KeyType][]byte)
 
-	rsaKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	rsaKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 	if err != nil {
 		return nil, err
 	}
@@ -820,7 +823,7 @@ func generateTestKeys() (map[KeyType][]byte, error) {
 	}
 	keyMap[KeyType_RSA2048] = rsaKeyBytes
 
-	rsaKey, err = rsa.GenerateKey(rand.Reader, 3072)
+	rsaKey, err = cryptoutil.GenerateRSAKey(rand.Reader, 3072)
 	if err != nil {
 		return nil, err
 	}
@@ -830,7 +833,7 @@ func generateTestKeys() (map[KeyType][]byte, error) {
 	}
 	keyMap[KeyType_RSA3072] = rsaKeyBytes
 
-	rsaKey, err = rsa.GenerateKey(rand.Reader, 4096)
+	rsaKey, err = cryptoutil.GenerateRSAKey(rand.Reader, 4096)
 	if err != nil {
 		return nil, err
 	}
@@ -1249,9 +1252,13 @@ func Test_RSA_PKCS1Signing(t *testing.T) {
 // FIPS Go build does not support at this time the SHA3 hashes as FIPS 140_2 does
 // not accept them.
 func isUnsupportedGoHashType(hashType HashType, err error) bool {
-	switch hashType {
-	case HashTypeSHA3224, HashTypeSHA3256, HashTypeSHA3384, HashTypeSHA3512:
-		return strings.Contains(err.Error(), "unsupported hash function")
+	// Skip over SHA3 hash tests when running with boringcrypto as it still doesn't support it or hasn't been
+	// validated yet. Wasn't available in FIPS-140-2, but should be in FIPS-140-3 eventually?
+	if strings.Contains(runtime.Version(), "X:boringcrypto") {
+		switch hashType {
+		case HashTypeSHA3224, HashTypeSHA3256, HashTypeSHA3384, HashTypeSHA3512:
+			return strings.Contains(err.Error(), "unsupported hash function")
+		}
 	}
 
 	return false

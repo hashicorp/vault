@@ -21,16 +21,22 @@ import (
 const (
 	pathStaticRole = "static-roles"
 
-	paramRoleName       = "name"
-	paramUsername       = "username"
-	paramRotationPeriod = "rotation_period"
+	paramRoleName        = "name"
+	paramUsername        = "username"
+	paramRotationPeriod  = "rotation_period"
+	paramAssumeRoleARN   = "assume_role_arn"
+	paramRoleSessionName = "assume_role_session_name"
+	paramExternalID      = "external_id"
 )
 
 type staticRoleEntry struct {
-	Name           string        `json:"name" structs:"name" mapstructure:"name"`
-	ID             string        `json:"id" structs:"id" mapstructure:"id"`
-	Username       string        `json:"username" structs:"username" mapstructure:"username"`
-	RotationPeriod time.Duration `json:"rotation_period" structs:"rotation_period" mapstructure:"rotation_period"`
+	Name                  string        `json:"name" structs:"name" mapstructure:"name"`
+	ID                    string        `json:"id" structs:"id" mapstructure:"id"`
+	Username              string        `json:"username" structs:"username" mapstructure:"username"`
+	RotationPeriod        time.Duration `json:"rotation_period" structs:"rotation_period" mapstructure:"rotation_period"`
+	AssumeRoleARN         string        `json:"assume_role_arn" structs:"assume_role_arn" mapstructure:"assume_role_arn"`
+	AssumeRoleSessionName string        `json:"assume_role_session_name" structs:"assume_role_session_name" mapstructure:"assume_role_session_name"`
+	ExternalID            string        `json:"external_id" structs:"external_id" mapstructure:"external_id"`
 }
 
 func pathStaticRoles(b *backend) *framework.Path {
@@ -53,23 +59,12 @@ func pathStaticRoles(b *backend) *framework.Path {
 			},
 		}},
 	}
+	fields := roleResponse[http.StatusOK][0].Fields
+	AddStaticAssumeRoleFieldsEnt(fields)
 
 	return &framework.Path{
 		Pattern: fmt.Sprintf("%s/%s", pathStaticRole, framework.GenericNameWithAtRegex(paramRoleName)),
-		Fields: map[string]*framework.FieldSchema{
-			paramRoleName: {
-				Type:        framework.TypeString,
-				Description: descRoleName,
-			},
-			paramUsername: {
-				Type:        framework.TypeString,
-				Description: descUsername,
-			},
-			paramRotationPeriod: {
-				Type:        framework.TypeDurationSecond,
-				Description: descRotationPeriod,
-			},
-		},
+		Fields:  fields,
 
 		Operations: map[logical.Operation]framework.OperationHandler{
 			logical.ReadOperation: &framework.PathOperation{
@@ -94,6 +89,19 @@ func pathStaticRoles(b *backend) *framework.Path {
 			},
 		},
 
+		HelpSynopsis:    pathStaticRolesHelpSyn,
+		HelpDescription: pathStaticRolesHelpDesc,
+	}
+}
+
+func pathListStaticRoles(b *backend) *framework.Path {
+	return &framework.Path{
+		Pattern: fmt.Sprintf("%s/?$", pathStaticRole),
+		Operations: map[logical.Operation]framework.OperationHandler{
+			logical.ListOperation: &framework.PathOperation{
+				Callback: b.pathStaticRolesList,
+			},
+		},
 		HelpSynopsis:    pathStaticRolesHelpSyn,
 		HelpDescription: pathStaticRolesHelpDesc,
 	}
@@ -159,6 +167,11 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 
 	// other params are optional if we're not Creating
 
+	err = validateAssumeRoleFields(data, &config)
+	if err != nil {
+		return nil, err
+	}
+
 	if rawUsername, ok := data.GetOk(paramUsername); ok {
 		config.Username = rawUsername.(string)
 
@@ -194,12 +207,13 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 
 	// Bootstrap initial set of keys if they did not exist before. AWS Secret Access Keys can only be obtained on creation,
 	// so we need to boostrap new roles with a new initial set of keys to be able to serve valid credentials to Vault clients.
-	existingCreds, err := req.Storage.Get(ctx, formatCredsStoragePath(config.Name))
+	credsPath := formatCredsStoragePath(config.Name)
+	existingCredsEntry, err := req.Storage.Get(ctx, credsPath)
 	if err != nil {
 		return nil, fmt.Errorf("unable to verify if credentials already exist for role %q: %w", config.Name, err)
 	}
-	if existingCreds == nil {
-		err := b.createCredential(ctx, req.Storage, config, false)
+	if existingCredsEntry == nil {
+		creds, err := b.createCredential(ctx, req.Storage, config, false)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create new credentials for role %q: %w", config.Name, err)
 		}
@@ -207,12 +221,17 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 		err = b.credRotationQueue.Push(&queue.Item{
 			Key:      config.Name,
 			Value:    config,
-			Priority: time.Now().Add(config.RotationPeriod).Unix(),
+			Priority: creds.priority(config),
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to add item into the rotation queue for role %q: %w", config.Name, err)
 		}
 	} else {
+		var existingCreds awsCredentials
+		err := existingCredsEntry.DecodeJSON(&existingCreds)
+		if err != nil {
+			return nil, fmt.Errorf("unable to decode existing credentials for role %s: %w", config.Name, err)
+		}
 		// creds already exist, so all we need to do is update the rotation
 		// what here stays the same and what changes? Can we change the name?
 		i, err := b.credRotationQueue.PopByKey(config.Name)
@@ -227,7 +246,14 @@ func (b *backend) pathStaticRolesWrite(ctx context.Context, req *logical.Request
 		}
 		i.Value = config
 		// update the next rotation to occur at now + the new rotation period
-		i.Priority = time.Now().Add(config.RotationPeriod).Unix()
+		newExpiration := time.Now().Add(config.RotationPeriod)
+		existingCreds.Expiration = &newExpiration
+		_, err = logical.StorageEntryJSON(credsPath, &existingCreds)
+		if err != nil {
+			return nil, fmt.Errorf("error updating credentials for role %s: %w", config.Name, err)
+		}
+		i.Priority = existingCreds.priority(config)
+
 		err = b.credRotationQueue.Push(i)
 		if err != nil {
 			return nil, fmt.Errorf("failed to add updated item into the rotation queue for role %q: %w", config.Name, err)
@@ -276,6 +302,21 @@ func (b *backend) pathStaticRolesDelete(ctx context.Context, req *logical.Reques
 	return nil, req.Storage.Delete(ctx, formatRoleStoragePath(roleName.(string)))
 }
 
+func (b *backend) pathStaticRolesList(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	b.roleMutex.RLock()
+	defer b.roleMutex.RUnlock()
+
+	roles, err := req.Storage.List(ctx, pathStaticRole+"/")
+	if err != nil {
+		return nil, fmt.Errorf("error listing static roles at %s: %w", pathStaticRole, err)
+	}
+	if len(roles) == 0 {
+		return &logical.Response{Data: map[string]interface{}{}}, nil
+	}
+
+	return logical.ListResponse(roles), nil
+}
+
 func (b *backend) validateRoleName(name string) error {
 	if name == "" {
 		return errors.New("empty role name attribute given")
@@ -286,10 +327,11 @@ func (b *backend) validateRoleName(name string) error {
 // validateIAMUser checks the user information we have for the role against the information on AWS. On a create, it uses the username
 // to retrieve the user information and _sets_ the userID. On update, it validates the userID and username.
 func (b *backend) validateIAMUserExists(ctx context.Context, storage logical.Storage, entry *staticRoleEntry, isCreate bool) error {
-	c, err := b.clientIAM(ctx, storage)
+	c, err := b.getNonCachedIAMClient(ctx, storage, *entry)
 	if err != nil {
-		return fmt.Errorf("unable to validate username %q: %w", entry.Username, err)
+		return fmt.Errorf("unable to get client to validate username %q: %w", entry.Username, err)
 	}
+	b.iamClient = c
 
 	// we don't really care about the content of the result, just that it's not an error
 	out, err := c.GetUser(&iam.GetUserInput{
@@ -318,8 +360,8 @@ const (
 )
 
 func (b *backend) validateRotationPeriod(period time.Duration) error {
-	if period < minAllowableRotationPeriod {
-		return fmt.Errorf("role rotation period out of range: must be greater than %.2f seconds", minAllowableRotationPeriod.Seconds())
+	if period < b.minAllowableRotationPeriod {
+		return fmt.Errorf("role rotation period out of range: must be greater than %.2f seconds", b.minAllowableRotationPeriod.Seconds())
 	}
 	return nil
 }
@@ -351,4 +393,7 @@ const (
 	descUsername       = "The IAM user to adopt as a static role."
 	descRotationPeriod = `Period by which to rotate the backing credential of the adopted user. 
 This can be a Go duration (e.g, '1m', 24h'), or an integer number of seconds.`
+	descAssumeRoleARN   = `The AWS ARN for the role to be assumed when interacting with the account specified.`
+	descRoleSessionName = `An identifier for the assumed role session.`
+	descExternalID      = `An external ID to be passed to the assumed role session.`
 )

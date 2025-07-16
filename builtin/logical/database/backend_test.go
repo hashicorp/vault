@@ -23,10 +23,12 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/builtinplugins"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/pluginconsts"
 	"github.com/hashicorp/vault/helper/testhelpers/certhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	postgreshelper "github.com/hashicorp/vault/helper/testhelpers/postgresql"
 	vaulthttp "github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/plugins/database/cassandra"
 	"github.com/hashicorp/vault/plugins/database/postgresql"
 	v4 "github.com/hashicorp/vault/sdk/database/dbplugin"
 	v5 "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
@@ -39,6 +41,7 @@ import (
 	_ "github.com/jackc/pgx/v4"
 	"github.com/mitchellh/mapstructure"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func getClusterPostgresDBWithFactory(t *testing.T, factory logical.Factory) (*vault.TestCluster, logical.SystemView) {
@@ -92,11 +95,21 @@ func TestBackend_PluginMain_PostgresMultiplexed(t *testing.T) {
 	v5.ServeMultiplex(postgresql.New)
 }
 
+// TestBackend_PluginMain_CassandraMultiplexed tests the Cassandra database plugin
+func TestBackend_PluginMain_CassandraMultiplexed(t *testing.T) {
+	if os.Getenv(pluginutil.PluginVaultVersionEnv) == "" {
+		return
+	}
+
+	v5.ServeMultiplex(cassandra.New)
+}
+
 func TestBackend_RoleUpgrade(t *testing.T) {
 	storage := &logical.InmemStorage{}
 	backend := &databaseBackend{}
 
 	roleExpected := &roleEntry{
+		Name: "test",
 		Statements: v4.Statements{
 			CreationStatements: "test",
 			Creation:           []string{"test"},
@@ -211,6 +224,11 @@ func TestBackend_config_connection(t *testing.T) {
 			"password_policy":                    "",
 			"plugin_version":                     "",
 			"verify_connection":                  false,
+			"skip_static_role_import_rotation":   false,
+			"rotation_schedule":                  "",
+			"rotation_period":                    time.Duration(0).Seconds(),
+			"rotation_window":                    time.Duration(0).Seconds(),
+			"disable_automated_rotation":         false,
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -266,6 +284,11 @@ func TestBackend_config_connection(t *testing.T) {
 			"password_policy":                    "",
 			"plugin_version":                     "",
 			"verify_connection":                  false,
+			"skip_static_role_import_rotation":   false,
+			"rotation_schedule":                  "",
+			"rotation_period":                    time.Duration(0).Seconds(),
+			"rotation_window":                    time.Duration(0).Seconds(),
+			"disable_automated_rotation":         false,
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -274,6 +297,7 @@ func TestBackend_config_connection(t *testing.T) {
 		}
 
 		delete(resp.Data["connection_details"].(map[string]interface{}), "name")
+		delete(resp.Data, "AutomatedRotationParams")
 		if !reflect.DeepEqual(expected, resp.Data) {
 			t.Fatalf("bad: expected:%#v\nactual:%#v\n", expected, resp.Data)
 		}
@@ -310,6 +334,11 @@ func TestBackend_config_connection(t *testing.T) {
 			"password_policy":                    "",
 			"plugin_version":                     "",
 			"verify_connection":                  false,
+			"skip_static_role_import_rotation":   false,
+			"rotation_schedule":                  "",
+			"rotation_period":                    time.Duration(0).Seconds(),
+			"rotation_window":                    time.Duration(0).Seconds(),
+			"disable_automated_rotation":         false,
 		}
 		configReq.Operation = logical.ReadOperation
 		resp, err = b.HandleRequest(namespace.RootContext(nil), configReq)
@@ -318,6 +347,7 @@ func TestBackend_config_connection(t *testing.T) {
 		}
 
 		delete(resp.Data["connection_details"].(map[string]interface{}), "name")
+		delete(resp.Data, "AutomatedRotationParams")
 		if !reflect.DeepEqual(expected, resp.Data) {
 			t.Fatalf("bad: expected:%#v\nactual:%#v\n", expected, resp.Data)
 		}
@@ -417,7 +447,7 @@ func TestBackend_basic(t *testing.T) {
 	defer b.Cleanup(context.Background())
 
 	cleanup, connURL := postgreshelper.PrepareTestContainer(t)
-	defer cleanup()
+	t.Cleanup(cleanup)
 
 	// Configure a connection
 	data := map[string]interface{}{
@@ -768,6 +798,11 @@ func TestBackend_connectionCrud(t *testing.T) {
 		"password_policy":                    "",
 		"plugin_version":                     "",
 		"verify_connection":                  false,
+		"skip_static_role_import_rotation":   false,
+		"rotation_schedule":                  "",
+		"rotation_period":                    json.Number("0"),
+		"rotation_window":                    json.Number("0"),
+		"disable_automated_rotation":         false,
 	}
 	resp, err = client.Read("database/config/plugin-test")
 	if err != nil {
@@ -775,6 +810,7 @@ func TestBackend_connectionCrud(t *testing.T) {
 	}
 
 	delete(resp.Data["connection_details"].(map[string]interface{}), "name")
+	delete(resp.Data, "AutomatedRotationParams")
 	if diff := deep.Equal(resp.Data, expected); diff != nil {
 		t.Fatal(strings.Join(diff, "\n"))
 	}
@@ -1565,6 +1601,133 @@ func TestBackend_ConnectionURL_redacted(t *testing.T) {
 					t.Fatalf("password was not redacted by URL.Redacted()")
 				}
 			}
+		})
+	}
+}
+
+// TestBackend_GetConnectionMetrics tests the GetConnectionMetrics method
+// of the database backend to ensure it correctly counts the number of connections
+// for each plugin type.
+func TestBackend_GetConnectionMetrics(t *testing.T) {
+	cluster, sys := getCluster(t)
+	defer cluster.Cleanup()
+
+	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "cassandra-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_CassandraMultiplexed",
+		[]string{fmt.Sprintf("%s=%s", pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)})
+	vault.TestAddTestPlugin(t, cluster.Cores[0].Core, "postgresql-database-plugin", consts.PluginTypeDatabase, "", "TestBackend_PluginMain_PostgresMultiplexed",
+		[]string{fmt.Sprintf("%s=%s", pluginutil.PluginCACertPEMEnv, cluster.CACertPEMFile)})
+
+	postgresConfig := map[string]interface{}{
+		"name":              "postgres-plugin-test",
+		"plugin_name":       "postgresql-database-plugin",
+		"connection_url":    "some_postgres_url",
+		"username":          "postgres",
+		"password":          "secret",
+		"verify_connection": false,
+	}
+
+	cassandraConfig := map[string]interface{}{
+		"name":              "cassandra-plugin-test",
+		"plugin_name":       "cassandra-database-plugin",
+		"hosts":             "some_cassandra_url",
+		"username":          "cassandra",
+		"password":          "secret",
+		"verify_connection": false,
+	}
+
+	postgresConfigV2 := map[string]interface{}{
+		"name":              "postgres-plugin-test-second-connection",
+		"plugin_name":       "postgresql-database-plugin",
+		"connection_url":    "some_postgres_url",
+		"username":          "postgres",
+		"password":          "secret",
+		"verify_connection": false,
+	}
+
+	cassandraConfigV2 := map[string]interface{}{
+		"name":              "cassandra-plugin-test-second-connection",
+		"plugin_name":       "cassandra-database-plugin",
+		"hosts":             "some_cassandra_url",
+		"username":          "cassandra",
+		"password":          "secret",
+		"verify_connection": false,
+	}
+
+	tests := []struct {
+		name              string
+		connectionConfigs []map[string]interface{}
+		expectedCounts    map[string]int
+	}{
+		{
+			name: "1 Postgres, 1 Cassandra connection",
+			connectionConfigs: []map[string]interface{}{
+				postgresConfig,
+				cassandraConfig,
+			},
+			expectedCounts: map[string]int{
+				pluginconsts.DbPostgresqlPlugin: 1,
+				pluginconsts.DbCassandraPlugin:  1,
+			},
+		},
+		{
+			name: "1 Postgres connection",
+			connectionConfigs: []map[string]interface{}{
+				postgresConfig,
+			},
+			expectedCounts: map[string]int{
+				pluginconsts.DbPostgresqlPlugin: 1,
+			},
+		},
+		{
+			name:              "No Connections",
+			connectionConfigs: []map[string]interface{}{},
+			expectedCounts:    map[string]int{},
+		},
+		{
+			name: " 2 Postgres, 2 Cassandra connections",
+			connectionConfigs: []map[string]interface{}{
+				postgresConfig,
+				postgresConfigV2,
+				cassandraConfig,
+				cassandraConfigV2,
+			},
+			expectedCounts: map[string]int{
+				pluginconsts.DbPostgresqlPlugin: 2,
+				pluginconsts.DbCassandraPlugin:  2,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := logical.TestBackendConfig()
+			config.StorageView = &logical.InmemStorage{}
+			config.System = sys
+
+			b, err := Factory(context.Background(), config)
+			require.NoError(t, err)
+			defer b.Cleanup(context.Background())
+
+			// Create connections
+			for _, connData := range tt.connectionConfigs {
+				req := &logical.Request{
+					Operation: logical.UpdateOperation,
+					Path:      fmt.Sprintf("config/%s", connData["name"]),
+					Storage:   config.StorageView,
+					Data:      connData,
+				}
+				resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+				if err != nil || (resp != nil && resp.IsError()) {
+					t.Fatalf("Failed to configure connection %s: err:%s resp:%#v\n", connData["name"], err, resp)
+				}
+			}
+
+			// Get metric counts
+			metricsReporter, ok := b.(logical.MetricsReporter)
+			require.True(t, ok)
+			connectionCount, err := metricsReporter.GetConnectionMetrics()
+			require.NoError(t, err)
+			require.Equal(t, tt.expectedCounts, connectionCount, "Unexpected connection counts")
 		})
 	}
 }

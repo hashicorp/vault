@@ -1,0 +1,418 @@
+---
+layout: docs
+page_title: Vault Agent Injector examples
+description: Configuration examples of using the Vault Agent Injector.
+---
+
+# Vault Agent Injector examples
+
+The following are different configuration examples to support a variety of
+deployment models.
+
+~> A common mistake is to set the annotation on the Deployment or other resource.
+Ensure that the injector annotations are specified on the pod specification when
+using higher level constructs such as deployments, jobs or statefulsets.
+
+## Before using the Vault Agent injector
+
+Before applying Vault Agent injection annotations to pods, the following requirements
+should be satisfied.
+
+### Connectivity
+
+- the Kubernetes API can connect to the Vault Agent injector service on port `443`, and
+  the injector can connect to the Kubernetes API,
+- Vault can connect to the Kubernetes API,
+- Pods in the Kubernetes cluster can connect to Vault.
+
+~> Note: The Kubernetes API typically runs on the master nodes, and the Vault Agent injector
+on a worker node in a Kubernetes cluster. <br/><br/>
+On Kubernetes clusters that have aggregator routing enabled (ex. [GKE private
+clusters](https://cloud.google.com/kubernetes-engine/docs/how-to/private-clusters#add_firewall_rules)),
+the Kubernetes API will connect directly to the injector service endpoint,
+which is on port `8080`.
+
+### Kubernetes and Vault configuration
+
+- Kubernetes auth method should be configured and enabled in Vault,
+- Pod should have a service account,
+- desired secrets exist within Vault,
+- the service account should be bound to a Vault role with a policy enabling access to desired secrets.
+
+For more information on configuring the Vault Kubernetes auth method,
+[see the official documentation](/vault/docs/auth/kubernetes#configuration).
+
+## Debugging
+
+If an error occurs with a mutation request, Kubernetes will attach the error to the
+owner of the pod. Check the following for errors:
+
+- If the pod was created by a deployment or statefulset, check for errors in the `replicaset`
+  that owns the pod.
+- If the pod was created by a job, check the `job` for errors.
+
+## Patching existing pods
+
+To patch existing pods, a Kubernetes patch can be applied to add the required annotations
+to pods. When applying a patch, the pods will be rescheduled.
+
+First, create the patch:
+
+```bash
+cat <<EOF >> ./patch.yaml
+spec:
+  template:
+    metadata:
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/agent-inject-status: "update"
+        vault.hashicorp.com/agent-inject-secret-db-creds: "database/creds/db-app"
+        vault.hashicorp.com/agent-inject-template-db-creds: |
+          {{- with secret "database/creds/db-app" -}}
+          postgres://{{ .Data.username }}:{{ .Data.password }}@postgres:5432/appdb?sslmode=disable
+          {{- end }}
+        vault.hashicorp.com/role: "db-app"
+        vault.hashicorp.com/ca-cert: "/vault/tls/ca.crt"
+        vault.hashicorp.com/client-cert: "/vault/tls/client.crt"
+        vault.hashicorp.com/client-key: "/vault/tls/client.key"
+        vault.hashicorp.com/tls-secret: "vault-tls-client"
+EOF
+```
+
+Next, apply the patch:
+
+```bash
+kubectl patch deployment <MY DEPLOYMENT> --patch "$(cat patch.yaml)"
+```
+
+The pod should now be rescheduled with additional containers. The pod can be inspected
+using the `kubectl describe` command:
+
+```bash
+kubectl describe pod <name of pod>
+```
+
+## Deployments, StatefulSets, etc.
+
+The annotations for configuring Vault Agent injection must be on the pod
+specification. Since higher level resources such as Deployments wrap pod
+specification templates, Vault Agent Injector can be used with all of these
+higher level constructs, too.
+
+An example Deployment below shows how to enable Vault Agent injection:
+
+```yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: app-example
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-example-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-example
+  template:
+    metadata:
+      labels:
+        app: app-example
+      annotations:
+        vault.hashicorp.com/agent-inject: 'true'
+        vault.hashicorp.com/agent-inject-secret-db-creds: 'database/creds/db-app'
+        vault.hashicorp.com/agent-inject-template-db-creds: |
+          {{- with secret "database/creds/db-app" -}}
+          postgres://{{ .Data.username }}:{{ .Data.password }}@postgres:5432/appdb?sslmode=disable
+          {{- end }}
+        vault.hashicorp.com/role: 'db-app'
+        vault.hashicorp.com/ca-cert: '/vault/tls/ca.crt'
+        vault.hashicorp.com/client-cert: '/vault/tls/client.crt'
+        vault.hashicorp.com/client-key: '/vault/tls/client.key'
+        vault.hashicorp.com/tls-secret: 'vault-tls-client'
+    spec:
+      containers:
+        - name: app
+          image: 'app:1.0.0'
+      serviceAccountName: app-example
+```
+
+## ConfigMap example
+
+The following example creates a deployment that mounts a Kubernetes ConfigMap
+containing Vault Agent configuration files. For a complete list of the Vault
+Agent configuration settings, [see the Agent documentation](/vault/docs/agent-and-proxy/agent/template#vault-agent-templates).
+
+```yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: app-example
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-example-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-example
+  template:
+    metadata:
+      labels:
+        app: app-example
+      annotations:
+        vault.hashicorp.com/agent-inject: 'true'
+        vault.hashicorp.com/agent-configmap: 'my-configmap'
+        vault.hashicorp.com/tls-secret: 'vault-tls-client'
+    spec:
+      containers:
+        - name: app
+          image: 'app:1.0.0'
+      serviceAccountName: app-example
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: my-configmap
+data:
+  config.hcl: |
+    "auto_auth" = {
+      "method" = {
+        "config" = {
+          "role" = "db-app"
+        }
+        "type" = "kubernetes"
+      }
+
+      "sink" = {
+        "config" = {
+          "path" = "/home/vault/.token"
+        }
+
+        "type" = "file"
+      }
+    }
+
+    "exit_after_auth" = false
+    "pid_file" = "/home/vault/.pid"
+
+    "template" = {
+      "contents" = "{{- with secret \"database/creds/db-app\" -}}postgres://{{ .Data.username }}:{{ .Data.password }}@postgres:5432/mydb?sslmode=disable{{- end }}"
+      "destination" = "/vault/secrets/db-creds"
+    }
+
+    "vault" = {
+      "address" = "https://vault.demo.svc.cluster.local:8200"
+      "ca_cert" = "/vault/tls/ca.crt"
+      "client_cert" = "/vault/tls/client.crt"
+      "client_key" = "/vault/tls/client.key"
+    }
+  config-init.hcl: |
+    "auto_auth" = {
+      "method" = {
+        "config" = {
+          "role" = "db-app"
+        }
+        "type" = "kubernetes"
+      }
+
+      "sink" = {
+        "config" = {
+          "path" = "/home/vault/.token"
+        }
+
+        "type" = "file"
+      }
+    }
+
+    "exit_after_auth" = true
+    "pid_file" = "/home/vault/.pid"
+
+    "template" = {
+      "contents" = "{{- with secret \"database/creds/db-app\" -}}postgres://{{ .Data.username }}:{{ .Data.password }}@postgres:5432/mydb?sslmode=disable{{- end }}"
+      "destination" = "/vault/secrets/db-creds"
+    }
+
+    "vault" = {
+      "address" = "https://vault.demo.svc.cluster.local:8200"
+      "ca_cert" = "/vault/tls/ca.crt"
+      "client_cert" = "/vault/tls/client.crt"
+      "client_key" = "/vault/tls/client.key"
+    }
+```
+
+## Environment variable example
+
+The following example demonstrates how templates can be used to create environment
+variables. A template should be created that exports a Vault secret as an environment
+variable and the application container should source those files during startup.
+
+```yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-deployment
+  labels:
+    app: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+      annotations:
+        vault.hashicorp.com/agent-inject: 'true'
+        vault.hashicorp.com/role: 'web'
+        vault.hashicorp.com/agent-inject-secret-config: 'secret/data/web'
+        # Environment variable export template
+        vault.hashicorp.com/agent-inject-template-config: |
+          {{- with secret "secret/data/web" -}}
+            export api_key="{{ .Data.data.payments_api_key }}"
+          {{- end }}
+    spec:
+      serviceAccountName: web
+      containers:
+        - name: web
+          image: alpine:latest
+          command:
+            ['sh', '-c']
+          args:
+            ['source /vault/secrets/config && <entrypoint script>']
+          ports:
+            - containerPort: 9090
+```
+
+## AppRole authentication
+
+The following example demonstrates how the AppRole authentication method can be used by
+Vault Agent for retrieving secrets. A Kubernetes secret containing the AppRole secret ID
+and role ID should be created first.
+
+```yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-deployment
+  labels:
+    app: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+      annotations:
+        vault.hashicorp.com/agent-inject: 'true'
+        vault.hashicorp.com/agent-extra-secret: 'approle-example'
+        vault.hashicorp.com/auth-type: 'approle'
+        vault.hashicorp.com/auth-path: 'auth/approle'
+        vault.hashicorp.com/auth-config-role-id-file-path: '/vault/custom/role-id'
+        vault.hashicorp.com/auth-config-secret-id-file-path: '/vault/custom/secret-id'
+        vault.hashicorp.com/agent-inject-secret-db-creds: 'database/creds/db-app'
+        vault.hashicorp.com/agent-inject-template-db-creds: |
+          {{- with secret "database/creds/db-app" -}}
+          postgres://{{ .Data.username }}:{{ .Data.password }}@postgres.postgres.svc:5432/wizard?sslmode=disable
+          {{- end }}
+        vault.hashicorp.com/role: 'my-role'
+        vault.hashicorp.com/tls-secret: 'vault-tls'
+        vault.hashicorp.com/ca-cert: '/vault/tls/ca.crt'
+    spec:
+      serviceAccountName: web
+      containers:
+        - name: web
+          image: alpine:latest
+          args:
+            ['sh', '-c', 'source /vault/secrets/config && <entrypoint script>']
+          ports:
+            - containerPort: 9090
+```
+
+## PKI cert example
+
+The following example demonstrates how to use the [`pkiCert` function][pkiCert] and
+[`writeToFile` function][writeToFile] from consul-template to create two files
+from a template: one for the certificate and CA (`cert.pem`) and one for the key
+(`cert.key`) generated by [Vault's PKI Secrets Engine](/vault/docs/secrets/pki).
+
+```yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-deployment
+  labels:
+    app: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+      annotations:
+        vault.hashicorp.com/agent-inject: 'true'
+        vault.hashicorp.com/role: 'web'
+        vault.hashicorp.com/agent-inject-secret-certs: 'pki/issue/cert'
+        vault.hashicorp.com/agent-inject-template-certs: |
+          {{- with pkiCert "pki/issue/cert" "common_name=test.example.com" "ttl=2h" -}}
+          {{ .Cert }}{{ .CA }}{{ .Key }}
+          {{ .Key | writeToFile "/vault/secrets/cert.key" "vault" "vault" "0644" }}
+          {{ .CA | writeToFile "/vault/secrets/cert.pem" "vault" "vault" "0644" }}
+          {{ .Cert | writeToFile "/vault/secrets/cert.pem" "vault" "vault" "0644" "append" }}
+          {{- end -}}
+    spec:
+      serviceAccountName: web
+      containers:
+        - name: web
+          image: nginx
+```
+
+[pkiCert]: https://github.com/hashicorp/consul-template/blob/main/docs/templating-language.md#pkicert
+[writeToFile]: https://github.com/hashicorp/consul-template/blob/main/docs/templating-language.md#writeToFile
+
+## Cross namespace secret sharing ((#cross-namespace))
+
+1. [Configure Vault for secret sharing across namespaces][cross-namespace].
+1. Use the following Pod annotations to authenticate to the Kubernetes method in
+   the `us-west-org` namespace and render secrets from the `us-east-org`
+   namespace into the file `/vault/secrets/marketing`
+
+```yaml
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: cross-namespace
+  namespace: client-nicecorp
+  annotations:
+    vault.hashicorp.com/agent-inject: "true"
+    vault.hashicorp.com/role: "cross-namespace-demo"
+    vault.hashicorp.com/auth-path: "us-west-org/auth/kubernetes"
+    vault.hashicorp.com/agent-inject-template-marketing: |
+      {{- with secret "us-east-org/kv-marketing/campaign" -}}
+      {{ range $k, $v := .Data.data }}{{ $k }}: {{ $v }}
+      {{ end }}{{- end -}}
+spec:
+  serviceAccountName: mega-app
+  containers:
+    - name: campaign
+      image: nginx
+```
+
+[cross-namespace]: https://support.hashicorp.com/hc/en-us/articles/27093291534995-How-to-configure-cross-namespace-access-in-Vault-Enterprise

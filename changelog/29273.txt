@@ -1,0 +1,3 @@
+```release-note:improvement
+sdk: Add helpers and CE stubs for plugins to communicate with Rotation Manager (Enterprise).
+```

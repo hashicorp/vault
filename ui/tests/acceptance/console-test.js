@@ -8,7 +8,7 @@ import { settled, waitUntil, click } from '@ember/test-helpers';
 import { create } from 'ember-cli-page-object';
 import { setupApplicationTest } from 'ember-qunit';
 import enginesPage from 'vault/tests/pages/secrets/backends';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -18,7 +18,7 @@ module('Acceptance | console', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
-    return authPage.login();
+    return login();
   });
 
   test("refresh reloads the current route's data", async function (assert) {

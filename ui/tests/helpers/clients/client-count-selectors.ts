@@ -13,6 +13,7 @@ export const CLIENT_COUNT = {
     startDiscrepancy: '[data-test-counts-start-discrepancy]',
   },
   dateRange: {
+    dropdownOption: (idx = 0) => `[data-test-date-range-billing-start="${idx}"]`,
     dateDisplay: (name: string) => (name ? `[data-test-date-range="${name}"]` : '[data-test-date-range]'),
     edit: '[data-test-date-range-edit]',
     editModal: '[data-test-date-range-edit-modal]',
@@ -25,8 +26,14 @@ export const CLIENT_COUNT = {
   statTextValue: (label: string) =>
     label ? `[data-test-stat-text="${label}"] .stat-value` : '[data-test-stat-text]',
   usageStats: (title: string) => `[data-test-usage-stats="${title}"]`,
-  attributionBlock: (type: string) =>
-    type ? `[data-test-clients-attribution="${type}"]` : '[data-test-clients-attribution]',
+  attribution: {
+    card: '[data-test-card="attribution"]',
+    table: '[data-test-clients-attribution-table]',
+    row: '[data-test-attribution-table-row',
+    counts: (index: number) => `[data-test-attribution-table-counts="${index}"]`,
+    pagination: '[data-test-pagination',
+    paginationInfo: '.hds-pagination-info',
+  },
   filterBar: '[data-test-clients-filter-bar]',
   nsFilter: '#namespace-search-select',
   mountFilter: '#mounts-search-select',

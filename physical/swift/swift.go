@@ -15,6 +15,7 @@ import (
 	metrics "github.com/armon/go-metrics"
 	cleanhttp "github.com/hashicorp/go-cleanhttp"
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/ncw/swift"
@@ -29,7 +30,7 @@ type SwiftBackend struct {
 	container  string
 	client     *swift.Connection
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 }
 
 // NewSwiftBackend constructs a Swift backend using a pre-existing
@@ -148,7 +149,7 @@ func NewSwiftBackend(conf map[string]string, logger log.Logger) (physical.Backen
 		client:     &c,
 		container:  container,
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permitpool.New(maxParInt),
 	}
 	return s, nil
 }
@@ -157,7 +158,9 @@ func NewSwiftBackend(conf map[string]string, logger log.Logger) (physical.Backen
 func (s *SwiftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"swift", "put"}, time.Now())
 
-	s.permitPool.Acquire()
+	if err := s.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer s.permitPool.Release()
 
 	err := s.client.ObjectPutBytes(s.container, entry.Key, entry.Value, "")
@@ -172,7 +175,9 @@ func (s *SwiftBackend) Put(ctx context.Context, entry *physical.Entry) error {
 func (s *SwiftBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"swift", "get"}, time.Now())
 
-	s.permitPool.Acquire()
+	if err := s.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer s.permitPool.Release()
 
 	// Do a list of names with the key first since eventual consistency means
@@ -204,7 +209,9 @@ func (s *SwiftBackend) Get(ctx context.Context, key string) (*physical.Entry, er
 func (s *SwiftBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"swift", "delete"}, time.Now())
 
-	s.permitPool.Acquire()
+	if err := s.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer s.permitPool.Release()
 
 	err := s.client.ObjectDelete(s.container, key)
@@ -221,7 +228,9 @@ func (s *SwiftBackend) Delete(ctx context.Context, key string) error {
 func (s *SwiftBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"swift", "list"}, time.Now())
 
-	s.permitPool.Acquire()
+	if err := s.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer s.permitPool.Release()
 
 	list, err := s.client.ObjectNamesAll(s.container, &swift.ObjectsOpts{Prefix: prefix})

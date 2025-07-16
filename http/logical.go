@@ -111,7 +111,10 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 		contentType := r.Header.Get("Content-Type")
 
 		if (ra != nil && ra.IsBinaryPath(r.Context(), path)) ||
-			path == "sys/storage/raft/snapshot" || path == "sys/storage/raft/snapshot-force" {
+			path == "sys/storage/raft/snapshot" ||
+			path == "sys/storage/raft/snapshot-force" ||
+			path == "sys/storage/raft/snapshot-load" {
+
 			passHTTPReq = true
 			origBody = r.Body
 		} else {
@@ -202,13 +205,38 @@ func buildLogicalRequestNoAuth(perfStandby bool, ra *vault.RouterAccess, w http.
 		return nil, nil, http.StatusInternalServerError, fmt.Errorf("failed to generate identifier for the request: %w", err)
 	}
 
+	var requiredSnapshotID string
+
+	// check for a read, list, or recover from snapshot request
+	switch op {
+	case logical.ReadOperation, logical.ListOperation:
+		snapshotID, ok := data[VaultSnapshotReadParam]
+		if ok && snapshotID != "" {
+			requiredSnapshotID = snapshotID.(string)
+			delete(data, VaultSnapshotReadParam)
+			if len(data) == 0 {
+				data = nil
+			}
+		}
+	case logical.UpdateOperation:
+		queryVals := r.URL.Query()
+		if queryVals.Has(VaultSnapshotRecoverParam) {
+			snapshotID := queryVals.Get(VaultSnapshotRecoverParam)
+			if snapshotID != "" {
+				requiredSnapshotID = snapshotID
+				op = logical.RecoverOperation
+			}
+		}
+	}
+
 	req := &logical.Request{
-		ID:         requestId,
-		Operation:  op,
-		Path:       path,
-		Data:       data,
-		Connection: getConnection(r),
-		Headers:    r.Header,
+		ID:                 requestId,
+		Operation:          op,
+		Path:               path,
+		Data:               data,
+		Connection:         getConnection(r),
+		Headers:            r.Header,
+		RequiresSnapshotID: requiredSnapshotID,
 	}
 
 	if ra != nil && ra.IsLimitedPath(r.Context(), path) {
@@ -473,6 +501,8 @@ func respondLogical(core *vault.Core, w http.ResponseWriter, r *http.Request, re
 // returning the CRL information on the PKI backends.
 func respondRaw(w http.ResponseWriter, r *http.Request, resp *logical.Response) {
 	retErr := func(w http.ResponseWriter, err string) {
+		defer logical.IncrementResponseStatusCodeMetric(http.StatusInternalServerError)
+
 		w.Header().Set("X-Vault-Raw-Error", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write(nil)
@@ -573,6 +603,8 @@ WRITE_RESPONSE:
 
 	w.WriteHeader(status)
 	w.Write(body)
+
+	logical.IncrementResponseStatusCodeMetric(status)
 }
 
 // getConnection is used to format the connection information for

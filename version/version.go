@@ -6,6 +6,7 @@ package version
 import (
 	"bytes"
 	"fmt"
+	"time"
 )
 
 type VersionInfo struct {
@@ -31,6 +32,14 @@ func GetVersion() *VersionInfo {
 		VersionMetadata:   md,
 		BuildDate:         BuildDate,
 	}
+}
+
+func GetVaultBuildDate() (time.Time, error) {
+	buildDate, err := time.Parse(time.RFC3339, BuildDate)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("failed to parse build date based on RFC3339: %w", err)
+	}
+	return buildDate, nil
 }
 
 func (c *VersionInfo) VersionNumber() string {

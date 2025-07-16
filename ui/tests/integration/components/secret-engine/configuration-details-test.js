@@ -8,19 +8,43 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
-import { CONFIGURABLE_SECRET_ENGINES } from 'vault/helpers/mountable-secret-engines';
 import {
-  createConfig,
   expectedConfigKeys,
   expectedValueOfConfigKeys,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
+import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
-module('Integration | Component | SecretEngine/ConfigurationDetails', function (hooks) {
+module('Integration | Component | SecretEngine::ConfigurationDetails', function (hooks) {
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.store = this.owner.lookup('service:store');
-    this.configModels = [];
+    this.configs = {
+      aws: {
+        region: 'us-west-2',
+        accessKey: '123-key',
+        iamEndpoint: 'iam-endpoint',
+        stsEndpoint: 'sts-endpoint',
+        maxRetries: 1,
+      },
+      azure: {
+        clientSecret: 'client-secret',
+        subscriptionId: 'subscription-id',
+        tenantId: 'tenant-id',
+        clientId: 'client-id',
+        rootPasswordTtl: '1800000s',
+        environment: 'AZUREPUBLICCLOUD',
+      },
+      gcp: {
+        credentials: '{"some-key":"some-value"}',
+        ttl: '100s',
+        maxTtl: '101s',
+      },
+      ssh: {
+        publicKey: 'public-key',
+        generateSigningKey: true,
+      },
+    };
   });
 
   test('it shows prompt message if no config models are passed in', async function (assert) {
@@ -29,29 +53,49 @@ module('Integration | Component | SecretEngine/ConfigurationDetails', function (
       <SecretEngine::ConfigurationDetails @typeDisplay="Display Name" />
     `);
     assert.dom(GENERAL.emptyStateTitle).hasText(`Display Name not configured`);
-    assert.dom(GENERAL.emptyStateMessage).hasText(`Get started by configuring your Display Name engine.`);
+    assert
+      .dom(GENERAL.emptyStateMessage)
+      .hasText(`Get started by configuring your Display Name secrets engine.`);
   });
 
-  test('it shows config details if configModel(s) are passed in', async function (assert) {
-    assert.expect(21);
-    for (const type of CONFIGURABLE_SECRET_ENGINES) {
-      const backend = `test-${type}`;
-      this.configModels = createConfig(this.store, backend, type);
+  for (const type of ALL_ENGINES.filter((engine) => engine.isConfigurable ?? false).map(
+    (engine) => engine.type
+  )) {
+    test(`${type}: it shows config details if configModel(s) are passed in`, async function (assert) {
+      this.config = this.configs[type];
+      this.typeDisplay = engineDisplayData(type).displayName;
 
-      await render(hbs`<SecretEngine::ConfigurationDetails @configModels={{array this.configModels}}/>`);
+      await render(
+        hbs`<SecretEngine::ConfigurationDetails @config={{this.config}} @typeDisplay={{this.typeDisplay}}/>`
+      );
+
       for (const key of expectedConfigKeys(type)) {
-        assert.dom(GENERAL.infoRowLabel(key)).exists(`${key} on the ${type} config details exists.`);
-        const responseKeyAndValue = expectedValueOfConfigKeys(type, key);
-        assert
-          .dom(GENERAL.infoRowValue(key))
-          .hasText(responseKeyAndValue, `${key} value for the ${type} config details exists.`);
-        // make sure the ones that should be masked are masked, and others are not.
-        if (key === 'private_key' || key === 'public_key') {
-          assert.dom(GENERAL.infoRowValue(key)).hasClass('masked-input', `${key} is masked`);
+        if (
+          key === 'Secret key' ||
+          key === 'Client secret' ||
+          key === 'Private key' ||
+          key === 'Credentials'
+        ) {
+          // these keys are not returned by the API and should not show on the details page
+          assert
+            .dom(GENERAL.infoRowLabel(key))
+            .doesNotExist(`${key} on the ${type} config details does NOT exists.`);
         } else {
-          assert.dom(GENERAL.infoRowValue(key)).doesNotHaveClass('masked-input', `${key} is not masked`);
+          // check the label appears
+          assert.dom(GENERAL.infoRowLabel(key)).exists(`${key} on the ${type} config details exists.`);
+          const responseKeyAndValue = expectedValueOfConfigKeys(type, key);
+          // check the value appears
+          assert
+            .dom(GENERAL.infoRowValue(key))
+            .hasText(responseKeyAndValue, `${key} value for the ${type} config details exists.`);
+          // make sure the values that should be masked are masked, and others are not.
+          if (key === 'Public Key') {
+            assert.dom(GENERAL.infoRowValue(key)).hasClass('masked-input', `${key} is masked`);
+          } else {
+            assert.dom(GENERAL.infoRowValue(key)).doesNotHaveClass('masked-input', `${key} is not masked`);
+          }
         }
       }
-    }
-  });
+    });
+  }
 });

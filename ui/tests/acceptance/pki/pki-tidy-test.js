@@ -10,8 +10,7 @@ import { click, currentRouteName, fillIn, visit } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { v4 as uuidv4 } from 'uuid';
 
-import authPage from 'vault/tests/pages/auth';
-import logout from 'vault/tests/pages/logout';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -22,7 +21,7 @@ module('Acceptance | pki tidy', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
-    await authPage.login();
+    await login();
     // Setup PKI engine
     const mountPath = `pki-workflow-${uuidv4()}`;
     await enablePage.enable('pki', mountPath);
@@ -30,18 +29,16 @@ module('Acceptance | pki tidy', function (hooks) {
     await runCmd([
       `write ${this.mountPath}/root/generate/internal common_name="Hashicorp Test" name="Hashicorp Test"`,
     ]);
-    await logout.visit();
   });
 
   hooks.afterEach(async function () {
-    await logout.visit();
-    await authPage.login();
+    await login();
     // Cleanup engine
     await runCmd([`delete sys/mounts/${this.mountPath}`]);
   });
 
   test('it configures a manual tidy operation and shows its details and tidy states', async function (assert) {
-    await authPage.login(this.pkiAdminToken);
+    await login(this.pkiAdminToken);
     await visit(`/vault/secrets/${this.mountPath}/pki/tidy`);
     await click(PKI_TIDY.tidyEmptyStateConfigure);
     assert.dom(PKI_TIDY.tidyConfigureModal.configureTidyModal).exists('Configure tidy modal exists');
@@ -114,7 +111,7 @@ module('Acceptance | pki tidy', function (hooks) {
   });
 
   test('it configures an auto tidy operation and shows its details', async function (assert) {
-    await authPage.login(this.pkiAdminToken);
+    await login(this.pkiAdminToken);
     await visit(`/vault/secrets/${this.mountPath}/pki/tidy`);
     await click(PKI_TIDY.tidyEmptyStateConfigure);
     assert.dom(PKI_TIDY.tidyConfigureModal.configureTidyModal).exists('Configure tidy modal exists');
@@ -145,7 +142,7 @@ module('Acceptance | pki tidy', function (hooks) {
 
   // test coverage for a bug where toggling acme tidy on then off caused API failure
   test('it configures a manual tidy operation', async function (assert) {
-    await authPage.login(this.pkiAdminToken);
+    await login(this.pkiAdminToken);
     await visit(`/vault/secrets/${this.mountPath}/pki/tidy`);
     await click(PKI_TIDY.tidyEmptyStateConfigure);
     assert.dom(PKI_TIDY.tidyConfigureModal.configureTidyModal).exists();
@@ -160,7 +157,7 @@ module('Acceptance | pki tidy', function (hooks) {
     assert
       .dom(GENERAL.ttl.input('Tidy ACME enabled'))
       .hasValue('30', 'acmeAccountSafetyBuffer defaults to 30 days');
-    await click('[data-test-toggle-input="Tidy ACME enabled"]');
+    await click(GENERAL.toggleInput('Tidy ACME enabled'));
 
     await click(PKI_TIDY_FORM.tidySave);
     assert.strictEqual(
@@ -171,7 +168,7 @@ module('Acceptance | pki tidy', function (hooks) {
   });
 
   test('it opens a tidy modal when the user clicks on the tidy toolbar action', async function (assert) {
-    await authPage.login(this.pkiAdminToken);
+    await login(this.pkiAdminToken);
     await visit(`/vault/secrets/${this.mountPath}/pki/tidy`);
     await click(PKI_TIDY.tidyConfigureModal.tidyOptionsModal);
     assert.dom(PKI_TIDY.tidyConfigureModal.configureTidyModal).exists('Configure tidy modal exists');
@@ -184,7 +181,7 @@ module('Acceptance | pki tidy', function (hooks) {
   });
 
   test('it should show correct toolbar action depending on whether auto tidy is enabled', async function (assert) {
-    await authPage.login(this.pkiAdminToken);
+    await login(this.pkiAdminToken);
     await visit(`/vault/secrets/${this.mountPath}/pki/tidy`);
     assert
       .dom(PKI_TIDY.tidyConfigureModal.tidyOptionsModal)

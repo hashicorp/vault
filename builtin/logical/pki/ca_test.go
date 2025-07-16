@@ -9,7 +9,6 @@ import (
 	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/json"
@@ -24,6 +23,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/certutil"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 )
@@ -98,7 +98,7 @@ func TestBackend_CA_Steps(t *testing.T) {
 		}
 		ecCACert = strings.TrimSpace(string(pem.EncodeToMemory(caCertPEMBlock)))
 
-		rak, err := rsa.GenerateKey(rand.Reader, 2048)
+		rak, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 		if err != nil {
 			panic(err)
 		}

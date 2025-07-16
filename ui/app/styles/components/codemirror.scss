@@ -1,3 +1,8 @@
+@use 'sass:color';
+@use '../utils/color_variables';
+@use '../utils/font_variables';
+@use 'calendar-widget';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -17,10 +22,10 @@ $serf: #dd4e58;
 $packer: #1ddba3;
 
 // Our colors
-$gray: lighten($black, 89%);
-$red: #ff3d3d;
-$green: #39b54a;
-$dark-gray: #535f73;
+$gray: color.adjust(color_variables.$black, $lightness: 89%);
+color_variables.$red: #ff3d3d;
+color_variables.$green: #39b54a;
+calendar-widget.$dark-gray: #535f73;
 
 $gutter-grey: #2a2f36;
 
@@ -28,18 +33,18 @@ $gutter-grey: #2a2f36;
   background-color: #f9f9fa;
   border: 1px solid $light-gray;
   border-radius: 0;
-  color: lighten($black, 13%);
-  font-family: $family-monospace;
+  color: color.adjust(color_variables.$black, $lightness: 13%);
+  font-family: font_variables.$family-monospace;
   font-size: 13px;
   padding: 7px 8px 9px;
 }
 
 .cm-s-hashi-read-only {
   &.CodeMirror {
-    background-color: $grey-lightest;
+    background-color: color_variables.$grey-lightest;
     border: none;
-    color: $ui-gray-600;
-    font-family: $family-monospace;
+    color: color_variables.$ui-gray-600;
+    font-family: font_variables.$family-monospace;
     -webkit-font-smoothing: auto;
     line-height: 1.4;
   }
@@ -49,17 +54,17 @@ $gutter-grey: #2a2f36;
     color: $packer;
   }
   span.cm-property {
-    color: lighten($consul, 20%);
+    color: color.adjust($consul, $lightness: 20%);
   }
 }
 
 .cm-s-hashi {
   &.CodeMirror {
-    background-color: $black !important;
+    background-color: color_variables.$black !important;
     resize: vertical;
     color: #cfd2d1 !important;
     border: none;
-    font-family: $family-monospace;
+    font-family: font_variables.$family-monospace;
     -webkit-font-smoothing: auto;
     line-height: 1.4;
   }
@@ -112,11 +117,11 @@ $gutter-grey: #2a2f36;
   }
 
   span.cm-variable {
-    color: lighten($consul, 20%);
+    color: color.adjust($consul, $lightness: 20%);
   }
 
   span.cm-variable-2 {
-    color: lighten($consul, 20%);
+    color: color.adjust($consul, $lightness: 20%);
   }
 
   span.cm-def {
@@ -127,7 +132,7 @@ $gutter-grey: #2a2f36;
     color: $gray;
   }
   span.cm-keyword {
-    color: $yellow;
+    color: color_variables.$yellow;
   }
 
   span.cm-atom {
@@ -151,7 +156,7 @@ $gutter-grey: #2a2f36;
   }
 
   span.cm-property {
-    color: lighten($consul, 20%);
+    color: color.adjust($consul, $lightness: 20%);
   }
 
   span.cm-variable-3 {

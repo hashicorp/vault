@@ -3,22 +3,18 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentRouteName, click } from '@ember/test-helpers';
+import { currentRouteName, click, find, findAll, visit } from '@ember/test-helpers';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { create } from 'ember-cli-page-object';
-import page from 'vault/tests/pages/access/methods';
-import authEnable from 'vault/tests/pages/settings/auth/enable';
-import authPage from 'vault/tests/pages/auth';
-import ss from 'vault/tests/pages/components/search-select';
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
-
 import { v4 as uuidv4 } from 'uuid';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { mountAuthCmd, runCmd } from 'vault/tests/helpers/commands';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import { sanitizePath } from 'core/utils/sanitize-path';
 
-const consoleComponent = create(consoleClass);
-const searchSelect = create(ss);
+const { searchSelect } = GENERAL;
 
 module('Acceptance | auth-methods list view', function (hooks) {
   setupApplicationTest(hooks);
@@ -26,14 +22,13 @@ module('Acceptance | auth-methods list view', function (hooks) {
 
   hooks.beforeEach(function () {
     this.uid = uuidv4();
-    return authPage.login();
+    return login();
   });
 
   test('it navigates to auth method', async function (assert) {
-    await page.visit();
+    await visit('/vault/access/');
     assert.strictEqual(currentRouteName(), 'vault.cluster.access.methods', 'navigates to the correct route');
-    assert.ok(page.methodsLink.isActive, 'the first link is active');
-    assert.strictEqual(page.methodsLink.text, 'Authentication Methods');
+    assert.dom('[data-test-sidebar-nav-link="Authentication Methods"]').hasClass('active');
   });
 
   test('it filters by name and auth type', async function (assert) {
@@ -41,52 +36,59 @@ module('Acceptance | auth-methods list view', function (hooks) {
     const authPath1 = `userpass-1-${this.uid}`;
     const authPath2 = `userpass-2-${this.uid}`;
     const type = 'userpass';
-    await authEnable.visit();
-    await authEnable.enable(type, authPath1);
-    await authEnable.visit();
-    await authEnable.enable(type, authPath2);
-    await page.visit();
+    await visit('/vault/settings/auth/enable');
+    await runCmd(mountAuthCmd(type, authPath1));
+    await visit('/vault/settings/auth/enable');
+    await runCmd(mountAuthCmd(type, authPath2));
+    await visit('/vault/access/');
+
     // filter by auth type
-
     await clickTrigger('#filter-by-auth-type');
-    await searchSelect.options.objectAt(0).click();
-    const rows = document.querySelectorAll('[data-test-auth-backend-link]');
-    const rowsUserpass = Array.from(rows).filter((row) => row.innerText.includes('userpass'));
-
+    await click(searchSelect.option(searchSelect.optionIndex(type)));
+    let rows = findAll('.list-item-row');
+    const rowsUserpass = findAll(GENERAL.button('userpass'));
     assert.strictEqual(rows.length, rowsUserpass.length, 'all rows returned are userpass');
 
     // filter by name
     await clickTrigger('#filter-by-auth-name');
-    const firstItemToSelect = searchSelect.options.objectAt(0).text;
-    await searchSelect.options.objectAt(0).click();
-    const singleRow = document.querySelectorAll('[data-test-auth-backend-link]');
-
+    await click(searchSelect.option());
+    const selectedItem = find(`#filter-by-auth-name ${searchSelect.selectedOption()}`).innerText;
+    const singleRow = findAll('.linked-block');
     assert.strictEqual(singleRow.length, 1, 'returns only one row');
-    assert.dom(singleRow[0]).includesText(firstItemToSelect, 'shows the filtered by auth name');
-    // clear filter by engine name
-    await searchSelect.deleteButtons.objectAt(1).click();
-    const rowsAgain = document.querySelectorAll('[data-test-auth-backend-link]');
-    assert.ok(rowsAgain.length > 1, 'filter has been removed');
+    assert.dom(singleRow[0]).includesText(selectedItem, 'shows the filtered by auth name');
+    // clear filter by name
+    await click(`#filter-by-auth-name ${searchSelect.removeSelected}`);
+    rows = findAll('.linked-block');
+    assert.true(rows.length > 1, 'filter has been removed');
 
     // cleanup
-    await consoleComponent.runCommands([`delete sys/auth/${authPath1}`]);
-    await consoleComponent.runCommands([`delete sys/auth/${authPath2}`]);
+    await runCmd(`delete sys/auth/${authPath1}`);
+    await runCmd(`delete sys/auth/${authPath2}`);
   });
 
   test('it should show all methods in list view', async function (assert) {
-    this.server.get('/sys/auth', () => ({
+    const authPayload = {
+      'token/': { accessor: 'auth_token_263b8b4e', type: 'token' },
+      'userpass/': { accessor: 'auth_userpass_87aca1f8', type: 'userpass' },
+    };
+    this.server.get('/sys/internal/ui/mounts', () => ({
       data: {
-        'token/': { accessor: 'auth_token_263b8b4e', type: 'token' },
-        'userpass/': { accessor: 'auth_userpass_87aca1f8', type: 'userpass' },
+        auth: authPayload,
       },
     }));
-    await page.visit();
-    assert.dom('[data-test-auth-backend-link]').exists({ count: 2 }, 'All auth methods appear in list view');
-    await authEnable.visit();
-    await click('[data-test-sidebar-nav-link="OIDC Provider"]');
-    await page.visit();
-    assert
-      .dom('[data-test-auth-backend-link]')
-      .exists({ count: 2 }, 'All auth methods appear in list view after navigating back');
+    await visit('/vault/access/');
+    for (const [key] of Object.entries(authPayload)) {
+      assert
+        .dom(GENERAL.linkedBlock(sanitizePath(key)))
+        .exists({ count: 1 }, `auth method ${key} appears in list view`);
+    }
+    await visit('/vault/settings/auth/enable');
+    await click(GENERAL.navLink('OIDC Provider'));
+    await visit('/vault/access/');
+    for (const [key] of Object.entries(authPayload)) {
+      assert
+        .dom(GENERAL.linkedBlock(sanitizePath(key)))
+        .exists({ count: 1 }, `auth method ${key} appears in list view after navigating from OIDC Provider`);
+    }
   });
 });

@@ -1,0 +1,32 @@
+---
+layout: 'docs'
+page_title: 'Bootstrapping Kubernetes auth method'
+sidebar_current: 'docs-platform-k8s-examples-kubernetes-auth'
+description: >-
+  Learn how to set up Kubernetes auth method.
+---
+
+# Bootstrapping Kubernetes auth method
+
+@include 'helm/version.mdx'
+
+In this example, we will walk through how to set up the [Kubernetes Auth Method](/vault/docs/auth/kubernetes).
+
+This assumes the following commands will be run inside a Vault pod running in Kubernetes.
+
+Exec into the Vault pod:
+
+```bash
+kubectl exec -it vault-0 -- /bin/sh
+```
+
+If you didn't set `server.dev.enabled=true`, you'll need to log in to Vault first using `vault login`.
+Then run the following commands to configure the Kubernetes Auth Method:
+
+```bash
+vault auth enable kubernetes
+vault write auth/kubernetes/config \
+    kubernetes_host=https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT
+```
+
+From here you can continue to configure Vault from the [Kubernetes Auth Method](/vault/docs/auth/kubernetes) documentation.

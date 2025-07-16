@@ -12,6 +12,7 @@ import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
 import { OIDC_BASE_URL, CLIENT_LIST_RESPONSE, SELECTORS } from 'vault/tests/helpers/oidc-config';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | oidc/key-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -57,11 +58,12 @@ module('Integration | Component | oidc/key-form', function (hooks) {
     await fillIn('[data-test-input="name"]', ' ');
     await click(SELECTORS.keySaveButton);
 
-    const validationErrors = findAll(SELECTORS.inlineAlert);
     assert
-      .dom(validationErrors[0])
+      .dom(GENERAL.validationErrorByAttr('name'))
       .hasText('Name is required. Name cannot contain whitespace.', 'Validation messages are shown for name');
-    assert.dom(validationErrors[1]).hasText('There are 2 errors with this form.', 'Renders form error count');
+    assert
+      .dom(SELECTORS.inlineAlert)
+      .hasText('There are 2 errors with this form.', 'Renders form error count');
 
     assert.dom('[data-test-oidc-radio="limited"] input').isDisabled('limit radio button disabled on create');
     await fillIn('[data-test-input="name"]', 'test-key');

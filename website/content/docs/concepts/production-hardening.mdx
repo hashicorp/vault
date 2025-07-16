@@ -1,0 +1,225 @@
+---
+layout: docs
+page_title: Production hardening
+description: >-
+  Harden your Vault deployments for production operations.
+---
+
+# Production hardening
+
+You can use the best practices in this document to harden Vault when planning
+your production deployment. These recommendations follow the
+[Vault security model](/vault/docs/internals/security), and focus on defense
+in depth.
+
+You should follow the **baseline recommendations** if at all possible for any
+production Vault deployment. The **extended recommendations** detail extra
+layers of security which may require more administrative overhead, and might
+not be suitable for every deployment.
+
+## Baseline recommendations
+
+- **Do not run as root**. Use a dedicated, unprivileged service account to run
+  Vault, rather than running as the root or Administrator account. Vault is
+  designed to run as an unprivileged user, and doing so adds significant
+  defense against various privilege-escalation attacks.
+
+- **Allow minimal write privileges**. The unprivileged Vault service account
+  should not have access to overwrite its executable binary or any Vault
+  configuration files. Limit what is writable by the Vault user to just
+  directories and files for local Vault storage (for example, Integrated
+  Storage) or file audit device logs.
+
+- **Use end-to-end TLS**. You should always use Vault with TLS in production.
+  If you use intermediate load balancers or reverse proxies to front Vault,
+  you should enable TLS for all network connections between every part of the
+  system (including external storage) to ensure encryption of all traffic in
+  transit to and from Vault. When possible, you should set the HTTP Strict
+  Transport Security (HSTS) header using Vault's [custom response headers](/vault/docs/configuration/listener/tcp#configuring-custom-http-response-headers) feature.
+
+- **Disable swap**. Vault encrypts data in transit and at rest, however it must
+  still have sensitive data in memory to function. Risk of exposure should be
+  minimized by disabling swap to prevent the operating system from paging
+  sensitive data to disk. Disabling swap is even more critical when your
+  Vault deployment uses Integrated Storage.
+
+- **Disable core dumps**. A user or administrator that can force a core dump
+  and has access to the resulting file can potentially access Vault encryption
+  keys. Preventing core dumps is a platform-specific process; on Linux setting
+  the resource limit `RLIMIT_CORE` to `0` disables core dumps. In the systemd
+  service unit file, setting `LimitCORE=0` will enforce this setting for the
+  Vault service.
+
+- **Use single tenancy**. Vault should be the sole user process running on a
+  machine. This reduces the risk that another process running on the same
+  machine gets compromised and gains the ability to interact with the Vault
+  process. Similarly, you should prefer running Vault on bare metal instead
+  of a virtual machine, and you prefer running in a virtual machine instead
+  of running in a containerized environment.
+
+- **Firewall traffic**. Use a local firewall or network security features of
+  your cloud provider to restrict incoming and outgoing traffic to Vault and
+  essential system services like NTP. This includes restricting incoming
+  traffic to permitted sub-networks and outgoing traffic to services Vault
+  needs to connect to, such as databases.
+
+- **Avoid root tokens**. When you initialize Vault, it emits an initial
+  root token. You should use this token just to perform initial setup,
+  such as enabling auth methods so that users can authenticate. You should
+  treat Vault [configuration as
+  code](https://www.hashicorp.com/blog/codifying-vault-policies-and-configuration/),
+  and use version control to manage policies. Once you complete initial Vault
+  setup, you should revoke the initial root token to reduce risk of exposure. Root tokens can be
+  [generated when needed](/vault/docs/commands/operator/generate-root), and should be
+  revoked when no longer needed.
+
+- **Configure user lockout**. Vault provides a [user lockout](/vault/docs/concepts/user-lockout) function
+  for the [approle](/vault/docs/auth/approle), [ldap](/vault/docs/auth/ldap) and [userpass](/vault/docs/auth/userpass)
+  auth methods. **Vault enables user lockout by default**. Verify the lockout threshold, and lockout duration matches your organizations security policies.
+
+- **Enable audit device logs**. Vault supports several [audit
+  devices](/vault/docs/audit). When you enable audit device logs, you gain
+  a detailed history of all operations performed by Vault, and a forensics
+  trail in the case of misuse or compromise. Audit logs [securely
+  hash](/vault/docs/audit#sensitive-information)
+  sensitive data, but you should still restrict access to prevent any
+  unintended information disclosure.
+
+- **Disable shell command history**. You may want the `vault` command itself to
+  not appear in history at all.
+
+- **Keep a frequent upgrade cadence**. Vault is actively developed, and you
+  should upgrade Vault often to incorporate security fixes and any changes in
+  default settings such as key lengths or cipher suites. Subscribe to the
+  [HashiCorp Announcement mailing list](https://groups.google.com/g/hashicorp-announce)
+  to receive announcements of new releases and visit the [Vault
+  CHANGELOG](https://github.com/hashicorp/vault/blob/main/CHANGELOG.md) for
+  details on the changes made in each release.
+
+- **Synchronize clocks**. Use NTP or whatever mechanism is appropriate for your
+  environment to ensure that all the Vault nodes agree about what time it is.
+  Vault uses the clock for things like enforcing TTLs and setting dates in PKI
+  certificates, and if the nodes have significant clock skew, a failover can wreak havoc.
+
+- **Restrict storage access**. Vault encrypts all data at rest, regardless of
+  which storage type it uses. Although Vault encrypts the data, an [attacker
+  with arbitrary
+  control](/vault/docs/internals/security) can cause
+  data corruption or loss by modifying or deleting keys. You should restrict
+  storage access outside of Vault to avoid unauthorized access or operations.
+
+- **Do not use clear text credentials**. The Vault configuration [`seal`
+  stanza](/vault/docs/configuration/seal) configures the seal type to use for
+  extra data protection such as using HSM or Cloud KMS solutions to encrypt and
+  decrypt the root key. **DO NOT** store your cloud credentials or HSM pin in
+  clear text within the `seal` stanza. If you host the Vault server on the same
+  cloud platform as the KMS service, use the platform-specific identity
+  solutions. For example:
+
+  - [Resource Access Management (RAM) on AliCloud](/vault/docs/configuration/seal/alicloudkms#authentication)
+  - [Instance Profiles on AWS](/vault/docs/configuration/seal/awskms#authentication)
+  - [Managed Service Identities (MSI) on Azure](/vault/docs/configuration/seal/azurekeyvault#authentication)
+  - [Service Account on Google Cloud Platform](/vault/docs/configuration/seal/gcpckms#authentication-permissions)
+
+  When using platform-specific identity solutions, you should be mindful of auth
+  method and secret engine configuration within namespaces. You can share
+  platform identity across Vault namespaces, as these provider features
+  generally offer host-based identity solutions.
+
+  If that is not applicable, set the credentials as environment variables
+  (for example, `VAULT_HSM_PIN`).
+
+- **Use the safest algorithms available**. [Vault's TLS listener](/vault/docs/configuration/listener/tcp#tls_cipher_suites)
+  supports a variety of legacy algorithms for backwards compatibility. While
+  these algorithms are available, they are not recommended for use when
+  a stronger alternative is available. If possible, use TLS 1.3 to ensure
+  that modern encryption algorithms encrypt data in transit and offer
+  forward secrecy.
+
+- **Follow best practices for plugins**. While HashiCorp-developed plugins
+  generally default to a safe configuration, you should be mindful of
+  misconfigured or malicious Vault plugins. These plugin issues can harm the
+  security posture of your Vault deployment.
+
+- **Be aware of non-deterministic configuration file merging**. Vault's
+  configuration file merging is non-deterministic, and inconsistencies in
+  settings between files can lead to inconsistencies in Vault settings.
+  Ensure set configurations are consistent across all files (and any files merged together get denoted by a `-config` flag).
+
+- **Use correct filesystem permissions**. Always ensure appropriate permissions
+  get applied to files before starting Vault. This is even more critical for files which contain sensitive information.
+
+- **Use standard input for vault secrets**. [Vault login](/vault/docs/commands/login)
+  and [Vault unseal](/vault/api-docs/system/unseal#key) allow operators to
+  give secret values from either standard input or with command-line arguments.
+  Command-line arguments can persisted in shell history, and are readable by other unprivileged users on the same host.
+
+- **Develop an off-boarding process**. Removing accounts in Vault or associated
+  identity providers may not immediately revoke [token-based access](/vault/docs/concepts/tokens#user-management-considerations).
+  Depending on how you manage access to Vault, operators should consider:
+
+  - Removing the entity from groups granting access to resources.
+  - [Revoking](/vault/docs/concepts/lease#prefix-based-revocation) the active leases for a given user account.
+  - Deleting the canonical entity of the user after removing accounts in Vault or associated identity providers.
+    Deleting the canonical entity alone is insufficient as one is automatically created on successful login if it does not exist.
+  - [Disabling](/vault/docs/commands/auth/disable) auth methods instead of deleting them, which revokes all
+    tokens generated by this auth method.
+
+- **Use short TTLs** When possible, credentials issued from Vault (for example
+  tokens, X.509 certificates) should be short-lived, as to guard against their potential compromise, and reduce the need to use revocation methods.
+
+## Extended recommendations
+
+- **Disable SSH / remote desktop**. When running a Vault as a single tenant
+  application, users should never access the machine directly. Instead, they
+  should access Vault through its API over the network. Use a centralized
+  logging and telemetry solution for debugging. Be sure to restrict access to
+  logs as need to know.
+
+- **Use systemd security features**. Systemd provides a number of features
+  that you can use to lock down access to the filesystem and to
+  administrative capabilities. The service unit file provided with the
+  official Vault Linux packages sets a number of these by default, including:
+
+  ```plaintext
+  ProtectSystem=full
+  PrivateTmp=yes
+  CapabilityBoundingSet=CAP_SYSLOG CAP_IPC_LOCK
+  AmbientCapabilities=CAP_IPC_LOCK
+  ProtectHome=read-only
+  PrivateDevices=yes
+  NoNewPrivileges=yes
+  ```
+
+  See the [systemd.exec manual page](https://www.freedesktop.org/software/systemd/man/systemd.exec.html) for more details.
+
+- **Perform immutable upgrades**. Vault relies on external storage for
+  persistence, and this decoupling allows the servers running Vault to be
+  immutably managed. When you upgrade to a new version, you can bring new
+  servers with the upgraded version of Vault online. You can attach the new
+  servers to the same shared storage and unseal them. Then you can destroy the
+  older version servers. This reduces the need for remote access and upgrade orchestration which may introduce security gaps.
+
+- **Configure SELinux / AppArmor**. Using mechanisms like
+  [SELinux](https://github.com/hashicorp/vault-selinux-policies)
+  and AppArmor can help you gain layers of security when using Vault.
+  While Vault can run on several popular operating systems, Linux is
+  recommended due to the various security primitives mentioned here.
+
+- **Adjust user limits**. It is possible that your Linux distribution enforces
+  strict process user limits (`ulimits`). Consider a review of `ulimits` for maximum amount of open files, connections, etc. before going into production. You might need to increase the default values to avoid errors about too
+  many open files.
+
+- **Be aware of special container considerations**. To use memory locking
+  (mlock) inside a Vault container, you need to use the `overlayfs2` or another
+  supporting driver.
+
+-	**Consider memory usage when configuring `disable_mlock` with integrated storage**.
+  When you leave `mlock` enabled, Vault disallows data swaps from memory to disk.
+  Disallowing swaps ensures that sensitive data remains in RAM, but also
+  increases the risk of out-of-memory (OOM) errors in under-provisioned systems.
+  Conversely, disabling `mlock` lets the operating system swap memory to disk
+  under pressure, which can reduce the risk of OOM errors but increase the
+  exposure risk for secrets that end up in the swap file. If you choose to
+  disable `mlock`, we recommend encrypting your swap file to limit the exposure
+  risk.

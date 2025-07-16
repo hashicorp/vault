@@ -367,6 +367,9 @@ Configuration options for the method.
   that this cache is used for all configured certificates.
 - `role_cache_size` `(int: 200)` - The size of the role cache.  Use `-1` to disable
   role caching.
+- `enable_metadata_on_failures` `(boolean: false)` - If set, metadata of the client
+  certificate such as common name, serial, subject key id and authority key id will
+  be returned on authentication failures and appear in auditing records.
 
 ### Sample payload
 

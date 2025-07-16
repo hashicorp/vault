@@ -1,0 +1,21 @@
+Permission  | HTTP action   | Result
+----------- | ------------- | -----------
+`create`    | `POST`/`PUT`  | Clients can write **new** data to the path.
+`delete`    | `DELETE`      | Clients can remove data from the path.
+`deny`      | N/A           | **Clients cannot access the path**.<br/>`deny` takes precedence over all other permission (including `sudo`).
+`list`      | `LIST`        | Clients can list data from the path. Not all plugins support `list`.
+`patch`     | `PATCH`       | Clients can update or write explicit key/value pairs to an **existing** the path.
+`read`      | `GET`         | Clients can read data from the path.
+`subscribe` | N/A           | Clients can request access to event streams from the plugin at the path. Not all plugins support `subscribe`.
+`sudo`      | N/A           | Clients can access the root-protected path when paired with the relevant permission verb.
+`update`    | `POST`/`PUT`  | Clients can **fully** overwrite data on an existing the path.
+
+<Warning>
+
+Data returned for a `list` operation **is not** filtered against ACL policies.
+**Do not** encode sensitive information in key names. 
+
+</Warning>
+
+
+

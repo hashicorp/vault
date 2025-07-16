@@ -28,7 +28,10 @@ const (
 	minCacheSize = 10
 )
 
-var ErrCmacEntOnly = errors.New("CMAC operations are only available in enterprise versions of Vault")
+var (
+	ErrCmacEntOnly = errors.New("CMAC operations are only available in enterprise versions of Vault")
+	ErrPQCEntOnly  = errors.New("PQC key types are only available in enterprise versions of Vault")
+)
 
 func Factory(ctx context.Context, conf *logical.BackendConfig) (logical.Backend, error) {
 	b, err := Backend(ctx, conf)
@@ -181,6 +184,10 @@ func (b *backend) GetPolicy(ctx context.Context, polReq keysutil.PolicyRequest, 
 
 	if p != nil && p.Type.CMACSupported() && !constants.IsEnterprise {
 		return nil, false, ErrCmacEntOnly
+	}
+
+	if p != nil && p.Type.IsPQC() && !constants.IsEnterprise {
+		return nil, false, ErrPQCEntOnly
 	}
 
 	return p, true, nil

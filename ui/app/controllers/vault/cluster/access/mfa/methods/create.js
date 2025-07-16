@@ -19,9 +19,9 @@ export default class MfaMethodCreateController extends Controller {
   queryParams = ['type'];
   methods = [
     { name: 'TOTP', icon: 'history' },
-    { name: 'Duo', icon: 'duo' },
+    { name: 'Duo', icon: 'duo-color' },
     { name: 'Okta', icon: 'okta-color' },
-    { name: 'PingID', icon: 'pingid' },
+    { name: 'PingID', icon: 'ping-identity-color' },
   ];
 
   @tracked type = null;

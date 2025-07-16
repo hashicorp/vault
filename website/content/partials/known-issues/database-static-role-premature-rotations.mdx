@@ -1,0 +1,20 @@
+### Database static role rotations on upgrade ((#db-static-role-rotations))
+
+### Affected Roles
+Any database static role that was created prior to Vault 1.15.0 will be affected upon upgrading to the following Vault versions:
+
+### Affected Versions:
+- 1.19.0, 1.19.1, 1.19.2
+- 1.18.5, 1.18.6, 1.18.7, 1.18.8
+- 1.17.12, 1.17.13, 1.17.14, 1.17.15
+- 1.16.16, 1.16.17, 1.16.18, 1.16.19
+
+### Issue
+Vault will automatically rotate static database credentials once, for all roles created prior to 1.15.0, when upgrading to affected versions. 
+After the one-time rotation, the static roles behave as expected.
+
+### Fixed Versions:
+- 1.19.3+
+- 1.18.9+
+- 1.17.16+
+- 1.16.20+

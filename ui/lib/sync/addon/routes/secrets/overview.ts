@@ -5,40 +5,56 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { hash } from 'rsvp';
+import {
+  SystemListSyncDestinationsListEnum,
+  SystemListSyncAssociationsListEnum,
+} from '@hashicorp/vault-client-typescript';
+import { listDestinationsTransform } from 'sync/utils/api-transforms';
 
 import type FlagsService from 'vault/services/flags';
 import type RouterService from '@ember/routing/router-service';
-import type StoreService from 'vault/services/store';
+import type ApiService from 'vault/services/api';
 import type VersionService from 'vault/services/version';
+import type CapabilitiesService from 'vault/services/capabilities';
+import type { Capabilities } from 'vault/app-types';
+import type {
+  SystemListSyncDestinationsResponse,
+  SystemListSyncAssociationsResponse,
+} from '@hashicorp/vault-client-typescript';
 
 export default class SyncSecretsOverviewRoute extends Route {
   @service('app-router') declare readonly router: RouterService;
-  @service declare readonly store: StoreService;
+  @service declare readonly api: ApiService;
   @service declare readonly flags: FlagsService;
   @service declare readonly version: VersionService;
+  @service declare readonly capabilities: CapabilitiesService;
 
   async model() {
     const isActivated = this.flags.secretsSyncIsActivated;
-    const licenseHasSecretsSync = this.version.hasSecretsSync;
-    const isHvdManaged = this.flags.isHvdManaged;
+    const capabilitiesReq = this.capabilities.for('syncActivate');
+    const requests = isActivated
+      ? [
+          capabilitiesReq,
+          this.api.sys.systemListSyncAssociations(SystemListSyncAssociationsListEnum.TRUE).catch(() => []),
+          this.api.sys.systemListSyncDestinations(SystemListSyncDestinationsListEnum.TRUE).catch(() => []),
+        ]
+      : [capabilitiesReq, [], []];
 
-    return hash({
-      licenseHasSecretsSync,
-      isActivated,
-      isHvdManaged,
-      destinations: isActivated ? this.store.query('sync/destination', {}).catch(() => []) : [],
-      associations: isActivated
-        ? this.store
-            .adapterFor('sync/association')
-            .queryAll()
-            .catch(() => [])
-        : [],
-    });
+    const [{ canCreate, canUpdate }, { totalSecrets }, destinations] = (await Promise.all(requests)) as [
+      Capabilities,
+      SystemListSyncAssociationsResponse,
+      SystemListSyncDestinationsResponse,
+    ];
+
+    return {
+      canActivateSecretsSync: canCreate || canUpdate,
+      totalSecrets,
+      destinations: listDestinationsTransform(destinations),
+    };
   }
 
   redirect() {
-    if (!this.flags.showSecretsSync) {
+    if (!this.version.hasSecretsSync) {
       this.router.replaceWith('vault.cluster.dashboard');
     }
   }

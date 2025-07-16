@@ -12,7 +12,7 @@ import { setRunOptions } from 'ember-a11y-testing/test-support';
 const SELECTORS = {
   policyText: '[data-test-modal-title]',
   policyDescription: (type) => `[data-test-example-modal-text=${type}]`,
-  jsonText: '[data-test-component="code-mirror-modifier"]',
+  jsonText: '.hds-code-block',
   informationLink: '[data-test-example-modal-information-link]',
 };
 
@@ -50,7 +50,7 @@ module('Integration | Component | policy-example', function (hooks) {
     assert
       .dom(SELECTORS.policyDescription('rgp'))
       .hasText(
-        'Role Governing Policies (RGPs) are tied to client tokens or identities which is similar to ACL policies . They use Sentinel as a language framework to enable fine-grained policy decisions.'
+        'Role Governing Policies (RGPs) are tied to client tokens or identities which is similar to ACL policies. They use Sentinel as a language framework to enable fine-grained policy decisions.'
       );
   });
 

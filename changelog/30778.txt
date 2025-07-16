@@ -1,0 +1,3 @@
+```release-note:bug
+ui/kmip: Fixes KMIP credentials view and displays `private_key` after generating
+```

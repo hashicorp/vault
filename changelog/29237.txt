@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Add activation flags. A mechanism for users to opt in to new functionality at a convenient time. Previously used only in Enterprise for SecretSync, activation flags are now available in CE for future features to use.
+```

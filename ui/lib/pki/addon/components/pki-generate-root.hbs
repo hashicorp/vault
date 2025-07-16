@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 {{! Show results if model has an ID, which is only generated after save }}
 {{#if @model.id}}
@@ -37,11 +37,15 @@
       {{#if @model.privateKey}}
         <CertificateCard @data={{@model.privateKey}} />
       {{else}}
-        <span class="tag">internal</span>
+        <Hds::Badge @text="internal" />
       {{/if}}
     </InfoTableRow>
     <InfoTableRow @label="Private key type" @value={{@model.privateKeyType}}>
-      <span class="{{unless @model.privateKeyType 'tag'}}">{{or @model.privateKeyType "internal"}}</span>
+      {{#if @model.privateKeyType}}
+        {{@model.privateKeyType}}
+      {{else}}
+        <Hds::Badge @text="internal" />
+      {{/if}}
     </InfoTableRow>
     <ParsedCertificateInfoRows @model={{@model.parsedCertificate}} />
   </main>
@@ -100,7 +104,7 @@
 
     <hr class="has-background-gray-100" />
     <Hds::ButtonSet>
-      <Hds::Button @text="Done" type="submit" data-test-save />
+      <Hds::Button @text="Done" type="submit" data-test-submit />
       <Hds::Button @text="Cancel" @color="secondary" {{on "click" @onCancel}} data-test-cancel />
     </Hds::ButtonSet>
     {{#if this.invalidFormAlert}}

@@ -10,6 +10,8 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
+import { ldapRoleID } from 'vault/adapters/ldap/role';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (hooks) {
   setupRenderingTest(hooks);
@@ -29,7 +31,8 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
     this.newModel = this.store.createRecord('ldap/role', { backend: 'ldap-test' });
 
     ['static', 'dynamic'].forEach((type) => {
-      this[`${type}RoleData`] = this.server.create('ldap-role', type, { name: `${type}-role` });
+      const name = `${type}-role`;
+      this[`${type}RoleData`] = this.server.create('ldap-role', type, { name, id: ldapRoleID(type, name) });
       this.store.pushPayload('ldap/role', {
         modelName: 'ldap/role',
         backend: 'ldap-test',
@@ -43,6 +46,8 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
       { label: 'Roles', route: 'roles' },
       { label: 'Create' },
     ];
+
+    this.fetchModel = (type, name) => this.store.peekRecord('ldap/role', ldapRoleID(type, name));
 
     this.renderComponent = () => {
       return render(
@@ -100,14 +105,14 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
       });
     };
 
-    this.model = this.store.peekRecord('ldap/role', 'static-role');
+    this.model = this.fetchModel('static', 'static-role');
     await this.renderComponent();
     assert.dom('[data-test-radio-card="static"]').isDisabled('Type selection is disabled when editing');
     assert.dom('[data-test-input="name"]').isDisabled('Name field is disabled when editing');
     checkFields(['name', 'dn', 'username']);
     checkTtl(['rotation_period']);
 
-    this.model = this.store.peekRecord('ldap/role', 'dynamic-role');
+    this.model = this.fetchModel('dynamic', 'dynamic-role');
     await this.renderComponent();
     checkFields(['name', 'username_template']);
     checkTtl(['default_ttl', 'max_ttl']);
@@ -115,7 +120,7 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
   });
 
   test('it should go back to list route and clean up model on cancel', async function (assert) {
-    this.model = this.store.peekRecord('ldap/role', 'static-role');
+    this.model = this.fetchModel('static', 'static-role');
     const spy = sinon.spy(this.model, 'rollbackAttributes');
 
     await this.renderComponent();
@@ -128,12 +133,10 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
   test('it should validate form fields', async function (assert) {
     const renderAndAssert = async (fields) => {
       await this.renderComponent();
-      await click('[data-test-save]');
+      await click('[data-test-submit]');
 
       fields.forEach((field) => {
-        assert
-          .dom(`[data-test-field="${field}"] [data-test-inline-error-message]`)
-          .exists('Validation message renders');
+        assert.dom(GENERAL.validationErrorByAttr(field)).exists('Validation message renders');
       });
 
       assert
@@ -164,7 +167,7 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
     await fillIn('[data-test-input="dn"]', 'foo');
     await fillIn('[data-test-input="username"]', 'bar');
     await fillIn('[data-test-ttl-value="Rotation period"]', 5);
-    await click('[data-test-save]');
+    await click('[data-test-submit]');
 
     assert.ok(
       this.transitionCalledWith('roles.role.details', 'static', 'test-role'),
@@ -181,13 +184,13 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
       assert.deepEqual(expected, data, 'POST request made to save role with correct properties');
     });
 
-    this.model = this.store.peekRecord('ldap/role', 'static-role');
+    this.model = this.fetchModel('static', 'static-role');
     await this.renderComponent();
 
     await fillIn('[data-test-input="dn"]', 'foo');
     await fillIn('[data-test-input="username"]', 'bar');
     await fillIn('[data-test-ttl-value="Rotation period"]', 30);
-    await click('[data-test-save]');
+    await click('[data-test-submit]');
 
     assert.ok(
       this.transitionCalledWith('roles.role.details', 'static', 'test-role'),

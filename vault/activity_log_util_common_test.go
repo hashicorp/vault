@@ -12,11 +12,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/axiomhq/hyperloglog"
 	"github.com/hashicorp/vault/helper/timeutil"
 	"github.com/hashicorp/vault/vault/activity"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 )
 
 // equalActivityMonthRecords is a helper to sort the namespaces and mounts
@@ -40,46 +40,7 @@ func equalActivityMonthRecords(t *testing.T, expected, got *activity.MonthRecord
 	require.Equal(t, expected, got)
 }
 
-// mockHLLGetter is a helper that returns an HLL getter function with 3 months
-// of HLLs
-func mockHLLGetter(t *testing.T) func(ctx context.Context, startTime time.Time) (*hyperloglog.Sketch, error) {
-	t.Helper()
-	// populate the first month with clients 1-20
-	monthOneHLL := hyperloglog.New()
-	// populate the second month with clients 10-30
-	monthTwoHLL := hyperloglog.New()
-	// populate the third month with clients 20-40
-	monthThreeHLL := hyperloglog.New()
-
-	for i := 0; i < 40; i++ {
-		clientID := []byte(fmt.Sprintf("client_%d", i))
-		if i < 20 {
-			monthOneHLL.Insert(clientID)
-		}
-		if 10 <= i && i < 20 {
-			monthTwoHLL.Insert(clientID)
-		}
-		if 20 <= i && i < 40 {
-			monthThreeHLL.Insert(clientID)
-		}
-	}
-	return func(ctx context.Context, startTime time.Time) (*hyperloglog.Sketch, error) {
-		currMonthStart := timeutil.StartOfMonth(time.Now())
-		if startTime.Equal(timeutil.MonthsPreviousTo(3, currMonthStart)) {
-			return monthThreeHLL, nil
-		}
-		if startTime.Equal(timeutil.MonthsPreviousTo(2, currMonthStart)) {
-			return monthTwoHLL, nil
-		}
-		if startTime.Equal(timeutil.MonthsPreviousTo(1, currMonthStart)) {
-			return monthOneHLL, nil
-		}
-		return nil, fmt.Errorf("bad start time")
-	}
-}
-
-// Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal creates 3 months
-// of hyperloglogs and fills them with overlapping clients. The test calls
+// Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal test calls
 // computeCurrentMonthForBillingPeriodInternal with the current month map having
 // some overlap with the previous months. The test then verifies that the
 // results have the correct number of entity, non-entity, and secret sync
@@ -87,8 +48,11 @@ func mockHLLGetter(t *testing.T) func(ctx context.Context, startTime time.Time) 
 // computeCurrentMonthForBillingPeriodInternal with an empty current month map,
 // and verifies that the results are all 0.
 func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) {
-	mockHLLGetFunc := mockHLLGetter(t)
+	core, _, _ := TestCoreUnsealed(t)
+	a := core.activityLog
+
 	month := newProcessMonth()
+	repeatedClientsIDsInMemory := make(map[string]struct{})
 	// Below we register the entity, non-entity, and secret sync clients that
 	// are seen in the current month
 
@@ -106,11 +70,21 @@ func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) 
 		"client_21": {},
 		"client_30": {},
 		"client_31": {},
+	}
+	newEntitiesStruct := map[string]struct{}{
 		"client_40": {},
 		"client_41": {},
 		"client_42": {},
 	}
+
+	// repeated clients
 	for id := range entitiesStruct {
+		repeatedClientsIDsInMemory[id] = struct{}{}
+		month.add(&activity.EntityRecord{ClientID: id, ClientType: entityActivityType})
+	}
+
+	// new clients
+	for id := range newEntitiesStruct {
 		month.add(&activity.EntityRecord{ClientID: id, ClientType: entityActivityType})
 	}
 
@@ -132,12 +106,23 @@ func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) 
 		"client_32": {},
 		"client_33": {},
 		"client_34": {},
+	}
+
+	newNonEntitiesStruct := map[string]struct{}{
 		"client_43": {},
 		"client_44": {},
 		"client_45": {},
 		"client_46": {},
 	}
+
+	// repeated non entity clients
 	for id := range nonEntitiesStruct {
+		repeatedClientsIDsInMemory[id] = struct{}{}
+		month.add(&activity.EntityRecord{ClientID: id, ClientType: nonEntityTokenActivityType})
+	}
+
+	// new non entity clients
+	for id := range newNonEntitiesStruct {
 		month.add(&activity.EntityRecord{ClientID: id, ClientType: nonEntityTokenActivityType})
 	}
 
@@ -152,12 +137,26 @@ func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) 
 		"client_25": {},
 		"client_35": {},
 		"client_36": {},
+	}
+
+	newSecretSyncStruct := map[string]struct{}{
 		"client_47": {},
 		"client_48": {},
 	}
+
+	// repeated secret sync clients
 	for id := range secretSyncStruct {
+		repeatedClientsIDsInMemory[id] = struct{}{}
 		month.add(&activity.EntityRecord{ClientID: id, ClientType: secretSyncActivityType})
 	}
+
+	// new secret sync clients
+	for id := range newSecretSyncStruct {
+		month.add(&activity.EntityRecord{ClientID: id, ClientType: secretSyncActivityType})
+	}
+
+	// store all repeated clients in in-memory client usage map
+	a.SetClientIDsUsageInfo(repeatedClientsIDsInMemory)
 
 	currentMonthClientsMap := make(map[int64]*processMonth, 1)
 
@@ -166,13 +165,10 @@ func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) 
 	// matter what the values actually are.
 	currentMonthClientsMap[0] = month
 
-	core, _, _ := TestCoreUnsealed(t)
-	a := core.activityLog
-
 	endTime := timeutil.StartOfMonth(time.Now())
 	startTime := timeutil.MonthsPreviousTo(3, endTime)
 
-	monthRecord, err := a.computeCurrentMonthForBillingPeriodInternal(context.Background(), currentMonthClientsMap, mockHLLGetFunc, startTime, endTime)
+	monthRecord, err := a.computeCurrentMonthForBillingPeriodInternal(currentMonthClientsMap, startTime, endTime)
 	require.NoError(t, err)
 
 	require.Equal(t, &activity.CountsRecord{
@@ -191,7 +187,7 @@ func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) 
 	endTime = time.Now().UTC()
 	startTime = timeutil.StartOfMonth(endTime)
 	emptyClientsMap := make(map[int64]*processMonth, 0)
-	monthRecord, err = a.computeCurrentMonthForBillingPeriodInternal(context.Background(), emptyClientsMap, mockHLLGetFunc, startTime, endTime)
+	monthRecord, err = a.computeCurrentMonthForBillingPeriodInternal(emptyClientsMap, startTime, endTime)
 	require.NoError(t, err)
 
 	require.Equal(t, &activity.CountsRecord{}, monthRecord.Counts)
@@ -203,10 +199,11 @@ func Test_ActivityLog_ComputeCurrentMonthForBillingPeriodInternal(t *testing.T) 
 // checks a variety of scenarios with different mount and namespace values
 func Test_ActivityLog_ComputeCurrentMonth_NamespaceMounts(t *testing.T) {
 	testCases := []struct {
-		name                string
-		currentMonthClients []*activity.EntityRecord
-		wantErr             bool
-		wantMonth           *activity.MonthRecord
+		name                          string
+		repeatedClientsUntilLastMonth []*activity.EntityRecord
+		currentMonthClients           []*activity.EntityRecord
+		wantErr                       bool
+		wantMonth                     *activity.MonthRecord
 	}{
 		{
 			name: "no clients",
@@ -224,6 +221,12 @@ func Test_ActivityLog_ComputeCurrentMonth_NamespaceMounts(t *testing.T) {
 			// all the clients have been seen before
 			// they're all on ns1/mount1
 			name: "all repeated",
+			repeatedClientsUntilLastMonth: []*activity.EntityRecord{
+				{ClientID: "client_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "client_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "client_3", ClientType: secretSyncActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "client_4", ClientType: ACMEActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+			},
 			currentMonthClients: []*activity.EntityRecord{
 				{ClientID: "client_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
 				{ClientID: "client_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
@@ -269,6 +272,12 @@ func Test_ActivityLog_ComputeCurrentMonth_NamespaceMounts(t *testing.T) {
 			// all the clients have been seen before
 			// they're all on ns1, but mounts 1-4
 			name: "all repeated multiple mounts",
+			repeatedClientsUntilLastMonth: []*activity.EntityRecord{
+				{ClientID: "client_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "client_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns1", MountAccessor: "mount2"},
+				{ClientID: "client_3", ClientType: secretSyncActivityType, NamespaceID: "ns1", MountAccessor: "mount3"},
+				{ClientID: "client_4", ClientType: ACMEActivityType, NamespaceID: "ns1", MountAccessor: "mount4"},
+			},
 			currentMonthClients: []*activity.EntityRecord{
 				{ClientID: "client_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
 				{ClientID: "client_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns1", MountAccessor: "mount2"},
@@ -329,6 +338,12 @@ func Test_ActivityLog_ComputeCurrentMonth_NamespaceMounts(t *testing.T) {
 			// all the clients have been seen before
 			// they're on namespaces ns1-4
 			name: "all repeated multiple namespaces",
+			repeatedClientsUntilLastMonth: []*activity.EntityRecord{
+				{ClientID: "client_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "client_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns2", MountAccessor: "mount1"},
+				{ClientID: "client_3", ClientType: secretSyncActivityType, NamespaceID: "ns3", MountAccessor: "mount1"},
+				{ClientID: "client_4", ClientType: ACMEActivityType, NamespaceID: "ns4", MountAccessor: "mount1"},
+			},
 			currentMonthClients: []*activity.EntityRecord{
 				{ClientID: "client_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
 				{ClientID: "client_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns2", MountAccessor: "mount1"},
@@ -410,6 +425,12 @@ func Test_ActivityLog_ComputeCurrentMonth_NamespaceMounts(t *testing.T) {
 			// 4 clients that have been seen before on namespaces 1-4
 			// 4 new clients on namespaces 1-4
 			name: "new clients multiple namespaces",
+			repeatedClientsUntilLastMonth: []*activity.EntityRecord{
+				{ClientID: "client_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "client_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns2", MountAccessor: "mount1"},
+				{ClientID: "client_3", ClientType: secretSyncActivityType, NamespaceID: "ns3", MountAccessor: "mount1"},
+				{ClientID: "client_4", ClientType: ACMEActivityType, NamespaceID: "ns4", MountAccessor: "mount1"},
+			},
 			currentMonthClients: []*activity.EntityRecord{
 				{ClientID: "client_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
 				{ClientID: "client_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns2", MountAccessor: "mount1"},
@@ -557,6 +578,12 @@ func Test_ActivityLog_ComputeCurrentMonth_NamespaceMounts(t *testing.T) {
 			// 4 clients that have been seen before on ns1/mount1-4
 			// 4 new clients on ns1/mount1-4
 			name: "new clients multiple mounts",
+			repeatedClientsUntilLastMonth: []*activity.EntityRecord{
+				{ClientID: "client_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "client_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns1", MountAccessor: "mount2"},
+				{ClientID: "client_3", ClientType: secretSyncActivityType, NamespaceID: "ns1", MountAccessor: "mount3"},
+				{ClientID: "client_4", ClientType: ACMEActivityType, NamespaceID: "ns1", MountAccessor: "mount4"},
+			},
 			currentMonthClients: []*activity.EntityRecord{
 				{ClientID: "client_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
 				{ClientID: "client_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns1", MountAccessor: "mount2"},
@@ -662,6 +689,12 @@ func Test_ActivityLog_ComputeCurrentMonth_NamespaceMounts(t *testing.T) {
 			// 4 clients that have been seen before on ns1/mount1-4
 			// 4 new clients on ns1/mount5-6
 			name: "new clients new mounts",
+			repeatedClientsUntilLastMonth: []*activity.EntityRecord{
+				{ClientID: "client_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "client_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns1", MountAccessor: "mount2"},
+				{ClientID: "client_3", ClientType: secretSyncActivityType, NamespaceID: "ns1", MountAccessor: "mount3"},
+				{ClientID: "client_4", ClientType: ACMEActivityType, NamespaceID: "ns1", MountAccessor: "mount4"},
+			},
 			currentMonthClients: []*activity.EntityRecord{
 				{ClientID: "client_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
 				{ClientID: "client_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns1", MountAccessor: "mount2"},
@@ -791,6 +824,12 @@ func Test_ActivityLog_ComputeCurrentMonth_NamespaceMounts(t *testing.T) {
 			// 4 clients that have been seen before on ns1
 			// 4 clients that are new on ns2-5
 			name: "new clients new namespaces",
+			repeatedClientsUntilLastMonth: []*activity.EntityRecord{
+				{ClientID: "client_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "client_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "client_3", ClientType: secretSyncActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+				{ClientID: "client_4", ClientType: ACMEActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
+			},
 			currentMonthClients: []*activity.EntityRecord{
 				{ClientID: "client_1", ClientType: entityActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
 				{ClientID: "client_2", ClientType: nonEntityTokenActivityType, NamespaceID: "ns1", MountAccessor: "mount1"},
@@ -958,9 +997,16 @@ func Test_ActivityLog_ComputeCurrentMonth_NamespaceMounts(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			mockHLL := mockHLLGetter(t)
 			core, _, _ := TestCoreUnsealed(t)
 			a := core.activityLog
+
+			// add repeated clients seen till last month to in-memory map
+			repeatedClients := make(map[string]struct{})
+			for _, c := range tc.repeatedClientsUntilLastMonth {
+				repeatedClients[c.ClientID] = struct{}{}
+			}
+			a.SetClientIDsUsageInfo(repeatedClients)
+
 			month := newProcessMonth()
 			for _, c := range tc.currentMonthClients {
 				month.add(c)
@@ -969,7 +1015,7 @@ func Test_ActivityLog_ComputeCurrentMonth_NamespaceMounts(t *testing.T) {
 			startTime := timeutil.MonthsPreviousTo(3, endTime)
 			currentMonth := make(map[int64]*processMonth)
 			currentMonth[0] = month
-			monthRecord, err := a.computeCurrentMonthForBillingPeriodInternal(context.Background(), currentMonth, mockHLL, startTime, endTime)
+			monthRecord, err := a.computeCurrentMonthForBillingPeriodInternal(currentMonth, startTime, endTime)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
@@ -978,7 +1024,7 @@ func Test_ActivityLog_ComputeCurrentMonth_NamespaceMounts(t *testing.T) {
 			correctMountPaths := func(namespaces []*activity.MonthlyNamespaceRecord) {
 				for _, ns := range namespaces {
 					for _, mount := range ns.Mounts {
-						mount.MountPath = fmt.Sprintf(deletedMountFmt, mount.MountPath)
+						mount.MountPath = fmt.Sprintf(DeletedMountFmt, mount.MountPath)
 					}
 				}
 			}
@@ -1003,7 +1049,7 @@ func writeTokenSegment(t *testing.T, core *Core, ts time.Time, index int, item *
 	t.Helper()
 	protoItem, err := proto.Marshal(item)
 	require.NoError(t, err)
-	WriteToStorage(t, core, makeSegmentPath(t, activityTokenLocalBasePath, ts, index), protoItem)
+	WriteToStorage(t, core, makeSegmentPath(t, activityTokenBasePath, ts, index), protoItem)
 }
 
 // makeSegmentPath formats the path for a segment at a particular time and index
@@ -1020,7 +1066,7 @@ func TestSegmentFileReader_BadData(t *testing.T) {
 	now := time.Now()
 
 	// write bad data that won't be able to be unmarshaled at index 0
-	WriteToStorage(t, core, makeSegmentPath(t, activityTokenLocalBasePath, now, 0), []byte("fake data"))
+	WriteToStorage(t, core, makeSegmentPath(t, activityTokenBasePath, now, 0), []byte("fake data"))
 	WriteToStorage(t, core, makeSegmentPath(t, activityEntityBasePath, now, 0), []byte("fake data"))
 
 	// write entity at index 1
@@ -1063,7 +1109,7 @@ func TestSegmentFileReader_MissingData(t *testing.T) {
 	now := time.Now()
 	// write entities and tokens at indexes 0, 1, 2
 	for i := 0; i < 3; i++ {
-		WriteToStorage(t, core, makeSegmentPath(t, activityTokenLocalBasePath, now, i), []byte("fake data"))
+		WriteToStorage(t, core, makeSegmentPath(t, activityTokenBasePath, now, i), []byte("fake data"))
 		WriteToStorage(t, core, makeSegmentPath(t, activityEntityBasePath, now, i), []byte("fake data"))
 
 	}
@@ -1084,7 +1130,7 @@ func TestSegmentFileReader_MissingData(t *testing.T) {
 
 	// delete the indexes 0, 1, 2
 	for i := 0; i < 3; i++ {
-		require.NoError(t, core.barrier.Delete(context.Background(), makeSegmentPath(t, activityTokenLocalBasePath, now, i)))
+		require.NoError(t, core.barrier.Delete(context.Background(), makeSegmentPath(t, activityTokenBasePath, now, i)))
 		require.NoError(t, core.barrier.Delete(context.Background(), makeSegmentPath(t, activityEntityBasePath, now, i)))
 	}
 
@@ -1166,4 +1212,71 @@ func TestSegmentFileReader(t *testing.T) {
 		require.True(t, proto.Equal(gotEntities[i], entities[i]))
 		require.True(t, proto.Equal(gotTokens[i], tokens[i]))
 	}
+}
+
+// Test_ActivityLog_ComputeMaxSegmentsAndCapacity verifies the computed max values for
+// ActivitySegmentClientCapacity which determines the maximum number of client records per segment and
+// activityLogMaxSegmentPerMonth which determines the maximum number of segments per month
+func Test_ActivityLog_ComputeMaxSegmentsAndCapacity(t *testing.T) {
+	entityRecordInstance := &activity.EntityRecord{}
+
+	// Get the message's descriptor
+	descriptor := entityRecordInstance.ProtoReflect().Descriptor()
+
+	// Get the number of fields from the descriptor
+	expectedFieldCount := descriptor.Fields().Len()
+
+	// sample record with max values for each field in entity record
+	maxSampleRecord := &activity.EntityRecord{
+		ClientID:      "11111111-1111-1111-1111-111111111111",
+		NamespaceID:   "root",
+		Timestamp:     time.Now().Unix(),
+		NonEntity:     true,
+		MountAccessor: "auth_userpass_00000005",
+		ClientType:    "non-entity-token",
+		UsageTime:     time.Now().Unix(),
+	}
+	fieldCountMaxSampleRecord := getNumberofPopulatedFieldsInRecord(maxSampleRecord.ProtoReflect())
+
+	// verify if the maxSampleRecord has populated values for every field in entityRecord
+	// this will be used to compute the max client record size to store in storage
+	// if this fails, please update the maxSampleRecord with updated entity Record field values
+	require.Equal(t, expectedFieldCount, fieldCountMaxSampleRecord)
+
+	// sample record size in bytes
+	sampleRecordSize := proto.Size(maxSampleRecord)
+
+	// adding 20 extra bytes to the sample record to account for any extra unknown size increases
+	sampleRecordSize = sampleRecordSize + 20
+
+	// records undergo JSON marshalling which increases the size by approx 4/3 times
+	sampleRecordSizeStorage := int(float64(sampleRecordSize*4) / float64(3))
+
+	// storage limit per storage entry 512KB
+	storageLimitPerEntry := 512 * 1000
+
+	// number of client records that can be stored in a segment
+	clientRecordsPerSegment := storageLimitPerEntry / sampleRecordSizeStorage
+
+	require.Condition(t, func() bool {
+		return clientRecordsPerSegment <= ActivitySegmentClientCapacity
+	}, "client records in segment is greater than expected ActivitySegmentClientCapacity. Please recompute and update ActivitySegmentClientCapacity")
+
+	// max entity records per month
+	expectedClientRecordsPerMonth := 700 * 1000
+
+	maxSegmentsPerMonth := expectedClientRecordsPerMonth / clientRecordsPerSegment
+
+	require.Condition(t, func() bool {
+		return maxSegmentsPerMonth <= activityLogMaxSegmentPerMonth
+	}, "segments per month is greater than expected activityLogMaxSegmentPerMonth. Please recompute and update activityLogMaxSegmentPerMonth")
+}
+
+func getNumberofPopulatedFieldsInRecord(msg protoreflect.Message) int {
+	count := 0
+	msg.Range(func(fd protoreflect.FieldDescriptor, v protoreflect.Value) bool {
+		count++
+		return true
+	})
+	return count
 }

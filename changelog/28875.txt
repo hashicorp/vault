@@ -1,0 +1,3 @@
+```release-note:change
+storage/raft: Do not allow nodes that have been removed from the raft cluster configuration to respond to requests. Shutdown and seal raft nodes when they are removed. 
+```

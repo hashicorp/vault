@@ -11,7 +11,7 @@ import { CONFIG_RESPONSE, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import { visit, click, currentURL } from '@ember/test-helpers';
 import sinon from 'sinon';
 import timestamp from 'core/utils/timestamp';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT, CHARTS } from 'vault/tests/helpers/clients/client-count-selectors';
 
@@ -24,7 +24,7 @@ module('Acceptance | clients | sync', function (hooks) {
       syncHandler(this.server);
       const version = this.owner.lookup('service:version');
       version.type = 'enterprise';
-      await authPage.login();
+      await login();
       return visit('/vault/clients/counts/sync');
     });
 
@@ -51,7 +51,7 @@ module('Acceptance | clients | sync', function (hooks) {
           },
         };
       });
-      await authPage.login();
+      await login();
       return visit('/vault/clients/counts/sync');
     });
 

@@ -46,6 +46,12 @@ dev-dynamic: BUILD_TAGS+=testonly
 dev-dynamic: prep
 	@CGO_ENABLED=1 BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
 
+# quickdev creates binaries for testing Vault locally like dev, but skips
+# the prep step.
+quickdev: BUILD_TAGS+=testonly
+quickdev:
+	@CGO_ENABLED=$(CGO_ENABLED) BUILD_TAGS='$(BUILD_TAGS)' VAULT_DEV_BUILD=1 sh -c "'$(CURDIR)/scripts/build.sh'"
+
 # *-mem variants will enable memory profiling which will write snapshots of heap usage
 # to $TMP/vaultprof every 5 minutes. These can be analyzed using `$ go tool pprof <profile_file>`.
 # Note that any build can have profiling added via: `$ BUILD_TAGS=memprofiler make ...`
@@ -221,8 +227,8 @@ proto: check-tools-external
 	buf generate
 
 	# No additional sed expressions should be added to this list. Going forward
-	# we should just use the variable names choosen by protobuf. These are left
-	# here for backwards compatability, namely for SDK compilation.
+	# we should just use the variable names chosen by protobuf. These are left
+	# here for backwards compatibility, namely for SDK compilation.
 	$(SED) -i -e 's/Id/ID/' -e 's/SPDX-License-IDentifier/SPDX-License-Identifier/' vault/request_forwarding_service.pb.go
 	$(SED) -i -e 's/Idp/IDP/' -e 's/Url/URL/' -e 's/Id/ID/' -e 's/IDentity/Identity/' -e 's/EntityId/EntityID/' -e 's/Api/API/' -e 's/Qr/QR/' -e 's/Totp/TOTP/' -e 's/Mfa/MFA/' -e 's/Pingid/PingID/' -e 's/namespaceId/namespaceID/' -e 's/Ttl/TTL/' -e 's/BoundCidrs/BoundCIDRs/' -e 's/SPDX-License-IDentifier/SPDX-License-Identifier/' helper/identity/types.pb.go helper/identity/mfa/types.pb.go helper/storagepacker/types.pb.go sdk/plugin/pb/backend.pb.go sdk/logical/identity.pb.go vault/activity/activity_log.pb.go
 

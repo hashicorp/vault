@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	log "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 )
 
 const DefaultParallelOperations = 128
@@ -58,6 +59,25 @@ type HABackend interface {
 
 	// Whether or not HA functionality is enabled
 	HAEnabled() bool
+}
+
+// RemovableNodeHABackend is used for HA backends that can remove nodes from
+// their cluster
+type RemovableNodeHABackend interface {
+	HABackend
+
+	// IsNodeRemoved checks if the node with the given ID has been removed.
+	// This will only be called on the active node.
+	IsNodeRemoved(ctx context.Context, nodeID string) (bool, error)
+
+	// NodeID returns the ID for this node
+	NodeID() string
+
+	// IsRemoved checks if this node has been removed
+	IsRemoved() bool
+
+	// RemoveSelf marks this node as being removed
+	RemoveSelf() error
 }
 
 // FencingHABackend is an HABackend which provides the additional guarantee that
@@ -167,34 +187,24 @@ type Lock interface {
 type Factory func(config map[string]string, logger log.Logger) (Backend, error)
 
 // PermitPool is used to limit maximum outstanding requests
+// Deprecated: use permitpool.Pool from go-secure-stdlib.
 type PermitPool struct {
-	sem chan int
+	*permitpool.Pool
 }
 
 // NewPermitPool returns a new permit pool with the provided
-// number of permits
+// number of permits.
+// Deprecated: use permitpool.New from go-secure-stdlib.
 func NewPermitPool(permits int) *PermitPool {
-	if permits < 1 {
-		permits = DefaultParallelOperations
-	}
 	return &PermitPool{
-		sem: make(chan int, permits),
+		Pool: permitpool.New(permits),
 	}
 }
 
 // Acquire returns when a permit has been acquired
+// Deprecated: use permitpool.Acquire from go-secure-stdlib.
 func (c *PermitPool) Acquire() {
-	c.sem <- 1
-}
-
-// Release returns a permit to the pool
-func (c *PermitPool) Release() {
-	<-c.sem
-}
-
-// Get number of requests in the permit pool
-func (c *PermitPool) CurrentPermits() int {
-	return len(c.sem)
+	_ = c.Pool.Acquire(context.Background())
 }
 
 // Prefixes is a shared helper function returns all parent 'folders' for a

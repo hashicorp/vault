@@ -65,6 +65,14 @@ func TestParseStorage(t *testing.T) {
 	testParseStorageTemplate(t)
 }
 
+// TestParseStorageURLConformance tests that all config attrs whose values can be
+// URLs, IP addresses, or host:port addresses, when configured with an IPv6
+// address, the normalized to be conformant with RFC-5942 §4
+// See: https://rfc-editor.org/rfc/rfc5952.html
+func TestParseStorageURLConformance(t *testing.T) {
+	testParseStorageURLConformance(t)
+}
+
 // TestConfigWithAdministrativeNamespace tests that .hcl and .json configurations are correctly parsed when the administrative_namespace_path is present.
 func TestConfigWithAdministrativeNamespace(t *testing.T) {
 	testConfigWithAdministrativeNamespaceHcl(t)
@@ -85,6 +93,76 @@ func TestUnknownFieldValidationHcl(t *testing.T) {
 
 func TestUnknownFieldValidationListenerAndStorage(t *testing.T) {
 	testUnknownFieldValidationStorageAndListener(t)
+}
+
+// Test_ObservationSystemConfig makes sure that the observation system config
+// is properly loaded.
+func Test_ObservationSystemConfig(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/observations.hcl")
+	require.NoError(t, err)
+	require.NotNil(t, config)
+	require.NotNil(t, config.Observations)
+	require.Equal(t, "/var/ledger.log", config.Observations.LedgerPath)
+	require.Empty(t, config.Observations.TypePrefixAllowlist)
+	require.Empty(t, config.Observations.TypePrefixDenylist)
+}
+
+// Test_ObservationSystemConfigAllowDenyList makes sure that the observation system config
+// is properly loaded with an allowlist and denylist.
+func Test_ObservationSystemConfigAllowDenyList(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/observations_allow_deny.hcl")
+	require.NoError(t, err)
+	require.NotNil(t, config)
+	require.NotNil(t, config.Observations)
+	require.Equal(t, "/var/ledger.log", config.Observations.LedgerPath)
+	require.Equal(t, []string{"deny1", "deny2"}, config.Observations.TypePrefixDenylist)
+	require.Equal(t, []string{"allow1", "allow2", "allow3"}, config.Observations.TypePrefixAllowlist)
+	require.Equal(t, "0777", config.Observations.FileMode)
+}
+
+// Test_ObservationSystemConfigMerge checks merge for observation system config
+func Test_ObservationSystemConfigMerge(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/observations.hcl")
+	require.NoError(t, err)
+	require.NotNil(t, config)
+
+	config2, err := LoadConfigFile("./test-fixtures/observations_allow_deny.hcl")
+	require.NoError(t, err)
+	require.NotNil(t, config2)
+
+	merged := config.Merge(config2)
+	require.NotNil(t, merged)
+	require.NotNil(t, merged.Observations)
+	require.Equal(t, "/var/ledger.log", merged.Observations.LedgerPath)
+	require.Equal(t, []string{"deny1", "deny2"}, merged.Observations.TypePrefixDenylist)
+	require.Equal(t, []string{"allow1", "allow2", "allow3"}, merged.Observations.TypePrefixAllowlist)
+	require.Equal(t, "0777", merged.Observations.FileMode)
+}
+
+// Test_ObservationSystemConfigMergeFromNoObservations checks merge for observation system config from a config
+// without an observation system defined
+func Test_ObservationSystemConfigMergeFromNoObservations(t *testing.T) {
+	config, err := LoadConfigFile("./test-fixtures/config.hcl")
+	require.NoError(t, err)
+	require.NotNil(t, config)
+
+	config2, err := LoadConfigFile("./test-fixtures/observations_allow_deny.hcl")
+	require.NoError(t, err)
+	require.NotNil(t, config2)
+
+	merged := config.Merge(config2)
+	require.NotNil(t, merged)
+	require.NotNil(t, merged.Observations)
+	require.Equal(t, "/var/ledger.log", merged.Observations.LedgerPath)
+	require.Equal(t, []string{"deny1", "deny2"}, merged.Observations.TypePrefixDenylist)
+	require.Equal(t, []string{"allow1", "allow2", "allow3"}, merged.Observations.TypePrefixAllowlist)
+	require.Equal(t, "0777", merged.Observations.FileMode)
+	require.Equal(t, true, merged.EnableUI)
+}
+
+// TestDuplicateKeyValidationHcl checks that the server command displays a warning when the HCL config file contains duplicate keys.
+func TestDuplicateKeyValidationHcl(t *testing.T) {
+	testDuplicateKeyValidationHcl(t)
 }
 
 func TestExperimentsConfigParsing(t *testing.T) {
@@ -285,7 +363,7 @@ func TestCheckConfig(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := CheckConfig(tt.config, nil)
+			_, err := CheckConfig(tt.config)
 			if tt.expectError {
 				require.Error(t, err)
 			} else {

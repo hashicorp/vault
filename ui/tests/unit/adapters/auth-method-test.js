@@ -54,7 +54,7 @@ module('Unit | Adapter | auth method', function (hooks) {
     await this.store.findAll('auth-method', { adapterOptions: { unauthenticated: true } });
   });
 
-  test('findAll makes request to correct endpoint when useMountsEndpoint is true', async function (assert) {
+  test('query makes request to correct endpoint ', async function (assert) {
     assert.expect(1);
 
     this.server.get('sys/internal/ui/mounts', () => {
@@ -62,6 +62,6 @@ module('Unit | Adapter | auth method', function (hooks) {
       return this.mockResponse;
     });
 
-    await this.store.findAll('auth-method', { adapterOptions: { useMountsEndpoint: true } });
+    await this.store.query('auth-method', {});
   });
 });

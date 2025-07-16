@@ -12,6 +12,7 @@ import hbs from 'htmlbars-inline-precompile';
 import { Response } from 'miragejs';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kubernetes | Page::Configure', function (hooks) {
   setupRenderingTest(hooks);
@@ -36,7 +37,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     this.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: 'kubernetes', route: 'overview' },
-      { label: 'configure' },
+      { label: 'Configure' },
     ];
     this.expectedInferred = {
       disable_local_ca_jwt: false,
@@ -230,7 +231,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     await click('[data-test-config-save]');
 
     assert
-      .dom('[data-test-field-validation="kubernetesHost"] [data-test-inline-error-message]')
+      .dom(GENERAL.validationErrorByAttr('kubernetesHost'))
       .hasText('Kubernetes host is required', 'Error renders for required field');
     assert.dom('[data-test-alert]').hasText('There is an error with this form.', 'Alert renders');
   });

@@ -1,0 +1,5 @@
+```release-note:change
+ui/activity: Replaces mount and namespace attribution charts with a table to allow sorting 
+client count data by `namespace`, `mount_path`, `mount_type` or number of clients for 
+a selected month. 
+```

@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <TabPageHeader @model={{@backendModel}} @breadcrumbs={{@breadcrumbs}}>
   <:toolbarFilters>
@@ -9,8 +9,7 @@
       <FilterInput
         aria-label="Filter roles"
         placeholder="Filter roles"
-        value={{@pageFilter}}
-        @autofocus={{true}}
+        @value={{@pageFilter}}
         @onInput={{this.onFilterChange}}
       />
     {{/if}}
@@ -43,46 +42,63 @@
 {{else}}
   <div class="has-bottom-margin-s">
     {{#each @roles as |role|}}
-      <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{array "roles.role.details" role.type role.name}} as |Item|>
+      <ListItem @linkPrefix={{this.mountPoint}} @linkParams={{this.linkParams role}} as |Item|>
         <Item.content>
           <Icon @name="user" />
-          <span data-test-role={{role.name}}>{{role.name}}</span>
+          <span data-test-role="{{role.type}} {{role.name}}">{{role.name}}</span>
           <Hds::Badge @text={{role.type}} data-test-role-type-badge={{role.name}} />
         </Item.content>
         <Item.menu>
           <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
-            <dd.ToggleIcon @icon="more-horizontal" @text="More options" @hasChevron={{false}} data-test-popup-menu-trigger />
-            {{#if role.canEdit}}
+            <dd.ToggleIcon
+              @icon="more-horizontal"
+              @text="More options"
+              @hasChevron={{false}}
+              data-test-popup-menu-trigger="{{role.type}} {{role.name}}"
+            />
+            {{#if (this.isHierarchical role.name)}}
               <dd.Interactive
-                data-test-edit
-                @route="roles.role.edit"
-                @models={{array role.type role.name}}
-              >Edit</dd.Interactive>
-            {{/if}}
-            {{#if role.canReadCreds}}
-              <dd.Interactive data-test-get-creds @route="roles.role.credentials" @models={{array role.type role.name}}>
-                Get credentials
-              </dd.Interactive>
-            {{/if}}
-            {{#if role.canRotateStaticCreds}}
+                data-test-subdirectory
+                @route="roles.subdirectory"
+                @models={{array role.type role.completeRoleName}}
+              >Content</dd.Interactive>
+            {{else}}
+              {{#if role.canEdit}}
+                <dd.Interactive
+                  data-test-edit
+                  @route="roles.role.edit"
+                  @models={{array role.type role.name}}
+                >Edit</dd.Interactive>
+              {{/if}}
+              {{#if role.canReadCreds}}
+                <dd.Interactive
+                  data-test-get-creds
+                  @route="roles.role.credentials"
+                  @models={{array role.type role.completeRoleName}}
+                >
+                  Get credentials
+                </dd.Interactive>
+              {{/if}}
+              {{#if role.canRotateStaticCreds}}
+                <dd.Interactive
+                  data-test-rotate-creds
+                  @color="critical"
+                  {{on "click" (fn (mut this.credsToRotate) role)}}
+                >Rotate credentials</dd.Interactive>
+              {{/if}}
               <dd.Interactive
-                data-test-rotate-creds
-                @color="critical"
-                {{on "click" (fn (mut this.credsToRotate) role)}}
-              >Rotate credentials</dd.Interactive>
-            {{/if}}
-            <dd.Interactive
-              data-test-details
-              @route="roles.role.details"
-              {{! this will force the roles.role model hook to fire since we may only have a partial model loaded in the list view }}
-              @models={{array role.type role.name}}
-            >Details</dd.Interactive>
-            {{#if role.canDelete}}
-              <dd.Interactive
-                data-test-delete
-                @color="critical"
-                {{on "click" (fn (mut this.roleToDelete) role)}}
-              >Delete</dd.Interactive>
+                data-test-details
+                @route="roles.role.details"
+                {{! this will force the roles.role model hook to fire since we may only have a partial model loaded in the list view }}
+                @models={{array role.type role.completeRoleName}}
+              >Details</dd.Interactive>
+              {{#if role.canDelete}}
+                <dd.Interactive
+                  data-test-delete
+                  @color="critical"
+                  {{on "click" (fn (mut this.roleToDelete) role)}}
+                >Delete</dd.Interactive>
+              {{/if}}
             {{/if}}
           </Hds::Dropdown>
         </Item.menu>
@@ -108,7 +124,9 @@
     <Hds::Pagination::Numbered
       @currentPage={{@roles.meta.currentPage}}
       @currentPageSize={{@roles.meta.pageSize}}
-      @route="roles"
+      {{! localName will be either "index" or "subdirectory" }}
+      @route="roles.{{this.router.currentRoute.localName}}"
+      @models={{@currentRouteParams}}
       @showSizeSelector={{false}}
       @totalItems={{@roles.meta.filteredTotal}}
       @queryFunction={{this.paginationQueryParams}}

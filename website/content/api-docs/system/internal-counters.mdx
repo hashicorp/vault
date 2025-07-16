@@ -7,7 +7,7 @@ description: >-
 
 # `/sys/internal/counters`
 
-The `/sys/internal/counters` endpoints are used to return data about the number of Tokens and Entities in Vault. They return information for the entire cluster.
+The `/sys/internal/counters` endpoints are used to return data about the number of Clients in Vault. They return information for the entire cluster.
 
 ## Entities
 
@@ -39,48 +39,6 @@ $ curl \
   "data": {
     "counters": {
       "entities": {
-        "total": 1
-      }
-    }
-  },
-  "wrap_info": null,
-  "warnings": null,
-  "auth": null
-}
-```
-
-</CodeBlockConfig>
-
-## Tokens
-
-This endpoint returns the total number of Tokens.
-
-| Method | Path                            |
-| :----- | :------------------------------ |
-| `GET`  | `/sys/internal/counters/tokens` |
-
-### Sample request
-
-```shell-session
-$ curl \
-    --header "X-Vault-Token: ..." \
-    --request GET \
-    http://127.0.0.1:8200/v1/sys/internal/counters/tokens
-```
-
-### Sample response
-
-<CodeBlockConfig hideClipboard>
-
-```json
-{
-  "request_id": "75cbaa46-e741-3eba-2be2-325b1ba8f03f",
-  "lease_id": "",
-  "renewable": false,
-  "lease_duration": 0,
-  "data": {
-    "counters": {
-      "service_tokens": {
         "total": 1
       }
     }
@@ -254,9 +212,149 @@ in the queried period. The `end_time` is the end of the final month of the queri
 period.
 
 - If the `end_date` supplied to the API is the current month, exact activity
-information will be returned for all months in the queried period, except for the
-current month. The last element in the `months` response stanza will signify the current month. Furthermore, the
-`new_clients` counts returned for the current month will be an estimate.
+information will be returned for all months in the queried period. The last element 
+in the `months` response stanza will signify the current month.
+
+@include 'counters-api-new-clients-behavior-change.mdx'
+
+### Behavior Differences between Vault Enterprise and Vault Community ((#count-difference))
+
+The `start_time` and `end_time` request parameters behave differently between
+Vault Enterprise and Vault Community edition.
+
+In Vault Enterprise edition, the time parameters must align with the entire default
+billing period of 12 months. In Vault Community edition, the Get Client Count endpoint  
+supports flexible historical time ranges, but excludes the current month and any
+future dates. 
+
+
+<Tabs>
+
+<Tab heading="Vault Enterprise">
+
+In Vault Enterprise, the Get Client Count endpoint adjusts `start_time` and
+`end_time` to align with the start and end of the corresponding billing period.
+
+- The endpoint only returns data for an entire billing period.
+- By default, the endpoint returns activity data from the start of the current 
+  billing period up to the time you call the endpoint.
+- If you provide a start time outside the current billing period, Vault
+  aligns the query to the full default billing period associated with the
+  provided start time.
+- If you provide an end time, but no start time, Vault aligns the query to the
+  full default billing period associated with the provided end time.
+- If you provide start and end times from different billing periods:
+   - Vault adjusts `start_time` to the start of the associated billing period.
+   - Vault adjusts `end_time` to the end of the billing period associated with `start_time`.
+   - The endpoint returns the associated counts and the following warning:
+
+   ```json
+   {
+      "warning": "start_time and end_time parameters can only be used to specify the beginning or end of the same billing period. The values provided for these parameters are not supported and are ignored. Showing the data for the entire billing period corresponding to start_time. If start_time is not provided, the billing period is determined based on the end_time."
+   }
+   ```
+
+For example, assume the start of the billing period is January 1, 2023 and
+current date is December 31, 2025 and you make the following API call:
+
+```shell-session
+$ curl \
+   --header "X-Vault-Token: ..." \
+   --request GET \
+   http://127.0.0.1:8200/v1/sys/internal/counters/activity?end_time=2023-12-31T00%3A00%3A00Z&start_time=2023-03-01T00%3A00%3A00Z
+```
+
+If `start_time` or `end_time` falls within the billing period or overlaps multiple billing periods, Vault returns the following::
+
+<CodeBlockConfig hideClipboard>
+
+```json
+{
+   "request_id":"26be5ab9-dcac-9237-ec12-269a8ca647d5",
+   "lease_id":"",
+   "renewable":false,
+   "lease_duration":0,
+   "data":{
+      "start_time":"2023-01-01T00:00:00Z",
+      "end_time":"2023-12-31T23:59:59Z",
+      "total":{
+         "entity_clients":20,
+         "non_entity_clients":20,
+         "secret_syncs":5,
+         "acme_clients":3,
+         "clients":48
+      }
+   },
+   "wrap_info":null,
+   "warnings":"start_time and end_time parameters can only be used to specify the beginning or end of the same billing period. The values provided for these parameters are not supported and are ignored. Showing the data for the entire billing period corresponding to start_time. If start_time is not provided, the billing period is determined based on the end_time.",
+   "auth":null
+}
+```
+
+</CodeBlockConfig>
+
+</Tab>
+
+<Tab heading="Vault Community">
+
+In Vault Community edition, the Get Client Count endpoint supports arbitrary
+historical time ranges. The default range for Get Client Count is the start of
+the current cycle through the end of the previous month.
+
+When `end_time` falls in the current month or a future month, Vault adjusts the query
+end time to the last day of the previous month and includes the following
+warning along with the associated counts:
+
+      ```json
+      {
+         "warning": "end_time parameter can only be used to specify a date until the end of previous month. The value provided for this parameter was in the current month or in the future date and was therefore ignored. The response includes data until the end of the previous month."
+      }
+      ```
+
+For example, assume the current date is September 25, 2025  and you call the
+Get Client Count endpoint with `end_time` set to `2025-10-01`:
+
+```shell-session
+$ curl \
+   --header "X-Vault-Token: ..." \
+   --request GET \
+   http://127.0.0.1:8200/v1/sys/internal/counters/activity?end_time=2025-10-01T00%3A00%3A00Z&start_time=2025-01-01T00%3A00%3A00Z
+```
+
+Vault adjusts `end_time` to the last day in the previous month (August 31, 2025) and returns the following:
+
+<CodeBlockConfig hideClipboard>
+
+   ```json
+{
+   "request_id":"26be5ab9-dcac-9237-ec12-269a8ca647d5",
+   "lease_id":"",
+   "renewable":false,
+   "lease_duration":0,
+   "data":{
+      "start_time":"2025-01-01T00:00:00Z",
+      "end_time":"2025-08-31T23:59:59Z",
+      "total":{
+         "entity_clients":20,
+         "non_entity_clients":20,
+         "secret_syncs":5,
+         "acme_clients":3,
+         "clients":48
+      }
+   },
+   "wrap_info":null,
+   "warnings":"end_time parameter can only be used to specify a date until the end of previous month. The value provided for this parameter was in the current month or in the future date and was therefore ignored. The response includes data until the end of the previous month.",
+   "auth":null
+}
+```
+
+</CodeBlockConfig>
+
+</Tab>
+
+</Tabs>
+
+### Sample response
 
 The following is an example of the `months` breakdown with just the current month information.
 
@@ -349,7 +447,7 @@ The following is an example of the `months` breakdown with just the current mont
 Refer to the [client count](/vault/docs/concepts/client-count) concepts page for
 more information on how clients map to these client IDs and how they are
 counted, or for more information about how the new clients for the current month
-are estimated in a billing period.
+are calculated.
 
 The response will include all child namespaces of the namespace in which the
 request was made. If some namespace has subsequently been deleted, its path will
@@ -379,6 +477,15 @@ is unknown.
   response with the current billing period information without having to
   explicitly provide a start and end time. This parameter is deprecated, as this option is now the default, so no parameter is needed to specify.
 
+@include 'counters-api-new-clients-behavior-change.mdx'
+
+<Note>
+  <EnterpriseAlert product="vault" inline />
+
+- @include 'counters-api-wait-warning.mdx'
+- @include 'counters-api-custom-contract-note.mdx'
+
+</Note>
 
 ### Sample request
 
@@ -413,7 +520,8 @@ $ curl \
             },
             "mounts":[
                {
-                  "path":"auth/up1/",
+                  "mount_path":"auth/up1/",
+                  "mount_type":"userpass/",
                   "counts":{
                      "entity_clients":10,
                      "non_entity_clients":10,
@@ -423,7 +531,8 @@ $ curl \
                   }
                },
                {
-                  "path":"auth/up2/",
+                  "mount_path":"auth/up2/",
+                  "mount_type":"userpass/",
                   "counts":{
                      "entity_clients":5,
                      "non_entity_clients":5,
@@ -433,7 +542,8 @@ $ curl \
                   }
                },
                {
-                  "path":"secrets/kv1/",
+                  "mount_path":"secrets/kv1/",
+                  "mount_type":"kv/",
                   "counts":{
                      "entity_clients":0,
                      "non_entity_clients":0,
@@ -443,7 +553,8 @@ $ curl \
                   }
                },
                {
-                  "path":"secrets/kv2/",
+                  "mount_path":"secrets/kv2/",
+                  "mount_type":"kv/",
                   "counts":{
                      "entity_clients":0,
                      "non_entity_clients":0,
@@ -453,7 +564,8 @@ $ curl \
                   }
                },
                {
-                  "path":"secrets/pki/",
+                  "mount_path":"secrets/pki/",
+                  "mount_type":"pki/",
                   "counts":{
                      "entity_clients":0,
                      "non_entity_clients":0,
@@ -476,7 +588,8 @@ $ curl \
             },
             "mounts":[
                {
-                  "path":"auth/up1/",
+                  "mount_path":"auth/up1/",
+                  "mount_type":"userpass/",
                   "counts":{
                      "entity_clients":0,
                      "non_entity_clients":5,
@@ -486,7 +599,8 @@ $ curl \
                   }
                },
                {
-                  "path":"auth/up2/",
+                  "mount_path":"auth/up2/",
+                  "mount_type":"userpass/",
                   "counts":{
                      "entity_clients":5,
                      "non_entity_clients":0,
@@ -522,7 +636,8 @@ $ curl \
                   },
                   "mounts":[
                      {
-                        "path":"auth/up2/",
+                        "mount_path":"auth/up2/",
+                        "mount_type":"userpass/",
                         "counts":{
                            "entity_clients":10,
                            "non_entity_clients":5,
@@ -532,7 +647,8 @@ $ curl \
                         }
                      },
                      {
-                        "path":"auth/up1/",
+                        "mount_path":"auth/up1/",
+                        "mount_type":"userpass/",
                         "counts":{
                            "entity_clients":3,
                            "non_entity_clients":2,
@@ -542,7 +658,8 @@ $ curl \
                         }
                      },
                      {
-                        "path":"secrets/kv1/",
+                        "mount_path":"secrets/kv1/",
+                        "mount_type":"kv/",
                         "counts":{
                            "entity_clients":0,
                            "non_entity_clients":0,
@@ -552,7 +669,8 @@ $ curl \
                         }
                      },
                      {
-                        "path":"secrets/kv2/",
+                        "mount_path":"secrets/kv2/",
+                        "mount_type":"kv/",
                         "counts":{
                            "entity_clients":0,
                            "non_entity_clients":0,
@@ -562,7 +680,8 @@ $ curl \
                         }
                      },
                      {
-                        "path":"secrets/pki/",
+                        "mount_path":"secrets/pki/",
+                        "mount_type":"pki/",
                         "counts":{
                            "entity_clients":0,
                            "non_entity_clients":0,
@@ -585,7 +704,8 @@ $ curl \
                   },
                   "mounts":[
                      {
-                        "path":"auth/up1/",
+                        "mount_path":"auth/up1/",
+                        "mount_type":"userpass/",
                         "counts":{
                            "entity_clients":0,
                            "non_entity_clients":5,
@@ -595,7 +715,8 @@ $ curl \
                         }
                      },
                      {
-                        "path":"auth/up2/",
+                        "mount_path":"auth/up2/",
+                        "mount_type":"userpass/",
                         "counts":{
                            "entity_clients":5,
                            "non_entity_clients":0,
@@ -628,7 +749,8 @@ $ curl \
                      },
                      "mounts":[
                         {
-                           "path":"auth/up2/",
+                           "mount_path":"auth/up2/",
+                           "mount_type":"userpass/",
                            "counts":{
                               "entity_clients":0,
                               "non_entity_clients":5,
@@ -636,7 +758,8 @@ $ curl \
                            }
                         },
                         {
-                           "path":"auth/up1/",
+                           "mount_path":"auth/up1/",
+                           "mount_type":"userpass/",
                            "counts":{
                               "entity_clients":5,
                               "non_entity_clients":0,
@@ -644,7 +767,8 @@ $ curl \
                            }
                         },
                         {
-                           "path":"secrets/kv1/",
+                           "mount_path":"secrets/kv1/",
+                           "mount_type":"kv/",
                            "counts":{
                               "entity_clients":0,
                               "non_entity_clients":0,
@@ -653,7 +777,8 @@ $ curl \
                            }
                         },
                         {
-                           "path":"secrets/kv2/",
+                           "mount_path":"secrets/kv2/",
+                           "mount_type":"kv/",
                            "counts":{
                               "entity_clients":0,
                               "non_entity_clients":0,
@@ -662,7 +787,8 @@ $ curl \
                            }
                         },
                         {
-                           "path":"secrets/pki/",
+                           "mount_path":"secrets/pki/",
+                           "mount_type":"pki/",
                            "counts":{
                               "entity_clients":0,
                               "non_entity_clients":0,
@@ -685,7 +811,8 @@ $ curl \
                      },
                      "mounts":[
                         {
-                           "path":"auth/up1/",
+                           "mount_path":"auth/up1/",
+                           "mount_type":"userpass/",
                            "counts":{
                               "entity_clients":0,
                               "non_entity_clients":5,
@@ -695,7 +822,8 @@ $ curl \
                            }
                         },
                         {
-                           "path":"auth/up2/",
+                           "mount_path":"auth/up2/",
+                           "mount_type":"userpass/",
                            "counts":{
                               "entity_clients":5,
                               "non_entity_clients":0,
@@ -731,7 +859,8 @@ $ curl \
                   },
                   "mounts":[
                      {
-                        "path":"auth/up1/",
+                        "mount_path":"auth/up1/",
+                        "mount_type":"userpass/",
                         "counts":{
                            "entity_clients":0,
                            "non_entity_clients":5,
@@ -741,7 +870,8 @@ $ curl \
                         }
                      },
                      {
-                        "path":"auth/up2/",
+                        "mount_path":"auth/up2/",
+                        "mount_type":"userpass/",
                         "counts":{
                            "entity_clients":5,
                            "non_entity_clients":0,
@@ -774,7 +904,8 @@ $ curl \
                      },
                      "mounts":[
                         {
-                           "path":"auth/up1/",
+                           "mount_path":"auth/up1/",
+                           "mount_type":"userpass/",
                            "counts":{
                               "entity_clients":0,
                               "non_entity_clients":5,
@@ -784,7 +915,8 @@ $ curl \
                            }
                         },
                         {
-                           "path":"auth/up2/",
+                           "mount_path":"auth/up2/",
+                           "mount_type":"userpass/",
                            "counts":{
                               "entity_clients":5,
                               "non_entity_clients":0,
@@ -794,7 +926,8 @@ $ curl \
                            }
                         },
                         {
-                           "path":"secrets/kv1/",
+                           "mount_path":"secrets/kv1/",
+                           "mount_type":"kv/",
                            "counts":{
                               "entity_clients":0,
                               "non_entity_clients":0,
@@ -804,7 +937,8 @@ $ curl \
                            }
                         },
                         {
-                           "path":"secrets/kv2/",
+                           "mount_path":"secrets/kv2/",
+                           "mount_type":"kv/",
                            "counts":{
                               "entity_clients":0,
                               "non_entity_clients":0,
@@ -814,7 +948,8 @@ $ curl \
                            }
                         },
                         {
-                           "path":"secrets/pki/",
+                           "mount_path":"secrets/pki/",
+                           "mount_type":"pki/",
                            "counts":{
                               "entity_clients":0,
                               "non_entity_clients":0,
@@ -846,7 +981,7 @@ $ curl \
 
 </CodeBlockConfig>
 
-### Sample request 
+### Sample request
 
 The following example retrieves the client count for a single month.
 
@@ -880,9 +1015,11 @@ this request was made.
 
 <Note>
 
-The client count may be inaccurate in the moments following a Vault
-reboot, or leadership change. The estimate will stabilize when background
+- For Vault versions prior to 1.20 and 1.20+ent, the client count may be inaccurate in the moments following a Vault
+reboot, or leadership change. The count will stabilize when background
 loading of client data has completed.
+
+- @include 'counters-api-wait-warning.mdx'
 
 </Note>
 
@@ -932,6 +1069,7 @@ $ curl \
               "secret_syncs": 0
             },
             "mount_path": "auth_token_0747d59c"
+            "mount_type":"token/",
           }
         ],
         "namespace_id": "root",
@@ -968,6 +1106,7 @@ $ curl \
                   "secret_syncs": 0
                 },
                 "mount_path": "auth_token_0747d59c"
+                "mount_type":"token/",
               }
             ],
             "namespace_id": "root",
@@ -1001,6 +1140,7 @@ $ curl \
                     "secret_syncs": 0
                   },
                   "mount_path": "auth_token_0747d59c"
+                  "mount_type":"token/",
                 }
               ],
               "namespace_id": "root",
@@ -1037,6 +1177,16 @@ The `/sys/internal/counters/config` endpoint is used to configure logging of act
 - `enabled` `(string: enable, disable, default)` - Enable or disable counting of client activity. When set to `default`, the client
   counts are enabled on Enterprise builds and disabled on community builds. Disabling the feature during the middle of a month will
   discard any data recorded for that month, but does not delete previous months.
+  <Note>
+
+  <EnterpriseAlert product="vault" inline />
+
+  License utilization cannot be reported if client counting is disabled.
+
+  As of 1.16.0, 1.15.6 and 1.14.10, client counting cannot be disabled as manual license utilization reporting is always enabled.
+
+  As of 1.14.0, 1.13.4, 1.12.8 and 1.11.12, client counting cannot be disabled when automated license utilization reporting is enabled.
+  </Note>
 - `retention_months` `(integer: 48)` - The number of months of history to retain. The minimum is 48 months and the maximum is 60 months.
 
 Any missing parameters are left at their existing value.
@@ -1123,7 +1273,7 @@ provided start and end times. The returned set of client information will be
 deduplicated over the time window and will show the earliest activity logged for
 each client. The output will be ordered chronologically by month of activity.
 
-<Note title="Techn preview">
+<Note title="Tech preview">
 
 This endpoint is currently in tech preview status.
 
@@ -1145,8 +1295,8 @@ it may be up to 20 minutes delayed.
 - **`sudo` required** – This endpoint requires `sudo` capability in addition to
   any path-specific capabilities.
 
-| Method | Path                                      |
-| :----- | :---------------------------------------- |
+| Method | Path                                     |
+|:-------|:-----------------------------------------|
 | `GET`  | `/sys/internal/counters/activity/export` |
 
 ### Parameters
@@ -1204,7 +1354,7 @@ single line.
   "mount_accessor": "auth_userpass_a005db73",
   "mount_type": "userpass",
   "mount_path": "auth/userpass/",
-  "timestamp": "2024-07-10T09:33:51Z",
+  "token_creation_time": "2024-07-10T09:33:51Z",
   "policies": [
     "secret-read",
     "secret-list",
@@ -1236,7 +1386,7 @@ single line.
   "mount_accessor": "auth_ns_token_e3119312",
   "mount_type": "ns_token",
   "mount_path": "auth/token/",
-  "timestamp": "2024-07-08T11:35:23Z",
+  "token_creation_time": "2024-07-08T11:35:23Z",
   "policies": [],
   "entity_metadata": {},
   "entity_alias_metadata": {},
@@ -1255,7 +1405,7 @@ single line.
   "mount_accessor": "auth_ldap_a005db73",
   "mount_type": "ldap",
   "mount_path": "auth/ldap/",
-  "timestamp": "2024-07-08T11:47:57Z",
+  "token_creation_time": "2024-07-08T11:47:57Z",
   "policies": [
     "secret-read"
   ],
@@ -1282,7 +1432,7 @@ single line.
   "mount_accessor": "auth_userpass_01a6ea85",
   "mount_type": "userpass",
   "mount_path": "auth/userpass/",
-  "timestamp": "2024-07-21T14:51:36Z",
+  "token_creation_time": "2024-07-21T14:51:36Z",
   "policies": [
     "secret-read"
   ],
@@ -1308,7 +1458,7 @@ single line.
   "mount_accessor": "auth_kubernetes_b596406f",
   "mount_type": "kubernetes",
   "mount_path": "auth/kubernetes/",
-  "timestamp": "2024-07-10T09:33:51Z",
+  "token_creation_time": "2024-07-10T09:33:51Z",
   "policies": [
     "secret-read"
   ],
@@ -1334,7 +1484,7 @@ single line.
   "mount_accessor": "auth_aws_c223ff01",
   "mount_type": "aws",
   "mount_path": "auth/aws/",
-  "timestamp": "2024-07-10T09:33:51Z",
+  "token_creation_time": "2024-07-10T09:33:51Z",
   "policies": [
     "secret-read"
   ],
@@ -1355,12 +1505,12 @@ will be named using the field name and underlying index (e.g. `policies.0`, `pol
 (e.g. `entity_metadata.email_address`, `entity_alias_metadata.region`). A flattened field will only be added if at least one record contains
 it. If a top-level field (e.g. `entity_metadata`) is not populated in any of the
 records then there will not be any flattened fields of prefix
-`enttiy_metadata.`.
+`entity_metadata.`.
 
 <CodeBlockConfig hideClipboard>
 
 ```text
-entity_name,entity_alias_name,client_id,client_type,local_entity_alias,namespace_id,namespace_path,mount_accessor,mount_path,mount_type,timestamp,entity_alias_custom_metadata.contact_email,entity_alias_custom_metadata.group,entity_alias_custom_metadata.region,entity_metadata.email_address,entity_group_ids.0,policies.0,policies.1,policies.2,policies.4
+entity_name,entity_alias_name,client_id,client_type,local_entity_alias,namespace_id,namespace_path,mount_accessor,mount_path,mount_type,token_creation_time,entity_alias_custom_metadata.contact_email,entity_alias_custom_metadata.group,entity_alias_custom_metadata.region,entity_metadata.email_address,entity_group_ids.0,policies.0,policies.1,policies.2,policies.4
 admin,admin,3f210722-7210-98e8-1f0d-e6a39ffb29c6,entity,false,root,,auth_userpass_a005db73,auth/userpass/,userpass,2024-07-10T09:33:51Z,admin@example.com,san_francisco,west,admin@example.com,746fbaf9-ffeb-62b9-7f0b-42d79ca0883f,secret-read,secret-list,secret-write,secret-delete
 ,,590198f7-9178-57d6-c345-48746bb438d8,non-entity-token,false,YWZzu,ns1/a/,auth_ns_token_e3119312,auth/token/,ns_token,2024-07-08T11:35:23Z,,,,,,,,,
 jdoe,jdoe,665a54bf-8652-c0c5-8121-40adf0d9786a,entity,false,wOsmr,ns1/a,auth_ldap_a005db73,auth/ldap/,ldap,2024-07-08T11:47:57Z,jdoe@example.com,new_york,east,,9f18cd4a-4e64-a2b2-b001-7b6b0dfb1270,secret-read,,,

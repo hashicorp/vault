@@ -19,10 +19,13 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	iradix "github.com/hashicorp/go-immutable-radix"
 	"github.com/hashicorp/raft"
+	"github.com/hashicorp/vault/helper/testhelpers/corehelpers"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/sdk/plugin/pb"
+	"github.com/stretchr/testify/require"
 )
 
 type idAddr struct {
@@ -957,4 +960,53 @@ func TestBoltSnapshotStore_CloseFailure(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected write to fail")
 	}
+}
+
+// TestLoadReadOnlySnapshot loads a test snapshot file and verifies that there are no
+// errors, and that the expected paths are excluded from the FSM.
+func TestLoadReadOnlySnapshot(t *testing.T) {
+	t.Parallel()
+	// Load a test snapshot file from the testdata directory.
+	// The snapshot contains the following paths:
+	//   * /different/path/to/exclude
+	//   * /path/to/exclude/1
+	//   * /path/to/exclude/2
+	//   * /path/to/keep
+	testSnapshotFilePath := "testdata/TestLoadReadOnlySnapshot.bin"
+	dir := t.TempDir()
+	logger := corehelpers.NewTestLogger(t)
+	snapshotFile, err := os.Open(testSnapshotFilePath)
+	require.NoError(t, err)
+	defer snapshotFile.Close()
+
+	// Create a radix tree containing paths to exclude.
+	pathsToExclude := iradix.New()
+	txn := pathsToExclude.Txn()
+	_, _ = txn.Insert([]byte("/path/to/exclude"), []byte("value"))
+	_, _ = txn.Insert([]byte("/path/to/exclude/1"), []byte("value"))
+	_, _ = txn.Insert([]byte("/different/path/to/exclude"), []byte("value"))
+	pathsToExclude = txn.Commit()
+	toExclude := func(key string) bool {
+		_, _, ok := pathsToExclude.Root().LongestPrefix([]byte(key))
+		return ok
+	}
+
+	// Create an FSM to load the snapshot data into.
+	fsm, err := NewFSM(dir, "test-fsm", logger)
+
+	err = LoadReadOnlySnapshot(fsm, snapshotFile, toExclude, logger)
+	require.NoError(t, err)
+	value, err := fsm.Get(context.Background(), "/path/to/exclude/1")
+	require.NoError(t, err)
+	require.Nil(t, value)
+	value, err = fsm.Get(context.Background(), "/path/to/exclude/2")
+	require.NoError(t, err)
+	require.Nil(t, value)
+	value, err = fsm.Get(context.Background(), "/different/path/to/exclude")
+	require.NoError(t, err)
+	require.Nil(t, value)
+
+	value, err = fsm.Get(context.Background(), "/path/to/keep")
+	require.NoError(t, err)
+	require.NotNil(t, value)
 }

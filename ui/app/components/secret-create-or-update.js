@@ -29,13 +29,13 @@
 import Component from '@glimmer/component';
 import ControlGroupError from 'vault/lib/control-group-error';
 import Ember from 'ember';
-import keys from 'core/utils/key-codes';
+import keys from 'core/utils/keys';
 import { action, set } from '@ember/object';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { isBlank, isNone } from '@ember/utils';
 import { task, waitForEvent } from 'ember-concurrency';
-import { WHITESPACE_WARNING } from 'vault/utils/model-helpers/validators';
+import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
 
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
@@ -89,7 +89,8 @@ export default class SecretCreateOrUpdate extends Component {
     this.validationErrorCount = values.filter(Boolean).length;
   }
   onEscape(e) {
-    if (e.keyCode !== keys.ESC || this.args.mode !== 'show') {
+    const isEscKeyPressed = keys.ESC.includes(e.key);
+    if (isEscKeyPressed || this.args.mode !== 'show') {
       return;
     }
     const parentKey = this.args.model.parentKey;

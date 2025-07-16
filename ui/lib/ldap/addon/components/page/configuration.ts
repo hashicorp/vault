@@ -11,7 +11,7 @@ import errorMessage from 'vault/utils/error-message';
 
 import type LdapConfigModel from 'vault/models/ldap/config';
 import type SecretEngineModel from 'vault/models/secret-engine';
-import type AdapterError from 'ember-data/adapter'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
+import type AdapterError from '@ember-data/adapter/error';
 import type { Breadcrumb } from 'vault/vault/app-types';
 import type FlashMessageService from 'vault/services/flash-messages';
 

@@ -1,10 +1,11 @@
 ---
 layout: docs
-page_title: GitHub - Secrets Sync Destination
-description: The GitHub destination syncs secrets from Vault to GitHub.
+page_title: Sync secrets from Vault to GitHub
+description: >-
+  Automatically sync and unsync the secrets from Vault to GitHub to centralize visibility and control of secrets lifecycle management.
 ---
 
-# GitHub actions secrets
+# Sync secrets from Vault to GitHub
 
 The GitHub actions sync destination allows Vault to safely synchronize secrets as GitHub organization, repository, or environment secrets.
 This is a low footprint option that enables your applications to benefit from Vault-managed secrets without requiring them
@@ -23,8 +24,10 @@ Prerequisites:
 
 
 <Warning title="Pitfalls of using an access token">
+
   Access tokens are tied to a user account and can be revoked at any time, causing disruptions to the sync process.
   GitHub applications are long-lived and do not expire. Using a GitHub application for authentication is preferred over using a personal access token.
+  
 </Warning>
 
 ### Repositories
