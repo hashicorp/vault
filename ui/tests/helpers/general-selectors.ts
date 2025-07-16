@@ -60,11 +60,11 @@ export const GENERAL = {
   filterInputExplicit: '[data-test-filter-input-explicit]',
   labelById: (id: string) => `label[id="${id}"]`,
   labelByGroupControlIndex: (index: number) => `.hds-form-group__control-field:nth-of-type(${index}) label`,
+  maskedInput: '[data-test-masked-input]',
   radioByAttr: (attr: string) => `[data-test-radio="${attr}"]`,
   selectByAttr: (attr: string) => `[data-test-select="${attr}"]`,
   toggleInput: (attr: string) => `[data-test-toggle-input="${attr}"]`,
   textToggle: '[data-test-text-toggle]',
-  textToggleTextarea: '[data-test-text-file-textarea]',
   filter: (name: string) => `[data-test-filter="${name}"]`,
 
   /* ────── Code Blocks / Editor ────── */

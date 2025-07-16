@@ -692,6 +692,9 @@ type Core struct {
 	// disableAutopilot is used to disable the autopilot subsystem in raft storage
 	disableAutopilot bool
 
+	// allowAuditLogPrefixing must be enabled for audit devices to use a prefix (more secure without)
+	allowAuditLogPrefixing bool
+
 	// enable/disable identifying response headers
 	enableResponseHeaderHostname   bool
 	enableResponseHeaderRaftNodeID bool
@@ -906,6 +909,9 @@ type CoreConfig struct {
 	// DisableAutopilot is used to disable autopilot subsystem in raft storage
 	DisableAutopilot bool
 
+	// AllowAuditLogPrefixing must be enabled for audit devices to use a prefix (more secure without)
+	AllowAuditLogPrefixing bool
+
 	// Whether to send headers in the HTTP response showing hostname or raft node ID
 	EnableResponseHeaderHostname   bool
 	EnableResponseHeaderRaftNodeID bool
@@ -1098,6 +1104,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		numExpirationWorkers:           conf.NumExpirationWorkers,
 		raftFollowerStates:             raft.NewFollowerStates(),
 		disableAutopilot:               conf.DisableAutopilot,
+		allowAuditLogPrefixing:         conf.AllowAuditLogPrefixing,
 		enableResponseHeaderHostname:   conf.EnableResponseHeaderHostname,
 		enableResponseHeaderRaftNodeID: conf.EnableResponseHeaderRaftNodeID,
 		mountMigrationTracker:          &sync.Map{},
@@ -1382,7 +1389,12 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	observationSystemConfig := conf.ObservationSystemConfig
 	if observationSystemConfig != nil {
 		if observationSystemConfig.LedgerPath != "" {
-			observations, err := observations.NewObservationSystem(nodeID, observationSystemConfig.LedgerPath, observationsLogger)
+			config := &observations.NewObservationSystemConfig{
+				ObservationSystemConfig: observationSystemConfig,
+				LocalNodeId:             nodeID,
+				Logger:                  observationsLogger,
+			}
+			observations, err := observations.NewObservationSystem(config)
 			if err != nil {
 				return nil, err
 			}
