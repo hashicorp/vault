@@ -212,11 +212,13 @@ module('Integration | Component | namespace-picker', function (hooks) {
     });
     await render(hbs`<NamespacePicker />`);
     assert
-      .dom(GENERAL.button('namespace-picker'))
+      .dom(GENERAL.toggleInput('namespace-id'))
       .hasText('admin', `shows the namespace 'admin' in the toggle component`);
-    await click(GENERAL.button('namespace-picker'));
-    assert.dom(`li ${GENERAL.button()}`).exists({ count: 2 }, 'namespace picker only contains 2 options');
-    assert.dom(GENERAL.button('admin')).exists();
-    assert.dom(GENERAL.button('admin/child1')).exists();
+    await click(GENERAL.toggleInput('namespace-id'));
+    assert
+      .dom(`li ${NAMESPACE_PICKER_SELECTORS.link()}`)
+      .exists({ count: 2 }, 'namespace picker only contains 2 options');
+    assert.dom(NAMESPACE_PICKER_SELECTORS.link('admin')).exists();
+    assert.dom(NAMESPACE_PICKER_SELECTORS.link('admin/child1')).exists();
   });
 });
