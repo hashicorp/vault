@@ -11,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { login, loginMethod, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { runCmd } from 'vault/tests/helpers/commands';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const tokenWithPolicy = async function (name, policy) {
   return await runCmd([
@@ -51,12 +52,12 @@ module('Acceptance | cluster', function (hooks) {
 
     await loginMethod({ username, password, path }, { authType: 'userpass', toggleOptions: true });
 
-    await click('[data-test-user-menu-trigger]');
+    await click(GENERAL.button('user-menu-trigger'));
     assert.dom('[data-test-user-menu-item="mfa"]').exists();
 
     await login();
     await settled();
-    await click('[data-test-user-menu-trigger]');
+    await click(GENERAL.button('user-menu-trigger'));
     assert.dom('[data-test-user-menu-item="mfa"]').doesNotExist();
   });
 

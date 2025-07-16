@@ -6,6 +6,8 @@ description: The GitHub auth method allows authentication with Vault using GitHu
 
 # GitHub auth method
 
+@include 'tips/custom-authn.mdx'
+
 The `github` auth method can be used to authenticate with Vault using a GitHub
 personal access token. This method of authentication is most useful for humans:
 operators or developers using Vault directly via the CLI.
@@ -91,6 +93,14 @@ management tool.
    ```text
    $ vault write auth/github/config organization=hashicorp
    ```
+
+<Note>
+
+If you use GitHub Enterprise, you must set the `organization_id`
+parameter with your GitHub organization ID. Vault cannot retrieve your
+organization details without authentication.
+
+</Note>
 
    For the complete list of configuration options, please see the API
    documentation.

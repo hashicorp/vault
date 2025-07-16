@@ -6,6 +6,7 @@ package quotas
 import (
 	"context"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
@@ -35,6 +36,8 @@ const (
 	EnvVaultEnableRateLimitAuditLogging = "VAULT_ENABLE_RATE_LIMIT_AUDIT_LOGGING"
 )
 
+var ErrGroupByNotSupported = errors.New("group_by mode is not supported in community edition")
+
 // Ensure that RateLimitQuota implements the Quota interface
 var _ Quota = (*RateLimitQuota)(nil)
 
@@ -49,6 +52,9 @@ type RateLimitQuota struct {
 
 	// Name of the quota rule
 	Name string `json:"name"`
+
+	// GroupBy is the grouping mode for the rate limit quota, defaulting to IP grouping if unset.
+	GroupBy GroupBy `json:"group_by"`
 
 	// NamespacePath is the path of the namespace to which this quota is
 	// applicable.
@@ -70,6 +76,10 @@ type RateLimitQuota struct {
 	// Rate defines the number of requests allowed per Interval.
 	Rate float64 `json:"rate"`
 
+	// SecondaryRate is only available when GroupBy is set to GroupByEntityThenIp or GroupByEntityThenNone, defining the
+	// number of requests allowed per Interval for the secondary groups.
+	SecondaryRate float64 `json:"secondary_rate"`
+
 	// Interval defines the duration to which rate limiting is applied.
 	Interval time.Duration `json:"interval"`
 
@@ -87,6 +97,7 @@ type RateLimitQuota struct {
 	blockedClients      sync.Map
 	purgeBlocked        bool
 	closePurgeBlockedCh chan struct{}
+	entRateLimitQuota
 }
 
 func (q *RateLimitQuota) GetNamespacePath() string {
@@ -98,7 +109,7 @@ func (q *RateLimitQuota) GetNamespacePath() string {
 // provided, which will default to 1s when initialized. An optional block
 // duration may be provided, where if set, when a client reaches the rate limit,
 // subsequent requests will fail until the block duration has passed.
-func NewRateLimitQuota(name, nsPath, mountPath, pathSuffix, role string, inheritable bool, interval, block time.Duration, rate float64) *RateLimitQuota {
+func NewRateLimitQuota(name, nsPath, mountPath, pathSuffix, role string, groupBy GroupBy, inheritable bool, interval, block time.Duration, rate, secondaryRate float64) *RateLimitQuota {
 	id, err := uuid.GenerateUUID()
 	if err != nil {
 		// Fall back to generating with a hash of the name, later in initialize
@@ -108,12 +119,14 @@ func NewRateLimitQuota(name, nsPath, mountPath, pathSuffix, role string, inherit
 		Name:          name,
 		ID:            id,
 		Type:          TypeRateLimit,
+		GroupBy:       groupBy,
 		NamespacePath: nsPath,
 		MountPath:     mountPath,
 		Role:          role,
 		PathSuffix:    pathSuffix,
 		Inheritable:   inheritable,
 		Rate:          rate,
+		SecondaryRate: secondaryRate,
 		Interval:      interval,
 		BlockInterval: block,
 		purgeInterval: DefaultRateLimitPurgeInterval,
@@ -219,7 +232,7 @@ func (rlq *RateLimitQuota) initialize(logger log.Logger, ms *metricsutil.Cluster
 		go rlq.purgeBlockedClients()
 	}
 
-	return nil
+	return rlq.initializeEnt()
 }
 
 // purgeBlockedClients performs a blocking process where every purgeInterval
@@ -301,6 +314,8 @@ func (rlq *RateLimitQuota) allow(ctx context.Context, req *Request) (Response, e
 	}
 
 	if req.ClientAddress == "" {
+		// we might not need the IP address depending on the group_by mode, but it's always available so it's better
+		// to make it an invariant
 		return resp, fmt.Errorf("missing request client address in quota request")
 	}
 
@@ -313,25 +328,34 @@ func (rlq *RateLimitQuota) allow(ctx context.Context, req *Request) (Response, e
 		}
 	}()
 
+	key, isSecondaryGroup, err := rlq.getGroupKey(req)
+	if err != nil {
+		if errors.Is(err, ErrGroupByNotSupported) {
+			rlq.logger.Warn("found unsupported group_by mode in rate limited quota, ignoring it", "group_by", rlq.GroupBy, "Name", rlq.Name)
+			return resp, nil
+		}
+		return resp, err
+	}
+
 	// Check if the client is currently blocked and if so, deny the request. Note,
 	// we cannot simply rely on the presence of the client in the map as the timing
 	// of purging blocked clients may not yield a false negative. In other words,
 	// a client may no longer be considered blocked whereas the purging interval
 	// has yet to run.
-	if v, ok := rlq.blockedClients.Load(req.ClientAddress); ok {
+	if v, ok := rlq.blockedClients.Load(key); ok {
 		blockedAt := v.(time.Time)
 		if time.Since(blockedAt) >= rlq.BlockInterval {
 			// allow the request and remove the blocked client
-			rlq.blockedClients.Delete(req.ClientAddress)
+			rlq.blockedClients.Delete(key)
 		} else {
 			// deny the request and return early
 			resp.Allowed = false
-			retryAfter = strconv.Itoa(int(time.Until(blockedAt.Add(rlq.BlockInterval)).Seconds()))
+			retryAfter = rlq.retryAfterSeconds(time.Now(), blockedAt.Add(rlq.BlockInterval))
 			return resp, nil
 		}
 	}
 
-	limit, remaining, reset, allow, err := rlq.store.Take(ctx, req.ClientAddress)
+	limit, remaining, reset, allow, err := rlq.take(ctx, key, isSecondaryGroup)
 	if err != nil {
 		return resp, err
 	}
@@ -339,18 +363,22 @@ func (rlq *RateLimitQuota) allow(ctx context.Context, req *Request) (Response, e
 	resp.Allowed = allow
 	resp.Headers[httplimit.HeaderRateLimitLimit] = strconv.FormatUint(limit, 10)
 	resp.Headers[httplimit.HeaderRateLimitRemaining] = strconv.FormatUint(remaining, 10)
-	resp.Headers[httplimit.HeaderRateLimitReset] = strconv.Itoa(int(time.Until(time.Unix(0, int64(reset))).Seconds()))
+	resp.Headers[httplimit.HeaderRateLimitReset] = rlq.retryAfterSeconds(time.Now(), time.Unix(0, int64(reset)))
 	retryAfter = resp.Headers[httplimit.HeaderRateLimitReset]
 
 	// If the request is not allowed (i.e. rate limit threshold reached) and blocking
 	// is enabled, we add the client to the set of blocked clients.
 	if !resp.Allowed && rlq.purgeBlocked {
 		blockedAt := time.Now()
-		retryAfter = strconv.Itoa(int(time.Until(blockedAt.Add(rlq.BlockInterval)).Seconds()))
-		rlq.blockedClients.Store(req.ClientAddress, blockedAt)
+		retryAfter = rlq.retryAfterSeconds(time.Now(), blockedAt.Add(rlq.BlockInterval))
+		rlq.blockedClients.Store(key, blockedAt)
 	}
 
 	return resp, nil
+}
+
+func (rlq *RateLimitQuota) retryAfterSeconds(now, waitUntil time.Time) string {
+	return strconv.Itoa(int(math.Ceil(waitUntil.Sub(now).Seconds())))
 }
 
 // close stops the current running client purge loop.
@@ -361,10 +389,12 @@ func (rlq *RateLimitQuota) close(ctx context.Context) error {
 	}
 
 	if rlq.store != nil {
-		return rlq.store.Close(ctx)
+		if err := rlq.store.Close(ctx); err != nil {
+			return err
+		}
 	}
 
-	return nil
+	return rlq.closeEnt(ctx)
 }
 
 func (rlq *RateLimitQuota) handleRemount(mountpath, nspath string) {

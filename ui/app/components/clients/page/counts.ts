@@ -42,6 +42,10 @@ export default class ClientsCountsPageComponent extends Component<Args> {
     return this.args.startTimestamp ? parseAPITimestamp(this.args.startTimestamp, 'MMMM yyyy') : null;
   }
 
+  get formattedEndDate() {
+    return this.args.endTimestamp ? parseAPITimestamp(this.args.endTimestamp, 'MMMM yyyy') : null;
+  }
+
   get formattedBillingStartDate() {
     return this.args.config.billingStartTimestamp.toISOString();
   }
@@ -64,7 +68,7 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   // passed into page-header for the export modal alert
   get upgradesDuringActivity() {
     const { versionHistory, activity } = this.args;
-    return filterVersionHistory(versionHistory, activity.startTime, activity.endTime);
+    return filterVersionHistory(versionHistory, activity?.startTime, activity?.endTime);
   }
 
   get upgradeExplanations() {
@@ -124,7 +128,7 @@ export default class ClientsCountsPageComponent extends Component<Args> {
   }
 
   // duplicate of the method found in the activity component, so that we render the child only when there is activity to view
-  get totalUsageCounts(): TotalClients {
+  get totalUsageCounts(): TotalClients | undefined {
     const { namespace, mountPath, activity } = this.args;
     if (mountPath) {
       // only do this if we have a mountPath filter.
@@ -200,7 +204,8 @@ export default class ClientsCountsPageComponent extends Component<Args> {
     this.args.onFilterChange(params);
   }
 
-  @action resetFilters() {
+  @action
+  resetFilters() {
     this.args.onFilterChange({
       start_time: undefined,
       end_time: undefined,

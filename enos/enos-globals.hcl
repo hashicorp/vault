@@ -11,13 +11,13 @@ globals {
   build_tags = {
     "ce"               = ["ui"]
     "ent"              = ["ui", "enterprise", "ent"]
-    "ent.fips1402"     = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.fips1402"]
+    "ent.fips1403"     = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_3", "ent.fips1403"]
     "ent.hsm"          = ["ui", "enterprise", "cgo", "hsm", "venthsm"]
-    "ent.hsm.fips1402" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_2", "ent.hsm.fips1402"]
+    "ent.hsm.fips1403" = ["ui", "enterprise", "cgo", "hsm", "fips", "fips_140_3", "ent.hsm.fips1403"]
   }
   config_modes    = ["env", "file"]
   consul_editions = ["ce", "ent"]
-  consul_versions = ["1.14.11", "1.15.7", "1.16.3", "1.17.0"]
+  consul_versions = ["1.18.2", "1.19.2", "1.20.6", "1.21.1"]
   distros         = ["amzn", "leap", "rhel", "sles", "ubuntu"]
   // Different distros may require different packages, or use different aliases for the same package
   distro_packages = {
@@ -51,7 +51,7 @@ globals {
     sles   = var.distro_version_sles
     ubuntu = var.distro_version_ubuntu
   }
-  editions            = ["ce", "ent", "ent.fips1402", "ent.hsm", "ent.hsm.fips1402"]
+  editions            = ["ce", "ent", "ent.fips1403", "ent.hsm", "ent.hsm.fips1403"]
   enterprise_editions = [for e in global.editions : e if e != "ce"]
   ip_versions         = ["4", "6"]
   package_manager = {

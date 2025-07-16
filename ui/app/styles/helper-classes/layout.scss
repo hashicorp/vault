@@ -43,6 +43,10 @@
   position: relative;
 }
 
+.position-absolute {
+  position: absolute;
+}
+
 .top-xxs {
   top: size_variables.$spacing-4;
 }
@@ -53,6 +57,10 @@
 }
 
 // overflow
+.overflow-auto {
+  overflow: auto;
+}
+
 .is-overflow-hidden {
   overflow: hidden;
 }

@@ -107,9 +107,17 @@ jobs:
           PLUGIN_SERVICE=$(echo "$PLUGIN" | cut -d- -f 4-)
           echo "::debug::plugin service: $PLUGIN_SERVICE"
 
+          # changelog filename is the PR number with a .txt extension
+          # if the repo is vault-enterprise, the filename should start with an underscore
+          CHANGELOG_FILENAME="${{ steps.pr.outputs.vault_pr_num }}.txt"
+          if [ "${{ github.repository }}" = "hashicorp/vault-enterprise" ]; then
+            CHANGELOG_FILENAME="_${{ steps.pr.outputs.vault_pr_num }}.txt"
+          fi
+          echo "::debug::changelog filename: $CHANGELOG_FILENAME"
+
           echo "\`\`\`release-note:change
           ${PLUGIN_TYPE}/${PLUGIN_SERVICE}: Update plugin to v${{ inputs.version }}
-          \`\`\`" > "changelog/${{ steps.pr.outputs.vault_pr_num }}.txt"
+          \`\`\`" > "changelog/$CHANGELOG_FILENAME"
 
           git add changelog/
           git commit -m "Add changelog"

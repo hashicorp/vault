@@ -10,7 +10,7 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { kvDataPath } from 'vault/utils/kv-path';
-import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
+import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { syncStatusResponse } from 'vault/mirage/handlers/sync';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { baseSetup } from 'vault/tests/helpers/kv/kv-run-commands';
@@ -124,9 +124,9 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     assert.dom(PAGE.title).includesText(this.model.path, 'renders secret path as page title');
     assert.dom(PAGE.infoRowValue('foo')).exists('renders row for secret data');
     assert.dom(PAGE.infoRowValue('foo')).hasText('***********');
-    await click(FORM.toggleMasked);
+    await click(GENERAL.button('toggle-masked'));
     assert.dom(PAGE.infoRowValue('foo')).hasText('bar', 'renders secret value');
-    await click(FORM.toggleJson);
+    await click(GENERAL.toggleInput('json'));
     assert.dom(GENERAL.codeBlock('secret-data')).hasText(
       `Version data {
   "foo": "bar"
@@ -142,8 +142,8 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     assert.expect(4);
     await this.renderComponent(this.modelComplex);
     assert.dom(PAGE.infoRowValue('foo')).doesNotExist('does not render rows of secret data');
-    assert.dom(FORM.toggleJson).isChecked();
-    assert.dom(FORM.toggleJson).isNotDisabled();
+    assert.dom(GENERAL.toggleInput('json')).isChecked();
+    assert.dom(GENERAL.toggleInput('json')).isNotDisabled();
     assert.dom(GENERAL.codeBlock('secret-data')).exists('hds codeBlock exists');
   });
 
@@ -259,7 +259,7 @@ module('Integration | Component | kv-v2 | Page::Secret::Details', function (hook
     await this.renderComponent();
 
     await click(PAGE.detail.copy);
-    await click(PAGE.detail.wrap);
+    await click(GENERAL.button('wrap'));
   });
 
   test('it renders sync status page alert for multiple destinations', async function (assert) {

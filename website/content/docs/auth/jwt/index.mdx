@@ -9,9 +9,12 @@ description: >-
 
 @include 'x509-sha1-deprecation.mdx'
 
+@include 'tips/custom-authn.mdx'
+
 ~> **Note**: Starting in Vault 1.17, if the JWT in the authentication request
-contains an `aud` claim, the associated `bound_audiences` for the "jwt" role
-must match at least one of the `aud` claims declared for the JWT. For
+contains an `aud` claim (typical case) the associated `bound_audiences` for the
+"jwt" role must **exactly** match at least one of the `aud` claims declared for
+the JWT. For
 additional details, refer to the [JWT auth method (API)](/vault/api-docs/auth/jwt)
 documentation and [1.17 Upgrade Guide](/vault/docs/upgrading/upgrade-to-1.17.x#jwt-auth-login-requires-bound-audiences-on-the-role).
 
@@ -214,7 +217,7 @@ backend instance per method at different paths.
 After verifying the JWT signatures, Vault checks the corresponding `aud` claim.
 
 If the JWT in the authentication request contains an `aud` claim, the
-associated `bound_audiences` for the role must match at least one of the `aud`
+associated `bound_audiences` for the role must **exactly** match at least one of the `aud`
 claims declared for the JWT.
 
 ### Via the CLI
@@ -281,7 +284,7 @@ management tool.
 
    ```text
    $ vault write auth/jwt/config \
-       oidc_discovery_url="https://myco.auth0.com/" \
+       oidc_discovery_url="https://myco.auth0.com" \
        oidc_client_id="m5i8bj3iofytj" \
        oidc_client_secret="f4ubv72nfiu23hnsj" \
        default_role="demo"
@@ -291,7 +294,7 @@ management tool.
 
    ```text
    $ vault write auth/jwt/config \
-      oidc_discovery_url="https://MYDOMAIN.eu.auth0.com/" \
+      oidc_discovery_url="https://MYDOMAIN.eu.auth0.com" \
       oidc_client_id="" \
       oidc_client_secret="" \
   ```
@@ -324,7 +327,7 @@ In some cases there are dedicated parameters, for example `bound_subject`,
 that must match the provided `sub` claim. For roles of type "jwt":
 
 1. the `bound_audiences` parameter is required when an `aud` claim is set.
-1. the `bound_audiences` parameter must match at least one of provided `aud` claims.
+1. the `bound_audiences` parameter must **exactly** match at least one of provided `aud` claims.
 
 You can also configure roles to check an arbitrary set of claims and required
 values with the `bound_claims` map. For example, assume `bound_claims` is set to:

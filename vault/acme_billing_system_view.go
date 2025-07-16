@@ -136,7 +136,7 @@ func (a *acmeBillingImpl) CreateActivityCountEventForIdentifiers(ctx context.Con
 		return nil
 	}
 	activityLog.logger.Debug(fmt.Sprintf("Handling ACME client count event for [%v] -> %v", identifiers, clientID))
-	activityLog.AddActivityToFragment(clientID, a.entry.NamespaceID, time.Now().Unix(), ACMEActivityType, a.entry.Accessor)
+	activityLog.AddActivityToFragment(clientID, a.entry.NamespaceID, time.Now().Unix(), ACMEActivityType, a.entry.Accessor, time.Now().Unix())
 
 	return nil
 }

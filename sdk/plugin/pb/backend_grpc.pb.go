@@ -688,6 +688,7 @@ const (
 	SystemView_GeneratePasswordFromPolicy_FullMethodName = "/pb.SystemView/GeneratePasswordFromPolicy"
 	SystemView_ClusterInfo_FullMethodName                = "/pb.SystemView/ClusterInfo"
 	SystemView_GenerateIdentityToken_FullMethodName      = "/pb.SystemView/GenerateIdentityToken"
+	SystemView_GetRotationInformation_FullMethodName     = "/pb.SystemView/GetRotationInformation"
 	SystemView_RegisterRotationJob_FullMethodName        = "/pb.SystemView/RegisterRotationJob"
 	SystemView_DeregisterRotationJob_FullMethodName      = "/pb.SystemView/DeregisterRotationJob"
 )
@@ -741,6 +742,8 @@ type SystemViewClient interface {
 	ClusterInfo(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*ClusterInfoReply, error)
 	// GenerateIdentityToken returns an identity token for the requesting plugin.
 	GenerateIdentityToken(ctx context.Context, in *GenerateIdentityTokenRequest, opts ...grpc.CallOption) (*GenerateIdentityTokenResponse, error)
+	// GetRotationInformation returns the time remaining in a rotation job for the requested credential.
+	GetRotationInformation(ctx context.Context, in *RotationInfoRequest, opts ...grpc.CallOption) (*RotationInfoReply, error)
 	// RegisterRotationJob returns a rotation ID for the requested plugin credential.
 	RegisterRotationJob(ctx context.Context, in *RegisterRotationJobRequest, opts ...grpc.CallOption) (*RegisterRotationJobResponse, error)
 	// DeregisterRotationJob returns any errors in de-registering a credential from the Rotation Manager.
@@ -895,6 +898,16 @@ func (c *systemViewClient) GenerateIdentityToken(ctx context.Context, in *Genera
 	return out, nil
 }
 
+func (c *systemViewClient) GetRotationInformation(ctx context.Context, in *RotationInfoRequest, opts ...grpc.CallOption) (*RotationInfoReply, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RotationInfoReply)
+	err := c.cc.Invoke(ctx, SystemView_GetRotationInformation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *systemViewClient) RegisterRotationJob(ctx context.Context, in *RegisterRotationJobRequest, opts ...grpc.CallOption) (*RegisterRotationJobResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(RegisterRotationJobResponse)
@@ -964,6 +977,8 @@ type SystemViewServer interface {
 	ClusterInfo(context.Context, *Empty) (*ClusterInfoReply, error)
 	// GenerateIdentityToken returns an identity token for the requesting plugin.
 	GenerateIdentityToken(context.Context, *GenerateIdentityTokenRequest) (*GenerateIdentityTokenResponse, error)
+	// GetRotationInformation returns the time remaining in a rotation job for the requested credential.
+	GetRotationInformation(context.Context, *RotationInfoRequest) (*RotationInfoReply, error)
 	// RegisterRotationJob returns a rotation ID for the requested plugin credential.
 	RegisterRotationJob(context.Context, *RegisterRotationJobRequest) (*RegisterRotationJobResponse, error)
 	// DeregisterRotationJob returns any errors in de-registering a credential from the Rotation Manager.
@@ -1019,6 +1034,9 @@ func (UnimplementedSystemViewServer) ClusterInfo(context.Context, *Empty) (*Clus
 }
 func (UnimplementedSystemViewServer) GenerateIdentityToken(context.Context, *GenerateIdentityTokenRequest) (*GenerateIdentityTokenResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GenerateIdentityToken not implemented")
+}
+func (UnimplementedSystemViewServer) GetRotationInformation(context.Context, *RotationInfoRequest) (*RotationInfoReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRotationInformation not implemented")
 }
 func (UnimplementedSystemViewServer) RegisterRotationJob(context.Context, *RegisterRotationJobRequest) (*RegisterRotationJobResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterRotationJob not implemented")
@@ -1299,6 +1317,24 @@ func _SystemView_GenerateIdentityToken_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SystemView_GetRotationInformation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RotationInfoRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemViewServer).GetRotationInformation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemView_GetRotationInformation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemViewServer).GetRotationInformation(ctx, req.(*RotationInfoRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _SystemView_RegisterRotationJob_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RegisterRotationJobRequest)
 	if err := dec(in); err != nil {
@@ -1397,6 +1433,10 @@ var SystemView_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GenerateIdentityToken",
 			Handler:    _SystemView_GenerateIdentityToken_Handler,
+		},
+		{
+			MethodName: "GetRotationInformation",
+			Handler:    _SystemView_GetRotationInformation_Handler,
 		},
 		{
 			MethodName: "RegisterRotationJob",
@@ -1507,6 +1547,108 @@ var Events_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SendEvent",
 			Handler:    _Events_SendEvent_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "sdk/plugin/pb/backend.proto",
+}
+
+const (
+	Observations_RecordObservation_FullMethodName = "/pb.Observations/RecordObservation"
+)
+
+// ObservationsClient is the client API for Observations service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type ObservationsClient interface {
+	RecordObservation(ctx context.Context, in *RecordObservationRequest, opts ...grpc.CallOption) (*Empty, error)
+}
+
+type observationsClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewObservationsClient(cc grpc.ClientConnInterface) ObservationsClient {
+	return &observationsClient{cc}
+}
+
+func (c *observationsClient) RecordObservation(ctx context.Context, in *RecordObservationRequest, opts ...grpc.CallOption) (*Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Empty)
+	err := c.cc.Invoke(ctx, Observations_RecordObservation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// ObservationsServer is the server API for Observations service.
+// All implementations must embed UnimplementedObservationsServer
+// for forward compatibility.
+type ObservationsServer interface {
+	RecordObservation(context.Context, *RecordObservationRequest) (*Empty, error)
+	mustEmbedUnimplementedObservationsServer()
+}
+
+// UnimplementedObservationsServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedObservationsServer struct{}
+
+func (UnimplementedObservationsServer) RecordObservation(context.Context, *RecordObservationRequest) (*Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RecordObservation not implemented")
+}
+func (UnimplementedObservationsServer) mustEmbedUnimplementedObservationsServer() {}
+func (UnimplementedObservationsServer) testEmbeddedByValue()                      {}
+
+// UnsafeObservationsServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ObservationsServer will
+// result in compilation errors.
+type UnsafeObservationsServer interface {
+	mustEmbedUnimplementedObservationsServer()
+}
+
+func RegisterObservationsServer(s grpc.ServiceRegistrar, srv ObservationsServer) {
+	// If the following call pancis, it indicates UnimplementedObservationsServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&Observations_ServiceDesc, srv)
+}
+
+func _Observations_RecordObservation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RecordObservationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ObservationsServer).RecordObservation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Observations_RecordObservation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ObservationsServer).RecordObservation(ctx, req.(*RecordObservationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Observations_ServiceDesc is the grpc.ServiceDesc for Observations service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Observations_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "pb.Observations",
+	HandlerType: (*ObservationsServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "RecordObservation",
+			Handler:    _Observations_RecordObservation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

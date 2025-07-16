@@ -174,7 +174,7 @@ func SetupPluginCatalog(ctx context.Context, in *PluginCatalogInput) (*PluginCat
 	}
 
 	// Sanitize the plugin catalog
-	err = catalog.entValidate(ctx)
+	err = catalog.verifyOfficialPlugins(ctx)
 	if err != nil {
 		logger.Error("error while sanitizing plugin storage", "error", err)
 		return nil, err
@@ -834,7 +834,7 @@ func (c *PluginCatalog) upgradePlugins(ctx context.Context, logger log.Logger) e
 		}
 
 		// Upgrade the storage. At this point we don't know what type of plugin this is so pass in the unknown type.
-		runner, err := c.setInternal(ctx, pluginutil.SetPluginInput{
+		runner, err := c.set(ctx, pluginutil.SetPluginInput{
 			Name:    pluginName,
 			Type:    consts.PluginTypeUnknown,
 			Version: plugin.Version,
@@ -862,6 +862,45 @@ func (c *PluginCatalog) upgradePlugins(ctx context.Context, logger log.Logger) e
 	}
 
 	return retErr
+}
+
+// verifyOfficialPlugins verifies all official HashiCorp plugins
+func (c *PluginCatalog) verifyOfficialPlugins(ctx context.Context) error {
+	plugins, err := c.collectAllPlugins(ctx)
+	if err != nil {
+		return err
+	}
+
+	// // TODO: In the future, add retries.
+	for _, plugin := range plugins {
+		if plugin.Download {
+			// TODO: In the future, we may want to have some sort of deadline here so we don't block Vault from starting or impose any extended delays.
+			if err := c.entDownloadExtractVerifyPlugin(ctx, plugin); err != nil {
+				c.logger.Warn("failed to download, extract, and verify plugin",
+					"plugin", plugin.Name, "version", plugin.Version, "error", err)
+			}
+		}
+	}
+
+	// The below verification block only applies to official plugins that were manually downloaded and extracted to the plugin directory.
+	var hasOfficialPlugins bool
+	for _, plugin := range plugins {
+		if plugin.Tier != consts.PluginTierOfficial || plugin.Download {
+			continue
+		}
+
+		hasOfficialPlugins = true
+		pluginDir := path.Join(c.directory, path.Dir(plugin.Command))
+		if _, err = VerifyPlugin(pluginDir, plugin.Name, verifyPGPSignatureDetached); err != nil {
+			return fmt.Errorf("failed to verify plugin %q version %q: %w", plugin.Name, plugin.Version, err)
+		}
+	}
+
+	if hasOfficialPlugins {
+		c.logger.Info("all official plugins verified")
+	}
+
+	return nil
 }
 
 // Get retrieves a plugin with the specified name from the catalog. It first
@@ -962,8 +1001,188 @@ func (c *PluginCatalog) Set(ctx context.Context, plugin pluginutil.SetPluginInpu
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	_, err := c.setInternal(ctx, plugin)
+	_, err := c.set(ctx, plugin)
 	return err
+}
+
+// set sets a plugin entry in the catalog.
+// For manually extracted plugin artifacts when sha256 is unset, it additionally attempts to verify the plugin.
+func (c *PluginCatalog) set(ctx context.Context, plugin pluginutil.SetPluginInput) (*pluginutil.PluginRunner, error) {
+	absCommand := plugin.Command
+	var pluginTier consts.PluginTier
+
+	if plugin.OCIImage == "" {
+		// When OCIImage is empty, then we want to register with the binary either directly (if Sha256 is set) or via the extracted artifact directory (if Sha256 is unset).
+
+		// Validate name and command are set as we rely on these to be specified to populate the plugin runner.
+		if plugin.Name == "" {
+			return nil, fmt.Errorf("must specify name to register plugin")
+		}
+		if plugin.Download || len(plugin.Sha256) > 0 {
+			// For downloaded plugins and plugin binaries, we require command to be set from the caller to populate the plugin runner.
+			// Extracted artifacts don't require command to be set as we derive it from the plugin name.
+			if plugin.Command == "" {
+				return nil, fmt.Errorf("must specify command to register plugin")
+			}
+		}
+
+		var expectedPluginDir string
+		var err error
+		if plugin.Download {
+			expectedPluginDir, plugin.Command, pluginTier, err = c.entPrepareDownloadedPlugin(ctx, plugin)
+		} else if len(plugin.Sha256) > 0 {
+			// When Download is false and Sha256 is set, we can assume the binary is already available.
+			expectedPluginDir = c.directory
+		} else {
+			// When Download is false and Sha256 is unset, ensure Version is set then attempt to verify
+			// the plugin in its extracted artifact directory.
+			//
+			// TODO: We should move this verification of manually extracted artifacts into handlePluginCatalogUpdate
+			// and pass tier and sha256 from the pluginutil.SetPluginInput instead of setting them here.
+
+			if len(plugin.Version) == 0 {
+				return nil, fmt.Errorf("must specify sha256 to register plugin with binary or version to register plugin with extracted artifact directory")
+			}
+
+			var err error
+			extractedArtifactDir := GetExtractedArtifactDir(plugin.Name, plugin.Version)
+			expectedPluginDir = path.Join(c.directory, extractedArtifactDir)
+
+			// plugin.Command is the command relative to the plugin directory,
+			// e.g., plugins/vault-plugin-secrets-kv_0.24.0_linux_amd64/vault-plugin-secrets-kv
+			plugin.Command = path.Join(extractedArtifactDir, plugin.Name)
+
+			metadata, err := VerifyPlugin(expectedPluginDir, plugin.Name, verifyPGPSignatureDetached)
+			if err != nil {
+				return nil, fmt.Errorf("failed to verify plugin plugin %q version %q: %w",
+					plugin.Name, plugin.Version, err)
+			}
+			pluginTier = metadata.Plugin.Tier
+
+			plugin.Sha256, err = hex.DecodeString(metadata.Plugin.Sha256)
+			if err != nil {
+				return nil, fmt.Errorf("failed to decode plugin metadata sha256: %w", err)
+			}
+		}
+
+		absCommand = filepath.Join(c.directory, plugin.Command)
+
+		sym, err := filepath.EvalSymlinks(absCommand)
+		if err != nil {
+			return nil, fmt.Errorf("error while validating the command path: %w", err)
+		}
+
+		// Best effort check to make sure the command isn't breaking out of the
+		// configured plugin directory.
+
+		symAbs, err := filepath.Abs(filepath.Dir(sym))
+		if err != nil {
+			return nil, fmt.Errorf("error while validating the command path: %w", err)
+		}
+
+		if symAbs != expectedPluginDir {
+			return nil, fmt.Errorf("cannot execute files outside of configured plugin directory %s: expected %s, got %s", c.directory, expectedPluginDir, symAbs)
+		}
+	}
+
+	// entryTmp should only be used for the below type and version checks. It uses the
+	// full command instead of the relative command because get() normally prepends
+	// the plugin directory to the command, but we can't use get() here.
+	entryTmp := &pluginutil.PluginRunner{
+		Name:     plugin.Name,
+		Command:  absCommand,
+		OCIImage: plugin.OCIImage,
+		Runtime:  plugin.Runtime,
+		Args:     plugin.Args,
+		Env:      plugin.Env,
+		Sha256:   plugin.Sha256,
+		Builtin:  false,
+		Tmpdir:   c.tmpdir,
+		Tier:     pluginTier,
+		Download: plugin.Download,
+	}
+
+	if entryTmp.OCIImage != "" && entryTmp.Runtime != "" {
+		var err error
+		entryTmp.RuntimeConfig, err = c.runtimeCatalog.Get(ctx, entryTmp.Runtime, consts.PluginRuntimeTypeContainer)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get configured runtime for plugin %q: %w", plugin.Name, err)
+		}
+	}
+	// If the plugin type is unknown, we want to attempt to determine the type
+	if plugin.Type == consts.PluginTypeUnknown {
+		var err error
+		plugin.Type, err = c.getPluginTypeFromUnknown(ctx, entryTmp)
+		if err != nil {
+			return nil, err
+		}
+		if plugin.Type == consts.PluginTypeUnknown {
+			return nil, ErrPluginBadType
+		}
+	}
+
+	// getting the plugin version is best-effort, so errors are not fatal
+	runningVersion := logical.EmptyPluginVersion
+	var versionErr error
+	switch plugin.Type {
+	case consts.PluginTypeSecrets, consts.PluginTypeCredential:
+		runningVersion, versionErr = c.getBackendRunningVersion(ctx, entryTmp)
+	case consts.PluginTypeDatabase:
+		runningVersion, versionErr = c.getDatabaseRunningVersion(ctx, entryTmp)
+	default:
+		return nil, fmt.Errorf("unknown plugin type: %v", plugin.Type)
+	}
+	if versionErr != nil {
+		c.logger.Warn("Error determining plugin version", "error", versionErr)
+		if errors.Is(versionErr, ErrPluginUnableToRun) {
+			return nil, versionErr
+		}
+	} else if plugin.Version != "" && runningVersion.Version != "" && plugin.Version != runningVersion.Version {
+		c.logger.Error("Plugin self-reported version did not match requested version",
+			"plugin", plugin.Name, "requestedVersion", plugin.Version, "reportedVersion", runningVersion.Version)
+		return nil, fmt.Errorf("%w: %s reported version (%s) did not match requested version (%s)",
+			ErrPluginVersionMismatch, plugin.Name, runningVersion.Version, plugin.Version)
+	} else if plugin.Version == "" && runningVersion.Version != "" {
+		plugin.Version = runningVersion.Version
+		_, err := semver.NewVersion(plugin.Version)
+		if err != nil {
+			return nil, fmt.Errorf("plugin self-reported version %q is not a valid semantic version: %w", plugin.Version, err)
+		}
+	}
+
+	entry := &pluginutil.PluginRunner{
+		Name:     plugin.Name,
+		Type:     plugin.Type,
+		Version:  plugin.Version,
+		Command:  plugin.Command,
+		OCIImage: plugin.OCIImage,
+		Runtime:  plugin.Runtime,
+		Args:     plugin.Args,
+		Env:      plugin.Env,
+		Sha256:   plugin.Sha256,
+		Builtin:  false,
+		Tmpdir:   c.tmpdir,
+		Tier:     pluginTier,
+		Download: plugin.Download,
+	}
+
+	buf, err := json.Marshal(entry)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode plugin entry: %w", err)
+	}
+
+	storageKey := path.Join(plugin.Type.String(), plugin.Name)
+	if plugin.Version != "" {
+		storageKey = path.Join(storageKey, plugin.Version)
+	}
+	logicalEntry := logical.StorageEntry{
+		Key:   storageKey,
+		Value: buf,
+	}
+	if err := c.catalogView.Put(ctx, &logicalEntry); err != nil {
+		return nil, fmt.Errorf("failed to persist plugin entry: %w", err)
+	}
+	return entry, nil
 }
 
 // Delete is used to remove an external plugin from the catalog. Builtin plugins

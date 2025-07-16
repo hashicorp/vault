@@ -17,10 +17,44 @@ revoked, or if the token has already reached its maximum TTL.
 
 ## Examples
 
-Renew a token (this uses the `/auth/token/renew` endpoint and permission):
+Create a token first:
 
 ```shell-session
-$ vault token renew 96ddf4bc-d217-f3ba-f9bd-017055595017
+$ vault token create
+Key                Value
+---                -----
+token              hvs.CAESIJk8P_ieg60yf9c92rl0S5j1mdMh7docAoHVS2q7UQ8bGh4KHGh2cy5uQ3dNQUhvbnFhTWl5cVJpMGxpVDhMZWU
+token_accessor     ntL634hzE0CtQnyCIqkxSa82
+token_duration     768h
+token_renewable    true
+token_policies     [default]
+```
+
+Renew a token using the token value and the `/auth/token/renew` endpoint:
+
+```shell-session
+$ vault token renew hvs.CAESIJk8P_ieg6Oyf9c92rl0S5j1mdMh7docAoHVS2q7UQ8bGh4KHGh2cy5uQ3dNQUhvbnFhTWl5cVJpMGxpVDhMZWU
+Key                Value
+---                -----
+token              n/a
+token_accessor     ntL634hzE0CtQnyCIqkxSa82
+token_duration     768h
+token_renewable    true
+token_policies     [default]
+```
+
+Alternatively, renew a token using its accessor value. Renewing with the
+ accessor vault is is useful when you do not have the actual token:
+
+```shell-session
+$ vault token renew -accessor ntL634hzE0CtQnyCIqkxSa82
+Key                Value
+---                -----
+token              n/a
+token_accessor     ntL634hzE0CtQnyCIqkxSa82
+token_duration     768h
+token_renewable    true
+token_policies     [default]
 ```
 
 Renew the currently authenticated token (this uses the `/auth/token/renew-self`
@@ -33,14 +67,19 @@ $ vault token renew
 Renew a token requesting a specific increment value:
 
 ```shell-session
-$ vault token renew -increment=30m 96ddf4bc-d217-f3ba-f9bd-017055595017
+$ vault token renew -increment=30m hvs.CAESIJk8P_ieg6Oyf9c92rl0S5j1mdMh7docAoHVS2q7UQ8bGh4KHGh2cy5uQ3dNQUhvbnFhTWl5cVJpMGxpVDhMZWU
 ```
 
 Fail if the requested TTL increment cannot be fully fulfilled:
 
 ```shell-session
-$ vault token renew -increment=30m 96ddf4bc-d217-f3ba-f9bd-017055595017 --fail-if-not-fulfilled || vault login
+$ vault token renew -increment=30m hvs.CAESIJk8P_ieg6Oyf9c92rl0S5j1mdMh7docAoHVS2q7UQ8bGh4KHGh2cy5uQ3dNQUhvbnFhTWl5cVJpMGxpVDhMZWU --fail-if-not-fulfilled || vault login
 ```
+
+You can renew tokens using the token itself or the associated accessor.
+The `token_accessor` parameter lets you perform limited operations (like
+renewal) without requiring sensitive data so you can manage  tokens
+without handling the secret token itself.
 
 ## Usage
 

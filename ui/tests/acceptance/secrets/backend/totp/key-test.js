@@ -16,24 +16,28 @@ import sinon from 'sinon';
 module('Acceptance | totp key backend', function (hooks) {
   setupApplicationTest(hooks);
 
-  const createVaultKey = async (keyName, issuer, accountName, exported = true) => {
+  const createVaultKey = async (keyName, issuer, accountName, exported = true, qrSize = 200) => {
     await fillIn(GENERAL.inputByAttr('name'), keyName);
     await fillIn(GENERAL.inputByAttr('issuer'), issuer);
     await fillIn(GENERAL.inputByAttr('accountName'), accountName);
     if (!exported) {
-      await click(GENERAL.ttl.toggle('toggle-exported'));
+      await click(GENERAL.toggleInput('toggle-exported'));
     }
-    await click(GENERAL.saveButton);
+    if (qrSize !== 200) {
+      await click(GENERAL.button('Provider Options'));
+      await fillIn(GENERAL.inputByAttr('qrSize'), qrSize);
+    }
+    await click(GENERAL.submitButton);
   };
 
   const createNonVaultKey = async (keyName, issuer, accountName, url, key) => {
-    await click('[data-test-radio="Other service"]');
+    await click(GENERAL.radioByAttr('Other service'));
     await fillIn(GENERAL.inputByAttr('name'), keyName);
     await fillIn(GENERAL.inputByAttr('issuer'), issuer);
     await fillIn(GENERAL.inputByAttr('accountName'), accountName);
     if (url) await fillIn(GENERAL.inputByAttr('url'), url);
     if (key) await fillIn(GENERAL.inputByAttr('key'), key);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
   };
 
   hooks.beforeEach(async function () {
@@ -145,11 +149,18 @@ module('Acceptance | totp key backend', function (hooks) {
     assert.strictEqual(flashMessage, 'Successfully created key.');
   });
 
-  test('it does not render QR code when exported is false', async function (assert) {
+  test('it does not render QR code or URL when exported is false', async function (assert) {
     await click(SES.createSecretLink);
     await createVaultKey(this.keyName, this.issuer, this.accountName, false);
     await waitUntil(() => currentURL() === `/vault/secrets/${this.path}/show/${this.keyName}`);
-    assert.dom('[data-test-qr-code]').doesNotExist('QR code is not displayed');
+    assert.dom('[data-test-qrcode]').doesNotExist('QR code is not displayed');
     assert.dom(GENERAL.infoRowLabel('URL')).doesNotExist('URl is not displayed');
+  });
+
+  test('it does not render QR code when QR size is 0', async function (assert) {
+    await click(SES.createSecretLink);
+    await createVaultKey(this.keyName, this.issuer, this.accountName, true, 0);
+    assert.dom('[data-test-qrcode]').doesNotExist('QR code is not displayed');
+    assert.dom(GENERAL.infoRowLabel('URL')).exists('URl is displayed');
   });
 });

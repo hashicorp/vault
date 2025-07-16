@@ -4,6 +4,7 @@
 package command
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
@@ -17,15 +18,7 @@ import (
 	"github.com/hashicorp/cli"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/api/cliconfig"
-	"github.com/hashicorp/vault/api/tokenhelper"
 )
-
-// DefaultTokenHelper returns the token helper that is configured for Vault.
-// This helper should only be used for non-server CLI commands.
-func DefaultTokenHelper() (tokenhelper.TokenHelper, error) {
-	return cliconfig.DefaultTokenHelper()
-}
 
 // RawField extracts the raw field from the given data and returns it as a
 // string for printing purposes.
@@ -201,6 +194,7 @@ func (r *recordingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 	r.body = body
 	return &http.Response{
 		StatusCode: 200,
+		Body:       io.NopCloser(bytes.NewReader([]byte(`{"warnings": []}`))),
 	}, nil
 }
 

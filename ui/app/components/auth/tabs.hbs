@@ -3,38 +3,43 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-<Hds::Tabs @onClickTab={{@onTabClick}} @selectedTabIndex={{@selectedTabIndex}} as |T|>
-  {{#each-in @authTabs as |methodType mounts|}}
-    <T.Tab data-test-auth-method={{methodType}}>{{@displayNameHelper methodType}}</T.Tab>
+<Hds::Tabs @onClickTab={{this.onClickTab}} @selectedTabIndex={{this.selectedTabIndex}} as |T|>
+  {{#each-in @authTabData as |methodType mounts|}}
+    <T.Tab data-test-auth-tab={{methodType}}>{{get (engines-display-data methodType) "displayName"}}</T.Tab>
     <T.Panel>
       <div class="has-top-padding-m">
         {{! Elements "behind" tabs always render on the DOM and are just superficially hidden/shown. 
 	        However, for accessibility, we only want to render form inputs relevant to the selected method. 
 	        By wrapping the elements in this conditional, it only renders them when the tab is selected. }}
-        {{#if (eq @selectedAuthMethod methodType)}}
+        {{#if (and mounts (eq @selectedAuthMethod methodType))}}
           {{#if (gt mounts.length 1)}}
-            {{! render dropdown of mount paths }}
-            <Hds::Form::Select::Field name="path" data-test-select="path" as |F|>
+            {{! DROPDOWN for mount paths }}
+            <Hds::Form::Select::Field name="path" data-test-select="path" {{on "change" this.setMount}} as |F|>
               <F.Label>Mount path</F.Label>
+              {{#if this.mountDescription}}
+                <F.HelperText data-test-description>{{this.mountDescription}}</F.HelperText>
+              {{/if}}
               <F.Options>
                 {{#each mounts as |mount|}}
-                  <option value={{mount.path}}>{{mount.path}}</option>
+                  <option value={{mount.path}} selected={{eq mount.path this.selectedMountPath}}>{{mount.path}}</option>
                 {{/each}}
               </F.Options>
             </Hds::Form::Select::Field>
           {{else}}
+            {{! SINGLE mount path }}
             {{#let (get mounts "0") as |mount|}}
-              {{#if (and (eq @selectedAuthMethod "token") mount.description)}}
-                {{! the token auth method does't support a custom path }}
-                <Hds::Text::Body @tag="p" @color="faint">{{mount.description}} data-test-description</Hds::Text::Body>
-              {{else}}
-                {{! if it's the only available mount path render a readonly input }}
-                <Hds::Form::TextInput::Field readonly name="path" @value={{mount.path}} data-test-input="path" as |F|>
-                  <F.Label>Mount path</F.Label>
-                  {{#if mount.description}}
-                    <F.HelperText data-test-description>{{mount.description}}</F.HelperText>
-                  {{/if}}
-                </Hds::Form::TextInput::Field>
+              {{#if mount.description}}
+                <Hds::Text::Body
+                  @tag="p"
+                  @color="faint"
+                  class="white-space-pre-line"
+                  data-test-description
+                >{{mount.description}}</Hds::Text::Body>
+              {{/if}}
+              {{! the token auth method does't support custom paths so no need to render an input }}
+              {{#if (not-eq @selectedAuthMethod "token")}}
+                {{! path is hidden so it is submitted with FormData but does not clutter the login form }}
+                <input type="hidden" id="path" name="path" value={{mount.path}} data-test-input="path" />
               {{/if}}
             {{/let}}
           {{/if}}

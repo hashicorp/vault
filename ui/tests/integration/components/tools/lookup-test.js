@@ -31,13 +31,13 @@ module('Integration | Component | tools/lookup', function (hooks) {
     assert.dom('h1').hasText('Lookup Token', 'Title renders');
     assert.dom('label').hasText('Wrapped token');
     assert.dom(TS.toolsInput('wrapping-token')).hasValue('');
-    assert.dom(TS.button('Done')).doesNotExist();
+    assert.dom(GENERAL.button('Done')).doesNotExist();
   });
 
   test('it renders errors', async function (assert) {
     this.server.post('sys/wrapping/lookup', () => new Response(500, {}, { errors: ['Something is wrong'] }));
     await this.renderComponent();
-    await click(TS.submit);
+    await click(GENERAL.submitButton);
     await waitUntil(() => find(GENERAL.messageError));
     assert.dom(GENERAL.messageError).hasText('Error Something is wrong', 'Error renders');
   });
@@ -59,7 +59,7 @@ module('Integration | Component | tools/lookup', function (hooks) {
     });
     await this.renderComponent();
     await fillIn(TS.toolsInput('wrapping-token'), `${token}   `);
-    await click(TS.submit);
+    await click(GENERAL.submitButton);
 
     await waitUntil(() => find(GENERAL.infoRowValue('Creation path')));
     assert.true(flashSuccessSpy.calledWith('Lookup was successful.'), 'it renders success flash');
@@ -70,9 +70,9 @@ module('Integration | Component | tools/lookup', function (hooks) {
     assert.dom(GENERAL.infoRowValue('Expires in')).hasText('about 1 year');
 
     // clicking done resets form
-    await click(TS.button('Done'));
+    await click(GENERAL.button('Done'));
     assert.dom('label').hasText('Wrapped token');
     assert.dom(TS.toolsInput('wrapping-token')).hasValue('');
-    assert.dom(TS.button('Done')).doesNotExist();
+    assert.dom(GENERAL.button('Done')).doesNotExist();
   });
 });

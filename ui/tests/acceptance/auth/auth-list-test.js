@@ -9,67 +9,63 @@ import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
 import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
-import enablePage from 'vault/tests/pages/settings/auth/enable';
-import { supportedManagedAuthBackends } from 'vault/helpers/supported-managed-auth-backends';
+import { MANAGED_AUTH_BACKENDS } from 'vault/helpers/supported-managed-auth-backends';
 import { deleteAuthCmd, mountAuthCmd, runCmd, createNS } from 'vault/tests/helpers/commands';
-import { methods } from 'vault/helpers/mountable-auth-methods';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
+import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 
 const SELECTORS = {
-  backendLink: (path) => `[data-test-auth-backend-link="${path}"]`,
   createUser: '[data-test-entity-create-link="user"]',
-  saveBtn: '[data-test-save-config]',
   methods: '[data-test-access-methods] a',
   listItem: '[data-test-list-item-content]',
 };
+
 module('Acceptance | auth backend list', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
     await login();
+  });
+
+  test('userpass secret backend', async function (assert) {
     this.path1 = `userpass-${uuidv4()}`;
     this.path2 = `userpass-${uuidv4()}`;
     this.user1 = 'user1';
     this.user2 = 'user2';
 
     await runCmd([mountAuthCmd('userpass', this.path1), mountAuthCmd('userpass', this.path2)], false);
-  });
-
-  hooks.afterEach(async function () {
-    await login();
-    await runCmd([deleteAuthCmd(this.path1), deleteAuthCmd(this.path2)], false);
-    return;
-  });
-
-  test('userpass secret backend', async function (assert) {
-    // enable a user in first userpass backend
+    // helper function to create a user in the specified backend
+    async function createUser(backendPath, username) {
+      await click(GENERAL.linkedBlock(backendPath));
+      assert.dom(GENERAL.emptyStateTitle).exists('shows empty state');
+      await click(SELECTORS.createUser);
+      await fillIn(GENERAL.inputByAttr('username'), username);
+      await fillIn(GENERAL.inputByAttr('password'), username);
+      await click(GENERAL.submitButton);
+      assert.strictEqual(currentURL(), `/vault/access/${backendPath}/item/user`);
+    }
+    // visit access page and enable the first user in the first userpass backend
     await visit('/vault/access');
-    await click(SELECTORS.backendLink(this.path1));
-    assert.dom(GENERAL.emptyStateTitle).exists('shows empty state');
-    await click(SELECTORS.createUser);
-    await fillIn(GENERAL.inputByAttr('username'), this.user1);
-    await fillIn(GENERAL.inputByAttr('password'), this.user1);
-    await click(SELECTORS.saveBtn);
-    assert.strictEqual(currentURL(), `/vault/access/${this.path1}/item/user`);
+    await createUser(this.path1, this.user1);
 
+    // navigate back to the methods list
     await click(SELECTORS.methods);
     assert.strictEqual(currentURL(), '/vault/access');
 
-    // enable a user in second userpass backend
-    await click(SELECTORS.backendLink(this.path2));
-    assert.dom(GENERAL.emptyStateTitle).exists('shows empty state');
-    await click(SELECTORS.createUser);
-    await fillIn(GENERAL.inputByAttr('username'), this.user2);
-    await fillIn(GENERAL.inputByAttr('password'), this.user2);
-    await click(SELECTORS.saveBtn);
-    assert.strictEqual(currentURL(), `/vault/access/${this.path2}/item/user`);
-    // Confirm that the user was created. There was a bug where the apiPath was not being updated when toggling between auth routes.
+    // enable a second user in the second userpass backend
+    await createUser(this.path2, this.user2);
+
+    // verify the second user is listed after creation
     assert.dom(SELECTORS.listItem).hasText(this.user2, 'user2 exists in the list');
 
-    // Confirm that the auth method 1 shows user1. There was a bug where the user was not listed when toggling between auth routes.
+    // check that switching back to the first auth method shows the first user
     await click(SELECTORS.methods);
-    await click(SELECTORS.backendLink(this.path1));
+    await click(GENERAL.linkedBlock(this.path1));
     assert.dom(SELECTORS.listItem).hasText(this.user1, 'user1 exists in the list');
+
+    await login();
+    await runCmd([deleteAuthCmd(this.path1), deleteAuthCmd(this.path2)], false);
   });
 
   module('auth methods are linkable and link to correct view', function (hooks) {
@@ -79,44 +75,52 @@ module('Acceptance | auth backend list', function (hooks) {
     });
 
     // Test all auth methods, not just those you can log in with
-    methods()
+    filterEnginesByMountCategory({ mountCategory: 'auth', isEnterprise: false })
       .map((backend) => backend.type)
       .forEach((type) => {
         test(`${type} auth method`, async function (assert) {
-          const supportManaged = supportedManagedAuthBackends();
-          const path = type === 'token' ? 'token' : `auth-list-${type}-${this.uid}`;
-          if (type !== 'token') {
-            await enablePage.enable(type, path);
+          const supportManaged = MANAGED_AUTH_BACKENDS;
+          const isTokenType = type === 'token';
+          const path = isTokenType ? 'token' : `auth-list-${type}-${this.uid}`;
+
+          // Enable auth if the backend is not type token
+          if (!isTokenType) {
+            await visit('/vault/settings/auth/enable');
+            await click(MOUNT_BACKEND_FORM.mountType(type));
+            await fillIn(GENERAL.inputByAttr('path'), path);
+            await click(GENERAL.submitButton);
           }
-          await settled();
+
           await visit('/vault/access');
 
-          // check popup menu
-          const itemCount = type === 'token' ? 2 : 3;
-          await click(`[data-test-auth-backend-link="${path}"] [data-test-popup-menu-trigger]`);
+          // check popup menu for auth method
+          const itemCount = isTokenType ? 2 : 3;
+          const triggerSelector = `${GENERAL.linkedBlock(path)} [data-test-popup-menu-trigger]`;
+          const itemSelector = `${GENERAL.linkedBlock(path)} .hds-dropdown-list-item`;
+
+          await click(triggerSelector);
           assert
-            .dom(`[data-test-auth-backend-link="${path}"] .hds-dropdown-list-item`)
+            .dom(itemSelector)
             .exists({ count: itemCount }, `shows ${itemCount} dropdown items for ${type}`);
 
-          // all auth methods should be linkable
-          await click(`[data-test-auth-backend-link="${path}"]`);
+          // check that auth methods are linkable
+          await click(GENERAL.linkedBlock(path));
+
           if (!supportManaged.includes(type)) {
-            assert.dom('[data-test-auth-section-tab]').exists({ count: 1 });
+            assert.dom(GENERAL.linkTo('auth-tab')).exists({ count: 1 });
             assert
-              .dom('[data-test-auth-section-tab]')
+              .dom(GENERAL.linkTo('auth-tab'))
               .hasText('Configuration', `only shows configuration tab for ${type} auth method`);
-            assert.dom('[data-test-doc-link] .doc-link').exists(`includes doc link for ${type} auth method`);
+            assert.dom(GENERAL.docLinkByAttr(path)).exists(`includes doc link for ${type} auth method`);
           } else {
-            let expectedTabs = 2;
-            if (type === 'ldap' || type === 'okta') {
-              expectedTabs = 3;
-            }
+            // determine expected number of managed auth tabs
+            const expectedTabs = ['ldap', 'okta'].includes(type) ? 3 : 2;
             assert
-              .dom('[data-test-auth-section-tab]')
+              .dom(GENERAL.linkTo('generated-tab'))
               .exists({ count: expectedTabs }, `has management tabs for ${type} auth method`);
           }
-          if (type !== 'token') {
-            // cleanup method
+          // cleanup method
+          if (!isTokenType) {
             await runCmd(deleteAuthCmd(path));
           }
         });
@@ -137,12 +141,12 @@ module('Acceptance | auth backend list', function (hooks) {
       await visit('/vault/access');
 
       // all auth methods should be linkable
-      await click(`[data-test-auth-backend-link="${path}"]`);
-      assert.dom('[data-test-auth-section-tab]').exists({ count: 1 });
+      await click(GENERAL.linkedBlock(path));
+      assert.dom(GENERAL.linkTo('auth-tab')).exists({ count: 1 });
       assert
-        .dom('[data-test-auth-section-tab]')
+        .dom(GENERAL.linkTo('auth-tab'))
         .hasText('Configuration', `only shows configuration tab for ${type} auth method`);
-      assert.dom('[data-test-doc-link] .doc-link').exists(`includes doc link for ${type} auth method`);
+      assert.dom(GENERAL.docLinkByAttr(path)).exists(`includes doc link for ${type} auth method`);
       await runCmd(deleteAuthCmd(path));
     });
 
@@ -152,14 +156,19 @@ module('Acceptance | auth backend list', function (hooks) {
       await settled();
       await loginNs(ns);
       // go directly to token configure route
-      await visit('/vault/settings/auth/configure/token/options');
-      await fillIn('[data-test-input="description"]', 'My custom description');
-      await click('[data-test-save-config="true"]');
-      assert.strictEqual(currentURL(), '/vault/access', 'successfully saves and navigates away');
-      await click('[data-test-auth-backend-link="token"]');
+      await visit(`/vault/settings/auth/configure/token/options?namespace=${ns}`);
+      await fillIn(GENERAL.inputByAttr('description'), 'My custom description');
+      await click(GENERAL.submitButton);
+      assert.strictEqual(
+        currentURL(),
+        `/vault/access?namespace=${ns}`,
+        'successfully saves and navigates away'
+      );
+      await click(GENERAL.linkedBlock('token'));
       assert
         .dom('[data-test-row-value="Description"]')
         .hasText('My custom description', 'description was saved');
+      await login();
       await runCmd(`delete sys/namespaces/${ns}`);
     });
   });

@@ -17,7 +17,7 @@ import (
 var listGithubWorkflowRuns = &github.ListWorkflowRunsReq{}
 
 func newGithubListRunCmd() *cobra.Command {
-	listRuns := &cobra.Command{
+	listRunsCmd := &cobra.Command{
 		Use:   "workflow-runs [WORKFLOW_NAME]",
 		Short: "List workflow runs",
 		Long:  "List Github Actions workflow runs for a given workflow. Be sure to use filter arguments to reduce the search, otherwise you'll likely hit your API limit.",
@@ -35,30 +35,30 @@ func newGithubListRunCmd() *cobra.Command {
 		},
 	}
 
-	listRuns.PersistentFlags().StringVarP(&listGithubWorkflowRuns.Actor, "actor", "a", "", "Filter using a specific Github actor")
-	listRuns.PersistentFlags().StringVarP(&listGithubWorkflowRuns.Branch, "branch", "b", "", "Filter using a specific Github branch")
-	listRuns.PersistentFlags().Int64VarP(&listGithubWorkflowRuns.CheckSuiteID, "check-suite-id", "c", 0, "Filter using a specific Github check suite")
-	listRuns.PersistentFlags().BoolVar(&listGithubWorkflowRuns.Compact, "compact", true, "When given a status filter, only fetch data for workflows, jobs, checks, and annotations that match our status and/or conclusion. Disabling compact mode with a large query range might result in Github throttling the requests.")
-	listRuns.PersistentFlags().StringVarP(&listGithubWorkflowRuns.DateQuery, "date-query", "d", fmt.Sprintf("%s..*", time.Now().Add(-168*time.Hour).Format(time.DateOnly)), "Filter using a date range query. It supports the Github ISO8601-ish date range query format. Default is newer than one week ago")
-	listRuns.PersistentFlags().StringVarP(&listGithubWorkflowRuns.Event, "event", "e", "", "Filter using a workflow triggered by an event type. E.g. push, pull_request, issue")
-	listRuns.PersistentFlags().BoolVarP(&listGithubWorkflowRuns.IncludePRs, "include-prs", "p", false, "Include workflow runs triggered via pull requests")
-	listRuns.PersistentFlags().StringVarP(&listGithubWorkflowRuns.Owner, "owner", "o", "hashicorp", "The Github organization")
-	listRuns.PersistentFlags().StringVarP(&listGithubWorkflowRuns.Repo, "repo", "r", "vault", "The Github repository. Private repositories require auth via a GITHUB_TOKEN env var")
-	listRuns.PersistentFlags().StringVar(&listGithubWorkflowRuns.Sha, "sha", "", "Filter based on the HEAD SHA associated with the workflow run")
-	listRuns.PersistentFlags().StringVar(&listGithubWorkflowRuns.Status, "status", "", "Filter by a given run status. For example: completed, cancelled, failure, skipped, success, in_progress")
+	listRunsCmd.PersistentFlags().StringVarP(&listGithubWorkflowRuns.Actor, "actor", "a", "", "Filter using a specific Github actor")
+	listRunsCmd.PersistentFlags().StringVarP(&listGithubWorkflowRuns.Branch, "branch", "b", "", "Filter using a specific Github branch")
+	listRunsCmd.PersistentFlags().Int64VarP(&listGithubWorkflowRuns.CheckSuiteID, "check-suite-id", "c", 0, "Filter using a specific Github check suite")
+	listRunsCmd.PersistentFlags().BoolVar(&listGithubWorkflowRuns.Compact, "compact", true, "When given a status filter, only fetch data for workflows, jobs, checks, and annotations that match our status and/or conclusion. Disabling compact mode with a large query range might result in Github throttling the requests.")
+	listRunsCmd.PersistentFlags().StringVarP(&listGithubWorkflowRuns.DateQuery, "date-query", "d", fmt.Sprintf("%s..*", time.Now().Add(-168*time.Hour).Format(time.DateOnly)), "Filter using a date range query. It supports the Github ISO8601-ish date range query format. Default is newer than one week ago")
+	listRunsCmd.PersistentFlags().StringVarP(&listGithubWorkflowRuns.Event, "event", "e", "", "Filter using a workflow triggered by an event type. E.g. push, pull_request, issue")
+	listRunsCmd.PersistentFlags().BoolVarP(&listGithubWorkflowRuns.IncludePRs, "include-prs", "p", false, "Include workflow runs triggered via pull requests")
+	listRunsCmd.PersistentFlags().StringVarP(&listGithubWorkflowRuns.Owner, "owner", "o", "hashicorp", "The Github organization")
+	listRunsCmd.PersistentFlags().StringVarP(&listGithubWorkflowRuns.Repo, "repo", "r", "vault", "The Github repository. Private repositories require auth via a GITHUB_TOKEN env var")
+	listRunsCmd.PersistentFlags().StringVar(&listGithubWorkflowRuns.Sha, "sha", "", "Filter based on the HEAD SHA associated with the workflow run")
+	listRunsCmd.PersistentFlags().StringVar(&listGithubWorkflowRuns.Status, "status", "", "Filter by a given run status. For example: completed, cancelled, failure, skipped, success, in_progress")
 
-	return listRuns
+	return listRunsCmd
 }
 
 func runListGithubWorkflowsCmd(cmd *cobra.Command, args []string) error {
 	cmd.SilenceUsage = true // Don't spam the usage on failure
 
-	res, err := listGithubWorkflowRuns.Run(context.TODO(), githubCmdState.Client)
+	res, err := listGithubWorkflowRuns.Run(context.TODO(), githubCmdState.Github)
 	if err != nil {
 		return fmt.Errorf("listing github workflow failures: %w", err)
 	}
 
-	switch githubCmdFlags.Format {
+	switch rootCfg.format {
 	case "json":
 		b, err := json.Marshal(res)
 		if err != nil {

@@ -9,24 +9,25 @@ import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { keyIsFolder } from 'core/utils/key-utils';
-import errorMessage from 'vault/utils/error-message';
 
-import type SyncDestinationModel from 'vault/models/sync/destination';
+import type { Destination } from 'vault/sync';
 import type RouterService from '@ember/routing/router-service';
-import type Store from '@ember-data/store';
+import type ApiService from 'vault/services/api';
 import type PaginationService from 'vault/services/pagination';
 import type FlashMessageService from 'vault/services/flash-messages';
-import type { SearchSelectOption } from 'vault/vault/app-types';
+import type Store from '@ember-data/store';
+import type { SearchSelectOption } from 'vault/app-types';
 
 interface Args {
-  destination: SyncDestinationModel;
+  destination: Destination;
 }
 
 export default class DestinationSyncPageComponent extends Component<Args> {
   @service('app-router') declare readonly router: RouterService;
-  @service declare readonly store: Store;
+  @service declare readonly api: ApiService;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly pagination: PaginationService;
+  @service declare readonly store: Store;
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
@@ -47,21 +48,22 @@ export default class DestinationSyncPageComponent extends Component<Args> {
     return !this.mountPath || !this.secretPath || this.isSecretDirectory || this.setAssociation.isRunning;
   }
 
-  willDestroy(): void {
-    this.pagination.clearDataset('sync/association');
-    super.willDestroy();
-  }
-
   // unable to use built-in fetch functionality of SearchSelect since we need to filter by kv type
   async fetchMounts() {
+    const adapter = this.store.adapterFor('application');
+    const mounts = [];
     try {
-      const secretEngines = await this.store.query('secret-engine', {});
-      this.mounts = secretEngines.reduce((filtered: SearchSelectOption[], model) => {
-        if (model.type === 'kv' && model.version === 2) {
-          filtered.push({ name: model.path, id: model.path });
+      const { data } = await adapter.ajax('/v1/sys/internal/ui/mounts', 'GET');
+      const secret = data.secret;
+      if (secret) {
+        for (const path in secret) {
+          const { type, options } = secret[path as keyof typeof secret];
+          if (type === 'kv' && options?.['version'] === '2') {
+            mounts.push({ name: path, id: path });
+          }
         }
-        return filtered;
-      }, []);
+      }
+      this.mounts = mounts;
     } catch (error) {
       // the user is still able to manually enter the mount path
       // InputSearch component will render in this case
@@ -83,20 +85,16 @@ export default class DestinationSyncPageComponent extends Component<Args> {
     this.error = ''; // reset error
     try {
       this.syncedSecret = '';
-      const { name: destinationName, type: destinationType } = this.args.destination;
+      const { name, type } = this.args.destination;
       const mount = keyIsFolder(this.mountPath) ? this.mountPath.slice(0, -1) : this.mountPath; // strip trailing slash from mount path
-      const association = this.store.createRecord('sync/association', {
-        destinationName,
-        destinationType,
-        mount,
-        secretName: this.secretPath,
-      });
-      await association.save({ adapterOptions: { action: 'set' } });
+      const payload = { mount, secretName: this.secretPath };
+      await this.api.sys.systemWriteSyncDestinationsTypeNameAssociationsSet(name, type, payload);
       this.syncedSecret = this.secretPath;
       // reset the secret path to help make it clear that the sync was successful
       this.secretPath = '';
     } catch (error) {
-      this.error = `Sync operation error: \n ${errorMessage(error)}`;
+      const { message } = await this.api.parseError(error);
+      this.error = `Sync operation error: \n ${message}`;
     }
   });
 }

@@ -194,8 +194,8 @@
             "path": "concepts/client-count/counting"
           },
           {
-            "title": "Usage metrics",
-            "path": "concepts/client-count/usage-metrics"
+            "title": "Client usage",
+            "path": "concepts/client-count/client-usage"
           },
           {
             "title": "FAQ",
@@ -278,11 +278,34 @@
       }
     ]
   },
+  {
+    "title": "Recent updates",
+    "routes": [
+      {
+        "title": "Release notes",
+        "path": "updates/release-notes"
+      },
+      {
+        "title": "Important changes",
+        "path": "updates/important-changes"
+      },
+      {
+        "title": "Deprecation notices",
+        "path": "updates/deprecation"
+      },
+      {
+        "title": "Change tracker",
+        "path": "updates/change-tracker"
+      },
+      {
+        "title": "Full changelog",
+        "href": "https://raw.githubusercontent.com/hashicorp/vault/refs/heads/main/CHANGELOG.md"
+      }
+    ]
+  },
 
-  
   { "divider": true },
   { "heading": "OPERATIONS" },
-
 
   {
     "title": "Get Vault",
@@ -358,7 +381,7 @@
       }
     ]
   },
-  
+
   {
     "title": "Configure Vault",
     "routes": [
@@ -384,7 +407,25 @@
       },
       {
         "title": "Create a lease count quota",
+        "badge": {
+          "text": "ENT",
+          "type": "filled",
+          "color": "neutral"
+        },
         "path": "configuration/create-lease-count-quota"
+      },
+      {
+        "title": "Create a rate limit quota",
+        "path": "configuration/create-rate-limit-quota"
+      },
+      {
+        "title": "Rate limit quotas group_by modes",
+        "badge": {
+          "text": "ENT",
+          "type": "filled",
+          "color": "neutral"
+        },
+        "path": "configuration/identity-based-rate-limit"
       },
       {
         "title": "Configure completed request logging",
@@ -398,10 +439,10 @@
           "color": "neutral"
         },
         "path": "configuration/entropy-augmentation"
-      },  
-      
+      },
+
       { "heading": "Configuration stanzas" },
-    
+
       {
         "title": "<code>adaptive_overload_protection</code>",
         "badge": {
@@ -938,6 +979,14 @@
         "path": "upgrade/replicated-deployment"
       },
       {
+        "title": "Manual upgrade for HA deployments",
+        "path": "upgrade/vault-ha-upgrade"
+      },
+      {
+        "title": "LTS Vault upgrades",
+        "path": "upgrade/lts-upgrade"
+      },
+      {
         "title": "Rollback an upgrade",
         "path": "upgrade/rollback"
       },
@@ -953,23 +1002,64 @@
     ]
   },
   {
-    "title": "Recent updates",
+    "title": "System administration",
     "routes": [
       {
-        "title": "Release notes",
-        "path": "updates/release-notes"
-      },
-      {
-        "title": "Important changes",
-        "path": "updates/important-changes"
-      },
-      {
-        "title": "Deprecation notices",
-        "path": "updates/deprecation"
-      },
-      {
-        "title": "Full changelog",
-        "path": "updates/changelog"
+        "title": "Manage snapshots",
+        "routes": [
+        {
+          "title": "Overview",
+          "path": "sysadmin/snapshots"
+        },
+        {
+          "title": "Automation and integrated storage",
+          "path": "sysadmin/snapshots/automation-overview",
+          "badge": {
+            "text": "ENT",
+            "type": "filled",
+            "color": "neutral"
+          }
+        },
+        {
+          "title": "Automate cluster snapshots",
+          "path": "sysadmin/snapshots/automate",
+          "badge": {
+            "text": "ENT",
+            "type": "filled",
+            "color": "neutral"
+          }
+        },
+        {
+          "title": "Save a cluster snapshot",
+          "path": "sysadmin/snapshots/save"
+        },
+        {
+          "title": "Restore a cluster snapshot",
+          "path": "sysadmin/snapshots/restore"
+        },
+        {
+          "title": "Recover a secret",
+          "badge": {
+            "text": "ENT",
+            "type": "filled",
+            "color": "neutral"
+          },
+          "routes": [
+            {
+              "title": "Overview",
+              "path": "sysadmin/snapshots/recover-a-secret"
+            },
+            {
+              "title": "Restore to a replicated cluster",
+              "path": "sysadmin/snapshots/recover-a-secret/replicated-cluster"
+            },
+            {
+              "title": "Restore to an unreplicated cluster",
+              "path": "sysadmin/snapshots/recover-a-secret/single-cluster"
+            }
+          ]
+        }
+        ]
       }
     ]
   },
@@ -1028,8 +1118,8 @@
                 "path": "internals/telemetry/metrics"
               },
               {
-                "title": "Core system metrics",
-                "path": "internals/telemetry/metrics/core-system"
+                "title": "Activity metrics",
+                "path": "internals/telemetry/metrics/activity"
               },
               {
                 "title": "Audit log metrics",
@@ -1046,6 +1136,10 @@
               {
                 "title": "Availability metrics",
                 "path": "internals/telemetry/metrics/availability"
+              },
+              {
+                "title": "Core system metrics",
+                "path": "internals/telemetry/metrics/core-system"
               },
               {
                 "title": "Database metrics",
@@ -1508,6 +1602,10 @@
         "path": "commands/read"
       },
       {
+        "title": "<code>recover</code>",
+        "path": "commands/recover"
+      },
+      {
         "title": "<code>secrets</code>",
         "routes": [
           {
@@ -1633,8 +1731,26 @@
         "path": "ui/browser-support"
       },
       {
-        "title": "Custom Messages",
+        "title": "Custom login",
+        "path": "ui/custom-login",
+        "badge": {
+          "text": "ENT",
+          "type": "filled",
+          "color": "neutral"
+        }
+      },
+      {
+        "title": "Custom messages",
         "path": "ui/custom-messages",
+        "badge": {
+          "text": "ENT",
+          "type": "filled",
+          "color": "neutral"
+        }
+      },
+      {
+        "title": "Namespaces",
+        "path": "ui/namespaces",
         "badge": {
           "text": "ENT",
           "type": "filled",
@@ -2199,6 +2315,15 @@
             "path": "secrets/pki/cmpv2"
           },
           {
+            "title": "Simple Certificate Enrollment Protocol (SCEP)",
+            "badge": {
+              "text": "ENT",
+              "type": "filled",
+              "color": "neutral"
+            },
+            "path": "secrets/pki/scep"
+          },
+          {
             "title": "Troubleshooting ACME",
             "path": "secrets/pki/troubleshooting-acme"
           }
@@ -2272,11 +2397,6 @@
             "path": "secrets/transit/key-wrapping-guide"
           }
         ]
-      },
-      {
-        "title": "Venafi (Certificates)",
-        "path": "secrets/venafi",
-        "hidden": true
       }
     ]
   },
@@ -2326,18 +2446,22 @@
         "title": "Overview",
         "path": "import",
         "badge": {
-          "text": "ALPHA",
+          "text": "BETA",
           "type": "outlined",
           "color": "highlight"
         }
       },
       {
-        "title": "GCP Secret Manager",
-        "path": "import/gcpsm"
+        "title": "AWS Secret Manager",
+        "path": "import/awssm"
       },
       {
-        "title": "Mappings",
-        "path": "import/mappings"
+        "title": "Azure KeyVault",
+        "path": "import/azurekv"
+      },
+      {
+        "title": "GCP Secret Manager",
+        "path": "import/gcpsm"
       }
     ]
   },
@@ -2528,6 +2652,15 @@
         ]
       },
       {
+        "title": "SCEP",
+        "path": "auth/scep",
+        "badge": {
+          "text": "ENT",
+          "type": "filled",
+          "color": "neutral"
+        }
+      },
+      {
         "title": "TLS Certificates",
         "path": "auth/cert"
       },
@@ -2586,7 +2719,7 @@
       },
       {
         "title": "Rollback upgrades",
-        "path" : "plugins/rollback"
+        "path": "plugins/rollback"
       },
       {
         "title": "Plugin development",
@@ -2782,10 +2915,6 @@
         ]
       },
       {
-        "title": "Automatic snapshots with integrated storage",
-        "path": "enterprise/automated-integrated-storage-snapshots"
-      },
-      {
         "title": "Automatically upgrade Vault clusters",
         "path": "enterprise/automated-upgrades"
       },
@@ -2809,8 +2938,8 @@
             "path": "enterprise/fips"
           },
           {
-            "title": "Built-in FIPS 140-2 support",
-            "path": "enterprise/fips/fips1402"
+            "title": "Built-in FIPS 140-3 support",
+            "path": "enterprise/fips/fips1403"
           },
           {
             "title": "Seal wrap for FIPS compliance",

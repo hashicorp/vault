@@ -1,7 +1,8 @@
 import Component from '@glimmer/component';
-import { HdsApplicationState, HdsTextDisplay, HdsCardContainer } from '@hashicorp/design-system-components/components';
+import { HdsApplicationState, HdsAlert, HdsTextDisplay, HdsCardContainer } from '@hashicorp/design-system-components/components';
 import TitleRow from './base/title-row.js';
 import cssCustomProperty from '../../modifiers/css-custom-property.js';
+import { htmlSafe } from '@ember/template';
 import { precompileTemplate } from '@ember/template-compilation';
 import { setComponentTemplate } from '@ember/component';
 
@@ -18,13 +19,10 @@ class GlobalLease extends Component {
     return Math.round(Math.min(count / quota * 100, 100));
   }
   get progressFillClass() {
-    if (this.percentage < 50) {
-      return 'ssu-global-lease__progress-fill--low';
+    if (this.percentage >= 100) {
+      return 'ssu-global-lease__progress-fill--exceeded';
     }
-    if (this.percentage < 100) {
-      return 'ssu-global-lease__progress-fill--medium';
-    }
-    return 'ssu-global-lease__progress-fill--high';
+    return '';
   }
   get formattedCount() {
     const formatter = new Intl.NumberFormat('en-US', {
@@ -47,22 +45,37 @@ class GlobalLease extends Component {
   }
   get description() {
     if (this.hasData) {
-      return 'Snapshot of global lease count quota consumption';
+      return htmlSafe('Total number of active <a class="hds-link-inline--color-secondary" href="https://developer.hashicorp.com/vault/docs/concepts/lease" target="_blank" data-test-vault-reporting-global-lease-description-link>leases</a> for this quota.');
     }
   }
   get linkUrl() {
     if (this.hasData) {
-      return 'https://developer.hashicorp.com/vault/docs/enterprise/lease-count-quotas';
+      return 'https://developer.hashicorp.com/vault/tutorials/operations/resource-quotas#global-default-lease-count-quota';
+    }
+  }
+  get alert() {
+    if (this.percentage >= 100) {
+      return {
+        color: 'warning',
+        description: 'Global lease quota limit reached. If lease creation is blocked, reduce usage or increase the limit.'
+      };
+    }
+    if (this.percentage >= 95) {
+      return {
+        color: 'neutral',
+        description: 'Approaching quota limit. Reduce usage or increase the lease limit to avoid blocking new leases.'
+      };
     }
   }
   static {
-    setComponentTemplate(precompileTemplate("\n    <HdsCardContainer data-test-global-lease @hasBorder={{true}} class=\"ssu-global-lease\" {{cssCustomProperty \"--vault-reporting-global-lease-percentage\" this.percentageString}} ...attributes>\n      <TitleRow @title=\"Global lease count quota\" @description={{this.description}} @linkText=\"Documentation\" @linkIcon=\"docs-link\" @linkUrl={{this.linkUrl}} @linkTarget=\"_blank\" />\n      {{#if this.hasData}}\n        <HdsTextDisplay class=\"ssu-global-lease__percentage-text\">{{this.percentage}}%</HdsTextDisplay>\n\n        <div class=\"ssu-global-lease__progress-wrapper\">\n          <div class=\"ssu-global-lease__progress-bar\">\n            <div class=\"ssu-global-lease__progress-fill {{this.progressFillClass}}\" data-test-global-lease-fill></div>\n          </div>\n          <span class=\"ssu-global-lease__count-text\">\n            <HdsTextDisplay @size=\"400\" @weight=\"medium\">\n              {{this.formattedCount}}\n            </HdsTextDisplay>\n          </span>\n        </div>\n      {{else}}\n\n        <HdsApplicationState data-test-global-lease-empty-state class=\"ssu-global-lease__empty-state\" as |A|>\n          {{#if (has-block \"empty\")}}\n            {{yield A to=\"empty\"}}\n          {{else}}\n            <A.Header data-test-global-lease-empty-state-title @title=\"None enforced\" />\n            <A.Body data-test-global-lease-empty-state-description @text=\"Global lease count quota is disabled. Enable it to manage active leases.\" />\n\n            <A.Footer as |F|>\n              <F.LinkStandalone data-test-global-lease-empty-state-link @icon=\"docs-link\" @iconPosition=\"trailing\" @text=\"Global lease count quota\" @href=\"https://developer.hashicorp.com/vault/tutorials/operations/resource-quotas#global-default-lease-count-quota\" target=\"_blank\" />\n            </A.Footer>\n          {{/if}}\n        </HdsApplicationState>\n      {{/if}}\n\n    </HdsCardContainer>\n  ", {
+    setComponentTemplate(precompileTemplate("\n    <HdsCardContainer data-test-vault-reporting-global-lease @hasBorder={{true}} class=\"ssu-global-lease\" {{cssCustomProperty \"--vault-reporting-global-lease-percentage\" this.percentageString}} ...attributes>\n      <TitleRow @title=\"Global lease count quota\" @description={{this.description}} @linkText=\"Documentation\" @linkIcon=\"docs-link\" @linkUrl={{this.linkUrl}} @linkTarget=\"_blank\" />\n      {{#if this.hasData}}\n        <HdsTextDisplay @size=\"300\" @weight=\"medium\" data-test-vault-reporting-global-lease-percentage-text>{{this.percentage}}%</HdsTextDisplay>\n\n        {{#if this.alert}}\n          <HdsAlert data-test-vault-reporting-global-lease-alert class=\"ssu-global-lease__alert\" @type=\"compact\" @color={{this.alert.color}} as |A|>\n            <A.Description>{{this.alert.description}}</A.Description>\n          </HdsAlert>\n        {{/if}}\n\n        <div class=\"ssu-global-lease__progress-wrapper\">\n          <div class=\"ssu-global-lease__progress-bar\">\n            <div class=\"ssu-global-lease__progress-fill {{this.progressFillClass}}\" data-test-vault-reporting-global-lease-fill></div>\n          </div>\n          <span>\n            <HdsTextDisplay @size=\"200\" @weight=\"semibold\" data-test-vault-reporting-global-lease-count-text>\n              {{this.formattedCount}}\n            </HdsTextDisplay>\n          </span>\n        </div>\n      {{else}}\n\n        <HdsApplicationState data-test-vault-reporting-global-lease-empty-state class=\"ssu-global-lease__empty-state\" as |A|>\n          {{#if (has-block \"empty\")}}\n            {{yield A to=\"empty\"}}\n          {{else}}\n            <A.Body data-test-vault-reporting-global-lease-empty-state-description @text=\"Lease quotas enforce limits on active secrets and tokens. It's recommended to enable this to protect stability for this Vault cluster.\" />\n\n            <A.Footer as |F|>\n              <F.LinkStandalone data-test-vault-reporting-global-lease-empty-state-link @icon=\"docs-link\" @iconPosition=\"trailing\" @text=\"Global lease count quota\" @href=\"https://developer.hashicorp.com/vault/tutorials/operations/resource-quotas#global-default-lease-count-quota\" target=\"_blank\" />\n            </A.Footer>\n          {{/if}}\n        </HdsApplicationState>\n      {{/if}}\n\n    </HdsCardContainer>\n  ", {
       strictMode: true,
       scope: () => ({
         HdsCardContainer,
         cssCustomProperty,
         TitleRow,
         HdsTextDisplay,
+        HdsAlert,
         HdsApplicationState
       })
     }), this);

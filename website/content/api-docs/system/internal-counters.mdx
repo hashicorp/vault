@@ -7,7 +7,7 @@ description: >-
 
 # `/sys/internal/counters`
 
-The `/sys/internal/counters` endpoints are used to return data about the number of Tokens and Entities in Vault. They return information for the entire cluster.
+The `/sys/internal/counters` endpoints are used to return data about the number of Clients in Vault. They return information for the entire cluster.
 
 ## Entities
 
@@ -39,48 +39,6 @@ $ curl \
   "data": {
     "counters": {
       "entities": {
-        "total": 1
-      }
-    }
-  },
-  "wrap_info": null,
-  "warnings": null,
-  "auth": null
-}
-```
-
-</CodeBlockConfig>
-
-## Tokens
-
-This endpoint returns the total number of Tokens.
-
-| Method | Path                            |
-| :----- | :------------------------------ |
-| `GET`  | `/sys/internal/counters/tokens` |
-
-### Sample request
-
-```shell-session
-$ curl \
-    --header "X-Vault-Token: ..." \
-    --request GET \
-    http://127.0.0.1:8200/v1/sys/internal/counters/tokens
-```
-
-### Sample response
-
-<CodeBlockConfig hideClipboard>
-
-```json
-{
-  "request_id": "75cbaa46-e741-3eba-2be2-325b1ba8f03f",
-  "lease_id": "",
-  "renewable": false,
-  "lease_duration": 0,
-  "data": {
-    "counters": {
-      "service_tokens": {
         "total": 1
       }
     }
@@ -254,9 +212,10 @@ in the queried period. The `end_time` is the end of the final month of the queri
 period.
 
 - If the `end_date` supplied to the API is the current month, exact activity
-information will be returned for all months in the queried period, except for the
-current month. The last element in the `months` response stanza will signify the current month. Furthermore, the
-`new_clients` counts returned for the current month will be an estimate.
+information will be returned for all months in the queried period. The last element 
+in the `months` response stanza will signify the current month.
+
+@include 'counters-api-new-clients-behavior-change.mdx'
 
 ### Behavior Differences between Vault Enterprise and Vault Community ((#count-difference))
 
@@ -488,7 +447,7 @@ The following is an example of the `months` breakdown with just the current mont
 Refer to the [client count](/vault/docs/concepts/client-count) concepts page for
 more information on how clients map to these client IDs and how they are
 counted, or for more information about how the new clients for the current month
-are estimated in a billing period.
+are calculated.
 
 The response will include all child namespaces of the namespace in which the
 request was made. If some namespace has subsequently been deleted, its path will
@@ -518,6 +477,15 @@ is unknown.
   response with the current billing period information without having to
   explicitly provide a start and end time. This parameter is deprecated, as this option is now the default, so no parameter is needed to specify.
 
+@include 'counters-api-new-clients-behavior-change.mdx'
+
+<Note>
+  <EnterpriseAlert product="vault" inline />
+
+- @include 'counters-api-wait-warning.mdx'
+- @include 'counters-api-custom-contract-note.mdx'
+
+</Note>
 
 ### Sample request
 
@@ -1047,9 +1015,11 @@ this request was made.
 
 <Note>
 
-The client count may be inaccurate in the moments following a Vault
-reboot, or leadership change. The estimate will stabilize when background
+- For Vault versions prior to 1.20 and 1.20+ent, the client count may be inaccurate in the moments following a Vault
+reboot, or leadership change. The count will stabilize when background
 loading of client data has completed.
+
+- @include 'counters-api-wait-warning.mdx'
 
 </Note>
 
@@ -1384,7 +1354,7 @@ single line.
   "mount_accessor": "auth_userpass_a005db73",
   "mount_type": "userpass",
   "mount_path": "auth/userpass/",
-  "timestamp": "2024-07-10T09:33:51Z",
+  "token_creation_time": "2024-07-10T09:33:51Z",
   "policies": [
     "secret-read",
     "secret-list",
@@ -1416,7 +1386,7 @@ single line.
   "mount_accessor": "auth_ns_token_e3119312",
   "mount_type": "ns_token",
   "mount_path": "auth/token/",
-  "timestamp": "2024-07-08T11:35:23Z",
+  "token_creation_time": "2024-07-08T11:35:23Z",
   "policies": [],
   "entity_metadata": {},
   "entity_alias_metadata": {},
@@ -1435,7 +1405,7 @@ single line.
   "mount_accessor": "auth_ldap_a005db73",
   "mount_type": "ldap",
   "mount_path": "auth/ldap/",
-  "timestamp": "2024-07-08T11:47:57Z",
+  "token_creation_time": "2024-07-08T11:47:57Z",
   "policies": [
     "secret-read"
   ],
@@ -1462,7 +1432,7 @@ single line.
   "mount_accessor": "auth_userpass_01a6ea85",
   "mount_type": "userpass",
   "mount_path": "auth/userpass/",
-  "timestamp": "2024-07-21T14:51:36Z",
+  "token_creation_time": "2024-07-21T14:51:36Z",
   "policies": [
     "secret-read"
   ],
@@ -1488,7 +1458,7 @@ single line.
   "mount_accessor": "auth_kubernetes_b596406f",
   "mount_type": "kubernetes",
   "mount_path": "auth/kubernetes/",
-  "timestamp": "2024-07-10T09:33:51Z",
+  "token_creation_time": "2024-07-10T09:33:51Z",
   "policies": [
     "secret-read"
   ],
@@ -1514,7 +1484,7 @@ single line.
   "mount_accessor": "auth_aws_c223ff01",
   "mount_type": "aws",
   "mount_path": "auth/aws/",
-  "timestamp": "2024-07-10T09:33:51Z",
+  "token_creation_time": "2024-07-10T09:33:51Z",
   "policies": [
     "secret-read"
   ],
@@ -1535,12 +1505,12 @@ will be named using the field name and underlying index (e.g. `policies.0`, `pol
 (e.g. `entity_metadata.email_address`, `entity_alias_metadata.region`). A flattened field will only be added if at least one record contains
 it. If a top-level field (e.g. `entity_metadata`) is not populated in any of the
 records then there will not be any flattened fields of prefix
-`enttiy_metadata.`.
+`entity_metadata.`.
 
 <CodeBlockConfig hideClipboard>
 
 ```text
-entity_name,entity_alias_name,client_id,client_type,local_entity_alias,namespace_id,namespace_path,mount_accessor,mount_path,mount_type,timestamp,entity_alias_custom_metadata.contact_email,entity_alias_custom_metadata.group,entity_alias_custom_metadata.region,entity_metadata.email_address,entity_group_ids.0,policies.0,policies.1,policies.2,policies.4
+entity_name,entity_alias_name,client_id,client_type,local_entity_alias,namespace_id,namespace_path,mount_accessor,mount_path,mount_type,token_creation_time,entity_alias_custom_metadata.contact_email,entity_alias_custom_metadata.group,entity_alias_custom_metadata.region,entity_metadata.email_address,entity_group_ids.0,policies.0,policies.1,policies.2,policies.4
 admin,admin,3f210722-7210-98e8-1f0d-e6a39ffb29c6,entity,false,root,,auth_userpass_a005db73,auth/userpass/,userpass,2024-07-10T09:33:51Z,admin@example.com,san_francisco,west,admin@example.com,746fbaf9-ffeb-62b9-7f0b-42d79ca0883f,secret-read,secret-list,secret-write,secret-delete
 ,,590198f7-9178-57d6-c345-48746bb438d8,non-entity-token,false,YWZzu,ns1/a/,auth_ns_token_e3119312,auth/token/,ns_token,2024-07-08T11:35:23Z,,,,,,,,,
 jdoe,jdoe,665a54bf-8652-c0c5-8121-40adf0d9786a,entity,false,wOsmr,ns1/a,auth_ldap_a005db73,auth/ldap/,ldap,2024-07-08T11:47:57Z,jdoe@example.com,new_york,east,,9f18cd4a-4e64-a2b2-b001-7b6b0dfb1270,secret-read,,,

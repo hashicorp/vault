@@ -10,19 +10,14 @@ import { hbs } from 'ember-cli-htmlbars';
 import Sinon from 'sinon';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const selectors = {
   form: '[data-test-sign-intermediate-form]',
-  csrInput: '[data-test-input="csr"]',
-  toggleGroup: (group) => `[data-test-toggle-group="${group}"]`,
-  fieldByName: (name) => `[data-test-field="${name}"]`,
   saveButton: '[data-test-pki-sign-intermediate-save]',
   cancelButton: '[data-test-pki-sign-intermediate-cancel]',
-  fieldError: '[data-test-inline-alert]',
   formError: '[data-test-form-error]',
   resultsContainer: '[data-test-sign-intermediate-result]',
-  rowByName: (name) => `[data-test-row-label="${name}"]`,
-  valueByName: (name) => `[data-test-value-div="${name}"]`,
 };
 module('Integration | Component | pki-sign-intermediate-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -52,17 +47,17 @@ module('Integration | Component | pki-sign-intermediate-form', function (hooks) 
       'Subject Alternative Name (SAN) Options',
       'Additional subject fields',
     ].forEach((group) => {
-      assert.dom(selectors.toggleGroup(group)).exists(`${group} renders`);
+      assert.dom(GENERAL.button(group)).exists(`${group} renders`);
     });
 
-    await click(selectors.toggleGroup('Signing options'));
+    await click(GENERAL.button('Signing options'));
     ['usePss', 'skid', 'signatureBits'].forEach((name) => {
-      assert.dom(selectors.fieldByName(name)).exists();
+      assert.dom(GENERAL.fieldByAttr(name)).exists();
     });
   });
 
   test('it shows the returned values on successful save', async function (assert) {
-    assert.expect(13);
+    assert.expect(12);
     await render(hbs`<PkiSignIntermediateForm @onCancel={{this.onCancel}} @model={{this.model}} />`, {
       owner: this.engine,
     });
@@ -82,10 +77,9 @@ module('Integration | Component | pki-sign-intermediate-form', function (hooks) 
     });
     await click(selectors.saveButton);
     assert.dom(selectors.formError).hasText('There is an error with this form.', 'Shows validation errors');
-    assert.dom(selectors.csrInput).hasClass('has-error-border');
-    assert.dom(selectors.fieldError).hasText('CSR is required.');
+    assert.dom(GENERAL.validationErrorByAttr('csr')).hasText('CSR is required.');
 
-    await fillIn(selectors.csrInput, 'example-data');
+    await fillIn(GENERAL.inputByAttr('csr'), 'example-data');
     await click(selectors.saveButton);
     [
       { label: 'Serial number' },
@@ -93,12 +87,12 @@ module('Integration | Component | pki-sign-intermediate-form', function (hooks) 
       { label: 'Certificate', isCertificate: true },
       { label: 'Issuing CA', isCertificate: true },
     ].forEach(({ label, isCertificate }) => {
-      assert.dom(selectors.rowByName(label)).exists();
+      assert.dom(GENERAL.infoRowLabel(label)).exists();
       if (isCertificate) {
-        assert.dom(selectors.valueByName(label)).includesText('PEM Format', `${label} is isCertificate`);
+        assert.dom(GENERAL.infoRowValue(label)).includesText('PEM Format', `${label} is isCertificate`);
       } else {
-        assert.dom(selectors.valueByName(label)).hasText('31:52:b9:09:40', `Renders ${label}`);
-        assert.dom(`${selectors.valueByName(label)} a`).exists(`${label} is a link`);
+        assert.dom(GENERAL.infoRowValue(label)).hasText('31:52:b9:09:40', `Renders ${label}`);
+        assert.dom(`${GENERAL.infoRowValue(label)} a`).exists(`${label} is a link`);
       }
     });
   });

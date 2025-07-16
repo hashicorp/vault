@@ -6,11 +6,10 @@
 import { module, test } from 'qunit';
 import { currentURL, click, fillIn, settled, waitFor } from '@ember/test-helpers';
 import { setupApplicationTest } from 'vault/tests/helpers';
-import { login, loginMethod, logout } from 'vault/tests/helpers/auth/auth-helpers';
+import { login, loginMethod } from 'vault/tests/helpers/auth/auth-helpers';
 import { createPolicyCmd, deleteAuthCmd, mountAuthCmd, runCmd } from '../helpers/commands';
 import { v4 as uuidv4 } from 'uuid';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
 const SUCCESS_MESSAGE = 'Successfully reset password';
 
@@ -36,7 +35,7 @@ module('Acceptance | reset password', function (hooks) {
     await login();
     await settled();
 
-    await click('[data-test-user-menu-trigger]');
+    await click(GENERAL.button('user-menu-trigger'));
     assert.dom('[data-test-user-menu-item="reset-password"]').doesNotExist();
   });
 
@@ -53,7 +52,7 @@ module('Acceptance | reset password', function (hooks) {
       { authType: 'userpass', toggleOptions: true }
     );
 
-    await click('[data-test-user-menu-trigger]');
+    await click(GENERAL.button('user-menu-trigger'));
     await click('[data-test-user-menu-item="reset-password"]');
 
     assert.strictEqual(currentURL(), '/vault/access/reset-password', 'links to password reset');
@@ -66,40 +65,7 @@ module('Acceptance | reset password', function (hooks) {
 
     assert.dom('[data-test-title]').hasText('Reset password', 'page title');
     await fillIn('[data-test-input="reset-password"]', 'newpassword');
-    await click('[data-test-reset-password-save]');
-    await waitFor('[data-test-flash-message]');
-    assert.dom('[data-test-flash-message]').hasText(`Success ${SUCCESS_MESSAGE}`);
-    assert.dom('[data-test-input="reset-password"]').hasValue('', 'Resets input after save');
-  });
-
-  test('allows password reset for userpass users logged in via tab', async function (assert) {
-    await login();
-    await runCmd([
-      mountAuthCmd('userpass', this.userpass),
-      `write sys/auth/${this.userpass}/tune listing_visibility="unauth"`,
-      createPolicyCmd(this.userpass, this.policy),
-      `write auth/${this.userpass}/users/reset-me password=password token_policies=${this.userpass}`,
-    ]);
-    await logout();
-    await click(`[data-test-auth-method="${this.userpass}"] a`);
-    await fillIn(GENERAL.inputByAttr('username'), 'reset-me');
-    await fillIn(GENERAL.inputByAttr('password'), 'password');
-    await click(AUTH_FORM.login);
-
-    await click('[data-test-user-menu-trigger]');
-    await click('[data-test-user-menu-item="reset-password"]');
-
-    assert.strictEqual(currentURL(), '/vault/access/reset-password', 'links to password reset');
-    assert
-      .dom('[data-test-current-user-banner]')
-      .hasText(
-        `You are updating the password for reset-me on the ${this.userpass} auth mount.`,
-        'shows correct banner text'
-      );
-
-    assert.dom('[data-test-title]').hasText('Reset password', 'page title');
-    await fillIn('[data-test-input="reset-password"]', 'newpassword');
-    await click('[data-test-reset-password-save]');
+    await click(GENERAL.submitButton);
     await waitFor('[data-test-flash-message]');
     assert.dom('[data-test-flash-message]').hasText(`Success ${SUCCESS_MESSAGE}`);
     assert.dom('[data-test-input="reset-password"]').hasValue('', 'Resets input after save');

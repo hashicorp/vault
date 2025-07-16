@@ -53,7 +53,7 @@ module('Integration | Component | database-role-edit', function (hooks) {
     this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['create']));
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelEmpty}} @mode="create"/>`);
-    await click('[data-test-secret-save]');
+    await click(GENERAL.submitButton);
 
     assert.dom('[data-test-inline-error-message]').exists('Inline form errors exist');
   });
@@ -75,7 +75,7 @@ module('Integration | Component | database-role-edit', function (hooks) {
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="edit"/>`);
     await fillIn('[data-test-ttl-value="Rotation period"]', '20');
-    await click('[data-test-secret-save]');
+    await click(GENERAL.submitButton);
   });
 
   test('enterprise: it should successfully create user that does not rotate immediately', async function (assert) {
@@ -101,7 +101,7 @@ module('Integration | Component | database-role-edit', function (hooks) {
     await click(GENERAL.toggleInput('toggle-skip_import_rotation'));
     await fillIn(GENERAL.inputByAttr('password'), 'testPassword'); // fill in password field
 
-    await click('[data-test-secret-save]');
+    await click(GENERAL.submitButton);
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="show"/>`);
     assert.dom(GENERAL.infoRowValue('Rotate immediately')).containsText('No');
@@ -130,7 +130,7 @@ module('Integration | Component | database-role-edit', function (hooks) {
     this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['create']));
 
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="create"/>`);
-    await click('[data-test-secret-save]');
+    await click(GENERAL.submitButton);
 
     assert.dom('[data-test-issuer-warning]').exists(); // check if warning modal shows after clicking save
     await click('[data-test-issuer-save]'); // click continue button on modal
@@ -142,12 +142,12 @@ module('Integration | Component | database-role-edit', function (hooks) {
   test('it should show Get credentials button when a user has the correct policy', async function (assert) {
     this.server.post('/sys/capabilities-self', capabilitiesStub('database/static-creds/my-role', ['read']));
     await render(hbs`<DatabaseRoleEdit @model={{this.modelStatic}} @mode="show"/>`);
-    assert.dom('[data-test-database-role-creds="static"]').exists('Get credentials button exists');
+    assert.dom(GENERAL.button('static')).exists('Get credentials button exists');
   });
 
   test('it should show Generate credentials button when a user has the correct policy', async function (assert) {
     this.server.post('/sys/capabilities-self', capabilitiesStub('database/creds/my-role', ['read']));
     await render(hbs`<DatabaseRoleEdit @model={{this.modelDynamic}} @mode="show"/>`);
-    assert.dom('[data-test-database-role-creds="dynamic"]').exists('Generate credentials button exists');
+    assert.dom(GENERAL.button('dynamic')).exists('Generate credentials button exists');
   });
 });

@@ -8,6 +8,8 @@ description: |-
 
 # LDAP auth method
 
+@include 'tips/custom-authn.mdx'
+
 @include 'x509-sha1-deprecation.mdx'
 
 The `ldap` auth method allows authentication using an existing LDAP
@@ -147,6 +149,14 @@ For anonymous search, `discoverdn` must be set to `true`, and `deny_null_bind` m
 - `enable_samaccountname_login` `(bool: false)` - (Optional) Lets Active Directory
   LDAP users log in using `sAMAccountName` or `userPrincipalName` when the
   `upndomain` parameter is set.
+
+### Certificates
+
+At startup, Vault can read LDAP certificates from the operating systems (OS)
+certificate trust store instead of reading CA certificates from the
+certificate parameter. After startup, you need to restart Vault to read in
+new certificates before the LDAP plugin can use the information to establish new
+LDAP connections to the configured server address.
 
 ### Group membership resolution
 

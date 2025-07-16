@@ -465,6 +465,8 @@ type Core struct {
 	defaultLeaseTTL time.Duration
 	maxLeaseTTL     time.Duration
 
+	removeIrrevocableLeaseAfter time.Duration
+
 	// baseLogger is used to avoid ResetNamed as it strips useful prefixes in
 	// e.g. testing
 	baseLogger log.Logger
@@ -559,11 +561,13 @@ type Core struct {
 	introspectionEnabled     bool
 	introspectionEnabledLock sync.Mutex
 
-	// pluginDirectory is the location vault will look for plugin binaries
+	// pluginDirectory is the location vault will look for old style plugins, it is
+	// the root for all plugin artifacts.
 	pluginDirectory string
-	// pluginTmpdir is the location vault will use for containerized plugin
+
+	// containerPluginTmpdir is the location vault will use for containerized plugin
 	// temporary files
-	pluginTmpdir string
+	containerPluginTmpdir string
 
 	// pluginFileUid is the uid of the plugin files and directory
 	pluginFileUid int
@@ -687,6 +691,9 @@ type Core struct {
 
 	// disableAutopilot is used to disable the autopilot subsystem in raft storage
 	disableAutopilot bool
+
+	// allowAuditLogPrefixing must be enabled for audit devices to use a prefix (more secure without)
+	allowAuditLogPrefixing bool
 
 	// enable/disable identifying response headers
 	enableResponseHeaderHostname   bool
@@ -844,6 +851,8 @@ type CoreConfig struct {
 
 	MaxLeaseTTL time.Duration
 
+	RemoveIrrevocableLeaseAfter time.Duration
+
 	ClusterName string
 
 	ClusterCipherSuites string
@@ -900,6 +909,9 @@ type CoreConfig struct {
 	// DisableAutopilot is used to disable autopilot subsystem in raft storage
 	DisableAutopilot bool
 
+	// AllowAuditLogPrefixing must be enabled for audit devices to use a prefix (more secure without)
+	AllowAuditLogPrefixing bool
+
 	// Whether to send headers in the HTTP response showing hostname or raft node ID
 	EnableResponseHeaderHostname   bool
 	EnableResponseHeaderRaftNodeID bool
@@ -921,8 +933,8 @@ type CoreConfig struct {
 	// only accessible in the root namespace, currently sys/audit-hash and sys/monitor.
 	AdministrativeNamespacePath string
 
-	// ObservationSystemLedgerPath is the path that the Observation System's ledger will be recorded at.
-	ObservationSystemLedgerPath string
+	// ObservationSystemConfig is the config for the Observation System
+	ObservationSystemConfig *observations.ObservationSystemConfig
 
 	NumRollbackWorkers int
 
@@ -1055,6 +1067,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 
 		defaultLeaseTTL:                conf.DefaultLeaseTTL,
 		maxLeaseTTL:                    conf.MaxLeaseTTL,
+		removeIrrevocableLeaseAfter:    conf.RemoveIrrevocableLeaseAfter,
 		sentinelTraceDisabled:          conf.DisableSentinelTrace,
 		cachingDisabled:                conf.DisableCache,
 		clusterName:                    conf.ClusterName,
@@ -1091,6 +1104,7 @@ func CreateCore(conf *CoreConfig) (*Core, error) {
 		numExpirationWorkers:           conf.NumExpirationWorkers,
 		raftFollowerStates:             raft.NewFollowerStates(),
 		disableAutopilot:               conf.DisableAutopilot,
+		allowAuditLogPrefixing:         conf.AllowAuditLogPrefixing,
 		enableResponseHeaderHostname:   conf.EnableResponseHeaderHostname,
 		enableResponseHeaderRaftNodeID: conf.EnableResponseHeaderRaftNodeID,
 		mountMigrationTracker:          &sync.Map{},
@@ -1269,7 +1283,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 		}
 	}
 	if conf.PluginTmpdir != "" {
-		c.pluginTmpdir, err = filepath.Abs(conf.PluginTmpdir)
+		c.containerPluginTmpdir, err = filepath.Abs(conf.PluginTmpdir)
 		if err != nil {
 			return nil, fmt.Errorf("core setup failed, could not verify plugin tmpdir: %w", err)
 		}
@@ -1360,7 +1374,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	if err != nil {
 		return nil, err
 	}
-	events, err := eventbus.NewEventBus(nodeID, eventsLogger)
+	events, err := eventbus.NewEventBus(nodeID, eventsLogger, c)
 	if err != nil {
 		return nil, err
 	}
@@ -1372,14 +1386,21 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	c.createSnapshotManager()
 
 	observationsLogger := conf.Logger.Named("observations")
-	observationSystemLedgerPath := conf.ObservationSystemLedgerPath
-	if observationSystemLedgerPath != "" {
-		observations, err := observations.NewObservationSystem(nodeID, observationSystemLedgerPath, observationsLogger)
-		if err != nil {
-			return nil, err
+	observationSystemConfig := conf.ObservationSystemConfig
+	if observationSystemConfig != nil {
+		if observationSystemConfig.LedgerPath != "" {
+			config := &observations.NewObservationSystemConfig{
+				ObservationSystemConfig: observationSystemConfig,
+				LocalNodeId:             nodeID,
+				Logger:                  observationsLogger,
+			}
+			observations, err := observations.NewObservationSystem(config)
+			if err != nil {
+				return nil, err
+			}
+			c.observations = observations
+			c.observations.Start()
 		}
-		c.observations = observations
-		c.observations.Start()
 	}
 
 	c.clusterAddrBridge = conf.ClusterAddrBridge
@@ -2506,6 +2527,28 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		return err
 	}
 
+	if c.isPrimary() {
+		// Reload the development cluster setting from config in case the cluster is newly promoted and the setting
+		// in Census Manager is a holdover from the old primary.
+		if err := c.reloadDevelopmentClusterSetting(); err != nil {
+			return err
+		}
+		// Store the primary's development cluster setting to propagate it to any secondaries
+		if err := c.persistDevelopmentClusterSetting(ctx); err != nil {
+			return err
+		}
+	} else {
+		// If we can find a stored development cluster setting, and it is different from what was set in our config,
+		// then we need to log an error warning that the value is changing and update the census manager with the new setting.
+		developmentCluster, err := c.getDevelopmentClusterSetting(ctx)
+		if err == nil && developmentCluster != c.DevelopmentCluster() {
+			c.logger.Error("development cluster setting in config does not match that of the primary, updating to follow the primary config setting")
+			c.SetDevelopmentCluster(developmentCluster)
+		} else if err != nil {
+			return err
+		}
+	}
+
 	if !c.IsDRSecondary() {
 		// not waiting on wg to avoid changing existing behavior
 		var wg sync.WaitGroup
@@ -2587,7 +2630,7 @@ func (c *Core) setupPluginCatalog(ctx context.Context) error {
 		BuiltinRegistry:      c.builtinRegistry,
 		CatalogView:          NewBarrierView(c.barrier, pluginCatalogPath),
 		PluginDirectory:      c.pluginDirectory,
-		Tmpdir:               c.pluginTmpdir,
+		Tmpdir:               c.containerPluginTmpdir,
 		EnableMlock:          c.enableMlock,
 		PluginRuntimeCatalog: c.pluginRuntimeCatalog,
 	})
@@ -2631,6 +2674,9 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 		func(ctx context.Context) error {
 			return c.setupHeaderHMACKey(ctx, false)
 		},
+		func(ctx context.Context) error {
+			return c.EntSetupUIDefaultAuth(ctx)
+		},
 	}
 
 	// If this server is not part of a Disaster Recovery secondary cluster,
@@ -2673,6 +2719,10 @@ func buildUnsealSetupFunctionSlice(c *Core, isActive bool) []func(context.Contex
 			return nil
 		})
 		setupFunctions = append(setupFunctions, c.loadLoginMFAConfigs)
+
+		setupFunctions = append(setupFunctions, func(ctx context.Context) error {
+			return c.EntSetupUIDefaultAuth(ctx)
+		})
 	}
 
 	return setupFunctions

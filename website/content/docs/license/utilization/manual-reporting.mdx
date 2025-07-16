@@ -41,6 +41,19 @@ reporting in favor of manual reporting.
 Data bundles include collections of JSON snapshots that contain license
 utilization information.
 
+<Note title="Vault policy requirement">
+
+To run the reporting command, you must have a Vault policy that grants
+`update` permission on the `sys/utilization` endpoint:
+
+```
+path "sys/utilization" {
+  capabilities = ["update"]
+}
+```
+
+</Note>
+
 1. Login into your [cluster node](/vault/tutorials/cloud/vault-access-cluster).
 1. Run this CLI command to generate a data bundle:
 
@@ -178,7 +191,8 @@ The default retention period is 400 days.
   "checksum": 6861637915450723051,
   "metadata": {
     "billing_start": "2023-05-04T00:00:00Z",
-    "cluster_id": "16d0ff5b-9d40-d7a7-384c-c9b95320c60e"
+    "cluster_id": "16d0ff5b-9d40-d7a7-384c-c9b95320c60e",
+    "development_cluster": "false"
   }
 ```
 

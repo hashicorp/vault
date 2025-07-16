@@ -6,7 +6,12 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import clientsHandler, { STATIC_NOW, LICENSE_START, UPGRADE_DATE } from 'vault/mirage/handlers/clients';
+import clientsHandler, {
+  STATIC_NOW,
+  LICENSE_START,
+  UPGRADE_DATE,
+  STATIC_PREVIOUS_MONTH,
+} from 'vault/mirage/handlers/clients';
 import syncHandler from 'vault/mirage/handlers/sync';
 import sinon from 'sinon';
 import { visit, click, findAll, fillIn, currentURL } from '@ember/test-helpers';
@@ -53,7 +58,6 @@ module('Acceptance | clients | overview', function (hooks) {
     assert
       .dom(CLIENT_COUNT.dateRange.dateDisplay('end'))
       .hasText('January 2024', 'billing start month is correctly parsed from license');
-    assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
     assert
       .dom(CHARTS.container('Vault client counts'))
       .exists('Shows running totals with monthly breakdown charts');
@@ -63,56 +67,47 @@ module('Acceptance | clients | overview', function (hooks) {
     assert.dom(CHARTS.xAxisLabel).exists({ count: 7 }, 'chart months matches query');
   });
 
-  // TODO revisit once CE changes are finalized
-  test.skip('it should update charts when querying date ranges', async function (assert) {
+  test('it should update charts when querying date ranges', async function (assert) {
     // query for single, historical month with no new counts (July 2023)
+    const service = this.owner.lookup('service:version');
+    service.type = 'community';
+
     const licenseStartMonth = format(LICENSE_START, 'yyyy-MM');
     const upgradeMonth = format(UPGRADE_DATE, 'yyyy-MM');
+    const endMonth = format(STATIC_PREVIOUS_MONTH, 'yyyy-MM');
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), licenseStartMonth);
     await fillIn(CLIENT_COUNT.dateRange.editDate('end'), licenseStartMonth);
 
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert
       .dom(CLIENT_COUNT.usageStats('Vault client counts'))
       .doesNotExist('running total single month stat boxes do not show');
     assert
       .dom(CHARTS.container('Vault client counts'))
       .doesNotExist('running total month over month charts do not show');
-    assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
-    assert.dom(CHARTS.container('namespace')).exists('namespace attribution chart shows');
-    assert.dom(CHARTS.container('mount')).exists('mount attribution chart shows');
-
-    // reset to billing period
-    await click(CLIENT_COUNT.dateRange.edit);
-    await click(CLIENT_COUNT.dateRange.reset);
-    await click(GENERAL.saveButton);
 
     // change to start on month/year of upgrade to 1.10
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), upgradeMonth);
-    await click(GENERAL.saveButton);
-
+    await fillIn(CLIENT_COUNT.dateRange.editDate('end'), endMonth);
+    await click(GENERAL.submitButton);
     assert
       .dom(CLIENT_COUNT.dateRange.dateDisplay('start'))
       .hasText('September 2023', 'billing start month is correctly parsed from license');
-    assert
-      .dom(CLIENT_COUNT.dateRange.dateDisplay('end'))
-      .hasText('January 2024', 'billing start month is correctly parsed from license');
-    assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
     assert
       .dom(CHARTS.container('Vault client counts'))
       .exists('Shows running totals with monthly breakdown charts');
     assert
       .dom(`${CHARTS.container('Vault client counts')} ${CHARTS.xAxisLabel}`)
       .hasText('9/23', 'x-axis labels start with queried start month (upgrade date)');
-    assert.dom(CHARTS.xAxisLabel).exists({ count: 5 }, 'chart months matches query');
+    assert.dom(CHARTS.xAxisLabel).exists({ count: 4 }, 'chart months matches query');
 
     // query for single, historical month (upgrade month)
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), upgradeMonth);
     await fillIn(CLIENT_COUNT.dateRange.editDate('end'), upgradeMonth);
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     assert
       .dom(CLIENT_COUNT.usageStats('Vault client counts'))
@@ -120,15 +115,12 @@ module('Acceptance | clients | overview', function (hooks) {
     assert
       .dom(CHARTS.container('Vault client counts'))
       .doesNotExist('running total month over month charts do not show');
-    assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
-    assert.dom(CHARTS.container('namespace')).exists('namespace attribution chart shows');
-    assert.dom(CHARTS.container('mount')).exists('mount attribution chart shows');
 
     // query historical date range (from September 2023 to December 2023)
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2023-09');
     await fillIn(CLIENT_COUNT.dateRange.editDate('end'), '2023-12');
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     assert
       .dom(CLIENT_COUNT.dateRange.dateDisplay('start'))
@@ -136,7 +128,6 @@ module('Acceptance | clients | overview', function (hooks) {
     assert
       .dom(CLIENT_COUNT.dateRange.dateDisplay('end'))
       .hasText('December 2023', 'billing start month is correctly parsed from license');
-    assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
     assert
       .dom(CHARTS.container('Vault client counts'))
       .exists('Shows running totals with monthly breakdown charts');
@@ -147,16 +138,10 @@ module('Acceptance | clients | overview', function (hooks) {
       .dom(xAxisLabels[xAxisLabels.length - 1])
       .hasText('12/23', 'x-axis labels end with queried end month');
 
-    // reset to billing period
-    await click(CLIENT_COUNT.dateRange.edit);
-    await click(CLIENT_COUNT.dateRange.reset);
-    await click(GENERAL.saveButton);
-
     // query month older than count start date
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2020-07');
-    await click(GENERAL.saveButton);
-
+    await click(GENERAL.submitButton);
     assert
       .dom(CLIENT_COUNT.counts.startDiscrepancy)
       .hasTextContaining(
@@ -169,7 +154,6 @@ module('Acceptance | clients | overview', function (hooks) {
     assert
       .dom(CHARTS.container('Vault client counts'))
       .exists('Shows running totals with monthly breakdown charts');
-    assert.dom(CLIENT_COUNT.attributionBlock()).exists({ count: 2 });
 
     const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
     const orderedNs = response.byNamespace.sort((a, b) => b.clients - a.clients);
@@ -178,23 +162,9 @@ module('Acceptance | clients | overview', function (hooks) {
     const filterNamespace = topNamespace.label === 'root' ? orderedNs[1] : topNamespace;
     const topMount = filterNamespace?.mounts.sort((a, b) => b.clients - a.clients)[0];
 
-    assert
-      .dom(`${CLIENT_COUNT.attributionBlock('namespace')} [data-test-top-attribution]`)
-      .includesText(`Top namespace ${topNamespace.label}`);
-    // this math works because there are no nested namespaces in the mirage data
-    assert
-      .dom(`${CLIENT_COUNT.attributionBlock('namespace')} [data-test-attribution-clients] p`)
-      .includesText(`${formatNumber([topNamespace.clients])}`, 'top attribution clients accurate');
-
     // Filter by top namespace
     await selectChoose(CLIENT_COUNT.nsFilter, filterNamespace.label);
     assert.dom(CLIENT_COUNT.selectedNs).hasText(filterNamespace.label, 'selects top namespace');
-    assert
-      .dom(`${CLIENT_COUNT.attributionBlock('mount')} [data-test-top-attribution]`)
-      .includesText('Top mount');
-    assert
-      .dom(`${CLIENT_COUNT.attributionBlock('mount')} [data-test-attribution-clients] p`)
-      .includesText(`${formatNumber([topMount.clients])}`, 'top attribution clients accurate');
 
     let expectedStats = {
       Entity: formatNumber([filterNamespace.entity_clients]),
@@ -211,7 +181,6 @@ module('Acceptance | clients | overview', function (hooks) {
     // FILTER BY AUTH METHOD
     await selectChoose(CLIENT_COUNT.mountFilter, topMount.label);
     assert.dom(CLIENT_COUNT.selectedAuthMount).hasText(topMount.label, 'selects top mount');
-    assert.dom(CLIENT_COUNT.attributionBlock()).doesNotExist('Does not show attribution block');
 
     expectedStats = {
       Entity: formatNumber([topMount.entity_clients]),
@@ -228,13 +197,6 @@ module('Acceptance | clients | overview', function (hooks) {
     // Remove namespace filter without first removing auth method filter
     await click(GENERAL.searchSelect.removeSelected);
     assert.strictEqual(currentURL(), '/vault/clients/counts/overview', 'removes both query params');
-    assert.dom('[data-test-top-attribution]').includesText('Top namespace');
-    assert
-      .dom('[data-test-attribution-clients]')
-      .hasTextContaining(
-        `${formatNumber([topNamespace.clients])}`,
-        'top attribution clients back to unfiltered value'
-      );
 
     expectedStats = {
       Entity: formatNumber([response.total.entity_clients]),

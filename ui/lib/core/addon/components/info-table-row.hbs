@@ -5,9 +5,9 @@
 
 {{#if (or (has-block) this.isVisible)}}
   <div class="info-table-row" data-test-component="info-table-row" ...attributes>
+    {{! label section of the row }}
     <div
       class="column {{or @labelWidth 'is-one-quarter'}} {{if this.hasLabelOverflow 'label-overflow'}}"
-      data-test-label-div
       {{did-insert this.calculateLabelOverflow}}
     >
       {{#if @label}}
@@ -34,7 +34,8 @@
         <Icon @name="minus" />
       {{/if}}
     </div>
-    <div class="column is-flex-center {{if @truncateValue 'is-two-thirds'}}" data-test-value-div={{@label}}>
+    {{! value section of the row }}
+    <div class="column is-flex-center {{if @truncateValue 'is-two-thirds'}}" data-test-row-value={{@label}}>
       {{#if @addCopyButton}}
         <Hds::Copy::Button
           @text="Copy"
@@ -44,7 +45,7 @@
             (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
           )}}
           class="transparent has-padding-xxs"
-          data-test-copy-button={{@value}}
+          data-test-copy-button
         />
       {{/if}}
       {{#if (has-block)}}

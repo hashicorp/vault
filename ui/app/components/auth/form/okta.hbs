@@ -7,7 +7,7 @@
   <OktaNumberChallenge
     @correctAnswer={{this.challengeAnswer}}
     @hasError={{this.oktaVerifyError}}
-    @onReturnToLogin={{this.reset}}
+    @onReturnToLogin={{this.cancelLogin}}
   />
 {{else}}
   <form {{on "submit" this.onSubmit}} data-test-auth-form={{@authType}}>
@@ -23,13 +23,7 @@
 
       {{yield to="advancedSettings"}}
 
-      <Hds::Button
-        @text="Sign in"
-        @isFullWidth={{true}}
-        type="submit"
-        class="has-top-margin-m has-bottom-margin-m"
-        data-test-auth-submit
-      />
+      <Auth::SignInButton @text="Sign in" @icon={{if this.login.isRunning "loading"}} />
 
       {{yield to="footer"}}
     </div>

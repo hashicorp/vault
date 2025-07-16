@@ -13,6 +13,8 @@ import { assert } from '@ember/debug';
 import { addToArray } from 'vault/helpers/add-to-array';
 import { removeFromArray } from 'vault/helpers/remove-from-array';
 import { isEmpty } from '@ember/utils';
+import { presence } from 'vault/utils/forms/validators';
+import { get } from '@ember/object';
 
 /**
  * @module FormField
@@ -54,7 +56,6 @@ import { isEmpty } from '@ember/utils';
 export default class FormFieldComponent extends Component {
   emptyData = '{\n}';
   shouldHideLabel = [
-    'boolean',
     'file',
     'json',
     'kv',
@@ -79,7 +80,9 @@ export default class FormFieldComponent extends Component {
       'Form is attempting to modify an ID. Ember-data does not allow this.',
       valuePath.toLowerCase() !== 'id'
     );
-    const modelValue = model[valuePath];
+    assert('@name is required', presence(attr.name));
+    assert('@model (or resource object being updated) is required', presence(model));
+    const modelValue = get(model, valuePath);
     this.showToggleTextInput = !!modelValue;
     this.toggleInputEnabled = !!modelValue;
   }
@@ -93,36 +96,59 @@ export default class FormFieldComponent extends Component {
   get isHdsFormField() {
     const { type, options } = this.args.attr;
 
-    // here we replicate the logic in the template, to make sure we don't change the order in which the "ifs" are evaluated
+    // here we replicate the logic in the `form-field.hbs` template, as it was at the beginning of the migation to HDS
+    // to make sure we don't change the order in which the "ifs" are evaluated
+    // see: https://github.com/hashicorp/vault/blob/e99c06a0249f1ecde02c5b48990cb0e91e4ec575/ui/lib/core/addon/components/form-field.hbs
     if (options?.possibleValues?.length > 0) {
-      // we still have to migrate the `radio` use case
-      if (options?.editType === 'radio') {
+      return true;
+    } else {
+      if (options?.editType === 'dateTimeLocal') {
+        return true;
+      } else if (
+        options?.editType === 'searchSelect' ||
+        options?.editType === 'mountAccessor' ||
+        options?.editType === 'kv' ||
+        options?.editType === 'file' ||
+        options?.editType === 'ttl' ||
+        options?.editType === 'regex' ||
+        options?.editType === 'toggleButton' ||
+        options?.editType === 'optionalText' ||
+        options?.editType === 'stringArray' ||
+        options?.sensitive === true
+      ) {
+        return false;
+      } else if (type === 'number' || type === 'string') {
+        if (options?.editType === 'textarea' || options?.editType === 'password') {
+          return true;
+        } else if (options?.editType === 'json') {
+          return false;
+        } else {
+          return true;
+        }
+      } else if (type === 'boolean' || options?.editType === 'boolean') {
+        return true;
+      } else if (type === 'object' || options?.editType === 'yield') {
         return false;
       } else {
-        return true;
-      }
-    } else {
-      if (type === 'number' || type === 'string') {
-        if (options?.editType === 'password') {
-          return true;
-        } else {
-          return false;
-        }
-      } else {
-        // we leave these fields as they are (for now)
+        // fallback, just in case
         return false;
       }
     }
   }
 
   get hasRadioSubText() {
-    // for 'radio' editType, check to see if every of the possibleValues has a subText and label
+    // for 'radio' editType, check to see if any of the possibleValues has a subText
     return this.args?.attr?.options?.possibleValues?.any((v) => v.subText);
+  }
+
+  get hasRadioHelpText() {
+    // for 'radio' editType, check to see if any of the possibleValues has a helpText
+    return this.args?.attr?.options?.possibleValues?.any((v) => v.helpText);
   }
 
   get hideLabel() {
     const { type, options } = this.args.attr;
-    if (type === 'boolean' || type === 'object' || options?.isSectionHeader) {
+    if (type === 'object' || options?.isSectionHeader) {
       return true;
     }
     // falsey values render a <FormFieldLabel>
@@ -144,27 +170,25 @@ export default class FormFieldComponent extends Component {
   // used in the label element next to the form element
   get labelString() {
     const label = this.args.attr.options?.label || '';
-    if (label) {
-      return label;
-    }
-    if (this.args.attr.name) {
-      return capitalize([humanize([dasherize([this.args.attr.name])])]);
-    }
-    return '';
+    return label ? label : capitalize([humanize([dasherize([this.args.attr.name])])]);
   }
+
   // both the path to mutate on the model, and the path to read the value from
   get valuePath() {
     return this.args.attr.options?.fieldValue || this.args.attr.name;
   }
+
   get isReadOnly() {
     const readonly = this.args.attr.options?.readOnly || false;
     return readonly && this.args.mode === 'edit';
   }
+
   get validationError() {
     const validations = this.args.modelValidations || {};
     const state = validations[this.valuePath];
     return state && !state.isValid ? state.errors.join(' ') : null;
   }
+
   get validationWarning() {
     const validations = this.args.modelValidations || {};
     const state = validations[this.valuePath];
@@ -192,6 +216,22 @@ export default class FormFieldComponent extends Component {
   @action
   setAndBroadcastBool(trueVal, falseVal, event) {
     const valueToSet = event.target.checked === true ? trueVal : falseVal;
+    this.setAndBroadcast(valueToSet);
+  }
+  @action
+  setAndBroadcastChecklist(event) {
+    let updatedValue = this.args.model[this.valuePath];
+    if (event.target.checked) {
+      updatedValue = addToArray(updatedValue, event.target.value);
+    } else {
+      updatedValue = removeFromArray(updatedValue, event.target.value);
+    }
+    this.setAndBroadcast(updatedValue);
+  }
+  @action
+  setAndBroadcastRadio(item) {
+    // we want to read the original value instead of `event.target.value` so we have `false` (boolean) and not `"false"` (string)
+    const valueToSet = this.radioValue(item);
     this.setAndBroadcast(valueToSet);
   }
   @action
@@ -242,16 +282,5 @@ export default class FormFieldComponent extends Component {
   onChangeWithEvent(event) {
     const prop = event.target.type === 'checkbox' ? 'checked' : 'value';
     this.setAndBroadcast(event.target[prop]);
-  }
-
-  @action
-  handleChecklist(event) {
-    let updatedValue = this.args.model[this.valuePath];
-    if (event.target.checked) {
-      updatedValue = addToArray(updatedValue, event.target.value);
-    } else {
-      updatedValue = removeFromArray(updatedValue, event.target.value);
-    }
-    this.setAndBroadcast(updatedValue);
   }
 }

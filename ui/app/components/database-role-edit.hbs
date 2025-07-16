@@ -52,7 +52,7 @@
           @color="secondary"
           class="toolbar-button"
           {{on "click" (fn this.generateCreds @model.id @model.type)}}
-          data-test-database-role-creds={{@model.type}}
+          data-test-button={{@model.type}}
         />
       {{/if}}
       {{#if @model.canEditRole}}
@@ -162,7 +162,7 @@
             @icon={{if this.handleCreateEditRole.isRunning "loading"}}
             type="submit"
             disabled={{this.handleCreateEditRole.isRunning}}
-            data-test-secret-save
+            data-test-submit
           />
           <Hds::Button
             @text="Cancel"
@@ -170,7 +170,7 @@
             @route="vault.cluster.secrets.backend.list-root"
             @model={{@model.backend}}
             @query={{hash tab="role"}}
-            data-test-database-role-cancel
+            data-test-cancel
           />
         </Hds::ButtonSet>
         {{#if this.invalidFormAlert}}

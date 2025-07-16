@@ -21,12 +21,10 @@ const SELECTORS = {
   versionsTab: '[data-test-transit-link="versions"]',
   actionsTab: '[data-test-transit-key-actions-link]',
   card: (action) => `[data-test-transit-card="${action}"]`,
-  infoRow: (label) => `[data-test-value-div="${label}"]`,
   form: (item) => `[data-test-transit-key="${item}"]`,
   versionRow: (version) => `[data-test-transit-version="${version}"]`,
   rotate: {
     trigger: '[data-test-transit-key-rotate]',
-    confirm: '[data-test-confirm-button]',
   },
 };
 
@@ -163,7 +161,7 @@ const testConvergentEncryption = async function (assert, keyName) {
       await click('[data-test-transit-b64-toggle="context"]');
     }
     assert.dom('[data-test-encrypt-modal]').doesNotExist(`${keyName}: is not open before encrypt`);
-    await click('[data-test-button-encrypt]');
+    await click(GENERAL.submitButton);
 
     if (testCase.assertAfterEncrypt) {
       await settled();
@@ -182,7 +180,7 @@ const testConvergentEncryption = async function (assert, keyName) {
     }
 
     codemirror('#ciphertext-control').setValue(copiedCiphertext);
-    await click('[data-test-button-decrypt]');
+    await click(GENERAL.submitButton);
 
     if (testCase.assertAfterDecrypt) {
       await settled();
@@ -245,10 +243,10 @@ module('Acceptance | transit', function (hooks) {
       `/vault/secrets/${this.path}/show/${name}?tab=details`,
       'it navigates to show page'
     );
-    assert.dom(SELECTORS.infoRow('Auto-rotation period')).hasText('30 days');
-    assert.dom(SELECTORS.infoRow('Deletion allowed')).hasText('false');
-    assert.dom(SELECTORS.infoRow('Derived')).hasText('Yes');
-    assert.dom(SELECTORS.infoRow('Convergent encryption')).hasText('Yes');
+    assert.dom(GENERAL.infoRowValue('Auto-rotation period')).hasText('30 days');
+    assert.dom(GENERAL.infoRowValue('Deletion allowed')).hasText('false');
+    assert.dom(GENERAL.infoRowValue('Derived')).hasText('Yes');
+    assert.dom(GENERAL.infoRowValue('Convergent encryption')).hasText('Yes');
     await click(GENERAL.breadcrumbLink(this.path));
     await click(SELECTORS.popupMenu);
     const actions = findAll('.hds-dropdown__list li');
@@ -346,14 +344,14 @@ module('Acceptance | transit', function (hooks) {
     const name = await this.generateTransitKey(keyData);
     await visit(`vault/secrets/${this.path}/show/${name}`);
     assert
-      .dom(SELECTORS.infoRow('Auto-rotation period'))
+      .dom(GENERAL.infoRowValue('Auto-rotation period'))
       .hasText('30 days', 'Has expected auto rotate value');
 
     await click(SELECTORS.versionsTab);
     assert.dom(SELECTORS.versionRow(1)).hasTextContaining('Version 1', `${name}: only one key version`);
 
     await click(SELECTORS.rotate.trigger);
-    await click(SELECTORS.rotate.confirm);
+    await click(GENERAL.confirmButton);
 
     assert.dom(SELECTORS.versionRow(2)).exists('two key versions after rotate');
 
@@ -474,7 +472,7 @@ module('Acceptance | transit', function (hooks) {
       assert.dom('[data-test-transit-version]').exists({ count: 1 }, `${name}: only one key version`);
       await click(SELECTORS.rotate.trigger);
 
-      await click(SELECTORS.rotate.confirm);
+      await click(GENERAL.confirmButton);
       assert
         .dom('[data-test-transit-version]')
         .exists({ count: 2 }, `${name}: two key versions after rotate`);
