@@ -1,0 +1,3 @@
+```release-note:bug
+plugin: exit upon parse error on CLI flags
+```
