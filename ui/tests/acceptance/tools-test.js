@@ -8,7 +8,7 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { toolsActions } from 'vault/helpers/tools-actions';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
-import { capitalize, camelize } from '@ember/string';
+import { capitalize } from '@ember/string';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -166,11 +166,11 @@ module('Acceptance | tools', function (hooks) {
       await click(TS.submit);
       await waitUntil(() => find('.CodeMirror'));
 
-      const expected = Object.keys(AUTH_RESPONSE.auth).reduce((obj, auth) => {
-        obj[camelize(auth)] = AUTH_RESPONSE.auth[auth];
-        return obj;
-      }, {});
-      assert.deepEqual(expected, JSON.parse(codemirror().getValue()), 'unwrapped data equals input data');
+      assert.deepEqual(
+        JSON.parse(codemirror().getValue()),
+        AUTH_RESPONSE.auth,
+        'unwrapped data equals input data'
+      );
     });
   });
 

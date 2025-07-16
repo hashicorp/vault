@@ -7,9 +7,11 @@ import Component from '@glimmer/component';
 import { service } from '@ember/service';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
+import errorMessage from 'vault/utils/error-message';
 
 import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
+import type Store from '@ember-data/store';
 import type { HTMLElementEvent } from 'vault/forms';
 
 /**
@@ -23,6 +25,7 @@ import type { HTMLElementEvent } from 'vault/forms';
 export default class ToolsUnwrap extends Component {
   @service declare readonly api: ApiService;
   @service declare readonly flashMessages: FlashMessageService;
+  @service declare readonly store: Store;
 
   @tracked token = '';
   @tracked unwrapData: unknown = '';
@@ -43,18 +46,18 @@ export default class ToolsUnwrap extends Component {
     const data = { token: this.token.trim() };
 
     try {
-      const resp = await this.api.sys.unwrap(data);
+      const adapter = this.store.adapterFor('application');
+      const resp = await adapter.ajax('/v1/sys/wrapping/unwrap', 'POST', { data });
       this.unwrapData = (resp && resp.data) || resp.auth;
       this.unwrapDetails = {
-        'Request ID': resp.requestId,
-        'Lease ID': resp.leaseId || 'None',
+        'Request ID': resp.request_id,
+        'Lease ID': resp.lease_id || 'None',
         Renewable: resp.renewable,
-        'Lease Duration': resp.leaseDuration || 'None',
+        'Lease Duration': resp.lease_duration || 'None',
       };
       this.flashMessages.success('Unwrap was successful.');
     } catch (error) {
-      const { message } = await this.api.parseError(error);
-      this.errorMessage = message;
+      this.errorMessage = errorMessage(error);
     }
   }
 }
