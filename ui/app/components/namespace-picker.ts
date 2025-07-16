@@ -96,9 +96,11 @@ export default class NamespacePicker extends Component {
       }),
     ];
 
-    // Conditionally add the root namespace
-    if (this.auth?.authData?.userRootNamespace === '') {
-      options.unshift({ id: 'root', path: '', label: 'root' });
+    // Add the user's root namespace because `sys/internal/ui/namespaces` does not include it.
+    const userRootNamespace = this.auth.authData?.userRootNamespace;
+    if (!options?.find((o) => o.path === userRootNamespace)) {
+      const ns = userRootNamespace === '' ? 'root' : userRootNamespace;
+      options.unshift({ id: ns, path: userRootNamespace, label: ns });
     }
 
     // If there are no namespaces returned by the internal endpoint, add the current namespace
