@@ -190,7 +190,7 @@ scenario "upgrade" {
     }
 
     variables {
-      ami_id          = step.ec2_info.ami_ids[matrix.arch][matrix.distro][global.distro_version[matrix.distro]]
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["24.04"]
       cluster_tag_key = global.vault_tag_key
       common_tags     = global.tags
       vpc_id          = step.create_vpc.id

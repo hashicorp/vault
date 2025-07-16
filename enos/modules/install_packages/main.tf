@@ -15,7 +15,7 @@ locals {
     "arm64" = "aarch64"
   }
   package_manager = {
-    "amzn"          = enos_host_info.hosts[0].distro_version == "2023" ? "dnf" : "yum"
+    "amzn"          = "yum"
     "opensuse-leap" = "zypper"
     "rhel"          = "dnf"
     "sles"          = "zypper"
