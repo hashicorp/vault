@@ -8,7 +8,7 @@ import { setupRenderingTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
 import { render, click, triggerKeyEvent, waitFor } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import page from '../../pages/components/json-editor';
+import page, { SELECTORS } from '../../pages/components/json-editor';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { createLongJson } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
@@ -53,10 +53,12 @@ module('Integration | Component | json-editor', function (hooks) {
         @readOnly={{true}}
       />`);
 
-    assert.strictEqual(component.readOnlyTitle, 'Test title', 'renders the provided title');
-    assert.true(component.readOnlyToolbar, 'renders the toolbar');
-    assert.true(component.readOnlyCopyButton, 'renders the copy button');
-    assert.true(component.readOnlyDisplay, 'renders the code block');
+    await this.pauseTest();
+
+    assert.dom(SELECTORS.title).hasText('Test title', 'renders the provided title');
+    assert.dom(SELECTORS.toolbar).exists('renders the toolbar');
+    assert.dom(SELECTORS.copy).exists('renders the copy button');
+    assert.dom(SELECTORS.codeBlock).exists('renders the code block');
   });
 
   test('it should render example and restore it', async function (assert) {
