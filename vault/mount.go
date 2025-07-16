@@ -1789,7 +1789,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	}
 
 	pluginRunningVersion := pluginVersion
-	if pluginRunningVersion == "" && entry.RunningSha256 == "" {
+	if pluginRunningVersion == "" && runningSha == "" {
 		pluginRunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
 	}
 
