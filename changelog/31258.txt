@@ -1,3 +1,0 @@
-```release-note:bug
-auto-reporting (enterprise): Clarify debug logs to accurately reflect when automated license utilization reporting is enabled or disabled, especially since manual reporting is always initialized.
-```
