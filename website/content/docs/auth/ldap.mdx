@@ -150,6 +150,14 @@ For anonymous search, `discoverdn` must be set to `true`, and `deny_null_bind` m
   LDAP users log in using `sAMAccountName` or `userPrincipalName` when the
   `upndomain` parameter is set.
 
+### Certificates
+
+At startup, Vault can read LDAP certificates from the operating systems (OS)
+certificate trust store instead of reading CA certificates from the
+certificate parameter. After startup, you need to restart Vault to read in
+new certificates before the LDAP plugin can use the information to establish new
+LDAP connections to the configured server address.
+
 ### Group membership resolution
 
 Once a user has been authenticated, the LDAP auth method must know how to resolve which groups the user is a member of. The configuration for this can vary depending on your LDAP server and your directory schema. There are two main strategies when resolving group membership - the first is searching for the authenticated user object and following an attribute to groups it is a member of. The second is to search for group objects of which the authenticated user is a member of. Both methods are supported.
