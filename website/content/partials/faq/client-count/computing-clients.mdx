@@ -83,3 +83,27 @@ If you are using Vault 1.10+:
 
 If you are using an older version of Vault, migrating mounts will always create
 duplication in the client count.
+
+### Can I take parts of the full payload and add them up to get the "total clients"? ((#adding-clients))
+
+Probably not.
+
+If you are using Vault 1.18+, you should be able to sum all of the counts
+in a child namespace to get the counts shown in a parent namespace (for example
+adding all of the counts from everthing immediately under the root namespace
+should yield the top-level counts).
+
+If you are using versions of Vault prior to 1.18, **and** including estimated data
+from the current month, the [values](/vault/api-docs/system/internal-counters#client-count)
+returned by the API do not deduplicate clients from the current
+month against earlier months in the billing period. This results in Vault showing
+client counts that can be significantly higher than they will actually be at the end
+of the month.
+
+In all versions of Vault, you cannot add data from non-namespace mounts to 
+reliably get the total in that namespace. This is because an
+[identity alias](/vault/docs/concepts/client-count#standard-entity-assignments)
+may authenticate to two different authentication methods, using a single identity,
+but creating two aliases. Each alias will be included in the "counts" for the
+authentication mount, but the identity is counted as only a single client in
+the namespace.
