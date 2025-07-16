@@ -8,13 +8,11 @@ import { setupRenderingTest } from 'ember-qunit';
 import { create } from 'ember-cli-page-object';
 import { render, click, triggerKeyEvent, waitFor } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import page, { SELECTORS } from '../../pages/components/json-editor';
+import { SELECTORS } from '../../pages/components/json-editor';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { createLongJson } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 import codemirror, { getCodeEditorValue, setCodeEditorValue } from 'vault/tests/helpers/codemirror';
-
-const component = create(page);
 
 module('Integration | Component | json-editor', function (hooks) {
   setupRenderingTest(hooks);
@@ -52,8 +50,6 @@ module('Integration | Component | json-editor', function (hooks) {
         @showToolbar={{true}}
         @readOnly={{true}}
       />`);
-
-    await this.pauseTest();
 
     assert.dom(SELECTORS.title).hasText('Test title', 'renders the provided title');
     assert.dom(SELECTORS.toolbar).exists('renders the toolbar');
