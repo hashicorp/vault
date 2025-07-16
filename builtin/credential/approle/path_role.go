@@ -273,6 +273,10 @@ can only be set during role creation and once set, it can't be reset later.`,
 								Required:    true,
 								Description: "The maximum number of times a token may be used, a value of zero means unlimited",
 							},
+							"token_auth_metadata": {
+								Type:        framework.TypeKVPairs,
+								Description: "The metadata to be tied to generated tokens. This should be a JSON formatted string containing the metadata in key value pairs",
+							},
 							"period": {
 								Type:        framework.TypeInt64,
 								Required:    false,

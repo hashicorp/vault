@@ -631,11 +631,12 @@ func TestAwsEc2_RoleCrud(t *testing.T) {
 		"token_bound_cidrs":              []string{},
 		"token_no_default_policy":        false,
 		"token_num_uses":                 0,
+		"token_auth_metadata":            map[string]string{},
 		"token_type":                     "default",
 	}
 
 	if resp.Data["role_id"] == nil {
-		t.Fatal("role_id not found in repsonse")
+		t.Fatal("role_id not found in response")
 	}
 	expected["role_id"] = resp.Data["role_id"]
 	if diff := deep.Equal(expected, resp.Data); diff != nil {
