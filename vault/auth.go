@@ -1052,13 +1052,18 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 		return nil, err
 	}
 
+	pluginRunningVersion := pluginVersion
+	if pluginRunningVersion == "" && runningSha == "" {
+		pluginRunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
+	}
+
 	pluginObservationRecorder, err := c.observations.WithPlugin(entry.namespace, &logical.ObservationPluginInfo{
 		MountClass:           consts.PluginTypeCredential.String(),
 		MountAccessor:        entry.Accessor,
 		MountPath:            entry.Path,
 		Plugin:               entry.Type,
 		PluginVersion:        pluginVersion,
-		RunningPluginVersion: entry.RunningVersion,
+		RunningPluginVersion: pluginRunningVersion,
 		Version:              entry.Options["version"],
 		Local:                entry.Local,
 	})
@@ -1081,11 +1086,8 @@ func (c *Core) newCredentialBackend(ctx context.Context, entry *MountEntry, sysV
 		return nil, err
 	}
 	if backend != nil {
-		entry.RunningVersion = pluginVersion
+		entry.RunningVersion = pluginRunningVersion
 		entry.RunningSha256 = runningSha
-		if entry.RunningVersion == "" && entry.RunningSha256 == "" {
-			entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeCredential, entry.Type)
-		}
 	}
 
 	return backend, nil
