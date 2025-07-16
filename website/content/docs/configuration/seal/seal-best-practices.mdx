@@ -1,0 +1,118 @@
+---
+layout: docs
+page_title: Sealing best practices
+description: >-
+  Best practices for configuring seal and unseal behavior in Vault.
+---
+
+# Sealing best practices
+
+This documentation explains the concepts, options, and considerations for unsealing a production Vault cluster. It builds on the [Reference Architecture](/vault/tutorials/raft/raft-reference-architecture) and [Deployment Guide](/vault/tutorials/day-one-raft/raft-deployment-guide) for Vault to deliver a pattern for a common Vault use case.
+
+## Vault unseal
+
+Once Vault is installed and configured according to the [Deployment Guide](/vault/tutorials/day-one-raft/raft-deployment-guide), the Vault starts in a sealed state. 
+
+ Because Vault always starts in a sealed state, the first decision point is around your implementation strategy to handle unsealing. Unsealing is the process by which your Vault root key is used to decrypt the data encryption key that Vault uses to encrypt all data. For obvious security reasons, Vault neither keeps nor knows the root key and so this is the function of the unsealing process; to present the root key to Vault.
+
+Vault Community Edition supports Shamir and cloud auto-unseal methods for most major cloud providers. Vault Enterprise also offers an hardware security module (HSM) unseal.
+
+There are several considerations when deciding on an unseal strategy.
+
+<Tip>
+
+Refer to the [seal/unseal](/vault/docs/concepts/seal) documentation to learn more about the concepts and reasoning behind Vault sealing.
+
+</Tip>
+
+
+## Operator overhead
+
+The default method for unseal uses [Shamir's Secret Sharing algorithm](https://en.wikipedia.org/wiki/Shamir%27s_Secret_Sharing) to split the key into shards so that there is never a single root key. This method relies on multiple operators (each with their own key) to be available to unseal Vault, so it may not be ideal in an Enterprise solution.
+
+If this method is employed, the recommendation is to put additional operational processes in place, such as:
+
+- Quarterly unseal drills to make sure all operators can respond.
+- Key shards should be stored in secure locations and further encrypted using personal encryption. Vault provides for this in the [init](/vault/docs/commands/operator/init) command with flags to PGP encrypt the unseal keys and root token.
+- Key holder key access is tied to enterprise user lifecycle management to ensure the process is responsive to staffing changes.
+
+## Cloud provider
+
+If your Vault implementation is in a public cloud or has access to one, you may have access to a secure Key Management Service (KMS), and Vault can take advantage of this to store the root key and retrieve it from there. This option is easy to use but relies on access to a public cloud.
+
+Considerations for using this method include:
+
+- **Security policy:** Does your security policy allow for secrets to be stored on a public cloud?
+- **Business continuity:** Some enterprises may have policies around vendor reliance for business continuity reasons.
+- You need to put additional security in place for the cloud provider access keys required to read the key store.
+
+## Access to an HSM
+
+If you have access to an HSM, Vault provides a way to store and retrieve the root key using the `pkcs11` configuration block in the `seal` stanza. This method offers considerable security as all parts of the secrets management infrastructure are within business control, but there are other considerations:
+
+- Security policies must manage access to and security of the HSM.
+- You need to put additional security in place for the HSM PIN that Vault needs to access the HSM.
+
+## Cloud provider auto-unseal
+
+Major cloud providers offer a cryptographic key management system, which Vault can use to provide the root key for the unseal operation.
+
+- [AWS KMS](/vault/docs/configuration/seal/awskms)
+- [Azure Key Vault](/vault/docs/configuration/seal/azurekeyvault)
+- [GCP Cloud KMS](/vault/docs/configuration/seal/gcpckms)
+- [AliCloud KMS](/vault/docs/configuration/seal/alicloudkms)
+- [OCI KMS](/vault/docs/configuration/seal/ocikms)
+
+For all of these cloud-provider methods of auto-unseal, the high-level principles are the same. Rather than having a root key protected by splitting it into shards and then distributing them securely, the root key is generated and stored in the cloud-provider key management platform offering. Vault is configured to retrieve this key on startup and unseal automatically.
+
+Using a cloud provider to auto-unseal has security implications around the trust of the provider.
+
+### Use AWS KMS for auto-unseal
+
+When using AWS, the AWS Key Management Service can store and provide the root key to the startup's Vault cluster. There are two steps:
+
+1. Generate an AWS KMS key
+2. Configure Vault to be able to read and un-encrypt this key
+
+For the first step, you can generate an AWS KMS key in whatever way you usually provision your AWS infrastructure and services. The result is a key that has a key ID. Best practice would only allow minimal access to administer this key and only allow Vault to access it. You should also enable CloudTrail audit logs for the KMS key and validate that nothing else tries to access this key. With AWS KMS you can generate the key with your own key material or allow AWS to provide this (the default method).
+
+The second step is to add the key ID and the AWS region of the key into the Vault configuration file inside the `seal` stanza. Vault will look for keys in `us-east-1` by default, but it is good practice to add the region key/value even if the key is in this region.
+
+As access to your KMS keys is limited by default, you will need to allow Vault to access it, and you can do this with Instance Profiles on the EC2 instances that run Vault. Best practice is to run Vault on its own instances and not co-host other services. The Instance Profile will need a role with a policy to `kms:Encrypt`, `kms:Decrypt` and `kms:DescribeKey`. Tie this policy to the single encryption key `arn` in the Policy JSON's Resources section.
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": ["kms:Encrypt", "kms:Decrypt", "kms:DescribeKey"],
+      "Resource": ["${kms_arn}"]
+    }
+  ]
+}
+```
+
+## Use HSM to unseal Vault
+
+It is also possible to unseal Vault using either a hardware HSM or a cloud KMS. The unseal method is similar to using a KMS, which is documented in the [HSM section](/vault/docs/configuration/seal/pkcs11) of the unseal docs. You can see a useful walkthrough video of this process by [SafenetAT](https://www.youtube.com/watch?v=3LyWfN9fWFE). You can also watch this [HashiCorp training video](https://www.hashicorp.com/resources/hashicorp-and-aws-integrating-cloudhsm-with-vault-e) on using AWS HSM.
+AWS also provides a high-level guide on [Securing and Managing secrets with HashiCorp Vault](https://aws.amazon.com/blogs/apn/securing-and-managing-secrets-with-hashicorp-vault-enterprise/) with its offering of both CloudHSM and KMS.
+
+## Recovery keys
+
+When Vault is initialized while using HSM or cloud-provided external keys for sealing, it returns several recovery keys. These are still required for highly privileged actions, such as generating new root keys. A section in the HSM docs addresses [recovery keys](/vault/docs/enterprise/hsm/behavior#recovery-key).
+
+## Changing seal method
+
+You can change the seal method using [seal migration](/vault/docs/concepts/seal#seal-migration).
+
+
+## Reference material
+
+- [Reference Architecture](/vault/tutorials/raft/raft-reference-architecture) covers the recommended production Vault cluster architecture
+- [Deployment Guide](/vault/tutorials/day-one-raft/raft-deployment-guide) covers how to install and configure Vault for production use
+- Recommended Pattern - Vault Centralized Secrets Management
+- [K/V Secrets Engine](/vault/docs/secrets/kv) is used to store static secrets within the configured physical storage for Vault
+- [Auth Methods](/vault/docs/auth) are used to authenticate users and machines with Vault
+- [Auto unseal tutorials](/vault/tutorials/auto-unseal)
+- [Consul Template](https://github.com/hashicorp/consul-template) is used to access static secrets stored in Vault and provide them to the applications and services that require them.

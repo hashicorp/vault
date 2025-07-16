@@ -8,6 +8,7 @@ import { setupRenderingTest } from 'vault/tests/helpers';
 import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | confirm-modal', function (hooks) {
   setupRenderingTest(hooks);
@@ -23,9 +24,7 @@ module('Integration | Component | confirm-modal', function (hooks) {
     assert
       .dom('[data-test-confirm-modal]')
       .hasClass('hds-modal--color-warning', 'renders warning modal color');
-    assert
-      .dom('[data-test-confirm-button]')
-      .hasClass('hds-button--color-primary', 'renders primary confirm button');
+    assert.dom(GENERAL.confirmButton).hasClass('hds-button--color-primary', 'renders primary confirm button');
     assert.dom('[data-test-confirm-action-title]').hasText('Are you sure?', 'renders default title');
     assert
       .dom('[data-test-confirm-action-message]')
@@ -50,15 +49,13 @@ module('Integration | Component | confirm-modal', function (hooks) {
 
     assert.dom('[data-test-confirm-action-message]').hasText('Nope', 'renders disabled message');
 
-    assert
-      .dom('[data-test-confirm-button]')
-      .doesNotExist('confirm button is not rendered when action is disabled');
+    assert.dom(GENERAL.confirmButton).doesNotExist('confirm button is not rendered when action is disabled');
   });
 
   test('it calls onConfirm when the modal is confirmed', async function (assert) {
     await render(hbs`<ConfirmModal @onConfirm={{this.onConfirm}} @onClose={{this.onClose}} />`);
 
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
     assert.true(this.onConfirm.called);
   });
 });

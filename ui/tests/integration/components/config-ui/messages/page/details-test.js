@@ -10,6 +10,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { dateFormat } from 'core/helpers/date-format';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const allFields = [
   { label: 'Active', key: 'active' },
@@ -29,7 +30,6 @@ module('Integration | Component | messages/page/details', function (hooks) {
 
   hooks.beforeEach(function () {
     this.context = { owner: this.engine };
-    this.store = this.owner.lookup('service:store');
 
     this.server.post('/sys/capabilities-self', () => ({
       data: {
@@ -37,8 +37,7 @@ module('Integration | Component | messages/page/details', function (hooks) {
       },
     }));
 
-    this.store.pushPayload('config-ui/message', {
-      modelName: 'config-ui/message',
+    this.message = {
       id: '01234567-89ab-cdef-0123-456789abcdef',
       active: true,
       type: 'banner',
@@ -46,47 +45,46 @@ module('Integration | Component | messages/page/details', function (hooks) {
       title: 'Message title 1',
       message: 'Some long long long message',
       link: { here: 'www.example.com' },
-      start_time: '2021-08-01T00:00:00Z',
-      end_time: '',
-      canDeleteCustomMessages: true,
+      startTime: new Date('2021-08-01T00:00:00Z'),
+      endTime: undefined,
       canEditCustomMessages: true,
-    });
+    };
+    this.capabilities = { canDelete: true, canUpdate: true };
   });
 
   test('it should show the message details', async function (assert) {
-    this.message = await this.store.peekRecord('config-ui/message', '01234567-89ab-cdef-0123-456789abcdef');
-
-    await render(hbs`<Messages::Page::Details @message={{this.message}} />`, {
-      owner: this.engine,
-    });
-    assert.dom('[data-test-page-title]').hasText('Message title 1');
+    await render(
+      hbs`<Messages::Page::Details @message={{this.message}} @capabilities={{this.capabilities}} />`,
+      this.context
+    );
+    assert.dom(GENERAL.title).hasText('Message title 1');
     assert
       .dom('[data-test-component="info-table-row"]')
       .exists({ count: allFields.length }, 'Correct number of filtered fields render');
 
     allFields.forEach((field) => {
-      assert
-        .dom(`[data-test-row-label="${field.label}"]`)
-        .hasText(field.label, `${field.label} label renders`);
+      assert.dom(GENERAL.infoRowLabel(field.label)).hasText(field.label, `${field.label} label renders`);
       if (field.key === 'startTime' || field.key === 'endTime') {
         const formattedDate = dateFormat([this.message[field.key], 'MMM d, yyyy hh:mm aaa'], {
           withTimeZone: true,
         });
         assert
-          .dom(`[data-test-row-value="${field.label}"]`)
+          .dom(GENERAL.infoRowValue(field.label))
           .hasText(formattedDate || 'Never', `${field.label} value renders`);
       } else if (field.key === 'authenticated' || field.key === 'active') {
         assert
-          .dom(`[data-test-value-div="${field.label}"]`)
+          .dom(GENERAL.infoRowValue(field.label))
           .hasText(this.message[field.key] ? 'Yes' : 'No', `${field.label} value renders`);
       } else if (field.key === 'link') {
-        assert.dom('[data-test-value-div="Link"]').exists();
-        assert.dom('[data-test-value-div="Link"] [data-test-link="message link"]').hasText('here');
+        assert.dom(GENERAL.infoRowValue('Link')).hasText('here');
       } else {
         assert
-          .dom(`[data-test-row-value="${field.label}"]`)
+          .dom(GENERAL.infoRowValue(field.label))
           .hasText(this.message[field.key], `${field.label} value renders`);
       }
     });
+
+    assert.dom(GENERAL.confirmTrigger).exists('delete button exists');
+    assert.dom(GENERAL.linkTo('edit')).exists();
   });
 });

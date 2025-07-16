@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/pki: Fix a bug that prevents enabling automatic tidying of the CMPv2 nonce store.
+```

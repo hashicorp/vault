@@ -11,7 +11,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import sinon from 'sinon';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { FORM } from 'vault/tests/helpers/kv/kv-selectors';
-import { NON_STRING_WARNING, WHITESPACE_WARNING } from 'vault/utils/model-helpers/validators';
+import { NON_STRING_WARNING, WHITESPACE_WARNING } from 'vault/utils/forms/validators';
 
 module('Integration | Component | kv | kv-patch/editor/form', function (hooks) {
   setupRenderingTest(hooks);
@@ -96,14 +96,14 @@ module('Integration | Component | kv | kv-patch/editor/form', function (hooks) {
     await this.renderComponent();
 
     assert.dom(GENERAL.toggleInput('Reveal subkeys')).isNotChecked('toggle is initially unchecked');
-    assert.dom('[data-test-subkeys]').doesNotExist();
+    assert.dom(GENERAL.codeBlock('subkeys')).doesNotExist();
     await click(GENERAL.toggleInput('Reveal subkeys'));
     assert.dom(GENERAL.toggleInput('Reveal subkeys')).isChecked();
-    assert.dom('[data-test-subkeys]').hasText(JSON.stringify(this.subkeys, null, 2));
+    assert.dom(GENERAL.codeBlock('subkeys')).hasText(JSON.stringify(this.subkeys, null, 2));
 
     await click(GENERAL.toggleInput('Reveal subkeys'));
     assert.dom(GENERAL.toggleInput('Reveal subkeys')).isNotChecked();
-    assert.dom('[data-test-subkeys]').doesNotExist('unchecking re-hides subkeys');
+    assert.dom(GENERAL.codeBlock('subkeys')).doesNotExist('unchecking re-hides subkeys');
   });
 
   test('it enables and disables inputs', async function (assert) {

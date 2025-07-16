@@ -8,7 +8,7 @@ import ListRoute from 'core/mixins/list-route';
 import { service } from '@ember/service';
 
 export default Route.extend(ListRoute, {
-  store: service(),
+  pagination: service(),
   secretMountPath: service(),
   pathHelp: service(),
   scope() {
@@ -18,7 +18,7 @@ export default Route.extend(ListRoute, {
     return this.pathHelp.hydrateModel('kmip/role', this.secretMountPath.currentPath);
   },
   model(params) {
-    return this.store
+    return this.pagination
       .lazyPaginatedQuery('kmip/role', {
         backend: this.secretMountPath.currentPath,
         scope: this.scope(),

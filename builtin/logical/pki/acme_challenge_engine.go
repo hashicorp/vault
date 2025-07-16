@@ -7,6 +7,7 @@ import (
 	"container/list"
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -435,7 +436,9 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string, 
 			return ace._verifyChallengeCleanup(sc, err, id)
 		}
 
-		valid, err = ValidateHTTP01Challenge(authz.Identifier.Value, cv.Token, cv.Thumbprint, config)
+		domain := encodeIdentifierForHTTP01Challenge(authz.Identifier)
+
+		valid, err = ValidateHTTP01Challenge(domain, cv.Token, cv.Thumbprint, config)
 		if err != nil {
 			err = fmt.Errorf("%w: error validating http-01 challenge %v: %v; %v", ErrIncorrectResponse, id, err, ChallengeAttemptFailedMsg)
 			return ace._verifyChallengeRetry(sc, cv, authzPath, authz, challenge, err, id)
@@ -488,10 +491,31 @@ func (ace *ACMEChallengeEngine) _verifyChallenge(sc *storageContext, id string, 
 
 	if err := saveAuthorizationAtPath(sc, authzPath, authz); err != nil {
 		err = fmt.Errorf("error saving updated (validated) authorization %v/%v for challenge %v: %w", cv.Account, cv.Authorization, id, err)
-		return ace._verifyChallengeRetry(sc, cv, authzPath, authz, challenge, err, id)
+		return ace._verifyChallengeRetry(sc, cv, authzPath, authz, challenge, fmt.Errorf("%w: %s", ErrServerInternal, err.Error()), id)
 	}
 
 	return ace._verifyChallengeCleanup(sc, nil, id)
+}
+
+func encodeIdentifierForHTTP01Challenge(identifier *ACMEIdentifier) string {
+	if !(identifier.Type == ACMEIPIdentifier && identifier.IsV6IP) {
+		return identifier.Value
+	}
+
+	// If our IPv6 identifier has a zone we need to encode the % to %25 otherwise
+	// the http.Client won't properly use it. RFC6874 specifies how the zone
+	// identifier in the URI should be handled. In section 2:
+	//
+	//    According to URI syntax [RFC3986], "%" is always treated as
+	//    an escape character in a URI, so, according to the established URI
+	//    syntax [RFC3986] any occurrences of literal "%" symbols in a URI MUST
+	//    be percent-encoded and represented in the form "%25". Thus, the
+	//    scoped address fe80::a%en1 would appear in a URI as
+	//    http://[fe80::a%25en1].
+	escapedIPv6 := strings.Replace(identifier.Value, "%", "%25", 1)
+
+	// IPv6 addresses need to be surrounded by [] within URLs
+	return fmt.Sprintf("[%s]", escapedIPv6)
 }
 
 func (ace *ACMEChallengeEngine) _verifyChallengeRetry(sc *storageContext, cv *ChallengeValidation, authzPath string, auth *ACMEAuthorization, challenge *ACMEChallenge, verificationErr error, id string) (bool, time.Time, error) {

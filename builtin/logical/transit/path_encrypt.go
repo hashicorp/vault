@@ -34,6 +34,9 @@ type BatchRequestItem struct {
 	// Ciphertext for decryption
 	Ciphertext string `json:"ciphertext" structs:"ciphertext" mapstructure:"ciphertext"`
 
+	// PaddingScheme for encryption/decryption
+	PaddingScheme string `json:"padding_scheme" structs:"padding_scheme" mapstructure:"padding_scheme"`
+
 	// Nonce to be used when v1 convergent encryption is used
 	Nonce string `json:"nonce" structs:"nonce" mapstructure:"nonce"`
 
@@ -103,6 +106,12 @@ func (b *backend) pathEncrypt() *framework.Path {
 			"plaintext": {
 				Type:        framework.TypeString,
 				Description: "Base64 encoded plaintext value to be encrypted",
+			},
+
+			"padding_scheme": {
+				Type: framework.TypeString,
+				Description: `The padding scheme to use for decrypt. Currently only applies to RSA key types.
+Options are 'oaep' or 'pkcs1v15'. Defaults to 'oaep'`,
 			},
 
 			"context": {
@@ -259,6 +268,13 @@ func decodeBatchRequestItems(src interface{}, requirePlaintext bool, requireCiph
 		} else if requirePlaintext {
 			errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].plaintext' missing plaintext to encrypt", i))
 		}
+		if v, has := item["padding_scheme"]; has {
+			if casted, ok := v.(string); ok {
+				(*dst)[i].PaddingScheme = casted
+			} else {
+				errs.Errors = append(errs.Errors, fmt.Sprintf("'[%d].padding_scheme' expected type 'string', got unconvertible type '%T'", i, item["padding_scheme"]))
+			}
+		}
 
 		if v, has := item["nonce"]; has {
 			if !reflect.ValueOf(v).IsValid() {
@@ -358,6 +374,13 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			KeyVersion:     d.Get("key_version").(int),
 			AssociatedData: d.Get("associated_data").(string),
 		}
+		if psRaw, ok := d.GetOk("padding_scheme"); ok {
+			if ps, ok := psRaw.(string); ok {
+				batchInputItems[0].PaddingScheme = ps
+			} else {
+				return logical.ErrorResponse("padding_scheme was not a string"), logical.ErrInvalidRequest
+			}
+		}
 	}
 
 	batchResponseItems := make([]EncryptBatchResponseItem, len(batchInputItems))
@@ -435,6 +458,12 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			polReq.KeyType = keysutil.KeyType_AES256_GCM96
 		case "chacha20-poly1305":
 			polReq.KeyType = keysutil.KeyType_ChaCha20_Poly1305
+		case "rsa-2048":
+			polReq.KeyType = keysutil.KeyType_RSA2048
+		case "rsa-3072":
+			polReq.KeyType = keysutil.KeyType_RSA3072
+		case "rsa-4096":
+			polReq.KeyType = keysutil.KeyType_RSA4096
 		case "ecdsa-p256", "ecdsa-p384", "ecdsa-p521":
 			return logical.ErrorResponse(fmt.Sprintf("key type %v not supported for this operation", keyType)), logical.ErrInvalidRequest
 		case "managed_key":
@@ -482,33 +511,40 @@ func (b *backend) pathEncryptWrite(ctx context.Context, req *logical.Request, d 
 			warnAboutNonceUsage = true
 		}
 
-		var factory interface{}
+		var factories []any
+		if item.PaddingScheme != "" {
+			paddingScheme, err := parsePaddingSchemeArg(p.Type, item.PaddingScheme)
+			if err != nil {
+				batchResponseItems[i].Error = fmt.Sprintf("'[%d].padding_scheme' invalid: %s", i, err.Error())
+				continue
+			}
+			factories = append(factories, paddingScheme)
+		}
 		if item.AssociatedData != "" {
 			if !p.Type.AssociatedDataSupported() {
 				batchResponseItems[i].Error = fmt.Sprintf("'[%d].associated_data' provided for non-AEAD cipher suite %v", i, p.Type.String())
 				continue
 			}
 
-			factory = AssocDataFactory{item.AssociatedData}
+			factories = append(factories, AssocDataFactory{item.AssociatedData})
 		}
 
-		var managedKeyFactory ManagedKeyFactory
 		if p.Type == keysutil.KeyType_MANAGED_KEY {
 			managedKeySystemView, ok := b.System().(logical.ManagedKeySystemView)
 			if !ok {
 				batchResponseItems[i].Error = errors.New("unsupported system view").Error()
 			}
 
-			managedKeyFactory = ManagedKeyFactory{
+			factories = append(factories, ManagedKeyFactory{
 				managedKeyParams: keysutil.ManagedKeyParameters{
 					ManagedKeySystemView: managedKeySystemView,
 					BackendUUID:          b.backendUUID,
 					Context:              ctx,
 				},
-			}
+			})
 		}
 
-		ciphertext, err := p.EncryptWithFactory(item.KeyVersion, item.DecodedContext, item.DecodedNonce, item.Plaintext, factory, managedKeyFactory)
+		ciphertext, err := p.EncryptWithFactory(item.KeyVersion, item.DecodedContext, item.DecodedNonce, item.Plaintext, factories...)
 		if err != nil {
 			switch err.(type) {
 			case errutil.InternalError:

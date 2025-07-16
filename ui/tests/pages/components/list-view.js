@@ -19,10 +19,4 @@ export default {
   menuItems: collection('.ember-basic-dropdown-content li', {
     testContainer: '#ember-testing',
   }),
-  delete: clickable('[data-test-confirm-action-trigger]', {
-    testContainer: '#ember-testing',
-  }),
-  confirmDelete: clickable('[data-test-confirm-button]', {
-    testContainer: '#ember-testing',
-  }),
 };

@@ -1,0 +1,196 @@
+---
+layout: docs
+page_title: Link Active Directory SAML groups to Vault
+description: >-
+  Connect Vault policies to Active Directory groups with Active Directory
+  Federation Services (AD FS) as a SAML provider.
+---
+
+# Link Active Directory SAML groups to Vault
+
+@include 'alerts/enterprise-and-hcp.mdx'
+
+Configure your Vault instance to link your Active Directory groups to Vault
+policies with SAML.
+
+
+
+## Before you start
+
+- **You must have Vault Enterprise or HCP Vault v1.15.5+**.
+- **You must be running AD FS on Windows Server**.
+- **You must have a [SAML plugin configured for AD FS](/vault/docs/auth/saml/adfs)**.
+- **You must have a Vault admin token**. If you do not have a valid admin
+   token, you can generate a new token in the Vault GUI or using
+   [`vault token create`](/vault/docs/commands/token/create) with the Vault CLI.
+
+
+
+## Step 1: Enable a `kv` plugin instance for AD clients
+
+<Tabs>
+
+<Tab heading="Vault CLI" group="cli">
+
+Enable an instance of the KV secret engine for AD FS under a custom path:
+
+```shell-session
+$ vault secrets enable -path=<ADFS_KV_PLUGIN_PATH> kv-v2
+```
+
+For example:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault secrets enable -path=adfs-kv kv-v2
+```
+
+</CodeBlockConfig>
+
+</Tab>
+
+<Tab heading="Vault GUI" group="gui">
+
+@include 'gui-instructions/enable-secrets-plugin.mdx'
+
+- Enable the KV plugin:
+
+    1. Select the **KV** token.
+    1. Set a mount path that reflects the plugin purpose. For example: `dfs-kv`.
+    1. Click **Enable engine**.
+
+</Tab>
+
+</Tabs>
+
+
+## Step 2: Create a read-only policy for the `kv` plugin
+
+<Tabs>
+
+<Tab heading="Vault CLI" group="cli">
+
+Use `vault write` to create a read-only policy for AD FS clients that use the
+new KV plugin:
+
+```shell-session
+$ vault policy write <RO_ADFS_POLICY_NAME> - << EOF
+# Read and list policy for the AD FS KV mount
+path "<ADFS_KV_PLUGIN_PATH>/*" {
+  capabilities = ["read", "list"]
+}
+EOF
+```
+
+For example:
+
+<CodeBlockConfig hideClipboard>
+
+```shell-session
+$ vault policy write ro-saml-adfs - << EOF
+# Read and list policy for the AD FS KV mount
+path "adfs-kv/*" {
+  capabilities = ["read", "list"]
+}
+EOF
+```
+
+</CodeBlockConfig>
+
+</Tab>
+
+<Tab heading="Vault GUI" group="gui">
+
+@include 'gui-instructions/create-acl-policy.mdx'
+
+- Set the policy details and click **Create policy**:
+
+    - **Name**: "ro-saml-adfs"
+    - **Policy**:
+    ```hcl
+    # Read and list policy for the AD FS KV mount
+    path "<ADFS_KV_PLUGIN_PATH>/*" {
+      capabilities = ["read", "list"]
+    }
+    ```
+
+</Tab>
+
+</Tabs>
+
+
+
+## Step 3: Create and link a Vault group to AD
+
+<Tabs>
+
+<Tab heading="Vault CLI" group="cli">
+
+1. Create an external group in Vault and save the group ID to a file named
+   `group_id.txt`:
+
+   ```shell-session
+   $ vault write                            \
+     -format=json                           \
+     identity/group name="SamlVaultReader"  \
+     policies="ro-adfs-test"                \
+     type="external" | jq -r ".data.id" > group_id.txt
+   ```
+
+1. Retrieve the mount accessor for the AD FS authentication method and save it
+   to a file named `accessor_adfs.txt`:
+
+   ```shell-session
+   $ vault auth list -format=json |               \
+     jq -r '.["<SAML_PLUGIN_PATH>/"].accessor' >  \
+     accessor_adfs.txt
+   ```
+
+1. Create a group alias:
+
+   ```shell-session
+   $ vault write identity/group-alias         \
+     name="<YOUR_EXISTING_AD_GROUP>"          \
+     mount_accessor=$(cat accessor_adfs.txt)  \
+     canonical_id="$(cat group_id.txt)"
+   ```
+
+
+</Tab>
+
+<Tab heading="Vault GUI" group="gui">
+
+@include 'gui-instructions/create-group.mdx'
+
+- Follow the prompts to create an external group with the following
+  information:
+     - Name: your new Vault group name
+     - Type: `external`
+     - Policies: the read-only AD FS policy you created. For example,
+       `ro-adfs-test`.
+
+- Click **Add alias** and follow the prompts to map the Vault group name to an
+  existing group in Active Directory:
+   - Name: the name of an existing AD group (**must match exactly**).
+   - Auth Backend: `<SAML_PLUGIN_PATH>/ (saml)`
+
+</Tab>
+
+</Tabs>
+
+
+## Step 4: Verify the link to Active Directory
+
+1. Use the Vault CLI to login as an Active Directory user who is a member of
+   the linked Active Directory group:
+
+   ```shell-session
+   $ vault login -method saml -path <SAML_PLUGIN_PATH>
+   ```
+
+1. Read your test value from the KV plugin:
+
+   ```shell-session
+   $ vault kv get adfs-kv/test
+   ```

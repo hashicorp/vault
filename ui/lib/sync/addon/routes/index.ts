@@ -9,7 +9,7 @@ import { service } from '@ember/service';
 import type RouterService from '@ember/routing/router-service';
 
 export default class SyncIndexRoute extends Route {
-  @service declare readonly router: RouterService;
+  @service('app-router') declare readonly router: RouterService;
 
   redirect() {
     this.router.transitionTo('vault.cluster.sync.secrets.overview');

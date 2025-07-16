@@ -96,7 +96,20 @@ func (b *backend) User(ctx context.Context, s logical.Storage, n string) (*UserE
 }
 
 func (b *backend) pathUserDelete(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	err := req.Storage.Delete(ctx, "user/"+d.Get("name").(string))
+	username := d.Get("name").(string)
+
+	cfg, err := b.Config(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return logical.ErrorResponse("ldap backend not configured"), nil
+	}
+	if !*cfg.CaseSensitiveNames {
+		username = strings.ToLower(username)
+	}
+
+	err = req.Storage.Delete(ctx, "user/"+username)
 	if err != nil {
 		return nil, err
 	}

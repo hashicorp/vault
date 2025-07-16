@@ -25,11 +25,14 @@ const DEFAULTS = {
 };
 const waiter = buildWaiter('replication-actions');
 
+/**
+ * @type Class
+ */
 export default Controller.extend(structuredClone(DEFAULTS), {
   isModalActive: false,
   isTokenCopied: false,
   expirationDate: null,
-  router: service(),
+  router: service('app-router'),
   store: service(),
   rm: service('replication-mode'),
   replicationMode: alias('rm.mode'),

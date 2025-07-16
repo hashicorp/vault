@@ -25,6 +25,7 @@ import (
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/awsutil"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/physical"
 )
@@ -40,7 +41,7 @@ type S3Backend struct {
 	kmsKeyId   string
 	client     *s3.S3
 	logger     log.Logger
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 }
 
 // NewS3Backend constructs a S3 backend using a pre-existing
@@ -157,7 +158,7 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 		path:       path,
 		kmsKeyId:   kmsKeyId,
 		logger:     logger,
-		permitPool: physical.NewPermitPool(maxParInt),
+		permitPool: permitpool.New(maxParInt),
 	}
 	return s, nil
 }
@@ -166,7 +167,9 @@ func NewS3Backend(conf map[string]string, logger log.Logger) (physical.Backend, 
 func (s *S3Backend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"s3", "put"}, time.Now())
 
-	s.permitPool.Acquire()
+	if err := s.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer s.permitPool.Release()
 
 	// Setup key
@@ -195,7 +198,9 @@ func (s *S3Backend) Put(ctx context.Context, entry *physical.Entry) error {
 func (s *S3Backend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"s3", "get"}, time.Now())
 
-	s.permitPool.Acquire()
+	if err := s.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer s.permitPool.Release()
 
 	// Setup key
@@ -248,7 +253,9 @@ func (s *S3Backend) Get(ctx context.Context, key string) (*physical.Entry, error
 func (s *S3Backend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"s3", "delete"}, time.Now())
 
-	s.permitPool.Acquire()
+	if err := s.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer s.permitPool.Release()
 
 	// Setup key
@@ -270,7 +277,9 @@ func (s *S3Backend) Delete(ctx context.Context, key string) error {
 func (s *S3Backend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"s3", "list"}, time.Now())
 
-	s.permitPool.Acquire()
+	if err := s.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer s.permitPool.Release()
 
 	// Setup prefix

@@ -18,10 +18,9 @@ import (
 // NewSealUnwrapper creates a new seal unwrapper
 func NewSealUnwrapper(underlying physical.Backend, logger log.Logger) physical.Backend {
 	ret := &sealUnwrapper{
-		underlying:   underlying,
-		logger:       logger,
-		locks:        locksutil.CreateLocks(),
-		allowUnwraps: new(uint32),
+		underlying: underlying,
+		logger:     logger,
+		locks:      locksutil.CreateLocks(),
 	}
 
 	if underTxn, ok := underlying.(physical.Transactional); ok {
@@ -43,7 +42,7 @@ type sealUnwrapper struct {
 	underlying   physical.Backend
 	logger       log.Logger
 	locks        []*locksutil.LockEntry
-	allowUnwraps *uint32
+	allowUnwraps atomic.Bool
 }
 
 // transactionalSealUnwrapper is a seal unwrapper that wraps a physical that is transactional
@@ -63,63 +62,70 @@ func (d *sealUnwrapper) Put(ctx context.Context, entry *physical.Entry) error {
 	return d.underlying.Put(ctx, entry)
 }
 
-// unwrap gets an entry from underlying storage and tries to unwrap it. If the entry was not wrapped, return
-// value unwrappedEntry will be nil. If the entry is wrapped and encrypted, an error is returned.
-func (d *sealUnwrapper) unwrap(ctx context.Context, key string) (entry, unwrappedEntry *physical.Entry, err error) {
-	entry, err = d.underlying.Get(ctx, key)
+// unwrap gets an entry from underlying storage and tries to unwrap it.
+// - If the entry is not wrapped: the entry will be returned unchanged and wasWrapped will be false
+// - If the entry is wrapped and encrypted: an error is returned.
+// - If the entry is wrapped but not encrypted: the entry will be unwrapped and returned. wasWrapped will be true.
+func (d *sealUnwrapper) unwrap(ctx context.Context, key string) (unwrappedEntry *physical.Entry, wasWrapped bool, err error) {
+	entry, err := d.underlying.Get(ctx, key)
 	if err != nil {
-		return nil, nil, err
+		return nil, false, err
 	}
 	if entry == nil {
-		return nil, nil, err
+		return nil, false, nil
 	}
 
 	wrappedEntryValue, unmarshaled := UnmarshalSealWrappedValueWithCanary(entry.Value)
 	switch {
 	case !unmarshaled:
-		unwrappedEntry = entry
+		// Entry is not wrapped
+		return entry, false, nil
 	case wrappedEntryValue.isEncrypted():
-		return nil, nil, fmt.Errorf("cannot decode sealwrapped storage entry %q", entry.Key)
+		// Entry is wrapped and encrypted
+		return nil, true, fmt.Errorf("cannot decode sealwrapped storage entry %q", entry.Key)
 	default:
+		// Entry is wrapped and not encrypted
 		pt, err := wrappedEntryValue.getPlaintextValue()
 		if err != nil {
-			return nil, nil, err
+			return nil, true, err
 		}
-		unwrappedEntry = &physical.Entry{
+		return &physical.Entry{
 			Key:   entry.Key,
 			Value: pt,
-		}
+		}, true, nil
 	}
-
-	return entry, unwrappedEntry, nil
 }
 
 func (d *sealUnwrapper) Get(ctx context.Context, key string) (*physical.Entry, error) {
-	entry, unwrappedEntry, err := d.unwrap(ctx, key)
+	entry, wasWrapped, err := d.unwrap(ctx, key)
 	switch {
-	case err != nil:
+	case err != nil: // Failed to get entry
 		return nil, err
-	case entry == nil:
+	case entry == nil: // Entry doesn't exist
 		return nil, nil
-	case atomic.LoadUint32(d.allowUnwraps) != 1:
-		return unwrappedEntry, nil
+	case !wasWrapped || !d.allowUnwraps.Load(): // Entry was not wrapped or unwrapping not allowed
+		return entry, nil
 	}
 
+	// Entry was wrapped, we need to replace it with the unwrapped value
+
+	// Grab locks because we are performing a write
 	locksutil.LockForKey(d.locks, key).Lock()
 	defer locksutil.LockForKey(d.locks, key).Unlock()
 
-	// At this point we need to re-read and re-check
-	entry, unwrappedEntry, err = d.unwrap(ctx, key)
+	// Read entry again in case it was changed while we were waiting for the lock
+	entry, wasWrapped, err = d.unwrap(ctx, key)
 	switch {
-	case err != nil:
+	case err != nil: // Failed to get entry
 		return nil, err
-	case entry == nil:
+	case entry == nil: // Entry doesn't exist
 		return nil, nil
-	case atomic.LoadUint32(d.allowUnwraps) != 1:
-		return unwrappedEntry, nil
+	case !wasWrapped || !d.allowUnwraps.Load(): // Entry was not wrapped or unwrapping not allowed
+		return entry, nil
 	}
 
-	return unwrappedEntry, d.underlying.Put(ctx, unwrappedEntry)
+	// Write out the unwrapped value
+	return entry, d.underlying.Put(ctx, entry)
 }
 
 func (d *sealUnwrapper) Delete(ctx context.Context, key string) error {
@@ -155,12 +161,12 @@ func (d *transactionalSealUnwrapper) Transaction(ctx context.Context, txns []*ph
 // This should only run during preSeal which ensures that it can't be run
 // concurrently and that it will be run only by the active node
 func (d *sealUnwrapper) stopUnwraps() {
-	atomic.StoreUint32(d.allowUnwraps, 0)
+	d.allowUnwraps.Store(false)
 }
 
 func (d *sealUnwrapper) runUnwraps() {
 	// Allow key unwraps on key gets. This gets set only when running on the
 	// active node to prevent standbys from changing data underneath the
 	// primary
-	atomic.StoreUint32(d.allowUnwraps, 1)
+	d.allowUnwraps.Store(true)
 }

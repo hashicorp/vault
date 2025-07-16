@@ -1,11 +1,14 @@
+@use '../utils/mixins';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
  */
 
 .page-header {
-  padding-bottom: $spacing-4;
-  padding-top: $spacing-20;
+  padding-bottom: size_variables.$spacing-4;
+  padding-top: size_variables.$spacing-20;
 
   .level {
     align-items: flex-end;
@@ -15,18 +18,18 @@
     flex-grow: 1;
     flex-shrink: 1;
 
-    @include until($mobile) {
+    @include mixins.until(size_variables.$mobile) {
       margin-top: 0.5rem;
     }
   }
   .level-right {
-    @include from($mobile) {
+    @include mixins.from(size_variables.$mobile) {
       justify-content: flex-end;
     }
   }
 
   .title {
-    margin-top: $spacing-16;
+    margin-top: size_variables.$spacing-16;
   }
 
   .title-with-icon {
@@ -34,7 +37,7 @@
   }
 
   .breadcrumb + .level .title {
-    margin-top: $spacing-20;
+    margin-top: size_variables.$spacing-20;
   }
   .title .icon {
     height: auto;

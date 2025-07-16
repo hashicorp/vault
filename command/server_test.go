@@ -1,7 +1,7 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: BUSL-1.1
 
-//go:build !race && !hsm && !fips_140_3
+//go:build !race && !hsm
 
 // NOTE: we can't use this with HSM. We can't set testing mode on and it's not
 // safe to use env vars since that provides an attack vector in the real world.
@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
@@ -32,16 +33,26 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Modifier is a function that modifies a string
+type Modifier func(string) string
+
+// regexReplacer returns a Modifier that replaces all occurrences of re with repl
+func regexReplacer(re, repl string) Modifier {
+	return func(s string) string {
+		return regexp.MustCompile(re).ReplaceAllString(s, repl)
+	}
+}
+
 func init() {
 	if signed := os.Getenv("VAULT_LICENSE_CI"); signed != "" {
 		os.Setenv(EnvVaultLicense, signed)
 	}
 }
 
-func testBaseHCL(tb testing.TB, listenerExtras string) string {
+func testBaseHCL(tb testing.TB, listenerExtras string, modifiers ...Modifier) string {
 	tb.Helper()
 
-	return strings.TrimSpace(fmt.Sprintf(`
+	base := strings.TrimSpace(fmt.Sprintf(`
 		disable_mlock = true
 		listener "tcp" {
 			address     = "127.0.0.1:%d"
@@ -49,6 +60,11 @@ func testBaseHCL(tb testing.TB, listenerExtras string) string {
 			%s
 		}
 	`, 0, listenerExtras))
+
+	for _, mod := range modifiers {
+		base = mod(base)
+	}
+	return base
 }
 
 const (
@@ -62,6 +78,12 @@ const (
 	badListenerWriteTimeout      = `http_write_timeout = "56lbs"`
 	badListenerIdleTimeout       = `http_idle_timeout = "78gophers"`
 
+	raftHCL = `
+storage "raft" {
+  path = "/path/to/raft/data"
+  node_id = "raft_node_1"
+}
+	`
 	inmemHCL = `
 backend "inmem_ha" {
   advertise_addr       = "http://127.0.0.1:8200"
@@ -72,7 +94,6 @@ ha_backend "inmem_ha" {
   redirect_addr        = "http://127.0.0.1:8200"
 }
 `
-
 	badHAInmemHCL = `
 ha_backend "inmem" {}
 `
@@ -274,6 +295,13 @@ func TestServer(t *testing.T) {
 			"",
 			0,
 			[]string{"-test-verify-only", "-recovery"},
+		},
+		{
+			"missing_disable_mlock_value_with_integrated_storage",
+			testBaseHCL(t, goodListenerTimeouts, regexReplacer(`\s*disable_mlock\s*=\s*.+`, "")) + raftHCL,
+			"disable_mlock must be configured",
+			1,
+			[]string{"-test-server-config"},
 		},
 	}
 

@@ -17,6 +17,7 @@ import (
 	"github.com/armon/go-metrics"
 	log "github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	"github.com/hashicorp/go-secure-stdlib/permitpool"
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"go.etcd.io/etcd/client/pkg/v3/transport"
@@ -34,7 +35,7 @@ type EtcdBackend struct {
 	lockTimeout    time.Duration
 	requestTimeout time.Duration
 
-	permitPool *physical.PermitPool
+	permitPool *permitpool.Pool
 
 	etcd *clientv3.Client
 }
@@ -178,7 +179,7 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 	return &EtcdBackend{
 		path:           path,
 		etcd:           etcd,
-		permitPool:     physical.NewPermitPool(physical.DefaultParallelOperations),
+		permitPool:     permitpool.New(physical.DefaultParallelOperations),
 		logger:         logger,
 		haEnabled:      haEnabledBool,
 		lockTimeout:    lock,
@@ -189,7 +190,9 @@ func newEtcd3Backend(conf map[string]string, logger log.Logger) (physical.Backen
 func (c *EtcdBackend) Put(ctx context.Context, entry *physical.Entry) error {
 	defer metrics.MeasureSince([]string{"etcd", "put"}, time.Now())
 
-	c.permitPool.Acquire()
+	if err := c.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer c.permitPool.Release()
 
 	ctx, cancel := context.WithTimeout(context.Background(), c.requestTimeout)
@@ -201,7 +204,9 @@ func (c *EtcdBackend) Put(ctx context.Context, entry *physical.Entry) error {
 func (c *EtcdBackend) Get(ctx context.Context, key string) (*physical.Entry, error) {
 	defer metrics.MeasureSince([]string{"etcd", "get"}, time.Now())
 
-	c.permitPool.Acquire()
+	if err := c.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer c.permitPool.Release()
 
 	ctx, cancel := context.WithTimeout(context.Background(), c.requestTimeout)
@@ -226,7 +231,9 @@ func (c *EtcdBackend) Get(ctx context.Context, key string) (*physical.Entry, err
 func (c *EtcdBackend) Delete(ctx context.Context, key string) error {
 	defer metrics.MeasureSince([]string{"etcd", "delete"}, time.Now())
 
-	c.permitPool.Acquire()
+	if err := c.permitPool.Acquire(ctx); err != nil {
+		return err
+	}
 	defer c.permitPool.Release()
 
 	ctx, cancel := context.WithTimeout(context.Background(), c.requestTimeout)
@@ -241,7 +248,9 @@ func (c *EtcdBackend) Delete(ctx context.Context, key string) error {
 func (c *EtcdBackend) List(ctx context.Context, prefix string) ([]string, error) {
 	defer metrics.MeasureSince([]string{"etcd", "list"}, time.Now())
 
-	c.permitPool.Acquire()
+	if err := c.permitPool.Acquire(ctx); err != nil {
+		return nil, err
+	}
 	defer c.permitPool.Release()
 
 	ctx, cancel := context.WithTimeout(context.Background(), c.requestTimeout)

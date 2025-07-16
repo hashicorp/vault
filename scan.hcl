@@ -3,18 +3,20 @@
 
 repository {
   go_modules = true
-  osv = true
-  secrets {
-    all = true
-  } 
+  osv        = true
+
   dependabot {
-    required = true
+    required     = true
     check_config = true
   }
-  
+
+  plugin "codeql" {
+    languages = ["go"]
+  }
+
   plugin "semgrep" {
     use_git_ignore = true
-    exclude = ["vendor"]
+    exclude        = ["vendor"]
     config = [
       "tools/semgrep/ci",
       "p/r2c-security-audit",
@@ -24,8 +26,8 @@ repository {
     ]
     exclude_rule = ["generic.html-templates.security.unquoted-attribute-var.unquoted-attribute-var"]
   }
-  
-  plugin "codeql" {
-    languages = ["go"]
+
+  secrets {
+    all = true
   }
 }

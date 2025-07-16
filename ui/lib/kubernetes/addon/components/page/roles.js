@@ -9,7 +9,7 @@ import { action } from '@ember/object';
 import { getOwner } from '@ember/owner';
 import errorMessage from 'vault/utils/error-message';
 import { tracked } from '@glimmer/tracking';
-import keys from 'core/utils/key-codes';
+import keys from 'core/utils/keys';
 
 /**
  * @module Roles
@@ -23,7 +23,7 @@ import keys from 'core/utils/key-codes';
  */
 export default class RolesPageComponent extends Component {
   @service flashMessages;
-  @service router;
+  @service('app-router') router;
   @tracked query;
   @tracked roleToDelete = null;
 
@@ -44,7 +44,8 @@ export default class RolesPageComponent extends Component {
 
   @action
   handleKeyDown(event) {
-    if (event.keyCode === keys.ESC) {
+    const isEscKeyPressed = keys.ESC.includes(event.key);
+    if (isEscKeyPressed) {
       // On escape, transition to roles index route.
       this.navigate();
     }

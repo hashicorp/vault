@@ -22,12 +22,115 @@ import (
 	"github.com/hashicorp/vault/helper/forwarding"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/logical"
+	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/hashicorp/vault/vault/cluster"
 	"github.com/hashicorp/vault/vault/replication"
 	"golang.org/x/net/http2"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
+
+var (
+	NotHAMember       = "node is not in HA cluster membership"
+	StatusNotHAMember = status.Error(codes.FailedPrecondition, NotHAMember)
+)
+
+const haNodeIDKey = "ha_node_id"
+
+func haIDFromContext(ctx context.Context) (string, bool) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return "", false
+	}
+	res := md.Get(haNodeIDKey)
+	if len(res) == 0 {
+		return "", false
+	}
+	return res[0], true
+}
+
+// haMembershipServerCheck extracts the client's HA node ID from the context
+// and checks if this client has been removed. The function returns
+// StatusNotHAMember if the client has been removed
+func haMembershipServerCheck(ctx context.Context, c *Core, haBackend physical.RemovableNodeHABackend) error {
+	if haBackend == nil {
+		return nil
+	}
+	nodeID, ok := haIDFromContext(ctx)
+	if !ok {
+		return nil
+	}
+	removed, err := haBackend.IsNodeRemoved(ctx, nodeID)
+	if err != nil {
+		c.logger.Error("failed to check if node is removed", "error", err)
+		return err
+	}
+	if removed {
+		return StatusNotHAMember
+	}
+	return nil
+}
+
+func haMembershipUnaryServerInterceptor(c *Core, haBackend physical.RemovableNodeHABackend) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+		err = haMembershipServerCheck(ctx, c, haBackend)
+		if err != nil {
+			return nil, err
+		}
+		return handler(ctx, req)
+	}
+}
+
+func haMembershipStreamServerInterceptor(c *Core, haBackend physical.RemovableNodeHABackend) grpc.StreamServerInterceptor {
+	return func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		err := haMembershipServerCheck(ss.Context(), c, haBackend)
+		if err != nil {
+			return err
+		}
+		return handler(srv, ss)
+	}
+}
+
+// haMembershipClientCheck checks if the given error from the server
+// is StatusNotHAMember. If so, the client will mark itself as removed
+// and shutdown
+func haMembershipClientCheck(err error, c *Core, haBackend physical.RemovableNodeHABackend) {
+	if !errors.Is(err, StatusNotHAMember) {
+		return
+	}
+	removeErr := haBackend.RemoveSelf()
+	if removeErr != nil {
+		c.logger.Debug("failed to remove self", "error", removeErr)
+	}
+	c.shutdownRemovedNode()
+}
+
+func haMembershipUnaryClientInterceptor(c *Core, haBackend physical.RemovableNodeHABackend) grpc.UnaryClientInterceptor {
+	return func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		if haBackend == nil {
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}
+		ctx = metadata.AppendToOutgoingContext(ctx, haNodeIDKey, haBackend.NodeID())
+		err := invoker(ctx, method, req, reply, cc, opts...)
+		haMembershipClientCheck(err, c, haBackend)
+		return err
+	}
+}
+
+func haMembershipStreamClientInterceptor(c *Core, haBackend physical.RemovableNodeHABackend) grpc.StreamClientInterceptor {
+	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
+		if haBackend == nil {
+			return streamer(ctx, desc, cc, method, opts...)
+		}
+		ctx = metadata.AppendToOutgoingContext(ctx, haNodeIDKey, haBackend.NodeID())
+		stream, err := streamer(ctx, desc, cc, method, opts...)
+		haMembershipClientCheck(err, c, haBackend)
+		return stream, err
+	}
+}
 
 type requestForwardingHandler struct {
 	fws         *http2.Server
@@ -47,6 +150,7 @@ type requestForwardingClusterClient struct {
 func NewRequestForwardingHandler(c *Core, fws *http2.Server, perfStandbySlots chan struct{}, perfStandbyRepCluster *replication.Cluster) (*requestForwardingHandler, error) {
 	// Resolve locally to avoid races
 	ha := c.ha != nil
+	removableHABackend := c.getRemovableHABackend()
 
 	fwRPCServer := grpc.NewServer(
 		grpc.KeepaliveParams(keepalive.ServerParameters{
@@ -54,6 +158,8 @@ func NewRequestForwardingHandler(c *Core, fws *http2.Server, perfStandbySlots ch
 		}),
 		grpc.MaxRecvMsgSize(math.MaxInt32),
 		grpc.MaxSendMsgSize(math.MaxInt32),
+		grpc.StreamInterceptor(haMembershipStreamServerInterceptor(c, removableHABackend)),
+		grpc.UnaryInterceptor(haMembershipUnaryServerInterceptor(c, removableHABackend)),
 	)
 
 	if ha && c.clusterHandler != nil {
@@ -274,6 +380,8 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 		core: c,
 	})
 
+	removableHABackend := c.getRemovableHABackend()
+
 	// Set up grpc forwarding handling
 	// It's not really insecure, but we have to dial manually to get the
 	// ALPN header right. It's just "insecure" because GRPC isn't managing
@@ -285,6 +393,8 @@ func (c *Core) refreshRequestForwardingConnection(ctx context.Context, clusterAd
 		grpc.WithKeepaliveParams(keepalive.ClientParameters{
 			Time: 2 * c.clusterHeartbeatInterval,
 		}),
+		grpc.WithStreamInterceptor(haMembershipStreamClientInterceptor(c, removableHABackend)),
+		grpc.WithUnaryInterceptor(haMembershipUnaryClientInterceptor(c, removableHABackend)),
 		grpc.WithDefaultCallOptions(
 			grpc.MaxCallRecvMsgSize(math.MaxInt32),
 			grpc.MaxCallSendMsgSize(math.MaxInt32),
@@ -332,6 +442,7 @@ func (c *Core) clearForwardingClients() {
 		clusterListener.RemoveClient(consts.RequestForwardingALPN)
 	}
 	c.clusterLeaderParams.Store((*ClusterLeaderParams)(nil))
+	c.rpcLastSuccessfulHeartbeat.Store(time.Time{})
 }
 
 // ForwardRequest forwards a given request to the active node and returns the
@@ -374,6 +485,10 @@ func (c *Core) ForwardRequest(req *http.Request) (int, http.Header, []byte, erro
 	if err != nil {
 		metrics.IncrCounter([]string{"ha", "rpc", "client", "forward", "errors"}, 1)
 		c.logger.Error("error during forwarded RPC request", "error", err)
+
+		if errors.Is(err, StatusNotHAMember) {
+			return 0, nil, nil, fmt.Errorf("error during forwarding RPC request: %w", err)
+		}
 		return 0, nil, nil, fmt.Errorf("error during forwarding RPC request")
 	}
 

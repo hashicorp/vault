@@ -6,11 +6,11 @@ package pki
 import (
 	"context"
 	"crypto/rand"
-	"crypto/rsa"
 	"testing"
 	"time"
 
 	"github.com/hashicorp/vault/helper/constants"
+	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 	"github.com/stretchr/testify/require"
 )
 
@@ -117,7 +117,7 @@ func TestAcmeConfig(t *testing.T) {
 				require.NoError(t, err)
 
 				baseAcmeURL := "/v1/pki/" + tc.prefixUrl
-				accountKey, err := rsa.GenerateKey(rand.Reader, 2048)
+				accountKey, err := cryptoutil.GenerateRSAKey(rand.Reader, 2048)
 				require.NoError(t, err, "failed creating rsa key")
 
 				acmeClient := getAcmeClientForCluster(t, cluster, baseAcmeURL, accountKey)

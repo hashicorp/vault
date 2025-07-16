@@ -1,0 +1,49 @@
+---
+layout: docs
+page_title: Change your license
+description: >-
+  Migrate your Vault enterprise deployment to a new license.
+---
+
+# Change your Vault license
+
+@include 'alerts/enterprise-only.mdx'
+
+<Tip title="Assumptions">
+
+  - You have an available Vault Enterprise license key.
+  - You have admin privileges for your Vault deployment environment.
+
+</Tip>
+
+Vault Enterprise automatically looks for valid license information in the
+following locations:
+
+Priority | Location             | Variable / Field
+:------: | -------------------- | ----------------
+1        | Environment variable | [`VAULT_LICENSE`](/vault/docs/commands#global-vault_license_path)
+2        | Environment variable | [`VAULT_LICENSE_PATH`](/vault/docs/commands#global-vault_license)
+3        | Config file          | [`license_path`](/vault/docs/configuration#license_path)
+
+
+To change your current Vault Enterprise license:
+
+1. Run [`vault version`](/vault/docs/commands/version#version) to confirm the
+   build date of your Vault binary is before the expiry date of your license
+   key. Vault will not start if the applied license is expired.
+1. Access the run environment for your Vault cluster.
+1. Run [`vault license get`](/vault/docs/commands/license/get) to review the
+   features associated with the current license. For example:
+1. Run [`vault license inspect`](/vault/docs/commands/license/inspect)
+   to verify the new license and review and changes to feature support.
+1. Save the current license key to a backup parameter or file.
+1. Replace the current license key with the new license key.
+1. Call the
+   [`/sys/config/reload/license`](/vault/api-docs/system/config-reload#reload-license-file)
+   endpoint on each standby node for the cluster. Refreshing the license on
+   standby nodes first reduces potential disruptions if you run into problems.
+1. Call the
+   [`/sys/config/reload/license`](/vault/api-docs/system/config-reload#reload-license-file)
+   endpoint on the leader node for the cluster.
+1. Run `vault license get` on each node or review the unseal logs for each node
+   to verify the new license applied correctly.

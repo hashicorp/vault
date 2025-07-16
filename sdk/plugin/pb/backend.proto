@@ -4,6 +4,7 @@
 syntax = "proto3";
 package pb;
 
+import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 import "sdk/logical/event.proto";
 import "sdk/logical/identity.proto";
@@ -68,6 +69,11 @@ message Paths {
   //
   // See note in /sdk/logical/logical.go.
   repeated string limited = 7;
+
+  // AllowSnapshotRead paths are allowed to be read from a loaded snapshot
+  //
+  // See note in /sdk/logical/logical.go
+  repeated string allow_snapshot_read = 8;
 }
 
 message Request {
@@ -156,6 +162,10 @@ message Request {
   // inspect the connection information and potentially use it for
   // authentication/protection.
   Connection connection = 20;
+
+  // RequiresSnapshotID will be present when the request is a list, read, or
+  // recover from snapshot operation
+  string requires_snapshot_id = 21;
 }
 
 message Auth {
@@ -607,6 +617,43 @@ message GenerateIdentityTokenResponse {
   int64 ttl = 2;
 }
 
+message RotationInfoRequest {
+  string mount_path = 1;
+}
+
+message RotationInfoReply {
+  int64 issue_time = 1;
+  int64 expire_time = 2;
+  int64 ttl = 3;
+}
+
+message RegisterRotationJobRequest {
+  RotationJobInput job = 1;
+}
+
+message RegisterRotationJobResponse {
+  string rotation_id = 1;
+  string err = 2;
+}
+
+message RotationJobInput {
+  string name = 1;
+  string mount_point = 2;
+  string path = 3;
+  string rotation_schedule = 4;
+  int64 rotation_window = 5;
+  int64 rotation_period = 6;
+}
+
+message DeregisterRotationRequestInput {
+  string mount_point = 1;
+  string req_path = 2;
+}
+
+message DeregisterRotationJobRequest {
+  DeregisterRotationRequestInput req = 1;
+}
+
 // SystemView exposes system configuration information in a safe way for plugins
 // to consume. Plugins should implement the client for this service.
 service SystemView {
@@ -665,6 +712,15 @@ service SystemView {
 
   // GenerateIdentityToken returns an identity token for the requesting plugin.
   rpc GenerateIdentityToken(GenerateIdentityTokenRequest) returns (GenerateIdentityTokenResponse);
+
+  // GetRotationInformation returns the time remaining in a rotation job for the requested credential.
+  rpc GetRotationInformation(RotationInfoRequest) returns (RotationInfoReply);
+
+  // RegisterRotationJob returns a rotation ID for the requested plugin credential.
+  rpc RegisterRotationJob(RegisterRotationJobRequest) returns (RegisterRotationJobResponse);
+
+  // DeregisterRotationJob returns any errors in de-registering a credential from the Rotation Manager.
+  rpc DeregisterRotationJob(DeregisterRotationJobRequest) returns (Empty);
 }
 
 message Connection {
@@ -711,4 +767,13 @@ message SendEventRequest {
 
 service Events {
   rpc SendEvent(SendEventRequest) returns (Empty);
+}
+
+message RecordObservationRequest {
+  string observation_type = 1;
+  google.protobuf.Struct data = 2;
+}
+
+service Observations {
+  rpc RecordObservation(RecordObservationRequest) returns (Empty);
 }

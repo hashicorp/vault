@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestInitialize(t *testing.T) {
+func TestMSSQLInitialize(t *testing.T) {
 	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 	defer cleanup()
 
@@ -79,7 +79,7 @@ func TestInitialize(t *testing.T) {
 	}
 }
 
-func TestNewUser(t *testing.T) {
+func TestMSSQLNewUser(t *testing.T) {
 	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 	defer cleanup()
 
@@ -185,7 +185,7 @@ func TestNewUser(t *testing.T) {
 	}
 }
 
-func TestUpdateUser_password(t *testing.T) {
+func TestMSSQLUpdateUser_password(t *testing.T) {
 	type testCase struct {
 		req              dbplugin.UpdateUserRequest
 		expectErr        bool
@@ -312,7 +312,7 @@ func TestUpdateUser_password(t *testing.T) {
 	}
 }
 
-func TestDeleteUser(t *testing.T) {
+func TestMSSQLDeleteUser(t *testing.T) {
 	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 	defer cleanup()
 
@@ -358,7 +358,7 @@ func TestDeleteUser(t *testing.T) {
 	assertCredsDoNotExist(t, connURL, dbUser, initPassword)
 }
 
-func TestDeleteUserContainedDB(t *testing.T) {
+func TestMSSQLDeleteUserContainedDB(t *testing.T) {
 	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 	defer cleanup()
 
@@ -405,7 +405,7 @@ func TestDeleteUserContainedDB(t *testing.T) {
 	assertContainedDBCredsDoNotExist(t, connURL, dbUser)
 }
 
-func TestContainedDBSQLSanitization(t *testing.T) {
+func TestMSSQLContainedDBSQLSanitization(t *testing.T) {
 	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 	defer cleanup()
 
@@ -443,7 +443,7 @@ func TestContainedDBSQLSanitization(t *testing.T) {
 	assert.EqualError(t, err, "mssql: Cannot alter the login 'vaultuser]', because it does not exist or you do not have permission.")
 }
 
-func TestSQLSanitization(t *testing.T) {
+func TestMSSQLSanitization(t *testing.T) {
 	cleanup, connURL := mssqlhelper.PrepareMSSQLTestContainer(t)
 	defer cleanup()
 
@@ -575,4 +575,12 @@ CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}';
 const testMSSQLContainedLogin = `
 CREATE LOGIN [{{name}}] WITH PASSWORD = '{{password}}';
 CREATE USER [{{name}}] FOR LOGIN [{{name}}];
+`
+
+const testMSSQLContainedLoginAdmin = `
+CREATE USER [{{name}}] WITH PASSWORD = '{{password}}';
+
+ALTER ROLE db_datareader ADD MEMBER [{{name}}];
+ALTER ROLE db_datawriter ADD MEMBER [{{name}}];
+ALTER ROLE db_owner ADD MEMBER [{{name}}];
 `

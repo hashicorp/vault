@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <PageHeader as |p|>
   <p.top>
@@ -29,6 +29,7 @@
     @derivedChange={{action "derivedChange" value="target.checked"}}
     @convergentEncryptionChange={{action "convergentEncryptionChange" value="target.checked"}}
     @key={{this.key}}
+    @errorMessage={{this.errorMessage}}
     @requestInFlight={{this.requestInFlight}}
   />
 {{else if (eq this.mode "edit")}}

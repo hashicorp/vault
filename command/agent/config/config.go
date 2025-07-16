@@ -23,6 +23,7 @@ import (
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/vault/command/agentproxyshared"
 	"github.com/hashicorp/vault/helper/namespace"
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/hashicorp/vault/sdk/helper/pointerutil"
 	"github.com/mitchellh/mapstructure"
@@ -181,6 +182,9 @@ type ExecConfig struct {
 func NewConfig() *Config {
 	return &Config{
 		SharedConfig: new(configutil.SharedConfig),
+		TemplateConfig: &TemplateConfig{
+			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+		},
 	}
 }
 
@@ -248,8 +252,13 @@ func (c *Config) Merge(c2 *Config) *Config {
 		result.DisableKeepAlivesTemplating = c2.DisableKeepAlivesTemplating
 	}
 
+	// Instead of checking if TemplateConfig is not nil, we compare against the default value
+	// that is set in NewConfig to determine if a TemplateConfig was specified in the config
+	defaultConfig := TemplateConfig{
+		MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
+	}
 	result.TemplateConfig = c.TemplateConfig
-	if c2.TemplateConfig != nil {
+	if *c2.TemplateConfig != defaultConfig {
 		result.TemplateConfig = c2.TemplateConfig
 	}
 
@@ -484,31 +493,47 @@ func (c *Config) validateEnvTemplateConfig() error {
 // LoadConfig loads the configuration at the given path, regardless if
 // it's a file or directory.
 func LoadConfig(path string) (*Config, error) {
+	cfg, _, err := LoadConfigCheckDuplicates(path)
+	return cfg, err
+}
+
+// LoadConfigCheckDuplicates is the same as the above but adds the ability to check if the HCL config file has
+// duplicate attributes.
+// TODO (HCL_DUP_KEYS_DEPRECATION): keep only LoadConfig once deprecation is complete
+func LoadConfigCheckDuplicates(path string) (cfg *Config, duplicate bool, err error) {
 	fi, err := os.Stat(path)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	if fi.IsDir() {
-		return LoadConfigDir(path)
+		return LoadConfigDirCheckDuplicates(path)
 	}
-	return LoadConfigFile(path)
+	return LoadConfigFileCheckDuplicates(path)
 }
 
 // LoadConfigDir loads the configuration at the given path if it's a directory
 func LoadConfigDir(dir string) (*Config, error) {
+	cfg, _, err := LoadConfigDirCheckDuplicates(dir)
+	return cfg, err
+}
+
+// LoadConfigDirCheckDuplicates is the same as the above but adds the ability to check if the HCL config file has
+// duplicate attributes.
+// TODO (HCL_DUP_KEYS_DEPRECATION): keep only LoadConfigDir once deprecation is complete
+func LoadConfigDirCheckDuplicates(dir string) (cfg *Config, duplicate bool, err error) {
 	f, err := os.Open(dir)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	defer f.Close()
 
 	fi, err := f.Stat()
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if !fi.IsDir() {
-		return nil, fmt.Errorf("configuration path must be a directory: %q", dir)
+		return nil, false, fmt.Errorf("configuration path must be a directory: %q", dir)
 	}
 
 	var files []string
@@ -517,7 +542,7 @@ func LoadConfigDir(dir string) (*Config, error) {
 		var fis []os.FileInfo
 		fis, err = f.Readdir(128)
 		if err != nil && err != io.EOF {
-			return nil, err
+			return nil, false, err
 		}
 
 		for _, fi := range fis {
@@ -545,10 +570,11 @@ func LoadConfigDir(dir string) (*Config, error) {
 
 	result := NewConfig()
 	for _, f := range files {
-		config, err := LoadConfigFile(f)
+		config, dup, err := LoadConfigFileCheckDuplicates(f)
 		if err != nil {
-			return nil, fmt.Errorf("error loading %q: %w", f, err)
+			return nil, duplicate, fmt.Errorf("error loading %q: %w", f, err)
 		}
+		duplicate = duplicate || dup
 
 		if result == nil {
 			result = config
@@ -557,7 +583,7 @@ func LoadConfigDir(dir string) (*Config, error) {
 		}
 	}
 
-	return result, nil
+	return result, duplicate, nil
 }
 
 // isTemporaryFile returns true or false depending on whether the
@@ -571,25 +597,33 @@ func isTemporaryFile(name string) bool {
 
 // LoadConfigFile loads the configuration at the given path if it's a file
 func LoadConfigFile(path string) (*Config, error) {
+	cfg, _, err := LoadConfigFileCheckDuplicates(path)
+	return cfg, err
+}
+
+// LoadConfigFileCheckDuplicates is the same as the above but adds the ability to check if the HCL config file has
+// duplicate attributes.
+// TODO (HCL_DUP_KEYS_DEPRECATION): keep only LoadConfigFile once deprecation is complete
+func LoadConfigFileCheckDuplicates(path string) (cfg *Config, duplicate bool, err error) {
 	fi, err := os.Stat(path)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	if fi.IsDir() {
-		return nil, fmt.Errorf("location is a directory, not a file")
+		return nil, false, fmt.Errorf("location is a directory, not a file")
 	}
 
 	// Read the file
 	d, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	// Parse!
-	obj, err := hcl.Parse(string(d))
+	obj, duplicate, err := random.ParseAndCheckForDuplicateHclAttributes(string(d))
 	if err != nil {
-		return nil, err
+		return nil, duplicate, err
 	}
 
 	// Attribute
@@ -603,13 +637,14 @@ func LoadConfigFile(path string) (*Config, error) {
 	// Start building the result
 	result := NewConfig()
 	if err := hcl.DecodeObject(result, obj); err != nil {
-		return nil, err
+		return nil, duplicate, err
 	}
 
-	sharedConfig, err := configutil.ParseConfig(string(d))
+	sharedConfig, dup, err := configutil.ParseConfigCheckDuplicate(string(d))
 	if err != nil {
-		return nil, err
+		return nil, duplicate, err
 	}
+	duplicate = duplicate || dup
 
 	// Pruning custom headers for Agent for now
 	for _, ln := range sharedConfig.Listeners {
@@ -620,35 +655,35 @@ func LoadConfigFile(path string) (*Config, error) {
 
 	list, ok := obj.Node.(*ast.ObjectList)
 	if !ok {
-		return nil, fmt.Errorf("error parsing: file doesn't contain a root object")
+		return nil, duplicate, fmt.Errorf("error parsing: file doesn't contain a root object")
 	}
 
 	if err := parseAutoAuth(result, list); err != nil {
-		return nil, fmt.Errorf("error parsing 'auto_auth': %w", err)
+		return nil, duplicate, fmt.Errorf("error parsing 'auto_auth': %w", err)
 	}
 
 	if err := parseCache(result, list); err != nil {
-		return nil, fmt.Errorf("error parsing 'cache':%w", err)
+		return nil, duplicate, fmt.Errorf("error parsing 'cache':%w", err)
 	}
 
 	if err := parseAPIProxy(result, list); err != nil {
-		return nil, fmt.Errorf("error parsing 'api_proxy':%w", err)
+		return nil, duplicate, fmt.Errorf("error parsing 'api_proxy':%w", err)
 	}
 
 	if err := parseTemplateConfig(result, list); err != nil {
-		return nil, fmt.Errorf("error parsing 'template_config': %w", err)
+		return nil, duplicate, fmt.Errorf("error parsing 'template_config': %w", err)
 	}
 
 	if err := parseTemplates(result, list); err != nil {
-		return nil, fmt.Errorf("error parsing 'template': %w", err)
+		return nil, duplicate, fmt.Errorf("error parsing 'template': %w", err)
 	}
 
 	if err := parseExec(result, list); err != nil {
-		return nil, fmt.Errorf("error parsing 'exec': %w", err)
+		return nil, duplicate, fmt.Errorf("error parsing 'exec': %w", err)
 	}
 
 	if err := parseEnvTemplates(result, list); err != nil {
-		return nil, fmt.Errorf("error parsing 'env_template': %w", err)
+		return nil, duplicate, fmt.Errorf("error parsing 'env_template': %w", err)
 	}
 
 	if result.Cache != nil && result.APIProxy == nil && (result.Cache.UseAutoAuthToken || result.Cache.ForceAutoAuthToken) {
@@ -660,7 +695,7 @@ func LoadConfigFile(path string) (*Config, error) {
 
 	err = parseVault(result, list)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing 'vault':%w", err)
+		return nil, duplicate, fmt.Errorf("error parsing 'vault':%w", err)
 	}
 
 	if result.Vault != nil {
@@ -679,7 +714,7 @@ func LoadConfigFile(path string) (*Config, error) {
 	if disableIdleConnsEnv := os.Getenv(DisableIdleConnsEnv); disableIdleConnsEnv != "" {
 		result.DisableIdleConns, err = parseutil.ParseCommaStringSlice(strings.ToLower(disableIdleConnsEnv))
 		if err != nil {
-			return nil, fmt.Errorf("error parsing environment variable %s: %v", DisableIdleConnsEnv, err)
+			return nil, duplicate, fmt.Errorf("error parsing environment variable %s: %v", DisableIdleConnsEnv, err)
 		}
 	}
 
@@ -694,14 +729,14 @@ func LoadConfigFile(path string) (*Config, error) {
 		case "":
 			continue
 		default:
-			return nil, fmt.Errorf("unknown disable_idle_connections value: %s", subsystem)
+			return nil, duplicate, fmt.Errorf("unknown disable_idle_connections value: %s", subsystem)
 		}
 	}
 
 	if disableKeepAlivesEnv := os.Getenv(DisableKeepAlivesEnv); disableKeepAlivesEnv != "" {
 		result.DisableKeepAlives, err = parseutil.ParseCommaStringSlice(strings.ToLower(disableKeepAlivesEnv))
 		if err != nil {
-			return nil, fmt.Errorf("error parsing environment variable %s: %v", DisableKeepAlivesEnv, err)
+			return nil, duplicate, fmt.Errorf("error parsing environment variable %s: %v", DisableKeepAlivesEnv, err)
 		}
 	}
 
@@ -716,11 +751,11 @@ func LoadConfigFile(path string) (*Config, error) {
 		case "":
 			continue
 		default:
-			return nil, fmt.Errorf("unknown disable_keep_alives value: %s", subsystem)
+			return nil, duplicate, fmt.Errorf("unknown disable_keep_alives value: %s", subsystem)
 		}
 	}
 
-	return result, nil
+	return result, duplicate, nil
 }
 
 func parseVault(result *Config, list *ast.ObjectList) error {
@@ -741,6 +776,10 @@ func parseVault(result *Config, list *ast.ObjectList) error {
 	err := hcl.DecodeObject(&v, item.Val)
 	if err != nil {
 		return err
+	}
+
+	if v.Address != "" {
+		v.Address = configutil.NormalizeAddr(v.Address)
 	}
 
 	if v.TLSSkipVerifyRaw != nil {
@@ -1030,8 +1069,61 @@ func parseMethod(result *Config, list *ast.ObjectList) error {
 	// Canonicalize namespace path if provided
 	m.Namespace = namespace.Canonicalize(m.Namespace)
 
+	// Normalize any configuration addresses
+	if len(m.Config) > 0 {
+		var err error
+		for k, v := range m.Config {
+			vStr, ok := v.(string)
+			if !ok {
+				continue
+			}
+			m.Config[k], err = normalizeAutoAuthMethod(m.Type, k, vStr)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	result.AutoAuth.Method = &m
 	return nil
+}
+
+// autoAuthMethodKeys maps an auto-auth method type to its associated
+// configuration whose values are URLs, IP addresses, or host:port style
+// addresses. All auto-auth types must have an entry in this map, otherwise our
+// normalization check will fail when parsing the storage entry config.
+// Auto-auth method types which don't contain such keys should include an empty
+// array.
+var autoAuthMethodKeys = map[string][]string{
+	"alicloud":   {""},
+	"approle":    {""},
+	"aws":        {""},
+	"azure":      {"resource"},
+	"cert":       {""},
+	"cf":         {""},
+	"gcp":        {"service_account"},
+	"jwt":        {""},
+	"ldap":       {""},
+	"kerberos":   {""},
+	"kubernetes": {""},
+	"oci":        {""},
+	"token_file": {""},
+}
+
+// normalizeAutoAuthMethod takes a storage name, a configuration key
+// and its associated value and will normalize any URLs, IP addresses, or
+// host:port style addresses.
+func normalizeAutoAuthMethod(method string, key string, value string) (string, error) {
+	keys, ok := autoAuthMethodKeys[method]
+	if !ok {
+		return "", fmt.Errorf("unknown auto-auth method type %s", method)
+	}
+
+	if slices.Contains(keys, key) {
+		return configutil.NormalizeAddr(value), nil
+	}
+
+	return value, nil
 }
 
 func parseSinks(result *Config, list *ast.ObjectList) error {
@@ -1104,9 +1196,6 @@ func parseTemplateConfig(result *Config, list *ast.ObjectList) error {
 
 	templateConfigList := list.Filter(name)
 	if len(templateConfigList.Items) == 0 {
-		result.TemplateConfig = &TemplateConfig{
-			MaxConnectionsPerHost: DefaultTemplateConfigMaxConnsPerHost,
-		}
 		return nil
 	}
 

@@ -23,24 +23,25 @@ var (
 type AuthEnableCommand struct {
 	*BaseCommand
 
-	flagDescription               string
-	flagPath                      string
-	flagDefaultLeaseTTL           time.Duration
-	flagMaxLeaseTTL               time.Duration
-	flagAuditNonHMACRequestKeys   []string
-	flagAuditNonHMACResponseKeys  []string
-	flagListingVisibility         string
-	flagPluginName                string
-	flagPassthroughRequestHeaders []string
-	flagAllowedResponseHeaders    []string
-	flagOptions                   map[string]string
-	flagLocal                     bool
-	flagSealWrap                  bool
-	flagExternalEntropyAccess     bool
-	flagTokenType                 string
-	flagVersion                   int
-	flagPluginVersion             string
-	flagIdentityTokenKey          string
+	flagDescription                string
+	flagPath                       string
+	flagDefaultLeaseTTL            time.Duration
+	flagMaxLeaseTTL                time.Duration
+	flagAuditNonHMACRequestKeys    []string
+	flagAuditNonHMACResponseKeys   []string
+	flagListingVisibility          string
+	flagPluginName                 string
+	flagPassthroughRequestHeaders  []string
+	flagAllowedResponseHeaders     []string
+	flagOptions                    map[string]string
+	flagLocal                      bool
+	flagSealWrap                   bool
+	flagExternalEntropyAccess      bool
+	flagTokenType                  string
+	flagVersion                    int
+	flagPluginVersion              string
+	flagIdentityTokenKey           string
+	flagTrimRequestTrailingSlashes BoolPtr
 }
 
 func (c *AuthEnableCommand) Synopsis() string {
@@ -217,6 +218,12 @@ func (c *AuthEnableCommand) Flags() *FlagSets {
 		Usage:   "Select the key used to sign plugin identity tokens.",
 	})
 
+	f.BoolPtrVar(&BoolPtrVar{
+		Name:   flagNameTrimRequestTrailingSlashes,
+		Target: &c.flagTrimRequestTrailingSlashes,
+		Usage:  "Whether to trim trailing slashes for incoming requests to this mount",
+	})
+
 	return set
 }
 
@@ -323,6 +330,11 @@ func (c *AuthEnableCommand) Run(args []string) int {
 
 		if fl.Name == flagNameIdentityTokenKey {
 			authOpts.Config.IdentityTokenKey = c.flagIdentityTokenKey
+		}
+
+		if fl.Name == flagNameTrimRequestTrailingSlashes && c.flagTrimRequestTrailingSlashes.IsSet() {
+			val := c.flagTrimRequestTrailingSlashes.Get()
+			authOpts.Config.TrimRequestTrailingSlashes = &val
 		}
 	})
 

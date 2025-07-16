@@ -1,0 +1,3 @@
+```release-note:bug
+auth/radius: Fixed an issue where usernames with upper case characters where not honored
+```

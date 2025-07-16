@@ -1,0 +1,3 @@
+```release-note:bug
+core: Fix a bug that prevents certain loggers from writing to a log file.
+```

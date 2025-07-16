@@ -1,0 +1,3 @@
+```release-note:improvement
+events (enterprise): Send events downstream to performance standby nodes in a cluster, removing the need to redirect client event subscriptions to the active node.
+```

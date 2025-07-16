@@ -36,6 +36,21 @@ func (c *Core) setupCensusManager(ctx context.Context) error {
 	return nil
 }
 
+// reloadDevelopmentClusterSetting is a stub on CE.
+func (c *Core) reloadDevelopmentClusterSetting() error {
+	return nil
+}
+
+// persistDevelopmentClusterSetting is a stub on CE.
+func (c *Core) persistDevelopmentClusterSetting(ctx context.Context) error {
+	return nil
+}
+
+// getDevelopmentClusterSetting is a stub on CE.
+func (c *Core) getDevelopmentClusterSetting(ctx context.Context) (bool, error) {
+	return false, nil
+}
+
 // BillingStart is a stub on CE.
 func (cm *CensusManager) BillingStart() time.Time {
 	return time.Time{}

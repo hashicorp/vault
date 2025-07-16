@@ -1,0 +1,133 @@
+---
+layout: docs
+page_title: Vault Enterprise license management
+description: >-
+  Vault Helm supports deploying Vault Enterprise, including license autoloading.
+---
+
+# Vault Enterprise license management
+
+You can use this Helm chart to deploy Vault Enterprise by following a few extra steps around licensing.
+
+~> **Note:** As of Vault Enterprise 1.8, the license must be specified via HCL configuration or environment variables on startup, unless the Vault cluster was created with an older Vault version and the license was stored. More information is available in the [Vault Enterprise License docs](/vault/docs/enterprise/license).
+
+@include 'helm/version.mdx'
+
+## Vault enterprise 1.8+
+
+### License install
+
+First create a Kubernetes secret using the contents of your license file. For example, the following commands create a secret with the name `vault-ent-license` and key `license`:
+
+```bash
+secret=$(cat 1931d1f4-bdfd-6881-f3f5-19349374841f.hclic)
+kubectl create secret generic vault-ent-license --from-literal="license=${secret}"
+```
+
+-> **Note:** If you cannot find your `.hclic` file, please contact your sales team or Technical Account Manager.
+
+In your chart overrides, set the values of [`server.image`](/vault/docs/platform/k8s/helm/configuration#image-2) to one of the enterprise [release tags](https://hub.docker.com/r/hashicorp/vault-enterprise/tags). Also set the name of the secret you just created in [`server.enterpriseLicense`](/vault/docs/platform/k8s/helm/configuration#enterpriselicense).
+
+```yaml
+# config.yaml
+server:
+  image:
+    repository: hashicorp/vault-enterprise
+    tag: 1.19.0-ent
+  enterpriseLicense:
+    secretName: vault-ent-license
+```
+
+Now run `helm install`:
+
+```shell-session
+$ helm install hashicorp hashicorp/vault -f config.yaml
+```
+
+Once the cluster is [initialized and unsealed](/vault/docs/platform/k8s/helm/run), you may check the license status using the `vault license get` command:
+
+```shell
+kubectl exec -ti vault-0 -- vault license get
+```
+
+### License update
+
+To update the autoloaded license in Vault, you may do the following:
+
+- Update your license secret with the new license data
+
+```shell
+new_secret=$(base64 < ./new-license.hclic | tr -d '\n')
+
+cat > patch-license.yaml <<EOF
+data:
+  license: ${new_secret}
+EOF
+
+kubectl patch secret vault-ent-license --patch "$(cat patch-license.yaml)"
+```
+
+- Wait until [`vault license inspect`](/vault/docs/commands/license/inspect) shows the updated license
+
+  Since the `inspect` command is reading the license file from the mounted secret, this tells you when the updated secret has been propagated to the mount on the Vault pod.
+
+```shell
+kubectl exec vault-0 -- vault license inspect
+```
+
+- Reload Vault's license config
+
+  You may use the [`sys/config/reload/license` API endpoint](/vault/api-docs/system/config-reload#reload-license-file):
+
+```shell
+kubectl exec vault-0 -- vault write -f sys/config/reload/license
+```
+
+Or you may issue an HUP signal directly to Vault:
+
+```shell
+kubectl exec vault-0 -- pkill -HUP vault
+```
+
+- Verify that [`vault license get`](/vault/docs/commands/license/get) shows the updated license
+
+```shell
+kubectl exec vault-0 -- vault license get
+```
+
+## Vault enterprise prior to 1.8
+
+In your chart overrides, set the values of `server.image` to one of the enterprise [release tags](https://hub.docker.com/r/hashicorp/vault-enterprise/tags). Install the chart, and initialize and unseal vault as described in [Running Vault](/vault/docs/platform/k8s/helm/run).
+
+After Vault has been initialized and unsealed, setup a port-forward tunnel to the Vault Enterprise cluster:
+
+```shell
+kubectl port-forward vault-0 8200:8200
+```
+
+Next, in a separate terminal, create a `payload.json` file that contains the license key like this example:
+
+```json
+{
+  "text": "01ABCDEFG..."
+}
+```
+
+Finally, using curl, apply the license key to the Vault API:
+
+```bash
+curl \
+  --header "X-Vault-Token: VAULT_LOGIN_TOKEN_HERE" \
+  --request POST \
+  --data @payload.json \
+  http://127.0.0.1:8200/v1/sys/license
+
+```
+
+To verify that the license installation worked correctly, using `curl`, run the following:
+
+```shell
+curl \
+  --header "X-Vault-Token: VAULT_LOGIN_TOKEN_HERE" \
+  http://127.0.0.1:8200/v1/sys/license
+```

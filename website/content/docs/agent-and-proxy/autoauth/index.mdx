@@ -1,32 +1,42 @@
 ---
 layout: docs
-page_title: Vault Agent and Vault Proxy Auto-Auth
-description: |-
-  Vault Agent and Vault Proxy's Auto-Auth functionality allows easy and automatic
+page_title: What is Auto-authentication?
+description: >-
+  Use auto-authentication with Vault Agent or Vault Proxy to simplify client
   authentication to Vault in a variety of environments.
 ---
 
-# Vault Agent and Vault Proxy Auto-Auth
+# What is Auto-authentication?
 
-The Auto-Auth functionality of Vault Agent and Vault Proxy allow for
-easy authentication in a wide variety of environments.
+Auto-authentication simplifies client authentication in a wide variety of
+environments. The following Vault tools come with auto-authentication built in:
 
-## Functionality
+- Vault Agent
+- Vault Proxy
 
-Auto-Auth consists of two parts: a Method, which is the authentication method
-that should be used in the current environment; and any number of Sinks, which
-are locations where the agent should write a token any time the current token
-value has changed.
+## Methods and sinks
 
-When Vault Agent or Vault Proxy are started with Auto-Auth enabled, it will attempt to acquire a
-Vault token using the configured Method. On failure, it will exponentially back
-off and then retry. On success, unless the auth method is configured to wrap
-the tokens, it will keep the resulting token renewed until renewal is no longer
-allowed. If renewal fails, the token has been revoked, the token has exceeded the maximum number of uses,
-or the token is an otherwise invalid value, it will attempt to reauthenticate.
+Auto-auth consists of two parts:
 
-Every time an authentication is successful, the token is written to the
-configured Sinks, subject to their configuration.
+- a **method** - the desired authentication method for the current environment
+- a **sink** - the location where tools save tokens when the token value changes
+
+When a supported tool starts with auto-auth enabled, the tool requests a Vault
+token using the configured method. If the request fails, the tool retries the
+request with an exponential back off.
+
+Once the request succeeds, the auth-auth renews unwrapped authentication tokens
+automatically until Vault denies the renewal. If the authentication method wraps
+tokens, auto-authentication cannot renew the token automatically.
+
+Vault typically denies renewal if the token:
+
+- the token was revoked.
+- the token has exceeded the maximum number of uses.
+- the token is otherwise invalid.
+
+Every time authentication succeeds, auto-auth writes the token to any
+appropriately configured sink.
 
 ## Advanced functionality
 
@@ -59,8 +69,12 @@ There are two ways that tokens can be response-wrapped:
 
 ### Encrypting tokens
 
-~> Support for encrypted tokens is experimental; if input/output formats
+<Note>
+
+Support for encrypted tokens is experimental; if input/output formats
 change, we will make every effort to provide backwards compatibility.
+
+</Note>
 
 Tokens can be encrypted, using a Diffie-Hellman exchange to generate an
 ephemeral key. In this mechanism, the client receiving the token writes a
@@ -70,11 +84,15 @@ key, which is then used to encrypt the token via AES-GCM. The nonce, encrypted
 payload, and the sink's public key are then written to the output file, where
 the client can compute the shared secret and decrypt the token value.
 
-~> NOTE: Token encryption is not a protection against MITM attacks! The purpose
+<Note>
+
+Token encryption is not a protection against MITM attacks! The purpose
 of this feature is for forward-secrecy and coverage against bare token values
 being persisted. A MITM that can write to the sink's output and/or client
 public-key input files could attack this exchange. Using TLS to protect the
 transit of tokens is highly recommended.
+
+</Note>
 
 To help mitigate MITM attacks, additional authenticated data (AAD) can be
 provided to Agent and Proxy. This data is written as part of the AES-GCM tag and must
@@ -111,11 +129,15 @@ The top level `auto_auth` block has two configuration entries:
 
 ### Configuration (Method)
 
-~> Auto-auth does not support using tokens with a limited number of uses. Auto-auth
+<Note>
+
+Auto-auth does not support using tokens with a limited number of uses. Auto-auth
 does not track the number of uses remaining, and may allow the token to
 expire before attempting to renew it. For example, if using AppRole auto-auth,
 you must use 0 (meaning unlimited) as the value for
 [`token_num_uses`](/vault/api-docs/auth/approle#token_num_uses).
+
+</Note>
 
 These are common configuration values that live within the `method` block:
 
@@ -209,7 +231,7 @@ These configuration values are common to all Sinks:
 
 ### Auto auth examples
 
-Auto-Auth configuration objects take two separate forms when specified in HCL
+Auto-auth configuration objects take two separate forms when specified in HCL
 and JSON. The following examples are meant to clarify the differences between
 the two formats.
 
@@ -218,8 +240,12 @@ the two formats.
 The HCL format may define any number of sink objects with an optional wrapping
 `sinks {...}` object.
 
-~> Note: The [corresponding JSON format](#sinks-json-format) _must_ specify a
+<Note>
+
+The [corresponding JSON format](#sinks-json-format) _must_ specify a
 `"sinks" : [...]` array to encapsulate all `sink` JSON objects.
+
+</Note>
 
 ```hcl
 // Other Vault Agent or Vault Proxy configuration blocks

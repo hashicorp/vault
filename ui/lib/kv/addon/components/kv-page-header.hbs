@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <PageHeader as |p|>
   <p.top>
@@ -12,7 +12,10 @@
       {{#if @mountName}}
         <Icon @name="key-values" @size="24" class="has-text-grey-light" />
         {{@mountName}}
-        <span class="tag">version 2</span>
+        <Hds::Badge @text="version 2" />
+      {{else if @secretPath}}
+        {{@secretPath}}
+        <Hds::Copy::Button @isIconOnly={{true}} @text="Copy your secret path" @textToCopy={{@secretPath}} />
       {{else}}
         {{@pageTitle}}
       {{/if}}
@@ -35,7 +38,7 @@
 {{/if}}
 
 {{#if (or (has-block "toolbarFilters") (has-block "toolbarActions"))}}
-  <Toolbar aria-label="menu items for managing {{or @mountName @pageTitle}}">
+  <Toolbar aria-label="menu items for managing {{or @mountName @secretPath @pageTitle}}">
     <ToolbarFilters aria-label="filters for secrets list">
       {{yield to="toolbarFilters"}}
     </ToolbarFilters>

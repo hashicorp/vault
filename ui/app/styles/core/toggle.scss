@@ -1,3 +1,6 @@
+@use '../utils/color_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -43,7 +46,7 @@
   height: 1.5rem;
   border: 0.1rem solid transparent;
   border-radius: 0.75rem;
-  background: $ui-gray-300;
+  background: color_variables.$ui-gray-300;
   content: '';
 }
 .toggle[type='checkbox'] + label::after {
@@ -55,12 +58,12 @@
   height: 1rem;
   transform: translate3d(0, 0, 0);
   border-radius: 50%;
-  background: $white;
-  transition: all 0.25s $easing;
+  background: color_variables.$white;
+  transition: all 0.25s size_variables.$easing;
   content: '';
 }
 .toggle[type='checkbox']:checked + label::before {
-  background: $ui-gray-700;
+  background: color_variables.$ui-gray-700;
 }
 .toggle[type='checkbox']:checked + label::after {
   left: 1.625rem;
@@ -70,25 +73,25 @@
 .toggle[type='checkbox'] {
   &.is-small {
     + label {
-      font-size: $size-7;
-      padding-left: $spacing-32;
+      font-size: size_variables.$size-7;
+      padding-left: size_variables.$spacing-32;
       margin: 0 0.25rem;
       &::before {
-        top: calc($size-8 / 5);
-        height: $size-8;
-        width: $size-8 * 2;
+        top: calc(size_variables.$size-8 / 5);
+        height: size_variables.$size-8;
+        width: size_variables.$size-8 * 2;
       }
       &::after {
-        width: $size-8 * 0.9;
-        height: $size-8 * 0.9;
+        width: size_variables.$size-8 * 0.9;
+        height: size_variables.$size-8 * 0.9;
         transform: translateX(0.05rem);
         left: 0;
-        top: calc($size-8 / 4);
+        top: calc(size_variables.$size-8 / 4);
       }
     }
     &:checked + label::after {
       left: 0;
-      transform: translateX(($size-8 * 2) - ($size-8 * 0.94));
+      transform: translateX((size_variables.$size-8 * 2) - (size_variables.$size-8 * 0.94));
     }
   }
 }
@@ -96,10 +99,10 @@
   will-change: left;
 }
 .toggle[type='checkbox']:focus + label {
-  box-shadow: 0 0 1px $blue;
+  box-shadow: 0 0 1px color_variables.$blue;
 }
 .toggle[type='checkbox'].is-success:checked + label::before {
-  background: $blue;
+  background: color_variables.$blue;
 }
 
 .toggle-label {

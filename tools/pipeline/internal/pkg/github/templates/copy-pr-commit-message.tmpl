@@ -1,0 +1,5 @@
+Merge {{ .OriginPullRequest.HTMLURL }}{{ if .TargetRef }} into {{ .TargetRef }}{{ end }}
+
+{{ range $i, $t := .CoAuthoredByTrailers -}}
+{{ $t }}
+{{ end -}}

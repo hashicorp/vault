@@ -15,12 +15,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
-	bolt "github.com/hashicorp-forge/bbolt"
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/go-secure-stdlib/base62"
 	"github.com/hashicorp/go-uuid"
@@ -28,6 +28,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/physical"
 	"github.com/stretchr/testify/require"
+	bolt "go.etcd.io/bbolt"
 )
 
 func testBothRaftBackends(t *testing.T, f func(t *testing.T, raftWALValue string)) {
@@ -758,6 +759,47 @@ func TestRaft_TransactionalBackend_ThreeNode(t *testing.T) {
 	})
 }
 
+// TestRaft_Removed creates a 3 node cluster and checks that the nodes are not
+// removed, then verifies that node3 marks itself as removed when it gets
+// removed from the cluster
+func TestRaft_Removed(t *testing.T) {
+	t.Parallel()
+	testBothRaftBackends(t, func(t *testing.T, raftWALValue string) {
+		conf := map[string]string{
+			"trailing_logs": "100",
+			"raft_wal":      raftWALValue,
+		}
+
+		raft1, _ := GetRaftWithConfig(t, true, true, conf)
+		raft2, _ := GetRaftWithConfig(t, false, true, conf)
+		raft3, _ := GetRaftWithConfig(t, false, true, conf)
+
+		addPeer(t, raft1, raft2)
+		addPeer(t, raft1, raft3)
+		physical.ExerciseBackend(t, raft1)
+
+		commitIdx := raft1.CommittedIndex()
+		ensureCommitApplied(t, commitIdx, raft2)
+		ensureCommitApplied(t, commitIdx, raft3)
+
+		require.False(t, raft1.IsRemoved())
+		require.False(t, raft2.IsRemoved())
+		require.False(t, raft3.IsRemoved())
+
+		callbackCalled := atomic.Bool{}
+		raft3.SetRemovedCallback(func() {
+			callbackCalled.Store(true)
+		})
+		err := raft1.RemovePeer(context.Background(), raft3.NodeID())
+		require.NoError(t, err)
+
+		require.Eventually(t, raft3.IsRemoved, 15*time.Second, 500*time.Millisecond)
+		require.True(t, callbackCalled.Load())
+		require.False(t, raft1.IsRemoved())
+		require.False(t, raft2.IsRemoved())
+	})
+}
+
 // TestRaft_TransactionalLimitsEnvOverride ensures the ENV var overrides for
 // transaction size limits are plumbed through as expected.
 func TestRaft_TransactionalLimitsEnvOverride(t *testing.T) {
@@ -852,7 +894,7 @@ func TestRaft_Backend_Performance(t *testing.T) {
 
 		defaultConfig := raft.DefaultConfig()
 		localConfig := raft.DefaultConfig()
-		err := b.applyConfigSettings(localConfig)
+		err := ApplyConfigSettings(b.logger, b.conf, localConfig)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -873,7 +915,7 @@ func TestRaft_Backend_Performance(t *testing.T) {
 		}
 
 		localConfig = raft.DefaultConfig()
-		err = b.applyConfigSettings(localConfig)
+		err = ApplyConfigSettings(b.logger, b.conf, localConfig)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -894,7 +936,7 @@ func TestRaft_Backend_Performance(t *testing.T) {
 		}
 
 		localConfig = raft.DefaultConfig()
-		err = b.applyConfigSettings(localConfig)
+		err = ApplyConfigSettings(b.logger, b.conf, localConfig)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -3,25 +3,24 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentURL, find, visit, settled, click } from '@ember/test-helpers';
+import { currentURL, visit, click, fillIn } from '@ember/test-helpers';
+import { selectChoose } from 'ember-power-select/test-support';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 
-import backendListPage from 'vault/tests/pages/secrets/backends';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-
-const { searchSelect } = GENERAL;
+import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 
 module('Acceptance | secret engine mount settings', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
     this.uid = uuidv4();
-    return authPage.login();
+    return login();
   });
 
   test('it allows you to mount a secret engine', async function (assert) {
@@ -31,22 +30,25 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     // mount unsupported backend
     await visit('/vault/settings/mount-secret-backend');
 
-    assert.strictEqual(currentURL(), '/vault/settings/mount-secret-backend');
-
-    await mountSecrets.selectType(type);
-    await mountSecrets
-      .path(path)
-      .toggleOptions()
-      .enableDefaultTtl()
-      .defaultTTLUnit('s')
-      .defaultTTLVal(100)
-      .submit();
-    await settled();
-    assert.ok(
-      find('[data-test-flash-message]').textContent.trim(),
-      `Successfully mounted '${type}' at '${path}'!`
+    assert.strictEqual(
+      currentURL(),
+      '/vault/settings/mount-secret-backend',
+      'navigates to the mount secret backend page'
     );
-    await settled();
+    await click(MOUNT_BACKEND_FORM.mountType(type));
+    await fillIn(GENERAL.inputByAttr('path'), path);
+    await click(GENERAL.button('Method Options'));
+    await click(GENERAL.toggleInput('Default Lease TTL'));
+    await mountSecrets.defaultTTLUnit('s').defaultTTLVal(100);
+    await click(GENERAL.submitButton);
+
+    assert
+      .dom(`${GENERAL.flashMessage}.is-success`)
+      .includesText(
+        `Success Successfully mounted the ${type} secrets engine at ${path}`,
+        'flash message is shown after mounting'
+      );
+
     assert.strictEqual(currentURL(), `/vault/secrets`, 'redirects to secrets page');
     // cleanup
     await runCmd(deleteEngineCmd(path));
@@ -59,10 +61,9 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     await visit('/vault/settings/mount-secret-backend');
     await runCmd(mountEngineCmd(type, path), false);
     await visit('/vault/secrets');
-    await click(searchSelect.trigger('filter-by-engine-name'));
-    await click(searchSelect.option(searchSelect.optionIndex(path)));
+    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), path);
     await click(GENERAL.menuTrigger);
-    await backendListPage.configLink();
+    await click(GENERAL.menuItem('view-configuration'));
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${path}/${type}/configuration`,
@@ -79,10 +80,9 @@ module('Acceptance | secret engine mount settings', function (hooks) {
     await visit('/vault/settings/mount-secret-backend');
     await runCmd(mountEngineCmd(type, path), false);
     await visit('/vault/secrets');
-    await click(searchSelect.trigger('filter-by-engine-name'));
-    await click(searchSelect.option(searchSelect.optionIndex(path)));
+    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), path);
     await click(GENERAL.menuTrigger);
-    await backendListPage.configLink();
+    await click(GENERAL.menuItem('view-configuration'));
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${path}/configuration`,

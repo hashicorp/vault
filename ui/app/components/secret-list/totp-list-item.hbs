@@ -1,0 +1,65 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<LinkedBlock
+  @params={{array "vault.cluster.secrets.backend.show" @item.id}}
+  class="list-item-row"
+  data-test-secret-link={{@item.id}}
+  @encode={{true}}
+>
+  <div class="columns is-mobile">
+    <div class="column is-10">
+      <LinkTo
+        @route="vault.cluster.secrets.backend.show"
+        @model={{@item.id}}
+        class="has-text-black has-text-weight-semibold"
+      >
+        <Icon @name="user" class="has-text-grey-light is-pulled-left" />
+        <div class="role-item-details">
+          <span class="is-underline">{{if (eq @item.id " ") "(self)" (or @item.keyWithoutParent @item.id)}}</span>
+        </div>
+      </LinkTo>
+    </div>
+    <div class="column has-text-right">
+      <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
+        <dd.ToggleIcon
+          @icon="more-horizontal"
+          @text="Manage key {{@item.id}}"
+          @hasChevron={{false}}
+          data-test-popup-menu-trigger
+        />
+        {{#if @item.canRead}}
+          <dd.Interactive
+            @route="vault.cluster.secrets.backend.show"
+            @model={{@item.id}}
+            data-test-popup-menu="details"
+          >Details</dd.Interactive>
+        {{/if}}
+        <dd.Interactive
+          @route="vault.cluster.secrets.backend.credentials"
+          @model={{@item.id}}
+          data-test-popup-menu="generate code"
+        >Generate Code</dd.Interactive>
+        {{#if @item.canDelete}}
+          <dd.Interactive
+            @color="critical"
+            data-test-confirm-action-trigger
+            {{on "click" (fn (mut this.showConfirmModal) true)}}
+          >Delete</dd.Interactive>
+        {{/if}}
+
+      </Hds::Dropdown>
+    </div>
+  </div>
+</LinkedBlock>
+
+{{#if this.showConfirmModal}}
+  <ConfirmModal
+    @color="critical"
+    @onClose={{fn (mut this.showConfirmModal) false}}
+    @confirmMessage="This will permanently delete this key."
+    @onConfirm={{@delete}}
+  />
+{{/if}}

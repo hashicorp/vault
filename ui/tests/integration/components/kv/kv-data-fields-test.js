@@ -11,6 +11,9 @@ import { hbs } from 'ember-cli-htmlbars';
 import { fillIn, render, click } from '@ember/test-helpers';
 import codemirror from 'vault/tests/helpers/codemirror';
 import { PAGE, FORM } from 'vault/tests/helpers/kv/kv-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { createLongJson } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
 module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
   setupRenderingTest(hooks);
@@ -22,6 +25,12 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
     this.backend = 'my-kv-engine';
     this.path = 'my-secret';
     this.secret = this.store.createRecord('kv/data', { backend: this.backend });
+    setRunOptions({
+      rules: {
+        // failing on .CodeMirror-scroll
+        'scrollable-region-focusable': { enabled: false },
+      },
+    });
   });
 
   test('it updates the secret model', async function (assert) {
@@ -88,7 +97,7 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
     assert.dom(PAGE.infoRowValue('foo')).hasText('bar', 'secret value shows after toggle');
   });
 
-  test('it shows readonly json editor when viewing secret details of complex secret', async function (assert) {
+  test('it shows hds codeblock when viewing secret details of complex secret', async function (assert) {
     this.secret.secretData = {
       foo: {
         bar: 'baz',
@@ -100,7 +109,24 @@ module('Integration | Component | kv-v2 | KvDataFields', function (hooks) {
       owner: this.engine,
     });
     assert.dom(PAGE.infoRowValue('foo')).doesNotExist('does not render rows of secret data');
-    assert.dom('[data-test-component="code-mirror-modifier"]').hasClass('readonly-codemirror');
-    assert.dom('[data-test-component="code-mirror-modifier"]').includesText(`{ "foo": { "bar": "baz" }}`);
+    assert.dom(GENERAL.codeBlock('secret-data')).exists('hds codeBlock exists');
+    assert
+      .dom(GENERAL.codeBlock('secret-data'))
+      .hasText(`Version data { "foo": { "bar": "baz" } } `, 'Json data is displayed');
+  });
+
+  test('it defaults to a viewportMargin 10 when there is no secret data', async function (assert) {
+    await render(hbs`<KvDataFields @showJson={{true}} @secret={{this.secret}} />`, { owner: this.engine });
+    assert.strictEqual(codemirror().options.viewportMargin, 10, 'viewportMargin defaults to 10');
+  });
+
+  test('it calculates viewportMargin based on secret size', async function (assert) {
+    this.secret.secretData = createLongJson(100);
+    await render(hbs`<KvDataFields @showJson={{true}} @secret={{this.secret}} />`, { owner: this.engine });
+    assert.strictEqual(
+      codemirror().options.viewportMargin,
+      100,
+      'viewportMargin is set to 100 matching the height of the json'
+    );
   });
 });

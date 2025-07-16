@@ -1,0 +1,3 @@
+```release-note:bug
+database/mssql: Fix a bug where contained databases would silently fail root rotation if a custom root rotation statement was not provided.
+```

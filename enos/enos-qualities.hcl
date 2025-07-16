@@ -405,6 +405,10 @@ quality "vault_audit_log" {
   description = "The Vault audit sub-system is enabled with the log and writes to a log"
 }
 
+quality "vault_audit_log_secrets" {
+  description = "The Vault audit sub-system does not output secret values"
+}
+
 quality "vault_audit_socket" {
   description = "The Vault audit sub-system is enabled with the socket and writes to a socket"
 }
@@ -490,6 +494,10 @@ quality "vault_init" {
   description = "Vault initializes the cluster with the given seal parameters"
 }
 
+quality "vault_journal_secrets" {
+  description = "The Vault systemd journal does not output secret values"
+}
+
 quality "vault_license_required_ent" {
   description = "Vault Enterprise requires a license in order to start"
 }
@@ -532,8 +540,32 @@ quality "vault_proxy_cli_access" {
   EOF
 }
 
+quality "vault_radar_index_create" {
+  description = "Vault radar is able to create an index from KVv2 mounts"
+}
+
+quality "vault_radar_scan_file" {
+  description = "Vault radar is able to scan a file for secrets"
+}
+
 quality "vault_raft_voters" {
   description = global.description.verify_raft_cluster_all_nodes_are_voters
+}
+
+quality "vault_raft_removed_after_restart" {
+  description = "A removed raft node will continue reporting as removed after the process is restarted"
+}
+
+quality "vault_raft_removed_statuses" {
+  description = "A removed raft node reports itself as removed in the status endpoints"
+}
+
+quality "vault_raft_removed_cant_rejoin" {
+  description = "A removed raft node cannot rejoin a cluster while it still has old vault/raft data"
+}
+
+quality "vault_raft_removed_rejoin_after_deletion" {
+  description = "A removed raft node can rejoin a cluster if it has deleted its old vault/raft data"
 }
 
 quality "vault_replication_ce_disabled" {
@@ -568,6 +600,11 @@ quality "vault_secrets_kv_read" {
 
 quality "vault_secrets_kv_write" {
   description = "Vault kv secrets engine data is writable"
+}
+
+
+quality "vault_secrets_ldap_write_config" {
+  description = "The Vault LDAP secrets engine is configured with the correct settings"
 }
 
 quality "vault_service_restart" {

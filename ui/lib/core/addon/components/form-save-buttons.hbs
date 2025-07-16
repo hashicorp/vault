@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <div class="field is-fullwidth box is-bottomless {{if (eq @includeBox false) 'is-shadowless'}}">
   <Hds::ButtonSet>
@@ -9,7 +9,7 @@
       @text={{or @saveButtonText "Save"}}
       @icon={{if @isSaving "loading"}}
       type="submit"
-      data-test-edit-form-submit
+      data-test-submit
       disabled={{@isSaving}}
     />
     {{#if this.cancelLink}}
@@ -21,12 +21,7 @@
       />
     {{/if}}
     {{#if @onCancel}}
-      <Hds::Button
-        @text={{or @cancelButtonText "Cancel"}}
-        @color="secondary"
-        {{on "click" @onCancel}}
-        data-test-cancel-button
-      />
+      <Hds::Button @text={{or @cancelButtonText "Cancel"}} @color="secondary" {{on "click" @onCancel}} data-test-cancel />
     {{/if}}
   </Hds::ButtonSet>
   {{yield to="error"}}

@@ -1,0 +1,390 @@
+---
+layout: docs
+page_title: Best practices for namespaces and mount paths
+description: >-
+  Review best practices for structuring Vault namespaces and learn how
+  namespaces impact endpoint paths.
+---
+
+# Best practices for namespaces and mount paths
+
+Namespaces are isolated environments that functionally create "Vaults within a
+Vault." They have separate login paths, and support creating and managing data
+isolated to their namespace. This functionality enables you to provide Vault as
+a service to tenants.
+
+![Conceptual diagram for namespace usages](/img/diagram_namespaces-for-org.png)
+
+This guide provides recommended approach to structuring Vault namespaces and
+mount paths, as well as some guidance around how to make decisions for
+namespaces and paths structuring, given the organizational structure and use
+cases.
+
+### Why is this topic important?
+
+Everything in Vault is path-based. Each path corresponds to an operation or
+secret in Vault, and the Vault API endpoints map to these paths; therefore,
+writing policies configures the permitted operations to specific secret paths.
+For example, to grant access to manage tokens in the root namespace, the policy
+path is `auth/token/*`. To manage tokens for the  _education_ namespace, the
+fully-qualified path functionally becomes `education/auth/token/*`.
+
+The following diagram demonstrates the API paths based on where the auth method
+and secrets engines are enabled. 
+
+![Namespaces and mount paths](/img/diagram_namespaces_paths.png)
+
+You can isolate secrets using namespaces or mounts dedicated to each Vault
+client. For example, you can create a namespace for each isolated tenant and
+they are responsible for managing the resources under their namespace.
+Alternatively, you can mount a dedicated secrets engine at a path dedicated to
+each team within the organization. 
+
+![Namespaces best practices](/img/diagram_namespaces_intro.png)
+
+Depending on how you isolate the secrets, it determines who is responsible for
+managing those secrets, and more importantly, policies related to those secrets.  
+
+
+<Note>
+
+The creation of namespaces should be performed by a user with a highly
+privileged token such as `root` to set up isolated environments for each
+organization, team, or application.
+
+</Note>
+
+## Deployment considerations
+
+To plan and design the Vault namespaces, auth method paths and secrets engine
+paths, you need to consider how to best structure Vault's logical objects for
+your organization. 
+
+
+<table>
+  <thead>
+    <tr>
+      <th>Requirements</th>
+      <th>What to consider</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Organizational structure</td>
+      <td>
+        <ul>
+          <li>What is your organizational structure?</li>
+          <li>What is the level of granularity across lines of businesses (LOBs), divisions, teams, services, apps that needs to be reflected in Vault's end-state design?</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td>Self-service requirements</td>
+      <td>
+        <ul>
+          <li>Given your organizational structure, what is the desired level of <strong>self-service</strong> required?</li>
+          <li>How are Vault policies to be managed?</li>
+          <li>Will teams need to directly manage policies for their own scope of responsibility?</li>
+          <li>Or, will they be interacting with Vault via some abstraction layer where policies and patterns will be templatized? For example, configuration by code, Git flows, the Terraform Vault provider, custom onboarding layers, or some combination of these.</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td>Audit requirements</td>
+      <td>
+        <ul>
+          <li>What are the requirements around auditing usage of Vault within your organization?</li>
+          <li>Is there a need to regularly certify access to secrets?</li>
+          <li>Is there a need to review and/or decommission stale secrets or auth roles?</li>
+          <li>Is there a need to determine chargeback amounts to internal customers?</li>
+        </ul>
+      </td>
+    </tr>
+    <tr>
+      <td>Secrets engine requirements</td>
+      <td>
+        What types of secrets engines will you use (KV, database, AD, PKI, etc.)? <br /><br />
+        For large organizations, each of these might require different structuring patterns. For example, with KV secrets engine, each team might have their own dedicated KV mount. However, for AD secrets engine, this is inherently a <em>shared</em> type of mount so you would manage access at a role level, rather than having multiple mounts that share the same connection configuration.
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+
+## Chroot namespace
+
+<Note title="Vault version">
+
+To use the chroot listener feature, you must run **Vault Enterprise 1.15** or
+later.
+
+</Note>
+
+Vault clients (users, applications, etc.) must be aware of which namespace to
+send requests, and set the target namespace using `-namespace` flag,
+`X-Vault-Namespace` HTTP header, or `VAULT_NAMESPACE` environment variable. If
+the target namespace is not properly set, the request will fail. This can be
+cumbersome. 
+
+To simplify, Vault operators can specify additional `listener` stanza in the
+configuration file, and defines `chroot_namespace` to specify an alternate
+top-level namespace.
+
+**Example:** 
+
+<CodeBlockConfig filename="vault-config.hcl" highlight="17-25">
+
+```hcl
+ui            = true
+cluster_addr  = "https://127.0.0.1:8201"
+api_addr      = "https://127.0.0.1:8200"
+disable_mlock = true
+
+storage "raft" {
+  path = "/path/to/raft/data"
+  node_id = "raft_node_1"
+}
+
+listener "tcp" {
+  address       = "127.0.0.1:8200"
+  tls_cert_file = "/path/to/full-chain.pem"
+  tls_key_file  = "/path/to/private-key.pem"
+}
+
+listener "tcp" {
+   address          = "127.0.0.1:8300"
+   chroot_namespace = "usa-hq"
+   tls_cert_file = "/path/to/full-chain.pem"
+   tls_key_file  = "/path/to/private-key.pem"
+   telemetry {
+      unauthenticated_metrics_access = true
+  }
+}
+
+telemetry {
+  statsite_address = "127.0.0.1:8125"
+  disable_hostname = true
+}
+```
+
+</CodeBlockConfig>
+
+The `chroot_namespace` specifies an alternate top-level namespace for the
+listener, `https//127.0.0.1:8300`.
+
+**Example request:**
+
+```shell-session
+$ curl --header "X-Vault-Namespace: team_1" \
+   --header "X-Vault-Token: $VAULT_TOKEN" \
+   --request POST \
+   --data '{"type": "kv-v2"}' \
+   https://127.0.0.1:8300/v1/sys/mounts/team-secret
+```
+
+The request operates on the `usa-hq/team_1` namespace since the top-level
+namespace is set to `usa-hq` for the listener address, `127.0.0.1:8300`.
+
+The top-level namespace for `https://127.0.0.1:8200` is `root`. 
+
+
+## General guidance
+
+The following principles should be used to guide an appropriate namespace or
+mount path structure.
+
+- [Use namespaces sparingly](#use-namespaces-sparingly)
+- [Leverage Vault identities](#leverage-vault-identities)
+- [Understand Vault's mount points](#understand-vault-s-mount-points)
+- [Granularity of paths](#granularity-of-paths)
+- [Standardized onboarding process](#standardized-onboarding-process)
+
+### Use namespaces sparingly
+
+The primary purpose of namespaces is to delineate administrative boundaries.
+The main determining factor for **encapsulating an organizational unit** into
+its own namespace is the need for that unit to be able to directly manage
+policies. However, many organizations may find their deployment requirements are
+more nuanced, especially if they want to enable "self-service" for their
+consumers of Vault.
+
+When setting up Vault to be self-service, you should first ask what does
+"self-service" actually mean to your organization.
+
+- Will teams be managing Vault directly?
+- Will there be an onboarding process/layer that teams interact with?
+
+When possible, HashiCorp recommends providing the self-service capability by
+implementing an onboarding layer rather than directly through Vault. The
+onboarding layer can enforce a standard naming convention, secrets path
+structure, and templated policies. In this case, the administrative boundary
+is at the onboarding layer and not at the organizational unit level. As such,
+this use case should not require a separate namespace for the team.
+
+![Namespaces best practices](/img/diagram_namespaces_bp.png)
+
+However, these teams may roll up to a specific platform team or LOB for which
+the policy structuring, authentication methods, and secrets use cases are common
+across all teams within that LOB. Here, it makes sense that the higher-level
+organizational unit has its own namespace.
+
+Additionally, in many cases, most of the desired level of isolation can be
+enforced via ACL policies.
+
+The entire list of namespaces must fit into a single storage entry in Vault, and
+each namespace creates at least two secrets engines which also require storage
+space. Namespace planning should include a review of the maximum number of
+namespaces allowed by the storage entry size.
+
+### Leverage Vault identities
+
+It's also critical to understand identity in order to make use of [Vault ACL
+templates](/vault/docs/concepts/policies#templated-policies),
+which can ease policy management.
+
+Vault provides an internal layer of identity management that can be used to map
+entities to multiple auth methods as well as provide grouping capabilities. This
+allows for more robust policy assignment options.
+
+<Tip>
+
+Visit the [identity alias name
+table](/vault/docs/secrets/identity#mount-bound-aliases) documentation page to
+learn about constructing templated ACL policies.
+
+</Tip>
+
+The entity aliases, based on specific information available from the auth
+method, maps to identity entities that you create. You can use the default names
+and associated metadata that are created for aliases and entities as part of
+policy templates and deciding on naming conventions for secrets paths/roles.
+This allows you to avoid having hard-coded policies for use cases that follow a
+certain pattern broadly.
+
+You can define identity groups to associate entities that should have
+permissions in common, and reference those groups in policy templates as much as
+you can entities and aliases. These groups may also be created automatically for
+you, depending on the auth methods used.
+
+**ACL policy template example:**
+
+<CodeBlockConfig lineNumbers>
+
+```hcl 
+path "kvv1-{{identity.entity.metadata.team_name}}/*" {
+   capabilities = [ "create", "read", "update", "delete", "list" ]
+}
+
+path "transit/encrypt/{{identity.entity.aliases.auth_approle_b2560218.name}}" {
+   capabilities = [ "update" ]
+}
+```
+
+</CodeBlockConfig>
+
+Those templated values get resolved dynamically based on the requester's entity
+token metadata. 
+
+At line 1, the `{{identity.entity.metadata.team_name}}` value retrieves the
+`team_name` value set on the entity's metadata. Similarly, the
+`{{identity.entity.aliases.auth_approle_b2560218.name}}` value at line 5 returns
+the Role ID of the requesting client. This enables your policies to be less
+static.
+
+<Note>
+
+ The number of identity entities is how Vault determines the number
+of active clients for reporting and licensing purposes. Refer to the [Client
+Count](/vault/docs/concepts/client-count) documentation for
+more detail. 
+
+</Note>
+
+<Tip>
+
+If you are not familiar with templated policies, read the [ACL Policy Path
+Templating](/vault/tutorials/policies/policy-templating) tutorial.
+
+</Tip>
+
+### Understand Vault's mount points
+
+Auth methods and secrets engines can be categorized into two types:
+
+1. **Dedicated:** Auth methods and secrets engines that can be managed and
+mapped directly to a specific organizational unit. For example, the team that
+manages `app-1` can utilize their own AppRole and/or KV mounts without the
+ability to impact other teams' mounts.
+
+1. **Shared:** An organization level resources such as Kubernetes auth method
+and the Active Directory (AD) secrets engine that are **shared** and managed at
+the company level; therefore, mounted at the company-level namespace.
+
+It's important to understand [Vault's sizing
+restrictions](/vault/docs/internals/limits) for mounts. All
+secrets engine and auth method mount points must each fit within a single storage
+entry. For Consul, the storage limit is 512KB. For Integrated Storage the limit
+is 1MB. 
+
+Each JSON object describing a mount uses ~500 bytes, but in compressed form
+it's ~75 bytes. Since auth mounts, secrets engine mount points, local-only auth
+methods, and local-only secrets engine mounts are stored separately the limit
+applies to each independently. 
+
+By default, each namespace is created with a token auth mount (`/auth/`), an
+identity mount (`/identity/`), and system mount (`/sys/`). This means that each
+namespace requires three different mounts and then you will add your custom
+mounts. Multiply that by 1,000s means that your mount tables will grow
+exponentially.
+
+### Granularity of paths 
+
+When thinking about Vault's logical structure, you want to find the right
+balance of granularity between the various mounts needed and the roles defined
+within the mounts. 
+
+Sharing mounts between teams has benefits and risk. It is up to you to find the
+right balance of granularity between the various mounts needed and the roles
+defined within the mounts. Below are a couple use cases with their benefits and
+risks. 
+
+You create a single KV mount with a sub-path for every team within the same
+mount.  
+
+- **Benefit:** reduces potential of hitting mount table limits.  
+- **Risk:** the KV mount is accidentally deleted causing all users of that secret 
+engine to be
+impacted.
+
+You create a unique mount per LOB.  
+
+- **Benefit:** can provide sub-paths for different teams and limit the 
+blast-radius  of an errant change to a single mount.  
+- **Risk:** unique KV mounts per team becomes inefficient from a mount
+management perspective.
+
+![Compare a single mount vs. multiple mounts](/img/diagram_namespaces_kv-paths.png)
+
+### Standardized onboarding process
+
+When deploying Vault at scale, it is critical to Vault adoption to consider the
+consumer experience. Specifically, it's important to reduce the level of
+friction of consuming Vault. While it maybe quick to drop Vault into an
+environment and interact with it directly, it's important to deliberately map
+out how consumers will onboard to Vault and consume the service.
+
+One of the pillars behind the Tao of Hashicorp is automation through
+codification. Many HashiCorp users are using Terraform for managing
+infrastructure on-prem and in the cloud. Terraform can also be used to [codify
+Vault](/vault/tutorials/operations/codify-mgmt-enterprise)
+configuration tasks such as creation of namespaces, policies, and mounts. This
+allows Vault operators to increase their productivity, move quicker, promote
+repeatable processes, and reduce human error.
+
+## Tutorials
+
+To learn more, review the following tutorials:
+
+- [Secure multi-tenancy with namespaces](/vault/tutorials/enterprise/namespaces)
+- [Vault recommended patterns](/vault/tutorials/recommended-patterns)
+- [Vault standard operating procedures](/vault/tutorials/standard-procedures)

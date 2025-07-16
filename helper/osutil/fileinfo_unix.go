@@ -8,6 +8,7 @@ package osutil
 import (
 	"fmt"
 	"io/fs"
+	"os"
 	"os/user"
 	"strconv"
 	"syscall"
@@ -58,4 +59,8 @@ func FileUidMatch(info fs.FileInfo, path string, uid int) (err error) {
 // Sets new umask and returns old umask
 func Umask(newmask int) int {
 	return syscall.Umask(newmask)
+}
+
+func Chown(f *os.File, owner, group int) error {
+	return f.Chown(owner, group)
 }

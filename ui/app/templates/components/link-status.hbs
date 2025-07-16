@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 {{#if (and this.state this.version.isEnterprise)}}
   <Hds::Alert @type="page" @color={{if (eq this.state "connected") "neutral" "warning"}} as |A|>

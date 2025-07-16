@@ -33,6 +33,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/strutil"
 	semver "github.com/hashicorp/go-version"
 	"github.com/hashicorp/vault/audit"
+	"github.com/hashicorp/vault/helper/activationflags"
 	"github.com/hashicorp/vault/helper/experiments"
 	"github.com/hashicorp/vault/helper/hostutil"
 	"github.com/hashicorp/vault/helper/identity"
@@ -56,6 +57,7 @@ import (
 	"github.com/hashicorp/vault/version"
 	"github.com/mitchellh/mapstructure"
 	"golang.org/x/crypto/sha3"
+	"golang.org/x/time/rate"
 )
 
 const (
@@ -94,11 +96,12 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	}
 
 	b := &SystemBackend{
-		Core:        core,
-		db:          db,
-		logger:      logger,
-		mfaBackend:  NewPolicyMFABackend(core, logger),
-		syncBackend: syncBackend,
+		Core:                 core,
+		db:                   db,
+		logger:               logger,
+		mfaBackend:           NewPolicyMFABackend(core, logger),
+		syncBackend:          syncBackend,
+		raftChallengeLimiter: rate.NewLimiter(rate.Limit(RaftChallengesPerSecond), RaftInitialChallengeLimit),
 	}
 
 	b.Backend = &framework.Backend{
@@ -200,7 +203,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	b.Backend.Paths = append(b.Backend.Paths, b.sealPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.statusPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogListPaths()...)
-	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogCRUDPath())
+	b.Backend.Paths = append(b.Backend.Paths, entWrappedPluginsCRUDPath(b)...)
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogPinsListPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsCatalogPinsCRUDPath())
 	b.Backend.Paths = append(b.Backend.Paths, b.pluginsReloadPath())
@@ -229,6 +232,7 @@ func NewSystemBackend(core *Core, logger log.Logger, config *logical.BackendConf
 	b.Backend.Paths = append(b.Backend.Paths, b.experimentPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.introspectionPaths()...)
 	b.Backend.Paths = append(b.Backend.Paths, b.wellKnownPaths()...)
+	b.Backend.Paths = append(b.Backend.Paths, b.activationFlagsPaths()...)
 
 	if core.rawEnabled {
 		b.Backend.Paths = append(b.Backend.Paths, b.rawPaths()...)
@@ -270,11 +274,14 @@ func (b *SystemBackend) rawPaths() []*framework.Path {
 type SystemBackend struct {
 	*framework.Backend
 	entSystemBackend
-	Core        *Core
-	db          *memdb.MemDB
-	logger      log.Logger
-	mfaBackend  *PolicyMFABackend
-	syncBackend *SecretsSyncBackend
+	Core                 *Core
+	db                   *memdb.MemDB
+	logger               log.Logger
+	mfaBackend           *PolicyMFABackend
+	syncBackend          *SecretsSyncBackend
+	idStoreBackend       *framework.Backend
+	raftChallengeLimiter *rate.Limiter
+	activationFlags      *activationflags.FeatureActivationFlags
 }
 
 // handleConfigStateSanitized returns the current configuration state. The configuration
@@ -531,17 +538,30 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		return logical.ErrorResponse("version %q is not allowed because 'builtin' is a reserved metadata identifier", pluginVersion), nil
 	}
 
+	if download := d.Get("download").(bool); download {
+		return logical.ErrorResponse("download is an enterprise only feature"), nil
+	}
+
 	sha256 := d.Get("sha256").(string)
 	if sha256 == "" {
 		sha256 = d.Get("sha_256").(string)
-		if sha256 == "" {
-			return logical.ErrorResponse("missing SHA-256 value"), nil
-		}
+	}
+
+	if sha256 == "" && pluginVersion == "" {
+		return logical.ErrorResponse("must provide at least one of sha256 or version: use sha256 for binary registration (version optional) or version only for artifact registration"), nil
+	}
+
+	if resp := validateSha256IsEmptyForEntPluginVersion(pluginVersion, sha256); resp.IsError() {
+		return resp, nil
 	}
 
 	command := d.Get("command").(string)
 	ociImage := d.Get("oci_image").(string)
-	if command == "" && ociImage == "" {
+	var resp logical.Response
+
+	if sha256 == "" && command != "" {
+		resp.AddWarning(fmt.Sprintf("When sha256 is unspecified, a plugin artifact is expected for registration and the command parameter %q will be ignored.", command))
+	} else if sha256 != "" && (command == "" && ociImage == "") {
 		return logical.ErrorResponse("must provide at least one of command or oci_image"), nil
 	}
 
@@ -607,7 +627,11 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		return nil, err
 	}
 
-	return nil, nil
+	if len(resp.Warnings) == 0 {
+		return nil, nil
+	}
+
+	return &resp, nil
 }
 
 func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -1389,7 +1413,9 @@ func (b *SystemBackend) mountInfo(ctx context.Context, entry *MountEntry, legacy
 			entryConfig["max_lease_ttl"] = coreMaxTTL
 		}
 	}
-
+	if entry.Config.TrimRequestTrailingSlashes {
+		entryConfig["trim_request_trailing_slashes"] = true
+	}
 	if rawVal, ok := entry.synthesizedConfigCache.Load("audit_non_hmac_request_keys"); ok {
 		entryConfig["audit_non_hmac_request_keys"] = rawVal.([]string)
 	}
@@ -1611,6 +1637,10 @@ func (b *SystemBackend) handleMount(ctx context.Context, req *logical.Request, d
 	// Copy over the force no cache if set
 	if apiConfig.ForceNoCache {
 		config.ForceNoCache = true
+	}
+
+	if apiConfig.TrimRequestTrailingSlashes {
+		config.TrimRequestTrailingSlashes = true
 	}
 
 	if err := checkListingVisibility(apiConfig.ListingVisibility); err != nil {
@@ -2147,6 +2177,10 @@ func (b *SystemBackend) handleTuneReadCommon(ctx context.Context, path string) (
 
 	if rawVal, ok := mountEntry.synthesizedConfigCache.Load("identity_token_key"); ok {
 		resp.Data["identity_token_key"] = rawVal.(string)
+	}
+
+	if mountEntry.Config.TrimRequestTrailingSlashes {
+		resp.Data["trim_request_trailing_slashes"] = mountEntry.Config.TrimRequestTrailingSlashes
 	}
 
 	if mountEntry.Config.UserLockoutConfig != nil {
@@ -2753,6 +2787,30 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
+	if rawVal, ok := data.GetOk("trim_request_trailing_slashes"); ok {
+		trimRequestTrailingSlashes := rawVal.(bool)
+
+		oldVal := mountEntry.Config.TrimRequestTrailingSlashes
+		mountEntry.Config.TrimRequestTrailingSlashes = trimRequestTrailingSlashes
+
+		// Update the mount table
+		var err error
+		switch {
+		case strings.HasPrefix(path, "auth/"):
+			err = b.Core.persistAuth(ctx, b.Core.auth, &mountEntry.Local)
+		default:
+			err = b.Core.persistMounts(ctx, b.Core.mounts, &mountEntry.Local)
+		}
+		if err != nil {
+			mountEntry.Config.TrimRequestTrailingSlashes = oldVal
+			return handleError(err)
+		}
+
+		if b.Core.logger.IsInfo() {
+			b.Core.logger.Info("mount tuning of trim_request_trailing_slashes successful", "path", path)
+		}
+	}
+
 	var err error
 	var resp *logical.Response
 	var options map[string]string
@@ -3269,6 +3327,7 @@ func (b *SystemBackend) handleEnableAuth(ctx context.Context, req *logical.Reque
 		return logical.ErrorResponse(fmt.Sprintf("invalid listing_visibility %s", apiConfig.ListingVisibility)), nil
 	}
 	config.ListingVisibility = apiConfig.ListingVisibility
+	config.TrimRequestTrailingSlashes = apiConfig.TrimRequestTrailingSlashes
 
 	if len(apiConfig.AuditNonHMACRequestKeys) > 0 {
 		config.AuditNonHMACRequestKeys = apiConfig.AuditNonHMACRequestKeys
@@ -3605,9 +3664,12 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 			policy.Raw = string(polBytes)
 		}
 
+		var duplicate bool
 		switch policyType {
 		case PolicyTypeACL:
-			p, err := ParseACLPolicy(ns, policy.Raw)
+			var p *Policy
+			// TODO (HCL_DUP_KEYS_DEPRECATION): go back to ParseACLPolicy once the deprecation is done
+			p, duplicate, err = ParseACLPolicyCheckDuplicates(ns, policy.Raw)
 			if err != nil {
 				return handleError(err)
 			}
@@ -3631,6 +3693,14 @@ func (b *SystemBackend) handlePoliciesSet(policyType PolicyType) framework.Opera
 			return handleError(err)
 		}
 
+		if duplicate {
+			if resp == nil {
+				resp = &logical.Response{}
+			}
+			// TODO (HCL_DUP_KEYS_DEPRECATION): remove log and API Warning once the deprecation is done
+			b.logger.Warn("newly created HCL policy contains duplicate attributes, which will no longer be supported in a future version", "policy", policy.Name, "namespace", ns.Path)
+			resp.AddWarning("policy contains duplicate attributes, which will no longer be supported in a future version")
+		}
 		return resp, nil
 	}
 }
@@ -4820,7 +4890,8 @@ func hasMountAccess(ctx context.Context, acl *ACL, path string) bool {
 			perms.CapabilitiesBitmap&SudoCapabilityInt > 0,
 			perms.CapabilitiesBitmap&UpdateCapabilityInt > 0,
 			perms.CapabilitiesBitmap&PatchCapabilityInt > 0,
-			perms.CapabilitiesBitmap&SubscribeCapabilityInt > 0:
+			perms.CapabilitiesBitmap&SubscribeCapabilityInt > 0,
+			perms.CapabilitiesBitmap&RecoverCapabilityInt > 0:
 
 			aclCapabilitiesGiven = true
 
@@ -5122,21 +5193,6 @@ func (b *SystemBackend) pathInternalCountersRequests(ctx context.Context, req *l
 	return resp, logical.ErrPathFunctionalityRemoved
 }
 
-func (b *SystemBackend) pathInternalCountersTokens(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	activeTokens, err := b.Core.countActiveTokens(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	resp := &logical.Response{
-		Data: map[string]interface{}{
-			"counters": activeTokens,
-		},
-	}
-
-	return resp, nil
-}
-
 func (b *SystemBackend) pathInternalCountersEntities(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	activeEntities, err := b.Core.countActiveEntities(ctx)
 	if err != nil {
@@ -5238,6 +5294,9 @@ func (b *SystemBackend) pathInternalUIResultantACL(ctx context.Context, req *log
 		}
 		if perms.CapabilitiesBitmap&SubscribeCapabilityInt > 0 {
 			capabilities = append(capabilities, SubscribeCapability)
+		}
+		if perms.CapabilitiesBitmap&RecoverCapabilityInt > 0 {
+			capabilities = append(capabilities, RecoverCapability)
 		}
 
 		// If "deny" is explicitly set or if the path has no capabilities at all,
@@ -5393,7 +5452,7 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 
 				// Add tags to all of the operations if necessary
 				if tag != "" {
-					for _, op := range []*framework.OASOperation{obj.Get, obj.Post, obj.Delete} {
+					for _, op := range []*framework.OASOperation{obj.Get, obj.Post, obj.Patch, obj.Delete} {
 						// TODO: a special override for identity is used used here because the backend
 						// is currently categorized as "secret", which will likely change. Also of interest
 						// is removing all tag handling here and providing the mount information to OpenAPI.
@@ -5465,24 +5524,25 @@ func (b *SystemBackend) pathInternalOpenAPI(ctx context.Context, req *logical.Re
 }
 
 type SealStatusResponse struct {
-	Type              string   `json:"type"`
-	Initialized       bool     `json:"initialized"`
-	Sealed            bool     `json:"sealed"`
-	T                 int      `json:"t"`
-	N                 int      `json:"n"`
-	Progress          int      `json:"progress"`
-	Nonce             string   `json:"nonce"`
-	Version           string   `json:"version"`
-	BuildDate         string   `json:"build_date"`
-	Migration         bool     `json:"migration"`
-	ClusterName       string   `json:"cluster_name,omitempty"`
-	ClusterID         string   `json:"cluster_id,omitempty"`
-	RecoverySeal      bool     `json:"recovery_seal"`
-	StorageType       string   `json:"storage_type,omitempty"`
-	HCPLinkStatus     string   `json:"hcp_link_status,omitempty"`
-	HCPLinkResourceID string   `json:"hcp_link_resource_ID,omitempty"`
-	Warnings          []string `json:"warnings,omitempty"`
-	RecoverySealType  string   `json:"recovery_seal_type,omitempty"`
+	Type               string   `json:"type"`
+	Initialized        bool     `json:"initialized"`
+	Sealed             bool     `json:"sealed"`
+	T                  int      `json:"t"`
+	N                  int      `json:"n"`
+	Progress           int      `json:"progress"`
+	Nonce              string   `json:"nonce"`
+	Version            string   `json:"version"`
+	BuildDate          string   `json:"build_date"`
+	Migration          bool     `json:"migration"`
+	ClusterName        string   `json:"cluster_name,omitempty"`
+	ClusterID          string   `json:"cluster_id,omitempty"`
+	RecoverySeal       bool     `json:"recovery_seal"`
+	StorageType        string   `json:"storage_type,omitempty"`
+	HCPLinkStatus      string   `json:"hcp_link_status,omitempty"`
+	HCPLinkResourceID  string   `json:"hcp_link_resource_ID,omitempty"`
+	Warnings           []string `json:"warnings,omitempty"`
+	RecoverySealType   string   `json:"recovery_seal_type,omitempty"`
+	RemovedFromCluster *bool    `json:"removed_from_cluster,omitempty"`
 }
 
 type SealBackendStatus struct {
@@ -5519,16 +5579,22 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 	hcpLinkStatus, resourceIDonHCP := core.GetHCPLinkStatus()
 
 	redactVersion, _, redactClusterName, _ := logical.CtxRedactionSettingsValue(ctx)
+	var removed *bool
+	isRemoved, shouldInclude := core.IsRemovedFromCluster()
+	if shouldInclude {
+		removed = &isRemoved
+	}
 
 	if sealConfig == nil {
 		s := &SealStatusResponse{
-			Type:         core.SealAccess().BarrierSealConfigType().String(),
-			Initialized:  initialized,
-			Sealed:       true,
-			RecoverySeal: core.SealAccess().RecoveryKeySupported(),
-			StorageType:  core.StorageType(),
-			Version:      version.GetVersion().VersionNumber(),
-			BuildDate:    version.BuildDate,
+			Type:               core.SealAccess().BarrierSealConfigType().String(),
+			Initialized:        initialized,
+			Sealed:             true,
+			RecoverySeal:       core.SealAccess().RecoveryKeySupported(),
+			StorageType:        core.StorageType(),
+			Version:            version.GetVersion().VersionNumber(),
+			BuildDate:          version.BuildDate,
+			RemovedFromCluster: removed,
 		}
 
 		if redactVersion {
@@ -5570,21 +5636,22 @@ func (core *Core) GetSealStatus(ctx context.Context, lock bool) (*SealStatusResp
 	progress, nonce := core.SecretProgress(lock)
 
 	s := &SealStatusResponse{
-		Type:             sealType,
-		Initialized:      initialized,
-		Sealed:           sealed,
-		T:                sealConfig.SecretThreshold,
-		N:                sealConfig.SecretShares,
-		Progress:         progress,
-		Nonce:            nonce,
-		Version:          version.GetVersion().VersionNumber(),
-		BuildDate:        version.BuildDate,
-		Migration:        core.IsInSealMigrationMode(lock) && !core.IsSealMigrated(lock),
-		ClusterName:      clusterName,
-		ClusterID:        clusterID,
-		RecoverySeal:     core.SealAccess().RecoveryKeySupported(),
-		RecoverySealType: recoverySealType,
-		StorageType:      core.StorageType(),
+		Type:               sealType,
+		Initialized:        initialized,
+		Sealed:             sealed,
+		T:                  sealConfig.SecretThreshold,
+		N:                  sealConfig.SecretShares,
+		Progress:           progress,
+		Nonce:              nonce,
+		Version:            version.GetVersion().VersionNumber(),
+		BuildDate:          version.BuildDate,
+		Migration:          core.IsInSealMigrationMode(lock) && !core.IsSealMigrated(lock),
+		RemovedFromCluster: removed,
+		ClusterName:        clusterName,
+		ClusterID:          clusterID,
+		RecoverySeal:       core.SealAccess().RecoveryKeySupported(),
+		RecoverySealType:   recoverySealType,
+		StorageType:        core.StorageType(),
 	}
 
 	if resourceIDonHCP != "" {
@@ -5642,7 +5709,16 @@ func (c *Core) GetSealBackendStatus(ctx context.Context) (*SealBackendStatusResp
 	if err != nil {
 		return nil, fmt.Errorf("could not list partially seal wrapped values: %w", err)
 	}
-	genInfo := c.seal.GetAccess().GetSealGenerationInfo()
+	// When multi-seal is enabled, use the stored seal generation information. Note that the in-memory
+	// value may not be up-to-date on non-active nodes.
+	genInfo, err := PhysicalSealGenInfo(ctx, c.physical)
+	if err != nil {
+		return nil, fmt.Errorf("could not read seal generation information: %w", err)
+	}
+	if genInfo == nil {
+		// Multi-seal is not enabled, use the in-memory value.
+		genInfo = c.seal.GetAccess().GetSealGenerationInfo()
+	}
 	r.FullyWrapped = genInfo.IsRewrapped() && len(pps) == 0
 	return &r, nil
 }
@@ -6121,8 +6197,14 @@ func sanitizePath(path string) string {
 		path += "/"
 	}
 
-	for strings.HasPrefix(path, "/") {
-		path = path[1:]
+	// Check for the specified prefixes and trim them if present
+	for strings.HasPrefix(path, "/") || strings.HasPrefix(path, "/\\") {
+		switch {
+		case strings.HasPrefix(path, "/\\"):
+			path = path[2:]
+		case strings.HasPrefix(path, "/"):
+			path = path[1:]
+		}
 	}
 
 	return path
@@ -6423,7 +6505,7 @@ This path responds to the following HTTP methods.
 	},
 
 	"alias_identifier": {
-		`It is the name of the alias (user). For example, if the alias belongs to userpass backend, 
+		`It is the name of the alias (user). For example, if the alias belongs to userpass backend,
 	   the name should be a valid username within userpass auth method. If the alias belongs
 	    to an approle auth method, the name should be a valid RoleID`,
 		"",
@@ -6845,6 +6927,11 @@ Must already be present on the machine.`,
 		`The Vault plugin runtime to use when running the plugin.`,
 		"",
 	},
+	"plugin-catalog_download": {
+		`Automatically downloads official HashiCorp plugins
+from releases.hashicorp.com (beta)`,
+		"",
+	},
 	"plugin-catalog-pins": {
 		"Configures pinned plugin versions from the plugin catalog",
 		`
@@ -7044,10 +7131,6 @@ This path responds to the following HTTP methods.
 		"Currently unsupported. Previously, count of requests seen by this Vault cluster over time.",
 		"Currently unsupported. Previously, count of requests seen by this Vault cluster over time. Not included in count: health checks, UI asset requests, requests forwarded from another cluster.",
 	},
-	"internal-counters-tokens": {
-		"Count of active tokens in this Vault cluster.",
-		"Count of active tokens in this Vault cluster.",
-	},
 	"internal-counters-entities": {
 		"Count of active entities in this Vault cluster.",
 		"Count of active entities in this Vault cluster.",
@@ -7145,6 +7228,10 @@ This path responds to the following HTTP methods.
 
 	"well-known-label": {
 		`The label representing a path-prefix within the /.well-known/ path`,
+		"",
+	},
+	"trim_request_trailing_slashes": {
+		`Whether to trim a trailing slash on incoming requests to this mount`,
 		"",
 	},
 }

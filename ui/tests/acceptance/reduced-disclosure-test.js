@@ -7,12 +7,13 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, currentRouteName, currentURL, fillIn, settled, visit } from '@ember/test-helpers';
-import authPage from 'vault/tests/pages/auth';
-import { createTokenCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
+import { login, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
+import { createTokenCmd, deleteNS, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import reducedDisclosureHandlers from 'vault/mirage/handlers/reduced-disclosure';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const { unsealKeys } = VAULT_KEYS;
 const SELECTORS = {
@@ -29,12 +30,12 @@ module('Acceptance | reduced disclosure test', function (hooks) {
     this.unsealCount = 0;
     this.sealed = false;
     this.versionSvc = this.owner.lookup('service:version');
-    return authPage.logout();
+    return logout();
   });
 
   test('login works when reduced disclosure enabled', async function (assert) {
     assert.dom(SELECTORS.footerVersion).hasText(`Vault`, 'shows Vault without version when logged out');
-    await authPage.login();
+    await login();
     assert.strictEqual(currentURL(), '/vault/dashboard');
 
     // Ensure it shows version on dashboard
@@ -45,10 +46,10 @@ module('Acceptance | reduced disclosure test', function (hooks) {
 
     const token = await runCmd(createTokenCmd('default'));
 
-    await authPage.logout();
+    await logout();
     assert.dom(SELECTORS.footerVersion).hasText(`Vault`, 'no vault version after logout');
 
-    await authPage.login(token);
+    await login(token);
     assert.strictEqual(currentURL(), '/vault/dashboard');
 
     assert
@@ -83,7 +84,7 @@ module('Acceptance | reduced disclosure test', function (hooks) {
         progress: attemptCount,
       };
     });
-    await authPage.login();
+    await login();
 
     await visit('/vault/settings/seal');
 
@@ -92,9 +93,7 @@ module('Acceptance | reduced disclosure test', function (hooks) {
 
     // seal
     await click('[data-test-seal]');
-
-    await click('[data-test-confirm-button]');
-
+    await click(GENERAL.confirmButton);
     await pollCluster(this.owner);
     await settled();
     assert.strictEqual(currentURL(), '/vault/unseal', 'vault is on the unseal page');
@@ -113,13 +112,13 @@ module('Acceptance | reduced disclosure test', function (hooks) {
     assert.dom('[data-test-cluster-status]').doesNotExist('ui does not show sealed warning');
     assert.strictEqual(currentRouteName(), 'vault.cluster.auth', 'vault is ready to authenticate');
     assert.dom('[data-test-footer-version]').hasText(`Vault`, 'Version is still not shown before auth');
-    await authPage.login();
+    await login();
     assert.dom('[data-test-footer-version]').hasText(`Vault 1.21.3`, 'Version is shown after login');
   });
 
   module('enterprise', function () {
     test('does not allow access to replication pages', async function (assert) {
-      await authPage.login();
+      await login();
       assert.dom('[data-test-sidebar-nav-link="Replication"]').doesNotExist('hides replication nav item');
 
       await visit(`/vault/replication/dr`);
@@ -133,7 +132,7 @@ module('Acceptance | reduced disclosure test', function (hooks) {
 
     test('it works for user accessing child namespace', async function (assert) {
       const namespace = 'reduced-disclosure';
-      await authPage.login();
+      await login();
 
       await runCmd(`write sys/namespaces/${namespace} -f`, false);
       const token = await runCmd(
@@ -147,8 +146,8 @@ module('Acceptance | reduced disclosure test', function (hooks) {
         )
       );
 
-      await authPage.logout();
-      await authPage.login(token);
+      await logout();
+      await login(token);
       assert
         .dom(SELECTORS.footerVersion)
         .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version for default policy in namespace');
@@ -162,11 +161,16 @@ module('Acceptance | reduced disclosure test', function (hooks) {
           'shows Vault version for default policy in child namespace'
         );
       assert.dom(SELECTORS.dashboardTitle).includesText('Vault v1.');
+
+      // log in to "root" before deleting
+      await login();
+      // clean up namespace pollution
+      await runCmd(deleteNS(namespace));
     });
     test('login works when reduced disclosure enabled (ent)', async function (assert) {
       const namespace = 'reduced-disclosure';
       assert.dom(SELECTORS.footerVersion).hasText(`Vault`, 'shows Vault without version when logged out');
-      await authPage.login();
+      await login();
       assert.strictEqual(currentURL(), '/vault/dashboard');
 
       // Ensure it shows version on dashboard
@@ -176,7 +180,7 @@ module('Acceptance | reduced disclosure test', function (hooks) {
         .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version after login');
 
       await runCmd(`write sys/namespaces/${namespace} -f`, false);
-      await authPage.loginNs(namespace);
+      await loginNs(namespace);
 
       assert
         .dom(SELECTORS.footerVersion)
@@ -184,14 +188,19 @@ module('Acceptance | reduced disclosure test', function (hooks) {
 
       const token = await runCmd(createTokenCmd('default'));
 
-      await authPage.logout();
+      await logout();
       assert.dom(SELECTORS.footerVersion).hasText(`Vault`, 'no vault version after logout');
 
-      await authPage.loginNs(namespace, token);
+      await loginNs(namespace, token);
       assert.strictEqual(currentURL(), '/vault/dashboard?namespace=reduced-disclosure');
       assert
         .dom(SELECTORS.footerVersion)
         .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version for default policy in namespace');
+
+      // log in to "root" before deleting
+      await login();
+      // clean up namespace pollution
+      await runCmd(deleteNS(namespace));
     });
   });
 });

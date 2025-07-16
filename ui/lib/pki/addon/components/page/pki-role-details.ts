@@ -17,7 +17,7 @@ interface Args {
 }
 
 export default class DetailsPage extends Component<Args> {
-  @service declare readonly router: RouterService;
+  @service('app-router') declare readonly router: RouterService;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly secretMountPath: SecretMountPath;
 
@@ -25,7 +25,7 @@ export default class DetailsPage extends Component<Args> {
     return [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: this.secretMountPath.currentPath, route: 'overview' },
-      { label: 'roles', route: 'roles.index' },
+      { label: 'Roles', route: 'roles.index' },
       { label: this.args.role.id },
     ];
   }

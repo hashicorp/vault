@@ -6,13 +6,11 @@
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 import { hash } from 'rsvp';
-import { normalizePath } from 'vault/utils/path-encoding-helpers';
-import { breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
-import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
+import { pathIsDirectory, breadcrumbsForSecret } from 'kv/utils/kv-breadcrumbs';
 
 export default class KvSecretsListRoute extends Route {
-  @service store;
-  @service router;
+  @service pagination;
+  @service('app-router') router;
   @service secretMountPath;
 
   queryParams = {
@@ -25,7 +23,7 @@ export default class KvSecretsListRoute extends Route {
   };
 
   async fetchMetadata(backend, pathToSecret, params) {
-    return await this.store
+    return await this.pagination
       .lazyPaginatedQuery('kv/metadata', {
         backend,
         responsePath: 'data.keys',
@@ -48,7 +46,9 @@ export default class KvSecretsListRoute extends Route {
   getPathToSecret(pathParam) {
     if (!pathParam) return '';
     // links and routing assumes pathToParam includes trailing slash
-    return pathIsDirectory(pathParam) ? normalizePath(pathParam) : normalizePath(`${pathParam}/`);
+    // users may want to include a percent-encoded octet like %2f in their path. Example: 'foo%2fbar' or non-data octets like 'foo%bar'.
+    // we are assuming the user intended to include these characters in their path and we should not decode them.
+    return pathIsDirectory(pathParam) ? pathParam : `${pathParam}/`;
   }
 
   model(params) {

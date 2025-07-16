@@ -14,8 +14,6 @@ import { getUnixTime } from 'date-fns';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT, CHARTS } from 'vault/tests/helpers/clients/client-count-selectors';
 import { formatNumber } from 'core/helpers/format-number';
-import { calculateAverage } from 'vault/utils/chart-helpers';
-import { dateFormat } from 'core/helpers/date-format';
 import { assertBarChart } from 'vault/tests/helpers/clients/client-count-helpers';
 
 const START_TIME = getUnixTime(LICENSE_START);
@@ -73,37 +71,24 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
 
     test('it should render with full month activity data', async function (assert) {
       const monthCount = this.activity.byMonth.length;
-      assert.expect(7 + monthCount * 2);
+      assert.expect(3 + monthCount);
       const expectedTotal = formatNumber([this.activity.total.secret_syncs]);
-      const expectedNewAvg = formatNumber([
-        calculateAverage(
-          this.activity.byMonth.map((m) => m?.new_clients),
-          'secret_syncs'
-        ),
-      ]);
       await this.renderComponent();
-
       assert
         .dom(statText('Total sync clients'))
         .hasText(
           `Total sync clients The total number of secrets synced from Vault to other destinations during this date range. ${expectedTotal}`,
           `renders correct total sync stat ${expectedTotal}`
         );
-      assert.dom(statText('Average new sync clients per month')).hasTextContaining(`${expectedNewAvg}`);
-
-      const formattedTimestamp = dateFormat([this.activity.responseTimestamp, 'MMM d yyyy, h:mm:ss aaa'], {
-        withTimeZone: true,
-      });
-      assert.dom(CHARTS.timestamp).hasText(`Updated ${formattedTimestamp}`, 'renders response timestamp');
 
       assertBarChart(assert, 'Secrets sync usage', this.activity.byMonth);
-      assertBarChart(assert, 'Monthly new', this.activity.byMonth);
     });
 
     test('it should render stats without chart for a single month', async function (assert) {
       const activityQuery = { start_time: { timestamp: END_TIME }, end_time: { timestamp: END_TIME } };
       this.activity = await this.store.queryRecord('clients/activity', activityQuery);
       const expectedTotal = formatNumber([this.activity.total.secret_syncs]);
+
       await this.renderComponent();
 
       assert.dom(CHARTS.chart('Secrets sync usage')).doesNotExist('total usage chart does not render');
@@ -112,7 +97,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
       assert
         .dom(usageStats('Secrets sync usage'))
         .hasText(
-          `Secrets sync usage Usage metrics tutorial This data can be used to understand how many secrets sync clients have been used for this date range. Each Vault secret that is synced to at least one destination counts as one Vault client. Total sync clients ${expectedTotal}`,
+          `Secrets sync usage Client usage tutorial Secrets sync clients which interacted with Vault for the first time each month. Each bar represents the total new sync clients for that month. Total sync clients ${expectedTotal}`,
           'it renders usage stats with single month copy'
         );
     });
@@ -147,7 +132,7 @@ module('Integration | Component | clients | Clients::Page::Sync', function (hook
       assert.dom(GENERAL.emptyStateMessage).hasText('There is no sync data available for this month.');
     });
 
-    test('it should render an empty total usage chart  if secrets sync is activated but monthly syncs are null or 0', async function (assert) {
+    test('it should render an empty total usage chart if secrets sync is activated but monthly syncs are null or 0', async function (assert) {
       // manually stub because mirage isn't setup to handle mixed data yet
       const counts = {
         clients: 10,

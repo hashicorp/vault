@@ -100,6 +100,7 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 			"-allowed-response-headers", "authorization",
 			"-listing-visibility", "unauth",
 			"-identity-token-key", "default",
+			"-trim-request-trailing-slashes=true",
 			"userpass",
 		})
 		if exp := 0; code != exp {
@@ -126,6 +127,9 @@ func TestAuthEnableCommand_Run(t *testing.T) {
 		}
 		if exp := "The best kind of test"; authInfo.Description != exp {
 			t.Errorf("expected %q to be %q", authInfo.Description, exp)
+		}
+		if !authInfo.Config.TrimRequestTrailingSlashes {
+			t.Errorf("expected trim_request_trailing_slashes to be enabled")
 		}
 		if diff := deep.Equal([]string{"authorization,authentication", "www-authentication"}, authInfo.Config.PassthroughRequestHeaders); len(diff) > 0 {
 			t.Errorf("Failed to find expected values in PassthroughRequestHeaders. Difference is: %v", diff)

@@ -1,0 +1,9 @@
+```release-note:change
+auth/gcp: Update plugin to v0.20.0
+```
+
+```release-note:feature
+**Automated Root Rotation**: Adds Automated Root Rotation capabilities to the GCP Auth plugin.
+This allows plugin users to automate their root credential rotations based on configurable
+schedules/periods via the Rotation Manager. Note: Enterprise only.
+```

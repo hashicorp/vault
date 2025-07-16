@@ -24,6 +24,8 @@ import (
 	"github.com/hashicorp/go-kms-wrapping/entropy/v2"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
+	iRegexp "github.com/hashicorp/go-secure-stdlib/regexp"
+	"github.com/hashicorp/vault/sdk/database/helper/connutil"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 	"github.com/hashicorp/vault/sdk/helper/license"
@@ -108,11 +110,20 @@ type Backend struct {
 	// RunningVersion is the optional version that will be self-reported
 	RunningVersion string
 
-	logger  log.Logger
-	system  logical.SystemView
-	events  logical.EventSender
-	once    sync.Once
-	pathsRe []*regexp.Regexp
+	// RotateCredential is the callback function used by the RotationManager
+	// to communicate with a plugin on when to rotate a credential
+	RotateCredential func(context.Context, *logical.Request) error
+
+	// ActivationFunc is the callback function used by ActivationFlags to
+	// communicate with a plugin to activate a feature.
+	ActivationFunc func(context.Context, *logical.Request) error
+
+	logger       log.Logger
+	system       logical.SystemView
+	events       logical.EventSender
+	observations logical.ObservationRecorder
+	once         sync.Once
+	pathsRe      []*regexp.Regexp
 }
 
 // periodicFunc is the callback called when the RollbackManager's timer ticks.
@@ -145,6 +156,10 @@ type PatchPreprocessorFunc func(map[string]interface{}) (map[string]interface{},
 // ErrNoEvents is returned when attempting to send an event, but when the event
 // sender was not passed in during `backend.Setup()`.
 var ErrNoEvents = errors.New("no event sender configured")
+
+// ErrNoObservations is returned when attempting to record an observation, but when
+// the observation system was not passed in during `backend.Setup()`.
+var ErrNoObservations = errors.New("no observation system configured")
 
 // Initialize is the logical.Backend implementation.
 func (b *Backend) Initialize(ctx context.Context, req *logical.InitializationRequest) error {
@@ -216,6 +231,8 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		return b.handleRevokeRenew(ctx, req)
 	case logical.RollbackOperation:
 		return b.handleRollback(ctx, req)
+	case logical.RotationOperation:
+		return b.handleRotation(ctx, req)
 	}
 
 	// If the path is empty and it is a help operation, handle that.
@@ -237,13 +254,18 @@ func (b *Backend) HandleRequest(ctx context.Context, req *logical.Request) (*log
 		}
 	}
 
+	// We need to check SQLConnectionProducer fields separately since they are not top-level Path fields.
+	var sqlFields map[string]any
+	if req.MountType == "database" && strings.HasPrefix(req.Path, "config") {
+		sqlFields = connutil.SQLConnectionProducerFieldNames()
+	}
 	// Build up the data for the route, with the URL taking priority
 	// for the fields over the PUT data.
 	raw := make(map[string]interface{}, len(path.Fields))
 	var ignored []string
 	for k, v := range req.Data {
 		raw[k] = v
-		if !path.TakesArbitraryInput && path.Fields[k] == nil {
+		if !path.TakesArbitraryInput && path.Fields[k] == nil && sqlFields[k] == nil {
 			ignored = append(ignored, k)
 		}
 	}
@@ -417,6 +439,7 @@ func (b *Backend) Setup(ctx context.Context, config *logical.BackendConfig) erro
 	b.logger = config.Logger
 	b.system = config.System
 	b.events = config.EventsSender
+	b.observations = config.ObservationRecorder
 	return nil
 }
 
@@ -515,8 +538,10 @@ func (b *Backend) init() {
 			p.Pattern = p.Pattern + "$"
 		}
 
-		// Detect the coding error of an invalid Pattern
-		b.pathsRe[i] = regexp.MustCompile(p.Pattern)
+		// Detect the coding error of an invalid Pattern. We are using an interned
+		// regexps library here to save memory, since we can have many instances of the
+		// same backend.
+		b.pathsRe[i] = iRegexp.MustCompileInterned(p.Pattern)
 	}
 }
 
@@ -665,6 +690,19 @@ func (b *Backend) handleRollback(ctx context.Context, req *logical.Request) (*lo
 	return resp, merr.ErrorOrNil()
 }
 
+// handleRotation invokes the RotateCredential func set on the backend.
+func (b *Backend) handleRotation(ctx context.Context, req *logical.Request) (*logical.Response, error) {
+	if b.RotateCredential == nil {
+		return nil, logical.ErrUnsupportedOperation
+	}
+
+	err := b.RotateCredential(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	return &logical.Response{}, nil
+}
+
 func (b *Backend) handleAuthRenew(ctx context.Context, req *logical.Request) (*logical.Response, error) {
 	if b.AuthRenew == nil {
 		return logical.ErrorResponse("this auth type doesn't support renew"), nil
@@ -740,6 +778,15 @@ func (b *Backend) SendEvent(ctx context.Context, eventType logical.EventType, ev
 		return ErrNoEvents
 	}
 	return b.events.SendEvent(ctx, eventType, event)
+}
+
+// RecordObservation is used to record observations through the plugin's observation system.
+// It returns ErrNoObservations if the observation system has not been configured or enabled.
+func (b *Backend) RecordObservation(ctx context.Context, observationType string, data map[string]interface{}) error {
+	if b.observations == nil {
+		return ErrNoObservations
+	}
+	return b.observations.RecordObservationFromPlugin(ctx, observationType, data)
 }
 
 // FieldSchema is a basic schema to describe the format of a path field.

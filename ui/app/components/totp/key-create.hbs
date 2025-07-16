@@ -1,0 +1,31 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<form {{on "submit" (perform @onSubmit)}}>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <MessageError @model={{@model}} />
+    <NamespaceReminder @mode={{"create"}} @noun="TOTP key" />
+    {{#each @defaultKeyFormFields as |field|}}
+      {{#let (find-by "name" field @model.allFields) as |attr|}}
+        <FormField @attr={{attr}} @model={{@model}} @modelValidations={{@modelValidations}} />
+      {{/let}}
+    {{/each}}
+
+    <Totp::KeyCreateToggleGroups @model={{@model}} @modelValidations={{@modelValidations}} @groups={{@groups}} />
+  </div>
+  <Hds::ButtonSet class="has-top-bottom-margin-12">
+    <Hds::Button @text="Create key" type="submit" data-test-submit />
+    <Hds::Button
+      @text="Cancel"
+      @color="secondary"
+      @route="vault.cluster.secrets.backend.list-root"
+      @model={{@model.backend}}
+      @query={{hash tab="key"}}
+    />
+  </Hds::ButtonSet>
+  {{#if @invalidFormAlert}}
+    <AlertInline @type="danger" class="has-top-padding-s" @message={{@invalidFormAlert}} />
+  {{/if}}
+</form>

@@ -8,8 +8,11 @@ import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import UnloadModelRouteMixin from 'vault/mixins/unload-model-route';
 
+/**
+ * @type Class
+ */
 export default Route.extend(UnloadModelRouteMixin, {
-  router: service(),
+  router: service('app-router'),
   store: service(),
   version: service(),
   rm: service('replication-mode'),

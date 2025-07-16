@@ -118,6 +118,18 @@ func (d *autoSeal) SetStoredKeys(ctx context.Context, keys [][]byte) error {
 	return writeStoredKeys(ctx, d.core.physical, d.Access, keys)
 }
 
+func (d *autoSeal) SetInitializationFlag(ctx context.Context) error {
+	return writeInitializationFlag(ctx, d.core.physical, true)
+}
+
+func (d *autoSeal) ClearInitializationFlag(ctx context.Context) error {
+	return writeInitializationFlag(ctx, d.core.physical, false)
+}
+
+func (d *autoSeal) IsInitializationFlagSet(ctx context.Context) (bool, error) {
+	return isInitializationFlagSet(ctx, d.core.physical)
+}
+
 // GetStoredKeys retrieves the key shares by unwrapping the encrypted key using the
 // autoseal.
 func (d *autoSeal) GetStoredKeys(ctx context.Context) ([][]byte, error) {
@@ -465,14 +477,18 @@ func (d *autoSeal) StartHealthCheck() {
 	healthCheck := time.NewTicker(seal.HealthTestIntervalNominal)
 	d.healthCheckStop = make(chan struct{})
 	healthCheckStop := d.healthCheckStop
-	ctx := d.core.activeContext
 
 	go func() {
 		lastTestOk := true
 		lastSeenOk := time.Now()
 
 		check := func(now time.Time) {
-			ctx, cancel := context.WithTimeout(ctx, seal.HealthTestTimeout)
+			if d.core.activeContext == nil {
+				// This probably only happens during the execution of some unit tests.
+				d.logger.Warn("no active context, skipping this health check")
+				return
+			}
+			ctx, cancel := context.WithTimeout(d.core.activeContext, seal.HealthTestTimeout)
 			defer cancel()
 
 			d.logger.Trace("performing a seal health check")
@@ -529,6 +545,7 @@ error and restart Vault.`)
 			d.allSealsHealthy = allHealthy
 		}
 
+		check(time.Now())
 		for {
 			select {
 			case <-healthCheckStop:

@@ -11,6 +11,9 @@ import Route from '@ember/routing/route';
 import { encodePath, normalizePath } from 'vault/utils/path-encoding-helpers';
 import { keyIsFolder, parentKeyForKey } from 'core/utils/key-utils';
 
+/**
+ * @type Class
+ */
 export default Route.extend({
   store: service(),
   router: service(),
@@ -137,6 +140,7 @@ export default Route.extend({
       kv: 'secret',
       keymgmt: `keymgmt/${options.queryParams?.itemType || 'key'}`,
       generic: 'secret',
+      totp: 'totp-key',
     };
     return types[engineType];
   },

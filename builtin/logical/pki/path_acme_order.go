@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/netip"
 	"sort"
 	"strings"
 	"time"
@@ -528,7 +529,8 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 	}
 
 	// ACME issued cert will override the TTL values to truncate to the issuer's
-	// expiration if we go beyond, no matter the setting
+	// expiration if we go beyond, no matter the setting.
+	// Note that if set to certutil.AlwaysEnforceErr we will error out
 	if signingBundle.LeafNotAfterBehavior == certutil.ErrNotAfterBehavior {
 		signingBundle.LeafNotAfterBehavior = certutil.TruncateNotAfterBehavior
 	}
@@ -578,7 +580,7 @@ func issueCertFromCsr(ac *acmeContext, csr *x509.CertificateRequest) (*certutil.
 		return nil, "", fmt.Errorf("%w: refusing to sign CSR: %s", ErrBadCSR, err.Error())
 	}
 
-	if err = parsedBundle.Verify(); err != nil {
+	if err = issuing.VerifyCertificate(ac.Context, ac.sc.Storage, issuerId, parsedBundle); err != nil {
 		return nil, "", fmt.Errorf("verification of parsed bundle failed: %w", err)
 	}
 
@@ -960,9 +962,23 @@ func parseOrderIdentifiers(data map[string]interface{}) ([]*ACMEIdentifier, erro
 		switch typeStr {
 		case string(ACMEIPIdentifier):
 			identifier.Type = ACMEIPIdentifier
-			ip := net.ParseIP(valueStr)
-			if ip == nil {
+			ip, err := netip.ParseAddr(valueStr)
+			if err != nil {
 				return nil, fmt.Errorf("value argument (%s) failed validation: failed parsing as IP: %w", valueStr, ErrMalformed)
+			}
+			if ip.Is6() {
+				if len(ip.Zone()) > 0 {
+					// If we are given an identifier with a local zone that doesn't make much sense
+					// as zone's are specific to the sender not us. For now disallow, perhaps in the
+					// future we should simply drop the zone?
+					return nil, fmt.Errorf("value argument (%s) failed validation: IPv6 identifiers with zone information are not allowed: %w", valueStr, ErrMalformed)
+				}
+
+				// We should keep whatever formatting of the IPv6 address that came in according
+				// to RFC8738 Section 2:
+				// An identifier for the IPv6 address 2001:db8::1 would be formatted like so:
+				//   {"type": "ip", "value": "2001:db8::1"}
+				identifier.IsV6IP = true
 			}
 		case string(ACMEDNSIdentifier):
 			identifier.Type = ACMEDNSIdentifier
@@ -1008,6 +1024,10 @@ func parseOrderIdentifiers(data map[string]interface{}) ([]*ACMEIdentifier, erro
 		}
 
 		identifiers = append(identifiers, identifier)
+	}
+
+	if len(identifiers) == 0 {
+		return nil, fmt.Errorf("no parsed identifiers were found: %w", ErrMalformed)
 	}
 
 	return identifiers, nil

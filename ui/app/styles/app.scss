@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-@import './reset';
-@import 'ember-basic-dropdown';
-@import 'ember-power-select';
-@import './core';
-@import './docs';
+@use 'reset';
+@use 'ember-basic-dropdown';
+@use 'ember-power-select';
+@use 'core';
+@use 'docs';
 
 @mixin font-face($name) {
   @font-face {

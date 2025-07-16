@@ -15,6 +15,7 @@ module('Unit | Adapter | sync | association', function (hooks) {
 
   hooks.beforeEach(function () {
     this.store = this.owner.lookup('service:store');
+    this.pagination = this.owner.lookup('service:pagination');
 
     this.params = [
       { type: 'aws-sm', name: 'us-west-1' },
@@ -50,7 +51,7 @@ module('Unit | Adapter | sync | association', function (hooks) {
       return associationsResponse(schema, req);
     });
 
-    await this.store.lazyPaginatedQuery('sync/association', {
+    await this.pagination.lazyPaginatedQuery('sync/association', {
       responsePath: 'data.keys',
       page: 1,
       destinationType: 'aws-sm',

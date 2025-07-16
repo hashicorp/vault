@@ -7,18 +7,21 @@ import { helper as buildHelper } from '@ember/component/helper';
 
 const SUPPORTED_SECRET_BACKENDS = [
   'aws',
-  'database',
+  'azure',
   'cubbyhole',
+  'database',
+  'gcp',
   'generic',
+  'keymgmt',
+  'kmip',
+  'kubernetes',
   'kv',
+  'ldap',
   'pki',
   'ssh',
-  'transit',
-  'kmip',
   'transform',
-  'keymgmt',
-  'kubernetes',
-  'ldap',
+  'transit',
+  'totp',
 ];
 
 export function supportedSecretBackends() {

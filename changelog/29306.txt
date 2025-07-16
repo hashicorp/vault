@@ -1,0 +1,3 @@
+```release-note:improvement
+raft/autopilot: We've updated the autopilot reconciliation logic (by updating the raft-autopilot dependency to v0.3.0) to avoid artificially increasing the quorum in presence of an unhealthy node. Now autopilot will start the reconciliation process by attempting to demote a failed voter node before any promotions, fixing the issue where Vault would initially increase quorum when faced with a failure of a voter node. In certain configurations, especially when using Vault Enterprise Redundancy Zones and losing a voter then a non-voter in quick succession, this would lead to a loss of quorum and cluster failure.
+```

@@ -63,14 +63,15 @@ type routeEntry struct {
 	tainted atomic.Bool
 	// backend is the actual backend instance for this route entry; lock l must
 	// be held to access this field.
-	backend       logical.Backend
-	mountEntry    *MountEntry
-	storageView   logical.Storage
-	storagePrefix string
-	rootPaths     atomic.Value
-	loginPaths    atomic.Value
-	binaryPaths   atomic.Value
-	limitedPaths  atomic.Value
+	backend                logical.Backend
+	mountEntry             *MountEntry
+	storageView            logical.Storage
+	storagePrefix          string
+	rootPaths              atomic.Value
+	loginPaths             atomic.Value
+	binaryPaths            atomic.Value
+	limitedPaths           atomic.Value
+	allowSnapshotReadPaths atomic.Value
 	// l is the lock used to protect access to backend during reloads
 	l sync.RWMutex
 }
@@ -89,7 +90,8 @@ type specialPathsEntry struct {
 }
 
 // specialPathsLookupFunc is used by (*Router).specialPath to look up a
-// specialPathsEntry corresponding to loginPath, binaryPath, or limitedPath.
+// specialPathsEntry corresponding to loginPath, binaryPath, limitedPath, or
+// allowSnapshotReadPath.
 type specialPathsLookupFunc func(re *routeEntry) *specialPathsEntry
 
 type ValidateMountResponse struct {
@@ -224,6 +226,12 @@ func (r *Router) Mount(backend logical.Backend, prefix string, mountEntry *Mount
 		return err
 	}
 	re.limitedPaths.Store(limitedPathsEntry)
+
+	allowSnapshotReadPathsEntry, err := parseUnauthenticatedPaths(paths.AllowSnapshotRead)
+	if err != nil {
+		return err
+	}
+	re.allowSnapshotReadPaths.Store(allowSnapshotReadPathsEntry)
 
 	switch {
 	case prefix == "":
@@ -373,23 +381,30 @@ func (r *Router) MatchingMountByAccessor(mountAccessor string) *MountEntry {
 // MatchingMount returns the mount prefix that would be used for a path
 func (r *Router) MatchingMount(ctx context.Context, path string) string {
 	r.l.RLock()
-	mount := r.matchingMountInternal(ctx, path)
+	mount, _ := r.matchingMountInternal(ctx, path)
 	r.l.RUnlock()
 	return mount
 }
 
-func (r *Router) matchingMountInternal(ctx context.Context, path string) string {
+// MatchingMountAndEntry returns the mount prefix and MountEntry used for a path
+func (r *Router) MatchingMountAndEntry(ctx context.Context, path string) (string, *MountEntry) {
+	r.l.RLock()
+	defer r.l.RUnlock()
+	return r.matchingMountInternal(ctx, path)
+}
+
+func (r *Router) matchingMountInternal(ctx context.Context, path string) (string, *MountEntry) {
 	ns, err := namespace.FromContext(ctx)
 	if err != nil {
-		return ""
+		return "", nil
 	}
 	path = ns.Path + path
 
-	mount, _, ok := r.root.LongestPrefix(path)
+	mount, raw, ok := r.root.LongestPrefix(path)
 	if !ok {
-		return ""
+		return "", nil
 	}
-	return mount
+	return mount, raw.(*routeEntry).mountEntry
 }
 
 // matchingPrefixInternal returns a mount prefix that a path may be a part of
@@ -416,7 +431,7 @@ func (r *Router) matchingPrefixInternal(ctx context.Context, path string) string
 func (r *Router) MountConflict(ctx context.Context, path string) string {
 	r.l.RLock()
 	defer r.l.RUnlock()
-	if exactMatch := r.matchingMountInternal(ctx, path); exactMatch != "" {
+	if exactMatch, _ := r.matchingMountInternal(ctx, path); exactMatch != "" {
 		return exactMatch
 	}
 	if prefixMatch := r.matchingPrefixInternal(ctx, path); prefixMatch != "" {
@@ -908,9 +923,18 @@ func (r *Router) LimitedPath(ctx context.Context, path string) bool {
 		})
 }
 
+// AllowSnapshotReadPath checks if the given path is allowed to be used for a
+// snapshot read
+func (r *Router) AllowSnapshotReadPath(ctx context.Context, path string) bool {
+	return r.specialPath(ctx, path,
+		func(re *routeEntry) *specialPathsEntry {
+			return re.allowSnapshotReadPaths.Load().(*specialPathsEntry)
+		})
+}
+
 // specialPath is a common method for checking if the given path has a matching
-// PathsSpecial entry. This is used for Login, Binary, and Limited PathsSpecial
-// fields.
+// PathsSpecial entry. This is used for Login, Binary, Limited, and
+// AllowSnapshotRead PathsSpecial fields.
 // Matching Priority
 //  1. prefix
 //  2. exact

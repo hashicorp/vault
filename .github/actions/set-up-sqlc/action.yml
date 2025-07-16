@@ -1,0 +1,62 @@
+# Copyright (c) HashiCorp, Inc.
+# SPDX-License-Identifier: BUSL-1.1
+
+---
+name: Set up sqlc from Github releases
+description: Set up sqlc from Github releases
+
+inputs:
+  destination:
+    description: "Where to install the sqlc binary (default: $HOME/bin/sqlc)"
+    type: string
+    default: "$HOME/bin/sqlc"
+  version:
+    description: "The version to install (default: latest)"
+    type: string
+    default: "v1.28.0"
+
+outputs:
+  destination:
+    description: Where the installed sqlc binary is
+    value: ${{ steps.install.outputs.destination }}
+  destination-dir:
+    description: The directory where the installed sqlc binary is
+    value: ${{ steps.install.outputs.destination-dir }}
+  version:
+    description: The installed version of sqlc
+    value: ${{ steps.install.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - id: install
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        VERSION=$(./.github/scripts/retry-command.sh gh release list -R sqlc-dev/sqlc --exclude-drafts --exclude-pre-releases | grep ${{ inputs.version }} | cut -f1)
+
+        mkdir -p $(dirname ${{ inputs.destination }})
+        DESTINATION="$(readlink -f "${{ inputs.destination }}")"
+        DESTINATION_DIR="$(dirname "$DESTINATION")"
+        echo "$DESTINATION_DIR" >> "$GITHUB_PATH"
+
+        {
+          echo "destination=$DESTINATION"
+          echo "destination-dir=$DESTINATION_DIR"
+          echo "version=$VERSION"
+        } | tee -a "$GITHUB_OUTPUT"
+
+        ARCH="$(echo "$RUNNER_ARCH" | tr '[:upper:]' '[:lower:]')"
+        OS="$(echo "$RUNNER_OS" | tr '[:upper:]' '[:lower:]')"
+        if [ "$ARCH" = "x64" ]; then
+          export ARCH="amd64"
+        fi
+        if [ "$OS" = "macos" ]; then
+          export OS="darwin"
+        fi
+
+        ./.github/scripts/retry-command.sh gh release download "$VERSION" --clobber -p "sqlc*_${OS}_${ARCH}.zip" -O sqlc.zip -R sqlc-dev/sqlc
+        unzip sqlc.zip
+        chmod +x sqlc
+        mv sqlc "$DESTINATION"

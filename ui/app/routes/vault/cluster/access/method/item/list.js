@@ -9,7 +9,7 @@ import { singularize } from 'ember-inflector';
 import ListRoute from 'vault/mixins/list-route';
 
 export default Route.extend(ListRoute, {
-  store: service(),
+  pagination: service(),
   pathHelp: service('path-help'),
 
   getMethodAndModelInfo() {
@@ -25,7 +25,7 @@ export default Route.extend(ListRoute, {
     const { page, pageFilter } = this.paramsFor(this.routeName);
     const modelType = `generated-${singularize(itemType)}-${type}`;
 
-    return this.store
+    return this.pagination
       .lazyPaginatedQuery(modelType, {
         responsePath: 'data.keys',
         page: page,
@@ -46,12 +46,12 @@ export default Route.extend(ListRoute, {
     willTransition(transition) {
       window.scrollTo(0, 0);
       if (transition.targetName !== this.routeName) {
-        this.store.clearAllDatasets();
+        this.pagination.clearDataset();
       }
       return true;
     },
     reload() {
-      this.store.clearAllDatasets();
+      this.pagination.clearDataset();
       this.refresh();
     },
   },

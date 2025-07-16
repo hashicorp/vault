@@ -9,6 +9,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 
 export default Route.extend({
+  pagination: service(),
   store: service(),
 
   queryParams: {
@@ -26,7 +27,7 @@ export default Route.extend({
     const prefix = params.prefix || '';
     if (this.modelFor('vault.cluster.access.leases').canList) {
       return hash({
-        leases: this.store
+        leases: this.pagination
           .lazyPaginatedQuery('lease', {
             prefix,
             responsePath: 'data.keys',
@@ -104,7 +105,7 @@ export default Route.extend({
     willTransition(transition) {
       window.scrollTo(0, 0);
       if (transition.targetName !== this.routeName) {
-        this.store.clearAllDatasets();
+        this.pagination.clearDataset();
       }
       return true;
     },

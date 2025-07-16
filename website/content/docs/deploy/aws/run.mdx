@@ -1,0 +1,44 @@
+---
+layout: docs
+page_title: Running Vault
+description: >-
+   Learn how to launch Vault from within the AWS Marketplace from the official Vault Marketplace listings.
+---
+
+# Running Vault
+
+## Launching the Vault AMI
+
+When Vault is first launched from an official Marketplace AMI, it will come up in an uninitialized state and must be initialized via the [API](/vault/api-docs/system/init), [CLI](/vault/docs/commands/operator/init), or UI. The Marketplace AMI listens on port 8200 by default. It is recommended to restrict ingress networking to the Vault instance as much as possible when initially deploying Vault (through EC2 security groups or otherwise) because anyone with network access to Vault will be able to initialize it. To learn more about the default listener configuration, or to make changes, please see the [Vault Deployment Guide](/vault/tutorials/day-one-consul/deployment-guide#listener-stanza).
+
+Additionally on first launch, a new self-signed [certificate](/vault/docs/configuration/listener/tcp#tls_cert_file) and [key](/vault/docs/configuration/listener/tcp#tls_key_file) (unique to the EC2 instance) will be generated to secure Vault traffic using TLS. This is provided as a “more secure” (vs. unencrypted TCP traffic) temporary solution, but it is strongly recommended to replace these with your own certificate and key. Please note that when using a self-signed certificate, Vault clients will need to [skip](/vault/docs/commands#vault_skip_verify) the verification of Vault’s certificate, which voids Vault’s [security model](/vault/docs/internals/security).
+
+In order to begin using a newly launched Vault instance or cluster, it must be [unsealed](/vault/docs/concepts/seal) first. HashiCorp generally recommends using the [AWS KMS Seal](/vault/docs/configuration/seal/awskms) when running Vault on AWS.
+
+## Viewing the Vault UI
+
+The Vault UI is enabled by default. You can view the UI by navigating to `https://VAULT_INSTANCE_PUBLIC_IP:8200/` in a web browser. Please note that your web browser will likely show a security warning that the default self-signed TLS certificate `(Organization: HashiCorp, Common Name: Vault)` is not trusted, and that this can be ignored at your own risk until Vault’s certificate and key are replaced with your own valid ones.
+
+## Upgrading Vault
+
+New Vault AMIs are added to the AWS Marketplace listing regularly and contain the latest versions of Vault and updated operating system packages. However, new AMIs are not built and tested to support in-place upgrades of your existing Vault installation.
+
+To upgrade a Vault instance launched from an official AWS Marketplace AMI, please follow the normal upgrade instructions for a [non-HA installation](/vault/docs/upgrading#non-ha-installations).
+
+# Architecture
+
+HashiCorp’s AWS Marketplace offerings provide an easy way to deploy Vault in a single-instance configuration using the [Filesystem storage backend](/vault/docs/configuration/storage/filesystem), but for production use, we recommend running Vault on AWS with the same [general architecture](/vault/docs/internals/architecture) as running it anywhere else. While the Filesystem storage backend is officially supported by HashiCorp, it does not support High Availability. Because Vault data is stored on disk in this configuration, it is subject to the durability and availability of Amazon Elastic Block Store (EBS) and should be backed up accordingly.
+
+For additional guidance on best practices for running Vault in production, please refer to the [Production Hardening](/vault/tutorials/operations/production-hardening) tutorial.
+
+# Getting support
+
+## Community Edition
+
+For the Community Vault AMI, support can be obtained through the [community channels](https://www.vaultproject.io/community)
+
+[See the Vault Project on Github.com](https://github.com/hashicorp/vault)
+
+## Enterprise
+
+For customers that purchase the Enterprise Vault AMI through the AWS Marketplace, Enterprise Support is also available from HashiCorp. To learn more, [see our support website](https://support.hashicorp.com/hc/en-us)

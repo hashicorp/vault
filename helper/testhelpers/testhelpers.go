@@ -723,6 +723,7 @@ func SetNonRootToken(client *api.Client) error {
 func RetryUntilAtCadence(t testing.TB, timeout, sleepTime time.Duration, f func() error) {
 	t.Helper()
 	fail := func(err error) {
+		t.Helper()
 		t.Fatalf("did not complete before deadline, err: %v", err)
 	}
 	RetryUntilAtCadenceWithHandler(t, timeout, sleepTime, fail, f)
@@ -1001,4 +1002,16 @@ func WaitForNodesExcludingSelectedStandbys(t testing.TB, cluster *vault.TestClus
 // the regression test env var (VAULT_REGRESSION_TESTS) is provided.
 func IsLocalOrRegressionTests() bool {
 	return os.Getenv("CI") == "" || os.Getenv("VAULT_REGRESSION_TESTS") == "true"
+}
+
+func RaftDataDir(t testing.TB, core *vault.TestClusterCore) string {
+	t.Helper()
+	r, ok := core.UnderlyingStorage.(*raft.RaftBackend)
+	if !ok {
+		r, ok = core.UnderlyingHAStorage.(*raft.RaftBackend)
+		if !ok {
+			t.Fatal("no raft backend")
+		}
+	}
+	return r.DataDir(t)
 }

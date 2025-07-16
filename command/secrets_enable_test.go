@@ -120,6 +120,7 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 			"-allowed-managed-keys", "key1,key2",
 			"-identity-token-key", "default",
 			"-delegated-auth-accessors", "authAcc1,authAcc2",
+			"-trim-request-trailing-slashes=true",
 			"-force-no-cache",
 			"pki",
 		})
@@ -156,6 +157,9 @@ func TestSecretsEnableCommand_Run(t *testing.T) {
 		}
 		if exp := true; mountInfo.Config.ForceNoCache != exp {
 			t.Errorf("expected %t to be %t", mountInfo.Config.ForceNoCache, exp)
+		}
+		if !mountInfo.Config.TrimRequestTrailingSlashes {
+			t.Errorf("expected trim_request_trailing_slashes to be enabled")
 		}
 		if diff := deep.Equal([]string{"authorization,authentication", "www-authentication"}, mountInfo.Config.PassthroughRequestHeaders); len(diff) > 0 {
 			t.Errorf("Failed to find expected values in PassthroughRequestHeaders. Difference is: %v", diff)

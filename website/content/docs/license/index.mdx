@@ -1,0 +1,85 @@
+---
+layout: docs
+page_title: Vault Enterprise licensing
+description: >-
+  Find documentation related to Vault Enterprise licensing
+---
+
+# Vault Enterprise licensing
+
+@include 'alerts/enterprise-only.mdx'
+
+Vault 1.8 introduced licenses and EULA enhancements that gate enterprise
+features in Vault. You must have a Vault Enterprise binary (evaluation or
+non-evaluation) downloaded from
+[releases.hashicorp.com](https://releases.hashicorp.com/vault/) to use an
+enterprise key. Vault Enterprise licenses do not apply to
+[HCP Vault Dedicated](/hcp/docs/vault/what-is-hcp-vault) deployments.
+
+
+## Evaluation licenses
+
+Evaluation licenses have a 1-day grace period until the license expires. Once
+the evaluation license expires, Vault seals and cannot unseal until you apply
+a valid license.
+
+
+## How licensing works
+
+To receive a Vault Enterprise license, you must agree to an end-user license
+agreement (EULA). Once you apply the license, the Vault Enterprise binary
+verifies your license with a EULA check during upgrades and any time a node
+starts, restarts, unseals with the following results:
+
+License type | License state | Vault build date   | Vault startup
+------------ | ------------- | ------------------ | -------------
+Any          | Valid         | N/A                | Succeeds
+Any          | Expired       | Before expiry data | Succeeds
+Any          | Expired       | After expiry data  | Fails
+Evaluation   | Terminated    | N/A                | Fails
+Standard     | Terminated    | Before expiry data | Succeeds
+Standard     | Terminated    | After expiry data  | Fails
+
+
+<Tip title="Applying security upgrades with an expired license">
+
+You cannot properly upgrade Vault with a terminated or expired license. If you
+have an emergency and need to perform an immediate upgrade to apply critical
+security patches, reach out to your Vault support contact for a **temporary**
+evaluation license. The temporary license allows you to complete the upgrade and
+apply security patches even if your license has expired.
+
+</Tip>
+
+
+## Additional resources
+
+<Tabs>
+
+<Tab heading="Guides">
+
+- [Automatically load a Vault enterprise license](/vault/docs/enterprise/license/autoloading) -
+  Configure Vault to automatically load your enterprise license.
+
+- [Automated license utilization reporting](/vault/docs/enterprise/license/autoloading) -
+  Learn about the data HashiCorp collects automatically to meter Enterprise
+  license utilization and how to enable or disable automated reporting
+
+- [Manual license utilization reporting](/vault/docs/enterprise/license/manual-reporting) -
+  Learn how to manually export, review, and send license utilization data to
+  HashiCorp through the Vault CLI or HCP web portal.
+
+- [Anonymous product usage reporting](/vault/docs/enterprise/license/product-usage-reporting) -
+  Learn about the anonymized data HashiCorp collects automatically for product
+  usage reporting and how to enable or disable data collection.
+
+</Tab>
+
+<Tab heading="Tutorials">
+
+- [Install a HashiCorp Enterprise License](/vault/tutorials/enterprise/hashicorp-enterprise-license) -
+  guided walkthrough for loading a Vault license.
+
+</Tab>
+
+</Tabs>

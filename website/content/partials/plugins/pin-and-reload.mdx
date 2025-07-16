@@ -1,0 +1,139 @@
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+1. Call `vault write` with the
+   [`/sys/plugins/pins/{type}/{name}`](/vault/api-docs/system/plugins-pins#create-update-pinned-version)
+   endpoint path to pin the new plugin version for the current cluster. You must
+   explicitly call the endpoint from the `root` namespace or Vault returns an
+   `404: unsupported path` error:
+
+   ```shell-session
+   $ vault write                                                      \
+       -namespace root                                                \
+       /sys/plugins/pins/<secret | auth | database>/<registered_name> \
+       version="<semantic_version>"
+   ```
+
+   For example, to pin a secrets plugin called `mykv` to version 1.0.0:
+
+   <CodeBlockConfig hideClipboard="true">
+
+    ```shell-session
+    $ vault write                    \
+        -namespace root              \
+        sys/plugins/pins/secret/mykv \
+        version="v1.0.0"
+    ```
+
+   </CodeBlockConfig>
+
+1. Call `vault plugin reload` to trigger a global refresh for all instances of
+   the downgraded plugin:
+
+    ```shell-session
+    $ vault plugin reload                \
+        -type <secret | auth | database> \
+        -plugin <registered_plugin_name> \
+        -scope global
+    ```
+
+    For example, to refresh the `mykv` plugin:
+
+    <CodeBlockConfig hideClipboard="true">
+
+    ```shell-session
+    $ vault plugin reload \
+        -type secret      \
+        -plugin mykv      \
+        -scope global
+
+    Success! Reloading plugin: mykv, reload_id: 1b7e989a-e1f9-2047-d41c-307ce64194e9
+    ```
+
+    </CodeBlockConfig>
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+1. Call the
+   [SetPinnedVersion](/vault/api-docs/system/plugins-pins#create-update-pinned-version)
+   endpoint to pin the new plugin version for the current cluster:
+
+   ```shell-session
+    $ curl                                      \
+      --request POST                            \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+      --data '{"version":"<semantic_version>"}' \
+      ${VAULT_ADDR}/v1/sys/plugins/pins/<plugin_type>/<plugin_name>
+   ```
+
+   For example, to pin a secrets plugin called `mykv` to version 1.0.1:
+
+   <CodeBlockConfig hideClipboard="true">
+
+    ```shell-session
+    $ curl                                      \
+      --request POST                            \
+      --header "X-Vault-Token: ${VAULT_TOKEN}"  \
+      --data '{"version":"v1.0.1"}'             \
+      ${VAULT_ADDR}/v1/sys/plugins/pins/secret/mykv | jq
+
+    {
+        "request_id": "f81013b1-e324-215c-07c6-f66b5b6fdc56",
+        "lease_id": "",
+        "renewable": false,
+        "lease_duration": 0,
+        "data": null,
+        "wrap_info": null,
+        "warnings": null,
+        "auth": null,
+        "mount_type": "system"
+    }
+    ```
+
+   </CodeBlockConfig>
+
+1. Call the [ReloadPlugins](/vault/api-docs/system/plugins-reload)
+   endpoint to trigger a global refresh for all instances of the downgraded
+   plugin:
+
+    ```shell-session
+    $ curl                                     \
+      --request POST                           \
+      --header "X-Vault-Token: ${VAULT_TOKEN}" \
+      --data '{"scope":"global"}'              \
+      ${VAULT_ADDR}/v1/sys/plugins/reload/<plugin_type>/<plugin_name>
+    ```
+
+    For example, to refresh the `mykv` plugin:
+
+    <CodeBlockConfig hideClipboard="true">
+
+    ```shell-session
+    $ curl                                     \
+      --request POST                           \
+      --header "X-Vault-Token: ${VAULT_TOKEN}" \
+      --data '{"scope":"global"}'              \
+      ${VAULT_ADDR}/v1/sys/plugins/reload/secret/mykv | jq
+    {
+    "request_id": "1b543f61-22a3-bfe9-d182-50ce75459373",
+    "lease_id": "",
+    "renewable": false,
+    "lease_duration": 0,
+    "data": {
+        "reload_id": "1b543f61-22a3-bfe9-d182-50ce75459373"
+    },
+    "wrap_info": null,
+    "warnings": null,
+    "auth": null,
+    "mount_type": ""
+    }
+    ```
+
+    </CodeBlockConfig>
+
+</Tab>
+
+</Tabs>

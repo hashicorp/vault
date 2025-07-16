@@ -7,7 +7,7 @@ import { fillIn, click, currentRouteName, currentURL, visit } from '@ember/test-
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import page from 'vault/tests/pages/access/identity/index';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { v4 as uuidv4 } from 'uuid';
@@ -16,14 +16,12 @@ const SELECTORS = {
   listItem: (name) => `[data-test-identity-row="${name}"]`,
   menu: `[data-test-popup-menu-trigger]`,
   menuItem: (element) => `[data-test-popup-menu="${element}"]`,
-  submit: '[data-test-identity-submit]',
-  confirm: '[data-test-confirm-button]',
 };
 module('Acceptance | /access/identity/entities', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
-    return authPage.login();
+    return login();
   });
 
   test('it renders the entities page', async function (assert) {
@@ -55,7 +53,7 @@ module('Acceptance | /access/identity/entities', function (hooks) {
       .dom('.hds-dropdown ul')
       .hasText('Details Create alias Edit Disable Delete', 'all actions render for entities');
     await click(`${SELECTORS.listItem(name)} ${SELECTORS.menuItem('delete')}`);
-    await click(SELECTORS.confirm);
+    await click(GENERAL.confirmButton);
   });
 
   test('it renders popup menu for external groups', async function (assert) {
@@ -69,7 +67,7 @@ module('Acceptance | /access/identity/entities', function (hooks) {
       .dom('.hds-dropdown ul')
       .hasText('Details Create alias Edit Delete', 'all actions render for external groups');
     await click(`${SELECTORS.listItem(name)} ${SELECTORS.menuItem('delete')}`);
-    await click(SELECTORS.confirm);
+    await click(GENERAL.confirmButton);
   });
 
   test('it renders popup menu for external groups with alias', async function (assert) {
@@ -79,7 +77,7 @@ module('Acceptance | /access/identity/entities', function (hooks) {
     await click(`${SELECTORS.listItem(name)} ${SELECTORS.menu}`);
     await click(SELECTORS.menuItem('create alias'));
     await fillIn(GENERAL.inputByAttr('name'), 'alias-test');
-    await click(SELECTORS.submit);
+    await click(GENERAL.submitButton);
 
     await visit('/vault/access/identity/groups');
     await click(`${SELECTORS.listItem(name)} ${SELECTORS.menu}`);
@@ -87,7 +85,7 @@ module('Acceptance | /access/identity/entities', function (hooks) {
       .dom('.hds-dropdown ul')
       .hasText('Details Edit Delete', 'no "Create alias" option for external groups with an alias');
     await click(`${SELECTORS.listItem(name)} ${SELECTORS.menuItem('delete')}`);
-    await click(SELECTORS.confirm);
+    await click(GENERAL.confirmButton);
   });
 
   test('it renders popup menu for internal groups', async function (assert) {
@@ -99,6 +97,6 @@ module('Acceptance | /access/identity/entities', function (hooks) {
       .dom('.hds-dropdown ul')
       .hasText('Details Edit Delete', 'no "Create alias" option for internal groups');
     await click(`${SELECTORS.listItem(name)} ${SELECTORS.menuItem('delete')}`);
-    await click(SELECTORS.confirm);
+    await click(GENERAL.confirmButton);
   });
 });

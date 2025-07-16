@@ -14,7 +14,7 @@ const Eng = Engine.extend({
   modulePrefix,
   Resolver,
   dependencies: {
-    services: ['auth', 'flash-messages', 'namespace', 'router', 'version'],
+    services: ['auth', 'flash-messages', 'namespace', 'app-router', 'version'],
   },
 });
 

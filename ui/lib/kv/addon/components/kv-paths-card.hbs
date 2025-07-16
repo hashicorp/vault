@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 <div data-test-overview-card-container="Paths" ...attributes>
   <Hds::Text::Display @weight="semibold" @size="300" @tag="h2">
@@ -26,7 +26,7 @@
           @isIconOnly={{true}}
           @textToCopy={{path.snippet}}
           @onError={{fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")}}
-          data-test-copy-button={{path.snippet}}
+          data-test-copy-button
           class="transparent"
         />
         <code class="is-flex-1 text-overflow-ellipsis has-left-margin-s">
@@ -53,7 +53,7 @@
         for other CLI commands.
       </p>
       <Hds::CodeBlock
-        data-test-commands="cli"
+        data-test-code-block="cli"
         @language="bash"
         @hasLineNumbers={{false}}
         @hasCopyButton={{true}}
@@ -71,7 +71,7 @@
         </DocLink>
       </p>
       <Hds::CodeBlock
-        data-test-commands="api"
+        data-test-code-block="api"
         @language="bash"
         @hasLineNumbers={{false}}
         @hasCopyButton={{true}}

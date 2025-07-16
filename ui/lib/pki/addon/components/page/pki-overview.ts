@@ -7,6 +7,7 @@ import Component from '@glimmer/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
+
 import type Store from '@ember-data/store';
 import type RouterService from '@ember/routing/router-service';
 import type PkiIssuerModel from 'vault/models/pki/issuer';
@@ -19,7 +20,7 @@ interface Args {
 }
 
 export default class PkiOverview extends Component<Args> {
-  @service declare readonly router: RouterService;
+  @service('app-router') declare readonly router: RouterService;
   @service declare readonly store: Store;
 
   @tracked rolesValue = '';

@@ -1,3 +1,5 @@
+VAULT_VERSION=$$(cat $(CURDIR)/../version/VERSION)
+
 .PHONY: default
 default: check-fmt shellcheck
 
@@ -10,10 +12,16 @@ fmt: fmt-enos fmt-modules shfmt
 .PHONY: check-fmt-enos
 check-fmt-enos:
 	enos fmt --check --diff .
+	enos fmt --check --diff ./k8s
 
 .PHONY: fmt-enos
 fmt-enos:
 	enos fmt .
+	enos fmt ./k8s
+
+.PHONY: gen-enos
+gen-enos:
+	pushd ../tools/pipeline &> /dev/null && go run ./... generate enos-dynamic-config -d ../../enos -f enos-dynamic-config.hcl -e ce -v $(VAULT_VERSION) -n 3 --log info && popd &> /dev/null
 
 .PHONY: check-fmt-modules
 check-fmt-modules:
@@ -25,6 +33,7 @@ fmt-modules:
 
 .PHONY: validate-enos
 validate-enos:
+	enos scenario validate --timeout 30m0s --chdir ./k8s
 	enos scenario validate --timeout 30m0s
 
 .PHONY: lint

@@ -24,11 +24,14 @@ func TestRegisterPlugin(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = client.Sys().RegisterPluginWithContext(context.Background(), &RegisterPluginInput{
+	resp, err := client.Sys().RegisterPluginWithContextDetailed(context.Background(), &RegisterPluginInput{
 		Version: "v1.0.0",
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	if len(resp.Warnings) > 0 {
+		t.Errorf("expected no warnings, got: %v", resp.Warnings)
 	}
 }
 

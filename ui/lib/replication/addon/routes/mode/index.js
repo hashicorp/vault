@@ -9,7 +9,7 @@ import Route from '@ember/routing/route';
 import { service } from '@ember/service';
 
 export default Route.extend({
-  router: service(),
+  router: service('app-router'),
   store: service(),
   model() {
     const replicationMode = this.paramsFor('mode').replication_mode;

@@ -195,10 +195,19 @@ export default ApplicationAdapter.extend({
 
   async updateRecord(store, type, snapshot) {
     const serializer = store.serializerFor(type.modelName);
-    const data = serializer.serialize(snapshot);
+    const serializedData = serializer.serialize(snapshot);
     const roleType = snapshot.attr('type');
     const backend = snapshot.attr('backend');
     const id = snapshot.attr('name');
+    let data = {};
+    if (roleType === 'static') {
+      data = {
+        ...serializedData,
+        username: snapshot.attr('username'), // username is required for updating a static role
+      };
+    } else {
+      data = serializedData;
+    }
 
     return this.ajax(this.urlFor(backend, id, roleType), 'POST', { data }).then(() => data);
   },

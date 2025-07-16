@@ -8,7 +8,11 @@ import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, findAll, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
+import clientsHandler, {
+  LICENSE_START,
+  STATIC_NOW,
+  STATIC_PREVIOUS_MONTH,
+} from 'vault/mirage/handlers/clients';
 import { fromUnixTime, getUnixTime } from 'date-fns';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
@@ -18,9 +22,9 @@ import sinon from 'sinon';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 
 const START_TIME = getUnixTime(LICENSE_START);
-const END_TIME = getUnixTime(STATIC_NOW);
+const END_TIME = getUnixTime(STATIC_PREVIOUS_MONTH);
 const START_ISO = LICENSE_START.toISOString();
-const END_ISO = STATIC_NOW.toISOString();
+const END_ISO = STATIC_PREVIOUS_MONTH.toISOString();
 
 module('Integration | Component | clients | Page::Counts', function (hooks) {
   setupRenderingTest(hooks);
@@ -62,7 +66,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
     await this.renderComponent();
 
     assert.dom(CLIENT_COUNT.dateRange.dateDisplay('start')).hasText('July 2023', 'Start month renders');
-    assert.dom(CLIENT_COUNT.dateRange.dateDisplay('end')).hasText('January 2024', 'End month renders');
+    assert.dom(CLIENT_COUNT.dateRange.dateDisplay('end')).hasText('December 2023', 'End month renders');
   });
 
   test('it should render no data empty state', async function (assert) {
@@ -72,7 +76,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
     assert
       .dom(GENERAL.emptyStateTitle)
-      .hasText('No data received from July 2023 to January 2024', 'No data empty state renders');
+      .hasText('No data received from July 2023 to December 2023', 'No data empty state renders');
   });
 
   test('it should render activity error', async function (assert) {
@@ -100,14 +104,13 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
   // license start is July 2, 2024 on date change it recalculates start to beginning of the month
   const july23start = getUnixTime(new Date('2023-07-01T00:00:00Z'));
   const dec23end = getUnixTime(new Date('2023-12-31T00:00:00Z'));
-  const jan24end = getUnixTime(new Date('2024-01-31T00:00:00Z'));
   [
     {
       scenario: 'changing start only',
-      expected: { start_time: jan23start, end_time: jan24end },
+      expected: { start_time: jan23start, end_time: dec23end },
       editStart: '2023-01',
       expectedStart: 'January 2023',
-      expectedEnd: 'January 2024',
+      expectedEnd: 'December 2023',
     },
     {
       scenario: 'changing end only',
@@ -124,18 +127,10 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
       expectedStart: 'January 2023',
       expectedEnd: 'December 2023',
     },
-    {
-      scenario: 'reset',
-      expected: { start_time: undefined, end_time: undefined },
-      reset: true,
-      expectedStart: 'July 2023',
-      expectedEnd: 'January 2024',
-    },
   ].forEach((testCase) => {
     test(`it should send correct millis value on filter change when ${testCase.scenario}`, async function (assert) {
       assert.expect(5);
-      // set to enterprise so reset will save correctly
-      this.owner.lookup('service:version').type = 'enterprise';
+      this.owner.lookup('service:version').type = 'community';
       this.onFilterChange = (params) => {
         assert.deepEqual(params, testCase.expected, 'Correct values sent on filter change');
         // in the app, the timestamp choices trigger a qp refresh as millis from epoch,
@@ -150,9 +145,9 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
       await this.renderComponent();
       await click(CLIENT_COUNT.dateRange.edit);
 
-      // page starts with default billing dates, which are july 23 - jan 24
+      // page starts with default billing dates, which are july 23 - dec 23
       assert.dom(CLIENT_COUNT.dateRange.editDate('start')).hasValue('2023-07');
-      assert.dom(CLIENT_COUNT.dateRange.editDate('end')).hasValue('2024-01');
+      assert.dom(CLIENT_COUNT.dateRange.editDate('end')).hasValue('2023-12');
 
       if (testCase.editStart) {
         await fillIn(CLIENT_COUNT.dateRange.editDate('start'), testCase.editStart);
@@ -163,7 +158,7 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
       if (testCase.reset) {
         await click(CLIENT_COUNT.dateRange.reset);
       }
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert.dom(CLIENT_COUNT.dateRange.dateDisplay('start')).hasText(testCase.expectedStart);
       assert.dom(CLIENT_COUNT.dateRange.dateDisplay('end')).hasText(testCase.expectedEnd);
     });
@@ -265,14 +260,16 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
       );
   });
 
-  test('it should render empty state for no start when CE', async function (assert) {
+  test('it should render empty state for no start or no end when CE', async function (assert) {
     this.owner.lookup('service:version').type = 'community';
     this.startTimestamp = null;
     this.activity = {};
 
     await this.renderComponent();
 
-    assert.dom(GENERAL.emptyStateTitle).hasText('No start date found', 'Empty state renders');
+    assert
+      .dom(GENERAL.emptyStateTitle)
+      .hasText('Input the start and end dates to view client attribution by path.', 'Empty state renders');
     assert.dom(CLIENT_COUNT.dateRange.edit).hasText('Set date range');
   });
 
@@ -283,6 +280,20 @@ module('Integration | Component | clients | Page::Counts', function (hooks) {
 
     assert
       .dom(GENERAL.emptyStateTitle)
-      .hasText('No data received from July 2023 to January 2024', 'Empty state renders');
+      .hasText('No data received from July 2023 to December 2023', 'Empty state renders');
+  });
+
+  test('it resets the tracked values on close', async function (assert) {
+    await this.renderComponent();
+    const DATE_RANGE = CLIENT_COUNT.dateRange;
+
+    await click(DATE_RANGE.edit);
+    await fillIn(DATE_RANGE.editDate('start'), '2017-04');
+    await fillIn(DATE_RANGE.editDate('end'), '2018-05');
+    await click(GENERAL.cancelButton);
+
+    await click(DATE_RANGE.edit);
+    assert.dom(DATE_RANGE.editDate('start')).hasValue('2023-07');
+    assert.dom(DATE_RANGE.editDate('end')).hasValue('2023-12');
   });
 });
