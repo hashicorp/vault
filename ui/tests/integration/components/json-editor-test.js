@@ -5,7 +5,6 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { create } from 'ember-cli-page-object';
 import { render, click, triggerKeyEvent, waitFor } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { SELECTORS } from '../../pages/components/json-editor';
