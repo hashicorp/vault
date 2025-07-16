@@ -184,7 +184,7 @@ scenario "proxy" {
     depends_on  = [step.create_vpc]
 
     providers = {
-      enos = local.enos_provider[matrix.distro]
+      enos = local.enos_provider["ubuntu"]
     }
 
     variables {
@@ -239,7 +239,7 @@ scenario "proxy" {
     ]
 
     providers = {
-      enos = local.enos_provider[matrix.distro]
+      enos = local.enos_provider["ubuntu"]
     }
 
     variables {

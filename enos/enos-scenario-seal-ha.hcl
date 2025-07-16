@@ -216,7 +216,7 @@ scenario "seal_ha" {
     depends_on  = [step.create_vpc]
 
     providers = {
-      enos = local.enos_provider[matrix.distro]
+      enos = local.enos_provider["ubuntu"]
     }
 
     variables {
@@ -271,7 +271,7 @@ scenario "seal_ha" {
     ]
 
     providers = {
-      enos = local.enos_provider[matrix.distro]
+      enos = local.enos_provider["ubuntu"]
     }
 
     variables {
