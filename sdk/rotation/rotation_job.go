@@ -10,6 +10,11 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
+const (
+	PerformedRegistration   = "registration"
+	PerformedDeregistration = "deregistration"
+)
+
 // RotationOptions is an embeddable struct to capture common rotation
 // settings between a Secret and Auth
 type RotationOptions struct {
@@ -26,6 +31,7 @@ type RotationJob struct {
 	// For requests, this will always be blank.
 	RotationID string `sentinel:""`
 	Path       string
+	MountPoint string
 	Name       string
 }
 
@@ -34,33 +40,65 @@ type RotationJobConfigureRequest struct {
 	MountPoint       string
 	ReqPath          string
 	RotationSchedule string
-	RotationWindow   int
-	RotationPeriod   int
+	RotationWindow   time.Duration
+	RotationPeriod   time.Duration
+}
+
+type RotationJobDeregisterRequest struct {
+	MountPoint string
+	ReqPath    string
+}
+
+// RotationInfoRequest is the request struct used by SystemView.GetRotationInformation.
+type RotationInfoRequest struct {
+	// ReqPath is the plugin-local path to the credential, and needs to match the ReqPath value that
+	// was supplied in schedule creation with RegisterRotationJob
+	ReqPath string
+}
+
+// RotationInfoResponse is the response struct returned by SystemView.GetRotationInformation.
+type RotationInfoResponse struct {
+	// NextVaultRotation is the scheduled time of the next rotation.
+	NextVaultRotation time.Time
+
+	// LastVaultRotation is the time of the prior rotation.
+	LastVaultRotation time.Time
+
+	// TTL is integer seconds until next rotation, conventionally clamped to 0 (i.e., will not be negative)
+	TTL int64
 }
 
 func (s *RotationJob) Validate() error {
-	// TODO: validation?
+	if s.MountPoint == "" {
+		return fmt.Errorf("MountPoint is required")
+	}
+
+	if s.Path == "" {
+		return fmt.Errorf("ReqPath is required")
+	}
+
+	if s.Schedule.RotationSchedule == "" && s.Schedule.RotationPeriod.Seconds() == 0 {
+		return fmt.Errorf("RotationSchedule or RotationPeriod is required to set up rotation job")
+	}
+
 	return nil
 }
 
-func newRotationJob(rotationSchedule, path, rotationJobName string, rotationWindow, ttl int) (*RotationJob, error) {
+func newRotationJob(configRequest *RotationJobConfigureRequest) (*RotationJob, error) {
 	var cronSc *cron.SpecSchedule
-	if rotationSchedule != "" {
+	if configRequest.RotationSchedule != "" {
 		var err error
-		cronSc, err = DefaultScheduler.Parse(rotationSchedule)
+		cronSc, err = DefaultScheduler.Parse(configRequest.RotationSchedule)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	rs := &RotationSchedule{
-		Schedule:         cronSc,
-		RotationSchedule: rotationSchedule,
-		RotationWindow:   time.Duration(rotationWindow) * time.Second,
-		RotationPeriod:   time.Duration(ttl) * time.Second,
-		// TODO
-		// decide if next rotation should be set here
-		// or when we actually push item into queue
+		Schedule:          cronSc,
+		RotationSchedule:  configRequest.RotationSchedule,
+		RotationWindow:    configRequest.RotationWindow,
+		RotationPeriod:    configRequest.RotationPeriod,
 		NextVaultRotation: time.Time{},
 		LastVaultRotation: time.Time{},
 	}
@@ -69,31 +107,21 @@ func newRotationJob(rotationSchedule, path, rotationJobName string, rotationWind
 		RotationOptions: RotationOptions{
 			Schedule: rs,
 		},
-		// Figure out how to get mount info
-		Path: path,
-		Name: rotationJobName,
+		MountPoint: configRequest.MountPoint,
+		Path:       configRequest.ReqPath,
+		Name:       configRequest.Name,
 	}, nil
 }
 
 // ConfigureRotationJob builds and returns a configured RotationJob for the mount and request with the given schedule.
 func ConfigureRotationJob(configRequest *RotationJobConfigureRequest) (*RotationJob, error) {
-	mount := configRequest.MountPoint + configRequest.ReqPath
-
-	var rotationJob *RotationJob
-	if configRequest.RotationSchedule != "" && configRequest.RotationWindow != 0 {
-		var err error
-		rotationJob, err = newRotationJob(configRequest.RotationSchedule, mount, configRequest.Name, configRequest.RotationWindow, 0)
-		if err != nil {
-			return nil, err
-		}
+	rotationJob, err := newRotationJob(configRequest)
+	if err != nil {
+		return nil, err
 	}
 
-	if configRequest.RotationPeriod != 0 {
-		var err error
-		rotationJob, err = newRotationJob("", mount, configRequest.Name, 0, configRequest.RotationPeriod)
-		if err != nil {
-			return nil, err
-		}
+	if err := rotationJob.Validate(); err != nil {
+		return nil, fmt.Errorf("error validating rotation job: %s", err)
 	}
 
 	// Expect rotation job to exist here

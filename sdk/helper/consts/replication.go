@@ -20,6 +20,7 @@ const (
 	// ids to ensure it doesn't collide.
 	CurrentReplicatedSecondaryIdentifier = ".current"
 	CoreFeatureFlagPath                  = "core/cluster/feature-flags"
+	CoreDevelopmentClusterPath           = "core/reporting/development-cluster"
 )
 
 type ReplicationState uint32

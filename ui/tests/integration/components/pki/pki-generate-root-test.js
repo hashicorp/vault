@@ -40,7 +40,11 @@ module('Integration | Component | pki-generate-root', function (hooks) {
 
     assert.dom('h2').exists({ count: 1 }, 'One H2 title without @urls');
     assert.dom(PKI_GENERATE_ROOT.mainSectionTitle).hasText('Root parameters');
-    assert.dom('[data-test-toggle-group]').exists({ count: 3 }, '3 toggle groups shown');
+    assert.dom(GENERAL.button('Key parameters')).exists('Key parameters toggle renders');
+    assert.dom(GENERAL.button('Subject Alternative Name (SAN) Options')).exists('SAN options toggle renders');
+    assert
+      .dom(GENERAL.button('Additional subject fields'))
+      .exists('Additional subject fields toggle renders');
   });
 
   test('it shows the appropriate fields under the toggles', async function (assert) {
@@ -51,7 +55,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
       }
     );
 
-    await click(PKI_GENERATE_ROOT.additionalGroupToggle);
+    await click(GENERAL.button('Additional subject fields'));
     assert
       .dom(PKI_GENERATE_ROOT.toggleGroupDescription)
       .hasText('These fields provide more information about the client to which the certificate belongs.');
@@ -59,7 +63,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
       .dom(PKI_GENERATE_ROOT.groupFields('Additional subject fields'))
       .exists({ count: 7 }, '7 form fields under Additional Fields toggle');
 
-    await click(PKI_GENERATE_ROOT.sanGroupToggle);
+    await click(GENERAL.button('Subject Alternative Name (SAN) Options'));
     assert
       .dom(PKI_GENERATE_ROOT.toggleGroupDescription)
       .hasText(
@@ -69,7 +73,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
       .dom(PKI_GENERATE_ROOT.groupFields('Subject Alternative Name (SAN) Options'))
       .exists({ count: 6 }, '7 form fields under SANs toggle');
 
-    await click(PKI_GENERATE_ROOT.keyParamsGroupToggle);
+    await click(GENERAL.button('Key parameters'));
     assert
       .dom(PKI_GENERATE_ROOT.toggleGroupDescription)
       .hasText(
@@ -89,7 +93,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
         owner: this.engine,
       }
     );
-    await click(PKI_GENERATE_ROOT.keyParamsGroupToggle);
+    await click(GENERAL.button('Key parameters'));
     assert
       .dom(PKI_GENERATE_ROOT.groupFields('Key parameters'))
       .exists({ count: 0 }, '0 form fields under keyParams toggle');
@@ -171,7 +175,7 @@ module('Integration | Component | pki-generate-root', function (hooks) {
       }
     );
 
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.dom(PKI_GENERATE_ROOT.formInvalidError).exists('Shows overall error form');
     assert.ok(saveSpy.notCalled);
   });

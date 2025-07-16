@@ -1,0 +1,3 @@
+```release-note:improvement
+core: Config reloading on SIGHUP now includes some Raft settings, which are now also present in `/sys/config/state/sanitized` output.
+```

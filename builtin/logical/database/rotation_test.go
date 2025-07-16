@@ -1620,6 +1620,92 @@ func TestDeletesOlderWALsOnLoad(t *testing.T) {
 	requireWALs(t, storage, 1)
 }
 
+// TestStaticRoleNextVaultRotationOnRestart verifies that a static role created prior to Vault 1.15.0
+// (when roles were created without NextVaultRotation set) is automatically assigned a valid
+// NextVaultRotation when loaded from storage and the rotation queue is repopulated.
+func TestStaticRoleNextVaultRotationOnRestart(t *testing.T) {
+	ctx := context.Background()
+	b, storage, mockDB := getBackend(t)
+	defer b.Cleanup(ctx)
+	configureDBMount(t, storage)
+
+	roleName := "hashicorp"
+	data := map[string]interface{}{
+		"username":        "hashicorp",
+		"db_name":         "mockv5",
+		"rotation_period": "10m",
+	}
+
+	createRoleWithData(t, b, storage, mockDB, roleName, data)
+	item, err := b.credRotationQueue.Pop()
+	require.NoError(t, err)
+	firstPriority := item.Priority
+	role, err := b.StaticRole(context.Background(), storage, roleName)
+	firstPassword := role.StaticAccount.Password
+	require.NoError(t, err)
+
+	// force NextVaultRotation to zero to simulate roles before 1.15.0
+	role.StaticAccount.NextVaultRotation = time.Time{}
+	entry, err := logical.StorageEntryJSON(databaseStaticRolePath+roleName, role)
+	require.NoError(t, err)
+	if err := storage.Put(context.Background(), entry); err != nil {
+		t.Fatal("failed to write role to storage", err)
+	}
+
+	// Confirm that NextVaultRotation is nil
+	role, err = b.StaticRole(ctx, storage, roleName)
+	require.NoError(t, err)
+	require.Equal(t, role.StaticAccount.NextVaultRotation, time.Time{})
+
+	// Repopulate queue to simulate restart
+	b.populateQueue(ctx, storage)
+
+	success := b.rotateCredential(t.Context(), storage)
+	require.False(t, success, "expected rotation to fail")
+
+	role, err = b.StaticRole(ctx, storage, roleName)
+	require.NoError(t, err)
+	require.Equal(t, role.StaticAccount.Password, firstPassword)
+	item, err = b.credRotationQueue.Pop()
+	require.NoError(t, err)
+	newPriority := item.Priority
+	require.Equal(t, role.StaticAccount.NextVaultRotation.Unix(), newPriority) // Confirm NextVaultRotation and priority are equal
+	require.Equal(t, newPriority, firstPriority)                               // confirm that priority has not changed
+}
+
+// TestRotationSchedulePriorityAfterRestart checks that the priority of a
+// static role with rotation schedule does not change after a restart
+// This addresses VAULT-35616, where role schedules were incorrectly shifting
+// from the local timezone to UTC after reloading from storage.
+func TestRotationSchedulePriorityAfterRestart(t *testing.T) {
+	ctx := context.Background()
+	b, storage, mockDB := getBackend(t)
+
+	// Replace test scheduler with default scheduler
+	scheduler := &schedule.DefaultSchedule{}
+	b.schedule = scheduler
+	defer b.Cleanup(ctx)
+	configureDBMount(t, storage)
+
+	roleName := "hashicorp"
+	data := map[string]interface{}{
+		"username":          "hashicorp",
+		"db_name":           "mockv5",
+		"rotation_schedule": "*/30 * * * SAT",
+	}
+
+	createRoleWithData(t, b, storage, mockDB, roleName, data)
+	item, err := b.credRotationQueue.Pop()
+	require.NoError(t, err)
+	firstPriority := item.Priority
+
+	// Repopulate queue to simulate restart
+	b.populateQueue(ctx, storage)
+	item, err = b.credRotationQueue.Pop()
+	newPriority := item.Priority
+	require.Equal(t, newPriority, firstPriority) // confirm that priority has not changed
+}
+
 func generateWALFromFailedRotation(t *testing.T, b *databaseBackend, storage logical.Storage, mockDB *mockNewDatabase, roleName string) {
 	t.Helper()
 	mockDB.On("UpdateUser", mock.Anything, mock.Anything).
@@ -1664,6 +1750,29 @@ func requireWALs(t *testing.T, storage logical.Storage, expectedCount int) []str
 	return wals
 }
 
+// getBackendWithConfig returns an initialized test backend for the given
+// BackendConfig
+func getBackendInitQueue(t *testing.T, c *logical.BackendConfig, tickInterval string) (*databaseBackend, *logical.BackendConfig, *mockNewDatabase) {
+	t.Helper()
+	// make queue ticks more frequent for tests
+	c.Config[queueTickIntervalKey] = tickInterval
+	c.StorageView = &logical.InmemStorage{}
+	// Create and init the backend ourselves instead of using a Factory because
+	// the factory function kicks off threads that cause racy tests.
+	b := Backend(c)
+	ctx := context.Background()
+	if err := b.Setup(ctx, c); err != nil {
+		t.Fatal(err)
+	}
+	b.schedule = &TestSchedule{}
+	b.credRotationQueue = queue.New()
+	b.initQueue(ctx, c)
+
+	mockDB := setupMockDB(b)
+
+	return b, c, mockDB
+}
+
 func getBackend(t *testing.T) (*databaseBackend, logical.Storage, *mockNewDatabase) {
 	t.Helper()
 	config := logical.TestBackendConfig()
@@ -1671,7 +1780,8 @@ func getBackend(t *testing.T) (*databaseBackend, logical.Storage, *mockNewDataba
 	// Create and init the backend ourselves instead of using a Factory because
 	// the factory function kicks off threads that cause racy tests.
 	b := Backend(config)
-	if err := b.Setup(context.Background(), config); err != nil {
+	ctx := context.Background()
+	if err := b.Setup(ctx, config); err != nil {
 		t.Fatal(err)
 	}
 	b.schedule = &TestSchedule{}

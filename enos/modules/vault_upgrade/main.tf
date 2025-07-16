@@ -132,21 +132,11 @@ module "get_ip_addresses" {
   vault_root_token  = var.vault_root_token
 }
 
-resource "enos_remote_exec" "restart_followers" {
-  for_each = module.get_ip_addresses.follower_hosts
-
-  environment = {
-    VAULT_ADDR        = var.vault_addr
-    VAULT_INSTALL_DIR = var.vault_install_dir
-  }
-
-  scripts = [abspath("${path.module}/scripts/restart-vault.sh")]
-
-  transport = {
-    ssh = {
-      host = each.value.public_ip
-    }
-  }
+module "restart_followers" {
+  source            = "../restart_vault"
+  hosts             = module.get_ip_addresses.follower_hosts
+  vault_addr        = var.vault_addr
+  vault_install_dir = var.vault_install_dir
 }
 
 resource "enos_vault_unseal" "followers" {
@@ -154,7 +144,7 @@ resource "enos_vault_unseal" "followers" {
     for idx, host in module.get_ip_addresses.follower_hosts : idx => host
     if var.vault_seal_type == "shamir"
   }
-  depends_on = [enos_remote_exec.restart_followers]
+  depends_on = [module.restart_followers]
 
   bin_path    = local.vault_bin_path
   vault_addr  = var.vault_addr
@@ -171,7 +161,7 @@ resource "enos_vault_unseal" "followers" {
 module "wait_for_followers_unsealed" {
   source = "../vault_wait_for_cluster_unsealed"
   depends_on = [
-    enos_remote_exec.restart_followers,
+    module.restart_followers,
     enos_vault_unseal.followers,
   ]
 
@@ -180,26 +170,17 @@ module "wait_for_followers_unsealed" {
   vault_install_dir = var.vault_install_dir
 }
 
-resource "enos_remote_exec" "restart_leader" {
-  depends_on = [module.wait_for_followers_unsealed]
-
-  environment = {
-    VAULT_ADDR        = var.vault_addr
-    VAULT_INSTALL_DIR = var.vault_install_dir
-  }
-
-  scripts = [abspath("${path.module}/scripts/restart-vault.sh")]
-
-  transport = {
-    ssh = {
-      host = module.get_ip_addresses.leader_public_ip
-    }
-  }
+module "restart_leader" {
+  depends_on        = [module.wait_for_followers_unsealed]
+  source            = "../restart_vault"
+  hosts             = module.get_ip_addresses.leader_hosts
+  vault_addr        = var.vault_addr
+  vault_install_dir = var.vault_install_dir
 }
 
 resource "enos_vault_unseal" "leader" {
   count      = var.vault_seal_type == "shamir" ? 1 : 0
-  depends_on = [enos_remote_exec.restart_leader]
+  depends_on = [module.restart_leader]
 
   bin_path    = local.vault_bin_path
   vault_addr  = var.vault_addr

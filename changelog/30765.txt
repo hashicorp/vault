@@ -1,0 +1,3 @@
+```release-note:change
+ui: Client count side nav link 'Vault Usage Metrics' renamed to 'Client Usage'
+```

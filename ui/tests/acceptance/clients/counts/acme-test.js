@@ -10,7 +10,7 @@ import { visit, click, currentURL } from '@ember/test-helpers';
 import { getUnixTime } from 'date-fns';
 import sinon from 'sinon';
 import timestamp from 'core/utils/timestamp';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CHARTS, CLIENT_COUNT } from 'vault/tests/helpers/clients/client-count-selectors';
 import { ACTIVITY_RESPONSE_STUB, assertBarChart } from 'vault/tests/helpers/clients/client-count-helpers';
@@ -50,7 +50,7 @@ module('Acceptance | clients | counts | acme', function (hooks) {
       nsMonthlyUsage: filterByMonthDataForMount(activity.byMonth, this.nsPath, this.mountPath),
     };
 
-    await authPage.login();
+    await login();
     return visit('/vault');
   });
 
@@ -66,8 +66,7 @@ module('Acceptance | clients | counts | acme', function (hooks) {
 
   test('it filters by mount data and renders charts', async function (assert) {
     const { nsTotals, nsMonthlyUsage } = this.expectedValues;
-    const nsMonthlyNew = nsMonthlyUsage.map((m) => m?.new_clients);
-    assert.expect(7 + nsMonthlyUsage.length + nsMonthlyNew.length);
+    assert.expect(4 + nsMonthlyUsage.length);
 
     await visit('/vault/clients/counts/acme');
     await selectChoose(CLIENT_COUNT.nsFilter, this.nsPath);
@@ -75,7 +74,6 @@ module('Acceptance | clients | counts | acme', function (hooks) {
 
     // each chart assertion count is data array length + 2
     assertBarChart(assert, 'ACME usage', nsMonthlyUsage);
-    assertBarChart(assert, 'Monthly new', nsMonthlyNew);
     assert.strictEqual(
       currentURL(),
       `/vault/clients/counts/acme?mountPath=pki-engine-0&ns=${this.nsPath}`,
@@ -85,13 +83,8 @@ module('Acceptance | clients | counts | acme', function (hooks) {
       .dom(CLIENT_COUNT.statText('Total ACME clients'))
       .hasTextContaining(
         `${formatNumber([nsTotals.acme_clients])}`,
-        'renders total acme clients for namespace'
+        'renders total new acme clients for namespace'
       );
-
-    // TODO: update this
-    assert
-      .dom(CLIENT_COUNT.statText('Average new ACME clients per month'))
-      .hasTextContaining(`13`, 'renders average acme clients for namespace');
   });
 
   /**
@@ -138,7 +131,7 @@ module('Acceptance | clients | counts | acme', function (hooks) {
     assert.expect(3);
     await visit('/vault/clients/counts/acme');
     await selectChoose(CLIENT_COUNT.nsFilter, this.nsPath);
-    await selectChoose(CLIENT_COUNT.mountFilter, 'auth/authid/0');
+    await selectChoose(CLIENT_COUNT.mountFilter, 'auth/userpass-0');
     // no data because this is an auth mount (acme_clients come from pki mounts)
     assert.dom(CLIENT_COUNT.statText('Total ACME clients')).hasTextContaining('0');
     assert.dom(`${CHARTS.chart('ACME usage')} ${CHARTS.verticalBar}`).isNotVisible();

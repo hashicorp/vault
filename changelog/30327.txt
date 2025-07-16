@@ -1,0 +1,3 @@
+```release-note:bug
+database: no longer incorrectly add an "unrecognized parameters" warning for certain SQL database secrets config operations when another warning is returned
+```

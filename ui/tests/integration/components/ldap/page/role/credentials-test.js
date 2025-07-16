@@ -12,6 +12,7 @@ import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { duration } from 'core/helpers/format-duration';
 import { dateFormat } from 'core/helpers/date-format';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | ldap | Page::Role::Credentials', function (hooks) {
   setupRenderingTest(hooks);
@@ -77,16 +78,14 @@ module('Integration | Component | ldap | Page::Role::Credentials', function (hoo
     );
 
     for (const field of fields) {
-      assert
-        .dom(`[data-test-row-label="${field.label}"]`)
-        .hasText(field.label, `${field.label} label renders`);
+      assert.dom(GENERAL.infoRowLabel(field.label)).hasText(field.label, `${field.label} label renders`);
 
       if (field.isMasked) {
-        await click(`[data-test-value-div="${field.label}"] [data-test-button="toggle-masked"]`);
+        await click(`${GENERAL.infoRowValue(field.label)} ${GENERAL.button('toggle-masked')}`);
       }
 
       const value = field.value ? field.value() : this.creds[field.key];
-      assert.dom(`[data-test-value-div="${field.label}"]`).hasText(value, `${field.label} value renders`);
+      assert.dom(GENERAL.infoRowValue(field.label)).hasText(value, `${field.label} value renders`);
     }
 
     await click('[data-test-done]');
@@ -120,16 +119,14 @@ module('Integration | Component | ldap | Page::Role::Credentials', function (hoo
       );
 
     for (const field of fields) {
-      assert
-        .dom(`[data-test-row-label="${field.label}"]`)
-        .hasText(field.label, `${field.label} label renders`);
+      assert.dom(GENERAL.infoRowLabel(field.label)).hasText(field.label, `${field.label} label renders`);
 
       if (field.isMasked) {
-        await click(`[data-test-value-div="${field.label}"] [data-test-button="toggle-masked"]`);
+        await click(`${GENERAL.infoRowValue(field.label)} ${GENERAL.button('toggle-masked')}`);
       }
 
       const value = field.value ? field.value() : this.creds[field.key];
-      assert.dom(`[data-test-value-div="${field.label}"]`).hasText(value, `${field.label} value renders`);
+      assert.dom(GENERAL.infoRowValue(field.label)).hasText(value, `${field.label} value renders`);
     }
 
     await click('[data-test-done]');

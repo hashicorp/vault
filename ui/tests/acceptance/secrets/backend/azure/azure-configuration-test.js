@@ -9,7 +9,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { spy } from 'sinon';
 
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { runCmd } from 'vault/tests/helpers/commands';
@@ -21,7 +21,6 @@ import {
   expectedConfigKeys,
   expectedValueOfConfigKeys,
   configUrl,
-  createConfig,
   fillInAzureConfig,
 } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 
@@ -31,14 +30,13 @@ module('Acceptance | Azure | configuration', function (hooks) {
 
   hooks.beforeEach(function () {
     const flash = this.owner.lookup('service:flash-messages');
-    this.store = this.owner.lookup('service:store');
     this.flashSuccessSpy = spy(flash, 'success');
     this.flashDangerSpy = spy(flash, 'danger');
     this.flashInfoSpy = spy(flash, 'info');
     this.version = this.owner.lookup('service:version');
     this.uid = uuidv4();
     this.type = 'azure';
-    return authPage.login();
+    return login();
   });
 
   test('it should prompt configuration after mounting the azure engine', async function (assert) {
@@ -72,7 +70,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
     await runCmd(`delete sys/mounts/${path}`);
   });
 
-  module('isCommunity', function (hooks) {
+  module('Community', function (hooks) {
     hooks.beforeEach(function () {
       this.version.type = 'community';
     });
@@ -85,8 +83,8 @@ module('Acceptance | Azure | configuration', function (hooks) {
           subscription_id: 'subscription-id',
           tenant_id: 'tenant-id',
           client_id: 'client-id',
-          root_password_ttl: '20 days 20 hours',
           environment: 'AZUREPUBLICCLOUD',
+          root_password_ttl: '1800000s',
         };
         this.server.get(`${path}/config`, () => {
           assert.true(true, 'request made to config when navigating to the configuration page.');
@@ -112,7 +110,8 @@ module('Acceptance | Azure | configuration', function (hooks) {
     });
 
     module('create', function () {
-      test('it should save azure account accessType options', async function (assert) {
+      test('it should save azure account options', async function (assert) {
+        // there are no azure specific options that can be returned from the API so confirm the generic options are saved.
         assert.expect(3);
         const path = `azure-${this.uid}`;
         await enablePage.enable(this.type, path);
@@ -125,18 +124,15 @@ module('Acceptance | Azure | configuration', function (hooks) {
 
         await click(SES.configTab);
         await click(SES.configure);
-        await fillInAzureConfig(this.type);
-        await click(GENERAL.saveButton);
+        await fillInAzureConfig();
+        await click(GENERAL.submitButton);
         assert.true(
           this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
-          'Success flash message is rendered showing the azure model configuration was saved.'
+          'Success flash message is rendered showing the azure configuration was saved.'
         );
         assert
           .dom(GENERAL.infoRowValue('Root password TTL'))
-          .hasText(
-            '1 hour 26 minutes 40 seconds',
-            'Root password TTL, an azure account specific field, has been set.'
-          );
+          .hasText('3 minutes 20 seconds', 'Root password TTL, a generic field, has been set.');
         assert
           .dom(GENERAL.infoRowValue('Subscription ID'))
           .hasText('subscription-id', 'Subscription ID, a generic field, has been set.');
@@ -182,7 +178,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
         });
         await fillIn(GENERAL.inputByAttr('subscriptionId'), 'subscription-id-updated');
         await click(GENERAL.enableField('clientSecret'));
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
       });
@@ -207,9 +203,9 @@ module('Acceptance | Azure | configuration', function (hooks) {
         });
         await fillIn(GENERAL.inputByAttr('subscriptionId'), 'subscription-id-updated-again');
         await click(GENERAL.enableField('clientSecret'));
-        await click('[data-test-button="toggle-masked"]');
+        await click(GENERAL.button('toggle-masked'));
         await fillIn(GENERAL.inputByAttr('clientSecret'), 'client-secret-updated');
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
       });
@@ -226,8 +222,8 @@ module('Acceptance | Azure | configuration', function (hooks) {
 
         await click(SES.configTab);
         await click(SES.configure);
-        await fillInAzureConfig('azure');
-        await click(GENERAL.saveButton);
+        await fillInAzureConfig();
+        await click(GENERAL.submitButton);
 
         assert.dom(GENERAL.messageError).hasText('Error welp, that did not work!', 'API error shows on form');
         assert.strictEqual(
@@ -252,7 +248,7 @@ module('Acceptance | Azure | configuration', function (hooks) {
     });
   });
 
-  module('isEnterprise', function (hooks) {
+  module('Enterprise', function (hooks) {
     hooks.beforeEach(function () {
       this.version.type = 'enterprise';
     });
@@ -267,12 +263,15 @@ module('Acceptance | Azure | configuration', function (hooks) {
           identity_token_audience: 'audience',
           identity_token_ttl: 720000,
           environment: 'AZUREPUBLICCLOUD',
+          root_password_ttl: '1800000s',
         };
         this.server.get(`${path}/config`, () => {
           assert.true(true, 'request made to config when navigating to the configuration page.');
           return { data: { id: path, type: this.type, ...wifAttrs } };
         });
         await enablePage.enable(this.type, path);
+        GENERAL.button('More options');
+
         for (const key of expectedConfigKeys('azure-wif')) {
           const responseKeyAndValue = expectedValueOfConfigKeys(this.type, key);
           assert
@@ -298,7 +297,6 @@ module('Acceptance | Azure | configuration', function (hooks) {
         this.server.get(`identity/oidc/config`, () => {
           throw new Error(`Request was made to return the issuer when it should not have been.`);
         });
-        await createConfig(this.store, path, this.type); // create the azure account config in the store
         await enablePage.enable(this.type, path);
         await click(SES.configTab);
 
@@ -309,8 +307,8 @@ module('Acceptance | Azure | configuration', function (hooks) {
     });
 
     module('create', function () {
-      test('it should transition and save issuer if model was not changed but issuer was', async function (assert) {
-        assert.expect(3);
+      test('it should transition and save issuer if config was not changed but issuer was', async function (assert) {
+        assert.expect(2);
         const path = `azure-${this.uid}`;
         await enablePage.enable(this.type, path);
         const newIssuer = `http://new.issuer.${this.uid}`;
@@ -326,32 +324,22 @@ module('Acceptance | Azure | configuration', function (hooks) {
             ],
           };
         });
-        this.server.post(configUrl(this.type, path), () => {
-          throw new Error('post request was incorrectly made to update the azure config model');
-        });
 
         await click(SES.configTab);
         await click(SES.configure);
         await click(SES.wif.accessType('wif'));
         await fillIn(GENERAL.inputByAttr('issuer'), newIssuer);
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
         await click(SES.wif.issuerWarningSave);
         assert.true(
-          this.flashSuccessSpy.calledWith(`Issuer saved successfully`),
-          'Shows issuer saved message'
+          this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
+          'Success message renders'
         );
-
-        assert
-          .dom(GENERAL.emptyStateTitle)
-          .hasText(
-            'Azure not configured',
-            'Empty state message is displayed because the model was not saved only the issuer'
-          );
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
       });
 
-      test('it should transition and save model if the model was changed but issuer was not', async function (assert) {
+      test('it should transition on save if config was changed but issuer was not', async function (assert) {
         assert.expect(4);
         const path = `azure-${this.uid}`;
         await enablePage.enable(this.type, path);
@@ -362,12 +350,12 @@ module('Acceptance | Azure | configuration', function (hooks) {
 
         await click(SES.configTab);
         await click(SES.configure);
-        await fillInAzureConfig('withWif');
-        await click(GENERAL.saveButton);
+        await fillInAzureConfig(true);
+        await click(GENERAL.submitButton);
         assert.dom(SES.wif.issuerWarningModal).doesNotExist('issuer warning modal does not show');
         assert.true(
           this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
-          'Success flash message is rendered showing the azure model configuration was saved.'
+          'Success flash message is rendered showing the azure configuration was saved.'
         );
         assert
           .dom(GENERAL.infoRowValue('Identity token audience'))
@@ -379,29 +367,28 @@ module('Acceptance | Azure | configuration', function (hooks) {
         await runCmd(`delete sys/mounts/${path}`);
       });
 
-      test('it should transition and show issuer error if model saved but issuer encountered an error', async function (assert) {
+      test('it should transition and show issuer error if config saved but issuer encountered an error', async function (assert) {
         const path = `azure-${this.uid}`;
         const oldIssuer = 'http://old.issuer';
-        await enablePage.enable(this.type, path);
+
         this.server.get('/identity/oidc/config', () => {
-          return { issuer: 'http://old.issuer' };
+          return { data: { issuer: oldIssuer } };
         });
         this.server.post('/identity/oidc/config', () => {
           return overrideResponse(400, { errors: ['bad request'] });
         });
 
+        await enablePage.enable(this.type, path);
         await click(SES.configTab);
         await click(SES.configure);
-        await fillInAzureConfig('withWif');
-        assert
-          .dom(GENERAL.inputByAttr('issuer'))
-          .hasValue(oldIssuer, 'issuer defaults to previously saved value');
+        await fillInAzureConfig(true);
         await fillIn(GENERAL.inputByAttr('issuer'), 'http://new.issuererrors');
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
         await click(SES.wif.issuerWarningSave);
+
         assert.true(
           this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
-          'Success flash message is rendered showing the azure model configuration was saved.'
+          'Success flash message is rendered showing the azure configuration was saved.'
         );
         assert.true(
           this.flashDangerSpy.calledWith(`Issuer was not saved: bad request`),
@@ -420,31 +407,22 @@ module('Acceptance | Azure | configuration', function (hooks) {
         await runCmd(`delete sys/mounts/${path}`);
       });
 
-      test('it should NOT transition and show error if model errored but issuer was saved', async function (assert) {
+      test('it should NOT transition and show error if config errors', async function (assert) {
         const path = `azure-${this.uid}`;
         const newIssuer = `http://new.issuer.${this.uid}`;
-        const oldIssuer = 'http://old.issuer';
-        await enablePage.enable(this.type, path);
-        this.server.get('/identity/oidc/config', () => {
-          return { issuer: oldIssuer };
-        });
+
         this.server.post(configUrl(this.type, path), () => {
           return overrideResponse(400, { errors: ['bad request'] });
         });
 
+        await enablePage.enable(this.type, path);
         await click(SES.configTab);
         await click(SES.configure);
-        await fillInAzureConfig('withWif');
-        assert
-          .dom(GENERAL.inputByAttr('issuer'))
-          .hasValue(oldIssuer, 'issuer defaults to previously saved value');
+        await fillInAzureConfig(true);
         await fillIn(GENERAL.inputByAttr('issuer'), newIssuer);
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
         await click(SES.wif.issuerWarningSave);
-        assert.true(
-          this.flashSuccessSpy.calledWith(`Issuer saved successfully`),
-          'Success flash message is rendered showing the issuer configuration was saved.'
-        );
+
         assert.dom(GENERAL.messageError).hasText('Error bad request', 'Error message is displayed.');
         assert.strictEqual(
           currentURL(),
@@ -465,14 +443,14 @@ module('Acceptance | Azure | configuration', function (hooks) {
         await enablePage.enable(this.type, path);
         await click(SES.configTab);
         await click(SES.configure);
-        await fillInAzureConfig('withWif');
-        await click(GENERAL.saveButton); // finished creating attributes, go back and edit them.
+        await fillInAzureConfig(true);
+        await click(GENERAL.submitButton); // finished creating attributes, go back and edit them.
         assert
           .dom(GENERAL.infoRowValue('Identity token audience'))
           .hasText('azure-audience', `value for identity token audience shows on the config details view.`);
         await click(SES.configure);
         await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'new-audience');
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
         assert
           .dom(GENERAL.infoRowValue('Identity token audience'))
           .hasText('new-audience', `value for identity token audience shows on the config details view.`);

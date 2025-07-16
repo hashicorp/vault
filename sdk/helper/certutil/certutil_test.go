@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"math/big"
 	mathrand "math/rand"
+	"net"
 	"reflect"
 	"strings"
 	"sync"
@@ -27,6 +28,7 @@ import (
 	"time"
 
 	"github.com/fatih/structs"
+	"github.com/go-test/deep"
 	"github.com/hashicorp/vault/sdk/helper/cryptoutil"
 )
 
@@ -1089,6 +1091,7 @@ func TestIgnoreCSRSigning(t *testing.T) {
 		params := &CreationParameters{
 			IgnoreCSRSignature: true,
 			URLs:               &URLEntries{},
+			NotAfter:           time.Now().Add(10000 * time.Hour),
 		}
 		data := &CreationBundle{
 			Params:        params,
@@ -1105,6 +1108,114 @@ func TestIgnoreCSRSigning(t *testing.T) {
 			t.Fatalf("signature verification failed: %v", err)
 		}
 	})
+}
+
+// TestSignIntermediat_name_constraints verifies that all the name constraints extension fields are
+// used when signing a certificate.
+func TestSignCertificate_name_constraints(t *testing.T) {
+	t.Parallel()
+
+	caKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("failed generating ca key: %v", err)
+	}
+	subjKeyID, err := GetSubjKeyID(caKey)
+	if err != nil {
+		t.Fatalf("failed generating ca subject key id: %v", err)
+	}
+	caCertTemplate := &x509.Certificate{
+		Subject: pkix.Name{
+			CommonName: "root.localhost",
+		},
+		SubjectKeyId:          subjKeyID,
+		DNSNames:              []string{"root.localhost"},
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		SerialNumber:          big.NewInt(mathrand.Int63()),
+		NotBefore:             time.Now().Add(-30 * time.Second),
+		NotAfter:              time.Now().Add(262980 * time.Hour),
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+	caBytes, err := x509.CreateCertificate(rand.Reader, caCertTemplate, caCertTemplate, caKey.Public(), caKey)
+	if err != nil {
+		t.Fatalf("failed creating ca certificate: %v", err)
+	}
+	caCert, err := x509.ParseCertificate(caBytes)
+	if err != nil {
+		t.Fatalf("failed parsing ca certificate: %v", err)
+	}
+
+	signingBundle := &CAInfoBundle{
+		ParsedCertBundle: ParsedCertBundle{
+			PrivateKeyType:   ECPrivateKey,
+			PrivateKey:       caKey,
+			CertificateBytes: caBytes,
+			Certificate:      caCert,
+			CAChain:          nil,
+		},
+		URLs: &URLEntries{},
+	}
+
+	key := genEdDSA(t)
+	csr := &x509.CertificateRequest{
+		PublicKeyAlgorithm: x509.ECDSA,
+		PublicKey:          key.Public(),
+		Subject: pkix.Name{
+			CommonName: "test.dadgarcorp.com",
+		},
+	}
+	_, ipnet1, err := net.ParseCIDR("1.2.3.4/32")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, ipnet2, err := net.ParseCIDR("1.2.3.4/16")
+	if err != nil {
+		t.Fatal(err)
+	}
+	params := &CreationParameters{
+		IgnoreCSRSignature:      true,
+		URLs:                    &URLEntries{},
+		NotAfter:                time.Now().Add(10000 * time.Hour),
+		PermittedDNSDomains:     []string{"example.com", ".example.com"},
+		ExcludedDNSDomains:      []string{"bad.example.com"},
+		PermittedIPRanges:       []*net.IPNet{ipnet1},
+		ExcludedIPRanges:        []*net.IPNet{ipnet2},
+		PermittedEmailAddresses: []string{"one@example.com", "two@example.com"},
+		ExcludedEmailAddresses:  []string{"un@example.com", "deux@example.com"},
+		PermittedURIDomains:     []string{"domain1", "domain2"},
+		ExcludedURIDomains:      []string{"domain3", "domain4"},
+	}
+	data := &CreationBundle{
+		Params:        params,
+		SigningBundle: signingBundle,
+		CSR:           csr,
+	}
+
+	parsedBundle, err := SignCertificate(data)
+	if err != nil {
+		t.Fatal("should have failed signing csr with ignore csr signature disabled")
+	}
+
+	var failedChecks []error
+	check := func(fieldName string, expected any, actual any) {
+		diff := deep.Equal(expected, actual)
+		if len(diff) > 0 {
+			failedChecks = append(failedChecks, fmt.Errorf("error in field %q: %v", fieldName, diff))
+		}
+	}
+	cert := parsedBundle.Certificate
+	check("PermittedDNSDomains", params.PermittedDNSDomains, cert.PermittedDNSDomains)
+	check("ExcludedDNSDomains", params.ExcludedDNSDomains, cert.ExcludedDNSDomains)
+	check("PermittedIPRanges", params.PermittedIPRanges, cert.PermittedIPRanges)
+	check("ExcludedIPRanges", params.ExcludedIPRanges, cert.ExcludedIPRanges)
+	check("PermittedEmailAddresses", params.PermittedEmailAddresses, cert.PermittedEmailAddresses)
+	check("ExcludedEmailAddresses", params.ExcludedEmailAddresses, cert.ExcludedEmailAddresses)
+	check("PermittedURIDomains", params.PermittedURIDomains, cert.PermittedURIDomains)
+	check("ExcludedURIDomains", params.ExcludedURIDomains, cert.ExcludedURIDomains)
+
+	if err := errors.Join(failedChecks...); err != nil {
+		t.Error(err)
+	}
 }
 
 func genRsaKey(t *testing.T) *rsa.PrivateKey {

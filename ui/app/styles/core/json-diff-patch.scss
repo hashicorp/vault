@@ -1,3 +1,5 @@
+@use '../utils/color_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -19,7 +21,7 @@
 }
 
 .jsondiffpatch-property-name {
-  color: $ui-gray-300;
+  color: color_variables.$ui-gray-300;
 }
 
 .jsondiffpatch-added > .jsondiffpatch-property-name {

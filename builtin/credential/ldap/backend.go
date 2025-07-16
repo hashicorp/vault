@@ -55,8 +55,9 @@ func Backend() *backend {
 			pathConfigRotateRoot(&b),
 		},
 
-		AuthRenew:   b.pathLoginRenew,
-		BackendType: logical.TypeCredential,
+		AuthRenew:        b.pathLoginRenew,
+		BackendType:      logical.TypeCredential,
+		RotateCredential: b.rotateRootCredential,
 	}
 
 	return &b

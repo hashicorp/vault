@@ -8,9 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/hashicorp/errwrap"
+	metrics "github.com/hashicorp/go-metrics/compat"
 	multierror "github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/vault/sdk/helper/consts"
 )
@@ -197,6 +199,8 @@ func AdjustErrorStatusCode(status *int, err error) {
 func RespondError(w http.ResponseWriter, status int, err error) {
 	AdjustErrorStatusCode(&status, err)
 
+	defer IncrementResponseStatusCodeMetric(status)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 
@@ -215,6 +219,8 @@ func RespondError(w http.ResponseWriter, status int, err error) {
 func RespondErrorAndData(w http.ResponseWriter, status int, data interface{}, err error) {
 	AdjustErrorStatusCode(&status, err)
 
+	defer IncrementResponseStatusCodeMetric(status)
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 
@@ -230,4 +236,15 @@ func RespondErrorAndData(w http.ResponseWriter, status int, data interface{}, er
 
 	enc := json.NewEncoder(w)
 	enc.Encode(resp)
+}
+
+func IncrementResponseStatusCodeMetric(statusCode int) {
+	statusString := strconv.Itoa(statusCode)
+	statusType := fmt.Sprintf("%cxx", statusString[0])
+	metrics.IncrCounterWithLabels([]string{"core", "response_status_code"},
+		1,
+		[]metrics.Label{
+			{"code", statusString},
+			{"type", statusType},
+		})
 }

@@ -1,3 +1,6 @@
+@use 'utils/color_variables';
+@use 'utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -27,7 +30,7 @@
   h1,
   h2,
   h3 {
-    border-bottom: 1px solid $grey-light;
+    border-bottom: 1px solid color_variables.$grey-light;
     padding-bottom: 0.5rem;
   }
 
@@ -52,19 +55,19 @@
 
   ul,
   ol {
-    padding-left: $spacing-16;
-    padding-bottom: $spacing-16;
+    padding-left: size_variables.$spacing-16;
+    padding-bottom: size_variables.$spacing-16;
   }
 
   pre,
   code {
-    background-color: $ui-gray-100;
+    background-color: color_variables.$ui-gray-100;
   }
 
   blockquote {
     margin-left: 1rem;
     padding: 0.5rem;
-    background: $ui-gray-010;
+    background: color_variables.$ui-gray-010;
     border-radius: 6px;
   }
 
@@ -99,12 +102,12 @@
       }
     }
     tr {
-      border-bottom: 1px solid $grey-light;
+      border-bottom: 1px solid color_variables.$grey-light;
     }
   }
 
   .docfy-demo {
-    border: 1px solid $grey-lightest;
+    border: 1px solid color_variables.$grey-lightest;
     border-radius: 6px;
     padding: 1rem;
     overflow: scroll;

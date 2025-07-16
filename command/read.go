@@ -57,7 +57,7 @@ Usage: vault read [options] PATH
 }
 
 func (c *ReadCommand) Flags() *FlagSets {
-	return c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat)
+	return c.flagSet(FlagSetHTTP | FlagSetOutputField | FlagSetOutputFormat | FlagSetSnapshot)
 }
 
 func (c *ReadCommand) AutocompleteArgs() complete.Predictor {
@@ -105,6 +105,13 @@ func (c *ReadCommand) Run(args []string) int {
 	if err != nil {
 		c.UI.Error(fmt.Sprintf("Failed to parse K=V data: %s", err))
 		return 1
+	}
+
+	if c.flagSnapshotID != "" {
+		if data == nil {
+			data = make(map[string][]string)
+		}
+		data["read_snapshot_id"] = []string{c.flagSnapshotID}
 	}
 
 	if Format(c.UI) != "raw" {

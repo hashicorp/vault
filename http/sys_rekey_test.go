@@ -149,7 +149,7 @@ func TestSysRekey_Init_Cancel(t *testing.T) {
 		defer cluster.Cleanup()
 		cl := cluster.Cores[0].Client
 
-		_, err := cl.Logical().Write("sys/rekey/init", map[string]interface{}{
+		initResp, err := cl.Logical().Write("sys/rekey/init", map[string]interface{}{
 			"secret_shares":    5,
 			"secret_threshold": 3,
 		})
@@ -157,7 +157,7 @@ func TestSysRekey_Init_Cancel(t *testing.T) {
 			t.Fatalf("err: %s", err)
 		}
 
-		_, err = cl.Logical().Delete("sys/rekey/init")
+		err = cl.Sys().RekeyCancelWithNonce(initResp.Data["nonce"].(string))
 		if err != nil {
 			t.Fatalf("err: %s", err)
 		}
@@ -278,8 +278,12 @@ func TestSysRekey_ReInitUpdate(t *testing.T) {
 		"secret_threshold": 3,
 	})
 	testResponseStatus(t, resp, 200)
+	var initResp map[string]interface{}
+	testResponseBody(t, resp, &initResp)
 
-	resp = testHttpDelete(t, token, addr+"/v1/sys/rekey/init")
+	resp = testHttpDeleteData(t, token, addr+"/v1/sys/rekey/init", map[string]interface{}{
+		"nonce": initResp["nonce"].(string),
+	})
 	testResponseStatus(t, resp, 204)
 
 	resp = testHttpPut(t, token, addr+"/v1/sys/rekey/init", map[string]interface{}{

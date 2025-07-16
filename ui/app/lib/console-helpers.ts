@@ -3,12 +3,12 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import keys from 'core/utils/key-codes';
-import AdapterError from '@ember-data/adapter/error';
+import keys from 'core/utils/keys';
 import { parse } from 'shell-quote';
-
 import argTokenizer from './arg-tokenizer';
-import { StringMap } from 'vault/vault/app-types';
+
+import type { StringMap } from 'vault/app-types';
+import type AdapterError from '@ember-data/adapter/error';
 
 // Add new commands to `log-help` component for visibility
 const supportedCommands = ['read', 'write', 'list', 'delete', 'kv-get'];
@@ -188,12 +188,7 @@ export function logFromResponse(response: LogResponse, path: string, method: str
   return { type: 'object', content: secret };
 }
 
-interface CustomError extends AdapterError {
-  httpStatus: number;
-  path: string;
-  errors: string[];
-}
-export function logFromError(error: CustomError, vaultPath: string, method: string) {
+export function logFromError(error: AdapterError, vaultPath: string, method: string) {
   let content;
   const { httpStatus, path } = error;
   const verbClause = {
@@ -217,7 +212,7 @@ interface CommandLog {
   type: string;
   content?: string;
 }
-export function shiftCommandIndex(keyCode: number, history: CommandLog[], index: number) {
+export function shiftCommandIndex(key: string, history: CommandLog[], index: number) {
   let newInputValue;
   const commandHistoryLength = history.length;
 
@@ -225,7 +220,7 @@ export function shiftCommandIndex(keyCode: number, history: CommandLog[], index:
     return [];
   }
 
-  if (keyCode === keys.UP) {
+  if (key === keys.UP) {
     index -= 1;
     if (index < 0) {
       index = commandHistoryLength - 1;

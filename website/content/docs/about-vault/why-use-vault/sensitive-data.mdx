@@ -1,0 +1,90 @@
+---
+layout: docs
+page_title: Secure sensitive data
+description: >-
+  Encrypt or tokenize sensitive data in transit and at rest without storing the
+  data in Vault.
+---
+
+# Secure sensitive data
+
+@include '/why-use-vault/secure-sensitive-data-small.mdx'
+
+
+## Encrypt data
+
+Use Vault to deploy **encryption as a service** and move the burden of data
+encryption/decryption from your applications to Vault.
+
+With the transit plugin, Vault can encrypt and decrypt external data,
+essentially allowing applications to encrypt their data while storing it in the
+primary data store, which simplifies encrypting data in transit and at rest
+across clouds and datacenters.
+
+
+<Tabs>
+<Tab heading="Key concepts + Overviews" group="overviews">
+
+- [Well architected framework: Best practices to protect sensitive data](/well-architected-framework/security/security-sensitive-data)
+
+</Tab>
+<Tab heading="Guides" group="guides">
+
+- [Wrap seals with encryption](/vault/docs/enterprise/sealwrap)
+- [Transit plugin overview](/vault/docs/secrets/transit)
+
+</Tab>
+<Tab heading="Tutorials" group="tutorials">
+
+- [Encrypt data in transit with Vault](/vault/tutorials/encryption-as-a-service/eaas-transit)
+- [Re-wrapping data after encryption key rotatio](/vault/tutorials/encryption-as-a-service/eaas-transit-rewrap)
+- [Key wrapping for transit key import](/vault/docs/secrets/transit/key-wrapping-guide)
+
+</Tab>
+<Tab heading="References" group="reference">
+
+- [Transit plugin API](/vault/api-docs/secret/transit)
+- [`vault transit` CLI commands](/vault/docs/commands/transit)
+
+</Tab>
+</Tabs>
+
+
+## Tokenize data
+
+Use Vault to securely transform and tokenize input data with NIST vetted
+cryptographic standards such as format-preserving encryption (FPE) via FF3-1 and
+pseudonymous transformations like data masking.
+
+With the transform plugin, Vault can perform one-way transformations that
+exchange sensitive values for unrelated, stateful tokenized values. Tokenization
+makes the original value unrecoverable from the token alone. Authorized clients
+must submit the token to Vault to retrieve the original value from a
+cryptographic mapping in storage.
+
+<Tabs>
+<Tab heading="Key concepts + Overviews" group="overviews">
+
+- [Tokenization transform overview](/vault/docs/secrets/transform/tokenization)
+- [Well architected framework: Best practices to protect sensitive data](/well-architected-framework/security/security-sensitive-data)
+
+</Tab>
+<Tab heading="Guides" group="guides">
+
+- [Transform plugin overview](/vault/docs/secrets/transform)
+- [Tokenization transform](/vault/docs/secrets/transform/tokenization)
+
+</Tab>
+<Tab heading="Tutorials" group="tutorials">
+
+- [Transform sensitive data with Vault](/vault/tutorials/encryption-as-a-service/transform)
+- [Data tokenization with transform secrets engine](/vault/tutorials/encryption-as-a-service/tokenization)
+
+</Tab>
+<Tab heading="References" group="reference">
+
+- [Transform plugin API](/vault/api-docs/secret/transform)
+- [`vault transform` CLI command](/vault/docs/commands/transform)
+
+</Tab>
+</Tabs>

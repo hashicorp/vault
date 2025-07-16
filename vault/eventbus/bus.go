@@ -19,6 +19,7 @@ import (
 	"github.com/hashicorp/eventlogger/formatter_filters/cloudevents"
 	"github.com/hashicorp/go-bexpr"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/go-uuid"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -30,8 +31,9 @@ const (
 	// eventTypeAll is purely internal to the event bus. We use it to send all
 	// events down one big firehose, and pipelines define their own filtering
 	// based on what each subscriber is interested in.
-	eventTypeAll   = "*"
-	defaultTimeout = 60 * time.Second
+	eventTypeAll            = "*"
+	defaultTimeout          = 60 * time.Second
+	eventMetadataVaultIndex = "vault_index"
 )
 
 var (
@@ -55,6 +57,13 @@ type EventBus struct {
 	timeout                    time.Duration
 	filters                    *Filters
 	cloudEventsFormatterFilter *cloudevents.FormatterFilter
+	walGetter                  StorageWALGetter
+}
+
+// StorageWALGetter is an interface used to fetch the current storage index
+// from core without importing core
+type StorageWALGetter interface {
+	GetCurrentWALHeader() string
 }
 
 type pluginEventBus struct {
@@ -111,6 +120,25 @@ func patchMountPath(data *logical.EventData, pluginInfo *logical.EventPluginInfo
 	return data
 }
 
+// getIndexForEvent returns the storage index (wal header) for events with
+// metadata.modified=true.
+func (bus *EventBus) getIndexForEvent(event *logical.EventReceived) (string, error) {
+	if event.Event == nil || event.Event.Metadata == nil || bus.walGetter == nil {
+		return "", nil
+	}
+	eventMetadataModified := event.Event.Metadata.GetFields()[logical.EventMetadataModified]
+	if eventMetadataModified != nil {
+		isModified, err := parseutil.ParseBool(eventMetadataModified.GetStringValue())
+		if err != nil {
+			return "", fmt.Errorf("failed to parse event metadata modified: %w", err)
+		}
+		if isModified {
+			return bus.walGetter.GetCurrentWALHeader(), nil
+		}
+	}
+	return "", nil
+}
+
 // SendEventInternal sends an event to the event bus and routes it to all relevant subscribers.
 // This function does *not* wait for all subscribers to acknowledge before returning.
 // This function is meant to be used by trusted internal code, so it can specify details like the namespace
@@ -118,7 +146,7 @@ func patchMountPath(data *logical.EventData, pluginInfo *logical.EventPluginInfo
 // the namespace and plugin info automatically.
 // The context passed in is currently ignored to ensure that the event is sent if the context is short-lived,
 // such as with an HTTP request context.
-func (bus *EventBus) SendEventInternal(_ context.Context, ns *namespace.Namespace, pluginInfo *logical.EventPluginInfo, eventType logical.EventType, data *logical.EventData) error {
+func (bus *EventBus) SendEventInternal(_ context.Context, ns *namespace.Namespace, pluginInfo *logical.EventPluginInfo, eventType logical.EventType, forwarded bool, data *logical.EventData) error {
 	if ns == nil {
 		return namespace.ErrNoNamespace
 	}
@@ -126,10 +154,23 @@ func (bus *EventBus) SendEventInternal(_ context.Context, ns *namespace.Namespac
 		return ErrNotStarted
 	}
 	eventReceived := &logical.EventReceived{
-		Event:      patchMountPath(data, pluginInfo),
 		Namespace:  ns.Path,
 		EventType:  string(eventType),
 		PluginInfo: pluginInfo,
+	}
+	// If the event has been forwarded downstream, no need to patch the mount
+	// path again
+	if forwarded {
+		eventReceived.Event = data
+	} else {
+		eventReceived.Event = patchMountPath(data, pluginInfo)
+		walStr, err := bus.getIndexForEvent(eventReceived)
+		if err != nil {
+			bus.logger.Warn("Failed to get index for event", "error", err)
+		}
+		if walStr != "" {
+			eventReceived.Event.Metadata.Fields[eventMetadataVaultIndex] = structpb.NewStringValue(walStr)
+		}
 	}
 
 	// We can't easily know when the SendEvent is complete, so we can't call the cancel function.
@@ -161,10 +202,10 @@ func (bus *EventBus) WithPlugin(ns *namespace.Namespace, eventPluginInfo *logica
 // This function does *not* wait for all subscribers to acknowledge before returning.
 // The context passed in is currently ignored.
 func (bus *pluginEventBus) SendEvent(ctx context.Context, eventType logical.EventType, data *logical.EventData) error {
-	return bus.bus.SendEventInternal(ctx, bus.namespace, bus.pluginInfo, eventType, data)
+	return bus.bus.SendEventInternal(ctx, bus.namespace, bus.pluginInfo, eventType, false, data)
 }
 
-func NewEventBus(localClusterID string, logger hclog.Logger) (*EventBus, error) {
+func NewEventBus(localNodeID string, logger hclog.Logger, c StorageWALGetter) (*EventBus, error) {
 	broker, err := eventlogger.NewBroker()
 	if err != nil {
 		return nil, err
@@ -180,7 +221,7 @@ func NewEventBus(localClusterID string, logger hclog.Logger) (*EventBus, error) 
 		logger = hclog.Default().Named("events")
 	}
 
-	sourceUrl, err := url.Parse("vault://" + localClusterID)
+	sourceUrl, err := url.Parse("vault://" + localNodeID)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +239,8 @@ func NewEventBus(localClusterID string, logger hclog.Logger) (*EventBus, error) 
 		formatterNodeID:            formatterNodeID,
 		timeout:                    defaultTimeout,
 		cloudEventsFormatterFilter: cloudEventsFormatterFilter,
-		filters:                    NewFilters(localClusterID),
+		filters:                    NewFilters(localNodeID),
+		walGetter:                  c,
 	}, nil
 }
 
@@ -214,10 +256,10 @@ func (bus *EventBus) SubscribeMultipleNamespaces(ctx context.Context, namespaceP
 	return bus.subscribeInternal(ctx, namespacePathPatterns, pattern, bexprFilter, nil)
 }
 
-// subscribeInternal creates the pipeline and connects it to the event bus to receive events.
-// if the cluster is specified, then the namespacePathPatterns, pattern, and bexprFilter are ignored, and instead this
-// subscription will be tied to the given cluster's filter.
-func (bus *EventBus) subscribeInternal(ctx context.Context, namespacePathPatterns []string, pattern string, bexprFilter string, cluster *string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
+// subscribeInternal creates the pipeline and connects it to the event bus to receive events. If the
+// clusterNode is specified, then the namespacePathPatterns, pattern, and bexprFilter are ignored,
+// and instead this subscription will be tied to the given cluster node's filter.
+func (bus *EventBus) subscribeInternal(ctx context.Context, namespacePathPatterns []string, pattern string, bexprFilter string, clusterNode *string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
 	// subscriptions are still stored even if the bus has not been started
 	pipelineID, err := uuid.GenerateUUID()
 	if err != nil {
@@ -235,8 +277,8 @@ func (bus *EventBus) subscribeInternal(ctx context.Context, namespacePathPattern
 	}
 
 	var filterNode *eventlogger.Filter
-	if cluster != nil {
-		filterNode, err = newClusterFilterNode(bus.filters, clusterID(*cluster))
+	if clusterNode != nil {
+		filterNode, err = newClusterNodeFilterNode(bus.filters, clusterNodeID(*clusterNode))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -259,7 +301,7 @@ func (bus *EventBus) subscribeInternal(ctx context.Context, namespacePathPattern
 
 	ctx, cancel := context.WithCancel(ctx)
 	asyncNode := newAsyncNode(ctx, bus.logger, bus.broker, func() {
-		if cluster == nil {
+		if clusterNode == nil {
 			bus.filters.removePattern(bus.filters.self, namespacePathPatterns, pattern)
 		}
 	})
@@ -301,9 +343,9 @@ func (bus *EventBus) GlobalMatch(ns *namespace.Namespace, eventType logical.Even
 	return bus.filters.globalMatch(ns, eventType)
 }
 
-// ApplyClusterFilterChanges applies the given filter changes to the cluster's filters.
-func (bus *EventBus) ApplyClusterFilterChanges(c string, changes []FilterChange) {
-	bus.filters.applyChanges(clusterID(c), changes)
+// ApplyClusterNodeFilterChanges applies the given filter changes to the cluster node's filters.
+func (bus *EventBus) ApplyClusterNodeFilterChanges(c string, changes []FilterChange) {
+	bus.filters.applyChanges(clusterNodeID(c), changes)
 }
 
 // ApplyGlobalFilterChanges applies the given filter changes to the global filters.
@@ -316,9 +358,9 @@ func (bus *EventBus) ClearGlobalFilter() {
 	bus.filters.clearGlobalPatterns()
 }
 
-// ClearClusterFilter removes all entries from the given cluster's filter.
-func (bus *EventBus) ClearClusterFilter(id string) {
-	bus.filters.clearClusterPatterns(clusterID(id))
+// ClearClusterNodeFilter removes all entries from the given cluster node's filter.
+func (bus *EventBus) ClearClusterNodeFilter(id string) {
+	bus.filters.clearClusterNodePatterns(clusterNodeID(id))
 }
 
 // NotifyOnGlobalFilterChanges returns a channel that receives changes to the global filter.
@@ -326,14 +368,19 @@ func (bus *EventBus) NotifyOnGlobalFilterChanges(ctx context.Context) (<-chan []
 	return bus.filters.watch(ctx, globalCluster)
 }
 
-// NotifyOnLocalFilterChanges returns a channel that receives changes to the filter for the current cluster.
+// NotifyOnLocalFilterChanges returns a channel that receives changes to the filter for the current cluster node.
 func (bus *EventBus) NotifyOnLocalFilterChanges(ctx context.Context) (<-chan []FilterChange, context.CancelFunc, error) {
-	return bus.NotifyOnClusterFilterChanges(ctx, string(bus.filters.self))
+	return bus.NotifyOnClusterNodeFilterChanges(ctx, string(bus.filters.self))
 }
 
-// NotifyOnClusterFilterChanges returns a channel that receives changes to the filter for the given cluster.
-func (bus *EventBus) NotifyOnClusterFilterChanges(ctx context.Context, cluster string) (<-chan []FilterChange, context.CancelFunc, error) {
-	return bus.filters.watch(ctx, clusterID(cluster))
+// NotifyOnClusterNodeFilterChanges returns a channel that receives changes to the filter for the given cluster node.
+func (bus *EventBus) NotifyOnClusterNodeFilterChanges(ctx context.Context, clusterNode string) (<-chan []FilterChange, context.CancelFunc, error) {
+	return bus.filters.watch(ctx, clusterNodeID(clusterNode))
+}
+
+// NewAllEventsSubscription creates a new subscription to all events.
+func (bus *EventBus) NewAllEventsSubscription(ctx context.Context) (<-chan *eventlogger.Event, context.CancelFunc, error) {
+	return bus.subscribeInternal(ctx, nil, "*", "", nil)
 }
 
 // NewGlobalSubscription creates a new subscription to all events that match the global filter.
@@ -342,18 +389,18 @@ func (bus *EventBus) NewGlobalSubscription(ctx context.Context) (<-chan *eventlo
 	return bus.subscribeInternal(ctx, nil, "", "", &g)
 }
 
-// NewClusterSubscription creates a new subscription to all events that match the given cluster's filter.
-func (bus *EventBus) NewClusterSubscription(ctx context.Context, cluster string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
-	return bus.subscribeInternal(ctx, nil, "", "", &cluster)
+// NewClusterNodeSubscription creates a new subscription to all events that match the given cluster node's filter.
+func (bus *EventBus) NewClusterNodeSubscription(ctx context.Context, clusterNode string) (<-chan *eventlogger.Event, context.CancelFunc, error) {
+	return bus.subscribeInternal(ctx, nil, "", "", &clusterNode)
 }
 
-// creates a new filter node that is tied to the filter for a given cluster
-func newClusterFilterNode(filters *Filters, c clusterID) (*eventlogger.Filter, error) {
+// creates a new filter node that is tied to the filter for a given cluster node
+func newClusterNodeFilterNode(filters *Filters, c clusterNodeID) (*eventlogger.Filter, error) {
 	return &eventlogger.Filter{
 		Predicate: func(e *eventlogger.Event) (bool, error) {
 			eventRecv := e.Payload.(*logical.EventReceived)
 			eventNs := strings.Trim(eventRecv.Namespace, "/")
-			if filters.clusterMatch(c, &namespace.Namespace{
+			if filters.clusterNodeMatch(c, &namespace.Namespace{
 				Path: eventNs,
 			}, logical.EventType(eventRecv.EventType)) {
 				return true, nil

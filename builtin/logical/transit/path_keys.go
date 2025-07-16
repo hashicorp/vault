@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -60,7 +61,7 @@ func (b *backend) pathKeys() *framework.Path {
 				Description: `
 The type of key to create. Currently, "aes128-gcm96" (symmetric), "aes256-gcm96" (symmetric), "ecdsa-p256"
 (asymmetric), "ecdsa-p384" (asymmetric), "ecdsa-p521" (asymmetric), "ed25519" (asymmetric), "rsa-2048" (asymmetric), "rsa-3072"
-(asymmetric), "rsa-4096" (asymmetric), "ml-dsa" (asymmetric) are supported.  Defaults to "aes256-gcm96".
+(asymmetric), "rsa-4096" (asymmetric), "ml-dsa" (asymmetric), "slh-dsa" (asymmetric) are supported.  Defaults to "aes256-gcm96".
 `,
 			},
 
@@ -133,7 +134,8 @@ key.`,
 			"parameter_set": {
 				Type: framework.TypeString,
 				Description: `The parameter set to use. Applies to ML-DSA and SLH-DSA key types.
-For ML-DSA key types, valid values are 44, 65, or 87.`,
+For ML-DSA key types, valid values are 44, 65, or 87.
+For SLH-DSA key types, valid values are SLH-DSA-SHA2-128s, SLH-DSA-SHAKE-128s, SLH-DSA-SHA2-128f, SLH-DSA-SHAKE-128f, SLH-DSA-SHA2-192s, SLH-DSA-SHAKE-192s, SLH-DSA-SHA2-192f, SLH-DSA-SHAKE-192f, SLH-DSA-SHA2-256s, SLH-DSA-SHAKE-256s, SLH-DSA-SHA2-256f, SLH-DSA-SHAKE-256f`,
 			},
 			"hybrid_key_type_pqc": {
 				Type: framework.TypeString,
@@ -178,6 +180,15 @@ func (b *backend) pathKeysList(ctx context.Context, req *logical.Request, d *fra
 	if err != nil {
 		return nil, err
 	}
+
+	// filter out partial paths
+	entries = slices.DeleteFunc(entries, func(s string) bool {
+		if strings.HasSuffix(s, "/") {
+			return true
+		}
+
+		return false
+	})
 
 	return logical.ListResponse(entries), nil
 }
@@ -243,6 +254,8 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		polReq.KeyType = keysutil.KeyType_MANAGED_KEY
 	case "aes128-cmac":
 		polReq.KeyType = keysutil.KeyType_AES128_CMAC
+	case "aes192-cmac":
+		polReq.KeyType = keysutil.KeyType_AES192_CMAC
 	case "aes256-cmac":
 		polReq.KeyType = keysutil.KeyType_AES256_CMAC
 	case "ml-dsa":
@@ -265,6 +278,27 @@ func (b *backend) pathPolicyWrite(ctx context.Context, req *logical.Request, d *
 		}
 
 		polReq.ParameterSet = parameterSet
+
+	case "slh-dsa":
+		polReq.KeyType = keysutil.KeyType_SLH_DSA
+		parameterSet = strings.ToLower(parameterSet)
+		switch parameterSet {
+		case keysutil.ParameterSet_SLH_DSA_SHA2_128S,
+			keysutil.ParameterSet_SLH_DSA_SHAKE_128S,
+			keysutil.ParameterSet_SLH_DSA_SHA2_128F,
+			keysutil.ParameterSet_SLH_DSA_SHAKE_128F,
+			keysutil.ParameterSet_SLH_DSA_SHA2_192S,
+			keysutil.ParameterSet_SLH_DSA_SHAKE_192S,
+			keysutil.ParameterSet_SLH_DSA_SHA2_192F,
+			keysutil.ParameterSet_SLH_DSA_SHAKE_192F,
+			keysutil.ParameterSet_SLH_DSA_SHA2_256S,
+			keysutil.ParameterSet_SLH_DSA_SHAKE_256S,
+			keysutil.ParameterSet_SLH_DSA_SHA2_256F,
+			keysutil.ParameterSet_SLH_DSA_SHAKE_256F:
+			polReq.ParameterSet = parameterSet
+		default:
+			return logical.ErrorResponse(fmt.Sprintf("invalid parameter set %s for key type %s", parameterSet, keyType)), logical.ErrInvalidRequest
+		}
 	default:
 		return logical.ErrorResponse(fmt.Sprintf("unknown key type %v", keyType)), logical.ErrInvalidRequest
 	}
@@ -430,7 +464,7 @@ func (b *backend) formatKeyPolicy(p *keysutil.Policy, context []byte) (*logical.
 		}
 		resp.Data["keys"] = retKeys
 
-	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096, keysutil.KeyType_ML_DSA, keysutil.KeyType_HYBRID:
+	case keysutil.KeyType_ECDSA_P256, keysutil.KeyType_ECDSA_P384, keysutil.KeyType_ECDSA_P521, keysutil.KeyType_ED25519, keysutil.KeyType_RSA2048, keysutil.KeyType_RSA3072, keysutil.KeyType_RSA4096, keysutil.KeyType_ML_DSA, keysutil.KeyType_HYBRID, keysutil.KeyType_SLH_DSA:
 		retKeys := map[string]map[string]interface{}{}
 		for k, v := range p.Keys {
 			key := asymKey{

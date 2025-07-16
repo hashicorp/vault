@@ -1,7 +1,7 @@
 {{!
   Copyright (c) HashiCorp, Inc.
   SPDX-License-Identifier: BUSL-1.1
-~}}
+}}
 
 {{#if @uploadOnly}}
   <label id="text-file-input-{{this.elementId}}" class="sr-only">{{or @label "File"}}</label>
@@ -41,7 +41,7 @@
       @isMultiline={{true}}
       {{on "input" this.handleTextInput}}
       aria-labelledby="text-file-input-{{this.elementId}}"
-      data-test-text-file-textarea
+      data-test-masked-input
       as |F|
     >
       <F.HelperText>
@@ -80,7 +80,7 @@
         @type="danger"
         @message={{or @validationError this.uploadError}}
         class="has-top-padding-s"
-        data-test-field-validation="text-file"
+        data-test-inline-alert
       />
     {{/if}}
   {{/if}}

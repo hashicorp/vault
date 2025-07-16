@@ -10,6 +10,7 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, click, fillIn } from '@ember/test-helpers';
 import { Response } from 'miragejs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import hbs from 'htmlbars-inline-precompile';
 import timestamp from 'core/utils/timestamp';
 
@@ -91,7 +92,7 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     assert.expect(15);
 
     this.server.post('/kubernetes-test/creds/role-0', () => {
-      assert.ok('POST request made to generate credentials');
+      assert.true(true, 'POST request made to generate credentials');
       return {
         request_id: '58fefc6c-5195-c17a-94f2-8f889f3df57c',
         lease_id: 'kubernetes/creds/default-role/aWczfcfJ7NKUdiirJrPXIs38',
@@ -108,9 +109,8 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     await this.renderComponent();
     await fillIn('[data-test-kubernetes-namespace]', 'kubernetes-test');
     assert.dom('[data-test-kubernetes-namespace]').hasValue('kubernetes-test', 'kubernetes-test');
-
-    await click('[data-test-toggle-input]');
-    await click('[data-test-toggle-input="Time-to-Live (TTL)"]');
+    await click(GENERAL.toggleInput('kubernetes-clusterRoleBinding'));
+    await click(GENERAL.toggleInput('Time-to-Live (TTL)'));
     await fillIn('[data-test-ttl-value="Time-to-Live (TTL)"]', 2);
     await click('[data-test-generate-credentials-button]');
 
@@ -120,20 +120,20 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
       .dom('[data-test-k8-alert-message]')
       .hasText("You won't be able to access these credentials later, so please copy them now.");
     assert.dom('[data-test-row-label="Service account token"]').hasText('Service account token');
-    await click('[data-test-value-div="Service account token"] [data-test-button]');
+    await click(`${GENERAL.infoRowValue('Service account token')} [data-test-button]`);
     assert
-      .dom('[data-test-value-div="Service account token"] .display-only')
+      .dom(`${GENERAL.infoRowValue('Service account token')} .display-only`)
       .hasText('eyJhbGciOiJSUzI1NiIsImtpZCI6Imlr');
     assert.dom('[data-test-row-label="Namespace"]').hasText('Namespace');
-    assert.dom('[data-test-value-div="Namespace"]').exists();
+    assert.dom(GENERAL.infoRowValue('Namespace')).exists();
     assert.dom('[data-test-row-label="Service account name"]').hasText('Service account name');
-    assert.dom('[data-test-value-div="Service account name"]').exists();
+    assert.dom(GENERAL.infoRowValue('Service account name')).exists();
 
     assert.dom('[data-test-row-label="Lease expiry"]').hasText('Lease expiry');
-    assert.dom('[data-test-value-div="Lease expiry"]').hasText('April 3rd 2018, 3:15:30 PM');
+    assert.dom(GENERAL.infoRowValue('Lease expiry')).hasText('April 3rd 2018, 3:15:30 PM');
     assert.dom('[data-test-row-label="lease_id"]').hasText('lease_id');
     assert
-      .dom('[data-test-value-div="lease_id"] [data-test-row-value="lease_id"]')
+      .dom(GENERAL.infoRowValue('lease_id'))
       .hasText('kubernetes/creds/default-role/aWczfcfJ7NKUdiirJrPXIs38');
   });
 });

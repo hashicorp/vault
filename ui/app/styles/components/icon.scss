@@ -1,3 +1,6 @@
+@use '../utils/color_variables';
+@use '../utils/size_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -6,10 +9,10 @@
 .icon {
   align-items: center;
   display: inline-flex;
-  height: $size-4;
+  height: size_variables.$size-4;
   justify-content: center;
   vertical-align: middle;
-  width: $size-4;
+  width: size_variables.$size-4;
   // override the display if .button.icon to .button's default display: inline-block. See manage namespaces icon button in the namespace picker
   &.button {
     display: inline-block;
@@ -17,14 +20,14 @@
 }
 
 .icon-blue {
-  color: $blue;
+  color: color_variables.$blue;
 }
 
 .hds-icon {
   &.hds-icon--is-inline {
     vertical-align: middle;
-    margin-left: $spacing-4;
-    margin-right: $spacing-4;
+    margin-left: size_variables.$spacing-4;
+    margin-right: size_variables.$spacing-4;
   }
 }
 

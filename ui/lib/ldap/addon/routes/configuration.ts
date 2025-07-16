@@ -14,7 +14,7 @@ import type LdapConfigModel from 'vault/models/ldap/config';
 import type SecretEngineModel from 'vault/models/secret-engine';
 import type Controller from '@ember/controller';
 import type { Breadcrumb } from 'vault/vault/app-types';
-import type AdapterError from 'ember-data/adapter'; // eslint-disable-line ember/use-ember-data-rfc-395-imports
+import type AdapterError from '@ember-data/adapter/error';
 
 interface RouteModel {
   backendModel: SecretEngineModel;
@@ -47,7 +47,7 @@ export default class LdapConfigurationRoute extends Route {
 
     controller.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
-      { label: resolvedModel.backendModel.id, route: 'overview', model: resolvedModel.backend },
+      { label: resolvedModel.backendModel.id, route: 'overview', model: resolvedModel.backendModel.id },
       { label: 'Configuration' },
     ];
   }

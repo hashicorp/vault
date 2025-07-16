@@ -1,0 +1,3 @@
+```release-note:bug
+auth/ldap: Fix a bug that does not properly delete users and groups by first converting their names to lowercase when case senstivity option is off.
+```

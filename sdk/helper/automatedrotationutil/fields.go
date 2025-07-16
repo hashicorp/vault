@@ -6,8 +6,10 @@ package automatedrotationutil
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/rotation"
 )
 
 var (
@@ -22,13 +24,9 @@ type AutomatedRotationParams struct {
 	RotationSchedule string `json:"rotation_schedule"`
 	// RotationWindow specifies the amount of time in which the rotation is allowed to
 	// occur starting from a given rotation_schedule.
-	RotationWindow int `json:"rotation_window"`
+	RotationWindow time.Duration `json:"rotation_window"`
 	// RotationPeriod is an alternate choice for simple time-to-live based rotation timing.
-	RotationPeriod int `json:"rotation_period"`
-
-	// RotationID is the unique ID of the registered rotation job.
-	// Used by the plugin to track the rotation.
-	RotationID string `json:"rotation_id"`
+	RotationPeriod time.Duration `json:"rotation_period"`
 
 	// If set, will deregister all registered rotation jobs from the RotationManager for plugin.
 	DisableAutomatedRotation bool `json:"disable_automated_rotation"`
@@ -37,32 +35,45 @@ type AutomatedRotationParams struct {
 // ParseAutomatedRotationFields provides common field parsing to embedding structs.
 func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.FieldData) error {
 	rotationScheduleRaw, scheduleOk := d.GetOk("rotation_schedule")
-	rotationWindowRaw, windowOk := d.GetOk("rotation_window")
-	rotationPeriodRaw, periodOk := d.GetOk("rotation_period")
+	rotationWindowSecondsRaw, windowOk := d.GetOk("rotation_window")
+	rotationPeriodSecondsRaw, periodOk := d.GetOk("rotation_period")
+	disableRotation, disableRotationOk := d.GetOk("disable_automated_rotation")
 
 	if scheduleOk {
-		if periodOk {
+		if periodOk && rotationPeriodSecondsRaw.(int) != 0 && rotationScheduleRaw.(string) != "" {
 			return ErrRotationMutuallyExclusiveFields
 		}
 		p.RotationSchedule = rotationScheduleRaw.(string)
+
+		// parse schedule to ensure it is valid
+		if p.RotationSchedule != "" {
+			_, err := rotation.DefaultScheduler.Parse(p.RotationSchedule)
+			if err != nil {
+				return fmt.Errorf("failed to parse provided rotation_schedule: %w", err)
+			}
+		}
 	}
 
 	if windowOk {
-		if periodOk {
+		if periodOk && rotationPeriodSecondsRaw.(int) != 0 && rotationWindowSecondsRaw.(int) != 0 {
 			return fmt.Errorf("rotation_window does not apply to period")
 		}
-		p.RotationWindow = rotationWindowRaw.(int)
+		rotationWindowSeconds := rotationWindowSecondsRaw.(int)
+		p.RotationWindow = time.Duration(rotationWindowSeconds) * time.Second
 	}
 
 	if periodOk {
-		p.RotationPeriod = rotationPeriodRaw.(int)
+		rotationPeriodSeconds := rotationPeriodSecondsRaw.(int)
+		p.RotationPeriod = time.Duration(rotationPeriodSeconds) * time.Second
 	}
 
-	if (scheduleOk && !windowOk) || (windowOk && !scheduleOk) {
-		return fmt.Errorf("must include both schedule and window")
+	if (windowOk && rotationWindowSecondsRaw.(int) != 0) && !scheduleOk {
+		return fmt.Errorf("cannot use rotation_window without rotation_schedule")
 	}
 
-	p.DisableAutomatedRotation = d.Get("disable_automated_rotation").(bool)
+	if disableRotationOk {
+		p.DisableAutomatedRotation = disableRotation.(bool)
+	}
 
 	return nil
 }
@@ -70,13 +81,22 @@ func (p *AutomatedRotationParams) ParseAutomatedRotationFields(d *framework.Fiel
 // PopulateAutomatedRotationData adds PluginIdentityTokenParams info into the given map.
 func (p *AutomatedRotationParams) PopulateAutomatedRotationData(m map[string]interface{}) {
 	m["rotation_schedule"] = p.RotationSchedule
-	m["rotation_window"] = p.RotationWindow
-	m["rotation_period"] = p.RotationPeriod
-	m["rotation_id"] = p.RotationID
+	m["rotation_window"] = p.RotationWindow.Seconds()
+	m["rotation_period"] = p.RotationPeriod.Seconds()
 	m["disable_automated_rotation"] = p.DisableAutomatedRotation
 }
 
 func (p *AutomatedRotationParams) ShouldRegisterRotationJob() bool {
+	return p.HasNonzeroRotationValues()
+}
+
+func (p *AutomatedRotationParams) ShouldDeregisterRotationJob() bool {
+	return p.DisableAutomatedRotation || (p.RotationSchedule == "" && p.RotationPeriod == 0)
+}
+
+// HasNonzeroRotationValues returns true if either of the primary rotation values (RotationSchedule or RotationPeriod)
+// are not the zero value.
+func (p *AutomatedRotationParams) HasNonzeroRotationValues() bool {
 	return p.RotationSchedule != "" || p.RotationPeriod != 0
 }
 
@@ -89,16 +109,12 @@ func AddAutomatedRotationFields(m map[string]*framework.FieldSchema) {
 			Description: "CRON-style string that will define the schedule on which rotations should occur. Mutually exclusive with rotation_period",
 		},
 		"rotation_window": {
-			Type:        framework.TypeInt,
+			Type:        framework.TypeDurationSecond,
 			Description: "Specifies the amount of time in which the rotation is allowed to occur starting from a given rotation_schedule",
 		},
 		"rotation_period": {
-			Type:        framework.TypeInt,
+			Type:        framework.TypeDurationSecond,
 			Description: "TTL for automatic credential rotation of the given username. Mutually exclusive with rotation_schedule",
-		},
-		"rotation_id": {
-			Type:        framework.TypeInt,
-			Description: "Unique ID of the registered rotation job",
 		},
 		"disable_automated_rotation": {
 			Type:        framework.TypeBool,

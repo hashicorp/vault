@@ -6,17 +6,18 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import replicationHandlers from 'vault/mirage/handlers/replication';
 import { click } from '@ember/test-helpers';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECTORS = {
   navReplication: '[data-test-sidebar-nav-link="Replication"]',
   navPerformance: '[data-test-sidebar-nav-link="Performance"]',
   navDR: '[data-test-sidebar-nav-link="Disaster Recovery"]',
   title: '[data-test-replication-title]',
-  primaryCluster: '[data-test-value-div="primary_cluster_addr"]',
-  replicationSet: '[data-test-row-value="Replication set"]',
+  primaryCluster: `${GENERAL.infoRowValue('primary_cluster_addr')}`,
+  replicationSet: `${GENERAL.infoRowValue('Replication set')}`,
   knownSecondariesTitle: '.known-secondaries-card h3',
 };
 module('Acceptance | Enterprise | replication navigation', function (hooks) {
@@ -25,7 +26,7 @@ module('Acceptance | Enterprise | replication navigation', function (hooks) {
 
   hooks.beforeEach(function () {
     replicationHandlers(this.server);
-    return authPage.login();
+    return login();
   });
 
   test('navigate between replication types updates page', async function (assert) {

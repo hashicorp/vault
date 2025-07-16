@@ -355,18 +355,30 @@ func (d dynamicSystemView) GenerateIdentityToken(ctx context.Context, req *plugi
 	}, nil
 }
 
-func (d dynamicSystemView) RegisterRotationJob(ctx context.Context, job *rotation.RotationJob) (string, error) {
+func (d dynamicSystemView) GetRotationInformation(ctx context.Context, req *rotation.RotationInfoRequest) (*rotation.RotationInfoResponse, error) {
+	// sanity check
+	mountEntry := d.mountEntry
+	if mountEntry == nil {
+		return nil, fmt.Errorf("no mount entry")
+	}
+	nsCtx := namespace.ContextWithNamespace(ctx, mountEntry.Namespace())
+
+	return d.core.GetRotationInformation(nsCtx, mountEntry.APIPath(), req)
+}
+
+func (d dynamicSystemView) RegisterRotationJob(ctx context.Context, req *rotation.RotationJobConfigureRequest) (string, error) {
 	mountEntry := d.mountEntry
 	if mountEntry == nil {
 		return "", fmt.Errorf("no mount entry")
 	}
-	ns := mountEntry.Namespace()
-	path := job.Path
-	if ns != namespace.RootNamespace {
-		path = ns.Path + "/" + path
-	}
 	nsCtx := namespace.ContextWithNamespace(ctx, mountEntry.Namespace())
-	id, err := d.core.RegisterRotationJob(nsCtx, path, job)
+
+	job, err := rotation.ConfigureRotationJob(req)
+	if err != nil {
+		return "", fmt.Errorf("error configuring rotation job: %s", err)
+	}
+
+	id, err := d.core.RegisterRotationJob(nsCtx, job)
 	if err != nil {
 		return "", fmt.Errorf("error registering rotation job: %s", err)
 	}
@@ -375,6 +387,12 @@ func (d dynamicSystemView) RegisterRotationJob(ctx context.Context, job *rotatio
 	return id, nil
 }
 
-func (d dynamicSystemView) DeregisterRotationJob(_ context.Context, rotationID string) (err error) {
-	return d.core.DeregisterRotationJob(rotationID)
+func (d dynamicSystemView) DeregisterRotationJob(ctx context.Context, req *rotation.RotationJobDeregisterRequest) (err error) {
+	mountEntry := d.mountEntry
+	if mountEntry == nil {
+		return fmt.Errorf("no mount entry")
+	}
+	nsCtx := namespace.ContextWithNamespace(ctx, mountEntry.Namespace())
+
+	return d.core.DeregisterRotationJob(nsCtx, req)
 }

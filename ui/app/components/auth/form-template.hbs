@@ -1,0 +1,98 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#if this.formComponent}}
+  {{#let (component this.formComponent) as |AuthFormComponent|}}
+    {{! renders Auth::Form::Base or Auth::Form::<Type>}}
+    <AuthFormComponent
+      @authType={{this.selectedAuthMethod}}
+      @cluster={{@cluster}}
+      @onError={{this.handleError}}
+      @onSuccess={{@onSuccess}}
+    >
+      <:namespace>
+        {{yield}}
+      </:namespace>
+
+      <:back>
+        {{#if this.showAlternateView}}
+          <Hds::Button
+            @text="Back"
+            {{on "click" this.toggleView}}
+            @color="tertiary"
+            @icon="arrow-left"
+            data-test-back-button
+          />
+        {{/if}}
+      </:back>
+
+      {{! DIRECT LINK, TABS OR DROPDOWN }}
+      <:authSelectOptions>
+        <div class="has-bottom-margin-m">
+          {{#if this.tabData}}
+            <Auth::Tabs
+              @authTabData={{this.tabData}}
+              @handleTabClick={{this.setAuthType}}
+              @selectedAuthMethod={{this.selectedAuthMethod}}
+            />
+          {{else}}
+            {{! Fallback is dropdown with all auth methods }}
+            <Hds::Form::Select::Field
+              name="selectedAuthMethod"
+              {{on "input" this.setTypeFromDropdown}}
+              data-test-select="auth type"
+              as |F|
+            >
+              <F.Label class="has-top-margin-m">Method</F.Label>
+              <F.Options>
+                {{#each this.supportedAuthTypes as |type|}}
+                  <option selected={{eq this.selectedAuthMethod type}} value={{type}}>
+                    {{get (engines-display-data type) "displayName"}}
+                  </option>
+                {{/each}}
+              </F.Options>
+            </Hds::Form::Select::Field>
+          {{/if}}
+        </div>
+      </:authSelectOptions>
+
+      <:error>
+        {{#if this.errorMessage}}
+          <MessageError @errorMessage={{this.errorMessage}} />
+        {{/if}}
+      </:error>
+
+      <:advancedSettings>
+        {{! custom auth options render their own mount path inputs and token does not support custom paths }}
+        {{#unless this.hideAdvancedSettings}}
+          <Hds::Reveal @text="Advanced settings" data-test-auth-form-options-toggle class="is-fullwidth">
+            <Hds::Form::TextInput::Field name="path" data-test-input="path" as |F|>
+              <F.Label class="has-top-margin-m">Mount path</F.Label>
+              <F.HelperText>
+                If this authentication method was mounted using a non-default path, input it below. Otherwise Vault will
+                assume the default path
+                <Hds::Text::Code class="code-in-text">{{this.selectedAuthMethod}}</Hds::Text::Code>
+                .</F.HelperText>
+            </Hds::Form::TextInput::Field>
+          </Hds::Reveal>
+        {{/unless}}
+      </:advancedSettings>
+
+      <:footer>
+        {{#if (and @alternateView (not this.showAlternateView))}}
+          <Hds::Button
+            {{on "click" this.toggleView}}
+            @color="tertiary"
+            @icon="arrow-right"
+            @iconPosition="trailing"
+            @isInline={{true}}
+            @text="Sign in with other methods"
+            data-test-button="Sign in with other methods"
+          />
+        {{/if}}
+      </:footer>
+    </AuthFormComponent>
+  {{/let}}
+{{/if}}

@@ -14,6 +14,7 @@ import (
 	"github.com/hashicorp/go-secure-stdlib/parseutil"
 	"github.com/hashicorp/vault/helper/constants"
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/hashicorp/vault/version"
 )
@@ -81,6 +82,7 @@ func handleSysHealthGet(core *vault.Core, w http.ResponseWriter, r *http.Request
 	}
 
 	w.Header().Set("Content-Type", "application/json")
+	defer logical.IncrementResponseStatusCodeMetric(code)
 	w.WriteHeader(code)
 
 	// Generate the response
@@ -94,6 +96,7 @@ func handleSysHealthHead(core *vault.Core, w http.ResponseWriter, r *http.Reques
 	if body != nil {
 		w.Header().Set("Content-Type", "application/json")
 	}
+	defer logical.IncrementResponseStatusCodeMetric(code)
 	w.WriteHeader(code)
 }
 
