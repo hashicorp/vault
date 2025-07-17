@@ -28,11 +28,11 @@ const (
 
 type (
 	entCore       struct{}
-	EntCoreConfig struct{}
+	entCoreConfig struct{}
 )
 
-func (e EntCoreConfig) Clone() EntCoreConfig {
-	return EntCoreConfig{}
+func (e entCoreConfig) Clone() entCoreConfig {
+	return entCoreConfig{}
 }
 
 type LicensingConfig struct {
@@ -225,3 +225,6 @@ func (c *Core) GetRequestLimiter(key string) *limits.RequestLimiter {
 
 // ReloadRequestLimiter is a no-op on CE.
 func (c *Core) ReloadRequestLimiter() {}
+
+// createSnapshotManager is a no-op on CE.
+func (c *Core) createSnapshotManager() {}

@@ -8,11 +8,11 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import syncScenario from 'vault/mirage/scenarios/sync';
 import syncHandlers from 'vault/mirage/handlers/sync';
-import authPage from 'vault/tests/pages/auth';
+import { login, loginNs } from 'vault/tests/helpers/auth/auth-helpers';
 import { click, waitFor, visit, currentURL } from '@ember/test-helpers';
 import { PAGE as ts } from 'vault/tests/helpers/sync/sync-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { runCmd } from 'vault/tests/helpers/commands';
+import { deleteNS, runCmd } from 'vault/tests/helpers/commands';
 
 // sync is an enterprise feature but since mirage is used the enterprise label has been intentionally omitted from the module name
 module('Acceptance | sync | overview', function (hooks) {
@@ -27,14 +27,14 @@ module('Acceptance | sync | overview', function (hooks) {
 
   test('it redirects on community', async function (assert) {
     this.version.type = 'community';
-    await authPage.login();
+    await login();
     await visit('/vault/sync/secrets/overview');
     assert.strictEqual(currentURL(), '/vault/dashboard', 'redirects to cluster dashboard route');
   });
 
   test('it redirects if enterprise but not on license', async function (assert) {
     this.server.get('/sys/license/features', () => ({ features: [] }));
-    await authPage.login();
+    await login();
     await visit('/vault/sync/secrets/overview');
     assert.strictEqual(currentURL(), '/vault/dashboard', 'redirects to cluster dashboard route');
   });
@@ -42,7 +42,7 @@ module('Acceptance | sync | overview', function (hooks) {
   // this test only runs on enterprise since HVD managed is harder to stub on CE
   test('enterprise: it does not redirect if HVD managed', async function (assert) {
     this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
-    await authPage.login();
+    await login();
     await visit('/vault/sync/secrets/overview');
     assert.strictEqual(currentURL(), '/vault/sync/secrets/overview', 'it navigates to overview');
   });
@@ -50,7 +50,7 @@ module('Acceptance | sync | overview', function (hooks) {
   module('when feature is activated', function (hooks) {
     hooks.beforeEach(async function () {
       syncHandlers(this.server);
-      await authPage.login();
+      await login();
     });
 
     test('it fetches destinations and associations', async function (assert) {
@@ -76,7 +76,7 @@ module('Acceptance | sync | overview', function (hooks) {
       await waitFor(ts.overview.table.actionToggle(0));
       await click(ts.overview.table.actionToggle(0));
       await click(ts.overview.table.action('sync'));
-      await click(ts.destinations.sync.cancel);
+      await click(GENERAL.cancelButton);
       await click(ts.breadcrumbLink('Secrets Sync'));
       await waitFor(ts.overview.table.actionToggle(0));
       await click(ts.overview.table.actionToggle(0));
@@ -111,7 +111,7 @@ module('Acceptance | sync | overview', function (hooks) {
         wasActivatePOSTCalled = true;
         return {};
       });
-      await authPage.login();
+      await login();
     });
 
     test('it does not fetch destinations and associations', async function (assert) {
@@ -163,9 +163,9 @@ module('Acceptance | sync | overview', function (hooks) {
         this.version.features = ['Secrets Sync', 'Namespaces'];
 
         await runCmd(`write sys/namespaces/admin -f`, false);
-        await authPage.loginNs('admin');
+        await loginNs('admin');
         await runCmd(`write sys/namespaces/foo -f`, false);
-        await authPage.loginNs('admin/foo');
+        await loginNs('admin/foo');
       });
 
       test('it should make activation-flag requests to correct namespace', async function (assert) {
@@ -195,11 +195,26 @@ module('Acceptance | sync | overview', function (hooks) {
         await click(ts.overview.optInBanner.enable);
         await click(ts.overview.activationModal.checkbox);
         await click(ts.overview.activationModal.confirm);
+
+        // During the namespace cleanup in the afterEach hook this endpoint is hit again which increases the assertion count (above)
+        // Re-stub here without the assertion to reduce unnecessary assertions.
+        this.server.get('/sys/activation-flags', () => {
+          return {
+            data: {
+              activated: ['secrets-sync'],
+              unactivated: [],
+            },
+          };
+        });
+        await visit('vault/dashboard');
+        await runCmd([`delete admin/sys/namespaces/foo -f`, deleteNS('admin')]);
       });
 
       test('it should make activation-flag requests to correct namespace when managed', async function (assert) {
         assert.expect(3);
-        this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+
+        const flagService = this.owner.lookup('service:flags');
+        flagService.featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
 
         this.server.get('/sys/activation-flags', (_, req) => {
           assert.deepEqual(req.requestHeaders, {}, 'Request is unauthenticated and in root namespace');
@@ -212,7 +227,7 @@ module('Acceptance | sync | overview', function (hooks) {
         });
         this.server.post('/sys/activation-flags/secrets-sync/activate', (_, req) => {
           assert.strictEqual(
-            req.requestHeaders['X-Vault-Namespace'],
+            req.requestHeaders['x-vault-namespace'],
             'admin',
             'Request is made to the admin namespace'
           );
@@ -226,6 +241,26 @@ module('Acceptance | sync | overview', function (hooks) {
         await click(ts.overview.optInBanner.enable);
         await click(ts.overview.activationModal.checkbox);
         await click(ts.overview.activationModal.confirm);
+
+        // During the namespace cleanup in the afterEach hook this endpoint is hit again which increases the assertion count (above)
+        // Re-stub here without the assertion to reduce unnecessary assertions.
+        this.server.get('/sys/activation-flags', () => {
+          return {
+            data: {
+              activated: ['secrets-sync'],
+              unactivated: [],
+            },
+          };
+        });
+
+        // Delete the admin/foo namespace
+        await visit('vault/dashboard');
+        await runCmd([deleteNS('foo')]);
+
+        // Reset the HVD feature flag so that we can delete the admin namespace
+        flagService.featureFlags = [];
+        await login();
+        await runCmd([deleteNS('admin')]);
       });
     });
   });

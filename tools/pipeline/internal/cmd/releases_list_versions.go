@@ -17,29 +17,29 @@ var listReleaseVersionsReq = &releases.ListVersionsReq{
 }
 
 func newReleasesVersionsBetweenCmd() *cobra.Command {
-	versions := &cobra.Command{
-		Use:   "list-versions",
+	versionsCmd := &cobra.Command{
+		Use:   "versions",
 		Short: "Create a list of Vault versions between a lower and upper bound",
 		Long:  "Create a list of Vault versions between a lower and upper bound",
 		RunE:  runListVersionsReq,
 	}
 
-	versions.PersistentFlags().StringVarP(&listReleaseVersionsReq.UpperBound, "upper", "u", "", "The highest version to include")
-	versions.PersistentFlags().StringVarP(&listReleaseVersionsReq.LowerBound, "lower", "l", "", "The lowest version to include")
-	versions.PersistentFlags().UintVarP(&listReleaseVersionsReq.NMinus, "nminus", "n", 0, "Instead of setting a dedicated lower bound, calculate N-X from the upper")
-	versions.PersistentFlags().StringVarP(&listReleaseVersionsReq.LicenseClass, "edition", "e", "", "The edition of Vault. Can either be 'ce' or 'enterprise'")
-	versions.PersistentFlags().StringSliceVarP(&listReleaseVersionsReq.Skip, "skip", "s", []string{}, "Skip this version. Can be provided none-to-many times")
+	versionsCmd.PersistentFlags().StringVarP(&listReleaseVersionsReq.UpperBound, "upper", "u", "", "The highest version to include")
+	versionsCmd.PersistentFlags().StringVarP(&listReleaseVersionsReq.LowerBound, "lower", "l", "", "The lowest version to include")
+	versionsCmd.PersistentFlags().UintVarP(&listReleaseVersionsReq.NMinus, "nminus", "n", 0, "Instead of setting a dedicated lower bound, calculate N-X from the upper")
+	versionsCmd.PersistentFlags().StringVarP(&listReleaseVersionsReq.LicenseClass, "edition", "e", "", "The edition of Vault. Can either be 'ce' or 'enterprise'")
+	versionsCmd.PersistentFlags().StringSliceVarP(&listReleaseVersionsReq.Skip, "skip", "s", []string{}, "Skip this version. Can be provided none-to-many times")
 
-	err := versions.MarkPersistentFlagRequired("upper")
+	err := versionsCmd.MarkPersistentFlagRequired("upper")
 	if err != nil {
 		panic(err)
 	}
-	err = versions.MarkPersistentFlagRequired("edition")
+	err = versionsCmd.MarkPersistentFlagRequired("edition")
 	if err != nil {
 		panic(err)
 	}
 
-	return versions
+	return versionsCmd
 }
 
 func runListVersionsReq(cmd *cobra.Command, args []string) error {

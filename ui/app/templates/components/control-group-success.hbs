@@ -59,7 +59,7 @@
         </label>
         <div class="control">
           <Input
-            data-test-token-input
+            data-test-input="token"
             class="input"
             autocomplete="off"
             spellcheck="false"
@@ -69,7 +69,7 @@
           />
         </div>
         <div class="field is-grouped box is-fullwidth is-bottomless">
-          <Hds::Button @text="Access" data-test-unwrap-button type="submit" disabled={{not this.token}} />
+          <Hds::Button @text="Access" type="submit" disabled={{not this.token}} data-test-submit />
         </div>
       </form>
     </div>

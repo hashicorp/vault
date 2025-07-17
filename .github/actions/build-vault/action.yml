@@ -11,59 +11,44 @@ description: |
 
 inputs:
   github-token:
-    type: string
     description: An elevated Github token to access private Go modules if necessary.
     default: ""
   cgo-enabled:
-    type: number
     description: Enable or disable CGO during the build.
-    default: 0
+    default: "0"
   create-docker-container:
-    type: boolean
     description: Package the binary into a Docker/AWS container.
-    default: true
+    default: "true"
   create-redhat-container:
-    type: boolean
     description: Package the binary into a Redhat container.
-    default: false
+    default: "false"
   create-packages:
-    type: boolean
     description: Package the binaries into deb and rpm formats.
-    default: true
+    default: "true"
   goos:
-    type: string
     description: The Go GOOS value environment variable to set during the build.
   goarch:
-    type: string
     description: The Go GOARCH value environment variable to set during the build.
   goarm:
-    type: string
     description: The Go GOARM value environment variable to set during the build.
     default: ""
   goexperiment:
-    type: string
     description: Which Go experiments to enable.
     default: ""
   go-tags:
-    type: string
     description: A comma separated list of tags to pass to the Go compiler during build.
     default: ""
   package-name:
-    type: string
     description: The name to use for the linux packages.
     default: ${{ github.event.repository.name }}
   vault-binary-name:
-    type: string
     description: The name of the vault binary.
     default: vault
   vault-edition:
-    type: string
     description: The edition of vault to build.
   vault-version:
-    type: string
     description: The version metadata to inject into the build via the linker.
   web-ui-cache-key:
-    type: string
     description: The cache key for restoring the pre-built web UI artifact.
 
 outputs:
@@ -74,29 +59,12 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Ensure zstd is available for actions/cache
-      # actions/cache restores based on cache key and "cache version", the former is unique to the
-      # build job or web UI, the latter is a hash which is based on the runner OS, the paths being
-      # cached, and the program used to compress it. Most of our workflows will use zstd to compress
-      # the cached artifact so we have to have it around for our machines to get both a version match
-      # and to decompress it. Most runners include zstd by default but there are exception like
-      # our Ubuntu 20.04 compatibility runners which do not.
-      shell: bash
-      run: which zstd || (sudo apt update && sudo apt install -y zstd)
-    - uses: ./.github/actions/set-up-go
+    - id: set-up-go
+      uses: ./.github/actions/set-up-go
       with:
         github-token: ${{ inputs.github-token }}
-    - uses: ./.github/actions/install-external-tools
-    - if: inputs.goarch == 's390x' && inputs.vault-edition == 'ent.hsm'
-      name: Configure CGO compiler for HSM edition on s390x
-      shell: bash
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y gcc-multilib-s390x-linux-gnu
-        {
-          echo "CC=s390x-linux-gnu-gcc"
-          echo "CC_FOR_TARGET=s390x-linux-gnu-gcc"
-        } | tee -a "$GITHUB_ENV"
+    - if: inputs.cgo-enabled == '0'
+      uses: ./.github/actions/install-external-tools
     - if: inputs.vault-edition != 'ce'
       name: Configure Git
       shell: bash
@@ -126,15 +94,27 @@ runs:
           build_step_name='Vault ${{ inputs.goos }} ${{ inputs.goarch }} v${{ inputs.vault-version }}+${{ inputs.vault-edition }}'
           package_version='${{ inputs.vault-version }}+ent' # this should always be +ent here regardless of enterprise edition
         fi
+        # Generate a builder cache key that considers anything that might change
+        # our build container, including:
+        # - The Go version we're building with
+        # - External Go build tooling as defined in tools/tools.sh
+        # - The Dockerfile or .build directory
+        # - The build-vault Github action
+        docker_sha=$(git ls-tree HEAD Dockerfile --object-only --abbrev=5)
+        build_sha=$(git ls-tree HEAD .build --object-only --abbrev=5)
+        tools_sha=$(git ls-tree HEAD tools/tools.sh --object-only --abbrev=5)
+        github_sha=$(git ls-tree HEAD .github/actions/build-vault --object-only --abbrev=5)
         {
           echo "artifact-basename=$(make ci-get-artifact-basename)"
           echo "binary-path=dist/${{ inputs.vault-binary-name }}"
           echo "build-step-name=${build_step_name}"
+          echo "vault-builder-cache-key=${docker_sha}-${build_sha}-${tools_sha}-${github_sha}-$(cat .go-version)"
           echo "package-version=${package_version}"
         } | tee -a "$GITHUB_OUTPUT"
-    - name: ${{ steps.metadata.outputs.build-step-name }}
+    - if: inputs.cgo-enabled == '0'
+      name: ${{ steps.metadata.outputs.build-step-name }}
       env:
-        CGO_ENABLED: ${{ inputs.cgo-enabled }}
+        CGO_ENABLED: 0
         GO_TAGS: ${{ inputs.go-tags }}
         GOARCH: ${{ inputs.goarch }}
         GOARM: ${{ inputs.goarm }}
@@ -145,6 +125,54 @@ runs:
         VERSION_METADATA: ${{ inputs.vault-edition != 'ce' && inputs.vault-edition || '' }}
       shell: bash
       run: make ci-build
+    - if: inputs.cgo-enabled == '1'
+      uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
+      with:
+        driver-opts: network=host # So we can run our own little registry
+    - if: inputs.cgo-enabled == '1'
+      shell: bash
+      run: docker run -d -p 5000:5000 --restart always --name registry registry:2
+    - if: inputs.cgo-enabled == '1'
+      name: Build CGO builder image
+      uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
+      env:
+        DOCKER_BUILD_SUMMARY: false
+      with:
+        context: .
+        build-args: |
+          GO_VERSION=${{ steps.set-up-go.outputs.go-version }}
+        # Only build a container for the host OS since the same container
+        # handles cross building.
+        platforms: linux/amd64
+        push: true
+        target: builder
+        tags: localhost:5000/vault-builder:${{ steps.metadata.outputs.vault-builder-cache-key }}
+        # Upload the resulting minimal image to actions cache. This could
+        # be a problem if the resulting images are too big.
+        cache-from: type=gha,scope=vault-builder-${{ steps.metadata.outputs.vault-builder-cache-key }}
+        cache-to: type=gha,mode=min,scope=vault-builder-${{ steps.metadata.outputs.vault-builder-cache-key }}
+        github-token: ${{ inputs.github-token }}
+    - if: inputs.cgo-enabled == '1'
+      name: ${{ steps.metadata.outputs.build-step-name }}
+      shell: bash
+      run: |
+        mkdir -p dist
+        mkdir -p out
+        docker run \
+          -v $(pwd):/build \
+          -v $(go env GOMODCACHE):/go-mod-cache \
+            --env GITHUB_TOKEN='${{ inputs.github-token }}' \
+            --env CGO_ENABLED=1 \
+            --env GO_TAGS='${{ inputs.go-tags }}' \
+            --env GOARCH='${{ inputs.goarch }}' \
+            --env GOARM='${{ inputs.goarm }}' \
+            --env GOEXPERIMENT='${{ inputs.goexperiment }}' \
+            --env GOMODCACHE=/go-mod-cache \
+            --env GOOS='${{ inputs.goos }}' \
+            --env VERSION='${{ inputs.version }}' \
+            --env VERSION_METADATA='${{ inputs.vault-edition != 'ce' && inputs.vault-edition || '' }}' \
+              localhost:5000/vault-builder:${{ steps.metadata.outputs.vault-builder-cache-key }} \
+                make ci-build
     - if: inputs.vault-edition != 'ce'
       shell: bash
       run: make ci-prepare-ent-legal
@@ -156,7 +184,7 @@ runs:
         BUNDLE_PATH: out/${{ steps.metadata.outputs.artifact-basename }}.zip
       shell: bash
       run: make ci-bundle
-    - uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: ${{ steps.metadata.outputs.artifact-basename }}.zip
         path: out/${{ steps.metadata.outputs.artifact-basename }}.zip
@@ -188,13 +216,13 @@ runs:
           echo "deb-files=$(basename out/*.deb)"
         } | tee -a "$GITHUB_OUTPUT"
     - if: inputs.create-packages == 'true'
-      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: ${{ steps.package-files.outputs.rpm-files }}
         path: out/${{ steps.package-files.outputs.rpm-files }}
         if-no-files-found: error
     - if: inputs.create-packages == 'true'
-      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       with:
         name: ${{ steps.package-files.outputs.deb-files }}
         path: out/${{ steps.package-files.outputs.deb-files }}

@@ -9,11 +9,12 @@ import { setupMirage } from 'ember-cli-mirage/test-support';
 import { v4 as uuidv4 } from 'uuid';
 import ldapMirageScenario from 'vault/mirage/scenarios/ldap';
 import ldapHandlers from 'vault/mirage/handlers/ldap';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { click, currentURL } from '@ember/test-helpers';
 import { isURL, visitURL } from 'vault/tests/helpers/ldap/ldap-helpers';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
 import { LDAP_SELECTORS } from 'vault/tests/helpers/ldap/ldap-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | ldap | libraries', function (hooks) {
   setupApplicationTest(hooks);
@@ -23,7 +24,7 @@ module('Acceptance | ldap | libraries', function (hooks) {
     ldapHandlers(this.server);
     ldapMirageScenario(this.server);
     this.backend = `ldap-test-${uuidv4()}`;
-    await authPage.login();
+    await login();
     // mount & configure
     await runCmd([
       mountEngineCmd('ldap', this.backend),
@@ -82,7 +83,7 @@ module('Acceptance | ldap | libraries', function (hooks) {
     assert.expect(2);
 
     for (const action of ['edit', 'details']) {
-      await click('[data-test-popup-menu-trigger]');
+      await click(GENERAL.menuTrigger);
       await click(`[data-test-${action}]`);
       const uri = action === 'details' ? 'details/accounts' : action;
       assert.true(

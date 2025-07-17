@@ -6,7 +6,7 @@ scenario "agent" {
     The agent scenario verifies Vault when running in Agent mode. The build can be a local branch,
     any CRT built Vault artifact saved to the local machine, or any CRT built Vault artifact in the
     stable channel in Artifactory.
-    
+
     The scenario creates a new Vault Cluster using the candidate build and then runs the same Vault
     build in Agent mode and verifies behavior against the Vault cluster. The scenario also performs
     standard baseline verification that is not specific to the Agent mode deployment.
@@ -22,10 +22,10 @@ scenario "agent" {
       - vault_build_date*
       - vault_product_version
       - vault_revision*
-    
+
     * If you don't already know what build date and revision you should be using, see
     https://eng-handbook.hashicorp.services/internal-tools/enos/troubleshooting/#execution-error-expected-vs-got-for-vault-versioneditionrevisionbuild-date.
-  
+
     Variables required for some scenario variants:
       - artifactory_username (if using `artifact_source:artifactory` in your filter)
       - artifactory_token (if using `artifact_source:artifactory` in your filter)
@@ -58,7 +58,7 @@ scenario "agent" {
       artifact_type   = ["package"]
     }
 
-    // PKCS#11 can only be used on ent.hsm and ent.hsm.fips1402.
+    // PKCS#11 can only be used on ent.hsm and ent.hsm.fips1403.
     exclude {
       seal    = ["pkcs11"]
       edition = [for e in matrix.edition : e if !strcontains(e, "hsm")]
@@ -502,6 +502,7 @@ scenario "agent" {
       quality.vault_mount_auth,
       quality.vault_mount_kv,
       quality.vault_secrets_kv_write,
+      quality.vault_secrets_ldap_write_config,
     ]
 
     variables {
@@ -678,6 +679,7 @@ scenario "agent" {
 
   output "secrets_engines_state" {
     description = "The state of configured secrets engines"
+    sensitive   = true
     value       = step.verify_secrets_engines_create.state
   }
 

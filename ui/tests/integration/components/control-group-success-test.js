@@ -9,13 +9,12 @@ import { click, fillIn, find, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const SELECTORS = {
   jsonViewer: '[data-test-json-viewer]',
   navigate: '[data-test-navigate-button]',
   navMessage: '[data-test-navigate-message]',
-  tokenInput: '[data-test-token-input]',
-  unwrap: '[data-test-unwrap-button]',
   unwrapForm: '[data-test-unwrap-form]',
 };
 
@@ -67,7 +66,7 @@ module('Integration | Component | control group success', function (hooks) {
     assert.expect(2);
     await render(hbs`<ControlGroupSuccess @model={{this.model}} />`);
     assert.dom(SELECTORS.unwrapForm).exists();
-    assert.dom(SELECTORS.tokenInput).hasValue('');
+    assert.dom(GENERAL.inputByAttr('token')).hasValue('');
   });
 
   test('it unwraps data on submit', async function (assert) {
@@ -76,10 +75,10 @@ module('Integration | Component | control group success', function (hooks) {
     sinon.stub(this.owner.lookup('service:api').sys, 'unwrap').resolves({ data: { foo: 'bar' } });
 
     await render(hbs`<ControlGroupSuccess @model={{this.model}} />`);
-    assert.dom(SELECTORS.tokenInput).hasValue('');
+    assert.dom(GENERAL.inputByAttr('token')).hasValue('');
 
-    await fillIn(SELECTORS.tokenInput, 'token');
-    await click(SELECTORS.unwrap);
+    await fillIn(GENERAL.inputByAttr('token'), 'token');
+    await click(GENERAL.submitButton);
 
     const actual = find(SELECTORS.jsonViewer).innerText;
     const expected = JSON.stringify({ foo: 'bar' }, null, 2);

@@ -27,7 +27,7 @@ locals {
       }
       "rhel" = {
         "8.10" = data.aws_ami.rhel_8["arm64"].id
-        "9.4"  = data.aws_ami.rhel_9["arm64"].id
+        "9.5"  = data.aws_ami.rhel_9["arm64"].id
       }
       "sles" = {
         "15.6" = data.aws_ami.sles_15["arm64"].id
@@ -48,7 +48,7 @@ locals {
       }
       "rhel" = {
         "8.10" = data.aws_ami.rhel_8["x86_64"].id
-        "9.4"  = data.aws_ami.rhel_9["x86_64"].id
+        "9.5"  = data.aws_ami.rhel_9["x86_64"].id
       }
       "sles" = {
         "15.6" = data.aws_ami.sles_15["x86_64"].id
@@ -117,7 +117,6 @@ data "aws_ami" "rhel_8" {
   most_recent = true
   for_each    = local.architectures
 
-  # Currently latest latest point release-1
   filter {
     name   = "name"
     values = ["RHEL-8.10*HVM-20*"]
@@ -140,10 +139,9 @@ data "aws_ami" "rhel_9" {
   most_recent = true
   for_each    = local.architectures
 
-  # Currently latest latest point release-1
   filter {
     name   = "name"
-    values = ["RHEL-9.4*HVM-20*"]
+    values = ["RHEL-9.5*HVM-20*"]
   }
 
   filter {

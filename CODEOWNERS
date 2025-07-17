@@ -55,22 +55,28 @@
 # UI code related to Vault's JWT/OIDC auth method and OIDC provider.
 # Changes to these files often require coordination with backend code,
 # so stewards of the backend code are added below for notification.
-/ui/app/components/auth-jwt.js         @hashicorp/vault-ui @hashicorp/vault-ecosystem
-/ui/app/routes/vault/cluster/oidc-*.js @hashicorp/vault-ui @hashicorp/vault-ecosystem
+/ui/app/components/auth/form/oidc-jwt.ts @hashicorp/vault-ui @hashicorp/vault-ecosystem
+/ui/app/components/auth/form/saml.ts     @hashicorp/vault-ui @hashicorp/vault-ecosystem
+/ui/app/routes/vault/cluster/oidc-*.js   @hashicorp/vault-ui @hashicorp/vault-ecosystem
 
 # Release config; service account is required for automation tooling.
-/.release/                     @hashicorp/github-secure-vault-core @hashicorp/quality-team
-/.github/workflows/build.yml   @hashicorp/github-secure-vault-core @hashicorp/quality-team
+/.release/                     @hashicorp/github-secure-vault-core @hashicorp/team-vault-quality
+/.github/workflows/build.yml   @hashicorp/github-secure-vault-core @hashicorp/team-vault-quality
 
 # Quality engineering
-/.github/  @hashicorp/quality-team
-/enos/     @hashicorp/quality-team
+/.github/  @hashicorp/team-vault-quality
+/enos/     @hashicorp/team-vault-quality
 
 # Cryptosec
+# Temporarily require the crypto team to approve Go updates as we need to make sure
+# 1.24 doesn't make it onto release branches until the FIPS paperwork has been completed.
+/.go-version                                         @hashicorp/vault-crypto
+
 /api/auth/cert/                                      @hashicorp/vault-crypto
 /builtin/logical/pki/                                @hashicorp/vault-crypto
 /builtin/logical/pkiext/                             @hashicorp/vault-crypto
 /website/content/docs/secrets/pki/                   @hashicorp/vault-crypto @hashicorp/vault-education-approvers
+/website/content/api-docs/secret/pki/                @hashicorp/vault-crypto @hashicorp/vault-education-approvers
 /website/content/api-docs/secret/pki.mdx             @hashicorp/vault-crypto @hashicorp/vault-education-approvers
 /builtin/credential/cert/                            @hashicorp/vault-crypto
 /website/content/docs/auth/cert.mdx                  @hashicorp/vault-crypto @hashicorp/vault-education-approvers
@@ -104,3 +110,4 @@
 /website/content/api-docs/secret/kmip.mdx            @hashicorp/vault-crypto @hashicorp/vault-education-approvers
 /website/content/docs/enterprise/fips/               @hashicorp/vault-crypto @hashicorp/vault-education-approvers
 /website/content/docs/platform/k8s                   @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
+/website/content/                                    @hashicorp/vault-customer-engineering @hashicorp/vault-education-approvers

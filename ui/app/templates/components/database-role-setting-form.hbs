@@ -9,7 +9,21 @@
     <div class="form-section">
       {{#each this.settingFields as |attr|}}
         {{#if (and (eq @mode "edit") (includes attr.name (array "skip_import_rotation" "username")))}}
-          <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
+          {{#if (eq attr.name "skip_import_rotation")}}
+            <ReadonlyFormField @attr={{attr}} @value={{not (get @model attr.name)}} />
+          {{else}}
+            <ReadonlyFormField @attr={{attr}} @value={{get @model attr.name}} />
+          {{/if}}
+        {{else if (and (eq @mode "edit") (eq attr.name "password"))}}
+          <EnableInput
+            data-test-enable-field={{attr.name}}
+            class="field"
+            @attr={{attr}}
+            {{! password field is disabled on edit once password has been rotated }}
+            @disabled={{(not (eq (get @model "last_vault_rotation") undefined))}}
+          >
+            <FormField @attr={{attr}} @model={{@model}} />
+          </EnableInput>
         {{else}}
           <FormField data-test-field={{true}} @attr={{attr}} @model={{@model}} @modelValidations={{@modelValidations}} />
           {{#if (and (eq attr.name "skip_import_rotation") this.isOverridden)}}

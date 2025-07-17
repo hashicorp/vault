@@ -59,7 +59,7 @@ import (
 	"github.com/mitchellh/copystructure"
 	"golang.org/x/crypto/ed25519"
 	"golang.org/x/net/http2"
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
@@ -262,6 +262,11 @@ func TestCoreWithSealAndUINoCleanup(t testing.TB, opts *CoreConfig) *Core {
 	}
 	if opts.NumRollbackWorkers != 0 {
 		conf.NumRollbackWorkers = opts.NumRollbackWorkers
+	}
+	if conf.RawConfig != nil {
+		if conf.RawConfig.Storage != nil {
+			conf.StorageType = conf.RawConfig.Storage.Type
+		}
 	}
 
 	conf.ActivityLogConfig = opts.ActivityLogConfig
@@ -1545,6 +1550,7 @@ func NewTestCluster(t testing.TB, base *CoreConfig, opts *TestClusterOptions) *T
 		coreConfig.ExpirationRevokeRetryBase = base.ExpirationRevokeRetryBase
 		coreConfig.PeriodicLeaderRefreshInterval = base.PeriodicLeaderRefreshInterval
 		coreConfig.ClusterAddrBridge = base.ClusterAddrBridge
+		coreConfig.ObservationSystemConfig = base.ObservationSystemConfig
 
 		testApplyEntBaseConfig(coreConfig, base)
 	}

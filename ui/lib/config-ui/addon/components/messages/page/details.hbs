@@ -11,7 +11,7 @@
 
 <Toolbar>
   <ToolbarActions aria-label="message delete and edit">
-    {{#if @message.canDeleteCustomMessages}}
+    {{#if @capabilities.canDelete}}
       <ConfirmAction
         class="toolbar-button"
         @buttonColor="secondary"
@@ -19,12 +19,11 @@
         @confirmTitle="Are you sure?"
         @confirmMessage="This will delete this message permanently. You cannot undo this action."
         @buttonText="Delete message"
-        data-test-confirm-action="Delete message"
       />
       <div class="toolbar-separator"></div>
     {{/if}}
-    {{#if @message.canEditCustomMessages}}
-      <LinkTo class="toolbar-link" @route="messages.message.edit" @model={{@message.id}} data-test-link="edit">
+    {{#if @capabilities.canUpdate}}
+      <LinkTo class="toolbar-link" @route="messages.message.edit" @model={{@message.id}} data-test-link-to="edit">
         Edit message
         <Icon @name="chevron-right" />
       </LinkTo>
@@ -32,18 +31,18 @@
   </ToolbarActions>
 </Toolbar>
 
-{{#each @message.allFields as |attr|}}
-  {{#if (or (eq attr.name "endTime") (eq attr.name "startTime"))}}
+{{#each this.displayFields as |field|}}
+  {{#if (or (eq field "endTime") (eq field "startTime"))}}
     {{! if the attr is an endTime and is falsy, we want to show a 'Never' text value }}
     <InfoTableRow
-      @label={{capitalize (humanize (dasherize attr.name))}}
+      @label={{capitalize (humanize (dasherize field))}}
       @value={{if
-        (and (eq attr.name "endTime") (not (get @message attr.name)))
+        (and (eq field "endTime") (not (get @message field)))
         "Never"
-        (date-format (get @message attr.name) "MMM d, yyyy hh:mm aaa" withTimeZone=true)
+        (date-format (get @message field) "MMM d, yyyy hh:mm aaa" withTimeZone=true)
       }}
     />
-  {{else if (eq attr.name "link")}}
+  {{else if (eq field "link")}}
     {{#if (is-empty-value @message.link)}}
       <InfoTableRow @label="Link" @value="None" />
     {{else}}
@@ -54,7 +53,7 @@
       {{/each-in}}
     {{/if}}
   {{else}}
-    <InfoTableRow @label={{capitalize (humanize (dasherize attr.name))}} @value={{get @message attr.name}} />
+    <InfoTableRow @label={{capitalize (humanize (dasherize field))}} @value={{get @message field}} />
   {{/if}}
 
 {{/each}}

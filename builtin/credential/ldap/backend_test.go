@@ -329,7 +329,7 @@ func TestLdapAuthBackend_CaseSensitivity(t *testing.T) {
 		}
 	}
 
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -375,7 +375,7 @@ func TestLdapAuthBackend_UserPolicies(t *testing.T) {
 	var err error
 	b, storage := createBackendWithStorage(t)
 
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,
@@ -486,7 +486,7 @@ func factory(t *testing.T) logical.Backend {
 // https://github.com/hashicorp/vault/issues/26183.
 func TestBackend_LoginRegression_AnonBind(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	cfg.AnonymousGroupSearch = true
 	defer cleanup()
 
@@ -521,7 +521,7 @@ func TestBackend_LoginRegression_AnonBind(t *testing.T) {
 // attributes to entity alias metadata.
 func TestBackend_LoginRegression_UserAttr(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	cfg.UserAttr = "givenName"
 	defer cleanup()
 
@@ -552,7 +552,7 @@ func TestBackend_LoginRegression_UserAttr(t *testing.T) {
 
 func TestBackend_basic(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -582,7 +582,7 @@ func TestBackend_basic(t *testing.T) {
 
 func TestBackend_basic_noPolicies(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -600,7 +600,7 @@ func TestBackend_basic_noPolicies(t *testing.T) {
 
 func TestBackend_basic_group_noPolicies(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -621,7 +621,7 @@ func TestBackend_basic_group_noPolicies(t *testing.T) {
 
 func TestBackend_basic_authbind(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -638,7 +638,7 @@ func TestBackend_basic_authbind(t *testing.T) {
 
 func TestBackend_basic_authbind_userfilter(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 
 	// userattr not used in the userfilter should result in a warning in the response
@@ -781,7 +781,7 @@ func TestBackend_basic_authbind_userfilter(t *testing.T) {
 
 func TestBackend_basic_authbind_metadata_name(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 
 	cfg.UserAttr = "cn"
@@ -846,7 +846,7 @@ func addUPNAttributeToLDAPSchemaAndUser(t *testing.T, cfg *ldaputil.ConfigEntry,
 
 func TestBackend_basic_discover(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -863,7 +863,7 @@ func TestBackend_basic_discover(t *testing.T) {
 
 func TestBackend_basic_nogroupdn(t *testing.T) {
 	b := factory(t)
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 
 	logicaltest.Test(t, logicaltest.TestCase{
@@ -1313,7 +1313,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 
 	ctx := context.Background()
 
-	cleanup, cfg := ldap.PrepareTestContainer(t, "master")
+	cleanup, cfg := ldap.PrepareTestContainer(t, ldap.DefaultVersion)
 	defer cleanup()
 	configReq := &logical.Request{
 		Operation: logical.UpdateOperation,

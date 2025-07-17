@@ -6,12 +6,12 @@
 
 ----
 
--	Website: https://www.vaultproject.io
--	Announcement list: [Google Groups](https://groups.google.com/group/hashicorp-announce)
--	Discussion forum: [Discuss](https://discuss.hashicorp.com/c/vault)
+- Website: [developer.hashicorp.com/vault](https://developer.hashicorp.com/vault)
+- Announcement list: [Google Groups](https://groups.google.com/group/hashicorp-announce)
+- Discussion forum: [Discuss](https://discuss.hashicorp.com/c/vault)
 - Documentation: [https://developer.hashicorp.com/vault/docs](https://developer.hashicorp.com/vault/docs)
 - Tutorials: [https://developer.hashicorp.com/vault/tutorials](https://developer.hashicorp.com/vault/tutorials)
-- Certification Exam: [https://developer.hashicorp.com/certifications/security-automation](https://developer.hashicorp.com/certifications/security-automation)
+- Certification exam: [https://developer.hashicorp.com/certifications/security-automation](https://developer.hashicorp.com/certifications/security-automation)
 
 <img width="300" alt="Vault Logo" src="https://github.com/hashicorp/vault/blob/f22d202cde2018f9455dec755118a9b84586e082/Vault_PrimaryLogo_Black.png">
 

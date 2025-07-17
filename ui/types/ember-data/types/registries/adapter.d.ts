@@ -6,6 +6,7 @@
 import Application from 'vault/adapters/application';
 import Adapter from 'ember-data/adapter';
 import ModelRegistry from 'ember-data/types/registries/model';
+import AuthMethodAdapter from 'vault/vault/adapters/auth-method';
 import PkiIssuerAdapter from 'vault/adapters/pki/issuer';
 import PkiTidyAdapter from 'vault/adapters/pki/tidy';
 import LdapRoleAdapter from 'vault/adapters/ldap/role';
@@ -19,6 +20,7 @@ import SyncAssociationAdapter from 'vault/adapters/sync/association';
  * Catch-all for ember-data.
  */
 export default interface AdapterRegistry {
+  'auth-method': AuthMethodAdapter;
   'ldap/library': LdapLibraryAdapter;
   'ldap/role': LdapRoleAdapter;
   'pki/issuer': PkiIssuerAdapter;

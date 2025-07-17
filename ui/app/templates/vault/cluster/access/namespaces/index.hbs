@@ -5,31 +5,52 @@
 
 {{#if (has-feature "Namespaces")}}
   <PageHeader as |p|>
+    <p.top>
+      <Hds::Breadcrumb data-test-breadcrumbs>
+        <Hds::Breadcrumb::Item @text="Namespaces" @current={{true}} />
+      </Hds::Breadcrumb>
+    </p.top>
+
     <p.levelLeft>
-      <h1 class="title is-3">
+      <h1 class="title is-3" data-test-page-title>
         Namespaces
       </h1>
     </p.levelLeft>
   </PageHeader>
 
   <Toolbar>
+    <ToolbarFilters>
+      <FilterInputExplicit
+        @query={{this.pageFilter}}
+        @placeholder="Search"
+        @handleSearch={{this.handleSearch}}
+        @handleInput={{this.handleInput}}
+        @handleKeyDown={{this.handleKeyDown}}
+      />
+    </ToolbarFilters>
     <ToolbarActions>
-      <ToolbarLink @route="vault.cluster.access.namespaces.create" @type="add">
+      <Hds::Button
+        class="has-right-margin-4"
+        @color="secondary"
+        @icon="reload"
+        @iconPosition="trailing"
+        @text="Refresh list"
+        {{on "click" this.refreshNamespaceList}}
+        data-test-button="refresh-namespace-list"
+      />
+      <ToolbarLink @route="vault.cluster.access.namespaces.create" @type="add" data-test-link-to="create-namespace">
         Create namespace
       </ToolbarLink>
     </ToolbarActions>
   </Toolbar>
 
-  <ListView @items={{this.model}} @itemNoun="namespace" @paginationRouteName="vault.cluster.access.namespaces" as |list|>
-    {{#if list.empty}}
-      <list.empty>
-        <Hds::Link::Standalone
-          @icon="learn-link"
-          @text="Secure multi-tenancy with namespaces tutorial"
-          @href={{doc-link "/vault/tutorials/enterprise/namespaces"}}
-        />
-      </list.empty>
-    {{else}}
+  <ListView
+    @items={{this.model.namespaces}}
+    @itemNoun="namespace"
+    @paginationRouteName="vault.cluster.access.namespaces"
+    as |list|
+  >
+    {{#if this.model.namespaces.length}}
       <ListItem as |Item|>
         <Item.content>
           {{list.item.id}}
@@ -37,37 +58,40 @@
         <Item.menu>
           <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
             <dd.ToggleIcon @icon="more-horizontal" @text="More options" @hasChevron={{false}} data-test-popup-menu-trigger />
-            {{#let (concat this.currentNamespace (if this.currentNamespace "/") list.item.id) as |targetNamespace|}}
-              {{#if (includes targetNamespace this.accessibleNamespaces)}}
-                <dd.Generic>
-                  <NamespaceLink @targetNamespace={{targetNamespace}} @unparsed={{true}} @class="ns-dropdown-item">
-                    Switch to Namespace
-                  </NamespaceLink>
-                </dd.Generic>
+            {{#let
+              (concat this.namespaceService.path (if this.namespaceService.path "/") list.item.id)
+              as |targetNamespace|
+            }}
+              {{#if (includes targetNamespace this.namespaceService.accessibleNamespaces)}}
+                <dd.Interactive {{on "click" (fn this.switchNamespace targetNamespace)}} data-test-popup-menu="switch">Switch
+                  to namespace</dd.Interactive>
               {{/if}}
             {{/let}}
-            <dd.Interactive @color="critical" {{on "click" (fn (mut this.nsToDelete) list.item)}}>Delete</dd.Interactive>
+            <dd.Interactive
+              @color="critical"
+              {{on "click" (fn (mut this.nsToDelete) list.item)}}
+              data-test-popup-menu="delete"
+            >Delete</dd.Interactive>
           </Hds::Dropdown>
           {{#if (eq this.nsToDelete list.item)}}
             <ConfirmModal
               @color="critical"
               @onClose={{fn (mut this.nsToDelete) null}}
-              @onConfirm={{action
-                (perform
-                  Item.callMethod
-                  "destroyRecord"
-                  this.nsToDelete
-                  (concat "Successfully deleted namespace: " this.nsToDelete.id)
-                  "There was an error deleting this namespace: "
-                  (action "refreshNamespaceList")
-                )
-              }}
+              @onConfirm={{fn this.deleteNamespace list.item}}
               @confirmTitle="Delete this namespace?"
               @confirmMessage="Any engines or mounts in this namespace will also be removed."
             />
           {{/if}}
         </Item.menu>
       </ListItem>
+    {{else}}
+      <list.empty>
+        <Hds::Link::Standalone
+          @icon="learn-link"
+          @text="Secure multi-tenancy with namespaces tutorial"
+          @href={{doc-link "/vault/tutorials/enterprise/namespaces"}}
+        />
+      </list.empty>
     {{/if}}
   </ListView>
 {{else}}

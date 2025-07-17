@@ -19,7 +19,6 @@ import (
 	"time"
 
 	"github.com/armon/go-metrics"
-	"github.com/axiomhq/hyperloglog"
 	"github.com/go-test/deep"
 	"github.com/golang/protobuf/proto"
 	"github.com/hashicorp/go-uuid"
@@ -55,7 +54,7 @@ func TestActivityLog_Creation(t *testing.T) {
 	const namespace_id = "ns123"
 	ts := time.Now()
 
-	a.AddEntityToFragment(entity_id, namespace_id, ts.Unix())
+	a.AddEntityToFragment(entity_id, namespace_id, ts.Unix(), ts.Unix())
 	if a.fragment == nil {
 		t.Fatal("no fragment created")
 	}
@@ -195,10 +194,10 @@ func TestActivityLog_UniqueEntities(t *testing.T) {
 	t2 := time.Now()
 	t3 := t2.Add(60 * time.Second)
 
-	a.AddEntityToFragment(id1, "root", t1.Unix())
-	a.AddEntityToFragment(id2, "root", t2.Unix())
-	a.AddEntityToFragment(id2, "root", t3.Unix())
-	a.AddEntityToFragment(id1, "root", t3.Unix())
+	a.AddEntityToFragment(id1, "root", t1.Unix(), t1.Unix())
+	a.AddEntityToFragment(id2, "root", t2.Unix(), t2.Unix())
+	a.AddEntityToFragment(id2, "root", t3.Unix(), t3.Unix())
+	a.AddEntityToFragment(id1, "root", t3.Unix(), t3.Unix())
 
 	if a.fragment == nil {
 		t.Fatal("no current fragment")
@@ -467,8 +466,8 @@ func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
 	}
 	path := fmt.Sprintf("%sentity/%d/0", ActivityLogPrefix, a.GetStartTimestamp())
 
-	a.AddEntityToFragment(ids[0], "root", times[0])
-	a.AddEntityToFragment(ids[1], "root2", times[1])
+	a.AddEntityToFragment(ids[0], "root", times[0], times[0])
+	a.AddEntityToFragment(ids[1], "root2", times[1], times[1])
 	err := a.saveCurrentSegmentToStorage(ctx, false)
 	if err != nil {
 		t.Fatalf("got error writing entities to storage: %v", err)
@@ -485,8 +484,8 @@ func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
 	}
 	expectedEntityIDs(t, out, ids[:2])
 
-	a.AddEntityToFragment(ids[0], "root", times[2])
-	a.AddEntityToFragment(ids[2], "root", times[2])
+	a.AddEntityToFragment(ids[0], "root", times[2], times[2])
+	a.AddEntityToFragment(ids[2], "root", times[2], times[2])
 	err = a.saveCurrentSegmentToStorage(ctx, false)
 	if err != nil {
 		t.Fatalf("got error writing segments to storage: %v", err)
@@ -499,35 +498,6 @@ func TestActivityLog_SaveEntitiesToStorage(t *testing.T) {
 		t.Fatalf("could not unmarshal protobuf: %v", err)
 	}
 	expectedEntityIDs(t, out, ids)
-}
-
-// TestActivityLog_StoreAndReadHyperloglog inserts into a hyperloglog, stores it and then reads it back. The test
-// verifies the estimate count is correct.
-func TestActivityLog_StoreAndReadHyperloglog(t *testing.T) {
-	core, _, _ := TestCoreUnsealed(t)
-	ctx := context.Background()
-
-	a := core.activityLog
-	a.SetStandbyEnable(ctx, true)
-	a.SetStartTimestamp(time.Now().Unix()) // set a nonzero segment
-	currentMonth := timeutil.StartOfMonth(time.Now())
-	currentMonthHll := hyperloglog.New()
-	currentMonthHll.Insert([]byte("a"))
-	currentMonthHll.Insert([]byte("a"))
-	currentMonthHll.Insert([]byte("b"))
-	currentMonthHll.Insert([]byte("c"))
-	currentMonthHll.Insert([]byte("d"))
-	currentMonthHll.Insert([]byte("d"))
-
-	err := a.StoreHyperlogLog(ctx, currentMonth, currentMonthHll)
-	if err != nil {
-		t.Fatalf("error storing hyperloglog in storage: %v", err)
-	}
-	fetchedHll, err := a.CreateOrFetchHyperlogLog(ctx, currentMonth)
-	// check the distinct count stored from hll
-	if fetchedHll.Estimate() != 4 {
-		t.Fatalf("wrong number of distinct elements: expected: 5 actual: %v", fetchedHll.Estimate())
-	}
 }
 
 // TestModifyResponseMonthsNilAppend calls modifyResponseMonths for a range of 5 months ago to now. It verifies that the
@@ -789,7 +759,7 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 
 	// First ActivitySegmentClientCapacity should fit in one segment
 	for i := 0; i < 4000; i++ {
-		a.AddEntityToFragment(genID(i), "root", ts)
+		a.AddEntityToFragment(genID(i), "root", ts, ts)
 	}
 
 	// Consume new fragment notification.
@@ -818,7 +788,7 @@ func TestActivityLog_MultipleFragmentsAndSegments(t *testing.T) {
 
 	// 4000 more local entities
 	for i := 4000; i < 8000; i++ {
-		a.AddEntityToFragment(genID(i), "root", ts)
+		a.AddEntityToFragment(genID(i), "root", ts, ts)
 	}
 
 	// Simulated remote fragment with 100 duplicate entities
@@ -1572,7 +1542,8 @@ func TestActivityLog_StopAndRestart(t *testing.T) {
 		t.Fatalf("nil token count map")
 	}
 
-	a.AddEntityToFragment("1111-1111", "root", time.Now().Unix())
+	ts := time.Now().Unix()
+	a.AddEntityToFragment("1111-1111", "root", ts, ts)
 	a.AddTokenToFragment("root")
 
 	err = a.saveCurrentSegmentToStorage(ctx, false)
@@ -2093,8 +2064,8 @@ func TestActivityLog_EnableDisable(t *testing.T) {
 	id1 := "11111111-1111-1111-1111-111111111111"
 	id2 := "22222222-2222-2222-2222-222222222222"
 	id3 := "33333333-3333-3333-3333-333333333333"
-	a.AddEntityToFragment(id1, "root", time.Now().Unix())
-	a.AddEntityToFragment(id2, "root", time.Now().Unix())
+	a.AddEntityToFragment(id1, "root", time.Now().Unix(), time.Now().Unix())
+	a.AddEntityToFragment(id2, "root", time.Now().Unix(), time.Now().Unix())
 
 	a.SetStartTimestamp(a.GetStartTimestamp() - 10)
 	seg1 := a.GetStartTimestamp()
@@ -2108,7 +2079,7 @@ func TestActivityLog_EnableDisable(t *testing.T) {
 	readSegmentFromStorage(t, core, path)
 
 	// Add in-memory fragment
-	a.AddEntityToFragment(id3, "root", time.Now().Unix())
+	a.AddEntityToFragment(id3, "root", time.Now().Unix(), time.Now().Unix())
 
 	// disable and verify segment exists
 	disableRequest()
@@ -2160,7 +2131,7 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 	id1 := "11111111-1111-1111-1111-111111111111"
 	id2 := "22222222-2222-2222-2222-222222222222"
 	id3 := "33333333-3333-3333-3333-333333333333"
-	a.AddEntityToFragment(id1, "root", time.Now().Unix())
+	a.AddEntityToFragment(id1, "root", time.Now().Unix(), time.Now().Unix())
 
 	month0 := time.Now().UTC()
 	segment0 := a.GetStartTimestamp()
@@ -2208,12 +2179,12 @@ func TestActivityLog_EndOfMonth(t *testing.T) {
 		t.Errorf("expected previous month %v got %v", segment1, intent.NextMonth)
 	}
 
-	a.AddEntityToFragment(id2, "root", time.Now().Unix())
+	a.AddEntityToFragment(id2, "root", time.Now().Unix(), time.Now().Unix())
 
 	a.HandleEndOfMonth(ctx, month2)
 	segment2 := a.GetStartTimestamp()
 
-	a.AddEntityToFragment(id3, "root", time.Now().Unix())
+	a.AddEntityToFragment(id3, "root", time.Now().Unix(), time.Now().Unix())
 
 	err = a.saveCurrentSegmentToStorage(ctx, false)
 	if err != nil {
@@ -2659,7 +2630,7 @@ func TestActivityLog_SaveAfterDisable(t *testing.T) {
 		DefaultReportMonths: 12,
 	})
 
-	a.AddEntityToFragment("1111-1111-11111111", "root", time.Now().Unix())
+	a.AddEntityToFragment("1111-1111-11111111", "root", time.Now().Unix(), time.Now().Unix())
 	startTimestamp := a.GetStartTimestamp()
 
 	// This kicks off an asynchronous delete
@@ -4286,12 +4257,11 @@ func TestActivityLog_handleEntitySegment(t *testing.T) {
 	}
 	a := &ActivityLog{}
 	t.Run("older segment empty", func(t *testing.T) {
-		hll := hyperloglog.New()
 		byNS := make(summaryByNamespace)
 		byMonth := make(summaryByMonth)
 		segmentTime := addMonths(-3)
 		// our 3 clients were seen 3 months ago, with no other clients having been seen
-		err := a.handleEntitySegment(&activity.EntityActivityLog{Clients: currentSegmentClients}, segmentTime, hll, pqOptions{
+		err := a.handleEntitySegment(&activity.EntityActivityLog{Clients: currentSegmentClients}, segmentTime, pqOptions{
 			byNamespace:       byNS,
 			byMonth:           byMonth,
 			endTime:           timeutil.EndOfMonth(segmentTime),
@@ -4306,11 +4276,8 @@ func TestActivityLog_handleEntitySegment(t *testing.T) {
 		require.Equal(t, byMonth.firstSeen(t, currentSegmentClients[0]), segmentTime)
 		require.Equal(t, byMonth.firstSeen(t, currentSegmentClients[1]), segmentTime)
 		require.Equal(t, byMonth.firstSeen(t, currentSegmentClients[2]), segmentTime)
-		// and all 3 should be in the hyperloglog
-		require.Equal(t, hll.Estimate(), uint64(3))
 	})
 	t.Run("older segment clients seen earlier", func(t *testing.T) {
-		hll := hyperloglog.New()
 		byNS := make(summaryByNamespace)
 		byNS.add(currentSegmentClients[0])
 		byNS.add(currentSegmentClients[1])
@@ -4325,7 +4292,7 @@ func TestActivityLog_handleEntitySegment(t *testing.T) {
 		byMonth.add(currentSegmentClients[1], seenBefore1Month)
 
 		// handle clients 0, 1, and 2 as having been seen 3 months ago
-		err := a.handleEntitySegment(&activity.EntityActivityLog{Clients: currentSegmentClients}, segmentTime, hll, pqOptions{
+		err := a.handleEntitySegment(&activity.EntityActivityLog{Clients: currentSegmentClients}, segmentTime, pqOptions{
 			byNamespace:       byNS,
 			byMonth:           byMonth,
 			endTime:           timeutil.EndOfMonth(segmentTime),
@@ -4339,11 +4306,8 @@ func TestActivityLog_handleEntitySegment(t *testing.T) {
 		require.Equal(t, byMonth.firstSeen(t, currentSegmentClients[0]), segmentTime)
 		require.Equal(t, byMonth.firstSeen(t, currentSegmentClients[1]), segmentTime)
 		require.Equal(t, byMonth.firstSeen(t, currentSegmentClients[2]), segmentTime)
-
-		require.Equal(t, hll.Estimate(), uint64(3))
 	})
 	t.Run("disjoint set of clients", func(t *testing.T) {
-		hll := hyperloglog.New()
 		byNS := make(summaryByNamespace)
 		byNS.add(currentSegmentClients[0])
 		byNS.add(currentSegmentClients[1])
@@ -4358,7 +4322,7 @@ func TestActivityLog_handleEntitySegment(t *testing.T) {
 		byMonth.add(currentSegmentClients[1], seenBefore1Month)
 
 		// handle client 2 as having been seen 3 months ago
-		err := a.handleEntitySegment(&activity.EntityActivityLog{Clients: currentSegmentClients[2:]}, segmentTime, hll, pqOptions{
+		err := a.handleEntitySegment(&activity.EntityActivityLog{Clients: currentSegmentClients[2:]}, segmentTime, pqOptions{
 			byNamespace:       byNS,
 			byMonth:           byMonth,
 			endTime:           timeutil.EndOfMonth(segmentTime),
@@ -4372,11 +4336,8 @@ func TestActivityLog_handleEntitySegment(t *testing.T) {
 		require.Equal(t, byMonth.firstSeen(t, currentSegmentClients[0]), seenBefore2Months)
 		require.Equal(t, byMonth.firstSeen(t, currentSegmentClients[1]), seenBefore1Month)
 		require.Equal(t, byMonth.firstSeen(t, currentSegmentClients[2]), segmentTime)
-		// the hyperloglog will have 1 element, because there was only 1 client in the segment
-		require.Equal(t, hll.Estimate(), uint64(1))
 	})
 	t.Run("new clients same namespaces", func(t *testing.T) {
-		hll := hyperloglog.New()
 		byNS := make(summaryByNamespace)
 		byNS.add(currentSegmentClients[0])
 		byNS.add(currentSegmentClients[1])
@@ -4404,7 +4365,7 @@ func TestActivityLog_handleEntitySegment(t *testing.T) {
 			})
 		}
 		// 3 new clients have been seen 3 months ago
-		err := a.handleEntitySegment(&activity.EntityActivityLog{Clients: moreSegmentClients}, segmentTime, hll, pqOptions{
+		err := a.handleEntitySegment(&activity.EntityActivityLog{Clients: moreSegmentClients}, segmentTime, pqOptions{
 			byNamespace:       byNS,
 			byMonth:           byMonth,
 			endTime:           timeutil.EndOfMonth(segmentTime),
@@ -4424,8 +4385,6 @@ func TestActivityLog_handleEntitySegment(t *testing.T) {
 		require.Equal(t, byMonth.firstSeen(t, moreSegmentClients[0]), segmentTime)
 		require.Equal(t, byMonth.firstSeen(t, moreSegmentClients[1]), segmentTime)
 		require.Equal(t, byMonth.firstSeen(t, moreSegmentClients[2]), segmentTime)
-		// the hyperloglog will have 3 elements, because there were the 3 new elements in moreSegmentClients seen
-		require.Equal(t, hll.Estimate(), uint64(3))
 	})
 }
 
@@ -4682,7 +4641,7 @@ func TestActivityLog_HandleEndOfMonth(t *testing.T) {
 	}()
 	core.activityLog.SetEnable(true)
 	core.activityLog.SetStartTimestamp(now.Unix())
-	core.activityLog.AddClientToFragment("id", "ns", now.Unix(), false, "mount")
+	core.activityLog.AddClientToFragment("id", "ns", now.Unix(), false, "mount", now.Unix())
 
 	// wait for the end of month to be triggered
 	select {
@@ -4714,7 +4673,7 @@ func TestAddActivityToFragment(t *testing.T) {
 	mount := "mount"
 	ns := "root"
 	id := "id1"
-	a.AddActivityToFragment(id, ns, 0, entityActivityType, mount)
+	a.AddActivityToFragment(id, ns, 0, entityActivityType, mount, 0)
 
 	testCases := []struct {
 		name         string
@@ -4770,7 +4729,7 @@ func TestAddActivityToFragment(t *testing.T) {
 			numClientsBefore := len(a.fragment.Clients)
 			a.fragmentLock.RUnlock()
 
-			a.AddActivityToFragment(tc.id, ns, 0, tc.activityType, mount)
+			a.AddActivityToFragment(tc.id, ns, 0, tc.activityType, mount, 0)
 			a.fragmentLock.RLock()
 			defer a.fragmentLock.RUnlock()
 			numClientsAfter := len(a.fragment.Clients)
@@ -5052,12 +5011,12 @@ func TestActivityLog_partialMonthClientCountUsingWriteExport(t *testing.T) {
 	expectedCurrentMonthClients := expectedClients[1:]
 
 	type record struct {
-		ClientID      string `json:"client_id"`
-		NamespaceID   string `json:"namespace_id"`
-		Timestamp     string `json:"timestamp"`
-		NonEntity     bool   `json:"non_entity"`
-		MountAccessor string `json:"mount_accessor"`
-		ClientType    string `json:"client_type"`
+		ClientID          string `json:"client_id"`
+		NamespaceID       string `json:"namespace_id"`
+		TokenCreationTime string `json:"token_creation_time"`
+		NonEntity         bool   `json:"non_entity"`
+		MountAccessor     string `json:"mount_accessor"`
+		ClientType        string `json:"client_type"`
 	}
 
 	startOfMonth := timeutil.StartOfMonth(now)
@@ -5111,7 +5070,7 @@ func TestActivityLog_partialMonthClientCountUsingWriteExport(t *testing.T) {
 
 			// Compare expectedClients with actualClients
 			for i := range expectedCurrentMonthClients {
-				resultTimeStamp, err := time.Parse(time.RFC3339, results[i].Timestamp)
+				resultTimeStamp, err := time.Parse(time.RFC3339, results[i].TokenCreationTime)
 				require.NoError(t, err)
 				require.Equal(t, expectedCurrentMonthClients[i].ClientID, results[i].ClientID)
 				require.Equal(t, expectedCurrentMonthClients[i].NamespaceID, results[i].NamespaceID)

@@ -19,12 +19,6 @@ process. If the secret value is updated in Vault, the secret is updated in the d
 from Vault, it is deleted on the external system as well. This process is asynchronous and event-based. Vault propagates
 modifications into the proper destinations automatically in a handful of seconds.
 
-<Highlight title="Sync secrets with HCP Vault Secrets">
-
-Secrets sync is a Vault Enterprise feature. For information on secrets sync with [HCP Vault Secrets](/hcp/docs/vault-secrets), refer to the HashiCorp Cloud Platform documentation for [Vault Secrets integrations](/hcp/docs/vault-secrets/integrations).
-
-</Highlight>
-
 ## Activating the feature
 
 The secrets sync feature requires manual activation through a one-time trigger. If a sync-related endpoint is called prior to
@@ -35,11 +29,11 @@ Activating the feature can be done through one of several methods:
 
 1. Activation directly through the UI.
 
-1. Acitvation through the CLI:
-  
+1. Activation through the CLI:
+
   ```shell-session
   $ vault write -f sys/activation-flags/secrets-sync/activate
-  ``` 
+  ```
 
 1. Activation through a POST or PUT request:
 
@@ -258,7 +252,7 @@ for each destination type below:
 ### Endpoint security
 
 By default, Vault restricts the allowed IP addresses and port numbers used by the sync clients to safeguard against
-server-side request forgery (SSRF). All special purpose IPs defined at the IANA special-purpose registry for 
+server-side request forgery (SSRF). All special purpose IPs defined at the IANA special-purpose registry for
 [IPv4](https://www.iana.org/assignments/iana-ipv4-special-registry/iana-ipv4-special-registry.xhtml) and
 [IPv6](https://www.iana.org/assignments/iana-ipv6-special-registry/iana-ipv6-special-registry.xhtml) are blocked, while the only
 two allowed ports are 80 and 443.

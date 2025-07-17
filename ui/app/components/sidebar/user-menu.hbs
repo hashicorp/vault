@@ -11,7 +11,7 @@
   data-test-user-menu
   as |Dropdown|
 >
-  <Dropdown.Trigger data-test-user-menu-trigger>
+  <Dropdown.Trigger data-test-button="user-menu-trigger">
     <Hds::Button @isIconOnly={{true}} @size="large" @icon="user" @text="User menu" />
   </Dropdown.Trigger>
   <Dropdown.Content>
@@ -57,7 +57,7 @@
                 @onError={{(fn
                   (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
                 )}}
-                data-test-copy-button={{this.auth.currentToken}}
+                data-test-copy-button
               />
             </li>
             {{#if (is-before (now interval=1000) this.auth.tokenExpirationDate)}}

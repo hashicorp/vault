@@ -1,0 +1,31 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+{{#each-in @groups as |group fields|}}
+  <ToggleButton
+    @isOpen={{eq this.showGroup group}}
+    @openLabel={{concat "Hide " group}}
+    @closedLabel={{group}}
+    @onClick={{fn this.toggleGroup group}}
+    class="is-block"
+    data-test-button={{group}}
+  />
+  {{#if (eq this.showGroup group)}}
+    <div class="box is-marginless" data-test-group={{group}}>
+      {{#each fields as |fieldName|}}
+        {{#let (find-by "name" fieldName @model.allFields) as |attr|}}
+          <FormField
+            data-test-field
+            @attr={{attr}}
+            @model={{@model}}
+            @showHelpText={{false}}
+            @modelValidations={{@modelValidations}}
+          />
+        {{/let}}
+      {{/each}}
+
+    </div>
+  {{/if}}
+{{/each-in}}

@@ -11,6 +11,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { ldapRoleID } from 'vault/adapters/ldap/role';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (hooks) {
   setupRenderingTest(hooks);
@@ -132,12 +133,10 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
   test('it should validate form fields', async function (assert) {
     const renderAndAssert = async (fields) => {
       await this.renderComponent();
-      await click('[data-test-save]');
+      await click('[data-test-submit]');
 
       fields.forEach((field) => {
-        assert
-          .dom(`[data-test-field="${field}"] [data-test-inline-error-message]`)
-          .exists('Validation message renders');
+        assert.dom(GENERAL.validationErrorByAttr(field)).exists('Validation message renders');
       });
 
       assert
@@ -168,7 +167,7 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
     await fillIn('[data-test-input="dn"]', 'foo');
     await fillIn('[data-test-input="username"]', 'bar');
     await fillIn('[data-test-ttl-value="Rotation period"]', 5);
-    await click('[data-test-save]');
+    await click('[data-test-submit]');
 
     assert.ok(
       this.transitionCalledWith('roles.role.details', 'static', 'test-role'),
@@ -191,7 +190,7 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
     await fillIn('[data-test-input="dn"]', 'foo');
     await fillIn('[data-test-input="username"]', 'bar');
     await fillIn('[data-test-ttl-value="Rotation period"]', 30);
-    await click('[data-test-save]');
+    await click('[data-test-submit]');
 
     assert.ok(
       this.transitionCalledWith('roles.role.details', 'static', 'test-role'),

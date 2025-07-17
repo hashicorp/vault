@@ -5,29 +5,18 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import { hash } from 'rsvp';
+import { paginate } from 'core/utils/paginate-list';
 
-import type PaginationService from 'vault/services/pagination';
-import type SyncDestinationModel from 'vault/vault/models/sync/destination';
-import type SyncAssociationModel from 'vault/vault/models/sync/association';
+import type ApiService from 'vault/services/api';
+import type { DestinationRouteModel } from '../destination';
 import type Controller from '@ember/controller';
 
-interface SyncDestinationSecretsRouteParams {
+type Params = {
   page?: string;
-}
-
-interface SyncDestinationSecretsRouteModel {
-  destination: SyncDestinationModel;
-  associations: SyncAssociationModel[];
-}
-
-interface SyncDestinationSecretsController extends Controller {
-  model: SyncDestinationSecretsRouteModel;
-  page: number | undefined;
-}
+};
 
 export default class SyncDestinationSecretsRoute extends Route {
-  @service declare readonly pagination: PaginationService;
+  @service declare readonly api: ApiService;
 
   queryParams = {
     page: {
@@ -35,20 +24,31 @@ export default class SyncDestinationSecretsRoute extends Route {
     },
   };
 
-  model(params: SyncDestinationSecretsRouteParams) {
-    const destination = this.modelFor('secrets.destinations.destination') as SyncDestinationModel;
-    return hash({
+  async model({ page }: Params) {
+    const { destination, capabilities } = this.modelFor(
+      'secrets.destinations.destination'
+    ) as DestinationRouteModel;
+
+    const {
+      associatedSecrets = {},
+      storeName,
+      storeType,
+    } = await this.api.sys.systemReadSyncDestinationsTypeNameAssociations(destination.name, destination.type);
+
+    const associations = Object.values(associatedSecrets).map((association) => ({
+      destinationName: storeName,
+      destinationType: storeType,
+      ...association,
+    }));
+
+    return {
       destination,
-      associations: this.pagination.lazyPaginatedQuery('sync/association', {
-        responsePath: 'data.keys',
-        page: Number(params.page) || 1,
-        destinationType: destination.type,
-        destinationName: destination.name,
-      }),
-    });
+      capabilities,
+      associations: paginate(associations, { page: Number(page) || 1 }),
+    };
   }
 
-  resetController(controller: SyncDestinationSecretsController, isExiting: boolean) {
+  resetController(controller: Controller, isExiting: boolean) {
     if (isExiting) {
       controller.set('page', undefined);
     }

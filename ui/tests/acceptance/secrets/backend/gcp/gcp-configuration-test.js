@@ -9,7 +9,7 @@ import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
 import { spy } from 'sinon';
 
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import enablePage from 'vault/tests/pages/settings/mount-secret-backend';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { runCmd } from 'vault/tests/helpers/commands';
@@ -38,7 +38,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
     this.uid = uuidv4();
     this.type = 'gcp';
     this.path = `GCP-${this.uid}`;
-    return authPage.login();
+    return login();
   });
 
   test('it should prompt configuration after mounting the GCP engine', async function (assert) {
@@ -108,7 +108,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
         await click(SES.configTab);
         await click(SES.configure);
         await fillInGcpConfig();
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
         assert.true(
           this.flashSuccessSpy.calledWith(`Successfully saved ${this.path}'s configuration.`),
           'Success flash message is rendered showing the GCP model configuration was saved.'
@@ -161,8 +161,8 @@ module('Acceptance | GCP | configuration', function (hooks) {
         });
 
         await click(GENERAL.textToggle);
-        await fillIn(GENERAL.textToggleTextarea, credentials);
-        await click(GENERAL.saveButton);
+        await fillIn(GENERAL.maskedInput, credentials);
+        await click(GENERAL.submitButton);
         // cleanup
         await runCmd(`delete sys/mounts/${this.path}`);
       });
@@ -187,10 +187,10 @@ module('Acceptance | GCP | configuration', function (hooks) {
           );
         });
 
-        await click(GENERAL.toggleGroup('More options'));
+        await click(GENERAL.button('More options'));
         await click(GENERAL.ttl.toggle('Config TTL'));
         await fillIn(GENERAL.ttl.input('Config TTL'), '10800');
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
         // cleanup
         await runCmd(`delete sys/mounts/${this.path}`);
       });
@@ -207,7 +207,7 @@ module('Acceptance | GCP | configuration', function (hooks) {
         await click(SES.configTab);
         await click(SES.configure);
         await fillInGcpConfig();
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
 
         assert
           .dom(GENERAL.messageError)
@@ -270,11 +270,11 @@ module('Acceptance | GCP | configuration', function (hooks) {
         await click(SES.configTab);
         await click(SES.configure);
         await fillInGcpConfig();
-        await click(GENERAL.saveButton); // save GCP credentials
+        await click(GENERAL.submitButton); // save GCP credentials
 
         await click(SES.configure); // navigate so you can edit that configuration
         await fillInGcpConfig(true);
-        await click(GENERAL.saveButton); // try and save wif fields
+        await click(GENERAL.submitButton); // try and save wif fields
         assert
           .dom(GENERAL.messageError)
           .hasText(

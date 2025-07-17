@@ -1,0 +1,127 @@
+---
+layout: docs
+page_title: Manage identities and authentication
+description: >-
+  Control client access to sensitive information with managed entities, identity
+  tokens, OIDC workflows, and WIF
+---
+
+# Manage identities and authentication
+
+@include '/why-use-vault/manage-identities-small.mdx'
+
+
+## Manage identities and entities
+
+Vault provides centralized identity management through the identity plugin so
+clients can use accounts with different identity providers to authenticate to
+Vault. The identity plugin ties authentication instances to a single,
+consolidated representation called an **entity**. Entities map to aliases for
+corresponding accounts with authentication providers and policies that authorize
+those entities to take action within Vault.
+
+
+<Tabs>
+<Tab heading="Key concepts + Overviews" group="overviews">
+
+- [Identities overview](/vault/docs/concepts/identity)
+- [Policies overview](/vault/docs/concepts/policies)
+- [Authentication overview](/vault/docs/concepts/auth)
+- [Clients and entities overview](/vault/docs/concepts/client-count)
+
+
+</Tab>
+<Tab heading="Guides" group="guides">
+
+- [Find and resolve duplicate Vault identities](/vault/docs/secrets/identity/deduplication)
+- [Use identity tokens](/vault/docs/secrets/identity/identity-token)
+- [Identity plugin overview](/vault/docs/secrets/identity)
+
+</Tab>
+<Tab heading="Tutorials" group="tutorials">
+
+- [Introduction to tokens](/vault/tutorials/get-started/introduction-tokens)
+- [Introduction to roles](/vault/tutorials/get-started/introduction-roles)
+- [Introduction to policies](/vault/tutorials/get-started/introduction-policies)
+- [Implement identity entities and groups](/vault/tutorials/auth-methods/identity)
+- [Generate tokens for machine authentication with AppRole](/vault/tutorials/auth-methods/approle)
+
+</Tab>
+<Tab heading="References" group="reference">
+
+- [Identity tokens API](/vault/api-docs/secret/identity/tokens)
+- [`vault policy` CLI commands](/vault/docs/commands/policy)
+- [`vault token` CLI commands](/vault/docs/commands/token)
+- [Authentication telemetry metrics](/vault/docs/internals/telemetry/metrics/authn)
+
+</Tab>
+</Tabs>
+
+
+## Use OIDC
+
+Use Vault as an OpenID Connect (OIDC) identity provider to let client
+applications that speak the OIDC protocol to leverage Vault as a source of
+identity.
+
+Vault generates OIDC-compliant ID tokens against internal roles that can
+configure authentication token claims with a templating system, token TTLs, and
+explicit mapping to specify signing keys.
+
+<Tabs>
+<Tab heading="Key concepts + Overviews" group="overviews">
+
+- [Using Vault as an OIDC provider](/vault/docs/concepts/oidc-provider)
+
+</Tab>
+<Tab heading="Guides" group="guides">
+
+- [Setup an OIDC identity provider](/vault/docs/secrets/identity/oidc-provider)
+- [Use JWT/OIDC authentication](/vault/docs/auth/jwt)
+- [Supported OIDC providers](/vault/docs/auth/jwt/oidc-providers)
+- [Use Kubernetes for OIDC authentication](/vault/docs/auth/jwt/oidc-providers/kubernetes)
+
+</Tab>
+<Tab heading="Tutorials" group="tutorials">
+
+- [Confirm client identity with an OIDC identity provider](/vault/tutorials/auth-methods/oidc-identity-provider)
+- [OIDC authentication with Okta](/vault/tutorials/manage-hcp-vault-dedicated/vault-oidc-okta)
+- [Secure workflows with OIDC authentication](/vault/tutorials/auth-methods/oidc-auth)
+- [Use Vault as an OIDC provider for single sign-on](/nomad/tutorials/single-sign-on/sso-oidc-vault)
+
+</Tab>
+<Tab heading="References" group="reference">
+
+- [JWT/OIDC authentication API](/vault/api-docs/auth/jwt)
+- [OIDC provider API](/vault/api-docs/secret/identity/oidc-provider)
+
+</Tab>
+</Tabs>
+
+
+## Use WIF
+
+Use Vault with workload identity federation (WIF) to let your applications
+authenticate to cloud services securely with short-lived tokens obtained from a
+trusted identity provider (IdP). 
+
+When you configure a WIF-enabled plugin and establish a trusted relationship
+between Vault and the associated  provider like AWS, Azure, and Google Cloud
+Platform, Vault can exchange internal identity tokens for short-lived STS
+credentials so the associated plugin can operate without configuring explicit
+access to sensitive IAM security credentials.
+
+<Tabs>
+<Tab heading="Guides" group="guides">
+
+- [Workload Identity Federation with AWS](/vault/docs/secrets/aws#plugin-workload-identity-federation-wif)
+- [Workload Identity Federation with Azure](/vault/docs/secrets/azure#plugin-workload-identity-federation-wif)
+- [Workload Identity Federation with GCP](/vault/docs/secrets/gcp#plugin-workload-identity-federation-wif)
+
+</Tab>
+<Tab heading="Tutorials" group="tutorials">
+
+- [Manage federated workload identities with AWS IAM and Vault Enterprise](/vault/tutorials/enterprise/plugin-workoad-identity-federation)
+
+</Tab>
+</Tabs>

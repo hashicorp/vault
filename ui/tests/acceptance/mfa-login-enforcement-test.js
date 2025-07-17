@@ -6,9 +6,10 @@
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, currentRouteName, fillIn, visit, waitFor } from '@ember/test-helpers';
-import authPage from 'vault/tests/pages/auth';
+import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import mfaConfigHandlers from 'vault/mirage/handlers/mfa-config';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Acceptance | mfa-login-enforcement', function (hooks) {
   setupApplicationTest(hooks);
@@ -16,7 +17,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
 
   hooks.beforeEach(function () {
     mfaConfigHandlers(this.server);
-    return authPage.login();
+    return login();
   });
 
   test('it should send the correct data when creating an enforcement', async function (assert) {
@@ -34,7 +35,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
 
     await visit('/ui/vault/access');
     await click('[data-test-sidebar-nav-link="Multi-Factor Authentication"]');
-    await click('[data-test-tab="enforcements"]');
+    await click(GENERAL.tab('enforcements'));
     await click('[data-test-enforcement-create]');
     // Fill out form
     await fillIn('[data-test-mlef-input="name"]', 'salad-college-setting');
@@ -48,7 +49,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
   test('it should create login enforcement', async function (assert) {
     await visit('/ui/vault/access');
     await click('[data-test-sidebar-nav-link="Multi-Factor Authentication"]');
-    await click('[data-test-tab="enforcements"]');
+    await click(GENERAL.tab('enforcements'));
     await click('[data-test-enforcement-create]');
 
     assert.dom('[data-test-mleh-title]').hasText('New enforcement', 'Title renders');
@@ -87,7 +88,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
 
   test('it should list login enforcements', async function (assert) {
     await visit('/vault/access/mfa/enforcements');
-    assert.dom('[data-test-tab="enforcements"]').hasClass('active', 'Enforcements tab is active');
+    assert.dom(GENERAL.tab('enforcements')).hasClass('active', 'Enforcements tab is active');
     assert.dom('.toolbar-link').exists({ count: 1 }, 'Correct number of toolbar links render');
     assert
       .dom('[data-test-enforcement-create]')
@@ -109,7 +110,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
       .hasClass('hds-icon-lock', 'Lock icon renders for list item');
     assert.dom(`[data-test-list-item-title="${item.name}"]`).hasText(item.name, 'Enforcement name renders');
 
-    await click('[data-test-popup-menu-trigger]');
+    await click(GENERAL.menuTrigger);
     await click('[data-test-list-item-link="details"]');
     assert.strictEqual(
       currentRouteName(),
@@ -117,7 +118,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
       'Details more menu action transitions to enforcement route'
     );
     await click('.hds-breadcrumb a');
-    await click('[data-test-popup-menu-trigger]');
+    await click(GENERAL.menuTrigger);
     await click('[data-test-list-item-link="edit"]');
     assert.strictEqual(
       currentRouteName(),
@@ -133,7 +134,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     // heading
     assert.dom('h1').includesText(enforcement.name, 'Name renders in title');
     assert.dom('h1 svg').hasClass('hds-icon-lock', 'Lock icon renders in title');
-    assert.dom('[data-test-tab="targets"]').hasClass('active', 'Targets tab is active by default');
+    assert.dom(GENERAL.tab('targets')).hasClass('active', 'Targets tab is active by default');
     await waitFor('[data-test-target]', { timeout: 5000 });
     assert.dom('[data-test-target]').exists({ count: 4 }, 'Targets render in list');
     // targets tab
@@ -165,8 +166,8 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
       }
     }
     // methods tab
-    await click('[data-test-tab="methods"]');
-    assert.dom('[data-test-tab="methods"]').hasClass('active', 'Methods tab is active');
+    await click(GENERAL.tab('methods'));
+    assert.dom(GENERAL.tab('methods')).hasClass('active', 'Methods tab is active');
     const method = this.owner.lookup('service:store').peekRecord('mfa-method', enforcement.mfa_method_ids[0]);
     assert
       .dom(`[data-test-mfa-method-list-item="${method.id}"]`)
@@ -174,7 +175,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
         `${method.name} ${method.id} Namespace: ${method.namespace_path}`,
         'Method list item renders'
       );
-    await click('[data-test-popup-menu-trigger]');
+    await click(GENERAL.menuTrigger);
     assert
       .dom(`[data-test-mfa-method-menu-link="details"]`)
       .hasAttribute('href', `/ui/vault/access/mfa/methods/${method.id}`, `Details link renders for method`);
@@ -190,9 +191,9 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
         'Toolbar edit action has link to edit route'
       );
     await click('[data-test-enforcement-delete]');
-    assert.dom('[data-test-confirm-button]').isDisabled('Delete button disabled with no confirmation');
+    assert.dom(GENERAL.confirmButton).isDisabled('Delete button disabled with no confirmation');
     await fillIn('[data-test-confirmation-modal-input]', enforcement.name);
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmButton);
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.mfa.enforcements.index',
@@ -203,7 +204,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
   test('it should edit login enforcement', async function (assert) {
     await visit('/vault/access/mfa/enforcements');
     const enforcement = this.server.db.mfaLoginEnforcements.where({})[0];
-    await click('[data-test-popup-menu-trigger]');
+    await click(GENERAL.menuTrigger);
     await click('[data-test-list-item-link="edit"]');
 
     assert.dom('h1').hasText('Update enforcement', 'Title renders');

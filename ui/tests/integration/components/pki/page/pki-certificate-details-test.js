@@ -9,6 +9,7 @@ import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
 
 module('Integration | Component | pki | Page::PkiCertificateDetails', function (hooks) {
@@ -91,9 +92,9 @@ module('Integration | Component | pki | Page::PkiCertificateDetails', function (
       .dom('[data-test-component="info-table-row"]')
       .exists({ count: 5 }, 'Correct number of fields render when certificate has not been revoked');
     assert
-      .dom('[data-test-value-div="Certificate"] [data-test-certificate-card]')
+      .dom(`${GENERAL.infoRowValue('Certificate')} [data-test-certificate-card]`)
       .exists('Certificate card renders for certificate');
-    assert.dom('[data-test-value-div="Serial number"] code').exists('Serial number renders as monospace');
+    assert.dom(`${GENERAL.infoRowValue('Serial number')} code`).exists('Serial number renders as monospace');
 
     await click('[data-test-pki-cert-download-button]');
     const { serialNumber, certificate } = this.model;
@@ -102,10 +103,10 @@ module('Integration | Component | pki | Page::PkiCertificateDetails', function (
       'Download pem method called with correct args'
     );
 
-    await click('[data-test-confirm-action-trigger]');
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmTrigger);
+    await click(GENERAL.confirmButton);
 
-    assert.dom('[data-test-value-div="Revocation time"]').exists('Revocation time is displayed');
+    assert.dom(GENERAL.infoRowValue('Revocation time')).exists('Revocation time is displayed');
   });
 
   test('it should render actions and fields for generated cert', async function (assert) {
@@ -132,17 +133,17 @@ module('Integration | Component | pki | Page::PkiCertificateDetails', function (
       .dom('[data-test-component="info-table-row"]')
       .exists({ count: 9 }, 'Correct number of fields render when certificate has not been revoked');
     assert
-      .dom('[data-test-value-div="Certificate"] [data-test-certificate-card]')
+      .dom(`${GENERAL.infoRowValue('Certificate')} [data-test-certificate-card]`)
       .exists('Certificate card renders for certificate');
-    assert.dom('[data-test-value-div="Serial number"] code').exists('Serial number renders as monospace');
+    assert.dom(`${GENERAL.infoRowValue('Serial number')} code`).exists('Serial number renders as monospace');
     assert
-      .dom('[data-test-value-div="CA Chain"] [data-test-certificate-card]')
+      .dom(`${GENERAL.infoRowValue('CA Chain')} [data-test-certificate-card]`)
       .exists('Certificate card renders for CA Chain');
     assert
-      .dom('[data-test-value-div="Issuing CA"] [data-test-certificate-card]')
+      .dom(`${GENERAL.infoRowValue('Issuing CA')} [data-test-certificate-card]`)
       .exists('Certificate card renders for Issuing CA');
     assert
-      .dom('[data-test-value-div="Private key"] [data-test-certificate-card]')
+      .dom(`${GENERAL.infoRowValue('Private key')} [data-test-certificate-card]`)
       .exists('Certificate card renders for private key');
 
     await click('[data-test-pki-cert-download-button]');
@@ -152,10 +153,10 @@ module('Integration | Component | pki | Page::PkiCertificateDetails', function (
       'Download pem method called with correct args'
     );
 
-    await click('[data-test-confirm-action-trigger]');
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmTrigger);
+    await click(GENERAL.confirmButton);
 
-    assert.dom('[data-test-value-div="Revocation time"]').exists('Revocation time is displayed');
+    assert.dom(GENERAL.infoRowValue('Revocation time')).exists('Revocation time is displayed');
   });
 
   test('it should render back button', async function (assert) {
@@ -184,7 +185,7 @@ module('Integration | Component | pki | Page::PkiCertificateDetails', function (
     await render(hbs`<Page::PkiCertificateDetails @model={{this.model}} @onRevoke={{this.revoked}} />`, {
       owner: this.engine,
     });
-    await click('[data-test-confirm-action-trigger]');
-    await click('[data-test-confirm-button]');
+    await click(GENERAL.confirmTrigger);
+    await click(GENERAL.confirmButton);
   });
 });

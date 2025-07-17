@@ -1,0 +1,86 @@
+---
+layout: docs
+page_title: Run the Vault Secrets Operator on OpenShift
+description: >-
+  Install the Vault Secrets Operator on OpenShift clusters via the embedded OperatorHub or the Helm chart.
+---
+
+# Run the Vault Secrets Operator on OpenShift
+
+The Vault Secrets Operator may be installed on OpenShift clusters via the embedded OperatorHub or the Helm chart. OpenShift versions 4.12 and later are supported.
+
+## OperatorHub
+
+The Vault Secrets Operator is certified by Red Hat and therefore included in the [OperatorHub section](https://access.redhat.com/documentation/en-us/openshift_container_platform/4.2/html/operators/olm-understanding-operatorhub) of an OpenShift cluster's web console.
+
+Navigate to the OperatorHub page of your OpenShift cluster and search for `Vault Secrets Operator`, then follow the instructions to install.
+
+### Options
+
+Set the following environment variables [on the subscription](https://access.redhat.com/solutions/5761251) to customize the Kubernetes Operator behavior.
+
+- [VSO_CLIENT_CACHE_NUM_LOCKS](/vault/docs/platform/k8s/vso/helm#v-controller-manager-clientcache-numlocks)
+- [VSO_CLIENT_CACHE_PERSISTENCE_MODEL](/vault/docs/platform/k8s/vso/helm#v-controller-manager-clientcache-persistencemodel)
+- [VSO_CLIENT_CACHE_SIZE](/vault/docs/platform/k8s/vso/helm#v-controller-manager-clientcache-cachesize)
+- [VSO_KUBE_CLIENT_QPS](/vault/docs/platform/k8s/vso/helm#v-controller-manager-kubeclient-qps)
+- [VSO_KUBE_CLIENT_BURST](/vault/docs/platform/k8s/vso/helm#v-controller-manager-kubeclient-burst)
+- [VSO_MAX_CONCURRENT_RECONCILES](/vault/docs/platform/k8s/vso/helm#v-controller-manager-maxconcurrentreconciles)
+- [VSO_GLOBAL_TRANSFORMATION_OPTIONS](/vault/docs/platform/k8s/vso/helm#v-controller-manager-globaltransformationoptions)
+- [VSO_GLOBAL_VAULT_AUTH_OPTIONS](/vault/docs/platform/k8s/vso/helm#v-controller-manager-globalvaultauthoptions)
+
+## Helm chart
+
+The Vault Secrets Operator may also be installed in OpenShift using the Helm chart. (See [Helm chart][helm].) The examples below show example [values.yaml files](https://helm.sh/docs/chart_template_guide/values_files/) for each configuration, which would be used with `helm install` as below:
+
+```shell-session
+$ helm install vault-secrets-operator hashicorp/vault-secrets-operator \
+  --create-namespace \
+  --namespace vault-secrets-operator \
+  --version 0.10.0 \
+  --values values.yaml
+```
+
+For OpenShift, increasing the memory [requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/) has proven necessary in some cases, so those settings are included in the examples below.
+
+### Default images
+
+These values would use the [default operator image](/vault/docs/platform/k8s/vso/helm#v-controller-manager-image) from HashiCorp's [Docker Hub repository][dockerhub].
+
+```yaml
+controller:
+  manager:
+    resources:
+      limits:
+        memory: 256Mi
+      requests:
+        memory: 128Mi
+```
+
+### UBI-based images certified by Red Hat
+
+These values would use [UBI-based](https://developers.redhat.com/products/rhel/ubi) images from the [Red Hat's certified container registry](https://catalog.redhat.com/software/containers/hashicorp/vault-secrets-operator/64dd558c892694d397c4bb06). Authentication may be required.
+
+```yaml
+controller:
+  kubeRbacProxy:
+    image:
+      repository: registry.redhat.io/openshift4/ose-kube-rbac-proxy
+      tag: v4.13.0
+  manager:
+    image:
+      repository: registry.connect.redhat.com/hashicorp/vault-secrets-operator
+      tag: 0.10.0-ubi
+    resources:
+      limits:
+        memory: 256Mi
+      requests:
+        memory: 128Mi
+```
+
+<Tip>
+
+UBI-based Vault Secrets Operator images are also published to HashiCorp's [DockerHub][dockerhub] and [Amazon ECR](https://gallery.ecr.aws/hashicorp/vault-secrets-operator) repositories.
+
+</Tip>
+
+[dockerhub]: https://hub.docker.com/r/hashicorp/vault-secrets-operator

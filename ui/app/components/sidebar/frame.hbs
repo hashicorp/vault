@@ -25,6 +25,7 @@
               @text="Console toggle"
               data-test-console-toggle
               {{on "click" (fn (mut this.console.isOpen) (not this.console.isOpen))}}
+              {{on "click" this.trackReplToggle}}
             />
             <Sidebar::UserMenu />
           </:actions>
@@ -38,10 +39,7 @@
 
       <:footer>
         {{#if (has-feature "Namespaces")}}
-          <NamespacePicker
-            @namespace={{this.clusterController.namespaceQueryParam}}
-            class="hds-side-nav-hide-when-minimized"
-          />
+          <NamespacePicker class="hds-side-nav-hide-when-minimized" />
         {{/if}}
       </:footer>
     </Hds::SideNav>

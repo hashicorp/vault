@@ -6,6 +6,8 @@
 import { module, test } from 'qunit';
 import { setupTest } from 'ember-qunit';
 import sinon from 'sinon';
+import config from 'vault/config/environment';
+import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
 
 module('Unit | Service | api', function (hooks) {
   setupTest(hooks);
@@ -110,14 +112,43 @@ module('Unit | Service | api', function (hooks) {
     );
   });
 
+  test('it should normalize request body keys to snake_case', async function (assert) {
+    const req = {
+      testProp: 'value',
+      testObj: {
+        camelCaseKey: 'value',
+      },
+      testArr: [{ arrObj: 'value' }],
+    };
+
+    const {
+      init: { body },
+    } = await this.apiService.normalizeRequestBodyKeys({ init: { body: JSON.stringify(req) } });
+
+    const json = JSON.parse(body);
+    assert.strictEqual(json.test_prop, 'value', 'Top-level key is converted to snake_case');
+    assert.strictEqual(json.test_obj.camel_case_key, 'value', 'Nested object key is converted to snake_case');
+    assert.strictEqual(
+      json.test_arr[0].arr_obj,
+      'value',
+      'Nested array object key is converted to snake_case'
+    );
+  });
+
   test('it should show warnings', async function (assert) {
-    const warnings = ['warning1', 'warning2'];
-    const response = new Response(JSON.stringify({ warnings }));
+    const warnings = JSON.stringify({ warnings: ['warning1', 'warning2'] });
+    const response = new Response(warnings, { headers: { 'Content-Length': warnings.length } });
 
     await this.apiService.showWarnings({ response });
 
-    assert.true(this.info.firstCall.calledWith(warnings[0]), 'First warning message is shown');
-    assert.true(this.info.secondCall.calledWith(warnings[1]), 'Second warning message is shown');
+    assert.true(this.info.firstCall.calledWith('warning1'), 'First warning message is shown');
+    assert.true(this.info.secondCall.calledWith('warning2'), 'Second warning message is shown');
+  });
+
+  test('it should not attempt to set warnings for empty response', async function (assert) {
+    const response = new Response();
+    await this.apiService.showWarnings({ response });
+    assert.true(this.info.notCalled, 'No warning messages are shown');
   });
 
   test('it should delete control group token', async function (assert) {
@@ -128,22 +159,6 @@ module('Unit | Service | api', function (hooks) {
       this.deleteControlGroupToken.calledWith(this.wrapInfo.accessor),
       'Control group token is deleted'
     );
-  });
-
-  test('it should format error response', async function (assert) {
-    const e = { data: { error: 'Something went wrong' } };
-    const response = new Response(JSON.stringify(e), { status: 400 });
-
-    const errorResponse = await this.apiService.formatErrorResponse({ response, url: this.url });
-    const error = await errorResponse.json();
-    const expectedError = {
-      ...e,
-      httpStatus: 400,
-      path: this.url,
-      errors: ['Something went wrong'],
-    };
-
-    assert.deepEqual(error, expectedError, 'Error is reformated and returned');
   });
 
   test('it should build headers', async function (assert) {
@@ -176,5 +191,72 @@ module('Unit | Service | api', function (hooks) {
       },
       'All supported headers are set'
     );
+  });
+
+  test('it should map list response to array', async function (assert) {
+    const response = {
+      keyInfo: {
+        key1: { title: 'Title 1' },
+        key2: { title: 'Title 2' },
+      },
+      keys: ['key1', 'key2'],
+    };
+    const expectedResponse = [
+      { id: 'key1', title: 'Title 1' },
+      { id: 'key2', title: 'Title 2' },
+    ];
+    const listData = this.apiService.keyInfoToArray(response);
+    assert.deepEqual(listData, expectedResponse, 'List response is mapped to array');
+  });
+
+  module('Error parsing', function () {
+    test('it should correctly parse message from error', async function (assert) {
+      let e = await this.apiService.parseError(getErrorResponse());
+      assert.strictEqual(e.message, 'first error, second error', 'Builds message from errors');
+
+      e = await this.apiService.parseError(
+        getErrorResponse({ errors: [], message: 'there were some errors' })
+      );
+      assert.strictEqual(e.message, 'there were some errors', 'Returns message when errors are empty');
+
+      const error = new Error('some js type error');
+      e = await this.apiService.parseError(error);
+      assert.strictEqual(e.message, error.message, 'Returns message from generic Error');
+
+      e = await this.apiService.parseError('some random error');
+      assert.strictEqual(e.message, 'An error occurred, please try again', 'Returns default fallback');
+
+      const fallback = 'Everything is broken, sorry';
+      e = await this.apiService.parseError('some random error', fallback);
+      assert.strictEqual(e.message, fallback, 'Returns custom fallback');
+    });
+
+    test('it should return status', async function (assert) {
+      const { status } = await this.apiService.parseError(getErrorResponse());
+      assert.strictEqual(status, 404, 'Returns the status code from the response');
+    });
+
+    test('it should return path', async function (assert) {
+      const { path } = await this.apiService.parseError(getErrorResponse());
+      assert.strictEqual(path, '/v1/test/error/parsing', 'Returns the path from the request url');
+    });
+
+    test('it should return error response', async function (assert) {
+      const error = {
+        errors: ['something bad happened', 'something else bad too'],
+        message: 'all bad things occurred',
+      };
+      const { response } = await this.apiService.parseError(getErrorResponse(error));
+      assert.deepEqual(response, error, 'Returns the original error response');
+    });
+
+    test('it should log out error in development environment', async function (assert) {
+      const consoleStub = sinon.stub(console, 'log');
+      sinon.stub(config, 'environment').value('development');
+      const error = new Error('some js type error');
+      await this.apiService.parseError(error);
+      assert.true(consoleStub.calledWith('API Error:', error));
+      sinon.restore();
+    });
   });
 });

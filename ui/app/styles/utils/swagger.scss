@@ -1,3 +1,6 @@
+@use '../utils/size_variables';
+@use '../utils/color_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -9,8 +12,63 @@
 .swagger-ember .swagger-ui .wrapper {
   padding: 0;
 
+  .info a {
+    color: color_variables.$blue-700;
+  }
+
+  .title {
+    small {
+      background-color: color_variables.$ui-gray-800;
+    }
+    .version-stamp {
+      background-color: color_variables.$green-700;
+    }
+  }
+
+  .opblock-deprecated {
+    opacity: 1;
+
+    .opblock-summary-method {
+      background-color: color_variables.$ui-gray-700;
+    }
+  }
+
+  .opblock-get {
+    .opblock-summary-method {
+      background-color: color_variables.$blue-500;
+    }
+  }
+
+  .opblock-post,
+  .opblock-patch {
+    .opblock-summary-method {
+      background-color: color_variables.$green-700;
+    }
+  }
+
+  .opblock-delete {
+    .opblock-summary-method {
+      background-color: color_variables.$red-500;
+    }
+  }
+
   .opblock-summary-path-description-wrapper {
     width: min-content;
     flex-grow: 1;
+  }
+
+  .info {
+    margin: size_variables.$spacing-8 0;
+
+    .title {
+      font-size: size_variables.$size-5;
+    }
+  }
+
+  .copy-to-clipboard {
+    &:focus,
+    &:focus-visible {
+      width: size_variables.$size-4;
+    }
   }
 }

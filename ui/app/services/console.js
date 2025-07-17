@@ -34,8 +34,8 @@ export default class ConsoleService extends Service {
     return getOwner(this).lookup('adapter:console');
   }
 
-  shiftCommandIndex(keyCode, setCommandFn = () => {}) {
-    const [newIndex, newCommand] = shiftCommandIndex(keyCode, this.commandHistory, this.commandIndex);
+  shiftCommandIndex(key, setCommandFn = () => {}) {
+    const [newIndex, newCommand] = shiftCommandIndex(key, this.commandHistory, this.commandIndex);
     if (newCommand !== undefined && newIndex !== undefined) {
       this.commandIndex = newIndex;
       setCommandFn(newCommand);

@@ -12,15 +12,14 @@ import hbs from 'htmlbars-inline-precompile';
 import { duration } from 'core/helpers/format-duration';
 import { createSecretsEngine, generateBreadcrumbs } from 'vault/tests/helpers/ldap/ldap-helpers';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const selectors = {
   rotateAction: '[data-test-toolbar-rotate-action]',
-  confirmRotate: '[data-test-confirm-button]',
   configAction: '[data-test-toolbar-config-action]',
   configCta: '[data-test-config-cta]',
   mountConfig: '[data-test-mount-config]',
   pageError: '[data-test-page-error]',
-  fieldValue: (label) => `[data-test-value-div="${label}"]`,
 };
 
 module('Integration | Component | ldap | Page::Configuration', function (hooks) {
@@ -84,27 +83,27 @@ module('Integration | Component | ldap | Page::Configuration', function (hooks) 
 
     await this.renderComponent();
 
-    assert.dom(selectors.pageError).exists('Config fetch error is rendered');
+    assert.dom(GENERAL.pageError.error).exists('Config fetch error is rendered');
   });
 
   test('it should render display fields', async function (assert) {
     await this.renderComponent();
 
-    assert.dom(selectors.fieldValue('Administrator Distinguished Name')).hasText(this.config.binddn);
-    assert.dom(selectors.fieldValue('URL')).hasText(this.config.url);
-    assert.dom(selectors.fieldValue('Schema')).hasText(this.config.schema);
-    assert.dom(selectors.fieldValue('Password Policy')).hasText(this.config.password_policy);
-    assert.dom(selectors.fieldValue('Userdn')).hasText(this.config.userdn);
-    assert.dom(selectors.fieldValue('Userattr')).hasText(this.config.userattr);
+    assert.dom(GENERAL.infoRowValue('Administrator Distinguished Name')).hasText(this.config.binddn);
+    assert.dom(GENERAL.infoRowValue('URL')).hasText(this.config.url);
+    assert.dom(GENERAL.infoRowValue('Schema')).hasText(this.config.schema);
+    assert.dom(GENERAL.infoRowValue('Password Policy')).hasText(this.config.password_policy);
+    assert.dom(GENERAL.infoRowValue('Userdn')).hasText(this.config.userdn);
+    assert.dom(GENERAL.infoRowValue('Userattr')).hasText(this.config.userattr);
     assert
-      .dom(selectors.fieldValue('Connection Timeout'))
+      .dom(GENERAL.infoRowValue('Connection Timeout'))
       .hasText(duration([this.config.connection_timeout]));
-    assert.dom(selectors.fieldValue('Request Timeout')).hasText(duration([this.config.request_timeout]));
-    assert.dom(selectors.fieldValue('CA Certificate')).hasText(this.config.certificate);
-    assert.dom(selectors.fieldValue('Start TLS')).includesText('No');
-    assert.dom(selectors.fieldValue('Insecure TLS')).includesText('No');
-    assert.dom(selectors.fieldValue('Client TLS Certificate')).hasText(this.config.client_tls_cert);
-    assert.dom(selectors.fieldValue('Client TLS Key')).hasText(this.config.client_tls_key);
+    assert.dom(GENERAL.infoRowValue('Request Timeout')).hasText(duration([this.config.request_timeout]));
+    assert.dom(GENERAL.infoRowValue('CA Certificate')).hasText(this.config.certificate);
+    assert.dom(GENERAL.infoRowValue('Start TLS')).includesText('No');
+    assert.dom(GENERAL.infoRowValue('Insecure TLS')).includesText('No');
+    assert.dom(GENERAL.infoRowValue('Client TLS Certificate')).hasText(this.config.client_tls_cert);
+    assert.dom(GENERAL.infoRowValue('Client TLS Key')).hasText(this.config.client_tls_key);
   });
 
   test('it should rotate root password', async function (assert) {
@@ -116,6 +115,6 @@ module('Integration | Component | ldap | Page::Configuration', function (hooks) 
 
     await this.renderComponent();
     await click(selectors.rotateAction);
-    await click(selectors.confirmRotate);
+    await click(GENERAL.confirmButton);
   });
 });

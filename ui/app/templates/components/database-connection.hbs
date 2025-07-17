@@ -68,7 +68,7 @@
             @backend={{@model.backend}}
             @type="add"
             @queryParams={{hash initialKey=@model.name itemType="role"}}
-            data-test-secret-create={{true}}
+            data-test-add-role
           >
             Add role
           </ToolbarSecretLink>
@@ -140,7 +140,7 @@
                     @closedLabel={{group}}
                     @onClick={{fn (mut (get this prop))}}
                     class="is-block"
-                    data-test-toggle-group={{group}}
+                    data-test-button={{group}}
                   />
                   {{#if (get this prop)}}
                     <div class="box is-marginless">
@@ -181,7 +181,7 @@
             @icon={{if this.handleCreateConnection.isRunning "loading"}}
             @text="Create database"
             type="submit"
-            data-test-secret-save
+            data-test-submit
           />
           <Hds::Button
             @text="Cancel"
@@ -270,7 +270,7 @@
                   @closedLabel={{group}}
                   @onClick={{fn (mut (get this prop))}}
                   class="is-block"
-                  data-test-toggle-group={{group}}
+                  data-test-button={{group}}
                 />
                 {{#if (get this prop)}}
                   <div class="box is-marginless">
@@ -301,7 +301,7 @@
     <div class="field is-grouped is-grouped-split is-fullwidth box is-bottomless">
       <div class="field is-grouped">
         <Hds::ButtonSet>
-          <Hds::Button @text="Save" type="submit" data-test-secret-save />
+          <Hds::Button @text="Save" type="submit" data-test-submit />
           <Hds::Button
             @text="Cancel"
             @color="secondary"
@@ -347,6 +347,13 @@
           @isLink={{true}}
           @queryParam="role"
           @type={{attr.type}}
+        />
+      {{else if (eq attr.name "skip_static_role_rotation_import")}}
+        <InfoTableRow
+          @alwaysRender={{not (is-empty-value (get @model attr.name) hasDefault=defaultDisplay)}}
+          @defaultShown={{defaultDisplay}}
+          @label={{capitalize (or attr.options.label (humanize (dasherize attr.name)))}}
+          @value={{not (get @model attr.name)}}
         />
       {{else}}
         <InfoTableRow

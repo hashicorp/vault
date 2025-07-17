@@ -12,6 +12,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { mountAuthCmd, runCmd } from 'vault/tests/helpers/commands';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
+import { sanitizePath } from 'core/utils/sanitize-path';
 
 const { searchSelect } = GENERAL;
 
@@ -44,22 +45,20 @@ module('Acceptance | auth-methods list view', function (hooks) {
     // filter by auth type
     await clickTrigger('#filter-by-auth-type');
     await click(searchSelect.option(searchSelect.optionIndex(type)));
-    let rows = findAll('[data-test-auth-backend-link]');
-    const rowsUserpass = Array.from(rows).filter((row) => row.innerText.includes('userpass'));
-
+    let rows = findAll('.list-item-row');
+    const rowsUserpass = findAll(GENERAL.button('userpass'));
     assert.strictEqual(rows.length, rowsUserpass.length, 'all rows returned are userpass');
 
     // filter by name
     await clickTrigger('#filter-by-auth-name');
     await click(searchSelect.option());
     const selectedItem = find(`#filter-by-auth-name ${searchSelect.selectedOption()}`).innerText;
-    const singleRow = findAll('[data-test-auth-backend-link]');
-
+    const singleRow = findAll('.linked-block');
     assert.strictEqual(singleRow.length, 1, 'returns only one row');
     assert.dom(singleRow[0]).includesText(selectedItem, 'shows the filtered by auth name');
     // clear filter by name
     await click(`#filter-by-auth-name ${searchSelect.removeSelected}`);
-    rows = findAll('[data-test-auth-backend-link]');
+    rows = findAll('.linked-block');
     assert.true(rows.length > 1, 'filter has been removed');
 
     // cleanup
@@ -68,24 +67,28 @@ module('Acceptance | auth-methods list view', function (hooks) {
   });
 
   test('it should show all methods in list view', async function (assert) {
+    const authPayload = {
+      'token/': { accessor: 'auth_token_263b8b4e', type: 'token' },
+      'userpass/': { accessor: 'auth_userpass_87aca1f8', type: 'userpass' },
+    };
     this.server.get('/sys/internal/ui/mounts', () => ({
       data: {
-        auth: {
-          'token/': { accessor: 'auth_token_263b8b4e', type: 'token' },
-          'userpass/': { accessor: 'auth_userpass_87aca1f8', type: 'userpass' },
-        },
+        auth: authPayload,
       },
     }));
     await visit('/vault/access/');
-    assert.dom('[data-test-auth-backend-link]').exists({ count: 2 }, 'All auth methods appear in list view');
-
-    // verify overflow style exists on auth method name
-    assert.dom('[data-test-path]').hasClass('overflow-wrap', 'auth method name has overflow class applied');
+    for (const [key] of Object.entries(authPayload)) {
+      assert
+        .dom(GENERAL.linkedBlock(sanitizePath(key)))
+        .exists({ count: 1 }, `auth method ${key} appears in list view`);
+    }
     await visit('/vault/settings/auth/enable');
-    await click('[data-test-sidebar-nav-link="OIDC Provider"]');
+    await click(GENERAL.navLink('OIDC Provider'));
     await visit('/vault/access/');
-    assert
-      .dom('[data-test-auth-backend-link]')
-      .exists({ count: 2 }, 'All auth methods appear in list view after navigating back');
+    for (const [key] of Object.entries(authPayload)) {
+      assert
+        .dom(GENERAL.linkedBlock(sanitizePath(key)))
+        .exists({ count: 1 }, `auth method ${key} appears in list view after navigating from OIDC Provider`);
+    }
   });
 });

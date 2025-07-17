@@ -63,7 +63,7 @@
           @text="Apply filters"
           @icon={{if this.handleSearch.isRunning "loading" "filter"}}
           type="submit"
-          data-test-filter-submit
+          data-test-submit
         />
       </Hds::SegmentedGroup>
     </form>
@@ -75,8 +75,8 @@
       @color="secondary"
       class="toolbar-button"
       {{on "click" this.createMessage}}
-      data-test-button="create message"
       aria-label="create message"
+      data-test-button="Create message"
     />
   </:toolbarActions>
 </Messages::TabPageHeader>
@@ -92,19 +92,23 @@
       <div class="level is-mobile">
         <div class="level-left">
           <div>
-            <Hds::Text::Display @tag="h2" data-linked-block-title={{message.id}}>
+            <Hds::Text::Display @tag="h2">
               <Icon @name="message-circle" class="auto-width" aria-label="message" />
               {{message.title}}
             </Hds::Text::Display>
             <div class="has-top-margin-xs">
-              <Hds::Badge @text={{message.badgeDisplayText}} @color={{message.badgeColor}} data-test-badge={{message.id}} />
+              <Hds::Badge
+                @text={{message.badgeDisplayText}}
+                @color={{message.badgeColor}}
+                data-test-badge={{message.badgeDisplayText}}
+              />
               <Hds::Badge @text={{(capitalize message.type)}} data-test-badge={{message.type}} />
             </div>
           </div>
         </div>
         <div class="level-right is-flex is-paddingless is-marginless">
           <div class="level-item">
-            {{#if (or message.canEditCustomMessages message.canDeleteCustomMessages)}}
+            {{#if (has-capability @capabilities "update" "delete" pathKey="customMessages" params=message)}}
               <Hds::Dropdown @isInline={{true}} @listPosition="bottom-right" as |dd|>
                 <dd.ToggleIcon
                   @icon="more-horizontal"
@@ -112,13 +116,14 @@
                   @hasChevron={{false}}
                   data-test-popup-menu-trigger
                 />
-                {{#if message.canEditCustomMessages}}
+                {{#if (has-capability @capabilities "update" pathKey="customMessages" params=message)}}
                   <dd.Interactive @route="messages.message.edit" @model={{message.id}}>Edit</dd.Interactive>
                 {{/if}}
-                {{#if message.canDeleteCustomMessages}}
+                {{#if (has-capability @capabilities "delete" pathKey="customMessages" params=message)}}
                   <dd.Interactive
                     @color="critical"
                     {{on "click" (fn (mut this.messageToDelete) message)}}
+                    data-test-popup-menu="delete"
                   >Delete</dd.Interactive>
                 {{/if}}
               </Hds::Dropdown>
@@ -159,7 +164,7 @@
       Vault can only store up to 100 messages. To create a message, delete one of your messages to clear up space.
     </M.Body>
     <M.Footer as |F|>
-      <Hds::Button @text="Close" {{on "click" F.close}} data-test-modal-button="maximum-message-modal" />
+      <Hds::Button @text="Close" {{on "click" F.close}} data-test-button="close-maximum-message" />
     </M.Footer>
   </Hds::Modal>
 {{/if}}

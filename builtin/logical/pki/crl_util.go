@@ -1055,7 +1055,7 @@ func revokeCert(sc *storageContext, config *pki_backend.CrlConfig, cert *x509.Ce
 				"serial_number", colonSerial, "error", ignoreErr)
 			sc.GetUnifiedTransferStatus().forceRun()
 
-			resp.AddWarning(fmt.Sprintf("Failed to write unified revocation entry, will re-attempt later: %v", err))
+			resp.AddWarning(fmt.Sprintf("Failed to write unified revocation entry, will re-attempt later: %v", ignoreErr))
 			failedWritingUnifiedCRL = true
 		}
 	}

@@ -1,0 +1,140 @@
+---
+layout: docs
+page_title: Restore to single cluster
+description: >-
+  Recover and restore individual secrets from a saved storage snapshot to a
+  single cluster
+---
+
+# Recover to a non-replicated cluster
+
+@include 'alerts/enterprise-only.mdx'
+
+Recover and restore a discrete secret from an integrated storage snapshot to a
+single, non-replicated cluster.
+
+@include 'sysadmin/snapshots/disabled-mount-warning.mdx'
+
+
+
+## Before you start 
+
+@include 'sysadmin/snapshots/restore-requirements/load-snapshots.mdx'
+
+@include 'sysadmin/snapshots/restore-requirements/restore-secrets.mdx'
+
+
+
+## Step 1: Load a snapshot
+
+Load the snapshot holding the secret you want to recover.
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+<Tabs>
+
+<Tab heading="Manual snapshot" group="manual">
+
+@include 'sysadmin/snapshots/load-snapshot/cli/manual.mdx'
+
+</Tab>
+
+<Tab heading="Automated snapshot" group="auto">
+
+When you use Vault Enterprise with automated snapshots, you can load a snapshot
+from cloud storage directly from the URL.
+
+@include 'sysadmin/snapshots/load-snapshot/cli/auto.mdx'
+
+</Tab>
+
+</Tabs>
+
+@include 'sysadmin/snapshots/check-status/cli.mdx'
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+<Tabs>
+
+<Tab heading="Manual snapshot" group="manual">
+
+@include 'sysadmin/snapshots/load-snapshot/api/manual.mdx'
+
+</Tab>
+
+<Tab heading="Automated snapshot" group="auto">
+
+When you use Vault Enterprise with automated snapshots, you can load a snapshot
+from cloud storage directly from the URL.
+
+@include 'sysadmin/snapshots/load-snapshot/api/auto.mdx'
+
+</Tab>
+
+</Tabs>
+
+@include 'sysadmin/snapshots/check-status/api.mdx'
+
+</Tab>
+
+</Tabs>
+
+Status key | Description 
+---------- | -----------
+`loading`  | Vault is in the process of loading the snapshot and extracting data
+`ready`    | Loading completed successfully. You can read data from the snapshot.
+`error`    | Loading failed. Refer to the logs and `error` field for details.
+
+
+
+
+
+## Step 2: Recover the secret
+
+When the snapshot status is `ready`, you can recover the secret by specifying
+the snapshot ID and the secret path you want to read from.
+
+Vault reads the secret at the specified path from the snapshot and writes that
+data to the associated path in Vault to recover the secret. The associated
+plugin then creates or updates the data at the specified path in live cluster
+storage.
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+@include 'sysadmin/snapshots/secret-restore/recover/cli.mdx'
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+@include 'sysadmin/snapshots/secret-restore/recover/api.mdx'
+
+</Tab>
+
+</Tabs>
+
+
+
+## Step 3: Verify secret recovery
+
+<Tabs>
+
+<Tab heading="CLI" group="cli">
+
+@include 'sysadmin/snapshots/secret-restore/verify/cli.mdx'
+
+</Tab>
+
+<Tab heading="API" group="api">
+
+@include 'sysadmin/snapshots/secret-restore/verify/api.mdx'
+
+</Tab>
+
+</Tabs>
