@@ -71,22 +71,19 @@
 
     <D.Footer @hasDivider={{true}} class="is-flex-center">
       <Hds::ButtonSet class="is-fullwidth">
-        {{#if this.canRefreshNamespaces}}
-          <Hds::Button
-            @color="secondary"
-            @text="Refresh list"
-            @isFullWidth={{(not this.canManageNamespaces)}}
-            @icon="reload"
-            @size="small"
-            {{on "click" this.refreshList}}
-            data-test-refresh-namespaces
-          />
-        {{/if}}
+        <Hds::Button
+          @color="secondary"
+          @text="Refresh list"
+          @isFullWidth={{not this.canManageNamespaces}}
+          @icon="reload"
+          @size="small"
+          {{on "click" this.refreshList}}
+          data-test-refresh-namespaces
+        />
         {{#if this.canManageNamespaces}}
           <Hds::Button
             @color="tertiary"
             @text="Manage"
-            @isFullWidth={{(not this.canRefreshNamespaces)}}
             @icon="settings"
             @size="small"
             @route="vault.cluster.access.namespaces"
