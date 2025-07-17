@@ -400,6 +400,38 @@ have a time-to-live of 1 hour and automatically refresh when they expire.
 Please see the [API documentation](/vault/api-docs/auth/azure#configure)
 for more details on the fields associated with plugin WIF.
 
+## Known issues and workarounds
+
+### OIDC ID token error
+Users have reported an [issue](https://github.com/hashicorp/vault-plugin-auth-azure/issues/141#issuecomment-2757840078), where workloads running inside AKS with Azure authentication on Vault servers deployed to Azure VM throw following error:
+ 
+ **Error**
+ ```
+ oidc: id token issued by a different provider, expected "https://sts.windows.net/TenantID/" got "https://login.microsoftonline.com/TenantId/v2.0"
+ ```
+ 
+ 
+ The error occured because `vault-agent-init` container by default uses `auth-type` as `kubernetes`. 
+ 
+ Ref. https://developer.hashicorp.com/vault/docs/platform/k8s/injector/annotations#vault-hashicorp-com-auth-type
+ 
+ We need to explicitly define the azure auth method using annotation `vault.hashicorp.com/auth-type: 'azure'`. 
+ 
+ Also, we need to pass resource field which is mandatory, that is why we need to pass another annotation `vault.hashicorp.com/auth-config-resource: "https://management.azure.com/"`.
+ 
+ Ref. https://developer.hashicorp.com/vault/docs/platform/k8s/injector/annotations#vault-hashicorp-com-auth-config
+ https://developer.hashicorp.com/vault/docs/agent-and-proxy/autoauth/methods/azure#resource
+ 
+ _Annotations to use:-_
+ 
+ ```
+ ...
+   annotations:
+     vault.hashicorp.com/auth-type: 'azure'
+     vault.hashicorp.com/auth-config-resource: "https://management.azure.com/"
+ ...
+ ```
+
 ## API
 
 The Azure Auth Plugin has a full HTTP API. Please see the [API documentation](/vault/api-docs/auth/azure) for more details.

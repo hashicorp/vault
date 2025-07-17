@@ -8,8 +8,8 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import keys from 'core/utils/keys';
-import { buildWaiter } from '@ember/test-waiters';
 
+import type CapabilitiesService from 'vault/services/capabilities';
 import type Router from 'vault/router';
 import type NamespaceService from 'vault/services/namespace';
 import type AuthService from 'vault/vault/services/auth';
@@ -21,8 +21,6 @@ interface NamespaceOption {
   path: string;
   label: string;
 }
-
-const waiter = buildWaiter('namespace-picker');
 
 /**
  * @module NamespacePicker
@@ -36,6 +34,7 @@ const waiter = buildWaiter('namespace-picker');
  */
 export default class NamespacePicker extends Component {
   @service declare auth: AuthService;
+  @service declare capabilities: CapabilitiesService;
   @service declare namespace: NamespaceService;
   @service declare router: Router;
   @service declare store: Store;
@@ -44,7 +43,6 @@ export default class NamespacePicker extends Component {
   @tracked batchSize = 200;
 
   @tracked canManageNamespaces = false; // Show/hide manage namespaces button
-  @tracked canRefreshNamespaces = false; // Show/hide refresh list button
   @tracked errorLoadingNamespaces = '';
   @tracked hasNamespaces = false;
   @tracked searchInput = '';
@@ -54,6 +52,7 @@ export default class NamespacePicker extends Component {
   constructor(owner: unknown, args: Record<string, never>) {
     super(owner, args);
     this.loadOptions();
+    this.fetchManageCapability();
   }
 
   get allNamespaces(): NamespaceOption[] {
@@ -100,9 +99,11 @@ export default class NamespacePicker extends Component {
       }),
     ];
 
-    // Conditionally add the root namespace
-    if (this.auth?.authData?.userRootNamespace === '') {
-      options.unshift({ id: 'root', path: '', label: 'root' });
+    // Add the user's root namespace because `sys/internal/ui/namespaces` does not include it.
+    const userRootNamespace = this.auth.authData?.userRootNamespace;
+    if (!options?.find((o) => o.path === userRootNamespace)) {
+      const ns = userRootNamespace === '' ? 'root' : userRootNamespace;
+      options.unshift({ id: ns, path: userRootNamespace, label: ns });
     }
 
     // If there are no namespaces returned by the internal endpoint, add the current namespace
@@ -182,18 +183,12 @@ export default class NamespacePicker extends Component {
   }
 
   @action
-  async fetchListCapability(): Promise<void> {
-    const waiterToken = waiter.beginAsync();
-    try {
-      const namespacePermission = await this.store.findRecord('capabilities', 'sys/namespaces/');
-      this.canRefreshNamespaces = namespacePermission.get('canList');
-      this.canManageNamespaces = true;
-    } catch (error) {
-      // If the findRecord call fails, the user lacks permissions to refresh or manage namespaces.
-      this.canRefreshNamespaces = this.canManageNamespaces = false;
-    } finally {
-      waiter.endAsync(waiterToken);
-    }
+  async fetchManageCapability(): Promise<void> {
+    // The namespace picker options are from `sys/internal/ui/namespaces` which all users have permissions to request.
+    // The UI view for managing namespaces (i.e. CRUD actions) calls `sys/namespaces` and DOES require LIST permissions.
+    // This is the capability check to hide/show the button that navigates to that route.
+    const { canList } = await this.capabilities.fetchPathCapabilities('sys/namespaces');
+    this.canManageNamespaces = canList;
   }
 
   @action
@@ -210,8 +205,6 @@ export default class NamespacePicker extends Component {
     } catch (error) {
       this.errorLoadingNamespaces = errorMessage(error);
     }
-
-    await this.fetchListCapability();
   }
 
   @action

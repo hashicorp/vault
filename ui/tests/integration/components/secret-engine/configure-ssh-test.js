@@ -65,7 +65,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
     await fillIn(GENERAL.inputByAttr('public_key'), 'hello');
     await click(GENERAL.submitButton);
     assert
-      .dom(GENERAL.inlineError)
+      .dom(GENERAL.validationErrorByAttr('publicKey'))
       .hasText(
         'You must provide a Public and Private keys or leave both unset.',
         'Public key validation error renders.'
@@ -74,9 +74,9 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
     await click(GENERAL.inputByAttr('generate_signing_key'));
     await click(GENERAL.submitButton);
     assert
-      .dom(GENERAL.inlineError)
+      .dom(GENERAL.validationErrorByAttr('generateSigningKey'))
       .hasText(
-        'You must provide a Public and Private keys or leave both unset.',
+        'Provide a Public and Private key or set "Generate Signing Key" to true.',
         'Generate signing key validation message shows.'
       );
   });

@@ -90,6 +90,10 @@
 
 .overflow-wrap {
   overflow-wrap: break-word;
+
+  &.word-break {
+    word-break: break-word;
+  }
 }
 
 .truncate-second-line {

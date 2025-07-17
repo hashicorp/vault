@@ -199,7 +199,7 @@ module('Integration | Component | keymgmt/provider-edit', function (hooks) {
     assert.dom(`[${ts}-creds-title]`).doesNotExist('New credentials header hidden in create mode');
 
     await click(`[${ts}-submit]`);
-    assert.dom('[data-test-inline-error-message]').exists('Validation error messages shown');
+    assert.dom('[data-test-validation-error]').exists('Validation error messages shown');
 
     await fillIn('[data-test-input="provider"]', 'azurekeyvault');
     ['client_id', 'client_secret', 'tenant_id'].forEach((prop) => {

@@ -125,15 +125,12 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
   });
 
   test('it should have form vaildations', async function (assert) {
+    assert.expect(2);
+
     await this.renderComponent();
 
     await click(GENERAL.submitButton);
-    assert
-      .dom(CUSTOM_MESSAGES.input('title'))
-      .hasClass('has-error-border', 'show error border for title field');
-    assert
-      .dom(`${CUSTOM_MESSAGES.fieldValidation('title')} ${CUSTOM_MESSAGES.inlineErrorMessage}`)
-      .hasText('Title is required.');
+    assert.dom(`${GENERAL.validationErrorByAttr('title')}`).hasText('Title is required.');
     assert.dom(`${GENERAL.validationErrorByAttr('message')}`).hasText('Message is required.');
   });
 
