@@ -1783,6 +1783,7 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		Plugin:        entry.Type,
 		PluginVersion: pluginVersion,
 		Version:       entry.Options["version"],
+		IsLocal:       entry.Local,
 	})
 	if err != nil {
 		return nil, err
