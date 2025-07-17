@@ -15,7 +15,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/google/go-github/v68/github"
 	libgithub "github.com/google/go-github/v68/github"
 	"github.com/hashicorp/vault/tools/pipeline/internal/pkg/changed"
 	libgit "github.com/hashicorp/vault/tools/pipeline/internal/pkg/git"
@@ -295,20 +294,12 @@ func (r *CreateBackportReq) Run(
 			res = &CreateBackportRes{}
 		}
 
-		// Figure out the comment body. Worst case it ought to be whatever error
-		// we've returned.
-		var body string
-		if res.Error != nil {
-			body = res.Error.Error()
-		}
-
 		// Set any known errors on the response before we create a comment, as the
 		// error will be used in the comment body if present.
 		res.Error = errors.Join(res.Error, os.Chdir(initialDir))
-		body = res.CommentBody()
 		var err1 error
 		res.Comment, err1 = createPullRequestComment(
-			ctx, github, r.Owner, r.Repo, int(r.PullNumber), body,
+			ctx, github, r.Owner, r.Repo, int(r.PullNumber), res.CommentBody(),
 		)
 
 		// Set our finalized error on our response and also update our returned error
@@ -589,7 +580,7 @@ func (r *CreateBackportReq) backportRef(
 	ctx context.Context,
 	git *libgit.Client,
 	github *libgithub.Client,
-	pr *github.PullRequest,
+	pr *libgithub.PullRequest,
 	activeVersions map[string]*releases.Version,
 	changedFiles *ListChangedFilesRes,
 	ref string, // the full base ref of the branch we're backporting to
@@ -748,7 +739,7 @@ func (r *CreateBackportReq) backportRef(
 func (r *CreateBackportReq) backportCECommitWithPatch(
 	ctx context.Context,
 	git *libgit.Client,
-	pr *github.PullRequest,
+	pr *libgithub.PullRequest,
 	changedFiles *ListChangedFilesRes,
 	commitSHA string,
 ) error {
@@ -994,11 +985,7 @@ func (r *CreateBackportReq) hasEntPrefix(ref string) bool {
 // isEnt takes a branch reference and determines whether or not it refers to
 // an enterprise branch.
 func (r *CreateBackportReq) isEnt(ref string) bool {
-	if r.hasCEPrefix(ref) {
-		return false
-	}
-
-	return true
+	return !r.hasCEPrefix(ref)
 }
 
 // shouldSkipRef determines whether or we ought to backport to a given branch
