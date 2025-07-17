@@ -65,7 +65,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
     await fillIn(GENERAL.inputByAttr('public_key'), 'hello');
     await click(GENERAL.submitButton);
     assert
-      .dom(GENERAL.validationErrorByAttr('publicKey'))
+      .dom(GENERAL.validationErrorByAttr('public_key'))
       .hasText(
         'You must provide a Public and Private keys or leave both unset.',
         'Public key validation error renders.'
