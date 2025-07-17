@@ -74,7 +74,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
     await click(GENERAL.inputByAttr('generate_signing_key'));
     await click(GENERAL.submitButton);
     assert
-      .dom(GENERAL.validationErrorByAttr('generateSigningKey'))
+      .dom(GENERAL.validationErrorByAttr('generate_signing_key'))
       .hasText(
         'Provide a Public and Private key or set "Generate Signing Key" to true.',
         'Generate signing key validation message shows.'
