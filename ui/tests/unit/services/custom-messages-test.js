@@ -14,7 +14,7 @@ module('Unit | Service | custom-messages', function (hooks) {
   hooks.beforeEach(function () {
     const payload = {
       keys: ['1', '2'],
-      keyInfo: {
+      key_info: {
         1: {
           type: 'banner',
           message: encodeString('This is a banner message'),
@@ -41,7 +41,7 @@ module('Unit | Service | custom-messages', function (hooks) {
     this.customMessages = this.owner.lookup('service:custom-messages');
 
     this.messages = payload.keys.map((id) => {
-      const data = payload.keyInfo[id];
+      const data = payload.key_info[id];
       return {
         id,
         ...data,
