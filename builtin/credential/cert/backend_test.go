@@ -3076,6 +3076,62 @@ func TestOcspMaxRetriesUpdate(t *testing.T) {
 	require.Equal(t, 4, resp.Data["ocsp_max_retries"], "ocsp config didn't match expectations on legacy entry")
 }
 
+func TestRecoverPartialLoad(t *testing.T) {
+	storage := &logical.InmemStorage{}
+	ctx := context.Background()
+
+	lb, err := Factory(context.Background(), &logical.BackendConfig{
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: 300 * time.Second,
+			MaxLeaseTTLVal:     1800 * time.Second,
+		},
+		StorageView: storage,
+	})
+	require.NoError(t, err, "failed creating backend")
+
+	b, ok := lb.(*backend)
+	require.True(t, ok, "somehow the backend was the wrong type")
+
+	// There a single certificate in storage...
+	nonCACert, err := os.ReadFile(testCertPath1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry, err := logical.StorageEntryJSON("cert/cert_a", CertEntry{
+		Name:        "cert_a",
+		Certificate: string(nonCACert),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = storage.Put(ctx, entry)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// ...but storage doesn't actually work right now....
+	storage.FailGet(true)
+
+	// ...can we load certificates? no.
+	_, _, trustedNonCAs, _ := b.getTrustedCerts(ctx, storage, "")
+	require.Len(t, trustedNonCAs, 0, "should have no non CA certificates yet")
+
+	// We should have a cache, and it should have a retry assocaited with it.
+	trusted, _ /*complete*/ := b.getTrustedCertsFromCache("")
+	require.NotNil(t, trusted, "cache didn't exist")
+	require.NotNil(t, trusted.retry, "cache not marked with a retry")
+	// We can't verify complete because it depends on how fast the test is running (techincally)
+
+	// Make sure that we reload the cache, and repair storage. (It works now!)
+	trusted.retry.deadline = time.Now().Add(-1 * time.Second)
+	storage.FailGet(false)
+
+	// Now when we get the trusted certs, it should actually work!
+	_, _, trustedNonCAs, _ = b.getTrustedCerts(ctx, storage, "")
+	require.Len(t, trustedNonCAs, 1, "should have recovered and loaded a non-CA cert")
+	require.Equal(t, trustedNonCAs[0].Entry.Name, "cert_a", "non-CA cert name didn't match")
+}
+
 func loadCerts(t *testing.T, certFile, certKey string) tls.Certificate {
 	caTLS, err := tls.LoadX509KeyPair(certFile, certKey)
 	require.NoError(t, err, "failed reading ca/key files")
