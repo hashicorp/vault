@@ -58,7 +58,7 @@ export default class MfaMethod extends Model {
   @attr('string', {
     label: 'Namespace',
   })
-  namespace_id;
+  namespace_path;
   @attr('string') mount_accessor;
 
   // PING ID

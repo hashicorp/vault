@@ -592,6 +592,7 @@ scenario "autopilot" {
       hosts             = step.get_updated_vault_cluster_ips.follower_hosts
       vault_addr        = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
       vault_install_dir = local.vault_install_dir
+      vault_root_token  = step.create_vault_cluster.root_token
     }
   }
 

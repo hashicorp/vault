@@ -23,8 +23,8 @@ module('Integration | Component | page/pki-tidy-auto-settings', function (hooks)
     this.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: backend, route: 'overview', model: backend },
-      { label: 'tidy', route: 'tidy.index', model: backend },
-      { label: 'auto' },
+      { label: 'Tidy', route: 'tidy.index', model: backend },
+      { label: 'Auto' },
     ];
   });
 

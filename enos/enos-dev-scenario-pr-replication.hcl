@@ -3,71 +3,14 @@
 
 scenario "dev_pr_replication" {
   description = <<-EOF
-    This scenario spins up a two Vault clusters with either an external Consul cluster or
+    This scenario spins up two Vault clusters with either an external Consul cluster or
     integrated Raft for storage. The secondary cluster is configured with performance replication
     from the primary cluster. None of our test verification is included in this scenario in order
     to improve end-to-end speed. If you wish to perform such verification you'll need to use a
     non-dev scenario.
 
-    The scenario supports finding and installing any released 'linux/amd64' or 'linux/arm64' Vault
-    artifact as long as its version is >= 1.8. You can also use the 'artifact:local' variant to
-    build and deploy the current branch!
-
-    In order to execute this scenario you'll need to install the enos CLI:
-      - $ brew tap hashicorp/tap && brew update && brew install hashicorp/tap/enos
-    
-    You'll also need access to an AWS account via Doormat, follow the guide here:
-      https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#authenticate-to-aws-with-doormat
-
-    Follow this guide to get an SSH keypair set up in the AWS account:
-      https://eng-handbook.hashicorp.services/internal-tools/enos/getting-started/#set-your-aws-key-pair-name-and-private-key
-
-    Please note that this scenario requires several inputs variables to be set in order to function
-    properly. While not all variants will require all variables, it's suggested that you look over
-    the scenario outline to determine which variables affect which steps and which have inputs that
-    you should set. You can use the following command to get a textual outline of the entire
-    scenario:
-      enos scenario outline dev_pr_replication
-
-    You can also create an HTML version that is suitable for viewing in web browsers:
-      enos scenario outline dev_pr_replication --format html > index.html
-      open index.html
-
-    To configure the required variables you have a couple of choices. You can create an
-    'enos-local.vars' file in the same 'enos' directory where this scenario is defined. In it you
-    declare your desired variable values. For example, you could copy the following content and
-    then set the values as necessary:
-
-    artifactory_username      = "username@hashicorp.com"
-    artifactory_token         = "<ARTIFACTORY TOKEN VALUE>
-    aws_region                = "us-west-2"
-    aws_ssh_keypair_name      = "<YOUR REGION SPECIFIC KEYPAIR NAME>"
-    aws_ssh_keypair_key_path  = "/path/to/your/private/key.pem"
-    dev_build_local_ui        = false
-    dev_consul_version        = "1.18.1"
-    vault_license_path        = "./support/vault.hclic"
-    vault_product_version     = "1.16.2"
-
-    Alternatively, you can set them in your environment:
-    export ENOS_VAR_aws_region="us-west-2"
-    export ENOS_VAR_vault_license_path="./support/vault.hclic"
-
-    After you've configured your inputs you can list and filter the available scenarios and then
-    subsequently launch and destroy them.
-      enos scenario list --help
-      enos scenario launch --help
-      enos scenario list dev_pr_replication
-      enos scenario launch dev_pr_replication arch:amd64 artifact:deb distro:ubuntu edition:ent.hsm primary_backend:raft primary_seal:awskms secondary_backend:raft secondary_seal:pkcs11
-
-    When the scenario is finished launching you refer to the scenario outputs to see information
-    related to your cluster. You can use this information to SSH into nodes and/or to interact
-    with vault.
-      enos scenario output dev_pr_replication arch:amd64 artifact:deb distro:ubuntu edition:ent.hsm primary_backend:raft primary_seal:awskms secondary_backend:raft secondary_seal:pkcs11
-      ssh -i /path/to/your/private/key.pem <PUBLIC_IP>
-      vault status
-
-    After you've finished you can tear down the cluster
-      enos scenario destroy dev_pr_replication arch:amd64 artifact:deb distro:ubuntu edition:ent.hsm primary_backend:raft primary_seal:awskms secondary_backend:raft secondary_seal:pkcs11
+    For a full tutorial for this scenario, see here:
+    https://eng-handbook.hashicorp.services/internal-tools/enos/tutorial-vault-dev-scenario-pr-replication/
   EOF
 
   // The matrix is where we define all the baseline combinations that enos can utilize to customize

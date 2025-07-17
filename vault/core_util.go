@@ -27,11 +27,11 @@ const (
 
 type (
 	entCore       struct{}
-	entCoreConfig struct{}
+	EntCoreConfig struct{}
 )
 
-func (e entCoreConfig) Clone() entCoreConfig {
-	return entCoreConfig{}
+func (e EntCoreConfig) Clone() EntCoreConfig {
+	return EntCoreConfig{}
 }
 
 type LicensingConfig struct {

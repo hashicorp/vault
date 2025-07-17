@@ -30,6 +30,9 @@ module('Integration | Component | dashboard/secrets-engines-card', function (hoo
 
     await render(hbs`<Dashboard::SecretsEnginesCard @secretsEngines={{this.secretsEngines}} />`);
 
+    // verify overflow style exists on secret engine text
+    assert.dom('[data-test-secret-path]').hasClass('overflow-wrap', 'secret engine name has overflow class ');
+
     assert.dom('[data-test-secrets-engines-card-show-all]').doesNotExist();
   });
 

@@ -29,7 +29,21 @@
 /vault/plugin_catalog.go      @hashicorp/vault-ecosystem
 
 # Content on developer.hashicorp.com
-/website/ @hashicorp/vault-education-approvers
+
+# Web presence gets notified of, and can approve changes to web tooling, but not content.
+
+/website/               @hashicorp/web-presence
+/website/data/
+/website/public/
+/website/content/
+
+# Education gets notified of, and can approve changes to web content.
+
+/website/data/          @hashicorp/vault-education-approvers
+/website/public/        @hashicorp/vault-education-approvers
+/website/content/       @hashicorp/vault-education-approvers
+/website/templates/     @hashicorp/vault-education-approvers
+/website/redirects.js   @hashicorp/vault-education-approvers
 
 # Plugin docs
 /website/content/docs/plugins/              @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
@@ -43,12 +57,12 @@
 /ui/app/routes/vault/cluster/oidc-*.js @hashicorp/vault-ui @hashicorp/vault-ecosystem
 
 # Release config; service account is required for automation tooling.
-/.release/                     @hashicorp/github-secure-vault-core @hashicorp/quality-team
-/.github/workflows/build.yml   @hashicorp/github-secure-vault-core @hashicorp/quality-team
+/.release/                     @hashicorp/github-secure-vault-core @hashicorp/team-vault-quality
+/.github/workflows/build.yml   @hashicorp/github-secure-vault-core @hashicorp/team-vault-quality
 
 # Quality engineering
-/.github/  @hashicorp/quality-team
-/enos/     @hashicorp/quality-team
+/.github/  @hashicorp/team-vault-quality
+/enos/     @hashicorp/team-vault-quality
 
 # Cryptosec
 /builtin/logical/pki/                                @hashicorp/vault-crypto
@@ -87,3 +101,4 @@
 /website/content/api-docs/secret/kmip.mdx            @hashicorp/vault-crypto @hashicorp/vault-education-approvers
 /website/content/docs/enterprise/fips/               @hashicorp/vault-crypto @hashicorp/vault-education-approvers
 /website/content/docs/platform/k8s                   @hashicorp/vault-ecosystem @hashicorp/vault-education-approvers
+/website/content/                                    @hashicorp/vault-customer-engineering @hashicorp/vault-education-approvers

@@ -45,7 +45,7 @@ module('Integration | Component | kubernetes | Page::Role::Details', function (h
       this.model = store.peekRecord('kubernetes/role', data.name);
       this.breadcrumbs = [
         { label: this.model.backend, route: 'overview' },
-        { label: 'roles', route: 'roles' },
+        { label: 'Roles', route: 'roles' },
         { label: this.model.name },
       ];
       return render(hbs`<Page::Role::Details @model={{this.model}} @breadcrumbs={{this.breadcrumbs}} />`, {
@@ -86,7 +86,7 @@ module('Integration | Component | kubernetes | Page::Role::Details', function (h
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(1)')
       .containsText(this.model.backend, 'Overview breadcrumb renders');
-    assert.dom('[data-test-breadcrumbs] li:nth-child(2) a').containsText('roles', 'Roles breadcrumb renders');
+    assert.dom('[data-test-breadcrumbs] li:nth-child(2) a').containsText('Roles', 'Roles breadcrumb renders');
     assert
       .dom('[data-test-breadcrumbs] li:nth-child(3)')
       .containsText(this.model.name, 'Role breadcrumb renders');

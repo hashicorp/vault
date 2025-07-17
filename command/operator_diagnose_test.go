@@ -7,6 +7,7 @@ package command
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -733,7 +734,7 @@ func compareResult(exp *diagnose.Result, act *diagnose.Result) error {
 		for _, c := range act.Children {
 			errStrings = append(errStrings, fmt.Sprintf("%+v", c))
 		}
-		return fmt.Errorf(strings.Join(errStrings, ","))
+		return errors.New(strings.Join(errStrings, ","))
 	}
 
 	if len(exp.Children) > 0 {

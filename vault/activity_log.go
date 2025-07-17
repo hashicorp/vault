@@ -1801,8 +1801,9 @@ func (c *Core) ActivityLogInjectResponse(ctx context.Context, pq *activity.Preco
 
 func (a *ActivityLog) includeInResponse(query *namespace.Namespace, record *namespace.Namespace) bool {
 	if record == nil {
-		// Deleted namespace, only include in root queries
-		return query.ID == namespace.RootNamespaceID
+		// Deleted namespace, only include in root or admin namespace (if configured) queries
+		adminNsPath := namespace.Canonicalize(a.core.administrativeNamespacePath())
+		return query.ID == namespace.RootNamespaceID || (adminNsPath != "" && query.Path == adminNsPath)
 	}
 	return record.HasParent(query)
 }
@@ -2969,6 +2970,11 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 		return ErrActivityExportInProgress
 	}
 	defer a.inprocessExport.Store(false)
+
+	// Normalize the start time to the beginning of the month to keep consistency with the sys/counters API
+	// Without this, if the start time falls within the same month as the billing start date, the Export API
+	// could omit data that the sys/counters API includes, leading to discrepancies
+	startTime = timeutil.StartOfMonth(startTime)
 
 	// Find the months with activity log data that are between the start and end
 	// months. We want to walk this in cronological order so the oldest instance of a

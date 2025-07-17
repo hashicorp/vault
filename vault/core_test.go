@@ -379,7 +379,7 @@ func TestCore_HasVaultVersion(t *testing.T) {
 	upgradeTime := versionEntry.TimestampInstalled
 
 	if upgradeTime.After(time.Now()) || upgradeTime.Before(time.Now().Add(-1*time.Hour)) {
-		t.Fatalf("upgrade time isn't within reasonable bounds of new core initialization. " +
+		t.Fatal("upgrade time isn't within reasonable bounds of new core initialization. " +
 			fmt.Sprintf("time is: %+v, upgrade time is %+v", time.Now(), upgradeTime))
 	}
 }
@@ -3695,4 +3695,17 @@ func TestBarrier_DeadlockDetection(t *testing.T) {
 	if !testCore.barrier.DetectDeadlocks() {
 		t.Fatal("barrierLock doesn't have deadlock detection enabled, it should")
 	}
+}
+
+// Test_administrativeNamespacePath verifies if administrativeNamespacePath function returns the configured administrative namespace path
+func Test_administrativeNamespacePath(t *testing.T) {
+	adminNamespacePath := "admin"
+	coreConfig := &CoreConfig{
+		RawConfig: &server.Config{
+			SharedConfig: &configutil.SharedConfig{AdministrativeNamespacePath: adminNamespacePath},
+		},
+		AdministrativeNamespacePath: adminNamespacePath,
+	}
+	core, _, _ := TestCoreUnsealedWithConfig(t, coreConfig)
+	require.Equal(t, core.administrativeNamespacePath(), adminNamespacePath)
 }

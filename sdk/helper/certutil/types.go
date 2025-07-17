@@ -31,6 +31,7 @@ import (
 	"strings"
 	"time"
 
+	ctx509 "github.com/google/certificate-transparency-go/x509"
 	"github.com/hashicorp/errwrap"
 	"github.com/hashicorp/vault/sdk/helper/errutil"
 )
@@ -372,33 +373,8 @@ func (p *ParsedCertBundle) ToCertBundle() (*CertBundle, error) {
 // key of the certificate to the private key and checks the certificate trust
 // chain for path issues.
 func (p *ParsedCertBundle) Verify() error {
-	// If private key exists, check if it matches the public key of cert
-	if p.PrivateKey != nil && p.Certificate != nil {
-		equal, err := ComparePublicKeys(p.Certificate.PublicKey, p.PrivateKey.Public())
-		if err != nil {
-			return errwrap.Wrapf("could not compare public and private keys: {{err}}", err)
-		}
-		if !equal {
-			return fmt.Errorf("public key of certificate does not match private key")
-		}
-	}
-
-	certPath := p.GetCertificatePath()
-	if len(certPath) > 1 {
-		for i, caCert := range certPath[1:] {
-			if !caCert.Certificate.IsCA {
-				return fmt.Errorf("certificate %d of certificate chain is not a certificate authority", i+1)
-			}
-			if !bytes.Equal(certPath[i].Certificate.AuthorityKeyId, caCert.Certificate.SubjectKeyId) {
-				return fmt.Errorf("certificate %d of certificate chain ca trust path is incorrect (%q/%q) (%X/%X)",
-					i+1,
-					certPath[i].Certificate.Subject.CommonName, caCert.Certificate.Subject.CommonName,
-					certPath[i].Certificate.AuthorityKeyId, caCert.Certificate.SubjectKeyId)
-			}
-		}
-	}
-
-	return nil
+	options := ctx509.VerifyOptions{}
+	return VerifyCertificate(p, options)
 }
 
 // GetCertificatePath returns a slice of certificates making up a path, pulled

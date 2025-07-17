@@ -21,6 +21,11 @@
   padding: $spacing-36;
 }
 
+.has-side-padding-8 {
+  padding-left: $spacing-8;
+  padding-right: $spacing-8;
+}
+
 .has-side-padding-s {
   padding-left: $spacing-12;
   padding-right: $spacing-12;
@@ -122,10 +127,6 @@
   margin-top: -$spacing-48;
 }
 
-.has-right-margin-xxs {
-  margin-right: $spacing-4;
-}
-
 .has-left-margin-xxs {
   margin-left: $spacing-4;
 }
@@ -216,6 +217,14 @@
 
 .has-left-margin-xl {
   margin-left: $spacing-36;
+}
+
+.has-right-margin-4 {
+  margin-right: $spacing-4;
+}
+
+.has-right-margin-8 {
+  margin-right: $spacing-8;
 }
 
 .has-right-margin-m {

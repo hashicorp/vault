@@ -18,7 +18,11 @@
           {{else if attr.options.detailLinkTo}}
             <LinkTo @route={{attr.options.detailLinkTo}} @model={{value}}>{{value}}</LinkTo>
           {{else if (or (eq attr.name "privateKey") (eq attr.name "privateKeyType"))}}
-            <span class="{{unless value 'tag'}}">{{or value "internal"}}</span>
+            {{#if value}}
+              {{value}}
+            {{else}}
+              <Hds::Badge @text="internal" />
+            {{/if}}
           {{else if attr.options.formatDate}}
             {{date-format value "MMM d yyyy HH:mm:ss a zzzz"}}
           {{else}}

@@ -6,6 +6,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"reflect"
@@ -380,7 +381,7 @@ func ParseSecret(r io.Reader) (*Secret, error) {
 			if err := json.Unmarshal(errBytes, &errStrArray); err != nil {
 				return nil, err
 			}
-			return nil, fmt.Errorf(strings.Join(errStrArray, " "))
+			return nil, errors.New(strings.Join(errStrArray, " "))
 		}
 
 		// if any raw data is present in resp.Body, add it to secret

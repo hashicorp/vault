@@ -23,3 +23,7 @@
   grid-row: 1;
   align-self: center;
 }
+
+.linked-block-title {
+  grid-template-columns: minmax(0, 28px) minmax(0, 1fr);
+}

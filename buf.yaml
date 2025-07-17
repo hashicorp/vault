@@ -41,6 +41,7 @@ lint:
       - physical/raft/types.proto
       - sdk/database/dbplugin/database.proto
       - sdk/database/dbplugin/v5/proto/database.proto
+      - sdk/database/dbplugin/v5/proto/database_ent.proto
       - sdk/helper/pluginutil/multiplexing.proto
       - sdk/logical/event.proto
       - sdk/logical/identity.proto
@@ -94,6 +95,7 @@ lint:
     RPC_REQUEST_RESPONSE_UNIQUE:
       - sdk/database/dbplugin/database.proto
       - sdk/database/dbplugin/v5/proto/database.proto
+      - sdk/database/dbplugin/v5/proto/database_ent.proto
       - sdk/plugin/pb/backend.proto
       - sdk/plugin/pb/system_view_service_ent.proto
       - vault/replication_services_ent.proto
@@ -101,6 +103,7 @@ lint:
     RPC_REQUEST_STANDARD_NAME:
       - sdk/database/dbplugin/database.proto
       - sdk/database/dbplugin/v5/proto/database.proto
+      - sdk/database/dbplugin/v5/proto/database_ent.proto
       - sdk/logical/version.proto
       - sdk/plugin/pb/backend.proto
       - sdk/plugin/pb/system_view_service_ent.proto
@@ -110,6 +113,7 @@ lint:
     RPC_RESPONSE_STANDARD_NAME:
       - sdk/database/dbplugin/database.proto
       - sdk/database/dbplugin/v5/proto/database.proto
+      - sdk/database/dbplugin/v5/proto/database_ent.proto
       - sdk/logical/version.proto
       - sdk/plugin/pb/backend.proto
       - vault/hcp_link/proto/meta/meta.proto
@@ -119,6 +123,7 @@ lint:
     SERVICE_SUFFIX:
       - sdk/database/dbplugin/database.proto
       - sdk/database/dbplugin/v5/proto/database.proto
+      - sdk/database/dbplugin/v5/proto/database_ent.proto
       - sdk/helper/pluginutil/multiplexing.proto
       - sdk/logical/version.proto
       - sdk/plugin/pb/backend.proto

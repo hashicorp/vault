@@ -16,12 +16,10 @@
     <h1 class="title is-3" data-test-replication-title={{@title}}>
       {{@title}}
       {{#if @data.anyReplicationEnabled}}
-        <span class="tag is-light has-text-grey-dark" data-test-mode>
-          {{if @isSecondary "secondary" "primary"}}
-        </span>
-        <span class="tag is-light has-text-grey-dark" data-test-secondaryId>
-          {{@secondaryId}}
-        </span>
+        <Hds::Badge @text={{if @isSecondary "secondary" "primary"}} data-test-mode />
+        {{#if @secondaryId}}
+          <Hds::Badge @text={{@secondaryId}} data-test-secondaryId />
+        {{/if}}
       {{/if}}
     </h1>
   </p.levelLeft>

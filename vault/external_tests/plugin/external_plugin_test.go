@@ -817,55 +817,80 @@ func TestExternalPlugin_DatabaseReload(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dbName := fmt.Sprintf("%s-%d", plugin.Name, 0)
-	roleName := "test-role-" + dbName
+	roleName := "test-role"
 
-	cleanupContainer, connURL := postgreshelper.PrepareTestContainerWithVaultUser(t, context.Background())
-	t.Cleanup(cleanupContainer)
+	// create 4 databases to create connections for
+	cleanupContainer0, connURL0 := postgreshelper.PrepareTestContainerWithVaultUser(t, context.Background())
+	t.Cleanup(cleanupContainer0)
+	cleanupContainer1, connURL1 := postgreshelper.PrepareTestContainerWithVaultUser(t, context.Background())
+	t.Cleanup(cleanupContainer1)
+	cleanupContainer2, connURL2 := postgreshelper.PrepareTestContainerWithVaultUser(t, context.Background())
+	t.Cleanup(cleanupContainer2)
 
-	_, err := client.Logical().Write("database/config/"+dbName, map[string]interface{}{
-		"connection_url": connURL,
-		"plugin_name":    plugin.Name,
-		"allowed_roles":  []string{roleName},
-		"username":       "vaultadmin",
-		"password":       "vaultpass",
+	var roles []string
+	// write the config and roles for the first 3 DBs
+	for i, url := range []string{connURL0, connURL1, connURL2} {
+		dbName := fmt.Sprintf("%s-%d", plugin.Name, i)
+		_, err := client.Logical().Write("database/config/"+dbName, map[string]interface{}{
+			"connection_url": url,
+			"plugin_name":    plugin.Name,
+			"allowed_roles":  []string{"*"},
+			"username":       "vaultadmin",
+			"password":       "vaultpass",
+		})
+		require.NoError(t, err)
+
+		r := fmt.Sprintf("%s-%d", roleName, i)
+		roles = append(roles, r)
+		_, err = client.Logical().Write("database/roles/"+r, map[string]interface{}{
+			"db_name":             dbName,
+			"creation_statements": testRole,
+			"max_ttl":             "10m",
+		})
+		require.NoError(t, err)
+	}
+
+	// the 4th db connection has a bad connURL on purpose, it should not fail
+	// the plugin reload
+	_, err := client.Logical().Write("database/config/"+plugin.Name+"-3", map[string]interface{}{
+		"connection_url":    "foobar",
+		"verify_connection": false, // this db connection should not fail the plugin reload
+		"plugin_name":       plugin.Name,
+		"allowed_roles":     []string{"*"},
+		"username":          "vaultadmin",
+		"password":          "vaultpass",
 	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	_, err = client.Logical().Write("database/roles/"+roleName, map[string]interface{}{
-		"db_name":             dbName,
-		"creation_statements": testRole,
-		"max_ttl":             "10m",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	resp, err := client.Logical().Read("database/creds/" + roleName)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if resp == nil {
-		t.Fatal("read creds response is nil")
+	for _, role := range roles {
+		resp, err := client.Logical().Read("database/creds/" + role)
+		require.NoError(t, err)
+		if resp == nil {
+			t.Fatal("read creds response is nil")
+		}
 	}
 
 	// Reload plugin
-	if _, err := client.Sys().ReloadPlugin(&api.ReloadPluginInput{
+	_, err = client.Sys().ReloadPlugin(&api.ReloadPluginInput{
 		Plugin: plugin.Name,
-	}); err != nil {
-		t.Fatal(err)
-	}
+	})
+	require.NoError(t, err)
 
 	// Generate credentials after reload
-	resp, err = client.Logical().Read("database/creds/" + roleName)
-	if err != nil {
-		t.Fatal(err)
+	for _, role := range roles {
+		resp, err := client.Logical().Read("database/creds/" + role)
+		require.NoError(t, err)
+		if resp == nil {
+			t.Fatal("read creds response is nil")
+		}
 	}
-	if resp == nil {
-		t.Fatal("read creds response is nil")
-	}
+
+	// remove one postgres database so that the plugin reload will fail
+	cleanupContainer1()
+	_, err = client.Sys().ReloadPlugin(&api.ReloadPluginInput{
+		Plugin: plugin.Name,
+	})
+	require.NoError(t, err)
 
 	if err := client.Sys().Unmount(plugin.Name); err != nil {
 		t.Fatal(err)

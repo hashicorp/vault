@@ -14,6 +14,7 @@ import { format, addDays, startOfDay } from 'date-fns';
 import { CUSTOM_MESSAGES } from 'vault/tests/helpers/config-ui/message-selectors';
 import timestamp from 'core/utils/timestamp';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import sinon from 'sinon';
 
 module('Integration | Component | messages/page/create-and-edit', function (hooks) {
   setupRenderingTest(hooks);
@@ -21,14 +22,14 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    const now = new Date('2023-07-02T00:00:00Z'); // stub "now" for testing
+    sinon.replace(timestamp, 'now', sinon.fake.returns(now));
     this.context = { owner: this.engine };
     this.store = this.owner.lookup('service:store');
     this.message = this.store.createRecord('config-ui/message');
   });
 
   test('it should display all the create form fields and default radio button values', async function (assert) {
-    assert.expect(17);
-
     await render(hbs`<Messages::Page::CreateAndEdit @message={{this.message}} />`, {
       owner: this.engine,
     });
@@ -46,11 +47,14 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
     assert.dom(CUSTOM_MESSAGES.field('message')).exists();
     assert.dom('[data-test-kv-key="0"]').exists();
     assert.dom('[data-test-kv-value="0"]').exists();
-    assert.dom(CUSTOM_MESSAGES.input('startTime')).exists();
     assert
       .dom(CUSTOM_MESSAGES.input('startTime'))
-      .hasValue(format(addDays(startOfDay(timestamp.now()), 1), datetimeLocalStringFormat));
-    assert.dom(CUSTOM_MESSAGES.input('endTime')).exists();
+      .hasValue(
+        format(addDays(startOfDay(timestamp.now()), 1), datetimeLocalStringFormat),
+        `message startTime defaults to midnight of following day. test context startTime: ${
+          this.message.startTime
+        }, now: ${timestamp.now().toISOString()}`
+      );
     assert.dom(CUSTOM_MESSAGES.input('endTime')).hasValue('');
   });
 

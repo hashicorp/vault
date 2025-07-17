@@ -1,0 +1,3 @@
+```release-note:bug
+activity: Show activity records from clients created in deleted namespaces when activity log is queried from admin namespace.
+```

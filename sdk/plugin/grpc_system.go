@@ -420,8 +420,7 @@ func (s *gRPCSystemViewServer) GenerateIdentityToken(ctx context.Context, req *p
 		TTL:      time.Duration(req.GetTTL()) * time.Second,
 	})
 	if err != nil {
-		return &pb.GenerateIdentityTokenResponse{}, status.Errorf(codes.Internal,
-			err.Error())
+		return &pb.GenerateIdentityTokenResponse{}, status.Error(codes.Internal, err.Error())
 	}
 
 	return &pb.GenerateIdentityTokenResponse{

@@ -769,7 +769,7 @@ func (c *Core) HALock() sync.Locker {
 
 // CoreConfig is used to parameterize a core
 type CoreConfig struct {
-	entCoreConfig
+	EntCoreConfig
 
 	DevToken string
 
@@ -3608,6 +3608,15 @@ func (c *Core) SanitizedConfig() map[string]interface{} {
 func (c *Core) LogFormat() string {
 	conf := c.rawConfig.Load()
 	return conf.(*server.Config).LogFormat
+}
+
+// administrativeNamespacePath returns the configured administrative namespace path.
+func (c *Core) administrativeNamespacePath() string {
+	conf := c.rawConfig.Load()
+	if conf == nil {
+		return ""
+	}
+	return conf.(*server.Config).AdministrativeNamespacePath
 }
 
 // LogLevel returns the log level provided by level provided by config, CLI flag, or env

@@ -38,9 +38,9 @@ module('Integration | Component | kubernetes | Page::Credentials', function (hoo
     };
     this.breadcrumbs = [
       { label: this.backend, route: 'overview' },
-      { label: 'roles', route: 'roles' },
+      { label: 'Roles', route: 'roles' },
       { label: this.roleName, route: 'roles.role.details' },
-      { label: 'credentials' },
+      { label: 'Credentials' },
     ];
     this.renderComponent = () => {
       return render(

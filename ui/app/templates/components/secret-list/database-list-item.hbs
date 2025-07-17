@@ -21,7 +21,9 @@
         <Icon @name="user" class="has-text-grey-light is-pulled-left" />
         <div class="role-item-details">
           <span class="is-underline">{{if (eq @item.id " ") "(self)" (or @item.keyWithoutParent @item.id)}}</span>
-          <span class="tag has-text-grey-dark">{{this.keyTypeValue}}</span>
+          {{#if this.keyTypeValue}}
+            <Hds::Badge @text={{this.keyTypeValue}} />
+          {{/if}}
         </div>
       </LinkTo>
     </div>

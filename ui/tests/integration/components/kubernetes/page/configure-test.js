@@ -36,7 +36,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     this.breadcrumbs = [
       { label: 'Secrets', route: 'secrets', linkExternal: true },
       { label: 'kubernetes', route: 'overview' },
-      { label: 'configure' },
+      { label: 'Configure' },
     ];
     this.expectedInferred = {
       disable_local_ca_jwt: false,

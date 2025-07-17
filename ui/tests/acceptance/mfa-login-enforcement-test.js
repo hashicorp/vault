@@ -171,7 +171,7 @@ module('Acceptance | mfa-login-enforcement', function (hooks) {
     assert
       .dom(`[data-test-mfa-method-list-item="${method.id}"]`)
       .includesText(
-        `${method.name} ${method.id} Namespace: ${method.namespace_id}`,
+        `${method.name} ${method.id} Namespace: ${method.namespace_path}`,
         'Method list item renders'
       );
     await click('[data-test-popup-menu-trigger]');

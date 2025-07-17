@@ -1691,6 +1691,8 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 	if err != nil {
 		return nil, err
 	}
+
+	conf := make(map[string]string)
 	var runningSha string
 	factory, ok := c.logicalBackends[t]
 	if !ok {
@@ -1713,9 +1715,11 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		if !plug.Builtin {
 			factory = wrapFactoryCheckPerms(c, factory)
 		}
+
+		entSetExternalPluginConfig(plug, conf)
 	}
+
 	// Set up conf to pass in plugin_name
-	conf := make(map[string]string)
 	for k, v := range entry.Options {
 		conf[k] = v
 	}

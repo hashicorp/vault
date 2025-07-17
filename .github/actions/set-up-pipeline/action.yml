@@ -14,7 +14,7 @@ runs:
   steps:
     - uses: ./.github/actions/set-up-go
       with:
-        github-token: ${{ inputs.github-token }}
+        github-token: ${{ inputs.github-token || github.token }}
         no-restore: true # Don't download vault's modules for pipeline
     - name: pipeline-metadata
       id: pipeline-metadata

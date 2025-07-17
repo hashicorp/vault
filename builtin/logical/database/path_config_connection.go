@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/url"
 	"sort"
-	"strings"
 
 	"github.com/fatih/structs"
 	"github.com/hashicorp/go-uuid"
@@ -173,6 +172,7 @@ func (b *databaseBackend) reloadPlugin() framework.OperationFunc {
 			return nil, err
 		}
 		reloaded := []string{}
+		reloadFailed := []string{}
 		for _, connName := range connNames {
 			entry, err := req.Storage.Get(ctx, fmt.Sprintf("config/%s", connName))
 			if err != nil {
@@ -188,15 +188,14 @@ func (b *databaseBackend) reloadPlugin() framework.OperationFunc {
 			}
 			if config.PluginName == pluginName {
 				if err := b.reloadConnection(ctx, req.Storage, connName); err != nil {
-					var successfullyReloaded string
-					if len(reloaded) > 0 {
-						successfullyReloaded = fmt.Sprintf("successfully reloaded %d connection(s): %s; ",
-							len(reloaded),
-							strings.Join(reloaded, ", "))
-					}
-					return nil, fmt.Errorf("%sfailed to reload connection %q: %w", successfullyReloaded, connName, err)
+					b.Logger().Error("failed to reload connection", "name", connName, "error", err)
+					b.dbEvent(ctx, "reload-connection-fail", req.Path, "", false, "name", connName)
+					reloadFailed = append(reloadFailed, connName)
+				} else {
+					b.Logger().Debug("reloaded connection", "name", connName)
+					b.dbEvent(ctx, "reload-connection", req.Path, "", true, "name", connName)
+					reloaded = append(reloaded, connName)
 				}
-				reloaded = append(reloaded, connName)
 			}
 		}
 
@@ -207,10 +206,12 @@ func (b *databaseBackend) reloadPlugin() framework.OperationFunc {
 			},
 		}
 
-		if len(reloaded) == 0 {
-			resp.AddWarning(fmt.Sprintf("no connections were found with plugin_name %q", pluginName))
+		if len(reloaded) > 0 {
+			b.dbEvent(ctx, "reload", req.Path, "", true, "plugin_name", pluginName)
+		} else if len(reloaded) == 0 && len(reloadFailed) == 0 {
+			b.Logger().Debug("no connections were found", "plugin_name", pluginName)
 		}
-		b.dbEvent(ctx, "reload", req.Path, "", true, "plugin_name", pluginName)
+
 		return resp, nil
 	}
 }

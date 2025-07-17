@@ -53,12 +53,12 @@
     data-test-auth-backend-link={{method.id}}
   >
     <div class="level is-mobile">
-      <div class="level-left">
-        <div>
+      <div>
+        <div class="is-grid align-items-center linked-block-title">
           <Hds::TooltipButton @text={{method.methodType}} aria-label="Type of auth mount">
             <Icon @name={{method.icon}} class="has-text-grey-light" />
           </Hds::TooltipButton>
-          <span data-test-path data-test-id={{method.id}} class="has-text-weight-semibold has-text-black">
+          <span data-test-path data-test-id={{method.id}} class="has-text-weight-semibold has-text-black overflow-wrap">
             {{method.path}}
           </span>
           <br />

@@ -36,10 +36,10 @@ func TestTLSValidCert(t *testing.T) {
 	warnings, errs := ListenerChecks(context.Background(), listeners)
 	if errs != nil {
 		// The test failed -- we can just return one of the errors
-		t.Fatalf(errs[0].Error())
+		t.Fatal(errs[0].Error())
 	}
 	if warnings != nil {
-		t.Fatalf("warnings returned from good listener")
+		t.Fatal("warnings returned from good listener")
 	}
 }
 

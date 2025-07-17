@@ -16,15 +16,15 @@
           <span class="has-text-weight-semibold has-text-black">
             {{@model.name}}
           </span>
-          <span class="tag has-left-margin-xs">
-            {{@model.id}}
-          </span>
-          <div class="has-top-margin-xs">
-            <code class="is-size-9">
-              Namespace:
-              {{@model.namespace_id}}
-            </code>
-          </div>
+          <Hds::Badge @text={{@model.id}} class="has-left-margin-xs" />
+          {{#if @model.namespace_path}}
+            <div class="has-top-margin-xs">
+              <code class="is-size-9">
+                Namespace:
+                {{@model.namespace_path}}
+              </code>
+            </div>
+          {{/if}}
         </div>
       </div>
     </div>
