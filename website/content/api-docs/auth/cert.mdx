@@ -69,7 +69,7 @@ Sets a CA cert and associated parameters in a role name.
   by a dash (-) instead of a dot (.) to allow usage in ACL templates.
 - `ocsp_enabled` `(bool: false)` - If enabled, validate certificates' revocation
   status using OCSP.
-- `ocsp_ca_certificates` `(string: "")` Any additional CA certificates needed to
+- `ocsp_ca_certificates` `(string: "")` Any additional OCSP responder certificates needed to
   verify OCSP responses.  Provided as base64 encoded PEM data.
 - `ocsp_servers_override` `(array: [])`: A comma-separated list of OCSP server
   addresses.  If unset, the OCSP server is determined from the AuthorityInformationAccess
