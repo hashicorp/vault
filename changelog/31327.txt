@@ -1,0 +1,27 @@
+```release-note:improvement
+auth/approle: Add ability to specify custom Auth metadata via new role creation parameter `token_auth_metadata`.
+```
+```release-note:improvement
+auth/aws: Add ability to specify custom Auth metadata via new role creation parameter `token_auth_metadata`.
+```
+```release-note:improvement
+auth/github: Add ability to specify custom Auth metadata via new configuration parameter `token_auth_metadata`.
+```
+```release-note:improvement
+auth/ldap: Add ability to specify custom Auth metadata via new role configuration parameter `token_auth_metadata`.
+```
+```release-note:improvement
+auth/okta: Add ability to specify custom Auth metadata via new role configuration parameter `token_auth_metadata`.
+```
+```release-note:improvement
+auth/radius: Add ability to specify custom Auth metadata via new role configuration parameter `token_auth_metadata`.
+```
+```release-note:improvement
+auth/scep: Add ability to specify custom Auth metadata via new role creation parameter `token_auth_metadata`.
+```
+```release-note:improvement
+auth/cert: Add ability to specify custom Auth metadata via new CA certificate role creation parameter `token_auth_metadata`.
+```
+```release-note:improvement
+auth/userpass: Add ability to specify custom Auth metadata via new user creation parameter `token_auth_metadata`.
+```
