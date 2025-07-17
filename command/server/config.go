@@ -653,6 +653,14 @@ func ParseConfigCheckDuplicate(d, source string) (cfg *Config, duplicate bool, e
 	// Parse!
 	obj, duplicate, err := random.ParseAndCheckForDuplicateHclAttributes(d)
 	if err != nil {
+		if strings.Contains(err.Error(), "was already set. Each argument can only be defined once") {
+			knownPossibleAttributeDupErrors := []string{"retry_join", "transform", "listener"}
+			for _, s := range knownPossibleAttributeDupErrors {
+				if strings.Contains(err.Error(), fmt.Sprintf("The argument %q at", s)) {
+					return nil, duplicate, fmt.Errorf("%w (if using the attribute syntax %s = [...], change it to the block syntax %s { ... })", err, s, s)
+				}
+			}
+		}
 		return nil, duplicate, err
 	}
 
