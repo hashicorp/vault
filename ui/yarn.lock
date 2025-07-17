@@ -2719,11 +2719,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/vault-client-typescript@portal:./api-client::locator=vault%40workspace%3A.":
-  version: 0.0.0-use.local
-  resolution: "@hashicorp/vault-client-typescript@portal:./api-client::locator=vault%40workspace%3A."
+"@hashicorp/vault-client-typescript@hashicorp/vault-client-typescript":
+  version: 0.0.0
+  resolution: "@hashicorp/vault-client-typescript@https://github.com/hashicorp/vault-client-typescript.git#commit=93a0740c07e014899ed948a893d4fde2fdaeaccf"
+  checksum: b360333bd99e4d94dee7f82655185e6daf20bafb424fd36a77133e6b3d7c2adfb6d485b694e044dd51281e6a52190cebf0a96b4f9ec2d4830388a21fe47128a7
   languageName: node
-  linkType: soft
+  linkType: hard
 
 "@hashicorp/vault-reporting@portal:./vault-reporting::locator=vault%40workspace%3A.":
   version: 0.0.0-use.local
@@ -18480,7 +18481,7 @@ __metadata:
     "@glimmer/component": ~1.1.2
     "@glimmer/tracking": ~1.1.2
     "@hashicorp/design-system-components": 4.18.2
-    "@hashicorp/vault-client-typescript": "portal:./api-client"
+    "@hashicorp/vault-client-typescript": hashicorp/vault-client-typescript
     "@hashicorp/vault-reporting": "portal:./vault-reporting"
     "@icholy/duration": ~5.1.0
     "@lineal-viz/lineal": ~0.5.1
