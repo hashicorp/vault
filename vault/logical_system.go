@@ -538,6 +538,10 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		return logical.ErrorResponse("version %q is not allowed because 'builtin' is a reserved metadata identifier", pluginVersion), nil
 	}
 
+	if download := d.Get("download").(bool); download {
+		return logical.ErrorResponse("download is an enterprise only feature"), nil
+	}
+
 	sha256 := d.Get("sha256").(string)
 	if sha256 == "" {
 		sha256 = d.Get("sha_256").(string)
@@ -553,7 +557,11 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 
 	command := d.Get("command").(string)
 	ociImage := d.Get("oci_image").(string)
-	if command == "" && ociImage == "" {
+	var resp logical.Response
+
+	if sha256 == "" && command != "" {
+		resp.AddWarning(fmt.Sprintf("When sha256 is unspecified, a plugin artifact is expected for registration and the command parameter %q will be ignored.", command))
+	} else if sha256 != "" && (command == "" && ociImage == "") {
 		return logical.ErrorResponse("must provide at least one of command or oci_image"), nil
 	}
 
@@ -619,7 +627,11 @@ func (b *SystemBackend) handlePluginCatalogUpdate(ctx context.Context, _ *logica
 		return nil, err
 	}
 
-	return nil, nil
+	if len(resp.Warnings) == 0 {
+		return nil, nil
+	}
+
+	return &resp, nil
 }
 
 func (b *SystemBackend) handlePluginCatalogRead(ctx context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
@@ -6913,6 +6925,11 @@ Must already be present on the machine.`,
 	},
 	"plugin-catalog_runtime": {
 		`The Vault plugin runtime to use when running the plugin.`,
+		"",
+	},
+	"plugin-catalog_download": {
+		`Automatically downloads official HashiCorp plugins
+from releases.hashicorp.com (beta)`,
 		"",
 	},
 	"plugin-catalog-pins": {

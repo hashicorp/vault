@@ -156,17 +156,21 @@ supplied name.
   See [/sys/plugins/runtimes/catalog](/vault/api-docs/system/plugins-runtimes-catalog) for additional information.
 
 - `version` `(string: "")` - Specifies the semantic version of the plugin. Used as the tag
-  when specifying `oci_image`, but with any leading 'v' trimmed.
+  when specifying `oci_image`, but with any leading 'v' trimmed. You can
+  omit version to register a plugin binary, but you must provide an
+  explicit version to register an extracted `.zip` file.
 
-- `sha256` `(string: <required>)` – The SHA256 sum of a Community plugin
-  binary or the OCI image. Before a plugin is run, its SHA will be checked against this value.
-  If the actual SHA of the plugin binary and the SHA provided in `sha256` do not match, Vault will not run the plugin. The `sha256` parameter is only required for Community plugins. Enterprise plugins do not require SHA confirmation.
+- `sha256` `(string: "")` – The SHA256 sum of a plugin binary or the OCI image.
+  Before Vault runs a plugin, it checks the plugin SHA against `sha256`. If the
+  actual SHA of the plugin binary and the SHA provided in `sha256` do not match,
+  Vault will not run the plugin. You must provide `sha256` to register a plugin
+  binary, but you must leave `sha256` unset to register an extracted `.zip` file.
 
-- `command` `(string: <required>)` - Specifies the command used to execute the
+- `command` `(string: "")` - Specifies the command used to execute the
   plugin. This is relative to the plugin directory. e.g. `"myplugin"`, or if `oci_image`
   is also specified, it is relative to the image's working directory.
-  The `command` parameter is only required for Community plugins as
-  the run command is known for Enterprise plugins.
+  You must provide `command` to register a plugin binary. Vault ignores `command`
+  when you register with an extracted `.zip` file as it already knows the associated run command.
 
 - `args` `(array: [])` – Specifies the arguments used to execute the plugin. If
   the arguments are provided here, the `command` parameter should only contain

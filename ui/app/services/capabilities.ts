@@ -7,13 +7,13 @@ import Service, { service } from '@ember/service';
 import { sanitizePath, sanitizeStart } from 'core/utils/sanitize-path';
 import { PATH_MAP, SUDO_PATHS, SUDO_PATH_PREFIXES } from 'vault/utils/constants/capabilities';
 
-import type ApiService from 'vault/services/api';
 import type NamespaceService from 'vault/services/namespace';
+import type Store from '@ember-data/store';
 import type { Capabilities, CapabilitiesMap, CapabilitiesData, CapabilityTypes } from 'vault/app-types';
 
 export default class CapabilitiesService extends Service {
-  @service declare readonly api: ApiService;
   @service declare readonly namespace: NamespaceService;
+  @service declare readonly store: Store;
 
   /*
   Add API paths to the PATH_MAP constant using a friendly key, e.g. 'syncDestinations'.
@@ -34,7 +34,7 @@ export default class CapabilitiesService extends Service {
   Users don't always have access to the capabilities-self endpoint in the current namespace.
   This can happen when logging in to a namespace and then navigating to a child namespace.
   The "relativeNamespace" refers to the namespace the user is currently in and attempting to access capabilities for.
-  Prepending "relativeNamespace" to the path while making the request to the "userRootNamespace"
+  Prepending "relativeNamespace" to the path while making the request in the "userRootNamespace" context (meaning, "userRootNamespace" is the namespace header)
   ensures we are querying capabilities-self where the user is most likely to have their policy/permissions.
   */
   relativeNamespacePath(path: string) {
@@ -83,16 +83,12 @@ export default class CapabilitiesService extends Service {
   }
 
   async fetch(paths: string[]): Promise<CapabilitiesMap> {
-    const payload = {
-      paths: paths.map((path) => this.relativeNamespacePath(path)),
-      namespace: sanitizePath(this.namespace.userRootNamespace),
-    };
-    if (!payload.namespace) {
-      delete payload.namespace;
-    }
-
     try {
-      const { data } = await this.api.sys.queryTokenSelfCapabilities(payload);
+      const adapter = this.store.adapterFor('application');
+      const { data } = await adapter.ajax('/v1/sys/capabilities-self', 'POST', {
+        data: { paths: paths.map((path) => this.relativeNamespacePath(path)) },
+        namespace: sanitizePath(this.namespace.userRootNamespace),
+      });
       return this.mapCapabilities(paths, data as CapabilitiesData);
     } catch (e) {
       // default to true if there is a problem fetching the model

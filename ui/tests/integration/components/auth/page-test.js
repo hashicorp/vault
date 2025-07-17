@@ -169,7 +169,7 @@ module('Integration | Component | auth | page', function (hooks) {
     module('with a direct link', function (hooks) {
       hooks.beforeEach(function () {
         // if path exists, the mount has listing_visibility="unauth"
-        this.directLinkIsVisibleMount = { path: 'my-oidc/', type: 'oidc' };
+        this.directLinkIsVisibleMount = { path: 'my_oidc/', type: 'oidc' };
         this.directLinkIsJustType = { type: 'okta' };
       });
 
@@ -199,7 +199,7 @@ module('Integration | Component | auth | page', function (hooks) {
         assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
         assert.dom(GENERAL.inputByAttr('role')).exists();
         assert.dom(GENERAL.inputByAttr('path')).hasAttribute('type', 'hidden');
-        assert.dom(GENERAL.inputByAttr('path')).hasValue('my-oidc/');
+        assert.dom(GENERAL.inputByAttr('path')).hasValue('my_oidc/');
         assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders');
         assert.dom(GENERAL.selectByAttr('auth type')).doesNotExist();
         assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
@@ -447,7 +447,7 @@ module('Integration | Component | auth | page', function (hooks) {
         await this.renderComponent();
         assert.dom(AUTH_FORM.tabBtn('oidc')).hasText('OIDC', 'it renders default method');
         assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
-        this.assertPathInput(assert, { isHidden: true, value: 'my-oidc/' });
+        this.assertPathInput(assert, { isHidden: true, value: 'my_oidc/' });
         await click(AUTH_FORM.otherMethodsBtn);
         assert.dom(AUTH_FORM.tabs).exists({ count: 2 }, 'it renders 2 backup type tabs');
         assert
@@ -466,7 +466,7 @@ module('Integration | Component | auth | page', function (hooks) {
         assert.dom(AUTH_FORM.tabBtn('oidc')).hasText('OIDC', 'it renders default method');
         assert.dom(AUTH_FORM.tabs).exists({ count: 1 }, 'only one tab renders');
         assert.dom(AUTH_FORM.authForm('oidc')).exists();
-        this.assertPathInput(assert, { isHidden: true, value: 'my-oidc/' });
+        this.assertPathInput(assert, { isHidden: true, value: 'my_oidc/' });
         assert.dom(GENERAL.backButton).doesNotExist();
         assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist();
       });
@@ -494,9 +494,9 @@ module('Integration | Component | auth | page', function (hooks) {
       });
 
       test('(default+backups): it hides advanced settings for default with visible mount but it renders for backups', async function (assert) {
-        this.visibleAuthMounts = { ...this.mountData('my-oidc/') };
+        this.visibleAuthMounts = { ...this.mountData('my_oidc/') };
         await this.renderComponent();
-        this.assertPathInput(assert, { isHidden: true, value: 'my-oidc/' });
+        this.assertPathInput(assert, { isHidden: true, value: 'my_oidc/' });
         await click(AUTH_FORM.otherMethodsBtn);
         assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
         await this.assertPathInput(assert);
@@ -507,7 +507,7 @@ module('Integration | Component | auth | page', function (hooks) {
       test('(default+backups): it only renders advanced settings for method without mounts', async function (assert) {
         // default and only one backup method have visible mounts
         this.visibleAuthMounts = {
-          ...this.mountData('my-oidc/'),
+          ...this.mountData('my_oidc/'),
           ...this.mountData('userpass/'),
           ...this.mountData('userpass2/'),
         };

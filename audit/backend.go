@@ -25,7 +25,7 @@ const (
 	optionFormat             = "format"
 	optionHMACAccessor       = "hmac_accessor"
 	optionLogRaw             = "log_raw"
-	optionPrefix             = "prefix"
+	OptionPrefix             = "prefix"
 
 	TypeFile   = "file"
 	TypeSocket = "socket"

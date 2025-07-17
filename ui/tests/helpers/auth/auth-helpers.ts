@@ -140,7 +140,9 @@ export const SYS_INTERNAL_UI_MOUNTS = {
     options: {},
     type: 'userpass',
   },
-  'my-oidc/': {
+  // there was a problem with the API service camel-casing mounts that were snake cased
+  // so including a snake cased mount for testing
+  'my_oidc/': {
     description: '',
     options: {},
     type: 'oidc',

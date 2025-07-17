@@ -254,9 +254,9 @@ module('Unit | Service | capabilities', function (hooks) {
     });
   });
 
-  module('within namespace', function (hooks) {
+  module('within a namespace', function (hooks) {
     // capabilities within namespaces are queried at the user's root namespace with a path that includes
-    // the relative namespace. The capabilities record is saved at the path without the namespace.
+    // the relative namespace.
     hooks.beforeEach(function () {
       this.nsSvc = this.owner.lookup('service:namespace');
       this.nsSvc.path = 'ns1';
@@ -343,6 +343,153 @@ module('Unit | Service | capabilities', function (hooks) {
         },
       };
       assert.propEqual(actual, expected, 'method returns expected response');
+    });
+
+    /* 
+    The setup in this test simulates a user whose auth method is mounted in the "root" namespace 
+    but their policy only grants access to paths in the context of the "ns1" namespace.
+
+    * ~Example policy paths~ *
+    # explicitly grants access to read "my-secret" in the kv engine mounted in the "ns1" namespace
+    path "ns1/kv/data/my-secret" {
+      capabilities = ["read", "delete"]
+    }
+    
+    # alternatively, their policy could grant access to read everything within the "ns1" namespace
+    path "ns1/*" {
+      capabilities = ["read"]
+    }
+  */
+    test(`if the user's root namespace is "root" and the resource is in a child namespace`, async function (assert) {
+      assert.expect(2);
+      const ns = this.nsSvc.path;
+      const paths = ['my/api/path', '/another/api/path'];
+      const expectedPayload = [`${ns}/my/api/path`, `${ns}/another/api/path`];
+
+      this.server.post('/sys/capabilities-self', (schema, req) => {
+        const nsHeader = req.requestHeaders['X-Vault-Namespace'];
+        const payload = JSON.parse(req.requestBody);
+        assert.strictEqual(nsHeader, undefined, 'request is made in the context of the "root" namespace');
+        assert.propEqual(payload.paths, expectedPayload, `paths include the relative namespace`);
+        return req.passthrough();
+      });
+      await this.capabilities.fetch(paths);
+    });
+
+    /* 
+    The setup in this test simulates a user whose root namespace is "root" and 
+    they are accessing a resource at a nested namespace: "ns1/child". 
+    */
+    test(`if the user's root namespace is "root" and the resource is in a grandchild`, async function (assert) {
+      assert.expect(2);
+      // the path in the namespace service is always the FULL namespace path of the current context
+      this.nsSvc.path = 'ns1/child';
+
+      const paths = ['my/api/path', '/another/api/path'];
+      const expectedPaths = ['ns1/child/my/api/path', 'ns1/child/another/api/path'];
+
+      this.server.post('/sys/capabilities-self', (schema, req) => {
+        const nsHeader = req.requestHeaders['X-Vault-Namespace'];
+        const payload = JSON.parse(req.requestBody);
+        assert.strictEqual(nsHeader, undefined, 'request is made in the context of the "root" namespace');
+        assert.propEqual(payload.paths, expectedPaths, `paths include the relative namespace`);
+        return req.passthrough();
+      });
+
+      await this.capabilities.fetch(paths);
+    });
+
+    /* 
+    The setup in this test simulates a user whose auth method is mounted in the "ns1" namespace and so cannot log in directly to "root" at all.
+    Since this user's context (along with their policy) is exclusively "ns1" the paths do not include the namespace.
+
+    * ~Example policy paths~ *
+    path "kv/data/my-secret" {
+      capabilities = ["read", "delete"]
+    }
+    */
+    test(`if the user's root namespace is an immediate child of "root" and they are accessing resources in the same namespace context`, async function (assert) {
+      assert.expect(2);
+
+      const ns = this.nsSvc.path;
+      const authService = this.owner.lookup('service:auth');
+      const authStub = sinon.stub(authService, 'authData').value({ userRootNamespace: ns });
+
+      const paths = ['my/api/path', '/another/api/path'];
+
+      this.server.post('/sys/capabilities-self', (schema, req) => {
+        const nsHeader = req.requestHeaders['X-Vault-Namespace'];
+        const payload = JSON.parse(req.requestBody);
+        assert.strictEqual(nsHeader, 'ns1', 'request is made in the context of the "ns1" namespace');
+        assert.propEqual(
+          payload.paths,
+          paths,
+          'paths do not include the namespace because request header manages context'
+        );
+        return req.passthrough();
+      });
+
+      await this.capabilities.fetch(paths);
+      authStub.restore();
+    });
+
+    /* 
+    The setup in this test simulates a user whose root namespace is "ns1" and 
+    they are accessing a resource at a namespace one level deeper in "ns1/child". 
+    */
+    test(`if the user's root namespace is a child of "root" and the resource is nested one more level`, async function (assert) {
+      assert.expect(2);
+      // the path in the namespace service is always the FULL namespace path of the current context
+      this.nsSvc.path = 'ns1/child';
+      const authService = this.owner.lookup('service:auth');
+      const authStub = sinon.stub(authService, 'authData').value({ userRootNamespace: 'ns1' });
+
+      const paths = ['my/api/path', '/another/api/path'];
+      const expectedPaths = ['child/my/api/path', 'child/another/api/path'];
+
+      this.server.post('/sys/capabilities-self', (schema, req) => {
+        const nsHeader = req.requestHeaders['X-Vault-Namespace'];
+        const payload = JSON.parse(req.requestBody);
+        assert.strictEqual(nsHeader, 'ns1', 'request is made in the context of the "ns1" namespace');
+        assert.propEqual(payload.paths, expectedPaths, 'paths include the relative namespace');
+        return req.passthrough();
+      });
+
+      await this.capabilities.fetch(paths);
+      authStub.restore();
+    });
+
+    /* 
+    The setup in this test simulates a user whose root namespace is "ns1/child" and 
+    they are accessing a resource in the same context. 
+    */
+    test(`if the user's root namespace is a grandchild of "root" and the resource is in the same context`, async function (assert) {
+      assert.expect(2);
+      // the path in the namespace service is always the FULL namespace path of the current context
+      this.nsSvc.path = 'ns1/child';
+      const authService = this.owner.lookup('service:auth');
+      const authStub = sinon.stub(authService, 'authData').value({ userRootNamespace: 'ns1/child' });
+
+      const paths = ['my/api/path', '/another/api/path'];
+
+      this.server.post('/sys/capabilities-self', (schema, req) => {
+        const nsHeader = req.requestHeaders['X-Vault-Namespace'];
+        const payload = JSON.parse(req.requestBody);
+        assert.strictEqual(
+          nsHeader,
+          'ns1/child',
+          'request is made in the context of the "ns1/child" namespace'
+        );
+        assert.propEqual(
+          payload.paths,
+          paths,
+          'paths do not include namespace because header manages namespace context'
+        );
+        return req.passthrough();
+      });
+
+      await this.capabilities.fetch(paths);
+      authStub.restore();
     });
   });
 });

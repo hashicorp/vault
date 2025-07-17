@@ -23,8 +23,8 @@ module('Acceptance | Enterprise | auth form custom login settings', function (ho
       `write test-ns/sys/namespaces/child -force`,
       `write sys/config/ui/login/default-auth/root-rule backup_auth_types=token default_auth_type=okta disable_inheritance=false namespace_path=""`,
       `write sys/config/ui/login/default-auth/ns-rule default_auth_type=ldap disable_inheritance=true namespace_path=test-ns`,
-      `write sys/auth/my-oidc type=oidc`,
-      `write sys/auth/my-oidc/tune listing_visibility="unauth"`,
+      `write sys/auth/my_oidc type=oidc`,
+      `write sys/auth/my_oidc/tune listing_visibility="unauth"`,
     ]);
     return await logout();
   });
@@ -37,7 +37,7 @@ module('Acceptance | Enterprise | auth form custom login settings', function (ho
     await runCmd([
       'delete sys/config/ui/login/default-auth/root-rule',
       'delete sys/config/ui/login/default-auth/ns-rule',
-      'delete sys/auth/my-oidc',
+      'delete sys/auth/my_oidc',
       'delete test-ns/sys/namespaces/child',
       'delete sys/namespaces/test-ns',
     ]);
@@ -71,7 +71,7 @@ module('Acceptance | Enterprise | auth form custom login settings', function (ho
   });
 
   test('it ignores login settings if query param references a visible mount path', async function (assert) {
-    await visit('/vault/auth?with=my-oidc%2F');
+    await visit('/vault/auth?with=my_oidc%2F');
     await waitFor(AUTH_FORM.tabBtn('oidc'));
     assert
       .dom(AUTH_FORM.tabBtn('oidc'))
