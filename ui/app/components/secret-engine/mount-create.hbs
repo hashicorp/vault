@@ -1,0 +1,69 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<PageHeader as |p|>
+  <p.levelLeft>
+    <h1 class="title is-3 title-with-icon" data-test-page-title>
+      {{#let (engines-display-data @mountType) as |typeInfo|}}
+        <Icon @name={{typeInfo.glyph}} @size="24" class="has-text-grey-light" />
+        {{concat "Enable " typeInfo.displayName " Secrets Engine"}}
+      {{/let}}
+    </h1>
+  </p.levelLeft>
+</PageHeader>
+
+<div class="box is-sideless is-bottomless is-fullwidth is-marginless">
+  <NamespaceReminder @mode="enable" @noun="Secret Engine" />
+  <MessageError @errorMessage={{this.errorMessage}} />
+
+  <form {{on "submit" (perform this.mountBackend)}}>
+    {{! TODO we need to pre-populate the path input to mountType }}
+    <FormFieldGroups
+      @model={{@mountModel}}
+      @groupName="formFieldGroups"
+      @renderGroup="default"
+      @modelValidations={{this.modelValidations}}
+      @onKeyUp={{this.onKeyUp}}
+    />
+
+    <FormFieldGroups @model={{@mountModel}} @renderGroup="Method Options" @groupName="formFieldGroups">
+      <:identityTokenKey>
+        <SearchSelectWithModal
+          @id="key"
+          @fallbackComponent="input-search"
+          @inputValue={{@mountModel.config.identityTokenKey}}
+          @onChange={{this.handleIdentityTokenKeyChange}}
+          @models={{array "oidc/key"}}
+          @selectLimit="1"
+          @modalFormTemplate="modal-form/oidc-key-template"
+          @placeholder="Search for an existing OIDC key, or type a new key name to create it."
+          @fallbackComponentPlaceholder="Input a key name"
+          @modalSubtext="This key will be created in the OIDC key path."
+        />
+      </:identityTokenKey>
+    </FormFieldGroups>
+
+    <div class="field is-grouped box is-fullwidth is-bottomless">
+      <div class="control">
+        <Hds::Button
+          @text="Enable engine"
+          @icon={{if this.mountBackend.isRunning "loading"}}
+          type="submit"
+          data-test-submit
+          disabled={{this.mountBackend.isRunning}}
+        />
+      </div>
+      <div class="control">
+        {{! TODO unsure if we need to clear any state here }}
+        <Hds::Button @text="Back" @color="secondary" data-test-back-button />
+      </div>
+      {{#if this.invalidFormAlert}}
+        <div class="control">
+          <AlertInline @type="danger" class="has-top-padding-s" @message={{this.invalidFormAlert}} />
+        </div>
+      {{/if}}
+    </div>
+  </form>
+</div>

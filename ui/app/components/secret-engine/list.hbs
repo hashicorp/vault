@@ -32,7 +32,8 @@
     />
   </ToolbarFilters>
   <ToolbarActions>
-    <ToolbarLink @route="vault.cluster.settings.mount-secret-backend" @type="add" data-test-enable-engine>
+    {{! TODO: remove route vault/cluster/settings/mount-backend-form which is the old mount list for secret engines. we still use the mount-backend-form for the auth list }}
+    <ToolbarLink @route="vault.cluster.secrets.mount.index" @type="add" data-test-enable-engine>
       Enable new engine
     </ToolbarLink>
   </ToolbarActions>

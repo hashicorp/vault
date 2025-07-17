@@ -5,6 +5,7 @@
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 /**
  * This route is responsible for fetching all configuration data.
@@ -21,6 +22,7 @@ export default class SecretsBackendConfigurationRoute extends Route {
     const { type, id } = secretsEngine;
     return {
       secretsEngine,
+      // TODO all this config stuff is plugin-settings!! move to configuration/plugin-settings and don't fetch it here.
       config: await this.fetchConfig(type, id), // fetch config for configurable engines (aws, azure, gcp, ssh)
     };
   }
@@ -146,5 +148,13 @@ export default class SecretsBackendConfigurationRoute extends Route {
       httpStatus: error.status,
       ...error.response,
     };
+  }
+
+  setupController(controller, resolvedModel) {
+    super.setupController(controller, resolvedModel);
+    const engine = engineDisplayData(resolvedModel.secretsEngine.type);
+    controller.typeDisplay = engine.displayName;
+    controller.isConfigurable = engine.isConfigurable ?? false;
+    controller.modelId = resolvedModel.secretsEngine.id;
   }
 }

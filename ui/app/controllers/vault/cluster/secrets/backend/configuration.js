@@ -6,8 +6,10 @@
 import Controller from '@ember/controller';
 import { toLabel } from 'core/helpers/to-label';
 import engineDisplayData from 'vault/helpers/engines-display-data';
+import { service } from '@ember/service';
 
 export default class SecretsBackendConfigurationController extends Controller {
+  @service router;
   get displayFields() {
     const { engineType } = this.model.secretsEngine;
     const fields = ['type', 'path', 'description', 'accessor', 'local', 'sealWrap'];
