@@ -401,7 +401,6 @@ Users have reported an [issue](https://github.com/hashicorp/vault-plugin-auth-az
  oidc: id token issued by a different provider, expected "https://sts.windows.net/TenantID/" got "https://login.microsoftonline.com/TenantId/v2.0"
  ```
  
- **Fix**
  
  The error occured because `vault-agent-init` container by default uses `auth-type` as `kubernetes`. 
  
