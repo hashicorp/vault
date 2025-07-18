@@ -19,7 +19,6 @@ import {
 } from '@hashicorp/vault-client-typescript';
 import config from 'vault/config/environment';
 import { waitForPromise } from '@ember/test-waiters';
-import { underscore } from '@ember/string';
 
 import type AuthService from 'vault/services/auth';
 import type NamespaceService from 'vault/services/namespace';
@@ -84,39 +83,6 @@ export default class ApiService extends Service {
     return { url, init };
   };
 
-  normalizeRequestBodyKeys = async (context: RequestContext) => {
-    const { url, init } = context;
-    if (init.body) {
-      const convertKeys = (value: unknown): unknown => {
-        const notAnObject = (obj: unknown) =>
-          !['[object Object]', '[object Array]'].includes(Object.prototype.toString.call(obj));
-
-        if (notAnObject(value)) {
-          return value;
-        }
-        const json = value as Record<string, unknown>;
-        // object could be an array, in which case convert keys if it contains objects
-        if (Array.isArray(json)) {
-          return json.map(convertKeys);
-        }
-        // convert object keys to snake_case
-        return Object.keys(json).reduce((convertedJson: Record<string, unknown>, key) => {
-          const value = json[key];
-          // if the value is an object, convert those keys too
-          const convertedValue = notAnObject(value) ? value : convertKeys(value);
-          convertedJson[underscore(key)] = convertedValue;
-          return convertedJson;
-        }, {});
-      };
-
-      const requestBody = JSON.parse(init.body as string);
-      const convertedBody = convertKeys(requestBody);
-      init.body = JSON.stringify(convertedBody);
-    }
-
-    return { url, init };
-  };
-
   // -- Post Request Middleware --
   showWarnings = async (context: ResponseContext) => {
     const response = context.response.clone();
@@ -147,7 +113,6 @@ export default class ApiService extends Service {
       { pre: this.setLastFetch },
       { pre: this.getControlGroupToken },
       { pre: this.setHeaders },
-      { pre: this.normalizeRequestBodyKeys },
       { post: this.showWarnings },
       { post: this.deleteControlGroupToken },
     ],

@@ -112,29 +112,6 @@ module('Unit | Service | api', function (hooks) {
     );
   });
 
-  test('it should normalize request body keys to snake_case', async function (assert) {
-    const req = {
-      testProp: 'value',
-      testObj: {
-        camelCaseKey: 'value',
-      },
-      testArr: [{ arrObj: 'value' }],
-    };
-
-    const {
-      init: { body },
-    } = await this.apiService.normalizeRequestBodyKeys({ init: { body: JSON.stringify(req) } });
-
-    const json = JSON.parse(body);
-    assert.strictEqual(json.test_prop, 'value', 'Top-level key is converted to snake_case');
-    assert.strictEqual(json.test_obj.camel_case_key, 'value', 'Nested object key is converted to snake_case');
-    assert.strictEqual(
-      json.test_arr[0].arr_obj,
-      'value',
-      'Nested array object key is converted to snake_case'
-    );
-  });
-
   test('it should show warnings', async function (assert) {
     const warnings = JSON.stringify({ warnings: ['warning1', 'warning2'] });
     const response = new Response(warnings, { headers: { 'Content-Length': warnings.length } });
