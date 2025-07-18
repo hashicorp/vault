@@ -1356,6 +1356,7 @@ func TestLdapAuthBackend_ConfigUpgrade(t *testing.T) {
 		TokenParams: tokenutil.TokenParams{
 			TokenPeriod:         5 * time.Minute,
 			TokenExplicitMaxTTL: 24 * time.Hour,
+			TokenAuthMetadata:   make(map[string]string),
 		},
 		ConfigEntry: &ldaputil.ConfigEntry{
 			Url:                      cfg.Url,

@@ -47,6 +47,9 @@ type TokenParams struct {
 
 	// The TTL to user for the token
 	TokenTTL time.Duration `json:"token_ttl" mapstructure:"token_ttl"`
+
+	// The metadata to attach to the authentication information.
+	TokenAuthMetadata map[string]string `json:"token_auth_metadata" mapstructure:"token_auth_metadata"`
 }
 
 // AddTokenFields adds fields to an existing role. It panics if it would
@@ -157,6 +160,15 @@ func TokenFields() map[string]*framework.FieldSchema {
 				Group: "Tokens",
 			},
 		},
+
+		"token_auth_metadata": {
+			Type:        framework.TypeKVPairs,
+			Description: "The metadata to be tied to generated tokens. This should be a JSON formatted string containing the metadata in key value pairs",
+			DisplayAttrs: &framework.DisplayAttributes{
+				Name:  "Token Auth Metadata",
+				Group: "Tokens",
+			},
+		},
 	}
 }
 
@@ -238,6 +250,11 @@ func (t *TokenParams) ParseTokenFields(req *logical.Request, d *framework.FieldD
 		return errors.New("'token_ttl' cannot be greater than 'token_max_ttl'")
 	}
 
+	t.TokenAuthMetadata = make(map[string]string)
+	if tokenMetadataRaw, ok := d.GetOk("token_auth_metadata"); ok {
+		t.TokenAuthMetadata = tokenMetadataRaw.(map[string]string)
+	}
+
 	return nil
 }
 
@@ -252,6 +269,7 @@ func (t *TokenParams) PopulateTokenData(m map[string]interface{}) {
 	m["token_type"] = t.TokenType.String()
 	m["token_ttl"] = int64(t.TokenTTL.Seconds())
 	m["token_num_uses"] = t.TokenNumUses
+	m["token_auth_metadata"] = t.TokenAuthMetadata
 
 	if len(t.TokenPolicies) == 0 {
 		m["token_policies"] = []string{}
@@ -259,6 +277,10 @@ func (t *TokenParams) PopulateTokenData(m map[string]interface{}) {
 
 	if len(t.TokenBoundCIDRs) == 0 {
 		m["token_bound_cidrs"] = []string{}
+	}
+
+	if len(t.TokenAuthMetadata) == 0 {
+		m["token_auth_metadata"] = map[string]string{}
 	}
 }
 
@@ -274,6 +296,18 @@ func (t *TokenParams) PopulateTokenAuth(auth *logical.Auth) {
 	auth.TokenType = t.TokenType
 	auth.TTL = t.TokenTTL
 	auth.NumUses = t.TokenNumUses
+
+	if len(t.TokenAuthMetadata) > 0 {
+		if auth.Metadata == nil {
+			auth.Metadata = map[string]string{}
+		}
+		for k, v := range t.TokenAuthMetadata {
+			if _, ok := auth.Metadata[k]; !ok {
+				// Do not override metadata with the same key added by the caller
+				auth.Metadata[k] = v
+			}
+		}
+	}
 }
 
 func DeprecationText(param string) string {
