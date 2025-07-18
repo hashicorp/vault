@@ -165,7 +165,7 @@ All of these metrics are numerical, and contain no sensitive values or additiona
 | `vault.db.redis.plugin.count`                                       | The total number of Redis database plugin connections in Vault.                                            |
 | `vault.db.rediselasticache.plugin.count`                            | The total number of Redis Elasticache database plugin connections in Vault.                                |
 | `vault.db.snowflake.plugin.count`                                   | The total number of Snowflake database plugin connections in Vault.                                        |
-| `vault.db.unknown.plugin.count`                                     | The total number of custom or unknown database plugin connections in Vault.                              |
+| `vault.db.unknown.plugin.count`                                     | The total number of custom or unknown database plugin connections in Vault.                                |
 | `vault.secret.engine.activedirectory.count`                         | The total number of Active Directory secret engines in Vault.                                              |
 | `vault.secret.engine.alicloud.count`                                | The total number of Alicloud secret engines in Vault.                                                      |
 | `vault.secret.engine.aws.count`                                     | The total number of AWS secret engines in Vault.                                                           |
@@ -181,6 +181,7 @@ All of these metrics are numerical, and contain no sensitive values or additiona
 | `vault.secret.engine.mongodb.count`                                 | The total number of MongoDB secret engines in Vault.                                                       |
 | `vault.secret.engine.mongodbatlas.count`                            | The total number of MongoDBAtlas secret engines in Vault.                                                  |
 | `vault.secret.engine.mssql.count`                                   | The total number of MSSql secret engines in Vault.                                                         |
+| `vault.secret.engine.mysql.count`                                   | The total number of MySQL secret engines in Vault.                                                         |
 | `vault.secret.engine.postgresql.count`                              | The total number of Postgresql secret engines in Vault.                                                    |
 | `vault.secret.engine.nomad.count`                                   | The total number of Nomad secret engines in Vault.                                                         |
 | `vault.secret.engine.ldap.count`                                    | The total number of LDAP secret engines in Vault.                                                          |
@@ -198,6 +199,7 @@ All of these metrics are numerical, and contain no sensitive values or additiona
 | `vault.secretsync.destinations.count`                               | The total number of secret destinations configured for secret sync.                                        |
 | `vault.secretsync.destinations.aws-sm.count`                        | The total number of AWS-SM secret destinations configured for secret sync.                                 |
 | `vault.secretsync.destinations.azure-kv.count`                      | The total number of Azure-KV secret destinations configured for secret sync.                               |
+| `vault.secretsync.destinations.gcp-sm.count`                        | The total number of secret sync destinations to GCP-SM configured.                                         |
 | `vault.secretsync.destinations.gh.count`                            | The total number of GH secret destinations configured for secret sync.                                     |
 | `vault.secretsync.destinations.vault.count`                         | The total number of Vault secret destinations configured for secret sync.                                  |
 | `vault.secretsync.destinations.vercel-project.count`                | The total number of Vercel Project secret destinations configured for secret sync.                         |
@@ -213,6 +215,13 @@ All of these metrics are numerical, and contain no sensitive values or additiona
 | `vault.ui.custom_banners.unauthenticated`                           | How many unauthenticated custom banners have been enabled across all namespaces.                           |
 | `vault.storage.max_entry_size`                                      | The value of `max_entry_size` parameter for the storage stanza in the config.                              |
 | `vault.storage.max_mount_and_namespace_table_entry_size`            | The value of `max_mount_and_namespace_table_entry_size` parameter for the storage stanza in the config.    |
+| `vault.operator.import.kv.version2.secrets.source.vault.count`      | The total number of secrets imported from Vault using operator import command.                             |
+| `vault.operator.import.kv.version2.secrets.source.aws.count`        | The total number of secrets imported from AWS using operator import command.                               |
+| `vault.operator.import.kv.version2.secrets.source.gcp.count`        | The otal number of secrets imported from GCP using operator import command.                                |
+| `vault.operator.import.kv.version2.secrets.source.azure.count`      | The total number of secrets imported from Azure using operator import command.                             |
+| `vault.operator.import.kv.version2.secrets.count`                   | The total number of secrets imported from using operator import command.                                   |
+| `vault.telemetry.stanzas.count`                                     | The count of telemetry stanzas configured in this cluster.                                                 |
+| `vault.telemetry.filters.count`                                     | The count of metric prefix filters specified in the telemetry stanza in config file.                       |
 | `vault.replication.secret.non_local_mounts`                         | The number of replicated secret mounts on Enterprise clusters.                                             |
 | `vault.replication.secret.local_mounts`                             | The number of local secret mounts on Enterprise clusters.                                                  |
 | `vault.replication.auth.local_mounts`                               | The number of local auth mounts on Enterprise clusters.                                                    |
@@ -242,8 +251,6 @@ All of these metrics are numerical, and contain no sensitive values or additiona
 | `vault.mfa.stepup.okta.count`                                       | The count of MFA configurations using the Okta method enforced as step-up authentication.                  |
 | `vault.mfa.stepup.pingid.count`                                     | The count of MFA configurations using the PingID method enforced as step-up authentication.                |
 | `vault.mfa.stepup.duo.count`                                        | The count of MFA configurations using the Duo method enforced as step-up authentication.                   |
-| `vault.telemetry.stanzas.count`                                     | The count of telemetry stanzas configured in this cluster.                                                 |
-| `vault.telemetry.filters.count`                                     | The count of metric prefix filters specified in the telemetry stanza in config file.                       |
 ## Usage metadata list
 
 HashiCorp collects the following product usage metadata as part of the `metadata` part of the
