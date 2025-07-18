@@ -195,7 +195,7 @@ module('Unit | Service | api', function (hooks) {
 
   test('it should map list response to array', async function (assert) {
     const response = {
-      keyInfo: {
+      key_info: {
         key1: { title: 'Title 1' },
         key2: { title: 'Title 2' },
       },

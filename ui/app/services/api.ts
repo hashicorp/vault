@@ -221,13 +221,13 @@ export default class ApiService extends Service {
   // accepts a list response as { keyInfo, keys } and returns a flat array of the keyInfo datum
   // to preserve the keys (unique identifiers) the value will be set on the datum as id
   keyInfoToArray(response: unknown = {}) {
-    const { keyInfo, keys } = response as { keyInfo?: Record<string, unknown>; keys?: string[] };
-    if (!keyInfo || !keys) {
+    const { key_info, keys } = response as { key_info?: Record<string, unknown>; keys?: string[] };
+    if (!key_info || !keys) {
       return [];
     }
     return keys.reduce(
       (arr, key) => {
-        const datum = keyInfo[key];
+        const datum = key_info[key];
         if (datum) {
           arr.push({ id: key, ...datum });
         }
