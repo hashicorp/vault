@@ -245,10 +245,12 @@ func documentPaths(backend *Backend, requestResponsePrefix string, doc *OASDocum
 func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *OASDocument) error {
 	var sudoPaths []string
 	var unauthPaths []string
+	var allowSnapshotReadPaths []string
 
 	if backend.PathsSpecial != nil {
 		sudoPaths = backend.PathsSpecial.Root
 		unauthPaths = backend.PathsSpecial.Unauthenticated
+		allowSnapshotReadPaths = backend.PathsSpecial.AllowSnapshotRead
 	}
 
 	// Convert optional parameters into distinct patterns to be processed independently.
@@ -278,6 +280,7 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 		pi.Sudo = specialPathMatch(path, sudoPaths)
 		pi.Unauthenticated = specialPathMatch(path, unauthPaths)
 		pi.DisplayAttrs = withoutOperationHints(p.DisplayAttrs)
+		allowSnapshotRead := specialPathMatch(path, allowSnapshotReadPaths)
 
 		// If the newer style Operations map isn't defined, create one from the legacy fields.
 		operations := p.Operations
@@ -326,6 +329,14 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 		for opType, opHandler := range operations {
 			props := opHandler.Properties()
 			if props.Unpublished || forceUnpublished {
+				continue
+			}
+
+			// OpenAPI doesn't allow for multiple operations on the same path and with the same HTTP method, so both
+			// Create, Update and Recover which operate on either POST or PUT methods are folded into Update (under POST
+			// method on OpenAPI). Furthermore, so far there's no use case for a Recover operation on an endpoint that
+			// doesn't support either Create or Update, so we skip it here as well.
+			if opType == logical.RecoverOperation {
 				continue
 			}
 
@@ -383,6 +394,17 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 				// dealing with a POST/PUT/PATCH request.
 				for name, field := range queryFields {
 					addFieldToOASSchema(s, name, field)
+				}
+
+				// The recover operation is a special case, it's under the same POST/PUT method as Create and
+				// Update, but it's triggered via a query parameter, not a field in the body.
+				if operations[logical.RecoverOperation] != nil && opType != logical.PatchOperation {
+					op.Parameters = append(op.Parameters, OASParameter{
+						Name:        "recover_snapshot_id",
+						Description: "Triggers a recover operation using the given snapshot ID. Request body is ignored when a recover operation is requested.",
+						In:          "query",
+						Schema:      &OASSchema{Type: "string"},
+					})
 				}
 
 				// Make the ordering deterministic, so that the generated OpenAPI spec document, observed over several
@@ -464,6 +486,15 @@ func documentPath(p *Path, backend *Backend, requestResponsePrefix string, doc *
 						Deprecated: field.Deprecated,
 					}
 					op.Parameters = append(op.Parameters, p)
+				}
+
+				if allowSnapshotRead && opType != logical.DeleteOperation {
+					op.Parameters = append(op.Parameters, OASParameter{
+						Name:        "read_snapshot_id",
+						Description: "Targets the read operation to the provided loaded snapshot Id",
+						In:          "query",
+						Schema:      &OASSchema{Type: "string"},
+					})
 				}
 
 				// Sort parameters for a stable output
