@@ -47,7 +47,7 @@ export default class MfaForm extends Component {
   }
 
   get constraints() {
-    return this.args.authData.mfaRequirement.mfaConstraints;
+    return this.args.authData.mfaRequirement.mfa_constraints;
   }
   get multiConstraint() {
     return this.constraints.length > 1;

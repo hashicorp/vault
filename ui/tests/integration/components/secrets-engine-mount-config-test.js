@@ -24,11 +24,11 @@ module('Integration | Component | secrets-engine-mount-config', function (hooks)
       type: 'ldap',
       accessor: 'ldap_7e838627',
       local: false,
-      sealWrap: true,
+      seal_wrap: true,
       config: {
         id: 'foo',
-        defaultLeaseTtl: 0,
-        maxLeaseTtl: 10000,
+        default_lease_ttl: 0,
+        max_lease_ttl: 10000,
       },
     });
   });

@@ -17,11 +17,11 @@ export default class VaultClusterSettingsMountSecretBackendRoute extends Route {
 
   model() {
     const defaults = {
-      config: { listingVisibility: false },
-      kvConfig: {
-        maxVersions: 0,
-        casRequired: false,
-        deleteVersionAfter: undefined,
+      config: { listing_visibility: false },
+      kv_config: {
+        max_versions: 0,
+        cas_required: false,
+        delete_version_after: undefined,
       },
       options: { version: 2 },
     };
