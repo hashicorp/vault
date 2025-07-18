@@ -2710,8 +2710,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
-	rawVal, ok := data.GetOk("allowed_response_headers")
-	if ok {
+	if rawVal, ok := data.GetOk("allowed_response_headers"); ok {
 		headers := rawVal.([]string)
 		oldVal := mountEntry.Config.AllowedResponseHeaders
 		mountEntry.Config.AllowedResponseHeaders = headers
