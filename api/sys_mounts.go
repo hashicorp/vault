@@ -5,7 +5,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -230,13 +229,6 @@ func (c *Sys) TuneMount(path string, config MountConfigInput) error {
 func (c *Sys) TuneMountWithContext(ctx context.Context, path string, config MountConfigInput) error {
 	ctx, cancelFunc := c.c.withConfiguredTimeout(ctx)
 	defer cancelFunc()
-
-	fmt.Printf("-- YISS. config we're passing to mount tune: %#v\n", config)
-	val, err := json.Marshal(config)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("-- YISS. config as json: %#v\n", string(val))
 
 	r := c.c.NewRequest(http.MethodPost, fmt.Sprintf("/v1/sys/mounts/%s/tune", path))
 	if err := r.SetJSONBody(config); err != nil {

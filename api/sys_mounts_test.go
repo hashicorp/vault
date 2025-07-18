@@ -9,54 +9,6 @@ import (
 	"testing"
 )
 
-func TestTuneMount(t *testing.T) {
-	mockVaultServer := httptest.NewServer(http.HandlerFunc(mockVaultMountsHandler))
-	defer mockVaultServer.Close()
-
-	cfg := DefaultConfig()
-	cfg.Address = mockVaultServer.URL
-	client, err := NewClient(cfg)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	path := "mypkipath"
-
-	// create the mount
-	input := &MountInput{
-		Type:        "pki",
-		Description: "my description",
-		Config: MountConfigInput{
-			DefaultLeaseTTL:        "1000",
-			MaxLeaseTTL:            "10000",
-			AllowedResponseHeaders: &[]string{"Authenticate"},
-		},
-		Local:                 false,
-		SealWrap:              true,
-		ExternalEntropyAccess: false,
-	}
-
-	err = client.Sys().Mount(path, input)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// not passing AllowedResponseHeaders should not remove the existing value
-	err = client.Sys().TuneMount(path, MountConfigInput{
-		MaxLeaseTTL: "20000",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	resp, err := client.Sys().MountConfig(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	t.Fatalf("resp = %#v", resp)
-}
-
 func TestListMounts(t *testing.T) {
 	mockVaultServer := httptest.NewServer(http.HandlerFunc(mockVaultMountsHandler))
 	defer mockVaultServer.Close()

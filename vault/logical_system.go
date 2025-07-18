@@ -2710,28 +2710,7 @@ func (b *SystemBackend) handleTuneWriteCommon(ctx context.Context, path string, 
 		}
 	}
 
-	fmt.Println("-- ABOUT TO CHECK")
 	rawVal, ok := data.GetOk("allowed_response_headers")
-	fmt.Printf("-- rawVal: %#v, ok: %t\n", rawVal, ok)
-
-	/*
-			turns out there's no difference between submitting a key with an empty value and not submitting a key at all.
-			for example, on this endpoint, if you were to submit
-
-			allowed_response_headers = []
-
-			as part of your API request, or you submitted an API request that didn't include the allowed_response_headers key at all,
-			in both cases, rawVal = nil and ok = false. this means it's impossible to distinguish between whoops i forgot to
-			include some data and i specifically want to clear this field.
-
-			since this endpoint uses PUT/POST and not PATCH, that means customers are expected to submit the entire
-			config object every time, but of course, if they can't submit an object that has a value that's empty, then
-			they can never clear a field.
-
-			this goes all the way through to the way the field data is parsed into FieldData.Raw. even getPrimitive is
-		    showing no value
-	*/
-
 	if ok {
 		headers := rawVal.([]string)
 		oldVal := mountEntry.Config.AllowedResponseHeaders
