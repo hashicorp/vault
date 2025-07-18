@@ -275,7 +275,7 @@ can only be set during role creation and once set, it can't be reset later.`,
 							},
 							"token_auth_metadata": {
 								Type:        framework.TypeKVPairs,
-								Description: "The metadata to be tied to generated tokens. This should be a JSON formatted string containing the metadata in key value pairs",
+								Description: "The metadata to be tied to generated tokens. This should be a list or map containing the metadata in key value pairs",
 							},
 							"period": {
 								Type:        framework.TypeInt64,
