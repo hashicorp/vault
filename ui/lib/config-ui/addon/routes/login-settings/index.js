@@ -16,7 +16,7 @@ export default class LoginSettingsRoute extends Route {
       const { data } = await adapter.ajax('/v1/sys/config/ui/login/default-auth', 'GET', {
         data: { list: true },
       });
-      const loginRules = this.api.keyInfoToArray({ keyInfo: data.key_info, keys: data.keys });
+      const loginRules = this.api.keyInfoToArray(data);
       return { loginRules };
     } catch (e) {
       if (e.httpStatus === 404) {
