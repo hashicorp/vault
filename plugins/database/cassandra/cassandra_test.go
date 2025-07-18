@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	backoff "github.com/cenkalti/backoff/v3"
+	"github.com/cenkalti/backoff/v4"
 	"github.com/gocql/gocql"
 	"github.com/hashicorp/vault/helper/testhelpers/cassandra"
 	dbplugin "github.com/hashicorp/vault/sdk/database/dbplugin/v5"
