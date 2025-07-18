@@ -17,7 +17,7 @@ auth/okta: Add ability to specify custom Auth metadata via new role configuratio
 auth/radius: Add ability to specify custom Auth metadata via new role configuration parameter `token_auth_metadata`.
 ```
 ```release-note:improvement
-auth/scep: Add ability to specify custom Auth metadata via new role creation parameter `token_auth_metadata`.
+auth/scep (enterprise): Add ability to specify custom Auth metadata via new role creation parameter `token_auth_metadata`.
 ```
 ```release-note:improvement
 auth/cert: Add ability to specify custom Auth metadata via new CA certificate role creation parameter `token_auth_metadata`.
