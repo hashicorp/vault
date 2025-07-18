@@ -44,10 +44,6 @@
     {{#each @model.formFields as |field|}}
       <FormField @attr={{field}} @model={{@model}} @modelValidations={{this.modelValidations}} />
     {{/each}}
-    <p class="is-size-9 has-text-grey has-bottom-margin-l">
-      You can use Alt+Tab (Option+Tab on MacOS) in the code editor to skip to the next field. Click 'How to write JSON
-      template for scopes' to view an example.
-    </p>
   </div>
   <div class="has-top-margin-l has-bottom-margin-l">
     <Hds::Button

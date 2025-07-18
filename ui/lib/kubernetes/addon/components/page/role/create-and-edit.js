@@ -28,6 +28,7 @@ export default class CreateAndEditRolePageComponent extends Component {
   @tracked modelValidations;
   @tracked invalidFormAlert;
   @tracked errorBanner;
+  @tracked codemirrorEditor;
 
   constructor() {
     super(...arguments);
@@ -85,7 +86,7 @@ export default class CreateAndEditRolePageComponent extends Component {
     const message =
       'This specifies the Role or ClusterRole rules to use when generating a role. Kubernetes documentation is';
     const link =
-      '<a href="https://kubernetes.io/docs/reference/access-authn-authz/rbac/" target="_blank" rel="noopener noreferrer">available here</>';
+      '<a href="https://kubernetes.io/docs/reference/access-authn-authz/rbac/" target="_blank" rel="noopener noreferrer" class="has-text-white">available here</>';
     return `${message} ${link}.`;
   }
 
@@ -112,6 +113,16 @@ export default class CreateAndEditRolePageComponent extends Component {
   @action
   resetRoleRules() {
     this.roleRulesTemplates = getRules();
+
+    this.codemirrorEditor.dispatch({
+      changes: [
+        {
+          from: 0,
+          to: this.codemirrorEditor.state.doc.length,
+          insert: this.args.value,
+        },
+      ],
+    });
   }
 
   @action
