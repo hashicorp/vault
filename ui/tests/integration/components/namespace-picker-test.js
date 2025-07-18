@@ -48,6 +48,16 @@ module('Integration | Component | namespace-picker', function (hooks) {
     );
   });
 
+  test('it selects the current namespace', async function (assert) {
+    await render(hbs`<NamespacePicker />`);
+    assert.dom(GENERAL.button('namespace-picker')).hasText('child1', 'it just displays the namespace node');
+    await click(GENERAL.button('namespace-picker'));
+    assert
+      .dom(GENERAL.button(this.nsService.path))
+      .hasAttribute('aria-selected', 'true', 'the current namespace path is selected');
+    assert.dom(`${GENERAL.button(this.nsService.path)} ${GENERAL.icon('check')}`).exists();
+  });
+
   test('it filters namespace options based on search input', async function (assert) {
     await render(hbs`<NamespacePicker/>`);
     await click(GENERAL.button('namespace-picker'));
@@ -159,5 +169,20 @@ module('Integration | Component | namespace-picker', function (hooks) {
     assert.dom(`li ${GENERAL.button()}`).exists({ count: 2 }, 'namespace picker only contains 2 options');
     assert.dom(GENERAL.button('admin')).exists();
     assert.dom(GENERAL.button('admin/child1')).exists();
+  });
+
+  test('it selects the correct namespace when matching nodes exist', async function (assert) {
+    // stub response so that two namespaces have matching node names 'child1'
+    this.server.get('/sys/internal/ui/namespaces', () => {
+      return { data: { keys: ['parent1/', 'parent1/child1', 'anotherParent/', 'anotherParent/child1'] } };
+    });
+    await render(hbs`<NamespacePicker />`);
+    assert.dom(GENERAL.button('namespace-picker')).hasText('child1', 'it displays the namespace node');
+    await click(GENERAL.button('namespace-picker'));
+    assert
+      .dom(GENERAL.button(this.nsService.path))
+      .hasAttribute('aria-selected', 'true', 'the current namespace path is selected');
+    assert.dom('[aria-selected="true"]').exists({ count: 1 }, 'only one option is selected');
+    assert.dom(GENERAL.icon('check')).exists({ count: 1 }, 'only one check mark renders');
   });
 });

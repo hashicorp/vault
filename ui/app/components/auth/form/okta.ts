@@ -42,8 +42,8 @@ export default class AuthFormOkta extends AuthBase {
     return this.normalizeAuthResponse(auth, {
       authMountPath: path,
       displayName: auth?.metadata?.username,
-      token: auth.clientToken,
-      ttl: auth.leaseDuration,
+      token: auth.client_token,
+      ttl: auth.lease_duration,
     });
   }
 
@@ -67,7 +67,7 @@ export default class AuthFormOkta extends AuthBase {
   async requestOktaVerify(nonce: string, mountPath: string) {
     try {
       const { data } = (await this.api.auth.oktaVerify(nonce, mountPath)) as OktaVerifyApiResponse;
-      return data.correctAnswer;
+      return data.correct_answer;
     } catch (e) {
       const { status, message } = await this.api.parseError(e);
       if (status === 404) {

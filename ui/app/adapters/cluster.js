@@ -121,8 +121,7 @@ export default ApplicationAdapter.extend({
     });
   },
 
-  mfaValidate(mfaRequirement) {
-    const { mfaRequestId: mfa_request_id, mfaConstraints: mfa_constraints } = mfaRequirement;
+  mfaValidate({ mfa_request_id, mfa_constraints }) {
     const options = {
       data: {
         mfa_request_id,
