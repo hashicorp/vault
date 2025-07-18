@@ -1,3 +1,4 @@
+
 #!/usr/bin/env bash
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
@@ -33,18 +34,29 @@ cat << EOF > ${GROUP_LDIF}
 dn: ou=users,dc=$LDAP_USERNAME,dc=com
 objectClass: organizationalUnit
 ou: users
+
+dn: ou=groups,dc=$LDAP_USERNAME,dc=com
+objectClass: organizationalUnit
+ou: groups
 EOF
 ldapadd -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}" -f ${GROUP_LDIF}
 
 echo "OpenLDAP: Creating User LDIF file and adding user to LDAP"
 USER_LDIF="user.ldif"
 cat << EOF > ${USER_LDIF}
+# User: enos
 dn: uid=$LDAP_USERNAME,ou=users,dc=$LDAP_USERNAME,dc=com
 objectClass: inetOrgPerson
-sn: user
+sn: $LDAP_USERNAME
 cn: $LDAP_USERNAME user
 uid: $LDAP_USERNAME
 userPassword: $LDAP_ADMIN_PW
+
+# Group: devs
+dn: cn=devs,ou=groups,dc=$LDAP_USERNAME,dc=com
+objectClass: groupOfNames
+cn: devs
+member: uid=$LDAP_USERNAME,ou=users,dc=$LDAP_USERNAME,dc=com
 EOF
 ldapadd -x -H "ldap://${LDAP_SERVER}:${LDAP_PORT}" -D "cn=admin,dc=${LDAP_USERNAME},dc=com" -w "${LDAP_ADMIN_PW}" -f ${USER_LDIF}
 
@@ -62,7 +74,6 @@ echo "Vault: Creating ldap auth and creating auth/ldap/config route"
   insecure_tls=true
 
 echo "Vault: Updating ldap auth and creating auth/ldap/config route"
-"$binpath" auth enable "${MOUNT}" > /dev/null 2>&1 || echo "Warning: Vault ldap auth already enabled"
 "$binpath" write "auth/${MOUNT}/config" \
   url="ldap://${LDAP_SERVER}:${LDAP_PORT}" \
   binddn="cn=admin,dc=${LDAP_USERNAME},dc=com" \
@@ -81,5 +92,17 @@ path "secret/data/*" {
   capabilities = ["read", "list"]
 }
 EOF
-"$binpath" policy write reader "${VAULT_LDAP_POLICY}"
-"$binpath" write "auth/${MOUNT}/users/${LDAP_USERNAME}" policies="reader"
+LDAP_READER_POLICY="reader-policy"
+"$binpath" policy write ${LDAP_READER_POLICY} "${VAULT_LDAP_POLICY}"
+"$binpath" write "auth/${MOUNT}/users/${LDAP_USERNAME}" policies="${LDAP_READER_POLICY}"
+
+echo "Vault: Creating Vault Policy for LDAP DEV and assigning user to policy"
+VAULT_LDAP_DEV_POLICY="ldap_dev.hcl"
+cat << EOF > ${VAULT_LDAP_DEV_POLICY}
+path "secret/data/dev/*" {
+  capabilities = ["read", "list"]
+}
+EOF
+LDAP_DEV_POLICY="dev-policy"
+"$binpath" policy write ${LDAP_DEV_POLICY} "${VAULT_LDAP_DEV_POLICY}"
+"$binpath" write "auth/${MOUNT}/groups/devs" policies="${LDAP_DEV_POLICY}"
