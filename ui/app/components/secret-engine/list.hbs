@@ -67,18 +67,31 @@
           </Hds::TooltipButton>
         {{/if}}
         {{#if backend.path}}
-          {{#if backend.isSupportedBackend}}
-            <LinkTo
-              @route={{backend.backendLink}}
-              @model={{backend.id}}
-              class="has-text-black has-text-weight-semibold overflow-wrap"
-              data-test-secret-path={{backend.path}}
-            >
-              {{backend.path}}
-            </LinkTo>
-          {{else}}
-            <span data-test-secret-path={{backend.path}}>{{backend.path}}</span>
-          {{/if}}
+          <div class="is-flex is-align-items-center">
+            {{#if backend.isSupportedBackend}}
+              <LinkTo
+                @route={{backend.backendLink}}
+                @model={{backend.id}}
+                class="has-text-black has-text-weight-semibold overflow-wrap"
+                data-test-secret-path={{backend.path}}
+              >
+                {{backend.path}}
+              </LinkTo>
+            {{else}}
+              <span data-test-secret-path={{backend.path}}>{{backend.path}}</span>
+            {{/if}}
+            <Hds::Button
+              @text={{if (includes backend.id this.favoriteEngines) "Remove from favorites" "Add to favorites"}}
+              @icon={{if (includes backend.id this.favoriteEngines) "star-fill" "star"}}
+              @color="tertiary"
+              @size="small"
+              class="favorite-star-button has-left-margin-xs"
+              @isIconOnly={{true}}
+              title={{if (includes backend.id this.favoriteEngines) "Remove from favorites" "Add to favorites"}}
+              {{on "click" (fn this.toggleFavorite backend.id)}}
+              data-test-favorite-engine={{backend.id}}
+            />
+          </div>
         {{/if}}
       </div>
       <code class="has-text-grey is-size-8" data-test-engine-accessor>
