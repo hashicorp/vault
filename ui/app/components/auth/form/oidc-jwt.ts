@@ -95,7 +95,7 @@ export default class AuthFormOidcJwt extends AuthBase {
         return field;
       });
     }
-    
+
     this.fetchAuthUrl.perform();
   }
 
