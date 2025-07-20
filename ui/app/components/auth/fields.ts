@@ -13,6 +13,7 @@ interface Field {
   name: string; // sets input name
   label?: string; // label will be "name" capitalized unless label exists
   helperText?: string;
+  value?: string;
 }
 
 export default class AuthFields extends Component<Args> {

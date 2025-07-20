@@ -12,6 +12,7 @@
       name={{name}}
       class="has-bottom-margin-m"
       data-test-input={{name}}
+      @value="{{field.value}}"
       as |F|
     >
       <F.Label>{{or label (capitalize name)}}</F.Label>
