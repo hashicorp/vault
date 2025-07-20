@@ -1,12 +1,12 @@
 ---
 layout: docs
-page_title: How HSM support changes Vault behavioral
+page_title: How HSM support changes Vault's behavior
 description: >-
   Understand how HSM support changes the way Vault works with unseal/recovery
   keys and rekey/recovery operations.
 ---
 
-# How HSM support changes Vault behavioral
+# How HSM support changes Vault's behavior
 
 @include 'alerts/enterprise-only.mdx'
 
@@ -15,14 +15,14 @@ effect when using Vault with an HSM.
 
 ## Key split between unseal keys and recovery keys
 
-Normally, Vault uses a single set of unseal keys to perform both decryption of
-the cryptographic barrier and to authorize recovery operations, such as the
+Normally, Vault uses a single set of unseal keys to both decrypt the
+cryptographic barrier and to authorize recovery operations, such as the
 [`generate-root`](/vault/api-docs/system/generate-root)
 functionality.
 
-When using an HSM, because the HSM automatically unseals the barrier but
-recovery operations should still have human oversight, Vault instead uses two
-sets of keys: unseal keys and recovery keys. 
+When using an HSM, Vault instead uses two sets of keys: unseal keys and recovery
+keys. This lets the HSM automatically unseal the barrier but still requires a
+human to oversee recovery operations.
 
 -> **Recovery keys:** Refer to the
  [Seal/Unseal](/vault/docs/concepts/seal#recovery-key) documentation to learn more
@@ -48,11 +48,10 @@ encryption key are supported when using an HSM.
 
 ## Performance and availability
 
-When an HSM is used for generating various Critical Security Parameters (CSPs) or for entropy augmentation,
-interaction with the HSM becomes part of the request processing for
-functionality using it. This means the HSM must be online and available for
-those requests to succeed. Additionally, some operations are performed much
-more frequently than key generation where interaction with the HSM may
-impact performance. A mount with seal wrapping enabled will interact with
-the HSM on every write for example. Vault tokens (non-batch) generated with
-entropy augmentation enabled will interact with the HSM when created.
+When Vault uses an HSM to generate various Critical Security Parameters (CSPs),
+or for entropy augmentation, it needs the HSM to be online and available to
+process these requests. Additionally, some operations that interact with the HSM
+can happen more frequently than key generation, and may impact performance. For
+example, a mount with seal wrapping enabled will interact with the HSM on every
+write. Vault will interact with the HSM every time it generates a non-batch
+token with entropy augmentation enabled.
