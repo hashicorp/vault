@@ -1,0 +1,3 @@
+```release-note:improvement
+events (enterprise): Send events from a primary cluster to a secondary cluster when there is a subscriber on the secondary cluster with a filter matching the events.
+```
