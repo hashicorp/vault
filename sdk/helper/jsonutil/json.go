@@ -14,7 +14,9 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 )
 
-// Encodes/Marshals the given object into JSON
+const CustomMaxJSONDepth = 500
+
+// EncodeJSON encodes/marshals the given object into JSON
 func EncodeJSON(in interface{}) ([]byte, error) {
 	if in == nil {
 		return nil, fmt.Errorf("input for encoding is nil")
@@ -84,7 +86,7 @@ func DecodeJSON(data []byte, out interface{}) error {
 	return DecodeJSONFromReader(bytes.NewReader(data), out)
 }
 
-// Decodes/Unmarshals the given io.Reader pointing to a JSON, into a desired object
+// DecodeJSONFromReader Decodes/Unmarshals the given io.Reader pointing to a JSON, into a desired object
 func DecodeJSONFromReader(r io.Reader, out interface{}) error {
 	if r == nil {
 		return fmt.Errorf("'io.Reader' being decoded is nil")
@@ -93,11 +95,65 @@ func DecodeJSONFromReader(r io.Reader, out interface{}) error {
 		return fmt.Errorf("output parameter 'out' is nil")
 	}
 
-	dec := json.NewDecoder(r)
+	jsonBytes, err := io.ReadAll(r)
+	if err != nil {
+		return fmt.Errorf("failed to read JSON input into buffer: %w", err)
+	}
+	if len(jsonBytes) == 0 {
+		return nil
+	}
+
+	// We need to read the content of the JSON before decoding it so that we determine the depth of the JSON and fail fast in case it exceeds our internal depth limit.
+	// This done because of the DoS found in https://hashicorp.atlassian.net/browse/VAULT-36788, which affects audit logging and other operations such as HMACing of fields.
+	depthReader := bytes.NewReader(jsonBytes)
+	actualDepth, err := calculateMaxDepthStreaming(depthReader)
+	if err != nil {
+		return fmt.Errorf("failed to scan JSON for depth: %w", err)
+	}
+	if actualDepth > CustomMaxJSONDepth {
+		return fmt.Errorf("JSON input exceeds allowed nesting depth (%d > %d)", actualDepth, CustomMaxJSONDepth)
+	}
+
+	dec := bytes.NewReader(jsonBytes)
+	jsonDec := json.NewDecoder(dec)
 
 	// While decoding JSON values, interpret the integer values as `json.Number`s instead of `float64`.
-	dec.UseNumber()
+	jsonDec.UseNumber()
 
 	// Since 'out' is an interface representing a pointer, pass it to the decoder without an '&'
-	return dec.Decode(out)
+	return jsonDec.Decode(out)
+}
+
+// This function avoids building the full map in memory, suitable for very deep JSON.
+func calculateMaxDepthStreaming(jsonReader io.Reader) (int, error) {
+	decoder := json.NewDecoder(jsonReader)
+	decoder.UseNumber()
+	maxDepth := 0
+	currentDepth := 0
+
+	for {
+		t, err := decoder.Token()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return 0, fmt.Errorf("error reading JSON token: %w", err)
+		}
+
+		if delim, ok := t.(json.Delim); ok {
+			if delim == '{' || delim == '[' {
+				currentDepth++
+				if currentDepth > maxDepth {
+					maxDepth = currentDepth
+				}
+			} else if delim == '}' || delim == ']' {
+				currentDepth--
+			}
+		}
+	}
+	// Add this check to account for unmatched delimiters
+	if currentDepth != 0 {
+		return 0, fmt.Errorf("malformed JSON, unmatched delimiters")
+	}
+	return maxDepth, nil
 }
