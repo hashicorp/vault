@@ -4,9 +4,10 @@
 package timeutil
 
 import (
+	"crypto/rand"
 	"errors"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"strconv"
 	"strings"
 	"testing"
@@ -192,7 +193,7 @@ func NormalizeToYear(date, normal time.Time) time.Time {
 }
 
 // GetRandomTimeInMonth gets a random time in same month as input time
-func GetRandomTimeInMonth(inputTime time.Time) time.Time {
+func GetRandomTimeInMonth(inputTime time.Time) (time.Time, error) {
 	firstOfMonth := StartOfMonth(inputTime)
 	year, month, _ := firstOfMonth.Date()
 
@@ -200,13 +201,37 @@ func GetRandomTimeInMonth(inputTime time.Time) time.Time {
 	_, _, lastDayOfMonth := EndOfMonth(inputTime).Date()
 
 	// Generate random day, hour, minute, and second
-	randomDay := rand.Intn(lastDayOfMonth) + 1 // +1 because rand.Intn returns [0, n)
-	randomHour := rand.Intn(24)
-	randomMinute := rand.Intn(60)
-	randomSecond := rand.Intn(60)
+	maxDay := big.NewInt(int64(lastDayOfMonth))
+	randomDayPtr, err := rand.Int(rand.Reader, maxDay)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	maxHour := big.NewInt(int64(24))
+	randomHourPtr, err := rand.Int(rand.Reader, maxHour)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	maxMinute := big.NewInt(int64(60))
+	randomMinutePtr, err := rand.Int(rand.Reader, maxMinute)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	maxSecond := big.NewInt(int64(60))
+	randomSecondPtr, err := rand.Int(rand.Reader, maxSecond)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	randomDay := int(randomDayPtr.Int64() + 1) // +1 because rand.Int returns [0, n)
+	randomHour := int(randomHourPtr.Int64())
+	randomMinute := int(randomMinutePtr.Int64())
+	randomSecond := int(randomSecondPtr.Int64())
 
 	// Create the random time
 	randomTime := time.Date(year, month, randomDay, randomHour, randomMinute, randomSecond, 0, time.UTC)
 
-	return randomTime
+	return randomTime, nil
 }

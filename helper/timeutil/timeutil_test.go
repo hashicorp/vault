@@ -485,7 +485,8 @@ func Test_GetRandomTimeInMonth(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			randomTime := GetRandomTimeInMonth(tc.inputTime)
+			randomTime, err := GetRandomTimeInMonth(tc.inputTime)
+			require.NoError(t, err)
 			startOfMonth := StartOfMonth(tc.inputTime)
 			endOfMonth := EndOfMonth(tc.inputTime)
 			if !((randomTime.After(startOfMonth) || randomTime.Equal(startOfMonth)) && (randomTime.Before(endOfMonth) || randomTime.Equal(endOfMonth))) {
