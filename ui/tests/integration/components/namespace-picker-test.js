@@ -8,36 +8,10 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, fillIn, findAll, waitFor, click, find } from '@ember/test-helpers';
 import sinon from 'sinon';
 import hbs from 'htmlbars-inline-precompile';
-import Service from '@ember/service';
 import { NAMESPACE_PICKER_SELECTORS } from 'vault/tests/helpers/namespace-picker';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-
-class StoreService extends Service {
-  findRecord(modelType, id) {
-    return new Promise((resolve, reject) => {
-      if (modelType === 'capabilities' && id === 'sys/namespaces/') {
-        resolve(); // Simulate a successful response
-      } else {
-        reject({ httpStatus: 404, message: 'not found' }); // Simulate an error response
-      }
-    });
-  }
-}
-
-function getMockCapabilitiesModel(canList) {
-  // Mock for the Capabilities model
-  return {
-    path: 'sys/namespaces/',
-    capabilities: canList ? ['list'] : [],
-    get(property) {
-      if (property === 'canList') {
-        return this.capabilities.includes('list');
-      }
-      return undefined;
-    },
-  };
-}
+import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
 
 module('Integration | Component | namespace-picker', function (hooks) {
   setupRenderingTest(hooks);
@@ -52,12 +26,8 @@ module('Integration | Component | namespace-picker', function (hooks) {
     // the path in the namespace service denotes the current namespace context a user is in
     this.nsService.path = 'parent1/child1';
     this.server.get('/sys/internal/ui/namespaces', () => {
-      return {
-        data: { keys: ['parent1/', 'parent1/child1/'] },
-      };
+      return { data: { keys: ['parent1/', 'parent1/child1/'] } };
     });
-
-    this.owner.register('service:store', StoreService);
   });
 
   hooks.afterEach(function () {
@@ -75,6 +45,16 @@ module('Integration | Component | namespace-picker', function (hooks) {
       searchInput,
       'The search input field is focused on component load'
     );
+  });
+
+  test('it selects the current namespace', async function (assert) {
+    await render(hbs`<NamespacePicker />`);
+    assert.dom(GENERAL.toggleInput('namespace-id')).hasText('child1', 'it just displays the namespace node');
+    await click(GENERAL.toggleInput('namespace-id'));
+    assert
+      .dom(NAMESPACE_PICKER_SELECTORS.link(this.nsService.path))
+      .hasAttribute('aria-selected', 'true', 'the current namespace path is selected');
+    assert.dom(`${NAMESPACE_PICKER_SELECTORS.link(this.nsService.path)} ${GENERAL.icon('check')}`).exists();
   });
 
   test('it filters namespace options based on search input', async function (assert) {
@@ -111,65 +91,43 @@ module('Integration | Component | namespace-picker', function (hooks) {
     );
   });
 
-  test('it shows both action buttons when canList is true', async function (assert) {
-    const storeStub = this.owner.lookup('service:store');
-    sinon.stub(storeStub, 'findRecord').callsFake((modelType, id) => {
-      if (modelType === 'capabilities' && id === 'sys/namespaces/') {
-        return Promise.resolve(getMockCapabilitiesModel(true));
-      }
-      return Promise.reject();
+  module('capabilities', function (hooks) {
+    hooks.beforeEach(function () {
+      // the capabilities service prepends the user's root namespace to API paths when checking permissions.
+      // For simplicity, test permissions from the "root" namespace context
+      this.nsService.path = '';
     });
 
-    await render(hbs`<NamespacePicker />`);
-    await click(GENERAL.toggleInput('namespace-id'));
+    test('it shows the "Manage" action when user has canList permissions', async function (assert) {
+      this.server.post('/sys/capabilities-self', () => capabilitiesStub('sys/namespaces', ['list']));
 
-    // Verify that the "Refresh List" button is visible
-    assert.dom(NAMESPACE_PICKER_SELECTORS.refreshList).exists('Refresh List button is visible');
-    assert.dom(NAMESPACE_PICKER_SELECTORS.manageButton).exists('Manage button is visible');
-  });
+      await render(hbs`<NamespacePicker />`);
+      await click(GENERAL.toggleInput('namespace-id'));
 
-  test('it hides the refresh button when canList is false', async function (assert) {
-    const storeStub = this.owner.lookup('service:store');
-    sinon.stub(storeStub, 'findRecord').callsFake((modelType, id) => {
-      if (modelType === 'capabilities' && id === 'sys/namespaces/') {
-        return Promise.resolve(getMockCapabilitiesModel(false));
-      }
-      return Promise.reject();
+      assert.dom(NAMESPACE_PICKER_SELECTORS.manageButton).exists('Manage button is visible');
     });
 
-    await render(hbs`<NamespacePicker />`);
-    await click(GENERAL.toggleInput('namespace-id'));
+    test('it hides the "Manage" button when canList is false', async function (assert) {
+      this.server.post('/sys/capabilities-self', capabilitiesStub(`sys/namespaces`, ['deny']));
+      await render(hbs`<NamespacePicker />`);
+      await click(GENERAL.toggleInput('namespace-id'));
 
-    // Verify that the buttons are hidden
-    assert.dom(NAMESPACE_PICKER_SELECTORS.refreshList).doesNotExist('Refresh List button is hidden');
-    assert.dom(NAMESPACE_PICKER_SELECTORS.manageButton).exists('Manage button is hidden');
-  });
-
-  test('it hides both action buttons when the capabilities store throws an error', async function (assert) {
-    const storeStub = this.owner.lookup('service:store');
-    sinon.stub(storeStub, 'findRecord').callsFake(() => {
-      return Promise.reject();
+      // Verify that the buttons are hidden
+      assert.dom(NAMESPACE_PICKER_SELECTORS.manageButton).doesNotExist('Manage button is hidden');
     });
 
-    await render(hbs`<NamespacePicker />`);
-    await click(GENERAL.toggleInput('namespace-id'));
+    test('it shows "Manage" button when the capabilities request throws an error', async function (assert) {
+      // It's rare for the capabilities request to fail (if it does, it's usually because the request is made in the wrong namespace context).
+      // If it fails, the UI should show resources and rely on the API to gate them appropriately.
+      this.server.post('/sys/capabilities-self', () => overrideResponse(403));
 
-    // Verify that the buttons are hidden
-    assert.dom(NAMESPACE_PICKER_SELECTORS.refreshList).doesNotExist('Refresh List button is hidden');
-    assert.dom(NAMESPACE_PICKER_SELECTORS.manageButton).doesNotExist('Manage button is hidden');
+      await render(hbs`<NamespacePicker />`);
+      await click(GENERAL.toggleInput('namespace-id'));
+      assert.dom(NAMESPACE_PICKER_SELECTORS.manageButton).exists();
+    });
   });
 
   test('it updates the namespace list after clicking "Refresh list"', async function (assert) {
-    this.owner.lookup('service:namespace').set('hasListPermissions', true);
-
-    const storeStub = this.owner.lookup('service:store');
-    sinon.stub(storeStub, 'findRecord').callsFake((modelType, id) => {
-      if (modelType === 'capabilities' && id === 'sys/namespaces/') {
-        return Promise.resolve(getMockCapabilitiesModel(true)); // Return the mock model
-      }
-      return Promise.reject();
-    });
-
     await render(hbs`<NamespacePicker />`);
     await click(GENERAL.toggleInput('namespace-id'));
 
@@ -180,7 +138,7 @@ module('Integration | Component | namespace-picker', function (hooks) {
       'Initially, three namespaces are displayed'
     );
 
-    // Re-stub request with a new namespace
+    // Re-stub request from beforeEach hook with a new namespace
     this.server.get('/sys/internal/ui/namespaces', () => {
       return {
         data: { keys: ['parent1/', 'parent1/child1/', 'new-namespace/'] },
@@ -220,5 +178,20 @@ module('Integration | Component | namespace-picker', function (hooks) {
       .exists({ count: 2 }, 'namespace picker only contains 2 options');
     assert.dom(NAMESPACE_PICKER_SELECTORS.link('admin')).exists();
     assert.dom(NAMESPACE_PICKER_SELECTORS.link('admin/child1')).exists();
+  });
+
+  test('it selects the correct namespace when matching nodes exist', async function (assert) {
+    // stub response so that two namespaces have matching node names 'child1'
+    this.server.get('/sys/internal/ui/namespaces', () => {
+      return { data: { keys: ['parent1/', 'parent1/child1', 'anotherParent/', 'anotherParent/child1'] } };
+    });
+    await render(hbs`<NamespacePicker />`);
+    assert.dom(GENERAL.toggleInput('namespace-id')).hasText('child1', 'it displays the namespace node');
+    await click(GENERAL.toggleInput('namespace-id'));
+    assert
+      .dom(NAMESPACE_PICKER_SELECTORS.link(this.nsService.path))
+      .hasAttribute('aria-selected', 'true', 'the current namespace path is selected');
+    assert.dom('[aria-selected="true"]').exists({ count: 1 }, 'only one option is selected');
+    assert.dom(GENERAL.icon('check')).exists({ count: 1 }, 'only one check mark renders');
   });
 });

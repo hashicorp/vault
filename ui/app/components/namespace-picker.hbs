@@ -8,7 +8,9 @@
 
     <D.ToggleButton
       @icon="org"
-      @text={{or this.selectedNamespace.id "-"}}
+      {{! Displays the node of the current namespace context in the toggle }}
+      {{! For example, if a user navigates to 'parent/child' the toggle just displays 'child' }}
+      @text={{this.namespace.currentNamespace}}
       @isFullWidth={{true}}
       data-test-toggle-input="namespace-id"
       {{on "click" this.toggleNamespacePicker}}
@@ -58,7 +60,7 @@
       <div class="is-overflow-y-auto is-max-drawer-height" {{did-insert this.setupScrollListener}}>
         {{#each this.visibleNamespaceOptions as |option|}}
           <D.Checkmark
-            @selected={{eq option.id this.selectedNamespace.id}}
+            @selected={{eq option.path this.selectedNamespace.path}}
             {{on "click" (fn this.onChange option)}}
             data-test-namespace-link={{option.path}}
           >
@@ -71,22 +73,19 @@
 
     <D.Footer @hasDivider={{true}} class="is-flex-center">
       <Hds::ButtonSet class="is-fullwidth">
-        {{#if this.canRefreshNamespaces}}
-          <Hds::Button
-            @color="secondary"
-            @text="Refresh list"
-            @isFullWidth={{(not this.canManageNamespaces)}}
-            @icon="reload"
-            @size="small"
-            {{on "click" this.refreshList}}
-            data-test-refresh-namespaces
-          />
-        {{/if}}
+        <Hds::Button
+          @color="secondary"
+          @text="Refresh list"
+          @isFullWidth={{not this.canManageNamespaces}}
+          @icon="reload"
+          @size="small"
+          {{on "click" this.refreshList}}
+          data-test-refresh-namespaces
+        />
         {{#if this.canManageNamespaces}}
           <Hds::Button
             @color="tertiary"
             @text="Manage"
-            @isFullWidth={{(not this.canRefreshNamespaces)}}
             @icon="settings"
             @size="small"
             @route="vault.cluster.access.namespaces"
