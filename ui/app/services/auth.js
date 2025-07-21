@@ -421,13 +421,13 @@ export default Service.extend({
   },
 
   parseMfaResponse(mfaRequirement) {
-    // mfaRequirement response comes back in a shape that is not easy to work with
+    // mfa_requirement response comes back in a shape that is not easy to work with
     // convert to array of objects and add necessary properties to satisfy the view
     if (mfaRequirement) {
-      const { mfaRequestId, mfaConstraints } = mfaRequirement;
+      const { mfa_request_id, mfa_constraints } = mfaRequirement;
       const constraints = [];
-      for (const key in mfaConstraints) {
-        const methods = mfaConstraints[key].any;
+      for (const key in mfa_constraints) {
+        const methods = mfa_constraints[key].any;
         const isMulti = methods.length > 1;
 
         // friendly label for display in MfaForm
@@ -441,7 +441,7 @@ export default Service.extend({
           selectedMethod: isMulti ? null : methods[0],
         });
       }
-      return { mfaRequestId, mfaConstraints: constraints };
+      return { mfa_request_id, mfa_constraints: constraints };
     }
     return {};
   },
@@ -484,7 +484,7 @@ export default Service.extend({
   // Depending on where auth happens (mfa/validate, renew-self or the method's login) the auth data
   // varies slightly (i.e. "ttl" vs "lease_duration"). Normalize it so stored authData contains consistent keys.
   // (Also, the API service returns camel cased keys and raw ajax requests return snake cased params.)
-  normalizeAuthData(authData, { authMethodType, authMountPath, displayName }) {
+  normalizeAuthData(authData, { authMethodType, authMountPath, displayName, token, ttl }) {
     const displayNameFromMetadata = (metadata) =>
       metadata
         ? ['org', 'username']
@@ -498,10 +498,11 @@ export default Service.extend({
       authMountPath,
       entityId: authData?.entity_id,
       expireTime: authData?.expire_time,
-      token: authData?.client_token,
+      token: token || authData?.client_token,
       renewable: authData?.renewable,
-      ttl: authData?.lease_duration,
+      ttl: ttl || authData?.lease_duration,
       policies: authData?.policies,
+      mfaRequirement: authData?.mfa_requirement,
       // not all methods return a display name or metadata, if this is still empty it will be gleaned from lookup-self
       displayName: displayName || displayNameFromMetadata(authData?.metadata),
     };

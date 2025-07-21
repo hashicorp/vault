@@ -121,46 +121,46 @@ module('Acceptance | landing page dashboard', function (hooks) {
   module('configuration details card', function (hooks) {
     hooks.beforeEach(async function () {
       this.data = {
-        apiAddr: 'http://127.0.0.1:8200',
-        cacheSize: 0,
-        clusterAddr: 'https://127.0.0.1:8201',
-        clusterCipherSuites: '',
-        clusterName: '',
-        defaultLeaseTtl: 0,
-        defaultMaxRequestDuration: 0,
-        detectDeadlocks: '',
-        disableCache: false,
-        disableClustering: false,
-        disableIndexing: false,
-        disableMlock: true,
-        disablePerformanceStandby: false,
-        disablePrintableCheck: false,
-        disableSealwrap: false,
-        disableSentinelTrace: false,
-        enableResponseHeaderHostname: false,
-        enableResponseHeaderRaftNodeId: false,
-        enableUi: true,
+        api_addr: 'http://127.0.0.1:8200',
+        cache_size: 0,
+        cluster_addr: 'https://127.0.0.1:8201',
+        cluster_cipher_suites: '',
+        cluster_name: '',
+        default_lease_ttl: 0,
+        default_max_request_duration: 0,
+        detect_deadlocks: '',
+        disable_cache: false,
+        disable_clustering: false,
+        disable_indexing: false,
+        disable_mlock: true,
+        disable_performance_standby: false,
+        disable_printable_check: false,
+        disable_sealwrap: false,
+        disable_sentinel_trace: false,
+        enable_response_header_hostname: false,
+        enable_response_header_raft_node_id: false,
+        enable_ui: true,
         experiments: null,
-        introspectionEndpoint: false,
+        introspection_endpoint: false,
         listeners: [
           {
             config: {
               address: '0.0.0.0:8200',
-              clusterAddress: '0.0.0.0:8201',
-              tlsDisable: true,
+              cluster_address: '0.0.0.0:8201',
+              tls_disable: true,
             },
             type: 'tcp',
           },
         ],
-        logFormat: '',
-        logLevel: 'debug',
-        logRequestsLevel: '',
-        maxLeaseTtl: '48h',
-        pidFile: '',
-        pluginDirectory: '',
-        pluginFilePermissions: 0,
-        pluginFileUid: 0,
-        rawStorageEndpoint: true,
+        log_format: '',
+        log_level: 'debug',
+        log_requests_level: '',
+        max_lease_ttl: '48h',
+        pid_file: '',
+        plugin_directory: '',
+        plugin_file_permissions: 0,
+        plugin_file_uid: 0,
+        raw_storage_endpoint: true,
         seals: [
           {
             disabled: false,
@@ -168,44 +168,44 @@ module('Acceptance | landing page dashboard', function (hooks) {
           },
         ],
         storage: {
-          clusterAddr: 'https://127.0.0.1:8201',
-          disableClustering: false,
+          cluster_addr: 'https://127.0.0.1:8201',
+          disable_clustering: false,
           raft: {
-            maxEntrySize: '',
+            max_entry_size: '',
           },
-          redirectAddr: 'http://127.0.0.1:8200',
+          redirect_addr: 'http://127.0.0.1:8200',
           type: 'raft',
         },
         telemetry: {
-          addLeaseMetricsNamespaceLabels: false,
-          circonusApiApp: '',
-          circonusApiToken: '',
-          circonusApiUrl: '',
-          circonusBrokerId: '',
-          circonusBrokerSelectTag: '',
-          circonusCheckDisplayName: '',
-          circonusCheckForceMetricActivation: '',
-          circonusCheckId: '',
-          circonusCheckInstanceId: '',
-          circonusCheckSearchTag: '',
-          circonusCheckTags: '',
-          circonusSubmissionInterval: '',
-          circonusSubmissionUrl: '',
-          disableHostname: true,
-          dogstatsdAddr: '',
-          dogstatsdTags: null,
-          leaseMetricsEpsilon: 3600000000000,
-          maximumGaugeCardinality: 500,
-          metricsPrefix: '',
-          numLeaseMetricsBuckets: 168,
-          prometheusRetentionTime: 86400000000000,
-          stackdriverDebugLogs: false,
-          stackdriverLocation: '',
-          stackdriverNamespace: '',
-          stackdriverProjectId: '',
-          statsdAddress: '',
-          statsiteAddress: '',
-          usageGaugePeriod: 5000000000,
+          add_lease_metrics_namespace_labels: false,
+          circonus_api_app: '',
+          circonus_api_token: '',
+          circonus_api_url: '',
+          circonus_broker_id: '',
+          circonus_broker_select_tag: '',
+          circonus_check_display_name: '',
+          circonus_check_force_metric_activation: '',
+          circonus_check_id: '',
+          circonus_check_instance_id: '',
+          circonus_check_search_tag: '',
+          circonus_check_tags: '',
+          circonus_submission_interval: '',
+          circonus_submission_url: '',
+          disable_hostname: true,
+          dogstatsd_addr: '',
+          dogstatsd_tags: null,
+          lease_metrics_epsilon: 3600000000000,
+          maximum_gauge_cardinality: 500,
+          metrics_prefix: '',
+          num_lease_metrics_buckets: 168,
+          prometheus_retention_time: 86400000000000,
+          stackdriver_debug_logs: false,
+          stackdriver_location: '',
+          stackdriver_namespace: '',
+          stackdriver_project_id: '',
+          statsd_address: '',
+          statsite_address: '',
+          usage_gauge_period: 5000000000,
         },
       };
 
@@ -252,9 +252,9 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
     test('it should show tls as enabled if tls_disable, tls_cert_file and tls_key_file are in the config', async function (assert) {
       assert.expect(1);
-      this.data.listeners[0].config.tlsDisable = false;
-      this.data.listeners[0].config.tlsCertFile = './cert.pem';
-      this.data.listeners[0].config.tlsKeyFile = './key.pem';
+      this.data.listeners[0].config.tls_disable = false;
+      this.data.listeners[0].config.tls_cert_file = './cert.pem';
+      this.data.listeners[0].config.tls_key_file = './key.pem';
 
       await login();
       await visit('/vault/dashboard');
@@ -263,9 +263,9 @@ module('Acceptance | landing page dashboard', function (hooks) {
 
     test('it should show tls as enabled if only cert and key exist in config', async function (assert) {
       assert.expect(1);
-      delete this.data.listeners[0].config.tlsDisable;
-      this.data.listeners[0].config.tlsCertFile = './cert.pem';
-      this.data.listeners[0].config.tlsKeyFile = './key.pem';
+      delete this.data.listeners[0].config.tls_disable;
+      this.data.listeners[0].config.tls_cert_file = './cert.pem';
+      this.data.listeners[0].config.tls_key_file = './key.pem';
       await login();
       await visit('/vault/dashboard');
       assert.dom(DASHBOARD.vaultConfigurationCard.configDetailsField('tls')).hasText('Enabled');

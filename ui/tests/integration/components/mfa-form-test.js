@@ -29,8 +29,8 @@ module('Integration | Component | mfa-form', function (hooks) {
     // override in tests that require different scenarios
     this.totpConstraint = this.server.create('mfa-method', { type: 'totp' });
     const mfaRequirement = this.authService.parseMfaResponse({
-      mfaRequestId: 'test-mfa-id',
-      mfaConstraints: { test_mfa: { any: [this.totpConstraint] } },
+      mfa_request_id: 'test-mfa-id',
+      mfa_constraints: { test_mfa: { any: [this.totpConstraint] } },
     });
     this.mfaAuthData.mfaRequirement = mfaRequirement;
   });
@@ -41,8 +41,8 @@ module('Integration | Component | mfa-form', function (hooks) {
     const duoConstraint = this.server.create('mfa-method', { type: 'duo' });
 
     this.mfaAuthData.mfaRequirement = this.authService.parseMfaResponse({
-      mfaRequestId: 'test-mfa-id',
-      mfaConstraints: { test_mfa_1: { any: [totpConstraint] } },
+      mfa_request_id: 'test-mfa-id',
+      mfa_constraints: { test_mfa_1: { any: [totpConstraint] } },
     });
 
     await render(
@@ -61,8 +61,8 @@ module('Integration | Component | mfa-form', function (hooks) {
       );
 
     this.mfaAuthData.mfaRequirement = this.authService.parseMfaResponse({
-      mfaRequestId: 'test-mfa-id',
-      mfaConstraints: { test_mfa_1: { any: [duoConstraint, oktaConstraint] } },
+      mfa_request_id: 'test-mfa-id',
+      mfa_constraints: { test_mfa_1: { any: [duoConstraint, oktaConstraint] } },
     });
 
     await render(
@@ -81,8 +81,8 @@ module('Integration | Component | mfa-form', function (hooks) {
       );
 
     this.mfaAuthData.mfaRequirement = this.authService.parseMfaResponse({
-      mfaRequestId: 'test-mfa-id',
-      mfaConstraints: { test_mfa_1: { any: [oktaConstraint] }, test_mfa_2: { any: [duoConstraint] } },
+      mfa_request_id: 'test-mfa-id',
+      mfa_constraints: { test_mfa_1: { any: [oktaConstraint] }, test_mfa_2: { any: [duoConstraint] } },
     });
 
     await render(
@@ -117,8 +117,8 @@ module('Integration | Component | mfa-form', function (hooks) {
     const oktaConstraint = this.server.create('mfa-method', { type: 'okta' });
     const pingidConstraint = this.server.create('mfa-method', { type: 'pingid' });
     const mfaRequirement = this.authService.parseMfaResponse({
-      mfaRequestId: 'test-mfa-id',
-      mfaConstraints: {
+      mfa_request_id: 'test-mfa-id',
+      mfa_constraints: {
         test_mfa_1: {
           any: [pingidConstraint, oktaConstraint],
         },

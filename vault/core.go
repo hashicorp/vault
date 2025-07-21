@@ -2565,7 +2565,9 @@ func (s standardUnsealStrategy) unseal(ctx context.Context, logger log.Logger, c
 		if err != nil {
 			return err
 		}
+		c.auditLock.Lock()
 		c.auditBroker = broker
+		c.auditLock.Unlock()
 	}
 
 	if c.isPrimary() {

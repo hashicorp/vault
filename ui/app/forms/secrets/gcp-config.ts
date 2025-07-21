@@ -16,8 +16,8 @@ export default class AzureConfigForm extends WifConfigForm<GcpConfigFormData> {
   isAccountPluginConfigured = false;
 
   get isWifPluginConfigured() {
-    const { identityTokenAudience, identityTokenTtl, serviceAccountEmail } = this.data;
-    return !!identityTokenAudience || !!identityTokenTtl || !!serviceAccountEmail;
+    const { identity_token_audience, identity_token_ttl, service_account_email } = this.data;
+    return !!identity_token_audience || !!identity_token_ttl || !!service_account_email;
   }
 
   accountFields = [
@@ -38,7 +38,7 @@ export default class AzureConfigForm extends WifConfigForm<GcpConfigFormData> {
       helperTextEnabled:
         'The default config TTL (time-to-live) for long-lived credentials (i.e. service account keys).',
     }),
-    new FormField('maxTtl', 'string', {
+    new FormField('max_ttl', 'string', {
       label: 'Max TTL',
       editType: 'ttl',
       helperTextDisabled:
@@ -50,11 +50,11 @@ export default class AzureConfigForm extends WifConfigForm<GcpConfigFormData> {
 
   wifFields = [
     this.commonWifFields.issuer,
-    this.commonWifFields.identityTokenAudience,
-    new FormField('serviceAccountEmail', 'string', {
+    this.commonWifFields.identity_token_audience,
+    new FormField('service_account_email', 'string', {
       subText: 'Email ID for the Service Account to impersonate for Workload Identity Federation.',
     }),
-    this.commonWifFields.identityTokenTtl,
+    this.commonWifFields.identity_token_ttl,
   ];
 
   get formFieldGroups() {

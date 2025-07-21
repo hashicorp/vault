@@ -26,14 +26,6 @@ const (
 	AuthTypeSAML             = "saml"
 	AuthTypeApprole          = "approle"
 	AuthTypeJWT              = "jwt"
-	DbCassandraPlugin        = "cassandra"
-	DbHanaPlugin             = "hdb"
-	DbInfluxDBPlugin         = "influxdb"
-	DbMongoDBPlugin          = "mongodb"
-	DbMsSQLPlugin            = "mssql"
-	DbMySQLPlugin            = "mysql"
-	DbRedshiftPlugin         = "redshift"
-	DbPostgresqlPlugin       = "pgx"
 	SecretEngineAD           = "ad"
 	SecretEngineAlicloud     = "alicloud"
 	SecretEngineAWS          = "aws"
@@ -70,4 +62,22 @@ const (
 	// SecretEngineDatabase is the entry type for all databases, i.e. this is the combined
 	// database type for every database.
 	SecretEngineDatabase = "database"
+)
+
+// These DB consts match the type returned from database plugin's Type() method.
+const (
+	DbCassandraPluginType        = "cassandra"
+	DbCouchbasePluginType        = "couchbase"
+	DbElasticSearchPluginType    = "elasticsearch"
+	DbHanaPluginType             = "hdb"
+	DbInfluxDBPluginType         = "influxdb"
+	DbMongoDBPluginType          = "mongodb"
+	DbMongoAtlasPluginType       = "mongodbatlas"
+	DbMsSQLPluginType            = "mssql"
+	DbMySQLPluginType            = "mysql"
+	DbPostgresqlPluginType       = "pgx"
+	DbRedshiftPluginType         = "redshift"
+	DbRedisPluginType            = "redis"
+	DbRedisElasticachePluginType = "redisElastiCache"
+	DbSnowflakePluginType        = "snowflake"
 )

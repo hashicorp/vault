@@ -13,27 +13,27 @@ import type { MfaRequirementApiResponse } from './mfa';
 // The structure of the returned data varies slightly between these cases.
 interface SharedAuthResponseData {
   accessor: string;
-  entityId: string;
+  entity_id: string;
   policies: string[];
   renewable: boolean;
 }
 
 // AuthResponseAuthKey defines login data inside the "auth" key
 interface AuthResponseAuthKey extends SharedAuthResponseData {
-  clientToken: string;
-  leaseDuration: number;
+  client_token: string;
+  lease_duration: number;
   metadata: Record<string, string>;
-  mfaRequirement: MfaRequirementApiResponse | null;
-  tokenType: 'service' | 'batch';
+  mfa_requirement: MfaRequirementApiResponse | null;
+  token_type: 'service' | 'batch';
 }
 
 // AuthResponseDataKey defines login data inside the "data" key
 interface AuthResponseDataKey extends SharedAuthResponseData {
-  displayName: string;
-  expireTime: string;
+  display_name: string;
+  expire_time: string;
   id: string; // this is the Vault issued token (the equivalent of the clientToken for responses with the "auth" key)
   meta: Record<string, string> | null;
-  namespacePath?: string;
+  namespace_path?: string;
   ttl: number;
   type: 'service' | 'batch'; // token type
 }
@@ -56,11 +56,11 @@ export interface OidcApiResponse extends ApiResponse {
 }
 
 export interface JwtOidcAuthUrlResponse extends ApiResponse {
-  data: { authUrl: string };
+  data: { auth_url: string };
 }
 
 export interface OktaVerifyApiResponse extends ApiResponse {
-  data: { correctAnswer: number };
+  data: { correct_answer: number };
 }
 
 export interface SamlLoginApiResponse extends ApiResponse {
@@ -69,8 +69,8 @@ export interface SamlLoginApiResponse extends ApiResponse {
 
 export interface SamlSsoServiceUrlApiResponse extends ApiResponse {
   data: {
-    ssoServiceUrl: string;
-    tokenPollId: string;
+    sso_service_url: string;
+    token_poll_id: string;
   };
 }
 

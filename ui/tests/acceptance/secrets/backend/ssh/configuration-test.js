@@ -84,9 +84,9 @@ module('Acceptance | ssh | configuration', function (hooks) {
       `/vault/secrets/${sshPath}/configuration/edit`,
       'after deleting public key stays on edit page'
     );
-    assert.dom(GENERAL.inputByAttr('privateKey')).hasNoText('Private key is empty and reset');
-    assert.dom(GENERAL.inputByAttr('publicKey')).hasNoText('Public key is empty and reset');
-    assert.dom(GENERAL.inputByAttr('generateSigningKey')).isChecked('Generate signing key is checked');
+    assert.dom(GENERAL.inputByAttr('private_key')).hasNoText('Private key is empty and reset');
+    assert.dom(GENERAL.inputByAttr('public_key')).hasNoText('Public key is empty and reset');
+    assert.dom(GENERAL.inputByAttr('generate_signing_key')).isChecked('Generate signing key is checked');
     await click(SES.viewBackend);
     await click(SES.configTab);
     assert
@@ -101,11 +101,13 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await enablePage.enable('ssh', path);
     await click(SES.configTab);
     await click(SES.configure);
-    assert.dom(GENERAL.inputByAttr('generateSigningKey')).isChecked('generate_signing_key defaults to true');
-    await click(GENERAL.inputByAttr('generateSigningKey'));
+    assert
+      .dom(GENERAL.inputByAttr('generate_signing_key'))
+      .isChecked('generate_signing_key defaults to true');
+    await click(GENERAL.inputByAttr('generate_signing_key'));
     await click(GENERAL.submitButton);
     assert
-      .dom(GENERAL.validationErrorByAttr('generateSigningKey'))
+      .dom(GENERAL.validationErrorByAttr('generate_signing_key'))
       .hasText('Provide a Public and Private key or set "Generate Signing Key" to true.');
     // visit the details page and confirm the public key is not shown
     await visit(`/vault/secrets/${path}/configuration`);

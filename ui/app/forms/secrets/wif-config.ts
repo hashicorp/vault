@@ -22,12 +22,12 @@ export default class WifConfigForm<T extends object> extends Form<T> {
       placeholder: 'https://vault-test.com',
     }),
 
-    identityTokenAudience: new FormField('identityTokenAudience', 'string', {
+    identity_token_audience: new FormField('identity_token_audience', 'string', {
       subText:
         'The audience claim value for plugin identity tokens. Must match an allowed audience configured for the target IAM OIDC identity provider.',
     }),
 
-    identityTokenTtl: new FormField('identityTokenTtl', 'string', {
+    identity_token_ttl: new FormField('identity_token_ttl', 'string', {
       label: 'Identity token TTL',
       helperTextDisabled:
         'The TTL of generated tokens. Defaults to 1 hour, turn on the toggle to specify a different value.',
@@ -35,7 +35,7 @@ export default class WifConfigForm<T extends object> extends Form<T> {
       editType: 'ttl',
     }),
 
-    serviceAccountEmail: new FormField('serviceAccountEmail', 'string', {
+    service_account_email: new FormField('service_account_email', 'string', {
       subText: 'Email ID for the Service Account to impersonate for Workload Identity Federation.',
     }),
   };

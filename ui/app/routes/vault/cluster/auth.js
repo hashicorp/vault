@@ -80,13 +80,7 @@ export default class AuthRoute extends ClusterRouteBase {
   async unwrapToken(token, clusterId) {
     try {
       const { auth } = await this.api.sys.unwrap({}, this.api.buildHeaders({ token }));
-      const authData = {
-        ...auth,
-        authMethodType: 'token',
-        authMountPath: '',
-        token: auth.clientToken,
-        ttl: auth.leaseDuration,
-      };
+      const authData = this.auth.normalizeAuthData(auth, { authMethodType: 'token', authMountPath: '' });
       return await this.auth.authSuccess(clusterId, authData);
     } catch (e) {
       const { message } = await this.api.parseError(e);

@@ -15,15 +15,15 @@ export default class AzureConfigForm extends WifConfigForm<AzureConfigFormData> 
   isAccountPluginConfigured = false;
 
   get isWifPluginConfigured() {
-    const { identityTokenAudience, identityTokenTtl } = this.data;
-    return !!identityTokenAudience || !!identityTokenTtl;
+    const { identity_token_audience, identity_token_ttl } = this.data;
+    return !!identity_token_audience || !!identity_token_ttl;
   }
 
   accountFields = [
-    new FormField('subscriptionId', 'string', { label: 'Subscription ID' }),
-    new FormField('tenantId', 'string', { label: 'Tenant ID' }),
-    new FormField('clientId', 'string', { label: 'Client ID' }),
-    new FormField('clientSecret', 'string', { sensitive: true }),
+    new FormField('subscription_id', 'string', { label: 'Subscription ID' }),
+    new FormField('tenant_id', 'string', { label: 'Tenant ID' }),
+    new FormField('client_id', 'string', { label: 'Client ID' }),
+    new FormField('client_secret', 'string', { sensitive: true }),
   ];
 
   optionFields = [
@@ -31,7 +31,7 @@ export default class AzureConfigForm extends WifConfigForm<AzureConfigFormData> 
       subText:
         'This value can also be provided with the AZURE_ENVIRONMENT environment variable. If not specified, Vault will use Azure Public Cloud.',
     }),
-    new FormField('rootPasswordTtl', 'string', {
+    new FormField('root_password_ttl', 'string', {
       label: 'Root password TTL',
       editType: 'ttl',
       // default is 15768000 sec. The api docs say 182 days, but this should be updated to 182.5 days.
@@ -46,8 +46,8 @@ export default class AzureConfigForm extends WifConfigForm<AzureConfigFormData> 
     this.accountFields[0] as FormField,
     this.accountFields[1] as FormField,
     this.accountFields[2] as FormField,
-    this.commonWifFields.identityTokenAudience,
-    this.commonWifFields.identityTokenTtl,
+    this.commonWifFields.identity_token_audience,
+    this.commonWifFields.identity_token_ttl,
   ];
 
   get formFieldGroups() {
