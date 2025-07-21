@@ -15,33 +15,40 @@ type Args = {
 
 export default class ConfigurationDetails extends Component<Args> {
   awsFields = [
-    'roleArn',
-    'identityTokenAudience',
-    'identityTokenTtl',
-    'accessKey',
+    'role_arn',
+    'identity_token_audience',
+    'identity_token_ttl',
+    'access_key',
     'region',
-    'iamEndpoint',
-    'stsEndpoint',
-    'maxRetries',
+    'iam_endpoint',
+    'sts_endpoint',
+    'max_retries',
     'lease',
-    'leaseMax',
+    'lease_max',
     'issuer',
   ];
 
   azureFields = [
-    'subscriptionId',
-    'tenantId',
-    'clientId',
-    'identityTokenAudience',
-    'identityTokenTtl',
-    'rootPasswordTtl',
+    'subscription_id',
+    'tenant_id',
+    'client_id',
+    'identity_token_audience',
+    'identity_token_ttl',
+    'root_password_ttl',
     'environment',
     'issuer',
   ];
 
-  gcpFields = ['serviceAccountEmail', 'ttl', 'maxTtl', 'identityTokenAudience', 'identityTokenTtl', 'issuer'];
+  gcpFields = [
+    'service_account_email',
+    'ttl',
+    'max_ttl',
+    'identity_token_audience',
+    'identity_token_ttl',
+    'issuer',
+  ];
 
-  sshFields = ['publicKey', 'generateSigningKey'];
+  sshFields = ['public_key', 'generate_signing_key'];
 
   get displayFields() {
     switch (this.args.typeDisplay) {
@@ -72,13 +79,15 @@ export default class ConfigurationDetails extends Component<Args> {
     return (
       {
         lease: 'Default Lease TTL',
-        leaseMax: 'Max Lease TTL',
+        lease_max: 'Max Lease TTL',
         ttl: 'Config TTL',
       }[field] || formattedLabel
     );
   };
 
   isDuration = (field: string) => {
-    return ['identityTokenTtl', 'rootPasswordTtl', 'lease', 'leaseMax', 'ttl', 'maxTtl'].includes(field);
+    return ['identity_token_ttl', 'root_password_ttl', 'lease', 'lease_max', 'ttl', 'max_ttl'].includes(
+      field
+    );
   };
 }

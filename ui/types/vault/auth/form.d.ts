@@ -38,8 +38,10 @@ export interface VisibleAuthMounts {
 // normalized so each method's information maps to the same key names
 export interface NormalizedAuthData extends NormalizeAuthResponseKeys {
   authMethodType: string;
+  entityId?: string;
   expireTime?: string;
-  namespacePath?: string;
+  renewable: boolean;
+  policies: string[];
   mfaRequirement?: MfaRequirementApiResponse | null;
 }
 

@@ -8,8 +8,10 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { toolsActions } from 'vault/helpers/tools-actions';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
+
 import { capitalize, camelize } from '@ember/string';
 import codemirror, { assertCodeBlockValue, setCodeEditorValue } from 'vault/tests/helpers/codemirror';
+
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { TOOLS_SELECTORS as TS } from 'vault/tests/helpers/tools-selectors';
@@ -162,12 +164,14 @@ module('Acceptance | tools', function (hooks) {
       /* eslint-disable-next-line ember/no-settled-after-test-helper */
       await settled();
 
+
       await waitUntil(() => find('.hds-code-block__code'));
       const expected = Object.keys(AUTH_RESPONSE.auth).reduce((obj, auth) => {
         obj[camelize(auth)] = AUTH_RESPONSE.auth[auth];
         return obj;
       }, {});
       assertCodeBlockValue(assert, '.hds-code-block__code', expected);
+
     });
   });
 

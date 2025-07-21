@@ -82,16 +82,16 @@ module('Acceptance | sync | destination (singular)', function (hooks) {
     apiStub.resolves(response);
 
     await visit('vault/sync/secrets/destinations/vercel-project/destination-vercel/edit');
-    await fillIn(GENERAL.inputByAttr('teamId'), 'team-id');
+    await fillIn(GENERAL.inputByAttr('team_id'), 'team-id');
     await click(GENERAL.submitButton);
-    assert.false('accessToken' in apiStub.lastCall.args[1], 'access_token not sent in request');
+    assert.false('access_token' in apiStub.lastCall.args[1], 'access_token not sent in request');
 
     await click(ts.toolbar('Edit destination'));
-    await click(ts.enableField('accessToken'));
-    await fillIn(GENERAL.inputByAttr('accessToken'), 'foobar');
+    await click(ts.enableField('access_token'));
+    await fillIn(GENERAL.inputByAttr('access_token'), 'foobar');
     await click(GENERAL.submitButton);
     assert.strictEqual(
-      apiStub.lastCall.args[1].accessToken,
+      apiStub.lastCall.args[1].access_token,
       'foobar',
       'Updated access token sent in patch request'
     );

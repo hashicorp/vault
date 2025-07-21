@@ -19,16 +19,16 @@ export default class AuthMethodConfigurationComponent extends Component<Args> {
     'description',
     'accessor',
     'local',
-    'sealWrap',
-    'config.listingVisibility',
-    'config.defaultLeaseTtl',
-    'config.maxLeaseTtl',
-    'config.tokenType',
-    'config.auditNonHmacRequestKeys',
-    'config.auditNonHmacResponseKeys',
-    'config.passthroughRequestHeaders',
-    'config.allowedResponseHeaders',
-    'config.pluginVersion',
+    'seal_wrap',
+    'config.listing_visibility',
+    'config.default_lease_ttl',
+    'config.max_lease_ttl',
+    'config.token_type',
+    'config.audit_non_hmac_request_keys',
+    'config.audit_non_hmac_response_keys',
+    'config.passthrough_request_headers',
+    'config.allowed_response_headers',
+    'config.plugin_version',
   ];
 
   label = (field: string) => {
@@ -37,24 +37,24 @@ export default class AuthMethodConfigurationComponent extends Component<Args> {
     // map specific fields to custom labels
     return (
       {
-        listingVisibility: 'Use as preferred UI login method',
-        defaultLeaseTtl: 'Default Lease TTL',
-        maxLeaseTtl: 'Max Lease TTL',
-        auditNonHmacRequestKeys: 'Request keys excluded from HMACing in audit',
-        auditNonHmacResponseKeys: 'Response keys excluded from HMACing in audit',
-        passthroughRequestHeaders: 'Allowed passthrough request headers',
+        listing_visibility: 'Use as preferred UI login method',
+        default_lease_ttl: 'Default Lease TTL',
+        max_lease_ttl: 'Max Lease TTL',
+        audit_non_hmac_request_keys: 'Request keys excluded from HMACing in audit',
+        audit_non_hmac_response_keys: 'Response keys excluded from HMACing in audit',
+        passthrough_request_headers: 'Allowed passthrough request headers',
       }[key] || label
     );
   };
   value = (field: string) => {
     const { method } = this.args;
-    if (field === 'config.listingVisibility') {
-      return method.config.listingVisibility === 'unauth';
+    if (field === 'config.listing_visibility') {
+      return method.config.listing_visibility === 'unauth';
     }
     return get(method, field);
   };
 
   isTtl = (field: string) => {
-    return ['config.defaultLeaseTtl', 'config.maxLeaseTtl'].includes(field);
+    return ['config.default_lease_ttl', 'config.max_lease_ttl'].includes(field);
   };
 }
