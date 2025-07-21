@@ -460,3 +460,37 @@ func TestTimeUtil_NormalizeToYear(t *testing.T) {
 		require.Equal(t, tc.expectedNormalizedDate, normalizedDate)
 	}
 }
+
+// Test_GetRandomTimeInMonth verifies that the random time generated is in the same month of input time.
+func Test_GetRandomTimeInMonth(t *testing.T) {
+	currYear, _, _ := time.Now().Date()
+	middleOfMonth := time.Date(currYear, 8, 15, 1, 2, 3, 0, time.UTC)
+
+	cases := []struct {
+		name      string
+		inputTime time.Time
+	}{
+		{
+			name:      "input time is in the start of a month",
+			inputTime: StartOfMonth(time.Now()),
+		},
+		{
+			name:      "input time is in the middle of a month",
+			inputTime: middleOfMonth,
+		},
+		{
+			name:      "input time is in the last of a month ",
+			inputTime: EndOfMonth(time.Now()),
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			randomTime := GetRandomTimeInMonth(tc.inputTime)
+			startOfMonth := StartOfMonth(tc.inputTime)
+			endOfMonth := EndOfMonth(tc.inputTime)
+			if !((randomTime.After(startOfMonth) || randomTime.Equal(startOfMonth)) && (randomTime.Before(endOfMonth) || randomTime.Equal(endOfMonth))) {
+				t.Fatalf("random time %v is not in the same month as input time %v", randomTime.UTC(), tc.inputTime.UTC())
+			}
+		})
+	}
+}

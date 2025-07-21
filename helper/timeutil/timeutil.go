@@ -6,6 +6,7 @@ package timeutil
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"strconv"
 	"strings"
 	"testing"
@@ -188,4 +189,24 @@ func NormalizeToYear(date, normal time.Time) time.Time {
 		date = date.AddDate(1, 0, 0)
 	}
 	return date
+}
+
+// GetRandomTimeInMonth gets a random time in same month as input time
+func GetRandomTimeInMonth(inputTime time.Time) time.Time {
+	firstOfMonth := StartOfMonth(inputTime)
+	year, month, _ := firstOfMonth.Date()
+
+	// Get the last day of the target month
+	_, _, lastDayOfMonth := EndOfMonth(inputTime).Date()
+
+	// Generate random day, hour, minute, and second
+	randomDay := rand.Intn(lastDayOfMonth) + 1 // +1 because rand.Intn returns [0, n)
+	randomHour := rand.Intn(24)
+	randomMinute := rand.Intn(60)
+	randomSecond := rand.Intn(60)
+
+	// Create the random time
+	randomTime := time.Date(year, month, randomDay, randomHour, randomMinute, randomSecond, 0, time.UTC)
+
+	return randomTime
 }

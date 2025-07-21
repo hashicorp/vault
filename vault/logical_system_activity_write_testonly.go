@@ -349,7 +349,8 @@ func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *g
 	}
 
 	// usage time of the client in the month that the client is being added to
-	usageTime := timeutil.MonthsPreviousTo(int(monthsAgo), now).Unix()
+	// this is a random time in the usage month
+	usageTime := timeutil.GetRandomTimeInMonth(timeutil.MonthsPreviousTo(int(monthsAgo), now)).Unix()
 
 	for _, client := range repeatedFrom.clients {
 		if c.ClientType == client.ClientType && mountAccessor == client.MountAccessor && c.Namespace == client.NamespaceID {
