@@ -164,14 +164,12 @@ module('Acceptance | tools', function (hooks) {
       /* eslint-disable-next-line ember/no-settled-after-test-helper */
       await settled();
 
-
       await waitUntil(() => find('.hds-code-block__code'));
       const expected = Object.keys(AUTH_RESPONSE.auth).reduce((obj, auth) => {
         obj[camelize(auth)] = AUTH_RESPONSE.auth[auth];
         return obj;
       }, {});
       assertCodeBlockValue(assert, '.hds-code-block__code', expected);
-
     });
   });
 
