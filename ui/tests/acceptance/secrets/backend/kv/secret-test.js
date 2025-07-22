@@ -51,8 +51,8 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await click(MOUNT_BACKEND_FORM.mountType('kv'));
       await fillIn(GENERAL.inputByAttr('path'), enginePath);
 
-      await fillIn(GENERAL.inputByAttr('kvConfig.maxVersions'), maxVersion);
-      await click(GENERAL.inputByAttr('kvConfig.casRequired'));
+      await fillIn(GENERAL.inputByAttr('kv_config.max_versions'), maxVersion);
+      await click(GENERAL.inputByAttr('kv_config.cas_required'));
       await click(GENERAL.ttl.toggle('Automate secret deletion'));
       await fillIn(GENERAL.selectByAttr('ttl-unit'), 's');
       await fillIn(GENERAL.ttl.input('Automate secret deletion'), '1');
