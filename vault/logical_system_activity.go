@@ -244,35 +244,6 @@ func (b *SystemBackend) rootActivityPaths() []*framework.Path {
 	return paths
 }
 
-func parseStartEndTimes(d *framework.FieldData, billingStartTime time.Time) (time.Time, time.Time, error) {
-	startTime := d.Get("start_time").(time.Time)
-	endTime := d.Get("end_time").(time.Time)
-
-	// If a specific endTime is used, then respect that
-	// otherwise we want to query up until the end of the current month.
-	//
-	// Also convert any user inputs to UTC to avoid
-	// problems later.
-	if endTime.IsZero() {
-		endTime = time.Now().UTC()
-	} else {
-		endTime = endTime.UTC()
-	}
-
-	// If startTime is not specified, we would like to query
-	// from the beginning of the billing period
-	if startTime.IsZero() {
-		startTime = billingStartTime
-	} else {
-		startTime = startTime.UTC()
-	}
-	if startTime.After(endTime) {
-		return time.Time{}, time.Time{}, fmt.Errorf("start_time is later than end_time")
-	}
-
-	return startTime, endTime, nil
-}
-
 // This endpoint is not used by the UI. The UI's "export" feature is entirely client-side.
 func (b *SystemBackend) handleClientExport(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	b.Core.activityLogLock.RLock()
