@@ -9,6 +9,7 @@ const SUPPORTED_SECRET_BACKENDS = [
   'aws',
   'azure',
   'cubbyhole',
+  'custom-plugin',
   'database',
   'gcp',
   'generic',

@@ -168,7 +168,23 @@ export default class MountBackendForm extends Component<Args> {
     }
 
     try {
-      if (mountCategory === 'secret') {
+      if (type === 'custom-plugin') {
+        // need to figure out how to set the fields to be path (plugin name)
+        // sha (sha256) and description (plugin description)
+        // AND OR add a button to upload a plugin file (.zip) <-- and if given a zip then ignore SHA
+
+        // call plugin category register here with plugin name / sha / etc
+        this.flashMessages.warning(
+          'Mounting a custom plugin is not yet supported in the UI. Please use the CLI to mount a custom plugin.'
+        );
+
+        // what the CLI command looks like:
+        //       vault secrets enable \
+        // -path=whateverYouWant \
+        // -plugin-name=vault-plugin-secrets-kv-0.21.0 \
+        // -description="External KV PLUGIN DESCRIPTION STUFF HERE" \
+        // plugin
+      } else if (mountCategory === 'secret') {
         yield this.api.sys.mountsEnableSecretsEngine(path, formData);
         yield this.saveKvConfig(path, formData);
       } else {

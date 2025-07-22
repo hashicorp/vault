@@ -240,6 +240,10 @@ export default class SecretEngineModel extends Model {
         // no ttl options for keymgmt
         optionFields = [...CORE_OPTIONS, 'config.allowedManagedKeys', ...STANDARD_CONFIG];
         break;
+      case 'custom-plugin':
+        // TODO how to fix this to set specific options only
+        optionFields = [...CORE_OPTIONS, 'config.allowedManagedKeys', ...STANDARD_CONFIG];
+        break;
       case ALL_ENGINES.find((engine) => engine.type === this.engineType && engine.isWIF)?.type:
         defaultFields = ['path'];
         optionFields = [

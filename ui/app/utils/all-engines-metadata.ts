@@ -298,4 +298,11 @@ export const ALL_ENGINES: EngineDisplayData[] = [
     type: 'userpass',
     value: 'userpass',
   },
+  {
+    pluginCategory: 'custom',
+    displayName: 'Register a Plugin',
+    mountCategory: ['auth', 'secret', 'custom'],
+    type: 'custom-plugin',
+    glyph: 'vault',
+  },
 ];

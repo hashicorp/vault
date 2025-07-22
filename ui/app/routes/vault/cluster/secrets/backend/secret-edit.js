@@ -140,6 +140,7 @@ export default Route.extend({
       kv: 'secret',
       keymgmt: `keymgmt/${options.queryParams?.itemType || 'key'}`,
       generic: 'secret',
+      'custom-plugin': 'custom-plugin',
       totp: 'totp-key',
     };
     return types[engineType];
