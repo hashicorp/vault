@@ -23,10 +23,6 @@ export default class AuthRoute extends ClusterRouteBase {
   @service store;
   @service version;
 
-  get adapter() {
-    return this.store.adapterFor('application');
-  }
-
   beforeModel() {
     return super.beforeModel().then(() => {
       return this.version.fetchFeatures();
@@ -90,8 +86,8 @@ export default class AuthRoute extends ClusterRouteBase {
 
   async fetchLoginSettings() {
     try {
-      // TODO update with api service when api-client is updated
-      const response = await this.adapter.ajax(
+      const adapter = this.store.adapterFor('application');
+      const response = await adapter.ajax(
         '/v1/sys/internal/ui/default-auth-methods',
         'GET',
         this.api.buildHeaders({ token: '' })
@@ -113,13 +109,11 @@ export default class AuthRoute extends ClusterRouteBase {
 
   async fetchMounts() {
     try {
-      const { data } = await this.adapter.ajax(
-        '/v1/sys/internal/ui/mounts',
-        'GET',
+      const resp = await this.api.sys.internalUiListEnabledVisibleMounts(
         this.api.buildHeaders({ token: '' })
       );
       // return a falsy value if the object is empty
-      return isEmptyValue(data.auth) ? null : data.auth;
+      return isEmptyValue(resp.auth) ? null : resp.auth;
     } catch {
       // catch error if there's a problem fetching mount data (i.e. invalid namespace)
       return null;
