@@ -15,7 +15,6 @@ import codemirror, { assertCodeBlockValue, setCodeEditorValue } from 'vault/test
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { TOOLS_SELECTORS as TS } from 'vault/tests/helpers/tools-selectors';
-import { AUTH } from 'vault/lib/route-paths';
 
 const createTokenStore = () => {
   let token;
