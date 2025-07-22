@@ -6,6 +6,7 @@ package ldap
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
@@ -46,6 +47,13 @@ func pathLogin(b *backend) *framework.Path {
 
 func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := d.Get("username").(string)
+	cfg, err := b.Config(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if !*cfg.CaseSensitiveNames {
+		username = strings.ToLower(username)
+	}
 	if username == "" {
 		return nil, fmt.Errorf("missing username")
 	}
