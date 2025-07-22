@@ -10,6 +10,8 @@ resource "enos_remote_exec" "ldap_verify_configs" {
 
   environment = {
     MOUNT             = "${var.create_state.ldap.ldap_mount}"
+    LDAP_SERVER       = "${var.create_state.ldap.host.private_ip}"
+    LDAP_PORT         = "${var.create_state.ldap.port}"
     LDAP_USERNAME     = "${var.create_state.ldap.username}"
     LDAP_ADMIN_PW     = "${var.create_state.ldap.pw}"
     VAULT_ADDR        = var.vault_addr
