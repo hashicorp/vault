@@ -161,8 +161,6 @@ module('Acceptance | tools', function (hooks) {
 
       await fillIn(TS.toolsInput('unwrap-token'), 'sometoken');
       await click(GENERAL.submitButton);
-      /* eslint-disable-next-line ember/no-settled-after-test-helper */
-      await settled();
 
       await waitUntil(() => find('.hds-code-block__code'));
       assertCodeBlockValue(assert, '.hds-code-block__code', AUTH_RESPONSE.auth);
