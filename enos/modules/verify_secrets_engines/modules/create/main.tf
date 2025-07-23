@@ -29,6 +29,7 @@ variable "ipv4_cidr" {
 
 variable "ipv6_cidr" {
   type        = string
+  default     = "fd00:ffff::/64"
   description = "The CIDR block for the VPC when using IPV6 mode"
 }
 
