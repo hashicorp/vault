@@ -948,11 +948,9 @@ func TestBackend_configDefaultsAfterUpdate(t *testing.T) {
 	})
 }
 
-/*
- * TestLdapAuthBackend_AliasLookaheadDefault will test the alias lookahead functionality
- * for the LDAP auth backend with a default configuration (i.e. case insensitive if the flag is
- * not set or is set to false.
- */
+// TestLdapAuthBackend_AliasLookaheadDefault will test the alias lookahead functionality
+// for the LDAP auth backend with a default configuration (i.e. case insensitive if the flag is
+// not set or is set to false).
 func TestLdapAuthBackend_AliasLookaheadDefault(t *testing.T) {
 	// create config and storage
 	b, storage := createBackendWithStorage(t)
@@ -1003,10 +1001,8 @@ func TestLdapAuthBackend_AliasLookaheadDefault(t *testing.T) {
 	}
 }
 
-/*
- * TestLdapAuthBackend_AliasLookaheadCaseSensitive will test the alias lookahead functionality
- * for the LDAP auth backend when a case sensitive configuration flag is set.
- */
+// TestLdapAuthBackend_AliasLookaheadCaseSensitive will test the alias lookahead functionality
+// for the LDAP auth backend when a case sensitive configuration flag is set
 func TestLdapAuthBackend_AliasLookaheadCaseSensitive(t *testing.T) {
 	// create config and storage
 	b, storage := createBackendWithStorage(t)
