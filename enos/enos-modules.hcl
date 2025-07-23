@@ -57,7 +57,7 @@ module "create_vpc" {
 }
 
 module "set_up_external_integration_target" {
-  source = "./modules/target_set_up_external_integration"
+  source = "./modules/set_up_external_integration_target"
 
   ldap_version = "1.5.0"
 }
