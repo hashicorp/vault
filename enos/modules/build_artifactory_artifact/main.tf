@@ -86,8 +86,9 @@ output "name" {
 
 output "vault_artifactory_release" {
   value = {
-    url    = data.enos_artifactory_item.vault.results[0].url
-    sha256 = data.enos_artifactory_item.vault.results[0].sha256
-    token  = var.artifactory_token
+    url      = data.enos_artifactory_item.vault.results[0].url
+    sha256   = data.enos_artifactory_item.vault.results[0].sha256
+    token    = var.artifactory_token
+    username = null # username is not an optional value yet
   }
 }

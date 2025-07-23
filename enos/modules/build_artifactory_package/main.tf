@@ -4,7 +4,8 @@
 terraform {
   required_providers {
     enos = {
-      source = "registry.terraform.io/hashicorp-forge/enos"
+      source  = "registry.terraform.io/hashicorp-forge/enos"
+      version = ">= 0.6.1"
     }
   }
 }
@@ -101,8 +102,9 @@ output "name" {
 
 output "release" {
   value = {
-    url    = data.enos_artifactory_item.vault.results[0].url
-    sha256 = data.enos_artifactory_item.vault.results[0].sha256
-    token  = var.artifactory_token
+    url      = data.enos_artifactory_item.vault.results[0].url
+    sha256   = data.enos_artifactory_item.vault.results[0].sha256
+    token    = var.artifactory_token
+    username = null # username is not optional yet
   }
 }
