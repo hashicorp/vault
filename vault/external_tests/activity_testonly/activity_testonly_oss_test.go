@@ -651,3 +651,44 @@ func TestActivityLog_CountersAPI_NoErrorOnLoadingClientIDsToMemoryFlag_CE(t *tes
 		"secret/":    1,
 	}, mountSet)
 }
+
+// TestActivityLog_CountersAPI_StartTimeRequired verifies that start_time is required for counters API
+func TestActivityLog_CountersAPI_StartTimeRequired(t *testing.T) {
+	t.Parallel()
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	// make API call with no start_time provided
+	_, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{})
+	// expect error since start_time is required on CE
+	require.ErrorContainsf(t, err, "start_time is required", "counters api call failed unexpectedly")
+
+	// now provide start_time
+	_, err = client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+		"start_time": {time.Now().Format(time.RFC3339)},
+	})
+	require.NoError(t, err)
+}
+
+// TestActivityLog_ExportAPI_StartTimeRequired verifies that start_time is required for export API
+func TestActivityLog_ExportAPI_StartTimeRequired(t *testing.T) {
+	t.Parallel()
+
+	cluster := minimal.NewTestSoloCluster(t, nil)
+	client := cluster.Cores[0].Client
+
+	// make API call with no start_time provided
+	_, err := client.Logical().ReadRawWithData("sys/internal/counters/activity/export", map[string][]string{
+		"format": {"json"},
+	})
+	// expect error since start_time is required on CE
+	require.ErrorContainsf(t, err, "start_time is required", "counters api call failed unexpectedly")
+
+	// now provide start_time
+	_, err = client.Logical().ReadRawWithData("sys/internal/counters/activity/export", map[string][]string{
+		"start_time": {time.Now().Format(time.RFC3339)},
+		"format":     {"json"},
+	})
+	require.NoError(t, err)
+}
