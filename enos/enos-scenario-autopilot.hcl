@@ -166,6 +166,23 @@ scenario "autopilot" {
     }
   }
 
+  step "create_external_integration_target" {
+    description = global.description.create_external_integration_target
+    module      = module.target_ec2_instances
+    depends_on  = [step.create_vpc]
+
+    providers = {
+      enos = local.enos_provider["ubuntu"]
+    }
+
+    variables {
+      ami_id          = step.ec2_info.ami_ids["arm64"]["ubuntu"]["24.04"]
+      cluster_tag_key = global.vault_tag_key
+      common_tags     = global.tags
+      vpc_id          = step.create_vpc.id
+    }
+  }
+
   step "create_vault_cluster_targets" {
     description = global.description.create_vault_cluster_targets
     module      = module.target_ec2_instances
@@ -205,6 +222,26 @@ scenario "autopilot" {
     }
   }
 
+  step "set_up_external_integration_target" {
+    description = global.description.set_up_external_integration_target
+    module      = module.set_up_external_integration_target
+    depends_on = [
+      step.create_external_integration_target
+    ]
+
+    providers = {
+      enos = local.enos_provider["ubuntu"]
+    }
+
+    variables {
+      hosts      = step.create_external_integration_target.hosts
+      ip_version = matrix.ip_version
+      packages   = concat(global.packages, global.distro_packages["ubuntu"]["24.04"], ["podman", "podman-docker"])
+      ldap_port  = global.ports.ldap.port
+      ldaps_port = global.ports.ldaps.port
+    }
+  }
+
   step "create_vault_cluster" {
     description = <<-EOF
       ${global.description.create_vault_cluster} In this instance we'll create a Vault Cluster with
@@ -214,7 +251,8 @@ scenario "autopilot" {
     module = module.vault_cluster
     depends_on = [
       step.build_vault,
-      step.create_vault_cluster_targets
+      step.create_vault_cluster_targets,
+      step.set_up_external_integration_target
     ]
 
     providers = {
@@ -376,6 +414,8 @@ scenario "autopilot" {
 
     variables {
       hosts             = step.create_vault_cluster.hosts
+      ip_version        = matrix.ip_version
+      ldap_host         = step.set_up_external_integration_target.state.ldap.host
       leader_host       = step.get_vault_cluster_ips.leader_host
       vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_install_dir = local.vault_install_dir
@@ -910,6 +950,11 @@ scenario "autopilot" {
   output "audit_device_file_path" {
     description = "The file path for the file audit device, if enabled"
     value       = step.create_vault_cluster.audit_device_file_path
+  }
+
+  output "external_integration_server_ldap" {
+    description = "The LDAP test servers info"
+    value       = step.set_up_external_integration_target.state.ldap
   }
 
   output "cluster_name" {
