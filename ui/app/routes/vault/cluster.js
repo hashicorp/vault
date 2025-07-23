@@ -128,6 +128,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     .cancelOn('deactivate')
     .keepLatest(),
 
+  // Note: do not make this afterModel hook async, it will break the DR secondary flow.
   afterModel(model, transition) {
     this._super(...arguments);
 
