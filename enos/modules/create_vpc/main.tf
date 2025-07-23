@@ -21,6 +21,7 @@ resource "random_string" "cluster_id" {
 resource "aws_vpc" "vpc" {
   // Always set the ipv4 cidr block as it's required in "dual-stack" VPCs which we create.
   cidr_block                       = var.ipv4_cidr
+  ipv6_cidr_block                  = var.ipv6_cidr 
   enable_dns_hostnames             = true
   enable_dns_support               = true
   assign_generated_ipv6_cidr_block = var.ip_version == 6
