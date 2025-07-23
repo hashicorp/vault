@@ -1,0 +1,3 @@
+```release-note:change
+ui: Fixes UI DR Secondary view from not loading/transitioning.
+```
