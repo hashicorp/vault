@@ -120,8 +120,31 @@ export default class SecretsEngineForm extends Form<SecretsEngineFormData> {
       if (this.engineType === 'pki') {
         fields.push(managedKeys);
       }
+    } else if (this.engineType === 'custom-plugin') {
+      const customFields = fields;
+      customFields.push(
+        new FormField('plugin_name', 'string', {
+          subText:
+            'Specifies the name for this plugin. Enterprise plugin names must match the name listed on the HashiCorp releases page ie. "vault-plugin-secrets-kv..."',
+        })
+      );
+      customFields.push(
+        new FormField('sha256', 'string', {
+          subText:
+            'SHA256 checksum of the plugin binary. - ex. run "shasum -a 256 {{your plugin binary}}" in CLI ',
+        })
+      );
+      customFields.push(
+        new FormField('plugin_zip', 'file', {
+          label: 'Upload Plugin Zip',
+          editType: 'file',
+          subText:
+            '- Upload a zip file executable from HashiCorp releases page or compiled from github repository',
+        })
+      );
+      customFields.push(new FormField('description', 'string', { editType: 'textarea' }));
+      return customFields;
     }
-
     return fields;
   }
 
@@ -165,6 +188,9 @@ export default class SecretsEngineForm extends Form<SecretsEngineFormData> {
   }
 
   get formFieldGroups() {
+    if (this.engineType === 'custom-plugin') {
+      return [new FormFieldGroup('default', this.defaultFields)];
+    }
     return [
       new FormFieldGroup('default', this.defaultFields),
       new FormFieldGroup('Method Options', this.optionFields),

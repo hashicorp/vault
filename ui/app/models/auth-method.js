@@ -74,6 +74,12 @@ export default class AuthMethodModel extends Model {
   })
   sealWrap;
 
+  @attr('string', {
+    editType: 'string',
+    helpText: 'SHA256 checksum of the plugin binary.',
+  })
+  sha256; // used for custom plugins
+
   // used when the `auth` prefix is important,
   // currently only when setting perf mount filtering
   get apiPath() {
@@ -128,6 +134,9 @@ export default class AuthMethodModel extends Model {
   }
 
   get formFieldGroups() {
+    if (this.methodType === 'custom-plugin') {
+      return [{ default: ['path', 'sha265', 'description'] }];
+    }
     return [
       { default: ['path'] },
       {

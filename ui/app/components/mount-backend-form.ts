@@ -87,7 +87,7 @@ export default class MountBackendForm extends Component<Args> {
   }
 
   typeChangeSideEffect(type: string) {
-    if (this.args.mountCategory !== 'secret') return;
+    if (this.args.mountCategory !== 'secret' || this.args.mountModel.type === 'custom-plugin') return;
     // If type PKI, set max lease to ~10years
     this.args.mountModel.config.max_lease_ttl = type === 'pki' ? '3650d' : 0;
   }
@@ -161,50 +161,63 @@ export default class MountBackendForm extends Component<Args> {
     event.preventDefault();
     const { mountModel, mountCategory } = this.args;
     const { type, path } = mountModel;
-    // only submit form if validations pass
-    const { isValid, data: formData } = this.checkModelValidity(mountModel);
-    if (!isValid) {
-      return;
-    }
 
-    try {
-      if (type === 'custom-plugin') {
-        // need to figure out how to set the fields to be path (plugin name)
-        // sha (sha256) and description (plugin description)
-        // AND OR add a button to upload a plugin file (.zip) <-- and if given a zip then ignore SHA
+    if (type === 'custom-plugin') {
+      // need to figure out how to set the fields to be path (plugin name)
+      // sha (sha256) and description (plugin description)
+      // AND OR add a button to upload a plugin file (.zip) <-- and if given a zip then ignore SHA
+      const { plugin_name, sha256 } = mountModel; // just need plugin name, sha256 OR zip file and description
+      // console.log(plugin_name, mountCategory, sha256, description, plugin_zip);
 
-        // call plugin category register here with plugin name / sha / etc
-        this.flashMessages.warning(
-          'Mounting a custom plugin is not yet supported in the UI. Please use the CLI to mount a custom plugin.'
-        );
+      // console.log(this.api.sys.pluginsCatalogListPlugins());
+      // call plugin category register here with plugin name / sha / etc
+      this.flashMessages.warning('Attemping to mount a custom plugin...');
 
-        // what the CLI command looks like:
-        //       vault secrets enable \
-        // -path=whateverYouWant \
-        // -plugin-name=vault-plugin-secrets-kv-0.21.0 \
-        // -description="External KV PLUGIN DESCRIPTION STUFF HERE" \
-        // plugin
-      } else if (mountCategory === 'secret') {
-        yield this.api.sys.mountsEnableSecretsEngine(path, formData);
-        yield this.saveKvConfig(path, formData);
-      } else {
-        yield mountModel.save();
+      this.api.sys.pluginsCatalogRegisterPlugin(plugin_name, {
+        sha256: sha256,
+        command: 'vault-plugin-secrets-kv-0.21.0',
+      });
+
+      //     vault plugin register \
+      // -sha256=<your sha> \
+      // secret vault-plugin-secrets-kv-0.21.0
+
+      // what the CLI command looks like for enable:
+      //       vault secrets enable \
+      // -path=whateverYouWant \
+      // -plugin-name=vault-plugin-secrets-kv-0.21.0 \
+      // -description="External KV PLUGIN DESCRIPTION STUFF HERE" \
+      // plugin
+    } else {
+      // only submit form if validations pass
+      const { isValid, data: formData } = this.checkModelValidity(mountModel);
+      if (!isValid) {
+        return;
       }
-      this.flashMessages.success(
-        `Successfully mounted the ${type} ${
-          this.args.mountCategory === 'secret' ? 'secrets engine' : 'auth method'
-        } at ${path}.`
-      );
-      // check whether to use the Ember engine route
-      const useEngineRoute = isAddonEngine(mountModel.engineType, Number(formData?.options?.version));
-      this.args.onMountSuccess(type, path, useEngineRoute);
-    } catch (error) {
-      if (error instanceof ResponseError) {
-        const { status, response, message } = yield this.api.parseError(error);
-        this.onMountError(status, response.errors, message);
-      } else {
-        const err = error as AdapterError;
-        this.onMountError(err.httpStatus, err.errors, err.message);
+
+      try {
+        if (mountCategory === 'secret') {
+          yield this.api.sys.mountsEnableSecretsEngine(path, formData);
+          yield this.saveKvConfig(path, formData);
+        } else {
+          yield mountModel.save();
+        }
+        this.flashMessages.success(
+          `Successfully mounted the ${type} ${
+            this.args.mountCategory === 'secret' ? 'secrets engine' : 'auth method'
+          } at ${path}.`
+        );
+        // check whether to use the Ember engine route
+        const useEngineRoute = isAddonEngine(mountModel.engineType, Number(formData?.options?.version));
+        this.args.onMountSuccess(type, path, useEngineRoute);
+      } catch (error) {
+        if (error instanceof ResponseError) {
+          const { status, response, message } = yield this.api.parseError(error);
+          this.onMountError(status, response.errors, message);
+        } else {
+          const err = error as AdapterError;
+          this.onMountError(err.httpStatus, err.errors, err.message);
+        }
       }
     }
   }
