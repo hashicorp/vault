@@ -59,7 +59,7 @@ locals {
     aws_access_key = aws_iam_access_key.aws_enos_test_user.id
     aws_secret_key = aws_iam_access_key.aws_enos_test_user.secret
     mount          = local.aws_mount
-    region         = data.aws_region.current.region
+    region         = data.aws_region.current.id
     vault_aws_role = local.vault_aws_role
   }
 }
