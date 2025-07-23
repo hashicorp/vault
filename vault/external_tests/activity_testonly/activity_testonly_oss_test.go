@@ -624,16 +624,18 @@ func TestActivityLog_CountersAPI_NoErrorOnLoadingClientIDsToMemoryFlag_CE(t *tes
 	// clientIDs in memory should be 0 as they are not updated in CE
 	require.Len(t, a.GetClientIDsUsageInfo(), 0)
 
-	// default counters api query
-	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{})
+	// default counters api query with start_time provided
+	startTime := timeutil.StartOfMonth(timeutil.MonthsPreviousTo(2, now)).Format(time.RFC3339)
+	resp, err := client.Logical().ReadWithData("sys/internal/counters/activity", map[string][]string{
+		"start_time": {startTime},
+	})
 	require.NoError(t, err)
 
 	// verify query response response
-	endPastMonth := timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now))
+	endPastMonth := timeutil.EndOfMonth(timeutil.MonthsPreviousTo(1, now)).Format(time.RFC3339)
 
-	// start time will be default time for time.Time{} as no start time is specified in input params
-	require.Equal(t, resp.Data["start_time"], time.Time{}.UTC().Format(time.RFC3339))
-	require.Equal(t, resp.Data["end_time"], endPastMonth.UTC().Format(time.RFC3339))
+	require.Equal(t, resp.Data["start_time"], startTime)
+	require.Equal(t, resp.Data["end_time"], endPastMonth)
 
 	byNamespace := getNamespaceData(t, resp)
 	require.Len(t, byNamespace, 1)
