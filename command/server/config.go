@@ -447,11 +447,6 @@ func (c *Config) Merge(c2 *Config) *Config {
 		if c2.Observations.LedgerPath != "" {
 			result.Observations.LedgerPath = c2.Observations.LedgerPath
 		}
-		result.Observations.TypePrefixDenylist = append(result.Observations.TypePrefixDenylist, c2.Observations.TypePrefixDenylist...)
-		result.Observations.TypePrefixAllowlist = append(result.Observations.TypePrefixAllowlist, c2.Observations.TypePrefixAllowlist...)
-		if c2.Observations.FileMode != "" {
-			result.Observations.FileMode = c2.Observations.FileMode
-		}
 	}
 
 	result.ImpreciseLeaseRoleTracking = c.ImpreciseLeaseRoleTracking

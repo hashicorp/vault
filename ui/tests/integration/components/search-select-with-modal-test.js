@@ -205,7 +205,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       '[data-test-component="code-mirror-modifier"] textarea',
       'path "secret/super-secret" { capabilities = ["deny"] }'
     );
-    await click(GENERAL.submitButton);
+    await click('[data-test-policy-save]');
     assert.dom('[data-test-modal-div]').doesNotExist('modal closes after save');
     assert
       .dom('[data-test-selected-option="0"]')

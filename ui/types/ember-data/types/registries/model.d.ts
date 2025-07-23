@@ -15,6 +15,7 @@ import PkiConfigUrlsModel from 'vault/models/pki/config/urls';
 import ClientsActivityModel from 'vault/models/clients/activity';
 import ClientsConfigModel from 'vault/models/clients/config';
 import ClientsVersionHistoryModel from 'vault/models/clients/version-history';
+import CaConfigModel from 'vault/models/ssh/ca-config';
 
 declare module 'ember-data/types/registries/model' {
   export default interface ModelRegistry {
@@ -29,6 +30,7 @@ declare module 'ember-data/types/registries/model' {
     'clients/activity': ClientsActivityModel;
     'clients/config': ClientsConfigModel;
     'clients/version-history': ClientsVersionHistoryModel;
+    'ssh/ca-config': CaConfigModel;
     // Catchall for any other models
     [key: string]: any;
   }

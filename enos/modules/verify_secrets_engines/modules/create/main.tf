@@ -22,6 +22,10 @@ variable "create_aws_secrets_engine" {
   default     = false
 }
 
+variable "integration_host_state" {
+  description = "The state of the test server from the 'backend_test_servers' module"
+}
+
 variable "hosts" {
   type = map(object({
     ipv6       = string
@@ -30,6 +34,21 @@ variable "hosts" {
   }))
   description = "The Vault cluster instances that were created"
 }
+
+variable "ip_version" {
+  type        = string
+  description = "IP Version (4 or 6)"
+  default     = "4"
+}
+
+variable "ports" {
+  description = "Port configuration for services"
+  type = map(object({
+    port        = string
+    description = string
+  }))
+}
+
 
 variable "leader_host" {
   type = object({
@@ -44,6 +63,11 @@ variable "leader_host" {
 variable "vault_addr" {
   type        = string
   description = "The local vault API listen address"
+}
+
+variable "vault_edition" {
+  type        = string
+  description = "The Vault product edition"
 }
 
 variable "vault_install_dir" {
@@ -64,5 +88,7 @@ output "state" {
     kv       = local.kv_output
     pki      = local.pki_output
     aws      = local.aws_state
+    ldap     = local.ldap_output
+    kmip     = local.kmip_output
   }
 }

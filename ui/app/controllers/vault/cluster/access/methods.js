@@ -26,24 +26,23 @@ export default class VaultClusterAccessMethodsController extends Controller {
 
   // list returned by getter is sorted in template
   get authMethodList() {
-    const { methods } = this.model;
     // return an options list to filter by engine type, ex: 'kv'
     if (this.selectedAuthType) {
       // check first if the user has also filtered by name.
       // names are individualized across type so you can't have the same name for an aws auth method and userpass.
       // this means it's fine to filter by first type and then name or just name.
       if (this.selectedAuthName) {
-        return methods.filter((method) => this.selectedAuthName === method.id);
+        return this.model.filter((method) => this.selectedAuthName === method.id);
       }
       // otherwise filter by auth type
-      return methods.filter((method) => this.selectedAuthType === method.type);
+      return this.model.filter((method) => this.selectedAuthType === method.type);
     }
     // return an options list to filter by auth name, ex: 'my-userpass'
     if (this.selectedAuthName) {
-      return methods.filter((method) => this.selectedAuthName === method.id);
+      return this.model.filter((method) => this.selectedAuthName === method.id);
     }
     // no filters, return full list
-    return methods;
+    return this.model;
   }
 
   get authMethodArrayByType() {

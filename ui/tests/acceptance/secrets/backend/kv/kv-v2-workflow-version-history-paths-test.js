@@ -34,7 +34,7 @@ module('Acceptance | kv-v2 workflow | version history, paths', function (hooks) 
   hooks.beforeEach(async function () {
     this.store = this.owner.lookup('service:store');
     this.backend = `kv-workflow-${uuidv4()}`;
-    this.secretPath = 'app/first-secret';
+    this.secretPath = 'app/first_secret';
     this.urlPath = `${this.backend}/kv/${encodeURIComponent(this.secretPath)}`;
     this.navToSecret = async () => {
       return visit(`/vault/secrets/${this.urlPath}/details?version=4`);

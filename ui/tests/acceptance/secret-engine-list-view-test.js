@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, currentRouteName, visit, currentURL, triggerEvent } from '@ember/test-helpers';
+import { click, fillIn, currentRouteName, visit, currentURL } from '@ember/test-helpers';
 import { selectChoose } from 'ember-power-select/test-support';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
@@ -30,7 +30,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await fillIn(SES.secretPath('create'), path);
     await fillIn(SES.secretKey('create'), key);
     await fillIn(GENERAL.inputByAttr(key), value);
-    await click(GENERAL.submitButton);
+    await click(GENERAL.saveButton);
     await click(SES.crumb(enginePath));
   };
 
@@ -45,7 +45,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await page.enableEngine();
     await click(MOUNT_BACKEND_FORM.mountType('aws'));
     await fillIn(GENERAL.inputByAttr('path'), 'aws_engine');
-    await click(GENERAL.submitButton);
+    await click(GENERAL.saveButton);
     await click(GENERAL.breadcrumbLink('Secrets'));
     assert.strictEqual(
       currentRouteName(),
@@ -61,7 +61,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await visit('/vault/secrets');
     await page.enableEngine();
     await click(MOUNT_BACKEND_FORM.mountType('nomad'));
-    await click(GENERAL.submitButton);
+    await click(GENERAL.saveButton);
 
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backends', 'navigates to the list page');
     // cleanup
@@ -72,7 +72,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await visit('/vault/secrets');
     await page.enableEngine();
     await click(MOUNT_BACKEND_FORM.mountType('aws'));
-    await click(GENERAL.submitButton);
+    await click(GENERAL.saveButton);
 
     assert.dom(SES.configTab).exists();
 
@@ -84,57 +84,6 @@ module('Acceptance | secret-engine list view', function (hooks) {
     );
     // cleanup
     await runCmd(deleteEngineCmd('aws'));
-  });
-
-  test('hovering over the icon of an unsupported engine shows unsupported tooltip', async function (assert) {
-    await visit('/vault/secrets');
-    await page.enableEngine();
-    await click(MOUNT_BACKEND_FORM.mountType('nomad'));
-    await click(GENERAL.submitButton);
-
-    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-type'), 'nomad');
-
-    await triggerEvent('.hds-tooltip-button', 'mouseenter');
-    assert
-      .dom('.hds-tooltip-container')
-      .hasText(
-        'The UI only supports configuration views for these secret engines. The CLI must be used to manage other engine resources.',
-        'shows tooltip text for unsupported engine'
-      );
-    // cleanup
-    await runCmd(deleteEngineCmd('nomad'));
-  });
-
-  test('hovering over the icon of a supported engine shows engine name', async function (assert) {
-    await visit('/vault/secrets');
-    await page.enableEngine();
-    await click(MOUNT_BACKEND_FORM.mountType('ssh'));
-    await click(GENERAL.submitButton);
-    await click(GENERAL.breadcrumbLink('Secrets'));
-
-    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-type'), 'ssh');
-    await triggerEvent('.hds-tooltip-button', 'mouseenter');
-    assert.dom('.hds-tooltip-container').hasText('SSH', 'shows tooltip for SSH without version');
-
-    // cleanup
-    await runCmd(deleteEngineCmd('ssh'));
-  });
-
-  test('hovering over the icon of a kv engine shows engine name and version', async function (assert) {
-    await visit('/vault/secrets');
-
-    await page.enableEngine();
-    await click(MOUNT_BACKEND_FORM.mountType('kv'));
-    await fillIn(GENERAL.inputByAttr('path'), `kv-${this.uid}`);
-    await click(GENERAL.submitButton);
-    await click(GENERAL.breadcrumbLink('Secrets'));
-
-    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), `kv-${this.uid}`);
-    await triggerEvent('.hds-tooltip-button', 'mouseenter');
-    assert.dom('.hds-tooltip-container').hasText('KV version 2', 'shows tooltip for kv version 2');
-
-    // cleanup
-    await runCmd(deleteEngineCmd('kv'));
   });
 
   test('enterprise: cannot view list without permissions inside a namespace', async function (assert) {

@@ -25,6 +25,7 @@ const SELECTORS = {
   versionRow: (version) => `[data-test-transit-version="${version}"]`,
   rotate: {
     trigger: '[data-test-transit-key-rotate]',
+    confirm: '[data-test-confirm-button]',
   },
 };
 
@@ -161,7 +162,7 @@ const testConvergentEncryption = async function (assert, keyName) {
       await click('[data-test-transit-b64-toggle="context"]');
     }
     assert.dom('[data-test-encrypt-modal]').doesNotExist(`${keyName}: is not open before encrypt`);
-    await click(GENERAL.submitButton);
+    await click('[data-test-button-encrypt]');
 
     if (testCase.assertAfterEncrypt) {
       await settled();
@@ -180,7 +181,7 @@ const testConvergentEncryption = async function (assert, keyName) {
     }
 
     codemirror('#ciphertext-control').setValue(copiedCiphertext);
-    await click(GENERAL.submitButton);
+    await click('[data-test-button-decrypt]');
 
     if (testCase.assertAfterDecrypt) {
       await settled();
@@ -351,7 +352,7 @@ module('Acceptance | transit', function (hooks) {
     assert.dom(SELECTORS.versionRow(1)).hasTextContaining('Version 1', `${name}: only one key version`);
 
     await click(SELECTORS.rotate.trigger);
-    await click(GENERAL.confirmButton);
+    await click(SELECTORS.rotate.confirm);
 
     assert.dom(SELECTORS.versionRow(2)).exists('two key versions after rotate');
 
@@ -472,7 +473,7 @@ module('Acceptance | transit', function (hooks) {
       assert.dom('[data-test-transit-version]').exists({ count: 1 }, `${name}: only one key version`);
       await click(SELECTORS.rotate.trigger);
 
-      await click(GENERAL.confirmButton);
+      await click(SELECTORS.rotate.confirm);
       assert
         .dom('[data-test-transit-version]')
         .exists({ count: 2 }, `${name}: two key versions after rotate`);

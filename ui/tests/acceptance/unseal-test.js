@@ -12,7 +12,6 @@ import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const { unsealKeys } = VAULT_KEYS;
 
@@ -58,7 +57,7 @@ module('Acceptance | unseal', function (hooks) {
 
     // seal
     await click('[data-test-seal]');
-    await click(GENERAL.confirmButton);
+    await click('[data-test-confirm-button]');
 
     await pollCluster(this.owner);
     await settled();

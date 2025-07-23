@@ -18,8 +18,8 @@ const allFields = [
   { label: 'Authenticated', key: 'authenticated' },
   { label: 'Title', key: 'title' },
   { label: 'Message', key: 'message' },
-  { label: 'Start time', key: 'start_time' },
-  { label: 'End time', key: 'end_time' },
+  { label: 'Start time', key: 'startTime' },
+  { label: 'End time', key: 'endTime' },
   { label: 'Link', key: 'link' },
 ];
 
@@ -45,8 +45,9 @@ module('Integration | Component | messages/page/details', function (hooks) {
       title: 'Message title 1',
       message: 'Some long long long message',
       link: { here: 'www.example.com' },
-      start_time: new Date('2021-08-01T00:00:00Z'),
-      end_time: undefined,
+      startTime: new Date('2021-08-01T00:00:00Z'),
+      endTime: undefined,
+      canEditCustomMessages: true,
     };
     this.capabilities = { canDelete: true, canUpdate: true };
   });
@@ -56,14 +57,14 @@ module('Integration | Component | messages/page/details', function (hooks) {
       hbs`<Messages::Page::Details @message={{this.message}} @capabilities={{this.capabilities}} />`,
       this.context
     );
-    assert.dom(GENERAL.title).hasText('Message title 1');
+    assert.dom('[data-test-page-title]').hasText('Message title 1');
     assert
       .dom('[data-test-component="info-table-row"]')
       .exists({ count: allFields.length }, 'Correct number of filtered fields render');
 
     allFields.forEach((field) => {
       assert.dom(GENERAL.infoRowLabel(field.label)).hasText(field.label, `${field.label} label renders`);
-      if (field.key === 'start_time' || field.key === 'end_time') {
+      if (field.key === 'startTime' || field.key === 'endTime') {
         const formattedDate = dateFormat([this.message[field.key], 'MMM d, yyyy hh:mm aaa'], {
           withTimeZone: true,
         });
@@ -83,7 +84,7 @@ module('Integration | Component | messages/page/details', function (hooks) {
       }
     });
 
-    assert.dom(GENERAL.confirmTrigger).exists('delete button exists');
-    assert.dom(GENERAL.linkTo('edit')).exists();
+    assert.dom('[data-test-confirm-action="Delete message"]').exists();
+    assert.dom('[data-test-link="edit"]').exists();
   });
 });

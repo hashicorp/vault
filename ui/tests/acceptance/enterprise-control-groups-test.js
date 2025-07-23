@@ -16,6 +16,7 @@ import { login, logout } from 'vault/tests/helpers/auth/auth-helpers';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 
 const controlGroupComponent = create(controlGroup);
 const controlGroupSuccessComponent = create(controlGroupSuccess);
@@ -150,7 +151,7 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
 
     await fillIn(GENERAL.inputByAttr('username'), ADMIN_USER);
     await fillIn(GENERAL.inputByAttr('password'), ADMIN_PASSWORD);
-    await click(GENERAL.submitButton);
+    await click(AUTH_FORM.login);
     await visit(`/vault/access/control-groups/${accessor}`);
 
     // putting here to help with flaky test
@@ -184,7 +185,8 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
 
       await controlGroupSuccessComponent.token(controlGroupToken);
       await settled();
-      await click(GENERAL.submitButton);
+      await controlGroupSuccessComponent.unwrap();
+      await settled();
       assert.ok(controlGroupSuccessComponent.showsJsonViewer, 'shows the json viewer');
     }
   };

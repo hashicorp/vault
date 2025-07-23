@@ -10,7 +10,8 @@ import { setupEngine } from 'ember-engines/test-support';
 import { render, click } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { CUSTOM_MESSAGES } from 'vault/tests/helpers/config-ui/message-selectors';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { addDays, startOfDay } from 'date-fns';
+import timestamp from 'core/utils/timestamp';
 
 const META = {
   value: {
@@ -38,8 +39,8 @@ module('Integration | Component | messages/page/list', function (hooks) {
         title: 'Message title 1',
         message: 'Some long long long message',
         link: { title: 'here', href: 'www.example.com' },
-        start_time: new Date('2021-08-01T00:00:00Z'),
-        end_time: undefined,
+        startTime: new Date('2021-08-01T00:00:00Z'),
+        endTime: undefined,
       },
       {
         id: '1',
@@ -49,8 +50,8 @@ module('Integration | Component | messages/page/list', function (hooks) {
         title: 'Message title 2',
         message: 'Some long long long message blah blah blah',
         link: { title: 'here', href: 'www.example2.com' },
-        start_time: new Date('2023-07-01T00:00:00Z'),
-        end_time: new Date('2023-08-01T00:00:00Z'),
+        startTime: new Date('2023-07-01T00:00:00Z'),
+        endTime: new Date('2023-08-01T00:00:00Z'),
       },
       {
         id: '2',
@@ -97,7 +98,8 @@ module('Integration | Component | messages/page/list', function (hooks) {
     await this.renderComponent();
     assert.dom('[data-test-icon="message-circle"]').exists();
     for (const message of this.messages) {
-      assert.dom(GENERAL.listItem(message.title)).exists('Message title is displayed');
+      assert.dom(CUSTOM_MESSAGES.listItem('Message title 1')).exists();
+      assert.dom(`[data-linked-block-title="${message.id}"]`).hasText(message.title);
     }
   });
 
@@ -111,14 +113,14 @@ module('Integration | Component | messages/page/list', function (hooks) {
         title: `Message title ${i}`,
         message: 'Some long long long message',
         link: { title: 'here', href: 'www.example.com' },
-        start_time: new Date('2021-08-01T00:00:00Z'),
+        startTime: new Date('2021-08-01T00:00:00Z'),
       });
     }
     this.messages.meta.total = this.messages.length;
     this.messages.meta.pageSize = 100;
 
     await this.renderComponent();
-    await click(GENERAL.button('Create message'));
+    await click(CUSTOM_MESSAGES.button('create message'));
     assert
       .dom(CUSTOM_MESSAGES.modalTitle('maximum-message-modal'))
       .hasText('Maximum number of messages reached');
@@ -127,6 +129,15 @@ module('Integration | Component | messages/page/list', function (hooks) {
       .hasText(
         'Vault can only store up to 100 messages. To create a message, delete one of your messages to clear up space.'
       );
-    await click(GENERAL.button('close-maximum-message'));
+    await click(CUSTOM_MESSAGES.modalButton('maximum-message-modal'));
+  });
+
+  test('it should show the correct badge colors based on badge status', async function (assert) {
+    this.messages[2].startTime = addDays(startOfDay(timestamp.now()), 1);
+
+    await this.renderComponent();
+    assert.dom(CUSTOM_MESSAGES.badge('0')).hasClass('hds-badge--color-success');
+    assert.dom(CUSTOM_MESSAGES.badge('1')).hasClass('hds-badge--color-neutral');
+    assert.dom(CUSTOM_MESSAGES.badge('2')).hasClass('hds-badge--color-highlight');
   });
 });

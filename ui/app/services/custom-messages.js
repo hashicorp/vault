@@ -34,10 +34,10 @@ export default class CustomMessagesService extends Service {
     try {
       const type = this.auth.currentToken ? 'Authenticated' : 'Unauthenticated';
       const method = `internalUiRead${type}ActiveCustomMessages`;
-      const { keys = [], key_info } = await this.api.sys[method]();
+      const { keys = [], keyInfo } = await this.api.sys[method]();
 
       this.messages = keys.map((key) => {
-        const data = key_info[key];
+        const data = keyInfo[key];
         return {
           id: key,
           ...data,

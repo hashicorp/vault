@@ -13,13 +13,16 @@ export type FormOptions = {
   isNew?: boolean;
 };
 
-export default class Form<T extends object> {
-  declare data: T;
+export default class Form {
+  [key: string]: unknown; // Add an index signature to allow dynamic property assignment for set shim
+  declare data: Record<string, unknown>;
   declare validations: Validations;
+  declare formFields: FormField[];
+  declare formFieldGroups: FormFieldGroup[];
   declare isNew: boolean;
 
-  constructor(data: Partial<T> = {}, options: FormOptions = {}, validations?: Validations) {
-    this.data = { ...data } as T;
+  constructor(data = {}, options: FormOptions = {}, validations?: Validations) {
+    this.data = { ...data };
     this.isNew = options.isNew || false;
     // typically this would be defined on the subclass
     // if validations are conditional, it may be preferable to define them during instantiation
@@ -30,26 +33,17 @@ export default class Form<T extends object> {
     // this allows for form field properties to be accessed directly on the class rather than form.data.someField
     const proxyTarget = (target: this, prop: string) => {
       // check if the property that is being accessed is a form field
-      const { formFields, formFieldGroups } = target as {
-        formFields?: FormField[];
-        formFieldGroups?: FormFieldGroup[];
-      };
-      const fields = Array.isArray(formFields) ? formFields : [];
+      let formFields = Array.isArray(target.formFields) ? target.formFields : [];
       // in the case of formFieldGroups we need extract the fields out into a flat array
-      const groupFields = Array.isArray(formFieldGroups)
-        ? formFieldGroups.reduce((arr: FormField[], group) => {
-            const values = Object.values(group)[0] || [];
-            return [...arr, ...values];
-          }, [])
-        : [];
-      // combine the formFields and formGroupFields into a single array
-      const allFields = [...fields, ...groupFields];
-      const formDataKeys = allFields.map((field) => field.name) || [];
+      if (Array.isArray(target.formFieldGroups)) {
+        formFields = target.formFieldGroups.reduce((arr: FormField[], group) => {
+          const values = Object.values(group)[0] || [];
+          return [...arr, ...values];
+        }, []);
+      }
+      const formDataKeys = formFields.map((field) => field.name) || [];
       // if the property is a form field return the data object as the target, otherwise return the original target (this)
-      // account for nested form data properties like 'config.maxLeaseTtl' when accessing the object like this.config
-      const isDataProp = formDataKeys.some((key) => key === prop || key.split('.').includes(prop));
-
-      return !Reflect.has(target, prop) && isDataProp ? target.data : target;
+      return !Reflect.has(target, prop) && formDataKeys.includes(prop) ? target.data : target;
     };
 
     return new Proxy(this, {

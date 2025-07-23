@@ -23,7 +23,6 @@ import {
   mountEngineCmd,
   runCmd,
   createTokenCmd,
-  deleteNS,
 } from 'vault/tests/helpers/commands';
 import {
   dataPolicy,
@@ -51,8 +50,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   hooks.beforeEach(async function () {
     const uid = uuidv4();
     this.backend = `kv-edge-${uid}`;
-    this.rootSecret = 'root-directory';
-    this.fullSecretPath = `${this.rootSecret}/nested/child-secret`;
+    this.rootSecret = 'root_directory';
+    this.fullSecretPath = `${this.rootSecret}/nested/child_secret`;
     await login();
     await runCmd(mountEngineCmd('kv-v2', this.backend), false);
     await writeSecret(this.backend, this.fullSecretPath, 'foo', 'bar');
@@ -94,14 +93,14 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
       await typeIn(PAGE.list.overviewInput, `${root}/no-access/`);
       assert
-        .dom(GENERAL.submitButton)
+        .dom(PAGE.list.overviewButton)
         .hasText('View list', 'shows list and not secret because search is a directory');
-      await click(GENERAL.submitButton);
+      await click(PAGE.list.overviewButton);
       assert.dom(PAGE.emptyStateTitle).hasText(`There are no secrets matching "${root}/no-access/".`);
 
       await visit(`/vault/secrets/${backend}/kv/list`);
       await typeIn(PAGE.list.overviewInput, `${root}/`); // add slash because this is a directory
-      await click(GENERAL.submitButton);
+      await click(PAGE.list.overviewButton);
 
       // URL correct
       assert.strictEqual(
@@ -186,7 +185,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
       await visit(`/vault/secrets/${backend}/kv/list`);
       await typeIn(PAGE.list.overviewInput, `${root}/${subdirectory}`); // intentionally leave out trailing slash
-      await click(GENERAL.submitButton);
+      await click(PAGE.list.overviewButton);
       assert.dom(PAGE.error.title).hasText('404 Not Found');
       assert
         .dom(PAGE.error.message)
@@ -213,7 +212,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
       await visit(`/vault/secrets/${this.backend}/kv/list`);
       await typeIn(PAGE.list.overviewInput, 'my_secret');
-      await click(GENERAL.submitButton);
+      await click(PAGE.list.overviewButton);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/kv/my_secret`,
@@ -320,7 +319,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await visit(`/vault/secrets/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'complex');
 
-    await click(GENERAL.toggleInput('json'));
+    await click(FORM.toggleJson);
 
     assert.strictEqual(
       codemirror().getValue(),
@@ -334,8 +333,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
     // Details view
     await click(PAGE.secretTab('Secret'));
-    assert.dom(GENERAL.toggleInput('json')).isNotDisabled('JSON toggle is not disabled');
-    assert.dom(GENERAL.toggleInput('json')).isChecked("JSON toggle is checked 'on'");
+    assert.dom(FORM.toggleJson).isNotDisabled('JSON toggle is not disabled');
+    assert.dom(FORM.toggleJson).isChecked("JSON toggle is checked 'on'");
 
     assert
       .dom(GENERAL.codeBlock('secret-data'))
@@ -343,8 +342,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
 
     // New version view
     await click(PAGE.detail.createNewVersion);
-    assert.dom(GENERAL.toggleInput('json')).isNotDisabled();
-    assert.dom(GENERAL.toggleInput('json')).isChecked();
+    assert.dom(FORM.toggleJson).isNotDisabled();
+    assert.dom(FORM.toggleJson).isChecked();
     assert.deepEqual(
       codemirror().getValue(),
       `{
@@ -362,7 +361,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await visit(`/vault/secrets/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'json jump');
 
-    await click(GENERAL.toggleInput('json'));
+    await click(FORM.toggleJson);
     codemirror().setCursor({ line: 2, ch: 1 });
     await triggerKeyEvent(GENERAL.codemirrorTextarea, 'keydown', 'Enter');
     const actualCursorPosition = JSON.stringify(codemirror().getCursor());
@@ -385,7 +384,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await visit(`/vault/secrets/${this.backend}/kv/create`);
     await fillIn(FORM.inputByAttr('path'), 'complex_version_test');
 
-    await click(GENERAL.toggleInput('json'));
+    await click(FORM.toggleJson);
     codemirror().setValue('{ "foo1": { "name": "bar1" } }');
     await click(FORM.saveBtn);
 
@@ -418,8 +417,8 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
     await fillIn(FORM.maskedValueInput(), '{bar}');
     await click(FORM.saveBtn);
     await click(GENERAL.overviewCard.actionText('Create new'));
-    assert.dom(GENERAL.toggleInput('json')).isNotDisabled();
-    assert.dom(GENERAL.toggleInput('json')).isNotChecked();
+    assert.dom(FORM.toggleJson).isNotDisabled();
+    assert.dom(FORM.toggleJson).isNotChecked();
   });
 
   // patch is technically enterprise only but stubbing the version so these tests run on both CE and enterprise
@@ -559,7 +558,7 @@ module('Acceptance | Enterprise | kv-v2 workflow | edge cases', function (hooks)
 
   hooks.afterEach(async function () {
     await login();
-    await runCmd(deleteNS(this.namespace));
+    await runCmd([`delete /sys/auth/${this.namespace}`]);
     await runCmd(deleteEngineCmd(this.backend));
     return;
   });

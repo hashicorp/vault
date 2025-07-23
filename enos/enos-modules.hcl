@@ -56,6 +56,12 @@ module "create_vpc" {
   common_tags = var.tags
 }
 
+module "set_up_external_integration_target" {
+  source = "./modules/set_up_external_integration_target"
+
+  ldap_version = "1.5.0"
+}
+
 module "choose_follower_host" {
   source = "./modules/choose_follower_host"
 }

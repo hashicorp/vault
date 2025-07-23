@@ -25,7 +25,6 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/jsonutil"
 	"github.com/hashicorp/vault/sdk/helper/pluginutil"
 	"github.com/hashicorp/vault/sdk/logical"
-	"github.com/hashicorp/vault/vault/observations"
 	"github.com/hashicorp/vault/vault/plugincatalog"
 	"github.com/mitchellh/copystructure"
 )
@@ -83,7 +82,6 @@ const (
 	mountTypeNSCubbyhole = "ns_cubbyhole"
 	mountTypeToken       = "token"
 	mountTypeNSToken     = "ns_token"
-	mountTypeDatabase    = "database"
 
 	MountTableUpdateStorage   = true
 	MountTableNoUpdateStorage = false
@@ -786,19 +784,6 @@ func (c *Core) mountInternal(ctx context.Context, entry *MountEntry, updateStora
 	if c.logger.IsInfo() {
 		c.logger.Info("successful mount", "namespace", entry.Namespace().Path, "path", entry.Path, "type", entry.Type, "version", entry.RunningVersion)
 	}
-
-	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountSecretsEnable, ns, map[string]interface{}{
-		"path":                   entry.Path,
-		"local_mount":            entry.Local,
-		"type":                   entry.Type,
-		"accessor":               entry.Accessor,
-		"plugin_version":         entry.Version,
-		"running_plugin_version": entry.RunningVersion,
-	})
-	if err != nil {
-		c.logger.Error("failed to record observation after enabling mount backend", "path", entry.Path, "error", err)
-	}
-
 	return nil
 }
 
@@ -980,18 +965,6 @@ func (c *Core) unmountInternal(ctx context.Context, path string, updateStorage b
 
 	if c.logger.IsInfo() {
 		c.logger.Info("successfully unmounted", "path", path, "namespace", ns.Path)
-	}
-
-	err = c.observations.RecordObservationToLedger(ctx, observations.ObservationTypeMountSecretsDisable, ns, map[string]interface{}{
-		"path":                   entry.Path,
-		"local_mount":            entry.Local,
-		"type":                   entry.Type,
-		"accessor":               entry.Accessor,
-		"plugin_version":         entry.Version,
-		"running_plugin_version": entry.RunningVersion,
-	})
-	if err != nil {
-		c.logger.Error("failed to record observation after enabling mount backend", "path", entry.Path, "error", err)
 	}
 
 	return nil
@@ -1789,20 +1762,13 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		return nil, err
 	}
 
-	pluginRunningVersion := pluginVersion
-	if pluginRunningVersion == "" && runningSha == "" {
-		pluginRunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
-	}
-
-	pluginObservationRecorder, err := c.observations.WithPlugin(entry.namespace, &logical.ObservationPluginInfo{
-		MountClass:           consts.PluginTypeSecrets.String(),
-		MountAccessor:        entry.Accessor,
-		MountPath:            entry.Path,
-		Plugin:               entry.Type,
-		PluginVersion:        pluginVersion,
-		RunningPluginVersion: pluginRunningVersion,
-		Version:              entry.Options["version"],
-		Local:                entry.Local,
+	pluginObservationRecorder, err := c.observations.WithPlugin(entry.namespace, &logical.EventPluginInfo{
+		MountClass:    consts.PluginTypeCredential.String(),
+		MountAccessor: entry.Accessor,
+		MountPath:     entry.Path,
+		Plugin:        entry.Type,
+		PluginVersion: pluginVersion,
+		Version:       entry.Options["version"],
 	})
 	if err != nil {
 		return nil, err
@@ -1828,8 +1794,11 @@ func (c *Core) newLogicalBackend(ctx context.Context, entry *MountEntry, sysView
 		return nil, fmt.Errorf("nil backend of type %q returned from factory", t)
 	}
 
-	entry.RunningVersion = pluginRunningVersion
+	entry.RunningVersion = pluginVersion
 	entry.RunningSha256 = runningSha
+	if entry.RunningVersion == "" && entry.RunningSha256 == "" {
+		entry.RunningVersion = versions.GetBuiltinVersion(consts.PluginTypeSecrets, entry.Type)
+	}
 	addLicenseCallback(c, backend)
 
 	return backend, nil

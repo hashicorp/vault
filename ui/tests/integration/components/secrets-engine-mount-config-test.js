@@ -8,7 +8,6 @@ import { setupRenderingTest } from 'ember-qunit';
 import { render, click } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import SecretsEngineResource from 'vault/resources/secrets/engine';
 
 const selectors = {
   toggle: '[data-test-mount-config-toggle]',
@@ -19,22 +18,27 @@ module('Integration | Component | secrets-engine-mount-config', function (hooks)
   setupRenderingTest(hooks);
 
   hooks.beforeEach(function () {
-    this.secretsEngine = new SecretsEngineResource({
-      path: 'ldap-test/',
-      type: 'ldap',
-      accessor: 'ldap_7e838627',
-      local: false,
-      seal_wrap: true,
-      config: {
-        id: 'foo',
-        default_lease_ttl: 0,
-        max_lease_ttl: 10000,
+    const store = this.owner.lookup('service:store');
+    store.pushPayload('secret-engine', {
+      modelName: 'secret-engine',
+      data: {
+        path: 'ldap-test/',
+        type: 'ldap',
+        accessor: 'ldap_7e838627',
+        local: false,
+        seal_wrap: true,
+        config: {
+          id: 'foo',
+          default_lease_ttl: 0,
+          max_lease_ttl: 10000,
+        },
       },
     });
+    this.model = store.peekRecord('secret-engine', 'ldap-test');
   });
 
   test('it should toggle config fields visibility', async function (assert) {
-    await render(hbs`<SecretsEngineMountConfig @secretsEngine={{this.secretsEngine}} />`);
+    await render(hbs`<SecretsEngineMountConfig @model={{this.model}} />`);
 
     assert
       .dom(selectors.toggle)
@@ -48,16 +52,16 @@ module('Integration | Component | secrets-engine-mount-config', function (hooks)
   });
 
   test('it should render correct config fields', async function (assert) {
-    await render(hbs`<SecretsEngineMountConfig @secretsEngine={{this.secretsEngine}} />`);
+    await render(hbs`<SecretsEngineMountConfig @model={{this.model}} />`);
     await click(selectors.toggle);
 
     assert
-      .dom(GENERAL.infoRowValue('Secret engine type'))
-      .hasText(this.secretsEngine.engineType, 'Secret engine type renders');
-    assert.dom(GENERAL.infoRowValue('Path')).hasText(this.secretsEngine.path, 'Path renders');
-    assert.dom(GENERAL.infoRowValue('Accessor')).hasText(this.secretsEngine.accessor, 'Accessor renders');
+      .dom(GENERAL.infoRowValue('Secret Engine Type'))
+      .hasText(this.model.engineType, 'Secret engine type renders');
+    assert.dom(GENERAL.infoRowValue('Path')).hasText(this.model.path, 'Path renders');
+    assert.dom(GENERAL.infoRowValue('Accessor')).hasText(this.model.accessor, 'Accessor renders');
     assert.dom(GENERAL.infoRowValue('Local')).includesText('No', 'Local renders');
-    assert.dom(GENERAL.infoRowValue('Seal wrap')).includesText('Yes', 'Seal wrap renders');
+    assert.dom(GENERAL.infoRowValue('Seal Wrap')).includesText('Yes', 'Seal wrap renders');
     assert.dom(GENERAL.infoRowValue('Default Lease TTL')).includesText('0', 'Default Lease TTL renders');
     assert
       .dom(GENERAL.infoRowValue('Max Lease TTL'))
@@ -66,7 +70,7 @@ module('Integration | Component | secrets-engine-mount-config', function (hooks)
 
   test('it should yield block for additional fields', async function (assert) {
     await render(hbs`
-      <SecretsEngineMountConfig @secretsEngine={{this.secretsEngine}}>
+      <SecretsEngineMountConfig @model={{this.model}}>
         <span data-test-yield>It Yields!</span>
       </SecretsEngineMountConfig>
     `);

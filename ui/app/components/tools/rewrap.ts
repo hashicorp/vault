@@ -41,8 +41,8 @@ export default class ToolsRewrap extends Component {
     const data = { token: this.originalToken.trim() };
 
     try {
-      const { wrap_info } = await this.api.sys.rewrap(data);
-      this.rewrappedToken = wrap_info?.token || '';
+      const { wrapInfo } = await this.api.sys.rewrap(data);
+      this.rewrappedToken = wrapInfo?.token || '';
       this.flashMessages.success('Rewrap was successful.');
     } catch (error) {
       const { message } = await this.api.parseError(error);

@@ -51,7 +51,7 @@ module('Acceptance | tools', function (hooks) {
       await waitUntil(() => find('.CodeMirror'));
       codemirror().setValue(DATA_TO_WRAP);
 
-      await click(GENERAL.submitButton);
+      await click(TS.submit);
       const wrappedToken = await waitUntil(() => find(TS.toolsInput('wrapping-token')));
       tokenStore.set(wrappedToken.innerText);
 
@@ -59,7 +59,7 @@ module('Acceptance | tools', function (hooks) {
       await click(GENERAL.navLink('Lookup'));
 
       await fillIn(TS.toolsInput('wrapping-token'), tokenStore.get());
-      await click(GENERAL.submitButton);
+      await click(TS.submit);
       await waitUntil(() => findAll('[data-test-component="info-table-row"]').length >= 3);
       assert
         .dom(GENERAL.infoRowValue('Creation path'))
@@ -71,7 +71,7 @@ module('Acceptance | tools', function (hooks) {
       await click(GENERAL.navLink('Rewrap'));
 
       await fillIn(TS.toolsInput('original-token'), tokenStore.get());
-      await click(GENERAL.submitButton);
+      await click(TS.submit);
       await waitUntil(() => find(TS.toolsInput('rewrapped-token')));
       const rewrappedToken = find(TS.toolsInput('rewrapped-token')).innerText;
       assert.notEqual(rewrappedToken, tokenStore.get(), 're-wrapped token is not the wrapped token');
@@ -81,7 +81,7 @@ module('Acceptance | tools', function (hooks) {
       await click(GENERAL.navLink('Unwrap'));
 
       await fillIn(TS.toolsInput('unwrap-token'), tokenStore.get());
-      await click(GENERAL.submitButton);
+      await click(TS.submit);
       await waitUntil(() => find('.CodeMirror'));
       assert.deepEqual(
         JSON.parse(codemirror().getValue()),
@@ -103,7 +103,7 @@ module('Acceptance | tools', function (hooks) {
     test('it generates random bytes', async function (assert) {
       await click(GENERAL.navLink('Random'));
       assert.dom(TS.toolsInput('bytes')).hasValue('32', 'defaults to 32 bytes');
-      await click(GENERAL.submitButton);
+      await click(TS.submit);
       const randomBytes = await waitUntil(() => find(TS.toolsInput('random-bytes')));
       assert.strictEqual(randomBytes.innerText.length, 44, 'shows the returned value of random bytes');
     });
@@ -116,18 +116,18 @@ module('Acceptance | tools', function (hooks) {
       await fillIn(TS.toolsInput('hash-input'), 'foo');
       await click(TS.toolsInput('b64-toggle'));
       assert.dom(TS.toolsInput('hash-input')).hasValue('Zm9v', 'it base64 encodes input');
-      await click(GENERAL.submitButton);
+      await click(TS.submit);
       let sumInput = await waitUntil(() => find(TS.toolsInput('sum')));
       assert
         .dom(sumInput)
         .hasText('LCa0a2j/xo/5m0U8HTBBNBNCLXBkg7+g+YpeiGJm564=', 'hashes the data, encodes input');
-      await click(GENERAL.button('Done'));
+      await click(TS.button('Done'));
 
       await waitUntil(() => find(TS.toolsInput('hash-input')));
       assert.dom(TS.toolsInput('hash-input')).hasText('', 'it clears input on done');
       await fillIn(TS.toolsInput('hash-input'), 'e2RhdGE6ImZvbyJ9');
 
-      await click(GENERAL.submitButton);
+      await click(TS.submit);
       sumInput = await waitUntil(() => find(TS.toolsInput('sum')));
       assert
         .dom(sumInput)
@@ -163,12 +163,12 @@ module('Acceptance | tools', function (hooks) {
       await click(GENERAL.navLink('Unwrap'));
 
       await fillIn(TS.toolsInput('unwrap-token'), 'sometoken');
-      await click(GENERAL.submitButton);
+      await click(TS.submit);
       await waitUntil(() => find('.CodeMirror'));
 
       assert.deepEqual(
-        AUTH_RESPONSE.auth,
         JSON.parse(codemirror().getValue()),
+        AUTH_RESPONSE.auth,
         'unwrapped data equals input data'
       );
     });
@@ -183,12 +183,12 @@ module('Acceptance | tools', function (hooks) {
       codemirror().setValue(DATA_TO_WRAP);
 
       // initial wrap
-      await click(GENERAL.submitButton);
+      await click(TS.submit);
       await waitUntil(() => find(TS.toolsInput('wrapping-token')));
-      await click(GENERAL.button('Back'));
+      await click(TS.button('Back'));
 
       // wrap again without re-inputting data
-      await click(GENERAL.submitButton);
+      await click(TS.submit);
       const wrappedToken = await waitUntil(() => find(TS.toolsInput('wrapping-token')));
       tokenStore.set(wrappedToken.innerText);
 
@@ -198,7 +198,7 @@ module('Acceptance | tools', function (hooks) {
       // we use lookup to check our token from the second wrap returns the unwrapped data we expect
       await click(GENERAL.navLink('Unwrap'));
       await fillIn(TS.toolsInput('unwrap-token'), tokenStore.get());
-      await click(GENERAL.submitButton);
+      await click(TS.submit);
       await waitUntil(() => find('.CodeMirror'));
       assert.strictEqual(codemirror().getValue(' '), '{   "tools": "tests" }', 'it renders unwrapped data');
     });
@@ -214,14 +214,14 @@ module('Acceptance | tools', function (hooks) {
       await click(GENERAL.toggleInput('Wrap TTL'));
       await fillIn(GENERAL.ttl.input('Wrap TTL'), '20');
 
-      await click(GENERAL.submitButton);
+      await click(TS.submit);
       const wrappedToken = await waitUntil(() => find(TS.toolsInput('wrapping-token')));
       tokenStore.set(wrappedToken.innerText);
 
       // lookup to check ttl is what we expect
       await click(GENERAL.navLink('Lookup'));
       await fillIn(TS.toolsInput('wrapping-token'), tokenStore.get());
-      await click(GENERAL.submitButton);
+      await click(TS.submit);
       await waitUntil(() => findAll('[data-test-component="info-table-row"]').length >= 3);
       assert.dom(GENERAL.infoRowValue('Creation TTL')).hasText('1200', 'show creation ttl row');
     });

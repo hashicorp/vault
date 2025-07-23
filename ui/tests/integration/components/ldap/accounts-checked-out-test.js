@@ -57,10 +57,6 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
     };
   });
 
-  hooks.afterEach(function () {
-    this.authStub.restore();
-  });
-
   test('it should render empty state when no accounts are checked out', async function (assert) {
     this.statuses = [
       { account: 'foo', available: true, library: 'test-library' },
@@ -78,7 +74,7 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
   });
 
   test('it should filter accounts for root user', async function (assert) {
-    this.authStub.value({ entityId: '' });
+    this.authStub.value({});
 
     await this.renderComponent();
 
@@ -89,7 +85,7 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
   });
 
   test('it should filter accounts for non root user', async function (assert) {
-    this.authStub.value({ entityId: '456' });
+    this.authStub.value({ entity_id: '456' });
 
     await this.renderComponent();
 
@@ -111,7 +107,7 @@ module('Integration | Component | ldap | AccountsCheckedOut', function (hooks) {
   });
 
   test('it should display details in table', async function (assert) {
-    this.authStub.value({ entityId: '456' });
+    this.authStub.value({ entity_id: '456' });
 
     await this.renderComponent();
 

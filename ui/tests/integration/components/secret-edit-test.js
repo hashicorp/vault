@@ -42,7 +42,7 @@ module('Integration | Component | secret edit', function (hooks) {
     });
 
     await render(hbs`<SecretEdit @mode={{this.mode}} @model={{this.model}} @key={{this.key}} />`);
-    assert.dom(GENERAL.toggleInput('json')).isDisabled();
+    assert.dom('[data-test-toggle-input="json"]').isDisabled();
   });
 
   test('it does JSON toggle in show mode when showing string data', async function (assert) {
@@ -56,7 +56,7 @@ module('Integration | Component | secret edit', function (hooks) {
     });
 
     await render(hbs`<SecretEdit @mode={{this.mode}} @model={{this.model}} @key={{this.key}} />`);
-    assert.dom(GENERAL.toggleInput('json')).isNotDisabled();
+    assert.dom('[data-test-toggle-input="json"]').isNotDisabled();
   });
 
   test('it shows an error when creating and data is not an object', async function (assert) {
@@ -87,7 +87,7 @@ module('Integration | Component | secret edit', function (hooks) {
       },
     });
     await render(hbs`<SecretEdit @mode={{this.mode}} @model={{this.model}} @key={{this.key}} />`);
-    assert.dom(GENERAL.submitButton).isNotDisabled();
+    assert.dom(GENERAL.saveButton).isNotDisabled();
   });
 
   test('it shows an error when editing and the data is not an object', async function (assert) {

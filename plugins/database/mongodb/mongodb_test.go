@@ -347,7 +347,6 @@ func TestMongoDB_RotateRoot_NonAdminDB(t *testing.T) {
 	assertCredsExist(t, dbUser, newPassword, connURL)
 }
 
-// TestGetTLS verify the different options of the MongoDB client created based on the multiple parameters given
 func TestGetTLSAuth(t *testing.T) {
 	ca := certhelpers.NewCert(t,
 		certhelpers.CommonName("certificate authority"),
@@ -361,7 +360,6 @@ func TestGetTLSAuth(t *testing.T) {
 
 	type testCase struct {
 		username   string
-		password   string
 		tlsCAData  []byte
 		tlsKeyData []byte
 
@@ -413,31 +411,12 @@ func TestGetTLSAuth(t *testing.T) {
 				}),
 			expectErr: false,
 		},
-		"good key + username/password": {
-			username:   "unittest",
-			password:   "unittest",
-			tlsKeyData: cert.CombinedPEM(),
-
-			expectOpts: options.Client().
-				SetTLSConfig(
-					&tls.Config{
-						Certificates: []tls.Certificate{cert.TLSCert},
-					},
-				).
-				SetAuth(options.Credential{
-					AuthMechanism: "SCRAM-SHA-256",
-					Username:      "unittest",
-					Password:      "unittest",
-				}),
-			expectErr: false,
-		},
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			c := new()
 			c.Username = test.username
-			c.Password = test.password
 			c.TLSCAData = test.tlsCAData
 			c.TLSCertificateKeyData = test.tlsKeyData
 

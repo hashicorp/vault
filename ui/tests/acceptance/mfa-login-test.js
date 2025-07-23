@@ -35,7 +35,7 @@ module('Acceptance | mfa-login', function (hooks) {
     await fillIn(AUTH_FORM.selectMethod, 'userpass');
     await fillIn(GENERAL.inputByAttr('username'), user);
     await fillIn(GENERAL.inputByAttr('password'), 'test');
-    await click(GENERAL.submitButton);
+    await click('[data-test-auth-submit]');
   };
   const didLogin = async (assert) => {
     await waitFor('[data-test-dashboard-card-header]', {

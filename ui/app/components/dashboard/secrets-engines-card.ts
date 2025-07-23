@@ -4,8 +4,7 @@
  */
 
 import Component from '@glimmer/component';
-
-import type SecretsEngineResource from 'vault/resources/secrets/engine';
+import type SecretEngineModel from 'vault/models/secret-engine';
 
 /**
  * @module DashboardSecretsEnginesCard
@@ -19,7 +18,7 @@ import type SecretsEngineResource from 'vault/resources/secrets/engine';
  */
 
 interface Args {
-  secretsEngines: SecretsEngineResource[];
+  secretsEngines: SecretEngineModel[];
 }
 
 export default class DashboardSecretsEnginesCard extends Component<Args> {

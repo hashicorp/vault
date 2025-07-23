@@ -17,20 +17,20 @@ export const listDestinationsTransform = (
   nameFilter?: string,
   typeFilter?: string
 ) => {
-  const { key_info } = response;
+  const { keyInfo } = response;
   const destinations: ListDestination[] = [];
   // build ListDestination objects from keyInfo
-  for (const key in key_info) {
+  for (const key in keyInfo) {
     // iterate through each type's destination names
-    const names = (key_info as Record<string, string[]>)[key];
+    const names = (keyInfo as Record<string, string[]>)[key];
     // remove trailing slash from key
     const type = key.replace(/\/$/, '') as DestinationType;
 
     names?.forEach((name: string) => {
       const id = `${type}/${name}`;
-      const { icon, name: type_display_name } = findDestination(type);
+      const { icon, name: typeDisplayName } = findDestination(type);
       // create object with destination's id and attributes
-      destinations.push({ id, name, type, icon, type_display_name });
+      destinations.push({ id, name, type, icon, typeDisplayName });
     });
   }
 

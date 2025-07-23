@@ -20,8 +20,8 @@ export default class MessagesCreateRoute extends Route {
 
   async getMessages(authenticated) {
     try {
-      const { key_info } = await this.api.sys.uiConfigListCustomMessages(true, undefined, authenticated);
-      return Object.values(key_info);
+      const { keyInfo } = await this.api.sys.uiConfigListCustomMessages(true, undefined, authenticated);
+      return Object.values(keyInfo);
     } catch {
       return [];
     }
@@ -33,7 +33,7 @@ export default class MessagesCreateRoute extends Route {
       {
         authenticated,
         type: 'banner',
-        start_time: addDays(startOfDay(timestamp.now()), 1).toISOString(),
+        startTime: addDays(startOfDay(timestamp.now()), 1).toISOString(),
       },
       { isNew: true }
     );

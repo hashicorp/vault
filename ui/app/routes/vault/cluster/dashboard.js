@@ -5,30 +5,29 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
+import { hash } from 'rsvp';
 // eslint-disable-next-line ember/no-mixins
 import ClusterRoute from 'vault/mixins/cluster-route';
 import { action } from '@ember/object';
-import SecretsEngineResource from 'vault/resources/secrets/engine';
 
 export default class VaultClusterDashboardRoute extends Route.extend(ClusterRoute) {
   @service store;
   @service namespace;
   @service version;
-  @service api;
 
-  async getVaultConfiguration(hasChroot) {
+  async getVaultConfiguration() {
     try {
-      if (!this.namespace.inRootNamespace || hasChroot) {
-        return null;
-      }
-      const { data } = await this.api.sys.readSanitizedConfigurationState();
-      return data;
+      if (!this.namespace.inRootNamespace) return null;
+
+      const adapter = this.store.adapterFor('application');
+      const configState = await adapter.ajax('/v1/sys/config/state/sanitized', 'GET');
+      return configState.data;
     } catch (e) {
       return null;
     }
   }
 
-  async model() {
+  model() {
     const clusterModel = this.modelFor('vault.cluster');
     const hasChroot = clusterModel?.hasChrootNamespace;
     const replication =
@@ -38,22 +37,13 @@ export default class VaultClusterDashboardRoute extends Route.extend(ClusterRout
             dr: clusterModel.dr,
             performance: clusterModel.performance,
           };
-    const requests = [
-      this.getVaultConfiguration(hasChroot),
-      this.api.sys.internalUiListEnabledVisibleMounts().catch(() => ({})),
-    ];
-    const [vaultConfiguration, { secret }] = await Promise.all(requests);
-    const secretsEngines = this.api
-      .responseObjectToArray(secret, 'path')
-      .map((engine) => new SecretsEngineResource(engine));
-
-    return {
+    return hash({
       replication,
-      secretsEngines,
+      secretsEngines: this.store.query('secret-engine', {}),
       isRootNamespace: this.namespace.inRootNamespace && !hasChroot,
       version: this.version,
-      vaultConfiguration,
-    };
+      vaultConfiguration: hasChroot ? null : this.getVaultConfiguration(),
+    });
   }
 
   @action

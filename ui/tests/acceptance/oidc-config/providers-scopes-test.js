@@ -93,7 +93,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       'create form navigates back to index on cancel'
     );
 
-    await click(GENERAL.menuTrigger);
+    await click('[data-test-popup-menu-trigger]');
     await click('[data-test-oidc-scope-menu-link="edit"]');
     assert.strictEqual(
       currentRouteName(),
@@ -109,7 +109,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
 
     // navigate to details from index page
     await click('[data-test-breadcrumb-link="oidc-scopes"] a');
-    await click(GENERAL.menuTrigger);
+    await click('[data-test-popup-menu-trigger]');
     await click('[data-test-oidc-scope-menu-link="details"]');
     assert.strictEqual(
       currentRouteName(),
@@ -153,7 +153,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
 
     // try to delete scope
     await click(SELECTORS.scopeDeleteButton);
-    await click(GENERAL.confirmButton);
+    await click(SELECTORS.confirmActionButton);
     assert.strictEqual(
       flashMessage.latestMessage,
       'unable to delete scope "test-scope" because it is currently referenced by these providers: test-provider',
@@ -310,7 +310,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     // delete
     await click(SELECTORS.providerDetailsTab);
     await click(SELECTORS.providerDeleteButton);
-    await click(GENERAL.confirmButton);
+    await click(SELECTORS.confirmActionButton);
     assert.strictEqual(
       flashMessage.latestMessage,
       'Provider deleted successfully',
@@ -325,7 +325,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     // delete scope
     await visit(OIDC_BASE_URL + '/scopes/test-scope/details');
     await click(SELECTORS.scopeDeleteButton);
-    await click(GENERAL.confirmButton);
+    await click(SELECTORS.confirmActionButton);
     assert.strictEqual(
       flashMessage.latestMessage,
       'Scope deleted successfully',
@@ -348,7 +348,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     assert
       .dom('[data-test-oidc-provider-linked-block="default"]')
       .exists('index page lists default provider');
-    await click(GENERAL.menuTrigger);
+    await click('[data-test-popup-menu-trigger]');
 
     await click('[data-test-oidc-provider-menu-link="edit"]');
     assert.strictEqual(

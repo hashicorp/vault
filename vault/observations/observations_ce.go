@@ -8,6 +8,7 @@ package observations
 import (
 	"context"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/helper/namespace"
 	"github.com/hashicorp/vault/sdk/logical"
 )
@@ -19,7 +20,7 @@ type pluginObservationSystem struct{}
 
 func (observations *ObservationSystem) Start() {}
 
-func (observations *ObservationSystem) WithPlugin(_ *namespace.Namespace, _ *logical.ObservationPluginInfo) (*pluginObservationSystem, error) {
+func (observations *ObservationSystem) WithPlugin(_ *namespace.Namespace, _ *logical.EventPluginInfo) (*pluginObservationSystem, error) {
 	return &pluginObservationSystem{}, nil
 }
 
@@ -31,6 +32,6 @@ func (observations *ObservationSystem) RecordObservationToLedger(_ context.Conte
 	return nil
 }
 
-func NewObservationSystem(_ *NewObservationSystemConfig) (*ObservationSystem, error) {
+func NewObservationSystem(_ string, _ string, _ hclog.Logger) (*ObservationSystem, error) {
 	return &ObservationSystem{}, nil
 }

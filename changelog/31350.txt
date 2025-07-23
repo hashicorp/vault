@@ -1,0 +1,3 @@
+```release-note:bug
+secrets/gcp: Update to vault-plugin-secrets-gcp@v0.22.1 to address more eventual consistency issues
+```

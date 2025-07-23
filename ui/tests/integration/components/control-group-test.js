@@ -44,7 +44,7 @@ module('Integration | Component | control group', function (hooks) {
       requestEntity: { id: 'requestor', name: 'entity8509' },
       reload: sinon.stub(),
     };
-    const authDataDefaults = { entityId: 'requestor' };
+    const authDataDefaults = { entity_id: 'requestor' };
 
     return {
       model: {
@@ -115,7 +115,7 @@ module('Integration | Component | control group', function (hooks) {
   });
 
   test('authorizer rendering', async function (assert) {
-    const { model, authData } = setup({ canAuthorize: true }, { entityId: 'manager' });
+    const { model, authData } = setup({ canAuthorize: true }, { entity_id: 'manager' });
 
     this.set('model', model);
     this.set('auth.authData', authData);
@@ -138,7 +138,7 @@ module('Integration | Component | control group', function (hooks) {
   test('authorizer rendering:authorized', async function (assert) {
     const { model, authData } = setup(
       { canAuthorize: true, authorizations: [{ id: 'manager', name: 'manager' }] },
-      { entityId: 'manager' }
+      { entity_id: 'manager' }
     );
 
     this.set('model', model);
@@ -153,7 +153,7 @@ module('Integration | Component | control group', function (hooks) {
   test('authorizer rendering: authorized and success', async function (assert) {
     const { model, authData } = setup(
       { approved: true, canAuthorize: true, authorizations: [{ id: 'manager', name: 'manager' }] },
-      { entityId: 'manager' }
+      { entity_id: 'manager' }
     );
 
     this.set('model', model);
@@ -173,7 +173,7 @@ module('Integration | Component | control group', function (hooks) {
   test('third-party: success', async function (assert) {
     const { model, authData } = setup(
       { approved: true, canAuthorize: true, authorizations: [{ id: 'foo', name: 'foo' }] },
-      { entityId: 'manager' }
+      { entity_id: 'manager' }
     );
 
     this.set('model', model);

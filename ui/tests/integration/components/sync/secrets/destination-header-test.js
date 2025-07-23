@@ -73,7 +73,7 @@ module('Integration | Component | sync | Secrets::DestinationHeader', function (
   test('it should render delete progress banner and hide actions', async function (assert) {
     assert.expect(5);
 
-    this.destination.purge_initiated_at = '2024-01-09T16:54:28.463879';
+    this.destination.purgeInitiatedAt = '2024-01-09T16:54:28.463879';
 
     await this.renderComponent();
     assert
@@ -92,8 +92,8 @@ module('Integration | Component | sync | Secrets::DestinationHeader', function (
   test('it should render delete error banner', async function (assert) {
     assert.expect(2);
 
-    this.destination.purge_initiated_at = '2024-01-09T16:54:28.463879';
-    this.destination.purge_error = 'oh no! a problem occurred!';
+    this.destination.purgeInitiatedAt = '2024-01-09T16:54:28.463879';
+    this.destination.purgeError = 'oh no! a problem occurred!';
 
     await this.renderComponent();
     assert

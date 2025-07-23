@@ -85,7 +85,7 @@
               @color="primary"
               @route="vault.cluster.unseal"
               @model={{this.model.name}}
-              data-test-button="Continue to Unseal"
+              data-test-advance-button
             />
           {{else}}
             <Hds::Button
@@ -95,7 +95,7 @@
               @model={{this.model.name}}
               @icon={{if this.model.sealed "loading"}}
               disabled={{this.model.sealed}}
-              data-test-button="Continue to Authenticate"
+              data-test-advance-button
             />
           {{/if}}
           <DownloadButton
@@ -205,7 +205,7 @@
           <Hds::Button
             @text="Initialize"
             @icon={{if this.loading "loading"}}
-            data-test-submit
+            data-test-init-submit
             type="submit"
             disabled={{this.loading}}
           />

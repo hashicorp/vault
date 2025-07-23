@@ -1389,12 +1389,7 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	observationSystemConfig := conf.ObservationSystemConfig
 	if observationSystemConfig != nil {
 		if observationSystemConfig.LedgerPath != "" {
-			config := &observations.NewObservationSystemConfig{
-				ObservationSystemConfig: observationSystemConfig,
-				LocalNodeId:             nodeID,
-				Logger:                  observationsLogger,
-			}
-			observations, err := observations.NewObservationSystem(config)
+			observations, err := observations.NewObservationSystem(nodeID, observationSystemConfig.LedgerPath, observationsLogger)
 			if err != nil {
 				return nil, err
 			}

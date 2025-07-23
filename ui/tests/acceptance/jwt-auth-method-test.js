@@ -7,8 +7,9 @@ import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { click, visit, fillIn, waitFor } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import sinon from 'sinon';
 import { Response } from 'miragejs';
-import { ERROR_JWT_LOGIN } from 'vault/utils/auth-form-helpers';
+import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
@@ -19,6 +20,7 @@ module('Acceptance | jwt auth method', function (hooks) {
 
   hooks.beforeEach(function () {
     localStorage.clear(); // ensure that a token isn't stored otherwise visit('/vault/auth') will redirect to secrets
+    this.stub = sinon.stub();
     this.server.post(
       '/auth/:path/oidc/auth_url',
       () =>
@@ -47,7 +49,7 @@ module('Acceptance | jwt auth method', function (hooks) {
     assert.dom(GENERAL.inputByAttr('role')).exists({ count: 1 }, 'Role input exists');
     assert.dom(GENERAL.inputByAttr('jwt')).exists({ count: 1 }, 'JWT input exists');
     await fillIn(GENERAL.inputByAttr('jwt'), 'my-test-jwt-token');
-    await click(GENERAL.submitButton);
+    await click(AUTH_FORM.login);
     await waitFor(GENERAL.messageError);
     assert.dom(GENERAL.messageError).hasText('Error Authentication failed: permission denied');
   });
@@ -68,7 +70,7 @@ module('Acceptance | jwt auth method', function (hooks) {
     await fillIn(GENERAL.inputByAttr('role'), 'some-role');
     await fillIn(GENERAL.inputByAttr('jwt'), 'my-test-jwt-token');
     assert.dom(GENERAL.inputByAttr('jwt')).exists({ count: 1 }, 'JWT input exists');
-    await click(GENERAL.submitButton);
+    await click(AUTH_FORM.login);
     await waitFor(GENERAL.messageError);
     assert.dom(GENERAL.messageError).hasText('Error Authentication failed: permission denied');
   });
@@ -95,7 +97,7 @@ module('Acceptance | jwt auth method', function (hooks) {
     assert.dom(GENERAL.inputByAttr('jwt')).exists({ count: 1 }, 'JWT input exists');
     await fillIn(GENERAL.inputByAttr('role'), 'some-role');
     await fillIn(GENERAL.inputByAttr('jwt'), 'my-test-jwt-token');
-    await click(GENERAL.submitButton);
+    await click(AUTH_FORM.login);
     await waitFor(GENERAL.messageError);
     assert.dom(GENERAL.messageError).hasText('Error Authentication failed: permission denied');
   });

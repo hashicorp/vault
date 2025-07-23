@@ -10,27 +10,27 @@ import { commonFields, getPayload } from './shared';
 
 import type { SystemWriteSyncDestinationsGhNameRequest } from '@hashicorp/vault-client-typescript';
 
-type GhFormData = SystemWriteSyncDestinationsGhNameRequest & {
-  name: string;
-};
+type GhFormData = Partial<SystemWriteSyncDestinationsGhNameRequest>;
 
-export default class GcpSmForm extends Form<GhFormData> {
+export default class GcpSmForm extends Form {
+  declare data: GhFormData;
+
   formFieldGroups = [
     new FormFieldGroup('default', [
       commonFields.name,
-      new FormField('repository_owner', 'string', {
+      new FormField('repositoryOwner', 'string', {
         subText:
           'Github organization or username that owns the repository. If empty, Vault will use the GITHUB_REPOSITORY_OWNER environment variable if configured.',
         editDisabled: true,
       }),
-      new FormField('repository_name', 'string', {
+      new FormField('repositoryName', 'string', {
         subText:
           'The name of the Github repository to connect to. If empty, Vault will use the GITHUB_REPOSITORY_NAME environment variable if configured.',
         editDisabled: true,
       }),
     ]),
     new FormFieldGroup('Credentials', [
-      new FormField('access_token', 'string', {
+      new FormField('accessToken', 'string', {
         subText:
           'Personal access token to authenticate to the GitHub repository. If empty, Vault will use the GITHUB_ACCESS_TOKEN environment variable if configured.',
         sensitive: true,
@@ -42,7 +42,6 @@ export default class GcpSmForm extends Form<GhFormData> {
 
   toJSON() {
     const formState = super.toJSON();
-    const data = getPayload<GhFormData>('gh', this.data, this.isNew);
-    return { ...formState, data };
+    return { ...formState, data: getPayload('gh', this.data, this.isNew) };
   }
 }

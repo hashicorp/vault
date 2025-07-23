@@ -69,7 +69,7 @@
           />
         </div>
         <div class="field is-grouped box is-fullwidth is-bottomless">
-          <Hds::Button @text="Access" type="submit" disabled={{not this.token}} data-test-submit />
+          <Hds::Button @text="Access" data-test-unwrap-button type="submit" disabled={{not this.token}} />
         </div>
       </form>
     </div>

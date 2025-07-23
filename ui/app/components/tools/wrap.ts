@@ -82,8 +82,8 @@ export default class ToolsWrap extends Component {
     const wrap = this.wrapTTL || '';
 
     try {
-      const { wrap_info } = await this.api.sys.wrap(data, this.api.buildHeaders({ wrap }));
-      this.token = wrap_info?.token || '';
+      const { wrapInfo } = await this.api.sys.wrap(data, this.api.buildHeaders({ wrap }));
+      this.token = wrapInfo?.token || '';
       this.flashMessages.success('Wrap was successful.');
     } catch (error) {
       const { message } = await this.api.parseError(error);

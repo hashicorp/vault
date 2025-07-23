@@ -5,15 +5,13 @@
 
 import Route from '@ember/routing/route';
 import { service } from '@ember/service';
-import SecretsEngineResource from 'vault/resources/secrets/engine';
 
-import type ApiService from 'vault/services/api';
+import type Store from '@ember-data/store';
 
 export default class SecretsBackends extends Route {
-  @service declare readonly api: ApiService;
+  @service declare readonly store: Store;
 
-  async model() {
-    const { secret } = await this.api.sys.internalUiListEnabledVisibleMounts();
-    return this.api.responseObjectToArray(secret, 'path').map((engine) => new SecretsEngineResource(engine));
+  model() {
+    return this.store.query('secret-engine', {});
   }
 }
