@@ -379,7 +379,6 @@ scenario "autopilot" {
     variables {
       ports             = global.ports
       ipv4_cidr         = step.create_vpc.ipv4_cidr
-      ipv6_cidr         = step.create_vpc.ipv6_cidr
       hosts             = step.create_vault_cluster.hosts
       leader_host       = step.get_vault_cluster_ips.leader_host
       vault_addr        = step.create_vault_cluster.api_addr_localhost
