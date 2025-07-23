@@ -158,6 +158,7 @@ func (b *backend) pathConfigRead(ctx context.Context, req *logical.Request, d *f
 	cfg.PopulateAutomatedRotationData(data)
 
 	data["password_policy"] = cfg.PasswordPolicy
+	data[rootRotationUrlKey] = cfg.RotationUrl
 
 	resp := &logical.Response{
 		Data: data,
@@ -233,6 +234,9 @@ func (b *backend) pathConfigWrite(ctx context.Context, req *logical.Request, d *
 
 	if passwordPolicy, ok := d.GetOk("password_policy"); ok {
 		cfg.PasswordPolicy = passwordPolicy.(string)
+	}
+	if rotationUrl, ok := d.GetOk(rootRotationUrlKey); ok {
+		cfg.RotationUrl = rotationUrl.(string)
 	}
 
 	var rotOp string
@@ -325,6 +329,7 @@ type ldapConfigEntry struct {
 	automatedrotationutil.AutomatedRotationParams
 
 	PasswordPolicy string `json:"password_policy"`
+	RotationUrl    string `json:"rotation_url"`
 }
 
 const pathConfigHelpSyn = `

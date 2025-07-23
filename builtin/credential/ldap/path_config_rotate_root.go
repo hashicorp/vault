@@ -37,15 +37,7 @@ func pathConfigRotateRoot(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
-	rotateLDAPURL := ""
-	if data != nil {
-		rotateLDAPURLRaw, ok := data.GetOk(rootRotationUrlKey)
-		if ok {
-			rotateLDAPURL = rotateLDAPURLRaw.(string)
-		}
-	}
-	ctx = context.WithValue(ctx, rootRotationUrlKey, rotateLDAPURL)
+func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	err := b.rotateRootCredential(ctx, req)
 	var responseError responseError
 	if errors.As(err, &responseError) {
@@ -89,11 +81,10 @@ func (b *backend) rotateRootCredential(ctx context.Context, req *logical.Request
 		LDAP:   ldaputil.NewLDAP(),
 	}
 
-	rotateLDAPURL, _ := ctx.Value(rootRotationUrlKey).(string)
 	// Create a copy of the config to modify for rotation
 	rotateConfig := *cfg.ConfigEntry
-	if rotateLDAPURL != "" {
-		rotateConfig.Url = rotateLDAPURL
+	if cfg.RotationUrl != "" {
+		rotateConfig.Url = cfg.RotationUrl
 	}
 	conn, err := client.DialLDAP(&rotateConfig)
 	if err != nil {
