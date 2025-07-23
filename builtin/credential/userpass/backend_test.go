@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -201,6 +202,35 @@ func TestBackend_userCreateOperation(t *testing.T) {
 	})
 }
 
+// TestBackend_userCreateOperationCheckCase will test the alias lookahead functionality
+// for the userpass auth method to ensure the alias returned is always lowercase due to
+// the effective case insensitivity of the auth method
+func TestBackend_userCreateOperationCheckCase(t *testing.T) {
+	b, err := Factory(context.Background(), &logical.BackendConfig{
+		Logger: nil,
+		System: &logical.StaticSystemView{
+			DefaultLeaseTTLVal: testSysTTL,
+			MaxLeaseTTLVal:     testSysMaxTTL,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Unable to create backend: %s", err)
+	}
+
+	logicaltest.Test(t, logicaltest.TestCase{
+		CredentialBackend: b,
+		Steps: []logicaltest.TestStep{
+			testUserCreateOperation(t, "web", "password", "foo"),
+			testAccStepLogin(t, "web", "password", []string{"default", "foo"}),
+			testAccStepLoginAlias(t, "web", "password"),
+			testAccStepLogin(t, "WEb", "password", []string{"default", "foo"}),
+			testAccStepLoginAlias(t, "wEb", "password"),
+			testAccStepLogin(t, "WEb", "password", []string{"default", "foo"}),
+			testAccStepLoginAlias(t, "WEb", "password"),
+		},
+	})
+}
+
 func TestBackend_passwordUpdate(t *testing.T) {
 	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
@@ -298,6 +328,30 @@ func testAccStepLogin(t *testing.T, user string, pass string, policies []string)
 		Unauthenticated: true,
 
 		Check:     logicaltest.TestCheckAuth(policies),
+		ConnState: &tls.ConnectionState{},
+	}
+}
+
+// userpass is case insentive, so we need to ensure that the alias lookahead returns all lowercase username
+// even if the username is provided in a different case.
+func testAccStepLoginAlias(t *testing.T, user string, pass string) logicaltest.TestStep {
+	return logicaltest.TestStep{
+		Operation: logical.AliasLookaheadOperation,
+		Path:      "login/" + user,
+		Data: map[string]interface{}{
+			"Raw": map[string]interface{}{
+				"username": user,
+			},
+		},
+		Check: func(resp *logical.Response) error {
+			if resp.Auth.Alias.Name != strings.ToLower(user) {
+				return fmt.Errorf("expected alias name to be '%s', got: %s", strings.ToLower(user), resp.Auth.Alias.Name)
+			}
+			if resp.IsError() {
+				return fmt.Errorf("bad: %#v", resp)
+			}
+			return nil
+		},
 		ConnState: &tls.ConnectionState{},
 	}
 }
