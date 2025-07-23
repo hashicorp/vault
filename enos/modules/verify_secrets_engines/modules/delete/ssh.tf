@@ -10,7 +10,7 @@ resource "enos_remote_exec" "ssh_delete_ca_role" {
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/../../scripts/delete-payload.sh")]
+  scripts = [abspath("${path.module}/../../scripts/delete.sh")]
 
   transport = {
     ssh = {
@@ -28,7 +28,7 @@ resource "enos_remote_exec" "ssh_delete_otp_role" {
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/../../scripts/delete-payload.sh")]
+  scripts = [abspath("${path.module}/../../scripts/delete.sh")]
 
   transport = {
     ssh = {

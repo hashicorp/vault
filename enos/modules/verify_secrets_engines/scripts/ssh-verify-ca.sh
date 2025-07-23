@@ -25,10 +25,10 @@ if ! ca_output=$("$binpath" read "ssh/config/ca" 2>&1); then
 fi
 
 # Extract the CA public key
-ca_public_key=$(echo "$ca_output" | jq -r '.data.public_key')
+ca_public_key=$(jq -r '.data.public_key' <<< "$ca_output")
 
 # Extract the first word (key type) from the public key
-key_type=$(echo "$ca_public_key" | awk '{print $1}')
+key_type=$(awk '{print $1}' <<< "$ca_public_key")
 
 # Verify that the key type matches the expected key type
 if [[ "$key_type" != "$CA_KEY_TYPE" ]]; then

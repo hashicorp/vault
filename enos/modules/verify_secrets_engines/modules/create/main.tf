@@ -24,13 +24,11 @@ variable "create_aws_secrets_engine" {
 
 variable "ipv4_cidr" {
   type        = string
-  default     = "10.13.0.0/16"
   description = "The CIDR block for the VPC when using IPV4 mode"
 }
 
 variable "ipv6_cidr" {
   type        = string
-  default     = "fd00:ffff::/64"
   description = "The CIDR block for the VPC when using IPV6 mode"
 }
 

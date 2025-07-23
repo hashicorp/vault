@@ -707,6 +707,8 @@ scenario "dr_replication" {
 
     variables {
       ports             = global.ports
+      ipv4_cidr         = step.create_vpc.ipv4_cidr
+      ipv6_cidr         = step.create_vpc.ipv6_cidr
       hosts             = step.create_primary_cluster_targets.hosts
       leader_host       = step.get_primary_cluster_ips.leader_host
       vault_addr        = step.create_primary_cluster.api_addr_localhost

@@ -29,7 +29,7 @@ log "Generating OTP credential from Vault"
 otp_cred=$("$binpath" write -format=json "ssh/creds/$ROLE_NAME" ip="$IP" username="$USERNAME") \
   || fail "Failed to generate OTP credential"
 
-OTP=$(echo "$otp_cred" | jq -r '.data.key')
+OTP=$(jq -r '.data.key' <<< "$otp_cred")
 log "Generated OTP: $OTP"
 
 log "Verifying OTP"
@@ -37,9 +37,9 @@ otp_output=$("$binpath" write -format=json ssh/verify otp="$OTP") \
   || fail "Failed to verify OTP credential for key $OTP"
 
 log "OTP Verification successful"
-ip=$(echo "$otp_output" | jq -r '.data.ip')
-role_name=$(echo "$otp_output" | jq -r '.data.role_name')
-username=$(echo "$otp_output" | jq -r '.data.username')
+ip=$(jq -r '.data.ip' <<< "$otp_output")
+role_name=$(jq -r '.data.role_name' <<< "$otp_output")
+username=$(jq -r '.data.username' <<< "$otp_output")
 
 log "IP: $ip"
 log "Role Name: $role_name"
