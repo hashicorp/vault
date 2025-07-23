@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { visit, currentURL, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
+import { find, visit, currentURL, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
@@ -48,9 +48,9 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     assert.expect(4);
     this.server.get('/identity/oidc/scope', () => overrideResponse(404));
     await visit(OIDC_BASE_URL);
-    await click('[data-test-tab="scopes"]');
+    await click(GENERAL.tab('scopes'));
     assert.strictEqual(currentURL(), '/vault/access/oidc/scopes');
-    assert.dom('[data-test-tab="scopes"]').hasClass('active', 'scopes tab is active');
+    assert.dom(GENERAL.tab('scopes')).hasClass('active', 'scopes tab is active');
     assert
       .dom(SELECTORS.scopeEmptyState)
       .hasText(
@@ -176,9 +176,21 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       'vault.cluster.access.oidc.scopes.create',
       'navigates to create form'
     );
-    await fillIn('[data-test-input="name"]', 'test-scope');
-    await fillIn('[data-test-input="description"]', 'this is a test');
-    await fillIn('[data-test-component="code-mirror-modifier"] textarea', SCOPE_DATA_RESPONSE.template);
+    await fillIn(GENERAL.inputByAttr('name'), 'test-scope');
+    await fillIn(GENERAL.inputByAttr('description'), 'this is a test');
+
+    const editorElement = await find(`${GENERAL.codemirror} .hds-code-editor__editor`);
+    const { editor } = editorElement;
+
+    editor.dispatch({
+      changes: [
+        {
+          from: 0,
+          to: editor.state.doc.length,
+          insert: SCOPE_DATA_RESPONSE.template,
+        },
+      ],
+    });
     await click(SELECTORS.scopeSaveButton);
     assert.strictEqual(
       flashMessage.latestMessage,
@@ -203,7 +215,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       'vault.cluster.access.oidc.scopes.scope.edit',
       'navigates to edit page from details'
     );
-    await fillIn('[data-test-input="description"]', 'this is an edit test');
+    await fillIn(GENERAL.inputByAttr('description'), 'this is an edit test');
     await click(SELECTORS.scopeSaveButton);
     assert.strictEqual(
       flashMessage.latestMessage,
@@ -221,15 +233,15 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
 
     // create a provider using test-scope
     await click('[data-test-breadcrumb-link="oidc-scopes"] a');
-    await click('[data-test-tab="providers"]');
-    assert.dom('[data-test-tab="providers"]').hasClass('active', 'providers tab is active');
+    await click(GENERAL.tab('providers'));
+    assert.dom(GENERAL.tab('providers')).hasClass('active', 'providers tab is active');
     await click('[data-test-oidc-provider-create]');
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.oidc.providers.create',
       'navigates to provider create form'
     );
-    await fillIn('[data-test-input="name"]', 'test-provider');
+    await fillIn(GENERAL.inputByAttr('name'), 'test-provider');
     await clickTrigger('#scopesSupported');
     await selectChoose('#scopesSupported', 'test-scope');
     await click(SELECTORS.providerSaveButton);
@@ -271,7 +283,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     );
     await click('[data-test-oidc-radio="limited"]');
     await click('[data-test-component="search-select"]#allowedClientIds .ember-basic-dropdown-trigger');
-    await fillIn('.ember-power-select-search input', 'test-app');
+    await fillIn(GENERAL.searchSelect.searchInput, 'test-app');
     await searchSelect.options.objectAt(0).click();
     await click(SELECTORS.providerSaveButton);
     assert.strictEqual(
@@ -342,8 +354,8 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
   test('it lists default provider and navigates to details', async function (assert) {
     assert.expect(7);
     await visit(OIDC_BASE_URL);
-    await click('[data-test-tab="providers"]');
-    assert.dom('[data-test-tab="providers"]').hasClass('active', 'providers tab is active');
+    await click(GENERAL.tab('providers'));
+    assert.dom(GENERAL.tab('providers')).hasClass('active', 'providers tab is active');
     assert.strictEqual(currentURL(), '/vault/access/oidc/providers');
     assert
       .dom('[data-test-oidc-provider-linked-block="default"]')

@@ -143,12 +143,12 @@ export default class GenerateCredentials extends Component {
   }
 
   @action
-  codemirrorUpdated(attr, val, codemirror) {
-    codemirror.performLint();
-    const hasErrors = codemirror.state.lint.marked.length > 0;
-
-    if (!hasErrors) {
+  editorUpdated(attr, val) {
+    // wont set invalid JSON to the model
+    try {
       this.model[attr] = JSON.parse(val);
+    } catch {
+      // linting is handled by the component
     }
   }
 
