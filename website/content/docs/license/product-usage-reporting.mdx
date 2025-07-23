@@ -6,6 +6,9 @@ description: >-
   usage reporting and how to enable or disable data collection.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Anonymous product usage reporting
 
 @include 'alerts/enterprise-only.mdx'
@@ -57,12 +60,12 @@ reporting {
 </Warning>
 
 
-You will find the following entries in the server log.
+You will find the following entry in the server log.
 
 <CodeBlockConfig hideClipboard>
 
   ```
-  [DEBUG] activity: there is no reporting agent configured, skipping counts reporting
+  [DEBUG] product usage reporting is disabled; usage metrics data will not be collected
   ```
 
 </CodeBlockConfig>
@@ -94,7 +97,8 @@ You will find the following entries in the server log.
 <CodeBlockConfig hideClipboard>
 
   ```
-  [DEBUG] core: product usage reporting disabled
+  [INFO] core: product usage reporting disabled via environment variable: env=OPTOUT_PRODUCT_USAGE_REPORTING
+  [DEBUG] product usage reporting is disabled; usage metrics data will not be collected
   ```
 
 </CodeBlockConfig>
@@ -218,7 +222,14 @@ All of these metrics are numerical, and contain no sensitive values or additiona
 | `vault.loadedsnapshots.cloud.google-gcs.count`                      | The total number of Google GCS snapshots loaded for recovery.                                              |
 | `vault.loadedsnapshots.cloud.aws-s3.count`                          | The total number of AWS S3 snapshots loaded for recovery.                                                  |
 | `vault.loadedsnapshots.cloud.azure-blob.count`                      | The total number of Azure Blob snapshots loaded for recovery.                                              |
-
+| `vault.mfa.login.totp.count`                                        | The count of MFA configurations using the TOTP method enforced during login.                               |
+| `vault.mfa.login.okta.count`                                        | The count of MFA configurations using the Okta method enforced during login.                               |
+| `vault.mfa.login.pingid.count`                                      | The count of MFA configurations using the PingID method enforced during login.                             |
+| `vault.mfa.login.duo.count`                                         | The count of MFA configurations using the Duo method enforced during login.                                |
+| `vault.mfa.stepup.totp.count`                                       | The count of MFA configurations using the TOTP method enforced as step-up authentication.                  |
+| `vault.mfa.stepup.okta.count`                                       | The count of MFA configurations using the Okta method enforced as step-up authentication.                  |
+| `vault.mfa.stepup.pingid.count`                                     | The count of MFA configurations using the PingID method enforced as step-up authentication.                |
+| `vault.mfa.stepup.duo.count`                                        | The count of MFA configurations using the Duo method enforced as step-up authentication.                   |
 ## Usage metadata list
 
 HashiCorp collects the following product usage metadata as part of the `metadata` part of the

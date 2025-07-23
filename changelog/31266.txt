@@ -1,0 +1,7 @@
+```release-note:bug
+plugins: Fix panics that can occur when a plugin audits a request or response before the Vault server has finished unsealing.
+```
+
+```release-note:bug
+kmip (enterprise): Fix a panic that can happen when a KMIP client makes a request before the Vault server has finished unsealing.
+```

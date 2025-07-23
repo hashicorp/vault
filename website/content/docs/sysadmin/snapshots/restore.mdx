@@ -5,6 +5,9 @@ description: >-
   Restore a Vault snapshot.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Restore a Vault snapshot
 
 Manually restore data for a Vault cluster leader node with a saved snapshot.
@@ -65,11 +68,11 @@ $ vault operator raft snapshot restore -force <local_file_path>
 For example:
    
 <CodeBlockConfig hideClipboard>
-   
+
 ```shell-session
 $ vault operator raft snapshot restore -force /tmp/snapshots/backup.snap
 ```
-   
+
 </CodeBlockConfig>
 
 </Tab>
@@ -106,34 +109,31 @@ $ curl                                       \
 
 </Tabs>
 
-
-
 ## Step 4: Unseal Vault
 
 <Tabs>
 
 <Tab heading="CLI" group="cli">
 
-Run
-[`vault operator raft snapshot restore`](/vault/docs/commands/operator/raft#snapshot-restore)
-with the local snapshot file path and the `-force` flag:
+Have each person with an unseal key share run
+`vault operator unseal` with their original unseal
+key until reaching the number of key shares required by your origial quroum
+configuration to unseal your Vault cluster:
+
 
 ```shell-session
-$ vault operator raft snapshot restore -force <local_file_path>
+$ vault operator unseal
 ```
 
-For example:
-   
+Enter the unseal key when prompted:
+
 <CodeBlockConfig hideClipboard>
-   
-```shell-session
-$ vault operator raft snapshot restore -force /tmp/snapshots/backup.snap
+
+```plaintext
+Unseal Key (will be hidden):
 ```
 
 </CodeBlockConfig>
-   
-You must use the `-force` flag as the auto-unseal or Shamir keys are not
-consistent with the snapshot data, which came from a different cluster.
 
 </Tab>
 
@@ -141,7 +141,7 @@ consistent with the snapshot data, which came from a different cluster.
 
 Have each person with an unseal key share run
 [`v1/sys/unseal`](/vault/api-docs/system/unseal) with their original unseal
-key until reaching the number of key shares required by your origial quroum
+key until reaching the number of key shares required by your origial quorum
 configuration to unseal your Vault cluster:
    
 ```shell-session

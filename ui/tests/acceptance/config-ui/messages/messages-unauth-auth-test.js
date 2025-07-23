@@ -5,7 +5,7 @@
 
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { click, visit, fillIn, currentRouteName, currentURL } from '@ember/test-helpers';
+import { click, visit, fillIn, currentRouteName, currentURL, waitFor } from '@ember/test-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CUSTOM_MESSAGES } from 'vault/tests/helpers/config-ui/message-selectors';
 import { setupMirage } from 'ember-cli-mirage/test-support';
@@ -138,7 +138,7 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
       'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'
     );
     await fillIn(
-      CUSTOM_MESSAGES.input('startTime'),
+      CUSTOM_MESSAGES.input('start_time'),
       format(addDays(startOfDay(new Date('2023-12-12')), 1), datetimeLocalStringFormat)
     );
     await fillIn('[data-test-kv-key="0"]', 'Learn more');
@@ -158,6 +158,7 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
 
     // log in to namespace
     await loginNs('world');
+    await waitFor(CUSTOM_MESSAGES.alertTitle(id));
     assert
       .dom(CUSTOM_MESSAGES.alertTitle(id))
       .hasText('active authenticated message title', 'title is correct')

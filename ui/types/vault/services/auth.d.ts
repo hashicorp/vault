@@ -8,17 +8,19 @@
 
 import Service from '@ember/service';
 import type { MfaRequirementApiResponse, ParsedMfaRequirement } from 'vault/auth/mfa';
+import type { NormalizedAuthData, NormalizeAuthResponseKeys } from 'vault/auth/form';
+import type { AuthResponseAuthKey, AuthResponseDataKey } from 'vault/auth/methods';
 
-export interface AuthData {
+interface AuthData {
   userRootNamespace: string;
   token: string;
   policies: string[];
   renewable: boolean;
-  entity_id: string;
+  entityId: string;
   displayName?: string;
 }
 
-export interface AuthResponse {
+export interface AuthSuccessResponse {
   namespace: string;
   token: string; // the name of the token in local storage, not the actual token
   isRoot: boolean;
@@ -27,18 +29,16 @@ export interface AuthResponseWithMfa {
   mfa_requirement: MfaRequirementApiResponse;
 }
 
+type NormalizedProps = NormalizeAuthResponseKeys & {
+  authMethodType: string;
+};
+
 export default class AuthService extends Service {
   authData: AuthData;
   currentToken: string;
   mfaErrors: null | Errors[];
   setLastFetch: (time: number) => void;
-  handleError: (error: Error | string) => string | error[] | [error];
-  authenticate(params: {
-    clusterId: string;
-    backend: string;
-    data: object;
-    selectedAuth: string;
-  }): Promise<AuthResponse>;
+  authSuccess(clusterId: string, authData: NormalizedAuthData): Promise<AuthSuccessResponse>;
   ajax: (
     url: string,
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
@@ -49,5 +49,9 @@ export default class AuthService extends Service {
     }
   ) => Promise<any>;
   getAuthType(): string | undefined;
-  _parseMfaResponse(mfaResponse: MfaRequirementApiResponse): ParsedMfaRequirement;
+  parseMfaResponse(mfaResponse: MfaRequirementApiResponse): ParsedMfaRequirement;
+  normalizeAuthData(
+    authResponse: AuthResponseAuthKey | AuthResponseDataKey,
+    normalizedProperties: NormalizedProps
+  ): NormalizedAuthData;
 }

@@ -5,19 +5,23 @@
 
 import AuthBase from './base';
 import Ember from 'ember';
-import { tracked } from '@glimmer/tracking';
-import { service } from '@ember/service';
-import { restartableTask, task, timeout, waitForEvent } from 'ember-concurrency';
 import { action } from '@ember/object';
-import { waitFor } from '@ember/test-waiters';
-import errorMessage from 'vault/utils/error-message';
+import { dasherize } from '@ember/string';
+import {
+  DOMAIN_PROVIDER_MAP,
+  ERROR_JWT_LOGIN,
+  ERROR_MISSING_PARAMS,
+  ERROR_POPUP_FAILED,
+  ERROR_WINDOW_CLOSED,
+} from 'vault/utils/auth-form-helpers';
+import { restartableTask, task, timeout, waitForEvent } from 'ember-concurrency';
+import { service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
+import parseURL from 'core/utils/parse-url';
 
-import type AdapterError from 'vault/@ember-data/adapter/error';
-import type AuthService from 'vault/vault/services/auth';
-import type FlagsService from 'vault/services/flags';
-import type RoleJwtModel from 'vault/models/role-jwt';
-import type Store from '@ember-data/store';
 import type { HTMLElementEvent } from 'vault/forms';
+import type { JwtOidcAuthUrlResponse, JwtOidcLoginApiResponse } from 'vault/vault/auth/methods';
+import type RouterService from '@ember/routing/router-service';
 
 /**
  * @module Auth::Form::OidcJwt
@@ -30,26 +34,17 @@ import type { HTMLElementEvent } from 'vault/forms';
 
 interface JwtLoginData {
   namespace?: string;
-  path?: string;
+  path: string;
   role?: string;
   jwt?: string;
 }
 
-interface OidcLoginData {
-  token: string;
+interface UrlParseData {
+  hostname: string;
 }
 
-const ERROR_WINDOW_CLOSED =
-  'The provider window was closed before authentication was complete. Your web browser may have blocked or closed a pop-up window. Please check your settings and click Sign In to try again.';
-const ERROR_MISSING_PARAMS =
-  'The callback from the provider did not supply all of the required parameters.  Please click Sign In to try again. If the problem persists, you may want to contact your administrator.';
-const ERROR_JWT_LOGIN = 'OIDC login is not configured for this mount';
-export { ERROR_WINDOW_CLOSED, ERROR_MISSING_PARAMS, ERROR_JWT_LOGIN };
-
 export default class AuthFormOidcJwt extends AuthBase {
-  @service declare readonly auth: AuthService;
-  @service declare readonly flags: FlagsService;
-  @service declare readonly store: Store;
+  @service declare readonly router: RouterService;
 
   loginFields = [
     {
@@ -62,96 +57,132 @@ export default class AuthFormOidcJwt extends AuthBase {
   _formData: FormData = new FormData();
 
   // set during auth prep and login workflow
-  @tracked fetchedRole: RoleJwtModel | null = null;
+  @tracked authUrl: string | null = null;
   @tracked errorMessage = '';
   @tracked isOIDC = true;
 
-  get tasksAreRunning() {
-    return this.prepareForOIDC.isRunning || this.exchangeOIDC.isRunning;
-  }
-
   get icon() {
-    return this?.fetchedRole?.providerIcon || '';
+    // Right now there is a bug in HDS where the name includes a space, this line can be removed when we
+    // upgrade to an HDS version with the corrected icon name
+    if (this.provider === 'Ping Identity') return 'ping-identity ';
+    return this.provider ? dasherize(this.provider.toLowerCase()) : '';
   }
 
   get providerName() {
-    return `with ${this?.fetchedRole?.providerName || 'OIDC Provider'}`;
+    return `with ${this.provider || 'OIDC Provider'}`;
+  }
+
+  get provider() {
+    const { hostname } = parseURL(this.authUrl) as UrlParseData;
+    if (hostname) {
+      const firstMatch = Object.keys(DOMAIN_PROVIDER_MAP).find((name) => hostname.includes(name));
+      return firstMatch ? DOMAIN_PROVIDER_MAP[firstMatch as keyof typeof DOMAIN_PROVIDER_MAP] : null;
+    }
+    return null;
   }
 
   @action
   initializeFormData(element: HTMLFormElement) {
     this._formData = new FormData(element);
-    this.fetchRole.perform();
+    this.fetchAuthUrl.perform();
   }
 
   @action
   updateFormData(event: HTMLElementEvent<HTMLInputElement>) {
     const { name, value } = event.target;
+    // the selectedAuthMethod dropdown is unrelated to login data so no need to track it in the form state.
+    if (name === 'selectedAuthMethod') return;
     this._formData?.set(name, value);
 
-    // re-fetch role if the following inputs have changed. namespace is not included because
+    // re-request auth_url if the following inputs have changed. namespace is not included because
     // when it changes the route model refreshes and a new component instantiates.
     if (['path', 'role'].includes(name)) {
-      this.fetchRole.perform(500);
+      this.fetchAuthUrl.perform(500);
     }
   }
 
-  fetchRole = restartableTask(async (wait = 0) => {
+  fetchAuthUrl = restartableTask(async (wait = 0) => {
     // task is restartable so if the user starts typing again,
     // it will cancel and restart from the beginning.
     if (wait) await timeout(wait);
 
     const { namespace = '', path = '', role = '' } = this.parseFormData(this._formData);
-    const id = JSON.stringify([path, role]);
+    const redirect_uri = this.generateRedirectUri(namespace, path);
 
     // reset state
-    this.fetchedRole = null;
+    this.authUrl = null;
     this.errorMessage = '';
 
     try {
-      this.fetchedRole = await this.store.findRecord('role-jwt', id, {
-        adapterOptions: { namespace },
-      });
+      const { data } = (await this.api.auth.jwtOidcRequestAuthorizationUrl(path, {
+        role,
+        redirect_uri,
+      })) as JwtOidcAuthUrlResponse;
+      this.authUrl = data.auth_url;
       this.isOIDC = true;
     } catch (e) {
-      const { httpStatus } = e as AdapterError;
-      const message = errorMessage(e);
-      // track errors but they only display on submit
+      const { status, message } = await this.api.parseError(e);
+      // errors are tracked here but they only display on submit
       this.errorMessage =
-        httpStatus === 400 ? 'Invalid role. Please try again.' : `Error fetching role: ${message}`;
-      // if the mount is configured for JWT authentication via static keys, JWKS, or OIDC discovery
+        // A 400 is returned if OIDC is configured but does not have a default role set.
+        status === 400 ? 'Invalid role. Please try again.' : `Error fetching role: ${message}`;
+      // If the mount is configured for JWT authentication via static keys, JWKS, or OIDC discovery
       // this specific error is returned. Flip the isOIDC boolean accordingly, otherwise assume OIDC.
-      this.isOIDC = message !== ERROR_JWT_LOGIN;
+      this.isOIDC = !message.includes(ERROR_JWT_LOGIN);
     }
   });
 
-  login = task(
-    waitFor(async (submitData) => {
-      if (this.isOIDC) {
-        this.startOIDCAuth();
-      } else {
-        this.continueLogin(submitData);
+  generateRedirectUri(namespace = '', path = '') {
+    const origin = window.location.origin;
+    const qp = namespace ? { namespace } : {};
+    const routeUrl = this.router.urlFor(
+      'vault.cluster.oidc-callback',
+      { auth_path: path },
+      { queryParams: qp }
+    );
+    return `${origin}${routeUrl}`;
+  }
+
+  // * LOGIN WORKFLOW BEGINS
+  async loginRequest(formData: JwtLoginData) {
+    if (this.isOIDC) {
+      return await this.loginOidc();
+    } else {
+      return await this.loginJwt(formData);
+    }
+  }
+
+  async loginJwt(formData: JwtLoginData) {
+    const { path, jwt, role } = formData;
+    const { auth } = (await this.api.auth.jwtLogin(path, { jwt, role })) as JwtOidcLoginApiResponse;
+    // displayName is not returned by auth response and is set in persistAuthData
+    return this.normalizeAuthResponse(auth, {
+      authMountPath: path,
+      token: auth.client_token,
+      ttl: auth.lease_duration,
+    });
+  }
+
+  async loginOidc() {
+    const oidcWindow = await this.startOIDCAuth();
+    if (oidcWindow) {
+      try {
+        // Initiate watching for the popup and current window
+        this.watchPopup.perform(oidcWindow);
+        this.watchCurrent.perform(oidcWindow);
+        const eventData = await this.prepareForOIDC();
+        const { auth, path } = await this.exchangeOIDC(eventData);
+        // displayName is not returned by auth response and is set in persistAuthData
+        return this.normalizeAuthResponse(auth, {
+          authMountPath: path,
+          token: auth.client_token,
+          ttl: auth.lease_duration,
+        });
+      } finally {
+        this.closeWindow(oidcWindow);
       }
-    })
-  );
-
-  async continueLogin(data: JwtLoginData | OidcLoginData) {
-    try {
-      // TODO CMB backend should probably be path, but holding off refactor since api service may remove need all together
-      // OIDC callback returns a token so authenticate with that
-      const backend = this.isOIDC && 'token' in data ? 'token' : this.args.authType;
-
-      const authResponse = await this.auth.authenticate({
-        clusterId: this.args.cluster.id,
-        backend,
-        data,
-        selectedAuth: this.args.authType,
-      });
-
-      // responsible for redirect after auth data is persisted
-      this.handleAuthResponse(authResponse);
-    } catch (error) {
-      this.onError(error as Error);
+    } else {
+      throw `Failed to open OIDC popup window. ${ERROR_POPUP_FAILED}`;
     }
   }
 
@@ -159,42 +190,39 @@ export default class AuthFormOidcJwt extends AuthBase {
   // 1. request oidc/auth_url to check for config errors, if none continue
   // 2. open popup window at auth_url
   async startOIDCAuth() {
-    await this.fetchRole.perform();
+    await this.fetchAuthUrl.perform();
 
-    const error =
-      this.fetchedRole && !this.fetchedRole.authUrl
-        ? 'Missing auth_url. Please check that allowed_redirect_uris for the role include this mount path.'
-        : this.errorMessage || null;
-
-    if (error) {
-      this.onError(error);
-    } else {
-      const win = window;
-      const POPUP_WIDTH = 500;
-      const POPUP_HEIGHT = 600;
-      const left = win.screen.width / 2 - POPUP_WIDTH / 2;
-      const top = win.screen.height / 2 - POPUP_HEIGHT / 2;
-      const oidcWindow = win.open(
-        this.fetchedRole?.authUrl,
-        'vaultOIDCWindow',
-        `width=${POPUP_WIDTH},height=${POPUP_HEIGHT},resizable,scrollbars=yes,top=${top},left=${left}`
-      );
-
-      this.prepareForOIDC.perform(oidcWindow);
+    if (!this.authUrl) {
+      const error =
+        // authUrl is an empty string if the request succeeds but a role is not properly configured.
+        this.authUrl === ''
+          ? 'Missing auth_url. Please check that allowed_redirect_uris for the role include this mount path.'
+          : this.errorMessage || 'Unknown OIDC error. Check the Vault logs and try again.';
+      throw error;
     }
+
+    const win = window;
+    const POPUP_WIDTH = 500;
+    const POPUP_HEIGHT = 600;
+    const left = win.screen.width / 2 - POPUP_WIDTH / 2;
+    const top = win.screen.height / 2 - POPUP_HEIGHT / 2;
+    const oidcWindow = win.open(
+      this.authUrl,
+      'vaultOIDCWindow',
+      `width=${POPUP_WIDTH},height=${POPUP_HEIGHT},resizable,scrollbars=yes,top=${top},left=${left}`
+    );
+
+    return oidcWindow;
   }
 
   // * OIDC AUTH PART 2
   // 3. watch popups for premature closure
-  // 4. wait message event from window.postMessage() in oidc-callback route
-  prepareForOIDC = task(async (oidcWindow) => {
+  // 4. wait for message event from window.postMessage() in oidc-callback route
+  async prepareForOIDC() {
     // NOTE TO DEVS: Be careful when updating the OIDC flow and ensure the updates
     // work with implicit flow. See issue https://github.com/hashicorp/vault-plugin-auth-jwt/pull/192
     const thisWindow = window;
 
-    // start watching the popup window and the current one
-    this.watchPopup.perform(oidcWindow);
-    this.watchCurrent.perform(oidcWindow);
     // eslint-disable-next-line no-constant-condition
     while (true) {
       // wait for message posted from oidc callback, see issue https://github.com/hashicorp/vault/issues/12436
@@ -202,48 +230,32 @@ export default class AuthFormOidcJwt extends AuthBase {
       const event = (await waitForEvent(thisWindow, 'message')) as unknown as MessageEvent;
       if (event.origin === thisWindow.origin && event.isTrusted && event.data.source === 'oidc-callback') {
         // event.data are params from the oidc callback url parsed by getParamsForCallback in the oidc-callback route
-        return this.exchangeOIDC.perform(event.data, oidcWindow);
+        return event.data;
       }
     }
-  });
+  }
 
   // * OIDC AUTH PART 3
   // 5. check parsed url for expected state params
   // 6. if successful, request client_token from oidc/callback
   // 7. close popups and continue login with client_token
-  exchangeOIDC = task(async (oidcState, oidcWindow) => {
-    if (oidcState === null || oidcState === undefined) {
-      return;
-    }
 
+  async exchangeOIDC(oidcState: { path: string; state: string; code: string }) {
     const { path, state, code } = oidcState;
     if (!path || !state || !code) {
-      return this.cancelLogin(oidcWindow, ERROR_MISSING_PARAMS);
+      throw ERROR_MISSING_PARAMS;
     }
 
-    let resp;
     // do the OIDC exchange, set the token and continue login flow
-    try {
-      const adapter = this.store.adapterFor('auth-method');
-      resp = await adapter.exchangeOIDC(path, state, code);
-      this.closeWindow(oidcWindow);
-    } catch (e) {
-      // If there was an error on Vault's end, close the popup
-      // and show the error on the login screen
-      return this.cancelLogin(oidcWindow, errorMessage(e));
-    }
-
-    const { client_token, mfa_requirement } = resp.auth;
-    if (mfa_requirement) {
-      return this.handleMfa(mfa_requirement, path);
-    } else if (client_token) {
-      return this.continueLogin({ token: client_token });
-    } else {
-      // If there's a problem with the OIDC exchange the auth workflow should fail earlier.
-      // Including this catch just in case, though it's unlikely this will be hit.
-      this.handleOIDCError('Missing token. Please try again.');
-    }
-  });
+    const { auth } = (await this.api.auth.jwtOidcCallback(
+      path,
+      undefined,
+      code,
+      state
+    )) as JwtOidcLoginApiResponse;
+    return { auth, path };
+  }
+  //* END LOGIN METHODS
 
   // MANAGE POPUPS
   watchPopup = task(async (oidcWindow) => {
@@ -253,7 +265,10 @@ export default class AuthFormOidcJwt extends AuthBase {
 
       await timeout(WAIT_TIME);
       if (!oidcWindow || oidcWindow.closed) {
-        return this.handleOIDCError(ERROR_WINDOW_CLOSED);
+        // Since watchPopup isn't awaited, errors thrown here won't bubble up
+        // and so we must call onError directly instead.
+        this.onError(ERROR_WINDOW_CLOSED);
+        return;
       }
     }
   });
@@ -264,20 +279,13 @@ export default class AuthFormOidcJwt extends AuthBase {
     oidcWindow.close();
   });
 
-  cancelLogin(oidcWindow: Window, errorMessage: string) {
-    this.closeWindow(oidcWindow);
-    this.handleOIDCError(errorMessage);
+  cancelLogin() {
+    this.login.cancelAll();
   }
 
   closeWindow(oidcWindow: Window) {
     this.watchPopup.cancelAll();
     this.watchCurrent.cancelAll();
     oidcWindow.close();
-  }
-
-  handleOIDCError(err: string) {
-    this.prepareForOIDC.cancelAll();
-    this.exchangeOIDC.cancelAll();
-    this.onError(err);
   }
 }

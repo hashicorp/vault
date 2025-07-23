@@ -55,7 +55,7 @@ export default class SecretsBackendConfigurationRoute extends Route {
       .catch(handleError);
     const { data: configLease } = await this.api.secrets.awsReadLeaseConfiguration(path).catch(handleError);
 
-    const WIF_FIELDS = ['roleArn', 'identityTokenAudience', 'identityTokenTtl'];
+    const WIF_FIELDS = ['role_arn', 'identity_token_audience', 'identity_token_ttl'];
     const issuer = await this.checkIssuer(configRoot, WIF_FIELDS);
 
     if (configRoot) {
@@ -66,7 +66,7 @@ export default class SecretsBackendConfigurationRoute extends Route {
   async fetchAzureConfig(path) {
     try {
       const { data: azureConfig } = await this.api.secrets.azureReadConfiguration(path);
-      const WIF_FIELDS = ['identityTokenAudience', 'identityTokenTtl'];
+      const WIF_FIELDS = ['identity_token_audience', 'identity_token_ttl'];
       const issuer = await this.checkIssuer(azureConfig, WIF_FIELDS);
       // azure config endpoint returns 200 with default values if engine has not been configured yet
       // all values happen to be falsy so we can just check if any are truthy
@@ -87,7 +87,7 @@ export default class SecretsBackendConfigurationRoute extends Route {
   async fetchGcpConfig(path) {
     try {
       const { data: gcpConfig } = await this.api.secrets.googleCloudReadConfiguration(path);
-      const WIF_FIELDS = ['identityTokenAudience', 'identityTokenTtl', 'serviceAccountEmail'];
+      const WIF_FIELDS = ['identity_token_audience', 'identity_token_ttl', 'service_account_email'];
       const issuer = await this.checkIssuer(gcpConfig, WIF_FIELDS);
 
       if (gcpConfig) {

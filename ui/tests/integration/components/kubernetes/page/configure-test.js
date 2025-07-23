@@ -231,7 +231,7 @@ module('Integration | Component | kubernetes | Page::Configure', function (hooks
     await click('[data-test-config-save]');
 
     assert
-      .dom(`${GENERAL.validationErrorByAttr('kubernetesHost')} [data-test-inline-error-message]`)
+      .dom(GENERAL.validationErrorByAttr('kubernetesHost'))
       .hasText('Kubernetes host is required', 'Error renders for required field');
     assert.dom('[data-test-alert]').hasText('There is an error with this form.', 'Alert renders');
   });

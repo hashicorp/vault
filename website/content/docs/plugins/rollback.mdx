@@ -5,6 +5,9 @@ description: >-
     Rollback or downgrade Vault plugins.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Rollback or downgrade Vault plugins
 
 Downgrading a plugin in the catalog affects all uses of that plugin version.
@@ -14,8 +17,10 @@ starting your rollback or downgrade.
 
 ## Before you start
 
-- **To register and downgrade enterprise plugins, you must have Vault v1.16.21+,
+- **To register and downgrade official enterprise plugins, you must have Vault v1.16.21+,
   1.17.17+, 1.18.10+, 1.19.4+, or 1.20.x+**.
+- **To register and downgrade official community plugins with an extracted `.zip` file, you must have
+  Vault v1.16.21+, 1.17.17+, 1.18.10+, 1.19.5+, or 1.20.x+**.
 
 @include 'plugins/common-requirements.mdx'
 

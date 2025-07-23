@@ -6,6 +6,9 @@ description: |-
   Vault's plugins and the plugin catalog.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # plugin
 
 The `plugin` command groups subcommands for interacting with Vault's plugins and
@@ -32,6 +35,16 @@ $ vault plugin register \
   -sha256=d3f0a8be02f6c074cf38c9c99d4d04c9c6466249 \
   secret my-custom-plugin
 Success! Registered plugin: my-custom-plugin
+```
+
+Register a plugin with `-download` <EnterpriseAlert inline="true"/>:
+
+```shell-session
+$ vault plugin register
+    -download \
+    -version=0.16.0+ent \
+    secret \
+    vault-plugin-secrets-keymgmt
 ```
 
 Get information about a plugin in the catalog:

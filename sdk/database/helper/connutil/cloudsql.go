@@ -23,13 +23,13 @@ func (c *SQLConnectionProducer) getCloudSQLDriverType() (string, error) {
 	return driverType, nil
 }
 
-func (c *SQLConnectionProducer) registerDrivers(driverName string, credentials string, usePrivateIP bool) (func() error, error) {
+func (c *SQLConnectionProducer) registerDrivers(driverName string, credentials string, usePrivateIP bool, usePSC bool) (func() error, error) {
 	typ, err := c.getCloudSQLDriverType()
 	if err != nil {
 		return nil, err
 	}
 
-	opts, err := GetCloudSQLAuthOptions(credentials, usePrivateIP)
+	opts, err := GetCloudSQLAuthOptions(credentials, usePrivateIP, usePSC)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +45,7 @@ func (c *SQLConnectionProducer) registerDrivers(driverName string, credentials s
 
 // GetCloudSQLAuthOptions takes a credentials JSON and returns
 // a set of GCP CloudSQL options - always WithIAMAUthN, and then the appropriate file/JSON option.
-func GetCloudSQLAuthOptions(credentials string, usePrivateIP bool) ([]cloudsqlconn.Option, error) {
+func GetCloudSQLAuthOptions(credentials string, usePrivateIP bool, usePSC bool) ([]cloudsqlconn.Option, error) {
 	opts := []cloudsqlconn.Option{cloudsqlconn.WithIAMAuthN()}
 
 	if credentials != "" {
@@ -54,6 +54,10 @@ func GetCloudSQLAuthOptions(credentials string, usePrivateIP bool) ([]cloudsqlco
 
 	if usePrivateIP {
 		opts = append(opts, cloudsqlconn.WithDefaultDialOptions(cloudsqlconn.WithPrivateIP()))
+	}
+
+	if usePSC {
+		opts = append(opts, cloudsqlconn.WithDefaultDialOptions(cloudsqlconn.WithPSC()))
 	}
 
 	return opts, nil

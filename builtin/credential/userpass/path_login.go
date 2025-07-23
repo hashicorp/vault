@@ -47,10 +47,10 @@ func pathLogin(b *backend) *framework.Path {
 	}
 }
 
-func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	username := d.Get("username").(string)
-	if username == "" {
-		return nil, fmt.Errorf("missing username")
+func (b *backend) pathLoginAliasLookahead(_ context.Context, _ *logical.Request, d *framework.FieldData) (*logical.Response, error) {
+	username, err := b.getUsername(d)
+	if err != nil {
+		return nil, err
 	}
 
 	return &logical.Response{
@@ -62,8 +62,21 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 	}, nil
 }
 
+// getUsername retrieves the username from the field data, ensuring it is not
+// empty. The username is always returned in lowercase.
+func (b *backend) getUsername(d *framework.FieldData) (string, error) {
+	username := d.Get("username").(string)
+	if username == "" {
+		return "", fmt.Errorf("missing username")
+	}
+	return strings.ToLower(username), nil
+}
+
 func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
-	username := strings.ToLower(d.Get("username").(string))
+	username, err := b.getUsername(d)
+	if err != nil {
+		return nil, err
+	}
 
 	password := d.Get("password").(string)
 	if password == "" {
@@ -89,7 +102,7 @@ func (b *backend) pathLogin(ctx context.Context, req *logical.Request, d *framew
 	} else {
 		// This is still acceptable as bcrypt will still make sure it takes
 		// a long time, it's just nicer to be random if possible
-		userPassword = []byte("dummy")
+		userPassword = []byte("$2a$10$/rzAjBPX3APZv8DesvsjB.OKdMif2xomluDfaxQ.OZcF06EuECsVG")
 	}
 
 	// Check for a password match. Check for a hash collision for Vault 0.2+,

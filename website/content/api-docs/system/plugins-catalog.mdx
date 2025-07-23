@@ -4,6 +4,9 @@ page_title: /sys/plugins/catalog - HTTP API
 description: The `/sys/plugins/catalog` endpoint is used to manage plugins.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # `/sys/plugins/catalog`
 
 The `/sys/plugins/catalog` endpoint is used to read, register, update, and
@@ -158,19 +161,19 @@ supplied name.
 - `version` `(string: "")` - Specifies the semantic version of the plugin. Used as the tag
   when specifying `oci_image`, but with any leading 'v' trimmed. You can
   omit version to register a plugin binary, but you must provide an
-  explicit version to register a plugin artifact.
+  explicit version to register an extracted `.zip` file.
 
 - `sha256` `(string: "")` – The SHA256 sum of a plugin binary or the OCI image.
   Before Vault runs a plugin, it checks the plugin SHA against `sha256`. If the
   actual SHA of the plugin binary and the SHA provided in `sha256` do not match,
   Vault will not run the plugin. You must provide `sha256` to register a plugin
-  binary, but you must leave `sha256` unset to register a plugin artifact.
+  binary, but you must leave `sha256` unset to register an extracted `.zip` file.
 
 - `command` `(string: "")` - Specifies the command used to execute the
   plugin. This is relative to the plugin directory. e.g. `"myplugin"`, or if `oci_image`
   is also specified, it is relative to the image's working directory.
   You must provide `command` to register a plugin binary. Vault ignores `command`
-  when you register a plugin artifact as it already knows the associated run command.
+  when you register with an extracted `.zip` file as it already knows the associated run command.
 
 - `args` `(array: [])` – Specifies the arguments used to execute the plugin. If
   the arguments are provided here, the `command` parameter should only contain

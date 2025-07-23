@@ -15,7 +15,6 @@ import type RouterService from '@ember/routing/router-service';
 import type ApiService from 'vault/services/api';
 import type PaginationService from 'vault/services/pagination';
 import type FlashMessageService from 'vault/services/flash-messages';
-import type Store from '@ember-data/store';
 import type { SearchSelectOption } from 'vault/app-types';
 
 interface Args {
@@ -27,7 +26,6 @@ export default class DestinationSyncPageComponent extends Component<Args> {
   @service declare readonly api: ApiService;
   @service declare readonly flashMessages: FlashMessageService;
   @service declare readonly pagination: PaginationService;
-  @service declare readonly store: Store;
 
   constructor(owner: unknown, args: Args) {
     super(owner, args);
@@ -50,11 +48,9 @@ export default class DestinationSyncPageComponent extends Component<Args> {
 
   // unable to use built-in fetch functionality of SearchSelect since we need to filter by kv type
   async fetchMounts() {
-    const adapter = this.store.adapterFor('application');
     const mounts = [];
     try {
-      const { data } = await adapter.ajax('/v1/sys/internal/ui/mounts', 'GET');
-      const secret = data.secret;
+      const { secret } = await this.api.sys.internalUiListEnabledVisibleMounts();
       if (secret) {
         for (const path in secret) {
           const { type, options } = secret[path as keyof typeof secret];
@@ -87,7 +83,7 @@ export default class DestinationSyncPageComponent extends Component<Args> {
       this.syncedSecret = '';
       const { name, type } = this.args.destination;
       const mount = keyIsFolder(this.mountPath) ? this.mountPath.slice(0, -1) : this.mountPath; // strip trailing slash from mount path
-      const payload = { mount, secretName: this.secretPath };
+      const payload = { mount, secret_name: this.secretPath };
       await this.api.sys.systemWriteSyncDestinationsTypeNameAssociationsSet(name, type, payload);
       this.syncedSecret = this.secretPath;
       // reset the secret path to help make it clear that the sync was successful
