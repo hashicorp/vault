@@ -80,10 +80,10 @@ func TestRotateRootWithRotationUrl(t *testing.T) {
 		Path:      "config",
 		Storage:   store,
 		Data: map[string]interface{}{
-			"url":      cfg.Url,
-			"binddn":   cfg.BindDN,
-			"bindpass": cfg.BindPassword,
-			"userdn":   cfg.UserDN,
+			"url":          cfg.Url,
+			"binddn":       cfg.BindDN,
+			"bindpass":     cfg.BindPassword,
+			"userdn":       cfg.UserDN,
 			"rotation_url": "ldap://rotation.example.com:389",
 		},
 	}
