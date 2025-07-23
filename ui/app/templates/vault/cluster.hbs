@@ -71,6 +71,12 @@
     />
   {{/if}}
 </div>
+
+{{! template-lint-disable no-inline-styles}}
+<div style="position: fixed; top: 5%; right: 15%; z-index: 1000;">
+  <PolicyBuilder />
+</div>
+
 <div class="global-flash">
   {{#each this.flashMessages.queue as |flash|}}
     <FlashMessage data-test-flash-message={{true}} @flash={{flash}} as |customComponent flash close|>

@@ -1,0 +1,99 @@
+<Hds::Button
+  @text="Generate policy"
+  @color="tertiary"
+  @icon="shield-check"
+  {{on "click" (fn (mut this.showFlyout) (not this.showFlyout))}}
+/>
+
+{{#if this.showFlyout}}
+  <Hds::Flyout @size="large" id="policy-builder" @onClose={{fn (mut this.showFlyout) false}} as |M|>
+    <M.Header @icon="shield-check" @tagline="Policy builder for {{this.context}}">
+      Policy Builder
+    </M.Header>
+    <M.Body>
+
+      <Hds::Card::Container class="has-padding-m has-top-margin-m has-bottom-margin-m" @level="base" @hasBorder={{true}}>
+        <Hds::Text::Display class="has-bottom-margin-xxs">Create or edit policy</Hds::Text::Display>
+
+        <Hds::Form::TextInput::Field class="field" name="policy_name" as |F|>
+          <F.Label>Policy name</F.Label>
+        </Hds::Form::TextInput::Field>
+      </Hds::Card::Container>
+
+      <Hds::Card::Container class="has-padding-m has-top-margin-m has-bottom-margin-m" @level="base" @hasBorder={{true}}>
+        <div class="has-bottom-margin-m">
+          <Hds::Text::Display class="has-bottom-margin-xxs">Configure policy</Hds::Text::Display>
+          <br />
+          <Hds::Text::Body>
+            Select permissions to grant for
+            {{if (gt this.paths.length 1) "each" "the"}}
+            API path.
+          </Hds::Text::Body>
+        </div>
+
+        {{#each this.paths as |path|}}
+          <Hds::Form::Checkbox::Group class="field" @layout="horizontal" @name={{path}} as |G|>
+            <G.Legend><Hds::Text::Code class="code-in-text">{{path}}</Hds::Text::Code></G.Legend>
+            {{#each this.permissions as |p|}}
+              <G.CheckboxField @value={{p}} {{on "change" this.updatePermissions}} as |F|>
+                <F.Label>{{p}}</F.Label>
+              </G.CheckboxField>
+            {{/each}}
+          </Hds::Form::Checkbox::Group>
+        {{/each}}
+
+        {{! POLICY STANZA }}
+        <Hds::CodeBlock @value={{this.policySnippet}} @language="yaml" @hasCopyButton={{true}} @hasLineNumbers={{false}} />
+      </Hds::Card::Container>
+
+      <Hds::Card::Container class="has-padding-m has-top-margin-m has-bottom-margin-m" @level="base" @hasBorder={{true}}>
+
+        <Hds::Text::Display>Apply policy via</Hds::Text::Display>
+        <Hds::Tabs as |T|>
+          <T.Tab Tab data-test-tab-example-policy>
+            UI
+          </T.Tab>
+          <T.Tab data-test-tab-your-policy>
+            CLI
+          </T.Tab>
+          <T.Tab Tab data-test-tab-example-policy>
+            TFVP
+          </T.Tab>
+
+          <T.Panel class="has-top-padding-m">
+            <Hds::Button @text="Apply policy" @color="secondary" @icon="wand" />
+          </T.Panel>
+          <T.Panel>
+            <Hds::CodeBlock @value={{this.cli}} @language="ruby" @hasCopyButton={{true}} />
+          </T.Panel>
+          <T.Panel class="has-top-padding-m">
+            <Hds::CodeBlock @value={{this.tfvp}} @language="ruby" @hasCopyButton={{true}} />
+          </T.Panel>
+        </Hds::Tabs>
+      </Hds::Card::Container>
+    </M.Body>
+  </Hds::Flyout>
+{{/if}}
+
+{{!-- <div style="background-color: #c1843e;padding: 24px">
+
+  <Hds::Form::TextInput::Field class="field" name="demo-cluster-name" as |F|>
+    <F.Label>Cluster name</F.Label>
+  </Hds::Form::TextInput::Field>
+
+  {{#each this.paths as |path|}}
+    <Hds::Form::Checkbox::Group class="field" @layout="horizontal" @name={{path}} as |G|>
+      <G.HelperText>Select permissions for the API path:
+        <Hds::Text::Code class="code-in-text">{{path}}</Hds::Text::Code>
+      </G.HelperText>
+      {{#each this.permissions as |p|}}
+        <G.CheckboxField @value={{p}} {{on "change" this.updatePermissions}} as |F|>
+          <F.Label>{{p}}</F.Label>
+        </G.CheckboxField>
+      {{/each}}
+    </Hds::Form::Checkbox::Group>
+  {{/each}}
+  {{! POLICY STANZA }}
+
+  <Hds::CodeBlock @value={{this.policySnippet}} @language="yaml" @hasCopyButton={{true}} @hasLineNumbers={{false}} />
+</div> --}}
