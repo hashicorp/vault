@@ -160,6 +160,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     // identify user for analytics service
     if (this.analytics.activated) {
       let licenseId = '';
+
       try {
         const licenseStatus = await this.api.sys.systemReadLicenseStatus();
         licenseId = licenseStatus?.data?.autoloaded?.licenseId;
@@ -167,6 +168,7 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
         // license is not retrievable
         licenseId = '';
       }
+
       try {
         const entity_id = this.auth.authData?.entityId;
         const entity = entity_id ? entity_id : `root_${uuidv4()}`;
