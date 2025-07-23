@@ -202,6 +202,9 @@ func TestBackend_userCreateOperation(t *testing.T) {
 	})
 }
 
+/*
+ * Test alias lookahead functionality to ensure the alias returned is case insensitive
+ */
 func TestBackend_userCreateOperationCheckCase(t *testing.T) {
 	b, err := Factory(context.Background(), &logical.BackendConfig{
 		Logger: nil,
