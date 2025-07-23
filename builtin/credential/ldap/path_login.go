@@ -51,7 +51,7 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 	if err != nil {
 		return nil, err
 	}
-	if !*cfg.CaseSensitiveNames {
+	if cfg != nil && !*cfg.CaseSensitiveNames {
 		username = strings.ToLower(username)
 	}
 	if username == "" {
