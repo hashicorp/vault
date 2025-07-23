@@ -102,9 +102,17 @@ func TestRotateRootWithRotationUrl(t *testing.T) {
 		Storage:   store,
 	}
 
-	// this should error because the rotation URL is not pointing ot anything
+	// this should error because the rotation URL is not pointing to anything, which validate the rotation URL is used
 	_, err = b.HandleRequest(ctx, req)
 	if err == nil {
 		t.Fatalf("expected an error when rotating root with a rotation URL that does not point to a valid LDAP server")
+	}
+	// validate that rotationURL doesnt affect LDAP URL in the config
+	newCFG, err := b.Config(ctx, req)
+	if err != nil {
+		t.Fatalf("failed to get config after rotation: %s", err)
+	}
+	if newCFG.Url != cfg.Url {
+		t.Fatalf("the LDAP URL should not have changed, but it did: %s", newCFG.Url)
 	}
 }
