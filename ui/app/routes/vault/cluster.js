@@ -128,7 +128,37 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     .cancelOn('deactivate')
     .keepLatest(),
 
-  async afterModel(model, transition) {
+  async addAnalyticsService(model) {
+    // identify user for analytics service
+    if (this.analytics.activated) {
+      if (model.dr.isSecondary) return;
+      let licenseId = '';
+      try {
+        const licenseStatus = await this.api.sys.systemReadLicenseStatus();
+        licenseId = licenseStatus?.data?.autoloaded?.licenseId;
+      } catch (e) {
+        // license is not retrievable
+        licenseId = '';
+      }
+      try {
+        const entity_id = this.auth.authData?.entityId;
+        const entity = entity_id ? entity_id : `root_${uuidv4()}`;
+        this.analytics.identifyUser(entity, {
+          licenseId: licenseId,
+          licenseState: model.license?.state || 'community',
+          version: model.version.version,
+          storageType: model.storageType,
+          replicationMode: model.replicationMode,
+          isEnterprise: Boolean(model.license),
+        });
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.log('unable to start analytics', e);
+      }
+    }
+  },
+
+  afterModel(model, transition) {
     this._super(...arguments);
 
     this.currentCluster.setCluster(model);
@@ -143,35 +173,15 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
       return this.router.transitionTo(this.routeName, { queryParams: { namespace: '' } });
     }
 
-    // identify user for analytics service
-    if (this.analytics.activated) {
-      let licenseId = '';
-
-      try {
-        const licenseStatus = await this.api.sys.systemReadLicenseStatus();
-        licenseId = licenseStatus?.data?.autoloaded?.licenseId;
-      } catch (e) {
-        // license is not retrievable
-        licenseId = '';
-      }
-
-      try {
-        const entity_id = this.auth.authData?.entityId;
-        const entity = entity_id ? entity_id : `root_${uuidv4()}`;
-
-        this.analytics.identifyUser(entity, {
-          licenseId: licenseId,
-          licenseState: model.license?.state || 'community',
-          version: model.version.version,
-          storageType: model.storageType,
-          replicationMode: model.replicationMode,
-          isEnterprise: Boolean(model.license),
-        });
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.log('unable to start analytics', e);
-      }
+    // Skip analytics initialization if the cluster is a DR secondary:
+    // 1. There is little value in collecting analytics in this state.
+    // 2. The analytics service requires resolving async setup (e.g. await),
+    //   which delays the afterModel hook resolution and breaks the DR secondary flow.
+    if (model.dr.isSecondary) {
+      return this.transitionToTargetRoute(transition);
     }
+
+    this.addAnalyticsService(model);
 
     return this.transitionToTargetRoute(transition);
   },
