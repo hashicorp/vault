@@ -89,7 +89,7 @@ func (b *backend) rotateRootCredential(ctx context.Context, req *logical.Request
 		LDAP:   ldaputil.NewLDAP(),
 	}
 
-	rotateLDAPURL, _ := ctx.Value(rootRotationURLKey).(string)
+	rotateLDAPURL, _ := ctx.Value(rootRotationUrlKey).(string)
 	// Create a copy of the config to modify for rotation
 	rotateConfig := *cfg.ConfigEntry
 	if rotateLDAPURL != "" {
