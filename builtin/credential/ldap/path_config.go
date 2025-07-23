@@ -21,6 +21,8 @@ const userFilterWarning = "userfilter configured does not consider userattr and 
 
 const rootRotationJobName = "ldap-auth-root-creds"
 
+const rootRotationUrlKey = "rotation_url"
+
 func pathConfig(b *backend) *framework.Path {
 	p := &framework.Path{
 		Pattern: `config`,
@@ -62,6 +64,13 @@ func pathConfig(b *backend) *framework.Path {
 	}
 
 	automatedrotationutil.AddAutomatedRotationFields(p.Fields)
+
+	p.Fields[rootRotationUrlKey] = &framework.FieldSchema{
+		Type:        framework.TypeString,
+		Description: "LDAP URL to connect to for password rotation if it is different from the configured LDAP URL",
+		Default:     "",
+		Required:    false,
+	}
 
 	return p
 }
