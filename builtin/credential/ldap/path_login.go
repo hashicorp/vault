@@ -47,17 +47,20 @@ func pathLogin(b *backend) *framework.Path {
 
 func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Request, d *framework.FieldData) (*logical.Response, error) {
 	username := d.Get("username").(string)
-	cfg, err := b.Config(ctx, req)
-	if err != nil {
-		return nil, err
-	}
-	if cfg == nil || cfg.CaseSensitiveNames == nil || !*cfg.CaseSensitiveNames {
-		username = strings.ToLower(username)
-	}
 	if username == "" {
 		return nil, fmt.Errorf("missing username")
 	}
 
+	cfg, err := b.Config(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	caseSensitive := cfg != nil && cfg.CaseSensitiveNames != nil && *cfg.CaseSensitiveNames
+	// if the username is not configured to be case-sensitive, we normalize it to lower case.
+	if !caseSensitive {
+		username = strings.ToLower(username)
+	}
 	return &logical.Response{
 		Auth: &logical.Auth{
 			Alias: &logical.Alias{
