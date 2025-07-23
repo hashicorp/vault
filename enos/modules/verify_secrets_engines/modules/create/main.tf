@@ -19,7 +19,7 @@ variable "create_aws_secrets_engine" {
     it's disabled by default.
     See: https://github.com/hashicorp/honeybee-templates/blob/main/templates/iam_policy/DemoUser.yaml
   EOF
-  default     = false
+  default     = true
 }
 
 variable "integration_host_state" {

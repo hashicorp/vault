@@ -250,11 +250,11 @@ jobs:
         name: enos scenario launch ${{ matrix.scenario.id.filter }}
         # Continue once and retry to handle occasional blips when creating infrastructure.
         continue-on-error: true
-        run: enos scenario launch --timeout 45m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
+        run: enos scenario launch smoke --timeout 45m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
       - if: steps.launch.outcome == 'failure'
         id: launch_retry
         name: Retry enos scenario launch ${{ matrix.scenario.id.filter }}
-        run: enos scenario launch --timeout 45m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
+        run: enos scenario launch smoke --timeout 45m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
       - name: Upload Debug Data
         if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -268,12 +268,12 @@ jobs:
         id: destroy
         name: enos scenario destroy ${{ matrix.scenario.id.filter }}
         continue-on-error: true
-        run: enos scenario destroy --timeout 10m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
+        run: enos scenario destroy smoke --timeout 10m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
       - if: steps.destroy.outcome == 'failure'
         id: destroy_retry
         name: Retry enos scenario destroy ${{ matrix.scenario.id.filter }}
         continue-on-error: true
-        run: enos scenario destroy --timeout 10m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
+        run: enos scenario destroy smoke --timeout 10m0s --chdir ./enos ${{ matrix.scenario.id.filter }}
       - name: Clean up Enos runtime directories
         id: cleanup
         if: ${{ always() }}
