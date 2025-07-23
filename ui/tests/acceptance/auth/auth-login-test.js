@@ -399,7 +399,7 @@ module('Acceptance | auth login', function (hooks) {
       await visit('/vault/auth');
 
       this.server.get('/sys/internal/ui/mounts', (_, req) => {
-        assert.strictEqual(req.requestHeaders['X-Vault-Namespace'], 'admin', 'header contains namespace');
+        assert.strictEqual(req.requestHeaders['x-vault-namespace'], 'admin', 'header contains namespace');
         return req.passthrough();
       });
       await typeIn(GENERAL.inputByAttr('namespace'), 'admin');

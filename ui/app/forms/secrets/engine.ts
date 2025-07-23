@@ -25,7 +25,7 @@ export default class SecretsEngineForm extends Form<SecretsEngineFormData> {
         level: 'warn',
       },
     ],
-    'kvConfig.maxVersions': [
+    'kv_config.max_versions': [
       { type: 'number', message: 'Maximum versions must be a number.' },
       { type: 'length', options: { min: 1, max: 16 }, message: 'You cannot go over 16 characters.' },
     ],
@@ -34,7 +34,7 @@ export default class SecretsEngineForm extends Form<SecretsEngineFormData> {
   get coreOptionFields() {
     return [
       new FormField('description', 'string', { editType: 'textarea' }),
-      new FormField('config.listingVisibility', 'boolean', {
+      new FormField('config.listing_visibility', 'boolean', {
         label: 'Use as preferred UI login method',
         editType: 'toggleButton',
         helperTextEnabled:
@@ -46,7 +46,7 @@ export default class SecretsEngineForm extends Form<SecretsEngineFormData> {
         helpText:
           'When Replication is enabled, a local mount will not be replicated across clusters. This can only be specified at mount time.',
       }),
-      new FormField('sealWrap', 'boolean', {
+      new FormField('seal_wrap', 'boolean', {
         helpText:
           'When enabled - if a seal supporting seal wrapping is specified in the configuration, all critical security parameters (CSPs) in this backend will be seal wrapped. (For KV mounts, all values will be seal wrapped.) This can only be specified at mount time.',
       }),
@@ -55,9 +55,9 @@ export default class SecretsEngineForm extends Form<SecretsEngineFormData> {
 
   get leaseConfigFields() {
     return [
-      new FormField('config.defaultLeaseTtl', 'string', { label: 'Default Lease TTL', editType: 'ttl' }),
-      new FormField('config.maxLeaseTtl', 'string', { label: 'Max Lease TTL', editType: 'ttl' }),
-      new FormField('config.allowedManagedKeys', 'string', {
+      new FormField('config.default_lease_ttl', 'string', { label: 'Default Lease TTL', editType: 'ttl' }),
+      new FormField('config.max_lease_ttl', 'string', { label: 'Max Lease TTL', editType: 'ttl' }),
+      new FormField('config.allowed_managed_keys', 'string', {
         label: 'Allowed managed keys',
         editType: 'stringArray',
       }),
@@ -66,22 +66,22 @@ export default class SecretsEngineForm extends Form<SecretsEngineFormData> {
 
   get standardConfigFields() {
     return [
-      new FormField('config.auditNonHmacRequestKeys', 'string', {
+      new FormField('config.audit_non_hmac_request_keys', 'string', {
         label: 'Request keys excluded from HMACing in audit',
         editType: 'stringArray',
         helpText: "Keys that will not be HMAC'd by audit devices in the request data object.",
       }),
-      new FormField('config.auditNonHmacResponseKeys', 'string', {
+      new FormField('config.audit_non_hmac_response_keys', 'string', {
         label: 'Response keys excluded from HMACing in audit',
         editType: 'stringArray',
         helpText: "Keys that will not be HMAC'd by audit devices in the response data object.",
       }),
-      new FormField('config.passthroughRequestHeaders', 'string', {
+      new FormField('config.passthrough_request_headers', 'string', {
         label: 'Allowed passthrough request headers',
         helpText: 'Headers to allow and pass from the request to the backend',
         editType: 'stringArray',
       }),
-      new FormField('config.allowedResponseHeaders', 'string', {
+      new FormField('config.allowed_response_headers', 'string', {
         label: 'Allowed response headers',
         helpText: 'Headers to allow, allowing a plugin to include them in the response.',
         editType: 'stringArray',
@@ -97,17 +97,17 @@ export default class SecretsEngineForm extends Form<SecretsEngineFormData> {
     const fields = [new FormField('path', 'string')];
     if (this.engineType === 'kv') {
       fields.push(
-        new FormField('kvConfig.maxVersions', 'number', {
+        new FormField('kv_config.max_versions', 'number', {
           label: 'Maximum number of versions',
           subText:
             'The number of versions to keep per key. Once the number of keys exceeds the maximum number set here, the oldest version will be permanently deleted. This value applies to all keys, but a key’s metadata settings can overwrite this value. When 0 is used or the value is unset, Vault will keep 10 versions.',
         }),
-        new FormField('kvConfig.casRequired', 'boolean', {
+        new FormField('kv_config.cas_required', 'boolean', {
           label: 'Require Check and Set',
           subText:
             'If checked, all keys will require the cas parameter to be set on all write requests. A key’s metadata settings can overwrite this value.',
         }),
-        new FormField('kvConfig.deleteVersionAfter', 'string', {
+        new FormField('kv_config.delete_version_after', 'string', {
           editType: 'ttl',
           label: 'Automate secret deletion',
           helperTextDisabled: 'A secret’s version must be manually deleted.',
@@ -139,7 +139,7 @@ export default class SecretsEngineForm extends Form<SecretsEngineFormData> {
         ...this.coreOptionFields,
         defaultTtl,
         maxTtl,
-        new FormField('config.identityTokenKey', undefined, {
+        new FormField('config.identity_token_key', undefined, {
           label: 'Identity token key',
           subText: `A named key to sign tokens. If not provided, this will default to Vault's OIDC default key.`,
           editType: 'yield',
@@ -178,8 +178,8 @@ export default class SecretsEngineForm extends Form<SecretsEngineFormData> {
       ...this.data,
       config: {
         ...(config || {}),
-        forceNoCache: config?.forceNoCache ?? false,
-        listingVisibility: config?.listingVisibility ? 'unauth' : 'hidden',
+        force_no_cache: config?.force_no_cache ?? false,
+        listing_visibility: config?.listing_visibility ? 'unauth' : 'hidden',
       },
     };
     // options are only relevant for kv/generic engines

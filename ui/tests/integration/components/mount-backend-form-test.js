@@ -137,11 +137,11 @@ module('Integration | Component | mount backend form', function (hooks) {
   module('secrets engine', function (hooks) {
     hooks.beforeEach(function () {
       const defaults = {
-        config: { listingVisibility: false },
-        kvConfig: {
-          maxVersions: 0,
-          casRequired: false,
-          deleteVersionAfter: 0,
+        config: { listing_visibility: false },
+        kv_config: {
+          max_versions: 0,
+          cas_required: false,
+          delete_version_after: 0,
         },
         options: { version: 2 },
       };
@@ -218,7 +218,7 @@ module('Integration | Component | mount backend form', function (hooks) {
     });
 
     module('WIF secret engines', function () {
-      test('it shows identityTokenKey when type is a WIF engine and hides when its not', async function (assert) {
+      test('it shows identity_token_key when type is a WIF engine and hides when its not', async function (assert) {
         await render(
           hbs`<MountBackendForm @mountCategory="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
         );
@@ -226,7 +226,7 @@ module('Integration | Component | mount backend form', function (hooks) {
           await click(MOUNT_BACKEND_FORM.mountType(engine));
           await click(GENERAL.button('Method Options'));
           assert
-            .dom(GENERAL.fieldByAttr('config.identityTokenKey'))
+            .dom(GENERAL.fieldByAttr('config.identity_token_key'))
             .exists(`Identity token key field shows when type=${this.model.type}`);
           await click(GENERAL.backButton);
         }
@@ -238,20 +238,20 @@ module('Integration | Component | mount backend form', function (hooks) {
           await click(MOUNT_BACKEND_FORM.mountType(engine.type));
           await click(GENERAL.button('Method Options'));
           assert
-            .dom(GENERAL.fieldByAttr('config.identityTokenKey'))
+            .dom(GENERAL.fieldByAttr('config.identity_token_key'))
             .doesNotExist(`Identity token key field hidden when type=${this.model.type}`);
           await click(GENERAL.backButton);
         }
       });
 
-      test('it updates identityTokenKey if user has changed it', async function (assert) {
+      test('it updates identity_token_key if user has changed it', async function (assert) {
         await render(
           hbs`<MountBackendForm @mountCategory="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
         );
         assert.strictEqual(
-          this.model.config.identityTokenKey,
+          this.model.config.identity_token_key,
           undefined,
-          `On init identityTokenKey is not set on the model`
+          `On init identity_token_key is not set on the model`
         );
         for (const engine of WIF_ENGINES) {
           await click(MOUNT_BACKEND_FORM.mountType(engine));
@@ -259,9 +259,9 @@ module('Integration | Component | mount backend form', function (hooks) {
           await typeIn(GENERAL.inputSearch('key'), `${engine}+specialKey`); // set to something else
 
           assert.strictEqual(
-            this.model.config.identityTokenKey,
+            this.model.config.identity_token_key,
             `${engine}+specialKey`,
-            `updates ${engine} model with custom identityTokenKey`
+            `updates ${engine} model with custom identity_token_key`
           );
           await click(GENERAL.backButton);
         }
