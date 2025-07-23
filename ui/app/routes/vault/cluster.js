@@ -128,36 +128,6 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     .cancelOn('deactivate')
     .keepLatest(),
 
-  async addAnalyticsService(model) {
-    // identify user for analytics service
-    if (this.analytics.activated) {
-      if (model.dr.isSecondary) return;
-      let licenseId = '';
-      try {
-        const licenseStatus = await this.api.sys.systemReadLicenseStatus();
-        licenseId = licenseStatus?.data?.autoloaded?.licenseId;
-      } catch (e) {
-        // license is not retrievable
-        licenseId = '';
-      }
-      try {
-        const entity_id = this.auth.authData?.entityId;
-        const entity = entity_id ? entity_id : `root_${uuidv4()}`;
-        this.analytics.identifyUser(entity, {
-          licenseId: licenseId,
-          licenseState: model.license?.state || 'community',
-          version: model.version.version,
-          storageType: model.storageType,
-          replicationMode: model.replicationMode,
-          isEnterprise: Boolean(model.license),
-        });
-      } catch (e) {
-        // eslint-disable-next-line no-console
-        console.log('unable to start analytics', e);
-      }
-    }
-  },
-
   afterModel(model, transition) {
     this._super(...arguments);
 
@@ -184,6 +154,35 @@ export default Route.extend(ModelBoundaryRoute, ClusterRoute, {
     this.addAnalyticsService(model);
 
     return this.transitionToTargetRoute(transition);
+  },
+
+  async addAnalyticsService(model) {
+    // identify user for analytics service
+    if (this.analytics.activated) {
+      let licenseId = '';
+      try {
+        const licenseStatus = await this.api.sys.systemReadLicenseStatus();
+        licenseId = licenseStatus?.data?.autoloaded?.licenseId;
+      } catch (e) {
+        // license is not retrievable
+        licenseId = '';
+      }
+      try {
+        const entity_id = this.auth.authData?.entityId;
+        const entity = entity_id ? entity_id : `root_${uuidv4()}`;
+        this.analytics.identifyUser(entity, {
+          licenseId: licenseId,
+          licenseState: model.license?.state || 'community',
+          version: model.version.version,
+          storageType: model.storageType,
+          replicationMode: model.replicationMode,
+          isEnterprise: Boolean(model.license),
+        });
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.log('unable to start analytics', e);
+      }
+    }
   },
 
   setupController() {
