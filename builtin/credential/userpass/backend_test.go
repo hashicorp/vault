@@ -203,7 +203,9 @@ func TestBackend_userCreateOperation(t *testing.T) {
 }
 
 /*
- * Test alias lookahead functionality to ensure the alias returned is case insensitive
+ * TestBackend_userCreateOperationCheckCase will test the alias lookahead functionality
+ * for the userpass auth method to ensure the alias returned is always lowercase due to
+ * the effective case insensitivity of the auth method
  */
 func TestBackend_userCreateOperationCheckCase(t *testing.T) {
 	b, err := Factory(context.Background(), &logical.BackendConfig{
