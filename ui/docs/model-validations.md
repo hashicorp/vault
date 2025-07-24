@@ -27,14 +27,14 @@ This function takes the class context (this) as the only argument and returns tr
 
 ## Usage
 
-Each property defined in the validations object supports multiple validations provided as an array. For example, _presence_ and _isWhitespaceFree_ can both be added as validations for a string property.
+Each property defined in the validations object supports multiple validations provided as an array. For example, _presence_ and _noWhitespace_ can both be added as validations for a string property.
 
 ```js
 const validations = {
   name: [
     { type: 'presence', message: 'Name is required.' },
     {
-      type: 'isWhitespaceFree',
+      type: 'noWhitespace',
       message: 'Name cannot contain whitespace.',
     },
   ],

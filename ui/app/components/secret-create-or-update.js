@@ -12,29 +12,30 @@ import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { isBlank, isNone } from '@ember/utils';
 import { task, waitForEvent } from 'ember-concurrency';
-import { WHITESPACE_WARNING, containsWhitespace, isWhitespaceFree } from 'vault/utils/forms/validators';
+import { WHITESPACE_WARNING, noWhitespace } from 'vault/utils/forms/validators';
 
 /**
  * @module SecretCreateOrUpdate
- * SecretCreateOrUpdate component displays either the form for creating a new secret or creating a new version of the secret
+ * Component for creating or updating a secret.
  *
  * @example
- * ```js
+ * ```hbs
  * <SecretCreateOrUpdate
- *  @mode="create"
- *  @model={{model}}
- *  @showAdvancedMode=true
- *  @modelForData={{@modelForData}}
- *  @secretData={{@secretData}}
- *  @buttonDisabled={{this.saving}}
+ *   @mode="create"
+ *   @model={{model}}
+ *   @showAdvancedMode=true
+ *   @modelForData={{@modelForData}}
+ *   @secretData={{@secretData}}
+ *   @buttonDisabled={{this.saving}}
  * />
  * ```
- * @param {string} mode - create, edit, show determines what view to display
- * @param {object} model - the route model
- * @param {boolean} showAdvancedMode - whether or not to show the JSON editor
- * @param {object} modelForData - a class that helps track secret data, defined in secret-edit
- * @param {object} secretData - class that is created in secret-edit
- * @param {boolean} buttonDisabled - if true, disables the submit button on the create/update form
+ *
+ * @param {string} mode - "create", "edit", "show" to control the view.
+ * @param {object} model - The route model.
+ * @param {boolean} showAdvancedMode - Show JSON editor if true.
+ * @param {object} modelForData - Helper class for managing secret data.
+ * @param {object} secretData - KV data for the secret.
+ * @param {boolean} buttonDisabled - Disables submit button when true.
  */
 
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
@@ -60,7 +61,7 @@ export default class SecretCreateOrUpdate extends Component {
   setup(elem, [secretData, mode]) {
     this.editorString = secretData.toJSONString();
     this.validationMessages = { path: '' };
-    // for validation, return array of path names already assigned
+
     if (Ember.testing) {
       this.secretPaths = ['beep', 'bop', 'boop'];
     }
@@ -76,18 +77,17 @@ export default class SecretCreateOrUpdate extends Component {
 
   checkValidation(name, value) {
     if (name === 'path') {
-      // Use validator utility
-      this.pathWhiteSpaceWarning = containsWhitespace(value);
+      // Warning if whitespace exists
+      this.pathWhiteSpaceWarning = !noWhitespace(value);
 
       if (!value) {
         set(this.validationMessages, name, `${name} can't be blank.`);
-      } else if (!isWhitespaceFree(value)) {
+      } else if (!noWhitespace(value)) {
         set(this.validationMessages, name, this.whitespaceWarning);
       } else {
         set(this.validationMessages, name, '');
       }
     }
-
     this.validationErrorCount = Object.values(this.validationMessages).filter(Boolean).length;
   }
 
@@ -176,7 +176,6 @@ export default class SecretCreateOrUpdate extends Component {
 
     const secretPath = type === 'create' ? this.args.modelForData.path : this.args.model.id;
     this.persistKey(() => {
-      // Show flash message in case there's a control group on read
       this.flashMessages.success(
         `Secret ${secretPath} ${type === 'create' ? 'created' : 'updated'} successfully.`
       );
@@ -189,7 +188,6 @@ export default class SecretCreateOrUpdate extends Component {
     const data = this.args.secretData;
     const item = data.find((d) => d.name === name);
     if (isBlank(item.name)) return;
-    // secretData is a KVObject/ArrayProxy so removeObject is fine here
     data.removeObject(item);
     this.checkRows();
     this.handleChange();

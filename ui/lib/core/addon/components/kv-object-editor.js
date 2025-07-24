@@ -11,8 +11,8 @@ import { action } from '@ember/object';
 import { guidFor } from '@ember/object/internals';
 import KVObject from 'vault/lib/kv-object';
 import {
-  containsWhitespace,
-  isNonString,
+  noWhitespace,
+  canParseToNonString,
   NON_STRING_WARNING,
   WHITESPACE_WARNING,
 } from 'vault/utils/forms/validators';
@@ -93,11 +93,11 @@ export default class KvObjectEditor extends Component {
   }
   showWhitespaceWarning = (name) => {
     if (this.args.allowWhiteSpace) return false;
-    return containsWhitespace(name);
+    return noWhitespace(name);
   };
 
   showNonStringWarning = (value) => {
     if (!this.args.warnNonStringValues) return false;
-    return isNonString(value);
+    return canParseToNonString(value);
   };
 }

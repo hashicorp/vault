@@ -19,7 +19,7 @@ export default function destinationFormResolver(type: DestinationType, data = {}
   const validations: Validations = {
     name: [
       { type: 'presence', message: 'Name is required.' },
-      { type: 'isWhitespaceFree', message: 'Name cannot contain whitespace.' },
+      { type: 'noWhitespace', message: 'Name cannot contain whitespace.' },
     ],
   };
 

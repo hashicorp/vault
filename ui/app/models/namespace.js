@@ -11,9 +11,9 @@ import { withModelValidations } from 'vault/decorators/model-validations';
 @withModelValidations({
   path: [
     { type: 'presence', message: `Path can't be blank.` },
-    { type: 'endsInSlash', message: `Path can't end in forward slash '/'.` },
+    { type: 'noEndingSlash', message: `Path can't end in forward slash '/'.` },
     {
-      type: 'isWhitespaceFree',
+      type: 'noWhitespace',
       message: "Path can't contain whitespace.",
     },
   ],

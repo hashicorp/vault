@@ -8,8 +8,8 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { A } from '@ember/array';
 import {
-  containsWhitespace,
-  isNonString,
+  noWhitespace,
+  canParseToNonString,
   WHITESPACE_WARNING,
   NON_STRING_WARNING,
 } from 'vault/utils/forms/validators';
@@ -53,12 +53,12 @@ export class KeyValueState {
   }
 
   get keyWarning() {
-    return containsWhitespace(this.key) ? WHITESPACE_WARNING('this key') : '';
+    return noWhitespace(this.key) ? WHITESPACE_WARNING('this key') : '';
   }
 
   get valueWarning() {
     if (this.value === null) return '';
-    return isNonString(this.value) ? NON_STRING_WARNING : '';
+    return canParseToNonString(this.value) ? NON_STRING_WARNING : '';
   }
 
   reset() {
@@ -97,12 +97,12 @@ export default class KvPatchEditorForm extends Component {
   }
 
   get newKeyWarning() {
-    return containsWhitespace(this.newKey) ? WHITESPACE_WARNING('this key') : '';
+    return noWhitespace(this.newKey) ? WHITESPACE_WARNING('this key') : '';
   }
 
   get newValueWarning() {
     if (this.newValue === null) return '';
-    return isNonString(this.newValue) ? NON_STRING_WARNING : '';
+    return canParseToNonString(this.newValue) ? NON_STRING_WARNING : '';
   }
 
   get newKeyError() {

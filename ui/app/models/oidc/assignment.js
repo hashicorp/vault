@@ -12,7 +12,7 @@ const validations = {
   name: [
     { type: 'presence', message: 'Name is required.' },
     {
-      type: 'isWhitespaceFree',
+      type: 'noWhitespace',
       message: 'Name cannot contain whitespace.',
     },
   ],

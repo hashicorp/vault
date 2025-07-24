@@ -50,7 +50,7 @@ module('Unit | forms | form', function (hooks) {
 
   test('it should allow for custom data to be passed in toJSON method', async function (assert) {
     this.data.foo = 'string with whitespace';
-    this.validations.foo = [{ type: 'isWhitespaceFree', message: 'Whitespace is not allowed' }];
+    this.validations.foo = [{ type: 'noWhitespace', message: 'Whitespace is not allowed' }];
 
     const serializedData = { foo: this.data.foo.replace(/\s/g, '_') };
     const state = { foo: { isValid: true, errors: [], warnings: [] } };

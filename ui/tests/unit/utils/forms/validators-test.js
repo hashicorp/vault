@@ -80,7 +80,7 @@ module('Unit | Util | validators', function (hooks) {
 
   test('it should validate whitespace', function (assert) {
     let isValid;
-    const check = (prop) => (isValid = validators.isWhitespaceFree(prop));
+    const check = (prop) => (isValid = validators.noWhitespace(prop));
     check('validText');
     assert.true(isValid, 'Valid when text contains no spaces');
     check('valid-text');
@@ -97,7 +97,7 @@ module('Unit | Util | validators', function (hooks) {
 
   test('it should validate value ends in a slash', function (assert) {
     let isValid;
-    const check = (prop) => (isValid = validators.endsInSlash(prop));
+    const check = (prop) => (isValid = validators.noEndingSlash(prop));
     check('validText');
     assert.true(isValid, 'Valid when text does not end in slash');
     check('valid/Text');
@@ -110,61 +110,61 @@ module('Unit | Util | validators', function (hooks) {
 
   // * GENERAL VALIDATORS
   test('it returns whether a value has whitespace or not', function (assert) {
-    let containsWhitespace;
-    const check = (value) => (containsWhitespace = validators.containsWhitespace(value));
+    let noWhitespace;
+    const check = (value) => (noWhitespace = validators.noWhitespace(value));
 
     check('someText');
-    assert.false(containsWhitespace, 'False when text contains no spaces');
+    assert.false(noWhitespace, 'False when text contains no spaces');
 
     check('some-text');
-    assert.false(containsWhitespace, 'False when text contains no spaces and hyphen');
+    assert.false(noWhitespace, 'False when text contains no spaces and hyphen');
 
     check('some space');
-    assert.true(containsWhitespace, 'True when text contains single space');
+    assert.true(noWhitespace, 'True when text contains single space');
 
     check('text with spaces');
-    assert.true(containsWhitespace, 'True when text contains multiple spaces');
+    assert.true(noWhitespace, 'True when text contains multiple spaces');
 
     check(' leadingSpace');
-    assert.true(containsWhitespace, 'True when text has leading whitespace');
+    assert.true(noWhitespace, 'True when text has leading whitespace');
 
     check('trailingSpace ');
-    assert.true(containsWhitespace, 'True when text has trailing whitespace');
+    assert.true(noWhitespace, 'True when text has trailing whitespace');
   });
 
   test('it returns whether a string input values evaluated as non-strings', function (assert) {
-    let isNonString;
-    const check = (value) => (isNonString = validators.isNonString(value));
+    let canParseToNonString;
+    const check = (value) => (canParseToNonString = validators.canParseToNonString(value));
     check(' {"foo": "bar"} ');
-    assert.true(isNonString, 'returns true when value contains an object');
+    assert.true(canParseToNonString, 'returns true when value contains an object');
 
     check(' ["a", "b", "c"] ');
-    assert.true(isNonString, 'returns true when value contains an array');
+    assert.true(canParseToNonString, 'returns true when value contains an array');
 
     check('123');
-    assert.true(isNonString, 'returns true when value is numbers');
+    assert.true(canParseToNonString, 'returns true when value is numbers');
 
     check('123e6');
-    assert.true(isNonString, 'returns true when value is numbers with exponents');
+    assert.true(canParseToNonString, 'returns true when value is numbers with exponents');
 
     check('true');
-    assert.true(isNonString, 'returns true when value is true');
+    assert.true(canParseToNonString, 'returns true when value is true');
 
     // falsy values that return true because JSON.parse() is successful
     check('null');
-    assert.true(isNonString, 'returns true when value is null');
+    assert.true(canParseToNonString, 'returns true when value is null');
 
     check('false');
-    assert.true(isNonString, 'returns true when value is false');
+    assert.true(canParseToNonString, 'returns true when value is false');
 
     check('0');
-    assert.true(isNonString, 'returns true when value is "0"');
+    assert.true(canParseToNonString, 'returns true when value is "0"');
 
     // falsy
     check('undefined');
-    assert.false(isNonString, 'returns false when value is undefined');
+    assert.false(canParseToNonString, 'returns false when value is undefined');
 
     check('my string');
-    assert.false(isNonString, 'returns false when value is letters');
+    assert.false(canParseToNonString, 'returns false when value is letters');
   });
 });
