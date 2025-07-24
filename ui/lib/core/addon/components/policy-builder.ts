@@ -10,13 +10,14 @@ import { service } from '@ember/service';
 import { addToArray } from 'vault/helpers/add-to-array';
 import { removeFromArray } from 'vault/helpers/remove-from-array';
 
+import type ApiService from 'vault/services/api';
 import type { HTMLElementEvent } from 'vault/forms';
 import type RouterService from '@ember/routing/router-service';
 import mapApiPathToRoute from 'vault/utils/policy-path-map';
 
 class Capability {
-  @tracked permissions: string[] = [];
   @tracked path: string;
+  @tracked permissions: string[] = [];
 
   constructor(path: string) {
     this.path = path;
@@ -32,22 +33,57 @@ class Capability {
     return this.permissions.length !== 0;
   }
 
-  setPermissions(checked: boolean, value: string) {
+  @action
+  setPermissions(event: HTMLElementEvent<HTMLInputElement>) {
+    const { value, checked } = event.target;
     if (checked) {
       this.permissions = addToArray(this.permissions, value);
     } else {
       this.permissions = removeFromArray(this.permissions, value);
     }
   }
+
+  @action
+  setPath(event: HTMLElementEvent<HTMLInputElement>) {
+    this.path = event.target.value;
+  }
 }
 
 export default class PolicyBuilder extends Component {
+  @service declare readonly api: ApiService;
   @service declare readonly router: RouterService;
 
   @tracked showFlyout = false;
+  @tracked policyAction = 'create';
+  @tracked policyName = '';
+  @tracked existingPolicies: string[] | undefined = [];
   @tracked capabilities: Capability[] = [];
+  @tracked showAdvanced = false;
+
+  @tracked identities: string[] | undefined = [];
 
   permissions = ['create', 'read', 'update', 'delete', 'list', 'patch', 'sudo'];
+  identityTypes = [
+    { type: 'authMount', label: 'Authentication mount' },
+    { type: 'group', label: 'Group' },
+    { type: 'entity', label: 'Entity' },
+  ];
+
+  identityOptions = [
+    { groupName: 'Authentication mount', options: [{ id: 'userpass/' }, { id: 'oidc/' }, { id: 'ldap/' }] },
+    { groupName: 'Group', options: [{ id: 'admins' }, { id: 'platform-engineers' }, { id: 'sales' }] },
+    { groupName: 'Entity', options: [{ id: 'bob' }, { id: 'matilda' }, { id: 'lorraine' }] },
+  ];
+
+  constructor(owner: unknown, args: Record<string, never>) {
+    super(owner, args);
+    this.fetchPolicies();
+  }
+
+  get context() {
+    const params = this.router.currentRoute?.parent?.params;
+    return params ? Object.values(params).join('/') : '';
+  }
 
   get policySnippet() {
     if (this.capabilities.length === 0) {
@@ -59,31 +95,51 @@ export default class PolicyBuilder extends Component {
   }
 
   @action
-  updatePermissions(event: HTMLElementEvent<HTMLInputElement>) {
-    const { name, value, checked } = event.target;
-    let capability = this.capabilities.find((c) => c.path === name);
-    if (!capability) {
-      capability = new Capability(name);
-      this.capabilities.push(capability);
-    }
-    capability.setPermissions(checked, value);
-    // Trigger reactivity by reassigning the array
-    // Remove any stanzas with no permissions
-    this.capabilities = [...this.capabilities.filter((c) => c.hasPermissions)];
-  }
+  openFlyout() {
+    this.showFlyout = true;
 
-  get paths() {
     const { currentRoute, currentRouteName } = this.router;
     if (currentRoute && !currentRouteName?.includes('loading') && 'attributes' in currentRoute) {
       const { name, attributes } = currentRoute as { name: string; attributes: unknown };
-      const paths = mapApiPathToRoute(name);
-      return paths?.map((fn) => fn(attributes)) || [];
+      const apiPaths = mapApiPathToRoute(name);
+      this.capabilities = apiPaths?.map((fn) => new Capability(fn(attributes))) || [];
+      this.capabilities = [...this.capabilities];
     }
     return [];
   }
 
-  get context() {
-    return this.paths.join(', ');
+  // @action
+  // handleAssignment(event: HTMLElementEvent<HTMLInputElement>) {
+  //   // do something
+  // }
+
+  @action
+  selectPolicy(event: HTMLElementEvent<HTMLInputElement>) {
+    const { value } = event.target;
+    this.policyAction = value;
+  }
+
+  @action
+  async fetchPolicies() {
+    try {
+      const { keys } = await this.api.sys.policiesListAclPolicies2();
+      this.existingPolicies = keys;
+    } catch {
+      // nah
+    }
+  }
+
+  @action
+  addPath() {
+    const item = new Capability('');
+    this.capabilities.push(item);
+    // Trigger an update
+    this.capabilities = [...this.capabilities];
+  }
+
+  @action
+  deletePath(path: string) {
+    this.capabilities = [...this.capabilities.filter((c) => c.path !== path)];
   }
 
   tfvp = `
