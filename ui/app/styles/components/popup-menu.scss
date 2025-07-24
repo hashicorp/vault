@@ -9,8 +9,7 @@
  */
 
 // Popup menu no longer exists, but these styles are still used in some places
-.popup-menu-content,
-.ember-power-select-options {
+.popup-menu-content {
   border-radius: size_variables.$radius;
   margin: -2px 0 0 0;
 
@@ -38,8 +37,6 @@
 
   button.link,
   a,
-  .ember-power-select-option,
-  .ember-power-select-option[aria-current='true'],
   .menu-item {
     background: transparent;
     box-shadow: none;
@@ -69,8 +66,6 @@
   }
 
   button.link,
-  .ember-power-select-option,
-  .ember-power-select-option[aria-current='true'],
   a {
     background-color: color_variables.$white;
     color: color_variables.$grey-darkest;
@@ -152,34 +147,6 @@
     min-width: 0;
     padding: 0;
     width: 2.5rem;
-  }
-}
-
-.ember-basic-dropdown-content {
-  background-color: transparent;
-
-  &--left.popup-menu {
-    margin: 0px 0 0 -8px;
-  }
-
-  &--below {
-    &.ember-basic-dropdown--transitioning-in {
-      animation: drop-fade-above 0.15s;
-    }
-
-    &.ember-basic-dropdown--transitioning-out {
-      animation: drop-fade-above 0.15s reverse;
-    }
-  }
-
-  &--above {
-    &.ember-basic-dropdown--transitioning-in {
-      animation: drop-fade-below 0.15s;
-    }
-
-    &.ember-basic-dropdown--transitioning-out {
-      animation: drop-fade-below 0.15s reverse;
-    }
   }
 }
 

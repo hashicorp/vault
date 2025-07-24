@@ -1,8 +1,14 @@
-<Hds::Button @text="Generate policy" @color="tertiary" @icon="shield-check" {{on "click" this.openFlyout}} />
-{{#if this.showFlyout}}
+<Hds::Button
+  @text="Generate policy"
+  @color="tertiary"
+  @icon="shield-check"
+  {{on "click" this.openFlyout}}
+  class="policy-wizard"
+/>
 
-  <Hds::Flyout @size="large" id="policy-builder" @onClose={{fn (mut this.showFlyout) false}} as |M|>
-    <M.Header @icon="wand" @tagline="Policy builder for {{this.context}}">
+{{#if this.showFlyout}}
+  <Hds::Flyout @size="large" @onClose={{fn (mut this.showFlyout) false}} as |M|>
+    <M.Header class="policy-wizard" @icon="wand">
       Policy Wizard
     </M.Header>
     <M.Body>
@@ -115,19 +121,28 @@
       <Hds::Card::Container class="has-padding-m has-top-margin-m has-bottom-margin-m" @level="base" @hasBorder={{true}}>
         <Hds::Text::Display class="has-bottom-margin-xxs">Assign policy</Hds::Text::Display>
         <br />
-        <Hds::Text::Body class="has-bottom-margin-xxs">Select who this policy should be assigned to:</Hds::Text::Body>
-        <div class="flex space-between column-gap-16">
-          {{#each-in this.identityOptions as |type options|}}
-            <Hds::Dropdown class="is-flex-grow-1" as |D|>
-              <D.ToggleButton @isFullWidth={{true}} @color="secondary" @text={{type}} />
-              <D.Title @text={{get (this.dropdownText type) "title"}} />
-              <D.Description @text={{get (this.dropdownText type) "description"}} />
-              {{#each options as |opt|}}
-                <D.Checkbox>{{opt.id}}</D.Checkbox>
-              {{/each}}
-            </Hds::Dropdown>
-          {{/each-in}}
-        </div>
+        <Hds::Text::Body class="has-bottom-margin-xxs">Select who this policy should be assigned to.</Hds::Text::Body>
+        {{#each-in this.identityOptions as |type options|}}
+          <Hds::Form::SuperSelect::Multiple::Field
+            @onChange={{fn this.handleAssignment type}}
+            @selected={{get this.selectedAssignments type}}
+            @options={{options}}
+            @searchEnabled={{true}}
+            @searchField="name"
+            class="field"
+            as |F|
+          >
+            <F.Label class="has-top-margin-xs">{{get (this.displayText type) "title"}}</F.Label>
+            <F.HelperText>{{get (this.displayText type) "description"}}</F.HelperText>
+            <F.Options>
+              {{#let F.options as |option|}}
+                {{option.name}}
+              {{/let}}
+            </F.Options>
+
+          </Hds::Form::SuperSelect::Multiple::Field>
+        {{/each-in}}
+
       </Hds::Card::Container>
 
       <Hds::Card::Container class="has-padding-m has-top-margin-m has-bottom-margin-m" @level="base" @hasBorder={{true}}>

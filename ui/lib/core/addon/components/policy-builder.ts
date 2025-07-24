@@ -9,12 +9,27 @@ import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import { addToArray } from 'vault/helpers/add-to-array';
 import { removeFromArray } from 'vault/helpers/remove-from-array';
+import mapApiPathToRoute from 'vault/utils/policy-path-map';
+import { EntityListByNameListEnum, GroupListByNameListEnum } from '@hashicorp/vault-client-typescript';
 
 import type ApiService from 'vault/services/api';
 import type { HTMLElementEvent } from 'vault/forms';
 import type RouterService from '@ember/routing/router-service';
-import mapApiPathToRoute from 'vault/utils/policy-path-map';
 
+interface Option {
+  type: string;
+  name: string;
+  authType?: string;
+}
+
+const IDENTITY_TYPES = {
+  authMount: 'Authentication mount',
+  group: 'Group',
+  entity: 'Entity',
+} as const;
+
+type IdentitySelectionKey = keyof typeof IDENTITY_TYPES;
+// type IdentityOptionKey = (typeof IDENTITY_TYPES)[IdentitySelectionKey];
 class Capability {
   @tracked path: string;
   @tracked permissions: string[] = [];
@@ -60,37 +75,36 @@ export default class PolicyBuilder extends Component {
   @tracked capabilities: Capability[] = [];
   @tracked showAdvanced = false;
 
-  @tracked identities: string[] | undefined = [];
-
-  permissions = ['create', 'read', 'update', 'delete', 'list', 'patch', 'sudo'];
-  // identityTypes = [
-  //   { type: 'authMount', label: 'Authentication mount' },
-  //   { type: 'group', label: 'Group' },
-  //   { type: 'entity', label: 'Entity' },
-  // ];
-
-  identityOptions = {
-    'Authentication mount': [{ id: 'userpass/' }, { id: 'oidc/' }, { id: 'ldap/' }],
-    Group: [{ id: 'admins' }, { id: 'platform-engineers' }, { id: 'sales' }],
-    Entity: [{ id: 'bob' }, { id: 'matilda' }, { id: 'lorraine' }],
+  @tracked selectedAssignments: Record<IdentitySelectionKey, Option[]> = {
+    authMount: [],
+    group: [],
+    entity: [],
   };
 
-  dropdownText = (type: string) => {
+  permissions = ['create', 'read', 'update', 'delete', 'list', 'patch', 'sudo'];
+
+  identityOptions: Record<IdentitySelectionKey, Option[]> = {
+    authMount: [],
+    group: [],
+    entity: [],
+  };
+
+  displayText = (type: string) => {
     switch (type) {
-      case 'Authentication mount':
+      case 'authMount':
         return {
           title: 'Authentication mounts',
-          description: 'The policy will be applied to users who authenticate with the selected mounts.',
+          description: 'Policy will be applied to users who authenticate with the selected mounts.',
         };
-      case 'Group':
+      case 'group':
         return {
           title: 'Groups',
-          description: 'The policy will be applied to users who belong to the selected groups.',
+          description: 'Policy will be applied to users who belong to the selected groups.',
         };
-      case 'Entity':
+      case 'entity':
         return {
           title: 'Entities',
-          description: 'The policy will be applied to users who belong to the selected entities.',
+          description: 'Policy will be applied to users who belong to the selected entities.',
         };
 
       default:
@@ -104,6 +118,7 @@ export default class PolicyBuilder extends Component {
   constructor(owner: unknown, args: Record<string, never>) {
     super(owner, args);
     this.fetchPolicies();
+    this.fetchIdentities();
   }
 
   get context() {
@@ -134,15 +149,17 @@ export default class PolicyBuilder extends Component {
     return [];
   }
 
-  // @action
-  // handleAssignment(event: HTMLElementEvent<HTMLInputElement>) {
-  //   // do something
-  // }
-
   @action
   selectPolicy(event: HTMLElementEvent<HTMLInputElement>) {
     const { value } = event.target;
     this.policyAction = value;
+  }
+
+  @action
+  handleAssignment(type: IdentitySelectionKey, selection: Option[]) {
+    this.selectedAssignments[type] = selection;
+    // trigger DOM update
+    this.selectedAssignments = Object.assign(this.selectedAssignments);
   }
 
   @action
@@ -152,6 +169,42 @@ export default class PolicyBuilder extends Component {
       this.existingPolicies = keys;
     } catch {
       // nah
+    }
+  }
+
+  @action
+  async fetchIdentities() {
+    const setOptions = (type: IdentitySelectionKey, options: Option[] | undefined) =>
+      (this.identityOptions[type] = options || []);
+
+    let type: IdentitySelectionKey;
+    try {
+      type = 'entity';
+      const { keys } = await this.api.identity.entityListByName(EntityListByNameListEnum.TRUE);
+      const entities = keys?.map((k) => ({ type, name: k }));
+      setOptions(type, entities);
+    } catch {
+      // nope
+    }
+
+    try {
+      type = 'group';
+      const { keys } = await this.api.identity.groupListByName(GroupListByNameListEnum.TRUE);
+      const groups = keys?.map((k) => ({ type, name: k }));
+      setOptions(type, groups);
+    } catch {
+      // nope
+    }
+
+    try {
+      type = 'authMount';
+      const { auth } = await this.api.sys.internalUiListEnabledVisibleMounts();
+      const mounts = this.api
+        .responseObjectToArray(auth, 'path')
+        .map((m) => ({ type, name: m.path, authType: m.type }));
+      setOptions(type, mounts);
+    } catch {
+      // nope
     }
   }
 
