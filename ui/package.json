@@ -39,6 +39,7 @@
     "test:filter": "node scripts/start-vault.js --server -f='!enterprise'",
     "test:server": "node scripts/start-vault.js --server",
     "test:dev": "node scripts/start-vault.js",
+    "test:mirage": "ember exam",
     "vault": "VAULT_REDIRECT_ADDR=http://127.0.0.1:8200 vault server -log-level=error -dev -dev-root-token-id=root -dev-ha -dev-transactional",
     "vault:cluster": "VAULT_REDIRECT_ADDR=http://127.0.0.1:8202 vault server -log-level=error -dev -dev-root-token-id=root -dev-listen-address=127.0.0.1:8202 -dev-ha -dev-transactional"
   },

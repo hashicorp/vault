@@ -16,6 +16,10 @@ export default function (server) {
     };
   });
 
+  server.get('/sys/health', function (schema) {
+    return schema.db.healths.firstOrCreate({}, server.create('health'));
+  });
+
   server.get('/sys/activation-flags', () => {
     return {
       data: {
@@ -25,24 +29,31 @@ export default function (server) {
     };
   });
 
-  server.get('/sys/health', function () {
+  server.get('/sys/license/features', function () {
     return {
-      enterprise: true,
-      initialized: true,
-      sealed: false,
-      standby: false,
-      license: {
-        expiry: '2021-05-12T23:20:50.52Z',
-        state: 'stored',
-      },
-      performance_standby: false,
-      replication_performance_mode: 'disabled',
-      replication_dr_mode: 'disabled',
-      server_time_utc: 1622562585,
-      version: '1.9.0+ent',
-      cluster_name: 'vault-cluster-e779cd7c',
-      cluster_id: '5f20f5ab-acea-0481-787e-71ec2ff5a60b',
-      last_wal: 121,
+      features: [
+        [
+          'HSM',
+          'Performance Replication',
+          'DR Replication',
+          'MFA',
+          'Sentinel',
+          'Seal Wrapping',
+          'Control Groups',
+          'Performance Standby',
+          'Namespaces',
+          'KMIP',
+          'Entropy Augmentation',
+          'Transform Secrets Engine',
+          'Lease Count Quotas',
+          'Key Management Secrets Engine',
+          'Automated Snapshots',
+          'Key Management Transparent Data Encryption',
+          'Secrets Sync',
+          'Secrets Import',
+          'Oracle Database Secrets Engine',
+        ],
+      ],
     };
   });
 
@@ -66,6 +77,14 @@ export default function (server) {
         },
       },
     };
+  });
+
+  server.get('/sys/seal-status', function (schema) {
+    return schema.db.sealStatuses.firstOrCreate({}, server.create('seal-status'));
+  });
+
+  server.get('/sys/replication/status', function (schema) {
+    return schema.db.replicationStatuses.firstOrCreate({}, server.create('replication-status'));
   });
 
   server.get('sys/namespaces', function () {
@@ -93,5 +112,47 @@ export default function (server) {
         ],
       },
     };
+  });
+
+  server.get('/sys/internal/ui/unauthenticated-messages', function () {
+    return { data: {} };
+  });
+
+  server.get('/sys/internal/ui/authenticated-messages', function () {
+    return { data: {} };
+  });
+
+  server.get('/sys/internal/ui/default-auth-methods', function () {
+    return { data: null };
+  });
+
+  // defaults to root token
+  server.get('/auth/token/lookup-self', function (schema) {
+    return schema.db.tokens.firstOrCreate({}, server.create('token'));
+  });
+
+  server.post('/sys/capabilities-self', function (schema, req) {
+    const { paths } = JSON.parse(req.requestBody);
+    const response = {
+      data: {
+        capabilities: ['root'],
+      },
+    };
+
+    paths.forEach((path) => {
+      response.data[path] = ['root'];
+    });
+
+    return response;
+  });
+
+  server.get('/sys/internal/ui/resultant-acl', function () {
+    return {
+      data: { chroot_namespace: '', root: true },
+    };
+  });
+
+  server.get('/sys/internal/ui/mounts', function () {
+    return { auth: {}, data: {} };
   });
 }
