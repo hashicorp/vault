@@ -7,7 +7,7 @@ module.exports = function (environment) {
   const policy = {
     'default-src': ["'none'"],
     'script-src': ["'self'"],
-    'script-src-elem': ["'https://vercel.live'"], //TODO check this
+    'script-src-elem': ["'*.vercel-ui-preview-test.vercel.app'"], //TODO check this
     'font-src': ["'self'"],
     'connect-src': ["'self'"],
     'img-src': ["'self'", 'data:'],
