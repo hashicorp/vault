@@ -2058,7 +2058,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ember/test-waiters@npm:^3.1.0":
+"@ember/test-waiters@npm:^3.0.0, @ember/test-waiters@npm:^3.1.0":
   version: 3.1.0
   resolution: "@ember/test-waiters@npm:3.1.0"
   dependencies:
@@ -2653,7 +2653,62 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/design-system-components@npm:4.18.2, @hashicorp/design-system-components@npm:~4.18.0":
+"@hashicorp/design-system-components@npm:4.21.0":
+  version: 4.21.0
+  resolution: "@hashicorp/design-system-components@npm:4.21.0"
+  dependencies:
+    "@codemirror/commands": ^6.8.0
+    "@codemirror/lang-go": ^6.0.1
+    "@codemirror/lang-javascript": ^6.2.2
+    "@codemirror/lang-json": ^6.0.1
+    "@codemirror/lang-markdown": ^6.3.2
+    "@codemirror/lang-sql": ^6.8.0
+    "@codemirror/lang-yaml": ^6.1.2
+    "@codemirror/language": ^6.10.3
+    "@codemirror/legacy-modes": ^6.4.2
+    "@codemirror/lint": ^6.8.4
+    "@codemirror/state": ^6.5.0
+    "@codemirror/view": ^6.36.2
+    "@ember/render-modifiers": ^2.1.0
+    "@ember/string": ^3.1.1
+    "@ember/test-waiters": ^3.1.0
+    "@embroider/addon-shim": ^1.10.0
+    "@embroider/macros": ^1.18.0
+    "@embroider/util": ^1.13.2
+    "@floating-ui/dom": ^1.6.12
+    "@hashicorp/design-system-tokens": ^2.3.0
+    "@hashicorp/flight-icons": ^3.12.0
+    "@lezer/highlight": ^1.2.1
+    "@nullvoxpopuli/ember-composable-helpers": ^5.2.11
+    clipboard-polyfill: ^4.1.1
+    codemirror-lang-hcl: ^0.0.0-beta.2
+    decorator-transforms: ^2.3.0
+    ember-a11y-refocus: ^4.1.4
+    ember-cli-sass: ^11.0.1
+    ember-concurrency: ^4.0.4
+    ember-element-helper: ^0.8.6
+    ember-focus-trap: ^1.1.1
+    ember-get-config: ^2.1.1
+    ember-modifier: ^4.2.2
+    ember-power-select: ^8.7.1
+    ember-stargate: ^0.5.0
+    ember-style-modifier: ^4.4.0
+    ember-truth-helpers: ^4.0.3
+    luxon: ^3.4.2
+    prismjs: ^1.30.0
+    sass: ^1.83.0
+    tabbable: ^6.2.0
+    tippy.js: ^6.3.7
+  peerDependencies:
+    ember-engines: ">= 0.11.0"
+  peerDependenciesMeta:
+    ember-engines:
+      optional: true
+  checksum: ad42ff51065e4fdcc117131eae0c7a91959f098e4067748c9632b68fae921bec0284a962f8689f319da01bc0a47d40ddadd453bd5d532415ab9afdec4652b71e
+  languageName: node
+  linkType: hard
+
+"@hashicorp/design-system-components@npm:~4.18.0":
   version: 4.18.2
   resolution: "@hashicorp/design-system-components@npm:4.18.2"
   dependencies:
@@ -2716,6 +2771,13 @@ __metadata:
   version: 3.10.0
   resolution: "@hashicorp/flight-icons@npm:3.10.0"
   checksum: 757545760ca599aa3880a9680054dbcd2d9f7ceaac1ded4110152afed6b2ccf7a2d08940cbeb3fea2d64db77b9a75d99d7b4ef5056eb9541ee5f0a5f0002120d
+  languageName: node
+  linkType: hard
+
+"@hashicorp/flight-icons@npm:^3.12.0":
+  version: 3.12.0
+  resolution: "@hashicorp/flight-icons@npm:3.12.0"
+  checksum: 2a64c1498df3f3f20da467f3b861d41727d5d422c097b51c5a486bd2de172e24730e0ef85892c199ada74325b7adecc2f583949792f6da59d68aa053396102de
   languageName: node
   linkType: hard
 
@@ -3130,6 +3192,17 @@ __metadata:
   dependencies:
     semver: ^7.3.5
   checksum: 68951c589e9a4328698a35fd82fe71909a257d6f2ede0434d236fa55634f0fbcad9bb8755553ce5849bd25ee6f019f4d435921ac715c853582c4a7f5983c8d4a
+  languageName: node
+  linkType: hard
+
+"@nullvoxpopuli/ember-composable-helpers@npm:^5.2.11":
+  version: 5.2.11
+  resolution: "@nullvoxpopuli/ember-composable-helpers@npm:5.2.11"
+  dependencies:
+    "@embroider/addon-shim": ^1.9.0
+    decorator-transforms: ^2.3.0
+    ember-functions-as-helper-polyfill: ^2.1.2
+  checksum: 89c476f48fb8786af33a0887f08e76fe3be5debac4d5b3e838312a253e969240682c0186c5e60567199ccf51a164ca6bae243c497766d6a686796f421cc2e2f0
   languageName: node
   linkType: hard
 
@@ -7871,6 +7944,18 @@ __metadata:
   languageName: node
   linkType: hard
 
+"ember-async-data@npm:^1.0.1":
+  version: 1.0.3
+  resolution: "ember-async-data@npm:1.0.3"
+  dependencies:
+    "@ember/test-waiters": ^3.0.0
+    "@embroider/addon-shim": ^1.8.6
+  peerDependencies:
+    ember-source: ">=4.8.4"
+  checksum: 0484ce4fd539700e48dd04adefdead83d058aec4facfb79b30dbee4206b7eab650eea1e657b5172d391ee16e522d9e96b5a76137465e31385841c31b3a6a52e6
+  languageName: node
+  linkType: hard
+
 "ember-auto-import@npm:2.10.0, ember-auto-import@npm:^2.2.4, ember-auto-import@npm:^2.4.1, ember-auto-import@npm:^2.6.3, ember-auto-import@npm:^2.7.0":
   version: 2.10.0
   resolution: "ember-auto-import@npm:2.10.0"
@@ -8532,7 +8617,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-concurrency@npm:^4.0.2, ember-concurrency@npm:~4.0.3":
+"ember-concurrency@npm:^4.0.2, ember-concurrency@npm:^4.0.4, ember-concurrency@npm:~4.0.3":
   version: 4.0.4
   resolution: "ember-concurrency@npm:4.0.4"
   dependencies:
@@ -8786,7 +8871,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ember-modifier@npm:^3.2.7 || ^4.0.0, ember-modifier@npm:^4.1.0, ember-modifier@npm:^4.2.0, ember-modifier@npm:~4.2.0":
+"ember-modifier@npm:^3.2.7 || ^4.0.0, ember-modifier@npm:^4.1.0, ember-modifier@npm:^4.2.0, ember-modifier@npm:^4.2.2, ember-modifier@npm:~4.2.0":
   version: 4.2.2
   resolution: "ember-modifier@npm:4.2.2"
   dependencies:
@@ -8815,6 +8900,26 @@ __metadata:
     ember-basic-dropdown: ^8.5.1
     ember-concurrency: ^4.0.4
   checksum: a8263edbb930fde10edcdc62abaeb380886c5fc378d446e5015a3eafdc1ec76b6d43ba81c6556628adad4ae4e69ae844086f1ab06cdc44961e5afb4d21fa23f1
+  languageName: node
+  linkType: hard
+
+"ember-power-select@npm:^8.7.1":
+  version: 8.7.3
+  resolution: "ember-power-select@npm:8.7.3"
+  dependencies:
+    "@embroider/addon-shim": ^1.10.0
+    "@embroider/util": ^1.13.2
+    decorator-transforms: ^2.3.0
+    ember-assign-helper: ^0.5.0
+    ember-lifeline: ^7.0.0
+    ember-modifier: ^4.2.0
+    ember-truth-helpers: ^4.0.3
+  peerDependencies:
+    "@ember/test-helpers": ^2.9.4 || ^3.2.1 || ^4.0.2 || ^5.0.0
+    "@glimmer/component": ^1.1.2 || ^2.0.0
+    ember-basic-dropdown: ^8.5.1
+    ember-concurrency: ^4.0.4
+  checksum: a775ed148a9cdaeafdc6fbe4b47217e0eafd5f489fdb064259d017e2ccd973d5874e4f9b2f9c9907879179a4149719c877399c813da6aff8c0c9941844292271
   languageName: node
   linkType: hard
 
@@ -8885,6 +8990,32 @@ __metadata:
     ember-concurrency:
       optional: true
   checksum: 9edb126ee307251080380d421aba42f330f76c6e295046ae59b48c3162d27e83223732e398f8373f933d120f38831e791e0fd31e63c70315982166db399d2b33
+  languageName: node
+  linkType: hard
+
+"ember-resources@npm:^6.0.0":
+  version: 6.5.2
+  resolution: "ember-resources@npm:6.5.2"
+  dependencies:
+    "@babel/runtime": ^7.17.8
+    "@embroider/addon-shim": ^1.2.0
+    "@embroider/macros": ^1.12.3
+    ember-async-data: ^1.0.1
+  peerDependencies:
+    "@ember/test-waiters": ">= 3.0.0"
+    "@glimmer/component": ">= 1.1.2"
+    "@glimmer/tracking": ">= 1.1.2"
+    "@glint/template": ^1.0.0-beta.3 || >= 1.0.0
+    ember-concurrency: ^2.0.0 || >= 3.0.0
+    ember-source: ^3.28.0 || ^4.0.0 || >= 5.0.0
+  peerDependenciesMeta:
+    "@ember/test-waiters":
+      optional: true
+    "@glimmer/component":
+      optional: true
+    ember-concurrency:
+      optional: true
+  checksum: 77e85a7951a3ce6785d7355161366c3a2f680a72cfc68c543215c57ae826dc4125059da355d56be4a4c1c8469c37c0e35c10e8034703f3f020401716de252c54
   languageName: node
   linkType: hard
 
@@ -9016,6 +9147,19 @@ __metadata:
     ember-resources: ^5.0.1
     tracked-maps-and-sets: ^3.0.1
   checksum: b41c0dd65c59e298d0a9f9b31fd5035b7824d8ebc0a92b47d52dc559b553ade3e9126bc4f647521138f09b34f80ed297300b6d428583b9a294de5071d5890bf6
+  languageName: node
+  linkType: hard
+
+"ember-stargate@npm:^0.5.0":
+  version: 0.5.0
+  resolution: "ember-stargate@npm:0.5.0"
+  dependencies:
+    "@ember/render-modifiers": ^2.0.0
+    "@embroider/addon-shim": ^1.0.0
+    "@glimmer/component": ^1.1.2
+    ember-resources: ^6.0.0
+    tracked-maps-and-sets: ^3.0.1
+  checksum: 0eff70822205580a5aad41e185dd726c45c9f3308de6f7cb16a5c333b690cdc6bb5b707520c9df258331194d0c66b3d4292d845fda91d62eac4ff1c9af1efe17
   languageName: node
   linkType: hard
 
@@ -13253,6 +13397,13 @@ __metadata:
   version: 3.6.1
   resolution: "luxon@npm:3.6.1"
   checksum: bc6c24dde90f4263f548cc5a4ea3328e9c9511bee0b2255bd319639712862f1eb14a39c1b2dcbff8a8bf6686996d28f45b8fc902994a72dd05a29cef1269a6a4
+  languageName: node
+  linkType: hard
+
+"luxon@npm:^3.4.2":
+  version: 3.7.1
+  resolution: "luxon@npm:3.7.1"
+  checksum: 19e5b20304f2e558b1e5e1f4f04f227419642d373f7c10ccf8f0e7d63c05828187a6aa39d70caf87d18a4834800dcbf29cf5f5d81d03c7d2471cd0b61cee97f6
   languageName: node
   linkType: hard
 
@@ -18455,7 +18606,7 @@ __metadata:
     "@ember/test-waiters": ~4.1.0
     "@glimmer/component": ~1.1.2
     "@glimmer/tracking": ~1.1.2
-    "@hashicorp/design-system-components": 4.18.2
+    "@hashicorp/design-system-components": 4.21.0
     "@hashicorp/vault-client-typescript": hashicorp/vault-client-typescript
     "@hashicorp/vault-reporting": "portal:./vault-reporting"
     "@icholy/duration": ~5.1.0
