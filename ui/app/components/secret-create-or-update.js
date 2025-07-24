@@ -3,6 +3,17 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
+import Component from '@glimmer/component';
+import ControlGroupError from 'vault/lib/control-group-error';
+import Ember from 'ember';
+import keys from 'core/utils/keys';
+import { action, set } from '@ember/object';
+import { service } from '@ember/service';
+import { tracked } from '@glimmer/tracking';
+import { isBlank, isNone } from '@ember/utils';
+import { task, waitForEvent } from 'ember-concurrency';
+import { WHITESPACE_WARNING, containsWhitespace, isWhitespaceFree } from 'vault/utils/forms/validators';
+
 /**
  * @module SecretCreateOrUpdate
  * SecretCreateOrUpdate component displays either the form for creating a new secret or creating a new version of the secret
@@ -26,17 +37,6 @@
  * @param {boolean} buttonDisabled - if true, disables the submit button on the create/update form
  */
 
-import Component from '@glimmer/component';
-import ControlGroupError from 'vault/lib/control-group-error';
-import Ember from 'ember';
-import keys from 'core/utils/keys';
-import { action, set } from '@ember/object';
-import { service } from '@ember/service';
-import { tracked } from '@glimmer/tracking';
-import { isBlank, isNone } from '@ember/utils';
-import { task, waitForEvent } from 'ember-concurrency';
-import { WHITESPACE_WARNING } from 'vault/utils/forms/validators';
-
 const LIST_ROUTE = 'vault.cluster.secrets.backend.list';
 const LIST_ROOT_ROUTE = 'vault.cluster.secrets.backend.list-root';
 const SHOW_ROUTE = 'vault.cluster.secrets.backend.show';
@@ -59,56 +59,53 @@ export default class SecretCreateOrUpdate extends Component {
   @action
   setup(elem, [secretData, mode]) {
     this.editorString = secretData.toJSONString();
-    this.validationMessages = {
-      path: '',
-    };
+    this.validationMessages = { path: '' };
     // for validation, return array of path names already assigned
     if (Ember.testing) {
       this.secretPaths = ['beep', 'bop', 'boop'];
     }
     this.checkRows();
-
-    if (mode === 'edit') {
-      this.addRow();
-    }
+    if (mode === 'edit') this.addRow();
   }
+
   checkRows() {
     if (this.args.secretData.length === 0) {
       this.addRow();
     }
   }
+
   checkValidation(name, value) {
     if (name === 'path') {
-      // check for whitespace
-      this.pathHasWhiteSpace(value);
-      !value
-        ? set(this.validationMessages, name, `${name} can't be blank.`)
-        : set(this.validationMessages, name, '');
+      // Use validator utility
+      this.pathWhiteSpaceWarning = containsWhitespace(value);
+
+      if (!value) {
+        set(this.validationMessages, name, `${name} can't be blank.`);
+      } else if (!isWhitespaceFree(value)) {
+        set(this.validationMessages, name, this.whitespaceWarning);
+      } else {
+        set(this.validationMessages, name, '');
+      }
     }
-    const values = Object.values(this.validationMessages);
-    this.validationErrorCount = values.filter(Boolean).length;
+
+    this.validationErrorCount = Object.values(this.validationMessages).filter(Boolean).length;
   }
+
   onEscape(e) {
     const isEscKeyPressed = keys.ESC.includes(e.key);
-    if (isEscKeyPressed || this.args.mode !== 'show') {
-      return;
-    }
+    if (isEscKeyPressed || this.args.mode !== 'show') return;
+
     const parentKey = this.args.model.parentKey;
-    if (parentKey) {
-      this.transitionToRoute(LIST_ROUTE, parentKey);
-    } else {
-      this.transitionToRoute(LIST_ROOT_ROUTE);
-    }
+    this.transitionToRoute(parentKey ? LIST_ROUTE : LIST_ROOT_ROUTE, parentKey);
   }
-  pathHasWhiteSpace(value) {
-    const validation = new RegExp('\\s', 'g'); // search for whitespace
-    this.pathWhiteSpaceWarning = validation.test(value);
+
+  transitionToRoute() {
+    return this.router.transitionTo(...arguments);
   }
-  // successCallback is called in the context of the component
+
   persistKey(successCallback) {
     const secret = this.args.model;
     const secretData = this.args.modelForData;
-
     let key = secretData?.path || secret.id;
 
     if (key.startsWith('/')) {
@@ -132,11 +129,9 @@ export default class SecretCreateOrUpdate extends Component {
         throw error;
       });
   }
+
   saveComplete(callback, key) {
     callback(key);
-  }
-  transitionToRoute() {
-    return this.router.transitionTo(...arguments);
   }
 
   @(task(function* (name, value) {
@@ -153,7 +148,6 @@ export default class SecretCreateOrUpdate extends Component {
   @action
   addRow() {
     const data = this.args.secretData;
-    // fired off on init
     if (isNone(data.find((d) => d.name === ''))) {
       data.pushObject({ name: '', value: '' });
       this.handleChange();
@@ -169,7 +163,6 @@ export default class SecretCreateOrUpdate extends Component {
     } catch (e) {
       this.error = e.message;
     }
-
     this.editorString = val;
   }
 
@@ -190,13 +183,12 @@ export default class SecretCreateOrUpdate extends Component {
       this.transitionToRoute(SHOW_ROUTE, secretPath);
     });
   }
+
   @action
   deleteRow(name) {
     const data = this.args.secretData;
     const item = data.find((d) => d.name === name);
-    if (isBlank(item.name)) {
-      return;
-    }
+    if (isBlank(item.name)) return;
     // secretData is a KVObject/ArrayProxy so removeObject is fine here
     data.removeObject(item);
     this.checkRows();

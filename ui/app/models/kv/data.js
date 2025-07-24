@@ -35,7 +35,7 @@ const validations = {
     { type: 'presence', message: `Path can't be blank.` },
     { type: 'endsInSlash', message: `Path can't end in forward slash '/'.` },
     {
-      type: 'containsWhiteSpace',
+      type: 'isWhitespaceFree',
       message: WHITESPACE_WARNING('path'),
       level: 'warn',
     },

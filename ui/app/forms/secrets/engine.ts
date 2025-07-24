@@ -20,7 +20,7 @@ export default class SecretsEngineForm extends Form<SecretsEngineFormData> {
     path: [
       { type: 'presence', message: "Path can't be blank." },
       {
-        type: 'containsWhiteSpace',
+        type: 'isWhitespaceFree',
         message: WHITESPACE_WARNING('path'),
         level: 'warn',
       },

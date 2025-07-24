@@ -19,7 +19,7 @@ const validations = {
   path: [
     { type: 'presence', message: "Path can't be blank." },
     {
-      type: 'containsWhiteSpace',
+      type: 'isWhitespaceFree',
       message: WHITESPACE_WARNING('path'),
       level: 'warn',
     },

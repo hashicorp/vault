@@ -101,7 +101,7 @@ module('Unit | Utility | forms | validate', function (hooks) {
     const validations = {
       foo: [
         {
-          type: 'containsWhiteSpace',
+          type: 'isWhitespaceFree',
           message,
           level: 'warn',
         },

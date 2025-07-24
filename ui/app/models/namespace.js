@@ -13,7 +13,7 @@ import { withModelValidations } from 'vault/decorators/model-validations';
     { type: 'presence', message: `Path can't be blank.` },
     { type: 'endsInSlash', message: `Path can't end in forward slash '/'.` },
     {
-      type: 'containsWhiteSpace',
+      type: 'isWhitespaceFree',
       message: "Path can't contain whitespace.",
     },
   ],

@@ -30,9 +30,9 @@ export type Validator =
   | 'presence'
   | 'length'
   | 'number'
-  | 'containsWhiteSpace'
+  | 'isWhitespaceFree'
   | 'endsInSlash'
-  | 'hasWhitespace'
+  | 'containsWhitespace'
   | 'isNonString';
 
 export type ValidatorOption =

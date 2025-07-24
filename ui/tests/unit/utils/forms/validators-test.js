@@ -80,7 +80,7 @@ module('Unit | Util | validators', function (hooks) {
 
   test('it should validate whitespace', function (assert) {
     let isValid;
-    const check = (prop) => (isValid = validators.containsWhiteSpace(prop));
+    const check = (prop) => (isValid = validators.isWhitespaceFree(prop));
     check('validText');
     assert.true(isValid, 'Valid when text contains no spaces');
     check('valid-text');
@@ -110,26 +110,26 @@ module('Unit | Util | validators', function (hooks) {
 
   // * GENERAL VALIDATORS
   test('it returns whether a value has whitespace or not', function (assert) {
-    let hasWhitespace;
-    const check = (value) => (hasWhitespace = validators.hasWhitespace(value));
+    let containsWhitespace;
+    const check = (value) => (containsWhitespace = validators.containsWhitespace(value));
 
     check('someText');
-    assert.false(hasWhitespace, 'False when text contains no spaces');
+    assert.false(containsWhitespace, 'False when text contains no spaces');
 
     check('some-text');
-    assert.false(hasWhitespace, 'False when text contains no spaces and hyphen');
+    assert.false(containsWhitespace, 'False when text contains no spaces and hyphen');
 
     check('some space');
-    assert.true(hasWhitespace, 'True when text contains single space');
+    assert.true(containsWhitespace, 'True when text contains single space');
 
     check('text with spaces');
-    assert.true(hasWhitespace, 'True when text contains multiple spaces');
+    assert.true(containsWhitespace, 'True when text contains multiple spaces');
 
     check(' leadingSpace');
-    assert.true(hasWhitespace, 'True when text has leading whitespace');
+    assert.true(containsWhitespace, 'True when text has leading whitespace');
 
     check('trailingSpace ');
-    assert.true(hasWhitespace, 'True when text has trailing whitespace');
+    assert.true(containsWhitespace, 'True when text has trailing whitespace');
   });
 
   test('it returns whether a string input values evaluated as non-strings', function (assert) {

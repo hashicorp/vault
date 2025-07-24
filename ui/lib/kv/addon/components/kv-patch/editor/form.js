@@ -8,7 +8,7 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { A } from '@ember/array';
 import {
-  hasWhitespace,
+  containsWhitespace,
   isNonString,
   WHITESPACE_WARNING,
   NON_STRING_WARNING,
@@ -53,7 +53,7 @@ export class KeyValueState {
   }
 
   get keyWarning() {
-    return hasWhitespace(this.key) ? WHITESPACE_WARNING('this key') : '';
+    return containsWhitespace(this.key) ? WHITESPACE_WARNING('this key') : '';
   }
 
   get valueWarning() {
@@ -97,7 +97,7 @@ export default class KvPatchEditorForm extends Component {
   }
 
   get newKeyWarning() {
-    return hasWhitespace(this.newKey) ? WHITESPACE_WARNING('this key') : '';
+    return containsWhitespace(this.newKey) ? WHITESPACE_WARNING('this key') : '';
   }
 
   get newValueWarning() {

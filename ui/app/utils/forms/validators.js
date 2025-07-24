@@ -9,7 +9,7 @@ import { capitalize } from '@ember/string';
 /*
 * Model Validators
 these return false when the condition fails because false means "invalid"
-for example containsWhiteSpace returns "false" when a value HAS whitespace 
+for example isWhitespaceFree returns "false" when a value HAS whitespace 
 because that is an invalid value
 */
 export const presence = (value) => isPresent(value);
@@ -32,8 +32,15 @@ export const number = (value, { nullable = false } = {}) => {
   return !isNaN(value);
 };
 
-export const containsWhiteSpace = (value) => {
-  return !hasWhitespace(value);
+// returns true only if the is no whitespace?
+export const containsWhitespace = (value) => {
+  return !isWhitespaceFree(value);
+};
+
+// detect if whitespace is present
+export const isWhitespaceFree = (value) => {
+  const validation = new RegExp('\\s', 'g'); // search for whitespace
+  return validation.test(value);
 };
 
 export const endsInSlash = (value) => {
@@ -45,11 +52,6 @@ export const endsInSlash = (value) => {
 * General Validators
 these utils return true or false relative to the function name
 */
-
-export const hasWhitespace = (value) => {
-  const validation = new RegExp('\\s', 'g'); // search for whitespace
-  return validation.test(value);
-};
 
 // HTML form inputs transform values to a string type
 // this returns if the value can be evaluated as non-string, i.e. "null"
@@ -75,10 +77,10 @@ export default {
   presence,
   length,
   number,
-  containsWhiteSpace,
+  isWhitespaceFree,
+  containsWhitespace,
   endsInSlash,
   isNonString,
-  hasWhitespace,
   WHITESPACE_WARNING,
   NON_STRING_WARNING,
 };
