@@ -120,8 +120,8 @@
           {{#each-in this.identityOptions as |type options|}}
             <Hds::Dropdown class="is-flex-grow-1" as |D|>
               <D.ToggleButton @isFullWidth={{true}} @color="secondary" @text={{type}} />
-              <D.Title @text="Title Text" />
-              <D.Description @text="Descriptive text goes here." />
+              <D.Title @text={{get (this.dropdownText type) "title"}} />
+              <D.Description @text={{get (this.dropdownText type) "description"}} />
               {{#each options as |opt|}}
                 <D.Checkbox>{{opt.id}}</D.Checkbox>
               {{/each}}

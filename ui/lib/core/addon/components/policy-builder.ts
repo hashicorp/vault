@@ -75,6 +75,32 @@ export default class PolicyBuilder extends Component {
     Entity: [{ id: 'bob' }, { id: 'matilda' }, { id: 'lorraine' }],
   };
 
+  dropdownText = (type: string) => {
+    switch (type) {
+      case 'Authentication mount':
+        return {
+          title: 'Authentication mounts',
+          description: 'The policy will be applied to users who authenticate with the selected mounts.',
+        };
+      case 'Group':
+        return {
+          title: 'Groups',
+          description: 'The policy will be applied to users who belong to the selected groups.',
+        };
+      case 'Entity':
+        return {
+          title: 'Entities',
+          description: 'The policy will be applied to users who belong to the selected entities.',
+        };
+
+      default:
+        return {
+          title: `Select a ${type}`,
+          description: 'The policy will be applied the selected resource.',
+        };
+    }
+  };
+
   constructor(owner: unknown, args: Record<string, never>) {
     super(owner, args);
     this.fetchPolicies();
