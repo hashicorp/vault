@@ -63,17 +63,17 @@ export default class PolicyBuilder extends Component {
   @tracked identities: string[] | undefined = [];
 
   permissions = ['create', 'read', 'update', 'delete', 'list', 'patch', 'sudo'];
-  identityTypes = [
-    { type: 'authMount', label: 'Authentication mount' },
-    { type: 'group', label: 'Group' },
-    { type: 'entity', label: 'Entity' },
-  ];
+  // identityTypes = [
+  //   { type: 'authMount', label: 'Authentication mount' },
+  //   { type: 'group', label: 'Group' },
+  //   { type: 'entity', label: 'Entity' },
+  // ];
 
-  identityOptions = [
-    { groupName: 'Authentication mount', options: [{ id: 'userpass/' }, { id: 'oidc/' }, { id: 'ldap/' }] },
-    { groupName: 'Group', options: [{ id: 'admins' }, { id: 'platform-engineers' }, { id: 'sales' }] },
-    { groupName: 'Entity', options: [{ id: 'bob' }, { id: 'matilda' }, { id: 'lorraine' }] },
-  ];
+  identityOptions = {
+    'Authentication mount': [{ id: 'userpass/' }, { id: 'oidc/' }, { id: 'ldap/' }],
+    Group: [{ id: 'admins' }, { id: 'platform-engineers' }, { id: 'sales' }],
+    Entity: [{ id: 'bob' }, { id: 'matilda' }, { id: 'lorraine' }],
+  };
 
   constructor(owner: unknown, args: Record<string, never>) {
     super(owner, args);

@@ -94,7 +94,12 @@
               <Hds::Form::Checkbox::Group class="field" @layout="horizontal" @name="PATH NAME" as |G|>
                 <G.Legend class="has-top-padding-m">Capabilities</G.Legend>
                 {{#each this.permissions as |p|}}
-                  <G.CheckboxField @value={{p}} {{on "change" capability.setPermissions}} as |F|>
+                  <G.CheckboxField
+                    checked={{includes p capability.permissions}}
+                    @value={{p}}
+                    {{on "change" capability.setPermissions}}
+                    as |F|
+                  >
                     <F.Label>{{p}}</F.Label>
                   </G.CheckboxField>
                 {{/each}}
@@ -107,17 +112,34 @@
       </Hds::Card::Container>
 
       {{! POLICY ASSIGNMENT }}
+      <Hds::Card::Container class="has-padding-m has-top-margin-m has-bottom-margin-m" @level="base" @hasBorder={{true}}>
+        <Hds::Text::Display class="has-bottom-margin-xxs">Assign policy</Hds::Text::Display>
+        <br />
+        <Hds::Text::Body class="has-bottom-margin-xxs">Select who this policy should be assigned to:</Hds::Text::Body>
+        <div class="flex space-between column-gap-16">
+          {{#each-in this.identityOptions as |type options|}}
+            <Hds::Dropdown class="is-flex-grow-1" as |D|>
+              <D.ToggleButton @isFullWidth={{true}} @color="secondary" @text={{type}} />
+              <D.Title @text="Title Text" />
+              <D.Description @text="Descriptive text goes here." />
+              {{#each options as |opt|}}
+                <D.Checkbox>{{opt.id}}</D.Checkbox>
+              {{/each}}
+            </Hds::Dropdown>
+          {{/each-in}}
+        </div>
+      </Hds::Card::Container>
 
       <Hds::Card::Container class="has-padding-m has-top-margin-m has-bottom-margin-m" @level="base" @hasBorder={{true}}>
         <Hds::Text::Display>Apply policy via</Hds::Text::Display>
         <Hds::Tabs as |T|>
-          <T.Tab Tab data-test-tab-example-policy>
+          <T.Tab>
             UI
           </T.Tab>
-          <T.Tab data-test-tab-your-policy>
+          <T.Tab>
             CLI
           </T.Tab>
-          <T.Tab Tab data-test-tab-example-policy>
+          <T.Tab>
             TFVP
           </T.Tab>
 
