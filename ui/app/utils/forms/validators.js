@@ -67,18 +67,6 @@ export const containsWhitespace = (value) => /\s/.test(value);
 export const noWhitespace = (value) => !/\s/.test(value);
 
 /**
- * Returns true if the value ends with a whitespace character.
- * UI should block submission and instruct encoding as %20.
- * (Existing secrets can still have this from API/CLI usage.)
- */
-export const hasTrailingWhitespace = (value) => /\s$/.test(value);
-
-/**
- * Inverse of hasTrailingWhitespace to fit the “false = invalid” validator pattern.
- */
-export const noTrailingWhitespace = (value) => !hasTrailingWhitespace(value);
-
-/**
  * Returns false if the value ends in a slash.
  */
 export const noEndingSlash = (value) => !/\/$/.test(value);
@@ -106,9 +94,6 @@ export const WHITESPACE_WARNING = (item) =>
     item
   )} contains whitespace. If this is desired, you'll need to encode it with %20 in API requests.`;
 
-export const TRAILING_WHITESPACE_ERROR = (item) =>
-  `${capitalize(item)} contains trailing whitespace. If this is desired, replace the space with %20.`;
-
 export const NON_STRING_WARNING =
   'This value will be saved as a string. If you need to save a non-string value, please use the JSON editor.';
 
@@ -122,11 +107,8 @@ export default {
   number,
   containsWhitespace,
   noWhitespace,
-  hasTrailingWhitespace,
-  noTrailingWhitespace,
   noEndingSlash,
   canParseToNonString,
-  TRAILING_WHITESPACE_ERROR,
   WHITESPACE_WARNING,
   NON_STRING_WARNING,
 };
