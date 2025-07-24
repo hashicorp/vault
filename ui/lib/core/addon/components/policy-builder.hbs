@@ -14,9 +14,15 @@
     <M.Body>
 
       {{! CREATE OR EDIT A POLICY  }}
-      <Hds::Card::Container class="has-padding-m has-top-margin-m has-bottom-margin-m" @level="base" @hasBorder={{true}}>
+      <Hds::Card::Container class="has-padding-m has-bottom-margin-m" @level="base" @hasBorder={{true}}>
         <Hds::Text::Display class="has-bottom-margin-xxs">Create or edit a policy</Hds::Text::Display>
-        <Hds::Form::Radio::Group @layout="horizontal" {{on "change" this.selectPolicy}} class="has-bottom-margin-m" as |G|>
+        <Hds::Form::Radio::Group
+          @layout="horizontal"
+          @name="policyAction"
+          {{on "input" this.handlePolicySelection}}
+          class="has-bottom-margin-m"
+          as |G|
+        >
           <G.HelperText>Choose to create a new policy or edit existing one</G.HelperText>
           <G.RadioField checked={{eq this.policyAction "create"}} @value="create" as |F|>
             <F.Label>Create a new policy</F.Label>
@@ -27,16 +33,17 @@
         </Hds::Form::Radio::Group>
 
         {{#if (eq this.policyAction "create")}}
-          <Hds::Form::TextInput::Field class="field" as |F|>
+          <Hds::Form::TextInput::Field
+            class="field"
+            name="name"
+            autocomplete="off"
+            {{on "input" this.handlePolicySelection}}
+            as |F|
+          >
             <F.Label>Policy name</F.Label>
           </Hds::Form::TextInput::Field>
-          <Hds::Reveal class="is-fullwidth has-top-margin-xxs" @text="Add a description">
-            <Hds::Form::TextInput::Field class="field" as |F|>
-              <F.Label>Description</F.Label>
-            </Hds::Form::TextInput::Field>
-          </Hds::Reveal>
         {{else if (eq this.policyAction "edit")}}
-          <Hds::Form::Select::Field class="field" as |F|>
+          <Hds::Form::Select::Field class="field" name="policyName" {{on "input" this.handlePolicySelection}} as |F|>
             <F.Label>Select a policy</F.Label>
             <F.HelperText>The configured permissions will be added to the selected policy.</F.HelperText>
             <F.Options>
@@ -55,44 +62,35 @@
       <Hds::Card::Container class="has-padding-m has-top-margin-m has-bottom-margin-m" @level="base" @hasBorder={{true}}>
         <div class="is-flex-between">
           <Hds::Text::Display class="has-bottom-margin-xxs">Policy stanza</Hds::Text::Display>
-          <Hds::Form::Toggle::Field
-            name="toggle-view"
-            {{on "change" (fn (mut this.showAdvanced) (not this.showAdvanced))}}
-            as |F|
-          >
+          <Hds::Form::Toggle::Field {{on "input" (fn (mut this.showPreview) (not this.showPreview))}} as |F|>
             <F.Label>Preview policy</F.Label>
           </Hds::Form::Toggle::Field>
         </div>
 
-        {{#if this.showAdvanced}}
-          {{! POLICY SAMPLE }}
+        {{! POLICY SAMPLE }}
+        {{#if this.showPreview}}
           <div class="has-padding-m has-top-margin-m has-bottom-margin-m">
             <Hds::CodeBlock
               @value={{this.policySnippet}}
-              @language="yaml"
+              @language="hcl"
               @hasCopyButton={{true}}
               @hasLineNumbers={{false}}
             />
           </div>
         {{else}}
           {{! PATH CAPABILITIES CARD }}
-          {{#each this.capabilities as |capability|}}
-            <Hds::Card::Container @background="neutral-secondary" class="has-padding-m has-top-margin-m has-bottom-margin-m">
+          {{#each this.policyStanzas as |stanza|}}
+            <Hds::Card::Container @background="neutral-secondary" class="has-padding-s has-top-margin-m has-bottom-margin-m">
               <Hds::Button
                 @text="Remove path"
                 @icon="trash"
                 @isIconOnly={{true}}
                 @color="critical"
                 class="is-pulled-right"
-                {{on "click" (fn this.deletePath capability.path)}}
+                {{on "click" (fn this.deletePath stanza.path)}}
               />
               <div class="is-flex-between has-bottom-margin-xxs">
-                <Hds::Form::TextInput::Field
-                  @value={{capability.path}}
-                  class="field"
-                  {{on "change" capability.setPath}}
-                  as |F|
-                >
+                <Hds::Form::TextInput::Field @value={{stanza.path}} class="field" {{on "input" stanza.setPath}} as |F|>
                   <F.Label class="has-top-margin-m">API path:</F.Label>
                 </Hds::Form::TextInput::Field>
               </div>
@@ -101,9 +99,9 @@
                 <G.Legend class="has-top-padding-m">Capabilities</G.Legend>
                 {{#each this.permissions as |p|}}
                   <G.CheckboxField
-                    checked={{includes p capability.permissions}}
+                    checked={{includes p stanza.permissions}}
                     @value={{p}}
-                    {{on "change" capability.setPermissions}}
+                    {{on "input" stanza.setPermissions}}
                     as |F|
                   >
                     <F.Label>{{p}}</F.Label>
@@ -112,16 +110,15 @@
               </Hds::Form::Checkbox::Group>
             </Hds::Card::Container>
           {{/each}}
+          <Hds::Button @icon="plus" @text="Add new path" @size="small" @color="secondary" {{on "click" this.addPath}} />
         {{/if}}
 
-        <Hds::Button @icon="plus" @text="Add new path" @size="small" @color="secondary" {{on "click" this.addPath}} />
       </Hds::Card::Container>
 
       {{! POLICY ASSIGNMENT }}
       <Hds::Card::Container class="has-padding-m has-top-margin-m has-bottom-margin-m" @level="base" @hasBorder={{true}}>
-        <Hds::Text::Display class="has-bottom-margin-xxs">Assign policy</Hds::Text::Display>
-        <br />
-        <Hds::Text::Body class="has-bottom-margin-xxs">Select who this policy should be assigned to.</Hds::Text::Body>
+        <Hds::Text::Display @tag="p" class="has-bottom-margin-xxs">Assign policy</Hds::Text::Display>
+        <Hds::Text::Body @tag="p" class="has-bottom-padding-s">Select who this policy should be applied to.</Hds::Text::Body>
         {{#each-in this.identityOptions as |type options|}}
           <Hds::Form::SuperSelect::Multiple::Field
             @onChange={{fn this.handleAssignment type}}
@@ -132,14 +129,13 @@
             class="field"
             as |F|
           >
-            <F.Label class="has-top-margin-xs">{{get (this.displayText type) "title"}}</F.Label>
+            <F.Label>{{get (this.displayText type) "title"}}</F.Label>
             <F.HelperText>{{get (this.displayText type) "description"}}</F.HelperText>
             <F.Options>
               {{#let F.options as |option|}}
                 {{option.name}}
               {{/let}}
             </F.Options>
-
           </Hds::Form::SuperSelect::Multiple::Field>
         {{/each-in}}
 
@@ -159,13 +155,18 @@
           </T.Tab>
 
           <T.Panel class="has-top-padding-m">
-            <Hds::Button @text="Apply policy" @color="secondary" @icon="wand" @isFullWidth={{true}} />
+            <Hds::Text::Body @tag="p" class="has-bottom-padding-s">Click "Apply policy" to assigned
+              {{this.policyAction}}
+              the policy and assign it to the selected
+              {{this.assignmentText}}.
+            </Hds::Text::Body>
+            <Hds::Button @text="Apply policy" @icon="wand" @isFullWidth={{true}} {{on "click" this.applyPolicy}} />
           </T.Panel>
           <T.Panel>
-            <Hds::CodeBlock @value={{this.cli}} @language="ruby" @hasCopyButton={{true}} />
+            <Hds::CodeBlock @value={{this.cliSnippet}} @language="ruby" @hasCopyButton={{true}} />
           </T.Panel>
           <T.Panel class="has-top-padding-m">
-            <Hds::CodeBlock @value={{this.tfvp}} @language="ruby" @hasCopyButton={{true}} />
+            <Hds::CodeBlock @value={{this.tfvpSnippet}} @language="hcl" @hasCopyButton={{true}} />
           </T.Panel>
         </Hds::Tabs>
       </Hds::Card::Container>

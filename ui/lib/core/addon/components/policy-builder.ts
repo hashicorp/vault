@@ -16,6 +16,12 @@ import type ApiService from 'vault/services/api';
 import type { HTMLElementEvent } from 'vault/forms';
 import type RouterService from '@ember/routing/router-service';
 
+const stanzaMaker = (path: string, policyStanzas: string[]) => {
+  const caps = policyStanzas.length ? policyStanzas.map((c) => `"${c}"`).join(', ') : '';
+  return `path "${path}" {
+  capabilities = [${caps}]
+}`;
+};
 interface Option {
   type: string;
   name: string;
@@ -29,32 +35,30 @@ const IDENTITY_TYPES = {
 } as const;
 
 type IdentitySelectionKey = keyof typeof IDENTITY_TYPES;
-// type IdentityOptionKey = (typeof IDENTITY_TYPES)[IdentitySelectionKey];
-class Capability {
+
+class PolicyStanza {
   @tracked path: string;
-  @tracked permissions: string[] = [];
+  @tracked capabilities: string[] = [];
 
   constructor(path: string) {
     this.path = path;
   }
 
   get policyStanza() {
-    return `path "${this.path}" {
-  permissions = [ ${this.permissions.map((c) => `"${c}"`).join(', ')} ]
-}`;
+    return stanzaMaker(this.path, this.capabilities);
   }
 
-  get hasPermissions() {
-    return this.permissions.length !== 0;
+  get hasCapabilities() {
+    return this.capabilities.length !== 0;
   }
 
   @action
   setPermissions(event: HTMLElementEvent<HTMLInputElement>) {
     const { value, checked } = event.target;
     if (checked) {
-      this.permissions = addToArray(this.permissions, value);
+      this.capabilities = addToArray(this.capabilities, value);
     } else {
-      this.permissions = removeFromArray(this.permissions, value);
+      this.capabilities = removeFromArray(this.capabilities, value);
     }
   }
 
@@ -68,22 +72,21 @@ export default class PolicyBuilder extends Component {
   @service declare readonly api: ApiService;
   @service declare readonly router: RouterService;
 
-  @tracked showFlyout = false;
-  @tracked policyAction = 'create';
-  @tracked policyName = '';
-  @tracked existingPolicies: string[] | undefined = [];
-  @tracked capabilities: Capability[] = [];
-  @tracked showAdvanced = false;
-
-  @tracked selectedAssignments: Record<IdentitySelectionKey, Option[]> = {
+  existingPolicies: string[] | undefined = [];
+  permissions = ['create', 'read', 'update', 'delete', 'list', 'patch', 'sudo'];
+  identityOptions: Record<IdentitySelectionKey, Option[]> = {
     authMount: [],
     group: [],
     entity: [],
   };
 
-  permissions = ['create', 'read', 'update', 'delete', 'list', 'patch', 'sudo'];
+  @tracked showFlyout = false;
+  @tracked showPreview = false;
+  @tracked policyAction = 'create';
+  @tracked policyName = '';
+  @tracked policyStanzas: PolicyStanza[] = [];
 
-  identityOptions: Record<IdentitySelectionKey, Option[]> = {
+  @tracked selectedAssignments: Record<IdentitySelectionKey, Option[]> = {
     authMount: [],
     group: [],
     entity: [],
@@ -106,7 +109,6 @@ export default class PolicyBuilder extends Component {
           title: 'Entities',
           description: 'Policy will be applied to users who belong to the selected entities.',
         };
-
       default:
         return {
           title: `Select a ${type}`,
@@ -121,18 +123,41 @@ export default class PolicyBuilder extends Component {
     this.fetchIdentities();
   }
 
-  get context() {
-    const params = this.router.currentRoute?.parent?.params;
-    return params ? Object.values(params).join('/') : '';
+  get assignmentText() {
+    const identities = Object.keys(this.selectedAssignments)
+      .filter((k) => this.selectedAssignments[k as IdentitySelectionKey].length)
+      .map((type) => this.displayText(type).title.toLowerCase());
+
+    if (identities.length > 1) {
+      const lastItem = identities.pop();
+      return `${identities.join(', ')} and ${lastItem}`;
+    } else if (identities.length === 1) {
+      return identities[0];
+    } else {
+      return 'identities';
+    }
   }
 
   get policySnippet() {
-    if (this.capabilities.length === 0) {
-      return `path " " {
-  permissions = [ ]
-}`;
+    if (this.policyStanzas.length === 0) {
+      return stanzaMaker('', []);
     }
-    return this.capabilities.map((c) => c.policyStanza).join('\n');
+    return this.formatPolicy(this.policyStanzas);
+  }
+
+  get cliSnippet() {
+    return `vault policy write ${this.policyName || '[policy name]'} - <<EOF
+${this.policySnippet}
+EOF`;
+  }
+
+  get tfvpSnippet() {
+    return `resource "vault_policy" "${this.policyName || '[policy name]'}" {
+  name   = "${this.policyName || '[policy name]'}"
+  policy = <<-EOT
+${this.policySnippet}
+EOT
+}`;
   }
 
   @action
@@ -143,16 +168,23 @@ export default class PolicyBuilder extends Component {
     if (currentRoute && !currentRouteName?.includes('loading') && 'attributes' in currentRoute) {
       const { name, attributes } = currentRoute as { name: string; attributes: unknown };
       const apiPaths = mapApiPathToRoute(name);
-      this.capabilities = apiPaths?.map((fn) => new Capability(fn(attributes))) || [];
-      this.capabilities = [...this.capabilities];
+      this.policyStanzas = apiPaths?.map((fn) => new PolicyStanza(fn(attributes))) || [];
+      this.policyStanzas = [...this.policyStanzas];
     }
     return [];
   }
 
   @action
-  selectPolicy(event: HTMLElementEvent<HTMLInputElement>) {
-    const { value } = event.target;
-    this.policyAction = value;
+  handlePolicySelection(event: HTMLElementEvent<HTMLInputElement>) {
+    const { name, value } = event.target;
+    if (name === 'policyAction') {
+      // either "create" or "edit"
+      this.policyAction = value;
+      // reset policy name
+      this.policyName = '';
+    } else {
+      this.policyName = value;
+    }
   }
 
   @action
@@ -174,8 +206,9 @@ export default class PolicyBuilder extends Component {
 
   @action
   async fetchIdentities() {
-    const setOptions = (type: IdentitySelectionKey, options: Option[] | undefined) =>
-      (this.identityOptions[type] = options || []);
+    const setOptions = (type: IdentitySelectionKey, options: Option[] | undefined) => {
+      this.identityOptions[type] = options || [];
+    };
 
     let type: IdentitySelectionKey;
     try {
@@ -210,41 +243,47 @@ export default class PolicyBuilder extends Component {
 
   @action
   addPath() {
-    const item = new Capability('');
-    this.capabilities.push(item);
+    const item = new PolicyStanza('');
+    this.policyStanzas.push(item);
     // Trigger an update
-    this.capabilities = [...this.capabilities];
+    this.policyStanzas = [...this.policyStanzas];
   }
 
   @action
   deletePath(path: string) {
-    this.capabilities = [...this.capabilities.filter((c) => c.path !== path)];
+    this.policyStanzas = [...this.policyStanzas.filter((c) => c.path !== path)];
   }
 
-  tfvp = `
-resource "vault_auth_backend" "userpass" {
-  type = "userpass"
-}
+  // the magic part!
+  @action
+  async applyPolicy() {
+    await this.createOrEditPolicy();
+    // TODO
+    // request to actually apply policies to identities
+  }
 
-resource "vault_generic_endpoint" "danielle-user" {
-   path                 = "auth/path/users/danielle-vault-user"
-   ignore_absent_fields = true
-   data_json = <<EOT
-{
-   "token_policies": ["developer-vault-policy"],
-   "password": "Vividness Itinerary Mumbo Reassure"
-}
-EOT
-}
-`;
-  cli = `-
-vault policy write top-secret-policy - <<EOF
-path "sys/auth" {
-  capabilities = ["read"]
-}
-EOF
-path "/v2/admin/secret/data/top-secret" {
-  capabilities = [ "update" ]
-}
-`;
+  async createOrEditPolicy() {
+    // policySnippet is purely for rendering the policy example. when it comes time to actually create/edit
+    // the policy we want to remove any stanzas without permissions
+    let policyPayload = this.formatPolicy(this.policyStanzas.filter((c) => c.hasCapabilities));
+    // if editing an existing policy, fetch the original
+    if (this.policyAction === 'edit') {
+      const { policy, rules } = await this.api.sys.policiesReadAclPolicy2(this.policyName);
+      // supposedly "rules" is deprecated, but that was the only key that returned data for me ¯\_(ツ)_/¯
+      const data = policy || rules || '';
+      // add existing policy to payload
+      policyPayload = data.concat(`\n\n`, policyPayload);
+    }
+    try {
+      await this.api.sys.policiesWriteAclPolicy2(this.policyName, { policy: policyPayload });
+    } catch (error) {
+      const { message } = await this.api.parseError(error);
+      console.debug(message); // eslint-disable-line
+    }
+  }
+
+  // HELPERS
+  formatPolicy(policyStanzas: PolicyStanza[]) {
+    return policyStanzas.map((c) => c.policyStanza).join('\n');
+  }
 }
