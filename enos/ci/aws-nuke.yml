@@ -10,6 +10,7 @@ blocklist:
 
 accounts:
   # replaced in CI
+#  774305585021:
   040730498200:
     presets:
       - default
