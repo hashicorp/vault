@@ -1,7 +1,12 @@
 {
-  "version": 2,
-  "public": true,
-  "github": {
-    "silent": true
-  }
+  "buildCommand": "ember build",
+  "outputDirectory": "../http/web_ui",
+  "installCommand": "yarn install",
+  "framework": null,
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }
