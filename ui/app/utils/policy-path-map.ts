@@ -6,7 +6,10 @@
 import apiPath from './api-path';
 
 const API_PATHS = {
-  kvv2: [apiPath`${'backend'}/data/${'path'}`, apiPath`${'backend'}/metadata/${'path'}`],
+  kvv2: {
+    overview: [apiPath`${'backend'}/data/${'path'}`, apiPath`${'backend'}/metadata/${'path'}`],
+    subkeys: [apiPath`${'backend'}/subkeys/${'path'}`, apiPath`${'backend'}/data/${'path'}`],
+  },
   secretsList: [apiPath`${'backend'}/`],
 };
 
@@ -14,8 +17,12 @@ const API_PATHS = {
 const ROUTE_PATTERNS: Array<{ pattern: RegExp; paths: ReturnType<typeof apiPath>[] }> = [
   // KV v2 routes - matches any kv secret route
   {
+    pattern: /^vault\.cluster\.secrets\.backend\.kv\.secret\.patch/,
+    paths: API_PATHS.kvv2.subkeys,
+  },
+  {
     pattern: /^vault\.cluster\.secrets\.backend\.kv/,
-    paths: API_PATHS.kvv2,
+    paths: API_PATHS.kvv2.overview,
   },
   {
     pattern: /^vault\.cluster\.secrets\./,
