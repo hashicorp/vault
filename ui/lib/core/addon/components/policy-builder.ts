@@ -148,40 +148,32 @@ export default class PolicyBuilder extends Component {
   }
 
   get cliSnippet() {
-    if (this.policyName) {
-      const cliCommand = (o: Option, type: IdentitySelectionKey) =>
-        `vault write identity/${type} name="${o.name}" policies="default, ${this.policyName}"`;
-      const command = this.buildAssignmentSnippet(cliCommand);
+    const cliCommand = (o: Option, type: IdentitySelectionKey) =>
+      `vault write identity/${type} name="${o.name}" policies="default, ${this.policyName}"`;
+    const command = this.buildAssignmentSnippet(cliCommand);
 
-      return `vault policy write ${this.policyName} - <<EOF
+    return `vault policy write ${this.policyName} - <<EOF
 ${this.actualPolicy}
 EOF
 ${command}`;
-    } else {
-      return '# Select a policy or fill in a name to preview commands!';
-    }
   }
 
   get tfvpSnippet() {
-    if (this.policyName) {
-      const tfvpCommand = (o: Option, type: IdentitySelectionKey) => {
-        return `resource "vault_identity_${type}" "${o.name}" {
+    const tfvpCommand = (o: Option, type: IdentitySelectionKey) => {
+      return `resource "vault_identity_${type}" "${o.name}" {
  name     = "${o.name}"
  policies = ["default", "${this.policyName}"]
 }`;
-      };
+    };
 
-      const command = this.buildAssignmentSnippet(tfvpCommand);
-      return `resource "vault_policy" "${this.policyName}" {
+    const command = this.buildAssignmentSnippet(tfvpCommand);
+    return `resource "vault_policy" "${this.policyName}" {
   name   = "${this.policyName}"
   policy = <<-EOT
 ${this.actualPolicy}
 EOT
 }
 ${command}`;
-    } else {
-      return '# Select a policy or fill in a name to preview commands!';
-    }
   }
 
   @action

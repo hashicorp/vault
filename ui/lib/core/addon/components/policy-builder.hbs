@@ -143,51 +143,61 @@
       </Hds::Card::Container>
 
       <Hds::Card::Container class="has-padding-m has-top-margin-m has-bottom-margin-m" @level="base" @hasBorder={{true}}>
-        <Hds::Text::Display>Apply policy via</Hds::Text::Display>
-        <Hds::Tabs as |T|>
-          <T.Tab>
-            UI
-          </T.Tab>
-          <T.Tab>
-            CLI
-          </T.Tab>
-          <T.Tab>
-            TFVP
-          </T.Tab>
+        {{#if this.policyName}}
+          <Hds::Text::Display>Apply policy via</Hds::Text::Display>
+          <Hds::Tabs as |T|>
+            <T.Tab>
+              UI
+            </T.Tab>
+            <T.Tab>
+              CLI
+            </T.Tab>
+            <T.Tab>
+              TFVP
+            </T.Tab>
 
-          <T.Panel class="has-top-padding-m">
-            <Hds::Text::Body @tag="p" class="has-bottom-padding-s">Click "Apply policy" to
-              {{this.policyAction}}
-              the policy{{this.applySubtext}}.
-            </Hds::Text::Body>
-            <Hds::Button @text="Apply policy" @icon="wand" @isFullWidth={{true}} {{on "click" this.applyPolicy}} />
+            <T.Panel class="has-top-padding-m">
+              <Hds::Text::Body @tag="p" class="has-bottom-padding-s">Click "Apply policy" to
+                {{this.policyAction}}
+                the policy{{this.applySubtext}}.
+              </Hds::Text::Body>
+              <Hds::Button @text="Apply policy" @icon="wand" @isFullWidth={{true}} {{on "click" this.applyPolicy}} />
 
-            {{#if this.error}}
-              <Hds::Alert @type="inline" @color="critical" class="has-top-margin-m" as |A|>
-                <A.Title>Oops! It's hackweek give me a break! ¯\_(ツ)_/¯</A.Title>
-                <A.Description>
-                  {{this.error}}
-                </A.Description>
-              </Hds::Alert>
-            {{/if}}
-          </T.Panel>
-          <T.Panel class="has-top-padding-m">
-            <Hds::Text::Body @tag="p" class="has-bottom-padding-s">
-              A CLI snippet to
-              {{this.policyAction}}
-              the policy{{this.applySubtext}}.
-            </Hds::Text::Body>
-            <Hds::CodeBlock @value={{this.cliSnippet}} @language="ruby" @hasCopyButton={{true}} />
-          </T.Panel>
-          <T.Panel class="has-top-padding-m">
-            <Hds::Text::Body @tag="p" class="has-bottom-padding-s">
-              A TFVP (Terraform Vault Provider) snippet to
-              {{this.policyAction}}
-              the policy{{this.applySubtext}}.
-            </Hds::Text::Body>
-            <Hds::CodeBlock @value={{this.tfvpSnippet}} @language="hcl" @hasCopyButton={{true}} />
-          </T.Panel>
-        </Hds::Tabs>
+              {{#if this.error}}
+                <Hds::Alert @type="inline" @color="critical" class="has-top-margin-m" as |A|>
+                  <A.Title>Oops! It's hackweek give me a break! ¯\_(ツ)_/¯</A.Title>
+                  <A.Description>
+                    {{this.error}}
+                  </A.Description>
+                </Hds::Alert>
+              {{/if}}
+            </T.Panel>
+            <T.Panel class="has-top-padding-m">
+              <Hds::Text::Body @tag="p" class="has-bottom-padding-s">
+                A CLI snippet to
+                {{this.policyAction}}
+                the policy{{this.applySubtext}}.
+              </Hds::Text::Body>
+              <Hds::CodeBlock @value={{this.cliSnippet}} @language="ruby" @hasCopyButton={{true}} />
+            </T.Panel>
+            <T.Panel class="has-top-padding-m">
+              <Hds::Text::Body @tag="p" class="has-bottom-padding-s">
+                A TFVP (Terraform Vault Provider) snippet to
+                {{this.policyAction}}
+                the policy{{this.applySubtext}}.
+              </Hds::Text::Body>
+              <Hds::CodeBlock @value={{this.tfvpSnippet}} @language="hcl" @hasCopyButton={{true}} />
+            </T.Panel>
+          </Hds::Tabs>
+        {{else}}
+          <Hds::ApplicationState @align="center" as |A|>
+            <A.Header
+              @title="{{if (eq this.policyAction 'create') 'Create' 'Select'}} a policy to get started"
+              @icon="wand"
+            />
+            <A.Body @text="Select an existing policy above or create a new one to see options for applying the policy." />
+          </Hds::ApplicationState>
+        {{/if}}
       </Hds::Card::Container>
     </M.Body>
   </Hds::Flyout>
