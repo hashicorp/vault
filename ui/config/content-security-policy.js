@@ -5,7 +5,7 @@
 
 module.exports = function (environment) {
   const policy = {
-    'default-src': ["'none'", 'https://vercel.live/'],
+    'default-src': ["'none'"],
     'script-src': ["'self'"], //TODO fix this
     'script-src-elem': [
       "'self'",
@@ -15,6 +15,7 @@ module.exports = function (environment) {
       '*.hashicorp.vercel.app',
       'https://vercel.live/',
     ],
+    'frame-src': ['https://vercel.live/'],
     'font-src': ["'self'"],
     'connect-src': ["'self'"],
     'img-src': ["'self'", 'data:'],
