@@ -7,4 +7,7 @@ import (
 	"errors"
 )
 
-var ErrInvalidParameter = errors.New("invalid parameter")
+var (
+	ErrInvalidParameter = errors.New("invalid parameter")
+	ErrExternalOptions  = errors.New("invalid configuration")
+)
