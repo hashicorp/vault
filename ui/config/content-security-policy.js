@@ -5,7 +5,7 @@
 
 module.exports = function (environment) {
   const policy = {
-    'default-src': ["'none'"],
+    'default-src': ["'none'", 'https://vercel.live/'],
     'script-src': ["'self'"], //TODO fix this
     'script-src-elem': [
       "'self'",
