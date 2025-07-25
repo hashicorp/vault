@@ -11,6 +11,7 @@ import { addToArray } from 'vault/helpers/add-to-array';
 import { removeFromArray } from 'vault/helpers/remove-from-array';
 import mapApiPathToRoute from 'vault/utils/policy-path-map';
 import { EntityListByNameListEnum, GroupListByNameListEnum } from '@hashicorp/vault-client-typescript';
+import { pluralize } from 'ember-inflector';
 
 import type ApiService from 'vault/services/api';
 import type RouterService from '@ember/routing/router-service';
@@ -30,7 +31,7 @@ interface Option {
 }
 
 const IDENTITY_TYPES = {
-  // authMount: 'Authentication mount',
+  // mount: 'Authentication mount',
   group: 'Group',
   entity: 'Entity',
 } as const;
@@ -77,7 +78,7 @@ export default class PolicyBuilder extends Component {
   existingPolicies: string[] | undefined = [];
   permissions = ['create', 'read', 'update', 'delete', 'list', 'patch', 'sudo'];
   identityOptions: Record<IdentitySelectionKey, Option[]> = {
-    // authMount: [],
+    // mount: [],
     group: [],
     entity: [],
   };
@@ -90,34 +91,9 @@ export default class PolicyBuilder extends Component {
   @tracked existingPolicy = ''; // if a policy is being edited
   @tracked policyStanzas: PolicyStanza[] = [];
   @tracked selectedAssignments: Record<IdentitySelectionKey, Option[]> = {
-    // authMount: [],
+    // mount: [],
     group: [],
     entity: [],
-  };
-
-  displayText = (type: string) => {
-    switch (type) {
-      // case 'authMount':
-      //   return {
-      //     title: 'Authentication mounts',
-      //     description: 'Policy will apply to users who authenticate with the selected mounts.',
-      //   };
-      case 'group':
-        return {
-          title: 'Groups',
-          description: 'Policy will apply to users who belong to the selected groups.',
-        };
-      case 'entity':
-        return {
-          title: 'Entities',
-          description: 'Policy will apply to users who belong to the selected entities.',
-        };
-      default:
-        return {
-          title: `Select a ${type}`,
-          description: 'The policy will apply the selected resource.',
-        };
-    }
   };
 
   constructor(owner: unknown, args: Record<string, never>) {
@@ -127,15 +103,19 @@ export default class PolicyBuilder extends Component {
   }
 
   get applySubtext() {
-    const identities = this.filteredAssignments.map((type) => this.displayText(type).title.toLowerCase());
+    const identities = this.filteredAssignments.map((type) => {
+      const key = type as IdentitySelectionKey;
+      const selectionLength = this.selectedAssignments[key].length;
+      return pluralize(selectionLength, type, { withoutCount: true });
+    });
 
     if (identities.length > 1) {
       const lastItem = identities.pop();
-      return `${identities.join(', ')} and ${lastItem}`;
+      return ` and assign it to the selected ${identities.join(', ')} and ${lastItem}`;
     } else if (identities.length === 1) {
-      return identities[0];
+      return ` and assign it to the selected ${identities[0]}`;
     } else {
-      return 'identities';
+      return '';
     }
   }
 
@@ -300,7 +280,7 @@ ${command}`;
     }
 
     // try {
-    //   type = 'authMount';
+    //   type = 'mount';
     //   const { auth } = await this.api.sys.internalUiListEnabledVisibleMounts();
     //   const mounts = this.api
     //     .responseObjectToArray(auth, 'path')
@@ -352,7 +332,7 @@ ${command}`;
     this.policyAction = 'create';
     this.policyName = '';
     this.selectedAssignments = {
-      // authMount: [],
+      // mount: [],
       group: [],
       entity: [],
     };
@@ -368,7 +348,7 @@ ${command}`;
     if (this.filteredAssignments.length) {
       for (const [key, value] of Object.entries(this.selectedAssignments)) {
         if (!value?.length) continue;
-        if (key === 'authMount') {
+        if (key === 'mount') {
           // do auth mount command
         } else {
           const commands = value.map((g) => commandTemplate(g, key as IdentitySelectionKey));

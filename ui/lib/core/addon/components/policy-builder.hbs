@@ -27,13 +27,7 @@
         </Hds::Form::Radio::Group>
 
         {{#if (eq this.policyAction "create")}}
-          <Hds::Form::TextInput::Field
-            class="field"
-            name="name"
-            autocomplete="off"
-            {{on "input" this.handleCreatePolicy}}
-            as |F|
-          >
+          <Hds::Form::TextInput::Field class="field" autocomplete="off" {{on "input" this.handleCreatePolicy}} as |F|>
             <F.Label>Policy name</F.Label>
           </Hds::Form::TextInput::Field>
         {{else if (eq this.policyAction "edit")}}
@@ -101,7 +95,7 @@
                 </Hds::Form::TextInput::Field>
               </div>
 
-              <Hds::Form::Checkbox::Group class="field" @layout="horizontal" @name="PATH NAME" as |G|>
+              <Hds::Form::Checkbox::Group class="field" @layout="horizontal" as |G|>
                 <G.Legend class="has-top-padding-m">Capabilities</G.Legend>
                 {{#each this.permissions as |p|}}
                   <G.CheckboxField
@@ -135,8 +129,9 @@
             class="field"
             as |F|
           >
-            <F.Label>{{get (this.displayText type) "title"}}</F.Label>
-            <F.HelperText>{{get (this.displayText type) "description"}}</F.HelperText>
+            <F.Label>{{pluralize (capitalize type)}}</F.Label>
+            <F.HelperText>Policy will apply to users who belong to the selected
+              {{pluralize (get (get this.selectedAssignments type) "length") type without-count=true}}.</F.HelperText>
             <F.Options>
               {{#let F.options as |option|}}
                 {{option.name}}
@@ -161,10 +156,9 @@
           </T.Tab>
 
           <T.Panel class="has-top-padding-m">
-            <Hds::Text::Body @tag="p" class="has-bottom-padding-s">Click "Apply policy" to assigned
+            <Hds::Text::Body @tag="p" class="has-bottom-padding-s">Click "Apply policy" to
               {{this.policyAction}}
-              the policy and assign it to the selected
-              {{this.applySubtext}}.
+              the policy{{this.applySubtext}}.
             </Hds::Text::Body>
             <Hds::Button @text="Apply policy" @icon="wand" @isFullWidth={{true}} {{on "click" this.applyPolicy}} />
 
@@ -177,10 +171,20 @@
               </Hds::Alert>
             {{/if}}
           </T.Panel>
-          <T.Panel>
+          <T.Panel class="has-top-padding-m">
+            <Hds::Text::Body @tag="p" class="has-bottom-padding-s">
+              A CLI snippet to
+              {{this.policyAction}}
+              the policy{{this.applySubtext}}.
+            </Hds::Text::Body>
             <Hds::CodeBlock @value={{this.cliSnippet}} @language="ruby" @hasCopyButton={{true}} />
           </T.Panel>
           <T.Panel class="has-top-padding-m">
+            <Hds::Text::Body @tag="p" class="has-bottom-padding-s">
+              A TFVP (Terraform Vault Provider) snippet to
+              {{this.policyAction}}
+              the policy{{this.applySubtext}}.
+            </Hds::Text::Body>
             <Hds::CodeBlock @value={{this.tfvpSnippet}} @language="hcl" @hasCopyButton={{true}} />
           </T.Panel>
         </Hds::Tabs>
