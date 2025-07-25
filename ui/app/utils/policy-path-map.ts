@@ -7,6 +7,7 @@ import apiPath from './api-path';
 
 const API_PATHS = {
   kvv2: [apiPath`${'backend'}/data/${'path'}`, apiPath`${'backend'}/metadata/${'path'}`],
+  secretsList: [apiPath`${'backend'}/`],
 };
 
 // Regex-based route matching - more flexible for parent/child relationships
@@ -15,6 +16,10 @@ const ROUTE_PATTERNS: Array<{ pattern: RegExp; paths: ReturnType<typeof apiPath>
   {
     pattern: /^vault\.cluster\.secrets\.backend\.kv/,
     paths: API_PATHS.kvv2,
+  },
+  {
+    pattern: /^vault\.cluster\.secrets\./,
+    paths: API_PATHS.secretsList,
   },
 ];
 
