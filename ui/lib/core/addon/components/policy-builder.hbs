@@ -2,12 +2,12 @@
   @text="Generate policy"
   @color="tertiary"
   @icon="shield-check"
-  {{on "click" this.openFlyout}}
+  {{on "click" (fn this.handleFlyout "open")}}
   class="policy-wizard"
 />
 
 {{#if this.showFlyout}}
-  <Hds::Flyout @size="large" @onClose={{fn (mut this.showFlyout) false}} as |M|>
+  <Hds::Flyout @size="large" @onClose={{fn this.handleFlyout "close"}} as |M|>
     <M.Header class="policy-wizard" @icon="wand">
       Policy Wizard
     </M.Header>

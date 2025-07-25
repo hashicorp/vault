@@ -202,31 +202,36 @@ ${command}`;
   }
 
   @action
-  openFlyout() {
-    this.showFlyout = true;
+  handleFlyout(action: string) {
+    this.showFlyout = action === 'open' ? true : false;
 
-    const { currentRoute, currentRouteName } = this.router;
-    if (currentRoute && !currentRouteName?.includes('loading') && 'attributes' in currentRoute) {
-      const { name, attributes } = currentRoute as { name: string; attributes: unknown };
-      const apiPaths = mapApiPathToRoute(name);
-      // hardcoding the check for "backend" since this is hackweek and
-      // only secrets are supported
-      // try the parent if there are none at the current route
-      let params;
-      if (
-        attributes &&
-        typeof attributes === 'object' &&
-        !Array.isArray(attributes) &&
-        'backend' in attributes
-      ) {
-        params = attributes;
+    if (action === 'open') {
+      const { currentRoute, currentRouteName } = this.router;
+      if (currentRoute && !currentRouteName?.includes('loading') && 'attributes' in currentRoute) {
+        const { name, attributes } = currentRoute as { name: string; attributes: unknown };
+        const apiPaths = mapApiPathToRoute(name);
+        // hardcoding the check for "backend" since this is hackweek and
+        // only secrets are supported
+        // try the parent if there are none at the current route
+        let params;
+        if (
+          attributes &&
+          typeof attributes === 'object' &&
+          !Array.isArray(attributes) &&
+          'backend' in attributes
+        ) {
+          params = attributes;
+        } else {
+          params = currentRoute?.parent?.params;
+        }
+        this.policyStanzas = apiPaths?.map((fn) => new PolicyStanza(fn(params))) || [];
+        this.policyStanzas = [...this.policyStanzas];
       } else {
-        params = currentRoute?.parent?.params;
+        this.policyStanzas = [];
       }
-      this.policyStanzas = apiPaths?.map((fn) => new PolicyStanza(fn(params))) || [];
-      this.policyStanzas = [...this.policyStanzas];
+    } else {
+      this.resetState();
     }
-    return [];
   }
 
   @action
