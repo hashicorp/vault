@@ -2,11 +2,5 @@
   "buildCommand": "ember build",
   "outputDirectory": "../http/web_ui",
   "installCommand": "yarn install",
-  "framework": null,
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ]
+  "framework": null
 }
