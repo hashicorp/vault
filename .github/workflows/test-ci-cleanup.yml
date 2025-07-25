@@ -2,7 +2,7 @@ name: test-ci-cleanup
 on:
   push:
     branches:
-      - enos/ent/VAULT-35697
+      - enos/VAULT-35697
   schedule:
     # * is a special character in YAML so you have to quote this string
     - cron:  '05 02 * * *'
