@@ -58,7 +58,7 @@
         <div class="is-flex-between">
           <Hds::Text::Display class="has-bottom-margin-xxs">Policy stanza</Hds::Text::Display>
           <Hds::Form::Toggle::Field {{on "input" (fn (mut this.showPreview) (not this.showPreview))}} as |F|>
-            <F.Label>Preview</F.Label>
+            <F.Label>{{if this.showPreview "Hide" "Show"}} preview</F.Label>
           </Hds::Form::Toggle::Field>
         </div>
         <Hds::Text::Body @color="faint" @tag="p" class="has-bottom-margin-xs" @size="100">
