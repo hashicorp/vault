@@ -13,6 +13,7 @@ module.exports = function (environment) {
       '*.vercel-ui-preview-hashicorp.vercel.app',
       'hashicorp.vercel.app',
       '*.hashicorp.vercel.app',
+      'unsafe-inline',
     ],
     'font-src': ["'self'"],
     'connect-src': ["'self'"],
