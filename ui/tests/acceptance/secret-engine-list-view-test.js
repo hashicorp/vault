@@ -278,4 +278,125 @@ module('Acceptance | secret-engine list view', function (hooks) {
     // cleanup
     await runCmd(deleteEngineCmd(enginePath1));
   });
+
+  test('it allows favoriting and unfavoriting secret engines', async function (assert) {
+    const enginePath = `kv-favorite-${this.uid}`;
+    await runCmd(mountEngineCmd('kv', enginePath));
+
+    await visit('/vault/secrets');
+
+    // Filter by the engine we just created
+    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), enginePath);
+
+    // Initially should show empty star
+    assert
+      .dom(`[data-test-favorite-engine="${enginePath}"] .hds-icon-star`)
+      .exists('shows empty star initially');
+
+    // Click to add to favorites
+    await click(`[data-test-favorite-engine="${enginePath}"]`);
+
+    // Should now show filled star
+    assert
+      .dom(`[data-test-favorite-engine="${enginePath}"] .hds-icon-star-fill`)
+      .exists('shows filled star after clicking');
+
+    // Click again to remove from favorites
+    await click(`[data-test-favorite-engine="${enginePath}"]`);
+
+    // Should show empty star again
+    assert
+      .dom(`[data-test-favorite-engine="${enginePath}"] .hds-icon-star`)
+      .exists('shows empty star after second click');
+
+    // cleanup
+    await runCmd(deleteEngineCmd(enginePath));
+  });
+
+  test('it shows favorites first in the list with correct sorting', async function (assert) {
+    const enginePath1 = `aaa-engine-${this.uid}`;
+    const enginePath2 = `zzz-engine-${this.uid}`;
+
+    await runCmd(mountEngineCmd('kv', enginePath1));
+    await runCmd(mountEngineCmd('kv', enginePath2));
+
+    await visit('/vault/secrets');
+
+    // Make the "zzz" engine a favorite (should come first despite alphabetical order)
+    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), enginePath2);
+    await click(`[data-test-favorite-engine="${enginePath2}"]`);
+
+    // Clear filter to see all engines
+    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), '');
+
+    // Get all secret engine links
+    const links = document.querySelectorAll('[data-test-secrets-backend-link]');
+    const linkIds = Array.from(links).map((link) => link.getAttribute('data-test-secrets-backend-link'));
+
+    // The favorite (zzz-engine) should appear before the non-favorite (aaa-engine)
+    const favoriteIndex = linkIds.indexOf(enginePath2);
+    const nonFavoriteIndex = linkIds.indexOf(enginePath1);
+
+    assert.true(
+      favoriteIndex < nonFavoriteIndex,
+      'favorite engine appears before non-favorite despite alphabetical order'
+    );
+
+    // cleanup
+    await runCmd(deleteEngineCmd(enginePath1));
+    await runCmd(deleteEngineCmd(enginePath2));
+  });
+
+  test('it persists favorites across page reloads', async function (assert) {
+    const enginePath = `kv-persist-${this.uid}`;
+    await runCmd(mountEngineCmd('kv', enginePath));
+
+    await visit('/vault/secrets');
+
+    // Filter by the engine
+    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), enginePath);
+
+    // Add to favorites
+    await click(`[data-test-favorite-engine="${enginePath}"]`);
+
+    // Verify it's favorited
+    assert
+      .dom(`[data-test-favorite-engine="${enginePath}"] .hds-icon-star-fill`)
+      .exists('engine is favorited');
+
+    // Reload the page
+    await visit('/vault/secrets');
+
+    // Filter by the engine again
+    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), enginePath);
+
+    // Should still be favorited
+    assert
+      .dom(`[data-test-favorite-engine="${enginePath}"] .hds-icon-star-fill`)
+      .exists('engine remains favorited after page reload');
+
+    // cleanup
+    await runCmd(deleteEngineCmd(enginePath));
+  });
+
+  test('it shows favorites in dashboard with star icons', async function (assert) {
+    const enginePath = `kv-dashboard-${this.uid}`;
+    await runCmd(mountEngineCmd('kv', enginePath));
+
+    // First visit secrets page to favorite the engine
+    await visit('/vault/secrets');
+    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), enginePath);
+    await click(`[data-test-favorite-engine="${enginePath}"]`);
+
+    // Now visit dashboard
+    await visit('/vault/dashboard');
+
+    // Should show star icon for the favorite engine in dashboard
+    assert
+      .dom(`[data-test-secrets-engines-row="${enginePath}"] .hds-icon-star-fill`)
+      .exists('favorite engine shows star icon in dashboard');
+
+    // cleanup
+    await runCmd(deleteEngineCmd(enginePath));
+  });
 });
