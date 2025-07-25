@@ -10,12 +10,6 @@ terraform {
   }
 }
 
-variable "artifactory_username" {
-  type        = string
-  description = "The username to use when connecting to artifactory"
-  default     = null
-}
-
 variable "artifactory_token" {
   type        = string
   description = "The token to use when connecting to artifactory"
@@ -58,12 +52,11 @@ module "artifact_metadata" {
 }
 
 data "enos_artifactory_item" "vault" {
-  username = var.artifactory_username
-  token    = var.artifactory_token
-  name     = module.artifact_metadata.artifact_name
-  host     = var.artifactory_host
-  repo     = var.artifactory_repo
-  path     = "${module.artifact_metadata.product_name}/*"
+  token = var.artifactory_token
+  name  = module.artifact_metadata.artifact_name
+  host  = var.artifactory_host
+  repo  = var.artifactory_repo
+  path  = "${module.artifact_metadata.product_name}/*"
   properties = tomap({
     "commit"          = var.revision,
     "product-name"    = module.artifact_metadata.product_name,
@@ -95,7 +88,7 @@ output "vault_artifactory_release" {
   value = {
     url      = data.enos_artifactory_item.vault.results[0].url
     sha256   = data.enos_artifactory_item.vault.results[0].sha256
-    username = var.artifactory_username
     token    = var.artifactory_token
+    username = null # username is not an optional value yet
   }
 }

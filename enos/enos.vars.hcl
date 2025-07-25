@@ -1,9 +1,6 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: BUSL-1.1
 
-// artifactory_username is the username to use when testing an artifact stored in artfactory.
-// artifactory_username = "yourname@hashicorp.com"
-
 // artifactory_token is the token to use when authenticating to artifactory.
 // artifactory_token = "yourtoken"
 

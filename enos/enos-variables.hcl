@@ -1,13 +1,6 @@
 // Copyright (c) HashiCorp, Inc.
 // SPDX-License-Identifier: BUSL-1.1
 
-variable "artifactory_username" {
-  type        = string
-  description = "The username to use when testing an artifact from artifactory"
-  default     = null
-  sensitive   = true
-}
-
 variable "artifactory_token" {
   type        = string
   description = "The token to use when authenticating to artifactory"
