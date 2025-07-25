@@ -8,7 +8,7 @@
 
 FEATURES:
 
-* **Post-Quantum Cryptography Support**: Experimental support for PQC signatures with SLH-DSA.
+* **Post-Quantum Cryptography Support**: Experimental support for PQC signatures with SLH-DSA in Transit.
 
 IMPROVEMENTS:
 
@@ -502,6 +502,7 @@ schedules/periods via the Rotation Manager. Note: Enterprise only. [[GH-29598](h
 Entities and Groups by renaming them. This feature is disabled by default and
 can be enabled through the `force_identity_deduplication` activation flag. [[GH-29356](https://github.com/hashicorp/vault/pull/29356)]
 * **Plugins**: Allow Enterprise plugins to run externally on Vault Enterprise only.
+* **Post-Quantum Cryptography Support**: Experimental support for PQC signatures with ML-DSA in Transit.
 * **Product Usage Reporting**: Added product usage reporting, which collects anonymous, numerical, non-sensitive data about Vault feature usage, and adds it to the existing utilization reports. [[GH-28858](https://github.com/hashicorp/vault/pull/28858)]
 * **Rotation Manager**: Add Rotation Manager to Vault Enterprise Core. The Rotation Manager enables
 plugin users to automate their root credential rotations based on configurable schedules/periods.
