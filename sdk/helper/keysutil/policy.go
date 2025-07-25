@@ -76,6 +76,8 @@ const (
 	KeyType_HYBRID
 	KeyType_AES192_CMAC
 	KeyType_SLH_DSA
+	KeyType_AES128_CBC
+	KeyType_AES256_CBC
 	// If adding to this list please update allTestKeyTypes in policy_test.go
 )
 
@@ -175,6 +177,13 @@ type SigningOptions struct {
 	ManagedKeyParams ManagedKeyParameters
 }
 
+type EncryptionOptions struct {
+	KeyVersion int
+	Context    []byte
+	Nonce      []byte
+	IV         []byte
+}
+
 type SigningResult struct {
 	Signature string
 	PublicKey []byte
@@ -188,7 +197,7 @@ type KeyType int
 
 func (kt KeyType) EncryptionSupported() bool {
 	switch kt {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY, KeyType_AES128_CBC, KeyType_AES256_CBC:
 		return true
 	}
 	return false
@@ -196,7 +205,7 @@ func (kt KeyType) EncryptionSupported() bool {
 
 func (kt KeyType) DecryptionSupported() bool {
 	switch kt {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_RSA2048, KeyType_RSA3072, KeyType_RSA4096, KeyType_MANAGED_KEY, KeyType_AES128_CBC, KeyType_AES256_CBC:
 		return true
 	}
 	return false
@@ -220,7 +229,7 @@ func (kt KeyType) HashSignatureInput() bool {
 
 func (kt KeyType) DerivationSupported() bool {
 	switch kt {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_ED25519:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_ED25519, KeyType_AES128_CBC, KeyType_AES256_CBC:
 		return true
 	}
 	return false
@@ -254,9 +263,9 @@ func (kt KeyType) HMACSupported() bool {
 	}
 }
 
-func (kt KeyType) IsPQC() bool {
+func (kt KeyType) IsEnterpriseOnly() bool {
 	switch kt {
-	case KeyType_ML_DSA, KeyType_HYBRID, KeyType_SLH_DSA:
+	case KeyType_MANAGED_KEY, KeyType_AES128_CMAC, KeyType_AES192_CMAC, KeyType_AES256_CMAC, KeyType_ML_DSA, KeyType_HYBRID, KeyType_AES128_CBC, KeyType_AES256_CBC, KeyType_SLH_DSA:
 		return true
 	default:
 		return false
@@ -318,6 +327,10 @@ func (kt KeyType) String() string {
 		return "aes192-cmac"
 	case KeyType_SLH_DSA:
 		return "slh-dsa"
+	case KeyType_AES128_CBC:
+		return "aes128-cbc"
+	case KeyType_AES256_CBC:
+		return "aes256-cbc"
 	}
 
 	return "[unknown]"
@@ -1040,6 +1053,13 @@ func (p *Policy) Decrypt(context, nonce []byte, value string) (string, error) {
 }
 
 func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factories ...any) (string, error) {
+	return p.DecryptWithOptions(EncryptionOptions{
+		Context: context,
+		Nonce:   nonce,
+	}, value, factories...)
+}
+
+func (p *Policy) DecryptWithOptions(opts EncryptionOptions, value string, factories ...any) (string, error) {
 	if !p.Type.DecryptionSupported() {
 		return "", errutil.UserError{Err: fmt.Sprintf("message decryption not supported for key type %v", p.Type)}
 	}
@@ -1077,9 +1097,10 @@ func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factori
 	if p.MinDecryptionVersion > 0 && ver < p.MinDecryptionVersion {
 		return "", errutil.UserError{Err: ErrTooOld}
 	}
+	opts.KeyVersion = ver
 
 	convergentVersion := p.convergentVersion(ver)
-	if convergentVersion == 1 && (nonce == nil || len(nonce) == 0) {
+	if convergentVersion == 1 && (opts.Nonce == nil || len(opts.Nonce) == 0) {
 		return "", errutil.UserError{Err: "invalid convergent nonce supplied"}
 	}
 
@@ -1098,7 +1119,7 @@ func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factori
 			numBytes = 16
 		}
 
-		encKey, err := p.GetKey(context, ver, numBytes)
+		encKey, err := p.GetKey(opts.Context, ver, numBytes)
 		if err != nil {
 			return "", err
 		}
@@ -1178,13 +1199,16 @@ func (p *Policy) DecryptWithFactory(context, nonce []byte, value string, factori
 			return "", errors.New("key type is managed_key, but managed key parameters were not provided")
 		}
 
-		plain, err = p.decryptWithManagedKey(managedKeyFactory.GetManagedKeyParameters(), keyEntry, decoded, nonce, aad)
+		plain, err = p.decryptWithManagedKey(managedKeyFactory.GetManagedKeyParameters(), keyEntry, decoded, opts.Nonce, aad)
 		if err != nil {
 			return "", err
 		}
 
 	default:
-		return "", errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
+		plain, err = entDecryptWithOptions(p, opts, decoded)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	return base64.StdEncoding.EncodeToString(plain), nil
@@ -1673,14 +1697,14 @@ func (p *Policy) ImportPublicOrPrivate(ctx context.Context, storage logical.Stor
 		return fmt.Errorf("unable to import only public key for derived Ed25519 key: imported key should not be an Ed25519 key pair but is instead an HKDF key")
 	}
 
-	if ((p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES128_CMAC) && len(key) != 16) ||
-		((p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305 || p.Type == KeyType_AES256_CMAC) && len(key) != 32) ||
+	if ((p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES128_CMAC || p.Type == KeyType_AES128_CBC) && len(key) != 16) ||
+		((p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305 || p.Type == KeyType_AES256_CMAC || p.Type == KeyType_AES256_CBC) && len(key) != 32) ||
 		(p.Type == KeyType_AES192_CMAC && len(key) != 24) ||
 		(p.Type == KeyType_HMAC && (len(key) < HmacMinKeySize || len(key) > HmacMaxKeySize)) {
 		return fmt.Errorf("invalid key size %d bytes for key type %s", len(key), p.Type)
 	}
 
-	if p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305 || p.Type == KeyType_HMAC || p.Type == KeyType_AES128_CMAC || p.Type == KeyType_AES256_CMAC || p.Type == KeyType_AES192_CMAC {
+	if p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES256_GCM96 || p.Type == KeyType_ChaCha20_Poly1305 || p.Type == KeyType_HMAC || p.Type == KeyType_AES128_CMAC || p.Type == KeyType_AES256_CMAC || p.Type == KeyType_AES192_CMAC || p.Type == KeyType_AES128_CBC || p.Type == KeyType_AES256_CBC {
 		entry.Key = key
 		if p.Type == KeyType_HMAC {
 			p.KeySize = len(key)
@@ -1802,10 +1826,10 @@ func (p *Policy) RotateInMemory(randReader io.Reader) (retErr error) {
 
 	var err error
 	switch p.Type {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES256_CMAC, KeyType_AES192_CMAC:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES256_CMAC, KeyType_AES192_CMAC, KeyType_AES128_CBC, KeyType_AES256_CBC:
 		// Default to 256 bit key
 		numBytes := 32
-		if p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES128_CMAC {
+		if p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES128_CMAC || p.Type == KeyType_AES128_CBC {
 			numBytes = 16
 		} else if p.Type == KeyType_AES192_CMAC {
 			numBytes = 24
@@ -2153,6 +2177,14 @@ func (p *Policy) SymmetricDecryptRaw(encKey, ciphertext []byte, opts SymmetricOp
 }
 
 func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value string, factories ...any) (string, error) {
+	return p.EncryptWithOptions(EncryptionOptions{
+		KeyVersion: ver,
+		Context:    context,
+		Nonce:      nonce,
+	}, value, factories...)
+}
+
+func (p *Policy) EncryptWithOptions(opts EncryptionOptions, value string, factories ...any) (string, error) {
 	if !p.Type.EncryptionSupported() {
 		return "", errutil.UserError{Err: fmt.Sprintf("message encryption not supported for key type %v", p.Type)}
 	}
@@ -2164,13 +2196,13 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 	}
 
 	switch {
-	case ver == 0:
-		ver = p.LatestVersion
-	case ver < 0:
+	case opts.KeyVersion == 0:
+		opts.KeyVersion = p.LatestVersion
+	case opts.KeyVersion < 0:
 		return "", errutil.UserError{Err: "requested version for encryption is negative"}
-	case ver > p.LatestVersion:
+	case opts.KeyVersion > p.LatestVersion:
 		return "", errutil.UserError{Err: "requested version for encryption is higher than the latest key version"}
-	case ver < p.MinEncryptionVersion:
+	case opts.KeyVersion < p.MinEncryptionVersion:
 		return "", errutil.UserError{Err: "requested version for encryption is less than the minimum encryption key version"}
 	}
 
@@ -2178,51 +2210,15 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 
 	switch p.Type {
 	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305:
-		hmacKey := context
-
-		var encKey []byte
-		var deriveHMAC bool
-
-		encBytes := 32
-		hmacBytes := 0
-		convergentVersion := p.convergentVersion(ver)
-		if convergentVersion > 2 {
-			deriveHMAC = true
-			hmacBytes = 32
-			if len(nonce) > 0 {
-				return "", errutil.UserError{Err: "nonce provided when not allowed"}
-			}
-		} else if len(nonce) > 0 && (!p.ConvergentEncryption || convergentVersion != 1) {
-			return "", errutil.UserError{Err: "nonce provided when not allowed"}
-		}
-		if p.Type == KeyType_AES128_GCM96 {
-			encBytes = 16
-		}
-
-		key, err := p.GetKey(context, ver, encBytes+hmacBytes)
+		encKey, hmacKey, err := p.getSymmetricKeys(opts)
 		if err != nil {
 			return "", err
-		}
-
-		if len(key) < encBytes+hmacBytes {
-			return "", errutil.InternalError{Err: "could not derive key, length too small"}
-		}
-
-		encKey = key[:encBytes]
-		if len(encKey) != encBytes {
-			return "", errutil.InternalError{Err: "could not derive enc key, length not correct"}
-		}
-		if deriveHMAC {
-			hmacKey = key[encBytes:]
-			if len(hmacKey) != hmacBytes {
-				return "", errutil.InternalError{Err: "could not derive hmac key, length not correct"}
-			}
 		}
 
 		symopts := SymmetricOpts{
 			Convergent: p.ConvergentEncryption,
 			HMACKey:    hmacKey,
-			Nonce:      nonce,
+			Nonce:      opts.Nonce,
 		}
 		for index, rawFactory := range factories {
 			if rawFactory == nil {
@@ -2242,7 +2238,7 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 			}
 		}
 
-		ciphertext, err = p.SymmetricEncryptRaw(ver, encKey, plaintext, symopts)
+		ciphertext, err = p.SymmetricEncryptRaw(opts.KeyVersion, encKey, plaintext, symopts)
 		if err != nil {
 			return "", err
 		}
@@ -2251,7 +2247,7 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 		if err != nil {
 			return "", err
 		}
-		keyEntry, err := p.safeGetKeyEntry(ver)
+		keyEntry, err := p.safeGetKeyEntry(opts.KeyVersion)
 		if err != nil {
 			return "", err
 		}
@@ -2274,7 +2270,7 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 			return "", errutil.InternalError{Err: fmt.Sprintf("failed to RSA encrypt the plaintext: %v", err)}
 		}
 	case KeyType_MANAGED_KEY:
-		keyEntry, err := p.safeGetKeyEntry(ver)
+		keyEntry, err := p.safeGetKeyEntry(opts.KeyVersion)
 		if err != nil {
 			return "", err
 		}
@@ -2297,22 +2293,71 @@ func (p *Policy) EncryptWithFactory(ver int, context []byte, nonce []byte, value
 			return "", errors.New("key type is managed_key, but managed key parameters were not provided")
 		}
 
-		ciphertext, err = p.encryptWithManagedKey(managedKeyFactory.GetManagedKeyParameters(), keyEntry, plaintext, nonce, aad)
+		ciphertext, err = p.encryptWithManagedKey(managedKeyFactory.GetManagedKeyParameters(), keyEntry, plaintext, opts.Nonce, aad)
 		if err != nil {
 			return "", err
 		}
 
 	default:
-		return "", errutil.InternalError{Err: fmt.Sprintf("unsupported key type %v", p.Type)}
+		ciphertext, err = entEncryptWithOptions(p, opts, plaintext)
+		if err != nil {
+			return "", err
+		}
 	}
 
 	// Convert to base64
 	encoded := base64.StdEncoding.EncodeToString(ciphertext)
 
 	// Prepend some information
-	encoded = p.getVersionPrefix(ver) + encoded
+	encoded = p.getVersionPrefix(opts.KeyVersion) + encoded
 
 	return encoded, nil
+}
+
+func (p *Policy) getSymmetricKeys(opts EncryptionOptions) ([]byte, []byte, error) {
+	hmacKey := opts.Context
+
+	var encKey []byte
+	var deriveHMAC bool
+
+	encBytes := 32
+	hmacBytes := 0
+	convergentVersion := p.convergentVersion(opts.KeyVersion)
+
+	if convergentVersion > 2 {
+		deriveHMAC = true
+		hmacBytes = 32
+		if len(opts.Nonce) > 0 {
+			return nil, nil, errutil.UserError{Err: "nonce provided when not allowed"}
+		}
+	} else if len(opts.Nonce) > 0 && (!p.ConvergentEncryption || convergentVersion != 1) {
+		return nil, nil, errutil.UserError{Err: "nonce provided when not allowed"}
+	}
+	if p.Type == KeyType_AES128_GCM96 || p.Type == KeyType_AES128_CBC {
+		encBytes = 16
+	}
+
+	key, err := p.GetKey(opts.Context, opts.KeyVersion, encBytes+hmacBytes)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if len(key) < encBytes+hmacBytes {
+		return nil, nil, errutil.InternalError{Err: "could not derive key, length too small"}
+	}
+
+	encKey = key[:encBytes]
+	if len(encKey) != encBytes {
+		return nil, nil, errutil.InternalError{Err: "could not derive enc key, length not correct"}
+	}
+	if deriveHMAC {
+		hmacKey = key[encBytes:]
+		if len(hmacKey) != hmacBytes {
+			return nil, nil, errutil.InternalError{Err: "could not derive hmac key, length not correct"}
+		}
+	}
+
+	return encKey, hmacKey, nil
 }
 
 func getPaddingScheme(factories []any) (PaddingScheme, error) {
@@ -2556,7 +2601,7 @@ func (ke *KeyEntry) WrapKey(targetKey any, targetKeyType KeyType, hash hash.Hash
 
 	var preppedTargetKey []byte
 	switch targetKeyType {
-	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES256_CMAC, KeyType_AES192_CMAC:
+	case KeyType_AES128_GCM96, KeyType_AES256_GCM96, KeyType_ChaCha20_Poly1305, KeyType_HMAC, KeyType_AES128_CMAC, KeyType_AES256_CMAC, KeyType_AES192_CMAC, KeyType_AES128_CBC, KeyType_AES256_CBC:
 		var ok bool
 		preppedTargetKey, ok = targetKey.([]byte)
 		if !ok {
