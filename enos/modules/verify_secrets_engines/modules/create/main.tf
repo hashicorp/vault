@@ -22,6 +22,26 @@ variable "create_aws_secrets_engine" {
   default     = false
 }
 
+variable "ipv4_cidr" {
+  type        = string
+  description = "The CIDR block for the VPC when using IPV4 mode"
+}
+
+variable "ipv6_cidr" {
+  type        = string
+  default     = "fd00:ffff::/64"
+  description = "The CIDR block for the VPC when using IPV6 mode"
+}
+
+variable "ports" {
+  type = map(object({
+    description = string
+    port        = number
+    protocol    = string
+  }))
+  description = "The ports to use for the Vault cluster instances"
+}
+
 variable "hosts" {
   type = map(object({
     ipv6       = string
@@ -84,12 +104,18 @@ variable "vault_root_token" {
   default     = null
 }
 
+variable "vault_edition" {
+  description = "The Vault binary edition (e.g., 'ce', 'ent', 'ent.fips1403', etc.)"
+  type        = string
+}
+
 output "state" {
   value = {
     auth     = local.auth_output
     identity = local.identity_output
     kv       = local.kv_output
     pki      = local.pki_output
+    ssh      = local.ssh_output
     aws      = local.aws_state
     ldap     = local.ldap_output
   }

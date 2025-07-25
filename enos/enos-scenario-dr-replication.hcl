@@ -746,6 +746,8 @@ scenario "dr_replication" {
     ]
 
     variables {
+      ports             = global.ports
+      ipv4_cidr         = step.create_vpc.ipv4_cidr
       hosts             = step.create_primary_cluster_targets.hosts
       ip_version        = matrix.ip_version
       ldap_host         = step.set_up_external_integration_target.state.ldap.host
@@ -753,6 +755,7 @@ scenario "dr_replication" {
       vault_addr        = step.create_primary_cluster.api_addr_localhost
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_primary_cluster.root_token
+      vault_edition     = matrix.edition
     }
   }
 
@@ -1296,6 +1299,32 @@ scenario "dr_replication" {
       vault_root_token        = step.create_secondary_cluster.root_token
       verify_pki_certs        = false
       verify_aws_engine_creds = false
+    }
+  }
+
+  step "verify_secrets_engines_delete" {
+    description = global.description.verify_secrets_engines_delete
+    module      = module.vault_verify_secrets_engines_delete
+    depends_on = [
+      step.verify_secrets_engines_on_primary,
+      step.verify_failover_replicated_data
+    ]
+
+    providers = {
+      enos = local.enos_provider[matrix.distro]
+    }
+
+    verifies = [
+      quality.vault_api_ssh_role_delete
+    ]
+
+    variables {
+      create_state      = step.verify_secrets_engines_on_primary.state
+      hosts             = step.get_secondary_cluster_ips.follower_hosts
+      leader_host       = step.get_secondary_cluster_ips.leader_host
+      vault_addr        = step.create_secondary_cluster.api_addr_localhost
+      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token  = step.create_secondary_cluster.root_token
     }
   }
 
