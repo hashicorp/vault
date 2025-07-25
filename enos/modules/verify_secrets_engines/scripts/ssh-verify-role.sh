@@ -70,28 +70,28 @@ fi
 
 log "Successfully read role $ROLE_NAME"
 
-key_type=$(jq -r               '.data.key_type' <<< "$output")
-default_user=$(jq -r               '.data.default_user' <<< "$output")
-allowed_users=$(jq -r               '.data.allowed_users' <<< "$output")
+key_type=$(jq -r '.data.key_type' <<< "$output")
+default_user=$(jq -r '.data.default_user' <<< "$output")
+allowed_users=$(jq -r '.data.allowed_users' <<< "$output")
 
 log "extracted common data"
 
 case "$KEY_TYPE" in
   otp)
-    port=$(jq -r               '.data.port' <<< "$output")
-    cidr_list=$(jq -r               '.data.cidr_list' <<< "$output")
-    exclude_cidr_list=$(jq -r               '.data.exclude_cidr_list' <<< "$output")
+    port=$(jq -r '.data.port' <<< "$output")
+    cidr_list=$(jq -r '.data.cidr_list' <<< "$output")
+    exclude_cidr_list=$(jq -r '.data.exclude_cidr_list' <<< "$output")
     log "extracted otp specific data"
     ;;
   ca)
-    ttl=$(jq -r               '.data.ttl' <<< "$output")
-    max_ttl=$(jq -r               '.data.max_ttl' <<< "$output")
-    key_id_format=$(jq -r               '.data.key_id_format' <<< "$output")
-    allow_user_certificates=$(jq -r               '.data.allow_user_certificates' <<< "$output")
-    allow_host_certificates=$(jq -r               '.data.allow_host_certificates' <<< "$output")
-    allow_user_key_ids=$(jq -r               '.data.allow_user_key_ids' <<< "$output")
-    allow_empty_principals=$(jq -r               '.data.allow_empty_principals' <<< "$output")
-    algorithm_signer=$(jq -r               '.data.algorithm_signer' <<< "$output")
+    ttl=$(jq -r '.data.ttl' <<< "$output")
+    max_ttl=$(jq -r '.data.max_ttl' <<< "$output")
+    key_id_format=$(jq -r '.data.key_id_format' <<< "$output")
+    allow_user_certificates=$(jq -r '.data.allow_user_certificates' <<< "$output")
+    allow_host_certificates=$(jq -r '.data.allow_host_certificates' <<< "$output")
+    allow_user_key_ids=$(jq -r '.data.allow_user_key_ids' <<< "$output")
+    allow_empty_principals=$(jq -r '.data.allow_empty_principals' <<< "$output")
+    algorithm_signer=$(jq -r '.data.algorithm_signer' <<< "$output")
     log "extracted ca specific data"
     ;;
   *)
