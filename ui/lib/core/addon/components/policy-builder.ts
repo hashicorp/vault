@@ -30,7 +30,7 @@ interface Option {
 }
 
 const IDENTITY_TYPES = {
-  authMount: 'Authentication mount',
+  // authMount: 'Authentication mount',
   group: 'Group',
   entity: 'Entity',
 } as const;
@@ -77,29 +77,31 @@ export default class PolicyBuilder extends Component {
   existingPolicies: string[] | undefined = [];
   permissions = ['create', 'read', 'update', 'delete', 'list', 'patch', 'sudo'];
   identityOptions: Record<IdentitySelectionKey, Option[]> = {
-    authMount: [],
+    // authMount: [],
     group: [],
     entity: [],
   };
 
+  @tracked error = '';
   @tracked showFlyout = false;
   @tracked showPreview = false;
   @tracked policyAction = 'create';
   @tracked policyName = '';
+  @tracked existingPolicy = ''; // if a policy is being edited
   @tracked policyStanzas: PolicyStanza[] = [];
   @tracked selectedAssignments: Record<IdentitySelectionKey, Option[]> = {
-    authMount: [],
+    // authMount: [],
     group: [],
     entity: [],
   };
 
   displayText = (type: string) => {
     switch (type) {
-      case 'authMount':
-        return {
-          title: 'Authentication mounts',
-          description: 'Policy will be applied to users who authenticate with the selected mounts.',
-        };
+      // case 'authMount':
+      //   return {
+      //     title: 'Authentication mounts',
+      //     description: 'Policy will be applied to users who authenticate with the selected mounts.',
+      //   };
       case 'group':
         return {
           title: 'Groups',
@@ -124,10 +126,8 @@ export default class PolicyBuilder extends Component {
     this.fetchIdentities();
   }
 
-  get assignmentText() {
-    const identities = Object.keys(this.selectedAssignments)
-      .filter((k) => this.selectedAssignments[k as IdentitySelectionKey].length)
-      .map((type) => this.displayText(type).title.toLowerCase());
+  get applySubtext() {
+    const identities = this.filteredAssignments.map((type) => this.displayText(type).title.toLowerCase());
 
     if (identities.length > 1) {
       const lastItem = identities.pop();
@@ -139,6 +139,12 @@ export default class PolicyBuilder extends Component {
     }
   }
 
+  get filteredAssignments() {
+    return Object.keys(this.selectedAssignments).filter(
+      (k) => this.selectedAssignments[k as IdentitySelectionKey].length
+    );
+  }
+
   get policySnippet() {
     if (this.policyStanzas.length === 0) {
       return stanzaMaker('', []);
@@ -146,19 +152,56 @@ export default class PolicyBuilder extends Component {
     return this.formatPolicy(this.policyStanzas);
   }
 
+  get actualPolicy() {
+    // policySnippet is purely for rendering the preview. when it comes time to use the actually
+    // policy we want to remove any stanzas without permissions
+    let actualPolicy = this.formatPolicy(this.policyStanzas.filter((c) => c.hasCapabilities));
+    // if editing an existing policy, add the policy data
+    if (this.policyAction === 'edit') {
+      actualPolicy = this.existingPolicy.concat(`\n\n`, actualPolicy);
+    }
+    return actualPolicy;
+  }
+
   get cliSnippet() {
-    return `vault policy write ${this.policyName || '[policy name]'} - <<EOF
-${this.policySnippet}
-EOF`;
+    if (this.policyName) {
+      const cliCommand = (o: Option, type: IdentitySelectionKey) =>
+        `vault write identity/${type} name="${o.name}" policies="default, ${this.policyName}"`;
+      const command = this.buildAssignmentSnippet(cliCommand);
+
+      return `vault policy write ${this.policyName} - <<EOF
+${this.actualPolicy}
+EOF
+
+${command}
+`;
+    } else {
+      return '# Select a policy or input a name to preview commands!';
+    }
   }
 
   get tfvpSnippet() {
-    return `resource "vault_policy" "${this.policyName || '[policy name]'}" {
-  name   = "${this.policyName || '[policy name]'}"
-  policy = <<-EOT
-${this.policySnippet}
-EOT
+    if (this.policyName) {
+      const tfvpCommand = (o: Option, type: IdentitySelectionKey) => {
+        return `resource "vault_identity_${type}" "${o.name}" {
+ name     = "${o.name}"
+ policies = ["default", "${this.policyName}"]
 }`;
+      };
+
+      const command = this.buildAssignmentSnippet(tfvpCommand);
+      return `resource "vault_policy" "${this.policyName}" {
+  name   = "${this.policyName}"
+  policy = <<-EOT
+${this.actualPolicy}
+EOT
+}
+
+${command}
+`;
+    } else {
+      return '# Select a policy or input a name to preview commands!';
+    }
   }
 
   @action
@@ -190,21 +233,27 @@ EOT
   }
 
   @action
-  handlePolicySelection(event: HTMLElementEvent<HTMLInputElement>) {
+  async handlePolicySelection(event: HTMLElementEvent<HTMLInputElement>) {
     const { name, value } = event.target;
     if (name === 'policyAction') {
-      // either "create" or "edit"
+      // value is either "create" or "edit"
       this.policyAction = value;
       // reset policy name
       this.policyName = '';
     } else {
       this.policyName = value;
     }
+    // fetch existing policy data
+    if (this.policyAction === 'edit' && value) {
+      const { policy, rules } = await this.api.sys.policiesReadAclPolicy2(this.policyName);
+      // supposedly "rules" is deprecated, but that was the only key that returned data for me ¯\_(ツ)_/¯
+      this.existingPolicy = policy || rules || '';
+    }
   }
 
   @action
   handleAssignment(type: IdentitySelectionKey, selection: Option[]) {
-    this.selectedAssignments[type] = selection;
+    this.selectedAssignments[type] = selection || [];
     // trigger DOM update
     this.selectedAssignments = Object.assign(this.selectedAssignments);
   }
@@ -244,16 +293,16 @@ EOT
       // nope
     }
 
-    try {
-      type = 'authMount';
-      const { auth } = await this.api.sys.internalUiListEnabledVisibleMounts();
-      const mounts = this.api
-        .responseObjectToArray(auth, 'path')
-        .map((m) => ({ type, name: m.path, authType: m.type }));
-      setOptions(type, mounts);
-    } catch {
-      // nope
-    }
+    // try {
+    //   type = 'authMount';
+    //   const { auth } = await this.api.sys.internalUiListEnabledVisibleMounts();
+    //   const mounts = this.api
+    //     .responseObjectToArray(auth, 'path')
+    //     .map((m) => ({ type, name: m.path, authType: m.type }));
+    //   setOptions(type, mounts);
+    // } catch {
+    //   // nope
+    // }
   }
 
   @action
@@ -273,30 +322,19 @@ EOT
   @action
   async applyPolicy() {
     await this.createOrEditPolicy();
-    // TODO
-    // request to actually apply policies to identities
+    // TODO: request to actually apply policies to identities
   }
 
   async createOrEditPolicy() {
-    // policySnippet is purely for rendering the policy example. when it comes time to actually create/edit
-    // the policy we want to remove any stanzas without permissions
-    let policyPayload = this.formatPolicy(this.policyStanzas.filter((c) => c.hasCapabilities));
-    // if editing an existing policy, fetch the original
-    if (this.policyAction === 'edit') {
-      const { policy, rules } = await this.api.sys.policiesReadAclPolicy2(this.policyName);
-      // supposedly "rules" is deprecated, but that was the only key that returned data for me ¯\_(ツ)_/¯
-      const data = policy || rules || '';
-      // add existing policy to payload
-      policyPayload = data.concat(`\n\n`, policyPayload);
-    }
     try {
+      const policyPayload = this.actualPolicy;
       await this.api.sys.policiesWriteAclPolicy2(this.policyName, { policy: policyPayload });
       const word = this.policyAction === 'create' ? 'created' : 'updated';
       this.flashMessages.success(`Success! The policy: ${this.policyName} has been successfully ${word}!`);
       this.resetState();
     } catch (error) {
       const { message } = await this.api.parseError(error);
-      this.flashMessages.danger(`Oops! Something went wrong - it's hackweek give me a break!`);
+      this.error = message;
       console.debug(message); // eslint-disable-line
     }
   }
@@ -308,7 +346,7 @@ EOT
     this.policyAction = 'create';
     this.policyName = '';
     this.selectedAssignments = {
-      authMount: [],
+      // authMount: [],
       group: [],
       entity: [],
     };
@@ -317,5 +355,22 @@ EOT
   // HELPERS
   formatPolicy(policyStanzas: PolicyStanza[]) {
     return policyStanzas.map((c) => c.policyStanza).join('\n');
+  }
+
+  buildAssignmentSnippet(commandTemplate: CallableFunction) {
+    let assignments: string[] = [];
+    if (this.filteredAssignments.length) {
+      for (const [key, value] of Object.entries(this.selectedAssignments)) {
+        if (!value?.length) continue;
+        if (key === 'authMount') {
+          // do auth mount command
+        } else {
+          const commands = value.map((g) => commandTemplate(g, key as IdentitySelectionKey));
+          assignments = [...commands, ...assignments];
+        }
+      }
+      return assignments.length ? assignments.join('\n') : '';
+    }
+    return '';
   }
 }

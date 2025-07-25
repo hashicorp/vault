@@ -63,7 +63,7 @@
         <div class="is-flex-between">
           <Hds::Text::Display class="has-bottom-margin-xxs">Policy stanza</Hds::Text::Display>
           <Hds::Form::Toggle::Field {{on "input" (fn (mut this.showPreview) (not this.showPreview))}} as |F|>
-            <F.Label>Preview policy</F.Label>
+            <F.Label>Preview</F.Label>
           </Hds::Form::Toggle::Field>
         </div>
 
@@ -99,7 +99,7 @@
                 <G.Legend class="has-top-padding-m">Capabilities</G.Legend>
                 {{#each this.permissions as |p|}}
                   <G.CheckboxField
-                    checked={{includes p stanza.permissions}}
+                    checked={{includes p stanza.capabilities}}
                     @value={{p}}
                     {{on "input" stanza.setPermissions}}
                     as |F|
@@ -158,9 +158,18 @@
             <Hds::Text::Body @tag="p" class="has-bottom-padding-s">Click "Apply policy" to assigned
               {{this.policyAction}}
               the policy and assign it to the selected
-              {{this.assignmentText}}.
+              {{this.applySubtext}}.
             </Hds::Text::Body>
             <Hds::Button @text="Apply policy" @icon="wand" @isFullWidth={{true}} {{on "click" this.applyPolicy}} />
+
+            {{#if this.error}}
+              <Hds::Alert @type="inline" @color="critical" class="has-top-margin-m" as |A|>
+                <A.Title>Oops - something went wrong! It's hackweek give me a break!</A.Title>
+                <A.Description>
+                  {{this.error}}
+                </A.Description>
+              </Hds::Alert>
+            {{/if}}
           </T.Panel>
           <T.Panel>
             <Hds::CodeBlock @value={{this.cliSnippet}} @language="ruby" @hasCopyButton={{true}} />
