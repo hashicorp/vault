@@ -34,11 +34,9 @@ interface IdentityResponse {
 interface Option {
   type: string;
   name: string;
-  authType?: string;
 }
 
 const IDENTITY_TYPES = {
-  // mount: 'Authentication mount',
   group: 'Group',
   entity: 'Entity',
 } as const;
@@ -85,7 +83,6 @@ export default class PolicyBuilder extends Component {
   existingPolicies: string[] | undefined = [];
   permissions = ['create', 'read', 'update', 'delete', 'list', 'patch', 'sudo'];
   identityOptions: Record<IdentitySelectionKey, Option[]> = {
-    // mount: [],
     group: [],
     entity: [],
   };
@@ -98,7 +95,6 @@ export default class PolicyBuilder extends Component {
   @tracked existingPolicy = ''; // if a policy is being edited
   @tracked policyStanzas: PolicyStanza[] = [];
   @tracked selectedAssignments: Record<IdentitySelectionKey, Option[]> = {
-    // mount: [],
     group: [],
     entity: [],
   };
@@ -285,17 +281,6 @@ ${command}`;
     } catch {
       // nope
     }
-
-    // try {
-    //   type = 'mount';
-    //   const { auth } = await this.api.sys.internalUiListEnabledVisibleMounts();
-    //   const mounts = this.api
-    //     .responseObjectToArray(auth, 'path')
-    //     .map((m) => ({ type, name: m.path, authType: m.type }));
-    //   setOptions(type, mounts);
-    // } catch {
-    //   // nope
-    // }
   }
 
   @action
@@ -364,7 +349,6 @@ ${command}`;
     this.policyAction = 'create';
     this.policyName = '';
     this.selectedAssignments = {
-      // mount: [],
       group: [],
       entity: [],
     };
@@ -380,12 +364,8 @@ ${command}`;
     if (this.filteredAssignments.length) {
       for (const [key, value] of Object.entries(this.selectedAssignments)) {
         if (!value?.length) continue;
-        if (key === 'mount') {
-          // do auth mount command
-        } else {
-          const commands = value.map((g) => commandTemplate(g, key as IdentitySelectionKey));
-          assignments = [...commands, ...assignments];
-        }
+        const commands = value.map((g) => commandTemplate(g, key as IdentitySelectionKey));
+        assignments = [...commands, ...assignments];
       }
       return assignments.length ? assignments.join('\n') : '';
     }
