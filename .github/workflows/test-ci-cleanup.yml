@@ -1,8 +1,5 @@
 name: test-ci-cleanup
 on:
-  push:
-    branches:
-      - enos/VAULT-35697
   schedule:
     # * is a special character in YAML so you have to quote this string
     - cron:  '05 02 * * *'
@@ -33,8 +30,8 @@ jobs:
     container:
       image: ghcr.io/ekristen/aws-nuke:v3.51.0 # https://github.com/ekristen/aws-nuke/pkgs/container/aws-nuke
       options:
-         --user root
-         -t
+        --user root
+        -t
       env:
         AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
         AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
@@ -64,7 +61,7 @@ jobs:
         # Filter STDERR because it's super noisy about things we don't have access to
         # Remove --no-dry-run to do dry run
         run: |
-          aws-nuke run -c aws-nuke.yml -q --force 2>/tmp/aws-nuke-error.log | grep -v "level=error" || true
+          aws-nuke run -c aws-nuke.yml -q --no-dry-run --force 2>/tmp/aws-nuke-error.log | grep -v "level=error" || true
 
   check-quotas:
     needs: [ setup, aws-nuke ]
