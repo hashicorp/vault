@@ -115,7 +115,7 @@ scenario "dev_pr_replication" {
           default value is where CRT will publish packages.
         artifactory_token:
           The artifactory identity token to use for authentication. You'll need this if you wish
-          to use deb or rpm artifacts! You can get a token joining the 'artifactory-users' Doormat
+          to use deb or rpm artifacts! You can get a token by joining the 'artifactory-users' Doormat
           group and using 'doormat artifactory create-token'.
         dev_build_local_ui:
           If you are not testing any changes in the UI, set to false. This will save time by not
