@@ -13,8 +13,9 @@ import mapApiPathToRoute from 'vault/utils/policy-path-map';
 import { EntityListByNameListEnum, GroupListByNameListEnum } from '@hashicorp/vault-client-typescript';
 
 import type ApiService from 'vault/services/api';
-import type { HTMLElementEvent } from 'vault/forms';
 import type RouterService from '@ember/routing/router-service';
+import type FlashMessages from 'vault/services/flash-messages';
+import type { HTMLElementEvent } from 'vault/forms';
 
 const stanzaMaker = (path: string, policyStanzas: string[]) => {
   const caps = policyStanzas.length ? policyStanzas.map((c) => `"${c}"`).join(', ') : '';
@@ -70,6 +71,7 @@ class PolicyStanza {
 
 export default class PolicyBuilder extends Component {
   @service declare readonly api: ApiService;
+  @service declare readonly flashMessages: FlashMessages;
   @service declare readonly router: RouterService;
 
   existingPolicies: string[] | undefined = [];
@@ -85,7 +87,6 @@ export default class PolicyBuilder extends Component {
   @tracked policyAction = 'create';
   @tracked policyName = '';
   @tracked policyStanzas: PolicyStanza[] = [];
-
   @tracked selectedAssignments: Record<IdentitySelectionKey, Option[]> = {
     authMount: [],
     group: [],
@@ -290,10 +291,27 @@ EOT
     }
     try {
       await this.api.sys.policiesWriteAclPolicy2(this.policyName, { policy: policyPayload });
+      const word = this.policyAction === 'create' ? 'created' : 'updated';
+      this.flashMessages.success(`Success! The policy: ${this.policyName} has been successfully ${word}!`);
+      this.resetState();
     } catch (error) {
       const { message } = await this.api.parseError(error);
+      this.flashMessages.danger(`Oops! Something went wrong - it's hackweek give me a break!`);
       console.debug(message); // eslint-disable-line
     }
+  }
+
+  @action
+  resetState() {
+    this.showFlyout = false;
+    this.showPreview = false;
+    this.policyAction = 'create';
+    this.policyName = '';
+    this.selectedAssignments = {
+      authMount: [],
+      group: [],
+      entity: [],
+    };
   }
 
   // HELPERS
