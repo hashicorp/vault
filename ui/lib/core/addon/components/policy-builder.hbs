@@ -16,13 +16,7 @@
       {{! CREATE OR EDIT A POLICY  }}
       <Hds::Card::Container class="has-padding-m has-bottom-margin-m" @level="base" @hasBorder={{true}}>
         <Hds::Text::Display class="has-bottom-margin-xxs">Create or edit a policy</Hds::Text::Display>
-        <Hds::Form::Radio::Group
-          @layout="horizontal"
-          @name="policyAction"
-          {{on "input" this.handlePolicySelection}}
-          class="has-bottom-margin-m"
-          as |G|
-        >
+        <Hds::Form::Radio::Group @layout="horizontal" {{on "input" this.handleRadio}} class="has-bottom-margin-m" as |G|>
           <G.HelperText>Choose to create a new policy or edit existing one</G.HelperText>
           <G.RadioField checked={{eq this.policyAction "create"}} @value="create" as |F|>
             <F.Label>Create a new policy</F.Label>
@@ -37,28 +31,29 @@
             class="field"
             name="name"
             autocomplete="off"
-            {{on "input" this.handlePolicySelection}}
+            {{on "input" this.handleCreatePolicy}}
             as |F|
           >
             <F.Label>Policy name</F.Label>
           </Hds::Form::TextInput::Field>
         {{else if (eq this.policyAction "edit")}}
-          <Hds::Form::Select::Field class="field" name="policyName" {{on "input" this.handlePolicySelection}} as |F|>
+          <Hds::Form::SuperSelect::Single::Field
+            @onChange={{this.handleEditPolicy}}
+            @selected={{this.policyName}}
+            @options={{this.existingPolicies}}
+            @searchEnabled={{true}}
+            class="field"
+            autocomplete="off"
+            as |F|
+          >
             <F.Label>Select a policy</F.Label>
             <F.HelperText>The configured permissions will be added to the selected policy.</F.HelperText>
-            <F.Options>
-              <option value=""></option>
-              {{#each this.existingPolicies as |policy|}}
-                <option selected={{eq this.policyName policy}} value={{policy}}>
-                  {{policy}}
-                </option>
-              {{/each}}
-            </F.Options>
-          </Hds::Form::Select::Field>
+            <F.Options>{{F.options}}</F.Options>
+          </Hds::Form::SuperSelect::Single::Field>
         {{/if}}
       </Hds::Card::Container>
 
-      {{! POLICY PATHS }}
+      {{! POLICY STANZAS }}
       <Hds::Card::Container class="has-padding-m has-top-margin-m has-bottom-margin-m" @level="base" @hasBorder={{true}}>
         <div class="is-flex-between">
           <Hds::Text::Display class="has-bottom-margin-xxs">Policy stanza</Hds::Text::Display>
@@ -66,6 +61,11 @@
             <F.Label>Preview</F.Label>
           </Hds::Form::Toggle::Field>
         </div>
+        <Hds::Text::Body @color="faint" @tag="p" class="has-bottom-margin-xs" @size="100">
+          Use
+          <Hds::Text::Code class="code-in-text">*</Hds::Text::Code>
+          for wildcard matching.
+        </Hds::Text::Body>
 
         {{! POLICY SAMPLE }}
         {{#if this.showPreview}}
@@ -90,7 +90,13 @@
                 {{on "click" (fn this.deletePath stanza.path)}}
               />
               <div class="is-flex-between has-bottom-margin-xxs">
-                <Hds::Form::TextInput::Field @value={{stanza.path}} class="field" {{on "input" stanza.setPath}} as |F|>
+                <Hds::Form::TextInput::Field
+                  @value={{stanza.path}}
+                  class="field"
+                  {{on "input" stanza.setPath}}
+                  autocomplete="off"
+                  as |F|
+                >
                   <F.Label class="has-top-margin-m">API path:</F.Label>
                 </Hds::Form::TextInput::Field>
               </div>

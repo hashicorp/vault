@@ -100,22 +100,22 @@ export default class PolicyBuilder extends Component {
       // case 'authMount':
       //   return {
       //     title: 'Authentication mounts',
-      //     description: 'Policy will be applied to users who authenticate with the selected mounts.',
+      //     description: 'Policy will apply to users who authenticate with the selected mounts.',
       //   };
       case 'group':
         return {
           title: 'Groups',
-          description: 'Policy will be applied to users who belong to the selected groups.',
+          description: 'Policy will apply to users who belong to the selected groups.',
         };
       case 'entity':
         return {
           title: 'Entities',
-          description: 'Policy will be applied to users who belong to the selected entities.',
+          description: 'Policy will apply to users who belong to the selected entities.',
         };
       default:
         return {
           title: `Select a ${type}`,
-          description: 'The policy will be applied the selected resource.',
+          description: 'The policy will apply the selected resource.',
         };
     }
   };
@@ -158,7 +158,8 @@ export default class PolicyBuilder extends Component {
     let actualPolicy = this.formatPolicy(this.policyStanzas.filter((c) => c.hasCapabilities));
     // if editing an existing policy, add the policy data
     if (this.policyAction === 'edit') {
-      actualPolicy = this.existingPolicy.concat(`\n\n`, actualPolicy);
+      const lineBreak = actualPolicy ? `\n\n` : '';
+      actualPolicy = this.existingPolicy.concat(lineBreak, actualPolicy);
     }
     return actualPolicy;
   }
@@ -172,11 +173,9 @@ export default class PolicyBuilder extends Component {
       return `vault policy write ${this.policyName} - <<EOF
 ${this.actualPolicy}
 EOF
-
-${command}
-`;
+${command}`;
     } else {
-      return '# Select a policy or input a name to preview commands!';
+      return '# Select a policy or fill in a name to preview commands!';
     }
   }
 
@@ -196,11 +195,9 @@ ${command}
 ${this.actualPolicy}
 EOT
 }
-
-${command}
-`;
+${command}`;
     } else {
-      return '# Select a policy or input a name to preview commands!';
+      return '# Select a policy or fill in a name to preview commands!';
     }
   }
 
@@ -233,22 +230,26 @@ ${command}
   }
 
   @action
-  async handlePolicySelection(event: HTMLElementEvent<HTMLInputElement>) {
-    const { name, value } = event.target;
-    if (name === 'policyAction') {
-      // value is either "create" or "edit"
-      this.policyAction = value;
-      // reset policy name
-      this.policyName = '';
-    } else {
-      this.policyName = value;
-    }
-    // fetch existing policy data
-    if (this.policyAction === 'edit' && value) {
-      const { policy, rules } = await this.api.sys.policiesReadAclPolicy2(this.policyName);
-      // supposedly "rules" is deprecated, but that was the only key that returned data for me ¯\_(ツ)_/¯
-      this.existingPolicy = policy || rules || '';
-    }
+  async handleRadio(event: HTMLElementEvent<HTMLInputElement>) {
+    // value is either "create" or "edit"
+    this.policyAction = event.target.value;
+    // reset policy name
+    this.policyName = '';
+  }
+
+  @action
+  async handleCreatePolicy(event: HTMLElementEvent<HTMLInputElement>) {
+    this.policyName = event.target.value;
+    // reset existing policy in case "edit" was previously selected
+    this.existingPolicy = '';
+  }
+
+  @action
+  async handleEditPolicy(name: string) {
+    this.policyName = name;
+    const { policy, rules } = await this.api.sys.policiesReadAclPolicy2(this.policyName);
+    // supposedly "rules" is deprecated, but that was the only key that returned data for me ¯\_(ツ)_/¯
+    this.existingPolicy = policy || rules || '';
   }
 
   @action
@@ -322,7 +323,7 @@ ${command}
   @action
   async applyPolicy() {
     await this.createOrEditPolicy();
-    // TODO: request to actually apply policies to identities
+    // TODO: request to actually apply policies to groups/entities
   }
 
   async createOrEditPolicy() {
