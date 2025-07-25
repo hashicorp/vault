@@ -24,6 +24,13 @@ const stanzaMaker = (path: string, policyStanzas: string[]) => {
   capabilities = [${caps}]
 }`;
 };
+
+interface IdentityResponse {
+  data: {
+    name: string;
+    policies: string[];
+  };
+}
 interface Option {
   type: string;
   name: string;
@@ -307,17 +314,42 @@ ${command}`;
   // the magic part!
   @action
   async applyPolicy() {
-    await this.createOrEditPolicy();
-    // TODO: request to actually apply policies to groups/entities
+    const isSuccess = await this.createOrEditPolicy();
+    if (isSuccess) {
+      // only update entities and groups if the policy request succeeds
+      const identities = Object.values(this.selectedAssignments).flat();
+      for (const identity of identities) {
+        await this.editIdentity(identity.type, identity.name);
+      }
+    }
+    if (!this.error) {
+      this.resetState();
+    }
   }
 
   async createOrEditPolicy() {
     try {
       const policyPayload = this.actualPolicy;
       await this.api.sys.policiesWriteAclPolicy2(this.policyName, { policy: policyPayload });
-      const word = this.policyAction === 'create' ? 'created' : 'updated';
-      this.flashMessages.success(`Success! The policy: ${this.policyName} has been successfully ${word}!`);
-      this.resetState();
+      return true;
+    } catch (error) {
+      const { message } = await this.api.parseError(error);
+      this.error = message;
+      console.debug(message); // eslint-disable-line
+      return false;
+    }
+  }
+
+  async editIdentity(type: string, name: string) {
+    const readMethod = type === 'entity' ? 'entityReadByName' : 'groupReadByName';
+    const updateMethod = type === 'entity' ? 'entityUpdateByName' : 'groupUpdateByName';
+    try {
+      const { data } = (await this.api.identity[readMethod](name)) as unknown as IdentityResponse;
+      const payload = { policies: [...data.policies, this.policyName] };
+      await this.api.identity[updateMethod](name, payload);
+      this.flashMessages.success(
+        `Successfully applied policy "${this.policyName}" to the ${type} "${name}"!`
+      );
     } catch (error) {
       const { message } = await this.api.parseError(error);
       this.error = message;
