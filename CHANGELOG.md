@@ -3,6 +3,45 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 1.20.1
+### July 25, 2025
+
+FEATURES:
+
+* **Post-Quantum Cryptography Support**: Experimental support for PQC signatures with SLH-DSA.
+
+IMPROVEMENTS:
+
+* Plugin Downloads (enterprise): add CLI `-download` option for plugin register (beta)
+* audit: Add additional verifications to the target of file audit sinks. [[GH-31211](https://github.com/hashicorp/vault/pull/31211)]
+* auth/cert: test non-CA cert equality on login matching instead of individual fields. [[GH-31210](https://github.com/hashicorp/vault/pull/31210)]
+* openapi: Add OpenAPI support for secret recovery operations. [[GH-31331](https://github.com/hashicorp/vault/pull/31331)]
+* plugins: Clarify usage of sha256, command, and version for plugin registration of binary or artifact with API and CLI. Introduce new RegisterPluginDetailed and RegisterPluginWtihContextDetailed functions to API client to propagate response along with error, and mark RegisterPlugin and RegisterPluginWithContext as deprecated. [[GH-30811](https://github.com/hashicorp/vault/pull/30811)]
+* secrets/pki (enterprise): enable separately-configured logging for SCEP-enrollment.
+* secrets/pki: Add the digest OID when logging SCEP digest mismatch errors. [[GH-31232](https://github.com/hashicorp/vault/pull/31232)]
+
+BUG FIXES:
+
+* activity (enterprise): Fix `development_cluster` setting being overwritten on performance secondaries upon cluster reload. [[GH-31223](https://github.com/hashicorp/vault/pull/31223)]
+* auth/scep (enterprise): enforce the token_bound_cidrs role parameter within SCEP roles
+* auth: update alias lookahead to respect username case for LDAP and username/password [[GH-31352](https://github.com/hashicorp/vault/pull/31352)]
+* auto-reporting (enterprise): Clarify debug logs to accurately reflect when automated license utilization reporting is enabled or disabled, especially since manual reporting is always initialized.
+* core/seal (enterprise): Fix a bug that caused the seal rewrap process to abort in the presence of partially sealed entries.
+* kmip (enterprise): Fix a panic that can happen when a KMIP client makes a request before the Vault server has finished unsealing. [[GH-31266](https://github.com/hashicorp/vault/pull/31266)]
+* plugins: Fix panics that can occur when a plugin audits a request or response before the Vault server has finished unsealing. [[GH-31266](https://github.com/hashicorp/vault/pull/31266)]
+* product usage reporting (enterprise): Clarify debug logs to accurately reflect when anonymous product usage reporting is enabled or disabled, especially since manual reporting is always initialized.
+* replication (enterprise): Fix bug with mount invalidations consuming excessive memory.
+* secrets-sync (enterprise): Unsyncing secret-key granularity associations will no longer give a misleading error about a failed unsync operation that did indeed succeed.
+* secrets/gcp: Update to vault-plugin-secrets-gcp@v0.22.1 to address more eventual consistency issues [[GH-31350](https://github.com/hashicorp/vault/pull/31350)]
+* ui: Fix capability checks for api resources with underscores to properly hide actions and dropdown items a user cannot perform [[GH-31271](https://github.com/hashicorp/vault/pull/31271)]
+* ui: Fix kv v2 overview page from erroring if a user does not have access to the /subkeys endpoint and the policy check fails. [[GH-31136](https://github.com/hashicorp/vault/pull/31136)]
+* ui: Fix mutation of unwrapped data when keys contain underscores [[GH-31287](https://github.com/hashicorp/vault/pull/31287)]
+* ui: Fix regression in 1.20.0 to properly set namespace context for capabilities checks [[GH-31276](https://github.com/hashicorp/vault/pull/31276)]
+* ui: Fix selecting multiple namespaces in the namespace picker when the path contains matching nodes [[GH-31326](https://github.com/hashicorp/vault/pull/31326)]
+* ui: Fixes UI login settings list page which was not rendering rules with an underscore in the name. [[GH-31150](https://github.com/hashicorp/vault/pull/31150)]
+* ui: Include user's root namespace in the namespace picker if it's a namespace other than the actual root ("") [[GH-31300](https://github.com/hashicorp/vault/pull/31300)]
+* ui: Revert camelizing of parameters returned from `sys/internal/ui/mounts` so mount paths match serve value [[GH-31094](https://github.com/hashicorp/vault/pull/31094)]
+
 ## 1.20.0
 ### June 25, 2025
 
@@ -182,6 +221,28 @@ intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/3
 * ui: Fix refresh namespace list after deleting a namespace. [[GH-30680](https://github.com/hashicorp/vault/pull/30680)]
 * ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 * ui: Redirect users authenticating with Vault as an OIDC provider to log in again when token expires. [[GH-30838](https://github.com/hashicorp/vault/pull/30838)]
+
+## 1.19.7 Enterprise
+### July 25, 2025
+
+**Enterprise LTS:** Vault Enterprise 1.19 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+IMPROVEMENTS:
+
+* audit: Add additional verifications to the target of file audit sinks. [[GH-31211](https://github.com/hashicorp/vault/pull/31211)]
+* auth/cert: test non-CA cert equality on login matching instead of individual fields. [[GH-31210](https://github.com/hashicorp/vault/pull/31210)]
+
+BUG FIXES:
+
+* auth: update alias lookahead to respect username case for LDAP and username/password [[GH-31352](https://github.com/hashicorp/vault/pull/31352)]
+* auto-reporting (enterprise): Clarify debug logs to accurately reflect when automated license utilization reporting is enabled or disabled, especially since manual reporting is always initialized.
+* core/seal (enterprise): Fix a bug that caused the seal rewrap process to abort in the presence of partially sealed entries.
+* kmip (enterprise): Fix a panic that can happen when a KMIP client makes a request before the Vault server has finished unsealing. [[GH-31266](https://github.com/hashicorp/vault/pull/31266)]
+* plugins: Fix panics that can occur when a plugin audits a request or response before the Vault server has finished unsealing. [[GH-31266](https://github.com/hashicorp/vault/pull/31266)]
+* product usage reporting (enterprise): Clarify debug logs to accurately reflect when anonymous product usage reporting is enabled or disabled, especially since manual reporting is always initialized.
+* replication (enterprise): Fix bug with mount invalidations consuming excessive memory.
+* secrets-sync (enterprise): Unsyncing secret-key granularity associations will no longer give a misleading error about a failed unsync operation that did indeed succeed.
+* secrets/gcp: Update to vault-plugin-secrets-gcp@v0.21.4 to address more eventual consistency issues
 
 ## 1.19.6 Enterprise
 ### June 25, 2025
@@ -584,6 +645,23 @@ Unblocks customers that were stuck in a failing loop when attempting to rotate s
 * ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 * ui: No longer running decodeURIComponent on KVv2 list view allowing percent encoded data-octets in path name. [[GH-28698](https://github.com/hashicorp/vault/pull/28698)]
 * vault/diagnose: Fix time to expiration reporting within the TLS verification to not be a month off. [[GH-29128](https://github.com/hashicorp/vault/pull/29128)]
+
+## 1.18.12 Enterprise
+### July 25, 2025
+
+IMPROVEMENTS:
+
+* audit: Add additional verifications to the target of file audit sinks. [[GH-31211](https://github.com/hashicorp/vault/pull/31211)]
+* auth/cert: test non-CA cert equality on login matching instead of individual fields. [[GH-31210](https://github.com/hashicorp/vault/pull/31210)]
+
+BUG FIXES:
+
+* auth: update alias lookahead to respect username case for LDAP and username/password [[GH-31352](https://github.com/hashicorp/vault/pull/31352)]
+* core/seal (enterprise): Fix a bug that caused the seal rewrap process to abort in the presence of partially sealed entries.
+* kmip (enterprise): Fix a panic that can happen when a KMIP client makes a request before the Vault server has finished unsealing. [[GH-31266](https://github.com/hashicorp/vault/pull/31266)]
+* plugins: Fix panics that can occur when a plugin audits a request or response before the Vault server has finished unsealing. [[GH-31266](https://github.com/hashicorp/vault/pull/31266)]
+* replication (enterprise): Fix bug with mount invalidations consuming excessive memory.
+* secrets-sync (enterprise): Unsyncing secret-key granularity associations will no longer give a misleading error about a failed unsync operation that did indeed succeed.
 
 ## 1.18.11 Enterprise
 ### June 25, 2025
@@ -1718,6 +1796,24 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 * ui: fix issue where a month without new clients breaks the client count dashboard [[GH-27352](https://github.com/hashicorp/vault/pull/27352)]
 * ui: fixed a bug where the replication pages did not update display when navigating between DR and performance [[GH-26325](https://github.com/hashicorp/vault/pull/26325)]
 * ui: fixes undefined start time in filename for downloaded client count attribution csv [[GH-26485](https://github.com/hashicorp/vault/pull/26485)]
+
+## 1.16.23 Enterprise
+### July 25, 2025
+
+**Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+IMPROVEMENTS:
+
+* audit: Add additional verifications to the target of file audit sinks. [[GH-31211](https://github.com/hashicorp/vault/pull/31211)]
+* auth/cert: test non-CA cert equality on login matching instead of individual fields. [[GH-31210](https://github.com/hashicorp/vault/pull/31210)]
+
+BUG FIXES:
+
+* auth: update alias lookahead to respect username case for LDAP and username/password [[GH-31352](https://github.com/hashicorp/vault/pull/31352)]
+* core/seal (enterprise): Fix a bug that caused the seal rewrap process to abort in the presence of partially sealed entries.
+* kmip (enterprise): Fix a panic that can happen when a KMIP client makes a request before the Vault server has finished unsealing. [[GH-31266](https://github.com/hashicorp/vault/pull/31266)]
+* plugins: Fix panics that can occur when a plugin audits a request or response before the Vault server has finished unsealing. [[GH-31266](https://github.com/hashicorp/vault/pull/31266)]
+* secrets-sync (enterprise): Unsyncing secret-key granularity associations will no longer give a misleading error about a failed unsync operation that did indeed succeed.
 
 ## 1.16.22 Enterprise
 ### June 25, 2025
