@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/cli"
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,10 +25,9 @@ func testPolicyFmtCommand(tb testing.TB) (*cli.MockUi, *PolicyFmtCommand) {
 }
 
 func TestPolicyFmtCommand_Run(t *testing.T) {
-	t.Parallel()
-
 	testCases := map[string]struct {
 		args      []string
+		envVars   map[string]string
 		policyArg string
 		out       string
 		expected  string
@@ -71,16 +71,38 @@ path "secret" {
 			out:       "failed to parse policy",
 			code:      1,
 		},
-		// TODO (HCL_DUP_KEYS_DEPRECATION): change this test case to expect a specific error when deprecation is done
-		"hcl_duplicate_key": {
+		// TODO (HCL_DUP_KEYS_DEPRECATION): remove this test once deprecation is fully done
+		"hcl_duplicate_key_env_set": {
 			policyArg: `
 path "secret" {
   capabilities = ["create", "update", "delete"]
   capabilities = ["create"]
 }
 `,
-			code: 0,
-			out:  "WARNING: Duplicate keys found in the provided policy, duplicate keys in HCL files are deprecated and will be forbidden in a future release.",
+			envVars: map[string]string{random.AllowHclDuplicatesEnvVar: "true"},
+			code:    0,
+			out:     "WARNING: Duplicate keys found in the provided policy, duplicate keys in HCL files are deprecated and will be forbidden in a future release.",
+		},
+		"hcl_duplicate_key_env_not_set": {
+			policyArg: `
+path "secret" {
+  capabilities = ["create", "update", "delete"]
+  capabilities = ["create"]
+}
+`,
+			code: 1,
+			out:  "failed to parse policy: The argument \"capabilities\" at 4:3 was already set. Each argument can only be defined once",
+		},
+		"hcl_duplicate_key_env_set_to_false": {
+			policyArg: `
+path "secret" {
+  capabilities = ["create", "update", "delete"]
+  capabilities = ["create"]
+}
+`,
+			envVars: map[string]string{random.AllowHclDuplicatesEnvVar: "false"},
+			code:    1,
+			out:     "failed to parse policy: The argument \"capabilities\" at 4:3 was already set. Each argument can only be defined once",
 		},
 	}
 
@@ -90,7 +112,10 @@ path "secret" {
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
 			r := require.New(t)
-			t.Parallel()
+
+			for k, v := range tc.envVars {
+				t.Setenv(k, v)
+			}
 
 			args := tc.args
 			if tc.policyArg != "" {
