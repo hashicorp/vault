@@ -13,7 +13,6 @@ import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { TtlEvent } from 'vault/app-types';
 import type { HTMLElementEvent } from 'vault/forms';
-import type { Editor } from 'codemirror';
 
 /**
  * @module ToolsWrap
@@ -68,10 +67,14 @@ export default class ToolsWrap extends Component {
   }
 
   @action
-  codemirrorUpdated(val: string, codemirror: Editor) {
-    codemirror.performLint();
-    this.hasLintingErrors = codemirror?.state.lint.marked?.length > 0;
-    if (!this.hasLintingErrors) this.wrapData = JSON.parse(val);
+  editorUpdated(val: string) {
+    this.hasLintingErrors = false;
+
+    try {
+      this.wrapData = JSON.parse(val);
+    } catch {
+      this.hasLintingErrors = true;
+    }
   }
 
   @action

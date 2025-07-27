@@ -16,6 +16,7 @@ import (
 	"github.com/hashicorp/hcl"
 	"github.com/hashicorp/hcl/hcl/ast"
 	"github.com/hashicorp/hcl/hcl/token"
+	"github.com/hashicorp/vault/helper/random"
 	"github.com/hashicorp/vault/internalshared/configutil"
 	"github.com/stretchr/testify/require"
 )
@@ -32,8 +33,6 @@ func boolPointer(x bool) *bool {
 
 // testConfigRaftRetryJoin decodes and normalizes retry_join stanzas.
 func testConfigRaftRetryJoin(t *testing.T) {
-	t.Parallel()
-
 	retryJoinExpected := []map[string]string{
 		// NOTE: Normalization handles IPv6 addresses and returns auto_join with
 		// sorted stable keys.
@@ -47,15 +46,49 @@ func testConfigRaftRetryJoin(t *testing.T) {
 		{"auto_join": "provider=k8s label_selector=\"app.kubernetes.io/name=vault, component=server\" namespace=vault"},
 		{"auto_join": "provider=k8s label_selector=\"app.kubernetes.io/name=vault1,component=server\" namespace=vault1"},
 	}
-	for _, cfg := range []string{
-		"attr",
-		"block",
-		"mixed",
-	} {
-		t.Run(cfg, func(t *testing.T) {
-			t.Parallel()
+	testCases := map[string]struct {
+		configFile    string
+		envVars       map[string]string
+		errorContains string
+	}{
+		"attributes_duplicate_error": {
+			configFile:    "./test-fixtures/raft_retry_join_attr.hcl",
+			errorContains: "The argument \"retry_join\" at 11:3 was already set. Each argument can only be defined once (if using the attribute syntax retry_join = [...], change it to the block syntax retry_join { ... })",
+		},
+		"attributes_allowed_with_env_var": {
+			configFile: "./test-fixtures/raft_retry_join_attr.hcl",
+			envVars: map[string]string{
+				random.AllowHclDuplicatesEnvVar: "true",
+			},
+		},
+		"blocks": {
+			configFile: "./test-fixtures/raft_retry_join_block.hcl",
+		},
+		"mixed_duplicate_error": {
+			configFile:    "./test-fixtures/raft_retry_join_mixed.hcl",
+			errorContains: "The argument \"retry_join\" at 14:3 was already set. Each argument can only be defined once (if using the attribute syntax retry_join = [...], change it to the block syntax retry_join { ... })",
+		},
+		"mixed_allowed_with_env_var": {
+			configFile: "./test-fixtures/raft_retry_join_mixed.hcl",
+			envVars: map[string]string{
+				random.AllowHclDuplicatesEnvVar: "true",
+			},
+		},
+	}
 
-			config, err := LoadConfigFile(fmt.Sprintf("./test-fixtures/raft_retry_join_%s.hcl", cfg))
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			for k, v := range tc.envVars {
+				t.Setenv(k, v)
+			}
+
+			config, err := LoadConfigFile(tc.configFile)
+			if tc.errorContains != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.errorContains)
+				return
+			}
+
 			require.NoError(t, err)
 			retryJoinJSON, err := json.Marshal(retryJoinExpected)
 			require.NoError(t, err)
@@ -607,11 +640,25 @@ func testUnknownFieldValidationHcl(t *testing.T) {
 	}
 }
 
+// TODO (HCL_DUP_KEYS_DEPRECATION): remove warning test once deprecation is completed
 func testDuplicateKeyValidationHcl(t *testing.T) {
-	_, duplicate, err := LoadConfigFileCheckDuplicate("./test-fixtures/invalid_config_duplicate_key.hcl")
-	// TODO (HCL_DUP_KEYS_DEPRECATION): require error once deprecation is done
-	require.NoError(t, err)
-	require.True(t, duplicate)
+	t.Run("env unset", func(t *testing.T) {
+		_, _, err := LoadConfigFileCheckDuplicate("./test-fixtures/invalid_config_duplicate_key.hcl")
+		require.Error(t, err)
+	})
+
+	t.Run("env set to false", func(t *testing.T) {
+		t.Setenv(random.AllowHclDuplicatesEnvVar, "false")
+		_, _, err := LoadConfigFileCheckDuplicate("./test-fixtures/invalid_config_duplicate_key.hcl")
+		require.Error(t, err)
+	})
+
+	t.Run("env set to true", func(t *testing.T) {
+		t.Setenv(random.AllowHclDuplicatesEnvVar, "true")
+		_, duplicate, err := LoadConfigFileCheckDuplicate("./test-fixtures/invalid_config_duplicate_key.hcl")
+		require.NoError(t, err)
+		require.True(t, duplicate)
+	})
 }
 
 // testConfigWithAdministrativeNamespaceJson tests that a config with a valid administrative namespace path is correctly validated and loaded.
