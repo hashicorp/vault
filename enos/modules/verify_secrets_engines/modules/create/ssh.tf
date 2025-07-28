@@ -24,12 +24,13 @@
 locals {
   // Variables
   otp_role_name = "ssh_role_otp"
+  ipv6_cidr     = "fd00:ffff::/64"
   otp_role_params = {
     key_type          = "otp"
     default_user      = local.ssh_test_user
     allowed_users     = local.ssh_test_user
     cidr_list         = strcontains(local.ssh_test_ip.address, ":") ? "${local.ssh_test_ip.base}/64" : "${local.ssh_test_ip.base}/32"
-    exclude_cidr_list = strcontains(local.ssh_test_ip.address, ":") ? cidrsubnet(var.ipv6_cidr, 32, 0) : cidrsubnet(var.ipv4_cidr, 8, 1)
+    exclude_cidr_list = strcontains(local.ssh_test_ip.address, ":") ? cidrsubnet(local.ipv6_cidr, 32, 0) : cidrsubnet(var.ipv4_cidr, 8, 1)
     port              = var.ports.ssh.port
     ttl               = "1h"
     max_ttl           = "2h"
