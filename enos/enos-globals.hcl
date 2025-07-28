@@ -22,26 +22,26 @@ globals {
   // Different distros may require different packages, or use different aliases for the same package
   distro_packages = {
     amzn = {
-      "2"    = ["nc"]
-      "2023" = ["nc"]
+      "2"    = ["nc", "openldap-clients"]
+      "2023" = ["nc", "openldap-clients"]
     }
     leap = {
-      "15.6" = ["netcat", "openssl"]
+      "15.6" = ["netcat", "openssl", "openldap2-client"]
     }
     rhel = {
-      "8.10" = ["nc"]
-      "9.5"  = ["nc"]
+      "8.10" = ["nc", "openldap-clients"]
+      "9.5"  = ["nc", "openldap-clients"]
     }
     sles = {
       // When installing Vault RPM packages on a SLES AMI, the openssl package provided
       // isn't named "openssl, which rpm doesn't know how to handle. Therefore we add the
       // "correctly" named one in our package installation before installing Vault.
-      "15.6" = ["netcat-openbsd", "openssl"]
+      "15.6" = ["netcat-openbsd", "openssl", "openldap2-client"]
     }
     ubuntu = {
-      "20.04" = ["netcat"]
-      "22.04" = ["netcat"]
-      "24.04" = ["netcat-openbsd"]
+      "20.04" = ["netcat", "ldap-utils"]
+      "22.04" = ["netcat", "ldap-utils"]
+      "24.04" = ["netcat-openbsd", "ldap-utils"]
     }
   }
   distro_version = {
@@ -68,6 +68,16 @@ globals {
     ssh : {
       description = "SSH"
       port        = 22
+      protocol    = "tcp"
+    },
+    ldap : {
+      description = "LDAP"
+      port        = 389
+      protocol    = "tcp"
+    },
+    ldaps : {
+      description = "LDAPS"
+      port        = 636
       protocol    = "tcp"
     },
     vault_agent : {
