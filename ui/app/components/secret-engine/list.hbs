@@ -89,13 +89,15 @@
           @hasChevron={{false}}
           data-test-popup-menu-trigger
         />
-        <dd.Interactive
-          @route={{backend.backendConfigurationLink}}
-          @model={{backend.id}}
-          data-test-popup-menu="view-configuration"
-        >
-          View configuration
-        </dd.Interactive>
+        {{#if (not-eq (get (engines-display-data backend.type) "displayName") "generic")}}
+          <dd.Interactive
+            @route={{backend.backendConfigurationLink}}
+            @model={{backend.id}}
+            data-test-popup-menu="view-configuration"
+          >
+            View configuration
+          </dd.Interactive>
+        {{/if}}
         {{#if (not-eq backend.type "cubbyhole")}}
           <dd.Interactive
             @color="critical"

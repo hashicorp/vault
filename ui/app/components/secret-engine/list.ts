@@ -77,7 +77,7 @@ export default class SecretEngineList extends Component<Args> {
       } else {
         this.tooltip = `${engineDisplayData(backend.type)?.displayName}`;
       }
-    } else if (backend.type === 'generic') {
+    } else if (engineDisplayData(backend.type)?.displayName === 'generic') {
       this.tooltip =
         'This is an externally mounted plugin that is not supported by the UI. Please use the CLI to manage this engine.';
     } else {
