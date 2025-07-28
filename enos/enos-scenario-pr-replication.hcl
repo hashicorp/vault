@@ -342,8 +342,7 @@ scenario "pr_replication" {
       hosts      = step.create_external_integration_target.hosts
       ip_version = matrix.ip_version
       packages   = concat(global.packages, global.distro_packages["ubuntu"]["24.04"], ["podman", "podman-docker"])
-      ldap_port  = global.ports.ldap.port
-      ldaps_port = global.ports.ldaps.port
+      ports      = global.integration_host_ports
     }
   }
 
@@ -768,13 +767,14 @@ scenario "pr_replication" {
     ]
 
     variables {
-      hosts             = step.create_primary_cluster_targets.hosts
-      ip_version        = matrix.ip_version
-      ldap_host         = step.set_up_external_integration_target.state.ldap.host
-      leader_host       = step.get_primary_cluster_ips.leader_host
-      vault_addr        = step.create_primary_cluster.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_root_token  = step.create_primary_cluster.root_token
+      hosts                  = step.create_primary_cluster_targets.hosts
+      ip_version             = matrix.ip_version
+      integration_host_state = step.set_up_external_integration_target.state
+      leader_host            = step.get_primary_cluster_ips.leader_host
+      ports                  = global.integration_host_ports
+      vault_addr             = step.create_primary_cluster.api_addr_localhost
+      vault_install_dir      = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token       = step.create_primary_cluster.root_token
     }
   }
 
@@ -984,6 +984,7 @@ scenario "pr_replication" {
     variables {
       create_state            = step.verify_secrets_engines_on_primary.state
       hosts                   = step.get_secondary_cluster_ips.follower_hosts
+      ip_version              = matrix.ip_version
       vault_addr              = step.create_secondary_cluster.api_addr_localhost
       vault_install_dir       = global.vault_install_dir[matrix.artifact_type]
       vault_root_token        = step.create_secondary_cluster.root_token

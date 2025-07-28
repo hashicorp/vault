@@ -22,6 +22,10 @@ variable "create_aws_secrets_engine" {
   default     = false
 }
 
+variable "integration_host_state" {
+  description = "The state of the test server from the 'backend_test_servers' module"
+}
+
 variable "hosts" {
   type = map(object({
     ipv6       = string
@@ -37,19 +41,12 @@ variable "ip_version" {
   default     = "4"
 }
 
-variable "ldap_host" {
-  type = object({
-    ipv6       = string
-    private_ip = string
-    public_ip  = string
-  })
-  description = "The external server instances that were created"
-}
-
-variable "ldap_port" {
-  type        = string
-  description = "The LDAP Server port"
-  default     = "389"
+variable "ports" {
+  description = "Port configuration for services"
+  type = map(object({
+    port        = string
+    description = string
+  }))
 }
 
 variable "ldap_password" {
@@ -92,5 +89,6 @@ output "state" {
     pki      = local.pki_output
     aws      = local.aws_state
     ldap     = local.ldap_output
+    kmip     = local.kmip_output
   }
 }

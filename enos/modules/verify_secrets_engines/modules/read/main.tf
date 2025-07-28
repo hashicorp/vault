@@ -22,6 +22,13 @@ variable "create_state" {
   description = "The state of the secrets engines from the 'create' module"
 }
 
+variable "ip_version" {
+  type        = string
+  description = "IP Version (4 or 6)"
+  default     = "4"
+
+}
+
 variable "vault_addr" {
   type        = string
   description = "The local vault API listen address"
