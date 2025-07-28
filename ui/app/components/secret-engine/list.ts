@@ -39,6 +39,7 @@ export default class SecretEngineList extends Component<Args> {
   @tracked selectedEngineType = '';
   @tracked selectedEngineName = '';
   @tracked engineToDisable: SecretsEngineResource | undefined = undefined;
+  @tracked tooltip = '';
 
   get displayableBackends() {
     return this.args.secretEngines.filter((backend) => backend.shouldIncludeInList);
@@ -68,16 +69,20 @@ export default class SecretEngineList extends Component<Args> {
     return sortedBackends;
   }
 
+  @action
   tooltipText(backend: SecretsEngineResource) {
     if (backend.isSupportedBackend) {
       if (backend.type === 'kv') {
-        return `${engineDisplayData(backend.type)?.displayName} ${backend.version}`;
+        this.tooltip = `${engineDisplayData(backend.type)?.displayName} version ${backend.version}`;
+      } else {
+        this.tooltip = `${engineDisplayData(backend.type)?.displayName}`;
       }
-      return engineDisplayData(backend.type)?.displayName;
     } else if (backend.type === 'generic') {
-      return 'This is a external plugin that is not supported by the UI. Please use the CLI to manage this engine.';
+      this.tooltip =
+        'This is an externally mounted plugin that is not supported by the UI. Please use the CLI to manage this engine.';
     } else {
-      return 'The UI only supports configuration views for these secret engines. The CLI must be used to manage other engine resources.';
+      this.tooltip =
+        'The UI only supports configuration views for these secret engines. The CLI must be used to manage other engine resources.';
     }
   }
 
