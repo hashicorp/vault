@@ -659,6 +659,7 @@ func TestBexpr(t *testing.T) {
 			Plugin:        "kv",
 			PluginVersion: "v1.13.1+builtin",
 			Version:       "2",
+			IsLocal:       false,
 		}
 		return bus.SendEventInternal(ctx, namespace.RootNamespace, &pluginInfo, logical.EventType(eventType), false, event)
 	}
@@ -672,6 +673,8 @@ func TestBexpr(t *testing.T) {
 		{"non-matching expression", "data_path == nothing", false},
 		{"matching expression", "data_path == secret/my/secret/path", true},
 		{"full matching expression", "data_path == secret/my/secret/path and operation != read and source_plugin_mount == secret/ and source_plugin_mount != somethingelse", true},
+		{"non-matching on local", "source_plugin_is_local == true", false},
+		{"matching on local", "source_plugin_is_local == false", true},
 	}
 
 	for _, testCase := range testCases {
@@ -1067,22 +1070,26 @@ func TestNotifyOnLocalFilterChanges(t *testing.T) {
 	}
 }
 
-type fakeWALGetter struct {
+type fakeStorageInfoGetter struct {
 	Header string
 }
 
-func (f *fakeWALGetter) GetCurrentWALHeader() string {
+func (f *fakeStorageInfoGetter) GetCurrentWALHeader() string {
 	return f.Header
 }
 
-var _ StorageWALGetter = (*fakeWALGetter)(nil)
+func (f *fakeStorageInfoGetter) IsReplicated(secondaryID, namespace, storagePath string) bool {
+	return false
+}
+
+var _ StorageInfoGetter = (*fakeStorageInfoGetter)(nil)
 
 // Test_getIndexForEvent tests the retrieval of the Vault storage index for an
 // event based on its metadata.
 func Test_getIndexForEvent(t *testing.T) {
 	tests := map[string]struct {
 		event       *logical.EventReceived
-		walGetter   StorageWALGetter
+		walGetter   StorageInfoGetter
 		expectErr   string
 		expectIndex string
 	}{
@@ -1096,7 +1103,7 @@ func Test_getIndexForEvent(t *testing.T) {
 					},
 				},
 			},
-			walGetter:   &fakeWALGetter{"test-wal"},
+			walGetter:   &fakeStorageInfoGetter{"test-wal"},
 			expectErr:   "",
 			expectIndex: "test-wal",
 		},
@@ -1110,7 +1117,7 @@ func Test_getIndexForEvent(t *testing.T) {
 					},
 				},
 			},
-			walGetter:   &fakeWALGetter{"test-wal"},
+			walGetter:   &fakeStorageInfoGetter{"test-wal"},
 			expectErr:   "",
 			expectIndex: "",
 		},
@@ -1124,7 +1131,7 @@ func Test_getIndexForEvent(t *testing.T) {
 					},
 				},
 			},
-			walGetter:   &fakeWALGetter{"test-wal"},
+			walGetter:   &fakeStorageInfoGetter{"test-wal"},
 			expectErr:   "",
 			expectIndex: "",
 		},
@@ -1138,7 +1145,7 @@ func Test_getIndexForEvent(t *testing.T) {
 					},
 				},
 			},
-			walGetter:   &fakeWALGetter{"test-wal"},
+			walGetter:   &fakeStorageInfoGetter{"test-wal"},
 			expectErr:   "failed to parse event metadata modified",
 			expectIndex: "",
 		},
