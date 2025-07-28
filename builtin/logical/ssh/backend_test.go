@@ -22,6 +22,7 @@ import (
 	logicaltest "github.com/hashicorp/vault/helper/testhelpers/logical"
 	vaulthttp "github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/helper/docker"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/snapshots"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
 	"github.com/mitchellh/mapstructure"
@@ -3024,4 +3025,89 @@ func TestProperAuthing(t *testing.T) {
 	if !validatedPath {
 		t.Fatalf("Expected to have validated at least one path.")
 	}
+}
+
+// TestSnapshotOperations_Role tests the behavior of the snapshot operations on
+// the roles path. It ensures that a snapshot read and list do not modify any
+// state on the backend. The test also verifies that a recover operation
+// restores the role.
+func TestSnapshotOperations_Role(t *testing.T) {
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+	b, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = b.Setup(context.Background(), config)
+
+	oldConfig := logical.TestBackendConfig()
+	oldConfig.StorageView = &logical.InmemStorage{}
+	oldBackend, err := Backend(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = oldBackend.Setup(context.Background(), oldConfig)
+	tc := snapshots.NewSnapshotTestCase(t, b)
+	snapshotStorage := tc.SnapshotStorage()
+	regularStorage := tc.RegularStorage()
+
+	// write a role to the snapshot's storage
+	resp, err := oldBackend.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Storage:   snapshotStorage,
+		Path:      "roles/test",
+		Data: map[string]interface{}{
+			"key_type":     "otp",
+			"default_user": "testuser",
+		},
+	})
+	require.NoError(t, err)
+	if resp != nil {
+		require.NoError(t, resp.Error())
+	}
+
+	// verify that read and list from a snapshot don't modify anything
+	tc.RunRead(t, "roles/test")
+	tc.RunList(t, "roles")
+
+	// run a recover
+	_, err = tc.DoRecover(t, "roles/test")
+	require.NoError(t, err)
+
+	// check after the recover operation to ensure the data was updated
+	read, err := b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "roles/test",
+		Storage:   regularStorage,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, read)
+	require.Equal(t, "otp", read.Data["key_type"])
+
+	// update the role so it's different than what's in the snapshot
+	resp, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "roles/test",
+		Storage:   regularStorage,
+		Data: map[string]interface{}{
+			"key_type":                "ca",
+			"allow_user_certificates": true,
+		},
+	})
+	require.NoError(t, err)
+	require.Nil(t, resp)
+
+	// recover again
+	_, err = tc.DoRecover(t, "roles/test")
+	require.NoError(t, err)
+
+	// verify that the role was restored to its version in the snapshot
+	read, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.ReadOperation,
+		Path:      "roles/test",
+		Storage:   regularStorage,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, read)
+	require.Equal(t, "otp", read.Data["key_type"])
 }
