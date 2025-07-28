@@ -23,7 +23,15 @@ import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
  */
 export default function engineDisplayData(methodType: string) {
   const engine = ALL_ENGINES?.find((t) => t.type === methodType);
-  if (!engine && methodType) engineDisplayData('generic'); // Fallback to generic if no match found & type is provided
+  if (!engine && methodType) {
+    // Fallback to a generic engine if no match found but type is provided
+    return {
+      displayName: 'Generic plugin',
+      type: 'generic',
+      glyph: 'vault',
+      mountCategory: ['secret', 'auth'],
+    };
+  }
 
   return engine;
 }
