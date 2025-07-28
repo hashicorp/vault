@@ -4,7 +4,8 @@
 terraform {
   required_providers {
     enos = {
-      source = "registry.terraform.io/hashicorp-forge/enos"
+      source  = "registry.terraform.io/hashicorp-forge/enos"
+      version = ">= 0.6.1"
     }
   }
 }
@@ -12,11 +13,6 @@ terraform {
 variable "arch" {
   type        = string
   description = "The architecture for the desired artifact"
-}
-
-variable "artifactory_username" {
-  type        = string
-  description = "The username to use when connecting to Artifactory"
 }
 
 variable "artifactory_token" {
@@ -73,12 +69,11 @@ module "artifact_metadata" {
 }
 
 data "enos_artifactory_item" "vault" {
-  username = var.artifactory_username
-  token    = var.artifactory_token
-  name     = module.artifact_metadata.artifact_name
-  host     = var.artifactory_host
-  repo     = module.artifact_metadata.release_repo
-  path     = module.artifact_metadata.release_paths[var.distro_version]
+  token = var.artifactory_token
+  name  = module.artifact_metadata.artifact_name
+  host  = var.artifactory_host
+  repo  = module.artifact_metadata.release_repo
+  path  = module.artifact_metadata.release_paths[var.distro_version]
 }
 
 output "results" {
@@ -109,7 +104,7 @@ output "release" {
   value = {
     url      = data.enos_artifactory_item.vault.results[0].url
     sha256   = data.enos_artifactory_item.vault.results[0].sha256
-    username = var.artifactory_username
     token    = var.artifactory_token
+    username = null # username is not optional yet
   }
 }
