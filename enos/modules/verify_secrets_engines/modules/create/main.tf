@@ -49,11 +49,6 @@ variable "ports" {
   }))
 }
 
-variable "ldap_password" {
-  type        = string
-  description = "The LDAP Server admin password"
-  default     = "password1"
-}
 
 variable "leader_host" {
   type = object({
@@ -68,6 +63,11 @@ variable "leader_host" {
 variable "vault_addr" {
   type        = string
   description = "The local vault API listen address"
+}
+
+variable "vault_edition" {
+  type        = string
+  description = "The Vault product edition"
 }
 
 variable "vault_install_dir" {

@@ -18,6 +18,10 @@ resource "enos_remote_exec" "kmip_client_configure" {
     KMIP_PORT  = var.create_state.kmip.port
   }
 
+  // Only perform KMIP operations for Vault Enterprise
+  // The KMIP secrets engine is not available in Vault CE
+  count = var.vault_edition == "ce" ? 0 : 1
+
   scripts = [abspath("${path.module}/../../scripts/kmip/kmip-client-configure.sh")]
 
   transport = {

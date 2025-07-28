@@ -1,6 +1,12 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
+variable "ldap_password" {
+  type        = string
+  description = "The LDAP Server admin password"
+  default     = "password1"
+}
+
 locals {
   ldap_output = {
     ip_version        = var.ip_version

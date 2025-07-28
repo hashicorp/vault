@@ -539,6 +539,7 @@ scenario "agent" {
       quality.vault_api_sys_policy_write,
       quality.vault_mount_auth,
       quality.vault_mount_kv,
+      quality.vault_secrets_kmip_write_config,
       quality.vault_secrets_kv_write,
       quality.vault_secrets_ldap_write_config,
     ]
@@ -550,6 +551,7 @@ scenario "agent" {
       leader_host            = step.get_vault_cluster_ips.leader_host
       ports                  = global.integration_host_ports
       vault_addr             = step.create_vault_cluster.api_addr_localhost
+      vault_edition          = matrix.edition
       vault_install_dir      = global.vault_install_dir[matrix.artifact_type]
       vault_root_token       = step.create_vault_cluster.root_token
     }

@@ -34,6 +34,11 @@ variable "vault_addr" {
   description = "The local vault API listen address"
 }
 
+variable "vault_edition" {
+  type        = string
+  description = "The Vault product edition"
+}
+
 variable "vault_install_dir" {
   type        = string
   description = "The directory where the Vault binary will be installed"

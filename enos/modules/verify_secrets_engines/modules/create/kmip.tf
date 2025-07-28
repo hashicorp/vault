@@ -38,6 +38,10 @@ resource "enos_remote_exec" "secrets_enable_kmip_secret" {
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
+  // Only perform KMIP operations for Vault Enterprise
+  // The KMIP secrets engine is not available in Vault CE
+  count = var.vault_edition == "ce" ? 0 : 1
+
   scripts = [abspath("${path.module}/../../scripts/secrets-enable.sh")]
 
   transport = {
@@ -59,6 +63,10 @@ resource "enos_remote_exec" "kmip_configure" {
     KMIP_PORT         = var.ports.kmip.port
   }
 
+  // Only perform KMIP operations for Vault Enterprise
+  // The KMIP secrets engine is not available in Vault CE
+  count = var.vault_edition == "ce" ? 0 : 1
+
   scripts = [abspath("${path.module}/../../scripts/kmip/kmip-configure.sh")]
 
   transport = {
@@ -78,6 +86,10 @@ resource "enos_remote_exec" "kmip_create_scope" {
     VAULT_INSTALL_DIR = var.vault_install_dir
     VAULT_TOKEN       = var.vault_root_token
   }
+
+  // Only perform KMIP operations for Vault Enterprise
+  // The KMIP secrets engine is not available in Vault CE
+  count = var.vault_edition == "ce" ? 0 : 1
 
   scripts = [abspath("${path.module}/../../scripts/write.sh")]
 
@@ -102,6 +114,10 @@ resource "enos_remote_exec" "kmip_create_role" {
     VAULT_TOKEN       = var.vault_root_token
   }
 
+  // Only perform KMIP operations for Vault Enterprise
+  // The KMIP secrets engine is not available in Vault CE
+  count = var.vault_edition == "ce" ? 0 : 1
+
   scripts = [abspath("${path.module}/../../scripts/write.sh")]
 
   transport = {
@@ -125,6 +141,10 @@ resource "enos_remote_exec" "kmip_generate_certificate" {
     CERT_FORMAT       = local.kmip_cert_format
   }
 
+  // Only perform KMIP operations for Vault Enterprise
+  // The KMIP secrets engine is not available in Vault CE
+  count = var.vault_edition == "ce" ? 0 : 1
+
   scripts = [abspath("${path.module}/../../scripts/kmip/kmip-generate-cert.sh")]
   transport = {
     ssh = {
@@ -147,6 +167,10 @@ resource "enos_remote_exec" "kmip_manage_roles" {
     VAULT_INSTALL_DIR = var.vault_install_dir
     VAULT_TOKEN       = var.vault_root_token
   }
+
+  // Only perform KMIP operations for Vault Enterprise
+  // The KMIP secrets engine is not available in Vault CE
+  count = var.vault_edition == "ce" ? 0 : 1
 
   scripts = [abspath("${path.module}/../../scripts/write.sh")]
 
