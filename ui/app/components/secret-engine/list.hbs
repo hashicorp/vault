@@ -48,21 +48,7 @@
     <div>
       <div class="has-text-grey is-grid align-items-center linked-block-title">
         {{#if backend.icon}}
-          <Hds::TooltipButton
-            @text={{if
-              backend.isSupportedBackend
-              (concat
-                (get (engines-display-data backend.type) "displayName")
-                (if
-                  (eq backend.version 2)
-                  " version 2"
-                  (if (and (eq backend.version 1) (eq backend.type "kv")) " version 1" "")
-                )
-              )
-              "The UI only supports configuration views for these secret engines. The CLI must be used to manage other engine resources."
-            }}
-            aria-label="Type of backend"
-          >
+          <Hds::TooltipButton @text={{fn this.tooltipText backend}} aria-label="Type of backend">
             <Icon @name={{backend.icon}} class="has-text-grey-light" />
           </Hds::TooltipButton>
         {{/if}}

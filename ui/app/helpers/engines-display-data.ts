@@ -23,5 +23,7 @@ import { ALL_ENGINES } from 'vault/utils/all-engines-metadata';
  */
 export default function engineDisplayData(methodType: string) {
   const engine = ALL_ENGINES?.find((t) => t.type === methodType);
+  if (!engine && methodType) engineDisplayData('generic'); // Fallback to generic if no match found & type is provided
+
   return engine;
 }

@@ -13,6 +13,7 @@ import type FlashMessageService from 'vault/services/flash-messages';
 import type SecretsEngineResource from 'vault/resources/secrets/engine';
 import type ApiService from 'vault/services/api';
 import type RouterService from '@ember/routing/router-service';
+import engineDisplayData from 'vault/helpers/engines-display-data';
 
 /**
  * @module SecretEngineList handles the display of the list of secret engines, including the filtering.
@@ -65,6 +66,19 @@ export default class SecretEngineList extends Component<Args> {
     }
     // no filters, return full sorted list.
     return sortedBackends;
+  }
+
+  tooltipText(backend: SecretsEngineResource) {
+    if (backend.isSupportedBackend) {
+      if (backend.type === 'kv') {
+        return `${engineDisplayData(backend.type)?.displayName} ${backend.version}`;
+      }
+      return engineDisplayData(backend.type)?.displayName;
+    } else if (backend.type === 'generic') {
+      return 'This is a external plugin that is not supported by the UI. Please use the CLI to manage this engine.';
+    } else {
+      return 'The UI only supports configuration views for these secret engines. The CLI must be used to manage other engine resources.';
+    }
   }
 
   // Filtering & searching
