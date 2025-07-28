@@ -716,6 +716,7 @@ scenario "upgrade" {
       hosts             = step.get_updated_vault_cluster_ips.follower_hosts
       ip_version        = matrix.ip_version
       vault_addr        = step.create_vault_cluster.api_addr_localhost
+      vault_edition     = matrix.edition
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }

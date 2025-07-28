@@ -1154,6 +1154,7 @@ scenario "dr_replication" {
       hosts                   = step.get_secondary_cluster_ips.follower_hosts
       ip_version              = matrix.ip_version
       vault_addr              = step.create_secondary_cluster.api_addr_localhost
+      vault_edition           = matrix.edition
       vault_install_dir       = global.vault_install_dir[matrix.artifact_type]
       vault_root_token        = step.create_secondary_cluster.root_token
       verify_pki_certs        = false
@@ -1294,6 +1295,7 @@ scenario "dr_replication" {
       hosts                   = step.get_secondary_cluster_ips.follower_hosts
       ip_version              = matrix.ip_version
       vault_addr              = step.create_secondary_cluster.api_addr_localhost
+      vault_edition           = matrix.edition
       vault_install_dir       = global.vault_install_dir[matrix.artifact_type]
       vault_root_token        = step.create_secondary_cluster.root_token
       verify_pki_certs        = false
