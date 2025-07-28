@@ -205,10 +205,10 @@ func TestTransit_CreateKey(t *testing.T) {
 		shouldError    bool
 		entOnly        bool
 	}{
-		"AES-128": {
+		"AES-128 GCM": {
 			creationParams: map[string]interface{}{"type": "aes128-gcm96"},
 		},
-		"AES-256": {
+		"AES-256 GCM": {
 			creationParams: map[string]interface{}{"type": "aes256-gcm96"},
 		},
 		"CHACHA20": {
@@ -341,6 +341,14 @@ func TestTransit_CreateKey(t *testing.T) {
 		},
 		"SLH-DSA-SHAKE-256f": {
 			creationParams: map[string]interface{}{"type": "slh-dsa", "parameter_set": keysutil.ParameterSet_SLH_DSA_SHAKE_256F},
+			entOnly:        true,
+		},
+		"AES-128 CBC": {
+			creationParams: map[string]interface{}{"type": "aes128-cbc"},
+			entOnly:        true,
+		},
+		"AES-256 CBC": {
+			creationParams: map[string]interface{}{"type": "aes256-cbc"},
 			entOnly:        true,
 		},
 		"bad key type": {
