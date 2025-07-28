@@ -32,7 +32,6 @@ scenario "dr_replication" {
     https://eng-handbook.hashicorp.services/internal-tools/enos/troubleshooting/#execution-error-expected-vs-got-for-vault-versioneditionrevisionbuild-date.
 
     Variables required for some scenario variants:
-      - artifactory_username (if using `artifact_source:artifactory` in your filter)
       - artifactory_token (if using `artifact_source:artifactory` in your filter)
       - aws_region (if different from the default value in enos-variables.hcl)
       - consul_license_path (if using an ENT edition of Consul)
@@ -125,20 +124,19 @@ scenario "dr_replication" {
     module      = "build_${matrix.artifact_source}"
 
     variables {
-      build_tags           = var.vault_local_build_tags != null ? var.vault_local_build_tags : global.build_tags[matrix.edition]
-      artifact_path        = local.artifact_path
-      goarch               = matrix.arch
-      goos                 = "linux"
-      artifactory_host     = matrix.artifact_source == "artifactory" ? var.artifactory_host : null
-      artifactory_repo     = matrix.artifact_source == "artifactory" ? var.artifactory_repo : null
-      artifactory_username = matrix.artifact_source == "artifactory" ? var.artifactory_username : null
-      artifactory_token    = matrix.artifact_source == "artifactory" ? var.artifactory_token : null
-      arch                 = matrix.artifact_source == "artifactory" ? matrix.arch : null
-      product_version      = var.vault_product_version
-      artifact_type        = matrix.artifact_type
-      distro               = matrix.artifact_source == "artifactory" ? matrix.distro : null
-      edition              = matrix.artifact_source == "artifactory" ? matrix.edition : null
-      revision             = var.vault_revision
+      build_tags        = var.vault_local_build_tags != null ? var.vault_local_build_tags : global.build_tags[matrix.edition]
+      artifact_path     = local.artifact_path
+      goarch            = matrix.arch
+      goos              = "linux"
+      artifactory_host  = matrix.artifact_source == "artifactory" ? var.artifactory_host : null
+      artifactory_repo  = matrix.artifact_source == "artifactory" ? var.artifactory_repo : null
+      artifactory_token = matrix.artifact_source == "artifactory" ? var.artifactory_token : null
+      arch              = matrix.artifact_source == "artifactory" ? matrix.arch : null
+      product_version   = var.vault_product_version
+      artifact_type     = matrix.artifact_type
+      distro            = matrix.artifact_source == "artifactory" ? matrix.distro : null
+      edition           = matrix.artifact_source == "artifactory" ? matrix.edition : null
+      revision          = var.vault_revision
     }
   }
 
