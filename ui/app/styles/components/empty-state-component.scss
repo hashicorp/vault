@@ -1,4 +1,3 @@
-@use '../utils/color_variables';
 @use '../utils/font_variables';
 @use '../utils/size_variables';
 
@@ -14,7 +13,7 @@
   display: flex;
   justify-content: center;
   padding: size_variables.$spacing-48 size_variables.$spacing-12;
-  box-shadow: 0 -2px 0 -1px color_variables.$neutral-300;
+  box-shadow: 0 -2px 0 -1px var(--token-color-palette-neutral-300);
 }
 
 .empty-state-transparent {
@@ -32,7 +31,7 @@
 }
 
 .empty-state-title {
-  color: color_variables.$neutral-400;
+  color: var(--token-color-palette-neutral-400);
   font-size: size_variables.$size-4;
   font-weight: font_variables.$font-weight-semibold;
   line-height: 1.2;

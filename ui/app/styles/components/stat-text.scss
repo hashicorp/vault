@@ -1,4 +1,3 @@
-@use '../utils/color_variables';
 @use '../utils/font_variables';
 @use '../utils/size_variables';
 
@@ -24,7 +23,7 @@
     .stat-text {
       font-size: size_variables.$size-8;
       font-weight: font_variables.$font-weight-normal;
-      color: color_variables.$neutral-500;
+      color: var(--token-color-palette-neutral-500);
       line-height: inherit;
     }
     .stat-value {
@@ -43,7 +42,7 @@
     .stat-text {
       font-size: size_variables.$size-8;
       font-weight: font_variables.$font-weight-normal;
-      color: color_variables.$neutral-500;
+      color: var(--token-color-palette-neutral-500);
       line-height: inherit;
     }
     .stat-value {
@@ -62,7 +61,7 @@
     .stat-text {
       font-size: size_variables.$size-8;
       font-weight: font_variables.$font-weight-normal;
-      color: color_variables.$neutral-500;
+      color: var(--token-color-palette-neutral-500);
       line-height: inherit;
     }
     .stat-value {
@@ -81,7 +80,7 @@
     .stat-text {
       font-size: size_variables.$size-8;
       font-weight: font_variables.$font-weight-normal;
-      color: color_variables.$neutral-500;
+      color: var(--token-color-palette-neutral-500);
       line-height: inherit;
     }
     .stat-value {
@@ -95,19 +94,19 @@
     .stat-label {
       font-size: size_variables.$size-8;
       font-weight: font_variables.$font-weight-normal;
-      color: color_variables.$neutral-400;
+      color: var(--token-color-palette-neutral-400);
       line-height: inherit;
     }
     .stat-text {
       font-size: size_variables.$size-8;
       font-weight: font_variables.$font-weight-normal;
-      color: color_variables.$neutral-500;
+      color: var(--token-color-palette-neutral-500);
       line-height: inherit;
     }
     .stat-value {
       font-size: size_variables.$size-8;
       font-weight: font_variables.$font-weight-normal;
-      color: color_variables.$neutral-600;
+      color: var(--token-color-palette-neutral-600);
       line-height: inherit;
     }
   }

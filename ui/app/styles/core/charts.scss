@@ -1,4 +1,3 @@
-@use '../utils/color_variables';
 @use '../utils/font_variables';
 @use '../utils/size_variables';
 
@@ -16,23 +15,23 @@
   display: inline-block;
   // numbers are indices because chart legend is iterated over
   &.dot-0 {
-    background-color: color_variables.$blue-100;
+    background-color: var(--token-color-palette-blue-100);
   }
   &.dot-1 {
-    background-color: color_variables.$blue-200;
+    background-color: var(--token-color-palette-blue-200);
   }
   &.dot-2 {
-    background-color: color_variables.$neutral-300;
+    background-color: var(--token-color-palette-neutral-300);
   }
   &.dot-3 {
-    background-color: color_variables.$neutral-500;
+    background-color: var(--token-color-palette-neutral-500);
   }
   // custom naming for running totals, which matches the custom-bar naming
   &.dot-clients {
-    background-color: color_variables.$blue-200;
+    background-color: var(--token-color-palette-blue-200);
   }
   &.dot-new_clients {
-    background-color: color_variables.$blue-200;
+    background-color: var(--token-color-palette-blue-200);
   }
 }
 
@@ -42,7 +41,7 @@
 }
 
 .chart-tooltip {
-  background-color: color_variables.$black;
+  background-color: hsl(0, 0%, 4%);
   color: white;
   font-size: size_variables.$size-9;
   padding: 6px;
@@ -64,7 +63,7 @@
   height: 0;
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
-  border-top: 9px solid color_variables.$black;
+  border-top: 9px solid hsl(0, 0%, 4%);
   position: absolute;
   opacity: 0.8;
   bottom: -9px;
@@ -73,14 +72,14 @@
 
 .has-grid {
   g > text {
-    color: color_variables.$neutral-400;
+    color: var(--token-color-palette-neutral-400);
     font-size: size_variables.$size-9;
   }
 
   g > line {
     // TODO: mix-blend doesn't work in firefox browser?
     mix-blend-mode: darken;
-    color: color_variables.$neutral-300;
+    color: var(--token-color-palette-neutral-300);
   }
 }
 

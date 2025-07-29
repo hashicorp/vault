@@ -1,5 +1,4 @@
 @use '../utils/box-shadow_variables';
-@use '../utils/color_variables';
 @use '../utils/size_variables';
 @use '../core/buttons.scss';
 @use '../core/inputs.scss';
@@ -49,7 +48,7 @@
 .file-delete-button {
   @extend .button;
   @extend .is-transparent;
-  color: color_variables.$neutral-400;
+  color: var(--token-color-palette-neutral-400);
   position: absolute;
   right: size_variables.$spacing-8;
 }

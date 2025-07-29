@@ -1,4 +1,3 @@
-@use '../utils/color_variables';
 @use '../utils/font_variables';
 @use '../utils/size_variables';
 
@@ -15,7 +14,7 @@
 
 .tabs {
   align-items: stretch;
-  box-shadow: inset 0 -1px 0 color_variables.$neutral-300;
+  box-shadow: inset 0 -1px 0 var(--token-color-palette-neutral-300);
   display: flex;
   justify-content: space-between;
   overflow: hidden;
@@ -34,22 +33,22 @@
         box-shadow: none;
       }
       &.active {
-        border-color: color_variables.$blue-200;
-        color: color_variables.$blue-200;
+        border-color: var(--token-color-palette-blue-200);
+        color: var(--token-color-palette-blue-200);
       }
     }
     li {
       // solves for tools -> sub-tabs like "Unwrap data" -> "Data"
       &.is-active {
-        border-bottom: 2px solid color_variables.$blue-200;
-        color: color_variables.$blue-200;
+        border-bottom: 2px solid var(--token-color-palette-blue-200);
+        color: var(--token-color-palette-blue-200);
       }
       // solves for tabs on auth mounts & secrets engines
       > a {
         &.active {
-          color: color_variables.$blue-200;
+          color: var(--token-color-palette-blue-200);
           background-color: transparent;
-          border-bottom: 2px solid color_variables.$blue-200;
+          border-bottom: 2px solid var(--token-color-palette-blue-200);
         }
       }
     }
@@ -61,8 +60,8 @@
     }
     &.active a,
     &.is-active a {
-      border-color: color_variables.$blue-200;
-      color: color_variables.$blue-200;
+      border-color: var(--token-color-palette-blue-200);
+      color: var(--token-color-palette-blue-200);
     }
   }
   // important for auth tabs in active state, otherwise the border-bottom will not show.
@@ -72,7 +71,7 @@
     justify-content: center;
     vertical-align: top;
     border-bottom: 2px solid transparent;
-    color: color_variables.$neutral-400;
+    color: var(--token-color-palette-neutral-400);
     font-weight: font_variables.$font-weight-semibold;
     padding: size_variables.$spacing-14 size_variables.$spacing-12 size_variables.$spacing-12;
     text-decoration: none;
@@ -82,12 +81,12 @@
 
     &:hover,
     &:active {
-      border-color: color_variables.$neutral-300;
+      border-color: var(--token-color-palette-neutral-300);
     }
 
     &:hover {
-      background-color: color_variables.$neutral-50;
-      color: color_variables.$neutral-600;
+      background-color: var(--token-color-palette-neutral-50);
+      color: var(--token-color-palette-neutral-600);
     }
   }
 

@@ -1,4 +1,3 @@
-@use '../utils/color_variables';
 @use '../utils/font_variables';
 @use '../utils/size_variables';
 
@@ -12,7 +11,7 @@
 
   .popup-menu-content {
     .menu-label {
-      color: color_variables.$black;
+      color: hsl(0, 0%, 4%);
       font-size: 14px;
       font-weight: font_variables.$font-weight-bold;
       text-transform: unset;
@@ -25,6 +24,6 @@
   .confirm-action-message p {
     padding-top: size_variables.$spacing-4;
     font-weight: font_variables.$font-weight-semibold;
-    color: color_variables.$black;
+    color: hsl(0, 0%, 4%);
   }
 }

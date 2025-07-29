@@ -1,4 +1,3 @@
-@use '../utils/color_variables';
 @use '../utils/size_variables';
 
 /**
@@ -16,15 +15,15 @@
   }
 }
 .lineal-chart-bar {
-  fill: color_variables.$blue-500;
+  fill: var(--token-color-palette-blue-500);
 }
 .lineal-axis {
-  color: color_variables.$neutral-400;
+  color: var(--token-color-palette-neutral-400);
   text {
     font-size: 0.75rem;
   }
   line {
-    color: color_variables.$neutral-300;
+    color: var(--token-color-palette-neutral-300);
   }
 }
 .lineal-tooltip-position {
@@ -42,20 +41,20 @@
 
 // @colorScale arg for Lineal::VBars is "blue-bar", indices are added by lineal
 .blue-bar-1 {
-  color: color_variables.$blue-100;
-  fill: color_variables.$blue-100;
+  color: var(--token-color-palette-blue-100);
+  fill: var(--token-color-palette-blue-100);
 }
 .blue-bar-2 {
-  color: color_variables.$blue-200;
-  fill: color_variables.$blue-200;
+  color: var(--token-color-palette-blue-200);
+  fill: var(--token-color-palette-blue-200);
 }
 
 // custom bar class for manually applying bar styles
 .custom-bar-clients {
-  color: color_variables.$blue-200;
-  fill: color_variables.$blue-200;
+  color: var(--token-color-palette-blue-200);
+  fill: var(--token-color-palette-blue-200);
 }
 .custom-bar-new_clients {
-  fill: color_variables.$blue-200;
-  color: color_variables.$blue-200;
+  fill: var(--token-color-palette-blue-200);
+  color: var(--token-color-palette-blue-200);
 }

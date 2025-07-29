@@ -1,6 +1,5 @@
 @use 'sass:color';
 @use '../utils/box-shadow_variables';
-@use '../utils/color_variables';
 @use '../utils/font_variables';
 @use '../utils/size_variables';
 
@@ -31,7 +30,7 @@
   grid-column-start: 1;
   grid-column-end: span col4-end;
   grid-row-start: 1;
-  box-shadow: inset 0 -1px 0 color_variables.$neutral-200;
+  box-shadow: inset 0 -1px 0 var(--token-color-palette-neutral-200);
 }
 
 .chart-container-wide {
@@ -108,14 +107,14 @@ h2.chart-title {
 }
 
 p.chart-description {
-  color: color_variables.$neutral-500;
+  color: var(--token-color-palette-neutral-500);
   font-size: 14px;
   line-height: 18px;
   margin-bottom: size_variables.$spacing-8;
 }
 
 p.chart-subtext {
-  color: color_variables.$neutral-400;
+  color: var(--token-color-palette-neutral-400);
   font-size: size_variables.$size-8;
   line-height: 16px;
   margin-top: size_variables.$spacing-8;

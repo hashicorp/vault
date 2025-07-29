@@ -1,5 +1,4 @@
 @use '../utils/box-shadow_variables';
-@use '../utils/color_variables';
 @use '../utils/font_variables';
 @use '../utils/size_variables';
 
@@ -58,7 +57,7 @@
   // so they match other dropdown elements until we replace popup-menu with Hds::Dropdown
   .hds-confirm-action-critical {
     &:hover {
-      background-color: color_variables.$neutral-50;
+      background-color: var(--token-color-palette-neutral-50);
     }
     div,
     span {
@@ -72,26 +71,26 @@
   .ember-power-select-option,
   .ember-power-select-option[aria-current='true'],
   a {
-    background-color: color_variables.$white;
-    color: color_variables.$neutral-600;
+    background-color: hsl(0, 0%, 100%);
+    color: var(--token-color-palette-neutral-600);
 
     &:hover {
-      background-color: color_variables.$neutral-50;
-      color: color_variables.$neutral-600;
+      background-color: var(--token-color-palette-neutral-50);
+      color: var(--token-color-palette-neutral-600);
     }
 
     &.active,
     &.is-active {
       background-color: transparent;
-      color: color_variables.$blue-200;
+      color: var(--token-color-palette-blue-200);
     }
 
     &.is-destroy {
-      color: color_variables.$red-200;
+      color: var(--token-color-palette-red-200);
 
       &:hover {
-        background-color: color_variables.$red-200;
-        color: color_variables.$white;
+        background-color: var(--token-color-palette-red-200);
+        color: hsl(0, 0%, 100%);
       }
     }
 
@@ -110,7 +109,7 @@
   }
 
   .menu-label {
-    color: color_variables.$neutral-500;
+    color: var(--token-color-palette-neutral-500);
     font-size: size_variables.$size-9;
     font-weight: font_variables.$font-weight-normal;
     letter-spacing: 0;
@@ -124,7 +123,7 @@
   }
 
   hr {
-    background-color: color_variables.$neutral-200;
+    background-color: var(--token-color-palette-neutral-200);
     margin: 0;
   }
 }

@@ -1,5 +1,4 @@
 @use '../utils/box-shadow_variables';
-@use '../utils/color_variables';
 @use '../utils/font_variables';
 @use '../utils/size_variables';
 
@@ -41,7 +40,7 @@ $dark-gray: #535f73;
 
 .border-col {
   grid-area: border-col;
-  background-color: color_variables.$neutral-200;
+  background-color: var(--token-color-palette-neutral-200);
 }
 
 .calendar-widget-container {

@@ -1,5 +1,4 @@
 @use '../utils/box-shadow_variables';
-@use '../utils/color_variables';
 @use '../utils/mixins';
 @use '../utils/size_variables';
 @use '../core/buttons.scss';
@@ -14,14 +13,18 @@
 }
 
 .toolbar {
-  background-color: color_variables.$neutral-50;
-  border: 1px solid color_variables.$neutral-100;
-  border-bottom-color: color_variables.$neutral-300;
-  border-top-color: color_variables.$neutral-300;
+  background-color: var(--token-color-palette-neutral-50);
+  border: 1px solid var(--token-color-palette-neutral-100);
+  border-bottom-color: var(--token-color-palette-neutral-300);
+  border-top-color: var(--token-color-palette-neutral-300);
   position: relative;
 
   &::after {
-    background: linear-gradient(to right, color_variables.$neutral-50, rgba(color_variables.$neutral-50, 0));
+    background: linear-gradient(
+      to right,
+      var(--token-color-palette-neutral-50),
+      rgba(var(--token-color-palette-neutral-50), 0)
+    );
     bottom: 0;
     content: '';
     position: absolute;
@@ -39,7 +42,7 @@
 
 .toolbar-label {
   padding: size_variables.$spacing-8;
-  color: color_variables.$neutral-400;
+  color: var(--token-color-palette-neutral-400);
 }
 
 .toolbar-scroller {
@@ -59,7 +62,7 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: color_variables.$neutral-300;
+    background: var(--token-color-palette-neutral-300);
     border-radius: size_variables.$spacing-4;
   }
 }
@@ -95,13 +98,13 @@
   @extend .is-ghost;
   @extend .has-icon-right;
   border: 0;
-  color: color_variables.$black;
+  color: hsl(0, 0%, 4%);
   transition: background-color size_variables.$speed;
 
   &:hover:not(.disabled) {
-    background-color: color_variables.$neutral-100;
+    background-color: var(--token-color-palette-neutral-100);
     border: 0;
-    color: color_variables.$blue-200;
+    color: var(--token-color-palette-blue-200);
   }
 
   &:active {
@@ -126,12 +129,12 @@
   }
 }
 a.disabled.toolbar-link {
-  color: color_variables.$black;
-  background-color: color_variables.$white;
+  color: hsl(0, 0%, 4%);
+  background-color: hsl(0, 0%, 100%);
   cursor: not-allowed;
   &:hover {
-    background-color: color_variables.$neutral-100;
-    color: color_variables.$blue-200;
+    background-color: var(--token-color-palette-neutral-100);
+    color: var(--token-color-palette-blue-200);
   }
 }
 
