@@ -234,8 +234,7 @@ scenario "smoke" {
       hosts      = step.create_external_integration_target.hosts
       ip_version = matrix.ip_version
       packages   = concat(global.packages, global.distro_packages["ubuntu"]["24.04"], ["podman", "podman-docker"])
-      ldap_port  = global.ports.ldap.port
-      ldaps_port = global.ports.ldaps.port
+      ports      = global.integration_host_ports
     }
   }
 
@@ -619,18 +618,21 @@ scenario "smoke" {
       quality.vault_api_sys_policy_write,
       quality.vault_mount_auth,
       quality.vault_mount_kv,
+      quality.vault_secrets_kmip_write_config,
       quality.vault_secrets_kv_write,
       quality.vault_secrets_ldap_write_config,
     ]
 
     variables {
-      hosts             = step.create_vault_cluster_targets.hosts
-      ip_version        = matrix.ip_version
-      ldap_host         = step.set_up_external_integration_target.state.ldap.host
-      leader_host       = step.get_vault_cluster_ips.leader_host
-      vault_addr        = step.create_vault_cluster.api_addr_localhost
-      vault_install_dir = global.vault_install_dir[matrix.artifact_type]
-      vault_root_token  = step.create_vault_cluster.root_token
+      hosts                  = step.create_vault_cluster_targets.hosts
+      ip_version             = matrix.ip_version
+      integration_host_state = step.set_up_external_integration_target.state
+      leader_host            = step.get_vault_cluster_ips.leader_host
+      ports                  = global.integration_host_ports
+      vault_addr             = step.create_vault_cluster.api_addr_localhost
+      vault_edition          = matrix.edition
+      vault_install_dir      = global.vault_install_dir[matrix.artifact_type]
+      vault_root_token       = step.create_vault_cluster.root_token
     }
   }
 
@@ -680,7 +682,9 @@ scenario "smoke" {
     variables {
       create_state      = step.verify_secrets_engines_create.state
       hosts             = step.get_vault_cluster_ips.follower_hosts
+      ip_version        = matrix.ip_version
       vault_addr        = step.create_vault_cluster.api_addr_localhost
+      vault_edition     = matrix.edition
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
@@ -739,6 +743,11 @@ scenario "smoke" {
   output "external_integration_server_ldap" {
     description = "The LDAP test servers info"
     value       = step.set_up_external_integration_target.state.ldap
+  }
+
+  output "integration_host_kmip_state" {
+    description = "The KMIP test servers info"
+    value       = step.set_up_external_integration_target.state.kmip
   }
 
   output "cluster_name" {
