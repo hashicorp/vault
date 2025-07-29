@@ -169,16 +169,13 @@ assert.ok(component.isVisible);
 ## Title and Heading Requirements
 - **ALL HTML headings** (`<h1>`, `<h2>`, `<h3>`, `<h4>`, `<h5>`, `<h6>`) MUST use sentence case
 - **Component title arguments** (`@title`, `@text`, `@label`) MUST use sentence case
-- **Watch for**: Common violations like "Quick Actions", "Secrets Engines", "Authentication Methods"
 
 ```handlebars
 {{!-- CORRECT: Sentence case in headings --}}
 <h2 class="title is-4">Quick actions</h2>
-<h3 class="title is-marginless is-6" data-test-card-subtitle="secrets-engines">Secrets engines</h3>
 
 {{!-- INCORRECT: Title case violations --}}
 <h2 class="title is-4">Quick Actions</h2>
-<h3 class="title is-marginless is-6" data-test-card-subtitle="secrets-engines">Secrets Engines</h3>
 
 {{!-- CORRECT: Component arguments with sentence case --}}
 <Hds::Button @text="Create new secret" />
