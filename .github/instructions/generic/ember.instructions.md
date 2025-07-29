@@ -161,7 +161,7 @@ Examples:
 @title="Upload user's profile"
 
 // Bad: incorrect casing  
-@title="Upload Users'sProfile"
+@title="Upload Users's Profile"
 
 // Changelog entries
 "ui (enterprise): Add advanced secret filtering"  // enterprise features
