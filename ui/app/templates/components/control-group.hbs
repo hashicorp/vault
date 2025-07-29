@@ -71,10 +71,9 @@
 
       <div class="authorizations" data-test-authorizations>
         {{#if (gt this.model.authorizations.length 0)}}
-          <span class="has-text-success">
-            <Icon @name="check-circle" />
-          </span>
-          Already approved by
+          <Hds::Alert @type="compact" @color="success" @icon="check-circle" as |A|>
+            <A.Description>Already approved by:</A.Description>
+          </Hds::Alert>
           {{#each this.model.authorizations as |authorization index|}}
             {{~#if authorization.canRead~}}
               <LinkTo @route="vault.cluster.access.identity.show" @models={{array "entities" authorization.id "details"}}>
@@ -95,20 +94,16 @@
   {{/if}}
 
   {{#if this.controlGroupResponse.token}}
-    <div class="is-flex-row has-bottom-margin-m has-top-margin-m" data-test-token>
+    <div class="has-bottom-margin-m has-top-margin-m" data-test-token>
       <p class="has-text-grey has-padding-xxs">
         We’ve saved your request token, but you may want to copy it just in case:
       </p>
-      <div>
-        <Hds::Copy::Snippet
-          data-test-token-value
-          @textToCopy={{this.controlGroupResponse.token}}
-          @color="secondary"
-          @onError={{(fn
-            (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
-          )}}
-        />
-      </div>
+      <Hds::Copy::Snippet
+        data-test-token-value
+        @textToCopy={{this.controlGroupResponse.token}}
+        @color="secondary"
+        @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
+      />
     </div>
   {{/if}}
   {{! template-lint-configure simple-unless "warn" }}
