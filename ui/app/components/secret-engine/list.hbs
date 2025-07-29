@@ -89,7 +89,7 @@
           @hasChevron={{false}}
           data-test-popup-menu-trigger
         />
-        {{#if (not-eq (get (engines-display-data backend.type) "displayName") "generic")}}
+        {{#if (not-eq (get (engines-display-data backend.type) "type") "generic")}}
           <dd.Interactive
             @route={{backend.backendConfigurationLink}}
             @model={{backend.id}}
