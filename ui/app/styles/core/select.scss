@@ -41,7 +41,7 @@ select {
   &:focus,
   &:focus-visible,
   &.is-active {
-    border-color: color_variables.$blue-500;
+    border-color: color_variables.$blue-200;
     box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25);
   }
 }

@@ -81,7 +81,7 @@ pre.masked-font {
     &:focus,
     &:hover,
     &:focus:not(:active) {
-      color: color_variables.$blue;
+      color: color_variables.$blue-200;
       border: 0;
       box-shadow: none;
     }

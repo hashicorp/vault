@@ -68,7 +68,7 @@
 }
 
 .b-checkbox input[type='checkbox']:checked + label::before {
-  border-color: color_variables.$blue;
+  border-color: color_variables.$blue-200;
 }
 
 .b-checkbox input[type='checkbox']:checked + label::after,

@@ -91,11 +91,11 @@ select.has-error-border,
 }
 
 .has-text-info {
-  color: color_variables.$blue-500 !important;
+  color: color_variables.$blue-200 !important;
 }
 // same without the !important
 .has-text-primary {
-  color: color_variables.$blue-500;
+  color: color_variables.$blue-200;
 }
 
 .has-text-success {
@@ -111,5 +111,5 @@ select.has-error-border,
 }
 
 .has-text-primary {
-  color: color_variables.$blue;
+  color: color_variables.$blue-200;
 }

@@ -49,7 +49,7 @@
   &:focus {
     border-color: color.adjust(#c2c5cb, $lightness: -10%);
     box-shadow: box-shadow_variables.$button-box-shadow-standard;
-    color: color.adjust(color_variables.$neutral-500, $lightness: -10%);
+    color: color.adjust(color_variables.$grey-500, $lightness: -10%);
   }
 
   &:focus:not(:active) {

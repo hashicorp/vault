@@ -99,10 +99,10 @@
   will-change: left;
 }
 .toggle[type='checkbox']:focus + label {
-  box-shadow: 0 0 1px color_variables.$blue;
+  box-shadow: 0 0 1px color_variables.$blue-200;
 }
 .toggle[type='checkbox'].is-success:checked + label::before {
-  background: color_variables.$blue;
+  background: color_variables.$blue-200;
 }
 
 .toggle-label {

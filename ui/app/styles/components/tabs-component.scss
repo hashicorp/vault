@@ -34,22 +34,22 @@
         box-shadow: none;
       }
       &.active {
-        border-color: color_variables.$blue;
-        color: color_variables.$blue;
+        border-color: color_variables.$blue-200;
+        color: color_variables.$blue-200;
       }
     }
     li {
       // solves for tools -> sub-tabs like "Unwrap data" -> "Data"
       &.is-active {
-        border-bottom: 2px solid color_variables.$blue;
-        color: color_variables.$blue;
+        border-bottom: 2px solid color_variables.$blue-200;
+        color: color_variables.$blue-200;
       }
       // solves for tabs on auth mounts & secrets engines
       > a {
         &.active {
-          color: color_variables.$blue;
+          color: color_variables.$blue-200;
           background-color: transparent;
-          border-bottom: 2px solid color_variables.$blue;
+          border-bottom: 2px solid color_variables.$blue-200;
         }
       }
     }
@@ -61,8 +61,8 @@
     }
     &.active a,
     &.is-active a {
-      border-color: color_variables.$blue;
-      color: color_variables.$blue;
+      border-color: color_variables.$blue-200;
+      color: color_variables.$blue-200;
     }
   }
   // important for auth tabs in active state, otherwise the border-bottom will not show.

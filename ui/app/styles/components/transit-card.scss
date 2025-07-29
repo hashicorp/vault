@@ -43,9 +43,9 @@
 
   &:hover {
     box-shadow:
-      0 0 0 1px color_variables.$blue-500,
+      0 0 0 1px color_variables.$blue-200,
       box-shadow_variables.$box-shadow-middle;
-    background: color_variables.$blue-010;
+    background: color_variables.$blue-50;
 
     .title {
       color: initial;

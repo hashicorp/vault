@@ -11,6 +11,8 @@ $neutral-300: var(--token-color-palette-neutral-300);
 $neutral-400: var(--token-color-palette-neutral-400);
 $neutral-500: var(--token-color-palette-neutral-500);
 $neutral-600: var(--token-color-palette-neutral-600);
+// used in instances such as  color.adjust() where the actual color is needed
+$grey-500: #656a76;
 
 // Black
 $black: hsl(0, 0%, 4%); // in hex: #0a0a0a
@@ -19,18 +21,13 @@ $black: hsl(0, 0%, 4%); // in hex: #0a0a0a
 $white: hsl(0, 0%, 100%);
 
 // Blue
-$blue-010: #fbfcff;
-$blue-050: #f0f5ff;
-$blue-100: #bfd4ff;
-$blue-300: #5b92ff;
-$blue-500: #1563ff;
-$blue-700: #0e40a3;
-$blue-900: #061b46;
-$blue-lightest: $blue-050;
-$blue-light: $blue-300;
-$blue: $blue-500;
-$blue-dark: $blue-700;
-$blue-darkest: $blue-900;
+$blue-50: var(--token-color-palette-blue-50);
+$blue-100: var(--token-color-palette-blue-100);
+$blue-200: var(--token-color-palette-blue-200);
+$blue-300: var(--token-color-palette-blue-300);
+$blue-500: var(--token-color-palette-blue-500);
+// used in instances such as  color.adjust() where the actual color is needed
+$blue: #1060ff;
 
 // Red
 $red-010: #fdfafb;

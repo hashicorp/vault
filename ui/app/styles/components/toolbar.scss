@@ -101,7 +101,7 @@
   &:hover:not(.disabled) {
     background-color: color_variables.$neutral-100;
     border: 0;
-    color: color_variables.$blue;
+    color: color_variables.$blue-200;
   }
 
   &:active {
@@ -131,7 +131,7 @@ a.disabled.toolbar-link {
   cursor: not-allowed;
   &:hover {
     background-color: color_variables.$neutral-100;
-    color: color_variables.$blue;
+    color: color_variables.$blue-200;
   }
 }
 
