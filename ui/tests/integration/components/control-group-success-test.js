@@ -10,13 +10,7 @@ import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-
-const SELECTORS = {
-  jsonViewer: '[data-test-json-viewer]',
-  navigate: '[data-test-navigate-button]',
-  navMessage: '[data-test-navigate-message]',
-  unwrapForm: '[data-test-unwrap-form]',
-};
+import { CONTROL_GROUP } from 'vault/tests/helpers/components/control-group-selectors';
 
 module('Integration | Component | control group success', function (hooks) {
   setupRenderingTest(hooks);
@@ -50,12 +44,12 @@ module('Integration | Component | control group success', function (hooks) {
     this.set('response', response);
     await render(hbs`<ControlGroupSuccess @model={{this.model}} @controlGroupResponse={{this.response}} />`);
     assert
-      .dom(SELECTORS.navMessage)
+      .dom(CONTROL_GROUP.navMessage)
       .hasText(
         'You have been granted access to foo/bar. Be careful, you can only access this data once. If you need access again in the future you will need to get authorized again. Visit'
       );
 
-    await click(SELECTORS.navigate);
+    await click(GENERAL.button('Visit'));
     const [transition] = this.transitionStub.lastCall.args;
     const [accessor] = this.markTokenForUnwrapStub.lastCall.args;
     assert.strictEqual(accessor, 'accessor', 'marks token for unwrap');
@@ -65,7 +59,7 @@ module('Integration | Component | control group success', function (hooks) {
   test('render without token', async function (assert) {
     assert.expect(2);
     await render(hbs`<ControlGroupSuccess @model={{this.model}} />`);
-    assert.dom(SELECTORS.unwrapForm).exists();
+    assert.dom(CONTROL_GROUP.unwrapForm).exists();
     assert.dom(GENERAL.inputByAttr('token')).hasValue('');
   });
 
@@ -80,7 +74,7 @@ module('Integration | Component | control group success', function (hooks) {
     await fillIn(GENERAL.inputByAttr('token'), 'token');
     await click(GENERAL.submitButton);
 
-    const actual = find(SELECTORS.jsonViewer).innerText;
+    const actual = find(CONTROL_GROUP.jsonViewer).innerText;
     const expected = JSON.stringify({ foo: 'bar' }, null, 2);
     assert.strictEqual(actual, expected, `it renders unwrapped data: ${actual}`);
   });
