@@ -1077,7 +1077,7 @@ scenario "seal_ha" {
       quality.vault_api_identity_oidc_config_read,
       quality.vault_api_identity_oidc_key_read,
       quality.vault_api_identity_oidc_role_read,
-      quality.vault_secrets_kv_read
+      quality.vault_secrets_kv_read,
     ]
 
     variables {
@@ -1085,6 +1085,7 @@ scenario "seal_ha" {
       hosts             = step.get_cluster_ips_after_migration.follower_hosts
       ip_version        = matrix.ip_version
       vault_addr        = step.create_vault_cluster.api_addr_localhost
+      vault_edition     = matrix.edition
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
       vault_root_token  = step.create_vault_cluster.root_token
     }
