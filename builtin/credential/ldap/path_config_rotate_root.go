@@ -39,6 +39,11 @@ func pathConfigRotateRoot(b *backend) *framework.Path {
 
 func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.Request, _ *framework.FieldData) (*logical.Response, error) {
 	err := b.rotateRootCredential(ctx, req)
+	if err != nil {
+		// log here instead of inside the actual rotate call because the rotation manager also logs, so this is
+		// the "equivalent" place for manual rotations.
+		b.Logger().Warn("failed to rotate root credential", "rotationID", req.Path, "err", err.Error())
+	}
 	var responseError responseError
 	if errors.As(err, &responseError) {
 		return logical.ErrorResponse(responseError.Error()), nil
