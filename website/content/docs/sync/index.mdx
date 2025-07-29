@@ -5,6 +5,9 @@ description: >-
   Use secrets sync feature to automatically sync Vault-managed secrets with external destinations to centralize secrets lifecycle management.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Secrets sync
 
 @include 'alerts/enterprise-and-hcp.mdx'
@@ -18,12 +21,6 @@ A secret that is associated from a Vault KVv2 Secrets Engine into an external de
 process. If the secret value is updated in Vault, the secret is updated in the destination as well. If the secret is deleted
 from Vault, it is deleted on the external system as well. This process is asynchronous and event-based. Vault propagates
 modifications into the proper destinations automatically in a handful of seconds.
-
-<Highlight title="Sync secrets with HCP Vault Secrets">
-
-Secrets sync is a Vault Enterprise feature. For information on secrets sync with [HCP Vault Secrets](/hcp/docs/vault-secrets), refer to the HashiCorp Cloud Platform documentation for [Vault Secrets integrations](/hcp/docs/vault-secrets/integrations).
-
-</Highlight>
 
 ## Activating the feature
 

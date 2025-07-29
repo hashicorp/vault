@@ -14,14 +14,14 @@ export default class MessagesMessageEditRoute extends Route {
   async model() {
     const { id } = this.paramsFor('messages.message');
     const data = await this.api.sys.uiConfigReadCustomMessage(id);
-    const { keyInfo, keys } = await this.api.sys.uiConfigListCustomMessages(
+    const { key_info, keys } = await this.api.sys.uiConfigListCustomMessages(
       true,
       undefined,
       data.authenticated
     );
     return {
       message: new CustomMessage({ ...data, message: decodeString(data.message) }),
-      messages: keys.map((id) => ({ ...keyInfo[id], id })),
+      messages: keys.map((id) => ({ ...key_info[id], id })),
     };
   }
 

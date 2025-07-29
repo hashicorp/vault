@@ -5,6 +5,9 @@ description: >-
   General guidance for upgrading a single Vault instance.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Upgrade Vault
 
 Vault supports in-place upgrades and automatically handles most tasks when you
@@ -35,6 +38,8 @@ To perform an in-place upgrade of a single Vault instance:
 1. Back up your Vault data. Vault does not make backward-compatibility
    guarantees for the Vault data store and the upgrade process may make changes
    to the data store.
+
+   @include 'tips/manage-snapshots.mdx'
 
 1. Back up your current Vault configuration.
 

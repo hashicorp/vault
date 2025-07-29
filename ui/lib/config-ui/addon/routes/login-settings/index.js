@@ -11,13 +11,13 @@ export default class LoginSettingsRoute extends Route {
 
   async model() {
     try {
-      const res = await this.api.sys.uiLoginDefaultAuthList(true);
-      const loginRules = this.api.keyInfoToArray({ keyInfo: res.keyInfo, keys: res.keys });
+      const data = await this.api.sys.uiLoginDefaultAuthList(true);
+      const loginRules = this.api.keyInfoToArray(data);
       return { loginRules };
     } catch (e) {
+      // If no login settings exist, return an empty array to render the empty state
       const error = await this.api.parseError(e);
       if (error.status === 404) {
-        // If no login settings exist, return an empty array to render the empty state
         return { loginRules: [] };
       }
       // Otherwise fallback to the standard error template

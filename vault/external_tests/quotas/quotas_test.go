@@ -6,6 +6,7 @@ package quotas
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/hashicorp/vault/builtin/credential/userpass"
 	"github.com/hashicorp/vault/builtin/logical/pki"
 	"github.com/hashicorp/vault/helper/constants"
+	"github.com/hashicorp/vault/helper/testhelpers"
 	"github.com/hashicorp/vault/helper/testhelpers/teststorage"
 	"github.com/hashicorp/vault/sdk/helper/testhelpers/schema"
 	"github.com/hashicorp/vault/sdk/logical"
@@ -726,4 +728,41 @@ func TestQuotas_RateLimitQuota_GroupByConfig(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
+}
+
+// TestQuotas_RateLimit_ZeroRetryRegression verifies that the rate limit response
+// headers do not return a Retry-After value of 0.
+func TestQuotas_RateLimit_ZeroRetryRegression(t *testing.T) {
+	conf, opts := teststorage.ClusterSetup(coreConfig, nil, nil)
+	cluster := vault.NewTestCluster(t, conf, opts)
+	cluster.Start()
+	defer cluster.Cleanup()
+
+	testhelpers.WaitForActiveNode(t, cluster)
+	client := cluster.Cores[0].Client
+	_, err := client.Logical().Write("sys/quotas/config", map[string]interface{}{
+		"enable_rate_limit_response_headers": true,
+	})
+	require.NoError(t, err)
+	_, err = client.Logical().Write("sys/quotas/rate-limit/root-rlq", map[string]interface{}{
+		"name": "root-rlq",
+		"rate": 1,
+	})
+	require.NoError(t, err)
+	failed := atomic.NewBool(false)
+	wg := sync.WaitGroup{}
+	client = client.WithResponseCallbacks(func(response *api.Response) {
+		if response.Header.Get("Retry-After") == "0" {
+			failed.Store(true)
+		}
+	})
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			client.Logical().Read("sys/mounts")
+		}()
+	}
+	wg.Wait()
+	require.False(t, failed.Load())
 }

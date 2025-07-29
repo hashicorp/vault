@@ -7,10 +7,10 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
-import { click, fillIn, find, render, waitUntil } from '@ember/test-helpers';
+import { click, fillIn, find, render, settled, waitFor, waitUntil } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import codemirror from 'vault/tests/helpers/codemirror';
+import { assertCodeBlockValue } from 'vault/tests/helpers/codemirror';
 import { TOOLS_SELECTORS as TS } from 'vault/tests/helpers/tools-selectors';
 import sinon from 'sinon';
 
@@ -29,18 +29,18 @@ module('Integration | Component | tools/unwrap', function (hooks) {
     await this.renderComponent();
 
     assert.dom('h1').hasText('Unwrap Data', 'Title renders');
-    assert.dom(TS.submit).hasText('Unwrap data');
+    assert.dom(GENERAL.submitButton).hasText('Unwrap data');
     assert.dom(TS.toolsInput('unwrap-token')).hasValue('');
     assert.dom(GENERAL.hdsTab('data')).doesNotExist();
     assert.dom(GENERAL.hdsTab('details')).doesNotExist();
     assert.dom('.CodeMirror').doesNotExist();
-    assert.dom(TS.button('Done')).doesNotExist();
+    assert.dom(GENERAL.button('Done')).doesNotExist();
   });
 
   test('it renders errors', async function (assert) {
     this.server.post('sys/wrapping/unwrap', () => new Response(500, {}, { errors: ['Something is wrong'] }));
     await this.renderComponent();
-    await click(TS.submit);
+    await click(GENERAL.submitButton);
     await waitUntil(() => find(GENERAL.messageError));
     assert.dom(GENERAL.messageError).hasText('Error Something is wrong', 'Error renders');
   });
@@ -71,12 +71,12 @@ module('Integration | Component | tools/unwrap', function (hooks) {
 
     // test submit
     await fillIn(TS.toolsInput('unwrap-token'), data.token);
-    await click(TS.submit);
-
-    await waitUntil(() => find('.CodeMirror'));
+    await click(GENERAL.submitButton);
+    await waitFor('.hds-code-block');
     assert.true(flashSpy.calledWith('Unwrap was successful.'), 'it renders success flash');
-    assert.dom('label').hasText('Unwrapped Data');
-    assert.strictEqual(codemirror().getValue(' '), '{   "foo": "bar" }', 'it renders unwrapped data');
+    assert.dom('.hds-code-block__title').hasText('Unwrapped Data');
+    await settled();
+    assertCodeBlockValue(assert, '.hds-code-block__code', '{   "foo": "bar" }');
     assert.dom(GENERAL.hdsTab('data')).hasAttribute('aria-selected', 'true');
 
     await click(GENERAL.hdsTab('details'));
@@ -89,7 +89,7 @@ module('Integration | Component | tools/unwrap', function (hooks) {
     }
 
     // form resets clicking 'Done'
-    await click(TS.button('Done'));
+    await click(GENERAL.button('Done'));
     assert.dom('label').hasText('Wrapped token');
     assert.dom(TS.toolsInput('unwrap-token')).hasValue('', 'token input resets');
   });
@@ -118,10 +118,8 @@ module('Integration | Component | tools/unwrap', function (hooks) {
     await this.renderComponent();
 
     await fillIn(TS.toolsInput('unwrap-token'), data.token);
-    await click(TS.submit);
-
-    await waitUntil(() => find('.CodeMirror'));
-    await click(GENERAL.hdsTab('details'));
+    await click(GENERAL.submitButton);
+    await waitFor('.hds-code-block');
     assert
       .dom(`${GENERAL.infoRowValue('Renewable')} ${GENERAL.icon('check-circle')}`)
       .exists('renders truthy icon for renewable');
@@ -141,6 +139,6 @@ module('Integration | Component | tools/unwrap', function (hooks) {
     await this.renderComponent();
 
     await fillIn(TS.toolsInput('unwrap-token'), `${data.token}  `);
-    await click(TS.submit);
+    await click(GENERAL.submitButton);
   });
 });

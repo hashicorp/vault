@@ -132,7 +132,7 @@ module('Integration | Component | pki | Page::PkiIssuerEditPage::PkiIssuerEdit',
     await render(hbs`<Page::PkiIssuerEdit @model={{this.model}} />`, { owner: this.engine });
 
     await this.update();
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
     assert.ok(this.transitionCalled(), 'Transitions to details route on save success');
   });
 
@@ -140,7 +140,7 @@ module('Integration | Component | pki | Page::PkiIssuerEditPage::PkiIssuerEdit',
     this.server.post('/pki/issuer/test', () => new Response(404, {}, { errors: ['Some error occurred'] }));
 
     await render(hbs`<Page::PkiIssuerEdit @model={{this.model}} />`, { owner: this.engine });
-    await click(GENERAL.saveButton);
+    await click(GENERAL.submitButton);
 
     assert
       .dom(selectors.alert)

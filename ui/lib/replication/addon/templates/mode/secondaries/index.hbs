@@ -22,7 +22,7 @@
   </Toolbar>
   {{#if this.model.replicationAttrs.knownSecondaries.length}}
     {{#each this.model.replicationAttrs.knownSecondaries as |secondary|}}
-      <div class="list-item-row" data-test-secondary-name={{secondary}}>
+      <div class="list-item-row overflow-wrap" data-test-secondary-name={{secondary}}>
         <div class="columns is-mobile">
           <div class="column is-10">
             {{secondary}}
@@ -40,7 +40,7 @@
                   <dd.Interactive
                     @route="mode.secondaries.config-show"
                     @models={{array this.replicationMode secondary}}
-                    data-test-replication-path-filter-link={{true}}
+                    data-test-replication-path-filter-link
                   >Path filter config</dd.Interactive>
                 {{/if}}
                 {{#if this.model.canRevokeSecondary}}

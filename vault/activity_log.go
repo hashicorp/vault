@@ -64,18 +64,18 @@ const (
 	activitySegmentWriteTimeout = 1 * time.Minute
 
 	// Number of client records to store per segment. Each ClientRecord may
-	// consume upto 99 bytes; rounding it to 100bytes. This []byte undergo JSON marshalling
+	// consume upto 115 bytes; rounding it to 120 bytes. This []byte undergo JSON marshalling
 	// before adding them in storage increasing the size by approximately 4/3 times. Considering the storage
-	// limit of 512KB per storage entry, we can roughly store 512KB/(100bytes * 4/3) yielding approximately 3820 records.
-	ActivitySegmentClientCapacity = 3820
+	// limit of 512KB per storage entry, we can roughly store 512KB/(120 bytes * 4/3) yielding approximately 3200 records.
+	ActivitySegmentClientCapacity = 3200
 
 	// Maximum number of segments per month. This allows for 700K entities per
-	// month; 700K/3820 (ActivitySegmentClientCapacity). These limits are geared towards controlling the storage
+	// month; 700K/3200 (ActivitySegmentClientCapacity). These limits are geared towards controlling the storage
 	// implications of persisting activity logs. If we hit a scenario where the
 	// storage consequences are less important in comparison to the accuracy of
 	// the client activity, these limits can be further relaxed or even be
 	// removed.
-	activityLogMaxSegmentPerMonth = 184
+	activityLogMaxSegmentPerMonth = 220
 
 	// trackedTWESegmentPeriod is a time period of a little over a month, and represents
 	// the amount of time that needs to pass after a 1.9 or later upgrade to result in
@@ -288,8 +288,8 @@ type ActivityLogExportRecord struct {
 	// MountPath is the path of the auth mount associated with the token used
 	MountPath string `json:"mount_path" mapstructure:"mount_path"`
 
-	// Timestamp denotes the time at which the activity occurred formatted using RFC3339
-	Timestamp string `json:"timestamp" mapstructure:"timestamp"`
+	// TokenCreationTime denotes the time at which the activity occurred formatted using RFC3339
+	TokenCreationTime string `json:"token_creation_time" mapstructure:"token_creation_time"`
 
 	// Policies are the list of policy names attached to the token used
 	Policies []string `json:"policies" mapstructure:"policies"`
@@ -1770,22 +1770,23 @@ func (c *Core) ResetActivityLog() []*activity.LogFragment {
 	return allFragments
 }
 
-func (a *ActivityLog) AddEntityToFragment(entityID string, namespaceID string, timestamp int64) {
-	a.AddClientToFragment(entityID, namespaceID, timestamp, false, "")
+// AddEntityToFragment adds an entity for frgament for testing purposes
+func (a *ActivityLog) AddEntityToFragment(entityID string, namespaceID string, timestamp int64, usageTime int64) {
+	a.AddClientToFragment(entityID, namespaceID, timestamp, false, "", usageTime)
 }
 
 // AddClientToFragment checks a client ID for uniqueness and
 // if not already present, adds it to the current fragment.
 //
 // See note below about AddActivityToFragment.
-func (a *ActivityLog) AddClientToFragment(clientID string, namespaceID string, timestamp int64, isTWE bool, mountAccessor string) {
+func (a *ActivityLog) AddClientToFragment(clientID string, namespaceID string, timestamp int64, isTWE bool, mountAccessor string, usageTime int64) {
 	// TWE == token without entity
 	if isTWE {
-		a.AddActivityToFragment(clientID, namespaceID, timestamp, nonEntityTokenActivityType, mountAccessor)
+		a.AddActivityToFragment(clientID, namespaceID, timestamp, nonEntityTokenActivityType, mountAccessor, usageTime)
 		return
 	}
 
-	a.AddActivityToFragment(clientID, namespaceID, timestamp, entityActivityType, mountAccessor)
+	a.AddActivityToFragment(clientID, namespaceID, timestamp, entityActivityType, mountAccessor, usageTime)
 }
 
 // AddActivityToFragment adds a client count event of any type to
@@ -1793,7 +1794,7 @@ func (a *ActivityLog) AddClientToFragment(clientID string, namespaceID string, t
 // all types; if not already present, we will add it to the current
 // fragment. The timestamp is a Unix timestamp *without* nanoseconds,
 // as that is what token.CreationTime uses.
-func (a *ActivityLog) AddActivityToFragment(clientID string, namespaceID string, timestamp int64, activityType string, mountAccessor string) {
+func (a *ActivityLog) AddActivityToFragment(clientID string, namespaceID string, timestamp int64, activityType string, mountAccessor string, usageTime int64) {
 	// Check whether entity ID already recorded
 	var present bool
 
@@ -1831,6 +1832,7 @@ func (a *ActivityLog) AddActivityToFragment(clientID string, namespaceID string,
 		Timestamp:     timestamp,
 		MountAccessor: mountAccessor,
 		ClientType:    activityType,
+		UsageTime:     usageTime,
 	}
 
 	// Track whether the clientID corresponds to a token without an entity or not.
@@ -2214,7 +2216,7 @@ func (a *ActivityLog) HandleTokenUsage(ctx context.Context, entry *logical.Token
 	}
 
 	// Parse an entry's client ID and add it to the activity log
-	a.AddClientToFragment(clientID, entry.NamespaceID, entry.CreationTime, isTWE, mountAccessor)
+	a.AddClientToFragment(clientID, entry.NamespaceID, entry.CreationTime, isTWE, mountAccessor, time.Now().Unix())
 	return nil
 }
 
@@ -3192,12 +3194,12 @@ func (a *ActivityLog) writeExport(ctx context.Context, rw http.ResponseWriter, f
 			ts := time.Unix(e.Timestamp, 0)
 
 			record := &ActivityLogExportRecord{
-				ClientID:      e.ClientID,
-				ClientType:    e.ClientType,
-				NamespaceID:   e.NamespaceID,
-				NamespacePath: nsDisplayPath,
-				Timestamp:     ts.UTC().Format(time.RFC3339),
-				MountAccessor: e.MountAccessor,
+				ClientID:          e.ClientID,
+				ClientType:        e.ClientType,
+				NamespaceID:       e.NamespaceID,
+				NamespacePath:     nsDisplayPath,
+				TokenCreationTime: ts.UTC().Format(time.RFC3339),
+				MountAccessor:     e.MountAccessor,
 
 				// Default following to empty versus nil, will be overwritten if necessary
 				Policies:                  []string{},
@@ -3481,7 +3483,7 @@ func baseActivityExportCSVHeader() []string {
 		"mount_accessor",
 		"mount_path",
 		"mount_type",
-		"timestamp",
+		"token_creation_time",
 	}
 }
 

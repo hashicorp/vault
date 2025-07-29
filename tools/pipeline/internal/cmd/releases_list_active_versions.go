@@ -14,7 +14,7 @@ import (
 var listReleaseActiveVersionsReq = &releases.ListActiveVersionsReq{}
 
 func newReleasesListActiveVersionsCmd() *cobra.Command {
-	versions := &cobra.Command{
+	activeVersionsCmd := &cobra.Command{
 		Use:   "active-versions [.release/versions.hcl]",
 		Short: "List the active versions from .release/versions.hcl",
 		Long:  "List the active versions from .release/versions.hcl",
@@ -22,9 +22,11 @@ func newReleasesListActiveVersionsCmd() *cobra.Command {
 		Args:  cobra.MaximumNArgs(1), // path to .release/versions.hcl
 	}
 
-	versions.PersistentFlags().UintVarP(&listReleaseActiveVersionsReq.Recurse, "recurse", "r", 0, "If no path to a config file is given, recursively search backwards for it and stop at root or until we've his the configured depth.")
+	activeVersionsCmd.PersistentFlags().UintVarP(&listReleaseActiveVersionsReq.Recurse, "recurse", "r", 0, "If no path to a config file is given, recursively search backwards for it and stop at root or until we've his the configured depth.")
 
-	return versions
+	activeVersionsCmd.PersistentFlags().BoolVar(&listReleaseActiveVersionsReq.WriteToGithubOutput, "github-output", false, "Whether or not to write 'active-versions' to $GITHUB_OUTPUT")
+
+	return activeVersionsCmd
 }
 
 func runListActiveVersionsReq(cmd *cobra.Command, args []string) error {
@@ -48,6 +50,15 @@ func runListActiveVersionsReq(cmd *cobra.Command, args []string) error {
 		fmt.Println(string(b))
 	default:
 		fmt.Println(res.ToTable())
+	}
+
+	if listReleaseActiveVersionsReq.WriteToGithubOutput {
+		output, err := res.ToGithubOutput()
+		if err != nil {
+			return err
+		}
+
+		return writeToGithubOutput("active-versions", output)
 	}
 
 	return err

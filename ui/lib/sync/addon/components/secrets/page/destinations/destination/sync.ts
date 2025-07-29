@@ -83,7 +83,7 @@ export default class DestinationSyncPageComponent extends Component<Args> {
       this.syncedSecret = '';
       const { name, type } = this.args.destination;
       const mount = keyIsFolder(this.mountPath) ? this.mountPath.slice(0, -1) : this.mountPath; // strip trailing slash from mount path
-      const payload = { mount, secretName: this.secretPath };
+      const payload = { mount, secret_name: this.secretPath };
       await this.api.sys.systemWriteSyncDestinationsTypeNameAssociationsSet(name, type, payload);
       this.syncedSecret = this.secretPath;
       // reset the secret path to help make it clear that the sync was successful

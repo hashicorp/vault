@@ -5,9 +5,14 @@ description: >-
   Use JWT/OIDC authentication with Vault to support OIDC and user-provided JWTs.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Use JWT/OIDC authentication
 
 @include 'x509-sha1-deprecation.mdx'
+
+@include 'tips/custom-authn.mdx'
 
 ~> **Note**: Starting in Vault 1.17, if the JWT in the authentication request
 contains an `aud` claim (typical case) the associated `bound_audiences` for the

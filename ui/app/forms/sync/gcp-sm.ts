@@ -10,15 +10,15 @@ import { commonFields, getPayload } from './shared';
 
 import type { SystemWriteSyncDestinationsGcpSmNameRequest } from '@hashicorp/vault-client-typescript';
 
-type GcpSmFormData = Partial<SystemWriteSyncDestinationsGcpSmNameRequest>;
+type GcpSmFormData = SystemWriteSyncDestinationsGcpSmNameRequest & {
+  name: string;
+};
 
-export default class GcpSmForm extends Form {
-  declare data: GcpSmFormData;
-
+export default class GcpSmForm extends Form<GcpSmFormData> {
   formFieldGroups = [
     new FormFieldGroup('default', [
       commonFields.name,
-      new FormField('projectId', 'string', {
+      new FormField('project_id', 'string', {
         label: 'Project ID',
         subText:
           'The target project to manage secrets in. If set, overrides the project derived from the service account JSON credentials or application default credentials.',
@@ -42,6 +42,7 @@ export default class GcpSmForm extends Form {
 
   toJSON() {
     const formState = super.toJSON();
-    return { ...formState, data: getPayload('gcp-sm', this.data, this.isNew) };
+    const data = getPayload<GcpSmFormData>('gcp-sm', this.data, this.isNew);
+    return { ...formState, data };
   }
 }

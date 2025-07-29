@@ -1,8 +1,12 @@
 name: Bench
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+  # This has been disabled due to excessive flakiness. The GHA is left here for easier re-implementation in case
+  # we wanted to iterate on this in the future, or if we find benchmark tests that are more stable.
+  # To re-enable, uncomment the pull request section and delete the workflow_dispatch line.
+  workflow_dispatch:
+#  pull_request:
+#    types: [opened, synchronize, reopened, ready_for_review]
 
 jobs:
   bench:

@@ -7,6 +7,9 @@ description: |-
   more.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # read
 
 The `read` command reads data from Vault at the given path (wrapper command for
@@ -62,6 +65,10 @@ engine, it prints the output in more structured format that is easy to read.
 
 The following flags are available in addition to the [standard set of
 flags](/vault/docs/commands) included on all commands.
+
+### Command options
+
+- `snapshot-id` `(string: "")` - Specifies a loaded snapshot ID to read the data from.
 
 ### Output options
 

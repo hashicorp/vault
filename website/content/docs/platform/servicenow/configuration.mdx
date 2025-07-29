@@ -4,6 +4,9 @@ page_title: Configure the Vault ServiceNow Credential Resolver
 description: Configurable properties for the Vault ServiceNow Credential Resolver.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Configure the Vault ServiceNow Credential Resolver
 
 ## MID server properties
@@ -99,6 +102,10 @@ In the ServiceNow UI:
 1. Choose a type from the list.
 1. Select "External credential store".
 1. Provide a fully qualified collection name (FQCN):
+    - **Yokohama or newer**: in the **Credentials** section of the ServiceNow
+      webpage, select your credentials and click **ⓘ** for the "Credential
+      Storage Vault" mid server. Click **Open Record** to add the vault resolver
+      FQCN: `com.snc.discovery.CredentialResolver`
     - **Xanadu (Q4-2024) or newer**:  use `com.snc.discovery.CredentialResolver`
     - **Versions prior to Xanadu (Q4-2024)**: leave blank or use "None"
 1. Provide a meaningful name for the resolver.

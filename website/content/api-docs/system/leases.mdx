@@ -4,6 +4,9 @@ page_title: /sys/leases - HTTP API
 description: The `/sys/leases` endpoints are used to view and manage leases.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # `/sys/leases`
 
 The `/sys/leases` endpoints are used to view and manage leases in Vault.
@@ -275,8 +278,7 @@ This endpoint was added in Vault 1.8.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    http://127.0.0.1:8200/v1/sys/leases/count \
-    -d type=irrevocable
+    http://127.0.0.1:8200/v1/sys/leases/count?type=irrevocable
 ```
 
 ## Leases list
@@ -310,6 +312,5 @@ This endpoint was added in Vault 1.8.
 $ curl \
     --header "X-Vault-Token: ..." \
     --request GET \
-    http://127.0.0.1:8200/v1/sys/leases \
-    -d type=irrevocable
+    "http://127.0.0.1:8200/v1/sys/leases?type=irrevocable&include_child_namespaces=true"
 ```

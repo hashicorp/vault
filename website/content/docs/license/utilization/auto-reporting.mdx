@@ -6,6 +6,9 @@ description: >-
   license utilization and how to enable or disable automated reporting.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Automated license utilization reporting
 
 @include 'alerts/enterprise-only.mdx'
@@ -59,17 +62,17 @@ You will find log entries similar to the following:
 <CodeBlockConfig hideClipboard>
 
 ```
-[DEBUG] core.reporting: beginning snapshot export
-[DEBUG] core.reporting: creating payload
-[DEBUG] core.reporting: marshalling payload to json
-[DEBUG] core.reporting: generating authentication headers
-[DEBUG] core.reporting: creating request
-[DEBUG] core.reporting: sending request
-[DEBUG] core.reporting: performing request: method=POST url=https://reporting.hashicorp.services
-[DEBUG] core.reporting: recording audit record
-[INFO]  core.reporting: Report sent: auditRecord="{\"payload\":{\"payload_version\":\"1\",\"license_id\":\"97afe7b4-b9c8-bf19-bf35-b89b5cc0efea\",\"product\":\"vault\",\"product_version\":\"1.14.0-rc1+ent\",\"export_timestamp\":\"2023-06-01T09:34:44.215133-04:00\",\"snapshots\":[{\"snapshot_version\":1,\"snapshot_id\":\"0001J7H7KMEDRXKM5C1QJGBXV3\",\"process_id\":\"01H1T45CZK2GN9WR22863W2K32\",\"timestamp\":\"2023-06-01T09:34:44.215001-04:00\",\"schema_version\":\"1.0.0\",\"service\":\"vault\",\"metrics\":{\"clientcount.current_month_estimate\":{\"key\":\"clientcount.current_month_estimate\",\"kind\":\"sum\",\"mode\":\"write\",\"labels\":{\"type\":{\"entity\":20,\"nonentity\":11}}},\"clientcount.previous_month_complete\":{\"key\":\"clientcount.previous_month_complete\",\"kind\":\"sum\",\"mode\":\"write\",\"labels\":{\"type\":{\"entity\":10,\"nonentity\":11}}}}}],\"metadata\":{\"vault\":{\"billing_start\":\"2023-03-01T00:00:00Z\",\"cluster_id\":\"a8d95acc-ec0a-6087-d7f6-4f054ab2e7fd\"}}}}"
-[DEBUG] core.reporting: completed recording audit record
-[DEBUG] core.reporting: export finished successfully
+[DEBUG] reporting.auto_exporter: beginning snapshot export
+[DEBUG] reporting.auto_exporter: creating bundle
+[DEBUG] reporting.auto_exporter: marshalling bundle to json
+[DEBUG] reporting.auto_exporter: creating request
+[DEBUG] reporting.auto_exporter: sending request
+[DEBUG] reporting.auto_exporter: performing request: method=POST url=https://reporting.hashicorp.services/v2
+[DEBUG] reporting.auto_exporter: recording audit record
+[DEBUG] reporting.auto_exporter: completed recording audit record
+[INFO]  reporting.auto_exporter: Report sent: auditRecord="{\"bundle\":{\"version\":\"2\",\"mode\":\"automatic\",\"license_id\":\"97afe7b4-b9c8-bf19-bf35-b89b5cc0efea\",\"product\":\"vault\",\"product_version\":\"1.14.0-rc1+ent\",\"export_timestamp\":\"2023-06-01T09:34:44.215133-04:00\",\"snapshots\":[{\"snapshot_version\":1,\"snapshot_id\":\"0001J7H7KMEDRXKM5C1QJGBXV3\",\"process_id\":\"01H1T45CZK2GN9WR22863W2K32\",\"timestamp\":\"2023-06-01T09:34:44.215001-04:00\",\"schema_version\":\"1.0.0\",\"service\":\"vault\",\"metrics\":{\"clientcount.current_month_estimate\":{\"key\":\"clientcount.current_month_estimate\",\"kind\":\"sum\",\"mode\":\"write\",\"labels\":{\"type\":{\"entity\":20,\"nonentity\":11}}},\"clientcount.previous_month_complete\":{\"key\":\"clientcount.previous_month_complete\",\"kind\":\"sum\",\"mode\":\"write\",\"labels\":{\"type\":{\"entity\":10,\"nonentity\":11}}}}}],\"metadata\":{\"vault\":{\"billing_start\":\"2023-03-01T00:00:00Z\",\"cluster_id\":\"a8d95acc-ec0a-6087-d7f6-4f054ab2e7fd\"}}}}"
+[DEBUG] reporting.auto_exporter: completed recording audit record
+[DEBUG] reporting.auto_exporter: export finished successfully
 ```
 
 </CodeBlockConfig>
@@ -80,13 +83,12 @@ egress, logs will show an error.
 <CodeBlockConfig hideClipboard>
 
 ```
-[DEBUG] core.reporting: beginning snapshot export
-[DEBUG] core.reporting: creating payload
-[DEBUG] core.reporting: marshalling payload to json
-[DEBUG] core.reporting: generating authentication headers
-[DEBUG] core.reporting: creating request
-[DEBUG] core.reporting: sending request
-[DEBUG] core.reporting: performing request: method=POST url=https://reporting.hashicorp.services
+[DEBUG] reporting.auto_exporter: beginning snapshot export
+[DEBUG] reporting.auto_exporter: creating bundle
+[DEBUG] reporting.auto_exporter: marshalling bundle to json
+[DEBUG] reporting.auto_exporter: creating request
+[DEBUG] reporting.auto_exporter: sending request
+[DEBUG] reporting.auto_exporter: performing request: method=POST url=https://reporting.hashicorp.services/v2
 [DEBUG] core.reporting: error status code received: statusCode=403
 ```
 
@@ -141,14 +143,12 @@ reporting status upon active unseal.
 </Warning>
 
 
-You will find the following entries in the server log.
+You will find the following entry in the server log.
 
 <CodeBlockConfig hideClipboard>
 
 ```
-[DEBUG] core: reloading automated reporting
-[INFO]  core: opting out of automated reporting
-[DEBUG] activity: there is no reporting agent configured, skipping counts reporting
+[DEBUG] reporting: automated reporting is disabled; license utilization data will not be exported unless triggered manually
 ```
 
 </CodeBlockConfig>
@@ -181,8 +181,7 @@ You will find the following entries in the server log.
 
 ```
 [INFO]  core: automated reporting disabled via environment variable: env=OPTOUT_LICENSE_REPORTING
-[INFO]  core: opting out of automated reporting
-[DEBUG] activity: there is no reporting agent configured, skipping counts reporting
+[DEBUG] reporting: automated reporting is disabled; license utilization data will not be exported unless triggered manually
 ```
 
 </CodeBlockConfig>
@@ -200,6 +199,8 @@ As of 1.20.0, clusters now report the `development_cluster` metadata field, whic
 indicates whether the cluster is used for development (non-production) purposes. By default, the field is set to `false`,
 indicating the cluster is running in a production environment. Changing the value is done via HCL configuration by adding
 the `development_cluster` field to the `license` parameter within the `reporting` stanza.
+Do not use `development_cluster` outside of development environments. Setting
+`development_cluster` to `true` on production clusters can violate EULA obligations.
 
 ```hcl
 reporting {
@@ -213,8 +214,16 @@ reporting {
 
 The `development_cluster` configuration cannot differ across replicated clusters.
 In [performance replication](/vault/docs/enterprise/replication#performance-replication), secondary clusters inherit the
-`development_cluster` value from the primary cluster, regardless of their own HCL configuration. If the secondary cluster
-is promoted to a primary, it will begin to report its own `development_cluster` value determined by its HCL configuration.
+`development_cluster` value from the primary cluster, regardless of their own HCL configuration.
+
+If the `development_cluster` setting in the secondary cluster configuration
+differs from the value inherited from the primary cluster, the secondary cluster
+logs the following error to warn about the discrepancy:
+
+`"development cluster setting in config does not match that of the primary, updating to follow the primary config setting"`
+
+If the secondary cluster is promoted to a primary, it reports the
+`development_cluster` value determined by its own HCL configuration.
 The reverse is also true, if the primary cluster is demoted to a secondary, it will report the `development_cluster`
 value of its new primary.
 
@@ -229,7 +238,7 @@ by all clusters in the replication group. Inconsistent configurations between cl
 reported `development_cluster` value when the primary cluster changes.
 
 Within each cluster, each node must have the same `development_cluster` setting in its configuration to be consistent.
-In the event of leadership change, nodes will use its server configuration to determine the value to report.
+In the event of leadership change, the active node will use its own server configuration to determine the value to report.
 Inconsistent configuration between nodes will change the `development_cluster` setting reported upon active unseal.
 
 </Warning>
@@ -279,7 +288,7 @@ HashiCorp collects the following utilization data as JSON payloads:
     </Note>
 
    - `cluster_id` - The cluster UUID as shown by `vault status` on the reporting
-     cluster
+     cluster.
    - `development_cluster` - Whether the cluster is operating as a development (non-production) cluster.
 
 <CodeBlockConfig hideClipboard>

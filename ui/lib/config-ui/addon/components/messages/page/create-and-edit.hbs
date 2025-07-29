@@ -38,9 +38,9 @@
         data-test-button="preview"
       />
 
-      <Hds::Button @text="{{if @message.isNew 'Create message' 'Save'}}" data-test-button="create-message" type="submit" />
+      <Hds::Button @text="{{if @message.isNew 'Create message' 'Save'}}" type="submit" data-test-submit />
 
-      <Hds::Button @text="Cancel" @color="secondary" {{on "click" this.cancel}} />
+      <Hds::Button @text="Cancel" @color="secondary" {{on "click" this.cancel}} data-test-cancel />
     </Hds::ButtonSet>
   </div>
   {{#if this.showMultipleModalsMessage}}
@@ -68,13 +68,13 @@
         <Hds::Button
           @text="Confirm"
           {{on "click" (fn this.updateUserConfirmation "confirmed")}}
-          data-test-modal-button="confirm"
+          data-test-button="confirm-multiple"
         />
         <Hds::Button
           @text="Cancel"
           @color="secondary"
           {{on "click" (fn this.updateUserConfirmation "cancel")}}
-          data-test-modal-button="cancel"
+          data-test-button="cancel-multiple"
         />
       </M.Footer>
     </Hds::Modal>
@@ -111,7 +111,7 @@
         {{/unless}}
       </M.Body>
       <M.Footer as |F|>
-        <Hds::Button @text="Confirm" {{on "click" F.close}} data-test-modal-button="Close" />
+        <Hds::Button @text="Confirm" {{on "click" F.close}} data-test-button="confirm-preview" />
       </M.Footer>
     </Hds::Modal>
   {{else}}

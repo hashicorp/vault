@@ -15,7 +15,6 @@ import { click, fillIn, render, typeIn } from '@ember/test-helpers';
 import { PAGE } from 'vault/tests/helpers/sync/sync-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { syncDestinations, findDestination } from 'vault/helpers/sync-destinations';
-import { decamelize, underscore } from '@ember/string';
 import formResolver from 'vault/forms/sync/resolver';
 
 const SYNC_DESTINATIONS = syncDestinations();
@@ -37,11 +36,11 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
         if (type !== 'aws-sm') {
           this.setupStubsForType(type);
         }
-        const { name, connectionDetails, options } = this.destination;
-        options.granularity = options.granularityLevel;
-        delete options.granularityLevel;
+        const { name, connection_details, options } = this.destination;
+        options.granularity = options.granularity_level;
+        delete options.granularity_level;
 
-        data = { name, ...connectionDetails, ...options };
+        data = { name, ...connection_details, ...options };
       }
 
       this.form = formResolver(type, data, { isNew });
@@ -143,7 +142,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     await click(GENERAL.kvObjectEditor.addRow);
     await fillIn(GENERAL.kvObjectEditor.key(1), 'added');
     await fillIn(GENERAL.kvObjectEditor.value(1), 'key');
-    await click(PAGE.saveButton);
+    await click(GENERAL.submitButton);
   });
 
   test('edit: it adds custom_tags when previously there are none', async function (assert) {
@@ -156,11 +155,11 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
       return payload;
     });
 
-    this.destination.options.customTags = {};
+    this.destination.options.custom_tags = {};
 
     await this.renderComponent();
-    await PAGE.form.fillInByAttr('customTags', 'blah');
-    await click(PAGE.saveButton);
+    await PAGE.form.fillInByAttr('custom_tags', 'blah');
+    await click(GENERAL.submitButton);
   });
 
   test('edit: payload does not contain any custom_tags when removed in form', async function (assert) {
@@ -176,7 +175,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
     await this.renderComponent();
     await click(PAGE.kvObjectEditor.deleteRow());
-    await click(PAGE.saveButton);
+    await click(GENERAL.submitButton);
   });
 
   test('edit: payload only contains masked inputs when they have changed', async function (assert) {
@@ -199,11 +198,11 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     });
 
     await this.renderComponent();
-    await click(PAGE.enableField('accessKeyId'));
-    await click(PAGE.inputByAttr('accessKeyId')); // click on input but do not change value
-    await click(PAGE.enableField('secretAccessKey'));
-    await fillIn(PAGE.inputByAttr('secretAccessKey'), 'new-secret');
-    await click(PAGE.saveButton);
+    await click(PAGE.enableField('access_key_id'));
+    await click(PAGE.inputByAttr('access_key_id')); // click on input but do not change value
+    await click(PAGE.enableField('secret_access_key'));
+    await fillIn(PAGE.inputByAttr('secret_access_key'), 'new-secret');
+    await click(GENERAL.submitButton);
   });
 
   test('it renders API errors', async function (assert) {
@@ -224,7 +223,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
 
     await this.renderComponent();
 
-    await click(PAGE.saveButton);
+    await click(GENERAL.submitButton);
     assert
       .dom(PAGE.messageError)
       .hasText(
@@ -239,17 +238,17 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
     assert.expect(2);
 
     await this.renderComponent();
-    await typeIn(PAGE.inputByAttr('teamId'), 'id');
+    await typeIn(PAGE.inputByAttr('team_id'), 'id');
     assert
-      .dom(PAGE.validationWarningByAttr('teamId'))
+      .dom(PAGE.validationWarningByAttr('team_id'))
       .doesNotExist('does not render warning validation for new vercel-project destination');
 
     this.generateForm(false, type); // existing destination
     await this.renderComponent();
-    await PAGE.form.fillInByAttr('teamId', '');
-    await typeIn(PAGE.inputByAttr('teamId'), 'edit');
+    await PAGE.form.fillInByAttr('team_id', '');
+    await typeIn(PAGE.inputByAttr('team_id'), 'edit');
     assert
-      .dom(PAGE.validationWarningByAttr('teamId'))
+      .dom(PAGE.validationWarningByAttr('team_id'))
       .hasText(
         'Team ID should only be updated if the project was transferred to another account.',
         'it renders validation warning'
@@ -259,7 +258,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
   // CREATE FORM ASSERTIONS FOR EACH DESTINATION TYPE
   for (const destination of SYNC_DESTINATIONS) {
     const { name, type } = destination;
-    const obfuscatedFields = ['accessToken', 'clientSecret', 'secretAccessKey', 'accessKeyId'];
+    const obfuscatedFields = ['access_token', 'client_secret', 'secret_access_key', 'access_key_id'];
 
     module(`create destination: ${type}`, function () {
       test('it renders destination form', async function (assert) {
@@ -311,11 +310,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
           assert.notPropContains(payload, { name, type }, 'name and type do not exist in payload');
           // instead of looping through all attrs, just grab the second one (first is 'name')
           const testAttr = this.formFields[1].name;
-          assert.propContains(
-            payload,
-            { [underscore(testAttr)]: `my-${testAttr}` },
-            'payload contains expected attrs'
-          );
+          assert.propContains(payload, { [testAttr]: `my-${testAttr}` }, 'payload contains expected attrs');
           return payload;
         });
 
@@ -324,7 +319,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
         for (const field of this.formFields) {
           await PAGE.form.fillInByAttr(field.name, `my-${field.name}`);
         }
-        await click(PAGE.saveButton);
+        await click(GENERAL.submitButton);
         const actualArgs = this.transitionStub.lastCall.args;
         const expectedArgs = ['vault.cluster.sync.secrets.destinations.destination.details', type, name];
         assert.propEqual(actualArgs, expectedArgs, 'transitionTo called with expected args');
@@ -333,7 +328,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
       test('it validates inputs', async function (assert) {
         this.generateForm(true, type);
 
-        const warningValidations = ['teamId'];
+        const warningValidations = ['team_id'];
         const validationAssertions = { ...this.form.validations };
         // remove warning validations
         warningValidations.forEach((warning) => {
@@ -342,7 +337,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
         assert.expect(Object.keys(validationAssertions).length);
 
         await this.renderComponent();
-        await click(PAGE.saveButton);
+        await click(GENERAL.submitButton);
 
         // only asserts validations for presence, refactor if validations change
         for (const attr in validationAssertions) {
@@ -396,7 +391,7 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
           assert.ok(true, `makes request: PATCH ${path}`);
           const payload = JSON.parse(req.requestBody);
           const payloadKeys = Object.keys(payload);
-          const expectedKeys = editable.map((key) => decamelize(key)).sort();
+          const expectedKeys = editable.sort();
           assert.propEqual(payloadKeys, expectedKeys, `${type} payload only contains editable attrs`);
           expectedKeys.forEach((key) => {
             assert.propEqual(payload[key], EXPECTED_VALUE(key), `destination: ${type} updates key: ${key}`);
@@ -414,13 +409,13 @@ module('Integration | Component | sync | Secrets::Page::Destinations::CreateAndE
               // Enable inputs with sensitive values
               await click(PAGE.form.enableInput(field.name));
             }
-            await PAGE.form.fillInByAttr(field.name, `new-${decamelize(field.name)}-value`);
+            await PAGE.form.fillInByAttr(field.name, `new-${field.name}-value`);
           } else {
             assert.dom(PAGE.inputByAttr(field.name)).isDisabled(`${field.name} is disabled`);
           }
         }
 
-        await click(PAGE.saveButton);
+        await click(GENERAL.submitButton);
         const actualArgs = this.transitionStub.lastCall.args;
         const expectedArgs = [
           'vault.cluster.sync.secrets.destinations.destination.details',

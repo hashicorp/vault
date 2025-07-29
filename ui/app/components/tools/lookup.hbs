@@ -14,7 +14,7 @@
 {{#if this.lookupData}}
   <div class="box is-fullwidth is-sideless is-paddingless is-marginless">
     {{#each-in this.lookupData as |key value|}}
-      {{#let (if (eq key "creationTtl") "Creation TTL" (to-label key)) as |label|}}
+      {{#let (if (eq key "creation_ttl") "Creation TTL" (to-label key)) as |label|}}
         <InfoTableRow @label={{label}} @value={{value}} />
       {{/let}}
     {{/each-in}}
@@ -43,7 +43,7 @@
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
-        <Hds::Button @text="Lookup token" type="submit" data-test-tools-submit />
+        <Hds::Button @text="Lookup token" type="submit" data-test-submit />
       </div>
     </div>
   </form>

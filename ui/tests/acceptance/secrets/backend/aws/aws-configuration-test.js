@@ -18,7 +18,6 @@ import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import {
-  createConfig,
   expectedConfigKeys,
   expectedValueOfConfigKeys,
   configUrl,
@@ -31,12 +30,20 @@ module('Acceptance | aws | configuration', function (hooks) {
 
   hooks.beforeEach(function () {
     const flash = this.owner.lookup('service:flash-messages');
-    this.store = this.owner.lookup('service:store');
     this.flashSuccessSpy = spy(flash, 'success');
     this.flashInfoSpy = spy(flash, 'info');
     this.flashDangerSpy = spy(flash, 'danger');
     this.version = this.owner.lookup('service:version');
     this.uid = uuidv4();
+    this.awsRootConfigResponse = {
+      data: {
+        region: 'us-west-2',
+        access_key: '123-key',
+        iam_endpoint: 'iam-endpoint',
+        sts_endpoint: 'sts-endpoint',
+        max_retries: 1,
+      },
+    };
     return login();
   });
 
@@ -99,7 +106,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(SES.configTab);
       await click(SES.configure);
       await fillInAwsConfig('withWif');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert.dom(SES.wif.issuerWarningModal).exists('issuer warning modal exists');
       await click(SES.wif.issuerWarningSave);
       // three flash messages, the first is about mounting the engine, only care about the last two
@@ -107,11 +114,6 @@ module('Acceptance | aws | configuration', function (hooks) {
         this.flashSuccessSpy.args[1][0],
         `Successfully saved ${path}'s configuration.`,
         'first flash message about the first model config.'
-      );
-      assert.strictEqual(
-        this.flashSuccessSpy.args[2][0],
-        'Issuer saved successfully',
-        'second success message is about the issuer.'
       );
       assert.dom(GENERAL.infoRowValue('Issuer')).exists('Issuer has been set and is shown.');
       assert.dom(GENERAL.infoRowValue('Role ARN')).hasText('foo-role', 'Role ARN has been set.');
@@ -129,16 +131,16 @@ module('Acceptance | aws | configuration', function (hooks) {
     test('it should not show issuer if no root WIF configuration data is returned', async function (assert) {
       const path = `aws-${this.uid}`;
       const type = 'aws';
-      this.server.get(`${path}/config/root`, (schema, req) => {
-        const payload = JSON.parse(req.requestBody);
+
+      this.server.get(`${path}/config/root`, () => {
         assert.true(true, 'request made to config/root when navigating to the configuration page.');
-        return { data: { id: path, type, attributes: payload } };
+        return this.awsRootConfigResponse;
       });
       this.server.get(`identity/oidc/config`, () => {
         throw new Error(`Request was made to return the issuer when it should not have been.`);
       });
+
       await enablePage.enable(type, path);
-      createConfig(this.store, path, type); // create the aws root config in the store
       await click(SES.configTab);
       assert.dom(GENERAL.infoRowLabel('Issuer')).doesNotExist(`Issuer does not exists on config details.`);
       assert.dom(GENERAL.infoRowLabel('Access key')).exists(`Access key does exists on config details.`);
@@ -158,7 +160,7 @@ module('Acceptance | aws | configuration', function (hooks) {
       await click(SES.configTab);
       await click(SES.configure);
       await fillInAwsConfig('withAccess');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert.true(
         this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
         'Success flash message is rendered showing the configuration was saved.'
@@ -171,21 +173,21 @@ module('Acceptance | aws | configuration', function (hooks) {
       await runCmd(`delete sys/mounts/${path}`);
     });
 
-    test('it should show identityTokenTtl or maxRetries even if they have not been set', async function (assert) {
+    test('it should show identity_token_ttl or maxRetries even if they have not been set', async function (assert) {
       // documenting the intention that we show fields that have not been set but are returned by the api due to defaults
       const path = `aws-${this.uid}`;
       await enablePage.enable('aws', path);
 
       await click(SES.configTab);
       await click(SES.configure);
-      // manually fill in attrs without using helper so we can exclude identityTokenTtl and maxRetries.
+      // manually fill in attrs without using helper so we can exclude identity_token_ttl and max_retries.
       await click(SES.wif.accessType('wif')); // toggle to wif
-      await fillIn(GENERAL.inputByAttr('roleArn'), 'foo-role');
-      await fillIn(GENERAL.inputByAttr('identityTokenAudience'), 'foo-audience');
+      await fillIn(GENERAL.inputByAttr('role_arn'), 'foo-role');
+      await fillIn(GENERAL.inputByAttr('identity_token_audience'), 'foo-audience');
       // manually fill in non-access type specific fields on root config so we can exclude Max Retries.
-      await click(GENERAL.toggleGroup('Root config options'));
+      await click(GENERAL.button('Root config options'));
       await fillIn(GENERAL.inputByAttr('region'), 'eu-central-1');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert
         .dom(GENERAL.infoRowValue('Identity token TTL'))
         .hasText('0', 'Identity token TTL shows default.');
@@ -199,14 +201,15 @@ module('Acceptance | aws | configuration', function (hooks) {
     test('it shows AWS mount configuration details', async function (assert) {
       const path = `aws-${this.uid}`;
       const type = 'aws';
-      this.server.get(`${path}/config/root`, (schema, req) => {
-        const payload = JSON.parse(req.requestBody);
+
+      this.server.get(`${path}/config/root`, () => {
         assert.true(true, 'request made to config/root when navigating to the configuration page.');
-        return { data: { id: path, type, attributes: payload } };
+        return this.awsRootConfigResponse;
       });
+
       await enablePage.enable(type, path);
-      createConfig(this.store, path, type); // create the aws root config in the store
       await click(SES.configTab);
+
       for (const key of expectedConfigKeys(type)) {
         if (key === 'Secret key') continue; // secret-key is not returned by the API
         assert.dom(GENERAL.infoRowLabel(key)).exists(`${key} on the ${type} config details exists.`);
@@ -228,11 +231,11 @@ module('Acceptance | aws | configuration', function (hooks) {
       const path = `aws-${this.uid}`;
       const type = 'aws';
       await enablePage.enable(type, path);
-      // create accessKey with value foo and confirm it shows up in the details page.
+      // create access_key with value foo and confirm it shows up in the details page.
       await click(SES.configTab);
       await click(SES.configure);
       await fillInAwsConfig('withAccess');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert.dom(GENERAL.infoRowValue('Access key')).hasText('foo', 'Access key is foo');
       assert
         .dom(GENERAL.infoRowValue('Region'))
@@ -240,12 +243,12 @@ module('Acceptance | aws | configuration', function (hooks) {
       // edit root config details and lease config details and confirm the configuration.index page is updated.
       await click(SES.configure);
       // edit root config details
-      await fillIn(GENERAL.inputByAttr('accessKey'), 'not-foo');
-      await click(GENERAL.toggleGroup('Root config options'));
+      await fillIn(GENERAL.inputByAttr('access_key'), 'not-foo');
+      await click(GENERAL.button('Root config options'));
       await fillIn(GENERAL.inputByAttr('region'), 'ap-southeast-2');
       // add lease config details
       await fillInAwsConfig('withLease');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
       assert
         .dom(GENERAL.infoRowValue('Access key'))
         .hasText('not-foo', 'Access key has been updated to not-foo');
@@ -258,76 +261,18 @@ module('Acceptance | aws | configuration', function (hooks) {
       await runCmd(`delete sys/mounts/${path}`);
     });
 
-    test('it should not make a post request if lease or root data was unchanged', async function (assert) {
-      assert.expect(3);
-      const path = `aws-${this.uid}`;
-      const type = 'aws';
-      await enablePage.enable(type, path);
-
-      this.server.post(configUrl(type, path), () => {
-        throw new Error(`post request was made to config/root when it should not have been.`);
-      });
-      this.server.post(configUrl('aws-lease', path), () => {
-        throw new Error(`post request was made to config/lease when it should not have been.`);
-      });
-
-      await click(SES.configTab);
-      await click(SES.configure);
-      await click(GENERAL.saveButton);
-      assert.true(
-        this.flashInfoSpy.calledWith('No changes detected.'),
-        'Flash message shows no changes detected.'
-      );
-      assert.strictEqual(
-        currentURL(),
-        `/vault/secrets/${path}/configuration`,
-        'navigates back to the configuration index view'
-      );
-      assert.dom(GENERAL.emptyStateTitle).hasText('AWS not configured');
-      // cleanup
-      await runCmd(`delete sys/mounts/${path}`);
-    });
-
-    test('it should reset models after saving', async function (assert) {
-      const path = `aws-${this.uid}`;
-      const type = 'aws';
-      await enablePage.enable(type, path);
-      await click(SES.configTab);
-      await click(SES.configure);
-      await fillInAwsConfig('withAccess');
-      //  the way to tell if a record has been unloaded is if the private key is not saved in the store (the API does not return it, but if the record was not unloaded it would have stayed.)
-      await click(GENERAL.saveButton); // save the configuration
-      await click(SES.configure);
-      const privateKeyExists = this.store.peekRecord('aws/root-config', path).privateKey ? true : false;
-      assert.false(
-        privateKeyExists,
-        'private key is not on the store record, meaning it was unloaded after save. This new record without the key comes from the API.'
-      );
-      assert
-        .dom(GENERAL.enableField('secretKey'))
-        .exists('secret key field is wrapped inside an enableInput component');
-      // cleanup
-      await runCmd(`delete sys/mounts/${path}`);
-    });
-
     test('it saves lease configuration if root configuration was not changed', async function (assert) {
       assert.expect(2);
       const path = `aws-${this.uid}`;
       await enablePage.enable('aws', path);
 
-      this.server.post(configUrl('aws', path), () => {
-        throw new Error(
-          `Request was made to save the config/root when it should not have been because the user did not make any changes to this config.`
-        );
-      });
-
       await click(SES.configTab);
       await click(SES.configure);
       await fillInAwsConfig('withLease');
-      await click(GENERAL.saveButton);
+      await click(GENERAL.submitButton);
 
       assert.true(
-        this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s lease configuration.`),
+        this.flashSuccessSpy.calledWith(`Successfully saved ${path}'s configuration.`),
         'Success flash message is rendered showing the lease configuration was saved.'
       );
       assert.strictEqual(
@@ -355,7 +300,7 @@ module('Acceptance | aws | configuration', function (hooks) {
         .dom(SES.wif.accessTypeSection)
         .doesNotExist('Access type section does not render for a community user');
       // check all the form fields are present
-      await click(GENERAL.toggleGroup('Root config options'));
+      await click(GENERAL.button('Root config options'));
       for (const key of expectedConfigKeys('aws', true)) {
         assert.dom(GENERAL.inputByAttr(key)).exists(`${key} shows for root section.`);
       }
@@ -385,7 +330,7 @@ module('Acceptance | aws | configuration', function (hooks) {
         await click(SES.configure);
         await fillInAwsConfig('withAccess');
         await fillInAwsConfig('withLease');
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
         // cleanup
         await runCmd(`delete sys/mounts/${path}`);
       });
@@ -395,21 +340,17 @@ module('Acceptance | aws | configuration', function (hooks) {
         const path = `aws-${this.uid}`;
         await enablePage.enable('aws', path);
 
-        this.server.post(configUrl('aws', path), () => {
-          throw new Error(
-            `Request was made to save the config/root when it should not have been because the user did not make any changes to this config.`
-          );
-        });
         this.server.post(configUrl('aws-lease', path), () => {
           return overrideResponse(400, { errors: ['bad request!'] });
         });
+
         await click(SES.configTab);
         await click(SES.configure);
         await fillInAwsConfig('withLease');
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
 
         assert.true(
-          this.flashDangerSpy.calledWith(`Lease configuration was not saved: bad request!`),
+          this.flashDangerSpy.calledWith(`Error saving lease configuration: bad request!`),
           'flash danger message is rendered showing the lease configuration was NOT saved.'
         );
         assert.strictEqual(
@@ -432,7 +373,7 @@ module('Acceptance | aws | configuration', function (hooks) {
         await click(SES.configTab);
         await click(SES.configure);
         await fillInAwsConfig('withAccess');
-        await click(GENERAL.saveButton);
+        await click(GENERAL.submitButton);
 
         assert.dom(GENERAL.messageError).hasText('Error welp, that did not work!', 'API error shows on form');
         assert.strictEqual(

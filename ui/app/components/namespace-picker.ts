@@ -8,6 +8,8 @@ import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
 import keys from 'core/utils/keys';
+
+import type CapabilitiesService from 'vault/services/capabilities';
 import type Router from 'vault/router';
 import type NamespaceService from 'vault/services/namespace';
 import type AuthService from 'vault/vault/services/auth';
@@ -15,7 +17,6 @@ import type Store from '@ember-data/store';
 import errorMessage from 'vault/utils/error-message';
 
 interface NamespaceOption {
-  id: string;
   path: string;
   label: string;
 }
@@ -32,6 +33,7 @@ interface NamespaceOption {
  */
 export default class NamespacePicker extends Component {
   @service declare auth: AuthService;
+  @service declare capabilities: CapabilitiesService;
   @service declare namespace: NamespaceService;
   @service declare router: Router;
   @service declare store: Store;
@@ -39,19 +41,25 @@ export default class NamespacePicker extends Component {
   // Load 200 namespaces in the namespace picker at a time
   @tracked batchSize = 200;
 
-  @tracked allNamespaces: NamespaceOption[] = [];
   @tracked canManageNamespaces = false; // Show/hide manage namespaces button
-  @tracked canRefreshNamespaces = false; // Show/hide refresh list button
   @tracked errorLoadingNamespaces = '';
   @tracked hasNamespaces = false;
   @tracked searchInput = '';
   @tracked searchInputHelpText =
     "Enter a full path in the search bar and hit the 'Enter' ↵ key to navigate faster.";
-  @tracked selected: NamespaceOption | null = null;
 
   constructor(owner: unknown, args: Record<string, never>) {
     super(owner, args);
     this.loadOptions();
+    this.fetchManageCapability();
+  }
+
+  get allNamespaces(): NamespaceOption[] {
+    return this.getOptions(this.namespace?.accessibleNamespaces);
+  }
+
+  get selectedNamespace(): NamespaceOption | null {
+    return this.getSelected(this.allNamespaces, this.namespace?.path) ?? null;
   }
 
   private matchesPath(option: NamespaceOption, currentPath: string): boolean {
@@ -62,39 +70,33 @@ export default class NamespacePicker extends Component {
     return options.find((option) => this.matchesPath(option, currentPath));
   }
 
-  private getOptions(namespace: NamespaceService): NamespaceOption[] {
-    /* Each namespace option has 3 properties: { id, path, and label }
-     *   - id: node / namespace name (displayed when the namespace picker is closed)
+  private getOptions(accessibleNamespaces: string[]): NamespaceOption[] {
+    /* Each namespace option has 2 properties: { path and label }
      *   - path: full namespace path (used to navigate to the namespace)
-     *   - label: text displayed inside the namespace picker dropdown (if root, then label = id, else label = path)
+     *   - label: text displayed inside the namespace picker dropdown (if root, then path is "", else label = path)
      *
      *  Example:
-     *   | id       | path           | label          |
-     *   | ---      | ----           | -----          |
-     *   | 'root'   | ''             | 'root'         |
-     *   | 'parent' | 'parent'       | 'parent'       |
-     *   | 'child'  | 'parent/child' | 'parent/child' |
+     *   | path           | label          |
+     *   | ----           | -----          |
+     *   | ''             | 'root'         |
+     *   | 'parent'       | 'parent'       |
+     *   | 'parent/child' | 'parent/child' |
      */
-    const options = [
-      ...(namespace?.accessibleNamespaces || []).map((ns: string) => {
-        const parts = ns.split('/');
-        return { id: parts[parts.length - 1] || '', path: ns, label: ns };
-      }),
-    ];
+    const options = (accessibleNamespaces || []).map((ns: string) => ({ path: ns, label: ns }));
 
-    // Conditionally add the root namespace
-    if (this.auth?.authData?.userRootNamespace === '') {
-      options.unshift({ id: 'root', path: '', label: 'root' });
+    // Add the user's root namespace because `sys/internal/ui/namespaces` does not include it.
+    const userRootNamespace = this.auth.authData?.userRootNamespace;
+    if (!options?.find((o) => o.path === userRootNamespace)) {
+      // the 'root' namespace is technically an empty string so we manually add the 'root' label.
+      const label = userRootNamespace === '' ? 'root' : userRootNamespace;
+      options.unshift({ path: userRootNamespace, label });
     }
 
     // If there are no namespaces returned by the internal endpoint, add the current namespace
     // to the list of options. This is a fallback for when the user has access to a single namespace.
     if (options.length === 0) {
-      options.push({
-        id: namespace.currentNamespace,
-        path: namespace.path,
-        label: namespace.path,
-      });
+      // 'path' defined in the namespace service is the full namespace path
+      options.push({ path: this.namespace.path, label: this.namespace.path });
     }
 
     return options;
@@ -145,9 +147,12 @@ export default class NamespacePicker extends Component {
     element.style.display = 'none';
 
     let maxWidth = 240; // Default minimum width
-    const namespaceLinks = document.querySelectorAll('[data-test-namespace-link]');
-    namespaceLinks.forEach((checkmark: Element) => {
-      const width = (checkmark as HTMLElement).offsetWidth;
+    // Calculate the maximum width of the visible namespace options
+    // The namespace is displayed as an HDS::checkmark button, so we need to find the width of the checkmark element
+    this.visibleNamespaceOptions.forEach((namespace: NamespaceOption) => {
+      const checkmarkElement = document.querySelector(`[data-test-button="${namespace.label}"]`);
+
+      const width = (checkmarkElement as HTMLElement).offsetWidth;
       if (width > maxWidth) {
         maxWidth = width;
       }
@@ -161,15 +166,12 @@ export default class NamespacePicker extends Component {
   }
 
   @action
-  async fetchListCapability(): Promise<void> {
-    try {
-      const namespacePermission = await this.store.findRecord('capabilities', 'sys/namespaces/');
-      this.canRefreshNamespaces = namespacePermission.get('canList');
-      this.canManageNamespaces = true;
-    } catch (error) {
-      // If the findRecord call fails, the user lacks permissions to refresh or manage namespaces.
-      this.canRefreshNamespaces = this.canManageNamespaces = false;
-    }
+  async fetchManageCapability(): Promise<void> {
+    // The namespace picker options are from `sys/internal/ui/namespaces` which all users have permissions to request.
+    // The UI view for managing namespaces (i.e. CRUD actions) calls `sys/namespaces` and DOES require LIST permissions.
+    // This is the capability check to hide/show the button that navigates to that route.
+    const { canList } = await this.capabilities.fetchPathCapabilities('sys/namespaces');
+    this.canManageNamespaces = canList;
   }
 
   @action
@@ -186,11 +188,6 @@ export default class NamespacePicker extends Component {
     } catch (error) {
       this.errorLoadingNamespaces = errorMessage(error);
     }
-
-    this.allNamespaces = this.getOptions(this.namespace);
-    this.selected = this.getSelected(this.allNamespaces, this.namespace?.path) ?? null;
-
-    await this.fetchListCapability();
   }
 
   @action
@@ -216,7 +213,6 @@ export default class NamespacePicker extends Component {
 
   @action
   async onChange(selected: NamespaceOption): Promise<void> {
-    this.selected = selected;
     this.searchInput = '';
     this.router.transitionTo('vault.cluster.dashboard', { queryParams: { namespace: selected.path } });
   }
@@ -227,7 +223,6 @@ export default class NamespacePicker extends Component {
       const matchingNamespace = this.allNamespaces.find((ns) => ns.label === this.searchInput.trim());
 
       if (matchingNamespace) {
-        this.selected = matchingNamespace;
         this.searchInput = '';
         this.router.transitionTo('vault.cluster.dashboard', {
           queryParams: { namespace: matchingNamespace.path },
@@ -246,5 +241,11 @@ export default class NamespacePicker extends Component {
   async refreshList(): Promise<void> {
     this.searchInput = '';
     await this.loadOptions();
+  }
+
+  @action
+  toggleNamespacePicker() {
+    // Reset the search input when the dropdown is toggled
+    this.searchInput = '';
   }
 }

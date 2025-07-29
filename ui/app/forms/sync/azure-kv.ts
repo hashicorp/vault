@@ -10,21 +10,21 @@ import { commonFields, getPayload } from './shared';
 
 import type { SystemWriteSyncDestinationsAzureKvNameRequest } from '@hashicorp/vault-client-typescript';
 
-type AzureKvFormData = Partial<SystemWriteSyncDestinationsAzureKvNameRequest>;
+type AzureKvFormData = SystemWriteSyncDestinationsAzureKvNameRequest & {
+  name: string;
+};
 
-export default class AzureKvForm extends Form {
-  declare data: AzureKvFormData;
-
+export default class AzureKvForm extends Form<AzureKvFormData> {
   formFieldGroups = [
     new FormFieldGroup('default', [
       commonFields.name,
-      new FormField('keyVaultUri', 'string', {
+      new FormField('key_vault_uri', 'string', {
         label: 'Key Vault URI',
         subText:
           'URI of an existing Azure Key Vault instance. If empty, Vault will use the KEY_VAULT_URI environment variable if configured.',
         editDisabled: true,
       }),
-      new FormField('tenantId', 'string', {
+      new FormField('tenant_id', 'string', {
         label: 'Tenant ID',
         subText:
           'ID of the target Azure tenant. If empty, Vault will use the AZURE_TENANT_ID environment variable if configured.',
@@ -34,14 +34,14 @@ export default class AzureKvForm extends Form {
         subText: 'Specifies a cloud for the client. The default is Azure Public Cloud.',
         editDisabled: true,
       }),
-      new FormField('clientId', 'string', {
+      new FormField('client_id', 'string', {
         label: 'Client ID',
         subText:
           'Client ID of an Azure app registration. If empty, Vault will use the AZURE_CLIENT_ID environment variable if configured.',
       }),
     ]),
     new FormFieldGroup('Credentials', [
-      new FormField('clientSecret', 'string', {
+      new FormField('client_secret', 'string', {
         subText:
           'Client secret of an Azure app registration. If empty, Vault will use the AZURE_CLIENT_SECRET environment variable if configured.',
         sensitive: true,
@@ -57,6 +57,7 @@ export default class AzureKvForm extends Form {
 
   toJSON() {
     const formState = super.toJSON();
-    return { ...formState, data: getPayload('azure-kv', this.data, this.isNew) };
+    const data = getPayload<AzureKvFormData>('azure-kv', this.data, this.isNew);
+    return { ...formState, data };
   }
 }

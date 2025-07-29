@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, find, currentURL, settled, visit, findAll } from '@ember/test-helpers';
+import { click, fillIn, find, currentURL, settled, visit, findAll, waitFor } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,7 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { encodeString } from 'vault/utils/b64';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { deleteEngineCmd, mountEngineCmd, runCmd } from 'vault/tests/helpers/commands';
-import codemirror from 'vault/tests/helpers/codemirror';
+import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 
@@ -25,7 +25,6 @@ const SELECTORS = {
   versionRow: (version) => `[data-test-transit-version="${version}"]`,
   rotate: {
     trigger: '[data-test-transit-key-rotate]',
-    confirm: '[data-test-confirm-button]',
   },
 };
 
@@ -151,7 +150,9 @@ const testConvergentEncryption = async function (assert, keyName) {
   for (const testCase of tests) {
     await click('[data-test-transit-action-link="encrypt"]');
 
-    codemirror('#plaintext-control').setValue(testCase.plaintext);
+    await waitFor('.cm-editor');
+    const editor = codemirror('#plaintext-control');
+    setCodeEditorValue(editor, testCase.plaintext);
     await fillIn('[data-test-transit-input="context"]', testCase.context);
 
     if (!testCase.encodePlaintext) {
@@ -162,7 +163,7 @@ const testConvergentEncryption = async function (assert, keyName) {
       await click('[data-test-transit-b64-toggle="context"]');
     }
     assert.dom('[data-test-encrypt-modal]').doesNotExist(`${keyName}: is not open before encrypt`);
-    await click('[data-test-button-encrypt]');
+    await click(GENERAL.submitButton);
 
     if (testCase.assertAfterEncrypt) {
       await settled();
@@ -180,8 +181,9 @@ const testConvergentEncryption = async function (assert, keyName) {
       testCase.assertBeforeDecrypt(keyName);
     }
 
-    codemirror('#ciphertext-control').setValue(copiedCiphertext);
-    await click('[data-test-button-decrypt]');
+    setCodeEditorValue(editor, copiedCiphertext);
+
+    await click(GENERAL.submitButton);
 
     if (testCase.assertAfterDecrypt) {
       await settled();
@@ -236,7 +238,7 @@ module('Acceptance | transit', function (hooks) {
     await click(SELECTORS.form('exportable'));
     await click(SELECTORS.form('derived'));
     await click(SELECTORS.form('convergent-encryption'));
-    await click('[data-test-toggle-label="Auto-rotation period"]');
+    await click(GENERAL.ttl.toggle('Auto-rotation period'));
     await click(SELECTORS.form('create'));
 
     assert.strictEqual(
@@ -352,7 +354,7 @@ module('Acceptance | transit', function (hooks) {
     assert.dom(SELECTORS.versionRow(1)).hasTextContaining('Version 1', `${name}: only one key version`);
 
     await click(SELECTORS.rotate.trigger);
-    await click(SELECTORS.rotate.confirm);
+    await click(GENERAL.confirmButton);
 
     assert.dom(SELECTORS.versionRow(2)).exists('two key versions after rotate');
 
@@ -464,7 +466,7 @@ module('Acceptance | transit', function (hooks) {
 
       const expectedRotateValue = key.autoRotate ? '30 days' : 'Key will not be automatically rotated';
       assert
-        .dom('[data-test-row-value="Auto-rotation period"]')
+        .dom(GENERAL.infoRowValue('Auto-rotation period'))
         .hasText(expectedRotateValue, 'Has expected auto rotate value');
 
       await click(SELECTORS.versionsTab);
@@ -473,7 +475,7 @@ module('Acceptance | transit', function (hooks) {
       assert.dom('[data-test-transit-version]').exists({ count: 1 }, `${name}: only one key version`);
       await click(SELECTORS.rotate.trigger);
 
-      await click(SELECTORS.rotate.confirm);
+      await click(GENERAL.confirmButton);
       assert
         .dom('[data-test-transit-version]')
         .exists({ count: 2 }, `${name}: two key versions after rotate`);

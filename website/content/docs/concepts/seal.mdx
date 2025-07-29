@@ -6,6 +6,9 @@ description: >-
   sealed to lock it down.
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Seal/Unseal
 
 When you start a Vault server, it starts in a sealed state. In this state, Vault can access the physical
@@ -103,7 +106,7 @@ mechanism, for example using
 [AWS Service Control Policies](https://docs.aws.amazon.com/organizations/latest/userguide/orgs_manage_policies_scps.html)
 or similar.
 
-With Vault Enterprise, the secondary clusters of [performance replication or DR replication](/vault/docs/enterprise/replication) can have the seal configuration independently of the primary cluster. When you properly configure the secondary clulster's seal, it guards against some of the risk. However, you could still lose unreplicated items such as local mounts.
+With Vault Enterprise, the secondary clusters of [performance replication or DR replication](/vault/docs/enterprise/replication) can have the seal configuration independently of the primary cluster. When you properly configure the secondary cluster's seal, it guards against some of the risk. However, you could still lose unreplicated items such as local mounts.
 
 </Warning>
 

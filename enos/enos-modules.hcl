@@ -16,6 +16,14 @@ module "backend_raft" {
   source = "./modules/backend_raft"
 }
 
+module "benchmark_config" {
+  source = "./modules/benchmark/config"
+}
+
+module "benchmark_setup" {
+  source = "./modules/benchmark/setup"
+}
+
 // Find any artifact in Artifactory. Requires the version, revision, and edition.
 module "build_artifactory" {
   source = "./modules/build_artifactory_artifact"
@@ -46,6 +54,12 @@ module "create_vpc" {
 
   environment = "ci"
   common_tags = var.tags
+}
+
+module "set_up_external_integration_target" {
+  source = "./modules/set_up_external_integration_target"
+
+  ldap_version = "1.5.0"
 }
 
 module "choose_follower_host" {

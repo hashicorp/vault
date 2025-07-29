@@ -1,5 +1,8 @@
 # Vault Website
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 This subdirectory contains the content for the [Vault Website](https://vaultproject.io/).
 
 <!--
@@ -88,7 +91,7 @@ The significant keys in the YAML frontmatter are:
 
 ### Validating Content
 
-Content changes are automatically validated against a set of rules as part of the pull request process. If you want to run these checks locally to validate your content before comitting your changes, you can run the following command:
+Content changes are automatically validated against a set of rules as part of the pull request process. If you want to run these checks locally to validate your content before committing your changes, you can run the following command:
 
 ```
 npm run content-check

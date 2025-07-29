@@ -10,31 +10,31 @@ import { commonFields, getPayload } from './shared';
 
 import type { SystemWriteSyncDestinationsVercelProjectNameRequest } from '@hashicorp/vault-client-typescript';
 
-type VercelProjectFormData = Partial<SystemWriteSyncDestinationsVercelProjectNameRequest>;
+type VercelProjectFormData = SystemWriteSyncDestinationsVercelProjectNameRequest & {
+  name: string;
+};
 
-export default class GcpSmForm extends Form {
-  declare data: VercelProjectFormData;
-
+export default class VercelProjectForm extends Form<VercelProjectFormData> {
   formFieldGroups = [
     new FormFieldGroup('default', [
       commonFields.name,
-      new FormField('projectId', 'string', {
+      new FormField('project_id', 'string', {
         label: 'Project ID',
         subText: 'Project ID where to manage environment variables.',
         editDisabled: true,
       }),
-      new FormField('teamId', 'string', {
+      new FormField('team_id', 'string', {
         label: 'Team ID',
         subText: 'Team ID the project belongs to. Optional.',
       }),
-      new FormField('deploymentEnvironments', 'string', {
+      new FormField('deployment_environments', 'string', {
         subText: 'Deployment environments where the environment variables are available.',
         editType: 'checkboxList',
         possibleValues: ['development', 'preview', 'production'],
       }),
     ]),
     new FormFieldGroup('Credentials', [
-      new FormField('accessToken', 'string', {
+      new FormField('access_token', 'string', {
         subText: 'Vercel API access token with the permissions to manage environment variables.',
         sensitive: true,
         noCopy: true,
@@ -45,6 +45,7 @@ export default class GcpSmForm extends Form {
 
   toJSON() {
     const formState = super.toJSON();
-    return { ...formState, data: getPayload('vercel-project', this.data, this.isNew) };
+    const data = getPayload<VercelProjectFormData>('vercel-project', this.data, this.isNew);
+    return { ...formState, data };
   }
 }
