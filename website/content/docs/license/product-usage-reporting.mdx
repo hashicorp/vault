@@ -217,7 +217,12 @@ All of these metrics are numerical, and contain no sensitive values or additiona
 | `vault.loadedsnapshots.manual.count`                                | The total number of manual (local) snapshots loaded for recovery.                                          |
 | `vault.loadedsnapshots.cloud.google-gcs.count`                      | The total number of Google GCS snapshots loaded for recovery.                                              |
 | `vault.loadedsnapshots.cloud.aws-s3.count`                          | The total number of AWS S3 snapshots loaded for recovery.                                                  |
-| `vault.loadedsnapshots.cloud.azure-blob.count`                      | The total number of Azure Blob snapshots loaded for recovery.                                              |
+| `vault.loadedsnapshots.cloud.azure-blob.count`                      | The total number of Azure Blob snapshots loaded for recovery.   
+| `vault.operator.import.kv.version2.secrets.count`                   | The total number of KVV2 secrets imported.   
+| `vault.operator.import.kv.version2.secrets.source.gcp.count`        | The total number of KVV2 secrets imported from a GCP Source.   
+| `vault.operator.import.kv.version2.secrets.source.azure.count`      | The total number of KVV2 secrets imported from a Azure Source.   
+| `vault.operator.import.kv.version2.secrets.source.aws.count`        | The total number of KVV2 secrets imported from a AWS Source.   
+                                           
 
 ## Usage metadata list
 
