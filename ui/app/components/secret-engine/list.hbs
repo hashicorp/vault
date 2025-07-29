@@ -51,7 +51,7 @@
           <Hds::TooltipButton
             aria-label="Type of backend"
             @text={{this.tooltip}}
-            onmouseover={{(fn this.tooltipText backend)}}
+            {{on "mouseover" (fn this.tooltipText backend)}}
           >
             <Icon @name={{backend.icon}} class="has-text-grey-light" />
           </Hds::TooltipButton>

@@ -28,7 +28,7 @@ export default function engineDisplayData(methodType: string) {
     return {
       displayName: 'Generic plugin',
       type: 'generic',
-      glyph: 'vault',
+      glyph: 'lock',
       mountCategory: ['secret', 'auth'],
     };
   }

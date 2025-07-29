@@ -28,6 +28,7 @@ import engineDisplayData from 'vault/helpers/engines-display-data';
 
 interface Args {
   secretEngines: Array<SecretsEngineResource>;
+  onHover: (tooltip: string) => void;
 }
 
 export default class SecretEngineList extends Component<Args> {
@@ -88,6 +89,8 @@ export default class SecretEngineList extends Component<Args> {
       this.tooltip =
         'The UI only supports configuration views for these secret engines. The CLI must be used to manage other engine resources.';
     }
+
+    this.args.onHover?.(this.tooltip); // expose the tracked value
   }
 
   // Filtering & searching
