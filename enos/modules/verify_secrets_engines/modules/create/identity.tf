@@ -78,7 +78,7 @@ resource "enos_remote_exec" "identity_entity_testuser" {
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/../../scripts/write-payload.sh")]
+  scripts = [abspath("${path.module}/../../scripts/write.sh")]
 
   transport = {
     ssh = {
@@ -102,7 +102,7 @@ resource "enos_remote_exec" "identity_entity_alias_testuser" {
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/../../scripts/write-payload.sh")]
+  scripts = [abspath("${path.module}/../../scripts/write.sh")]
 
   transport = {
     ssh = {
@@ -123,7 +123,7 @@ resource "enos_remote_exec" "oidc_config" {
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/../../scripts/write-payload.sh")]
+  scripts = [abspath("${path.module}/../../scripts/write.sh")]
 
   transport = {
     ssh = {
@@ -147,7 +147,7 @@ resource "enos_remote_exec" "oidc_key" {
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/../../scripts/write-payload.sh")]
+  scripts = [abspath("${path.module}/../../scripts/write.sh")]
 
   transport = {
     ssh = {
@@ -182,7 +182,7 @@ resource "enos_remote_exec" "oidc_role" {
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/../../scripts/write-payload.sh")]
+  scripts = [abspath("${path.module}/../../scripts/write.sh")]
 
   transport = {
     ssh = {
@@ -231,7 +231,7 @@ resource "enos_remote_exec" "identity_group_oidc_token_readers" {
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/../../scripts/write-payload.sh")]
+  scripts = [abspath("${path.module}/../../scripts/write.sh")]
 
   transport = {
     ssh = {
@@ -300,7 +300,7 @@ resource "enos_remote_exec" "oidc_key_rotate" {
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/../../scripts/write-payload.sh")]
+  scripts = [abspath("${path.module}/../../scripts/write.sh")]
 
   transport = {
     ssh = {

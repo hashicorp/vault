@@ -1,12 +1,18 @@
 # Copyright (c) HashiCorp, Inc.
 # SPDX-License-Identifier: BUSL-1.1
 
+variable "ldap_password" {
+  type        = string
+  description = "The LDAP Server admin password"
+  default     = "password1"
+}
+
 locals {
   ldap_output = {
     ip_version        = var.ip_version
     ldap_mount        = "ldap"
-    host              = var.ldap_host
-    port              = var.ldap_port
+    host              = var.integration_host_state.ldap.host
+    port              = var.ports.ldap.port
     username          = "enos"
     pw                = var.ldap_password
     vault_policy_name = local.kv_output.writer_policy_name
@@ -45,7 +51,7 @@ resource "enos_remote_exec" "ldap_configurations" {
 
   environment = {
     MOUNT             = local.ldap_output.ldap_mount
-    LDAP_SERVER       = var.ldap_host.private_ip
+    LDAP_SERVER       = local.ldap_output.host.private_ip
     LDAP_PORT         = local.ldap_output.port
     LDAP_USERNAME     = local.ldap_output.username
     LDAP_ADMIN_PW     = local.ldap_output.pw
