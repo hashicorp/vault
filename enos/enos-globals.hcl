@@ -64,22 +64,9 @@ globals {
   packages = ["jq"]
   // Ports that we'll open up for ingress in the security group for all target machines.
   // Port protocol maps to the IpProtocol schema: https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_IpPermission.html
-  ports = {
-    ssh : {
-      description = "SSH"
-      port        = 22
-      protocol    = "tcp"
-    },
-    ldap : {
-      description = "LDAP"
-      port        = 389
-      protocol    = "tcp"
-    },
-    ldaps : {
-      description = "LDAPS"
-      port        = 636
-      protocol    = "tcp"
-    },
+
+  // Ports that we'll open up for ingress in the security group for all Vault target machines.
+  vault_cluster_ports = {
     vault_agent : {
       description = "Vault Agent"
       port        = 8100
@@ -99,7 +86,10 @@ globals {
       description = "Vault Cluster listener"
       port        = 8201
       protocol    = "tcp"
-    },
+    }
+  }
+  // Ports that we'll open up for ingress in the security group for all Consul target machines.
+  consul_cluster_ports = {
     consul_rpc : {
       description = "Consul internal communication"
       port        = 8300
@@ -154,8 +144,47 @@ globals {
       description = "Consul UDP DNS Server"
       port        = 8600
       protocol    = "udp"
+    }
+  }
+  ingress_ports = {
+    ssh : {
+      description = "SSH"
+      port        = 22
+      protocol    = "tcp"
+    }
+  }
+  // Ports that we'll open up for ingress in the security group for all external integration target machines.
+  integration_host_ports = {
+    ldap : {
+      description = "LDAP"
+      port        = 389
+      protocol    = "tcp"
+    },
+    ldaps : {
+      description = "LDAPS"
+      port        = 636
+      protocol    = "tcp"
+    },
+    mysql : {
+      description = "MySQL Server"
+      port        = 3306
+      protocol    = "tcp"
+    },
+    kmip : {
+      description = "KMIP Server"
+      port        = 5696
+      protocol    = "tcp"
     },
   }
+
+  // Combine all ports into a single map
+  ports = merge(
+    global.vault_cluster_ports,
+    global.consul_cluster_ports,
+    global.ingress_ports,
+    global.integration_host_ports
+  )
+
   seals = ["awskms", "pkcs11", "shamir"]
   tags = merge({
     "Project Name" : var.project_name
