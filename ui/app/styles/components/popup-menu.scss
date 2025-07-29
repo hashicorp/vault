@@ -87,10 +87,10 @@
     }
 
     &.is-destroy {
-      color: color_variables.$red;
+      color: color_variables.$red-200;
 
       &:hover {
-        background-color: color_variables.$red;
+        background-color: color_variables.$red-200;
         color: color_variables.$white;
       }
     }

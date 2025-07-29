@@ -34,8 +34,8 @@
 }
 
 .control-group-header.is-success {
-  color: color_variables.$green-dark;
-  background: color_variables.$green-lightest;
+  color: color_variables.$green-300;
+  background: var(--token-color-palette-green-50);
 }
 
 .control-group .authorizations {

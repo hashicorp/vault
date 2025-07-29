@@ -21,7 +21,7 @@
       background-color: color_variables.$neutral-600;
     }
     .version-stamp {
-      background-color: color_variables.$green-700;
+      background-color: color_variables.$green-300;
     }
   }
 
@@ -42,13 +42,13 @@
   .opblock-post,
   .opblock-patch {
     .opblock-summary-method {
-      background-color: color_variables.$green-700;
+      background-color: color_variables.$green-300;
     }
   }
 
   .opblock-delete {
     .opblock-summary-method {
-      background-color: color_variables.$red-500;
+      background-color: color_variables.$red-200;
     }
   }
 

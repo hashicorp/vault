@@ -16,23 +16,23 @@
   display: inline-block;
   // numbers are indices because chart legend is iterated over
   &.dot-0 {
-    background-color: var(--token-color-palette-blue-100);
+    background-color: color_variables.$blue-100;
   }
   &.dot-1 {
-    background-color: var(--token-color-palette-blue-200);
+    background-color: color_variables.$blue-200;
   }
   &.dot-2 {
-    background-color: var(--token-color-palette-neutral-300);
+    background-color: color_variables.$neutral-300;
   }
   &.dot-3 {
-    background-color: var(--token-color-palette-neutral-500);
+    background-color: color_variables.$neutral-500;
   }
   // custom naming for running totals, which matches the custom-bar naming
   &.dot-clients {
-    background-color: var(--token-color-palette-blue-200);
+    background-color: color_variables.$blue-200;
   }
   &.dot-new_clients {
-    background-color: var(--token-color-palette-blue-200);
+    background-color: color_variables.$blue-200;
   }
 }
 

@@ -47,9 +47,9 @@
   &:active,
   &.is-active,
   &:focus {
-    border-color: color.adjust(#c2c5cb, $lightness: -10%);
+    border-color: color.adjust(color_variables.$neutral-300-raw, $lightness: -10%);
     box-shadow: box-shadow_variables.$button-box-shadow-standard;
-    color: color.adjust(color_variables.$grey-500, $lightness: -10%);
+    color: color.adjust(color_variables.$neutral-500-raw, $lightness: -10%);
   }
 
   &:focus:not(:active) {
@@ -72,33 +72,33 @@
   }
 
   &.is-danger {
-    background-color: color_variables.$red-500;
-    border-color: color.adjust(color_variables.$red-500, $lightness: -2%);
+    background-color: color_variables.$red-200;
+    border-color: color.adjust(color_variables.$red-200-raw, $lightness: -2%);
     color: color_variables.$white;
     text-shadow: 0 1px 1px rgba(color_variables.$black, 0.25);
 
     &:hover:not([disabled]) {
-      background-color: color.adjust(color_variables.$red-500, $lightness: -5%);
-      border-color: color.adjust(color_variables.$red-500, $lightness: -5%);
+      background-color: color.adjust(color_variables.$red-200-raw, $lightness: -5%);
+      border-color: color.adjust(color_variables.$red-200-raw, $lightness: -5%);
       box-shadow: box-shadow_variables.$box-shadow-middle;
     }
 
     &:active,
     &.is-active {
-      background-color: color.adjust(color_variables.$red-500, $lightness: -10%);
-      border-color: color.adjust(color_variables.$red-500, $lightness: -10%);
+      background-color: color.adjust(color_variables.$red-200-raw, $lightness: -10%);
+      border-color: color.adjust(color_variables.$red-200-raw, $lightness: -10%);
       box-shadow: box-shadow_variables.$box-shadow-middle;
     }
 
     &:focus {
-      border-color: color.adjust(color_variables.$red-500, $lightness: -10%);
+      border-color: color.adjust(color_variables.$red-200-raw, $lightness: -10%);
       box-shadow: box-shadow_variables.$button-box-shadow-standard;
     }
   }
 
   &.is-danger-outlined {
-    border: 1px solid color_variables.$red-500;
-    color: color_variables.$red-500;
+    border: 1px solid color_variables.$red-200;
+    color: color_variables.$red-200;
   }
 
   &.is-flat {
@@ -111,7 +111,7 @@
     background-color: transparent;
     border-color: transparent;
     box-shadow: none;
-    color: color_variables.$blue;
+    color: color_variables.$blue-200;
     text-decoration: none;
 
     &:hover {
@@ -146,7 +146,7 @@
   &.is-link {
     background-color: transparent;
     border-color: transparent;
-    color: color_variables.$blue;
+    color: color_variables.$blue-200;
     text-decoration: none;
     font-weight: font_variables.$font-weight-semibold;
     box-shadow: none;
@@ -154,8 +154,8 @@
   }
 
   &.is-primary {
-    background-color: color_variables.$blue;
-    border-color: color.adjust(color_variables.$blue, $lightness: -2%);
+    background-color: color_variables.$blue-200;
+    border-color: color.adjust(color_variables.$blue-200-raw, $lightness: -2%);
     color: color_variables.$white;
     font-weight: font_variables.$font-weight-bold;
     text-shadow: 0 1px 1px rgba(color_variables.$black, 0.25);
@@ -167,20 +167,20 @@
     }
 
     &:hover:not([disabled]) {
-      background-color: color.adjust(color_variables.$blue, $lightness: -5%);
-      border-color: color.adjust(color_variables.$blue, $lightness: -5%);
+      background-color: color.adjust(color_variables.$blue-200-raw, $lightness: -5%);
+      border-color: color.adjust(color_variables.$blue-200-raw, $lightness: -5%);
       box-shadow: box-shadow_variables.$box-shadow-middle;
     }
 
     &:active,
     &.is-active {
-      background-color: color.adjust(color_variables.$blue, $lightness: -10%);
-      border-color: color.adjust(color_variables.$blue, $lightness: -10%);
+      background-color: color.adjust(color_variables.$blue-200-raw, $lightness: -10%);
+      border-color: color.adjust(color_variables.$blue-200-raw, $lightness: -10%);
       box-shadow: box-shadow_variables.$box-shadow-middle;
     }
 
     &:focus {
-      border-color: color.adjust(color_variables.$blue, $lightness: -10%);
+      border-color: color.adjust(color_variables.$blue-200-raw, $lightness: -10%);
       box-shadow: box-shadow_variables.$button-box-shadow-standard;
     }
 
@@ -192,29 +192,29 @@
       &:active,
       &.is-active {
         background-color: transparent;
-        border-bottom: 2px solid color.adjust(color_variables.$blue, $lightness: -10%);
+        border-bottom: 2px solid color.adjust(color_variables.$blue-200-raw, $lightness: -10%);
         border-radius: unset;
-        color: color.adjust(color_variables.$blue, $lightness: -10%);
+        color: color.adjust(color_variables.$blue-200-raw, $lightness: -10%);
       }
     }
     // is-primary.is-outlined the only is-outlined buttons are primary.
     &.is-outlined {
       background-color: transparent;
-      border-color: color_variables.$blue;
-      color: color_variables.$blue;
+      border-color: color_variables.$blue-200;
+      color: color_variables.$blue-200;
 
       &:hover,
       &:focus {
         background-color: transparent;
-        border-color: color.adjust(color_variables.$blue, $lightness: -10%);
-        color: color_variables.$blue;
+        border-color: color.adjust(color_variables.$blue-200-raw, $lightness: -10%);
+        color: color_variables.$blue-200;
       }
 
       &:active,
       &.is-active {
         background-color: transparent;
-        border-color: color.adjust(color_variables.$blue, $lightness: -10%);
-        color: color.adjust(color_variables.$blue, $lightness: -10%);
+        border-color: color.adjust(color_variables.$blue-200-raw, $lightness: -10%);
+        color: color.adjust(color_variables.$blue-200-raw, $lightness: -10%);
       }
     }
 
@@ -349,8 +349,8 @@ a.button.disabled {
   }
 
   &.primary {
-    background-color: color_variables.$blue;
-    border-color: color.adjust(color_variables.$blue, $lightness: -2%);
+    background-color: color_variables.$blue-200;
+    border-color: color.adjust(color_variables.$blue-200-raw, $lightness: -2%);
     color: color_variables.$white;
     font-weight: font_variables.$font-weight-bold;
     text-shadow: 0 1px 1px rgba(color_variables.$black, 0.25);
@@ -386,7 +386,7 @@ a.button.disabled {
     box-shadow: none;
     &:hover:not(.disabled) {
       background-color: color_variables.$neutral-100;
-      color: color_variables.$blue;
+      color: color_variables.$blue-200;
     }
   }
 }

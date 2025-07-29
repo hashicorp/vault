@@ -11,7 +11,7 @@
   border-radius: 3rem;
   background: linear-gradient(
     135deg,
-    color_variables.$blue,
+    color_variables.$blue-200,
     hsl(271, 100%, 71%)
   ); // only use case for purple in the app. define here instead of utils/color_var
   animation: env-banner-color-rotate 8s infinite linear alternate;

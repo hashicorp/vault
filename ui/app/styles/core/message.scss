@@ -44,36 +44,36 @@
 
   // message types, see message-types.js
   &.is-danger {
-    background: color_variables.$red-010;
-    border: 1px solid color_variables.$red-050;
+    background: var(--token-color-surface-critical);
+    border: 1px solid color_variables.$red-50;
 
     .message-body {
-      color: color_variables.$red-700;
+      color: color_variables.$red-300;
     }
 
     .message-icon {
-      color: color_variables.$red-500;
+      color: color_variables.$red-200;
     }
 
     .message-title {
-      color: color_variables.$red-700;
+      color: color_variables.$red-300;
     }
   }
 
   &.is-highlight {
-    background: color_variables.$yellow-010;
-    border: 1px solid color_variables.$yellow-100;
+    background: var(--token-color-surface-warning);
+    border: 1px solid var(--token-color-palette-amber-100);
 
     .message-body {
       color: color_variables.$neutral-600;
     }
 
     .message-icon {
-      color: color_variables.$yellow-500;
+      color: var(--token-color-palette-amber-200);
     }
 
     .message-title {
-      color: color_variables.$orange-700;
+      color: var(--token-color-palette-amber-300);
     }
   }
 
@@ -95,19 +95,19 @@
   }
 
   &.is-success {
-    background: color_variables.$green-010;
-    border: 1px solid color_variables.$green-100;
+    background: var(--token-color-surface-success);
+    border: 1px solid var(--token-color-palette-green-100);
 
     .message-body {
-      color: color_variables.$green-900;
+      color: var(--token-color-palette-green-500);
     }
 
     .message-icon {
-      color: color_variables.$green-500;
+      color: color_variables.$green-200;
     }
 
     .message-title {
-      color: color_variables.$green-700;
+      color: color_variables.$green-300;
     }
   }
 }

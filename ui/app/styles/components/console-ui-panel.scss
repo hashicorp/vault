@@ -49,7 +49,7 @@ $console-close-height: 35px;
   }
 
   .console-ui-panel-intro {
-    color: var(--token-color-palette-neutral-400);
+    color: color_variables.$neutral-400;
   }
 }
 
@@ -59,7 +59,7 @@ $console-close-height: 35px;
 
   input {
     background-color: rgba(color_variables.$black, 0.5);
-    border: 1px solid var(--token-color-palette-neutral-500);
+    border: 1px solid color_variables.$neutral-500;
     border-radius: var(--token-side-nav-body-list-item-border-radius);
     caret-color: color_variables.$white;
     color: color_variables.$white;
@@ -102,14 +102,10 @@ $console-close-height: 35px;
   }
 
   &.console-ui-alert--error {
-    // HDS tokens are not light enough on the dark background to pass a11y tests.
-    // hex value for --token-color-foreground-critical
-    color: color.adjust(#e52228, $lightness: 20%);
+    color: color.adjust(color_variables.$red-200-raw, $lightness: 20%);
   }
   &.console-ui-alert--success {
-    // HDS tokens are not light enough on the dark background to pass a11y tests.
-    // hex value for --token-color-foreground-success
-    color: color.adjust(#008a22, $lightness: 20%);
+    color: color.adjust(color_variables.$green-200-raw, $lightness: 20%);
   }
 }
 

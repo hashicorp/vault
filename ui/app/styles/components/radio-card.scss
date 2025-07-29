@@ -46,7 +46,7 @@
   }
   input[type='radio']:focus + span.dot {
     box-shadow:
-      0 0 10px 1px rgba(color_variables.$blue, 0.4),
+      0 0 10px 1px rgba(color_variables.$blue-200-raw, 0.4),
       inset 0 0 0 0.15rem color_variables.$white;
   }
 

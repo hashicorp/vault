@@ -74,17 +74,17 @@
 }
 
 .progress.is-success::-webkit-progress-value {
-  background-color: color_variables.$green-500;
+  background-color: color_variables.$green-200;
 }
 
 .progress.is-success::-moz-progress-bar {
-  background-color: color_variables.$green-500;
+  background-color: color_variables.$green-200;
 }
 
 .progress.is-success::-ms-fill {
-  background-color: color_variables.$green-500;
+  background-color: color_variables.$green-200;
 }
 
 .progress.is-success:indeterminate {
-  background-image: linear-gradient(to right, color_variables.$green-500 30%, #ededed 30%);
+  background-image: linear-gradient(to right, color_variables.$green-200 30%, #ededed 30%);
 }

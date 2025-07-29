@@ -4,63 +4,44 @@
  */
 
 // Grey
-$neutral-50: var(--token-color-palette-neutral-50);
-$neutral-100: var(--token-color-palette-neutral-100);
-$neutral-200: var(--token-color-palette-neutral-200);
-$neutral-300: var(--token-color-palette-neutral-300);
-$neutral-400: var(--token-color-palette-neutral-400);
-$neutral-500: var(--token-color-palette-neutral-500);
-$neutral-600: var(--token-color-palette-neutral-600);
+$neutral-50: var(--token-color-palette-neutral-50); // #fafafa
+$neutral-100: var(--token-color-palette-neutral-100); // #f1f2f3
+$neutral-200: var(--token-color-palette-neutral-200); // #dedfe3
+$neutral-300: var(--token-color-palette-neutral-300); // #c2c5cb
+$neutral-400: var(--token-color-palette-neutral-400); // #8c909c
+$neutral-500: var(--token-color-palette-neutral-500); // #656a76
+$neutral-600: var(--token-color-palette-neutral-600); // #3b3d45
 // used in instances such as  color.adjust() where the actual color is needed
-$grey-500: #656a76;
+$neutral-300-raw: #c2c5cb;
+$neutral-500-raw: #656a76;
 
 // Black
-$black: hsl(0, 0%, 4%); // in hex: #0a0a0a
+$black: hsl(0, 0%, 4%); // #0a0a0a
 
 // White
-$white: hsl(0, 0%, 100%);
+$white: hsl(0, 0%, 100%); // #ffffff
 
 // Blue
-$blue-50: var(--token-color-palette-blue-50);
-$blue-100: var(--token-color-palette-blue-100);
-$blue-200: var(--token-color-palette-blue-200);
-$blue-300: var(--token-color-palette-blue-300);
-$blue-500: var(--token-color-palette-blue-500);
+$blue-50: var(--token-color-palette-blue-50); // #f2f8ff
+$blue-100: var(--token-color-palette-blue-100); // #cce3fe
+$blue-200: var(--token-color-palette-blue-200); // #1060ff
+$blue-300: var(--token-color-palette-blue-300); // #0c56e9
+$blue-500: var(--token-color-palette-blue-500); // #1c345f
 // used in instances such as  color.adjust() where the actual color is needed
-$blue: #1060ff;
+$blue-200-raw: #1060ff;
 
 // Red
-$red-010: #fdfafb;
-$red-050: #f9ecee;
-$red-100: #efc7cc;
-$red-300: #db7d88;
-$red-500: #c73445;
-$red-700: #7f222c;
-$red-900: #370f13;
-$red-lightest: $red-050;
-$red-light: $red-300;
-$red: $red-500;
-$red-dark: $red-700;
-$red-darkest: $red-900;
+$red-50: var(--token-color-palette-red-50); // #fff5f5
+$red-200: var(--token-color-palette-red-200); // #e52228
+$red-300: var(--token-color-palette-red-300); // #c00005
+// used in instances such as  color.adjust() where the actual color is needed
+$red-200-raw: #e52228;
 
 // Green
-$green-010: #fafdfa;
-$green-050: #ecf7ed;
-$green-100: #c6e9c9;
-$green-500: #2eb039;
-$green-700: #1e7125;
-$green-900: #0d3010;
-$green-lightest: $green-050;
-$green: $green-500;
-$green-dark: $green-700;
+$green-200: var(--token-color-palette-green-200); // #008a22
+$green-300: var(--token-color-palette-green-300); // #00781e
+// used in instances such as  color.adjust() where the actual color is needed
+$green-200-raw: #008a22;
 
-// Orange
-$orange-500: #fa8f37;
-$orange-700: #a05c23;
-$orange: $orange-500;
-
-// Yellow
-$yellow-010: #fffdf6;
-$yellow-100: #fdeeba;
-$yellow-500: #fac402;
-$yellow: $yellow-500;
+// Amber
+$amber-200: var(--token-color-palette-amber-200); // #bb5a00
