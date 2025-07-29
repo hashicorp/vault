@@ -16,10 +16,16 @@ locals {
     org         = "hashicorp"
     admin_pw    = "password1"
     version     = var.ldap_version
-    port        = var.ldap_port
-    secure_port = var.ldaps_port
+    port        = var.ports.ldap.port
+    secure_port = var.ports.ldaps.port
     ip_version  = var.ip_version
     host        = var.hosts[0]
+  }
+  kmip_client = {
+    // The KMIP client configuration is used to connect to the KMIP server
+    // uses Percona (MySQL) as the KMIP client.
+    port = var.ports.mysql.port
+    host = var.hosts[0]
   }
 }
 
@@ -27,6 +33,7 @@ locals {
 output "state" {
   value = {
     ldap = local.ldap_server
+    kmip = local.kmip_client
   }
 }
 
@@ -58,6 +65,24 @@ resource "enos_remote_exec" "setup_openldap" {
   transport = {
     ssh = {
       host = local.ldap_server.host.public_ip
+    }
+  }
+}
+
+# Creating KMIP Server
+resource "enos_remote_exec" "create_kmip" {
+  depends_on = [module.install_packages]
+
+  environment = {
+    VAULT_ADDR = var.ip_version == "6" ? var.hosts[0].ipv6 : var.hosts[0].public_ip
+    KMIP_PORT  = var.ports.kmip.port
+  }
+
+  scripts = [abspath("${path.module}/scripts/setup_kmip.sh")]
+
+  transport = {
+    ssh = {
+      host = local.kmip_client.host.public_ip
     }
   }
 }

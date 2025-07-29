@@ -1,5 +1,4 @@
 @use '../utils/size_variables';
-@use '../utils/color_variables';
 
 /**
  * Copyright (c) HashiCorp, Inc.
@@ -13,15 +12,15 @@
   padding: 0;
 
   .info a {
-    color: color_variables.$blue-700;
+    color: var(--token-color-palette-blue-300);
   }
 
   .title {
     small {
-      background-color: color_variables.$ui-gray-800;
+      background-color: var(--token-color-palette-neutral-600);
     }
     .version-stamp {
-      background-color: color_variables.$green-700;
+      background-color: var(--token-color-palette-green-300);
     }
   }
 
@@ -29,26 +28,26 @@
     opacity: 1;
 
     .opblock-summary-method {
-      background-color: color_variables.$ui-gray-700;
+      background-color: var(--token-color-palette-neutral-500);
     }
   }
 
   .opblock-get {
     .opblock-summary-method {
-      background-color: color_variables.$blue-500;
+      background-color: var(--token-color-palette-blue-200);
     }
   }
 
   .opblock-post,
   .opblock-patch {
     .opblock-summary-method {
-      background-color: color_variables.$green-700;
+      background-color: var(--token-color-palette-green-300);
     }
   }
 
   .opblock-delete {
     .opblock-summary-method {
-      background-color: color_variables.$red-500;
+      background-color: var(--token-color-palette-red-200);
     }
   }
 
