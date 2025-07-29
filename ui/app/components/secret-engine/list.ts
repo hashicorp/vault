@@ -79,8 +79,8 @@ export default class SecretEngineList extends Component<Args> {
         this.tooltip = `${engineDisplayData(backend.type)?.displayName}`;
       }
     } else if (engineDisplayData(backend.type)?.type === 'generic') {
-      // If a mounted engine type doesn't match any known type, the type is referred to as 'generic' and set this tooltip.
-      // Handles issue when a user mounts an engine that doesn't follow the expected naming conventions for what's in the binary despite being a valid engine.
+      // If a mounted engine type doesn't match any known type, the type is returned as 'generic' and set this tooltip.
+      // Handles issue when a user externally mounts an engine that doesn't follow the expected naming conventions for what's in the binary, despite being a valid engine.
       this.tooltip =
         'This is an externally mounted plugin that is not recognized by the UI. Please use the CLI to manage this engine.';
     } else {
