@@ -1,0 +1,204 @@
+<Hds::Button
+  @text="Generate policy"
+  @color="tertiary"
+  @icon="shield-check"
+  {{on "click" (fn this.handleFlyout "open")}}
+  class="policy-wizard"
+/>
+
+{{#if this.showFlyout}}
+  <Hds::Flyout @size="large" @onClose={{fn this.handleFlyout "close"}} as |M|>
+    <M.Header class="policy-wizard" @icon="wand">
+      Policy Wizard
+    </M.Header>
+    <M.Body>
+
+      {{! CREATE OR EDIT A POLICY  }}
+      <Hds::Card::Container class="has-padding-m has-bottom-margin-m" @level="base" @hasBorder={{true}}>
+        <Hds::Text::Display class="has-bottom-margin-xxs">Create or edit a policy</Hds::Text::Display>
+        <Hds::Form::Radio::Group @layout="horizontal" {{on "input" this.handleRadio}} class="has-bottom-margin-m" as |G|>
+          <G.HelperText>Choose to create a new policy or edit existing one</G.HelperText>
+          <G.RadioField checked={{eq this.policyAction "create"}} @value="create" as |F|>
+            <F.Label>Create a new policy</F.Label>
+          </G.RadioField>
+          <G.RadioField checked={{eq this.policyAction "edit"}} @value="edit" as |F|>
+            <F.Label>Edit an existing policy</F.Label>
+          </G.RadioField>
+        </Hds::Form::Radio::Group>
+
+        {{#if (eq this.policyAction "create")}}
+          <Hds::Form::TextInput::Field class="field" autocomplete="off" {{on "input" this.handleCreatePolicy}} as |F|>
+            <F.Label>Policy name</F.Label>
+          </Hds::Form::TextInput::Field>
+        {{else if (eq this.policyAction "edit")}}
+          <Hds::Form::SuperSelect::Single::Field
+            @onChange={{this.handleEditPolicy}}
+            @selected={{this.policyName}}
+            @options={{this.existingPolicies}}
+            @searchEnabled={{true}}
+            class="field"
+            autocomplete="off"
+            as |F|
+          >
+            <F.Label>Select a policy</F.Label>
+            <F.HelperText>The configured permissions will be added to the selected policy.</F.HelperText>
+            <F.Options>{{F.options}}</F.Options>
+          </Hds::Form::SuperSelect::Single::Field>
+        {{/if}}
+      </Hds::Card::Container>
+
+      {{! POLICY STANZAS }}
+      <Hds::Card::Container class="has-padding-m has-top-margin-m has-bottom-margin-m" @level="base" @hasBorder={{true}}>
+        <div class="is-flex-between">
+          <Hds::Text::Display class="has-bottom-margin-xxs">Policy stanza</Hds::Text::Display>
+          <Hds::Form::Toggle::Field {{on "input" (fn (mut this.showPreview) (not this.showPreview))}} as |F|>
+            <F.Label>{{if this.showPreview "Hide" "Show"}} preview</F.Label>
+          </Hds::Form::Toggle::Field>
+        </div>
+        <Hds::Text::Body @color="faint" @tag="p" class="has-bottom-margin-xs" @size="100">
+          Use
+          <Hds::Text::Code class="code-in-text">*</Hds::Text::Code>
+          for wildcard matching.
+        </Hds::Text::Body>
+
+        {{! POLICY SAMPLE }}
+        {{#if this.showPreview}}
+          <div class="has-padding-m has-top-margin-m has-bottom-margin-m">
+            <Hds::CodeBlock
+              @value={{this.policySnippet}}
+              @language="hcl"
+              @hasCopyButton={{true}}
+              @hasLineNumbers={{false}}
+            />
+          </div>
+        {{else}}
+          {{! PATH CAPABILITIES CARD }}
+          {{#each this.policyStanzas as |stanza|}}
+            <Hds::Card::Container @background="neutral-secondary" class="has-padding-s has-top-margin-m has-bottom-margin-m">
+              <Hds::Button
+                @text="Remove path"
+                @icon="trash"
+                @isIconOnly={{true}}
+                @color="critical"
+                class="is-pulled-right"
+                {{on "click" (fn this.deletePath stanza.path)}}
+              />
+              <div class="is-flex-between has-bottom-margin-xxs">
+                <Hds::Form::TextInput::Field
+                  @value={{stanza.path}}
+                  class="field"
+                  {{on "input" stanza.setPath}}
+                  autocomplete="off"
+                  as |F|
+                >
+                  <F.Label class="has-top-margin-m">API path:</F.Label>
+                </Hds::Form::TextInput::Field>
+              </div>
+
+              <Hds::Form::Checkbox::Group class="field" @layout="horizontal" as |G|>
+                <G.Legend class="has-top-padding-m">Capabilities</G.Legend>
+                {{#each this.permissions as |p|}}
+                  <G.CheckboxField
+                    checked={{includes p stanza.capabilities}}
+                    @value={{p}}
+                    {{on "input" stanza.setPermissions}}
+                    as |F|
+                  >
+                    <F.Label>{{p}}</F.Label>
+                  </G.CheckboxField>
+                {{/each}}
+              </Hds::Form::Checkbox::Group>
+            </Hds::Card::Container>
+          {{/each}}
+          <Hds::Button @icon="plus" @text="Add new path" @size="small" @color="secondary" {{on "click" this.addPath}} />
+        {{/if}}
+
+      </Hds::Card::Container>
+
+      {{! POLICY ASSIGNMENT }}
+      <Hds::Card::Container class="has-padding-m has-top-margin-m has-bottom-margin-m" @level="base" @hasBorder={{true}}>
+        <Hds::Text::Display @tag="p" class="has-bottom-margin-xxs">Assign policy</Hds::Text::Display>
+        <Hds::Text::Body @tag="p" class="has-bottom-padding-s">Select who this policy should be applied to.</Hds::Text::Body>
+        {{#each-in this.identityOptions as |type options|}}
+          <Hds::Form::SuperSelect::Multiple::Field
+            @onChange={{fn this.handleAssignment type}}
+            @selected={{get this.selectedAssignments type}}
+            @options={{options}}
+            @searchEnabled={{true}}
+            @searchField="name"
+            class="field"
+            as |F|
+          >
+            <F.Label>{{pluralize (capitalize type)}}</F.Label>
+            <F.HelperText>Policy will apply to users who belong to the selected
+              {{pluralize (get (get this.selectedAssignments type) "length") type without-count=true}}.</F.HelperText>
+            <F.Options>
+              {{#let F.options as |option|}}
+                {{option.name}}
+              {{/let}}
+            </F.Options>
+          </Hds::Form::SuperSelect::Multiple::Field>
+        {{/each-in}}
+
+      </Hds::Card::Container>
+
+      <Hds::Card::Container class="has-padding-m has-top-margin-m has-bottom-margin-m" @level="base" @hasBorder={{true}}>
+        {{#if this.policyName}}
+          <Hds::Text::Display>Apply policy via</Hds::Text::Display>
+          <Hds::Tabs as |T|>
+            <T.Tab>
+              UI
+            </T.Tab>
+            <T.Tab>
+              CLI
+            </T.Tab>
+            <T.Tab>
+              TFVP
+            </T.Tab>
+
+            <T.Panel class="has-top-padding-m">
+              <Hds::Text::Body @tag="p" class="has-bottom-padding-s">Click "Apply policy" to
+                {{this.policyAction}}
+                the policy{{this.applySubtext}}.
+              </Hds::Text::Body>
+              <Hds::Button @text="Apply policy" @icon="wand" @isFullWidth={{true}} {{on "click" this.applyPolicy}} />
+
+              {{#if this.error}}
+                <Hds::Alert @type="inline" @color="critical" class="has-top-margin-m" as |A|>
+                  <A.Title>Oops! It's hackweek give me a break! ¯\_(ツ)_/¯</A.Title>
+                  <A.Description>
+                    {{this.error}}
+                  </A.Description>
+                </Hds::Alert>
+              {{/if}}
+            </T.Panel>
+            <T.Panel class="has-top-padding-m">
+              <Hds::Text::Body @tag="p" class="has-bottom-padding-s">
+                A CLI snippet to
+                {{this.policyAction}}
+                the policy{{this.applySubtext}}.
+              </Hds::Text::Body>
+              <Hds::CodeBlock @value={{this.cliSnippet}} @language="ruby" @hasCopyButton={{true}} />
+            </T.Panel>
+            <T.Panel class="has-top-padding-m">
+              <Hds::Text::Body @tag="p" class="has-bottom-padding-s">
+                A TFVP (Terraform Vault Provider) snippet to
+                {{this.policyAction}}
+                the policy{{this.applySubtext}}.
+              </Hds::Text::Body>
+              <Hds::CodeBlock @value={{this.tfvpSnippet}} @language="hcl" @hasCopyButton={{true}} />
+            </T.Panel>
+          </Hds::Tabs>
+        {{else}}
+          <Hds::ApplicationState @align="center" as |A|>
+            <A.Header
+              @title="{{if (eq this.policyAction 'create') 'Create' 'Select'}} a policy to get started"
+              @icon="wand"
+            />
+            <A.Body @text="Select an existing policy above or create a new one to see options for applying the policy." />
+          </Hds::ApplicationState>
+        {{/if}}
+      </Hds::Card::Container>
+    </M.Body>
+  </Hds::Flyout>
+{{/if}}

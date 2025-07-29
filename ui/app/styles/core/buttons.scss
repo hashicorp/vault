@@ -390,3 +390,19 @@ a.button.disabled {
     }
   }
 }
+
+.policy-wizard {
+  background: linear-gradient(
+    135deg,
+    color_variables.$blue,
+    hsl(237, 100%, 71%)
+  ); // only use case for purple in the app. define here instead of utils/color_var
+  animation: env-banner-color-rotate 8s infinite linear alternate;
+  color: color_variables.$white;
+
+  .notification {
+    background-color: transparent;
+    line-height: 2;
+    padding: 0 size_variables.$spacing-12;
+  }
+}

@@ -71,6 +71,13 @@
     />
   {{/if}}
 </div>
+
+{{! HACKWEEK }}
+{{! template-lint-disable no-inline-styles}}
+<div style="position: fixed; top: 1%; right: 1%; z-index: 1000; ">
+  <PolicyBuilder />
+</div>
+
 <div class="global-flash">
   {{#each this.flashMessages.queue as |flash|}}
     <FlashMessage data-test-flash-message={{true}} @flash={{flash}} as |customComponent flash close|>
