@@ -5,7 +5,9 @@ package random
 
 import (
 	"fmt"
+	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -15,14 +17,31 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+// AllowHclDuplicatesEnvVar is an environment variable that allows Vault to revert back to accepting HCL files with
+// duplicate attributes. It's temporary until we finish the deprecation process, at which point this will be removed
+const AllowHclDuplicatesEnvVar = "VAULT_ALLOW_PENDING_REMOVAL_DUPLICATE_HCL_ATTRIBUTES"
+
 // ParseAndCheckForDuplicateHclAttributes parses the input JSON/HCL file and if it is HCL it also checks
 // for duplicate keys in the HCL file, allowing callers to handle the issue accordingly. In a future release we'll
 // change the behavior to treat duplicate keys as an error and eventually remove this helper altogether.
 // TODO (HCL_DUP_KEYS_DEPRECATION): remove once not used anymore
 func ParseAndCheckForDuplicateHclAttributes(input string) (res *ast.File, duplicate bool, err error) {
 	res, err = hcl.Parse(input)
-	// TODO (HCL_DUP_KEYS_DEPRECATION): on the "pending removal stage" check for env var before allowing the "warn only" behavior
 	if err != nil && strings.Contains(err.Error(), "Each argument can only be defined once") {
+		allowHclDuplicatesRaw := os.Getenv(AllowHclDuplicatesEnvVar)
+		if allowHclDuplicatesRaw == "" {
+			// default is to not allow duplicates
+			return nil, false, err
+		}
+		allowHclDuplicates, envParseErr := strconv.ParseBool(allowHclDuplicatesRaw)
+		if envParseErr != nil {
+			return nil, false, fmt.Errorf("error parsing %q environment variable: %w", AllowHclDuplicatesEnvVar, err)
+		}
+		if !allowHclDuplicates {
+			return nil, false, err
+		}
+
+		// if allowed by the environment variable, parse again without failing on duplicate attributes
 		duplicate = true
 		res, err = hclParser.ParseDontErrorOnDuplicateKeys([]byte(input))
 	}

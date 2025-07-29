@@ -30,7 +30,7 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
       {
         authenticated: true,
         type: 'banner',
-        startTime: addDays(startOfDay(timestamp.now()), 1).toISOString(),
+        start_time: addDays(startOfDay(timestamp.now()), 1).toISOString(),
       },
       { isNew: true }
     );
@@ -60,14 +60,14 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
     assert.dom('[data-test-kv-key="0"]').exists();
     assert.dom('[data-test-kv-value="0"]').exists();
     assert
-      .dom(CUSTOM_MESSAGES.input('startTime'))
+      .dom(CUSTOM_MESSAGES.input('start_time'))
       .hasValue(
         format(addDays(startOfDay(timestamp.now()), 1), datetimeLocalStringFormat),
-        `message startTime defaults to midnight of following day. test context startTime: ${
-          this.message.startTime
+        `message start_time defaults to midnight of following day. test context start_time: ${
+          this.message.start_time
         }, now: ${timestamp.now().toISOString()}`
       );
-    assert.dom(CUSTOM_MESSAGES.input('endTime')).hasValue('');
+    assert.dom(CUSTOM_MESSAGES.input('end_time')).hasValue('');
   });
 
   test('it should display validation errors for invalid form fields', async function (assert) {
@@ -75,8 +75,8 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
 
     await this.renderComponent();
 
-    await fillIn(CUSTOM_MESSAGES.input('startTime'), '2024-01-20T00:00');
-    await fillIn(CUSTOM_MESSAGES.input('endTime'), '2024-01-01T00:00');
+    await fillIn(CUSTOM_MESSAGES.input('start_time'), '2024-01-20T00:00');
+    await fillIn(CUSTOM_MESSAGES.input('end_time'), '2024-01-01T00:00');
     await click(GENERAL.submitButton);
     assert
       .dom(GENERAL.validationErrorByAttr('title'))
@@ -87,12 +87,12 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
       .exists('Validation error for field `message` renders')
       .hasText('Message is required.');
     assert
-      .dom(GENERAL.validationErrorByAttr('startTime'))
-      .exists('Validation error for field `startTime` renders')
+      .dom(GENERAL.validationErrorByAttr('start_time'))
+      .exists('Validation error for field `start_time` renders')
       .hasText('Start time is after end time.');
     assert
-      .dom(GENERAL.validationErrorByAttr('endTime'))
-      .exists('Validation error for field `endTime` renders')
+      .dom(GENERAL.validationErrorByAttr('end_time'))
+      .exists('Validation error for field `end_time` renders')
       .hasText('End time is before start time.');
   });
 
@@ -111,12 +111,12 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
       'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'
     );
     await fillIn(
-      CUSTOM_MESSAGES.input('startTime'),
+      CUSTOM_MESSAGES.input('start_time'),
       format(addDays(startOfDay(new Date('2023-12-12')), 1), datetimeLocalStringFormat)
     );
     await click('#specificDate');
     await fillIn(
-      CUSTOM_MESSAGES.input('endTime'),
+      CUSTOM_MESSAGES.input('end_time'),
       format(addDays(startOfDay(new Date('2023-12-12')), 10), datetimeLocalStringFormat)
     );
     await fillIn('[data-test-kv-key="0"]', 'Learn more');
@@ -143,8 +143,8 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
       authenticated: false,
       title: 'Hello world',
       message: 'Blah blah blah. Some super long message.',
-      startTime: new Date('2023-12-12T08:00:00.000Z'),
-      endTime: new Date('2023-12-21T08:00:00.000Z'),
+      start_time: new Date('2023-12-12T08:00:00.000Z'),
+      end_time: new Date('2023-12-21T08:00:00.000Z'),
       link: { 'Learn more': 'www.learnmore.com' },
     });
 
@@ -163,11 +163,11 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
     assert.dom('[data-test-kv-value="0"]').hasValue('www.learnmore.com');
     await click('#specificDate');
     assert
-      .dom(CUSTOM_MESSAGES.input('startTime'))
-      .hasValue(format(new Date(this.message.startTime), datetimeLocalStringFormat));
+      .dom(CUSTOM_MESSAGES.input('start_time'))
+      .hasValue(format(new Date(this.message.start_time), datetimeLocalStringFormat));
     assert
-      .dom(CUSTOM_MESSAGES.input('endTime'))
-      .hasValue(format(new Date(this.message.endTime), datetimeLocalStringFormat));
+      .dom(CUSTOM_MESSAGES.input('end_time'))
+      .hasValue(format(new Date(this.message.end_time), datetimeLocalStringFormat));
   });
 
   test('it should show a preview image modal when preview is clicked', async function (assert) {
@@ -220,8 +220,8 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
         title: 'Message title 1',
         message: 'Some long long long message',
         link: { here: 'www.example.com' },
-        startTime: new Date('2021-08-01T00:00:00Z'),
-        endTime: '',
+        start_time: new Date('2021-08-01T00:00:00Z'),
+        end_time: '',
       },
       {
         id: '01234567-89ab-vvvv-0123-456789abcdef',
@@ -231,8 +231,8 @@ module('Integration | Component | messages/page/create-and-edit', function (hook
         title: 'Message title 2',
         message: 'Some long long long message',
         link: { here: 'www.example.com' },
-        startTime: new Date('2021-08-01T00:00:00Z'),
-        endTime: new Date('2090-08-01T00:00:00Z'),
+        start_time: new Date('2021-08-01T00:00:00Z'),
+        end_time: new Date('2090-08-01T00:00:00Z'),
       },
     ];
 

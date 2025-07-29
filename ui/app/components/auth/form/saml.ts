@@ -20,9 +20,9 @@ import type { SamlLoginApiResponse, SamlSsoServiceUrlApiResponse } from 'vault/v
  */
 
 interface SamlRole {
-  ssoServiceUrl: string;
-  tokenPollId: string;
-  clientVerifier: string;
+  sso_service_url: string;
+  token_poll_id: string;
+  client_verifier: string;
 }
 export default class AuthFormSaml extends AuthBase {
   loginFields = [
@@ -48,7 +48,7 @@ export default class AuthFormSaml extends AuthBase {
     // either the default of auth type, or the custom inputted path
     const { namespace, path, role } = formData;
     const fetchedRole = await this.fetchSamlRole({ namespace, path, role });
-    const samlWindow = await this.startSAMLAuth(fetchedRole.ssoServiceUrl);
+    const samlWindow = await this.startSAMLAuth(fetchedRole.sso_service_url);
     if (samlWindow) {
       try {
         // start watching the popup window and the current one
@@ -60,8 +60,8 @@ export default class AuthFormSaml extends AuthBase {
         // displayName is not included in auth response - it is set in persistAuthData
         return this.normalizeAuthResponse(auth, {
           authMountPath: path,
-          token: auth.clientToken,
-          ttl: auth.leaseDuration,
+          token: auth.client_token,
+          ttl: auth.lease_duration,
         });
       } finally {
         this.closeWindow(samlWindow);
@@ -79,22 +79,22 @@ export default class AuthFormSaml extends AuthBase {
   async fetchSamlRole({ namespace = '', path = '', role = '' }): Promise<SamlRole> {
     // Create the client verifier and challenge
     const verifier = uuid();
-    const clientChallenge = await this.generateClientChallenge(verifier);
-    const acsUrl = this.generateAcsUrl(path, namespace);
-    const clientType = SamlWriteSsoServiceUrlRequestClientTypeEnum.BROWSER; // 'browser'
+    const client_challenge = await this.generateClientChallenge(verifier);
+    const acs_url = this.generateAcsUrl(path, namespace);
+    const client_type = SamlWriteSsoServiceUrlRequestClientTypeEnum.BROWSER; // 'browser'
     // Kick off the authentication flow by generating the SSO service URL
     // It requires the client challenge generated from the verifier. We'll
     // later provide the verifier to match up with the challenge on the server
     // when we poll for the Vault token by its returned token poll ID.
     const { data } = (await this.api.auth.samlWriteSsoServiceUrl(path, {
-      acsUrl,
-      clientChallenge,
-      clientType,
+      acs_url,
+      client_challenge,
+      client_type,
       role,
     })) as SamlSsoServiceUrlApiResponse;
     return {
       ...data,
-      clientVerifier: verifier,
+      client_verifier: verifier,
     };
   }
 
@@ -123,11 +123,11 @@ export default class AuthFormSaml extends AuthBase {
       await timeout(WAIT_TIME);
 
       try {
-        const { clientVerifier, tokenPollId } = fetchedRole;
+        const { client_verifier, token_poll_id } = fetchedRole;
         // Exit loop if there's a response
         return (await this.api.auth.samlWriteToken(path, {
-          clientVerifier,
-          tokenPollId,
+          client_verifier,
+          token_poll_id,
         })) as SamlLoginApiResponse;
       } catch (e) {
         const { message, status } = await this.api.parseError(e);
