@@ -8,7 +8,6 @@ import { setupRenderingTest } from 'ember-qunit';
 import { click, fillIn, find, render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CONTROL_GROUP } from 'vault/tests/helpers/components/control-group-selectors';
 
@@ -26,13 +25,6 @@ module('Integration | Component | control group success', function (hooks) {
       requestEntity: { id: 'requestor', name: 'entity8509' },
       reload: sinon.stub(),
     };
-    setRunOptions({
-      rules: {
-        // TODO: swap out JsonEditor with Hds::CodeBlock for display
-        'color-contrast': { enabled: false },
-        label: { enabled: false },
-      },
-    });
   });
 
   test('render with saved token', async function (assert) {

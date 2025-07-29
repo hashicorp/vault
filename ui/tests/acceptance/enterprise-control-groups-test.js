@@ -16,11 +16,9 @@ import {
 } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-
 import { storageKey } from 'vault/services/control-group';
 import { writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { login, logout } from 'vault/tests/helpers/auth/auth-helpers';
-import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { CONTROL_GROUP } from 'vault/tests/helpers/components/control-group-selectors';
@@ -29,12 +27,6 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
-    setRunOptions({
-      rules: {
-        // TODO: fix the hashi-read-only theme
-        'color-contrast': { enabled: false },
-      },
-    });
     return login();
   });
 
