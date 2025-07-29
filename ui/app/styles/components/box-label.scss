@@ -18,7 +18,7 @@ label.box-label {
   @extend .box;
   @extend .is-centered;
 
-  border-color: color_variables.$grey-light;
+  border-color: color_variables.$neutral-300;
   border-radius: 3px;
   box-shadow: box-shadow_variables.$box-link-shadow;
   text-decoration: none;
@@ -37,12 +37,12 @@ label.box-label {
     box-shadow: box-shadow_variables.$box-link-hover-shadow, box-shadow_variables.$box-shadow-middle;
 
     .icon {
-      color: color_variables.$grey;
+      color: color_variables.$neutral-400;
     }
   }
 
   .icon {
-    color: color_variables.$grey-light;
+    color: color_variables.$neutral-300;
   }
 
   input[type='radio'] {
@@ -50,7 +50,7 @@ label.box-label {
   }
 
   input[type='radio'] + label {
-    border: 1px solid color_variables.$grey-light;
+    border: 1px solid color_variables.$neutral-300;
     border-radius: 50%;
     cursor: pointer;
     display: block;
@@ -67,9 +67,9 @@ label.box-label {
 }
 
 .box-label-header {
-  color: color_variables.$grey;
+  color: color_variables.$neutral-400;
 
   .is-selected & {
-    color: color_variables.$grey-darkest;
+    color: color_variables.$neutral-600;
   }
 }

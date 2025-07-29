@@ -81,12 +81,12 @@ div > .ember-power-select-options {
   }
 
   .ember-power-select-option[aria-current='true'] {
-    background-color: color_variables.$ui-gray-050;
-    color: color_variables.$ui-gray-900;
+    background-color: color_variables.$neutral-50;
+    color: color_variables.$neutral-600;
   }
 
   .ember-power-select-option--no-matches-message {
-    color: color_variables.$grey;
+    color: color_variables.$neutral-400;
     font-size: size_variables.$size-8;
     font-weight: font_variables.$font-weight-semibold;
     text-transform: uppercase;
@@ -94,7 +94,7 @@ div > .ember-power-select-options {
     &:hover,
     &:focus {
       background: transparent;
-      color: color_variables.$grey;
+      color: color_variables.$neutral-400;
     }
   }
 }
@@ -111,7 +111,7 @@ div > .ember-power-select-options {
   }
 
   .control .button {
-    color: color_variables.$grey-light;
+    color: color_variables.$neutral-300;
     min-width: auto;
 
     &:hover,

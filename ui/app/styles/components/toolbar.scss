@@ -14,18 +14,14 @@
 }
 
 .toolbar {
-  background-color: color_variables.$ui-gray-010;
-  border: 1px solid color_variables.$ui-gray-100;
-  border-bottom-color: color_variables.$ui-gray-300;
-  border-top-color: color_variables.$ui-gray-300;
+  background-color: color_variables.$neutral-50;
+  border: 1px solid color_variables.$neutral-100;
+  border-bottom-color: color_variables.$neutral-300;
+  border-top-color: color_variables.$neutral-300;
   position: relative;
 
   &::after {
-    background: linear-gradient(
-      to right,
-      color_variables.$ui-gray-010,
-      rgba(color_variables.$ui-gray-010, 0)
-    );
+    background: linear-gradient(to right, color_variables.$neutral-50, rgba(color_variables.$neutral-50, 0));
     bottom: 0;
     content: '';
     position: absolute;
@@ -43,7 +39,7 @@
 
 .toolbar-label {
   padding: size_variables.$spacing-8;
-  color: color_variables.$grey;
+  color: color_variables.$neutral-400;
 }
 
 .toolbar-scroller {
@@ -63,7 +59,7 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: color_variables.$ui-gray-300;
+    background: color_variables.$neutral-300;
     border-radius: size_variables.$spacing-4;
   }
 }
@@ -103,7 +99,7 @@
   transition: background-color size_variables.$speed;
 
   &:hover:not(.disabled) {
-    background-color: color_variables.$ui-gray-100;
+    background-color: color_variables.$neutral-100;
     border: 0;
     color: color_variables.$blue;
   }
@@ -134,7 +130,7 @@ a.disabled.toolbar-link {
   background-color: color_variables.$white;
   cursor: not-allowed;
   &:hover {
-    background-color: color_variables.$ui-gray-100;
+    background-color: color_variables.$neutral-100;
     color: color_variables.$blue;
   }
 }

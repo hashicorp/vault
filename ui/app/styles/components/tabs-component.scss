@@ -15,7 +15,7 @@
 
 .tabs {
   align-items: stretch;
-  box-shadow: inset 0 -1px 0 color_variables.$grey-light;
+  box-shadow: inset 0 -1px 0 color_variables.$neutral-300;
   display: flex;
   justify-content: space-between;
   overflow: hidden;
@@ -72,7 +72,7 @@
     justify-content: center;
     vertical-align: top;
     border-bottom: 2px solid transparent;
-    color: color_variables.$grey;
+    color: color_variables.$neutral-400;
     font-weight: font_variables.$font-weight-semibold;
     padding: size_variables.$spacing-14 size_variables.$spacing-12 size_variables.$spacing-12;
     text-decoration: none;
@@ -82,12 +82,12 @@
 
     &:hover,
     &:active {
-      border-color: color_variables.$grey-light;
+      border-color: color_variables.$neutral-300;
     }
 
     &:hover {
-      background-color: color_variables.$ui-gray-050;
-      color: color_variables.$grey-darkest;
+      background-color: color_variables.$neutral-50;
+      color: color_variables.$neutral-600;
     }
   }
 

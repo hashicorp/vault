@@ -13,10 +13,10 @@
   @extend .box;
   box-shadow:
     box-shadow_variables.$box-shadow-middle,
-    0 0 1px color_variables.$grey-dark;
+    0 0 1px color_variables.$neutral-500;
 }
 .control-group-success.is-editor {
-  background: color_variables.$grey-lightest;
+  background: color_variables.$neutral-50;
 }
 
 .control-group a {
@@ -25,8 +25,8 @@
 .control-group-header {
   box-shadow: 0 0 1px currentColor;
   padding: size_variables.$spacing-10 size_variables.$spacing-14;
-  background: color_variables.$grey-lightest;
-  color: color_variables.$grey-dark;
+  background: color_variables.$neutral-50;
+  color: color_variables.$neutral-500;
   position: relative;
   strong {
     color: currentColor;

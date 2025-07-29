@@ -10,7 +10,7 @@
 // This file defines the style for .is-label
 
 .is-label {
-  color: color_variables.$grey-darkest;
+  color: color_variables.$neutral-600;
   font-size: 14px;
   font-weight: font_variables.$font-weight-bold;
   display: flex;
@@ -29,6 +29,6 @@
   }
 
   &::before {
-    border-color: color_variables.$grey-light;
+    border-color: color_variables.$neutral-300;
   }
 }

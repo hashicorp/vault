@@ -58,7 +58,7 @@
   // so they match other dropdown elements until we replace popup-menu with Hds::Dropdown
   .hds-confirm-action-critical {
     &:hover {
-      background-color: color_variables.$ui-gray-050;
+      background-color: color_variables.$neutral-50;
     }
     div,
     span {
@@ -73,11 +73,11 @@
   .ember-power-select-option[aria-current='true'],
   a {
     background-color: color_variables.$white;
-    color: color_variables.$grey-darkest;
+    color: color_variables.$neutral-600;
 
     &:hover {
-      background-color: color_variables.$ui-gray-050;
-      color: color_variables.$ui-gray-900;
+      background-color: color_variables.$neutral-50;
+      color: color_variables.$neutral-600;
     }
 
     &.active,
@@ -110,7 +110,7 @@
   }
 
   .menu-label {
-    color: color_variables.$grey-dark;
+    color: color_variables.$neutral-500;
     font-size: size_variables.$size-9;
     font-weight: font_variables.$font-weight-normal;
     letter-spacing: 0;
@@ -124,7 +124,7 @@
   }
 
   hr {
-    background-color: color_variables.$ui-gray-200;
+    background-color: color_variables.$neutral-200;
     margin: 0;
   }
 }

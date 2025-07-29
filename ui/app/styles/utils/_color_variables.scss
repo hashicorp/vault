@@ -3,33 +3,14 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-//  HDS TOKENS
-
 // Grey
 $neutral-50: var(--token-color-palette-neutral-50);
-
-/*
-DEPRECATED
-below variables are deprecated, use HDS tokens instead
-*/
-
-// UI Gray
-$ui-gray-010: #fbfbfc;
-$ui-gray-050: #f7f8fa;
-$ui-gray-100: #ebeef2;
-$ui-gray-200: #dce0e6;
-$ui-gray-300: #bac1cc;
-$ui-gray-400: #8e96a3;
-$ui-gray-500: #6f7682;
-$ui-gray-600: #626873;
-$ui-gray-700: #525761;
-$ui-gray-800: #373a42;
-$ui-gray-900: #1f2124;
-$grey-lightest: $ui-gray-050;
-$grey-light: $ui-gray-300;
-$grey: $ui-gray-500;
-$grey-dark: $ui-gray-700;
-$grey-darkest: $ui-gray-900;
+$neutral-100: var(--token-color-palette-neutral-100);
+$neutral-200: var(--token-color-palette-neutral-200);
+$neutral-300: var(--token-color-palette-neutral-300);
+$neutral-400: var(--token-color-palette-neutral-400);
+$neutral-500: var(--token-color-palette-neutral-500);
+$neutral-600: var(--token-color-palette-neutral-600);
 
 // Black
 $black: hsl(0, 0%, 4%); // in hex: #0a0a0a

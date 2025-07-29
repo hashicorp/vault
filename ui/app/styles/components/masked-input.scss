@@ -56,7 +56,7 @@ pre.masked-font {
 .button.masked-input-toggle {
   min-width: size_variables.$spacing-36;
   border-left: 0;
-  color: color_variables.$grey;
+  color: color_variables.$neutral-400;
   box-shadow: 0 3px 1px 0px rgba(10, 10, 10, 0.12);
 }
 
@@ -72,7 +72,7 @@ pre.masked-font {
     min-width: size_variables.$spacing-24;
     border: 0;
     box-shadow: none;
-    color: color_variables.$grey-light;
+    color: color_variables.$neutral-300;
     padding-left: 0;
     padding-right: 0;
 

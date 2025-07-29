@@ -15,7 +15,7 @@
     line-height: normal;
 
     &:hover {
-      box-shadow: 0 0 0 1px rgba(color_variables.$grey-dark, 0.3);
+      box-shadow: 0 0 0 1px rgba(color_variables.$neutral-500, 0.3);
     }
 
     .toolbar-link {
@@ -130,7 +130,7 @@
   }
   .summary-state {
     padding-bottom: size_variables.$spacing-36;
-    border-bottom: 1px solid rgba(color_variables.$grey-dark, 0.3);
+    border-bottom: 1px solid rgba(color_variables.$neutral-500, 0.3);
   }
 
   // prevent double lines at the bottom of the dashboard

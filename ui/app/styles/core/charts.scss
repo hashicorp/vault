@@ -73,14 +73,14 @@
 
 .has-grid {
   g > text {
-    color: color_variables.$ui-gray-500;
+    color: color_variables.$neutral-400;
     font-size: size_variables.$size-9;
   }
 
   g > line {
     // TODO: mix-blend doesn't work in firefox browser?
     mix-blend-mode: darken;
-    color: color_variables.$ui-gray-300;
+    color: color_variables.$neutral-300;
   }
 }
 
@@ -88,31 +88,5 @@
   .tick > text {
     font-weight: font_variables.$font-weight-semibold;
     font-size: size_variables.$size-9;
-  }
-}
-
-// RESPONSIVE STYLING //
-
-@media only screen and (max-width: 950px) {
-  .chart-container-left {
-    grid-column-start: 1;
-    grid-column-end: 4;
-    grid-row-start: 2;
-    grid-row-end: 3;
-    margin-left: size_variables.$spacing-48;
-    margin-right: size_variables.$spacing-48;
-  }
-  .chart-container-right {
-    grid-column-start: 1;
-    grid-column-end: 4;
-    grid-row-start: 3;
-    grid-row-end: 4;
-    margin-left: size_variables.$spacing-48;
-    margin-right: size_variables.$spacing-48;
-  }
-
-  .timestamp {
-    grid-column-start: 1;
-    grid-row-start: 4;
   }
 }

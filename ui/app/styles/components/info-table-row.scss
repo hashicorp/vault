@@ -9,7 +9,7 @@
  */
 
 .info-table-row {
-  box-shadow: 0 1px 0 color_variables.$grey-light;
+  box-shadow: 0 1px 0 color_variables.$neutral-300;
   margin: 0;
 
   &.has-no-shadow {
@@ -22,8 +22,8 @@
 
   &.thead {
     box-shadow:
-      0 1px 0 color_variables.$grey-light,
-      0 -1px 0 color_variables.$grey-light;
+      0 1px 0 color_variables.$neutral-300,
+      0 -1px 0 color_variables.$neutral-300;
     margin: 0;
     padding: 0 size_variables.$spacing-14 0 0;
 
@@ -63,7 +63,7 @@
   }
 
   .icon-false {
-    color: color_variables.$ui-gray-300;
+    color: color_variables.$neutral-300;
   }
 
   a {
@@ -96,7 +96,7 @@
 .info-table-row-header {
   margin: 0;
   font-size: size_variables.$size-8;
-  color: color_variables.$grey;
+  color: color_variables.$neutral-400;
   font-weight: font_variables.$font-weight-semibold;
 
   @include mixins.until(size_variables.$mobile) {

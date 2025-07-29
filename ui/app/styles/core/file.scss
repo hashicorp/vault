@@ -49,7 +49,7 @@
 .file-delete-button {
   @extend .button;
   @extend .is-transparent;
-  color: color_variables.$grey;
+  color: color_variables.$neutral-400;
   position: absolute;
   right: size_variables.$spacing-8;
 }

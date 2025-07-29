@@ -7,7 +7,7 @@
 
 .autocomplete-input {
   background: color_variables.$white !important;
-  border: 1px solid color_variables.$grey-light;
+  border: 1px solid color_variables.$neutral-300;
   box-sizing: border-box;
   border-radius: 3px;
   width: 99%;
@@ -19,7 +19,7 @@
 .autocomplete-input-option {
   padding: 12px;
   &:hover {
-    background-color: color_variables.$grey-lightest;
+    background-color: color_variables.$neutral-50;
     cursor: pointer;
   }
 }

@@ -11,12 +11,12 @@
 
 .button {
   align-items: center;
-  background-color: color_variables.$grey-lightest;
-  border: 1px solid color_variables.$grey-light;
+  background-color: color_variables.$neutral-50;
+  border: 1px solid color_variables.$neutral-300;
   border-radius: size_variables.$radius;
   box-shadow: box-shadow_variables.$box-shadow-low;
   cursor: pointer;
-  color: color_variables.$ui-gray-800;
+  color: color_variables.$neutral-600;
   display: inline-block;
   font-size: size_variables.$size-8;
   font-weight: font_variables.$font-weight-semibold;
@@ -47,9 +47,9 @@
   &:active,
   &.is-active,
   &:focus {
-    border-color: color.adjust(color_variables.$grey-light, $lightness: -10%);
+    border-color: color.adjust(#c2c5cb, $lightness: -10%);
     box-shadow: box-shadow_variables.$button-box-shadow-standard;
-    color: color.adjust(color_variables.$grey-dark, $lightness: -10%);
+    color: color.adjust(color_variables.$neutral-500, $lightness: -10%);
   }
 
   &:focus:not(:active) {
@@ -58,7 +58,7 @@
 
   &:disabled {
     background-color: color_variables.$white;
-    border-color: color_variables.$ui-gray-050;
+    border-color: color_variables.$neutral-50;
     box-shadow: none;
     cursor: not-allowed;
     opacity: 0.5;
@@ -116,7 +116,7 @@
 
     &:hover {
       color: color_variables.$blue-500;
-      background-color: color_variables.$grey-lightest;
+      background-color: color_variables.$neutral-50;
     }
   }
 
@@ -129,7 +129,7 @@
     pointer-events: none;
     &::after {
       animation: spinAround 500ms infinite linear;
-      border: 2px solid color_variables.$ui-gray-300;
+      border: 2px solid color_variables.$neutral-300;
       border-radius: 290486px;
       border-right-color: transparent;
       border-top-color: transparent;
@@ -161,7 +161,7 @@
     text-shadow: 0 1px 1px rgba(color_variables.$black, 0.25);
 
     &:disabled {
-      background-color: color_variables.$ui-gray-700;
+      background-color: color_variables.$neutral-500;
       border-color: transparent;
       box-shadow: none;
     }
@@ -220,9 +220,9 @@
 
     &.is-outlined [disabled] {
       background-color: transparent;
-      border-color: color_variables.$ui-gray-700;
+      border-color: color_variables.$neutral-500;
       box-shadow: none;
-      color: color_variables.$ui-gray-700;
+      color: color_variables.$neutral-500;
     }
   }
 
@@ -237,7 +237,7 @@
   // End of button types
 
   &.tool-tip-trigger {
-    color: color_variables.$grey-dark;
+    color: color_variables.$neutral-500;
     min-width: auto;
     padding: 0;
   }
@@ -292,7 +292,7 @@
 
 a.button.disabled {
   color: color_variables.$white;
-  background-color: color_variables.$grey-dark;
+  background-color: color_variables.$neutral-500;
   opacity: 0.5;
   border-color: transparent;
   box-shadow: none;
@@ -315,7 +315,7 @@ a.button.disabled {
   cursor: pointer;
 
   &:disabled {
-    color: color_variables.$grey-light;
+    color: color_variables.$neutral-300;
     cursor: not-allowed;
   }
 }
@@ -331,11 +331,11 @@ a.button.disabled {
   }
 
   &.icon-grey-300 svg {
-    color: color_variables.$ui-gray-300;
+    color: color_variables.$neutral-300;
   }
 
   &.icon-grey-500 svg {
-    color: color_variables.$ui-gray-500;
+    color: color_variables.$neutral-400;
   }
 
   &.transparent {
@@ -343,7 +343,7 @@ a.button.disabled {
     box-shadow: none;
     border: 1px solid transparent;
     &:hover {
-      border: 1px solid color_variables.$grey-light;
+      border: 1px solid color_variables.$neutral-300;
       border-color: var(--token-color-border-strong);
     }
   }
@@ -360,8 +360,8 @@ a.button.disabled {
   }
 
   &.secondary {
-    background-color: color_variables.$grey-lightest;
-    border: 1px solid color_variables.$grey-light;
+    background-color: color_variables.$neutral-50;
+    border: 1px solid color_variables.$neutral-300;
   }
 
   &.in-dropdown {
@@ -385,7 +385,7 @@ a.button.disabled {
     border: none;
     box-shadow: none;
     &:hover:not(.disabled) {
-      background-color: color_variables.$ui-gray-100;
+      background-color: color_variables.$neutral-100;
       color: color_variables.$blue;
     }
   }

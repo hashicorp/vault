@@ -10,8 +10,8 @@
 .box {
   background-color: color_variables.$white;
   border-radius: 0;
-  box-shadow: 0 0 0 1px rgba(color_variables.$grey-dark, 0.3);
-  color: color_variables.$ui-gray-900;
+  box-shadow: 0 0 0 1px rgba(color_variables.$neutral-500, 0.3);
+  color: color_variables.$neutral-600;
   display: block;
   padding: size_variables.$spacing-18;
 

@@ -8,10 +8,10 @@
  */
 
 .copy-text {
-  background: color_variables.$ui-gray-010;
+  background: color_variables.$neutral-50;
 
   & > code {
-    color: color_variables.$ui-gray-800;
+    color: color_variables.$neutral-600;
     padding: 14px;
   }
 }

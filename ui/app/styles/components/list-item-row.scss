@@ -27,7 +27,7 @@
     margin-left: auto;
     font-size: size_variables.$size-8;
     font-weight: font_variables.$font-weight-semibold;
-    color: color_variables.$ui-gray-500;
+    color: color_variables.$neutral-400;
   }
 
   .center-display {
@@ -58,8 +58,8 @@ a.list-item-row,
     padding-right: size_variables.$spacing-10;
     position: relative;
     box-shadow:
-      0 2px 0 -1px color_variables.$grey-light,
-      0 -2px 0 -1px color_variables.$grey-light,
+      0 2px 0 -1px color_variables.$neutral-300,
+      0 -2px 0 -1px color_variables.$neutral-300,
       box-shadow_variables.$box-link-hover-shadow,
       box-shadow_variables.$box-shadow-middle;
   }

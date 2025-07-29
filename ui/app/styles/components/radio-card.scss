@@ -29,7 +29,7 @@
   }
 
   input[type='radio'] + span.dot {
-    border: 1px solid color_variables.$grey-light;
+    border: 1px solid color_variables.$neutral-300;
     border-radius: 50%;
     cursor: pointer;
     display: block;
@@ -77,7 +77,7 @@
   padding: size_variables.$spacing-16;
 }
 .radio-card-icon {
-  color: color_variables.$ui-gray-300;
+  color: color_variables.$neutral-300;
 }
 .radio-card-message {
   margin: size_variables.$spacing-4;
@@ -97,14 +97,14 @@
 .radio-card-radio-row {
   display: flex;
   justify-content: center;
-  background: color_variables.$ui-gray-050;
+  background: color_variables.$neutral-50;
   padding: size_variables.$spacing-8;
 }
 
 .is-selected {
   &.radio-card {
     border-color: color_variables.$blue-500;
-    background: color_variables.$ui-gray-010;
+    background: color_variables.$neutral-50;
     box-shadow: box-shadow_variables.$box-shadow-middle;
   }
   .radio-card-icon {

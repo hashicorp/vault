@@ -20,10 +20,10 @@
 .regex-group {
   font-family: font_variables.$family-monospace;
   font-size: size_variables.$size-8;
-  color: color_variables.$ui-gray-600;
+  color: color_variables.$neutral-500;
 }
 .regex-group-position {
-  background-color: color_variables.$ui-gray-200;
+  background-color: color_variables.$neutral-200;
   border-radius: 3px;
   padding-top: 5px;
   padding-bottom: 4px;

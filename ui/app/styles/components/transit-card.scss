@@ -19,7 +19,7 @@
 
 .transit-card {
   border-radius: size_variables.$radius;
-  box-shadow: 0 0 0 1px rgba(color_variables.$grey-light, 0.4);
+  box-shadow: 0 0 0 1px rgba(color_variables.$neutral-300, 0.4);
   display: grid;
   grid-template-columns: 0.45fr 2fr;
   padding: size_variables.$spacing-16;
@@ -32,11 +32,11 @@
   .transit-action-description {
     font-family: font_variables.$family-sans;
     font-size: size_variables.$size-8;
-    color: color_variables.$grey;
+    color: color_variables.$neutral-400;
   }
 
   .title {
-    color: color_variables.$grey;
+    color: color_variables.$neutral-400;
     font-size: size_variables.$size-7;
     margin-bottom: size_variables.$spacing-4;
   }

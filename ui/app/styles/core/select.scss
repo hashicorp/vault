@@ -12,11 +12,11 @@ select {
 }
 
 .select select {
-  background-color: color_variables.$ui-gray-050;
+  background-color: color_variables.$neutral-50;
   box-shadow: 0 3px 1px rgba(color_variables.$black, 0.12);
-  border: 1px solid color_variables.$grey-light;
+  border: 1px solid color_variables.$neutral-300;
   border-radius: size_variables.$radius;
-  color: color_variables.$grey-dark;
+  color: color_variables.$neutral-500;
   cursor: pointer;
   display: block;
   font-size: 1em;
@@ -51,13 +51,13 @@ select {
 }
 
 .select select[disabled] {
-  border-color: color_variables.$grey-light;
-  background-color: color_variables.$ui-gray-100;
-  color: color_variables.$ui-gray-500;
+  border-color: color_variables.$neutral-300;
+  background-color: color_variables.$neutral-100;
+  color: color_variables.$neutral-400;
   cursor: not-allowed;
   user-select: none;
   &:hover {
-    border-color: color_variables.$grey-light;
+    border-color: color_variables.$neutral-300;
   }
 }
 

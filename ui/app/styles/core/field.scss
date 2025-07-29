@@ -11,7 +11,7 @@
 .field {
   // cannot use :read-only selector because tag used for other purposes
   &.is-readOnly {
-    background-color: color_variables.$ui-gray-100;
+    background-color: color_variables.$neutral-100;
     cursor: not-allowed;
   }
 

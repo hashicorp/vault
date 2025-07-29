@@ -18,7 +18,7 @@
 
   .title {
     small {
-      background-color: color_variables.$ui-gray-800;
+      background-color: color_variables.$neutral-600;
     }
     .version-stamp {
       background-color: color_variables.$green-700;
@@ -29,7 +29,7 @@
     opacity: 1;
 
     .opblock-summary-method {
-      background-color: color_variables.$ui-gray-700;
+      background-color: color_variables.$neutral-500;
     }
   }
 

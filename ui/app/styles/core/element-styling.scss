@@ -41,7 +41,7 @@ body,
 pre:not(.hds-code-block__code),
 strong,
 table th {
-  color: color_variables.$ui-gray-900;
+  color: color_variables.$neutral-600;
 }
 
 h1,
@@ -144,19 +144,19 @@ a {
 }
 
 a:hover {
-  color: color_variables.$ui-gray-900;
+  color: color_variables.$neutral-600;
 }
 
 code {
   background-color: transparent;
-  color: color_variables.$ui-gray-700;
+  color: color_variables.$neutral-500;
   font-size: 1em;
   font-weight: 400;
   padding: 0;
 }
 
 hr {
-  background-color: color_variables.$ui-gray-300;
+  background-color: color_variables.$neutral-300;
   border: none;
   display: block;
   height: 1px;

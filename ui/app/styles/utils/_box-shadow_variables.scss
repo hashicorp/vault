@@ -23,12 +23,12 @@ $box-shadow-highest:
   0 16px 16px -4px rgba(color_variables.$black, 0.2);
 
 // box-link
-$box-link-shadow: 0 0 0 1px color_variables.$ui-gray-200;
-$box-link-hover-shadow: 0 0 0 1px color_variables.$ui-gray-300;
+$box-link-shadow: 0 0 0 1px color_variables.$neutral-200;
+$box-link-hover-shadow: 0 0 0 1px color_variables.$neutral-300;
 
 // border
-$base-border: 1px solid color_variables.$ui-gray-300;
-$light-border: 1px solid color_variables.$ui-gray-200;
+$base-border: 1px solid color_variables.$neutral-300;
+$light-border: 1px solid color_variables.$neutral-200;
 
 // button specific
 $button-box-shadow-standard: 0 3px 1px 0 rgba(color_variables.$black, 0.12);
