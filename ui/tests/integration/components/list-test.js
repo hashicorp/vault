@@ -40,6 +40,7 @@ module('Integration | Component | secret-engine/list', function (hooks) {
       createSecretsEngine(undefined, 'aws', 'aws-1'),
       createSecretsEngine(undefined, 'aws', 'aws-2'),
       createSecretsEngine(undefined, 'nomad', 'nomad-test'),
+      createSecretsEngine(undefined, 'badType', 'external-test'),
     ];
   });
 
@@ -60,6 +61,24 @@ module('Integration | Component | secret-engine/list', function (hooks) {
     assert.true(
       this.flashSuccessSpy.calledWith(`The kv Secrets Engine at ${enginePath}/ has been disabled.`),
       'Flash message shows that engine was disabled.'
+    );
+  });
+
+  test('hovering over the icon of an external unrecognized engine type sets unrecognized tooltip text', async function (assert) {
+    this.set('onHover', (val) => {
+      this.set('tooltip', val);
+    });
+    await render(
+      hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} @onHover={{this.onHover}} />`
+    );
+
+    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), 'external-test');
+    await triggerEvent('.hds-tooltip-button', 'mouseover');
+
+    assert.strictEqual(
+      this.tooltip,
+      'This is an externally mounted plugin that is not recognized by the UI. Please use the CLI to manage this engine.',
+      'shows tooltip text for unsupported engine'
     );
   });
 
