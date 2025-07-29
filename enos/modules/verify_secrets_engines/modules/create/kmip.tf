@@ -13,9 +13,9 @@ locals {
   kmip_cert_format = "pem"
   kmip_mount_path  = "kmip"
 
-  // Response data
-  server_ca   = enos_remote_exec.kmip_configure.stdout
-  client_cert = enos_remote_exec.kmip_generate_certificate.stdout
+  // Response data - only access if Vault Enterprise (count > 0)
+  server_ca   = var.vault_edition == "ce" ? "" : enos_remote_exec.kmip_configure[0].stdout
+  client_cert = var.vault_edition == "ce" ? "" : enos_remote_exec.kmip_generate_certificate[0].stdout
 
   kmip_output = {
     server_ca      = local.server_ca
