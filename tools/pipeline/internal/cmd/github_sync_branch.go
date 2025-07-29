@@ -28,7 +28,7 @@ func newSyncGithubBranchCmd() *cobra.Command {
 	syncBranchCmd.PersistentFlags().StringVar(&syncGithubBranchReq.FromBranch, "from-branch", "", "The name of the branch we want to sync from")
 	syncBranchCmd.PersistentFlags().StringVar(&syncGithubBranchReq.ToOrigin, "to-origin", "to", "The origin name to use for the to-branch")
 	syncBranchCmd.PersistentFlags().StringVar(&syncGithubBranchReq.ToOwner, "to-owner", "hashicorp", "The Github organization hosting the to branch")
-	syncBranchCmd.PersistentFlags().StringVar(&syncGithubBranchReq.ToRepo, "to-repo", "vault-enterprise", "The Github repository to sync to")
+	syncBranchCmd.PersistentFlags().StringVar(&syncGithubBranchReq.ToRepo, "to-repo", "vault", "The Github repository to sync to")
 	syncBranchCmd.PersistentFlags().StringVar(&syncGithubBranchReq.ToBranch, "to-branch", "", "The name of the branch we want to sync to")
 	syncBranchCmd.PersistentFlags().StringVarP(&syncGithubBranchReq.RepoDir, "repo-dir", "d", "", "The path to the vault repository dir. If not set a temporary directory will be used")
 
