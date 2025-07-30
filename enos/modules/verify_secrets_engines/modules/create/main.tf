@@ -24,7 +24,7 @@ variable "create_aws_secrets_engine" {
 
 variable "ipv4_cidr" {
   type        = string
-  description = "The CIDR block for the VPC when using IPV4 mode"
+  description = "The CIDR block for the VPC when using IPv4 mode"
 }
 
 variable "ports" {
@@ -34,6 +34,10 @@ variable "ports" {
     protocol    = string
   }))
   description = "The ports to use for the Vault cluster instances"
+}
+
+variable "integration_host_state" {
+  description = "The state of the test server from the 'backend_test_servers' module"
 }
 
 variable "hosts" {
@@ -51,26 +55,14 @@ variable "ip_version" {
   default     = "4"
 }
 
-variable "ldap_host" {
-  type = object({
-    ipv6       = string
-    private_ip = string
-    public_ip  = string
-  })
-  description = "The external server instances that were created"
+variable "ports" {
+  description = "Port configuration for services"
+  type = map(object({
+    port        = string
+    description = string
+  }))
 }
 
-variable "ldap_port" {
-  type        = string
-  description = "The LDAP Server port"
-  default     = "389"
-}
-
-variable "ldap_password" {
-  type        = string
-  description = "The LDAP Server admin password"
-  default     = "password1"
-}
 
 variable "leader_host" {
   type = object({
@@ -85,6 +77,11 @@ variable "leader_host" {
 variable "vault_addr" {
   type        = string
   description = "The local vault API listen address"
+}
+
+variable "vault_edition" {
+  type        = string
+  description = "The Vault product edition"
 }
 
 variable "vault_install_dir" {
@@ -112,5 +109,6 @@ output "state" {
     ssh      = local.ssh_output
     aws      = local.aws_state
     ldap     = local.ldap_output
+    kmip     = local.kmip_output
   }
 }

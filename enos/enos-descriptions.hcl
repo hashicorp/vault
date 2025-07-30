@@ -176,6 +176,8 @@ globals {
         - v1/identity/*
         - v1/kv/*
         - v1/sys/policy/*
+        - v1/kmip/*
+        - v1/ldap/*
     EOF
 
     verify_secrets_engines_read = <<-EOF
@@ -185,6 +187,8 @@ globals {
         - v1/identity/*
         - v1/kv/*
         - v1/sys/policy/*
+        - v1/kmip/*
+        - v1/ldap/*
     EOF
 
     verify_secrets_engines_delete = <<-EOF

@@ -1,4 +1,3 @@
-@use '../utils/color_variables';
 @use '../utils/size_variables';
 
 /**
@@ -11,8 +10,8 @@
 // box-shadow helpers
 .has-only-top-shadow {
   box-shadow:
-    0 -1px 0 -1px color_variables.$grey-light,
-    0 -2px 0 -1px color_variables.$grey-light;
+    0 -1px 0 -1px var(--token-color-palette-neutral-300),
+    0 -2px 0 -1px var(--token-color-palette-neutral-300);
 }
 
 .is-shadowless {
@@ -21,18 +20,18 @@
 
 .is-sideless {
   box-shadow:
-    0 2px 0 -1px color_variables.$grey-light,
-    0 -2px 0 -1px color_variables.$grey-light;
+    0 2px 0 -1px var(--token-color-palette-neutral-300),
+    0 -2px 0 -1px var(--token-color-palette-neutral-300);
 }
 
 // this helper needs to go after is-sideless as they are often used together and is-bottomless needs to override is-sideless (no this is not ideal).
 .is-bottomless {
-  box-shadow: 0 -1px 0 0 color_variables.$grey-light;
+  box-shadow: 0 -1px 0 0 var(--token-color-palette-neutral-300);
 }
 
 // border helpers
 .has-default-border {
-  border: 1px solid color_variables.$grey !important;
+  border: 1px solid var(--token-color-palette-neutral-400) !important;
 }
 
 .is-borderless {
@@ -70,13 +69,13 @@
 
 // large grouped css blocks
 .is-hint {
-  color: color_variables.$grey;
+  color: var(--token-color-palette-neutral-400);
   font-size: size_variables.$size-8;
   padding: size_variables.$spacing-12 0;
 }
 
 .is-optional {
-  color: color_variables.$grey;
+  color: var(--token-color-palette-neutral-400);
   font-size: size_variables.$size-8;
   text-transform: lowercase;
 }
