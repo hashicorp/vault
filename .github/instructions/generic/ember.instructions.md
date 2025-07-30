@@ -33,6 +33,12 @@ The application uses modern Ember Octane patterns, Handlebars templates, and SCS
 - **Build System**: Ember CLI with Webpack for bundling and asset management
 - **Development**: ESLint for code linting, Prettier for code formatting
 
+## File Naming and TypeScript Adoption
+- **New Files**: All new JavaScript files must use `.ts` extension for TypeScript
+- **Legacy File Migration**: When editing existing `.js` files, assess the effort required to convert to `.ts` and prioritize conversion if time permits
+- **Component Structure**: Components should have matching `.ts` and `.hbs` files in the same directory
+- **Gradual Migration**: The codebase is transitioning from JavaScript to TypeScript - contribute to this effort when possible
+
 ## Build and Deployment Structure
 - **Development Build**: `ember serve` creates development server with live reload
 - **Production Build**: `ember build --environment=production` generates optimized assets in `dist/`
@@ -57,6 +63,8 @@ The application uses modern Ember Octane patterns, Handlebars templates, and SCS
 - Update comments when code changes to maintain accuracy
 
 ## TypeScript Guidelines
+- **File Naming**: All new files should use `.ts` extension instead of `.js`
+- **Migration Strategy**: When modifying existing `.js` files, evaluate the effort required to convert to `.ts` and prioritize conversion if time permits
 - Use explicit types instead of `any` - prefer `unknown` for truly dynamic content
 - Define interfaces for object shapes and function signatures
 - Use type guards and discriminated unions for runtime type checking
@@ -66,7 +74,7 @@ The application uses modern Ember Octane patterns, Handlebars templates, and SCS
 - Replace `Route.extend`, `Model.extend`, or `Component.extend` with native JavaScript classes
 - Use Ember Octane conventions: tracked properties, decorators, and native class syntax
 - Create reusable components rather than one-off implementations
-- Co-locate component templates (`.hbs`) with their JavaScript/TypeScript files
+- Co-locate component templates (`.hbs`) with their TypeScript files (`.ts` preferred over `.js`)
 - Prioritize reusability and maintainability when creating components - avoid overly complex or one-off implementations
 
 ## Asynchronous Programming
@@ -97,7 +105,7 @@ The application uses modern Ember Octane patterns, Handlebars templates, and SCS
 - Use `@tracked` only for internal component state that changes over time
 - Never use `@tracked` on component arguments (properties passed from parent components)
 - Component class names must match their file names exactly
-- Place `.hbs` templates in the same directory as their `.js` or `.ts` files within `vault/ui/app/components/`
+- Place `.hbs` templates in the same directory as their `.ts` files (or `.js` for legacy files) within `vault/ui/app/components/`
 - Organize new components in logical subdirectories by feature or domain
 - Remove quotes around dynamic data attributes: `data-test-id={{value}}` not `data-test-id="{{value}}"`
 
