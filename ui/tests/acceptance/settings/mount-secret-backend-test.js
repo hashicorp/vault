@@ -136,7 +136,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     await settled();
     await page.enableEngine();
     await mountBackend('kv', path);
-
+    await settled();
     assert.dom('[data-test-message-error-description]').containsText(`path is already in use at ${path}`);
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
 
