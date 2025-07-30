@@ -8,7 +8,7 @@
 import Component from '@glimmer/component';
 import config from 'vault/config/environment';
 
-export default class AuthTabs extends Component {
+export default class NavBar extends Component {
   get isNotProduction() {
     return config.environment !== 'production';
   }

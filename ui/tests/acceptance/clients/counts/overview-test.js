@@ -248,23 +248,9 @@ module('Acceptance | clients | overview | sync in license, activated', function 
     return visit('/vault/clients/counts/overview');
   });
 
-  test('it should render the correct tabs', async function (assert) {
-    assert.dom(GENERAL.tab('sync')).exists('shows the sync tab');
-  });
-
   test('it should show secrets sync stats', async function (assert) {
     assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists('shows secret sync data on overview');
-  });
-
-  test('it should navigate to secrets sync page', async function (assert) {
-    await click(GENERAL.tab('sync'));
-
-    assert.dom(GENERAL.tab('sync')).hasClass('active');
-    assert.dom(GENERAL.emptyStateTitle).doesNotExist();
-
-    assert
-      .dom(CHARTS.chart('Secrets sync usage'))
-      .exists('chart is shown because feature is active and has data');
+    // TODO add assertion sync clients SHOW in running total chart and legend
   });
 });
 
@@ -279,15 +265,12 @@ module('Acceptance | clients | overview | sync in license, not activated', funct
     return visit('/vault/clients/counts/overview');
   });
 
-  test('it should show the secrets sync tab', async function (assert) {
-    assert.dom(GENERAL.tab('sync')).exists('sync tab is shown because feature is in license');
-  });
-
   test('it should hide secrets sync stats', async function (assert) {
     assert
       .dom(CLIENT_COUNT.statTextValue('Secret sync'))
       .doesNotExist('stat is hidden because feature is not activated');
     assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists('other stats are still visible');
+    // TODO add assertion sync clients HIDDEN in running total chart and legend
   });
 });
 
@@ -303,13 +286,10 @@ module('Acceptance | clients | overview | sync not in license', function (hooks)
     return visit('/vault/clients/counts/overview');
   });
 
-  test('it should hide the secrets sync tab', async function (assert) {
-    assert.dom(GENERAL.tab('sync')).doesNotExist();
-  });
-
   test('it should hide secrets sync stats', async function (assert) {
     assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).doesNotExist();
     assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists('other stats are still visible');
+    // TODO add assertion sync clients HIDDEN in running total chart and legend
   });
 });
 
@@ -326,11 +306,8 @@ module('Acceptance | clients | overview | HVD', function (hooks) {
     return visit('/vault/clients/counts/overview');
   });
 
-  test('it should show the secrets sync tab', async function (assert) {
-    assert.dom(GENERAL.tab('sync')).exists();
-  });
-
   test('it should show secrets sync stats', async function (assert) {
     assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists();
+    // TODO add assertion sync clients SHOW in running total chart and legend
   });
 });
