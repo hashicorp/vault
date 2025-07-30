@@ -55,15 +55,6 @@ variable "ip_version" {
   default     = "4"
 }
 
-variable "ports" {
-  description = "Port configuration for services"
-  type = map(object({
-    port        = string
-    description = string
-  }))
-}
-
-
 variable "leader_host" {
   type = object({
     ipv6       = string
