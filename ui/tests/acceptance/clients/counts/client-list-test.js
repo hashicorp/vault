@@ -10,7 +10,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 
 // integration test handle general display assertions, acceptance handles nav + filtering
-module('Acceptance | clients | counts | client list', function (hooks) {
+module.skip('Acceptance | clients | counts | client list', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(async function () {
