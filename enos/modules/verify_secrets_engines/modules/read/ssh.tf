@@ -26,6 +26,7 @@ resource "enos_remote_exec" "ssh_verify_ca_role" {
   for_each = var.hosts
 
   environment = {
+    VERIFY_SSH_SECRETS      = var.verify_ssh_secrets
     ROLE_NAME               = var.create_state.ssh.ca_role_name
     KEY_TYPE                = var.create_state.ssh.ca_role_params.key_type
     DEFAULT_USER            = var.create_state.ssh.ca_role_params.default_user
@@ -57,16 +58,17 @@ resource "enos_remote_exec" "ssh_verify_otp_role" {
   for_each = var.hosts
 
   environment = {
-    ROLE_NAME         = var.create_state.ssh.otp_role_name
-    KEY_TYPE          = var.create_state.ssh.otp_role_params.key_type
-    DEFAULT_USER      = var.create_state.ssh.otp_role_params.default_user
-    ALLOWED_USERS     = var.create_state.ssh.otp_role_params.allowed_users
-    CIDR_LIST         = var.create_state.ssh.otp_role_params.cidr_list
-    EXCLUDE_CIDR_LIST = var.create_state.ssh.otp_role_params.exclude_cidr_list
-    PORT              = tostring(var.create_state.ssh.otp_role_params.port)
-    VAULT_ADDR        = var.vault_addr
-    VAULT_TOKEN       = var.vault_root_token
-    VAULT_INSTALL_DIR = var.vault_install_dir
+    VERIFY_SSH_SECRETS = var.verify_ssh_secrets
+    ROLE_NAME          = var.create_state.ssh.otp_role_name
+    KEY_TYPE           = var.create_state.ssh.otp_role_params.key_type
+    DEFAULT_USER       = var.create_state.ssh.otp_role_params.default_user
+    ALLOWED_USERS      = var.create_state.ssh.otp_role_params.allowed_users
+    CIDR_LIST          = var.create_state.ssh.otp_role_params.cidr_list
+    EXCLUDE_CIDR_LIST  = var.create_state.ssh.otp_role_params.exclude_cidr_list
+    PORT               = tostring(var.create_state.ssh.otp_role_params.port)
+    VAULT_ADDR         = var.vault_addr
+    VAULT_TOKEN        = var.vault_root_token
+    VAULT_INSTALL_DIR  = var.vault_install_dir
   }
 
   scripts = [abspath("${path.module}/../../scripts/ssh-verify-role.sh")]
@@ -83,10 +85,11 @@ resource "enos_remote_exec" "ssh_verify_ca" {
   for_each = var.hosts
 
   environment = {
-    CA_KEY_TYPE       = var.create_state.ssh.ca_key_type
-    VAULT_ADDR        = var.vault_addr
-    VAULT_TOKEN       = var.vault_root_token
-    VAULT_INSTALL_DIR = var.vault_install_dir
+    VERIFY_SSH_SECRETS = var.verify_ssh_secrets
+    CA_KEY_TYPE        = var.create_state.ssh.ca_key_type
+    VAULT_ADDR         = var.vault_addr
+    VAULT_TOKEN        = var.vault_root_token
+    VAULT_INSTALL_DIR  = var.vault_install_dir
   }
 
   scripts = [abspath("${path.module}/../../scripts/ssh-verify-ca.sh")]
@@ -103,11 +106,12 @@ resource "enos_remote_exec" "ssh_verify_signed_key" {
   for_each = var.hosts
 
   environment = {
-    SIGNED_KEY        = var.create_state.ssh.data.sign_key.signed_key
-    KEY_TYPE          = var.create_state.ssh.ca_key_type
-    VAULT_ADDR        = var.vault_addr
-    VAULT_TOKEN       = var.vault_root_token
-    VAULT_INSTALL_DIR = var.vault_install_dir
+    VERIFY_SSH_SECRETS = var.verify_ssh_secrets
+    SIGNED_KEY         = var.create_state.ssh.data.sign_key.signed_key
+    KEY_TYPE           = var.create_state.ssh.ca_key_type
+    VAULT_ADDR         = var.vault_addr
+    VAULT_TOKEN        = var.vault_root_token
+    VAULT_INSTALL_DIR  = var.vault_install_dir
   }
 
   scripts = [abspath("${path.module}/../../scripts/ssh-verify-signed-key.sh")]
@@ -124,12 +128,13 @@ resource "enos_remote_exec" "ssh_verify_otp" {
   for_each = var.hosts
 
   environment = {
-    IP                = var.create_state.ssh.test_ip
-    ROLE_NAME         = var.create_state.ssh.otp_role_name
-    USERNAME          = var.create_state.ssh.test_user
-    VAULT_ADDR        = var.vault_addr
-    VAULT_TOKEN       = var.vault_root_token
-    VAULT_INSTALL_DIR = var.vault_install_dir
+    VERIFY_SSH_SECRETS = var.verify_ssh_secrets
+    IP                 = var.create_state.ssh.test_ip
+    ROLE_NAME          = var.create_state.ssh.otp_role_name
+    USERNAME           = var.create_state.ssh.test_user
+    VAULT_ADDR         = var.vault_addr
+    VAULT_TOKEN        = var.vault_root_token
+    VAULT_INSTALL_DIR  = var.vault_install_dir
   }
 
   scripts = [abspath("${path.module}/../../scripts/ssh-verify-otp.sh")]
@@ -143,11 +148,12 @@ resource "enos_remote_exec" "ssh_verify_otp" {
 
 resource "enos_local_exec" "ssh_verify_cert" {
   environment = {
-    SIGNED_KEY        = var.create_state.ssh.data.generate_cert.signed_key
-    KEY_TYPE          = var.create_state.ssh.cert_key_type
-    VAULT_ADDR        = var.vault_addr
-    VAULT_TOKEN       = var.vault_root_token
-    VAULT_INSTALL_DIR = var.vault_install_dir
+    VERIFY_SSH_SECRETS = var.verify_ssh_secrets
+    SIGNED_KEY         = var.create_state.ssh.data.generate_cert.signed_key
+    KEY_TYPE           = var.create_state.ssh.cert_key_type
+    VAULT_ADDR         = var.vault_addr
+    VAULT_TOKEN        = var.vault_root_token
+    VAULT_INSTALL_DIR  = var.vault_install_dir
   }
 
   scripts = [abspath("${path.module}/../../scripts/ssh-verify-signed-key.sh")]

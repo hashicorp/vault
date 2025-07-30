@@ -26,6 +26,7 @@ log() {
 log "Starting env var checks"
 
 # Common required vars
+[[ -z "$VERIFY_SSH_SECRETS" ]] && fail "VERIFY_SSH_SECRETS env variable has not been set"
 [[ -z "$ROLE_NAME" ]] && fail "ROLE_NAME env variable has not been set"
 [[ -z "$KEY_TYPE" ]] && fail "KEY_TYPE env variable has not been set"
 [[ -z "$VAULT_ADDR" ]] && fail "VAULT_ADDR env variable has not been set"
@@ -35,6 +36,9 @@ log "Starting env var checks"
 # Always required for both types
 [[ -z "$DEFAULT_USER" ]] && fail "DEFAULT_USER env variable has not been set"
 [[ -z "$ALLOWED_USERS" ]] && fail "ALLOWED_USERS env variable has not been set"
+
+# Exit if VERIFY_SSH_SECRETS is set to false
+[[ "${VERIFY_SSH_SECRETS}" == false ]] && exit 0
 
 # Type-specific required vars
 case "$KEY_TYPE" in

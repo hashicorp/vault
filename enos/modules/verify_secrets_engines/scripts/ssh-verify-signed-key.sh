@@ -9,11 +9,15 @@ fail() {
   exit 1
 }
 
+[[ -z "$VERIFY_SSH_SECRETS" ]] && fail "VERIFY_SSH_SECRETS env variable has not been set"
 [[ -z "$SIGNED_KEY" ]] && fail "SIGNED_KEY env variable has not been set"
 [[ -z "$KEY_TYPE" ]] && fail "KEY_TYPE env variable has not been set"
 [[ -z "$VAULT_ADDR" ]] && fail "VAULT_ADDR env variable has not been set"
 [[ -z "$VAULT_TOKEN" ]] && fail "VAULT_TOKEN env variable has not been set"
 [[ -z "$VAULT_INSTALL_DIR" ]] && fail "VAULT_INSTALL_DIR env variable has not been set"
+
+# Exit if VERIFY_SSH_SECRETS is set to false
+[[ "${VERIFY_SSH_SECRETS}" == false ]] && exit 0
 
 SIGNED_KEY_PATH=$(mktemp)
 trap 'rm -f "$SIGNED_KEY_PATH"' EXIT
