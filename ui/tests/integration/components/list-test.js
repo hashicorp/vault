@@ -65,67 +65,51 @@ module('Integration | Component | secret-engine/list', function (hooks) {
   });
 
   test('hovering over the icon of an external unrecognized engine type sets unrecognized tooltip text', async function (assert) {
-    this.set('onHover', (val) => {
-      this.set('tooltip', val);
-    });
-    await render(
-      hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} @onHover={{this.onHover}} />`
-    );
+    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
 
     await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), 'external-test');
-    await triggerEvent('.hds-tooltip-button', 'mouseover');
+    await triggerEvent('.hds-tooltip-button', 'mouseenter');
 
-    assert.strictEqual(
-      this.tooltip,
-      'This is an externally mounted plugin that is not recognized by the UI. Please use the CLI to manage this engine.',
-      'shows tooltip text for unsupported engine'
-    );
+    assert
+      .dom('.hds-tooltip-container')
+      .hasText(
+        'This plugin is not supported by the UI. Please use the CLI to manage this engine.',
+        'shows tooltip text for unsupported engine'
+      );
   });
 
   test('hovering over the icon of an unsupported engine sets unsupported tooltip text', async function (assert) {
-    this.set('onHover', (val) => {
-      this.set('tooltip', val);
-    });
-    await render(
-      hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} @onHover={{this.onHover}} />`
-    );
+    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
 
     await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-type'), 'nomad');
-    await triggerEvent('.hds-tooltip-button', 'mouseover');
+    await triggerEvent('.hds-tooltip-button', 'mouseenter');
 
-    assert.strictEqual(
-      this.tooltip,
-      'The UI only supports configuration views for these secret engines. The CLI must be used to manage other engine resources.',
-      'shows tooltip text for unsupported engine'
-    );
+    assert
+      .dom('.hds-tooltip-container')
+      .hasText(
+        'The UI only supports configuration views for these secret engines. The CLI must be used to manage other engine resources.',
+        'shows tooltip text for unsupported engine'
+      );
   });
 
   test('hovering over the icon of a supported engine sets engine name as tooltip', async function (assert) {
-    this.set('onHover', (val) => {
-      this.set('tooltip', val);
-    });
-    await render(
-      hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} @onHover={{this.onHover}} />`
-    );
+    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
     await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), 'aws-1');
 
-    await triggerEvent('.hds-tooltip-button', 'mouseover');
+    await triggerEvent('.hds-tooltip-button', 'mouseenter');
 
-    assert.strictEqual(this.tooltip, 'AWS', 'shows tooltip text for aws engine');
+    assert.dom('.hds-tooltip-container').hasText('AWS', 'shows tooltip text for supported engine with name');
   });
 
   test('hovering over the icon of a kv engine shows engine name and version', async function (assert) {
-    this.set('onHover', (val) => {
-      this.set('tooltip', val);
-    });
-    await render(
-      hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} @onHover={{this.onHover}} />`
-    );
+    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}}/>`);
 
     await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), `kv-test`);
 
-    await triggerEvent('.hds-tooltip-button', 'mouseover');
-    assert.strictEqual(this.tooltip, 'KV version 1', 'shows tooltip text for kv engine with version');
+    await triggerEvent('.hds-tooltip-button', 'mouseenter');
+    assert
+      .dom('.hds-tooltip-container')
+      .hasText('KV version 1', 'shows tooltip text for kv engine with version');
   });
 
   test('it adds disabled css styling to unsupported secret engines', async function (assert) {

@@ -48,11 +48,7 @@
     <div>
       <div class="has-text-grey is-grid align-items-center linked-block-title">
         {{#if backend.icon}}
-          <Hds::TooltipButton
-            aria-label="Type of backend"
-            @text={{this.tooltip}}
-            {{on "mouseover" (fn this.tooltipText backend)}}
-          >
+          <Hds::TooltipButton aria-label="Type of backend" @text={{this.generateToolTipText backend}}>
             <Icon @name={{backend.icon}} class="has-text-grey-light" />
           </Hds::TooltipButton>
         {{/if}}

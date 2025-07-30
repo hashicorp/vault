@@ -28,7 +28,6 @@ import engineDisplayData from 'vault/helpers/engines-display-data';
 
 interface Args {
   secretEngines: Array<SecretsEngineResource>;
-  onHover: (tooltip: string) => void;
 }
 
 export default class SecretEngineList extends Component<Args> {
@@ -40,7 +39,6 @@ export default class SecretEngineList extends Component<Args> {
   @tracked selectedEngineType = '';
   @tracked selectedEngineName = '';
   @tracked engineToDisable: SecretsEngineResource | undefined = undefined;
-  @tracked tooltip = '';
 
   get displayableBackends() {
     return this.args.secretEngines.filter((backend) => backend.shouldIncludeInList);
@@ -70,28 +68,27 @@ export default class SecretEngineList extends Component<Args> {
     return sortedBackends;
   }
 
-  @action
-  tooltipText(backend: SecretsEngineResource) {
-    if (backend.isSupportedBackend) {
+  generateToolTipText = (backend: SecretsEngineResource) => {
+    const displayData = engineDisplayData(backend.type);
+
+    if (!displayData) {
+      return;
+    } else if (backend.isSupportedBackend) {
       if (backend.type === 'kv') {
         // If the backend is a KV engine, include the version in the tooltip.
-        this.tooltip = `${engineDisplayData(backend.type)?.displayName} version ${backend.version}`;
+        return `${displayData.displayName} version ${backend.version}`;
       } else {
-        this.tooltip = `${engineDisplayData(backend.type)?.displayName}`;
+        return `${displayData.displayName}`;
       }
-    } else if (engineDisplayData(backend.type)?.type === 'generic') {
+    } else if (displayData.type === 'generic') {
       // If a mounted engine type doesn't match any known type, the type is returned as 'generic' and set this tooltip.
       // Handles issue when a user externally mounts an engine that doesn't follow the expected naming conventions for what's in the binary, despite being a valid engine.
-      this.tooltip =
-        'This is an externally mounted plugin that is not recognized by the UI. Please use the CLI to manage this engine.';
+      return 'This plugin is not supported by the UI. Please use the CLI to manage this engine.';
     } else {
       // If the engine type is recognized but not supported, we only show configuration view and set this tooltip.
-      this.tooltip =
-        'The UI only supports configuration views for these secret engines. The CLI must be used to manage other engine resources.';
+      return 'The UI only supports configuration views for these secret engines. The CLI must be used to manage other engine resources.';
     }
-
-    this.args.onHover?.(this.tooltip); // expose the tracked value
-  }
+  };
 
   // Filtering & searching
   get secretEngineArrayByType() {
