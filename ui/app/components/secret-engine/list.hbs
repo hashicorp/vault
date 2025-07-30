@@ -48,21 +48,7 @@
     <div>
       <div class="has-text-grey is-grid align-items-center linked-block-title">
         {{#if backend.icon}}
-          <Hds::TooltipButton
-            @text={{if
-              backend.isSupportedBackend
-              (concat
-                (get (engines-display-data backend.type) "displayName")
-                (if
-                  (eq backend.version 2)
-                  " version 2"
-                  (if (and (eq backend.version 1) (eq backend.type "kv")) " version 1" "")
-                )
-              )
-              "The UI only supports configuration views for these secret engines. The CLI must be used to manage other engine resources."
-            }}
-            aria-label="Type of backend"
-          >
+          <Hds::TooltipButton aria-label="Type of backend" @text={{this.generateToolTipText backend}}>
             <Icon @name={{backend.icon}} class="has-text-grey-light" />
           </Hds::TooltipButton>
         {{/if}}
@@ -99,13 +85,15 @@
           @hasChevron={{false}}
           data-test-popup-menu-trigger
         />
-        <dd.Interactive
-          @route={{backend.backendConfigurationLink}}
-          @model={{backend.id}}
-          data-test-popup-menu="view-configuration"
-        >
-          View configuration
-        </dd.Interactive>
+        {{#if (not-eq (get (engines-display-data backend.type) "type") "generic")}}
+          <dd.Interactive
+            @route={{backend.backendConfigurationLink}}
+            @model={{backend.id}}
+            data-test-popup-menu="view-configuration"
+          >
+            View configuration
+          </dd.Interactive>
+        {{/if}}
         {{#if (not-eq backend.type "cubbyhole")}}
           <dd.Interactive
             @color="critical"
