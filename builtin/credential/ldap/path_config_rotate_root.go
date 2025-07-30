@@ -43,6 +43,9 @@ func (b *backend) pathConfigRotateRootUpdate(ctx context.Context, req *logical.R
 		// log here instead of inside the actual rotate call because the rotation manager also logs, so this is
 		// the "equivalent" place for manual rotations.
 		b.Logger().Warn("failed to rotate root credential", "rotationID", req.Path, "err", err.Error())
+	} else {
+		// err is nil in this case
+		b.Logger().Info("succesfully rotated root credential on user request", "rotatioNID", req.Path)
 	}
 	var responseError responseError
 	if errors.As(err, &responseError) {
