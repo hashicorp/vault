@@ -311,18 +311,7 @@ data-test-card-subtitle="secrets-engines"
 <Hds::Alert @message="Operation completed successfully" />
 ```
 
-## Common Title Case Violations to Avoid
-- "Quick Actions" → should be "Quick actions"
-- "Secrets Engines" → should be "Secrets engines" 
-- "Authentication Methods" → should be "Authentication methods"
-- "Policy Rules" → should be "Policy rules"
-- "Access Control" → should be "Access control"
-
 ```javascript
-// Changelog entries
-"ui (enterprise): Add advanced secret filtering"  // enterprise features
-"ui: Fix secret list pagination"                  // community features
-
 // KV engine naming
 "KVv2" or "KV version 2"     // Correct
 "KV v2"                      // Incorrect
@@ -336,6 +325,12 @@ For files in the `changelog/` directory:
 - **Enterprise features**: Use `ui (enterprise): descriptive text`  
 - **Community features**: Use `ui: descriptive text`
 - Always indicate enterprise-only features in the description
+
+```javascript
+// Changelog entries
+"ui (enterprise): Add advanced secret filtering"  // enterprise features
+"ui: Fix secret list pagination"                  // community features
+```
 
 ---
 
@@ -368,9 +363,9 @@ Example dependency specification:
 
 # Code Review Checklist
 
-## 🚨 High Priority: Title and Heading Case
-- **Critical**: Check ALL HTML headings (`<h1>`, `<h2>`, `<h3>`, etc.) use sentence case
-- **Critical**: Verify component `@title`, `@label`, and `@text` arguments use sentence case
+## Title and Heading Case
+- Check ALL HTML headings (`<h1>`, `<h2>`, `<h3>`, etc.) use sentence case
+- Verify component `@title`, `@label`, and `@text` arguments use sentence case
 - **Look for**: Title case violations like "Quick Actions", "Secrets Engines", "Authentication Methods"
 - **Flag**: Any heading or title that capitalizes words beyond the first word
 
