@@ -72,7 +72,7 @@ export default class MountForm<T extends SecretsEngineFormData | AuthMethodFormD
       helpText: 'Headers to allow, allowing a plugin to include them in the response.',
       editType: 'stringArray',
     }),
-    pluginVersion: new FormField('plugin_version', 'string', {
+    pluginVersion: new FormField('config.plugin_version', 'string', {
       label: 'Plugin version',
       subText:
         'Specifies the semantic version of the plugin to use, e.g. "v1.0.0". If unspecified, the server will select any matching un-versioned plugin that may have been registered, the latest versioned plugin registered, or a built-in plugin in that order of precedence.',

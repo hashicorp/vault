@@ -6,7 +6,7 @@
 import Component from '@glimmer/component';
 import { tracked } from '@glimmer/tracking';
 import { service } from '@ember/service';
-import { action } from '@ember/object';
+import { action, set } from '@ember/object';
 import { task } from 'ember-concurrency';
 import { waitFor } from '@ember/test-waiters';
 import { presence } from 'vault/utils/forms/validators';
@@ -77,8 +77,8 @@ export default class MountBackendForm extends Component<Args> {
 
   typeChangeSideEffect(type: string) {
     // If type PKI, set max lease to ~10years
-    if (this.args.mountCategory === 'secret' && type === 'pki') {
-      this.args.mountModel.data.config.max_lease_ttl = '3650d';
+    if (this.args.mountCategory === 'secret') {
+      this.args.mountModel.data.config.max_lease_ttl = type === 'pki' ? '3650d' : 0;
     }
   }
 
@@ -176,8 +176,8 @@ export default class MountBackendForm extends Component<Args> {
   }
 
   @action
-  onPathChange(_name: string, value: string) {
-    this.args.mountModel.data.path = value;
+  onKeyUp(name: string, value: string) {
+    set(this.args.mountModel.data, name, value);
     this.checkModelWarnings();
   }
 
