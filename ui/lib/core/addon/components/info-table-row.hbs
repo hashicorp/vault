@@ -12,16 +12,16 @@
     >
       {{#if @label}}
         {{#if this.hasLabelOverflow}}
-          <ToolTip @verticalPosition="below" @horizontalPosition="left" as |T|>
-            <T.Trigger @tabindex={{false}}>
-              <span class="is-label has-text-grey-dark" data-test-row-label={{@label}}>{{@label}}</span>
-            </T.Trigger>
-            <T.Content @defaultClass="tool-tip">
-              <div class="box fit-content" data-test-label-tooltip>
-                {{@label}}
-              </div>
-            </T.Content>
-          </ToolTip>
+          <Hds::TooltipButton
+            @text={{@label}}
+            data-test-row-label={{@label}}
+          >
+            <span
+              class="is-label has-text-grey-dark" 
+            >
+              {{@label}}
+            </span>
+          </Hds::TooltipButton>
         {{else}}
           <span class="is-label has-text-grey-dark" data-test-row-label={{@label}}>{{@label}}</span>
         {{/if}}

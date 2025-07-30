@@ -7,7 +7,7 @@ import { module, test } from 'qunit';
 import { resolve } from 'rsvp';
 import Service from '@ember/service';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, triggerEvent } from '@ember/test-helpers';
+import { focus, render, triggerEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
@@ -78,9 +78,12 @@ module('Integration | Component | InfoTableRow', function (hooks) {
         @tooltipText={{this.tooltipText}}
       />`);
 
-    await triggerEvent('.ember-basic-dropdown-trigger', 'mouseenter');
-    const tooltip = document.querySelector('div.box').textContent.trim();
-    assert.strictEqual(tooltip, 'Tooltip text!', 'renders tooltip text');
+      debugger
+
+    await focus('[data-test-row-label]');
+
+    assert.dom('.tippy-content').hasText('Label tooltip exists on hover');
+    // assert.strictEqual(tooltip, 'Tooltip text!', 'renders tooltip text');
   });
 
   test('it should copy tooltip', async function (assert) {
@@ -205,7 +208,8 @@ module('Integration | Component | InfoTableRow', function (hooks) {
   });
 
   test('Truncates the label if too long', async function (assert) {
-    this.set('label', 'abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz');
+    this.label = 'abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz';
+
     await render(hbs`<div style="width: 100px;">
       <InfoTableRow
         @label={{this.label}}
@@ -213,8 +217,9 @@ module('Integration | Component | InfoTableRow', function (hooks) {
       />
     </div>`);
     assert.dom('[data-test-component="info-table-row"]').exists('Row renders');
-    await triggerEvent('[data-test-row-label]', 'mouseenter');
-    assert.dom('[data-test-label-tooltip]').exists('Label tooltip exists on hover');
+    await focus('[data-test-row-label]');
+
+    assert.dom('.tippy-content').exists('Label tooltip exists on hover');
   });
 
   test('Renders if block value and alwaysrender=false', async function (assert) {
