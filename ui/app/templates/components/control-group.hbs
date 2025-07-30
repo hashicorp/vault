@@ -48,23 +48,25 @@
       </div>
 
       {{#if (or (not this.model.requestEntity) this.currentUserIsRequesting)}}
-        <div class="message is-highlight" data-test-accessor-callout>
-          <Hds::Copy::Button
-            @text="Copy"
-            @isIconOnly={{true}}
-            @textToCopy={{this.model.id}}
-            @onError={{(fn
-              (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
-            )}}
-            class="transparent top-right-absolute"
-          />
-          <div class="message-body">
-            <h4 class="title is-7 is-marginless">
-              Accessor
-            </h4>
-            <code class="is-word-break" data-test-accessor-value>{{this.model.id}}</code>
-          </div>
-        </div>
+        <Hds::Alert
+          @type="inline"
+          @color={{if this.isSuccess "success" "warning"}}
+          @icon={{false}}
+          data-test-inline-alert
+          as |A|
+        >
+          <A.Title>Accessor</A.Title>
+          <A.Description>
+            <Hds::Copy::Snippet
+              @textToCopy={{this.model.id}}
+              @color="secondary"
+              @onError={{(fn
+                (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
+              )}}
+              data-test-accessor-value
+            />
+          </A.Description>
+        </Hds::Alert>
       {{/if}}
 
       <div class="authorizations" data-test-authorizations>
@@ -93,20 +95,16 @@
   {{/if}}
 
   {{#if this.controlGroupResponse.token}}
-    <div class="is-flex-row has-bottom-margin-m has-top-margin-m" data-test-token>
+    <div class="has-bottom-margin-m has-top-margin-m" data-test-token>
       <p class="has-text-grey has-padding-xxs">
         We’ve saved your request token, but you may want to copy it just in case:
       </p>
-      <div>
-        <Hds::Copy::Snippet
-          data-test-token-value
-          @textToCopy={{this.controlGroupResponse.token}}
-          @color="secondary"
-          @onError={{(fn
-            (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
-          )}}
-        />
-      </div>
+      <Hds::Copy::Snippet
+        data-test-token-value
+        @textToCopy={{this.controlGroupResponse.token}}
+        @color="secondary"
+        @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
+      />
     </div>
   {{/if}}
   {{! template-lint-configure simple-unless "warn" }}
@@ -120,14 +118,14 @@
             @route="vault.cluster.access.control-groups"
             @icon="chevron-left"
             @iconPosition="leading"
-            data-test-back-link
+            data-test-back-button
           />
         {{else}}
           <Hds::Button
             @text="Authorize"
             @icon={{if this.authorize.isRunning "loading"}}
             {{on "click" (action (perform this.authorize))}}
-            data-test-authorize-button
+            data-test-button="Authorize"
           />
         {{/if}}
       {{else}}
@@ -135,7 +133,7 @@
           @text="Refresh"
           @icon={{if this.refresh.isRunning "loading"}}
           {{on "click" (action (perform this.refresh))}}
-          data-test-refresh-button
+          data-test-button="Refresh"
         />
       {{/if}}
     </div>
