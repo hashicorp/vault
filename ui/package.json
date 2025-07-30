@@ -11,7 +11,6 @@
   "scripts": {
     "build": "ember build --environment=production && cp metadata.json ../http/web_ui/metadata.json",
     "build:dev": "ember build",
-    "copilot": "echo \"To review your changes against our custom guidelines, do one of the following:\n\n1. In VS Code, open the files you've changed. Use Copilot Chat (Ctrl+Alt+I) and reference our guidelines in .github/copilot-instructions.md by typing '@workspace /review' and then specifically asking about your changes and our guidelines.\n2. When creating a Pull Request, ensure 'Request pull request review from Copilot' is enabled (if configured by your org/repo).\n\nRemember to consult .github/copilot-instructions.md for our project's common mistakes and best practices before committing!\"",
     "docs": "sh scripts/generate-docs.sh",
     "docfy-md": "node scripts/docfy-md.js",
     "lint:css": "stylelint \"**/*.css\"",
