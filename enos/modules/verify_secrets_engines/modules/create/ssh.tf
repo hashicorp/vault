@@ -178,7 +178,7 @@ resource "enos_remote_exec" "ssh_configure_ca" {
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/../../scripts/write-payload.sh")]
+  scripts = [abspath("${path.module}/../../scripts/write.sh")]
 
   transport = {
     ssh = {
@@ -197,7 +197,7 @@ resource "enos_remote_exec" "ssh_create_ca_role" {
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/../../scripts/write-payload.sh")]
+  scripts = [abspath("${path.module}/../../scripts/write.sh")]
 
   transport = {
     ssh = {
@@ -217,7 +217,7 @@ resource "enos_remote_exec" "ssh_create_otp_role" {
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/../../scripts/write-payload.sh")]
+  scripts = [abspath("${path.module}/../../scripts/write.sh")]
 
   transport = {
     ssh = {
@@ -237,7 +237,7 @@ resource "enos_remote_exec" "ssh_sign_key" {
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/../../scripts/write-payload.sh")]
+  scripts = [abspath("${path.module}/../../scripts/write.sh")]
 
   transport = {
     ssh = {
@@ -257,7 +257,7 @@ resource "enos_remote_exec" "ssh_generate_otp" {
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/../../scripts/write-payload.sh")]
+  scripts = [abspath("${path.module}/../../scripts/write.sh")]
 
   transport = {
     ssh = {
@@ -278,7 +278,7 @@ resource "enos_remote_exec" "ssh_generate_cert" {
     VAULT_INSTALL_DIR = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/../../scripts/write-payload.sh")]
+  scripts = [abspath("${path.module}/../../scripts/write.sh")]
 
   transport = {
     ssh = {
