@@ -11,10 +11,11 @@
       </LinkTo>
     </li>
     <li>
-      {{! TODO add this route }}
-      {{! <LinkTo @route="vault.cluster.clients.counts.client-list" data-test-tab="token">
-        Client list
-      </LinkTo> }}
+      {{#if this.isNotProduction}}
+        <LinkTo @route="vault.cluster.clients.counts.client-list" data-test-tab="token">
+          Client list
+        </LinkTo>
+      {{/if}}
     </li>
   </ul>
 </nav>
