@@ -79,7 +79,7 @@ func (b *databaseBackend) pathRotateRootCredentialsUpdate() framework.OperationF
 		name := data.Get("name").(string)
 		resp, err = b.rotateRootCredentials(ctx, req, name)
 		if err != nil {
-			b.Logger().Warn("failed to rotate root credential", "path", req.Path, "err", err.Error())
+			b.Logger().Error("failed to rotate root credential", "path", req.Path, "err", err.Error())
 		} else {
 			b.Logger().Info("succesfully rotated root credential on user request", "path", req.Path)
 		}
@@ -242,7 +242,7 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 		// this item back on the queue. The err should still be returned at the end
 		// of this method.
 		if err != nil {
-			b.logger.Warn("unable to rotate credentials in rotate-role", "rotationID", name, "error", err)
+			b.logger.Error("unable to rotate credentials in rotate-role", "rotationID", name, "error", err)
 			// Update the priority to re-try this rotation and re-add the item to
 			// the queue
 			item.Priority = time.Now().Add(10 * time.Second).Unix()
