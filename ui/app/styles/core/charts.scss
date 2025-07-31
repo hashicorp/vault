@@ -6,10 +6,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-// LEGEND STYLING
-// legend positioning is in chart-container.scss
-$green-cyan: var(--token-color-nomad-brand);
-$blue-200: var(--token-color-palette-blue-200);
+// LEGEND STYLING (positioning is in chart-container.scss)
+$green-cyan: #06d092;
+$cerulean: #02a8ef;
 $blue-500: var(--token-color-palette-blue-500);
 $purple-300: var(--token-color-palette-purple-300);
 
@@ -33,7 +32,7 @@ $purple-300: var(--token-color-palette-purple-300);
     background-color: $purple-300;
   }
   .legend-acme_clients {
-    background-color: $blue-200;
+    background-color: $cerulean;
   }
 }
 
@@ -112,6 +111,6 @@ $purple-300: var(--token-color-palette-purple-300);
   fill: $purple-300;
 }
 .stacked-bar-4 {
-  color: $blue-200;
-  fill: $blue-200;
+  color: $cerulean;
+  fill: $cerulean;
 }

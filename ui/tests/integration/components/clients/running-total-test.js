@@ -111,7 +111,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
       { label: 'Entity clients', color: 'rgb(28, 52, 95)' },
       { label: 'Non-entity clients', color: 'rgb(6, 208, 146)' },
       { label: 'Secret sync clients', color: 'rgb(145, 28, 237)' },
-      { label: 'Acme clients', color: 'rgb(16, 96, 255)' },
+      { label: 'Acme clients', color: 'rgb(2, 168, 239)' },
     ];
 
     findAll('.legend-item').forEach((e, i) => {
@@ -185,7 +185,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
     const expectedLegend = [
       { label: 'Entity clients', color: 'rgb(28, 52, 95)' },
       { label: 'Non-entity clients', color: 'rgb(6, 208, 146)' },
-      { label: 'Acme clients', color: 'rgb(16, 96, 255)' },
+      { label: 'Acme clients', color: 'rgb(2, 168, 239)' },
     ];
 
     findAll('.legend-item').forEach((e, i) => {
