@@ -6,16 +6,17 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { render } from '@ember/test-helpers';
+import { click, find, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import clientsHandler, { LICENSE_START, STATIC_NOW } from 'vault/mirage/handlers/clients';
 import sinon from 'sinon';
-import { formatRFC3339, getUnixTime } from 'date-fns';
+import { getUnixTime } from 'date-fns';
 import { findAll } from '@ember/test-helpers';
 import { formatNumber } from 'core/helpers/format-number';
 import timestamp from 'core/utils/timestamp';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { CLIENT_COUNT, CHARTS } from 'vault/tests/helpers/clients/client-count-selectors';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const START_TIME = getUnixTime(LICENSE_START);
 
@@ -32,15 +33,9 @@ module('Integration | Component | clients/running-total', function (hooks) {
       end_time: { timestamp: getUnixTime(timestamp.now()) },
     };
     const activity = await store.queryRecord('clients/activity', activityQuery);
-    this.byMonthActivity = activity.byMonth;
-    this.newActivity = this.byMonthActivity.map((d) => d.new_clients);
+    this.byMonthNewClients = activity.byMonth.map((d) => d.new_clients);
 
     this.totalUsageCounts = activity.total;
-    this.set('timestamp', formatRFC3339(timestamp.now()));
-    this.set('chartLegend', [
-      { label: 'entity clients', key: 'entity_clients' },
-      { label: 'non-entity clients', key: 'non_entity_clients' },
-    ]);
     this.isSecretsSyncActivated = true;
     this.isHistoricalMonth = false;
 
@@ -48,7 +43,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
       await render(hbs`
       <Clients::RunningTotal
         @isSecretsSyncActivated={{this.isSecretsSyncActivated}}
-        @byMonthNewClients={{this.byMonthActivity}}
+        @byMonthNewClients={{this.byMonthNewClients}}
         @runningTotals={{this.totalUsageCounts}}
         @upgradeData={{this.upgradesDuringActivity}}
         @isHistoricalMonth={{this.isHistoricalMonth}}
@@ -68,6 +63,10 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
     assert.dom(CHARTS.container('Vault client counts')).exists('running total component renders');
     assert.dom(CHARTS.chart('Vault client counts')).exists('bar chart renders');
+    assert.dom(CHARTS.legend).hasText('New clients');
+    const expectedColor = 'rgb(28, 52, 95)';
+    const color = getComputedStyle(find(CHARTS.legendDot(1))).backgroundColor;
+    assert.strictEqual(color, expectedColor, `actual color: ${color}, expected color: ${expectedColor}`);
 
     const expectedValues = {
       'Running new client total': formatNumber([this.totalUsageCounts.clients]),
@@ -90,45 +89,58 @@ module('Integration | Component | clients/running-total', function (hooks) {
       assert
         .dom(e)
         .hasText(
-          `${this.byMonthActivity[i].month}`,
-          `renders x-axis labels for bar chart: ${this.byMonthActivity[i].month}`
+          `${this.byMonthNewClients[i].month}`,
+          `renders x-axis labels for bar chart: ${this.byMonthNewClients[i].month}`
         );
     });
     assert
       .dom(CHARTS.verticalBar)
-      .exists({ count: this.byMonthActivity.length }, 'renders correct number of bars ');
+      .exists({ count: this.byMonthNewClients.length }, 'renders correct number of bars ');
   });
 
-  test('it renders with no new monthly data', async function (assert) {
-    this.byMonthActivity = this.byMonthActivity.map((d) => ({
-      ...d,
-      new_clients: { month: d.month },
-    }));
-
+  test('it toggles to split chart by client type', async function (assert) {
     await this.renderComponent();
+    await click(GENERAL.inputByAttr('toggle view'));
 
     assert.dom(CHARTS.container('Vault client counts')).exists('running total component renders');
     assert.dom(CHARTS.chart('Vault client counts')).exists('bar chart renders');
+    assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients Secret sync clients Acme clients');
 
-    const expectedValues = {
-      Entity: formatNumber([this.totalUsageCounts.entity_clients]),
-      'Non-entity': formatNumber([this.totalUsageCounts.non_entity_clients]),
-      ACME: formatNumber([this.totalUsageCounts.acme_clients]),
-      'Secret sync': formatNumber([this.totalUsageCounts.secret_syncs]),
-    };
-    for (const label in expectedValues) {
+    // assert each legend item is correct
+    const expectedLegend = [
+      { label: 'Entity clients', color: 'rgb(28, 52, 95)' },
+      { label: 'Non-entity clients', color: 'rgb(6, 208, 146)' },
+      { label: 'Secret sync clients', color: 'rgb(145, 28, 237)' },
+      { label: 'Acme clients', color: 'rgb(16, 96, 255)' },
+    ];
+
+    findAll('.legend-item').forEach((e, i) => {
+      const { label, color } = expectedLegend[i];
+      assert.dom(e).hasText(label, `legend renders label: ${label}`);
+      const dotColor = getComputedStyle(find(CHARTS.legendDot(i + 1))).backgroundColor;
+      assert.strictEqual(dotColor, color, `actual color: ${dotColor}, expected color: ${color}`);
+    });
+
+    // assert bar chart is correct
+    findAll(CHARTS.xAxisLabel).forEach((e, i) => {
       assert
-        .dom(CLIENT_COUNT.statTextValue(label))
+        .dom(e)
         .hasText(
-          `${expectedValues[label]}`,
-          `stat label: ${label} renders correct total: ${expectedValues[label]}`
+          `${this.byMonthNewClients[i].month}`,
+          `renders x-axis labels for bar chart: ${this.byMonthNewClients[i].month}`
         );
-    }
+    });
+
+    const months = this.byMonthNewClients.length;
+    const barsPerMonth = expectedLegend.length;
+    assert
+      .dom(CHARTS.verticalBar)
+      .exists({ count: months * barsPerMonth }, `renders ${barsPerMonth} bars per month`);
   });
 
   test('it renders with single historical month data', async function (assert) {
-    const singleMonthNew = this.newActivity[this.newActivity.length - 1];
-    this.byMonthActivity = [singleMonthNew];
+    const singleMonthNew = this.byMonthNewClients[this.byMonthNewClients.length - 1];
+    this.byMonthNewClients = [singleMonthNew];
     this.isHistoricalMonth = true;
     await this.renderComponent();
     const expectedStats = {
@@ -152,6 +164,8 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
   test('it hides secret sync totals when feature is not activated', async function (assert) {
     this.isSecretsSyncActivated = false;
+    // reset secret sync clients to 0
+    this.byMonthNewClients = this.byMonthNewClients.map((obj) => ({ ...obj, secret_syncs: 0 }));
 
     await this.renderComponent();
 
@@ -160,5 +174,31 @@ module('Integration | Component | clients/running-total', function (hooks) {
     assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists();
     assert.dom(CLIENT_COUNT.statTextValue('Non-entity')).exists();
     assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).doesNotExist('does not render secret syncs');
+
+    // check toggle view
+    await click(GENERAL.inputByAttr('toggle view'));
+    assert
+      .dom(CHARTS.legend)
+      .hasText('Entity clients Non-entity clients Acme clients', 'legend does not include sync clients');
+
+    // assert each legend item is correct
+    const expectedLegend = [
+      { label: 'Entity clients', color: 'rgb(28, 52, 95)' },
+      { label: 'Non-entity clients', color: 'rgb(6, 208, 146)' },
+      { label: 'Acme clients', color: 'rgb(16, 96, 255)' },
+    ];
+
+    findAll('.legend-item').forEach((e, i) => {
+      const { label, color } = expectedLegend[i];
+      assert.dom(e).hasText(label, `legend renders label: ${label}`);
+      const dotColor = getComputedStyle(find(CHARTS.legendDot(i + 1))).backgroundColor;
+      assert.strictEqual(dotColor, color, `actual color: ${dotColor}, expected color: ${color}`);
+    });
+
+    const months = this.byMonthNewClients.length;
+    const barsPerMonth = expectedLegend.length;
+    assert
+      .dom(CHARTS.verticalBar)
+      .exists({ count: months * barsPerMonth }, `renders ${barsPerMonth} bars per month`);
   });
 });

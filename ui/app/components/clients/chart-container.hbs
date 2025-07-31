@@ -37,7 +37,7 @@
           {{#each @legend as |l|}}
             <div class="legend-item">
               <span class="dots legend-{{l.key}}"></span>
-              <Hds::Text::Body @size="100">{{capitalize l.label}}</Hds::Text::Body>
+              <Hds::Text::Body @tag="p" @size="100">{{capitalize l.label}}</Hds::Text::Body>
             </div>
           {{/each}}
         </div>
