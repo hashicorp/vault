@@ -16,8 +16,8 @@ export default class AwsConfigForm extends WifConfigForm<AwsConfigFormData> {
     lease: [
       {
         validator(data: AwsConfigForm['data']) {
-          const { lease, leaseMax } = data;
-          return (lease && leaseMax) || (!lease && !leaseMax) ? true : false;
+          const { lease, lease_max } = data;
+          return (lease && lease_max) || (!lease && !lease_max) ? true : false;
         },
         message: 'Lease TTL and Max Lease TTL are both required if one of them is set.',
       },
@@ -25,17 +25,17 @@ export default class AwsConfigForm extends WifConfigForm<AwsConfigFormData> {
   };
 
   get isAccountPluginConfigured() {
-    return !!this.data.accessKey;
+    return !!this.data.access_key;
   }
 
   get isWifPluginConfigured() {
-    const { identityTokenAudience, identityTokenTtl, roleArn } = this.data;
-    return !!identityTokenAudience || !!identityTokenTtl || !!roleArn;
+    const { identity_token_audience, identity_token_ttl, role_arn } = this.data;
+    return !!identity_token_audience || !!identity_token_ttl || !!role_arn;
   }
 
   accountFields = [
-    new FormField('accessKey', 'string'),
-    new FormField('secretKey', 'string', { sensitive: true }),
+    new FormField('access_key', 'string'),
+    new FormField('secret_key', 'string', { sensitive: true }),
   ];
 
   optionFields = [
@@ -44,21 +44,21 @@ export default class AwsConfigForm extends WifConfigForm<AwsConfigFormData> {
       subText:
         'Specifies the AWS region. If not set it will use the AWS_REGION env var, AWS_DEFAULT_REGION env var, or us-east-1 in that order.',
     }),
-    new FormField('iamEndpoint', 'string', { label: 'IAM endpoint' }),
-    new FormField('stsEndpoint', 'string', { label: 'STS endpoint' }),
-    new FormField('maxRetries', 'number', {
+    new FormField('iam_endpoint', 'string', { label: 'IAM endpoint' }),
+    new FormField('sts_endpoint', 'string', { label: 'STS endpoint' }),
+    new FormField('max_retries', 'number', {
       subText: 'Number of max retries the client should use for recoverable errors. Default is -1.',
     }),
   ];
 
   wifFields = [
     this.commonWifFields.issuer,
-    new FormField('roleArn', 'string', {
+    new FormField('role_arn', 'string', {
       label: 'Role ARN',
       subText: 'Role ARN to assume for plugin workload identity federation.',
     }),
-    this.commonWifFields.identityTokenAudience,
-    this.commonWifFields.identityTokenTtl,
+    this.commonWifFields.identity_token_audience,
+    this.commonWifFields.identity_token_ttl,
   ];
 
   // formFieldGroups will render the default and root config option fields
@@ -77,7 +77,7 @@ export default class AwsConfigForm extends WifConfigForm<AwsConfigFormData> {
       label: 'Default Lease TTL',
       editType: 'ttl',
     }),
-    new FormField('leaseMax', 'string', {
+    new FormField('lease_max', 'string', {
       label: 'Max Lease TTL',
       editType: 'ttl',
     }),

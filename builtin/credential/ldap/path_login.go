@@ -6,6 +6,7 @@ package ldap
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/hashicorp/vault/sdk/framework"
 	"github.com/hashicorp/vault/sdk/helper/cidrutil"
@@ -50,6 +51,16 @@ func (b *backend) pathLoginAliasLookahead(ctx context.Context, req *logical.Requ
 		return nil, fmt.Errorf("missing username")
 	}
 
+	cfg, err := b.Config(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	caseSensitive := cfg != nil && cfg.CaseSensitiveNames != nil && *cfg.CaseSensitiveNames
+	// if the username is not configured to be case-sensitive, we normalize it to lower case.
+	if !caseSensitive {
+		username = strings.ToLower(username)
+	}
 	return &logical.Response{
 		Auth: &logical.Auth{
 			Alias: &logical.Alias{

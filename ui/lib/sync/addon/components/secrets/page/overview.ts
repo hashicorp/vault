@@ -67,9 +67,9 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
     responses: SystemReadSyncDestinationsTypeNameAssociationsResponse[]
   ): DestinationMetrics[] {
     return responses.map((response) => {
-      const { storeName, storeType, associatedSecrets } = response;
-      const type = storeType as DestinationType;
-      const secrets = associatedSecrets as Record<string, AssociatedSecret>;
+      const { store_name, store_type, associated_secrets } = response;
+      const type = store_type as DestinationType;
+      const secrets = associated_secrets as Record<string, AssociatedSecret>;
       const unsynced = [];
       let lastUpdated;
 
@@ -77,11 +77,11 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
         const association = secrets[key];
         // for display purposes, any status other than SYNCED is considered unsynced
         if (association) {
-          if (association.syncStatus !== 'SYNCED') {
-            unsynced.push(association.syncStatus);
+          if (association.sync_status !== 'SYNCED') {
+            unsynced.push(association.sync_status);
           }
           // use the most recent updated_at value as the last synced date
-          const updated = new Date(association.updatedAt);
+          const updated = new Date(association.updated_at);
           if (!lastUpdated || updated > lastUpdated) {
             lastUpdated = updated;
           }
@@ -91,7 +91,7 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
       const associationCount = Object.entries(secrets).length;
       return {
         icon: findDestination(type).icon,
-        name: storeName,
+        name: store_name,
         type,
         associationCount,
         status: associationCount ? (unsynced.length ? `${unsynced.length} Unsynced` : 'All synced') : null,

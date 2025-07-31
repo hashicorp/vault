@@ -138,7 +138,7 @@ module('Acceptance | auth custom messages auth tests', function (hooks) {
       'Lorem ipsum dolor sit amet, consectetur adipiscing elit.'
     );
     await fillIn(
-      CUSTOM_MESSAGES.input('startTime'),
+      CUSTOM_MESSAGES.input('start_time'),
       format(addDays(startOfDay(new Date('2023-12-12')), 1), datetimeLocalStringFormat)
     );
     await fillIn('[data-test-kv-key="0"]', 'Learn more');

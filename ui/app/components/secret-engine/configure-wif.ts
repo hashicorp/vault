@@ -151,8 +151,8 @@ export default class ConfigureWif extends Component<Args> {
     if (type === 'aws') {
       await this.api.secrets.awsConfigureRootIamCredentials(backendPath, data);
       try {
-        const { lease, leaseMax } = data as { lease: string; leaseMax: string };
-        await this.api.secrets.awsConfigureLease(backendPath, { lease, leaseMax });
+        const { lease, lease_max } = data as { lease: string; lease_max: string };
+        await this.api.secrets.awsConfigureLease(backendPath, { lease, lease_max });
       } catch (e) {
         const { message } = await this.api.parseError(e);
         this.flashMessages.danger(`Error saving lease configuration: ${message}`);
@@ -182,14 +182,14 @@ export default class ConfigureWif extends Component<Args> {
     if (accessType === 'account') {
       // reset all "wif" attributes that are mutually exclusive with "account" attributes
       // these attributes are the same for each engine
-      configForm.data.identityTokenAudience = configForm.data.identityTokenTtl = undefined;
+      configForm.data.identity_token_audience = configForm.data.identity_token_ttl = undefined;
     } else if (accessType === 'wif') {
       // reset all "account" attributes that are mutually exclusive with "wif" attributes
       // these attributes are different for each engine
       if (type === 'azure') {
-        (configForm as AzureConfigForm).data.clientSecret = undefined;
+        (configForm as AzureConfigForm).data.client_secret = undefined;
       } else if (type === 'aws') {
-        (configForm as AwsConfigForm).data.accessKey = undefined;
+        (configForm as AwsConfigForm).data.access_key = undefined;
       }
     }
   }

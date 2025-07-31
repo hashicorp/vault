@@ -9,23 +9,14 @@
     <code>{{this.model.requestPath}}</code>. Be careful, you can only access this data once. If you need access again in the
     future you will need to get authorized again.
     <div class="box is-shadowless is-fullwidth is-marginless has-slim-padding">
-      <Hds::Button @text="Visit" data-test-navigate-button {{on "click" (action (perform this.markAndNavigate))}} />
+      <Hds::Button @text="Visit" data-test-button="Visit" {{on "click" (action (perform this.markAndNavigate))}} />
     </div>
   </div>
 {{else}}
   {{#if this.unwrapData}}
     <div class="control-group-success is-editor">
       <div class="is-relative">
-        <JsonEditor
-          data-test-json-viewer
-          @showToolbar={{false}}
-          @value={{stringify this.unwrapData}}
-          @readOnly={{true}}
-          {{! ideally we calculate the "height" of the json data, but 100 should cover most cases }}
-          @viewportMargin="100"
-          @gutters={{false}}
-          @theme="hashi-read-only auto-height"
-        />
+        <JsonEditor data-test-json-viewer @value={{stringify this.unwrapData}} @readOnly={{true}} />
         <Hds::Copy::Button
           @text="Copy"
           @isIconOnly={{true}}

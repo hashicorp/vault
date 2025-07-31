@@ -26,8 +26,8 @@ export default class AuthFormUserpass extends AuthBase {
     return this.normalizeAuthResponse(auth, {
       authMountPath: path,
       displayName: auth?.metadata?.username,
-      token: auth.clientToken,
-      ttl: auth.leaseDuration,
+      token: auth.client_token,
+      ttl: auth.lease_duration,
     });
   }
 }

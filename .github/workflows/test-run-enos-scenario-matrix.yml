@@ -131,8 +131,7 @@ jobs:
           caCertificate: ${{ steps.vault-auth.outputs.ca_certificate }}
           token: ${{ steps.vault-auth.outputs.token }}
           secrets: |
-            kv/data/github/${{ github.repository }}/artifactory token | ARTIFACTORY_TOKEN;
-            kv/data/github/${{ github.repository }}/artifactory username | ARTIFACTORY_USER;
+            kv/data/github/${{ github.repository }}/artifactory bearer-token | ARTIFACTORY_BEARER_TOKEN;
             kv/data/github/${{ github.repository }}/aws access-key-id | AWS_ACCESS_KEY_ID_CI;
             kv/data/github/${{ github.repository }}/aws secret-access-key | AWS_SECRET_ACCESS_KEY_CI;
             kv/data/github/${{ github.repository }}/aws role-arn | AWS_ROLE_ARN_CI;
@@ -146,8 +145,7 @@ jobs:
         run: |
           if [[ "${{ needs.metadata.outputs.is-enterprise }}" != 'true' ]]; then
             {
-              echo "artifactory-user=${{ secrets.ARTIFACTORY_USER }}"
-              echo "artifactory-token=${{ secrets.ARTIFACTORY_TOKEN }}"
+              echo "artifactory-token=${{ secrets.ARTIFACTORY_BEARER_TOKEN }}"
               echo "aws-access-key-id=${{ secrets.AWS_ACCESS_KEY_ID_CI }}"
               echo "aws-secret-access-key=${{ secrets.AWS_SECRET_ACCESS_KEY_CI }}"
               echo "aws-role-arn=${{ secrets.AWS_ROLE_ARN_CI }}"
@@ -162,8 +160,7 @@ jobs:
            } | tee -a "$GITHUB_OUTPUT"
           else
             {
-              echo "artifactory-user=${{ steps.vault-secrets.outputs.ARTIFACTORY_USER }}"
-              echo "artifactory-token=${{ steps.vault-secrets.outputs.ARTIFACTORY_TOKEN }}"
+              echo "artifactory-token=${{ steps.vault-secrets.outputs.ARTIFACTORY_BEARER_TOKEN }}"
               echo "aws-access-key-id=${{ steps.vault-secrets.outputs.AWS_ACCESS_KEY_ID_CI }}"
               echo "aws-secret-access-key=${{ steps.vault-secrets.outputs.AWS_SECRET_ACCESS_KEY_CI }}"
               echo "aws-role-arn=${{ steps.vault-secrets.outputs.AWS_ROLE_ARN_CI }}"
@@ -183,7 +180,6 @@ jobs:
           {
             echo "GITHUB_TOKEN=${{ steps.secrets.outputs.github-token }}"
             echo "ENOS_DEBUG_DATA_ROOT_DIR=/tmp/enos-debug-data"
-            echo "ENOS_VAR_artifactory_username=${{ steps.secrets.outputs.artifactory-user }}"
             echo "ENOS_VAR_artifactory_token=${{ steps.secrets.outputs.artifactory-token }}"
             echo "ENOS_VAR_aws_region=${{ matrix.attributes.aws_region }}"
             echo "ENOS_VAR_aws_ssh_keypair_name=${{ inputs.ssh-key-name }}"

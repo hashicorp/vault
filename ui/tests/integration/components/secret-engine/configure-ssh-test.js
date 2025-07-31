@@ -20,7 +20,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
   hooks.beforeEach(function () {
     const router = this.owner.lookup('service:router');
     this.id = 'ssh-test';
-    this.form = new SshConfigForm({ generateSigningKey: true }, { isNew: true });
+    this.form = new SshConfigForm({ generate_signing_key: true }, { isNew: true });
     this.transitionStub = sinon.stub(router, 'transitionTo');
     this.refreshStub = sinon.stub(router, 'refresh');
   });
@@ -32,10 +32,10 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
         @id={{this.id}}
       />
     `);
-    assert.dom(GENERAL.inputByAttr('privateKey')).hasNoText('Private key is empty and reset');
-    assert.dom(GENERAL.inputByAttr('publicKey')).hasNoText('Public key is empty and reset');
+    assert.dom(GENERAL.inputByAttr('private_key')).hasNoText('Private key is empty and reset');
+    assert.dom(GENERAL.inputByAttr('public_key')).hasNoText('Public key is empty and reset');
     assert
-      .dom(GENERAL.inputByAttr('generateSigningKey'))
+      .dom(GENERAL.inputByAttr('generate_signing_key'))
       .isChecked('Generate signing key is checked by default');
   });
 
@@ -62,19 +62,19 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
         @id={{this.id}}
       />
     `);
-    await fillIn(GENERAL.inputByAttr('publicKey'), 'hello');
+    await fillIn(GENERAL.inputByAttr('public_key'), 'hello');
     await click(GENERAL.submitButton);
     assert
-      .dom(GENERAL.validationErrorByAttr('publicKey'))
+      .dom(GENERAL.validationErrorByAttr('public_key'))
       .hasText(
         'You must provide a Public and Private keys or leave both unset.',
         'Public key validation error renders.'
       );
 
-    await click(GENERAL.inputByAttr('generateSigningKey'));
+    await click(GENERAL.inputByAttr('generate_signing_key'));
     await click(GENERAL.submitButton);
     assert
-      .dom(GENERAL.validationErrorByAttr('generateSigningKey'))
+      .dom(GENERAL.validationErrorByAttr('generate_signing_key'))
       .hasText(
         'Provide a Public and Private key or set "Generate Signing Key" to true.',
         'Generate signing key validation message shows.'
@@ -107,10 +107,10 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
   module('editing', function (hooks) {
     hooks.beforeEach(function () {
       this.editId = 'ssh-edit-me';
-      this.publicKey = 'public-key';
+      this.public_key = 'public-key';
       this.form = new SshConfigForm({
-        publicKey: this.publicKey,
-        generateSigningKey: true,
+        public_key: this.public_key,
+        generate_signing_key: true,
       });
     });
     test('it populates fields when editing', async function (assert) {
@@ -127,7 +127,7 @@ module('Integration | Component | SecretEngine/configure-ssh', function (hooks) 
       await click(GENERAL.button('toggle-masked'));
       assert
         .dom(GENERAL.inputByAttr('public-key'))
-        .hasText(this.publicKey, 'public key is unmasked and shows the actual value');
+        .hasText(this.public_key, 'public key is unmasked and shows the actual value');
     });
 
     test('it allows you to delete a public key', async function (assert) {

@@ -107,7 +107,7 @@ export default class AuthFormOidcJwt extends AuthBase {
     if (wait) await timeout(wait);
 
     const { namespace = '', path = '', role = '' } = this.parseFormData(this._formData);
-    const redirectUri = this.generateRedirectUri(namespace, path);
+    const redirect_uri = this.generateRedirectUri(namespace, path);
 
     // reset state
     this.authUrl = null;
@@ -116,9 +116,9 @@ export default class AuthFormOidcJwt extends AuthBase {
     try {
       const { data } = (await this.api.auth.jwtOidcRequestAuthorizationUrl(path, {
         role,
-        redirectUri,
+        redirect_uri,
       })) as JwtOidcAuthUrlResponse;
-      this.authUrl = data.authUrl;
+      this.authUrl = data.auth_url;
       this.isOIDC = true;
     } catch (e) {
       const { status, message } = await this.api.parseError(e);
@@ -158,8 +158,8 @@ export default class AuthFormOidcJwt extends AuthBase {
     // displayName is not returned by auth response and is set in persistAuthData
     return this.normalizeAuthResponse(auth, {
       authMountPath: path,
-      token: auth.clientToken,
-      ttl: auth.leaseDuration,
+      token: auth.client_token,
+      ttl: auth.lease_duration,
     });
   }
 
@@ -175,8 +175,8 @@ export default class AuthFormOidcJwt extends AuthBase {
         // displayName is not returned by auth response and is set in persistAuthData
         return this.normalizeAuthResponse(auth, {
           authMountPath: path,
-          token: auth.clientToken,
-          ttl: auth.leaseDuration,
+          token: auth.client_token,
+          ttl: auth.lease_duration,
         });
       } finally {
         this.closeWindow(oidcWindow);

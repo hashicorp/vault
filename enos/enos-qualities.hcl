@@ -594,6 +594,10 @@ quality "vault_seal_pkcs11" {
   description = "Vault auto-unseals with the pkcs11 seal"
 }
 
+quality "vault_secrets_kmip_write_config" {
+  description = "The Vault KMIP secrets engine is configured with the correct settings"
+}
+
 quality "vault_secrets_kv_read" {
   description = "Vault kv secrets engine data is readable"
 }
@@ -601,7 +605,6 @@ quality "vault_secrets_kv_read" {
 quality "vault_secrets_kv_write" {
   description = "Vault kv secrets engine data is writable"
 }
-
 
 quality "vault_secrets_ldap_write_config" {
   description = "The Vault LDAP secrets engine is configured with the correct settings"

@@ -35,7 +35,7 @@ const authUrlRequestTests = (test) => {
       const { role } = JSON.parse(req.requestBody);
       assert.true(true, 'it makes request to auth_url');
       assert.strictEqual(role, '', 'role is empty');
-      return { data: { authUrl: '123-example.com' } };
+      return { data: { auth_url: '123-example.com' } };
     });
     await this.renderComponent();
   });
@@ -100,7 +100,7 @@ const oidcLoginTests = (test) => {
   // true success has to be asserted in acceptance tests because it's not possible to mock a trusted message event
   test('it opens the popup window on submit', async function (assert) {
     this.server.post(`/auth/${this.authType}/oidc/auth_url`, () => {
-      return { data: { authUrl: '123-example.com' } };
+      return { data: { auth_url: '123-example.com' } };
     });
     sinon.replaceGetter(window, 'screen', () => ({ height: 600, width: 500 }));
     await this.renderComponent();
@@ -142,7 +142,7 @@ const oidcLoginTests = (test) => {
   });
 
   test('it fires onError callback on submit when auth_url request is successful but missing auth_url', async function (assert) {
-    this.server.post('/auth/:path/oidc/auth_url', () => ({ data: { authUrl: '' } }));
+    this.server.post('/auth/:path/oidc/auth_url', () => ({ data: { auth_url: '' } }));
     await this.renderComponent();
     await click(GENERAL.submitButton);
 
