@@ -682,6 +682,7 @@ scenario "dev_pr_replication" {
       hosts             = step.create_primary_cluster_targets.hosts
       leader_host       = step.get_primary_cluster_ips.leader_host
       vault_addr        = step.create_primary_cluster.api_addr_localhost
+      vault_edition     = matrix.edition
       vault_install_dir = local.vault_install_dir
       vault_root_token  = step.create_primary_cluster.root_token
     }

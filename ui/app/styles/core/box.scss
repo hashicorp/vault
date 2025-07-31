@@ -1,5 +1,4 @@
 @use '../utils/box-shadow_variables';
-@use '../utils/color_variables';
 @use '../utils/size_variables';
 
 /**
@@ -8,10 +7,10 @@
  */
 
 .box {
-  background-color: color_variables.$white;
+  background-color: hsl(0, 0%, 100%);
   border-radius: 0;
-  box-shadow: 0 0 0 1px rgba(color_variables.$grey-dark, 0.3);
-  color: color_variables.$ui-gray-900;
+  box-shadow: 0 0 0 1px rgba(var(--token-color-palette-neutral-500), 0.3);
+  color: var(--token-color-palette-neutral-600);
   display: block;
   padding: size_variables.$spacing-18;
 
@@ -33,11 +32,11 @@
   }
 
   &.no-top-shadow {
-    box-shadow: inset 0 -1px 0 0 rgba(color_variables.$black, 0.1);
+    box-shadow: inset 0 -1px 0 0 rgba(hsl(0, 0%, 4%), 0.1);
   }
 
   &.has-container {
-    box-shadow: 0 4px 4px rgba(color_variables.$black, 0.25);
+    box-shadow: 0 4px 4px rgba(hsl(0, 0%, 4%), 0.25);
     border: box-shadow_variables.$base-border;
     padding: size_variables.$spacing-24;
   }

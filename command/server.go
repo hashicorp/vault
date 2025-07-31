@@ -2304,6 +2304,15 @@ func (c *ServerCommand) Reload(lock *sync.RWMutex, reloadFuncs *map[string][]rel
 					}
 				}
 			}
+
+		case strings.HasPrefix(k, "observations|"):
+			for _, relFunc := range relFuncs {
+				if relFunc != nil {
+					if err := relFunc(); err != nil {
+						reloadErrors = multierror.Append(reloadErrors, fmt.Errorf("error encountered reloading observation system with ledger at path %q: %w", strings.TrimPrefix(k, "observations|"), err))
+					}
+				}
+			}
 		}
 	}
 

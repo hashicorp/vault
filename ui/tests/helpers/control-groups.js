@@ -3,14 +3,13 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, visit } from '@ember/test-helpers';
-import { create } from 'ember-cli-page-object';
+import { click, visit, find } from '@ember/test-helpers';
 
 import { CONTROL_GROUP_PREFIX, TOKEN_SEPARATOR } from 'vault/services/control-group';
 import { login, loginMethod } from 'vault/tests/helpers/auth/auth-helpers';
-import controlGroup from 'vault/tests/pages/components/control-group';
+import { CONTROL_GROUP } from 'vault/tests/helpers/components/control-group-selectors';
 import { createPolicyCmd, createTokenCmd, mountAuthCmd, runCmd } from './commands';
-const controlGroupComponent = create(controlGroup);
+import { GENERAL } from './general-selectors';
 
 const storageKey = (accessor, path) => {
   return `${CONTROL_GROUP_PREFIX}${accessor}${TOKEN_SEPARATOR}${path}`;
@@ -91,7 +90,7 @@ export async function grantAccessForWrite({
     { authType: 'userpass', toggleOptions: true }
   );
   await visit(`/vault/access/control-groups/${accessor}`);
-  await controlGroupComponent.authorize();
+  await click(GENERAL.button('Authorize'));
   await login(userToken);
   localStorage.setItem(
     storageKey(accessor, creation_path),
@@ -124,14 +123,14 @@ export async function grantAccess({
     throw new Error('missing required fields for grantAccess');
   }
   const userpassMount = `userpass-${backend}`;
-  const accessor = controlGroupComponent.accessor;
-  const controlGroupToken = controlGroupComponent.token;
+  const accessor = find(CONTROL_GROUP.accessorValue).textContent.trim();
+  const controlGroupToken = find(CONTROL_GROUP.tokenValue).textContent.trim();
   await loginMethod(
     { username: authorizerUser, password: authorizerPassword, path: userpassMount },
     { authType: 'userpass', toggleOptions: true }
   );
   await visit(`/vault/access/control-groups/${accessor}`);
-  await controlGroupComponent.authorize();
+  await click(GENERAL.button('Authorize'));
   await login(userToken);
   localStorage.setItem(
     storageKey(accessor, apiPath),
@@ -145,6 +144,6 @@ export async function grantAccess({
     })
   );
   await visit(`/vault/access/control-groups/${accessor}`);
-  await click(`[data-test-navigate-button]`);
+  await click(GENERAL.button('Visit'));
   /* end of control group authorization flow */
 }

@@ -16,16 +16,12 @@ variable "ip_version" {
   default     = "4"
 }
 
-variable "ldap_port" {
-  type        = string
-  description = "OpenLDAP Server port"
-  default     = "389"
-}
-
-variable "ldaps_port" {
-  type        = string
-  description = "OpenLDAP Server secure port"
-  default     = "636"
+variable "ports" {
+  description = "Port configuration for services"
+  type = map(object({
+    port        = string
+    description = string
+  }))
 }
 
 variable "ldap_version" {

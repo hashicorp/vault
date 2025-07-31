@@ -64,7 +64,7 @@ module('Integration | Component | kv | Page::Secret::Metadata::Version-History',
       if (data.destroyed) {
         assert
           .dom(`${PAGE.versions.icon(version)} [data-test-icon="x-square-fill"]`)
-          .hasStyle({ color: 'rgb(199, 52, 69)' });
+          .hasStyle({ color: 'rgb(229, 34, 40)' });
       }
       if (data.isSecretDeleted) {
         assert
