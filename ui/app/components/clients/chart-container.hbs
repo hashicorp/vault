@@ -9,9 +9,9 @@ a 2/3-width right element. If a @legend arg exists, it renders centered below th
 <Hds::Card::Container class="chart-container" data-test-chart-container={{@title}} ...attributes>
   <div class="has-bottom-margin-xl">
     <h2 class="chart-title">{{@title}}</h2>
-    <p class="chart-description">
-      {{@description}}
-    </p>
+    {{#if @description}}
+      <p class="chart-description">{{@description}}</p>
+    {{/if}}
     {{#if (has-block "customSubheader")}}
       {{yield to="customSubheader"}}
     {{/if}}
