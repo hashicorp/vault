@@ -4,12 +4,8 @@
 }}
 
 {{#if (gt @byMonthNewClients.length 1)}}
-  <Clients::ChartContainer
-    @title="Vault client counts"
-    @description={{this.chartContainerText}}
-    @legend={{this.chartLegend}}
-  >
-    <:customSubheader>
+  <Clients::CountsCard @title="Vault client counts" @description={{this.chartContainerText}} @legend={{this.chartLegend}}>
+    <:subheader>
       <div class="is-pulled-right">
         <Hds::Form::Toggle::Field
           data-test-input="toggle view"
@@ -19,7 +15,7 @@
           <F.Label>Split by client type</F.Label>
         </Hds::Form::Toggle::Field>
       </div>
-    </:customSubheader>
+    </:subheader>
 
     <:dataLeft>
       <StatText
@@ -59,7 +55,7 @@
         />
       {{/if}}
     </:dataRight>
-  </Clients::ChartContainer>
+  </Clients::CountsCard>
 {{else}}
   {{#let (get @byMonthNewClients "0") as |singleMonthData|}}
     {{#if (and @isHistoricalMonth singleMonthData.clients)}}
