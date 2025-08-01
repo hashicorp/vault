@@ -1,0 +1,19 @@
+<a id="audit-arg-file-max_files" />
+
+**`max_files (int : 0)`**
+
+The number of audit log file archives to preserve over time.
+Must be one of the following:
+
+Value | Description
+----- | -----------
+`n`   | Preserve up to `n` archived logs
+`0`   | Never delete log archives
+`-1`  | Always delete log archives
+
+The archived name of rotated audit logs includes a timestamp indicating when
+the log rotated. For example, the file `/var/log/audit.log` archives to
+`/var/log/audit-{timestamp}.log` before resetting.
+
+**Example**: `max_files=5`
+
