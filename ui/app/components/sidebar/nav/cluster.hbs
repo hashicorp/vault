@@ -21,6 +21,11 @@
       data-test-sidebar-nav-link="Secrets Sync"
     />
   {{/if}}
+  <Nav.Link
+    @route="vault.cluster.recovery.snapshots"
+    @text="Secrets Recovery"
+    data-test-sidebar-nav-link="Secrets Recovery"
+  />
   {{#if (has-permission "access")}}
     <Nav.Link
       @route={{get (route-params-for "access") "route"}}

@@ -209,6 +209,14 @@ Router.map(function () {
       this.route('replication-dr-promote', function () {
         this.route('details');
       });
+      this.route('recovery', function () {
+        this.route('snapshots', function () {
+          this.route('load');
+          this.route('snapshot', function () {
+            this.route('manage');
+          });
+        });
+      });
       if (config.addRootMounts) {
         config.addRootMounts.call(this);
       }
