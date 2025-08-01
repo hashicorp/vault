@@ -16,6 +16,8 @@ const SELECTORS = {
   listItem: (name) => `[data-test-identity-row="${name}"]`,
   menu: `[data-test-popup-menu-trigger]`,
   menuItem: (element) => `[data-test-popup-menu="${element}"]`,
+  submit: '[data-test-identity-submit]',
+  confirm: '[data-test-confirm-button]',
 };
 module('Acceptance | /access/identity/entities', function (hooks) {
   setupApplicationTest(hooks);
@@ -53,7 +55,7 @@ module('Acceptance | /access/identity/entities', function (hooks) {
       .dom('.hds-dropdown ul')
       .hasText('Details Create alias Edit Disable Delete', 'all actions render for entities');
     await click(`${SELECTORS.listItem(name)} ${SELECTORS.menuItem('delete')}`);
-    await click(GENERAL.confirmButton);
+    await click(SELECTORS.confirm);
   });
 
   test('it renders popup menu for external groups', async function (assert) {
@@ -67,7 +69,7 @@ module('Acceptance | /access/identity/entities', function (hooks) {
       .dom('.hds-dropdown ul')
       .hasText('Details Create alias Edit Delete', 'all actions render for external groups');
     await click(`${SELECTORS.listItem(name)} ${SELECTORS.menuItem('delete')}`);
-    await click(GENERAL.confirmButton);
+    await click(SELECTORS.confirm);
   });
 
   test('it renders popup menu for external groups with alias', async function (assert) {
@@ -77,7 +79,7 @@ module('Acceptance | /access/identity/entities', function (hooks) {
     await click(`${SELECTORS.listItem(name)} ${SELECTORS.menu}`);
     await click(SELECTORS.menuItem('create alias'));
     await fillIn(GENERAL.inputByAttr('name'), 'alias-test');
-    await click(GENERAL.submitButton);
+    await click(SELECTORS.submit);
 
     await visit('/vault/access/identity/groups');
     await click(`${SELECTORS.listItem(name)} ${SELECTORS.menu}`);
@@ -85,7 +87,7 @@ module('Acceptance | /access/identity/entities', function (hooks) {
       .dom('.hds-dropdown ul')
       .hasText('Details Edit Delete', 'no "Create alias" option for external groups with an alias');
     await click(`${SELECTORS.listItem(name)} ${SELECTORS.menuItem('delete')}`);
-    await click(GENERAL.confirmButton);
+    await click(SELECTORS.confirm);
   });
 
   test('it renders popup menu for internal groups', async function (assert) {
@@ -97,6 +99,6 @@ module('Acceptance | /access/identity/entities', function (hooks) {
       .dom('.hds-dropdown ul')
       .hasText('Details Edit Delete', 'no "Create alias" option for internal groups');
     await click(`${SELECTORS.listItem(name)} ${SELECTORS.menuItem('delete')}`);
-    await click(GENERAL.confirmButton);
+    await click(SELECTORS.confirm);
   });
 });

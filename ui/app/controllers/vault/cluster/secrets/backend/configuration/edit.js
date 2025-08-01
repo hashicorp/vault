@@ -4,13 +4,13 @@
  */
 
 import Controller from '@ember/controller';
-import engineDisplayData from 'vault/helpers/engines-display-data';
+import { WIF_ENGINES, allEngines } from 'vault/helpers/mountable-secret-engines';
 
 export default class SecretsBackendConfigurationEditController extends Controller {
   get isWifEngine() {
-    return engineDisplayData(this.model.type)?.isWIF;
+    return WIF_ENGINES.includes(this.model.type);
   }
   get displayName() {
-    return engineDisplayData(this.model.type).displayName;
+    return allEngines().find((engine) => engine.type === this.model.type)?.displayName;
   }
 }

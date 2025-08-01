@@ -10,9 +10,9 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { v4 as uuidv4 } from 'uuid';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { mountAuthCmd, runCmd } from 'vault/tests/helpers/commands';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
-import { sanitizePath } from 'core/utils/sanitize-path';
 
 const { searchSelect } = GENERAL;
 
@@ -45,8 +45,9 @@ module('Acceptance | auth-methods list view', function (hooks) {
     // filter by auth type
     await clickTrigger('#filter-by-auth-type');
     await click(searchSelect.option(searchSelect.optionIndex(type)));
-    let rows = findAll('.list-item-row');
-    const rowsUserpass = findAll(GENERAL.button('userpass'));
+    let rows = findAll('.linked-block list-item row');
+    const rowsUserpass = findAll(AUTH_FORM.linkedBlockAuth(type));
+
     assert.strictEqual(rows.length, rowsUserpass.length, 'all rows returned are userpass');
 
     // filter by name
@@ -77,17 +78,21 @@ module('Acceptance | auth-methods list view', function (hooks) {
       },
     }));
     await visit('/vault/access/');
-    for (const [key] of Object.entries(authPayload)) {
+    for (const [key, value] of Object.entries(authPayload)) {
       assert
-        .dom(GENERAL.linkedBlock(sanitizePath(key)))
+        .dom(AUTH_FORM.linkedBlockAuth(value.type))
         .exists({ count: 1 }, `auth method ${key} appears in list view`);
     }
+
+    // verify overflow style exists on auth method name
+    assert.dom('[data-test-path]').hasClass('overflow-wrap', 'auth method name has overflow class applied');
     await visit('/vault/settings/auth/enable');
     await click(GENERAL.navLink('OIDC Provider'));
     await visit('/vault/access/');
-    for (const [key] of Object.entries(authPayload)) {
+
+    for (const [key, value] of Object.entries(authPayload)) {
       assert
-        .dom(GENERAL.linkedBlock(sanitizePath(key)))
+        .dom(AUTH_FORM.linkedBlockAuth(value.type))
         .exists({ count: 1 }, `auth method ${key} appears in list view after navigating from OIDC Provider`);
     }
   });

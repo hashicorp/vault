@@ -221,7 +221,7 @@ func (b *Backend) Get(ctx context.Context, key string) (retEntry *physical.Entry
 
 	// Read
 	r, err := b.client.Bucket(b.bucket).Object(key).NewReader(ctx)
-	if errors.Is(err, storage.ErrObjectNotExist) {
+	if err == storage.ErrObjectNotExist {
 		return nil, nil
 	}
 	if err != nil {
@@ -258,7 +258,7 @@ func (b *Backend) Delete(ctx context.Context, key string) error {
 
 	// Delete
 	err := b.client.Bucket(b.bucket).Object(key).Delete(ctx)
-	if err != nil && !errors.Is(err, storage.ErrObjectNotExist) {
+	if err != nil && err != storage.ErrObjectNotExist {
 		return fmt.Errorf("failed to delete key %q: %w", key, err)
 	}
 	return nil

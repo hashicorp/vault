@@ -4,11 +4,12 @@
  */
 
 import { Base } from '../create';
-import { create, fillable } from 'ember-cli-page-object';
+import { clickable, create, fillable } from 'ember-cli-page-object';
 
 export default create({
   ...Base,
   path: fillable('[data-test-secret-path="true"]'),
   secretKey: fillable('[data-test-secret-key]'),
   secretValue: fillable('[data-test-secret-value] textarea'),
+  toggleJSON: clickable('[data-test-toggle-input="json"]'),
 });

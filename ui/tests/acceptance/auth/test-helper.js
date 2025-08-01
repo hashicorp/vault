@@ -12,8 +12,8 @@ const assertFields = (assert, fields, customSelectors = {}) => {
   fields.forEach((param) => {
     if (Object.keys(customSelectors).includes(param)) {
       assert.dom(customSelectors[param]).exists();
-    } else if (param === 'config.listing_visibility') {
-      assert.dom(GENERAL.toggleInput('toggle-config.listing_visibility')).exists();
+    } else if (param === 'config.listingVisibility') {
+      assert.dom(GENERAL.toggleInput('toggle-config.listingVisibility')).exists();
     } else {
       assert.dom(GENERAL.inputByAttr(param)).exists();
     }
@@ -22,7 +22,7 @@ const assertFields = (assert, fields, customSelectors = {}) => {
 export default (test) => {
   test('it renders mount fields', async function (assert) {
     await click(MOUNT_BACKEND_FORM.mountType(this.type));
-    await click(GENERAL.button('Method Options'));
+    await click(GENERAL.toggleGroup('Method Options'));
     assertFields(assert, this.mountFields, this.customSelectors);
   });
 
@@ -39,7 +39,7 @@ export default (test) => {
 
     for (const toggle in this.tuneToggles) {
       const fields = this.tuneToggles[toggle];
-      await click(GENERAL.button(toggle));
+      await click(GENERAL.toggleGroup(toggle));
       assertFields(assert, fields, this.customSelectors);
     }
   });

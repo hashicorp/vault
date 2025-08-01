@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, currentRouteName, fillIn, visit, waitUntil } from '@ember/test-helpers';
+import { click, fillIn, visit } from '@ember/test-helpers';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { Server } from 'miragejs';
 
 import type { LoginFields } from 'vault/vault/auth/form';
 
@@ -29,8 +30,7 @@ export const login = async (token = rootToken) => {
 
   await fillIn(AUTH_FORM.selectMethod, 'token');
   await fillIn(GENERAL.inputByAttr('token'), token);
-  await click(GENERAL.submitButton);
-  return await waitUntil(() => currentRouteName() === 'vault.cluster.dashboard');
+  return click(AUTH_FORM.login);
 };
 
 export const loginNs = async (ns: string, token = rootToken) => {
@@ -42,8 +42,7 @@ export const loginNs = async (ns: string, token = rootToken) => {
 
   await fillIn(AUTH_FORM.selectMethod, 'token');
   await fillIn(GENERAL.inputByAttr('token'), token);
-  await click(GENERAL.submitButton);
-  return await waitUntil(() => currentRouteName() === 'vault.cluster.dashboard');
+  return click(AUTH_FORM.login);
 };
 
 // LOGIN WITH NON-TOKEN METHODS
@@ -58,8 +57,7 @@ export const loginMethod = async (
   await fillIn(AUTH_FORM.selectMethod, type);
 
   await fillInLoginFields(loginFields, options);
-  await click(GENERAL.submitButton);
-  return await waitUntil(() => currentRouteName() === 'vault.cluster.dashboard');
+  return click(AUTH_FORM.login);
 };
 
 export const fillInLoginFields = async (loginFields: LoginFields, { toggleOptions = false } = {}) => {
@@ -72,26 +70,63 @@ export const fillInLoginFields = async (loginFields: LoginFields, { toggleOption
   }
 };
 
-const LOGIN_DATA = {
-  token: { token: 'mysupersecuretoken' },
-  username: { username: 'matilda', password: 'some-password' },
-  role: { role: 'some-dev' },
+// See AUTH_METHOD_MAP for how login data maps to method types,
+// stubRequests are the requests made on submit for that method type
+export const LOGIN_DATA = {
+  token: {
+    loginData: { token: 'mytoken' },
+    stubRequests: (server: Server, response: object) => server.get('/auth/token/lookup-self', () => response),
+  },
+  username: {
+    loginData: { username: 'matilda', password: 'password' },
+    stubRequests: (server: Server, path: string, response: object) =>
+      server.post(`/auth/${path}/login/matilda`, () => response),
+  },
+  github: {
+    loginData: { token: 'mysupersecuretoken' },
+    stubRequests: (server: Server, path: string, response: object) =>
+      server.post(`/auth/${path}/login`, () => response),
+  },
+  oidc: {
+    loginData: { role: 'some-dev' },
+    hasPopupWindow: true,
+    stubRequests: (server: Server, path: string, response: object) => {
+      server.get(`/auth/${path}/oidc/callback`, () => response);
+      server.post(`/auth/${path}/oidc/auth_url`, () => {
+        return { data: { auth_url: 'http://dev-foo-bar.com' } };
+      });
+    },
+  },
+  saml: {
+    loginData: { role: 'some-dev' },
+    hasPopupWindow: true,
+    stubRequests: (server: Server, path: string, response: object) => {
+      server.put(`/auth/${path}/token`, () => response);
+      server.put(`/auth/${path}/sso_service_url`, () => {
+        return { data: { sso_service_url: 'http://sso-url.hashicorp.com/service', token_poll_id: '1234' } };
+      });
+    },
+  },
 };
-// maps auth type to login input data
-export const AUTH_METHOD_LOGIN_DATA = {
-  // token methods
-  token: LOGIN_DATA.token,
-  github: LOGIN_DATA.token,
+
+// maps auth type to request data
+export const AUTH_METHOD_MAP = [
+  { authType: 'token', options: LOGIN_DATA.token },
+  { authType: 'github', options: LOGIN_DATA.github },
+
   // username and password methods
-  userpass: LOGIN_DATA.username,
-  ldap: LOGIN_DATA.username,
-  okta: LOGIN_DATA.username,
-  radius: LOGIN_DATA.username,
-  // role
-  oidc: LOGIN_DATA.role,
-  jwt: LOGIN_DATA.role,
-  saml: LOGIN_DATA.role,
-};
+  { authType: 'userpass', options: LOGIN_DATA.username },
+  { authType: 'ldap', options: LOGIN_DATA.username },
+  { authType: 'okta', options: LOGIN_DATA.username },
+  { authType: 'radius', options: LOGIN_DATA.username },
+
+  // oidc
+  { authType: 'oidc', options: LOGIN_DATA.oidc },
+  { authType: 'jwt', options: LOGIN_DATA.oidc },
+
+  // ENTERPRISE ONLY
+  { authType: 'saml', options: LOGIN_DATA.saml },
+];
 
 // Mock response for `sys/internal/ui/mounts`
 export const SYS_INTERNAL_UI_MOUNTS = {

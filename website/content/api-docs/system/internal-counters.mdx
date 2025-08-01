@@ -5,9 +5,6 @@ description: >-
   The `/sys/internal/counters` endpoints are used to return data about Vault usage.
 ---
 
-> [!IMPORTANT]  
-> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
-
 # `/sys/internal/counters`
 
 The `/sys/internal/counters` endpoints are used to return data about the number of Clients in Vault. They return information for the entire cluster.
@@ -1357,7 +1354,7 @@ single line.
   "mount_accessor": "auth_userpass_a005db73",
   "mount_type": "userpass",
   "mount_path": "auth/userpass/",
-  "token_creation_time": "2024-07-10T09:33:51Z",
+  "timestamp": "2024-07-10T09:33:51Z",
   "policies": [
     "secret-read",
     "secret-list",
@@ -1389,7 +1386,7 @@ single line.
   "mount_accessor": "auth_ns_token_e3119312",
   "mount_type": "ns_token",
   "mount_path": "auth/token/",
-  "token_creation_time": "2024-07-08T11:35:23Z",
+  "timestamp": "2024-07-08T11:35:23Z",
   "policies": [],
   "entity_metadata": {},
   "entity_alias_metadata": {},
@@ -1408,7 +1405,7 @@ single line.
   "mount_accessor": "auth_ldap_a005db73",
   "mount_type": "ldap",
   "mount_path": "auth/ldap/",
-  "token_creation_time": "2024-07-08T11:47:57Z",
+  "timestamp": "2024-07-08T11:47:57Z",
   "policies": [
     "secret-read"
   ],
@@ -1435,7 +1432,7 @@ single line.
   "mount_accessor": "auth_userpass_01a6ea85",
   "mount_type": "userpass",
   "mount_path": "auth/userpass/",
-  "token_creation_time": "2024-07-21T14:51:36Z",
+  "timestamp": "2024-07-21T14:51:36Z",
   "policies": [
     "secret-read"
   ],
@@ -1461,7 +1458,7 @@ single line.
   "mount_accessor": "auth_kubernetes_b596406f",
   "mount_type": "kubernetes",
   "mount_path": "auth/kubernetes/",
-  "token_creation_time": "2024-07-10T09:33:51Z",
+  "timestamp": "2024-07-10T09:33:51Z",
   "policies": [
     "secret-read"
   ],
@@ -1487,7 +1484,7 @@ single line.
   "mount_accessor": "auth_aws_c223ff01",
   "mount_type": "aws",
   "mount_path": "auth/aws/",
-  "token_creation_time": "2024-07-10T09:33:51Z",
+  "timestamp": "2024-07-10T09:33:51Z",
   "policies": [
     "secret-read"
   ],
@@ -1508,12 +1505,12 @@ will be named using the field name and underlying index (e.g. `policies.0`, `pol
 (e.g. `entity_metadata.email_address`, `entity_alias_metadata.region`). A flattened field will only be added if at least one record contains
 it. If a top-level field (e.g. `entity_metadata`) is not populated in any of the
 records then there will not be any flattened fields of prefix
-`entity_metadata.`.
+`enttiy_metadata.`.
 
 <CodeBlockConfig hideClipboard>
 
 ```text
-entity_name,entity_alias_name,client_id,client_type,local_entity_alias,namespace_id,namespace_path,mount_accessor,mount_path,mount_type,token_creation_time,entity_alias_custom_metadata.contact_email,entity_alias_custom_metadata.group,entity_alias_custom_metadata.region,entity_metadata.email_address,entity_group_ids.0,policies.0,policies.1,policies.2,policies.4
+entity_name,entity_alias_name,client_id,client_type,local_entity_alias,namespace_id,namespace_path,mount_accessor,mount_path,mount_type,timestamp,entity_alias_custom_metadata.contact_email,entity_alias_custom_metadata.group,entity_alias_custom_metadata.region,entity_metadata.email_address,entity_group_ids.0,policies.0,policies.1,policies.2,policies.4
 admin,admin,3f210722-7210-98e8-1f0d-e6a39ffb29c6,entity,false,root,,auth_userpass_a005db73,auth/userpass/,userpass,2024-07-10T09:33:51Z,admin@example.com,san_francisco,west,admin@example.com,746fbaf9-ffeb-62b9-7f0b-42d79ca0883f,secret-read,secret-list,secret-write,secret-delete
 ,,590198f7-9178-57d6-c345-48746bb438d8,non-entity-token,false,YWZzu,ns1/a/,auth_ns_token_e3119312,auth/token/,ns_token,2024-07-08T11:35:23Z,,,,,,,,,
 jdoe,jdoe,665a54bf-8652-c0c5-8121-40adf0d9786a,entity,false,wOsmr,ns1/a,auth_ldap_a005db73,auth/ldap/,ldap,2024-07-08T11:47:57Z,jdoe@example.com,new_york,east,,9f18cd4a-4e64-a2b2-b001-7b6b0dfb1270,secret-read,,,

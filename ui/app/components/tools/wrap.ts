@@ -13,6 +13,7 @@ import type ApiService from 'vault/services/api';
 import type FlashMessageService from 'vault/services/flash-messages';
 import type { TtlEvent } from 'vault/app-types';
 import type { HTMLElementEvent } from 'vault/forms';
+import type { Editor } from 'codemirror';
 
 /**
  * @module ToolsWrap
@@ -67,14 +68,10 @@ export default class ToolsWrap extends Component {
   }
 
   @action
-  editorUpdated(val: string) {
-    this.hasLintingErrors = false;
-
-    try {
-      this.wrapData = JSON.parse(val);
-    } catch {
-      this.hasLintingErrors = true;
-    }
+  codemirrorUpdated(val: string, codemirror: Editor) {
+    codemirror.performLint();
+    this.hasLintingErrors = codemirror?.state.lint.marked?.length > 0;
+    if (!this.hasLintingErrors) this.wrapData = JSON.parse(val);
   }
 
   @action
@@ -85,8 +82,8 @@ export default class ToolsWrap extends Component {
     const wrap = this.wrapTTL || '';
 
     try {
-      const { wrap_info } = await this.api.sys.wrap(data, this.api.buildHeaders({ wrap }));
-      this.token = wrap_info?.token || '';
+      const { wrapInfo } = await this.api.sys.wrap(data, this.api.buildHeaders({ wrap }));
+      this.token = wrapInfo?.token || '';
       this.flashMessages.success('Wrap was successful.');
     } catch (error) {
       const { message } = await this.api.parseError(error);

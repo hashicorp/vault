@@ -12,7 +12,9 @@ import { Validations } from 'vault/vault/app-types';
 
 type CustomMessageFormData = Partial<CreateCustomMessageRequest>;
 
-export default class CustomMessageForm extends Form<CustomMessageFormData> {
+export default class CustomMessageForm extends Form {
+  declare data: CustomMessageFormData;
+
   formFields = [
     new FormField('authenticated', undefined, {
       label: 'Where should we display this message?',
@@ -65,13 +67,13 @@ export default class CustomMessageForm extends Form<CustomMessageFormData> {
       allowWhiteSpace: true,
     }),
 
-    new FormField('start_time', 'dateTimeLocal', {
+    new FormField('startTime', 'dateTimeLocal', {
       editType: 'dateTimeLocal',
       label: 'Message starts',
       subText: 'Defaults to 12:00 a.m. the following day (local timezone).',
     }),
 
-    new FormField('end_time', 'dateTimeLocal', {
+    new FormField('endTime', 'dateTimeLocal', {
       editType: 'yield',
       label: 'Message expires',
     }),
@@ -91,20 +93,20 @@ export default class CustomMessageForm extends Form<CustomMessageFormData> {
         message: 'Link title and url are required.',
       },
     ],
-    start_time: [
+    startTime: [
       {
-        validator({ start_time, end_time }: CustomMessageFormData) {
-          if (!start_time || !end_time) return true;
-          return isBefore(new Date(start_time), new Date(end_time));
+        validator({ startTime, endTime }: CustomMessageFormData) {
+          if (!startTime || !endTime) return true;
+          return isBefore(new Date(startTime), new Date(endTime));
         },
         message: 'Start time is after end time.',
       },
     ],
-    end_time: [
+    endTime: [
       {
-        validator({ start_time, end_time }: CustomMessageFormData) {
-          if (!start_time || !end_time) return true;
-          return isAfter(new Date(end_time), new Date(start_time));
+        validator({ startTime, endTime }: CustomMessageFormData) {
+          if (!startTime || !endTime) return true;
+          return isAfter(new Date(endTime), new Date(startTime));
         },
         message: 'End time is before start time.',
       },
@@ -114,10 +116,10 @@ export default class CustomMessageForm extends Form<CustomMessageFormData> {
   toJSON() {
     // overriding to do some date serialization
     // form sets dates as strings but client expects Date objects
-    const start_time = this.data.start_time ? new Date(this.data.start_time as unknown as string) : undefined;
-    const end_time = this.data.end_time ? new Date(this.data.end_time as unknown as string) : undefined;
+    const startTime = this.data.startTime ? new Date(this.data.startTime as unknown as string) : undefined;
+    const endTime = this.data.endTime ? new Date(this.data.endTime as unknown as string) : undefined;
     // encode message to base64
     const message = this.data.message ? encodeString(this.data.message) : undefined;
-    return super.toJSON({ ...this.data, start_time, end_time, message });
+    return super.toJSON({ ...this.data, startTime, endTime, message });
   }
 }

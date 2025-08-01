@@ -38,10 +38,10 @@ export default class ToolsLookup extends Component {
 
   get expirationDate() {
     if (this.lookupData) {
-      const { creation_time, creation_ttl } = this.lookupData;
-      if (creation_time && creation_ttl) {
+      const { creationTime, creationTtl } = this.lookupData;
+      if (creationTime && creationTtl) {
         // returns new Date with seconds added.
-        return addSeconds(creation_time, Number(creation_ttl));
+        return addSeconds(creationTime, Number(creationTtl));
       }
     }
     return null;

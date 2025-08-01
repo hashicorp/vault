@@ -9,10 +9,10 @@ import { click, currentRouteName, fillIn } from '@ember/test-helpers';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { setupMirage } from 'ember-cli-mirage/test-support';
+import { allEngines } from 'vault/helpers/mountable-secret-engines';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { runCmd } from '../helpers/commands';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
-import engineDisplayData from 'vault/helpers/engines-display-data';
 
 module('Acceptance | Enterprise | keymgmt', function (hooks) {
   setupApplicationTest(hooks);
@@ -24,7 +24,7 @@ module('Acceptance | Enterprise | keymgmt', function (hooks) {
 
   test('it transitions to list route after mount success', async function (assert) {
     assert.expect(1);
-    const engine = engineDisplayData('keymgmt');
+    const engine = allEngines().find((e) => e.type === 'keymgmt');
 
     // delete any previous mount with same name
     await runCmd([`delete sys/mounts/${engine.type}`]);

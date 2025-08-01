@@ -70,7 +70,7 @@ module('Acceptance | mfa-method', function (hooks) {
         'Copy renders for list item'
       );
 
-    await click(GENERAL.menuTrigger);
+    await click('[data-test-popup-menu-trigger]');
     await click('[data-test-mfa-method-menu-link="details"]');
     assert.strictEqual(
       currentRouteName(),
@@ -78,7 +78,7 @@ module('Acceptance | mfa-method', function (hooks) {
       'Details more menu action transitions to method route'
     );
     await click('.hds-breadcrumb a');
-    await click(GENERAL.menuTrigger);
+    await click('[data-test-popup-menu-trigger]');
     await click('[data-test-mfa-method-menu-link="edit"]');
     assert.strictEqual(
       currentRouteName(),
@@ -121,9 +121,6 @@ module('Acceptance | mfa-method', function (hooks) {
       .hasText(
         "This method cannot be deleted until its enforcements are deleted. This can be done from the 'Enforcements' tab."
       );
-
-    // we need to close the modal
-    await click(GENERAL.cancelButton);
 
     const fields = [
       ['Issuer', 'Period', 'Key size', 'QR size', 'Algorithm', 'Digits', 'Skew', 'Max validation attempts'],
@@ -168,8 +165,8 @@ module('Acceptance | mfa-method', function (hooks) {
     await visit('/vault/access/mfa/methods');
     const methodCount = this.element.querySelectorAll('[data-test-mfa-method-list-item]').length;
     await click('[data-test-mfa-method-list-item]');
-    await click(GENERAL.confirmTrigger);
-    await click(GENERAL.confirmButton);
+    await click('[data-test-confirm-action-trigger]');
+    await click('[data-test-confirm-button]');
     assert.dom('[data-test-mfa-method-list-item]').exists({ count: methodCount - 1 }, 'Method was deleted');
   });
 
@@ -193,7 +190,7 @@ module('Acceptance | mfa-method', function (hooks) {
       await click('[data-test-mleh-radio="skip"]');
       await click('[data-test-mfa-create-save]');
       assert
-        .dom('[data-test-validation-error]')
+        .dom('[data-test-inline-error-message]')
         .exists({ count: required.length }, `Required field validations display for ${type}`);
 
       for (const field of required) {
@@ -295,7 +292,7 @@ module('Acceptance | mfa-method', function (hooks) {
     await fillIn('[data-test-input="max_validation_attempts"]', 10);
     await click('[data-test-mfa-save]');
     await fillIn('[data-test-confirmation-modal-input]', model.type);
-    await click(GENERAL.confirmButton);
+    await click('[data-test-confirm-button]');
 
     assert.dom('[data-test-row-value="Issuer"]').hasText('foo', 'Issuer field is updated');
     assert.dom('[data-test-row-value="Algorithm"]').hasText('SHA1', 'Algorithm field is updated');

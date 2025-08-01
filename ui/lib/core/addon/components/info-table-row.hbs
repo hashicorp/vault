@@ -45,7 +45,7 @@
             (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger")
           )}}
           class="transparent has-padding-xxs"
-          data-test-copy-button
+          data-test-copy-button={{@value}}
         />
       {{/if}}
       {{#if (has-block)}}

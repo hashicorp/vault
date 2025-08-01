@@ -10,7 +10,7 @@
     id="never"
     value="never"
     @value="never"
-    @onChange={{fn (mut @message.end_time) ""}}
+    @onChange={{fn (mut @message.endTime) ""}}
     @groupValue={{this.groupValue}}
   />
   <label for="never" class="has-left-margin-xs has-text-black is-size-7">
@@ -45,8 +45,8 @@
         @type="datetime-local"
         @value={{if this.messageEndTime (date-format this.messageEndTime this.datetimeLocalStringFormat) ""}}
         class="input has-top-margin-xs is-auto-width {{if this.validationError 'has-error-border'}}"
-        name="end_time"
-        data-test-input="end_time"
+        name="endTime"
+        data-test-input="endTime"
         {{on "focusout" this.onFocusOut}}
       />
     </div>

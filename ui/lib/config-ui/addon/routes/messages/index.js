@@ -37,22 +37,22 @@ export default class MessagesRoute extends Route {
     }[status];
 
     try {
-      const { key_info, keys } = await this.api.sys.uiConfigListCustomMessages(
+      const { keyInfo, keys } = await this.api.sys.uiConfigListCustomMessages(
         true,
         active,
         authenticated,
         type
       );
-      // ids are in the keys array and can be mapped to the object in key_info
-      // map and set id property on key_info object
+      // ids are in the keys array and can be mapped to the object in keyInfo
+      // map and set id property on keyInfo object
       const data = keys.map((id) => {
-        const { start_time, end_time, ...message } = key_info[id];
+        const { startTime, endTime, ...message } = keyInfo[id];
         // dates returned from list endpoint are strings -- convert to date
         return {
           id,
           ...message,
-          start_time: start_time ? new Date(start_time) : start_time,
-          end_time: end_time ? new Date(end_time) : end_time,
+          startTime: startTime ? new Date(startTime) : startTime,
+          endTime: endTime ? new Date(endTime) : endTime,
         };
       });
       const messages = paginate(data, {

@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix mutation of unwrapped data when keys contain underscores
+```

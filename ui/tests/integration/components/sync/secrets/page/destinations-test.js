@@ -32,7 +32,7 @@ module('Integration | Component | sync | Page::Destinations', function (hooks) {
         name: 'destination-aws',
         type: 'aws-sm',
         icon: 'aws-color',
-        type_display_name: 'AWS Secrets Manager',
+        typeDisplayName: 'AWS Secrets Manager',
       },
     ];
     this.destinations.meta = {

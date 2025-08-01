@@ -1,3 +1,5 @@
+@use '../utils/color_variables';
+
 /**
  * Copyright (c) HashiCorp, Inc.
  * SPDX-License-Identifier: BUSL-1.1
@@ -7,27 +9,27 @@
 
 // background colors
 .background-neutral-50 {
-  background: var(--token-color-palette-neutral-50);
+  background: color_variables.$neutral-50;
 }
 
 .has-background-white-bis {
-  background: var(--token-color-palette-neutral-50);
+  background: color_variables.$ui-gray-050;
 }
 
 .has-background-gray-100 {
-  background-color: var(--token-color-palette-neutral-100);
+  background-color: color_variables.$ui-gray-100;
 }
 
 .has-background-gray-200 {
-  background-color: var(--token-color-palette-neutral-200);
+  background-color: color_variables.$ui-gray-200;
 }
 
 .has-background-gray-300 {
-  background-color: var(--token-color-palette-neutral-300);
+  background-color: color_variables.$ui-gray-300;
 }
 
 .has-background-gray-900 {
-  background-color: var(--token-color-palette-neutral-600);
+  background-color: color_variables.$ui-gray-900;
 }
 
 .background-color-black {
@@ -37,12 +39,12 @@
 // borders
 .has-border-top-light {
   border-radius: 0;
-  border-top: 1px solid var(--token-color-palette-neutral-300);
+  border-top: 1px solid color_variables.$grey-light;
 }
 
 .has-border-bottom-light {
   border-radius: 0;
-  border-bottom: 1px solid var(--token-color-palette-neutral-300);
+  border-bottom: 1px solid color_variables.$grey-light;
 }
 
 .has-error-border,
@@ -50,25 +52,25 @@ select.has-error-border,
 .ttl-picker-form-field-error input,
 .string-list-form-field-error .field:first-of-type textarea,
 .hds-form-checkbox.has-error-border {
-  border: 1px solid var(--token-color-palette-red-200);
+  border: 1px solid color_variables.$red-500;
 }
 
 .error-border-child-inputs input,
 .error-border-child-inputs textarea {
-  border: 1px solid var(--token-color-palette-red-200);
+  border: 1px solid color_variables.$red-500;
 }
 
 // specifically for the SearchSelect dropdown.
 .dropdown-has-error-border > div.ember-basic-dropdown-trigger {
-  border: 1px solid var(--token-color-palette-red-200);
+  border: 1px solid color_variables.$red-500;
 }
 
 // text color
 .text-grey-lightest {
-  color: var(--token-color-palette-neutral-50);
+  color: color_variables.$grey-lightest;
 }
 
-.has-text-neutral-300 {
+.has-text-grey-light {
   color: var(--token-color-foreground-faint) !important;
 }
 
@@ -76,38 +78,38 @@ select.has-error-border,
   color: var(--token-color-foreground-faint) !important;
 }
 
-.has-text-neutral-500 {
-  color: var(--token-color-palette-neutral-500) !important;
+.has-text-grey-dark {
+  color: color_variables.$ui-gray-700 !important;
 }
 
 .has-text-white {
-  color: hsl(0, 0%, 100%) !important;
+  color: color_variables.$white !important;
 }
 
 .has-text-black {
-  color: hsl(0, 0%, 4%) !important;
+  color: color_variables.$black !important;
 }
 
 .has-text-info {
-  color: var(--token-color-palette-blue-200) !important;
+  color: color_variables.$blue-500 !important;
 }
 // same without the !important
 .has-text-primary {
-  color: var(--token-color-palette-blue-200);
+  color: color_variables.$blue-500;
 }
 
 .has-text-success {
-  color: var(--token-color-palette-green-200) !important;
+  color: var(--token-color-foreground-success) !important;
 }
 
 .has-text-highlight {
-  color: var(--token-color-palette-amber-200);
+  color: color_variables.$yellow-500;
 }
 
 .has-text-danger {
-  color: var(--token-color-palette-red-200) !important;
+  color: color_variables.$red-500 !important;
 }
 
 .has-text-primary {
-  color: var(--token-color-palette-blue-200);
+  color: color_variables.$blue;
 }

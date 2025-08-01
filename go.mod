@@ -155,10 +155,10 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-ad v0.21.0
 	github.com/hashicorp/vault-plugin-secrets-alicloud v0.20.0
 	github.com/hashicorp/vault-plugin-secrets-azure v0.22.0
-	github.com/hashicorp/vault-plugin-secrets-gcp v0.22.0
+	github.com/hashicorp/vault-plugin-secrets-gcp v0.22.1
 	github.com/hashicorp/vault-plugin-secrets-gcpkms v0.21.0
 	github.com/hashicorp/vault-plugin-secrets-kubernetes v0.11.0
-	github.com/hashicorp/vault-plugin-secrets-kv v0.24.1
+	github.com/hashicorp/vault-plugin-secrets-kv v0.24.0
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.16.0
 	github.com/hashicorp/vault-plugin-secrets-terraform v0.12.0
@@ -218,6 +218,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.35.0
 	go.opentelemetry.io/otel/trace v1.35.0
 	go.uber.org/atomic v1.11.0
+	go.uber.org/goleak v1.3.0
 	golang.org/x/crypto v0.40.0
 	golang.org/x/exp v0.0.0-20250711185948-6ae5c78190dc
 	golang.org/x/net v0.42.0

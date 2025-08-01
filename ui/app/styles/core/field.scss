@@ -1,3 +1,4 @@
+@use '../utils/color_variables';
 @use '../utils/size_variables';
 
 /**
@@ -10,7 +11,7 @@
 .field {
   // cannot use :read-only selector because tag used for other purposes
   &.is-readOnly {
-    background-color: var(--token-color-palette-neutral-100);
+    background-color: color_variables.$ui-gray-100;
     cursor: not-allowed;
   }
 

@@ -1,3 +1,0 @@
-```release-note:improvement
-sdk: add stub code for retrieving rotation schedule information
-```

@@ -10,11 +10,11 @@ import { commonFields, getPayload } from './shared';
 
 import type { SystemWriteSyncDestinationsAwsSmNameRequest } from '@hashicorp/vault-client-typescript';
 
-type AwsSmFormData = SystemWriteSyncDestinationsAwsSmNameRequest & {
-  name: string;
-};
+type AwsSmFormData = Partial<SystemWriteSyncDestinationsAwsSmNameRequest>;
 
-export default class AwsSmForm extends Form<AwsSmFormData> {
+export default class AwsSmForm extends Form {
+  declare data: AwsSmFormData;
+
   formFieldGroups = [
     new FormFieldGroup('default', [
       commonFields.name,
@@ -23,26 +23,26 @@ export default class AwsSmForm extends Form<AwsSmFormData> {
           'For AWS secrets manager, the name of the region must be supplied, something like “us-west-1.” If empty, Vault will use the AWS_REGION environment variable if configured.',
         editDisabled: true,
       }),
-      new FormField('role_arn', 'string', {
+      new FormField('roleArn', 'string', {
         label: 'Role ARN',
         subText:
           'Specifies a role to assume when connecting to AWS. When assuming a role, Vault uses temporary STS credentials to authenticate.',
       }),
-      new FormField('external_id', 'string', {
+      new FormField('externalId', 'string', {
         label: 'External ID',
         subText:
           'Optional extra protection that must match the trust policy granting access to the AWS IAM role ARN. We recommend using a different random UUID per destination.',
       }),
     ]),
     new FormFieldGroup('Credentials', [
-      new FormField('access_key_id', 'string', {
+      new FormField('accessKeyId', 'string', {
         label: 'Access key ID',
         subText:
           'Access key ID to authenticate against the secrets manager. If empty, Vault will use the AWS_ACCESS_KEY_ID environment variable if configured.',
         sensitive: true,
         noCopy: true,
       }),
-      new FormField('secret_access_key', 'string', {
+      new FormField('secretAccessKey', 'string', {
         label: 'Secret access key',
         subText:
           'Secret access key to authenticate against the secrets manager. If empty, Vault will use the AWS_SECRET_ACCESS_KEY environment variable if configured.',
@@ -59,7 +59,6 @@ export default class AwsSmForm extends Form<AwsSmFormData> {
 
   toJSON() {
     const formState = super.toJSON();
-    const data = getPayload<AwsSmFormData>('aws-sm', this.data, this.isNew);
-    return { ...formState, data };
+    return { ...formState, data: getPayload('aws-sm', this.data, this.isNew) };
   }
 }

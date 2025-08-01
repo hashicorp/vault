@@ -1,3 +1,4 @@
+@use '../utils/color_variables';
 @use '../utils/font_variables';
 
 /**
@@ -6,7 +7,7 @@
  */
 
 .doc-link {
-  color: var(--token-color-palette-blue-200);
+  color: color_variables.$blue;
   font-weight: font_variables.$font-weight-semibold;
   &:hover {
     text-decoration: underline !important;

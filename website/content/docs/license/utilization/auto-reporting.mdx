@@ -6,9 +6,6 @@ description: >-
   license utilization and how to enable or disable automated reporting.
 ---
 
-> [!IMPORTANT]  
-> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
-
 # Automated license utilization reporting
 
 @include 'alerts/enterprise-only.mdx'
@@ -62,17 +59,17 @@ You will find log entries similar to the following:
 <CodeBlockConfig hideClipboard>
 
 ```
-[DEBUG] reporting.auto_exporter: beginning snapshot export
-[DEBUG] reporting.auto_exporter: creating bundle
-[DEBUG] reporting.auto_exporter: marshalling bundle to json
-[DEBUG] reporting.auto_exporter: creating request
-[DEBUG] reporting.auto_exporter: sending request
-[DEBUG] reporting.auto_exporter: performing request: method=POST url=https://reporting.hashicorp.services/v2
-[DEBUG] reporting.auto_exporter: recording audit record
-[DEBUG] reporting.auto_exporter: completed recording audit record
-[INFO]  reporting.auto_exporter: Report sent: auditRecord="{\"bundle\":{\"version\":\"2\",\"mode\":\"automatic\",\"license_id\":\"97afe7b4-b9c8-bf19-bf35-b89b5cc0efea\",\"product\":\"vault\",\"product_version\":\"1.14.0-rc1+ent\",\"export_timestamp\":\"2023-06-01T09:34:44.215133-04:00\",\"snapshots\":[{\"snapshot_version\":1,\"snapshot_id\":\"0001J7H7KMEDRXKM5C1QJGBXV3\",\"process_id\":\"01H1T45CZK2GN9WR22863W2K32\",\"timestamp\":\"2023-06-01T09:34:44.215001-04:00\",\"schema_version\":\"1.0.0\",\"service\":\"vault\",\"metrics\":{\"clientcount.current_month_estimate\":{\"key\":\"clientcount.current_month_estimate\",\"kind\":\"sum\",\"mode\":\"write\",\"labels\":{\"type\":{\"entity\":20,\"nonentity\":11}}},\"clientcount.previous_month_complete\":{\"key\":\"clientcount.previous_month_complete\",\"kind\":\"sum\",\"mode\":\"write\",\"labels\":{\"type\":{\"entity\":10,\"nonentity\":11}}}}}],\"metadata\":{\"vault\":{\"billing_start\":\"2023-03-01T00:00:00Z\",\"cluster_id\":\"a8d95acc-ec0a-6087-d7f6-4f054ab2e7fd\"}}}}"
-[DEBUG] reporting.auto_exporter: completed recording audit record
-[DEBUG] reporting.auto_exporter: export finished successfully
+[DEBUG] core.reporting: beginning snapshot export
+[DEBUG] core.reporting: creating payload
+[DEBUG] core.reporting: marshalling payload to json
+[DEBUG] core.reporting: generating authentication headers
+[DEBUG] core.reporting: creating request
+[DEBUG] core.reporting: sending request
+[DEBUG] core.reporting: performing request: method=POST url=https://reporting.hashicorp.services
+[DEBUG] core.reporting: recording audit record
+[INFO]  core.reporting: Report sent: auditRecord="{\"payload\":{\"payload_version\":\"1\",\"license_id\":\"97afe7b4-b9c8-bf19-bf35-b89b5cc0efea\",\"product\":\"vault\",\"product_version\":\"1.14.0-rc1+ent\",\"export_timestamp\":\"2023-06-01T09:34:44.215133-04:00\",\"snapshots\":[{\"snapshot_version\":1,\"snapshot_id\":\"0001J7H7KMEDRXKM5C1QJGBXV3\",\"process_id\":\"01H1T45CZK2GN9WR22863W2K32\",\"timestamp\":\"2023-06-01T09:34:44.215001-04:00\",\"schema_version\":\"1.0.0\",\"service\":\"vault\",\"metrics\":{\"clientcount.current_month_estimate\":{\"key\":\"clientcount.current_month_estimate\",\"kind\":\"sum\",\"mode\":\"write\",\"labels\":{\"type\":{\"entity\":20,\"nonentity\":11}}},\"clientcount.previous_month_complete\":{\"key\":\"clientcount.previous_month_complete\",\"kind\":\"sum\",\"mode\":\"write\",\"labels\":{\"type\":{\"entity\":10,\"nonentity\":11}}}}}],\"metadata\":{\"vault\":{\"billing_start\":\"2023-03-01T00:00:00Z\",\"cluster_id\":\"a8d95acc-ec0a-6087-d7f6-4f054ab2e7fd\"}}}}"
+[DEBUG] core.reporting: completed recording audit record
+[DEBUG] core.reporting: export finished successfully
 ```
 
 </CodeBlockConfig>
@@ -83,12 +80,13 @@ egress, logs will show an error.
 <CodeBlockConfig hideClipboard>
 
 ```
-[DEBUG] reporting.auto_exporter: beginning snapshot export
-[DEBUG] reporting.auto_exporter: creating bundle
-[DEBUG] reporting.auto_exporter: marshalling bundle to json
-[DEBUG] reporting.auto_exporter: creating request
-[DEBUG] reporting.auto_exporter: sending request
-[DEBUG] reporting.auto_exporter: performing request: method=POST url=https://reporting.hashicorp.services/v2
+[DEBUG] core.reporting: beginning snapshot export
+[DEBUG] core.reporting: creating payload
+[DEBUG] core.reporting: marshalling payload to json
+[DEBUG] core.reporting: generating authentication headers
+[DEBUG] core.reporting: creating request
+[DEBUG] core.reporting: sending request
+[DEBUG] core.reporting: performing request: method=POST url=https://reporting.hashicorp.services
 [DEBUG] core.reporting: error status code received: statusCode=403
 ```
 
@@ -143,12 +141,14 @@ reporting status upon active unseal.
 </Warning>
 
 
-You will find the following entry in the server log.
+You will find the following entries in the server log.
 
 <CodeBlockConfig hideClipboard>
 
 ```
-[DEBUG] reporting: automated reporting is disabled; license utilization data will not be exported unless triggered manually
+[DEBUG] core: reloading automated reporting
+[INFO]  core: opting out of automated reporting
+[DEBUG] activity: there is no reporting agent configured, skipping counts reporting
 ```
 
 </CodeBlockConfig>
@@ -181,7 +181,8 @@ You will find the following entries in the server log.
 
 ```
 [INFO]  core: automated reporting disabled via environment variable: env=OPTOUT_LICENSE_REPORTING
-[DEBUG] reporting: automated reporting is disabled; license utilization data will not be exported unless triggered manually
+[INFO]  core: opting out of automated reporting
+[DEBUG] activity: there is no reporting agent configured, skipping counts reporting
 ```
 
 </CodeBlockConfig>

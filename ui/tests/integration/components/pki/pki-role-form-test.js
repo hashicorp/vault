@@ -9,6 +9,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { setupEngine } from 'ember-engines/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import { PKI_ROLE_FORM } from 'vault/tests/helpers/pki/pki-selectors';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
@@ -57,13 +58,13 @@ module('Integration | Component | pki-role-form', function (hooks) {
       .dom(GENERAL.fieldByAttr('noStoreMetadata'))
       .doesNotExist('noStoreMetadata is not shown b/c not enterprise');
     assert.dom(GENERAL.inputByAttr('addBasicConstraints')).exists();
-    assert.dom(GENERAL.button('Domain handling')).exists('shows form-field group add domain handling');
-    assert.dom(GENERAL.button('Key parameters')).exists('shows form-field group key params');
-    assert.dom(GENERAL.button('Key usage')).exists('shows form-field group key usage');
-    assert.dom(GENERAL.button('Policy identifiers')).exists('shows form-field group policy identifiers');
-    assert.dom(GENERAL.button('Subject Alternative Name (SAN) Options')).exists('shows form-field group SAN');
+    assert.dom(PKI_ROLE_FORM.domainHandling).exists('shows form-field group add domain handling');
+    assert.dom(PKI_ROLE_FORM.keyParams).exists('shows form-field group key params');
+    assert.dom(PKI_ROLE_FORM.keyUsage).exists('shows form-field group key usage');
+    assert.dom(PKI_ROLE_FORM.policyIdentifiers).exists('shows form-field group policy identifiers');
+    assert.dom(PKI_ROLE_FORM.san).exists('shows form-field group SAN');
     assert
-      .dom(GENERAL.button('Additional subject fields'))
+      .dom(PKI_ROLE_FORM.additionalSubjectFields)
       .exists('shows form-field group additional subject fields');
   });
 
@@ -86,7 +87,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
 
   test('it should save a new pki role with various options selected', async function (assert) {
     // Key usage, Key params and Not valid after options are tested in their respective component tests
-    assert.expect(7);
+    assert.expect(8);
     this.server.post(`/${this.role.backend}/roles/test-role`, (schema, req) => {
       assert.ok(true, 'Request made to save role');
       const request = JSON.parse(req.requestBody);
@@ -120,27 +121,30 @@ module('Integration | Component | pki-role-form', function (hooks) {
       { owner: this.engine }
     );
 
-    await click(GENERAL.submitButton);
+    await click(GENERAL.saveButton);
 
     assert
-      .dom(GENERAL.validationErrorByAttr('name'))
+      .dom(GENERAL.inputByAttr('name'))
+      .hasClass('has-error-border', 'shows border error on role name field when no role name is submitted');
+    assert
+      .dom('[data-test-inline-error-message]')
       .includesText('Name is required.', 'show correct error message');
 
     await fillIn(GENERAL.inputByAttr('name'), 'test-role');
     await click('[data-test-input="addBasicConstraints"]');
-    await click(GENERAL.button('Domain handling'));
+    await click(PKI_ROLE_FORM.domainHandling);
     await click('[data-test-input="allowedDomainsTemplate"]');
-    await click(GENERAL.button('Policy identifiers'));
+    await click(PKI_ROLE_FORM.policyIdentifiers);
     await fillIn('[data-test-input="policyIdentifiers"] [data-test-string-list-input="0"]', 'some-oid');
-    await click(GENERAL.button('Subject Alternative Name (SAN) Options'));
+    await click(PKI_ROLE_FORM.san);
     await click('[data-test-input="allowUriSansTemplate"]');
-    await click(GENERAL.button('Additional subject fields'));
+    await click(PKI_ROLE_FORM.additionalSubjectFields);
     await fillIn(
       '[data-test-input="allowedSerialNumbers"] [data-test-string-list-input="0"]',
       'some-serial-number'
     );
 
-    await click(GENERAL.submitButton);
+    await click(GENERAL.saveButton);
   });
 
   test('it should update attributes on the model on update', async function (assert) {
@@ -168,7 +172,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
     );
     await click(GENERAL.ttl.toggle('issuerRef-toggle'));
     await fillIn(GENERAL.selectByAttr('issuerRef'), 'issuer-1');
-    await click(GENERAL.submitButton);
+    await click(GENERAL.saveButton);
     assert.strictEqual(this.role.issuerRef, 'issuer-1', 'Issuer Ref correctly saved on create');
   });
 
@@ -224,7 +228,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
     await click(GENERAL.ttl.toggle('issuerRef-toggle'));
     await fillIn(GENERAL.selectByAttr('issuerRef'), 'issuer-1');
 
-    await click(GENERAL.button('Key parameters'));
+    await click(PKI_ROLE_FORM.keyParams);
     assert.dom(GENERAL.inputByAttr('keyType')).hasValue('rsa');
     assert
       .dom(GENERAL.inputByAttr('keyBits'))
@@ -243,7 +247,7 @@ module('Integration | Component | pki-role-form', function (hooks) {
       .dom(GENERAL.inputByAttr('signatureBits'))
       .hasValue('384', 'dropdown has selected value, not default value (0)');
 
-    await click(GENERAL.submitButton);
+    await click(GENERAL.saveButton);
     assert.strictEqual(this.role.issuerRef, 'issuer-1', 'Issuer Ref correctly saved on create');
   });
 });

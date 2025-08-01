@@ -8,7 +8,6 @@ import { setupRenderingTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { render, triggerEvent, click, waitFor } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | raft-storage-restore', function (hooks) {
   setupRenderingTest(hooks);
@@ -30,9 +29,9 @@ module('Integration | Component | raft-storage-restore', function (hooks) {
     await triggerEvent('[data-test-file-input]', 'change', {
       files: [new Blob(['Raft Snapshot'])],
     });
-    await click(GENERAL.submitButton);
+    await click('[data-test-edit-form-submit]');
     await waitFor('#force-restore');
     await click('#force-restore');
-    await click(GENERAL.submitButton);
+    await click('[data-test-edit-form-submit]');
   });
 });

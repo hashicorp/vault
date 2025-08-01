@@ -354,26 +354,26 @@ func Test_multipleMonthsActivityClients_addRepeatedClients(t *testing.T) {
 
 	thisMonth := m.months[0]
 	// this will match the first client in month 1
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true}, defaultMount, nil, time.Now().UTC()))
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true}, defaultMount, nil))
 	require.Contains(t, month1Clients, thisMonth.clients[0])
 
 	// this will match the 3rd client in month 1
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true, ClientType: "non-entity"}, defaultMount, nil, time.Now().UTC()))
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true, ClientType: "non-entity"}, defaultMount, nil))
 	require.Equal(t, month1Clients[2], thisMonth.clients[1])
 
 	// this will match the first two clients in month 1
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 2, Repeated: true}, defaultMount, nil, time.Now().UTC()))
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 2, Repeated: true}, defaultMount, nil))
 	require.Equal(t, month1Clients[0:2], thisMonth.clients[2:4])
 
 	// this will match the first client in month 2
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2}, "identity", nil, time.Now().UTC()))
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2}, "identity", nil))
 	require.Equal(t, month2Clients[0], thisMonth.clients[4])
 
 	// this will match the 3rd client in month 2
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2, Namespace: "other_ns"}, defaultMount, nil, time.Now().UTC()))
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2, Namespace: "other_ns"}, defaultMount, nil))
 	require.Equal(t, month2Clients[2], thisMonth.clients[5])
 
-	require.Error(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2, Namespace: "other_ns"}, "other_mount", nil, time.Now().UTC()))
+	require.Error(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2, Namespace: "other_ns"}, "other_mount", nil))
 }
 
 // Test_singleMonthActivityClients_populateSegments calls populateSegments for a

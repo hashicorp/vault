@@ -29,14 +29,6 @@ module('Integration | Component | replication known-secondaries-table', function
     await render(hbs`<KnownSecondariesTable @secondaries={{this.secondaries}} />`, this.context);
 
     assert.dom('[data-test-known-secondaries-table]').exists();
-
-    // Verify table has overflow and word break classes applied
-    assert
-      .dom('[data-test-known-secondaries-table]')
-      .hasClass('overflow-wrap', 'it has the overflow-wrap class applied');
-    assert
-      .dom('[data-test-known-secondaries-table]')
-      .hasClass('word-break', 'it has the word-break class applied');
   });
 
   test('it shows the secondary URL and connection_status', async function (assert) {

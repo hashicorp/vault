@@ -80,7 +80,7 @@
       @title={{capitalize (or @attr.options.label (humanize (dasherize @attr.name)))}}
       @helpText={{@attr.options.helpText}}
       @value={{if (get @model @attr.name) (stringify (get @model @attr.name)) @emptyData}}
-      @valueUpdated={{@editorUpdated}}
+      @valueUpdated={{@codemirrorUpdated}}
     />
   {{/if}}
 </div>

@@ -1,3 +1,4 @@
+@use '../utils/color_variables';
 @use '../utils/size_variables';
 
 /**
@@ -13,7 +14,7 @@
   padding-bottom: size_variables.$spacing-12;
 }
 .raft-join-unseal {
-  color: var(--token-color-palette-amber-200);
+  color: color_variables.$orange;
   font-size: size_variables.$size-6;
   display: inline-block;
 }

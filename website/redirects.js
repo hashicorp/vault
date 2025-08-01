@@ -16,13 +16,13 @@ module.exports = [
     permanent: true,
   },
   {
-    source: '/vault/docs/agent/autoauth',
-    destination: '/vault/docs/agent-and-proxy/autoauth',
+    source: '/vault/docs/agent-and-proxy/autoauth/methods',
+    destination: '/vault/docs/agent-and-proxy/autoauth/methods/alicloud',
     permanent: true,
   },
   {
-    source: '/vault/docs/agent/autoauth/:slug',
-    destination: '/vault/docs/agent-and-proxy/autoauth/:slug*',
+    source: '/vault/docs/agent/autoauth/:slug(.*)',
+    destination: '/vault/docs/agent-and-proxy/autoauth/:slug',
     permanent: true,
   },
   {
@@ -56,8 +56,8 @@ module.exports = [
     permanent: true,
   },
   {
-    source: '/vault/docs/agent/caching/:slug',
-    destination: '/vault/docs/agent-and-proxy/agent/caching/:slug*',
+    source: '/vault/docs/agent/caching/:slug(.*)',
+    destination: '/vault/docs/agent-and-proxy/agent/caching/:slug',
     permanent: true,
   },
   {
@@ -76,12 +76,12 @@ module.exports = [
     permanent: true,
   },
   {
-    source: '/vault/docs/:version(v1\.(?:4|5|6|7|8|9|10|11|12|13)\.x)/agent-and-proxy/autoauth/:slug*',
+    source: '/vault/docs/:version(v1\.(?:4|5|6|7|8|9|10|11|12|13)\.x)/agent-and-proxy/autoauth/:slug(.*)',
     destination: '/vault/docs/:version/agent/autoauth/:slug',
     permanent: true,
   },
   {
-    source: '/vault/docs/:version(v1\.(?:8|9|10|11|12|13)\.x)/agent-and-proxy/agent/caching/:slug*',
+    source: '/vault/docs/:version(v1\.(?:8|9|10|11|12|13)\.x)/agent-and-proxy/agent/caching/:slug(.*)',
     destination: '/vault/docs/:version/agent/caching/:slug',
     permanent: true,
   },
@@ -116,6 +116,11 @@ module.exports = [
     permanent: true,
   },
   {
+    source: '/vault/docs/deprecation',
+    destination: '/vault/docs/updates/deprecation',
+    permanent: true,
+  },
+  {
     source: '/vault/docs/concepts/lease-explosions',
     destination: '/vault/docs/configuration/prevent-lease-explosions',
     permanent: true,
@@ -133,11 +138,6 @@ module.exports = [
   {
     source: '/vault/docs/command/web',
     destination: '/vault/docs/ui/web-cli',
-    permanent: true,
-  },
-  {
-    source: '/vault/docs/deprecation',
-    destination: '/vault/docs/updates/deprecation',
     permanent: true,
   },
   {
@@ -171,28 +171,38 @@ module.exports = [
     permanent: true,
   },
   {
+    source: '/vault/docs/upgrading/deduplication/:slug(.*)',
+    destination: '/vault/docs/secrets/identity/deduplication/:slug',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/upgrading/upgrade-to-:version(0\.(?:5|6|7|8|9|10|11)).:patch(.*)',
+    destination: '/vault/docs/v1.9.x/upgrading/upgrade-to-:version.:patch',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/upgrading/upgrade-to-:version(1\.(?:0|1|2|3|4|5|6|7|8)).:patch(.*)',
+    destination: '/vault/docs/v1.9.x/upgrading/upgrade-to-:version.:patch',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/upgrading/upgrade-to-:version(1\.(?:9|10|11|12|13|14|15|16|17|18)\.x)',
+    destination: '/vault/docs/v:version/upgrading/upgrade-to-:version',
+    permanent: true,
+  },
+  {
     source: '/vault/docs/upgrading/upgrade-to-1.19.x',
     destination: '/vault/docs/v1.19.x/updates/important-changes',
     permanent: true,
   },
   {
-    source: '/vault/docs/upgrading/deduplication/:slug*',
-    destination: '/vault/docs/secrets/identity/deduplication/:slug*',
-    permanent: true,
-  },
-  {
-    source: '/vault/docs/upgrading/upgrade-to-:version(1\.(?:12|13|14|15|16|17|18)\.x)',
+    source: '/vault/docs/v:version(1\.(?:9|10|11|12|13|14|15|16|17|18)\.x)/updates/important-changes',
     destination: '/vault/docs/v:version/upgrading/upgrade-to-:version',
     permanent: true,
   },
   {
     source: '/vault/docs/release-notes/1.19.0',
     destination: '/vault/docs/v1.19.x/updates/release-notes',
-    permanent: true,
-  },
-  {
-    source: '/vault/docs/v:version(1\.(?:4|5|6|7|8|9|10|11|12|13|14|15|16|17|18)\.x)/updates/important-changes',
-    destination: '/vault/docs/v:version/upgrading/upgrade-to-:version',
     permanent: true,
   },
   {
@@ -206,7 +216,7 @@ module.exports = [
     permanent: true,
   },
   {
-    source: '/vault/docs/release-notes/v:version(1\.(?:4|5|6|7|8|9|10|11|12|13|14|15|17|18)).0',
+    source: '/vault/docs/release-notes/:version(1\.(?:4|5|6|7|8|9|10|11|12|13|14|15|17|18)).0',
     destination: '/vault/docs/v:version.x/release-notes/:version.0',
     permanent: true,
   },
@@ -246,18 +256,18 @@ module.exports = [
     permanent: true,
   },
   {
-    source: '/vault/docs/install/:slug*',
-    destination: '/vault/docs/get-vault/:slug*',
+    source: '/vault/docs/install/:slug(.*)',
+    destination: '/vault/docs/get-vault/:slug',
     permanent: true,
   },
   {
-    source: '/vault/docs/platform/aws/:slug*',
-    destination: '/vault/docs/deploy/aws/:slug*',
+    source: '/vault/docs/platform/aws/:slug(.*)',
+    destination: '/vault/docs/deploy/aws/:slug',
     permanent: true,
   },
   {
-    source: '/vault/docs/platform/k8s/:slug*',
-    destination: '/vault/docs/deploy/kubernetes/:slug*',
+    source: '/vault/docs/platform/k8s/:slug(.*)',
+    destination: '/vault/docs/deploy/kubernetes/:slug',
     permanent: true,
   },
   {
@@ -321,8 +331,18 @@ module.exports = [
     permanent: true,
   },
   {
-    source: '/vault/docs/:version(v1\.*\.x)/v:ver(1\.*\.x)/:slug*',
+    source: '/vault/docs/:version(v1\.*\.x)/v:ver(1\.*\.x)/:slug(.*)',
     destination: '/vault/docs/:version/:slug',
     permanent: true,
-  }
+  },
+  {
+    source: '/vault/docs/commands/web',
+    destination: '/vault/docs/ui/web-cli',
+    permanent: true,
+  },
+  {
+    source: '/vault/docs/browser-support',
+    destination: '/vault/docs/ui/browser-support',
+    permanent: true,
+  },
 ]

@@ -7,12 +7,11 @@ import { set } from '@ember/object';
 import { hash } from 'rsvp';
 import Route from '@ember/routing/route';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
-import { isAddonEngine, filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
+import { allEngines, isAddonEngine, CONFIGURATION_ONLY } from 'vault/helpers/mountable-secret-engines';
 import { service } from '@ember/service';
 import { normalizePath } from 'vault/utils/path-encoding-helpers';
 import { assert } from '@ember/debug';
 import { pathIsDirectory } from 'kv/utils/kv-breadcrumbs';
-import engineDisplayData from 'vault/helpers/engines-display-data';
 
 const SUPPORTED_BACKENDS = supportedSecretBackends();
 
@@ -82,17 +81,15 @@ export default Route.extend({
     const secret = this.secretParam();
     const backend = this.enginePathParam();
     const { tab } = this.paramsFor('vault.cluster.secrets.backend.list-root');
-    const secretEngine = this.modelFor('vault.cluster.secrets.backend');
+    const secretEngine = this.store.peekRecord('secret-engine', backend);
     const type = secretEngine?.engineType;
     assert('secretEngine.engineType is not defined', !!type);
     // if configuration only, redirect to configuration route
-    if (engineDisplayData(type)?.isOnlyMountable) {
+    if (CONFIGURATION_ONLY.includes(type)) {
       return this.router.transitionTo('vault.cluster.secrets.backend.configuration', backend);
     }
 
-    const engineRoute = filterEnginesByMountCategory({ mountCategory: 'secret', isEnterprise: true }).find(
-      (engine) => engine.type === type
-    )?.engineRoute;
+    const engineRoute = allEngines().find((engine) => engine.type === type)?.engineRoute;
     if (!type || !SUPPORTED_BACKENDS.includes(type)) {
       return this.router.transitionTo('vault.cluster.secrets');
     }
@@ -108,13 +105,15 @@ export default Route.extend({
       // if it's KV v2 but not registered as an addon, it's type generic
       return this.router.transitionTo('vault.cluster.secrets.backend.kv.list', backend);
     }
-    const modelType = this.getModelType(secretEngine.type, tab);
+    const modelType = this.getModelType(backend, tab);
     return this.pathHelp.hydrateModel(modelType, backend).then(() => {
       this.store.unloadAll('capabilities');
     });
   },
 
-  getModelType(type, tab) {
+  getModelType(backend, tab) {
+    const secretEngine = this.store.peekRecord('secret-engine', backend);
+    const type = secretEngine.engineType;
     const types = {
       database: tab === 'role' ? 'database/role' : 'database/connection',
       transit: 'transit-key',
@@ -134,7 +133,7 @@ export default Route.extend({
     const secret = this.secretParam() || '';
     const backend = this.enginePathParam();
     const backendModel = this.modelFor('vault.cluster.secrets.backend');
-    const modelType = this.getModelType(backendModel.type, params.tab);
+    const modelType = this.getModelType(backend, params.tab);
 
     return hash({
       secret,
@@ -166,7 +165,7 @@ export default Route.extend({
     const secret = resolvedModel.secret;
     const model = resolvedModel.secrets;
     const backend = this.enginePathParam();
-    const backendModel = this.modelFor('vault.cluster.secrets.backend');
+    const backendModel = this.store.peekRecord('secret-engine', backend);
     const has404 = this.has404;
     // only clear store cache if this is a new model
     if (secret !== controller?.baseKey?.id) {

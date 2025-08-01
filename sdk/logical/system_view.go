@@ -102,9 +102,6 @@ type SystemView interface {
 	// GenerateIdentityToken returns an identity token for the requesting plugin.
 	GenerateIdentityToken(ctx context.Context, req *pluginutil.IdentityTokenRequest) (*pluginutil.IdentityTokenResponse, error)
 
-	// GetRotationInformation gets rotation information from the system about an established rotation job.
-	GetRotationInformation(ctx context.Context, req *rotation.RotationInfoRequest) (*rotation.RotationInfoResponse, error)
-
 	// RegisterRotationJob returns a rotation ID after registering a
 	// rotation job for the requesting plugin.
 	// NOTE: This method is intended for use only by HashiCorp Vault Enterprise plugins.
@@ -302,10 +299,6 @@ func (d StaticSystemView) GenerateIdentityToken(_ context.Context, _ *pluginutil
 
 func (d StaticSystemView) APILockShouldBlockRequest() (bool, error) {
 	return d.APILockShouldBlockRequestVal, nil
-}
-
-func (d StaticSystemView) GetRotationInformation(ctx context.Context, req *rotation.RotationInfoRequest) (*rotation.RotationInfoResponse, error) {
-	return nil, errors.New("GetRotationInformation is not implemented in StaticSystemView")
 }
 
 func (d StaticSystemView) RegisterRotationJob(_ context.Context, _ *rotation.RotationJobConfigureRequest) (rotationID string, err error) {

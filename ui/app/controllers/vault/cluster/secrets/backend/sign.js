@@ -19,12 +19,12 @@ export default Controller.extend({
       });
     },
 
-    editorUpdated(attr, val) {
-      // wont set invalid JSON to the model
-      try {
+    codemirrorUpdated(attr, val, codemirror) {
+      codemirror.performLint();
+      const hasErrors = codemirror.state.lint.marked.length > 0;
+
+      if (!hasErrors) {
         set(this.model, attr, JSON.parse(val));
-      } catch {
-        // linting is handled by the component
       }
     },
 

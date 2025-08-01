@@ -12,7 +12,6 @@
           id="param"
           onchange={{action (mut this.param) value="target.value"}}
           aria-label="lookup by alias name"
-          data-test-select="lookup-param-select"
         >
           {{#each (array "alias name" "name" "id" "alias id") as |paramOption|}}
             <option selected={{eq this.param paramOption}} value={{paramOption}}>
@@ -29,10 +28,10 @@
       {{/if}}
     </div>
     <div class="control is-expanded">
-      <Input class="input" @value={{this.paramValue}} placeholder={{capitalize this.param}} data-test-input="param-value" />
+      <Input class="input" @value={{this.paramValue}} placeholder={{capitalize this.param}} />
     </div>
     <div class="control">
-      <Hds::Button @text="Lookup" @color="secondary" class="is-hidden" type="submit" data-test-submit />
+      <Hds::Button @text="Lookup" @color="secondary" class="is-hidden" type="submit" />
     </div>
   </div>
 </form>

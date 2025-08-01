@@ -1,4 +1,5 @@
 @use '../utils/box-shadow_variables';
+@use '../utils/color_variables';
 @use '../utils/mixins';
 @use '../utils/size_variables';
 @use '../core/buttons.scss';
@@ -13,17 +14,17 @@
 }
 
 .toolbar {
-  background-color: var(--token-color-palette-neutral-50);
-  border: 1px solid var(--token-color-palette-neutral-100);
-  border-bottom-color: var(--token-color-palette-neutral-300);
-  border-top-color: var(--token-color-palette-neutral-300);
+  background-color: color_variables.$ui-gray-010;
+  border: 1px solid color_variables.$ui-gray-100;
+  border-bottom-color: color_variables.$ui-gray-300;
+  border-top-color: color_variables.$ui-gray-300;
   position: relative;
 
   &::after {
     background: linear-gradient(
       to right,
-      var(--token-color-palette-neutral-50),
-      rgba(var(--token-color-palette-neutral-50), 0)
+      color_variables.$ui-gray-010,
+      rgba(color_variables.$ui-gray-010, 0)
     );
     bottom: 0;
     content: '';
@@ -42,7 +43,7 @@
 
 .toolbar-label {
   padding: size_variables.$spacing-8;
-  color: var(--token-color-palette-neutral-400);
+  color: color_variables.$grey;
 }
 
 .toolbar-scroller {
@@ -62,7 +63,7 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: var(--token-color-palette-neutral-300);
+    background: color_variables.$ui-gray-300;
     border-radius: size_variables.$spacing-4;
   }
 }
@@ -98,13 +99,13 @@
   @extend .is-ghost;
   @extend .has-icon-right;
   border: 0;
-  color: hsl(0, 0%, 4%);
+  color: color_variables.$black;
   transition: background-color size_variables.$speed;
 
   &:hover:not(.disabled) {
-    background-color: var(--token-color-palette-neutral-100);
+    background-color: color_variables.$ui-gray-100;
     border: 0;
-    color: var(--token-color-palette-blue-200);
+    color: color_variables.$blue;
   }
 
   &:active {
@@ -129,12 +130,12 @@
   }
 }
 a.disabled.toolbar-link {
-  color: hsl(0, 0%, 4%);
-  background-color: hsl(0, 0%, 100%);
+  color: color_variables.$black;
+  background-color: color_variables.$white;
   cursor: not-allowed;
   &:hover {
-    background-color: var(--token-color-palette-neutral-100);
-    color: var(--token-color-palette-blue-200);
+    background-color: color_variables.$ui-gray-100;
+    color: color_variables.$blue;
   }
 }
 

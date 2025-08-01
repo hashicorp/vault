@@ -25,7 +25,7 @@
         name="activation-token-id"
         id="activation-token-id"
         @value={{this.id}}
-        data-test-input="Secondary ID"
+        data-test-replication-secondary-id
       />
     </div>
     <p class="help has-text-grey">
@@ -84,7 +84,7 @@
     <M.Footer>
       <Hds::ButtonSet>
         <Hds::Copy::Button
-          data-test-button="Copy token"
+          data-test-modal-copy
           @text="Copy token"
           @textToCopy={{this.token}}
           class="primary"
@@ -95,7 +95,7 @@
           {{on "click" (action "onCopy")}}
         />
         <Hds::Button
-          data-test-cancel
+          data-test-modal-close
           disabled={{not this.isTokenCopied}}
           @text="Close"
           @color="secondary"

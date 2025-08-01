@@ -89,7 +89,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       await click(PKI_CONFIGURE_CREATE.optionByKey('generate-root'));
       await fillIn(GENERAL.inputByAttr('type'), 'internal');
       await fillIn(GENERAL.inputByAttr('commonName'), 'my-root-cert');
-      await click(GENERAL.submitButton);
+      await click(GENERAL.saveButton);
     });
 
     test('create role exit via cancel', async function (assert) {
@@ -137,7 +137,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       assert.strictEqual(roles.length, 0, 'No roles exist yet');
       await click(PKI_ROLE_DETAILS.createRoleLink);
       await fillIn(GENERAL.inputByAttr('name'), roleId);
-      await click(GENERAL.submitButton);
+      await click(GENERAL.saveButton);
       assert.dom(GENERAL.infoRowValue('Role name')).hasText(roleId, 'Shows correct role after create');
       roles = this.store.peekAll('pki/role');
       role = roles.at(0);
@@ -300,7 +300,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       await click(PKI_CONFIGURE_CREATE.optionByKey('generate-root'));
       await fillIn(GENERAL.inputByAttr('type'), 'internal');
       await fillIn(GENERAL.inputByAttr('commonName'), 'my-root-cert');
-      await click(GENERAL.submitButton);
+      await click(GENERAL.saveButton);
       // Go to list view so we fetch all the issuers
       await visit(`/vault/secrets/${this.mountPath}/pki/issuers`);
 
@@ -330,7 +330,7 @@ module('Acceptance | pki engine route cleanup test', function (hooks) {
       await click(PKI_CONFIGURE_CREATE.optionByKey('generate-root'));
       await fillIn(GENERAL.inputByAttr('type'), 'internal');
       await fillIn(GENERAL.inputByAttr('commonName'), 'my-root-cert');
-      await click(GENERAL.submitButton);
+      await click(GENERAL.saveButton);
     });
     test('create key exit', async function (assert) {
       let keys, key;

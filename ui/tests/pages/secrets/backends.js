@@ -13,5 +13,7 @@ export default create({
     path: text('[data-test-secret-path]'),
     menu: clickable('[data-test-popup-menu-trigger]'),
   }),
+  disableButton: clickable('[data-test-confirm-action-trigger]'),
+  confirmDisable: clickable('[data-test-confirm-button]'),
   console: uiPanel,
 });

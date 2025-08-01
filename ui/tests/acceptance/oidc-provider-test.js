@@ -162,7 +162,7 @@ module('Acceptance | oidc provider', function (hooks) {
     await fillIn(GENERAL.inputByAttr('password'), USER_PASSWORD);
     await click(AUTH_FORM.advancedSettings);
     await fillIn(GENERAL.inputByAttr('path'), authMethodPath);
-    await click(GENERAL.submitButton);
+    await click(AUTH_FORM.login);
     assert.strictEqual(currentURL(), url, 'URL is as expected after login');
     assert
       .dom('[data-test-oidc-redirect]')
@@ -194,7 +194,7 @@ module('Acceptance | oidc provider', function (hooks) {
     await fillIn(GENERAL.inputByAttr('path'), authMethodPath);
     await fillIn(GENERAL.inputByAttr('username'), OIDC_USER);
     await fillIn(GENERAL.inputByAttr('password'), USER_PASSWORD);
-    await click(GENERAL.submitButton);
+    await click(AUTH_FORM.login);
     assert
       .dom('[data-test-oidc-redirect]')
       .hasTextContaining(`click here to go back to app`, 'Shows link back to app');
@@ -211,7 +211,7 @@ module('Acceptance | oidc provider', function (hooks) {
     await fillIn(GENERAL.inputByAttr('path'), authMethodPath);
     await fillIn(GENERAL.inputByAttr('username'), OIDC_USER);
     await fillIn(GENERAL.inputByAttr('password'), USER_PASSWORD);
-    await click(GENERAL.submitButton);
+    await click(AUTH_FORM.login);
     await visit(url);
 
     assert.notOk(
@@ -256,7 +256,7 @@ module('Acceptance | oidc provider', function (hooks) {
     await fillIn(GENERAL.inputByAttr('password'), USER_PASSWORD);
     await click(AUTH_FORM.advancedSettings);
     await fillIn(GENERAL.inputByAttr('path'), authMethodPath);
-    await click(GENERAL.submitButton);
+    await click(AUTH_FORM.login);
 
     // permission denied error redirect user to log in
     // if the route remains "vault.cluster.oidc-provider" - it did not redirect

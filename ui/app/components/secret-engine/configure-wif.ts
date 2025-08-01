@@ -11,16 +11,16 @@ import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { ValidationMap } from 'vault/vault/app-types';
 import { assert } from '@ember/debug';
-import { next } from '@ember/runloop';
+import { capitalize } from '@ember/string';
+import errorMessage from 'vault/utils/error-message';
 
+import type MountConfigModel from 'vault/vault/models/secret-engine/mount-config';
+import type AdditionalConfigModel from 'vault/vault/models/secret-engine/additional-config';
+import type IdentityOidcConfigModel from 'vault/models/identity/oidc/config';
 import type Router from '@ember/routing/router';
-import type ApiService from 'vault/services/api';
+import type Store from '@ember-data/store';
 import type VersionService from 'vault/services/version';
 import type FlashMessageService from 'vault/services/flash-messages';
-import type Owner from '@ember/owner';
-import type AwsConfigForm from 'vault/forms/secrets/aws-config';
-import type AzureConfigForm from 'vault/forms/secrets/azure-config';
-import type GcpConfigForm from 'vault/forms/secrets/gcp-config';
 
 /**
  * @module SecretEngineConfigureWif component is used to configure secret engines that allow the WIF (Workload Identity Federation) configuration.
@@ -33,56 +33,71 @@ import type GcpConfigForm from 'vault/forms/secrets/gcp-config';
     @backendPath={{this.model.id}}
     @displayName="AWS"
     @type="aws"
-    @configForm={{this.model.configForm}}
+    @mountConfigModel={{this.model.mount-config-model}}
+    @additionalConfigModel={{this.model.additional-config-model}}
+    @issuerConfig={{this.model.identity-oidc-config}}
     />
  *
  * @param {string} backendPath - name of the secret engine, ex: 'azure-123'.
  * @param {string} displayName - used for flash messages, subText and labels. ex: 'Azure'.
  * @param {string} type - the type of the engine, ex: 'azure'.
- * @param {object} configForm - the config form for the engine. The field `isWifPluginConfigured` must be added to the form, otherwise this component will assert an error. `isWifPluginConfigured` should return true if any required wif fields have been set.
+ * @param {object} mountConfigModel - the config model for the engine. The attr `isWifPluginConfigured` must be added to this config model otherwise this component will assert an error. `isWifPluginConfigured` should return true if any required wif fields have been set.
+ * @param {object} [additionalConfigModel] - for engines with two config models. Currently, only used by aws
+ * @param {object} [issuerConfig] - the identity/oidc/config model. Will be passed in if user has an enterprise license.
  */
 
-type ConfigForm = AwsConfigForm | AzureConfigForm | GcpConfigForm;
 interface Args {
   backendPath: string;
   displayName: string;
   type: string;
-  configForm: ConfigForm;
+  mountConfigModel: MountConfigModel;
+  additionalConfigModel: AdditionalConfigModel;
+  issuerConfig: IdentityOidcConfigModel;
 }
 
 export default class ConfigureWif extends Component<Args> {
   @service declare readonly router: Router;
-  @service declare readonly api: ApiService;
+  @service declare readonly store: Store;
   @service declare readonly version: VersionService;
   @service declare readonly flashMessages: FlashMessageService;
 
+  @tracked accessType = 'account'; // for community users they will not be able to change this. for enterprise users, they will have the option to select "wif".
   @tracked errorMessage = '';
   @tracked invalidFormAlert = '';
   @tracked saveIssuerWarning = '';
   @tracked modelValidations: ValidationMap | null = null;
 
   disableAccessType = false;
-  originalIssuer: string | undefined;
 
-  constructor(owner: Owner, args: Args) {
+  constructor(owner: unknown, args: Args) {
     super(owner, args);
     // the following checks are only relevant to existing enterprise configurations
-    const { isNew, data, isWifPluginConfigured, isAccountPluginConfigured } = this.args.configForm;
+    if (this.version.isCommunity && this.args.mountConfigModel.isNew) return;
+    const { isWifPluginConfigured, isAccountPluginConfigured } = this.args.mountConfigModel;
+    assert(
+      `'isWifPluginConfigured' is required to be defined on the config model. Must return a boolean.`,
+      isWifPluginConfigured !== undefined
+    );
+    this.accessType = isWifPluginConfigured ? 'wif' : 'account';
+    // if wif or account only attributes are defined, disable the user's ability to change the access type
+    this.disableAccessType = isWifPluginConfigured || isAccountPluginConfigured;
+  }
 
-    if (this.version.isEnterprise && !isNew) {
-      assert(
-        `'isWifPluginConfigured' is required to be defined on the config model. Must return a boolean.`,
-        isWifPluginConfigured !== undefined
-      );
-      next(() => {
-        this.args.configForm.accessType = isWifPluginConfigured ? 'wif' : 'account';
-      });
-      // if wif or account only attributes are defined, disable the user's ability to change the access type
-      this.disableAccessType = isWifPluginConfigured || isAccountPluginConfigured;
-    }
+  get mountConfigModelAttrChanged() {
+    // "backend" dirties model state so explicity ignore it here
+    return Object.keys(this.args.mountConfigModel?.changedAttributes()).some((item) => item !== 'backend');
+  }
 
-    // cache the issuer to check if it has been changed later
-    this.originalIssuer = data.issuer;
+  get issuerAttrChanged() {
+    return this.args.issuerConfig?.hasDirtyAttributes;
+  }
+
+  get additionalConfigModelAttrChanged() {
+    const { additionalConfigModel } = this.args;
+    // required to check for additional model otherwise Object.keys will have nothing to iterate over and fails
+    return additionalConfigModel
+      ? Object.keys(additionalConfigModel.changedAttributes()).some((item) => item !== 'backend')
+      : false;
   }
 
   @action continueSubmitForm() {
@@ -96,71 +111,96 @@ export default class ConfigureWif extends Component<Args> {
     waitFor(async (event: Event) => {
       event?.preventDefault();
       this.resetErrors();
-      const { isValid, state, invalidFormMessage, data } = this.args.configForm.toJSON();
-
-      if (!isValid) {
-        this.modelValidations = isValid ? null : state;
-        this.invalidFormAlert = isValid ? '' : invalidFormMessage;
+      // currently we only check validations on the additional model
+      if (this.args.additionalConfigModel && !this.isValid(this.args.additionalConfigModel)) {
         return;
       }
-
-      if (this.originalIssuer !== data.issuer) {
+      if (this.issuerAttrChanged) {
         // if the issuer has changed show modal with warning that the config will change
         // if the modal is shown, the user has to click confirm to continue saving
         this.saveIssuerWarning = `You are updating the global issuer config. This will overwrite Vault's current issuer ${
-          !this.originalIssuer ? 'if it exists ' : ''
+          this.args.issuerConfig.queryIssuerError ? 'if it exists ' : ''
         }and may affect other configurations using this value. Continue?`;
         // exit task until user confirms
         return;
       }
-
       await this.save.perform();
     })
   );
 
   save = task(
     waitFor(async () => {
-      try {
-        const { data } = this.args.configForm.toJSON();
-        const { issuer } = data;
-        await this.saveConfig(data);
-        if (this.originalIssuer !== issuer) {
-          await this.updateIssuer(issuer as string);
-        }
-        this.flashMessages.success(`Successfully saved ${this.args.backendPath}'s configuration.`);
+      const mountConfigModelChanged = this.mountConfigModelAttrChanged;
+      const additionalModelAttrChanged = this.additionalConfigModelAttrChanged;
+      const issuerAttrChanged = this.issuerAttrChanged;
+      // check if any of the model(s) or issuer attributes have changed
+      // if no changes, transition and notify user
+      if (!mountConfigModelChanged && !additionalModelAttrChanged && !issuerAttrChanged) {
+        this.flashMessages.info('No changes detected.');
         this.transition();
-      } catch (e) {
-        const { message } = await this.api.parseError(e);
-        this.errorMessage = message;
-        this.invalidFormAlert = 'There was an error submitting this form.';
+        return;
+      }
+
+      const mountConfigModelSaved = mountConfigModelChanged ? await this.saveMountConfigModel() : false;
+      const issuerSaved = issuerAttrChanged ? await this.updateIssuer() : false;
+
+      if (
+        mountConfigModelSaved ||
+        (!mountConfigModelChanged && issuerSaved) ||
+        (!mountConfigModelChanged && additionalModelAttrChanged)
+      ) {
+        // if there are changes made to the an additional model, attempt to save it. if saving fails, we transition and the failure will surface as a sticky flash message on the configuration details page.
+        if (additionalModelAttrChanged) {
+          await this.saveAdditionalConfigModel();
+        }
+        // we only prevent a transition if the mount config model or issuer fail when saving
+        this.transition();
+      } else {
+        return;
       }
     })
   );
 
-  async updateIssuer(issuer: string) {
+  async updateIssuer(): Promise<boolean> {
     try {
-      await this.api.identity.oidcConfigure({ issuer });
+      await this.args.issuerConfig.save();
+      this.flashMessages.success('Issuer saved successfully');
+      return true;
     } catch (e) {
-      const { message } = await this.api.parseError(e, 'Check Vault logs for details.');
-      this.flashMessages.danger(`Issuer was not saved: ${message}`);
+      this.flashMessages.danger(`Issuer was not saved: ${errorMessage(e, 'Check Vault logs for details.')}`);
+      // remove issuer from the config model if it was not saved
+      this.args.issuerConfig.rollbackAttributes();
+      return false;
     }
   }
 
-  async saveConfig(data: ConfigForm['data']) {
-    const { backendPath, type } = this.args;
-    if (type === 'aws') {
-      await this.api.secrets.awsConfigureRootIamCredentials(backendPath, data);
-      try {
-        const { lease, lease_max } = data as { lease: string; lease_max: string };
-        await this.api.secrets.awsConfigureLease(backendPath, { lease, lease_max });
-      } catch (e) {
-        const { message } = await this.api.parseError(e);
-        this.flashMessages.danger(`Error saving lease configuration: ${message}`);
-      }
-    } else if (type === 'azure') {
-      await this.api.secrets.azureConfigure(backendPath, data);
-    } else if (type === 'gcp') {
-      await this.api.secrets.googleCloudConfigure(backendPath, data);
+  async saveMountConfigModel(): Promise<boolean> {
+    const { backendPath, mountConfigModel } = this.args;
+    try {
+      await mountConfigModel.save();
+      this.flashMessages.success(`Successfully saved ${backendPath}'s configuration.`);
+      return true;
+    } catch (error) {
+      this.errorMessage = errorMessage(error);
+      this.invalidFormAlert = 'There was an error submitting this form.';
+      return false;
+    }
+  }
+
+  async saveAdditionalConfigModel() {
+    const { backendPath, additionalConfigModel, type } = this.args;
+    const additionalConfigModelName = type === 'aws' ? 'lease configuration' : 'additional configuration';
+    try {
+      await additionalConfigModel.save();
+      this.flashMessages.success(`Successfully saved ${backendPath}'s ${additionalConfigModelName}.`);
+    } catch (error) {
+      // the only error the user sees is a sticky flash message on the next view.
+      this.flashMessages.danger(
+        `${capitalize(additionalConfigModelName)} was not saved: ${errorMessage(error)}`,
+        {
+          sticky: true,
+        }
+      );
     }
   }
 
@@ -174,29 +214,39 @@ export default class ConfigureWif extends Component<Args> {
     this.router.transitionTo('vault.cluster.secrets.backend.configuration', this.args.backendPath);
   }
 
-  @action
-  onChangeAccessType(accessType: 'account' | 'wif') {
-    const { configForm, type } = this.args;
-    configForm.accessType = accessType;
+  isValid(model: AdditionalConfigModel) {
+    const { isValid, state, invalidFormMessage } = model.validate();
+    this.modelValidations = isValid ? null : state;
+    this.invalidFormAlert = isValid ? '' : invalidFormMessage;
+    return isValid;
+  }
 
+  @action
+  onChangeAccessType(accessType: string) {
+    this.accessType = accessType;
+    const { mountConfigModel, type } = this.args;
     if (accessType === 'account') {
       // reset all "wif" attributes that are mutually exclusive with "account" attributes
       // these attributes are the same for each engine
-      configForm.data.identity_token_audience = configForm.data.identity_token_ttl = undefined;
-    } else if (accessType === 'wif') {
+      mountConfigModel.identityTokenAudience = mountConfigModel.identityTokenTtl = undefined;
+      // return the issuer to the globally set value (if there is one) on toggle
+      this.args.issuerConfig.rollbackAttributes();
+    }
+    if (accessType === 'wif') {
       // reset all "account" attributes that are mutually exclusive with "wif" attributes
       // these attributes are different for each engine
-      if (type === 'azure') {
-        (configForm as AzureConfigForm).data.client_secret = undefined;
-      } else if (type === 'aws') {
-        (configForm as AwsConfigForm).data.access_key = undefined;
-      }
+      type === 'azure'
+        ? (mountConfigModel.clientSecret = undefined)
+        : type === 'aws'
+        ? (mountConfigModel.accessKey = undefined)
+        : null;
     }
   }
 
   @action
   onCancel() {
     this.resetErrors();
+    this.args.mountConfigModel.unloadRecord();
     this.transition();
   }
 }

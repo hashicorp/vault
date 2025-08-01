@@ -40,7 +40,7 @@ export default class SyncSecretsOverviewRoute extends Route {
         ]
       : [capabilitiesReq, [], []];
 
-    const [{ canCreate, canUpdate }, { total_secrets }, destinations] = (await Promise.all(requests)) as [
+    const [{ canCreate, canUpdate }, { totalSecrets }, destinations] = (await Promise.all(requests)) as [
       Capabilities,
       SystemListSyncAssociationsResponse,
       SystemListSyncDestinationsResponse,
@@ -48,7 +48,7 @@ export default class SyncSecretsOverviewRoute extends Route {
 
     return {
       canActivateSecretsSync: canCreate || canUpdate,
-      total_secrets,
+      totalSecrets,
       destinations: listDestinationsTransform(destinations),
     };
   }

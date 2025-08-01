@@ -157,7 +157,7 @@ module('Acceptance | pki tidy', function (hooks) {
     assert
       .dom(GENERAL.ttl.input('Tidy ACME enabled'))
       .hasValue('30', 'acmeAccountSafetyBuffer defaults to 30 days');
-    await click(GENERAL.toggleInput('Tidy ACME enabled'));
+    await click('[data-test-toggle-input="Tidy ACME enabled"]');
 
     await click(PKI_TIDY_FORM.tidySave);
     assert.strictEqual(

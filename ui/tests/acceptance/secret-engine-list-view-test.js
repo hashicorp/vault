@@ -30,7 +30,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await fillIn(SES.secretPath('create'), path);
     await fillIn(SES.secretKey('create'), key);
     await fillIn(GENERAL.inputByAttr(key), value);
-    await click(GENERAL.submitButton);
+    await click(GENERAL.saveButton);
     await click(SES.crumb(enginePath));
   };
 
@@ -45,7 +45,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await page.enableEngine();
     await click(MOUNT_BACKEND_FORM.mountType('aws'));
     await fillIn(GENERAL.inputByAttr('path'), 'aws_engine');
-    await click(GENERAL.submitButton);
+    await click(GENERAL.saveButton);
     await click(GENERAL.breadcrumbLink('Secrets'));
     assert.strictEqual(
       currentRouteName(),
@@ -61,7 +61,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await visit('/vault/secrets');
     await page.enableEngine();
     await click(MOUNT_BACKEND_FORM.mountType('nomad'));
-    await click(GENERAL.submitButton);
+    await click(GENERAL.saveButton);
 
     assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backends', 'navigates to the list page');
     // cleanup
@@ -72,7 +72,7 @@ module('Acceptance | secret-engine list view', function (hooks) {
     await visit('/vault/secrets');
     await page.enableEngine();
     await click(MOUNT_BACKEND_FORM.mountType('aws'));
-    await click(GENERAL.submitButton);
+    await click(GENERAL.saveButton);
 
     assert.dom(SES.configTab).exists();
 

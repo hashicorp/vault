@@ -1,5 +1,6 @@
 @use 'sass:color';
 @use '../utils/box-shadow_variables';
+@use '../utils/color_variables';
 @use '../utils/font_variables';
 @use '../utils/size_variables';
 
@@ -28,7 +29,7 @@ $console-close-height: 35px;
 }
 
 .console-ui-panel-content {
-  color: hsl(0, 0%, 100%);
+  color: color_variables.$white;
   display: flex;
   flex-direction: column;
   font-size: size_variables.$size-7;
@@ -45,6 +46,17 @@ $console-close-height: 35px;
     font-size: size_variables.$size-7;
     min-height: 2rem;
     padding: 0;
+
+    &:not(.console-ui-command):not(.CodeMirror-line) {
+      padding-left: size_variables.$spacing-20;
+    }
+  }
+
+  .cm-s-hashi.CodeMirror {
+    background-color: rgba(color_variables.$black, 0.5) !important;
+    font-weight: font_variables.$font-weight-normal;
+    margin-left: size_variables.$spacing-20;
+    padding: size_variables.$spacing-12 size_variables.$spacing-20;
   }
 
   .console-ui-panel-intro {
@@ -57,11 +69,11 @@ $console-close-height: 35px;
   display: flex;
 
   input {
-    background-color: rgba(hsl(0, 0%, 4%), 0.5);
+    background-color: rgba(color_variables.$black, 0.5);
     border: 1px solid var(--token-color-palette-neutral-500);
     border-radius: var(--token-side-nav-body-list-item-border-radius);
-    caret-color: hsl(0, 0%, 100%);
-    color: hsl(0, 0%, 100%);
+    caret-color: color_variables.$white;
+    color: color_variables.$white;
     flex: 1 1 auto;
     font-family: font_variables.$family-monospace;
     font-size: size_variables.$size-6;
@@ -101,9 +113,13 @@ $console-close-height: 35px;
   }
 
   &.console-ui-alert--error {
+    // HDS tokens are not light enough on the dark background to pass a11y tests.
+    // hex value for --token-color-foreground-critical
     color: color.adjust(#e52228, $lightness: 20%);
   }
   &.console-ui-alert--success {
+    // HDS tokens are not light enough on the dark background to pass a11y tests.
+    // hex value for --token-color-foreground-success
     color: color.adjust(#008a22, $lightness: 20%);
   }
 }

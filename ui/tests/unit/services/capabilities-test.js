@@ -367,9 +367,9 @@ module('Unit | Service | capabilities', function (hooks) {
       const expectedPayload = [`${ns}/my/api/path`, `${ns}/another/api/path`];
 
       this.server.post('/sys/capabilities-self', (schema, req) => {
-        const nsHeader = req.requestHeaders['x-vault-namespace'];
+        const nsHeader = req.requestHeaders['X-Vault-Namespace'];
         const payload = JSON.parse(req.requestBody);
-        assert.strictEqual(nsHeader, '', 'request is made in the context of the "root" namespace');
+        assert.strictEqual(nsHeader, undefined, 'request is made in the context of the "root" namespace');
         assert.propEqual(payload.paths, expectedPayload, `paths include the relative namespace`);
         return req.passthrough();
       });
@@ -389,9 +389,9 @@ module('Unit | Service | capabilities', function (hooks) {
       const expectedPaths = ['ns1/child/my/api/path', 'ns1/child/another/api/path'];
 
       this.server.post('/sys/capabilities-self', (schema, req) => {
-        const nsHeader = req.requestHeaders['x-vault-namespace'];
+        const nsHeader = req.requestHeaders['X-Vault-Namespace'];
         const payload = JSON.parse(req.requestBody);
-        assert.strictEqual(nsHeader, '', 'request is made in the context of the "root" namespace');
+        assert.strictEqual(nsHeader, undefined, 'request is made in the context of the "root" namespace');
         assert.propEqual(payload.paths, expectedPaths, `paths include the relative namespace`);
         return req.passthrough();
       });
@@ -418,7 +418,7 @@ module('Unit | Service | capabilities', function (hooks) {
       const paths = ['my/api/path', '/another/api/path'];
 
       this.server.post('/sys/capabilities-self', (schema, req) => {
-        const nsHeader = req.requestHeaders['x-vault-namespace'];
+        const nsHeader = req.requestHeaders['X-Vault-Namespace'];
         const payload = JSON.parse(req.requestBody);
         assert.strictEqual(nsHeader, 'ns1', 'request is made in the context of the "ns1" namespace');
         assert.propEqual(
@@ -448,7 +448,7 @@ module('Unit | Service | capabilities', function (hooks) {
       const expectedPaths = ['child/my/api/path', 'child/another/api/path'];
 
       this.server.post('/sys/capabilities-self', (schema, req) => {
-        const nsHeader = req.requestHeaders['x-vault-namespace'];
+        const nsHeader = req.requestHeaders['X-Vault-Namespace'];
         const payload = JSON.parse(req.requestBody);
         assert.strictEqual(nsHeader, 'ns1', 'request is made in the context of the "ns1" namespace');
         assert.propEqual(payload.paths, expectedPaths, 'paths include the relative namespace');
@@ -473,7 +473,7 @@ module('Unit | Service | capabilities', function (hooks) {
       const paths = ['my/api/path', '/another/api/path'];
 
       this.server.post('/sys/capabilities-self', (schema, req) => {
-        const nsHeader = req.requestHeaders['x-vault-namespace'];
+        const nsHeader = req.requestHeaders['X-Vault-Namespace'];
         const payload = JSON.parse(req.requestBody);
         assert.strictEqual(
           nsHeader,

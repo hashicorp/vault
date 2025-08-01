@@ -4,7 +4,15 @@
 }}
 
 <div class="console-ui-output">
-  <JsonEditor @value={{stringify this.content}} @readOnly={{true}} />
+  <JsonEditor
+    @showToolbar={{false}}
+    @value={{stringify this.content}}
+    @readOnly={{true}}
+    {{! ideally we calculate the "height" of the json data, but 100 should cover most cases }}
+    @viewportMargin="100"
+    @gutters={{false}}
+    @theme="hashi auto-height"
+  />
   <Hds::Copy::Button
     @text="Copy"
     @isIconOnly={{true}}

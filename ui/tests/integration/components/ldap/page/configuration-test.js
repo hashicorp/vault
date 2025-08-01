@@ -16,6 +16,7 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const selectors = {
   rotateAction: '[data-test-toolbar-rotate-action]',
+  confirmRotate: '[data-test-confirm-button]',
   configAction: '[data-test-toolbar-config-action]',
   configCta: '[data-test-config-cta]',
   mountConfig: '[data-test-mount-config]',
@@ -83,7 +84,7 @@ module('Integration | Component | ldap | Page::Configuration', function (hooks) 
 
     await this.renderComponent();
 
-    assert.dom(GENERAL.pageError.error).exists('Config fetch error is rendered');
+    assert.dom(selectors.pageError).exists('Config fetch error is rendered');
   });
 
   test('it should render display fields', async function (assert) {
@@ -115,6 +116,6 @@ module('Integration | Component | ldap | Page::Configuration', function (hooks) 
 
     await this.renderComponent();
     await click(selectors.rotateAction);
-    await click(GENERAL.confirmButton);
+    await click(selectors.confirmRotate);
   });
 });

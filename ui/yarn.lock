@@ -2719,12 +2719,11 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@hashicorp/vault-client-typescript@hashicorp/vault-client-typescript":
-  version: 0.0.0
-  resolution: "@hashicorp/vault-client-typescript@https://github.com/hashicorp/vault-client-typescript.git#commit=93a0740c07e014899ed948a893d4fde2fdaeaccf"
-  checksum: b360333bd99e4d94dee7f82655185e6daf20bafb424fd36a77133e6b3d7c2adfb6d485b694e044dd51281e6a52190cebf0a96b4f9ec2d4830388a21fe47128a7
+"@hashicorp/vault-client-typescript@portal:./api-client::locator=vault%40workspace%3A.":
+  version: 0.0.0-use.local
+  resolution: "@hashicorp/vault-client-typescript@portal:./api-client::locator=vault%40workspace%3A."
   languageName: node
-  linkType: hard
+  linkType: soft
 
 "@hashicorp/vault-reporting@portal:./vault-reporting::locator=vault%40workspace%3A.":
   version: 0.0.0-use.local
@@ -3529,6 +3528,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/codemirror@npm:~5.60.15":
+  version: 5.60.15
+  resolution: "@types/codemirror@npm:5.60.15"
+  dependencies:
+    "@types/tern": "*"
+  checksum: cfad3f569de48fba3efa44fdfeba77933e231486a52cc80cff7ce6eeeed5b447a5bc2b11e2226bc00ccee332c661e53e35a15cf14eb835f434a6a402d9462f5f
+  languageName: node
+  linkType: hard
+
 "@types/connect@npm:*":
   version: 3.4.38
   resolution: "@types/connect@npm:3.4.38"
@@ -4037,6 +4045,15 @@ __metadata:
   version: 1.2.2
   resolution: "@types/symlink-or-copy@npm:1.2.2"
   checksum: fb8fc2a356d1d7ab222bbea772ca6bf1b4a90b1f14ea46c1522643d3afd018f3b938ead7ba04af88175432a07497c02904bf428008505acf8a4745f1bc6e3892
+  languageName: node
+  linkType: hard
+
+"@types/tern@npm:*":
+  version: 0.23.9
+  resolution: "@types/tern@npm:0.23.9"
+  dependencies:
+    "@types/estree": "*"
+  checksum: 53f229c79edf9454011f5b37c8539e0e760a130beac953d4e2126823de1ac6b0e2a45612596679fb232ec861826584fcaa272e2254a890b410575683423d56a8
   languageName: node
   linkType: hard
 
@@ -6705,6 +6722,13 @@ __metadata:
     "@lezer/highlight": ^1.0.0
     "@lezer/lr": ^1.0.0
   checksum: 9fb6e15faaf4dadff680c5b7523b536bf913f0985e298e671a5f964b06b8fc862fa53a17cb226d2c9d774c32b5b67a0669803177908618964d8af6ad6b528377
+  languageName: node
+  linkType: hard
+
+"codemirror@npm:~5.65.19":
+  version: 5.65.19
+  resolution: "codemirror@npm:5.65.19"
+  checksum: 3422332a62d301224e7061edded5fc7596e2a97cdb8186f725d479481bbc43bbe1e61150955579432455b3fd653822c39ec8d4e090c62fc5d36c753f6308374f
   languageName: node
   linkType: hard
 
@@ -18456,11 +18480,12 @@ __metadata:
     "@glimmer/component": ~1.1.2
     "@glimmer/tracking": ~1.1.2
     "@hashicorp/design-system-components": 4.18.2
-    "@hashicorp/vault-client-typescript": hashicorp/vault-client-typescript
+    "@hashicorp/vault-client-typescript": "portal:./api-client"
     "@hashicorp/vault-reporting": "portal:./vault-reporting"
     "@icholy/duration": ~5.1.0
     "@lineal-viz/lineal": ~0.5.1
     "@tsconfig/ember": ~2.0.0
+    "@types/codemirror": ~5.60.15
     "@types/d3-array": ~3.2.1
     "@types/ember-data": ~4.4.16
     "@types/qunit": ~2.19.12
@@ -18474,6 +18499,7 @@ __metadata:
     base64-js: ~1.5.1
     broccoli-asset-rev: ~3.0.0
     broccoli-sri-hash: "meirish/broccoli-sri-hash#rooturl"
+    codemirror: ~5.65.19
     columnify: ~1.6.0
     concurrently: ~9.1.2
     d3-array: ~3.2.4

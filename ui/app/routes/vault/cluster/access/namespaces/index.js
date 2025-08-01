@@ -6,10 +6,7 @@
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
 import { action } from '@ember/object';
-import { buildWaiter } from '@ember/test-waiters';
 import { hash } from 'rsvp';
-
-const waiter = buildWaiter('namespace-list-route');
 
 export default class NamespaceListRoute extends Route {
   @service pagination;
@@ -33,23 +30,20 @@ export default class NamespaceListRoute extends Route {
   }
 
   async fetchNamespaces(params) {
-    const waiterToken = waiter.beginAsync();
-    try {
-      const model = await this.pagination.lazyPaginatedQuery('namespace', {
+    return await this.pagination
+      .lazyPaginatedQuery('namespace', {
         responsePath: 'data.keys',
         page: Number(params?.page) || 1,
         pageFilter: params?.pageFilter,
+      })
+      .then((model) => model)
+      .catch((err) => {
+        if (err.httpStatus === 404) {
+          return [];
+        } else {
+          throw err;
+        }
       });
-      return model;
-    } catch (err) {
-      if (err.httpStatus === 404) {
-        return [];
-      } else {
-        throw err;
-      }
-    } finally {
-      waiter.endAsync(waiterToken);
-    }
   }
 
   model(params) {
