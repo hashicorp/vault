@@ -144,7 +144,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-gcp v0.21.0
 	github.com/hashicorp/vault-plugin-auth-jwt v0.24.1
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.15.0
-	github.com/hashicorp/vault-plugin-auth-kubernetes v0.22.2
+	github.com/hashicorp/vault-plugin-auth-kubernetes v0.22.3-0.20250801002623-becc0ef64d97
 	github.com/hashicorp/vault-plugin-auth-oci v0.19.0
 	github.com/hashicorp/vault-plugin-database-couchbase v0.14.0
 	github.com/hashicorp/vault-plugin-database-elasticsearch v0.18.0
@@ -231,7 +231,7 @@ require (
 	google.golang.org/grpc v1.72.2
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
-	k8s.io/apimachinery v0.33.1
+	k8s.io/apimachinery v0.33.3
 	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738
 	layeh.com/radius v0.0.0-20231213012653-1006025d24f8
 )
@@ -557,7 +557,7 @@ require (
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.33.1 // indirect
+	k8s.io/api v0.33.3 // indirect
 	k8s.io/client-go v0.33.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect
