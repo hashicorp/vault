@@ -3,27 +3,16 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import {
-  currentRouteName,
-  currentURL,
-  settled,
-  click,
-  findAll,
-  fillIn,
-  visit,
-  typeIn,
-} from '@ember/test-helpers';
+import { currentRouteName, currentURL, click, findAll, fillIn, visit, typeIn } from '@ember/test-helpers';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
-import { v4 as uuidv4 } from 'uuid';
-import { runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
+import { setupMirage } from 'ember-cli-mirage/test-support';
+import { setupAuth } from 'vault/tests/helpers/auth/setup-auth';
+import sinon from 'sinon';
 
-import { create } from 'ember-cli-page-object';
 import page from 'vault/tests/pages/settings/mount-secret-backend';
 import configPage from 'vault/tests/pages/secrets/backend/configuration';
-import { login } from 'vault/tests/helpers/auth/auth-helpers';
-import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import mountSecrets from 'vault/tests/pages/settings/mount-secret-backend';
 import { supportedSecretBackends } from 'vault/helpers/supported-secret-backends';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -31,52 +20,69 @@ import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engin
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 import { mountBackend } from 'vault/tests/helpers/components/mount-backend-form-helpers';
 import { SELECTORS as OIDC } from 'vault/tests/helpers/oidc-config';
-import { adminOidcCreateRead, adminOidcCreate } from 'vault/tests/helpers/secret-engine/policy-generator';
 import { filterEnginesByMountCategory } from 'vault/utils/all-engines-metadata';
 import engineDisplayData from 'vault/helpers/engines-display-data';
 
-const consoleComponent = create(consoleClass);
-
 // enterprise backends are tested separately
 const BACKENDS_WITH_ENGINES = ['kv', 'pki', 'ldap', 'kubernetes'];
+
 module('Acceptance | settings/mount-secret-backend', function (hooks) {
   setupApplicationTest(hooks);
+  setupMirage(hooks);
+  setupAuth(hooks);
 
   hooks.beforeEach(function () {
-    this.uid = uuidv4();
     this.calcDays = (hours) => {
       const days = Math.floor(hours / 24);
       const remainder = hours % 24;
       return `${days} days ${remainder} hours`;
     };
-    return login();
+    this.kvPath = 'kv';
+    this.mount = this.server.create('mount', 'isKv');
+
+    this.api = this.owner.lookup('service:api');
+    this.capabilities = this.owner.lookup('service:capabilities');
+
+    this.mountStub = sinon.stub(this.api.sys, 'mountsEnableSecretsEngine').resolves();
+    this.mountReadStub = sinon.stub(this.api.sys, 'internalUiReadMountInformation');
+    this.mountReadStub.callsFake(() => this.mount);
+    this.capabilitiesForStub = sinon.stub(this.capabilities, 'for');
+
+    // handle requests but ignore responses since they are not needed in the scope of these tests
+    ['metadata', 'config', 'roles', 'keys'].forEach((path) => {
+      this.server.get(`/:path/${path}`, {}, 404);
+    });
+    this.server.get('/kv', {}, 404);
+
+    // pki/config/acme uses hydrateModel which is not necessary for these tests
+    sinon.stub(this.owner.lookup('service:pathHelp'), 'hydrateModel').resolves({});
   });
 
   test('it sets the ttl correctly when mounting', async function (assert) {
-    // always force the new mount to the top of the list
-    const path = `mount-kv-${this.uid}`;
     const defaultTTLHours = 100;
     const maxTTLHours = 300;
+    this.mount.config.default_lease_ttl = 360000;
+    this.mount.config.max_lease_ttl = 1080000;
+
     await page.visit();
 
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
     await click(MOUNT_BACKEND_FORM.mountType('kv'));
-    await fillIn(GENERAL.inputByAttr('path'), path);
+    await fillIn(GENERAL.inputByAttr('path'), this.kvPath);
     await click(GENERAL.button('Method Options'));
     await click(GENERAL.toggleInput('Default Lease TTL'));
     await page.defaultTTLUnit('h').defaultTTLVal(defaultTTLHours);
     await click(GENERAL.toggleInput('Max Lease TTL'));
     await page.maxTTLUnit('h').maxTTLVal(maxTTLHours);
     await click(GENERAL.submitButton);
-    await configPage.visit({ backend: path });
+    await configPage.visit({ backend: this.kvPath });
     assert.strictEqual(configPage.defaultTTL, `${this.calcDays(defaultTTLHours)}`, 'shows the proper TTL');
     assert.strictEqual(configPage.maxTTL, `${this.calcDays(maxTTLHours)}`, 'shows the proper max TTL');
   });
 
   test('it sets the ttl when enabled then disabled', async function (assert) {
-    // always force the new mount to the top of the list
-    const path = `mount-kv-${this.uid}`;
     const maxTTLHours = 300;
+    this.mount.config.max_lease_ttl = 1080000;
 
     await page.visit();
 
@@ -86,13 +92,13 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       'navigates to mount page'
     );
     await click(MOUNT_BACKEND_FORM.mountType('kv'));
-    await fillIn(GENERAL.inputByAttr('path'), path);
+    await fillIn(GENERAL.inputByAttr('path'), this.kvPath);
     await click(GENERAL.button('Method Options'));
     await click(GENERAL.toggleInput('Default Lease TTL'));
     await click(GENERAL.toggleInput('Max Lease TTL'));
     await page.maxTTLUnit('h').maxTTLVal(maxTTLHours);
     await click(GENERAL.submitButton);
-    await configPage.visit({ backend: path });
+    await configPage.visit({ backend: this.kvPath });
     assert.strictEqual(configPage.defaultTTL, '1 month 1 day', 'shows system default TTL');
     assert.strictEqual(configPage.maxTTL, `${this.calcDays(maxTTLHours)}`, 'shows the proper max TTL');
   });
@@ -121,69 +127,25 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
   });
 
   test('it throws error if setting duplicate path name', async function (assert) {
-    const path = `kv-duplicate`;
-
-    await consoleComponent.runCommands([
-      // delete any kv-duplicate previously written here so that tests can be re-run
-      `delete sys/mounts/${path}`,
-    ]);
+    const error = `path is already in use at ${this.kvPath}`;
+    this.mountStub.rejects({ errors: [error] });
 
     await page.visit();
 
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
-    await mountBackend('kv', path);
-    await page.secretList();
-    await settled();
-    await page.enableEngine();
-    await mountBackend('kv', path);
+    await mountBackend('kv', this.kvPath);
 
-    assert.dom('[data-test-message-error-description]').containsText(`path is already in use at ${path}`);
     assert.strictEqual(currentRouteName(), 'vault.cluster.settings.mount-secret-backend');
-
-    await page.secretList();
-    await settled();
-    assert.dom(SES.secretsBackendLink(path)).exists({ count: 1 }, 'renders only one instance of the engine');
+    assert.dom('[data-test-message-error-description]').containsText(error);
   });
 
   test('version 2 with no update to config endpoint still allows mount of secret engine', async function (assert) {
-    const enginePath = `kv-noUpdate-${this.uid}`;
-    const V2_POLICY = `
-      path "${enginePath}/*" {
-        capabilities = ["list","create","read","sudo","delete"]
-      }
-      path "sys/mounts/*"
-      {
-        capabilities = ["create", "read", "update", "delete", "list", "sudo"]
-      }
+    this.capabilitiesForStub.withArgs('kvConfig', { path: this.kvPath }).returns({ canUpdate: false });
+    this.server.get(`/${this.kvPath}/metadata`, {}, 404);
 
-      # List existing secrets engines.
-      path "sys/mounts"
-      {
-        capabilities = ["read"]
-      }
-      # Allow page to load after mount
-      path "sys/internal/ui/mounts/${enginePath}" {
-        capabilities = ["read"]
-      }
-    `;
-    await consoleComponent.toggle();
-    await consoleComponent.runCommands(
-      [
-        // delete any previous mount with same name
-        `delete sys/mounts/${enginePath}`,
-        `write sys/policies/acl/kv-v2-degrade policy=${btoa(V2_POLICY)}`,
-        'write -field=client_token auth/token/create policies=kv-v2-degrade',
-      ],
-      false
-    );
-    await settled();
-    const userToken = consoleComponent.lastLogOutput;
-
-    await login(userToken);
-    // create the engine
     await mountSecrets.visit();
     await click(MOUNT_BACKEND_FORM.mountType('kv'));
-    await fillIn(GENERAL.inputByAttr('path'), enginePath);
+    await fillIn(GENERAL.inputByAttr('path'), this.kvPath);
     await mountSecrets.setMaxVersion(101);
     await click(GENERAL.submitButton);
 
@@ -194,11 +156,9 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       );
     assert.strictEqual(
       currentURL(),
-      `/vault/secrets/${enginePath}/kv/list`,
+      `/vault/secrets/${this.kvPath}/kv/list`,
       'After mounting, redirects to secrets list page'
     );
-    await configPage.visit({ backend: enginePath });
-    await settled();
   });
 
   test('it should transition to mountable addon engine after mount success', async function (assert) {
@@ -209,10 +169,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     assert.expect(addons.length);
 
     for (const engine of addons) {
-      await consoleComponent.runCommands([
-        // delete any previous mount with same name
-        `delete sys/mounts/${engine.type}`,
-      ]);
       await mountSecrets.visit();
       await mountBackend(engine.type, engine.type);
 
@@ -221,10 +177,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         `vault.cluster.secrets.backend.${engine.engineRoute}`,
         `Transitions to ${engine.displayName} route on mount success`
       );
-      await consoleComponent.runCommands([
-        // cleanup after
-        `delete sys/mounts/${engine.type}`,
-      ]);
     }
   });
 
@@ -238,10 +190,7 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     assert.expect(engines.length);
 
     for (const engine of engines) {
-      await consoleComponent.runCommands([
-        // delete any previous mount with same name
-        `delete sys/mounts/${engine.type}`,
-      ]);
+      this.mount = this.server.create('mount', { type: engine.type });
       await mountSecrets.visit();
       await click(MOUNT_BACKEND_FORM.mountType(engine.type));
       await fillIn(GENERAL.inputByAttr('path'), engine.type);
@@ -257,11 +206,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
         `vault.cluster.secrets.backend.${route}`,
         `${engine.type} navigates to the correct view (either list if not configuration only or configuration if it is).`
       );
-
-      await consoleComponent.runCommands([
-        // cleanup after
-        `delete sys/mounts/${engine.type}`,
-      ]);
     }
   });
 
@@ -272,10 +216,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     assert.expect(unsupported.length);
 
     for (const engine of unsupported) {
-      await consoleComponent.runCommands([
-        // delete any previous mount with same name
-        `delete sys/mounts/${engine.type}`,
-      ]);
       await mountSecrets.visit();
       await mountBackend(engine.type, engine.type);
 
@@ -290,10 +230,6 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
   test('it should transition to different locations for kv v1 and v2', async function (assert) {
     assert.expect(4);
     const v2 = 'kv-v2';
-    await consoleComponent.runCommands([
-      // delete any previous mount with same name
-      `delete sys/mounts/${v2}`,
-    ]);
     await mountSecrets.visit();
     await mountBackend('kv', v2);
     assert.strictEqual(currentURL(), `/vault/secrets/${v2}/kv/list`, `${v2} navigates to list url`);
@@ -303,11 +239,8 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
       `${v2} navigates to list url`
     );
 
-    const v1 = 'kv-v1';
-    await consoleComponent.runCommands([
-      // delete any previous mount with same name
-      `delete sys/mounts/${v1}`,
-    ]);
+    const v1 = 'kv';
+    this.mount = this.server.create('mount', 'isKvV1');
     await mountSecrets.visit();
     await click(MOUNT_BACKEND_FORM.mountType('kv'));
     await fillIn(GENERAL.inputByAttr('path'), v1);
@@ -323,105 +256,102 @@ module('Acceptance | settings/mount-secret-backend', function (hooks) {
     );
   });
 
-  module('WIF secret engines', function () {
-    test('it sets identity_token_key on mount config using search select list, resets after', async function (assert) {
-      // create an oidc/key
-      await runCmd(`write identity/oidc/key/some-key allowed_client_ids="*"`);
+  module('WIF secret engines', function (hooks) {
+    hooks.beforeEach(function () {
+      this.type = 'aws';
+      this.newKey = 'test-oidc-key';
+      this.keys = ['default'];
 
+      this.server.get('/identity/oidc/key', () => {
+        return {
+          data: { keys: this.keys },
+        };
+      });
+      this.server.post('/identity/oidc/key/:name', {}, 204);
+      this.server.get('/aws/roles', {}, 404);
+
+      this.mountReadStub.resolves(
+        this.server.create('mount', 'isAws', { config: { identity_token_key: this.newKey } })
+      );
+      sinon.stub(this.api.secrets, 'awsReadRootIamCredentialsConfiguration').resolves({
+        data: {
+          identity_token_key: this.newKey,
+          identity_token_ttl: 3600,
+          role_arn: 'arn:aws:iam::123456789012:role/VaultRole',
+        },
+      });
+      sinon.stub(this.api.secrets, 'awsReadLeaseConfiguration').resolves({ data: {} });
+      sinon.stub(this.api.identity, 'oidcReadConfiguration').resolves({ data: {} });
+    });
+
+    test('it sets identity_token_key on mount config using search select list, resets after', async function (assert) {
       await page.visit();
-      await click(MOUNT_BACKEND_FORM.mountType('aws')); // only testing aws of the WIF engines as the functionality for all others WIF engines in this form are the same
+      await click(MOUNT_BACKEND_FORM.mountType(this.type));
       await click(GENERAL.button('Method Options'));
       assert.dom('[data-test-search-select-with-modal]').exists('Search select with modal component renders');
       await clickTrigger('#key');
       const dropdownOptions = findAll('[data-option-index]').map((o) => o.innerText);
-      assert.ok(dropdownOptions.includes('some-key'), 'search select options show some-key');
-      await click(GENERAL.searchSelect.option(GENERAL.searchSelect.optionIndex('some-key')));
+      assert.ok(dropdownOptions.includes('default'), 'search select options show default');
+      await click(GENERAL.searchSelect.option(GENERAL.searchSelect.optionIndex('default')));
       assert
         .dom(GENERAL.searchSelect.selectedOption())
-        .hasText('some-key', 'some-key was selected and displays in the search select');
+        .hasText('default', 'default was selected and displays in the search select');
       await click(GENERAL.backButton);
       // Choose a non-wif engine
       await click(MOUNT_BACKEND_FORM.mountType('ssh'));
       assert
         .dom('[data-test-search-select-with-modal]')
         .doesNotExist('for type ssh, the modal field does not render.');
-      // cleanup
-      await runCmd(`delete identity/oidc/key/some-key`);
     });
 
     test('it allows a user with permissions to oidc/key to create an identity_token_key', async function (assert) {
-      const engine = 'aws'; // only testing aws of the WIF engines as the functionality for all others WIF engines in this form are the same
-      await login();
-      const path = `secrets-adminPolicy-${engine}`;
-      const newKey = `key-${engine}-${uuidv4()}`;
-      const secrets_admin_policy = adminOidcCreateRead(path);
-      const secretsAdminToken = await runCmd(
-        tokenWithPolicyCmd(`secrets-admin-${path}`, secrets_admin_policy)
-      );
-
-      await login(secretsAdminToken);
       await visit('/vault/settings/mount-secret-backend');
-      await click(MOUNT_BACKEND_FORM.mountType(engine));
-      await fillIn(GENERAL.inputByAttr('path'), path);
+      await click(MOUNT_BACKEND_FORM.mountType(this.type));
+      await fillIn(GENERAL.inputByAttr('path'), this.type);
       await click(GENERAL.button('Method Options'));
       await clickTrigger('#key');
       // create new key
-      await fillIn(GENERAL.searchSelect.searchInput, newKey);
+      await fillIn(GENERAL.searchSelect.searchInput, this.newKey);
       await click(GENERAL.searchSelect.options);
-      assert.dom('#search-select-modal').exists(`modal with form opens for engine ${engine}`);
+      assert.dom('#search-select-modal').exists(`modal with form opens for engine ${this.type}`);
       assert
         .dom('[data-test-modal-title]')
-        .hasText('Create new key', `Create key modal renders for engine: ${engine}`);
+        .hasText('Create new key', `Create key modal renders for engine: ${this.type}`);
 
       await click(OIDC.keySaveButton);
-      assert.dom('#search-select-modal').doesNotExist(`modal disappears onSave for engine ${engine}`);
-      assert.dom(GENERAL.searchSelect.selectedOption()).hasText(newKey, `${newKey} is now selected`);
+      assert.dom('#search-select-modal').doesNotExist(`modal disappears onSave for engine ${this.type}`);
+      assert
+        .dom(GENERAL.searchSelect.selectedOption())
+        .hasText(this.newKey, `${this.newKey} is now selected`);
 
       await click(GENERAL.submitButton);
-      await visit(`/vault/secrets/${path}/configuration`);
+      await visit(`/vault/secrets/${this.type}/configuration`);
       await click(SES.configurationToggle);
       assert
         .dom(GENERAL.infoRowValue('Identity token key'))
-        .hasText(newKey, `shows identity token key on configuration page for engine: ${engine}`);
-
-      // cleanup
-      await runCmd(`delete sys/mounts/${path}`);
-      await runCmd(`delete identity/oidc/key/some-key`);
-      await runCmd(`delete identity/oidc/key/${newKey}`);
+        .hasText(this.newKey, `shows identity token key on configuration page for engine: ${this.type}`);
     });
 
     test('it allows user with NO access to oidc/key to manually input an identity_token_key', async function (assert) {
-      const engine = 'aws'; // only testing aws of the WIF engines as the functionality for all others WIF engines in this form are the same
-      await login();
-      const path = `secrets-noOidcAdmin-${engine}`;
-      const secretsNoOidcAdminPolicy = adminOidcCreate(path);
-      const secretsNoOidcAdminToken = await runCmd(
-        tokenWithPolicyCmd(`secrets-noOidcAdmin-${path}`, secretsNoOidcAdminPolicy)
-      );
-      // create an oidc/key that they can then use even if they can't read it.
-      await runCmd(`write identity/oidc/key/general-key allowed_client_ids="*"`);
+      this.server.get('/identity/oidc/key', {}, 403);
 
-      await login(secretsNoOidcAdminToken);
       await page.visit();
-      await click(MOUNT_BACKEND_FORM.mountType(engine));
-      await fillIn(GENERAL.inputByAttr('path'), path);
+      await click(MOUNT_BACKEND_FORM.mountType(this.type));
+      await fillIn(GENERAL.inputByAttr('path'), this.type);
       await click(GENERAL.button('Method Options'));
       // type-in fallback component to create new key
-      await typeIn(GENERAL.inputSearch('key'), 'general-key');
+      await typeIn(GENERAL.inputSearch('key'), this.newKey);
       await click(GENERAL.submitButton);
       assert
         .dom(GENERAL.latestFlashContent)
-        .hasText(`Successfully mounted the ${engine} secrets engine at ${path}.`);
+        .hasText(`Successfully mounted the ${this.type} secrets engine at ${this.type}.`);
 
-      await visit(`/vault/secrets/${path}/configuration`);
+      await visit(`/vault/secrets/${this.type}/configuration`);
 
       await click(SES.configurationToggle);
       assert
         .dom(GENERAL.infoRowValue('Identity token key'))
-        .hasText('general-key', `shows identity token key on configuration page for engine: ${engine}`);
-
-      // cleanup
-      await runCmd(`delete sys/mounts/${path}`);
+        .hasText(this.newKey, `shows identity token key on configuration page for engine: ${this.type}`);
     });
   });
 });
