@@ -16,10 +16,8 @@
  *
  */
 import Component from '@ember/component';
-import layout from '../templates/components/operation-field-display';
 
 export default Component.extend({
-  layout,
   tagName: '',
   model: null,
 
@@ -43,5 +41,5 @@ export default Component.extend({
     operationEnabled(model, field) {
       return this.trueOrFalseString(model, field, 'Enabled', 'Disabled');
     },
-  },
+  }
 });
