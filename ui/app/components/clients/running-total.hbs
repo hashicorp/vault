@@ -4,25 +4,18 @@
 }}
 
 {{#if (gt @byMonthNewClients.length 1)}}
-  <Clients::CountsCard @title="Vault client counts" @description={{this.chartContainerText}} @legend={{this.chartLegend}}>
-    <:subheader>
-      <div class="is-pulled-right">
-        <Hds::Form::Toggle::Field
-          data-test-input="toggle view"
-          {{on "change" (fn (mut this.showStacked) (not this.showStacked))}}
-          as |F|
-        >
-          <F.Label>Split by client type</F.Label>
-        </Hds::Form::Toggle::Field>
-      </div>
-    </:subheader>
+  <Clients::CountsCard
+    @title="Client usage trends for selected billing period"
+    @description={{this.chartContainerText}}
+    @legend={{this.chartLegend}}
+  >
 
     <:dataLeft>
       <StatText
-        @label="Running new client total"
+        @label="New client total and type distribution"
         @subText="The number of new clients which interacted with Vault during the selected period."
         @value={{@runningTotals.clients}}
-        @size="l"
+        @size="m"
         @tooltipText="This number is the total for the queried date range. The chart displays a monthly breakdown of total new clients per month."
       />
 
@@ -39,16 +32,26 @@
     </:dataLeft>
 
     <:dataRight>
+      <div class="flex space-between has-bottom-margin-xl left-padding-16">
+        <Hds::Text::Body @tag="p">Client usage by month</Hds::Text::Body>
+        <Hds::Form::Toggle::Field
+          data-test-input="toggle view"
+          {{on "change" (fn (mut this.showStacked) (not this.showStacked))}}
+          as |F|
+        >
+          <F.Label>Split by client type</F.Label>
+        </Hds::Form::Toggle::Field>
+      </div>
       {{#if this.showStacked}}
         <Clients::Charts::VerticalBarStacked
-          @chartTitle="Vault client counts"
+          @chartTitle="Client usage by month"
           @data={{this.runningTotalData}}
           @chartLegend={{this.chartLegend}}
           @chartHeight={{200}}
         />
       {{else}}
         <Clients::Charts::VerticalBarBasic
-          @chartTitle="Vault client counts"
+          @chartTitle="Client usage by month"
           @data={{this.runningTotalData}}
           @dataKey="new_clients"
           @chartHeight={{200}}

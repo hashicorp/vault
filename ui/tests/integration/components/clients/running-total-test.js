@@ -61,15 +61,17 @@ module('Integration | Component | clients/running-total', function (hooks) {
   test('it renders with full monthly activity data', async function (assert) {
     await this.renderComponent();
 
-    assert.dom(CHARTS.container('Vault client counts')).exists('running total component renders');
-    assert.dom(CHARTS.chart('Vault client counts')).exists('bar chart renders');
+    assert
+      .dom(CHARTS.container('Client usage trends for selected billing period'))
+      .exists('running total component renders');
+    assert.dom(CHARTS.chart('Client usage by month')).exists('bar chart renders');
     assert.dom(CHARTS.legend).hasText('New clients');
     const expectedColor = 'rgb(28, 52, 95)';
     const color = getComputedStyle(find(CHARTS.legendDot(1))).backgroundColor;
     assert.strictEqual(color, expectedColor, `actual color: ${color}, expected color: ${expectedColor}`);
 
     const expectedValues = {
-      'Running new client total': formatNumber([this.totalUsageCounts.clients]),
+      'New client total and type distribution': formatNumber([this.totalUsageCounts.clients]),
       Entity: formatNumber([this.totalUsageCounts.entity_clients]),
       'Non-entity': formatNumber([this.totalUsageCounts.non_entity_clients]),
       ACME: formatNumber([this.totalUsageCounts.acme_clients]),
@@ -102,8 +104,10 @@ module('Integration | Component | clients/running-total', function (hooks) {
     await this.renderComponent();
     await click(GENERAL.inputByAttr('toggle view'));
 
-    assert.dom(CHARTS.container('Vault client counts')).exists('running total component renders');
-    assert.dom(CHARTS.chart('Vault client counts')).exists('bar chart renders');
+    assert
+      .dom(CHARTS.container('Client usage trends for selected billing period'))
+      .exists('running total component renders');
+    assert.dom(CHARTS.chart('Client usage by month')).exists('bar chart renders');
     assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients Secret sync clients Acme clients');
 
     // assert each legend item is correct
@@ -158,7 +162,7 @@ module('Integration | Component | clients/running-total', function (hooks) {
           `stat label: ${label} renders single month new clients: ${expectedStats[label]}`
         );
     }
-    assert.dom(CHARTS.chart('Vault client counts')).doesNotExist('bar chart does not render');
+    assert.dom(CHARTS.chart('Client usage by month')).doesNotExist('bar chart does not render');
     assert.dom(CLIENT_COUNT.statTextValue()).exists({ count: 5 }, 'renders 5 stat text containers');
   });
 
@@ -169,8 +173,10 @@ module('Integration | Component | clients/running-total', function (hooks) {
 
     await this.renderComponent();
 
-    assert.dom(CHARTS.container('Vault client counts')).exists('running total component renders');
-    assert.dom(CHARTS.chart('Vault client counts')).exists('bar chart renders');
+    assert
+      .dom(CHARTS.container('Client usage trends for selected billing period'))
+      .exists('running total component renders');
+    assert.dom(CHARTS.chart('Client usage by month')).exists('bar chart renders');
     assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists();
     assert.dom(CLIENT_COUNT.statTextValue('Non-entity')).exists();
     assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).doesNotExist('does not render secret syncs');
