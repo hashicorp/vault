@@ -39,5 +39,5 @@ export default Component.extend(ReplicationActions, DEFAULTS, {
         id: null,
       });
     },
-  }
+  },
 });

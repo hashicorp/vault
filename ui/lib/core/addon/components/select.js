@@ -26,16 +26,16 @@ import Component from '@ember/component';
  */
 
 export default Component.extend({
- classNames: ['field'],
- label: null,
- selectedValue: null,
- name: null,
- options: null,
- valueAttribute: 'value',
- labelAttribute: 'label',
- isInline: false,
- isFullwidth: false,
- noDefault: false,
- onChange() {},
- ariaLabel: null
+  classNames: ['field'],
+  label: null,
+  selectedValue: null,
+  name: null,
+  options: null,
+  valueAttribute: 'value',
+  labelAttribute: 'label',
+  isInline: false,
+  isFullwidth: false,
+  noDefault: false,
+  onChange() {},
+  ariaLabel: null,
 });

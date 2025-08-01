@@ -13,5 +13,5 @@ export default Actions.extend({
       // No data is submitted for disable request
       return this.onSubmit(replicationMode, clusterMode, null, evt);
     },
-  }
+  },
 });

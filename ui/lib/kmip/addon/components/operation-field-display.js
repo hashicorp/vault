@@ -41,5 +41,5 @@ export default Component.extend({
     operationEnabled(model, field) {
       return this.trueOrFalseString(model, field, 'Enabled', 'Disabled');
     },
-  }
+  },
 });

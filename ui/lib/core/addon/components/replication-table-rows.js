@@ -38,5 +38,5 @@ export default Component.extend({
 
   clusterId: computed('replicationDetails.clusterId', function () {
     return this.replicationDetails.clusterId || 'unknown';
-  })
+  }),
 });

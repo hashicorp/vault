@@ -7,6 +7,6 @@ import Component from '@ember/component';
 import { service } from '@ember/service';
 
 export default Component.extend({
- tagName: '',
- secretMountPath: service()
+  tagName: '',
+  secretMountPath: service(),
 });

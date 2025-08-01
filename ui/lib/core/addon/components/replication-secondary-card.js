@@ -66,5 +66,5 @@ export default Component.extend({
       return this.replicationDetails.primaries[0].api_address;
     }
     return '';
-  })
+  }),
 });

@@ -92,5 +92,5 @@ export default Component.extend({
       model.rollbackAttributes();
     }
     this._super(...arguments);
-  }
+  },
 });
