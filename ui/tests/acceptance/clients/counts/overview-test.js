@@ -247,7 +247,8 @@ module('Acceptance | clients | overview | secrets sync', function (hooks) {
     await visit('/vault/clients/counts/overview');
     assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).doesNotExist();
     assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists('other stats are still visible');
-    // TODO add assertion sync clients HIDDEN in running total chart and legend
+    await click(GENERAL.inputByAttr('toggle view'));
+    assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients clients Acme clients');
   });
 
   module('feature is on license', function (hooks) {
@@ -260,7 +261,8 @@ module('Acceptance | clients | overview | secrets sync', function (hooks) {
       await login();
       await visit('/vault/clients/counts/overview');
       assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists('shows secret sync data on overview');
-      // TODO add assertion sync clients SHOW in running total chart and legend
+      await click(GENERAL.inputByAttr('toggle view'));
+      assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients Secret sync clients Acme clients');
     });
 
     test('it should hide secrets sync stats when feature is NOT activated', async function (assert) {
@@ -277,7 +279,8 @@ module('Acceptance | clients | overview | secrets sync', function (hooks) {
         .dom(CLIENT_COUNT.statTextValue('Secret sync'))
         .doesNotExist('stat is hidden because feature is not activated');
       assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists('other stats are still visible');
-      // TODO add assertion sync clients HIDDEN in running total chart and legend
+      await click(GENERAL.inputByAttr('toggle view'));
+      assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients clients Acme clients');
     });
 
     test('it should show secrets sync stats for HVD managed clusters', async function (assert) {
@@ -287,7 +290,8 @@ module('Acceptance | clients | overview | secrets sync', function (hooks) {
       await login();
       await visit('/vault/clients/counts/overview');
       assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists();
-      // TODO add assertion sync clients SHOW in running total chart and legend
+      await click(GENERAL.inputByAttr('toggle view'));
+      assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients Secret sync clients Acme clients');
     });
   });
 });
