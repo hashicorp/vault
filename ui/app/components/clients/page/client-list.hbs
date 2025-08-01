@@ -19,7 +19,10 @@
         {{/each}}
       </SG.Dropdown>
       <SG.Dropdown as |D|>
-        <D.ToggleButton @color="secondary" @text="Mount path: {{this.selectedMountPath}}" />
+        <D.ToggleButton
+          @color="secondary"
+          @text="Mount path{{if this.selectedMountPath (concat ': ' this.selectedMountPath)}}"
+        />
         {{#each this.mountPaths as |mountPath|}}
           <D.Checkmark
             {{on "click" (fn this.setFilter "selectedMountPath" mountPath)}}
