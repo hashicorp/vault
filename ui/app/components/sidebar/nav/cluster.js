@@ -5,6 +5,7 @@
 
 import Component from '@glimmer/component';
 import { service } from '@ember/service';
+import config from 'vault/config/environment';
 
 export default class SidebarNavClusterComponent extends Component {
   @service currentCluster;
@@ -56,5 +57,10 @@ export default class SidebarNavClusterComponent extends Component {
 
     // otherwise we show the link depending on whether or not the feature exists
     return this.version.hasSecretsSync;
+  }
+
+  // TODO remove conditional once further feature work for single item recovery for release 1.21 is completed
+  get showSecretsRecovery() {
+    return config.environment !== 'production';
   }
 }
