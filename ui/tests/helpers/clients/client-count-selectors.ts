@@ -45,9 +45,9 @@ export const CLIENT_COUNT = {
 
 export const CHARTS = {
   // container
-  container: (title: string) => `[data-test-chart-container="${title}"]`,
-  timestamp: '[data-test-chart-container-timestamp]',
-  legend: '[data-test-chart-container-legend]',
+  container: (title: string) => `[data-test-counts-card="${title}"]`,
+  timestamp: '[data-test-counts-card-timestamp]',
+  legend: '[data-test-counts-card-legend]',
   legendDot: (nth: number) => `.legend-item:nth-child(${nth}) > span`,
 
   // chart elements

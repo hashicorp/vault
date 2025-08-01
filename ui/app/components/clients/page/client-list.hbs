@@ -1,0 +1,40 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<Clients::CountsCard @title="Client counts by path">
+  <:subheader>
+    <Hds::SegmentedGroup as |SG|>
+      <SG.Dropdown as |D|>
+        <D.ToggleButton
+          @color="secondary"
+          @text="Namespace{{if this.selectedNamespace (concat ': ' this.selectedNamespace)}}"
+        />
+        {{#each this.namespaces as |namespace|}}
+          <D.Checkmark
+            {{on "click" (fn this.setFilter "selectedNamespace" namespace)}}
+            @selected={{eq namespace this.selectedNamespace}}
+          >{{namespace}}</D.Checkmark>
+        {{/each}}
+      </SG.Dropdown>
+      <SG.Dropdown as |D|>
+        <D.ToggleButton
+          @color="secondary"
+          @text="Mount path{{if this.selectedMountPath (concat ': ' this.selectedMountPath)}}"
+        />
+        {{#each this.mountPaths as |mountPath|}}
+          <D.Checkmark
+            {{on "click" (fn this.setFilter "selectedMountPath" mountPath)}}
+            @selected={{eq mountPath this.selectedMountPath}}
+          >{{mountPath}}</D.Checkmark>
+        {{/each}}
+      </SG.Dropdown>
+    </Hds::SegmentedGroup>
+    <Hds::Button @icon="reload" @text="Clear filters" @color="tertiary" {{on "click" this.resetFilters}} />
+  </:subheader>
+
+  <:table>
+    {{! table }}
+  </:table>
+</Clients::CountsCard>

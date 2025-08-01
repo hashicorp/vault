@@ -14,21 +14,29 @@
 />
 
 {{#if this.hasAttributionData}}
-  <Hds::Form::Select::Base
-    class="has-bottom-margin-m"
-    aria-label="Month"
-    name="month"
-    {{on "input" this.selectMonth}}
-    @width="200px"
-    data-test-select="attribution-month"
-    as |S|
-  >
-    <S.Options>
-      <option value="">Select month</option>
-      {{#each this.months as |m|}}
-        <option value={{m.value}} selected={{eq m.value this.selectedMonth}}>{{m.display}}</option>
-      {{/each}}
-    </S.Options>
-  </Hds::Form::Select::Base>
-  <Clients::Table @data={{this.tableData}} />
+  <Clients::CountsCard @title="Client attribution" @legend={{this.chartLegend}}>
+    <:subheader>
+      <Hds::Form::Select::Base
+        class="has-bottom-margin-m"
+        aria-label="Month"
+        name="month"
+        {{on "input" this.selectMonth}}
+        @width="200px"
+        data-test-select="attribution-month"
+        as |S|
+      >
+        <S.Options>
+          <option value="">Select month</option>
+          {{#each this.months as |m|}}
+            <option value={{m.value}} selected={{eq m.value this.selectedMonth}}>{{m.display}}</option>
+          {{/each}}
+        </S.Options>
+      </Hds::Form::Select::Base>
+    </:subheader>
+
+    <:table>
+      <Clients::Table @data={{this.tableData}} />
+    </:table>
+  </Clients::CountsCard>
+
 {{/if}}
