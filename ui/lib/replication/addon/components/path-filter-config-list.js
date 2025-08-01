@@ -34,8 +34,8 @@ export default Component.extend({
     const secret = [];
     const auth = [];
     const mounts = ns
-      ? yield adapter.ajax('/v1/sys/internal/ui/mounts', 'GET', { namespace: ns })
-      : yield adapter.ajax('/v1/sys/internal/ui/mounts', 'GET');
+      ? (yield adapter.ajax('/v1/sys/internal/ui/mounts', 'GET', { namespace: ns }))
+      : (yield adapter.ajax('/v1/sys/internal/ui/mounts', 'GET'));
 
     ['secret', 'auth'].forEach((key) => {
       for (const [id, info] of Object.entries(mounts.data[key])) {
