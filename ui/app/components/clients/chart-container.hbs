@@ -3,49 +3,43 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{! HBS display template for rendering title, description and stat boxes with a chart on the right }}
+{{! Template displays a title and description above a flex row with a 1/3-width left element and 
+a 2/3-width right element. If a @legend arg exists, it renders centered below the right element }}
 
-<div class="chart-wrapper single-chart-grid" data-test-chart-container={{@title}} ...attributes>
-  <div class="chart-header has-bottom-margin-xl">
+<Hds::Card::Container class="chart-container" data-test-chart-container={{@title}} ...attributes>
+  <div class="has-bottom-margin-xl">
     <h2 class="chart-title">{{@title}}</h2>
-    <p class="chart-description">
-      {{@description}}
-    </p>
+    {{#if @description}}
+      <p class="chart-description">{{@description}}</p>
+    {{/if}}
+    {{#if (has-block "customSubheader")}}
+      {{yield to="customSubheader"}}
+    {{/if}}
   </div>
 
-  {{#if @hasChartData}}
-    {{#if (has-block "subTitle")}}
-      <div class="chart-subTitle">
-        {{yield to="subTitle"}}
-      </div>
-    {{/if}}
-
-    {{#if (has-block "stats")}}
-      {{yield to="stats"}}
-    {{/if}}
-
-    {{#if (has-block "chart")}}
-      <div class="chart-container-wide">
-        {{yield to="chart"}}
-      </div>
-    {{/if}}
-
-    {{#if (has-block "legend")}}
-      <div class="legend">
-        {{yield to="legend"}}
-      </div>
-    {{else if @legend}}
-      <div class="legend" data-test-chart-container-legend>
-        {{#each @legend as |legend idx|}}
-          <span class="legend-colors dot-{{idx}}"></span>
-          <span class="legend-label">{{capitalize legend.label}}</span>
-        {{/each}}
-      </div>
-    {{/if}}
-
-  {{else}}
-    <div class="chart-empty-state chart-container-wide">
-      {{yield to="emptyState"}}
+  <div class="chart-flex-row">
+    <div class="item-left">
+      {{#if (has-block "dataLeft")}}
+        {{yield to="dataLeft"}}
+      {{/if}}
     </div>
-  {{/if}}
-</div>
+
+    <div class="item-right">
+      {{#if (has-block "dataRight")}}
+        {{yield to="dataRight"}}
+      {{/if}}
+
+      {{#if @legend}}
+        <div class="legend-container" data-test-chart-container-legend>
+          {{#each @legend as |l|}}
+            <div class="legend-item">
+              <span class="dots legend-{{l.key}}"></span>
+              <Hds::Text::Body @tag="p" @size="100">{{capitalize l.label}}</Hds::Text::Body>
+            </div>
+          {{/each}}
+        </div>
+      {{/if}}
+
+    </div>
+  </div>
+</Hds::Card::Container>

@@ -48,7 +48,7 @@ export const CHARTS = {
   container: (title: string) => `[data-test-chart-container="${title}"]`,
   timestamp: '[data-test-chart-container-timestamp]',
   legend: '[data-test-chart-container-legend]',
-  legendLabel: (nth: number) => `.legend-label:nth-child(${nth * 2})`, // nth * 2 accounts for dots in legend
+  legendDot: (nth: number) => `.legend-item:nth-child(${nth}) > span`,
 
   // chart elements
   chart: (title: string) => `[data-test-chart="${title}"]`,
