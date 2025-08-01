@@ -1,0 +1,3 @@
+```release-note:bug
+gcs: fix failed locking due to updated library error checks
+```

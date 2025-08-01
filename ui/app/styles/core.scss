@@ -4,7 +4,6 @@
  */
 
 // Variables
-@use 'utils/color_variables'; // colors need to come first.
 @use 'utils/box-shadow_variables';
 @use 'utils/font_variables';
 @use 'utils/size_variables';
@@ -23,7 +22,6 @@
 @use 'core/box';
 @use 'core/buttons';
 @use 'core/charts';
-@use 'core/charts-lineal';
 @use 'core/checkbox-and-radio';
 @use 'core/columns';
 @use 'core/containers';

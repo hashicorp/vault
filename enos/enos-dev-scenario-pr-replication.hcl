@@ -113,12 +113,10 @@ scenario "dev_pr_replication" {
         artifactory_repo:
           The artifactory host to search. It's very unlikely that you'll want to change this. The
           default value is where CRT will publish packages.
-        artifactory_username:
-          The artifactory username associated with your token. You'll need this if you wish to use
-          deb or rpm artifacts! You can request access via Okta.
         artifactory_token:
-          The artifactory token associated with your username. You'll need this if you wish to use
-          deb or rpm artifacts! You can create a token by logging into Artifactory via Okta.
+          The artifactory identity token to use for authentication. You'll need this if you wish
+          to use deb or rpm artifacts! You can get a token by joining the 'artifactory-users' Doormat
+          group and using 'doormat artifactory create-token'.
         dev_build_local_ui:
           If you are not testing any changes in the UI, set to false. This will save time by not
           building the entire UI. If you need to test the UI, set to true.
@@ -149,11 +147,10 @@ scenario "dev_pr_replication" {
       // Required when using a RPM or Deb package
       // Some of these variables don't have default values so we'll only set them if they are
       // required.
-      artifactory_host     = local.use_artifactory ? var.artifactory_host : null
-      artifactory_repo     = local.use_artifactory ? var.artifactory_repo : null
-      artifactory_username = local.use_artifactory ? var.artifactory_username : null
-      artifactory_token    = local.use_artifactory ? var.artifactory_token : null
-      distro               = matrix.distro
+      artifactory_host  = local.use_artifactory ? var.artifactory_host : null
+      artifactory_repo  = local.use_artifactory ? var.artifactory_repo : null
+      artifactory_token = local.use_artifactory ? var.artifactory_token : null
+      distro            = matrix.distro
     }
   }
 
@@ -685,6 +682,7 @@ scenario "dev_pr_replication" {
       hosts             = step.create_primary_cluster_targets.hosts
       leader_host       = step.get_primary_cluster_ips.leader_host
       vault_addr        = step.create_primary_cluster.api_addr_localhost
+      vault_edition     = matrix.edition
       vault_install_dir = local.vault_install_dir
       vault_root_token  = step.create_primary_cluster.root_token
     }

@@ -1,5 +1,4 @@
 @use '../utils/box-shadow_variables';
-@use '../utils/color_variables';
 @use '../utils/font_variables';
 @use '../utils/size_variables';
 
@@ -48,7 +47,7 @@
   z-index: -1;
 
   &::after {
-    background: color_variables.$white;
+    background: hsl(0, 0%, 100%);
     bottom: size_variables.$spacing-4;
     content: '';
     left: size_variables.$spacing-4 + size_variables.$spacing-24;
@@ -67,7 +66,7 @@
 }
 
 div > .ember-power-select-options {
-  background: color_variables.$white;
+  background: hsl(0, 0%, 100%);
   border: box-shadow_variables.$base-border;
   box-shadow: box-shadow_variables.$box-shadow-middle;
   margin: -4px size_variables.$spacing-8 0;
@@ -81,12 +80,12 @@ div > .ember-power-select-options {
   }
 
   .ember-power-select-option[aria-current='true'] {
-    background-color: color_variables.$ui-gray-050;
-    color: color_variables.$ui-gray-900;
+    background-color: var(--token-color-palette-neutral-50);
+    color: var(--token-color-palette-neutral-600);
   }
 
   .ember-power-select-option--no-matches-message {
-    color: color_variables.$grey;
+    color: var(--token-color-palette-neutral-400);
     font-size: size_variables.$size-8;
     font-weight: font_variables.$font-weight-semibold;
     text-transform: uppercase;
@@ -94,7 +93,7 @@ div > .ember-power-select-options {
     &:hover,
     &:focus {
       background: transparent;
-      color: color_variables.$grey;
+      color: var(--token-color-palette-neutral-400);
     }
   }
 }
@@ -111,12 +110,12 @@ div > .ember-power-select-options {
   }
 
   .control .button {
-    color: color_variables.$grey-light;
+    color: var(--token-color-palette-neutral-300);
     min-width: auto;
 
     &:hover,
     &:focus {
-      color: color_variables.$blue;
+      color: var(--token-color-palette-blue-200);
     }
   }
 }

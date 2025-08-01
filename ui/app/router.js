@@ -29,9 +29,10 @@ Router.map(function () {
       this.route('clients', function () {
         this.route('counts', function () {
           this.route('overview');
-          this.route('token');
-          this.route('sync');
-          this.route('acme');
+          // TODO remove this conditional when client count feature work for 1.21 is complete
+          if (config.environment !== 'production') {
+            this.route('client-list');
+          }
         });
         this.route('config');
         this.route('edit');

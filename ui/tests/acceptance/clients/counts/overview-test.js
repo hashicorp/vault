@@ -235,102 +235,59 @@ module('Acceptance | clients | overview', function (hooks) {
   });
 });
 
-module('Acceptance | clients | overview | sync in license, activated', function (hooks) {
+module('Acceptance | clients | overview | secrets sync', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
-  hooks.beforeEach(async function () {
-    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
-
-    syncHandler(this.server);
-
-    await login();
-    return visit('/vault/clients/counts/overview');
-  });
-
-  test('it should render the correct tabs', async function (assert) {
-    assert.dom(GENERAL.tab('sync')).exists('shows the sync tab');
-  });
-
-  test('it should show secrets sync stats', async function (assert) {
-    assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists('shows secret sync data on overview');
-  });
-
-  test('it should navigate to secrets sync page', async function (assert) {
-    await click(GENERAL.tab('sync'));
-
-    assert.dom(GENERAL.tab('sync')).hasClass('active');
-    assert.dom(GENERAL.emptyStateTitle).doesNotExist();
-
-    assert
-      .dom(CHARTS.chart('Secrets sync usage'))
-      .exists('chart is shown because feature is active and has data');
-  });
-});
-
-module('Acceptance | clients | overview | sync in license, not activated', function (hooks) {
-  setupApplicationTest(hooks);
-  setupMirage(hooks);
-
-  hooks.beforeEach(async function () {
-    this.server.get('/sys/license/features', () => ({ features: ['Secrets Sync'] }));
-
-    await login();
-    return visit('/vault/clients/counts/overview');
-  });
-
-  test('it should show the secrets sync tab', async function (assert) {
-    assert.dom(GENERAL.tab('sync')).exists('sync tab is shown because feature is in license');
-  });
-
-  test('it should hide secrets sync stats', async function (assert) {
-    assert
-      .dom(CLIENT_COUNT.statTextValue('Secret sync'))
-      .doesNotExist('stat is hidden because feature is not activated');
-    assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists('other stats are still visible');
-  });
-});
-
-module('Acceptance | clients | overview | sync not in license', function (hooks) {
-  setupApplicationTest(hooks);
-  setupMirage(hooks);
-
-  hooks.beforeEach(async function () {
+  test('it should hide secrets sync stats when feature is NOT on license', async function (assert) {
     // mocks endpoint for no additional license modules
     this.server.get('/sys/license/features', () => ({ features: [] }));
 
     await login();
-    return visit('/vault/clients/counts/overview');
-  });
-
-  test('it should hide the secrets sync tab', async function (assert) {
-    assert.dom(GENERAL.tab('sync')).doesNotExist();
-  });
-
-  test('it should hide secrets sync stats', async function (assert) {
+    await visit('/vault/clients/counts/overview');
     assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).doesNotExist();
     assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists('other stats are still visible');
-  });
-});
-
-module('Acceptance | clients | overview | HVD', function (hooks) {
-  setupApplicationTest(hooks);
-  setupMirage(hooks);
-
-  hooks.beforeEach(async function () {
-    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
-    syncHandler(this.server);
-    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
-
-    await login();
-    return visit('/vault/clients/counts/overview');
+    // TODO add assertion sync clients HIDDEN in running total chart and legend
   });
 
-  test('it should show the secrets sync tab', async function (assert) {
-    assert.dom(GENERAL.tab('sync')).exists();
-  });
+  module('feature is on license', function (hooks) {
+    hooks.beforeEach(async function () {
+      syncHandler(this.server);
+    });
 
-  test('it should show secrets sync stats', async function (assert) {
-    assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists();
+    test('it should show secrets sync stats when the feature is activated', async function (assert) {
+      syncHandler(this.server);
+      await login();
+      await visit('/vault/clients/counts/overview');
+      assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists('shows secret sync data on overview');
+      // TODO add assertion sync clients SHOW in running total chart and legend
+    });
+
+    test('it should hide secrets sync stats when feature is NOT activated', async function (assert) {
+      this.server.get('/sys/activation-flags', () => {
+        return {
+          data: { activated: [], unactivated: ['secrets-sync'] },
+        };
+      });
+
+      await login();
+      await visit('/vault/clients/counts/overview');
+
+      assert
+        .dom(CLIENT_COUNT.statTextValue('Secret sync'))
+        .doesNotExist('stat is hidden because feature is not activated');
+      assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists('other stats are still visible');
+      // TODO add assertion sync clients HIDDEN in running total chart and legend
+    });
+
+    test('it should show secrets sync stats for HVD managed clusters', async function (assert) {
+      // mock HVD managed cluster
+      this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+
+      await login();
+      await visit('/vault/clients/counts/overview');
+      assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists();
+      // TODO add assertion sync clients SHOW in running total chart and legend
+    });
   });
 });
