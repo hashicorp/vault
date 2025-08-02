@@ -1552,8 +1552,8 @@ github.com/hashicorp/vault-plugin-auth-alicloud v0.21.0 h1:5nw3SbWPZNeOx/C7jPzKn
 github.com/hashicorp/vault-plugin-auth-alicloud v0.21.0/go.mod h1:b74ZlQ/vh4MNPIOJiUDlXtdhr2Qmby7FAUeO+5q+1M0=
 github.com/hashicorp/vault-plugin-auth-azure v0.21.1 h1:EWiajfcAeLfuA64RaOS0x7K7SxhtEHd+wt470cXQMgs=
 github.com/hashicorp/vault-plugin-auth-azure v0.21.1/go.mod h1:aJbsRQ5rGoutoJ/SwTkPlCgOL0uALPj5BJ73YICQZ5M=
-github.com/hashicorp/vault-plugin-auth-cf v0.21.0 h1:yELepQ3qV/QtbhtbfnhArTjYG4f6a5RyRVDsQV/+Y8g=
-github.com/hashicorp/vault-plugin-auth-cf v0.21.0/go.mod h1:cwskmYdDcdF71m+Wsz7Vq0oWDef+gMHZViXkCAHGoTM=
+github.com/hashicorp/vault-plugin-auth-cf v0.21.1-0.20250801004018-646a1fe4e931 h1:WlrkN5PB/FoxECCuTmiJRnRJZINjnCvhmzpqcv4hX0Q=
+github.com/hashicorp/vault-plugin-auth-cf v0.21.1-0.20250801004018-646a1fe4e931/go.mod h1:gUqHLusTFh8NBFxTmdFRaL7Jpcm3wZzicb891tdn9gs=
 github.com/hashicorp/vault-plugin-auth-gcp v0.21.0 h1:KRCGEEAP9mwxRTOOWJpQk/mi6Twxi1PHtfRAJfLEse4=
 github.com/hashicorp/vault-plugin-auth-gcp v0.21.0/go.mod h1:wzBCdw8cRPVQvhbbnhEi65y46vXMfuP1EP2mdByh4eQ=
 github.com/hashicorp/vault-plugin-auth-jwt v0.24.1 h1:SsSHcbmoMFz3cZDr+HyVZ1oppPFOjfjSHt+U10gT1p0=
