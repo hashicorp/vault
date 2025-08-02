@@ -74,6 +74,12 @@ variable "verify_pki_certs" {
   default     = true
 }
 
+variable "verify_ssh_secrets" {
+  type        = bool
+  description = "Flag to verify SSH secrets"
+  default     = true
+}
+
 locals {
   vault_bin_path = "${var.vault_install_dir}/vault"
 }
