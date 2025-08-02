@@ -142,7 +142,7 @@ require (
 	github.com/hashicorp/vault-plugin-auth-azure v0.21.1
 	github.com/hashicorp/vault-plugin-auth-cf v0.21.0
 	github.com/hashicorp/vault-plugin-auth-gcp v0.21.0
-	github.com/hashicorp/vault-plugin-auth-jwt v0.24.1
+	github.com/hashicorp/vault-plugin-auth-jwt v0.24.2-0.20250801001336-18c238dede8b
 	github.com/hashicorp/vault-plugin-auth-kerberos v0.15.0
 	github.com/hashicorp/vault-plugin-auth-kubernetes v0.22.2
 	github.com/hashicorp/vault-plugin-auth-oci v0.19.0
@@ -214,9 +214,9 @@ require (
 	go.etcd.io/etcd/client/v3 v3.5.17
 	go.mongodb.org/atlas v0.38.0
 	go.mongodb.org/mongo-driver v1.17.3
-	go.opentelemetry.io/otel v1.35.0
-	go.opentelemetry.io/otel/sdk v1.35.0
-	go.opentelemetry.io/otel/trace v1.35.0
+	go.opentelemetry.io/otel v1.36.0
+	go.opentelemetry.io/otel/sdk v1.36.0
+	go.opentelemetry.io/otel/trace v1.36.0
 	go.uber.org/atomic v1.11.0
 	golang.org/x/crypto v0.40.0
 	golang.org/x/exp v0.0.0-20250711185948-6ae5c78190dc
@@ -227,8 +227,8 @@ require (
 	golang.org/x/term v0.33.0
 	golang.org/x/text v0.27.0
 	golang.org/x/tools v0.35.0
-	google.golang.org/api v0.235.0
-	google.golang.org/grpc v1.72.2
+	google.golang.org/api v0.244.0
+	google.golang.org/grpc v1.74.2
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/ory-am/dockertest.v3 v3.3.4
 	k8s.io/apimachinery v0.33.1
@@ -237,9 +237,9 @@ require (
 )
 
 require (
-	cel.dev/expr v0.20.0 // indirect
+	cel.dev/expr v0.24.0 // indirect
 	cloud.google.com/go v0.121.0 // indirect
-	cloud.google.com/go/auth v0.16.1 // indirect
+	cloud.google.com/go/auth v0.16.3 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.7.0 // indirect
 	cloud.google.com/go/iam v1.5.2 // indirect
@@ -321,7 +321,7 @@ require (
 	github.com/circonus-labs/circonusllhist v0.1.3 // indirect
 	github.com/cloudflare/circl v1.6.2-0.20250618153321-aa837fd1539d // indirect
 	github.com/cloudfoundry-community/go-cfclient v0.0.0-20220930021109-9c4e6c59ccf1 // indirect
-	github.com/cncf/xds/go v0.0.0-20250121191232-2f005788dc42 // indirect
+	github.com/cncf/xds/go v0.0.0-20250501225837-2ac532fd4443 // indirect
 	github.com/containerd/continuity v0.4.5 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/coreos/etcd v3.3.27+incompatible // indirect
@@ -361,7 +361,7 @@ require (
 	github.com/go-git/go-billy/v5 v5.6.2 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.1 // indirect
 	github.com/go-ldap/ldif v0.0.0-20200320164324-fd88d9b715b3 // indirect
-	github.com/go-logr/logr v1.4.2 // indirect
+	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-openapi/analysis v0.23.0 // indirect
@@ -390,7 +390,7 @@ require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/uuid v1.6.0
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
-	github.com/googleapis/gax-go/v2 v2.14.2 // indirect
+	github.com/googleapis/gax-go/v2 v2.15.0 // indirect
 	github.com/gophercloud/gophercloud v0.1.0 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 // indirect
@@ -536,19 +536,19 @@ require (
 	go.etcd.io/etcd/api/v3 v3.5.17 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
-	go.opentelemetry.io/contrib/detectors/gcp v1.35.0 // indirect
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.60.0 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0 // indirect
-	go.opentelemetry.io/otel/metric v1.35.0 // indirect
-	go.opentelemetry.io/otel/sdk/metric v1.35.0 // indirect
+	go.opentelemetry.io/contrib/detectors/gcp v1.36.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.61.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.61.0 // indirect
+	go.opentelemetry.io/otel/metric v1.36.0 // indirect
+	go.opentelemetry.io/otel/sdk/metric v1.36.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/mod v0.26.0 // indirect
 	golang.org/x/time v0.12.0
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
-	google.golang.org/genproto v0.0.0-20250528174236-200df99c418a // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250519155744-55703ea1f237 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250519155744-55703ea1f237 // indirect; indirect\
+	google.golang.org/genproto v0.0.0-20250603155806-513f23925822 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250603155806-513f23925822 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250728155136-f173205681a0 // indirect; indirect\
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
