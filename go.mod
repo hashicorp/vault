@@ -161,7 +161,7 @@ require (
 	github.com/hashicorp/vault-plugin-secrets-kv v0.24.1
 	github.com/hashicorp/vault-plugin-secrets-mongodbatlas v0.15.0
 	github.com/hashicorp/vault-plugin-secrets-openldap v0.16.0
-	github.com/hashicorp/vault-plugin-secrets-terraform v0.12.0
+	github.com/hashicorp/vault-plugin-secrets-terraform v0.12.1-0.20250801002443-eec3f18a905d
 	github.com/hashicorp/vault-testing-stepwise v0.3.2
 	github.com/hashicorp/vault/api v1.20.0
 	github.com/hashicorp/vault/api/auth/approle v0.1.0
@@ -406,7 +406,7 @@ require (
 	github.com/hashicorp/go-secure-stdlib/httputil v0.1.0 // indirect
 	github.com/hashicorp/go-secure-stdlib/plugincontainer v0.4.1 // indirect
 	github.com/hashicorp/go-slug v0.16.4 // indirect
-	github.com/hashicorp/go-tfe v1.81.0 // indirect
+	github.com/hashicorp/go-tfe v1.88.0 // indirect
 	github.com/hashicorp/jsonapi v1.4.3-0.20250220162346-81a76b606f3e // indirect
 	github.com/hashicorp/logutils v1.0.0 // indirect
 	github.com/hashicorp/mdns v1.0.4 // indirect
