@@ -62,6 +62,7 @@ on:
     branches:
       - main
       - release/**
+      # TODO: VAULT-34830: - ce/**
   schedule:
     - cron: '05 02 * * *' # * is a special character in YAML so you have to quote this string
 
@@ -82,7 +83,7 @@ jobs:
       github.event_name == 'push' ||
       github.event_name == 'schedule' ||
       (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64","small"]') }}
     permissions: write-all # vault-auth
     outputs:
       build-date: ${{ steps.metadata.outputs.vault-build-date }}
@@ -92,7 +93,8 @@ jobs:
       compute-build-ui: ${{ steps.metadata.outputs.compute-build-ui }}
       compute-small: ${{ steps.metadata.outputs.compute-small }}
       is-draft: ${{ steps.metadata.outputs.is-draft }}
-      is-enterprise: ${{ steps.metadata.outputs.is-enterprise }}
+      is-ent-branch: ${{ steps.metadata.outputs.is-ent-branch }}
+      is-ent-repo: ${{ steps.metadata.outputs.is-ent-repo }}
       is-fork: ${{ steps.metadata.outputs.is-fork }}
       labels: ${{ steps.metadata.outputs.labels }}
       vault-binary-name: ${{ steps.metadata.outputs.vault-binary-name }}
@@ -117,11 +119,11 @@ jobs:
         with:
           vault-version: ${{ steps.set-product-version.outputs.product-version }}
       # Get the elevated github token
-      - if: steps.metadata.outputs.is-enterprise == 'true'
+      - if: steps.metadata.outputs.is-ent-repo == 'true'
         id: vault-auth
         name: Vault Authenticate
         run: vault-auth
-      - if: steps.metadata.outputs.is-enterprise == 'true'
+      - if: steps.metadata.outputs.is-ent-repo == 'true'
         id: vault-secrets
         name: Fetch Vault Secrets
         uses: hashicorp/vault-action@d1720f055e0635fd932a1d2a48f87a666a57906c # v3.0.0
@@ -135,13 +137,13 @@ jobs:
       - uses: ./.github/actions/changed-files
         id: changed-files
         with:
-          github-token: ${{ steps.metadata.outputs.is-enterprise != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
+          github-token: ${{ steps.metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
       # Ensure that we have not changed any enterprise files on pull requests against ce/* branches.
       # We do this here because we have the information, there's absolutely no reason to go
       # further until we've resolved the issue, and we want to fail a required workflow if this
       # issue is present.
       - if: |
-          steps.metadata.outputs.is-enterprise == 'true' &&
+          steps.metadata.outputs.is-ent-repo == 'true' &&
           steps.metadata.outputs.workflow-trigger == 'pull_request' &&
           startsWith(github.event.pull_request.base.ref, 'ce/') &&
           contains(fromJSON(steps.changed-files.outputs.changed-files).groups, 'enterprise')
@@ -157,7 +159,7 @@ jobs:
       - uses: ./.github/actions/set-up-go
         name: Ensure Go modules are cached
         with:
-          github-token: ${{ secrets.ELEVATED_GITHUB_TOKEN }}
+          github-token: ${{ steps.metadata.outputs.is-ent-repo != 'true' && secrets.ELEVATED_GITHUB_TOKEN || steps.vault-secrets.outputs.ELEVATED_GITHUB_TOKEN }}
           # Don't download them on a cache hit during setup, just make sure they're cached before
           # subsequent workflows are run.
           no-restore: true
@@ -221,33 +223,57 @@ jobs:
         name: Build UI
         run: make ci-build-ui
 
-  artifacts:
-    # Artifacts is where we'll build the various Vault binaries and package them into their respective
-    # Zip bundles, RPM and Deb packages, and container images. After we've packaged them we upload
-    # them to the Github Actions artifacts storage and execute our Enos test scenarios. If the
-    # workflow is triggered by a push to main CRT will take these artifacts from Github and perform
-    # all of the necessary notarizing and signing before uploading them to Artifactory.
-    #
-    #   # Trigger the setup workflow if any of the following conditions are true:
-    #
-    #   * The workflow was triggered by on schedule to test building all artifacts.
-    #   * The Go app was changed.
-    #   * Our pipeline or test scenarios changed.
-    #   * The build/all label is present on a pull request or push.
+  # Artifacts is where we'll build the various Vault binaries and package them into their respective
+  # Zip bundles, RPM and Deb packages, and container images. After we've packaged them we upload
+  # them to the Github Actions artifacts storage and execute our Enos test scenarios. If the
+  # workflow is triggered by a push to main CRT will take these artifacts from Github and perform
+  # all of the necessary notarizing and signing before uploading them to Artifactory.
+  #
+  #   # Trigger the setup workflow if any of the following conditions are true:
+  #
+  #   * The workflow was triggered by on schedule to test building all artifacts.
+  #   * The Go app was changed.
+  #   * Our pipeline or test scenarios changed.
+  #   * The build/all label is present on a pull request or push.
+  artifacts-ce:
     if: |
-      needs.setup.outputs.workflow-trigger == 'schedule' ||
-      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
-      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
-      contains(fromJSON(needs.setup.outputs.changed-files).groups, 'enos') ||
-      contains(fromJSON(needs.setup.outputs.labels), 'build/all')
+      needs.setup.outputs.is-ent-branch != 'true' && (
+        needs.setup.outputs.workflow-trigger == 'schedule' ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'enos') ||
+        contains(fromJSON(needs.setup.outputs.labels), 'build/all')
+      )
     needs:
       - setup
       - ui # Don't build and test artifacts unless the UI build was triggered.
-    # The following is the only line that should be different between CE and Ent.
-    uses: ./.github/workflows/build-artifacts-ce.yml # Make sure we use the correct workflow.
+    uses: ./.github/workflows/build-artifacts-ce.yml
     with:
-      # The inputs defined here must be supported in both the build-artifacts-ce and
-      # build-artifacts-ent workflows. The implementations should seek to keep a compatible interface.
+      build-all: ${{contains(fromJSON(needs.setup.outputs.labels), 'build/all') || needs.setup.outputs.workflow-trigger == 'schedule' || contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain')}}
+      build-date: ${{ needs.setup.outputs.build-date }}
+      checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
+      compute-build: ${{ needs.setup.outputs.compute-build }}
+      compute-small: ${{ needs.setup.outputs.compute-small }}
+      vault-revision: ${{ needs.setup.outputs.vault-revision }}
+      vault-version: ${{ needs.setup.outputs.vault-version }}
+      vault-version-package: ${{ needs.setup.outputs.vault-version-package }}
+      web-ui-cache-key: ${{ needs.ui.outputs.cache-key }}
+    secrets: inherit
+
+  artifacts-ent:
+    if: |
+      needs.setup.outputs.is-ent-branch == 'true' && (
+        needs.setup.outputs.workflow-trigger == 'schedule' ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'app') ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'pipeline') ||
+        contains(fromJSON(needs.setup.outputs.changed-files).groups, 'enos') ||
+        contains(fromJSON(needs.setup.outputs.labels), 'build/all')
+      )
+    needs:
+      - setup
+      - ui # Don't build and test artifacts unless the UI build was triggered.
+    uses: ./.github/workflows/build-artifacts-ent.yml
+    with:
       build-all: ${{contains(fromJSON(needs.setup.outputs.labels), 'build/all') || needs.setup.outputs.workflow-trigger == 'schedule' || contains(fromJSON(needs.setup.outputs.changed-files).groups, 'gotoolchain')}}
       build-date: ${{ needs.setup.outputs.build-date }}
       checkout-ref: ${{ needs.setup.outputs.checkout-ref }}
@@ -267,15 +293,16 @@ jobs:
     needs:
       - setup
       - ui
-      - artifacts
+      - artifacts-ce
+      - artifacts-ent
     uses: ./.github/workflows/test-run-enos-scenario-matrix.yml
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.artifacts.outputs.testable-packages) }}
+        include: ${{ needs.setup.outputs.is-ent-branch == 'true' && fromJSON(needs.artifacts-ent.outputs.testable-packages) || fromJSON(needs.artifacts-ce.outputs.testable-packages) }}
     with:
       build-artifact-name: ${{ matrix.artifact }}
-      runs-on: ${{ github.repository == 'hashicorp/vault' && '"ubuntu-latest"' || '["self-hosted","linux","small"]' }}
+      runs-on: ${{ github.repository == 'hashicorp/vault' && '"ubuntu-latest"' || '["self-hosted","ubuntu-latest-x64","small"]' }}
       sample-max: 1
       sample-name: ${{ matrix.sample }}
       ssh-key-name: ${{ github.event.repository.name }}-ci-ssh-key
@@ -292,12 +319,13 @@ jobs:
     needs:
       - setup
       - ui
-      - artifacts
+      - artifacts-ce
+      - artifacts-ent
     uses: ./.github/workflows/test-run-enos-scenario-containers.yml
     strategy:
       fail-fast: false
       matrix:
-        include: ${{ fromJSON(needs.artifacts.outputs.testable-containers) }}
+        include: ${{ needs.setup.outputs.is-ent-branch == 'true' && fromJSON(needs.artifacts-ent.outputs.testable-containers) || fromJSON(needs.artifacts-ce.outputs.testable-containers) }}
     with:
       build-artifact-name: ${{ matrix.artifact }}
       sample-max: 1
@@ -322,12 +350,13 @@ jobs:
         github.event_name == 'schedule' ||
         (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
       )
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","linux","small"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64","small"]') }}
     permissions: write-all # Ensure we have id-token:write access for vault-auth.
     needs:
       - setup
       - ui
-      - artifacts
+      - artifacts-ce
+      - artifacts-ent
       - test
       - test-containers
     steps:
@@ -345,11 +374,11 @@ jobs:
             echo "result=${result}"
             echo "results=${results}"
           } | tee -a "$GITHUB_OUTPUT"
-      - if: needs.setup.outputs.is-enterprise == 'true'
+      - if: needs.setup.outputs.is-ent-repo == 'true'
         id: vault-auth
         name: Vault Authenticate
         run: vault-auth
-      - if: needs.setup.outputs.is-enterprise == 'true'
+      - if: needs.setup.outputs.is-ent-repo == 'true'
         id: secrets
         name: Fetch Vault Secrets
         uses: hashicorp/vault-action@v3
@@ -361,14 +390,14 @@ jobs:
             kv/data/github/${{ github.repository }}/github_actions_notifications_bot token | SLACK_BOT_TOKEN;
       - id: slackbot-token
         run:
-          echo "slackbot-token=${{ needs.setup.outputs.is-enterprise != 'true' && secrets.SLACK_BOT_TOKEN || steps.secrets.outputs.SLACK_BOT_TOKEN }}" >> "$GITHUB_OUTPUT"
+          echo "slackbot-token=${{ needs.setup.outputs.is-ent-repo != 'true' && secrets.SLACK_BOT_TOKEN || steps.secrets.outputs.SLACK_BOT_TOKEN }}" >> "$GITHUB_OUTPUT"
       - if: |
           needs.setup.outputs.workflow-trigger == 'pull_request' &&
           github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name &&
           (github.repository == 'hashicorp/vault' || github.repository == 'hashicorp/vault-enterprise')
         name: Create or update a build status comment on the pull request
         env:
-          ARTIFACTS: ${{ needs.artifacts.result }}
+          ARTIFACTS: ${{ needs.setup.outputs.is-ent-branch == 'true' && needs.artifacts-ent.result || needs.artifacts-ce.result }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           REPO: ${{ github.event.repository.name }}
@@ -390,13 +419,13 @@ jobs:
           # channel-id: "C05Q4D5V89W" # Notify #test-vault-ci-slack-integration
           payload: |
             {
-              "text": "${{ github.repository }} build failures on ${{ github.ref_name }}",
+              "text": "${{ needs.setup.outputs.is-ent-branch == 'true' && 'vault-enterprise' || 'vault' }} build failures on ${{ github.ref_name }}",
               "blocks": [
                 {
                   "type": "header",
                   "text": {
                     "type": "plain_text",
-                    "text": ":rotating_light: ${{ github.repository }} build failures on ${{ github.ref_name }} :rotating_light:",
+                    "text": ":rotating_light: ${{ needs.setup.outputs.is-ent-branch == 'true' && 'vault-enterprise' || 'vault' }} build failures on ${{ github.ref_name }} :rotating_light:",
                     "emoji": true
                   }
                 },
@@ -407,7 +436,7 @@ jobs:
                   "type": "section",
                   "text": {
                     "type": "mrkdwn",
-                    "text": "${{ needs.setup.result != 'failure' && ':white_check_mark:' || ':x:' }} Setup\n${{ needs.ui.result != 'failure' && ':white_check_mark:' || ':x:' }} Build UI\n${{ needs.artifacts.result != 'failure' && ':white_check_mark:' || ':x:' }} Build Vault Artifacts\n${{ needs.test.result != 'failure' && ':white_check_mark:' || ':x:' }} Enos package test scenarios\n${{ needs.test-containers.result != 'failure' && ':white_check_mark:' || ':x:' }} Enos container test scenarios"
+                    "text": "${{ needs.setup.result != 'failure' && ':white_check_mark:' || ':x:' }} Setup\n${{ needs.ui.result != 'failure' && ':white_check_mark:' || ':x:' }} Build UI\n${{ (needs.setup.outputs.is-ent-branch == 'true' && needs.artifacts-ent.result != 'failure' || needs.artifacts-ce.result != 'failure' ) && ':white_check_mark:' || ':x:' }} Build Vault Artifacts\n${{ needs.test.result != 'failure' && ':white_check_mark:' || ':x:' }} Enos package test scenarios\n${{ needs.test-containers.result != 'failure' && ':white_check_mark:' || ':x:' }} Enos container test scenarios"
                   },
                   "accessory": {
                     "type": "button",
@@ -422,7 +451,8 @@ jobs:
               ]
             }
       - uses: hashicorp/actions-generate-metadata@v1
-        if: needs.artifacts.result == 'success' # create build metadata if we successfully created artifacts
+        # create build metadata if we successfully created artifacts
+        if: needs.setup.outputs.is-ent-branch == 'true' && needs.artifacts-ent.result == 'success' || needs.artifacts-ce.result == 'success'
         id: generate-metadata-file
         with:
           version: ${{ needs.setup.outputs.vault-version-metadata }}

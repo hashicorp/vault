@@ -37,21 +37,27 @@ jobs:
     name: Get metadata
     runs-on: ubuntu-latest
     outputs:
-      runs-on: ${{ steps.get-metadata.outputs.runs-on }}
-      vault_edition: ${{ steps.get-metadata.outputs.vault_edition }}
+      is-ent-branch: ${{ steps.metadata.outputs.is-ent-branch }}
+      is-ent-repo: ${{ steps.metadata.outputs.is-ent-repo }}
+      runs-on: ${{ steps.get-outputs.outputs.runs-on }}
+      vault_edition: ${{ steps.get-outputs.outputs.vault_edition }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - id: get-metadata
-        env:
-          IS_ENT: ${{ startsWith(github.event.repository.name, 'vault-enterprise' ) }}
+      - uses: ./.github/actions/metadata
+        id: metadata
+      - id: get-outputs
         run: |
-          if [ "$IS_ENT" == true ]; then
-            echo "detected vault_edition=ent"
+          if [[ '${{ steps.metadata.outputs.is-ent-repo }}' == 'true' ]]; then
             echo "runs-on=['self-hosted', 'ondemand', 'os=linux', 'type=m5d.4xlarge']" >> "$GITHUB_OUTPUT"
+          else
+            echo "runs-on=\"custom-linux-xl-vault-latest\"" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [[ '${{ steps.metadata.outputs.is-ent-branch }}' == 'true' ]]; then
+            echo "detected vault_edition=ent"
             echo "vault_edition=ent" >> "$GITHUB_OUTPUT"
           else
-            echo "detected vault_edition=oss"
-            echo "runs-on=\"custom-linux-xl-vault-latest\"" >> "$GITHUB_OUTPUT"
+            echo "detected vault_edition=ce"
             echo "vault_edition=oss" >> "$GITHUB_OUTPUT"
           fi
 
@@ -66,7 +72,6 @@ jobs:
       ENOS_VAR_aws_region: us-east-1
       ENOS_VAR_aws_ssh_keypair_name: ${{ github.event.repository.name }}-ci-ssh-key
       ENOS_VAR_aws_ssh_private_key_path: ./support/private_key.pem
-      ENOS_VAR_tfc_api_token: ${{ secrets.TF_API_TOKEN }}
       ENOS_VAR_terraform_plugin_cache_dir: ./support/terraform-plugin-cache
       ENOS_VAR_vault_license_path: ./support/vault.hclic
       GOPRIVATE: github.com/hashicorp
@@ -96,7 +101,7 @@ jobs:
           echo "${{ secrets.SSH_KEY_PRIVATE_CI }}" > ./enos/support/private_key.pem
           chmod 600 ./enos/support/private_key.pem
       - name: Set Up Vault Enterprise License
-        if: contains(github.event.repository.name, 'ent')
+        if: ${{ needs.get-metadata.outputs.is-ent-branch == 'true' }}
         run: echo "${{ secrets.VAULT_LICENSE }}" > ./enos/support/vault.hclic || true
       - name: Check Chrome Installed
         id: chrome-check
