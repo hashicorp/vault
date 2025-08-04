@@ -1,3 +1,3 @@
 ```release-note:improvement
-activity: The [activity export API](https://developer.hashicorp.com/vault/api-docs/system/internal-counters#activity-export) response now includes the client's first used timestamp within the specified query period.
+activity: The [activity export API](https://developer.hashicorp.com/vault/api-docs/system/internal-counters#activity-export) response now includes a new timestamp that denotes the first time the client was used within the specified query period.
 ```
