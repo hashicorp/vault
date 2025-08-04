@@ -239,6 +239,11 @@ module('Acceptance | clients | overview | secrets sync', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
+  hooks.beforeEach(async function () {
+    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
+    clientsHandler(this.server);
+  });
+
   test('it should hide secrets sync stats when feature is NOT on license', async function (assert) {
     // mocks endpoint for no additional license modules
     this.server.get('/sys/license/features', () => ({ features: [] }));
