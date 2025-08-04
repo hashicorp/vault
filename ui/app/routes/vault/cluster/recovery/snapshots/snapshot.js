@@ -5,7 +5,7 @@
 
 import Route from '@ember/routing/route';
 
-export default class RecoverySnapshotRoute extends Route {
+export default class RecoverySnapshotsSnapshotRoute extends Route {
   model(params) {
     return params.snapshot_id;
   }
