@@ -252,10 +252,9 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 				item.Value = resp.WALID
 			}
 		} else {
-			nextRotationTime := role.StaticAccount.NextRotationTimeFromInput(resp.RotationTime).Unix()
-			ttl := nextRotationTime - time.Now().Unix()
+			item.Priority = role.StaticAccount.NextRotationTimeFromInput(resp.RotationTime).Unix()
+			ttl := role.StaticAccount.CredentialTTL().Seconds()
 			b.Logger().Info("rotated credential in rotate-role", "rotationID", name, "TTL", ttl)
-			item.Priority = nextRotationTime
 			// Clear any stored WAL ID as we must have successfully deleted our WAL to get here.
 			item.Value = ""
 			modified = true
