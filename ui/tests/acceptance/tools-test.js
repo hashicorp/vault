@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, fillIn, find, findAll, currentURL, visit, waitUntil } from '@ember/test-helpers';
+import { click, fillIn, find, findAll, currentURL, visit, waitUntil, settled } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { toolsActions } from 'vault/helpers/tools-actions';
@@ -87,6 +87,7 @@ module('Acceptance | tools', function (hooks) {
       await click(TS.submit);
 
       await waitUntil(() => find('.hds-code-block__code'));
+      await settled();
       assertCodeBlockValue(assert, '.hds-code-block__code', DATA_TO_WRAP);
 
       await waitUntil(() => find(GENERAL.hdsTab('details')));
@@ -163,6 +164,7 @@ module('Acceptance | tools', function (hooks) {
       await click(TS.submit);
 
       await waitUntil(() => find('.hds-code-block__code'));
+      await settled();
       assertCodeBlockValue(assert, '.hds-code-block__code', AUTH_RESPONSE.auth);
     });
   });
@@ -195,6 +197,7 @@ module('Acceptance | tools', function (hooks) {
       await click(TS.submit);
 
       await waitUntil(() => find('.hds-code-block__code'));
+      await settled();
       assertCodeBlockValue(assert, '.hds-code-block__code', '{   "tools": "tests" }');
     });
 

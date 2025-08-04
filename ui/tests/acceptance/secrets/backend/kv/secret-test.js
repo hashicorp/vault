@@ -346,7 +346,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       const editor = codemirror();
       setCodeEditorValue(editor, content);
 
-      await click(GENERAL.submitButton);
+      await click(GENERAL.saveButton);
 
       assert.strictEqual(
         currentRouteName(),
