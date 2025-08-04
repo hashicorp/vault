@@ -100,7 +100,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
 
     await this.renderComponent();
     await setEditorValue(this.wrapData);
-    await click(GENERAL.submitButton);
+    await click(TS.submit);
     await waitUntil(() => find(TS.toolsInput('wrapping-token')));
     assert.true(flashSpy.calledWith('Wrap was successful.'), 'it renders success flash');
     assert.dom(TS.toolsInput('wrapping-token')).hasText(this.token);
@@ -186,7 +186,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await click('[data-test-kv-add-row="0"]');
     await fillIn(GENERAL.kvObjectEditor.key('1'), 'foo2');
     await fillIn(GENERAL.kvObjectEditor.value('1'), multilineData);
-    await click(GENERAL.submitButton);
+    await click(TS.submit);
     await waitUntil(() => find(TS.toolsInput('wrapping-token')));
     assert.true(flashSpy.calledWith('Wrap was successful.'), 'it renders success flash');
     assert.dom(TS.toolsInput('wrapping-token')).hasText(this.token);
@@ -201,8 +201,8 @@ module('Integration | Component | tools/wrap', function (hooks) {
     await fillIn(TTL.valueInputByLabel('Wrap TTL'), '20');
     await click(TS.submit);
 
-    await waitUntil(() => find(GENERAL.button('Done')));
-    await click(GENERAL.button('Done'));
+    await waitUntil(() => find(TS.button('Done')));
+    await click(TS.button('Done'));
     await waitFor('.cm-editor');
     const editor = codemirror();
     const editorValue = getCodeEditorValue(editor);
@@ -221,10 +221,10 @@ module('Integration | Component | tools/wrap', function (hooks) {
   test('it preserves input data on back', async function (assert) {
     await this.renderComponent();
     await setEditorValue(this.wrapData);
-    await click(GENERAL.submitButton);
+    await click(TS.submit);
 
-    await waitUntil(() => find(GENERAL.button('Back')));
-    await click(GENERAL.button('Back'));
+    await waitUntil(() => find(TS.button('Back')));
+    await click(TS.button('Back'));
     await waitFor('.cm-editor');
     const editor = codemirror();
     const editorValue = getCodeEditorValue(editor);
@@ -260,9 +260,9 @@ module('Integration | Component | tools/wrap', function (hooks) {
         'JSON is unparsable. Fix linting errors to avoid data discrepancies.',
         'Linting error message is shown for json view'
       );
-    await click(GENERAL.submitButton);
-    await waitUntil(() => find(GENERAL.button('Done')));
-    await click(GENERAL.button('Done'));
+    await click(TS.submit);
+    await waitUntil(() => find(TS.button('Done')));
+    await click(TS.button('Done'));
     assert.dom(GENERAL.inlineAlert).doesNotExist();
 
     await setEditorValue(`{bad json}`);
@@ -272,9 +272,9 @@ module('Integration | Component | tools/wrap', function (hooks) {
         'JSON is unparsable. Fix linting errors to avoid data discrepancies.',
         'Linting error message is shown for json view'
       );
-    await click(GENERAL.submitButton);
-    await waitUntil(() => find(GENERAL.button('Back')));
-    await click(GENERAL.button('Back'));
+    await click(TS.submit);
+    await waitUntil(() => find(TS.button('Back')));
+    await click(TS.button('Back'));
     assert.dom(GENERAL.inlineAlert).doesNotExist();
   });
 });

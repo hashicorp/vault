@@ -84,7 +84,7 @@ module('Acceptance | tools', function (hooks) {
       // unwrap
       await click(GENERAL.navLink('Unwrap'));
       await fillIn(TS.toolsInput('unwrap-token'), tokenStore.get());
-      await click(GENERAL.submitButton);
+      await click(TS.submit);
 
       await waitUntil(() => find('.hds-code-block__code'));
       assertCodeBlockValue(assert, '.hds-code-block__code', DATA_TO_WRAP);
@@ -160,7 +160,7 @@ module('Acceptance | tools', function (hooks) {
       await click(GENERAL.navLink('Unwrap'));
 
       await fillIn(TS.toolsInput('unwrap-token'), 'sometoken');
-      await click(GENERAL.submitButton);
+      await click(TS.submit);
 
       await waitUntil(() => find('.hds-code-block__code'));
       assertCodeBlockValue(assert, '.hds-code-block__code', AUTH_RESPONSE.auth);
@@ -192,7 +192,7 @@ module('Acceptance | tools', function (hooks) {
       // we use lookup to check our token from the second wrap returns the unwrapped data we expect
       await click(GENERAL.navLink('Unwrap'));
       await fillIn(TS.toolsInput('unwrap-token'), tokenStore.get());
-      await click(GENERAL.submitButton);
+      await click(TS.submit);
 
       await waitUntil(() => find('.hds-code-block__code'));
       assertCodeBlockValue(assert, '.hds-code-block__code', '{   "tools": "tests" }');

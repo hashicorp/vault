@@ -95,7 +95,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert
         .dom(PAGE.list.overviewButton)
         .hasText('View list', 'shows list and not secret because search is a directory');
-      await click(GENERAL.submitButton);
+      await click(PAGE.list.overviewButton);
       assert.dom(GENERAL.emptyStateTitle).hasText(`There are no secrets matching "${root}/no-access/".`);
 
       await visit(`/vault/secrets/${backend}/kv/list`);
@@ -120,10 +120,10 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
       assert.dom(PAGE.toolbarAction).exists({ count: 1 }, 'toolbar only renders create secret action');
       assert.dom(PAGE.list.filter).hasValue(`${root}/`);
       // List content correct
-      assert.dom(GENERAL.listItem(`${subdirectory}/`)).exists('renders linked block for subdirectory');
-      await click(GENERAL.listItem(`${subdirectory}/`));
-      assert.dom(GENERAL.listItem(secret)).exists('renders linked block for child secret');
-      await click(GENERAL.listItem(secret));
+      assert.dom(PAGE.list.item(`${subdirectory}/`)).exists('renders linked block for subdirectory');
+      await click(PAGE.list.item(`${subdirectory}/`));
+      assert.dom(PAGE.list.item(secret)).exists('renders linked block for child secret');
+      await click(PAGE.list.item(secret));
       assert
         .dom(GENERAL.overviewCard.container('Current version'))
         .hasText(`Current version The current version of this secret. 1`);
@@ -155,7 +155,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
         'goes back to subdirectory list'
       );
       assert.dom(PAGE.list.filter).hasValue(`${root}/${subdirectory}/`);
-      assert.dom(GENERAL.listItem(secret)).exists('renders linked block for child secret');
+      assert.dom(PAGE.list.item(secret)).exists('renders linked block for child secret');
 
       // back again
       previousCrumb = findAll(GENERAL.breadcrumb).length - 2;
@@ -165,7 +165,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
         `/vault/secrets/${backend}/kv/list/${root}/`,
         'goes back to root directory'
       );
-      assert.dom(GENERAL.listItem(`${subdirectory}/`)).exists('renders linked block for subdirectory');
+      assert.dom(PAGE.list.item(`${subdirectory}/`)).exists('renders linked block for subdirectory');
 
       // and back to the engine list view
       previousCrumb = findAll(GENERAL.breadcrumb).length - 2;
@@ -305,7 +305,7 @@ module('Acceptance | kv-v2 workflow | edge cases', function (hooks) {
   test('no ghost item after editing metadata', async function (assert) {
     await visit(`/vault/secrets/${this.backend}/kv/list/edge/`);
     assert.dom(PAGE.list.item()).exists({ count: 2 }, 'two secrets are listed');
-    await click(GENERAL.listItem('two'));
+    await click(PAGE.list.item('two'));
     await click(PAGE.secretTab('Metadata'));
     await click(PAGE.metadata.editBtn);
     await fillIn(FORM.keyInput(), 'foo');

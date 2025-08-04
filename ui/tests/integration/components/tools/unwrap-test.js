@@ -72,12 +72,12 @@ module('Integration | Component | tools/unwrap', function (hooks) {
 
     // test submit
     await fillIn(TS.toolsInput('unwrap-token'), data.token);
-    await click(GENERAL.submitButton);
+    await click(TS.submit);
     await waitFor('.hds-code-block');
     assert.true(flashSpy.calledWith('Unwrap was successful.'), 'it renders success flash');
     assert.dom('.hds-code-block__title').hasText('Unwrapped Data');
     await settled();
-    assertCodeBlockValue(assert, '.hds-code-block__code', '{   "foo": "bar" }');
+    assertCodeBlockValue(assert, '.hds-code-block__code', '{   "foo_test": "bar" }');
     assert.dom(GENERAL.hdsTab('data')).hasAttribute('aria-selected', 'true');
 
     await click(GENERAL.hdsTab('details'));
@@ -119,7 +119,7 @@ module('Integration | Component | tools/unwrap', function (hooks) {
     await this.renderComponent();
 
     await fillIn(TS.toolsInput('unwrap-token'), data.token);
-    await click(GENERAL.submitButton);
+    await click(TS.submit);
     await waitFor('.hds-code-block');
     assert
       .dom(`${GENERAL.infoRowValue('Renewable')} ${GENERAL.icon('check-circle')}`)

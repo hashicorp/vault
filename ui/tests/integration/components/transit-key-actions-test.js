@@ -297,7 +297,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     this.set('storeService.keyActionReturnVal', response);
     await setupExport.call(this);
     await click('[data-test-toggle-label="Wrap response"]');
-    await click(GENERAL.submitButton);
+    await click('button[type="submit"]');
     assert.dom('#transit-export-modal').exists('Modal opens after export');
     assert.deepEqual(
       JSON.parse(find('[data-test-encrypted-value="export"]').innerText),
@@ -313,7 +313,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     await click('[data-test-toggle-label="Wrap response"]');
     await click('#exportVersion');
     await triggerEvent('#exportVersion', 'change');
-    await click(GENERAL.submitButton);
+    await click('button[type="submit"]');
     assert.dom('#transit-export-modal').exists('Modal opens after export');
     assert.deepEqual(
       JSON.parse(find('[data-test-encrypted-value="export"]').innerText),
@@ -351,7 +351,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     const editor = codemirror();
     setCodeEditorValue(editor, 'plaintext');
     await click('input[data-test-transit-input="encodedBase64"]');
-    await click(GENERAL.submitButton);
+    await click('button[type="submit"]');
     assert.deepEqual(
       this.storeService.callArgs,
       {

@@ -158,7 +158,7 @@ module('Integration | Component | search select with modal', function (hooks) {
     await component.selectOption();
 
     assert.dom('#search-select-modal').exists('modal is active');
-    assert.dom(GENERAL.emptyStateTitle).hasText('No policy type selected');
+    assert.dom('[data-test-empty-state-title]').hasText('No policy type selected');
     assert.ok(this.onChange.notCalled, 'onChange is not called');
   });
 
@@ -195,7 +195,7 @@ module('Integration | Component | search select with modal', function (hooks) {
       'dropdown gives option to create new option'
     );
     await component.selectOption();
-    assert.dom(GENERAL.emptyStateTitle).hasText('No policy type selected');
+    assert.dom('[data-test-empty-state-title]').hasText('No policy type selected');
     await fillIn(GENERAL.selectByAttr('policyType'), 'acl');
     assert.dom('[data-test-policy-form]').exists('policy form renders after type is selected');
     await click('[data-test-tab-example-policy] button');
@@ -206,7 +206,7 @@ module('Integration | Component | search select with modal', function (hooks) {
     const editor = codemirror();
     setCodeEditorValue(editor, 'path "secret/super-secret" { capabilities = ["deny"] }');
     await settled();
-    await click(GENERAL.submitButton);
+    await click('[data-test-policy-save]');
     assert.dom('[data-test-modal-div]').doesNotExist('modal closes after save');
     assert
       .dom(GENERAL.searchSelect.selectedOption(0))

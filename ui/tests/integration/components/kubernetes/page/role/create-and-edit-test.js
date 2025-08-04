@@ -59,14 +59,16 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
       hbs`<Page::Role::CreateAndEdit @model={{this.newModel}} @breadcrumbs={{this.breadcrumbs}} />`,
       { owner: this.engine }
     );
-    assert.dom(GENERAL.emptyStateTitle).hasText('Choose an option above', 'Empty state title renders');
     assert
-      .dom(GENERAL.emptyStateMessage)
+      .dom('[data-test-empty-state-title]')
+      .hasText('Choose an option above', 'Empty state title renders');
+    assert
+      .dom('[data-test-empty-state-message]')
       .hasText(
         'To configure a Vault role, choose what should be generated in Kubernetes by Vault.',
         'Empty state message renders'
       );
-    assert.dom(GENERAL.submitButton).isDisabled('Save button is disabled');
+    assert.dom('[data-test-save]').isDisabled('Save button is disabled');
   });
 
   test('it should display different form fields based on generation preference selection', async function (assert) {
@@ -162,11 +164,11 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     );
     await click('[data-test-radio-card="basic"]');
 
-    await click(GENERAL.submitButton);
+    await click('[data-test-save]');
     assert.dom(GENERAL.validationErrorByAttr('name')).hasText('Name is required', 'Validation error renders');
     await fillIn(GENERAL.inputByAttr('name'), 'role-1');
     await fillIn(GENERAL.inputByAttr('serviceAccountName'), 'default');
-    await click(GENERAL.submitButton);
+    await click('[data-test-save]');
 
     assert.ok(
       this.transitionCalledWith('roles.role.details', this.newModel.name),
@@ -202,7 +204,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
         },
       }[pref];
       assert.dom(selector.name)[selector.method](selector.value);
-      await click(GENERAL.submitButton);
+      await click('[data-test-save]');
       assert.ok(
         this.transitionCalledWith('roles.role.details', this.role.name),
         'Transitions to details route on save'
@@ -281,7 +283,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     await click('[data-test-radio-card="full"]');
     await fillIn(GENERAL.inputByAttr('name'), 'role-1');
     await fillIn('[data-test-select-template]', '5');
-    await click(GENERAL.submitButton);
+    await click('[data-test-save]');
   });
 
   test('it should unset selectedTemplateId when switching from full generation preference', async function (assert) {
@@ -301,7 +303,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     await fillIn('[data-test-select-template]', '5');
     await click('[data-test-radio-card="basic"]');
     await fillIn(GENERAL.inputByAttr('serviceAccountName'), 'default');
-    await click(GENERAL.submitButton);
+    await click('[data-test-save]');
   });
 
   test('it should go back to list route and clean up model', async function (assert) {
@@ -331,7 +333,7 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     );
     await click('[data-test-radio-card="basic"]');
 
-    await click(GENERAL.submitButton);
+    await click('[data-test-save]');
     assert.dom(GENERAL.validationErrorByAttr('name')).hasText('Name is required');
 
     assert
@@ -362,6 +364,6 @@ module('Integration | Component | kubernetes | Page::Role::CreateAndEdit', funct
     });
 
     await fillIn(GENERAL.inputByAttr('serviceAccountName'), 'demo');
-    await click(GENERAL.submitButton);
+    await click('[data-test-save]');
   });
 });

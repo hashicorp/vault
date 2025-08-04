@@ -29,6 +29,7 @@ const SELECT = {
   confirmDelete: '[data-test-confirm-button]',
   createPolicy: '[data-test-policy-create-link]',
   nameInput: '[data-test-policy-input="name"]',
+  save: '[data-test-policy-save]',
   policyTitle: '[data-test-policy-name]',
   listBreadcrumb: '[data-test-policy-list-link] a',
 };
@@ -91,7 +92,7 @@ module('Acceptance | policies/acl', function (hooks) {
     const editor = codemirror();
     setCodeEditorValue(editor, policyString);
 
-    await click(GENERAL.submitButton);
+    await click(SELECT.save);
     assert.strictEqual(
       currentURL(),
       `/vault/policy/acl/${policyName}`,
@@ -119,7 +120,7 @@ module('Acceptance | policies/acl', function (hooks) {
     const editor = codemirror();
     setCodeEditorValue(editor, policyString);
 
-    await click(GENERAL.submitButton);
+    await click(SELECT.save);
 
     await waitUntil(() => currentURL() === `/vault/policy/acl/${encodeURIComponent(policyLower)}`);
     assert.strictEqual(

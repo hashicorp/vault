@@ -131,7 +131,7 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
   test('it should validate form fields', async function (assert) {
     const renderAndAssert = async (fields) => {
       await this.renderComponent();
-      await click(GENERAL.submitButton);
+      await click('[data-test-save]');
 
       fields.forEach((field) => {
         assert
@@ -167,7 +167,7 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
     await fillIn(GENERAL.inputByAttr('dn'), 'foo');
     await fillIn(GENERAL.inputByAttr('username'), 'bar');
     await fillIn(GENERAL.ttl.input('Rotation period'), 5);
-    await click(GENERAL.submitButton);
+    await click('[data-test-save]');
 
     assert.ok(
       this.transitionCalledWith('roles.role.details', 'static', 'test-role'),
@@ -190,7 +190,7 @@ module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (h
     await fillIn(GENERAL.inputByAttr('dn'), 'foo');
     await fillIn(GENERAL.inputByAttr('username'), 'bar');
     await fillIn(GENERAL.ttl.input('Rotation period'), 30);
-    await click(GENERAL.submitButton);
+    await click('[data-test-save]');
 
     assert.ok(
       this.transitionCalledWith('roles.role.details', 'static', 'test-role'),

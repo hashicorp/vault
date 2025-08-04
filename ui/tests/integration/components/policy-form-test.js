@@ -311,7 +311,8 @@ module('Integration | Component | policy-form', function (hooks) {
     `);
     await setEditorValue('updated');
     assert.strictEqual(this.model.policy, 'updated', 'Policy editor updates policy value on model');
-    await click(GENERAL.cancelButton);
+
+    await click(SELECTORS.cancelButton);
     assert.ok(this.onSave.notCalled);
     assert.ok(this.onCancel.calledOnce, 'Form calls onCancel');
 

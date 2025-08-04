@@ -184,7 +184,7 @@ const testConvergentEncryption = async function (assert, keyName) {
 
     setCodeEditorValue(editor, copiedCiphertext);
 
-    await click(GENERAL.submitButton);
+    await click('[data-test-button-decrypt]');
 
     if (testCase.assertAfterDecrypt) {
       await settled();
