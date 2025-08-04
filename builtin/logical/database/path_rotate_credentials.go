@@ -242,7 +242,7 @@ func (b *databaseBackend) pathRotateRoleCredentialsUpdate() framework.OperationF
 		// this item back on the queue. The err should still be returned at the end
 		// of this method.
 		if err != nil {
-			b.logger.Error("unable to rotate credentials in rotate-role", "rotationID", name, "error", err)
+			b.logger.Error("unable to rotate credentials in rotate-role", "rotationID", name, "err", err)
 			// Update the priority to re-try this rotation and re-add the item to
 			// the queue
 			item.Priority = time.Now().Add(10 * time.Second).Unix()
