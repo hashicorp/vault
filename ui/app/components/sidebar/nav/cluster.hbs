@@ -21,7 +21,7 @@
       data-test-sidebar-nav-link="Secrets Sync"
     />
   {{/if}}
-  {{#if this.showSecretsRecovery}}
+  {{#if this.isNotProduction}}
     <Nav.Link
       @route="vault.cluster.recovery.snapshots"
       @text="Secrets Recovery"

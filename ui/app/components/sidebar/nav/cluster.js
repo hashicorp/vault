@@ -60,7 +60,7 @@ export default class SidebarNavClusterComponent extends Component {
   }
 
   // TODO remove conditional once further feature work for single item recovery for release 1.21 is completed
-  get showSecretsRecovery() {
+  get isNotProduction() {
     return config.environment !== 'production';
   }
 }

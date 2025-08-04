@@ -5,4 +5,4 @@
 
 import Route from '@ember/routing/route';
 
-export default class VaultClusterRecoverySnapshotsRoute extends Route {}
+export default class RecoverySnapshotsRoute extends Route {}

@@ -17,6 +17,15 @@ Router.map(function () {
       this.route('dashboard');
       this.mount('config-ui');
       this.mount('sync');
+      // TODO remove conditional once further feature work for single item recovery for release 1.21 is completed
+      if (config.environment !== 'production') {
+        this.route('recovery', function () {
+          this.route('snapshots', function () {
+            this.route('load');
+            this.route('snapshot', { path: '/:snapshot_id' });
+          });
+        });
+      }
       this.route('oidc-provider-ns', { path: '/*namespace/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-provider', { path: '/identity/oidc/provider/:provider_name/authorize' });
       this.route('oidc-callback', { path: '/auth/*auth_path/oidc/callback' });
@@ -210,17 +219,7 @@ Router.map(function () {
       this.route('replication-dr-promote', function () {
         this.route('details');
       });
-      // TODO remove conditional once further feature work for single item recovery for release 1.21 is completed
-      if (config.environment !== 'production') {
-        this.route('recovery', function () {
-          this.route('snapshots', function () {
-            this.route('load');
-            this.route('snapshot', function () {
-              this.route('manage');
-            });
-          });
-        });
-      }
+
       if (config.addRootMounts) {
         config.addRootMounts.call(this);
       }
