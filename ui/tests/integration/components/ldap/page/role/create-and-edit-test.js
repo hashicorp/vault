@@ -11,6 +11,7 @@ import { render, click, fillIn } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { ldapRoleID } from 'vault/adapters/ldap/role';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | ldap | Page::Role::CreateAndEdit', function (hooks) {
   setupRenderingTest(hooks);

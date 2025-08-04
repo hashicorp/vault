@@ -14,6 +14,7 @@ import codemirror, { getCodeEditorValue, setCodeEditorValue } from 'vault/tests/
 import { FORM, PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | kv-v2 | Page::Secret::Edit', function (hooks) {
   setupRenderingTest(hooks);

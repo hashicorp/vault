@@ -10,6 +10,7 @@ import { hbs } from 'ember-cli-htmlbars';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { SELECTORS, OIDC_BASE_URL } from 'vault/tests/helpers/oidc-config';
 import { capabilitiesStub } from 'vault/tests/helpers/stubs';
+import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 module('Integration | Component | oidc/scope-form', function (hooks) {
   setupRenderingTest(hooks);
