@@ -13,7 +13,6 @@ import hbs from 'htmlbars-inline-precompile';
 import { encodeString } from 'vault/utils/b64';
 import waitForError from 'vault/tests/helpers/wait-for-error';
 import codemirror, { getCodeEditorValue, setCodeEditorValue } from 'vault/tests/helpers/codemirror';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const storeStub = Service.extend({
   callArgs: null,

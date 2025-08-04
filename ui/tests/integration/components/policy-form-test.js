@@ -10,7 +10,6 @@ import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 
 const SELECTORS = {
