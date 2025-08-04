@@ -8,11 +8,11 @@
 
 SECURITY:
 
-* audit: privileged vault operator may execute code on the underlying host (CVE-2025-6000) [[GH-31211](https://github.com/hashicorp/vault/pull/31211),[HCSEC-2025-14](https://discuss.hashicorp.com/t/hcsec-2025-14-privileged-vault-operator-may-execute-code-on-the-underlying-host/76033)]
+* audit: privileged vault operator may execute code on the underlying host (CVE-2025-6000). Add additional verifications to the target of file audit sinks. [[GH-31211](https://github.com/hashicorp/vault/pull/31211),[HCSEC-2025-14](https://discuss.hashicorp.com/t/hcsec-2025-14-privileged-vault-operator-may-execute-code-on-the-underlying-host/76033)]
 * auth/userpass: timing side-channel in vault's userpass auth method (CVE-2025-6011)[HCSEC-2025-15](https://discuss.hashicorp.com/t/hcsec-2025-15-timing-side-channel-in-vault-s-userpass-auth-method/76034)
-* core/login: vault userpass and ldap user lockout bypass (CVE-2025-6004) [[GH-31352](https://github.com/hashicorp/vault/pull/31352),[HCSEC-2025-16](https://discuss.hashicorp.com/t/hcsec-2025-16-vault-userpass-and-ldap-user-lockout-bypass/76035)]
+* core/login: vault userpass and ldap user lockout bypass (CVE-2025-6004). update alias lookahead to respect username case for LDAP and username/password. [[GH-31352](https://github.com/hashicorp/vault/pull/31352),[HCSEC-2025-16](https://discuss.hashicorp.com/t/hcsec-2025-16-vault-userpass-and-ldap-user-lockout-bypass/76035)]
 * secrets/totp: vault totp secrets engine code reuse (CVE-2025-6014) [[GH-31246](https://github.com/hashicorp/vault/pull/31246),[HCSEC-2025-17](https://discuss.hashicorp.com/t/hcsec-2025-17-vault-totp-secrets-engine-code-reuse/76036)]
-* auth/cert: vault certificate auth method did not validate common name for non-ca certificates (CVE-2025-6037) [[GH-31210](https://github.com/hashicorp/vault/pull/31210),[HCSEC-2025-18](https://discuss.hashicorp.com/t/hcsec-2025-18-vault-certificate-auth-method-did-not-validate-common-name-for-non-ca-certificates/76037)]
+* auth/cert: vault certificate auth method did not validate common name for non-ca certificates (CVE-2025-6037). test non-CA cert equality on login matching instead of individual fields. [[GH-31210](https://github.com/hashicorp/vault/pull/31210),[HCSEC-2025-18](https://discuss.hashicorp.com/t/hcsec-2025-18-vault-certificate-auth-method-did-not-validate-common-name-for-non-ca-certificates/76037)]
 * core/mfa: vault login mfa bypass of rate limiting and totp token reuse (CVE-2025-6015) [[GH-31217](https://github.com/hashicorp/vault/pull/31297),[HCSEC-2025-19](https://discuss.hashicorp.com/t/hcsec-2025-19-vault-login-mfa-bypass-of-rate-limiting-and-totp-token-reuse/76038)]
 
 FEATURES:
@@ -54,7 +54,7 @@ BUG FIXES:
 SECURITY:
 
 * core: require a nonce when cancelling a rekey operation that was initiated within the last 10 minutes. [[GH-30794](https://github.com/hashicorp/vault/pull/30794)],[[HCSEC-2025-11](https://discuss.hashicorp.com/t/hcsec-2025-11-vault-vulnerable-to-recovery-key-cancellation-denial-of-service/75570)]
-* core/identity: vault root namespace operator may elevate privileges (CVE-2025-5999) [[GH-31045](https://github.com/hashicorp/vault/pull/31045),[HCSEC-2025-13](https://discuss.hashicorp.com/t/hcsec-2025-13-vault-root-namespace-operator-may-elevate-token-privileges/76032)]
+* core/identity: vault root namespace operator may elevate privileges (CVE-2025-5999). Fix string contains check in Identity APIs to be case-insensitive. [[GH-31045](https://github.com/hashicorp/vault/pull/31045),[HCSEC-2025-13](https://discuss.hashicorp.com/t/hcsec-2025-13-vault-root-namespace-operator-may-elevate-token-privileges/76032)]
 
 CHANGES:
 
@@ -235,11 +235,11 @@ intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/3
 
 SECURITY: 
 
-* audit: privileged vault operator may execute code on the underlying host (CVE-2025-6000) [[GH-31211](https://github.com/hashicorp/vault/pull/31211),[HCSEC-2025-14](https://discuss.hashicorp.com/t/hcsec-2025-14-privileged-vault-operator-may-execute-code-on-the-underlying-host/76033)]
+* audit: privileged vault operator may execute code on the underlying host (CVE-2025-6000). Add additional verifications to the target of file audit sinks. [[GH-31211](https://github.com/hashicorp/vault/pull/31211),[HCSEC-2025-14](https://discuss.hashicorp.com/t/hcsec-2025-14-privileged-vault-operator-may-execute-code-on-the-underlying-host/76033)]
 * auth/userpass: timing side-channel in vault's userpass auth method (CVE-2025-6011)[HCSEC-2025-15](https://discuss.hashicorp.com/t/hcsec-2025-15-timing-side-channel-in-vault-s-userpass-auth-method/76034)
-* core/login: vault userpass and ldap user lockout bypass (CVE-2025-6004) [[GH-31352](https://github.com/hashicorp/vault/pull/31352),[HCSEC-2025-16](https://discuss.hashicorp.com/t/hcsec-2025-16-vault-userpass-and-ldap-user-lockout-bypass/76035)]
+* core/login: vault userpass and ldap user lockout bypass (CVE-2025-6004). update alias lookahead to respect username case for LDAP and username/password. [[GH-31352](https://github.com/hashicorp/vault/pull/31352),[HCSEC-2025-16](https://discuss.hashicorp.com/t/hcsec-2025-16-vault-userpass-and-ldap-user-lockout-bypass/76035)]
 * secrets/totp: vault totp secrets engine code reuse (CVE-2025-6014) [[GH-31246](https://github.com/hashicorp/vault/pull/31246),[HCSEC-2025-17](https://discuss.hashicorp.com/t/hcsec-2025-17-vault-totp-secrets-engine-code-reuse/76036)]
-* auth/cert: vault certificate auth method did not validate common name for non-ca certificates (CVE-2025-6037) [[GH-31210](https://github.com/hashicorp/vault/pull/31210),[HCSEC-2025-18](https://discuss.hashicorp.com/t/hcsec-2025-18-vault-certificate-auth-method-did-not-validate-common-name-for-non-ca-certificates/76037)]
+* auth/cert: vault certificate auth method did not validate common name for non-ca certificates (CVE-2025-6037). test non-CA cert equality on login matching instead of individual fields. [[GH-31210](https://github.com/hashicorp/vault/pull/31210),[HCSEC-2025-18](https://discuss.hashicorp.com/t/hcsec-2025-18-vault-certificate-auth-method-did-not-validate-common-name-for-non-ca-certificates/76037)]
 * core/mfa: vault login mfa bypass of rate limiting and totp token reuse (CVE-2025-6015) [[GH-31217](https://github.com/hashicorp/vault/pull/31297),[HCSEC-2025-19](https://discuss.hashicorp.com/t/hcsec-2025-19-vault-login-mfa-bypass-of-rate-limiting-and-totp-token-reuse/76038)]
 
 BUG FIXES:
@@ -261,7 +261,7 @@ BUG FIXES:
 SECURITY:
 
 * core: require a nonce when cancelling a rekey operation that was initiated within the last 10 minutes. [[GH-30794](https://github.com/hashicorp/vault/pull/30794)],[[HCSEC-2025-11](https://discuss.hashicorp.com/t/hcsec-2025-11-vault-vulnerable-to-recovery-key-cancellation-denial-of-service/75570)]
-* core/identity: vault root namespace operator may elevate privileges (CVE-2025-5999) [[GH-31045](https://github.com/hashicorp/vault/pull/31045)[HCSEC-2025-13](https://discuss.hashicorp.com/t/hcsec-2025-13-vault-root-namespace-operator-may-elevate-token-privileges/76032)]
+* core/identity: vault root namespace operator may elevate privileges (CVE-2025-5999). Fix string contains check in Identity APIs to be case-insensitive. [[GH-31045](https://github.com/hashicorp/vault/pull/31045),[HCSEC-2025-13](https://discuss.hashicorp.com/t/hcsec-2025-13-vault-root-namespace-operator-may-elevate-token-privileges/76032)]
 
 CHANGES:
 
@@ -661,11 +661,11 @@ Unblocks customers that were stuck in a failing loop when attempting to rotate s
 
 SECURITY:
 
-* audit: privileged vault operator may execute code on the underlying host (CVE-2025-6000) [[GH-31211](https://github.com/hashicorp/vault/pull/31211),[HCSEC-2025-14](https://discuss.hashicorp.com/t/hcsec-2025-14-privileged-vault-operator-may-execute-code-on-the-underlying-host/76033)]
+* audit: privileged vault operator may execute code on the underlying host (CVE-2025-6000). Add additional verifications to the target of file audit sinks. [[GH-31211](https://github.com/hashicorp/vault/pull/31211),[HCSEC-2025-14](https://discuss.hashicorp.com/t/hcsec-2025-14-privileged-vault-operator-may-execute-code-on-the-underlying-host/76033)]
 * auth/userpass: timing side-channel in vault's userpass auth method (CVE-2025-6011)[HCSEC-2025-15](https://discuss.hashicorp.com/t/hcsec-2025-15-timing-side-channel-in-vault-s-userpass-auth-method/76034)
-* core/login: vault userpass and ldap user lockout bypass (CVE-2025-6004) [[GH-31352](https://github.com/hashicorp/vault/pull/31352),[HCSEC-2025-16](https://discuss.hashicorp.com/t/hcsec-2025-16-vault-userpass-and-ldap-user-lockout-bypass/76035)]
+* core/login: vault userpass and ldap user lockout bypass (CVE-2025-6004). update alias lookahead to respect username case for LDAP and username/password. [[GH-31352](https://github.com/hashicorp/vault/pull/31352),[HCSEC-2025-16](https://discuss.hashicorp.com/t/hcsec-2025-16-vault-userpass-and-ldap-user-lockout-bypass/76035)]
 * secrets/totp: vault totp secrets engine code reuse (CVE-2025-6014) [[GH-31246](https://github.com/hashicorp/vault/pull/31246),[HCSEC-2025-17](https://discuss.hashicorp.com/t/hcsec-2025-17-vault-totp-secrets-engine-code-reuse/76036)]
-* auth/cert: vault certificate auth method did not validate common name for non-ca certificates (CVE-2025-6037) [[GH-31210](https://github.com/hashicorp/vault/pull/31210),[HCSEC-2025-18](https://discuss.hashicorp.com/t/hcsec-2025-18-vault-certificate-auth-method-did-not-validate-common-name-for-non-ca-certificates/76037)]
+* auth/cert: vault certificate auth method did not validate common name for non-ca certificates (CVE-2025-6037). test non-CA cert equality on login matching instead of individual fields. [[GH-31210](https://github.com/hashicorp/vault/pull/31210),[HCSEC-2025-18](https://discuss.hashicorp.com/t/hcsec-2025-18-vault-certificate-auth-method-did-not-validate-common-name-for-non-ca-certificates/76037)]
 * core/mfa: vault login mfa bypass of rate limiting and totp token reuse (CVE-2025-6015) [[GH-31217](https://github.com/hashicorp/vault/pull/31297),[HCSEC-2025-19](https://discuss.hashicorp.com/t/hcsec-2025-19-vault-login-mfa-bypass-of-rate-limiting-and-totp-token-reuse/76038)]
 
 BUG FIXES:
@@ -682,7 +682,7 @@ BUG FIXES:
 SECURITY:
 
 * core: require a nonce when cancelling a rekey operation that was initiated within the last 10 minutes. [[GH-30794](https://github.com/hashicorp/vault/pull/30794)],[[HCSEC-2025-11](https://discuss.hashicorp.com/t/hcsec-2025-11-vault-vulnerable-to-recovery-key-cancellation-denial-of-service/75570)]
-* core/identity: vault root namespace operator may elevate privileges (CVE-2025-5999) [[GH-31045](https://github.com/hashicorp/vault/pull/31045)[HCSEC-2025-13](https://discuss.hashicorp.com/t/hcsec-2025-13-vault-root-namespace-operator-may-elevate-token-privileges/76032)]
+* core/identity: vault root namespace operator may elevate privileges (CVE-2025-5999). Fix string contains check in Identity APIs to be case-insensitive. [[GH-31045](https://github.com/hashicorp/vault/pull/31045),[HCSEC-2025-13](https://discuss.hashicorp.com/t/hcsec-2025-13-vault-root-namespace-operator-may-elevate-token-privileges/76032)]
 
 CHANGES:
 
@@ -1176,7 +1176,7 @@ use versioned plugins. [[GH-27881](https://github.com/hashicorp/vault/pull/27881
 SECURITY:
 
 * core: require a nonce when cancelling a rekey operation that was initiated within the last 10 minutes. [[GH-30794](https://github.com/hashicorp/vault/pull/30794)],[[HCSEC-2025-11](https://discuss.hashicorp.com/t/hcsec-2025-11-vault-vulnerable-to-recovery-key-cancellation-denial-of-service/75570)]
-* core/identity: vault root namespace operator may elevate privileges (CVE-2025-5999) [[GH-31045](https://github.com/hashicorp/vault/pull/31045)[HCSEC-2025-13](https://discuss.hashicorp.com/t/hcsec-2025-13-vault-root-namespace-operator-may-elevate-token-privileges/76032)]
+* core/identity: vault root namespace operator may elevate privileges (CVE-2025-5999). Fix string contains check in Identity APIs to be case-insensitive. [[GH-31045](https://github.com/hashicorp/vault/pull/31045),[HCSEC-2025-13](https://discuss.hashicorp.com/t/hcsec-2025-13-vault-root-namespace-operator-may-elevate-token-privileges/76032)]
 
 CHANGES:
 
@@ -1817,11 +1817,11 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 
 SECURITY:
 
-* audit: privileged vault operator may execute code on the underlying host (CVE-2025-6000) [[GH-31211](https://github.com/hashicorp/vault/pull/31211),[HCSEC-2025-14](https://discuss.hashicorp.com/t/hcsec-2025-14-privileged-vault-operator-may-execute-code-on-the-underlying-host/76033)]
+* audit: privileged vault operator may execute code on the underlying host (CVE-2025-6000). Add additional verifications to the target of file audit sinks. [[GH-31211](https://github.com/hashicorp/vault/pull/31211),[HCSEC-2025-14](https://discuss.hashicorp.com/t/hcsec-2025-14-privileged-vault-operator-may-execute-code-on-the-underlying-host/76033)]
 * auth/userpass: timing side-channel in vault's userpass auth method (CVE-2025-6011)[HCSEC-2025-15](https://discuss.hashicorp.com/t/hcsec-2025-15-timing-side-channel-in-vault-s-userpass-auth-method/76034)
-* core/login: vault userpass and ldap user lockout bypass (CVE-2025-6004) [[GH-31352](https://github.com/hashicorp/vault/pull/31352),[HCSEC-2025-16](https://discuss.hashicorp.com/t/hcsec-2025-16-vault-userpass-and-ldap-user-lockout-bypass/76035)]
+* core/login: vault userpass and ldap user lockout bypass (CVE-2025-6004). update alias lookahead to respect username case for LDAP and username/password. [[GH-31352](https://github.com/hashicorp/vault/pull/31352),[HCSEC-2025-16](https://discuss.hashicorp.com/t/hcsec-2025-16-vault-userpass-and-ldap-user-lockout-bypass/76035)]
 * secrets/totp: vault totp secrets engine code reuse (CVE-2025-6014) [[GH-31246](https://github.com/hashicorp/vault/pull/31246),[HCSEC-2025-17](https://discuss.hashicorp.com/t/hcsec-2025-17-vault-totp-secrets-engine-code-reuse/76036)]
-* auth/cert: vault certificate auth method did not validate common name for non-ca certificates (CVE-2025-6037) [[GH-31210](https://github.com/hashicorp/vault/pull/31210),[HCSEC-2025-18](https://discuss.hashicorp.com/t/hcsec-2025-18-vault-certificate-auth-method-did-not-validate-common-name-for-non-ca-certificates/76037)]
+* auth/cert: vault certificate auth method did not validate common name for non-ca certificates (CVE-2025-6037). test non-CA cert equality on login matching instead of individual fields. [[GH-31210](https://github.com/hashicorp/vault/pull/31210),[HCSEC-2025-18](https://discuss.hashicorp.com/t/hcsec-2025-18-vault-certificate-auth-method-did-not-validate-common-name-for-non-ca-certificates/76037)]
 * core/mfa: vault login mfa bypass of rate limiting and totp token reuse (CVE-2025-6015) [[GH-31217](https://github.com/hashicorp/vault/pull/31297),[HCSEC-2025-19](https://discuss.hashicorp.com/t/hcsec-2025-19-vault-login-mfa-bypass-of-rate-limiting-and-totp-token-reuse/76038)]
 
 BUG FIXES:
@@ -1839,7 +1839,7 @@ BUG FIXES:
 SECURITY:
 
 * core: require a nonce when cancelling a rekey operation that was initiated within the last 10 minutes. [[GH-30794](https://github.com/hashicorp/vault/pull/30794)],[[HCSEC-2025-11](https://discuss.hashicorp.com/t/hcsec-2025-11-vault-vulnerable-to-recovery-key-cancellation-denial-of-service/75570)]
-* core/identity: vault root namespace operator may elevate privileges (CVE-2025-5999) [[GH-31045](https://github.com/hashicorp/vault/pull/31045)[HCSEC-2025-13](https://discuss.hashicorp.com/t/hcsec-2025-13-vault-root-namespace-operator-may-elevate-token-privileges/76032)]
+* core/identity: vault root namespace operator may elevate privileges (CVE-2025-5999). Fix string contains check in Identity APIs to be case-insensitive. [[GH-31045](https://github.com/hashicorp/vault/pull/31045),[HCSEC-2025-13](https://discuss.hashicorp.com/t/hcsec-2025-13-vault-root-namespace-operator-may-elevate-token-privileges/76032)]
 
 CHANGES:
 
