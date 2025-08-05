@@ -107,6 +107,9 @@ func pathConfigCA(b *backend) *framework.Path {
 					OperationSuffix: "ca-configuration",
 				},
 			},
+			logical.RecoverOperation: &framework.PathOperation{
+				Callback: b.pathConfigCARecover,
+			},
 		},
 
 		HelpSynopsis: `Set the SSH private key used for signing certificates.`,
@@ -151,7 +154,7 @@ func (b *backend) pathConfigCADelete(ctx context.Context, req *logical.Request, 
 	return nil, nil
 }
 
-func readStoredKey(ctx context.Context, storage logical.Storage, keyType string) (*keyStorageEntry, error) {
+func readStoredKeyEntry(ctx context.Context, storage logical.Storage, keyType string) (*logical.StorageEntry, error) {
 	var path, deprecatedPath string
 	switch keyType {
 	case caPrivateKey:
@@ -191,10 +194,16 @@ func readStoredKey(ctx context.Context, storage logical.Storage, keyType string)
 			}
 		}
 	}
+	return entry, nil
+}
+func readStoredKey(ctx context.Context, storage logical.Storage, keyType string) (*keyStorageEntry, error) {
+	entry, err := readStoredKeyEntry(ctx, storage, keyType)
+	if err != nil {
+		return nil, err
+	}
 	if entry == nil {
 		return nil, nil
 	}
-
 	var keyEntry keyStorageEntry
 	if err := entry.DecodeJSON(&keyEntry); err != nil {
 		return nil, err
@@ -519,4 +528,62 @@ func caKeysConfigured(ctx context.Context, s logical.Storage) (bool, error) {
 	}
 
 	return false, nil
+}
+
+func (b *backend) pathConfigCARecover(ctx context.Context, req *logical.Request, data *framework.FieldData) (*logical.Response, error) {
+	// check live storage for existing keys. Disallow recovery if CA is already configured for consistency with create operation
+	found, err := caKeysConfigured(ctx, req.Storage)
+	if err != nil {
+		return nil, err
+	}
+	if found {
+		return logical.ErrorResponse("keys are already configured; delete them before recovering the CA"), nil
+	}
+
+	// fetch directly from the snapshot storage instead of following the usual restore procedure of getting the values
+	// from the req.Data, since those came from a previous CARead operation on the loaded snapshot, which only contains
+	// the public key.
+	snapshotStorage, err := logical.NewSnapshotStorageView(req)
+	if err != nil {
+		return nil, err
+	}
+	publicKeyEntry, err := readStoredKeyEntry(ctx, snapshotStorage, caPublicKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read CA public key for restore: %w", err)
+	}
+	privateKeyEntry, err := readStoredKeyEntry(ctx, snapshotStorage, caPrivateKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read CA private key for restore: %w", err)
+	}
+	managedKey, err := readManagedKey(ctx, snapshotStorage)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read CA managed key for restore: %w", err)
+	}
+
+	if publicKeyEntry == nil && privateKeyEntry == nil && managedKey == nil {
+		return logical.ErrorResponse("no CA keys found in snapshot storage to restore"), nil
+	}
+
+	// it's possible that we've read the keys from a deprecated path in the snapshot, but it should be automatically
+	// upgraded to the new path anyway, so we don't care about restoring it back to the deprecated path
+	if publicKeyEntry != nil {
+		err = req.Storage.Put(ctx, publicKeyEntry)
+		if err != nil {
+			return nil, fmt.Errorf("failed to restore public key entry in storage: %w", err)
+		}
+	}
+	if privateKeyEntry != nil {
+		err = req.Storage.Put(ctx, privateKeyEntry)
+		if err != nil {
+			return nil, fmt.Errorf("failed to restore private key entry in storage: %w", err)
+		}
+	}
+	if managedKey != nil {
+		err = b.createManagedKey(ctx, req.Storage, managedKey.KeyName.String(), managedKey.KeyId.String())
+		if err != nil {
+			return nil, fmt.Errorf("failed to restore managed key entry in storage: %w", err)
+		}
+	}
+
+	return nil, nil
 }
