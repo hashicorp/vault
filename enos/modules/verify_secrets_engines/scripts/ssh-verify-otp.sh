@@ -21,8 +21,10 @@ log() {
 [[ -z "$VAULT_TOKEN" ]] && fail "VAULT_TOKEN env variable has not been set"
 [[ -z "$VAULT_INSTALL_DIR" ]] && fail "VAULT_INSTALL_DIR env variable has not been set"
 
-# Exit if VERIFY_SSH_SECRETS is set to false
-[[ "${VERIFY_SSH_SECRETS}" == false ]] && exit 0
+if [[ "$VERIFY_SSH_SECRETS" == "false" ]]; then
+  log "VERIFY_SSH_SECRETS is false; exiting script"
+  exit 0
+fi
 
 binpath=${VAULT_INSTALL_DIR}/vault
 test -x "$binpath" || fail "unable to locate vault binary at $binpath"

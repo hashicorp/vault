@@ -37,8 +37,10 @@ log "Starting env var checks"
 [[ -z "$DEFAULT_USER" ]] && fail "DEFAULT_USER env variable has not been set"
 [[ -z "$ALLOWED_USERS" ]] && fail "ALLOWED_USERS env variable has not been set"
 
-# Exit if VERIFY_SSH_SECRETS is set to false
-[[ "${VERIFY_SSH_SECRETS}" == false ]] && exit 0
+if [[ "$VERIFY_SSH_SECRETS" == "false" ]]; then
+  log "VERIFY_SSH_SECRETS is false; exiting script"
+  exit 0
+fi
 
 # Type-specific required vars
 case "$KEY_TYPE" in

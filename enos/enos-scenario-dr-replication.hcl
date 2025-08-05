@@ -1302,6 +1302,7 @@ scenario "dr_replication" {
       vault_root_token        = step.create_secondary_cluster.root_token
       verify_pki_certs        = false
       verify_aws_engine_creds = false
+      verify_ssh_secrets      = false
     }
   }
 
