@@ -6,26 +6,22 @@ package namespace
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/hashicorp/vault/sdk/helper/consts"
+	"github.com/hashicorp/vault/sdk/helper/namespace"
 )
 
 type contextValues struct{}
 
-type Namespace struct {
-	ID             string            `json:"id" mapstructure:"id"`
-	Path           string            `json:"path" mapstructure:"path"`
-	CustomMetadata map[string]string `json:"custom_metadata" mapstructure:"custom_metadata"`
-}
+type Namespace namespace.Namespace
 
 func (n *Namespace) String() string {
-	return fmt.Sprintf("ID: %s. Path: %s", n.ID, n.Path)
+	return n.String()
 }
 
 const (
-	RootNamespaceID = "root"
+	RootNamespaceID = namespace.RootNamespaceID
 )
 
 var (
@@ -54,7 +50,7 @@ func (n *Namespace) TrimmedPath(path string) string {
 }
 
 func ContextWithNamespace(ctx context.Context, ns *Namespace) context.Context {
-	return context.WithValue(ctx, contextNamespace, ns)
+	return namespace.ContextWithNamespace(ctx, (*namespace.Namespace)(ns))
 }
 
 func RootContext(ctx context.Context) context.Context {
@@ -67,21 +63,11 @@ func RootContext(ctx context.Context) context.Context {
 // FromContext retrieves the namespace from a context, or an error
 // if there is no namespace in the context.
 func FromContext(ctx context.Context) (*Namespace, error) {
-	if ctx == nil {
-		return nil, errors.New("context was nil")
+	ns, err := namespace.FromContext(ctx)
+	if err != nil {
+		return nil, err
 	}
-
-	nsRaw := ctx.Value(contextNamespace)
-	if nsRaw == nil {
-		return nil, ErrNoNamespace
-	}
-
-	ns := nsRaw.(*Namespace)
-	if ns == nil {
-		return nil, ErrNoNamespace
-	}
-
-	return ns, nil
+	return (*Namespace)(ns), nil
 }
 
 // Canonicalize trims any prefix '/' and adds a trailing '/' to the
