@@ -83,7 +83,7 @@ jobs:
       github.event_name == 'push' ||
       github.event_name == 'schedule' ||
       (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64","small"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
     permissions: write-all # vault-auth
     outputs:
       build-date: ${{ steps.metadata.outputs.vault-build-date }}
@@ -288,7 +288,10 @@ jobs:
   test:
     # Test all of the testable artifacts if our repo isn't a fork. We don't test when the PR is
     # created from a fork because secrets are not passed in and they are required.
-    if: ${{ needs.setup.outputs.is-fork == 'false' }}
+    if: |
+      always() &&
+      needs.setup.outputs.is-fork == 'false' &&
+      ( needs.artifacts-ce.result == 'success' || needs.artifacts-ent.result == 'success' )
     name: test ${{ matrix.artifact }}
     needs:
       - setup
@@ -302,7 +305,7 @@ jobs:
         include: ${{ needs.setup.outputs.is-ent-branch == 'true' && fromJSON(needs.artifacts-ent.outputs.testable-packages) || fromJSON(needs.artifacts-ce.outputs.testable-packages) }}
     with:
       build-artifact-name: ${{ matrix.artifact }}
-      runs-on: ${{ github.repository == 'hashicorp/vault' && '"ubuntu-latest"' || '["self-hosted","ubuntu-latest-x64","small"]' }}
+      runs-on: ${{ github.repository == 'hashicorp/vault' && '"ubuntu-latest"' || '["self-hosted","ubuntu-latest-x64"]' }}
       sample-max: 1
       sample-name: ${{ matrix.sample }}
       ssh-key-name: ${{ github.event.repository.name }}-ci-ssh-key
@@ -314,7 +317,10 @@ jobs:
   test-containers:
     # Test all of the testable containers if our repo isn't a fork. We don't test when the PR is
     # created from a fork because secrets are not passed in and they are required (for now).
-    if: ${{ needs.setup.outputs.is-fork == 'false' }}
+    if: |
+      always() &&
+      needs.setup.outputs.is-fork == 'false' &&
+      ( needs.artifacts-ce.result == 'success' || needs.artifacts-ent.result == 'success' )
     name: test ${{ matrix.artifact }}
     needs:
       - setup
@@ -350,7 +356,7 @@ jobs:
         github.event_name == 'schedule' ||
         (github.event_name == 'pull_request' && github.event.pull_request.draft == false)
       )
-    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64","small"]') }}
+    runs-on: ${{ github.repository == 'hashicorp/vault' && 'ubuntu-latest' || fromJSON('["self-hosted","ubuntu-latest-x64"]') }}
     permissions: write-all # Ensure we have id-token:write access for vault-auth.
     needs:
       - setup
