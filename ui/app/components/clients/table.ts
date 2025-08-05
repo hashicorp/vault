@@ -16,6 +16,7 @@ interface TableData extends MountClients {
 
 interface Args {
   data: TableData[];
+  columns: Record<string, unknown>[];
 }
 
 type TableColumn = 'namespace' | 'label' | 'mount_type' | 'clients';
@@ -26,7 +27,21 @@ export default class Table extends Component<Args> {
   @tracked sortColumn: TableColumn = 'clients';
   @tracked sortDirection: SortDirection = 'desc';
 
-  pageSize = Ember.testing ? 3 : 10; // lower in tests to test pagination without seeding more data
+  pageSize = Ember.testing ? 3 : 100; // lower in tests to test pagination without seeding more data
+
+  get columns() {
+    const defaultColumns = [
+      { key: 'namespace', label: 'Namespace', isSortable: true },
+      { key: 'label', label: 'Mount path', isSortable: true },
+      { key: 'mount_type', label: 'Mount type', isSortable: true },
+      { key: 'clients', label: 'Counts', isSortable: true },
+    ];
+    return this.args.columns || defaultColumns;
+  }
+
+  get keys() {
+    return this.args.columns.map((k) => k.key);
+  }
 
   get paginatedTableData(): TableData[] {
     const sorted = this.sortTableData(this.args.data);
@@ -34,7 +49,7 @@ export default class Table extends Component<Args> {
       page: this.currentPage,
       pageSize: this.pageSize,
     });
-
+    console.log(paginated);
     return paginated;
   }
 

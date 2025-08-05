@@ -27,6 +27,29 @@ export const CLIENT_TYPES = [
 
 export type ClientTypes = (typeof CLIENT_TYPES)[number];
 
+export const ACTIVITY_EXPORT_COLUMNS = {
+  shared: [
+    'client_id',
+    'client_type',
+    'namespace_id',
+    'namespace_path',
+    'mount_accessor',
+    'mount_type',
+    'mount_path',
+    'token_creation_time',
+    'client_first_used_time',
+  ],
+  entity_clients: [
+    'entity_name',
+    'entity_alias_name',
+    'local_entity_alias',
+    'entity_metadata',
+    'entity_alias_metadata',
+    'entity_alias_custom_metadata',
+    'entity_group_ids',
+  ],
+};
+
 // generates a block of total clients with 0's for use as defaults
 function emptyCounts() {
   return CLIENT_TYPES.reduce((prev, type) => {

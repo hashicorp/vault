@@ -3,15 +3,12 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
+{{log @data}}
 {{#if @data}}
   <Hds::Table
-    @model={{this.paginatedTableData}}
-    @columns={{array
-      (hash key="namespace" label="Namespace" isSortable=true)
-      (hash key="label" label="Mount path" isSortable=true)
-      (hash key="mount_type" label="Mount type" isSortable=true)
-      (hash key="clients" label="Counts" isSortable=true)
-    }}
+    {{!-- @model={{this.paginatedTableData}} --}}
+    @model={{@data}}
+    @columns={{this.columns}}
     @sortBy="clients"
     @sortOrder="desc"
     @onSort={{this.updateSort}}
@@ -19,14 +16,15 @@
   >
     <:body as |B|>
       <B.Tr data-test-attribution-table-row>
-        <B.Td>{{B.data.namespace}}</B.Td>
-        <B.Td>{{B.data.label}}</B.Td>
-        {{#if (eq B.data.mount_type "deleted mount")}}
-          <B.Td><Hds::Badge @text="Deleted" @type="outlined" /></B.Td>
-        {{else}}
-          <B.Td>{{B.data.mount_type}}</B.Td>
-        {{/if}}
-        <B.Td data-test-attribution-table-counts={{B.rowIndex}}>{{B.data.clients}}</B.Td>
+        {{#each this.keys as |key|}}
+          {{#let (get B.data key) as |value|}}
+            {{#if (and (eq key "mount_type") (eq value "deleted mount"))}}
+              <B.Td><Hds::Badge @text="Deleted" @type="outlined" /></B.Td>
+            {{else}}
+              <B.Td>{{value}}</B.Td>
+            {{/if}}
+          {{/let}}
+        {{/each}}
       </B.Tr>
     </:body>
   </Hds::Table>
