@@ -16,9 +16,3 @@ self-hosted-runner:
     - type=c6a.4xlarge
     - ubuntu-latest-x64
     - custom-linux-xl-vault-latest
-
-paths:
-  .github/workflows/build.yml:
-    ignore:
-      # This file only exists on enterprise so it's okay to ignore the error
-      - 'could not read reusable workflow file for "./.github/workflows/build-artifacts-ent.yml"'
