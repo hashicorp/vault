@@ -13,7 +13,6 @@ import { SELECTORS, OIDC_BASE_URL, CLIENT_LIST_RESPONSE } from 'vault/tests/help
 import parseURL from 'core/utils/parse-url';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const ISSUER_URL = 'http://127.0.0.1:8200/v1/identity/oidc/provider/test-provider';
 
@@ -82,12 +81,11 @@ module('Integration | Component | oidc/provider-form', function (hooks) {
     await fillIn('[data-test-input="name"]', ' ');
     await click(SELECTORS.providerSaveButton);
 
+    const validationErrors = findAll(SELECTORS.inlineAlert);
     assert
-      .dom(GENERAL.validationErrorByAttr('name'))
+      .dom(validationErrors[0])
       .hasText('Name is required. Name cannot contain whitespace.', 'Validation messages are shown for name');
-    assert
-      .dom(SELECTORS.inlineAlert)
-      .hasText('There are 2 errors with this form.', 'Renders form error count');
+    assert.dom(validationErrors[1]).hasText('There are 2 errors with this form.', 'Renders form error count');
 
     await click('[data-test-oidc-radio="limited"]');
     assert

@@ -39,17 +39,15 @@ export default class DestinationsCreateForm extends Component<Args> {
     super(owner, args);
     // cache initial custom tags value to compare against updates
     // tags that are removed when editing need to be added to the payload
-    // cast type here since not all types have custom_tags
-    const { custom_tags } = args.form.data as unknown as Record<string, unknown>;
-    if (custom_tags) {
-      this.initialCustomTags = { ...custom_tags };
+    if (args.form['customTags']) {
+      this.initialCustomTags = { ...args.form['customTags'] };
     }
   }
 
   get header() {
     const { type, form } = this.args;
     const { name: typeDisplayName } = findDestination(type);
-    const { name } = form.data;
+    const { name } = form;
 
     return form.isNew
       ? {
@@ -89,20 +87,18 @@ export default class DestinationsCreateForm extends Component<Args> {
     }
   }
 
-  diffCustomTags(payload: Record<string, unknown>) {
+  diffCustomTags(customTags?: Record<string, string>) {
     // if tags were removed we need to add them to the payload
-    const { isNew } = this.args.form;
-    const { custom_tags } = payload;
-    if (!isNew && custom_tags && this.initialCustomTags) {
-      // compare the new and old keys of custom_tags object to determine which need to be removed
-      const oldKeys = Object.keys(this.initialCustomTags).filter(
-        (k) => !Object.keys(custom_tags).includes(k)
-      );
-      // add tags_to_remove to the payload if there is a diff
+    const { form } = this.args;
+    if (!form.isNew && customTags && this.initialCustomTags) {
+      // compare the new and old keys of customTags object to determine which need to be removed
+      const oldKeys = Object.keys(this.initialCustomTags).filter((k) => !Object.keys(customTags).includes(k));
+      // add tagsToRemove to the payload if there is a diff
       if (oldKeys.length > 0) {
-        payload['tags_to_remove'] = oldKeys;
+        return { tagsToRemove: oldKeys };
       }
     }
+    return {};
   }
 
   save = task(
@@ -113,18 +109,21 @@ export default class DestinationsCreateForm extends Component<Args> {
       this.modelValidations = null;
 
       const { form, type } = this.args;
-      const { name } = form.data;
       const { isValid, state, invalidFormMessage, data } = form.toJSON();
+      const name = form['name'] as string;
 
       this.modelValidations = isValid ? null : state;
       this.invalidFormMessage = isValid ? '' : invalidFormMessage;
 
       if (isValid) {
         try {
-          const payload = data as unknown as Record<string, unknown>;
-          this.diffCustomTags(payload);
-          const method = apiMethodResolver(form.isNew ? 'write' : 'patch', type);
-          await this.api.sys[method](name, payload);
+          const { tagsToRemove } = this.diffCustomTags(data['customTags'] as Record<string, string>);
+          if (tagsToRemove) {
+            data['tagsToRemove'] = tagsToRemove;
+          }
+
+          const method = apiMethodResolver(form.isNew ? 'write' : 'patch', this.args.type);
+          await this.api.sys[method](name, data);
 
           this.router.transitionTo('vault.cluster.sync.secrets.destinations.destination.details', type, name);
         } catch (error) {

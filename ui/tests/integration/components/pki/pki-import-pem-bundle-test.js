@@ -11,7 +11,6 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { CERTIFICATES } from 'vault/tests/helpers/pki/pki-helpers';
 import { PKI_CONFIGURE_CREATE } from 'vault/tests/helpers/pki/pki-selectors';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const { issuerPemBundle } = CERTIFICATES;
 module('Integration | Component | PkiImportPemBundle', function (hooks) {
@@ -45,8 +44,8 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
 
     assert.dom('[data-test-pki-import-pem-bundle-form]').exists('renders form');
     assert.dom('[data-test-component="text-file"]').exists('renders text file input');
-    await click(GENERAL.textToggle);
-    await fillIn(GENERAL.maskedInput, this.pemBundle);
+    await click('[data-test-text-toggle]');
+    await fillIn('[data-test-text-file-textarea]', this.pemBundle);
     assert.strictEqual(this.model.pemBundle, this.pemBundle);
   });
 
@@ -85,8 +84,8 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
       { owner: this.engine }
     );
 
-    await click(GENERAL.textToggle);
-    await fillIn(GENERAL.maskedInput, this.pemBundle);
+    await click('[data-test-text-toggle]');
+    await fillIn('[data-test-text-file-textarea]', this.pemBundle);
     assert.strictEqual(this.model.pemBundle, this.pemBundle, 'PEM bundle updated on model');
     await click(PKI_CONFIGURE_CREATE.importSubmit);
   });
@@ -126,8 +125,8 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
       { owner: this.engine }
     );
 
-    await click(GENERAL.textToggle);
-    await fillIn(GENERAL.maskedInput, this.pemBundle);
+    await click('[data-test-text-toggle]');
+    await fillIn('[data-test-text-file-textarea]', this.pemBundle);
     assert.strictEqual(this.model.pemBundle, this.pemBundle);
     await click(PKI_CONFIGURE_CREATE.importSubmit);
   });
@@ -161,8 +160,8 @@ module('Integration | Component | PkiImportPemBundle', function (hooks) {
       { owner: this.engine }
     );
 
-    await click(GENERAL.textToggle);
-    await fillIn(GENERAL.maskedInput, this.pemBundle);
+    await click('[data-test-text-toggle]');
+    await fillIn('[data-test-text-file-textarea]', this.pemBundle);
     await click(PKI_CONFIGURE_CREATE.importSubmit);
 
     assert

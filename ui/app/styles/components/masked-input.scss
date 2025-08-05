@@ -1,3 +1,4 @@
+@use '../utils/color_variables';
 @use '../utils/font_variables';
 @use '../utils/size_variables';
 
@@ -55,7 +56,7 @@ pre.masked-font {
 .button.masked-input-toggle {
   min-width: size_variables.$spacing-36;
   border-left: 0;
-  color: var(--token-color-palette-neutral-400);
+  color: color_variables.$grey;
   box-shadow: 0 3px 1px 0px rgba(10, 10, 10, 0.12);
 }
 
@@ -71,7 +72,7 @@ pre.masked-font {
     min-width: size_variables.$spacing-24;
     border: 0;
     box-shadow: none;
-    color: var(--token-color-palette-neutral-300);
+    color: color_variables.$grey-light;
     padding-left: 0;
     padding-right: 0;
 
@@ -80,7 +81,7 @@ pre.masked-font {
     &:focus,
     &:hover,
     &:focus:not(:active) {
-      color: var(--token-color-palette-blue-200);
+      color: color_variables.$blue;
       border: 0;
       box-shadow: none;
     }
@@ -92,5 +93,5 @@ pre.masked-font {
 }
 
 .masked-input .input:focus + .masked-input-toggle {
-  background: rgba(hsl(0, 0%, 100%), 0.95);
+  background: rgba(color_variables.$white, 0.95);
 }

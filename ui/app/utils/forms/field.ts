@@ -18,11 +18,6 @@ export interface FieldOptions {
   sensitive?: boolean;
   noCopy?: boolean;
   docLink?: string;
-  helpText?: string;
-  helperTextDisabled?: string;
-  helperTextEnabled?: string;
-  placeholder?: string;
-  noDefault?: boolean;
 }
 
 export default class FormField {

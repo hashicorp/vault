@@ -1,3 +1,0 @@
-```release-note:improvement
-ui: Use the Helios Design System Code Block component for all readonly code editors and use its Code Editor component for all other code editors
-```

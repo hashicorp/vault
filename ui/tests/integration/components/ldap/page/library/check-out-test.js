@@ -70,7 +70,7 @@ module('Integration | Component | ldap | Page::Library::CheckOut', function (hoo
         'Warning alert renders'
       );
     assert.dom('[data-test-row-value="Account name"]').hasText('foo.bar', 'Account name renders');
-    await click(GENERAL.button('toggle-masked'));
+    await click('[data-test-button="toggle-masked"]');
     assert.dom(`${GENERAL.infoRowValue('Password')} .masked-value`).hasText('password', 'Password renders');
     assert
       .dom('[data-test-row-value="Lease ID"]')

@@ -14,17 +14,17 @@ import type { DestinationRouteModel } from '../destination';
 export default class SyncSecretsDestinationsDestinationEditRoute extends Route {
   model() {
     const { destination } = this.modelFor('secrets.destinations.destination') as DestinationRouteModel;
-    const { type, name, connection_details, options } = destination;
+    const { type, name, connectionDetails, options } = destination;
     // granularity is returned as granularityLevel in the response but expected as granularity in the request
-    const { granularity_level, ...partialOptions } = options;
+    const { granularityLevel, ...partialOptions } = options;
 
     return {
       type,
       form: formResolver(type, {
         name,
-        ...connection_details,
+        ...connectionDetails,
         ...partialOptions,
-        granularity: granularity_level,
+        granularity: granularityLevel,
       }),
     };
   }

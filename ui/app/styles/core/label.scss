@@ -1,3 +1,4 @@
+@use '../utils/color_variables';
 @use '../utils/font_variables';
 @use '../utils/size_variables';
 
@@ -9,7 +10,7 @@
 // This file defines the style for .is-label
 
 .is-label {
-  color: var(--token-color-palette-neutral-600);
+  color: color_variables.$grey-darkest;
   font-size: 14px;
   font-weight: font_variables.$font-weight-bold;
   display: flex;
@@ -28,6 +29,6 @@
   }
 
   &::before {
-    border-color: var(--token-color-palette-neutral-300);
+    border-color: color_variables.$grey-light;
   }
 }

@@ -1,3 +1,4 @@
+@use '../utils/color_variables';
 @use '../utils/font_variables';
 @use '../utils/size_variables';
 
@@ -22,7 +23,7 @@
   word-break: break-word;
 
   > a {
-    color: hsl(0, 0%, 4%);
+    color: color_variables.$black;
     text-decoration: none;
   }
 
@@ -63,5 +64,5 @@
 .is-subtitle-gray {
   text-transform: uppercase;
   font-size: size_variables.$size-7;
-  color: var(--token-color-palette-neutral-400);
+  color: color_variables.$ui-gray-500;
 }

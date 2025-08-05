@@ -80,6 +80,8 @@ module.exports = function (defaults) {
   const app = new EmberApp(defaults, appConfig);
 
   app.import('node_modules/jsonlint/lib/jsonlint.js');
+  app.import('node_modules/codemirror/addon/lint/lint.css');
+  app.import('node_modules/codemirror/lib/codemirror.css');
   app.import('node_modules/text-encoder-lite/text-encoder-lite.js');
   app.import('node_modules/jsondiffpatch/dist/jsondiffpatch.umd.js');
   app.import('node_modules/jsondiffpatch/dist/formatters-styles/html.css');

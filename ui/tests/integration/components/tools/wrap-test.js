@@ -7,20 +7,13 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
-import { click, fillIn, find, render, settled, waitFor, waitUntil } from '@ember/test-helpers';
+import { click, fillIn, find, render, waitUntil } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { TTL_PICKER as TTL } from 'vault/tests/helpers/components/ttl-picker-selectors';
 import { TOOLS_SELECTORS as TS } from 'vault/tests/helpers/tools-selectors';
-import codemirror, { getCodeEditorValue, setCodeEditorValue } from 'vault/tests/helpers/codemirror';
+import codemirror from 'vault/tests/helpers/codemirror';
 import sinon from 'sinon';
-
-async function setEditorValue(value) {
-  await waitFor('.cm-editor');
-  const editor = codemirror();
-  setCodeEditorValue(editor, value);
-  return settled();
-}
 
 module('Integration | Component | tools/wrap', function (hooks) {
   setupRenderingTest(hooks);
@@ -43,28 +36,19 @@ module('Integration | Component | tools/wrap', function (hooks) {
   test('it renders defaults', async function (assert) {
     await this.renderComponent();
 
-    await waitFor('.cm-editor');
-
     assert.dom('h1').hasText('Wrap Data', 'Title renders');
     assert.dom('[data-test-toggle-label="json"]').hasText('JSON');
-    assert.dom('[data-test-component="json-editor-title"]').hasText('Data to wrap');
-    assert.dom('.hds-code-editor__description').hasText('json-formatted');
-
-    const editor = codemirror();
-    const editorValue = getCodeEditorValue(editor);
-
+    assert.dom('[data-test-component="json-editor-title"]').hasText('Data to wrap (json-formatted)');
     assert.strictEqual(
-      editorValue,
-      `{
-  "": ""
-}`,
+      codemirror().getValue(' '),
+      `{   \"\": \"\" }`, // eslint-disable-line no-useless-escape
       'json editor initializes with empty object that includes whitespace'
     );
     assert.dom(TTL.toggleByLabel('Wrap TTL')).isNotChecked('Wrap TTL defaults to unchecked');
-    assert.dom(GENERAL.submitButton).isEnabled();
+    assert.dom(TS.submit).isEnabled();
     assert.dom(TS.toolsInput('wrapping-token')).doesNotExist();
-    assert.dom(GENERAL.button('Back')).doesNotExist();
-    assert.dom(GENERAL.button('Done')).doesNotExist();
+    assert.dom(TS.button('Back')).doesNotExist();
+    assert.dom(TS.button('Done')).doesNotExist();
 
     await click(TTL.toggleByLabel('Wrap TTL'));
     assert.dom(TTL.valueInputByLabel('Wrap TTL')).hasValue('30', 'ttl defaults to 30 when toggled');
@@ -74,7 +58,7 @@ module('Integration | Component | tools/wrap', function (hooks) {
   test('it renders errors', async function (assert) {
     this.server.post('sys/wrapping/wrap', () => new Response(500, {}, { errors: ['Something is wrong'] }));
     await this.renderComponent();
-    await click(GENERAL.submitButton);
+    await click(TS.submit);
     await waitUntil(() => find(GENERAL.messageError));
     assert.dom(GENERAL.messageError).hasText('Error Something is wrong', 'Error renders');
   });
@@ -99,8 +83,8 @@ module('Integration | Component | tools/wrap', function (hooks) {
     });
 
     await this.renderComponent();
-    await setEditorValue(this.wrapData);
-    await click(GENERAL.submitButton);
+    await codemirror().setValue(this.wrapData);
+    await click(TS.submit);
     await waitUntil(() => find(TS.toolsInput('wrapping-token')));
     assert.true(flashSpy.calledWith('Wrap was successful.'), 'it renders success flash');
     assert.dom(TS.toolsInput('wrapping-token')).hasText(this.token);
@@ -119,34 +103,26 @@ module('Integration | Component | tools/wrap', function (hooks) {
     });
 
     await this.renderComponent();
-    await setEditorValue(this.wrapData);
+    await codemirror().setValue(this.wrapData);
     await click(TTL.toggleByLabel('Wrap TTL'));
     await fillIn(TTL.valueInputByLabel('Wrap TTL'), '20');
-    await click(GENERAL.submitButton);
+    await click(TS.submit);
   });
 
   test('it toggles between views and preserves input data', async function (assert) {
-    assert.expect(7);
+    assert.expect(6);
     await this.renderComponent();
-    await setEditorValue(this.wrapData);
-    assert.dom('[data-test-component="json-editor-title"]').hasText('Data to wrap');
-    assert.dom('.hds-code-editor__description').hasText('json-formatted');
-    await click(GENERAL.toggleInput('json'));
-
+    await codemirror().setValue(this.wrapData);
+    assert.dom('[data-test-component="json-editor-title"]').hasText('Data to wrap (json-formatted)');
+    await click('[data-test-toggle-input="json"]');
     assert.dom('[data-test-component="json-editor-title"]').doesNotExist();
-    assert.dom(GENERAL.kvObjectEditor.key('0')).hasValue('foo');
-    assert.dom(GENERAL.kvObjectEditor.value('0')).hasValue('bar');
-    await click(GENERAL.toggleInput('json'));
+    assert.dom('[data-test-kv-key="0"]').hasValue('foo');
+    assert.dom('[data-test-kv-value="0"]').hasValue('bar');
+    await click('[data-test-toggle-input="json"]');
     assert.dom('[data-test-component="json-editor-title"]').exists();
-
-    await waitFor('.cm-editor');
-    const editor = codemirror();
-    const editorValue = getCodeEditorValue(editor);
     assert.strictEqual(
-      editorValue,
-      `{
-  "foo": "bar"
-}`,
+      codemirror().getValue(' '),
+      `{   \"foo": \"bar" }`, // eslint-disable-line no-useless-escape
       'json editor has original data'
     );
   });
@@ -180,13 +156,13 @@ module('Integration | Component | tools/wrap', function (hooks) {
     });
 
     await this.renderComponent();
-    await click(GENERAL.toggleInput('json'));
-    await fillIn(GENERAL.kvObjectEditor.key('0'), 'foo');
-    await fillIn(GENERAL.kvObjectEditor.value('0'), 'bar');
+    await click('[data-test-toggle-input="json"]');
+    await fillIn('[data-test-kv-key="0"]', 'foo');
+    await fillIn('[data-test-kv-value="0"]', 'bar');
     await click('[data-test-kv-add-row="0"]');
-    await fillIn(GENERAL.kvObjectEditor.key('1'), 'foo2');
-    await fillIn(GENERAL.kvObjectEditor.value('1'), multilineData);
-    await click(GENERAL.submitButton);
+    await fillIn('[data-test-kv-key="1"]', 'foo2');
+    await fillIn('[data-test-kv-value="1"]', multilineData);
+    await click(TS.submit);
     await waitUntil(() => find(TS.toolsInput('wrapping-token')));
     assert.true(flashSpy.calledWith('Wrap was successful.'), 'it renders success flash');
     assert.dom(TS.toolsInput('wrapping-token')).hasText(this.token);
@@ -196,21 +172,16 @@ module('Integration | Component | tools/wrap', function (hooks) {
 
   test('it resets on done', async function (assert) {
     await this.renderComponent();
-    await setEditorValue(this.wrapData);
+    await codemirror().setValue(this.wrapData);
     await click(TTL.toggleByLabel('Wrap TTL'));
     await fillIn(TTL.valueInputByLabel('Wrap TTL'), '20');
-    await click(GENERAL.submitButton);
+    await click(TS.submit);
 
-    await waitUntil(() => find(GENERAL.button('Done')));
-    await click(GENERAL.button('Done'));
-    await waitFor('.cm-editor');
-    const editor = codemirror();
-    const editorValue = getCodeEditorValue(editor);
+    await waitUntil(() => find(TS.button('Done')));
+    await click(TS.button('Done'));
     assert.strictEqual(
-      editorValue,
-      `{
-  "": ""
-}`,
+      codemirror().getValue(' '),
+      `{   \"\": \"\" }`, // eslint-disable-line no-useless-escape
       'json editor initializes with empty object that includes whitespace'
     );
     assert.dom(TTL.toggleByLabel('Wrap TTL')).isNotChecked('Wrap TTL resets to unchecked');
@@ -220,19 +191,14 @@ module('Integration | Component | tools/wrap', function (hooks) {
 
   test('it preserves input data on back', async function (assert) {
     await this.renderComponent();
-    await setEditorValue(this.wrapData);
-    await click(GENERAL.submitButton);
+    await codemirror().setValue(this.wrapData);
+    await click(TS.submit);
 
-    await waitUntil(() => find(GENERAL.button('Back')));
-    await click(GENERAL.button('Back'));
-    await waitFor('.cm-editor');
-    const editor = codemirror();
-    const editorValue = getCodeEditorValue(editor);
+    await waitUntil(() => find(TS.button('Back')));
+    await click(TS.button('Back'));
     assert.strictEqual(
-      editorValue,
-      `{
-  "foo": "bar"
-}`,
+      codemirror().getValue(' '),
+      `{   \"foo": \"bar" }`, // eslint-disable-line no-useless-escape
       'json editor has original data'
     );
     assert.dom(TTL.toggleByLabel('Wrap TTL')).isNotChecked('Wrap TTL defaults to unchecked');
@@ -240,41 +206,41 @@ module('Integration | Component | tools/wrap', function (hooks) {
 
   test('it renders/hides warning based on json linting', async function (assert) {
     await this.renderComponent();
-    await setEditorValue(`{bad json}`);
+    await codemirror().setValue(`{bad json}`);
     assert
-      .dom(GENERAL.inlineAlert)
+      .dom('[data-test-inline-alert]')
       .hasText(
         'JSON is unparsable. Fix linting errors to avoid data discrepancies.',
         'Linting error message is shown for json view'
       );
-    await setEditorValue(this.wrapData);
-    assert.dom(GENERAL.inlineAlert).doesNotExist();
+    await codemirror().setValue(this.wrapData);
+    assert.dom('[data-test-inline-alert]').doesNotExist();
   });
 
   test('it hides json warning on back and on done', async function (assert) {
     await this.renderComponent();
-    await setEditorValue(`{bad json}`);
+    await codemirror().setValue(`{bad json}`);
     assert
-      .dom(GENERAL.inlineAlert)
+      .dom('[data-test-inline-alert]')
       .hasText(
         'JSON is unparsable. Fix linting errors to avoid data discrepancies.',
         'Linting error message is shown for json view'
       );
-    await click(GENERAL.submitButton);
-    await waitUntil(() => find(GENERAL.button('Done')));
-    await click(GENERAL.button('Done'));
-    assert.dom(GENERAL.inlineAlert).doesNotExist();
+    await click(TS.submit);
+    await waitUntil(() => find(TS.button('Done')));
+    await click(TS.button('Done'));
+    assert.dom('[data-test-inline-alert]').doesNotExist();
 
-    await setEditorValue(`{bad json}`);
+    await codemirror().setValue(`{bad json}`);
     assert
-      .dom(GENERAL.inlineAlert)
+      .dom('[data-test-inline-alert]')
       .hasText(
         'JSON is unparsable. Fix linting errors to avoid data discrepancies.',
         'Linting error message is shown for json view'
       );
-    await click(GENERAL.submitButton);
-    await waitUntil(() => find(GENERAL.button('Back')));
-    await click(GENERAL.button('Back'));
-    assert.dom(GENERAL.inlineAlert).doesNotExist();
+    await click(TS.submit);
+    await waitUntil(() => find(TS.button('Back')));
+    await click(TS.button('Back'));
+    assert.dom('[data-test-inline-alert]').doesNotExist();
   });
 });

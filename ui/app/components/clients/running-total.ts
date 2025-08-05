@@ -4,8 +4,6 @@
  */
 
 import Component from '@glimmer/component';
-import { tracked } from '@glimmer/tracking';
-
 import type { ByMonthNewClients, TotalClients } from 'core/utils/client-count-utils';
 import type ClientsVersionHistoryModel from 'vault/vault/models/clients/version-history';
 
@@ -21,8 +19,6 @@ interface Args {
 }
 
 export default class RunningTotal extends Component<Args> {
-  @tracked showStacked = false;
-
   get chartContainerText() {
     const { isSecretsSyncActivated } = this.args;
     return `The total clients in the specified date range, displayed per month. This includes entity, non-entity${
@@ -38,14 +34,6 @@ export default class RunningTotal extends Component<Args> {
   }
 
   get chartLegend() {
-    if (this.showStacked) {
-      return [
-        { key: 'entity_clients', label: 'entity clients' },
-        { key: 'non_entity_clients', label: 'non-entity clients' },
-        ...(this.args.isSecretsSyncActivated ? [{ key: 'secret_syncs', label: 'secret sync clients' }] : []),
-        { key: 'acme_clients', label: 'acme clients' },
-      ];
-    }
     return [{ key: 'new_clients', label: 'new clients' }];
   }
 }

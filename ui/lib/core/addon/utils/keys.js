@@ -15,5 +15,4 @@ export default {
   DOWN: 'ArrowDown',
   T: 'T',
   BACKSPACE: 'Backspace',
-  SPACE: ' ',
 };

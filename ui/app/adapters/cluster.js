@@ -121,6 +121,28 @@ export default ApplicationAdapter.extend({
     });
   },
 
+  authenticate({ backend, data }) {
+    const { role, jwt, token, password, username, path, nonce } = data;
+    const url = this.urlForAuth(backend, username, path);
+    const verb = backend === 'token' ? 'GET' : 'POST';
+    const options = {
+      unauthenticated: true,
+    };
+    if (backend === 'token') {
+      options.headers = {
+        'X-Vault-Token': token,
+      };
+    } else if (backend === 'jwt' || backend === 'oidc') {
+      options.data = { role, jwt };
+    } else if (backend === 'okta') {
+      options.data = { password, nonce };
+    } else {
+      options.data = token ? { token, password } : { password };
+    }
+
+    return this.ajax(url, verb, options);
+  },
+
   mfaValidate({ mfa_request_id, mfa_constraints }) {
     const options = {
       data: {
@@ -151,6 +173,26 @@ export default ApplicationAdapter.extend({
       );
     }
     return `${this.buildURL()}/${endpoint}`;
+  },
+
+  urlForAuth(type, username, path) {
+    const authBackend = type.toLowerCase();
+    const authURLs = {
+      github: 'login',
+      jwt: 'login',
+      oidc: 'login',
+      userpass: `login/${encodeURIComponent(username)}`,
+      ldap: `login/${encodeURIComponent(username)}`,
+      okta: `login/${encodeURIComponent(username)}`,
+      radius: `login/${encodeURIComponent(username)}`,
+      token: 'lookup-self',
+    };
+    const urlSuffix = authURLs[authBackend];
+    const urlPrefix = path && authBackend !== 'token' ? path : authBackend;
+    if (!urlSuffix) {
+      throw new Error(`There is no auth url for ${type}.`);
+    }
+    return `/v1/auth/${urlPrefix}/${urlSuffix}`;
   },
 
   urlForReplication(replicationMode, clusterMode, endpoint) {

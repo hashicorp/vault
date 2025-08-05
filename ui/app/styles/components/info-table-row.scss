@@ -1,3 +1,4 @@
+@use '../utils/color_variables';
 @use '../utils/font_variables';
 @use '../utils/mixins';
 @use '../utils/size_variables';
@@ -8,7 +9,7 @@
  */
 
 .info-table-row {
-  box-shadow: 0 1px 0 var(--token-color-palette-neutral-300);
+  box-shadow: 0 1px 0 color_variables.$grey-light;
   margin: 0;
 
   &.has-no-shadow {
@@ -21,8 +22,8 @@
 
   &.thead {
     box-shadow:
-      0 1px 0 var(--token-color-palette-neutral-300),
-      0 -1px 0 var(--token-color-palette-neutral-300);
+      0 1px 0 color_variables.$grey-light,
+      0 -1px 0 color_variables.$grey-light;
     margin: 0;
     padding: 0 size_variables.$spacing-14 0 0;
 
@@ -58,11 +59,11 @@
   }
 
   .icon-true {
-    color: var(--token-color-palette-green-200);
+    color: color_variables.$green-500;
   }
 
   .icon-false {
-    color: var(--token-color-palette-neutral-300);
+    color: color_variables.$ui-gray-300;
   }
 
   a {
@@ -95,7 +96,7 @@
 .info-table-row-header {
   margin: 0;
   font-size: size_variables.$size-8;
-  color: var(--token-color-palette-neutral-400);
+  color: color_variables.$grey;
   font-weight: font_variables.$font-weight-semibold;
 
   @include mixins.until(size_variables.$mobile) {

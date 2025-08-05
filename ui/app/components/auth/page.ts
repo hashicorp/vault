@@ -8,8 +8,8 @@ import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { action } from '@ember/object';
 
-import type { AuthSuccessResponse } from 'vault/vault/services/auth';
-import type { NormalizedAuthData, UnauthMountsByType, UnauthMountsResponse } from 'vault/vault/auth/form';
+import type { AuthResponse, AuthResponseWithMfa } from 'vault/vault/services/auth';
+import type { UnauthMountsByType, UnauthMountsResponse } from 'vault/vault/auth/form';
 import type AuthService from 'vault/vault/services/auth';
 import type ClusterModel from 'vault/models/cluster';
 import type CspEventService from 'vault/services/csp-event';
@@ -89,9 +89,9 @@ interface Args {
 }
 
 interface MfaAuthData {
-  mfaRequirement: object;
-  authMethodType: string;
-  authMountPath: string;
+  mfa_requirement: object;
+  path: string;
+  selectedAuth: string;
 }
 
 enum FormView {
@@ -235,33 +235,35 @@ export default class AuthPage extends Component<Args> {
 
   // ACTIONS
   @action
-  async onAuthResponse(normalizedAuthData: NormalizedAuthData) {
-    const hasMfa = 'mfaRequirement' in normalizedAuthData ? normalizedAuthData.mfaRequirement : undefined;
-
-    if (hasMfa) {
+  onAuthResponse(authResponse: AuthResponse | AuthResponseWithMfa, { selectedAuth = '', path = '' }) {
+    const mfa_requirement = 'mfa_requirement' in authResponse ? authResponse.mfa_requirement : undefined;
+    /*
+    Checking for an mfa_requirement happens in two places.
+    If doSubmit in <AuthForm> is called directly (by the <form> component) mfa is just handled here.
+  
+    Login methods submitted using a child form component of <AuthForm> are first checked for mfa 
+    in the Auth::LoginForm "authenticate" task, and then that data eventually bubbles up here.
+    */
+    if (mfa_requirement) {
       // if an mfa requirement exists further action is required
-      const { authMethodType, authMountPath } = normalizedAuthData;
-      const parsedMfaResponse = this.auth.parseMfaResponse(hasMfa);
-      this.mfaAuthData = { mfaRequirement: parsedMfaResponse, authMethodType, authMountPath };
+      this.mfaAuthData = { mfa_requirement, selectedAuth, path };
     } else {
-      // Persist auth data in local storage
-      const resp = await this.auth.authSuccess(this.args.cluster.id, normalizedAuthData);
       // calls authSuccess in auth.js controller
-      this.args.onAuthSuccess(resp);
+      this.args.onAuthSuccess(authResponse);
     }
   }
 
   @action
   onCancelMfa() {
     // before resetting mfaAuthData, preserve auth type
-    this.canceledMfaAuth = this.mfaAuthData?.authMethodType ?? '';
+    this.canceledMfaAuth = this.mfaAuthData?.selectedAuth ?? '';
     this.mfaAuthData = null;
   }
 
   @action
-  onMfaSuccess(authSuccessData: AuthSuccessResponse) {
+  onMfaSuccess(authResponse: AuthResponse) {
     // calls authSuccess in auth.js controller
-    this.args.onAuthSuccess(authSuccessData);
+    this.args.onAuthSuccess(authResponse);
   }
 
   @action

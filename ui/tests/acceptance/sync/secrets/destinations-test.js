@@ -45,7 +45,7 @@ module('Acceptance | sync | destinations (plural)', function (hooks) {
     await click(ts.cta.button);
     await click(ts.selectType('aws-sm'));
     await fillIn(ts.inputByAttr('name'), 'foo');
-    await click(GENERAL.submitButton);
+    await click(ts.saveButton);
     assert.dom(ts.infoRowValue('Name')).hasText('foo', 'Destination details render after create success');
 
     await click(ts.breadcrumbLink('Destinations'));
@@ -85,15 +85,15 @@ module('Acceptance | sync | destinations (plural)', function (hooks) {
 
   test('it should filter destinations list', async function (assert) {
     await visit('vault/sync/secrets/destinations');
-    assert.dom(GENERAL.listItemLink).exists({ count: 6 }, 'All destinations render');
+    assert.dom(ts.listItem).exists({ count: 6 }, 'All destinations render');
     await click(`${ts.filter('type')} .ember-basic-dropdown-trigger`);
     await click(ts.searchSelect.option());
-    assert.dom(GENERAL.listItemLink).exists({ count: 2 }, 'Destinations are filtered by type');
+    assert.dom(ts.listItem).exists({ count: 2 }, 'Destinations are filtered by type');
     await fillIn(ts.filter('name'), 'new');
-    assert.dom(GENERAL.listItemLink).exists({ count: 1 }, 'Destinations are filtered by type and name');
+    assert.dom(ts.listItem).exists({ count: 1 }, 'Destinations are filtered by type and name');
     await click(ts.searchSelect.removeSelected);
     await fillIn(ts.filter('name'), 'gcp');
-    assert.dom(GENERAL.listItemLink).exists({ count: 1 }, 'Destinations are filtered by name');
+    assert.dom(ts.listItem).exists({ count: 1 }, 'Destinations are filtered by name');
   });
 
   test('it should transition to correct routes when performing actions', async function (assert) {

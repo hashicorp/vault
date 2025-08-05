@@ -45,10 +45,10 @@ export const CLIENT_COUNT = {
 
 export const CHARTS = {
   // container
-  container: (title: string) => `[data-test-counts-card="${title}"]`,
-  timestamp: '[data-test-counts-card-timestamp]',
-  legend: '[data-test-counts-card-legend]',
-  legendDot: (nth: number) => `.legend-item:nth-child(${nth}) > span`,
+  container: (title: string) => `[data-test-chart-container="${title}"]`,
+  timestamp: '[data-test-chart-container-timestamp]',
+  legend: '[data-test-chart-container-legend]',
+  legendLabel: (nth: number) => `.legend-label:nth-child(${nth * 2})`, // nth * 2 accounts for dots in legend
 
   // chart elements
   chart: (title: string) => `[data-test-chart="${title}"]`,

@@ -33,6 +33,7 @@ const PAGE = {
   roleSettingsSection: '[data-test-role-settings-section]',
   statementsSection: '[data-test-statements-section]',
   editRole: '[data-test-edit-link]',
+  generateCredentials: (type = 'dynamic') => `[data-test-database-role-creds="${type}"]`,
 };
 
 const FORM = {
@@ -103,7 +104,7 @@ module('Acceptance | database workflow', function (hooks) {
 
       // fill in connection details
       await fillOutConnection(`connect-${this.backend}`);
-      await click(GENERAL.submitButton);
+      await click(GENERAL.saveButton);
 
       assert.dom(PAGE.rotateModal).hasText('Rotate your root credentials?', 'rotate modal is shown');
       await click(PAGE.confirmRotate);
@@ -136,7 +137,7 @@ module('Acceptance | database workflow', function (hooks) {
 
       // fill in connection details
       await fillOutConnection(`connect-${this.backend}`);
-      await click(GENERAL.submitButton);
+      await click(GENERAL.saveButton);
 
       assert.dom(PAGE.rotateModal).hasText('Rotate your root credentials?', 'rotate modal is shown');
       await click(PAGE.skipRotate);
@@ -170,14 +171,14 @@ module('Acceptance | database workflow', function (hooks) {
 
       // fill in connection details
       await fillOutConnection(`bad-connection`);
-      await click(GENERAL.submitButton);
+      await click(GENERAL.saveButton);
       assert.strictEqual(
         flash.latestMessage,
         `error creating database object: error verifying - ping: Error 1045 (28000): Access denied for user 'admin'@'192.168.65.1' (using password: YES)`,
         'shows the error message from API'
       );
       await fillIn(GENERAL.inputByAttr('name'), `connect-${this.backend}`);
-      await click(GENERAL.submitButton);
+      await click(GENERAL.saveButton);
       assert.dom(PAGE.rotateModal).hasText('Rotate your root credentials?', 'rotate modal is shown');
       await click(PAGE.confirmRotate);
 
@@ -205,7 +206,7 @@ module('Acceptance | database workflow', function (hooks) {
 
       // fill in connection details
       await fillOutConnection(`fail-rotate`);
-      await click(GENERAL.submitButton);
+      await click(GENERAL.saveButton);
       assert.dom(PAGE.rotateModal).hasText('Rotate your root credentials?', 'rotate modal is shown');
       await click(PAGE.confirmRotate);
 
@@ -226,7 +227,7 @@ module('Acceptance | database workflow', function (hooks) {
       this.connection = `connect-${this.backend}`;
       await visit(`/vault/secrets/${this.backend}/create`);
       await fillOutConnection(this.connection);
-      await click(GENERAL.submitButton);
+      await click(GENERAL.saveButton);
       await visit(`/vault/secrets/${this.backend}/show/${this.connection}`);
     });
 
@@ -261,7 +262,7 @@ module('Acceptance | database workflow', function (hooks) {
       await fillIn(FORM.creationStatement(), `GRANT SELECT ON *.* TO '{{name}}'@'%'`);
       await click(`[data-test-string-list-row="0"] [data-test-string-list-button="add"]`);
       await fillIn(FORM.creationStatement(1), `GRANT CREATE ON *.* TO '{{name}}'@'%'`);
-      await click(GENERAL.submitButton);
+      await click(GENERAL.saveButton);
       // DETAILS
       assert.strictEqual(
         currentURL(),
@@ -296,7 +297,7 @@ module('Acceptance | database workflow', function (hooks) {
       assert.dom(GENERAL.inputByAttr('database')).isDisabled('Database is read-only');
       assert.dom(GENERAL.inputByAttr('type')).isDisabled('Type is read-only');
       await fillIn('[data-test-ttl-value="Generated credentials’s Time-to-Live (TTL)"]', '2');
-      await click(GENERAL.submitButton);
+      await click(GENERAL.saveButton);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/show/role/${roleName}`,
@@ -307,7 +308,7 @@ module('Acceptance | database workflow', function (hooks) {
         .hasText('2 hours', 'Shows updated TTL');
 
       // CREDENTIALS
-      await click(GENERAL.button('dynamic'));
+      await click(PAGE.generateCredentials());
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.backend}/credentials/${roleName}?roleType=dynamic`,
@@ -320,7 +321,7 @@ module('Acceptance | database workflow', function (hooks) {
         .dom(`${GENERAL.infoRowValue('Username')} [data-test-masked-input]`)
         .hasText('***********', 'Username is masked');
 
-      await click(`${GENERAL.infoRowValue('Username')} ${GENERAL.button('toggle-masked')}`);
+      await click(`${GENERAL.infoRowValue('Username')} ${GENERAL.testButton('toggle-masked')}`);
       assert
         .dom(`${GENERAL.infoRowValue('Username')} [data-test-masked-input]`)
         .hasText('generated-username', 'Username is generated');
@@ -329,7 +330,7 @@ module('Acceptance | database workflow', function (hooks) {
         .dom(`${GENERAL.infoRowValue('Password')} [data-test-masked-input]`)
         .hasText('***********', 'Password is masked');
 
-      await click(`${GENERAL.infoRowValue('Password')} ${GENERAL.button('toggle-masked')}`);
+      await click(`${GENERAL.infoRowValue('Password')} ${GENERAL.testButton('toggle-masked')}`);
       assert
         .dom(`${GENERAL.infoRowValue('Password')} [data-test-masked-input]`)
         .hasText('generated-password', 'Password is generated');
@@ -349,9 +350,9 @@ module('Acceptance | database workflow', function (hooks) {
         await visit(`/vault/secrets/${this.backend}/create`);
         await fillOutConnection(this.connection);
         if (toggleRotateOff) {
-          await click(GENERAL.toggleInput('toggle-skip_static_role_rotation_import'));
+          await click('[data-test-toggle-input="toggle-skip_static_role_rotation_import"]');
         }
-        await click(GENERAL.submitButton);
+        await click(GENERAL.saveButton);
         await visit(`/vault/secrets/${this.backend}/show/${this.connection}`);
       };
     });

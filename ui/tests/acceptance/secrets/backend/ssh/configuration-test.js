@@ -23,6 +23,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
   setupMirage(hooks);
 
   hooks.beforeEach(function () {
+    this.store = this.owner.lookup('service:store');
     this.uid = uuidv4();
     return login();
   });
@@ -61,7 +62,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
       'transitions to the configuration page'
     );
     // default has generate CA checked so we just submit the form
-    await click(GENERAL.submitButton);
+    await click(SES.ssh.save);
     assert.strictEqual(
       currentURL(),
       `/vault/secrets/${sshPath}/configuration`,
@@ -76,7 +77,7 @@ module('Acceptance | ssh | configuration', function (hooks) {
       .dom(SES.ssh.editConfigSection)
       .exists('renders the edit configuration section of the form and not the create part');
     // delete Public key
-    await click(GENERAL.button('delete-public-key'));
+    await click(SES.ssh.delete);
     assert.dom(GENERAL.confirmMessage).hasText('Confirming will remove the CA certificate information.');
     await click(GENERAL.confirmButton);
     assert.strictEqual(
@@ -84,9 +85,9 @@ module('Acceptance | ssh | configuration', function (hooks) {
       `/vault/secrets/${sshPath}/configuration/edit`,
       'after deleting public key stays on edit page'
     );
-    assert.dom(GENERAL.inputByAttr('private_key')).hasNoText('Private key is empty and reset');
-    assert.dom(GENERAL.inputByAttr('public_key')).hasNoText('Public key is empty and reset');
-    assert.dom(GENERAL.inputByAttr('generate_signing_key')).isChecked('Generate signing key is checked');
+    assert.dom(GENERAL.inputByAttr('privateKey')).hasNoText('Private key is empty and reset');
+    assert.dom(GENERAL.inputByAttr('publicKey')).hasNoText('Public key is empty and reset');
+    assert.dom(GENERAL.inputByAttr('generateSigningKey')).isChecked('Generate signing key is checked');
     await click(SES.viewBackend);
     await click(SES.configTab);
     assert
@@ -101,13 +102,11 @@ module('Acceptance | ssh | configuration', function (hooks) {
     await enablePage.enable('ssh', path);
     await click(SES.configTab);
     await click(SES.configure);
+    assert.dom(GENERAL.inputByAttr('generateSigningKey')).isChecked('generate_signing_key defaults to true');
+    await click(GENERAL.inputByAttr('generateSigningKey'));
+    await click(SES.ssh.save);
     assert
-      .dom(GENERAL.inputByAttr('generate_signing_key'))
-      .isChecked('generate_signing_key defaults to true');
-    await click(GENERAL.inputByAttr('generate_signing_key'));
-    await click(GENERAL.submitButton);
-    assert
-      .dom(GENERAL.validationErrorByAttr('generate_signing_key'))
+      .dom(GENERAL.inlineError)
       .hasText('Provide a Public and Private key or set "Generate Signing Key" to true.');
     // visit the details page and confirm the public key is not shown
     await visit(`/vault/secrets/${path}/configuration`);

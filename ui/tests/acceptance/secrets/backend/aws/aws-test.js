@@ -83,7 +83,7 @@ module('Acceptance | aws secret backend', function (hooks) {
     assert.dom(SES.secretHeader).hasText('Create an AWS Role', 'It renders the create role page');
 
     await fillIn(GENERAL.inputByAttr('name'), roleName);
-    await click(GENERAL.submitButton);
+    await click(GENERAL.saveButton);
     await waitUntil(() => currentURL() === `/vault/secrets/${path}/show/${roleName}`); // flaky without this
     assert.strictEqual(
       currentURL(),
@@ -135,7 +135,7 @@ module('Acceptance | aws secret backend', function (hooks) {
       assert.dom('h1').hasText('Create an AWS Role');
       await fillIn(GENERAL.inputByAttr('name'), roleName);
       await fillIn(GENERAL.inputByAttr('credentialType'), scenario.credentialType);
-      await click(GENERAL.submitButton);
+      await click(GENERAL.saveButton);
       await waitUntil(() => currentURL() === `/vault/secrets/${path}/show/${roleName}`); // flaky without this
       assert.strictEqual(currentURL(), `/vault/secrets/${path}/show/${roleName}`);
       await click(SES.generateLink);
@@ -146,7 +146,7 @@ module('Acceptance | aws secret backend', function (hooks) {
       // based on credentialType, fill out form
       await scenario.fillOutForm(assert);
 
-      await click(GENERAL.submitButton);
+      await click(GENERAL.saveButton);
       assert.dom(SES.warning).exists('Shows access warning after generation');
       assert.dom(GENERAL.infoRowValue('Access key')).exists();
       assert.dom(GENERAL.infoRowValue('Secret key')).exists();
@@ -185,7 +185,7 @@ module('Acceptance | aws secret backend', function (hooks) {
 
     await fillIn(GENERAL.inputByAttr('credentialType'), 'assumed_role');
 
-    await click(GENERAL.submitButton);
+    await click(GENERAL.saveButton);
     assert.dom(SES.warning).exists('Shows access warning after generation');
     assert.dom(GENERAL.infoRowValue('Access key')).exists();
     assert.dom(GENERAL.infoRowValue('Secret key')).exists();

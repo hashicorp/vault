@@ -34,6 +34,8 @@ export const PAGE = {
     sync: {
       mountSelect: '[data-test-sync-mount-select]',
       mountInput: '[data-test-sync-mount-input]',
+      submit: '[data-test-sync-submit]',
+      cancel: '[data-test-sync-cancel]',
       successMessage: '[data-test-sync-success-message]',
     },
     list: {
@@ -80,6 +82,7 @@ export const PAGE = {
   },
   selectType: (type) => `[data-test-select-destination="${type}"]`,
   createCancel: '[data-test-destination-create-cancel]',
+  saveButton: '[data-test-save]',
   toolbar: (btnText) => `[data-test-toolbar="${btnText}"]`,
   form: {
     enableInput: (attr) => `[data-test-enable-field="${attr}"] [data-test-icon="edit"]`, // TODO duplicated in general-selectors as this component became more widely used
@@ -91,15 +94,15 @@ export const PAGE = {
         case 'granularity':
           return await click(`${GENERAL.radioByAttr('secret-key')}`);
         case 'credentials':
-          await click(GENERAL.textToggle);
-          return fillIn(GENERAL.maskedInput, value);
-        case 'custom_tags':
+          await click('[data-test-text-toggle]');
+          return fillIn('[data-test-text-file-textarea]', value);
+        case 'customTags':
           await fillIn('[data-test-kv-key="0"]', 'foo');
           return fillIn('[data-test-kv-value="0"]', value);
-        case 'deployment_environments':
-          await click(`${GENERAL.inputGroupByAttr('deployment_environments')} input#development`);
-          await click(`${GENERAL.inputGroupByAttr('deployment_environments')} input#preview`);
-          return await click(`${GENERAL.inputGroupByAttr('deployment_environments')} input#production`);
+        case 'deploymentEnvironments':
+          await click(`${GENERAL.inputGroupByAttr('deploymentEnvironments')} input#development`);
+          await click(`${GENERAL.inputGroupByAttr('deploymentEnvironments')} input#preview`);
+          return await click(`${GENERAL.inputGroupByAttr('deploymentEnvironments')} input#production`);
         default:
           return fillIn(`[data-test-input="${attr}"]`, value);
       }

@@ -4,6 +4,8 @@
  */
 
 import Component from '@glimmer/component';
+import layout from '../templates/components/read-more';
+import { setComponentTemplate } from '@ember/component';
 import { action } from '@ember/object';
 import { tracked } from '@glimmer/tracking';
 
@@ -23,7 +25,7 @@ import { tracked } from '@glimmer/tracking';
  * </div>
  */
 
-export default class ReadMoreComponent extends Component {
+class ReadMoreComponent extends Component {
   @action
   calculateOverflow(e) {
     const spanText = e.querySelector('.description-block');
@@ -43,3 +45,5 @@ export default class ReadMoreComponent extends Component {
     this.isOpen = !this.isOpen;
   }
 }
+
+export default setComponentTemplate(layout, ReadMoreComponent);

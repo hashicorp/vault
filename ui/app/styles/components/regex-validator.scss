@@ -1,3 +1,4 @@
+@use '../utils/color_variables';
 @use '../utils/font_variables';
 @use '../utils/size_variables';
 
@@ -19,10 +20,10 @@
 .regex-group {
   font-family: font_variables.$family-monospace;
   font-size: size_variables.$size-8;
-  color: var(--token-color-palette-neutral-500);
+  color: color_variables.$ui-gray-600;
 }
 .regex-group-position {
-  background-color: var(--token-color-palette-neutral-200);
+  background-color: color_variables.$ui-gray-200;
   border-radius: 3px;
   padding-top: 5px;
   padding-bottom: 4px;

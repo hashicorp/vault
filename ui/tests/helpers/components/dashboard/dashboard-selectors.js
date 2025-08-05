@@ -17,8 +17,9 @@ export const DASHBOARD = {
   title: (name) => `[data-test-title="${name}"]`,
   subtitle: (name) => `[data-test-card-subtitle="${name}"]`,
   subtext: (name) => `[data-test-subtext="${name}"]`,
-  tooltipTitle: (name) => `[data-test-replication-status-title="${name}"]`,
-  tooltipIcon: (type, name, icon) => `[data-test-type="${type}"] [data-test-replication-icon="${icon}"]`,
+  tooltipTitle: (name) => `[data-test-tooltip-title="${name}"]`,
+  tooltipIcon: (type, name, icon) =>
+    `[data-test-type="${type}"] [data-test-tooltip-title="${name}"] [data-test-icon="${icon}"]`,
   statLabel: (name) => `[data-test-stat-text="${name}"] .stat-label`,
   statText: (name) => `[data-test-stat-text="${name}"] .stat-text`,
   statValue: (name) => `[data-test-stat-text="${name}"] .stat-value`,

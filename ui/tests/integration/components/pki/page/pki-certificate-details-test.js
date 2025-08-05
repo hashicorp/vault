@@ -103,8 +103,8 @@ module('Integration | Component | pki | Page::PkiCertificateDetails', function (
       'Download pem method called with correct args'
     );
 
-    await click(GENERAL.confirmTrigger);
-    await click(GENERAL.confirmButton);
+    await click('[data-test-confirm-action-trigger]');
+    await click('[data-test-confirm-button]');
 
     assert.dom(GENERAL.infoRowValue('Revocation time')).exists('Revocation time is displayed');
   });
@@ -153,8 +153,8 @@ module('Integration | Component | pki | Page::PkiCertificateDetails', function (
       'Download pem method called with correct args'
     );
 
-    await click(GENERAL.confirmTrigger);
-    await click(GENERAL.confirmButton);
+    await click('[data-test-confirm-action-trigger]');
+    await click('[data-test-confirm-button]');
 
     assert.dom(GENERAL.infoRowValue('Revocation time')).exists('Revocation time is displayed');
   });
@@ -185,7 +185,7 @@ module('Integration | Component | pki | Page::PkiCertificateDetails', function (
     await render(hbs`<Page::PkiCertificateDetails @model={{this.model}} @onRevoke={{this.revoked}} />`, {
       owner: this.engine,
     });
-    await click(GENERAL.confirmTrigger);
-    await click(GENERAL.confirmButton);
+    await click('[data-test-confirm-action-trigger]');
+    await click('[data-test-confirm-button]');
   });
 });

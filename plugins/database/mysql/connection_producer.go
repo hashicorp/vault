@@ -37,8 +37,6 @@ type mySQLConnectionProducer struct {
 	Password                 string      `json:"password" mapstructure:"password" structs:"password"`
 	AuthType                 string      `json:"auth_type" mapstructure:"auth_type" structs:"auth_type"`
 	ServiceAccountJSON       string      `json:"service_account_json" mapstructure:"service_account_json" structs:"service_account_json"`
-	UsePrivateIP             bool        `json:"use_private_ip" mapstructure:"use_private_ip" structs:"use_private_ip"`
-	UsePSC                   bool        `json:"use_psc" mapstructure:"use_psc" structs:"use_psc"`
 
 	TLSCertificateKeyData []byte `json:"tls_certificate_key" mapstructure:"tls_certificate_key" structs:"-"`
 	TLSCAData             []byte `json:"tls_ca"              mapstructure:"tls_ca"              structs:"-"`
@@ -125,11 +123,8 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 	}
 
 	// validate auth_type if provided
-	authType := c.AuthType
-	if authType != "" {
-		if ok := connutil.ValidateAuthType(authType); !ok {
-			return nil, fmt.Errorf("invalid auth_type %s provided", authType)
-		}
+	if ok := connutil.ValidateAuthType(c.AuthType); !ok {
+		return nil, fmt.Errorf("invalid auth_type: %s", c.AuthType)
 	}
 
 	if c.AuthType == connutil.AuthTypeGCPIAM {
@@ -142,7 +137,7 @@ func (c *mySQLConnectionProducer) Init(ctx context.Context, conf map[string]inte
 		// however, the driver might store a credentials file, in which case the state stored by the driver is in
 		// fact critical to the proper function of the connection. So it needs to be registered here inside the
 		// ConnectionProducer init.
-		dialerCleanup, err := registerDriverMySQL(c.cloudDriverName, c.ServiceAccountJSON, c.UsePrivateIP, c.UsePSC)
+		dialerCleanup, err := registerDriverMySQL(c.cloudDriverName, c.ServiceAccountJSON)
 		if err != nil {
 			return nil, err
 		}
@@ -323,8 +318,8 @@ func (c *mySQLConnectionProducer) rewriteProtocolForGCP(inDSN string) (string, e
 	return config.FormatDSN(), nil
 }
 
-func registerDriverMySQL(driverName, credentials string, usePrivateIP bool, usePSC bool) (cleanup func() error, err error) {
-	opts, err := connutil.GetCloudSQLAuthOptions(credentials, usePrivateIP, usePSC)
+func registerDriverMySQL(driverName, credentials string) (cleanup func() error, err error) {
+	opts, err := connutil.GetCloudSQLAuthOptions(credentials, false)
 	if err != nil {
 		return nil, err
 	}

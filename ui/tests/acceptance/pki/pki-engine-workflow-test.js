@@ -152,7 +152,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/roles/some-role/details`);
       assert.dom(PKI_ROLE_DETAILS.deleteRoleButton).exists('Delete role button is shown');
       await click(PKI_ROLE_DETAILS.deleteRoleButton);
-      await click(GENERAL.confirmButton);
+      await click('[data-test-confirm-button]');
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.mountPath}/pki/roles`,
@@ -231,7 +231,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.dom(GENERAL.title).hasText('Create a PKI Role');
 
       await fillIn(GENERAL.inputByAttr('name'), roleName);
-      await click(GENERAL.submitButton);
+      await click(GENERAL.saveButton);
       assert.strictEqual(
         flash.latestMessage,
         `Successfully created the role ${roleName}.`,
@@ -276,7 +276,7 @@ module('Acceptance | pki workflow', function (hooks) {
       await click('.linked-block');
       // details page
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`);
-      assert.dom(GENERAL.button('Download')).doesNotExist('does not download button for private key');
+      assert.dom(PKI_KEYS.downloadButton).doesNotExist('does not download button for private key');
 
       // edit page
       await click(PKI_KEYS.keyEditLink);
@@ -289,7 +289,7 @@ module('Acceptance | pki workflow', function (hooks) {
       );
       await visit(`/vault/secrets/${this.mountPath}/pki/keys/${keyId}/edit`);
       await fillIn(GENERAL.inputByAttr('keyName'), 'test-key');
-      await click(GENERAL.submitButton);
+      await click(GENERAL.saveButton);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${this.mountPath}/pki/keys/${keyId}/details`,
@@ -303,7 +303,7 @@ module('Acceptance | pki workflow', function (hooks) {
       assert.strictEqual(currentURL(), `/vault/secrets/${this.mountPath}/pki/keys/create`);
       await fillIn(GENERAL.inputByAttr('type'), 'exported'); // exported keys generated private_key data
       await fillIn(GENERAL.inputByAttr('keyType'), 'rsa');
-      await click(GENERAL.submitButton);
+      await click(GENERAL.saveButton);
       keyId = find(GENERAL.infoRowValue('Key ID')).textContent?.trim();
       assert.strictEqual(
         currentURL(),
@@ -317,7 +317,7 @@ module('Acceptance | pki workflow', function (hooks) {
           'Next steps This private key material will only be available once. Copy or download it now.',
           'renders banner to save private key'
         );
-      assert.dom(GENERAL.button('Download')).exists('renders download button');
+      assert.dom(PKI_KEYS.downloadButton).exists('renders download button');
       await click(PKI_KEYS.keyDeleteButton);
       await click(GENERAL.confirmButton);
       assert.strictEqual(
@@ -487,8 +487,8 @@ module('Acceptance | pki workflow', function (hooks) {
       await login();
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
-      await click(GENERAL.textToggle);
-      await fillIn(GENERAL.maskedInput, unsupportedPem);
+      await click('[data-test-text-toggle]');
+      await fillIn('[data-test-text-file-textarea]', unsupportedPem);
       await click(PKI_CONFIGURE_CREATE.importSubmit);
       const issuerId = find(PKI_CONFIGURE_CREATE.importedIssuer).innerText;
       await click(`${PKI_CONFIGURE_CREATE.importedIssuer} a`);
@@ -504,7 +504,7 @@ module('Acceptance | pki workflow', function (hooks) {
         );
       assert.dom('[data-test-input="commonName"]').hasValue('fancy-cert-unsupported-subj-and-ext-oids');
       await fillIn('[data-test-input="issuerName"]', 'existing-issuer');
-      await click(GENERAL.submitButton);
+      await click(GENERAL.saveButton);
       assert
         .dom('[data-test-rotate-error]')
         .hasText('Error issuer name already in use', 'it renders error banner');

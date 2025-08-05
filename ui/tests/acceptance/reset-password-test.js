@@ -35,7 +35,7 @@ module('Acceptance | reset password', function (hooks) {
     await login();
     await settled();
 
-    await click(GENERAL.button('user-menu-trigger'));
+    await click(GENERAL.testButton('user-menu-trigger'));
     assert.dom('[data-test-user-menu-item="reset-password"]').doesNotExist();
   });
 
@@ -52,7 +52,7 @@ module('Acceptance | reset password', function (hooks) {
       { authType: 'userpass', toggleOptions: true }
     );
 
-    await click(GENERAL.button('user-menu-trigger'));
+    await click(GENERAL.testButton('user-menu-trigger'));
     await click('[data-test-user-menu-item="reset-password"]');
 
     assert.strictEqual(currentURL(), '/vault/access/reset-password', 'links to password reset');
@@ -65,7 +65,7 @@ module('Acceptance | reset password', function (hooks) {
 
     assert.dom('[data-test-title]').hasText('Reset password', 'page title');
     await fillIn('[data-test-input="reset-password"]', 'newpassword');
-    await click(GENERAL.submitButton);
+    await click('[data-test-reset-password-save]');
     await waitFor('[data-test-flash-message]');
     assert.dom('[data-test-flash-message]').hasText(`Success ${SUCCESS_MESSAGE}`);
     assert.dom('[data-test-input="reset-password"]').hasValue('', 'Resets input after save');

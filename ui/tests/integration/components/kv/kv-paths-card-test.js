@@ -6,11 +6,9 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { setupEngine } from 'ember-engines/test-support';
-import { render, click, findAll } from '@ember/test-helpers';
+import { render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import sinon from 'sinon';
 /* eslint-disable no-useless-escape */
 
 module('Integration | Component | kv-v2 | KvPathsCard', function (hooks) {
@@ -21,19 +19,9 @@ module('Integration | Component | kv-v2 | KvPathsCard', function (hooks) {
     this.backend = 'kv-engine';
     this.path = 'my-secret';
     this.isCondensed = false;
-    this.clipboardSpy = sinon.stub(navigator.clipboard, 'writeText').resolves();
 
-    this.assertClipboard = async (assert, expected, index) => {
-      const buttons = findAll(GENERAL.copyButton);
-      await click(buttons[index]);
-      assert.true(this.clipboardSpy.called, 'clipboard.writeText was called');
-
-      const call = this.clipboardSpy.getCall(index);
-      assert.strictEqual(
-        call.args[0],
-        expected,
-        `Expected clipboard text to match: ${expected} (at index ${index})`
-      );
+    this.assertClipboard = (assert, element, expected) => {
+      assert.dom(element).hasAttribute('data-test-copy-button', expected);
     };
 
     this.renderComponent = async () => {
@@ -44,10 +32,6 @@ module('Integration | Component | kv-v2 | KvPathsCard', function (hooks) {
         }
       );
     };
-  });
-
-  hooks.afterEach(function () {
-    this.clipboardSpy.restore(); // Restore original clipboard
   });
 
   test('it renders condensed version', async function (assert) {
@@ -65,9 +49,9 @@ module('Integration | Component | kv-v2 | KvPathsCard', function (hooks) {
       { label: 'API path', expected: `/v1/${this.backend}/data/${this.path}` },
       { label: 'CLI path', expected: `-mount="${this.backend}" "${this.path}"` },
     ];
-    for (const [index, path] of paths.entries()) {
+    for (const path of paths) {
       assert.dom(PAGE.infoRowValue(path.label)).hasText(path.expected);
-      await this.assertClipboard(assert, path.expected, index);
+      this.assertClipboard(assert, PAGE.paths.copyButton(path.label), path.expected);
     }
   });
 
@@ -90,9 +74,9 @@ module('Integration | Component | kv-v2 | KvPathsCard', function (hooks) {
 
     await this.renderComponent();
 
-    for (const [index, path] of paths.entries()) {
+    for (const path of paths) {
       assert.dom(PAGE.infoRowValue(path.label)).hasText(path.expected);
-      await this.assertClipboard(assert, path.expected, index);
+      this.assertClipboard(assert, PAGE.paths.copyButton(path.label), path.expected);
     }
   });
 
@@ -115,9 +99,9 @@ module('Integration | Component | kv-v2 | KvPathsCard', function (hooks) {
 
     await this.renderComponent();
 
-    for (const [index, path] of paths.entries()) {
+    for (const path of paths) {
       assert.dom(PAGE.infoRowValue(path.label)).hasText(path.expected);
-      await this.assertClipboard(assert, path.expected, index);
+      this.assertClipboard(assert, PAGE.paths.copyButton(path.label), path.expected);
     }
   });
 

@@ -41,14 +41,21 @@ export default class KvDataFields extends Component {
     return this.args.secret?.secretData ? stringify([this.args.secret.secretData], {}) : this.startingValue;
   }
 
-  @action
-  handleJson(value) {
-    this.lintingErrors = false;
+  get viewportMargin() {
+    if (!this.args?.secret?.secretData) return 10;
+    const jsonHeight = Object.keys(this.args.secret.secretData).length;
+    // return the higher of: 10 or the approimated number of lines in the json. jsonHeight only includes the first level of keys, so for objects
+    // with lots of nested values, it will undercount.
+    const max = Math.max(jsonHeight, 10);
+    return Math.min(max, 1000); // cap at 1000 lines to avoid performance implications
+  }
 
-    try {
+  @action
+  handleJson(value, codemirror) {
+    codemirror.performLint();
+    this.lintingErrors = codemirror.state.lint.marked.length > 0;
+    if (!this.lintingErrors) {
       this.args.secret.secretData = JSON.parse(value);
-    } catch {
-      this.lintingErrors = true;
     }
   }
 }

@@ -49,17 +49,17 @@ module('Acceptance | clients | counts', function (hooks) {
     await click(CLIENT_COUNT.dateRange.edit);
     await fillIn(CLIENT_COUNT.dateRange.editDate('start'), '2023-03');
     await fillIn(CLIENT_COUNT.dateRange.editDate('end'), '2023-10');
-    await click(GENERAL.submitButton);
+    await click(GENERAL.saveButton);
     assert.strictEqual(
       currentURL(),
       '/vault/clients/counts/overview?end_time=1698710400&start_time=1677628800',
       'Start and end times added as query params'
     );
 
-    await click(GENERAL.tab('client list'));
+    await click(GENERAL.tab('token'));
     assert.strictEqual(
       currentURL(),
-      '/vault/clients/counts/client-list?end_time=1698710400&start_time=1677628800',
+      '/vault/clients/counts/token?end_time=1698710400&start_time=1677628800',
       'Start and end times persist through child route change'
     );
 

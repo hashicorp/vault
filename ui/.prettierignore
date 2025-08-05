@@ -4,6 +4,7 @@
 # compiled output
 /dist/
 /vault-reporting/
+/api-client/
 
 # misc
 /coverage/

@@ -11,5 +11,5 @@ export default create({
   ...fields,
   visit: visitable('/vault/settings/auth/configure/:path/:section'),
   flash: flashMessage,
-  save: clickable('[data-test-submit-config]'),
+  save: clickable('[data-test-save-config]'),
 });

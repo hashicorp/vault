@@ -1,4 +1,5 @@
 @use '../utils/box-shadow_variables';
+@use '../utils/color_variables';
 @use '../utils/mixins';
 @use '../utils/size_variables';
 
@@ -14,8 +15,8 @@
   align-items: center;
   border-radius: size_variables.$radius;
   border: box-shadow_variables.$base-border;
-  box-shadow: 0 4px 1px rgba(hsl(0, 0%, 4%), 0.06) inset;
-  color: var(--token-color-palette-neutral-500);
+  box-shadow: 0 4px 1px rgba(color_variables.$black, 0.06) inset;
+  color: color_variables.$grey-dark;
   display: inline-flex;
   font-size: size_variables.$size-6;
   height: size_variables.$size-2;
@@ -32,13 +33,13 @@
   &.is-active,
   &:focus-visible {
     outline: none;
-    background-color: hsl(0, 0%, 100%);
-    border-color: var(--token-color-palette-blue-200) !important;
+    background-color: color_variables.$white;
+    border-color: color_variables.$blue-500 !important;
     box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25);
   }
 
   &:hover {
-    border-color: var(--token-color-palette-neutral-300);
+    border-color: color_variables.$ui-gray-300;
   }
 
   @include mixins.until(size_variables.$desktop) {
@@ -52,13 +53,13 @@
 
 .input[disabled],
 .textarea[disabled] {
-  border-color: var(--token-color-palette-neutral-300);
-  background-color: var(--token-color-palette-neutral-100);
-  color: var(--token-color-palette-neutral-400);
+  border-color: color_variables.$grey-light;
+  background-color: color_variables.$ui-gray-100;
+  color: color_variables.$ui-gray-500;
   cursor: not-allowed;
 
   &:hover {
-    border-color: var(--token-color-palette-neutral-300);
+    border-color: color_variables.$grey-light;
   }
 }
 

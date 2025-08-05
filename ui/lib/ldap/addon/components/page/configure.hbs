@@ -96,16 +96,12 @@
     </M.Body>
     <M.Footer>
       <Hds::ButtonSet>
+        <Hds::Button data-test-save-with-rotate @text="Save and rotate" {{on "click" (fn (perform this.save) null true)}} />
         <Hds::Button
-          @text="Save and rotate"
-          {{on "click" (fn (perform this.save) null true)}}
-          data-test-button="Save and rotate"
-        />
-        <Hds::Button
+          data-test-save-without-rotate
           @text="Save without rotating"
           @color="secondary"
           {{on "click" (fn (perform this.save) null false)}}
-          data-test-button="Save without rotating"
         />
       </Hds::ButtonSet>
     </M.Footer>

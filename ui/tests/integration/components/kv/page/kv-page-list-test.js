@@ -13,7 +13,6 @@ import { kvMetadataPath } from 'vault/utils/kv-path';
 import { allowAllCapabilitiesStub } from 'vault/tests/helpers/stubs';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const CREATE_RECORDS = (number, store, server) => {
   const mirageList = server.createList('kv-metadatum', number, 'withCustomPath');
@@ -93,7 +92,7 @@ module('Integration | Component | kv | Page::List', function (hooks) {
     const popupSelector = `${PAGE.list.item('my-secret-0')} ${PAGE.popup}`;
     await click(popupSelector);
     await click('[data-test-popup-metadata-delete]');
-    await click(GENERAL.confirmButton);
+    await click('[data-test-confirm-button]');
     assert.dom(PAGE.list.item('my-secret-0')).doesNotExist('deleted the first record from the list');
   });
 });

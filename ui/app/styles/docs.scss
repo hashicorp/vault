@@ -1,3 +1,4 @@
+@use 'utils/color_variables';
 @use 'utils/size_variables';
 
 /**
@@ -29,7 +30,7 @@
   h1,
   h2,
   h3 {
-    border-bottom: 1px solid var(--token-color-palette-neutral-300);
+    border-bottom: 1px solid color_variables.$grey-light;
     padding-bottom: 0.5rem;
   }
 
@@ -60,13 +61,13 @@
 
   pre,
   code {
-    background-color: var(--token-color-palette-neutral-100);
+    background-color: color_variables.$ui-gray-100;
   }
 
   blockquote {
     margin-left: 1rem;
     padding: 0.5rem;
-    background: var(--token-color-palette-neutral-50);
+    background: color_variables.$ui-gray-010;
     border-radius: 6px;
   }
 
@@ -101,12 +102,12 @@
       }
     }
     tr {
-      border-bottom: 1px solid var(--token-color-palette-neutral-300);
+      border-bottom: 1px solid color_variables.$grey-light;
     }
   }
 
   .docfy-demo {
-    border: 1px solid var(--token-color-palette-neutral-50);
+    border: 1px solid color_variables.$grey-lightest;
     border-radius: 6px;
     padding: 1rem;
     overflow: scroll;

@@ -6,12 +6,12 @@
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
 import { setupEngine } from 'ember-engines/test-support';
-import { click, render, waitFor, settled } from '@ember/test-helpers';
+import { click, render } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import sinon from 'sinon';
-import { FORM } from 'vault/tests/helpers/kv/kv-selectors';
-import codemirror, { getCodeEditorValue, setCodeEditorValue } from 'vault/tests/helpers/codemirror';
+import { FORM, parseObject } from 'vault/tests/helpers/kv/kv-selectors';
+import codemirror from 'vault/tests/helpers/codemirror';
 
 module('Integration | Component | kv | kv-patch/editor/json-form', function (hooks) {
   setupRenderingTest(hooks);
@@ -32,7 +32,7 @@ module('Integration | Component | kv | kv-patch/editor/json-form', function (hoo
       },
     };
     this.renderComponent = async () => {
-      await render(
+      return render(
         hbs`
     <KvPatch::JsonForm
       @onSubmit={{this.onSubmit}}
@@ -43,21 +43,12 @@ module('Integration | Component | kv | kv-patch/editor/json-form', function (hoo
     />`,
         { owner: this.engine }
       );
-      return waitFor('.cm-editor');
     };
   });
 
   test('it renders', async function (assert) {
     await this.renderComponent();
-    const editor = codemirror();
-    const editorValue = getCodeEditorValue(editor);
-    assert.strictEqual(
-      editorValue,
-      `{
-  "": ""
-}`,
-      'json editor initializes with empty object'
-    );
+    assert.propEqual(parseObject(codemirror), { '': '' }, 'json editor initializes with empty object');
     await click(FORM.saveBtn);
     assert.true(this.onSubmit.calledOnce, 'clicking "Save" calls @onSubmit');
     await click(FORM.cancelBtn);
@@ -80,14 +71,11 @@ module('Integration | Component | kv | kv-patch/editor/json-form', function (hoo
 
   test('it renders linting errors', async function (assert) {
     await this.renderComponent();
-    const editor = codemirror();
-    setCodeEditorValue(editor, '{ "foo3":  }');
-    await settled();
+    await codemirror().setValue('{ "foo3":  }');
     assert
       .dom(GENERAL.inlineError)
       .hasText('JSON is unparsable. Fix linting errors to avoid data discrepancies.');
-    setCodeEditorValue(editor, '{ "foo": "bar" }');
-    await settled();
+    await codemirror().setValue('{ "foo": "bar" }');
     assert.dom(GENERAL.inlineError).doesNotExist('error disappears when linting is fixed');
   });
 
@@ -100,8 +88,7 @@ module('Integration | Component | kv | kv-patch/editor/json-form', function (hoo
   test('it submits data', async function (assert) {
     this.submitError = 'There was a problem';
     await this.renderComponent();
-    const editor = codemirror();
-    setCodeEditorValue(editor, '{ "foo": "bar" }');
+    await codemirror().setValue('{ "foo": "bar" }');
     await click(FORM.saveBtn);
     const [data] = this.onSubmit.lastCall.args;
     assert.propEqual(data, { foo: 'bar' }, `onSubmit called with ${JSON.stringify(data)}`);

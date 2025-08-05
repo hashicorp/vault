@@ -1,3 +1,4 @@
+@use '../utils/color_variables';
 @use '../utils/font_variables';
 
 /**
@@ -8,7 +9,7 @@
 .link {
   background: transparent;
   border: 0;
-  color: var(--token-color-palette-blue-200);
+  color: color_variables.$blue;
   cursor: pointer;
   display: inline;
   font: inherit;

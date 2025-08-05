@@ -9,7 +9,6 @@ import { service } from '@ember/service';
 import type FlagsService from 'vault/services/flags';
 import type ApiService from 'vault/services/api';
 import type { getUsageDataFunction, UsageDashboardData } from '@hashicorp/vault-reporting/types/index';
-import type { UtilizationReport } from 'vault/usage';
 
 /**
  * @module UsagePage
@@ -36,38 +35,41 @@ export default class UsagePage extends Component {
      * We should get typescript errors if top level interfaces in the API client or
      * the vault-reporting addon change.
      */
-    const response = (await this.api.sys.generateUtilizationReport()) as UtilizationReport;
-    const { lease_count_quotas, replication_status, pki, secret_sync } = response;
+    const response = await this.api.sys.generateUtilizationReport();
+    const leaseCountQuotas = response.leaseCountQuotas as UsageDashboardData['leaseCountQuotas'];
+    const replicationStatus = response.replicationStatus as UsageDashboardData['replicationStatus'];
+    const pki = response.pki as UsageDashboardData['pki'];
+    const secretSync = response.secretSync as UsageDashboardData['secretSync'];
 
     const data: UsageDashboardData = {
-      authMethods: (response.auth_methods as Record<string, number>) || {},
-      secretEngines: (response.secret_engines as Record<string, number>) || {},
-      leasesByAuthMethod: (response.leases_by_auth_method as Record<string, number>) || {},
+      authMethods: (response.authMethods as Record<string, number>) || {},
+      secretEngines: (response.secretEngines as Record<string, number>) || {},
+      leasesByAuthMethod: (response.leasesByAuthMethod as Record<string, number>) || {},
       leaseCountQuotas: {
         globalLeaseCountQuota: {
-          capacity: lease_count_quotas?.global_lease_count_quota?.capacity || 0,
-          count: lease_count_quotas?.global_lease_count_quota?.count || 0,
-          name: lease_count_quotas?.global_lease_count_quota?.name || '',
+          capacity: leaseCountQuotas?.globalLeaseCountQuota?.capacity || 0,
+          count: leaseCountQuotas?.globalLeaseCountQuota?.count || 0,
+          name: leaseCountQuotas?.globalLeaseCountQuota?.name || '',
         },
-        totalLeaseCountQuotas: lease_count_quotas?.total_lease_count_quotas || 0,
+        totalLeaseCountQuotas: leaseCountQuotas?.totalLeaseCountQuotas || 0,
       },
       replicationStatus: {
-        drState: replication_status?.dr_state || 'disabled',
-        prState: replication_status?.pr_state || 'disabled',
-        drPrimary: replication_status?.dr_primary ?? false,
-        prPrimary: replication_status?.pr_primary ?? false,
+        drState: replicationStatus?.drState || 'disabled',
+        prState: replicationStatus?.prState || 'disabled',
+        drPrimary: replicationStatus?.drPrimary ?? false,
+        prPrimary: replicationStatus?.prPrimary ?? false,
       },
-      kvv1Secrets: response.kvv1_secrets || 0,
-      kvv2Secrets: response.kvv2_secrets || 0,
+      kvv1Secrets: response.kvv1Secrets || 0,
+      kvv2Secrets: response.kvv2Secrets || 0,
       namespaces: response.namespaces || 0,
       pki: {
-        totalIssuers: pki?.total_issuers || 0,
-        totalRoles: pki?.total_roles || 0,
+        totalIssuers: pki?.totalIssuers || 0,
+        totalRoles: pki?.totalRoles || 0,
       },
       secretSync: {
-        totalDestinations: secret_sync?.total_destinations || 0,
+        totalDestinations: secretSync?.totalDestinations || 0,
       },
     };
-    return data;
+    return data as UsageDashboardData;
   };
 }

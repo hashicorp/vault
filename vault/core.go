@@ -1389,44 +1389,17 @@ func NewCore(conf *CoreConfig) (*Core, error) {
 	observationSystemConfig := conf.ObservationSystemConfig
 	if observationSystemConfig != nil {
 		if observationSystemConfig.LedgerPath != "" {
-			config := &observations.NewObservationSystemConfig{
-				ObservationSystemConfig: observationSystemConfig,
-				LocalNodeId:             nodeID,
-				Logger:                  observationsLogger,
-			}
-			err = c.AddObservationSystemToCore(config)
+			observations, err := observations.NewObservationSystem(nodeID, observationSystemConfig.LedgerPath, observationsLogger)
 			if err != nil {
 				return nil, err
 			}
+			c.observations = observations
+			c.observations.Start()
 		}
 	}
 
 	c.clusterAddrBridge = conf.ClusterAddrBridge
 	return c, nil
-}
-
-func (c *Core) AddObservationSystemToCore(config *observations.NewObservationSystemConfig) error {
-	observations, err := observations.NewObservationSystem(config)
-	if err != nil {
-		return err
-	}
-	c.observations = observations
-
-	c.reloadFuncsLock.Lock()
-
-	// While it's only possible to configure one observation system now, making the key
-	// include the path future-proofs us going forward.
-	key := "observations|" + config.LedgerPath
-	c.reloadFuncs[key] = append(c.reloadFuncs[key], func() error {
-		config.Logger.Info("reloading observation system", "path", config.LedgerPath)
-		return observations.Reload()
-	})
-
-	c.reloadFuncsLock.Unlock()
-
-	c.observations.Start()
-
-	return nil
 }
 
 // configureListeners configures the Core with the listeners from the CoreConfig.

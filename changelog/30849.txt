@@ -1,3 +1,0 @@
-```release-note:change
-auth/gcp: Update plugin to v0.21.0
-```

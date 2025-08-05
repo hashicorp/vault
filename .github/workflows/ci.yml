@@ -176,8 +176,7 @@ jobs:
       runs-on: ${{ needs.setup.outputs.compute-test-go }}
       runs-on-small: ${{ needs.setup.outputs.compute-small }}
       testonly: true
-      test-timing-cache-restore: false
-      test-timing-cache-save: false
+      test-timing-cache-enabled: false
       total-runners: 2 # test runners cannot be less than 2
     secrets: inherit
 

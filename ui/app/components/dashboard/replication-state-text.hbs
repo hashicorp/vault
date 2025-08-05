@@ -1,9 +1,9 @@
 {{!
-Copyright (c) HashiCorp, Inc.
-SPDX-License-Identifier: BUSL-1.1
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
 }}
 
-<div ...attributes>
+<div>
   <h2 class="is-size-5 has-text-weight-semibold has-bottom-margin-xs" data-test-title={{@title}}>
     {{@title}}
   </h2>
@@ -14,23 +14,25 @@ SPDX-License-Identifier: BUSL-1.1
     </div>
   {{/if}}
 
-  <Hds::TooltipButton @text="The cluster's current operating state" aria-label="The cluster's current operating state">
-    <div class="is-flex-v-centered">
-      <Hds::Text::Display
-        class="title is-4 has-text-weight-semibold has-top-margin-xxs has-bottom-margin-xxs has-right-padding-sm"
-        data-test-replication-status-title={{@title}}
-      >
-        {{or @state "not set up"}}
-      </Hds::Text::Display>
+  <ToolTip @verticalPosition="above" @horizontalPosition="center" as |T|>
+    <T.Trigger
+      data-test-tooltip-trigger
+      tabindex="-1"
+      class="title is-4 has-text-weight-semibold has-top-margin-xxs has-bottom-margin-xxs"
+      data-test-tooltip-title={{@title}}
+    >
+      {{or @state "not set up"}}
 
-      {{#let (or @clusterStates.glyph "x-circle") as |icon|}}
-        <Hds::Icon
-          @isInline={{true}}
-          @name={{icon}}
-          class={{if @clusterStates.isOk "has-text-success" "has-text-danger"}}
-          data-test-replication-icon={{icon}}
-        />
-      {{/let}}
-    </div>
-  </Hds::TooltipButton>
+      <Hds::Icon
+        @name={{or @clusterStates.glyph "x-circle"}}
+        @isInline={{true}}
+        class={{if @clusterStates.isOk "has-text-success" "has-text-danger"}}
+      />
+    </T.Trigger>
+    <T.Content @defaultClass="tool-tip smaller-font">
+      <div class="box" data-test-hover-copy-tooltip-text>
+        The cluster's current operating state
+      </div>
+    </T.Content>
+  </ToolTip>
 </div>

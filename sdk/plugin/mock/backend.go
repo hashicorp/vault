@@ -5,7 +5,6 @@ package mock
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"testing"
@@ -138,16 +137,6 @@ func expectInternalValue(t *testing.T, client *api.Client, mountPath, expected s
 
 func (b *backend) rotateRootCredential(ctx context.Context, req *logical.Request) error {
 	b.Logger().Debug("mock rotateRootCredential")
-
-	cfg, err := b.configEntry(ctx, req.Storage)
-	if err != nil {
-		return err
-	}
-
-	if cfg.FailRotate {
-		return errors.New("mock plugin was asked to fail to rotate")
-	}
-
 	b.internal = "rotated"
 	return nil
 }

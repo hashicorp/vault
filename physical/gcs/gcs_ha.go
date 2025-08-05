@@ -398,7 +398,7 @@ func (l *Lock) writeLock() (bool, error) {
 func (l *Lock) get(ctx context.Context) (*LockRecord, error) {
 	// Read
 	attrs, err := l.backend.haClient.Bucket(l.backend.bucket).Object(l.key).Attrs(ctx)
-	if errors.Is(err, storage.ErrObjectNotExist) {
+	if err == storage.ErrObjectNotExist {
 		return nil, nil
 	}
 	if err != nil {

@@ -23,6 +23,8 @@ export const SECRET_ENGINE_SELECTORS = {
   secretHeader: '[data-test-secret-header]',
   secretLink: (name: string) => (name ? `[data-test-secret-link="${name}"]` : '[data-test-secret-link]'),
   secretLinkMenu: (name: string) => `[data-test-secret-link="${name}"] [data-test-popup-menu-trigger]`,
+  secretLinkMenuDelete: (name: string) =>
+    `[data-test-secret-link="${name}"] [data-test-confirm-action-trigger]`,
   secretLinkATag: (name: string) =>
     name ? `[data-test-secret-item-link="${name}"]` : '[data-test-secret-item-link]',
   viewBackend: '[data-test-backend-view-link]',
@@ -44,6 +46,9 @@ export const SECRET_ENGINE_SELECTORS = {
   },
   ssh: {
     editConfigSection: '[data-test-edit-config-section]',
+    save: '[data-test-configure-save-button]',
+    cancel: '[data-test-cancel-button]',
+    delete: '[data-test-delete-public-key]',
     createRole: '[data-test-role-ssh-create]',
     deleteRole: '[data-test-ssh-role-delete]',
   },

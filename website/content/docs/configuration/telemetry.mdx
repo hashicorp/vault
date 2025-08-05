@@ -6,9 +6,6 @@ description: >-
   systems.
 ---
 
-> [!IMPORTANT]  
-> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
-
 # `telemetry` stanza
 
 The `telemetry` stanza specifies various configurations for Vault to publish
@@ -20,16 +17,6 @@ telemetry {
   statsite_address = "statsite.company.local:8125"
 }
 ```
-
-<Tip title="Metrics from Leader vs Standby nodes">
-
-  Metrics from the telemetry end point are node specific.
-  In most cases the active leader node telemetry is most useful, particularly
-  after initial startup. Some metrics are **only** reported by the leader node,
-  for example
-  [active `vault.identity.*` metrics](/vault/docs/internals/telemetry/metrics/all#vault-identity-entity-active-monthly).
-
-</Tip>
 
 ## `telemetry` parameters
 
@@ -200,11 +187,11 @@ These `telemetry` parameters apply to
 The `/v1/sys/metrics` endpoint is only accessible on active nodes
 and automatically disabled on standby nodes. You can enable the `/v1/sys/metrics`
 endpoint on standby nodes by [enabling unauthenticated metrics access][telemetry-tcp].
-Standby nodes will never forward a request to `/v1/sys/metrics` to the leader
+Standby nodes will never forward a request to `/v1/sys/metrics` to the active
 node. If unauthenticated metrics access is enabled, the standby node will
 respond with its own metrics. If unauthenticated metrics access is not enabled,
-then a standby node will attempt to service the request (with Vault enterprise)
-or otherwise redirect the request to the leader node (in Vault community edition).
+then a standby node will attempt to service the request but fail and then
+redirect the request to the active node.
 
 Querying `/v1/sys/metrics` with one of the following headers:
 

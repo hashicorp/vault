@@ -16,13 +16,12 @@ interface Path {
   navigation: boolean;
   param: string | false;
 }
-export type PathInfo = {
+interface PathsInfo {
   apiPath: string;
-  paths: Path[];
+  itemType: string;
   itemTypes: string[];
-  itemType?: string;
-  itemID?: string;
-};
+  paths: Path[];
+}
 
 interface OpenApiParameter {
   description?: string;
@@ -54,7 +53,7 @@ interface OpenApiPath {
 }
 
 // Take object entries from the OpenAPI response and consolidate them into an object which includes itemTypes, operations, and paths
-export function reducePathsByPathName(pathsInfo: PathInfo, currentPath: [string, OpenApiPath]): PathInfo {
+export function reducePathsByPathName(pathsInfo: PathsInfo, currentPath: [string, OpenApiPath]): PathsInfo {
   const pathName = currentPath[0];
   const pathDetails = currentPath[1];
   const displayAttrs = pathDetails['x-vault-displayAttrs'];
@@ -124,7 +123,7 @@ export function pathToHelpUrlSegment(path: string): string {
   return path.replaceAll(apiPathRegex, 'example');
 }
 
-export function filterPathsByItemType(pathInfo: PathInfo, itemType: string): Path[] {
+export function filterPathsByItemType(pathInfo: PathsInfo, itemType: string): Path[] {
   if (!itemType) {
     return pathInfo.paths;
   }

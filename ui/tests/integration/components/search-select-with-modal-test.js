@@ -9,13 +9,12 @@ import { create } from 'ember-cli-page-object';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { Response } from 'miragejs';
 import { clickTrigger, typeInSearch } from 'ember-power-select/test-support/helpers';
-import { render, fillIn, click, findAll, waitFor, settled } from '@ember/test-helpers';
+import { render, fillIn, click, findAll } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import ss from 'vault/tests/pages/components/search-select';
 import sinon from 'sinon';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 
 const component = create(ss);
 
@@ -158,7 +157,7 @@ module('Integration | Component | search select with modal', function (hooks) {
     await component.selectOption();
 
     assert.dom('#search-select-modal').exists('modal is active');
-    assert.dom(GENERAL.emptyStateTitle).hasText('No policy type selected');
+    assert.dom('[data-test-empty-state-title]').hasText('No policy type selected');
     assert.ok(this.onChange.notCalled, 'onChange is not called');
   });
 
@@ -195,21 +194,21 @@ module('Integration | Component | search select with modal', function (hooks) {
       'dropdown gives option to create new option'
     );
     await component.selectOption();
-    assert.dom(GENERAL.emptyStateTitle).hasText('No policy type selected');
-    await fillIn(GENERAL.selectByAttr('policyType'), 'acl');
+    assert.dom('[data-test-empty-state-title]').hasText('No policy type selected');
+    await fillIn('[data-test-select="policyType"]', 'acl');
     assert.dom('[data-test-policy-form]').exists('policy form renders after type is selected');
     await click('[data-test-tab-example-policy] button');
     assert.dom('[data-test-tab-example-policy] button').hasAttribute('aria-selected', 'true');
     await click('[data-test-tab-your-policy] button');
     assert.dom('[data-test-tab-your-policy] button').hasAttribute('aria-selected', 'true');
-    await waitFor('.cm-editor');
-    const editor = codemirror();
-    setCodeEditorValue(editor, 'path "secret/super-secret" { capabilities = ["deny"] }');
-    await settled();
-    await click(GENERAL.submitButton);
+    await fillIn(
+      '[data-test-component="code-mirror-modifier"] textarea',
+      'path "secret/super-secret" { capabilities = ["deny"] }'
+    );
+    await click('[data-test-policy-save]');
     assert.dom('[data-test-modal-div]').doesNotExist('modal closes after save');
     assert
-      .dom(GENERAL.searchSelect.selectedOption(0))
+      .dom('[data-test-selected-option="0"]')
       .hasText('acl-test-new', 'adds newly created policy to selected options');
     assert.ok(
       this.onChange.calledWithExactly(['acl-test-new']),

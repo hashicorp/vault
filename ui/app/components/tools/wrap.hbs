@@ -53,7 +53,7 @@
           @title="Data to wrap"
           @subTitle="json-formatted"
           @value={{this.stringifiedWrapData}}
-          @valueUpdated={{this.editorUpdated}}
+          @valueUpdated={{this.codemirrorUpdated}}
         />
       {{else}}
         <KvObjectEditor
@@ -82,7 +82,7 @@
     </div>
     <div class="field is-grouped box is-fullwidth is-bottomless">
       <div class="control">
-        <Hds::Button @text="Wrap data" type="submit" data-test-submit />
+        <Hds::Button @text="Wrap data" type="submit" data-test-tools-submit />
       </div>
     </div>
   </form>

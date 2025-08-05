@@ -5,14 +5,14 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'vault/tests/helpers';
-import { render, click, find, findAll, triggerEvent } from '@ember/test-helpers';
+import { render, click, find, findAll } from '@ember/test-helpers';
 import { hbs } from 'ember-cli-htmlbars';
 import { v4 as uuidv4 } from 'uuid';
 import sinon from 'sinon';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
 import { clickTrigger } from 'ember-power-select/test-support/helpers';
-import { selectChoose } from 'ember-power-select/test-support';
+
 import { createSecretsEngine } from 'vault/tests/helpers/secret-engine/secret-engine-helpers';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -27,30 +27,30 @@ module('Integration | Component | secret-engine/list', function (hooks) {
         capabilities: ['root'],
       },
     }));
+    this.store = this.owner.lookup('service:store');
     this.version = this.owner.lookup('service:version');
     this.flashMessages = this.owner.lookup('service:flash-messages');
     this.flashMessages.registerTypes(['success', 'danger']);
     this.flashSuccessSpy = sinon.spy(this.flashMessages, 'success');
     this.flashDangerSpy = sinon.spy(this.flashMessages, 'danger');
     this.uid = uuidv4();
-    // generate a model of cubbyhole, kv, and nomad
+    // generate a model of cubbyhole, kv2, and nomad
     this.secretEngineModels = [
-      createSecretsEngine(undefined, 'cubbyhole', 'cubbyhole-test'),
-      createSecretsEngine(undefined, 'kv', 'kv-test'),
-      createSecretsEngine(undefined, 'aws', 'aws-1'),
-      createSecretsEngine(undefined, 'aws', 'aws-2'),
-      createSecretsEngine(undefined, 'nomad', 'nomad-test'),
-      createSecretsEngine(undefined, 'badType', 'external-test'),
+      createSecretsEngine(this.store, 'cubbyhole', 'cubbyhole-test'),
+      createSecretsEngine(this.store, 'kv', 'kv2-test'),
+      createSecretsEngine(this.store, 'aws', 'aws-1'),
+      createSecretsEngine(this.store, 'aws', 'aws-2'),
+      createSecretsEngine(this.store, 'nomad', 'nomad-test'),
     ];
   });
 
   test('it allows you to disable an engine', async function (assert) {
-    const enginePath = 'kv-test';
+    const enginePath = 'kv2-test';
     this.server.delete(`sys/mounts/${enginePath}`, () => {
-      assert.true(true, 'Request is made to delete engine');
+      assert.true(true, 'Destroy record is called and deletes the engine');
       return overrideResponse(204);
     });
-    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
+    await render(hbs`<SecretEngine::List @secretEngineModels={{this.secretEngineModels}} />`);
 
     assert.dom(SES.secretsBackendLink(enginePath)).exists('shows the link for the kvv2 secrets engine');
     const row = SES.secretsBackendLink(enginePath);
@@ -64,56 +64,8 @@ module('Integration | Component | secret-engine/list', function (hooks) {
     );
   });
 
-  test('hovering over the icon of an external unrecognized engine type sets unrecognized tooltip text', async function (assert) {
-    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
-
-    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), 'external-test');
-    await triggerEvent('.hds-tooltip-button', 'mouseenter');
-
-    assert
-      .dom('.hds-tooltip-container')
-      .hasText(
-        'This plugin is not supported by the UI. Please use the CLI to manage this engine.',
-        'shows tooltip text for unsupported engine'
-      );
-  });
-
-  test('hovering over the icon of an unsupported engine sets unsupported tooltip text', async function (assert) {
-    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
-
-    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-type'), 'nomad');
-    await triggerEvent('.hds-tooltip-button', 'mouseenter');
-
-    assert
-      .dom('.hds-tooltip-container')
-      .hasText(
-        'The UI only supports configuration views for these secret engines. The CLI must be used to manage other engine resources.',
-        'shows tooltip text for unsupported engine'
-      );
-  });
-
-  test('hovering over the icon of a supported engine sets engine name as tooltip', async function (assert) {
-    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
-    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), 'aws-1');
-
-    await triggerEvent('.hds-tooltip-button', 'mouseenter');
-
-    assert.dom('.hds-tooltip-container').hasText('AWS', 'shows tooltip text for supported engine with name');
-  });
-
-  test('hovering over the icon of a kv engine shows engine name and version', async function (assert) {
-    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}}/>`);
-
-    await selectChoose(GENERAL.searchSelect.trigger('filter-by-engine-name'), `kv-test`);
-
-    await triggerEvent('.hds-tooltip-button', 'mouseenter');
-    assert
-      .dom('.hds-tooltip-container')
-      .hasText('KV version 1', 'shows tooltip text for kv engine with version');
-  });
-
   test('it adds disabled css styling to unsupported secret engines', async function (assert) {
-    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
+    await render(hbs`<SecretEngine::List @secretEngineModels={{this.secretEngineModels}} />`);
     assert
       .dom(SES.secretsBackendLink('nomad-test'))
       .doesNotHaveClass(
@@ -127,7 +79,7 @@ module('Integration | Component | secret-engine/list', function (hooks) {
   });
 
   test('it filters by name and engine type', async function (assert) {
-    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
+    await render(hbs`<SecretEngine::List @secretEngineModels={{this.secretEngineModels}} />`);
     // filter by type
     await clickTrigger('#filter-by-engine-type');
     await click(GENERAL.searchSelect.option());
@@ -151,7 +103,7 @@ module('Integration | Component | secret-engine/list', function (hooks) {
   });
 
   test('it applies overflow styling', async function (assert) {
-    await render(hbs`<SecretEngine::List @secretEngines={{this.secretEngineModels}} />`);
+    await render(hbs`<SecretEngine::List @secretEngineModels={{this.secretEngineModels}} />`);
     // not using the secret-engine-selector "secretPath" because I want to return the first node of a querySelectorAll
     const firstSecretEngine = document.querySelectorAll('[data-test-secret-path]')[0];
     assert.dom(firstSecretEngine).hasClass('overflow-wrap', 'secret engine name has overflow class ');
