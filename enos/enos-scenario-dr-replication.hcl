@@ -1306,7 +1306,12 @@ scenario "dr_replication" {
     }
   }
 
-  step "verify_secrets_engines_delete" {
+  # Verification is intentionally disabled for DR clusters because they do not handle client requests.
+  # However, we still include this step to future-proof the module, making it easier to enable delete
+  # verification later for other secrets engines or use cases where DR verification becomes relevant.
+  # For now, the script will short-circuit if verification is disabled. Potential future work will include
+  # verifying against the primary cluster.
+    step "verify_secrets_engines_delete" {
     description = global.description.verify_secrets_engines_delete
     module      = module.vault_verify_secrets_engines_delete
     depends_on = [

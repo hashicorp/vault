@@ -7,7 +7,7 @@
 # | POST   | /ssh/roles/:name            | ✅      |                                       |
 # | GET    | /ssh/roles/:name            | ✅      |                                       |
 # | LIST   | /ssh/roles                  | ✅      |                                       |
-# | DELETE | /ssh/roles/:name            | ✅      |                                       |
+# | DELETE | /ssh/roles/:name            | 🟡      | Missing successful delete verification|
 # | POST   | /ssh/config/zeroaddress     | ❌      |                                       |
 # | GET    | /ssh/config/zeroaddress     | ❌      |                                       |
 # | DELETE | /ssh/config/zeroaddress     | ❌      |                                       |
