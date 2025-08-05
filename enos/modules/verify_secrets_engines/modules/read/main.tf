@@ -63,6 +63,12 @@ variable "verify_aws_secrets_engine" {
   default     = false
 }
 
+variable "verify_ldap_secret_engine" {
+  type        = bool
+  description = "Whether or not we'll verify the LDAP secrets engine"
+  default     = false
+}
+
 variable "verify_aws_engine_creds" {
   type    = bool
   default = true
