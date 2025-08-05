@@ -59,10 +59,10 @@ module('Acceptance | clients | overview', function (hooks) {
       .dom(CLIENT_COUNT.dateRange.dateDisplay('end'))
       .hasText('January 2024', 'billing start month is correctly parsed from license');
     assert
-      .dom(CHARTS.container('Vault client counts'))
+      .dom(CHARTS.container('Client usage trends for selected billing period'))
       .exists('Shows running totals with monthly breakdown charts');
     assert
-      .dom(`${CHARTS.container('Vault client counts')} ${CHARTS.xAxisLabel}`)
+      .dom(`${CHARTS.container('Client usage trends for selected billing period')} ${CHARTS.xAxisLabel}`)
       .hasText('7/23', 'x-axis labels start with billing start date');
     assert.dom(CHARTS.xAxisLabel).exists({ count: 7 }, 'chart months matches query');
   });
@@ -84,7 +84,7 @@ module('Acceptance | clients | overview', function (hooks) {
       .dom(CLIENT_COUNT.usageStats('Vault client counts'))
       .doesNotExist('running total single month stat boxes do not show');
     assert
-      .dom(CHARTS.container('Vault client counts'))
+      .dom(CHARTS.container('Client usage trends for selected billing period'))
       .doesNotExist('running total month over month charts do not show');
 
     // change to start on month/year of upgrade to 1.10
@@ -96,10 +96,10 @@ module('Acceptance | clients | overview', function (hooks) {
       .dom(CLIENT_COUNT.dateRange.dateDisplay('start'))
       .hasText('September 2023', 'billing start month is correctly parsed from license');
     assert
-      .dom(CHARTS.container('Vault client counts'))
+      .dom(CHARTS.container('Client usage trends for selected billing period'))
       .exists('Shows running totals with monthly breakdown charts');
     assert
-      .dom(`${CHARTS.container('Vault client counts')} ${CHARTS.xAxisLabel}`)
+      .dom(`${CHARTS.container('Client usage trends for selected billing period')} ${CHARTS.xAxisLabel}`)
       .hasText('9/23', 'x-axis labels start with queried start month (upgrade date)');
     assert.dom(CHARTS.xAxisLabel).exists({ count: 4 }, 'chart months matches query');
 
@@ -113,7 +113,7 @@ module('Acceptance | clients | overview', function (hooks) {
       .dom(CLIENT_COUNT.usageStats('Vault client counts'))
       .exists('running total single month usage stats show');
     assert
-      .dom(CHARTS.container('Vault client counts'))
+      .dom(CHARTS.container('Client usage trends for selected billing period'))
       .doesNotExist('running total month over month charts do not show');
 
     // query historical date range (from September 2023 to December 2023)
@@ -129,7 +129,7 @@ module('Acceptance | clients | overview', function (hooks) {
       .dom(CLIENT_COUNT.dateRange.dateDisplay('end'))
       .hasText('December 2023', 'billing start month is correctly parsed from license');
     assert
-      .dom(CHARTS.container('Vault client counts'))
+      .dom(CHARTS.container('Client usage trends for selected billing period'))
       .exists('Shows running totals with monthly breakdown charts');
 
     assert.dom(CHARTS.xAxisLabel).exists({ count: 4 }, 'chart months matches query');
@@ -152,7 +152,7 @@ module('Acceptance | clients | overview', function (hooks) {
 
   test('totals filter correctly with full data', async function (assert) {
     assert
-      .dom(CHARTS.container('Vault client counts'))
+      .dom(CHARTS.container('Client usage trends for selected billing period'))
       .exists('Shows running totals with monthly breakdown charts');
 
     const response = await this.store.peekRecord('clients/activity', 'some-activity-id');
@@ -235,102 +235,68 @@ module('Acceptance | clients | overview', function (hooks) {
   });
 });
 
-module('Acceptance | clients | overview | sync in license, activated', function (hooks) {
+module('Acceptance | clients | overview | secrets sync', function (hooks) {
   setupApplicationTest(hooks);
   setupMirage(hooks);
 
   hooks.beforeEach(async function () {
     sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
-
-    syncHandler(this.server);
-
-    await login();
-    return visit('/vault/clients/counts/overview');
+    clientsHandler(this.server);
   });
 
-  test('it should render the correct tabs', async function (assert) {
-    assert.dom(GENERAL.tab('sync')).exists('shows the sync tab');
-  });
-
-  test('it should show secrets sync stats', async function (assert) {
-    assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists('shows secret sync data on overview');
-  });
-
-  test('it should navigate to secrets sync page', async function (assert) {
-    await click(GENERAL.tab('sync'));
-
-    assert.dom(GENERAL.tab('sync')).hasClass('active');
-    assert.dom(GENERAL.emptyStateTitle).doesNotExist();
-
-    assert
-      .dom(CHARTS.chart('Secrets sync usage'))
-      .exists('chart is shown because feature is active and has data');
-  });
-});
-
-module('Acceptance | clients | overview | sync in license, not activated', function (hooks) {
-  setupApplicationTest(hooks);
-  setupMirage(hooks);
-
-  hooks.beforeEach(async function () {
-    this.server.get('/sys/license/features', () => ({ features: ['Secrets Sync'] }));
-
-    await login();
-    return visit('/vault/clients/counts/overview');
-  });
-
-  test('it should show the secrets sync tab', async function (assert) {
-    assert.dom(GENERAL.tab('sync')).exists('sync tab is shown because feature is in license');
-  });
-
-  test('it should hide secrets sync stats', async function (assert) {
-    assert
-      .dom(CLIENT_COUNT.statTextValue('Secret sync'))
-      .doesNotExist('stat is hidden because feature is not activated');
-    assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists('other stats are still visible');
-  });
-});
-
-module('Acceptance | clients | overview | sync not in license', function (hooks) {
-  setupApplicationTest(hooks);
-  setupMirage(hooks);
-
-  hooks.beforeEach(async function () {
+  test('it should hide secrets sync stats when feature is NOT on license', async function (assert) {
     // mocks endpoint for no additional license modules
     this.server.get('/sys/license/features', () => ({ features: [] }));
 
     await login();
-    return visit('/vault/clients/counts/overview');
-  });
-
-  test('it should hide the secrets sync tab', async function (assert) {
-    assert.dom(GENERAL.tab('sync')).doesNotExist();
-  });
-
-  test('it should hide secrets sync stats', async function (assert) {
+    await visit('/vault/clients/counts/overview');
     assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).doesNotExist();
     assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists('other stats are still visible');
-  });
-});
-
-module('Acceptance | clients | overview | HVD', function (hooks) {
-  setupApplicationTest(hooks);
-  setupMirage(hooks);
-
-  hooks.beforeEach(async function () {
-    sinon.replace(timestamp, 'now', sinon.fake.returns(STATIC_NOW));
-    syncHandler(this.server);
-    this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
-
-    await login();
-    return visit('/vault/clients/counts/overview');
+    await click(GENERAL.inputByAttr('toggle view'));
+    assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients Acme clients');
   });
 
-  test('it should show the secrets sync tab', async function (assert) {
-    assert.dom(GENERAL.tab('sync')).exists();
-  });
+  module('feature is on license', function (hooks) {
+    hooks.beforeEach(async function () {
+      syncHandler(this.server);
+    });
 
-  test('it should show secrets sync stats', async function (assert) {
-    assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists();
+    test('it should show secrets sync stats when the feature is activated', async function (assert) {
+      syncHandler(this.server);
+      await login();
+      await visit('/vault/clients/counts/overview');
+      assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists('shows secret sync data on overview');
+      await click(GENERAL.inputByAttr('toggle view'));
+      assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients Secret sync clients Acme clients');
+    });
+
+    test('it should hide secrets sync stats when feature is NOT activated', async function (assert) {
+      this.server.get('/sys/activation-flags', () => {
+        return {
+          data: { activated: [], unactivated: ['secrets-sync'] },
+        };
+      });
+
+      await login();
+      await visit('/vault/clients/counts/overview');
+
+      assert
+        .dom(CLIENT_COUNT.statTextValue('Secret sync'))
+        .doesNotExist('stat is hidden because feature is not activated');
+      assert.dom(CLIENT_COUNT.statTextValue('Entity')).exists('other stats are still visible');
+      await click(GENERAL.inputByAttr('toggle view'));
+      assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients Acme clients');
+    });
+
+    test('it should show secrets sync stats for HVD managed clusters', async function (assert) {
+      // mock HVD managed cluster
+      this.owner.lookup('service:flags').featureFlags = ['VAULT_CLOUD_ADMIN_NAMESPACE'];
+
+      await login();
+      await visit('/vault/clients/counts/overview');
+      assert.dom(CLIENT_COUNT.statTextValue('Secret sync')).exists();
+      await click(GENERAL.inputByAttr('toggle view'));
+      assert.dom(CHARTS.legend).hasText('Entity clients Non-entity clients Secret sync clients Acme clients');
+    });
   });
 });

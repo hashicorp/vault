@@ -1,6 +1,5 @@
 @use 'sass:color';
 @use '../utils/box-shadow_variables';
-@use '../utils/color_variables';
 @use '../utils/font_variables';
 @use '../utils/size_variables';
 
@@ -11,12 +10,12 @@
 
 .button {
   align-items: center;
-  background-color: color_variables.$grey-lightest;
-  border: 1px solid color_variables.$grey-light;
+  background-color: var(--token-color-palette-neutral-50);
+  border: 1px solid var(--token-color-palette-neutral-300);
   border-radius: size_variables.$radius;
   box-shadow: box-shadow_variables.$box-shadow-low;
   cursor: pointer;
-  color: color_variables.$ui-gray-800;
+  color: var(--token-color-palette-neutral-600);
   display: inline-block;
   font-size: size_variables.$size-8;
   font-weight: font_variables.$font-weight-semibold;
@@ -47,9 +46,9 @@
   &:active,
   &.is-active,
   &:focus {
-    border-color: color.adjust(color_variables.$grey-light, $lightness: -10%);
+    border-color: color.adjust(#c2c5cb, $lightness: -10%);
     box-shadow: box-shadow_variables.$button-box-shadow-standard;
-    color: color.adjust(color_variables.$grey-dark, $lightness: -10%);
+    color: color.adjust(#656a76, $lightness: -10%);
   }
 
   &:focus:not(:active) {
@@ -57,8 +56,8 @@
   }
 
   &:disabled {
-    background-color: color_variables.$white;
-    border-color: color_variables.$ui-gray-050;
+    background-color: hsl(0, 0%, 100%);
+    border-color: var(--token-color-palette-neutral-50);
     box-shadow: none;
     cursor: not-allowed;
     opacity: 0.5;
@@ -72,33 +71,33 @@
   }
 
   &.is-danger {
-    background-color: color_variables.$red-500;
-    border-color: color.adjust(color_variables.$red-500, $lightness: -2%);
-    color: color_variables.$white;
-    text-shadow: 0 1px 1px rgba(color_variables.$black, 0.25);
+    background-color: var(--token-color-palette-red-200);
+    border-color: color.adjust(#e52228, $lightness: -2%);
+    color: hsl(0, 0%, 100%);
+    text-shadow: 0 1px 1px rgba(hsl(0, 0%, 4%), 0.25);
 
     &:hover:not([disabled]) {
-      background-color: color.adjust(color_variables.$red-500, $lightness: -5%);
-      border-color: color.adjust(color_variables.$red-500, $lightness: -5%);
+      background-color: color.adjust(#e52228, $lightness: -5%);
+      border-color: color.adjust(#e52228, $lightness: -5%);
       box-shadow: box-shadow_variables.$box-shadow-middle;
     }
 
     &:active,
     &.is-active {
-      background-color: color.adjust(color_variables.$red-500, $lightness: -10%);
-      border-color: color.adjust(color_variables.$red-500, $lightness: -10%);
+      background-color: color.adjust(#e52228, $lightness: -10%);
+      border-color: color.adjust(#e52228, $lightness: -10%);
       box-shadow: box-shadow_variables.$box-shadow-middle;
     }
 
     &:focus {
-      border-color: color.adjust(color_variables.$red-500, $lightness: -10%);
+      border-color: color.adjust(#e52228, $lightness: -10%);
       box-shadow: box-shadow_variables.$button-box-shadow-standard;
     }
   }
 
   &.is-danger-outlined {
-    border: 1px solid color_variables.$red-500;
-    color: color_variables.$red-500;
+    border: 1px solid var(--token-color-palette-red-200);
+    color: var(--token-color-palette-red-200);
   }
 
   &.is-flat {
@@ -111,12 +110,12 @@
     background-color: transparent;
     border-color: transparent;
     box-shadow: none;
-    color: color_variables.$blue;
+    color: var(--token-color-palette-blue-200);
     text-decoration: none;
 
     &:hover {
-      color: color_variables.$blue-500;
-      background-color: color_variables.$grey-lightest;
+      color: var(--token-color-palette-blue-500);
+      background-color: var(--token-color-palette-neutral-50);
     }
   }
 
@@ -129,7 +128,7 @@
     pointer-events: none;
     &::after {
       animation: spinAround 500ms infinite linear;
-      border: 2px solid color_variables.$ui-gray-300;
+      border: 2px solid var(--token-color-palette-neutral-300);
       border-radius: 290486px;
       border-right-color: transparent;
       border-top-color: transparent;
@@ -146,7 +145,7 @@
   &.is-link {
     background-color: transparent;
     border-color: transparent;
-    color: color_variables.$blue;
+    color: var(--token-color-palette-blue-200);
     text-decoration: none;
     font-weight: font_variables.$font-weight-semibold;
     box-shadow: none;
@@ -154,75 +153,75 @@
   }
 
   &.is-primary {
-    background-color: color_variables.$blue;
-    border-color: color.adjust(color_variables.$blue, $lightness: -2%);
-    color: color_variables.$white;
+    background-color: var(--token-color-palette-blue-200);
+    border-color: color.adjust(#1060ff, $lightness: -2%);
+    color: hsl(0, 0%, 100%);
     font-weight: font_variables.$font-weight-bold;
-    text-shadow: 0 1px 1px rgba(color_variables.$black, 0.25);
+    text-shadow: 0 1px 1px rgba(hsl(0, 0%, 4%), 0.25);
 
     &:disabled {
-      background-color: color_variables.$ui-gray-700;
+      background-color: var(--token-color-palette-neutral-500);
       border-color: transparent;
       box-shadow: none;
     }
 
     &:hover:not([disabled]) {
-      background-color: color.adjust(color_variables.$blue, $lightness: -5%);
-      border-color: color.adjust(color_variables.$blue, $lightness: -5%);
+      background-color: color.adjust(#1060ff, $lightness: -5%);
+      border-color: color.adjust(#1060ff, $lightness: -5%);
       box-shadow: box-shadow_variables.$box-shadow-middle;
     }
 
     &:active,
     &.is-active {
-      background-color: color.adjust(color_variables.$blue, $lightness: -10%);
-      border-color: color.adjust(color_variables.$blue, $lightness: -10%);
+      background-color: color.adjust(#1060ff, $lightness: -10%);
+      border-color: color.adjust(#1060ff, $lightness: -10%);
       box-shadow: box-shadow_variables.$box-shadow-middle;
     }
 
     &:focus {
-      border-color: color.adjust(color_variables.$blue, $lightness: -10%);
+      border-color: color.adjust(#1060ff, $lightness: -10%);
       box-shadow: box-shadow_variables.$button-box-shadow-standard;
     }
 
     &.is-loading::after {
-      border-color: transparent transparent color_variables.$white color_variables.$white;
+      border-color: transparent transparent hsl(0, 0%, 100%) hsl(0, 0%, 100%);
     }
 
     &.is-underlined {
       &:active,
       &.is-active {
         background-color: transparent;
-        border-bottom: 2px solid color.adjust(color_variables.$blue, $lightness: -10%);
+        border-bottom: 2px solid color.adjust(#1060ff, $lightness: -10%);
         border-radius: unset;
-        color: color.adjust(color_variables.$blue, $lightness: -10%);
+        color: color.adjust(#1060ff, $lightness: -10%);
       }
     }
     // is-primary.is-outlined the only is-outlined buttons are primary.
     &.is-outlined {
       background-color: transparent;
-      border-color: color_variables.$blue;
-      color: color_variables.$blue;
+      border-color: var(--token-color-palette-blue-200);
+      color: var(--token-color-palette-blue-200);
 
       &:hover,
       &:focus {
         background-color: transparent;
-        border-color: color.adjust(color_variables.$blue, $lightness: -10%);
-        color: color_variables.$blue;
+        border-color: color.adjust(#1060ff, $lightness: -10%);
+        color: var(--token-color-palette-blue-200);
       }
 
       &:active,
       &.is-active {
         background-color: transparent;
-        border-color: color.adjust(color_variables.$blue, $lightness: -10%);
-        color: color.adjust(color_variables.$blue, $lightness: -10%);
+        border-color: color.adjust(#1060ff, $lightness: -10%);
+        color: color.adjust(#1060ff, $lightness: -10%);
       }
     }
 
     &.is-outlined [disabled] {
       background-color: transparent;
-      border-color: color_variables.$ui-gray-700;
+      border-color: var(--token-color-palette-neutral-500);
       box-shadow: none;
-      color: color_variables.$ui-gray-700;
+      color: var(--token-color-palette-neutral-500);
     }
   }
 
@@ -237,7 +236,7 @@
   // End of button types
 
   &.tool-tip-trigger {
-    color: color_variables.$grey-dark;
+    color: var(--token-color-palette-neutral-500);
     min-width: auto;
     padding: 0;
   }
@@ -291,8 +290,8 @@
 }
 
 a.button.disabled {
-  color: color_variables.$white;
-  background-color: color_variables.$grey-dark;
+  color: hsl(0, 0%, 100%);
+  background-color: var(--token-color-palette-neutral-500);
   opacity: 0.5;
   border-color: transparent;
   box-shadow: none;
@@ -315,7 +314,7 @@ a.button.disabled {
   cursor: pointer;
 
   &:disabled {
-    color: color_variables.$grey-light;
+    color: var(--token-color-palette-neutral-300);
     cursor: not-allowed;
   }
 }
@@ -327,15 +326,15 @@ a.button.disabled {
   box-shadow: box-shadow_variables.$box-shadow-low; // TODO delete
 
   &.white-icon svg {
-    color: color_variables.$white;
+    color: hsl(0, 0%, 100%);
   }
 
   &.icon-grey-300 svg {
-    color: color_variables.$ui-gray-300;
+    color: var(--token-color-palette-neutral-300);
   }
 
   &.icon-grey-500 svg {
-    color: color_variables.$ui-gray-500;
+    color: var(--token-color-palette-neutral-400);
   }
 
   &.transparent {
@@ -343,25 +342,25 @@ a.button.disabled {
     box-shadow: none;
     border: 1px solid transparent;
     &:hover {
-      border: 1px solid color_variables.$grey-light;
+      border: 1px solid var(--token-color-palette-neutral-300);
       border-color: var(--token-color-border-strong);
     }
   }
 
   &.primary {
-    background-color: color_variables.$blue;
-    border-color: color.adjust(color_variables.$blue, $lightness: -2%);
-    color: color_variables.$white;
+    background-color: var(--token-color-palette-blue-200);
+    border-color: color.adjust(#1060ff, $lightness: -2%);
+    color: hsl(0, 0%, 100%);
     font-weight: font_variables.$font-weight-bold;
-    text-shadow: 0 1px 1px rgba(color_variables.$black, 0.25);
+    text-shadow: 0 1px 1px rgba(hsl(0, 0%, 4%), 0.25);
     svg {
-      color: color_variables.$white;
+      color: hsl(0, 0%, 100%);
     }
   }
 
   &.secondary {
-    background-color: color_variables.$grey-lightest;
-    border: 1px solid color_variables.$grey-light;
+    background-color: var(--token-color-palette-neutral-50);
+    border: 1px solid var(--token-color-palette-neutral-300);
   }
 
   &.in-dropdown {
@@ -380,13 +379,13 @@ a.button.disabled {
   display: inline-flex; // temporarily fixes existing button alignment until we adopt Hds::ButtonSet
   // for toolbar-button must pass arg @color="secondary"
   &.toolbar-button {
-    color: color_variables.$black;
+    color: hsl(0, 0%, 4%);
     background: none;
     border: none;
     box-shadow: none;
     &:hover:not(.disabled) {
-      background-color: color_variables.$ui-gray-100;
-      color: color_variables.$blue;
+      background-color: var(--token-color-palette-neutral-100);
+      color: var(--token-color-palette-blue-200);
     }
   }
 }
