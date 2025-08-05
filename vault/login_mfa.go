@@ -2343,9 +2343,10 @@ func (c *Core) validateTOTP(ctx context.Context, mfaFactors *MFAFactor, entityMe
 		return fmt.Errorf("failed to validate TOTP passcode")
 	}
 
-	// The duration in which a passcode is stored in cache to enforce
-	// rate limit on failed totp passcode validation
-	passcodeTTL := time.Duration(int64(time.Second) * int64(totpSecret.Period) * int64(2*totpSecret.Skew))
+	// The duration in which a rateLimitID (configID_entityID) is used to limit the number of TOTP validation attempts.
+	// The passcode will be added to the usedCodes cache later, with a different TTL, with the skew and period.
+	passcodeTTL := time.Duration(int64(time.Second) * int64(totpSecret.Period))
+
 	// Enforcing rate limit per MethodID per EntityID
 	rateLimitID := fmt.Sprintf("%s_%s", configID, entityID)
 
