@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { currentURL, visit as _visit, settled, fillIn, click, waitUntil } from '@ember/test-helpers';
+import { currentURL, visit as _visit, settled, fillIn, click } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { create } from 'ember-cli-page-object';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
-import { runCmd } from 'vault/tests/helpers/commands';
+import consoleClass from 'vault/tests/pages/components/console/ui-panel';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
@@ -23,12 +24,29 @@ const visit = async (url) => {
   await settled();
 };
 
-const setupWrapping = async () => {
-  await login();
-  const wrappedToken = await runCmd(`write -field=token auth/token/create policies=default -wrap-ttl=5m`);
-  return wrappedToken;
+const consoleComponent = create(consoleClass);
+
+const wrappedAuth = async () => {
+  await consoleComponent.toggle();
+  await settled();
+  await consoleComponent.runCommands(
+    `write -field=token auth/token/create policies=default -wrap-ttl=5m`,
+    false
+  );
+  await settled();
+  // because of flaky test, trying to capture the token using a dom selector instead of the page object
+  const token = document.querySelector('[data-test-component="console/log-text"] pre').textContent;
+  if (token.includes('Error')) {
+    throw new Error(`Error mounting secrets engine: ${token}`);
+  }
+  return token;
 };
 
+const setupWrapping = async () => {
+  await login();
+  const wrappedToken = await wrappedAuth();
+  return wrappedToken;
+};
 module('Acceptance | redirect_to query param functionality', function (hooks) {
   setupApplicationTest(hooks);
 
@@ -49,8 +67,7 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
     await fillIn(AUTH_FORM.selectMethod, 'token');
     // the login method on this page does another visit call that we don't want here
     await fillIn(GENERAL.inputByAttr('token'), 'root');
-    await click(GENERAL.submitButton);
-    await waitUntil(() => currentURL().includes('vault/secrets'));
+    await click(AUTH_FORM.login);
     assert.strictEqual(currentURL(), url, 'navigates to the redirect_to url after auth');
   });
 
@@ -69,8 +86,7 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
     );
     await fillIn(AUTH_FORM.selectMethod, 'token');
     await fillIn(GENERAL.inputByAttr('token'), 'root');
-    await click(GENERAL.submitButton);
-    await waitUntil(() => currentURL().includes('vault/secrets'));
+    await click(AUTH_FORM.login);
     assert.strictEqual(currentURL(), url, 'navigates to the redirect_to with the query param after auth');
   });
 
@@ -79,7 +95,6 @@ module('Acceptance | redirect_to query param functionality', function (hooks) {
     const url = '/vault/secrets/cubbyhole/create';
 
     await visit(`/vault/logout?redirect_to=${url}&wrapped_token=${wrappedToken}`);
-    await waitUntil(() => currentURL().includes('vault/secrets'));
     assert.strictEqual(currentURL(), url, 'authenticates then navigates to the redirect_to url after auth');
   });
 });

@@ -8,7 +8,6 @@ import { service } from '@ember/service';
 import { sanitizePath } from 'core/utils/sanitize-path';
 import { encodePath } from 'vault/utils/path-encoding-helpers';
 import { tracked } from '@glimmer/tracking';
-import { getOwner } from '@ember/owner';
 
 export default class GeneratedItemListAdapter extends ApplicationAdapter {
   @service store;
@@ -29,10 +28,8 @@ export default class GeneratedItemListAdapter extends ApplicationAdapter {
     return this.paths.deletePath || '';
   }
 
-  getDynamicApiPath() {
-    const result = getOwner(this)
-      .lookup('route:vault.cluster.access.method')
-      .modelFor('vault.cluster.access.method');
+  getDynamicApiPath(id) {
+    const result = this.store.peekRecord('auth-method', id);
     this.apiPath = result.apiPath;
     return result.apiPath;
   }

@@ -1,0 +1,102 @@
+{{!
+  Copyright (c) HashiCorp, Inc.
+  SPDX-License-Identifier: BUSL-1.1
+}}
+
+<form
+  {{on "submit" (fn @doSubmit (hash ciphertext=@ciphertext padding_scheme=@padding_scheme context=@context nonce=@nonce))}}
+  ...attributes
+>
+  <div class="box is-sideless is-fullwidth is-marginless">
+    <div class="content has-bottom-margin-l">
+      <p>You can decrypt ciphertext using <code>{{@key.name}}</code> as the cryptographic key.</p>
+    </div>
+    <div class="field">
+      <div id="ciphertext-control" class="control">
+        <JsonEditor
+          @title="Ciphertext"
+          @valueUpdated={{fn (mut @ciphertext)}}
+          @mode="ruby"
+          @data-test-transit-input="ciphertext"
+        />
+      </div>
+    </div>
+    {{#if @key.derived}}
+      <div class="field">
+        <label for="context" class="is-label">
+          Context
+        </label>
+        <div class="field has-addons">
+          <div class="control">
+            <Input @type="text" id="context" @value={{@context}} class="input" data-test-transit-input="context" />
+          </div>
+          <div class="control">
+            <B64Toggle @value={{@context}} @data-test-transit-b64-toggle="context" />
+          </div>
+        </div>
+      </div>
+    {{/if}}
+    {{#if (includes @key.type (array "rsa-2048" "rsa-3072" "rsa-4096"))}}
+      <div class="field">
+        <label for="padding_scheme" class="is-label">Padding Scheme</label>
+        <div class="control is-expanded">
+          <div class="select is-fullwidth">
+            <select
+              name="padding_scheme"
+              id="padding_scheme"
+              data-test-padding-scheme
+              onchange={{action (mut @padding_scheme) value="target.value"}}
+            >
+              {{#each (array "oaep" "pkcs1v15") as |scheme|}}
+                <option selected={{eq @padding_scheme scheme}} value={{scheme}}>
+                  {{scheme}}
+                </option>
+              {{/each}}
+            </select>
+          </div>
+        </div>
+      </div>
+    {{/if}}
+    {{#if (eq @key.convergentEncryptionVersion 1)}}
+      <div class="field">
+        <label for="nonce" class="is-label">Nonce</label>
+        <div class="field has-addons">
+          <div class="control">
+            <Input @type="text" id="nonce" @value={{@nonce}} class="input" data-test-transit-input="nonce" />
+          </div>
+          <div class="control">
+            <B64Toggle @value={{@nonce}} @data-test-transit-b64-toggle="nonce" />
+          </div>
+        </div>
+      </div>
+    {{/if}}
+  </div>
+  <div class="field is-grouped box is-fullwidth is-bottomless">
+    <div class="control">
+      <Hds::Button @text="Decrypt" type="submit" id="decrypt" data-test-button-decrypt />
+    </div>
+  </div>
+</form>
+{{#if @isModalActive}}
+  <Hds::Modal id="transit-decrypt-modal" @onClose={{fn (mut @isModalActive) false}} data-test-decrypt-modal as |M|>
+    <M.Header>
+      Copy your unwrapped data
+    </M.Header>
+    <M.Body>
+      <h2 class="has-text-weight-semibold is-6">Plaintext</h2>
+      <p class="sub-text">Plaintext is base64 encoded.</p>
+      <Hds::Copy::Snippet
+        @textToCopy={{@plaintext}}
+        @color="secondary"
+        @container="#transit-decrypt-modal"
+        @isFullWidth={{true}}
+        @isTruncated={{true}}
+        @onError={{(fn (set-flash-message "Clipboard copy failed. The Clipboard API requires a secure context." "danger"))}}
+        data-test-encrypted-value="plaintext"
+      />
+    </M.Body>
+    <M.Footer as |F|>
+      <Hds::Button @text="Close" {{on "click" F.close}} />
+    </M.Footer>
+  </Hds::Modal>
+{{/if}}

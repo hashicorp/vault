@@ -45,7 +45,6 @@ lint:
       - sdk/helper/pluginutil/multiplexing.proto
       - sdk/logical/event.proto
       - sdk/logical/identity.proto
-      - sdk/logical/observation.proto
       - sdk/logical/plugin.proto
       - sdk/logical/version.proto
       - sdk/plugin/pb/backend.proto
@@ -79,7 +78,6 @@ lint:
       - sdk/helper/pluginutil/multiplexing.proto
       - sdk/logical/event.proto
       - sdk/logical/identity.proto
-      - sdk/logical/observation.proto
       - sdk/logical/plugin.proto
       - sdk/logical/version.proto
       - sdk/plugin/pb/backend.proto

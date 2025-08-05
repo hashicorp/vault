@@ -1,4 +1,5 @@
 @use '../utils/box-shadow_variables';
+@use '../utils/color_variables';
 @use '../utils/size_variables';
 
 /**
@@ -8,7 +9,7 @@
 
 .progress {
   appearance: none;
-  background: var(--token-color-palette-neutral-50);
+  background: color_variables.$ui-gray-050;
   border: none;
   box-shadow: inset box-shadow_variables.$box-link-shadow;
   border-radius: size_variables.$radius;
@@ -73,17 +74,17 @@
 }
 
 .progress.is-success::-webkit-progress-value {
-  background-color: var(--token-color-palette-green-200);
+  background-color: color_variables.$green-500;
 }
 
 .progress.is-success::-moz-progress-bar {
-  background-color: var(--token-color-palette-green-200);
+  background-color: color_variables.$green-500;
 }
 
 .progress.is-success::-ms-fill {
-  background-color: var(--token-color-palette-green-200);
+  background-color: color_variables.$green-500;
 }
 
 .progress.is-success:indeterminate {
-  background-image: linear-gradient(to right, var(--token-color-palette-green-200) 30%, #ededed 30%);
+  background-image: linear-gradient(to right, color_variables.$green-500 30%, #ededed 30%);
 }

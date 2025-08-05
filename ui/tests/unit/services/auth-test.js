@@ -14,46 +14,39 @@ module('Unit | Service | auth', function (hooks) {
   });
 
   module('#calculateExpiration', function () {
-    test('with a non-zero ttl value', function (assert) {
-      const now = Date.now();
-      const ttl = 30;
-      const expireTime = null;
-      const calculatedExpiry = this.service.calculateExpiration({ now, ttl, expireTime });
+    [
+      ['#calculateExpiration w/ttl', { ttl: 30 }, 30],
+      ['#calculateExpiration w/lease_duration', { lease_duration: 15 }, 15],
+    ].forEach(([testName, response, ttlValue]) => {
+      test(testName, function (assert) {
+        const now = Date.now();
 
-      assert.strictEqual(calculatedExpiry.ttl, 30, 'returns the ttl');
-      assert.strictEqual(
-        calculatedExpiry.tokenExpirationEpoch,
-        now + ttl * 1e3,
-        'calculates expiration from ttl as epoch timestamp'
-      );
+        const resp = this.service.calculateExpiration(response, now);
+
+        assert.strictEqual(resp.ttl, ttlValue, 'returns the ttl');
+        assert.strictEqual(
+          resp.tokenExpirationEpoch,
+          now + ttlValue * 1e3,
+          'calculates expiration from ttl as epoch timestamp'
+        );
+      });
     });
 
-    test('with a zero ttl value', function (assert) {
-      const now = Date.now();
-      const ttl = 0;
-      const expireTime = null;
-      const calculatedExpiry = this.service.calculateExpiration({ now, ttl, expireTime });
-
-      assert.strictEqual(calculatedExpiry.ttl, null, 'returns `null` for the ttl');
-      assert.strictEqual(calculatedExpiry.tokenExpirationEpoch, null, 'tokenExpirationEpoch is null');
-    });
-
-    test('#calculateExpiration w/ expireTime', function (assert) {
+    test('#calculateExpiration w/ expire_time', function (assert) {
       const now = Date.now();
       const expirationString = '2024-06-13T09:10:21-07:00';
       const expectedExpirationEpoch = new Date(expirationString).getTime();
 
-      const calculatedExpiry = this.service.calculateExpiration({
-        now,
-        ttl: 30,
-        expireTime: '2024-06-13T09:10:21-07:00',
-      });
+      const resp = this.service.calculateExpiration(
+        { ttl: 30, expire_time: '2024-06-13T09:10:21-07:00' },
+        now
+      );
 
-      assert.strictEqual(calculatedExpiry.ttl, 30, 'returns ttl');
+      assert.strictEqual(resp.ttl, 30, 'returns ttl');
       assert.strictEqual(
-        calculatedExpiry.tokenExpirationEpoch,
+        resp.tokenExpirationEpoch,
         expectedExpirationEpoch,
-        'calculates expiration from expireTime'
+        'calculates expiration from expire_time'
       );
     });
   });
@@ -61,9 +54,10 @@ module('Unit | Service | auth', function (hooks) {
   module('#setExpirationSettings', function () {
     test('#setExpirationSettings for a renewable token', function (assert) {
       const now = Date.now();
-      const renewable = true;
+      const ttl = 30;
+      const response = { ttl, renewable: true };
 
-      this.service.setExpirationSettings(renewable, now);
+      this.service.setExpirationSettings(response, now);
 
       assert.false(this.service.allowExpiration, 'sets allowExpiration to false');
       assert.strictEqual(this.service.expirationCalcTS, now, 'sets expirationCalcTS to now');
@@ -71,9 +65,10 @@ module('Unit | Service | auth', function (hooks) {
 
     test('#setExpirationSettings for a non-renewable token', function (assert) {
       const now = Date.now();
-      const renewable = false;
+      const ttl = 30;
+      const response = { ttl, renewable: false };
 
-      this.service.setExpirationSettings(renewable, now);
+      this.service.setExpirationSettings(response, now);
 
       assert.true(this.service.allowExpiration, 'sets allowExpiration to true');
       assert.strictEqual(this.service.expirationCalcTS, null, 'keeps expirationCalcTS as null');

@@ -31,13 +31,13 @@ export default class DestinationsTabsToolbar extends Component<Args> {
   get showSyncBtn() {
     const { destination, capabilities } = this.args;
     const path = this.capabilities.pathFor('syncSetAssociation', destination);
-    return capabilities[path]?.canUpdate && !destination.purge_initiated_at;
+    return capabilities[path]?.canUpdate && !destination.purgeInitiatedAt;
   }
 
   get showEditBtn() {
     const { destination, capabilities } = this.args;
     const path = this.capabilities.pathFor('syncDestination', destination);
-    return capabilities[path]?.canUpdate && !destination.purge_initiated_at;
+    return capabilities[path]?.canUpdate && !destination.purgeInitiatedAt;
   }
 
   @action

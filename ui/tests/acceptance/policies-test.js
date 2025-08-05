@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, currentURL, currentRouteName, visit, fillIn } from '@ember/test-helpers';
+import { click, currentURL, currentRouteName, visit } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { login } from 'vault/tests/helpers/auth/auth-helpers';
@@ -41,8 +41,7 @@ module('Acceptance | policies', function (hooks) {
   test('it navigates to and from policy show page from sidebar', async function (assert) {
     await visit('/vault/dashboard');
     await click(GENERAL.navLink('Policies'));
-    assert.strictEqual(currentURL(), '/vault/policies/acl', 'currentURL is /vault/policies/acl');
-    await fillIn('[data-test-component="navigate-input"]', 'default'); // filter for the policy in case there are many on this view and the default policy is on the second page
+    assert.strictEqual(currentURL(), '/vault/policies/acl');
     await click('[data-test-policy-link="default"]');
     assert.strictEqual(currentURL(), '/vault/policy/acl/default');
     await click(GENERAL.navLink('Back to main navigation'));

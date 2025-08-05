@@ -8,12 +8,11 @@ import { resolve } from 'rsvp';
 import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, click, find, fillIn, blur, triggerEvent, waitFor } from '@ember/test-helpers';
+import { render, click, find, fillIn, blur, triggerEvent } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
 import { encodeString } from 'vault/utils/b64';
 import waitForError from 'vault/tests/helpers/wait-for-error';
-import codemirror, { getCodeEditorValue, setCodeEditorValue } from 'vault/tests/helpers/codemirror';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import codemirror from 'vault/tests/helpers/codemirror';
 
 const storeStub = Service.extend({
   callArgs: null,
@@ -150,10 +149,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     await render(hbs`
     <TransitKeyActions @selectedAction={{this.selectedAction}} @key={{this.key}} />`);
 
-    let editor;
-    await waitFor('.cm-editor');
-    editor = codemirror('#plaintext-control');
-    setCodeEditorValue(editor, 'plaintext');
+    codemirror('#plaintext-control').setValue('plaintext');
     await click('button[type="submit"]');
     assert.deepEqual(
       this.storeService.callArgs,
@@ -174,9 +170,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     await click('dialog button');
     // Encrypt again, with pre-encoded value and checkbox selected
     const preEncodedValue = encodeString('plaintext');
-    await waitFor('.cm-editor');
-    editor = codemirror('#plaintext-control');
-    setCodeEditorValue(editor, preEncodedValue);
+    codemirror('#plaintext-control').setValue(preEncodedValue);
     await click('input[data-test-transit-input="encodedBase64"]');
     await click('button[type="submit"]');
 
@@ -206,9 +200,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     await render(hbs`
     <TransitKeyActions @selectedAction="encrypt" @key={{this.key}} />`);
 
-    await waitFor('.cm-editor');
-    const editor = codemirror();
-    setCodeEditorValue(editor, 'plaintext');
+    codemirror().setValue('plaintext');
     assert.dom('#key_version').exists({ count: 1 }, 'it renders the key version selector');
 
     await triggerEvent('#key_version', 'change');
@@ -237,9 +229,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     await render(hbs`
     <TransitKeyActions @selectedAction="encrypt" @key={{this.key}} />`);
 
-    await waitFor('.cm-editor');
-    const editor = codemirror('#plaintext-control');
-    setCodeEditorValue(editor, 'plaintext');
+    codemirror('#plaintext-control').setValue('plaintext');
     assert.dom('#key_version').doesNotExist('it does not render the selector when there is only one key');
   });
 
@@ -250,9 +240,7 @@ module('Integration | Component | transit key actions', function (hooks) {
 
     this.set('storeService.keyActionReturnVal', { plaintext });
     this.set('selectedAction', 'decrypt');
-    await waitFor('.cm-editor');
-    const editor = codemirror('#ciphertext-control');
-    assert.strictEqual(getCodeEditorValue(editor), '', 'does not prefill ciphertext value');
+    assert.strictEqual(codemirror('#ciphertext-control').getValue(), '', 'does not prefill ciphertext value');
   });
 
   const setupExport = async function () {
@@ -297,7 +285,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     this.set('storeService.keyActionReturnVal', response);
     await setupExport.call(this);
     await click('[data-test-toggle-label="Wrap response"]');
-    await click(GENERAL.submitButton);
+    await click('button[type="submit"]');
     assert.dom('#transit-export-modal').exists('Modal opens after export');
     assert.deepEqual(
       JSON.parse(find('[data-test-encrypted-value="export"]').innerText),
@@ -313,7 +301,7 @@ module('Integration | Component | transit key actions', function (hooks) {
     await click('[data-test-toggle-label="Wrap response"]');
     await click('#exportVersion');
     await triggerEvent('#exportVersion', 'change');
-    await click(GENERAL.submitButton);
+    await click('button[type="submit"]');
     assert.dom('#transit-export-modal').exists('Modal opens after export');
     assert.deepEqual(
       JSON.parse(find('[data-test-encrypted-value="export"]').innerText),
@@ -347,11 +335,9 @@ module('Integration | Component | transit key actions', function (hooks) {
     <TransitKeyActions @key={{this.key}} @selectedAction="hmac" />`);
     await fillIn('#algorithm', 'sha2-384');
     await blur('#algorithm');
-    await waitFor('.cm-editor');
-    const editor = codemirror();
-    setCodeEditorValue(editor, 'plaintext');
+    await fillIn('[data-test-component="code-mirror-modifier"] textarea', 'plaintext');
     await click('input[data-test-transit-input="encodedBase64"]');
-    await click(GENERAL.submitButton);
+    await click('button[type="submit"]');
     assert.deepEqual(
       this.storeService.callArgs,
       {

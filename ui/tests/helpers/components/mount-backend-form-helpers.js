@@ -11,9 +11,9 @@ export const mountBackend = async (type, path) => {
   await click(MOUNT_BACKEND_FORM.mountType(type));
   if (path) {
     await fillIn(GENERAL.inputByAttr('path'), path);
-    await click(GENERAL.submitButton);
+    await click(GENERAL.saveButton);
   } else {
     // save with default path
-    await click(GENERAL.submitButton);
+    await click(GENERAL.saveButton);
   }
 };

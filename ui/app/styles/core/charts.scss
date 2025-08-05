@@ -1,3 +1,4 @@
+@use '../utils/color_variables';
 @use '../utils/font_variables';
 @use '../utils/size_variables';
 
@@ -6,38 +7,42 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-// LEGEND STYLING (positioning is in chart-container.scss)
-$green-cyan: #06d092;
-$cerulean: #02a8ef;
-$blue-500: var(--token-color-palette-blue-500);
-$purple-300: var(--token-color-palette-purple-300);
+// MISC STYLES for non-lineal charts
 
-.legend-container {
-  .dots {
-    height: 10px;
-    width: 10px;
-    border-radius: 50%;
-    display: inline-block;
+.legend-colors {
+  height: 10px;
+  width: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  // numbers are indices because chart legend is iterated over
+  &.dot-0 {
+    background-color: var(--token-color-palette-blue-100);
   }
-  .legend-new_clients {
-    background-color: $blue-500;
+  &.dot-1 {
+    background-color: var(--token-color-palette-blue-200);
   }
-  .legend-entity_clients {
-    background-color: $blue-500;
+  &.dot-2 {
+    background-color: var(--token-color-palette-neutral-300);
   }
-  .legend-non_entity_clients {
-    background-color: $green-cyan;
+  &.dot-3 {
+    background-color: var(--token-color-palette-neutral-500);
   }
-  .legend-secret_syncs {
-    background-color: $purple-300;
+  // custom naming for running totals, which matches the custom-bar naming
+  &.dot-clients {
+    background-color: var(--token-color-palette-blue-200);
   }
-  .legend-acme_clients {
-    background-color: $cerulean;
+  &.dot-new_clients {
+    background-color: var(--token-color-palette-blue-500);
   }
 }
 
+.legend-label {
+  padding-left: size_variables.$spacing-8;
+  padding-right: size_variables.$spacing-36;
+}
+
 .chart-tooltip {
-  background-color: hsl(0, 0%, 4%);
+  background-color: color_variables.$black;
   color: white;
   font-size: size_variables.$size-9;
   padding: 6px;
@@ -48,17 +53,10 @@ $purple-300: var(--token-color-palette-purple-300);
   .bold {
     font-weight: font_variables.$font-weight-bold;
   }
-  // styling below handles tooltip position
-  position: absolute;
-  transform-style: preserve-3d;
-  bottom: 30px;
-  left: -20px;
-  pointer-events: none;
-  width: 140px;
-  transform: translate(calc(1px * var(--x, 0)), calc(-1px * var(--y, 0)));
-  transform-origin: bottom left;
-  z-index: 100;
-  margin-bottom: size_variables.$spacing-8;
+}
+
+.is-label-fit-content {
+  max-width: fit-content !important;
 }
 
 .chart-tooltip-arrow {
@@ -66,51 +64,55 @@ $purple-300: var(--token-color-palette-purple-300);
   height: 0;
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
-  border-top: 9px solid hsl(0, 0%, 4%);
+  border-top: 9px solid color_variables.$black;
   position: absolute;
   opacity: 0.8;
   bottom: -9px;
   left: calc(50% - 5px);
 }
 
-// LINEAL STYLING //
-.lineal-chart {
-  position: relative;
-  padding: 10px 10px 20px 50px;
-  width: 100%;
-  svg {
-    overflow: visible;
+.has-grid {
+  g > text {
+    color: color_variables.$ui-gray-500;
+    font-size: size_variables.$size-9;
+  }
+
+  g > line {
+    // TODO: mix-blend doesn't work in firefox browser?
+    mix-blend-mode: darken;
+    color: color_variables.$ui-gray-300;
   }
 }
 
-.lineal-chart-bar {
-  fill: var(--token-color-palette-blue-500);
-}
-
-.lineal-axis {
-  color: var(--token-color-palette-neutral-400);
-  text {
-    font-size: 0.75rem;
-  }
-  line {
-    color: var(--token-color-palette-neutral-300);
+.is-horizontal {
+  .tick > text {
+    font-weight: font_variables.$font-weight-semibold;
+    font-size: size_variables.$size-9;
   }
 }
 
-// @colorScale arg for Lineal::VBars is "stacked-bar", indices are added by lineal
-.stacked-bar-1 {
-  color: $blue-500;
-  fill: $blue-500;
-}
-.stacked-bar-2 {
-  color: $green-cyan;
-  fill: $green-cyan;
-}
-.stacked-bar-3 {
-  color: $purple-300;
-  fill: $purple-300;
-}
-.stacked-bar-4 {
-  color: $cerulean;
-  fill: $cerulean;
+// RESPONSIVE STYLING //
+
+@media only screen and (max-width: 950px) {
+  .chart-container-left {
+    grid-column-start: 1;
+    grid-column-end: 4;
+    grid-row-start: 2;
+    grid-row-end: 3;
+    margin-left: size_variables.$spacing-48;
+    margin-right: size_variables.$spacing-48;
+  }
+  .chart-container-right {
+    grid-column-start: 1;
+    grid-column-end: 4;
+    grid-row-start: 3;
+    grid-row-end: 4;
+    margin-left: size_variables.$spacing-48;
+    margin-right: size_variables.$spacing-48;
+  }
+
+  .timestamp {
+    grid-column-start: 1;
+    grid-row-start: 4;
+  }
 }

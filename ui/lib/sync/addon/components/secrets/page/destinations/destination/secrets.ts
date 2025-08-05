@@ -51,8 +51,8 @@ export default class SyncSecretsDestinationsPageComponent extends Component<Args
   async update(association: AssociatedSecret, operation: string) {
     try {
       const { name, type } = this.args.destination;
-      const { mount, secret_name } = association;
-      const body = { mount, secret_name };
+      const { mount, secretName } = association;
+      const body = { mount, secretName };
 
       if (operation === 'set') {
         await this.api.sys.systemWriteSyncDestinationsTypeNameAssociationsSet(name, type, body);

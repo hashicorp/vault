@@ -4,8 +4,6 @@
  */
 import sinon from 'sinon';
 
-export const DELAY_IN_MS = 500;
-
 // suggestions for a custom popup
 // passing { close: true } automatically closes popups opened from window.open()
 // passing { closed: true } sets value on popup window
@@ -32,11 +30,3 @@ export const callbackData = (data = {}) => ({
   code: 'code',
   ...data,
 });
-
-// Simulates the OIDC popup message event the OIDC auth method waits for
-// mountPath is necessary because it builds the callback URL
-export const triggerMessageEvent = (mountPath, delay = DELAY_IN_MS) => {
-  setTimeout(() => {
-    window.postMessage(callbackData({ path: mountPath }), window.origin);
-  }, delay);
-};

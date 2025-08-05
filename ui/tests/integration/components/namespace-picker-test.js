@@ -5,14 +5,13 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, fillIn, findAll, click, find } from '@ember/test-helpers';
+import { render, fillIn, findAll, waitFor, click, find } from '@ember/test-helpers';
 import sinon from 'sinon';
 import hbs from 'htmlbars-inline-precompile';
+import { NAMESPACE_PICKER_SELECTORS } from 'vault/tests/helpers/namespace-picker';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { capabilitiesStub, overrideResponse } from 'vault/tests/helpers/stubs';
-
-const INITIALIZED_NAMESPACES = ['root', 'parent1', 'parent1/child1'];
 
 module('Integration | Component | namespace-picker', function (hooks) {
   setupRenderingTest(hooks);
@@ -37,10 +36,10 @@ module('Integration | Component | namespace-picker', function (hooks) {
 
   test('it focuses the search input field when the component is loaded', async function (assert) {
     await render(hbs`<NamespacePicker />`);
-    await click(GENERAL.button('namespace-picker'));
+    await click(GENERAL.toggleInput('namespace-id'));
 
     // Verify that the search input field is focused
-    const searchInput = find(GENERAL.inputByAttr('Search namespaces'));
+    const searchInput = find(NAMESPACE_PICKER_SELECTORS.searchInput);
     assert.strictEqual(
       document.activeElement,
       searchInput,
@@ -50,43 +49,45 @@ module('Integration | Component | namespace-picker', function (hooks) {
 
   test('it selects the current namespace', async function (assert) {
     await render(hbs`<NamespacePicker />`);
-    assert.dom(GENERAL.button('namespace-picker')).hasText('child1', 'it just displays the namespace node');
-    await click(GENERAL.button('namespace-picker'));
+    assert.dom(GENERAL.toggleInput('namespace-id')).hasText('child1', 'it just displays the namespace node');
+    await click(GENERAL.toggleInput('namespace-id'));
     assert
-      .dom(GENERAL.button(this.nsService.path))
+      .dom(NAMESPACE_PICKER_SELECTORS.link(this.nsService.path))
       .hasAttribute('aria-selected', 'true', 'the current namespace path is selected');
-    assert.dom(`${GENERAL.button(this.nsService.path)} ${GENERAL.icon('check')}`).exists();
+    assert.dom(`${NAMESPACE_PICKER_SELECTORS.link(this.nsService.path)} ${GENERAL.icon('check')}`).exists();
   });
 
   test('it filters namespace options based on search input', async function (assert) {
     await render(hbs`<NamespacePicker/>`);
-    await click(GENERAL.button('namespace-picker'));
+    await click(GENERAL.toggleInput('namespace-id'));
 
-    // Verify all namespaces are displayed initially which are pre-populated in the NamespaceService
-    for (const namespace of INITIALIZED_NAMESPACES) {
-      assert.dom(GENERAL.button(namespace)).exists(`Namespace "${namespace}" is displayed initially`);
-    }
+    // Verify all namespaces are displayed initially
+    await waitFor(NAMESPACE_PICKER_SELECTORS.link());
+    assert.strictEqual(
+      findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
+      3,
+      'All namespaces are displayed initially'
+    );
+
     // Simulate typing into the search input
-    await fillIn(GENERAL.inputByAttr('Search namespaces'), 'child1');
+    await waitFor(NAMESPACE_PICKER_SELECTORS.searchInput);
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, 'child1');
 
     // Verify that only namespaces matching the search input are displayed
     assert.strictEqual(
-      findAll(GENERAL.inputByAttr('Search namespaces')).length,
+      findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
       1,
       'Only matching namespaces are displayed after filtering'
     );
 
     // Clear the search input
-    await fillIn(GENERAL.inputByAttr('Search namespaces'), '');
+    await fillIn(NAMESPACE_PICKER_SELECTORS.searchInput, '');
 
     // Verify all namespaces are displayed after clearing the search input
-    assert.dom(GENERAL.button('root')).exists('Namespace "root" is displayed');
-    assert.dom(GENERAL.button('parent1')).exists('Namespace "parent1" is displayed');
-    assert.dom(GENERAL.button('parent1/child1')).exists('Namespace "parent1/child1" is displayed');
     assert.strictEqual(
-      findAll(`ul ${GENERAL.button()}`).length,
+      findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
       3,
-      'Three namespaces are displayed after clearing the search input'
+      'All namespaces are displayed after clearing the search input'
     );
   });
 
@@ -101,18 +102,18 @@ module('Integration | Component | namespace-picker', function (hooks) {
       this.server.post('/sys/capabilities-self', () => capabilitiesStub('sys/namespaces', ['list']));
 
       await render(hbs`<NamespacePicker />`);
-      await click(GENERAL.button('namespace-picker'));
+      await click(GENERAL.toggleInput('namespace-id'));
 
-      assert.dom(GENERAL.button('Manage')).exists('Manage button is visible');
+      assert.dom(NAMESPACE_PICKER_SELECTORS.manageButton).exists('Manage button is visible');
     });
 
     test('it hides the "Manage" button when canList is false', async function (assert) {
       this.server.post('/sys/capabilities-self', capabilitiesStub(`sys/namespaces`, ['deny']));
       await render(hbs`<NamespacePicker />`);
-      await click(GENERAL.button('namespace-picker'));
+      await click(GENERAL.toggleInput('namespace-id'));
 
       // Verify that the buttons are hidden
-      assert.dom(GENERAL.button('Manage')).doesNotExist('Manage button is hidden');
+      assert.dom(NAMESPACE_PICKER_SELECTORS.manageButton).doesNotExist('Manage button is hidden');
     });
 
     test('it shows "Manage" button when the capabilities request throws an error', async function (assert) {
@@ -121,22 +122,21 @@ module('Integration | Component | namespace-picker', function (hooks) {
       this.server.post('/sys/capabilities-self', () => overrideResponse(403));
 
       await render(hbs`<NamespacePicker />`);
-      await click(GENERAL.button('namespace-picker'));
-      assert.dom(GENERAL.button('Manage')).exists();
+      await click(GENERAL.toggleInput('namespace-id'));
+      assert.dom(NAMESPACE_PICKER_SELECTORS.manageButton).exists();
     });
   });
 
   test('it updates the namespace list after clicking "Refresh list"', async function (assert) {
     await render(hbs`<NamespacePicker />`);
-    await click(GENERAL.button('namespace-picker'));
+    await click(GENERAL.toggleInput('namespace-id'));
 
     // Verify initial namespaces are displayed
-    assert.dom(GENERAL.button('parent1')).exists('Namespace "parent1" is displayed');
-    assert.dom(GENERAL.button('parent1/child1')).exists('Namespace "parent1/child1" is displayed');
-    assert.dom(GENERAL.button('root')).exists('Namespace "root" is displayed');
-    assert
-      .dom(GENERAL.button('new-namespace'))
-      .doesNotExist('Namespace "new-namespace" is not displayed initially');
+    assert.strictEqual(
+      findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
+      3,
+      'Initially, three namespaces are displayed'
+    );
 
     // Re-stub request from beforeEach hook with a new namespace
     this.server.get('/sys/internal/ui/namespaces', () => {
@@ -145,12 +145,19 @@ module('Integration | Component | namespace-picker', function (hooks) {
       };
     });
     // Click the "Refresh list" button
-    await click(GENERAL.button('Refresh list'));
+    await click(NAMESPACE_PICKER_SELECTORS.refreshList);
 
     // Verify the new namespace is displayed
+    assert.strictEqual(
+      findAll(NAMESPACE_PICKER_SELECTORS.link()).length,
+      4,
+      'After refreshing, four namespaces are displayed'
+    );
+
+    // Verify the new namespace is specifically shown
     assert
-      .dom(GENERAL.button('new-namespace'))
-      .exists('Namespace "new-namespace" is displayed after refreshing');
+      .dom(NAMESPACE_PICKER_SELECTORS.link('new-namespace'))
+      .exists('The new namespace "new-namespace" is displayed after refreshing');
   });
 
   test("it should display the user's root namespace if it is not true root (an empty string)", async function (assert) {
@@ -163,12 +170,14 @@ module('Integration | Component | namespace-picker', function (hooks) {
     });
     await render(hbs`<NamespacePicker />`);
     assert
-      .dom(GENERAL.button('namespace-picker'))
+      .dom(GENERAL.toggleInput('namespace-id'))
       .hasText('admin', `shows the namespace 'admin' in the toggle component`);
-    await click(GENERAL.button('namespace-picker'));
-    assert.dom(`li ${GENERAL.button()}`).exists({ count: 2 }, 'namespace picker only contains 2 options');
-    assert.dom(GENERAL.button('admin')).exists();
-    assert.dom(GENERAL.button('admin/child1')).exists();
+    await click(GENERAL.toggleInput('namespace-id'));
+    assert
+      .dom(`li ${NAMESPACE_PICKER_SELECTORS.link()}`)
+      .exists({ count: 2 }, 'namespace picker only contains 2 options');
+    assert.dom(NAMESPACE_PICKER_SELECTORS.link('admin')).exists();
+    assert.dom(NAMESPACE_PICKER_SELECTORS.link('admin/child1')).exists();
   });
 
   test('it selects the correct namespace when matching nodes exist', async function (assert) {
@@ -177,10 +186,10 @@ module('Integration | Component | namespace-picker', function (hooks) {
       return { data: { keys: ['parent1/', 'parent1/child1', 'anotherParent/', 'anotherParent/child1'] } };
     });
     await render(hbs`<NamespacePicker />`);
-    assert.dom(GENERAL.button('namespace-picker')).hasText('child1', 'it displays the namespace node');
-    await click(GENERAL.button('namespace-picker'));
+    assert.dom(GENERAL.toggleInput('namespace-id')).hasText('child1', 'it displays the namespace node');
+    await click(GENERAL.toggleInput('namespace-id'));
     assert
-      .dom(GENERAL.button(this.nsService.path))
+      .dom(NAMESPACE_PICKER_SELECTORS.link(this.nsService.path))
       .hasAttribute('aria-selected', 'true', 'the current namespace path is selected');
     assert.dom('[aria-selected="true"]').exists({ count: 1 }, 'only one option is selected');
     assert.dom(GENERAL.icon('check')).exists({ count: 1 }, 'only one check mark renders');

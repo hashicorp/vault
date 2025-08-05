@@ -36,16 +36,16 @@ export default function destinationFormResolver(type: DestinationType, data = {}
     return new GhForm(data, options, validations);
   }
   if (type === 'vercel-project') {
-    const teamId = (data as VercelProjectForm['data'])['team_id'];
-    validations['team_id'] = [
+    const teamId = (data as VercelProjectForm['data'])['teamId'];
+    validations['teamId'] = [
       {
         validator: (formData: VercelProjectForm['data']) =>
-          !options?.isNew && formData['team_id'] !== teamId ? false : true,
+          !options?.isNew && formData['teamId'] !== teamId ? false : true,
         message: 'Team ID should only be updated if the project was transferred to another account.',
         level: 'warn',
       },
     ];
-    validations['deployment_environments'] = [
+    validations['deploymentEnvironments'] = [
       { type: 'presence', message: 'At least one environment is required.' },
     ];
     return new VercelProjectForm(data, options, validations);

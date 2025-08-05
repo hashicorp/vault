@@ -1,3 +1,4 @@
+@use '../utils/color_variables';
 @use '../utils/font_variables';
 @use '../utils/size_variables';
 
@@ -40,7 +41,7 @@ body,
 pre:not(.hds-code-block__code),
 strong,
 table th {
-  color: var(--token-color-palette-neutral-600);
+  color: color_variables.$ui-gray-900;
 }
 
 h1,
@@ -83,7 +84,7 @@ object {
 }
 
 html {
-  background-color: hsl(0, 0%, 100%);
+  background-color: color_variables.$white;
   font-size: size_variables.$base-font-size; // 16px
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
@@ -131,7 +132,7 @@ body {
 }
 
 a {
-  color: var(--token-color-palette-blue-200);
+  color: color_variables.$blue-500;
   cursor: pointer;
   text-decoration: underline;
 
@@ -143,19 +144,19 @@ a {
 }
 
 a:hover {
-  color: var(--token-color-palette-neutral-600);
+  color: color_variables.$ui-gray-900;
 }
 
 code {
   background-color: transparent;
-  color: var(--token-color-palette-neutral-500);
+  color: color_variables.$ui-gray-700;
   font-size: 1em;
   font-weight: 400;
   padding: 0;
 }
 
 hr {
-  background-color: var(--token-color-palette-neutral-300);
+  background-color: color_variables.$ui-gray-300;
   border: none;
   display: block;
   height: 1px;
@@ -193,7 +194,7 @@ label {
 // <Hds::Dropdown>
 .hds-dropdown-list-item {
   > button:disabled {
-    color: hsl(0, 0%, 4%);
+    color: color_variables.$black;
     opacity: 0.5;
     cursor: not-allowed;
   }

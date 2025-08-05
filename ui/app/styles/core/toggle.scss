@@ -1,3 +1,4 @@
+@use '../utils/color_variables';
 @use '../utils/size_variables';
 
 /**
@@ -45,7 +46,7 @@
   height: 1.5rem;
   border: 0.1rem solid transparent;
   border-radius: 0.75rem;
-  background: var(--token-color-palette-neutral-300);
+  background: color_variables.$ui-gray-300;
   content: '';
 }
 .toggle[type='checkbox'] + label::after {
@@ -57,12 +58,12 @@
   height: 1rem;
   transform: translate3d(0, 0, 0);
   border-radius: 50%;
-  background: hsl(0, 0%, 100%);
+  background: color_variables.$white;
   transition: all 0.25s size_variables.$easing;
   content: '';
 }
 .toggle[type='checkbox']:checked + label::before {
-  background: var(--token-color-palette-neutral-500);
+  background: color_variables.$ui-gray-700;
 }
 .toggle[type='checkbox']:checked + label::after {
   left: 1.625rem;
@@ -98,10 +99,10 @@
   will-change: left;
 }
 .toggle[type='checkbox']:focus + label {
-  box-shadow: 0 0 1px var(--token-color-palette-blue-200);
+  box-shadow: 0 0 1px color_variables.$blue;
 }
 .toggle[type='checkbox'].is-success:checked + label::before {
-  background: var(--token-color-palette-blue-200);
+  background: color_variables.$blue;
 }
 
 .toggle-label {

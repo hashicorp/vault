@@ -12,7 +12,7 @@
     </p.top>
 
     <p.levelLeft>
-      <h1 class="title is-3" data-test-page-title>
+      <h1 class="title is-3">
         Namespaces
       </h1>
     </p.levelLeft>
@@ -51,6 +51,7 @@
     as |list|
   >
     {{#if this.model.namespaces.length}}
+
       <ListItem as |Item|>
         <Item.content>
           {{list.item.id}}
@@ -63,15 +64,14 @@
               as |targetNamespace|
             }}
               {{#if (includes targetNamespace this.namespaceService.accessibleNamespaces)}}
-                <dd.Interactive {{on "click" (fn this.switchNamespace targetNamespace)}} data-test-popup-menu="switch">Switch
-                  to namespace</dd.Interactive>
+                <dd.Generic>
+                  <NamespaceLink @targetNamespace={{targetNamespace}} @unparsed={{true}} @class="ns-dropdown-item">
+                    Switch to namespace
+                  </NamespaceLink>
+                </dd.Generic>
               {{/if}}
             {{/let}}
-            <dd.Interactive
-              @color="critical"
-              {{on "click" (fn (mut this.nsToDelete) list.item)}}
-              data-test-popup-menu="delete"
-            >Delete</dd.Interactive>
+            <dd.Interactive @color="critical" {{on "click" (fn (mut this.nsToDelete) list.item)}}>Delete</dd.Interactive>
           </Hds::Dropdown>
           {{#if (eq this.nsToDelete list.item)}}
             <ConfirmModal

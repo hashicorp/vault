@@ -1,0 +1,3 @@
+```release-note:bug
+ui: Fix capability checks for api resources with underscores to properly hide actions and dropdown items a user cannot perform
+```

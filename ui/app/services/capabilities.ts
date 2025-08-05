@@ -7,13 +7,13 @@ import Service, { service } from '@ember/service';
 import { sanitizePath, sanitizeStart } from 'core/utils/sanitize-path';
 import { PATH_MAP, SUDO_PATHS, SUDO_PATH_PREFIXES } from 'vault/utils/constants/capabilities';
 
-import type ApiService from 'vault/services/api';
 import type NamespaceService from 'vault/services/namespace';
+import type Store from '@ember-data/store';
 import type { Capabilities, CapabilitiesMap, CapabilitiesData, CapabilityTypes } from 'vault/app-types';
 
 export default class CapabilitiesService extends Service {
-  @service declare readonly api: ApiService;
   @service declare readonly namespace: NamespaceService;
+  @service declare readonly store: Store;
 
   /*
   Add API paths to the PATH_MAP constant using a friendly key, e.g. 'syncDestinations'.
@@ -83,13 +83,12 @@ export default class CapabilitiesService extends Service {
   }
 
   async fetch(paths: string[]): Promise<CapabilitiesMap> {
-    const payload = { paths: paths.map((path) => this.relativeNamespacePath(path)) };
-
     try {
-      const { data } = await this.api.sys.queryTokenSelfCapabilities(
-        payload,
-        this.api.buildHeaders({ namespace: sanitizePath(this.namespace.userRootNamespace) })
-      );
+      const adapter = this.store.adapterFor('application');
+      const { data } = await adapter.ajax('/v1/sys/capabilities-self', 'POST', {
+        data: { paths: paths.map((path) => this.relativeNamespacePath(path)) },
+        namespace: sanitizePath(this.namespace.userRootNamespace),
+      });
       return this.mapCapabilities(paths, data as CapabilitiesData);
     } catch (e) {
       // default to true if there is a problem fetching the model

@@ -12,7 +12,7 @@
       {{! For example, if a user navigates to 'parent/child' the toggle just displays 'child' }}
       @text={{this.namespace.currentNamespace}}
       @isFullWidth={{true}}
-      data-test-button="namespace-picker"
+      data-test-toggle-input="namespace-id"
       {{on "click" this.toggleNamespacePicker}}
     />
 
@@ -31,7 +31,6 @@
             @type="search"
             aria-label="Search namespaces"
             placeholder="Search"
-            data-test-input="Search namespaces"
             {{on "keydown" this.onKeyDown}}
             {{on "input" this.onSearchInput}}
             {{did-insert this.focusSearchInput}}
@@ -53,7 +52,7 @@
       </D.Header>
 
       {{#if this.showNoNamespacesMessage}}
-        <D.Generic class="sub-text is-marginless" {{did-insert this.adjustElementWidth}} data-test-help-text="no namespaces">
+        <D.Generic class="sub-text is-marginless" {{did-insert this.adjustElementWidth}}>
           {{this.noNamespacesMessage}}
         </D.Generic>
       {{/if}}
@@ -63,7 +62,7 @@
           <D.Checkmark
             @selected={{eq option.path this.selectedNamespace.path}}
             {{on "click" (fn this.onChange option)}}
-            data-test-button={{option.label}}
+            data-test-namespace-link={{option.path}}
           >
             <span class="is-fullwidth is-word-break right-padding-4">{{option.label}}</span>
           </D.Checkmark>
@@ -81,7 +80,7 @@
           @icon="reload"
           @size="small"
           {{on "click" this.refreshList}}
-          data-test-button="Refresh list"
+          data-test-refresh-namespaces
         />
         {{#if this.canManageNamespaces}}
           <Hds::Button
@@ -90,7 +89,7 @@
             @icon="settings"
             @size="small"
             @route="vault.cluster.access.namespaces"
-            data-test-button="Manage"
+            data-test-manage-namespaces
           />
         {{/if}}
       </Hds::ButtonSet>

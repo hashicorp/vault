@@ -148,7 +148,7 @@ module('Integration | Component | kv | Page::Secret::Metadata::Edit', function (
     await fillIn(FORM.inputByAttr('maxVersions'), 'a');
     await click(FORM.saveBtn);
     assert
-      .dom(FORM.validationError('maxVersions'))
+      .dom(FORM.inlineAlert)
       .hasText('Maximum versions must be a number.', 'Validation message is shown for max_versions');
 
     await click(FORM.cancelBtn);

@@ -1,3 +1,4 @@
+@use '../utils/color_variables';
 @use '../utils/mixins';
 @use '../utils/size_variables';
 
@@ -11,11 +12,11 @@ select {
 }
 
 .select select {
-  background-color: var(--token-color-palette-neutral-50);
-  box-shadow: 0 3px 1px rgba(hsl(0, 0%, 4%), 0.12);
-  border: 1px solid var(--token-color-palette-neutral-300);
+  background-color: color_variables.$ui-gray-050;
+  box-shadow: 0 3px 1px rgba(color_variables.$black, 0.12);
+  border: 1px solid color_variables.$grey-light;
   border-radius: size_variables.$radius;
-  color: var(--token-color-palette-neutral-500);
+  color: color_variables.$grey-dark;
   cursor: pointer;
   display: block;
   font-size: 1em;
@@ -40,7 +41,7 @@ select {
   &:focus,
   &:focus-visible,
   &.is-active {
-    border-color: var(--token-color-palette-blue-200);
+    border-color: color_variables.$blue-500;
     box-shadow: 0 0 0 0.125em rgba(21, 99, 255, 0.25);
   }
 }
@@ -50,13 +51,13 @@ select {
 }
 
 .select select[disabled] {
-  border-color: var(--token-color-palette-neutral-300);
-  background-color: var(--token-color-palette-neutral-100);
-  color: var(--token-color-palette-neutral-400);
+  border-color: color_variables.$grey-light;
+  background-color: color_variables.$ui-gray-100;
+  color: color_variables.$ui-gray-500;
   cursor: not-allowed;
   user-select: none;
   &:hover {
-    border-color: var(--token-color-palette-neutral-300);
+    border-color: color_variables.$grey-light;
   }
 }
 

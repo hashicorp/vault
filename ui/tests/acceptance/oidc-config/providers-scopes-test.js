@@ -4,7 +4,7 @@
  */
 
 import { module, test } from 'qunit';
-import { find, visit, currentURL, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
+import { visit, currentURL, click, fillIn, findAll, currentRouteName } from '@ember/test-helpers';
 import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import oidcConfigHandlers from 'vault/mirage/handlers/oidc-config';
@@ -48,9 +48,9 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     assert.expect(4);
     this.server.get('/identity/oidc/scope', () => overrideResponse(404));
     await visit(OIDC_BASE_URL);
-    await click(GENERAL.tab('scopes'));
+    await click('[data-test-tab="scopes"]');
     assert.strictEqual(currentURL(), '/vault/access/oidc/scopes');
-    assert.dom(GENERAL.tab('scopes')).hasClass('active', 'scopes tab is active');
+    assert.dom('[data-test-tab="scopes"]').hasClass('active', 'scopes tab is active');
     assert
       .dom(SELECTORS.scopeEmptyState)
       .hasText(
@@ -93,7 +93,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       'create form navigates back to index on cancel'
     );
 
-    await click(GENERAL.menuTrigger);
+    await click('[data-test-popup-menu-trigger]');
     await click('[data-test-oidc-scope-menu-link="edit"]');
     assert.strictEqual(
       currentRouteName(),
@@ -109,7 +109,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
 
     // navigate to details from index page
     await click('[data-test-breadcrumb-link="oidc-scopes"] a');
-    await click(GENERAL.menuTrigger);
+    await click('[data-test-popup-menu-trigger]');
     await click('[data-test-oidc-scope-menu-link="details"]');
     assert.strictEqual(
       currentRouteName(),
@@ -153,7 +153,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
 
     // try to delete scope
     await click(SELECTORS.scopeDeleteButton);
-    await click(GENERAL.confirmButton);
+    await click(SELECTORS.confirmActionButton);
     assert.strictEqual(
       flashMessage.latestMessage,
       'unable to delete scope "test-scope" because it is currently referenced by these providers: test-provider',
@@ -176,21 +176,9 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       'vault.cluster.access.oidc.scopes.create',
       'navigates to create form'
     );
-    await fillIn(GENERAL.inputByAttr('name'), 'test-scope');
-    await fillIn(GENERAL.inputByAttr('description'), 'this is a test');
-
-    const editorElement = await find(`${GENERAL.codemirror} .hds-code-editor__editor`);
-    const { editor } = editorElement;
-
-    editor.dispatch({
-      changes: [
-        {
-          from: 0,
-          to: editor.state.doc.length,
-          insert: SCOPE_DATA_RESPONSE.template,
-        },
-      ],
-    });
+    await fillIn('[data-test-input="name"]', 'test-scope');
+    await fillIn('[data-test-input="description"]', 'this is a test');
+    await fillIn('[data-test-component="code-mirror-modifier"] textarea', SCOPE_DATA_RESPONSE.template);
     await click(SELECTORS.scopeSaveButton);
     assert.strictEqual(
       flashMessage.latestMessage,
@@ -215,7 +203,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
       'vault.cluster.access.oidc.scopes.scope.edit',
       'navigates to edit page from details'
     );
-    await fillIn(GENERAL.inputByAttr('description'), 'this is an edit test');
+    await fillIn('[data-test-input="description"]', 'this is an edit test');
     await click(SELECTORS.scopeSaveButton);
     assert.strictEqual(
       flashMessage.latestMessage,
@@ -233,15 +221,15 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
 
     // create a provider using test-scope
     await click('[data-test-breadcrumb-link="oidc-scopes"] a');
-    await click(GENERAL.tab('providers'));
-    assert.dom(GENERAL.tab('providers')).hasClass('active', 'providers tab is active');
+    await click('[data-test-tab="providers"]');
+    assert.dom('[data-test-tab="providers"]').hasClass('active', 'providers tab is active');
     await click('[data-test-oidc-provider-create]');
     assert.strictEqual(
       currentRouteName(),
       'vault.cluster.access.oidc.providers.create',
       'navigates to provider create form'
     );
-    await fillIn(GENERAL.inputByAttr('name'), 'test-provider');
+    await fillIn('[data-test-input="name"]', 'test-provider');
     await clickTrigger('#scopesSupported');
     await selectChoose('#scopesSupported', 'test-scope');
     await click(SELECTORS.providerSaveButton);
@@ -283,7 +271,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     );
     await click('[data-test-oidc-radio="limited"]');
     await click('[data-test-component="search-select"]#allowedClientIds .ember-basic-dropdown-trigger');
-    await fillIn(GENERAL.searchSelect.searchInput, 'test-app');
+    await fillIn('.ember-power-select-search input', 'test-app');
     await searchSelect.options.objectAt(0).click();
     await click(SELECTORS.providerSaveButton);
     assert.strictEqual(
@@ -322,7 +310,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     // delete
     await click(SELECTORS.providerDetailsTab);
     await click(SELECTORS.providerDeleteButton);
-    await click(GENERAL.confirmButton);
+    await click(SELECTORS.confirmActionButton);
     assert.strictEqual(
       flashMessage.latestMessage,
       'Provider deleted successfully',
@@ -337,7 +325,7 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
     // delete scope
     await visit(OIDC_BASE_URL + '/scopes/test-scope/details');
     await click(SELECTORS.scopeDeleteButton);
-    await click(GENERAL.confirmButton);
+    await click(SELECTORS.confirmActionButton);
     assert.strictEqual(
       flashMessage.latestMessage,
       'Scope deleted successfully',
@@ -354,13 +342,13 @@ module('Acceptance |  oidc-config providers and scopes', function (hooks) {
   test('it lists default provider and navigates to details', async function (assert) {
     assert.expect(7);
     await visit(OIDC_BASE_URL);
-    await click(GENERAL.tab('providers'));
-    assert.dom(GENERAL.tab('providers')).hasClass('active', 'providers tab is active');
+    await click('[data-test-tab="providers"]');
+    assert.dom('[data-test-tab="providers"]').hasClass('active', 'providers tab is active');
     assert.strictEqual(currentURL(), '/vault/access/oidc/providers');
     assert
       .dom('[data-test-oidc-provider-linked-block="default"]')
       .exists('index page lists default provider');
-    await click(GENERAL.menuTrigger);
+    await click('[data-test-popup-menu-trigger]');
 
     await click('[data-test-oidc-provider-menu-link="edit"]');
     assert.strictEqual(

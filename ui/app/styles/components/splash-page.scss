@@ -1,3 +1,4 @@
+@use '../utils/color_variables';
 @use '../utils/mixins';
 @use '../utils/size_variables';
 
@@ -15,7 +16,7 @@
   }
 
   svg {
-    fill: hsl(0, 0%, 100%);
+    fill: color_variables.$white;
     height: 24px;
     width: 72px;
 

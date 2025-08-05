@@ -7,7 +7,6 @@ import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { render, find, click, fillIn } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
@@ -76,24 +75,24 @@ module('Integration | Component | client count config', function (hooks) {
 
     await click('[data-test-input="enabled"]');
     await fillIn('[data-test-input="retentionMonths"]', 20);
-    await click(GENERAL.submitButton);
+    await click('[data-test-clients-config-save]');
     assert
-      .dom(GENERAL.validationErrorByAttr('retentionMonths'))
+      .dom('[data-test-inline-error-message]')
       .hasText(
         'Retention period must be greater than or equal to 48.',
         'Validation error shows for min retention period'
       );
     await fillIn('[data-test-input="retentionMonths"]', 90);
-    await click(GENERAL.submitButton);
+    await click('[data-test-clients-config-save]');
     assert
-      .dom(GENERAL.validationErrorByAttr('retentionMonths'))
+      .dom('[data-test-inline-error-message]')
       .hasText(
         'Retention period must be less than or equal to 60.',
         'Validation error shows for max retention period'
       );
 
     await fillIn('[data-test-input="retentionMonths"]', retentionMonths);
-    await click(GENERAL.submitButton);
+    await click('[data-test-clients-config-save]');
     assert
       .dom('[data-test-clients-config-modal="title"]')
       .hasText('Turn usage tracking on?', 'Correct modal title renders');
@@ -105,11 +104,8 @@ module('Integration | Component | client count config', function (hooks) {
       'Route transitions correctly on save success'
     );
 
-    // we need to close the modal
-    await click('[data-test-clients-config-modal="cancel"]');
-
     await click('[data-test-input="enabled"]');
-    await click(GENERAL.submitButton);
+    await click('[data-test-clients-config-save]');
     assert.dom('[data-test-clients-config-modal]').exists('Modal renders');
     assert
       .dom('[data-test-clients-config-modal="title"]')
@@ -140,16 +136,16 @@ module('Integration | Component | client count config', function (hooks) {
     assert.dom('[data-test-input="retentionMonths"]').hasValue('49', 'Retention months render');
 
     await fillIn('[data-test-input="retentionMonths"]', 5);
-    await click(GENERAL.submitButton);
+    await click('[data-test-clients-config-save]');
     assert
-      .dom(GENERAL.validationErrorByAttr('retentionMonths'))
+      .dom('[data-test-inline-error-message]')
       .hasText(
         'Retention period must be greater than or equal to 24.',
         'Validation error shows for incorrect retention period'
       );
 
     await fillIn('[data-test-input="retentionMonths"]', 48);
-    await click(GENERAL.submitButton);
+    await click('[data-test-clients-config-save]');
   });
 
   test('it should not show modal when data collection is not changed', async function (assert) {
@@ -168,6 +164,6 @@ module('Integration | Component | client count config', function (hooks) {
       <Clients::Config @model={{this.model}} @mode="edit" />
     `);
     await fillIn('[data-test-input="retentionMonths"]', 48);
-    await click(GENERAL.submitButton);
+    await click('[data-test-clients-config-save]');
   });
 });

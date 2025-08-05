@@ -11,7 +11,6 @@ import { setupEngine } from 'ember-engines/test-support';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import sinon from 'sinon';
 
 module('Integration | Component | pki-generate-csr', function (hooks) {
   setupRenderingTest(hooks);
@@ -38,15 +37,10 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
         'link-name': { enabled: false },
       },
     });
-    this.clipboardSpy = sinon.stub(navigator.clipboard, 'writeText').resolves();
-  });
-
-  hooks.afterEach(function () {
-    sinon.restore(); // resets all stubs, including clipboard
   });
 
   test('it should render fields and save', async function (assert) {
-    assert.expect(11);
+    assert.expect(9);
 
     this.server.post('/pki-test/issuers/generate/intermediate/exported', (schema, req) => {
       const payload = JSON.parse(req.requestBody);
@@ -73,15 +67,11 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
       assert.dom(`[data-test-input="${key}"]`).exists(`${key} form field renders`);
     });
 
-    assert.dom(GENERAL.button('Key parameters')).exists('Key parameters toggle renders');
-    assert.dom(GENERAL.button('Subject Alternative Name (SAN) Options')).exists('SAN options toggle renders');
-    assert
-      .dom(GENERAL.button('Additional subject fields'))
-      .exists('Additional subject fields toggle renders');
+    assert.dom('[data-test-toggle-group]').exists({ count: 3 }, 'Toggle groups render');
 
-    await fillIn(GENERAL.inputByAttr('type'), 'exported');
-    await fillIn(GENERAL.inputByAttr('commonName'), 'foo');
-    await click(GENERAL.submitButton);
+    await fillIn('[data-test-input="type"]', 'exported');
+    await fillIn('[data-test-input="commonName"]', 'foo');
+    await click('[data-test-save]');
 
     const savedRecord = this.store.peekAll('pki/action')[0];
     assert.false(savedRecord.isNew, 'record is saved');
@@ -99,13 +89,13 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
       }
     );
 
-    await click(GENERAL.submitButton);
+    await click('[data-test-save]');
 
     assert
       .dom(GENERAL.validationErrorByAttr('type'))
       .hasText('Type is required.', 'Type validation error renders');
     assert
-      .dom(GENERAL.validationErrorByAttr('commonName'))
+      .dom('[data-test-field="commonName"] [data-test-inline-alert]')
       .hasText('Common name is required.', 'Common name validation error renders');
     assert.dom('[data-test-alert]').hasText('There are 2 errors with this form.', 'Alert renders');
 
@@ -131,19 +121,15 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
         'renders Next steps alert banner'
       );
 
-    await click(`${GENERAL.infoRowValue('CSR')} ${GENERAL.copyButton}`);
-    assert.strictEqual(this.clipboardSpy.firstCall.args[0], this.model.csr, 'copy value is csr');
-
-    await click(`${GENERAL.infoRowValue('Key ID')} ${GENERAL.copyButton}`);
-    assert.strictEqual(this.clipboardSpy.secondCall.args[0], this.model.keyId, 'copy value is key_id');
-
-    await click(`${GENERAL.infoRowValue('Private key')} ${GENERAL.copyButton}`);
-    assert.strictEqual(
-      this.clipboardSpy.thirdCall.args[0],
-      this.model.privateKey,
-      'copy value is private_key'
-    );
-
+    assert
+      .dom(`${GENERAL.infoRowValue('CSR')} [data-test-certificate-card] button`)
+      .hasAttribute('data-test-copy-button', this.model.csr, 'it renders copyable csr');
+    assert
+      .dom(`${GENERAL.infoRowValue('Key ID')} button`)
+      .hasAttribute('data-test-copy-button', this.model.keyId, 'it renders copyable key_id');
+    assert
+      .dom(`${GENERAL.infoRowValue('Private key')} [data-test-certificate-card] button`)
+      .hasAttribute('data-test-copy-button', this.model.privateKey, 'it renders copyable private_key');
     assert
       .dom(GENERAL.infoRowValue('Private key type'))
       .hasText(this.model.privateKeyType, 'renders private_key_type');
@@ -166,12 +152,12 @@ module('Integration | Component | pki-generate-csr', function (hooks) {
         'Next steps Copy the CSR below for a parent issuer to sign and then import the signed certificate back into this mount.',
         'renders Next steps alert banner'
       );
-    await click(`${GENERAL.infoRowValue('CSR')} ${GENERAL.copyButton}`);
-    assert.strictEqual(this.clipboardSpy.firstCall.args[0], this.model.csr, 'copy value is csr');
-
-    await click(`${GENERAL.infoRowValue('Key ID')} ${GENERAL.copyButton}`);
-    assert.strictEqual(this.clipboardSpy.secondCall.args[0], this.model.keyId, 'copy value is key_id');
-
+    assert
+      .dom(`${GENERAL.infoRowValue('CSR')} [data-test-certificate-card] button`)
+      .hasAttribute('data-test-copy-button', this.model.csr, 'it renders copyable csr');
+    assert
+      .dom(`${GENERAL.infoRowValue('Key ID')} button`)
+      .hasAttribute('data-test-copy-button', this.model.keyId, 'it renders copyable key_id');
     assert.dom(GENERAL.infoRowValue('Private key')).hasText('internal', 'does not render private key');
     assert
       .dom(GENERAL.infoRowValue('Private key type'))

@@ -48,7 +48,7 @@
     <div>
       <div class="has-text-grey is-grid align-items-center linked-block-title">
         {{#if backend.icon}}
-          <Hds::TooltipButton aria-label="Type of backend" @text={{this.generateToolTipText backend}}>
+          <Hds::TooltipButton @text={{or backend.engineType backend.path}} aria-label="Type of backend">
             <Icon @name={{backend.icon}} class="has-text-grey-light" />
           </Hds::TooltipButton>
         {{/if}}
@@ -67,10 +67,11 @@
           {{/if}}
         {{/if}}
       </div>
-      <code class="has-text-grey is-size-8" data-test-engine-accessor>
-        {{backend.accessor}}
-        {{backend.running_plugin_version}}
-      </code>
+      {{#if backend.accessor}}
+        <code class="has-text-grey is-size-8">
+          {{if (eq backend.version 2) (concat "v2 " backend.accessor) backend.accessor}}
+        </code>
+      {{/if}}
       {{#if backend.description}}
         <ReadMore>
           {{backend.description}}
@@ -85,15 +86,13 @@
           @hasChevron={{false}}
           data-test-popup-menu-trigger
         />
-        {{#if (not-eq (get (engines-display-data backend.type) "type") "generic")}}
-          <dd.Interactive
-            @route={{backend.backendConfigurationLink}}
-            @model={{backend.id}}
-            data-test-popup-menu="view-configuration"
-          >
-            View configuration
-          </dd.Interactive>
-        {{/if}}
+        <dd.Interactive
+          @route={{backend.backendConfigurationLink}}
+          @model={{backend.id}}
+          data-test-popup-menu="view-configuration"
+        >
+          View configuration
+        </dd.Interactive>
         {{#if (not-eq backend.type "cubbyhole")}}
           <dd.Interactive
             @color="critical"

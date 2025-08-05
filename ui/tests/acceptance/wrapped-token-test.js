@@ -75,11 +75,18 @@ module(`Acceptance | wrapped_token query param functionality`, function (hooks) 
     this.server.post('/sys/wrapping/unwrap', () => {
       return { auth: { client_token: '12345' } };
     });
-    const authSpy = sinon.spy(this.owner.lookup('service:auth'), 'authSuccess');
+    const authSpy = sinon.spy(this.owner.lookup('service:auth'), 'authenticate');
     await visit(`/vault/logout?wrapped_token=${this.token}`);
-    const [clusterId, { authMethodType, token }] = authSpy.lastCall.args;
-    assert.strictEqual(clusterId, '1', 'authSuccess is called with clusterId');
-    assert.strictEqual(authMethodType, 'token', 'authSuccess is called with token as the authMethodType');
-    assert.strictEqual(token, '12345', 'authSuccess is called with the client_token');
+    const [actual] = authSpy.lastCall.args;
+    assert.propEqual(
+      actual,
+      {
+        backend: 'token',
+        clusterId: '1',
+        data: { token: '12345' },
+        selectedAuth: 'token',
+      },
+      `it calls auth service authenticate method with correct args: ${JSON.stringify(actual)} `
+    );
   });
 });

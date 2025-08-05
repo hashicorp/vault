@@ -89,8 +89,7 @@ vault secrets enable "totp"
 vault secrets enable "transit"
 
 # Enable enterprise features
-# Check if vault version contains +ent
-if vault version | grep -q "+ent"; then
+if [[ -n "${VAULT_LICENSE:-}" ]]; then
     vault secrets enable "keymgmt"
     vault secrets enable "kmip"
     vault secrets enable "transform"

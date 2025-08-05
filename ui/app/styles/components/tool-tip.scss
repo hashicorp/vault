@@ -1,3 +1,4 @@
+@use '../utils/color_variables';
 @use '../utils/mixins';
 @use '../utils/size_variables';
 
@@ -15,9 +16,9 @@
 
   .box {
     position: relative;
-    color: hsl(0, 0%, 100%);
+    color: color_variables.$white;
     max-width: 200px;
-    background: hsl(0, 0%, 4%);
+    background: color_variables.$black;
     padding: 0.5rem;
     line-height: 1.4;
     border-radius: size_variables.$radius-large;
@@ -27,7 +28,7 @@
     max-width: fit-content;
   }
 
-  @include mixins.css-top-arrow(8px, hsl(0, 0%, 4%), 1px, hsl(0, 0%, 4%), 20px);
+  @include mixins.css-top-arrow(8px, color_variables.$black, 1px, color_variables.$black, 20px);
   &.ember-basic-dropdown-content--below.ember-basic-dropdown--transitioning-in {
     animation: drop-fade-above 0.15s;
   }
@@ -59,19 +60,25 @@
 }
 
 .ember-basic-dropdown-content--below.ember-basic-dropdown-content--left.tool-tip {
-  @include mixins.css-top-arrow(8px, hsl(0, 0%, 4%), 1px, hsl(0, 0%, 4%), calc(100% - 20px));
+  @include mixins.css-top-arrow(8px, color_variables.$black, 1px, color_variables.$black, calc(100% - 20px));
 }
 .ember-basic-dropdown-content--below.ember-basic-dropdown-content--right.tool-tip {
-  @include mixins.css-top-arrow(8px, hsl(0, 0%, 4%), 1px, hsl(0, 0%, 4%), calc(100% - 20px));
+  @include mixins.css-top-arrow(8px, color_variables.$black, 1px, color_variables.$black, calc(100% - 20px));
 }
 .ember-basic-dropdown-content--above.tool-tip {
-  @include mixins.css-bottom-arrow(8px, hsl(0, 0%, 4%), 1px, hsl(0, 0%, 4%));
+  @include mixins.css-bottom-arrow(8px, color_variables.$black, 1px, color_variables.$black);
   & {
     margin-top: -8px;
   }
 }
 .ember-basic-dropdown-content--above.ember-basic-dropdown-content--right.tool-tip {
-  @include mixins.css-bottom-arrow(8px, hsl(0, 0%, 4%), 1px, hsl(0, 0%, 4%), calc(100% - 20px));
+  @include mixins.css-bottom-arrow(
+    8px,
+    color_variables.$black,
+    1px,
+    color_variables.$black,
+    calc(100% - 20px)
+  );
 }
 
 .b-checkbox .tool-tip-trigger {

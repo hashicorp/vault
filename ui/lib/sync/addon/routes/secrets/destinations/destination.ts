@@ -58,7 +58,7 @@ export default class SyncSecretsDestinationsDestinationRoute extends Route {
     const baseRoute = 'vault.cluster.sync.secrets.destinations.destination';
     const routes = [`${baseRoute}.edit`, `${baseRoute}.sync`];
     const toRoute = transition.to?.name;
-    if (toRoute && routes.includes(toRoute) && destination.purge_initiated_at) {
+    if (toRoute && routes.includes(toRoute) && destination.purgeInitiatedAt) {
       const action = transition.to?.localName === 'edit' ? 'Editing a destination' : 'Syncing secrets';
       this.flashMessages.info(`${action} is not permitted once a purge has been initiated.`);
       this.router.replaceWith('vault.cluster.sync.secrets.destinations.destination.secrets');

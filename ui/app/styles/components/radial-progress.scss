@@ -1,3 +1,4 @@
+@use '../utils/color_variables';
 @use '../utils/size_variables';
 
 /**
@@ -9,11 +10,11 @@
   transform: rotate(-90deg) translateX(-20%);
 }
 .radial-progress circle {
-  stroke: rgba(var(--token-color-palette-neutral-300), 0.5);
+  stroke: rgba(color_variables.$grey-light, 0.5);
   transition: stroke-dashoffset size_variables.$speed ease-in;
   will-change: stroke-dashoffset;
   stroke-linecap: round;
 }
 .radial-progress circle.progress-fill {
-  stroke: var(--token-color-palette-green-200);
+  stroke: color_variables.$green;
 }

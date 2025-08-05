@@ -2813,32 +2813,21 @@ func TestSystemBackend_policyCRUD(t *testing.T) {
 // TestSystemBackend_writeHCLDuplicateAttributes checks that trying to create a policy with duplicate HCL attributes
 // results in a warning being returned by the API
 func TestSystemBackend_writeHCLDuplicateAttributes(t *testing.T) {
+	b := testSystemBackend(t)
+
 	// policy with duplicate attribute
 	rules := `path "foo/" { policy = "read" policy = "read" }`
 	req := logical.TestRequest(t, logical.UpdateOperation, "policy/foo")
 	req.Data["policy"] = rules
-
-	t.Run("fails with env unset", func(t *testing.T) {
-		b := testSystemBackend(t)
-		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
-		require.Error(t, err)
-		require.Error(t, resp.Error())
-		require.EqualError(t, resp.Error(), "failed to parse policy: The argument \"policy\" at 1:31 was already set. Each argument can only be defined once")
-	})
-
-	// TODO (HCL_DUP_KEYS_DEPRECATION): leave only test above once deprecation is done
-	t.Run("warning with env set", func(t *testing.T) {
-		t.Setenv(random.AllowHclDuplicatesEnvVar, "true")
-		b := testSystemBackend(t)
-		resp, err := b.HandleRequest(namespace.RootContext(nil), req)
-		if err != nil {
-			t.Fatalf("err: %v %#v", err, resp)
-		}
-		if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
-			t.Fatalf("bad: %#v", resp)
-		}
-		require.Contains(t, resp.Warnings, "policy contains duplicate attributes, which will no longer be supported in a future version")
-	})
+	resp, err := b.HandleRequest(namespace.RootContext(nil), req)
+	// TODO (HCL_DUP_KEYS_DEPRECATION): change this test to expect an error when creating a policy with duplicate attributes
+	if err != nil {
+		t.Fatalf("err: %v %#v", err, resp)
+	}
+	if resp != nil && (resp.IsError() || len(resp.Data) > 0) {
+		t.Fatalf("bad: %#v", resp)
+	}
+	require.Contains(t, resp.Warnings, "policy contains duplicate attributes, which will no longer be supported in a future version")
 }
 
 func TestSystemBackend_enableAudit(t *testing.T) {

@@ -11,11 +11,21 @@
       </LinkTo>
     </li>
     <li>
-      {{#if this.isNotProduction}}
-        <LinkTo @route="vault.cluster.clients.counts.client-list" data-test-tab="client list">
-          Client list
+      <LinkTo @route="vault.cluster.clients.counts.token" data-test-tab="token">
+        Entity/Non-entity clients
+      </LinkTo>
+    </li>
+    {{#if @showSecretsSyncClientCounts}}
+      <li>
+        <LinkTo @route="vault.cluster.clients.counts.sync" data-test-tab="sync">
+          Secrets sync clients
         </LinkTo>
-      {{/if}}
+      </li>
+    {{/if}}
+    <li>
+      <LinkTo @route="vault.cluster.clients.counts.acme" data-test-tab="acme">
+        ACME clients
+      </LinkTo>
     </li>
   </ul>
 </nav>

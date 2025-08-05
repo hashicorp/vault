@@ -799,6 +799,13 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 		entity.NamespaceID = namespace.RootNamespaceID
 	}
 
+	ns, err := i.namespacer.NamespaceByID(ctx, entity.NamespaceID)
+	if err != nil {
+		return false, err
+	}
+
+	nsCtx := namespace.ContextWithNamespace(ctx, ns)
+
 	if previousEntity != nil && previousEntity.NamespaceID != entity.NamespaceID {
 		return false, errors.New("entity and previous entity are not in the same namespace")
 	}
@@ -879,7 +886,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 				"alias_by_factors", aliasByFactors)
 
 			persistMerge := persist || persistMerges
-			respErr, intErr := i.mergeEntityAsPartOfUpsert(ctx, txn, entity, aliasByFactors.CanonicalID, persistMerge)
+			respErr, intErr := i.mergeEntityAsPartOfUpsert(nsCtx, txn, entity, aliasByFactors.CanonicalID, persistMerge)
 			switch {
 			case respErr != nil:
 				return false, respErr
@@ -909,7 +916,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 		// are in case-sensitive mode so we can report these to the operator ahead
 		// of them disabling case-sensitive mode. Note that alias resolvers don't
 		// ever modify right now so ignore the bool.
-		_, conflictErr := i.conflictResolver.ResolveAliases(ctx, entity, aliasByFactors, alias)
+		_, conflictErr := i.conflictResolver.ResolveAliases(nsCtx, entity, aliasByFactors, alias)
 
 		// This appears to be accounting for any duplicate aliases for the same
 		// Entity. In that case we would have skipped over the merge above in the
@@ -941,7 +948,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 
 		if persist {
 			// Persist the previous entity object
-			if err := i.persistEntity(ctx, previousEntity); err != nil {
+			if err := i.persistEntity(nsCtx, previousEntity); err != nil {
 				return false, err
 			}
 		}
@@ -960,7 +967,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 	}
 
 	if persist {
-		if err := i.persistEntity(ctx, entity); err != nil {
+		if err := i.persistEntity(nsCtx, entity); err != nil {
 			return false, err
 		}
 	}
@@ -971,7 +978,7 @@ func (i *IdentityStore) upsertEntityInTxn(ctx context.Context, txn *memdb.Txn, e
 	// can persist the change.
 	if i.localNode.HAState() == consts.Active {
 		for _, alias := range localAliasesToDrop {
-			if err := i.localAliasPacker.DeleteItem(ctx, alias.CanonicalID); err != nil {
+			if err := i.localAliasPacker.DeleteItem(nsCtx, alias.CanonicalID); err != nil {
 				i.logger.Warn("failed to delete entity from local alias packer", "entity_id", alias.CanonicalID)
 			}
 		}

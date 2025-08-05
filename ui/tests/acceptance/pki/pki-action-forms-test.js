@@ -57,8 +57,8 @@ module('Acceptance | pki action forms test', function (hooks) {
       await click(PKI_CONFIGURE_CREATE.importSubmit);
       assert.dom(GENERAL.messageError).hasText('Error please upload your PEM bundle');
       // Fill in form data
-      await click(GENERAL.textToggle);
-      await fillIn(GENERAL.maskedInput, this.pemBundle);
+      await click('[data-test-text-toggle]');
+      await fillIn('[data-test-text-file-textarea]', this.pemBundle);
       await click(PKI_CONFIGURE_CREATE.importSubmit);
 
       assert.strictEqual(
@@ -94,8 +94,8 @@ module('Acceptance | pki action forms test', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
       assert.dom(PKI_CONFIGURE_CREATE.importForm).exists('import form is shown save');
-      await click(GENERAL.textToggle);
-      await fillIn(GENERAL.maskedInput, this.pemBundle);
+      await click('[data-test-text-toggle]');
+      await fillIn('[data-test-text-file-textarea]', this.pemBundle);
       await click(PKI_CONFIGURE_CREATE.importSubmit);
 
       assert.strictEqual(
@@ -135,8 +135,8 @@ module('Acceptance | pki action forms test', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
       assert.dom(PKI_CONFIGURE_CREATE.importForm).exists('import form is shown save');
-      await click(GENERAL.textToggle);
-      await fillIn(GENERAL.maskedInput, this.pemBundle);
+      await click('[data-test-text-toggle]');
+      await fillIn('[data-test-text-file-textarea]', this.pemBundle);
       await click(PKI_CONFIGURE_CREATE.importSubmit);
 
       assert.dom(PKI_CONFIGURE_CREATE.importForm).doesNotExist('import form is hidden after save');
@@ -161,8 +161,8 @@ module('Acceptance | pki action forms test', function (hooks) {
       await visit(`/vault/secrets/${this.mountPath}/pki/configuration/create`);
       await click(PKI_CONFIGURE_CREATE.optionByKey('import'));
       assert.dom(PKI_CONFIGURE_CREATE.importForm).exists('import form is shown save');
-      await click(GENERAL.textToggle);
-      await fillIn(GENERAL.maskedInput, this.pemBundle);
+      await click('[data-test-text-toggle]');
+      await fillIn('[data-test-text-file-textarea]', this.pemBundle);
       await click(PKI_CONFIGURE_CREATE.importSubmit);
 
       assert.dom(PKI_CONFIGURE_CREATE.importForm).doesNotExist('import form is hidden after save');
@@ -193,9 +193,9 @@ module('Acceptance | pki action forms test', function (hooks) {
       await fillIn(GENERAL.inputByAttr('type'), 'internal');
       await typeIn(GENERAL.inputByAttr('commonName'), commonName);
       await typeIn(GENERAL.inputByAttr('issuerName'), issuerName);
-      await click(GENERAL.button('Key parameters'));
+      await click(PKI_GENERATE_ROOT.keyParamsGroupToggle);
       await typeIn(GENERAL.inputByAttr('keyName'), keyName);
-      await click(GENERAL.submitButton);
+      await click(GENERAL.saveButton);
 
       assert.strictEqual(
         currentURL(),
@@ -223,7 +223,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       // Fill in form
       await fillIn(GENERAL.inputByAttr('type'), 'exported');
       await typeIn(GENERAL.inputByAttr('commonName'), commonName);
-      await click(GENERAL.submitButton);
+      await click(GENERAL.saveButton);
 
       assert.strictEqual(
         currentURL(),
@@ -259,7 +259,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await click(PKI_CONFIGURE_CREATE.optionByKey('generate-csr'));
       await fillIn(GENERAL.inputByAttr('type'), 'internal');
       await fillIn(GENERAL.inputByAttr('commonName'), 'my-common-name');
-      await click('[data-test-submit]');
+      await click('[data-test-save]');
       assert.dom(GENERAL.title).hasText('View Generated CSR');
       await assert.dom(PKI_CONFIGURE_CREATE.csrDetails).exists('renders CSR details after save');
       await click('[data-test-done]');
@@ -276,7 +276,7 @@ module('Acceptance | pki action forms test', function (hooks) {
       await click(PKI_CONFIGURE_CREATE.optionByKey('generate-csr'));
       await fillIn(GENERAL.inputByAttr('type'), 'exported');
       await fillIn(GENERAL.inputByAttr('commonName'), 'my-common-name');
-      await click('[data-test-submit]');
+      await click('[data-test-save]');
       await assert.dom(PKI_CONFIGURE_CREATE.csrDetails).exists('renders CSR details after save');
       assert.dom(GENERAL.title).hasText('View Generated CSR');
       assert

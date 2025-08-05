@@ -8,40 +8,36 @@ import { action } from '@ember/object';
 import { service } from '@ember/service';
 import { tracked } from '@glimmer/tracking';
 import { dropTask } from 'ember-concurrency';
+import errorMessage from 'vault/utils/error-message';
 
 import type FlashMessageService from 'vault/services/flash-messages';
-import type SecretsEngineResource from 'vault/resources/secrets/engine';
-import type ApiService from 'vault/services/api';
-import type RouterService from '@ember/routing/router-service';
-import engineDisplayData from 'vault/helpers/engines-display-data';
+import SecretEngineModel from 'vault/models/secret-engine';
 
 /**
  * @module SecretEngineList handles the display of the list of secret engines, including the filtering.
  * 
  * @example
  * <SecretEngine::List
-    @secretEngines={{this.model}}
+    @secretEngineModels={{this.model}}
     />
  *
- * @param {array} secretEngines - An array of Secret Engine models returned from query on the parent route.
+ * @param {array} secretEngineModels - An array of Secret Engine models returned from query on the parent route.
  */
 
 interface Args {
-  secretEngines: Array<SecretsEngineResource>;
+  secretEngineModels: Array<SecretEngineModel>;
 }
 
-export default class SecretEngineList extends Component<Args> {
+export default class SecretListItem extends Component<Args> {
   @service declare readonly flashMessages: FlashMessageService;
-  @service declare readonly api: ApiService;
-  @service declare readonly router: RouterService;
 
   @tracked secretEngineOptions: Array<string> | [] = [];
   @tracked selectedEngineType = '';
   @tracked selectedEngineName = '';
-  @tracked engineToDisable: SecretsEngineResource | undefined = undefined;
+  @tracked engineToDisable: SecretEngineModel | undefined = undefined;
 
   get displayableBackends() {
-    return this.args.secretEngines.filter((backend) => backend.shouldIncludeInList);
+    return this.args.secretEngineModels.filter((backend) => backend.shouldIncludeInList);
   }
 
   get sortedDisplayableBackends() {
@@ -67,28 +63,6 @@ export default class SecretEngineList extends Component<Args> {
     // no filters, return full sorted list.
     return sortedBackends;
   }
-
-  generateToolTipText = (backend: SecretsEngineResource) => {
-    const displayData = engineDisplayData(backend.type);
-
-    if (!displayData) {
-      return;
-    } else if (backend.isSupportedBackend) {
-      if (backend.type === 'kv') {
-        // If the backend is a KV engine, include the version in the tooltip.
-        return `${displayData.displayName} version ${backend.version}`;
-      } else {
-        return `${displayData.displayName}`;
-      }
-    } else if (displayData.type === 'generic') {
-      // If a mounted engine type doesn't match any known type, the type is returned as 'generic' and set this tooltip.
-      // Handles issue when a user externally mounts an engine that doesn't follow the expected naming conventions for what's in the binary, despite being a valid engine.
-      return 'This plugin is not supported by the UI. Please use the CLI to manage this engine.';
-    } else {
-      // If the engine type is recognized but not supported, we only show configuration view and set this tooltip.
-      return 'The UI only supports configuration views for these secret engines. The CLI must be used to manage other engine resources.';
-    }
-  };
 
   // Filtering & searching
   get secretEngineArrayByType() {
@@ -122,16 +96,14 @@ export default class SecretEngineList extends Component<Args> {
   }
 
   @dropTask
-  *disableEngine(engine: SecretsEngineResource) {
-    const { engineType, id, path } = engine;
+  *disableEngine(engine: SecretEngineModel) {
+    const { engineType, path } = engine;
     try {
-      yield this.api.sys.mountsDisableSecretsEngine(id);
+      yield engine.destroyRecord();
       this.flashMessages.success(`The ${engineType} Secrets Engine at ${path} has been disabled.`);
-      this.router.transitionTo('vault.cluster.secrets.backends');
     } catch (err) {
-      const { message } = yield this.api.parseError(err);
       this.flashMessages.danger(
-        `There was an error disabling the ${engineType} Secrets Engines at ${path}: ${message}.`
+        `There was an error disabling the ${engineType} Secrets Engines at ${path}: ${errorMessage(err)}.`
       );
     } finally {
       this.engineToDisable = undefined;

@@ -8,12 +8,11 @@ import { setupApplicationTest } from 'ember-qunit';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { click, currentRouteName, currentURL, fillIn, settled, visit } from '@ember/test-helpers';
 import { login, loginNs, logout } from 'vault/tests/helpers/auth/auth-helpers';
-import { createTokenCmd, deleteNS, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
+import { createTokenCmd, runCmd, tokenWithPolicyCmd } from 'vault/tests/helpers/commands';
 import { pollCluster } from 'vault/tests/helpers/poll-cluster';
 import VAULT_KEYS from 'vault/tests/helpers/vault-keys';
 import reducedDisclosureHandlers from 'vault/mirage/handlers/reduced-disclosure';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 
 const { unsealKeys } = VAULT_KEYS;
 const SELECTORS = {
@@ -93,7 +92,9 @@ module('Acceptance | reduced disclosure test', function (hooks) {
 
     // seal
     await click('[data-test-seal]');
-    await click(GENERAL.confirmButton);
+
+    await click('[data-test-confirm-button]');
+
     await pollCluster(this.owner);
     await settled();
     assert.strictEqual(currentURL(), '/vault/unseal', 'vault is on the unseal page');
@@ -161,11 +162,6 @@ module('Acceptance | reduced disclosure test', function (hooks) {
           'shows Vault version for default policy in child namespace'
         );
       assert.dom(SELECTORS.dashboardTitle).includesText('Vault v1.');
-
-      // log in to "root" before deleting
-      await login();
-      // clean up namespace pollution
-      await runCmd(deleteNS(namespace));
     });
     test('login works when reduced disclosure enabled (ent)', async function (assert) {
       const namespace = 'reduced-disclosure';
@@ -196,11 +192,6 @@ module('Acceptance | reduced disclosure test', function (hooks) {
       assert
         .dom(SELECTORS.footerVersion)
         .hasText(`Vault ${this.versionSvc.version}`, 'shows Vault version for default policy in namespace');
-
-      // log in to "root" before deleting
-      await login();
-      // clean up namespace pollution
-      await runCmd(deleteNS(namespace));
     });
   });
 });

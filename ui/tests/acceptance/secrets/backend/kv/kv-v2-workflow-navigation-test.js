@@ -38,9 +38,9 @@ import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SES } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
 import { setupControlGroup, grantAccess } from 'vault/tests/helpers/control-groups';
 
-const secretPath = `my-#:$=?-secret`;
+const secretPath = `my-#:$=?_secret`;
 // This doesn't encode in a normal way, so hardcoding it here until we sort that out
-const secretPathUrlEncoded = `my-%23:$=%3F-secret`;
+const secretPathUrlEncoded = `my-%23:$=%3F_secret`;
 // these are rendered individually by each page component, assigning a const here for consistency
 const ALL_TABS = ['Overview', 'Secret', 'Metadata', 'Paths', 'Version History'];
 const navToBackend = async (backend) => {
@@ -631,7 +631,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.list.overviewCard).exists('renders overview card');
 
       await typeIn(PAGE.list.overviewInput, 'directory/');
-      await click(GENERAL.submitButton);
+      await click(PAGE.list.overviewButton);
       assert
         .dom('[data-test-inline-error-message]')
         .hasText('You do not have the required permissions or the directory does not exist.');
@@ -665,7 +665,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         .doesNotExist('List filter input does not render because no list capabilities');
 
       await typeIn(PAGE.list.overviewInput, 'app/nested/secret');
-      await click(GENERAL.submitButton);
+      await click(PAGE.list.overviewButton);
 
       assert.strictEqual(
         currentURL(),
@@ -699,7 +699,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       // Navigate to secret
       await typeIn(PAGE.list.overviewInput, secretPath);
-      await click(GENERAL.submitButton);
+      await click(PAGE.list.overviewButton);
 
       assert.strictEqual(
         currentURL(),
@@ -761,7 +761,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.title).hasText(`${backend} version 2`, 'title correct on secrets list');
 
       await typeIn(PAGE.list.overviewInput, 'app/nested/secret');
-      await click(GENERAL.submitButton);
+      await click(PAGE.list.overviewButton);
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, 'app', 'nested', 'secret']);
       assert.dom(PAGE.title).hasText('app/nested/secret', 'title correct on secret detail');
 
@@ -857,7 +857,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
         .dom(PAGE.list.overviewInput)
         .hasValue('app/', 'overview card is pre-filled with directory param');
       await typeIn(PAGE.list.overviewInput, 'nested/secret');
-      await click(GENERAL.submitButton);
+      await click(PAGE.list.overviewButton);
 
       assert.strictEqual(
         currentURL(),
@@ -1262,7 +1262,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
 
       // Navigate to secret
       await typeIn(PAGE.list.overviewInput, 'app/nested/secret');
-      await click(GENERAL.submitButton);
+      await click(PAGE.list.overviewButton);
 
       assert.strictEqual(
         currentURL(),
@@ -1300,7 +1300,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       await navToBackend(backend);
 
       await typeIn(PAGE.list.overviewInput, secretPath);
-      await click(GENERAL.submitButton);
+      await click(PAGE.list.overviewButton);
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${backend}/kv/${secretPathUrlEncoded}`,
@@ -1387,7 +1387,7 @@ module('Acceptance | kv-v2 workflow | navigation', function (hooks) {
       assert.dom(PAGE.title).hasText(`${backend} version 2`, 'correct page title for secret list');
 
       await typeIn(PAGE.list.overviewInput, secretPath);
-      await click(GENERAL.submitButton);
+      await click(PAGE.list.overviewButton);
       assertCorrectBreadcrumbs(assert, ['Secrets', backend, secretPath]);
       assert.dom(PAGE.title).hasText(secretPath, 'correct page title for secret detail');
 

@@ -5,32 +5,25 @@
 
 import { service } from '@ember/service';
 import Route from '@ember/routing/route';
-import SecretsEngineResource from 'vault/resources/secrets/engine';
-
 export default Route.extend({
   flashMessages: service(),
   router: service(),
   secretMountPath: service(),
-  api: service(),
-
+  store: service(),
   oldModel: null,
 
-  async model(params) {
+  model(params) {
     const { backend } = params;
     this.secretMountPath.update(backend);
-
-    try {
-      const secretsEngine = await this.api.sys.internalUiReadMountInformation(backend);
-      return new SecretsEngineResource({ ...secretsEngine, path: `${backend}/` });
-    } catch (e) {
-      // the backend.error template is expecting additional data so for now we will catch and rethrow
-      const error = await this.api.parseError(e);
-      throw {
-        backend,
-        httpStatus: error.status,
-        ...error,
-      };
-    }
+    return this.store
+      .query('secret-engine', {
+        path: backend,
+      })
+      .then((model) => {
+        if (model) {
+          return model[0];
+        }
+      });
   },
 
   afterModel(model, transition) {

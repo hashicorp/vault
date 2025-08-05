@@ -10,11 +10,15 @@ import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
-import { AUTH_METHOD_LOGIN_DATA } from 'vault/tests/helpers/auth/auth-helpers';
+import { AUTH_METHOD_MAP } from 'vault/tests/helpers/auth/auth-helpers';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { ENTERPRISE_LOGIN_METHODS, ERROR_JWT_LOGIN, supportedTypes } from 'vault/utils/auth-form-helpers';
+import {
+  ALL_LOGIN_METHODS,
+  BASE_LOGIN_METHODS,
+  ENTERPRISE_LOGIN_METHODS,
+} from 'vault/utils/supported-login-methods';
 import { overrideResponse } from 'vault/tests/helpers/stubs';
-import { getErrorResponse } from 'vault/tests/helpers/api/error-response';
+import { ERROR_JWT_LOGIN } from 'vault/components/auth/form/oidc-jwt';
 
 module('Integration | Component | auth | form template', function (hooks) {
   setupRenderingTest(hooks);
@@ -23,7 +27,6 @@ module('Integration | Component | auth | form template', function (hooks) {
   hooks.beforeEach(function () {
     window.localStorage.clear();
     this.version = this.owner.lookup('service:version');
-    this.router = this.owner.lookup('service:router');
     this.cluster = { id: '1' };
 
     this.alternateView = null;
@@ -54,9 +57,7 @@ module('Integration | Component | auth | form template', function (hooks) {
   test('it does not show toggle buttons if @alternateView does not exist', async function (assert) {
     await this.renderComponent();
     assert.dom(GENERAL.backButton).doesNotExist('"Back" button does not render');
-    assert
-      .dom(GENERAL.button('Sign in with other methods'))
-      .doesNotExist('"Sign in with other methods" does not render');
+    assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('"Sign in with other methods" does not render');
   });
 
   test('it initializes with preset auth type', async function (assert) {
@@ -66,19 +67,19 @@ module('Integration | Component | auth | form template', function (hooks) {
   });
 
   test('it displays errors', async function (assert) {
-    const api = this.owner.lookup('service:api');
-    // stub auth request for "token" method because it's selected by default
-    const tokenLookUpSelfStub = sinon.stub(api.auth, 'tokenLookUpSelf');
-    tokenLookUpSelfStub.rejects(getErrorResponse({ errors: ['uh oh!'] }, 400));
+    const authenticateStub = sinon.stub(this.owner.lookup('service:auth'), 'authenticate');
+    authenticateStub.throws('permission denied');
     await this.renderComponent();
-    await click(GENERAL.submitButton);
-    assert.dom(GENERAL.messageError).hasText('Error Authentication failed: uh oh!');
-    tokenLookUpSelfStub.restore();
+    await click(AUTH_FORM.login);
+    assert
+      .dom(GENERAL.messageError)
+      .hasText('Error Authentication failed: permission denied: Sinon-provided permission denied');
+    authenticateStub.restore();
   });
 
   test('dropdown does not include enterprise methods on community versions', async function (assert) {
     this.version.type = 'community';
-    const supported = supportedTypes(false);
+    const supported = BASE_LOGIN_METHODS.map((m) => m.type);
     const unsupported = ENTERPRISE_LOGIN_METHODS.map((m) => m.type);
     assert.expect(supported.length + unsupported.length);
     await this.renderComponent();
@@ -109,12 +110,12 @@ module('Integration | Component | auth | form template', function (hooks) {
             type: 'userpass',
           },
         ],
-        ldap: [
+        oidc: [
           {
-            path: 'my-ldap/',
+            path: 'my_oidc/',
             description: '',
             options: {},
-            type: 'ldap',
+            type: 'oidc',
           },
         ],
         token: [
@@ -147,19 +148,19 @@ module('Integration | Component | auth | form template', function (hooks) {
       // click through each tab
       await click(AUTH_FORM.tabBtn('userpass'));
       assertSelected('userpass');
-      assertUnselected('ldap');
+      assertUnselected('oidc');
       assertUnselected('token');
       assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
 
-      await click(AUTH_FORM.tabBtn('ldap'));
-      assertSelected('ldap');
+      await click(AUTH_FORM.tabBtn('oidc'));
+      assertSelected('oidc');
       assertUnselected('token');
       assertUnselected('userpass');
       assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
 
       await click(AUTH_FORM.tabBtn('token'));
       assertSelected('token');
-      assertUnselected('ldap');
+      assertUnselected('oidc');
       assertUnselected('userpass');
       assert.dom(AUTH_FORM.advancedSettings).doesNotExist();
     });
@@ -168,9 +169,9 @@ module('Integration | Component | auth | form template', function (hooks) {
       await this.renderComponent();
       assert.dom(AUTH_FORM.tabs).exists({ count: 3 }, 'tabs render by default');
       assert.dom(GENERAL.backButton).doesNotExist();
-      await click(GENERAL.button('Sign in with other methods'));
+      await click(AUTH_FORM.otherMethodsBtn);
       assert
-        .dom(GENERAL.button('Sign in with other methods'))
+        .dom(AUTH_FORM.otherMethodsBtn)
         .doesNotExist('"Sign in with other methods" does not render after it is clicked');
       assert
         .dom(GENERAL.selectByAttr('auth type'))
@@ -178,48 +179,44 @@ module('Integration | Component | auth | form template', function (hooks) {
       await click(GENERAL.backButton);
       assert.dom(GENERAL.backButton).doesNotExist('"Back" button does not render after it is clicked');
       assert.dom(AUTH_FORM.tabs).exists({ count: 3 }, 'clicking "Back" renders tabs again');
-      assert
-        .dom(GENERAL.button('Sign in with other methods'))
-        .exists('"Sign in with other methods" renders again');
+      assert.dom(AUTH_FORM.otherMethodsBtn).exists('"Sign in with other methods" renders again');
     });
 
     test('it resets selected tab after clicking "Sign in with other methods" and then "Back"', async function (assert) {
       await this.renderComponent();
       assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
-      assert.dom(AUTH_FORM.tabBtn('ldap')).hasAttribute('aria-selected', 'false');
+      assert.dom(AUTH_FORM.tabBtn('oidc')).hasAttribute('aria-selected', 'false');
       assert.dom(AUTH_FORM.tabBtn('token')).hasAttribute('aria-selected', 'false');
 
       // select a different tab before clicking "Sign in with other methods"
-      await click(AUTH_FORM.tabBtn('ldap'));
-      assert.dom(AUTH_FORM.tabBtn('ldap')).hasAttribute('aria-selected', 'true');
+      await click(AUTH_FORM.tabBtn('oidc'));
+      assert.dom(AUTH_FORM.tabBtn('oidc')).hasAttribute('aria-selected', 'true');
       assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'false');
-      await click(GENERAL.button('Sign in with other methods'));
+      await click(AUTH_FORM.otherMethodsBtn);
       assert.dom(GENERAL.selectByAttr('auth type')).exists('it renders dropdown instead of tabs');
       await click(GENERAL.backButton);
       // assert tab selection is reset
       assert.dom(AUTH_FORM.tabBtn('userpass')).hasAttribute('aria-selected', 'true');
-      assert.dom(AUTH_FORM.tabBtn('ldap')).hasAttribute('aria-selected', 'false');
+      assert.dom(AUTH_FORM.tabBtn('oidc')).hasAttribute('aria-selected', 'false');
       assert.dom(AUTH_FORM.tabBtn('token')).hasAttribute('aria-selected', 'false');
     });
 
     test('it preselects tab from initialFormState', async function (assert) {
-      this.initialFormState = { initialAuthType: 'ldap', showAlternate: false };
+      this.initialFormState = { initialAuthType: 'oidc', showAlternate: false };
       await this.renderComponent();
-      assert.dom(AUTH_FORM.authForm('ldap')).exists('ldap form renders');
-      assert.dom(AUTH_FORM.tabBtn('ldap')).hasAttribute('aria-selected', 'true');
+      assert.dom(AUTH_FORM.authForm('oidc')).exists('oidc form renders');
+      assert.dom(AUTH_FORM.tabBtn('oidc')).hasAttribute('aria-selected', 'true');
     });
 
     test('it renders dropdown and preselects type if initialFormState is not a tab', async function (assert) {
-      this.initialFormState = { initialAuthType: 'okta', showAlternate: true };
+      this.initialFormState = { initialAuthType: 'ldap', showAlternate: true };
       await this.renderComponent();
-      assert.dom(GENERAL.selectByAttr('auth type')).hasValue('okta');
+      assert.dom(GENERAL.selectByAttr('auth type')).hasValue('ldap');
       assert.dom(GENERAL.inputByAttr('username')).exists();
       assert.dom(GENERAL.inputByAttr('password')).exists();
 
       assert.dom(GENERAL.backButton).exists('"Back" button renders');
-      assert
-        .dom(GENERAL.button('Sign in with other methods'))
-        .doesNotExist('"Sign in with other methods" does not render');
+      assert.dom(AUTH_FORM.otherMethodsBtn).doesNotExist('"Sign in with other methods" does not render');
     });
   });
 
@@ -231,27 +228,21 @@ module('Integration | Component | auth | form template', function (hooks) {
       this.namespaceQueryParam = '';
     });
 
-    // in the ent module to test ALL supported login methods
+    // in th ent module to test ALL supported login methods
     // iterating in tests should generally be avoided, but purposefully wanted to test the component
     // renders as expected as auth types change
     test('it selects each supported auth type and renders its form and relevant fields', async function (assert) {
-      const authMethodTypes = supportedTypes(true);
-      const totalFields = Object.values(AUTH_METHOD_LOGIN_DATA).reduce(
-        (sum, obj) => sum + Object.keys(obj).length,
-        0
-      );
+      const fieldCount = AUTH_METHOD_MAP.map((m) => Object.keys(m.options.loginData).length);
+      const sum = fieldCount.reduce((a, b) => a + b, 0);
+      const methodCount = AUTH_METHOD_MAP.length;
       // 3 assertions per method, plus an assertion for each expected field
-      assert.expect(3 * authMethodTypes.length + totalFields); // count at time of writing is 40
+      assert.expect(3 * methodCount + sum); // count at time of writing is 40
 
       await this.renderComponent();
-      for (const authType of authMethodTypes) {
-        let stub;
-        if (['oidc', 'jwt'].includes(authType)) {
-          stub = sinon.stub(this.router, 'urlFor').returns('123-example.com');
-        }
-        const loginData = AUTH_METHOD_LOGIN_DATA[authType];
+      for (const method of AUTH_METHOD_MAP) {
+        const { authType, options } = method;
 
-        const fields = Object.keys(loginData);
+        const fields = Object.keys(options.loginData);
         await fillIn(GENERAL.selectByAttr('auth type'), authType);
 
         assert.dom(GENERAL.selectByAttr('auth type')).hasValue(authType), `${authType}: it selects type`;
@@ -272,15 +263,11 @@ module('Integration | Component | auth | form template', function (hooks) {
         fields.forEach((field) => {
           assert.dom(GENERAL.inputByAttr(field)).exists(`${authType}: ${field} input renders`);
         });
-
-        if (stub) {
-          stub.restore();
-        }
       }
     });
 
     test('dropdown includes enterprise methods', async function (assert) {
-      const supported = supportedTypes(true);
+      const supported = ALL_LOGIN_METHODS.map((m) => m.type);
       assert.expect(supported.length);
       await this.renderComponent();
 
@@ -296,7 +283,9 @@ module('Integration | Component | auth | form template', function (hooks) {
   // in the corresponding the Auth::Form::<Type> integration tests
   module('oidc-jwt', function (hooks) {
     hooks.beforeEach(async function () {
-      this.routerStub = (path) => sinon.stub(this.router, 'urlFor').returns(`/auth/${path}/oidc/callback`);
+      this.store = this.owner.lookup('service:store');
+      this.routerStub = (path) =>
+        sinon.stub(this.owner.lookup('service:router'), 'urlFor').returns(`/auth/${path}/oidc/callback`);
     });
 
     test('it re-requests the auth_url when authType changes', async function (assert) {
@@ -380,7 +369,7 @@ module('Integration | Component | auth | form template', function (hooks) {
       await fillIn(GENERAL.inputByAttr('role'), 'foo');
       await fillIn(GENERAL.inputByAttr('path'), 'foo-oidc');
       assert.dom(GENERAL.inputByAttr('role')).hasValue('foo', 'role is retained when mount path is changed');
-      await click(GENERAL.submitButton);
+      await click(AUTH_FORM.login);
     });
   });
 });

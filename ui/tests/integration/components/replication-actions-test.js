@@ -9,7 +9,6 @@ import Service from '@ember/service';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
 import { click, fillIn, render } from '@ember/test-helpers';
-import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 
@@ -129,9 +128,9 @@ module('Integration | Component | replication actions', function (hooks) {
   ];
 
   for (const [replicationMode, clusterMode, action, headerText, fillInFn, expectedOnSubmit] of testCases) {
-    const testCaseKey = `${replicationMode}-${clusterMode}-${action}`;
-    test(`replication and cluster mode action behavior: testCaseKey = ${testCaseKey}`, async function (assert) {
+    test(`replication mode ${replicationMode}, cluster mode: ${clusterMode}, action: ${action}`, async function (assert) {
       assert.expect(1);
+      const testKey = `${replicationMode}-${clusterMode}-${action}`;
       this.set('model', {
         replicationAttrs: {
           modeForUrl: clusterMode,
@@ -152,7 +151,7 @@ module('Integration | Component | replication actions', function (hooks) {
         assert.deepEqual(
           JSON.stringify(actual),
           JSON.stringify(expectedOnSubmit),
-          `Submitted values match what is expected for the testCaseKey: ${testCaseKey}`
+          `${testKey}: submitted values match expected`
         );
         return resolve();
       });
@@ -169,12 +168,13 @@ module('Integration | Component | replication actions', function (hooks) {
       );
       assert
         .dom(`[data-test-${action}-replication] h3`)
-        .hasText(headerText, `Renders the component header for: ${testCaseKey}`);
-      await click(GENERAL.button(action));
+        .hasText(headerText, `${testKey}: renders the ${action} component header`);
+
+      await click(`[data-test-replication-action-trigger="${action}"]`);
       if (typeof fillInFn === 'function') {
         await fillInFn.call(this);
       }
-      await click(GENERAL.confirmButton);
+      await click('[data-test-confirm-button]');
     });
   }
 });

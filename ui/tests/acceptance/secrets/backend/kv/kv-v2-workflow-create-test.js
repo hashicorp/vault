@@ -29,7 +29,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     this.store = this.owner.lookup('service:store');
     await login();
     await runCmd(mountEngineCmd('kv-v2', this.backend), false);
-    await writeVersionedSecret(this.backend, 'app/first', 'foo', 'bar', 2);
+    const secretPath = 'app/first_secret';
+    await writeVersionedSecret(this.backend, secretPath, 'foo', 'bar', 2);
+    this.secretUrl = (path = secretPath) => `/vault/secrets/${this.backend}/kv/${encodeURIComponent(path)}`;
   });
 
   hooks.afterEach(async function () {
@@ -61,8 +63,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(`${PAGE.list.item('app/')} [data-test-path]`).hasText('app/', 'expected list item');
     });
     test('cancel on new version rolls back model (a)', async function (assert) {
-      const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
+      await visit(`${this.secretUrl()}/details`);
       assert.dom(PAGE.infoRowValue('foo')).exists('key has expected value');
       await click(PAGE.detail.createNewVersion);
       await fillIn(FORM.keyInput(), 'bar');
@@ -84,7 +85,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // Create secret form -- validations
       await click(FORM.saveBtn);
       assert.dom(FORM.invalidFormAlert).hasText('There is an error with this form.');
-      assert.dom(GENERAL.validationErrorByAttr('path')).hasText("Path can't be blank.");
+      assert.dom(FORM.validation('path')).hasText("Path can't be blank.");
       await typeIn(FORM.inputByAttr('path'), secretPath);
       assert
         .dom(FORM.validationWarning)
@@ -167,9 +168,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Create secret
       await typeIn(FORM.inputByAttr('path'), 'my/');
-      assert.dom(GENERAL.validationErrorByAttr('path')).hasText("Path can't end in forward slash '/'.");
+      assert.dom(FORM.validation('path')).hasText("Path can't end in forward slash '/'.");
       await typeIn(FORM.inputByAttr('path'), 'secret');
-      assert.dom(GENERAL.validationErrorByAttr('path')).doesNotExist('form validation goes away');
+      assert.dom(FORM.validation('path')).doesNotExist('form validation goes away');
       await fillIn(FORM.keyInput(), 'password');
       await fillIn(FORM.maskedValueInput(), 'kittens1234');
 
@@ -182,10 +183,10 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // MaxVersions validation
       await fillIn(FORM.inputByAttr('maxVersions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('Maximum versions must be a number.');
+      assert.dom(FORM.validation('maxVersions')).hasText('Maximum versions must be a number.');
       await fillIn(FORM.inputByAttr('maxVersions'), '99999999999999999');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('You cannot go over 16 characters.');
+      assert.dom(FORM.validation('maxVersions')).hasText('You cannot go over 16 characters.');
       await fillIn(FORM.inputByAttr('maxVersions'), '7');
 
       // Fill in other metadata
@@ -235,7 +236,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('creates a secret at a sub-directory (a)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/list/app/`);
-      assert.dom(PAGE.list.item('first')).exists('Lists first sub-secret');
+      assert.dom(PAGE.list.item('first_secret')).exists('Lists first sub-secret');
       assert.dom(PAGE.list.item('new')).doesNotExist('Does not show new secret');
       await click(PAGE.list.createSecret);
       assert.strictEqual(
@@ -262,25 +263,25 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('create new version of secret from older version (a)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
+      await visit(`${this.secretUrl()}/details`);
       await click(PAGE.detail.versionDropdown);
       await click(`${PAGE.detail.version(1)} a`);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`,
+        `/vault/secrets/${backend}/kv/app%2Ffirst_secret/details?version=1`,
         'goes to version 1'
       );
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
       await click(PAGE.detail.createNewVersion);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Ffirst/details/edit?version=1`,
+        `/vault/secrets/${backend}/kv/app%2Ffirst_secret/details/edit?version=1`,
         'Goes to new version page'
       );
       assert
         .dom(FORM.versionAlert)
         .hasText(
-          'Warning You are creating a new version based on data from Version 1. The current version for app/first is Version 2.',
+          'Warning You are creating a new version based on data from Version 1. The current version for app/first_secret is Version 2.',
           'Shows version warning'
         );
       assert.dom(FORM.keyInput()).hasValue('key-1', 'Key input has old value');
@@ -291,14 +292,14 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.saveBtn);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Ffirst`,
+        `/vault/secrets/${backend}/kv/app%2Ffirst_secret`,
         'goes to overview after save'
       );
 
       await click(PAGE.secretTab('Secret'));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Ffirst/details?version=3`,
+        `/vault/secrets/${backend}/kv/app%2Ffirst_secret/details?version=3`,
         'goes to latest version 3'
       );
       await click(PAGE.infoRowToggleMasked('my-key'));
@@ -364,8 +365,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       assert.dom(PAGE.list.item()).doesNotExist('list view still has no items');
     });
     test('cancel on new version rolls back model (dr)', async function (assert) {
-      const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
+      await visit(`${this.secretUrl()}/details`);
       assert.dom(PAGE.infoRowValue('foo')).exists('key has expected value');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist();
     });
@@ -378,7 +378,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // Create secret form -- validations
       await click(FORM.saveBtn);
       assert.dom(FORM.invalidFormAlert).hasText('There is an error with this form.');
-      assert.dom(GENERAL.validationErrorByAttr('path')).hasText("Path can't be blank.");
+      assert.dom(FORM.validation('path')).hasText("Path can't be blank.");
       await typeIn(FORM.inputByAttr('path'), secretPath);
       assert
         .dom(FORM.validationWarning)
@@ -394,7 +394,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
 
       // Since this persona can't create a new secret, test update with existing:
-      await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
+      await visit(`${this.secretUrl()}/details`);
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
       assert.dom(PAGE.infoRow).exists({ count: 1 }, '1 row of data shows');
       assert.dom(PAGE.infoRowValue('foo')).hasText('***********');
@@ -425,9 +425,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Create secret
       await typeIn(FORM.inputByAttr('path'), 'my/');
-      assert.dom(GENERAL.validationErrorByAttr('path')).hasText("Path can't end in forward slash '/'.");
+      assert.dom(FORM.validation('path')).hasText("Path can't end in forward slash '/'.");
       await typeIn(FORM.inputByAttr('path'), 'secret');
-      assert.dom(GENERAL.validationErrorByAttr('path')).doesNotExist('form validation goes away');
+      assert.dom(FORM.validation('path')).doesNotExist('form validation goes away');
       await fillIn(FORM.keyInput(), 'password');
       await fillIn(FORM.maskedValueInput(), 'kittens1234');
 
@@ -440,10 +440,10 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // MaxVersions validation
       await fillIn(FORM.inputByAttr('maxVersions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('Maximum versions must be a number.');
+      assert.dom(FORM.validation('maxVersions')).hasText('Maximum versions must be a number.');
       await fillIn(FORM.inputByAttr('maxVersions'), '99999999999999999');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('You cannot go over 16 characters.');
+      assert.dom(FORM.validation('maxVersions')).hasText('You cannot go over 16 characters.');
       await fillIn(FORM.inputByAttr('maxVersions'), '7');
 
       // Fill in other metadata
@@ -479,8 +479,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
     });
     test('create new version of secret from older version (dr)', async function (assert) {
-      const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`);
+      await visit(`${this.secretUrl()}/details?version=1`);
       assert.dom(PAGE.detail.versionDropdown).doesNotExist('version dropdown does not show');
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('cannot create new version');
@@ -514,7 +513,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('cancel on new version rolls back model (dlr)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
+      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first_secret')}/details`);
       assert.dom(PAGE.infoRowValue('foo')).exists('key has expected value');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('cannot create new version');
     });
@@ -527,7 +526,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // Create secret form -- validations
       await click(FORM.saveBtn);
       assert.dom(FORM.invalidFormAlert).hasText('There is an error with this form.');
-      assert.dom(GENERAL.validationErrorByAttr('path')).hasText("Path can't be blank.");
+      assert.dom(FORM.validation('path')).hasText("Path can't be blank.");
       await typeIn(FORM.inputByAttr('path'), secretPath);
       assert
         .dom(FORM.validationWarning)
@@ -543,7 +542,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
 
       // Since this persona can't create a new secret, test update with existing:
-      await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
+      await visit(`${this.secretUrl()}/details`);
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 2 created');
       assert.dom(PAGE.infoRow).exists({ count: 1 }, '1 row of data shows');
       assert.dom(PAGE.infoRowValue('foo')).hasText('***********');
@@ -574,9 +573,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Create secret
       await typeIn(FORM.inputByAttr('path'), 'my/');
-      assert.dom(GENERAL.validationErrorByAttr('path')).hasText("Path can't end in forward slash '/'.");
+      assert.dom(FORM.validation('path')).hasText("Path can't end in forward slash '/'.");
       await typeIn(FORM.inputByAttr('path'), 'secret');
-      assert.dom(GENERAL.validationErrorByAttr('path')).doesNotExist('form validation goes away');
+      assert.dom(FORM.validation('path')).doesNotExist('form validation goes away');
       await fillIn(FORM.keyInput(), 'password');
       await fillIn(FORM.maskedValueInput(), 'kittens1234');
 
@@ -589,10 +588,10 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // MaxVersions validation
       await fillIn(FORM.inputByAttr('maxVersions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('Maximum versions must be a number.');
+      assert.dom(FORM.validation('maxVersions')).hasText('Maximum versions must be a number.');
       await fillIn(FORM.inputByAttr('maxVersions'), '99999999999999999');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('You cannot go over 16 characters.');
+      assert.dom(FORM.validation('maxVersions')).hasText('You cannot go over 16 characters.');
       await fillIn(FORM.inputByAttr('maxVersions'), '7');
 
       // Fill in other metadata
@@ -628,8 +627,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
     });
     test('create new version of secret from older version (dlr)', async function (assert) {
-      const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`);
+      await visit(`${this.secretUrl()}/details?version=1`);
       assert.dom(PAGE.detail.versionDropdown).doesNotExist('version dropdown does not show');
       assert.dom(PAGE.detail.versionTimestamp).includesText('Version 1 created');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('cannot create new version');
@@ -663,7 +661,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('cancel on new version rolls back model (mm)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
+      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first_secret')}/details`);
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
       assert
         .dom(PAGE.detail.createNewVersion)
@@ -678,7 +676,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // Create secret form -- validations
       await click(FORM.saveBtn);
       assert.dom(FORM.invalidFormAlert).hasText('There is an error with this form.');
-      assert.dom(GENERAL.validationErrorByAttr('path')).hasText("Path can't be blank.");
+      assert.dom(FORM.validation('path')).hasText("Path can't be blank.");
       await typeIn(FORM.inputByAttr('path'), secretPath);
       assert
         .dom(FORM.validationWarning)
@@ -694,7 +692,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         .hasText('Error 1 error occurred: * permission denied', 'API error shows on form');
 
       // Since this persona can't create a new secret, test update with existing:
-      await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
+      await visit(`${this.secretUrl()}/details`);
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('Version created tooltip does not show');
       assert.dom(PAGE.infoRow).doesNotExist('secret data not shown');
       assert.dom(PAGE.emptyStateTitle).hasText('You do not have permission to read this secret');
@@ -716,7 +714,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // Add new version
       await click(PAGE.secretTab('Secret'));
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('create new version button not rendered');
-      await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details/edit?version=1`);
+      await visit(`${this.secretUrl()}/details/edit?version=1`);
       assert
         .dom(FORM.noReadAlert)
         .hasText(
@@ -725,7 +723,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         );
 
       assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
-      assert.dom(FORM.inputByAttr('path')).hasValue('app/first');
+      assert.dom(FORM.inputByAttr('path')).hasValue('app/first_secret');
       assert.dom(FORM.toggleMetadata).doesNotExist('Does not show metadata toggle when creating new version');
       assert.dom(FORM.keyInput()).hasValue('', 'first row has no key');
       assert.dom(FORM.maskedValueInput()).hasValue('', 'first row has no value');
@@ -743,9 +741,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Create secret
       await typeIn(FORM.inputByAttr('path'), 'my/');
-      assert.dom(GENERAL.validationErrorByAttr('path')).hasText("Path can't end in forward slash '/'.");
+      assert.dom(FORM.validation('path')).hasText("Path can't end in forward slash '/'.");
       await typeIn(FORM.inputByAttr('path'), 'secret');
-      assert.dom(GENERAL.validationErrorByAttr('path')).doesNotExist('form validation goes away');
+      assert.dom(FORM.validation('path')).doesNotExist('form validation goes away');
       await fillIn(FORM.keyInput(), 'password');
       await fillIn(FORM.maskedValueInput(), 'kittens1234');
 
@@ -758,10 +756,10 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // MaxVersions validation
       await fillIn(FORM.inputByAttr('maxVersions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('Maximum versions must be a number.');
+      assert.dom(FORM.validation('maxVersions')).hasText('Maximum versions must be a number.');
       await fillIn(FORM.inputByAttr('maxVersions'), '99999999999999999');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('You cannot go over 16 characters.');
+      assert.dom(FORM.validation('maxVersions')).hasText('You cannot go over 16 characters.');
       await fillIn(FORM.inputByAttr('maxVersions'), '7');
 
       // Fill in other metadata
@@ -781,7 +779,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     test('creates a secret at a sub-directory (mm)', async function (assert) {
       const backend = this.backend;
       await visit(`/vault/secrets/${backend}/kv/list/app/`);
-      assert.dom(PAGE.list.item('first')).exists('Lists first sub-secret');
+      assert.dom(PAGE.list.item('first_secret')).exists('Lists first sub-secret');
       assert.dom(PAGE.list.item('new')).doesNotExist('Does not show new secret');
       await click(PAGE.list.createSecret);
       assert.strictEqual(
@@ -799,19 +797,19 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('create new version of secret from older version (mm)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details`);
+      await visit(`${this.secretUrl()}/details`);
       assert.dom(PAGE.detail.versionDropdown).hasText('Version 2');
       await click(PAGE.detail.versionDropdown);
       await click(`${PAGE.detail.version(1)} a`);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/app%2Ffirst/details?version=1`,
+        `/vault/secrets/${backend}/kv/app%2Ffirst_secret/details?version=1`,
         'goes to version 1'
       );
       assert.dom(PAGE.detail.versionDropdown).hasText('Version 1');
       assert.dom(PAGE.detail.versionTimestamp).doesNotExist('version timestamp not shown');
       assert.dom(PAGE.detail.createNewVersion).doesNotExist('create new version button not rendered');
-      await visit(`/vault/secrets/${backend}/kv/app%2Ffirst/details/edit?version=1`);
+      await visit(`${this.secretUrl()}/details/edit?version=1`);
       assert
         .dom(FORM.noReadAlert)
         .hasText(
@@ -820,7 +818,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
         );
 
       assert.dom(FORM.inputByAttr('path')).isDisabled('path input is disabled');
-      assert.dom(FORM.inputByAttr('path')).hasValue('app/first');
+      assert.dom(FORM.inputByAttr('path')).hasValue('app/first_secret');
       assert.dom(FORM.toggleMetadata).doesNotExist('Does not show metadata toggle when creating new version');
       assert.dom(FORM.keyInput()).hasValue('', 'first row has no key');
       assert.dom(FORM.maskedValueInput()).hasValue('', 'first row has no value');
@@ -857,7 +855,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
     });
     test('cancel on new version rolls back model (sc)', async function (assert) {
       const backend = this.backend;
-      await visit(`/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}/details`);
+      await visit(`${this.secretUrl()}/details`);
       assert
         .dom(PAGE.emptyStateTitle)
         .hasText('You do not have permission to read this secret', 'no permissions state shows');
@@ -866,7 +864,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(FORM.cancelBtn);
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}`,
+        `/vault/secrets/${backend}/kv/${encodeURIComponent('app/first_secret')}`,
         'cancel goes to overview'
       );
       await click(PAGE.secretTab('Secret'));
@@ -875,7 +873,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       await click(PAGE.breadcrumbAtIdx(3));
       assert.strictEqual(
         currentURL(),
-        `/vault/secrets/${backend}/kv/${encodeURIComponent('app/first')}`,
+        `/vault/secrets/${backend}/kv/${encodeURIComponent('app/first_secret')}`,
         'breadcrumb goes to overview'
       );
     });
@@ -888,7 +886,7 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // Create secret form -- validations
       await click(FORM.saveBtn);
       assert.dom(FORM.invalidFormAlert).hasText('There is an error with this form.');
-      assert.dom(GENERAL.validationErrorByAttr('path')).hasText("Path can't be blank.");
+      assert.dom(FORM.validation('path')).hasText("Path can't be blank.");
       await typeIn(FORM.inputByAttr('path'), secretPath);
       assert
         .dom(FORM.validationWarning)
@@ -971,9 +969,9 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
 
       // Create secret
       await typeIn(FORM.inputByAttr('path'), 'my/');
-      assert.dom(GENERAL.validationErrorByAttr('path')).hasText("Path can't end in forward slash '/'.");
+      assert.dom(FORM.validation('path')).hasText("Path can't end in forward slash '/'.");
       await typeIn(FORM.inputByAttr('path'), 'secret');
-      assert.dom(GENERAL.validationErrorByAttr('path')).doesNotExist('form validation goes away');
+      assert.dom(FORM.validation('path')).doesNotExist('form validation goes away');
       await fillIn(FORM.keyInput(), 'password');
       await fillIn(FORM.maskedValueInput(), 'kittens1234');
 
@@ -986,10 +984,10 @@ module('Acceptance | kv-v2 workflow | secret and version create', function (hook
       // MaxVersions validation
       await fillIn(FORM.inputByAttr('maxVersions'), 'seven');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('Maximum versions must be a number.');
+      assert.dom(FORM.validation('maxVersions')).hasText('Maximum versions must be a number.');
       await fillIn(FORM.inputByAttr('maxVersions'), '99999999999999999');
       await click(FORM.saveBtn);
-      assert.dom(GENERAL.validationErrorByAttr('maxVersions')).hasText('You cannot go over 16 characters.');
+      assert.dom(FORM.validation('maxVersions')).hasText('You cannot go over 16 characters.');
       await fillIn(FORM.inputByAttr('maxVersions'), '7');
 
       // Fill in other metadata
@@ -1104,7 +1102,7 @@ path "${this.backend}/metadata/*" {
       // Create secret form -- validations
       await click(FORM.saveBtn);
       assert.dom(FORM.invalidFormAlert).hasText('There is an error with this form.');
-      assert.dom(GENERAL.validationErrorByAttr('path')).hasText("Path can't be blank.");
+      assert.dom(FORM.validation('path')).hasText("Path can't be blank.");
       await typeIn(FORM.inputByAttr('path'), secretPath);
       assert.dom(PAGE.create.metadataSection).doesNotExist('Hides metadata section by default');
 

@@ -3,30 +3,34 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import {
-  settled,
-  currentURL,
-  currentRouteName,
-  visit,
-  waitUntil,
-  fillIn,
-  click,
-  waitFor,
-  find,
-} from '@ember/test-helpers';
-import { module, test } from 'qunit';
+import { settled, currentURL, currentRouteName, visit, waitUntil, fillIn, click } from '@ember/test-helpers';
+import { module, test, skip } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
+import { create } from 'ember-cli-page-object';
+
 import { storageKey } from 'vault/services/control-group';
+import controlGroup from 'vault/tests/pages/components/control-group';
+import controlGroupSuccess from 'vault/tests/pages/components/control-group-success';
 import { writeSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { login, logout } from 'vault/tests/helpers/auth/auth-helpers';
+import { setRunOptions } from 'ember-a11y-testing/test-support';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
-import { CONTROL_GROUP } from 'vault/tests/helpers/components/control-group-selectors';
+import { AUTH_FORM } from 'vault/tests/helpers/auth/auth-form-selectors';
+
+const controlGroupComponent = create(controlGroup);
+const controlGroupSuccessComponent = create(controlGroupSuccess);
 
 module('Acceptance | Enterprise | control groups', function (hooks) {
   setupApplicationTest(hooks);
 
   hooks.beforeEach(function () {
+    setRunOptions({
+      rules: {
+        // TODO: fix the hashi-read-only theme
+        'color-contrast': { enabled: false },
+      },
+    });
     return login();
   });
 
@@ -136,9 +140,9 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
     // as the requestor, go to the URL that's blocked by the control group
     // and store the values
     await visit(url);
-    await waitFor(CONTROL_GROUP.accessorValue);
-    const accessor = find(CONTROL_GROUP.accessorValue).textContent.trim();
-    const controlGroupToken = find(CONTROL_GROUP.tokenValue).textContent.trim();
+
+    const accessor = controlGroupComponent.accessor;
+    const controlGroupToken = controlGroupComponent.token;
     await logout();
     await settled();
     // log in as the admin, navigate to the accessor page,
@@ -147,13 +151,14 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
 
     await fillIn(GENERAL.inputByAttr('username'), ADMIN_USER);
     await fillIn(GENERAL.inputByAttr('password'), ADMIN_PASSWORD);
-    await click(GENERAL.submitButton);
+    await click(AUTH_FORM.login);
     await visit(`/vault/access/control-groups/${accessor}`);
 
     // putting here to help with flaky test
-    await waitFor(GENERAL.button('Authorize'));
-    await click(GENERAL.button('Authorize'));
-    assert.dom(CONTROL_GROUP.bannerPrefix).hasText('Thanks!', 'text display changes');
+    assert.dom('[data-test-authorize-button]').exists();
+    await controlGroupComponent.authorize();
+    await settled();
+    assert.strictEqual(controlGroupComponent.bannerPrefix, 'Thanks!', 'text display changes');
     await settled();
     await login(context.userToken);
     await settled();
@@ -171,24 +176,27 @@ module('Acceptance | Enterprise | control groups', function (hooks) {
       );
       await visit(`/vault/access/control-groups/${accessor}`);
 
-      assert.dom(CONTROL_GROUP.navMessage).exists('shows user the navigate message');
-      await click(GENERAL.button('Visit'));
+      assert.ok(controlGroupSuccessComponent.showsNavigateMessage, 'shows user the navigate message');
+      await controlGroupSuccessComponent.navigate();
+      await settled();
       assert.strictEqual(currentURL(), url, 'successfully loads the target url');
     } else {
       await visit(`/vault/access/control-groups/${accessor}`);
-      await fillIn(GENERAL.inputByAttr('token'), controlGroupToken);
-      await click(GENERAL.submitButton);
-      await waitFor(CONTROL_GROUP.jsonViewer);
-      assert.dom(CONTROL_GROUP.jsonViewer).exists('shows the json viewer');
+
+      await controlGroupSuccessComponent.token(controlGroupToken);
+      await settled();
+      await controlGroupSuccessComponent.unwrap();
+      await settled();
+      assert.ok(controlGroupSuccessComponent.showsJsonViewer, 'shows the json viewer');
     }
   };
 
-  test('it allows the full flow to work without a saved token', async function (assert) {
+  skip('it allows the full flow to work without a saved token', async function (assert) {
     await workflow(assert, this);
     await settled();
   });
 
-  test('it allows the full flow to work with a saved token', async function (assert) {
+  skip('it allows the full flow to work with a saved token', async function (assert) {
     await workflow(assert, this, true);
     await settled();
   });

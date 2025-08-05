@@ -1,4 +1,5 @@
 @use '../utils/box-shadow_variables';
+@use '../utils/color_variables';
 @use '../utils/size_variables';
 @use '../core/box.scss';
 
@@ -12,10 +13,10 @@
   @extend .box;
   box-shadow:
     box-shadow_variables.$box-shadow-middle,
-    0 0 1px var(--token-color-palette-neutral-500);
+    0 0 1px color_variables.$grey-dark;
 }
 .control-group-success.is-editor {
-  background: var(--token-color-palette-neutral-50);
+  background: color_variables.$grey-lightest;
 }
 
 .control-group a {
@@ -24,8 +25,8 @@
 .control-group-header {
   box-shadow: 0 0 1px currentColor;
   padding: size_variables.$spacing-10 size_variables.$spacing-14;
-  background: var(--token-color-palette-neutral-50);
-  color: var(--token-color-palette-neutral-500);
+  background: color_variables.$grey-lightest;
+  color: color_variables.$grey-dark;
   position: relative;
   strong {
     color: currentColor;
@@ -33,8 +34,8 @@
 }
 
 .control-group-header.is-success {
-  color: var(--token-color-palette-green-300);
-  background: var(--token-color-palette-green-50);
+  color: color_variables.$green-dark;
+  background: color_variables.$green-lightest;
 }
 
 .control-group .authorizations {
