@@ -46,6 +46,8 @@ export default class ClientsClientListPageComponent extends ActivityComponent {
     this.records = Array.from({ length: 25000 }, (_, i) => {
       return i % 2 === 0 ? entity(i) : non_entity(i);
     });
+    // eslint-disable-next-line
+    console.log(this.records);
   }
 
   get columns() {

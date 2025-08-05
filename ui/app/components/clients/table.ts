@@ -40,7 +40,7 @@ export default class Table extends Component<Args> {
   }
 
   get keys() {
-    return this.args.columns.map((k) => k.key);
+    return this.args.columns.map((k) => k['key']);
   }
 
   get paginatedTableData(): TableData[] {
@@ -49,7 +49,7 @@ export default class Table extends Component<Args> {
       page: this.currentPage,
       pageSize: this.pageSize,
     });
-    console.log(paginated);
+
     return paginated;
   }
 
