@@ -90,7 +90,7 @@ resource "enos_remote_exec" "secrets_enable_ldap_secret" {
     VAULT_TOKEN       = var.vault_root_token
   }
 
-  scripts = [abspath("${path.module}/../../scripts/secrets-enable.sh")]
+  scripts = [abspath("${path.module}/../../../scripts/secrets-enable.sh")]
 
   transport = {
     ssh = {
@@ -117,7 +117,7 @@ resource "enos_remote_exec" "ldap_configurations" {
     VAULT_TOKEN       = var.vault_root_token
   }
 
-  scripts = [abspath("${path.module}/../../scripts/ldap-configs.sh")]
+  scripts = [abspath("${path.module}/../../../scripts/ldap-configs.sh")]
 
   transport = {
     ssh = {
