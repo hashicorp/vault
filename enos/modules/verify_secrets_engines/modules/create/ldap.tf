@@ -19,7 +19,7 @@ module "create_ldap_secret_engine" {
 }
 
 locals {
-  ldap_output = var.create_ldap_secret_engine ? module.create_ldap_secret_engine[0].ldap_output : null
+  ldap_output = var.create_ldap_secret_engine ? module.create_ldap_secret_engine[0].ldap : null
 }
 
 output "ldap" {

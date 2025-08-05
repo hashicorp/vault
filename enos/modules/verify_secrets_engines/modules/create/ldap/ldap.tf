@@ -76,7 +76,7 @@ locals {
   }
 }
 
-output "ldap_output" {
+output "ldap" {
   value = local.ldap_output
 }
 
