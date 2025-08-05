@@ -47,3 +47,9 @@ variable "vault_root_token" {
   description = "The Vault root token"
   default     = null
 }
+
+variable "verify_ssh_secrets" {
+  type        = bool
+  description = "Flag to verify SSH secrets"
+  default     = true
+}

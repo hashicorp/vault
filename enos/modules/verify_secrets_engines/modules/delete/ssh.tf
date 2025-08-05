@@ -3,6 +3,7 @@
 
 # Delete SSH CA role
 resource "enos_remote_exec" "ssh_delete_ca_role" {
+  count = var.verify_ssh_secrets ? 1 : 0
   environment = {
     REQPATH           = "ssh/roles/${var.create_state.ssh.ca_role_name}"
     VAULT_ADDR        = var.vault_addr
@@ -21,6 +22,7 @@ resource "enos_remote_exec" "ssh_delete_ca_role" {
 
 # Delete SSH OTP role
 resource "enos_remote_exec" "ssh_delete_otp_role" {
+  count = var.verify_ssh_secrets ? 1 : 0
   environment = {
     REQPATH           = "ssh/roles/${var.create_state.ssh.otp_role_name}"
     VAULT_ADDR        = var.vault_addr

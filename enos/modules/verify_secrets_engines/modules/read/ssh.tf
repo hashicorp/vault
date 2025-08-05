@@ -45,7 +45,7 @@ resource "enos_remote_exec" "ssh_verify_ca_role" {
     VAULT_INSTALL_DIR       = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/../../scripts/ssh-verify-role.sh")]
+  scripts = [abspath("${path.module}/../../scripts/ssh/ssh-verify-role.sh")]
 
   transport = {
     ssh = {
@@ -71,7 +71,7 @@ resource "enos_remote_exec" "ssh_verify_otp_role" {
     VAULT_INSTALL_DIR  = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/../../scripts/ssh-verify-role.sh")]
+  scripts = [abspath("${path.module}/../../scripts/ssh/ssh-verify-role.sh")]
 
   transport = {
     ssh = {
@@ -92,7 +92,7 @@ resource "enos_remote_exec" "ssh_verify_ca" {
     VAULT_INSTALL_DIR  = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/../../scripts/ssh-verify-ca.sh")]
+  scripts = [abspath("${path.module}/../../scripts/ssh/ssh-verify-ca.sh")]
 
   transport = {
     ssh = {
@@ -114,7 +114,7 @@ resource "enos_remote_exec" "ssh_verify_signed_key" {
     VAULT_INSTALL_DIR  = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/../../scripts/ssh-verify-signed-key.sh")]
+  scripts = [abspath("${path.module}/../../scripts/ssh/ssh-verify-signed-key.sh")]
 
   transport = {
     ssh = {
@@ -137,7 +137,7 @@ resource "enos_remote_exec" "ssh_verify_otp" {
     VAULT_INSTALL_DIR  = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/../../scripts/ssh-verify-otp.sh")]
+  scripts = [abspath("${path.module}/../../scripts/ssh/ssh-verify-otp.sh")]
 
   transport = {
     ssh = {
@@ -156,5 +156,5 @@ resource "enos_local_exec" "ssh_verify_cert" {
     VAULT_INSTALL_DIR  = var.vault_install_dir
   }
 
-  scripts = [abspath("${path.module}/../../scripts/ssh-verify-signed-key.sh")]
+  scripts = [abspath("${path.module}/../../scripts/ssh/ssh-verify-signed-key.sh")]
 }
