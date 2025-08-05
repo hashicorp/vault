@@ -9,6 +9,10 @@ fail() {
   exit 1
 }
 
+log() {
+  echo "[DEBUG] $1" >&2
+}
+
 [[ -z "$VERIFY_SSH_SECRETS" ]] && fail "VERIFY_SSH_SECRETS env variable has not been set"
 [[ -z "$SIGNED_KEY" ]] && fail "SIGNED_KEY env variable has not been set"
 [[ -z "$KEY_TYPE" ]] && fail "KEY_TYPE env variable has not been set"

@@ -4,7 +4,7 @@
 
 # List SSH roles
 resource "enos_remote_exec" "ssh_list_roles" {
-  for_each = var.hosts
+  for_each = var.verify_ssh_secrets ? var.hosts : {}
   environment = {
     REQPATH           = "ssh/roles"
     VAULT_ADDR        = var.vault_addr
