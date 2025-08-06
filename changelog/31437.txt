@@ -1,0 +1,3 @@
+```release-note:bug
+audit: Log entry has time as first field. Useful for log parsers, forwarders for accurate timestamps of events.
+```
