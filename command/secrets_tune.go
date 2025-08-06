@@ -256,7 +256,9 @@ func (c *SecretsTuneCommand) Run(args []string) int {
 		}
 
 		if fl.Name == flagNameAllowedResponseHeaders {
-			mountConfigInput.AllowedResponseHeaders = c.flagAllowedResponseHeaders
+			if len(c.flagAllowedResponseHeaders) > 0 {
+				mountConfigInput.AllowedResponseHeaders = &c.flagAllowedResponseHeaders
+			}
 		}
 
 		if fl.Name == flagNameAllowedManagedKeys {
