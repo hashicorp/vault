@@ -500,6 +500,10 @@ func (m *mockIAM) CreateAccessKey(input *iam.CreateAccessKeyInput) (*iam.CreateA
 	}, nil
 }
 
+// TODO: Move to external_tests in vault repo once plugin is externalized
+// https://github.com/hashicorp/vault/tree/e2273dbd77f3473c94b0ae3f298811d149018acd/vault/external_tests/plugin
+// https://hashicorp.slack.com/archives/G014PNTE3FA/p1754441457254849?thread_ts=1754439881.160869&cid=G014PNTE3FA
+//
 // // Test_RotationQueueInitialized creates a 2 node cluster and sets up the AWS
 // // credentials backend. The test creates 3 sets of static credentials. Two of
 // // those have a low rotation period and should get rotated during the test. The
