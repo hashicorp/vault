@@ -86,6 +86,7 @@ func (b *backend) pathRotateWrite(ctx context.Context, req *logical.Request, d *
 		return nil, err
 	}
 
+	b.Logger().Info("succesfully rotated key on user request", "name", name)
 	return b.formatKeyPolicy(p, nil)
 }
 
