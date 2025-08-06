@@ -3,6 +3,18 @@
 - [v1.0.0 - v1.9.10](CHANGELOG-pre-v1.10.md)
 - [v0.11.6 and earlier](CHANGELOG-v0.md)
 
+## 1.20.2
+### August 06, 2025
+
+SECURITY:
+
+* auth/ldap: fix MFA/TOTP enforcement bypass when username_as_alias is enabled.
+
+BUG FIXES:
+
+* agent/template: Fixed issue where templates would not render correctly if namespaces was provided by config, and the namespace and mount path of the secret were the same. [[GH-31392](https://github.com/hashicorp/vault/pull/31392)]
+* identity/mfa: revert cache entry change from #31217 and document cache entry values [[GH-31421](https://github.com/hashicorp/vault/pull/31421)]
+
 ## 1.20.1
 ### July 25, 2025
 
@@ -227,6 +239,20 @@ intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/3
 * ui: Fix refresh namespace list after deleting a namespace. [[GH-30680](https://github.com/hashicorp/vault/pull/30680)]
 * ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 * ui: Redirect users authenticating with Vault as an OIDC provider to log in again when token expires. [[GH-30838](https://github.com/hashicorp/vault/pull/30838)]
+
+## 1.19.8 Enterprise
+### August 06, 2025
+
+**Enterprise LTS:** Vault Enterprise 1.19 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+SECURITY:
+
+* auth/ldap: fix MFA/TOTP enforcement bypass when username_as_alias is enabled.
+
+BUG FIXES:
+
+* agent/template: Fixed issue where templates would not render correctly if namespaces was provided by config, and the namespace and mount path of the secret were the same. [[GH-31392](https://github.com/hashicorp/vault/pull/31392)]
+* identity/mfa: revert cache entry change from #31217 and document cache entry values [[GH-31421](https://github.com/hashicorp/vault/pull/31421)]
 
 ## 1.19.7 Enterprise
 ### July 25, 2025
@@ -655,6 +681,17 @@ Unblocks customers that were stuck in a failing loop when attempting to rotate s
 * ui: MFA methods now display the namespace path instead of the namespace id. [[GH-29588](https://github.com/hashicorp/vault/pull/29588)]
 * ui: No longer running decodeURIComponent on KVv2 list view allowing percent encoded data-octets in path name. [[GH-28698](https://github.com/hashicorp/vault/pull/28698)]
 * vault/diagnose: Fix time to expiration reporting within the TLS verification to not be a month off. [[GH-29128](https://github.com/hashicorp/vault/pull/29128)]
+
+## 1.18.13 Enterprise
+### August 06, 2025
+
+SECURITY:
+
+* auth/ldap: fix MFA/TOTP enforcement bypass when username_as_alias is enabled.
+
+BUG FIXES:
+
+* identity/mfa: revert cache entry change from #31217 and document cache entry values [[GH-31421](https://github.com/hashicorp/vault/pull/31421)]
 
 ## 1.18.12 Enterprise
 ### July 25, 2025
@@ -1809,6 +1846,19 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 * ui: fix issue where a month without new clients breaks the client count dashboard [[GH-27352](https://github.com/hashicorp/vault/pull/27352)]
 * ui: fixed a bug where the replication pages did not update display when navigating between DR and performance [[GH-26325](https://github.com/hashicorp/vault/pull/26325)]
 * ui: fixes undefined start time in filename for downloaded client count attribution csv [[GH-26485](https://github.com/hashicorp/vault/pull/26485)]
+
+## 1.16.24 Enterprise
+### August 06, 2025
+
+**Enterprise LTS:** Vault Enterprise 1.16 is a [Long-Term Support (LTS)](https://developer.hashicorp.com/vault/docs/enterprise/lts) release.
+
+SECURITY:
+
+* auth/ldap: fix MFA/TOTP enforcement bypass when username_as_alias is enabled.
+
+BUG FIXES:
+
+* identity/mfa: revert cache entry change from #31217 and document cache entry values [[GH-31421](https://github.com/hashicorp/vault/pull/31421)]
 
 ## 1.16.23 Enterprise
 ### July 25, 2025
