@@ -59,10 +59,10 @@ module('Acceptance | clients | overview', function (hooks) {
       .dom(CLIENT_COUNT.dateRange.dateDisplay('end'))
       .hasText('January 2024', 'billing start month is correctly parsed from license');
     assert
-      .dom(CHARTS.container('Client usage trends for selected billing period'))
+      .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
       .exists('Shows running totals with monthly breakdown charts');
     assert
-      .dom(`${CHARTS.container('Client usage trends for selected billing period')} ${CHARTS.xAxisLabel}`)
+      .dom(`${CLIENT_COUNT.card('Client usage trends for selected billing period')} ${CHARTS.xAxisLabel}`)
       .hasText('7/23', 'x-axis labels start with billing start date');
     assert.dom(CHARTS.xAxisLabel).exists({ count: 7 }, 'chart months matches query');
   });
@@ -84,7 +84,7 @@ module('Acceptance | clients | overview', function (hooks) {
       .dom(CLIENT_COUNT.usageStats('Vault client counts'))
       .doesNotExist('running total single month stat boxes do not show');
     assert
-      .dom(CHARTS.container('Client usage trends for selected billing period'))
+      .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
       .doesNotExist('running total month over month charts do not show');
 
     // change to start on month/year of upgrade to 1.10
@@ -96,10 +96,10 @@ module('Acceptance | clients | overview', function (hooks) {
       .dom(CLIENT_COUNT.dateRange.dateDisplay('start'))
       .hasText('September 2023', 'billing start month is correctly parsed from license');
     assert
-      .dom(CHARTS.container('Client usage trends for selected billing period'))
+      .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
       .exists('Shows running totals with monthly breakdown charts');
     assert
-      .dom(`${CHARTS.container('Client usage trends for selected billing period')} ${CHARTS.xAxisLabel}`)
+      .dom(`${CLIENT_COUNT.card('Client usage trends for selected billing period')} ${CHARTS.xAxisLabel}`)
       .hasText('9/23', 'x-axis labels start with queried start month (upgrade date)');
     assert.dom(CHARTS.xAxisLabel).exists({ count: 4 }, 'chart months matches query');
 
@@ -113,7 +113,7 @@ module('Acceptance | clients | overview', function (hooks) {
       .dom(CLIENT_COUNT.usageStats('Vault client counts'))
       .exists('running total single month usage stats show');
     assert
-      .dom(CHARTS.container('Client usage trends for selected billing period'))
+      .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
       .doesNotExist('running total month over month charts do not show');
 
     // query historical date range (from September 2023 to December 2023)
@@ -129,7 +129,7 @@ module('Acceptance | clients | overview', function (hooks) {
       .dom(CLIENT_COUNT.dateRange.dateDisplay('end'))
       .hasText('December 2023', 'billing start month is correctly parsed from license');
     assert
-      .dom(CHARTS.container('Client usage trends for selected billing period'))
+      .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
       .exists('Shows running totals with monthly breakdown charts');
 
     assert.dom(CHARTS.xAxisLabel).exists({ count: 4 }, 'chart months matches query');
@@ -152,7 +152,7 @@ module('Acceptance | clients | overview', function (hooks) {
 
   test('totals filter correctly with full data', async function (assert) {
     assert
-      .dom(CHARTS.container('Client usage trends for selected billing period'))
+      .dom(CLIENT_COUNT.card('Client usage trends for selected billing period'))
       .exists('Shows running totals with monthly breakdown charts');
 
     const response = await this.store.peekRecord('clients/activity', 'some-activity-id');

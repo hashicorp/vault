@@ -15,10 +15,10 @@
     @sortBy="clients"
     @sortOrder="desc"
     @onSort={{this.updateSort}}
-    data-test-clients-attribution-table
+    ...attributes
   >
     <:body as |B|>
-      <B.Tr data-test-attribution-table-row>
+      <B.Tr data-test-table-row={{B.rowIndex}}>
         <B.Td>{{B.data.namespace}}</B.Td>
         <B.Td>{{B.data.label}}</B.Td>
         {{#if (eq B.data.mount_type "deleted mount")}}
@@ -26,7 +26,7 @@
         {{else}}
           <B.Td>{{B.data.mount_type}}</B.Td>
         {{/if}}
-        <B.Td data-test-attribution-table-counts={{B.rowIndex}}>{{B.data.clients}}</B.Td>
+        <B.Td data-test-table-data="clients">{{B.data.clients}}</B.Td>
       </B.Tr>
     </:body>
   </Hds::Table>
@@ -42,7 +42,7 @@
     class="has-top-margin-m"
   />
 {{else}}
-  <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-l" data-test-card="attribution">
+  <Hds::Card::Container @level="mid" @hasBorder={{true}} class="has-padding-l" data-test-card="attribution empty state">
     <Hds::ApplicationState as |A|>
       <A.Header @title={{this.tableHeaderMessage}} />
       <A.Body @text={{this.tableBodyMessage}} />
