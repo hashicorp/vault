@@ -5,13 +5,13 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, settled } from '@ember/test-helpers';
+import { render, settled, waitFor } from '@ember/test-helpers';
 import { resolve } from 'rsvp';
 import { run } from '@ember/runloop';
 import Service from '@ember/service';
 import hbs from 'htmlbars-inline-precompile';
-import codemirror from 'vault/tests/helpers/codemirror';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
+import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 
 let capabilities;
 const storeService = Service.extend({
@@ -69,11 +69,11 @@ module('Integration | Component | secret edit', function (hooks) {
       hbs`<SecretEdit @mode={{this.mode}} @model={{this.model}} @preferAdvancedEdit={{true}} @key={{this.key}} />`
     );
 
-    codemirror().setValue(JSON.stringify([{ foo: 'bar' }]));
+    await waitFor('.cm-editor');
+    const editor = codemirror();
+    setCodeEditorValue(editor, JSON.stringify([{ foo: 'bar' }]));
     await settled();
-    assert
-      .dom('[data-test-message-error]')
-      .includesText('Vault expects data to be formatted as an JSON object');
+    assert.dom(GENERAL.messageError).includesText('Vault expects data to be formatted as an JSON object');
   });
 
   test('it allows saving when the model isError', async function (assert) {
@@ -108,10 +108,10 @@ module('Integration | Component | secret edit', function (hooks) {
       hbs`<SecretEdit @mode={{this.mode}} @model={{this.model}} @preferAdvancedEdit={{true}} @key={{this.key}} />`
     );
 
-    codemirror().setValue(JSON.stringify([{ foo: 'bar' }]));
+    await waitFor('.cm-editor');
+    const editor = codemirror();
+    setCodeEditorValue(editor, JSON.stringify([{ foo: 'bar' }]));
     await settled();
-    assert
-      .dom('[data-test-message-error]')
-      .includesText('Vault expects data to be formatted as an JSON object');
+    assert.dom(GENERAL.messageError).includesText('Vault expects data to be formatted as an JSON object');
   });
 });

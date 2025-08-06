@@ -1,4 +1,3 @@
-@use '../utils/color_variables';
 @use '../utils/size_variables';
 
 /**
@@ -11,11 +10,11 @@
   border-radius: 3rem;
   background: linear-gradient(
     135deg,
-    color_variables.$blue,
+    var(--token-color-palette-blue-200),
     hsl(271, 100%, 71%)
   ); // only use case for purple in the app. define here instead of utils/color_var
   animation: env-banner-color-rotate 8s infinite linear alternate;
-  color: color_variables.$white;
+  color: hsl(0, 0%, 100%);
 
   .hs-icon {
     margin: 0;

@@ -13,6 +13,9 @@ valid_change_types: >-
   - Change in support
 ---
 
+> [!IMPORTANT]  
+> **Documentation Update:** Product documentation, which were located in this repository under `/website`, are now located in [`hashicorp/web-unified-docs`](https://github.com/hashicorp/web-unified-docs), colocated with all other product documentation. Contributions to this content should be done in the `web-unified-docs` repo, and not this one. Changes made to `/website` content in this repo will not be reflected on the developer.hashicorp.com website.
+
 # Important changes
 
 **Last updated**: 2025-06-30
@@ -146,6 +149,22 @@ None.
 
 
 ## Known issues
+
+### Snowflake DB secrets engine key pair authentication not refreshing credentials successfully ((#snowflake-keypair-refresh))
+
+| Change      | Status | Affected version                       | Fixed version
+| ----------- | ------ | -------------------------------------- | --------------------
+| Known issue | Open   | 1.20.x, 1.19.x, 1.18.x+ent, 1.17.x+ent, 1.16.x+ent | None
+
+Users using keypair authentication with Snowflake databases may receive errors
+due to improper credential refreshes and stale connections in the connection pool.
+When two or more concurrent operations occur, Vault tries to reuse an idle
+connection from the pool and the request fails due to session timeout in the
+Snowflake database.
+
+#### Recommendation
+
+As a workaround, you can set the `max_connection_lifetime` to a value below `SESSION_IDLE_TIMEOUT_MINS`.
 
 ### UI KV v2 overview for secret paths containing underscores ((#ui-kvv2-underscore-secrets))
 

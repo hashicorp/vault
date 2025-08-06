@@ -39,10 +39,10 @@ export default class DestinationsCreateForm extends Component<Args> {
     super(owner, args);
     // cache initial custom tags value to compare against updates
     // tags that are removed when editing need to be added to the payload
-    // cast type here since not all types have customTags
-    const { customTags } = args.form.data as unknown as Record<string, unknown>;
-    if (customTags) {
-      this.initialCustomTags = { ...customTags };
+    // cast type here since not all types have custom_tags
+    const { custom_tags } = args.form.data as unknown as Record<string, unknown>;
+    if (custom_tags) {
+      this.initialCustomTags = { ...custom_tags };
     }
   }
 
@@ -92,13 +92,15 @@ export default class DestinationsCreateForm extends Component<Args> {
   diffCustomTags(payload: Record<string, unknown>) {
     // if tags were removed we need to add them to the payload
     const { isNew } = this.args.form;
-    const { customTags } = payload;
-    if (!isNew && customTags && this.initialCustomTags) {
-      // compare the new and old keys of customTags object to determine which need to be removed
-      const oldKeys = Object.keys(this.initialCustomTags).filter((k) => !Object.keys(customTags).includes(k));
-      // add tagsToRemove to the payload if there is a diff
+    const { custom_tags } = payload;
+    if (!isNew && custom_tags && this.initialCustomTags) {
+      // compare the new and old keys of custom_tags object to determine which need to be removed
+      const oldKeys = Object.keys(this.initialCustomTags).filter(
+        (k) => !Object.keys(custom_tags).includes(k)
+      );
+      // add tags_to_remove to the payload if there is a diff
       if (oldKeys.length > 0) {
-        payload['tagsToRemove'] = oldKeys;
+        payload['tags_to_remove'] = oldKeys;
       }
     }
   }

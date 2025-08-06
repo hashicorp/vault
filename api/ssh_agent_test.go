@@ -14,12 +14,25 @@ import (
 
 // TestSSH_CanLoadDuplicateKeys verifies that during the deprecation process of duplicate HCL attributes this function
 // will still allow them.
+// TODO (HCL_DUP_KEYS_DEPRECATION): on full removal change this test to ensure that duplicate attributes cannot be parsed
+// under any circumstances.
 func TestSSH_CanLoadDuplicateKeys(t *testing.T) {
-	_, err := LoadSSHHelperConfig("./test-fixtures/agent_config_duplicate_keys.hcl")
-	require.NoError(t, err)
-	// TODO (HCL_DUP_KEYS_DEPRECATION): Change test to expect an error
-	// require.Error(t, err)
-	// require.Contains(t, err.Error(), "Each argument can only be defined once")
+	t.Run("fail parsing without env var", func(t *testing.T) {
+		_, err := LoadSSHHelperConfig("./test-fixtures/agent_config_duplicate_keys.hcl")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "Each argument can only be defined once")
+	})
+	t.Run("fail parsing with env var set to false", func(t *testing.T) {
+		t.Setenv(allowHclDuplicatesEnvVar, "false")
+		_, err := LoadSSHHelperConfig("./test-fixtures/agent_config_duplicate_keys.hcl")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "Each argument can only be defined once")
+	})
+	t.Run("succeed parsing with env var set to true", func(t *testing.T) {
+		t.Setenv(allowHclDuplicatesEnvVar, "true")
+		_, err := LoadSSHHelperConfig("./test-fixtures/agent_config_duplicate_keys.hcl")
+		require.NoError(t, err)
+	})
 }
 
 func TestSSH_CreateTLSClient(t *testing.T) {

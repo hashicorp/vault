@@ -3,10 +3,9 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { later, _cancelTimers as cancelTimers } from '@ember/runloop';
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, settled, click, typeIn, fillIn } from '@ember/test-helpers';
+import { render, click, typeIn, fillIn } from '@ember/test-helpers';
 import { setupMirage } from 'ember-cli-mirage/test-support';
 import { allowAllCapabilitiesStub, noopStub } from 'vault/tests/helpers/stubs';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
@@ -17,6 +16,7 @@ import { ALL_ENGINES, filterEnginesByMountCategory } from 'vault/utils/all-engin
 import hbs from 'htmlbars-inline-precompile';
 import sinon from 'sinon';
 import SecretsEngineForm from 'vault/forms/secrets/engine';
+import AuthMethodForm from 'vault/forms/auth/method';
 
 const WIF_ENGINES = ALL_ENGINES.filter((e) => e.isWIF).map((e) => e.type);
 
@@ -35,14 +35,12 @@ module('Integration | Component | mount backend form', function (hooks) {
     this.onMountSuccess = sinon.spy();
   });
 
-  hooks.afterEach(function () {
-    this.server.shutdown();
-  });
-
   module('auth method', function (hooks) {
     hooks.beforeEach(function () {
-      this.model = this.store.createRecord('auth-method');
-      this.model.set('config', this.store.createRecord('mount-config'));
+      const defaults = {
+        config: { listing_visibility: false },
+      };
+      this.model = new AuthMethodForm(defaults, { isNew: true });
     });
 
     test('it renders default state', async function (assert) {
@@ -100,9 +98,9 @@ module('Integration | Component | mount backend form', function (hooks) {
       await click(MOUNT_BACKEND_FORM.mountType('github'));
       await click(GENERAL.button('Method Options'));
       assert
-        .dom('[data-test-input="config.tokenType"]')
+        .dom('[data-test-input="config.token_type"]')
         .hasValue('', 'token type does not have a default value.');
-      const selectOptions = document.querySelector('[data-test-input="config.tokenType"]').options;
+      const selectOptions = document.querySelector('[data-test-input="config.token_type"]').options;
       assert.strictEqual(selectOptions[1].text, 'default-service', 'first option is default-service');
       assert.strictEqual(selectOptions[2].text, 'default-batch', 'second option is default-batch');
       assert.strictEqual(selectOptions[3].text, 'batch', 'third option is batch');
@@ -123,8 +121,6 @@ module('Integration | Component | mount backend form', function (hooks) {
         hbs`<MountBackendForm @mountCategory="auth" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
       );
       await mountBackend('approle', 'foo');
-      later(() => cancelTimers(), 50);
-      await settled();
 
       assert.true(spy.calledOnce, 'calls the passed success method');
       assert.true(
@@ -137,11 +133,11 @@ module('Integration | Component | mount backend form', function (hooks) {
   module('secrets engine', function (hooks) {
     hooks.beforeEach(function () {
       const defaults = {
-        config: { listingVisibility: false },
-        kvConfig: {
-          maxVersions: 0,
-          casRequired: false,
-          deleteVersionAfter: 0,
+        config: { listing_visibility: false },
+        kv_config: {
+          max_versions: 0,
+          cas_required: false,
+          delete_version_after: 0,
         },
         options: { version: 2 },
       };
@@ -207,8 +203,6 @@ module('Integration | Component | mount backend form', function (hooks) {
       );
 
       await mountBackend('ssh', 'foo');
-      // later(() => cancelTimers(), 50);
-      // await settled();
 
       assert.true(spy.calledOnce, 'calls the passed success method');
       assert.true(
@@ -218,7 +212,7 @@ module('Integration | Component | mount backend form', function (hooks) {
     });
 
     module('WIF secret engines', function () {
-      test('it shows identityTokenKey when type is a WIF engine and hides when its not', async function (assert) {
+      test('it shows identity_token_key when type is a WIF engine and hides when its not', async function (assert) {
         await render(
           hbs`<MountBackendForm @mountCategory="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
         );
@@ -226,7 +220,7 @@ module('Integration | Component | mount backend form', function (hooks) {
           await click(MOUNT_BACKEND_FORM.mountType(engine));
           await click(GENERAL.button('Method Options'));
           assert
-            .dom(GENERAL.fieldByAttr('config.identityTokenKey'))
+            .dom(GENERAL.fieldByAttr('config.identity_token_key'))
             .exists(`Identity token key field shows when type=${this.model.type}`);
           await click(GENERAL.backButton);
         }
@@ -238,20 +232,20 @@ module('Integration | Component | mount backend form', function (hooks) {
           await click(MOUNT_BACKEND_FORM.mountType(engine.type));
           await click(GENERAL.button('Method Options'));
           assert
-            .dom(GENERAL.fieldByAttr('config.identityTokenKey'))
+            .dom(GENERAL.fieldByAttr('config.identity_token_key'))
             .doesNotExist(`Identity token key field hidden when type=${this.model.type}`);
           await click(GENERAL.backButton);
         }
       });
 
-      test('it updates identityTokenKey if user has changed it', async function (assert) {
+      test('it updates identity_token_key if user has changed it', async function (assert) {
         await render(
           hbs`<MountBackendForm @mountCategory="secret" @mountModel={{this.model}} @onMountSuccess={{this.onMountSuccess}} />`
         );
         assert.strictEqual(
-          this.model.config.identityTokenKey,
+          this.model.config.identity_token_key,
           undefined,
-          `On init identityTokenKey is not set on the model`
+          `On init identity_token_key is not set on the model`
         );
         for (const engine of WIF_ENGINES) {
           await click(MOUNT_BACKEND_FORM.mountType(engine));
@@ -259,9 +253,9 @@ module('Integration | Component | mount backend form', function (hooks) {
           await typeIn(GENERAL.inputSearch('key'), `${engine}+specialKey`); // set to something else
 
           assert.strictEqual(
-            this.model.config.identityTokenKey,
+            this.model.config.identity_token_key,
             `${engine}+specialKey`,
-            `updates ${engine} model with custom identityTokenKey`
+            `updates ${engine} model with custom identity_token_key`
           );
           await click(GENERAL.backButton);
         }

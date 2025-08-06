@@ -6,9 +6,9 @@
 {{#if @config}}
   {{#each this.displayFields as |field|}}
     {{! public key while not sensitive when editing/creating, should be hidden by default on viewing }}
-    {{#if (eq field "publicKey")}}
-      <InfoTableRow @label="Public key" @value={{@config.publicKey}}>
-        <MaskedInput @value={{@config.publicKey}} @name={{field}} @displayOnly={{true}} @allowCopy={{true}} />
+    {{#if (eq field "public_key")}}
+      <InfoTableRow @label="Public key" @value={{@config.public_key}}>
+        <MaskedInput @value={{@config.public_key}} @name={{field}} @displayOnly={{true}} @allowCopy={{true}} />
       </InfoTableRow>
     {{else}}
       <InfoTableRow

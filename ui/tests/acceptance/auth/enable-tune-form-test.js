@@ -25,16 +25,16 @@ module('Acceptance | auth enable tune form test', function (hooks) {
       'path',
       'description',
       'local',
-      'sealWrap',
-      'config.listingVisibility',
-      'config.defaultLeaseTtl',
-      'config.maxLeaseTtl',
-      'config.tokenType',
-      'config.auditNonHmacRequestKeys',
-      'config.auditNonHmacResponseKeys',
-      'config.passthroughRequestHeaders',
-      'config.allowedResponseHeaders',
-      'config.pluginVersion',
+      'seal_wrap',
+      'config.listing_visibility',
+      'config.default_lease_ttl',
+      'config.max_lease_ttl',
+      'config.token_type',
+      'config.audit_non_hmac_request_keys',
+      'config.audit_non_hmac_response_keys',
+      'config.passthrough_request_headers',
+      'config.allowed_response_headers',
+      'config.plugin_version',
     ];
   });
 
@@ -68,7 +68,7 @@ module('Acceptance | auth enable tune form test', function (hooks) {
       this.type = 'jwt';
       this.path = `${this.type}-${uuidv4()}`;
       this.customSelectors = {
-        providerConfig: `${GENERAL.fieldByAttr('providerConfig')} textarea`,
+        providerConfig: `${GENERAL.fieldByAttr('providerConfig')} .cm-editor`,
       };
       this.tuneFields = [
         'defaultRole',
@@ -156,7 +156,7 @@ module('Acceptance | auth enable tune form test', function (hooks) {
       this.type = 'oidc';
       this.path = `${this.type}-${uuidv4()}`;
       this.customSelectors = {
-        providerConfig: `${GENERAL.fieldByAttr('providerConfig')} textarea`,
+        providerConfig: `${GENERAL.fieldByAttr('providerConfig')} .cm-editor`,
       };
       this.tuneFields = [
         'oidcDiscoveryUrl',

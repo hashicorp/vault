@@ -47,7 +47,7 @@
           @xScale={{xScale}}
           @yScale={{yScale}}
           @color="clientType"
-          @colorScale="blue-bar"
+          @colorScale="stacked-bar"
           transform="translate({{this.barOffset xScale.bandwidth}},0)"
           data-test-vertical-bar
         />
@@ -75,7 +75,7 @@
 
       {{#if this.activeDatum}}
         <div
-          class="lineal-tooltip-position chart-tooltip"
+          class="chart-tooltip"
           role="status"
           {{style
             --x=(this.tooltipX (xScale.compute this.activeDatum.x) xScale.bandwidth)

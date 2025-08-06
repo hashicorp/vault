@@ -28,7 +28,7 @@ func TestWorkflowRunSummaryTemplate(t *testing.T) {
 		require.NotNil(t, run)
 		run.summary = ""
 		summary, err := run.Summary()
-		require.NoError(t, err)
+		require.NoErrorf(t, err, summary)
 		require.NotEmpty(t, summary)
 		// t.Log(summary) // useful to see rendered output when modifying
 	}

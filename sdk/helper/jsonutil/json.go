@@ -4,6 +4,7 @@
 package jsonutil
 
 import (
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
@@ -14,7 +15,7 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/compressutil"
 )
 
-// Encodes/Marshals the given object into JSON
+// EncodeJSON encodes/marshals the given object into JSON
 func EncodeJSON(in interface{}) ([]byte, error) {
 	if in == nil {
 		return nil, fmt.Errorf("input for encoding is nil")
@@ -84,7 +85,7 @@ func DecodeJSON(data []byte, out interface{}) error {
 	return DecodeJSONFromReader(bytes.NewReader(data), out)
 }
 
-// Decodes/Unmarshals the given io.Reader pointing to a JSON, into a desired object
+// DecodeJSONFromReader Decodes/Unmarshals the given io.Reader pointing to a JSON, into a desired object
 func DecodeJSONFromReader(r io.Reader, out interface{}) error {
 	if r == nil {
 		return fmt.Errorf("'io.Reader' being decoded is nil")
@@ -100,4 +101,147 @@ func DecodeJSONFromReader(r io.Reader, out interface{}) error {
 
 	// Since 'out' is an interface representing a pointer, pass it to the decoder without an '&'
 	return dec.Decode(out)
+}
+
+// containerState holds information about an open JSON container (object or array).
+type containerState struct {
+	Type  json.Delim // '{' or '['
+	Count int        // Number of entries (for objects) or elements for arrays)
+}
+
+// JSONLimits defines the configurable limits for JSON validation.
+type JSONLimits struct {
+	MaxDepth             int
+	MaxStringValueLength int
+	MaxObjectEntryCount  int
+	MaxArrayElementCount int
+}
+
+// isWhitespace checks if a byte is a JSON whitespace character.
+func isWhitespace(b byte) bool {
+	return b == ' ' || b == '\t' || b == '\n' || b == '\r'
+}
+
+// VerifyMaxDepthStreaming scans the JSON stream to determine its maximum nesting depth
+// and enforce various limits. It first checks if the stream is likely JSON before proceeding.
+func VerifyMaxDepthStreaming(jsonReader io.Reader, limits JSONLimits) (int, error) {
+	// Use a buffered reader to peek at the stream without consuming it from the original reader.
+	bufReader := bufio.NewReader(jsonReader)
+
+	// Find the first non-whitespace character.
+	var firstByte byte
+	var err error
+	for {
+		firstByte, err = bufReader.ReadByte()
+		if err != nil {
+			// If we hit EOF before finding a real character, it's an empty or whitespace-only payload.
+			if err == io.EOF {
+				return 0, nil
+			}
+			return 0, err // A different I/O error occurred.
+		}
+		if !isWhitespace(firstByte) {
+			break // Found the first significant character.
+		}
+	}
+
+	// If the payload doesn't start with '{' or '[', assume it's not a JSON object or array
+	// and that our limits do not apply.
+	if firstByte != '{' && firstByte != '[' {
+		return 0, nil
+	}
+
+	fullStreamReader := io.MultiReader(bytes.NewReader([]byte{firstByte}), bufReader)
+	decoder := json.NewDecoder(fullStreamReader)
+	decoder.UseNumber()
+
+	var (
+		maxDepth      = 0
+		currentDepth  = 0
+		isKeyExpected bool
+	)
+	containerInfoStack := make([]containerState, 0, limits.MaxDepth)
+
+	for {
+		t, err := decoder.Token()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			// Any error from the decoder is now considered a real error.
+			return 0, fmt.Errorf("error reading JSON token: %w", err)
+		}
+
+		switch v := t.(type) {
+		case json.Delim:
+			switch v {
+			case '{', '[':
+				currentDepth++
+				// Check against the limit directly.
+				if currentDepth > limits.MaxDepth {
+					return 0, fmt.Errorf("JSON input exceeds allowed nesting depth")
+				}
+				if currentDepth > maxDepth {
+					maxDepth = currentDepth
+				}
+
+				containerInfoStack = append(containerInfoStack, containerState{Type: v, Count: 0})
+				if v == '{' {
+					isKeyExpected = true
+				}
+			case '}', ']':
+				if len(containerInfoStack) == 0 {
+					return 0, fmt.Errorf("malformed JSON: unmatched closing delimiter '%c'", v)
+				}
+				top := containerInfoStack[len(containerInfoStack)-1]
+				containerInfoStack = containerInfoStack[:len(containerInfoStack)-1]
+				currentDepth--
+				if (v == '}' && top.Type != '{') || (v == ']' && top.Type != '[') {
+					return 0, fmt.Errorf("malformed JSON: mismatched closing delimiter '%c' for opening '%c'", v, top.Type)
+				}
+				if len(containerInfoStack) > 0 && containerInfoStack[len(containerInfoStack)-1].Type == '{' {
+					isKeyExpected = false
+				}
+			}
+		case string:
+			if len(v) > limits.MaxStringValueLength {
+				return 0, fmt.Errorf("JSON string value exceeds allowed length")
+			}
+			if len(containerInfoStack) > 0 {
+				top := &containerInfoStack[len(containerInfoStack)-1]
+				if top.Type == '{' {
+					if isKeyExpected {
+						top.Count++
+						if top.Count > limits.MaxObjectEntryCount {
+							return 0, fmt.Errorf("JSON object exceeds allowed entry count")
+						}
+						isKeyExpected = false
+					}
+				} else if top.Type == '[' {
+					top.Count++
+					if top.Count > limits.MaxArrayElementCount {
+						return 0, fmt.Errorf("JSON array exceeds allowed element count")
+					}
+				}
+			}
+		default: // Handles numbers, booleans, and nulls
+			if len(containerInfoStack) > 0 {
+				top := &containerInfoStack[len(containerInfoStack)-1]
+				if top.Type == '[' {
+					top.Count++
+					if top.Count > limits.MaxArrayElementCount {
+						return 0, fmt.Errorf("JSON array exceeds allowed element count")
+					}
+				} else if top.Type == '{' {
+					isKeyExpected = true
+				}
+			}
+		}
+	}
+
+	if len(containerInfoStack) != 0 {
+		return 0, fmt.Errorf("malformed JSON, unclosed containers")
+	}
+
+	return maxDepth, nil
 }

@@ -13,56 +13,56 @@ import type {
 import type { MountConfig, MountOptions } from 'vault/mount';
 
 type CommonConfigParams = {
-  rotationPeriod: number;
-  rotationSchedule: string;
-  rotationWindow: number;
-  identityTokenAudience: string;
-  identityTokenTtl: number;
-  disableAutomatedRotation: boolean;
+  rotation_period: number;
+  rotation_schedule: string;
+  rotation_window: number;
+  identity_token_audience: string;
+  identity_token_ttl: number;
+  disable_automated_rotation: boolean;
   issuer?: string;
 };
 
 export type AwsConfig = CommonConfigParams & {
-  accessKey: string;
-  iamEndpoint: string;
-  maxRetries: number;
+  access_key: string;
+  iam_endpoint: string;
+  max_retries: number;
   region: string;
-  roleArn: string;
-  stsEndpoint: string;
-  stsFallbackEndpoints: string[];
-  stsFallbackRegions: string[];
-  stsRegion: string;
-  usernameTemplate: string;
+  role_arn: string;
+  sts_endpoint: string;
+  sts_fallback_endpoints: string[];
+  sts_fallback_regions: string[];
+  sts_region: string;
+  username_template: string;
   lease?: string;
-  leaseMax?: string;
+  lease_max?: string;
 };
 
 export type AzureConfig = CommonConfigParams & {
-  clientId: string;
+  client_id: string;
   environment: string;
-  subscriptionId: string;
-  tenantId: string;
+  subscription_id: string;
+  tenant_id: string;
 };
 
 export type GcpConfig = CommonConfigParams & {
-  maxTtl: number;
-  serviceAccountEmail: string;
+  max_ttl: number;
+  service_account_email: string;
   ttl: number;
 };
 
 export type SshConfig = {
-  publicKey: string;
-  generateSigningKey: boolean;
+  public_key: string;
+  generate_signing_key: boolean;
 };
 
 export type SecretsEngineFormData = MountsEnableSecretsEngineRequest & {
   path: string;
-  config?: EngineConfig;
-  options?: EngineOptions;
-  kvConfig?: {
-    maxVersions?: number;
-    casRequired?: boolean;
-    deleteVersionAfter?: string;
+  config: MountConfig;
+  options?: MountOptions;
+  kv_config?: {
+    max_versions?: number;
+    cas_required?: boolean;
+    delete_version_after?: string;
   };
 };
 

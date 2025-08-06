@@ -22,26 +22,26 @@ globals {
   // Different distros may require different packages, or use different aliases for the same package
   distro_packages = {
     amzn = {
-      "2"    = ["nc"]
-      "2023" = ["nc"]
+      "2"    = ["nc", "openldap-clients"]
+      "2023" = ["nc", "openldap-clients"]
     }
     leap = {
-      "15.6" = ["netcat", "openssl"]
+      "15.6" = ["netcat", "openssl", "openldap2-client"]
     }
     rhel = {
-      "8.10" = ["nc"]
-      "9.5"  = ["nc"]
+      "8.10" = ["nc", "openldap-clients"]
+      "9.5"  = ["nc", "openldap-clients"]
     }
     sles = {
       // When installing Vault RPM packages on a SLES AMI, the openssl package provided
       // isn't named "openssl, which rpm doesn't know how to handle. Therefore we add the
       // "correctly" named one in our package installation before installing Vault.
-      "15.6" = ["netcat-openbsd", "openssl"]
+      "15.6" = ["netcat-openbsd", "openssl", "openldap2-client"]
     }
     ubuntu = {
-      "20.04" = ["netcat"]
-      "22.04" = ["netcat"]
-      "24.04" = ["netcat-openbsd"]
+      "20.04" = ["netcat", "ldap-utils"]
+      "22.04" = ["netcat", "ldap-utils"]
+      "24.04" = ["netcat-openbsd", "ldap-utils"]
     }
   }
   distro_version = {
@@ -64,12 +64,9 @@ globals {
   packages = ["jq"]
   // Ports that we'll open up for ingress in the security group for all target machines.
   // Port protocol maps to the IpProtocol schema: https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_IpPermission.html
-  ports = {
-    ssh : {
-      description = "SSH"
-      port        = 22
-      protocol    = "tcp"
-    },
+
+  // Ports that we'll open up for ingress in the security group for all Vault target machines.
+  vault_cluster_ports = {
     vault_agent : {
       description = "Vault Agent"
       port        = 8100
@@ -89,7 +86,10 @@ globals {
       description = "Vault Cluster listener"
       port        = 8201
       protocol    = "tcp"
-    },
+    }
+  }
+  // Ports that we'll open up for ingress in the security group for all Consul target machines.
+  consul_cluster_ports = {
     consul_rpc : {
       description = "Consul internal communication"
       port        = 8300
@@ -144,8 +144,47 @@ globals {
       description = "Consul UDP DNS Server"
       port        = 8600
       protocol    = "udp"
+    }
+  }
+  ingress_ports = {
+    ssh : {
+      description = "SSH"
+      port        = 22
+      protocol    = "tcp"
+    }
+  }
+  // Ports that we'll open up for ingress in the security group for all external integration target machines.
+  integration_host_ports = {
+    ldap : {
+      description = "LDAP"
+      port        = 389
+      protocol    = "tcp"
+    },
+    ldaps : {
+      description = "LDAPS"
+      port        = 636
+      protocol    = "tcp"
+    },
+    mysql : {
+      description = "MySQL Server"
+      port        = 3306
+      protocol    = "tcp"
+    },
+    kmip : {
+      description = "KMIP Server"
+      port        = 5696
+      protocol    = "tcp"
     },
   }
+
+  // Combine all ports into a single map
+  ports = merge(
+    global.vault_cluster_ports,
+    global.consul_cluster_ports,
+    global.ingress_ports,
+    global.integration_host_ports
+  )
+
   seals = ["awskms", "pkcs11", "shamir"]
   tags = merge({
     "Project Name" : var.project_name

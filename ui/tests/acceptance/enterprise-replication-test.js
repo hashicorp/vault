@@ -106,6 +106,11 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     assert
       .dom('[data-test-secondary-name]')
       .includesText(secondaryName, 'it displays the secondary in the list of known secondaries');
+
+    // verify overflow-wrap class is applied to secondary name
+    assert
+      .dom('[data-test-secondary-name]')
+      .hasClass('overflow-wrap', 'it applies the overflow-wrap class to the secondary name');
   });
 
   test('disabling dr primary when perf replication is enabled', async function (assert) {

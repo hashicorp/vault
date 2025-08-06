@@ -352,28 +352,44 @@ func Test_multipleMonthsActivityClients_addRepeatedClients(t *testing.T) {
 	month2Clients := m.months[2].clients
 	month1Clients := m.months[1].clients
 
+	// checks if all the clients in "containsClients" array exists in "allClients" array
+	hasClients := func(allClients []*activity.EntityRecord, containsClients []*activity.EntityRecord) bool {
+		allClientsList := make(map[string]struct{})
+
+		for _, client := range allClients {
+			allClientsList[client.ClientID] = struct{}{}
+		}
+
+		for _, client := range containsClients {
+			if _, exists := allClientsList[client.ClientID]; !exists {
+				return false
+			}
+		}
+		return true
+	}
+
 	thisMonth := m.months[0]
 	// this will match the first client in month 1
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true}, defaultMount, nil))
-	require.Contains(t, month1Clients, thisMonth.clients[0])
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true}, defaultMount, nil, time.Now().UTC()))
+	require.True(t, hasClients(month1Clients, []*activity.EntityRecord{thisMonth.clients[0]}))
 
 	// this will match the 3rd client in month 1
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true, ClientType: "non-entity"}, defaultMount, nil))
-	require.Equal(t, month1Clients[2], thisMonth.clients[1])
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, Repeated: true, ClientType: "non-entity"}, defaultMount, nil, time.Now().UTC()))
+	require.True(t, hasClients([]*activity.EntityRecord{month1Clients[2]}, []*activity.EntityRecord{thisMonth.clients[1]}))
 
 	// this will match the first two clients in month 1
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 2, Repeated: true}, defaultMount, nil))
-	require.Equal(t, month1Clients[0:2], thisMonth.clients[2:4])
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 2, Repeated: true}, defaultMount, nil, time.Now().UTC()))
+	require.True(t, hasClients(month1Clients[0:2], thisMonth.clients[2:4]))
 
 	// this will match the first client in month 2
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2}, "identity", nil))
-	require.Equal(t, month2Clients[0], thisMonth.clients[4])
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2}, "identity", nil, time.Now().UTC()))
+	require.True(t, hasClients([]*activity.EntityRecord{month2Clients[0]}, []*activity.EntityRecord{thisMonth.clients[4]}))
 
 	// this will match the 3rd client in month 2
-	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2, Namespace: "other_ns"}, defaultMount, nil))
-	require.Equal(t, month2Clients[2], thisMonth.clients[5])
+	require.NoError(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2, Namespace: "other_ns"}, defaultMount, nil, time.Now().UTC()))
+	require.True(t, hasClients([]*activity.EntityRecord{month2Clients[2]}, []*activity.EntityRecord{thisMonth.clients[5]}))
 
-	require.Error(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2, Namespace: "other_ns"}, "other_mount", nil))
+	require.Error(t, m.addRepeatedClients(0, &generation.Client{Count: 1, RepeatedFromMonth: 2, Namespace: "other_ns"}, "other_mount", nil, time.Now().UTC()))
 }
 
 // Test_singleMonthActivityClients_populateSegments calls populateSegments for a

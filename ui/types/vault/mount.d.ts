@@ -4,16 +4,16 @@
  */
 
 export type MountConfig = {
-  forceNoCache?: boolean;
-  listingVisibility?: string | boolean;
-  defaultLeaseTtl?: number;
-  maxLeaseTtl?: number;
-  allowedManagedKeys?: string[];
-  auditNonHmacRequestKeys?: string[];
-  auditNonHmacResponseKeys?: string[];
-  passthroughRequestHeaders?: string[];
-  allowedResponseHeaders?: string[];
-  identityTokenKey?: string;
+  force_no_cache?: boolean;
+  listing_visibility?: string | boolean;
+  default_lease_ttl?: number | string;
+  max_lease_ttl?: number | string;
+  allowed_managed_keys?: string[];
+  audit_non_hmac_request_keys?: string[];
+  audit_non_hmac_response_keys?: string[];
+  passthrough_request_headers?: string[];
+  allowed_response_headers?: string[];
+  identity_token_key?: string;
 };
 
 export type MountOptions = {
@@ -25,13 +25,13 @@ export type Mount = {
   accessor: string;
   config: MountConfig;
   description: string;
-  externalEntropyAccess: boolean;
+  external_entropy_access: boolean;
   local: boolean;
   options?: MountOptions;
-  pluginVersion: string;
-  runningPluginVersion: string;
-  runningSha256: string;
-  sealWrap: boolean;
+  plugin_version: string;
+  running_plugin_version: string;
+  running_sha256: string;
+  seal_wrap: boolean;
   type: string;
   uuid: string;
 };
