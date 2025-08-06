@@ -4,7 +4,7 @@
 }}
 
 {{#if @data}}
-  <Hds::Table
+  <Hds::AdvancedTable
     {{!-- @model={{this.paginatedTableData}} --}}
     @model={{@data}}
     @columns={{this.columns}}
@@ -26,7 +26,7 @@
         {{/each}}
       </B.Tr>
     </:body>
-  </Hds::Table>
+  </Hds::AdvancedTable>
 
   <Hds::Pagination::Numbered
     @showSizeSelector={{false}}

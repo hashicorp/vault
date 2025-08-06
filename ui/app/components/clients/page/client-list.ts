@@ -43,7 +43,7 @@ export default class ClientsClientListPageComponent extends ActivityComponent {
       mount_path: 'auth/auto/eng/core/auth/core-gh-auth/',
       timestamp: '2025-07-29T20:01:50Z',
     });
-    this.records = Array.from({ length: 25000 }, (_, i) => {
+    this.records = Array.from({ length: 2500 }, (_, i) => {
       return i % 2 === 0 ? entity(i) : non_entity(i);
     });
     // eslint-disable-next-line

@@ -21,6 +21,7 @@ import SyncAssociationAdapter from 'vault/adapters/sync/association';
  */
 export default interface AdapterRegistry {
   'auth-method': AuthMethodAdapter;
+  'clients/activity': ClientsActivityAda;
   'ldap/library': LdapLibraryAdapter;
   'ldap/role': LdapRoleAdapter;
   'pki/issuer': PkiIssuerAdapter;
