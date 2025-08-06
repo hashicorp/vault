@@ -8,7 +8,7 @@
 
 SECURITY:
 
-* auth/ldap: fix MFA/TOTP enforcement bypass when username_as_alias is enabled.
+* auth/ldap: fix MFA/TOTP enforcement bypass when username_as_alias is enabled [[GH-31427](https://github.com/hashicorp/vault/pull/31427),[HCSEC-2025-20](https://discuss.hashicorp.com/t/hcsec-2025-20-vault-ldap-mfa-enforcement-bypass-when-using-username-as-alias/76092)].
 
 BUG FIXES:
 
@@ -247,7 +247,7 @@ intermediate certificates. [[GH-30034](https://github.com/hashicorp/vault/pull/3
 
 SECURITY:
 
-* auth/ldap: fix MFA/TOTP enforcement bypass when username_as_alias is enabled.
+* auth/ldap: fix MFA/TOTP enforcement bypass when username_as_alias is enabled [[GH-31427](https://github.com/hashicorp/vault/pull/31427),[HCSEC-2025-20](https://discuss.hashicorp.com/t/hcsec-2025-20-vault-ldap-mfa-enforcement-bypass-when-using-username-as-alias/76092)].
 
 BUG FIXES:
 
@@ -687,7 +687,7 @@ Unblocks customers that were stuck in a failing loop when attempting to rotate s
 
 SECURITY:
 
-* auth/ldap: fix MFA/TOTP enforcement bypass when username_as_alias is enabled.
+* auth/ldap: fix MFA/TOTP enforcement bypass when username_as_alias is enabled [[GH-31427](https://github.com/hashicorp/vault/pull/31427),[HCSEC-2025-20](https://discuss.hashicorp.com/t/hcsec-2025-20-vault-ldap-mfa-enforcement-bypass-when-using-username-as-alias/76092)].
 
 BUG FIXES:
 
@@ -1854,7 +1854,7 @@ autopilot to fail to discover new server versions and so not trigger an upgrade.
 
 SECURITY:
 
-* auth/ldap: fix MFA/TOTP enforcement bypass when username_as_alias is enabled.
+* auth/ldap: fix MFA/TOTP enforcement bypass when username_as_alias is enabled [[GH-31427](https://github.com/hashicorp/vault/pull/31427),[HCSEC-2025-20](https://discuss.hashicorp.com/t/hcsec-2025-20-vault-ldap-mfa-enforcement-bypass-when-using-username-as-alias/76092)].
 
 BUG FIXES:
 
