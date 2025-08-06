@@ -10,13 +10,13 @@ import (
 // entry represents an audit entry.
 // It could be an entry for a request or response.
 type entry struct {
+	Time          string    `json:"time,omitempty"`
 	Auth          *auth     `json:"auth,omitempty"`
 	Error         string    `json:"error,omitempty"`
 	Forwarded     bool      `json:"forwarded,omitempty"`
 	ForwardedFrom string    `json:"forwarded_from,omitempty"` // Populated in Enterprise when a request is forwarded
 	Request       *request  `json:"request,omitempty"`
 	Response      *response `json:"response,omitempty"`
-	Time          string    `json:"time,omitempty"`
 	Type          string    `json:"type,omitempty"`
 }
 
