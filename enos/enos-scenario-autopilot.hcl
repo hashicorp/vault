@@ -413,15 +413,16 @@ scenario "autopilot" {
     ]
 
     variables {
-      hosts                  = step.create_vault_cluster.hosts
-      ip_version             = matrix.ip_version
-      integration_host_state = step.set_up_external_integration_target.state
-      leader_host            = step.get_vault_cluster_ips.leader_host
-      ports                  = global.integration_host_ports
-      vault_addr             = step.create_vault_cluster.api_addr_localhost
-      vault_edition          = matrix.edition
-      vault_install_dir      = local.vault_install_dir
-      vault_root_token       = step.create_vault_cluster.root_token
+      hosts                     = step.create_vault_cluster.hosts
+      ip_version                = matrix.ip_version
+      integration_host_state    = step.set_up_external_integration_target.state
+      leader_host               = step.get_vault_cluster_ips.leader_host
+      ports                     = global.integration_host_ports
+      vault_addr                = step.create_vault_cluster.api_addr_localhost
+      vault_edition             = matrix.edition
+      vault_install_dir         = local.vault_install_dir
+      vault_root_token          = step.create_vault_cluster.root_token
+      create_aws_secrets_engine = true
     }
   }
 
@@ -636,13 +637,14 @@ scenario "autopilot" {
     ]
 
     variables {
-      create_state      = step.verify_secrets_engines_create.state
-      hosts             = step.get_updated_vault_cluster_ips.follower_hosts
-      ip_version        = matrix.ip_version
-      vault_addr        = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
-      vault_edition     = matrix.edition
-      vault_install_dir = local.vault_install_dir
-      vault_root_token  = step.create_vault_cluster.root_token
+      create_state              = step.verify_secrets_engines_create.state
+      hosts                     = step.get_updated_vault_cluster_ips.follower_hosts
+      ip_version                = matrix.ip_version
+      vault_addr                = step.upgrade_vault_cluster_with_autopilot.api_addr_localhost
+      vault_edition             = matrix.edition
+      vault_install_dir         = local.vault_install_dir
+      vault_root_token          = step.create_vault_cluster.root_token
+      verify_aws_secrets_engine = true
     }
   }
 
