@@ -234,7 +234,12 @@ func (b *backend) pathDecryptWrite(ctx context.Context, req *logical.Request, d 
 			})
 		}
 
-		plaintext, err := p.DecryptWithFactory(item.DecodedContext, item.DecodedNonce, item.Ciphertext, factories...)
+		opts := keysutil.EncryptionOptions{
+			Context: item.DecodedContext,
+			Nonce:   item.DecodedNonce,
+		}
+
+		plaintext, err := p.DecryptWithOptions(opts, item.Ciphertext, factories...)
 		if err != nil {
 			switch err.(type) {
 			case errutil.InternalError:
