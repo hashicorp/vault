@@ -1068,6 +1068,16 @@ func TestUpdateUser_Password(t *testing.T) {
 			expectErr:      true,
 			credsAssertion: assertCredsDoNotExist,
 		},
+		"multiline statements": {
+			statements: []string{`
+				DO $$ BEGIN
+				IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname='{{name}}')
+				THEN CREATE ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}';
+				ELSE ALTER ROLE "{{name}}" WITH LOGIN PASSWORD '{{password}}';
+				END IF; END \$\$`},
+			expectErr:      false,
+			credsAssertion: assertCredsExist,
+		},
 	}
 
 	// Shared test container for speed - there should not be any overlap between the tests
