@@ -26,7 +26,7 @@ export interface EngineDisplayData {
   displayName: string;
   engineRoute?: string; // engines that have their own Ember engine will have this route defined.
   glyph?: string;
-  isWIF?: boolean; // flag for 'Workload Identity Federation' engines.
+  isWIF?: boolean; // flag for 'Workload Identity Federation' engines. - https://developer.hashicorp.com/hcp/docs/hcp/iam/service-principal/workload-identity-federation
   mountCategory: string[];
   requiredFeature?: string; // flag for engines that require the ADP (Advanced Data Protection) feature. - https://www.hashicorp.com/en/blog/advanced-data-protection-adp-now-available-in-hcp-vault
   requiresEnterprise?: boolean;
