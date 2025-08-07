@@ -39,12 +39,18 @@ outputs:
   go-tags:
     description: The minimal set of Go tags required to build the correct edition of Vault.
     value: ${{ steps.workflow-metadata.outputs.go-tags }}
+  is-ce-in-enterprise:
+    description: Whether or not the workflow is running CE Vault in the context of Vault Enterprise.
+    value: ${{ steps.workflow-metadata.outputs.is-ce-in-enterprise }}
   is-draft:
     description: Whether or not the workflow is executing in the context of a pull request draft.
     value: ${{ steps.workflow-metadata.outputs.is-draft }}
-  is-enterprise:
-    description: Whether or not the workflow is executing in the context of Vault enterprise.
-    value: ${{ steps.workflow-metadata.outputs.is-enterprise }}
+  is-ent-branch:
+    description: Whether or not the workflow is executing in the context of Vault Enterprise.
+    value: ${{ steps.workflow-metadata.outputs.is-ent-branch }}
+  is-ent-repo:
+    description: Whether or not the workflow is executing in the context of hashicorp/vault-enterprise
+    value: ${{ steps.workflow-metadata.outputs.is-ent-repo }}
   is-fork:
     description: Whether or not the workflow is being triggered on a pull request that is a fork.
     value: ${{ steps.workflow-metadata.outputs.is-fork }}
@@ -102,9 +108,9 @@ runs:
           is_draft='${{ github.event.pull_request.draft }}'
 
           # Determine our pull request labels. We specifically look them up via the pulls API
-          # because at some point they stopped being reliable in the
-          # github.event.pull_request.labels.*.name context.
-
+          # because the github.event.pull_request.labels.*.name context is very inflexible.
+          # This allows people to add labels after inital pull request and/or to re-run this
+          # workflow to reload them.
           labels=$(gh api "/repos/${{ github.repository }}/issues/${{ github.event.number }}/labels" | jq -erc '. | map(.name)')
         else
           # We can assume we're being triggered for a 'push' (a merge)
@@ -139,6 +145,7 @@ runs:
         fi
 
         {
+          echo "is-ce-in-enterprise=${is_ce_in_enterprise}"
           echo "is-draft=${is_draft}"
           echo 'is-fork=${{ github.event.pull_request.head.repo.fork && 'true' || 'false' }}'
           echo "labels=${labels}"
@@ -146,8 +153,16 @@ runs:
         } | tee -a "$GITHUB_OUTPUT"
 
         # Set CE and Ent specific workflow metadata
-        is_enterprise='${{ contains(github.repository, 'vault-enterprise') }}'
-        if [ "$is_enterprise" = 'true' ]; then
+        is_enterprise_repo='${{ contains(github.repository, 'vault-enterprise') }}'
+        if [ "$is_enterprise_repo" = 'true' ]; then
+          base_ref='${{ github.event.pull_request.base.ref || github.event.base_ref || github.ref_name || github.event.branch || github.ref }}'
+          is_ce_in_enterprise=$([[ ce/ == "$base_ref"* ]] && echo "true" || echo "false")
+          if [ "$is_ce_in_enterprise_repo" = 'true' ]; then
+            is_enterprise="false"
+          else
+            is_enterprise="true"
+          fi
+
           {
             echo 'compute-build=["self-hosted","ondemand","os=linux","disk_gb=64","type=c6a.4xlarge"]'
             echo 'compute-build-ui=["self-hosted","ondemand","os=linux", "disk_gb=64", "type=c6a.2xlarge"]'
@@ -155,7 +170,9 @@ runs:
             echo 'compute-test-ui=["self-hosted","ondemand","os=linux","type=m6a.2xlarge"]'
             echo 'compute-small=["self-hosted","linux","small"]'
             echo 'go-tags=ent,enterprise'
-            echo 'is-enterprise=true'
+            echo "is-ce-in-enterprise=${is_ce_in_enterprise}"
+            echo "is-ent-branch=${is_enterprise}"
+            echo 'is-ent-repo=true'
             echo 'vault-version-metadata=${{ inputs.vault-version }}+ent'
           } | tee -a "$GITHUB_OUTPUT"
         else
@@ -166,7 +183,9 @@ runs:
             echo 'compute-test-ui="custom-linux-medium-vault-latest"'
             echo 'compute-small="ubuntu-latest"'
             echo 'go-tags='
-            echo 'is-enterprise=false'
+            echo 'is-ce-in-enterprise=false'
+            echo 'is-ent-branch=false'
+            echo 'is-ent-repo=false'
             echo 'vault-version-metadata=${{ inputs.vault-version }}'
           } | tee -a "$GITHUB_OUTPUT"
         fi
