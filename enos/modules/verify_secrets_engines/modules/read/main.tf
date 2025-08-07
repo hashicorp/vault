@@ -50,7 +50,7 @@ variable "vault_root_token" {
   default     = null
 }
 
-variable "verify_aws_secrets_engine" {
+variable "aws_enabled" {
   type        = bool
   description = <<-EOF
     Whether or not we'll verify the AWS secrets engine. Due to the various security requirements in
@@ -63,7 +63,7 @@ variable "verify_aws_secrets_engine" {
   default     = false
 }
 
-variable "verify_ldap_secret_engine" {
+variable "ldap_enabled" {
   type        = bool
   description = "Whether or not we'll verify the LDAP secrets engine"
   default     = false

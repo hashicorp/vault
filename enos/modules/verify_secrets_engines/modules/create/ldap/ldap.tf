@@ -42,7 +42,7 @@ variable "ldap_password" {
 }
 
 variable "integration_host_state" {
-  description = "The state of the test server from the 'backend_test_servers' module"
+  description = "The state of the test server from the 'set_up_external_integration' module"
 }
 
 variable "ip_version" {
@@ -59,11 +59,6 @@ variable "ports" {
   }))
 }
 
-variable "writer_policy_name" {
-  type        = string
-  description = "KV Writer Policy Name"
-}
-
 locals {
   ldap_output = {
     ip_version        = var.ip_version
@@ -72,7 +67,6 @@ locals {
     port              = var.ports.ldap.port
     username          = "enos"
     pw                = var.ldap_password
-    vault_policy_name = var.writer_policy_name
   }
 }
 
@@ -111,7 +105,6 @@ resource "enos_remote_exec" "ldap_configurations" {
     LDAP_PORT         = local.ldap_output.port
     LDAP_USERNAME     = local.ldap_output.username
     LDAP_ADMIN_PW     = local.ldap_output.pw
-    POLICY_NAME       = local.ldap_output.vault_policy_name
     VAULT_ADDR        = var.vault_addr
     VAULT_INSTALL_DIR = var.vault_install_dir
     VAULT_TOKEN       = var.vault_root_token

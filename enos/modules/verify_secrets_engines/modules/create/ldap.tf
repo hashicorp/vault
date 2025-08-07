@@ -5,12 +5,11 @@ module "create_ldap_secret_engine" {
   depends_on = [
     enos_remote_exec.policy_write_kv_writer,
   ]
-  count  = var.create_ldap_secret_engine ? 1 : 0
+  count  = var.ldap_enabled ? 1 : 0
   source = "./ldap"
 
   integration_host_state = var.integration_host_state
   ip_version             = var.ip_version
-  writer_policy_name     = local.kv_output.writer_policy_name
   leader_host            = var.leader_host
   ports                  = var.ports
   vault_addr             = var.vault_addr
@@ -19,7 +18,7 @@ module "create_ldap_secret_engine" {
 }
 
 locals {
-  ldap_output = var.create_ldap_secret_engine ? module.create_ldap_secret_engine[0].ldap : null
+  ldap_output = var.ldap_enabled ? module.create_ldap_secret_engine[0].ldap : null
 }
 
 output "ldap" {
