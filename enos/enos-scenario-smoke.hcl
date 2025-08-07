@@ -627,6 +627,7 @@ scenario "smoke" {
       hosts                  = step.create_vault_cluster_targets.hosts
       ip_version             = matrix.ip_version
       integration_host_state = step.set_up_external_integration_target.state
+      ldap_enabled           = true
       leader_host            = step.get_vault_cluster_ips.leader_host
       ports                  = global.ports
       ipv4_cidr              = step.create_vpc.ipv4_cidr
@@ -634,7 +635,6 @@ scenario "smoke" {
       vault_edition          = matrix.edition
       vault_install_dir      = global.vault_install_dir[matrix.artifact_type]
       vault_root_token       = step.create_vault_cluster.root_token
-      create_ldap_secret_engine = true
     }
   }
 
@@ -685,6 +685,7 @@ scenario "smoke" {
       create_state      = step.verify_secrets_engines_create.state
       hosts             = step.get_vault_cluster_ips.follower_hosts
       ip_version        = matrix.ip_version
+      ldap_enabled      = true
       vault_addr        = step.create_vault_cluster.api_addr_localhost
       vault_edition     = matrix.edition
       vault_install_dir = global.vault_install_dir[matrix.artifact_type]
