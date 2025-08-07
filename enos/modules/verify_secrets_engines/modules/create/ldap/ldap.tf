@@ -61,12 +61,12 @@ variable "ports" {
 
 locals {
   ldap_output = {
-    ip_version        = var.ip_version
-    ldap_mount        = "ldap"
-    host              = var.integration_host_state.ldap.host
-    port              = var.ports.ldap.port
-    username          = "enos"
-    pw                = var.ldap_password
+    ip_version = var.ip_version
+    ldap_mount = "ldap"
+    host       = var.integration_host_state.ldap.host
+    port       = var.ports.ldap.port
+    username   = "enos"
+    pw         = var.ldap_password
   }
 }
 
