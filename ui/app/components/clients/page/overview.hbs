@@ -35,7 +35,39 @@
     </:subheader>
 
     <:table>
-      <Clients::Table @data={{this.tableData}} data-test-table="attribution" />
+      <Clients::Table
+        data-test-table="attribution"
+        @data={{this.tableData}}
+        @columns={{this.tableColumns}}
+        @initiallySortBy={{hash column="clients" direction="desc"}}
+      >
+        <:emptyState>
+          <Hds::ApplicationState as |A|>
+            <A.Header
+              @title={{if
+                this.selectedMonth
+                "No data is available for the selected month"
+                "Select a month to view client attribution"
+              }}
+            />
+            <A.Body
+              @text="View the namespace mount breakdown of clients by selecting {{if
+                this.selectedMonth
+                'another'
+                'a'
+              }} month."
+            />
+            <A.Footer as |F|>
+              <F.LinkStandalone
+                @icon="file-text"
+                @text="Client count documentation"
+                @href="https://developer.hashicorp.com/vault/docs/concepts/client-count"
+                @iconPosition="trailing"
+              />
+            </A.Footer>
+          </Hds::ApplicationState>
+        </:emptyState>
+      </Clients::Table>
     </:table>
   </Clients::CountsCard>
 
