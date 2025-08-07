@@ -41,16 +41,7 @@ module('Integration | Component | clients/table', function (hooks) {
       ];
       this.data = Array.from({ length: recordNumber }, (_, i) => record(i));
     };
-    this.renderComponent = async (customEmptyState = false) => {
-      if (customEmptyState) {
-        return render(hbs`
-            <Clients::Table
-              @columns={{this.columns}}
-              @data={{this.data}}
-            >
-            <:emptyState>No data!</:emptyState>
-            </Clients::Table>`);
-      }
+    this.renderComponent = async () => {
       return render(hbs`
           <Clients::Table
             @columns={{this.columns}}
@@ -62,9 +53,17 @@ module('Integration | Component | clients/table', function (hooks) {
     };
   });
 
-  test('it renders default empty state if no data exists', async function (assert) {
+  test('it renders default empty state when no data exists', async function (assert) {
     await this.renderComponent();
     assert.dom(CLIENT_COUNT.card('table empty state')).hasText('No data to display');
+  });
+
+  test('it renders yielded empty state block when no data exists', async function (assert) {
+    await render(hbs`
+      <Clients::Table @columns={{this.columns}} @data={{this.data}}>
+      <:emptyState>Oh no, there's no data!</:emptyState>
+      </Clients::Table>`);
+    assert.dom(CLIENT_COUNT.card('table empty state')).hasText("Oh no, there's no data!");
   });
 
   test('it renders and paginates data', async function (assert) {
