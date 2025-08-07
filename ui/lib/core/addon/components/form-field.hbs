@@ -388,8 +388,7 @@
                 (if (eq @attr.options.mode "ruby") value (stringify (jsonify value)))
                 @attr.options.defaultValue
               }}
-              @valueUpdated={{fn this.codemirrorUpdated true}}
-              @theme={{or @attr.options.theme "hashi"}}
+              @valueUpdated={{fn this.editorUpdated true}}
               @helpText={{this.helpTextString}}
               @mode={{@attr.options.mode}}
               @example={{@attr.options.example}}
@@ -468,7 +467,7 @@
       <JsonEditor
         @title={{this.labelString}}
         @value={{if (get @model this.valuePath) (stringify (get @model this.valuePath)) this.emptyData}}
-        @valueUpdated={{fn this.codemirrorUpdated false}}
+        @valueUpdated={{fn this.editorUpdated false}}
         @helpText={{this.helpTextString}}
         @example={{@attr.options.example}}
       />

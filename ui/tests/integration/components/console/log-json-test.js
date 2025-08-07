@@ -5,15 +5,12 @@
 
 import { module, test } from 'qunit';
 import { setupRenderingTest } from 'ember-qunit';
-import { render, find } from '@ember/test-helpers';
+import { render } from '@ember/test-helpers';
 import hbs from 'htmlbars-inline-precompile';
+import { assertCodeBlockValue } from 'vault/tests/helpers/codemirror';
 
 module('Integration | Component | console/log json', function (hooks) {
   setupRenderingTest(hooks);
-
-  hooks.beforeEach(function () {
-    this.codeMirror = this.owner.lookup('service:code-mirror');
-  });
 
   test('it renders', async function (assert) {
     // Set any properties with this.set('myProperty', 'value');
@@ -24,7 +21,6 @@ module('Integration | Component | console/log json', function (hooks) {
     this.set('content', objectContent);
 
     await render(hbs`<Console::LogJson @content={{this.content}} />`);
-    const instance = find('[data-test-component=code-mirror-modifier]').innerText;
-    assert.strictEqual(instance, expectedText);
+    assertCodeBlockValue(assert, '.hds-code-block__code', expectedText);
   });
 });

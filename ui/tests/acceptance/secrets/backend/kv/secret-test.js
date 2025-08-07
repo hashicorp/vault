@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: BUSL-1.1
  */
 
-import { click, visit, settled, currentURL, currentRouteName, fillIn } from '@ember/test-helpers';
+import { click, visit, settled, currentURL, currentRouteName, fillIn, waitFor } from '@ember/test-helpers';
 import { module, test } from 'qunit';
 import { setupApplicationTest } from 'ember-qunit';
 import { v4 as uuidv4 } from 'uuid';
@@ -16,7 +16,7 @@ import { login } from 'vault/tests/helpers/auth/auth-helpers';
 import { writeSecret, writeVersionedSecret } from 'vault/tests/helpers/kv/kv-run-commands';
 import { runCmd } from 'vault/tests/helpers/commands';
 import { PAGE } from 'vault/tests/helpers/kv/kv-selectors';
-import codemirror from 'vault/tests/helpers/codemirror';
+import codemirror, { setCodeEditorValue } from 'vault/tests/helpers/codemirror';
 import { MOUNT_BACKEND_FORM } from 'vault/tests/helpers/components/mount-backend-form-selectors';
 import { GENERAL } from 'vault/tests/helpers/general-selectors';
 import { SECRET_ENGINE_SELECTORS as SS } from 'vault/tests/helpers/secret-engine/secret-engine-selectors';
@@ -50,11 +50,13 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await mountSecrets.visit();
       await click(MOUNT_BACKEND_FORM.mountType('kv'));
       await fillIn(GENERAL.inputByAttr('path'), enginePath);
-      await fillIn('[data-test-input="maxVersions"]', maxVersion);
-      await click('[data-test-input="casRequired"]');
-      await click('[data-test-toggle-label="Automate secret deletion"]');
-      await fillIn('[data-test-select="ttl-unit"]', 's');
-      await fillIn('[data-test-ttl-value="Automate secret deletion"]', '1');
+
+      await fillIn(GENERAL.inputByAttr('maxVersions'), maxVersion);
+      await click(GENERAL.inputByAttr('casRequired'));
+      await click(GENERAL.ttl.toggle('Automate secret deletion'));
+      await fillIn(GENERAL.selectByAttr('ttl-unit'), 's');
+      await fillIn(GENERAL.ttl.input('Automate secret deletion'), '1');
+
       await click(GENERAL.saveButton);
 
       await click(PAGE.secretTab('Configuration'));
@@ -170,24 +172,24 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       // navigate to farthest leaf
       await visit(`/vault/secrets/${enginePath}/list`);
       assert.dom('[data-test-component="navigate-input"]').hasNoValue();
-      assert.dom('[data-test-secret-link]').exists({ count: 1 });
-      await click('[data-test-secret-link="1/"]');
+      assert.dom(SS.secretLink()).exists({ count: 1 });
+      await click(SS.secretLink('1/'));
       assert.dom('[data-test-component="navigate-input"]').hasValue('1/');
-      assert.dom('[data-test-secret-link]').exists({ count: 2 });
-      await click('[data-test-secret-link="1/2/"]');
+      assert.dom(SS.secretLink()).exists({ count: 2 });
+      await click(SS.secretLink('1/2/'));
       assert.dom('[data-test-component="navigate-input"]').hasValue('1/2/');
-      assert.dom('[data-test-secret-link]').exists({ count: 1 });
-      await click('[data-test-secret-link="1/2/3/"]');
+      assert.dom(SS.secretLink()).exists({ count: 1 });
+      await click(SS.secretLink('1/2/3/'));
       assert.dom('[data-test-component="navigate-input"]').hasValue('1/2/3/');
-      assert.dom('[data-test-secret-link]').exists({ count: 2 });
+      assert.dom(SS.secretLink()).exists({ count: 2 });
 
       // delete the items
       await click(SS.secretLinkMenu('1/2/3/4'));
-      await click(SS.secretLinkMenuDelete('1/2/3/4'));
-      await listPage.confirmDelete();
-      await settled();
+      await click(`${SS.secretLink('1/2/3/4')} ${GENERAL.confirmTrigger}`);
+      await click(GENERAL.confirmButton);
       assert.strictEqual(currentRouteName(), 'vault.cluster.secrets.backend.list');
       assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/list/1/2/3/`, 'remains on the page');
+      assert.dom(SS.secretLink()).exists({ count: 1 });
 
       assert.dom('[data-test-secret-link]').exists({ count: 1 });
       await listPage.secrets.objectAt(0).menuToggle();
@@ -200,7 +202,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       assert.dom(GENERAL.emptyStateTitle).hasText('No secrets under "1/2/".');
       await click('[data-test-list-root-link]');
       assert.strictEqual(currentURL(), `/vault/secrets/${enginePath}/list`);
-      assert.dom('[data-test-secret-link]').exists({ count: 1 });
+      assert.dom(SS.secretLink()).exists({ count: 1 });
     });
 
     test('first level secrets redirect properly upon deletion', async function (assert) {
@@ -266,16 +268,16 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await listPage.visitRoot({ backend: enginePath });
       await settled();
 
-      assert.dom(`[data-test-secret-link="${firstPath}/"]`).exists('First section item exists');
-      await click(`[data-test-secret-link="${firstPath}/"]`);
+      assert.dom(SS.secretLink(`${firstPath}/`)).exists('First section item exists');
+      await click(SS.secretLink(`${firstPath}/`));
 
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${enginePath}/list/${encodeURIComponent(firstPath)}/`,
         'First part of path is encoded in URL'
       );
-      assert.dom(`[data-test-secret-link="${secretPath}"]`).exists('Link to secret exists');
-      await click(`[data-test-secret-link="${secretPath}"]`);
+      assert.dom(SS.secretLink(secretPath)).exists('Link to secret exists');
+      await click(SS.secretLink(secretPath));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${enginePath}/show/${encodeURIComponent(firstPath)}/${encodeURIComponent(
@@ -284,7 +286,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         'secret path is encoded in URL'
       );
       assert.dom('h1').hasText(secretPath, 'Path renders correctly on show page');
-      await click(`[data-test-secret-breadcrumb="${firstPath}"] a`);
+      await click(SS.crumb(firstPath));
       assert.strictEqual(
         currentURL(),
         `/vault/secrets/${enginePath}/list/${encodeURIComponent(firstPath)}/`,
@@ -327,7 +329,7 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await listPage.filterInput('filter/foo1');
       assert.strictEqual(listPage.secrets.length, 1, 'renders only one secret');
       await listPage.secrets.objectAt(0).click();
-      await click('[data-test-secret-breadcrumb="filter"] a');
+      await click(SS.crumb('filter'));
       assert.strictEqual(listPage.secrets.length, 3, 'renders three secrets');
       assert.strictEqual(listPage.filterInputValue, 'filter/', 'pageFilter has been reset');
     });
@@ -339,7 +341,11 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
       await click(SS.createSecretLink);
       await fillIn(SS.secretPath('create'), secretPath);
       await click(GENERAL.toggleInput('json'));
-      codemirror().setValue(content);
+
+      await waitFor('.cm-editor');
+      const editor = codemirror();
+      setCodeEditorValue(editor, content);
+
       await click(GENERAL.saveButton);
 
       assert.strictEqual(
@@ -348,11 +354,12 @@ module('Acceptance | secrets/secret/create, read, delete', function (hooks) {
         'redirects to the show page'
       );
       assert.ok(showPage.editIsPresent, 'shows the edit button');
-      assert.strictEqual(
-        codemirror().options.value,
-        JSON.stringify({ bar: 'boo', foo: 'fa' }, null, 2),
-        'saves the content'
-      );
+      assert
+        .dom('.hds-code-block')
+        .includesText(
+          `Secret Data ${JSON.stringify({ bar: 'boo', foo: 'fa' }, null, 2).replace(/\n\s*/g, ' ').trim()}`,
+          'shows the secret data'
+        );
     });
   });
 });
