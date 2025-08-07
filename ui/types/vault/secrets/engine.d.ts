@@ -57,7 +57,7 @@ export type SshConfig = {
 
 export type SecretsEngineFormData = MountsEnableSecretsEngineRequest & {
   path: string;
-  config?: MountConfig;
+  config: MountConfig;
   options?: MountOptions;
   kv_config?: {
     max_versions?: number;

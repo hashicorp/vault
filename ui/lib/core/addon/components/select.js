@@ -4,7 +4,6 @@
  */
 
 import Component from '@ember/component';
-import layout from '../templates/components/select';
 
 /**
  * @module Select
@@ -27,7 +26,6 @@ import layout from '../templates/components/select';
  */
 
 export default Component.extend({
-  layout,
   classNames: ['field'],
   label: null,
   selectedValue: null,

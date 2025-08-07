@@ -22,6 +22,7 @@ export interface FieldOptions {
   helperTextDisabled?: string;
   helperTextEnabled?: string;
   placeholder?: string;
+  noDefault?: boolean;
 }
 
 export default class FormField {
