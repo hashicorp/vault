@@ -214,7 +214,7 @@ type FollowerState struct {
 
 func (f *FollowerState) neverSentHeartbeat() bool {
 	// We can't use LastHeartbeat to determine if the node has been contacted,
-	// since we set it for every node in the cluster during post-unseal
+	// since we set it for every node in the cluster during post-unseal.
 	// Instead, check if the node has reported any applied index or term.
 	// These will both be 0 if the node has never sent an echo.
 	return f.LastTerm == 0 && f.AppliedIndex == 0
