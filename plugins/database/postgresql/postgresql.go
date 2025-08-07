@@ -269,25 +269,34 @@ func (p *PostgreSQL) changeUserPassword(ctx context.Context, username string, ch
 	}
 	defer tx.Rollback()
 
+	m := map[string]string{
+		"name":     username,
+		"username": username,
+		"password": password,
+	}
+
+	if p.passwordAuthentication == passwordAuthenticationSCRAMSHA256 {
+		hashedPassword, err := scram.Hash(password)
+		if err != nil {
+			return fmt.Errorf("unable to scram-sha256 password: %w", err)
+		}
+		m["password"] = hashedPassword
+	}
+
 	for _, stmt := range stmts {
+
+		if containsMultilineStatement(stmt) {
+			// Execute it as-is.
+			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, stmt); err != nil {
+				return fmt.Errorf("failed to execute query: %w", err)
+			}
+			continue
+		}
+		// Otherwise, it's fine to split the statements on the semicolon.
 		for _, query := range strutil.ParseArbitraryStringSlice(stmt, ";") {
 			query = strings.TrimSpace(query)
 			if len(query) == 0 {
 				continue
-			}
-
-			m := map[string]string{
-				"name":     username,
-				"username": username,
-				"password": password,
-			}
-
-			if p.passwordAuthentication == passwordAuthenticationSCRAMSHA256 {
-				hashedPassword, err := scram.Hash(password)
-				if err != nil {
-					return fmt.Errorf("unable to scram-sha256 password: %w", err)
-				}
-				m["password"] = hashedPassword
 			}
 
 			if err := dbtxn.ExecuteTxQueryDirect(ctx, tx, m, query); err != nil {
