@@ -145,7 +145,7 @@ resource "enos_remote_exec" "verify_rejoin_fails" {
   }
 }
 module "restart" {
-  depends_on        = [
+  depends_on = [
     enos_remote_exec.verify_rejoin_fails,
     enos_remote_exec.verify_raft_peer_removed,
     enos_remote_exec.verify_unseal_fails
