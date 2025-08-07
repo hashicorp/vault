@@ -3,7 +3,7 @@
 
 # Verifying Vault LDAP Configurations
 module "verify_ldap_secret_engine" {
-  count  = var.verify_ldap_secret_engine ? 1 : 0
+  count  = var.ldap_enabled ? 1 : 0
   source = "./ldap"
 
   create_state      = var.create_state
