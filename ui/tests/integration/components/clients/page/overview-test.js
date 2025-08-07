@@ -65,7 +65,7 @@ module('Integration | Component | clients/page/overview', function (hooks) {
     assert.dom(GENERAL.selectByAttr('attribution-month')).exists('shows month selection dropdown');
 
     assert
-      .dom(CLIENT_COUNT.card('attribution empty state'))
+      .dom(CLIENT_COUNT.card('table empty state'))
       .exists('shows card for table state')
       .hasText(
         'Select a month to view client attribution View the namespace mount breakdown of clients by selecting a month. Client count documentation',
@@ -80,7 +80,7 @@ module('Integration | Component | clients/page/overview', function (hooks) {
     await fillIn(GENERAL.selectByAttr('attribution-month'), '6/23');
 
     assert
-      .dom(CLIENT_COUNT.card('attribution empty state'))
+      .dom(CLIENT_COUNT.card('table empty state'))
       .hasText(
         'No data is available for the selected month View the namespace mount breakdown of clients by selecting another month. Client count documentation',
         'Shows correct message for a month selection with no data'
@@ -93,9 +93,7 @@ module('Integration | Component | clients/page/overview', function (hooks) {
     assert.dom(GENERAL.selectByAttr('attribution-month')).exists('shows month selection dropdown');
     await fillIn(GENERAL.selectByAttr('attribution-month'), '9/23');
 
-    assert
-      .dom(CLIENT_COUNT.card('attribution empty state'))
-      .doesNotExist('does not show card when table has data');
+    assert.dom(CLIENT_COUNT.card('table empty state')).doesNotExist('does not show card when table has data');
     assert.dom(GENERAL.table('attribution')).exists('shows table');
     assert.dom(GENERAL.paginationInfo).hasText('1–3 of 6', 'shows correct pagination info');
   });
@@ -109,9 +107,7 @@ module('Integration | Component | clients/page/overview', function (hooks) {
 
     await fillIn(GENERAL.selectByAttr('attribution-month'), '9/23');
 
-    assert
-      .dom(CLIENT_COUNT.card('attribution empty state'))
-      .doesNotExist('does not show card when table has data');
+    assert.dom(CLIENT_COUNT.card('table empty state')).doesNotExist('does not show card when table has data');
     assert.dom(GENERAL.table('attribution')).exists();
     assert.dom(GENERAL.paginationInfo).hasText('1–3 of 3', 'shows correct pagination info');
   });
@@ -126,9 +122,7 @@ module('Integration | Component | clients/page/overview', function (hooks) {
     await render(
       hbs`<Clients::Page::Overview @activity={{this.activity}} @namespace={{this.namespace}} @mountPath={{this.mountPath}}/>`
     );
-    assert
-      .dom(CLIENT_COUNT.card('attribution empty state'))
-      .doesNotExist('does not show card when table has data');
+    assert.dom(CLIENT_COUNT.card('table empty state')).doesNotExist('does not show card when table has data');
     assert
       .dom(GENERAL.table('attribution'))
       .doesNotExist('does not show table when a mount filter is applied');

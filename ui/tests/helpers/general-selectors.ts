@@ -43,6 +43,7 @@ export const GENERAL = {
   table: (title: string) => `[data-test-table="${title}"]`,
   tableRow: (idx?: number) => (idx ? `[data-test-table-row="${idx}"]` : '[data-test-table-row]'),
   tableData: (idx?: number, key?: string) => `[data-test-table-row="${idx}"] [data-test-table-data="${key}"]`,
+  tableColumnHeader: (col: number) => `th:nth-child(${col})`, // number is not 0-indexed, first column header is 1
 
   /* ────── Inputs / Form Fields ────── */
   checkboxByAttr: (attr: string) => `[data-test-checkbox="${attr}"]`,
@@ -137,6 +138,7 @@ export const GENERAL = {
   /* ────── Pagination ────── */
   pagination: '[data-test-pagination]',
   paginationInfo: '.hds-pagination-info',
+  paginationSizeSelector: '.hds-pagination-size-selector select',
   nextPage: '.hds-pagination-nav__arrow--direction-next',
   prevPage: '.hds-pagination-nav__arrow--direction-prev',
 
