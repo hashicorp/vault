@@ -71,6 +71,23 @@ func (m *mockIAMClient) CreateUserWithContext(_ aws.Context, input *iam.CreateUs
 	return nil, awserr.New("Throttling", "", nil)
 }
 
+// roleData is a shared struct used by test functions to parse role roleData from Vault responses
+type roleData struct {
+	PolicyArns             []string          `mapstructure:"policy_arns"`
+	RoleArns               []string          `mapstructure:"role_arns"`
+	PolicyDocument         string            `mapstructure:"policy_document"`
+	CredentialType         string            `mapstructure:"credential_type"`
+	DefaultStsTtl          int64             `mapstructure:"default_sts_ttl"`
+	MaxStsTtl              int64             `mapstructure:"max_sts_ttl"`
+	UserPath               string            `mapstructure:"user_path"`
+	PermissionsBoundaryArn string            `mapstructure:"permissions_boundary_arn"`
+	IamGroups              []string          `mapstructure:"iam_groups"`
+	IamTags                map[string]string `mapstructure:"iam_tags"`
+	MfaSerialNumber        string            `mapstructure:"mfa_serial_number"`
+	SessionTags            map[string]string `mapstructure:"session_tags"`
+	ExternalID             string            `mapstructure:"external_id"`
+}
+
 func getBackend(t *testing.T) logical.Backend {
 	cfg := logical.TestBackendConfig()
 	cfg.System = &testSystemView{}
@@ -956,23 +973,29 @@ func testAccStepReadPolicy(t *testing.T, name string, value string) stepwise.Ste
 				return fmt.Errorf("bad: %#v", resp)
 			}
 
-			expected := map[string]interface{}{
-				"policy_arns":              []string(nil),
-				"role_arns":                []string(nil),
-				"policy_document":          value,
-				"credential_type":          strings.Join([]string{iamUserCred, federationTokenCred}, ","),
-				"default_sts_ttl":          int64(0),
-				"max_sts_ttl":              int64(0),
-				"user_path":                "",
-				"permissions_boundary_arn": "",
-				"iam_groups":               []string(nil),
-				"iam_tags":                 map[string]string(nil),
-				"mfa_serial_number":        "",
-				"session_tags":             map[string]string(nil),
-				"external_id":              "",
+			var d roleData
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
 			}
-			if !reflect.DeepEqual(resp.Data, expected) {
-				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
+
+			expected := roleData{
+				PolicyArns:             []string(nil),
+				RoleArns:               []string(nil),
+				PolicyDocument:         value,
+				CredentialType:         strings.Join([]string{iamUserCred, federationTokenCred}, ","),
+				DefaultStsTtl:          int64(0),
+				MaxStsTtl:              int64(0),
+				UserPath:               "",
+				PermissionsBoundaryArn: "",
+				IamGroups:              []string(nil),
+				IamTags:                map[string]string(nil),
+				MfaSerialNumber:        "",
+				SessionTags:            map[string]string(nil),
+				ExternalID:             "",
+			}
+
+			if !reflect.DeepEqual(d, expected) {
+				return fmt.Errorf("bad: got: %#v\nexpected: %#v", d, expected)
 			}
 			return nil
 		},
@@ -1580,23 +1603,29 @@ func testAccStepReadArnPolicy(t *testing.T, name string, value string) stepwise.
 				return fmt.Errorf("bad: %#v", resp)
 			}
 
-			expected := map[string]interface{}{
-				"policy_arns":              []string{value},
-				"role_arns":                []string(nil),
-				"policy_document":          "",
-				"credential_type":          iamUserCred,
-				"default_sts_ttl":          int64(0),
-				"max_sts_ttl":              int64(0),
-				"user_path":                "",
-				"permissions_boundary_arn": "",
-				"iam_groups":               []string(nil),
-				"iam_tags":                 map[string]string(nil),
-				"mfa_serial_number":        "",
-				"session_tags":             map[string]string(nil),
-				"external_id":              "",
+			var d roleData
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
 			}
-			if !reflect.DeepEqual(resp.Data, expected) {
-				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
+
+			expected := roleData{
+				PolicyArns:             []string{value},
+				RoleArns:               []string(nil),
+				PolicyDocument:         "",
+				CredentialType:         iamUserCred,
+				DefaultStsTtl:          int64(0),
+				MaxStsTtl:              int64(0),
+				UserPath:               "",
+				PermissionsBoundaryArn: "",
+				IamGroups:              []string(nil),
+				IamTags:                map[string]string(nil),
+				MfaSerialNumber:        "",
+				SessionTags:            map[string]string(nil),
+				ExternalID:             "",
+			}
+
+			if !reflect.DeepEqual(d, expected) {
+				return fmt.Errorf("bad: got: %#v\nexpected: %#v", d, expected)
 			}
 
 			return nil
@@ -1656,23 +1685,29 @@ func testAccStepReadIamGroups(t *testing.T, name string, groups []string) stepwi
 				return fmt.Errorf("bad: %#v", resp)
 			}
 
-			expected := map[string]interface{}{
-				"policy_arns":              []string(nil),
-				"role_arns":                []string(nil),
-				"policy_document":          "",
-				"credential_type":          iamUserCred,
-				"default_sts_ttl":          int64(0),
-				"max_sts_ttl":              int64(0),
-				"user_path":                "",
-				"permissions_boundary_arn": "",
-				"iam_groups":               groups,
-				"iam_tags":                 map[string]string(nil),
-				"mfa_serial_number":        "",
-				"session_tags":             map[string]string(nil),
-				"external_id":              "",
+			var d roleData
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
 			}
-			if !reflect.DeepEqual(resp.Data, expected) {
-				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
+
+			expected := roleData{
+				PolicyArns:             []string(nil),
+				RoleArns:               []string(nil),
+				PolicyDocument:         "",
+				CredentialType:         iamUserCred,
+				DefaultStsTtl:          int64(0),
+				MaxStsTtl:              int64(0),
+				UserPath:               "",
+				PermissionsBoundaryArn: "",
+				IamGroups:              groups,
+				IamTags:                map[string]string(nil),
+				MfaSerialNumber:        "",
+				SessionTags:            map[string]string(nil),
+				ExternalID:             "",
+			}
+
+			if !reflect.DeepEqual(d, expected) {
+				return fmt.Errorf("bad: got: %#v\nexpected: %#v", d, expected)
 			}
 
 			return nil
@@ -1721,23 +1756,29 @@ func testAccStepReadIamTags(t *testing.T, name string, tags map[string]string) s
 				return fmt.Errorf("vault response not received")
 			}
 
-			expected := map[string]interface{}{
-				"policy_arns":              []string(nil),
-				"role_arns":                []string(nil),
-				"policy_document":          "",
-				"credential_type":          iamUserCred,
-				"default_sts_ttl":          int64(0),
-				"max_sts_ttl":              int64(0),
-				"user_path":                "",
-				"permissions_boundary_arn": "",
-				"iam_groups":               []string(nil),
-				"iam_tags":                 tags,
-				"mfa_serial_number":        "",
-				"session_tags":             map[string]string(nil),
-				"external_id":              "",
+			var d roleData
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
 			}
-			if !reflect.DeepEqual(resp.Data, expected) {
-				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
+
+			expected := roleData{
+				PolicyArns:             []string(nil),
+				RoleArns:               []string(nil),
+				PolicyDocument:         "",
+				CredentialType:         iamUserCred,
+				DefaultStsTtl:          int64(0),
+				MaxStsTtl:              int64(0),
+				UserPath:               "",
+				PermissionsBoundaryArn: "",
+				IamGroups:              []string(nil),
+				IamTags:                tags,
+				MfaSerialNumber:        "",
+				SessionTags:            map[string]string(nil),
+				ExternalID:             "",
+			}
+
+			if !reflect.DeepEqual(d, expected) {
+				return fmt.Errorf("bad: got: %#v\nexpected: %#v", d, expected)
 			}
 
 			return nil
@@ -1874,7 +1915,7 @@ func testAccStepWriteSTSSessionTags(t *testing.T, name string, tags any, externa
 	}
 }
 
-func testAccStepReadSTSSessionTags(t *testing.T, name string, tags any, externalID string, expectNilResp bool) stepwise.Step {
+func testAccStepReadSTSSessionTags(t *testing.T, name string, tags map[string]string, externalID string, expectNilResp bool) stepwise.Step {
 	t.Helper()
 
 	return stepwise.Step{
@@ -1891,22 +1932,28 @@ func testAccStepReadSTSSessionTags(t *testing.T, name string, tags any, external
 				return fmt.Errorf("vault response not received")
 			}
 
-			expected := map[string]interface{}{
-				"policy_arns":              []string(nil),
-				"role_arns":                []string(nil),
-				"policy_document":          "",
-				"credential_type":          assumedRoleCred,
-				"default_sts_ttl":          int64(0),
-				"max_sts_ttl":              int64(0),
-				"user_path":                "",
-				"permissions_boundary_arn": "",
-				"iam_groups":               []string(nil),
-				"iam_tags":                 map[string]string(nil),
-				"mfa_serial_number":        "",
-				"session_tags":             tags,
-				"external_id":              externalID,
+			var d roleData
+			if err := mapstructure.Decode(resp.Data, &d); err != nil {
+				return err
 			}
-			if !reflect.DeepEqual(resp.Data, expected) {
+
+			expected := roleData{
+				PolicyArns:             []string(nil),
+				RoleArns:               []string(nil),
+				PolicyDocument:         "",
+				CredentialType:         assumedRoleCred,
+				DefaultStsTtl:          int64(0),
+				MaxStsTtl:              int64(0),
+				UserPath:               "",
+				PermissionsBoundaryArn: "",
+				IamGroups:              []string(nil),
+				IamTags:                map[string]string(nil),
+				MfaSerialNumber:        "",
+				SessionTags:            tags,
+				ExternalID:             externalID,
+			}
+
+			if !reflect.DeepEqual(d, expected) {
 				return fmt.Errorf("bad: got: %#v\nexpected: %#v", resp.Data, expected)
 			}
 
