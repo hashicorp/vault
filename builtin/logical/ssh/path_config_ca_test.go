@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/vault/sdk/helper/testhelpers/snapshots"
+	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
 
@@ -585,4 +587,57 @@ func readKey(ctx context.Context, s logical.Storage, path string) error {
 	}
 
 	return nil
+}
+
+func TestCARecover(t *testing.T) {
+	var err error
+	config := logical.TestBackendConfig()
+	config.StorageView = &logical.InmemStorage{}
+
+	b, err := Factory(context.Background(), config)
+	if err != nil {
+		t.Fatalf("Cannot create backend: %s", err)
+	}
+	tc := snapshots.NewSnapshotTestCase(t, b)
+
+	// generate CA keys on the snapshot storage
+	_, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/ca",
+		Storage:   tc.SnapshotStorage(),
+		Data: map[string]interface{}{
+			"public_key":  testCAPublicKey,
+			"private_key": testCAPrivateKey,
+		},
+	})
+	require.NoError(t, err)
+
+	// write different CA to the regular storage
+	_, err = b.HandleRequest(context.Background(), &logical.Request{
+		Operation: logical.UpdateOperation,
+		Path:      "config/ca",
+		Storage:   tc.RegularStorage(),
+		Data: map[string]interface{}{
+			"generate_signing_key": true,
+		},
+	})
+	require.NoError(t, err)
+	t.Run("read no side effects", func(t *testing.T) {
+		tc.RunRead(t, "config/ca")
+	})
+
+	t.Run("recover succeeds", func(t *testing.T) {
+		tc.DoRecover(t, "config/ca")
+		data, err := b.HandleRequest(context.Background(), &logical.Request{
+			Operation: logical.ReadOperation,
+			Path:      "config/ca",
+			Storage:   tc.SnapshotStorage(),
+			Data: map[string]interface{}{
+				"public_key": "should be the actual public key but the SSH CA recovery doesn't really care as it reads directly from snapshot storage",
+			},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, data)
+		require.Equal(t, testCAPublicKey, data.Data["public_key"])
+	})
 }
