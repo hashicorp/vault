@@ -4,6 +4,7 @@
 }}
 
 <Hds::Card::Container @hasBorder={{true}} class="has-padding-l" data-test-card="quick-actions">
+  {{!-- VIOLATION: All HTML headings (`<h1>`, `<h2>`, `<h3>`, etc.) should use sentence case (only first letter capitalized) --}}
   <h2 class="title is-4">Quick Actions</h2>
   {{#if this.filteredSecretEngines}}
     <div class="has-top-margin-m has-bottom-margin-m">
