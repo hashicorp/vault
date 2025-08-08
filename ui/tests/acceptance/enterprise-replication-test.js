@@ -59,6 +59,8 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await pollCluster(this.owner);
     await settled();
     await click('[data-test-replication-link="secondaries"]');
+    await click(GENERAL.button('Copy token'));
+    await click(GENERAL.cancelButton);
     await click(GENERAL.menuTrigger);
     await click('[data-test-replication-path-filter-link]');
     assert.strictEqual(
@@ -103,6 +105,8 @@ module('Acceptance | Enterprise | replication', function (hooks) {
     await settled();
 
     await click('[data-test-replication-link="secondaries"]');
+    await click(GENERAL.button('Copy token'));
+    await click(GENERAL.cancelButton);
     assert
       .dom('[data-test-secondary-name]')
       .includesText(secondaryName, 'it displays the secondary in the list of known secondaries');
