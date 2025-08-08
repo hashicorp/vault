@@ -21,8 +21,14 @@ export default class RecoverySnapshotsRoute extends Route {
     const canLoadSnapshot = capabilities[path]?.canUpdate;
 
     try {
-      const data = await this.api.sys.systemListStorageRaftSnapshotLoad(true);
-      const snapshots = this.api.keyInfoToArray(data);
+      const { keys } = await this.api.sys.systemListStorageRaftSnapshotLoad(true);
+
+      const snapshots = await Promise.all(
+        keys.map(async (key: string) => {
+          const details = await this.api.sys.systemReadStorageRaftSnapshotLoadId(key);
+          return details;
+        })
+      );
 
       return hash({
         snapshots,

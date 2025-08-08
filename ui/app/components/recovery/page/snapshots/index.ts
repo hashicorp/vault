@@ -19,7 +19,7 @@ enum State {
 }
 
 interface Args {
-  model: { canLoadSnapshot: boolean };
+  model: { canLoadSnapshot: boolean; snapshots: Record<string, unknown>[] };
 }
 
 export default class Index extends Component<Args> {
@@ -70,6 +70,11 @@ export default class Index extends Component<Args> {
       buttonColor: 'primary',
     },
   };
+  get loadedSnapshots() {
+    const { snapshots } = this.args.model;
+
+    return snapshots;
+  }
 
   get state() {
     const { canLoadSnapshot } = this.args.model;
