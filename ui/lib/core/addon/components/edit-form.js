@@ -7,19 +7,20 @@ import AdapterError from '@ember-data/adapter/error';
 import { service } from '@ember/service';
 import Component from '@ember/component';
 import { task } from 'ember-concurrency';
-import layout from '../templates/components/edit-form';
 import { next } from '@ember/runloop';
 import { waitFor } from '@ember/test-waiters';
 
 export default Component.extend({
-  layout,
   flashMessages: service(),
 
   // internal validations
   invalidFormAlert: '',
+
   modelValidations: null,
+
   // public API
   model: null,
+
   successMessage: 'Saved!',
   deleteSuccessMessage: 'Deleted!',
   deleteButtonText: 'Delete',

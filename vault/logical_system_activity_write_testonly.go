@@ -357,8 +357,9 @@ func (m *multipleMonthsActivityClients) addRepeatedClients(monthsAgo int32, c *g
 
 	for _, client := range repeatedFrom.clients {
 		if c.ClientType == client.ClientType && mountAccessor == client.MountAccessor && c.Namespace == client.NamespaceID {
-			client.UsageTime = usageTime.Unix()
-			addingTo.addEntityRecord(client, segmentIndex)
+			repeatedClient := *client
+			repeatedClient.UsageTime = usageTime.Unix()
+			addingTo.addEntityRecord(&repeatedClient, segmentIndex)
 			numClients--
 			if numClients == 0 {
 				break
