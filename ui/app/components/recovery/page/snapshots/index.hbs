@@ -3,4 +3,34 @@
   SPDX-License-Identifier: BUSL-1.1
 }}
 
-{{! TODO: This is an empty skeleton component which will be completed as part of 1.21 feature work on single item recovery }}
+<Hds::PageHeader class="has-top-padding-l has-bottom-padding-m" as |PH|>
+  <PH.Title>
+    Secrets Recovery
+    {{#if this.version.isCommunity}}
+      <Hds::Badge @text="Enterprise" @color="highlight" />
+    {{/if}}
+  </PH.Title>
+
+  <PH.Subtitle>
+    Recover lost or deleted secrets from a raft snapshot. Supported types include KV v1 and Cubbyhole.
+  </PH.Subtitle>
+</Hds::PageHeader>
+
+{{#let (get this.emptyStateDetails this.state) as |d|}}
+  <EmptyState @title={{d.title}} @icon={{d.icon}} @message={{d.message}}>
+
+    {{#if (eq this.state this.viewState.ALLOW_UPLOAD)}}
+      <Hds::Button @text={{d.buttonText}} @color={{d.buttonColor}} {{on "click" this.uploadSnapshot}} />
+    {{else}}
+      <Hds::Button
+        @text={{d.buttonText}}
+        @color={{d.buttonColor}}
+        @icon={{d.buttonIcon}}
+        @iconPosition="trailing"
+        @route={{d.buttonRoute}}
+        @query={{if d.buttonRoute (hash namespace="")}}
+        @href={{doc-link d.buttonHref}}
+      />
+    {{/if}}
+  </EmptyState>
+{{/let}}
