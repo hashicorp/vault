@@ -10,6 +10,7 @@
  */
 
 label.box-label {
+  // VIOLATION: Should not use !important for styling overrides
   cursor: pointer !important;
 }
 

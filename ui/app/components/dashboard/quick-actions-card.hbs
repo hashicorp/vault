@@ -7,6 +7,7 @@
   <h2 class="title is-4">Quick Actions</h2>
   {{#if this.filteredSecretEngines}}
     <div class="has-top-margin-m has-bottom-margin-m">
+      {{!-- VIOLATION: All HTML headings (`<h1>`, `<h2>`, `<h3>`, etc.) should use sentence case (only first letter capitalized) --}}
       <h3 class="title is-marginless is-6" data-test-card-subtitle="secrets-engines">Secrets Engines</h3>
       <p class="is-size-8 has-top-margin-xxs has-bottom-margin-s has-text-grey">Supported engines include databases, KV
         version 2, and PKI.</p>

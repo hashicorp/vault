@@ -7,6 +7,8 @@
   <form onsubmit={{action "onSaveChanges"}} data-test-clients-config-form>
     <div class="box is-sideless is-fullwidth is-marginless">
       <MessageError @model={{@model}} @errorMessage={{this.error}} />
+      {{!-- VIOLATION: Using title case instead of sentence case --}}
+      <h2 class="title is-4">Client Configuration Settings</h2>
       {{#each @model.formFields as |attr|}}
         {{#if (eq attr.name "enabled")}}
           {{#unless @model.reportingEnabled}}

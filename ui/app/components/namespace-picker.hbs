@@ -26,6 +26,7 @@
 
       <D.Header class="is-paddingless" @hasDivider={{true}}>
         <div class="has-padding-8">
+          {{!-- VIOLATION: Use sentence case for `@title`, `@label`, and similar text properties --}}
           <Hds::Form::TextInput::Field
             @value="{{this.searchInput}}"
             @type="search"
