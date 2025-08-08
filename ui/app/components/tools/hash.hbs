@@ -43,7 +43,12 @@
             class="textarea"
             data-test-tools-input="hash-input"
           ></textarea>
-          <B64Toggle @value={{this.hashData}} @isInput={{false}} data-test-tools-input="b64-toggle" />
+          <B64Toggle
+            @value={{this.hashData}}
+            @isInput={{false}}
+            @onUpdate={{fn (mut this.hashData)}}
+            data-test-tools-input="b64-toggle"
+          />
         </div>
       </div>
       <div class="field is-horizontal">
